@@ -1,1 +1,2 @@
-
+Fixes:
+- Fix custom jwt processing by replacing the remaining webpack_require in auth code

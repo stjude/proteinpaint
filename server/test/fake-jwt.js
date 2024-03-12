@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const serverconfig = require('../src/serverconfig')
-const jsonwebtoken = require('jsonwebtoken')
+import serverconfig from '../src/serverconfig.js'
+import jsonwebtoken from 'jsonwebtoken'
 
 const time = Math.floor(Date.now() / 1000)
 const dslabel = process.argv[2] || 'TermdbTest'

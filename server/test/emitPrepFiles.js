@@ -1,7 +1,7 @@
-const serverconfig = require('../src/serverconfig')
-const fs = require('fs')
-const path = require('path')
-const augen = require('@sjcrh/augen')
+import serverconfig from '../src/serverconfig.js'
+import fs from 'fs'
+import path from 'path'
+import augen from '@sjcrh/augen'
 
 {
 	// start moving migrated route handler code here

@@ -124,6 +124,7 @@ async function validateDsCredentials(creds, serverconfig) {
 					//throw `missing secret for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}], type: '${cred.type}'`
 					// TODO: this headerKey should be unique to a dslabel + route, to avoid conflicts
 					if (!cred.headerKey) cred.headerKey = headerKey
+					if (cred.processor) cred.processor = (await import(cred.processor))?.default
 				} else if (cred.type != 'forbidden' && cred.type != 'open') {
 					throw `unknown cred.type='${cred.type}' for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}]`
 				}
@@ -435,7 +436,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				code = 400
 				throw `Incorrect authorization route, use ${cred.authRoute}'`
 			}
-			const { email, ip } = await getJwtPayload(q, req.headers, cred)
+			const { email, ip } = getJwtPayload(q, req.headers, cred)
 			checkIPaddress(req, ip, cred)
 			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred)
 			code = 401 // in case of jwt processing error
@@ -704,7 +705,7 @@ function getJwtPayload(q, headers, cred, _time, session = null) {
 	if (!rawToken) throw `missing header['${cred.headerKey}']`
 
 	// the embedder may supply a processor function
-	const processor = cred.processor ? __non_webpack_require__(cred.processor) : {}
+	const processor = cred.processor || {}
 
 	// use a handleToken() if available for an embedder, for example to decrypt a fully encrypted jwt
 	const token = processor.handleToken?.(rawToken) || rawToken

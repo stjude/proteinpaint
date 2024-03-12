@@ -29,6 +29,7 @@ server/routes/*.js
 server/src/app.js
 server/src/health.js
 server/src/hicstat.js
+server/package*/*
 
 **/public/bin/*
 public/tmp/*
