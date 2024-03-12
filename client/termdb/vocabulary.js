@@ -1,5 +1,6 @@
 import initBinConfig from '#shared/termdb.initbinconfig'
 import { TermdbVocab } from './TermdbVocab'
+import { GdcVocab } from './GdcVocab'
 import { FrontendVocab } from './FrontendVocab'
 import { isNumeric } from '#shared/helpers'
 
@@ -24,7 +25,7 @@ export function vocabInit(opts) {
 	/*** end legacy support ***/
 
 	if (vocab.dslabel) {
-		//const { TermdbVocab } = await import('./TermdbVocab')
+		if (0 && vocab.dslabel == 'GDC') return new GdcVocab(opts)
 		return new TermdbVocab(opts)
 	} else if (vocab.terms) {
 		//const { FrontendVocab } = await import('./FrontendVocab')

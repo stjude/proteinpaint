@@ -41,8 +41,8 @@ export function getMatrixRequestOpts(state) {
 		terms,
 		filter: state.filter,
 		filter0: state.filter0,
-		maxGenes: state.config.settings.matrix.maxGenes
-		//termsPerRequest: 100 // this is just for testing
+		maxGenes: state.config.settings.matrix.maxGenes,
+		termsPerRequest: 100 // this is just for testing
 	}
 
 	if (this.chartType == 'hierCluster') {

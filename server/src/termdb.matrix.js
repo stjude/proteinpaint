@@ -107,7 +107,8 @@ async function getSampleData(q) {
 	}
 
 	const sampleFilterSet = await mayGetSampleFilterSet(q, nonDictTerms) // conditionally returns a set of sample ids
-
+	const promises = []
+	const _samplesByTw = new Map()
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
@@ -115,9 +116,21 @@ async function getSampleData(q) {
 			if (q.ds.cohort?.termdb?.getGeneAlias) {
 				byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 			}
+			promises.push(q.ds.mayGetGeneVariantData(tw, q))
+		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
+			tw.type = tw.term.type // required by regression code
+			_samplesByTw.set(tw, new Map())
+			promises.push(getSampleData_snplstOrLocus(tw, _samplesByTw.get(tw), true))
+		} else {
+			throw 'unknown type of non-dictionary term'
+		}
+	}
+	console.log(128, promises)
+	const responses = await Promise.all(promises)
 
-			const data = await q.ds.mayGetGeneVariantData(tw, q)
-
+	for (const [i, tw] of nonDictTerms.entries()) {
+		if (tw.term.type == 'geneVariant') {
+			const data = responses[i]
 			for (const [sampleId, value] of data.entries()) {
 				if (!(tw.term.name in value)) continue
 				if (!dictTerms.length) {
@@ -130,11 +143,7 @@ async function getSampleData(q) {
 				}
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
-			tw.type = tw.term.type // required by regression code
-
-			const _samples = new Map()
-			await getSampleData_snplstOrLocus(tw, _samples, true)
-
+			const _samples = _samplesByTw.get(tw)
 			for (const [sampleId, value] of _samples) {
 				if (sampleFilterSet && !sampleFilterSet.has(sampleId)) continue // filter in use and this sample not in filter
 
@@ -146,8 +155,6 @@ async function getSampleData(q) {
 
 				samples[sampleId][tw.term.id] = snp2value
 			}
-		} else {
-			throw 'unknown type of non-dictionary term'
 		}
 	}
 

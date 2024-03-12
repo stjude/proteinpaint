@@ -891,6 +891,7 @@ export class TermdbVocab extends Vocab {
 			for (const tw of opts.terms) {
 				mayFillInCategory2samplecount4term(tw, data.lst, this.termdbConfig)
 			}
+			console.log(893, data)
 			return data
 		} catch (e) {
 			throw e

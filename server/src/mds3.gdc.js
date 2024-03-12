@@ -86,10 +86,8 @@ export function validate_variant2sample(a) {
 }
 
 export function validate_query_snvindel_byrange(ds) {
-	ds.queries.snvindel.byrange.get = async q => {
-		// no longer uses graphql query; byisoform.get() now works to pull ssm by rglst[]
-		return await ds.queries.snvindel.byisoform.get(q)
-	}
+	// no longer uses graphql query; byisoform.get() now works to pull ssm by rglst[]
+	ds.queries.snvindel.byrange.get = ds.queries.snvindel.byisoform.get
 }
 
 /*
@@ -337,8 +335,10 @@ export function validate_query_snvindel_byisoform(ds) {
 		4. in resulting ssm, set isoform to refseq so skewer can show
 		*/
 		const refseq = mayMapRefseq2ensembl(opts, ds)
+		console.log(337)
 
 		const ssmLst = await snvindel_byisoform(opts, ds)
+		console.log(339)
 		const mlst = [] // parse final ssm into this list
 		for (const ssm of ssmLst) {
 			const m = {
@@ -541,7 +541,7 @@ export function validate_query_geneCnv(ds) {
 		*/
 
 		if (!p.gene && typeof p.gene != 'string') throw 'p.gene does not provide non-empty string' // gene is required for now
-
+		console.log(542, p.gene)
 		const filters = { op: 'and', content: [] }
 
 		if (p.gene) {
@@ -902,7 +902,13 @@ async function snvindel_byisoform(opts, ds) {
 		query2 = isoform2ssm_query2_getcase
 
 	const { host, headers } = ds.getHostHeaders(opts)
-
+	console.log(
+		903,
+		path.join(host.rest, query1.endpoint),
+		headers,
+		JSON.stringify(Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))),
+		JSON.stringify(Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds)))
+	)
 	// must use POST as filter can be too long for GET
 	const p1 = ky
 		.post(path.join(host.rest, query1.endpoint), {
@@ -1255,8 +1261,9 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	}
 
 	prepTwLst(twLst)
-
+	console.log(1260, geneTwLst)
 	if (geneTwLst) {
+		console.log(1261)
 		if (!Array.isArray(geneTwLst)) throw 'geneTwLst not array'
 		// temporarily create q.isoforms[] to do ssm query
 		q.isoforms = []
@@ -2025,6 +2032,7 @@ const isoform2ssm_query1_getvariant = {
 
 		if (p.isoform) {
 			if (typeof p.isoform != 'string') throw '.isoform value not string'
+			console.log(2029, p.isoform)
 			f.filters.content.push({
 				op: '=',
 				content: {
@@ -2144,6 +2152,7 @@ const isoform2ssm_query2_getcase = {
 			})
 			hasSsmOrIsoform = true
 		} else if (p.isoform) {
+			console.log(2148)
 			f.filters.content.push({
 				op: '=',
 				content: {
