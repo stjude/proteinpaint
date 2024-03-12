@@ -3,8 +3,6 @@ import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'
 import serverconfig from '#src/serverconfig.js'
-import * as fs from 'fs'
-import path from 'path'
 
 export const api: any = {
 	endpoint: 'hicdata',
