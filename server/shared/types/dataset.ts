@@ -757,6 +757,7 @@ export type Cohort = {
 	scatterplots?: Scatterplots
 	// optional title of this ds, if missing use ds.label. shown on mass nav header
 	title?: string
+	hideTitle?: boolean // optional flag to hide title
 	cumburden?: {
 		files: {
 			fit: string
