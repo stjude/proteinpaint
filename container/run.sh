@@ -59,11 +59,15 @@ if [[ ! -d ./dataset ]]; then
 	mkdir dataset
 fi
 
+# common network is needed to communicate with the blat server
+sh createPPNetwork.sh
+
 echo "Starting container process='$CONTAINER_NAME' ..."
 APPDIR=$(pwd)
 CONTAPP=/home/root/pp/app/active
 docker run -d \
 	--name $CONTAINER_NAME \
+	--network pp_network \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
 	--mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json \
 	--mount type=bind,source=$APPDIR/dataset,target=$CONTAPP/dataset \

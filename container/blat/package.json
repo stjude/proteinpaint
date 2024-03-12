@@ -1,0 +1,9 @@
+{
+	"name": "@sjcrh/ppblat",
+	"version": "1.0.0",
+	"license": "SEE LICENSE IN ./LICENSE",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/stjude/proteinpaint"
+	}
+}

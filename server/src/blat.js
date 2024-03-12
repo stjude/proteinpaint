@@ -32,28 +32,15 @@ export function request_closure(genomes) {
 }
 
 function server_stat(name, g) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(serverconfig.gfServer, ['status', g.blat.host, g.blat.port])
-		const out = [],
-			out2 = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.stderr.on('data', i => out2.push(i))
-		ps.on('close', code => {
-			const e = out2.join('').trim()
-			if (e) {
-				resolve(name + ' OFF')
-			}
-			const lines = out.join('').trim().split('\n')
-			let c = 0
-			for (const line of lines) {
-				if (line.startsWith('blat requests')) c = line.split(' ')[2]
-			}
-			resolve(name + ' ON, ' + c + ' requests')
-		})
-
-		ps.on('error', err => {
-			reject('Error spawning gfServer: ' + err.message)
-		})
+	return new Promise(async (resolve, reject) => {
+		// query a random sequence to see if the server is up
+		const infile = path.join(serverconfig.cachedir, await write_tmpfile('>query\n' + 'ATCG' + '\n'))
+		try {
+			await run_blat2(g, infile)
+			resolve(`ON for ${g.blat.host} ${g.blat.port}`)
+		} catch (e) {
+			reject(`OFF for ${g.blat.host} ${g.blat.port}`)
+		}
 	})
 }
 
