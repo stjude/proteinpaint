@@ -77,7 +77,7 @@ export class InfoBar {
 			endColor: this.endColor,
 			position: '20,0',
 			tickPosition: 'bottom',
-			data: [this.parent.min, this.parent.max],
+			data: [this.parent('min'), this.parent('max')],
 			ticks: 2,
 			width: 120
 		})
@@ -89,15 +89,15 @@ export class InfoBar {
 		//need to account for fragments in detail view later
 		const resolutionText = bplen(this.resolution)
 		this.resolutionDiv.text(`${resolutionText} bp`)
-		if (this.parent.state.currView == 'horizontal') {
+		if (this.parent('state').currView == 'horizontal') {
 			this.colorScaleLabel.style('display', 'none')
 			this.colorScaleDiv.style('display', 'none')
 		} else {
 			this.colorScaleLabel.style('display', '')
 			this.colorScaleDiv.style('display', '')
 
-			const min = this.parent.min
-			const max = this.parent.max
+			const min = this.parent('min')
+			const max = this.parent('max')
 
 			if (min < 0) {
 				this.colorScale.bar.startColor = 'blue'
