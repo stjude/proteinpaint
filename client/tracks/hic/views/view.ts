@@ -224,21 +224,24 @@ export class HicView {
 					controlsDiv: this.dom.controlsDiv,
 					hic: this.hic,
 					state: this.state,
-					parent: () => {
-						return this.min, this.max
-					}
+					parent: (prop: string, value?: string | number) => {
+						if (value) this[prop] = value
+						return this[prop]
+					},
+					colorizeElement: this.colorizeElement,
+					error: this.error
 				})
 			}
-			// this.infoBar = new InfoBar({
-			// 	app: this.app,
-			// 	infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
-			// 	hic: this.hic,
-			// 	parent: (prop: string) => {
-			// 		return this[prop]
-			// 	},
-			// 	resolution: this[this.activeView].resolution
-			// })
-			// this.infoBar.render()
+			this.infoBar = new InfoBar({
+				app: this.app,
+				infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
+				hic: this.hic,
+				parent: (prop: string) => {
+					return this[prop]
+				},
+				resolution: this[this.activeView].resolution
+			})
+			this.infoBar.render()
 		} catch (e: any) {
 			this.errList.push(e.message || e)
 		}
