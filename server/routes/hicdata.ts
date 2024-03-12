@@ -3,6 +3,8 @@ import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'
 import serverconfig from '#src/serverconfig.js'
+import * as fs from 'fs'
+import path from 'path'
 
 export const api: any = {
 	endpoint: 'hicdata',
@@ -43,11 +45,14 @@ export const api: any = {
 function init() {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			const payload = await handle_hicdata(req.query as HicdataRequest)
+			let payload
+			if (req.query.chrlst) {
+				payload = await handle_genome_data_request(req.query)
+			} else {
+				payload = await handle_hicdata(req.query as HicdataRequest)
+			}
 			res.send(payload)
-		} catch (e) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
+		} catch (e: any) {
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
@@ -108,4 +113,32 @@ function handle_hicdata(q: HicdataRequest) {
 			resolve({ items })
 		})
 	})
+}
+
+/** Only used for the genome view in the app. All other app views and
+ * tracks use handle_hicdata() directly.
+ * @param q
+ * @returns
+ */
+async function handle_genome_data_request(q) {
+	const data: { items: number[]; lead: number; follow: number }[] = []
+	for (let i = 0; i < q.chrlst.length; i++) {
+		const lead = q.chrlst[i]
+		for (let j = 0; j <= i; j++) {
+			const follow = q.chrlst[j]
+			const query = {
+				matrixType: q.matrixType,
+				file: q.file,
+				url: q.url,
+				pos1: lead.replace('chr', ''),
+				pos2: follow.replace('chr', ''),
+				nmeth: q.nmeth,
+				resolution: q.resolution
+			}
+
+			const tmp: any = await handle_hicdata(query)
+			data.push({ items: tmp.items, lead, follow })
+		}
+	}
+	return data
 }
