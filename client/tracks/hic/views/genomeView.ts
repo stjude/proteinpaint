@@ -420,7 +420,6 @@ export class GenomeView {
 	}
 
 	async render() {
-		//Update info bar
 		this.renderGrid()
 		this.setLeadFollowMap()
 
@@ -440,6 +439,8 @@ export class GenomeView {
 
 	async makeElements() {
 		for (const data of this.data) {
+			//Fix for when M chr has no data and is removed from hic.chrlst.
+			if (!this.hic.chrlst.includes(data.lead) || !this.hic.chrlst.includes(data.follow)) continue
 			const obj = this.lead2follow.get(data.lead).get(data.follow)
 			obj.data = [] as any
 			obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
