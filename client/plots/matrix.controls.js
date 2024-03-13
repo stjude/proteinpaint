@@ -687,8 +687,8 @@ export class MatrixControls {
 						settingsKey: 'showMatrixCNV',
 						options: [
 							{ label: 'Show all CNV', value: 'all' },
-							// { label: `Show only CNV gain`, value: 'onlyGain' },
-							// { label: `Show only CNV loss`, value: 'onlyLoss' },
+							{ label: `Show only CNV gain`, value: 'onlyGain' },
+							{ label: `Show only CNV loss`, value: 'onlyLoss' },
 							{ label: `Do not show CNV`, value: 'none' }
 						],
 						labelDisplay: 'block',

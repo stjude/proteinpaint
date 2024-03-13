@@ -2,7 +2,14 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import { mclass, dt2label, truncatingMutations, proteinChangingMutations } from '#shared/common'
+import {
+	mclass,
+	dt2label,
+	truncatingMutations,
+	proteinChangingMutations,
+	mclasscnvgain,
+	mclasscnvloss
+} from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 import { renderTable } from '../dom/table.ts'
@@ -2708,7 +2715,9 @@ function setMutationSelectionActions(self) {
 		onlyTruncating: showOnlyTrunc,
 		onlyPC: showOnlyPC,
 		none: showNone,
-		all: showAll
+		all: showAll,
+		onlyGain: showOnlyCNVGain,
+		onlyLoss: showOnlyCNVLoss
 	}
 	self.mutationControlCallback = mutationSelection => {
 		const menuGrp = self.dom.legendMenu.clear()
@@ -2871,6 +2880,76 @@ function showAll(menuGrp, targetData, self) {
 		targetData.dt.includes(4)
 	)
 		self.config.settings.matrix.showMatrixCNV = 'all'
+	self.app.dispatch({
+		type: 'plot_edit',
+		id: self.id,
+		config: self.config
+	})
+}
+
+function showOnlyCNVGain(menuGrp, targetData, self) {
+	menuGrp.hide()
+
+	//remove the individual legend filter in the group
+	self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(f => f.legendGrpName !== targetData.name)
+	// remove the grp legend filter for the group
+	self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(4))
+
+	for (const item of targetData.items) {
+		if (item.key == mclasscnvgain) continue
+		// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
+		// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
+		// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
+		const filterNew = {
+			legendGrpName: item.termid,
+			type: 'tvs',
+			tvs: {
+				isnot: true,
+				legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+				term: { type: 'geneVariant' },
+				values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+			}
+		}
+		self.config.legendValueFilter.lst.push(filterNew)
+	}
+
+	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster')
+		self.config.settings.matrix.showMatrixCNV = 'onlyGain'
+	self.app.dispatch({
+		type: 'plot_edit',
+		id: self.id,
+		config: self.config
+	})
+}
+
+function showOnlyCNVLoss(menuGrp, targetData, self) {
+	menuGrp.hide()
+
+	//remove the individual legend filter in the group
+	self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(f => f.legendGrpName !== targetData.name)
+	// remove the grp legend filter for the group
+	self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(4))
+
+	for (const item of targetData.items) {
+		if (item.key == mclasscnvloss) continue
+		// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
+		// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
+		// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
+		const filterNew = {
+			legendGrpName: item.termid,
+			type: 'tvs',
+			tvs: {
+				isnot: true,
+				legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+				term: { type: 'geneVariant' },
+				values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+			}
+		}
+		self.config.legendValueFilter.lst.push(filterNew)
+	}
+
+	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster')
+		self.config.settings.matrix.showMatrixCNV = 'onlyLoss'
 	self.app.dispatch({
 		type: 'plot_edit',
 		id: self.id,
