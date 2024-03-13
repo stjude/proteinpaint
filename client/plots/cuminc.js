@@ -994,8 +994,8 @@ function setRenderers(self) {
 
 	function getSvgSubElems(svg, chart) {
 		let clipRect, clipG, mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
-		const clipId = `${self.id}-${self.chartIncrement++}`
 		if (!svg.select('.sjpcb-cuminc-mainG').size()) {
+			const clipId = `${self.id}-${self.chartIncrement++}`
 			clipRect = svg.append('defs').append('clipPath').attr('id', clipId).append('rect')
 			clipG = svg.append('g').attr('class', 'sjpcb-cuminc-clipG')
 			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG')
@@ -1014,7 +1014,7 @@ function setRenderers(self) {
 				.attr('stroke-width', '2px')
 			plotRect = mainG.append('rect').attr('class', 'sjpcb-plot-tip-rect').style('fill', 'transparent')
 		} else {
-			clipRect = svg.select(`#${clipId}`)
+			clipRect = svg.select('defs clipPath rect')
 			clipG = svg.select('.sjpcb-cuminc-clipG')
 			mainG = svg.select('.sjpcb-cuminc-mainG')
 			seriesesG = mainG.select('.sjpcb-cuminc-seriesesG')
