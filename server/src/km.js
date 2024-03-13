@@ -6,7 +6,7 @@ import { spawn } from 'child_process'
 import readline from 'readline'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
-import lines2R from './lines2R.js'
+import run_R from './run_R.js'
 
 /*
 function cascade

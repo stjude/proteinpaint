@@ -4,7 +4,7 @@ import imagesize from 'image-size'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { get_term_cte } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
-import lines2R from './lines2R.js'
+import run_R from './run_R.js'
 import serverconfig from './serverconfig.js'
 import * as utils from './utils.js'
 import * as termdbsql from './termdb.sql.js'
@@ -575,20 +575,17 @@ function validateRinput(Rinput) {
 async function runRegression(Rinput, id2originalId, q, result) {
 	// run regression analysis in R
 	stime = new Date().getTime()
-	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await utils.write_file(Rinputfile, JSON.stringify(Rinput))
-	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
-	fs.unlink(Rinputfile, () => {})
+	const Routput = JSON.parse(
+		await run_R(path.join(serverconfig.binpath, 'utils', 'regression.R'), JSON.stringify(Rinput))
+	)
 	await parseRoutput(Rinput, Routput, id2originalId, q, result)
 	etime = new Date().getTime()
 	benchmark['NodeJS']['runRegression'] = (etime - stime) / 1000 + ' sec'
 }
 
 async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
-	if (Routput.length != 1) throw 'expected 1 json line in R output'
-	const out = JSON.parse(Routput[0])
-	const outdata = out.data
-	benchmark['regression.R'] = out.benchmark
+	const outdata = Routput.data
+	benchmark['regression.R'] = Routput.benchmark
 
 	for (const analysis of outdata) {
 		// convert "analysis" to "analysisResult", then push latter to resultLst

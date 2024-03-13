@@ -1,6 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-import lines2R from '#src/lines2R.js'
+import run_R from '#src/run_R.js'
 import {
 	TermdbClusterRequest,
 	TermdbClusterResponse,

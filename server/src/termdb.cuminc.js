@@ -2,7 +2,7 @@ import path from 'path'
 import { get_rows } from './termdb.sql'
 import { write_file } from './utils'
 import fs from 'fs'
-import lines2R from './lines2R'
+import run_R from './run_R'
 import serverconfig from './serverconfig'
 
 /*********** EXPORT

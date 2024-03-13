@@ -5,7 +5,7 @@ import * as utils from './utils.js'
 import * as vcf from '#shared/vcf.js'
 import * as common from '#shared/common.js'
 import * as termdbsql from './termdb.sql.js'
-import lines2R from './lines2R.js'
+import run_R from './run_R.js'
 import serverconfig from './serverconfig.js'
 
 /*
