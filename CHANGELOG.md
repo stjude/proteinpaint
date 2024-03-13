@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Fix custom jwt processing by replacing the remaining webpack_require in auth code
+
+
 ## 2.46.4
 
 Fixes:
