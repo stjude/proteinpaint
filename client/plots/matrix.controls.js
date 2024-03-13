@@ -26,6 +26,10 @@ export class MatrixControls {
 		this.setVariablesBtn(s)
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
+		if (state.termdbConfig.matrix?.settings?.addMutationCNVButtons && this.parent.chartType !== 'hierCluster')
+			this.setCNVBtn()
+		if (state.termdbConfig.matrix?.settings?.addMutationCNVButtons && this.parent.chartType !== 'hierCluster')
+			this.setMutationBtn()
 		this.setDownloadBtn(s)
 		this.setZoomInput()
 		this.setDragToggle({
@@ -628,6 +632,70 @@ export class MatrixControls {
 						chartType: 'legend',
 						settingsKey: 'linesep',
 						boxLabel: 'Line separated'
+					}
+				]
+			})
+			.html(d => d.label)
+			.style('margin', '2px 0')
+			.on('click', (event, d) => this.callback(event, d))
+	}
+
+	// Mutation button for selecting mutations to display on the matrix
+	setMutationBtn() {
+		this.opts.holder
+			.append('button')
+			.style('margin', '2px 0')
+			.datum({
+				label: 'Mutation',
+				rows: [
+					{
+						title: `Show mutation options`,
+						type: 'radio',
+						chartType: 'matrix',
+						settingsKey: 'showMatrixMutation',
+						options: [
+							{ label: 'Show all mutations', value: 'all' },
+							{ label: `Show only truncating mutations`, value: 'onlyTruncating' },
+							{ label: `Show only protein-changing mutations`, value: 'onlyPC' },
+							{ label: `Do not show mutations`, value: 'none' }
+						],
+						labelDisplay: 'block',
+						getDisplayStyle(plot) {
+							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+						},
+						callback: this.parent.mutationControlCallback
+					}
+				]
+			})
+			.html(d => d.label)
+			.style('margin', '2px 0')
+			.on('click', (event, d) => this.callback(event, d))
+	}
+
+	// CNV button for selecting the CNVs to display on the matrix
+	setCNVBtn() {
+		this.opts.holder
+			.append('button')
+			.style('margin', '2px 0')
+			.datum({
+				label: 'CNV',
+				rows: [
+					{
+						title: `Include the count in the gene label`,
+						type: 'radio',
+						chartType: 'matrix',
+						settingsKey: 'showMatrixCNV',
+						options: [
+							{ label: 'Show all CNV', value: 'all' },
+							// { label: `Show only CNV gain`, value: 'onlyGain' },
+							// { label: `Show only CNV loss`, value: 'onlyLoss' },
+							{ label: `Do not show CNV`, value: 'none' }
+						],
+						labelDisplay: 'block',
+						getDisplayStyle(plot) {
+							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+						},
+						callback: this.parent.CNVControlCallback
 					}
 				]
 			})

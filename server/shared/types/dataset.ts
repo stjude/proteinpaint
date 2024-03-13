@@ -552,6 +552,7 @@ type MatrixSettings = {
 	proteinChangingMutations?: Array<string>
 	showHints?: string[]
 	displayDictRowWithNoValues?: boolean
+	addMutationCNVButtons?: boolean
 }
 
 type Mclass = {
