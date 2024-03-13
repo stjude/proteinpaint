@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Add Mutation and CNV control buttons for GDC. Hide CNV by default for GDC.
+
 Fixes:
 - Fix custom jwt processing by replacing the remaining webpack_require in auth code
 
