@@ -62,6 +62,14 @@ export async function getPlotConfig(opts = {}, app) {
 				geneVariantCountSamplesSkipMclass: [],
 				cellbg: '#ececec',
 				showGrid: '', // false | 'pattern' | 'rect'
+				showMatrixMutation:
+					app.vocabApi.termdbConfig?.matrix?.settings?.addMutationCNVButtons && opts.chartType !== 'hierCluster'
+						? 'all'
+						: '',
+				showMatrixCNV:
+					app.vocabApi.termdbConfig?.matrix?.settings?.addMutationCNVButtons && opts.chartType !== 'hierCluster'
+						? 'none'
+						: '',
 				gridStroke: '#fff',
 				outlineStroke: '#ccc',
 				beamStroke: '#f00',
@@ -168,6 +176,13 @@ export async function getPlotConfig(opts = {}, app) {
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
 
+	if (
+		config.settings.matrix.showMatrixCNV == 'none' &&
+		!config.legendGrpFilter.lst.find(l => l.dt?.length == 1 && l.dt[0] == 4)
+	) {
+		// add the default CNV legend group value filter
+		config.legendGrpFilter.lst.push({ dt: [4] })
+	}
 	const m = config.settings.matrix
 	// harcode these overrides for now
 	m.duration = 0

@@ -215,8 +215,90 @@ export function getLegendData(legendGroups, refs, self) {
 		}
 	}
 
-	for (const f of this.config.legendGrpFilter.lst) {
-		legendData.push(f.legendData)
+	for (const grpFilter of self.config.legendGrpFilter.lst) {
+		if (
+			grpFilter.dt.length == 1 &&
+			grpFilter.dt[0] == 4 &&
+			!legendData.filter(l => l.dt)?.find(l => l.dt.length == 1 && l.dt[0] == 4)
+		) {
+			legendData.push({
+				name: 'CNV',
+				dt: grpFilter.dt,
+				origin: grpFilter.origin,
+				crossedOut: true,
+				items: grpFilter.filteredOutCats.map(fc => {
+					return {
+						termid: 'CNV',
+						key: fc,
+						text: self.mclass[fc].label,
+						color: self.mclass[fc]?.color,
+						isLegendItem: true
+					}
+				})
+			})
+		} else if (grpFilter.dt.includes(1)) {
+			const controlLabels = self.settings.matrix.controlLabels
+			const groupName = grpFilter.origin
+				? `${grpFilter.origin[0].toUpperCase() + grpFilter.origin.slice(1)} ${controlLabels.Mutations}`
+				: controlLabels.Mutations
+			if (!legendData.filter(l => l.dt)?.find(l => l.dt.includes(1) && l.origin == grpFilter.origin)) {
+				legendData.push({
+					name: groupName,
+					dt: grpFilter.dt,
+					origin: grpFilter.origin,
+					crossedOut: true,
+					items: grpFilter.filteredOutCats.map(fc => {
+						return {
+							termid: groupName,
+							key: fc,
+							text: self.mclass[fc].label,
+							color: self.mclass[fc]?.color,
+							isLegendItem: true
+						}
+					})
+				})
+			}
+		} else if (
+			grpFilter.dt.length == 1 &&
+			grpFilter.dt[0] == 2 &&
+			!legendData.filter(l => l.dt)?.find(l => l.dt.length == 1 && l.dt[0] == 2)
+		) {
+			legendData.push({
+				name: 'Fusion RNA',
+				dt: grpFilter.dt,
+				origin: grpFilter.origin,
+				crossedOut: true,
+				items: grpFilter.filteredOutCats.map(fc => {
+					return {
+						termid: 'Fusion RNA',
+						key: fc,
+						text: self.mclass[fc].label,
+						color: self.mclass[fc]?.color,
+						isLegendItem: true
+					}
+				})
+			})
+		} else if (
+			grpFilter.dt.length == 1 &&
+			grpFilter.dt[0] == 5 &&
+			!legendData.filter(l => l.dt)?.find(l => l.dt.length == 1 && l.dt[0] == 5)
+		) {
+			legendData.push({
+				name: 'Structural Variation',
+				dt: grpFilter.dt,
+				origin: grpFilter.origin,
+				crossedOut: true,
+				items: grpFilter.filteredOutCats.map(fc => {
+					return {
+						termid: 'Structural Variation',
+						key: fc,
+						text: self.mclass[fc].label,
+						color: self.mclass[fc]?.color,
+						isLegendItem: true
+					}
+				})
+			})
+		}
 	}
 
 	// sort the items in legend groups, put greyedOut and crossedOut items to the end
@@ -231,7 +313,21 @@ export function getLegendData(legendGroups, refs, self) {
 			return getStatusOrder(a) - getStatusOrder(b)
 		})
 	}
-	return legendData.sort((a, b) => (a.order && b.order ? a.order - b.order : a.order ? -1 : b.order ? 1 : 0))
+	return legendData.sort((a, b) =>
+		a.crossedOut && b.crossedOut
+			? 0
+			: a.crossedOut
+			? 1
+			: b.crossedOut
+			? -1
+			: a.order && b.order
+			? a.order - b.order
+			: a.order
+			? -1
+			: b.order
+			? 1
+			: 0
+	)
 }
 
 export function getLegendItemText(item, count, t, s) {

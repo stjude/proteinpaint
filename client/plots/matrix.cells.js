@@ -85,11 +85,19 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
 	} else if (value.dt == 1 || value.dt == 2) {
-		const divisor = 3
-		cell.height = s.rowh / divisor
-		cell.width = colw
-		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
-		cell.y = height * 0.33333
+		if (s.showMatrixCNV == 'none') {
+			// when CNV is not displayed, show as tall bar
+			cell.height = s.rowh
+			cell.width = colw
+			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+			cell.y = 0
+		} else {
+			const divisor = 3
+			cell.height = s.rowh / divisor
+			cell.width = colw
+			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+			cell.y = height * 0.33333
+		}
 	} else if (value.dt == 4 || value.dt == 3) {
 		cell.height = s.rowh
 		cell.width = colw

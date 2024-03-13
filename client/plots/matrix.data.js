@@ -109,15 +109,23 @@ export function applyLegendValueFilter() {
 
 	for (const grpFilter of self.config.legendGrpFilter.lst) {
 		if (grpFilter.dt) {
+			const filteredOutCats = new Set() // the classes removed by the grpFilter
 			for (const oneSampleData of self.origData.lst) {
 				for (const annoForOneTerm of Object.values(oneSampleData)) {
-					if (annoForOneTerm.values)
-						annoForOneTerm.values = annoForOneTerm.values.filter(
-							v => !(grpFilter.dt.includes(v.dt) && (!grpFilter.origin || v.origin == grpFilter.origin))
-						)
+					if (annoForOneTerm.values) {
+						const newValues = []
+						for (const v of annoForOneTerm.values) {
+							if (!(grpFilter.dt.includes(v.dt) && (!grpFilter.origin || v.origin == grpFilter.origin))) {
+								newValues.push(v)
+							} else {
+								filteredOutCats.add(v.class)
+							}
+						}
+						annoForOneTerm.values = newValues
+					}
 				}
 			}
-
+			grpFilter.filteredOutCats = [...filteredOutCats]
 			for (const oneSampleData of Object.values(self.origData.samples)) {
 				for (const annoForOneTerm of Object.values(oneSampleData)) {
 					if (annoForOneTerm.values)
@@ -125,13 +133,6 @@ export function applyLegendValueFilter() {
 							v => !(grpFilter.dt.includes(v.dt) && (!grpFilter.origin || v.origin == grpFilter.origin))
 						)
 				}
-			}
-		} else {
-			for (const oneSampleData of self.origData.lst) {
-				delete oneSampleData[grpFilter.$id]
-			}
-			for (const oneSampleData of Object.values(self.origData.samples)) {
-				delete oneSampleData[grpFilter.$id]
 			}
 		}
 	}
