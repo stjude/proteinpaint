@@ -6,7 +6,7 @@ import { interpolateSqlValues } from './termdb.sql.js'
 import { mclass, dt2label, morigin } from '#shared/common.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import { authApi } from './auth.js'
-import lines2R from './lines2R.js'
+import run_R from './run_R.js'
 import { write_file, read_file } from './utils.js'
 
 /*

@@ -3,7 +3,7 @@ import { getData } from './termdb.matrix'
 import { write_file } from './utils'
 import fs from 'fs'
 import serverconfig from './serverconfig'
-import lines2R from './lines2R'
+import run_R from './run_R'
 
 export async function get_survival(q, ds) {
 	try {

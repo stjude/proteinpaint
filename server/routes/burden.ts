@@ -1,5 +1,5 @@
 import { BurdenRequest, BurdenResponse } from '#shared/types/routes/burden.ts'
-import lines2R from '#src/lines2R.js'
+import run_R from '#src/run_R.js'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { write_file } from '#src/utils.js'

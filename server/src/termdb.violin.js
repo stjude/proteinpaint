@@ -1,7 +1,7 @@
 import { unlink } from 'fs'
 import { scaleLinear, scaleLog } from 'd3'
 import serverconfig from './serverconfig'
-import lines2R from './lines2R'
+import run_R from './run_R'
 // import { run_rust } from '@sjcrh/proteinpaint-rust'
 import path from 'path'
 import { write_file } from './utils'

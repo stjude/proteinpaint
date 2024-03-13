@@ -1,7 +1,7 @@
 import path from 'path'
 import { get_samples, get_term_cte, interpolateSqlValues } from './termdb.sql'
 import { getFilterCTEs } from './termdb.filter'
-import lines2R from './lines2R'
+import run_R from './run_R'
 import fs from 'fs'
 import imagesize from 'image-size'
 import serverconfig from './serverconfig'

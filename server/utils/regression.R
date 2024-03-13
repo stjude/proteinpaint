@@ -6,10 +6,11 @@
 # USAGE
 ###########
 
-# Usage: Rscript regression.R in.json > results
+# Usage: echo <input json> | Rscript regression.R > <output json>
 
-# Input data is in JSON format and is read in from <in.json> file.
-# Regression results are written in JSON format to stdout.
+# Input is input data in JSON format.
+# Output is regression results in JSON format.
+# Input is received from standard input and output is sent to standard output.
 
 # Input JSON specifications:
 # {
@@ -77,20 +78,18 @@ suppressPackageStartupMessages({
   library(lmtest)
 })
 
-args <- commandArgs(trailingOnly = T)
-if (length(args) != 1) stop("Usage: Rscript regression.R in.json > results")
-infile <- args[1]
-
 benchmark <- list()
-
 
 ################
 # PREPARE DATA #
 ################
 
-# read in json input
+# stream in json input
 stime <- Sys.time()
-input <- fromJSON(infile)
+con <- file("stdin", "r")
+json <- readLines(con)
+close(con)
+input <- fromJSON(json)
 etime <- Sys.time()
 dtime <- etime - stime
 benchmark[["read_json_input"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
