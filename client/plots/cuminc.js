@@ -183,6 +183,7 @@ class MassCumInc
 class MassCumInc {
 	constructor(opts) {
 		this.type = 'cuminc'
+		this.chartIncrement = 0
 	}
 
 	async init(appState) {
@@ -893,9 +894,20 @@ function setRenderers(self) {
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
-		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg, chart)
+		const [clipRect, clipG, mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(
+			svg,
+			chart
+		)
 		/* eslint-enable */
-		//if (d.xVals) computeScales(d, s);
+
+		// set dimensions of clipRect
+		// will be same as those of plotRect
+		clipRect
+			.attr('x', 0)
+			.attr('width', s.svgw - s.svgPadding.left - s.svgPadding.right)
+			.attr('y', 0)
+			.attr('height', s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset)
+
 		const xOffset = s.svgPadding.left
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
 		const serieses = seriesesG
@@ -925,9 +937,9 @@ function setRenderers(self) {
 		})
 
 		plotRect
-			.attr('x', 0) //s.svgPadding.left) //s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5)
+			.attr('x', 0)
 			.attr('width', s.svgw - s.svgPadding.left - s.svgPadding.right)
-			.attr('y', 0) //s.svgPadding.top) // - s.svgPadding.bottom + 5)
+			.attr('y', 0)
 			.attr('height', s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset)
 
 		svg.seriesTip.update({
@@ -981,10 +993,13 @@ function setRenderers(self) {
 	}
 
 	function getSvgSubElems(svg, chart) {
-		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
+		let clipRect, clipG, mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
 		if (!svg.select('.sjpcb-cuminc-mainG').size()) {
+			const clipId = `${self.id}-${self.chartIncrement++}`
+			clipRect = svg.append('defs').append('clipPath').attr('id', clipId).append('rect')
+			clipG = svg.append('g').attr('class', 'sjpcb-cuminc-clipG')
 			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG')
-			seriesesG = mainG.append('g').attr('class', 'sjpcb-cuminc-seriesesG')
+			seriesesG = mainG.append('g').attr('class', 'sjpcb-cuminc-seriesesG').attr('clip-path', `url(#${clipId})`)
 			axisG = mainG.append('g').attr('class', 'sjpcb-cuminc-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-x-axis')
 			yAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-y-axis')
@@ -999,6 +1014,8 @@ function setRenderers(self) {
 				.attr('stroke-width', '2px')
 			plotRect = mainG.append('rect').attr('class', 'sjpcb-plot-tip-rect').style('fill', 'transparent')
 		} else {
+			clipRect = svg.select('defs clipPath rect')
+			clipG = svg.select('.sjpcb-cuminc-clipG')
 			mainG = svg.select('.sjpcb-cuminc-mainG')
 			seriesesG = mainG.select('.sjpcb-cuminc-seriesesG')
 			axisG = mainG.select('.sjpcb-cuminc-axis')
@@ -1015,7 +1032,7 @@ function setRenderers(self) {
 			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
 		}
 
-		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
+		return [clipRect, clipG, mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
 	}
 
 	function renderSeries(g, series, s) {
@@ -1376,7 +1393,7 @@ function getPj(self) {
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
 			scaledX(row, context) {
-				const xScale = context.context.context.context.parent.xScale.clamp(true)
+				const xScale = context.context.context.context.parent.xScale.clamp(false)
 				return xScale(context.self.x)
 			},
 			yTickValues(row, context) {
@@ -1402,7 +1419,7 @@ function getPj(self) {
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
 			scaledY(row, context) {
-				const yScale = context.context.context.context.parent.yScale.clamp(true)
+				const yScale = context.context.context.context.parent.yScale.clamp(false)
 				const s = context.self
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
 			},
