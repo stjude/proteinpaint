@@ -3,8 +3,7 @@ import { axisstyle, font } from '#src/client'
 import { axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { format as d3format } from 'd3-format'
-import { select as d3select, pointer, Selection } from 'd3-selection'
-import { Dom } from '../../../types/d3'
+import { selectAll, pointer, Selection } from 'd3-selection'
 
 export class ChrPairView {
 	/** opts */
