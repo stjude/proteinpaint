@@ -1,1 +1,2 @@
-
+Fixes:
+- Include gfClient to the pp deps image
