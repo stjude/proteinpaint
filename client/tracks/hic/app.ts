@@ -6,7 +6,7 @@ import { showErrorsWithCounter } from '../../dom/sayerror'
 import { hicViewInit } from './views/view'
 import * as client from '#src/client'
 import { select as d3select } from 'd3-selection'
-import { HicDataMapper } from './data/dataMapper'
+import { hicParseFile } from './data/parseData'
 
 class HicApp {
 	/** Required for rx */
@@ -38,7 +38,6 @@ class HicApp {
 	store: any
 	/** Required for rx */
 	type: 'app'
-	dataMapper: any
 	views = ['genome', 'chrpair', 'detail', 'horizontal']
 
 	constructor(opts) {
@@ -122,8 +121,7 @@ class HicApp {
 	async init() {
 		this.determineView()
 		try {
-			this.dataMapper = new HicDataMapper(this.hic, true, this.errList)
-			await this.dataMapper.getHicStraw(this.hic, true, this.errList)
+			await hicParseFile(this.hic, true, this.errList)
 			this.getViewsConfig()
 
 			this.store = await hicStoreInit({ app: this.api, state: this.hic.state })
@@ -140,7 +138,6 @@ class HicApp {
 					state: this.state,
 					dom: this.dom,
 					hic: this.hic,
-					dataMapper: this.dataMapper,
 					errList: this.errList,
 					error: this.error
 				})

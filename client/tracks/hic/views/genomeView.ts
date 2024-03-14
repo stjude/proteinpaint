@@ -40,7 +40,8 @@ export class GenomeView {
 	hic: any
 	plotDiv: MainPlotDiv
 	resolution: number
-	parent: any
+	parent: (prop: string) => string | number
+	colorizeElement: any
 
 	/** Dom */
 	tip = new client.Menu()
@@ -66,6 +67,8 @@ export class GenomeView {
 	yoff = 0
 	binpx = 1
 	atdev_chrnum = 8
+	min = 0
+	max = 0
 
 	constructor(opts) {
 		this.app = opts.app
@@ -73,6 +76,7 @@ export class GenomeView {
 		this.plotDiv = opts.plotDiv
 		this.data = opts.data
 		this.parent = opts.parent
+		this.colorizeElement = opts.colorizeElement
 		this.resolution = opts.hic.bpresolution[0]
 		this.svg = this.plotDiv.plot.append('svg')
 		this.layer_map = this.svg.append('g')
@@ -434,6 +438,8 @@ export class GenomeView {
 
 	async update(data) {
 		this.data = data
+		this.min = this.parent('min') as number
+		this.max = this.parent('max') as number
 		await this.makeElements()
 	}
 
@@ -451,7 +457,7 @@ export class GenomeView {
 				const leadpx = Math.floor(plead / this.resolution) * this.binpx
 				const followpx = Math.floor(pfollow / this.resolution) * this.binpx
 				obj.data.push([leadpx, followpx, value])
-				this.parent.colorizeElement(leadpx, followpx, value, obj, this.binpx, this.binpx)
+				await this.colorizeElement(leadpx, followpx, value, obj, this.binpx, this.binpx)
 			}
 			obj.img.attr('xlink:href', obj.canvas.toDataURL())
 			if (obj.canvas2) {

@@ -6,6 +6,9 @@ import { ChrPairView } from './chrPairView'
 import { GenomeView } from './genomeView.ts'
 import { controlPanelInit } from '../controls/controlPanel'
 import { InfoBar } from '../dom/infoBar'
+import { HicDataMapper } from '../data/dataMapper'
+import { GenomeDataFetcher } from '../data/genomeDataFetcher.ts'
+import { DataFetcher } from '../data/dataFetcher.ts'
 
 export class HicView {
 	dom: any
@@ -22,6 +25,7 @@ export class HicView {
 	components = {
 		controls: []
 	}
+	data: any
 	infoBar: any
 	error: any
 	skipMain = true
@@ -44,7 +48,7 @@ export class HicView {
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		this.app = opts.app
-		this.dataMapper = opts.dataMapper
+		this.dataMapper = new HicDataMapper(this.hic)
 		this.activeView = this.state.currView
 		this.error = opts.error
 	}
@@ -53,10 +57,14 @@ export class HicView {
 		return appState
 	}
 
+	getMinMax() {
+		return [this.min, this.max]
+	}
+
 	async colorizeElement(lead: number, follow: number, v: number, obj: any, width: number, height: number) {
 		const bpMinV = this.min
 		const bpMaxV = this.max
-		const currView = this.activeView
+		const currView = this.app.getState().currView
 
 		if (v >= 0) {
 			// positive or zero, use red
@@ -95,8 +103,11 @@ export class HicView {
 				plotDiv: this.plotDiv,
 				hic: this.hic,
 				app: this.app,
-				data: this.dataMapper.data,
-				parent: this
+				data: this.data,
+				parent: prop => {
+					return this[prop]
+				},
+				colorizeElement: this.colorizeElement
 			})
 			this.genome.render()
 		} else if (this.state.currView === 'chrpair') {
@@ -104,7 +115,7 @@ export class HicView {
 				plotDiv: this.plotDiv,
 				hic: this.hic,
 				app: this.app,
-				data: this.dataMapper.data,
+				data: this.data,
 				parent: this
 			})
 			this.chrpair.render()
@@ -183,8 +194,18 @@ export class HicView {
 		return [xObj, yObj]
 	}
 
-	setDataArgs(appState) {
-		this.state = this.app.getState(appState)
+	async fetchData(obj) {
+		if (this.activeView == 'genome') {
+			const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
+			this.data = await genomeFetcher.getData(obj)
+		} else {
+			const dataFetcher = new DataFetcher(this.hic, true, this.errList)
+			this.data = await dataFetcher.getData(obj)
+		}
+	}
+
+	async setDataArgs(appState) {
+		this.state = await this.app.getState(appState)
 		const currView = this.state[this.state.currView]
 		const args = {
 			nmeth: currView.nmeth,
@@ -192,7 +213,7 @@ export class HicView {
 			matrixType: currView.matrixType
 		}
 
-		if (currView == 'chrpair') {
+		if (this.state.currView == 'chrpair') {
 			//pos1
 			args['lead'] = this.state.x.chr
 			//pos2
@@ -203,15 +224,18 @@ export class HicView {
 
 	async init() {
 		try {
+			this.activeView = this.state.currView
 			const currView = this.state[this.state.currView]
 			//This only works for genome view.
 			//Will need to make it compatible with other views
 			const obj = {
+				matrixType: currView.matrixType,
 				nmeth: currView.nmeth,
 				resolution: this.hic['bpresolution'][0]
 			}
 
-			const [min, max] = await this.dataMapper.getData(obj)
+			await this.fetchData(obj)
+			const [min, max] = this.dataMapper.sortData(this.data)
 
 			this.min = min
 			this.max = max
@@ -249,8 +273,9 @@ export class HicView {
 
 	async main(appState: any) {
 		if (this.skipMain == false) {
-			const args = this.setDataArgs(appState)
-			const [min, max] = await this.dataMapper.getData(args)
+			const args = await this.setDataArgs(appState)
+			await this.fetchData(args)
+			const [min, max] = this.dataMapper.sortData(this.data)
 			this.min = min
 			this.max = max
 
@@ -265,7 +290,7 @@ export class HicView {
 				this.initView()
 				this.activeView == this.state.currView
 			} else {
-				await this[this.state.currView].update(this.dataMapper.data)
+				await this[this.state.currView].update(this.data)
 			}
 			this.infoBar.update()
 		} else {
