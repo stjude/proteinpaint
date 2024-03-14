@@ -83,11 +83,14 @@ async function getBurdenEstimates(
 	// TODO: use the dataset location
 	const { fit, surv, sample } = ds.cohort.cumburden.files
 	if (!fit || !surv || !sample) throw `missing one or more of ds.cohort.burden.files.{fit, surv, sample}`
+	if (!ageCutoffs[data.diaggrp]) throw `unkown age cutoff for diaggrp='${data.diaggrp}'`
+	const ageCutoff = ageCutoffs[data.diaggrp]
 	const args = [
 		infile,
 		`${serverconfig.tpmasterdir}/${fit}`,
 		`${serverconfig.tpmasterdir}/${surv}`,
-		`${serverconfig.tpmasterdir}/${sample}`
+		`${serverconfig.tpmasterdir}/${sample}`,
+		ageCutoff
 	]
 	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/burden.R'), [], args)
 	const estimates = JSON.parse(Routput[0])
@@ -141,3 +144,17 @@ const defaults = Object.freeze({
 	pelvis: 0,
 	abd: 0 //2.4
 })
+
+const ageCutoffs = {
+	1: 50, // "Acute lymphoblastic leukemia"
+	2: 45, // "AML"
+	3: 55, // "Hodgkin lymphoma"
+	4: 50, // "Non-Hodgkin lymphoma"
+	5: 40, // "Central nervous system"
+	6: 60, // "Bone tumor"
+	7: 50, // "STS"
+	8: 45, // "Wilms tumor"
+	9: 45, // "Neuroblastoma"
+	10: 45, // "Retinoblastoma"
+	11: 50 // "Germ cell tumor";
+}
