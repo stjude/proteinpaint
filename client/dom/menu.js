@@ -167,6 +167,35 @@ export class Menu {
 		return this
 	}
 
+	// simplified alternative to show(), with less arguments
+	show2(_x, _y) {
+		let x = _x
+		let y = _y
+		this.prevX = _x
+		this.prevY = _y
+
+		// show around a given point
+		document.body.appendChild(this.dnode)
+		this.d.style('display', 'block')
+
+		x = x + window.scrollX + this.offsetX
+		y = y + window.scrollY + this.offsetY
+
+		const width = window.innerWidth
+		const height = window.innerHeight
+		const middlex = width / 2
+		const middley = height / 2
+		const p = this.dnode.getBoundingClientRect()
+
+		//does not fit to the right
+		if (/*width - x < middlex &&*/ x + p.width > width) this.d.style('left', 0)
+		else this.d.style('left', x + 'px')
+
+		this.d.style('top', y + 'px').style('bottom', null)
+		this.d.transition().style('opacity', 1)
+		return this
+	}
+
 	showunder(dom) {
 		// route to .show()
 		const p = dom.getBoundingClientRect()

@@ -134,7 +134,7 @@ async function click2sunburst(d, tk, block, tippos) {
 			// positioned relative to the bottom of the div, which may not be visible
 			// relative to the screen/window bottom and so the sample table is rendered
 			// below the screen and not visible unless the user scrolls down
-			tk.itemtip.show(x, y) //, false, false)
+			tk.itemtip.show2(x, y)
 		}
 	}
 	if (d.aa) {
