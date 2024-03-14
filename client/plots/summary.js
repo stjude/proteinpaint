@@ -343,8 +343,7 @@ export async function getPlotConfig(opts, app) {
 		groups: [],
 		settings: {
 			controls: {
-				term2: null, // the previous overlay value may be displayed as a convenience for toggling
-				term0: null
+				isOpen: false
 			},
 			common: {
 				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log

@@ -68,12 +68,15 @@ class Scatter {
 	}
 
 	async init(appState) {
-		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
+		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
+		const controlsHolder = leftDiv
+			.insert('div')
+			.style('display', 'inline-block')
+			.attr('class', 'pp-termdb-plot-controls')
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
-		const controlsHolder = controlsDiv.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
 
 		this.dom = {
 			header: this.opts.header,
@@ -82,7 +85,7 @@ class Scatter {
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
 			controlsHolder,
-			toolsDiv: controlsHolder.insert('div')
+			toolsDiv: leftDiv.insert('div')
 		}
 
 		this.settings = {}
