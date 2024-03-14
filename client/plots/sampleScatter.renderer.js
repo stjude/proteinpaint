@@ -535,14 +535,14 @@ export function setRenderers(self) {
 		toolsDiv.selectAll('*').remove()
 		let display = 'block'
 		if (inline) display = 'inline-block'
-		const helpDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
-			.attr('name', 'sjpp-help-btn') //For unit tests
-		icon_functions['help'](helpDiv, {
-			handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
-		})
+		// const helpDiv = toolsDiv
+		// 	.insert('div')
+		// 	.style('display', display)
+		// 	.style('margin', '20px')
+		// 	.attr('name', 'sjpp-help-btn') //For unit tests
+		// icon_functions['help'](helpDiv, {
+		// 	handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
+		// })
 
 		const homeDiv = toolsDiv
 			.insert('div')
@@ -564,7 +564,6 @@ export function setRenderers(self) {
 		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
 		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
 		const lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
-
 		if (!(self.is2DLarge || self.is3D)) {
 			icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
 			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
