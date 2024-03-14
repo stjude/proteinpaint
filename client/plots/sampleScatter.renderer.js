@@ -132,7 +132,7 @@ export function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
-			chart.regressionG = chart.serie.append('g').attr('class', 'sjpcb-scatter-lowess')
+			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-scatter-lowess')
 
 			//Adding clip path
 			const id = `${Date.now()}`
