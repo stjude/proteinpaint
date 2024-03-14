@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.47.0
 
 Features:
 - Add Mutation and CNV control buttons for GDC. Hide CNV by default for GDC.
