@@ -92,11 +92,9 @@ export async function get_survival(q, ds) {
 		// perform survival analysis for each chart
 		for (const chartId in byChartSeries) {
 			const data = byChartSeries[chartId]
-			const datafile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-			await write_file(datafile, JSON.stringify(data))
-			const out = await lines2R(path.join(serverconfig.binpath, 'utils/survival.R'), [], [datafile])
-			const survival_data = JSON.parse(out)
-
+			const survival_data = JSON.parse(
+				await run_R(path.join(serverconfig.binpath, 'utils', 'survival.R'), JSON.stringify(data))
+			)
 			// parse survival estimates
 			for (const obj of survival_data.estimates) {
 				for (const key in obj) {
@@ -128,8 +126,6 @@ export async function get_survival(q, ds) {
 				if (!final_data.tests) final_data.tests = {}
 				final_data.tests[chartId] = survival_data.tests
 			}
-
-			fs.unlink(datafile, () => {})
 		}
 		// sort by d.x
 		final_data.case.sort((a, b) => a[2] - b[2])

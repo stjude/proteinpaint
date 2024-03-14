@@ -10,13 +10,17 @@ library(parallel)
 
 options(warn=-1)
 
-# Input from lines2R
+# stream in json input data
+con <- file("stdin", "r")
+json <- readLines(con)
+close(con)
+input <- fromJSON(json)
+# handle input arguments
 args <- commandArgs(trailingOnly = T)
-if (length(args) != 4) stop("Usage: Rscript burden.R in.json fitsData survData sampleData > results")
-infile <- args[1]
-fitsData <- args[2]
-survData <- args[3]
-sampleData <- args[4]
+if (length(args) != 3) stop("Usage: echo <in_json> | Rscript burden.R fitsData survData sampleData > <out_json>")
+fitsData <- args[1]
+survData <- args[2]
+sampleData <- args[3]
 
 chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
 availCores <- detectCores()
@@ -82,7 +86,6 @@ newdata_chc_sampled$t.endage=seq(6,71,1)
 ### originally data fit to 60 only. using cphfits can get est up to 60 only. ==> later I further cut at 50 or so to fit lines, becuase original data had 95th percentile around age 50 or so.
 newdata_chc_sampled=newdata_chc_sampled[newdata_chc_sampled$t.endage<=60,]
 
-input <- fromJSON(infile)
 # paste(names(input), input, sep = ":", collapse = ",")
 pr=input$diaggrp
 sexval=input$sex

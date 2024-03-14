@@ -101,10 +101,9 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 		inputData.matrix.push(getZscore(row))
 	}
 
-	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await utils.write_file(Rinputfile, JSON.stringify(inputData))
-	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/hclust.R'), [], [Rinputfile]))
-	await fs.promises.unlink(Rinputfile)
+	const Routput = JSON.parse(
+		await run_R(path.join(serverconfig.binpath, 'utils', 'hclust.R'), JSON.stringify(inputData))
+	)
 
 	const row_names_index: number[] = Routput.RowOrder.map(row => inputData.row_names.indexOf(row.name)) // sorted rows. value is array index in input data
 	const col_names_index: number[] = Routput.ColOrder.map(col => inputData.col_names.indexOf(col.name)) // sorted columns, value is array index from input array
