@@ -188,8 +188,8 @@ export class Menu {
 		const p = this.dnode.getBoundingClientRect()
 
 		//does not fit to the right
-		if (/*width - x < middlex &&*/ x + p.width > width) this.d.style('left', 0)
-		else this.d.style('left', x + 'px')
+		if (x + p.width > width) this.d.style('left', null).style('right', width - x + 'px')
+		else this.d.style('left', x + 'px').style('right', null)
 
 		this.d.style('top', y + 'px').style('bottom', null)
 		this.d.transition().style('opacity', 1)
