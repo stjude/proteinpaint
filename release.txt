@@ -1,2 +1,1 @@
-Fixes:
-- Do not force the sample table to be positioned relative to screen bottom after a sunburst click
+

@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - Fix custom jwt processing by replacing the remaining webpack_require in auth code
+- Do not force the sample table to be positioned relative to screen bottom after a sunburst click
 
 
 ## 2.46.4
