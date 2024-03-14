@@ -178,7 +178,10 @@ export class Menu {
 		document.body.appendChild(this.dnode)
 		this.d.style('display', 'block')
 
-		x = x + window.scrollX + this.offsetX
+		// the event.clientX and event.clientY are already veiwport positions.
+		// when position == absolute, (what we have now) the scroll position has to be considered.
+		// when position == fixed, relative to the viewport, the scroll could be ignored, but the menu doesn't follow the scroll
+		x = x + window.scrollX + this.offsetX // by adding the scroll, the postion of menu becomes relative to document.body
 		y = y + window.scrollY + this.offsetY
 
 		const width = window.innerWidth
@@ -188,10 +191,13 @@ export class Menu {
 		const p = this.dnode.getBoundingClientRect()
 
 		//does not fit to the right
-		if (x + p.width > width) this.d.style('left', null).style('right', width - x + 'px')
-		else this.d.style('left', x + 'px').style('right', null)
+		// "right" is relative to the right side of menu and window
+		if (x + p.width > width) this.d.style('left', '').style('right', '5px')
+		else this.d.style('left', x + 'px').style('right', '')
 
-		this.d.style('top', y + 'px').style('bottom', null)
+		// for now, the users have to scroll down to see the entire menu if there is not enough height for the menu
+		// TODO: reposition the menu to make it at least partially visible.
+		this.d.style('top', y + 'px').style('bottom', '')
 		this.d.transition().style('opacity', 1)
 		return this
 	}

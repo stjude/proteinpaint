@@ -156,7 +156,7 @@ export function setInteractivity(self) {
 		}
 		self.dom.matrixCellHoverOver.clear()
 		self.dom.matrixCellHoverOver.d.append('div').html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-		self.dom.matrixCellHoverOver.show(event.clientX, event.clientY)
+		self.dom.matrixCellHoverOver.show2(event.clientX, event.clientY)
 		self.dom.mainG.on('mouseout', self.mouseout)
 	}
 
