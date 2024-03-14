@@ -361,7 +361,7 @@ class Scatter {
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.app.hasWebGL?.() ? ['discrete', 'continuous'] : ['discrete'],
 				processInput: tw => {
-					if (tw) tw.q = { mode: 'continuous' }
+					if (tw?.term.type == 'integer' || tw?.term.type == 'float') tw.q = { mode: 'continuous' }
 				}
 			})
 		}
