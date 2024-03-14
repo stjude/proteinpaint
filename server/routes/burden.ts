@@ -73,24 +73,22 @@ async function getBurdenEstimates(
 	q: { query: { [x: string]: any } },
 	ds: { cohort: { cumburden: { files: { fit: any; surv: any; sample: any } } } }
 ) {
-	const infile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	for (const k in q.query) {
 		q.query[k] = Number(q.query[k])
 	}
 	const data = Object.assign({}, defaults, q.query)
 	//console.log(40, data, JSON.stringify(data))
-	await write_file(infile, JSON.stringify(data))
 	// TODO: use the dataset location
 	const { fit, surv, sample } = ds.cohort.cumburden.files
 	if (!fit || !surv || !sample) throw `missing one or more of ds.cohort.burden.files.{fit, surv, sample}`
 	const args = [
-		infile,
 		`${serverconfig.tpmasterdir}/${fit}`,
 		`${serverconfig.tpmasterdir}/${surv}`,
 		`${serverconfig.tpmasterdir}/${sample}`
 	]
-	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/burden.R'), [], args)
-	const estimates = JSON.parse(Routput[0])
+	const estimates = JSON.parse(
+		await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), JSON.stringify(data), args)
+	)
 	return estimates
 }
 

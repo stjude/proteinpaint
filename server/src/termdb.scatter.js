@@ -464,10 +464,7 @@ function isComputable(term, value) {
 
 export async function trigger_getLowessCurve(req, q, res) {
 	const data = q.coords
-	const datafile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await write_file(datafile, JSON.stringify(data))
-	let result = await lines2R(path.join(serverconfig.binpath, 'utils/lowess.R'), [], [datafile])
-	result = JSON.parse(result)
+	const result = JSON.parse(await run_R(path.join(serverconfig.binpath, 'utils', 'lowess.R'), JSON.stringify(data)))
 	const lowessCurve = []
 	for (const [i, x] of Object.entries(result.x)) lowessCurve.push([x, result.y[i]])
 	return res.send(lowessCurve)

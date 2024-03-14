@@ -6,10 +6,10 @@
 # Usage #
 #########
 
-# Usage: Rscript survival.R in.json > results
+# Usage: echo <in_json> | Rscript survival.R > <out_json>
 
-# Input data is in JSON format and is read in from <in.json> file.
-# Survival results are written in JSON format to stdout.
+#   in_json: [string] input data in JSON format. Streamed through stdin.
+#   out_json: [string] survival results in JSON format. Streamed to stdout.
 
 # Input JSON:
 # [
@@ -34,11 +34,11 @@
 library(jsonlite)
 library(survival)
 
-# read in data
-args <- commandArgs(trailingOnly = T)
-if (length(args) != 1) stop("one argument needed")
-infile <- args[1]
-dat <- fromJSON(infile)
+# stream in json input
+con <- file("stdin", "r")
+json <- readLines(con)
+close(con)
+dat <- fromJSON(json)
 
 # perform survival analysis
 dat$series <- as.factor(dat$series)

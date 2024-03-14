@@ -1,5 +1,7 @@
-# Usage:
-# time Rscript hclust.R in.json
+# Usage: echo <in_json> | Rscript hclust.R > <out_json>
+
+#   in_json: [string] input data in JSON format. Streamed through stdin.
+#   out_json: [string] clustering results in JSON format. Streamed to stdout.
 
 # Image is in Rplots.pdf
 
@@ -21,10 +23,10 @@ suppressWarnings({
 #library(ggplot2) # Uncomment this line to plot heatmap in R
 
 # Distance matrix
-args <- commandArgs(trailingOnly = T)
-if (length(args) != 1) stop("Usage: Rscript test.R in.json > results")
-infile <- args[1]
-input <- fromJSON(infile)
+con <- file("stdin", "r")
+json <- readLines(con)
+close(con)
+input <- fromJSON(json)
 
 #if (length(input$valueIsTransformed) == 0 || input$valueIsTransformed == FALSE) {
 # normalized_matrix <- t(scale(t(input$matrix))) # Applying z-score normalization
