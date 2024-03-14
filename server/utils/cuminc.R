@@ -1,15 +1,15 @@
 #################################
-# Cumulative incidence analysis #
+# CUMULATIVE INCIDENCE ANALYSIS #
 #################################
 
 #########
-# Usage #
+# USAGE
 #########
 
-# Usage: Rscript cuminc.R in.json > results
+# Usage: echo <in_json> | Rscript cuminc.R > <out_json>
 
-# Input data is in JSON format and is read in from <in.json> file.
-# Cuminc results are written in JSON format to stdout.
+#   in_json: [string] input data in JSON format. Streamed through stdin.
+#   out_json: [string] cumulative incidence results in JSON format. Streamed to stdout.
 
 # Input JSON:
 # {
@@ -53,12 +53,17 @@
 
 
 ########
-# Code #
+# CODE
 ########
 
 library(parallel)
 library(jsonlite)
 suppressPackageStartupMessages(library(cmprsk))
+
+
+#############
+# FUNCTIONS #
+#############
 
 # function to run cumulative incidence analysis on data for a chart
 run_cuminc <- function(chart, startTime) {
@@ -242,17 +247,26 @@ compute_counts <- function(res, chart) {
 }
 
 
-# read in data
-args <- commandArgs(trailingOnly = T)
-if (length(args) != 1) stop("Usage: Rscript cuminc.R in.json > results")
-infile <- args[1]
-input <- fromJSON(infile)
+################
+# PREPARE DATA #
+################
+
+# stream in json input
+con <- file("stdin", "r")
+json <- readLines(con)
+close(con)
+input <- fromJSON(json)
 
 dat <- input$data
 startTime <- ifelse("startTime" %in% names(input), input$startTime, NA)
 
 #save.image("~/test.RData")
 #stop("stop here")
+
+
+################
+# RUN ANALYSIS #
+################
 
 # perform cumulative incidence analysis
 # parallelize the analysis across charts/variants

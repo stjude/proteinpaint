@@ -97,10 +97,7 @@ export async function runCumincR(Rinput) {
 	}
 
 	// run cumulative incidence analysis
-	const datafile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await write_file(datafile, JSON.stringify(Rinput))
-	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [], [datafile])
-	const ci_data = JSON.parse(Routput[0])
+	const ci_data = JSON.parse(await run_R(path.join(serverconfig.binpath, 'utils', 'cuminc.R'), JSON.stringify(Rinput)))
 
 	// parse cumulative incidence results
 	// revert placeholders
@@ -118,9 +115,6 @@ export async function runCumincR(Rinput) {
 			}
 		}
 	}
-
-	// delete the input data file
-	fs.unlink(datafile, () => {})
 
 	return ci_data
 }

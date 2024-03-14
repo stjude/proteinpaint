@@ -6,11 +6,10 @@
 # USAGE
 ###########
 
-# Usage: echo <input json> | Rscript regression.R > <output json>
+# Usage: echo <in_json> | Rscript regression.R > <out_json>
 
-# Input is input data in JSON format.
-# Output is regression results in JSON format.
-# Input is received from standard input and output is sent to standard output.
+#   in_json: [string] input data in JSON format. Streamed through stdin.
+#   out_json: [string] regression results in JSON format. Streamed to stdout.
 
 # Input JSON specifications:
 # {
