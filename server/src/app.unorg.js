@@ -851,6 +851,9 @@ async function handle_mdssvcnv(req, res) {
 
 	if (req.query.iscustom) {
 		// is custom track
+		if (req.query.file) {
+			if (utils.illegalpath(req.query.file, false, false)) return res.send({ error: 'invalid svcnv file' })
+		}
 		gn = genomes[req.query.genome]
 		if (!gn) return res.send({ error: 'invalid genome' })
 
@@ -869,6 +872,10 @@ async function handle_mdssvcnv(req, res) {
 		if (req.query.checkexpressionrank) {
 			if (!req.query.checkexpressionrank.file && !req.query.checkexpressionrank.url)
 				return res.send({ error: 'no file or url for checkexpressionrank' })
+			if (req.query.checkexpressionrank.file) {
+				if (utils.illegalpath(req.query.checkexpressionrank.file, false, false))
+					return res.send({ error: 'invalid expression file' })
+			}
 			dsquery.checkexpressionrank = {
 				file: req.query.checkexpressionrank.file,
 				url: req.query.checkexpressionrank.url,
@@ -884,6 +891,9 @@ async function handle_mdssvcnv(req, res) {
 				return res.send({ error: 'invalid JSON for VCF object' })
 			}
 			if (!vcf.file && !vcf.url) return res.send({ error: 'no file or url for custom VCF track' })
+			if (vcf.file) {
+				if (utils.illegalpath(vcf.file, false, false)) return res.send({ error: 'invalid vcf file' })
+			}
 			vcf.type = common.mdsvcftype.vcf
 			dsquery.checkvcf = {
 				info: vcf.info,
