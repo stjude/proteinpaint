@@ -154,6 +154,8 @@ class SampleView {
 				}
 			})
 			function addOptions(options, parent) {
+				const samplesDataArray = Object.values(parent.samplesData)
+				options = options.filter(s => !samplesDataArray.find(sd => sd.parent_id == parent.samplesData[s].id))
 				const data = options.map(s => ({
 					value: s,
 					label: parent
@@ -231,12 +233,13 @@ class SampleView {
 		return state
 	}
 
+	//Get samples related through parent
 	getSamples(sampleName) {
 		let sampleData = this.samplesData[sampleName]
 		if (!sampleData) return []
 		const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
 		while (sampleData.parent_name) {
-			samples.push({ sampleId: sampleData.parent_id, sampleName: sampleData.parent_name })
+			samples.unshift({ sampleId: sampleData.parent_id, sampleName: sampleData.parent_name })
 			sampleData = this.samplesData[sampleData.parent_name]
 		}
 		return samples
@@ -563,7 +566,8 @@ function setRenderers(self) {
 	self.renderSampleDictionary = function () {
 		// use an array to support multiple visible samples,
 		// but prototyping with just one sample for now
-		const visibleSamples = Object.values(self.sampleDataByTermId)
+		const visibleSamples = []
+		for (const sample of self.state.samples) visibleSamples.push(self.sampleDataByTermId[sample.sampleId])
 		// for the column names, just need the first column name + sample data
 		self.renderTHead(['', ...self.state.samples.map(s => s.sampleName)])
 		const tBodyData = self.orderedVisibleTerms.map((term, trIndex) => [
