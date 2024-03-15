@@ -128,6 +128,7 @@ async function trigger_getsamples(q, res, ds) {
 	// individual term may allow getting from it
 	const lst = await termdbsql.get_samples(q.filter, ds)
 	const samples = lst.map(i => ds.cohort.termdb.q.id2sampleName(i))
+	console.log(lst, samples)
 	res.send({ samples })
 }
 
@@ -400,7 +401,12 @@ async function get_AllSamplesByName(q, req, res, ds) {
 			const filteredSamples = await get_samples(q.filter, q.ds, true)
 			sampleName2Id = new Map()
 			for (const sample of filteredSamples) {
-				sampleName2Id.set(sample.name, sample.id)
+				sampleName2Id.set(sample.name, {
+					id: sample.id,
+					name: sample.name,
+					parent_id: sample.parent_id,
+					parent_name: ds.sampleId2Name.get(sample.parent_id)
+				})
 			}
 		}
 
