@@ -124,7 +124,7 @@ class SampleView {
 				.attr('placeholder', sampleName)
 				.style('width', '400px')
 			const datalist = this.dom.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
-			addOptions(allSamples)
+			addOptions(allSamples, this)
 			input.on('keyup', e => {
 				datalist.selectAll('*').remove()
 				const str = input.node().value.toLowerCase()
@@ -137,12 +137,12 @@ class SampleView {
 					if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
 					if (options.length == limit && allSamples.length > 10000) break
 				}
-				if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options)
+				if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options, this)
 			})
 			input.on('change', e => {
 				const sampleName = input.node().value
 				if (this.samplesData[sampleName]) {
-					const samples = this.getSamples(this.samplesData[sampleName])
+					const samples = this.getSamples(sampleName)
 
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 				} else {
@@ -153,14 +153,20 @@ class SampleView {
 					}
 				}
 			})
-
-			function addOptions(options) {
+			function addOptions(options, parent) {
+				const data = options.map(s => ({
+					value: s,
+					label: parent
+						.getSamples(s)
+						.map(s => s.sampleName)
+						.join(' > ')
+				}))
 				datalist
 					.selectAll('option')
-					.data(options.filter((s, i) => i < limit))
+					.data(data.filter((s, i) => i < limit))
 					.enter()
 					.append('option')
-					.attr('value', d => d)
+					.attr('value', d => d.value)
 					.attr('label', (d, i) =>
 						i + 1 === limit
 							? isBigDataset
@@ -168,7 +174,7 @@ class SampleView {
 								: `Showing ${i + 1} of ${options.length} hits`
 							: i + 1 === options.length && i > 0
 							? `Found ${options.length} hits`
-							: d
+							: d.label
 					)
 			}
 		}
@@ -191,7 +197,7 @@ class SampleView {
 
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
-		let samples = config.samples || this.getSamples(this.samplesData[this.sample.sampleName])
+		let samples = config.samples || this.getSamples(this.sample.sampleName)
 
 		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
 		const q = appState.termdbConfig.queries
@@ -225,7 +231,9 @@ class SampleView {
 		return state
 	}
 
-	getSamples(sampleData) {
+	getSamples(sampleName) {
+		let sampleData = this.samplesData[sampleName]
+		if (!sampleData) return []
 		const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
 		while (sampleData.parent_name) {
 			samples.push({ sampleId: sampleData.parent_id, sampleName: sampleData.parent_name })
