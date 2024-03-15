@@ -1,11 +1,11 @@
-import { MainPlotDiv } from '../../../types/hic.ts'
+import { MainPlotDiv } from '../../../../types/hic.ts'
 import { axisstyle, font } from '#src/client'
 import { axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { format as d3format } from 'd3-format'
-import { selectAll, pointer, Selection } from 'd3-selection'
-import { ColorizeElement } from '../dom/colorizeElement.ts'
-import { Positions } from './positions.ts'
+import { pointer } from 'd3-selection'
+import { ColorizeElement } from '../../dom/ColorizeElement.ts'
+import { Positions } from '../Positions.ts'
 
 export class ChrPairView {
 	/** opts */
@@ -13,31 +13,34 @@ export class ChrPairView {
 	hic: any
 	plotDiv: MainPlotDiv
 	parent: (prop: string) => any
-	data: any
+	items: { items: number[][] }
+	colorizeElement: ColorizeElement
 	positions: Positions
 
 	chrxlen: number
 	chrylen: number
 	maxchrlen: number
-	canvas: Selection<HTMLCanvasElement, any, any, any>
+	// canvas: Selection<HTMLCanvasElement, any, any, any>
+	canvas: any
 	ctx: any
 
 	binpx = 1
 	/** padding on the ends of x/y chr coordinate axes */
 	axispad = 10
 	calResolution: number | null = null
+	data: number[][] = []
 
 	constructor(opts) {
 		this.app = opts.app
 		this.hic = opts.hic
 		this.plotDiv = opts.plotDiv
-		this.data = opts.data
+		this.items = opts.items
 		this.parent = opts.parent
 		this.chrxlen = this.hic.genome.chrlookup[this.parent('state').x.chr.toUpperCase()].len
 		this.chrylen = this.hic.genome.chrlookup[this.parent('state').x.chr.toUpperCase()].len
 		this.maxchrlen = Math.max(this.chrxlen, this.chrylen)
-		this.canvas = this.plotDiv.plot.append('canvas')
-		this.positions = new Positions(this.parent('error'), this.parent('activeView'), this.parent('state').currView)
+		this.colorizeElement = new ColorizeElement()
+		this.positions = new Positions(opts.error, opts.activeView, opts.currView)
 	}
 
 	setDefaultBinpx() {
@@ -53,7 +56,7 @@ export class ChrPairView {
 
 		//y axis
 		const svgY = this.plotDiv.yAxis.append('svg')
-		const h = Math.ceil(this.chrylen / this.calResolution!) * this.binpx
+		const h = Math.ceil(this.chrylen / this.calResolution) * this.binpx
 		svgY.attr('width', 100).attr('height', this.axispad * 2 + h)
 
 		svgY
@@ -75,9 +78,8 @@ export class ChrPairView {
 		})
 
 		// x axis
-		this.plotDiv.xAxis.selectAll('*').remove()
 		const svgX = this.plotDiv.xAxis.append('svg')
-		const w = Math.ceil(this.chrxlen / this.calResolution!) * this.binpx
+		const w = Math.ceil(this.chrxlen / this.calResolution) * this.binpx
 		svgX.attr('height', 100).attr('width', this.axispad * 2 + w)
 		svgX
 			.append('text')
@@ -97,34 +99,53 @@ export class ChrPairView {
 	}
 
 	renderCanvas() {
-		this.canvas.style('margin', this.axispad + 'px').on('click', async function (this: any, event: MouseEvent) {
-			const [x, y] = pointer(event, this)
-			const [xObj, yObj] = this.positions.setPositions(
-				x,
-				y,
-				this.binpx,
-				this.parent('state').x.chr,
-				this.parent('state').y.chr,
-				this.hic
-			)
-			this.app.dispatch({
-				type: 'view_change',
-				view: 'detail',
-				config: {
-					x: xObj,
-					y: yObj
-				}
+		const initDetailView = this.initDetailView.bind(this)
+		this.canvas = this.plotDiv.plot
+			.append('canvas')
+			.style('margin', this.axispad + 'px')
+			.on('click', async function (this: any, event: MouseEvent) {
+				const [x, y] = pointer(event, this)
+				initDetailView(x, y)
 			})
-		})
+			.node()
 
-		this.canvas['width'] = Math.ceil(this.chrxlen / this.calResolution!) * this.binpx
-		this.canvas['height'] = Math.ceil(this.chrylen / this.calResolution!) * this.binpx
-		this.ctx = this.canvas.node()!.getContext('2d')
+		this.canvas.width = Math.ceil(this.chrxlen / this.calResolution!) * this.binpx
+		this.canvas.height = Math.ceil(this.chrylen / this.calResolution!) * this.binpx
+		this.ctx = this.canvas.getContext('2d')
 	}
 
-	getData() {
+	initDetailView(x, y) {
+		const [xObj, yObj] = this.positions.setPosition(
+					x,
+					y,
+					this.binpx,
+					this.parent('state').x,
+					this.parent('state').y,
+					this.hic
+				)
+				this.app.dispatch({
+					type: 'view_change',
+					view: 'detail',
+					config: {
+						x: xObj,
+						y: yObj
+					}
+				})
+	}
+
+	getData(firstisx) {
 		const isintrachr = this.parent('state').x.chr === this.parent('state').y.chr
-		const firstisx = this.isFirstX()
+
+		for (const [coord1, coord2, v] of this.items.items) {
+			const px1 = Math.floor(coord1 / this.calResolution!) * this.binpx
+			const px2 = Math.floor(coord2 / this.calResolution!) * this.binpx
+			const x = firstisx ? px1 : px2
+			const y = firstisx ? px2 : px1
+			this.data.push([x, y, v])
+			if (isintrachr) {
+				this.data.push([y, x, v])
+			}
+		}
 	}
 
 	isFirstX() {
@@ -135,14 +156,32 @@ export class ChrPairView {
 	async render() {
 		this.calResolution = this.parent('calResolution')
 		this.setDefaultBinpx()
-		this.renderAxes()
-		this.renderCanvas()
 
 		await this.update()
 	}
 
 	async update() {
-		this.parent('infoBar').resolution = this.calResolution
-		this.parent('infoBar').update()
+		//TODO, consolidate this with view main()
+		this.plotDiv.xAxis.selectAll('*').remove()
+		this.plotDiv.yAxis.selectAll('*').remove()
+		this.plotDiv.plot.selectAll('*').remove()
+		this.renderAxes()
+		this.renderCanvas()
+		const firstisx = this.isFirstX()
+		this.getData(firstisx)
+		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+		for (const [x, y, v] of this.data) {
+			this.colorizeElement.colorizeElement(
+				x,
+				y,
+				v,
+				this.ctx,
+				this.binpx,
+				this.binpx,
+				this.parent('min'),
+				this.parent('max'),
+				'chrpair'
+			)
+		}
 	}
 }
