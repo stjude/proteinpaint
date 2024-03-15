@@ -1,9 +1,9 @@
 import { getCompInit } from '#rx'
 import { Elem, Tr } from '../../../types/d3'
-import { NormalizationMethodControl } from './normMeth'
-import { CutoffControl } from './cutoff'
-import { MatrixTypeControl } from './matrixType'
-import { ColorizeElement } from '../dom/colorizeElement'
+import { NormalizationMethodControl } from './NormalizationMethodControl'
+import { CutoffControl } from './CutoffControl'
+import { MatrixTypeControl } from './MatrixTypeControl'
+import { ColorizeElement } from '../dom/ColorizeElement'
 
 // see function documentation for more details
 //  */
@@ -37,7 +37,7 @@ class ControlPanel {
 	/** replace with type arg */
 	hic: any
 	parent: (prop: string, value?: string | number) => any
-	colorizeElement: any
+	colorizeElement: ColorizeElement
 	error: any
 
 	state: any

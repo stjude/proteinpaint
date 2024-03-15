@@ -1,5 +1,4 @@
-import { Input, Elem } from '../../../types/d3'
-import { debounce } from 'debounce'
+import { Elem } from '../../../types/d3'
 
 export class CutoffControl {
 	holder: Elem
@@ -22,11 +21,9 @@ export class CutoffControl {
 			.attr('type', 'number')
 			.property('value', this.value)
 			.on('keyup', async (event: KeyboardEvent) => {
-				// debounce(() => {
 				if (event.code != 'Enter') return
 				const v: any = (event.target as HTMLInputElement).value
 				this.callback(v)
-				// }, 300)
 			})
 		return cutoffDiv
 	}

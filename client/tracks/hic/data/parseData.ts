@@ -1,6 +1,5 @@
 import * as client from '#src/client'
 import * as common from '#shared/common'
-import { truncate } from 'fs'
 
 /**
 ********* EXPORTED *********

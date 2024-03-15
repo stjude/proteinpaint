@@ -11,7 +11,7 @@ export class GenomeDataFetcher {
 		this.debugmode = debugmode
 		this.errList = errList || []
 	}
-	//TODO: include mincutoff in query?
+
 	async getData(obj) {
 		if (this.data.length) this.data = []
 		if (!obj?.matrixType) obj.matrixType = 'observed'

@@ -1,4 +1,4 @@
-import { Dom, Elem } from '../../../types/d3'
+import { Elem } from '../../../types/d3'
 
 export class NormalizationMethodControl {
 	defaultNmeth: string
