@@ -39,21 +39,5 @@ export class GenomeDataFetcher {
 			this.errList.push(e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
-
-		// let countBlankM = 0
-		// for (const i of this.data) {
-		//     /** Addresses the nagging problem if no data is present for M chr, not to render
-		//      * squares for chrM-chr*. Errors still appear for the user.
-		//      * TODO: Move to server side???
-		//      */
-		//     if (i.lead == 'chrM' || i.lead == 'chrY' && !i.items.length) {
-		//         countBlankM++
-		//         continue
-		//     }
-		// }
-		// if (countBlankM == 25) {
-		//     const idx = this.hic.chrlst.indexOf('chrM')
-		//     this.hic.chrlst.splice(idx, 1)
-		// }
 	}
 }
