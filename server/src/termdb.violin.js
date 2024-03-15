@@ -1,8 +1,6 @@
-import { unlink } from 'fs'
 import { scaleLinear, scaleLog } from 'd3'
 import serverconfig from './serverconfig'
-import run_R from './run_R'
-// import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import path from 'path'
 import { write_file } from './utils'
 import { getData } from './termdb.matrix'
@@ -118,16 +116,7 @@ export async function wilcoxon(term, result) {
 		}
 	}
 
-	//fs.writeFile('test.txt', JSON.stringify(wilcoxInput), function (err) {
-	//	// For catching input to rust pipeline, in case of an error
-	//	if (err) return console.log(err)
-	//})
-	//const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
-	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await write_file(tmpfile, JSON.stringify(wilcoxInput))
-	const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
-	unlink(tmpfile, () => {})
-	const wilcoxOutput = JSON.parse(out)
+	const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
 	for (const test of wilcoxOutput) {
 		if (test.pvalue == null || test.pvalue == 'null') {
 			result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])

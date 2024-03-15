@@ -99,8 +99,8 @@ async function get_pvalue(samplesets) {
 			lines.push(v.serialtime + '\t' + v.censored + '\t' + i)
 		}
 	}
-	const p = await lines2R(path.join(serverconfig.binpath, '/utils/km.R'), lines)
-	return Number(p.join(''))
+	const p = await run_R(path.join(serverconfig.binpath, 'utils', 'km.R'), lines.join('\n'))
+	return Number(p)
 }
 
 async function pvalue_may4eachmutatedset(q, samplesets) {
