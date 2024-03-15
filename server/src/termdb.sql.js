@@ -49,17 +49,23 @@ as the actual query is embedded in qfilter
 return an array of sample names passing through the filter
 */
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
-	const sql = ds.cohort.db.connection.prepare(
-		filter
-			? `WITH ${filter.filters} SELECT sample as id, name, parent_id FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
-			: 'SELECT id, name, parent_id FROM sampleidmap' // both statements must return sample id as a uniform behavior
-	)
-	let re
-	if (filter) re = sql.all(filter.values)
-	else re = sql.all()
-	if (canDisplay) return re
-	for (const item of re) delete item.name
-	return re
+	try {
+		const sql = ds.cohort.db.connection.prepare(
+			filter
+				? `WITH ${filter.filters} SELECT sample as id, name, parent_id, mother_id FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
+				: 'SELECT id, name, parent_id, mother_id FROM sampleidmap' // both statements must return sample id as a uniform behavior
+		)
+		let re
+
+		if (filter) re = sql.all(filter.values)
+		else re = sql.all()
+
+		if (canDisplay) return re
+		for (const item of re) delete item.name
+		return re
+	} catch (e) {
+		if (e.message == 'no such column: parent_id') throw 'The db schema has changed. Please update the database.'
+	}
 }
 
 export async function get_samplecount(q, ds) {
