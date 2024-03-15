@@ -10,7 +10,7 @@ export class ChrPairView {
 	app: any
 	hic: any
 	plotDiv: MainPlotDiv
-	parent: any
+	parent: (prop: string) => any
 	data: any
 
 	chrxlen: number
@@ -30,8 +30,8 @@ export class ChrPairView {
 		this.plotDiv = opts.plotDiv
 		this.data = opts.data
 		this.parent = opts.parent
-		this.chrxlen = this.hic.genome.chrlookup[this.parent.state.x.chr.toUpperCase()].len
-		this.chrylen = this.hic.genome.chrlookup[this.parent.state.x.chr.toUpperCase()].len
+		this.chrxlen = this.hic.genome.chrlookup[this.parent('state').x.chr.toUpperCase()].len
+		this.chrylen = this.hic.genome.chrlookup[this.parent('state').x.chr.toUpperCase()].len
 		this.maxchrlen = Math.max(this.chrxlen, this.chrylen)
 		this.canvas = this.plotDiv.plot.append('canvas')
 	}
@@ -50,7 +50,7 @@ export class ChrPairView {
 			}
 		}
 		if (this.resolution == null) {
-			this.parent.error('no suitable resolution')
+			//this.parent.error('no suitable resolution')
 			return
 		}
 	}
@@ -75,7 +75,7 @@ export class ChrPairView {
 			.append('g')
 			.attr('transform', 'translate(80,' + (this.axispad + h / 2) + ')')
 			.append('text')
-			.text(this.parent.state.y.chr)
+			.text(this.parent('state').y.chr)
 			.attr('text-anchor', 'middle')
 			.attr('font-size', 15)
 			.attr('font-family', font)
@@ -96,7 +96,7 @@ export class ChrPairView {
 		svgX.attr('height', 100).attr('width', this.axispad * 2 + w)
 		svgX
 			.append('text')
-			.text(this.parent.state.x.chr)
+			.text(this.parent('state').x.chr)
 			.attr('font-size', 15)
 			.attr('font-family', font)
 			.attr('x', this.axispad + w / 2)
@@ -131,13 +131,13 @@ export class ChrPairView {
 	}
 
 	getData() {
-		const isintrachr = this.parent.state.x.chr === this.parent.state.y.chr
+		const isintrachr = this.parent('state').x.chr === this.parent('state').y.chr
 		const firstisx = this.isFirstX()
 	}
 
 	isFirstX() {
-		if (this.parent.state.x.chr == this.parent.state.y.chr) return true
-		return this.hic.chrorder.indexOf(this.parent.state.x.chr) < this.hic.chrorder.indexOf(this.parent.state.y.chr)
+		if (this.parent('state').x.chr == this.parent('state').y.chr) return true
+		return this.hic.chrorder.indexOf(this.parent('state').x.chr) < this.hic.chrorder.indexOf(this.parent('state').y.chr)
 	}
 
 	async render() {
@@ -150,7 +150,7 @@ export class ChrPairView {
 	}
 
 	async update() {
-		this.parent.infoBar.resolution = this.resolution
-		this.parent.infoBar.update()
+		this.parent('infoBar').resolution = this.resolution
+		this.parent('infoBar').update()
 	}
 }

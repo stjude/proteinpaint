@@ -2,6 +2,7 @@ import { SvgSvg, SvgG } from '../../../types/d3'
 //import { Selection } from 'd3-selection'
 //import * as client from '#src/client'
 //import blocklazyload from '#src/block.lazyload'
+import { ColorizeElement } from '../dom/colorizeElement.ts'
 
 import { axisRight, axisBottom } from 'd3-axis'
 import { select as d3select, pointer, Selection } from 'd3-selection'
@@ -76,11 +77,11 @@ export class GenomeView {
 		this.plotDiv = opts.plotDiv
 		this.data = opts.data
 		this.parent = opts.parent
-		this.colorizeElement = opts.colorizeElement
 		this.resolution = opts.hic.bpresolution[0]
 		this.svg = this.plotDiv.plot.append('svg')
 		this.layer_map = this.svg.append('g')
 		this.layer_sv = this.svg.append('g')
+		this.colorizeElement = new ColorizeElement()
 	}
 
 	renderGrid() {
@@ -444,6 +445,8 @@ export class GenomeView {
 	}
 
 	async makeElements() {
+		const min = this.parent('min')
+		const max = this.parent('max')
 		for (const data of this.data) {
 			//Fix for when M chr has no data and is removed from hic.chrlst.
 			if (!this.hic.chrlst.includes(data.lead) || !this.hic.chrlst.includes(data.follow)) continue
@@ -457,7 +460,18 @@ export class GenomeView {
 				const leadpx = Math.floor(plead / this.resolution) * this.binpx
 				const followpx = Math.floor(pfollow / this.resolution) * this.binpx
 				obj.data.push([leadpx, followpx, value])
-				await this.colorizeElement(leadpx, followpx, value, obj, this.binpx, this.binpx)
+
+				await this.colorizeElement.colorizeElement(
+					leadpx,
+					followpx,
+					value,
+					obj,
+					this.binpx,
+					this.binpx,
+					min,
+					max,
+					'genome'
+				)
 			}
 			obj.img.attr('xlink:href', obj.canvas.toDataURL())
 			if (obj.canvas2) {
