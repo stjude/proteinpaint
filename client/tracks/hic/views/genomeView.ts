@@ -255,7 +255,15 @@ export class GenomeView {
 				.on('click', async () => {
 					await this.app.dispatch({
 						type: 'view_change',
-						view: 'chrpair'
+						view: 'chrpair',
+						config: {
+							x: {
+								chr: lead
+							},
+							y: {
+								chr: follow
+							}
+						}
 					})
 				})
 				.on('mouseover', () => {

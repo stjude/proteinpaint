@@ -9,6 +9,7 @@ import { InfoBar } from '../dom/infoBar'
 import { HicDataMapper } from '../data/dataMapper'
 import { GenomeDataFetcher } from '../data/genomeDataFetcher.ts'
 import { DataFetcher } from '../data/dataFetcher.ts'
+import { Resolution } from './resolution.ts'
 
 export class HicView {
 	dom: any
@@ -28,6 +29,8 @@ export class HicView {
 	data: any
 	infoBar: any
 	error: any
+	resolution: Resolution
+	calResolution: number | null = null
 	skipMain = true
 	min = 0
 	max = 0
@@ -51,51 +54,12 @@ export class HicView {
 		this.dataMapper = new HicDataMapper(this.hic)
 		this.activeView = this.state.currView
 		this.error = opts.error
+		this.resolution = new Resolution(this.error)
 	}
 
 	getState(appState: any) {
 		return appState
 	}
-
-	getMinMax() {
-		return [this.min, this.max]
-	}
-
-	// async colorizeElement(lead: number, follow: number, v: number, obj: any, width: number, height: number) {
-	// 	const bpMinV = this.min
-	// 	const bpMaxV = this.max
-	// 	const currView = this.app.getState().currView
-
-	// 	if (v >= 0) {
-	// 		// positive or zero, use red
-	// 		const p = v >= bpMaxV ? 0 : v <= bpMinV ? 255 : Math.floor((255 * (bpMaxV - v)) / bpMaxV)
-	// 		const positiveFill = `rgb(255, ${p}, ${p})`
-	// 		if (currView === 'genome') {
-	// 			obj.ctx.fillStyle = positiveFill
-	// 			obj.ctx2.fillStyle = positiveFill
-	// 		} else {
-	// 			/** ctx for the chrpair and detail view */
-	// 			obj.fillStyle = positiveFill
-	// 		}
-	// 	} else {
-	// 		// negative, use blue
-	// 		const p = v <= bpMinV ? 255 : Math.floor((255 * (bpMaxV + v)) / bpMaxV)
-	// 		const negativeFill = `rgb(${p}, ${p}, 255)`
-	// 		if (currView === 'genome') {
-	// 			obj.ctx.fillStyle = negativeFill
-	// 			obj.ctx2.fillStyle = negativeFill
-	// 		} else {
-	// 			obj.fillStyle = negativeFill
-	// 		}
-	// 	}
-
-	// 	if (currView === 'genome') {
-	// 		obj.ctx.fillRect(follow, lead, width, height)
-	// 		obj.ctx2.fillRect(lead, follow, width, height)
-	// 	} else {
-	// 		obj.fillRect(lead, follow, width, height)
-	// 	}
-	// }
 
 	async initView() {
 		if (this.state.currView == 'genome') {
@@ -131,77 +95,21 @@ export class HicView {
 		}
 	}
 
-	getResolution() {
-		//Move to data mapper?
-		//TODO: resolution for detail and horizontal view
-		if (this[this.state.currView]?.resolution) return this[this.state.currView].resolution
-		if (this.state.currView == 'chrpair') {
-			const chrxlen = this.hic.genome.chrlookup[this.state.x.chr.toUpperCase()].len
-			const chrylen = this.hic.genome.chrlookup[this.state.y.chr.toUpperCase()].len
-			const maxchrlen = Math.max(chrxlen, chrylen)
-
-			let resolution = null
-			for (let i = 0; i < this.hic.bpresolution.length; i++) {
-				const res = this.hic.bpresolution[i]
-				if (maxchrlen / res > 200) {
-					resolution = res
-					break
-				}
-			}
-			if (resolution == null) {
-				this.error('no suitable resolution')
-				return
-			}
-			return resolution
-		}
-	}
-
-	setPositions(x: number, y: number, binpx: number) {
-		const initialbinnum_detail = 20
-
-		const state = this.app.getState()
-		const chrx = state.x.chr
-		const chry = state.y.chr
-
-		const resolution = this.getResolution()
-
-		const viewrangebpw = resolution! * initialbinnum_detail
-
-		let coordx = Math.max(1, Math.floor((x * resolution!) / binpx) - viewrangebpw / 2)
-		let coordy = Math.max(1, Math.floor((y * resolution!) / binpx) - viewrangebpw / 2)
-
-		// make sure positions are not out of bounds
-		{
-			const lenx = this.hic.genome.chrlookup[chrx.toUpperCase()].len
-			if (coordx + viewrangebpw >= lenx) {
-				coordx = lenx - viewrangebpw
-			}
-			const leny = this.hic.genome.chrlookup[chry.toUpperCase()].len
-			if (coordy + viewrangebpw > leny) {
-				coordy = leny - viewrangebpw
-			}
-		}
-
-		const xObj = {
-			chr: chrx,
-			start: coordx,
-			stop: coordx + viewrangebpw
-		}
-
-		const yObj = {
-			chr: chry,
-			start: coordx,
-			stop: coordx + viewrangebpw
-		}
-
-		return [xObj, yObj]
-	}
-
 	async fetchData(obj) {
 		if (this.activeView == 'genome') {
 			const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
 			this.data = await genomeFetcher.getData(obj)
 		} else {
+			// if (!this.state?.x?.chr || !this.state?.y?.chr) {
+			// 	this.errList.push(`No positions provided for ${this.activeView} view.`)
+			// 	return
+			// } else {
+			// 	obj.lead == this.state.x.chr
+			// 	obj.follow == this.state.y.chr
+			// }
+			//***FOR TESTING, RM LATER */
+			// obj.lead = 'chr1'
+			// obj.follow = 'chr2'
 			const dataFetcher = new DataFetcher(this.hic, true, this.errList)
 			this.data = await dataFetcher.getData(obj)
 		}
@@ -210,9 +118,16 @@ export class HicView {
 	async setDataArgs(appState) {
 		this.state = await this.app.getState(appState)
 		const currView = this.state[this.state.currView]
+		this.calResolution = this.resolution.getResolution(
+			this.hic,
+			this.state.currView,
+			currView,
+			this.state.x,
+			this.state.y
+		) as number
 		const args = {
 			nmeth: currView.nmeth,
-			resolution: this.getResolution(),
+			resolution: this.calResolution,
 			matrixType: currView.matrixType
 		}
 

@@ -4,6 +4,8 @@ import { axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { format as d3format } from 'd3-format'
 import { selectAll, pointer, Selection } from 'd3-selection'
+import { ColorizeElement } from '../dom/colorizeElement.ts'
+import { Positions } from './positions.ts'
 
 export class ChrPairView {
 	/** opts */
@@ -12,6 +14,7 @@ export class ChrPairView {
 	plotDiv: MainPlotDiv
 	parent: (prop: string) => any
 	data: any
+	positions: Positions
 
 	chrxlen: number
 	chrylen: number
@@ -19,10 +22,10 @@ export class ChrPairView {
 	canvas: Selection<HTMLCanvasElement, any, any, any>
 	ctx: any
 
-	resolution: number | null = null
 	binpx = 1
 	/** padding on the ends of x/y chr coordinate axes */
 	axispad = 10
+	calResolution: number | null = null
 
 	constructor(opts) {
 		this.app = opts.app
@@ -34,41 +37,23 @@ export class ChrPairView {
 		this.chrylen = this.hic.genome.chrlookup[this.parent('state').x.chr.toUpperCase()].len
 		this.maxchrlen = Math.max(this.chrxlen, this.chrylen)
 		this.canvas = this.plotDiv.plot.append('canvas')
-	}
-
-	setResolution() {
-		//TODO: this is repeat code in view. Move to data mapper?
-		/*
-		for resolution bin from great to tiny
-		find one that just shows >200 # bins over biggest chr
-		*/
-		for (let i = 0; i < this.hic.bpresolution.length; i++) {
-			const res = this.hic.bpresolution[i]
-			if (this.maxchrlen / res > 200) {
-				this.resolution = res
-				break
-			}
-		}
-		if (this.resolution == null) {
-			//this.parent.error('no suitable resolution')
-			return
-		}
+		this.positions = new Positions(this.parent('error'), this.parent('activeView'), this.parent('state').currView)
 	}
 
 	setDefaultBinpx() {
-		if (this.resolution == null) return
+		if (this.calResolution == null) return
 		//this.binpx default is 1
-		while ((this.binpx * this.maxchrlen) / this.resolution < 600) {
+		while ((this.binpx * this.maxchrlen) / this.calResolution < 600) {
 			this.binpx++
 		}
 	}
 
 	renderAxes() {
-		if (this.resolution == null) return
+		if (this.calResolution == null) return
 
 		//y axis
 		const svgY = this.plotDiv.yAxis.append('svg')
-		const h = Math.ceil(this.chrylen / this.resolution) * this.binpx
+		const h = Math.ceil(this.chrylen / this.calResolution!) * this.binpx
 		svgY.attr('width', 100).attr('height', this.axispad * 2 + h)
 
 		svgY
@@ -92,7 +77,7 @@ export class ChrPairView {
 		// x axis
 		this.plotDiv.xAxis.selectAll('*').remove()
 		const svgX = this.plotDiv.xAxis.append('svg')
-		const w = Math.ceil(this.chrxlen / this.resolution) * this.binpx
+		const w = Math.ceil(this.chrxlen / this.calResolution!) * this.binpx
 		svgX.attr('height', 100).attr('width', this.axispad * 2 + w)
 		svgX
 			.append('text')
@@ -114,7 +99,14 @@ export class ChrPairView {
 	renderCanvas() {
 		this.canvas.style('margin', this.axispad + 'px').on('click', async function (this: any, event: MouseEvent) {
 			const [x, y] = pointer(event, this)
-			const [xObj, yObj] = this.parent.setPositions(x, y, this.binpx)
+			const [xObj, yObj] = this.positions.setPositions(
+				x,
+				y,
+				this.binpx,
+				this.parent('state').x.chr,
+				this.parent('state').y.chr,
+				this.hic
+			)
 			this.app.dispatch({
 				type: 'view_change',
 				view: 'detail',
@@ -125,8 +117,8 @@ export class ChrPairView {
 			})
 		})
 
-		this.canvas['width'] = Math.ceil(this.chrxlen / this.resolution!) * this.binpx
-		this.canvas['height'] = Math.ceil(this.chrylen / this.resolution!) * this.binpx
+		this.canvas['width'] = Math.ceil(this.chrxlen / this.calResolution!) * this.binpx
+		this.canvas['height'] = Math.ceil(this.chrylen / this.calResolution!) * this.binpx
 		this.ctx = this.canvas.node()!.getContext('2d')
 	}
 
@@ -141,7 +133,7 @@ export class ChrPairView {
 	}
 
 	async render() {
-		this.setResolution()
+		this.calResolution = this.parent('calResolution')
 		this.setDefaultBinpx()
 		this.renderAxes()
 		this.renderCanvas()
@@ -150,7 +142,7 @@ export class ChrPairView {
 	}
 
 	async update() {
-		this.parent('infoBar').resolution = this.resolution
+		this.parent('infoBar').resolution = this.calResolution
 		this.parent('infoBar').update()
 	}
 }
