@@ -756,7 +756,7 @@ export type Cohort = {
 	db: FileObj
 	termdb?: Termdb
 	scatterplots?: Scatterplots
-	// optional title of this ds, if missing use ds.label. shown on mass nav header
+	// optional title of this ds, if missing use ds.label. shown on mass nav header. use blank string to not to show a label
 	title?: string
 	cumburden?: {
 		files: {
