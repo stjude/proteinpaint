@@ -813,156 +813,156 @@ class Hicstat {
 	// 	return
 	// }
 
-	async init_chrPairView(hic: any, chrx: string, chry: string) {
-		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
-		if (Object.values(this.x).length > 0) this.x = {}
-		this.x.chr = chrx
-		if (Object.values(this.y).length > 0) this.y = {}
-		this.y.chr = chry
-		const detailView = this.init_detailView.bind(this)
-		nmeth2select(hic, this.chrpairview, true)
-		matrixType2select(this.chrpairview, this, true)
+	// async init_chrPairView(hic: any, chrx: string, chry: string) {
+	// 	this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
+	// 	if (Object.values(this.x).length > 0) this.x = {}
+	// 	this.x.chr = chrx
+	// 	if (Object.values(this.y).length > 0) this.y = {}
+	// 	this.y.chr = chry
+	// 	const detailView = this.init_detailView.bind(this)
+	// 	nmeth2select(hic, this.chrpairview, true)
+	// 	matrixType2select(this.chrpairview, this, true)
 
-		this.ingenome = false
-		this.inchrpair = true
-		this.indetail = false
-		this.inhorizontal = false
+	// 	this.ingenome = false
+	// 	this.inchrpair = true
+	// 	this.indetail = false
+	// 	this.inhorizontal = false
 
-		showBtns(this)
-		this.genomeview.svg!.remove()
+	// 	//showBtns(this)
+	// 	this.genomeview.svg!.remove()
 
-		const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
-		const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
-		const maxchrlen = Math.max(chrxlen, chrylen)
+	// 	const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
+	// 	const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
+	// 	const maxchrlen = Math.max(chrxlen, chrylen)
 
-		/*
-		for resolution bin from great to tiny
-		find one that just shows >200 # bins over biggest chr
-		*/
-		let resolution = null
-		for (let i = 0; i < hic.bpresolution.length; i++) {
-			const res = hic.bpresolution[i]
-			if (maxchrlen / res > 200) {
-				resolution = res
-				break
-			}
-		}
-		if (resolution == null) {
-			this.error('no suitable resolution')
-			return
-		}
-		this.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
+	// 	/*
+	// 	for resolution bin from great to tiny
+	// 	find one that just shows >200 # bins over biggest chr
+	// 	*/
+	// 	let resolution = null
+	// 	for (let i = 0; i < hic.bpresolution.length; i++) {
+	// 		const res = hic.bpresolution[i]
+	// 		if (maxchrlen / res > 200) {
+	// 			resolution = res
+	// 			break
+	// 		}
+	// 	}
+	// 	if (resolution == null) {
+	// 		this.error('no suitable resolution')
+	// 		return
+	// 	}
+	// 	this.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
 
-		let binpx = 1
-		while ((binpx * maxchrlen) / resolution < 600) {
-			binpx++
-		}
+	// 	let binpx = 1
+	// 	while ((binpx * maxchrlen) / resolution < 600) {
+	// 		binpx++
+	// 	}
 
-		const axispad = 10 // padding on the ends of x/y chr coordinate axes
+	// 	const axispad = 10 // padding on the ends of x/y chr coordinate axes
 
-		{
-			// y axis
-			this.dom.plotDiv.yAxis.selectAll('*').remove()
-			const svg = this.dom.plotDiv.yAxis.append('svg')
-			const h = Math.ceil(chrylen / resolution) * binpx
-			svg.attr('width', 100).attr('height', axispad * 2 + h)
-			svg
-				.append('g')
-				.attr('transform', 'translate(80,' + (axispad + h / 2) + ')')
-				.append('text')
-				.text(chry)
-				.attr('text-anchor', 'middle')
-				.attr('font-size', 15)
-				.attr('font-family', client.font)
-				.attr('dominant-baseline', 'central')
-				.attr('transform', 'rotate(90)')
-			client.axisstyle({
-				axis: svg
-					.append('g')
-					.attr('transform', 'translate(1,' + axispad + ')')
-					.call(axisRight(scaleLinear().domain([0, chrylen]).range([0, h])).tickFormat(d3format('.2s'))),
-				showline: true
-			})
-			this.chrpairview.axisy = svg as any
-		}
+	// 	{
+	// 		// y axis
+	// 		this.dom.plotDiv.yAxis.selectAll('*').remove()
+	// 		const svg = this.dom.plotDiv.yAxis.append('svg')
+	// 		const h = Math.ceil(chrylen / resolution) * binpx
+	// 		svg.attr('width', 100).attr('height', axispad * 2 + h)
+	// 		svg
+	// 			.append('g')
+	// 			.attr('transform', 'translate(80,' + (axispad + h / 2) + ')')
+	// 			.append('text')
+	// 			.text(chry)
+	// 			.attr('text-anchor', 'middle')
+	// 			.attr('font-size', 15)
+	// 			.attr('font-family', client.font)
+	// 			.attr('dominant-baseline', 'central')
+	// 			.attr('transform', 'rotate(90)')
+	// 		client.axisstyle({
+	// 			axis: svg
+	// 				.append('g')
+	// 				.attr('transform', 'translate(1,' + axispad + ')')
+	// 				.call(axisRight(scaleLinear().domain([0, chrylen]).range([0, h])).tickFormat(d3format('.2s'))),
+	// 			showline: true
+	// 		})
+	// 		this.chrpairview.axisy = svg as any
+	// 	}
 
-		{
-			// x axis
-			this.dom.plotDiv.xAxis.selectAll('*').remove()
-			const svg = this.dom.plotDiv.xAxis.append('svg')
-			const w = Math.ceil(chrxlen / resolution) * binpx
-			svg.attr('height', 100).attr('width', axispad * 2 + w)
-			svg
-				.append('text')
-				.text(chrx)
-				.attr('font-size', 15)
-				.attr('font-family', client.font)
-				.attr('x', axispad + w / 2)
-				.attr('text-anchor', 'middle')
-				.attr('y', 60)
-			client.axisstyle({
-				axis: svg
-					.append('g')
-					.attr('transform', 'translate(' + axispad + ',1)')
-					.call(axisBottom(scaleLinear().domain([0, chrxlen]).range([0, w])).tickFormat(d3format('.2s'))),
-				showline: true
-			})
-			this.chrpairview.axisx = svg as any
-		}
+	// 	{
+	// 		// x axis
+	// 		this.dom.plotDiv.xAxis.selectAll('*').remove()
+	// 		const svg = this.dom.plotDiv.xAxis.append('svg')
+	// 		const w = Math.ceil(chrxlen / resolution) * binpx
+	// 		svg.attr('height', 100).attr('width', axispad * 2 + w)
+	// 		svg
+	// 			.append('text')
+	// 			.text(chrx)
+	// 			.attr('font-size', 15)
+	// 			.attr('font-family', client.font)
+	// 			.attr('x', axispad + w / 2)
+	// 			.attr('text-anchor', 'middle')
+	// 			.attr('y', 60)
+	// 		client.axisstyle({
+	// 			axis: svg
+	// 				.append('g')
+	// 				.attr('transform', 'translate(' + axispad + ',1)')
+	// 				.call(axisBottom(scaleLinear().domain([0, chrxlen]).range([0, w])).tickFormat(d3format('.2s'))),
+	// 			showline: true
+	// 		})
+	// 		this.chrpairview.axisx = svg as any
+	// 	}
 
-		this.chrpairview.resolution = resolution
-		this.chrpairview.binpx = binpx
+	// 	this.chrpairview.resolution = resolution
+	// 	this.chrpairview.binpx = binpx
 
-		const canvas = this.dom.plotDiv.plot
-			.append('canvas')
-			.style('margin', axispad + 'px')
-			.on('click', async function (this: any, event: MouseEvent) {
-				const [x, y] = pointer(event, this)
-				await detailView(hic, chrx, chry, x, y)
-			})
-			.node()
-		canvas!.width = Math.ceil(chrxlen / resolution) * binpx
-		canvas!.height = Math.ceil(chrylen / resolution) * binpx
-		const ctx = canvas!.getContext('2d')
-		this.chrpairview.ctx = ctx
-		this.chrpairview.canvas = canvas
+	// 	const canvas = this.dom.plotDiv.plot
+	// 		.append('canvas')
+	// 		.style('margin', axispad + 'px')
+	// 		.on('click', async function (this: any, event: MouseEvent) {
+	// 			const [x, y] = pointer(event, this)
+	// 			await detailView(hic, chrx, chry, x, y)
+	// 		})
+	// 		.node()
+	// 	canvas!.width = Math.ceil(chrxlen / resolution) * binpx
+	// 	canvas!.height = Math.ceil(chrylen / resolution) * binpx
+	// 	const ctx = canvas!.getContext('2d')
+	// 	this.chrpairview.ctx = ctx
+	// 	this.chrpairview.canvas = canvas
 
-		await getdata_chrpair(hic, this)
-	}
+	// 	await getdata_chrpair(hic, this)
+	// }
 
-	set_Positions(hic: any, chrx: string, chry: string, x: number, y: number) {
-		this.x.chr = chrx
-		this.y.chr = chry
+	// set_Positions(hic: any, chrx: string, chry: string, x: number, y: number) {
+	// 	this.x.chr = chrx
+	// 	this.y.chr = chry
 
-		if (x && y) {
-			const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
+	// 	if (x && y) {
+	// 		const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
 
-			let coordx = Math.max(
-				1,
-				Math.floor((x * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
-			)
-			let coordy = Math.max(
-				1,
-				Math.floor((y * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
-			)
+	// 		let coordx = Math.max(
+	// 			1,
+	// 			Math.floor((x * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
+	// 		)
+	// 		let coordy = Math.max(
+	// 			1,
+	// 			Math.floor((y * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
+	// 		)
 
-			// make sure positions are not out of bounds
-			{
-				const lenx = hic.genome.chrlookup[chrx.toUpperCase()].len
-				if (coordx + viewrangebpw >= lenx) {
-					coordx = lenx - viewrangebpw
-				}
-				const leny = hic.genome.chrlookup[chry.toUpperCase()].len
-				if (coordy + viewrangebpw > leny) {
-					coordy = leny - viewrangebpw
-				}
-			}
+	// 		// make sure positions are not out of bounds
+	// 		{
+	// 			const lenx = hic.genome.chrlookup[chrx.toUpperCase()].len
+	// 			if (coordx + viewrangebpw >= lenx) {
+	// 				coordx = lenx - viewrangebpw
+	// 			}
+	// 			const leny = hic.genome.chrlookup[chry.toUpperCase()].len
+	// 			if (coordy + viewrangebpw > leny) {
+	// 				coordy = leny - viewrangebpw
+	// 			}
+	// 		}
 
-			;(this.x.start = coordx), (this.x.stop = coordx + viewrangebpw)
-			this.y.start = coordy
-			this.y.stop = coordy + viewrangebpw
-		}
-	}
+	// 		;(this.x.start = coordx), (this.x.stop = coordx + viewrangebpw)
+	// 		this.y.start = coordy
+	// 		this.y.stop = coordy + viewrangebpw
+	// 	}
+	// }
 
 	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Detailed')
@@ -975,7 +975,7 @@ class Hicstat {
 		this.inhorizontal = false
 
 		// const isintrachr = chrx == chry
-		showBtns(this)
+		//showBtns(this)
 
 		if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
 
@@ -1196,9 +1196,9 @@ class Hicstat {
 		this.indetail = false
 		this.inhorizontal = true
 
-		showBtns(this)
+		//showBtns(this)
 
-		if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
+		//if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
 
 		const regionx = { chr: this.x.chr, start: this.x.start, stop: this.x.stop }
 		const regiony = { chr: this.y.chr, start: this.y.start, stop: this.y.stop }
@@ -1284,33 +1284,33 @@ class Hicstat {
 // 	}
 // }
 
-export function showBtns(self: any) {
-	//Show in any other view except whole genome
-	self.dom.controlsDiv.genomeViewBtn.style('display', self.ingenome ? 'none' : 'inline-block')
+// export function showBtns(self: any) {
+// 	//Show in any other view except whole genome
+// 	self.dom.controlsDiv.genomeViewBtn.style('display', self.ingenome ? 'none' : 'inline-block')
 
-	if (self.indetail) {
-		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
-		//Only show horizontalViewBtn and zoom buttons in detail view
-		self.dom.controlsDiv.horizontalViewBtn.style('display', 'block')
-		self.dom.controlsDiv.zoomDiv.style('display', 'contents')
-		//Hide previously shown detail view btn
-		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
-	} else if (self.inhorizontal) {
-		//Only show chrpairViewBtn if in horizonal or detail view
-		//Include chr x and chr y in the button text
-		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
-		//Only show detailViewBtn in horizontal view
-		self.dom.controlsDiv.detailViewBtn.style('display', 'block')
-		//Hide if horizontal and zoom btns if previously displayed
-		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
-		self.dom.controlsDiv.zoomDiv.style('display', 'none')
-	} else {
-		self.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
-		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
-		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
-		self.dom.controlsDiv.zoomDiv.style('display', 'none')
-	}
-}
+// 	if (self.indetail) {
+// 		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
+// 		//Only show horizontalViewBtn and zoom buttons in detail view
+// 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'block')
+// 		self.dom.controlsDiv.zoomDiv.style('display', 'contents')
+// 		//Hide previously shown detail view btn
+// 		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
+// 	} else if (self.inhorizontal) {
+// 		//Only show chrpairViewBtn if in horizonal or detail view
+// 		//Include chr x and chr y in the button text
+// 		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
+// 		//Only show detailViewBtn in horizontal view
+// 		self.dom.controlsDiv.detailViewBtn.style('display', 'block')
+// 		//Hide if horizontal and zoom btns if previously displayed
+// 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
+// 		self.dom.controlsDiv.zoomDiv.style('display', 'none')
+// 	} else {
+// 		self.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
+// 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
+// 		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
+// 		self.dom.controlsDiv.zoomDiv.style('display', 'none')
+// 	}
+// }
 
 // //////////////////// __whole genome view__ ////////////////////
 
@@ -1591,78 +1591,78 @@ export function showBtns(self: any) {
 
 //////////////////// __chrpair view__ ////////////////////
 
-function tell_firstisx(hic: any, chrx: string, chry: string) {
-	if (chrx == chry) return true
-	return hic.chrorder.indexOf(chrx) < hic.chrorder.indexOf(chry)
-}
+// function tell_firstisx(hic: any, chrx: string, chry: string) {
+// 	if (chrx == chry) return true
+// 	return hic.chrorder.indexOf(chrx) < hic.chrorder.indexOf(chry)
+// }
 
-export async function getdata_chrpair(hic: any, self: any) {
-	const isintrachr = self.x.chr == self.y.chr
-	const firstisx = tell_firstisx(hic, self.x.chr, self.y.chr)
+// export async function getdata_chrpair(hic: any, self: any) {
+// 	const isintrachr = self.x.chr == self.y.chr
+// 	const firstisx = tell_firstisx(hic, self.x.chr, self.y.chr)
 
-	const resolution = self.chrpairview.resolution
-	const binpx = self.chrpairview.binpx
-	const ctx = self.chrpairview.ctx
+// 	const resolution = self.chrpairview.resolution
+// 	const binpx = self.chrpairview.binpx
+// 	const ctx = self.chrpairview.ctx
 
-	const arg = {
-		matrixType: self.chrpairview.matrixType,
-		jwt: hic.jwt,
-		file: hic.file,
-		url: hic.url,
-		pos1: hic.nochr ? self.x.chr.replace('chr', '') : self.x.chr,
-		pos2: hic.nochr ? self.y.chr.replace('chr', '') : self.y.chr,
-		nmeth: self.chrpairview.nmeth,
-		resolution: resolution
-	}
-	try {
-		const data = await client.dofetch2('/hicdata', {
-			method: 'POST',
-			body: JSON.stringify(arg)
-		})
-		if (data.error) throw { message: `${self.x.chr} - ${self.y.chr}: ${data.error.error}` } //Fix for message displaying [object object] instead of error message
+// 	const arg = {
+// 		matrixType: self.chrpairview.matrixType,
+// 		jwt: hic.jwt,
+// 		file: hic.file,
+// 		url: hic.url,
+// 		pos1: hic.nochr ? self.x.chr.replace('chr', '') : self.x.chr,
+// 		pos2: hic.nochr ? self.y.chr.replace('chr', '') : self.y.chr,
+// 		nmeth: self.chrpairview.nmeth,
+// 		resolution: resolution
+// 	}
+// 	try {
+// 		const data = await client.dofetch2('/hicdata', {
+// 			method: 'POST',
+// 			body: JSON.stringify(arg)
+// 		})
+// 		if (data.error) throw { message: `${self.x.chr} - ${self.y.chr}: ${data.error.error}` } //Fix for message displaying [object object] instead of error message
 
-		ctx.clearRect(0, 0, self.chrpairview.canvas.width, self.chrpairview.canvas.height)
+// 		ctx.clearRect(0, 0, self.chrpairview.canvas.width, self.chrpairview.canvas.height)
 
-		if (!data.items || data.items.length == 0) {
-			// no data
-			return
-		}
+// 		if (!data.items || data.items.length == 0) {
+// 			// no data
+// 			return
+// 		}
 
-		// const err = 0
+// 		// const err = 0
 
-		self.chrpairview.isintrachr = isintrachr
-		self.chrpairview.data = []
+// 		self.chrpairview.isintrachr = isintrachr
+// 		self.chrpairview.data = []
 
-		/*
-		a percentile as cutoff for chrpairview
-		*/
-		const vlst = [] as any
+// 		/*
+// 		a percentile as cutoff for chrpairview
+// 		*/
+// 		const vlst = [] as any
 
-		for (const [coord1, coord2, v] of data.items) {
-			vlst.push(v)
+// 		for (const [coord1, coord2, v] of data.items) {
+// 			vlst.push(v)
 
-			const px1 = Math.floor(coord1 / resolution) * binpx
-			const px2 = Math.floor(coord2 / resolution) * binpx
-			const x = firstisx ? px1 : px2
-			const y = firstisx ? px2 : px1
+// 			const px1 = Math.floor(coord1 / resolution) * binpx
+// 			const px2 = Math.floor(coord2 / resolution) * binpx
+// 			const x = firstisx ? px1 : px2
+// 			const y = firstisx ? px2 : px1
 
-			self.chrpairview.data.push([x, y, v])
-			if (isintrachr) {
-				self.chrpairview.data.push([y, x, v])
-			}
-		}
-		await setViewCutoff(vlst, self.chrpairview, self)
+// 			self.chrpairview.data.push([x, y, v])
+// 			if (isintrachr) {
+// 				self.chrpairview.data.push([y, x, v])
+// 			}
+// 		}
+// 		await setViewCutoff(vlst, self.chrpairview, self)
 
-		for (const [x, y, v] of self.chrpairview.data) {
-			//await colorizeElement(x, y, v, self.chrpairview, self, ctx)
-		}
-	} catch (err: any) {
-		self.errList.push(err.message || err)
-		if (err.stack) console.log(err.stack)
-	}
+// 		for (const [x, y, v] of self.chrpairview.data) {
+// 			//await colorizeElement(x, y, v, self.chrpairview, self, ctx)
+// 		}
+// 	} catch (err: any) {
+// 		self.errList.push(err.message || err)
+// 		if (err.stack) console.log(err.stack)
+// 	}
 
-	if (self.errList.length) self.error(self.errList)
-}
+// 	if (self.errList.length) self.error(self.errList)
+// }
 
 /**
  * set normalization method from <select>

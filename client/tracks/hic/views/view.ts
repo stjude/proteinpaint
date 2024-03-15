@@ -79,7 +79,7 @@ export class HicView {
 				plotDiv: this.plotDiv,
 				hic: this.hic,
 				app: this.app,
-				data: this.data,
+				items: this.data,
 				parent: prop => {
 					return this[prop]
 				}
@@ -96,7 +96,8 @@ export class HicView {
 	}
 
 	async fetchData(obj) {
-		if (this.activeView == 'genome') {
+		if (this.data?.length) this.data = []
+		if (this.state.currView == 'genome') {
 			const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
 			this.data = await genomeFetcher.getData(obj)
 		} else {
@@ -107,27 +108,35 @@ export class HicView {
 			// 	obj.lead == this.state.x.chr
 			// 	obj.follow == this.state.y.chr
 			// }
-			//***FOR TESTING, RM LATER */
-			// obj.lead = 'chr1'
-			// obj.follow = 'chr2'
+			/***FOR TESTING, RM LATER */
+			obj.lead = 'chr1'
+			obj.follow = 'chr2'
 			const dataFetcher = new DataFetcher(this.hic, true, this.errList)
 			this.data = await dataFetcher.getData(obj)
 		}
 	}
 
-	async setDataArgs(appState) {
-		this.state = await this.app.getState(appState)
-		const currView = this.state[this.state.currView]
+	setResolution(appState) {
+		const state = this.app.getState(appState)
 		this.calResolution = this.resolution.getResolution(
 			this.hic,
 			this.state.currView,
-			currView,
-			this.state.x,
-			this.state.y
+			state[state.currView],
+			// state.x,
+			// state.y
+			{ chr: 'chr1' },
+			{ chr: 'chr2' }
 		) as number
+
+		return this.calResolution
+	}
+
+	async setDataArgs(appState) {
+		this.state = await this.app.getState(appState)
+		const currView = this.state[this.state.currView]
 		const args = {
 			nmeth: currView.nmeth,
-			resolution: this.calResolution,
+			resolution: this.setResolution(appState),
 			matrixType: currView.matrixType
 		}
 
@@ -140,16 +149,15 @@ export class HicView {
 		return args
 	}
 
-	async init() {
+	async init(appState) {
 		try {
 			this.activeView = this.state.currView
 			const currView = this.state[this.state.currView]
-			//This only works for genome view.
-			//Will need to make it compatible with other views
+			//TODO: Will need to make it compatible with runpp() inputs
 			const obj = {
 				matrixType: currView.matrixType,
 				nmeth: currView.nmeth,
-				resolution: this.hic['bpresolution'][0]
+				resolution: this.activeView == 'genome' ? this.hic['bpresolution'][0] : this.setResolution(appState)
 			}
 
 			await this.fetchData(obj)
@@ -170,7 +178,6 @@ export class HicView {
 						if (value) this[prop] = value
 						return this[prop]
 					},
-					//colorizeElement: this.colorizeElement,
 					error: this.error
 				})
 			}

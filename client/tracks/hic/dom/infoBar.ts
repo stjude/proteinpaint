@@ -87,7 +87,7 @@ export class InfoBar {
 
 	update() {
 		//need to account for fragments in detail view later
-		const resolutionText = bplen(this.resolution)
+		const resolutionText = bplen(this.parent('calResolution') || this.resolution)
 		this.resolutionDiv.text(`${resolutionText} bp`)
 		if (this.parent('state').currView == 'horizontal') {
 			this.colorScaleLabel.style('display', 'none')
