@@ -3,31 +3,7 @@ import { Elem, Tr } from '../../../types/d3'
 import { NormalizationMethodControl } from './normMeth'
 import { CutoffControl } from './cutoff'
 import { MatrixTypeControl } from './matrixType'
-
-// import { bplen } from '#shared/common'
-// import {
-// 	nmeth2select,
-// 	matrixType2select,
-// 	getdata_chrpair,
-// 	getdata_detail,
-// 	defaultnmeth,
-// 	showBtns,
-// 	makeWholeGenomeElements,
-// 	colorizeElement
-// } from '../views/hic.straw'
-// import blocklazyload from '#src/block.lazyload'
-
-// /**
-// ********* EXPORTED *********
-
-// init_hicControls()
-
-// ********* INTERNAL *********
-// addLabel()
-// makeNormMethDisplay()
-// getData()
-// setmaxv()
-// switchview()
+import { ColorizeElement } from '../dom/colorizeElement'
 
 // see function documentation for more details
 //  */
@@ -73,9 +49,9 @@ class ControlPanel {
 		this.app = opts.app
 		this.controlsDiv = opts.controlsDiv
 		this.hic = opts.hic
-		this.state = opts.state
+		this.colorizeElement = new ColorizeElement()
+		// this.state = opts.state
 		this.parent = opts.parent
-		this.colorizeElement = opts.colorizeElement
 		this.error = opts.error
 	}
 
@@ -93,6 +69,7 @@ class ControlPanel {
 	}
 
 	init() {
+		this.state = this.app.getState()
 		const menuWrapper = this.controlsDiv
 			.style('background', 'rgb(253, 250, 244)')
 			.style('vertical-align', 'top')
@@ -279,7 +256,10 @@ class ControlPanel {
 					//Fix for when chr present in the header but no data in the hic file
 					if (!b.data) continue
 					for (const [leadpx, followpx, val] of b.data) {
-						this.colorizeElement(leadpx, followpx, val, b, 1, 1)
+						//this.colorizeElement(leadpx, followpx, val, b, 1, 1)
+						const min = this.parent('min')
+						const max = this.parent('max')
+						this.colorizeElement.colorizeElement(leadpx, followpx, val, b, 1, 1, min, max, 'genome')
 					}
 					b.img.attr('xlink:href', b.canvas.toDataURL())
 					if (b.canvas2) {

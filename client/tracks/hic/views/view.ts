@@ -61,41 +61,41 @@ export class HicView {
 		return [this.min, this.max]
 	}
 
-	async colorizeElement(lead: number, follow: number, v: number, obj: any, width: number, height: number) {
-		const bpMinV = this.min
-		const bpMaxV = this.max
-		const currView = this.app.getState().currView
+	// async colorizeElement(lead: number, follow: number, v: number, obj: any, width: number, height: number) {
+	// 	const bpMinV = this.min
+	// 	const bpMaxV = this.max
+	// 	const currView = this.app.getState().currView
 
-		if (v >= 0) {
-			// positive or zero, use red
-			const p = v >= bpMaxV ? 0 : v <= bpMinV ? 255 : Math.floor((255 * (bpMaxV - v)) / bpMaxV)
-			const positiveFill = `rgb(255, ${p}, ${p})`
-			if (currView === 'genome') {
-				obj.ctx.fillStyle = positiveFill
-				obj.ctx2.fillStyle = positiveFill
-			} else {
-				/** ctx for the chrpair and detail view */
-				obj.fillStyle = positiveFill
-			}
-		} else {
-			// negative, use blue
-			const p = v <= bpMinV ? 255 : Math.floor((255 * (bpMaxV + v)) / bpMaxV)
-			const negativeFill = `rgb(${p}, ${p}, 255)`
-			if (currView === 'genome') {
-				obj.ctx.fillStyle = negativeFill
-				obj.ctx2.fillStyle = negativeFill
-			} else {
-				obj.fillStyle = negativeFill
-			}
-		}
+	// 	if (v >= 0) {
+	// 		// positive or zero, use red
+	// 		const p = v >= bpMaxV ? 0 : v <= bpMinV ? 255 : Math.floor((255 * (bpMaxV - v)) / bpMaxV)
+	// 		const positiveFill = `rgb(255, ${p}, ${p})`
+	// 		if (currView === 'genome') {
+	// 			obj.ctx.fillStyle = positiveFill
+	// 			obj.ctx2.fillStyle = positiveFill
+	// 		} else {
+	// 			/** ctx for the chrpair and detail view */
+	// 			obj.fillStyle = positiveFill
+	// 		}
+	// 	} else {
+	// 		// negative, use blue
+	// 		const p = v <= bpMinV ? 255 : Math.floor((255 * (bpMaxV + v)) / bpMaxV)
+	// 		const negativeFill = `rgb(${p}, ${p}, 255)`
+	// 		if (currView === 'genome') {
+	// 			obj.ctx.fillStyle = negativeFill
+	// 			obj.ctx2.fillStyle = negativeFill
+	// 		} else {
+	// 			obj.fillStyle = negativeFill
+	// 		}
+	// 	}
 
-		if (currView === 'genome') {
-			obj.ctx.fillRect(follow, lead, width, height)
-			obj.ctx2.fillRect(lead, follow, width, height)
-		} else {
-			obj.fillRect(lead, follow, width, height)
-		}
-	}
+	// 	if (currView === 'genome') {
+	// 		obj.ctx.fillRect(follow, lead, width, height)
+	// 		obj.ctx2.fillRect(lead, follow, width, height)
+	// 	} else {
+	// 		obj.fillRect(lead, follow, width, height)
+	// 	}
+	// }
 
 	async initView() {
 		if (this.state.currView == 'genome') {
@@ -106,8 +106,8 @@ export class HicView {
 				data: this.data,
 				parent: prop => {
 					return this[prop]
-				},
-				colorizeElement: this.colorizeElement
+				}
+				//colorizeElement: this.colorizeElement
 			})
 			this.genome.render()
 		} else if (this.state.currView === 'chrpair') {
@@ -116,7 +116,10 @@ export class HicView {
 				hic: this.hic,
 				app: this.app,
 				data: this.data,
-				parent: this
+				parent: prop => {
+					return this[prop]
+				}
+				//colorizeElement: this.colorizeElement
 			})
 			this.chrpair.render()
 		} else if (this.state.currView === 'horizontal') {
@@ -252,7 +255,7 @@ export class HicView {
 						if (value) this[prop] = value
 						return this[prop]
 					},
-					colorizeElement: this.colorizeElement,
+					//colorizeElement: this.colorizeElement,
 					error: this.error
 				})
 			}
