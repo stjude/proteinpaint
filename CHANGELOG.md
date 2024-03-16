@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Include gfClient to the pp deps image
+- remove main menu renderer from disco plot
 
 
 ## 2.47.0
