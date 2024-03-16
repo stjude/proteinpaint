@@ -1,2 +1,2 @@
 Fixes:
-- remove main menu renderer
+- remove main menu renderer from disco plot
