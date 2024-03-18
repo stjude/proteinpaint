@@ -1,4 +1,4 @@
-import { Resolution } from './resolution'
+import { Resolution } from './Resolution.ts'
 
 export class Positions {
 	resolution: Resolution
@@ -16,10 +16,10 @@ export class Positions {
 		this.activeView = activeView
 		this.currView = currView
 	}
-	setPositions(x: number, y: number, binpx: number, chrx: string, chry: string, hic: any) {
+	setPosition(x: number, y: number, binpx: number, chrx: { chr: string }, chry: { chr: string }, hic: any) {
 		const initialbinnum_detail = 20
 
-		const resolution = this.resolution.getResolution(hic, this.activeView, this.currView, chrx, chry)
+		const resolution = this.resolution.getChrPairResolution(hic, chrx, chry)
 
 		const viewrangebpw = resolution! * initialbinnum_detail
 
@@ -28,24 +28,23 @@ export class Positions {
 
 		// make sure positions are not out of bounds
 		{
-			const lenx = hic.genome.chrlookup[chrx.toUpperCase()].len
+			const lenx = hic.genome.chrlookup[chrx.chr.toUpperCase()].len
 			if (coordx + viewrangebpw >= lenx) {
 				coordx = lenx - viewrangebpw
 			}
-			const leny = hic.genome.chrlookup[chry.toUpperCase()].len
+			const leny = hic.genome.chrlookup[chry.chr.toUpperCase()].len
 			if (coordy + viewrangebpw > leny) {
 				coordy = leny - viewrangebpw
 			}
 		}
-
 		const xObj = {
-			chr: chrx,
+			chr: chrx.chr,
 			start: coordx,
 			stop: coordx + viewrangebpw
 		}
 
 		const yObj = {
-			chr: chry,
+			chr: chry.chr,
 			start: coordx,
 			stop: coordx + viewrangebpw
 		}

@@ -1,17 +1,17 @@
 import { getCompInit } from '#rx'
 import { MainPlotDiv } from '../../../types/hic.ts'
-import { ChrPairView } from './chrPairView'
-// import { HorizontalView } from './horizontalView'
-// import { DetailView } from './detailView'
-import { GenomeView } from './genomeView.ts'
-import { controlPanelInit } from '../controls/controlPanel'
-import { InfoBar } from '../dom/infoBar'
-import { HicDataMapper } from '../data/dataMapper'
-import { GenomeDataFetcher } from '../data/genomeDataFetcher.ts'
-import { DataFetcher } from '../data/dataFetcher.ts'
-import { Resolution } from './resolution.ts'
+import { ChrPairView } from './chrpair/ChrPairView.ts'
+// import { HorizontalView } from './horizontal/HorizontalView.ts'
+import { DetailView } from './detail/DetailView.ts'
+import { GenomeView } from './genome/GenomeView.ts'
+import { controlPanelInit } from '../controls/ControlPanel.ts'
+import { InfoBar } from '../dom/InfoBar.ts'
+import { DataMapper } from '../data/DataMapper.ts'
+import { GenomeDataFetcher } from '../data/GenomeDataFetcher.ts'
+import { DataFetcher } from '../data/DataFetcher.ts'
+import { Resolution } from './Resolution.ts'
 
-export class HicView {
+export class ViewComponent {
 	dom: any
 	plotDiv: MainPlotDiv
 	type: 'view'
@@ -19,6 +19,7 @@ export class HicView {
 	state: any
 	genome: any
 	chrpair: any
+	detail: any
 	app: any
 	dataMapper: any
 	activeView: string
@@ -34,6 +35,7 @@ export class HicView {
 	skipMain = true
 	min = 0
 	max = 0
+	hasStatePreMain = true
 
 	constructor(opts) {
 		this.type = 'view'
@@ -51,7 +53,7 @@ export class HicView {
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		this.app = opts.app
-		this.dataMapper = new HicDataMapper(this.hic)
+		this.dataMapper = new DataMapper(this.hic)
 		this.activeView = this.state.currView
 		this.error = opts.error
 		this.resolution = new Resolution(this.error)
@@ -71,7 +73,6 @@ export class HicView {
 				parent: prop => {
 					return this[prop]
 				}
-				//colorizeElement: this.colorizeElement
 			})
 			this.genome.render()
 		} else if (this.state.currView === 'chrpair') {
@@ -83,13 +84,20 @@ export class HicView {
 				parent: prop => {
 					return this[prop]
 				}
-				//colorizeElement: this.colorizeElement
 			})
 			this.chrpair.render()
+		} else if (this.state.currView === 'detail') {
+			this.detail = new DetailView({
+				plotDiv: this.plotDiv,
+				hic: this.hic,
+				app: this.app,
+				items: this.data,
+				parent: prop => {
+					return this[prop]
+				}
+			})
 		} else if (this.state.currView === 'horizontal') {
 			//this.horizonalView = new HorizontalView.main()
-		} else if (this.state.currView === 'detail') {
-			//this.detailView = new DetailView.main()
 		} else {
 			throw Error(`Unknown view: ${this.state.currView}`)
 		}
@@ -101,16 +109,16 @@ export class HicView {
 			const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
 			this.data = await genomeFetcher.getData(obj)
 		} else {
-			// if (!this.state?.x?.chr || !this.state?.y?.chr) {
-			// 	this.errList.push(`No positions provided for ${this.activeView} view.`)
-			// 	return
-			// } else {
-			// 	obj.lead == this.state.x.chr
-			// 	obj.follow == this.state.y.chr
-			// }
-			/***FOR TESTING, RM LATER */
-			obj.lead = 'chr1'
-			obj.follow = 'chr2'
+			if (!this.state?.x?.chr || !this.state?.y?.chr) {
+				this.errList.push(`No positions provided for ${this.activeView} view.`)
+				return
+			} else {
+				const chrx = this.state.x
+				const chry = this.state.y
+				obj['lead'] = `${chrx.start && chrx.stop ? `${chrx.chr}:${chrx.start}-${chrx.stop}` : chrx.chr.replace('chr', '') }`
+				obj['follow'] = `${chry.start && chry.stop ? `${chry.chr}:${chry.start}-${chry.stop}` : chry.chr.replace('chr', '') }`
+			}
+			
 			const dataFetcher = new DataFetcher(this.hic, true, this.errList)
 			this.data = await dataFetcher.getData(obj)
 		}
@@ -122,10 +130,10 @@ export class HicView {
 			this.hic,
 			this.state.currView,
 			state[state.currView],
-			// state.x,
-			// state.y
-			{ chr: 'chr1' },
-			{ chr: 'chr2' }
+			state.x,
+			state.y
+			// { chr: 'chr1' },
+			// { chr: 'chr2' }
 		) as number
 
 		return this.calResolution
@@ -159,7 +167,6 @@ export class HicView {
 				nmeth: currView.nmeth,
 				resolution: this.activeView == 'genome' ? this.hic['bpresolution'][0] : this.setResolution(appState)
 			}
-
 			await this.fetchData(obj)
 			const [min, max] = this.dataMapper.sortData(this.data)
 
@@ -227,4 +234,4 @@ export class HicView {
 	}
 }
 
-export const hicViewInit = getCompInit(HicView)
+export const viewCompInit = getCompInit(ViewComponent)

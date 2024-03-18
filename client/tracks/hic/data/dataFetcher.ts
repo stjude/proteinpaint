@@ -10,7 +10,7 @@ export class DataFetcher {
 		this.debugmode = debugmode
 		this.errList = errList || []
 	}
-	//TODO: include mincutoff in query?
+
 	async getData(obj) {
 		if (!obj?.matrixType) obj.matrixType = 'observed'
 		const arg = {

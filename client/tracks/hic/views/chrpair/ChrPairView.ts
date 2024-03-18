@@ -1,11 +1,11 @@
-import { MainPlotDiv } from '../../../types/hic.ts'
+import { MainPlotDiv } from '../../../../types/hic.ts'
 import { axisstyle, font } from '#src/client'
 import { axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { format as d3format } from 'd3-format'
-import { selectAll, pointer, Selection } from 'd3-selection'
-import { ColorizeElement } from '../dom/colorizeElement.ts'
-import { Positions } from './positions.ts'
+import { pointer } from 'd3-selection'
+import { ColorizeElement } from '../../dom/ColorizeElement.ts'
+import { Positions } from '../Positions.ts'
 
 export class ChrPairView {
 	/** opts */
@@ -14,8 +14,8 @@ export class ChrPairView {
 	plotDiv: MainPlotDiv
 	parent: (prop: string) => any
 	items: { items: number[][] }
-	positions: Positions
 	colorizeElement: ColorizeElement
+	positions: Positions
 
 	chrxlen: number
 	chrylen: number
@@ -39,8 +39,8 @@ export class ChrPairView {
 		this.chrxlen = this.hic.genome.chrlookup[this.parent('state').x.chr.toUpperCase()].len
 		this.chrylen = this.hic.genome.chrlookup[this.parent('state').x.chr.toUpperCase()].len
 		this.maxchrlen = Math.max(this.chrxlen, this.chrylen)
-		this.positions = new Positions(this.parent('error'), this.parent('activeView'), this.parent('state').currView)
 		this.colorizeElement = new ColorizeElement()
+		this.positions = new Positions(opts.error, opts.activeView, opts.currView)
 	}
 
 	setDefaultBinpx() {
@@ -99,33 +99,38 @@ export class ChrPairView {
 	}
 
 	renderCanvas() {
+		const initDetailView = this.initDetailView.bind(this)
 		this.canvas = this.plotDiv.plot
 			.append('canvas')
 			.style('margin', this.axispad + 'px')
 			.on('click', async function (this: any, event: MouseEvent) {
 				const [x, y] = pointer(event, this)
-				const [xObj, yObj] = this.positions.setPositions(
-					x,
-					y,
-					this.binpx,
-					this.parent('state').x.chr,
-					this.parent('state').y.chr,
-					this.hic
-				)
-				// this.app.dispatch({
-				// 	type: 'view_change',
-				// 	view: 'detail',
-				// 	config: {
-				// 		x: xObj,
-				// 		y: yObj
-				// 	}
-				// })
+				initDetailView(x, y)
 			})
 			.node()
 
 		this.canvas.width = Math.ceil(this.chrxlen / this.calResolution!) * this.binpx
 		this.canvas.height = Math.ceil(this.chrylen / this.calResolution!) * this.binpx
 		this.ctx = this.canvas.getContext('2d')
+	}
+
+	initDetailView(x, y) {
+		const [xObj, yObj] = this.positions.setPosition(
+					x,
+					y,
+					this.binpx,
+					this.parent('state').x,
+					this.parent('state').y,
+					this.hic
+				)
+				this.app.dispatch({
+					type: 'view_change',
+					view: 'detail',
+					config: {
+						x: xObj,
+						y: yObj
+					}
+				})
 	}
 
 	getData(firstisx) {
@@ -151,13 +156,17 @@ export class ChrPairView {
 	async render() {
 		this.calResolution = this.parent('calResolution')
 		this.setDefaultBinpx()
-		this.renderAxes()
-		this.renderCanvas()
 
 		await this.update()
 	}
 
 	async update() {
+		//TODO, consolidate this with view main()
+		this.plotDiv.xAxis.selectAll('*').remove()
+		this.plotDiv.yAxis.selectAll('*').remove()
+		this.plotDiv.plot.selectAll('*').remove()
+		this.renderAxes()
+		this.renderCanvas()
 		const firstisx = this.isFirstX()
 		this.getData(firstisx)
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)

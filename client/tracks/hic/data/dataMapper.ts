@@ -1,4 +1,4 @@
-export class HicDataMapper {
+export class DataMapper {
 	hic: any
 
 	constructor(hic: any) {
