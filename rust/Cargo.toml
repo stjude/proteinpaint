@@ -1,5 +1,5 @@
 [package]
-name = "bam"
+name = "PP_rust_utilities"
 version = "0.1.0"
 authors = ["rpaul1 <rpaul1@stjude.org>"]
 edition = "2018"
@@ -76,9 +76,9 @@ path="src/gdcmaf.rs"
 name="topGeneByExpressionVariance"
 path="src/topGeneByExpressionVariance.rs"
 
-#[[bin]]
-#name="wilcoxon"
-#path="src/wilcoxon.rs"
+[[bin]]
+name="wilcoxon"
+path="src/wilcoxon.rs"
 
 [[bin]]
 name="DEanalysis"
