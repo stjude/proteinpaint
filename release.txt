@@ -1,1 +1,2 @@
-
+Features:
+- Reenable the option to create a single sample cohort from a lollipop sample table/menu
