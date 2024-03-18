@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.47.1
 
 Fixes:
 - Include gfClient to the pp deps image
