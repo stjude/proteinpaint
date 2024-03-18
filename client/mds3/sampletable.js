@@ -284,13 +284,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 
 	const extraRow = div.append('div') // row under sample name to show optional info about the sample
 
-	/* !!! temporary change !!!
-	hides button to disable selecting a single sample
-	required for gdc not wanting to create single-case cohort, and shouldn't break non-gdc ds too much
-	reenable when gdc offer a modal to select existing cohort and add to it
-	also revert test change
-	*/
-	if (0 && tk.allow2selectSamples) {
+	if (tk.allow2selectSamples) {
 		// display button for selecting this sample alone
 		const t = tk.allow2selectSamples.buttonText
 		const btn = extraRow
