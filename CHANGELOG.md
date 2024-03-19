@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Fix the timeout issues when using ky http client
+
+
 ## 2.47.1
 
 Fixes:
