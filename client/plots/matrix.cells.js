@@ -85,7 +85,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
 	} else if (value.dt == 1 || value.dt == 2) {
-		if (s.showMatrixCNV == 'none') {
+		if (s.showMatrixCNV == 'none' || s.allMatrixCNVHidden) {
 			// when CNV is not displayed, show as tall bar
 			cell.height = s.rowh
 			cell.width = colw

@@ -70,6 +70,7 @@ export async function getPlotConfig(opts = {}, app) {
 					app.vocabApi.termdbConfig?.matrix?.settings?.addMutationCNVButtons && opts.chartType !== 'hierCluster'
 						? 'none'
 						: '',
+				allMatrixCNVHidden: false,
 				gridStroke: '#fff',
 				outlineStroke: '#ccc',
 				beamStroke: '#f00',

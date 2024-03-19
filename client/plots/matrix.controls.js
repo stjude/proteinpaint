@@ -657,7 +657,8 @@ export class MatrixControls {
 							{ label: 'Show all mutations', value: 'all' },
 							{ label: `Show only truncating mutations`, value: 'onlyTruncating' },
 							{ label: `Show only protein-changing mutations`, value: 'onlyPC' },
-							{ label: `Do not show mutations`, value: 'none' }
+							{ label: `Do not show mutations`, value: 'none' },
+							{ label: `Show selected mutation`, value: 'bySelection' }
 						],
 						labelDisplay: 'block',
 						getDisplayStyle(plot) {
@@ -665,7 +666,8 @@ export class MatrixControls {
 						},
 						callback: this.parent.mutationControlCallback
 					}
-				]
+				],
+				customInputs: this.generateMutationItems
 			})
 			.html(d => d.label)
 			.style('margin', '2px 0')
@@ -689,7 +691,8 @@ export class MatrixControls {
 							{ label: 'Show all CNV', value: 'all' },
 							{ label: `Show only CNV gain`, value: 'onlyGain' },
 							{ label: `Show only CNV loss`, value: 'onlyLoss' },
-							{ label: `Do not show CNV`, value: 'none' }
+							{ label: `Do not show CNV`, value: 'none' },
+							{ label: `Show selected CNV`, value: 'bySelection' }
 						],
 						labelDisplay: 'block',
 						getDisplayStyle(plot) {
@@ -697,7 +700,8 @@ export class MatrixControls {
 						},
 						callback: this.parent.CNVControlCallback
 					}
-				]
+				],
+				customInputs: this.generateCNVItems
 			})
 			.html(d => d.label)
 			.style('margin', '2px 0')
@@ -1019,6 +1023,24 @@ export class MatrixControls {
 		if (!parent.selectedGroup) parent.selectedGroup = self.chartType == 'hierCluster' ? 1 : 0
 		app.tip.d.append('hr')
 		self.addDictMenu(app, parent, app.tip.d.append('div'))
+	}
+
+	generateCNVItems(self, app, parent, table) {
+		if (
+			parent.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+			parent.chartType !== 'hierCluster' &&
+			parent.config.settings.matrix.showMatrixCNV == 'bySelection'
+		)
+			parent.CNVControlCallback('bySelection')
+	}
+
+	generateMutationItems(self, app, parent, table) {
+		if (
+			parent.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+			parent.chartType !== 'hierCluster' &&
+			parent.config.settings.matrix.showMatrixMutation == 'bySelection'
+		)
+			parent.mutationControlCallback('bySelection')
 	}
 
 	async addDictMenu(app, parent, tr, holder = undefined) {
