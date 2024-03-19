@@ -58,7 +58,9 @@ export function may_render_cnv(data, tk, block) {
 					const table = table2col({ holder: tk.itemtip.d })
 					const cnv = structuredClone(c)
 					cnv.samples = [{ sample_id: sample.sample_id }]
-					table_cnv({ mlst: [cnv], tk }, table)
+					table_cnv({ mlst: [cnv], tk }, table, value => {
+						return tk.cnv.colorScale(value)
+					})
 				})
 				.on('mouseout', event => {
 					event.target.setAttribute('stroke', '')

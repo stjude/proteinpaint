@@ -106,7 +106,8 @@ export default class CnvArcsMapper {
 				start: data.start,
 				stop: data.stop,
 				value: data.value,
-				unit: this.cnvUnit
+				unit: this.cnvUnit,
+				sampleName: this.sampleName
 			}
 
 			arcs.push(arc)

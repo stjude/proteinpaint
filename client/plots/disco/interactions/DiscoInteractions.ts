@@ -1,5 +1,5 @@
 export class DiscoInteractions {
-	cappingClickCallback: (d: any, t: any) => void
+	// cappingClickCallback: (d: any, t: any) => void
 	downloadClickListener: (d: any) => void
 	geneClickListener: (gene: string, mnames: Array<string>) => void
 	prioritizeGenesCheckboxListener: (checked: boolean) => void
@@ -9,35 +9,35 @@ export class DiscoInteractions {
 		// note! only call this constructor then disco.state{} is created
 		this.downloadImgName = disco.state.settings.downloadImgName || 'disco.plot'
 
-		this.cappingClickCallback = (d: any, t: any) => {
-			const tip = disco.app.tip
-			tip.clear()
-			const body = disco.app.tip.d
-			const input = body
-				.append('span')
-				.html('Capping:')
-				.append('input')
-				.attr('type', 'number')
-				.on('change', () => {
-					disco.app.dispatch({
-						type: 'plot_edit',
-						id: disco.opts.id,
-						config: {
-							settings: {
-								cnv: {
-									capping: Number(input.property('value'))
-								}
-							}
-						}
-					})
-					tip.hide()
-				})
-			const rect = t.node().getBoundingClientRect()
-			const x = rect.left - 20
-			const y = rect.top - 40
-
-			tip.show(x, y)
-		}
+		// this.cappingClickCallback = (d: any, t: any) => {
+		// 	const tip = disco.app.tip
+		// 	tip.clear()
+		// 	const body = disco.app.tip.d
+		// 	const input = body
+		// 		.append('span')
+		// 		.html('Capping:')
+		// 		.append('input')
+		// 		.attr('type', 'number')
+		// 		.on('change', () => {
+		// 			disco.app.dispatch({
+		// 				type: 'plot_edit',
+		// 				id: disco.opts.id,
+		// 				config: {
+		// 					settings: {
+		// 						cnv: {
+		// 							capping: Number(input.property('value'))
+		// 						}
+		// 					}
+		// 				}
+		// 			})
+		// 			tip.hide()
+		// 		})
+		// 	const rect = t.node().getBoundingClientRect()
+		// 	const x = rect.left - 20
+		// 	const y = rect.top - 40
+		//
+		// 	tip.show(x, y)
+		// }
 
 		this.downloadClickListener = (svg: any) => {
 			const a = document.createElement('a')

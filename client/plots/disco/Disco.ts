@@ -48,6 +48,14 @@ export default class Disco {
 		const topbar = holder.append('div')
 		const config_div = holder.append('div')
 
+		const displayedElementsCount =
+			viewModel.settings.Disco.prioritizeGeneLabelsByGeneSets &&
+			viewModel.settings.Disco.showPrioritizeGeneLabelsByGeneSets
+				? viewModel.filteredSnvDataLength
+				: viewModel.snvDataLength
+
+		// TODO calculate viewModel.filteredSnvDataLength always
+
 		const features = await multiInit({
 			topbar: topBarInit({
 				app: this.app,
@@ -76,7 +84,7 @@ export default class Disco {
 					},
 					{
 						boxLabel: '',
-						label: 'Only show mutations for Cancer Gene Census genes',
+						label: `Only show mutations for ${viewModel.genesetName} genes (${displayedElementsCount} out of ${viewModel.snvDataLength})`,
 						type: 'checkbox',
 						chartType: 'Disco',
 						settingsKey: 'prioritizeGeneLabelsByGeneSets',
@@ -94,8 +102,9 @@ export default class Disco {
 
 		const legendRenderer = new LegendRenderer(
 			settings.Disco.cnvCapping,
-			settings.label.fontSize,
-			discoInteractions.cappingClickCallback
+			settings.label.fontSize
+			// ,
+			// discoInteractions.cappingClickCallback
 		)
 
 		const discoRenderer = new DiscoRenderer(

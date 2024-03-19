@@ -30,7 +30,7 @@ export class DiscoRenderer {
 		const rootDiv = holder.append('div')
 		const svgDiv = rootDiv.append('div').style('display', 'inline-block').style('font-family', 'Arial')
 
-		this.downloadButtonRenderer.render(controlsDiv, svgDiv)
+		// this.downloadButtonRenderer.render(controlsDiv, svgDiv)
 		// TODO move controls to the menu
 		// const controlsDiv = svgDiv.append('div')
 

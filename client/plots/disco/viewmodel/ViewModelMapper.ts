@@ -34,6 +34,8 @@ export class ViewModelMapper {
 	}
 
 	map(opts: any): ViewModel {
+		console.log('opts', opts)
+
 		const chromosomesOverride = opts.args.chromosomes
 
 		const chrSizes = opts.args.genome.majorchr

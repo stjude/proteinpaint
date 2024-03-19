@@ -4,11 +4,14 @@ import { FusionLegend } from '#plots/disco/fusion/FusionLegend.ts'
 
 export default class LegendJSONMapper {
 	private cvnCapping: number
-	private onClickCallback: (d: any, t: any) => any
+	// private onClickCallback: (d: any, t: any) => any
 
-	constructor(cvnCapping: number, onClickCallback: (d: any, t: any) => any) {
+	constructor(
+		cvnCapping: number
+		// onClickCallback: (d: any, t: any) => any
+	) {
 		this.cvnCapping = cvnCapping
-		this.onClickCallback = onClickCallback
+		// this.onClickCallback = onClickCallback
 	}
 
 	map(legend: Legend) {
@@ -94,8 +97,9 @@ export default class LegendJSONMapper {
 				text: `Capping: ${cap.value}`,
 				color: cap.color,
 				order: cnvOrder++,
-				border: '1px solid #ccc',
-				onClickCallback: this.onClickCallback
+				border: '1px solid #ccc'
+				// ,
+				// onClickCallback: this.onClickCallback
 			})
 
 			legendJSON.push({

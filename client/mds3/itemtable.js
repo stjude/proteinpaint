@@ -104,7 +104,9 @@ async function itemtable_oneItem(arg) {
 	} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 		await table_svfusion(arg, table)
 	} else if (m.dt == dtcnv) {
-		table_cnv(arg, table)
+		table_cnv(arg, table, value => {
+			return arg.tk.cnv.colorScale(value)
+		})
 	} else {
 		throw 'oneItem: unknown dt'
 	}
@@ -526,12 +528,12 @@ async function table_svfusion(arg, table) {
 	}
 }
 
-export function table_cnv(arg, table) {
+export function table_cnv(arg, table, calculateColor) {
 	const m = arg.mlst[0]
 	{
 		const [c1, c2] = table.addRow()
 		c1.text('Copy number change')
-		c2.html(`<span style="background:${arg.tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`)
+		c2.html(`<span style="background:${calculateColor(m.value)}">&nbsp;&nbsp;</span> ${m.value}`)
 	}
 	{
 		const [c1, c2] = table.addRow()
