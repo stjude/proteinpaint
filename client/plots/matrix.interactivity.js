@@ -2555,10 +2555,24 @@ function setLengendActions(self) {
 							} else self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
 						}
 					}
+					if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+						if (targetData.dt == 1) self.config.settings.matrix.showMatrixMutation = 'bySelection'
+						if (targetData.dt == 4) {
+							self.config.settings.matrix.showMatrixCNV = 'bySelection'
+							if (
+								self.legendData.find(l => l.name == 'CNV')?.items?.length ==
+								self.config.legendValueFilter.lst.filter(l => l.legendGrpName == 'CNV')?.length
+							) {
+								//when all CNV items are hidden by applying legend value filter
+								self.config.settings.matrix.allMatrixCNVHidden = true
+							} else self.config.settings.matrix.allMatrixCNVHidden = false
+						}
+					}
+
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: { legendValueFilter: self.config.legendValueFilter }
+						config: self.config
 					})
 				})
 		}
@@ -2589,10 +2603,23 @@ function setLengendActions(self) {
 						}
 						self.config.legendValueFilter.lst.push(filterNew)
 
+						if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+							if (targetData.dt == 1) self.config.settings.matrix.showMatrixMutation = 'bySelection'
+							if (targetData.dt == 4) {
+								self.config.settings.matrix.showMatrixCNV = 'bySelection'
+								if (
+									self.legendData.find(l => l.name == 'CNV')?.items?.length ==
+									self.config.legendValueFilter.lst.filter(l => l.legendGrpName == 'CNV')?.length
+								) {
+									//when all CNV items are hidden by applying legend value filter
+									self.config.settings.matrix.allMatrixCNVHidden = true
+								} else self.config.settings.matrix.allMatrixCNVHidden = false
+							}
+						}
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
-							config: { legendValueFilter: self.config.legendValueFilter }
+							config: self.config
 						})
 					})
 			}
@@ -2717,7 +2744,8 @@ function setMutationSelectionActions(self) {
 		none: showNone,
 		all: showAll,
 		onlyGain: showOnlyCNVGain,
-		onlyLoss: showOnlyCNVLoss
+		onlyLoss: showOnlyCNVLoss,
+		bySelection: showByLegendFilter
 	}
 	self.mutationControlCallback = mutationSelection => {
 		const menuGrp = self.dom.legendMenu.clear()
@@ -2878,8 +2906,10 @@ function showAll(menuGrp, targetData, self) {
 		self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
 		targetData.dt.includes(4)
-	)
+	) {
 		self.config.settings.matrix.showMatrixCNV = 'all'
+		self.config.settings.matrix.allMatrixCNVHidden = false
+	}
 	self.app.dispatch({
 		type: 'plot_edit',
 		id: self.id,
@@ -2913,8 +2943,10 @@ function showOnlyCNVGain(menuGrp, targetData, self) {
 		self.config.legendValueFilter.lst.push(filterNew)
 	}
 
-	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster')
+	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 		self.config.settings.matrix.showMatrixCNV = 'onlyGain'
+		self.config.settings.matrix.allMatrixCNVHidden = false
+	}
 	self.app.dispatch({
 		type: 'plot_edit',
 		id: self.id,
@@ -2948,11 +2980,113 @@ function showOnlyCNVLoss(menuGrp, targetData, self) {
 		self.config.legendValueFilter.lst.push(filterNew)
 	}
 
-	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster')
+	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 		self.config.settings.matrix.showMatrixCNV = 'onlyLoss'
+		self.config.settings.matrix.allMatrixCNVHidden = false
+	}
 	self.app.dispatch({
 		type: 'plot_edit',
 		id: self.id,
 		config: self.config
 	})
+}
+
+function showByLegendFilter(menuGrp, targetData, self) {
+	menuGrp.hide()
+
+	const classDiv = self.app.tip.d.append('div')
+
+	const checkboxName = Math.random().toString()
+	const mClassDiv = classDiv
+		.selectAll(':scope>div')
+		.data(targetData.items)
+		.enter()
+		.append('label')
+		.style('margin', '5px')
+		.style('margin-left', '30px')
+		.style('display', 'block')
+		.each(function (d) {
+			const oneClassDiv = select(this).attr('class', 'sjpp_row_wrapper')
+			oneClassDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('name', checkboxName)
+				.property('disabled', d.crossedOut ? true : false)
+				.property('checked', targetData.crossedOut || d.greyedOut ? false : true)
+				.style('vertical-align', 'top')
+				.style('margin-right', '3px')
+			oneClassDiv
+				.append('span')
+				.style('margin-left', '3px')
+				.html(d.text)
+				.style('color', d.color)
+				.style('text-decoration', d.crossedOut ? 'line-through' : '')
+		})
+
+	const applyBtn = classDiv
+		.append('button')
+		//.property('disabled', true)
+		.style('margin-top', '3px')
+		.text('Apply')
+		.on('click', () => {
+			const checkedCheckboxes = mClassDiv.selectAll(`input[type='checkbox'][name='${checkboxName}']:checked`)
+			const checkedItems = checkedCheckboxes.nodes().map(c => select(c).datum().key)
+
+			menuGrp.hide()
+
+			//remove the individual legend filter in the group
+			self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+				f => f.legendGrpName !== targetData.name || f.tvs.legendFilterType == 'geneVariant_hard'
+			)
+
+			// remove the grp legend filter for the group
+			self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(
+				f => !((f.dt.includes(1) && targetData.dt.includes(1)) || (f.dt.includes(4) && targetData.dt.includes(4)))
+			)
+
+			for (const item of targetData.items) {
+				if (checkedItems.includes(item.key)) continue
+				// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
+				// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
+				// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
+				const filterNew = {
+					legendGrpName: item.termid,
+					type: 'tvs',
+					tvs: {
+						isnot: true,
+						legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+						term: { type: 'geneVariant' },
+						values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+					}
+				}
+				self.config.legendValueFilter.lst.push(filterNew)
+			}
+
+			if (
+				self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+				self.chartType !== 'hierCluster' &&
+				targetData.dt.includes(1)
+			)
+				self.config.settings.matrix.showMatrixMutation = 'bySelection'
+			else if (
+				self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+				self.chartType !== 'hierCluster' &&
+				targetData.dt.includes(4)
+			) {
+				self.config.settings.matrix.showMatrixCNV = 'bySelection'
+				if (
+					self.legendData.find(l => l.name == 'CNV')?.items?.length ==
+					self.config.legendValueFilter.lst.filter(l => l.legendGrpName == 'CNV')?.length
+				) {
+					//when all CNV items are hidden by applying legend value filter
+					self.config.settings.matrix.allMatrixCNVHidden = true
+				} else self.config.settings.matrix.allMatrixCNVHidden = false
+			}
+
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: self.config
+			})
+		})
 }
