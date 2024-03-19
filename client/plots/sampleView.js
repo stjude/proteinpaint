@@ -226,7 +226,14 @@ class SampleView {
 
 	//Get samples related through parent
 	getSamples(sampleName) {
-		let sampleData = this.samplesData[sampleName]
+		let lastName = sampleName
+		const samplesArray = Object.values(this.samplesData)
+		let lastSample = samplesArray.find(s => s.ancestor_name == lastName)
+		while (lastSample) {
+			lastName = lastSample.name
+			lastSample = samplesArray.find(s => s.ancestor_name == lastName)
+		}
+		let sampleData = this.samplesData[lastName]
 		if (!sampleData) return []
 		const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
 		while (sampleData.ancestor_name) {
