@@ -162,15 +162,7 @@ const mafColumns = [
 	{ column: 'callers', selected: true }
 ]
 
-export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = false }) {
-	// public api obj to be returned
-	const publicApi = {}
-
-	if (typeof callbackOnRender == 'function') {
-		// ?
-		callbackOnRender(publicApi)
-	}
-
+export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }) {
 	try {
 		{
 			// validate column names in case of human err
@@ -181,6 +173,14 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 				cn.add(c.column)
 			}
 		}
+		update({ filter0 })
+	} catch (e) {
+		console.log(e)
+		sayerror(holder, e.message || e)
+	}
+
+	async function update({ filter0 }) {
+		holder.selectAll('*').remove()
 		const obj = {
 			// old habit of wrapping everything
 			errDiv: holder.append('div'),
@@ -193,11 +193,13 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 		}
 		makeControls(obj)
 		await getFilesAndShowTable(obj)
-	} catch (e) {
-		console.log(e)
-		sayerror(holder, e.message || e)
+		if (typeof callbacks?.postRender == 'function') {
+			callbacks.postRender(publicApi)
+		}
 	}
 
+	// public api obj to be returned
+	const publicApi = { update }
 	return publicApi // ?
 }
 
