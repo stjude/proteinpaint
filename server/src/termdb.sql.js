@@ -75,9 +75,9 @@ return an array of sample names passing through the filter
 		filter
 			? `WITH ${filter.filters} SELECT sample as id, name, sa.ancestor_id, sa FROM ${filter.CTEname} 
 			join sampleidmap on sample = sampleidmap.id 
-			left join sample_ancestry sa on sample = sa.sample_id`
+			left join sample_ancestry sa on sample = sa.sample_id and sa.distance = 1`
 			: `SELECT id, name, sa.ancestor_id FROM sampleidmap			
-			left join sample_ancestry sa on id = sa.sample_id`
+			left join sample_ancestry sa on id = sa.sample_id and sa.distance = 1`
 		// both statements must return sample id as a uniform behavior
 	)
 	let re
