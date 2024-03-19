@@ -154,21 +154,12 @@ class SampleView {
 				}
 			})
 			function addOptions(options, parent) {
-				const samplesDataArray = Object.values(parent.samplesData)
-				options = options.filter(s => !samplesDataArray.find(sd => sd.parent_id == parent.samplesData[s].id))
-				const data = options.map(s => ({
-					value: s,
-					label: parent
-						.getSamples(s)
-						.map(s => s.sampleName)
-						.join(' > ')
-				}))
 				datalist
 					.selectAll('option')
-					.data(data.filter((s, i) => i < limit))
+					.data(options.filter((s, i) => i < limit))
 					.enter()
 					.append('option')
-					.attr('value', d => d.value)
+					.attr('value', d => d)
 					.attr('label', (d, i) =>
 						i + 1 === limit
 							? isBigDataset
@@ -176,7 +167,7 @@ class SampleView {
 								: `Showing ${i + 1} of ${options.length} hits`
 							: i + 1 === options.length && i > 0
 							? `Found ${options.length} hits`
-							: d.label
+							: d
 					)
 			}
 		}
@@ -238,10 +229,11 @@ class SampleView {
 		let sampleData = this.samplesData[sampleName]
 		if (!sampleData) return []
 		const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
-		while (sampleData.parent_name) {
-			samples.unshift({ sampleId: sampleData.parent_id, sampleName: sampleData.parent_name })
-			sampleData = this.samplesData[sampleData.parent_name]
+		while (sampleData.ancestor_name) {
+			samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
+			sampleData = this.samplesData[sampleData.ancestor_name]
 		}
+		console.log(samples)
 		return samples
 	}
 
