@@ -701,6 +701,9 @@ async function parseEmbedThenUrl(arg, app) {
 	if (arg.launchGdcHierCluster) {
 		return await launchGdcHierCluster(arg, app)
 	}
+	if (arg.launchGdcMaf) {
+		return await launchGdcMaf(arg, app)
+	}
 
 	if (arg.parseurl && location.search.length) {
 		/*
@@ -1320,16 +1323,21 @@ async function launchSelectGenomeWithTklst(arg, app) {
 }
 
 async function launchGeneSearch4GDCmds3(arg, app) {
-	const _ = await import('./geneSearch4GDCmds3')
+	const _ = await import('./geneSearch4GDCmds3.js')
 	return await _.init(arg, app.holder0, app.genomes)
 }
 async function launchGdcMatrix(arg, app) {
-	const _ = await import('./launchGdcMatrix')
+	const _ = await import('./launchGdcMatrix.js')
 	return await _.init(arg, app.holder0, app.genomes)
 }
-async function launchGdcHierCluster(arg, app) {
-	const _ = await import('./launchGdcHierCluster')
-	return await _.init(arg, app.holder0, app.genomes)
+async function launchGdcMaf(arg, app) {
+	const _ = await import('./gdc.maf.js')
+	return await _.gdcMAFui({
+		holder: app.holder0,
+		filter0: arg.filter0,
+		callbacks: arg.callbacks || {},
+		debugmode: arg.debugmode
+	})
 }
 
 function launchmavb(arg, app) {
