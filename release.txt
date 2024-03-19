@@ -1,1 +1,3 @@
 
+Features:
+- enable selecting individual mclasses upon clicking GDC oncomatrix mutation/cnv button
