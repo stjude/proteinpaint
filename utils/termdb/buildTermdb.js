@@ -245,10 +245,7 @@ function loadTermsFile(scriptArg) {
 	 */
 	const terms = []
 	const parent_ids = new Set() //To store parent_id for each term in terms
-	for (const line of fs
-		.readFileSync(scriptArg.get('terms'), { encoding: 'utf8' })
-		.trim()
-		.split('\n')) {
+	for (const line of fs.readFileSync(scriptArg.get('terms'), { encoding: 'utf8' }).trim().split('\n')) {
 		const [termid, termname, parent_id, jsontext, child_order, type, isleaf] = line.split('\t')
 
 		if (!termid) throw 'termid missing from terms file'
@@ -279,10 +276,7 @@ function loadTermsFile(scriptArg) {
 
 function mayLoadHtmlDef(scriptArg, id2term) {
 	if (!scriptArg.has('termHtmlDef')) return
-	for (const line of fs
-		.readFileSync(scriptArg.get('termHtmlDef'), { encoding: 'utf8' })
-		.trim()
-		.split('\n')) {
+	for (const line of fs.readFileSync(scriptArg.get('termHtmlDef'), { encoding: 'utf8' }).trim().split('\n')) {
 		const [id, s] = line.split('\t')
 		if (!id) throw 'id field blank in termHtmlDef file'
 		const term = id2term.get(id)
@@ -325,10 +319,7 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 
 	function load3Col() {
 		console.log('loading annotation3Col ...')
-		for (const line of fs
-			.readFileSync(scriptArg.get('annotation3Col'), { encoding: 'utf8' })
-			.trim()
-			.split('\n')) {
+		for (const line of fs.readFileSync(scriptArg.get('annotation3Col'), { encoding: 'utf8' }).trim().split('\n')) {
 			const [sample, termid, value] = line.split('\t')
 			if (!sample || !termid || !value) continue
 
@@ -348,10 +339,7 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 
 	function loadMatrix() {
 		console.log('loading annotation ...')
-		const lines = fs
-			.readFileSync(scriptArg.get('annotation'), { encoding: 'utf8' })
-			.trim()
-			.split('\n')
+		const lines = fs.readFileSync(scriptArg.get('annotation'), { encoding: 'utf8' }).trim().split('\n')
 		const hterms = [] // array of term objs by order of file columns
 		const headerfields = lines[0].split('\t')
 		for (let i = 1; i < headerfields.length; i++) {
@@ -410,10 +398,7 @@ function loadSurvival(scriptArg, terms, sampleCollect) {
 	if (!scriptArg.has('survival')) return
 	console.log('loading survival ...')
 	const survivalData = new Map() // k: sample id, v: map( termid=>[v1,v2])
-	for (const line of fs
-		.readFileSync(scriptArg.get('survival'), { encoding: 'utf8' })
-		.trim()
-		.split('\n')) {
+	for (const line of fs.readFileSync(scriptArg.get('survival'), { encoding: 'utf8' }).trim().split('\n')) {
 		const [sample, termid, v1, v2] = line.split('\t')
 		if (!sample || !termid || !v1 || !v2) continue
 
@@ -551,6 +536,8 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	if (scriptArg.has('termHtmlDef')) importLines.push(`.import ${scriptArg.get('termHtmlDef')} termhtmldef`)
 
 	if (scriptArg.has('term2genes')) importLines.push(`.import ${scriptArg.get('term2genes')} term2genes`)
+
+	if (scriptArg.has('sampleAncestry')) importLines.push(`.import ${scriptArg.get('sampleAncestry')} sample_ancestry`)
 
 	// temp script to load tables
 	fs.writeFileSync(loadScript, importLines.join('\n'))
