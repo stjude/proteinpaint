@@ -394,13 +394,13 @@ async function get_AllSamplesByName(q, req, res, ds) {
 		res.send(result)
 		return
 	} else {
-		let sampleName2Id = ds.sampleName2Id
+		let sampleName2Id = new Map()
+
 		if (q.filter) {
 			q.ds = ds
 			const filteredSamples = ds.cohort.termdb.hasAncestry
 				? await get_samples_ancestry(q.filter, q.ds, true)
 				: await get_samples(q.filter, q.ds, true)
-			sampleName2Id = new Map()
 			for (const sample of filteredSamples) {
 				sampleName2Id.set(sample.name, {
 					id: sample.id,
@@ -409,8 +409,9 @@ async function get_AllSamplesByName(q, req, res, ds) {
 					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id)
 				})
 			}
+		} else {
+			for (const [key, value] of ds.sampleName2Id) sampleName2Id.set(key, { id: value })
 		}
-
 		res.send(Object.fromEntries(sampleName2Id))
 	}
 }

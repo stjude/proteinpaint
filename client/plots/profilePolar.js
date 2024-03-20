@@ -83,7 +83,7 @@ class profilePolar extends profilePlot {
 			.text(config.title)
 
 		const rows = []
-		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: 'Score' }]
+		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: 'Score', align: 'center' }]
 
 		// Create a polar grid.
 		const radius = this.radius
