@@ -2556,7 +2556,17 @@ function setLengendActions(self) {
 						}
 					}
 					if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
-						if (targetData.dt == 1) self.config.settings.matrix.showMatrixMutation = 'bySelection'
+						if (targetData.dt == 1) {
+							self.config.settings.matrix.showMatrixMutation = 'bySelection'
+							const cl = self.settings.matrix.controlLabels
+							if (
+								self.legendData.find(l => l.name == cl.Mutations)?.items?.length ==
+								self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
+							) {
+								//when all mutation items are hidden by applying legend value filter
+								self.config.settings.matrix.allMatrixMutationHidden = true
+							} else self.config.settings.matrix.allMatrixMutationHidden = false
+						}
 						if (targetData.dt == 4) {
 							self.config.settings.matrix.showMatrixCNV = 'bySelection'
 							if (
@@ -2604,7 +2614,17 @@ function setLengendActions(self) {
 						self.config.legendValueFilter.lst.push(filterNew)
 
 						if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
-							if (targetData.dt == 1) self.config.settings.matrix.showMatrixMutation = 'bySelection'
+							if (targetData.dt == 1) {
+								self.config.settings.matrix.showMatrixMutation = 'bySelection'
+								const cl = self.settings.matrix.controlLabels
+								if (
+									self.legendData.find(l => l.name == cl.Mutations)?.items?.length ==
+									self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
+								) {
+									//when all mutation items are hidden by applying legend value filter
+									self.config.settings.matrix.allMatrixMutationHidden = true
+								} else self.config.settings.matrix.allMatrixMutationHidden = false
+							}
 							if (targetData.dt == 4) {
 								self.config.settings.matrix.showMatrixCNV = 'bySelection'
 								if (
@@ -2743,8 +2763,6 @@ function setMutationSelectionActions(self) {
 		onlyPC: showOnlyPC,
 		none: showNone,
 		all: showAll,
-		onlyGain: showOnlyCNVGain,
-		onlyLoss: showOnlyCNVLoss,
 		bySelection: showByLegendFilter
 	}
 	self.mutationControlCallback = mutationSelection => {
@@ -2788,8 +2806,17 @@ function showOnlyTrunc(menuGrp, targetData, self) {
 		}
 		self.config.legendValueFilter.lst.push(filterNew)
 	}
-	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster')
+	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 		self.config.settings.matrix.showMatrixMutation = 'onlyTruncating'
+		const cl = self.settings.matrix.controlLabels
+		if (
+			self.legendData.find(l => l.name == cl.Mutations)?.items?.length ==
+			self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
+		) {
+			//when all mutation items are hidden by applying legend value filter
+			self.config.settings.matrix.allMatrixMutationHidden = true
+		} else self.config.settings.matrix.allMatrixMutationHidden = false
+	}
 	self.app.dispatch({
 		type: 'plot_edit',
 		id: self.id,
@@ -2827,8 +2854,17 @@ function showOnlyPC(menuGrp, targetData, self) {
 		}
 		self.config.legendValueFilter.lst.push(filterNew)
 	}
-	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster')
+	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 		self.config.settings.matrix.showMatrixMutation = 'onlyPC'
+		const cl = self.settings.matrix.controlLabels
+		if (
+			self.legendData.find(l => l.name == cl.Mutations)?.items?.length ==
+			self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
+		) {
+			//when all mutation items are hidden by applying legend value filter
+			self.config.settings.matrix.allMatrixMutationHidden = true
+		} else self.config.settings.matrix.allMatrixMutationHidden = false
+	}
 	self.app.dispatch({
 		type: 'plot_edit',
 		id: self.id,
@@ -2900,88 +2936,15 @@ function showAll(menuGrp, targetData, self) {
 		self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
 		targetData.dt.includes(1)
-	)
+	) {
 		self.config.settings.matrix.showMatrixMutation = 'all'
-	else if (
+		self.config.settings.matrix.allMatrixMutationHidden = false
+	} else if (
 		self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
 		targetData.dt.includes(4)
 	) {
 		self.config.settings.matrix.showMatrixCNV = 'all'
-		self.config.settings.matrix.allMatrixCNVHidden = false
-	}
-	self.app.dispatch({
-		type: 'plot_edit',
-		id: self.id,
-		config: self.config
-	})
-}
-
-function showOnlyCNVGain(menuGrp, targetData, self) {
-	menuGrp.hide()
-
-	//remove the individual legend filter in the group
-	self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(f => f.legendGrpName !== targetData.name)
-	// remove the grp legend filter for the group
-	self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(4))
-
-	for (const item of targetData.items) {
-		if (item.key == mclasscnvgain) continue
-		// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
-		// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
-		// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
-		const filterNew = {
-			legendGrpName: item.termid,
-			type: 'tvs',
-			tvs: {
-				isnot: true,
-				legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
-				term: { type: 'geneVariant' },
-				values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
-			}
-		}
-		self.config.legendValueFilter.lst.push(filterNew)
-	}
-
-	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
-		self.config.settings.matrix.showMatrixCNV = 'onlyGain'
-		self.config.settings.matrix.allMatrixCNVHidden = false
-	}
-	self.app.dispatch({
-		type: 'plot_edit',
-		id: self.id,
-		config: self.config
-	})
-}
-
-function showOnlyCNVLoss(menuGrp, targetData, self) {
-	menuGrp.hide()
-
-	//remove the individual legend filter in the group
-	self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(f => f.legendGrpName !== targetData.name)
-	// remove the grp legend filter for the group
-	self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(4))
-
-	for (const item of targetData.items) {
-		if (item.key == mclasscnvloss) continue
-		// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
-		// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
-		// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
-		const filterNew = {
-			legendGrpName: item.termid,
-			type: 'tvs',
-			tvs: {
-				isnot: true,
-				legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
-				term: { type: 'geneVariant' },
-				values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
-			}
-		}
-		self.config.legendValueFilter.lst.push(filterNew)
-	}
-
-	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
-		self.config.settings.matrix.showMatrixCNV = 'onlyLoss'
 		self.config.settings.matrix.allMatrixCNVHidden = false
 	}
 	self.app.dispatch({
@@ -3066,9 +3029,17 @@ function showByLegendFilter(menuGrp, targetData, self) {
 				self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
 				self.chartType !== 'hierCluster' &&
 				targetData.dt.includes(1)
-			)
+			) {
 				self.config.settings.matrix.showMatrixMutation = 'bySelection'
-			else if (
+				const cl = self.settings.matrix.controlLabels
+				if (
+					self.legendData.find(l => l.name == cl.Mutations)?.items?.length ==
+					self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
+				) {
+					//when all mutation items are hidden by applying legend value filter
+					self.config.settings.matrix.allMatrixMutationHidden = true
+				} else self.config.settings.matrix.allMatrixMutationHidden = false
+			} else if (
 				self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
 				self.chartType !== 'hierCluster' &&
 				targetData.dt.includes(4)

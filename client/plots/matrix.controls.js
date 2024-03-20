@@ -6,6 +6,7 @@ import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
+import { select } from 'd3-selection'
 
 const tip = new Menu({ padding: '' })
 
@@ -647,6 +648,17 @@ export class MatrixControls {
 			.style('margin', '2px 0')
 			.datum({
 				label: 'Mutation',
+				updateBtn: btn => {
+					const matrixSetting = this.parent.config.settings.matrix
+					btn.style(
+						'text-decoration',
+						matrixSetting.showMatrixMutation == 'none' || matrixSetting.allMatrixMutationHidden ? 'line-through' : ''
+					)
+					btn.style(
+						'text-decoration-thickness',
+						matrixSetting.showMatrixMutation == 'none' || matrixSetting.allMatrixMutationHidden ? '2px' : ''
+					)
+				},
 				rows: [
 					{
 						title: `Show mutation options`,
@@ -681,16 +693,25 @@ export class MatrixControls {
 			.style('margin', '2px 0')
 			.datum({
 				label: 'CNV',
+				updateBtn: btn => {
+					const matrixSetting = this.parent.config.settings.matrix
+					btn.style(
+						'text-decoration',
+						matrixSetting.showMatrixCNV == 'none' || matrixSetting.allMatrixCNVHidden ? 'line-through' : ''
+					)
+					btn.style(
+						'text-decoration-thickness',
+						matrixSetting.showMatrixCNV == 'none' || matrixSetting.allMatrixCNVHidden ? '2px' : ''
+					)
+				},
 				rows: [
 					{
-						title: `Include the count in the gene label`,
+						title: `Show CNV options`,
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'showMatrixCNV',
 						options: [
 							{ label: 'Show all CNV', value: 'all' },
-							{ label: `Show only CNV gain`, value: 'onlyGain' },
-							{ label: `Show only CNV loss`, value: 'onlyLoss' },
 							{ label: `Do not show CNV`, value: 'none' },
 							{ label: `Show selected CNV`, value: 'bySelection' }
 						],
@@ -724,8 +745,9 @@ export class MatrixControls {
 
 		this.btns
 			.text(d => (d.getCount ? `${d.getCount()} ` : '') + d.label)
-			.style('text-decoration', d => (d.active ? 'underline' : ''))
-			.style('color', d => (d.active ? '#3a3' : ''))
+			.each(function (d) {
+				if (d.updateBtn) d.updateBtn(select(this))
+			})
 
 		const s = this.parent.config.settings.matrix
 		const d = this.parent.dimensions
@@ -1026,6 +1048,7 @@ export class MatrixControls {
 	}
 
 	generateCNVItems(self, app, parent, table) {
+		table.attr('class', null) // remove the hoverover background for CNV button
 		if (
 			parent.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
 			parent.chartType !== 'hierCluster' &&
@@ -1035,6 +1058,7 @@ export class MatrixControls {
 	}
 
 	generateMutationItems(self, app, parent, table) {
+		table.attr('class', null) // remove the hoverover background for CNV button
 		if (
 			parent.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
 			parent.chartType !== 'hierCluster' &&

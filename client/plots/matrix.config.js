@@ -71,6 +71,7 @@ export async function getPlotConfig(opts = {}, app) {
 						? 'none'
 						: '',
 				allMatrixCNVHidden: false,
+				allMatrixMutationHidden: false,
 				gridStroke: '#fff',
 				outlineStroke: '#ccc',
 				beamStroke: '#f00',
