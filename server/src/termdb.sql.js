@@ -49,14 +49,39 @@ as the actual query is embedded in qfilter
 return an array of sample names passing through the filter
 */
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
-
 	const sql = ds.cohort.db.connection.prepare(
 		filter
 			? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
 			: 'SELECT id, name FROM sampleidmap' // both statements must return sample id as a uniform behavior
 	)
-
 	let re
+
+	if (filter) re = sql.all(filter.values)
+	else re = sql.all()
+
+	if (canDisplay) return re
+	for (const item of re) delete item.name
+	return re
+}
+
+export async function get_samples_ancestry(qfilter, ds, canDisplay = false) {
+	/*
+must have qfilter[]
+as the actual query is embedded in qfilter
+return an array of sample names passing through the filter
+*/
+	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
+	const sql = ds.cohort.db.connection.prepare(
+		filter
+			? `WITH ${filter.filters} SELECT sample as id, name, sa.ancestor_id, sa FROM ${filter.CTEname} 
+			join sampleidmap on sample = sampleidmap.id 
+			left join sample_ancestry sa on sample = sa.sample_id and sa.distance = 1`
+			: `SELECT id, name, sa.ancestor_id FROM sampleidmap			
+			left join sample_ancestry sa on id = sa.sample_id and sa.distance = 1`
+		// both statements must return sample id as a uniform behavior
+	)
+	let re
+
 	if (filter) re = sql.all(filter.values)
 	else re = sql.all()
 	if (canDisplay) return re

@@ -54,7 +54,7 @@ export class profilePlot {
 
 		if (config.site) {
 			if (Object.keys(this.sampleidmap).length == 0) throw 'You must login to view site info' //no sample data returned
-			const id = this.sampleidmap[config.site]
+			const id = this.sampleidmap[config.site].id
 			if (!id) throw 'Invalid site'
 		}
 	}
@@ -279,7 +279,7 @@ export class profilePlot {
 			if (this.state.isLoggedIn) {
 				let result
 				if (this.state.site && !this.settings.isAggregate) {
-					const id = this.sampleidmap[this.state.site]
+					const id = this.sampleidmap[this.state.site].id
 					this.settings.site = id
 					this.sites = [{ label: this.state.site, value: id }]
 				} //Admin
@@ -306,7 +306,7 @@ export class profilePlot {
 				let result
 
 				if (this.state.site) {
-					const id = this.sampleidmap[this.state.site]
+					const id = this.sampleidmap[this.state.site].id
 					this.settings.site = id
 					this.sites = [{ label: this.state.site, value: id }]
 					result = await this.app.vocabApi.getAnnotatedSampleData({

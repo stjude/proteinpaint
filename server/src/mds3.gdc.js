@@ -51,6 +51,17 @@ isoform2ssm_query1_getvariant{}
 isoform2ssm_query2_getcase{}
 */
 
+/*
+	!!! NOTE on ky usage: !!!
+	- the default is 10 seconds before a timeout error gets generated
+	
+	- must set `timeout: false` in order to let the GDC API trigger the timeout error, instead
+	  of hardcoding the 10 second default or another timeout value
+	
+	- the timeout issues are encountered more frequently when the server is busy or
+	  where the server is slower, such as in qa-int
+*/
+
 export function convertSampleId_addGetter(tdb, ds) {
 	tdb.convertSampleId.get = inputs => {
 		const old2new = {}
@@ -73,7 +84,7 @@ export async function validate_ssm2canonicalisoform(api, getHostHeaders) {
 				'ssms',
 				q.ssm_id + '?fields=consequence.transcript.is_canonical,consequence.transcript.transcript_id'
 			),
-			{ headers }
+			{ timeout: false, headers }
 		).json()
 		if (!Array.isArray(re?.data?.consequence)) throw '.data.consequence not array'
 		const canonical = re.data.consequence.find(i => i.transcript.is_canonical)
@@ -192,6 +203,7 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 		const re = await ky
 			.post(`${host.geneExp}/gene_expression/gene_selection`, {
 				headers,
+				timeout: false, // instead of 10 second default
 				json: {
 					case_ids,
 					gene_ids: ensgLst,
@@ -231,7 +243,7 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky.post(path.join(host.rest, 'cases'), { headers, json }).json()
+		const re = await ky.post(path.join(host.rest, 'cases'), { timeout: false, headers, json }).json()
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		const lst = []
 		for (const h of re.data.hits) {
@@ -252,8 +264,11 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 
 async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample2value, ds) {
 	const { host, headers } = ds.getHostHeaders(q)
+	// do not use headers here that has accept: 'application/json' ???
+	// headers.accept = 'text/plain'
 	const re = await ky
 		.post(`${host.geneExp}/gene_expression/values`, {
+			timeout: false,
 			headers,
 			json: {
 				case_ids,
@@ -464,6 +479,7 @@ export function validate_query_geneCnv(ds) {
 		const { host, headers } = ds.getHostHeaders(opts)
 		const re = await ky
 			.post(path.join(host.rest, 'cnvs'), {
+				timeout: false,
 				headers,
 				json: {
 					size: 100000,
@@ -589,6 +605,7 @@ export function validate_query_geneCnv2(ds) {
 		const { host, headers } = ds.getHostHeaders(opts)
 		const re = await ky
 			.post(path.join(host.rest, 'cnv_occurrences'), {
+				timeout: false,
 				headers,
 				json: Object.assign({ size: 100000, fields: getFields(opts) }, getFilters(opts))
 			})
@@ -708,6 +725,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 	const { host, headers } = ds.getHostHeaders(opts)
 	const re = await ky
 		.post(path.join(host.rest, 'files'), {
+			timeout: false,
 			headers,
 			json: {
 				size: 10000,
@@ -752,7 +770,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 	const events = [] // collect cnv and fusion events into one array
 
 	if (wgsFile) {
-		const re = await ky(path.join(host.rest, 'data', wgsFile), { headers }).text()
+		// do not use headers here that has accept: 'application/json'
+		const re = await ky(path.join(host.rest, 'data', wgsFile), { timeout: false }).text()
 		const lines = re.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Copy_Number	Major_Copy_Number	Minor_Copy_Number
@@ -806,8 +825,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 		}
 	} else if (snpFile) {
 		// only load available snp file if no wgs cnv
-
-		const re = await ky(path.join(host.rest, 'data', snpFile), { headers }).text()
+		// do not use headers here since accept should be 'text/plain', not 'application/json'
+		const re = await ky(path.join(host.rest, 'data', snpFile), { timeout: false }).text()
 		const lines = re.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Num_Probes	Segment_Mean
@@ -829,7 +848,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 
 	if (arribaFile) {
 		try {
-			const re = await ky(path.join(host.rest, 'data', arribaFile), { headers }).text()
+			// do not use headers here that has accept: 'application/json'
+			const re = await ky(path.join(host.rest, 'data', arribaFile), { timeout: false }).text()
 			const lines = re.split('\n')
 			// first line is header
 			// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
@@ -906,12 +926,14 @@ async function snvindel_byisoform(opts, ds) {
 	// must use POST as filter can be too long for GET
 	const p1 = ky
 		.post(path.join(host.rest, query1.endpoint), {
+			timeout: false,
 			headers,
 			json: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
 		})
 		.json()
 	const p2 = ky
 		.post(path.join(host.rest, query2.endpoint), {
+			timeout: false,
 			headers,
 			json: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
 		})
@@ -1343,7 +1365,9 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
-	const re = await ky.post(path.join(host.rest, isoform2ssm_query2_getcase.endpoint), { headers, json: param }).json()
+	const re = await ky
+		.post(path.join(host.rest, isoform2ssm_query2_getcase.endpoint), { timeout: false, headers, json: param })
+		.json()
 
 	delete q.isoforms
 
@@ -1485,6 +1509,7 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 	const { host, headers } = ds.getHostHeaders(q)
 	const re = await ky
 		.post(path.join(host.rest, 'cases'), {
+			timeout: false,
 			headers,
 			json: {
 				size: ds.__gdc.casesWithExpData.size,
@@ -1578,7 +1603,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	const query = termid2size_query(termPaths)
 	const variables = termid2size_filters(q, ds)
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky.post(host.graphql, { headers, json: { query, variables } }).json()
+	const re = await ky.post(host.graphql, { timeout: false, headers, json: { query, variables } }).json()
 
 	// levels to traverse in api return
 	const keys = ['data', 'explore', 'cases', 'aggregations']
@@ -1626,7 +1651,10 @@ export function validate_m2csq(ds) {
 	ds.queries.snvindel.m2csq.get = async q => {
 		// q is client request object
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), { headers }).json()
+		const re = await ky(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
+			timeout: false,
+			headers
+		}).json()
 		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
 		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
 		return re.data.consequence.map(i => i.transcript)
@@ -1736,6 +1764,7 @@ async function convert2caseId(n, ds) {
 	const { host, headers } = ds.getHostHeaders(q)
 	const re = await ky
 		.post(path.join(host.rest, 'cases'), {
+			timeout: false,
 			headers,
 			json: {
 				size: 1,
@@ -1751,7 +1780,7 @@ async function convert2caseId(n, ds) {
 			}
 		})
 		.json()
-	console.log(re)
+
 	for (const h of re.data.hits) {
 		if (h.case_id) return h.case_id
 	}
@@ -1793,7 +1822,7 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 			].join(',')
 		}
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky.post(path.join(host.rest, 'files'), { headers, json }).json()
+		const re = await ky.post(path.join(host.rest, 'files'), { timeout: false, headers, json }).json()
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
 		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
@@ -1857,8 +1886,9 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		sample: value is the file Id, one that's found by gdc_validate_query_singleCell_samples
 	*/
 	ds.queries.singleCell.data.get = async q => {
-		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky(path.join(host.rest, 'data', q.sample), { headers }).text()
+		const { host } = ds.getHostHeaders(q)
+		// do not use headers here that has accept: 'application/json'
+		const re = await ky(path.join(host.rest, 'data', q.sample), { timeout: false }).text()
 		const lines = re.trim().split('\n')
 
 		// first line is header
@@ -1919,8 +1949,11 @@ async function getSingleSampleMutations(query, ds, genome) {
 	// ssm
 	{
 		const { host, headers } = ds.getHostHeaders(query)
+		const url = path.join(host.rest, isoform2ssm_query1_getvariant.endpoint)
+
 		const re = await ky
-			.post(path.join(host.rest, isoform2ssm_query1_getvariant.endpoint), {
+			.post(url, {
+				timeout: false,
 				headers,
 				json: {
 					size: 10000, // ssm max!
@@ -1929,6 +1962,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 				}
 			})
 			.json()
+
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total not integer'
 		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
@@ -1964,8 +1998,13 @@ async function getSingleSampleMutations(query, ds, genome) {
 
 	{
 		// cnv TODO total
-		const tmp = await getCnvFusion4oneCase(query, ds)
-		result.mlst.push(...tmp)
+		try {
+			const tmp = await getCnvFusion4oneCase(query, ds)
+			result.mlst.push(...tmp)
+		} catch (e) {
+			console.log(e)
+			throw e
+		}
 	}
 
 	return result

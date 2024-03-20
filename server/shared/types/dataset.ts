@@ -283,10 +283,11 @@ no longer used!!
 file content is a probe-by-sample matrix, values are signals
 for a given region, the median signal from probes in the region is used to make a gain/loss call for each sample
 this is alternative to CnvSegment
-*/
+
 type Probe2Cnv = {
 	file: string
 }
+*/
 
 type RnaseqGeneCount = {
 	file: string
@@ -368,11 +369,32 @@ export type SingleCellQuery = {
 	data: SingleCellDataGdc | SingleCellDataNative
 }
 
+type LdQuery = {
+	// each track obj defines a ld track
+	tracks: {
+		// for displaying and identifying a track. must not duplicate
+		name: string
+		// relative path of ld .gz file
+		file: string
+		// dynamically added full path
+		file0?: string
+		// dynamically added
+		nochr?: boolean
+		// if to show by default
+		shown: boolean
+		// max range allowed to show data
+		viewrangelimit: number
+	}[]
+	overlay: {
+		color_1: string
+		color_0: string
+	}
+}
+
 type Mds3Queries = {
 	defaultBlock2GeneMode?: boolean
 	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
-	probe2cnv?: Probe2Cnv // this is no longer used
 	cnv?: CnvSegment
 	singleSampleMutation?: SingleSampleMutationQuery
 	geneExpression?: GeneExpressionQuery
@@ -387,6 +409,7 @@ type Mds3Queries = {
 			gdcapi: true
 		}
 	}
+	ld?: LdQuery
 }
 
 /*** types supporting Termdb ***/

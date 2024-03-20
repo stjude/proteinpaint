@@ -15,41 +15,42 @@ class SampleView {
 	}
 
 	setDom(opts) {
-		const div = opts.holder.append('div')
+		const div = opts.holder
+			.append('div')
+			.style('display', 'flex')
+			.style('flex-wrap', 'wrap')
+			.style('justify-content', 'flex-start')
+			.style('width', '100vw')
 		const controlsDiv = div.insert('div').style('display', 'inline-block')
-		const mainDiv = div.insert('div').style('display', 'inline-block') //div besides controls, with dictionary
-		const rightDiv = div.append('div').style('display', 'inline-block') //div with plots
-		const sampleDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '20px')
+		const leftDiv = div.insert('div').style('display', 'inline-block').style('vertical-align', 'top') //div besides controls, with dictionary
+		const plotsDiv = div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
+		const sampleDiv = leftDiv.insert('div').style('display', 'inline-block').style('padding', '20px')
 
-		const tableDiv = mainDiv.insert('div').style('padding', '10px')
+		const tableDiv = leftDiv.insert('div').style('padding', '10px')
 		const table = tableDiv.append('table').style('border-collapse', 'collapse')
 		const thead = table.append('thead')
 		this.dom = {
 			header: opts.header,
 			holder: opts.holder,
 			controlsDiv,
-			mainDiv,
 			sampleDiv,
 			tableDiv,
 			table,
 			thead,
 			theadrow: thead.append('tr'),
 			tbody: table.append('tbody'),
-			contentDiv: mainDiv.insert('div'),
-			rightDiv
+			plotsDiv
 		}
 	}
 
 	async init(appState) {
 		this.termsByCohort = {}
 
-		const div = this.dom.sampleDiv
 		await this.setSampleSelect(appState)
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
 		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
-		if (hasPlots) this.setControls()
-		await this.renderPlots(state, state.samples)
+		if (hasPlots) await this.setControls()
 	}
 
 	async setSampleSelect(appState) {
@@ -105,18 +106,17 @@ class SampleView {
 			})
 		} else {
 			const limit = 100
-			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName({
+			this.samplesData = await this.app.vocabApi.getAllSamplesByName({
 				filter: getNormalRoot(appState.termfilter?.filter)
 			})
-			const allSamples = Object.keys(sampleName2Id)
-
+			const allSamples = Object.keys(this.samplesData)
 			const isBigDataset = allSamples.length > 10000
 
 			if (allSamples.length == 0)
 				//Happens if it requires sign in first
 				return
 			const sampleName = allSamples[0]
-			this.sample = config.sample || { sampleId: sampleName2Id[sampleName], sampleName }
+			this.sample = config.sample || { sampleId: this.samplesData[sampleName].id, sampleName }
 			const input = this.dom.sampleDiv
 				.append('input')
 				.attr('list', 'sampleDatalist')
@@ -124,7 +124,7 @@ class SampleView {
 				.attr('placeholder', sampleName)
 				.style('width', '400px')
 			const datalist = this.dom.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
-			addOptions(allSamples)
+			addOptions(allSamples, this)
 			input.on('keyup', e => {
 				datalist.selectAll('*').remove()
 				const str = input.node().value.toLowerCase()
@@ -137,19 +137,14 @@ class SampleView {
 					if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
 					if (options.length == limit && allSamples.length > 10000) break
 				}
-				if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options)
+				if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options, this)
 			})
 			input.on('change', e => {
 				const sampleName = input.node().value
-				const sampleId = sampleName2Id[sampleName]
-				if (sampleId) {
-					this.dom.tableDiv.style('display', 'block')
-					this.sample = { sampleId, sampleName }
+				if (this.samplesData[sampleName]) {
+					const samples = this.getSamples(sampleName)
 
-					this.showVisiblePlots()
-					this.renderPlots(this.state, [this.sample])
-
-					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: this.sample } })
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 				} else {
 					this.dom.tableDiv.style('display', 'none')
 					if (this.state.hasPlots) {
@@ -158,8 +153,7 @@ class SampleView {
 					}
 				}
 			})
-
-			function addOptions(options) {
+			function addOptions(options, parent) {
 				datalist
 					.selectAll('option')
 					.data(options.filter((s, i) => i < limit))
@@ -173,7 +167,10 @@ class SampleView {
 								: `Showing ${i + 1} of ${options.length} hits`
 							: i + 1 === options.length && i > 0
 							? `Found ${options.length} hits`
-							: d
+							: parent
+									.getSamples(d)
+									.map(s => s.sampleName)
+									.join(' > ')
 					)
 			}
 		}
@@ -196,7 +193,8 @@ class SampleView {
 
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
-		let samples = config.samples || [this.sample]
+		let samples = config.samples || this.getSamples(this.sample.sampleName)
+
 		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
 		const q = appState.termdbConfig.queries
 		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
@@ -206,7 +204,6 @@ class SampleView {
 			// TODO: use state.config drectly, instead of having to extract
 			// selected config.key-values into the component state
 			activeCohort: config.activeCohort,
-			sample: config?.sample || this.sample,
 			terms: config.terms,
 			expandedTermIds: config.expandedTermIds,
 			samples,
@@ -230,11 +227,30 @@ class SampleView {
 		return state
 	}
 
+	//Get samples related through parent
+	getSamples(sampleName) {
+		let lastName = sampleName
+		const samplesArray = Object.values(this.samplesData)
+		let lastSample = samplesArray.find(s => s.ancestor_name == lastName)
+		while (lastSample) {
+			lastName = lastSample.name
+			lastSample = samplesArray.find(s => s.ancestor_name == lastName)
+		}
+		let sampleData = this.samplesData[lastName]
+		if (!sampleData) return []
+		const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
+		while (sampleData.ancestor_name) {
+			samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
+			sampleData = this.samplesData[sampleData.ancestor_name]
+		}
+		return samples
+	}
+
 	async main() {
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
-		if (this.state.samples.length == 1 && this.state.sample == null) return
+		await this.renderPlots(this.state, this.state.samples)
 		if (this.state.hasPlots) this.showVisiblePlots()
 
 		this.termsById = this.getTermsById(this.state)
@@ -449,7 +465,7 @@ class SampleView {
 			const missingAccess = e?.error == 'Missing access' && this.state.termdbConfig.dataDownloadCatch?.missingAccess
 			const message = missingAccess?.message?.replace('MISSING-ACCESS-LINK', missingAccess?.links[e?.linkKey])
 			const helpLink = this.state.termdbConfig.dataDownloadCatch?.helpLink
-			this.dom.mainDiv
+			this.dom.holder
 				.style('color', '#e44')
 				.style('padding', '10px')
 				.html(
@@ -474,25 +490,17 @@ class SampleView {
 	}
 
 	async renderPlots(state, samples) {
-		this.dom.contentDiv.selectAll('*').remove()
-		this.dom.rightDiv.selectAll('*').remove()
+		this.dom.plotsDiv.selectAll('*').remove()
+		const plotsDiv = this.dom.plotsDiv
 		this.discoPlots = []
 		this.singleSamplePlots = []
-		const table = this.dom.contentDiv.style('display', 'table')
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
-			const div = this.dom.contentDiv.append('div').style('display', 'table-row')
-
+			let div = plotsDiv.append('div')
 			for (const sample of samples) {
-				let cellDiv
-				if (state.samples.length == 1)
-					cellDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-				else cellDiv = div.append('div').style('display', 'table-cell')
+				const cellDiv = div.append('div').style('display', 'inline-block')
 				this.discoPlots.push(cellDiv)
-				cellDiv
-					.insert('div')
-					.style('font-weight', 'bold')
-					.style('padding-left', '20px')
-					.text(`${sample.sampleName} Disco plot`)
+				if (this.state.samples.length > 1)
+					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 				const discoPlotImport = await import('./plot.disco.js')
 				discoPlotImport.default(
 					state.termdbConfig,
@@ -505,15 +513,13 @@ class SampleView {
 		}
 		if (state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
-				let div = this.dom.contentDiv.append('div').style('display', 'table-row')
+				let div = plotsDiv.append('div')
 				for (const sample of samples) {
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
-					let plotDiv
-					if (state.samples.length == 1)
-						plotDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-					else plotDiv = div.insert('div').style('display', 'table-cell').style('padding', '20px')
+					const plotDiv = div.insert('div').style('display', 'table-cell').style('padding', '20px')
 					this.singleSamplePlots.push(plotDiv)
-					plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
+					if (this.state.samples.length > 1)
+						plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
 					const ssgqImport = await import('./plot.ssgq.js')
 					await ssgqImport.plotSingleSampleGenomeQuantification(
 						state.termdbConfig,
@@ -531,7 +537,7 @@ class SampleView {
 
 export function getTermValue(term, data) {
 	let value = data[term.id]?.value
-	if (value == null) return null
+	if (value == null || value == undefined || value == 'undefined') return null
 	if (term.type == 'float' || term.type == 'integer') {
 		value = term.values?.[value]?.label || term.values?.[value]?.key || value
 		if (isNaN(value)) return value
@@ -561,7 +567,8 @@ function setRenderers(self) {
 	self.renderSampleDictionary = function () {
 		// use an array to support multiple visible samples,
 		// but prototyping with just one sample for now
-		const visibleSamples = Object.values(self.sampleDataByTermId)
+		const visibleSamples = []
+		for (const sample of self.state.samples) visibleSamples.push(self.sampleDataByTermId[sample.sampleId])
 		// for the column names, just need the first column name + sample data
 		self.renderTHead(['', ...self.state.samples.map(s => s.sampleName)])
 		const tBodyData = self.orderedVisibleTerms.map((term, trIndex) => [

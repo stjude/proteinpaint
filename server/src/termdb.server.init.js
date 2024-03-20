@@ -61,6 +61,10 @@ export function server_init_db_queries(ds) {
 		'anno_categorical',
 		'buildDate'
 	]
+	if (tables.has('sample_ancestry')) {
+		const num_rows = cn.prepare('SELECT count(*) as num_rows FROM sample_ancestry').get().num_rows
+		if (num_rows > 0) ds.cohort.termdb.hasAncestry = true
+	}
 	for (const table of schema_tables) if (!tables.has(table)) console.log(`${table} table missing!!!!!!!!!!!!!!!!!!!!`)
 	//throw `${table} table missing`
 	if (!tables.has('terms')) throw 'terms table missing'

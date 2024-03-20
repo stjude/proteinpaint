@@ -13,7 +13,7 @@ import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
 import { authApi } from './auth.js'
 import { getResult as geneSearch } from './gene.js'
 import { searchSNP } from './searchSNP.js'
-import { get_samples } from './termdb.sql.js'
+import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 
 /*
 ********************** EXPORTED
@@ -397,10 +397,17 @@ async function get_AllSamplesByName(q, req, res, ds) {
 		let sampleName2Id = ds.sampleName2Id
 		if (q.filter) {
 			q.ds = ds
-			const filteredSamples = await get_samples(q.filter, q.ds, true)
+			const filteredSamples = ds.cohort.termdb.hasAncestry
+				? await get_samples_ancestry(q.filter, q.ds, true)
+				: await get_samples(q.filter, q.ds, true)
 			sampleName2Id = new Map()
 			for (const sample of filteredSamples) {
-				sampleName2Id.set(sample.name, sample.id)
+				sampleName2Id.set(sample.name, {
+					id: sample.id,
+					name: sample.name,
+					ancestor_id: sample.ancestor_id,
+					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id)
+				})
 			}
 		}
 
