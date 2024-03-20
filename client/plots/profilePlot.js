@@ -54,7 +54,7 @@ export class profilePlot {
 
 		if (config.site) {
 			if (Object.keys(this.sampleidmap).length == 0) throw 'You must login to view site info' //no sample data returned
-			const id = this.sampleidmap[config.site].id
+			const id = this.sampleidmap[config.site]?.id
 			if (!id) throw 'Invalid site'
 		}
 	}

@@ -15,6 +15,7 @@ export type Column = {
 	editCallback?: (i: number, cell: Cell) => void // Makes this column editable  and allows to notify the change through the callback.
 	//It is only allowed for cells with a value or a color field
 	nowrap?: boolean // set white-space=nowrap on all <td> of this column so strings do not wrap
+	align: string // left, center, right
 }
 
 export type Button = {
@@ -262,6 +263,8 @@ export function renderTable({
 				})
 			}
 			if (column.width) td.style('width', column.width)
+			if (column.align) td.style('text-align', column.align)
+
 			if (column.nowrap) td.style('white-space', 'nowrap')
 			if (cell.url) {
 				td.append('a')
