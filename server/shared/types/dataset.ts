@@ -575,7 +575,7 @@ type MatrixSettings = {
 	proteinChangingMutations?: Array<string>
 	showHints?: string[]
 	displayDictRowWithNoValues?: boolean
-	addMutationCNVButtons?: boolean
+	addMutationCNVButtons?: boolean // allow to add two buttons (CNV and mutation) to control panel for selecting mclasses displayed on oncoMatrix
 }
 
 type Mclass = {
