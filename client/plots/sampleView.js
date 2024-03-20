@@ -167,7 +167,10 @@ class SampleView {
 								: `Showing ${i + 1} of ${options.length} hits`
 							: i + 1 === options.length && i > 0
 							? `Found ${options.length} hits`
-							: d
+							: parent
+									.getSamples(d)
+									.map(s => s.sampleName)
+									.join(' > ')
 					)
 			}
 		}
@@ -240,7 +243,6 @@ class SampleView {
 			samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
 			sampleData = this.samplesData[sampleData.ancestor_name]
 		}
-		console.log(samples)
 		return samples
 	}
 
