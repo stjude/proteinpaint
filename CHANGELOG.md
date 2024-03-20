@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - Fix the timeout issues when using ky http client
+- change the defination of trancating/protein-changing mutation, change oncomatrix mclasses sorting order
 
 
 ## 2.47.1
