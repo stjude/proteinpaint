@@ -535,7 +535,7 @@ class SampleView {
 
 export function getTermValue(term, data) {
 	let value = data[term.id]?.value
-	if (value == null) return null
+	if (value == null || value == undefined || value == 'undefined') return null
 	if (term.type == 'float' || term.type == 'integer') {
 		value = term.values?.[value]?.label || term.values?.[value]?.key || value
 		if (isNaN(value)) return value
