@@ -1,1 +1,2 @@
-
+Fixes:
+- Fix to unhide a survival series by clicking its corresponding legend entry

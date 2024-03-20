@@ -62,7 +62,7 @@ class TdbSurvival {
 			},
 			handlers: {
 				legend: {
-					click: e => this.legendClick(e.target.data, e.clientX, e.clientY)
+					click: e => this.legendClick(e.target.__data__, e.clientX, e.clientY)
 				}
 			}
 		})
@@ -72,7 +72,7 @@ class TdbSurvival {
 			},
 			handlers: {
 				legend: {
-					click: e => this.legendClick(e.target.data, e.clientX, e.clientY)
+					click: e => this.legendClick(e.target.__data__, e.clientX, e.clientY)
 				}
 			}
 		})
