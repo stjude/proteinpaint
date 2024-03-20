@@ -1085,5 +1085,5 @@ export function getColors(number) {
 	return d3scale.scaleOrdinal(scheme)
 }
 
-export const truncatingMutations = ['F', 'N', 'D', 'I', 'L']
-export const proteinChangingMutations = ['F', 'N', 'D', 'I', 'L', 'M', 'P']
+export const truncatingMutations = ['F', 'N', 'L', 'P']
+export const proteinChangingMutations = ['F', 'N', 'L', 'P', 'D', 'I', 'ProteinAltering', 'M']

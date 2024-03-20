@@ -350,20 +350,25 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 							// copy-number
 							'CNV_amp',
 							'CNV_loss',
+
 							// truncating
-							'F',
-							'N',
+							'F', // FRAMESHIFT
+							'N', // NONSENSE
+							'L', // SPLICE
+							'P', // SPLICE_REGION
+
 							// indel
-							'D',
-							'I',
+							'D', // PROTEINDEL
+							'I', // PROTEININS
+							'ProteinAltering',
+
 							// point
-							'M',
-							'P',
-							'L',
+							'M', // MISSENSE
+
 							// noncoding
 							'Utr3',
 							'Utr5',
-							'S',
+							'S', //SILENT
 							'Intron',
 							'noncoding'
 						]
@@ -418,21 +423,27 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 							// copy-number
 							'CNV_amp',
 							'CNV_loss',
+
 							// truncating
-							'F',
-							'N',
+							'F', // FRAMESHIFT
+							'N', // NONSENSE
+							'L', // SPLICE
+							'P', // SPLICE_REGION
+
 							// indel
-							'D',
-							'I',
+							'D', // PROTEINDEL
+							'I', // PROTEININS
+							'ProteinAltering',
+
 							// point
-							'M',
-							'P',
-							'L',
+							'M', // MISSENSE
+
 							// noncoding
 							'Utr3',
 							'Utr5',
-							'S',
-							'Intron'
+							'S', //SILENT
+							'Intron',
+							'noncoding'
 						]
 					}
 				]
