@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- enable selecting individual mclasses upon clicking GDC oncomatrix mutation/cnv button
+
 Fixes:
 - Fix the timeout issues when using ky http client
 
