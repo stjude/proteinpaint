@@ -1,1 +1,3 @@
 
+Fixes:
+- change the defination of trancating/protein-changing mutation, change oncomatrix mclasses sorting order
