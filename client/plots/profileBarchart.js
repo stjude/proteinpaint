@@ -99,7 +99,7 @@ class profileBarchart extends profilePlot {
 			.append('path')
 			.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
 			.attr('stroke-width', 1)
-			.attr('stroke', color)
+			.attr('stroke', 'gray')
 
 		let x
 		let y
@@ -275,10 +275,8 @@ class profileBarchart extends profilePlot {
 			.attr('y', 0)
 			.attr('width', 20)
 			.attr('height', 20)
-		if (operator == 'and') rect.attr('fill', color)
-		else {
-			rect.attr('fill', `url(#${this.id}_diagonalHatch)`)
-		}
+		if (operator == 'and') rect.attr('fill', 'gray')
+		else rect.attr('fill', `url(#${this.id}_diagonalHatch)`)
 
 		const text = this.svg
 			.append('text')
