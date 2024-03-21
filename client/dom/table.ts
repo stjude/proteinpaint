@@ -15,7 +15,7 @@ export type Column = {
 	editCallback?: (i: number, cell: Cell) => void // Makes this column editable  and allows to notify the change through the callback.
 	//It is only allowed for cells with a value or a color field
 	nowrap?: boolean // set white-space=nowrap on all <td> of this column so strings do not wrap
-	align: string // left, center, right
+	align?: string // left, center, right. If missing it is aligned to the left by default
 }
 
 export type Button = {
