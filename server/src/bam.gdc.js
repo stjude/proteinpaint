@@ -103,7 +103,7 @@ export function gdc_bam_request(genomes) {
 				res.send(bamdata)
 			} else {
 				// no user input, list all available bam files from current cohort
-				const re = await getCaseFiles(req.query.filter0, req.query)
+				const re = await getCaseFiles(req.query.filter0, req.query, ds)
 				res.send(re)
 			}
 		} catch (e) {
@@ -420,7 +420,7 @@ export async function gdcCheckPermission(gdcFileUUID, ds, reqQuery) {
 get list of cases by filter0, then get bam files for these cases
 to be displayed in a UI table and user can browse and select one
 */
-async function getCaseFiles(filter0, q) {
+async function getCaseFiles(filter0, q, ds) {
 	const cases = await getCasesByFilter(filter0, q)
 	if (cases.length == 0) throw 'No cases available' // shows this msg in the handle on ui
 	const re = await getFileByCaseId(cases, 'cases.case_id', listCaseFileSize, q)
@@ -441,7 +441,9 @@ async function getCaseFiles(filter0, q) {
 	return {
 		case2files,
 		total: re.data?.pagination?.total,
-		loaded: listCaseFileSize
+		loaded: listCaseFileSize,
+		// in bam slice download app (versus sequence reads viz) client calls api directly thus need the rest host. since client always makes this request, send the host url to client
+		restapihost: ds.getHostHeaders(q).host.rest
 	}
 }
 
