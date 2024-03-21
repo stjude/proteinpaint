@@ -63,9 +63,12 @@ export class profilePlot {
 		const values = Object.values(tw.term.values)
 		const data = this.filtersData.lst.filter(sample => this.samplesPerFilter[tw.id].includes(parseInt(sample.sample)))
 		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
-		for (const value of values) value.disabled = !sampleValues.includes(value.label)
+		for (const value of values) {
+			value.value = value.label
+			value.disabled = !sampleValues.includes(value.label)
+		}
 		values.unshift({ label: '', value: '' })
-		if (!(tw.id in this.settings)) this.settings[tw.id] = values[0].value
+		if (!(tw.id in this.settings)) this.settings[tw.id] = values[0].label
 		return values
 	}
 
