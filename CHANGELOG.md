@@ -11,6 +11,7 @@ Fixes:
 - Fix the timeout issues when using ky http client
 - change the defination of trancating/protein-changing mutation, change oncomatrix mclasses sorting order
 - Fix to unhide a survival series by clicking its corresponding legend entry
+- Do not persist highlighted dendrogram branch selection when the hier. cluster data changes due to changes to cohort, clustering method, etc.
 
 
 ## 2.47.1

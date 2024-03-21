@@ -1,2 +1,1 @@
-Fixes:
-- Do not persist highlighted dendrogram branch selection when the hier. cluster data changes due to changes to cohort, clustering method, etc.
+
