@@ -47,13 +47,13 @@ class profileBarchart extends profilePlot {
 		for (const group of this.configComponent.groups)
 			for (const row of group.rows) {
 				this.rowCount++
-				if (row.sc) {
-					this.twLst.push(row.sc.score)
-					this.twLst.push(row.sc.maxScore)
+				if (row.term1) {
+					this.twLst.push(row.term1.score)
+					this.twLst.push(row.term1.maxScore)
 				}
-				if (row.poc) {
-					this.twLst.push(row.poc.score)
-					this.twLst.push(row.poc.maxScore)
+				if (row.term2) {
+					this.twLst.push(row.term2.score)
+					this.twLst.push(row.term2.maxScore)
 				}
 			}
 		await this.setControls([this.componentInput])
@@ -143,8 +143,8 @@ class profileBarchart extends profilePlot {
 					.attr('fill', '#f8d335')
 					.attr('fill-opacity', 0)
 				x = 400
-				if (row.sc) this.drawRect(x, y, row, 'sc', g)
-				if (row.poc) this.drawRect(x + stepx, y, row, 'poc', g)
+				if (row.term1) this.drawRect(x, y, row, 'term1', g)
+				if (row.term2) this.drawRect(x + stepx, y, row, 'term2', g)
 				y += step
 			}
 		}
@@ -218,11 +218,11 @@ class profileBarchart extends profilePlot {
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const d = row[field]
 		let subjectiveTerm = false
-		if ((row.name == 'Total Module' || row.name == 'End-user Impression*') && !row.poc) subjectiveTerm = true
+		if ((row.name == 'Total Module' || row.name == 'End-user Impression*') && !row.term2) subjectiveTerm = true
 		const termColor = d.score.term.color
 		const value = this.getPercentage(d)
-		const isFirst = field == 'sc' || (field == 'poc' && !row.sc)
-		const pairValue = field == 'sc' ? this.getPercentage(row.poc) : this.getPercentage(row.sc)
+		const isFirst = field == 'term1' || (field == 'term2' && !row.term1)
+		const pairValue = field == 'term1' ? this.getPercentage(row.term2) : this.getPercentage(row.term1)
 		const width = value ? (value / 100) * barwidth : 0
 		if (value) {
 			const rect = g
@@ -255,12 +255,12 @@ class profileBarchart extends profilePlot {
 			.attr('text-anchor', 'end')
 			.text(`${value || 0}%`)
 		if (width > 0) text.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
-		else if (!pairValue && field == 'sc') text.attr('transform', `translate(${x + 35}, ${y + 15})`)
+		else if (!pairValue && field == 'term1') text.attr('transform', `translate(${x + 35}, ${y + 15})`)
 		//else text.attr('transform', `translate(${x + 35}, ${y + 15})`)
 
 		if (isFirst)
 			g.append('text')
-				.attr('transform', `translate(${field == 'sc' ? x : x - stepx}, ${y + 15})`)
+				.attr('transform', `translate(${field == 'term1' ? x : x - stepx}, ${y + 15})`)
 				.attr('text-anchor', 'end')
 				.text(row.name)
 				.attr('pointer-events', 'none')
@@ -304,17 +304,17 @@ export async function getPlotConfig(opts, app) {
 			component.hasSubjectiveData = false
 			for (const group of component.groups)
 				for (const row of group.rows) {
-					if (row.sc) {
-						row.sc.score.q = row.sc.maxScore.q = { mode: 'continuous' }
-						twlst.push(row.sc.score)
-						twlst.push(row.sc.maxScore)
+					if (row.term1) {
+						row.term1.score.q = row.term1.maxScore.q = { mode: 'continuous' }
+						twlst.push(row.term1.score)
+						twlst.push(row.term1.maxScore)
 					}
-					if (row.poc) {
-						row.poc.score.q = row.poc.maxScore.q = { mode: 'continuous' }
-						twlst.push(row.poc.score)
-						twlst.push(row.poc.maxScore)
+					if (row.term2) {
+						row.term2.score.q = row.term2.maxScore.q = { mode: 'continuous' }
+						twlst.push(row.term2.score)
+						twlst.push(row.term2.maxScore)
 					}
-					if (row.sc && row.poc) component.hasSubjectiveData = true
+					if (row.term1 && row.term2) component.hasSubjectiveData = true
 				}
 		}
 		await fillTwLst(twlst, app.vocabApi)

@@ -28,13 +28,13 @@ class profileRadar extends profilePlot {
 		this.terms = this.config[this.config.plot].terms
 		for (const row of this.terms) {
 			this.rowCount++
-			if (row.sc) {
-				this.twLst.push(row.sc.score)
-				this.twLst.push(row.sc.maxScore)
+			if (row.term1) {
+				this.twLst.push(row.term1.score)
+				this.twLst.push(row.term1.maxScore)
 			}
-			if (row.poc) {
-				this.twLst.push(row.poc.score)
-				this.twLst.push(row.poc.maxScore)
+			if (row.term2) {
+				this.twLst.push(row.term2.score)
+				this.twLst.push(row.term2.maxScore)
 			}
 		}
 		await this.setControls()
@@ -84,13 +84,13 @@ class profileRadar extends profilePlot {
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
 		let i = 0
-		const data = [], //sc
-			data2 = [] //poc
-		for (let { module, sc, poc } of this.terms) {
+		const data = [], //term1
+			data2 = [] //term2
+		for (let { module, term1, term2 } of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
-			this.addData('sc', iangle, i, data)
-			this.addData('poc', iangle, i, data2)
-			rows.push([{ value: module }, { value: this.getPercentage(sc) }, { value: this.getPercentage(poc) }])
+			this.addData('term1', iangle, i, data)
+			this.addData('term2', iangle, i, data2)
+			rows.push([{ value: module }, { value: this.getPercentage(term1) }, { value: this.getPercentage(term2) }])
 
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
@@ -156,9 +156,12 @@ class profileRadar extends profilePlot {
 		this.addFilterLegend()
 
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
-		const item1 = `${config[config.plot].term1.name} (${config[config.plot].term1.abbrev})`
+		let abbrev = config[config.plot].term1.abbrev ? `(${config[config.plot].term1.abbrev})` : ''
+		const item1 = `${config[config.plot].term1.name} ${abbrev}`
 		this.addLegendItem(item1, color1, 0, 'none')
-		const item2 = `${config[config.plot].term2.name} (${config[config.plot].term2.abbrev})`
+		abbrev = config[config.plot].term2.abbrev ? `(${config[config.plot].term2.abbrev})` : ''
+
+		const item2 = `${config[config.plot].term2.name} ${abbrev}`
 		this.addLegendItem(item2, color2, 1, '5, 5')
 	}
 
@@ -168,7 +171,7 @@ class profileRadar extends profilePlot {
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
-		const color = field == 'sc' ? 'blue' : '#aaa'
+		const color = field == 'term1' ? 'blue' : '#aaa'
 		const circle = this.polarG
 			.append('g')
 			.attr('transform', `translate(${x}, ${y})`)
@@ -261,15 +264,15 @@ export async function getPlotConfig(opts, app) {
 		const terms = config[opts.plot].terms
 		const twlst = []
 		for (const row of terms) {
-			if (row.sc) {
-				row.sc.score.q = row.sc.maxScore.q = { mode: 'continuous' }
-				twlst.push(row.sc.score)
-				twlst.push(row.sc.maxScore)
+			if (row.term1) {
+				row.term1.score.q = row.term1.maxScore.q = { mode: 'continuous' }
+				twlst.push(row.term1.score)
+				twlst.push(row.term1.maxScore)
 			}
-			if (row.poc) {
-				row.poc.score.q = row.poc.maxScore.q = { mode: 'continuous' }
-				twlst.push(row.poc.score)
-				twlst.push(row.poc.maxScore)
+			if (row.term2) {
+				row.term2.score.q = row.term2.maxScore.q = { mode: 'continuous' }
+				twlst.push(row.term2.score)
+				twlst.push(row.term2.maxScore)
 			}
 		}
 		await fillTwLst(twlst, app.vocabApi)
