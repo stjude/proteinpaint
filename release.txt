@@ -1,2 +1,1 @@
-Fixes:
-- Disable the geneset submit button when there there is less than a minNumGenes option (3 for hier cluster, 1 for matrix)
+

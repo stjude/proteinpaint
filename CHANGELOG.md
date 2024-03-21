@@ -12,6 +12,7 @@ Fixes:
 - change the defination of trancating/protein-changing mutation, change oncomatrix mclasses sorting order
 - Fix to unhide a survival series by clicking its corresponding legend entry
 - Do not persist highlighted dendrogram branch selection when the hier. cluster data changes due to changes to cohort, clustering method, etc.
+- Disable the geneset submit button when there there is less than a minNumGenes option (3 for hier cluster, 1 for matrix)
 
 
 ## 2.47.1
