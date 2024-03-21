@@ -954,39 +954,6 @@ export async function bamsliceui({
 				a.click()
 				document.body.removeChild(a)
 				return
-
-				/* no longer issues request to backend
-				body.stream2download = true
-				const data = await dofetch3('tkbam', { headers, body })
-				// data is binary blob
-
-				if (!(await blobEndsWithBytes(data, bamEOF))) {
-					// incorrect bam and missing EOF, must be truncating of an oversized file slice
-					// indicate cutoff to user to be helpful. access optionalFeatures to get cutoff size because not possible to pass it from this response here
-					sayerror(
-						saydiv,
-						`BAM slice exceeds
-						${fileSize(JSON.parse(sessionStorage.getItem('optionalFeatures')).gdcBam.streamMaxSize)}
-						and is truncated. Please use with caution, or reduce query region size and try again.`
-					)
-					// still let it download
-				}
-
-				// download the file to client
-				const a = document.createElement('a')
-				a.href = URL.createObjectURL(data)
-				if (par.unmapped) {
-					a.download = file.track_name + '.unmapped.bam'
-				} else {
-					a.download = `${file.track_name}.${par.chr}.${par.start}.${par.stop}.bam`
-				}
-				a.style.display = 'none'
-				document.body.appendChild(a)
-				a.click()
-				document.body.removeChild(a)
-
-				return
-				*/
 			}
 
 			const gdc_bam_files = await dofetch3('tkbam', { headers, body })
@@ -1043,37 +1010,6 @@ export async function bamsliceui({
 	}
 
 	return publicApi
-}
-
-function blobEndsWithBytes(blob, byteSequence) {
-	if (!blob || !byteSequence || byteSequence.length > blob.size) {
-		return false // Handle invalid inputs or sequence exceeding blob size
-	}
-
-	const sliceSize = byteSequence.length
-	const start = blob.size - sliceSize
-	const end = blob.size
-
-	// Read the last slice of the blob
-	const reader = new FileReader()
-	reader.readAsArrayBuffer(blob.slice(start, end))
-
-	return new Promise(resolve => {
-		reader.onload = function (event) {
-			const arrayBuffer = event.target.result
-			const view = new Uint8Array(arrayBuffer)
-
-			// Compare the last bytes of the view with the byte sequence
-			let match = true
-			for (let i = 0; i < byteSequence.length; i++) {
-				if (view[i] !== byteSequence[i]) {
-					match = false
-					break
-				}
-			}
-			resolve(match)
-		}
-	})
 }
 
 function geneSearchInstruction(d) {
