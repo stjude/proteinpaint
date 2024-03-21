@@ -79,22 +79,6 @@ function addButtons(headerHolder, app, dslabel, isLoggedIn, site) {
 					site
 				)
 			)
-	if (dslabel == 'ProfileFull')
-		div
-			.append('button')
-			.text('Radar Graph 3')
-			.on('click', e =>
-				launchRadarPlot(
-					app,
-					'profileRadar',
-					'Radar Graph 3',
-					'plot1',
-					preserveCheckbox.node().checked,
-					isLoggedIn,
-					site
-				)
-			)
-
 	if (dslabel == 'ProfileAbbrev' && isLoggedIn)
 		div
 			.append('button')
@@ -110,6 +94,12 @@ function addButtons(headerHolder, app, dslabel, isLoggedIn, site) {
 					site
 				)
 			)
+	div
+		.append('button')
+		.text('Radar Graph 3')
+		.on('click', e =>
+			launchRadarPlot(app, 'profileRadar', 'Radar Graph 3', 'plot1', preserveCheckbox.node().checked, isLoggedIn, site)
+		)
 
 	div.append('label').attr('for', 'preservePlots').text('Preserve Plots')
 	const preserveCheckbox = div.append('input').attr('id', 'preservePlots').attr('type', 'checkbox')
