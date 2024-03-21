@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.48.0
 
 Features:
 - enable selecting individual mclasses upon clicking GDC oncomatrix mutation/cnv button
