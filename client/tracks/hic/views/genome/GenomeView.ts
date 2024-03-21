@@ -27,6 +27,8 @@ import { hicParseFile } from '../../data/parseData.ts'
 // import { init_hicInfoBar } from '../dom/info.bar.ts'
 //import { init_hicControls } from '../controls/controlPanel.ts'
 import { Div } from '../../../../types/d3'
+import { GenomeViewModel } from '../viewmodel/GenomeViewModel.ts'
+import { GenomeViewRenderer } from '../renderer/GenomeViewRenderer.ts'
 
 type Pane = {
 	pain: Selection<HTMLDivElement, any, any, any>
@@ -36,6 +38,10 @@ type Pane = {
 }
 
 export class GenomeView {
+	viewModel: GenomeViewModel
+
+	viewRender: GenomeViewRenderer
+
 	/** opts */
 	app: any
 	hic: any
@@ -82,6 +88,8 @@ export class GenomeView {
 		this.layer_map = this.svg.append('g')
 		this.layer_sv = this.svg.append('g')
 		this.colorizeElement = new ColorizeElement()
+		this.viewModel = new GenomeViewModel(opts)
+		this.viewRender = new GenomeViewRenderer(this.layer_map, this.layer_sv, this.viewModel)
 	}
 
 	renderGrid() {
@@ -433,6 +441,8 @@ export class GenomeView {
 	}
 
 	async render() {
+		// this.viewRender.render()
+		// TODO migrate this.renderGrid to this.viewRender.render()
 		this.renderGrid()
 		this.setLeadFollowMap()
 
@@ -1672,18 +1682,18 @@ class Hicstat {
  * @returns
  */
 
-// export function nmeth2select(hic: any, v: any, init?: boolean) {
-// 	const options = hic.nmethselect.node().options
-// 	if (!options) return //When only 'NONE' is available
-// 	let selectedNmeth: any
-// 	if (init) {
-// 		selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value)
-// 	} else {
-// 		selectedNmeth = Array.from(options).find((o: any) => o.value === v.nmeth)
-// 	}
-// 	selectedNmeth.selected = true
-// 	v.nmeth = selectedNmeth.value
-// }
+export function nmeth2select(hic: any, v: any, init?: boolean) {
+	const options = hic.nmethselect.node().options
+	if (!options) return //When only 'NONE' is available
+	let selectedNmeth: any
+	if (init) {
+		selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value)
+	} else {
+		selectedNmeth = Array.from(options).find((o: any) => o.value === v.nmeth)
+	}
+	selectedNmeth.selected = true
+	v.nmeth = selectedNmeth.value
+}
 
 //////////////////// __detail view__ ////////////////////
 
@@ -1699,17 +1709,17 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
  * @param self
  * @param init true if called during view init
  */
-// export function matrixType2select(v: any, self: any, init?: boolean) {
-// 	const options = self.dom.controlsDiv.matrixType.node().options
-// 	let selectedOption: any
-// 	if (init) {
-// 		selectedOption = Array.from(options).find((o: any) => o.value === self.dom.controlsDiv.matrixType.node().value)
-// 	} else {
-// 		selectedOption = Array.from(options).find((o: any) => o.value === v.matrixType)
-// 	}
-// 	selectedOption.selected = true
-// 	v.matrixType = selectedOption.value
-// }
+export function matrixType2select(v: any, self: any, init?: boolean) {
+	const options = self.dom.controlsDiv.matrixType.node().options
+	let selectedOption: any
+	if (init) {
+		selectedOption = Array.from(options).find((o: any) => o.value === self.dom.controlsDiv.matrixType.node().value)
+	} else {
+		selectedOption = Array.from(options).find((o: any) => o.value === v.matrixType)
+	}
+	selectedOption.selected = true
+	v.matrixType = selectedOption.value
+}
 
 /**
  * call when coordinate changes
@@ -1721,8 +1731,8 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
  * @returns
  */
 async function detailViewUpdateHic(hic: any, self: any) {
-	// self.dom.infoBarDiv.colorScaleLabel.style('display', '')
-	// self.dom.infoBarDiv.colorScaleDiv.style('display', '')
+	self.dom.infoBarDiv.colorScaleLabel.style('display', '')
+	self.dom.infoBarDiv.colorScaleDiv.style('display', '')
 	const xstart = self.x.start
 	const xstop = self.x.stop
 	const ystart = self.y.start
@@ -2041,7 +2051,7 @@ export function getdata_detail(hic: any, self: any) {
 			}
 			// done all lines
 
-			//setViewCutoff(vlst, self.detailview, self)
+			setViewCutoff(vlst, self.detailview, self)
 
 			for (const [x, y, w, h, v] of lst) {
 				//colorizeElement(x, y, v, self.detailview, self, ctx, w, h)
@@ -2100,22 +2110,22 @@ export function hicparsefragdata(items: any) {
  * @param view view object within self (e.g. self.genomeView)
  * @param self
  */
-// export async function setViewCutoff(vlst: any, view: any, self: any) {
-// 	const sortedVlst = vlst.sort((a: number, b: number) => a - b)
-// 	const maxv = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
-// 	view.bpmaxv = maxv
-// 	self.dom.controlsDiv.inputBpMaxv.property('value', view.bpmaxv)
+export async function setViewCutoff(vlst: any, view: any, self: any) {
+	const sortedVlst = vlst.sort((a: number, b: number) => a - b)
+	const maxv = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
+	view.bpmaxv = maxv
+	self.dom.controlsDiv.inputBpMaxv.property('value', view.bpmaxv)
 
-// 	if (sortedVlst[0] < 0) {
-// 		self.colorScale.bar.startColor = self.colorBar.startColor = 'blue'
-// 		self.colorScale.data = [sortedVlst[0], maxv]
-// 	} else {
-// 		self.colorScale.bar.startColor = self.colorBar.startColor = 'white'
-// 		self.colorScale.data = [0, maxv]
-// 	}
+	if (sortedVlst[0] < 0) {
+		self.colorScale.bar.startColor = self.colorBar.startColor = 'blue'
+		self.colorScale.data = [sortedVlst[0], maxv]
+	} else {
+		self.colorScale.bar.startColor = self.colorBar.startColor = 'white'
+		self.colorScale.data = [0, maxv]
+	}
 
-// 	self.colorScale.updateScale()
-// }
+	self.colorScale.updateScale()
+}
 // /**
 //  * Fills the canvas with color based on the value from the straw response
 //  * Default color is red for positive values and blue for negative values.
