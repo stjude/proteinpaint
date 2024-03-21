@@ -11,7 +11,7 @@ import { GenomeDataFetcher } from '../data/GenomeDataFetcher.ts'
 import { DataFetcher } from '../data/DataFetcher.ts'
 import { Resolution } from './Resolution.ts'
 
-export class ViewComponent {
+export class HicComponent {
 	dom: any
 	plotDiv: MainPlotDiv
 	type: 'view'
@@ -65,7 +65,7 @@ export class ViewComponent {
 
 	async initView() {
 		if (this.state.currView == 'genome') {
-			this.genome = await new GenomeView({
+			this.genome = new GenomeView({
 				plotDiv: this.plotDiv,
 				hic: this.hic,
 				app: this.app,
@@ -234,4 +234,4 @@ export class ViewComponent {
 	}
 }
 
-export const viewCompInit = getCompInit(ViewComponent)
+export const viewCompInit = getCompInit(HicComponent)
