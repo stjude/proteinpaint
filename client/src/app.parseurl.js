@@ -261,7 +261,7 @@ upon error, throw err message as a string
 			enzyme: urlp.get('enzyme'),
 			holder: arg.holder
 		}
-		const _ = await import('../tracks/hic/app')
+		const _ = await import('../tracks/hic/HicApp')
 		await _.hicInit(hic)
 		return
 	}

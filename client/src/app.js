@@ -979,7 +979,7 @@ function launchhic(hic, app) {
 	}
 	hic.hostURL = app.hostURL
 	hic.holder = app.holder0
-	import('../tracks/hic/app').then(async _ => {
+	import('../tracks/hic/HicApp.ts').then(async _ => {
 		await _.hicInit(hic, app.debugmode)
 	})
 }
