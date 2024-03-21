@@ -486,6 +486,7 @@ function setDropdownInput(opts) {
 		.data(opts.options)
 		.enter()
 		.append('option')
+		.property('disabled', d => d.disabled)
 		.attr('value', d => d.value)
 		.attr('selected', d => d.selected)
 		.html(d => '&nbsp;' + d.label + '&nbsp;')
