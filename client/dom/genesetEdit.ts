@@ -29,6 +29,7 @@ type showGenesetEditArg = {
 	holder: any
 	genome: any
 	mode?: 'expression' // if provided, allow to load top variably expressed genes; later can be union of multiple mode strings
+	minNumGenes?: number
 	callback: (arg: CallbackArg) => void
 	vocabApi: any
 	geneList?: {
@@ -38,7 +39,7 @@ type showGenesetEditArg = {
 }
 
 export function showGenesetEdit(arg: showGenesetEditArg) {
-	const { holder, genome, mode, callback, vocabApi, titleText } = arg
+	const { holder, genome, mode, callback, vocabApi, titleText, minNumGenes } = arg
 	let geneList = structuredClone(arg.geneList || [])
 	const tip2 = new Menu({ padding: '0px', parent_menu: holder.node(), test: 'test' })
 	holder.selectAll('*').remove()
@@ -306,7 +307,8 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		const hasChanged = origNames !== JSON.stringify(geneList.map(t => t.gene).sort())
 		api.dom.restoreBtn?.property('disabled', !hasChanged)
 		// disable submit button when gene list not changed or is empty in expression mode
-		api.dom.submitBtn.property('disabled', !hasChanged || (mode == 'expression' && !geneList?.length))
+		const minNum = minNumGenes || 0
+		api.dom.submitBtn.property('disabled', !hasChanged || geneList?.length < minNum)
 		if (hasChanged) submitBtn.node().focus()
 	}
 

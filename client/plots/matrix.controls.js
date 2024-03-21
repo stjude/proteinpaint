@@ -27,10 +27,10 @@ export class MatrixControls {
 		this.setVariablesBtn(s)
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
-		if (state.termdbConfig.matrix?.settings?.addMutationCNVButtons && this.parent.chartType !== 'hierCluster')
+		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster') {
 			this.setCNVBtn()
-		if (state.termdbConfig.matrix?.settings?.addMutationCNVButtons && this.parent.chartType !== 'hierCluster')
 			this.setMutationBtn()
+		}
 		this.setDownloadBtn(s)
 		this.setZoomInput()
 		this.setDragToggle({
@@ -888,6 +888,7 @@ export class MatrixControls {
 				genome: app.opts.genome,
 				geneList,
 				mode: selectedGroup.mode,
+				minNumGenes: selectedGroup.mode == 'expression' ? 3 : 1,
 				vocabApi: this.opts.app.vocabApi,
 				callback: ({ geneList, groupName }) => {
 					if (!selectedGroup) throw `missing selectedGroup`
