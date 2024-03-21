@@ -1,15 +1,16 @@
+import CnvArc from '#plots/disco/cnv/CnvArc.ts'
 import * as d3 from 'd3'
-import IRenderer from '#plots/disco/IRenderer.ts'
-import CnvArc from './CnvArc.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
-import { table2col } from '#dom/table2col'
 import { table_cnv } from '../../../mds3/itemtable'
-import { ar } from '../../../dist/app-755e3b83'
-export default class CnvRenderer implements IRenderer {
-	private menuPadding: number
+import { table2col } from '#dom/table2col'
+import { scaleLinear } from 'd3-scale'
 
-	constructor(menuPadding: number) {
-		this.menuPadding = menuPadding
+export class CnvHeatmapRenderer {
+	private colorScale: any
+
+	constructor(cnvMinValue, cnvMaxValue) {
+		//TODO pass colors to the color scale
+		this.colorScale = scaleLinear([cnvMinValue, 0, cnvMaxValue], ['#67a9cf', 'white', '#D6683C']).clamp(true)
 	}
 
 	render(holder: any, elements: Array<CnvArc>) {
@@ -25,7 +26,7 @@ export default class CnvRenderer implements IRenderer {
 			.enter()
 			.append('path')
 			.attr('d', (d: CnvArc) => arcGenerator(d))
-			.attr('fill', (d: CnvArc) => d.color)
+			.attr('fill', (d: CnvArc) => this.colorScale(d.value))
 			.on('mouseover', (mouseEvent: MouseEvent, arc: CnvArc) => {
 				const table = table2col({ holder: menu.d })
 				const cnv: any = structuredClone(arc)

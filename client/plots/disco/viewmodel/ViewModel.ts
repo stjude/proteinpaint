@@ -16,10 +16,12 @@ export default class ViewModel {
 	fusions: Array<Fusion>
 
 	settings: Settings
-	svnDataLength: number
+	snvDataLength: number
 	filteredSnvDataLength: number
-	snvDataLength
+	snvDataLengthAll: number
 	genesetName: string
+	cnvMaxValue?: number
+	cnvMinValue?: number
 
 	constructor(
 		settings: Settings,
@@ -27,9 +29,12 @@ export default class ViewModel {
 		legend: Legend,
 		fusions: Array<Fusion>,
 		filteredSnvDataLength: number,
-		svnDataLength: number,
+		snvDataLength: number,
 		genesetName: string,
-		snvDataLength: number
+		// TODO do we need this?
+		snvDataLengthAll: number,
+		cnvMaxValue?: number,
+		cnvMinValue?: number
 	) {
 		this.settings = settings
 		this.rings = rings
@@ -49,9 +54,12 @@ export default class ViewModel {
 				this.settings.verticalPadding)
 
 		this.legendHeight = this.calculateLegendHeight(legend)
-		this.svnDataLength = svnDataLength
-		this.filteredSnvDataLength = filteredSnvDataLength
 		this.snvDataLength = snvDataLength
+		this.filteredSnvDataLength = filteredSnvDataLength
+		this.snvDataLengthAll = snvDataLengthAll
+
+		this.cnvMaxValue = cnvMaxValue
+		this.cnvMinValue = cnvMinValue
 	}
 
 	getElements(ringType: RingType): Array<Arc> {

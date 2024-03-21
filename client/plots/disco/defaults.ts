@@ -9,7 +9,8 @@ export default function discoDefaults(overrides = {}): Settings {
 			cnvCapping: 5,
 			isOpen: false,
 			prioritizeGeneLabelsByGeneSets: false,
-			showPrioritizeGeneLabelsByGeneSets: false
+			showPrioritizeGeneLabelsByGeneSets: false,
+			cnvRenderingType: 'bar'
 		},
 
 		rings: {

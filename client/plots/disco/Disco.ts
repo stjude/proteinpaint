@@ -9,13 +9,15 @@ import discoDefaults from './defaults.ts'
 import NonExonicSnvRenderer from './snv/NonExonicSnvRenderer.ts'
 import SnvRenderer from './snv/SnvRenderer.ts'
 import LohRenderer from './loh/LohRenderer.ts'
-import CnvRenderer from './cnv/CnvRenderer.ts'
+import CnvBarRenderer from './cnv/CnvBarRenderer.ts'
 import IRenderer from './IRenderer.ts'
 import { RingType } from './ring/RingType.ts'
 import Settings from './Settings.ts'
 import { multiInit } from '../../rx'
 import { topBarInit } from '#plots/controls.btns.js'
 import { configUiInit } from '#plots/controls.config.js'
+import { CnvHeatmapRenderer } from '#plots/disco/cnv/CnvHeatmapRenderer.ts'
+import ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 
 export default class Disco {
 	// following attributes are required by rx
@@ -46,13 +48,14 @@ export default class Disco {
 		holder.selectAll('*').remove()
 
 		const topbar = holder.append('div')
-		const config_div = holder.append('div')
+		// Figure out why we need to set the background color here
+		const config_div = holder.append('div').style('background-color', '#FDFAF4')
 
 		const displayedElementsCount =
 			viewModel.settings.Disco.prioritizeGeneLabelsByGeneSets &&
 			viewModel.settings.Disco.showPrioritizeGeneLabelsByGeneSets
 				? viewModel.filteredSnvDataLength
-				: viewModel.snvDataLength
+				: viewModel.snvDataLengthAll
 
 		// TODO calculate viewModel.filteredSnvDataLength always
 
@@ -84,11 +87,23 @@ export default class Disco {
 					},
 					{
 						boxLabel: '',
-						label: `Only show mutations for ${viewModel.genesetName} genes (${displayedElementsCount} out of ${viewModel.snvDataLength})`,
+						label: `Only show mutations for ${viewModel.genesetName} genes (${displayedElementsCount} out of ${viewModel.snvDataLengthAll})`,
 						type: 'checkbox',
 						chartType: 'Disco',
 						settingsKey: 'prioritizeGeneLabelsByGeneSets',
 						title: 'Only show mutations for Cancer Gene Census genes'
+					},
+					{
+						boxLabel: '',
+						label: 'CNV rendering type',
+						type: 'radio',
+						chartType: 'Disco',
+						settingsKey: 'cnvRenderingType',
+						title: 'CNV rendering type',
+						options: [
+							{ label: 'Bar', value: 'bar' },
+							{ label: 'Heatmap', value: 'heatmap' }
+						]
 					}
 				]
 			})
@@ -108,7 +123,7 @@ export default class Disco {
 		)
 
 		const discoRenderer = new DiscoRenderer(
-			this.getRingRenderers(settings, discoInteractions.geneClickListener),
+			this.getRingRenderers(settings, viewModel, discoInteractions.geneClickListener),
 			legendRenderer,
 			discoInteractions.downloadClickListener,
 			discoInteractions.prioritizeGenesCheckboxListener
@@ -117,7 +132,11 @@ export default class Disco {
 		discoRenderer.render(holder, viewModel)
 	}
 
-	getRingRenderers(settings: Settings, geneClickListener: (gene: string, mnames: Array<string>) => void) {
+	getRingRenderers(
+		settings: Settings,
+		viewModel: ViewModel,
+		geneClickListener: (gene: string, mnames: Array<string>) => void
+	) {
 		const chromosomesRenderer = new ChromosomesRenderer(
 			settings.padAngle,
 			settings.rings.chromosomeInnerRadius,
@@ -126,7 +145,10 @@ export default class Disco {
 		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration, geneClickListener)
 		const nonExonicSnvRenderer = new NonExonicSnvRenderer(geneClickListener)
 		const snvRenderer = new SnvRenderer(settings.rings.snvRingWidth, geneClickListener)
-		const cnvRenderer = new CnvRenderer(settings.menu.padding)
+		const cnvRenderer =
+			settings.Disco.cnvRenderingType === 'heatmap'
+				? new CnvHeatmapRenderer(viewModel.cnvMinValue, viewModel.cnvMaxValue)
+				: new CnvBarRenderer(settings.menu.padding)
 		const lohRenderer = new LohRenderer()
 
 		const renderersMap: Map<RingType, IRenderer> = new Map()

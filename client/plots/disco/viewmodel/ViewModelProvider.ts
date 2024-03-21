@@ -154,7 +154,9 @@ export default class ViewModelProvider {
 			dataHolder.filteredSnvData.length,
 			dataHolder.snvData.length,
 			this.genesetName,
-			data.filter(i => i.dt == dtsnvindel).length
+			data.filter(i => i.dt == dtsnvindel).length,
+			dataHolder.cnvMaxValue,
+			dataHolder.cnvMinValue
 		)
 	}
 }

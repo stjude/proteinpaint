@@ -9,6 +9,7 @@ export default interface Settings {
 		isOpen: boolean
 		showPrioritizeGeneLabelsByGeneSets: boolean
 		prioritizeGeneLabelsByGeneSets: boolean // set to true to prioritize by default, if applicable
+		cnvRenderingType: string
 	}
 
 	rings: {
