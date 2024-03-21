@@ -10,6 +10,7 @@ import { renderTable } from '../dom/table'
 import { table2col } from '../dom/table2col'
 import { fileSize } from '#shared/fileSize'
 import { keyupEnter } from './client'
+import path from 'path'
 
 /*
 
@@ -573,6 +574,10 @@ export async function bamsliceui({
 		if (data.error) throw data.error
 		if (typeof data.case2files != 'object') throw 'wrong return'
 
+		// "bam slicing download" app calls gdc api directly from client here and doesn't go through pp backend. thus it need the rest api host name which is determined by pp backend and diffs based on environments
+		if (!data.restapihost) throw 'data.restapihost is missing'
+		gdc_args.restapihost = data.restapihost
+
 		// data = { case2files={}, total=int, loaded=int }
 		/*
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.total} BAM files`)
@@ -929,7 +934,28 @@ export async function bamsliceui({
 
 			if (stream2download) {
 				// detour
-				// TODO support unmapped in this mode
+
+				headers.compression = false
+				// cookie is domain based and will be automatically passed on all requests
+
+				const url = path.join(gdc_args.restapihost, '/slicing/view/', file.file_id + '?region=' + body.gdcFilePosition)
+				const response = await fetch(url, { method: 'GET', headers })
+				const data = await response.blob()
+				// download the file to client
+				const a = document.createElement('a')
+				a.href = URL.createObjectURL(data)
+				if (par.unmapped) {
+					a.download = file.track_name + '.unmapped.bam'
+				} else {
+					a.download = `${file.track_name}.${par.chr}.${par.start}.${par.stop}.bam`
+				}
+				a.style.display = 'none'
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
+				return
+
+				/* no longer issues request to backend
 				body.stream2download = true
 				const data = await dofetch3('tkbam', { headers, body })
 				// data is binary blob
@@ -960,6 +986,7 @@ export async function bamsliceui({
 				document.body.removeChild(a)
 
 				return
+				*/
 			}
 
 			const gdc_bam_files = await dofetch3('tkbam', { headers, body })
