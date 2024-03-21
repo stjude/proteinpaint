@@ -1,5 +1,5 @@
 import { Matrix } from './matrix'
-import { getCompInit } from '../rx'
+import { getCompInit, deepEqual } from '../rx'
 import * as renderers from './hierCluster.renderers'
 import * as interactivity from './hierCluster.interactivity'
 import { dofetch3 } from '#common/dofetch'
@@ -63,10 +63,17 @@ export class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
+		this.prevServerData = this.currServerData
 		const abortCtrl = new AbortController()
 		const [d, stale] = await this.api.detectStale(() => this.requestData({ signal: abortCtrl.signal }), { abortCtrl })
 		if (stale) throw `stale sequenceId`
 		if (d.error) throw d.error
+		this.currServerData = structuredClone(d)
+		if (!deepEqual(this.prevServerData, this.currServerData)) {
+			// do not persist highlighted dendrogram branch selection
+			// when the cohort, clustering method, or other config changes the server data
+			delete this.clickedClusterIds
+		}
 		const s = this.settings.hierCluster
 		const twlst = this.hcTermGroup.lst
 
