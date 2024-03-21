@@ -1330,6 +1330,10 @@ async function launchGdcMatrix(arg, app) {
 	const _ = await import('./launchGdcMatrix.js')
 	return await _.init(arg, app.holder0, app.genomes)
 }
+async function launchGdcHierCluster(arg, app) {
+	const _ = await import('./launchGdcHierCluster.js')
+	return await _.init(arg, app.holder0, app.genomes)
+}
 async function launchGdcMaf(arg, app) {
 	const _ = await import('./gdc.maf.js')
 	return await _.gdcMAFui({
