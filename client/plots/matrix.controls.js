@@ -228,6 +228,11 @@ export class MatrixControls {
 						settingsKey: 'cellEncoding',
 						options: [
 							{
+								label: 'Single',
+								value: 'single',
+								title: `Show a single rectangle in a matrix cell to render one variant for the same ${l.sample} and gene`
+							},
+							{
 								label: 'Stacked',
 								value: '',
 								title: `Show stacked rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
@@ -238,7 +243,8 @@ export class MatrixControls {
 								title: `Show overlapping rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
 							}
 						],
-						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
+						styles: { padding: 0, 'padding-right': '10px', margin: 0 },
+						callback: this.parent.geneStyleControlCallback
 					},
 					{
 						label: 'Sort Genes',
@@ -1051,7 +1057,7 @@ export class MatrixControls {
 	generateCNVItems(self, app, parent, table) {
 		table.attr('class', null) // remove the hoverover background for CNV button
 		if (
-			parent.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+			parent.state.config.settings.matrix.addMutationCNVButtons &&
 			parent.chartType !== 'hierCluster' &&
 			parent.config.settings.matrix.showMatrixCNV == 'bySelection'
 		)
@@ -1061,7 +1067,7 @@ export class MatrixControls {
 	generateMutationItems(self, app, parent, table) {
 		table.attr('class', null) // remove the hoverover background for CNV button
 		if (
-			parent.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+			parent.state.config.settings.matrix.addMutationCNVButtons &&
 			parent.chartType !== 'hierCluster' &&
 			parent.config.settings.matrix.showMatrixMutation == 'bySelection'
 		)

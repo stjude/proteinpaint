@@ -247,6 +247,9 @@ function getSortSamplesByClass(st, self, rows, s) {
 		cls.set(row.sample, indices.length ? Math.min(...indices) : nextRound)
 		// samples with multiple mclasses should not impact sorting against samples with only 1 mclass
 		// if (indices.length > 1) dt[row.sample] += [...(new Set(indices))].length * 0.05
+
+		if (row.sample == '7de19081-d5fd-468c-ad0d-f6e3e8b2ad70')
+			console.log('what is row', row, cls.get(row.sample), indices)
 	}
 
 	return (a, b) => {
@@ -343,6 +346,9 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 				tiebreakers: [
 					{
 						filter: {
+							// this does not filter out cnv, it just means that the cnv must
+							// also have a dt=1 mutation in order to be displayed and sorted
+							// by this order
 							values: [{ dt: 1 }]
 						},
 						by: 'class',
@@ -524,3 +530,14 @@ export function getSampleGroupSorter(self) {
 function defaultSorter(a, b) {
 	return a.name < b.name ? -1 : 1
 }
+
+// export function getMclassSorter(self){
+// 	const s = self.settings.matrix
+// 	const sortOptions = s.sortOptions[s.sortSamplesBy]
+
+// 	//TODO fill it in
+// 	const mclassPriority = []
+// 	const sorter = (a, b) => mclassPriority.indexOf(a.class) - mclassPriority.index(b.class)
+
+// 	return sorter
+// }

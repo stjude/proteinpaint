@@ -8,6 +8,8 @@ export function getTermOrder(data) {
 	const termOrder = []
 	let totalIndex = 0,
 		visibleGrpIndex = 0
+
+	// this.mclassSorter = getMclassSorter(this)
 	for (const [grpIndex, grp] of this.termGroups.entries()) {
 		const lst = [] // will derive a mutable copy of grp.lst
 		for (const [index, tw] of grp.lst.entries()) {
@@ -205,6 +207,7 @@ export function getSampleOrder(data) {
 	return sampleOrder.filter(so => !so.grp.isExcluded)
 }
 
+// self.mclassSorter = getMclassSorter()
 /*
 Given the anno of a term for a sample, generate the 
     filteredValues (values matched the filter)
@@ -226,8 +229,11 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		: values.filter(v => sample_match_termvaluesetting(v, isSpecific[0], tw.term, sample))
 
 	const renderedValues = []
-	if (tw.term.type != 'geneVariant' || s.cellEncoding != 'oncoprint') renderedValues.push(...filteredValues)
+	if (tw.term.type != 'geneVariant' || s.cellEncoding == '') renderedValues.push(...filteredValues)
 	else {
+		// console.log("inside of else")
+		filteredValues.sort((a, b) => getMclassOrder(a) - getMclassOrder(b))
+		// filteredValues.sort(this.mclassSorter)
 		const sortedFilteredValues = []
 		// dt=1 are SNVindels, dt=4 CNV, dt=3 Gene Expression
 		// will render only one matching value per dt
@@ -245,10 +251,11 @@ export function classifyValues(anno, tw, grp, s, sample) {
 	}
 	// group stacked cell values to avoid striped pattern
 	if (tw.term.type == 'geneVariant') {
-		renderedValues.sort(this.stackSiblingCellsByClass)
-		filteredValues.sort(this.stackSiblingCellsByClass)
+		// renderedValues.sort(this.stackSiblingCellsByClass)
+		// filteredValues.sort(this.stackSiblingCellsByClass)
 	}
 
+	// if(sample._ref_.label == 'BLGSP-71-19-00119') console.log("what is renderedValues", renderedValues, sample, s.sortOptions[s.sortSamplesBy])
 	return {
 		filteredValues,
 		countedValues: filteredValues.filter(v => {
@@ -261,6 +268,29 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		}),
 		renderedValues
 	}
+}
+
+function getMclassOrder(item) {
+	const priorityArray = [
+		'CNV_amp',
+		'CNV_loss',
+		'F',
+		'N',
+		'L',
+		'P',
+		'D',
+		'I',
+		'ProteinAltering',
+		'M',
+		'Utr3',
+		'Utr5',
+		'S',
+		'Intron',
+		'noncoding',
+		'WT',
+		'Blank'
+	]
+	return priorityArray.indexOf(item.class)
 }
 
 export function stackSiblingCellsByClass(a, b) {

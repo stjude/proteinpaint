@@ -179,7 +179,7 @@ export async function getPlotConfig(opts = {}, app) {
 	copyMerge(config, opts)
 
 	if (
-		config.settings.matrix.showMatrixCNV == 'none' &&
+		config.settings.matrix.cellEncoding == 'single' &&
 		!config.legendGrpFilter.lst.find(l => l.dt?.length == 1 && l.dt[0] == 4)
 	) {
 		// add the default CNV legend group value filter
