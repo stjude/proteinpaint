@@ -235,16 +235,22 @@ function getSortSamplesByClass(st, self, rows, s) {
 
 	function setSortIndex(row) {
 		if (!($id in row)) {
-			cls.set(row.sample, nextRound)
+			// there is no value to index, force the sorting to the next round of tiebreakers
+			cls.set(row.sample, [nextRound])
 			return
 		}
 		const values = row[$id].renderedValues || row[$id].filteredValues || row[$id].values
 		if (sortSamples.filter && !findMatchingValue(values, sortSamples.filter.values)) {
-			cls.set(row.sample, nextRound)
+			// there is no matching values, force the sorting to the next round of tiebreakers
+			cls.set(row.sample, [nextRound])
 			return
 		}
+		// find all matching mclass values that are in the current order == sortPriority.order
 		const indices = values.map(v => order.indexOf(v.class)).filter(i => i !== -1)
-		cls.set(row.sample, indices.length ? Math.min(...indices) : nextRound)
+		// sort the each matching mclass value by its priority
+		indices.sort()
+		// each sample will have an array of
+		cls.set(row.sample, indices)
 		// samples with multiple mclasses should not impact sorting against samples with only 1 mclass
 		// if (indices.length > 1) dt[row.sample] += [...(new Set(indices))].length * 0.05
 
@@ -252,14 +258,27 @@ function getSortSamplesByClass(st, self, rows, s) {
 			console.log('what is row', row, cls.get(row.sample), indices)
 	}
 
+	// not calling setSortIndex in advance based on the benchmark notes above
+	// rows.forEach(setSortIndex)
+
 	return (a, b) => {
 		if (!cls.has(a.sample)) setSortIndex(a)
 		if (!cls.has(b.sample)) setSortIndex(b)
-		return cls.get(a.sample) - cls.get(b.sample)
+		const ca = cls.get(a.sample)
+		const cb = cls.get(b.sample)
+		if (!ca.length && !cb.length) return 0
+		if (!ca.length) return 1
+		if (!cb.length) return -1
+		for (const [i, va] of ca.entries()) {
+			if (cb[i] === undefined || va < cb[i]) return -1
+			if (va > cb[i]) return 1
+		}
+		for (const [i, vb] of cb.entries()) {
+			if (ca[i] === undefined || vb < ca[i]) return 1
+			if (vb > cb[i]) return -1
+		}
+		return 0
 	}
-
-	// rows.forEach(setSortIndex)
-	// return (a, b) => cls.get(a.sample) - cls.get(b.sample)
 }
 
 function findMatchingValue(annoValues, filterValues) {
