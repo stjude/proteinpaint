@@ -226,7 +226,8 @@ function getSortSamplesByDt(st, self, rows, s) {
 function getSortSamplesByClass(st, self, rows, s) {
 	const { $id, sortSamples } = st
 	const order = sortSamples.order
-	const nextRound = order.length + 1
+	const paddedLen = order.length.toString().length
+	const nextRound = 'z' // this string will cause a sample to be sorted last in a tiebreaker round
 	// benchmark:
 	// - fastest by 100+ ms: using Map and not pre-sorting
 	// - ok: using {} as a tracker and either pre-sorting or not
@@ -236,26 +237,25 @@ function getSortSamplesByClass(st, self, rows, s) {
 	function setSortIndex(row) {
 		if (!($id in row)) {
 			// there is no value to index, force the sorting to the next round of tiebreakers
-			cls.set(row.sample, [nextRound])
+			cls.set(row.sample, nextRound)
 			return
 		}
 		const values = row[$id].renderedValues || row[$id].filteredValues || row[$id].values
 		if (sortSamples.filter && !findMatchingValue(values, sortSamples.filter.values)) {
 			// there is no matching values, force the sorting to the next round of tiebreakers
-			cls.set(row.sample, [nextRound])
+			cls.set(row.sample, nextRound)
 			return
 		}
 		// find all matching mclass values that are in the current order == sortPriority.order
 		const indices = values.map(v => order.indexOf(v.class)).filter(i => i !== -1)
 		// sort the each matching mclass value by its priority
 		indices.sort()
-		// each sample will have an array of
-		cls.set(row.sample, indices)
+		// each sample will be mapped to a sortable string (for ease of sorting comparison),
+		// derived from concatenating an array of numbers equivalent to values that match
+		// the mclass sortPriority
+		cls.set(row.sample, indices.length ? indices.map(i => i.toString().padStart(paddedLen, '0')).join('') : nextRound)
 		// samples with multiple mclasses should not impact sorting against samples with only 1 mclass
 		// if (indices.length > 1) dt[row.sample] += [...(new Set(indices))].length * 0.05
-
-		if (row.sample == '7de19081-d5fd-468c-ad0d-f6e3e8b2ad70')
-			console.log('what is row', row, cls.get(row.sample), indices)
 	}
 
 	// not calling setSortIndex in advance based on the benchmark notes above
@@ -266,18 +266,7 @@ function getSortSamplesByClass(st, self, rows, s) {
 		if (!cls.has(b.sample)) setSortIndex(b)
 		const ca = cls.get(a.sample)
 		const cb = cls.get(b.sample)
-		if (!ca.length && !cb.length) return 0
-		if (!ca.length) return 1
-		if (!cb.length) return -1
-		for (const [i, va] of ca.entries()) {
-			if (cb[i] === undefined || va < cb[i]) return -1
-			if (va > cb[i]) return 1
-		}
-		for (const [i, vb] of cb.entries()) {
-			if (ca[i] === undefined || vb < ca[i]) return 1
-			if (vb > cb[i]) return -1
-		}
-		return 0
+		return ca < cb ? -1 : ca > cb ? 1 : 0
 	}
 }
 
