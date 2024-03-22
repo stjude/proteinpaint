@@ -2,13 +2,13 @@ import { SvgSvg, SvgG } from '../../../../types/d3'
 //import { Selection } from 'd3-selection'
 //import * as client from '#src/client'
 //import blocklazyload from '#src/block.lazyload'
-import { ColorizeElement } from '../../dom/ColorizeElement.ts'
+import { ColorizeElement } from '../../dom/colorizeElement.ts'
 
-import { axisRight, axisBottom } from 'd3-axis'
+// import { axisRight, axisBottom } from 'd3-axis'
 import { select as d3select, pointer, Selection } from 'd3-selection'
-import { scaleLinear } from 'd3-scale'
+// import { scaleLinear } from 'd3-scale'
 import * as client from '#src/client'
-import { format as d3format } from 'd3-format'
+// import { format as d3format } from 'd3-format'
 import * as common from '#shared/common'
 import blocklazyload from '#src/block.lazyload'
 import {
@@ -16,7 +16,7 @@ import {
 	MainPlotDiv,
 	HicstrawDom,
 	DetailViewAxis,
-	HicstrawInput,
+	// HicstrawInput,
 	WholeGenomeView,
 	ChrPairView,
 	HorizontalView,
@@ -27,8 +27,10 @@ import { hicParseFile } from '../../data/parseData.ts'
 // import { init_hicInfoBar } from '../dom/info.bar.ts'
 //import { init_hicControls } from '../controls/controlPanel.ts'
 import { Div } from '../../../../types/d3'
-import { GenomeViewModel } from '../viewmodel/GenomeViewModel.ts'
-import { GenomeViewRenderer } from '../renderer/GenomeViewRenderer.ts'
+import { GridViewModel } from '../viewmodel/GridViewModel.ts'
+import { GridRenderer } from '../renderer/GridRenderer.ts'
+import { GridElementsRenderer } from '../viewmodel/GridElementsRenderer.ts'
+import { GridElementData } from '../viewmodel/GridElementData.ts'
 
 type Pane = {
 	pain: Selection<HTMLDivElement, any, any, any>
@@ -38,9 +40,9 @@ type Pane = {
 }
 
 export class GenomeView {
-	viewModel: GenomeViewModel
+	viewModel: GridViewModel
 
-	viewRender: GenomeViewRenderer
+	viewRender: GridRenderer
 
 	/** opts */
 	app: any
@@ -57,6 +59,7 @@ export class GenomeView {
 	svg: SvgSvg
 	layer_map: SvgG
 	layer_sv: SvgG
+	gridElementsRenderer: GridElementsRenderer
 
 	/** Data */
 	/** px width for each chr */
@@ -88,215 +91,125 @@ export class GenomeView {
 		this.layer_map = this.svg.append('g')
 		this.layer_sv = this.svg.append('g')
 		this.colorizeElement = new ColorizeElement()
-		this.viewModel = new GenomeViewModel(opts)
-		this.viewRender = new GenomeViewRenderer(this.layer_map, this.layer_sv, this.viewModel)
+		this.viewModel = new GridViewModel(opts)
+		this.viewRender = new GridRenderer(this.svg, this.layer_map, this.layer_sv, this.viewModel.grid)
+		this.gridElementsRenderer = new GridElementsRenderer(this.viewModel.grid, this.layer_map, this.app)
 	}
 
-	renderGrid() {
-		/** Defaults */
-		const spacecolor = '#ccc'
-		const checker_fill = '#DEF3FA'
+	// setLeadFollowMap() {
+	// 	this.xoff = 0
 
-		// heatmap layer underneath sv
-		this.layer_map.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
-		this.layer_sv.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
+	// 	for (let i = 0; i < this.hic.chrlst.length; i++) {
+	// 		const lead = this.hic.chrlst[i]
+	// 		this.lead2follow.set(lead, new Map())
 
-		let checker_row = true
+	// 		this.yoff = 0
 
-		let totalpx = this.hic.chrlst.length
-		for (const chr of this.hic.chrlst) {
-			const w = Math.ceil(this.hic.genome.chrlookup[chr.toUpperCase()].len / this.resolution) * this.binpx
-			this.chr2px[chr] = w
-			totalpx += w
-		}
+	// 		for (let j = 0; j <= i; j++) {
+	// 			const follow = this.hic.chrlst[j]
 
-		this.xoff = 0
+	// 			this.lead2follow!.get(lead)!.set(follow, {
+	// 				x: this.xoff,
+	// 				y: this.yoff
+	// 			})
+	// 			this.makeChrCanvas(lead, follow)
+	// 			this.yoff += this.chr2px[follow] + this.borderwidth
+	// 		}
+	// 		this.xoff += this.chr2px[lead] + this.borderwidth
+	// 	}
+	// }
 
-		// column labels
-		for (const chr of this.hic.chrlst) {
-			const chrw = this.chr2px[chr]
-			if (checker_row) {
-				this.layer_map
-					.append('rect')
-					.attr('x', this.xoff)
-					.attr('width', chrw)
-					.attr('height', this.fontsize)
-					.attr('y', -this.fontsize)
-					.attr('fill', checker_fill)
-			}
-			checker_row = !checker_row
-			this.layer_map
-				.append('text')
-				.attr('font-family', client.font)
-				.attr('text-anchor', 'middle')
-				.attr('font-size', 12)
-				.attr('x', this.xoff + chrw / 2)
-				.text(chr)
+	// makeChrCanvas(lead: string, follow: string) {
+	// 	const obj = this.lead2follow.get(lead).get(follow)
 
-			this.xoff += chrw
-			this.layer_sv
-				.append('line')
-				.attr('x1', this.xoff)
-				.attr('x2', this.xoff)
-				.attr('y2', totalpx)
-				.attr('stroke', spacecolor)
-				.attr('shape-rendering', 'crispEdges')
+	// 	const leadchrlen = this.hic.genome.chrlookup[lead.toUpperCase()].len
+	// 	const followchrlen = this.hic.genome.chrlookup[follow.toUpperCase()].len
 
-			this.xoff += this.borderwidth
-		}
+	// 	const xbins = Math.ceil(leadchrlen / this.resolution)
+	// 	const ybins = Math.ceil(followchrlen / this.resolution)
 
-		this.yoff = 0
-		checker_row = true
+	// 	obj.canvas = this.hic.holder.append('canvas').style('display', 'none').node()
 
-		// row labels
-		for (const chr of this.hic.chrlst) {
-			const chrh = this.chr2px[chr]
-			if (checker_row) {
-				this.layer_map
-					.append('rect')
-					.attr('x', -this.defaultChrLabWidth)
-					.attr('width', this.defaultChrLabWidth)
-					.attr('height', chrh)
-					.attr('y', this.yoff)
-					.attr('fill', checker_fill)
-			}
-			checker_row = !checker_row
-			this.layer_map
-				.append('text')
-				.attr('font-family', client.font)
-				.attr('text-anchor', 'end')
-				.attr('dominant-baseline', 'central')
-				.attr('font-size', 12)
-				.attr('y', this.yoff + chrh / 2)
-				.text(chr)
+	// 	obj.ctx = obj.canvas.getContext('2d')
 
-			this.yoff += chrh
-			this.layer_sv
-				.append('line')
-				.attr('x2', totalpx)
-				.attr('y1', this.yoff)
-				.attr('y2', this.yoff)
-				.attr('stroke', spacecolor)
-				.attr('shape-rendering', 'crispEdges')
+	// 	obj.canvas.width = xbins * this.binpx
+	// 	obj.canvas.height = ybins * this.binpx
 
-			this.yoff += this.borderwidth
-		}
-	}
+	// 	obj.img = this.layer_map
+	// 		.append('image')
+	// 		.attr('width', obj.canvas.width)
+	// 		.attr('height', obj.canvas.height)
+	// 		.attr('x', obj.x)
+	// 		.attr('y', obj.y)
+	// 		.on('click', async () => {
+	// 			await this.app.dispatch({
+	// 				type: 'view_change',
+	// 				view: 'chrpair',
+	// 				config: {
+	// 					x: {
+	// 						chr: lead
+	// 					},
+	// 					y: {
+	// 						chr: follow
+	// 					}
+	// 				}
+	// 			})
+	// 		})
+	// 		.on('mouseover', () => {
+	// 			this.showChrPair_mouseover(obj.img, lead, follow)
+	// 		})
 
-	setLeadFollowMap() {
-		this.xoff = 0
+	// 	if (lead != follow) {
+	// 		obj.canvas2 = this.hic.holder.append('canvas').style('display', 'none').node()
 
-		for (let i = 0; i < this.hic.chrlst.length; i++) {
-			const lead = this.hic.chrlst[i]
-			this.lead2follow.set(lead, new Map())
+	// 		obj.ctx2 = obj.canvas2.getContext('2d')
 
-			this.yoff = 0
+	// 		obj.canvas2.width = ybins * this.binpx
+	// 		obj.canvas2.height = xbins * this.binpx
 
-			for (let j = 0; j <= i; j++) {
-				const follow = this.hic.chrlst[j]
+	// 		obj.img2 = this.layer_map
+	// 			.append('image')
+	// 			.attr('width', obj.canvas2.width)
+	// 			.attr('height', obj.canvas2.height)
+	// 			.attr('x', obj.y)
+	// 			.attr('y', obj.x)
+	// 			.on('click', async () => {
+	// 				await this.app.dispatch({
+	// 					type: 'view_change',
+	// 					view: 'chrpair',
+	// 					config: {
+	// 						x: {
+	// 							chr: lead
+	// 						},
+	// 						y: {
+	// 							chr: follow
+	// 						}
+	// 					}
+	// 				})
+	// 			})
+	// 			.on('mouseover', () => {
+	// 				this.showChrPair_mouseover(obj.img2, follow, lead)
+	// 			})
+	// 	} else {
+	// 		obj.ctx2 = obj.ctx
+	// 	}
+	// }
 
-				this.lead2follow!.get(lead)!.set(follow, {
-					x: this.xoff,
-					y: this.yoff
-				})
-				this.makeChrCanvas(lead, follow)
-				this.yoff += this.chr2px[follow] + this.borderwidth
-			}
-			this.xoff += this.chr2px[lead] + this.borderwidth
-		}
-	}
-
-	makeChrCanvas(lead: string, follow: string) {
-		const obj = this.lead2follow.get(lead).get(follow)
-
-		const leadchrlen = this.hic.genome.chrlookup[lead.toUpperCase()].len
-		const followchrlen = this.hic.genome.chrlookup[follow.toUpperCase()].len
-
-		const xbins = Math.ceil(leadchrlen / this.resolution)
-		const ybins = Math.ceil(followchrlen / this.resolution)
-
-		obj.canvas = this.hic.holder.append('canvas').style('display', 'none').node()
-
-		obj.ctx = obj.canvas.getContext('2d')
-
-		obj.canvas.width = xbins * this.binpx
-		obj.canvas.height = ybins * this.binpx
-
-		obj.img = this.layer_map
-			.append('image')
-			.attr('width', obj.canvas.width)
-			.attr('height', obj.canvas.height)
-			.attr('x', obj.x)
-			.attr('y', obj.y)
-			.on('click', async () => {
-				await this.app.dispatch({
-					type: 'view_change',
-					view: 'chrpair',
-					config: {
-						x: {
-							chr: lead
-						},
-						y: {
-							chr: follow
-						}
-					}
-				})
-			})
-			.on('mouseover', () => {
-				this.showChrPair_mouseover(obj.img, lead, follow)
-			})
-
-		if (lead != follow) {
-			obj.canvas2 = this.hic.holder.append('canvas').style('display', 'none').node()
-
-			obj.ctx2 = obj.canvas2.getContext('2d')
-
-			obj.canvas2.width = ybins * this.binpx
-			obj.canvas2.height = xbins * this.binpx
-
-			obj.img2 = this.layer_map
-				.append('image')
-				.attr('width', obj.canvas2.width)
-				.attr('height', obj.canvas2.height)
-				.attr('x', obj.y)
-				.attr('y', obj.x)
-				.on('click', async () => {
-					await this.app.dispatch({
-						type: 'view_change',
-						view: 'chrpair',
-						config: {
-							x: {
-								chr: lead
-							},
-							y: {
-								chr: follow
-							}
-						}
-					})
-				})
-				.on('mouseover', () => {
-					this.showChrPair_mouseover(obj.img2, follow, lead)
-				})
-		} else {
-			obj.ctx2 = obj.ctx
-		}
-	}
-
-	showChrPair_mouseover(img: any, x_chr: string, y_chr: string) {
-		const p = img.node().getBoundingClientRect()
-		this.pica_x
-			.clear()
-			.show(p.left, p.top)
-			.d.style('top', null)
-			.style('bottom', window.innerHeight - p.top - window.pageYOffset + 'px')
-			.text(x_chr)
-		this.pica_y
-			.clear()
-			.show(p.left, p.top)
-			.d.style('left', null)
-			.style('right', document.body.clientWidth - p.left - window.pageXOffset + 'px') // no scrollbar width
-			.text(y_chr)
-	}
+	// showChrPair_mouseover(img: any, x_chr: string, y_chr: string) {
+	// 	const p = img.node().getBoundingClientRect()
+	// 	this.pica_x
+	// 		.clear()
+	// 		.show(p.left, p.top)
+	// 		.d.style('top', null)
+	// 		.style('bottom', window.innerHeight - p.top - window.pageYOffset + 'px')
+	// 		.text(x_chr)
+	// 	this.pica_y
+	// 		.clear()
+	// 		.show(p.left, p.top)
+	// 		.d.style('left', null)
+	// 		.style('right', document.body.clientWidth - p.left - window.pageXOffset + 'px') // no scrollbar width
+	// 		.text(y_chr)
+	// }
 
 	makeSv() {
 		const unknownchr = new Set()
@@ -441,25 +354,34 @@ export class GenomeView {
 	}
 
 	async render() {
-		// this.viewRender.render()
-		// TODO migrate this.renderGrid to this.viewRender.render()
-		this.renderGrid()
-		this.setLeadFollowMap()
+		// this.layer_map.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
+		// this.layer_sv.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
 
-		if (this.hic.sv && this.hic.sv.items) {
-			this.makeSv()
-		}
+		// let totalpx = this.hic.chrlst.length
+		// for (const chr of this.hic.chrlst) {
+		// 	const w = Math.ceil(this.hic.genome.chrlookup[chr.toUpperCase()].len / this.resolution) * this.binpx
+		// 	this.chr2px[chr] = w
+		// 	totalpx += w
+		// }
 
-		this.svg.attr('width', this.defaultChrLabWidth + this.xoff).attr('height', this.fontsize + this.yoff)
+		this.viewRender.render()
+		this.gridElementsRenderer.render(this.hic.holder)
+		// this.setLeadFollowMap()
 
-		await this.update(this.data)
+		// if (this.hic.sv && this.hic.sv.items) {
+		// 	this.makeSv()
+		// }
+		// console.log(this.defaultChrLabWidth, this.fontsize, this.xoff, this.yoff)
+		// this.svg.attr('width', this.defaultChrLabWidth + this.xoff).attr('height', this.fontsize + this.yoff)
+
+		//await this.update(this.data)
 	}
 
 	async update(data) {
 		this.data = data
 		this.min = this.parent('min') as number
 		this.max = this.parent('max') as number
-		await this.makeElements()
+		//await this.makeElements()
 	}
 
 	async makeElements() {
@@ -468,7 +390,8 @@ export class GenomeView {
 		for (const data of this.data) {
 			//Fix for when M chr has no data and is removed from hic.chrlst.
 			if (!this.hic.chrlst.includes(data.lead) || !this.hic.chrlst.includes(data.follow)) continue
-			const obj = this.lead2follow.get(data.lead).get(data.follow)
+			const obj = this.viewModel.grid.chromosomeMatrix.get(data.lead)!.get(data.follow)
+			if (!obj) continue
 			obj.data = [] as any
 			obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
 			if (obj.canvas2) {
@@ -1682,18 +1605,18 @@ class Hicstat {
  * @returns
  */
 
-export function nmeth2select(hic: any, v: any, init?: boolean) {
-	const options = hic.nmethselect.node().options
-	if (!options) return //When only 'NONE' is available
-	let selectedNmeth: any
-	if (init) {
-		selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value)
-	} else {
-		selectedNmeth = Array.from(options).find((o: any) => o.value === v.nmeth)
-	}
-	selectedNmeth.selected = true
-	v.nmeth = selectedNmeth.value
-}
+// export function nmeth2select(hic: any, v: any, init?: boolean) {
+// 	const options = hic.nmethselect.node().options
+// 	if (!options) return //When only 'NONE' is available
+// 	let selectedNmeth: any
+// 	if (init) {
+// 		selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value)
+// 	} else {
+// 		selectedNmeth = Array.from(options).find((o: any) => o.value === v.nmeth)
+// 	}
+// 	selectedNmeth.selected = true
+// 	v.nmeth = selectedNmeth.value
+// }
 
 //////////////////// __detail view__ ////////////////////
 
@@ -1709,17 +1632,17 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
  * @param self
  * @param init true if called during view init
  */
-export function matrixType2select(v: any, self: any, init?: boolean) {
-	const options = self.dom.controlsDiv.matrixType.node().options
-	let selectedOption: any
-	if (init) {
-		selectedOption = Array.from(options).find((o: any) => o.value === self.dom.controlsDiv.matrixType.node().value)
-	} else {
-		selectedOption = Array.from(options).find((o: any) => o.value === v.matrixType)
-	}
-	selectedOption.selected = true
-	v.matrixType = selectedOption.value
-}
+// export function matrixType2select(v: any, self: any, init?: boolean) {
+// 	const options = self.dom.controlsDiv.matrixType.node().options
+// 	let selectedOption: any
+// 	if (init) {
+// 		selectedOption = Array.from(options).find((o: any) => o.value === self.dom.controlsDiv.matrixType.node().value)
+// 	} else {
+// 		selectedOption = Array.from(options).find((o: any) => o.value === v.matrixType)
+// 	}
+// 	selectedOption.selected = true
+// 	v.matrixType = selectedOption.value
+// }
 
 /**
  * call when coordinate changes
