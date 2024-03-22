@@ -1,1 +1,2 @@
-
+Fixes:
+- Group similar mutation class colors together when sorting matrix samples and if CNVs are displayed
