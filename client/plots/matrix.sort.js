@@ -226,13 +226,22 @@ function getSortSamplesByDt(st, self, rows, s) {
 function getSortSamplesByClass(st, self, rows, s) {
 	const { $id, sortSamples } = st
 	const order = sortSamples.order
-	const paddedLen = order.length.toString().length
 	const nextRound = 'z' // this string will cause a sample to be sorted last in a tiebreaker round
 	// benchmark:
 	// - fastest by 100+ ms: using Map and not pre-sorting
 	// - ok: using {} as a tracker and either pre-sorting or not
 	// - slowest: using Map and pre-sorting
 	const cls = new Map()
+	// Example idea:
+	//
+	// sortPriority order = ['CNV_amp', 'CNV_loss', 'F', 'N', 'L', 'P']
+	// if sample.values has a matching mclass in order, map to '1', otherwise map to 'x'
+	//
+	// sample1.values: ['CNV_amp', 'F']       => '1x1xxx'  // first sample by string order
+	// sample2.values: ['CNV_amp', 'P']       => '1xxxx1'
+	// sample3.values: ['CNV_loss', 'F', 'L'] => 'x11x1x'
+	// sample4.values: ['F', 'N']             => 'xx11xx'
+	// sample5.values: ['noncoding]           => 'z'       // next round of tiebreakers
 
 	function setSortIndex(row) {
 		if (!($id in row)) {
@@ -246,16 +255,14 @@ function getSortSamplesByClass(st, self, rows, s) {
 			cls.set(row.sample, nextRound)
 			return
 		}
-		// find all matching mclass values that are in the current order == sortPriority.order
-		const indices = values.map(v => order.indexOf(v.class)).filter(i => i !== -1)
-		// sort the each matching mclass value by its priority
-		indices.sort()
+		let str = ''
+		for (const mcls of order) {
+			str += values.find(v => v.class === mcls) ? '1' : 'x'
+		}
 		// each sample will be mapped to a sortable string (for ease of sorting comparison),
 		// derived from concatenating an array of numbers equivalent to values that match
 		// the mclass sortPriority
-		cls.set(row.sample, indices.length ? indices.map(i => i.toString().padStart(paddedLen, '0')).join('') : nextRound)
-		// samples with multiple mclasses should not impact sorting against samples with only 1 mclass
-		// if (indices.length > 1) dt[row.sample] += [...(new Set(indices))].length * 0.05
+		cls.set(row.sample, str)
 	}
 
 	// not calling setSortIndex in advance based on the benchmark notes above
