@@ -196,7 +196,7 @@ export function setInteractivity(self) {
 					const svg = td.append('svg').attr('width', width).attr('height', '25px')
 					const g = svg.append('g').attr('transform', 'translate(10, 14)')
 					g.append('path').attr('d', shape).attr('fill', color).attr('stroke', '#aaa')
-					const text = g.append('text').attr('x', 12).attr('y', 6)
+					const text = g.append('text').attr('x', 12).attr('y', 6).attr('font-size', '0.9em')
 
 					const span2 = text.append('tspan').text(node.value).attr('fill', fontColor)
 				} else td.style('padding', '2px').text(`${node.value}`)
