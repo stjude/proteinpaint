@@ -79,13 +79,13 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	cell.value = value
 
 	const colw = self.dimensions.colw
-	if (s.cellEncoding != 'oncoprint') {
+	if (s.cellEncoding == '') {
 		cell.height = s.rowh / values.length
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
 	} else if (value.dt == 1 || value.dt == 2) {
-		if (s.showMatrixCNV == 'none' || s.allMatrixCNVHidden) {
+		if (s.cellEncoding == 'single') {
 			// when CNV is not displayed, show as tall bar
 			cell.height = s.rowh
 			cell.width = colw

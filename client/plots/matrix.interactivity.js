@@ -2555,7 +2555,7 @@ function setLengendActions(self) {
 							} else self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
 						}
 					}
-					if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+					if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 						if (targetData.dt == 1) {
 							self.config.settings.matrix.showMatrixMutation = 'bySelection'
 							const cl = self.settings.matrix.controlLabels
@@ -2575,7 +2575,13 @@ function setLengendActions(self) {
 							) {
 								//when all CNV items are hidden by applying legend value filter
 								self.config.settings.matrix.allMatrixCNVHidden = true
-							} else self.config.settings.matrix.allMatrixCNVHidden = false
+								if (self.config.settings.matrix.cellEncoding == 'oncoprint')
+									self.config.settings.matrix.cellEncoding = 'single'
+							} else {
+								self.config.settings.matrix.allMatrixCNVHidden = false
+								if (self.config.settings.matrix.cellEncoding !== '')
+									self.config.settings.matrix.cellEncoding = 'oncoprint'
+							}
 						}
 					}
 
@@ -2613,7 +2619,7 @@ function setLengendActions(self) {
 						}
 						self.config.legendValueFilter.lst.push(filterNew)
 
-						if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+						if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 							if (targetData.dt == 1) {
 								self.config.settings.matrix.showMatrixMutation = 'bySelection'
 								const cl = self.settings.matrix.controlLabels
@@ -2633,6 +2639,8 @@ function setLengendActions(self) {
 								) {
 									//when all CNV items are hidden by applying legend value filter
 									self.config.settings.matrix.allMatrixCNVHidden = true
+									if (self.config.settings.matrix.cellEncoding == 'oncoprint')
+										self.config.settings.matrix.cellEncoding = 'single'
 								} else self.config.settings.matrix.allMatrixCNVHidden = false
 							}
 						}
@@ -2775,8 +2783,110 @@ function setMutationSelectionActions(self) {
 		const targetData = self.legendData.find(l => l.dt?.includes(4))
 		self.mutationSelectionActions[CNVSelection](menuGrp, targetData, self)
 	}
+
+	self.geneStyleControlCallback = styleSelection => {
+		const targetData = self.legendData.find(l => l.dt?.includes(4))
+		if (styleSelection == '') showStackedStyle(targetData, self) //stacked style
+		else if (styleSelection == 'single') showSingleStyle(targetData, self)
+		else if (styleSelection == 'oncoprint') showOncoprintStyle(targetData, self)
+	}
 }
 
+function showSingleStyle(targetData, self) {
+	const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
+	// when the legend group is shown and now hide it
+	// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
+
+	//todo: remove the counts
+
+	const filterNew = { dt: targetData.dt }
+	if (byOrigin) {
+		// when distinguish between germline and somatic for the dt
+		filterNew.origin = targetData.origin
+	}
+	// when the legend group is hidden, need to remove the individual legend filter belongs to this legend group
+	self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(f => f.legendGrpName !== targetData.name)
+
+	self.config.legendGrpFilter.lst.push(filterNew)
+	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+		self.config.settings.matrix.showMatrixCNV = 'none'
+		self.config.settings.matrix.cellEncoding = 'single'
+	}
+
+	self.app.dispatch({
+		type: 'plot_edit',
+		id: self.id,
+		config: self.config
+	})
+}
+
+function showOncoprintStyle(targetData, self) {
+	const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
+
+	//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
+	const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
+		f =>
+			f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
+			(!byOrigin || f.origin == targetData.origin)
+	)
+
+	//legendFilterIndex is the index of the first filter (in this filter group being clicked) that is already in self.config.legendValueFilter.lst, if there's any
+	const legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
+		l =>
+			l.legendGrpName == targetData.name &&
+			l.tvs.values.find(v => targetData.dt.includes(v.dt) && (!byOrigin || v.origin == targetData.origin))
+	)
+
+	if (legendGrpFilterIndex !== -1) self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
+	if (legendFilterIndex !== -1)
+		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+			f => f.legendGrpName != targetData.name
+		)
+	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+		self.config.settings.matrix.showMatrixCNV = 'all'
+		self.config.settings.matrix.allMatrixCNVHidden = false
+		self.config.settings.matrix.cellEncoding = 'oncoprint'
+	}
+	self.app.dispatch({
+		type: 'plot_edit',
+		id: self.id,
+		config: self.config
+	})
+}
+
+function showStackedStyle(targetData, self) {
+	const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
+
+	//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
+	const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
+		f =>
+			f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
+			(!byOrigin || f.origin == targetData.origin)
+	)
+
+	//legendFilterIndex is the index of the first filter (in this filter group being clicked) that is already in self.config.legendValueFilter.lst, if there's any
+	const legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
+		l =>
+			l.legendGrpName == targetData.name &&
+			l.tvs.values.find(v => targetData.dt.includes(v.dt) && (!byOrigin || v.origin == targetData.origin))
+	)
+
+	if (legendGrpFilterIndex !== -1) self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
+	if (legendFilterIndex !== -1)
+		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+			f => f.legendGrpName != targetData.name
+		)
+	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+		self.config.settings.matrix.showMatrixCNV = 'all'
+		self.config.settings.matrix.allMatrixCNVHidden = false
+		self.config.settings.matrix.cellEncoding = ''
+	}
+	self.app.dispatch({
+		type: 'plot_edit',
+		id: self.id,
+		config: self.config
+	})
+}
 function showOnlyTrunc(menuGrp, targetData, self) {
 	menuGrp.hide()
 	// when the legend group is not hidden and show a "show only the truncating mutations" option
@@ -2806,7 +2916,7 @@ function showOnlyTrunc(menuGrp, targetData, self) {
 		}
 		self.config.legendValueFilter.lst.push(filterNew)
 	}
-	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 		self.config.settings.matrix.showMatrixMutation = 'onlyTruncating'
 		const cl = self.settings.matrix.controlLabels
 		if (
@@ -2854,7 +2964,7 @@ function showOnlyPC(menuGrp, targetData, self) {
 		}
 		self.config.legendValueFilter.lst.push(filterNew)
 	}
-	if (self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 		self.config.settings.matrix.showMatrixMutation = 'onlyPC'
 		const cl = self.settings.matrix.controlLabels
 		if (
@@ -2890,17 +3000,19 @@ function showNone(menuGrp, targetData, self) {
 
 	self.config.legendGrpFilter.lst.push(filterNew)
 	if (
-		self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
 		targetData.dt.includes(1)
 	)
 		self.config.settings.matrix.showMatrixMutation = 'none'
 	else if (
-		self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
 		targetData.dt.includes(4)
-	)
+	) {
 		self.config.settings.matrix.showMatrixCNV = 'none'
+		if (self.config.settings.matrix.cellEncoding == 'oncoprint') self.config.settings.matrix.cellEncoding = 'single'
+	}
 
 	self.app.dispatch({
 		type: 'plot_edit',
@@ -2933,19 +3045,20 @@ function showAll(menuGrp, targetData, self) {
 			f => f.legendGrpName != targetData.name
 		)
 	if (
-		self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
 		targetData.dt.includes(1)
 	) {
 		self.config.settings.matrix.showMatrixMutation = 'all'
 		self.config.settings.matrix.allMatrixMutationHidden = false
 	} else if (
-		self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
 		targetData.dt.includes(4)
 	) {
 		self.config.settings.matrix.showMatrixCNV = 'all'
 		self.config.settings.matrix.allMatrixCNVHidden = false
+		if (self.config.settings.matrix.cellEncoding !== '') self.config.settings.matrix.cellEncoding = 'oncoprint'
 	}
 	self.app.dispatch({
 		type: 'plot_edit',
@@ -3026,7 +3139,7 @@ function showByLegendFilter(menuGrp, targetData, self) {
 			}
 
 			if (
-				self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+				self.state.config.settings.matrix.addMutationCNVButtons &&
 				self.chartType !== 'hierCluster' &&
 				targetData.dt.includes(1)
 			) {
@@ -3040,7 +3153,7 @@ function showByLegendFilter(menuGrp, targetData, self) {
 					self.config.settings.matrix.allMatrixMutationHidden = true
 				} else self.config.settings.matrix.allMatrixMutationHidden = false
 			} else if (
-				self.state.termdbConfig.matrix?.settings?.addMutationCNVButtons &&
+				self.state.config.settings.matrix.addMutationCNVButtons &&
 				self.chartType !== 'hierCluster' &&
 				targetData.dt.includes(4)
 			) {
@@ -3051,7 +3164,12 @@ function showByLegendFilter(menuGrp, targetData, self) {
 				) {
 					//when all CNV items are hidden by applying legend value filter
 					self.config.settings.matrix.allMatrixCNVHidden = true
-				} else self.config.settings.matrix.allMatrixCNVHidden = false
+					if (self.config.settings.matrix.cellEncoding == 'oncoprint')
+						self.config.settings.matrix.cellEncoding = 'single'
+				} else {
+					self.config.settings.matrix.allMatrixCNVHidden = false
+					if (self.config.settings.matrix.cellEncoding !== '') self.config.settings.matrix.cellEncoding = 'oncoprint'
+				}
 			}
 
 			self.app.dispatch({
