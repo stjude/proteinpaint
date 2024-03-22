@@ -4,7 +4,7 @@ import { axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { format as d3format } from 'd3-format'
 import { pointer } from 'd3-selection'
-import { ColorizeElement } from '../../dom/ColorizeElement.ts'
+import { ColorizeElement } from '../../dom/colorizeElement.ts'
 import { Positions } from '../Positions.ts'
 
 export class ChrPairView {
@@ -116,21 +116,21 @@ export class ChrPairView {
 
 	initDetailView(x, y) {
 		const [xObj, yObj] = this.positions.setPosition(
-					x,
-					y,
-					this.binpx,
-					this.parent('state').x,
-					this.parent('state').y,
-					this.hic
-				)
-				this.app.dispatch({
-					type: 'view_change',
-					view: 'detail',
-					config: {
-						x: xObj,
-						y: yObj
-					}
-				})
+			x,
+			y,
+			this.binpx,
+			this.parent('state').x,
+			this.parent('state').y,
+			this.hic
+		)
+		this.app.dispatch({
+			type: 'view_change',
+			view: 'detail',
+			config: {
+				x: xObj,
+				y: yObj
+			}
+		})
 	}
 
 	getData(firstisx) {
