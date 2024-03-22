@@ -1,26 +1,33 @@
 import { Grid } from '../viewmodel/Grid.ts'
+import { SvgSvg, SvgG } from 'types/d3'
 
 export class GridRenderer {
-	private layerMap: any
-	private layerSv: any
+	private svg: SvgSvg
+	private layerMap: SvgG
+	private layerSv: SvgG
 	private grid: Grid
 
-	constructor(layerMap: any, layerSv: any, grid: Grid) {
-		this.layerMap = layerMap
-		this.layerSv = layerSv
+	constructor(svg: SvgSvg, layerMap: SvgG, layerSv: SvgG, grid: Grid) {
+		this.svg = svg
+		//Renders the entire grid
+		this.layerMap = layerMap.attr('transform', `translate(${Grid.defaultChrLabWidth}, ${Grid.fontSize})`)
+		//Renders the lines between the chromosomes
+		this.layerSv = layerSv.attr('transform', `translate(${Grid.defaultChrLabWidth}, ${Grid.fontSize})`)
 		this.grid = grid
 	}
 
 	render() {
 		this.renderAxisX(this.grid)
 		this.renderAxisY(this.grid)
+
+		this.svg.attr('width', Grid.defaultChrLabWidth + this.grid.xoff).attr('height', Grid.fontSize + this.grid.yoff)
 	}
 
 	private renderAxisX(grid: Grid) {
 		let xoff = 0
-		// column labels
 
-		grid.chromosomeList.forEach((chr, index) => {
+		// column labels
+		this.grid.chromosomeList.forEach((chr, index) => {
 			const chrw = chr.width
 
 			if (index % 2 === 0) {
@@ -30,12 +37,13 @@ export class GridRenderer {
 					.attr('width', chrw)
 					.attr('height', Grid.fontSize)
 					.attr('y', -Grid.fontSize)
-					.attr('fill', Grid.checker_fill)
+					.attr('fill', Grid.checkerFill)
 			}
 
 			this.layerMap
 				.append('text')
-				.attr('font-family', 'Arial')
+				// .attr('transform', 'rotate(90)')
+				.attr('font-family', Grid.font)
 				.attr('text-anchor', 'middle')
 				.attr('font-size', 12)
 				.attr('x', xoff + chrw / 2)
@@ -47,49 +55,49 @@ export class GridRenderer {
 				.attr('x1', xoff)
 				.attr('x2', xoff)
 				.attr('y2', grid.totalpx)
-				// TODO fix this
-				// .attr('stroke', spacecolor)
+				.attr('stroke', Grid.spaceColor)
 				.attr('shape-rendering', 'crispEdges')
 
-			// TODO this.xoff += this.borderwidth
-
-			xoff += 1
+			xoff += Grid.borderWidth
 		})
-
-		// for (const chr of this.hic.chrlst) {
-		//     const chrw = this.chr2px[chr]
-		//     if (checker_row) {
-		//         this.layer_map
-		//             .append('rect')
-		//             .attr('x', this.xoff)
-		//             .attr('width', chrw)
-		//             .attr('height', this.fontsize)
-		//             .attr('y', -this.fontsize)
-		//             .attr('fill', checker_fill)
-		//     }
-		//     checker_row = !checker_row
-		//     this.layer_map
-		//         .append('text')
-		//         .attr('font-family', client.font)
-		//         .attr('text-anchor', 'middle')
-		//         .attr('font-size', 12)
-		//         .attr('x', this.xoff + chrw / 2)
-		//         .text(chr)
-		//
-		//     this.xoff += chrw
-		//     this.layer_sv
-		//         .append('line')
-		//         .attr('x1', this.xoff)
-		//         .attr('x2', this.xoff)
-		//         .attr('y2', totalpx)
-		//         .attr('stroke', spacecolor)
-		//         .attr('shape-rendering', 'crispEdges')
-		//
-		//     this.xoff += this.borderwidth
-		// }
 	}
 
 	private renderAxisY(grid: Grid) {
-		//     TODO implement
+		let yoff = 0
+
+		// row labels
+		this.grid.chromosomeList.forEach((chr, index) => {
+			const chrh = chr.width
+			if (index % 2 === 0) {
+				this.layerMap
+					.append('rect')
+					.attr('x', -Grid.defaultChrLabWidth)
+					.attr('width', Grid.defaultChrLabWidth)
+					.attr('height', chrh)
+					.attr('y', yoff)
+					.attr('fill', Grid.checkerFill)
+			}
+
+			this.layerMap
+				.append('text')
+				.attr('font-family', Grid.font)
+				.attr('text-anchor', 'end')
+				.attr('dominant-baseline', 'central')
+				.attr('font-size', 12)
+				.attr('y', yoff + chrh / 2)
+				.text(chr.label)
+
+			yoff += chrh
+
+			this.layerSv
+				.append('line')
+				.attr('x2', grid.totalpx)
+				.attr('y1', yoff)
+				.attr('y2', yoff)
+				.attr('stroke', Grid.spaceColor)
+				.attr('shape-rendering', 'crispEdges')
+
+			yoff += Grid.borderWidth
+		})
 	}
 }

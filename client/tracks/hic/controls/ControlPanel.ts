@@ -3,18 +3,7 @@ import { Elem, Tr } from '../../../types/d3'
 import { NormalizationMethodControl } from './NormalizationMethodControl'
 import { CutoffControl } from './CutoffControl'
 import { MatrixTypeControl } from './MatrixTypeControl'
-import { ColorizeElement } from '../dom/ColorizeElement'
-
-// see function documentation for more details
-//  */
-
-// /**
-//  * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, horizontal and detail views)
-//  * Some of the view button text and functionality updated in hic.straw.ts
-//  * @param hic formatted input
-//  * @param self app obj
-//  * @returns control panel for the app
-//  */
+import { ColorizeElement } from '../dom/colorizeElement'
 
 class ControlPanel {
 	type: 'controlPanel'
@@ -146,7 +135,11 @@ class ControlPanel {
 			.on('click', async () => {
 				await this.app.dispatch({
 					type: 'view_change',
-					view: 'genome'
+					view: 'genome',
+					config: {
+						x: {},
+						y: {}
+					}
 				})
 			})
 
@@ -158,7 +151,15 @@ class ControlPanel {
 			.on('click', async () => {
 				await this.app.dispatch({
 					type: 'view_change',
-					view: 'chrpair'
+					view: 'chrpair',
+					config: {
+						x: {
+							chr: this.state.x.chr
+						},
+						y: {
+							chr: this.state.y.chr
+						}
+					}
 				})
 			})
 
