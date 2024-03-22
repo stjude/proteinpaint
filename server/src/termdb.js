@@ -406,7 +406,8 @@ async function get_AllSamplesByName(q, req, res, ds) {
 					id: sample.id,
 					name: sample.name,
 					ancestor_id: sample.ancestor_id,
-					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id)
+					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
+					type: sample.type
 				})
 			}
 		} else {
