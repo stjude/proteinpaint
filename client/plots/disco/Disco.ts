@@ -26,48 +26,33 @@ export default class Disco {
 	private state: any
 	private id: any
 	private app: any
+	private features: any
+	private isOpen: boolean
+	private discoInteractions: DiscoInteractions
 	constructor(opts: any) {
 		this.type = 'Disco'
 		this.opts = opts
+		this.isOpen = false
+		this.discoInteractions = new DiscoInteractions(this)
 	}
 
-	getState(appState: any) {
-		return appState.plots.find(p => p.id === this.id)
-	}
-
-	async main(): Promise<void> {
-		// run this only when this.state{} is set; cannot do this step in constructor()
-		const discoInteractions = new DiscoInteractions(this)
-
-		const settings: Settings = this.state.settings
-
-		const stateViewModelMapper = new ViewModelMapper(settings)
-		const viewModel = stateViewModelMapper.map(this.app.getState())
-
+	async init() {
 		const holder = this.opts.holder
-		holder.selectAll('*').remove()
-
-		const topbar = holder.append('div')
 		// Figure out why we need to set the background color here
-		const config_div = holder.append('div').style('background-color', '#FDFAF4')
+		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const topbar = controlsHolder.append('div')
+		const config_div = controlsHolder.append('div')
+		// const settings: Settings = this.state.settings
 
-		const displayedElementsCount =
-			viewModel.settings.Disco.prioritizeGeneLabelsByGeneSets &&
-			viewModel.settings.Disco.showPrioritizeGeneLabelsByGeneSets
-				? viewModel.filteredSnvDataLength
-				: viewModel.snvDataLengthAll
-
-		// TODO calculate viewModel.filteredSnvDataLength always
-
-		const features = await multiInit({
+		this.features = await multiInit({
 			topbar: topBarInit({
 				app: this.app,
 				id: this.id,
 				// TODO change the way svg is selected
 				downloadHandler: () =>
-					discoInteractions.downloadClickListener(holder.select('svg[data-testid="sjpp_disco_plot"]').node()),
-				callback: () => this.toggleVisibility(settings.Disco.isOpen),
-				isOpen: () => settings.Disco.isOpen,
+					this.discoInteractions.downloadClickListener(holder.select('svg[id="sjpp_disco_plot"]').node()),
+				callback: () => this.toggleVisibility(this.isOpen),
+				isOpen: () => this.isOpen,
 				holder: topbar
 			}),
 
@@ -75,7 +60,7 @@ export default class Disco {
 				app: this.app,
 				id: this.id,
 				holder: config_div,
-				isOpen: () => settings.Disco.isOpen,
+				isOpen: () => this.isOpen,
 				inputs: [
 					{
 						label: 'Cnv capping',
@@ -87,7 +72,7 @@ export default class Disco {
 					},
 					{
 						boxLabel: '',
-						label: `Only show mutations for ${viewModel.genesetName} genes (${displayedElementsCount} out of ${viewModel.snvDataLengthAll})`,
+						label: `Only show mutations for Cancer Gene Census genes`,
 						type: 'checkbox',
 						chartType: 'Disco',
 						settingsKey: 'prioritizeGeneLabelsByGeneSets',
@@ -108,28 +93,47 @@ export default class Disco {
 				]
 			})
 		})
+	}
 
+	async main(): Promise<void> {
+		// run this only when this.state{} is set; cannot do this step in constructor()
+		const settings: Settings = this.state.settings
+
+		this.isOpen = settings.Disco.isOpen
+
+		const stateViewModelMapper = new ViewModelMapper(settings)
+		const viewModel = stateViewModelMapper.map(this.app.getState())
+
+		const holder = this.opts.holder
+		// TODO change this
+		holder.select('div[id="sjpp_disco_plot_holder_div"]').remove()
+		const svgDiv = holder.append('div').attr('id', 'sjpp_disco_plot_holder_div').style('display', 'inline-block')
+
+		const displayedElementsCount =
+			viewModel.settings.Disco.prioritizeGeneLabelsByGeneSets &&
+			viewModel.settings.Disco.showPrioritizeGeneLabelsByGeneSets
+				? viewModel.filteredSnvDataLength
+				: viewModel.snvDataLengthAll
+
+		// TODO calculate viewModel.filteredSnvDataLength always
 		const appState = this.app.getState()
 
-		for (const name in features) {
-			features[name].update({ state: this.state, appState })
+		for (const name in this.features) {
+			this.features[name].update({ state: this.state, appState })
 		}
 
-		const legendRenderer = new LegendRenderer(
-			settings.Disco.cnvCapping,
-			settings.label.fontSize
-			// ,
-			// discoInteractions.cappingClickCallback
-		)
+		const legendRenderer = new LegendRenderer(settings.Disco.cnvCapping, settings.label.fontSize)
 
 		const discoRenderer = new DiscoRenderer(
-			this.getRingRenderers(settings, viewModel, discoInteractions.geneClickListener),
-			legendRenderer,
-			discoInteractions.downloadClickListener,
-			discoInteractions.prioritizeGenesCheckboxListener
+			this.getRingRenderers(settings, viewModel, this.discoInteractions.geneClickListener),
+			legendRenderer
 		)
 
-		discoRenderer.render(holder, viewModel)
+		discoRenderer.render(svgDiv, viewModel)
+	}
+
+	getState(appState: any) {
+		return appState.plots.find(p => p.id === this.id)
 	}
 
 	getRingRenderers(
