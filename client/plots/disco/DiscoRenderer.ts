@@ -9,12 +9,7 @@ export class DiscoRenderer {
 	private legendRenderer: LegendRenderer
 	private fusionRenderer: FusionRenderer
 
-	constructor(
-		renders: Map<RingType, IRenderer>,
-		legendRenderer: LegendRenderer
-		// downloadClickListener: (d: any) => void,
-		// prioritizedGenesCheckboxListener: (checked: boolean) => void
-	) {
+	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer) {
 		this.renders = renders
 		this.legendRenderer = legendRenderer
 		this.fusionRenderer = new FusionRenderer()
