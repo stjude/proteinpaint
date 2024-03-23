@@ -3,8 +3,6 @@ import ViewModel from './viewmodel/ViewModel.ts'
 import LegendRenderer from './legend/LegendRenderer.ts'
 import { RingType } from './ring/RingType.ts'
 import FusionRenderer from './fusion/FusionRenderer.ts'
-import DownloadButtonRenderer from './download/DownloadButtonRenderer.ts'
-import PrioritizeGenesCheckboxRenderer from '#plots/disco/prioritizegenes/PrioritizeGenesCheckboxRenderer.ts'
 
 export class DiscoRenderer {
 	private renders: Map<RingType, IRenderer>
