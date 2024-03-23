@@ -8,8 +8,6 @@ export class DiscoRenderer {
 	private renders: Map<RingType, IRenderer>
 	private legendRenderer: LegendRenderer
 	private fusionRenderer: FusionRenderer
-	// private downloadButtonRenderer: DownloadButtonRenderer
-	// private prioritizeGenesCheckboxRenderer: PrioritizeGenesCheckboxRenderer
 
 	constructor(
 		renders: Map<RingType, IRenderer>,
