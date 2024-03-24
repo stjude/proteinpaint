@@ -179,9 +179,9 @@ function setRenderers(self) {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
-			.style('font-size', '1.1em')
+			.style('font-size', '1.2em')
 			.style('margin-top', '48px')
-			.text(appState.termdbConfig.title)
+			.text(appState.termdbConfig.title.text)
 
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
 		const controlsDiv = header
@@ -219,9 +219,9 @@ function setRenderers(self) {
 			self.dom.tabDiv.style('display', 'none')
 			self.dom.recoverDiv.style('display', 'none')
 			titleDiv.style('margin-top', '95px').style('font-size', '0.9em')
-			if (appState.termdbConfig.link)
+			if (appState.termdbConfig.title?.link)
 				titleDiv
-					.on('click', () => window.open(appState.termdbConfig.link, '_blank'))
+					.on('click', () => window.open(appState.termdbConfig.title.link, '_blank'))
 					.on('mouseover', () => titleDiv.style('cursor', 'pointer'))
 		}
 
