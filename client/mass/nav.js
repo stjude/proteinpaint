@@ -219,6 +219,7 @@ function setRenderers(self) {
 			self.dom.tabDiv.style('display', 'none')
 			self.dom.recoverDiv.style('display', 'none')
 			titleDiv.style('margin-top', '95px').style('font-size', '0.9em')
+			self.dom.sessionDiv.style('margin-left', '92vw')
 			if (appState.termdbConfig.title?.link)
 				titleDiv
 					.on('click', () => window.open(appState.termdbConfig.title.link, '_blank'))
