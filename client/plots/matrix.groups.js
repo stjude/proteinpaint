@@ -1,5 +1,5 @@
 import { sample_match_termvaluesetting } from '#shared/filter'
-import { getSampleSorter, getTermSorter, getSampleGroupSorter } from './matrix.sort'
+import { getSampleSorter, getTermSorter, getSampleGroupSorter, getMclassSorter } from './matrix.sort'
 
 export function getTermOrder(data) {
 	const s = this.settings.matrix
@@ -9,7 +9,7 @@ export function getTermOrder(data) {
 	let totalIndex = 0,
 		visibleGrpIndex = 0
 
-	// this.mclassSorter = getMclassSorter(this)
+	this.mclassSorter = getMclassSorter(this)
 	for (const [grpIndex, grp] of this.termGroups.entries()) {
 		const lst = [] // will derive a mutable copy of grp.lst
 		for (const [index, tw] of grp.lst.entries()) {
@@ -207,7 +207,6 @@ export function getSampleOrder(data) {
 	return sampleOrder.filter(so => !so.grp.isExcluded)
 }
 
-// self.mclassSorter = getMclassSorter()
 /*
 Given the anno of a term for a sample, generate the 
     filteredValues (values matched the filter)
@@ -229,33 +228,36 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		: values.filter(v => sample_match_termvaluesetting(v, isSpecific[0], tw.term, sample))
 
 	const renderedValues = []
-	if (tw.term.type != 'geneVariant' || s.cellEncoding == '') renderedValues.push(...filteredValues)
+	if (tw.term.type != 'geneVariant') renderedValues.push(...filteredValues)
 	else {
-		// console.log("inside of else")
-		filteredValues.sort((a, b) => getMclassOrder(a) - getMclassOrder(b))
-		// filteredValues.sort(this.mclassSorter)
-		const sortedFilteredValues = []
-		// dt=1 are SNVindels, dt=4 CNV, dt=3 Gene Expression
-		// will render only one matching value per dt
-		for (const dt of [4, 1, 2, 3]) {
-			const v =
-				dt == 3
-					? filteredValues.find(v => v.dt === dt)
-					: filteredValues.find(v => v.dt === dt && v.class !== 'WT' && v.class !== 'Blank')
-			if (v) renderedValues.push(v)
+		// filteredValues.sort((a, b) => getMclassOrder(a) - getMclassOrder(b))
+		filteredValues.sort(this.mclassSorter)
 
-			const oneDtV = filteredValues.filter(v => v.dt === dt)
-			sortedFilteredValues.push(...oneDtV)
+		if (s.cellEncoding == '') renderedValues.push(...filteredValues)
+		else {
+			const sortedFilteredValues = []
+			// dt=1 are SNVindels, dt=4 CNV, dt=3 Gene Expression
+			// will render only one matching value per dt
+			for (const dt of [4, 1, 2, 3]) {
+				const v =
+					dt == 3
+						? filteredValues.find(v => v.dt === dt)
+						: filteredValues.find(v => v.dt === dt && v.class !== 'WT' && v.class !== 'Blank')
+				if (v) renderedValues.push(v)
+
+				const oneDtV = filteredValues.filter(v => v.dt === dt)
+				sortedFilteredValues.push(...oneDtV)
+			}
+			filteredValues = sortedFilteredValues
 		}
-		filteredValues = sortedFilteredValues
-	}
-	// group stacked cell values to avoid striped pattern
-	if (tw.term.type == 'geneVariant') {
-		// renderedValues.sort(this.stackSiblingCellsByClass)
-		// filteredValues.sort(this.stackSiblingCellsByClass)
 	}
 
-	// if(sample._ref_.label == 'BLGSP-71-19-00119') console.log("what is renderedValues", renderedValues, sample, s.sortOptions[s.sortSamplesBy])
+	// group stacked cell values to avoid striped pattern
+	// if (tw.term.type == 'geneVariant') {
+	// renderedValues.sort(this.stackSiblingCellsByClass)
+	// filteredValues.sort(this.stackSiblingCellsByClass)
+	// }
+
 	return {
 		filteredValues,
 		countedValues: filteredValues.filter(v => {

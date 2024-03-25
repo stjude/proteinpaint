@@ -546,13 +546,29 @@ function defaultSorter(a, b) {
 	return a.name < b.name ? -1 : 1
 }
 
-// export function getMclassSorter(self){
-// 	const s = self.settings.matrix
-// 	const sortOptions = s.sortOptions[s.sortSamplesBy]
+export function getMclassSorter(self) {
+	const s = self.settings.matrix
+	const sortPriority = s.sortOptions['a'].sortPriority
 
-// 	//TODO fill it in
-// 	const mclassPriority = []
-// 	const sorter = (a, b) => mclassPriority.indexOf(a.class) - mclassPriority.index(b.class)
+	const mclassPriority = []
+	sortPriority.forEach(obj => {
+		if (obj.types.includes('geneVariant')) {
+			// Extract 'order' arrays from each tiebreaker and filter 'WT' and 'Blank'
+			obj.tiebreakers.forEach(tiebreaker => {
+				if (tiebreaker.by == 'class' && tiebreaker.order) {
+					mclassPriority.push(...tiebreaker.order.filter(t => t !== 'WT' && t !== 'Blank'))
+				}
+			})
+		}
+	})
 
-// 	return sorter
-// }
+	const sorter = (a, b) =>
+		mclassPriority.indexOf(a.class) == -1 && mclassPriority.indexOf(a.class) == -1
+			? 0
+			: mclassPriority.indexOf(a.class) == -1
+			? 1
+			: mclassPriority.indexOf(b.class) == -1
+			? -1
+			: mclassPriority.indexOf(a.class) - mclassPriority.indexOf(b.class)
+	return sorter
+}
