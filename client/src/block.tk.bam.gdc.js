@@ -10,7 +10,6 @@ import { renderTable } from '../dom/table'
 import { table2col } from '../dom/table2col'
 import { fileSize } from '#shared/fileSize'
 import { keyupEnter } from './client'
-import path from 'path'
 
 /*
 
@@ -84,12 +83,6 @@ const baminfo_rows = [
 ]
 const noPermissionMessage =
 	'You are attempting to access a Sequence Read file that you are not authorized to access. <a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>Please request dbGaP Access to the project</a>.'
-
-// https://samtools.github.io/hts-specs/SAMv1.pdf, section 4.1.2
-const bamEOF = [
-	0x1f, 0x8b, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x06, 0x00, 0x42, 0x43, 0x02, 0x00, 0x1b, 0x00, 0x03,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-]
 
 /*
 Arguments:
@@ -938,7 +931,7 @@ export async function bamsliceui({
 				headers.compression = false
 				// cookie is domain based and will be automatically passed on all requests
 
-				const url = path.join(gdc_args.restapihost, '/slicing/view/', file.file_id + '?region=' + body.gdcFilePosition)
+				const url = `${gdc_args.restapihost}/slicing/view/${file.file_id}?region=${body.gdcFilePosition}`
 				const response = await fetch(url, { method: 'GET', headers })
 				const data = await response.blob()
 				// download the file to client
