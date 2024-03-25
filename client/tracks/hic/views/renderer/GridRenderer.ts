@@ -19,7 +19,6 @@ export class GridRenderer {
 	render() {
 		this.renderAxisX(this.grid)
 		this.renderAxisY(this.grid)
-
 		this.svg.attr('width', Grid.defaultChrLabWidth + this.grid.xoff).attr('height', Grid.fontSize + this.grid.yoff)
 	}
 
