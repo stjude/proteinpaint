@@ -84,7 +84,6 @@ return an array of sample names passing through the filter
 
 	if (filter) re = sql.all(filter.values)
 	else re = sql.all()
-	console.log(re)
 	if (canDisplay) return re
 	for (const item of re) delete item.name
 	return re
