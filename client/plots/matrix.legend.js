@@ -230,6 +230,7 @@ export function getLegendData(legendGroups, refs, self) {
 					return {
 						dt: 4,
 						termid: 'CNV',
+						origin: grpFilter.origin,
 						key: fc,
 						text: self.mclass[fc].label,
 						color: self.mclass[fc]?.color,
@@ -250,6 +251,8 @@ export function getLegendData(legendGroups, refs, self) {
 					crossedOut: true,
 					items: grpFilter.filteredOutCats.map(fc => {
 						return {
+							dt: self.mclass[fc].dt,
+							origin: grpFilter.origin,
 							termid: groupName,
 							key: fc,
 							text: self.mclass[fc].label,
@@ -272,6 +275,7 @@ export function getLegendData(legendGroups, refs, self) {
 				items: grpFilter.filteredOutCats.map(fc => {
 					return {
 						dt: 2,
+						origin: grpFilter.origin,
 						termid: 'Fusion RNA',
 						key: fc,
 						text: self.mclass[fc].label,
@@ -293,6 +297,7 @@ export function getLegendData(legendGroups, refs, self) {
 				items: grpFilter.filteredOutCats.map(fc => {
 					return {
 						dt: 5,
+						origin: grpFilter.origin,
 						termid: 'Structural Variation',
 						key: fc,
 						text: self.mclass[fc].label,
