@@ -3095,7 +3095,7 @@ function showByLegendFilter(menuGrp, targetData, self) {
 				.append('span')
 				.style('margin-left', '3px')
 				.html(d.text)
-				.style('color', d.color)
+				//.style('color', d.color)
 				.style('text-decoration', d.crossedOut ? 'line-through' : '')
 		})
 
