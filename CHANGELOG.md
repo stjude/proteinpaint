@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- GDC bam slicing download app now calls gdc api directly from client without going through pp backend
+
 
 ## 2.48.0
 
