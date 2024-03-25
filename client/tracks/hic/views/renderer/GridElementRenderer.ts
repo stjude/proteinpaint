@@ -1,5 +1,5 @@
 import { SvgG } from 'types/d3'
-import { ChrsTooltips } from './ChrsTooltips.ts'
+import { ChrsTooltips } from '../viewmodel/ChrsTooltips.ts'
 import { Selection } from 'd3-selection'
 
 export class GridElementRenderer {
@@ -16,6 +16,9 @@ export class GridElementRenderer {
 	render(obj: any, lead: string, follow: string, holder: any) {
 		obj.canvas = holder.append('canvas').style('display', 'none').node() as Selection<HTMLCanvasElement, any, any, any>
 		obj.ctx = (obj.canvas as HTMLCanvasElement).getContext('2d')
+
+		obj.canvas.width = obj.xbins
+		obj.canvas.height = obj.ybins
 
 		obj.img = this.layerMap
 			.append('image')
@@ -50,6 +53,9 @@ export class GridElementRenderer {
 				any
 			>
 
+			obj.canvas2.width = obj.ybins
+			obj.canvas2.height = obj.xbins
+
 			obj.ctx2 = (obj.canvas2 as HTMLCanvasElement).getContext('2d')
 
 			obj.img2 = this.layerMap
@@ -79,4 +85,5 @@ export class GridElementRenderer {
 			obj.ctx2 = obj.ctx
 		}
 	}
+	
 }

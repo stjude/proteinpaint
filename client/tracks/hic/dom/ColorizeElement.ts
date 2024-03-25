@@ -1,11 +1,11 @@
 export class ColorizeElement {
 	async colorizeElement(
-		lead: number,
-		follow: number,
+		xCoord: number,
+		yCoord: number,
 		v: number,
 		obj: any,
-		width: number,
-		height: number,
+		width: number, //binpx
+		height: number, //binpx
 		min: number,
 		max: number,
 		currView: any
@@ -37,10 +37,10 @@ export class ColorizeElement {
 		}
 
 		if (currView === 'genome') {
-			obj.ctx.fillRect(follow, lead, width, height)
-			obj.ctx2.fillRect(lead, follow, width, height)
+			obj.ctx.fillRect(yCoord, xCoord, width, height)
+			obj.ctx2.fillRect(xCoord, yCoord, width, height)
 		} else {
-			obj.fillRect(lead, follow, width, height)
+			obj.fillRect(xCoord, yCoord, width, height)
 		}
 	}
 }
