@@ -167,10 +167,7 @@ class SampleView {
 					.attr(
 						'label',
 						(d, i) =>
-							parent
-								.getSamples(d)
-								.map(s => s.sampleName)
-								.join(' > ') +
+							parent.getLabel(d) +
 							(i + 1 == limit
 								? isBigDataset
 									? `Showing first ${i + 1} hits`
@@ -252,6 +249,12 @@ class SampleView {
 			sampleData = this.samplesData[sampleData.ancestor_name]
 		}
 		return samples
+	}
+
+	getLabel(sampleName) {
+		const samples = this.getSamples(sampleName)
+		if (samples.length == 1) return ''
+		return samples.map(s => s.sampleName).join(' > ')
 	}
 
 	async main() {
