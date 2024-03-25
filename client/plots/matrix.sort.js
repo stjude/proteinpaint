@@ -351,7 +351,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 							]
 						},
 						by: 'class',
-						order: ['Fuserna', 'WT', 'Blank']
+						order: ['Fuserna' /*'WT', 'Blank'*/]
 					}
 				]
 			},
@@ -427,7 +427,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 							]
 						},
 						by: 'class',
-						order: ['Fuserna', 'WT', 'Blank']
+						order: ['Fuserna' /* 'WT', 'Blank'*/]
 					}
 				]
 			},
