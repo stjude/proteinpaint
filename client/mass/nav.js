@@ -179,9 +179,9 @@ function setRenderers(self) {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
-			.style('font-size', '1.5em')
-			.style('margin-top', '44px')
-			.text(appState.termdbConfig.title)
+			.style('font-size', '1.2em')
+			.style('margin-top', '48px')
+			.text(appState.termdbConfig.title.text)
 
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
 		const controlsDiv = header
@@ -218,7 +218,12 @@ function setRenderers(self) {
 			// should only show chart buttons
 			self.dom.tabDiv.style('display', 'none')
 			self.dom.recoverDiv.style('display', 'none')
-			titleDiv.style('margin-top', '90px')
+			titleDiv.style('margin-top', '95px').style('font-size', '0.9em')
+			self.dom.sessionDiv.style('margin-left', '92vw')
+			if (appState.termdbConfig.title?.link)
+				titleDiv
+					.on('click', () => window.open(appState.termdbConfig.title.link, '_blank'))
+					.on('mouseover', () => titleDiv.style('cursor', 'pointer'))
 		}
 
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {

@@ -780,7 +780,7 @@ export type Cohort = {
 	termdb?: Termdb
 	scatterplots?: Scatterplots
 	// optional title of this ds, if missing use ds.label. shown on mass nav header. use blank string to not to show a label
-	title?: string
+	title?: Title
 	cumburden?: {
 		files: {
 			fit: string
@@ -788,6 +788,11 @@ export type Cohort = {
 			sample: string
 		}
 	}
+}
+
+type Title = {
+	text: string
+	link?: string
 }
 /*** types supporting MdsCohort type ***/
 type SampleAttribute = {

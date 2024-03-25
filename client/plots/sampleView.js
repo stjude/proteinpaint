@@ -20,7 +20,7 @@ class SampleView {
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
 			.style('justify-content', 'flex-start')
-			.style('width', '100vw')
+			.style('width', '110vw')
 		const controlsDiv = div.insert('div').style('display', 'inline-block')
 		const leftDiv = div.insert('div').style('display', 'inline-block').style('vertical-align', 'top') //div besides controls, with dictionary
 		const plotsDiv = div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
@@ -109,7 +109,11 @@ class SampleView {
 			this.samplesData = await this.app.vocabApi.getAllSamplesByName({
 				filter: getNormalRoot(appState.termfilter?.filter)
 			})
-			const allSamples = Object.keys(this.samplesData)
+			const allSamples = []
+			for (const sample in this.samplesData)
+				if (this.samplesData[sample].type == 'root' || this.samplesData[sample].type == null)
+					//If the dataset has no ancestors, all the samples should be root'
+					allSamples.push(sample)
 			const isBigDataset = allSamples.length > 10000
 
 			if (allSamples.length == 0)
@@ -160,17 +164,20 @@ class SampleView {
 					.enter()
 					.append('option')
 					.attr('value', d => d)
-					.attr('label', (d, i) =>
-						i + 1 === limit
-							? isBigDataset
-								? `Showing first ${i + 1} hits`
-								: `Showing ${i + 1} of ${options.length} hits`
-							: i + 1 === options.length && i > 0
-							? `Found ${options.length} hits`
-							: parent
-									.getSamples(d)
-									.map(s => s.sampleName)
-									.join(' > ')
+					.attr(
+						'label',
+						(d, i) =>
+							parent
+								.getSamples(d)
+								.map(s => s.sampleName)
+								.join(' > ') +
+							(i + 1 == limit
+								? isBigDataset
+									? `Showing first ${i + 1} hits`
+									: `Showing ${i + 1} of ${options.length} hits`
+								: i + 1 === options.length && i > 0
+								? `  (Found ${options.length} hits)`
+								: '')
 					)
 			}
 		}
@@ -240,7 +247,8 @@ class SampleView {
 		if (!sampleData) return []
 		const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
 		while (sampleData.ancestor_name) {
-			samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
+			if (this.samplesData[sampleData.ancestor_name]?.type != 'root')
+				samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
 			sampleData = this.samplesData[sampleData.ancestor_name]
 		}
 		return samples

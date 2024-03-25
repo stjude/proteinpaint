@@ -84,12 +84,6 @@ const baminfo_rows = [
 const noPermissionMessage =
 	'You are attempting to access a Sequence Read file that you are not authorized to access. <a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>Please request dbGaP Access to the project</a>.'
 
-// https://samtools.github.io/hts-specs/SAMv1.pdf, section 4.1.2
-const bamEOF = [
-	0x1f, 0x8b, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x06, 0x00, 0x42, 0x43, 0x02, 0x00, 0x1b, 0x00, 0x03,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-]
-
 /*
 Arguments:
 
@@ -573,6 +567,10 @@ export async function bamsliceui({
 		if (data.error) throw data.error
 		if (typeof data.case2files != 'object') throw 'wrong return'
 
+		// "bam slicing download" app calls gdc api directly from client here and doesn't go through pp backend. thus it need the rest api host name which is determined by pp backend and diffs based on environments
+		if (!data.restapihost) throw 'data.restapihost is missing'
+		gdc_args.restapihost = data.restapihost
+
 		// data = { case2files={}, total=int, loaded=int }
 		/*
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.total} BAM files`)
@@ -929,23 +927,13 @@ export async function bamsliceui({
 
 			if (stream2download) {
 				// detour
-				// TODO support unmapped in this mode
-				body.stream2download = true
-				const data = await dofetch3('tkbam', { headers, body })
-				// data is binary blob
 
-				if (!(await blobEndsWithBytes(data, bamEOF))) {
-					// incorrect bam and missing EOF, must be truncating of an oversized file slice
-					// indicate cutoff to user to be helpful. access optionalFeatures to get cutoff size because not possible to pass it from this response here
-					sayerror(
-						saydiv,
-						`BAM slice exceeds
-						${fileSize(JSON.parse(sessionStorage.getItem('optionalFeatures')).gdcBam.streamMaxSize)}
-						and is truncated. Please use with caution, or reduce query region size and try again.`
-					)
-					// still let it download
-				}
+				headers.compression = false
+				// cookie is domain based and will be automatically passed on all requests
 
+				const url = `${gdc_args.restapihost}/slicing/view/${file.file_id}?region=${body.gdcFilePosition}`
+				const response = await fetch(url, { method: 'GET', headers })
+				const data = await response.blob()
 				// download the file to client
 				const a = document.createElement('a')
 				a.href = URL.createObjectURL(data)
@@ -958,7 +946,6 @@ export async function bamsliceui({
 				document.body.appendChild(a)
 				a.click()
 				document.body.removeChild(a)
-
 				return
 			}
 
@@ -1016,37 +1003,6 @@ export async function bamsliceui({
 	}
 
 	return publicApi
-}
-
-function blobEndsWithBytes(blob, byteSequence) {
-	if (!blob || !byteSequence || byteSequence.length > blob.size) {
-		return false // Handle invalid inputs or sequence exceeding blob size
-	}
-
-	const sliceSize = byteSequence.length
-	const start = blob.size - sliceSize
-	const end = blob.size
-
-	// Read the last slice of the blob
-	const reader = new FileReader()
-	reader.readAsArrayBuffer(blob.slice(start, end))
-
-	return new Promise(resolve => {
-		reader.onload = function (event) {
-			const arrayBuffer = event.target.result
-			const view = new Uint8Array(arrayBuffer)
-
-			// Compare the last bytes of the view with the byte sequence
-			let match = true
-			for (let i = 0; i < byteSequence.length; i++) {
-				if (view[i] !== byteSequence[i]) {
-					match = false
-					break
-				}
-			}
-			resolve(match)
-		}
-	})
 }
 
 function geneSearchInstruction(d) {

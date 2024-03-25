@@ -88,7 +88,7 @@ function make(q, res, ds, genome) {
 		isGeneSetTermdb: tdb.isGeneSetTermdb,
 		lollipop: tdb.lollipop,
 		urlTemplates: tdb.urlTemplates,
-		title: 'title' in ds.cohort ? ds.cohort.title : ds.label
+		title: 'title' in ds.cohort ? ds.cohort.title : { text: ds.label }
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
