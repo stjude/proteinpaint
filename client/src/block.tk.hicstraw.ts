@@ -942,8 +942,35 @@ function makeTk(tk: any, block: any) {
 
 	tk.img = tk.glider.append('image')
 
-	// sneak canvas, render graph then copy to tk.img for showing
-	tk.hiddencanvas = block.holder.append('canvas').style('display', 'none')
+	tk.subpanels = []
+	function createSubpanelImgs(tk, i) {
+		const mainImgs: HTMLCanvasElement[] = []
+		const interImgs: HTMLImageElement[] = []
+
+		for (let j = 0; j < 3; j++) {
+			const mainImg = document.createElement('canvas')
+			mainImgs.push(mainImg)
+			tk.subpanels[i].mainImgContainers[j].appendChild(mainImg)
+		}
+
+		for (let j = 0; j < 3; j++) {
+			const interImg = document.createElement('img')
+			interImgs.push(interImg)
+			tk.subpanels[i].interImgContainers[j].appendChild(interImg)
+		}
+
+		tk.subpanels[i] = {
+			mainImgs: mainImgs,
+			interImgs: interImgs
+		}
+	}
+
+	for (let i = 0; i < block.subpanels.length; i++) {
+		createSubpanelImgs(tk, i)
+	}
+
+	// // sneak canvas, render graph then copy to tk.img for showing
+	// tk.hiddencanvas = block.holder.append('canvas').style('display', 'none')
 
 	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
 		configPanel(tk, block)
