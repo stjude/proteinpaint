@@ -1,7 +1,4 @@
 import { SvgSvg, SvgG } from '../../../../types/d3'
-//import { Selection } from 'd3-selection'
-//import * as client from '#src/client'
-//import blocklazyload from '#src/block.lazyload'
 import { ColorizeElement } from '../../dom/colorizeElement.ts'
 
 // import { axisRight, axisBottom } from 'd3-axis'
@@ -29,8 +26,10 @@ import { hicParseFile } from '../../data/parseData.ts'
 import { Div } from '../../../../types/d3'
 import { GridViewModel } from '../viewmodel/GridViewModel.ts'
 import { GridRenderer } from '../renderer/GridRenderer.ts'
-import { GridElementsRenderer } from '../viewmodel/GridElementsRenderer.ts'
+import { GridElementsRenderer } from '../renderer/GridElementsRenderer.ts'
 import { GridElementData } from '../viewmodel/GridElementData.ts'
+import { GridElementDom } from '../viewmodel/GridElementDom.ts'
+import { GridElementsFormattedData } from '../renderer/GridElementsFormattedData.ts'
 
 type Pane = {
 	pain: Selection<HTMLDivElement, any, any, any>
@@ -95,29 +94,6 @@ export class GenomeView {
 		this.viewRender = new GridRenderer(this.svg, this.layer_map, this.layer_sv, this.viewModel.grid)
 		this.gridElementsRenderer = new GridElementsRenderer(this.viewModel.grid, this.layer_map, this.app)
 	}
-
-	// setLeadFollowMap() {
-	// 	this.xoff = 0
-
-	// 	for (let i = 0; i < this.hic.chrlst.length; i++) {
-	// 		const lead = this.hic.chrlst[i]
-	// 		this.lead2follow.set(lead, new Map())
-
-	// 		this.yoff = 0
-
-	// 		for (let j = 0; j <= i; j++) {
-	// 			const follow = this.hic.chrlst[j]
-
-	// 			this.lead2follow!.get(lead)!.set(follow, {
-	// 				x: this.xoff,
-	// 				y: this.yoff
-	// 			})
-	// 			this.makeChrCanvas(lead, follow)
-	// 			this.yoff += this.chr2px[follow] + this.borderwidth
-	// 		}
-	// 		this.xoff += this.chr2px[lead] + this.borderwidth
-	// 	}
-	// }
 
 	// makeChrCanvas(lead: string, follow: string) {
 	// 	const obj = this.lead2follow.get(lead).get(follow)
@@ -354,72 +330,90 @@ export class GenomeView {
 	}
 
 	async render() {
-		// this.layer_map.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
-		// this.layer_sv.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
-
-		// let totalpx = this.hic.chrlst.length
-		// for (const chr of this.hic.chrlst) {
-		// 	const w = Math.ceil(this.hic.genome.chrlookup[chr.toUpperCase()].len / this.resolution) * this.binpx
-		// 	this.chr2px[chr] = w
-		// 	totalpx += w
-		// }
-
 		this.viewRender.render()
 		this.gridElementsRenderer.render(this.hic.holder)
-		// this.setLeadFollowMap()
-
 		// if (this.hic.sv && this.hic.sv.items) {
 		// 	this.makeSv()
 		// }
-		// console.log(this.defaultChrLabWidth, this.fontsize, this.xoff, this.yoff)
-		// this.svg.attr('width', this.defaultChrLabWidth + this.xoff).attr('height', this.fontsize + this.yoff)
 
-		//await this.update(this.data)
+		await this.update(this.data)
 	}
 
 	async update(data) {
 		this.data = data
 		this.min = this.parent('min') as number
 		this.max = this.parent('max') as number
-		//await this.makeElements()
-	}
-
-	async makeElements() {
-		const min = this.parent('min')
-		const max = this.parent('max')
 		for (const data of this.data) {
 			//Fix for when M chr has no data and is removed from hic.chrlst.
 			if (!this.hic.chrlst.includes(data.lead) || !this.hic.chrlst.includes(data.follow)) continue
-			const obj = this.viewModel.grid.chromosomeMatrix.get(data.lead)!.get(data.follow)
+			const obj = this.viewModel.grid.chromosomeMatrix.get(data.lead)!.get(data.follow) as GridElementData &
+				GridElementDom
 			if (!obj) continue
-			obj.data = [] as any
+
 			obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
 			if (obj.canvas2) {
-				obj.ctx2.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
+				obj.ctx2!.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
 			}
-			for (const [plead, pfollow, value] of data.items) {
-				const leadpx = Math.floor(plead / this.resolution) * this.binpx
-				const followpx = Math.floor(pfollow / this.resolution) * this.binpx
-				obj.data.push([leadpx, followpx, value])
+			console.log(356, data.items)
+			obj.data = new GridElementsFormattedData(this.min, this.max, data.items, this.binpx, this.resolution).formatData()
 
+			for (const [xPx, yPx, value] of obj.data) {
 				await this.colorizeElement.colorizeElement(
-					leadpx,
-					followpx,
+					xPx,
+					yPx,
 					value,
 					obj,
 					this.binpx,
 					this.binpx,
-					min,
-					max,
+					this.min,
+					this.max,
 					'genome'
 				)
 			}
+
 			obj.img.attr('xlink:href', obj.canvas.toDataURL())
 			if (obj.canvas2) {
-				obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
+				obj.img2!.attr('xlink:href', obj.canvas2.toDataURL())
 			}
 		}
 	}
+
+	// async makeElements() {
+	// 	const min = this.parent('min')
+	// 	const max = this.parent('max')
+	// 	for (const data of this.data) {
+	// 		//Fix for when M chr has no data and is removed from hic.chrlst.
+	// 		if (!this.hic.chrlst.includes(data.lead) || !this.hic.chrlst.includes(data.follow)) continue
+	// 		const obj = this.viewModel.grid.chromosomeMatrix.get(data.lead)!.get(data.follow)
+	// 		if (!obj) continue
+	// 		obj.data = [] as any
+	// 		obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
+	// 		if (obj.canvas2) {
+	// 			obj.ctx2.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
+	// 		}
+	// 		for (const [plead, pfollow, value] of data.items) {
+	// 			const leadpx = Math.floor(plead / this.resolution) * this.binpx
+	// 			const followpx = Math.floor(pfollow / this.resolution) * this.binpx
+	// 			obj.data.push([leadpx, followpx, value])
+
+	// 			await this.colorizeElement.colorizeElement(
+	// 				leadpx,
+	// 				followpx,
+	// 				value,
+	// 				obj,
+	// 				this.binpx,
+	// 				this.binpx,
+	// 				min,
+	// 				max,
+	// 				'genome'
+	// 			)
+	// 		}
+	// 		obj.img.attr('xlink:href', obj.canvas.toDataURL())
+	// 		if (obj.canvas2) {
+	// 			obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
+	// 		}
+	// 	}
+	// }
 }
 
 // /** Default normalization method if none returned from the server. Exported to parsing and controls script*/

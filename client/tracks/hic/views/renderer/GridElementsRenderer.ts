@@ -1,4 +1,4 @@
-import { Grid } from './Grid'
+import { Grid } from '../viewmodel/Grid'
 import { GridElementRenderer } from './GridElementRenderer'
 import { SvgG } from 'types/d3'
 
@@ -12,8 +12,8 @@ export class GridElementsRenderer {
 	}
 
 	render(holder: any) {
-		//chrx= String value of x chromosome
-		//chry = map of y chromosome with grid elements
+		//chrx = String value of chromosome on x axis
+		//chry = map of chromosome on y axis with grid elements and data
 		for (const [chrx, chryMap] of this.grid.chromosomeMatrix) {
 			for (const [chry, gridElem] of chryMap) {
 				this.gridElementRenderer.render(gridElem, chrx, chry, holder)
