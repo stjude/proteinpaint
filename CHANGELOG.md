@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - GDC bam slicing download app now calls gdc api directly from client without going through pp backend
+- Group similar mutation class colors together when sorting matrix samples and if CNVs are displayed
+- Add Single style for GDC oncoMatrix
 
 
 ## 2.48.0
