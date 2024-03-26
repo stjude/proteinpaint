@@ -700,15 +700,11 @@ export class MatrixControls {
 			.datum({
 				label: 'CNV',
 				updateBtn: btn => {
-					const matrixSetting = this.parent.config.settings.matrix
-					btn.style(
-						'text-decoration',
-						matrixSetting.showMatrixCNV == 'none' || matrixSetting.allMatrixCNVHidden ? 'line-through' : ''
-					)
-					btn.style(
-						'text-decoration-thickness',
-						matrixSetting.showMatrixCNV == 'none' || matrixSetting.allMatrixCNVHidden ? '2px' : ''
-					)
+					const s = this.parent.config.settings.matrix
+					const notRendered = s.showMatrixCNV == 'none' || s.allMatrixCNVHidden
+					btn
+						.style('text-decoration', notRendered ? 'line-through' : '')
+						.style('text-decoration-thickness', notRendered ? '2px' : '')
 				},
 				rows: [
 					{
