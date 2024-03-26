@@ -42,7 +42,7 @@ get_label4key
 
 */
 
-export async function get_samples(qfilter, ds, canDisplay = false) {
+export async function get_samples(qfilter, ds, canDisplay = false, type = 'sample') {
 	/*
 must have qfilter[]
 as the actual query is embedded in qfilter
@@ -52,13 +52,12 @@ return an array of sample names passing through the filter
 	const sql = ds.cohort.db.connection.prepare(
 		filter
 			? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id 
-			   where (sampleidmap.type = 'sample' OR sampleidmap.type = NULL)`
-			: `SELECT id, name FROM sampleidmap where (sampleidmap.type = 'sample' OR sampleidmap.type = NULL)` // both statements must return sample id as a uniform behavior
+			   where (sampleidmap.type = ${type} OR sampleidmap.type is NULL OR sampleidmap.type = '')`
+			: `SELECT id, name FROM sampleidmap where (sampleidmap.type = 'sample' OR sampleidmap.type is NULL OR sampleidmap.type = '')` // both statements must return sample id as a uniform behavior
 	)
 	let re
 	if (filter) re = sql.all(filter.values)
 	else re = sql.all()
-
 	if (canDisplay) return re
 	for (const item of re) delete item.name
 	return re
