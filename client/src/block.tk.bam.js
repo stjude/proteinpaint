@@ -924,10 +924,11 @@ function makeTk(tk, block) {
 		// attribute is not set, set to true by default
 		tk.drop_pcrduplicates = true
 	}
-	if (tk.drop_supplementary_alignments == undefined) {
-		// attribute is not set, set to true by default
-		tk.drop_supplementary_alignments = true
-	}
+	tk.drop_supplementary_alignments = false // Commenting out this functionality for now. Will later test it with a suitable example
+	//if (tk.drop_supplementary_alignments == undefined) {
+	//	// attribute is not set, set to true by default
+	//	tk.drop_supplementary_alignments = true
+	//}
 
 	if (tk.show_readnames == undefined) {
 		tk.show_readnames = false
@@ -1621,18 +1622,20 @@ function configPanel(tk, block) {
 			}
 		})
 	}
-	{
-		make_one_checkbox({
-			holder: d.append('div'),
-			labeltext: 'Drop supplementary alignments',
-			checked: tk.drop_supplementary_alignments,
-			divstyle: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '6.5px' },
-			callback: () => {
-				tk.drop_supplementary_alignments = !tk.drop_supplementary_alignments
-				loadTk(tk, block)
-			}
-		})
-	}
+	// Can uncomment this later after testing with a suitable example
+
+	//{
+	//	make_one_checkbox({
+	//		holder: d.append('div'),
+	//		labeltext: 'Drop supplementary alignments',
+	//		checked: tk.drop_supplementary_alignments,
+	//		divstyle: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '6.5px' },
+	//		callback: () => {
+	//			tk.drop_supplementary_alignments = !tk.drop_supplementary_alignments
+	//			loadTk(tk, block)
+	//		}
+	//	})
+	//}
 	if (tk.variants) {
 		make_one_checkbox({
 			holder: d.append('div'),
