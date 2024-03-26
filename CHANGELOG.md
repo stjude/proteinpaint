@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Display hints about persisted matrix gene set and option to unhide CNV and mutations when there is no matrix data to render
 
+Fixes:
+- refactor to move all gdc plot launchers into a separate folder
+
 
 ## 2.48.1
 
