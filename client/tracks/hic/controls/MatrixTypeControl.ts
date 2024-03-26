@@ -12,6 +12,7 @@ export class MatrixTypeControl {
 		// { label: 'Observed Pearson', value: 'op'}
 	]
 	callback: (matrixType: string) => void
+	matrixSelect: any
 
 	constructor(holder: Elem, callback: (matrixType: string) => void) {
 		this.holder = holder
@@ -19,16 +20,22 @@ export class MatrixTypeControl {
 	}
 
 	render() {
-		const dropdown = this.holder
+		this.matrixSelect = this.holder
 			.style('margin-right', '10px')
 			.append('select')
 			.on('change', async () => {
-				this.callback(dropdown.node()!.value)
+				this.callback(this.matrixSelect.node().value)
 			})
 		for (const matrixType of this.values) {
-			dropdown.append('option').text(matrixType.label).attr('value', matrixType.value)
+			this.matrixSelect.append('option').text(matrixType.label).attr('value', matrixType.value)
 		}
+	}
 
-		return dropdown
+	update(option: any) {
+		const options = this.matrixSelect.node().options
+		if (!options) return //When only 'NONE' is available
+		const selectedNmeth = Array.from(options).find((o: any) => o.value === option) as HTMLOptionElement
+		if (!selectedNmeth) throw `Invalid normalization method: ${option}`
+		selectedNmeth.selected = true
 	}
 }

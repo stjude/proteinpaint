@@ -89,13 +89,13 @@ class ControlPanel {
 		//Normalization
 		const normalizationRow = menuTable.append('tr') as any
 		this.addLabel(normalizationRow, 'NORMALIZATION')
-		this.controls.nmeth = normalizationRow.append('td').attr('class', 'sjpp-nmeth-select') as any
-		new NormalizationMethodControl(
-			this.controls.nmeth,
+		this.controls.nmeth = new NormalizationMethodControl(
+			normalizationRow.append('td').attr('class', 'sjpp-nmeth-select'),
 			this.hic.normalization,
 			this.state.defaultNmeth,
 			this.nmethCallback
-		).render()
+		)
+		this.controls.nmeth.render()
 
 		//***Cutoffs
 		//Min CUTOFF
@@ -119,7 +119,8 @@ class ControlPanel {
 		//Matrix type
 		const matrixTypeRow = menuTable.append('tr') as any
 		this.addLabel(matrixTypeRow, 'matrix type')
-		this.controls.matrixType = new MatrixTypeControl(matrixTypeRow.append('td'), this.matrixTypeCallback).render()
+		this.controls.matrixType = new MatrixTypeControl(matrixTypeRow.append('td'), this.matrixTypeCallback)
+		this.controls.matrixType.render()
 
 		const viewRow = menuTable.append('tr') as any
 		this.addLabel(viewRow, 'VIEW')
@@ -275,8 +276,21 @@ class ControlPanel {
 					}
 				}
 			}
-		} else {
-			console.log('Need to implement recoloring logic for other views')
+		} else if (this.parent('activeView') == 'chrpair') {
+			const view = this.parent('chrpair')
+			for (const [xCoord, yCoord, val] of view.data) {
+				this.colorizeElement.colorizeElement(
+					xCoord,
+					yCoord,
+					val,
+					view.ctx,
+					view.binpx,
+					view.binpx,
+					this.parent('min'),
+					this.parent('max'),
+					this.parent('activeView')
+				)
+			}
 		}
 	}
 
@@ -298,6 +312,9 @@ class ControlPanel {
 
 	main(appState) {
 		this.state = this.app.getState(appState)
+
+		this.controls.nmeth.update(this.state[this.state.currView].nmeth)
+		this.controls.matrixType.update(this.state[this.state.currView].matrixType)
 
 		this.controls.zoomDiv.style('display', this.state.currView == 'detail' ? 'contents' : 'none')
 		if (this.state.currView == 'chrpair') {
