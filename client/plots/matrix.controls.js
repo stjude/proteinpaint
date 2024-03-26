@@ -766,7 +766,7 @@ export class MatrixControls {
 				step: s.zoomStep || 1
 			})
 
-		if (this.svgScrollApi) {
+		if (this.svgScrollApi && d) {
 			this.svgScrollApi.update({
 				x: d.xOffset,
 				y: d.yOffset - s.scrollHeight,

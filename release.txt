@@ -1,1 +1,2 @@
-
+Features:
+- Display hints about persisted matrix gene set and option to unhide CNV and mutations when there is no matrix data to render
