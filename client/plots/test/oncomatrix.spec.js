@@ -96,7 +96,7 @@ tape('2 genes, 2 dict terms', function (test) {
 	}
 
 	async function testBtnRendering(matrix) {
-		test.equal(matrix.Inner.dom.controls.node().querySelectorAll('button').length, 8, `should render buttons`)
+		test.equal(matrix.Inner.dom.controls.node().querySelectorAll('button').length, 10, `should render buttons`)
 	}
 
 	async function testZoom(matrix) {
