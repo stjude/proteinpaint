@@ -123,11 +123,13 @@ export class Matrix {
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
+		const filter0 = appState.termfilter.filter0
+		this.prevFilter0 = this.state?.filter0 // will be used to detect cohort change
 		return {
 			isVisible: true,
 			config,
 			filter: appState.termfilter.filter,
-			filter0: appState.termfilter.filter0, // read-only, invisible filter currently only used for gdc dataset
+			filter0, // read-only, invisible filter currently only used for gdc dataset
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage,
 			vocab: appState.vocab,
@@ -185,12 +187,10 @@ export class Matrix {
 			this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 			this.sampleOrder = this.getSampleOrder(this.data)
 
-			if (
-				!this.sampleOrder?.length &&
-				!this.config.legendGrpFilter?.lst.length &&
-				!this.config.legendValueFilter?.lst.length
-			) {
+			if (!this.sampleOrder?.length) {
+				// lack of data may be due to cohort filter, legend filter, and/or selected geneset
 				this.showNoMatchingDataMessage()
+				this.controlsRenderer.main()
 				return
 			}
 			this.setLayout()
@@ -201,7 +201,7 @@ export class Matrix {
 			this.dom.loadingDiv.html('Rendering ...')
 			if (this.plotDendrogramHclust) this.plotDendrogramHclust()
 			this.render()
-			this.dom.loadingDiv.style('display', 'none')
+			this.mayDisplayCohortMessage()
 			this.dom.svg.style('display', '').style('opacity', 1).style('pointer-events', '')
 
 			const [xGrps, yGrps] = !this.settings.matrix.transpose ? ['sampleGrps', 'termGrps'] : ['termGrps', 'sampleGrps']
@@ -255,11 +255,39 @@ export class Matrix {
 
 		if (this.settings.matrix.showHints?.includes('genesetEdit')) {
 			const div1 = div.append('div').style('margin', '5px 10px')
-			div1
-				.append('span')
-				.html(
-					'You may change the selected cohort and keep the current gene list,<br/>or modify the gene list from the '
-				)
+			div1.append('span').html('You may change the selected cohort,')
+
+			if (this.config.legendGrpFilter?.lst.length || this.config.legendValueFilter?.lst.length) {
+				div1.append('br')
+				div1.append('span').html('show hidden ')
+				div1
+					.append('span')
+					.html('CNV')
+					.style('cursor', 'pointer')
+					.style('text-decoration', 'underline')
+					.on('click', () => {
+						this.controlsRenderer.btns
+							.filter(d => d.label == 'CNV')
+							?.node()
+							.click()
+					})
+				div1.append('span').html(' or ')
+				div1
+					.append('span')
+					.style('cursor', 'pointer')
+					.style('text-decoration', 'underline')
+					.html('Mutation')
+					.on('click', () => {
+						this.controlsRenderer.btns
+							.filter(d => d.label == 'Mutation')
+							?.node()
+							.click()
+					})
+				div1.append('span').html(' data,')
+			}
+
+			div1.append('br')
+			div1.append('span').html('or edit the gene list from the ')
 			div1
 				.append('span')
 				.style('cursor', 'pointer')
@@ -285,6 +313,52 @@ export class Matrix {
 				})
 		}
 		this.dom.svg.style('display', 'none')
+	}
+
+	mayDisplayCohortMessage() {
+		const msg =
+			!this.prevFilter0 || deepEqual(this.state.filter0, this.prevFilter0)
+				? ''
+				: 'The gene list is persisted across cohorts.'
+		if (msg) {
+			this.dom.loadingDiv.html('')
+			const div = this.dom.loadingDiv
+				.append('div')
+				.style('display', 'inline-block')
+				.style('text-align', 'center')
+				.style('position', 'relative')
+				.style('left', '-150px')
+			div.append('div').html(msg)
+
+			if (this.settings.matrix.showHints?.includes('genesetEdit')) {
+				const div1 = div.append('div')
+				div1.append('span').html(' You may edit the gene list from the ')
+				div1
+					.append('span')
+					.style('cursor', 'pointer')
+					.style('text-decoration', 'underline')
+					.html('Gene Set Edit Group menu.')
+					.on('click', () => {
+						const GenesBtn = this.controlsRenderer.btns
+							.filter(d => d.label == 'Genes')
+							?.node()
+							.click()
+						const i = setInterval(() => {
+							const editBtn = this.app.tip.d
+								.selectAll('button')
+								.filter(function () {
+									return this.innerHTML == 'Edit Group'
+								})
+								.node()
+							if (editBtn) {
+								editBtn.click()
+								clearInterval(i)
+							}
+						}, 100)
+					})
+			}
+		}
+		this.dom.loadingDiv.style('display', msg ? '' : 'none')
 	}
 
 	sampleKey(s) {
