@@ -86,7 +86,7 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 				${CTEname} AS (
 					SELECT id as sample
 					FROM sampleidmap
-					WHERE (sampleidmap.type = NULL OR sampleidmap.type = 'sample') and sample NOT IN (
+					WHERE sample NOT IN (
 						${superCTE}
 					)
 				)
