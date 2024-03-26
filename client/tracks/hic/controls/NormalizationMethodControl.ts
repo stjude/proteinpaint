@@ -5,6 +5,7 @@ export class NormalizationMethodControl {
 	holder: Elem
 	normalization: string[]
 	callback: (nmeth: string) => void
+	nmethSelect: any
 
 	constructor(holder: Elem, normalization: string[], defaultNmeth: string, callback: (nmeth: string) => void) {
 		this.holder = holder
@@ -14,20 +15,27 @@ export class NormalizationMethodControl {
 	}
 
 	render() {
-		let nmethselect
 		if (!this.normalization?.length) {
-			nmethselect = this.holder.text(this.defaultNmeth)
+			this.nmethSelect = this.holder.text(this.defaultNmeth)
 		} else {
-			nmethselect = this.holder
+			this.nmethSelect = this.holder
 				.style('margin-right', '10px')
 				.append('select')
 				.on('change', async () => {
-					const nmeth = nmethselect.node()!.value
+					const nmeth = this.nmethSelect.node().value
 					this.callback(nmeth)
 				})
 			for (const n of this.normalization) {
-				nmethselect.append('option').text(n)
+				this.nmethSelect.append('option').text(n)
 			}
 		}
+	}
+
+	update(option: any) {
+		const options = this.nmethSelect.node().options
+		if (!options) return //When only 'NONE' is available
+		const selectedNmeth = Array.from(options).find((o: any) => o.value === option) as HTMLOptionElement
+		if (!selectedNmeth) throw `Invalid normalization method: ${option}`
+		selectedNmeth.selected = true
 	}
 }

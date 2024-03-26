@@ -134,8 +134,8 @@ export class ChrPairView {
 	}
 
 	getData(firstisx) {
+		//Replace with gridelementsForm.... code
 		const isintrachr = this.parent('state').x.chr === this.parent('state').y.chr
-
 		for (const [coord1, coord2, v] of this.items.items) {
 			const px1 = Math.floor(coord1 / this.calResolution!) * this.binpx
 			const px2 = Math.floor(coord2 / this.calResolution!) * this.binpx
