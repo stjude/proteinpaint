@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Display hints about persisted matrix gene set and option to unhide CNV and mutations when there is no matrix data to render
+- Stream data into and out of R using the run_R.js module
 
 Fixes:
 - refactor to move all gdc plot launchers into a separate folder
