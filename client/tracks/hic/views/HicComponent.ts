@@ -21,7 +21,7 @@ export class HicComponent {
 	chrpair: any
 	detail: any
 	app: any
-	dataMapper: any
+	dataMapper: DataMapper
 	activeView: string
 	errList: string[]
 	components = {
@@ -213,8 +213,8 @@ export class HicComponent {
 					this.plotDiv.yAxis.selectAll('*').remove()
 					this.plotDiv.plot.selectAll('*').remove()
 				}
+				this.activeView = this.state.currView
 				this.initView()
-				this.activeView == this.state.currView
 			} else {
 				await this[this.state.currView].update(this.data)
 			}
