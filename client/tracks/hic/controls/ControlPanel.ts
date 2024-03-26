@@ -3,7 +3,7 @@ import { Elem, Tr } from '../../../types/d3'
 import { NormalizationMethodControl } from './NormalizationMethodControl'
 import { CutoffControl } from './CutoffControl'
 import { MatrixTypeControl } from './MatrixTypeControl'
-import { ColorizeElement } from '../dom/colorizeElement'
+import { ColorizeElement } from '../dom/ColorizeElement'
 
 class ControlPanel {
 	type: 'controlPanel'

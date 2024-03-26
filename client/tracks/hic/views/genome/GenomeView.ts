@@ -1,5 +1,5 @@
 import { SvgSvg, SvgG } from '../../../../types/d3'
-import { ColorizeElement } from '../../dom/colorizeElement.ts'
+import { ColorizeElement } from '../../dom/ColorizeElement.ts'
 
 // import { axisRight, axisBottom } from 'd3-axis'
 import { select as d3select, pointer, Selection } from 'd3-selection'

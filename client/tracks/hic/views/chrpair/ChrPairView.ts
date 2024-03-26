@@ -4,7 +4,7 @@ import { axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { format as d3format } from 'd3-format'
 import { pointer } from 'd3-selection'
-import { ColorizeElement } from '../../dom/colorizeElement.ts'
+import { ColorizeElement } from '../../dom/ColorizeElement.ts'
 import { Positions } from '../Positions.ts'
 
 export class ChrPairView {
