@@ -9,7 +9,7 @@ import { Tabs } from '../dom/toggleButtons'
 import { renderTable } from '../dom/table'
 import { table2col } from '../dom/table2col'
 import { fileSize } from '#shared/fileSize'
-import { keyupEnter } from './client'
+import { keyupEnter } from '../src/client'
 
 /*
 
@@ -998,7 +998,7 @@ export async function bamsliceui({
 			par.tklst.push(tk)
 		}
 		first_genetrack_tolist(genome, par.tklst)
-		const _ = await import('./block')
+		const _ = await import('../src/block')
 		new _.Block(par)
 	}
 
