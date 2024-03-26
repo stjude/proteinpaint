@@ -29,7 +29,7 @@ import { GridRenderer } from '../renderer/GridRenderer.ts'
 import { GridElementsRenderer } from '../renderer/GridElementsRenderer.ts'
 import { GridElementData } from '../viewmodel/GridElementData.ts'
 import { GridElementDom } from '../viewmodel/GridElementDom.ts'
-import { GridElementsFormattedData } from '../renderer/GridElementsFormattedData.ts'
+import { GridElementsFormattedData } from '../../data/GridElementsFormattedData.ts'
 
 type Pane = {
 	pain: Selection<HTMLDivElement, any, any, any>
@@ -59,6 +59,7 @@ export class GenomeView {
 	layer_map: SvgG
 	layer_sv: SvgG
 	gridElementsRenderer: GridElementsRenderer
+	gridFormattedData: GridElementsFormattedData
 
 	/** Data */
 	/** px width for each chr */
@@ -93,6 +94,7 @@ export class GenomeView {
 		this.viewModel = new GridViewModel(opts)
 		this.viewRender = new GridRenderer(this.svg, this.layer_map, this.layer_sv, this.viewModel.grid)
 		this.gridElementsRenderer = new GridElementsRenderer(this.viewModel.grid, this.layer_map, this.app)
+		this.gridFormattedData = new GridElementsFormattedData()
 	}
 
 	// makeChrCanvas(lead: string, follow: string) {
@@ -354,8 +356,7 @@ export class GenomeView {
 			if (obj.canvas2) {
 				obj.ctx2!.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
 			}
-			console.log(356, data.items)
-			obj.data = new GridElementsFormattedData(this.min, this.max, data.items, this.binpx, this.resolution).formatData()
+			obj.data = this.gridFormattedData.formatData(data.items, this.binpx, this.resolution)
 
 			for (const [xPx, yPx, value] of obj.data) {
 				await this.colorizeElement.colorizeElement(
