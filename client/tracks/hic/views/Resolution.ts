@@ -7,15 +7,15 @@ export class Resolution {
 		this.error = error
 	}
 
-	getResolution(hic: any, activeView: string, currView: { nmeth: string; resolution: number }, x: any, y: any) {
-		if (currView?.resolution) return currView.resolution
-		if (activeView == 'chrpair') {
-			const resolution = this.getChrPairResolution(hic, x, y)
+	getResolution(state: any, hic: any) {
+		if (state.currView == 'genome') return hic['bpresolution'][0]
+		if (state.currView == 'chrpair') {
+			const resolution = this.getChrPairResolution(hic, state.x, state.y)
 			return resolution
-		} else if (activeView == 'detailed') {
+		} else if (state.currView == 'detailed') {
 			/**Must obtain the resolution for the chr pair before calculating the
 			 * the resolution for the region. */
-			const chrpairResolution = this.getChrPairResolution(hic, x, y)
+			const chrpairResolution = this.getChrPairResolution(hic, state.x, state.y)
 			if (!chrpairResolution) return
 			const viewRangeBpW = chrpairResolution * this.initialbinnum_detail
 
@@ -31,7 +31,7 @@ export class Resolution {
 				resolution = hic.bpresolution[hic.bpresolution.length - 1]
 			}
 			return resolution
-		} else if (activeView == 'horizontal') {
+		} else if (state.currView == 'horizontal') {
 			//TODO
 		} else {
 			// this.error(`Unknown view: ${activeView}`)

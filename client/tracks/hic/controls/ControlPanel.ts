@@ -251,20 +251,27 @@ class ControlPanel {
 	reColorHeatmap = () => {
 		if (this.parent('activeView') == 'genome') {
 			const genomeView = this.parent('genome')
-			if (!genomeView.lead2follow) return
-			for (const [lead, a] of genomeView.lead2follow) {
-				for (const [follow, b] of a) {
-					//Fix for when chr present in the header but no data in the hic file
-					if (!b.data) continue
-					for (const [leadpx, followpx, val] of b.data) {
-						//this.colorizeElement(leadpx, followpx, val, b, 1, 1)
-						const min = this.parent('min')
-						const max = this.parent('max')
-						this.colorizeElement.colorizeElement(leadpx, followpx, val, b, 1, 1, min, max, 'genome')
+			const chrMatrix = genomeView.viewRender.grid.chromosomeMatrix
+			if (!chrMatrix) return
+			for (const [chrx, yMap] of chrMatrix) {
+				for (const [chry, canvasObj] of yMap) {
+					if (!canvasObj) continue
+					for (const [leadpx, followpx, val] of canvasObj.data) {
+						this.colorizeElement.colorizeElement(
+							leadpx,
+							followpx,
+							val,
+							canvasObj,
+							1,
+							1,
+							this.parent('min'),
+							this.parent('max'),
+							'genome'
+						)
 					}
-					b.img.attr('xlink:href', b.canvas.toDataURL())
-					if (b.canvas2) {
-						b.img2.attr('xlink:href', b.canvas2.toDataURL())
+					canvasObj.img.attr('xlink:href', canvasObj.canvas.toDataURL())
+					if (canvasObj.canvas2) {
+						canvasObj.img2.attr('xlink:href', canvasObj.canvas2.toDataURL())
 					}
 				}
 			}

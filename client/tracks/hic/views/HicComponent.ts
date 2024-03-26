@@ -115,10 +115,14 @@ export class HicComponent {
 			} else {
 				const chrx = this.state.x
 				const chry = this.state.y
-				obj['lead'] = `${chrx.start && chrx.stop ? `${chrx.chr}:${chrx.start}-${chrx.stop}` : chrx.chr.replace('chr', '') }`
-				obj['follow'] = `${chry.start && chry.stop ? `${chry.chr}:${chry.start}-${chry.stop}` : chry.chr.replace('chr', '') }`
+				obj['lead'] = `${
+					chrx.start && chrx.stop ? `${chrx.chr}:${chrx.start}-${chrx.stop}` : chrx.chr.replace('chr', '')
+				}`
+				obj['follow'] = `${
+					chry.start && chry.stop ? `${chry.chr}:${chry.start}-${chry.stop}` : chry.chr.replace('chr', '')
+				}`
 			}
-			
+
 			const dataFetcher = new DataFetcher(this.hic, true, this.errList)
 			this.data = await dataFetcher.getData(obj)
 		}
@@ -126,21 +130,12 @@ export class HicComponent {
 
 	setResolution(appState) {
 		const state = this.app.getState(appState)
-		this.calResolution = this.resolution.getResolution(
-			this.hic,
-			this.state.currView,
-			state[state.currView],
-			state.x,
-			state.y
-			// { chr: 'chr1' },
-			// { chr: 'chr2' }
-		) as number
+		this.calResolution = this.resolution.getResolution(state, this.hic) as number
 
 		return this.calResolution
 	}
 
 	async setDataArgs(appState) {
-		this.state = await this.app.getState(appState)
 		const currView = this.state[this.state.currView]
 		const args = {
 			nmeth: currView.nmeth,
@@ -157,15 +152,14 @@ export class HicComponent {
 		return args
 	}
 
-	async init(appState) {
+	async init(appState: any) {
 		try {
 			this.activeView = this.state.currView
 			const currView = this.state[this.state.currView]
-			//TODO: Will need to make it compatible with runpp() inputs
 			const obj = {
 				matrixType: currView.matrixType,
 				nmeth: currView.nmeth,
-				resolution: this.activeView == 'genome' ? this.hic['bpresolution'][0] : this.setResolution(appState)
+				resolution: this.setResolution(appState)
 			}
 			await this.fetchData(obj)
 			const [min, max] = this.dataMapper.sortData(this.data)
@@ -195,7 +189,7 @@ export class HicComponent {
 				parent: (prop: string) => {
 					return this[prop]
 				},
-				resolution: this[this.activeView].resolution
+				resolution: this.calResolution
 			})
 			this.infoBar.render()
 		} catch (e: any) {
