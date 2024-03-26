@@ -187,10 +187,16 @@ export class Matrix {
 			this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 			this.sampleOrder = this.getSampleOrder(this.data)
 
-			if (!this.sampleOrder?.length) {
-				// lack of data may be due to cohort filter, legend filter, and/or selected geneset
+			if (
+				!this.sampleOrder?.length &&
+				// TODO: should show empty data message when there is nothing to render
+				//       because of cohort, legend filter, and/or geneset
+				// this.config.settings.matrix.addMutationCNVButtons ||
+				!this.config.legendGrpFilter?.lst.length &&
+				!this.config.legendValueFilter?.lst.length
+			) {
 				this.showNoMatchingDataMessage()
-				this.controlsRenderer.main()
+				this.controlsRenderer.main() // to update button count or cross out button labels
 				return
 			}
 			this.setLayout()

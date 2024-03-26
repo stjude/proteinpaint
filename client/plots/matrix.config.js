@@ -62,14 +62,11 @@ export async function getPlotConfig(opts = {}, app) {
 				geneVariantCountSamplesSkipMclass: [],
 				cellbg: '#ececec',
 				showGrid: '', // false | 'pattern' | 'rect'
-				showMatrixMutation:
-					app.vocabApi.termdbConfig?.matrix?.settings?.addMutationCNVButtons && opts.chartType !== 'hierCluster'
-						? 'all'
-						: '',
-				showMatrixCNV:
-					app.vocabApi.termdbConfig?.matrix?.settings?.addMutationCNVButtons && opts.chartType !== 'hierCluster'
-						? 'none'
-						: '',
+				// whether to show these controls buttons
+				addMutationCNVButtons: false,
+				// used for the radio inputs in the CNV/Mutation control menus
+				showMatrixMutation: opts.chartType !== 'hierCluster' ? '' : 'all',
+				showMatrixCNV: opts.chartType !== 'hierCluster' ? '' : 'all',
 				allMatrixCNVHidden: false,
 				allMatrixMutationHidden: false,
 				gridStroke: '#fff',
