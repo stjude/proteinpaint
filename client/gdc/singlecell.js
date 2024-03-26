@@ -3,6 +3,9 @@ import { sayerror } from '../dom/sayerror.ts'
 import { renderTable } from '../dom/table.ts'
 
 /*
+FIXME unfinished! change into calling mass ui as other launchers, and api supplies a callback
+
+
 a UI to list aliquots with scrnaseq data from current cohort
 user selects one file, and show the tsne/umap/pca plots of that experiment
 
@@ -79,16 +82,16 @@ async function getFilesAndShowTable(obj) {
 	const rows = []
 	const rowid2gdcfileid = []
 	for (const sample of result.samples) {
-		for (const f of sample.files) {
+		for (const f of sample.experiments) {
 			const row = [
 				{ value: sample.sample },
-				{ value: sample.projectId },
-				{ value: sample.primarySite },
-				{ value: sample.diseaseType },
+				{ value: sample['case.project.project_id']},
+				{ value: sample['case.primary_site']},
+				{ value: sample['case.disease_type']},
 				{ value: f.sampleType }
 			]
 			rows.push(row)
-			rowid2gdcfileid.push(f.fileId)
+			rowid2gdcfileid.push(f.experimentID)
 		}
 	}
 	renderTable({

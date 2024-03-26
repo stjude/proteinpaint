@@ -1,5 +1,4 @@
 import { appInit } from '#plots/plot.app.js'
-// import { launchWithGenes } from './launchWithGenes'
 import { select } from 'd3-selection'
 import { copyMerge } from '#rx'
 

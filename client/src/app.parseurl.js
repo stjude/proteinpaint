@@ -59,7 +59,7 @@ upon error, throw err message as a string
 	}
 
 	if (urlp.has('gdcbamslice')) {
-		const _ = await import('./block.tk.bam.gdc')
+		const _ = await import('../gdc/bam.js')
 		_.bamsliceui({
 			genomes: arg.genomes,
 			holder: arg.holder,
@@ -70,7 +70,7 @@ upon error, throw err message as a string
 	}
 
 	if (urlp.has('gdcmaf')) {
-		const _ = await import('./gdc.maf')
+		const _ = await import('../gdc/maf.js')
 		_.gdcMAFui({
 			holder: arg.holder,
 			debugmode: arg.debugmode
@@ -78,7 +78,7 @@ upon error, throw err message as a string
 		return
 	}
 	if (urlp.has('gdcsinglecell')) {
-		const _ = await import('./gdc.singleCell')
+		const _ = await import('../gdc/singlecell.js')
 		_.gdcSinglecellUi({
 			holder: arg.holder,
 			debugmode: arg.debugmode

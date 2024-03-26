@@ -54,9 +54,11 @@ launch_fimo
 launch_genefusion
 launch_singlecell
 
-********** quick fix parameters
 geneSearch4GDCmds3
 launchGdcMatrix
+launchGdcHierCluster
+launchGdcMaf
+gdcbamslice
 */
 
 const headtip = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
@@ -1322,20 +1324,21 @@ async function launchSelectGenomeWithTklst(arg, app) {
 	await _.init(arg, app.holder0, app.genomes)
 }
 
+///////////////// gdc launchers ///////////////
 async function launchGeneSearch4GDCmds3(arg, app) {
-	const _ = await import('./geneSearch4GDCmds3.js')
+	const _ = await import('../gdc/lollipop.js')
 	return await _.init(arg, app.holder0, app.genomes)
 }
 async function launchGdcMatrix(arg, app) {
-	const _ = await import('./launchGdcMatrix.js')
+	const _ = await import('../gdc/oncomatrix.js')
 	return await _.init(arg, app.holder0, app.genomes)
 }
 async function launchGdcHierCluster(arg, app) {
-	const _ = await import('./launchGdcHierCluster.js')
+	const _ = await import('../gdc/geneExpClustering.js')
 	return await _.init(arg, app.holder0, app.genomes)
 }
 async function launchGdcMaf(arg, app) {
-	const _ = await import('./gdc.maf.js')
+	const _ = await import('../gdc/maf.js')
 	return await _.gdcMAFui({
 		holder: app.holder0,
 		filter0: arg.filter0,
@@ -1343,6 +1346,23 @@ async function launchGdcMaf(arg, app) {
 		debugmode: arg.debugmode
 	})
 }
+function launchgdcbamslice(arg, app) {
+	return import('../gdc/bam.js').then(p => {
+		return p.bamsliceui({
+			genomes: app.genomes,
+			holder: app.holder0,
+			hideTokenInput: arg.gdcbamslice.hideTokenInput, // set to true in gdc react wrapper
+			callbacks: arg.gdcbamslice.callbacks || {}, // for testing
+			// react wrapper can supply this optional filter as bam ui is required to only search cases within a cohort user created in Analysis Tools Framework(ATF)
+			filter0: arg.filter0,
+			// react wrapper can set this to true and run it in "download mode", will not visualize file
+			stream2download: arg.gdcbamslice.stream2download,
+			// for testing
+			inputValue: arg.gdcbamslice.inputValue
+		})
+	})
+}
+///////////////// end of gdc launchers ///////////////
 
 function launchmavb(arg, app) {
 	if (arg.mavolcanoplot.uionly) {
@@ -1396,23 +1416,6 @@ function launchJunctionbyMatrix(arg, app) {
 			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
 		})
 	}
-}
-
-function launchgdcbamslice(arg, app) {
-	return import('./block.tk.bam.gdc').then(p => {
-		return p.bamsliceui({
-			genomes: app.genomes,
-			holder: app.holder0,
-			hideTokenInput: arg.gdcbamslice.hideTokenInput, // set to true in gdc react wrapper
-			callbacks: arg.gdcbamslice.callbacks || {}, // for testing
-			// react wrapper can supply this optional filter as bam ui is required to only search cases within a cohort user created in Analysis Tools Framework(ATF)
-			filter0: arg.filter0,
-			// react wrapper can set this to true and run it in "download mode", will not visualize file
-			stream2download: arg.gdcbamslice.stream2download,
-			// for testing
-			inputValue: arg.gdcbamslice.inputValue
-		})
-	})
 }
 
 async function launch_singlecell(arg, app) {
