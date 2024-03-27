@@ -8,6 +8,7 @@ import { legend_newrow } from './block.legend'
 import { basecompliment } from '#shared/common'
 import { rgb } from 'd3-color'
 import { default_text_color } from '../shared/common'
+import { Menu } from '#dom/menu'
 
 /*
 the "gene model" track, showing in one of four modes:
@@ -53,10 +54,7 @@ export function gmtkfromtemplate(tk) {
 
 export function gmtkmaketk(tk, block) {
 	tk.tklabel.text(block.usegm.name)
-	tk.isoformlabel = block
-		.maketklefthandle(tk, 13)
-		.attr('class', null)
-		.text(block.usegm.isoform)
+	tk.isoformlabel = block.maketklefthandle(tk, 13).attr('class', null).text(block.usegm.isoform)
 	domainlegend(tk, block)
 	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
 		configpanel(tk, block)
@@ -144,10 +142,7 @@ function configpanel(tk, block) {
 	}
 	if (block.gmmode == client.gmmode.protein || block.gmmode == client.gmmode.exononly) {
 		const tr = table.append('tr')
-		const label = tr
-			.append('td')
-			.attr('colspan', 2)
-			.append('label')
+		const label = tr.append('td').attr('colspan', 2).append('label')
 		label
 			.append('input')
 			.attr('type', 'checkbox')
@@ -156,10 +151,7 @@ function configpanel(tk, block) {
 				tk.noCodonNumberInsideBox = !tk.noCodonNumberInsideBox
 				gmtkrender(tk, block)
 			})
-		label
-			.append('span')
-			.style('margin-left', '10px')
-			.text('Hide codon numbers')
+		label.append('span').style('margin-left', '10px').text('Hide codon numbers')
 	}
 }
 
@@ -211,10 +203,7 @@ function configpanel_gmsum(block, holder) {
 		for (const [isoform, obj] of isoformset) {
 			const row = holder.append('div').style('margin', '3px 5px 3px 30px')
 			const id = Math.random()
-			obj.checkbox = row
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('id', id)
+			obj.checkbox = row.append('input').attr('type', 'checkbox').attr('id', id)
 			if (!obj.hidden) {
 				obj.checkbox.property('checked', true)
 			}
@@ -264,10 +253,7 @@ function configpanel_gmsum(block, holder) {
 export function gmtkrender(tk, block) {
 	tk.busy = false
 	block.ifbusy()
-	tk.glider
-		.attr('transform', 'translate(0,0)')
-		.selectAll('*')
-		.remove()
+	tk.glider.attr('transform', 'translate(0,0)').selectAll('*').remove()
 	if (!block.gmmode) {
 		block.tkerror(tk, 'running usegm track but gmmode not set')
 		return
@@ -299,7 +285,7 @@ export function gmtkrender(tk, block) {
 				.attr('font-family', client.font)
 				.attr('fill', 'black')
 				.attr('font-size', block.labelfontsize)
-				.each(function() {
+				.each(function () {
 					collectlabw.push(this.getBBox().width)
 				})
 				.on('mousedown', event => {
@@ -316,10 +302,10 @@ export function gmtkrender(tk, block) {
 		block.usegm.__tkg = tk.glider.append('g')
 		render1gm(block.usegm, tk.stackheight, tk, block)
 		tk.height_main = tk.toppad + tk.stackheight + tk.bottompad
-		tk.tklabel.text(block.usegm.name).each(function() {
+		tk.tklabel.text(block.usegm.name).each(function () {
 			collectlabw.push(this.getBBox().width)
 		})
-		tk.isoformlabel.text(block.usegm.isoform).each(function() {
+		tk.isoformlabel.text(block.usegm.isoform).each(function () {
 			collectlabw.push(this.getBBox().width)
 		})
 	}
@@ -498,12 +484,7 @@ block:
 				}
 				viewcodingstoppx = boxstart + boxwidth
 				// white bg
-				const b = tkg
-					.append('rect')
-					.attr('x', boxstart)
-					.attr('width', boxwidth)
-					.attr('height', h)
-					.attr('fill', 'white')
+				const b = tkg.append('rect').attr('x', boxstart).attr('width', boxwidth).attr('height', h).attr('fill', 'white')
 				eboxes.push({ b: b, r: r, start: start, stop: stop })
 				// domain?
 				if (gm.pdomains) {
@@ -534,21 +515,11 @@ block:
 					// enclosing box for each coding exon
 					if (start == e[0]) {
 						const _x = boxstart + (r.reverse ? boxwidth : 0)
-						tkg
-							.append('line')
-							.attr('x1', _x)
-							.attr('x2', _x)
-							.attr('y2', h)
-							.attr('stroke', linecolor)
+						tkg.append('line').attr('x1', _x).attr('x2', _x).attr('y2', h).attr('stroke', linecolor)
 					}
 					if (stop == e[1]) {
 						const _x = boxstart + (r.reverse ? 0 : boxwidth)
-						tkg
-							.append('line')
-							.attr('x1', _x)
-							.attr('x2', _x)
-							.attr('y2', h)
-							.attr('stroke', linecolor)
+						tkg.append('line').attr('x1', _x).attr('x2', _x).attr('y2', h).attr('stroke', linecolor)
 					}
 					tkg
 						.append('line')
@@ -570,11 +541,7 @@ block:
 	// 5 - enclosing box of entire coding region
 	if (block.gmmode == client.gmmode.exononly || block.gmmode == client.gmmode.protein) {
 		if (viewcodingstartpx != null && viewcodingstoppx != null) {
-			tkg
-				.append('line')
-				.attr('x1', viewcodingstartpx)
-				.attr('x2', viewcodingstoppx)
-				.attr('stroke', linecolor)
+			tkg.append('line').attr('x1', viewcodingstartpx).attr('x2', viewcodingstoppx).attr('stroke', linecolor)
 			tkg
 				.append('line')
 				.attr('x1', viewcodingstartpx)
@@ -752,19 +719,12 @@ block:
 			}
 		}
 		if (aadomain.length && !tk.noCodonNumberInsideBox) {
-			const scale = scaleLinear()
-				.domain(aadomain)
-				.range(aarange)
+			const scale = scaleLinear().domain(aadomain).range(aarange)
 			client.axisstyle({
 				axis: tkg
 					.append('g')
 					.attr('transform', 'translate(0,' + (showaaseq ? (showntseq ? rowh * 2 : h / 2) : h / 2) + ')')
-					.call(
-						axisBottom()
-							.scale(scale)
-							.tickSize(0)
-							.tickFormat(d3format('d'))
-					),
+					.call(axisBottom().scale(scale).tickSize(0).tickFormat(d3format('d'))),
 				color: 'black',
 				showline: false,
 				fontsize: rowh
@@ -934,10 +894,7 @@ function coord2legend(tk, event, r, start, stop, gm, block, h) {
 			if (d.name + d.description in gm.domain_hidden) continue
 			if (d.start <= p.aapos && d.stop >= p.aapos) {
 				const row = div.append('div')
-				row
-					.append('span')
-					.style('background-color', d.color)
-					.html('&nbsp;&nbsp;')
+				row.append('span').style('background-color', d.color).html('&nbsp;&nbsp;')
 				row
 					.append('span')
 					.style('font-family', client.font)
@@ -981,6 +938,7 @@ function domainlegend(tk, block) {
 	const lst = client.getdomaintypes(block.usegm)
 
 	for (const domaintype of lst) {
+		console.log(domaintype)
 		/*
 		domaintype {}
 		.key: domain.name+domain.description
@@ -1031,6 +989,93 @@ function domainlegend(tk, block) {
 			.text(domaintype.name)
 			.style('color', default_text_color)
 			.style('padding-right', '10px')
+
+			// .on('click', event => {
+			// 	block.tip.clear().showunder(event.target)
+
+			// })
+			// .on('click', event => {
+			// 	//create new menu object
+			// 	//console.log(self.app.tip)
+
+			// 	const mymenu = new Menu()
+			// 	mymenu.clear()
+			// 	mymenu.d.append('div').text('Show')
+			// 	mymenu.d.append('div').text('Hide')
+			// 	mymenu.d.append('div').text('Show All')
+			// 	mymenu.show(event.clientX, event.clientY)
+			// 	// 3 Call back functions
+			// 	//
+
+			// 	event.stopPropagation()
+			// 	block.tip.clear().showunder(event.target)
+			// 	block.tip.d.append('div').text(domaintype.description)
+			// 	// block.tip.d.append('div').text(domaintype.description)
+			// })
+			// console.log(row)
+			// // Toggle dropdown visibility
+			// nameSpan.on('click', () => {
+			// 	dropdown.style('display', dropdown.style('display') === 'none' ? 'block' : 'none')
+			// })
+
+			.on('click', event => {
+				const mymenu = new Menu({
+					onHide: () => block.tip.clear().hide() // Hide tooltip when menu is hidden
+				})
+				mymenu.clear()
+				mymenu.d
+					.append('div')
+					.text('Show')
+					.on('click', () => {
+						// Callback for "Show" option
+						console.log('Show option clicked for', domaintype.key)
+						if (block.gmmode == client.gmmode.gmsum) {
+							for (const m of block.allgm) {
+								if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
+							}
+						} else {
+							delete block.usegm.domain_hidden[domaintype.key]
+						}
+						gmtkrender(tk, block) // Re-render the visualization
+					})
+				mymenu.d
+					.append('div')
+					.text('Hide')
+					.on('click', () => {
+						// Callback for "Hide" option
+						console.log('Hide option clicked for', domaintype.key)
+						if (block.gmmode == client.gmmode.gmsum) {
+							for (const m of block.allgm) {
+								if (!m.domain_hidden) m.domain_hidden = {}
+								m.domain_hidden[domaintype.key] = 1
+							}
+						} else {
+							if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
+							block.usegm.domain_hidden[domaintype.key] = 1
+						}
+						gmtkrender(tk, block) // Re-render the visualization
+					})
+				mymenu.d
+					.append('div')
+					.text('Show All')
+					.on('click', () => {
+						// Callback for "Show All" option
+						console.log('Show All option clicked')
+						if (block.gmmode == client.gmmode.gmsum) {
+							for (const m of block.allgm) {
+								m.domain_hidden = {}
+							}
+						} else {
+							block.usegm.domain_hidden = {}
+						}
+						gmtkrender(tk, block) // Re-render the visualization
+					})
+				mymenu.show(event.clientX, event.clientY)
+				event.stopPropagation()
+				// block.tip.clear().showunder(event.target);
+				// block.tip.d.append('div').text(domaintype.description);
+			})
+
 		row
 			.append('span')
 			.text(domaintype.description)
@@ -1150,11 +1195,7 @@ function customdomainmakeui(block, tk, pane) {
 	}
 	if (customd.length > 0) {
 		const div = pane.body.append('div').style('margin', '20px 0px')
-		div
-			.append('div')
-			.text('Click to remove a domain')
-			.style('font-size', '.8em')
-			.style('margin-bottom', '5px')
+		div.append('div').text('Click to remove a domain').style('font-size', '.8em').style('margin-bottom', '5px')
 		for (const i of customd) {
 			const row = div.append('div').classed('sja_menuoption', true)
 			row
@@ -1166,10 +1207,7 @@ function customdomainmakeui(block, tk, pane) {
 				.style('padding', '1px 2px')
 				.style('font-family', 'Courier')
 				.html('&nbsp;')
-			row
-				.append('div')
-				.style('display', 'inline-block')
-				.text(i.name)
+			row.append('div').style('display', 'inline-block').text(i.name)
 			row.on('click', () => {
 				row.remove()
 				const lst2 = []
@@ -1187,10 +1225,7 @@ function customdomainmakeui(block, tk, pane) {
 		.append('p')
 		.style('font-size', '.9em')
 		.html('<span style="font-size:.8em;color:#aaa">EXAMPLE</span>&nbsp;&nbsp;domain_name ; 100 200 ; red')
-	const ta = pane.body
-		.append('textarea')
-		.attr('rows', 5)
-		.attr('cols', 30)
+	const ta = pane.body.append('textarea').attr('rows', 5).attr('cols', 30)
 	const row1 = pane.body.append('div').style('margin-top', '5px')
 	const select = row1.append('select')
 	select.append('option').text('Codon position')
@@ -1250,10 +1285,7 @@ function customdomainmakeui(block, tk, pane) {
 		.text('Clear')
 		.style('margin-left', '5px')
 		.on('click', () => ta.property('value', ''))
-	const errdiv = pane.body
-		.append('div')
-		.style('margin-top', '10px')
-		.style('display', 'none')
+	const errdiv = pane.body.append('div').style('margin-top', '10px').style('display', 'none')
 	const err = m => {
 		errdiv.style('display', 'block')
 		client.sayerror(errdiv, m)
