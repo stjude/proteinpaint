@@ -8,6 +8,7 @@ import { getFilterCTEs } from './termdb.filter.js'
 import { authApi } from './auth.js'
 import lines2R from './lines2R.js'
 import { write_file, read_file } from './utils.js'
+import { listTableColumns } from './termdb.server.init.js'
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -143,6 +144,7 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 			if (!plot) throw `plot not found with plotName ${q.plotName}`
 
 			const result = await getSamples(req, ds, plot)
+
 			refSamples = result[0]
 			cohortSamples = result[1]
 			if (q.colorColumn) {
@@ -424,7 +426,7 @@ function order(map, tw, refs) {
 	return entries
 }
 
-export async function getScatterCoordinates(req, q, ds) {
+export async function getScatterCoordinates(req, q, ds, type = 'sample') {
 	q.ds = ds
 	const samples = []
 	if (q.coordTWs.length != 2) return samples
@@ -440,10 +442,15 @@ export async function getScatterCoordinates(req, q, ds) {
 
 	sql += `SELECT ax.sample AS sampleId, ax.value as x, ay.value AS y , ${zterm ? 'az.value AS z' : '0 as z'}
 			FROM anno_${xterm.type} ax 
-			JOIN anno_${yterm.type} ay on ax.sample = ay.sample  
+			JOIN anno_${yterm.type} ay on ax.sample = ay.sample  JOIN sampleidmap on ax.sample = sampleidmap.id
 			${zterm ? `JOIN anno_${zterm.type} az on ax.sample = az.sample and az.term_id = '${zterm.id}' ` : ''}
 			WHERE ax.term_id = '${xterm.id}' and ay.term_id = '${yterm.id}'`
 	if (filter) sql += ` AND ax.sample IN ${filter.CTEname}`
+
+	const cols = listTableColumns(ds.cohort.db.connection, 'sampleidmap')
+	if (cols.includes('type'))
+		sql += ` AND (sampleidmap.type = '${type}' OR sampleidmap.type is NULL OR sampleidmap.type = '')`
+
 	const rows = q.ds.cohort.db.connection.prepare(sql).all()
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	for (const { sampleId, x, y, z } of rows) {
