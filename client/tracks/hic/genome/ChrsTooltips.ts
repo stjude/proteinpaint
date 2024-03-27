@@ -1,4 +1,4 @@
-import { Menu } from '../../../../src/client'
+import { Menu } from '../../../src/client'
 
 export class ChrsTooltips {
 	private chrx_tip: Menu

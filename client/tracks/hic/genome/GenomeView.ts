@@ -1,5 +1,5 @@
-import { SvgSvg, SvgG } from '../../../../types/d3'
-import { ColorizeElement } from '../../dom/ColorizeElement.ts'
+import { SvgSvg, SvgG } from '../../../types/d3'
+import { ColorizeElement } from '../dom/ColorizeElement.ts'
 
 // import { axisRight, axisBottom } from 'd3-axis'
 import { select as d3select, pointer, Selection } from 'd3-selection'
@@ -18,18 +18,18 @@ import {
 	ChrPairView,
 	HorizontalView,
 	DetailView
-} from '../../../../types/hic.ts'
-import { showErrorsWithCounter } from '../../../../dom/sayerror'
-import { hicParseFile } from '../../data/parseData.ts'
+} from '../../../types/hic.ts'
+// import { showErrorsWithCounter } from '../../../dom/sayerror.ts'
+// import { hicParseFile } from '../data/parseData.ts'
 // import { init_hicInfoBar } from '../dom/info.bar.ts'
 //import { init_hicControls } from '../controls/controlPanel.ts'
-import { Div } from '../../../../types/d3'
+import { Div } from '../../../types/d3'
 import { GridViewModel } from '../viewmodel/GridViewModel.ts'
-import { GridRenderer } from '../renderer/GridRenderer.ts'
-import { GridElementsRenderer } from '../renderer/GridElementsRenderer.ts'
-import { GridElementData } from '../viewmodel/GridElementData.ts'
-import { GridElementDom } from '../viewmodel/GridElementDom.ts'
-import { GridElementsFormattedData } from '../../data/GridElementsFormattedData.ts'
+import { GridRenderer } from '../grid/GridRenderer.ts'
+import { GridElementsRenderer } from '../grid/GridElementsRenderer.ts'
+import { GridElementData } from '../grid/GridElementData.ts'
+import { GridElementDom } from '../grid/GridElementDom.ts'
+import { GridElementsFormattedData } from '../data/GridElementsFormattedData.ts'
 
 type Pane = {
 	pain: Selection<HTMLDivElement, any, any, any>
@@ -425,37 +425,37 @@ class Hicstat {
 		}
 	}
 
-	async error(err: string | string[]) {
-		if (err && typeof err == 'string') this.errList.push(err)
-		showErrorsWithCounter(this.errList, this.dom.errorDiv)
-		//Remove errors after displaying
-		this.errList = []
-		this.dom.loadingDiv.style('display', 'none')
-	}
+	// async error(err: string | string[]) {
+	// 	if (err && typeof err == 'string') this.errList.push(err)
+	// 	showErrorsWithCounter(this.errList, this.dom.errorDiv)
+	// 	//Remove errors after displaying
+	// 	this.errList = []
+	// 	this.dom.loadingDiv.style('display', 'none')
+	// }
 
-	async render(hic: any) {
-		this.dom.loadingDiv.append('div').attr('class', 'sjpp-spinner').style('display', '')
-		await hicParseFile(hic, this.debugmode, this.errList)
-		if (this.errList.length) {
-			//Display file reader errors to user before rendering app
-			this.error(this.errList)
-			this.dom.loadingDiv.style('display', 'none')
-			return
-		}
-		//await init_hicInfoBar(hic, this)
-		//init_hicControls(hic, this)
-		this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
-		const tr1 = this.dom.plotDiv.append('tr')
-		const tr2 = this.dom.plotDiv.append('tr')
-		this.dom.plotDiv = {
-			plot: tr1.append('td').classed('sjpp-hic-plot', true),
-			yAxis: tr1.append('td').classed('sjpp-hic-plot-xaxis', true),
-			xAxis: tr2.append('td').classed('sjpp-hic-plot-yaxis', true),
-			blank: tr2.append('td')
-		} as MainPlotDiv
-		/** Open the whole genome view by default. User clicks within squares to launch the other views. */
-		//await this.init_wholeGenomeView(hic)
-	}
+	// async render(hic: any) {
+	// 	this.dom.loadingDiv.append('div').attr('class', 'sjpp-spinner').style('display', '')
+	// 	await hicParseFile(hic, this.debugmode, this.errList)
+	// 	if (this.errList.length) {
+	// 		//Display file reader errors to user before rendering app
+	// 		this.error(this.errList)
+	// 		this.dom.loadingDiv.style('display', 'none')
+	// 		return
+	// 	}
+	// 	//await init_hicInfoBar(hic, this)
+	// 	//init_hicControls(hic, this)
+	// 	this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
+	// 	const tr1 = this.dom.plotDiv.append('tr')
+	// 	const tr2 = this.dom.plotDiv.append('tr')
+	// 	this.dom.plotDiv = {
+	// 		plot: tr1.append('td').classed('sjpp-hic-plot', true),
+	// 		yAxis: tr1.append('td').classed('sjpp-hic-plot-xaxis', true),
+	// 		xAxis: tr2.append('td').classed('sjpp-hic-plot-yaxis', true),
+	// 		blank: tr2.append('td')
+	// 	} as MainPlotDiv
+	// 	/** Open the whole genome view by default. User clicks within squares to launch the other views. */
+	// 	//await this.init_wholeGenomeView(hic)
+	// }
 
 	// async init_wholeGenomeView(hic: any) {
 	// 	this.dom.loadingDiv.style('display', '')
