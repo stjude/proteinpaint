@@ -6,6 +6,7 @@ import { format as d3format } from 'd3-format'
 import { pointer } from 'd3-selection'
 import { ColorizeElement } from '../../dom/ColorizeElement.ts'
 import { Positions } from '../Positions.ts'
+import { GridElementsFormattedData } from '../../data/GridElementsFormattedData.ts'
 
 export class ChrPairView {
 	/** opts */
@@ -16,6 +17,7 @@ export class ChrPairView {
 	items: { items: number[][] }
 	colorizeElement: ColorizeElement
 	positions: Positions
+	formattedData: GridElementsFormattedData
 
 	chrxlen: number
 	chrylen: number
@@ -41,6 +43,7 @@ export class ChrPairView {
 		this.maxchrlen = Math.max(this.chrxlen, this.chrylen)
 		this.colorizeElement = new ColorizeElement()
 		this.positions = new Positions(opts.error, opts.activeView, opts.currView)
+		this.formattedData = new GridElementsFormattedData()
 	}
 
 	setDefaultBinpx() {
@@ -156,19 +159,18 @@ export class ChrPairView {
 	async render() {
 		this.calResolution = this.parent('calResolution')
 		this.setDefaultBinpx()
-
-		await this.update()
-	}
-
-	async update() {
-		//TODO, consolidate this with view main()
-		this.plotDiv.xAxis.selectAll('*').remove()
-		this.plotDiv.yAxis.selectAll('*').remove()
-		this.plotDiv.plot.selectAll('*').remove()
 		this.renderAxes()
 		this.renderCanvas()
+
+		await this.update(this.items)
+	}
+
+	async update(items: { items: number[][] }) {
+		this.items = items
 		const firstisx = this.isFirstX()
-		this.getData(firstisx)
+		const isintrachr = this.parent('state').x.chr === this.parent('state').y.chr
+		this.data = this.formattedData.formatData(items.items, this.binpx, this.calResolution!, firstisx, isintrachr)
+
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
 		for (const [x, y, v] of this.data) {
 			this.colorizeElement.colorizeElement(
