@@ -7,9 +7,9 @@
 		"proteinpaint-rust": "index.js"
 	},
 	"scripts": {
-		"dev": "cargo clean && cargo build --release",
-		"build": "cargo clean && cargo build --release",
-		"postinstall": "if [ ! -d ./test ] & [ ! -d ./target/release ]; then cargo clean && cargo build --release; fi",
+		"dev": "cargo build --release",
+		"build": "cargo build --release",
+		"postinstall": "if [ ! -d ./test ] & [ ! -d ./target/release ]; then cargo build --release; fi",
 		"test": "tape **/test/*.spec.js",
 		"test:unit": "tape **/test/*.unit.spec.js",
 		"test:integration": "echo 'TODO: rust integration tests'"
