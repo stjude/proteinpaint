@@ -50,13 +50,13 @@ as the actual query is embedded in qfilter
 return an array of sample names passing through the filter
 */
 	const cols = listTableColumns(ds.cohort.db.connection, 'sampleidmap')
-	const hasType = cols.includes('type')
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
 	let sql = filter
 		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id `
 		: `SELECT id, name FROM sampleidmap`
 
-	sql += hasType ? ` where (sampleidmap.type = '${type}' OR sampleidmap.type is NULL OR sampleidmap.type = '')` : ''
+	if (cols.includes('type'))
+		sql += ` where (sampleidmap.type = '${type}' OR sampleidmap.type is NULL OR sampleidmap.type = '')`
 	const cmd = ds.cohort.db.connection.prepare(sql)
 	let re
 	if (filter) re = cmd.all(filter.values)
