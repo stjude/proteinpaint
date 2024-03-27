@@ -52,19 +52,16 @@ return an array of sample names passing through the filter
 	const cols = listTableColumns(ds.cohort.db.connection, 'sampleidmap')
 	const hasType = cols.includes('type')
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
-	const sql = ds.cohort.db.connection.prepare(
-		filter
-			? `WITH ${filter.filters} SELECT sample as id, name FROM ${
-					filter.CTEname
-			  } join sampleidmap on sample = sampleidmap.id 
-			   ${hasType ? ` where (sampleidmap.type = '${type}' OR sampleidmap.type is NULL OR sampleidmap.type = '')` : ''}`
-			: `SELECT id, name FROM sampleidmap ${
-					hasType ? ` where(sampleidmap.type = '${type}' OR sampleidmap.type is NULL OR sampleidmap.type = '')` : ''
-			  }` // both statements must return sample id as a uniform behavior
-	)
+	let sql = filter
+		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id `
+		: `SELECT id, name FROM sampleidmap`
+
+	sql += hasType ? ` where (sampleidmap.type = '${type}' OR sampleidmap.type is NULL OR sampleidmap.type = '')` : ''
+	console.log(sql)
+	const cmd = ds.cohort.db.connection.prepare(sql)
 	let re
-	if (filter) re = sql.all(filter.values)
-	else re = sql.all()
+	if (filter) re = cmd.all(filter.values)
+	else re = cmd.all()
 	if (canDisplay) return re
 	for (const item of re) delete item.name
 	return re
