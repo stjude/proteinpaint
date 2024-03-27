@@ -6,6 +6,7 @@ import * as conditionSql from './termdb.sql.condition.js'
 import { sampleLstSql } from './termdb.sql.samplelst.js'
 import * as serverconfig from './serverconfig.js'
 import { boxplot_getvalue } from './utils.js'
+import { listTableColumns } from './termdb.server.init.js'
 /*
 
 ********************** EXPORTED
@@ -42,23 +43,24 @@ get_label4key
 
 */
 
-export async function get_samples(qfilter, ds, canDisplay = false) {
+export async function get_samples(qfilter, ds, canDisplay = false, type = 'sample') {
 	/*
 must have qfilter[]
 as the actual query is embedded in qfilter
 return an array of sample names passing through the filter
 */
+	const cols = listTableColumns(ds.cohort.db.connection, 'sampleidmap')
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
-	const sql = ds.cohort.db.connection.prepare(
-		filter
-			? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
-			: 'SELECT id, name FROM sampleidmap' // both statements must return sample id as a uniform behavior
-	)
+	let sql = filter
+		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id `
+		: `SELECT id, name FROM sampleidmap`
+
+	if (cols.includes('type'))
+		sql += ` where (sampleidmap.type = '${type}' OR sampleidmap.type is NULL OR sampleidmap.type = '')`
+	const cmd = ds.cohort.db.connection.prepare(sql)
 	let re
-
-	if (filter) re = sql.all(filter.values)
-	else re = sql.all()
-
+	if (filter) re = cmd.all(filter.values)
+	else re = cmd.all()
 	if (canDisplay) return re
 	for (const item of re) delete item.name
 	return re

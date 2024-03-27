@@ -61,6 +61,10 @@ export function server_init_db_queries(ds) {
 		'anno_categorical',
 		'buildDate'
 	]
+	//const sampleColumns = listTableColumns(cn, 'sampleidmap')
+	//if (!sampleColumns.includes('type'))
+	//Fix datasets with missing columns on the fly, requires write permission when opening the connection, not possible in readonly mode
+	//	cn.prepare('alter table sampleidmap add column type character varying(100)').run()
 	if (tables.has('sample_ancestry')) {
 		const num_rows = cn.prepare('SELECT count(*) as num_rows FROM sample_ancestry').get().num_rows
 		if (num_rows > 0) ds.cohort.termdb.hasAncestry = true
@@ -105,10 +109,10 @@ export function server_init_db_queries(ds) {
 			s2i = new Map()
 		const s = cn.prepare('SELECT * FROM sampleidmap')
 		let totalCount = 0
-		for (const { id, name } of s.all()) {
+		for (const { id, name, type } of s.all()) {
 			i2s.set(id, name)
 			s2i.set(name, id)
-			totalCount++
+			if (type == 'sample' || !type) totalCount++
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
@@ -563,6 +567,11 @@ export function server_init_db_queries(ds) {
 export function listDbTables(cn) {
 	const rows = cn.prepare("SELECT name FROM sqlite_master WHERE type='table'").all()
 	return new Set(rows.map(i => i.name))
+}
+
+export function listTableColumns(cn, table) {
+	const rows = cn.prepare(`SELECT name FROM PRAGMA_TABLE_INFO('${table}')`).all()
+	return rows.map(i => i.name)
 }
 
 export function mayComputeTermtypeByCohort(ds) {
