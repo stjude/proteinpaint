@@ -1,4 +1,4 @@
-import { MainPlotDiv } from '../../../../types/hic.ts'
+import { MainPlotDiv } from '../../../types/hic.ts'
 //import { ColorizeElement } from '../dom/ColorizeElement.ts'
 
 export class DetailView {

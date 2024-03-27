@@ -1,15 +1,15 @@
 import { getCompInit } from '#rx'
-import { MainPlotDiv } from '../../../types/hic.ts'
+import { MainPlotDiv } from '../../types/hic.ts'
 import { ChrPairView } from './chrpair/ChrPairView.ts'
 // import { HorizontalView } from './horizontal/HorizontalView.ts'
 import { DetailView } from './detail/DetailView.ts'
 import { GenomeView } from './genome/GenomeView.ts'
-import { controlPanelInit } from '../controls/ControlPanel.ts'
-import { InfoBar } from '../dom/InfoBar.ts'
-import { DataMapper } from '../data/DataMapper.ts'
-import { GenomeDataFetcher } from '../data/GenomeDataFetcher.ts'
-import { DataFetcher } from '../data/DataFetcher.ts'
-import { Resolution } from './Resolution.ts'
+import { controlPanelInit } from './controls/ControlPanel.ts'
+import { InfoBar } from './dom/InfoBar.ts'
+import { DataMapper } from './data/DataMapper.ts'
+import { GenomeDataFetcher } from './data/GenomeDataFetcher.ts'
+import { DataFetcher } from './data/DataFetcher.ts'
+import { Resolution } from './data/Resolution.ts'
 
 export class HicComponent {
 	dom: any

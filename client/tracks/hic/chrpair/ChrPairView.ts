@@ -1,12 +1,12 @@
-import { MainPlotDiv } from '../../../../types/hic.ts'
+import { MainPlotDiv } from '../../../types/hic.ts'
 import { axisstyle, font } from '#src/client'
 import { axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { format as d3format } from 'd3-format'
 import { pointer } from 'd3-selection'
-import { ColorizeElement } from '../../dom/ColorizeElement.ts'
-import { Positions } from '../Positions.ts'
-import { GridElementsFormattedData } from '../../data/GridElementsFormattedData.ts'
+import { ColorizeElement } from '../dom/ColorizeElement.ts'
+import { Positions } from '../data/Positions.ts'
+import { GridElementsFormattedData } from '../data/GridElementsFormattedData.ts'
 
 export class ChrPairView {
 	/** opts */
@@ -117,7 +117,7 @@ export class ChrPairView {
 		this.ctx = this.canvas.getContext('2d')
 	}
 
-	initDetailView(x, y) {
+	initDetailView(x: number, y: number) {
 		const [xObj, yObj] = this.positions.setPosition(
 			x,
 			y,
@@ -134,21 +134,6 @@ export class ChrPairView {
 				y: yObj
 			}
 		})
-	}
-
-	getData(firstisx) {
-		//Replace with gridelementsForm.... code
-		const isintrachr = this.parent('state').x.chr === this.parent('state').y.chr
-		for (const [coord1, coord2, v] of this.items.items) {
-			const px1 = Math.floor(coord1 / this.calResolution!) * this.binpx
-			const px2 = Math.floor(coord2 / this.calResolution!) * this.binpx
-			const x = firstisx ? px1 : px2
-			const y = firstisx ? px2 : px1
-			this.data.push([x, y, v])
-			if (isintrachr) {
-				this.data.push([y, x, v])
-			}
-		}
 	}
 
 	isFirstX() {
