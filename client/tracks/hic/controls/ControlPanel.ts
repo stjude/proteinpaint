@@ -288,7 +288,7 @@ class ControlPanel {
 					view.binpx,
 					this.parent('min'),
 					this.parent('max'),
-					this.parent('activeView')
+					'chrpair'
 				)
 			}
 		}
