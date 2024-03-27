@@ -1,6 +1,6 @@
-import { Grid } from './Grid.ts'
+import { Grid } from '../grid/Grid.ts'
 
-export class GenomeViewModel {
+export class GridViewModel {
 	grid: Grid
 
 	constructor(opts: any) {

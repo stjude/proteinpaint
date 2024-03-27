@@ -1,4 +1,4 @@
-import { Grid } from '../viewmodel/Grid'
+import { Grid } from './Grid'
 import { GridElementRenderer } from './GridElementRenderer'
 import { SvgG } from 'types/d3'
 
