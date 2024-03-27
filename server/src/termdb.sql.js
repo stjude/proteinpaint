@@ -57,7 +57,6 @@ return an array of sample names passing through the filter
 		: `SELECT id, name FROM sampleidmap`
 
 	sql += hasType ? ` where (sampleidmap.type = '${type}' OR sampleidmap.type is NULL OR sampleidmap.type = '')` : ''
-	console.log(sql)
 	const cmd = ds.cohort.db.connection.prepare(sql)
 	let re
 	if (filter) re = cmd.all(filter.values)
