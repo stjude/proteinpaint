@@ -1018,7 +1018,7 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
-	async getAllSamplesByName(opts) {
+	async getSamplesByName(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termb')
@@ -1026,7 +1026,7 @@ export class TermdbVocab extends Vocab {
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
 		const body = {
-			for: 'getAllSamplesByName',
+			for: 'getSamplesByName',
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname

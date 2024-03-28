@@ -175,7 +175,7 @@ function mayReshapeDsCredentials(creds) {
 // TODO: should create a checker function for each route that may be protected
 const protectedRoutes = {
 	termdb: ['matrix'],
-	samples: ['singleSampleData', 'getAllSamples', 'scatter', 'convertSampleId', 'getAllSamplesByName']
+	samples: ['singleSampleData', 'getAllSamples', 'scatter', 'convertSampleId', 'getSamplesByName']
 }
 
 const authRouteByCredType = {

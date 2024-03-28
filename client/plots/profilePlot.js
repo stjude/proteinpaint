@@ -50,7 +50,7 @@ export class profilePlot {
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
-		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
+		this.sampleidmap = await this.app.vocabApi.getSamplesByName()
 
 		if (config.site) {
 			if (Object.keys(this.sampleidmap).length == 0) throw 'You must login to view site info' //no sample data returned

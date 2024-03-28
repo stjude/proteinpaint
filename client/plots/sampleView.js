@@ -106,7 +106,7 @@ class SampleView {
 			})
 		} else {
 			const limit = 100
-			this.samplesData = await this.app.vocabApi.getAllSamplesByName({
+			this.samplesData = await this.app.vocabApi.getSamplesByName({
 				filter: getNormalRoot(appState.termfilter?.filter)
 			})
 			const allSamples = []
