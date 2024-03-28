@@ -440,16 +440,23 @@ export async function getScatterCoordinates(req, q, ds, type = 'sample') {
 
 	if (q.divideByTW && q.divideByTW.q.mode == 'continuous') zterm = q.divideByTW.term
 
-	sql += `SELECT ax.sample AS sampleId, ax.value as x, ay.value AS y , ${zterm ? 'az.value AS z' : '0 as z'}
-			FROM anno_${xterm.type} ax 
-			JOIN anno_${yterm.type} ay on ax.sample = ay.sample  JOIN sampleidmap on ax.sample = sampleidmap.id
-			${zterm ? `JOIN anno_${zterm.type} az on ax.sample = az.sample and az.term_id = '${zterm.id}' ` : ''}
-			WHERE ax.term_id = '${xterm.id}' and ay.term_id = '${yterm.id}'`
+	if (ds.cohort.db.tableColumns[`sample_${type}`]) {
+		sql += `SELECT ax.sample AS sampleId, ax.value as x, ay.value AS y , ${zterm ? 'az.value AS z' : '0 as z'}
+		FROM ${type}_samples s 
+		JOIN anno_${xterm.type} ax on ax.sample = s.id
+		JOIN anno_${yterm.type} ay on ay.sample = s.id
+		${zterm ? `JOIN anno_${zterm.type} az on az.sample = s.id and az.term_id = '${zterm.id}' ` : ''}
+		WHERE ax.term_id = '${xterm.id}' and ay.term_id = '${yterm.id}'`
+	} //Some datasets may not have sample view tables
+	else {
+		sql += `SELECT ax.sample AS sampleId, ax.value as x, ay.value AS y , ${zterm ? 'az.value AS z' : '0 as z'}
+		FROM sampleidmap s 
+		JOIN anno_${xterm.type} ax on ax.sample = s.id
+		JOIN anno_${yterm.type} ay on ay.sample = s.id
+		${zterm ? `JOIN anno_${zterm.type} az on az.sample = s.id and az.term_id = '${zterm.id}' ` : ''}
+		WHERE ax.term_id = '${xterm.id}' and ay.term_id = '${yterm.id}'`
+	}
 	if (filter) sql += ` AND ax.sample IN ${filter.CTEname}`
-
-	const cols = listTableColumns(ds.cohort.db.connection, 'sampleidmap')
-	if (cols.includes('type'))
-		sql += ` AND (sampleidmap.type = '${type}' OR sampleidmap.type is NULL OR sampleidmap.type = '')`
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all()
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
