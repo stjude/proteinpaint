@@ -38,6 +38,11 @@ export function server_init_db_queries(ds) {
 	ds.cohort.db.connection = cn
 
 	const tables = listDbTables(cn)
+	ds.cohort.db.tableColumns = {}
+	for (const table of tables) {
+		const columns = listTableColumns(cn, table)
+		ds.cohort.db.tableColumns[table] = columns
+	}
 	const schema_tables = [
 		'cohorts',
 		'sampleidmap',
@@ -61,10 +66,7 @@ export function server_init_db_queries(ds) {
 		'anno_categorical',
 		'buildDate'
 	]
-	//const sampleColumns = listTableColumns(cn, 'sampleidmap')
-	//if (!sampleColumns.includes('type'))
-	//Fix datasets with missing columns on the fly, requires write permission when opening the connection, not possible in readonly mode
-	//	cn.prepare('alter table sampleidmap add column type character varying(100)').run()
+
 	if (tables.has('sample_ancestry')) {
 		const num_rows = cn.prepare('SELECT count(*) as num_rows FROM sample_ancestry').get().num_rows
 		if (num_rows > 0) ds.cohort.termdb.hasAncestry = true
