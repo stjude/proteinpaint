@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.49.0
 
 Features:
 - Display hints about persisted matrix gene set and option to unhide CNV and mutations when there is no matrix data to render
