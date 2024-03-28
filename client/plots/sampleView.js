@@ -253,7 +253,6 @@ class SampleView {
 
 	getLabel(sampleName) {
 		const samples = this.getSamples(sampleName)
-		if (samples.length == 1) return ''
 		return samples.map(s => s.sampleName).join(' > ')
 	}
 
