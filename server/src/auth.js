@@ -560,6 +560,50 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		const payload = jsonwebtoken.verify(token, cred.secret)
 		return payload || {}
 	}
+
+	authApi.getHealth = async function () {
+		const errors = []
+		for (const dslabelPattern in creds) {
+			if (dslabelPattern.startsWith('#')) continue
+			for (const routePattern in creds[dslabelPattern]) {
+				if (dslabelPattern.startsWith('#')) continue
+				for (const embedderHostPattern in creds[dslabelPattern][routePattern]) {
+					if (dslabelPattern.startsWith('#')) continue
+					const cred = creds[dslabelPattern][routePattern][embedderHostPattern]
+					const keys = [dslabelPattern, routePattern, embedderHostPattern].join(' > ')
+					if (cred.processor) {
+						if (cred.processor.test) {
+							const res = await cred.processor.test(
+								cred,
+								`http://localhost:${serverconfig.port}${cred.authRoute}`,
+								embedderHostPattern
+							)
+							if (res?.status != 'ok') errors.push(keys)
+						}
+					} else if (cred.type == 'basic') {
+						try {
+							const res = await fetch(`http://localhost:${serverconfig.port}${cred.authRoute}`, {
+								method: 'POST',
+								headers: {
+									authorization: `Basic ${btoa(cred.password)}`
+								},
+								body: JSON.stringify({
+									dslabel: dslabelPattern,
+									embedder: embedderHostPattern,
+									route: cred.route
+								})
+							}).then(r => r.json())
+							if (res?.status != 'ok') errors.push(keys)
+						} catch (e) {
+							console.log(e)
+							errors.push(keys)
+						}
+					}
+				}
+			}
+		}
+		return { errors }
+	}
 }
 
 function getSessionId(req, cred) {
@@ -757,5 +801,6 @@ export const authApi = {
 	getForbiddenRoutesForDsEmbedder: () => [],
 	userCanAccess: () => true,
 	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
-	getPayloadFromHeaderAuth: () => ({})
+	getPayloadFromHeaderAuth: () => ({}),
+	getHealth: () => undefined
 }

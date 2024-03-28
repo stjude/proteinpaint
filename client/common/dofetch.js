@@ -232,7 +232,7 @@ function mayAdjustRequest(url, init) {
 		// assume a minimal URL path + parameters for a POST request
 		// since the payload will be in the request body
 		if (typeof init.body == 'string') init.body = JSON.parse(init.body)
-		if (!init.body.embedder) init.body.embedder = hostname
+		if (!init.body.embedder && includeEmbedder) init.body.embedder = hostname
 		init.body = JSON.stringify(init.body)
 		return url
 	}
@@ -245,14 +245,14 @@ function mayAdjustRequest(url, init) {
 		// init.body should be an object, to be converted to either
 		// (a) GET URL search parameter strings, OR
 		// (b) POST body, JSON-encoded
-		if (!init.body.embedder) init.body.embedder = hostname
+		if (!init.body.embedder && includeEmbedder) init.body.embedder = hostname
 
 		const params = encode(init.body)
 		if (!url.includes('?')) url += '?'
 		url += params
 	}
 
-	if (!url.includes('embedder=')) {
+	if (!url.includes('embedder=') && includeEmbedder) {
 		const sep = url.includes('?') ? '&' : '?'
 		url += `${sep}embedder=${hostname}`
 	}
@@ -286,7 +286,7 @@ function mayAdjustRequest(url, init) {
 					params[k] = decodedVal
 				}
 			})
-		if (!params.embedder) params.embedder = hostname
+		if (!params.embedder && includeEmbedder) params.embedder = hostname
 		init.body = JSON.stringify(params)
 	}
 
@@ -294,7 +294,10 @@ function mayAdjustRequest(url, init) {
 }
 
 const dsAuthOk = new Set()
-let dsAuth, authUi, authUiHolder
+let dsAuth,
+	authUi,
+	authUiHolder,
+	includeEmbedder = false
 
 /*
 	opts{}
@@ -311,6 +314,7 @@ export function setAuth(opts) {
 		// so that an unnecessary login form will not be shown
 		if (auth.insession) dsAuthOk.add(auth)
 	}
+	includeEmbedder = opts.dsAuth?.length > 0 || false
 }
 
 export function isInSession(dslabel, route) {

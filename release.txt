@@ -1,1 +1,2 @@
-
+Features:
+- include auth test status in server healthcheck
