@@ -72,7 +72,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'singleSampleData') return get_singleSampleData(q, req, res, ds, tdb)
 			if (q.for == 'getProfileFacilities') return get_ProfileFacilities(q, req, res, ds, tdb)
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
-			if (q.for == 'getAllSamplesByName') return get_AllSamplesByName(q, req, res, ds)
+			if (q.for == 'getSamplesByName') return get_AllSamplesByName(q, req, res, ds)
 			if (q.for == 'DEanalysis') return await get_DEanalysis(q, res, ds)
 
 			throw "termdb: doesn't know what to do"
