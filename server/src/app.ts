@@ -50,7 +50,6 @@ export async function launch() {
 			routeFiles
 				//.filter(file => file.includes('health'))
 				.map(async file => {
-					console.log('route: ', file)
 					const _ = await import(`../routes/${file}`)
 					const route = Object.assign({}, _)
 					route.file = file
@@ -58,7 +57,6 @@ export async function launch() {
 				})
 		)
 
-		const augen = await import('@sjcrh/augen')
 		const __dirname = import.meta.dirname
 		augen.setRoutes(app, routes, {
 			app,

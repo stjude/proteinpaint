@@ -2,44 +2,53 @@ import serverconfig from './serverconfig.js'
 import fs from 'fs'
 import pkg from '../package.json'
 import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../shared/types/routes/healthcheck.js'
+import { authApi } from './auth'
+
+let auth
 
 export async function getStat(genomes) {
-	if (!versionInfo.deps) setVersionInfoDeps()
+	if (!versionInfo.deps) setVersionInfoDeps() // set only once
+	if (!auth) auth = await authApi.getHealth() // set only once
 
 	const health = {
-		status: 'ok',
+		status: auth?.errors?.length ? 'error' : 'ok',
 		genomes: {},
-		versionInfo
+		versionInfo,
+		auth
 	} as HealthCheckResponse
 
+	setGenomeDbInfo(genomes, health)
+	return health
+}
+
+function setGenomeDbInfo(genomes, health) {
 	// report status of every genome
 	for (const gn in genomes) {
-		const genome = genomes[gn] //; console.log(genome.genedb)
-		const dbInfo = {} as GenomeBuildInfo // object to store status of this genome
-
-		if (genome.genedb) {
-			// genedb status
-			dbInfo.genedb = {
-				buildDate: genome.genedb.get_buildDate?.get().date || 'unknown',
-				tables: genome.genedb.tableSize
-			}
-		}
-
-		if (genome.termdbs) {
-			// genome-level termdb status e.g. msigdb
-			dbInfo.termdbs = {}
-			for (const key in genome.termdbs) {
-				const db = genome.termdbs[key]
-				dbInfo.termdbs[key] = {
-					buildDate: db.cohort.termdb.q.get_buildDate?.get().date || 'unknown'
+		const genome = genomes[gn]
+		if (!('dbInfo' in genome)) {
+			// set only once and track using the genome object
+			const dbInfo = {} as GenomeBuildInfo // object to store status of this genome
+			if (genome.genedb) {
+				// genedb status
+				dbInfo.genedb = {
+					buildDate: genome.genedb.get_buildDate?.get().date || 'unknown',
+					tables: genome.genedb.tableSize
 				}
 			}
+			if (genome.termdbs) {
+				// genome-level termdb status e.g. msigdb
+				dbInfo.termdbs = {}
+				for (const key in genome.termdbs) {
+					const db = genome.termdbs[key]
+					dbInfo.termdbs[key] = {
+						buildDate: db.cohort.termdb.q.get_buildDate?.get().date || 'unknown'
+					}
+				}
+			}
+			genome.dbInfo = Object.keys(dbInfo).length ? dbInfo : undefined
 		}
-
-		if (Object.keys(dbInfo).length && health.genomes) health.genomes[gn] = dbInfo
+		health.genomes[gn] = genome.dbInfo
 	}
-
-	return health
 }
 
 export const versionInfo: VersionInfo = {

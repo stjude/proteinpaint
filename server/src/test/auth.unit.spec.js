@@ -122,17 +122,18 @@ tape(`initialization`, async test => {
 		const app = appInit()
 		await authApi.maySetAuthRoutes(app, '', { cachedir })
 		test.deepEqual(
+			Object.keys(authApi).sort(),
 			[
 				'canDisplaySampleIds',
 				'getDsAuth',
 				'getForbiddenRoutesForDsEmbedder',
+				'getHealth',
 				'getJwtPayload',
 				'getPayloadFromHeaderAuth',
 				'getRequiredCredForDsEmbedder',
 				'maySetAuthRoutes',
 				'userCanAccess'
 			],
-			Object.keys(authApi).sort(),
 			'should set the expected methods with an empty dsCredentials'
 		)
 		test.deepEqual(
