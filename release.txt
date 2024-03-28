@@ -1,1 +1,3 @@
 
+Fixes:
+- fix the error from genomic alterations rendering when there are no mutations or CNV data
