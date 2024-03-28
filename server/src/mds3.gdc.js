@@ -938,7 +938,13 @@ async function snvindel_byisoform(opts, ds) {
 			json: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
 		})
 		.json()
+
+	const starttime = Date.now()
+
 	const [re_ssms, re_cases] = await Promise.all([p1, p2])
+
+	if (serverconfig.debugmode) console.log('gdc snvindel tandem queries', Date.now() - starttime)
+
 	if (!Array.isArray(re_ssms?.data?.hits) || !Array.isArray(re_cases?.data?.hits))
 		throw 'ssm tandem query not returning data.hits[]'
 
@@ -2125,6 +2131,7 @@ const isoform2ssm_query1_getvariant = {
 		if (p.filterObj) {
 			f.case_filters.content.push(filter2GDCfilter(p.filterObj))
 		}
+		if (!f.case_filters.content.length) delete f.case_filters
 		return f
 	}
 }
@@ -2254,6 +2261,7 @@ const isoform2ssm_query2_getcase = {
 			f.case_filters.content.push(filter2GDCfilter(p.filterObj))
 		}
 		addTid2value_to_filter(p.tid2value, f.case_filters.content, ds)
+		if (!f.case_filters.content.length) delete f.case_filters // do not use empty case_filters to speed up query (Jason Stiles 3/28/24)
 		return f
 	}
 }
