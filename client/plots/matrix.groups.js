@@ -272,29 +272,6 @@ export function classifyValues(anno, tw, grp, s, sample) {
 	}
 }
 
-function getMclassOrder(item) {
-	const priorityArray = [
-		'CNV_amp',
-		'CNV_loss',
-		'F',
-		'N',
-		'L',
-		'P',
-		'D',
-		'I',
-		'ProteinAltering',
-		'M',
-		'Utr3',
-		'Utr5',
-		'S',
-		'Intron',
-		'noncoding',
-		'WT',
-		'Blank'
-	]
-	return priorityArray.indexOf(item.class)
-}
-
 export function stackSiblingCellsByClass(a, b) {
 	return a.class === b.class ? 0 : a.class === 'Blank' ? 1 : b.class == 'Blank' ? -1 : a.class < b.class ? -1 : 1
 }
