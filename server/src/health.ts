@@ -2,7 +2,7 @@ import serverconfig from './serverconfig.js'
 import fs from 'fs'
 import pkg from '../package.json'
 import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../shared/types/routes/healthcheck.js'
-import { authApi } from './auth'
+import { authApi } from './auth.js'
 
 let auth
 
