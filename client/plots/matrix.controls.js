@@ -177,6 +177,24 @@ export class MatrixControls {
 
 	setGenesBtn(s) {
 		const l = s.controlLabels
+		const renderStyleOptions = [
+			{
+				label: `&nbsp;Stacked <span style="font-size:.7em;color:#858585;">Show stacked rectangles in the same matrix cell to render variants for the same ${l.sample} and gene</span>`,
+				value: '',
+				title: `Show stacked rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
+			},
+			{
+				label: `&nbsp;OncoPrint <span style="font-size:.7em;color:#858585;">Show overlapping rectangles in the same matrix cell to render variants for the same ${l.sample} and gene</span>`,
+				value: 'oncoprint',
+				title: `Show overlapping rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
+			}
+		]
+		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster')
+			renderStyleOptions.unshift({
+				label: `&nbsp;Single <span style="font-size:.7em;color:#858585;">Show a single rectangle in a matrix cell to render the most severe variant (truncating > indels > missense > synonymous) for the same ${l.sample} and gene</span>`,
+				value: 'single',
+				title: `Show a single rectangle in a matrix cell to render the most severe variant (truncating > indels > missense > synonymous) for the same ${l.sample} and gene`
+			})
 		this.opts.holder
 			.append('button')
 			//.property('disabled', d => d.disabled)
@@ -226,24 +244,9 @@ export class MatrixControls {
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'cellEncoding',
-						options: [
-							{
-								label: 'Single',
-								value: 'single',
-								title: `Show a single rectangle in a matrix cell to render one variant for the same ${l.sample} and gene`
-							},
-							{
-								label: 'Stacked',
-								value: '',
-								title: `Show stacked rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
-							},
-							{
-								label: 'OncoPrint',
-								value: 'oncoprint',
-								title: `Show overlapping rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
-							}
-						],
-						styles: { padding: 0, 'padding-right': '10px', margin: 0 },
+						options: renderStyleOptions,
+						styles: { padding: '5px 0px', margin: 0 },
+						labelDisplay: 'block',
 						callback: this.parent.geneStyleControlCallback
 					},
 					{

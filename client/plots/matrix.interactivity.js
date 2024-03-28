@@ -2410,7 +2410,7 @@ function setLengendActions(self) {
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text(`Show all ${targetData.name}`)
 					.on('click', () => {
-						showAll(menuGrp, targetData, self, legendGrpFilterIndex, legendFilterIndex)
+						showAll(menuGrp, targetData, self)
 					})
 			}
 			menuGrp.showunder(event.target)
@@ -2776,12 +2776,12 @@ function setMutationSelectionActions(self) {
 	self.mutationControlCallback = mutationSelection => {
 		const menuGrp = self.dom.legendMenu.clear()
 		const targetData = self.legendData.find(l => l.dt?.includes(1))
-		self.mutationSelectionActions[mutationSelection](menuGrp, targetData, self)
+		self.mutationSelectionActions[mutationSelection](menuGrp, targetData, self, 'mutation')
 	}
 	self.CNVControlCallback = CNVSelection => {
 		const menuGrp = self.dom.legendMenu.clear()
 		const targetData = self.legendData.find(l => l.dt?.includes(4))
-		self.mutationSelectionActions[CNVSelection](menuGrp, targetData, self)
+		self.mutationSelectionActions[CNVSelection](menuGrp, targetData, self, 'CNV')
 	}
 
 	self.geneStyleControlCallback = styleSelection => {
@@ -2793,22 +2793,32 @@ function setMutationSelectionActions(self) {
 }
 
 function showSingleStyle(targetData, self) {
-	const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
-	// when the legend group is shown and now hide it
-	// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
-
-	//todo: remove the counts
-
-	const filterNew = { dt: targetData.dt }
-	if (byOrigin) {
-		// when distinguish between germline and somatic for the dt
-		filterNew.origin = targetData.origin
-	}
-	// when the legend group is hidden, need to remove the individual legend filter belongs to this legend group
-	self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(f => f.legendGrpName !== targetData.name)
-
-	self.config.legendGrpFilter.lst.push(filterNew)
 	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+		if (targetData) {
+			// there are CNV data
+			const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
+
+			//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
+			const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
+				f =>
+					f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
+					(!byOrigin || f.origin == targetData.origin)
+			)
+			if (legendGrpFilterIndex == -1) {
+				// when the legend group is shown and now hide it
+				// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
+				const filterNew = { dt: targetData.dt }
+				if (byOrigin) {
+					// when distinguish between germline and somatic for the dt
+					filterNew.origin = targetData.origin
+				}
+				// when the legend group is hidden, need to remove the individual legend filter belongs to this legend group
+				self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+					f => f.legendGrpName !== targetData.name
+				)
+				self.config.legendGrpFilter.lst.push(filterNew)
+			}
+		}
 		self.config.settings.matrix.showMatrixCNV = 'none'
 		self.config.settings.matrix.cellEncoding = 'single'
 	}
@@ -2821,32 +2831,27 @@ function showSingleStyle(targetData, self) {
 }
 
 function showOncoprintStyle(targetData, self) {
-	const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
-
-	//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
-	const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
-		f =>
-			f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
-			(!byOrigin || f.origin == targetData.origin)
-	)
-
-	//legendFilterIndex is the index of the first filter (in this filter group being clicked) that is already in self.config.legendValueFilter.lst, if there's any
-	const legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
-		l =>
-			l.legendGrpName == targetData.name &&
-			l.tvs.values.find(v => targetData.dt.includes(v.dt) && (!byOrigin || v.origin == targetData.origin))
-	)
-
-	if (legendGrpFilterIndex !== -1) self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
-	if (legendFilterIndex !== -1)
-		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
-			f => f.legendGrpName != targetData.name
-		)
 	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+		if (targetData) {
+			// there are CNV data
+			const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
+
+			//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
+			const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
+				f =>
+					f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
+					(!byOrigin || f.origin == targetData.origin)
+			)
+			if (legendGrpFilterIndex !== -1) self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
+			// when changing to oncoPrint, need to remove the CNV legend filters
+			self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+				f => f.legendGrpName !== targetData.name
+			)
+		}
 		self.config.settings.matrix.showMatrixCNV = 'all'
 		self.config.settings.matrix.allMatrixCNVHidden = false
-		self.config.settings.matrix.cellEncoding = 'oncoprint'
 	}
+	self.config.settings.matrix.cellEncoding = 'oncoprint'
 	self.app.dispatch({
 		type: 'plot_edit',
 		id: self.id,
@@ -2855,32 +2860,28 @@ function showOncoprintStyle(targetData, self) {
 }
 
 function showStackedStyle(targetData, self) {
-	const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
-
-	//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
-	const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
-		f =>
-			f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
-			(!byOrigin || f.origin == targetData.origin)
-	)
-
-	//legendFilterIndex is the index of the first filter (in this filter group being clicked) that is already in self.config.legendValueFilter.lst, if there's any
-	const legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
-		l =>
-			l.legendGrpName == targetData.name &&
-			l.tvs.values.find(v => targetData.dt.includes(v.dt) && (!byOrigin || v.origin == targetData.origin))
-	)
-
-	if (legendGrpFilterIndex !== -1) self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
-	if (legendFilterIndex !== -1)
-		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
-			f => f.legendGrpName != targetData.name
-		)
 	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
+		if (targetData) {
+			// there are CNV data
+			const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
+
+			//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
+			const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
+				f =>
+					f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
+					(!byOrigin || f.origin == targetData.origin)
+			)
+			if (legendGrpFilterIndex !== -1) self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
+			// when changing to oncoPrint, need to remove the CNV legend filters
+			self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+				f => f.legendGrpName !== targetData.name
+			)
+		}
 		self.config.settings.matrix.showMatrixCNV = 'all'
 		self.config.settings.matrix.allMatrixCNVHidden = false
-		self.config.settings.matrix.cellEncoding = ''
 	}
+
+	self.config.settings.matrix.cellEncoding = ''
 	self.app.dispatch({
 		type: 'plot_edit',
 		id: self.id,
@@ -2893,35 +2894,41 @@ function showOnlyTrunc(menuGrp, targetData, self) {
 	// add a new "soft legend filter" to for all the legends in the legend group whose mclass
 	// is not in the truncatingM
 
-	//remove the individual legend filter in the group
-	self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(f => f.legendGrpName !== targetData.name)
-	// remove the grp legend filter for the group
-	self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(1))
+	if (targetData) {
+		// there are mutations data
+		//remove the individual legend filter in the group
+		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+			f => f.legendGrpName !== targetData.name
+		)
+		// remove the grp legend filter for the group
+		self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(1))
 
-	const truncatingM = self.config.settings.matrix.truncatingMutations || truncatingMutations
-	for (const item of targetData.items) {
-		if (truncatingM.includes(item.key)) continue
-		// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
-		// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
-		// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
-		const filterNew = {
-			legendGrpName: item.termid,
-			type: 'tvs',
-			tvs: {
-				isnot: true,
-				legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
-				term: { type: 'geneVariant' },
-				values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+		const truncatingM = self.config.settings.matrix.truncatingMutations || truncatingMutations
+		for (const item of targetData.items) {
+			if (truncatingM.includes(item.key)) continue
+			// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
+			// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
+			// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
+			const filterNew = {
+				legendGrpName: item.termid,
+				type: 'tvs',
+				tvs: {
+					isnot: true,
+					legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+					term: { type: 'geneVariant' },
+					values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+				}
 			}
+			self.config.legendValueFilter.lst.push(filterNew)
 		}
-		self.config.legendValueFilter.lst.push(filterNew)
 	}
+
 	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 		self.config.settings.matrix.showMatrixMutation = 'onlyTruncating'
 		const cl = self.settings.matrix.controlLabels
 		if (
-			self.legendData.find(l => l.name == cl.Mutations)?.items?.length ==
-			self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
+			targetData &&
+			targetData.items?.length == self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
 		) {
 			//when all mutation items are hidden by applying legend value filter
 			self.config.settings.matrix.allMatrixMutationHidden = true
@@ -2940,36 +2947,42 @@ function showOnlyPC(menuGrp, targetData, self) {
 	// add a new "soft legend filter" for all the legends in the legend group (origin + dt) whose mclass
 	// is not in the nonTruncatingPCM
 
-	//remove the individual legend filter in the group
-	self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(f => f.legendGrpName !== targetData.name)
+	if (targetData) {
+		// there are mutations data
+		//remove the individual legend filter in the group
+		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+			f => f.legendGrpName !== targetData.name
+		)
 
-	// remove the grp legend filter for the group
-	self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(1))
+		// remove the grp legend filter for the group
+		self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(1))
 
-	const proteinChangingM = self.config.settings.matrix.proteinChangingMutations || proteinChangingMutations
-	for (const item of targetData.items) {
-		if (proteinChangingM.includes(item.key)) continue
-		// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
-		// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
-		// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
-		const filterNew = {
-			legendGrpName: item.termid,
-			type: 'tvs',
-			tvs: {
-				isnot: true,
-				legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
-				term: { type: 'geneVariant' },
-				values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+		const proteinChangingM = self.config.settings.matrix.proteinChangingMutations || proteinChangingMutations
+		for (const item of targetData.items) {
+			if (proteinChangingM.includes(item.key)) continue
+			// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
+			// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
+			// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
+			const filterNew = {
+				legendGrpName: item.termid,
+				type: 'tvs',
+				tvs: {
+					isnot: true,
+					legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+					term: { type: 'geneVariant' },
+					values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+				}
 			}
+			self.config.legendValueFilter.lst.push(filterNew)
 		}
-		self.config.legendValueFilter.lst.push(filterNew)
 	}
+
 	if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
 		self.config.settings.matrix.showMatrixMutation = 'onlyPC'
 		const cl = self.settings.matrix.controlLabels
 		if (
-			self.legendData.find(l => l.name == cl.Mutations)?.items?.length ==
-			self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
+			targetData &&
+			targetData.items?.length == self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
 		) {
 			//when all mutation items are hidden by applying legend value filter
 			self.config.settings.matrix.allMatrixMutationHidden = true
@@ -2982,33 +2995,44 @@ function showOnlyPC(menuGrp, targetData, self) {
 	})
 }
 
-function showNone(menuGrp, targetData, self) {
+function showNone(menuGrp, targetData, self, target) {
 	menuGrp.hide()
-	const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
-	// when the legend group is shown and now hide it
-	// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
+	if (targetData) {
+		// there are data
+		const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
+		// when the legend group is shown and now hide it
+		// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
 
-	//todo: remove the counts
-
-	const filterNew = { dt: targetData.dt }
-	if (byOrigin) {
-		// when distinguish between germline and somatic for the dt
-		filterNew.origin = targetData.origin
+		//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
+		const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
+			f =>
+				f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
+				(!byOrigin || f.origin == targetData.origin)
+		)
+		if (legendGrpFilterIndex == -1) {
+			const filterNew = { dt: targetData.dt }
+			if (byOrigin) {
+				// when distinguish between germline and somatic for the dt
+				filterNew.origin = targetData.origin
+			}
+			// when the legend group is hidden, need to remove the individual legend filter belongs to this legend group
+			self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+				f => f.legendGrpName !== targetData.name
+			)
+			self.config.legendGrpFilter.lst.push(filterNew)
+		}
 	}
-	// when the legend group is hidden, need to remove the individual legend filter belongs to this legend group
-	self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(f => f.legendGrpName !== targetData.name)
 
-	self.config.legendGrpFilter.lst.push(filterNew)
 	if (
 		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
-		targetData.dt.includes(1)
+		(target == 'mutation' || targetData?.dt?.includes(1))
 	)
 		self.config.settings.matrix.showMatrixMutation = 'none'
 	else if (
 		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
-		targetData.dt.includes(4)
+		(target == 'CNV' || targetData?.dt?.includes(4))
 	) {
 		self.config.settings.matrix.showMatrixCNV = 'none'
 		if (self.config.settings.matrix.cellEncoding == 'oncoprint') self.config.settings.matrix.cellEncoding = 'single'
@@ -3021,40 +3045,45 @@ function showNone(menuGrp, targetData, self) {
 	})
 }
 
-function showAll(menuGrp, targetData, self) {
+function showAll(menuGrp, targetData, self, target) {
 	menuGrp.hide()
-	const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
 
-	//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
-	const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
-		f =>
-			f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
-			(!byOrigin || f.origin == targetData.origin)
-	)
+	if (targetData) {
+		// there are  data
+		const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
 
-	//legendFilterIndex is the index of the first filter (in this filter group being clicked) that is already in self.config.legendValueFilter.lst, if there's any
-	const legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
-		l =>
-			l.legendGrpName == targetData.name &&
-			l.tvs.values.find(v => targetData.dt.includes(v.dt) && (!byOrigin || v.origin == targetData.origin))
-	)
-
-	if (legendGrpFilterIndex !== -1) self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
-	if (legendFilterIndex !== -1)
-		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
-			f => f.legendGrpName != targetData.name
+		//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
+		const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
+			f =>
+				f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
+				(!byOrigin || f.origin == targetData.origin)
 		)
+
+		//legendFilterIndex is the index of the first filter (in this filter group being clicked) that is already in self.config.legendValueFilter.lst, if there's any
+		const legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
+			l =>
+				l.legendGrpName == targetData.name &&
+				l.tvs.values.find(v => targetData.dt.includes(v.dt) && (!byOrigin || v.origin == targetData.origin))
+		)
+
+		if (legendGrpFilterIndex !== -1) self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
+		if (legendFilterIndex !== -1)
+			self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+				f => f.legendGrpName != targetData.name
+			)
+	}
+
 	if (
 		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
-		targetData.dt.includes(1)
+		(target == 'mutation' || targetData?.dt?.includes(1))
 	) {
 		self.config.settings.matrix.showMatrixMutation = 'all'
 		self.config.settings.matrix.allMatrixMutationHidden = false
 	} else if (
 		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
-		targetData.dt.includes(4)
+		(target == 'CNV' || targetData?.dt?.includes(4))
 	) {
 		self.config.settings.matrix.showMatrixCNV = 'all'
 		self.config.settings.matrix.allMatrixCNVHidden = false
@@ -3067,9 +3096,32 @@ function showAll(menuGrp, targetData, self) {
 	})
 }
 
-function showByLegendFilter(menuGrp, targetData, self) {
+function showByLegendFilter(menuGrp, targetData, self, target) {
 	menuGrp.hide()
 
+	if (!targetData) {
+		//there are no mutatons data
+		if (
+			self.state.config.settings.matrix.addMutationCNVButtons &&
+			self.chartType !== 'hierCluster' &&
+			(target == 'mutation' || targetData?.dt?.includes(1))
+		) {
+			self.config.settings.matrix.showMatrixMutation = 'bySelection'
+		} else if (
+			self.state.config.settings.matrix.addMutationCNVButtons &&
+			self.chartType !== 'hierCluster' &&
+			(target == 'mutation' || targetData?.dt?.includes(4))
+		) {
+			self.config.settings.matrix.showMatrixCNV = 'bySelection'
+		}
+
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: self.config
+		})
+		return
+	}
 	const classDiv = self.app.tip.d.append('div')
 
 	const checkboxName = Math.random().toString()
