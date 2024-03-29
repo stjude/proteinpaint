@@ -1262,6 +1262,48 @@ export class MatrixControls {
 				}
 				triggerGenesetEdit(tip.d.append('div'))
 			})
+
+		if (parent.opts.customInputs.geneset) {
+			for (const btn of parent.opts.customInputs.geneset) {
+				td.append('button')
+					.html(btn.label)
+					.on('click', () => {
+						tip.hide()
+						btn.showInput({
+							callback: genesArr => {
+								const geneLst = genesArr.map(gene => ({ gene }))
+								// TODO: this may not be the first term group
+								let group = tg.find(g => g.lst.find(tw => tw.term?.type == 'geneVariant'))
+								if (!group) group = tg[0]
+								const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+								const tws = geneLst.map(d => {
+									//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+									let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+									if (!tw)
+										tw = {
+											$id: get$id(),
+											term: {
+												name: d.symbol || d.gene,
+												type: 'geneVariant'
+											},
+											q: {}
+										}
+									return tw
+								})
+								group.lst = [...lst, ...tws]
+								if (!group.lst.length) tg.splice(selectedGroup.index, 1)
+								app.dispatch({
+									type: 'plot_edit',
+									id: this.parent.id,
+									config: {
+										termgroups: tg
+									}
+								})
+							}
+						})
+					})
+			}
+		}
 	}
 
 	setMenuBackBtn(holder, callback) {
