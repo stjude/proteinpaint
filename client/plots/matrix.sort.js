@@ -225,7 +225,18 @@ function getSortSamplesByDt(st, self, rows, s) {
 
 function getSortSamplesByClass(st, self, rows, s) {
 	const { $id, sortSamples } = st
-	const order = sortSamples.order
+	const m = self.config.settings.matrix
+	const sortBySSM = !m.allMatrixMutationHidden && m.variantSortBy.includes('ssm')
+	const sortByCNV = !m.allMatrixCNVHidden && m.variantSortBy.includes('cnv')
+	const order = sortSamples.order.filter(
+		sortBySSM && sortByCNV
+			? () => true
+			: !sortBySSM && !sortByCNV
+			? () => false
+			: !sortByCNV
+			? v => !v.startsWith('CNV_')
+			: v => v.startsWith('CNV_')
+	)
 	const nextRound = 'z' // this string will cause a sample to be sorted last in a tiebreaker round
 	// benchmark:
 	// - fastest by 100+ ms: using Map and not pre-sorting
@@ -317,8 +328,10 @@ export function getTermSorter(self, s, grp) {
 	}
 }
 
-export function getSortOptions(termdbConfig, controlLabels = {}) {
+export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 	const s = termdbConfig?.matrix?.settings || {}
+	const l = Object.assign({ sample: 'sample' }, controlLabels, s.controlLabels || {})
+
 	const sortOptions = {}
 	if (s.sortPriority) {
 		const order = 1
@@ -335,7 +348,11 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 
 	// Similar to Oncoprint sorting
 	sortOptions.a = {
-		label: 'CNV+SSM > SSM-only > CNV-only',
+		label: l.Mutation + ' categories', //'CNV+SSM > SSM-only > CNV-only',
+		// altLabels: {
+		// 	mutationOnly: 'SSM',
+		// 	cnvOnly: 'CNV',
+		// },
 		value: 'a',
 		order: 1,
 		sortPriority: [
@@ -398,6 +415,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 					// per Lou's comment during GDC milestone 10 meeting 6/29/2023
 					// can comment this out and instead uncomment the alternative, non-nested filter below
 					{
+						//ignoreIf: s => s.allMatrixCNVHidden
 						by: 'class',
 						order: ['CNV_amp', 'CNV_loss']
 					}
@@ -410,90 +428,93 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 		]
 	}
 
-	sortOptions.b = {
-		label: 'CNV+SSM > SSM-only',
-		value: 'b',
-		order: 1,
-		sortPriority: [
-			{
-				types: ['geneVariant'],
-				tiebreakers: [
-					{
-						filter: {
-							values: [
-								{
-									dt: 2
-								}
-							]
-						},
-						by: 'class',
-						order: ['Fuserna' /* 'WT', 'Blank'*/]
-					}
-				]
-			},
+	// sortOptions.b = {
+	// 	label: 'CNV+SSM > SSM-only',
+	// 	altLabels: {
+	// 		mutationOnly: 'SSM',
+	// 		cnvOnly: 'CNV'
+	// 	},
+	// 	value: 'b',
+	// 	order: 1,
+	// 	sortPriority: [
+	// 		{
+	// 			types: ['geneVariant'],
+	// 			tiebreakers: [
+	// 				{
+	// 					filter: {
+	// 						values: [
+	// 							{
+	// 								dt: 2
+	// 							}
+	// 						]
+	// 					},
+	// 					by: 'class',
+	// 					order: ['Fuserna' /* 'WT', 'Blank'*/]
+	// 				}
+	// 			]
+	// 		},
 
-			{
-				types: ['geneVariant'],
-				tiebreakers: [
-					{
-						filter: {
-							values: [{ dt: 1 }]
-						},
-						by: 'class',
-						order: [
-							// copy-number
-							'CNV_amp',
-							'CNV_loss',
+	// 		{
+	// 			types: ['geneVariant'],
+	// 			tiebreakers: [
+	// 				{
+	// 					filter: {
+	// 						values: [{ dt: 1 }]
+	// 					},
+	// 					by: 'class',
+	// 					order: [
+	// 						// copy-number
+	// 						'CNV_amp',
+	// 						'CNV_loss',
 
-							// truncating
-							'F', // FRAMESHIFT
-							'N', // NONSENSE
-							'L', // SPLICE
-							'P', // SPLICE_REGION
+	// 						// truncating
+	// 						'F', // FRAMESHIFT
+	// 						'N', // NONSENSE
+	// 						'L', // SPLICE
+	// 						'P', // SPLICE_REGION
 
-							// indel
-							'D', // PROTEINDEL
-							'I', // PROTEININS
-							'ProteinAltering',
+	// 						// indel
+	// 						'D', // PROTEINDEL
+	// 						'I', // PROTEININS
+	// 						'ProteinAltering',
 
-							// point
-							'M', // MISSENSE
+	// 						// point
+	// 						'M', // MISSENSE
 
-							// noncoding
-							'Utr3',
-							'Utr5',
-							'S', //SILENT
-							'Intron',
-							'noncoding'
-						]
-					}
-				]
-			},
-			{
-				types: ['geneVariant'],
-				tiebreakers: [
-					{
-						by: 'dt',
-						order: [4] // snvindel, cnv,
-						// other dt values will be ordered last
-						// for the sorter to not consider certain dt values,
-						// need to explicitly not use such values for sorting
-						// ignore: [4]
-					},
-					{
-						by: 'class',
-						order: ['CNV_amp', 'CNV_loss']
-					}
-				]
-			},
-			{
-				types: ['categorical', 'integer', 'float', 'survival'],
-				tiebreakers: [{ by: 'values' }]
-			}
-		]
-	}
+	// 						// noncoding
+	// 						'Utr3',
+	// 						'Utr5',
+	// 						'S', //SILENT
+	// 						'Intron',
+	// 						'noncoding'
+	// 					]
+	// 				}
+	// 			]
+	// 		},
+	// 		// {
+	// 		// 	types: ['geneVariant'],
+	// 		// 	tiebreakers: [
+	// 		// 		{
+	// 		// 			by: 'dt',
+	// 		// 			order: [4] // snvindel, cnv,
+	// 		// 			// other dt values will be ordered last
+	// 		// 			// for the sorter to not consider certain dt values,
+	// 		// 			// need to explicitly not use such values for sorting
+	// 		// 			// ignore: [4]
+	// 		// 		},
+	// 		// 		{
+	// 		// 			by: 'class',
+	// 		// 			order: ['CNV_amp', 'CNV_loss']
+	// 		// 		}
+	// 		// 	]
+	// 		// },
+	// 		{
+	// 			types: ['categorical', 'integer', 'float', 'survival'],
+	// 			tiebreakers: [{ by: 'values' }]
+	// 		}
+	// 	]
+	// }
 
-	const l = Object.assign({ sample: 'sample' }, controlLabels, s.controlLabels || {})
 	sortOptions.name = {
 		label: `By ${l.sample} name, ID, or label`,
 		value: 'name',

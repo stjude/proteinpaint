@@ -39,7 +39,7 @@ export async function getPlotConfig(opts = {}, app) {
 			matrix: {
 				svgCanvasSwitch: 1000, // the number of samples to trigger switching between svg and canvas
 				useMinPixelWidth: true, // canvas may be hazy if false, but more accurately reflects column density
-				cellEncoding: '', // can be oncoprint
+				cellEncoding: '', // can be "oncoprint" | "stacked" | "single"
 				margin: {
 					top: 10,
 					right: 5,
@@ -51,6 +51,7 @@ export async function getPlotConfig(opts = {}, app) {
 				maxGenes: opts.settings?.maxGenes || 50,
 				maxSample: opts.settings?.maxSample || 1000,
 				sortPriority: undefined,
+				variantSortBy: ['ssm', 'cnv'],
 
 				sampleNameFilter: '',
 				sortSamplesBy: 'a',
@@ -66,8 +67,8 @@ export async function getPlotConfig(opts = {}, app) {
 				// whether to show these controls buttons
 				addMutationCNVButtons: false,
 				// used for the radio inputs in the CNV/Mutation control menus
-				showMatrixMutation: opts.chartType !== 'hierCluster' ? '' : 'all',
-				showMatrixCNV: opts.chartType !== 'hierCluster' ? '' : 'all',
+				showMatrixMutation: opts.chartType !== 'hierCluster' ? '' : 'all', // all | none | onlyTruncating | onlyPC | bySelection
+				showMatrixCNV: opts.chartType !== 'hierCluster' ? '' : 'all', // all | none | bySelection
 				allMatrixCNVHidden: false,
 				allMatrixMutationHidden: false,
 				gridStroke: '#fff',

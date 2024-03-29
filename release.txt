@@ -1,1 +1,2 @@
-
+Features:
+- Improve the matrix sorting options to easily toggle sorting by cnv and/or consequence

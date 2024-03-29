@@ -591,7 +591,7 @@ tape('sort samples by sample name', function (test) {
 	}
 })
 
-tape('sort samples by CNV+SSM > SSM-only > CNV-only', function (test) {
+tape('sort samples by Mutation categories', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
 	runpp({

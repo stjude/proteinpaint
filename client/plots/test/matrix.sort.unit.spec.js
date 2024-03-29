@@ -88,6 +88,7 @@ function getArgs(_settings = {}) {
 		matrix: {
 			sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: { by: 'sample' } }],
 			sortOptions: ms.getSortOptions(),
+			variantSortBy: [],
 			..._settings
 		}
 	}
@@ -213,9 +214,37 @@ tape('sortSamplesBy = asListed', test => {
 	test.end()
 })
 
-tape('sortPriority by CNV+SSM > SSM-only > CNV-only that uses a filter', test => {
+tape('sortPriority by Mutation categories, default no value sorting, that uses a filter', test => {
 	const { self, settings, rows } = getArgs({
 		sortSamplesBy: 'a'
+	})
+	const sorter = ms.getSampleSorter(self, settings, rows)
+	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
+	test.deepEqual(
+		sampleNames,
+		[
+			[2, 3, 1],
+			[5, 4]
+		],
+		'should sort the samples by dt then value'
+	)
+	test.deepEqual(
+		simpleMatrix(sampleNames, self.termOrder, rows),
+		// prettier-ignore
+		[ 
+			[ '2', '3', ' ', '5', ' ' ], 
+			[ '2', ' ', '1', '5', ' ' ], 
+			[ ' ', '3', '1', ' ', '4' ] 
+		],
+		'should sort sample and rows in the expected order'
+	)
+	test.end()
+})
+
+tape('sortPriority by Mutation categories with value sorting, that uses a filter', test => {
+	const { self, settings, rows } = getArgs({
+		sortSamplesBy: 'a',
+		variantSortBy: ['cnv', 'ssm']
 	})
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))

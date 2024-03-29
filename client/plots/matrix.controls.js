@@ -68,7 +68,7 @@ export class MatrixControls {
 
 	setSamplesBtn(s) {
 		const l = s.controlLabels
-
+		const parent = this.parent
 		this.opts.holder
 			.append('button')
 			//.property('disabled', d => d.disabled)
@@ -84,9 +84,54 @@ export class MatrixControls {
 						chartType: 'matrix',
 						settingsKey: 'sortSamplesBy',
 						options: Object.values(s.sortOptions).sort((a, b) => a.order - b.order),
-						labelDisplay: 'block',
+						//labelDisplay: 'block',
 						getDisplayStyle(plot) {
 							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+						}
+						// setRadioLabel(d) {
+						// 	if (!d.altLabels) return '&nbsp;' + d.label
+						// 	const s = parent.config.settings.matrix
+						// 	// show in label
+						// 	const showSSM = (s.showMatrixMutation != 'none' && !s.allMatrixMutationHidden) && s.variantSortBy.includes('ssm')
+						// 	const showCNV = (s.showMatrixCNV != 'none' && !s.allMatrixCNVHidden) && s.variantSortBy.includes('cnv')
+						// 	const label = showSSM && showCNV
+						// 		? d.label
+						// 		: !showSSM && !showCNV
+						// 		? d.label
+						// 		: showCNV
+						// 		? d.altLabels.mutationOnly
+						// 		: d.altLabels.cnvOnly
+
+						// 	return '&nbsp;' + label
+						// }
+					},
+					{
+						label: `Sort by values`,
+						type: 'multiCheckbox',
+						chartType: 'matrix',
+						settingsKey: 'variantSortBy',
+						options: [
+							{
+								label: 'CNV',
+								value: 'cnv',
+								getDisplayStyle(plot) {
+									const s = plot.settings.matrix
+									return s.showMatrixCNV == 'none' || s.allMatrixCNVHidden ? 'none' : ''
+								}
+							},
+							{
+								label: l.Mutation,
+								value: 'ssm',
+								getDisplayStyle(plot) {
+									const s = plot.settings.matrix
+									return s.showMatrixMutation == 'none' || s.allMatrixMutationHidden ? 'none' : ''
+								}
+							}
+						],
+						getDisplayStyle(plot) {
+							return plot.chartType == 'hierCluster' || plot.settings.matrix.sortSamplesBy == 'name'
+								? 'none'
+								: 'table-row'
 						}
 					},
 					{
