@@ -79,15 +79,14 @@ return an array of sample names passing through the filter
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
 	let sql = filter
 		? `WITH ${filter.filters} SELECT sample as id, name, sa.ancestor_id, sampleidmap.type FROM ${filter.CTEname}
-	join sampleidmap on id = sampleidmap.id left join sample_ancestry sa on id = sa.sample_id and sa.distance = 1`
+			join sampleidmap on sample = sampleidmap.id left join sample_ancestry sa on sample = sa.sample_id and sa.distance = 1 union all 
+			select id, name, null as ancestor_id, 'root' as type from sample_ancestry sa join root_samples on sa.ancestor_id = id where sample_id in (select sample from ${filter.CTEname})` //Root samples need to be added
 		: `SELECT id, name, sa.ancestor_id, sampleidmap.type FROM sampleidmap left join sample_ancestry sa on id = sa.sample_id and sa.distance = 1`
 
 	const cmd = ds.cohort.db.connection.prepare(sql)
 	let re
-	console.log(sql)
 	if (filter) re = cmd.all(filter.values)
 	else re = cmd.all()
-	console.log(re)
 	if (canDisplay) return re
 	for (const item of re) delete item.name
 	return re
