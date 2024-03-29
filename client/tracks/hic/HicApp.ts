@@ -128,6 +128,11 @@ class HicApp {
 		this.determineView()
 		try {
 			await hicParseFile(this.hic, true, this.errList)
+			/** Generally NONE is not listed to the file.
+			 * Must add before setting the views configs.
+			 */
+			if (!this.hic['normalization'].includes('NONE')) this.hic['normalization'].unshift('NONE')
+
 			this.getViewsConfig()
 
 			this.store = await hicStoreInit({ app: this.api, state: this.hic.state })
