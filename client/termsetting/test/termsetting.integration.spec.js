@@ -366,7 +366,7 @@ tape('Categorical term', async test => {
 	test.equal(
 		dragItems[0].innerHTML,
 		'Non-Hodgkin lymphoma (n=16)',
-		'Should have first cateogry as "Non-Hodgkin lymphoma (n=16)"'
+		'Should have first category as "Non-Hodgkin lymphoma (n=16)"'
 	)
 
 	//Test drag functionality
