@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- include auth test status in server healthcheck
+
 Fixes:
 - fix the error from genomic alterations rendering when there are no mutations or CNV data
 
