@@ -354,6 +354,7 @@ type SingleCellPlot = {
 	fileSuffix: string
 	colorColumn: ColorColumn
 	coordsColumns: { x: number; y: number }
+	sampleType?: string
 }
 export type SingleCellDataNative = {
 	src: 'native' | string
@@ -455,6 +456,7 @@ type ScatterPlotsEntry = {
 	colorTW?: { id: string }
 	/** this plot use a file column to color dots */
 	colorColumn?: ColorColumn
+	coordsColumns?: { x: number; y: number; z?: number }
 	settings?: { [index: string]: any }
 }
 

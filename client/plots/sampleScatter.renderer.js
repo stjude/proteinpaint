@@ -683,10 +683,9 @@ export function setRenderers(self) {
 		let fontSize = Math.min(0.8, 20 / chart.colorLegend.size)
 		if (fontSize < 0.5) fontSize = 0.5
 		const colorG = legendG.style('font-size', `${fontSize}em`)
-
 		const title0 = self.config.term0
 			? `${chart.id}, n=${chart.cohortSamples.length}`
-			: `${chart.cohortSamples.length} items`
+			: `${chart.cohortSamples.length} ${self.config.sampleType ? self.config.sampleType + 's' : 'samples'}`
 		colorG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
 		offsetY += step + 10
 		if (self.config.colorTW || self.config.colorColumn) {

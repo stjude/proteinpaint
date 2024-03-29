@@ -44,19 +44,21 @@ export async function mayInitiateScatterplots(ds) {
 		if (!p.name) throw '.name missing from one of scatterplots.plots[]'
 		if (p.file) {
 			const lines = (await read_file(path.join(serverconfig.tpmasterdir, p.file))).trim().split('\n')
-
+			const xColumn = p.coordsColumns?.x || 1
+			const yColumn = p.coordsColumns?.y || 2
 			const headerFields = lines[0].split('\t')
 
 			p.filterableSamples = [] // array to keep filterable samples
-			const referenceSamples = [] // optional array to keep reference samples
+			p.referenceSamples = [] // optional array to keep reference samples
 
 			let invalidXY = 0,
 				sampleCount = 0
 			for (let i = 1; i < lines.length; i++) {
 				const l = lines[i].trim().split('\t')
 				// sampleName \t x \t y ...
-				const x = Number(l[1]),
-					y = Number(l[2])
+
+				const x = Number(l[xColumn]),
+					y = Number(l[yColumn])
 				if (Number.isNaN(x) || Number.isNaN(y)) {
 					invalidXY++
 					continue
@@ -78,7 +80,7 @@ export async function mayInitiateScatterplots(ds) {
 							sample.info[headerFields[j]] = l[j]
 						}
 					}
-					referenceSamples.push(sample)
+					p.referenceSamples.push(sample)
 				} else {
 					// sample id can be undefined, e.g. reference samples
 					sampleCount++
@@ -86,8 +88,6 @@ export async function mayInitiateScatterplots(ds) {
 					p.filterableSamples.push(sample)
 				}
 			}
-
-			if (referenceSamples.length) p.referenceSamples = referenceSamples
 
 			console.log(
 				p.filterableSamples.length,
@@ -185,16 +185,15 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 }
 
 async function getSamples(req, ds, plot) {
-	if (plot.filterableSamples) {
-		// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
-		let samples = [],
-			refSamples = []
-		if (plot.referenceSamples) refSamples = readSamples(plot.referenceSamples)
-		if (plot.filterableSamples) samples = readSamples(plot.filterableSamples)
-		return [refSamples, samples]
-	}
 	if (plot.gdcapi) throw 'gdcapi not implemented yet'
-	throw 'do not know how to load data from this plot'
+
+	// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
+	let samples = [],
+		refSamples = []
+	if (plot.filterableSamples) samples = readSamples(plot.filterableSamples)
+	if (plot.referenceSamples) refSamples = readSamples(plot.referenceSamples)
+
+	return [refSamples, samples]
 
 	function readSamples(samples) {
 		const result = []
