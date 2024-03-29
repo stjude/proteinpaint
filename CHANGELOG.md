@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- fix the error from genomic alterations rendering when there are no mutations or CNV data
+
+
 ## 2.49.0
 
 Features:
