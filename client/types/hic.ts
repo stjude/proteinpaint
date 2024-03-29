@@ -29,7 +29,6 @@ export type HicRunProteinPaintTrackArgs = BaseTrackArgs &
 
 export type HicstrawArgs = SharedArgs & {
 	matrixType: 'observed' | 'expected' | 'oe'
-	jwt: any
 	pos1: string
 	pos2: string
 	/** Normalization method for the queried data */

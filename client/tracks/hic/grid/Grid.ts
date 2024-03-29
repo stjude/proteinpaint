@@ -47,14 +47,14 @@ export class Grid {
 				const chrxChrLen = chrlookup[chrx.toUpperCase()].len
 				const chryChrLen = chrlookup[chry.toUpperCase()].len
 
-				const xbins = Math.ceil(chrxChrLen / resolution)
-				const ybins = Math.ceil(chryChrLen / resolution)
+				const xbins = Math.ceil(chrxChrLen / resolution) * binpx
+				const ybins = Math.ceil(chryChrLen / resolution) * binpx
 
 				this.chromosomeMatrix.get(chrx)!.set(chry, {
 					x: this.xoff,
 					y: yoff,
-					xbins: xbins * binpx,
-					ybins: ybins * binpx,
+					xbins,
+					ybins,
 					data: [] //Empty array of data to fill later
 				})
 				yoff += this.chr2px[chry] + Grid.borderWidth
