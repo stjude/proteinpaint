@@ -1,7 +1,7 @@
 export class Resolution {
 	error: (f: string | string[]) => void
-	initialbinnum_detail = 20
-	minimumbinnum_bp = 200
+	initialBinNum = 20
+	minBinNum_bp = 200
 
 	constructor(error: (f: string | string[]) => void) {
 		this.error = error
@@ -12,16 +12,14 @@ export class Resolution {
 		if (state.currView == 'chrpair') {
 			const resolution = this.getChrPairResolution(hic, state.x, state.y)
 			return resolution
-		} else if (state.currView == 'detailed') {
-			/**Must obtain the resolution for the chr pair before calculating the
-			 * the resolution for the region. */
-			const chrpairResolution = this.getChrPairResolution(hic, state.x, state.y)
-			if (!chrpairResolution) return
-			const viewRangeBpW = chrpairResolution * this.initialbinnum_detail
+		} else if (state.currView == 'detail') {
+			/**Must obtain the resolution for the chr pair before calculating the resolution for the region. */
+			const viewRangeBpW = this.getDefaultViewSpan(hic, state.x, state.y)
+			if (!viewRangeBpW) return
 
 			let resolution = null
 			for (const res of hic.bpresolution) {
-				if (viewRangeBpW / res > this.minimumbinnum_bp) {
+				if (viewRangeBpW / res > this.minBinNum_bp) {
 					resolution = res
 					break
 				}
@@ -58,5 +56,11 @@ export class Resolution {
 		}
 
 		return resolution
+	}
+
+	getDefaultViewSpan(hic: any, x: any, y: any) {
+		const chrpairResolution = this.getChrPairResolution(hic, x, y)
+		if (!chrpairResolution) return
+		return chrpairResolution * this.initialBinNum
 	}
 }

@@ -96,6 +96,7 @@ export class HicComponent {
 					return this[prop]
 				}
 			})
+			this.detail.render()
 		} else if (this.state.currView === 'horizontal') {
 			//this.horizonalView = new HorizontalView.main()
 		} else {

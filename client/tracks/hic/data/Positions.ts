@@ -3,18 +3,10 @@ import { Resolution } from './Resolution.ts'
 export class Positions {
 	resolution: Resolution
 	error: (f: string | string[]) => void
-	activeView: string
-	currView: { nmeth: string; resolution: number; matrixType: string }
 
-	constructor(
-		error: (f: string | string[]) => void,
-		activeView: string,
-		currView: { nmeth: string; resolution: number; matrixType: string }
-	) {
+	constructor(error: (f: string | string[]) => void) {
 		this.error = error
 		this.resolution = new Resolution(this.error)
-		this.activeView = activeView
-		this.currView = currView
 	}
 	setPosition(x: number, y: number, binpx: number, chrx: { chr: string }, chry: { chr: string }, hic: any) {
 		const initialbinnum_detail = 20
@@ -45,8 +37,8 @@ export class Positions {
 
 		const yObj = {
 			chr: chry.chr,
-			start: coordx,
-			stop: coordx + viewrangebpw
+			start: coordy,
+			stop: coordy + viewrangebpw
 		}
 
 		return [xObj, yObj]

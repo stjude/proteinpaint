@@ -1,22 +1,32 @@
+import { get } from '@sjcrh/proteinpaint-server/src/massSession'
 import { dofetch2 } from '../../../src/client'
 
 export class DetailViewDataFetcher {
 	obj = {
-		getdata: 1,
-		getBED: 1,
 		rglst: [] as { chr: string; start: number; stop: number }[]
 	}
+	errList: string[]
 
-	formatXFragArgs(enzymefile: string, chrx: { chr: string; start: number; stop: number }) {
-		this.obj['file'] = enzymefile
-		this.obj.rglst.push(chrx)
-		return this.obj
+	constructor(errList: string[]) {
+		this.errList = errList
 	}
 
-	formatYFragArgs(enzymefile: string, chry: { chr: string; start: number; stop: number }) {
-		this.obj['file'] = enzymefile
-		this.obj.rglst.push(chry)
-		return this.obj
+	isFragData(hic: any, resolution: number | null) {
+		if (resolution != null) return
+		if (!hic.enzyme) {
+			resolution = hic.bpresolution[hic.bpresolution.length - 1]
+			return
+		}
+	}
+
+	formatFragArgs(enzymefile: string, chr: { chr: string; start: number; stop: number }) {
+		const arg = {
+			getdata: 1,
+			getBED: 1,
+			file: enzymefile,
+			rglst: [chr]
+		}
+		return arg
 	}
 
 	/**
@@ -31,5 +41,11 @@ export class DetailViewDataFetcher {
 			errList.push(e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
+	}
+
+	async getXFragData(hic: any, resolution: number | null, chrx: { chr: string; start: number; stop: number }) {
+		this.isFragData(hic, resolution)
+		const reqArgs = this.formatFragArgs(hic.enzyme, chrx)
+		return await this.getBedData(reqArgs, this.errList)
 	}
 }

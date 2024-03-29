@@ -41,7 +41,6 @@ export class GridRenderer {
 
 			this.layerMap
 				.append('text')
-				// .attr('transform', 'rotate(90)')
 				.attr('font-family', Grid.font)
 				.attr('text-anchor', 'middle')
 				.attr('font-size', 12)
