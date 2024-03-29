@@ -5,6 +5,7 @@ import { divideInit } from './controls.divide'
 import { initRadioInputs } from '../dom/radio2'
 import { termsettingInit } from '#termsetting'
 import { rgb } from 'd3-color'
+import { select } from 'd3-selection'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -444,6 +445,7 @@ function setRadioInput(opts) {
 					d.getDisplayStyle ? d.getDisplayStyle(plot) : opts.labelDisplay || 'inline-block'
 				)
 				//radio.dom.labels.style('display', d => opts.labelDisplay || 'span')
+				if (opts.setRadioLabel) radio.dom.labels.html(opts.setRadioLabel)
 			}
 		}
 	}
@@ -549,6 +551,70 @@ function setCheckboxInput(opts) {
 }
 
 /*
+	Use for array of allowed values
+*/
+function setMultiCheckbox(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
+			labelTdb: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder
+				.append('td')
+				.attr('colspan', opts.colspan || '')
+				.style('padding', '5px')
+				.style('text-align', opts.align || '')
+		}
+	}
+
+	self.dom.labels = self.dom.inputTd
+		.selectAll('label')
+		.data(opts.options)
+		.enter()
+		.append('label')
+		.style('margin-right', '8px')
+		.each(function (d) {
+			const label = select(this)
+			self.dom.input = label
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('value', d => d.value)
+				.on('change', () => {
+					const checked = []
+					const value = self.dom.labels.selectAll('input').each(function (d) {
+						if (this.checked) checked.push(d.value)
+					})
+					opts.dispatch({
+						type: 'plot_edit',
+						id: opts.id,
+						config: {
+							settings: {
+								[opts.chartType]: {
+									[opts.settingsKey]: checked
+								}
+							}
+						}
+					})
+				})
+
+			label.append('span').html(d.label)
+		})
+
+	self.dom.inputs = self.dom.labels.selectAll('input')
+
+	const api = {
+		main(plot) {
+			const values = plot.settings[opts.chartType][opts.settingsKey]
+			self.dom.inputs.property('checked', d => values.includes(d.value))
+			self.dom.labels.style('display', d => d.getDisplayStyle?.(plot) || '')
+			opts.holder.style('display', opts.getDisplayStyle?.(plot) || 'table-row')
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+/*
 	this is a generalized control wrapper for termsetting pill,
 	intended to eventually replace the more specific term1, overlay, and divide components
 
@@ -623,6 +689,7 @@ export const initByInput = {
 	radio: setRadioInput,
 	dropdown: setDropdownInput,
 	checkbox: setCheckboxInput,
+	multiCheckbox: setMultiCheckbox,
 	term: setTermInput
 }
 
