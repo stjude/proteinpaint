@@ -835,7 +835,7 @@ h2 {
 .sjpp-controls-table tr:hover {
   /*font-weight: 600;*/
   text-shadow:0px 0px 0.5px black;
-  background-color: rgba(240, 236, 123, 0.5);
+background-color: rgba(239, 236, 149, 0.389);
 }
 
 .sja_edit_btn {
