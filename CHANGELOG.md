@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - fix the error from genomic alterations rendering when there are no mutations or CNV data
+- In GDC query, do not supply empty "case_filters{content[]}" that will slow down API. lollipop and oncomatrix are now faster when there's no cohort
 
 
 ## 2.49.0
