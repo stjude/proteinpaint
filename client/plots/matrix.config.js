@@ -50,11 +50,12 @@ export async function getPlotConfig(opts = {}, app) {
 				// put in settings, so that later may be overridden by a user
 				maxGenes: opts.settings?.maxGenes || 50,
 				maxSample: opts.settings?.maxSample || 1000,
-				sortPriority: undefined,
-				variantSortBy: ['ssm', 'cnv'],
 
 				sampleNameFilter: '',
 				sortSamplesBy: 'a',
+				sortPriority: undefined, // will be filled-in
+				sortByMutation: 'presence',
+				sortByCNV: false,
 				sortOptions: getSortOptions(app.vocabApi.termdbConfig, controlLabels),
 				sortSampleGrpsBy: 'name', // 'hits' | 'name' | 'sampleCount'
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],

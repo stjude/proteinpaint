@@ -5,6 +5,8 @@ import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
+import { make_radios } from '#dom/radiobutton'
+import { make_one_checkbox } from '#dom/checkbox'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 import { select } from 'd3-selection'
 
@@ -78,60 +80,72 @@ export class MatrixControls {
 					'sampleCount' in this.overrides ? this.overrides.sampleCount : this.parent.sampleOrder?.length || 0,
 				rows: [
 					{
-						label: `Sort ${l.Samples}`,
+						label: `Sort ${l.Sample} Priority`,
 						title: `Set how to sort ${l.samples}`,
-						type: 'radio',
-						chartType: 'matrix',
-						settingsKey: 'sortSamplesBy',
-						options: Object.values(s.sortOptions).sort((a, b) => a.order - b.order),
-						//labelDisplay: 'block',
-						getDisplayStyle(plot) {
-							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
-						}
-						// setRadioLabel(d) {
-						// 	if (!d.altLabels) return '&nbsp;' + d.label
-						// 	const s = parent.config.settings.matrix
-						// 	// show in label
-						// 	const showSSM = (s.showMatrixMutation != 'none' && !s.allMatrixMutationHidden) && s.variantSortBy.includes('ssm')
-						// 	const showCNV = (s.showMatrixCNV != 'none' && !s.allMatrixCNVHidden) && s.variantSortBy.includes('cnv')
-						// 	const label = showSSM && showCNV
-						// 		? d.label
-						// 		: !showSSM && !showCNV
-						// 		? d.label
-						// 		: showCNV
-						// 		? d.altLabels.mutationOnly
-						// 		: d.altLabels.cnvOnly
-
-						// 	return '&nbsp;' + label
-						// }
-					},
-					{
-						label: `Sort by values`,
-						type: 'multiCheckbox',
-						chartType: 'matrix',
-						settingsKey: 'variantSortBy',
-						options: [
-							{
-								label: 'CNV',
-								value: 'cnv',
-								getDisplayStyle(plot) {
-									const s = plot.settings.matrix
-									return s.showMatrixCNV == 'none' || s.allMatrixCNVHidden ? 'none' : ''
+						type: 'custom',
+						init(self) {
+							const ssmDiv = self.dom.inputTd.append('div')
+							ssmDiv.append('span').html('SSM')
+							const { inputs } = make_radios({
+								// holder, options, callback, styles
+								holder: ssmDiv.append('span'),
+								options: [
+									{ label: 'by consequence', value: 'consequence' },
+									{ label: 'by presence', value: 'presence', checked: true }
+								],
+								styles: {
+									display: 'inline-block'
+								},
+								callback: value => {
+									parent.app.dispatch({
+										type: 'plot_edit',
+										id: parent.id,
+										config: {
+											settings: {
+												matrix: {
+													sortByMutation: value
+												}
+											}
+										}
+									})
 								}
-							},
-							{
-								label: l.Mutation,
-								value: 'ssm',
-								getDisplayStyle(plot) {
+							})
+
+							const cnvDiv = self.dom.inputTd.append('div')
+							cnvDiv.append('span').html('CNV')
+							// holder, labeltext, callback, checked, divstyle
+							const input = make_one_checkbox({
+								holder: cnvDiv.append('span'),
+								divstyle: { display: 'inline-block' },
+								checked: false,
+								labeltext: 'sort by CNV',
+								callback: () => {
+									parent.app.dispatch({
+										type: 'plot_edit',
+										id: parent.id,
+										config: {
+											settings: {
+												matrix: {
+													sortByCNV: input.property('checked')
+												}
+											}
+										}
+									})
+								}
+							})
+
+							//self.dom.inputTd.append('div').append('span').html('By case name')
+
+							return {
+								main: plot => {
 									const s = plot.settings.matrix
-									return s.showMatrixMutation == 'none' || s.allMatrixMutationHidden ? 'none' : ''
+									// ssm
+									inputs.property('checked', d => d.value == s.sortByMutation)
+									// cnv
+									input.property('checked', s.sortByCNV)
+									cnvDiv.style('display', s.showMatrixCNV != 'none' && !s.allMatrixCNVHidden ? 'block' : 'none')
 								}
 							}
-						],
-						getDisplayStyle(plot) {
-							return plot.chartType == 'hierCluster' || plot.settings.matrix.sortSamplesBy == 'name'
-								? 'none'
-								: 'table-row'
 						}
 					},
 					{
