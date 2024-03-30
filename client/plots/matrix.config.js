@@ -1,6 +1,7 @@
 import { copyMerge } from '../rx'
 import { getSortOptions } from './matrix.sort'
 import { fillTermWrapper } from '#termsetting'
+import { mclass, proteinChangingMutations, dtsnvindel } from '#shared/common'
 
 export async function getPlotConfig(opts = {}, app) {
 	const controlLabels = {
@@ -181,6 +182,45 @@ export async function getPlotConfig(opts = {}, app) {
 	) {
 		// add the default CNV legend group value filter
 		config.legendGrpFilter.lst.push({ dt: [4] })
+	}
+
+	if (config.settings.matrix.showMatrixMutation == 'onlyPC' && !config.legendValueFilter.lst.length) {
+		// add the default synonymous legend value filters
+		const proteinChangingM = config.settings.matrix.proteinChangingMutations || proteinChangingMutations
+
+		const controlLabels = config.settings.matrix.controlLabels
+		const origin = app.vocabApi.termdbConfig.assayAvailability?.byDt?.[dtsnvindel]?.byOrigin
+
+		for (const [k, v] of Object.entries(mclass)) {
+			if (proteinChangingM.includes(k) || v.dt != dtsnvindel) continue
+			if (origin) {
+				for (const o of ['somatic', 'germline']) {
+					const filterNew = {
+						legendGrpName: controlLabels.Mutations,
+						type: 'tvs',
+						tvs: {
+							isnot: true,
+							legendFilterType: 'geneVariant_soft',
+							term: { type: 'geneVariant' },
+							values: [{ dt: dtsnvindel, origin: o, mclasslst: [k] }]
+						}
+					}
+					config.legendValueFilter.lst.push(filterNew)
+				}
+			} else {
+				const filterNew = {
+					legendGrpName: controlLabels.Mutations,
+					type: 'tvs',
+					tvs: {
+						isnot: true,
+						legendFilterType: 'geneVariant_soft',
+						term: { type: 'geneVariant' },
+						values: [{ dt: dtsnvindel, mclasslst: [k] }]
+					}
+				}
+				config.legendValueFilter.lst.push(filterNew)
+			}
+		}
 	}
 	const m = config.settings.matrix
 	// harcode these overrides for now

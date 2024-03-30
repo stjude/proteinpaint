@@ -147,11 +147,7 @@ export function applyLegendValueFilter() {
 		l => !l.tvs.legendFilterType || l.tvs.legendFilterType !== 'geneVariant_soft'
 	)
 	for (const row of self.origData.lst) {
-		const include = sample_match_termvaluesetting(
-			row,
-			self.app.vocabApi.vocab?.dslabel == 'GDC' ? self.config.legendValueFilter : onlyHardFilter,
-			geneVariant$ids
-		)
+		const include = sample_match_termvaluesetting(row, onlyHardFilter, geneVariant$ids)
 		if (include || self.chartType == 'hierCluster') {
 			// for hierCluster, should not filter out any samples by sample_match_termvaluesetting
 			// samples are filtered out by joining legendValueFilter with filter in setHierClusterData
@@ -160,18 +156,31 @@ export function applyLegendValueFilter() {
 		}
 	}
 
-	for (const valFilter of self.config.legendValueFilter.lst) {
-		// after applying each soft filter, hide the remaining targetted mclass
-		if (valFilter.tvs.legendFilterType !== 'geneVariant_soft') continue
+	const onlySoftFilter = structuredClone(self.config.legendValueFilter)
+	onlySoftFilter.lst = onlySoftFilter.lst.filter(l => l.tvs.legendFilterType == 'geneVariant_soft')
+	const validSoftFilterLst = []
+	for (const valFilter of onlySoftFilter.lst) {
+		// applying each soft filter
 		const tvsV = valFilter.tvs.values[0]
-
+		const filteredOutCats = new Set() // the classes removed by the grpFilter
 		for (const oneSampleData of data.lst) {
 			for (const annoForOneTerm of Object.values(oneSampleData)) {
-				if (annoForOneTerm.values)
-					annoForOneTerm.values = annoForOneTerm.values.filter(
-						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
-					)
+				if (annoForOneTerm.values) {
+					const newValues = []
+					for (const v of annoForOneTerm.values) {
+						if (!(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))) {
+							newValues.push(v)
+						} else {
+							filteredOutCats.add(v.class)
+						}
+					}
+					annoForOneTerm.values = newValues
+				}
 			}
+		}
+		if (filteredOutCats.size !== 0) {
+			valFilter.filteredOutCats = [...filteredOutCats]
+			validSoftFilterLst.push(valFilter)
 		}
 		for (const oneSampleData of Object.values(data.samples)) {
 			for (const annoForOneTerm of Object.values(oneSampleData)) {
@@ -182,6 +191,7 @@ export function applyLegendValueFilter() {
 			}
 		}
 	}
+	self.config.legendValueFilter.lst = [...onlyHardFilter.lst, ...validSoftFilterLst]
 	if (self.chartType !== 'hierCluster' && geneVariant$ids.length && self.app.vocabApi.vocab?.dslabel == 'GDC')
 		remove_empty_sample(data, geneVariant$ids)
 	self.data = data
