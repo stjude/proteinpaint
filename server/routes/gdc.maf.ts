@@ -97,7 +97,6 @@ async function listMafFiles(q: GdcMafRequest, ds) {
 
 	const data = {
 		filters,
-		case_filters,
 		size: maxFileNumber,
 		fields: [
 			'id',
@@ -108,6 +107,7 @@ async function listMafFiles(q: GdcMafRequest, ds) {
 			// may add diagnosis and primary site
 		].join(',')
 	}
+	if (case_filters.content.length) data.case_filters = case_filters
 
 	const response = await got.post(path.join(host.rest, 'files'), { headers, body: JSON.stringify(data) })
 

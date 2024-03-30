@@ -29,7 +29,7 @@ validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
 gdc_validate_query_geneExpression
-	gdcGetCasesWithExressionDataFromCohort
+	gdcGetCasesWithExpressionDataFromCohort
 gdc_validate_query_singleCell_samples
 gdc_validate_query_singleCell_data
 querySamples_gdcapi
@@ -128,7 +128,7 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		const t1 = new Date()
 
 		// get all cases from current filter
-		const caseLst = await gdcGetCasesWithExressionDataFromCohort(q, ds) // list of case uuid
+		const caseLst = await gdcGetCasesWithExpressionDataFromCohort(q, ds) // list of case uuid
 		if (caseLst.length == 0) return { gene2sample2value, byTermId: {} } // no cases with exp data
 
 		const t2 = new Date()
@@ -227,7 +227,7 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 }
 
 // return list of case uuid with gene exp data
-export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
+export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 	const f = { op: 'and', content: [] }
 	if (q.filter0) {
 		f.content.push(q.filter0)
@@ -704,6 +704,7 @@ export function validate_query_geneCnv2(ds) {
 				filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj)
 			)
 		}
+		if (!f.case_filters.content.length) delete f.case_filters // allow to speed up
 		return f
 	}
 }
@@ -1686,6 +1687,7 @@ function termid2size_query(termlst) {
 	}
 
 	// for all terms from termidlst will be added to single query
+	// here case_filters will always be non-empty so it will always be used
 	const query = `query termislst2total( $filters: FiltersArgument) {
 		explore {
 			cases {
@@ -1816,7 +1818,6 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 
 		const json = {
 			filters,
-			case_filters,
 			size: 100,
 			fields: [
 				'cases.submitter_id',
@@ -1827,6 +1828,9 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 				'cases.disease_type'
 			].join(',')
 		}
+
+		if (case_filters.content.length) json.case_filters = case_filters // speed
+
 		const { host, headers } = ds.getHostHeaders(q)
 		const re = await ky.post(path.join(host.rest, 'files'), { timeout: false, headers, json }).json()
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
@@ -2131,7 +2135,7 @@ const isoform2ssm_query1_getvariant = {
 		if (p.filterObj) {
 			f.case_filters.content.push(filter2GDCfilter(p.filterObj))
 		}
-		if (!f.case_filters.content.length) delete f.case_filters
+		if (!f.case_filters.content.length) delete f.case_filters // allow to speed up
 		return f
 	}
 }

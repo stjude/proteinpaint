@@ -2,7 +2,7 @@ import {
 	TermdbTopVariablyExpressedGenesRequest,
 	TermdbTopVariablyExpressedGenesResponse
 } from '#shared/types/routes/termdb.topVariablyExpressedGenes.ts'
-import { gdcGetCasesWithExressionDataFromCohort } from '../src/mds3.gdc.js'
+import { gdcGetCasesWithExpressionDataFromCohort } from '../src/mds3.gdc.js'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import got from 'got'
@@ -135,7 +135,7 @@ function gdcValidateQuery(ds: any, genome: any) {
 		if (!ds.__gdc.doneCaching) throw 'The server has not finished caching the case IDs: try again in ~2 minutes'
 
 		// based on current cohort, get list of cases with exp data, as input of next api query
-		const caseLst = await gdcGetCasesWithExressionDataFromCohort(q, ds)
+		const caseLst = await gdcGetCasesWithExpressionDataFromCohort(q, ds)
 		if (caseLst.length == 0) {
 			// there are no cases with gene exp data
 			return [] as string[]
