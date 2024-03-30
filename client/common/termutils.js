@@ -118,29 +118,6 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
 						}
 					}) && true
-			} else if (t.term.type == 'geneVariant' && t.legendFilterType == 'geneVariant_soft') {
-				// handle a matrix legend soft filter
-				const f = t.values[0] //matrix geneVariant legend filter only has one item in tvs.values
-				thistermmatch =
-					samplevalue.find(s => {
-						for (const v of s.values) {
-							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
-						}
-					}) && true
-
-				if (thistermmatch) {
-					// check if there's another type of mutation (not WT or BLANK) in the sample
-					for (const sv of samplevalue) {
-						for (const v of sv.values) {
-							if (v.class == 'WT' || v.class == 'Blank') continue
-							if (!(v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class))) {
-								thistermmatch = false
-								break
-							}
-						}
-						if (!thistermmatch) break
-					}
-				}
 			} else {
 				throw 'unknown term type'
 			}
