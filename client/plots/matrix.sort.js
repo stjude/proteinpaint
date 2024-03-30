@@ -226,17 +226,20 @@ function getSortSamplesByDt(st, self, rows, s) {
 function getSortSamplesByClass(st, self, rows, s) {
 	const { $id, sortSamples } = st
 	const m = self.config.settings.matrix
-	const sortBySSM = !m.allMatrixMutationHidden && m.variantSortBy.includes('ssm')
-	const sortByCNV = !m.allMatrixCNVHidden && m.variantSortBy.includes('cnv')
+	const sortBySSM = m.showMatrixMutation != 'none' && !m.allMatrixMutationHidden && m.variantSortBy.includes('ssm')
+	const sortByCNV = m.showMatrixCNV != 'none' && !m.allMatrixCNVHidden && m.variantSortBy.includes('cnv')
 	const order = sortSamples.order.filter(
 		sortBySSM && sortByCNV
-			? () => true
+			? () => true // TODO: handle showMatrixMutation, showMatrixCNV == 'bySelection', if self.config.legendValueFilter.lst.includes(order[*])
 			: !sortBySSM && !sortByCNV
 			? () => false
 			: !sortByCNV
-			? v => !v.startsWith('CNV_')
-			: v => v.startsWith('CNV_')
+			? v => !v.startsWith('CNV_') // TODO: handle showMatrixMutation, showMatrixCNV == 'bySelection'
+			: v => v.startsWith('CNV_') // TODO: handle showMatrixMutation, showMatrixCNV == 'bySelection'
 	)
+
+	if (!order.length && sortSamples.ignoreEmptyFilteredOrder) return () => 0
+
 	const nextRound = 'z' // this string will cause a sample to be sorted last in a tiebreaker round
 	// benchmark:
 	// - fastest by 100+ ms: using Map and not pre-sorting
@@ -278,7 +281,6 @@ function getSortSamplesByClass(st, self, rows, s) {
 
 	// not calling setSortIndex in advance based on the benchmark notes above
 	// rows.forEach(setSortIndex)
-
 	return (a, b) => {
 		if (!cls.has(a.sample)) setSortIndex(a)
 		if (!cls.has(b.sample)) setSortIndex(b)
@@ -415,7 +417,10 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 					// per Lou's comment during GDC milestone 10 meeting 6/29/2023
 					// can comment this out and instead uncomment the alternative, non-nested filter below
 					{
-						//ignoreIf: s => s.allMatrixCNVHidden
+						// this flag is needed to ignore sorting by this tiebreaker if all the ordered class
+						// are filtered out because of not showing CNV or mutation data, otherwise
+						// samples with CNV_* data will be sorted ahead of samples without CNV_* data
+						ignoreEmptyFilteredOrder: true,
 						by: 'class',
 						order: ['CNV_amp', 'CNV_loss']
 					}
