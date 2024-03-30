@@ -88,7 +88,8 @@ function getArgs(_settings = {}) {
 		matrix: {
 			sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: { by: 'sample' } }],
 			sortOptions: ms.getSortOptions(),
-			variantSortBy: [],
+			sortByMutation: 'presence',
+			sortByCNV: false,
 			..._settings
 		}
 	}
@@ -244,7 +245,8 @@ tape('sortPriority by Mutation categories, default no value sorting, that uses a
 tape('sortPriority by Mutation categories with value sorting, that uses a filter', test => {
 	const { self, settings, rows } = getArgs({
 		sortSamplesBy: 'a',
-		variantSortBy: ['cnv', 'ssm']
+		sortByMutation: 'consequence',
+		sortByCNV: true
 	})
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))

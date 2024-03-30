@@ -614,6 +614,25 @@ function setMultiCheckbox(opts) {
 	return Object.freeze(api)
 }
 
+function setCustomInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label')
+				.attr('title', opts.title),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.api = opts.init(self)
+
+	if (opts.debug) self.api.Inner = self
+	return Object.freeze(self.api)
+}
+
 /*
 	this is a generalized control wrapper for termsetting pill,
 	intended to eventually replace the more specific term1, overlay, and divide components
@@ -690,6 +709,7 @@ export const initByInput = {
 	dropdown: setDropdownInput,
 	checkbox: setCheckboxInput,
 	multiCheckbox: setMultiCheckbox,
+	custom: setCustomInput,
 	term: setTermInput
 }
 
