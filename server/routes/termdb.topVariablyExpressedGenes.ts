@@ -51,14 +51,14 @@ export function validate_query_TopVariablyExpressedGenes(ds: any, genome: any) {
 	if (q.src == 'gdcapi') {
 		gdcValidateQuery(ds, genome)
 	} else if (q.src == 'native') {
-		nativeValidateQuery(ds, genome)
+		nativeValidateQuery(ds)
 	} else {
 		throw 'unknown topVariablyExpressedGenes.src'
 	}
 	// added getter: q.getGenes()
 }
 
-function nativeValidateQuery(ds: any, genome: any) {
+function nativeValidateQuery(ds: any) {
 	const gE = ds.queries.geneExpression // a separate query required to supply data for computing top genes
 	if (!gE) throw 'topVariablyExpressedGenes query given but geneExpression missing'
 	if (gE.src != 'native') throw 'topVariablyExpressedGenes is native but geneExpression.src is not native'

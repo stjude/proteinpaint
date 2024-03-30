@@ -95,7 +95,7 @@ async function listMafFiles(q: GdcMafRequest, ds) {
 
 	const { host, headers } = ds.getHostHeaders(q)
 
-	const data = {
+	const data: any = {
 		filters,
 		size: maxFileNumber,
 		fields: [
