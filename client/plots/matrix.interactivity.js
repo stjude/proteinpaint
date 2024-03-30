@@ -2323,7 +2323,10 @@ function setLengendActions(self) {
 			// or when its a genevariant legend group name for hierCluster
 			return
 		}
-		const legendGrpHidden = self.config.legendGrpFilter.lst.find(f => f.dt?.includes(targetData.dt)) && true
+		const legendGrpHidden =
+			self.config.legendGrpFilter.lst.find(
+				f => f.dt?.includes(targetData.dt) && (!f.origin || f.origin == targetData.origin)
+			) && true
 		if (targetData.isLegendItem && legendGrpHidden) {
 			// when the legend's group is hidden
 			return
@@ -2418,7 +2421,10 @@ function setLengendActions(self) {
 		}
 
 		// when clicking a legend item
-		const legendGrpHidden = self.config.legendGrpFilter.lst.find(f => f.dt?.includes(targetData.dt)) && true
+		const legendGrpHidden =
+			self.config.legendGrpFilter.lst.find(
+				f => f.dt?.includes(targetData.dt) && (!f.origin || f.origin == targetData.origin)
+			) && true
 		if (targetData.isLegendItem && legendGrpHidden) {
 			// when the legend's group is hidden
 			return
