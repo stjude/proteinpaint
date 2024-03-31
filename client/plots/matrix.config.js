@@ -1,7 +1,7 @@
 import { copyMerge } from '../rx'
 import { getSortOptions } from './matrix.sort'
 import { fillTermWrapper } from '#termsetting'
-import { mclass, proteinChangingMutations, dtsnvindel } from '#shared/common'
+import { mclass, proteinChangingMutations, truncatingMutations, dtsnvindel } from '#shared/common'
 
 export async function getPlotConfig(opts = {}, app) {
 	const controlLabels = {
@@ -67,11 +67,8 @@ export async function getPlotConfig(opts = {}, app) {
 				showGrid: '', // false | 'pattern' | 'rect'
 				// whether to show these controls buttons
 				addMutationCNVButtons: false,
-				// used for the radio inputs in the CNV/Mutation control menus
-				showMatrixMutation: opts.chartType !== 'hierCluster' ? '' : 'all', // all | none | onlyTruncating | onlyPC | bySelection
-				showMatrixCNV: opts.chartType !== 'hierCluster' ? '' : 'all', // all | none | bySelection
-				allMatrixCNVHidden: false,
-				allMatrixMutationHidden: false,
+				truncatingMutations,
+				proteinChangingMutations,
 				gridStroke: '#fff',
 				outlineStroke: '#ccc',
 				beamStroke: '#f00',
@@ -152,6 +149,8 @@ export async function getPlotConfig(opts = {}, app) {
 
 	const overrides = app.vocabApi.termdbConfig.matrix || {}
 	copyMerge(config.settings.matrix, overrides.settings)
+	if (overrides.legendGrpFilter) config.legendGrpFilter = overrides.legendGrpFilter
+	if (overrides.legendValueFilter) config.legendGrpFilter = overrides.legendValueFilter
 
 	if (opts.name) {
 		// name should be identifier of a premade plot from the datase; load data of the premade plot and override into config{}
@@ -188,7 +187,7 @@ export async function getPlotConfig(opts = {}, app) {
 
 	if (config.settings.matrix.showMatrixMutation == 'onlyPC' && !config.legendValueFilter.lst.length) {
 		// add the default synonymous legend value filters
-		const proteinChangingM = config.settings.matrix.proteinChangingMutations || proteinChangingMutations
+		const proteinChangingM = s.matrix.proteinChangingMutations
 
 		const controlLabels = config.settings.matrix.controlLabels
 		const origin = app.vocabApi.termdbConfig.assayAvailability?.byDt?.[dtsnvindel]?.byOrigin
