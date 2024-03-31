@@ -5,7 +5,7 @@ import { setRenderers } from './matrix.renderers'
 import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
 import svgLegend from '#dom/svg.legend'
-import { mclass, dt2label, morigin } from '#shared/common'
+import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common'
 import * as matrixData from './matrix.data'
 import * as matrixLayout from './matrix.layout'
 import * as matrixSerieses from './matrix.serieses'
@@ -30,6 +30,7 @@ export class Matrix {
 
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
+		this.computed = {} // will hold settings/configuration/data that are computed or derived from other data
 		if (this.dom.header) this.dom.header.html(this.holderTitle)
 
 		this.setControls(appState)
@@ -156,6 +157,7 @@ export class Matrix {
 			delete this.clickedChildren
 
 			try {
+				this.setComputedConfig()
 				const promises = []
 				// get the data
 				if (this.setHierClusterData) promises.push(this.setHierClusterData())
@@ -242,6 +244,45 @@ export class Matrix {
 		}
 
 		this.resetInteractions()
+	}
+
+	setComputedConfig() {
+		const s = this.config.settings.matrix
+		const mclasses = Object.values(mclass)
+		// by mclass
+		const hiddenVariants = new Set()
+
+		for (const f of this.config.legendGrpFilter.lst) {
+			if (!f.dt) continue
+			mclasses
+				.filter(c => f.dt.includes(c.dt))
+				.map(c => c.key)
+				.forEach(key => hiddenVariants.add(key))
+		}
+		for (const f of this.config.legendValueFilter.lst) {
+			if (!f.legendGrpName) continue
+			f.tvs.values[0].mclasslst.forEach(key => hiddenVariants.add(key))
+		}
+		s.hiddenVariants = [...hiddenVariants]
+
+		const hiddenCNVs = new Set(s.hiddenVariants.filter(d => d.startsWith('CNV_')))
+		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size >= 2 ? 'none' : 'bySelection'
+		s.allMatrixCNVHidden = hiddenCNVs.size >= 2
+
+		const snvIndelClasses = Object.values(mclass).filter(m => m.dt === dtsnvindel)
+		const hiddenMutations = new Set(s.hiddenVariants.filter(key => snvIndelClasses.find(c => c.key === key)))
+		const PCset = new Set(s.proteinChangingMutations)
+		const TMset = new Set(s.truncatingMutations)
+		s.showMatrixMutation = !hiddenMutations.size
+			? 'all'
+			: hiddenMutations.size >= snvIndelClasses.length
+			? 'none'
+			: hiddenMutations.size === PCset.size && [...hiddenMutations].every(m => PCset.has(m))
+			? 'onlyPC'
+			: hiddenMutations.size === TMset.size && [...hiddenMutations].every(m => TMset.has(m))
+			? 'onlyTruncating'
+			: 'bySelection'
+		s.allMatrixMutationHidden = hiddenMutations.size >= snvIndelClasses.length
 	}
 
 	showNoMatchingDataMessage() {

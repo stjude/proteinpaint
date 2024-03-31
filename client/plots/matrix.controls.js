@@ -717,15 +717,10 @@ export class MatrixControls {
 			.datum({
 				label: 'Mutation',
 				updateBtn: btn => {
-					const matrixSetting = this.parent.config.settings.matrix
-					btn.style(
-						'text-decoration',
-						matrixSetting.showMatrixMutation == 'none' || matrixSetting.allMatrixMutationHidden ? 'line-through' : ''
-					)
-					btn.style(
-						'text-decoration-thickness',
-						matrixSetting.showMatrixMutation == 'none' || matrixSetting.allMatrixMutationHidden ? '2px' : ''
-					)
+					const s = this.parent.config.settings.matrix
+					btn
+						.style('text-decoration', s.allMatrixMutationHidden ? 'line-through' : '')
+						.style('text-decoration-thickness', s.allMatrixMutationHidden ? '2px' : '')
 				},
 				rows: [
 					{
@@ -763,7 +758,7 @@ export class MatrixControls {
 				label: 'CNV',
 				updateBtn: btn => {
 					const s = this.parent.config.settings.matrix
-					const notRendered = s.showMatrixCNV == 'none' || s.allMatrixCNVHidden
+					const notRendered = s.allMatrixCNVHidden
 					btn
 						.style('text-decoration', notRendered ? 'line-through' : '')
 						.style('text-decoration-thickness', notRendered ? '2px' : '')
