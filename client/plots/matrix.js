@@ -269,20 +269,22 @@ export class Matrix {
 		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size >= 2 ? 'none' : 'bySelection'
 		s.allMatrixCNVHidden = hiddenCNVs.size >= 2
 
-		const snvIndelClasses = Object.values(mclass).filter(m => m.dt === dtsnvindel)
-		const hiddenMutations = new Set(s.hiddenVariants.filter(key => snvIndelClasses.find(c => c.key === key)))
+		s.snvIndelClasses = Object.values(mclass)
+			.filter(m => m.dt === dtsnvindel)
+			.map(m => m.key)
+		const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.snvIndelClasses.find(k => k === key)))
 		const PCset = new Set(s.proteinChangingMutations)
 		const TMset = new Set(s.truncatingMutations)
 		s.showMatrixMutation = !hiddenMutations.size
 			? 'all'
-			: hiddenMutations.size >= snvIndelClasses.length
+			: hiddenMutations.size >= s.snvIndelClasses.length
 			? 'none'
 			: hiddenMutations.size === PCset.size && [...hiddenMutations].every(m => PCset.has(m))
 			? 'onlyPC'
 			: hiddenMutations.size === TMset.size && [...hiddenMutations].every(m => TMset.has(m))
 			? 'onlyTruncating'
 			: 'bySelection'
-		s.allMatrixMutationHidden = hiddenMutations.size >= snvIndelClasses.length
+		s.allMatrixMutationHidden = hiddenMutations.size >= s.snvIndelClasses.length
 	}
 
 	showNoMatchingDataMessage() {
