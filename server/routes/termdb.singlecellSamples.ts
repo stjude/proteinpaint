@@ -83,29 +83,21 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	// for now use this quick fix method to pull sample ids annotated by this term
 	// to support situation where not all samples from a dataset has sc data
-	const isSamples = ds.cohort.termdb.q.getAllValues4term(S.isSampleTerm)
-	if (isSamples.size == 0) throw 'no samples found that are identified by isSampleTerm'
-	const samples = [] as any // array of samples with sc data to be sent to client and list in table; cannot use Sample type for the use of "sampleid" temp property
-	for (const sampleid of isSamples.keys()) {
-		if (isSamples.get(sampleid) == '1')
-			samples.push({
-				sample: ds.cohort.termdb.q.id2sampleName(sampleid), // string name for display
-				sampleid // temporarily kept to assign term value to each sample
-			})
-	}
+	const samples = {}
 	if (S.sampleColumns) {
 		// has optional terms to show as table columns and annotate samples
 		for (const term of S.sampleColumns) {
 			const s2v = ds.cohort.termdb.q.getAllValues4term(term.termid) // map. k: sampleid, v: term value
-			for (const s of samples) {
-				if (s2v.has(s.sampleid)) s[term.termid] = s2v.get(s.sampleid)
+			for (const [s, v] of s2v.entries()) {
+				console.log(s)
+				if (!samples[s]) samples[s] = { sample: ds.cohort.termdb.q.id2sampleName(s) }
+				samples[s][term.termid] = v
 			}
 		}
 	}
-	for (const s of samples) delete s.sampleid
 
 	S.get = () => {
-		return { samples: samples as Sample[] }
+		return { samples: Object.values(samples) as Sample[] }
 	}
 }
 
