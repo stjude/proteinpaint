@@ -230,12 +230,14 @@ function getSortSamplesByClass(st, self, rows, s) {
 	const sortByCNV = m.showMatrixCNV != 'none' && !m.allMatrixCNVHidden && m.sortByCNV
 	const order = sortSamples.order.filter(
 		sortBySSM && sortByCNV
-			? () => true // TODO: handle showMatrixMutation, showMatrixCNV == 'bySelection', if self.config.legendValueFilter.lst.includes(order[*])
+			? v => !m.hiddenVariants.includes(v)
 			: !sortBySSM && !sortByCNV
 			? () => false
-			: !sortByCNV
-			? v => !v.startsWith('CNV_') // TODO: handle showMatrixMutation, showMatrixCNV == 'bySelection'
-			: v => v.startsWith('CNV_') // TODO: handle showMatrixMutation, showMatrixCNV == 'bySelection'
+			: sortBySSM
+			? v => s.snvIndelClasses.includes(v) && !m.hiddenVariants.includes(v)
+			: sortByCNV
+			? v => v.startsWith('CNV_') && !m.hiddenVariants.includes(v)
+			: v => !v.startsWith('CNV_')
 	)
 
 	if (!order.length && sortSamples.ignoreEmptyFilteredOrder) return () => 0
