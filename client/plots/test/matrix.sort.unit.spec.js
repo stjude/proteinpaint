@@ -90,6 +90,7 @@ function getArgs(_settings = {}) {
 			sortOptions: ms.getSortOptions(),
 			sortByMutation: 'presence',
 			sortByCNV: false,
+			hiddenVariants: [],
 			..._settings
 		}
 	}

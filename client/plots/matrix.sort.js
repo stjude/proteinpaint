@@ -234,7 +234,7 @@ function getSortSamplesByClass(st, self, rows, s) {
 			: !sortBySSM && !sortByCNV
 			? () => false
 			: sortBySSM
-			? v => s.snvIndelClasses.includes(v) && !m.hiddenVariants.includes(v)
+			? v => m.snvIndelClasses.includes(v) && !m.hiddenVariants.includes(v)
 			: sortByCNV
 			? v => v.startsWith('CNV_') && !m.hiddenVariants.includes(v)
 			: v => !v.startsWith('CNV_')
@@ -433,6 +433,13 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 				tiebreakers: [{ by: 'values' }]
 			}
 		]
+	}
+
+	// legacy support for testing, do not display in a control UI
+	sortOptions.name = {
+		label: `By ${l.sample} name, ID, or label`,
+		value: 'name',
+		order: Object.values(sortOptions).length
 	}
 
 	return sortOptions
