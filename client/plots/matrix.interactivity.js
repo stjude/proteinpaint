@@ -2,14 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import {
-	mclass,
-	dt2label,
-	truncatingMutations,
-	proteinChangingMutations,
-	mclasscnvgain,
-	mclasscnvloss
-} from '#shared/common'
+import { mclass, dt2label, dtsnvindel } from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 import { renderTable } from '../dom/table.ts'
@@ -2906,18 +2899,23 @@ function showOnlyTrunc(menuGrp, targetData, self) {
 
 		// remove the grp legend filter for the group
 		self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(1))
-		const item = targetData.items[0]
-		const filterNew = {
-			legendGrpName: targetData.name,
-			type: 'tvs',
-			tvs: {
-				isnot: true,
-				legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
-				term: { type: 'geneVariant' },
-				values: [{ dt: item.dt, origin: item.origin, mclasslst: [...self.config.settings.matrix.truncatingMutations] }]
+
+		const truncatingM = self.config.settings.matrix.truncatingMutations
+		const controlLabels = self.config.settings.matrix.controlLabels
+		for (const [k, v] of Object.entries(mclass)) {
+			if (truncatingM.includes(k) || v.dt != dtsnvindel) continue
+			const filterNew = {
+				legendGrpName: controlLabels.Mutations,
+				type: 'tvs',
+				tvs: {
+					isnot: true,
+					legendFilterType: 'geneVariant_soft',
+					term: { type: 'geneVariant' },
+					values: [{ dt: dtsnvindel, origin: targetData.origin, mclasslst: [k] }]
+				}
 			}
+			self.config.legendValueFilter.lst.push(filterNew)
 		}
-		self.config.legendValueFilter.lst.push(filterNew)
 	}
 
 	self.app.dispatch({
@@ -2942,20 +2940,23 @@ function showOnlyPC(menuGrp, targetData, self) {
 
 		// remove the grp legend filter for the group
 		self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(1))
-		const item = targetData.items[0]
-		const filterNew = {
-			legendGrpName: item.termid,
-			type: 'tvs',
-			tvs: {
-				isnot: true,
-				legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
-				term: { type: 'geneVariant' },
-				values: [
-					{ dt: item.dt, origin: item.origin, mclasslst: [...self.config.settings.matrix.proteinChangingMutations] }
-				]
+
+		const proteinChangingMutations = self.config.settings.matrix.proteinChangingMutations
+		const controlLabels = self.config.settings.matrix.controlLabels
+		for (const [k, v] of Object.entries(mclass)) {
+			if (proteinChangingMutations.includes(k) || v.dt != dtsnvindel) continue
+			const filterNew = {
+				legendGrpName: controlLabels.Mutations,
+				type: 'tvs',
+				tvs: {
+					isnot: true,
+					legendFilterType: 'geneVariant_soft',
+					term: { type: 'geneVariant' },
+					values: [{ dt: dtsnvindel, origin: targetData.origin, mclasslst: [k] }]
+				}
 			}
+			self.config.legendValueFilter.lst.push(filterNew)
 		}
-		self.config.legendValueFilter.lst.push(filterNew)
 	}
 
 	self.app.dispatch({

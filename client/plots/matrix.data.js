@@ -156,10 +156,8 @@ export function applyLegendValueFilter() {
 		}
 	}
 
-	const onlySoftFilter = structuredClone(self.config.legendValueFilter)
-	onlySoftFilter.lst = onlySoftFilter.lst.filter(l => l.tvs.legendFilterType == 'geneVariant_soft')
-	const validSoftFilterLst = []
-	for (const valFilter of onlySoftFilter.lst) {
+	for (const valFilter of self.config.legendValueFilter.lst) {
+		if (valFilter.tvs.legendFilterType !== 'geneVariant_soft') continue
 		// applying each soft filter
 		const tvsV = valFilter.tvs.values[0]
 		const filteredOutCats = new Set() // the classes removed by the grpFilter
@@ -178,10 +176,7 @@ export function applyLegendValueFilter() {
 				}
 			}
 		}
-		if (filteredOutCats.size !== 0) {
-			valFilter.filteredOutCats = [...filteredOutCats]
-			validSoftFilterLst.push(valFilter)
-		}
+		valFilter.filteredOutCats = [...filteredOutCats]
 		for (const oneSampleData of Object.values(data.samples)) {
 			for (const annoForOneTerm of Object.values(oneSampleData)) {
 				if (annoForOneTerm.values)
@@ -191,7 +186,6 @@ export function applyLegendValueFilter() {
 			}
 		}
 	}
-	self.config.legendValueFilter.lst = [...onlyHardFilter.lst, ...validSoftFilterLst]
 	if (self.chartType !== 'hierCluster' && geneVariant$ids.length && self.app.vocabApi.vocab?.dslabel == 'GDC')
 		remove_empty_sample(data, geneVariant$ids)
 	self.data = data

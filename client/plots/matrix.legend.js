@@ -14,6 +14,10 @@ export function getLegendData(legendGroups, refs, self) {
 			for (const f of this.config.legendValueFilter.lst) {
 				if (f.tvs.term.type !== 'geneVariant') continue
 				if (f.legendGrpName != $id) continue
+				if (f.tvs.legendFilterType == 'geneVariant_soft' && f.filteredOutCats.length == 0) {
+					// when the soft legend filter doesn't filter out any value, do not generate the greyed-out legend for it
+					continue
+				}
 				for (const v of f.tvs.values) {
 					for (const key of v.mclasslst) {
 						const legendk = v.origin ? v.origin + key : key
