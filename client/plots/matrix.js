@@ -260,17 +260,20 @@ export class Matrix {
 				.forEach(key => hiddenVariants.add(key))
 		}
 		for (const f of this.config.legendValueFilter.lst) {
-			if (!f.legendGrpName) continue
-			f.tvs.values[0].mclasslst.forEach(key => hiddenVariants.add(key))
+			if (!f.legendGrpName || !f.tvs?.term?.type.startsWith('gene')) continue
+			if (f.tvs.values?.[0].mclasslst) f.tvs.values[0].mclasslst.forEach(key => hiddenVariants.add(key))
+			else if (f.tvs.values) f.tvs.values.forEach(v => hiddenVariants.add(v.key))
+			else throw `unhandled tvs from legendValueFilter`
 		}
 		s.hiddenVariants = [...hiddenVariants]
 
-		const hiddenCNVs = new Set(s.hiddenVariants.filter(d => d.startsWith('CNV_')))
+		const hiddenCNVs = new Set(s.hiddenVariants.filter(key => mclass[key]?.dt === dtcnv))
+		// TODO: hiddenCNVs.size comparison should not be hardcoded against 2
 		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size >= 2 ? 'none' : 'bySelection'
 		s.allMatrixCNVHidden = hiddenCNVs.size >= 2
 
 		s.snvIndelClasses = Object.values(mclass)
-			.filter(m => m.dt === dtsnvindel)
+			.filter(m => m.dt != dtcnv && m.key !== 'Blank' && m.key != 'WT')
 			.map(m => m.key)
 		const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.snvIndelClasses.find(k => k === key)))
 		const PCset = new Set(s.proteinChangingMutations)

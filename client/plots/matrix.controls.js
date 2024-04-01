@@ -111,6 +111,8 @@ export class MatrixControls {
 								}
 							})
 
+							inputs.style('margin', '2px 0 0 2px').style('vertical-align', 'top')
+
 							const cnvDiv = self.dom.inputTd.append('div')
 							cnvDiv.append('span').html('CNV')
 							// holder, labeltext, callback, checked, divstyle
