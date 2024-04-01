@@ -150,7 +150,7 @@ export async function getPlotConfig(opts = {}, app) {
 	const overrides = app.vocabApi.termdbConfig.matrix || {}
 	copyMerge(config.settings.matrix, overrides.settings)
 	if (overrides.legendGrpFilter) config.legendGrpFilter = overrides.legendGrpFilter
-	if (overrides.legendValueFilter) config.legendGrpFilter = overrides.legendValueFilter
+	if (overrides.legendValueFilter) config.legendValueFilter = overrides.legendValueFilter
 
 	if (opts.name) {
 		// name should be identifier of a premade plot from the datase; load data of the premade plot and override into config{}
@@ -176,53 +176,6 @@ export async function getPlotConfig(opts = {}, app) {
 
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
-
-	if (
-		config.settings.matrix.cellEncoding == 'single' &&
-		!config.legendGrpFilter.lst.find(l => l.dt?.length == 1 && l.dt[0] == 4)
-	) {
-		// add the default CNV legend group value filter
-		config.legendGrpFilter.lst.push({ dt: [4] })
-	}
-
-	if (config.settings.matrix.showMatrixMutation == 'onlyPC' && !config.legendValueFilter.lst.length) {
-		// add the default synonymous legend value filters
-		const proteinChangingM = s.matrix.proteinChangingMutations
-
-		const controlLabels = config.settings.matrix.controlLabels
-		const origin = app.vocabApi.termdbConfig.assayAvailability?.byDt?.[dtsnvindel]?.byOrigin
-
-		for (const [k, v] of Object.entries(mclass)) {
-			if (proteinChangingM.includes(k) || v.dt != dtsnvindel) continue
-			if (origin) {
-				for (const o of ['somatic', 'germline']) {
-					const filterNew = {
-						legendGrpName: controlLabels.Mutations,
-						type: 'tvs',
-						tvs: {
-							isnot: true,
-							legendFilterType: 'geneVariant_soft',
-							term: { type: 'geneVariant' },
-							values: [{ dt: dtsnvindel, origin: o, mclasslst: [k] }]
-						}
-					}
-					config.legendValueFilter.lst.push(filterNew)
-				}
-			} else {
-				const filterNew = {
-					legendGrpName: controlLabels.Mutations,
-					type: 'tvs',
-					tvs: {
-						isnot: true,
-						legendFilterType: 'geneVariant_soft',
-						term: { type: 'geneVariant' },
-						values: [{ dt: dtsnvindel, mclasslst: [k] }]
-					}
-				}
-				config.legendValueFilter.lst.push(filterNew)
-			}
-		}
-	}
 	const m = config.settings.matrix
 	// harcode these overrides for now
 	m.duration = 0
