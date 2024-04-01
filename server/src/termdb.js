@@ -373,48 +373,26 @@ async function get_AllSamplesByName(q, req, res, ds) {
 
 	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
 
-	/* FIXME
-	for a dataset with only subset of samples having sc data, sample view plot should list all samples (not cells)
-	and sc view should only list samples with sc
-	still need work
-	*/
-	if (ds.queries?.singleCell?.samples?.get) {
-		/*
-		this dataset has single cell data, only return samples with sc data
-		this avoid issue of returning cells which are in sampleidmap table
+	let sampleName2Id = new Map()
 
-		!!this logic should only be used in sc-specific view on client!!
-		more fixes pending
-		*/
-		const lst = await ds.queries.singleCell.samples.get()
-		const result = {}
-		for (const s of lst.samples) {
-			result[s.sample] = ds.cohort.termdb.q.sampleName2id(s.sample)
+	if (q.filter) {
+		q.ds = ds
+		const filteredSamples = ds.cohort.termdb.hasAncestry
+			? await get_samples_ancestry(q.filter, q.ds, true)
+			: await get_samples(q.filter, q.ds, true)
+		for (const sample of filteredSamples) {
+			sampleName2Id.set(sample.name, {
+				id: sample.id,
+				name: sample.name,
+				ancestor_id: sample.ancestor_id,
+				ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
+				type: sample.type
+			})
 		}
-		res.send(result)
-		return
 	} else {
-		let sampleName2Id = new Map()
-
-		if (q.filter) {
-			q.ds = ds
-			const filteredSamples = ds.cohort.termdb.hasAncestry
-				? await get_samples_ancestry(q.filter, q.ds, true)
-				: await get_samples(q.filter, q.ds, true)
-			for (const sample of filteredSamples) {
-				sampleName2Id.set(sample.name, {
-					id: sample.id,
-					name: sample.name,
-					ancestor_id: sample.ancestor_id,
-					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
-					type: sample.type
-				})
-			}
-		} else {
-			for (const [key, value] of ds.sampleName2Id) sampleName2Id.set(key, { id: value })
-		}
-		res.send(Object.fromEntries(sampleName2Id))
+		for (const [key, value] of ds.sampleName2Id) sampleName2Id.set(key, { id: value })
 	}
+	res.send(Object.fromEntries(sampleName2Id))
 }
 
 async function get_DEanalysis(q, res, ds) {
