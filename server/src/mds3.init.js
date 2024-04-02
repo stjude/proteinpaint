@@ -57,6 +57,9 @@ validate_query_snvindel
 		mayDropMbyInfoFilter
 		addSamplesFromBcfLine
 			vcfFormat2sample
+	snvindelByRangeGetter_bcfMaf
+		mayLimitSamples
+		mayDropMbyInfoFilter
 	mayValidateSampleHeader
 validate_query_svfusion
 	svfusionByRangeGetter_file
@@ -580,6 +583,16 @@ async function validate_query_snvindel(ds, genome) {
 				delete q.byrange._tk.samples
 			}
 			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
+		} else if (q.byrange.bcfMafFile) {
+			q.byrange.bcffile = q.byrange.bcfMafFile.bcffile.startsWith(serverconfig.tpmasterdir)
+				? q.byrange.bcfMafFile.bcffile
+				: path.join(serverconfig.tpmasterdir, q.byrange.bcfMafFile.bcffile)
+			q.byrange.maffile = q.byrange.bcfMafFile.maffile.startsWith(serverconfig.tpmasterdir)
+				? q.byrange.bcfMafFile.maffile
+				: path.join(serverconfig.tpmasterdir, q.byrange.bcfMafFile.maffile)
+			q.byrange._tk = { file: q.byrange.bcffile, maffile: q.byrange.maffile }
+			q.byrange.get = await snvindelByRangeGetter_bcfMaf(ds, genome)
+			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else if (q.byrange.chr2bcffile) {
 			q.byrange._tk = { chr2files: {} } // to hold small tk obj from each chr
 			for (const chr in q.byrange.chr2bcffile) {
@@ -655,6 +668,229 @@ so that gencode-annotated stuff can show under a refseq name
 function mayAdd_refseq2ensembl(ds, genome) {
 	if (!genome.genedb.hasTable_refseq2ensembl) return
 	ds.refseq2ensembl_query = genome.genedb.db.prepare('select ensembl from refseq2ensembl where refseq=?')
+}
+
+/* generate getter as ds.queries.snvindel.byrange.get() when both bcffile(no samples) and maffile are provided
+
+Called to initiate official dataset, in sthis script 
+
+getter input:
+.rglst=[ {chr, start, stop} ] (required)
+.tid2value = { termid1:v1, termid2:v2, ...} (optional, to restrict samples)
+
+getter returns:
+array of variants with array of sample ids attached to each variant
+as .samples=[ {sample_id} ]
+*/
+export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
+	const q = ds.queries.snvindel.byrange
+	/* q{}
+	._tk={}
+        	.file= absolute path to bcf file
+		.maffile= absolute path to maf file
+		.dir=str
+		.nochr=true
+		.sampleIdx=int // index of sample column in maf file
+		.formatIdx=Map()
+		.info={}
+			<ID>: {}
+				ID: 'CSQ',
+				Number: '.',
+				Type: 'String',
+				Description: 'Cons
+		.format={} // null if no format
+			<ID>: {}
+				ID: 'dna_assay',
+				Number: '1',
+				Type: 'String',
+				Description: '...'
+		.samples=[ {name:str}, ... ]
+	.
+	*/
+	await utils.init_one_vcfMaf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
+	// q._tk{} is initiated
+	if (q._tk.format) {
+		for (const id in q._tk.format) {
+			if (id == 'GT') {
+				q._tk.format[id].isGT = true
+			}
+		}
+	}
+	if (ds.queries.snvindel.format4filters) {
+		// array of format keys; allow to be used as filters on client
+		if (!Array.isArray(ds.queries.snvindel.format4filters)) throw 'snvindel.format4filters[] is not array'
+		for (const k of ds.queries.snvindel.format4filters) {
+			if (q._tk.format[k]) q._tk.format[k].isFilter = true // allow it to work as filter on client
+		}
+		delete ds.queries.snvindel.format4filters
+	}
+	if (q._tk.info) {
+		if (q.infoFields) {
+			/* q._tk.info{} is the raw INFO fields parsed from vcf file
+			q.infoFields[] is the list of fields with special configuration
+			pass these configurations to q._tk.info{}
+			*/
+			for (const field of q.infoFields) {
+				// field = {name,key,categories}
+				if (!field.key) throw '.key missing from one of snvindel.byrange.infoFields[]'
+				if (!field.name) field.name = field.key
+				const _field = q._tk.info[field.key]
+				if (!_field) throw 'invalid key from one of snvindel.byrange.infoFields[]'
+
+				// transfer configurations from field{} to _field{}
+				_field.categories = field.categories
+				_field.name = field.name
+				_field.separator = field.separator
+			}
+			delete q.infoFields
+		}
+	}
+	// NOTE ds.queries.snvindel{} as a common place to attach info/format
+	// as a dataset not using bcf file may also require info/format
+	ds.queries.snvindel.info = q._tk.info
+	ds.queries.snvindel.format = q._tk.format
+
+	/*
+	param{}
+		.rglst[]
+		.filterObj{}
+		.addFormatValues: boolean
+			if true, formatK2v{} will be added to sample objects
+		.infoFilter{}
+		.variantFilter{}
+		.hiddenmclass = set
+		.skewerRim{}
+			{formatKey, hiddenvalues: set}
+		.formatFilter{}
+			{ <formatKey> : set of hidden values }
+	*/
+	return async param => {
+		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
+		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+		const formatFilter = getFormatFilter(param)
+
+		let bcfpath = q._tk.file
+		const bcfArgs = [
+			'query',
+			bcfpath,
+			'-r',
+			// plus 1 to stop, as rglst pos is 0-based, and bcf is 1-based
+			param.rglst
+				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + (r.stop + 1))
+				.join(','),
+			'-f',
+			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\n'
+		]
+
+		const limitSamples = await mayLimitSamples(param, q._tk.samples, ds)
+		if (limitSamples && limitSamples.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return []
+		}
+		if (param.variantFilter) {
+			add_bcf_variant_filter(param.variantFilter, bcfArgs)
+		}
+
+		const variantsNoSample = []
+
+		await utils.get_lines_bigfile({
+			isbcf: true,
+			args: bcfArgs,
+			dir: q._tk.dir,
+			callback: line => {
+				const l = line.split('\t')
+				const id = l[0],
+					chr = l[1],
+					pos = Number(l[2]),
+					refallele = l[3],
+					altalleles = l[4].split(','),
+					infoStr = l[5]
+				const m0 = { pos: pos - 1 } // temp obj, modified by compute_mclass()
+				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
+				// m0.mlst[] is set; each ele is an m{} per ALT
+
+				// make a m{} for every alt allele
+				for (const m of m0.mlst) {
+					if (param.hiddenmclass && param.hiddenmclass.has(m.class)) continue
+
+					// m should have .info{}
+					if (mayDropMbyInfoFilter(m, param)) continue // m is dropped due to info filter
+
+					/* m0.mlst.length>1 has multiple alt alleles
+					even if just one allele passes info filter, bcftools still returns the whole line
+					thus must do this manual filter
+					*/
+					if (m0.mlst.length > 1 && mayDropMbyInfoFilter_2(m, param)) continue // remove param.variantFilter?.lst
+					m.chr = (q._tk.nochr ? 'chr' : '') + chr
+					//m.pos = pos - 1 // bcf pos is 1-based, return 0-based
+					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
+
+					// acceptable variant
+					variantsNoSample.push(m)
+				}
+			}
+		})
+
+		// obtain samples for each of variant from maf file
+		let mafpath = q._tk.maffile
+		let sampleIdx = q._tk.sampleIdx
+		let formatIdx = q._tk.formatIdx
+		const mafArgs = [
+			mafpath,
+			param.rglst
+				.map(r => (r.chr.startsWith('chr') ? r.chr : 'chr' + r.chr) + ':' + r.start + '-' + (r.stop + 1))
+				.join(',')
+		]
+
+		const variantSamples = {} // { ssm_id: [ {sample_id} ]} for adding samples to the variants
+
+		await utils.get_lines_bigfile({
+			args: mafArgs,
+			dir: q._tk.dir,
+			callback: line => {
+				const l = line.split('\t')
+				const chr = l[0],
+					pos = Number(l[1]) - 1,
+					refallele = l[2],
+					altallele = l[3]
+				const ssm_id = [chr, pos, refallele, altallele].join(ssmIdFieldsSeparator)
+				if (!variantSamples.hasOwnProperty(ssm_id)) {
+					variantSamples[ssm_id] = []
+				}
+				const sample = l[sampleIdx]
+				const sampleInt = ds.sampleName2Id.get(sample)
+				if (limitSamples && !limitSamples.include(sampleInt)) {
+					return // Skip this line if sampleInt is not found in limitSamples
+				}
+
+				const sampleObj = { sample_id: sampleInt }
+				if (param.addFormatValues) {
+					const formatK2v = {} // key: FORMAT ID, value: value in this sample
+					for (const format of formatIdx.keys()) {
+						const fv = l[formatIdx.get(format)]
+						if (!fv) continue
+						if (q._tk.format[format].isGT) {
+							formatK2v.GT = fv
+						} else {
+							formatK2v[format] = fv
+						}
+					}
+					sampleObj.formatK2v = formatK2v
+				}
+				variantSamples[ssm_id].push(sampleObj)
+			}
+		})
+
+		// add samples to variants
+		const variants = []
+		for (const variant of variantsNoSample) {
+			if (variantSamples.hasOwnProperty(variant.ssm_id)) {
+				variant.samples = variantSamples[variant.ssm_id]
+				variants.push(variant)
+			}
+		}
+		return variants
+	}
 }
 
 /* generate getter as ds.queries.snvindel.byrange.get()
