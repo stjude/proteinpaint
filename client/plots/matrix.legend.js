@@ -83,6 +83,10 @@ export function getLegendData(legendGroups, refs, self) {
 				for (const v of f.tvs.values) {
 					// need to push all the dt to legend group, even when the legend item is hidden or filtered out
 					if (legend.dt && !legend.dt.includes(v.dt)) legend.dt.push(v.dt)
+					if (f.tvs.legendFilterType == 'geneVariant_soft' && f.filteredOutCats.length == 0) {
+						// when the soft legend filter doesn't filter out any value, do not generate the greyed-out legend for it
+						continue
+					}
 					for (const key of v.mclasslst) {
 						const legendk = v.origin ? v.origin + key : key
 						legend.values[legendk] = {
