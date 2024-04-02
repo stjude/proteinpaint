@@ -18,6 +18,7 @@ const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } =
 cache_index
 file_is_readable
 init_one_vcf
+init_one_vcfMaf
 validate_tabixfile
 tabix_is_nochr
 write_file
@@ -239,6 +240,77 @@ export async function init_one_vcf(tk, genome, isbcf) {
 	if (await tabix_is_nochr(filelocation, tk.dir, genome)) {
 		tk.nochr = true
 	}
+}
+
+/*
+ set "isbcf" to true when tk.file points to a bcf file and tk.maffile points to a maf file
+   samples and format information will be obtained from the header of maf file
+   obtain the index for sample column and each format field from maf file
+     ._tk = {}
+            .info{}
+            .samples[]
+            .format{}
+            .sampleIdx: int
+            .formatIdx: Map
+*/
+export async function init_one_vcfMaf(tk, genome, isbcf) {
+	let filelocation, maffilelocation, sampleIdx
+	let formatIdx = new Map()
+	if (tk.file) {
+		if (!tk.file.startsWith(serverconfig.tpmasterdir)) {
+			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+		}
+		filelocation = tk.file
+		await validate_tabixfile(tk.file)
+	} else {
+		throw 'no file given for vcf file'
+	}
+	if (!tk.maffile) throw 'no file given for maf file'
+	if (!tk.maffile.startsWith(serverconfig.tpmasterdir)) {
+		tk.maffile = path.join(serverconfig.tpmasterdir, tk.maffile)
+	}
+	maffilelocation = tk.maffile
+	await validate_tabixfile(tk.maffile)
+	const [info, format, samples, errors] = isbcf
+		? await get_header_bcf(filelocation, tk.dir)
+		: await get_header_vcf(filelocation, tk.dir)
+	if (errors) {
+		console.log(errors.join('\n'))
+		throw 'got above errors parsing vcf'
+	}
+	tk.info = info
+	const [info_maf, format_maf, samples_maf, errors_maf] = await get_header_vcf(maffilelocation, tk.dir)
+	if (errors_maf) {
+		console.log(errors_maf.join('\n'))
+		throw 'got above errors parsing vcf maf file'
+	}
+	tk.format = format_maf
+	tk.samples = samples_maf
+	if (await tabix_is_nochr(filelocation, tk.dir, genome)) {
+		tk.nochr = true
+	}
+	// obtain the index of samples and format field
+	const idxArgs = ['-H', maffilelocation]
+	await get_lines_bigfile({
+		args: idxArgs,
+		dir: tk.dir,
+		callback: line => {
+			if (line.startsWith('#chr')) {
+				const l = line.split('\t')
+				for (const [i, colName] of l.entries()) {
+					// hardcoded sample column name as 'sample'
+					if (colName == 'sample') {
+						sampleIdx = i
+					} else if (tk.format.hasOwnProperty(colName)) {
+						formatIdx.set(colName, i)
+					}
+				}
+			}
+		}
+	})
+	if (!sampleIdx) throw 'sample column missing from maf file'
+	tk.sampleIdx = sampleIdx
+	tk.formatIdx = formatIdx
 }
 
 /*
