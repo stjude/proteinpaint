@@ -3080,7 +3080,7 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 	const checkboxName = Math.random().toString()
 	const mClassDiv = classDiv
 		.selectAll(':scope>div')
-		.data(target == 'mutation' ? s.snvIndelClasses : s.CNVClasses)
+		.data(target == 'mutation' ? s.mutationClasses : s.CNVClasses)
 		.enter()
 		.append('label')
 		.style('margin', '5px')
@@ -3132,7 +3132,7 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 				f => !((f.dt.includes(1) && targetData.dt.includes(1)) || (f.dt.includes(4) && targetData.dt.includes(4)))
 			)
 
-			for (const item of target == 'mutation' ? s.snvIndelClasses : s.CNVClasses) {
+			for (const item of target == 'mutation' ? s.mutationClasses : s.CNVClasses) {
 				if (checkedItems.includes(item)) continue
 				// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
 				// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
