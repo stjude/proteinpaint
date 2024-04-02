@@ -3062,17 +3062,9 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 	const s = self.config.settings.matrix
 	if (!targetData) {
 		//there are no mutatons data
-		if (
-			s.addMutationCNVButtons &&
-			self.chartType !== 'hierCluster' &&
-			(target == 'mutation' || targetData?.dt?.includes(1))
-		) {
+		if (s.addMutationCNVButtons && self.chartType !== 'hierCluster' && target == 'mutation') {
 			s.showMatrixMutation = 'bySelection'
-		} else if (
-			s.addMutationCNVButtons &&
-			self.chartType !== 'hierCluster' &&
-			(target == 'mutation' || targetData?.dt?.includes(4))
-		) {
+		} else if (s.addMutationCNVButtons && self.chartType !== 'hierCluster' && target == 'CNV') {
 			s.showMatrixCNV = 'bySelection'
 		}
 
@@ -3088,28 +3080,36 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 	const checkboxName = Math.random().toString()
 	const mClassDiv = classDiv
 		.selectAll(':scope>div')
-		.data(targetData.items)
+		.data(target == 'mutation' ? s.snvIndelClasses : s.CNVClasses)
 		.enter()
 		.append('label')
 		.style('margin', '5px')
 		.style('margin-left', '30px')
 		.style('display', 'block')
 		.each(function (d) {
+			const mclassDisabled = self.config.legendValueFilter.lst.find(
+				f =>
+					f.tvs.legendFilterType == 'geneVariant_hard' &&
+					f.tvs.values[0].dt == mclass[d].dt &&
+					f.tvs.values[0].mclasslst.includes(d)
+			)
+			const mclassHidden = target == 'mutation' ? s.hiddenMutations.includes(d) : s.hiddenCNVs.includes(d)
+
 			const oneClassDiv = select(this).attr('class', 'sjpp_row_wrapper')
 			oneClassDiv
 				.append('input')
 				.attr('type', 'checkbox')
 				.attr('name', checkboxName)
-				.property('disabled', d.crossedOut ? true : false)
-				.property('checked', targetData.crossedOut || d.greyedOut ? false : true)
+				.property('disabled', mclassDisabled ? true : false)
+				.property('checked', mclassDisabled || mclassHidden ? false : true)
 				.style('vertical-align', 'top')
 				.style('margin-right', '3px')
 			oneClassDiv
 				.append('span')
 				.style('margin-left', '3px')
-				.html(d.text)
+				.html(mclass[d].label)
 				//.style('color', d.color)
-				.style('text-decoration', d.crossedOut ? 'line-through' : '')
+				.style('text-decoration', mclassDisabled ? 'line-through' : '')
 		})
 
 	const applyBtn = classDiv
@@ -3119,8 +3119,7 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 		.text('Apply')
 		.on('click', () => {
 			const checkedCheckboxes = mClassDiv.selectAll(`input[type='checkbox'][name='${checkboxName}']:checked`)
-			const checkedItems = checkedCheckboxes.nodes().map(c => select(c).datum().key)
-
+			const checkedItems = checkedCheckboxes.nodes().map(c => select(c).datum())
 			menuGrp.hide()
 
 			//remove the individual legend filter in the group
@@ -3133,56 +3132,22 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 				f => !((f.dt.includes(1) && targetData.dt.includes(1)) || (f.dt.includes(4) && targetData.dt.includes(4)))
 			)
 
-			for (const item of targetData.items) {
-				if (checkedItems.includes(item.key)) continue
+			for (const item of target == 'mutation' ? s.snvIndelClasses : s.CNVClasses) {
+				if (checkedItems.includes(item)) continue
 				// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
 				// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
 				// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
 				const filterNew = {
-					legendGrpName: item.termid,
+					legendGrpName: targetData.name,
 					type: 'tvs',
 					tvs: {
 						isnot: true,
 						legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
 						term: { type: 'geneVariant' },
-						values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+						values: [{ dt: mclass[item].dt, origin: targetData.origin, mclasslst: [item] }]
 					}
 				}
 				self.config.legendValueFilter.lst.push(filterNew)
-			}
-
-			if (
-				self.state.config.settings.matrix.addMutationCNVButtons &&
-				self.chartType !== 'hierCluster' &&
-				targetData.dt.includes(1)
-			) {
-				self.config.settings.matrix.showMatrixMutation = 'bySelection'
-				const cl = self.settings.matrix.controlLabels
-				if (
-					self.legendData.find(l => l.name == cl.Mutations)?.items?.length ==
-					self.config.legendValueFilter.lst.filter(l => l.legendGrpName == cl.Mutations)?.length
-				) {
-					//when all mutation items are hidden by applying legend value filter
-					self.config.settings.matrix.allMatrixMutationHidden = true
-				} else self.config.settings.matrix.allMatrixMutationHidden = false
-			} else if (
-				self.state.config.settings.matrix.addMutationCNVButtons &&
-				self.chartType !== 'hierCluster' &&
-				targetData.dt.includes(4)
-			) {
-				self.config.settings.matrix.showMatrixCNV = 'bySelection'
-				if (
-					self.legendData.find(l => l.name == 'CNV')?.items?.length ==
-					self.config.legendValueFilter.lst.filter(l => l.legendGrpName == 'CNV')?.length
-				) {
-					//when all CNV items are hidden by applying legend value filter
-					self.config.settings.matrix.allMatrixCNVHidden = true
-					if (self.config.settings.matrix.cellEncoding == 'oncoprint')
-						self.config.settings.matrix.cellEncoding = 'single'
-				} else {
-					self.config.settings.matrix.allMatrixCNVHidden = false
-					if (self.config.settings.matrix.cellEncoding !== '') self.config.settings.matrix.cellEncoding = 'oncoprint'
-				}
 			}
 
 			self.app.dispatch({
