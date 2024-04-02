@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Support survival term as outcome variable in regression analysis
+
+
 ## 2.50.0
 
 Features:
