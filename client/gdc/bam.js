@@ -10,10 +10,9 @@ import { renderTable } from '../dom/table'
 import { table2col } from '../dom/table2col'
 import { fileSize } from '#shared/fileSize'
 import { keyupEnter } from '../src/client'
+import { make_one_checkbox } from '#dom/checkbox'
 
 /*
-
-TODO rename to launchGdcBAM.js to be consistent
 
 SV_EXPAND: to be expanded to support SV review using subpanel
 
@@ -139,9 +138,10 @@ export async function bamsliceui({
 	const gdc_args = {
 		bam_files: [],
 		runFlags: {
+			// presence of a flag indicates the corresponding ui component is not finished loading yet
 			runflag_caseFileList: 1,
 			runflag_gdcInput: 1
-		} //
+		}
 	}
 
 	// fill from url for quick testing: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
@@ -308,6 +308,7 @@ export async function bamsliceui({
 			.style('padding', '2px 5px')
 
 		td.append('br') // add line break from input box
+
 		const listCaseFileHandle = td
 			.append('div')
 			.attr('class', 'sja-gdcbam-listCaseFileHandle') // for testing
@@ -335,7 +336,7 @@ export async function bamsliceui({
 			.attr('class', 'sja-gdcbam-multifiletable')
 			.style('display', 'none')
 
-		// the update() will be called in pp react wrapper, when user changes cohort from gdc ATF
+		// the update() will be called in pp react wrapper, when user changes cohort from gdc portal
 		publicApi.update = _arg => {
 			searchByGdcInputString(null, _arg?.filter0 || filter0)
 			queryCaseFileList(listCaseFileHandle, _arg?.filter0 || filter0)
@@ -565,18 +566,31 @@ export async function bamsliceui({
 		if (_filter0) body.filter0 = _filter0
 		const data = await dofetch3('gdcbam', { body }) // query same route without case_id
 		if (data.error) throw data.error
+		// data = { case2files={}, total=int, loaded=int }
 		if (typeof data.case2files != 'object') throw 'wrong return'
 
 		// "bam slicing download" app calls gdc api directly from client here and doesn't go through pp backend. thus it need the rest api host name which is determined by pp backend and diffs based on environments
 		if (!data.restapihost) throw 'data.restapihost is missing'
 		gdc_args.restapihost = data.restapihost
 
-		// data = { case2files={}, total=int, loaded=int }
 		/*
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.total} BAM files`)
 		else handle.text(`Or, browse first ${data.loaded} BAM files out of ${data.total} total`)
 		*/
-		if (data.total < data.loaded) handle.text(`Or, browse ${data.loaded} available BAM files`)
+		handle.text(`Or, Browse ${data.loaded} Available BAM Files`)
+
+		// count number of bams per assay, allow checkbox to alter true/false for each assay here
+		const assays = new Map() // k: assay, v: {count:int, checked:bool}
+		for (const c in data.case2files) {
+			for (const f of data.case2files[c]) {
+				const e = f.experimental_strategy
+				if (!assays.has(e)) {
+					assays.set(e, { count: 1, checked: true })
+				} else {
+					assays.get(e).count += 1
+				}
+			}
+		}
 
 		handle
 			.classed('sja_clbtext', true) // not to override the class name used for testing
@@ -587,50 +601,72 @@ export async function bamsliceui({
 				}
 			})
 			.on('click', event => {
-				const div = tip
-					.clear()
-					//.showunder(event.target)
-					.d.append('div')
+				tip.clear().showunder(event.target)
+				{
+					// finished summarizing assay types for bams. show checkboxes for assays
+					const row = tip.d.append('div').style('margin', '10px')
+					for (const [k, o] of assays) {
+						make_one_checkbox({
+							holder: row,
+							labeltext: `${k}, ${o.count}`,
+							divstyle: { display: 'inline', 'margin-right': '15px' },
+							checked: o.checked,
+							callback: () => {
+								o.checked = !o.checked
+								makeTable(tableDiv)
+							}
+						})
+					}
+				}
+				const tableDiv = tip.d
+					.append('div')
 					.style('margin', '10px')
 					.style('overflow-y', 'scroll')
 					.style('height', '300px')
 					.style('resize', 'vertical')
-				const table = div.append('table').style('border-spacing', '0px')
-				// header row that stays
-				const tr = table
-					.append('tr')
-					.style('position', 'sticky')
-					.style('top', '0px')
-					.style('background-color', 'white')
-					.style('color', '#aaa')
-					.style('font-size', '.7em')
-				tr.append('td').text('CASE')
-				tr.append('td').text('BAM FILES, SELECT ONE TO VIEW')
-				for (const caseName in data.case2files) {
-					const tr = table.append('tr').attr('class', 'sja_clb_gray')
-					tr.append('td').style('vertical-align', 'top').style('color', '#888').text(caseName)
-					const td2 = tr.append('td')
-					for (const f of data.case2files[caseName]) {
-						// f { sample_type, experimental_strategy, file_size, file_uuid }
-						td2
-							.append('div')
-							.attr('class', 'sja_clbtext')
-							.attr('tabindex', 0)
-							.html(`${f.sample_type}, ${f.experimental_strategy} <span style="font-size:.8em">${f.file_size}</span>`)
-							.on('click', () => {
-								tip.hide()
-								gdcid_input.property('value', f.file_uuid).node().dispatchEvent(new Event('search'))
-							})
-							.on('keyup', event => {
-								if (event.key == 'Enter') event.target.click()
-							})
-					}
-				}
-
-				table.select('.sja_clbtext')?.node()?.focus()
-
-				tip.showunder(event.target)
+				makeTable(tableDiv)
 			})
+
+		// create new table to show list of available cases and bams, based on scoped things (data, assays), allow to click a bam and feed into main ui; skip bams with assay types that are unchecked
+		function makeTable(tableDiv) {
+			tableDiv.selectAll('*').remove()
+			const table = tableDiv.append('table').style('border-spacing', '0px')
+
+			// header row that stays
+			const tr = table
+				.append('tr')
+				.style('position', 'sticky')
+				.style('top', '0px')
+				.style('background-color', 'white')
+				.style('color', '#888')
+			tr.append('td').text('CASE')
+			tr.append('td').text('BAM FILES, SELECT ONE TO VIEW')
+
+			// make tr for each case
+			for (const caseName in data.case2files) {
+				const tr = table.append('tr').attr('class', 'sja_clb_gray')
+				tr.append('td').style('vertical-align', 'top').style('color', '#888').text(caseName)
+				const td2 = tr.append('td')
+				for (const f of data.case2files[caseName]) {
+					// make a div for each file
+					// f { sample_type, experimental_strategy, file_size, file_uuid }
+					if (!assays.get(f.experimental_strategy).checked) continue // assay type of this bam is unchecked
+					td2
+						.append('div')
+						.attr('class', 'sja_clbtext')
+						.attr('tabindex', 0)
+						.html(`${f.sample_type}, ${f.experimental_strategy} <span style="font-size:.8em">${f.file_size}</span>`)
+						.on('click', () => {
+							tip.hide()
+							gdcid_input.property('value', f.file_uuid).node().dispatchEvent(new Event('search'))
+						})
+						.on('keyup', event => {
+							if (event.key == 'Enter') event.target.click()
+						})
+				}
+			}
+			table.select('.sja_clbtext')?.node()?.focus()
+		}
 	}
 
 	// this is called after a file/case is found
