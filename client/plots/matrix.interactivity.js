@@ -3150,6 +3150,18 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 				self.config.legendValueFilter.lst.push(filterNew)
 			}
 
+			if (
+				self.state.config.settings.matrix.addMutationCNVButtons &&
+				self.chartType !== 'hierCluster' &&
+				(target == 'CNV' || targetData?.dt?.includes(4))
+			) {
+				if (checkedItems.length == 0 && self.config.settings.matrix.cellEncoding == 'oncoprint') {
+					//when all CNV items are hidden by applying legend value filter
+					self.config.settings.matrix.cellEncoding = 'single'
+				} else if (checkedItems.length > 0 && self.config.settings.matrix.cellEncoding == 'single') {
+					self.config.settings.matrix.cellEncoding = 'oncoprint'
+				}
+			}
 			self.app.dispatch({
 				type: 'plot_edit',
 				id: self.id,
