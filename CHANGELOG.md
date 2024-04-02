@@ -11,6 +11,7 @@ Features:
 Fixes:
 - fix the error from genomic alterations rendering when there are no mutations or CNV data
 - In GDC query, do not supply empty "case_filters{content[]}" that will slow down API. lollipop and oncomatrix are now faster when there's no cohort
+- at GDC bam slicing UI, the table listing available cases and bam files can be filtered by assay types
 
 
 ## 2.49.0

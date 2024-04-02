@@ -1,2 +1,1 @@
-Fixes:
-- at GDC bam slicing UI, the table listing available cases and bam files can be filtered by assay types
+
