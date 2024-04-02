@@ -1993,12 +1993,11 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 			`third option should be "Do not show Somatic Mutations"`
 		)
 		test.equal(options.length, 3, `Should show three options`)
-		const rects = await detectGte({
+		const rects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 180,
+			count: 181,
 			trigger: () => {
-				console.log(2000, options)
 				options[0].dispatchEvent(
 					new MouseEvent('click', {
 						bubbles: true,
@@ -2039,10 +2038,10 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 			`fourth option should be "Show all Somatic Mutations"`
 		)
 		test.equal(options2.length, 4, `Should show four options`)
-		const rects2 = await detectGte({
+		const rects2 = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 180,
+			count: 183,
 			trigger: () => {
 				options2[1].dispatchEvent(
 					new MouseEvent('click', {
@@ -2080,7 +2079,7 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 		)
 
 		test.equal(options3.length, 4, `Should show four options`)
-		const rects3 = await detectGte({
+		const rects3 = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
 			count: 180,
@@ -2121,7 +2120,7 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 		)
 
 		test.equal(options4.length, 1, `Should show one option`)
-		const rects4 = await detectGte({
+		const rects4 = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
 			count: 240,

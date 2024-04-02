@@ -2905,7 +2905,9 @@ function showOnlyTrunc(menuGrp, targetData, self) {
 		for (const [k, v] of Object.entries(mclass)) {
 			if (truncatingM.includes(k) || v.dt != dtsnvindel) continue
 			const filterNew = {
-				legendGrpName: controlLabels.Mutations,
+				legendGrpName: targetData.origin
+					? `${targetData.origin[0].toUpperCase() + targetData.origin.slice(1)} ${controlLabels.Mutations}`
+					: controlLabels.Mutations,
 				type: 'tvs',
 				tvs: {
 					isnot: true,
@@ -2946,7 +2948,9 @@ function showOnlyPC(menuGrp, targetData, self) {
 		for (const [k, v] of Object.entries(mclass)) {
 			if (proteinChangingMutations.includes(k) || v.dt != dtsnvindel) continue
 			const filterNew = {
-				legendGrpName: controlLabels.Mutations,
+				legendGrpName: targetData.origin
+					? `${targetData.origin[0].toUpperCase() + targetData.origin.slice(1)} ${controlLabels.Mutations}`
+					: controlLabels.Mutations,
 				type: 'tvs',
 				tvs: {
 					isnot: true,
