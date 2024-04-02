@@ -272,7 +272,6 @@ export class Matrix {
 		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size == CNVClasses.length ? 'none' : 'bySelection'
 		s.allMatrixCNVHidden = hiddenCNVs.size == CNVClasses.length
 
-		console.log('what is s.allMatrixCNVHidden', s.allMatrixCNVHidden)
 		const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.mutationClasses.find(k => k === key)))
 		s.hiddenMutations = [...hiddenMutations]
 		const PCset = new Set(s.proteinChangingMutations)
