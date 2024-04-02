@@ -1,2 +1,5 @@
 Features:
 - Improve the matrix sorting options to easily toggle sorting by cnv and/or consequence
+
+Fixes:
+- Add to GDC oncoMatrix mutation/cnv buttons all available mutation/cnv classes in GDC instead of all available mutation/cnv classes in the current matrix
