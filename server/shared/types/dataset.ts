@@ -457,7 +457,7 @@ type ScatterPlotsEntry = {
 	colorColumn?: ColorColumn
 	coordsColumns?: { x: number; y: number; z?: number }
 	settings?: { [index: string]: any }
-	sampleType?: string //It allows to specify the type of the sample, and it is used in the scatter legend
+	sampleType?: string // by default the dots are called "samples" on the plot, use this to call it by diff name e.g. "cells"
 }
 
 type Scatterplots = {
