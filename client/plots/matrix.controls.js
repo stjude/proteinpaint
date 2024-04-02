@@ -26,13 +26,13 @@ export class MatrixControls {
 			this.parent.setClusteringBtn(this.opts.holder, (event, data) => this.callback(event, data))
 		this.setSamplesBtn(s)
 		this.setGenesBtn(s)
+		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster') {
+			this.setMutationBtn()
+			this.setCNVBtn()
+		}
 		this.setVariablesBtn(s)
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
-		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster') {
-			this.setCNVBtn()
-			this.setMutationBtn()
-		}
 		this.setDownloadBtn(s)
 		this.setZoomInput()
 		this.setDragToggle({
