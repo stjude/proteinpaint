@@ -11,6 +11,15 @@ function getId() {
 	return idPrefix + '_' + id++
 }
 
+const navHeaderModes = new Set([
+	'with_tabs', // default, shows tabs cohort/charts/filter etc
+	'hidden', // no header
+	'search_only', // ?
+	'hide_search', // ?
+	'only_buttons', // show only chart buttons and hide the tabs and search, to tailor header appearance for some ds
+	'with_cohortHtmlSelect' // only show cohort toggle as <select>
+])
+
 const defaultState = {
 	nav: {
 		header_mode: 'with_tabs', //Other possible modes are hidden, only_buttons, search_only, hide_search and with_cohortHtmlSelect FIXME validate
@@ -65,7 +74,8 @@ class TdbStore {
 	}
 
 	validateState() {
-		// todo
+		// nav.header_mode should always be present
+		if (!navHeaderModes.has(this.state.nav.header_mode)) throw 'invalid state.nav.header_mode'
 	}
 
 	async init() {
