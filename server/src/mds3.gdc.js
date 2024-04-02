@@ -1907,8 +1907,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		const plotUmap = { name: 'UMAP', cells: [], colorBy: 'Cluster' },
 			plotTsne = { name: 'TSNE', cells: [], colorBy: 'Cluster' },
 			plotPca = { name: 'PCA', cells: [], colorBy: 'Cluster' },
-			seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} },
-			tid2cellvalue = { [seuratClusterTerm.id]: {} } // corresponds to above term id
+			seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} }
 
 		for (let i = 1; i < lines.length; i++) {
 			const line = lines[i]
@@ -1918,7 +1917,6 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			const clusterId = l[3]
 			if (!clusterId) throw 'seuratCluster missing from a line'
 			seuratClusterTerm.values[clusterId] = { label: 'Cluster ' + clusterId }
-			tid2cellvalue[seuratClusterTerm.id][cellId] = `Cluster ${clusterId}`
 
 			const umap1 = Number(l[4]),
 				umap2 = Number(l[5]),
@@ -1940,9 +1938,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			plotPca.cells.push({ cellId, x: pc1, y: pc2, category })
 		}
 		return {
-			plots: [plotTsne, plotUmap, plotPca],
-			terms: [seuratClusterTerm],
-			tid2cellvalue
+			plots: [plotTsne, plotUmap, plotPca]
 		}
 	}
 }

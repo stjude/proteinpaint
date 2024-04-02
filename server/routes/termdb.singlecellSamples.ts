@@ -107,19 +107,9 @@ function getDataNative(D: SingleCellDataNative, ds: any) {
 		nameSet.add(plot.name)
 	}
 
-	// scoped and cached for runtime
-	const _terms = [] as any
-
-	for (const tid of D.termIds) {
-		const t = ds.cohort.termdb.q.termjsonByOneid(tid)
-		if (!t) throw 'invalid term id from queries.singleCell.data.termIds[]'
-		_terms.push(t)
-	}
 	D.get = async q => {
 		// if sample is int, may convert to string
 		try {
-			const tid2cellvalue = {}
-			for (const tid of D.termIds) tid2cellvalue[tid] = {} // k: cell id, v: cell value for this term
 			const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
 			for (const plot of D.plots) {
 				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, q.sample + plot.fileSuffix)
@@ -146,10 +136,6 @@ function getDataNative(D: SingleCellDataNative, ds: any) {
 					if (!cellId) throw 'cell id missing'
 					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
 					cells.push({ cellId, x, y, category })
-
-					for (const tid of D.termIds) {
-						tid2cellvalue[tid][cellId] = l[1]
-					}
 				}
 				plots.push({ name: plot.name, cells, colorBy: plot.colorColumn?.name, colorMap: plot.colorColumn?.colorMap })
 			}
@@ -157,7 +143,7 @@ function getDataNative(D: SingleCellDataNative, ds: any) {
 				// no data available for this sample
 				return { nodata: true }
 			}
-			return { plots, terms: _terms, tid2cellvalue }
+			return { plots }
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			return { error: e.message || e }
