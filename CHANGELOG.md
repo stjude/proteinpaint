@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.50.0
 
 Features:
 - include auth test status in server healthcheck
