@@ -359,7 +359,6 @@ export type SingleCellDataNative = {
 	src: 'native' | string
 	sameLegend: boolean
 	plots: SingleCellPlot[]
-	termIds: string[]
 	refName: string
 	get?: (q: any) => any
 }
