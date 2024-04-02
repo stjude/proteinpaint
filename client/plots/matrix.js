@@ -248,16 +248,13 @@ export class Matrix {
 
 	setComputedConfig() {
 		const s = this.config.settings.matrix
-		const mclasses = Object.values(mclass)
-		// by mclass
-		const hiddenVariants = new Set()
+		const mclasses = s.mclasses
+		const synonymousMutations = s.synonymousMutations
 
+		const hiddenVariants = new Set()
 		for (const f of this.config.legendGrpFilter.lst) {
 			if (!f.dt) continue
-			mclasses
-				.filter(c => f.dt.includes(c.dt))
-				.map(c => c.key)
-				.forEach(key => hiddenVariants.add(key))
+			mclasses.filter(m => f.dt.includes(mclass[m].dt)).forEach(key => hiddenVariants.add(key))
 		}
 		for (const f of this.config.legendValueFilter.lst) {
 			if (!f.legendGrpName || !f.tvs?.term?.type.startsWith('gene')) continue
@@ -272,12 +269,11 @@ export class Matrix {
 		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size >= 2 ? 'none' : 'bySelection'
 		s.allMatrixCNVHidden = hiddenCNVs.size >= 2
 
-		s.snvIndelClasses = Object.values(mclass)
-			.filter(m => m.dt != dtcnv && m.key !== 'Blank' && m.key != 'WT')
-			.map(m => m.key)
+		s.snvIndelClasses = mclasses.filter(m => mclass[m]?.dt === dtsnvindel)
 		const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.snvIndelClasses.find(k => k === key)))
 		const PCset = new Set(s.proteinChangingMutations)
 		const TMset = new Set(s.truncatingMutations)
+
 		s.showMatrixMutation = !hiddenMutations.size
 			? 'all'
 			: hiddenMutations.size >= s.snvIndelClasses.length

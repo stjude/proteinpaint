@@ -571,8 +571,10 @@ type MatrixSettings = {
 	sortPriority?: SortPriorityEntry[]
 	ignoreCnvValues?: boolean
 	geneVariantCountSamplesSkipMclass?: Array<string>
-	truncatingMutations?: Array<string>
-	proteinChangingMutations?: Array<string>
+	truncatingMutations?: Array<string> // all the truncating mutations exist in the dataset
+	proteinChangingMutations?: Array<string> // all the protein-changing mutations mutations exist in the dataset
+	mclasses?: Array<string> // all the mclasses exist in the dataset
+	synonymousMutations?: Array<string> // all the synonymous mutations exist in the dataset
 	showHints?: string[]
 	displayDictRowWithNoValues?: boolean
 	addMutationCNVButtons?: boolean // allow to add two buttons (CNV and mutation) to control panel for selecting mclasses displayed on oncoMatrix
