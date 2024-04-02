@@ -248,12 +248,15 @@ export class Matrix {
 
 	setComputedConfig() {
 		const s = this.config.settings.matrix
-		const mclasses = s.mclasses
+		const mutationClasses = s.mutationClasses
+		const CNVClasses = s.CNVClasses
 
 		const hiddenVariants = new Set()
 		for (const f of this.config.legendGrpFilter.lst) {
 			if (!f.dt) continue
-			mclasses.filter(m => f.dt.includes(mclass[m].dt)).forEach(key => hiddenVariants.add(key))
+			;[...mutationClasses, ...CNVClasses]
+				.filter(m => f.dt.includes(mclass[m].dt))
+				.forEach(key => hiddenVariants.add(key))
 		}
 		for (const f of this.config.legendValueFilter.lst) {
 			if (!f.legendGrpName || !f.tvs?.term?.type.startsWith('gene')) continue
@@ -263,29 +266,28 @@ export class Matrix {
 		}
 		s.hiddenVariants = [...hiddenVariants]
 
-		s.CNVClasses = mclasses.filter(m => mclass[m]?.dt === dtcnv)
 		const hiddenCNVs = new Set(s.hiddenVariants.filter(key => mclass[key]?.dt === dtcnv))
 		s.hiddenCNVs = [...hiddenCNVs]
-		// TODO: hiddenCNVs.size comparison should not be hardcoded against 2
-		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size >= 2 ? 'none' : 'bySelection'
-		s.allMatrixCNVHidden = hiddenCNVs.size >= 2
 
-		s.snvIndelClasses = mclasses.filter(m => mclass[m]?.dt === dtsnvindel)
-		const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.snvIndelClasses.find(k => k === key)))
+		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size == CNVClasses.length ? 'none' : 'bySelection'
+		s.allMatrixCNVHidden = hiddenCNVs.size == CNVClasses.length
+
+		console.log('what is s.allMatrixCNVHidden', s.allMatrixCNVHidden)
+		const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.mutationClasses.find(k => k === key)))
 		s.hiddenMutations = [...hiddenMutations]
 		const PCset = new Set(s.proteinChangingMutations)
 		const TMset = new Set(s.truncatingMutations)
 
 		s.showMatrixMutation = !hiddenMutations.size
 			? 'all'
-			: hiddenMutations.size >= s.snvIndelClasses.length
+			: hiddenMutations.size == s.mutationClasses.length
 			? 'none'
-			: hiddenMutations.size === s.snvIndelClasses.length - PCset.size && [...hiddenMutations].every(m => !PCset.has(m))
+			: hiddenMutations.size === s.mutationClasses.length - PCset.size && [...hiddenMutations].every(m => !PCset.has(m))
 			? 'onlyPC'
-			: hiddenMutations.size === s.snvIndelClasses.length - TMset.size && [...hiddenMutations].every(m => !TMset.has(m))
+			: hiddenMutations.size === s.mutationClasses.length - TMset.size && [...hiddenMutations].every(m => !TMset.has(m))
 			? 'onlyTruncating'
 			: 'bySelection'
-		s.allMatrixMutationHidden = hiddenMutations.size >= s.snvIndelClasses.length
+		s.allMatrixMutationHidden = hiddenMutations.size == s.mutationClasses.length
 	}
 
 	showNoMatchingDataMessage() {

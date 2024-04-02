@@ -573,7 +573,8 @@ type MatrixSettings = {
 	geneVariantCountSamplesSkipMclass?: Array<string>
 	truncatingMutations?: Array<string> // all the truncating mutations exist in the dataset
 	proteinChangingMutations?: Array<string> // all the protein-changing mutations mutations exist in the dataset
-	mclasses?: Array<string> // all the mclasses exist in the dataset
+	mutationClasses?: Array<string> // all the mutation classes exist in the dataset
+	CNVClasses?: Array<string> // all the CNV classes exist in the dataset
 	synonymousMutations?: Array<string> // all the synonymous mutations exist in the dataset
 	showHints?: string[]
 	displayDictRowWithNoValues?: boolean

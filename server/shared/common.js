@@ -1087,5 +1087,10 @@ export function getColors(number) {
 
 export const truncatingMutations = ['F', 'N', 'L', 'P']
 export const proteinChangingMutations = ['F', 'N', 'L', 'P', 'D', 'I', 'ProteinAltering', 'M']
-export const mclasses = Object.keys(mclass)
 export const synonymousMutations = ['S', 'Intron', 'Utr3', 'Utr5', 'noncoding', 'E']
+export const mutationClasses = Object.values(mclass)
+	.filter(m => m.dt == dtsnvindel)
+	.map(m => m.key)
+export const CNVClasses = Object.values(mclass)
+	.filter(m => m.dt == dtcnv)
+	.map(m => m.key)

@@ -234,7 +234,7 @@ function getSortSamplesByClass(st, self, rows, s) {
 			: !sortBySSM && !sortByCNV
 			? () => false
 			: sortBySSM
-			? v => m.snvIndelClasses.includes(v) && !m.hiddenVariants.includes(v)
+			? v => m.mutationClasses.includes(v) && !m.hiddenVariants.includes(v)
 			: sortByCNV
 			? v => v.startsWith('CNV_') && !m.hiddenVariants.includes(v)
 			: v => !v.startsWith('CNV_')

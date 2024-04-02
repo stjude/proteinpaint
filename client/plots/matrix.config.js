@@ -1,7 +1,13 @@
 import { copyMerge } from '../rx'
 import { getSortOptions } from './matrix.sort'
 import { fillTermWrapper } from '#termsetting'
-import { proteinChangingMutations, truncatingMutations, synonymousMutations, mclasses } from '#shared/common'
+import {
+	proteinChangingMutations,
+	truncatingMutations,
+	synonymousMutations,
+	mutationClasses,
+	CNVClasses
+} from '#shared/common'
 
 export async function getPlotConfig(opts = {}, app) {
 	const controlLabels = {
@@ -70,7 +76,8 @@ export async function getPlotConfig(opts = {}, app) {
 				truncatingMutations,
 				proteinChangingMutations,
 				synonymousMutations,
-				mclasses,
+				mutationClasses,
+				CNVClasses,
 				gridStroke: '#fff',
 				outlineStroke: '#ccc',
 				beamStroke: '#f00',
