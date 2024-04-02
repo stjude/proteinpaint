@@ -9,7 +9,7 @@ export const graphableTypes = new Set([
 	'snplst',
 	'snplocus',
 	'geneVariant',
-	'samplelst',
+	'samplelst'
 ])
 /*
 	isUsableTerm() will
@@ -151,8 +151,8 @@ export function isUsableTerm(term, _usecase, ds) {
 					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 					return uses
 				} else if (usecase.regressionType == 'cox') {
-					if (term.type == 'condition') uses.add('plot')
-					if (child_types.includes('condition')) uses.add('branch')
+					if (term.type == 'condition' || term.type == 'survival') uses.add('plot')
+					if (child_types.includes('condition') || child_types.includes('survival')) uses.add('branch')
 					return uses
 				}
 			}
