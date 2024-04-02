@@ -24,9 +24,6 @@ class profilePolar extends profilePlot {
 		}
 
 		this.arcGenerator = d3.arc().innerRadius(0)
-
-		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
-		document.addEventListener('scroll', event => this.tip.hide())
 	}
 
 	async main() {

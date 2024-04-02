@@ -93,7 +93,7 @@ class singleCellPlot {
 		this.settings = {}
 
 		await this.setControls()
-		document.addEventListener('scroll', event => this.tip.hide())
+		document.addEventListener('scroll', event => this?.tip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.tip.hide())
 	}
 

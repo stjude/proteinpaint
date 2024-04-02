@@ -13,7 +13,7 @@ function getId() {
 
 const defaultState = {
 	nav: {
-		header_mode: 'with_tabs',
+		header_mode: 'with_tabs', //Other possible modes are hidden, only_buttons, search_only, hide_search and with_cohortHtmlSelect
 		activeTab: 0
 	},
 	// will be ignored if there is no dataset termdb.selectCohort

@@ -354,7 +354,6 @@ type SingleCellPlot = {
 	fileSuffix: string
 	colorColumn: ColorColumn
 	coordsColumns: { x: number; y: number }
-	sampleType?: string
 }
 export type SingleCellDataNative = {
 	src: 'native' | string
@@ -458,6 +457,7 @@ type ScatterPlotsEntry = {
 	colorColumn?: ColorColumn
 	coordsColumns?: { x: number; y: number; z?: number }
 	settings?: { [index: string]: any }
+	sampleType?: string //It allows to specify the type of the sample, and it is used in the scatter legend
 }
 
 type Scatterplots = {

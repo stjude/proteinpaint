@@ -92,7 +92,7 @@ class Scatter {
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
 		setInteractivity(this)
 		setRenderers(this)
-		document.addEventListener('scroll', event => this.dom.tooltip.hide())
+		document.addEventListener('scroll', event => this?.dom?.tooltip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.dom.tooltip.hide())
 	}
 

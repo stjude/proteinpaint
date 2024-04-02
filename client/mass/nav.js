@@ -213,7 +213,7 @@ function setRenderers(self) {
 			titleDiv,
 			tip: new Menu({ padding: '5px' })
 		}
-
+		//header_mode only_buttons is used to show only the mass buttons and hide the tabs and the seach. It is used in the BALL-scrna dataset
 		if (appState.nav.header_mode == 'only_buttons') {
 			// should only show chart buttons
 			self.dom.tabDiv.style('display', 'none')

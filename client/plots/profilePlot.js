@@ -4,6 +4,7 @@ import { controlsInit } from './controls'
 import { fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
 import { getSampleFilter } from '../termsetting/handlers/samplelst'
+import { Menu } from '#dom/menu'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 export class profilePlot {
@@ -57,6 +58,9 @@ export class profilePlot {
 			const id = this.sampleidmap[config.site]?.id
 			if (!id) throw 'Invalid site'
 		}
+
+		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
+		document.addEventListener('scroll', event => this?.tip?.hide())
 	}
 
 	getList(tw) {
