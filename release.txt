@@ -1,1 +1,2 @@
-
+Features:
+- Support survival term as outcome variable in regression analysis
