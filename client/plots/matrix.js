@@ -249,7 +249,6 @@ export class Matrix {
 	setComputedConfig() {
 		const s = this.config.settings.matrix
 		const mclasses = s.mclasses
-		const synonymousMutations = s.synonymousMutations
 
 		const hiddenVariants = new Set()
 		for (const f of this.config.legendGrpFilter.lst) {
@@ -264,13 +263,16 @@ export class Matrix {
 		}
 		s.hiddenVariants = [...hiddenVariants]
 
+		s.CNVClasses = mclasses.filter(m => mclass[m]?.dt === dtcnv)
 		const hiddenCNVs = new Set(s.hiddenVariants.filter(key => mclass[key]?.dt === dtcnv))
+		s.hiddenCNVs = [...hiddenCNVs]
 		// TODO: hiddenCNVs.size comparison should not be hardcoded against 2
 		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size >= 2 ? 'none' : 'bySelection'
 		s.allMatrixCNVHidden = hiddenCNVs.size >= 2
 
 		s.snvIndelClasses = mclasses.filter(m => mclass[m]?.dt === dtsnvindel)
 		const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.snvIndelClasses.find(k => k === key)))
+		s.hiddenMutations = [...hiddenMutations]
 		const PCset = new Set(s.proteinChangingMutations)
 		const TMset = new Set(s.truncatingMutations)
 
@@ -278,9 +280,9 @@ export class Matrix {
 			? 'all'
 			: hiddenMutations.size >= s.snvIndelClasses.length
 			? 'none'
-			: hiddenMutations.size === PCset.size && [...hiddenMutations].every(m => PCset.has(m))
+			: hiddenMutations.size === s.snvIndelClasses.length - PCset.size && [...hiddenMutations].every(m => !PCset.has(m))
 			? 'onlyPC'
-			: hiddenMutations.size === TMset.size && [...hiddenMutations].every(m => TMset.has(m))
+			: hiddenMutations.size === s.snvIndelClasses.length - TMset.size && [...hiddenMutations].every(m => !TMset.has(m))
 			? 'onlyTruncating'
 			: 'bySelection'
 		s.allMatrixMutationHidden = hiddenMutations.size >= s.snvIndelClasses.length
