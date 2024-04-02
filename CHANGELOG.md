@@ -7,11 +7,13 @@ All notable changes to this project will be documented in this file.
 Features:
 - include auth test status in server healthcheck
 - Hide synonymous mutations by default for GDC oncoMatrix
+- Improve the matrix sorting options to easily toggle sorting by cnv and/or consequence
 
 Fixes:
 - fix the error from genomic alterations rendering when there are no mutations or CNV data
 - In GDC query, do not supply empty "case_filters{content[]}" that will slow down API. lollipop and oncomatrix are now faster when there's no cohort
 - at GDC bam slicing UI, the table listing available cases and bam files can be filtered by assay types
+- Add to GDC oncoMatrix mutation/cnv buttons all available mutation/cnv classes in GDC instead of all available mutation/cnv classes in the current matrix
 
 
 ## 2.49.0
