@@ -1,7 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
-import { Menu } from '#dom/menu'
 import { renderTable } from '../dom/table'
 import { profilePlot } from './profilePlot.js'
 import { loadFilterTerms } from './profilePlot.js'
@@ -19,8 +18,6 @@ class profileRadarFacility extends profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 
 		this.lineGenerator = d3.line()
-		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
-		document.addEventListener('scroll', event => this.tip.hide())
 	}
 
 	async main() {
