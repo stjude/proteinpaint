@@ -89,7 +89,6 @@ async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 		for (const term of S.sampleColumns) {
 			const s2v = ds.cohort.termdb.q.getAllValues4term(term.termid) // map. k: sampleid, v: term value
 			for (const [s, v] of s2v.entries()) {
-				console.log(s)
 				if (!samples[s]) samples[s] = { sample: ds.cohort.termdb.q.id2sampleName(s) }
 				samples[s][term.termid] = v
 			}
