@@ -5,6 +5,7 @@ import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { isUsableTerm, nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { keyupEnter } from '#src/client'
+import { TermTypes } from '../shared/common.js'
 
 /*
 steps:
@@ -42,6 +43,7 @@ class TermSearch {
 	}
 
 	reactsTo(action) {
+		if (action.type == 'set_term_type') return true
 		if (action.type == 'app_refresh') return true
 		const prefix = action.type.split('_')[0]
 		return ['search', 'cohort', 'submenu'].includes(prefix)
@@ -54,29 +56,35 @@ class TermSearch {
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''
 					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(','),
-			allowedTermTypes: appState.termdbConfig.allowedTermTypes || [],
+			allowedTermTypes: appState.termdbConfig?.allowedTermTypes || [],
 			expandedTermIds: appState.tree.expandedTermIds,
 			selectedTerms: appState.selectedTerms,
 			usecase: appState.tree.usecase,
 			search: appState.search,
-			isGeneSetTermdb: appState.termdbConfig.isGeneSetTermdb
+			isGeneSetTermdb: appState.termdbConfig.isGeneSetTermdb,
+			termType: appState.termType
 		}
 	}
 
 	async main() {
 		// show/hide search input from the tree
+		const termType = this.state.termType
+		if (termType == TermTypes.SNP_LIST || termType == TermTypes.SNP_LOCUS || termType == TermTypes.MUTATION_SIGNATURE) {
+			this.dom.holder.style('display', 'none') //These views will have their own UI
+			return
+		}
 		this.dom.holder.style('display', this.state.isVisible ? 'block' : 'none')
 		this.renderSelectedNonDictTerms()
 	}
 
 	// targetType optional, see vocab.findTerm()
-	async doSearch(str, targetType) {
+	async doSearch(str) {
 		if (!str || str.length < 3) {
 			this.clear()
 			this.bus.emit('postSearch', [])
 			return
 		}
-		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.usecase, targetType)
+		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.usecase, this.state.termType)
 		this.currData = data
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
@@ -100,7 +108,7 @@ function setRenderers(self) {
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
-			.attr('placeholder', 'Search' + self.getPrompt(state))
+			.attr('placeholder', 'Search term')
 			.style('width', '220px')
 			.style('margin', '10px')
 			.style('display', 'inline-block')
@@ -334,8 +342,7 @@ function setInteractivity(self) {
 			return
 		}
 		if (!keyupEnter(event)) return // not pressing enter
-		if (!self.app.vocabApi.termdbConfig?.queries?.snvindel?.allowSNPs) return // snp search not enabled on this ds
-		self.onInput(event, 'snp') // targetType=snp
+		self.onInput(event)
 	}
 
 	self.onInput = async (event, targetType) => {

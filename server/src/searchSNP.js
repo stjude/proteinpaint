@@ -14,6 +14,9 @@
 .lst[ str ]
 	used for byName
 */
+
+import { query_bigbed_by_coord } from './utils.js'
+
 export async function searchSNP(q, genome) {
 	if (!genome) throw 'invalid genome'
 	if (!genome.snp) throw 'snp is not configured for this genome'
@@ -34,7 +37,7 @@ export async function searchSNP(q, genome) {
 				// guard against big range and avoid retrieving snps from whole chromosome that will overwhelm server
 				throw 'range too big'
 			}
-			const snps = await utils.query_bigbed_by_coord(genome.snp.bigbedfile, q.chr, r.start, r.stop)
+			const snps = await query_bigbed_by_coord(genome.snp.bigbedfile, q.chr, r.start, r.stop)
 			for (const snp of snps) {
 				const hit = snp2hit(snp)
 				if (q.alleleLst) {

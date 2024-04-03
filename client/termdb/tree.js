@@ -3,6 +3,7 @@ import { select, selectAll } from 'd3-selection'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
+import { TermTypes } from '../shared/common.js'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -85,6 +86,7 @@ class TdbTree {
 		if (action.type.startsWith('info_')) return true
 		if (action.type.startsWith('submenu_')) return true
 		if (action.type == 'app_refresh') return true
+		if (action.type == 'set_term_type') return true
 	}
 
 	getState(appState) {
@@ -95,7 +97,8 @@ class TdbTree {
 			expandedTermIds: appState.tree.expandedTermIds,
 			selectedTerms: appState.selectedTerms,
 			termfilter: { filter },
-			usecase: appState.tree.usecase
+			usecase: appState.tree.usecase,
+			termType: appState.termType
 		}
 
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
@@ -112,6 +115,10 @@ class TdbTree {
 	}
 
 	async main() {
+		if (this.state.termType != TermTypes.DICTIONARY_VARIABLES) {
+			this.dom.holder.style('display', 'none')
+			return
+		}
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
 			return

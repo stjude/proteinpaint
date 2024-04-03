@@ -558,6 +558,7 @@ function setInteractivity(self) {
 			state: {
 				activeCohort: self.activeCohort,
 				tree: {
+					target: 'overlay',
 					usecase: self.usecase
 				}
 			},
