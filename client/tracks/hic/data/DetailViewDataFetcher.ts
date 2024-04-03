@@ -1,5 +1,5 @@
 import { get } from '@sjcrh/proteinpaint-server/src/massSession'
-import { dofetch2 } from '../../../src/client'
+import { dofetch, dofetch2 } from '../../../src/client'
 
 export class DetailViewDataFetcher {
 	obj = {
@@ -34,11 +34,11 @@ export class DetailViewDataFetcher {
 	 * @param errList
 	 * @returns
 	 */
-	async getBedData(arg: any, errList: any) {
+	async getBedData(arg: any) {
 		try {
 			return await dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
 		} catch (e: any) {
-			errList.push(e.message || e)
+			this.errList.push(e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
 	}
@@ -46,6 +46,55 @@ export class DetailViewDataFetcher {
 	async getXFragData(hic: any, resolution: number | null, chrx: { chr: string; start: number; stop: number }) {
 		this.isFragData(hic, resolution)
 		const reqArgs = this.formatFragArgs(hic.enzyme, chrx)
-		return await this.getBedData(reqArgs, this.errList)
+		return await this.getBedData(reqArgs)
+	}
+
+	/**
+	 * Separate request from data fetch
+	 * Returns the additional fragment data
+	 * @param fragCoords
+	 */
+	async fetchFragData(
+		hic: any,
+		detailView: any,
+		resolution: number,
+		x: { chr: string; start: number; stop: number },
+		y: { chr: string; start: number; stop: number },
+		fragCoords?: { x: { start: number; stop: number }; y: { start: number; stop: number } }
+	) {
+		const fragStrawArgs = {
+			matrixType: detailView.matrixType,
+			file: hic.file,
+			url: hic.url,
+			pos1: this.determinePosition(hic, x, fragCoords?.x),
+			pos2: this.determinePosition(hic, y, fragCoords?.y),
+			nmeth: detailView.nmeth,
+			resolution: resolution
+		}
+
+		if (fragCoords) fragStrawArgs['isfrag'] = true
+
+		try {
+			const data = dofetch('hicdata?', {
+				method: 'POST',
+				body: JSON.stringify(fragStrawArgs)
+			})
+			console.log(data)
+		} catch (e: any) {
+			this.errList.push(e.message || e)
+			if (e.stack) console.log(e.stack)
+		}
+	}
+
+	determinePosition(
+		hic: any,
+		chr: { chr: string; start: number; stop: number },
+		fragCoord?: { start: number; stop: number }
+	) {
+		if (fragCoord) {
+			return `${hic.nochr ? chr.chr.replace('chr', '') : chr.chr}:${fragCoord.start}:${fragCoord.stop}`
+		} else {
+			return `${hic.nochr ? chr.chr.replace('chr', '') : chr.chr}:${chr.start}:${chr.stop}`
+		}
 	}
 }

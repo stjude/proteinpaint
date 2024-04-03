@@ -22,7 +22,6 @@ export class ChrPairView {
 	chrxlen: number
 	chrylen: number
 	maxchrlen: number
-	// canvas: Selection<HTMLCanvasElement, any, any, any>
 	canvas: any
 	ctx: any
 

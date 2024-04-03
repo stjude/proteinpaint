@@ -11,7 +11,7 @@ export class DataFetcher {
 		this.errList = errList || []
 	}
 
-	async getData(obj) {
+	async getData(obj: any) {
 		if (!obj?.matrixType) obj.matrixType = 'observed'
 		const arg = {
 			matrixType: obj.matrixType,

@@ -640,8 +640,8 @@ class Hicstat {
 			await this.init_detailView(hic, chrx, chry, x, y)
 		})
 
-		this.dom.infoBarDiv.colorScaleDiv.style('display', 'none')
-		this.dom.infoBarDiv.colorScaleLabel.style('display', 'none')
+		// this.dom.infoBarDiv.colorScaleDiv.style('display', 'none')
+		// this.dom.infoBarDiv.colorScaleLabel.style('display', 'none')
 	}
 }
 
@@ -798,7 +798,7 @@ async function getBedData(arg: any, self: any) {
 	}
 }
 
-export function getdata_detail(hic: any, self: any) {
+function getdata_detail(hic: any, self: any) {
 	/*
 	x/y view range and resolution have all been set
 	request hic data and paint canvas
@@ -819,7 +819,6 @@ export function getdata_detail(hic: any, self: any) {
 
 	const par: HicstrawArgs = {
 		matrixType: self.detailview.matrixType,
-		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,
 		pos1:

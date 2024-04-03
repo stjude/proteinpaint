@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { MainPlotDiv } from '../../types/hic.ts'
+import { HicstrawDom, MainPlotDiv } from '../../types/hic.ts'
 import { ChrPairView } from './chrpair/ChrPairView.ts'
 // import { HorizontalView } from './horizontal/HorizontalView.ts'
 import { DetailView } from './detail/DetailView.ts'
@@ -8,11 +8,12 @@ import { controlPanelInit } from './controls/ControlPanel.ts'
 import { InfoBar } from './dom/InfoBar.ts'
 import { DataMapper } from './data/DataMapper.ts'
 import { GenomeDataFetcher } from './data/GenomeDataFetcher.ts'
+import { DetailViewDataMapper } from './data/DetailViewDataMapper.ts'
 import { DataFetcher } from './data/DataFetcher.ts'
 import { Resolution } from './data/Resolution.ts'
 
 export class HicComponent {
-	dom: any
+	dom: HicstrawDom
 	plotDiv: MainPlotDiv
 	type: 'view'
 	hic: any
@@ -70,7 +71,7 @@ export class HicComponent {
 				hic: this.hic,
 				app: this.app,
 				data: this.data,
-				parent: prop => {
+				parent: (prop: any) => {
 					return this[prop]
 				}
 			})
@@ -81,7 +82,7 @@ export class HicComponent {
 				hic: this.hic,
 				app: this.app,
 				items: this.data,
-				parent: prop => {
+				parent: (prop: any) => {
 					return this[prop]
 				}
 			})
@@ -92,7 +93,7 @@ export class HicComponent {
 				hic: this.hic,
 				app: this.app,
 				items: this.data,
-				parent: prop => {
+				parent: (prop: any) => {
 					return this[prop]
 				}
 			})
@@ -109,6 +110,8 @@ export class HicComponent {
 		if (this.state.currView == 'genome') {
 			const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
 			this.data = await genomeFetcher.getData(obj)
+		} else if (this.state.currView == 'detail') {
+			const detailFetcher = new DetailViewDataMapper(this.hic, this.errList)
 		} else {
 			if (!this.state?.x?.chr || !this.state?.y?.chr) {
 				this.errList.push(`No positions provided for ${this.activeView} view.`)
@@ -132,7 +135,6 @@ export class HicComponent {
 	setResolution(appState) {
 		const state = this.app.getState(appState)
 		this.calResolution = this.resolution.getResolution(state, this.hic) as number
-
 		return this.calResolution
 	}
 

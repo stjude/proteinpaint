@@ -80,14 +80,7 @@ export type HicstrawDom = {
 		zoomOut: Elem
 	}
 	/** Information display for the user */
-	infoBarDiv: {
-		/** Text to be hidden in horizontal view */
-		colorScaleLabel: Elem
-		/** Color scale container. Hidden in horizontal view */
-		colorScaleDiv: Div
-		/** Text display of resolution */
-		resolution: Elem
-	}
+	infoBarDiv: Div
 	/** Holds the cloak when the view is loading. */
 	loadingDiv: Div
 	/** Holder for the plot and axes */
