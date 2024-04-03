@@ -7,5 +7,9 @@ export class DetailBlock {
 
 	constructor(blockwidth) {
 		this.width = blockwidth
+		this.leftheadw = 20
+		this.rightheadw = 40
+		this.lpad = 1
+		this.rpad = 1
 	}
 }

@@ -24,9 +24,12 @@ export class DetailViewDataMapper {
 		return this.resolution
 	}
 
-	// async getData() {
-	// 	try {
-	// 		const xFragData = await this.dataFetcher.getXFragData(this.hic, this.resolution, this.hic.x)
-	// 	} catch (e: any) {}
-	// }
+	async getFragData() {
+		try {
+			const xFragData = await this.dataFetcher.getXFragData(this.hic, this.resolution, this.hic.x)
+		} catch (e: any) {
+			this.errList.push(e.message || e)
+			if (e.stack) console.log(e.stack)
+		}
+	}
 }

@@ -3,6 +3,7 @@ import { Resolution } from '../data/Resolution.ts'
 import { ColorizeElement } from '../dom/ColorizeElement.ts'
 import { DetailBlock } from './DetailBlock.ts'
 import { select, Selection } from 'd3-selection'
+import { DetailViewDataMapper } from '../data/DetailViewDataMapper.ts'
 
 export class DetailView {
 	app: any
@@ -14,6 +15,7 @@ export class DetailView {
 	colorizeElement: ColorizeElement
 	viewRangeBpw: number | undefined
 	calResolution: number | null = null
+	dataMapper: DetailViewDataMapper
 
 	xBlock: any
 	yBlock: any
@@ -38,6 +40,7 @@ export class DetailView {
 			(this.parent('state') as any).x,
 			(this.parent('state') as any).y
 		)
+		this.dataMapper = new DetailViewDataMapper(this.hic, opts.error)
 	}
 
 	setDefaultBinPx() {

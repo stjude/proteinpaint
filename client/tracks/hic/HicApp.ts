@@ -87,13 +87,12 @@ class HicApp {
 	determineView() {
 		//TODO figure out view based on opts
 		//Will be useful when runpp() for chrPair and detailed view is implemented
-		if (!this.hic.state.currView) this.hic.state.currView = 'genome'
-		// if (!this.hic.state.currView) {
-		// 	this.hic.state.currView = 'chrpair'
-		// 	this.hic.state.x = { chr: 'chr1', start: 0, stop: 1000000 }
-		// 	this.hic.state.y = { chr: 'chr2', start: 0, stop: 1000000 }
-		// }
-		else {
+		// if (!this.hic.state.currView) this.hic.state.currView = 'genome'
+		if (!this.hic.state.currView) {
+			this.hic.state.currView = 'detail'
+			this.hic.state.x = { chr: 'chr1', start: 0, stop: 1000000 }
+			this.hic.state.y = { chr: 'chr2', start: 0, stop: 1000000 }
+		} else {
 			if (!this.views.some(v => v === this.hic.state.currView)) this.error(`Unknown view: ${this.hic.state.currView}`)
 			else return this.hic.state.currView
 		}
