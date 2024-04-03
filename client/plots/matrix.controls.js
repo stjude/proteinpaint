@@ -1,12 +1,11 @@
 import { initByInput } from './controls.config'
 import { to_svg } from '../src/client'
+import { getSorterUi } from './matrix.sorterUi'
 import { fillTermWrapper, get$id } from '#termsetting'
 import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
-import { make_radios } from '#dom/radiobutton'
-import { make_one_checkbox } from '#dom/checkbox'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 import { select } from 'd3-selection'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
@@ -80,77 +79,7 @@ export class MatrixControls {
 				getCount: () =>
 					'sampleCount' in this.overrides ? this.overrides.sampleCount : this.parent.sampleOrder?.length || 0,
 				rows: [
-					{
-						label: `Sort ${l.Sample} Priority`,
-						title: `Set how to sort ${l.samples}`,
-						type: 'custom',
-						init(self) {
-							const ssmDiv = self.dom.inputTd.append('div')
-							ssmDiv.append('span').html('SSM')
-							const { inputs } = make_radios({
-								// holder, options, callback, styles
-								holder: ssmDiv.append('span'),
-								options: [
-									{ label: 'by consequence', value: 'consequence' },
-									{ label: 'by presence', value: 'presence', checked: true }
-								],
-								styles: {
-									display: 'inline-block'
-								},
-								callback: value => {
-									parent.app.dispatch({
-										type: 'plot_edit',
-										id: parent.id,
-										config: {
-											settings: {
-												matrix: {
-													sortByMutation: value
-												}
-											}
-										}
-									})
-								}
-							})
-
-							inputs.style('margin', '2px 0 0 2px').style('vertical-align', 'top')
-
-							const cnvDiv = self.dom.inputTd.append('div')
-							cnvDiv.append('span').html('CNV')
-							// holder, labeltext, callback, checked, divstyle
-							const input = make_one_checkbox({
-								holder: cnvDiv.append('span'),
-								divstyle: { display: 'inline-block' },
-								checked: false,
-								labeltext: 'sort by CNV',
-								callback: () => {
-									parent.app.dispatch({
-										type: 'plot_edit',
-										id: parent.id,
-										config: {
-											settings: {
-												matrix: {
-													sortByCNV: input.property('checked')
-												}
-											}
-										}
-									})
-								}
-							})
-
-							//self.dom.inputTd.append('div').append('span').html('By case name')
-
-							return {
-								main: plot => {
-									const s = plot.settings.matrix
-									// ssm
-									inputs.property('checked', d => d.value == s.sortByMutation)
-									// cnv
-									input.property('checked', s.sortByCNV)
-									cnvDiv.style('display', s.showMatrixCNV != 'none' && !s.allMatrixCNVHidden ? 'block' : 'none')
-								}
-							}
-						}
-					},
+					getSorterUi(this, s),
 					{
 						label: `Maximum # ${l.Samples}`,
 						title: `Limit the number of displayed ${l.samples}`,
