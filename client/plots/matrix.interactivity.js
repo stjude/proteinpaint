@@ -2391,12 +2391,19 @@ function setLengendActions(self) {
 							showOnlyPC(menuGrp, targetData, self)
 						})
 				}
+				const onlyGeneGroupShown =
+					self.legendData.filter(l => l.dt && !l.crossedOut && l.items.find(i => !i.greyedOut && !i.crossedOut))
+						.length <= 1
 				div
 					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
+					.attr(
+						'class',
+						onlyGeneGroupShown ? 'sja_menuoption_not_interactive sja_sharp_border' : 'sja_menuoption sja_sharp_border'
+					)
 					.text(`Do not show ${targetData.name}`)
+					.style('opacity', onlyGeneGroupShown ? '0.5' : '1')
 					.on('click', () => {
-						showNone(menuGrp, targetData, self)
+						if (!onlyGeneGroupShown) showNone(menuGrp, targetData, self)
 					})
 			}
 			// when the legend group is hidden or when a legend filter belongs to the legend group exist in legendValueFilter, show the "show all" option
