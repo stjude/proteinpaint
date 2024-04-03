@@ -2,6 +2,7 @@ import { getAppInit, multiInit } from '#rx'
 import { storeInit } from './store'
 import { vocabInit } from './vocabulary'
 import { treeInit } from './tree'
+import { TermTypeSearchInit } from './TermTypeSearch'
 import { submenuInit } from './submenu'
 import { searchInit } from './search'
 import { select } from 'd3-selection'
@@ -38,14 +39,18 @@ class TdbApp {
 			.on('click', () => this.opts.tree?.submit_lst(this.state.selectedTerms))
 
 		const topbar = opts.holder.append('div')
+		const termTypeSearchDiv = topbar.append('div').style('display', 'inline-block')
+		const treeDiv = topbar.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+
 		this.dom = {
 			holder: opts.holder,
-			treeDiv: opts.holder.append('div'),
+			termTypeSearchDiv,
+			searchDiv: treeDiv.append('div'),
+			treeDiv: treeDiv.append('div'),
 			customTermDiv: opts.holder.append('div').style('margin', '10px'),
 			submitDiv,
 			submitBtn,
 			topbar,
-			searchDiv: topbar.append('div').style('display', 'inline-block'),
 			filterDiv: topbar.append('div').style('display', 'none'),
 			errdiv: opts.holder.append('div'),
 			tip: new Menu({ padding: '5px' })
@@ -171,6 +176,10 @@ class TdbApp {
 					app: this.api,
 					holder: this.dom.searchDiv,
 					isVisible: header_mode !== 'hide_search'
+				}),
+				termType: TermTypeSearchInit({
+					app: this.api,
+					holder: this.dom.termTypeSearchDiv
 				}),
 				tree: treeInit({
 					app: this.api,

@@ -1,7 +1,6 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from '#filter/filter'
-import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '../dom/table.ts'
 import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'

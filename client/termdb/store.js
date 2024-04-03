@@ -3,6 +3,7 @@ import { root_ID } from './tree'
 import { dofetch3 } from '../src/client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase'
+import { TermTypes } from '../shared/common.js'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
@@ -29,7 +30,8 @@ const defaultState = {
 			join: '',
 			lst: []
 		}
-	}
+	},
+	termType: TermTypes.DICTIONARY_VARIABLES
 }
 
 // one store for the whole tdb app
@@ -217,6 +219,10 @@ TdbStore.prototype.actions = {
 
 			this.state.tree.expandedTermIds = expandedTermIds
 		}
+	},
+
+	set_term_type({ value }) {
+		this.state.termType = value
 	}
 }
 

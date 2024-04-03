@@ -1094,3 +1094,19 @@ export const mutationClasses = Object.values(mclass)
 export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
+
+export const TermTypes = {
+	DICTIONARY_VARIABLES: 'Dictionary Variables',
+	MUTATION_CNV_FUSION: 'Mutation/CNV/Fusion',
+	VARIANT_GENOTYPE: 'Variant Genotype',
+	DNA_METHYLATION: 'DNA Methylation',
+	GENE_DEPENDENCY: 'Gene Dependency',
+	GENE_EXPRESSION: 'Gene Expression',
+	PROTEIN_EXPRESSION: 'Protein Expression',
+	SPLICE_JUNCTION: 'Splice Junction',
+	METABOLITE: 'Metabolite',
+	GSEA: 'GSEA',
+	MUTATION_SIGNATURE: 'Mutation Signature',
+	SNP_LIST: 'SNP List',
+	SNP_LOCUS: 'SNP Locus'
+}

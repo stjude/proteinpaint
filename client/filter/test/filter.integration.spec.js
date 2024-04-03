@@ -1816,7 +1816,8 @@ tape('filterPromptInit()', async test => {
 
 	//Test all the relevant dom elements are present
 	test.equal(filter.dom.treeTip.dnode.style.display, 'block', `Should display variable selection menu`)
-	const backBtn = await detectOne({ elem: filter.dom.treeTip.dnode, selector: 'span' })
+	const backBtn = await detectOne({ elem: filter.dom.treeTip.dnode, selector: 'div> div> span' })
+	console.log(backBtn)
 	test.ok(backBtn.innerText.includes('Back to variable selection'), `Should display back button`)
 	const inputs = await detectGte({ elem: filter.dom.treeTip.dnode, selector: 'input', count: 3 })
 	test.ok(
