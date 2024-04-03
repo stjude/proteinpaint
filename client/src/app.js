@@ -265,6 +265,9 @@ function setHostUrl(arg, app) {
 		}
 	}
 
+	// strip trailing slash
+	if (app.hostURL.endsWith('/')) app.hostURL = app.hostURL.slice(0, -1)
+
 	// store fetch parameters
 	sessionStorage.setItem('hostURL', app.hostURL)
 }
