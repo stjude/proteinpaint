@@ -129,7 +129,7 @@ export async function get_regression(q, ds) {
 			snplocusPostprocess(q, sampledata, Rinput, result)
 		])
 
-		console.log('benchmark:', benchmark)
+		//console.log('benchmark:', benchmark)
 
 		return result
 	} catch (e) {
