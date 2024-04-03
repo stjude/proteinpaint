@@ -1,1 +1,2 @@
-
+Fixes:
+- Oncomatrix do not allow to hide all the alteration groups
