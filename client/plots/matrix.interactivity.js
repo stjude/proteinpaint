@@ -3111,6 +3111,10 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 				.property('checked', mclassDisabled || mclassHidden ? false : true)
 				.style('vertical-align', 'top')
 				.style('margin-right', '3px')
+				.on('change', function () {
+					const anyChecked = mClassDiv.selectAll(`input[type='checkbox'][name='${checkboxName}']:checked`).empty()
+					applyBtn.property('disabled', anyChecked)
+				})
 			oneClassDiv
 				.append('span')
 				.style('margin-left', '3px')
@@ -3121,7 +3125,7 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 
 	const applyBtn = classDiv
 		.append('button')
-		//.property('disabled', true)
+		.property('disabled', true)
 		.style('margin-top', '3px')
 		.text('Apply')
 		.on('click', () => {
