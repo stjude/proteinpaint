@@ -2,6 +2,7 @@ import { getCompInit, copyMerge, deepEqual } from '../rx'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
+import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
 
 export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
@@ -157,7 +158,7 @@ export function setLabelsAndScales() {
 				}
 				if (t.tw.term.type == 'geneVariant' && anno.values) {
 					for (const val of anno.values) {
-						if (val.dt == 4 && 'value' in val && !s.ignoreCnvValues) {
+						if (val.dt == dtcnv && 'value' in val && !s.ignoreCnvValues) {
 							const v = val.value
 							if (v < 0) {
 								if (!('minLoss' in this.cnvValues) || this.cnvValues['minLoss'] > v) this.cnvValues['minLoss'] = v

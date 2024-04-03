@@ -1,4 +1,5 @@
 import { convertUnits } from '#shared/helpers'
+import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
 /*
 	cell: a matrix cell data
 	tw: termwrapper
@@ -84,7 +85,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
-	} else if (value.dt == 1 || value.dt == 2) {
+	} else if (value.dt == dtsnvindel || value.dt == dtfusionrna) {
 		if (s.cellEncoding == 'single') {
 			// when CNV is not displayed, show as tall bar
 			cell.height = s.rowh
@@ -98,7 +99,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y = height * 0.33333
 		}
-	} else if (value.dt == 4 || value.dt == 3) {
+	} else if (value.dt == dtcnv || value.dt == dtgeneexpression) {
 		cell.height = s.rowh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
@@ -116,7 +117,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	const byDt = self.state.termdbConfig.assayAvailability?.byDt
 	// return the corresponding legend item data
 	const order = value.class == 'CNV_loss' ? -2 : value.class.startsWith('CNV_') ? -1 : 0
-	if (value.dt == 4) {
+	if (value.dt == dtcnv) {
 		if (t.scales && value.class.startsWith('CNV_')) {
 			const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
 			const { maxLoss, maxGain, minLoss, minGain } = t.scales
@@ -150,7 +151,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 			}
 		}
-	} else if (value.dt == 2 && byDt?.[2]) {
+	} else if (value.dt == dtfusionrna && byDt?.[dtfusionrna]) {
 		const group = 'Fusion RNA'
 		return {
 			ref: t.ref,
@@ -159,7 +160,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 			order: -1,
 			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 		}
-	} else if (value.dt == 5 && byDt?.[5]) {
+	} else if (value.dt == dtsv && byDt?.[dtsv]) {
 		const group = 'Structural Variation'
 		return {
 			ref: t.ref,
@@ -168,7 +169,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 			order: -1,
 			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 		}
-	} else if (value.dt == 3) {
+	} else if (value.dt == dtgeneexpression) {
 		return {
 			ref: t.ref,
 			group: self.config.settings.hierCluster?.termGroupName || 'Gene Expression',
@@ -243,7 +244,7 @@ export const maySetEmptyCell = {
 }
 
 function setVariantEmptyCell(siblingCells, cellTemplate, s, d) {
-	if (siblingCells.find(c => c.value.dt == 4)) return
+	if (siblingCells.find(c => c.value.dt == dtcnv)) return
 	const cell = Object.assign({}, cellTemplate)
 	cell.fill = s.cellbg
 	cell.height = s.rowh

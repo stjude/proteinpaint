@@ -9,6 +9,7 @@ import { make_radios } from '#dom/radiobutton'
 import { make_one_checkbox } from '#dom/checkbox'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 import { select } from 'd3-selection'
+import { dtsnvindel, dtcnv } from '#shared/common'
 
 const tip = new Menu({ padding: '' })
 
@@ -1112,7 +1113,7 @@ export class MatrixControls {
 	generateCNVItems(self, app, parent, table) {
 		table.attr('class', null) // remove the hoverover background for CNV button
 		const m = parent.config.settings.matrix
-		const mutationLegendGrp = parent.legendData.find(l => l.dt?.includes(1))
+		const mutationLegendGrp = parent.legendData.find(l => l.dt?.includes(dtsnvindel))
 		if (
 			m.showMatrixCNV !== 'none' &&
 			(m.allMatrixMutationHidden ||
@@ -1132,7 +1133,7 @@ export class MatrixControls {
 	generateMutationItems(self, app, parent, table) {
 		table.attr('class', null) // remove the hoverover background for CNV button
 		const m = parent.config.settings.matrix
-		const cnvLegendGrp = parent.legendData.find(l => l.dt?.includes(4))
+		const cnvLegendGrp = parent.legendData.find(l => l.dt?.includes(dtcnv))
 		if (
 			m.showMatrixMutation !== 'none' &&
 			(m.allMatrixCNVHidden ||
