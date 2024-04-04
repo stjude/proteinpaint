@@ -2,21 +2,28 @@ import tape from 'tape'
 import { parseDictionary } from '../dictionary.parse'
 import * as d3s from 'd3-selection'
 
-/***********************************
- reusable helper vars and functions
-************************************/
-
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-}
-
 /****************
  Dictionary Tests
+
+levels before variable, type, and categories - no gaps
+levels after variable, type, categories - with gap
+empty variable
+extra, non essential column
+no level columns
+repeated level names, same line
+dash between levels
+missing type
+repeated intermediate terms for diff branches, whole dataset
+missing Variable header
+missing Type header
+missing parent_id header
+missing name header
+missing type header
+missing values header
+blank or dash in required data column
+missing k=v in values (dictionary format)
+uncomputable category is not number
+
 *****************/
 
 tape('\n', function (test) {
@@ -497,11 +504,6 @@ tape('missing Type header', function (test) {
 	test.end()
 })
 
-tape('\n', function (test) {
-	test.pass('-***- dictionary.ui, data dictionary parsing-***-')
-	test.end()
-})
-
 tape('missing parent_id header', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
@@ -625,3 +627,31 @@ tape('missing k=v in values (dictionary format)', function (test) {
 	}
 	test.end()
 })
+
+tape('uncomputable category is not number', function (test) {
+	test.timeoutAfter(100)
+	// user can totally encode missing numeric values with words like "unk". our system requires those to be coded as number instead otherwise it crashes our sql query. in below "unk" key is rejected
+	const tsv = [`variable\ttype\tcategories`, `A1a\tinteger\t{ "unk": { "label": "unknown" } }`].join('\n')
+
+	const message = 'Should throw on uncomputable category not being number'
+	try {
+		parseDictionary(tsv)
+		test.fail(message)
+	} catch (e) {
+		test.pass(message + ': ' + e)
+	}
+	test.end()
+})
+
+/***********************************
+ reusable helper vars and functions
+************************************/
+
+function getHolder() {
+	return d3s
+		.select('body')
+		.append('div')
+		.style('border', '1px solid #aaa')
+		.style('padding', '5px')
+		.style('margin', '5px')
+}

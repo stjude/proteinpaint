@@ -110,17 +110,7 @@ export function parseDictionary(input) {
 					terms[termId].values[key] = { label: label }
 				}
 
-				if (type == 'integer' || type == 'float') {
-					// term is numeric. keys declared in .values{} should be uncomputable categories
-					for (const k in terms[termId].values) {
-						const tmp = Number(k)
-						if (Number.isNaN(tmp)) {
-							// this is by design so that all values in the db to match the column type for that value, otherwise the generated SQL statements would always have to include
-							throw `Uncomputable category of a numeric term is required to be a number (here uses non-numeric value of ${k}).`
-						}
-						terms[termId].values[k].uncomputable = true
-					}
-				}
+				validateNumericTermCategories(terms[termId])
 			} catch (e) {
 				throw `Line ${lineNum} error: ${e}`
 			}
@@ -256,10 +246,7 @@ function parseCategories(type, catJSON, addAttrJSON, lineNum, varName) {
 		attributes: addAttrJSON == '' || addAttrJSON == undefined ? {} : JSON.parse(addAttrJSON)
 	}
 
-	if (term.type == 'integer' || term.type == 'float') {
-		// for numeric term, all keys in values are not computable
-		for (const k in term.values) term.values[k].uncomputable = true
-	}
+	validateNumericTermCategories(term)
 
 	if (term.type == 'categorical') {
 		term.groupsetting = { inuse: false }
@@ -297,5 +284,21 @@ function trackMissingTerms(termNameToId, terms, parentTermNames, parent2ChildOrd
 			termNameToId[name] = name
 			parentTermNames.add(name)
 		}
+	}
+}
+
+function validateNumericTermCategories(term) {
+	if (term.type != 'integer' && term.type != 'float') return
+	// term is numeric
+	if (!term.values) return // .values{} is optional
+	if (typeof term.values != 'object') throw 'numeric .values{} is not object'
+	// values{} keys should be uncomputable categories, auto-assign the flag here. also make sure keys can be cast into numbers
+	for (const k in term.values) {
+		const tmp = Number(k)
+		if (Number.isNaN(tmp)) {
+			// this is by design so that all values in the db to match the column type for that value, otherwise the generated SQL statements would always have to include
+			throw `Uncomputable category of a numeric term is required to be a number (here uses non-numeric value of ${k}).`
+		}
+		term.values[k].uncomputable = true
 	}
 }
