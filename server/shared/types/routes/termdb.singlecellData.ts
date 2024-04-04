@@ -36,9 +36,6 @@ export type HasdataResponse = {
 	/** List of plots from singlecell experiment of this sample */
 	plots: Plot[]
 
-	/** Cell annotations. key: termId, value: {cellId: value}. assumption is that same set of annotations apply to all plots */
-	//tid2cellvalue: {}
-
 	/** Terms used to annotate cells */
 	//terms: Term[]
 }

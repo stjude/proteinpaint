@@ -9,6 +9,7 @@ import { make_radios } from '#dom/radiobutton'
 import { make_one_checkbox } from '#dom/checkbox'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 import { select } from 'd3-selection'
+import { dtsnvindel, dtcnv } from '#shared/common'
 
 const tip = new Menu({ padding: '' })
 
@@ -1111,21 +1112,41 @@ export class MatrixControls {
 
 	generateCNVItems(self, app, parent, table) {
 		table.attr('class', null) // remove the hoverover background for CNV button
+		const m = parent.config.settings.matrix
+		const mutationLegendGrp = parent.legendData.find(l => l.dt?.includes(dtsnvindel))
 		if (
-			parent.state.config.settings.matrix.addMutationCNVButtons &&
-			parent.chartType !== 'hierCluster' &&
-			parent.config.settings.matrix.showMatrixCNV == 'bySelection'
-		)
+			m.showMatrixCNV !== 'none' &&
+			(m.allMatrixMutationHidden ||
+				!mutationLegendGrp ||
+				mutationLegendGrp.crossedOut ||
+				!mutationLegendGrp.items.find(i => !i.greyedOut && !i.crossedOut))
+		) {
+			// when all mutation items in the current matrix are hidden or there is no mutation data
+			table.select("input[type='radio'][value='none']").property('disabled', true)
+
+			table.select("input[type='radio'][value='none'] + span").style('opacity', '0.5').on('mouseup', null)
+		}
+		if (m.addMutationCNVButtons && parent.chartType !== 'hierCluster' && m.showMatrixCNV == 'bySelection')
 			parent.CNVControlCallback('bySelection')
 	}
 
 	generateMutationItems(self, app, parent, table) {
 		table.attr('class', null) // remove the hoverover background for CNV button
+		const m = parent.config.settings.matrix
+		const cnvLegendGrp = parent.legendData.find(l => l.dt?.includes(dtcnv))
 		if (
-			parent.state.config.settings.matrix.addMutationCNVButtons &&
-			parent.chartType !== 'hierCluster' &&
-			parent.config.settings.matrix.showMatrixMutation == 'bySelection'
-		)
+			m.showMatrixMutation !== 'none' &&
+			(m.allMatrixCNVHidden ||
+				!cnvLegendGrp ||
+				cnvLegendGrp.crossedOut ||
+				!cnvLegendGrp.items.find(i => !i.greyedOut && !i.crossedOut))
+		) {
+			// when all CNV items in the current matrix are hidden or there is no CNV data
+			table.select("input[type='radio'][value='none']").property('disabled', true)
+
+			table.select("input[type='radio'][value='none'] + span").style('opacity', '0.5').on('mouseup', null)
+		}
+		if (m.addMutationCNVButtons && parent.chartType !== 'hierCluster' && m.showMatrixMutation == 'bySelection')
 			parent.mutationControlCallback('bySelection')
 	}
 

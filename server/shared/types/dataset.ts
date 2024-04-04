@@ -359,7 +359,6 @@ export type SingleCellDataNative = {
 	src: 'native' | string
 	sameLegend: boolean
 	plots: SingleCellPlot[]
-	termIds: string[]
 	refName: string
 	get?: (q: any) => any
 }
@@ -451,11 +450,12 @@ type ScatterPlotsEntry = {
 	name: string
 	dimension: number
 	file: string
-	/** this plot use a dict term to fetch sample values and color dots */
-	colorTW?: { id: string }
-	/** this plot use a file column to color dots */
-	colorColumn?: ColorColumn
+	coordsColumns?: { x: number; y: number; z?: number }
 	settings?: { [index: string]: any }
+	sampleType?: string // by default the dots are called "samples" on the plot, use this to call it by diff name e.g. "cells"
+	/** a plot can be colored by either a dict term termsetting (colorTW) or file column values (colorColumn) */
+	colorTW?: { id: string }
+	colorColumn?: ColorColumn
 }
 
 type Scatterplots = {

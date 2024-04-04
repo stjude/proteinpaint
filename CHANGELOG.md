@@ -2,7 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.51.1
+
+Fixes:
+- Oncomatrix do not allow to hide all the alteration groups
+
+
+## 2.51.0
+
+Features:
+- Support survival term as outcome variable in regression analysis
+
+
+## 2.50.0
 
 Features:
 - include auth test status in server healthcheck

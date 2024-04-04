@@ -129,7 +129,7 @@ export async function get_regression(q, ds) {
 			snplocusPostprocess(q, sampledata, Rinput, result)
 		])
 
-		console.log('benchmark:', benchmark)
+		//console.log('benchmark:', benchmark)
 
 		return result
 	} catch (e) {
@@ -348,11 +348,15 @@ function makeRinput(q, sampledata) {
 			// cox regression, therefore time-to-event outcome
 			// use both key (event status) and value (time)
 			entry[outcome.timeToEvent.eventId] = out.key
-			const { age_start, age_end } = out.value
-			entry[outcome.timeToEvent.timeId] = age_end - age_start
-			if (q.outcome.q.timeScale == 'age') {
-				entry[outcome.timeToEvent.agestartId] = age_start
-				entry[outcome.timeToEvent.ageendId] = age_end
+			if (q.outcome.term.type == 'condition') {
+				const { age_start, age_end } = out.value
+				entry[outcome.timeToEvent.timeId] = age_end - age_start
+				if (q.outcome.q.timeScale == 'age') {
+					entry[outcome.timeToEvent.agestartId] = age_start
+					entry[outcome.timeToEvent.ageendId] = age_end
+				}
+			} else {
+				entry[outcome.timeToEvent.timeId] = out.value
 			}
 		}
 
@@ -1177,48 +1181,16 @@ async function getSampleData_dictionaryTerms(q, terms) {
 			`
 		).join(`UNION ALL`)}`
 
-	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+	const _rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 
 	// process rows
-	const prows = []
-	const ageEndOffset = q.ds.cohort.termdb.ageEndOffset
-	if (!ageEndOffset) throw 'missing age end offset'
-	for (const row of rows) {
-		if (q.regressionType == 'cox' && row.term_id == q.outcome.id) {
-			// cox outcome row
-
-			// event: event status code
-			// age_start: age at beginning of follow-up
-			// age_end: age at event or at censoring
-			const event = row.key
-			const { age_start, age_end } = JSON.parse(row.value)
-
-			// discard samples that had events before follow-up
-			if (event == -1) continue
-
-			// for timeScale='age', add a small offset to age_end
-			// to prevent age_end = age_start (which would cause
-			// R to error out)
-			const value = {
-				age_start,
-				age_end: q.outcome.q.timeScale == 'age' ? age_end + ageEndOffset : age_end
-			}
-
-			prows.push({
-				sample: row.sample,
-				key: event,
-				value,
-				term_id: row.term_id
-			})
-		} else {
-			// not cox outcome row
-			// no need to process row
-			prows.push(row)
-		}
-	}
+	const rows =
+		q.regressionType == 'cox' && q.outcome.term.type == 'condition'
+			? processCoxConditionOutcomeRows(_rows, q.outcome, q.ds.cohort.termdb.ageEndOffset)
+			: _rows
 
 	// parse the processed rows
-	for (const { sample, term_id, key, value } of prows) {
+	for (const { sample, term_id, key, value } of rows) {
 		const term = terms.find(term => term.id == term_id)
 
 		if (!samples.has(sample)) {
@@ -1255,6 +1227,45 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	}
 
 	return samples
+}
+
+function processCoxConditionOutcomeRows(rows, outcome, ageEndOffset) {
+	if (!ageEndOffset) throw 'missing age end offset'
+	const prows = []
+	for (const row of rows) {
+		if (row.term_id == outcome.id) {
+			// outcome row
+
+			// event: event status code
+			// age_start: age at beginning of follow-up
+			// age_end: age at event or at censoring
+			const event = row.key
+			const { age_start, age_end } = JSON.parse(row.value)
+
+			// discard samples that had events before follow-up
+			if (event == -1) continue
+
+			// for timeScale='age', add a small offset to age_end
+			// to prevent age_end = age_start (which would cause
+			// R to error out)
+			const value = {
+				age_start,
+				age_end: outcome.q.timeScale == 'age' ? age_end + ageEndOffset : age_end
+			}
+
+			prows.push({
+				sample: row.sample,
+				key: event,
+				value,
+				term_id: row.term_id
+			})
+		} else {
+			// not outcome row
+			// no need to process row
+			prows.push(row)
+		}
+	}
+	return prows
 }
 
 /*

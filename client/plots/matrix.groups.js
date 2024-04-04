@@ -1,5 +1,6 @@
 import { sample_match_termvaluesetting } from '#shared/filter'
 import { getSampleSorter, getTermSorter, getSampleGroupSorter, getMclassSorter } from './matrix.sort'
+import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
 
 export function getTermOrder(data) {
 	const s = this.settings.matrix
@@ -238,9 +239,9 @@ export function classifyValues(anno, tw, grp, s, sample) {
 			const sortedFilteredValues = []
 			// dt=1 are SNVindels, dt=4 CNV, dt=3 Gene Expression
 			// will render only one matching value per dt
-			for (const dt of [4, 1, 2, 3]) {
+			for (const dt of [dtcnv, dtsnvindel, dtfusionrna, dtgeneexpression]) {
 				const v =
-					dt == 3
+					dt == dtgeneexpression
 						? filteredValues.find(v => v.dt === dt)
 						: filteredValues.find(v => v.dt === dt && v.class !== 'WT' && v.class !== 'Blank')
 				if (v) renderedValues.push(v)

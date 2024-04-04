@@ -179,8 +179,8 @@ function setRenderers(self) {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
-			.style('font-size', '1.2em')
-			.style('margin-top', '48px')
+			.style('font-size', '1.1em')
+			.style('margin-top', '50px')
 			.text(appState.termdbConfig.title.text)
 
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
@@ -215,11 +215,9 @@ function setRenderers(self) {
 		}
 
 		if (appState.nav.header_mode == 'only_buttons') {
-			// should only show chart buttons
 			self.dom.tabDiv.style('display', 'none')
 			self.dom.recoverDiv.style('display', 'none')
 			titleDiv.style('margin-top', '95px').style('font-size', '0.9em')
-			self.dom.sessionDiv.style('margin-left', '92vw')
 			if (appState.termdbConfig.title?.link)
 				titleDiv
 					.on('click', () => window.open(appState.termdbConfig.title.link, '_blank'))
@@ -371,7 +369,12 @@ function setRenderers(self) {
 			if (self.dom.messageDiv) self.dom.messageDiv.style('display', 'none')
 		}
 		const selectCohort = self.state.termdbConfig.selectCohort
-		self.dom.searchDiv.style('display', selectCohort && self.activeCohort == -1 ? 'none' : 'inline-block')
+		self.dom.searchDiv.style(
+			'display',
+			(selectCohort && self.activeCohort == -1) || self.state.nav.header_mode == 'only_buttons'
+				? 'none'
+				: 'inline-block'
+		)
 		//self.dom.holder.style('margin-bottom', self.state.nav.header_mode === 'with_tabs' ? '20px' : '')//To be checked why it was needed
 		self.dom.header.style('border-bottom', self.state.nav.header_mode === 'with_tabs' ? '1px solid #000' : '')
 		self.dom.tds

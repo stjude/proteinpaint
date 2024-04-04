@@ -1,7 +1,7 @@
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
-import { mclass, dt2label, morigin } from '#shared/common'
+import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common'
 
 export function getLegendData(legendGroups, refs, self) {
 	const s = this.settings.matrix
@@ -246,12 +246,12 @@ export function getLegendData(legendGroups, refs, self) {
 					}
 				})
 			})
-		} else if (grpFilter.dt.includes(1)) {
+		} else if (grpFilter.dt.includes(dtsnvindel)) {
 			const controlLabels = self.settings.matrix.controlLabels
 			const groupName = grpFilter.origin
 				? `${grpFilter.origin[0].toUpperCase() + grpFilter.origin.slice(1)} ${controlLabels.Mutations}`
 				: controlLabels.Mutations
-			if (!legendData.filter(l => l.dt)?.find(l => l.dt.includes(1) && l.origin == grpFilter.origin)) {
+			if (!legendData.filter(l => l.dt)?.find(l => l.dt.includes(dtsnvindel) && l.origin == grpFilter.origin)) {
 				legendData.push({
 					name: groupName,
 					dt: grpFilter.dt,

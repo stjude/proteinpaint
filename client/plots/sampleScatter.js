@@ -92,7 +92,7 @@ class Scatter {
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
 		setInteractivity(this)
 		setRenderers(this)
-		document.addEventListener('scroll', event => this.dom.tooltip.hide())
+		document.addEventListener('scroll', event => this?.dom?.tooltip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.dom.tooltip.hide())
 	}
 
@@ -550,6 +550,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 						chartType: 'sampleScatter',
 						name: plot.name
 					}
+					if (plot.sampleType) config.sampleType = plot.sampleType
 					if (plot.colorTW) config.colorTW = JSON.parse(JSON.stringify(plot.colorTW))
 					else if (plot.colorColumn) config.colorColumn = JSON.parse(JSON.stringify(plot.colorColumn))
 
@@ -597,7 +598,8 @@ export async function renderScatter(holder, state, plot) {
 					chartType: 'sampleScatter',
 					subfolder: 'plots',
 					name: plot.name,
-					colorTW: plot.colorTW
+					colorTW: plot.colorTW,
+					sampleType: plot.sampleType
 				}
 			]
 		}

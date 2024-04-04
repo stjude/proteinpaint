@@ -503,7 +503,10 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	}
 	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 	const rows = []
-	for (const sample of data.lst) rows.push([{ value: sample.sampleName }])
+	for (const sample of data.lst) {
+		const value = data.refs.bySampleId[Number(sample.sample)].label
+		rows.push([{ value }])
+	}
 	const columns = [{ label: 'Sample' }]
 	const menu = new Menu({ padding: '5px' })
 	const div = menu.d.append('div')

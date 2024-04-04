@@ -93,7 +93,7 @@ class singleCellPlot {
 		this.settings = {}
 
 		await this.setControls()
-		document.addEventListener('scroll', event => this.tip.hide())
+		document.addEventListener('scroll', event => this?.tip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.tip.hide())
 	}
 
@@ -440,7 +440,6 @@ async function renderSamplesTable(div, self, state) {
 		self.samples = samples
 		maxHeight = '30vh'
 	}
-
 	renderTable({
 		rows,
 		columns,
@@ -468,7 +467,6 @@ async function renderSamplesTable(div, self, state) {
 
 async function getTableData(self, samples, state) {
 	const rows = []
-
 	for (const sample of samples) {
 		if (sample.experiments)
 			for (const exp of sample.experiments) {
@@ -508,7 +506,7 @@ async function getTableData(self, samples, state) {
 	for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
 		columns.push({
 			label: (await self.app.vocabApi.getterm(c.termid)).name,
-			width: '20vw'
+			width: '15vw'
 		})
 	}
 

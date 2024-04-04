@@ -2,7 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import { mclass, dt2label, dtsnvindel } from '#shared/common'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 import { renderTable } from '../dom/table.ts'
@@ -2307,7 +2307,7 @@ function setZoomPanActions(self) {
 function setLengendActions(self) {
 	self.legendLabelMouseover = event => {
 		const targetData = event.target.__data__
-		if (!targetData || targetData.dt == 3) {
+		if (!targetData || targetData.dt == dtgeneexpression) {
 			// for gene expression don't use legend as filter
 			return
 		}
@@ -2340,7 +2340,7 @@ function setLengendActions(self) {
 
 	self.legendLabelMouseup = event => {
 		const targetData = event.target.__data__
-		if (!targetData || targetData.dt == 3) {
+		if (!targetData || targetData.dt == dtgeneexpression) {
 			// for gene expression don't use legend as filter
 			return
 		}
@@ -2374,7 +2374,7 @@ function setLengendActions(self) {
 			// when the legend group is not hidden
 			if (legendGrpFilterIndex == -1) {
 				// for consequences/mutations legend group
-				if (targetData.dt.includes(1)) {
+				if (targetData.dt.includes(dtsnvindel)) {
 					div
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
@@ -2391,12 +2391,21 @@ function setLengendActions(self) {
 							showOnlyPC(menuGrp, targetData, self)
 						})
 				}
+				const onlyGeneGroupShown =
+					self.legendData.filter(
+						l =>
+							l.dt && !l.crossedOut && (l.name == targetData.name || l.items.find(i => !i.greyedOut && !i.crossedOut))
+					).length <= 1
 				div
 					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
+					.attr(
+						'class',
+						onlyGeneGroupShown ? 'sja_menuoption_not_interactive sja_sharp_border' : 'sja_menuoption sja_sharp_border'
+					)
 					.text(`Do not show ${targetData.name}`)
+					.style('opacity', onlyGeneGroupShown ? '0.5' : '1')
 					.on('click', () => {
-						showNone(menuGrp, targetData, self)
+						if (!onlyGeneGroupShown) showNone(menuGrp, targetData, self)
 					})
 			}
 			// when the legend group is hidden or when a legend filter belongs to the legend group exist in legendValueFilter, show the "show all" option
@@ -2555,7 +2564,7 @@ function setLengendActions(self) {
 						}
 					}
 					if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
-						if (targetData.dt == 1) {
+						if (targetData.dt == dtsnvindel) {
 							self.config.settings.matrix.showMatrixMutation = 'bySelection'
 							const cl = self.settings.matrix.controlLabels
 							if (
@@ -2566,7 +2575,7 @@ function setLengendActions(self) {
 								self.config.settings.matrix.allMatrixMutationHidden = true
 							} else self.config.settings.matrix.allMatrixMutationHidden = false
 						}
-						if (targetData.dt == 4) {
+						if (targetData.dt == dtcnv) {
 							self.config.settings.matrix.showMatrixCNV = 'bySelection'
 							if (
 								self.legendData.find(l => l.name == 'CNV')?.items?.length ==
@@ -2619,7 +2628,7 @@ function setLengendActions(self) {
 						self.config.legendValueFilter.lst.push(filterNew)
 
 						if (self.state.config.settings.matrix.addMutationCNVButtons && self.chartType !== 'hierCluster') {
-							if (targetData.dt == 1) {
+							if (targetData.dt == dtsnvindel) {
 								self.config.settings.matrix.showMatrixMutation = 'bySelection'
 								const cl = self.settings.matrix.controlLabels
 								if (
@@ -2630,7 +2639,7 @@ function setLengendActions(self) {
 									self.config.settings.matrix.allMatrixMutationHidden = true
 								} else self.config.settings.matrix.allMatrixMutationHidden = false
 							}
-							if (targetData.dt == 4) {
+							if (targetData.dt == dtcnv) {
 								self.config.settings.matrix.showMatrixCNV = 'bySelection'
 								if (
 									self.legendData.find(l => l.name == 'CNV')?.items?.length ==
@@ -2774,17 +2783,17 @@ function setMutationSelectionActions(self) {
 	}
 	self.mutationControlCallback = mutationSelection => {
 		const menuGrp = self.dom.legendMenu.clear()
-		const targetData = self.legendData.find(l => l.dt?.includes(1))
+		const targetData = self.legendData.find(l => l.dt?.includes(dtsnvindel))
 		self.mutationSelectionActions[mutationSelection](menuGrp, targetData, self, 'mutation')
 	}
 	self.CNVControlCallback = CNVSelection => {
 		const menuGrp = self.dom.legendMenu.clear()
-		const targetData = self.legendData.find(l => l.dt?.includes(4))
+		const targetData = self.legendData.find(l => l.dt?.includes(dtcnv))
 		self.mutationSelectionActions[CNVSelection](menuGrp, targetData, self, 'CNV')
 	}
 
 	self.geneStyleControlCallback = styleSelection => {
-		const targetData = self.legendData.find(l => l.dt?.includes(4))
+		const targetData = self.legendData.find(l => l.dt?.includes(dtcnv))
 		if (styleSelection == '') showStackedStyle(targetData, self) //stacked style
 		else if (styleSelection == 'single') showSingleStyle(targetData, self)
 		else if (styleSelection == 'oncoprint') showOncoprintStyle(targetData, self)
@@ -2898,7 +2907,9 @@ function showOnlyTrunc(menuGrp, targetData, self) {
 		)
 
 		// remove the grp legend filter for the group
-		self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(1))
+		self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(
+			f => !(f.dt.includes(dtsnvindel) && f.origin == targetData.origin)
+		)
 
 		const truncatingM = self.config.settings.matrix.truncatingMutations
 		const controlLabels = self.config.settings.matrix.controlLabels
@@ -2941,7 +2952,9 @@ function showOnlyPC(menuGrp, targetData, self) {
 		)
 
 		// remove the grp legend filter for the group
-		self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(f => !f.dt.includes(1))
+		self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(
+			f => !(f.dt.includes(dtsnvindel) && f.origin == targetData.origin)
+		)
 
 		const proteinChangingMutations = self.config.settings.matrix.proteinChangingMutations
 		const controlLabels = self.config.settings.matrix.controlLabels
@@ -3001,7 +3014,7 @@ function showNone(menuGrp, targetData, self, target) {
 	if (
 		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
-		(target == 'CNV' || targetData?.dt?.includes(4)) &&
+		(target == 'CNV' || targetData?.dt?.includes(dtcnv)) &&
 		self.config.settings.matrix.cellEncoding == 'oncoprint'
 	) {
 		self.config.settings.matrix.cellEncoding = 'single'
@@ -3045,7 +3058,7 @@ function showAll(menuGrp, targetData, self, target) {
 	if (
 		self.state.config.settings.matrix.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
-		(target == 'CNV' || targetData?.dt?.includes(4)) &&
+		(target == 'CNV' || targetData?.dt?.includes(dtcnv)) &&
 		self.config.settings.matrix.cellEncoding !== ''
 	) {
 		self.config.settings.matrix.cellEncoding = 'oncoprint'
@@ -3104,6 +3117,10 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 				.property('checked', mclassDisabled || mclassHidden ? false : true)
 				.style('vertical-align', 'top')
 				.style('margin-right', '3px')
+				.on('change', function () {
+					const anyChecked = mClassDiv.selectAll(`input[type='checkbox'][name='${checkboxName}']:checked`).empty()
+					applyBtn.property('disabled', anyChecked)
+				})
 			oneClassDiv
 				.append('span')
 				.style('margin-left', '3px')
@@ -3114,7 +3131,7 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 
 	const applyBtn = classDiv
 		.append('button')
-		//.property('disabled', true)
+		.property('disabled', true)
 		.style('margin-top', '3px')
 		.text('Apply')
 		.on('click', () => {
@@ -3129,7 +3146,11 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 
 			// remove the grp legend filter for the group
 			self.config.legendGrpFilter.lst = self.config.legendGrpFilter.lst.filter(
-				f => !((f.dt.includes(1) && targetData.dt.includes(1)) || (f.dt.includes(4) && targetData.dt.includes(4)))
+				f =>
+					!(
+						(f.dt.includes(dtsnvindel) && targetData.dt.includes(dtsnvindel)) ||
+						(f.dt.includes(dtcnv) && targetData.dt.includes(dtcnv))
+					)
 			)
 
 			for (const item of target == 'mutation' ? s.mutationClasses : s.CNVClasses) {
@@ -3153,7 +3174,7 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 			if (
 				self.state.config.settings.matrix.addMutationCNVButtons &&
 				self.chartType !== 'hierCluster' &&
-				(target == 'CNV' || targetData?.dt?.includes(4))
+				(target == 'CNV' || targetData?.dt?.includes(dtcnv))
 			) {
 				if (checkedItems.length == 0 && self.config.settings.matrix.cellEncoding == 'oncoprint') {
 					//when all CNV items are hidden by applying legend value filter

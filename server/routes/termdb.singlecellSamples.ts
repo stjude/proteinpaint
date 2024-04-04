@@ -83,29 +83,20 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	// for now use this quick fix method to pull sample ids annotated by this term
 	// to support situation where not all samples from a dataset has sc data
-	const isSamples = ds.cohort.termdb.q.getAllValues4term(S.isSampleTerm)
-	if (isSamples.size == 0) throw 'no samples found that are identified by isSampleTerm'
-	const samples = [] as any // array of samples with sc data to be sent to client and list in table; cannot use Sample type for the use of "sampleid" temp property
-	for (const sampleid of isSamples.keys()) {
-		if (isSamples.get(sampleid) == '1')
-			samples.push({
-				sample: ds.cohort.termdb.q.id2sampleName(sampleid), // string name for display
-				sampleid // temporarily kept to assign term value to each sample
-			})
-	}
+	const samples = {}
 	if (S.sampleColumns) {
 		// has optional terms to show as table columns and annotate samples
 		for (const term of S.sampleColumns) {
 			const s2v = ds.cohort.termdb.q.getAllValues4term(term.termid) // map. k: sampleid, v: term value
-			for (const s of samples) {
-				if (s2v.has(s.sampleid)) s[term.termid] = s2v.get(s.sampleid)
+			for (const [s, v] of s2v.entries()) {
+				if (!samples[s]) samples[s] = { sample: ds.cohort.termdb.q.id2sampleName(s) }
+				samples[s][term.termid] = v
 			}
 		}
 	}
-	for (const s of samples) delete s.sampleid
 
 	S.get = () => {
-		return { samples: samples as Sample[] }
+		return { samples: Object.values(samples) as Sample[] }
 	}
 }
 
@@ -116,19 +107,9 @@ function getDataNative(D: SingleCellDataNative, ds: any) {
 		nameSet.add(plot.name)
 	}
 
-	// scoped and cached for runtime
-	const _terms = [] as any
-
-	for (const tid of D.termIds) {
-		const t = ds.cohort.termdb.q.termjsonByOneid(tid)
-		if (!t) throw 'invalid term id from queries.singleCell.data.termIds[]'
-		_terms.push(t)
-	}
 	D.get = async q => {
 		// if sample is int, may convert to string
 		try {
-			const tid2cellvalue = {}
-			for (const tid of D.termIds) tid2cellvalue[tid] = {} // k: cell id, v: cell value for this term
 			const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
 			for (const plot of D.plots) {
 				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, q.sample + plot.fileSuffix)
@@ -155,10 +136,6 @@ function getDataNative(D: SingleCellDataNative, ds: any) {
 					if (!cellId) throw 'cell id missing'
 					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
 					cells.push({ cellId, x, y, category })
-
-					for (const tid of D.termIds) {
-						tid2cellvalue[tid][cellId] = l[1]
-					}
 				}
 				plots.push({ name: plot.name, cells, colorBy: plot.colorColumn?.name, colorMap: plot.colorColumn?.colorMap })
 			}
@@ -166,7 +143,7 @@ function getDataNative(D: SingleCellDataNative, ds: any) {
 				// no data available for this sample
 				return { nodata: true }
 			}
-			return { plots, terms: _terms, tid2cellvalue }
+			return { plots }
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			return { error: e.message || e }

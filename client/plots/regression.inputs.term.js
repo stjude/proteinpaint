@@ -188,7 +188,8 @@ export class InputTerm {
 
 		if (!tw.q.mode && !nonDictionaryTermTypes.has(tw.term.type)) {
 			// fill in q.mode for dictionary terms
-			if (tw.term.type == 'categorical' || tw.term.type == 'condition') tw.q.mode = 'discrete'
+			if (tw.term.type == 'categorical' || tw.term.type == 'condition' || tw.term.type == 'survival')
+				tw.q.mode = 'discrete'
 			else tw.q.mode = 'continuous'
 		}
 
@@ -476,7 +477,8 @@ function getQSetter4outcome(regressionType) {
 		integer: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		float: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		categorical: maySetTwoGroups,
-		condition: setQ4conditionOutcome
+		condition: setQ4tteOutcome,
+		survival: setQ4tteOutcome
 	}
 }
 
@@ -517,17 +519,14 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 	tw.refGrp = tw.q.lst[0].label
 }
 
-function setQ4conditionOutcome(tw, vocabApi, filter, state) {
-	/* tw is a condition term as outcome for logistic/cox (but not other regression types, for now)
-	will always break grades into two groups
-	this requires q.breaks[] to have a single grade value
-	for logistic: set tw.refGrp
-	*/
+function setQ4tteOutcome(tw, vocabApi, filter, state) {
+	// set q for time-to-event outcome (i.e., condition or survival term)
 	if (state.config.regressionType == 'logistic') {
-		if (!tw.refGrp) {
-			// refGrp missing, set to be first group, guaranteed to be "No event / Grade 0"
-			tw.refGrp = tw.q.groups[0].name
-		}
+		// if refGrp missing, set to be first group, guaranteed to be "No event / Grade 0"
+		if (!tw.refGrp) tw.refGrp = tw.q.groups[0].name
+	}
+	if (state.config.regressionType == 'cox') {
+		if (!tw.q.timeScale) tw.q.timeScale = 'time'
 	}
 }
 

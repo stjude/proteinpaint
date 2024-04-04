@@ -16,14 +16,16 @@ const data = {
 	ip: '127.0.0.1'
 }
 
+const route = !process.argv[4] ? '' : process.argv[4][0] != '/' ? process.argv[4] : process.argv[4].slice(1)
+
 // for testing only
 if (cred?.processor) {
 	;(async () => {
 		const _ = await import(cred.processor)
 		const { generatePayload, test } = _.default
-		const url = process.argv[4] ? `${serverconfig.URL}${process.argv[4]}` : ''
+		const url = process.argv[4] ? `${serverconfig.URL}/${route}` : ''
 		if (url) {
-			console.log(await test(cred, url, 'viz.stjude.cloud'))
+			console.log(await test(cred, url, 'localhost'))
 		} else {
 			const payload = generatePayload(data, cred)
 			console.log(payload)

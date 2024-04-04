@@ -130,6 +130,8 @@ function addScatterplots(c, ds) {
 			colorTW: p.colorTW,
 			shapeTW: p.shapeTW,
 			colorColumn: p.colorColumn,
+			sampleType: p.sampleType,
+			coordsColumns: p.coordsColumns,
 			settings: p.settings
 		}
 	})
