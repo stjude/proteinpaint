@@ -859,7 +859,7 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 				}
 				const sample = l[sampleIdx]
 				const sampleInt = ds.sampleName2Id.get(sample)
-				if (limitSamples && !limitSamples.include(sampleInt)) {
+				if (limitSamples && !limitSamples.includes(sampleInt)) {
 					return // Skip this line if sampleInt is not found in limitSamples
 				}
 
