@@ -1007,7 +1007,6 @@ function domainlegend(tk, block) {
 				.append('div')
 				.attr('class', 'sja_menuoption')
 				.text('Show')
-				.style('display', show ? '' : 'none')
 				.on('click', () => {
 					nameDiv.node().style.textDecoration = 'none'
 					descriptionDiv.node().style.textDecoration = 'none'
