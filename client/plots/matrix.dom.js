@@ -143,7 +143,7 @@ export function setMatrixDom(opts) {
 	// remove the matrix brush zoom area when clicking on body
 	select('body').on(`mousedown.matrixZoom-${this.id}`, this.resetInteractions)
 
-	window.onscroll = this.scrollStopHandler
+	window.onscroll = this.delayedMouseoutHandler
 	const contentDiv = this.dom.holder.node().closest('.sjpp-output-sandbox-content')
-	if (contentDiv) contentDiv.onscroll = this.scrollStopHandler
+	if (contentDiv) contentDiv.onscroll = this.delayedMouseoutHandler
 }

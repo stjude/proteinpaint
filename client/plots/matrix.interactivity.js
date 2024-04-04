@@ -14,7 +14,7 @@ const svgIcons = {
 
 export function setInteractivity(self) {
 	let t
-	self.scrollStopHandler = () => {
+	self.delayedMouseoutHandler = () => {
 		if (t) clearTimeout(t)
 		t = setTimeout(self.mouseout, 500)
 	}

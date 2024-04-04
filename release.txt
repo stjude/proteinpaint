@@ -1,2 +1,2 @@
 Fixes:
-- fix position errors after zooming in/out caused by outdated imgBox
+- fix position errors after oncoMatrix/hierCluster zooming in/out caused by outdated imgBox
