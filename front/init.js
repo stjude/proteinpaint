@@ -6,7 +6,8 @@ const ps = require('child_process')
 const fs = require('fs')
 const { execSync } = require('child_process')
 
-const URLPATH = process.argv[2] || '.'
+let URLPATH = process.argv[2] || '.'
+if (URLPATH.endsWith('/')) URLPATH = URLPATH.slice(0, -1)
 const CWD = process.cwd()
 
 console.log('CWD', CWD)
