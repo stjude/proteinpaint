@@ -1,2 +1,1 @@
-Fixes:
-- fix position errors after oncoMatrix/hierCluster zooming in/out caused by outdated imgBox
+

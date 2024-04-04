@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- fix position errors after oncoMatrix/hierCluster zooming in/out caused by outdated imgBox
+
 
 ## 2.51.1
 
