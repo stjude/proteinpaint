@@ -42,6 +42,8 @@ export function setRenderers(self) {
 			sg.exit().remove()
 			sg.each(self.renderSeries)
 			sg.enter().append('g').attr('class', 'sjpp-mass-series-g').style('opacity', 0.001).each(self.renderSeries)
+			// need to reset imgBox and beam highlighters after rendering to avoid misaligned beam highlighters
+			self.mouseout()
 		}
 		self.prevUseCanvas = s.useCanvas
 	}
@@ -130,6 +132,8 @@ export function setRenderers(self) {
 			g.append('image').attr('width', width).attr('height', height).attr('xlink:href', dataURL)
 			if (!window.OffscreenCanvas) canvas.remove()
 		}
+		// need to reset imgBox and beam highlighters after rendering to avoid misaligned beam highlighters
+		self.mouseout()
 	}
 
 	self.renderCellWithCanvas = function (ctx, cell, series, s, d, _y) {
