@@ -1,1 +1,2 @@
-
+Fixes:
+- fix position errors after zooming in/out caused by outdated imgBox
