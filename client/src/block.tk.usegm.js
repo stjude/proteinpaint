@@ -2,7 +2,7 @@ import * as client from './client'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { format as d3format } from 'd3-format'
-import { select as d3select } from 'd3-selection'
+import { select as d3select, selectAll } from 'd3-selection'
 import * as coord from './coord'
 import { legend_newrow } from './block.legend'
 import { basecompliment } from '#shared/common'
@@ -957,32 +957,6 @@ function domainlegend(tk, block) {
 			.style('cursor', 'default')
 			.style('font-family', 'Courier')
 			.html(block.usegm.domain_hidden[domaintype.key] ? '&times;' : '&nbsp;')
-		// .on('click', event => {
-		// 	// toggle show/hide of a type of domain
-
-		// 	if (domaintype.key in block.usegm.domain_hidden) {
-		// 		event.target.innerHTML = '&nbsp;'
-
-		// 		if (block.gmmode == client.gmmode.gmsum) {
-		// 			for (const m of block.allgm) {
-		// 				if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
-		// 			}
-		// 		} else {
-		// 			// not in gmsum, only modify usegm
-		// 			delete block.usegm.domain_hidden[domaintype.key]
-		// 		}
-		// 	} else {
-		// 		event.target.innerHTML = '&times;'
-		// 		if (block.gmmode == client.gmmode.gmsum) {
-		// 			for (const m of block.allgm) {
-		// 				if (m.domain_hidden) m.domain_hidden[domaintype.key] = 1
-		// 			}
-		// 		} else {
-		// 			block.usegm.domain_hidden[domaintype.key] = 1
-		// 		}
-		// 	}
-		// 	gmtkrender(tk, block)
-		// })
 
 		const clickableDiv = row.append('div').style('display', 'inline-block')
 
@@ -1050,6 +1024,10 @@ function domainlegend(tk, block) {
 				.text('Show All')
 				.on('click', () => {
 					// Callback for "Show All" option
+					const spans = tk.td_legend.selectAll('span')
+					for (const span of spans.nodes()) {
+						span.style.textDecoration = 'none'
+					}
 					if (block.gmmode == client.gmmode.gmsum) {
 						for (const m of block.allgm) {
 							m.domain_hidden = {}
@@ -1062,7 +1040,6 @@ function domainlegend(tk, block) {
 			block.tip.show(event.clientX, event.clientY)
 			event.stopPropagation()
 		})
-
 		if (domaintype.CDD) {
 			row
 				.append('a')
