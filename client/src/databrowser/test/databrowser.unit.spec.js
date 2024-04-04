@@ -22,7 +22,8 @@ missing type header
 missing values header
 blank or dash in required data column
 missing k=v in values (dictionary format)
-uncomputable category is not number
+uncomputable category is a string but not number
+uncomputable category is empty string but not number
 
 *****************/
 
@@ -628,10 +629,24 @@ tape('missing k=v in values (dictionary format)', function (test) {
 	test.end()
 })
 
-tape('uncomputable category is not number', function (test) {
+tape('uncomputable category is a string but not number', function (test) {
 	test.timeoutAfter(100)
 	// user can totally encode missing numeric values with words like "unk". our system requires those to be coded as number instead otherwise it crashes our sql query. in below "unk" key is rejected
 	const tsv = [`variable\ttype\tcategories`, `A1a\tinteger\t{ "unk": { "label": "unknown" } }`].join('\n')
+
+	const message = 'Should throw on uncomputable category not being number'
+	try {
+		parseDictionary(tsv)
+		test.fail(message)
+	} catch (e) {
+		test.pass(message + ': ' + e)
+	}
+	test.end()
+})
+
+tape('uncomputable category is empty string but not number', function (test) {
+	test.timeoutAfter(100)
+	const tsv = [`variable\ttype\tcategories`, `A1a\tinteger\t{ "": { "label": "empty!!" } }`].join('\n')
 
 	const message = 'Should throw on uncomputable category not being number'
 	try {
