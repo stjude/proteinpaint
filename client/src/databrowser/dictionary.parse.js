@@ -114,8 +114,10 @@ export function parseDictionary(input) {
 					// term is numeric. keys declared in .values{} should be uncomputable categories
 					for (const k in terms[termId].values) {
 						const tmp = Number(k)
-						if (Number.isNaN(tmp))
-							throw `Uncomputable category of a numeric term is required to be a number (here uses non-numeric value of ${k}, at line ${lineNum}). This is by design so that all such values can be kept in anno_float table etc`
+						if (Number.isNaN(tmp)) {
+							// this is by design so that all values in the db to match the column type for that value, otherwise the generated SQL statements would always have to include
+							throw `Uncomputable category of a numeric term is required to be a number (here uses non-numeric value of ${k}).`
+						}
 						terms[termId].values[k].uncomputable = true
 					}
 				}
