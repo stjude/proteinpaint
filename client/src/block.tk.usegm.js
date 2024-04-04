@@ -938,7 +938,7 @@ function domainlegend(tk, block) {
 	const lst = client.getdomaintypes(block.usegm)
 
 	for (const domaintype of lst) {
-		console.log(domaintype)
+		//console.log(domaintype)
 		/*
 		domaintype {}
 		.key: domain.name+domain.description
@@ -957,136 +957,112 @@ function domainlegend(tk, block) {
 			.style('cursor', 'default')
 			.style('font-family', 'Courier')
 			.html(block.usegm.domain_hidden[domaintype.key] ? '&times;' : '&nbsp;')
-			.on('click', event => {
-				// toggle show/hide of a type of domain
+		// .on('click', event => {
+		// 	// toggle show/hide of a type of domain
 
-				if (domaintype.key in block.usegm.domain_hidden) {
-					event.target.innerHTML = '&nbsp;'
+		// 	if (domaintype.key in block.usegm.domain_hidden) {
+		// 		event.target.innerHTML = '&nbsp;'
 
-					if (block.gmmode == client.gmmode.gmsum) {
-						for (const m of block.allgm) {
-							if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
-						}
-					} else {
-						// not in gmsum, only modify usegm
-						delete block.usegm.domain_hidden[domaintype.key]
-					}
-				} else {
-					event.target.innerHTML = '&times;'
-					if (block.gmmode == client.gmmode.gmsum) {
-						for (const m of block.allgm) {
-							if (m.domain_hidden) m.domain_hidden[domaintype.key] = 1
-						}
-					} else {
-						block.usegm.domain_hidden[domaintype.key] = 1
-					}
-				}
-				gmtkrender(tk, block)
-			})
+		// 		if (block.gmmode == client.gmmode.gmsum) {
+		// 			for (const m of block.allgm) {
+		// 				if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
+		// 			}
+		// 		} else {
+		// 			// not in gmsum, only modify usegm
+		// 			delete block.usegm.domain_hidden[domaintype.key]
+		// 		}
+		// 	} else {
+		// 		event.target.innerHTML = '&times;'
+		// 		if (block.gmmode == client.gmmode.gmsum) {
+		// 			for (const m of block.allgm) {
+		// 				if (m.domain_hidden) m.domain_hidden[domaintype.key] = 1
+		// 			}
+		// 		} else {
+		// 			block.usegm.domain_hidden[domaintype.key] = 1
+		// 		}
+		// 	}
+		// 	gmtkrender(tk, block)
+		// })
 
-		row
+		const clickableDiv = row.append('div').style('display', 'inline-block')
+
+		const nameDiv = clickableDiv
 			.append('span')
 			.text(domaintype.name)
 			.style('color', default_text_color)
 			.style('padding-right', '10px')
 
-			// .on('click', event => {
-			// 	block.tip.clear().showunder(event.target)
-
-			// })
-			// .on('click', event => {
-			// 	//create new menu object
-			// 	//console.log(self.app.tip)
-
-			// 	const mymenu = new Menu()
-			// 	mymenu.clear()
-			// 	mymenu.d.append('div').text('Show')
-			// 	mymenu.d.append('div').text('Hide')
-			// 	mymenu.d.append('div').text('Show All')
-			// 	mymenu.show(event.clientX, event.clientY)
-			// 	// 3 Call back functions
-			// 	//
-
-			// 	event.stopPropagation()
-			// 	block.tip.clear().showunder(event.target)
-			// 	block.tip.d.append('div').text(domaintype.description)
-			// 	// block.tip.d.append('div').text(domaintype.description)
-			// })
-			// console.log(row)
-			// // Toggle dropdown visibility
-			// nameSpan.on('click', () => {
-			// 	dropdown.style('display', dropdown.style('display') === 'none' ? 'block' : 'none')
-			// })
-
-			.on('click', event => {
-				const mymenu = new Menu({
-					onHide: () => block.tip.clear().hide() // Hide tooltip when menu is hidden
-				})
-				mymenu.clear()
-				mymenu.d
-					.append('div')
-					.text('Show')
-					.on('click', () => {
-						// Callback for "Show" option
-						console.log('Show option clicked for', domaintype.key)
-						if (block.gmmode == client.gmmode.gmsum) {
-							for (const m of block.allgm) {
-								if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
-							}
-						} else {
-							delete block.usegm.domain_hidden[domaintype.key]
-						}
-						gmtkrender(tk, block) // Re-render the visualization
-						domainlegend(tk, block)
-					})
-				mymenu.d
-					.append('div')
-					.text('Hide')
-					.on('click', () => {
-						// Callback for "Hide" option
-						console.log('Hide option clicked for', domaintype.key)
-						if (block.gmmode == client.gmmode.gmsum) {
-							for (const m of block.allgm) {
-								if (!m.domain_hidden) m.domain_hidden = {}
-								m.domain_hidden[domaintype.key] = 1
-							}
-							event.target.style.textDecoration = 'line-through'
-							// rerender the legend - show a strikethrough on the name of the item.
-						} else {
-							if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
-							block.usegm.domain_hidden[domaintype.key] = 1
-						}
-						gmtkrender(tk, block) // Re-render the visualization
-						domainlegend(tk, block)
-					})
-				mymenu.d
-					.append('div')
-					.text('Show All')
-					.on('click', () => {
-						// Callback for "Show All" option
-						console.log('Show All option clicked')
-						if (block.gmmode == client.gmmode.gmsum) {
-							for (const m of block.allgm) {
-								m.domain_hidden = {}
-							}
-						} else {
-							block.usegm.domain_hidden = {}
-						}
-						gmtkrender(tk, block) // Re-render the visualization
-						domainlegend(tk, block)
-					})
-				mymenu.show(event.clientX, event.clientY)
-				event.stopPropagation()
-				// block.tip.clear().showunder(event.target);
-				// block.tip.d.append('div').text(domaintype.description);
-			})
-
-		row
+		const descriptionDiv = clickableDiv
 			.append('span')
 			.text(domaintype.description)
 			.style('color', default_text_color)
 			.style('font-size', '.7em')
 			.style('padding-right', '10px')
+
+		clickableDiv.on('click', event => {
+			block.tip.clear()
+
+			//Show button
+			block.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Show')
+				.style('display', show ? '' : 'none')
+				.on('click', () => {
+					nameDiv.node().style.textDecoration = 'none'
+					descriptionDiv.node().style.textDecoration = 'none'
+					// Callback for "Show" option
+					if (block.gmmode == client.gmmode.gmsum) {
+						for (const m of block.allgm) {
+							if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
+						}
+					} else {
+						delete block.usegm.domain_hidden[domaintype.key]
+					}
+					gmtkrender(tk, block) // Re-render the visualization
+				})
+
+			//Hide button
+			block.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Hide')
+				.on('click', event => {
+					// Callback for "Hide" option
+					nameDiv.node().style.textDecoration = 'line-through'
+					descriptionDiv.node().style.textDecoration = 'line-through'
+					if (block.gmmode == client.gmmode.gmsum) {
+						for (const m of block.allgm) {
+							if (!m.domain_hidden) m.domain_hidden = {}
+							m.domain_hidden[domaintype.key] = 1
+						}
+						//event.target.style.textDecoration = 'line-through'
+						// rerender the legend - show a strikethrough on the name of the item.
+					} else {
+						if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
+						block.usegm.domain_hidden[domaintype.key] = 1
+					}
+					gmtkrender(tk, block) // Re-render the visualization
+				})
+			//Show All button
+			block.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Show All')
+				.on('click', () => {
+					// Callback for "Show All" option
+					if (block.gmmode == client.gmmode.gmsum) {
+						for (const m of block.allgm) {
+							m.domain_hidden = {}
+						}
+					} else {
+						block.usegm.domain_hidden = {}
+					}
+					gmtkrender(tk, block) // Re-render the visualization
+				})
+			block.tip.show(event.clientX, event.clientY)
+			event.stopPropagation()
+		})
 
 		if (domaintype.CDD) {
 			row
