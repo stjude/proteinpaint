@@ -1037,6 +1037,7 @@ function domainlegend(tk, block) {
 							delete block.usegm.domain_hidden[domaintype.key]
 						}
 						gmtkrender(tk, block) // Re-render the visualization
+						domainlegend(tk, block)
 					})
 				mymenu.d
 					.append('div')
@@ -1049,11 +1050,14 @@ function domainlegend(tk, block) {
 								if (!m.domain_hidden) m.domain_hidden = {}
 								m.domain_hidden[domaintype.key] = 1
 							}
+							event.target.style.textDecoration = 'line-through'
+							// rerender the legend - show a strikethrough on the name of the item.
 						} else {
 							if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
 							block.usegm.domain_hidden[domaintype.key] = 1
 						}
 						gmtkrender(tk, block) // Re-render the visualization
+						domainlegend(tk, block)
 					})
 				mymenu.d
 					.append('div')
@@ -1069,6 +1073,7 @@ function domainlegend(tk, block) {
 							block.usegm.domain_hidden = {}
 						}
 						gmtkrender(tk, block) // Re-render the visualization
+						domainlegend(tk, block)
 					})
 				mymenu.show(event.clientX, event.clientY)
 				event.stopPropagation()
