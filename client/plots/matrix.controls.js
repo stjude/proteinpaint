@@ -79,7 +79,6 @@ export class MatrixControls {
 				getCount: () =>
 					'sampleCount' in this.overrides ? this.overrides.sampleCount : this.parent.sampleOrder?.length || 0,
 				rows: [
-					getSorterUi(this, s),
 					{
 						label: `Maximum # ${l.Samples}`,
 						title: `Limit the number of displayed ${l.samples}`,
@@ -162,7 +161,33 @@ export class MatrixControls {
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'collabelmaxchars'
-					}
+					},
+					{
+						label: `Group ${l.Samples} By`,
+						title: `Select a variable with discrete values to group ${l.samples}`,
+						type: 'term',
+						chartType: 'matrix',
+						configKey: 'divideBy',
+						vocabApi: this.opts.app.vocabApi,
+						state: {
+							vocab: this.opts.vocab
+							//activeCohort: appState.activeCohort
+						},
+						getDisplayStyle(plot) {
+							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+						},
+						processInput: tw => {
+							if (tw) fillTermWrapper(tw)
+							return tw
+						},
+						getBodyParams: () => {
+							const currentGeneNames = this.parent.termOrder
+								.filter(t => t.tw.term.type === 'geneVariant')
+								.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
+							return { currentGeneNames }
+						}
+					},
+					getSorterUi(this, s)
 				]
 			})
 			.html(d => d.label)

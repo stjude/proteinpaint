@@ -249,15 +249,12 @@ export class Matrix {
 
 	setComputedConfig() {
 		const s = this.config.settings.matrix
-		const mutationClasses = s.mutationClasses
-		const CNVClasses = s.CNVClasses
+		const allClasses = [...s.mutationClasses, ...s.CNVClasses]
 
 		const hiddenVariants = new Set()
 		for (const f of this.config.legendGrpFilter.lst) {
 			if (!f.dt) continue
-			;[...mutationClasses, ...CNVClasses]
-				.filter(m => f.dt.includes(mclass[m].dt))
-				.forEach(key => hiddenVariants.add(key))
+			allClasses.filter(m => f.dt.includes(mclass[m].dt)).forEach(key => hiddenVariants.add(key))
 		}
 		for (const f of this.config.legendValueFilter.lst) {
 			if (!f.legendGrpName || !f.tvs?.term?.type.startsWith('gene')) continue
@@ -270,8 +267,8 @@ export class Matrix {
 		const hiddenCNVs = new Set(s.hiddenVariants.filter(key => mclass[key]?.dt === dtcnv))
 		s.hiddenCNVs = [...hiddenCNVs]
 
-		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size == CNVClasses.length ? 'none' : 'bySelection'
-		s.allMatrixCNVHidden = hiddenCNVs.size == CNVClasses.length
+		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size == s.CNVClasses.length ? 'none' : 'bySelection'
+		s.allMatrixCNVHidden = hiddenCNVs.size == s.CNVClasses.length
 
 		const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.mutationClasses.find(k => k === key)))
 		s.hiddenMutations = [...hiddenMutations]

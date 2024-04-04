@@ -3078,9 +3078,7 @@ function showNone(menuGrp, targetData, self, target) {
 	})
 }
 
-function showAll(menuGrp, targetData, self, target) {
-	menuGrp.hide()
-
+export function getConfigForShowAll(self, targetData, target) {
 	if (targetData) {
 		// there are  data
 		const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
@@ -3106,18 +3104,26 @@ function showAll(menuGrp, targetData, self, target) {
 			)
 	}
 
+	const s = self.config.settings.matrix
 	if (
-		self.state.config.settings.matrix.addMutationCNVButtons &&
+		s.addMutationCNVButtons &&
 		self.chartType !== 'hierCluster' &&
 		(target == 'CNV' || targetData?.dt?.includes(dtcnv)) &&
-		self.config.settings.matrix.cellEncoding !== ''
+		s.cellEncoding !== ''
 	) {
-		self.config.settings.matrix.cellEncoding = 'oncoprint'
+		s.cellEncoding = 'oncoprint'
 	}
+
+	return self.config
+}
+
+export function showAll(menuGrp, targetData, self, target) {
+	menuGrp.hide()
+
 	self.app.dispatch({
 		type: 'plot_edit',
 		id: self.id,
-		config: self.config
+		config: getConfigForShowAll(self, targetData, target)
 	})
 }
 
