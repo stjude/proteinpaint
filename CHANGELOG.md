@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.51.1
 
 Fixes:
 - Oncomatrix do not allow to hide all the alteration groups
