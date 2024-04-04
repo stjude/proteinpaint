@@ -160,7 +160,7 @@ if (serverconfig.allow_env_overrides) {
 	}
 }
 
-if (serverconfig.URL.endsWith('/')) serverconfig.URL = serverconfig.URL.slice(0, -1)
+if (serverconfig.URL?.endsWith('/')) serverconfig.URL = serverconfig.URL.slice(0, -1)
 
 // always change selected configuration paths in a container
 if (process.env.PP_MODE?.startsWith('container')) {
