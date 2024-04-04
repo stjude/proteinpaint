@@ -292,13 +292,17 @@ function validateNumericTermCategories(term) {
 	// term is numeric
 	if (!term.values) return // .values{} is optional
 	if (typeof term.values != 'object') throw 'numeric .values{} is not object'
-	// values{} keys should be uncomputable categories, auto-assign the flag here. also make sure keys can be cast into numbers
-	for (const k in term.values) {
-		const tmp = Number(k)
+	// values{} keys should be uncomputable categories, auto-assign the flag here
+	// also make sure keys can be cast into numbers
+	for (const key in term.values) {
+		if (key == '') throw 'Cannot use empty string as an uncomputable category'
+		// key is not empty string
+		const tmp = Number(key)
 		if (Number.isNaN(tmp)) {
 			// this is by design so that all values in the db to match the column type for that value, otherwise the generated SQL statements would always have to include
-			throw `Uncomputable category of a numeric term is required to be a number (here uses non-numeric value of ${k}).`
+			throw `Uncomputable category of a numeric term is required to be a number (here uses non-numeric value of ${key}).`
 		}
-		term.values[k].uncomputable = true
+		// key is a valid category because it can be casted into a number
+		term.values[key].uncomputable = true
 	}
 }
