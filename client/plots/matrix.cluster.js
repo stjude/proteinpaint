@@ -83,6 +83,8 @@ function setRenderers(self) {
 		}
 
 		s.prevShowGrid = s.showGrid
+		// need to reset imgBox and beam highlighters after rendering to avoid misaligned beam highlighters
+		self.parent.delayedMouseoutHandler()
 	}
 
 	self.translateElems = function (dx, s, d, duration = 0) {
