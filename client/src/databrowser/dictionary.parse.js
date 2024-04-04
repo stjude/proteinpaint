@@ -97,10 +97,7 @@ export function parseDictionary(input) {
 					terms[termId].values = {}
 					terms[termId].groupsetting = { inuse: false }
 				}
-				const values = cols[valuesIndex]
-					.trim()
-					.replace(/"/g, '')
-					.split(';')
+				const values = cols[valuesIndex].trim().replace(/"/g, '').split(';')
 
 				for (const x of values) {
 					const v = x.trim()
@@ -114,7 +111,13 @@ export function parseDictionary(input) {
 				}
 
 				if (type == 'integer' || type == 'float') {
-					for (const k in terms[termId].values) terms[termId].values[k].uncomputable = true
+					// term is numeric. keys declared in .values{} should be uncomputable categories
+					for (const k in terms[termId].values) {
+						const tmp = Number(k)
+						if (Number.isNaN(tmp))
+							throw `Uncomputable category of a numeric term is required to be a number (here uses non-numeric value of ${k}, at line ${lineNum}). This is by design so that all such values can be kept in anno_float table etc`
+						terms[termId].values[k].uncomputable = true
+					}
 				}
 			} catch (e) {
 				throw `Line ${lineNum} error: ${e}`
