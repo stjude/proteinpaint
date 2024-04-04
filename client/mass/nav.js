@@ -181,7 +181,7 @@ function setRenderers(self) {
 			.style('float', 'right')
 			.style('font-size', '1.1em')
 			.style('margin-top', '50px')
-			.text(appState.termdbConfig.title.text)
+			.text(appState.termdbConfig?.title?.text || '')
 
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
 		const controlsDiv = header
