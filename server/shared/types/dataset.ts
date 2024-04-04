@@ -61,9 +61,14 @@ type GenomicPositionEntry = {
 */
 
 type Chr2bcffile = { [index: string]: string }
+type bcfMafFile = {
+	bcffile: string
+	maffile: string
+}
 
 type ByRangeEntry = {
 	bcffile?: string
+	bcfMafFile?: bcfMafFile
 	file?: string
 	infoFields?: InfoFieldsEntry[]
 	chr2bcffile?: Chr2bcffile
