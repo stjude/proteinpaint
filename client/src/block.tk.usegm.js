@@ -976,8 +976,8 @@ function domainlegend(tk, block) {
 		clickableDiv.on('click', event => {
 			block.tip.clear()
 
-			//Show button
 			if (block.usegm.domain_hidden[domaintype.key]) {
+				// If the current domain is hidden, show the "Show" and "Show All" options
 				block.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
@@ -995,9 +995,33 @@ function domainlegend(tk, block) {
 						}
 						gmtkrender(tk, block) // Re-render the visualization
 					})
+
+				// Add the "Show All" option
+				block.tip.d
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text('Show All')
+					.on('click', () => {
+						// Callback for "Show All" option
+						const spans = tk.td_legend.selectAll('span')
+						spans.style('text-decoration', 'none')
+						if (block.gmmode == client.gmmode.gmsum) {
+							for (const m of block.allgm) {
+								m.domain_hidden = {}
+							}
+						} else {
+							block.usegm.domain_hidden = {}
+						}
+						gmtkrender(tk, block) // Re-render the visualization
+					})
+
+				block.tip.show(event.clientX, event.clientY)
+				event.stopPropagation()
+				return
 			}
 
-			//Hide button
+			// If the current domain is not hidden, proceed as usual
+
 			block.tip.d
 				.append('div')
 				.attr('class', 'sja_menuoption')
@@ -1011,15 +1035,14 @@ function domainlegend(tk, block) {
 							if (!m.domain_hidden) m.domain_hidden = {}
 							m.domain_hidden[domaintype.key] = 1
 						}
-						//event.target.style.textDecoration = 'line-through'
-						// rerender the legend - show a strikethrough on the name of the item.
 					} else {
 						if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
 						block.usegm.domain_hidden[domaintype.key] = 1
 					}
 					gmtkrender(tk, block) // Re-render the visualization
 				})
-			//Show All button
+
+			// Add the "Show All" option
 			block.tip.d
 				.append('div')
 				.attr('class', 'sja_menuoption')
@@ -1027,9 +1050,7 @@ function domainlegend(tk, block) {
 				.on('click', () => {
 					// Callback for "Show All" option
 					const spans = tk.td_legend.selectAll('span')
-					for (const span of spans.nodes()) {
-						span.style.textDecoration = 'none'
-					}
+					spans.style('text-decoration', 'none')
 					if (block.gmmode == client.gmmode.gmsum) {
 						for (const m of block.allgm) {
 							m.domain_hidden = {}
@@ -1039,9 +1060,25 @@ function domainlegend(tk, block) {
 					}
 					gmtkrender(tk, block) // Re-render the visualization
 				})
+
 			block.tip.show(event.clientX, event.clientY)
 			event.stopPropagation()
 		})
+
+		if (block.usegm.domain_hidden && block.usegm.domain_hidden[domaintype.key]) {
+			nameDiv.node().style.textDecoration = 'line-through'
+			descriptionDiv.node().style.textDecoration = 'line-through'
+		}
+
+		if (block.gmmode == client.gmmode.gmsum) {
+			for (const m of block.allgm) {
+				if (m.domain_hidden && m.domain_hidden[domaintype.key]) {
+					nameDiv.node().style.textDecoration = 'line-through'
+					descriptionDiv.node().style.textDecoration = 'line-through'
+				}
+			}
+		}
+
 		if (domaintype.CDD) {
 			row
 				.append('a')
@@ -1109,6 +1146,7 @@ function domainlegend(tk, block) {
 				.style('padding-right', '10px')
 		}
 	}
+
 	if (block.usegm.coding && block.usegm.coding.length > 0) {
 		// custom domain ui, only for coding gene
 		tk.td_legend
