@@ -218,9 +218,9 @@ class singleCellPlot {
 			.append('svg')
 			.attr('width', this.settings.svgw)
 			.attr('height', this.settings.svgh + 40)
-			.on('mouseover', event => {
-				if (!this.onClick) this.showTooltip(event, plot)
-			})
+			//.on('mouseover', event => {
+			//	if (!this.onClick) this.showTooltip(event, plot)
+			//})
 			.on('click', event => this.showTooltip(event, plot))
 		svg.append('text').attr('transform', `translate(20, 30)`).style('font-weight', 'bold').text(`${plot.name}`)
 
