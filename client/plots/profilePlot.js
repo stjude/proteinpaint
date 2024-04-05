@@ -7,6 +7,7 @@ import { getSampleFilter } from '../termsetting/handlers/samplelst'
 import { Menu } from '#dom/menu'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
+
 export class profilePlot {
 	constructor() {
 		this.type = 'profilePlot'
@@ -271,12 +272,27 @@ export class profilePlot {
 			this.components.controls.on(`downloadClick.${chartType}`, () =>
 				downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
 			)
-		this.components.controls.on(`helpClick.${chartType}`, () =>
-			window.open(
-				'https://docs.google.com/document/d/1hsxqTrfHcDqhCjaYbOldz7kWffR_kM9KDk3Xrxa4glk/edit?usp=sharing',
-				'_blank'
-			)
-		)
+		this.components.controls.on(`helpClick.${chartType}`, () => {
+			let link
+			if (this.state.dslabel == 'ProfileAbbrev') {
+				if (chartType == 'profileBarchart')
+					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-abbr-profiledash.pdf'
+				else if (chartType == 'profilePolar')
+					link =
+						'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-abbr-profiledash.pdf'
+				else if (chartType.startsWith('profileRadar'))
+					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-abbr-profiledash.pdf'
+			} else if (this.state.dslabel == 'ProfileFull') {
+				if (chartType == 'profileBarchart')
+					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-full-profiledash.pdf'
+				else if (chartType == 'profilePolar')
+					link =
+						'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-full-profiledash.pdf'
+				else if (chartType.startsWith('profileRadar'))
+					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-full-profiledash.pdf'
+			}
+			if (link) window.open(link)
+		})
 		this.filtersCount = 0
 	}
 
