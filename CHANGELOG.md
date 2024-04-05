@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - fix position errors after oncoMatrix/hierCluster zooming in/out caused by outdated imgBox
+- when parsing phenotree, enforce uncomputable categories are numbers also
 
 
 ## 2.51.1
