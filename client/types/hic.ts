@@ -1,6 +1,5 @@
 import { BaseTrackArgs } from './tracks.ts'
-import { Div, Elem, Input, Svg, SvgG } from './d3'
-import { Selection } from 'd3-selection'
+import { Div, Elem, Input } from './d3'
 
 type SharedArgs = {
 	/** HiC file path from tp/ */
@@ -10,6 +9,8 @@ type SharedArgs = {
 }
 
 type RestrictionEnzyme = 'Dpnll' | 'EcoRl' | 'Hindlll' | 'MboI' | 'Ncol'
+
+export type ChrPosition = { chr: string; start: number; stop: number }
 
 export type HicRunProteinPaintTrackArgs = BaseTrackArgs &
 	SharedArgs & {
@@ -89,63 +90,63 @@ export type HicstrawDom = {
 	tip: any
 }
 
-export type WholeGenomeView = {
-	/** # pixel per bin, may set according to resolution */
-	binpx: number
-	/** Appears as the max cutoff value for the user in the menu */
-	bpmaxv: number
-	/** Arrays of hicdata response [pos1, pos2, and value] reformatted for rendering */
-	data: number[]
-	/** heatmap layer underneath svg */
-	layer_map: SvgG
-	/** second g layer underneath the svg */
-	layer_sv: SvgG
-	/** SVG elements and data for individual canvases */
-	lead2follow?: Map<
-		string,
-		Map<
-			string,
-			Partial<{
-				canvas: Elem
-				canvas2?: Elem
-				x: number
-				y: number
-				data: number[][]
-				img: Elem
-				img2?: Elem
-			}>
-		>
-	>
-	/** Normalization method tied to this view. Intended to render independently of other views */
-	nmeth: string
-	/** Matrix type specific to this view. Value from dropdown and relates to 1st straw parameter. */
-	matrixType: 'observed' | 'expected' | 'oe' | 'log(oe)'
-	/** Displays the chr on the x axis to the user next to the cell's upper left corner.
-	 * Eventually there should be Menu type for client */
-	pica_x: any
-	/** Displays the chr on the y axis to the user next to the cell's upper left corner.
-	 * Eventually there should be Menu type for client */
-	pica_y: any
-	/** Calculated resolution. Displayed in menu for user */
-	resolution: number
-	/** Not entirely sure why SVGElement wasn't sufficient. Maybe this is a typescript bandaid?? */
-	svg: Selection<SVGSVGElement, any, HTMLElement, any>
-}
+// export type WholeGenomeView = {
+// 	/** # pixel per bin, may set according to resolution */
+// 	binpx: number
+// 	/** Appears as the max cutoff value for the user in the menu */
+// 	bpmaxv: number
+// 	/** Arrays of hicdata response [pos1, pos2, and value] reformatted for rendering */
+// 	data: number[]
+// 	/** heatmap layer underneath svg */
+// 	layer_map: SvgG
+// 	/** second g layer underneath the svg */
+// 	layer_sv: SvgG
+// 	/** SVG elements and data for individual canvases */
+// 	lead2follow?: Map<
+// 		string,
+// 		Map<
+// 			string,
+// 			Partial<{
+// 				canvas: Elem
+// 				canvas2?: Elem
+// 				x: number
+// 				y: number
+// 				data: number[][]
+// 				img: Elem
+// 				img2?: Elem
+// 			}>
+// 		>
+// 	>
+// 	/** Normalization method tied to this view. Intended to render independently of other views */
+// 	nmeth: string
+// 	/** Matrix type specific to this view. Value from dropdown and relates to 1st straw parameter. */
+// 	matrixType: 'observed' | 'expected' | 'oe' | 'log(oe)'
+// 	/** Displays the chr on the x axis to the user next to the cell's upper left corner.
+// 	 * Eventually there should be Menu type for client */
+// 	pica_x: any
+// 	/** Displays the chr on the y axis to the user next to the cell's upper left corner.
+// 	 * Eventually there should be Menu type for client */
+// 	pica_y: any
+// 	/** Calculated resolution. Displayed in menu for user */
+// 	resolution: number
+// 	/** Not entirely sure why SVGElement wasn't sufficient. Maybe this is a typescript bandaid?? */
+// 	svg: Selection<SVGSVGElement, any, HTMLElement, any>
+// }
 
-export type ChrPairView = {
-	axisx?: Svg
-	axisy?: Svg
-	binpx: number
-	canvas: any //dom
-	ctx: any //dom
-	data: number[][]
-	/** Matrix type specific to this view. Value from dropdown and relates to 1st straw parameter. */
-	matrixType: 'observed' | 'expected' | 'oe' | 'log(oe)'
-	/** Normalization method tied to this view. Intended to render independently of other views */
-	nmeth: string
-	/** Calculated resolution. Displayed in menu for user */
-	resolution: number
-}
+// export type ChrPairView = {
+// 	axisx?: Svg
+// 	axisy?: Svg
+// 	binpx: number
+// 	canvas: any //dom
+// 	ctx: any //dom
+// 	data: number[][]
+// 	/** Matrix type specific to this view. Value from dropdown and relates to 1st straw parameter. */
+// 	matrixType: 'observed' | 'expected' | 'oe' | 'log(oe)'
+// 	/** Normalization method tied to this view. Intended to render independently of other views */
+// 	nmeth: string
+// 	/** Calculated resolution. Displayed in menu for user */
+// 	resolution: number
+// }
 
 export type HorizontalView = {
 	/** args for runpp(). Define this later */

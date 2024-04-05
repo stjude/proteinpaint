@@ -1,11 +1,12 @@
 import tape from 'tape'
 import { Positions } from '../data/Positions.ts'
 import { Resolution } from '../data/Resolution.ts'
+import { ChrPosition } from 'types/hic.ts'
 
 type MockState = {
 	currView: string
-	x: { chr: string; start: number; stop: number }
-	y: { chr: string; start: number; stop: number }
+	x: ChrPosition
+	y: ChrPosition
 }
 
 const mockHic = {

@@ -1,14 +1,13 @@
-import { select as d3select, pointer, Selection } from 'd3-selection'
+import { select as d3select, Selection } from 'd3-selection'
 import * as client from '#src/client'
-import * as common from '#shared/common'
 import blocklazyload from '#src/block.lazyload'
 import {
 	HicstrawArgs,
 	MainPlotDiv,
 	HicstrawDom,
 	DetailViewAxis,
-	WholeGenomeView,
-	ChrPairView,
+	// WholeGenomeView,
+	// ChrPairView,
 	HorizontalView,
 	DetailView
 } from '../../../types/hic.ts'
@@ -31,8 +30,9 @@ type Pane = {
 
 export class GenomeView {
 	viewModel: GridViewModel
-
 	viewRender: GridRenderer
+	gridElementsRenderer: GridElementsRenderer
+	gridFormattedData: GridElementsFormattedData
 
 	/** opts */
 	app: any
@@ -49,8 +49,6 @@ export class GenomeView {
 	svg: SvgSvg
 	layer_map: SvgG
 	layer_sv: SvgG
-	gridElementsRenderer: GridElementsRenderer
-	gridFormattedData: GridElementsFormattedData
 
 	/** Data */
 	/** px width for each chr */
@@ -712,6 +710,7 @@ async function detailViewUpdateHic(hic: any, self: any) {
 					for (const [id, pos] of map) {
 						self.detailview.frag.xid2coord.set(id, pos)
 					}
+
 					self.detailview.frag.yid2coord = self.detailview.frag.xid2coord
 				} else {
 					self.detailview.frag.yid2coord = map
@@ -868,7 +867,6 @@ function getdata_detail(hic: any, self: any) {
 				firstisx = xstart < ystart
 			} else {
 				//firstisx = tell_firstisx(hic, chrx, chry)
-				//firstisx = hic.genome.chrlookup[chrx.toUpperCase()].len > hic.genome.chrlookup[chry.toUpperCase()].len
 			}
 
 			const lst = [] as number[][]

@@ -1,9 +1,11 @@
-import { get } from '@sjcrh/proteinpaint-server/src/massSession'
-import { dofetch, dofetch2 } from '../../../src/client'
+import { dofetch2 } from '../../../src/client'
+import { ChrPosition } from '../../../types/hic.ts'
+
+export type FragCoord = { start: number; stop: number }
 
 export class DetailViewDataFetcher {
 	obj = {
-		rglst: [] as { chr: string; start: number; stop: number }[]
+		rglst: [] as ChrPosition[]
 	}
 	errList: string[]
 
@@ -19,7 +21,7 @@ export class DetailViewDataFetcher {
 		}
 	}
 
-	formatFragArgs(enzymefile: string, chr: { chr: string; start: number; stop: number }) {
+	formatFragArgs(enzymefile: string, chr: ChrPosition) {
 		const arg = {
 			getdata: 1,
 			getBED: 1,
@@ -43,24 +45,29 @@ export class DetailViewDataFetcher {
 		}
 	}
 
-	async getXFragData(hic: any, resolution: number | null, chrx: { chr: string; start: number; stop: number }) {
+	async getXFragData(hic: any, resolution: number | null, chrx: ChrPosition) {
 		this.isFragData(hic, resolution)
-		const reqArgs = this.formatFragArgs(hic.enzyme, chrx)
+		if (!hic.enzymefile) return
+		const reqArgs = this.formatFragArgs(hic.enzymefile, chrx)
 		return await this.getBedData(reqArgs)
 	}
 
+	async getYFragData(hic: any, chry: ChrPosition) {
+		const reqArgs = this.formatFragArgs(hic.enzymefile, chry)
+		return await this.getBedData(reqArgs)
+	}
 	/**
 	 * Separate request from data fetch
 	 * Returns the additional fragment data
 	 * @param fragCoords
 	 */
-	async fetchFragData(
+	async fetchData(
 		hic: any,
 		detailView: any,
 		resolution: number,
-		x: { chr: string; start: number; stop: number },
-		y: { chr: string; start: number; stop: number },
-		fragCoords?: { x: { start: number; stop: number }; y: { start: number; stop: number } }
+		x: ChrPosition,
+		y: ChrPosition,
+		fragCoords?: { x: FragCoord; y: FragCoord }
 	) {
 		const fragStrawArgs = {
 			matrixType: detailView.matrixType,
@@ -75,22 +82,21 @@ export class DetailViewDataFetcher {
 		if (fragCoords) fragStrawArgs['isfrag'] = true
 
 		try {
-			const data = dofetch('hicdata?', {
+			const data = dofetch2('hicdata?', {
 				method: 'POST',
 				body: JSON.stringify(fragStrawArgs)
-			})
-			console.log(data)
+			}) as any
+			if (data.error) {
+				this.errList.push(data.error)
+			}
+			return data
 		} catch (e: any) {
 			this.errList.push(e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
 	}
 
-	determinePosition(
-		hic: any,
-		chr: { chr: string; start: number; stop: number },
-		fragCoord?: { start: number; stop: number }
-	) {
+	determinePosition(hic: any, chr: ChrPosition, fragCoord?: FragCoord) {
 		if (fragCoord) {
 			return `${hic.nochr ? chr.chr.replace('chr', '') : chr.chr}:${fragCoord.start}:${fragCoord.stop}`
 		} else {

@@ -15,14 +15,14 @@ export class DataMapper {
 			}
 		} else {
 			//genome view
-			let countBlankM = 0
+			const blankChrs: string[] = []
 			for (const d of data) {
 				/** Addresses the nagging problem if no data is present for M chr, not to render
 				 * squares for chrM-chr*. Errors still appear for the user.
 				 * TODO: Move to server side???
 				 */
 				if (d?.lead == 'chrM' || (d?.lead == 'chrY' && !d.items.length)) {
-					countBlankM++
+					blankChrs.push(d.lead)
 					continue
 				}
 				for (const i of d.items) {
@@ -30,9 +30,11 @@ export class DataMapper {
 				}
 			}
 
-			if (countBlankM == 25) {
-				const idx = this.hic.chrlst.indexOf('chrM')
-				this.hic.chrlst.splice(idx, 1)
+			if (blankChrs.length) {
+				for (const c of blankChrs) {
+					const idx = this.hic.chrlst.indexOf(c)
+					this.hic.chrlst.splice(idx, 1)
+				}
 			}
 		}
 

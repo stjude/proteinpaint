@@ -5,14 +5,14 @@ import { hicData } from './hicData.ts'
 import { hicparsestat } from '../../../tracks/hic/data/parseData.ts'
 //import { runproteinpaint } from '../../../test/front.helpers.js'
 
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-}
+// function getHolder() {
+// 	return d3s
+// 		.select('body')
+// 		.append('div')
+// 		.style('border', '1px solid #aaa')
+// 		.style('padding', '5px')
+// 		.style('margin', '5px')
+// }
 
 async function getGenomes(genome: string) {
 	const response = await dofetch2('genomes')

@@ -111,7 +111,13 @@ export class HicComponent {
 			const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
 			this.data = await genomeFetcher.getData(obj)
 		} else if (this.state.currView == 'detail') {
-			const detailFetcher = new DetailViewDataMapper(this.hic, this.errList)
+			const parent = (prop: string, value?: string | number) => {
+				if (value) this[prop] = value
+				return this[prop]
+			}
+			const detailMapper = new DetailViewDataMapper(this.hic, this.errList, parent)
+			this.data = await detailMapper.getData(this.state.x, this.state.y)
+			console.log(this.data)
 		} else {
 			if (!this.state?.x?.chr || !this.state?.y?.chr) {
 				this.errList.push(`No positions provided for ${this.activeView} view.`)
