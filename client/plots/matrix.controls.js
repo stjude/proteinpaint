@@ -9,7 +9,7 @@ import { make_radios } from '#dom/radiobutton'
 import { make_one_checkbox } from '#dom/checkbox'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 import { select } from 'd3-selection'
-import { dtsnvindel, dtcnv } from '#shared/common'
+import { mclass, dt2label, dtsnvindel, dtcnv } from '#shared/common'
 
 const tip = new Menu({ padding: '' })
 
@@ -798,7 +798,106 @@ export class MatrixControls {
 			//.property('disabled', d => d.disabled)
 			.text('Download')
 			.on('focus', () => this.parent.app.tip.hide())
-			.on('click.sjpp-matrix-download', () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }))
+			.on('click.sjpp-matrix-download', event => {
+				const p = this.parent
+				if (!p.dom.downloadMenu) p.dom.downloadMenu = new Menu({ padding: '' })
+				const downloadMenu = p.dom.downloadMenu.clear()
+				const div = downloadMenu.d.append('div')
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(`SVG image`)
+					.on('click.sjpp-matrix-download', () => {
+						to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true })
+						p.dom.downloadMenu.destroy()
+					})
+
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(`TSV data`)
+					.on('click.sjpp-matrix-download', () => {
+						const lst = p.data.lst
+						const allTerms = p.termOrder.map(t => t.tw)
+						if (p.config.divideBy?.id && !allTerms.find(a => a.id == p.config.divideBy.id)) {
+							// when divideBy term is not in the matrix terms
+							allTerms.push(p.config.divideBy)
+						}
+
+						const activeSamples = []
+						for (const d of lst) {
+							for (const tw of allTerms) {
+								if (tw.$id in d) {
+									activeSamples.push(d)
+									break
+								}
+							}
+						}
+
+						const header = ['sample']
+						for (const tw of allTerms) header.push(tw.term.name)
+
+						const rows = [header]
+						for (const s of activeSamples) {
+							const row = [s._ref_.label]
+							for (const tw of allTerms) {
+								if (!s[tw.$id]) {
+									row.push('')
+								} else {
+									if (tw.term.type == 'geneVariant') {
+										const allVariant = []
+										for (const v of s[tw.$id].renderedValues) {
+											if (v.dt == 1) {
+												allVariant.push(
+													v.origin
+														? `${v.origin} ${dt2label[v.dt]}:${mclass[v.class]?.label}(${v.mname})`
+														: `${dt2label[v.dt]}:${mclass[v.class]?.label}(${v.mname})`
+												)
+											} else if (v.dt == 4) {
+												allVariant.push(
+													v.origin
+														? `${v.origin} ${dt2label[v.dt]}:${v.value || mclass[v.class]?.label}`
+														: `${dt2label[v.dt]}:${v.value || mclass[v.class]?.label}`
+												)
+											} else if (v.dt == 3) {
+												allVariant.push(
+													v.origin ? `${v.origin} ${dt2label[v.dt]}:${v.value}` : `${dt2label[v.dt]}:${v.value}`
+												)
+											} else if (v.dt == 2 || v.dt == 5) {
+												allVariant.push(
+													v.origin
+														? `${v.origin} ${dt2label[v.dt]}:${v.gene}::${v.mname}`
+														: `${dt2label[v.dt]}:${v.gene}::${v.mname}`
+												)
+											} else {
+											}
+										}
+										row.push(allVariant.join(';;'))
+									} else {
+										row.push(s[tw.$id]?.renderedValues?.[0] || s[tw.$id]?.value || '')
+									}
+								}
+							}
+							rows.push(row)
+						}
+
+						const matrix = rows.map(row => row.join('\t')).join('\n')
+						const a = document.createElement('a')
+						document.body.appendChild(a)
+						a.addEventListener(
+							'click',
+							function () {
+								a.download = 'matrix.txt'
+								a.href = URL.createObjectURL(new Blob([matrix], { type: 'text/tab-separated-values' }))
+								document.body.removeChild(a)
+							},
+							false
+						)
+						a.click()
+						p.dom.downloadMenu.destroy()
+					})
+				downloadMenu.showunder(event.target)
+			})
 	}
 
 	main(overrides = {}) {
