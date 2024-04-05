@@ -13,19 +13,15 @@ type KeyLabel = {
 	label: string
 }
 
-/*** types specific to ClinVar ***/
-
-type ClinvarCategoriesEntry = {
-	color: string
-	label?: string
-	desc: string
-	textcolor?: string
-	name?: string
-}
-
-//Shared with genome.ts
-export type ClinvarClinsig = {
-	[index: string]: ClinvarCategoriesEntry
+// a set of categories about a vcf INFO field
+export type InfoFieldCategories = {
+	[index: string]: {
+		color: string
+		label?: string
+		desc: string
+		textcolor?: string
+		name?: string
+	}
 }
 
 type NumericFilterEntry = {
@@ -45,10 +41,10 @@ export type ClinvarAF = {
 
 /*** types supporting Queries type ***/
 
-type InfoFieldsEntry = {
+type InfoFieldEntry = {
 	name: string
 	key: string
-	categories?: ClinvarClinsig
+	categories?: InfoFieldCategories
 	separator?: string
 }
 
@@ -63,16 +59,19 @@ type GenomicPositionEntry = {
 type Chr2bcffile = { [index: string]: string }
 type bcfMafFile = {
 	bcffile: string // bcf file for only variants, no samples and FORMAT
-	maffile: string // maf file for sample mutations. bcf header contents with FORMAT and list of samples are copied into this maf as headers (any else)
+	maffile: string // maf file for sample mutations. bcf header contents with FORMAT and list of samples are copied into this maf as headers followed by the maf header starting with #chr, pos, ref, alt and sample. Each column after sample corresponds to the information in FORMAT. file is bgzipped and tabix indexed (tabix -c"#" -s 1 -b 2 -e 2 <maf.gz>)
 }
 
 type SnvindelByRange = {
 	// if true, served from gdc. no other parameters TODO change to src='gdc/native'
 	gdcapi?: boolean
+
 	// local file can have following different setup
 	bcffile?: string // one single bcf file
 	chr2bcffile?: Chr2bcffile // one bcf file per chr
 	bcfMafFile?: bcfMafFile // bcf+maf combined
+
+	infoFields?: InfoFieldEntry[] // allow to apply special configurations to certain INFO fields of the bcf file
 }
 type SvfusionByRange = {
 	file?: string
@@ -196,11 +195,14 @@ type Population = {
 // a data type under ds.queries{}
 type SnvIndelQuery = {
 	forTrack?: boolean
-	byrange: SnvindelByRange
+
+	// allow to query data by either isoform or range
+	byisoform?: GdcApi // isoform query is only used for gdc api
+	byrange: SnvindelByRange // query data by range
+
 	infoUrl?: URLEntry[]
 	skewerRim?: SkewerRim
 	format4filters?: string[]
-	byisoform?: GdcApi
 	m2csp?: M2Csq
 	format?: SnvIndelFormat
 	variant_filter?: VariantFilter

@@ -1,6 +1,6 @@
-import { ClinvarClinsig, ClinvarAF } from '#types'
+import { InfoFieldCategories, ClinvarAF } from '#types'
 
-export const clinsig: ClinvarClinsig = {
+export const clinsig: InfoFieldCategories = {
 	Affects: {
 		color: '#ccc',
 		label: 'Affects',
