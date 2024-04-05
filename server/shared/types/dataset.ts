@@ -62,17 +62,20 @@ type GenomicPositionEntry = {
 
 type Chr2bcffile = { [index: string]: string }
 type bcfMafFile = {
-	bcffile: string
-	maffile: string
+	bcffile: string // bcf file for only variants, no samples and FORMAT
+	maffile: string // maf file for sample mutations. bcf header contents with FORMAT and list of samples are copied into this maf as headers (any else)
 }
 
-type ByRangeEntry = {
-	bcffile?: string
-	bcfMafFile?: bcfMafFile
-	file?: string
-	infoFields?: InfoFieldsEntry[]
-	chr2bcffile?: Chr2bcffile
+type SnvindelByRange = {
+	// if true, served from gdc. no other parameters TODO change to src='gdc/native'
 	gdcapi?: boolean
+	// local file can have following different setup
+	bcffile?: string // one single bcf file
+	chr2bcffile?: Chr2bcffile // one bcf file per chr
+	bcfMafFile?: bcfMafFile // bcf+maf combined
+}
+type SvfusionByRange = {
+	file?: string
 }
 
 type URLEntry = {
@@ -193,7 +196,7 @@ type Population = {
 // a data type under ds.queries{}
 type SnvIndelQuery = {
 	forTrack?: boolean
-	byrange: ByRangeEntry
+	byrange: SnvindelByRange
 	infoUrl?: URLEntry[]
 	skewerRim?: SkewerRim
 	format4filters?: string[]
@@ -213,7 +216,7 @@ type SnvIndelQuery = {
 }
 
 type SvFusion = {
-	byrange: ByRangeEntry
+	byrange: SvfusionByRange
 }
 
 type SingleSampleMutationQuery = {
