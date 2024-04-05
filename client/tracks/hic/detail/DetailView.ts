@@ -4,6 +4,7 @@ import { ColorizeElement } from '../dom/ColorizeElement.ts'
 import { DetailBlock } from './DetailBlock.ts'
 import { select, Selection } from 'd3-selection'
 import { DetailViewDataMapper } from '../data/DetailViewDataMapper.ts'
+import { DetailCoordinates } from '../data/DetailCoodinates.ts'
 
 export class DetailView {
 	app: any
@@ -16,6 +17,9 @@ export class DetailView {
 	viewRangeBpw: number | undefined
 	calResolution: number | null = null
 	dataMapper: DetailViewDataMapper
+	items: { items: number[][] }
+	coordinates: DetailCoordinates
+	errList: string[]
 
 	xBlock: any
 	yBlock: any
@@ -31,8 +35,9 @@ export class DetailView {
 		this.app = opts.app
 		this.hic = opts.hic
 		this.plotDiv = opts.plotDiv
-		this.data = opts.data
+		this.items = opts.items
 		this.parent = opts.parent
+		this.errList = this.parent('errList') as any
 		this.resolution = new Resolution(opts.error)
 		this.colorizeElement = new ColorizeElement()
 		this.viewRangeBpw = this.resolution.getDefaultViewSpan(
@@ -40,7 +45,8 @@ export class DetailView {
 			(this.parent('state') as any).x,
 			(this.parent('state') as any).y
 		)
-		this.dataMapper = new DetailViewDataMapper(this.hic, opts.error)
+		this.dataMapper = new DetailViewDataMapper(this.hic, opts.error, opts.parent)
+		this.coordinates = new DetailCoordinates(this.hic, this.errList)
 	}
 
 	setDefaultBinPx() {
@@ -100,10 +106,16 @@ export class DetailView {
 
 		this.ctx = this.canvas.node().getContext('2d') as CanvasRenderingContext2D
 
-		await this.update()
+		await this.update(this.items, blockwidth)
 	}
 
-	async update() {
-		//TODO
+	async update(items: { items: number[][] }, blockwidth) {
+		this.items = items
+		const state = this.parent('state') as any
+		console.log(this.dataMapper)
+		// const coords = this.coordinates.getCoordinates(state.x, state.y, this.items, this.dataMapper.fragData, this.dataMapper.resolution, this.canvas, this.ctx)
+		// console.log(coords)
+
+		//const x = this.dataMapper.parent('state').x
 	}
 }

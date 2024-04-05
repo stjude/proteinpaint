@@ -90,8 +90,10 @@ class HicApp {
 		// if (!this.hic.state.currView) this.hic.state.currView = 'genome'
 		if (!this.hic.state.currView) {
 			this.hic.state.currView = 'detail'
-			this.hic.state.x = { chr: 'chr1', start: 0, stop: 1000000 }
-			this.hic.state.y = { chr: 'chr2', start: 0, stop: 1000000 }
+			//chr2:60858723-80858723
+			this.hic.state.x = { chr: 'chr2', start: 60858723, stop: 80858723 }
+			//chr1:95507812-115507812
+			this.hic.state.y = { chr: 'chr1', start: 95507812, stop: 115507812 }
 		} else {
 			if (!this.views.some(v => v === this.hic.state.currView)) this.error(`Unknown view: ${this.hic.state.currView}`)
 			else return this.hic.state.currView
@@ -99,7 +101,15 @@ class HicApp {
 	}
 
 	getViewsConfig() {
-		const nmeth = this.hic['normalization'].length > 0 ? this.hic['normalization'][0] : 'NONE'
+		/** Generally NONE is not listed in the norm meth array.
+		 * Must add before setting the views configs.*/
+		let nmeth: string | string[]
+		if (this.hic['normalization'].length > 0) {
+			if (!this.hic['normalization'].includes('NONE')) this.hic['normalization'].unshift('NONE')
+			nmeth = this.hic['normalization'][0]
+		} else {
+			nmeth = 'NONE'
+		}
 
 		//If currView provided without state, add state
 		if (this.hic.state.currView) {
@@ -127,11 +137,6 @@ class HicApp {
 		this.determineView()
 		try {
 			await hicParseFile(this.hic, true, this.errList)
-			/** Generally NONE is not listed to the file.
-			 * Must add before setting the views configs.
-			 */
-			if (!this.hic['normalization'].includes('NONE')) this.hic['normalization'].unshift('NONE')
-
 			this.getViewsConfig()
 
 			this.store = await hicStoreInit({ app: this.api, state: this.hic.state })
