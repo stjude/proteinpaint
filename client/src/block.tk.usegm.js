@@ -977,23 +977,25 @@ function domainlegend(tk, block) {
 			block.tip.clear()
 
 			//Show button
-			block.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('Show')
-				.on('click', () => {
-					nameDiv.node().style.textDecoration = 'none'
-					descriptionDiv.node().style.textDecoration = 'none'
-					// Callback for "Show" option
-					if (block.gmmode == client.gmmode.gmsum) {
-						for (const m of block.allgm) {
-							if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
+			if (block.usegm.domain_hidden[domaintype.key]) {
+				block.tip.d
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text('Show')
+					.on('click', () => {
+						nameDiv.node().style.textDecoration = 'none'
+						descriptionDiv.node().style.textDecoration = 'none'
+						// Callback for "Show" option
+						if (block.gmmode == client.gmmode.gmsum) {
+							for (const m of block.allgm) {
+								if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
+							}
+						} else {
+							delete block.usegm.domain_hidden[domaintype.key]
 						}
-					} else {
-						delete block.usegm.domain_hidden[domaintype.key]
-					}
-					gmtkrender(tk, block) // Re-render the visualization
-				})
+						gmtkrender(tk, block) // Re-render the visualization
+					})
+			}
 
 			//Hide button
 			block.tip.d
