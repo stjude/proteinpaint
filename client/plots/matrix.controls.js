@@ -9,7 +9,7 @@ import { make_radios } from '#dom/radiobutton'
 import { make_one_checkbox } from '#dom/checkbox'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 import { select } from 'd3-selection'
-import { mclass, dt2label, dtsnvindel, dtcnv } from '#shared/common'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
 
 const tip = new Menu({ padding: '' })
 
@@ -847,27 +847,27 @@ export class MatrixControls {
 									if (tw.term.type == 'geneVariant') {
 										const allVariant = []
 										for (const v of s[tw.$id].renderedValues) {
-											if (v.dt == 1) {
+											if (v.dt == dtsnvindel) {
 												allVariant.push(
-													v.origin
-														? `${v.origin} ${dt2label[v.dt]}:${mclass[v.class]?.label}(${v.mname})`
-														: `${dt2label[v.dt]}:${mclass[v.class]?.label}(${v.mname})`
+													(v.origin ? `${v.origin} ` : '') +
+														`${dt2label[v.dt]}:${mclass[v.class]?.label}` +
+														(v.mname ? `(${v.mname})` : '')
 												)
-											} else if (v.dt == 4) {
+											} else if (v.dt == dtcnv) {
 												allVariant.push(
 													v.origin
 														? `${v.origin} ${dt2label[v.dt]}:${v.value || mclass[v.class]?.label}`
 														: `${dt2label[v.dt]}:${v.value || mclass[v.class]?.label}`
 												)
-											} else if (v.dt == 3) {
+											} else if (v.dt == dtgeneexpression) {
 												allVariant.push(
 													v.origin ? `${v.origin} ${dt2label[v.dt]}:${v.value}` : `${dt2label[v.dt]}:${v.value}`
 												)
-											} else if (v.dt == 2 || v.dt == 5) {
+											} else if (v.dt == dtfusionrna || v.dt == dtsv) {
 												allVariant.push(
-													v.origin
-														? `${v.origin} ${dt2label[v.dt]}:${v.gene}::${v.mname}`
-														: `${dt2label[v.dt]}:${v.gene}::${v.mname}`
+													(v.origin ? `${v.origin} ` : '') +
+														`${dt2label[v.dt]}:${mclass[v.class]?.label}` +
+														(v.gene && v.mname ? `(${v.gene}::${v.mname})` : '')
 												)
 											} else {
 											}
