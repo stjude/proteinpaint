@@ -1,3 +1,4 @@
+import { deepEqual } from '#rx'
 import { make_radios } from '#dom/radiobutton'
 import { make_one_checkbox } from '#dom/checkbox'
 import { mclass } from '#shared/common'
@@ -14,8 +15,10 @@ export function getSorterUi(opts) {
 	const s = parent.config.settings.matrix
 	const l = s.controlLabels
 
-	let input
+	let input,
+		theads = []
 	const self = {
+		opts,
 		highlightColor: 'none',
 		label: `Sort ${l.Samples}`,
 		title: `Set how to sort ${l.samples}`,
@@ -24,11 +27,11 @@ export function getSorterUi(opts) {
 		expandedSection: '',
 		init() {
 			const s = parent.config.settings.matrix
-			const activeOption = s.sortOptions[s.sortSamplesBy]
+			const activeOption = structuredClone(s.sortOptions[s.sortSamplesBy])
 
 			const sectionData = [
 				{
-					label: 'By data for each selected row',
+					label: 'For each selected row, sort cases by matching data',
 					handler(div) {
 						//div.append('button').html('Select a row')
 					},
@@ -36,26 +39,40 @@ export function getSorterUi(opts) {
 				},
 				...activeOption.sortPriority,
 				{
-					label: 'By case name, alphabetically',
+					label: 'Sort cases by name, alphabetically',
 					tiebreakers: []
 				}
 			]
 
 			opts.holder.selectAll('*').remove()
-			opts.holder.append('div').append('button').html('Apply')
+			const topDiv = opts.holder.append('div')
+			topDiv.append('button').html('Apply')
+			topDiv.append('button').html('Reset')
+
 			const table = opts.holder.append('table')
 
 			const tr = table.append('thead')
-			tr.append('th').html('Priority')
+			tr.append('th').html('Priority').style('text-align', 'left').style('max-width', '0px')
 			tr.append('th').html('Data used of sorting')
 			tr.append('th')
+				.style('text-align', 'center')
+				.style('cursor', 'pointer')
+				.html(self.expandedSection == 'all' ? '&lt;&lt;' : '...')
+				.on('click', toggleSection)
+			tr.append('th')
 				.attr('colspan', 3)
-				.html(!self.expanded ? '...' : 'Data not used for sorting')
-				.on('click', expandOrCollapse)
+				.style('display', self.expandedSection ? '' : 'none')
+				.html('Data not used for sorting')
 
+			// to track sort priority number
 			let i = 0
+
 			for (const sd of sectionData) {
-				const thead = table.append('thead').datum(sd).attr('draggable', true)
+				const thead = table.append('thead').datum(sd).attr('draggable', true).attr('droppable', true)
+				//.on('dragenter', )
+
+				theads.push(select(thead))
+
 				const tr = thead.append('tr').style('background-color', '#eee')
 
 				const td12 = tr
@@ -66,32 +83,45 @@ export function getSorterUi(opts) {
 					.style('text-align', 'left')
 					.on('click', toggleSection)
 				td12.append('span').style('margin-right', '12px').style('font-weight', 400).html(sd.label)
-				td12
-					.append('button')
-					.style('height', '20px')
-					.style('float', 'right')
-					.html(self.expandedSection == sd.label ? '&minus;' : '+')
-					.on('click', sd.handler)
 
 				tr.append('th')
 					.style('padding', '5px')
 					.style('vertical-align', 'top')
-					.html(!self.expanded ? '...' : '< Visible')
-					.on('click', expandOrCollapse)
+					.style('text-align', 'center')
+					.style('font-weight', 400)
+					.style('cursor', 'pointer')
+					.html(self.expandedSection == 'all' || self.expandedSection == sd.label ? '&lt;&lt;' : '...')
+					.on('click', toggleSection)
+
 				tr.append('th')
 					.style('padding', '5px')
 					.style('vertical-align', 'top')
-					.style('display', !self.expanded ? 'none' : '')
+					.style('font-weight', 400)
+					.style('display', self.expandedSection ? '' : 'none')
+					.html('Visible')
+					.on('click', toggleSection)
+
+				tr.append('th')
+					.style('padding', '5px')
+					.style('vertical-align', 'top')
+					.style('font-weight', 400)
+					.style('display', self.expandedSection ? '' : 'none')
 					.html('Hidden')
+
 				tr.append('th')
 					.style('padding', '5px')
 					.style('vertical-align', 'top')
-					.style('display', !self.expanded ? 'none' : '')
+					.style('font-weight', 400)
+					.style('display', self.expandedSection ? '' : 'none')
 					.html('Case Filter')
 
-				const tbody = table.append('tbody').style('display', self.expandedSection == sd.label ? '' : 'none')
-				if (!sd.tiebreakers?.length || !sd.types?.includes('geneVariant')) continue
+				const tbody = table
+					.append('tbody')
+					.style('display', self.expandedSection == 'all' || self.expandedSection == sd.label ? '' : 'none')
+
 				for (const tb of sd.tiebreakers) {
+					// TODO: should handle dictionary variables
+					if (!sd.types?.includes('geneVariant')) continue
 					const tr = tbody.append('tr').attr('draggable', true)
 					if (!tb.disabled) i++
 					tr.append('td')
@@ -103,7 +133,11 @@ export function getSorterUi(opts) {
 
 					const label = td2.append('label')
 					label.append('span').html(' (in listed order ')
-					label.append('input').attr('type', 'checkbox').style('vertical-align', 'bottom') //.html('(in listed order ')
+					label
+						.append('input')
+						.attr('type', 'checkbox')
+						.style('vertical-align', 'bottom') //.html('(in listed order ')
+						.on('change')
 
 					label.append('span').html(')')
 					td2
@@ -126,40 +160,37 @@ export function getSorterUi(opts) {
 							div.append('span').html(cls.label)
 						})
 
-					if (!self.expanded) {
-						tr.append('td').html('...').on('click', expandOrCollapse)
-						tr.append('td').style('display', 'none')
-						tr.append('td').style('display', 'none')
-					} else {
-						tr.append('td') //.style('display', '')
-						tr.append('td')
-						tr.append('td')
-					}
+					tr.append('td').style('text-align', 'center').html('&nbsp;') //.on('click', toggleSection)
+					tr.append('td') //.style('display', 'none')
+					tr.append('td') //.style('display', 'none')
+					tr.append('td') //.style('display', 'none')
 				}
+
+				const lastTr = tbody.append('tr').attr('draggable', true)
+				lastTr.append('td').html('&nbsp;')
+				lastTr.append('td').style('text-align', 'left').append('button').html('Add a tiebreaker')
+				lastTr.append('td').html('&nbsp;')
+				lastTr.append('td').html('&nbsp;')
+				lastTr.append('td').html('&nbsp;')
 			}
 
 			return {
-				main: plot => {
-					const s = plot.settings.matrix
-					// ssm
-					// ssmInput.property('checked', s.sortByMutation == 'consequence')
-					// cnv
-					// cnvInput.property('checked', s.sortByCNV)
-					//cnvDiv.style('display', s.showMatrixCNV != 'none' && !s.allMatrixCNVHidden ? 'block' : 'none')
-				}
+				main: self.init
 			}
 		}
 	}
 
-	function expandOrCollapse(event, d) {
-		self.expanded = !self.expanded
-		//console.log(151, self.expandedSection, d)
-		if (self.expanded) self.expandedSection = d.label
-		self.init()
-	}
+	// function expandOrCollapse(event, d) {
+	// 	self.expanded = !self.expanded
+	// 	//console.log(151, self.expandedSection, d)
+	// 	//if (self.expanded) self.expandedSection = d.label
+	// 	self.expandedSection = self.expanded ? d.label : ''
+	// 	self.init()
+	// }
 
-	function toggleSection(event, d) {
+	function toggleSection(event, d = { label: 'all' }) {
 		self.expandedSection = self.expandedSection === d.label ? '' : d.label
+		self.expanded = !!self.expandedSection
 		self.init()
 	}
 
