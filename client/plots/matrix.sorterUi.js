@@ -20,10 +20,12 @@ export function getSorterUi(opts) {
 		label: `Sort ${l.Samples}`,
 		title: `Set how to sort ${l.samples}`,
 		type: 'custom',
+		expanded: opts.expanded || false,
+		expandedSection: '',
 		init() {
 			const s = parent.config.settings.matrix
 			const activeOption = s.sortOptions[s.sortSamplesBy]
-			console.log(22, opts, activeOption)
+
 			const sectionData = [
 				{
 					label: 'By data for each selected row',
@@ -46,30 +48,51 @@ export function getSorterUi(opts) {
 			const tr = table.append('thead')
 			tr.append('th').html('Priority')
 			tr.append('th').html('Data used of sorting')
-			tr.append('th').attr('colspan', 3).html('Data not used for sorting')
+			tr.append('th')
+				.attr('colspan', 3)
+				.html(!self.expanded ? '...' : 'Data not used for sorting')
+				.on('click', expandOrCollapse)
 
 			let i = 0
 			for (const sd of sectionData) {
-				const thead = table.append('thead')
-				const tr = thead.append('tr')
+				const thead = table.append('thead').datum(sd).attr('draggable', true)
+				const tr = thead.append('tr').style('background-color', '#eee')
 
-				tr.style('background-color', '#eee')
 				const td12 = tr
 					.append('th')
 					.attr('colspan', 2)
 					.style('padding', '5px')
 					.style('vertical-align', 'top')
 					.style('text-align', 'left')
-				td12.append('span').style('margin-right', '12px').html(sd.label)
-				td12.append('button').style('height', '20px').style('float', 'right').html('+').on('click', sd.handler)
-				tr.append('th').style('padding', '5px').style('vertical-align', 'top').html('Visible')
-				tr.append('th').style('padding', '5px').style('vertical-align', 'top').html('Hidden')
-				tr.append('th').style('padding', '5px').style('vertical-align', 'top').html('Case Filter')
+					.on('click', toggleSection)
+				td12.append('span').style('margin-right', '12px').style('font-weight', 400).html(sd.label)
+				td12
+					.append('button')
+					.style('height', '20px')
+					.style('float', 'right')
+					.html(self.expandedSection == sd.label ? '&minus;' : '+')
+					.on('click', sd.handler)
 
-				const tbody = table.append('tbody')
+				tr.append('th')
+					.style('padding', '5px')
+					.style('vertical-align', 'top')
+					.html(!self.expanded ? '...' : '< Visible')
+					.on('click', expandOrCollapse)
+				tr.append('th')
+					.style('padding', '5px')
+					.style('vertical-align', 'top')
+					.style('display', !self.expanded ? 'none' : '')
+					.html('Hidden')
+				tr.append('th')
+					.style('padding', '5px')
+					.style('vertical-align', 'top')
+					.style('display', !self.expanded ? 'none' : '')
+					.html('Case Filter')
+
+				const tbody = table.append('tbody').style('display', self.expandedSection == sd.label ? '' : 'none')
 				if (!sd.tiebreakers?.length || !sd.types?.includes('geneVariant')) continue
 				for (const tb of sd.tiebreakers) {
-					const tr = tbody.append('tr')
+					const tr = tbody.append('tr').attr('draggable', true)
 					if (!tb.disabled) i++
 					tr.append('td')
 						.style('padding', '5px')
@@ -77,11 +100,12 @@ export function getSorterUi(opts) {
 						.html(!tb.disabled ? i : '&nbsp;') // TODO: show pr
 					const td2 = tr.append('td').style('padding', '5px').style('vertical-align', 'top').style('max-width', '500px')
 					td2.append('span').html(tb.label || '')
+
 					const label = td2.append('label')
 					label.append('span').html(' (in listed order ')
 					label.append('input').attr('type', 'checkbox').style('vertical-align', 'bottom') //.html('(in listed order ')
+
 					label.append('span').html(')')
-					console.log(75, tb)
 					td2
 						.append('div')
 						.selectAll('div')
@@ -101,6 +125,16 @@ export function getSorterUi(opts) {
 								.style('background-color', cls.color)
 							div.append('span').html(cls.label)
 						})
+
+					if (!self.expanded) {
+						tr.append('td').html('...').on('click', expandOrCollapse)
+						tr.append('td').style('display', 'none')
+						tr.append('td').style('display', 'none')
+					} else {
+						tr.append('td') //.style('display', '')
+						tr.append('td')
+						tr.append('td')
+					}
 				}
 			}
 
@@ -115,6 +149,18 @@ export function getSorterUi(opts) {
 				}
 			}
 		}
+	}
+
+	function expandOrCollapse(event, d) {
+		self.expanded = !self.expanded
+		//console.log(151, self.expandedSection, d)
+		if (self.expanded) self.expandedSection = d.label
+		self.init()
+	}
+
+	function toggleSection(event, d) {
+		self.expandedSection = self.expandedSection === d.label ? '' : d.label
+		self.init()
 	}
 
 	self.init()
