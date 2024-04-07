@@ -374,7 +374,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 							]
 						},
 						by: 'class',
-						applyOrder: false,
+						isOrdered: false,
 						order: ['Fuserna' /*'WT', 'Blank'*/]
 					},
 					{
@@ -387,7 +387,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 							]
 						},
 						by: 'class',
-						applyOrder: false,
+						isOrdered: false,
 						order: [
 							// truncating
 							'F', // FRAMESHIFT
@@ -414,7 +414,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 							]
 						},
 						by: 'class',
-						applyOrder: true,
+						isOrdered: true,
 						order: ['CNV_amp', 'CNV_loss']
 					},
 					{
@@ -427,7 +427,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 							]
 						},
 						by: 'class',
-						applyOrder: false,
+						isOrdered: false,
 						order: [
 							// truncating
 							'F', // FRAMESHIFT
@@ -454,7 +454,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 				]
 			},
 			{
-				label: 'For each dictionary variable from top to bottom, sort cases by matchin data',
+				label: 'For each dictionary variable from top to bottom, sort cases by matching data',
 				types: ['categorical', 'integer', 'float', 'survival'],
 				tiebreakers: [
 					{
@@ -486,7 +486,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 			{
 				label: 'Cases with protein changing mutations > without',
 				filter: '',
-				applyOrder: false,
+				isOrdered: false,
 				order: [
 					// truncating
 					'F', // FRAMESHIFT

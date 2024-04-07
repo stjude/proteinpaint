@@ -77,7 +77,7 @@ export class MatrixControls {
 				const tip = this.parent.app.tip
 				tip.clear()
 				console.log(this)
-				const ui = getSorterUi({ controls: this, holder: tip.d })
+				const ui = getSorterUi({ controls: this, holder: tip.d, tip })
 				//ui.init({
 
 				//})
