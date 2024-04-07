@@ -1,4 +1,4 @@
-import { deepEqual } from '#rx'
+import { deepEqual, copyMerge } from '#rx'
 import { make_radios } from '#dom/radiobutton'
 import { make_one_checkbox } from '#dom/checkbox'
 import { mclass } from '#shared/common'
@@ -16,7 +16,10 @@ export function getSorterUi(opts) {
 	const l = s.controlLabels
 
 	let input,
-		theads = []
+		theads = [],
+		sectionData,
+		dragged = {}
+
 	const self = {
 		opts,
 		highlightColor: 'none',
@@ -25,11 +28,12 @@ export function getSorterUi(opts) {
 		type: 'custom',
 		expanded: opts.expanded || false,
 		expandedSection: '',
-		init() {
-			const s = parent.config.settings.matrix
-			const activeOption = structuredClone(s.sortOptions[s.sortSamplesBy])
+		init(overrides = {}) {
+			//console.log(32, 'self.init')
+			const s = copyMerge(`{}`, parent.config.settings.matrix, overrides)
+			self.activeOption = structuredClone(s.sortOptions[s.sortSamplesBy])
 
-			const sectionData = [
+			sectionData = [
 				{
 					label: 'For each selected row, sort cases by matching data',
 					handler(div) {
@@ -37,7 +41,7 @@ export function getSorterUi(opts) {
 					},
 					tiebreakers: []
 				},
-				...activeOption.sortPriority,
+				...self.activeOption.sortPriority,
 				{
 					label: 'Sort cases by name, alphabetically',
 					tiebreakers: []
@@ -46,7 +50,7 @@ export function getSorterUi(opts) {
 
 			opts.holder.selectAll('*').remove()
 			const topDiv = opts.holder.append('div')
-			topDiv.append('button').html('Apply')
+			topDiv.append('button').html('Apply').on('click', apply)
 			topDiv.append('button').html('Reset')
 
 			const table = opts.holder.append('table')
@@ -68,8 +72,16 @@ export function getSorterUi(opts) {
 			let i = 0
 
 			for (const sd of sectionData) {
-				const thead = table.append('thead').datum(sd).attr('draggable', true).attr('droppable', true)
-				//.on('dragenter', )
+				const thead = table
+					.append('thead')
+					.datum(sd)
+					.attr('draggable', true)
+					.attr('droppable', true)
+					.on('dragstart', trackDraggedSection)
+					.on('dragover', highlightSection)
+					.on('dragleave', unhighlightSection)
+					.on('drop', adjustSortPriority)
+				//.on('dragend', adjustSortPriority)
 
 				theads.push(select(thead))
 
@@ -173,20 +185,14 @@ export function getSorterUi(opts) {
 				lastTr.append('td').html('&nbsp;')
 				lastTr.append('td').html('&nbsp;')
 			}
-
-			return {
-				main: self.init
-			}
-		}
+		},
+		toggleSection,
+		trackDraggedSection,
+		highlightSection,
+		unhighlightSection,
+		adjustSortPriority,
+		apply
 	}
-
-	// function expandOrCollapse(event, d) {
-	// 	self.expanded = !self.expanded
-	// 	//console.log(151, self.expandedSection, d)
-	// 	//if (self.expanded) self.expandedSection = d.label
-	// 	self.expandedSection = self.expanded ? d.label : ''
-	// 	self.init()
-	// }
 
 	function toggleSection(event, d = { label: 'all' }) {
 		self.expandedSection = self.expandedSection === d.label ? '' : d.label
@@ -194,6 +200,68 @@ export function getSorterUi(opts) {
 		self.init()
 	}
 
+	function trackDraggedSection(event, d) {
+		//event.preventDefault()
+		dragged.sectionData = d
+		dragged.index = self.activeOption.sortPriority.indexOf(d)
+	}
+
+	function highlightSection(event, d) {
+		if (d == dragged.sectionData) return
+		event.preventDefault()
+		const i = self.activeOption.sortPriority.indexOf(d)
+		const borderSide = i < dragged.index ? 'border-top' : i > dragged.index ? 'border-bottom' : ''
+		if (!borderSide) return
+		select(this).selectAll('th').style(borderSide, '2px solid blue')
+	}
+
+	function unhighlightSection(event, d) {
+		event.preventDefault()
+		select(this).selectAll('th').style('border', 'none')
+	}
+
+	function adjustSortPriority(event, d) {
+		if (d == dragged.sectionData) return
+		//event.preventDefault()
+		const i = self.activeOption.sortPriority.indexOf(d)
+		const s = parent.config.settings.matrix
+		//console.log(221, self.activeOption)
+		const j = i < dragged.index ? i : i + 1
+		self.activeOption.sortPriority.splice(dragged.index, 1)
+		self.activeOption.sortPriority.splice(j, 0, dragged.sectionData)
+		self.init({
+			sortOptions: {
+				[s.sortSamplesBy]: self.activeOption
+			}
+		})
+	}
+
+	function apply() {
+		parent.app.tip?.hide()
+		parent.app.dispatch({
+			type: 'plot_edit',
+			id: parent.id,
+			config: {
+				settings: {
+					matrix: {
+						sortOptions: {
+							[s.sortSamplesBy]: self.activeOption
+						}
+					}
+				}
+			}
+		})
+	}
+
 	self.init()
-	return self
+
+	self.api = {
+		main: self.init,
+		destroy: () => {
+			opts.holder.selectAll('*').remove()
+		}
+	}
+
+	if (opts.debug) self.api.Inner = self
+	return self.api
 }
