@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- enable downloading data for oncoMatrix
+
 
 ## 2.51.2
 
