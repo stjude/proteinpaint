@@ -361,7 +361,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 		order: 1, // this is used for list order as a sorter option in a dropdown
 		sortPriority: [
 			{
-				label: 'For each gene mutation row from top to bottom, sort cases by',
+				label: 'For each gene mutation row from top to bottom, sort cases by matching data',
 				types: ['geneVariant'],
 				tiebreakers: [
 					{
@@ -454,7 +454,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 				]
 			},
 			{
-				label: 'For each dictionary variable from top to bottom, sort cases by',
+				label: 'For each dictionary variable from top to bottom, sort cases by matchin data',
 				types: ['categorical', 'integer', 'float', 'survival'],
 				tiebreakers: [
 					{
@@ -619,7 +619,6 @@ export function getMclassSorter(self) {
 	const s = self.settings.matrix
 	const mclassPriority = []
 	s.sortOptions[s.sortSamplesBy].sortPriority.forEach(obj => {
-		console.log(627, obj)
 		if (obj.types.includes('geneVariant')) {
 			// Extract 'order' arrays from each tiebreaker and filter 'WT' and 'Blank'
 			obj.tiebreakers.forEach(tiebreaker => {
