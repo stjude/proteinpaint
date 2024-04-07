@@ -352,15 +352,122 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 
 	// Similar to Oncoprint sorting
 	sortOptions.a = {
-		label: l.Mutation + ' categories', //'CNV+SSM > SSM-only > CNV-only',
+		//label: l.Mutation + ' categories', //'CNV+SSM > SSM-only > CNV-only',
 		// altLabels: {
 		// 	mutationOnly: 'SSM',
 		// 	cnvOnly: 'CNV',
 		// },
 		value: 'a',
-		order: 1,
+		order: 1, // this is used for list order as a sorter option in a dropdown
 		sortPriority: [
 			{
+				label: 'For each gene mutation row from top to bottom, sort cases by',
+				types: ['geneVariant'],
+				tiebreakers: [
+					{
+						label: 'Cases with Fusion RNASeq > without',
+						filter: {
+							values: [
+								{
+									dt: 2
+								}
+							]
+						},
+						by: 'class',
+						applyOrder: false,
+						order: ['Fuserna' /*'WT', 'Blank'*/]
+					},
+					{
+						label: 'Cases with protein changing mutations > without',
+						filter: {
+							values: [
+								{
+									dt: 1
+								}
+							]
+						},
+						by: 'class',
+						applyOrder: false,
+						order: [
+							// truncating
+							'F', // FRAMESHIFT
+							'N', // NONSENSE
+							'L', // SPLICE
+							'P', // SPLICE_REGION
+
+							// indel
+							'D', // PROTEINDEL
+							'I', // PROTEININS
+							'ProteinAltering',
+
+							// point
+							'M' // MISSENSE
+						]
+					},
+					{
+						label: 'Cases with CNV data > without',
+						filter: {
+							values: [
+								{
+									dt: 4
+								}
+							]
+						},
+						by: 'class',
+						applyOrder: true,
+						order: ['CNV_amp', 'CNV_loss']
+					},
+					{
+						label: 'Cases with consequence data',
+						filter: {
+							values: [
+								{
+									dt: 1
+								}
+							]
+						},
+						by: 'class',
+						applyOrder: false,
+						order: [
+							// truncating
+							'F', // FRAMESHIFT
+							'N', // NONSENSE
+							'L', // SPLICE
+							'P', // SPLICE_REGION
+
+							// indel
+							'D', // PROTEINDEL
+							'I', // PROTEININS
+							'ProteinAltering',
+
+							// point
+							'M', // MISSENSE
+
+							// noncoding
+							'Utr3',
+							'Utr5',
+							'S', //SILENT
+							'Intron',
+							'noncoding'
+						]
+					}
+				]
+			},
+			{
+				label: 'For each dictionary variable from top to bottom, sort cases by',
+				types: ['categorical', 'integer', 'float', 'survival'],
+				tiebreakers: [
+					{
+						label: 'Values',
+						by: 'values'
+					}
+				]
+			}
+		],
+
+		'#sortPriority': [
+			{
+				label: 'Cases with Fusion RNASeq > without',
 				types: ['geneVariant'],
 				tiebreakers: [
 					{
@@ -374,6 +481,26 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 						by: 'class',
 						order: ['Fuserna' /*'WT', 'Blank'*/]
 					}
+				]
+			},
+			{
+				label: 'Cases with protein changing mutations > without',
+				filter: '',
+				applyOrder: false,
+				order: [
+					// truncating
+					'F', // FRAMESHIFT
+					'N', // NONSENSE
+					'L', // SPLICE
+					'P', // SPLICE_REGION
+
+					// indel
+					'D', // PROTEINDEL
+					'I', // PROTEININS
+					'ProteinAltering',
+
+					// point
+					'M' // MISSENSE
 				]
 			},
 
@@ -430,7 +557,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 			},
 			{
 				types: ['categorical', 'integer', 'float', 'survival'],
-				tiebreakers: [{ by: 'values' }]
+				tiebreakers: [{ by: 'values', order: [] }]
 			}
 		]
 	}
@@ -490,10 +617,9 @@ function defaultSorter(a, b) {
 
 export function getMclassSorter(self) {
 	const s = self.settings.matrix
-	const sortPriority = s.sortOptions['a'].sortPriority
-
 	const mclassPriority = []
-	sortPriority.forEach(obj => {
+	s.sortOptions[s.sortSamplesBy].sortPriority.forEach(obj => {
+		console.log(627, obj)
 		if (obj.types.includes('geneVariant')) {
 			// Extract 'order' arrays from each tiebreaker and filter 'WT' and 'Blank'
 			obj.tiebreakers.forEach(tiebreaker => {
@@ -504,13 +630,16 @@ export function getMclassSorter(self) {
 		}
 	})
 
-	const sorter = (a, b) =>
-		mclassPriority.indexOf(a.class) == -1 && mclassPriority.indexOf(a.class) == -1
+	const sorter = (a, b) => {
+		const ai = mclassPriority.indexOf(a.class)
+		const bi = mclassPriority.indexOf(b.class)
+		return ai == -1 && bi == -1
 			? 0
 			: mclassPriority.indexOf(a.class) == -1
 			? 1
 			: mclassPriority.indexOf(b.class) == -1
 			? -1
 			: mclassPriority.indexOf(a.class) - mclassPriority.indexOf(b.class)
+	}
 	return sorter
 }
