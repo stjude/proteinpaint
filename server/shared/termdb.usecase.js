@@ -27,6 +27,8 @@ export const graphableTypes = new Set([
 		.target (REQUIRED): 'barchart', 'regression', etc
 			- used as a switch-case "router" for additional use-specific logic
 			- other parameters, if applicable, are described in the route "handler" 
+		.detail 
+		  - a more specific detailed use case
 	
 	ds 
 	- a bootstrapped dataset object that can supply overrides to the use case logic,

@@ -24,6 +24,7 @@ export class MatrixControls {
 		const s = state.config.settings.matrix
 		if (this.parent.setClusteringBtn)
 			this.parent.setClusteringBtn(this.opts.holder, (event, data) => this.callback(event, data))
+		this.setSortFilterBtn(s)
 		this.setSamplesBtn(s)
 		this.setGenesBtn(s)
 		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster') {
@@ -66,6 +67,22 @@ export class MatrixControls {
 			.selectAll(':scope>button')
 			.filter(d => d && d.label)
 			.on(`keyup.matrix-${this.parent.id}`, this.keyboardNavHandler)
+	}
+
+	setSortFilterBtn(s) {
+		this.opts.holder
+			.append('button')
+			.html('Sort and Filter')
+			.on('click', () => {
+				const tip = this.parent.app.tip
+				tip.clear()
+				console.log(this)
+				const ui = getSorterUi({ controls: this, holder: tip.d })
+				//ui.init({
+
+				//})
+				tip.showunder(event.target)
+			})
 	}
 
 	setSamplesBtn(s) {
@@ -186,8 +203,7 @@ export class MatrixControls {
 								.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
 							return { currentGeneNames }
 						}
-					},
-					getSorterUi(this, s)
+					}
 				]
 			})
 			.html(d => d.label)
