@@ -225,17 +225,19 @@ function getSortSamplesByDt(st, self, rows, s) {
 
 function getSortSamplesByClass(st, self, rows, s) {
 	const { $id, sortSamples } = st
+	if (sortSamples.disabled) return () => 0
+
 	const m = self.config.settings.matrix
-	const sortBySSM = m.showMatrixMutation != 'none' && !m.allMatrixMutationHidden && m.sortByMutation == 'consequence'
-	const sortByCNV = m.showMatrixCNV != 'none' && !m.allMatrixCNVHidden && m.sortByCNV
+	const includeSSM = m.showMatrixMutation != 'none' && !m.allMatrixMutationHidden
+	const includeCNV = m.showMatrixCNV != 'none' && !m.allMatrixCNVHidden
 	const order = sortSamples.order.filter(
-		sortBySSM && sortByCNV
+		includeSSM && includeCNV
 			? v => !m.hiddenVariants.includes(v)
-			: !sortBySSM && !sortByCNV
+			: !includeSSM && !includeCNV
 			? () => false
-			: sortBySSM
+			: includeSSM
 			? v => m.mutationClasses.includes(v) && !m.hiddenVariants.includes(v)
-			: sortByCNV
+			: includeCNV
 			? v => v.startsWith('CNV_') && !m.hiddenVariants.includes(v)
 			: v => !v.startsWith('CNV_')
 	)
@@ -271,9 +273,14 @@ function getSortSamplesByClass(st, self, rows, s) {
 			cls.set(row.sample, nextRound)
 			return
 		}
-		let str = ''
+		const vals = values.map(v => v.class)
+		let str = sortSamples.isOrdered ? '' : 'x'
 		for (const mcls of order) {
-			str += values.find(v => v.class === mcls) ? '1' : 'x'
+			if (sortSamples.isOrdered) str += vals.includes(mcls) ? '1' : 'x'
+			else if (vals.includes(mcls)) {
+				str = '1'
+				break
+			}
 		}
 		// each sample will be mapped to a sortable string (for ease of sorting comparison),
 		// derived from concatenating an array of numbers equivalent to values that match
@@ -414,7 +421,8 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 							]
 						},
 						by: 'class',
-						isOrdered: true,
+						isOrdered: false,
+						disabled: true,
 						order: ['CNV_amp', 'CNV_loss']
 					},
 					{

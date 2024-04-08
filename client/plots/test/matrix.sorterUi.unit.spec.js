@@ -148,11 +148,10 @@ tape('simulated tiebreaker drag/drop', async test => {
 		.filter(d => d?.types?.includes('geneVariant'))
 		.node()
 
-	const trs = thead1.nextSibling.querySelectorAll('tr') //thead.__data__.tiebreakers // select(thead.nextSibling).selectAll('tr').each(d => )
+	const trs = thead1.nextSibling.querySelectorAll('tr')
 
 	// since this simulated test does not trigger actual drag and drop,
 	// must make sure that the correct event handler is tested here
-
 	test.equal(
 		select(trs[0]).on('drop'),
 		ui.adjustTieBreakers,
@@ -193,5 +192,50 @@ tape('simulated tiebreaker drag/drop', async test => {
 	)
 
 	if (test._ok) uiApi.destroy()
+	test.end()
+})
+
+tape.only('tiebreaker disabled', async test => {
+	const { uiApi, controls, config, parent, opts } = await getControls()
+	const s = config.settings.matrix
+	const ui = uiApi.Inner
+	const activeOptionBeforeDrag = structuredClone(ui.activeOption)
+	const thead0 = opts.holder
+		.selectAll('thead')
+		.filter(d => d?.types?.includes('geneVariant'))
+		.node()
+
+	thead0.firstChild.firstChild.click()
+
+	const thead1 = opts.holder
+		.selectAll('thead')
+		.filter(d => d?.types?.includes('geneVariant'))
+		.node()
+
+	const trs = thead1.nextSibling.querySelectorAll('tr')
+
+	test.equal(
+		select(trs[1].firstChild).select('input').property('checked'),
+		true,
+		'should not check the row for protein-changing tiebreaker'
+	)
+
+	test.equal(
+		select(trs[2].firstChild).select('input').property('checked'),
+		false,
+		'should not check the row for CNV tiebreaker'
+	)
+
+	select(trs[2].firstChild).select('input').node().click()
+	const activeTieBreakers = ui.activeOption.sortPriority[0].tiebreakers
+	ui.apply()
+
+	test.deepEqual(
+		activeTieBreakers[2].disabled,
+		config.settings.matrix.sortOptions[s.sortSamplesBy].sortPriority[0].tiebreakers[2]?.disabled,
+		'should adjust the CNV tiebreaker disabled after clicking apply'
+	)
+
+	// if (test._ok) uiApi.destroy()
 	test.end()
 })
