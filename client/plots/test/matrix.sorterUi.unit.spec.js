@@ -153,7 +153,7 @@ tape('simulated tiebreaker drag/drop', async test => {
 	// since this simulated test does not trigger actual drag and drop,
 	// must make sure that the correct event handler is tested here
 	test.equal(
-		select(trs[0]).on('drop'),
+		select(trs[0].firstChild).on('drop'),
 		ui.adjustTieBreakers,
 		'should attach the correct drop handler for tiebreaker label'
 	)
@@ -195,7 +195,7 @@ tape('simulated tiebreaker drag/drop', async test => {
 	test.end()
 })
 
-tape.only('tiebreaker disabled', async test => {
+tape('tiebreaker disabled', async test => {
 	const { uiApi, controls, config, parent, opts } = await getControls()
 	const s = config.settings.matrix
 	const ui = uiApi.Inner
@@ -236,6 +236,68 @@ tape.only('tiebreaker disabled', async test => {
 		'should adjust the CNV tiebreaker disabled after clicking apply'
 	)
 
-	// if (test._ok) uiApi.destroy()
+	if (test._ok) uiApi.destroy()
+	test.end()
+})
+
+tape('simulated value drag/drop', async test => {
+	const { uiApi, controls, config, parent, opts } = await getControls()
+	const ui = uiApi.Inner
+	const a = structuredClone(config.settings.matrix.sortOptions.a)
+	ui.expandedSection = a.sortPriority[0].label
+	a.sortPriority[0].tiebreakers[1].isOrdered = true
+	uiApi.main({
+		sortOptions: { a }
+	})
+
+	const activeOptionBeforeDrag = structuredClone(ui.activeOption)
+
+	const thead1 = opts.holder
+		.selectAll('thead')
+		.filter(d => d?.types?.includes('geneVariant'))
+		.node()
+	const valuesDiv = thead1.nextSibling.querySelectorAll('tr')[1].querySelector('.sjpp-matrix-sorter-ui-value')
+	const lastVal = select(valuesDiv.lastChild)
+
+	// since this simulated test does not trigger actual drag and drop,
+	// must make sure that the correct event handler is tested here
+	test.equal(lastVal.on('drop'), ui.adjustValueOrder, 'should attach the correct drop handler for value label')
+
+	const activeOrder = ui.activeOption.sortPriority[0].tiebreakers[1].order
+	const activeOrderBeforeDrag = structuredClone(activeOrder)
+	const value = lastVal.datum()
+	ui.trackDraggedValue.call(lastVal.node(), { target: lastVal.node() }, value)
+	ui.adjustValueOrder({ preventDefault: () => undefined }, activeOrder[0])
+
+	const thead2 = opts.holder
+		.selectAll('thead')
+		.filter(d => d?.types?.includes('geneVariant'))
+		.node()
+	const valuesDiv2 = thead2.nextSibling.querySelectorAll('tr')[1].querySelector('.sjpp-matrix-sorter-ui-value')
+	const lastVal2 = select(valuesDiv2.lastChild)
+	const n = activeOrderBeforeDrag.length
+
+	test.deepEqual(
+		[valuesDiv2.firstChild.__data__, valuesDiv2.lastChild.__data__],
+		[activeOrderBeforeDrag[n - 1], activeOrderBeforeDrag[n - 2]],
+		'should visibly switch the first first and last values'
+	)
+
+	const s = config.settings.matrix
+	test.deepEqual(
+		activeOrderBeforeDrag,
+		s.sortOptions[s.sortSamplesBy].sortPriority[0].tiebreakers[1].order,
+		'should not adjust the tiebreaker.order before clicking apply, after drag/drop'
+	)
+
+	ui.apply()
+
+	test.deepEqual(
+		activeOrder,
+		s.sortOptions[s.sortSamplesBy].sortPriority[0].tiebreakers[1].order,
+		'should adjust the tiebreaker.order after clicking apply'
+	)
+
+	if (test._ok) uiApi.destroy()
 	test.end()
 })
