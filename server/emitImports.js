@@ -8,7 +8,7 @@
 
 */
 
-import * as glob from 'glob'
+const glob = await import('glob')
 import fs from 'fs'
 import path from 'path'
 
