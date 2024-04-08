@@ -1,4 +1,4 @@
-import glob from 'glob'
+const glob = await import('glob')
 import path from 'path'
 import fs from 'fs/promises'
 import serverconfig from '../../serverconfig.js'
