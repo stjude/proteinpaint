@@ -72,7 +72,7 @@ export class MatrixControls {
 	setSortFilterBtn(s) {
 		this.opts.holder
 			.append('button')
-			.html('Sort and Filter')
+			.html('Sort')
 			.on('click', () => {
 				const tip = this.parent.app.tip
 				tip.clear()

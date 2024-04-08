@@ -421,7 +421,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 							]
 						},
 						by: 'class',
-						isOrdered: false,
+						isOrdered: true,
 						disabled: true,
 						order: ['CNV_amp', 'CNV_loss']
 					},

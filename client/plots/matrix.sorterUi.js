@@ -138,14 +138,8 @@ export function getSorterUi(opts) {
 					if (!sd.types?.includes('geneVariant')) continue
 					const tr = tbody
 						.append('tr')
-						.datum(tb)
-						.attr('draggable', true)
-						.attr('droppable', true)
 						.style('opacity', tb.disabled ? 0.5 : 1)
-						.on('dragstart', trackDraggedTieBreaker)
-						.on('dragover', highlightTieBreaker)
-						.on('dragleave', unhighlightTieBreaker)
-						.on('drop', adjustTieBreakers)
+						.datum(tb)
 
 					if (!tb.disabled) i++
 					const td1 = tr
@@ -156,8 +150,14 @@ export function getSorterUi(opts) {
 								? `This tiebreaker is currently not being used to sort ${l.cases}. Check the box to use.`
 								: `The number indicates the order in which this tiebreaker is used. Unched the box to skip.`
 						)
+						.datum(tb)
+						.attr('draggable', true)
+						.attr('droppable', true)
+						.on('dragstart', trackDraggedTieBreaker)
+						.on('dragover', highlightTieBreaker)
+						.on('dragleave', unhighlightTieBreaker)
+						.on('drop', adjustTieBreakers)
 					td1.style('padding', '5px').style('vertical-align', 'top').style('text-align', 'center')
-
 					td1.append('span').html(!tb.disabled ? i + '<br>' : '') // TODO: show pr
 					//td1.append('br')
 					const disabled = td1
@@ -187,13 +187,23 @@ export function getSorterUi(opts) {
 					label.append('span').html(')')
 					td2
 						.append('div')
+						.attr('class', 'sjpp-matrix-sorter-ui-value')
 						.selectAll('div')
 						.data(tb.order)
 						.enter()
 						.append('div')
 						.style('display', 'inline-block')
 						.each(function (key) {
-							const div = select(this).attr('draggable', true).style('margin-right', '10px')
+							const div = select(this)
+								.attr('draggable', true)
+								.attr('droppable', true)
+								.style('margin-right', '10px')
+								.style('opacity', tb.disabled ? 0.5 : 1)
+								.on('dragstart', trackDraggedValue)
+								.on('dragover', highlightValue)
+								.on('dragleave', unhighlightValue)
+								.on('drop', adjustValueOrder)
+
 							const cls = mclass[key]
 							div
 								.append('div')
@@ -224,10 +234,17 @@ export function getSorterUi(opts) {
 		highlightSection,
 		unhighlightSection,
 		adjustSortPriority,
+
 		trackDraggedTieBreaker,
 		highlightTieBreaker,
 		unhighlightTieBreaker,
 		adjustTieBreakers,
+
+		trackDraggedValue,
+		highlightValue,
+		unhighlightValue,
+		adjustValueOrder,
+
 		apply
 	}
 
@@ -302,6 +319,46 @@ export function getSorterUi(opts) {
 		const s = parent.config.settings.matrix
 		dragged.sectionData.tiebreakers.splice(dragged.index, 1)
 		dragged.sectionData.tiebreakers.splice(i, 0, dragged.data)
+		self.init({
+			sortOptions: {
+				[s.sortSamplesBy]: self.activeOption
+			}
+		})
+	}
+
+	function trackDraggedValue(event, d) {
+		dragged.type = 'value'
+		dragged.data = d
+		dragged.sectionData = event.target.closest('tbody').__data__
+		dragged.priorityIndex = self.activeOption.sortPriority.indexOf(dragged.sectionData)
+		dragged.tiebreaker = event.target.closest('tr').__data__
+		dragged.tbIndex = dragged.sectionData.tiebreakers.indexOf(dragged.priorityIndex)
+		dragged.order = dragged.tiebreaker.order
+		dragged.index = dragged.order.indexOf(d)
+	}
+
+	function highlightValue(event, d) {
+		if (dragged.type != 'value' || d == dragged.data) return
+		event.preventDefault()
+		const i = dragged.order.indexOf(d)
+		const borderSide = i < dragged.index ? 'border-right' : i > dragged.index ? 'border-left' : ''
+		if (!borderSide) return
+		select(this).style(borderSide, '2px solid blue')
+	}
+
+	function unhighlightValue(event, d) {
+		if (dragged.type != 'value') return
+		event.preventDefault()
+		select(this).style('border', 'none')
+	}
+
+	function adjustValueOrder(event, d) {
+		if (dragged.type != 'value' || d == dragged.data) return
+		event.preventDefault()
+		const i = dragged.order.indexOf(d)
+		const s = parent.config.settings.matrix
+		dragged.order.splice(dragged.index, 1)
+		dragged.order.splice(i, 0, dragged.data)
 		self.init({
 			sortOptions: {
 				[s.sortSamplesBy]: self.activeOption
