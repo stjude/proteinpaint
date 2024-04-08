@@ -141,26 +141,48 @@ export function getSorterUi(opts) {
 						.datum(tb)
 						.attr('draggable', true)
 						.attr('droppable', true)
+						.style('opacity', tb.disabled ? 0.5 : 1)
 						.on('dragstart', trackDraggedTieBreaker)
 						.on('dragover', highlightTieBreaker)
 						.on('dragleave', unhighlightTieBreaker)
 						.on('drop', adjustTieBreakers)
 
 					if (!tb.disabled) i++
-					tr.append('td')
-						.style('padding', '5px')
-						.style('vertical-align', 'top')
-						.html(!tb.disabled ? i : '&nbsp;') // TODO: show pr
+					const td1 = tr
+						.append('td')
+						.attr(
+							'title',
+							tb.disabled
+								? `This tiebreaker is currently not being used to sort ${l.cases}. Check the box to use.`
+								: `The number indicates the order in which this tiebreaker is used. Unched the box to skip.`
+						)
+					td1.style('padding', '5px').style('vertical-align', 'top').style('text-align', 'center')
+
+					td1.append('span').html(!tb.disabled ? i + '<br>' : '') // TODO: show pr
+					//td1.append('br')
+					const disabled = td1
+						.append('input')
+						.attr('type', 'checkbox')
+						.property('checked', !tb.disabled)
+						.on('change', () => {
+							tb.disabled = !disabled.property('checked')
+							tr.style('opacity', tb.disabled ? 0.5 : 1)
+						})
+
 					const td2 = tr.append('td').style('padding', '5px').style('vertical-align', 'top').style('max-width', '500px')
 					td2.append('span').html(tb.label || '')
 
 					const label = td2.append('label')
 					label.append('span').html(' (in listed order ')
-					label
+					if (!tb.isOrdered) tb.isOrdered = false
+					const checkbox = label
 						.append('input')
 						.attr('type', 'checkbox')
+						.property('checked', tb.isOrdered)
 						.style('vertical-align', 'bottom') //.html('(in listed order ')
-						.on('change')
+						.on('change', () => {
+							tb.isOrdered = checkbox.property('checked')
+						})
 
 					label.append('span').html(')')
 					td2
