@@ -3,7 +3,8 @@ import { dofetch3 } from '#common/dofetch'
 import { interpolateRgb } from 'd3-interpolate'
 
 const defaultConfig = {
-	clusterMethod: 'average'
+	clusterMethod: 'average',
+	distanceMethod: 'euclidean'
 }
 
 const clusterMethodLst = [
@@ -14,6 +15,8 @@ const clusterMethodLst = [
 	//'median', 'centroid', crashes R with "No connections found!"
 	//'ward.D','ward.D2', crashes client
 ]
+
+const distanceMethodLst = ['euclidean', 'maximum', 'manhattan', 'canberra']
 
 class geneExpression {
 	constructor() {
@@ -133,6 +136,7 @@ function plotHeatmap_R(data, self) {
 	}
 	*/
 	self.dom.clusterMethodSelect.property('selectedIndex', clusterMethodLst.indexOf(self.state.config.clusterMethod))
+	self.dom.distanceMethodSelect.property('selectedIndex', distanceMethodLst.indexOf(self.state.config.distanceMethod))
 	const obj = data.clustering
 	console.log(obj)
 	obj.d = {
@@ -287,7 +291,7 @@ function validateRline(r) {
 // connect with output from rust/src/cluster
 function plotHeatmap(data, self) {
 	self.dom.clusterMethodSelect.property('selectedIndex', clusterMethodLst.indexOf(self.state.config.clusterMethod))
-
+	self.dom.distanceMethodSelect.property('selectedIndex', distanceMethodLst.indexOf(self.state.config.distanceMethod))
 	// data={geneNameLst,sampleNameLst,matrix,rowIdxLst,sorted_sample_coordinates,sorted_gene_coordinates}
 	const obj = data.clustering
 	console.log(obj)

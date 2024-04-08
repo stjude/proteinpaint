@@ -187,6 +187,7 @@ export class HierCluster extends Matrix {
 			dataType: s.dataType,
 			genes,
 			clusterMethod: s.clusterMethod,
+			distanceMethod: s.distanceMethod,
 			filter: getNormalRoot(filterJoin([state.filter, dictionaryLegendFilter])),
 			filter0: state.filter0
 		}

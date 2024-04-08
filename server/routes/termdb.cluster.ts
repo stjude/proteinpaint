@@ -88,6 +88,7 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 		row_names: [] as string[], // genes
 		col_names: [...sampleSet] as string[], // samples
 		cluster_method: q.clusterMethod as string,
+		distance_method: q.distanceMethod as string,
 		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 

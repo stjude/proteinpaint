@@ -204,6 +204,35 @@ export function setClusteringBtn(holder, callback) {
 					]
 				},
 				{
+					label: `Distance Method`,
+					title: `Sets which clustering method to use`,
+					type: 'radio',
+					chartType: 'hierCluster',
+					settingsKey: 'distanceMethod',
+					options: [
+						{
+							label: 'Euclidean',
+							value: 'euclidean',
+							title: `Calculate distance using euclidean method`
+						},
+						{
+							label: 'Maximum',
+							value: 'maximum',
+							title: `Maximum distance between two components of x and y`
+						},
+						{
+							label: 'Manhattan',
+							value: 'manhattan',
+							title: `Calculate distance using euclidean method`
+						},
+						{
+							label: 'Canberra',
+							value: 'canberra',
+							title: `Terms with zero numerator and denominator are omitted from the sum and treated as if the values were missing`
+						}
+					]
+				},
+				{
 					label: `Column Dendrogram Height`,
 					title: `The maximum height to render the column dendrogram`,
 					type: 'number',

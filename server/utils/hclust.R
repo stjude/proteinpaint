@@ -42,7 +42,7 @@ input <- fromJSON(json)
 #print (dim(normalized_matrix))
 
 # For Rows (i.e genes)
-RowDist <- dist(input$matrix, method = "euclidean") # Transposing the matrix
+RowDist <- dist(input$matrix, method = tolower(input$distance_method)) # Transposing the matrix
 # Hierarchical clustering
 RowDend <- hclust(RowDist, method = tolower(input$cluster_method))
 #RowDend <- flashClust(RowDist, method = tolower(input$cluster_method))
@@ -57,7 +57,7 @@ colnames(RowDendOrderHeight) <- "height"
 #print (RowDendOrderHeight)
 
 # For columns (i.e samples)
-ColumnDist <- dist(t(input$matrix), method = "euclidean") # Transposing the matrix
+ColumnDist <- dist(t(input$matrix), method = tolower(input$distance_method)) # Transposing the matrix
 
 # Hierarchical clustering
 

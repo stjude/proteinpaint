@@ -23,6 +23,7 @@ export async function getPlotConfig(opts = {}, app) {
 		// otherwise, should define it via opts or overrides
 		termGroupName: 'Gene Expression',
 		clusterMethod: 'average', // complete
+		distanceMethod: 'euclidean',
 		zScoreCap: 5,
 		xDendrogramHeight: 100,
 		yDendrogramHeight: 200,
