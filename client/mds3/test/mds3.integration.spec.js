@@ -14,7 +14,7 @@ Official - allow2selectSamples
 Incorrect dslabel
 TP53 custom data, no sample
 Custom variants, missing or invalid mclass
-Custom variants WITH samples
+Custom variants WITH samples (allows some to be without)
 Custom data with samples and sample selection
 Numeric mode custom dataset, with mode change
 
@@ -613,13 +613,15 @@ tape('Custom variants, missing or invalid mclass', test => {
 	}
 })
 
-tape('Custom variants WITH samples', test => {
+tape('Custom variants WITH samples (allows some to be without)', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
 	const custom_variants = [
+		// first variant must have sample, as will click on it to check if sample is showing in itemtip
 		{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1, sample: 'sample 2' },
-		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1, sample: 'sample 1' },
+		// 2nd variant has no sample and should be allowed
+		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1 },
 		{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1, sample: 'sample 1' }
 	]
 
