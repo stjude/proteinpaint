@@ -36,6 +36,7 @@ export function getSorterUi(opts) {
 			sectionData = [
 				{
 					label: 'For each selected row, sort cases by matching data',
+					notDraggable: true,
 					handler(div) {
 						//div.append('button').html('Select a row')
 					},
@@ -44,6 +45,7 @@ export function getSorterUi(opts) {
 				...self.activeOption.sortPriority,
 				{
 					label: 'Sort cases by name, alphabetically',
+					notDraggable: true,
 					tiebreakers: []
 				}
 			]
@@ -75,13 +77,12 @@ export function getSorterUi(opts) {
 				const thead = table
 					.append('thead')
 					.datum(sd)
-					.attr('draggable', true)
-					.attr('droppable', true)
+					.attr('draggable', !sd.notDraggable)
+					.attr('droppable', !sd.notDraggable)
 					.on('dragstart', trackDraggedSection)
 					.on('dragover', highlightSection)
 					.on('dragleave', unhighlightSection)
 					.on('drop', adjustSortPriority)
-				//.on('dragend', adjustSortPriority)
 
 				theads.push(select(thead))
 
@@ -129,12 +130,22 @@ export function getSorterUi(opts) {
 
 				const tbody = table
 					.append('tbody')
+					.datum(sd)
 					.style('display', self.expandedSection == 'all' || self.expandedSection == sd.label ? '' : 'none')
 
 				for (const tb of sd.tiebreakers) {
 					// TODO: should handle dictionary variables
 					if (!sd.types?.includes('geneVariant')) continue
-					const tr = tbody.append('tr').attr('draggable', true)
+					const tr = tbody
+						.append('tr')
+						.datum(tb)
+						.attr('draggable', true)
+						.attr('droppable', true)
+						.on('dragstart', trackDraggedTieBreaker)
+						.on('dragover', highlightTieBreaker)
+						.on('dragleave', unhighlightTieBreaker)
+						.on('drop', adjustTieBreakers)
+
 					if (!tb.disabled) i++
 					tr.append('td')
 						.style('padding', '5px')
@@ -191,6 +202,10 @@ export function getSorterUi(opts) {
 		highlightSection,
 		unhighlightSection,
 		adjustSortPriority,
+		trackDraggedTieBreaker,
+		highlightTieBreaker,
+		unhighlightTieBreaker,
+		adjustTieBreakers,
 		apply
 	}
 
@@ -201,13 +216,13 @@ export function getSorterUi(opts) {
 	}
 
 	function trackDraggedSection(event, d) {
-		//event.preventDefault()
-		dragged.sectionData = d
+		dragged.type = 'sortPriority'
+		dragged.data = d
 		dragged.index = self.activeOption.sortPriority.indexOf(d)
 	}
 
 	function highlightSection(event, d) {
-		if (d == dragged.sectionData) return
+		if (dragged.type != 'sortPriority' || d == dragged.data) return
 		event.preventDefault()
 		const i = self.activeOption.sortPriority.indexOf(d)
 		const borderSide = i < dragged.index ? 'border-top' : i > dragged.index ? 'border-bottom' : ''
@@ -216,19 +231,55 @@ export function getSorterUi(opts) {
 	}
 
 	function unhighlightSection(event, d) {
+		if (dragged.type != 'sortPriority') return
 		event.preventDefault()
 		select(this).selectAll('th').style('border', 'none')
 	}
 
 	function adjustSortPriority(event, d) {
-		if (d == dragged.sectionData) return
+		if (d == dragged.data) return
 		//event.preventDefault()
 		const i = self.activeOption.sortPriority.indexOf(d)
 		const s = parent.config.settings.matrix
-		//console.log(221, self.activeOption)
-		const j = i < dragged.index ? i : i + 1
 		self.activeOption.sortPriority.splice(dragged.index, 1)
-		self.activeOption.sortPriority.splice(j, 0, dragged.sectionData)
+		self.activeOption.sortPriority.splice(i, 0, dragged.data)
+		self.init({
+			sortOptions: {
+				[s.sortSamplesBy]: self.activeOption
+			}
+		})
+	}
+
+	function trackDraggedTieBreaker(event, d) {
+		dragged.type = 'tiebreaker'
+		dragged.data = d
+		dragged.sectionData = event.target.closest('tbody').__data__
+		dragged.priorityIndex = self.activeOption.sortPriority.indexOf(dragged.sectionData)
+		dragged.index = dragged.sectionData.tiebreakers.indexOf(d)
+	}
+
+	function highlightTieBreaker(event, d) {
+		if (dragged.type != 'tiebreaker' || d == dragged.data) return
+		event.preventDefault()
+		const i = dragged.sectionData.tiebreakers.indexOf(d)
+		const borderSide = i < dragged.index ? 'border-top' : i > dragged.index ? 'border-bottom' : ''
+		if (!borderSide) return
+		select(this).selectAll('td:nth-child(2)').style(borderSide, '2px solid blue')
+	}
+
+	function unhighlightTieBreaker(event, d) {
+		if (dragged.type != 'tiebreaker') return
+		event.preventDefault()
+		select(this).selectAll('td:nth-child(2)').style('border', 'none')
+	}
+
+	function adjustTieBreakers(event, d) {
+		if (dragged.type != 'tiebreaker' || d == dragged.data) return
+		event.preventDefault()
+		const i = dragged.sectionData.tiebreakers.indexOf(d)
+		const s = parent.config.settings.matrix
+		dragged.sectionData.tiebreakers.splice(dragged.index, 1)
+		dragged.sectionData.tiebreakers.splice(i, 0, dragged.data)
 		self.init({
 			sortOptions: {
 				[s.sortSamplesBy]: self.activeOption
