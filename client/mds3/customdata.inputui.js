@@ -5,8 +5,11 @@ import * as coord from '#src/coord'
 
 /*
 ui only works for gm mode
-TODO allow it to for genomic mode too, so can input custom data for 
 
+TODO
+- allow it to for genomic mode too, so can input custom data for 
+- unit test
+- reuse ui on appdrawer card
 */
 
 export default function (block) {
@@ -17,14 +20,7 @@ export default function (block) {
 
 	div.append('p').text(`Add mutation and/or fusion to show over ${block.usegm.name} ${block.usegm.isoform}`)
 
-	const ta = div
-		.append('textarea')
-		.attr('cols', '63')
-		.attr('rows', '5')
-		.property(
-			'placeholder',
-			'Mutation: mutation name, position, class, sample\nFusion: gene1, isoform1, position1, gene2, isoform2, position2, sample'
-		)
+	const ta = div.append('textarea').attr('cols', '50').attr('rows', '5').property('placeholder', 'Enter data')
 
 	const nameinput = div
 		.append('div')
@@ -143,70 +139,11 @@ export default function (block) {
 			nameinput.property('value', '')
 		})
 
-	// show bad lines after parsing
+	// div to show bad lines after parsing
 	const says = div.append('div').style('display', 'none', 'margin-top', '20px')
 
-	// instructions for mutation
-	div
-		.append('p')
-		.append('span')
-		.attr('class', 'sja_clbtext')
-		.text('Mutation data format')
-		.on('click', () => {
-			infodiv1.style('display', infodiv1.style('display') == 'none' ? '' : 'none')
-		})
-	const infodiv1 = div
-		.append('div')
-		.style('display', 'none')
-		.style('margin-top', '20px')
-		.style('color', '#858585')
-		.html(
-			`One mutation per line. Fields are joined by tab or comma:
-	<ol>
-		<li>Mutation name, can be any string</li>
-		<li>Mutation position</li>
-		<li>Mutation class code</li>
-		<li>Optional sample name</li>
-	</ol>
-	Position types:
-	<ul><li>Codon position: integer, 1-based (do not use for noncoding gene)</li>
-	<li>RNA position: integer, 1-based, beginning from transcription start site</li>
-	<li>Genomic position: chromosome name and 1-based coordinate joined by colon, e.g. chr1:2345</li></ul>`
-		)
-	mclasscolor2table(infodiv1.append('table').style('margin-top', '3px'), true)
-
-	// instructions for svfusion
-	div
-		.append('p')
-		.append('span')
-		.attr('class', 'sja_clbtext')
-		.text('SV/fusion data format')
-		.on('click', () => {
-			infodiv2.style('display', infodiv2.style('display') == 'none' ? '' : 'none')
-		})
-	const infodiv2 = div
-		.append('div')
-		.style('display', 'none')
-		.style('margin-top', '20px')
-		.style('color', '#858585')
-		.html(
-			`Limited to two-gene fusion products.<br>
-	One product per line.<br>
-	Each line has six fields joined by tab or comma:
-	<ol><li>N-term gene symbol</li>
-	<li>N-term gene isoform</li>
-	<li>N-term gene break-end position</li>
-	<li>C-term gene symbol</li>
-	<li>C-term gene isoform</li>
-	<li>C-term gene break-end position</li>
-	<li>Optional sample name</li>
-	</ol>
-	Break-end position types:
-	<ul><li>Codon position: integer, 1-based</li>
-	<li>RNA position: integer, 1-based, beginning from transcription start site</li>
-	<li>Genomic position: chromosome name and 1-based coordinate joined by colon, e.g. chr1:2345</li></ul>
-	Either one of the isoforms must be already displayed.`
-		)
+	showSnvindelHelp(div)
+	showSvfusionHelp(div)
 }
 
 /*
@@ -240,6 +177,82 @@ function parsePositionFromGm(selecti, str, gm) {
 		return [gm.chr, value - 1]
 	}
 	throw 'unknown selecti'
+}
+// instructions for mutation
+function showSnvindelHelp(div) {
+	const p = div.append('p')
+	p.append('span').text('Mutation format: mutation name, position, class, sample').style('opacity', 0.6)
+	p.append('span')
+		.attr('class', 'sja_clbtext')
+		.style('margin-left', '10px')
+		.text('Show details')
+		.on('click', event => {
+			const show = infodiv1.style('display') == 'none'
+			infodiv1.style('display', show ? '' : 'none')
+			event.target.innerHTML = show ? 'Hide details' : 'Show details'
+		})
+	const infodiv1 = div
+		.append('div')
+		.style('display', 'none')
+		.style('margin-left', '20px')
+		.style('padding-left', '10px')
+		.style('border-left', 'solid 1px black')
+		.style('color', '#858585')
+		.html(
+			`One mutation per line. Fields are joined by tab or comma:
+		<ol>
+			<li>Mutation name, can be any string</li>
+			<li>Mutation position</li>
+			<li>Mutation class code</li>
+			<li>Optional sample name</li>
+		</ol>
+		Position types:
+		<ul><li>Codon position: integer, 1-based (do not use for noncoding gene)</li>
+		<li>RNA position: integer, 1-based, beginning from transcription start site</li>
+		<li>Genomic position: chromosome name and 1-based coordinate joined by colon, e.g. chr1:2345</li></ul>`
+		)
+	mclasscolor2table(infodiv1.append('table').style('margin-top', '3px'), true)
+}
+
+function showSvfusionHelp(div) {
+	const p = div.append('p')
+	p.append('span')
+		.style('opacity', 0.6)
+		.text('SV/fusion format: gene1, isoform1, position1, gene2, isoform2, position2, sample')
+	p.append('span')
+		.attr('class', 'sja_clbtext')
+		.style('margin-left', '10px')
+		.text('Show details')
+		.on('click', event => {
+			const show = infodiv2.style('display') == 'none'
+			infodiv2.style('display', show ? '' : 'none')
+			event.target.innerHTML = show ? 'Hide details' : 'Show details'
+		})
+	const infodiv2 = div
+		.append('div')
+		.style('display', 'none')
+		.style('margin-left', '20px')
+		.style('padding-left', '10px')
+		.style('border-left', 'solid 1px black')
+		.style('color', '#858585')
+		.html(
+			`Limited to two-gene fusion products.<br>
+		One product per line.<br>
+		Each line has six fields joined by tab or comma:
+		<ol><li>N-term gene symbol</li>
+		<li>N-term gene isoform</li>
+		<li>N-term gene break-end position</li>
+		<li>C-term gene symbol</li>
+		<li>C-term gene isoform</li>
+		<li>C-term gene break-end position</li>
+		<li>Optional sample name</li>
+		</ol>
+		Break-end position types:
+		<ul><li>Codon position: integer, 1-based</li>
+		<li>RNA position: integer, 1-based, beginning from transcription start site</li>
+		<li>Genomic position: chromosome name and 1-based coordinate joined by colon, e.g. chr1:2345</li></ul>
+		Either one of the isoforms must be already displayed.`
+		)
 }
 
 // itd not enabled
