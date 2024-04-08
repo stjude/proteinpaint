@@ -136,6 +136,7 @@ export class Matrix {
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig,
 			clusterMethod: config.settings.hierCluster?.clusterMethod,
+			distanceMethod: config.settings.hierCluster?.distanceMethod,
 			nav: appState.nav
 		}
 	}
