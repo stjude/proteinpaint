@@ -1,1 +1,2 @@
-
+Features
+- New BCF card on the home page. See proteinpaint.stjude.org/?appcard=BCF.
