@@ -1061,11 +1061,11 @@ function domainlegend(tk, block) {
 					gmtkrender(tk, block) // Re-render the visualization
 				})
 
-			// Add the "Show only this" option.
+			// Add the "Show only" option.
 			block.tip.d
 				.append('div')
 				.attr('class', 'sja_menuoption')
-				.text('Show only this')
+				.text('Show only')
 				.on('click', () => {
 					// Callback for "Show only this" option
 					const spans = tk.td_legend.selectAll('span')
@@ -1078,7 +1078,8 @@ function domainlegend(tk, block) {
 						block.usegm.domain_hidden = {}
 					}
 					// Keep only the clicked domain type visible
-					block.usegm.domain_hidden[domaintype.key] = undefined
+					nameDiv.node().style.textDecoration = 'none'
+					descriptionDiv.node().style.textDecoration = 'none'
 					gmtkrender(tk, block) // Re-render the visualization
 				})
 
