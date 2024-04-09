@@ -1,5 +1,4 @@
 import path from 'path'
-import fs from 'fs'
 import run_R from '#src/run_R.js'
 import {
 	TermdbClusterRequest,
