@@ -1070,12 +1070,15 @@ function domainlegend(tk, block) {
 					// Callback for "Show only this" option
 					const spans = tk.td_legend.selectAll('span')
 					spans.style('text-decoration', 'line-through')
+
 					if (block.gmmode == client.gmmode.gmsum) {
 						for (const m of block.allgm) {
-							m.domain_hidden = {}
+							if (!m.domain_hidden) m.domain_hidden = {}
+							m.domain_hidden[domaintype.key] = 1
 						}
 					} else {
-						block.usegm.domain_hidden = {}
+						if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
+						block.usegm.domain_hidden[domaintype.key] = 1
 					}
 					// Keep only the clicked domain type visible
 					nameDiv.node().style.textDecoration = 'none'
@@ -1195,6 +1198,7 @@ function domainlegend(tk, block) {
 		})
 		colorPickerInput.click()
 	}
+	// using D3 syntax instead of d3.select for 'Color' option.
 
 	// Function to apply the selected color to the domain type
 	function applyCustomColor(domaintype, color) {
