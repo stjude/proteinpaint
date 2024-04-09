@@ -64,10 +64,11 @@ export class profilePlot {
 		document.addEventListener('scroll', event => this?.tip?.hide())
 	}
 
-	getList(tw) {
+	getList(tw, parent) {
 		const values = Object.values(tw.term.values)
 		const data = this.filtersData.lst.filter(sample => this.samplesPerFilter[tw.id].includes(parseInt(sample.sample)))
 		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
+
 		for (const value of values) {
 			value.value = value.label
 			value.disabled = !sampleValues.includes(value.label)
@@ -101,9 +102,11 @@ export class profilePlot {
 	async setControls(additionalInputs = []) {
 		const filters = {}
 		for (const tw of this.config.filterTWs) {
-			const filter = this.getFilter([tw.id])
+			const filter = this.getFilter(tw)
 			if (filter) filters[tw.id] = filter
 		}
+
+		//Dictionary with samples applying all the filters but not the one from the current term id
 		this.samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
 			filters
 		})
@@ -387,7 +390,9 @@ export class profilePlot {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
-	getFilter(excluded = []) {
+	getFilter(tw = null) {
+		const excluded = []
+		if (tw) excluded.push(tw.$id)
 		const lst = []
 		for (const tw of this.config.filterTWs) this.processTW(tw, this.settings[tw.id], excluded, lst)
 
