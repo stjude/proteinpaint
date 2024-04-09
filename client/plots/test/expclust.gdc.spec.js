@@ -166,7 +166,8 @@ tape('TME genes, 3 variables', function (test) {
 			config: {
 				settings: {
 					hierCluster: {
-						clusterMethod: 'complete'
+						clusterMethod: 'complete',
+						distanceMethod: 'euclidean'
 					}
 				}
 			}
@@ -175,6 +176,11 @@ tape('TME genes, 3 variables', function (test) {
 			hierCluster.Inner.config.settings.hierCluster.clusterMethod,
 			'complete',
 			`should change clustering method to ${hierCluster.Inner.config.settings.hierCluster.clusterMethod}`
+		)
+		test.equal(
+			hierCluster.Inner.config.settings.hierCluster.distanceMethod,
+			'euclidean',
+			`should change clustering method to ${hierCluster.Inner.config.settings.hierCluster.distanceMethod}`
 		)
 	}
 
