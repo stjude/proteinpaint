@@ -13,6 +13,8 @@ import { GeneExpressionQuery, GeneExpressionQueryNative, GeneExpressionQueryGdc 
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { dtgeneexpression } from '#shared/common.js'
+import { clusterMethodLst } from '#shared/clustering'
+import { distanceMethodLst } from '#shared/clustering'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -81,6 +83,10 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 		for (const s in o) sampleSet.add(s)
 		break
 	}
+
+	// Checking if cluster and distance method for hierarchial clustering is valid
+	if (clusterMethodLst.map(i => i.value).includes(q.clusterMethod as string) == false) throw 'Invalid cluster method'
+	if (distanceMethodLst.map(i => i.value).includes(q.distanceMethod as string) == false) throw 'Invalid distance method'
 
 	const inputData = {
 		matrix: [] as number[][],

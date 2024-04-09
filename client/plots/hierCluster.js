@@ -9,6 +9,8 @@ import { dtgeneexpression } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { getNormalRoot } from '#filter'
 export * from './hierCluster.config'
+import { clusterMethodLst } from '#shared/clustering'
+import { distanceMethodLst } from '#shared/clustering'
 /*
 FIXME items
 
@@ -181,14 +183,11 @@ export class HierCluster extends Matrix {
 		// all parameters here must remove payload properties that are
 		// not relevant to the data request, so that the dofetch and/or
 		// browser caching would work
-		if (s.clusterMethod != 'average' && s.clusterMethod != 'complete') throw 'Invalid cluster method'
-		if (
-			s.distanceMethod != 'euclidean' &&
-			s.distanceMethod != 'maximum' &&
-			s.distanceMethod != 'manhattan' &&
-			s.distanceMethod != 'canberra'
-		)
-			throw 'Invalid distance method'
+
+		// Checking if cluster and distance method for hierarchial clustering is valid
+		if (clusterMethodLst.map(i => i.value).includes(s.clusterMethod) == false) throw 'Invalid cluster method'
+		if (distanceMethodLst.map(i => i.value).includes(s.distanceMethod) == false) throw 'Invalid distance method'
+
 		const body = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
