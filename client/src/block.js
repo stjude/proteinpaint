@@ -449,7 +449,7 @@ export class Block {
 					.on('click', event => {
 						const p = event.target.getBoundingClientRect()
 						this.tip.clear().show(p.left - 150, p.top + p.height - 15)
-						import('./block.ds.gmcustomdata').then(q => q.default(this))
+						import('../mds3/customdata.inputui').then(q => q.default(this))
 					})
 			}
 			butrow.append('span').html('&nbsp;&nbsp;&nbsp;')
