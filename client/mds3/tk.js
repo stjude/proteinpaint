@@ -23,8 +23,9 @@ export async function loadTk(tk, block) {
 	block.block_setheight()
 
 	try {
-		if (!tk.mds) {
+		if (!tk.mds || tk.uninitialized) {
 			// missing .mds{}, run makeTk to initiate; only run once
+			// or, when uninitialized=true, must rerun makeTk(). somehow this fixes an issue allowing custom and native tk to reappear by hiding-showing it in tkmenu
 			await makeTk(tk, block)
 		}
 

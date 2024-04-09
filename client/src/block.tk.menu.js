@@ -21,6 +21,7 @@ newtk_bedj
 newtk_junction
 newtk_vcf
 newtk_interaction
+notAllowedToHideThisTrack
 
 ************* function cascade
 facettrigger
@@ -1791,6 +1792,7 @@ function notAllowedToHideThisTrack(tk) {
 	if (tk.type == client.tkt.usegm) return true
 
 	// is official mds3 tk, always on; could be temporary fix! can encode this choice at ds if indeed we need to hide an official mds3...
+	// 4-2024 can show/hide from tk menu without leaving menu. issue is that tk is not registered as custom tk and won't reappear in tkmenu after closing menu, thus still does not allow hiding it
 	if (tk.type == 'mds3' && tk.dslabel) return true
 
 	// is a gdc bam tk, it only shows in gdc bam slicing app and doesn't make sense to hide it

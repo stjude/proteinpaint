@@ -20,7 +20,8 @@ export default function (block) {
 
 	div.append('p').text(`Add mutation and/or fusion to show over ${block.usegm.name} ${block.usegm.isoform}`)
 
-	const ta = div.append('textarea').attr('cols', '50').attr('rows', '5').property('placeholder', 'Enter data')
+	const textarea = div.append('textarea').attr('cols', '50').attr('rows', '5').property('placeholder', 'Enter data')
+	textarea.node().focus()
 
 	const nameinput = div
 		.append('div')
@@ -39,7 +40,7 @@ export default function (block) {
 		.style('margin-left', '5px')
 		.text('Submit')
 		.on('click', async () => {
-			const v = ta.property('value')
+			const v = textarea.property('value')
 			if (v == '') return
 			says.style('display', 'none')
 			const selecti = select.node().selectedIndex,
@@ -49,7 +50,10 @@ export default function (block) {
 			for (const line0 of v.trim().split('\n')) {
 				const line = line0.trim()
 				if (!line) continue // skip empty line
-				const l = line.split(line.includes('\t') ? '\t' : ',')
+
+				// detect which splitting field is present in line, with a priority list
+				// tab has high priority as it will allow comma and space in mutation name
+				const l = line.split(line.includes('\t') ? '\t' : line.includes(' ') ? ' ' : ',')
 
 				// guess type of data for each line by the number of fields
 
@@ -135,7 +139,7 @@ export default function (block) {
 		.text('Clear')
 		.style('margin-left', '5px')
 		.on('click', () => {
-			ta.property('value', '')
+			textarea.property('value', '')
 			nameinput.property('value', '')
 		})
 
@@ -199,7 +203,7 @@ function showSnvindelHelp(div) {
 		.style('border-left', 'solid 1px black')
 		.style('color', '#858585')
 		.html(
-			`One mutation per line. Fields are joined by tab or comma:
+			`One mutation per line. Fields are joined by tab, comma or space:
 		<ol>
 			<li>Mutation name, can be any string</li>
 			<li>Mutation position</li>
@@ -236,9 +240,8 @@ function showSvfusionHelp(div) {
 		.style('border-left', 'solid 1px black')
 		.style('color', '#858585')
 		.html(
-			`Limited to two-gene fusion products.<br>
-		One product per line.<br>
-		Each line has six fields joined by tab or comma:
+			`Limited to two-gene fusion products. One product per line.
+			Fields are joined by tab, comma or space:
 		<ol><li>N-term gene symbol</li>
 		<li>N-term gene isoform</li>
 		<li>N-term gene break-end position</li>
@@ -474,7 +477,7 @@ function customdataui_del(block, x, y) {
 		.text('Clear')
 		.style('margin-left', '5px')
 		.on('click', () => {
-			ta.property('value', '')
+			textarea.property('value', '')
 			nameinput.property('value', '')
 		})
 	const says = div.append('div').style('display', 'none', 'margin-top', '20px')
