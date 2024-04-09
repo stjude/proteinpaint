@@ -1061,6 +1061,39 @@ function domainlegend(tk, block) {
 					gmtkrender(tk, block) // Re-render the visualization
 				})
 
+			// Add the "Show only this" option.
+			block.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Show only this')
+				.on('click', () => {
+					// Callback for "Show only this" option
+					const spans = tk.td_legend.selectAll('span')
+					spans.style('text-decoration', 'line-through')
+					if (block.gmmode == client.gmmode.gmsum) {
+						for (const m of block.allgm) {
+							m.domain_hidden = {}
+						}
+					} else {
+						block.usegm.domain_hidden = {}
+					}
+					// Keep only the clicked domain type visible
+					block.usegm.domain_hidden[domaintype.key] = undefined
+					gmtkrender(tk, block) // Re-render the visualization
+				})
+
+			// Adds a "Color" option for each domain type. When clicked, it opens a color picker dialog. The selected color is then applied to the domain type's fill property
+			block.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.html(
+					`Color: <div style="background-color: ${domaintype.fill}; border: solid 1px ${domaintype.stroke}; width: 20px; height: 20px; display: inline-block; margin-right: 5px;"></div> `
+				)
+				.on('click', event => {
+					// Callback for "Color" option
+					handleCustomColorSelection(domaintype)
+				})
+
 			block.tip.show(event.clientX, event.clientY)
 			event.stopPropagation()
 		})
@@ -1145,6 +1178,28 @@ function domainlegend(tk, block) {
 				.style('font-size', '.7em')
 				.style('padding-right', '10px')
 		}
+	}
+
+	// Function to handle the custom color selection
+	function handleCustomColorSelection(domaintype) {
+		const colorPickerInput = document.createElement('input')
+		colorPickerInput.type = 'color'
+		colorPickerInput.value = domaintype.fill // Set initial color value
+		colorPickerInput.addEventListener('input', function (event) {
+			const selectedColor = event.target.value
+			applyCustomColor(domaintype, selectedColor)
+			// Update the legend item color
+			const legendItem = d3.select(`#legend_${domaintype.key}`)
+			legendItem.style('background-color', selectedColor)
+		})
+		colorPickerInput.click()
+	}
+
+	// Function to apply the selected color to the domain type
+	function applyCustomColor(domaintype, color) {
+		domaintype.fill = color
+		console.log('Applying custom color:', color)
+		gmtkrender(tk, block)
 	}
 
 	if (block.usegm.coding && block.usegm.coding.length > 0) {
