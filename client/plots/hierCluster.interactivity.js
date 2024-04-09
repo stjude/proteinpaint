@@ -205,7 +205,7 @@ export function setClusteringBtn(holder, callback) {
 				},
 				{
 					label: `Distance Method`,
-					title: `Sets which clustering method to use`,
+					title: `Sets which distance method to use for clustering`,
 					type: 'radio',
 					chartType: 'hierCluster',
 					settingsKey: 'distanceMethod',
@@ -223,12 +223,12 @@ export function setClusteringBtn(holder, callback) {
 						{
 							label: 'Manhattan',
 							value: 'manhattan',
-							title: `Calculate distance using euclidean method`
+							title: `Calculate distance using the absolute distance between the two vectors`
 						},
 						{
 							label: 'Canberra',
 							value: 'canberra',
-							title: `Terms with zero numerator and denominator are omitted from the sum and treated as if the values were missing`
+							title: `Calculate distance using Canberra method`
 						}
 					]
 				},
