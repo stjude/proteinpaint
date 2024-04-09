@@ -1087,15 +1087,19 @@ function domainlegend(tk, block) {
 				})
 
 			// Adds a "Color" option for each domain type. When clicked, it opens a color picker dialog. The selected color is then applied to the domain type's fill property
-			block.tip.d
-				.append('div')
+			block.tip.d.append('span').text('Color')
+			const colorPicker = block.tip.d
+				.append('input')
 				.attr('class', 'sja_menuoption')
-				.html(
-					`Color: <div style="background-color: ${domaintype.fill}; border: solid 1px ${domaintype.stroke}; width: 20px; height: 20px; display: inline-block; margin-right: 5px;"></div> `
-				)
-				.on('click', event => {
-					// Callback for "Color" option
-					handleCustomColorSelection(domaintype)
+				.attr('type', 'color')
+				.attr('value', domaintype.fill)
+				.style('margin-left', '5px')
+				.on('input', event => {
+					// Apply the selected color to the domain type's fill property
+					colorPicker.on('input', function () {
+						const selectedColor = this.value
+						applyCustomColor(domaintype, selectedColor)
+					})
 				})
 
 			block.tip.show(event.clientX, event.clientY)
@@ -1184,23 +1188,8 @@ function domainlegend(tk, block) {
 		}
 	}
 
-	// Function to handle the custom color selection
-	function handleCustomColorSelection(domaintype) {
-		const colorPickerInput = document.createElement('input')
-		colorPickerInput.type = 'color'
-		colorPickerInput.value = domaintype.fill // Set initial color value
-		colorPickerInput.addEventListener('input', function (event) {
-			const selectedColor = event.target.value
-			applyCustomColor(domaintype, selectedColor)
-			// Update the legend item color
-			const legendItem = d3.select(`#legend_${domaintype.key}`)
-			legendItem.style('background-color', selectedColor)
-		})
-		colorPickerInput.click()
-	}
 	// using D3 syntax instead of d3.select for 'Color' option.
-
-	// Function to apply the selected color to the domain type
+	// Function to apply the selected color to the domain type's fill property
 	function applyCustomColor(domaintype, color) {
 		domaintype.fill = color
 		console.log('Applying custom color:', color)
