@@ -122,6 +122,16 @@
         },
         {
             "type": "card",
+            "name": "BCF",
+            "section": "tracks",
+            "ribbon": {"text": "new", "expireDate": "2024-05-15"},
+            "description": "Custom variant calls",
+            "image": "https://proteinpaint.stjude.org/ppdemo/images/bcf-square.png",
+            "sandboxJson": "BCF",
+            "searchterms": ["bcf"]
+        },
+        {
+            "type": "card",
             "name": "Splice Junction",
             "section": "tracks",
             "description": "Single sample and cohort",
