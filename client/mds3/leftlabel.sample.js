@@ -62,7 +62,6 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 			vocab: tk.mds.termdb.vocabApi.state.vocab,
 			callback: f => {
 				tk.filterObj = f
-				tk.uninitialized = true
 				tk.load()
 			}
 		}

@@ -299,7 +299,6 @@ function may_update_formatFilter(data, tk) {
 
 function reload(tk) {
 	tk.legend.tip.hide()
-	tk.uninitialized = true
 	tk.load()
 }
 
@@ -539,9 +538,7 @@ function update_mclass(tk) {
 					.text('Hide')
 					.on('click', () => {
 						tk.legend.mclass.hiddenvalues.add(c.k)
-						tk.legend.tip.hide()
-						tk.uninitialized = true
-						tk.load()
+						reload(tk)
 					})
 
 				tk.legend.tip.d
@@ -553,9 +550,7 @@ function update_mclass(tk) {
 							tk.legend.mclass.hiddenvalues.add(c2.k)
 						}
 						tk.legend.mclass.hiddenvalues.delete(c.k)
-						tk.legend.tip.hide()
-						tk.uninitialized = true
-						tk.load()
+						reload(tk)
 					})
 
 				if (hiddenlst.length) {
@@ -565,9 +560,7 @@ function update_mclass(tk) {
 						.text('Show all')
 						.on('click', () => {
 							tk.legend.mclass.hiddenvalues.clear()
-							tk.legend.tip.hide()
-							tk.uninitialized = true
-							tk.load()
+							reload(tk)
 						})
 				}
 
@@ -608,7 +601,6 @@ function update_mclass(tk) {
 				loading = true
 				tk.legend.mclass.hiddenvalues.delete(c.k)
 				event.target.innerHTML = 'Updating...'
-				tk.uninitialized = true
 				await tk.load()
 			})
 	}
@@ -708,7 +700,6 @@ function may_update_skewerRim(data, tk) {
 				loading = true
 				sk.hiddenvaluelst.splice(sk.hiddenvaluelst.indexOf(c), 1)
 				event.target.innerHTML = 'Updating...'
-				tk.uninitialized = true
 				await tk.load()
 			})
 	}
