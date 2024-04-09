@@ -622,7 +622,7 @@ tape('Custom variants WITH samples (allows some to be without)', test => {
 		{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1, sample: 'sample 2' },
 		// 2nd variant has no sample and should be allowed
 		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1 },
-		{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1, sample: 'sample 1' }
+		{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'F', dt: 1, sample: 'sample 1' }
 	]
 
 	runproteinpaint({

@@ -3,7 +3,7 @@ import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '#common/urlmap'
-import { mclass } from '#shared/common'
+import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { vcfparsemeta } from '#shared/vcf'
 import { getFilterName } from './leftlabel.sample'
 import { fillTermWrapper } from '#termsetting'
@@ -757,11 +757,11 @@ makes no return
 */
 function validateCustomVariants(tk, block) {
 	for (const m of tk.custom_variants) {
-		if (m.dt == 1) {
+		if (m.dt == dtsnvindel) {
 			validateCustomSnvindel(m)
 			continue
 		}
-		if (m.dt == 2 || m.dt == 5) {
+		if (m.dt == dtfusionrna || m.dt == dtsv) {
 			validateCustomSvfusion(m, block)
 			continue
 		}
@@ -873,13 +873,16 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 		// at least one m{} has occurrence, presumably all m{} should have it. no need to group
 		return
 	}
+
 	// sample_id is hardcoded, change "sample" to "sample_id"
+
 	for (const i of tk.custom_variants) {
 		if (i.sample) {
 			i.sample_id = i.sample
 			delete i.sample
 		}
 	}
+
 	if (!tk.custom_variants.find(i => i.sample_id)) {
 		// no m{} has sample, cannot derive occurrence
 		// usecase: for displaying variant-only info, e.g. regression-snplocus, dbsnp, clinvar
