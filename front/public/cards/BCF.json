@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "label": "BCF demo",
+            "label": "Variant-only BCF file",
             "urlparam": "?genome=hg38&gene=kras&mds3bcffile=BCF_Demo,hg38/clinvar.hg38.bcf.gz",
             "runargs": {
                 "nobox": 1,
@@ -17,10 +17,13 @@
                         }
                     }
                 ]
+            },
+            "testSpec": {
+                "expected": {"circle": 3 }
             }
         },
         {
-            "label": "BCF with samples",
+            "label": "Variant-sample BCF matrix",
             "urlparam": "?genome=hg38&gene=p53&mds3bcffile=BCF_Demo_samples,files/hg38/TermdbTest/TermdbTest.bcf.gz",
             "runargs": {
                 "nobox": 1,
@@ -36,7 +39,16 @@
                         }
                     }
                 ]
+            },
+            "testSpec": {
+                "expected": {"circle": 3 }
             }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "VCF Format Documentation",
+            "link": "https://samtools.github.io/hts-specs/VCFv4.2.pdf"
         }
     ]
 }
