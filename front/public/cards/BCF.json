@@ -1,0 +1,42 @@
+{
+    "ppcalls": [
+        {
+            "label": "BCF demo",
+            "urlparam": "?genome=hg38&gene=kras&mds3bcffile=BCF_Demo,hg38/clinvar.hg38.bcf.gz",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "gene": "KRAS",
+                "tracks": [
+                    {
+                        "type": "mds3",
+                        "name": "BCF Demo",
+                        "bcf": {
+                            "file": "hg38/clinvar.hg38.bcf.gz"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "label": "BCF with samples",
+            "urlparam": "?genome=hg38&gene=p53&mds3bcffile=BCF_Demo_samples,files/hg38/TermdbTest/TermdbTest.bcf.gz",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "gene": "TP53",
+                "tracks": [
+                    {
+                        "type": "mds3",
+                        "name": "BCF with samples",
+                        "bcf": {
+                            "file": "files/hg38/TermdbTest/TermdbTest.bcf.gz"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
