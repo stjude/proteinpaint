@@ -11,7 +11,7 @@ import * as matrixLayout from './matrix.layout'
 import * as matrixSerieses from './matrix.serieses'
 import * as matrixLegend from './matrix.legend'
 import * as matrixGroups from './matrix.groups'
-export { getPlotConfig } from './matrix.config'
+export { getPlotConfig, setComputedConfig } from './matrix.config'
 
 export class Matrix {
 	constructor(opts) {
@@ -158,7 +158,7 @@ export class Matrix {
 			delete this.clickedChildren
 
 			try {
-				this.setComputedConfig()
+				setComputedConfig(this.config)
 				const promises = []
 				// get the data
 				if (this.setHierClusterData) promises.push(this.setHierClusterData())
@@ -245,46 +245,6 @@ export class Matrix {
 		}
 
 		this.resetInteractions()
-	}
-
-	setComputedConfig() {
-		const s = this.config.settings.matrix
-		const allClasses = [...s.mutationClasses, ...s.CNVClasses]
-
-		const hiddenVariants = new Set()
-		for (const f of this.config.legendGrpFilter.lst) {
-			if (!f.dt) continue
-			allClasses.filter(m => f.dt.includes(mclass[m].dt)).forEach(key => hiddenVariants.add(key))
-		}
-		for (const f of this.config.legendValueFilter.lst) {
-			if (!f.legendGrpName || !f.tvs?.term?.type.startsWith('gene')) continue
-			if (f.tvs.values?.[0].mclasslst) f.tvs.values[0].mclasslst.forEach(key => hiddenVariants.add(key))
-			else if (f.tvs.values) f.tvs.values.forEach(v => hiddenVariants.add(v.key))
-			else throw `unhandled tvs from legendValueFilter`
-		}
-		s.hiddenVariants = [...hiddenVariants]
-
-		const hiddenCNVs = new Set(s.hiddenVariants.filter(key => mclass[key]?.dt === dtcnv))
-		s.hiddenCNVs = [...hiddenCNVs]
-
-		s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size == s.CNVClasses.length ? 'none' : 'bySelection'
-		s.allMatrixCNVHidden = hiddenCNVs.size == s.CNVClasses.length
-
-		const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.mutationClasses.find(k => k === key)))
-		s.hiddenMutations = [...hiddenMutations]
-		const PCset = new Set(s.proteinChangingMutations)
-		const TMset = new Set(s.truncatingMutations)
-
-		s.showMatrixMutation = !hiddenMutations.size
-			? 'all'
-			: hiddenMutations.size == s.mutationClasses.length
-			? 'none'
-			: hiddenMutations.size === s.mutationClasses.length - PCset.size && [...hiddenMutations].every(m => !PCset.has(m))
-			? 'onlyPC'
-			: hiddenMutations.size === s.mutationClasses.length - TMset.size && [...hiddenMutations].every(m => !TMset.has(m))
-			? 'onlyTruncating'
-			: 'bySelection'
-		s.allMatrixMutationHidden = hiddenMutations.size == s.mutationClasses.length
 	}
 
 	showNoMatchingDataMessage() {

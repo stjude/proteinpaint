@@ -2,6 +2,8 @@ import { copyMerge } from '../rx'
 import { getSortOptions } from './matrix.sort'
 import { fillTermWrapper } from '#termsetting'
 import {
+	mclass,
+	dtcnv,
 	proteinChangingMutations,
 	truncatingMutations,
 	synonymousMutations,
@@ -28,12 +30,14 @@ export async function getPlotConfig(opts = {}, app) {
 		samplegroups: [],
 		divideBy: null,
 		legendValueFilter: {
+			isAtomic: true,
 			type: 'tvslst',
 			in: true,
 			join: 'and',
 			lst: []
 		},
 		legendGrpFilter: {
+			isAtomic: true,
 			type: 'tvslst',
 			in: true,
 			join: 'and',
@@ -210,4 +214,56 @@ export async function getPlotConfig(opts = {}, app) {
 	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)
 	return config
+}
+
+// config: a hydrated matrix config object
+export function setComputedConfig(config) {
+	const s = config.settings.matrix
+	const allClasses = [...s.mutationClasses, ...s.CNVClasses]
+
+	s.filterByClass = {}
+	for (const f of config.legendGrpFilter.lst) {
+		if (!f.dt) continue
+		allClasses
+			.filter(m => f.dt.includes(mclass[m].dt))
+			.forEach(key => {
+				s.filterByClass[key] = 'value'
+			})
+	}
+	for (const f of config.legendValueFilter.lst) {
+		if (!f.legendGrpName || !f.tvs?.term?.type.startsWith('gene')) continue
+		if (f.tvs.values?.[0].mclasslst)
+			f.tvs.values[0].mclasslst.forEach(key => {
+				s.filterByClass[key] = f.legendFilterType?.endsWith('_hard') ? 'case' : 'value'
+			})
+		else if (f.tvs.values)
+			f.tvs.values.forEach(v => {
+				//hiddenVariants.add(v.key)
+				s.filterByClass[key] = 'value'
+			})
+		else throw `unhandled tvs from legendValueFilter`
+	}
+	s.hiddenVariants = Object.keys(s.filterByClass)
+
+	const hiddenCNVs = new Set(s.hiddenVariants.filter(key => mclass[key]?.dt === dtcnv))
+	s.hiddenCNVs = [...hiddenCNVs]
+
+	s.showMatrixCNV = !hiddenCNVs.size ? 'all' : hiddenCNVs.size == s.CNVClasses.length ? 'none' : 'bySelection'
+	s.allMatrixCNVHidden = hiddenCNVs.size == s.CNVClasses.length
+
+	const hiddenMutations = new Set(s.hiddenVariants.filter(key => s.mutationClasses.find(k => k === key)))
+	s.hiddenMutations = [...hiddenMutations]
+	const PCset = new Set(s.proteinChangingMutations)
+	const TMset = new Set(s.truncatingMutations)
+
+	s.showMatrixMutation = !hiddenMutations.size
+		? 'all'
+		: hiddenMutations.size == s.mutationClasses.length
+		? 'none'
+		: hiddenMutations.size === s.mutationClasses.length - PCset.size && [...hiddenMutations].every(m => !PCset.has(m))
+		? 'onlyPC'
+		: hiddenMutations.size === s.mutationClasses.length - TMset.size && [...hiddenMutations].every(m => !TMset.has(m))
+		? 'onlyTruncating'
+		: 'bySelection'
+	s.allMatrixMutationHidden = hiddenMutations.size == s.mutationClasses.length
 }
