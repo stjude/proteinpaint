@@ -66,7 +66,7 @@ export async function getPlotConfig(opts = {}, app) {
 				sortPriority: undefined, // will be filled-in
 				sortByMutation: 'consequence',
 				sortByCNV: true,
-				sortOptions: getSortOptions(app.vocabApi.termdbConfig, controlLabels),
+				//sortOptions: getSortOptions(app.vocabApi.termdbConfig, controlLabels),
 				sortSampleGrpsBy: 'name', // 'hits' | 'name' | 'sampleCount'
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'sampleCount', // or 'as listed'
@@ -190,12 +190,14 @@ export async function getPlotConfig(opts = {}, app) {
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
 	const m = config.settings.matrix
-	// harcode these overrides for now
-	m.duration = 0
+
+	;(m.sortOptions = getSortOptions(app.vocabApi.termdbConfig, controlLabels, m)),
+		// harcode these overrides for now
+		(m.duration = 0)
 	// force auto-dimensions for colw
 	m.colw = 0
 	// support deprecated sortSamplesBy value from a saved session
-	if (!m.sortOptions?.[m.sortSamplesBy]) m.sortSamplesBy = 'a'
+	if (m.sortSamplesBy != 'asListed' && !m.sortOptions?.[m.sortSamplesBy]) m.sortSamplesBy = 'a'
 	else if (['selectedTerms', 'class', 'dt', 'hits'].includes(m.sortSamplesBy)) m.sortSamplesBy = 'a'
 	if (m.samplecount4gene === true || m.samplecount4gene === 1) m.samplecount4gene = 'abs'
 	// support overrides in localhost

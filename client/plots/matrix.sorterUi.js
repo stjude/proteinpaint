@@ -46,7 +46,8 @@ export function getSorterUi(opts) {
 					handler(div) {
 						//div.append('button').html('Select a row')
 					},
-					tiebreakers: []
+					tiebreakers: [],
+					handler: handleSelectedTerms
 				},
 				...self.activeOption.sortPriority,
 				{
@@ -57,7 +58,7 @@ export function getSorterUi(opts) {
 			]
 
 			opts.holder.selectAll('*').remove()
-			const topDiv = opts.holder.append('div')
+			const topDiv = opts.holder.append('div').style('text-align', 'right')
 			topDiv.append('button').html('Apply').on('click', apply)
 			topDiv.append('button').html('Reset').on('click', self.init)
 
@@ -77,7 +78,7 @@ export function getSorterUi(opts) {
 					.append('thead')
 					.datum(sd)
 					.attr('draggable', !sd.notDraggable)
-					.attr('droppable', !sd.notDraggable)
+					.attr('droppable', true) //!sd.notDraggable)
 					.on('dragstart', trackDraggedSection)
 					.on('dragover', highlightSection)
 					.on('dragleave', unhighlightSection)
@@ -85,7 +86,7 @@ export function getSorterUi(opts) {
 
 				theads.push(select(thead))
 
-				const tr = thead.append('tr').style('background-color', '#eee')
+				const tr = thead.append('tr').style('background-color', '#eee').on('mouseover', undoMouseoverHighlights)
 				tr.append('th')
 					.style('padding', '5px')
 					.style('vertical-align', 'top')
@@ -106,8 +107,8 @@ export function getSorterUi(opts) {
 					.style('text-align', 'center')
 					.style('font-weight', 400)
 					.style('cursor', 'pointer')
-					.append('button')
-					.html('Add')
+					.append('span')
+					.html('Details')
 					.on('click', toggleSection)
 
 				const tbody = table
@@ -117,12 +118,13 @@ export function getSorterUi(opts) {
 
 				for (const tb of sd.tiebreakers) {
 					// TODO: should handle dictionary variables
-					if (!sd.types?.includes('geneVariant')) continue
+					if (!sd.types?.includes('geneVariant') || tb.skip) continue
 					const tr = tbody
 						.append('tr')
+						.on('mouseover', undoMouseoverHighlights)
 						.datum(tb)
-						.attr('draggable', true)
-						.attr('droppable', true)
+						.attr('draggable', !tb.disabled)
+						.attr('droppable', !tb.disabled)
 						.on('dragstart', trackDraggedTieBreaker)
 						.on('dragover', highlightTieBreaker)
 						.on('dragleave', unhighlightTieBreaker)
@@ -150,77 +152,28 @@ export function getSorterUi(opts) {
 						.style('max-width', '500px')
 					td2.append('span').html(tb.label || '')
 
-					const label = td2.append('label')
-					label.append('span').html(' (use data list order ')
-					if (!tb.isOrdered) tb.isOrdered = false
-					const checkbox = label
-						.append('input')
-						.datum(tb)
-						.attr('type', 'checkbox')
-						.property('checked', tb.isOrdered)
-						.style('vertical-align', 'bottom') //.html('(in listed order ')
-						.on('change', toggleTieBreakerIsOrdered)
+					if (!tb.disabled) {
+						const label = td2.append('label')
+						label.append('span').html(' (use data list order ')
+						if (!tb.isOrdered) tb.isOrdered = false
+						const checkbox = label
+							.append('input')
+							.datum(tb)
+							.attr('type', 'checkbox')
+							.property('checked', tb.isOrdered)
+							.style('vertical-align', 'bottom') //.html('(in listed order ')
+							.on('change', toggleTieBreakerIsOrdered)
 
-					label.append('span').html(')')
+						label.append('span').html(')')
 
-					const order = tb.order //.filter(cls => !s.hiddenVariants.includes(cls))
-					td2
-						.append('div')
-						.attr('class', 'sjpp-matrix-sorter-ui-value')
-						.selectAll('div')
-						.data(
-							order.map((key, index) => ({
-								lstName: 'order',
-								key,
-								cls: mclass[key],
-								tb,
-								dragstart: trackDraggedValue,
-								dragover: highlightValue,
-								dragleave: unhighlightValue,
-								drop: adjustValueOrder,
-								filterByClass: s.filterByClass,
-								index
-							}))
-						)
-						.enter()
-						.append('div')
-						.style('display', tb.isOrdered ? 'block' : 'inline-block')
-						.each(setValueDiv)
-
-					if (tb.notUsed?.length) {
-						const notUsed = td2.append('div')
-						if (!unusedDisplayByLabel.has(tb.label)) unusedDisplayByLabel.set(tb.label, 'none')
-
-						notUsed //.append('td')
+						const order = tb.order //.filter(cls => !s.hiddenVariants.includes(cls))
+						td2
 							.append('div')
-							.attr('data-testid', 'sjpp-matrix-sorter-ui-hidden-add')
-							.style('display', 'inline-block')
-							.style('padding', '5x')
-							.style('vertical-align', 'top')
-							.style('padding', '3px 5px')
-							.style('cursor', 'pointer')
-							.html(`+Add`)
-							.on('click', () => {
-								unusedDisplayByLabel.set(
-									tb.label,
-									unusedDisplayByLabel.get(tb.label) == 'inline-block' ? 'none' : 'inline-block'
-								)
-								availDiv.style('display', unusedDisplayByLabel.get(tb.label))
-							})
-
-						const availDiv = notUsed
-							.append('div')
-							.attr('data-testid', 'sjpp-matrix-sorter-ui-hidden-vals')
-							.style('margin-top', '3px')
-							.style('vertical-align', 'top')
-							.style('padding-left', '12px')
-							.style('display', unusedDisplayByLabel.get(tb.label))
-
-						availDiv
+							.attr('class', 'sjpp-matrix-sorter-ui-value')
 							.selectAll('div')
 							.data(
-								tb.notUsed.map((key, index) => ({
-									lstName: 'notUsed',
+								order.map((key, index) => ({
+									lstName: 'order',
 									key,
 									cls: mclass[key],
 									tb,
@@ -234,8 +187,59 @@ export function getSorterUi(opts) {
 							)
 							.enter()
 							.append('div')
-							.style('display', 'inline-block')
+							.style('display', tb.isOrdered ? 'block' : 'inline-block')
 							.each(setValueDiv)
+
+						if (tb.notUsed?.length) {
+							const notUsed = td2.append('div')
+							if (!unusedDisplayByLabel.has(tb.label)) unusedDisplayByLabel.set(tb.label, 'none')
+
+							notUsed //.append('td')
+								.append('div')
+								.attr('data-testid', 'sjpp-matrix-sorter-ui-hidden-add')
+								.style('display', 'inline-block')
+								.style('padding', '5x')
+								.style('vertical-align', 'top')
+								.style('padding', '3px 5px')
+								.style('cursor', 'pointer')
+								.html(`+Add`)
+								.on('click', () => {
+									unusedDisplayByLabel.set(
+										tb.label,
+										unusedDisplayByLabel.get(tb.label) == 'inline-block' ? 'none' : 'inline-block'
+									)
+									availDiv.style('display', unusedDisplayByLabel.get(tb.label))
+								})
+
+							const availDiv = notUsed
+								.append('div')
+								.attr('data-testid', 'sjpp-matrix-sorter-ui-hidden-vals')
+								.style('margin-top', '3px')
+								.style('vertical-align', 'top')
+								.style('padding-left', '12px')
+								.style('display', unusedDisplayByLabel.get(tb.label))
+
+							availDiv
+								.selectAll('div')
+								.data(
+									tb.notUsed.map((key, index) => ({
+										lstName: 'notUsed',
+										key,
+										cls: mclass[key],
+										tb,
+										dragstart: trackDraggedValue,
+										dragover: highlightValue,
+										dragleave: unhighlightValue,
+										drop: adjustValueOrder,
+										filterByClass: s.filterByClass,
+										index
+									}))
+								)
+								.enter()
+								.append('div')
+								.style('display', 'inline-block')
+								.each(setValueDiv)
+						}
 					}
 
 					const td3 = tr.append('td').style('text-align', 'center').style('vertical-align', 'top')
@@ -247,9 +251,13 @@ export function getSorterUi(opts) {
 						.on('click', toggleTieBreakerDisabled)
 				}
 
-				const lastTr = tbody.append('tr').attr('draggable', true)
+				const lastTr = tbody.append('tr').attr('draggable', true).on('mouseover', undoMouseoverHighlights)
 				lastTr.append('td').html('&nbsp;')
-				lastTr.append('td').style('text-align', 'left') //.append('button').html('Add')
+				const tdNew = lastTr
+					.append('td')
+					.style('text-align', 'left') //.append('button').html('Add')
+					.html(sd.details && !sd.order?.length ? sd.details : '&nbsp;')
+				if (sd.handler) sd.handler(tdNew, lastTr, tbody)
 				lastTr.append('td').html('&nbsp;')
 			}
 		},
@@ -372,14 +380,20 @@ export function getSorterUi(opts) {
 
 	function setValueDiv(d) {
 		const title = []
-		if (d.tb.notUsed?.includes(d.key)) title.push(`Click to use for sorting ${l.samples}.`)
-		if (d.filterByClass[d.key] == 'value') title.push('Hidden value')
-		if (d.filterByClass[d.key] == 'case') title.push('Case filter')
+		if (d.tb.notUsed?.includes(d.key)) title.push(`- Click on this label to include in used data values.`)
+		if (d.filterByClass[d.key])
+			title.unshift('- Click on the corresponding entry in the matrix legend or Mutation/CNV menus to unhide')
+		if (title.length) title.unshift(`To use this data value for sorting ${l.samples}:`)
+		// else {
+		// 	if (d.filterByClass[d.key] == 'value') title.push('Hidden value')
+		// 	if (d.filterByClass[d.key] == 'case') title.push('Case filter')
+		// 	if (title.length) title.unshift(`This data value was not used to sort ${l.cases}, since ${reason}: to use `)
+		// }
 
 		const skipped = d.tb.notUsed?.includes(d.key)
 		const opacity = d.filterByClass[d.key] == 'value' ? 0.5 : 1
 		const div = select(this)
-			.attr('title', title.join(','))
+			.attr('title', title.length ? title.join('\n') : `Click to not use this data value to sort ${l.samples}`)
 			.attr('draggable', d.tb.isOrdered ? true : false)
 			.attr('droppable', d.tb.isOrdered ? true : false)
 			.style('width', 'fit-content')
@@ -394,7 +408,18 @@ export function getSorterUi(opts) {
 			.on('drop', d.drop)
 			.on('mouseenter', () => toggle.style('opacity', 1))
 			.on('mouseleave', () => toggle.style('opacity', 0))
+			//.on('mouseover', () => )
 			.on('click', () => {
+				if (title.length) {
+					const div = tip.clear().d.append('div').style('max-width', '200px').style('padding', '5px')
+					div.append('div').html(title.join('<br>'))
+					tip.showunder(this)
+					if (d.filterByClass[d.key]) return
+				}
+
+				// if () title.push('Hidden value')
+				// if (d.filterByClass[d.key] == 'case') title.push('Case filter')
+
 				const targetLstName = d.lstName == 'order' ? 'notUsed' : 'order'
 				if (!d.tb[targetLstName]) d.tb[targetLstName] = []
 				const targetLst = d.tb[targetLstName]
@@ -497,80 +522,64 @@ export function getSorterUi(opts) {
 		})
 	}
 
-	// function showValueMenu(event, d) {
-	// 	event.stopPropagation?.()
-	// 	tip.clear()
-	// 	const s = parent.config.settings.matrix
-	// 	const l = s.controlLabels
-	// 	make_one_checkbox({
-	// 		holder: tip.d.append('div'),
-	// 			labeltext: 'Do not use this data value to sort cases',
-	// 			checked: d.tb.skipped.includes(d.key),
-	// 			style: {padding: '5px'},
-	// 			callback: checked => {
-	// 				tip.hide()
-	// 				if (!d.tb.skipped) d.tb.skipped = []
-	// 				const i = d.tb.skipped.indexOf(d.key)
-	// 				if (checked && i == -1) d.tb.skipped.push(d.key)
-	// 				else if (!checked && i != -1) d.tb.skipped.splice(i, 1)
-	// 				self.init({
-	//  				sortOptions: {
-	// 					[s.sortSamplesBy]: self.activeOption
-	// 				}
-	// 			})
-	// 			}
-	// 	})
-
-	// 	const fbk = s.filterByClass[d.key] || ''
-	// 	make_radios({
-	// 		holder: tip.d.append('div'),
-	// 			options: [{
-	// 				label: `Show ${d.cls.label}, do not use to filter ${l.samples}`,
-	// 				value: '',
-	// 				checked: fbk != 'value' && fbk != 'case'
-	// 			},{
-	// 				label: `Do not show ${d.cls.label}`,
-	// 				value: 'value',
-	// 				checked: fbk == 'value'
-	// 			},{
-	// 				label: `Hide ${l.samples} with ${d.cls.label}`,
-	// 				value: 'case',
-	// 				checked: fbk == 'case'
-	// 			}],
-	// 			// checked: d.tb.skipped.includes(d.key),
-	// 			style: {padding: '5px'},
-	// 			callback: value => {
-	// 				tip.hide()
-	// 				//const config = structuredClone(parent.config)
-	// 				self.init({
-	//  				sortOptions: {
-	// 					[s.sortSamplesBy]: self.activeOption
-	// 				}
-	// 			})
-	// 			}
-	// 	})
-
-	// 	tip.showunder(this)
-	// }
-
-	function apply(edits = {}) {
+	function apply() {
 		parent.app.tip?.hide()
 		parent.app.dispatch({
 			type: 'plot_edit',
 			id: parent.id,
 			config: {
-				settings: copyMerge(
-					{
-						matrix: {
-							sortOptions: {
-								[s.sortSamplesBy]: self.activeOption
-							}
+				settings: {
+					matrix: {
+						sortOptions: {
+							[s.sortSamplesBy]: self.activeOption
 						}
-					},
-					edits
-				)
+					}
+				}
 			}
 		})
+	}
+
+	function undoMouseoverHighlights() {
+		// this.style.backgroundColor = '#fff'
+		// this.style.textShadow = 'none'
+	}
+
+	function handleSelectedTerms(td, tr) {
+		if (!parent.selectedTermsToSortAgainst?.length) {
+			td.html(`Click on a matrix row label and the left triangle to add an entry here`)
+			return
+		}
+		const selectedTerms = parent.selectedTermsToSortAgainst.map(t => {
+			return {
+				t,
+				label: t.tw.term.name + (t.tw.term.type == 'geneVariant' ? ' alterations' : ' values')
+			}
+		})
+		const tbody = select(tr.node().parentNode)
+		tbody.selectAll('tr').remove()
+		tbody
+			.selectAll('tr')
+			.data(selectedTerms)
+			.enter()
+			.append('tr')
+			.selectAll('td')
+			.data((d, i) => [
+				{ label: i + 1, textAlign: 'center', cursor: '', t: d.t },
+				{ label: d.label, textAlign: 'left', cursor: '' },
+				{
+					label: 'Delete',
+					textAlign: 'center',
+					cursor: 'pointer',
+					click: parent.unsortSamplesAgainstTerm,
+					data: d
+				}
+			])
+			.enter()
+			.append('td')
+			.style('text-align', d => d.textAlign)
+			.style('cursor', d => d.cursor)
+			.html(d => d.label)
+			.on('click', (event, d) => d.click?.(event, d))
 	}
 
 	self.init()

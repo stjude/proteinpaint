@@ -11,7 +11,8 @@ import * as matrixLayout from './matrix.layout'
 import * as matrixSerieses from './matrix.serieses'
 import * as matrixLegend from './matrix.legend'
 import * as matrixGroups from './matrix.groups'
-export { getPlotConfig, setComputedConfig } from './matrix.config'
+import { setComputedConfig } from './matrix.config'
+export { getPlotConfig } from './matrix.config'
 
 export class Matrix {
 	constructor(opts) {

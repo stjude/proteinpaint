@@ -120,7 +120,7 @@ export const icons = {
 			.on('click', o.handler)
 	},
 	left: (elem, o) => {
-		const fill = o.disabled ? disabled.color : 'rgb(100,100,255)'
+		const fill = o.fill ? o.fill : o.disabled ? disabled.color : 'rgb(100,100,255)'
 		return elem
 			.attr('title', o.title)
 			.style('padding', '0 3px')
