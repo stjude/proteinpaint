@@ -9,8 +9,7 @@ import { dtgeneexpression } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { getNormalRoot } from '#filter'
 export * from './hierCluster.config'
-import { clusterMethodLst } from '#shared/clustering'
-import { distanceMethodLst } from '#shared/clustering'
+import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
 /*
 FIXME items
 
