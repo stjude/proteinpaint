@@ -1,5 +1,6 @@
 import tape from 'tape'
 import * as ms from '../matrix.sort'
+import { getPlotConfig, setComputedConfig } from '../matrix.config'
 
 /*************************
  reusable helper functions
@@ -13,7 +14,7 @@ const terms = {
 
 // return unique copies so that each test does not reuse
 // the same data rows that are already sorted in another test
-function getArgs(_settings = {}) {
+async function getArgs(_settings = {}) {
 	const samples = {
 		1: {
 			sample: 1,
@@ -37,7 +38,7 @@ function getArgs(_settings = {}) {
 			sample: 3,
 			aaa: {
 				values: [
-					{ dt: 1, class: 'S' },
+					{ dt: 1, class: 'F' },
 					{ dt: 4, class: 'CNV_loss' }
 				]
 			},
@@ -83,27 +84,30 @@ function getArgs(_settings = {}) {
 			]
 		}
 	]
+	const app = { vocabApi: { termdbConfig: {} } }
+	const config = await getPlotConfig(
+		{
+			settings: {
+				matrix: {
+					sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: { by: 'sample' } }],
+					sortByMutation: 'presence',
+					sortByCNV: false,
+					hiddenVariants: [],
+					..._settings
+				}
+			}
+		},
+		app
+	)
 
-	const settings = {
-		matrix: {
-			sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: { by: 'sample' } }],
-			sortOptions: ms.getSortOptions(),
-			sortByMutation: 'presence',
-			sortByCNV: false,
-			hiddenVariants: [],
-			..._settings
-		}
-	}
+	const settings = config.settings
+	config.sortOptions = ms.getSortOptions(undefined, undefined, settings.matrix)
 
 	const rows = Object.values(samples)
 	return {
 		self: {
-			app: {
-				vocabApi: {}
-			},
-			config: {
-				settings
-			},
+			app,
+			config,
 			termGroups: tg,
 			sampleGroups: sg,
 			sampleOrder: [
@@ -189,8 +193,11 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('sortSamplesBy = asListed', test => {
-	const { self, settings, rows } = getArgs({ sortSamplesBy: 'asListed' })
+tape('sortSamplesBy = asListed', async test => {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	const { self, settings, rows } = await getArgs({ sortSamplesBy: 'asListed' })
 	self.asListedSampleOrder = [1, 2, 3, 4, 5]
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
@@ -216,8 +223,11 @@ tape('sortSamplesBy = asListed', test => {
 	test.end()
 })
 
-tape('sortPriority by Mutation categories, default no value sorting, that uses a filter', test => {
-	const { self, settings, rows } = getArgs({
+tape('sortPriority by Mutation categories, default no value sorting, that uses a filter', async test => {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	const { self, settings, rows } = await getArgs({
 		sortSamplesBy: 'a'
 	})
 	const sorter = ms.getSampleSorter(self, settings, rows)
@@ -243,12 +253,18 @@ tape('sortPriority by Mutation categories, default no value sorting, that uses a
 	test.end()
 })
 
-tape('sortPriority by Mutation categories with value sorting, that uses a filter', test => {
-	const { self, settings, rows } = getArgs({
+tape('sortPriority by Mutation categories with value sorting, that uses a filter', async test => {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	const { self, settings, rows } = await getArgs({
 		sortSamplesBy: 'a',
-		sortByMutation: 'consequence',
-		sortByCNV: true
+		showMatrixMutation: 'onlyPC',
+		showMatrixCNV: 'all'
 	})
+	const tb = settings.sortOptions.a.sortPriority[0].tiebreakers[2]
+	tb.disabled = false
+	tb.isOrdered = true
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
 	test.deepEqual(
@@ -272,8 +288,11 @@ tape('sortPriority by Mutation categories with value sorting, that uses a filter
 	test.end()
 })
 
-tape('custom sortPriority, without filter', test => {
-	const { self, settings, rows } = getArgs({
+tape('custom sortPriority, without filter', async test => {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	const { self, settings, rows } = await getArgs({
 		sortSamplesBy: 'custom',
 		sortOptions: {
 			custom: {
@@ -360,8 +379,11 @@ tape('custom sortPriority, without filter', test => {
 	test.end()
 })
 
-tape('sort against selectedTerms', test => {
-	const { self, settings, rows } = getArgs({ sortSamplesBy: 'dt' })
+tape('sort against selectedTerms', async test => {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	const { self, settings, rows } = await getArgs({ sortSamplesBy: 'dt' })
 	self.termGroups[0].lst[1].sortSamples = {}
 	settings.sortSamplesBy = 'a'
 	const sorter = ms.getSampleSorter(self, settings, rows)
@@ -387,8 +409,11 @@ tape('sort against selectedTerms', test => {
 	test.end()
 })
 
-tape('getSampleSorter() should apply an opts.skipSorter() argument', test => {
-	const { self, settings, rows } = getArgs({
+tape('getSampleSorter() should apply an opts.skipSorter() argument', async test => {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	const { self, settings, rows } = await getArgs({
 		sortSamplesBy: 'a'
 	})
 	const sorter = ms.getSampleSorter(self, settings, rows, {

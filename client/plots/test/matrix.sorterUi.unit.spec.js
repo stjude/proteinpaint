@@ -48,6 +48,11 @@ async function getControls(_opts = {}) {
  test sections
 ***************/
 
+tape('\n', function (test) {
+	test.pass('-***- plots/matrix.sorterUi -***-')
+	test.end()
+})
+
 tape('default setup', async test => {
 	const { uiApi, controls, config, parent, opts } = await getControls()
 	const s = parent.config.settings.matrix
@@ -167,7 +172,6 @@ tape('simulated tiebreaker drag/drop', async test => {
 
 	const activeTieBreakers = ui.activeOption.sortPriority[0].tiebreakers
 	const i = activeTieBreakers.indexOf(tbData)
-	console.log(activeTieBreakers[i + 1].label)
 	ui.adjustTieBreakers({ preventDefault: () => undefined }, activeTieBreakers[i + 1])
 
 	const thead2 = opts.holder
@@ -177,7 +181,7 @@ tape('simulated tiebreaker drag/drop', async test => {
 	const trs2 = [...thead2.nextSibling.querySelectorAll('tr')]
 	test.deepEqual(
 		trs2.slice(0, 2).map(elem => elem.__data__),
-		activeOptionBeforeDrag.sortPriority[0].tiebreakers.slice(0, 2).reverse(),
+		activeOptionBeforeDrag.sortPriority[0].tiebreakers.slice(1, 3).reverse(),
 		'should visibly switch the first two tiebreaker rows'
 	)
 
@@ -219,7 +223,7 @@ tape('tiebreaker disabled', async test => {
 	const trs = thead1.nextSibling.querySelectorAll('tr')
 
 	test.equal(
-		select(trs[1].lastChild).select('button').html(),
+		select(trs[0].lastChild).select('button').html(),
 		'Disable',
 		'should indicate that the protein-changing tiebreaker is active'
 	)
@@ -227,7 +231,7 @@ tape('tiebreaker disabled', async test => {
 	test.equal(
 		select(trs[2].lastChild).select('button').html(),
 		'Enable',
-		'should indicate that the CNV tiebreaker is active'
+		'should indicate that the CNV tiebreaker is not active'
 	)
 
 	select(trs[2].lastChild).select('button').node().click()
@@ -260,7 +264,7 @@ tape('simulated value drag/drop', async test => {
 		.selectAll('thead')
 		.filter(d => d?.types?.includes('geneVariant'))
 		.node()
-	const valuesDiv = thead1.nextSibling.querySelectorAll('tr')[1].querySelector('.sjpp-matrix-sorter-ui-value')
+	const valuesDiv = thead1.nextSibling.querySelectorAll('tr')[0].querySelector('.sjpp-matrix-sorter-ui-value')
 	const lastVal = select(valuesDiv.lastChild)
 
 	// since this simulated test does not trigger actual drag and drop,
@@ -277,7 +281,7 @@ tape('simulated value drag/drop', async test => {
 		.selectAll('thead')
 		.filter(d => d?.types?.includes('geneVariant'))
 		.node()
-	const valuesDiv2 = thead2.nextSibling.querySelectorAll('tr')[1].querySelector('.sjpp-matrix-sorter-ui-value')
+	const valuesDiv2 = thead2.nextSibling.querySelectorAll('tr')[0].querySelector('.sjpp-matrix-sorter-ui-value')
 	const lastVal2 = select(valuesDiv2.lastChild)
 	const n = activeOrderBeforeDrag.length
 
@@ -355,7 +359,7 @@ tape('hidden values', async test => {
 		.selectAll('thead')
 		.filter(d => d?.types?.includes('geneVariant'))
 		.node()
-	const tr1 = thead1.nextSibling.querySelectorAll('tr')[1]
+	const tr1 = thead1.nextSibling.querySelectorAll('tr')[0]
 	const valuesDiv = tr1.querySelector('.sjpp-matrix-sorter-ui-value')
 	const m = valuesDiv.querySelectorAll(':scope>div').length
 	//const valueDivsBeforeDrop = valuesDiv.querySelectorAll(':scope > div')
@@ -375,7 +379,7 @@ tape('hidden values', async test => {
 		.selectAll('thead')
 		.filter(d => d?.types?.includes('geneVariant'))
 		.node()
-		.nextSibling.querySelectorAll('tr')[1]
+		.nextSibling.querySelectorAll('tr')[0]
 
 	const valuesDiv_a = tr1_a.querySelector('.sjpp-matrix-sorter-ui-value')
 	const unusedVals_a = tr1_a.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-vals]')

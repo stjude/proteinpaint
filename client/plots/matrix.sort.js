@@ -23,8 +23,8 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 	const activeOption = s.sortOptions[s.sortSamplesBy]
 	if (!activeOption) throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
 
-	const selectedTerms = self.termOrder
-		.filter(t => t.tw.sortSamples) // sortSamples property indicates a term is selected
+	self.selectedTermsToSortAgainst = self.termOrder.filter(t => t.tw.sortSamples) // sortSamples property indicates a term is selected
+	const selectedTerms = self.selectedTermsToSortAgainst
 		.map(t => t.tw)
 		.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority)
 
@@ -305,6 +305,7 @@ function findMatchingValue(annoValues, filterValues) {
 			if (
 				(!f.dt || v.dt === f.dt) &&
 				(!f.mclassLst || f.mclassLst.includes(v.class)) &&
+				(!f.class || f.class === v.class) &&
 				(!f.origin || v.origin === f.origin)
 			) {
 				return true
@@ -339,8 +340,8 @@ export function getTermSorter(self, s, grp) {
 	}
 }
 
-export function getSortOptions(termdbConfig, controlLabels = {}, self) {
-	const s = termdbConfig?.matrix?.settings || {}
+export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings) {
+	const s = matrixSettings || termdbConfig?.matrix?.settings || {}
 	const l = Object.assign({ sample: 'sample' }, controlLabels, s.controlLabels || {})
 
 	const sortOptions = {}
@@ -372,6 +373,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 				types: ['geneVariant'],
 				tiebreakers: [
 					{
+						skip: !s.mutationClasses.includes('Fuserna'), // not visible, cannot be enabled
 						label: 'Cases with Fusion RNASeq > without',
 						filter: {
 							values: [
@@ -396,19 +398,20 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 						by: 'class',
 						isOrdered: false,
 						order: [
-							// truncating
-							'F', // FRAMESHIFT
-							'N', // NONSENSE
-							'L', // SPLICE
-							'P', // SPLICE_REGION
+							...s.proteinChangingMutations
+							// // truncating
+							// 'F', // FRAMESHIFT
+							// 'N', // NONSENSE
+							// 'L', // SPLICE
+							// 'P', // SPLICE_REGION
 
-							// indel
-							'D', // PROTEINDEL
-							'I', // PROTEININS
-							'ProteinAltering',
+							// // indel
+							// 'D', // PROTEINDEL
+							// 'I', // PROTEININS
+							// 'ProteinAltering',
 
-							// point
-							'M' // MISSENSE
+							// // point
+							// 'M' // MISSENSE
 						]
 					},
 					{
@@ -422,10 +425,11 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 						},
 						by: 'class',
 						isOrdered: true,
-						disabled: true,
+						disabled: true, // visible, can be enabled
 						order: ['CNV_amp', 'CNV_loss']
 					},
 					{
+						disabled: true,
 						label: 'Cases with consequence data',
 						filter: {
 							values: [
@@ -435,7 +439,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 							]
 						},
 						by: 'class',
-						isOrdered: false,
+						isOrdered: true,
 						order: [
 							// truncating
 							'F', // FRAMESHIFT
@@ -449,8 +453,9 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 							'ProteinAltering',
 
 							// point
-							'M', // MISSENSE
-
+							'M' // MISSENSE
+						],
+						notUsed: [
 							// noncoding
 							'Utr3',
 							'Utr5',
@@ -470,102 +475,6 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 						by: 'values'
 					}
 				]
-			}
-		],
-
-		'#sortPriority': [
-			{
-				label: 'Cases with Fusion RNASeq > without',
-				types: ['geneVariant'],
-				tiebreakers: [
-					{
-						filter: {
-							values: [
-								{
-									dt: 2
-								}
-							]
-						},
-						by: 'class',
-						order: ['Fuserna' /*'WT', 'Blank'*/]
-					}
-				]
-			},
-			{
-				label: 'Cases with protein changing mutations > without',
-				filter: '',
-				isOrdered: false,
-				order: [
-					// truncating
-					'F', // FRAMESHIFT
-					'N', // NONSENSE
-					'L', // SPLICE
-					'P', // SPLICE_REGION
-
-					// indel
-					'D', // PROTEINDEL
-					'I', // PROTEININS
-					'ProteinAltering',
-
-					// point
-					'M' // MISSENSE
-				]
-			},
-
-			{
-				types: ['geneVariant'],
-				tiebreakers: [
-					{
-						filter: {
-							// this does not filter out cnv, it just means that the cnv must
-							// also have a dt=1 mutation in order to be displayed and sorted
-							// by this order
-							values: [{ dt: 1 }]
-						},
-						by: 'class',
-						order: [
-							// copy-number
-							'CNV_amp',
-							'CNV_loss',
-
-							// truncating
-							'F', // FRAMESHIFT
-							'N', // NONSENSE
-							'L', // SPLICE
-							'P', // SPLICE_REGION
-
-							// indel
-							'D', // PROTEINDEL
-							'I', // PROTEININS
-							'ProteinAltering',
-
-							// point
-							'M', // MISSENSE
-
-							// noncoding
-							'Utr3',
-							'Utr5',
-							'S', //SILENT
-							'Intron',
-							'noncoding'
-						]
-					},
-					// NOTE: nested CNV filter causes sorting samples by cnv+ssm > ssm-only > cnv-only
-					// per Lou's comment during GDC milestone 10 meeting 6/29/2023
-					// can comment this out and instead uncomment the alternative, non-nested filter below
-					{
-						// this flag is needed to ignore sorting by this tiebreaker if all the ordered class
-						// are filtered out because of not showing CNV or mutation data, otherwise
-						// samples with CNV_* data will be sorted ahead of samples without CNV_* data
-						ignoreEmptyFilteredOrder: true,
-						by: 'class',
-						order: ['CNV_amp', 'CNV_loss']
-					}
-				]
-			},
-			{
-				types: ['categorical', 'integer', 'float', 'survival'],
-				tiebreakers: [{ by: 'values', order: [] }]
 			}
 		]
 	}

@@ -24,7 +24,7 @@ export class MatrixControls {
 		const s = state.config.settings.matrix
 		if (this.parent.setClusteringBtn)
 			this.parent.setClusteringBtn(this.opts.holder, (event, data) => this.callback(event, data))
-		this.setSortFilterBtn(s)
+		//this.setSortBtn(s)
 		this.setSamplesBtn(s)
 		this.setGenesBtn(s)
 		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster') {
@@ -69,7 +69,7 @@ export class MatrixControls {
 			.on(`keyup.matrix-${this.parent.id}`, this.keyboardNavHandler)
 	}
 
-	setSortFilterBtn(s) {
+	setSortBtn(s) {
 		let ui
 
 		this.opts.holder
@@ -207,6 +207,25 @@ export class MatrixControls {
 								.filter(t => t.tw.term.type === 'geneVariant')
 								.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
 							return { currentGeneNames }
+						}
+					},
+					{
+						label: `Sort ${l.Samples} By`,
+						title: ``,
+						type: 'custom',
+						init(self) {
+							//const opts = { controls, holder, debug: true, setComputedConfig }
+							self.dom.row.on('mouseover', function () {
+								this.style.backgroundColor = '#fff'
+								this.style.textShadow = 'none'
+							})
+
+							return getSorterUi({
+								controls: this,
+								holder: self.dom.inputTd,
+								tip: this.parent.app.tip
+								//expandedSection: this.parent.config.settings.matrix.sortOptions.a?.sortPriority[0]?.label || ''
+							})
 						}
 					}
 				]

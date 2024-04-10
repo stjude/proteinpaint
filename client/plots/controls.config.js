@@ -622,7 +622,8 @@ function setCustomInput(opts) {
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label')
-				.attr('title', opts.title),
+				.attr('title', opts.title)
+				.style('vertical-align', 'top'),
 			inputTd: opts.holder.append('td')
 		}
 	}

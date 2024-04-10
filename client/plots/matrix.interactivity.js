@@ -600,6 +600,7 @@ function setTermActions(self) {
 
 		// sorting icons
 		const vartype = t.tw.term.type == 'geneVariant' ? 'gene' : 'variable'
+		const sortRevertable = self.type != 'hierCluster' && t.tw.sortSamples?.priority !== undefined
 		div
 			.append('span')
 			.selectAll('div')
@@ -616,7 +617,8 @@ function setTermActions(self) {
 						icon: 'left',
 						title: `Sort ${l.samples} against this ${vartype}`,
 						disabled: t.tw.sortSamples?.priority === 0 || self.type == 'hierCluster',
-						handler: self.sortSamplesAgainstTerm
+						fill: sortRevertable ? 'rgba(200,100,100,0.5)' : '',
+						handler: sortRevertable ? self.unsortSamplesAgainstTerm : self.sortSamplesAgainstTerm
 					},
 					{
 						html: '&nbsp;|&nbsp;'
@@ -688,7 +690,7 @@ function setTermActions(self) {
 	}
 
 	self.sortSamplesAgainstTerm = event => {
-		event.stopPropagation()
+		event?.stopPropagation()
 		const t = self.activeLabel
 		const [tcopy] = self.getSorterTerms(t)
 		const termgroups = self.termGroups
@@ -702,6 +704,32 @@ function setTermActions(self) {
 			}
 		}
 
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.opts.id,
+			config: {
+				termgroups
+			}
+		})
+		self.dom.tip.hide()
+	}
+
+	self.unsortSamplesAgainstTerm = (event, d) => {
+		event.stopPropagation()
+		const t = self.activeLabel || d.data.t
+		const [tcopy] = self.getSorterTerms(t)
+		const termgroups = self.termGroups
+		termgroups[t.grpIndex].lst[t.lstIndex] = tcopy
+		for (const g of termgroups) {
+			for (const tw of g.lst) {
+				if (!tw.sortSamples) continue
+				if (tw.$id === t.tw.$id) {
+					delete tw.sortSamples //.priority
+				} else if ('sortSamples' in tw && 'priority' in tw.sortSamples) {
+					if (tw.sortSamples.priority > t.sortSamples?.priority) tw.sortSamples.priority -= 1
+				}
+			}
+		}
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.opts.id,
@@ -1160,10 +1188,10 @@ function setTermActions(self) {
 		if (!activeOption) {
 			throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
 		}
-		const matchingSortSamples = activeOption.sortPriority?.find(o => o.types.includes(t.tw.term.type))?.tiebreakers[0]
+		const matchingSortSamples = activeOption.sortPriority?.find(o => o.types.includes(t.tw?.term?.type))?.tiebreakers[0]
 		const sortSamples = matchingSortSamples
 			? {} // will let matrix.sort fill-in based on the first matching tiebreaker
-			: t.tw.term.type == 'geneVariant'
+			: t.tw?.term?.type == 'geneVariant'
 			? {
 					by: 'class',
 					order: [
@@ -1191,8 +1219,8 @@ function setTermActions(self) {
 			  }
 			: { by: 'values' }
 
-		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
-		const tcopy = JSON.parse(JSON.stringify(t.tw))
+		const i = sorterTerms.findIndex(st => st.$id === t.tw?.$id)
+		const tcopy = JSON.parse(JSON.stringify(t.tw || {}))
 		// will let the matrix.sorter code fill-in the sortSamples with tiebreakers
 		tcopy.sortSamples = sortSamples
 		if (i == -1) {
