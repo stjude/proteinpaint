@@ -1,6 +1,5 @@
 import { renderTable } from '../dom/table'
-import { clusterMethodLst } from '#shared/clustering'
-import { distanceMethodLst } from '#shared/clustering'
+import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
 
 // Given a clusterId, return all its children clusterIds
 export function getAllChildrenClusterIds(clickedClusterId) {

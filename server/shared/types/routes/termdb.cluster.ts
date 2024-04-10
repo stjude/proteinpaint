@@ -16,8 +16,9 @@ export type TermdbClusterRequest = {
 	/** Dataset label */
 	dslabel: string
 	/** cluster method */
-	clusterMethod: 'average' | 'complete'
-	/** TODO new param distance metric */
+	clusterMethod: string
+	/** distance method */
+	distanceMethod: string
 	/** Data type */
 	dataType: 3 // create union to support more types
 	/** List of genes TODO can be non-genes when dataType is generalized */

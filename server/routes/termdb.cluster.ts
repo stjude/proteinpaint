@@ -13,8 +13,7 @@ import { GeneExpressionQuery, GeneExpressionQueryNative, GeneExpressionQueryGdc 
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { dtgeneexpression } from '#shared/common.js'
-import { clusterMethodLst } from '#shared/clustering'
-import { distanceMethodLst } from '#shared/clustering'
+import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 
 export const api = {
 	endpoint: 'termdb/cluster',
