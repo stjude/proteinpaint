@@ -39,6 +39,7 @@ async function loadDataset(headerHolder, dslabel) {
 	const queryString = window.location.search
 	const urlParams = new URLSearchParams(queryString)
 	const isLoggedIn = urlParams.get('isLoggedIn')
+	console.log('isLoggedIn', isLoggedIn)
 	const site = urlParams.get('site')
 
 	addButtons(headerHolder, app, dslabel, isLoggedIn, site)
