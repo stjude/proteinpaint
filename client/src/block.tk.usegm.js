@@ -972,6 +972,7 @@ function domainlegend(tk, block) {
 							} else {
 								delete block.usegm.domain_hidden[domaintype.key]
 							}
+							block.tip.hide()
 							gmtkrender(tk, block) // Re-render the visualization
 						})
 
@@ -983,7 +984,7 @@ function domainlegend(tk, block) {
 						.text('Show All')
 						.on('click', () => {
 							// Callback for "Show All" option
-							const spans = tk.td_legend.selectAll('span')
+							const spans = tk.td_legend.selectAll('span.sjpp-domain-legend')
 							spans.style('text-decoration', 'none')
 							if (block.gmmode == client.gmmode.gmsum) {
 								for (const m of block.allgm) {
@@ -992,6 +993,7 @@ function domainlegend(tk, block) {
 							} else {
 								block.usegm.domain_hidden = {}
 							}
+							block.tip.hide()
 							gmtkrender(tk, block) // Re-render the visualization
 						})
 
@@ -1020,6 +1022,7 @@ function domainlegend(tk, block) {
 							if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
 							block.usegm.domain_hidden[domaintype.key] = 1
 						}
+						block.tip.hide()
 						gmtkrender(tk, block) // Re-render the visualization
 					})
 
@@ -1031,7 +1034,7 @@ function domainlegend(tk, block) {
 					.text('Show All')
 					.on('click', () => {
 						// Callback for "Show All" option
-						const spans = tk.td_legend.selectAll('span')
+						const spans = tk.td_legend.selectAll('span.sjpp-domain-legend')
 						spans.style('text-decoration', 'none')
 						if (block.gmmode == client.gmmode.gmsum) {
 							for (const m of block.allgm) {
@@ -1040,6 +1043,7 @@ function domainlegend(tk, block) {
 						} else {
 							block.usegm.domain_hidden = {}
 						}
+						block.tip.hide()
 						gmtkrender(tk, block) // Re-render the visualization
 					})
 
@@ -1051,18 +1055,22 @@ function domainlegend(tk, block) {
 					.text('Show only')
 					.on('click', () => {
 						// Callback for "Show only this" option
-						const spans = tk.td_legend.selectAll('span')
+						const spans = tk.td_legend.selectAll('span.sjpp-domain-legend')
 						spans.style('text-decoration', 'line-through')
 
 						if (block.gmmode == client.gmmode.gmsum) {
 							for (const m of block.allgm) {
-								if (!m.domain_hidden) m.domain_hidden = {}
-								m.domain_hidden[domaintype.key] = 1
+								for (const c of lst) {
+									if (c.key != domaintype.key) m.domain_hidden[c.key] = 1
+								}
 							}
 						} else {
 							if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
-							block.usegm.domain_hidden[domaintype.key] = 1
+							for (const c of lst) {
+								if (c.key != domaintype.key) block.usegm.domain_hidden[c.key] = 1
+							}
 						}
+						block.tip.hide()
 						// Keep only the clicked domain type visible
 						nameDiv.node().style.textDecoration = 'none'
 						descriptionDiv.node().style.textDecoration = 'none'
@@ -1098,12 +1106,14 @@ function domainlegend(tk, block) {
 
 		const nameDiv = clickRow
 			.append('span')
+			.classed('sjpp-domain-legend', true)
 			.text(domaintype.name)
 			.style('color', default_text_color)
 			.style('margin-right', '10px')
 
 		const descriptionDiv = clickRow
 			.append('span')
+			.classed('sjpp-domain-legend', true)
 			.text(domaintype.description)
 			.style('color', default_text_color)
 			.style('font-size', '.7em')
