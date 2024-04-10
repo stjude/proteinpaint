@@ -84,8 +84,8 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 	}
 
 	// Checking if cluster and distance method for hierarchial clustering is valid
-	if (clusterMethodLst.map(i => i.value).includes(q.clusterMethod as string) == false) throw 'Invalid cluster method'
-	if (distanceMethodLst.map(i => i.value).includes(q.distanceMethod as string) == false) throw 'Invalid distance method'
+	if (!clusterMethodLst.find(i => i.value == q.clusterMethod)) throw 'Invalid cluster method'
+	if (!distanceMethodLst.find(i => i.value == q.distanceMethod)) throw 'Invalid distance method'
 
 	const inputData = {
 		matrix: [] as number[][],
