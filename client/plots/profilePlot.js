@@ -7,6 +7,12 @@ import { getSampleFilter } from '../termsetting/handlers/samplelst'
 import { Menu } from '#dom/menu'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
+const orderedVolumes = [
+	'Small (1-25 annual newly diagnoses)',
+	'Medium (26-80 annual newly diagnoses)',
+	'Large (81-120 annual newly diagnoses)',
+	'Very large (>120 annual newly diagnoses)'
+]
 
 export class profilePlot {
 	constructor() {
@@ -131,6 +137,12 @@ export class profilePlot {
 		this.incomes.sort((elem1, elem2) => {
 			const i1 = orderedIncomes.indexOf(elem1.value)
 			const i2 = orderedIncomes.indexOf(elem2.value)
+			if (i1 < i2) return -1
+			return 1
+		})
+		this.hospitalVolumes.sort((elem1, elem2) => {
+			const i1 = orderedVolumes.indexOf(elem1.value)
+			const i2 = orderedVolumes.indexOf(elem2.value)
 			if (i1 < i2) return -1
 			return 1
 		})
