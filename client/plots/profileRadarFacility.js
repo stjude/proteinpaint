@@ -35,16 +35,6 @@ class profileRadarFacility extends profilePlot {
 		this.plot()
 	}
 
-	getPercentage2(d) {
-		if (!d) return null
-		const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
-		let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
-		scores.sort((s1, s2) => s1 - s2)
-		const middle = Math.floor(scores.length / 2)
-		const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
-		return Math.round(score)
-	}
-
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
@@ -91,7 +81,7 @@ class profileRadarFacility extends profilePlot {
 			const row = [{ value: item.module }, { value: this.getPercentage(item) }]
 
 			this.addData(iangle, i, data, false)
-			row.push({ value: this.getPercentage2(item) })
+			row.push({ value: this.getPercentage(item, true) })
 			rows.push(row)
 
 			i++
@@ -170,7 +160,7 @@ class profileRadarFacility extends profilePlot {
 
 	addData(iangle, i, data, isFacility) {
 		const item = this.terms[i]
-		const percentage = isFacility ? this.getPercentage(item) : this.getPercentage2(item)
+		const percentage = isFacility ? this.getPercentage(item) : this.getPercentage(item, true)
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)

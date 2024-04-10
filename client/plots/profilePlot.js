@@ -64,7 +64,7 @@ export class profilePlot {
 		document.addEventListener('scroll', event => this?.tip?.hide())
 	}
 
-	getList(tw, parent) {
+	getList(tw) {
 		const values = Object.values(tw.term.values)
 		const data = this.filtersData.lst.filter(sample => this.samplesPerFilter[tw.id].includes(parseInt(sample.sample)))
 		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
@@ -302,7 +302,6 @@ export class profilePlot {
 	async loadSampleData(chartType, inputs) {
 		if (chartType != 'profileRadarFacility') {
 			if (this.state.isLoggedIn) {
-				let result
 				if (this.state.site && !this.settings.isAggregate) {
 					const id = this.sampleidmap[this.state.site].id
 					this.settings.site = id
@@ -322,11 +321,10 @@ export class profilePlot {
 						callback: value => this.setSite(value)
 					})
 				}
-				if (this.settings.site) this.sampleData = this.data.lst[this.settings.site]
+				if (this.settings.site) this.sampleData = this.data.lst.find(s => s.sample == this.settings.site)
 				else this.sampleData = null
 			}
 		} else {
-			let result
 			if (this.state.isLoggedIn) {
 				let result
 
@@ -482,9 +480,13 @@ export class profilePlot {
 		return filename
 	}
 
-	getPercentage(d) {
+	getPercentage(d, isAggregate = null) {
 		if (!d) return null
-		if (this.sampleData) {
+		if (isAggregate == null)
+			//not specified when called
+			//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
+			isAggregate = this.settings.isAggregate || this.sampleData == null //if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
+		if (!isAggregate) {
 			const score = this.sampleData[d.score.$id]?.value
 			const maxScore = this.sampleData[d.maxScore.$id]?.value
 			const percentage = (score / maxScore) * 100
