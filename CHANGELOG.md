@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.53.0
 
 Features:
 - Both mutation and sv/fusion data can be submitted in one ui to create custom mds3 tk
