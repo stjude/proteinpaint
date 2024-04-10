@@ -60,9 +60,9 @@ function addButtons(headerHolder, app, dslabel, isLoggedIn, site) {
 		.on('click', e => launchPlot(app, 'profilePolar', 'Polar Graph', preserveCheckbox.node().checked, isLoggedIn, site))
 	div
 		.append('button')
-		.text('Barchart Graph')
+		.text('Bar Graph')
 		.on('click', e =>
-			launchPlot(app, 'profileBarchart', 'Barchart Graph', preserveCheckbox.node().checked, isLoggedIn, site)
+			launchPlot(app, 'profileBarchart', 'Bar Graph', preserveCheckbox.node().checked, isLoggedIn, site)
 		)
 	if (isLoggedIn)
 		div
