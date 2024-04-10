@@ -1,9 +1,9 @@
 import tape from 'tape'
-import { getSorterUi } from '../matrix.sorterUi.js'
-import { getPlotConfig } from '../matrix.config'
-import { initByInput } from '../controls.config'
 import { select } from 'd3-selection'
 import { copyMerge } from '#rx'
+import { getSorterUi } from '../matrix.sorterUi.js'
+import { getPlotConfig, setComputedConfig } from '../matrix.config'
+import { initByInput } from '../controls.config'
 
 /*************************
  reusable helper functions
@@ -20,6 +20,7 @@ async function getControls(_opts = {}) {
 				_opts.dispatch ||
 				(action => {
 					copyMerge(config, action.config)
+					setComputedConfig(config)
 					uiApi.main()
 				}),
 			vocabApi: {
@@ -31,10 +32,13 @@ async function getControls(_opts = {}) {
 		}
 	}
 
-	const config = await getPlotConfig({}, parent.app)
+	const config = await getPlotConfig(_opts, parent.app)
+	setComputedConfig(config)
 	parent.config = config
+	//config.settings.matrix.hiddenVariants = _opts.hiddenVariants || []
+	//config.settings.matrix.filterByClass = _opts.filterByClass || {}
 	const controls = { parent }
-	const opts = { controls, holder, debug: true }
+	const opts = { controls, holder, debug: true, setComputedConfig }
 	const uiApi = getSorterUi(opts)
 	//const input = initByInput.custom(uiOpts)
 	return { uiApi, controls, config, parent: controls.parent, opts }
@@ -153,7 +157,7 @@ tape('simulated tiebreaker drag/drop', async test => {
 	// since this simulated test does not trigger actual drag and drop,
 	// must make sure that the correct event handler is tested here
 	test.equal(
-		select(trs[0].firstChild).on('drop'),
+		select(trs[0]).on('drop'),
 		ui.adjustTieBreakers,
 		'should attach the correct drop handler for tiebreaker label'
 	)
@@ -215,18 +219,18 @@ tape('tiebreaker disabled', async test => {
 	const trs = thead1.nextSibling.querySelectorAll('tr')
 
 	test.equal(
-		select(trs[1].firstChild).select('input').property('checked'),
-		true,
-		'should not check the row for protein-changing tiebreaker'
+		select(trs[1].lastChild).select('button').html(),
+		'Disable',
+		'should indicate that the protein-changing tiebreaker is active'
 	)
 
 	test.equal(
-		select(trs[2].firstChild).select('input').property('checked'),
-		false,
-		'should not check the row for CNV tiebreaker'
+		select(trs[2].lastChild).select('button').html(),
+		'Enable',
+		'should indicate that the CNV tiebreaker is active'
 	)
 
-	select(trs[2].firstChild).select('input').node().click()
+	select(trs[2].lastChild).select('button').node().click()
 	const activeTieBreakers = ui.activeOption.sortPriority[0].tiebreakers
 	ui.apply()
 
@@ -267,7 +271,7 @@ tape('simulated value drag/drop', async test => {
 	const activeOrderBeforeDrag = structuredClone(activeOrder)
 	const value = lastVal.datum()
 	ui.trackDraggedValue.call(lastVal.node(), { target: lastVal.node() }, value)
-	ui.adjustValueOrder({ preventDefault: () => undefined }, activeOrder[0])
+	ui.adjustValueOrder({ preventDefault: () => undefined }, valuesDiv.firstChild.__data__)
 
 	const thead2 = opts.holder
 		.selectAll('thead')
@@ -278,9 +282,9 @@ tape('simulated value drag/drop', async test => {
 	const n = activeOrderBeforeDrag.length
 
 	test.deepEqual(
-		[valuesDiv2.firstChild.__data__, valuesDiv2.lastChild.__data__],
+		[valuesDiv2.firstChild.__data__?.key, valuesDiv2.lastChild.__data__?.key],
 		[activeOrderBeforeDrag[n - 1], activeOrderBeforeDrag[n - 2]],
-		'should visibly switch the first first and last values'
+		'should visibly switch the last value to first'
 	)
 
 	const s = config.settings.matrix
@@ -296,6 +300,104 @@ tape('simulated value drag/drop', async test => {
 		activeOrder,
 		s.sortOptions[s.sortSamplesBy].sortPriority[0].tiebreakers[1].order,
 		'should adjust the tiebreaker.order after clicking apply'
+	)
+
+	if (test._ok) uiApi.destroy()
+	test.end()
+})
+
+tape('hidden values', async test => {
+	const filterByClass = {
+		// CNV_amp: 'value',
+		// CNV_loss: 'value',
+		// Utr3: 'value',
+		// Utr5: 'value',
+		// S: 'value',
+		// Intron: 'value',
+		noncoding: 'value'
+	}
+	const legendValueFilter = Object.freeze({
+		isAtomic: true,
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				legendGrpName: 'test',
+				type: 'tvs',
+				tvs: {
+					isnot: true,
+					legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+					term: { type: 'geneVariant' },
+					values: [{ dt: 1, mclasslst: Object.keys(filterByClass) }]
+				}
+			}
+		]
+	})
+
+	const { uiApi, controls, config, parent, opts } = await getControls({
+		legendValueFilter: structuredClone(legendValueFilter)
+	})
+	// config is a reference to the mutable object
+	const s = config.settings.matrix
+	const ui = uiApi.Inner
+	const a = config.settings.matrix.sortOptions.a
+	ui.expandedSection = a.sortPriority[0].label
+	a.sortPriority[0].tiebreakers[1].isOrdered = true
+	a.sortPriority[0].tiebreakers[1].notUsed = ['S']
+	uiApi.main({
+		sortOptions: { a }
+	})
+
+	const origConfig = structuredClone(config)
+
+	const thead1 = opts.holder
+		.selectAll('thead')
+		.filter(d => d?.types?.includes('geneVariant'))
+		.node()
+	const tr1 = thead1.nextSibling.querySelectorAll('tr')[1]
+	const valuesDiv = tr1.querySelector('.sjpp-matrix-sorter-ui-value')
+	const m = valuesDiv.querySelectorAll(':scope>div').length
+	//const valueDivsBeforeDrop = valuesDiv.querySelectorAll(':scope > div')
+	const hiddenBtn = tr1.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-add]')
+	hiddenBtn.click()
+
+	const unusedVals = tr1.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-vals]')
+	const n = 1
+	test.equal(
+		unusedVals.querySelectorAll(':scope>div').length,
+		1,
+		`should have the expected number of addable hidden values on load`
+	)
+
+	valuesDiv.firstChild.click()
+	const tr1_a = opts.holder
+		.selectAll('thead')
+		.filter(d => d?.types?.includes('geneVariant'))
+		.node()
+		.nextSibling.querySelectorAll('tr')[1]
+
+	const valuesDiv_a = tr1_a.querySelector('.sjpp-matrix-sorter-ui-value')
+	const unusedVals_a = tr1_a.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-vals]')
+	test.deepEqual(
+		[valuesDiv_a.querySelectorAll(':scope>div').length, unusedVals_a.querySelectorAll(':scope>div').length],
+		[m - 1, n + 1],
+		`should increase the expected number of used and unused values by 1, after clicking on a visible sorter value`
+	)
+
+	test.deepEqual(origConfig, config, 'should not adjust the tiebreaker.order + notUsed arrays before clicking apply')
+
+	ui.apply()
+
+	const s0 = origConfig.settings.matrix
+	const tb = s0.sortOptions.a.sortPriority[0].tiebreakers[1] //.order
+	if (!tb.notUsed) tb.notUsed = []
+	tb.notUsed.unshift(tb.order.shift())
+
+	test.deepEqual(
+		config.settings.matrix.sortOptions.a,
+		origConfig.settings.matrix.sortOptions.a,
+		'should adjust the tiebreaker.order + notUsed after clicking apply'
 	)
 
 	if (test._ok) uiApi.destroy()

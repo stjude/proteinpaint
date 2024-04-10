@@ -70,13 +70,22 @@ export class MatrixControls {
 	}
 
 	setSortFilterBtn(s) {
+		let ui
+
 		this.opts.holder
 			.append('button')
 			.html('Sort')
 			.on('click', () => {
 				const tip = this.parent.app.tip
 				tip.clear()
-				const ui = getSorterUi({ controls: this, holder: tip.d, tip })
+				if (ui) ui.main()
+				else
+					ui = getSorterUi({
+						controls: this,
+						holder: tip.d,
+						tip
+						//expandedSection: this.parent.config.settings.matrix.sortOptions.a?.sortPriority[0]?.label || ''
+					})
 				tip.showunder(event.target)
 			})
 	}

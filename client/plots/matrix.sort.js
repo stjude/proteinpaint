@@ -368,7 +368,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 		order: 1, // this is used for list order as a sorter option in a dropdown
 		sortPriority: [
 			{
-				label: 'For each gene mutation row from top to bottom, sort cases by matching data',
+				label: 'For each gene mutation, sort cases by matching data',
 				types: ['geneVariant'],
 				tiebreakers: [
 					{
@@ -462,7 +462,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, self) {
 				]
 			},
 			{
-				label: 'For each dictionary variable from top to bottom, sort cases by matching data',
+				label: 'For each dictionary variable, sort cases by matching data',
 				types: ['categorical', 'integer', 'float', 'survival'],
 				tiebreakers: [
 					{
