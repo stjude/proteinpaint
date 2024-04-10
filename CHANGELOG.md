@@ -10,6 +10,7 @@ Features:
 
 Fixes:
 - fix npm start
+- address mds3 mclass legend error by not setting uninitiated flag to true
 
 
 ## 2.52.0
