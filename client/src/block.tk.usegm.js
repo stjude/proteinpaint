@@ -918,7 +918,6 @@ function coord2legend(tk, event, r, start, stop, gm, block, h) {
 }
 
 function domainlegend(tk, block) {
-	// TODO bad implementation, improve
 	if (!block.legend || !block.legend.holder) {
 		// block not support legend
 		return
@@ -938,7 +937,6 @@ function domainlegend(tk, block) {
 	const lst = client.getdomaintypes(block.usegm)
 
 	for (const domaintype of lst) {
-		//console.log(domaintype)
 		/*
 		domaintype {}
 		.key: domain.name+domain.description
@@ -947,51 +945,80 @@ function domainlegend(tk, block) {
 
 		const row = tk.td_legend.append('div').style('margin', block.legend.vpad + ' 0px 8px 0px')
 
-		row
-			.append('div')
-			.style('background-color', domaintype.fill)
-			.style('border', 'solid 1px ' + domaintype.stroke)
-			.style('display', 'inline-block')
+		// clickRow includes color box, name and description, to show menu; links are outside of clickRow
+		const clickRow = row
+			.append('span')
+			.style('padding', '5px 0px')
 			.style('margin-right', '10px')
-			.style('padding', '2px 3px')
-			.style('cursor', 'default')
-			.style('font-family', 'Courier')
-			.html(block.usegm.domain_hidden[domaintype.key] ? '&times;' : '&nbsp;')
+			.attr('class', 'sja_clb')
+			.on('click', () => {
+				block.tip.clear().showunder(clickRow.node())
 
-		const clickableDiv = row.append('div').style('display', 'inline-block')
+				if (block.usegm.domain_hidden[domaintype.key]) {
+					// If the current domain is hidden, show the "Show" and "Show All" options
+					block.tip.d
+						.append('div')
+						.attr('class', 'sja_menuoption')
+						.style('border-radius', '0px')
+						.text('Show')
+						.on('click', () => {
+							nameDiv.node().style.textDecoration = 'none'
+							descriptionDiv.node().style.textDecoration = 'none'
+							// Callback for "Show" option
+							if (block.gmmode == client.gmmode.gmsum) {
+								for (const m of block.allgm) {
+									if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
+								}
+							} else {
+								delete block.usegm.domain_hidden[domaintype.key]
+							}
+							gmtkrender(tk, block) // Re-render the visualization
+						})
 
-		const nameDiv = clickableDiv
-			.append('span')
-			.text(domaintype.name)
-			.style('color', default_text_color)
-			.style('padding-right', '10px')
+					// Add the "Show All" option
+					block.tip.d
+						.append('div')
+						.attr('class', 'sja_menuoption')
+						.style('border-radius', '0px')
+						.text('Show All')
+						.on('click', () => {
+							// Callback for "Show All" option
+							const spans = tk.td_legend.selectAll('span')
+							spans.style('text-decoration', 'none')
+							if (block.gmmode == client.gmmode.gmsum) {
+								for (const m of block.allgm) {
+									m.domain_hidden = {}
+								}
+							} else {
+								block.usegm.domain_hidden = {}
+							}
+							gmtkrender(tk, block) // Re-render the visualization
+						})
 
-		const descriptionDiv = clickableDiv
-			.append('span')
-			.text(domaintype.description)
-			.style('color', default_text_color)
-			.style('font-size', '.7em')
-			.style('padding-right', '10px')
+					block.tip.show(event.clientX, event.clientY)
+					event.stopPropagation()
+					return
+				}
 
-		clickableDiv.on('click', event => {
-			block.tip.clear()
+				// If the current domain is not hidden, proceed as usual
 
-			if (block.usegm.domain_hidden[domaintype.key]) {
-				// If the current domain is hidden, show the "Show" and "Show All" options
 				block.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
-					.text('Show')
-					.on('click', () => {
-						nameDiv.node().style.textDecoration = 'none'
-						descriptionDiv.node().style.textDecoration = 'none'
-						// Callback for "Show" option
+					.style('border-radius', '0px')
+					.text('Hide')
+					.on('click', event => {
+						// Callback for "Hide" option
+						nameDiv.node().style.textDecoration = 'line-through'
+						descriptionDiv.node().style.textDecoration = 'line-through'
 						if (block.gmmode == client.gmmode.gmsum) {
 							for (const m of block.allgm) {
-								if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
+								if (!m.domain_hidden) m.domain_hidden = {}
+								m.domain_hidden[domaintype.key] = 1
 							}
 						} else {
-							delete block.usegm.domain_hidden[domaintype.key]
+							if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
+							block.usegm.domain_hidden[domaintype.key] = 1
 						}
 						gmtkrender(tk, block) // Re-render the visualization
 					})
@@ -1000,6 +1027,7 @@ function domainlegend(tk, block) {
 				block.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
+					.style('border-radius', '0px')
 					.text('Show All')
 					.on('click', () => {
 						// Callback for "Show All" option
@@ -1015,96 +1043,70 @@ function domainlegend(tk, block) {
 						gmtkrender(tk, block) // Re-render the visualization
 					})
 
-				block.tip.show(event.clientX, event.clientY)
-				event.stopPropagation()
-				return
-			}
+				// Add the "Show only" option.
+				block.tip.d
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.style('border-radius', '0px')
+					.text('Show only')
+					.on('click', () => {
+						// Callback for "Show only this" option
+						const spans = tk.td_legend.selectAll('span')
+						spans.style('text-decoration', 'line-through')
 
-			// If the current domain is not hidden, proceed as usual
-
-			block.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('Hide')
-				.on('click', event => {
-					// Callback for "Hide" option
-					nameDiv.node().style.textDecoration = 'line-through'
-					descriptionDiv.node().style.textDecoration = 'line-through'
-					if (block.gmmode == client.gmmode.gmsum) {
-						for (const m of block.allgm) {
-							if (!m.domain_hidden) m.domain_hidden = {}
-							m.domain_hidden[domaintype.key] = 1
+						if (block.gmmode == client.gmmode.gmsum) {
+							for (const m of block.allgm) {
+								if (!m.domain_hidden) m.domain_hidden = {}
+								m.domain_hidden[domaintype.key] = 1
+							}
+						} else {
+							if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
+							block.usegm.domain_hidden[domaintype.key] = 1
 						}
-					} else {
-						if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
-						block.usegm.domain_hidden[domaintype.key] = 1
-					}
-					gmtkrender(tk, block) // Re-render the visualization
-				})
-
-			// Add the "Show All" option
-			block.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('Show All')
-				.on('click', () => {
-					// Callback for "Show All" option
-					const spans = tk.td_legend.selectAll('span')
-					spans.style('text-decoration', 'none')
-					if (block.gmmode == client.gmmode.gmsum) {
-						for (const m of block.allgm) {
-							m.domain_hidden = {}
-						}
-					} else {
-						block.usegm.domain_hidden = {}
-					}
-					gmtkrender(tk, block) // Re-render the visualization
-				})
-
-			// Add the "Show only" option.
-			block.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('Show only')
-				.on('click', () => {
-					// Callback for "Show only this" option
-					const spans = tk.td_legend.selectAll('span')
-					spans.style('text-decoration', 'line-through')
-
-					if (block.gmmode == client.gmmode.gmsum) {
-						for (const m of block.allgm) {
-							if (!m.domain_hidden) m.domain_hidden = {}
-							m.domain_hidden[domaintype.key] = 1
-						}
-					} else {
-						if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
-						block.usegm.domain_hidden[domaintype.key] = 1
-					}
-					// Keep only the clicked domain type visible
-					nameDiv.node().style.textDecoration = 'none'
-					descriptionDiv.node().style.textDecoration = 'none'
-					gmtkrender(tk, block) // Re-render the visualization
-				})
-
-			// Adds a "Color" option for each domain type. When clicked, it opens a color picker dialog. The selected color is then applied to the domain type's fill property
-			block.tip.d.append('span').text('Color')
-			const colorPicker = block.tip.d
-				.append('input')
-				.attr('class', 'sja_menuoption')
-				.attr('type', 'color')
-				.attr('value', domaintype.fill)
-				.style('margin-left', '5px')
-				.on('input', event => {
-					// Apply the selected color to the domain type's fill property
-					colorPicker.on('input', function () {
-						const selectedColor = this.value
-						applyCustomColor(domaintype, selectedColor)
+						// Keep only the clicked domain type visible
+						nameDiv.node().style.textDecoration = 'none'
+						descriptionDiv.node().style.textDecoration = 'none'
+						gmtkrender(tk, block) // Re-render the visualization
 					})
-				})
 
-			block.tip.show(event.clientX, event.clientY)
-			event.stopPropagation()
-		})
+				// Adds a "Color" option for each domain type. When clicked, it opens a color picker dialog. The selected color is then applied to the domain type's fill property
+				const menuRow = block.tip.d.append('div').style('margin', '10px')
+				menuRow.append('span').text('Color')
+				const colorPicker = menuRow
+					.append('input')
+					.attr('type', 'color')
+					.property('value', domaintype.fill)
+					.style('margin-left', '5px')
+					.on('change', event => {
+						domainColorBox.style('background', event.target.value) // to change box color without rendering legend
+						domaintype.fill = event.target.value // to allow menu option to show new color as legend is not rerendered
+						// assign new color to original domain entries from gm.pdomains[] that corresponds to this domaintype
+						for (const d of block.usegm.pdomains) {
+							const k = d.name + d.description // unique identifier of a domain
+							if (k == domaintype.key) d.color = event.target.value // d is a domain of same type as domaintype
+						}
+						gmtkrender(tk, block)
+					})
+			})
+
+		const domainColorBox = clickRow
+			.append('span')
+			.style('background-color', domaintype.fill)
+			.style('border', 'solid 1px white')
+			.html('&nbsp;&nbsp;&nbsp;')
+			.style('margin-right', '10px')
+
+		const nameDiv = clickRow
+			.append('span')
+			.text(domaintype.name)
+			.style('color', default_text_color)
+			.style('margin-right', '10px')
+
+		const descriptionDiv = clickRow
+			.append('span')
+			.text(domaintype.description)
+			.style('color', default_text_color)
+			.style('font-size', '.7em')
 
 		if (block.usegm.domain_hidden && block.usegm.domain_hidden[domaintype.key]) {
 			nameDiv.node().style.textDecoration = 'line-through'
@@ -1186,14 +1188,6 @@ function domainlegend(tk, block) {
 				.style('font-size', '.7em')
 				.style('padding-right', '10px')
 		}
-	}
-
-	// using D3 syntax instead of d3.select for 'Color' option.
-	// Function to apply the selected color to the domain type's fill property
-	function applyCustomColor(domaintype, color) {
-		domaintype.fill = color
-		console.log('Applying custom color:', color)
-		gmtkrender(tk, block)
 	}
 
 	if (block.usegm.coding && block.usegm.coding.length > 0) {
