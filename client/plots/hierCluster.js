@@ -184,8 +184,8 @@ export class HierCluster extends Matrix {
 		// browser caching would work
 
 		// Checking if cluster and distance method for hierarchial clustering is valid
-		if (clusterMethodLst.map(i => i.value).includes(s.clusterMethod) == false) throw 'Invalid cluster method'
-		if (distanceMethodLst.map(i => i.value).includes(s.distanceMethod) == false) throw 'Invalid distance method'
+		if (!clusterMethodLst.find(i => i.value == s.clusterMethod)) throw 'Invalid cluster method'
+		if (!distanceMethodLst.find(i => i.value == s.distanceMethod)) throw 'Invalid distance method'
 
 		const body = {
 			genome: state.vocab.genome,

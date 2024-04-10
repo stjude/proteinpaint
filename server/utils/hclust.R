@@ -44,8 +44,8 @@ input <- fromJSON(json)
 # For Rows (i.e genes)
 RowDist <- dist(input$matrix, method = tolower(input$distance_method)) # Transposing the matrix
 # Hierarchical clustering
-RowDend <- hclust(RowDist, method = tolower(input$cluster_method))
-#RowDend <- flashClust(RowDist, method = tolower(input$cluster_method))
+RowDend <- hclust(RowDist, method = input$cluster_method)
+#RowDend <- flashClust(RowDist, method = input$cluster_method)
 RowDendMergeDf <- as.data.frame(RowDend$merge)
 colnames(RowDendMergeDf) <- c("n1","n2")
 #print ("merge")
@@ -61,8 +61,8 @@ ColumnDist <- dist(t(input$matrix), method = tolower(input$distance_method)) # T
 
 # Hierarchical clustering
 
-ColumnDend <- hclust(ColumnDist, method = tolower(input$cluster_method))
-#ColumnDend <- flashClust(ColumnDist,method = tolower(input$cluster_method))
+ColumnDend <- hclust(ColumnDist, method = input$cluster_method)
+#ColumnDend <- flashClust(ColumnDist,method = input$cluster_method)
 
 ColumnDendMergeDf <- as.data.frame(ColumnDend$merge)
 colnames(ColumnDendMergeDf) <- c("n1","n2")
