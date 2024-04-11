@@ -1,1 +1,2 @@
-
+Features:
+- Click on protein domain legend to show menu options to toggle visibility and change color.
