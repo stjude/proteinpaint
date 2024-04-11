@@ -1,8 +1,6 @@
-import { getHandler as getSnpListHandler } from '../termsetting/handlers/snplst.ts'
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
 import { TermTypeGroups } from '../shared/common.js'
-import { getHandler as getSnpLocusHandler } from '../termsetting/handlers/snplocus.ts'
 
 type Dict = {
 	[key: string]: any
@@ -23,36 +21,43 @@ const useCases = {
 	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS]
 }
 
+export const typeGroup = {
+	categorical: TermTypeGroups.DICTIONARY_VARIABLES,
+	condition: TermTypeGroups.DICTIONARY_VARIABLES,
+	float: TermTypeGroups.DICTIONARY_VARIABLES,
+	integer: TermTypeGroups.DICTIONARY_VARIABLES,
+	survival: TermTypeGroups.DICTIONARY_VARIABLES,
+	geneVariant: TermTypeGroups.MUTATION_CNV_FUSION,
+	snplst: TermTypeGroups.SNP_LIST,
+	snplocus: TermTypeGroups.SNP_LOCUS
+}
+
 export class TermTypeSearch {
 	dom: any
-	typeDict: Dict
 	types: Array<string>
 	app: any
 	type: string
 	tabs: Array<Dict>
 	state: any
+	genomeObj: any
+	handlerByType: Dict
 
 	constructor(opts) {
 		this.type = 'termTypeSearch'
-		this.dom = { holder: opts.holder }
-		this.typeDict = {
-			categorical: TermTypeGroups.DICTIONARY_VARIABLES,
-			condition: TermTypeGroups.DICTIONARY_VARIABLES,
-			float: TermTypeGroups.DICTIONARY_VARIABLES,
-			integer: TermTypeGroups.DICTIONARY_VARIABLES,
-			survival: TermTypeGroups.DICTIONARY_VARIABLES,
-			geneVariant: TermTypeGroups.MUTATION_CNV_FUSION,
-			snplst: TermTypeGroups.SNP_LIST,
-			snplocus: TermTypeGroups.SNP_LOCUS
-		}
+		this.genomeObj = opts.genome
+		this.dom = { holder: opts.holder, topbar: opts.topbar }
+
 		this.types = []
 		this.tabs = []
+		this.handlerByType = {}
 	}
 
-	init(appState) {
+	async init(appState) {
 		this.types = this.app.vocabApi.termdbConfig?.allowedTermTypes
 		if (!this.types) return
-		this.addTabsAllowed(appState)
+
+		const state = this.getState(appState)
+		await this.addTabsAllowed(state)
 		if (this.tabs.length == 1) return
 		new Tabs({
 			holder: this.dom.holder,
@@ -69,10 +74,13 @@ export class TermTypeSearch {
 
 	reactsTo(action) {
 		if (action.type.startsWith('submenu_')) return true //may change tree visibility
+		if (action.type == 'set_term_type_group') return true
+		if (action.type == 'app_refresh') return true
 	}
 
 	main() {
-		if (!this.state.isVisible) this.dom.holder.style('display', 'none')
+		this.dom.holder.style('display', this.state.isVisible ? 'inline-block' : 'none')
+		this.dom.topbar.style('display', this.state.isVisible ? 'inline-block' : 'none')
 	}
 
 	getState(appState) {
@@ -80,14 +88,25 @@ export class TermTypeSearch {
 			termTypeGroup: appState.termTypeGroup,
 			usecase: appState.tree.usecase,
 			isVisible: !appState.submenu.term,
-			genome: appState.vocab?.genome
+			selectedTerms: appState.selectedTerms,
+			cohortStr:
+				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
+					? ''
+					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(',')
 		}
 	}
 
-	addTabsAllowed(appState) {
-		const state = this.getState(appState)
+	async addTabsAllowed(state) {
 		for (const type of this.types) {
-			const termTypeGroup = this.typeDict[type]
+			const termTypeGroup = typeGroup[type]
+			try {
+				if (termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+					const _ = await import(`./handlers/${type}.ts`)
+					this.handlerByType[type] = await new _.SearchHandler()
+				}
+			} catch (e) {
+				throw `error with handler='./handlers/${type}.ts': ${e}`
+			}
 			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
 				//In regression snplocus and snplst are only allowed for the input variable, disabled for now
 				// if (state.usecase.target == 'regression' && (type == 'snplocus' || type == 'snplst' || type == 'geneVariant')) {
@@ -113,26 +132,27 @@ export class TermTypeSearch {
 		}
 	}
 
-	setTermTypeGroup(termTypeGroup) {
-		this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
+	async setTermTypeGroup(termTypeGroup) {
+		await this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
 		const tab = this.tabs.find(tab => tab.label == termTypeGroup)
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
-		if (tab.label == TermTypeGroups.SNP_LOCUS) {
-			this.q = { doNotRestrictAncestry: true }
-			const genomeObj = { name: this.state.genome, hasSNP: true }
-			this.opts = { genomeObj }
-			this.vocabApi = this.app.vocabApi
-			const handler = getSnpLocusHandler(this)
-			handler.showEditMenu(holder)
-		}
-		if (tab.label == TermTypeGroups.SNP_LIST) {
-			this.q = { doNotRestrictAncestry: true }
-			this.usecase = { target: 'TermTypeSearch' }
 
-			const handler = getSnpListHandler(this)
-			handler.showEditMenu(holder)
+		if (tab.label != TermTypeGroups.DICTIONARY_VARIABLES) {
+			const handler = this.handlerByType['geneVariant']
+			if (tab.label == TermTypeGroups.MUTATION_CNV_FUSION)
+				await handler.init({ holder, genomeObj: this.genomeObj, app: this.app, callback: this.selectTerm })
+			return
 		}
+	}
+
+	selectTerm(term) {
+		this.app.dispatch({
+			type: 'app_refresh',
+			state: {
+				selectedTerms: [...this.state.selectedTerms, term]
+			}
+		})
 	}
 }
 
