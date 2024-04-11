@@ -2,13 +2,11 @@ import * as client from './client'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { format as d3format } from 'd3-format'
-import { select as d3select, selectAll } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import * as coord from './coord'
 import { legend_newrow } from './block.legend'
 import { basecompliment } from '#shared/common'
-import { rgb } from 'd3-color'
 import { default_text_color } from '../shared/common'
-import { Menu } from '#dom/menu'
 
 /*
 the "gene model" track, showing in one of four modes:
@@ -917,6 +915,7 @@ function coord2legend(tk, event, r, start, stop, gm, block, h) {
 	tk.tktip.show(event.clientX, gm.__tkg.node().getBoundingClientRect().top + h - 10)
 }
 
+// FIXME do this through d3 enter-update
 function domainlegend(tk, block) {
 	if (!block.legend || !block.legend.holder) {
 		// block not support legend
@@ -933,10 +932,11 @@ function domainlegend(tk, block) {
 	}
 	tk.td_legend.selectAll('*').remove()
 
-	// get unique list of domain types
-	const lst = client.getdomaintypes(block.usegm)
+	// get unique list of domain types from current gm (note that it may not cover all domains from all gm which could be minor issue)
+	// any customizations to the domains (visibility and color), apply to all gm
+	const domainTypes = client.getdomaintypes(block.usegm)
 
-	for (const domaintype of lst) {
+	for (const domaintype of domainTypes) {
 		/*
 		domaintype {}
 		.key: domain.name+domain.description
@@ -955,7 +955,7 @@ function domainlegend(tk, block) {
 				block.tip.clear().showunder(clickRow.node())
 
 				if (block.usegm.domain_hidden[domaintype.key]) {
-					// If the current domain is hidden, show the "Show" and "Show All" options
+					// current domain is hidden. show the "Show" option
 					block.tip.d
 						.append('div')
 						.attr('class', 'sja_menuoption')
@@ -964,89 +964,44 @@ function domainlegend(tk, block) {
 						.on('click', () => {
 							nameDiv.node().style.textDecoration = 'none'
 							descriptionDiv.node().style.textDecoration = 'none'
-							// Callback for "Show" option
-							if (block.gmmode == client.gmmode.gmsum) {
-								for (const m of block.allgm) {
-									if (m.domain_hidden) delete m.domain_hidden[domaintype.key]
-								}
-							} else {
-								delete block.usegm.domain_hidden[domaintype.key]
+							for (const m of block.allgm) {
+								delete m.domain_hidden[domaintype.key]
 							}
 							block.tip.hide()
 							gmtkrender(tk, block) // Re-render the visualization
 						})
-
-					// Add the "Show All" option
+				} else {
+					// current domain is not hidden, show "Hide"
 					block.tip.d
 						.append('div')
 						.attr('class', 'sja_menuoption')
 						.style('border-radius', '0px')
-						.text('Show All')
-						.on('click', () => {
-							// Callback for "Show All" option
-							const spans = tk.td_legend.selectAll('span.sjpp-domain-legend')
-							spans.style('text-decoration', 'none')
-							if (block.gmmode == client.gmmode.gmsum) {
-								for (const m of block.allgm) {
-									m.domain_hidden = {}
-								}
-							} else {
-								block.usegm.domain_hidden = {}
+						.text('Hide')
+						.on('click', event => {
+							nameDiv.node().style.textDecoration = 'line-through'
+							descriptionDiv.node().style.textDecoration = 'line-through'
+							for (const m of block.allgm) {
+								m.domain_hidden[domaintype.key] = 1
 							}
 							block.tip.hide()
 							gmtkrender(tk, block) // Re-render the visualization
 						})
-
-					block.tip.show(event.clientX, event.clientY)
-					event.stopPropagation()
-					return
 				}
 
-				// If the current domain is not hidden, proceed as usual
-
-				block.tip.d
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.style('border-radius', '0px')
-					.text('Hide')
-					.on('click', event => {
-						// Callback for "Hide" option
-						nameDiv.node().style.textDecoration = 'line-through'
-						descriptionDiv.node().style.textDecoration = 'line-through'
-						if (block.gmmode == client.gmmode.gmsum) {
-							for (const m of block.allgm) {
-								if (!m.domain_hidden) m.domain_hidden = {}
-								m.domain_hidden[domaintype.key] = 1
-							}
-						} else {
-							if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
-							block.usegm.domain_hidden[domaintype.key] = 1
-						}
-						block.tip.hide()
-						gmtkrender(tk, block) // Re-render the visualization
-					})
-
-				// Add the "Show only" option.
+				// always show the "Show only" option.
 				block.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
 					.style('border-radius', '0px')
 					.text('Show only')
 					.on('click', () => {
-						// Callback for "Show only this" option
 						const spans = tk.td_legend.selectAll('span.sjpp-domain-legend')
 						spans.style('text-decoration', 'line-through')
 
-						if (block.gmmode == client.gmmode.gmsum) {
-							for (const m of block.allgm) {
-								for (const c of lst) {
-									if (c.key != domaintype.key) m.domain_hidden[c.key] = 1
-								}
-							}
-						} else {
-							if (!block.usegm.domain_hidden) block.usegm.domain_hidden = {}
-							for (const c of lst) {
-								if (c.key != domaintype.key) block.usegm.domain_hidden[c.key] = 1
+						for (const m of block.allgm) {
+							delete m.domain_hidden[domaintype.key]
+							for (const c of domainTypes) {
+								if (c.key != domaintype.key) m.domain_hidden[c.key] = 1
 							}
 						}
 						block.tip.hide()
@@ -1056,26 +1011,47 @@ function domainlegend(tk, block) {
 						gmtkrender(tk, block) // Re-render the visualization
 					})
 
-				// Adds a "Color" option for each domain type. When clicked, it opens a color picker dialog. The selected color is then applied to the domain type's fill property
-				const menuRow = block.tip.d.append('div').style('margin', '10px')
-				menuRow.append('span').text('Color')
-				const colorPicker = menuRow
-					.append('input')
-					.attr('type', 'color')
-					.property('value', domaintype.fill)
-					.style('margin-left', '5px')
-					.on('change', event => {
-						domainColorBox.style('background', event.target.value) // to change box color without rendering legend
-						domaintype.fill = event.target.value // to allow menu option to show new color as legend is not rerendered
-						// assign new color to original domain entries from gm.pdomains[] that corresponds to this domaintype
-						for (const d of block.usegm.pdomains) {
-							const k = d.name + d.description // unique identifier of a domain
-							if (k == domaintype.key) d.color = event.target.value // d is a domain of same type as domaintype
-						}
-						gmtkrender(tk, block)
-					})
+				if (Object.keys(block.usegm.domain_hidden).length) {
+					// Add the "Show All" option when there's at least one hidden domain
+					block.tip.d
+						.append('div')
+						.attr('class', 'sja_menuoption')
+						.style('border-radius', '0px')
+						.text('Show All')
+						.on('click', () => {
+							const spans = tk.td_legend.selectAll('span.sjpp-domain-legend')
+							spans.style('text-decoration', 'none')
+							for (const m of block.allgm) {
+								m.domain_hidden = {}
+							}
+							block.tip.hide()
+							gmtkrender(tk, block) // Re-render the visualization
+						})
+				}
+
+				if (!block.usegm.domain_hidden[domaintype.key]) {
+					// current domain is visible. Add a "Color" option to customize its color
+					const menuRow = block.tip.d.append('div').style('margin', '10px')
+					menuRow.append('span').text('Color')
+					const colorPicker = menuRow
+						.append('input')
+						.attr('type', 'color')
+						.property('value', domaintype.fill)
+						.style('margin-left', '5px')
+						.on('change', event => {
+							domainColorBox.style('background', event.target.value) // to change box color without rendering legend
+							domaintype.fill = event.target.value // to allow menu option to show new color as legend is not rerendered
+							// assign new color to original domain entries from gm.pdomains[] that corresponds to this domaintype
+							for (const p of block.allgm) {
+								const d = p.pdomains.find(d => d.name + d.description == domaintype.key)
+								if (d) d.color = event.target.value
+							}
+							gmtkrender(tk, block)
+						})
+				}
 			})
 
+		// TODO if domain is hidden show transparent box
 		const domainColorBox = clickRow
 			.append('span')
 			.style('background-color', domaintype.fill)
