@@ -462,7 +462,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const id = getSessionId(req)
 			const altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
 			const session = sessions[q.dslabel]?.[id] || sessions[q.dslabel]?.[altId]
-			const { email } = session.email
+			const email = session.email
 			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
 			res.send({ status: 'ok' })
