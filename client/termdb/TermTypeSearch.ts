@@ -1,7 +1,7 @@
 import { getHandler as getSnpListHandler } from '../termsetting/handlers/snplst.ts'
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
-import { TermTypes } from '../shared/common.js'
+import { TermTypeGroups } from '../shared/common.js'
 import { getHandler as getSnpLocusHandler } from '../termsetting/handlers/snplocus.ts'
 
 type Dict = {
@@ -10,15 +10,16 @@ type Dict = {
 
 //For each use case the corresponding tabs are shown
 const useCases = {
-	summary: [TermTypes.DICTIONARY_VARIABLES],
-	barchart: [TermTypes.DICTIONARY_VARIABLES],
-	sampleScatter: [TermTypes.DICTIONARY_VARIABLES],
-	cuminc: [TermTypes.DICTIONARY_VARIABLES],
-	survival: [TermTypes.DICTIONARY_VARIABLES],
-	overlay: [TermTypes.DICTIONARY_VARIABLES],
-	divideBy: [TermTypes.DICTIONARY_VARIABLES, TermTypes.MUTATION_CNV_FUSION],
-	regression: [TermTypes.DICTIONARY_VARIABLES, TermTypes.SNP_LIST, TermTypes.SNP_LOCUS],
-	dataDownload: [TermTypes.DICTIONARY_VARIABLES, TermTypes.SNP_LIST, TermTypes.SNP_LOCUS]
+	dictionary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
+	summary: [TermTypeGroups.DICTIONARY_VARIABLES],
+	barchart: [TermTypeGroups.DICTIONARY_VARIABLES],
+	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES],
+	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
+	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
+	overlay: [TermTypeGroups.DICTIONARY_VARIABLES],
+	divideBy: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
+	regression: [TermTypeGroups.DICTIONARY_VARIABLES],
+	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS]
 }
 
 export class TermTypeSearch {
@@ -34,14 +35,14 @@ export class TermTypeSearch {
 		this.type = 'termTypeSearch'
 		this.dom = { holder: opts.holder }
 		this.typeDict = {
-			categorical: TermTypes.DICTIONARY_VARIABLES,
-			condition: TermTypes.DICTIONARY_VARIABLES,
-			float: TermTypes.DICTIONARY_VARIABLES,
-			integer: TermTypes.DICTIONARY_VARIABLES,
-			survival: TermTypes.DICTIONARY_VARIABLES,
-			geneVariant: TermTypes.MUTATION_CNV_FUSION,
-			snplst: TermTypes.SNP_LIST,
-			snplocus: TermTypes.SNP_LOCUS
+			categorical: TermTypeGroups.DICTIONARY_VARIABLES,
+			condition: TermTypeGroups.DICTIONARY_VARIABLES,
+			float: TermTypeGroups.DICTIONARY_VARIABLES,
+			integer: TermTypeGroups.DICTIONARY_VARIABLES,
+			survival: TermTypeGroups.DICTIONARY_VARIABLES,
+			geneVariant: TermTypeGroups.MUTATION_CNV_FUSION,
+			snplst: TermTypeGroups.SNP_LIST,
+			snplocus: TermTypeGroups.SNP_LOCUS
 		}
 		this.types = []
 		this.tabs = []
@@ -75,7 +76,7 @@ export class TermTypeSearch {
 
 	getState(appState) {
 		return {
-			termType: appState.termType,
+			termTypeGroup: appState.termTypeGroup,
 			usecase: appState.tree.usecase,
 			isVisible: !appState.submenu.term,
 			genome: appState.vocab?.genome
@@ -85,33 +86,33 @@ export class TermTypeSearch {
 	addTabsAllowed(appState) {
 		const state = this.getState(appState)
 		for (const type of this.types) {
-			const termType = this.typeDict[type]
-			if (termType && !this.tabs.some(tab => tab.label == termType)) {
+			const termTypeGroup = this.typeDict[type]
+			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
 				//In regression snplocus and snplst are only allowed for the input variable
-				if (state.usecase.target == 'regression' && (type == 'snplocus' || type == 'snplst')) {
+				if (state.usecase.target == 'regression' && (type == 'snplocus' || type == 'snplst' || type == 'geneVariant')) {
 					if (state.usecase.detail == 'independent')
-						this.tabs.push({ label: termType, callback: () => this.setTermType(termType) })
+						this.tabs.push({ label: termTypeGroup, callback: () => this.setTermTypeGroup(termTypeGroup) })
 					continue
 				}
 				//In sampleScatter geneVariant is only allowed if detail is not numeric, like the case of scaleBy
 				if (state.usecase.target == 'sampleScatter' && type == 'geneVariant') {
 					if (state.usecase.detail != 'numeric')
-						this.tabs.push({ label: termType, callback: () => this.setTermType(termType) })
+						this.tabs.push({ label: termTypeGroup, callback: () => this.setTermTypeGroup(termTypeGroup) })
 					continue
 				}
 				//In most cases the target is enough to know what terms are allowed
-				if (!state.usecase.target || useCases[state.usecase.target]?.includes(termType))
-					this.tabs.push({ label: termType, callback: () => this.setTermType(termType) })
+				if (!state.usecase.target || useCases[state.usecase.target]?.includes(termTypeGroup))
+					this.tabs.push({ label: termTypeGroup, callback: () => this.setTermTypeGroup(termTypeGroup) })
 			}
 		}
 	}
 
-	setTermType(termType) {
-		this.app.dispatch({ type: 'set_term_type', value: termType })
-		const tab = this.tabs.find(tab => tab.label == termType)
+	setTermTypeGroup(termTypeGroup) {
+		this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
+		const tab = this.tabs.find(tab => tab.label == termTypeGroup)
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
-		if (tab.label == TermTypes.SNP_LOCUS) {
+		if (tab.label == TermTypeGroups.SNP_LOCUS) {
 			this.q = { doNotRestrictAncestry: true }
 			const genomeObj = { name: this.state.genome, hasSNP: true }
 			this.opts = { genomeObj }
@@ -119,7 +120,7 @@ export class TermTypeSearch {
 			const handler = getSnpLocusHandler(this)
 			handler.showEditMenu(holder)
 		}
-		if (tab.label == TermTypes.SNP_LIST) {
+		if (tab.label == TermTypeGroups.SNP_LIST) {
 			this.q = { doNotRestrictAncestry: true }
 			this.usecase = { target: 'TermTypeSearch' }
 

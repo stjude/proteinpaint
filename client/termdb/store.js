@@ -1,9 +1,8 @@
 import * as rx from '../rx'
 import { root_ID } from './tree'
-import { dofetch3 } from '../src/client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase'
-import { TermTypes } from '../shared/common.js'
+import { TermTypeGroups } from '../shared/common.js'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
@@ -31,7 +30,7 @@ const defaultState = {
 			lst: []
 		}
 	},
-	termType: TermTypes.DICTIONARY_VARIABLES
+	termTypeGroup: TermTypeGroups.DICTIONARY_VARIABLES
 }
 
 // one store for the whole tdb app
@@ -221,8 +220,8 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	set_term_type({ value }) {
-		this.state.termType = value
+	set_term_type_group({ value }) {
+		this.state.termTypeGroup = value
 	}
 }
 

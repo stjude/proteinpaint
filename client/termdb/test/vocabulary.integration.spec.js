@@ -5,7 +5,7 @@ const vocabData = require('./vocabData')
 const TermdbVocab = require('../TermdbVocab').TermdbVocab
 const FrontendVocab = require('../FrontendVocab').FrontendVocab
 const d3s = require('d3-selection')
-const { TermTypes } = require('../../shared/common.js')
+const { TermTypeGroups } = require('../../shared/common.js')
 const testAppInit = require('../../test/test.helpers').testAppInit
 const termjson = require('../../test/testdata/termjson').termjson
 
@@ -728,17 +728,17 @@ tape('findTerm()', async test => {
 
 	// =1 result
 	testTerm = 'Arrhythmias'
-	result = await termdbVocabApi.findTerm(testTerm, 'ABC', null, TermTypes.DICTIONARY_VARIABLES)
+	result = await termdbVocabApi.findTerm(testTerm, 'ABC', null, TermTypeGroups.DICTIONARY_VARIABLES)
 	test.equal(result.lst.length, 1, `Should return the correct number (n = 1) of terms`)
 
 	// >1 result
 	testTerm = 's'
-	result = await termdbVocabApi.findTerm(testTerm, 'ABC', null, TermTypes.DICTIONARY_VARIABLES)
+	result = await termdbVocabApi.findTerm(testTerm, 'ABC', null, TermTypeGroups.DICTIONARY_VARIABLES)
 	test.equal(result.lst.length, 32, `Should return the correct number (n = 32) of terms`)
 
 	// =0 result
 	testTerm = 'ZZZ'
-	result = await termdbVocabApi.findTerm(testTerm, '', null, TermTypes.DICTIONARY_VARIABLES)
+	result = await termdbVocabApi.findTerm(testTerm, '', null, TermTypeGroups.DICTIONARY_VARIABLES)
 	test.equal(result.lst.length, 0, `Should return the correct number (n = 0) of terms`)
 })
 
