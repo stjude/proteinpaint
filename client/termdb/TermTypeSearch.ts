@@ -10,9 +10,10 @@ type Dict = {
 
 //For each use case the corresponding tabs are shown
 const useCases = {
+	filter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	dictionary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES],
-	barchart: [TermTypeGroups.DICTIONARY_VARIABLES],
+	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES],
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
 	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
@@ -88,8 +89,13 @@ export class TermTypeSearch {
 		for (const type of this.types) {
 			const termTypeGroup = this.typeDict[type]
 			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
-				//In regression snplocus and snplst are only allowed for the input variable
-				if (state.usecase.target == 'regression' && (type == 'snplocus' || type == 'snplst' || type == 'geneVariant')) {
+				//In regression snplocus and snplst are only allowed for the input variable, disabled for now
+				// if (state.usecase.target == 'regression' && (type == 'snplocus' || type == 'snplst' || type == 'geneVariant')) {
+				// 	if (state.usecase.detail == 'independent')
+				// 		this.tabs.push({ label: termTypeGroup, callback: () => this.setTermTypeGroup(termTypeGroup) })
+				// 	continue
+				// }
+				if (state.usecase.target == 'regression' && type == 'geneVariant') {
 					if (state.usecase.detail == 'independent')
 						this.tabs.push({ label: termTypeGroup, callback: () => this.setTermTypeGroup(termTypeGroup) })
 					continue

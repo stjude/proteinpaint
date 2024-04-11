@@ -1065,7 +1065,8 @@ function setInteractivity(self) {
 			getCategoriesArguments: self.opts.getCategoriesArguments,
 			state: {
 				activeCohort: self.activeCohort,
-				termfilter: { filter: rootFilterCopy }
+				termfilter: { filter: rootFilterCopy },
+				tree: { usecase: { target: 'filter' } }
 			},
 			tree: {
 				disable_terms:
