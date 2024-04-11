@@ -77,6 +77,9 @@ class TermSearch {
 			this.dom.holder.style('display', 'none') //These views will have their own UI
 			return
 		}
+		this.dom.input.node().value = ''
+		this.dom.input.attr('placeholder', 'Search ' + this.state.termTypeGroup)
+		this.clear()
 		this.dom.holder.style('display', this.state.isVisible ? 'block' : 'none')
 		this.renderSelectedNonDictTerms()
 	}
@@ -117,8 +120,7 @@ function setRenderers(self) {
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
-			.attr('placeholder', 'Search term')
-			.style('width', '220px')
+			.style('width', '250px')
 			.style('margin', '10px')
 			.style('display', 'inline-block')
 			.on('input', debounce(self.onInput, 300))
@@ -354,12 +356,12 @@ function setInteractivity(self) {
 		self.onInput(event)
 	}
 
-	self.onInput = async (event, targetType) => {
+	self.onInput = async event => {
 		const str = self.dom.input.property('value')
 		// do not trim space from input so that 'age ' will not match with 'agent'
 		try {
 			//await self.main({ str })
-			await self.doSearch(str, targetType)
+			await self.doSearch(str)
 		} catch (e) {
 			self.clear()
 			self.dom.resultDiv.style('display', 'inline-grid')
