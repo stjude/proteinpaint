@@ -37,6 +37,7 @@ class MassDict {
 
 	getState(appState) {
 		return {
+			tree: { usecase: { target: 'dictionary' } },
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,

@@ -1095,7 +1095,7 @@ export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
 
-export const TermTypes = {
+export const TermTypeGroups = {
 	DICTIONARY_VARIABLES: 'Dictionary Variables',
 	MUTATION_CNV_FUSION: 'Mutation/CNV/Fusion',
 	VARIANT_GENOTYPE: 'Variant Genotype',

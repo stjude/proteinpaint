@@ -5,7 +5,7 @@ import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { isUsableTerm, nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { keyupEnter } from '#src/client'
-import { TermTypes } from '../shared/common.js'
+import { TermTypeGroups } from '../shared/common.js'
 
 /*
 steps:
@@ -43,7 +43,7 @@ class TermSearch {
 	}
 
 	reactsTo(action) {
-		if (action.type == 'set_term_type') return true
+		if (action.type == 'set_term_type_group') return true
 		if (action.type == 'app_refresh') return true
 		const prefix = action.type.split('_')[0]
 		return ['search', 'cohort', 'submenu'].includes(prefix)
@@ -62,14 +62,18 @@ class TermSearch {
 			usecase: appState.tree.usecase,
 			search: appState.search,
 			isGeneSetTermdb: appState.termdbConfig.isGeneSetTermdb,
-			termType: appState.termType
+			termTypeGroup: appState.termTypeGroup
 		}
 	}
 
 	async main() {
 		// show/hide search input from the tree
-		const termType = this.state.termType
-		if (termType == TermTypes.SNP_LIST || termType == TermTypes.SNP_LOCUS || termType == TermTypes.MUTATION_SIGNATURE) {
+		const termTypeGroup = this.state.termTypeGroup
+		if (
+			termTypeGroup == TermTypeGroups.SNP_LIST ||
+			termTypeGroup == TermTypeGroups.SNP_LOCUS ||
+			termTypeGroup == TermTypeGroups.MUTATION_SIGNATURE
+		) {
 			this.dom.holder.style('display', 'none') //These views will have their own UI
 			return
 		}
@@ -84,7 +88,12 @@ class TermSearch {
 			this.bus.emit('postSearch', [])
 			return
 		}
-		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.usecase, this.state.termType)
+		const data = await this.app.vocabApi.findTerm(
+			str,
+			this.state.cohortStr,
+			this.state.usecase,
+			this.state.termTypeGroup
+		)
 		this.currData = data
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
