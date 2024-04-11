@@ -915,8 +915,7 @@ function coord2legend(tk, event, r, start, stop, gm, block, h) {
 	tk.tktip.show(event.clientX, gm.__tkg.node().getBoundingClientRect().top + h - 10)
 }
 
-// FIXME do this through d3 enter-update
-function domainlegend(tk, block) {
+async function domainlegend(tk, block) {
 	if (!block.legend || !block.legend.holder) {
 		// block not support legend
 		return
@@ -936,223 +935,200 @@ function domainlegend(tk, block) {
 	// any customizations to the domains (visibility and color), apply to all gm
 	const domainTypes = client.getdomaintypes(block.usegm)
 
-	for (const domaintype of domainTypes) {
-		/*
-		domaintype {}
-		.key: domain.name+domain.description
-		rest of attributes are the same as individual domains
-		*/
-
-		const row = tk.td_legend.append('div').style('margin', block.legend.vpad + ' 0px 8px 0px')
-
-		// clickRow includes color box, name and description, to show menu; links are outside of clickRow
-		const clickRow = row
-			.append('span')
-			.style('padding', '5px 0px')
-			.style('margin-right', '10px')
-			.attr('class', 'sja_clb')
-			.on('click', () => {
-				block.tip.clear().showunder(clickRow.node())
-
-				if (block.usegm.domain_hidden[domaintype.key]) {
-					// current domain is hidden. show the "Show" option
-					block.tip.d
-						.append('div')
-						.attr('class', 'sja_menuoption')
-						.style('border-radius', '0px')
-						.text('Show')
-						.on('click', () => {
-							nameDiv.node().style.textDecoration = 'none'
-							descriptionDiv.node().style.textDecoration = 'none'
-							for (const m of block.allgm) {
-								delete m.domain_hidden[domaintype.key]
-							}
-							block.tip.hide()
-							gmtkrender(tk, block) // Re-render the visualization
-						})
-				} else {
-					// current domain is not hidden, show "Hide"
-					block.tip.d
-						.append('div')
-						.attr('class', 'sja_menuoption')
-						.style('border-radius', '0px')
-						.text('Hide')
-						.on('click', event => {
-							nameDiv.node().style.textDecoration = 'line-through'
-							descriptionDiv.node().style.textDecoration = 'line-through'
-							for (const m of block.allgm) {
-								m.domain_hidden[domaintype.key] = 1
-							}
-							block.tip.hide()
-							gmtkrender(tk, block) // Re-render the visualization
-						})
-				}
-
-				// always show the "Show only" option.
-				block.tip.d
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.style('border-radius', '0px')
-					.text('Show only')
-					.on('click', () => {
-						const spans = tk.td_legend.selectAll('span.sjpp-domain-legend')
-						spans.style('text-decoration', 'line-through')
-
-						for (const m of block.allgm) {
-							delete m.domain_hidden[domaintype.key]
-							for (const c of domainTypes) {
-								if (c.key != domaintype.key) m.domain_hidden[c.key] = 1
-							}
-						}
-						block.tip.hide()
-						// Keep only the clicked domain type visible
-						nameDiv.node().style.textDecoration = 'none'
-						descriptionDiv.node().style.textDecoration = 'none'
-						gmtkrender(tk, block) // Re-render the visualization
-					})
-
-				if (Object.keys(block.usegm.domain_hidden).length) {
-					// Add the "Show All" option when there's at least one hidden domain
-					block.tip.d
-						.append('div')
-						.attr('class', 'sja_menuoption')
-						.style('border-radius', '0px')
-						.text('Show All')
-						.on('click', () => {
-							const spans = tk.td_legend.selectAll('span.sjpp-domain-legend')
-							spans.style('text-decoration', 'none')
-							for (const m of block.allgm) {
-								m.domain_hidden = {}
-							}
-							block.tip.hide()
-							gmtkrender(tk, block) // Re-render the visualization
-						})
-				}
-
-				if (!block.usegm.domain_hidden[domaintype.key]) {
-					// current domain is visible. Add a "Color" option to customize its color
-					const menuRow = block.tip.d.append('div').style('margin', '10px')
-					menuRow.append('span').text('Color')
-					const colorPicker = menuRow
-						.append('input')
-						.attr('type', 'color')
-						.property('value', domaintype.fill)
-						.style('margin-left', '5px')
-						.on('change', event => {
-							domainColorBox.style('background', event.target.value) // to change box color without rendering legend
-							domaintype.fill = event.target.value // to allow menu option to show new color as legend is not rerendered
-							// assign new color to original domain entries from gm.pdomains[] that corresponds to this domaintype
-							for (const p of block.allgm) {
-								const d = p.pdomains.find(d => d.name + d.description == domaintype.key)
-								if (d) d.color = event.target.value
-							}
-							gmtkrender(tk, block)
-						})
-				}
-			})
-
-		// TODO if domain is hidden show transparent box
-		const domainColorBox = clickRow
-			.append('span')
-			.style('background-color', domaintype.fill)
-			.style('border', 'solid 1px white')
-			.html('&nbsp;&nbsp;&nbsp;')
-			.style('margin-right', '10px')
-
-		const nameDiv = clickRow
-			.append('span')
-			.classed('sjpp-domain-legend', true)
-			.text(domaintype.name)
-			.style('color', default_text_color)
-			.style('margin-right', '10px')
-
-		const descriptionDiv = clickRow
-			.append('span')
-			.classed('sjpp-domain-legend', true)
-			.text(domaintype.description)
-			.style('color', default_text_color)
-			.style('font-size', '.7em')
-
-		if (block.usegm.domain_hidden && block.usegm.domain_hidden[domaintype.key]) {
-			nameDiv.node().style.textDecoration = 'line-through'
-			descriptionDiv.node().style.textDecoration = 'line-through'
+	const links = [
+		{
+			key: 'CDD',
+			makelink: domaintype => `https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=${domaintype.CDD}`
+		},
+		{
+			key: 'Pfam',
+			makelink: domaintype => `https://www.ebi.ac.uk/interpro/entry/pfam/PF${domaintype.Pfam.substr(4)}`
+		},
+		{
+			key: 'SMART',
+			makelink: domaintype =>
+				`https://smart.embl.de/smart/do_annotation.pl?BLAST=DUMMY&DOMAIN=${domaintype.SMART.substr(5)}`
+		},
+		{
+			key: 'COG',
+			makelink: domaintype => `https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=${domaintype.COG}`
+		},
+		{
+			key: 'PRK',
+			makelink: domaintype => `https://www.ncbi.nlm.nih.gov/proteinclusters?term=${domaintype.PRK}`
+		},
+		{
+			key: 'pmid', // may support comma-joined ids
+			makelink: domaintype => `https://pubmed.ncbi.nlm.nih.gov/${domaintype.pmid}/`,
+			txt: domaintype => `PubMed ${domaintype.pmid}`
+		},
+		{
+			key: 'url',
+			makelink: domaintype => domaintype.url,
+			txt: () => 'Reference'
 		}
+	]
 
-		if (block.gmmode == client.gmmode.gmsum) {
-			for (const m of block.allgm) {
-				if (m.domain_hidden && m.domain_hidden[domaintype.key]) {
-					nameDiv.node().style.textDecoration = 'line-through'
-					descriptionDiv.node().style.textDecoration = 'line-through'
+	const menuOptions = [
+		{
+			label: 'Hide',
+			hide: d => block.usegm.domain_hidden[d.key],
+			callback: d => {
+				for (const m of block.allgm) {
+					m.domain_hidden[d.key] = 1
 				}
 			}
+		},
+		{
+			label: 'Show',
+			hide: d => !block.usegm.domain_hidden[d.key],
+			callback: d => {
+				for (const m of block.allgm) {
+					delete m.domain_hidden[d.key]
+				}
+			}
+		},
+		{
+			label: 'Show All',
+			hide: () => !Object.keys(block.usegm.domain_hidden).length,
+			callback: () => {
+				for (const m of block.allgm) {
+					m.domain_hidden = {}
+				}
+			}
+		},
+		{
+			label: 'Show only',
+			hide: () => Object.keys(block.usegm.domain_hidden).length == domainTypes.length - 1,
+			callback: d => {
+				for (const m of block.allgm) {
+					delete m.domain_hidden[d.key]
+					for (const c of domainTypes) {
+						if (c.key != d.key) m.domain_hidden[c.key] = 1
+					}
+				}
+			}
+		},
+		{
+			label: '',
+			render: (e, d) => {
+				e.text('Color: ')
+					.style('margin', '10px')
+					.append('input')
+					.attr('type', 'color')
+					.attr('value', d.fill)
+					.style('margin-left', '5px')
+					.on('change', event => {
+						d.colorbox.style('background', event.target.value)
+						d.fill = event.target.value
+						for (const p of block.allgm) {
+							const dt = p.pdomains.find(pd => pd.name + pd.description == d.key)
+							if (dt) dt.color = event.target.value
+						}
+						// Destroy menu and re-render the visualization
+						block.tip.hide()
+						gmtkrender(tk, block)
+					})
+			},
+			hide: d => block.usegm.domain_hidden[d.key],
+			callback: () => {}
 		}
+	]
 
-		if (domaintype.CDD) {
-			row
-				.append('a')
-				.attr('href', 'https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=' + domaintype.CDD)
-				.attr('target', '_blank')
-				.text('CDD')
-				.style('font-size', '.7em')
-				.style('padding-right', '10px')
-		}
-		if (domaintype.Pfam) {
-			row
-				.append('a')
-				.attr('href', 'https://www.ebi.ac.uk/interpro/entry/pfam/PF' + domaintype.Pfam.substr(4))
-				.attr('target', '_blank')
-				.text('Pfam')
-				.style('font-size', '.7em')
-				.style('padding-right', '10px')
-		}
-		if (domaintype.SMART) {
-			row
-				.append('a')
-				.attr('href', 'https://smart.embl.de/smart/do_annotation.pl?BLAST=DUMMY&DOMAIN=' + domaintype.SMART.substr(5))
-				.attr('target', '_blank')
-				.text('SMART')
-				.style('font-size', '.7em')
-				.style('padding-right', '10px')
-		}
-		if (domaintype.COG) {
-			row
-				.append('a')
-				.attr('href', 'https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=' + domaintype.COG)
-				.attr('target', '_blank')
-				.text('COG')
-				.style('font-size', '.7em')
-				.style('padding-right', '10px')
-		}
-		if (domaintype.PRK) {
-			row
-				.append('a')
-				.attr('href', 'https://www.ncbi.nlm.nih.gov/proteinclusters?term=' + domaintype.PRK)
-				.attr('target', '_blank')
-				.text('PRK')
-				.style('font-size', '.7em')
-				.style('padding-right', '10px')
-		}
+	await tk.td_legend
+		.selectAll('div')
+		.data(domainTypes)
+		.enter()
+		.append('div')
+		.classed('sjpp-domain-legend-item', true)
+		.style('margin', block.legend.vpad + ' 0px 8px 0px')
+		.append('span')
+		.style('padding', '5px 0px')
+		.style('margin-right', '10px')
+		.each(async function (domaintype) {
+			//Encompasses the entire clickable row: color box, name, and description
+			domaintype.wrapper = d3select(this)
 
-		if (domaintype.pmid) {
-			// may support comma-joined ids
-			row
-				.append('a')
-				.attr('href', 'https://pubmed.ncbi.nlm.nih.gov/' + domaintype.pmid + '/')
-				.attr('target', '_blank')
-				.text('PubMed ' + domaintype.pmid)
-				.style('font-size', '.7em')
-				.style('padding-right', '10px')
-		}
+			//Color box
+			domaintype.colorbox = domaintype.wrapper
+				.append('span')
+				.style('background-color', block.usegm.domain_hidden[domaintype.key] ? 'transparent' : domaintype.fill)
+				.style('border', block.usegm.domain_hidden[domaintype.key] ? 'solid 0.25px black' : 'none')
+				.style('border', 'solid 1px white')
+				.html('&nbsp;&nbsp;&nbsp;')
+				.style('margin-right', '10px')
 
-		if (domaintype.url) {
-			row
-				.append('a')
-				.attr('href', domaintype.url)
-				.attr('target', '_blank')
-				.text('Reference')
+			//Domain name
+			domaintype.name = domaintype.wrapper
+				.append('span')
+				.text(domaintype.name)
+				.style('text-decoration', block.usegm.domain_hidden[domaintype.key] ? 'line-through' : 'none')
+				.style('color', default_text_color)
+				.style('margin-right', '10px')
+
+			//Domain description
+			domaintype.description = domaintype.wrapper
+				.append('span')
+				.text(domaintype.description)
+				.style('text-decoration', block.usegm.domain_hidden[domaintype.key] ? 'line-through' : 'none')
+				.style('color', default_text_color)
 				.style('font-size', '.7em')
-				.style('padding-right', '10px')
-		}
+				.style('margin-right', '10px')
+		})
+		.on('click', async (event, domaintype) => {
+			block.tip.clear().showunder(event.target)
+
+			await block.tip.d
+				.selectAll('div')
+				.data(menuOptions.filter(o => !o.hide(domaintype)))
+				.enter()
+				.append('div')
+				.style('border-radius', '0px')
+				.classed('sja_menuoption', o => !o.render)
+				.text(o => o.label)
+				.each(async function (option) {
+					if (option.render) option.picker = option.render(d3select(this), domaintype)
+					else return
+				})
+				.on('click', (event, option) => {
+					event.stopPropagation()
+					option.callback(domaintype)
+					updateItems()
+
+					// Destroy menu and re-render the visualization
+					block.tip.hide()
+					gmtkrender(tk, block)
+				})
+		})
+		.append('span')
+		.each(function (domaintype) {
+			const a = d3select(this)
+			for (const link of links) {
+				if (domaintype[link.key]) {
+					a.append('a')
+						.attr('href', link.makelink(domaintype))
+						.attr('target', '_blank')
+						.text(link.txt ? link.txt(domaintype) : link.key)
+						.style('font-size', '.7em')
+						.style('padding-right', '10px')
+				}
+			}
+		})
+
+	//Updates the styling of the domain legend items based on the current hidden domains
+	const updateItems = () => {
+		const isHidden = domaintype => block.usegm.domain_hidden && block.usegm.domain_hidden[domaintype.key]
+
+		tk.td_legend
+			.selectAll('div.sjpp-domain-legend-item')
+			.data(domainTypes)
+			.each(function (domaintype) {
+				domaintype.colorbox
+					.style('background-color', isHidden(domaintype) ? 'transparent' : domaintype.fill)
+					.style('border', isHidden(domaintype) ? 'solid 0.25px black' : 'none')
+				domaintype.name.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
+				domaintype.description.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
+			})
 	}
 
 	if (block.usegm.coding && block.usegm.coding.length > 0) {
