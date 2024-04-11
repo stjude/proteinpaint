@@ -43,6 +43,7 @@ class TdbApp {
 		const treeDiv = topbar.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		this.dom = {
+			topbar,
 			holder: opts.holder,
 			termTypeSearchDiv,
 			searchDiv: treeDiv.append('div'),
@@ -177,9 +178,11 @@ class TdbApp {
 					holder: this.dom.searchDiv,
 					isVisible: header_mode !== 'hide_search'
 				}),
-				termType: TermTypeSearchInit({
+				termTypeSearch: TermTypeSearchInit({
 					app: this.api,
-					holder: this.dom.termTypeSearchDiv
+					holder: this.dom.termTypeSearchDiv,
+					topbar: this.dom.topbar,
+					genome: this.opts.vocabApi.app.opts.genome
 				}),
 				tree: treeInit({
 					app: this.api,

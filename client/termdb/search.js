@@ -72,7 +72,8 @@ class TermSearch {
 		if (
 			termTypeGroup == TermTypeGroups.SNP_LIST ||
 			termTypeGroup == TermTypeGroups.SNP_LOCUS ||
-			termTypeGroup == TermTypeGroups.MUTATION_SIGNATURE
+			termTypeGroup == TermTypeGroups.MUTATION_SIGNATURE ||
+			termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION
 		) {
 			this.dom.holder.style('display', 'none') //These views will have their own UI
 			return
