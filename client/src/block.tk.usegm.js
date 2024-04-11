@@ -1026,27 +1026,6 @@ function domainlegend(tk, block) {
 						gmtkrender(tk, block) // Re-render the visualization
 					})
 
-				// Add the "Show All" option
-				block.tip.d
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.style('border-radius', '0px')
-					.text('Show All')
-					.on('click', () => {
-						// Callback for "Show All" option
-						const spans = tk.td_legend.selectAll('span.sjpp-domain-legend')
-						spans.style('text-decoration', 'none')
-						if (block.gmmode == client.gmmode.gmsum) {
-							for (const m of block.allgm) {
-								m.domain_hidden = {}
-							}
-						} else {
-							block.usegm.domain_hidden = {}
-						}
-						block.tip.hide()
-						gmtkrender(tk, block) // Re-render the visualization
-					})
-
 				// Add the "Show only" option.
 				block.tip.d
 					.append('div')
