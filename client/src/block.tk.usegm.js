@@ -7,6 +7,7 @@ import * as coord from './coord'
 import { legend_newrow } from './block.legend'
 import { basecompliment } from '#shared/common'
 import { default_text_color } from '../shared/common'
+import { rgb } from 'd3-color'
 
 /*
 the "gene model" track, showing in one of four modes:
@@ -1027,6 +1028,12 @@ async function domainlegend(tk, block) {
 			//sja_clb class adds the background color hover effect
 			domaintype.wrapper = domaintype.div.append('span').classed('sja_clb', true)
 
+			//Fix for users entering colors in different formats (i.e. red, rgb(255,0,0), etc.)
+			//Color picker only accepts hex code for value
+			domaintype.fill = domaintype.fill.startsWith('#') ? domaintype.fill : rgb(domaintype.fill).formatHex()
+
+			console.log(domaintype.fill)
+
 			//Color box
 			domaintype.colorbox = domaintype.wrapper
 				.append('span')
@@ -1244,6 +1251,7 @@ function customdomainmakeui(block, tk, proteinDomainUI) {
 						start = Math.min(a1, a2)
 						stop = Math.max(a1, a2)
 				}
+
 				block.usegm.pdomains.push({
 					iscustom: true,
 					name: l[0].trim(),
