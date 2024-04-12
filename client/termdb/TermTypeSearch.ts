@@ -6,7 +6,11 @@ type Dict = {
 	[key: string]: any
 }
 
-//For each use case the corresponding tabs are shown
+/*
+When searching for terms, depending on the use case, only certain types of terms are allowed.
+The tree target is used to determine the allowed term types.
+ */
+
 const useCases = {
 	matrix: [TermTypeGroups.DICTIONARY_VARIABLES],
 	filter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
@@ -22,6 +26,8 @@ const useCases = {
 	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS]
 }
 
+//The dataset provides the allowed term types that are then mapped to the term type groups
+//Depending on the dataset types and the use case only certain term type groups/tabs are allowed
 export const typeGroup = {
 	categorical: TermTypeGroups.DICTIONARY_VARIABLES,
 	condition: TermTypeGroups.DICTIONARY_VARIABLES,
@@ -149,10 +155,10 @@ export class TermTypeSearch {
 					genomeObj: this.genomeObj,
 					callback: term => this.selectTerm(term)
 				})
-			return
+			//Add other cases here like snplst, snplocus, etc
 		}
 	}
-
+	//This callback will be called by the handlers when a term is selected
 	selectTerm(term) {
 		if (this.click_term) this.click_term(term)
 		else
