@@ -1,6 +1,5 @@
 import { Menu } from '#dom/menu'
 import { addGeneSearchbox } from '#dom/genesearch'
-import { fillTermWrapper } from '#termsetting'
 
 export class SearchHandler {
 	app: any
@@ -21,6 +20,6 @@ export class SearchHandler {
 	}
 
 	async selectGene(name) {
-		const term = await fillTermWrapper({ term: { name, type: 'geneVariant' } }, this.app.vocabApi)
+		this.callback({ name, type: 'geneVariant' })
 	}
 }

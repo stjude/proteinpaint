@@ -141,7 +141,12 @@ export class TermTypeSearch {
 		if (tab.label != TermTypeGroups.DICTIONARY_VARIABLES) {
 			const handler = this.handlerByType['geneVariant']
 			if (tab.label == TermTypeGroups.MUTATION_CNV_FUSION)
-				await handler.init({ holder, genomeObj: this.genomeObj, app: this.app, callback: this.selectTerm })
+				await handler.init({
+					holder,
+					genomeObj: this.genomeObj,
+					app: this.app,
+					callback: term => this.selectTerm(term)
+				})
 			return
 		}
 	}
