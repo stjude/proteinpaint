@@ -1012,21 +1012,23 @@ async function domainlegend(tk, block) {
 		}
 	]
 
-	await tk.td_legend
+	const legendRows = tk.td_legend
 		.selectAll('div')
 		.data(domainTypes)
 		.enter()
 		.append('div')
 		.classed('sjpp-domain-legend-item', true)
 		.style('margin', block.legend.vpad + ' 0px 8px 0px')
+
+	legendRows
 		.append('span')
+		//sja_clb class adds the background color hover effect
+		.classed('sja_clb', true)
 		.style('padding', '5px 0px')
 		.style('margin-right', '10px')
-		.each(async function (domaintype) {
+		.each(function (domaintype) {
 			//Encompasses the entire clickable row: color box, name, and description
-			domaintype.div = d3select(this)
-			//sja_clb class adds the background color hover effect
-			domaintype.wrapper = domaintype.div.append('span').classed('sja_clb', true)
+			domaintype.wrapper = d3select(this).append('span')
 
 			//Fix for users entering colors in different formats (i.e. red, rgb(255,0,0), etc.)
 			//Color picker only accepts hex code for value
@@ -1068,10 +1070,6 @@ async function domainlegend(tk, block) {
 				.style('border-radius', '0px')
 				.classed('sja_menuoption', true)
 				.text(o => o.label)
-				.each(async function (option) {
-					if (option.render) option.picker = option.render(d3select(this), domaintype)
-					else return
-				})
 				.on('click', (event, option) => {
 					event.stopPropagation()
 					option.callback(domaintype)
@@ -1105,37 +1103,33 @@ async function domainlegend(tk, block) {
 					})
 			}
 		})
-		/* Add links dynamically to the row from the array above
+	/* Add links dynamically to the row from the array above
 		in a separate span. The hover effect will not apply to 
 		this span. */
-		.append('span')
-		.each(function (domaintype) {
-			const holder = d3select(this)
-			for (const link of links) {
-				if (domaintype[link.key]) {
-					holder
-						.append('a')
-						.attr('href', link.makelink(domaintype))
-						.attr('target', '_blank')
-						.text(link.txt ? link.txt(domaintype) : link.key)
-						.style('font-size', '.7em')
-						.style('padding-right', '10px')
-				}
+	legendRows.append('span').each(function (domaintype) {
+		const holder = d3select(this)
+		for (const link of links) {
+			if (domaintype[link.key]) {
+				holder
+					.append('a')
+					.attr('href', link.makelink(domaintype))
+					.attr('target', '_blank')
+					.text(link.txt ? link.txt(domaintype) : link.key)
+					.style('font-size', '.7em')
+					.style('padding-right', '10px')
 			}
-		})
+		}
+	})
 
 	//Updates the styling of the domain legend items based on the current hidden domains
 	const updateItems = () => {
 		const isHidden = domaintype => block.usegm.domain_hidden && block.usegm.domain_hidden[domaintype.key]
 
-		tk.td_legend
-			.selectAll('div.sjpp-domain-legend-item')
-			.data(domainTypes)
-			.each(function (domaintype) {
-				domaintype.colorbox.style('background-color', isHidden(domaintype) ? 'transparent' : domaintype.fill)
-				domaintype.name.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
-				domaintype.description.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
-			})
+		legendRows.data(domainTypes).each(function (domaintype) {
+			domaintype.colorbox.style('background-color', isHidden(domaintype) ? 'transparent' : domaintype.fill)
+			domaintype.name.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
+			domaintype.description.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
+		})
 	}
 
 	if (block.usegm.coding && block.usegm.coding.length > 0) {
