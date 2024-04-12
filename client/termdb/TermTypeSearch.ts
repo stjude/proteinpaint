@@ -41,10 +41,12 @@ export class TermTypeSearch {
 	state: any
 	genomeObj: any
 	handlerByType: Dict
+	click_term: any
 
 	constructor(opts) {
 		this.type = 'termTypeSearch'
 		this.genomeObj = opts.genome
+		this.click_term = opts.click_term
 		this.dom = { holder: opts.holder, topbar: opts.topbar }
 
 		this.types = []
@@ -75,7 +77,6 @@ export class TermTypeSearch {
 	reactsTo(action) {
 		if (action.type.startsWith('submenu_')) return true //may change tree visibility
 		if (action.type == 'set_term_type_group') return true
-		if (action.type == 'app_refresh') return true
 	}
 
 	main() {
@@ -152,12 +153,7 @@ export class TermTypeSearch {
 	}
 
 	selectTerm(term) {
-		this.app.dispatch({
-			type: 'app_refresh',
-			state: {
-				selectedTerms: [...this.state.selectedTerms, term]
-			}
-		})
+		this.click_term(term)
 	}
 }
 
