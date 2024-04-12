@@ -466,7 +466,7 @@ async function makeheader(app, obj, jwt) {
 		},
 		{
 			label: 'URL parameters',
-			link: 'https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing'
+			link: 'https://github.com/stjude/proteinpaint/wiki/URL-parameters'
 		},
 		{
 			label: 'All tutorials',
