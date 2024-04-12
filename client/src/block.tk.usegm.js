@@ -1023,13 +1023,14 @@ async function domainlegend(tk, block) {
 		.style('margin-right', '10px')
 		.each(async function (domaintype) {
 			//Encompasses the entire clickable row: color box, name, and description
-			domaintype.wrapper = d3select(this)
+			domaintype.div = d3select(this)
+			//sja_clb class adds the background color hover effect
+			domaintype.wrapper = domaintype.div.append('span').classed('sja_clb', true)
 
 			//Color box
 			domaintype.colorbox = domaintype.wrapper
 				.append('span')
 				.style('background-color', block.usegm.domain_hidden[domaintype.key] ? 'transparent' : domaintype.fill)
-				.style('border', 'solid 1px white')
 				.html('&nbsp;&nbsp;&nbsp;')
 				.style('margin-right', '10px')
 
@@ -1053,6 +1054,7 @@ async function domainlegend(tk, block) {
 		.on('click', async (event, domaintype) => {
 			block.tip.clear().showunder(event.target)
 
+			//Dynamically add options from the array above
 			await block.tip.d
 				.selectAll('div')
 				.data(menuOptions.filter(o => !o.hide(domaintype)))
@@ -1089,8 +1091,8 @@ async function domainlegend(tk, block) {
 						domaintype.colorbox.style('background', event.target.value)
 						domaintype.fill = event.target.value
 						for (const p of block.allgm) {
-							const dt = p.pdomains.find(pd => pd.name + pd.description == domaintype.key)
-							if (dt) dt.color = event.target.value
+							const findDomain = p.pdomains.find(pd => pd.name + pd.description == domaintype.key)
+							if (findDomain) findDomain.color = event.target.value
 						}
 						// Same as above
 						block.tip.hide()
@@ -1098,13 +1100,16 @@ async function domainlegend(tk, block) {
 					})
 			}
 		})
-		// Add links to the row
+		/* Add links dynamically to the row from the array above
+		in a separate span. The hover effect will not apply to 
+		this span. */
 		.append('span')
 		.each(function (domaintype) {
-			const a = d3select(this)
+			const holder = d3select(this)
 			for (const link of links) {
 				if (domaintype[link.key]) {
-					a.append('a')
+					holder
+						.append('a')
 						.attr('href', link.makelink(domaintype))
 						.attr('target', '_blank')
 						.text(link.txt ? link.txt(domaintype) : link.key)
