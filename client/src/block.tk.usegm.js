@@ -1026,83 +1026,80 @@ async function domainlegend(tk, block) {
 		.classed('sja_clb', true)
 		.style('padding', '5px 0px')
 		.style('margin-right', '10px')
-		.each(function (domaintype) {
-			//Encompasses the entire clickable row: color box, name, and description
-			domaintype.wrapper = d3select(this).append('span')
 
-			//Fix for users entering colors in different formats (i.e. red, rgb(255,0,0), etc.)
-			//Color picker only accepts hex code for value
-			domaintype.fill = domaintype.fill.startsWith('#') ? domaintype.fill : rgb(domaintype.fill).formatHex()
+	const clickableRow = legendRows.append('span')
 
-			//Color box
-			domaintype.colorbox = domaintype.wrapper
-				.append('span')
-				.style('background-color', block.usegm.domain_hidden[domaintype.key] ? 'transparent' : domaintype.fill)
-				.html('&nbsp;&nbsp;&nbsp;')
-				.style('margin-right', '10px')
+	//Color box
+	const colorbox = clickableRow
+		.append('span')
+		//Fix for users entering colors in different formats (i.e. red, rgb(255,0,0), etc.)
+		//Color picker only accepts hex code for value
+		.style('background-color', d => d.fill)
+		.html('&nbsp;&nbsp;&nbsp;')
+		.style('margin-right', '10px')
 
-			//Domain name
-			domaintype.name = domaintype.wrapper
-				.append('span')
-				.text(domaintype.name)
-				.style('text-decoration', block.usegm.domain_hidden[domaintype.key] ? 'line-through' : 'none')
-				.style('color', default_text_color)
-				.style('margin-right', '10px')
+	//Domain name
+	const name = clickableRow
+		.append('span')
+		.text(d => d.name)
+		.style('text-decoration', d => (block.usegm.domain_hidden[d.key] ? 'line-through' : 'none'))
+		.style('color', default_text_color)
+		.style('margin-right', '10px')
 
-			//Domain description
-			domaintype.description = domaintype.wrapper
-				.append('span')
-				.text(domaintype.description)
-				.style('text-decoration', block.usegm.domain_hidden[domaintype.key] ? 'line-through' : 'none')
-				.style('color', default_text_color)
-				.style('font-size', '.7em')
-				.style('margin-right', '10px')
-		})
-		.on('click', async (event, domaintype) => {
-			block.tip.clear().showunder(event.target)
+	//Domain description
+	const description = clickableRow
+		.append('span')
+		.text(d => d.description)
+		.style('text-decoration', d => (block.usegm.domain_hidden[d.key] ? 'line-through' : 'none'))
+		.style('color', default_text_color)
+		.style('font-size', '.7em')
+		.style('margin-right', '10px')
 
-			//Dynamically add options from the array above
-			await block.tip.d
-				.selectAll('div')
-				.data(menuOptions.filter(o => !o.hide(domaintype)))
-				.enter()
+	clickableRow.on('click', async (event, domaintype) => {
+		block.tip.clear().showunder(event.target)
+
+		//Dynamically add options from the array above
+		await block.tip.d
+			.selectAll('div')
+			.data(menuOptions.filter(o => !o.hide(domaintype)))
+			.enter()
+			.append('div')
+			.style('border-radius', '0px')
+			.classed('sja_menuoption', true)
+			.text(o => o.label)
+			.on('click', (event, option) => {
+				event.stopPropagation()
+				option.callback(domaintype)
+				updateItems()
+
+				// Destroy menu and re-render the visualization
+				block.tip.hide()
+				gmtkrender(tk, block)
+			})
+
+		// Add color picker seperately to accommodate rendering needs
+		if (!block.usegm.domain_hidden[domaintype.key]) {
+			block.tip.d
 				.append('div')
-				.style('border-radius', '0px')
-				.classed('sja_menuoption', true)
-				.text(o => o.label)
-				.on('click', (event, option) => {
-					event.stopPropagation()
-					option.callback(domaintype)
+				.text('Color: ')
+				.style('margin', '10px')
+				.append('input')
+				.attr('type', 'color')
+				.attr('value', domaintype.fill)
+				.style('margin-left', '5px')
+				.on('change', event => {
+					domaintype.fill = event.target.value
+					for (const p of block.allgm) {
+						const findDomain = p.pdomains.find(pd => pd.name + pd.description == domaintype.key)
+						if (findDomain) findDomain.color = event.target.value
+					}
 					updateItems()
-
-					// Destroy menu and re-render the visualization
+					// Same as above
 					block.tip.hide()
 					gmtkrender(tk, block)
 				})
-
-			// Add color picker seperately to accommodate rendering needs
-			if (!block.usegm.domain_hidden[domaintype.key]) {
-				block.tip.d
-					.append('div')
-					.text('Color: ')
-					.style('margin', '10px')
-					.append('input')
-					.attr('type', 'color')
-					.attr('value', domaintype.fill)
-					.style('margin-left', '5px')
-					.on('change', event => {
-						domaintype.colorbox.style('background', event.target.value)
-						domaintype.fill = event.target.value
-						for (const p of block.allgm) {
-							const findDomain = p.pdomains.find(pd => pd.name + pd.description == domaintype.key)
-							if (findDomain) findDomain.color = event.target.value
-						}
-						// Same as above
-						block.tip.hide()
-						gmtkrender(tk, block)
-					})
-			}
-		})
+		}
+	})
 	/* Add links dynamically to the row from the array above
 		in a separate span. The hover effect will not apply to 
 		this span. */
@@ -1124,12 +1121,9 @@ async function domainlegend(tk, block) {
 	//Updates the styling of the domain legend items based on the current hidden domains
 	const updateItems = () => {
 		const isHidden = domaintype => block.usegm.domain_hidden && block.usegm.domain_hidden[domaintype.key]
-
-		legendRows.data(domainTypes).each(function (domaintype) {
-			domaintype.colorbox.style('background-color', isHidden(domaintype) ? 'transparent' : domaintype.fill)
-			domaintype.name.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
-			domaintype.description.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
-		})
+		colorbox.style('background-color', d => (isHidden(d) ? 'transparent' : d.fill))
+		name.style('text-decoration', d => (isHidden(d) ? 'line-through' : 'none'))
+		description.style('text-decoration', d => (isHidden(d) ? 'line-through' : 'none'))
 	}
 
 	if (block.usegm.coding && block.usegm.coding.length > 0) {
@@ -1244,10 +1238,11 @@ function customdomainmakeui(block, tk, proteinDomainUI) {
 						stop = Math.max(a1, a2)
 				}
 
+				const color = l[2].trim().startsWith('#') ? l[2].trim() : rgb(l[2].trim()).formatHex()
 				block.usegm.pdomains.push({
 					iscustom: true,
 					name: l[0].trim(),
-					color: l[2].trim(),
+					color,
 					start: start,
 					stop: stop
 				})
