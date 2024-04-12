@@ -47,6 +47,7 @@ export class TermTypeSearch {
 		this.type = 'termTypeSearch'
 		this.genomeObj = opts.genome
 		this.click_term = opts.click_term
+
 		this.dom = { holder: opts.holder, topbar: opts.topbar }
 
 		this.types = []
@@ -152,7 +153,12 @@ export class TermTypeSearch {
 	}
 
 	selectTerm(term) {
-		this.click_term(term)
+		if (this.click_term) this.click_term(term)
+		else
+			this.app.dispatch({
+				type: 'submenu_set',
+				submenu: { term, type: 'tvs' }
+			})
 	}
 }
 
