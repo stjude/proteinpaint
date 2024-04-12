@@ -1008,30 +1008,6 @@ async function domainlegend(tk, block) {
 					}
 				}
 			}
-		},
-		{
-			label: '',
-			render: (e, d) => {
-				e.text('Color: ')
-					.style('margin', '10px')
-					.append('input')
-					.attr('type', 'color')
-					.attr('value', d.fill)
-					.style('margin-left', '5px')
-					.on('change', event => {
-						d.colorbox.style('background', event.target.value)
-						d.fill = event.target.value
-						for (const p of block.allgm) {
-							const dt = p.pdomains.find(pd => pd.name + pd.description == d.key)
-							if (dt) dt.color = event.target.value
-						}
-						// Destroy menu and re-render the visualization
-						block.tip.hide()
-						gmtkrender(tk, block)
-					})
-			},
-			hide: d => block.usegm.domain_hidden[d.key],
-			callback: () => {}
 		}
 	]
 
@@ -1053,7 +1029,6 @@ async function domainlegend(tk, block) {
 			domaintype.colorbox = domaintype.wrapper
 				.append('span')
 				.style('background-color', block.usegm.domain_hidden[domaintype.key] ? 'transparent' : domaintype.fill)
-				.style('border', block.usegm.domain_hidden[domaintype.key] ? 'solid 0.25px black' : 'none')
 				.style('border', 'solid 1px white')
 				.html('&nbsp;&nbsp;&nbsp;')
 				.style('margin-right', '10px')
@@ -1084,7 +1059,7 @@ async function domainlegend(tk, block) {
 				.enter()
 				.append('div')
 				.style('border-radius', '0px')
-				.classed('sja_menuoption', o => !o.render)
+				.classed('sja_menuoption', true)
 				.text(o => o.label)
 				.each(async function (option) {
 					if (option.render) option.picker = option.render(d3select(this), domaintype)
@@ -1099,7 +1074,31 @@ async function domainlegend(tk, block) {
 					block.tip.hide()
 					gmtkrender(tk, block)
 				})
+
+			// Add color picker seperately to accommodate rendering needs
+			if (!block.usegm.domain_hidden[domaintype.key]) {
+				block.tip.d
+					.append('div')
+					.text('Color: ')
+					.style('margin', '10px')
+					.append('input')
+					.attr('type', 'color')
+					.attr('value', domaintype.fill)
+					.style('margin-left', '5px')
+					.on('change', event => {
+						domaintype.colorbox.style('background', event.target.value)
+						domaintype.fill = event.target.value
+						for (const p of block.allgm) {
+							const dt = p.pdomains.find(pd => pd.name + pd.description == domaintype.key)
+							if (dt) dt.color = event.target.value
+						}
+						// Same as above
+						block.tip.hide()
+						gmtkrender(tk, block)
+					})
+			}
 		})
+		// Add links to the row
 		.append('span')
 		.each(function (domaintype) {
 			const a = d3select(this)
@@ -1123,9 +1122,7 @@ async function domainlegend(tk, block) {
 			.selectAll('div.sjpp-domain-legend-item')
 			.data(domainTypes)
 			.each(function (domaintype) {
-				domaintype.colorbox
-					.style('background-color', isHidden(domaintype) ? 'transparent' : domaintype.fill)
-					.style('border', isHidden(domaintype) ? 'solid 0.25px black' : 'none')
+				domaintype.colorbox.style('background-color', isHidden(domaintype) ? 'transparent' : domaintype.fill)
 				domaintype.name.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
 				domaintype.description.style('text-decoration', isHidden(domaintype) ? 'line-through' : 'none')
 			})
