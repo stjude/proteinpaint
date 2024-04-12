@@ -1032,8 +1032,6 @@ async function domainlegend(tk, block) {
 			//Color picker only accepts hex code for value
 			domaintype.fill = domaintype.fill.startsWith('#') ? domaintype.fill : rgb(domaintype.fill).formatHex()
 
-			console.log(domaintype.fill)
-
 			//Color box
 			domaintype.colorbox = domaintype.wrapper
 				.append('span')
