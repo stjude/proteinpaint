@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Click on protein domain legend to show menu options to toggle visibility and change color.
+
+Fixes:
+- email log bug fix
+
 
 ## 2.53.0
 
