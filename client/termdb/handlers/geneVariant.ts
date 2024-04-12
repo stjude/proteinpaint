@@ -2,11 +2,9 @@ import { Menu } from '#dom/menu'
 import { addGeneSearchbox } from '#dom/genesearch'
 
 export class SearchHandler {
-	app: any
 	callback: any
 
 	init(opts) {
-		this.app = opts.app
 		this.callback = opts.callback
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),

@@ -145,7 +145,6 @@ export class TermTypeSearch {
 				await handler.init({
 					holder,
 					genomeObj: this.genomeObj,
-					app: this.app,
 					callback: term => this.selectTerm(term)
 				})
 			return
