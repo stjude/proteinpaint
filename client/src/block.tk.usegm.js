@@ -1135,49 +1135,42 @@ async function domainlegend(tk, block) {
 
 	if (block.usegm.coding && block.usegm.coding.length > 0) {
 		// custom domain ui, only for coding gene
-		tk.td_legend
-			.append('div')
-			.style('margin-top', '10px')
+		let displayUI = false
+
+		const addProteinBtn = tk.td_legend.append('div').style('margin-top', '10px')
+
+		const proteinDomainUI = tk.td_legend.append('div').style('display', 'none')
+		customdomainmakeui(block, tk, proteinDomainUI)
+
+		const btn = addProteinBtn
 			.append('div')
 			.style('display', 'inline-block')
 			.classed('sja_menuoption', true)
 			.style('font-size', '.8em')
-			.text('+ add protein domain')
-			.on('click', event => {
-				if (block.customdomainui) {
-					if (block.customdomainui.pane.style('display') == 'none') {
-						client.appear(block.customdomainui.pane)
-					} else {
-						client.disappear(block.customdomainui.pane)
-					}
-				} else {
-					const p = event.target.getBoundingClientRect()
-					block.customdomainui = client.newpane({
-						x: p.left + p.width + 20,
-						y: p.top - 100,
-						close: () => {
-							client.disappear(block.customdomainui.pane)
-						}
-					})
-					customdomainmakeui(block, tk, block.customdomainui)
-				}
+			.html(displayUI ? '&#9660; add protein domain' : '&#9650; add protein domain')
+			.on('click', () => {
+				displayUI = !displayUI
+				proteinDomainUI.style('display', displayUI ? 'block' : 'none')
+				btn.html(displayUI ? '&#9660; add protein domain' : '&#9650; add protein domain')
 			})
 	}
 }
 
-function customdomainmakeui(block, tk, pane) {
-	pane.body.style('padding', '20px')
-	pane.header.html(
-		'Add domains for ' + block.usegm.name + ' <span style="font-size:.8em">' + block.usegm.isoform + '</span>'
-	)
-	pane.body.selectAll('*').remove()
+function customdomainmakeui(block, tk, proteinDomainUI) {
+	const wrapper = proteinDomainUI.style('padding', '20px')
+
+	//header
+	wrapper
+		.append('div')
+		.html(`Add domains for ${block.usegm.name} <span style="font-size:.8em">${block.usegm.isoform}</span>`)
 	const lst = client.getdomaintypes(block.usegm)
+
 	const customd = []
 	for (const d of lst) {
 		if (d.iscustom) customd.push(d)
 	}
 	if (customd.length > 0) {
-		const div = pane.body.append('div').style('margin', '20px 0px')
+		const div = wrapper.append('div').style('margin', '20px 0px')
 		div.append('div').text('Click to remove a domain').style('font-size', '.8em').style('margin-bottom', '5px')
 		for (const i of customd) {
 			const row = div.append('div').classed('sja_menuoption', true)
@@ -1204,12 +1197,12 @@ function customdomainmakeui(block, tk, pane) {
 			})
 		}
 	}
-	pane.body
+	wrapper
 		.append('p')
 		.style('font-size', '.9em')
 		.html('<span style="font-size:.8em;color:#aaa">EXAMPLE</span>&nbsp;&nbsp;domain_name ; 100 200 ; red')
-	const ta = pane.body.append('textarea').attr('rows', 5).attr('cols', 30)
-	const row1 = pane.body.append('div').style('margin-top', '5px')
+	const ta = wrapper.append('textarea').attr('rows', 5).attr('cols', 30)
+	const row1 = wrapper.append('div').style('margin-top', '5px')
 	const select = row1.append('select')
 	select.append('option').text('Codon position')
 	select.append('option').text('mRNA position')
@@ -1259,21 +1252,22 @@ function customdomainmakeui(block, tk, pane) {
 					stop: stop
 				})
 			}
+			proteinDomainUI.style('display', 'none')
 			gmtkrender(tk, block)
 			domainlegend(tk, block)
-			customdomainmakeui(block, tk, pane)
+			//customdomainmakeui(block, tk, pane)
 		})
 	row1
 		.append('button')
 		.text('Clear')
 		.style('margin-left', '5px')
 		.on('click', () => ta.property('value', ''))
-	const errdiv = pane.body.append('div').style('margin-top', '10px').style('display', 'none')
+	const errdiv = wrapper.append('div').style('margin-top', '10px').style('display', 'none')
 	const err = m => {
 		errdiv.style('display', 'block')
 		client.sayerror(errdiv, m)
 	}
-	pane.body
+	wrapper
 		.append('div')
 		.style('color', '#858585')
 		.style('margin-top', '20px')
