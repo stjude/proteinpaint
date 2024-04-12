@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.54.0
 
 Features:
 - Click on protein domain legend to show menu options to toggle visibility and change color.
