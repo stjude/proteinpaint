@@ -182,7 +182,8 @@ class TdbApp {
 					app: this.api,
 					holder: this.dom.termTypeSearchDiv,
 					topbar: this.dom.topbar,
-					genome: this.opts.vocabApi.app.opts.genome
+					genome: this.opts.vocabApi.app.opts.genome,
+					click_term: this.opts.tree?.click_term
 				}),
 				tree: treeInit({
 					app: this.api,
