@@ -8,6 +8,7 @@ type Dict = {
 
 //For each use case the corresponding tabs are shown
 const useCases = {
+	matrix: [TermTypeGroups.DICTIONARY_VARIABLES],
 	filter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	dictionary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES],
