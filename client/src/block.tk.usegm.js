@@ -1020,20 +1020,14 @@ async function domainlegend(tk, block) {
 		.classed('sjpp-domain-legend-item', true)
 		.style('margin', block.legend.vpad + ' 0px 8px 0px')
 
-	legendRows
-		.append('span')
-		//sja_clb class adds the background color hover effect
-		.classed('sja_clb', true)
-		.style('padding', '5px 0px')
-		.style('margin-right', '10px')
+	legendRows.append('span').style('padding', '5px 0px').style('margin-right', '10px')
 
-	const clickableRow = legendRows.append('span')
+	//sja_clb class adds the background color hover effect
+	const clickableRow = legendRows.append('span').classed('sja_clb', true)
 
 	//Color box
 	const colorbox = clickableRow
 		.append('span')
-		//Fix for users entering colors in different formats (i.e. red, rgb(255,0,0), etc.)
-		//Color picker only accepts hex code for value
 		.style('background-color', d => d.fill)
 		.html('&nbsp;&nbsp;&nbsp;')
 		.style('margin-right', '10px')
@@ -1238,6 +1232,8 @@ function customdomainmakeui(block, tk, proteinDomainUI) {
 						stop = Math.max(a1, a2)
 				}
 
+				//Fix for users entering colors in different formats (i.e. red, rgb(255,0,0), etc.)
+				//Color picker only accepts hex code for value
 				const color = l[2].trim().startsWith('#') ? l[2].trim() : rgb(l[2].trim()).formatHex()
 				block.usegm.pdomains.push({
 					iscustom: true,
