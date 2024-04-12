@@ -12,7 +12,7 @@ import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
 import { authApi } from './auth.js'
 import { getResult as geneSearch } from './gene.js'
-import { searchSNP } from './searchSNP.js'
+import { searchSNP } from '../routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/common.js'
 /*
@@ -170,23 +170,22 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 
 	try {
 		//Snp list and Snp locus will have their own UI
-		// if (q.targetType == 'snp') {
-		// 	if (!ds.queries?.snvindel?.allowSNPs) throw 'this dataset does not support snp search'
-		// 	// must convert to lowercase e.g. "rs" but not "RS" for bigbed file search to work
-		// 	const lst = await searchSNP({ byName: true, lst: [str.toLowerCase()] }, genome)
-		// 	for (const s of lst) {
-		// 		terms.push({
-		// 			type: 'geneVariant',
-		// 			name: s.name,
-		// 			subtype: 'snp',
-		// 			chr: s.chrom,
-		// 			start: s.chromStart,
-		// 			stop: s.chromEnd,
-		// 			alleles: s.alleles
-		// 		})
-		// 	}
-		// } else
-		if (q.targetType == TermTypeGroups.MUTATION_CNV_FUSION) {
+		if (q.targetType == 'snp') {
+			if (!ds.queries?.snvindel?.allowSNPs) throw 'this dataset does not support snp search'
+			// must convert to lowercase e.g. "rs" but not "RS" for bigbed file search to work
+			const lst = await searchSNP({ byName: true, lst: [str.toLowerCase()] }, genome)
+			for (const s of lst) {
+				terms.push({
+					type: 'geneVariant',
+					name: s.name,
+					subtype: 'snp',
+					chr: s.chrom,
+					start: s.chromStart,
+					stop: s.chromEnd,
+					alleles: s.alleles
+				})
+			}
+		} else if (q.targetType == TermTypeGroups.MUTATION_CNV_FUSION) {
 			const mayUseGeneVariant = isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')
 
 			if (ds.mayGetMatchingGeneNames && mayUseGeneVariant) {
