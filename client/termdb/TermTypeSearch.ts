@@ -17,6 +17,7 @@ const useCases = {
 	dictionary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES],
 	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
+	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES],
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
 	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
