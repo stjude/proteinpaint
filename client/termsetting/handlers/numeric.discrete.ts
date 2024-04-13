@@ -257,7 +257,12 @@ function setqDefaults(self) {
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
 	if (self.q && !self.q.mode) self.q.mode = 'discrete'
 	if (!self.q || self.q.mode !== 'discrete') self.q = {}
-	if (!self.q.type) self.q.type = 'regular-bin'
+
+	if (!self.q.type) {
+		// supply default q.type when missing. important not to always hardcode to "regular-bin". e.g. in gdc, agedx default binning is custom but not regular; for such term defaulting to regular will confuse termsetting ui
+		self.q.type = self.term.bins?.default?.type || 'regular-bin'
+	}
+
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].discrete[self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)
 	const bin_size = 'bin_size' in self.q && self.q.bin_size!.toString()
