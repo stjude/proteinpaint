@@ -550,7 +550,7 @@ function setInteractivity(self) {
 				holder instanceof Element ? holder : this instanceof Element ? this : self.dom.holder.node()
 			)
 		else self.dom.tip.show(event!.clientX, event!.clientY)
-
+		if (!self.usecase) self.usecase = { target: 'overlayOrDivide' }
 		const termdb = await import('../termdb/app.js')
 		termdb.appInit({
 			holder: self.dom.tip.d,
@@ -558,7 +558,6 @@ function setInteractivity(self) {
 			state: {
 				activeCohort: self.activeCohort,
 				tree: {
-					target: 'overlay',
 					usecase: self.usecase
 				}
 			},
