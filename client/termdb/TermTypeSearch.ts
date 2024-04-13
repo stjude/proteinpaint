@@ -21,7 +21,7 @@ const useCases = {
 	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES],
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
 	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
-	overlay: [TermTypeGroups.DICTIONARY_VARIABLES],
+	overlayOrDivide: [TermTypeGroups.DICTIONARY_VARIABLES],
 	divideBy: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	regression: [TermTypeGroups.DICTIONARY_VARIABLES],
 	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS]
