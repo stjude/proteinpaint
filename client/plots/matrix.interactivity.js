@@ -462,6 +462,13 @@ function setTermActions(self) {
 		self.dom.menutop.style('display', '').selectAll('*').remove()
 		self.dom.menubody.style('padding', 0).selectAll('*').remove()
 
+		// display loading... upon clicking a term row label
+		const termMenuWaitDiv = self.dom.menutop.append('div').style('display', 'block').text('Loading...')
+		self.dom.tip.show(event.clientX - 20, event.clientY - 20)
+
+		await self.pill.main(Object.assign({ menuOptions: self.getMenuOptions(t) }, t.tw ? t.tw : { term: null, q: null }))
+		termMenuWaitDiv.remove()
+
 		self.dom.shortcutDiv = self.dom.menutop.append('div')
 
 		// Do not show shortcuts for hierCluster for now
@@ -539,13 +546,12 @@ function setTermActions(self) {
 		//menuBtnsDiv.on('click', () => menuBtnsDiv.style('display', 'none'))
 		// must remember event target since it's cleared after async-await
 		const clickedElem = event.target
-		await self.pill.main(Object.assign({ menuOptions: self.getMenuOptions(t) }, t.tw ? t.tw : { term: null, q: null }))
 		self.pill.showMenu(event, clickedElem, self.dom.twMenuBar)
 
 		self.dom.grpMenuDiv = self.dom.menutop.append('div').style('margin-top', '10px')
 		//self.showTermGroupInputs(self.dom.grpMenuDiv)
 		//self.dom.tip.showunder(clickedElem)
-		self.dom.tip.show(event.clientX - 20, event.clientY - 20)
+		//self.dom.tip.show(event.clientX - 20, event.clientY - 20)
 	}
 
 	self.launchGB = async t => {
