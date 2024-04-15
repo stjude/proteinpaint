@@ -466,6 +466,7 @@ type ScatterPlotsEntry = {
 	/** a plot can be colored by either a dict term termsetting (colorTW) or file column values (colorColumn) */
 	colorTW?: { id: string }
 	colorColumn?: ColorColumn
+	sampleCategory?: { tw: { id: string }; defaultValue: string; order: string[] }
 }
 
 type Scatterplots = {
