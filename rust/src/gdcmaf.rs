@@ -42,8 +42,8 @@ fn select_maf_col(d:String,columns:&Vec<String>) -> Vec<u8> {
             for x in header_indices.iter() {
                 maf_out_lst.push(maf_cont_lst[*x].to_string());
             };
-            maf_out_lst.push("\n".to_string());
             maf_str.push_str(maf_out_lst.join("\t").as_str());
+            maf_str.push_str("\n");
         }
     };
     maf_str.as_bytes().to_vec()
