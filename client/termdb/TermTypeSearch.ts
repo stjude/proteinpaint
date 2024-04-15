@@ -18,11 +18,11 @@ const useCases = {
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES],
 	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
-	//sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES],//Commented out as it is covered by the overlayOrDivide use case
+	//sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES],//Commented out as it is covered by the default use case
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
 	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
-	overlayOrDivide: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
+	default: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	regression: [TermTypeGroups.DICTIONARY_VARIABLES],
 	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS]
 }
