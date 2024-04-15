@@ -132,7 +132,8 @@ function addScatterplots(c, ds) {
 			colorColumn: p.colorColumn,
 			sampleType: p.sampleType,
 			coordsColumns: p.coordsColumns,
-			settings: p.settings
+			settings: p.settings,
+			sampleCategory: p.sampleCategory
 		}
 	})
 }

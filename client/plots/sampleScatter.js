@@ -26,6 +26,7 @@ import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rebaseGroupFilter } from '../mass/groups'
 import { plotColor } from '../shared/common.js'
+import { filterJoin } from '#filter'
 
 /*
 sample object returned by server:
@@ -125,7 +126,7 @@ class Scatter {
 		const opts = {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
-			filter: this.state.termfilter.filter,
+			filter: this.getFilter(),
 			coordTWs
 		}
 		if (c.colorColumn) opts.colorColumn = c.colorColumn
@@ -315,6 +316,7 @@ class Scatter {
 			settingsKey: 'showAxes',
 			title: `Option to show/hide plot axes`
 		}
+
 		const inputs = [
 			{
 				type: 'term',
@@ -349,6 +351,29 @@ class Scatter {
 				settingsKey: 'svgh'
 			}
 		]
+		if (this.config.sampleCategory) {
+			const options = Object.values(this.config.sampleCategory.tw.term.values).map(v => ({
+				label: v.label || v.key,
+				value: v.key
+			}))
+			if (this.config.sampleCategory.order)
+				options.sort((elem1, elem2) => {
+					const i1 = this.config.sampleCategory.order.indexOf(elem1.value)
+					const i2 = this.config.sampleCategory.order.indexOf(elem2.value)
+					if (i1 < i2) return -1
+					return 1
+				})
+			if (!this.settings.sampleCategory) this.settings.sampleCategory = this.config.sampleCategory.defaultValue || ''
+			options.push({ label: 'All', value: '' })
+			const sampleCategory = {
+				label: 'Sample type',
+				type: 'dropdown',
+				chartType: 'sampleScatter',
+				settingsKey: 'sampleCategory',
+				options
+			}
+			inputs.push(sampleCategory)
+		}
 
 		if (!this.is2DLarge) {
 			inputs.unshift({
@@ -472,6 +497,29 @@ class Scatter {
 			} else for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
 		})
 	}
+
+	getFilter() {
+		if (!this.settings.sampleCategory) return this.state.termfilter.filter
+		const tw = this.config.sampleCategory.tw
+		const value =
+			'sampleCategory' in this.settings ? this.settings.sampleCategory : this.config.sampleCategory.defaultValue
+		const tvslst = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: tw.term,
+						values: [{ key: value }]
+					}
+				}
+			]
+		}
+		const filter = filterJoin([this.state.termfilter.filter, tvslst])
+		return filter
+	}
 }
 
 export function downloadImage(imageURL) {
@@ -497,6 +545,8 @@ export async function getPlotConfig(opts, app) {
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
+		if (opts.sampleCategory) await fillTermWrapper(opts.sampleCategory.tw, app.vocabApi)
+
 		let settings = getDefaultScatterSettings()
 		if (opts.settings) copyMerge(settings, opts.settings)
 		if (!opts.term && !opts.term2) settings.showAxes = false
@@ -550,6 +600,12 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 						chartType: 'sampleScatter',
 						name: plot.name
 					}
+					if (plot.sampleCategory)
+						config.sampleCategory = {
+							tw: JSON.parse(JSON.stringify(plot.sampleCategory.tw)),
+							order: plot.sampleCategory.order,
+							defaultValue: plot.sampleCategory.defaultValue
+						}
 					if (plot.sampleType) config.sampleType = plot.sampleType
 					if (plot.colorTW) config.colorTW = JSON.parse(JSON.stringify(plot.colorTW))
 					else if (plot.colorColumn) config.colorColumn = JSON.parse(JSON.stringify(plot.colorColumn))
@@ -599,7 +655,12 @@ export async function renderScatter(holder, state, plot) {
 					subfolder: 'plots',
 					name: plot.name,
 					colorTW: plot.colorTW,
-					sampleType: plot.sampleType
+					sampleType: plot.sampleType,
+					sampleCategory: {
+						tw: JSON.parse(JSON.stringify(plot.sampleCategory.tw)),
+						order: plot.sampleCategory.order,
+						defaultValue: plot.sampleCategory.defaultValue
+					}
 				}
 			]
 		}
