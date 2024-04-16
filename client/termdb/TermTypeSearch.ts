@@ -20,11 +20,11 @@ const useCases = {
 	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	//sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES],//Commented out as it is covered by the default use case
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
+	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES], //Later on can support other term types like snplocus, snplst, geneVariant
 	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
 	default: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
-	regression: [TermTypeGroups.DICTIONARY_VARIABLES],
-	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS]
+	regression: [TermTypeGroups.DICTIONARY_VARIABLES]
 }
 
 //The dataset provides the allowed term types that are then mapped to the term type groups
