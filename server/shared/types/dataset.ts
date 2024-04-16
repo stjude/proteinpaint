@@ -466,7 +466,18 @@ type ScatterPlotsEntry = {
 	/** a plot can be colored by either a dict term termsetting (colorTW) or file column values (colorColumn) */
 	colorTW?: { id: string }
 	colorColumn?: ColorColumn
-	sampleCategory?: { tw: { id: string }; defaultValue: string; order: string[] }
+	/** provide a sampletype term to filter for specific type of samples for subjects with multiple samples and show in the plot.
+	e.g. to only show D samples from all patients
+	this is limited to only one term and doesn't allow switching between multiple terms
+	*/
+	sampleCategory?: {
+		/** categorical term like "sampleType" which describes types of multiple samples from the same subject */
+		tw: { id: string }
+		/** default category */
+		defaultValue: string
+		/** order of categories */
+		order: string[]
+	}
 }
 
 type Scatterplots = {
