@@ -125,23 +125,24 @@ export class TermTypeSearch {
 			}
 			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
 				//In regression snplocus and snplst are only allowed for the input variable, disabled for now
-				// if (state.usecase.target == 'regression' && (type == 'snplocus' || type == 'snplst' || type == 'geneVariant')) {
+				// if (state.usecase.target == 'regression' && (type == 'snplocus' || type == 'snplst' || type == TermTypes.GENE_VARIANT)) {
 				// 	if (state.usecase.detail == 'independent')
 				// 		this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
 				// 	continue
 				// }
-				if (state.usecase.target == 'regression' && type == 'geneVariant') {
+				if (state.usecase.target == 'regression' && type == TermTypes.GENE_VARIANT) {
 					if (state.usecase.detail == 'independent')
 						this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
 					continue
 				}
 				//In sampleScatter geneVariant is only allowed if detail is not numeric, like the case of scaleBy
-				if (state.usecase.target == 'sampleScatter' && type == 'geneVariant') {
+				if (state.usecase.target == 'sampleScatter' && type == TermTypes.GENE_VARIANT) {
 					if (state.usecase.detail != 'numeric')
 						this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
 					continue
 				}
-				if (state.usecase.target == 'matrix' && state.usecase.detail == 'termgroups' && type == 'geneVariant') continue //Not supported yet to select multiple geneVariants
+				if (state.usecase.target == 'matrix' && state.usecase.detail == 'termgroups' && type == TermTypes.GENE_VARIANT)
+					continue //Not supported yet to select multiple geneVariants
 				//In most cases the target is enough to know what terms are allowed
 				if (!state.usecase.target || useCases[state.usecase.target]?.includes(termTypeGroup))
 					this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
