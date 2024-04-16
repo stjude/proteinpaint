@@ -1,7 +1,6 @@
-import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
-import { copy_term, get_ds_tdb } from '#src/termdb.js'
+import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js'
 import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.js'
 
@@ -28,7 +27,7 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 
-			const [ds, tdb] = get_ds_tdb(genome, q)
+			const [ds] = get_ds_tdb(genome, q)
 			return make(q, res, ds, genome)
 		} catch (e: any) {
 			res.send({ error: e.message || e })
