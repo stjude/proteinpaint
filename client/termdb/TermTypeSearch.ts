@@ -113,7 +113,7 @@ export class TermTypeSearch {
 			if (type == TermTypes.GENE_VARIANT) {
 				label = 'Mutation'
 				if (this.app.vocabApi.termdbConfig.queries.cnv) label = 'Mutation/CNV'
-				if (this.app.vocabApi.termdbConfig.queries.fusion) label = label + '/Fusion'
+				if (this.app.vocabApi.termdbConfig.queries.svfusion) label = label + '/Fusion'
 			}
 			try {
 				if (termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {

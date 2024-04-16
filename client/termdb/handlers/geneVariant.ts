@@ -10,7 +10,7 @@ export class SearchHandler {
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
 			row: opts.holder,
-			geneOnly: false,
+			geneOnly: true,
 			callback: () => this.selectGene(geneSearch.geneSymbol),
 			hideHelp: true,
 			focusOff: true
