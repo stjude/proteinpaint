@@ -10,7 +10,7 @@ export class SearchHandler {
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
 			row: opts.holder,
-			geneOnly: true,
+			geneOnly: false,
 			callback: () => this.selectGene(geneSearch.geneSymbol),
 			hideHelp: true,
 			focusOff: true
@@ -18,6 +18,6 @@ export class SearchHandler {
 	}
 
 	async selectGene(name) {
-		this.callback({ name, type: 'geneVariant' })
+		if (name) this.callback({ name, type: 'geneVariant' })
 	}
 }
