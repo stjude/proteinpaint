@@ -18,7 +18,7 @@ const useCases = {
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES],
 	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
-	//sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES],//Commented out as it is covered by the default use case
+	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES], //This case covers dynamic scatters with coordinates from numeric terms
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
 	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES], //Later on can support other term types like snplocus, snplst, geneVariant
 	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
@@ -137,7 +137,7 @@ export class TermTypeSearch {
 						this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
 					continue
 				}
-				//In sampleScatter geneVariant is only allowed if detail is not numeric, like the case of scaleBy
+				//In sampleScatter geneVariant is only allowed if detail is not numeric, like when building a dynamic scatter
 				if (state.usecase.target == 'sampleScatter' && type == TermTypes.GENE_VARIANT) {
 					if (state.usecase.detail != 'numeric')
 						this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
