@@ -4,8 +4,8 @@ export class ColorizeElement {
 		yCoord: number,
 		v: number,
 		obj: any,
-		width: number, //binpx
-		height: number, //binpx
+		width: number, //binpx for most views
+		height: number, //binpx for most views
 		min: number,
 		max: number,
 		currView: any

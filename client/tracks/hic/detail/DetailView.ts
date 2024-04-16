@@ -106,16 +106,35 @@ export class DetailView {
 
 		this.ctx = this.canvas.node().getContext('2d') as CanvasRenderingContext2D
 
-		await this.update(this.items, blockwidth)
+		await this.update(this.items)
 	}
 
-	async update(items: { items: number[][] }, blockwidth) {
+	async update(items: { items: number[][] }) {
 		this.items = items
 		const state = this.parent('state') as any
-		console.log(this.dataMapper)
-		// const coords = this.coordinates.getCoordinates(state.x, state.y, this.items, this.dataMapper.fragData, this.dataMapper.resolution, this.canvas, this.ctx)
-		// console.log(coords)
+		const [coords, canvaswidth, canvasheight, vlist] = this.coordinates.getCoordinates(
+			state.x,
+			state.y,
+			this.items,
+			this.dataMapper.resolution,
+			this.canvas,
+			this.dataMapper['fragData']
+		)
 
-		//const x = this.dataMapper.parent('state').x
+		this.ctx.clearRect(0, 0, canvaswidth, canvasheight)
+
+		for (const [xCoord, yCoord, width, height, value] of coords as any) {
+			this.colorizeElement.colorizeElement(
+				xCoord,
+				yCoord,
+				value,
+				this.ctx,
+				width,
+				height,
+				this.parent('min') as number,
+				this.parent('max') as number,
+				'detail'
+			)
+		}
 	}
 }
