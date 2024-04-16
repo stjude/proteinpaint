@@ -111,9 +111,11 @@ export class TermTypeSearch {
 			const termTypeGroup = typeGroup[type]
 			let label = termTypeGroup
 			if (type == TermTypes.GENE_VARIANT) {
-				label = 'Mutation'
-				if (this.app.vocabApi.termdbConfig.queries.cnv) label = 'Mutation/CNV'
-				if (this.app.vocabApi.termdbConfig.queries.svfusion) label = label + '/Fusion'
+				const labels = []
+				if (this.app.vocabApi.termdbConfig.queries.snvindel) labels.push('Mutation')
+				if (this.app.vocabApi.termdbConfig.queries.cnv) labels.push('CNV')
+				if (this.app.vocabApi.termdbConfig.queries.svfusion) labels.push('Fusion')
+				label = labels.join('/')
 			}
 			try {
 				if (termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
