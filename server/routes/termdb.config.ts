@@ -161,6 +161,9 @@ function addGenomicQueries(c, ds, genome) {
 			allowSNPs: q.snvindel.allowSNPs
 		}
 	}
+	if (q.svfusion) {
+		q2.svfusion = {}
+	}
 	if (q.cnv) {
 		q2.cnv = {}
 		for (const k of [
@@ -174,6 +177,14 @@ function addGenomicQueries(c, ds, genome) {
 			if (k in q.cnv) q2.cnv[k] = q.cnv[k]
 		}
 	}
+	if (q.geneCnv) {
+		// gdc cnv is gene-level cnv but still expose as ".cnv{}" to see if client can handle it the same way as segment-based cnv.
+		// if it won't work, change to q2.geneCnv{} instead
+		if (!q2.cnv) {
+			q2.cnv = {}
+		}
+	}
+
 	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes
 	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes
 	if (q.singleSampleMutation) {
