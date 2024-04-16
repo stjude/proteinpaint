@@ -23,7 +23,9 @@ export type GeneVariantTW = TermWrapper & {
 	term: GeneVariantTerm
 }
 
+// TODO: should we not include the "Term" object and just specify {gene, name, type}?
 export type GeneVariantTerm = Term & {
+	gene: string
 	isoform: string
 }
 

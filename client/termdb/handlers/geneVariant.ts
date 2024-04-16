@@ -18,6 +18,6 @@ export class SearchHandler {
 	}
 
 	async selectGene(name) {
-		if (name) this.callback({ name, type: 'geneVariant' })
+		this.callback({ gene: name, name, type: 'geneVariant' })
 	}
 }
