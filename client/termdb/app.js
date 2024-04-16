@@ -48,7 +48,7 @@ class TdbApp {
 			termTypeSearchDiv,
 			searchDiv: treeDiv.append('div'),
 			treeDiv: treeDiv.append('div'),
-			customTermDiv: opts.holder.append('div').style('margin', '10px'),
+			customTermDiv: treeDiv.append('div').style('margin', '10px'),
 			submitDiv,
 			submitBtn,
 			topbar,

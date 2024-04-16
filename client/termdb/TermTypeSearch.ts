@@ -12,7 +12,7 @@ The tree target is used to determine the allowed term types.
  */
 
 const useCases = {
-	matrix: [TermTypeGroups.DICTIONARY_VARIABLES],
+	matrix: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	filter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	dictionary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES],
@@ -135,6 +135,7 @@ export class TermTypeSearch {
 						this.tabs.push({ label: termTypeGroup, callback: () => this.setTermTypeGroup(termTypeGroup) })
 					continue
 				}
+				if (state.usecase.target == 'matrix' && state.usecase.detail == 'termgroups' && type == 'geneVariant') continue //Not supported yet to select multiple geneVariants
 				//In most cases the target is enough to know what terms are allowed
 				if (!state.usecase.target || useCases[state.usecase.target]?.includes(termTypeGroup))
 					this.tabs.push({ label: termTypeGroup, callback: () => this.setTermTypeGroup(termTypeGroup) })
