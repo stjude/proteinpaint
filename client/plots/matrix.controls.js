@@ -860,9 +860,7 @@ export class MatrixControls {
 														: `${dt2label[v.dt]}:${v.value || mclass[v.class]?.label}`
 												)
 											} else if (v.dt == dtgeneexpression) {
-												allVariant.push(
-													v.origin ? `${v.origin} ${dt2label[v.dt]}:${v.value}` : `${dt2label[v.dt]}:${v.value}`
-												)
+												allVariant.push(v.origin ? `${v.origin}:${v.value}` : v.value)
 											} else if (v.dt == dtfusionrna || v.dt == dtsv) {
 												allVariant.push(
 													(v.origin ? `${v.origin} ` : '') +
@@ -887,7 +885,12 @@ export class MatrixControls {
 						a.addEventListener(
 							'click',
 							function () {
-								a.download = 'matrix.txt'
+								const currentDate = new Date().toISOString().split('T')[0]
+								a.download = p.config.settings?.hierCluster?.termGroupName?.startsWith('Gene Expression')
+									? `GeneExpression.${currentDate}.tsv`
+									: p.chartType == 'hierCluster'
+									? `HierCluster.${currentDate}.tsv`
+									: `OncoMatrix.${currentDate}.tsv`
 								a.href = URL.createObjectURL(new Blob([matrix], { type: 'text/tab-separated-values' }))
 								document.body.removeChild(a)
 							},
