@@ -162,10 +162,10 @@ export class ChrPairView {
 				y,
 				v,
 				this.ctx,
-				this.binpx,
-				this.binpx,
-				this.parent('min'),
-				this.parent('max'),
+				this.binpx, //width
+				this.binpx, //height
+				this.parent('min') as number,
+				this.parent('max') as number,
 				'chrpair'
 			)
 		}

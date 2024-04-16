@@ -80,8 +80,8 @@ export class DetailViewDataMapper {
 		}
 	}
 
-	determineMap(map, chrx, chy) {
-		if (chrx.chr == chy.chr) {
+	determineMap(map, chrx: ChrPosition, chry: ChrPosition) {
+		if (chrx.chr == chry.chr) {
 			for (const [id, pos] of map) {
 				this.frag.x['map'].set(id, pos)
 			}
@@ -91,7 +91,7 @@ export class DetailViewDataMapper {
 		}
 	}
 
-	async getData(chrx, chry) {
+	async getData(chrx: ChrPosition, chry: ChrPosition) {
 		this.updateResolution(chrx, chry)
 		if (!this.resolution) return
 

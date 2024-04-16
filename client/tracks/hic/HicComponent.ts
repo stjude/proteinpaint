@@ -117,7 +117,6 @@ export class HicComponent {
 			}
 			const detailMapper = new DetailViewDataMapper(this.hic, this.errList, parent)
 			this.data = await detailMapper.getData(this.state.x, this.state.y)
-			console.log(this.data)
 		} else {
 			if (!this.state?.x?.chr || !this.state?.y?.chr) {
 				this.errList.push(`No positions provided for ${this.activeView} view.`)
