@@ -119,7 +119,7 @@ class HicApp {
 		/** Generally NONE is not listed in the norm meth array.
 		 * Must add before setting the views configs.*/
 		let nmeth: string | string[]
-		if (this.hic['normalization'].length > 0) {
+		if (this.hic['normalization']?.length > 0) {
 			if (!this.hic['normalization'].includes('NONE')) this.hic['normalization'].unshift('NONE')
 			nmeth = this.hic['normalization'][0]
 		} else {

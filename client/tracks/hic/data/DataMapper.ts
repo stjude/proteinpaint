@@ -21,7 +21,7 @@ export class DataMapper {
 				 * squares for chrM-chr*. Errors still appear for the user.
 				 * TODO: Move to server side???
 				 */
-				if (d?.lead == 'chrM' || (d?.lead == 'chrY' && !d.items.length)) {
+				if ((d?.lead == 'chrM' && !d.items.length) || (d?.lead == 'chrY' && !d.items.length)) {
 					blankChrs.push(d.lead)
 					continue
 				}
@@ -29,7 +29,6 @@ export class DataMapper {
 					vlst.push(i[2])
 				}
 			}
-
 			if (blankChrs.length) {
 				for (const c of blankChrs) {
 					const idx = this.hic.chrlst.indexOf(c)

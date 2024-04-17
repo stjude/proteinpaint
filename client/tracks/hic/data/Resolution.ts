@@ -13,13 +13,20 @@ export class Resolution {
 			const resolution = this.getChrPairResolution(hic, state.x, state.y)
 			return resolution
 		} else if (state.currView == 'detail') {
-			/**Must obtain the resolution for the chr pair before calculating the resolution for the region. */
-			const viewRangeBpW = this.getDefaultViewSpan(hic, state.x, state.y)
-			if (!viewRangeBpW) return
-
+			// /**Must obtain the resolution for the chr pair before calculating the resolution for the region. */
+			// const viewRangeBpW = this.getDefaultViewSpan(hic, state.x, state.y)
+			// if (!viewRangeBpW) throw `No default span calculated for detail view`
+			// let resolution = null
+			// for (const res of hic.bpresolution) {
+			// 	if (viewRangeBpW / res > this.minBinNum_bp) {
+			// 		resolution = res
+			// 		break
+			// 	}
+			// }
+			const maxBpWidth = Math.max(state.x.stop - state.x.start, state.y.stop - state.y.start)
 			let resolution = null
 			for (const res of hic.bpresolution) {
-				if (viewRangeBpW / res > this.minBinNum_bp) {
+				if (maxBpWidth / res > this.minBinNum_bp) {
 					resolution = res
 					break
 				}
@@ -28,11 +35,12 @@ export class Resolution {
 				// use finest
 				resolution = hic.bpresolution[hic.bpresolution.length - 1]
 			}
+
 			return resolution
 		} else if (state.currView == 'horizontal') {
 			//TODO
 		} else {
-			// this.error(`Unknown view: ${activeView}`)
+			this.error(`Unknown view: ${state.currView}`)
 		}
 	}
 
@@ -54,7 +62,6 @@ export class Resolution {
 			this.error(`No suitable resolution for ${x.chr}-${y.chr} pair.`)
 			return
 		}
-
 		return resolution
 	}
 

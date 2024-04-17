@@ -6,9 +6,9 @@ export class DetailViewDataMapper {
 	hic: any
 	dataFetcher: DetailViewDataFetcher
 	minBinNum_bp = 20
-	resolution: number | null = null
+	//resolution: number | null = null
 	errList: string[]
-	parent: (prop: string, v: number) => string | number
+	parent: (prop: string, v?: number) => string | number
 	frag = {
 		x: {},
 		y: {}
@@ -22,22 +22,24 @@ export class DetailViewDataMapper {
 		this.parent = parent
 	}
 
-	updateResolution(x: ChrPosition, y: ChrPosition) {
-		const maxBpWidth = Math.max(x.stop - x.start, y.stop - y.start)
-		for (const res of this.hic.bpresolution) {
-			if (maxBpWidth / res > this.minBinNum_bp) {
-				this.resolution = res
-				break
-			}
-		}
-		return this.resolution
-	}
+	// updateResolution(x: ChrPosition, y: ChrPosition) {
+	// 	const maxBpWidth = Math.max(x.stop - x.start, y.stop - y.start)
+	// 	for (const res of this.hic.bpresolution) {
+	// 		if (maxBpWidth / res > this.minBinNum_bp) {
+	// 			this.resolution = res
+	// 			break
+	// 		}
+	// 	}
+	// 	return this.resolution
+	// }
 
 	async getFragData(chrx: ChrPosition, chry: ChrPosition) {
 		try {
-			const xFragData = await this.dataFetcher.getXFragData(this.hic, this.resolution, chrx)
+			const xFragData = await this.dataFetcher.getXFragData(this.hic, this.parent('calResolution') as number, chrx)
 			if (!xFragData) {
-				this.parent('calResolution', this.resolution!)
+				//skipped the initial resolution calculation
+				//no need for this step
+				//this.parent('calResolution', this.resolution!)
 				//TODO: update canvas with and height
 			} else {
 				if (!xFragData.items) {
@@ -92,14 +94,14 @@ export class DetailViewDataMapper {
 	}
 
 	async getData(chrx: ChrPosition, chry: ChrPosition) {
-		this.updateResolution(chrx, chry)
-		if (!this.resolution) return
+		// this.updateResolution(chrx, chry)
+		// if (!this.resolution) return
 
 		this.fragData = (await this.getFragData(chrx, chry)) as any
 		return await this.dataFetcher.fetchData(
 			this.hic,
-			this.hic.state[this.hic.state.currView],
-			this.resolution,
+			this.parent('state')['detail'],
+			this.parent('calResolution') as number,
 			chrx,
 			chry,
 			this.fragData as any

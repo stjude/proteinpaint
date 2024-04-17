@@ -231,9 +231,9 @@ export class GenomeView {
 	async render() {
 		this.viewRender.render()
 		this.gridElementsRenderer.render(this.hic.holder)
-		// if (this.hic.sv && this.hic.sv.items) {
-		// 	this.makeSv()
-		// }
+		if (this.hic.sv && this.hic.sv.items) {
+			this.makeSv()
+		}
 
 		await this.update(this.data)
 	}

@@ -1,9 +1,9 @@
 export class DetailBlock {
 	private width: number
-	private leftheadw = 20
-	private rightheadw = 40
-	private lpad = 1
-	private rpad = 1
+	private leftheadw: number
+	private rightheadw: number
+	private lpad: number
+	private rpad: number
 
 	constructor(blockwidth) {
 		this.width = blockwidth
