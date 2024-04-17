@@ -820,6 +820,7 @@ export class MatrixControls {
 						const lst = p.data.lst
 						const allTerms = p.termOrder.map(t => t.tw)
 						const assayAvailability = p.state.termdbConfig.assayAvailability
+						const controlLabels = p.settings.matrix.controlLabels
 						if (p.config.divideBy?.id && !allTerms.find(a => a.id == p.config.divideBy.id)) {
 							// when divideBy term is not in the matrix terms
 							allTerms.push(p.config.divideBy)
@@ -835,7 +836,7 @@ export class MatrixControls {
 							}
 						}
 
-						const header = ['sample']
+						const header = [controlLabels.Sample]
 						for (const tw of allTerms) header.push(tw.term.name)
 
 						const rows = [header]
@@ -855,7 +856,7 @@ export class MatrixControls {
 													(v.origin ? `${v.origin} ` : '') +
 														(hasAssayAvailability ? `${dt2label[v.dt]}:` : '') +
 														`${mclass[v.class]?.label}` +
-														(v.mname ? `(${v.mname})` : '')
+														(v.mname ? `,${v.mname}` : '')
 												)
 											} else if (v.dt == dtcnv) {
 												const cnvValue = v.value
