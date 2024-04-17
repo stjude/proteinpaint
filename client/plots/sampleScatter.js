@@ -336,7 +336,8 @@ class Scatter {
 				settingsKey: 'opacity',
 				title: 'It represents the opacity of the symbols',
 				min: 0,
-				max: 1
+				max: 1,
+				step: 0.1
 			},
 			{
 				label: 'Chart width',
