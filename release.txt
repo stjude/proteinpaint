@@ -1,2 +1,1 @@
-Fixes:
-- Pass request header containing session when querying arriba file which is controlled
+
