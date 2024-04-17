@@ -10,14 +10,22 @@ export class SearchHandler {
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
 			row: opts.holder,
-			geneOnly: true,
-			callback: () => this.selectGene(geneSearch.geneSymbol),
+			callback: () => this.selectGene(geneSearch),
 			hideHelp: true,
 			focusOff: true
 		})
 	}
 
-	async selectGene(name) {
-		this.callback({ gene: name, name, type: 'geneVariant' })
+	async selectGene(geneSearch) {
+		let term
+		if (geneSearch.geneSymbol) {
+			term = { gene: geneSearch.geneSymbol, name: geneSearch.geneSymbol, type: 'geneVariant' }
+		} else {
+			if (!geneSearch.chr || !geneSearch.start || !geneSearch.stop) throw 'incomplete position'
+			const { chr, start, stop } = geneSearch
+			// TODO: 0/1-based coordinate?
+			term = { chr, start, stop, name: `${chr}:${start}-${stop}`, type: 'geneVariant' }
+		}
+		this.callback(term)
 	}
 }

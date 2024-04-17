@@ -38,8 +38,8 @@ let id = 0
 
 export function fillTW(tw: GeneVariantTW, vocabApi?: VocabApi) {
 	if (!('id' in tw)) tw.id = idPrefix + id++
-	if (!tw.term.gene) throw 'gene not specified'
-	if (!tw.term.name && tw.term.isoform) tw.term.name = tw.term.isoform as string //TODO: how should we handle term.isoform?
+	if (!tw.term.gene && !(tw.term.chr && tw.term.start && tw.term.stop)) throw 'no gene or position specified'
+	// TODO: auto fill term.name
 
 	{
 		// apply optional ds-level configs for this specific term
