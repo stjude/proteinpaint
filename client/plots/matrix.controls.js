@@ -885,12 +885,13 @@ export class MatrixControls {
 						a.addEventListener(
 							'click',
 							function () {
+								console.log(p)
 								const currentDate = new Date().toISOString().split('T')[0]
 								a.download = p.config.settings?.hierCluster?.termGroupName?.startsWith('Gene Expression')
 									? `GeneExpression.${currentDate}.tsv`
 									: p.chartType == 'hierCluster'
 									? `HierCluster.${currentDate}.tsv`
-									: `OncoMatrix.${currentDate}.tsv`
+									: `${p.app.vocabApi.termdbConfig.matrix?.appName || 'Matrix'}.${currentDate}.tsv`
 								a.href = URL.createObjectURL(new Blob([matrix], { type: 'text/tab-separated-values' }))
 								document.body.removeChild(a)
 							},
