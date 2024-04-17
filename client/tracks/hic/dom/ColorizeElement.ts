@@ -6,13 +6,10 @@ export class ColorizeElement {
 		obj: any,
 		width: number, //binpx for most views
 		height: number, //binpx for most views
-		min: number,
-		max: number,
+		bpMinV: number, //min
+		bpMaxV: number, //max
 		currView: any
 	) {
-		const bpMinV = min
-		const bpMaxV = max
-
 		if (v >= 0) {
 			// positive or zero, use red
 			const p = v >= bpMaxV ? 0 : v <= bpMinV ? 255 : Math.floor((255 * (bpMaxV - v)) / bpMaxV)

@@ -1,4 +1,4 @@
-import { MainPlotDiv } from '../../../types/hic.ts'
+import { MainPlotDiv, DetailViewAxis } from '../../../types/hic.ts'
 import { Resolution } from '../data/Resolution.ts'
 import { ColorizeElement } from '../dom/ColorizeElement.ts'
 import { DetailBlock } from './DetailBlock.ts'
@@ -30,6 +30,7 @@ export class DetailView {
 	binpx = 2
 	initialBinNum = 20
 	minCanvasSize = 500
+	bbmargin = 1
 
 	constructor(opts: any) {
 		this.app = opts.app
@@ -60,18 +61,20 @@ export class DetailView {
 		const canvasHolder = this.plotDiv.plot
 			.append('div')
 			.style('position', 'relative')
-			.style('width', `${blockwidth} px`)
-			.style('height', `${blockwidth} px`)
+			.style('width', `${blockwidth}px`)
+			.style('height', `${blockwidth}px`)
 			.style('overflow', 'hidden')
 
+		//main canvas
 		this.canvas = canvasHolder
 			.append('canvas')
 			.style('display', 'block')
 			.style('position', 'absolute')
+			//Starting width and height to render the canvas
 			.attr('width', blockwidth)
 			.attr('height', blockwidth)
-			.attr('left', '10px')
-			.attr('top', '10px')
+			.attr('left', `${this.bbmargin + this.xBlock.leftheadw + this.xBlock.lpad}px`)
+			.attr('top', `${this.bbmargin + this.yBlock.rightheadw + this.yBlock.rpad}px`)
 			.on('mousedown', (event: MouseEvent) => {
 				const body = select(document.body)
 				const x = event.clientX
@@ -112,11 +115,11 @@ export class DetailView {
 	async update(items: { items: number[][] }) {
 		this.items = items
 		const state = this.parent('state') as any
-		const [coords, canvaswidth, canvasheight, vlist] = this.coordinates.getCoordinates(
+		const [coords, canvaswidth, canvasheight] = this.coordinates.getCoordinates(
 			state.x,
 			state.y,
 			this.items,
-			this.dataMapper.resolution,
+			this.calResolution,
 			this.canvas,
 			this.dataMapper['fragData']
 		)
@@ -136,5 +139,7 @@ export class DetailView {
 				'detail'
 			)
 		}
+
+		this.canvas.attr('width', canvaswidth).attr('height', canvasheight)
 	}
 }

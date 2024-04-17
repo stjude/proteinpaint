@@ -1,7 +1,7 @@
 import { Chromosome } from '../axes/Chromosome.ts'
 import { font } from '#src/client'
 import { GridElementData } from './GridElementData.ts'
-import { ChrLookUp } from '../../../types/globalTypes.ts'
+import { ChrLookUp } from '../../../types/global.ts'
 import { GridElementDom } from './GridElementDom.ts'
 
 export class Grid {

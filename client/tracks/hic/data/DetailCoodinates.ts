@@ -25,11 +25,7 @@ export class DetailCoordinates {
 		const xpxbp = canvaswidth / (chrx.stop - chrx.start)
 		const ypxbp = canvasheight / (chry.stop - chry.start)
 
-		const vlist: number[] = []
-
 		for (const [xCoord, yCoord, value] of data.items) {
-			vlist.push(value)
-
 			let coord1, coord2, span1, span2
 
 			if (fragData && fragData.length) {
@@ -119,6 +115,6 @@ export class DetailCoordinates {
 				value
 			])
 		}
-		return [list, canvaswidth, canvasheight, vlist]
+		return [list, canvaswidth, canvasheight]
 	}
 }
