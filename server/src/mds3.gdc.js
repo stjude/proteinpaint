@@ -849,8 +849,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 
 	if (arribaFile) {
 		try {
-			// do not use headers here that has accept: 'application/json'
-			const re = await ky(path.join(host.rest, 'data', arribaFile), { timeout: false }).text()
+			// must use headers to access controlled fusion file
+			const re = await ky(path.join(host.rest, 'data', arribaFile), { headers, timeout: false }).text()
 			const lines = re.split('\n')
 			// first line is header
 			// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
