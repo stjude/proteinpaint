@@ -100,8 +100,8 @@ tape('avoid race condition', async test => {
 	})
 	const termgroups = structuredClone(hc.config.termgroups)
 	termgroups[0].lst = [
-		await fillTermWrapper({ term: { name: 'AKT1', type: 'geneVariant' } }),
-		await fillTermWrapper({ term: { name: 'TP53', type: 'geneVariant' } })
+		await fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant' } }),
+		await fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } })
 	]
 	const responseDelay = 250
 	hc.__wait = responseDelay
@@ -123,9 +123,9 @@ tape('avoid race condition', async test => {
 			hc.__wait = 0
 			const termgroups = structuredClone(hc.config.termgroups)
 			termgroups[0].lst = [
-				await fillTermWrapper({ term: { name: 'AKT1', type: 'geneVariant' } }),
-				await fillTermWrapper({ term: { name: 'TP53', type: 'geneVariant' } }),
-				await fillTermWrapper({ term: { name: 'KRAS', type: 'geneVariant' } })
+				await fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant' } }),
+				await fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } }),
+				await fillTermWrapper({ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant' } })
 			]
 			app.dispatch({
 				type: 'plot_edit',
