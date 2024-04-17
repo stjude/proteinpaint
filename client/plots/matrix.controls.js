@@ -885,7 +885,6 @@ export class MatrixControls {
 						a.addEventListener(
 							'click',
 							function () {
-								console.log(p)
 								const currentDate = new Date().toISOString().split('T')[0]
 								a.download = p.config.settings?.hierCluster?.termGroupName?.startsWith('Gene Expression')
 									? `GeneExpression.${currentDate}.tsv`
