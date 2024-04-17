@@ -125,8 +125,8 @@ class GenesetComp {
 			// do tempfix of "data.genes.slice(0,3).map" for faster testing
 			genes.map(async i =>
 				typeof i == 'string'
-					? await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
-					: await fillTermWrapper({ term: { name: i.gene || i.name, type: 'geneVariant' } })
+					? await fillTermWrapper({ term: { gene: i, type: 'geneVariant' } })
+					: await fillTermWrapper({ term: { gene: i.gene || i.name, type: 'geneVariant' } })
 			)
 		)
 	}
@@ -144,7 +144,7 @@ class GenesetComp {
 			callback: async result => {
 				const twlst = await Promise.all(
 					result.geneList.map(async i => {
-						return await fillTermWrapper({ term: { name: i.gene || i.name || i, type: 'geneVariant' } })
+						return await fillTermWrapper({ term: { gene: i.gene || i.name || i, type: 'geneVariant' } })
 					})
 				)
 

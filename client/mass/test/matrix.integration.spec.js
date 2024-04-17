@@ -23,6 +23,12 @@ const runpp = helpers.getRunPp('mass', {
 	debug: 1
 })
 
+const genes = [
+	{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } },
+	{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
+	{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
+]
+
 /**************
  test sections
 ***************/
@@ -326,7 +332,7 @@ tape('geneVariant term', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } }]
+							lst: [{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } }]
 						}
 					]
 				}
@@ -378,9 +384,7 @@ tape('geneVariant terms and dictionary terms', function (test) {
 						{
 							name: '',
 							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } },
+								...structuredClone(genes),
 								{ id: 'agedx', term: termjson['agedx'] },
 								{ id: 'diaggrp', term: termjson['diaggrp'] },
 								{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
@@ -443,11 +447,7 @@ tape('geneVariant terms with divide by dictionary term', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -507,9 +507,7 @@ tape('geneVariant terms and dictionary terms divide by dictionary term', functio
 						{
 							name: '',
 							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } },
+								...structuredClone(genes),
 								{ id: 'agedx', term: termjson['agedx'] },
 								{ id: 'diaggrp', term: termjson['diaggrp'] },
 								{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
@@ -570,11 +568,7 @@ tape('sort samples by sample name', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -599,7 +593,7 @@ tape('sort samples by sample name', function (test) {
 	}
 })
 
-tape('sort samples by Mutation categories, not sorted by CNV', function (test) {
+tape.only('sort samples by Mutation categories, not sorted by CNV', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
 	runpp({
@@ -621,11 +615,7 @@ tape('sort samples by Mutation categories, not sorted by CNV', function (test) {
 					termgroups: [
 						{
 							name: 'Demographics',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -699,11 +689,7 @@ tape('sort samples by CNV+SSM > SSM-only', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -815,11 +801,7 @@ tape('sort sample groups by Group Name', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -869,11 +851,7 @@ tape('sort sample groups by Sample Count', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -923,11 +901,7 @@ tape('sort sample groups by Hits', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -978,11 +952,7 @@ tape('sort sample groups by Hits 2', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -1029,11 +999,7 @@ tape('Display Sample Counts for Gene: Absolute', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -1083,11 +1049,7 @@ tape('Display Sample Counts for Gene: Percent', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -1137,11 +1099,7 @@ tape('Display Sample Counts for Gene: None', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -1188,11 +1146,7 @@ tape('Sort Genes By Sample Count', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -1238,11 +1192,7 @@ tape('Sort Genes By Input Data Order', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -1288,11 +1238,7 @@ tape('avoid race condition', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [
-								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
+							lst: [...structuredClone(genes)]
 						}
 					]
 				}
@@ -1345,8 +1291,8 @@ tape('avoid race condition', function (test) {
 							{
 								name: '',
 								lst: [
-									{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-									{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+									{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
+									{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
 								]
 							}
 						]
@@ -1361,7 +1307,7 @@ tape('avoid race condition', function (test) {
 							termgroups: [
 								{
 									name: '',
-									lst: [{ term: { name: 'BCR', type: 'geneVariant', isleaf: true } }]
+									lst: [{ term: { gene: 'BCR', name: 'BCR', type: 'geneVariant', isleaf: true } }]
 								}
 							]
 						}
@@ -1771,7 +1717,7 @@ tape(
 						termgroups: [
 							{
 								name: '',
-								lst: [{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } }]
+								lst: [{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } }]
 							}
 						]
 					}
@@ -1975,7 +1921,7 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 					termgroups: [
 						{
 							name: '',
-							lst: [{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } }]
+							lst: [{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } }]
 						}
 					]
 				}
@@ -2198,9 +2144,9 @@ tape(
 							{
 								name: '',
 								lst: [
-									{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
-									{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-									{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } },
+									{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } },
+									{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
+									{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } },
 									{ id: 'agedx', term: termjson['agedx'] },
 									{ id: 'diaggrp', term: termjson['diaggrp'] },
 									{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }

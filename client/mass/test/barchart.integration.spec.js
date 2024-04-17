@@ -259,7 +259,7 @@ tape('term1=geneVariant', function (test) {
 			plots: [
 				{
 					chartType: 'summary', // cannot use 'barchart', breaks
-					term: { term: { type: 'geneVariant', name: 'TP53' } }
+					term: { term: { type: 'geneVariant', gene: 'TP53', name: 'TP53' } }
 				}
 			]
 		},

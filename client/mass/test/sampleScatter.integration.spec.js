@@ -964,7 +964,7 @@ tape('Color by gene', function (test) {
 		plots: [
 			{
 				chartType: 'sampleScatter',
-				colorTW: { term: { name: 'TP53', type: 'geneVariant' } },
+				colorTW: { term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } },
 				name: 'TermdbTest TSNE'
 			}
 		]

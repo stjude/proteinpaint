@@ -79,8 +79,10 @@ function validateArg(q, ds, genome) {
 
 	for (const tw of q.terms) {
 		// TODO clean up
-		if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
-		if (!tw.q) console.log('do something??')
+		if (tw.term.type != 'geneVariant') {
+			if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+			if (!tw.q) console.log('do something??')
+		}
 	}
 	if (q.currentGeneNames) {
 		if (!Array.isArray(q.currentGeneNames)) throw 'currentGeneNames[] is not array'
@@ -112,7 +114,7 @@ async function getSampleData(q) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
-			if (q.ds.cohort?.termdb?.getGeneAlias) {
+			if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
 				byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 			}
 
@@ -325,7 +327,7 @@ async function mayQueryMutatedSamples(q) {
 	// has genes. query samples mutated on any of these genes, collect sample id into a set and return
 	const sampleSet = new Set()
 	for (const geneName of q.currentGeneNames) {
-		const tw = { term: { name: geneName, type: 'geneVariant' } }
+		const tw = { term: { gene: geneName, name: geneName, type: 'geneVariant' } }
 		const data = await q.ds.mayGetGeneVariantData(tw, q)
 		for (const sampleId of data.keys()) {
 			sampleSet.add(sampleId)
@@ -359,7 +361,7 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	if (q.currentGeneNames) {
 		q2.geneTwLst = []
 		for (const n of q.currentGeneNames) {
-			q2.geneTwLst.push({ term: { name: n, type: 'geneVariant' } })
+			q2.geneTwLst.push({ term: { gene: n, name: n, type: 'geneVariant' } })
 		}
 	} else {
 		/* do not throw here
