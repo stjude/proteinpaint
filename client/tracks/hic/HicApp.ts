@@ -29,6 +29,8 @@ class HicApp {
 		holder: Div | Elem
 		hostUrl: string
 		name: string
+		position1?: string
+		position2?: string
 		tklist?: any[]
 		state?: any
 		jwt?: any
@@ -50,6 +52,8 @@ class HicApp {
 			holder: opts.holder,
 			hostUrl: opts.hostUrl,
 			jwt: opts.jwt,
+			position1: opts.position1,
+			position2: opts.position2,
 			name: 'name' in opts ? opts.name : 'Hi-C',
 			tklist: 'tklst' in opts ? opts.tklst : [],
 			state: 'state' in opts ? opts.state : {}
@@ -85,15 +89,26 @@ class HicApp {
 	}
 
 	determineView() {
-		//TODO figure out view based on opts
-		//Will be useful when runpp() for chrPair and detailed view is implemented
-		// if (!this.hic.state.currView) this.hic.state.currView = 'genome'
-		if (!this.hic.state.currView) {
-			this.hic.state.currView = 'detail'
-			//chr2:60858723-80858723
-			this.hic.state.x = { chr: 'chr2', start: 60858723, stop: 80858723 }
-			//chr1:95507812-115507812
-			this.hic.state.y = { chr: 'chr1', start: 95507812, stop: 115507812 }
+		if (!this.hic.position1 && !this.hic.position2 && !this.hic.state.currView) this.hic.state.currView = 'genome'
+		if (!this.hic.position1 && this.hic.position2) this.errList.push('Missing first position')
+		if (this.hic.position1 && !this.hic.position2) this.errList.push('Missing second position')
+		if (this.hic.position1 && this.hic.position2) {
+			const pos1 = this.hic.position1.split(/[:-]/)
+			const pos2 = this.hic.position2.split(/[:-]/)
+			this.hic.state.x = { chr: pos1[0] }
+			this.hic.state.y = { chr: pos2[0] }
+
+			if (!Number.isNaN(+pos1[1]) && !Number.isNaN(+pos1[2])) {
+				this.hic.state.x.start = +pos1[1]
+				this.hic.state.x.stop = +pos1[2]
+
+				this.hic.state.y.start = +pos2[1]
+				this.hic.state.y.stop = +pos2[2]
+
+				this.hic.state.currView = 'detail'
+			} else {
+				this.hic.state.currView = 'chrpair'
+			}
 		} else {
 			if (!this.views.some(v => v === this.hic.state.currView)) this.error(`Unknown view: ${this.hic.state.currView}`)
 			else return this.hic.state.currView
