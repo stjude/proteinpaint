@@ -918,12 +918,11 @@ export async function fillTermWrapper(
 	}
 
 	// tw.term{} is valid, now make sure that tw.id makes sense
-	if (tw.id == undefined || tw.id === '') {
-		// for dictionary term, tw.term.id must be valid
-		// for non dict term, it can still be missing
+	if ((tw.id == undefined || tw.id === '') && tw.term.id) {
 		tw.id = tw.term.id
-	} else if (tw.id != tw.term.id) {
-		throw 'the given ids (tw.id and tw.term.id) are different'
+	}
+	if (tw.id && tw.term.id) {
+		if (tw.id != tw.term.id) throw 'the given ids (tw.id and tw.term.id) are different'
 	}
 
 	if (!tw.q) tw.q = {}

@@ -57,6 +57,7 @@ export async function getPlotConfig(opts = {}, app) {
 		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
 		const twlst = []
+		// TODO: may treat these genes as type='geneExpression' instead of type= 'geneVariant'
 		for (const i of opts.genes) {
 			let tw
 			if (typeof i.term == 'object' && i.term.type == 'geneVariant') {
@@ -65,10 +66,8 @@ export async function getPlotConfig(opts = {}, app) {
 			} else {
 				// shape i into term{} and nest into tw{}
 				i.type = 'geneVariant'
-				if (i.name) {
-				} else if (i.gene) {
-					i.name = i.gene // TODO
-				}
+				if (!i.gene && !i.name) throw 'no gene or name present'
+				if (!i.gene) i.gene = i.name
 				tw = { term: i }
 			}
 			await fillTermWrapper(tw)
