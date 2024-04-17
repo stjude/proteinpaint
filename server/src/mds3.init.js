@@ -2296,8 +2296,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// validate tw
 		if (typeof tw.term != 'object') throw 'tw.term{} is not object'
 		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'
-		if (typeof tw.term.name != 'string') throw 'tw.term.name is not string'
-		if (!tw.term.name) throw 'tw.term.name should be gene symbol but is empty string' // TODO term.gene if subtype='gene'
+		if (!tw.term.gene && !(tw.term.chr && tw.term.start && tw.term.stop)) throw 'no gene or position specified'
 
 		const mlst = [] // collect raw data points
 
@@ -2483,10 +2482,10 @@ if the model is canonical, the isoform will be usable for screening csq annotati
 */
 async function mayMapGeneName2coord(term, genome) {
 	if (term.chr && Number.isInteger(term.start) && Number.isInteger(term.stop)) return
-	// coord missing, fill in chr/start/stop by querying with name
-	if (!term.name) throw 'both term.name and term.chr/start/stop missing'
+	// coord missing, fill in chr/start/stop by querying with gene
+	if (!term.gene) throw 'both term.gene and term.chr/start/stop missing'
 	// may reuse code from route genelookup?deep=1
-	const lst = genome.genedb.getjsonbyname.all(term.name)
+	const lst = genome.genedb.getjsonbyname.all(term.gene)
 	if (lst.length == 0) throw 'unknown gene name'
 	const tmp = lst.find(i => i.isdefault) || lst[0]
 	const gm = JSON.parse(tmp.genemodel)
@@ -2500,10 +2499,9 @@ async function mayMapGeneName2coord(term, genome) {
 async function mayMapGeneName2isoform(term, genome) {
 	if (term.isoform && typeof term.isoform == 'string') return
 	// isoform missing, query canonical isoform by name
-	if (!term.name) throw 'both term.name and term.isoform'
-	const lst = genome.genedb.getjsonbyname.all(term.name)
+	if (!term.gene) throw 'term.gene missing'
+	const lst = genome.genedb.getjsonbyname.all(term.gene)
 	if (lst.length == 0) return // no match, do not crash
-
 	const tmp = lst.find(i => i.isdefault) || lst[0]
 	const gm = JSON.parse(tmp.genemodel)
 	if (!gm.isoform) throw 'isoform missing from returned gm'
@@ -2530,6 +2528,7 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 		}
 		// term.isoform is set
 		arg.isoform = term.isoform
+		// TODO: byisoform.get() will need to be updated to use term.gene instead of term.name
 		return await ds.queries.snvindel.byisoform.get(arg)
 	}
 	if (ds.queries.snvindel.byrange) {
@@ -2598,12 +2597,8 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 	}
 
 	if (ds.queries.geneCnv.bygene) {
-		// term.name should be gene name
-		if (!term.name) {
-			// gene name missing
-			return []
-		}
-		arg.gene = term.name
+		if (!term.gene) return []
+		arg.gene = term.gene
 		return await ds.queries.geneCnv.bygene.get(arg)
 	}
 	throw 'unknown queries.geneCnv method'

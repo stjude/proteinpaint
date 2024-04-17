@@ -112,6 +112,7 @@ async function getSampleData(q) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
+			// TODO: getGeneAlias() will need to be updated to use term.gene instead of term.name
 			if (q.ds.cohort?.termdb?.getGeneAlias) {
 				byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 			}
