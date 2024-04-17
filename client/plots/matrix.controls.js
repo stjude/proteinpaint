@@ -819,6 +819,7 @@ export class MatrixControls {
 					.on('click.sjpp-matrix-download', () => {
 						const lst = p.data.lst
 						const allTerms = p.termOrder.map(t => t.tw)
+						const assayAvailability = p.state.termdbConfig.assayAvailability
 						if (p.config.divideBy?.id && !allTerms.find(a => a.id == p.config.divideBy.id)) {
 							// when divideBy term is not in the matrix terms
 							allTerms.push(p.config.divideBy)
@@ -847,30 +848,43 @@ export class MatrixControls {
 									if (tw.term.type == 'geneVariant') {
 										const allVariant = []
 										for (const v of s[tw.$id].renderedValues) {
+											// when assayAvailability presents, has WT and Blank
+											const hasAssayAvailability = assayAvailability?.byDt?.[parseInt(v.dt)]
 											if (v.dt == dtsnvindel) {
 												allVariant.push(
 													(v.origin ? `${v.origin} ` : '') +
-														`${dt2label[v.dt]}:${mclass[v.class]?.label}` +
+														(hasAssayAvailability ? `${dt2label[v.dt]}:` : '') +
+														`${mclass[v.class]?.label}` +
 														(v.mname ? `(${v.mname})` : '')
 												)
 											} else if (v.dt == dtcnv) {
+												const cnvValue = v.value
+													? `${hasAssayAvailability ? '' : 'CNV:'}${v.value}` //show v.value for numerical CNV, otherwise show CNV gain/loss
+													: v.class == 'CNV_amp'
+													? 'CNV gain'
+													: v.class == 'CNV_loss'
+													? 'CNV loss'
+													: mclass[v.class]?.label
+
 												allVariant.push(
-													v.origin
-														? `${v.origin} ${dt2label[v.dt]}:${v.value || mclass[v.class]?.label}`
-														: `${dt2label[v.dt]}:${v.value || mclass[v.class]?.label}`
+													(v.origin ? `${v.origin} ` : '') +
+														(hasAssayAvailability ? `${dt2label[v.dt]}:` : '') +
+														cnvValue
 												)
 											} else if (v.dt == dtgeneexpression) {
 												allVariant.push(v.origin ? `${v.origin}:${v.value}` : v.value)
 											} else if (v.dt == dtfusionrna || v.dt == dtsv) {
 												allVariant.push(
 													(v.origin ? `${v.origin} ` : '') +
-														`${dt2label[v.dt]}:${mclass[v.class]?.label}` +
+														(hasAssayAvailability ? `${dt2label[v.dt]}:` : '') +
+														`${mclass[v.class]?.label}` +
 														(v.gene && v.mname ? `(${v.gene}::${v.mname})` : '')
 												)
 											} else {
+												allVariant.push(`DO NOT SUPPORT dt='${v.dt}'`)
 											}
 										}
-										row.push(allVariant.join(';;'))
+										row.push(allVariant.join('|'))
 									} else {
 										row.push(s[tw.$id]?.renderedValues?.[0] || s[tw.$id]?.value || '')
 									}
