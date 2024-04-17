@@ -38,6 +38,8 @@ function init({ genomes }) {
 			res.send(payload)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
+			if (e.stack) console.log(e.stack)
+			else console.trace(e)
 		}
 	}
 }
