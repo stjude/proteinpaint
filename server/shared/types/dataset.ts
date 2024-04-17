@@ -608,7 +608,11 @@ type Mclass = {
 }
 
 type Matrix = {
+	/** alternative name, e.g. the plot is called "oncomatrix" in gdc; by default it's called "matrix" */
+	appName?: string
+	/** default settings for matrix plot */
 	settings?: MatrixSettings
+	/** matrix-specific mclass override? */
 	mclass?: Mclass
 }
 
