@@ -1,6 +1,6 @@
 import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, Gene } from '#shared/types/routes/gdc.topMutatedGenes.ts'
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
-import got from 'got'
+import ky from 'ky'
 
 // TODO change to /termdb/topMutatedGenes
 
@@ -247,12 +247,14 @@ async function getGenesGraphql(q: GdcTopMutatedGeneRequest, ds) {
 	const query: string = queryV2.query
 	const variables: object = queryV2.getVariables(q)
 
-	const response = await got.post(host.graphql, {
-		headers,
-		body: JSON.stringify({ query, variables })
-	})
+	const re: any = await ky
+		.post(host.graphql, {
+			timeout: false, // do not let ky timeout
+			headers,
+			json: { query, variables }
+		})
+		.json()
 
-	const re: any = JSON.parse(response.body)
 	const genes: Gene[] = []
 	for (const g of re.data.genesTableViewer.explore.genes.hits.edges) {
 		/* g.node is:
