@@ -78,7 +78,7 @@ ds {
 	}
 }
 */
-async function listMafFiles(q: GdcMafRequest, ds) {
+async function listMafFiles(q: GdcMafRequest, ds: any) {
 	const filters = {
 		op: 'and',
 		content: [
@@ -102,6 +102,7 @@ async function listMafFiles(q: GdcMafRequest, ds) {
 			'id',
 			'file_size',
 			'cases.project.project_id', // for display only
+			'cases.case_id', // case uuid for making case url link to portal
 			'cases.submitter_id', // used when listing all cases & files
 			'cases.samples.sample_type'
 			// may add diagnosis and primary site
@@ -172,10 +173,11 @@ async function listMafFiles(q: GdcMafRequest, ds) {
 		const file = {
 			id: h.id,
 			project_id: c.project.project_id,
-			file_size: h.file_size
+			file_size: h.file_size,
+			case_submitter_id: c.submitter_id,
+			case_uuid: c.case_id
 		} as File
 
-		file.case_submitter_id = c.submitter_id
 		if (c.samples) {
 			file.sample_types = c.samples.map((i: { sample_type: any }) => i.sample_type).sort()
 			// sort to show sample type names in consistent alphabetical order

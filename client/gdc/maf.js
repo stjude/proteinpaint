@@ -299,7 +299,7 @@ async function getFilesAndShowTable(obj) {
 	const rows = []
 	for (const f of result.files) {
 		const row = [
-			{ value: f.case_submitter_id },
+			{ html: `<a href=https://portal.gdc.cancer.gov/cases/${f.case_uuid} target=_blank>${f.case_submitter_id}</a>` },
 			{ value: f.project_id },
 			{
 				html: f.sample_types
@@ -382,7 +382,7 @@ async function getFilesAndShowTable(obj) {
 		// download the file to client
 		const a = document.createElement('a')
 		a.href = URL.createObjectURL(data)
-		a.download = 'cohort.maf.gz'
+		a.download = `cohortMAF.${new Date().toISOString().split('T')[0]}.gz`
 		a.style.display = 'none'
 		document.body.appendChild(a)
 		a.click()

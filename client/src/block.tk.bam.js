@@ -943,18 +943,10 @@ function makeTk(tk, block) {
 
 	tk.readMenu = new Menu() // show read details here upon clicking a read
 	// css class will force scrollbar to always show when content is too wide. if narrow scrollbar won't show
-	tk.readMenu.d
-		.style('max-width', '90vw')
-		.style('max-height', '65vh')
-		.style('overflow', 'scroll')
-		.attr('class', 'sjpp_show_scrollbar')
+	tk.readMenu.d.style('max-width', '90vw').style('max-height', '65vh').attr('class', 'sjpp_show_scrollbar')
 
 	tk.multiAlignMenu = new Menu() // show multi-read alignment
-	tk.multiAlignMenu.d
-		.style('max-width', '90vw')
-		.style('max-height', '65vh')
-		.style('overflow', 'scroll')
-		.attr('class', 'sjpp_show_scrollbar')
+	tk.multiAlignMenu.d.style('max-width', '90vw').style('max-height', '65vh').attr('class', 'sjpp_show_scrollbar')
 
 	tk.pileupheight = 100
 	tk.pileupbottompad = 6
