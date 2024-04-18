@@ -1,14 +1,25 @@
 export class ColorizeElement {
 	async colorizeElement(
+		/** x coordinate */
 		xCoord: number,
+		/** y coordinate */
 		yCoord: number,
+		/** Value determines the color for the dot */
 		v: number,
+		/** Genome view: {ctx:.. ctx2:...}
+		 * Detail view and chrpair view: obj == ctx
+		 */
 		obj: any,
-		width: number, //binpx for most views
-		height: number, //binpx for most views
-		bpMinV: number, //min
-		bpMaxV: number, //max
-		currView: any
+		/** binpx for most views */
+		width: number,
+		/** binpx for most views */
+		height: number,
+		/** min, from parent component's this.min */
+		bpMinV: number,
+		/** max, from parent component's this.max */
+		bpMaxV: number,
+		/** func not used in horizontal view */
+		currView: 'genome' | 'detail' | 'chrpair'
 	) {
 		if (v >= 0) {
 			// positive or zero, use red
@@ -18,7 +29,6 @@ export class ColorizeElement {
 				obj.ctx.fillStyle = positiveFill
 				obj.ctx2.fillStyle = positiveFill
 			} else {
-				/** ctx for the chrpair and detail view */
 				obj.fillStyle = positiveFill
 			}
 		} else {

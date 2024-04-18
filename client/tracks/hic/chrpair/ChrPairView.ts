@@ -63,6 +63,7 @@ export class ChrPairView {
 
 		svgY
 			.append('g')
+			.attr('data-testid', 'sjpp-chrpair-svg-y')
 			.attr('transform', 'translate(80,' + (this.axispad + h / 2) + ')')
 			.append('text')
 			.text(this.parent('state').y.chr)
@@ -85,6 +86,7 @@ export class ChrPairView {
 		svgX.attr('height', 100).attr('width', this.axispad * 2 + w)
 		svgX
 			.append('text')
+			.attr('data-testid', 'sjpp-chrpair-svg-x')
 			.text(this.parent('state').x.chr)
 			.attr('font-size', 15)
 			.attr('font-family', font)
@@ -104,6 +106,7 @@ export class ChrPairView {
 		const initDetailView = this.initDetailView.bind(this)
 		this.canvas = this.plotDiv.plot
 			.append('canvas')
+			.attr('data-testid', 'sjpp-chrpair-canvas')
 			.style('margin', this.axispad + 'px')
 			.on('click', async function (this: any, event: MouseEvent) {
 				const [x, y] = pointer(event, this)
