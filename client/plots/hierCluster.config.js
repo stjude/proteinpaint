@@ -57,9 +57,11 @@ export async function getPlotConfig(opts = {}, app) {
 		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
 		const twlst = []
-		// TODO: may treat these genes as type='geneExpression' instead of type= 'geneVariant'
 		for (const i of opts.genes) {
 			let tw
+			// FIXME: should not hardcode term type here
+			// hierarchical clustering will need to be performed
+			// on any numeric term.
 			if (typeof i.term == 'object' && i.term.type == 'geneVariant') {
 				// i is already well-formed tw object
 				tw = i
@@ -70,7 +72,7 @@ export async function getPlotConfig(opts = {}, app) {
 				if (!i.gene) i.gene = i.name
 				tw = { term: i }
 			}
-			await fillTermWrapper(tw)
+			await fillTermWrapper(tw, app.vocabApi)
 			twlst.push(tw)
 		}
 

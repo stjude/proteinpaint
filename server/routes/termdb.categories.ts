@@ -124,8 +124,8 @@ async function trigger_getcategories(
 	}
 	const tw =
 		q.type == 'geneVariant'
-			? { term, q: { isAtomic: true } }
-			: { id: q.tid, term, q: q.term1_q || getDefaultQ(term, q) }
+			? { $id: q.gene || q.name || q.tid, term, q: { isAtomic: true } }
+			: { $id: q.tid, id: q.tid, term, q: q.term1_q || getDefaultQ(term, q) }
 	const arg = {
 		filter: q.filter,
 		terms: [tw],

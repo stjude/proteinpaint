@@ -438,7 +438,7 @@ export class TermdbVocab extends Vocab {
 				dslabel: this.vocab.dslabel,
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
-				isKDE: arg.isKDE || true,
+				isKDE: 'isKDE' in arg ? arg.isKDE : true,
 				ticks: arg.ticks,
 				datasymbol: arg.datasymbol || 'rug',
 				orientation: arg.orientation || 'horizontal',
@@ -463,7 +463,7 @@ export class TermdbVocab extends Vocab {
 				getGeneExpressionData: 1,
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
-				isKDE: arg.isKDE || true,
+				isKDE: 'isKDE' in arg ? arg.isKDE : true,
 				ticks: arg.ticks || 20,
 				svgw: arg.svgw || 200
 			},

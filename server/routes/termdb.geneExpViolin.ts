@@ -10,7 +10,7 @@ export const api: any = {
 				typeId: 'getGeneExpViolinRequest'
 			},
 			response: {
-				typeId: 'getGeneEspViolinResponse'
+				typeId: 'getGeneExpViolinResponse'
 			},
 			examples: [
 				{
@@ -36,13 +36,13 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as getGeneExpViolinRequest
+		const q: getGeneExpViolinRequest = req.query
 		try {
 			const g = genomes[req.query.genome]
 			const ds = g.datasets[req.query.dslabel]
 			if (!g) throw 'invalid genome name'
-			const data = await trigger_getGeneExpViolinPlotData(req.query, null, ds, g) // as getViolinResponse
-			res.send(data as getGeneExpViolinResponse)
+			const data: getGeneExpViolinResponse = await trigger_getGeneExpViolinPlotData(req.query, null, ds, g) // as getViolinResponse
+			res.send(data)
 		} catch (e) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore

@@ -98,7 +98,6 @@ async function addDemographicSexFilter(opts, btn) {
 	const termdivSex = await detectLst({ elem: tipd, selector: '.termdiv', count: 6, matchAs: '>=' })
 	const sexPill = termdivSex.find(elem => elem.__data__.id === 'sex')
 	sexPill.querySelectorAll('.termlabel')[0].click()
-	// TODO: fix value selection with the new term type search input
 	const detectSelect = await detectLst({ elem: tipd, selector: "input[type='checkbox']", count: 1, matchAs: '>=' })
 	detectSelect[0].click()
 	const applyBtn = await detectOne({ elem: tipd, selector: '.sjpp_apply_btn' })
