@@ -1143,28 +1143,27 @@ sandbox header
 }
 
 .sjpp_show_scrollbar{
-    overflow-y: scroll;
-    overflow-x: scroll;
-
+	/* set to "auto" to avoid showing a gray track as non-functional scrollbar when contents don't scroll at all, since scrollbar track is now gray and no longer white */
+    overflow-y: auto;
+    overflow-x: auto;
 }
 
 .sjpp_show_scrollbar::-webkit-scrollbar{
-    background-color: white;
-    border-radius: 10px;
-    width: 18px;
+    background-color: #f1f1f1; /* use non-white track color so the presence of scrollbar is apparent (gdc requirement) */
+    border-radius: 7px;
+    width: 14px;
 }
 
 /* This will handle the thumb (scrolling part) */
 .sjpp_show_scrollbar::-webkit-scrollbar-thumb{
-    background-color: grey;
-    border-radius: 10px;
-    border: 5px solid white;
-
+    background-color: #858585;
+    border-radius: 7px;
+    border: 1px solid white;
 }
 
 .sjpp_show_scrollbar::-webkit-scrollbar-thumb:vertical{
-    height: 18px!important;
-    width: 18px;
+    height: 14px!important;
+    width: 14px;
 }
 
 .sjpp-matrix-series-group-label-g text,

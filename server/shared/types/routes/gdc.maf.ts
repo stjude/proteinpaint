@@ -7,6 +7,8 @@ export type File = {
 	id: string
 	/** A string representing a submitter ID for the case associated with this file */
 	case_submitter_id: string
+	// case uuid
+	case_uuid: string
 	/** An integer as the byte size of this file, compressed */
 	file_size: number
 	/** Array of strings, each is a sample type, for all samples involved in generating the maf file */
