@@ -76,9 +76,9 @@ export class GenomeView {
 		this.data = opts.data
 		this.parent = opts.parent
 		this.resolution = opts.resolution || opts.hic.bpresolution[0]
-		this.svg = this.plotDiv.plot.append('svg')
-		this.layer_map = this.svg.append('g')
-		this.layer_sv = this.svg.append('g')
+		this.svg = this.plotDiv.plot.append('svg').attr('data-testid', 'sjpp-hic-genome-svg')
+		this.layer_map = this.svg.append('g').attr('data-testid', 'sjpp-hic-layerMap-g')
+		this.layer_sv = this.svg.append('g').attr('data-testid', 'sjpp-hic-layerSv-g')
 		this.colorizeElement = new ColorizeElement()
 		this.viewModel = new GridViewModel(opts)
 		this.viewRender = new GridRenderer(this.svg, this.layer_map, this.layer_sv, this.viewModel.grid)
@@ -683,8 +683,8 @@ async function detailViewUpdateHic(hic: any, self: any) {
 			self.detailview.resolution = resolution
 			// self.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
 			// fixed bin size only for bp bins
-			self.detailview.xbinpx = self.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
-			self.detailview.ybinpx = self.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
+			// self.detailview.xbinpx = self.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
+			// self.detailview.ybinpx = self.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
 		} else {
 			//got fragment index for x
 			if (xfragment.error) throw { message: xfragment.error }

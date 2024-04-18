@@ -48,9 +48,9 @@ export class HicComponent {
 		const tr1 = this.plotDiv.append('tr')
 		const tr2 = this.plotDiv.append('tr')
 		this.plotDiv = {
-			plot: tr1.append('td').classed('sjpp-hic-plot', true),
-			yAxis: tr1.append('td').classed('sjpp-hic-plot-xaxis', true),
-			xAxis: tr2.append('td').classed('sjpp-hic-plot-yaxis', true),
+			plot: tr1.append('td').classed('sjpp-hic-plot', true).attr('data-testid', 'sjpp-hic-plot'),
+			yAxis: tr1.append('td').classed('sjpp-hic-plot-xaxis', true).attr('data-testid', 'sjpp-hic-xaxis'),
+			xAxis: tr2.append('td').classed('sjpp-hic-plot-yaxis', true).attr('data-testid', 'sjpp-hic-yaxis'),
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		this.app = opts.app
