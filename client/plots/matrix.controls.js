@@ -1086,6 +1086,7 @@ export class MatrixControls {
 							tw = {
 								$id: get$id(),
 								term: {
+									gene: d.symbol || d.gene,
 									name: d.symbol || d.gene,
 									type: 'geneVariant'
 								},

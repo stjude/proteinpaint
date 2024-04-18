@@ -79,8 +79,10 @@ function validateArg(q, ds, genome) {
 
 	for (const tw of q.terms) {
 		// TODO clean up
-		if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
-		if (!tw.q) console.log('do something??')
+		if (tw.term.type != 'geneVariant') {
+			if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+			if (!tw.q) console.log('do something??')
+		}
 	}
 	if (q.currentGeneNames) {
 		if (!Array.isArray(q.currentGeneNames)) throw 'currentGeneNames[] is not array'
