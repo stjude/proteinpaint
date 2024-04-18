@@ -900,9 +900,18 @@ export class TermdbVocab extends Vocab {
 	// get a tw copy with the correct identifier and without $id
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
-		const idn = 'id' in tw.term ? tw.term.id : tw.term.name
 		const copy = { term: {}, q: tw.q }
-		if ('id' in tw || 'id' in tw.term) {
+		if (tw.term.type == 'geneVariant') {
+			copy.term.name = tw.term.name
+			copy.term.type = tw.term.type
+			if (tw.term.gene) {
+				copy.term.gene = tw.term.gene
+			} else {
+				copy.term.chr = tw.term.chr
+				copy.term.start = tw.term.start
+				copy.term.stop = tw.term.stop
+			}
+		} else if ('id' in tw || 'id' in tw.term) {
 			copy.term.id = tw.id || tw.term.id
 			if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 				// added following so getData will not break
@@ -914,14 +923,6 @@ export class TermdbVocab extends Vocab {
 			copy.term.type = tw.term.type
 			copy.term.values = tw.term.values
 		}
-
-		// geneVariant term may have term.chr/start/stop, must add those to copy
-		if (tw.term.chr) {
-			copy.term.chr = tw.term.chr
-			copy.term.start = tw.term.start
-			copy.term.stop = tw.term.stop
-		}
-
 		return copy
 	}
 

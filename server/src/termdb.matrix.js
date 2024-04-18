@@ -325,7 +325,7 @@ async function mayQueryMutatedSamples(q) {
 	// has genes. query samples mutated on any of these genes, collect sample id into a set and return
 	const sampleSet = new Set()
 	for (const geneName of q.currentGeneNames) {
-		const tw = { term: { name: geneName, type: 'geneVariant' } }
+		const tw = { term: { gene: geneName, name: geneName, type: 'geneVariant' } }
 		const data = await q.ds.mayGetGeneVariantData(tw, q)
 		for (const sampleId of data.keys()) {
 			sampleSet.add(sampleId)
@@ -359,7 +359,7 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	if (q.currentGeneNames) {
 		q2.geneTwLst = []
 		for (const n of q.currentGeneNames) {
-			q2.geneTwLst.push({ term: { name: n, type: 'geneVariant' } })
+			q2.geneTwLst.push({ term: { gene: n, name: n, type: 'geneVariant' } })
 		}
 	} else {
 		/* do not throw here
