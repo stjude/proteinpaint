@@ -267,7 +267,10 @@ export class HierCluster extends Matrix {
 			/* all items from .lst[] are expected to be {gene} */
 			for (const tw of this.hcTermGroup.lst) {
 				if (tw.term.type != 'geneVariant') throw 'not geneVariant term while dataType==dtgeneexpression'
-				lst.push(structuredClone(tw.term))
+				// see notes above, avoid modifying the state unnecessarily
+				// ** select the properties to include **, since GDC term.values (computed incrementally)
+				// or cohort-dependent term.categories2samplecount can affect caching
+				lst.push({ name: tw.term.name, type: tw.term.type, gene: tw.term.gene || tw.term.name })
 			}
 		} else {
 			throw 'unknown dataType'

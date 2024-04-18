@@ -99,10 +99,10 @@ tape('avoid race condition', async test => {
 		genes: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
 	})
 	const termgroups = structuredClone(hc.config.termgroups)
-	termgroups[0].lst = [
-		await fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant' } }),
-		await fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } })
-	]
+	termgroups[0].lst = await Promise.all([
+		fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant' } }, app.vocabApi),
+		fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } }, app.vocabApi)
+	])
 	const responseDelay = 250
 	hc.__wait = responseDelay
 	hc.origRequestData = hc.requestData
@@ -122,11 +122,11 @@ tape('avoid race condition', async test => {
 			await sleep(1)
 			hc.__wait = 0
 			const termgroups = structuredClone(hc.config.termgroups)
-			termgroups[0].lst = [
-				await fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant' } }),
-				await fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } }),
-				await fillTermWrapper({ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant' } })
-			]
+			termgroups[0].lst = await Promise.all([
+				fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant' } }, app.vocabApi),
+				fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } }, app.vocabApi),
+				fillTermWrapper({ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant' } }, app.vocabApi)
+			])
 			app.dispatch({
 				type: 'plot_edit',
 				id: hc.id,
@@ -216,7 +216,7 @@ tape('dendrogram click', async function (test) {
 		'should list the expected number of samples'
 	)
 	if (test._ok) {
-		//hc.dom.dendroClickMenu.clear().hide()
-		//app.destroy()
+		hc.dom.dendroClickMenu.clear().hide()
+		app.destroy()
 	}
 })

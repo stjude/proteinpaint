@@ -239,7 +239,7 @@ async function queryMutatedSamples(q, ds) {
 		if (typeof q.genome != 'object') throw 'serverside genome obj needed'
 		q.rglst = []
 		for (const tw of q.geneTwLst) {
-			if (tw.term.chr && tw.term.start && tw.term.stop) {
+			if (tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop)) {
 				q.rglst.push({ chr: tw.term.chr, start: tw.term.start, stop: tw.term.stop })
 			} else {
 				const result = geneDbSearch.getResult(q.genome, { deep: 1, input: tw.term.name })

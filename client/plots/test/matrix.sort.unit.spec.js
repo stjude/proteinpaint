@@ -1,6 +1,13 @@
 import tape from 'tape'
 import * as ms from '../matrix.sort'
 import { getPlotConfig, setComputedConfig } from '../matrix.config'
+import {
+	proteinChangingMutations,
+	truncatingMutations,
+	synonymousMutations,
+	mutationClasses,
+	CNVClasses
+} from '#shared/common'
 
 /*************************
  reusable helper functions
@@ -93,6 +100,11 @@ async function getArgs(_settings = {}) {
 					sortByMutation: 'presence',
 					sortByCNV: false,
 					hiddenVariants: [],
+					proteinChangingMutations,
+					truncatingMutations,
+					synonymousMutations,
+					mutationClasses,
+					CNVClasses,
 					..._settings
 				}
 			}

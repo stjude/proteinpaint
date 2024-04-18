@@ -33,6 +33,7 @@ Features:
 Fixes:
 - prevent showing a blank CNV legend in the lolllipop app
 
+
 ## 2.55.0
 
 Features:

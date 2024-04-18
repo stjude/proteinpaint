@@ -37,11 +37,11 @@ opts{}
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable
-//const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
-//let $id = 0
+const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
+let $id = 0
 
 export async function get$id(minTwCopy) {
-	if (!minTwCopy) return null
+	if (!minTwCopy) return <string>`${$id++}${idSuffix}`
 	delete minTwCopy.$id
 	return await digestMessage(JSON.stringify(minTwCopy))
 }
@@ -895,7 +895,7 @@ export async function fillTwLst(
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
 ): Promise<void> {
-	await mayHydrateDictTw(twlst, vocabApi)
+	await mayHydrateDictTwLst(twlst, vocabApi)
 	const promises: Promise<TermWrapper>[] = []
 	for (const tw of twlst) {
 		promises.push(fillTermWrapper(tw, vocabApi, defaultQByTsHandler))
@@ -906,11 +906,11 @@ export async function fillTwLst(
 // fill in tw.term{} from a dehydrated state
 // a dictionary tw can be simply expressed as {id:str} and this function will fill in the term object.
 // a non-dict term will always have a term object, so this function will not be applied to non-dict term
-async function mayHydrateDictTw(twlst: TwLst, vocabApi: VocabApi) {
+async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 	const ids: string[] = []
 	for (const tw of twlst) {
 		if (tw.term) continue
-		if (tw.id === undefined || tw.id === '') throw 'missing both .id and .term'
+		if (tw.id === undefined || tw.id === '') throw '.id is required'
 		ids.push(tw.id)
 	}
 	const terms = ids.length ? await vocabApi.getTerms(ids) : {}
@@ -928,12 +928,16 @@ export async function fillTermWrapper(
 	defaultQByTsHandler?: DefaultQByTsHandler
 ): Promise<TermWrapper> {
 	tw.isAtomic = true
-	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	if (!tw.term && tw.id) {
-		await mayHydrateDictTw([tw], vocabApi)
+		await mayHydrateDictTwLst([tw], vocabApi)
 	}
 
-	// tw.term{} is valid, now make sure that tw.id makes sense
+	// tw.term{} is now valid
+
+	// TODO: should strip tw.id because it is no longer necessary
+	// TODO: should remove usage of tw.id in the codebase after hydration
+
+	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	if ((tw.id == undefined || tw.id === '') && tw.term.id) {
 		tw.id = tw.term.id
 	}
@@ -958,6 +962,8 @@ async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHand
 	let _
 	if (tw.term.type) {
 		try {
+			// TODO: in the fillTW() of each term type handler, should specify
+			// whether the term is a dictionary term (possibly by setting an .isDictionary flag)
 			_ = await import(`./handlers/${type}.ts`)
 		} catch (error) {
 			throw `Type ${type} does not exist`

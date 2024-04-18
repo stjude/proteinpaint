@@ -2296,7 +2296,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// validate tw
 		if (typeof tw.term != 'object') throw 'tw.term{} is not object'
 		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'
-		if (!tw.term.gene && !(tw.term.chr && tw.term.start && tw.term.stop)) throw 'no gene or position specified'
+		if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop)))
+			throw 'no gene or position specified'
 
 		const mlst = [] // collect raw data points
 

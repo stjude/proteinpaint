@@ -23,11 +23,13 @@ const runpp = helpers.getRunPp('mass', {
 	debug: 1
 })
 
-const genes = [
-	{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } },
-	{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
-	{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
-]
+function getGenes() {
+	return [
+		{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } },
+		{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
+		{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
+	]
+}
 
 /**************
  test sections
@@ -311,7 +313,7 @@ tape('divide by continuous terms', function (test) {
 	}
 })
 
-tape.skip('geneVariant term', function (test) {
+tape('geneVariant term', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -362,7 +364,7 @@ tape.skip('geneVariant term', function (test) {
 	}
 })
 
-tape.skip('geneVariant terms and dictionary terms', function (test) {
+tape('geneVariant terms and dictionary terms', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
@@ -384,7 +386,7 @@ tape.skip('geneVariant terms and dictionary terms', function (test) {
 						{
 							name: '',
 							lst: [
-								...structuredClone(genes),
+								...getGenes(),
 								{ id: 'agedx', term: termjson['agedx'] },
 								{ id: 'diaggrp', term: termjson['diaggrp'] },
 								{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
@@ -423,7 +425,7 @@ tape.skip('geneVariant terms and dictionary terms', function (test) {
 	}
 })
 
-tape.skip('geneVariant terms with divide by dictionary term', function (test) {
+tape('geneVariant terms with divide by dictionary term', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
@@ -447,7 +449,7 @@ tape.skip('geneVariant terms with divide by dictionary term', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -482,7 +484,7 @@ tape.skip('geneVariant terms with divide by dictionary term', function (test) {
 	}
 })
 
-tape.skip('geneVariant terms and dictionary terms divide by dictionary term', function (test) {
+tape('geneVariant terms and dictionary terms divide by dictionary term', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
@@ -507,7 +509,7 @@ tape.skip('geneVariant terms and dictionary terms divide by dictionary term', fu
 						{
 							name: '',
 							lst: [
-								...structuredClone(genes),
+								...getGenes(),
 								{ id: 'agedx', term: termjson['agedx'] },
 								{ id: 'diaggrp', term: termjson['diaggrp'] },
 								{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
@@ -546,7 +548,7 @@ tape.skip('geneVariant terms and dictionary terms divide by dictionary term', fu
 	}
 })
 
-tape.skip('sort samples by sample name', function (test) {
+tape('sort samples by sample name', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
 	runpp({
@@ -568,7 +570,7 @@ tape.skip('sort samples by sample name', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -615,7 +617,7 @@ tape('sort samples by Mutation categories, not sorted by CNV', function (test) {
 					termgroups: [
 						{
 							name: 'Demographics',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -647,7 +649,7 @@ tape('sort samples by Mutation categories, not sorted by CNV', function (test) {
 	}
 })
 
-tape.skip('sort samples by CNV+SSM > SSM-only', function (test) {
+tape('sort samples by CNV+SSM > SSM-only', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(5)
 	const sortOptions = getSortOptions(
@@ -689,7 +691,7 @@ tape.skip('sort samples by CNV+SSM > SSM-only', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -776,7 +778,7 @@ tape('set max number of samples', function (test) {
 	}
 })
 
-tape.skip('sort sample groups by Group Name', function (test) {
+tape('sort sample groups by Group Name', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -801,7 +803,7 @@ tape.skip('sort sample groups by Group Name', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -826,7 +828,7 @@ tape.skip('sort sample groups by Group Name', function (test) {
 	}
 })
 
-tape.skip('sort sample groups by Sample Count', function (test) {
+tape('sort sample groups by Sample Count', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -851,7 +853,7 @@ tape.skip('sort sample groups by Sample Count', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -876,7 +878,7 @@ tape.skip('sort sample groups by Sample Count', function (test) {
 	}
 })
 
-tape.skip('sort sample groups by Hits', function (test) {
+tape('sort sample groups by Hits', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -901,7 +903,7 @@ tape.skip('sort sample groups by Hits', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -926,7 +928,7 @@ tape.skip('sort sample groups by Hits', function (test) {
 	}
 })
 
-tape.skip('sort sample groups by Hits 2', function (test) {
+tape('sort sample groups by Hits 2', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -952,7 +954,7 @@ tape.skip('sort sample groups by Hits 2', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -977,7 +979,7 @@ tape.skip('sort sample groups by Hits 2', function (test) {
 	}
 })
 
-tape.skip('Display Sample Counts for Gene: Absolute', function (test) {
+tape('Display Sample Counts for Gene: Absolute', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -999,7 +1001,7 @@ tape.skip('Display Sample Counts for Gene: Absolute', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -1027,7 +1029,7 @@ tape.skip('Display Sample Counts for Gene: Absolute', function (test) {
 	}
 })
 
-tape.skip('Display Sample Counts for Gene: Percent', function (test) {
+tape('Display Sample Counts for Gene: Percent', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -1049,7 +1051,7 @@ tape.skip('Display Sample Counts for Gene: Percent', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -1077,7 +1079,7 @@ tape.skip('Display Sample Counts for Gene: Percent', function (test) {
 	}
 })
 
-tape.skip('Display Sample Counts for Gene: None', function (test) {
+tape('Display Sample Counts for Gene: None', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -1099,7 +1101,7 @@ tape.skip('Display Sample Counts for Gene: None', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -1124,7 +1126,7 @@ tape.skip('Display Sample Counts for Gene: None', function (test) {
 	}
 })
 
-tape.skip('Sort Genes By Sample Count', function (test) {
+tape('Sort Genes By Sample Count', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -1146,7 +1148,7 @@ tape.skip('Sort Genes By Sample Count', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -1170,7 +1172,7 @@ tape.skip('Sort Genes By Sample Count', function (test) {
 	}
 })
 
-tape.skip('Sort Genes By Input Data Order', function (test) {
+tape('Sort Genes By Input Data Order', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -1192,7 +1194,7 @@ tape.skip('Sort Genes By Input Data Order', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -1216,7 +1218,7 @@ tape.skip('Sort Genes By Input Data Order', function (test) {
 	}
 })
 
-tape.skip('avoid race condition', function (test) {
+tape('avoid race condition', function (test) {
 	test.timeoutAfter(1500)
 	test.plan(4)
 	runpp({
@@ -1238,7 +1240,7 @@ tape.skip('avoid race condition', function (test) {
 					termgroups: [
 						{
 							name: '',
-							lst: [...structuredClone(genes)]
+							lst: getGenes()
 						}
 					]
 				}
@@ -1292,6 +1294,8 @@ tape.skip('avoid race condition', function (test) {
 							{
 								name: '',
 								lst: [
+									// $id is added manually since fillTermWrapper() is not called here and
+									// cannot be assumed to be called within store.plot_edit()
 									{ $id: 0, term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
 									{ $id: 1, term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
 								]
@@ -1308,6 +1312,8 @@ tape.skip('avoid race condition', function (test) {
 							termgroups: [
 								{
 									name: '',
+									// $id is added manually since fillTermWrapper() is not called here and
+									// cannot be assumed to be called within store.plot_edit()
 									lst: [{ $id: 3, term: { gene: 'BCR', name: 'BCR', type: 'geneVariant', isleaf: true } }]
 								}
 							]
@@ -1694,7 +1700,7 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 	}
 })
 
-tape.skip(
+tape(
 	'apply "Hide samples with" and "Do not show" legend filters to a geneVariant term in geneVariant term only matrix',
 	function (test) {
 		test.timeoutAfter(5000)
@@ -1900,7 +1906,7 @@ tape.skip(
 	}
 )
 
-tape.skip('apply legend group filters to a geneVariant term in geneVariant term only matrix', function (test) {
+tape('apply legend group filters to a geneVariant term in geneVariant term only matrix', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(15)
 
@@ -2120,7 +2126,7 @@ tape.skip('apply legend group filters to a geneVariant term in geneVariant term 
 	}
 })
 
-tape.skip(
+tape(
 	'apply legend group filters and legend filters to a matrix with both geneVariant and dictionary terms',
 	function (test) {
 		test.timeoutAfter(5000)
