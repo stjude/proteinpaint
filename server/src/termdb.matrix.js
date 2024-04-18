@@ -151,7 +151,6 @@ async function getSampleData(q) {
 				samples[sampleId][tw.$id || tw.term.id] = snp2value
 			}
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
-			const getGeneExpression = q.ds.queries.geneExpression.get
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
@@ -162,7 +161,7 @@ async function getSampleData(q) {
 				dataType: 3,
 				genes: [{ gene: tw.term.gene }]
 			}
-			const data = await getGeneExpression(args)
+			const data = await q.ds.queries.geneExpression.get(args)
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				const values = data.gene2sample2value.get(tw.term.gene)

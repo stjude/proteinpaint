@@ -57,7 +57,7 @@ export function getHandler(self) {
 				.html('Getting distribution data ...<br/>')
 			const d = await self.vocabApi.getViolinPlotData(
 				{
-					termid: self.term.id,
+					term: self.term,
 					filter: self.filter,
 					svgw: self.num_obj.plot_size.width
 				},

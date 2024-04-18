@@ -8,6 +8,7 @@ import { createCanvas } from 'canvas'
 import { getBinsDensity } from '../../server/shared/violin.bins'
 import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
+import { TermTypes } from '#shared/common.js'
 
 /*
 q = {
@@ -52,14 +53,47 @@ q = {
 }
 */
 
-export async function trigger_getViolinPlotData(q, res, ds, genome) {
-	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
+export async function getGeneExpViolinPlotData(q, res, ds, genome) {
+	const term = { id: q.termid, type: TermTypes.geneExpression, gene: q.termid }
+	const valuesObject = divideValues(q, data, term, q.divideTw)
+	console.log(valuesObject)
+	const gene = q.termid
+	const args = {
+		genome: q.genome,
+		dslabel: q.label,
+		clusterMethod: 'hierarchical',
+		/** distance method */
+		distanceMethod: 'euclidean',
+		/** Data type */
+		dataType: 3,
+		genes: [{ gene }]
+	}
+	const data = await ds.queries.geneExpression.get(args)
+	let min = Infinity,
+		max = -Infinity
+	const key2values = new Map()
+	for (const sampleId in data.gene2sample2value.get(gene)) {
+		if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+		const values = data.gene2sample2value.get(gene)
+		const value = Number(values[sampleId])
+		if (min > value) min = value
+		if (max < value) max = value
+	}
+	const result = resultObj(valuesObject, data, q)
+	console.log(result)
 
+	return result
+}
+
+export async function trigger_getViolinPlotData(q, res, ds, genome) {
+	if (q.termType == TermTypes.GENE_EXPRESSION) return await getGeneExpViolinPlotData(q, res, ds, genome)
+	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
+	const termid = term.id
 	if (!term) throw '.termid invalid'
 	//term on backend should always be an integer term
 	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
 
-	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
+	const twLst = [{ id: termid, term, q: { mode: 'continuous' } }]
 
 	if (q.divideTw) {
 		if (q.divideTw !== null && q.divideTw !== undefined && typeof q.divideTw === 'object' && !('id' in q.divideTw)) {

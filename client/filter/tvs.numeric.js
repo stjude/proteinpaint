@@ -118,11 +118,13 @@ async function fillMenu(self, div, tvs) {
 			const data = await self.opts.vocabApi.getViolinPlotData(
 				{
 					termid: tvs.term.id,
+					termType: tvs.term.type,
 					filter: self.filter,
 					svgw: self.num_obj.plot_size.width / window.devicePixelRatio
 				},
 				self.opts.getCategoriesArguments
 			)
+			console.log('data', data)
 			self.num_obj.density_data = convertViolinData(data)
 		} catch (err) {
 			console.log(err)

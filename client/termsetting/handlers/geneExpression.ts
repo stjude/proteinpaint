@@ -1,165 +1,63 @@
-import { select } from 'd3-selection'
-import { mclass, dt2label } from '#shared/common'
-import { VocabApi, GeneExpressionTermSettingInstance, GeneExpressionTW } from '#shared/types/index'
+import { NumericTerm, NumericQ, NumericTW } from '../../shared/types/terms/numeric'
+import { VocabApi } from '../../shared/types/index'
+import { TermTypes } from '../../shared/common.js'
+import { GeneExpressionTW } from 'shared/types/terms/geneExpression.js'
 
-/* 
-instance attributes
+/*
+Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 
 
-self.term{}
-	.name: str, not really used
-	.type: "geneExpression"
+TODO: maybe merge these scripts with numeric.toggle
+
+******** EXPORTED ********
+getHandler()
+fillTW()
+
+******** INTERNAL ********
+importSubtype()
+    - subtype: str - should match the end of one numeric subhandler file (e.g. toggle, discrete, etc.)
+    resuable try/catch block for import statement
 */
 
-//TODO move to common.ts??? Corresponds to client/shared/common.js
-type MClassEntry = { label: string; color: string; dt: number; desc: string; key: string }
-type GroupsEntry = { name: string; items: MClassEntry[] }
-
-// self is the termsetting instance
-export function getHandler(self: GeneExpressionTermSettingInstance) {
-	return {
-		getPillName() {
-			return self.term.name
-		},
-
-		getPillStatus() {
-			return { text: self.q.exclude?.length ? 'matching variants' : 'any variant class' }
-		},
-
-		//validateQ(data: Q) {},
-
-		async showEditMenu(div: Element) {
-			await makeEditMenu(self, div)
-		}
-	}
+export async function getHandler(self) {
+	const numEditVers = self.opts.numericEditMenuVersion as string[]
+	const subtype = numEditVers.length > 1 ? 'toggle' : numEditVers[0] // defaults to 'discrete'
+	const _ = await importSubtype(subtype)
+	return await _.getHandler(self)
 }
 
-const idPrefix = `_geneExpression_AUTOID_${+new Date()}_`
-let id = 0
-const namePrefix = `_geneExpression_AUTONAME_${+new Date()}_`
-let name = 0
-
-export function fillTW(tw: GeneExpressionTW, vocabApi?: VocabApi) {
-	if (!('id' in tw)) tw.id = idPrefix + id++
-	if (!tw.term.name) tw.term.name = namePrefix + name++
-	if (!tw.term.gene && !(tw.term.chr && tw.term.start && tw.term.stop)) throw 'no gene or position specified'
-
-	{
-		// TODO: how should 'tw.term.name' be handled here?
-		// apply optional ds-level configs for this specific term
-		const c = vocabApi?.termdbConfig.customTwQByType?.geneExpression
-		if (c && tw.term.name) {
-			//if (c) valid js code but `&& tw.term.name` required to avoid type error
-			// order of overide: 1) do not override existing settings in tw.q{} 2) c.byGene[thisGene] 3) c.default{}
-			Object.assign(tw.q, c.default || {}, c.byGene?.[tw.term.name] || {}, tw.q)
+export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+	if (!tw.q.mode) {
+		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'discrete'
+	}
+	const subtype = tw.term.type == TermTypes.GENE_EXPRESSION ? 'toggle' : tw.q.mode
+	tw.term.bins = {
+		default: {
+			mode: 'discrete',
+			type: 'regular-bin',
+			bin_size: 10,
+			startinclusive: false,
+			stopinclusive: true,
+			first_bin: {
+				startunbounded: true,
+				stop: 10
+			},
+			last_bin: {
+				start: 100,
+				stopunbounded: true
+			}
 		}
 	}
-
-	// cnv cutoffs; if the attributes are missing from q{}, add
-	if ('cnvMaxLength' in tw.q) {
-		// has cutoff
-		if (!Number.isInteger(tw.q.cnvMaxLength)) throw 'cnvMaxLength is not integer'
-		// cnvMaxLength value<=0 will not filter by length
-	} else {
-		tw.q.cnvMaxLength = 2000000
-	}
-	// cutoffs on cnv quantifications, subject to change!
-	if ('cnvGainCutoff' in tw.q) {
-		if (!Number.isFinite(tw.q.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
-		if (tw.q.cnvGainCutoff && tw.q.cnvGainCutoff < 0) throw 'cnvGainCutoff is not positive'
-		// =0 for no filtering gains
-	} else {
-		tw.q.cnvGainCutoff = 0.2
-	}
-	if ('cnvLossCutoff' in tw.q) {
-		if (!Number.isFinite(tw.q.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
-		if (tw.q.cnvLossCutoff && tw.q.cnvLossCutoff > 0) throw 'cnvLossCutoff is not negative'
-		// =0 for not filtering losses
-	} else {
-		tw.q.cnvLossCutoff = -0.2
-	}
+	console.log(tw)
+	//const _ = await importSubtype(subtype)
+	return tw //await _.fillTW(tw, vocabApi, defaultQ)
 }
 
-function makeEditMenu(self: GeneExpressionTermSettingInstance, _div: any) {
-	const div = _div.append('div').style('padding', '5px').style('cursor', 'pointer')
-
-	div.append('div').style('font-size', '1.2rem').text(self.term.name)
-	const applyBtn = div
-		.append('button')
-		.property('disabled', true)
-		.style('margin-top', '3px')
-		.text('Apply')
-		.on('click', () => {
-			self.runCallback({
-				term: JSON.parse(JSON.stringify(self.term)),
-				q: { exclude }
-			})
-		})
-
-	const exclude = self.q?.exclude?.slice().sort() || []
-	const origExclude = JSON.stringify(exclude)
-	const mclasses = Object.values(mclass)
-
-	const dtNums = [...new Set(mclasses.map((c: any) => c.dt))].sort() as number[] // must add type "any" to avoid tsc err
-
-	const groups: GroupsEntry[] = []
-	for (const dt of dtNums) {
-		const items = mclasses.filter((c: any) => c.dt === dt) as MClassEntry[] // must add type "any" to avoid tsc err
-
-		if (items.length) {
-			groups.push({
-				name: dt2label[dt],
-				items
-			})
-		}
+async function importSubtype(subtype: string | undefined) {
+	try {
+		/* Note: @rollup/plugin-dynamic-import-vars cannot use a import variable name in the same dir. Adding str, in this case 'numeric.', in front of the template literal allows this to work. */
+		return await import(`./numeric.${subtype}.ts`)
+	} catch (e: any) {
+		if (e.stack) console.log(e.stack)
+		throw `Type numeric.${subtype} does not exist [handlers/numeric.ts importSubtype()]`
 	}
-
-	div
-		.append('div')
-		.selectAll(':scope>div')
-		.data(groups, (d: GroupsEntry) => d.name)
-		.enter()
-		.append('div')
-		.style('max-width', '500px')
-		.style('margin', '5px')
-		.style('padding-left', '5px')
-		.style('text-align', 'left')
-		.each(function (this: any, grp: GroupsEntry) {
-			const div = select(this)
-			div.append('div').style('font-weight', 600).html(grp.name)
-			//.on('click', )
-
-			div
-				.selectAll(':scope>div')
-				.data(grp.items, (d: any) => d.label)
-				.enter()
-				.append('div')
-				.style('margin', '5px')
-				.style('display', 'inline-block')
-				.on('click', function (this: any, event: Event, d: MClassEntry) {
-					const i = exclude.indexOf(d.key)
-					if (i == -1) exclude.push(d.key)
-					else exclude.splice(i, 1)
-					select(this.lastChild).style('text-decoration', i == -1 ? 'line-through' : '')
-					applyBtn.property('disabled', JSON.stringify(exclude) === origExclude)
-				})
-				.each(function (this: any, d: MClassEntry) {
-					const itemDiv = select(this)
-					itemDiv
-						.append('div')
-						.style('display', 'inline-block')
-						.style('width', '1rem')
-						.style('height', '1rem')
-						.style('border', '1px solid #ccc')
-						.style('background-color', d.color)
-						.html('&nbsp;')
-
-					itemDiv
-						.append('div')
-						.style('display', 'inline-block')
-						.style('margin-left', '3px')
-						.style('text-decoration', exclude.includes(d.key) ? 'line-through' : '')
-						.style('cursor', 'pointer')
-						.text(d.label)
-				})
-		})
 }

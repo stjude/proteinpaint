@@ -343,7 +343,7 @@ class ViolinPlot {
 				arg.scale = term.q.scale
 			}
 		} else if ((term.term.type === 'float' || term.term.type === 'integer') && term.q.mode === 'continuous') {
-			arg.termid = term.id
+			arg.term = term
 			if (term2) arg.divideTw = term2
 		} else if ((term2?.term?.type === 'float' || term2?.term?.type === 'integer') && term2.q.mode === 'continuous') {
 			if (term2) arg.termid = term2.id
@@ -351,6 +351,7 @@ class ViolinPlot {
 		} else {
 			throw 'both term1 and term2 are not numeric/continuous'
 		}
+		arg.termType = term.type
 		return arg
 	}
 }

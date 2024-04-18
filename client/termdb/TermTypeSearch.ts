@@ -98,12 +98,7 @@ export class TermTypeSearch {
 		return {
 			termTypeGroup: appState.termTypeGroup,
 			usecase: appState.tree.usecase,
-			isVisible: !appState.submenu.term,
-			selectedTerms: appState.selectedTerms,
-			cohortStr:
-				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
-					? ''
-					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(',')
+			isVisible: !appState.submenu.term
 		}
 	}
 

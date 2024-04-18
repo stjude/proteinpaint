@@ -802,7 +802,7 @@ export function setRenderers(self) {
 			}
 		}
 		if (self.config.scaleDotTW) {
-			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight})`)
+			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 100})`)
 			self.drawScaleDotLegend(chart)
 		}
 		if (self.config.shapeTW) {
