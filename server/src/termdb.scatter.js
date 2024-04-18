@@ -3,12 +3,11 @@ import path from 'path'
 import serverconfig from './serverconfig.js'
 import { schemeCategory20, getColors } from '#shared/common.js'
 import { interpolateSqlValues } from './termdb.sql.js'
-import { mclass, dt2label, morigin } from '#shared/common.js'
+import { mclass, dt2label, morigin, TermTypes } from '#shared/common.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import { authApi } from './auth.js'
 import run_R from './run_R.js'
 import { write_file, read_file } from './utils.js'
-import { listTableColumns } from './termdb.server.init.js'
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -250,7 +249,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		if (!q.colorTW) {
 			sample.category = 'Default'
 		} else {
-			if (q.colorTW?.q?.mode === 'continuous') {
+			if (q.colorTW?.q?.mode === 'continuous' || q.colorTW?.term.type === TermTypes.GENE_EXPRESSION) {
 				if (dbSample) sample.category = dbSample[q.colorTW.term.id || q.colorTW.term.name].value
 			} else processSample(dbSample, sample, q.colorTW, results[divideBy].colorMap, 'category')
 		}

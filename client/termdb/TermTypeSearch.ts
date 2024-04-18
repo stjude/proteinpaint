@@ -18,7 +18,7 @@ const useCases = {
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES],
 	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
-	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES], //This case covers dynamic scatters with coordinates from numeric terms
+	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION], //This case covers dynamic scatters with coordinates from numeric terms
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
 	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES], //Later on can support other term types like snplocus, snplst, geneVariant
 	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
@@ -37,7 +37,8 @@ export const typeGroup = {
 	survival: TermTypeGroups.DICTIONARY_VARIABLES,
 	geneVariant: TermTypeGroups.MUTATION_CNV_FUSION,
 	snplst: TermTypeGroups.SNP_LIST,
-	snplocus: TermTypeGroups.SNP_LOCUS
+	snplocus: TermTypeGroups.SNP_LOCUS,
+	geneExpression: TermTypeGroups.GENE_EXPRESSION
 }
 
 export class TermTypeSearch {
@@ -134,39 +135,37 @@ export class TermTypeSearch {
 				// }
 				if (state.usecase.target == 'regression' && type == TermTypes.GENE_VARIANT) {
 					if (state.usecase.detail == 'independent')
-						this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
+						this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 					continue
 				}
 				//In sampleScatter geneVariant is only allowed if detail is not numeric, like when building a dynamic scatter
 				if (state.usecase.target == 'sampleScatter' && type == TermTypes.GENE_VARIANT) {
 					if (state.usecase.detail != 'numeric')
-						this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
+						this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 					continue
 				}
 				if (state.usecase.target == 'matrix' && state.usecase.detail == 'termgroups' && type == TermTypes.GENE_VARIANT)
 					continue //Not supported yet to select multiple geneVariants
 				//In most cases the target is enough to know what terms are allowed
 				if (!state.usecase.target || useCases[state.usecase.target]?.includes(termTypeGroup))
-					this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
+					this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 			}
 		}
 	}
 
-	async setTermTypeGroup(termTypeGroup) {
+	async setTermTypeGroup(type, termTypeGroup) {
 		await this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
 		const tab = this.tabs.find(tab => tab.termTypeGroup == termTypeGroup)
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
 
 		if (tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
-			const handler = this.handlerByType['geneVariant']
-			if (tab.termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION)
-				await handler.init({
-					holder,
-					genomeObj: this.genomeObj,
-					callback: term => this.selectTerm(term)
-				})
-			//Add other cases here like snplst, snplocus, etc
+			const handler = this.handlerByType[type]
+			await handler.init({
+				holder,
+				genomeObj: this.genomeObj,
+				callback: term => this.selectTerm(term)
+			})
 		}
 	}
 	//This callback will be called by the handlers when a term is selected

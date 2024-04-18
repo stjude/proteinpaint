@@ -1095,7 +1095,8 @@ export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
 
-//Term types should be used gradually using these constants instead of hardcoding the values, eg: type == TermTypes.CATEGORICAL instead of type == 'categorical'
+//Term types should be used gradually using these constants instead of hardcoding the values,
+// eg: type == TermTypes.CATEGORICAL instead of type == 'categorical'
 export const TermTypes = {
 	GENE_VARIANT: 'geneVariant',
 	GENE_EXPRESSION: 'geneExpression',
@@ -1105,7 +1106,8 @@ export const TermTypes = {
 	SNP_LIST: 'snplst',
 	SNP_LOCUS: 'snplocus',
 	CONDITION: 'condition',
-	SURVIVAL: 'survival'
+	SURVIVAL: 'survival',
+	SAMPLELST: 'samplelst'
 }
 
 export const TermTypeGroups = {

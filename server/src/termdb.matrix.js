@@ -8,6 +8,7 @@ import serverconfig from './serverconfig'
 import * as utils from './utils'
 import * as termdbsql from './termdb.sql'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
+import { TermTypes } from '#shared/common.js'
 
 /*
 
@@ -149,6 +150,26 @@ async function getSampleData(q) {
 
 				samples[sampleId][tw.$id || tw.term.id] = snp2value
 			}
+		} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
+			const getGeneExpression = q.ds.queries.geneExpression.get
+			const args = {
+				genome: q.ds.genome,
+				dslabel: q.ds.label,
+				clusterMethod: 'hierarchical',
+				/** distance method */
+				distanceMethod: 'euclidean',
+				/** Data type */
+				dataType: 3,
+				genes: [{ gene: tw.term.gene }]
+			}
+			const data = await getGeneExpression(args)
+			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
+				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				const values = data.gene2sample2value.get(tw.term.gene)
+				const value = Number(values[sampleId])
+				samples[sampleId][tw.term.id] = { key: value, value }
+			}
+			/** pp filter */
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}
@@ -205,7 +226,7 @@ function divideTerms(lst) {
 		nonDict = []
 	for (const tw of lst) {
 		const type = tw.term.type
-		if (type == 'snplst' || type == 'snplocus' || type == 'geneVariant') {
+		if (type == 'snplst' || type == 'snplocus' || type == 'geneVariant' || type == TermTypes.GENE_EXPRESSION) {
 			nonDict.push(tw)
 		} else {
 			dict.push(tw)

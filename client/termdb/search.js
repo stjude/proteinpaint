@@ -66,15 +66,23 @@ class TermSearch {
 		}
 	}
 
-	async main() {
-		// show/hide search input from the tree
+	isTermTypeSupported() {
 		const termTypeGroup = this.state.termTypeGroup
+
 		if (
 			termTypeGroup == TermTypeGroups.SNP_LIST ||
 			termTypeGroup == TermTypeGroups.SNP_LOCUS ||
 			termTypeGroup == TermTypeGroups.MUTATION_SIGNATURE ||
-			termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION
-		) {
+			termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION ||
+			termTypeGroup == TermTypeGroups.GENE_EXPRESSION
+		)
+			return false
+		return true
+	}
+
+	async main() {
+		// show/hide search input from the tree
+		if (!this.isTermTypeSupported()) {
 			this.dom.holder.style('display', 'none') //These views will have their own UI
 			return
 		}
