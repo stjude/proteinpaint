@@ -35,16 +35,13 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 
 const idPrefix = `_geneVariant_AUTOID_${+new Date()}_`
 let id = 0
-const namePrefix = `_geneVariant_AUTONAME_${+new Date()}_`
-let name = 0
 
 export function fillTW(tw: GeneVariantTW, vocabApi?: VocabApi) {
-	if (!('id' in tw)) tw.id = idPrefix + id++
-	if (!tw.term.name) tw.term.name = namePrefix + name++
+	if (!tw.id) tw.id = idPrefix + id++
 	if (!tw.term.gene && !(tw.term.chr && tw.term.start && tw.term.stop)) throw 'no gene or position specified'
+	if (!tw.term.name) tw.term.name = tw.term.gene || `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
 
 	{
-		// TODO: how should 'tw.term.name' be handled here?
 		// apply optional ds-level configs for this specific term
 		const c = vocabApi?.termdbConfig.customTwQByType?.geneVariant
 		if (c && tw.term.name) {

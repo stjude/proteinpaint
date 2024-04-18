@@ -21,8 +21,8 @@ export class SearchHandler {
 			this.callback({ gene: geneSearch.geneSymbol, name: geneSearch.geneSymbol, type: 'geneVariant' })
 		} else if (geneSearch.chr && geneSearch.start && geneSearch.stop) {
 			const { chr, start, stop } = geneSearch
-			// TODO: 0/1-based coordinate?
-			this.callback({ chr, start, stop, name: `${chr}:${start}-${stop}`, type: 'geneVariant' })
+			// name should be 1-based coordinate
+			this.callback({ chr, start, stop, name: `${chr}:${start + 1}-${stop}`, type: 'geneVariant' })
 		} else {
 			throw 'no gene or position specified'
 		}

@@ -2528,7 +2528,6 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 		}
 		// term.isoform is set
 		arg.isoform = term.isoform
-		// TODO: byisoform.get() will need to be updated to use term.gene instead of term.name
 		return await ds.queries.snvindel.byisoform.get(arg)
 	}
 	if (ds.queries.snvindel.byrange) {
