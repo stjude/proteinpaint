@@ -224,11 +224,8 @@ function setRenderers(self) {
 		}
 	}
 
-	self.addSection = function(section, div) {
-		div
-			.style('display', 'none')
-			.style('margin', '3px 5px')
-			.style('padding', '3px 5px')
+	self.addSection = function (section, div) {
+		div.style('display', 'none').style('margin', '3px 5px').style('padding', '3px 5px')
 
 		section.dom = {
 			holder: div,
@@ -249,7 +246,7 @@ function setRenderers(self) {
 		and later may do more section restyling based on
 		the state of inputs that are being edited
 	*/
-	self.renderSection = function(section) {
+	self.renderSection = function (section) {
 		// decide to show/hide this section
 		// only show when this section is for outcome,
 		// or this is independent and only show it when the outcome has been selected
@@ -266,10 +263,7 @@ function setRenderers(self) {
 
 		inputs.exit().each(removeInput)
 
-		inputs
-			.enter()
-			.append('div')
-			.each(addInput)
+		inputs.enter().append('div').each(addInput)
 	}
 
 	function syncInputsWithConfig(section) {
@@ -313,10 +307,7 @@ function setRenderers(self) {
 
 	async function addInput(input) {
 		await input.init(
-			select(this)
-				.style('width', 'fit-content')
-				.style('margin', '0px 15px 35px 25px')
-				.style('padding', '0px 5px')
+			select(this).style('width', 'fit-content').style('margin', '0px 15px 35px 25px').style('padding', '0px 5px')
 		)
 	}
 
@@ -328,11 +319,7 @@ function setRenderers(self) {
 			delete input.dom[key]
 		}
 		const div = select(this)
-		div
-			.transition()
-			.duration(500)
-			.style('opacity', 0)
-			.remove()
+		div.transition().duration(500).style('opacity', 0).remove()
 	}
 
 	self.resetSubmitButton = () => {
@@ -340,7 +327,7 @@ function setRenderers(self) {
 		self.dom.submitBtn
 			.text('Run analysis')
 			.style('display', self.config.outcome && self.config.independent.length ? 'block' : 'none')
-			.property('disabled', self.hasError)
+			.property('disabled', self.hasError) //.attr('data-testid', 'sja_submit_button')
 	}
 }
 

@@ -998,7 +998,7 @@ function setRenderers(self) {
 			const clipId = `${self.id}-${self.chartIncrement++}`
 			clipRect = svg.append('defs').append('clipPath').attr('id', clipId).append('rect')
 			clipG = svg.append('g').attr('class', 'sjpcb-cuminc-clipG')
-			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG')
+			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG').attr('data-testid', 'sja-cuminc-main-g')
 			seriesesG = mainG.append('g').attr('class', 'sjpcb-cuminc-seriesesG').attr('clip-path', `url(#${clipId})`)
 			axisG = mainG.append('g').attr('class', 'sjpcb-cuminc-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-x-axis')

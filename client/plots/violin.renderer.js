@@ -201,6 +201,7 @@ export default function setViolinRenderer(self) {
 					(isH ? plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
 			)
 			.classed('sjpp-violin-plot', true)
+			.attr('data-testid', 'sja_violin_plot')
 
 		// a <g> in which everything is rendered into
 		const svgG = violinSvg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')

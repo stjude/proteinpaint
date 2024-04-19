@@ -271,7 +271,7 @@ export default function barsRenderer(barsapp, holder) {
 				.on('click.tphm2', hm.handlers.svg.click)
 		}
 
-		mainG = svg.append('g').attr('class', 'sjpcb-bars-mainG')
+		mainG = svg.append('g').attr('class', 'sjpcb-bars-mainG').attr('data-testid', 'sjpcb-bars-mainG')
 		hm.h.svg = svg
 		hm.h.mainG = mainG
 
@@ -286,6 +286,7 @@ export default function barsRenderer(barsapp, holder) {
 		rowlabels = mainG
 			.append('g')
 			.attr('class', 'bars-rowlabels')
+			.attr('data-testid', 'sjpcb-bars-rowlabels')
 			.style('cursor', hm.handlers.rowLabel.click ? 'pointer' : '')
 			.on('mouseover.tphm2', colLabelMouseover)
 			.on('mouseout.tphm2', colLabelMouseout)
@@ -294,6 +295,7 @@ export default function barsRenderer(barsapp, holder) {
 		series = mainG
 			.append('g')
 			.attr('class', 'bars-series')
+			.attr('data-testid', 'sjpcb-bars-series')
 			.on('mouseover.tphm2', seriesMouseOver)
 			.on('mouseout.tphm2', seriesMouseOut)
 			.on('click', seriesClick)

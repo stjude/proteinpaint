@@ -30,6 +30,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 		oneLegendDiv
 			.append('div')
 			.attr('class', 'pp-sbar-div-oneLegend')
+			.attr('data-testid', 'pp-sbar-div-oneLegend')
 			.style('width', s.mainWidth || '')
 			.style(
 				'text-align',
