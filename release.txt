@@ -1,2 +1,1 @@
-Features:
-- oncoMatrix: after hiding a category from divideBy term, add an option to divideBy button to bring it back
+

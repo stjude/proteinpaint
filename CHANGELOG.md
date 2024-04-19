@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- oncoMatrix: after hiding a category from divideBy term, add an option to divideBy button to bring it back
+
 Fixes:
 - numeric setdefaultq() will default to term's own default bin type rather than always hardcoding to regular-bin
 - Pass request header containing session when querying arriba file which is controlled
