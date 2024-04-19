@@ -760,10 +760,13 @@ export class TermdbVocab extends Vocab {
 			if (opts.signal) init.signal = opts.signal // an AbortController.signal to trigger a fetch cancellation
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
-			if (this.vocab.dslabel == 'GDC' && copies.find(tw => tw.term.id) && currentGeneNames?.length) {
-				/* term.id is present meaning term is dictionary term (FIXME if this is unreliable)
-				and there are gene terms, add this to limit to mutated cases
-				*/
+			if (
+				this.vocab.dslabel == 'GDC' &&
+				copies.find(tw => tw.term.id && tw.term.type != 'geneVariant') &&
+				currentGeneNames?.length
+			) {
+				//term is dictionary term and there are gene terms,
+				//add this to limit to mutated cases
 				init.body.currentGeneNames = currentGeneNames
 			}
 			promises.push(
@@ -771,7 +774,7 @@ export class TermdbVocab extends Vocab {
 					if (data.error) throw data.error
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 					for (const tw of copies) {
-						const idn = 'id' in tw.term ? tw.term.id : tw.term.name
+						const idn = tw.term.type == 'geneVariant' ? tw.term.name : tw.term.id
 
 						for (const sampleId in data.samples) {
 							const sample = data.samples[sampleId]

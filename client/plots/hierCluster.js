@@ -262,17 +262,7 @@ export class HierCluster extends Matrix {
 			/* all items from .lst[] are expected to be {gene} */
 			for (const tw of this.hcTermGroup.lst) {
 				if (tw.term.type != 'geneVariant') throw 'not geneVariant term while dataType==dtgeneexpression'
-				// FIXME when {name} is fully migrated to {gene}, delete following line and use continue to skip non-gene terms
-				if (!tw.term.gene) {
-					if (!tw.term.name) throw 'geneVariant term missing gene/name'
-					// adding tw properties should be done in fillTermWrapper(),
-					// otherwise it makes state-tracked tw comparison unreliable
-					// tw.term.gene = tw.term.name
-				}
-				// see notes above, avoid modifying the state unnecessarily
-				// select the properties to include, since GDC term.values (computed incrementally)
-				// or cohort-dependent term.categories2samplecount can affect caching
-				lst.push({ name: tw.term.name, type: tw.term.type, gene: tw.term.gene || tw.term.name })
+				lst.push(structuredClone(tw.term))
 			}
 		} else {
 			throw 'unknown dataType'
