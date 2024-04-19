@@ -76,7 +76,7 @@ async function showBinsMenu(self, div: any) {
 		if (!self.vocabApi) throw `Missing .vocabApi{} [numeric.discrete showBinsMenu()]`
 		const d = await self.vocabApi.getViolinPlotData(
 			{
-				termid: self.termid,
+				termid: self.term.id,
 				termType: self.term.type,
 				filter: self.filter,
 				svgw: self.num_obj.plot_size.width / window.devicePixelRatio,

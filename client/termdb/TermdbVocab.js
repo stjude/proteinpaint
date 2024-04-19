@@ -447,7 +447,6 @@ export class TermdbVocab extends Vocab {
 			arg,
 			_body
 		)
-		console.log('getViolinPlotData', body)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const d = await dofetch3('termdb/violin', { headers, body })
 

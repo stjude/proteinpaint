@@ -18,6 +18,24 @@ importSubtype()
     resuable try/catch block for import statement
 */
 
+const bins = {
+	default: {
+		mode: 'discrete',
+		type: 'regular-bin',
+		bin_size: 10,
+		startinclusive: false,
+		stopinclusive: true,
+		first_bin: {
+			startunbounded: true,
+			stop: 10
+		},
+		last_bin: {
+			start: 100,
+			stopunbounded: true
+		}
+	}
+}
+
 export async function getHandler(self) {
 	const numEditVers = self.opts.numericEditMenuVersion as string[]
 	const subtype = numEditVers.length > 1 ? 'toggle' : numEditVers[0] // defaults to 'discrete'
@@ -30,26 +48,11 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'discrete'
 	}
 	const subtype = tw.term.type == TermTypes.GENE_EXPRESSION ? 'toggle' : tw.q.mode
-	tw.term.bins = {
-		default: {
-			mode: 'discrete',
-			type: 'regular-bin',
-			bin_size: 10,
-			startinclusive: false,
-			stopinclusive: true,
-			first_bin: {
-				startunbounded: true,
-				stop: 10
-			},
-			last_bin: {
-				start: 100,
-				stopunbounded: true
-			}
-		}
-	}
-	console.log(tw)
-	//const _ = await importSubtype(subtype)
-	return tw //await _.fillTW(tw, vocabApi, defaultQ)
+	tw.q.bin_size = 10
+	tw.term.bins = bins
+	tw.term.id = tw.term.gene //the id should be the gene so that the edit works when generating the density plot
+	tw.id = tw.term.gene
+	return tw
 }
 
 async function importSubtype(subtype: string | undefined) {

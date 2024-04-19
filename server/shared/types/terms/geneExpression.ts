@@ -26,6 +26,7 @@ export type GeneExpressionTW = TermWrapper & {
 
 export type GeneExpressionTerm = Term & {
 	gene?: string
+	bins?: any
 }
 
 export type GeneExpressionTermSettingInstance = TermSettingInstance & {

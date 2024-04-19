@@ -54,9 +54,6 @@ q = {
 */
 
 export async function getGeneExpViolinPlotData(q, res, ds, genome) {
-	const term = { id: q.termid, type: TermTypes.geneExpression, gene: q.termid }
-	const valuesObject = divideValues(q, data, term, q.divideTw)
-	console.log(valuesObject)
 	const gene = q.termid
 	const args = {
 		genome: q.genome,
@@ -71,16 +68,23 @@ export async function getGeneExpViolinPlotData(q, res, ds, genome) {
 	const data = await ds.queries.geneExpression.get(args)
 	let min = Infinity,
 		max = -Infinity
-	const key2values = new Map()
+	const samples = []
 	for (const sampleId in data.gene2sample2value.get(gene)) {
-		if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 		const values = data.gene2sample2value.get(gene)
 		const value = Number(values[sampleId])
 		if (min > value) min = value
 		if (max < value) max = value
+		samples.push(value)
 	}
-	const result = resultObj(valuesObject, data, q)
-	console.log(result)
+	const plot = { label: 'All samples', values: samples, plotValueCount: samples.length }
+	const axisScale = scaleLinear().domain([min, max]).range([0, q.svgw])
+	plot.density = getBinsDensity(axisScale, plot, true, q.ticks)
+	const result = {
+		min,
+		max,
+		plots: [plot], // each element is data for one plot: {label=str, values=[]}
+		pvalues: []
+	}
 
 	return result
 }
