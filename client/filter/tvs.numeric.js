@@ -124,7 +124,6 @@ async function fillMenu(self, div, tvs) {
 				},
 				self.opts.getCategoriesArguments
 			)
-			console.log('data', data)
 			self.num_obj.density_data = convertViolinData(data)
 		} catch (err) {
 			console.log(err)

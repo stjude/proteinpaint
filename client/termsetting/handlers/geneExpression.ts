@@ -26,16 +26,14 @@ export async function getHandler(self) {
 }
 
 export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
-	if (!tw.q.mode) {
-		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'continuous'
-	}
 	if (!tw.term.bins) {
 		const d = await vocabApi.getGeneExpViolinPlotData({ gene: tw.term.gene })
-		tw.q = structuredClone(d.bins.default)
+		tw.q = structuredClone(d.bins.default) //we should not overwrite the default
+		tw.q.mode = 'continuous'
 		tw.term.bins = d.bins
-	}
-	tw.term.id = tw.term.gene //solve id!!
+	} else if (!tw.q.mode) tw.q.mode = 'continuous'
 
+	tw.term.id = tw.term.gene //solve id!!
 	return tw
 }
 

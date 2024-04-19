@@ -697,7 +697,7 @@ tape('Numerical term.bins.default.type=custom-bin', async test => {
 	}
 })
 
-tape.only('Numerical term: toggle menu - 4 options', async test => {
+tape('Numerical term: toggle menu - 4 options', async test => {
 	test.timeoutAfter(3000)
 	test.plan(9)
 

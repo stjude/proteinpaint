@@ -433,6 +433,7 @@ export class TermdbVocab extends Vocab {
 		const body = Object.assign(
 			{
 				getViolinPlotData: 1,
+				termid: arg.term?.id,
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
 				embedder: window.location.hostname,

@@ -54,7 +54,7 @@ q = {
 */
 
 export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
-	const gene = q.gene
+	const gene = q.tw?.term.gene || q.gene
 	if (!gene) throw 'gene is required'
 	if (ds.queries.geneExpression.gene2density[gene]) return ds.queries.geneExpression.gene2density[gene]
 	const args = {
@@ -112,14 +112,16 @@ export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
 }
 
 export async function trigger_getViolinPlotData(q, res, ds, genome) {
-	if (q.gene) return await trigger_getGeneExpViolinPlotData(q, res, ds, genome)
+	if (q.tw?.term.type == TermTypes.GENE_EXPRESSION)
+		//to support new types we pass the termwrapper object
+		return await trigger_getGeneExpViolinPlotData(q, res, ds, genome)
+	console.log('q', q)
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
-	const termid = term.id
 	if (!term) throw '.termid invalid'
 	//term on backend should always be an integer term
 	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
 
-	const twLst = [{ id: termid, term, q: { mode: 'continuous' } }]
+	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
 
 	if (q.divideTw) {
 		if (q.divideTw !== null && q.divideTw !== undefined && typeof q.divideTw === 'object' && !('id' in q.divideTw)) {

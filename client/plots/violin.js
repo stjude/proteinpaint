@@ -263,7 +263,6 @@ class ViolinPlot {
 		await this.getDescrStats()
 
 		const args = this.validateArgs()
-
 		this.data = await this.app.vocabApi.getViolinPlotData(args)
 
 		if (this.settings.plotThickness == undefined) {
