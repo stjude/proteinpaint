@@ -106,22 +106,22 @@ export function getLegendData(legendGroups, refs, self) {
 					// create a legend only if the mode is discrete, no legend created for continuous mode
 					if (t.ref?.bins) {
 						for (const v of f.tvs.ranges) {
-							const termValues = Object.values(t.ref.bins)
+							const termValues = t.ref.bins
 							legend.values[v.name] = {
 								key: v.name,
-								label: termValues.find(vl => vl.name == v.name)?.name || v.name,
-								fill: termValues.find(vl => vl.name == v.name)?.color,
+								label: termValues?.find(vl => vl.name == v.name)?.name || v.name,
+								fill: termValues?.find(vl => vl.name == v.name)?.color,
 								crossedOut: true
 							}
 						}
 					}
 				} else {
 					for (const v of f.tvs.values) {
-						const termValues = Object.values(t.tw.term.values)
+						const termValues = t.tw.term.values
 						legend.values[v.key] = {
 							key: v.key,
-							label: termValues.find(vl => vl.key == v.key)?.label || v.key,
-							fill: termValues.find(vl => vl.key == v.key)?.color,
+							label: termValues?.[v.key]?.label || v.key,
+							fill: termValues?.[v.key]?.color,
 							crossedOut: true
 						}
 					}

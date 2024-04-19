@@ -179,6 +179,10 @@ export class MatrixControls {
 							if (tw) fillTermWrapper(tw)
 							return tw
 						},
+						processConfig: config => {
+							if (this.parent.config.divideBy)
+								config.legendValueFilter = this.parent.mayRemoveTvsEntry(this.parent.config.divideBy)
+						},
 						getBodyParams: () => {
 							const currentGeneNames = this.parent.termOrder
 								.filter(t => t.tw.term.type === 'geneVariant')

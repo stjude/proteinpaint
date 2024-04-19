@@ -1258,7 +1258,7 @@ function setTermActions(self) {
 		const lst = structuredClone(self.config.legendValueFilter.lst)
 		const items = lst.filter(
 			f =>
-				f.tvs.term.type === tw.term.type &&
+				f.tvs?.term.type === tw?.term.type &&
 				((('id' in f.tvs.term || 'id' in tw.term) && f.tvs.term.id === tw.term.id) || f.tvs.term.name === tw.term.name)
 		)
 		if (!items.length) return self.config.legendValueFilter
@@ -1274,7 +1274,7 @@ function setTermActions(self) {
 				lst.splice(i, 1)
 			}
 		}
-		return { type: 'tvslst', lst }
+		return { in: true, join: 'and', type: 'tvslst', lst }
 	}
 
 	self.launchBrowser = event => {
@@ -1298,7 +1298,7 @@ function setTermActions(self) {
 }
 
 function setSampleGroupActions(self) {
-	self.showSampleGroupMenu = function () {
+	self.showSampleGroupMenu = function (event) {
 		const d = event.target.__data__
 		if (!d) return
 		self.activeLabel = d
@@ -1318,7 +1318,7 @@ function setSampleGroupActions(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.style('display', 'inline-block')
+			.style('display', 'block')
 			.html(d => d.label)
 			.on('click', (event, d) => {
 				event.stopPropagation()
@@ -1393,15 +1393,60 @@ function setSampleGroupActions(self) {
 	self.removeSampleGroup = () => {
 		// this should not happen, but making sure
 		if (!self.config.divideBy) return
-		const divideBy = JSON.parse(JSON.stringify(self.config.divideBy))
-		if (!divideBy.exclude) divideBy.exclude = []
-		divideBy.exclude.push(self.activeLabel.grp.id)
+
+		const tw = self.activeLabel.grp.tw
+		const term = tw.term
+		if (term.type == 'categorical') {
+			term.$id = tw.$id
+			const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(l => l.legendGrpName == tw.id)
+			if (filterGrpIndex == -1) {
+				const filterNew = {
+					legendGrpName: tw.id,
+					type: 'tvs',
+					tvs: {
+						isnot: true,
+						term,
+						values: [{ key: self.activeLabel.grp.id }]
+					}
+				}
+				self.config.legendValueFilter.lst.push(filterNew)
+			} else {
+				// the filter for the categorical term exist, but the current legend key is not there.
+				self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: self.activeLabel.grp.id })
+			}
+		} else if (term.type == 'integer' || term.type == 'float') {
+			term.$id = tw.$id
+			const filterNew = {
+				legendGrpName: tw.id,
+				type: 'tvs',
+				tvs: {
+					isnot: true,
+					term,
+					ranges: [self.data.refs.byTermId[tw.$id].bins.find(b => self.activeLabel.grp.id == b.name)]
+				}
+			}
+			self.config.legendValueFilter.lst.push(filterNew)
+		}
+
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
-			config: {
-				divideBy
-			}
+			config: { legendValueFilter: self.config.legendValueFilter }
+		})
+		self.dom.tip.hide()
+	}
+
+	self.showDeletedSampleGroups = () => {
+		// this should not happen, but making sure
+		if (!self.config.divideBy) return
+
+		const tw = self.activeLabel?.grp?.tw || self.config.divideBy
+		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(l => l.legendGrpName !== tw.id)
+
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: { legendValueFilter: self.config.legendValueFilter }
 		})
 		self.dom.tip.hide()
 	}
@@ -3094,7 +3139,8 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 		})
 		return
 	}
-	const classDiv = self.app.tip.d.append('div')
+	self.app.tip.d.selectAll('.byLFClassDiv').remove()
+	const classDiv = self.app.tip.d.append('div').attr('class', 'byLFClassDiv')
 
 	const checkboxName = Math.random().toString()
 	const mClassDiv = classDiv
