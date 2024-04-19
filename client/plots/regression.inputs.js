@@ -327,7 +327,7 @@ function setRenderers(self) {
 		self.dom.submitBtn
 			.text('Run analysis')
 			.style('display', self.config.outcome && self.config.independent.length ? 'block' : 'none')
-			.property('disabled', self.hasError) //.attr('data-testid', 'sja_submit_button')
+			.property('disabled', self.hasError)
 	}
 }
 

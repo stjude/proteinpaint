@@ -462,7 +462,10 @@ function setRenderers(self) {
 	self.mayshow_coefficients = result => {
 		if (!result.coefficients) return
 		const div = self.newDiv(result.coefficients.label)
-		const table = div.append('table').style('border-spacing', '0px')
+		const table = div
+			.append('table')
+			.style('border-spacing', '0px')
+			.attr('data-testid', 'sjpp_regression_resultCoefficientTable')
 
 		// padding is set on every <td>. need a better solution
 
@@ -470,7 +473,7 @@ function setRenderers(self) {
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 			result.coefficients.header.forEach((v, i) => {
-				tr.append('td').text(v).style('padding', '8px').attr('data-testid', 'sja_results')
+				tr.append('td').text(v).style('padding', '8px')
 				if (i === 1) tr.append('td') // column 3 will be for forest plot
 			})
 		}
