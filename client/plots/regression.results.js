@@ -470,7 +470,7 @@ function setRenderers(self) {
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 			result.coefficients.header.forEach((v, i) => {
-				tr.append('td').text(v).style('padding', '8px')
+				tr.append('td').text(v).style('padding', '8px').attr('data-testid', 'sja_results')
 				if (i === 1) tr.append('td') // column 3 will be for forest plot
 			})
 		}

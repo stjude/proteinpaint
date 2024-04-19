@@ -140,6 +140,7 @@ class TdbTree {
 		this.dom.holder
 			.selectAll('.termbtn, .sja_tree_click_term')
 			.attr('tabindex', 0)
+			.attr('data-testid', 'sjpp_termdbbutton')
 			.on('keyup', event => {
 				if (event.key == 'Enter') event.target.click()
 			})

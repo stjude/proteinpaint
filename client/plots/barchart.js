@@ -819,6 +819,7 @@ function setRenderers(self) {
 		div
 			.append('div')
 			.attr('class', 'pp-sbar-div-chartLengends')
+			.attr('data-testid', 'sjpcb-bars-chartLengends')
 			.style('vertical-align', 'top')
 			.style('margin', '10px 10px 10px 30px')
 			.style('display', 'none')

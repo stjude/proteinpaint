@@ -148,7 +148,8 @@ function setRenderers(self) {
 			.data(self.tabs)
 			.enter()
 			.append('button')
-			.attr('class', 'sj-toggle-button')
+			.attr('data-testid', 'sja_toggle_button')
+			.attr('class', 'sj-toggle-button') //
 			.classed('sjpp-active', tab => tab.active)
 			//Padding here overrides automatic styling for all pp buttons
 			.style('padding', '0px')
