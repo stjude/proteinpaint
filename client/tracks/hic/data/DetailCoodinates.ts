@@ -26,7 +26,7 @@ export class DetailCoordinates {
 		const ypxbp = canvasheight / (chry.stop - chry.start)
 
 		for (const [xCoord, yCoord, value] of data.items) {
-			let coord1, coord2, span1, span2
+			let coord1: number, coord2: number, span1: number, span2: number
 
 			if (fragData && fragData.length) {
 				// the beginning fragment index

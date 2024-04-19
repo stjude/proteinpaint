@@ -463,112 +463,112 @@ class Hicstat {
 		/******** common parameter for x/y block ********/
 
 		const arg: any = {
-			noresize: true,
-			nobox: true,
-			butrowbottom: true,
-			style: {
-				margin: this.detailview.bbmargin + 'px'
-			},
-			genome: hic.genome,
-			hostURL: hic.hostURL,
-			width: blockwidth,
-			leftheadw: 20,
-			rightheadw: 40,
-			tklst: []
+			// noresize: true,
+			// nobox: true,
+			// butrowbottom: true,
+			// style: {
+			// 	margin: this.detailview.bbmargin + 'px'
+			// },
+			// genome: hic.genome,
+			// hostURL: hic.hostURL,
+			// width: blockwidth,
+			// leftheadw: 20,
+			// rightheadw: 40,
+			// tklst: []
 		}
-		client.first_genetrack_tolist(hic.genome, arg.tklst)
+		// client.first_genetrack_tolist(hic.genome, arg.tklst)
 
 		// duplicate arg for y
-		const arg2: any = {}
-		for (const k in arg) arg2[k] = arg[k]
+		// const arg2: any = {}
+		// for (const k in arg) arg2[k] = arg[k]
 
 		/******************* x block ******************/
 
-		let xfirsttime = true
-		arg.chr = this.x.chr
-		arg.start = this.x.start
-		arg.stop = this.x.stop
-		arg.holder = this.dom.plotDiv.xAxis
-		arg.onloadalltk_always = async (bb: any) => {
-			/**Replace with Block type when defined later */
-			/*
+		// let xfirsttime = true
+		// arg.chr = this.x.chr
+		// arg.start = this.x.start
+		// arg.stop = this.x.stop
+		// arg.holder = this.dom.plotDiv.xAxis
+		// arg.onloadalltk_always = async (bb: any) => {
+		/**Replace with Block type when defined later */
+		/*
 			cannot apply transition to canvasholder
 			it may prevent resetting width when both x and y are changing
 			*/
-			canvasholder.style(
-				'width',
-				2 * this.detailview.bbmargin! + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
-			)
+		// canvasholder.style(
+		// 	'width',
+		// 	2 * this.detailview.bbmargin! + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
+		// )
 
-			if (xfirsttime) {
-				xfirsttime = false
-				// must do this:
-				canvas.transition().style('left', this.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
-				return
-			}
-			await detailViewUpdateRegionFromBlock(hic, this)
-		}
-		arg.onpanning = (xoff: number) => {
-			canvas.style(
-				'left',
-				xoff + this.detailview.bbmargin! + this.detailview.xb!.leftheadw + this.detailview.xb!.lpad + 'px'
-			)
-		}
-		blocklazyload(arg).then(block => {
-			this.detailview.xb = block
-		})
+		// if (xfirsttime) {
+		// 	xfirsttime = false
+		// 	// must do this:
+		// 	canvas.transition().style('left', this.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
+		// 	return
+		// }
+		// 	await detailViewUpdateRegionFromBlock(hic, this)
+		// }
+		// arg.onpanning = (xoff: number) => {
+		// 	canvas.style(
+		// 		'left',
+		// 		xoff + this.detailview.bbmargin! + this.detailview.xb!.leftheadw + this.detailview.xb!.lpad + 'px'
+		// 	)
+		// }
+		// blocklazyload(arg).then(block => {
+		// 	this.detailview.xb = block
+		// })
 
 		/******************* y block ******************/
 
-		const sheath = this.dom.plotDiv.yAxis
-			.append('div')
-			.style('position', 'relative')
-			.style('width', '200px') // dummy size
-			.style('height', '800px')
+		// const sheath = this.dom.plotDiv.yAxis
+		// 	.append('div')
+		// 	.style('position', 'relative')
+		// 	.style('width', '200px') // dummy size
+		// 	.style('height', '800px')
 
-		const rotor = sheath
-			.append('div')
-			.style('position', 'absolute')
-			.style('bottom', '0px')
-			.style('transform', 'rotate(-90deg)')
-			.style('transform-origin', 'left bottom')
+		// const rotor = sheath
+		// 	.append('div')
+		// 	.style('position', 'absolute')
+		// 	.style('bottom', '0px')
+		// 	.style('transform', 'rotate(-90deg)')
+		// 	.style('transform-origin', 'left bottom')
 
-		let yfirsttime = true
+		// let yfirsttime = true
 
-		arg2.rotated = true
-		arg2.showreverse = true
+		// arg2.rotated = true
+		// arg2.showreverse = true
 
-		arg2.chr = this.y.chr
-		arg2.start = this.y.start
-		arg2.stop = this.y.stop
-		arg2.holder = rotor
-		arg2.onloadalltk_always = async bb => {
-			const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.detailview.bbmargin!
-			sheath.transition().style('height', bbw + 'px')
-			canvasholder.style('height', bbw + 'px')
-			if (yfirsttime) {
-				yfirsttime = false
-				// must do this:
-				canvas.transition().style('top', this.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
-				return
-			}
-			await detailViewUpdateRegionFromBlock(hic, this)
-		}
-		arg2.onpanning = xoff => {
-			canvas.style(
-				'top',
-				-xoff + this.detailview.bbmargin! + this.detailview.yb!.rightheadw + this.detailview.yb!.rpad + 'px'
-			)
-		}
+		// arg2.chr = this.y.chr
+		// arg2.start = this.y.start
+		// arg2.stop = this.y.stop
+		// arg2.holder = rotor
+		// arg2.onloadalltk_always = async bb => {
+		// const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.detailview.bbmargin!
+		// sheath.transition().style('height', bbw + 'px')
+		// canvasholder.style('height', bbw + 'px')
+		// if (yfirsttime) {
+		// 	yfirsttime = false
+		// 	// must do this:
+		// 	canvas.transition().style('top', this.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
+		// 	return
+		// }
+		// 	await detailViewUpdateRegionFromBlock(hic, this)
+		// }
+		// arg2.onpanning = xoff => {
+		// 	canvas.style(
+		// 		'top',
+		// 		-xoff + this.detailview.bbmargin! + this.detailview.yb!.rightheadw + this.detailview.yb!.rpad + 'px'
+		// 	)
+		// }
 
-		const buttonrowh = 30
-		arg2.onsetheight = bbh => {
-			rotor.transition().style('left', this.detailview.bbmargin + bbh + buttonrowh + 'px')
-		}
+		// const buttonrowh = 30
+		// arg2.onsetheight = bbh => {
+		// 	rotor.transition().style('left', this.detailview.bbmargin + bbh + buttonrowh + 'px')
+		// }
 
-		blocklazyload(arg2).then(block => {
-			this.detailview.yb = block
-		})
+		// blocklazyload(arg2).then(block => {
+		// 	this.detailview.yb = block
+		// })
 		/*
 		//XXX this won't work, will duplicate the chunk for block, try named chunk
 		import('./block').then(p=>{

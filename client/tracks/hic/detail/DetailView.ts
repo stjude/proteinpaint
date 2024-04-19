@@ -1,15 +1,18 @@
-import { MainPlotDiv, DetailViewAxis } from '../../../types/hic.ts'
+import { MainPlotDiv } from '../../../types/hic.ts'
 import { Resolution } from '../data/Resolution.ts'
 import { ColorizeElement } from '../dom/ColorizeElement.ts'
 import { DetailBlock } from './DetailBlock.ts'
 import { select, Selection } from 'd3-selection'
 import { DetailViewDataMapper } from '../data/DetailViewDataMapper.ts'
 import { DetailCoordinates } from '../data/DetailCoodinates.ts'
+import { Elem } from 'types/d3'
 
 export class DetailView {
 	app: any
 	hic: any
 	plotDiv: MainPlotDiv
+	sheath: Elem
+	rotor: Selection<HTMLDivElement, any, any, any>
 	data: any
 	parent: (prop: string) => string | number
 	resolution: Resolution
@@ -36,6 +39,8 @@ export class DetailView {
 		this.app = opts.app
 		this.hic = opts.hic
 		this.plotDiv = opts.plotDiv
+		this.sheath = opts.plotDiv.yAxis.append('div')
+		this.rotor = this.sheath.append('div')
 		this.items = opts.items
 		this.parent = opts.parent
 		this.errList = this.parent('errList') as any
@@ -57,12 +62,22 @@ export class DetailView {
 		}
 	}
 
+	renderYBlockHolder() {
+		this.sheath.style('position', 'relative').style('width', '200px').style('height', '800px')
+
+		this.rotor
+			.style('position', 'absolute')
+			.style('bottom', '0px')
+			.style('transform', 'rotate(-90deg)')
+			.style('transform-origin', 'left bottom')
+	}
+
 	renderCanvas(blockwidth: number) {
 		const canvasHolder = this.plotDiv.plot
 			.append('div')
 			.style('position', 'relative')
-			.style('width', `${blockwidth}px`)
-			.style('height', `${blockwidth}px`)
+			.style('width', `${this.xBlock.bbw}px`)
+			.style('height', `${this.yBlock.bbw}px`)
 			.style('overflow', 'hidden')
 
 		//main canvas
@@ -70,11 +85,12 @@ export class DetailView {
 			.append('canvas')
 			.style('display', 'block')
 			.style('position', 'absolute')
+			.attr('data-testid', 'sjpp-hic-detail-canvas')
 			//Starting width and height to render the canvas
 			.attr('width', blockwidth)
 			.attr('height', blockwidth)
-			.attr('left', `${this.bbmargin + this.xBlock.leftheadw + this.xBlock.lpad}px`)
-			.attr('top', `${this.bbmargin + this.yBlock.rightheadw + this.yBlock.rpad}px`)
+			.attr('left', `${this.xBlock.defaultLeft}px`)
+			.attr('top', `${this.yBlock.defaultTop}px`)
 			.on('mousedown', (event: MouseEvent) => {
 				const body = select(document.body)
 				const x = event.clientX
@@ -84,16 +100,16 @@ export class DetailView {
 				body.on('mousemove', event => {
 					const xoff = event.clientX - x
 					const yoff = event.clientY - y
-					this.xBlock.panning(xoff)
-					this.yBlock.panning(yoff)
+					this.xBlock.block.panning(xoff)
+					this.yBlock.block.panning(yoff)
 					this.canvas.style('left', `${oldx + xoff}px`).style('top', `${oldy + yoff}px`)
 				})
 				body.on('mouseup', (event: MouseEvent) => {
 					body.on('mousemove', null).on('mouseup', null)
 					const xoff = event.clientX - x
 					const yoff = event.clientY - y
-					this.xBlock.pannedby(xoff)
-					this.yBlock.pannedby(yoff)
+					this.xBlock.block.pannedby(xoff)
+					this.yBlock.block.pannedby(yoff)
 				})
 			}) as Selection<HTMLCanvasElement, any, any, any>
 	}
@@ -103,9 +119,17 @@ export class DetailView {
 		this.setDefaultBinPx()
 
 		const blockwidth = Math.ceil((this.binpx * this.viewRangeBpw!) / this.calResolution)
-		this.xBlock = new DetailBlock(blockwidth)
-		this.yBlock = new DetailBlock(blockwidth)
+
+		this.xBlock = new DetailBlock(this.hic, blockwidth, this.bbmargin, this.plotDiv.xAxis, false)
+		this.yBlock = new DetailBlock(this.hic, blockwidth, this.bbmargin, this.rotor, true)
+
 		this.renderCanvas(blockwidth)
+		this.renderYBlockHolder()
+
+		const state = this.parent('state') as any
+
+		this.xBlock.loadBlock(state.x, this.canvas)
+		this.yBlock.loadBlock(state.y, this.canvas, this.sheath)
 
 		this.ctx = this.canvas.node().getContext('2d') as CanvasRenderingContext2D
 
@@ -139,7 +163,7 @@ export class DetailView {
 				'detail'
 			)
 		}
-
-		this.canvas.attr('width', canvaswidth).attr('height', canvasheight)
+		// This does not work. Do not do this
+		// this.canvas.attr('width', canvaswidth).attr('height', canvasheight)
 	}
 }
