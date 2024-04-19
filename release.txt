@@ -1,2 +1,1 @@
-Fixes:
-- improve GDC cohortMAF ui to add case link and make scrollbar more apparent
+

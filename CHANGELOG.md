@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - numeric setdefaultq() will default to term's own default bin type rather than always hardcoding to regular-bin
 - Pass request header containing session when querying arriba file which is controlled
+- improve GDC cohortMAF ui to add case link and make scrollbar more apparent
 
 
 ## 2.54.0
