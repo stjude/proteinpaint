@@ -1258,7 +1258,7 @@ function setTermActions(self) {
 		const lst = structuredClone(self.config.legendValueFilter.lst)
 		const items = lst.filter(
 			f =>
-				f.tvs.term.type === tw.term.type &&
+				f.tvs?.term.type === tw?.term.type &&
 				((('id' in f.tvs.term || 'id' in tw.term) && f.tvs.term.id === tw.term.id) || f.tvs.term.name === tw.term.name)
 		)
 		if (!items.length) return self.config.legendValueFilter
