@@ -668,12 +668,15 @@ async function setTermInput(opts) {
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
 			if (opts.processInput) opts.processInput(tw)
 			pill.main(tw ? tw : { term: null, q: null })
+			const config = {
+				[opts.configKey]: tw
+			}
+			if (opts.processConfig) opts.processConfig(config) // do the custom config modification inside the processConfig function
+
 			opts.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
-				config: {
-					[opts.configKey]: tw
-				}
+				config
 			})
 		}
 	})

@@ -340,12 +340,6 @@ export function setRenderers(self) {
 			.attr('y', -20)
 			.text(`${cl.Samples} grouped by`)
 
-		gNote
-			.append('title')
-			.text(
-				`${cl.Samples} are grouped by this gene or variable. Use the Samples -> 'Group Samples By' input in the controls bar to edit.`
-			)
-
 		const g = box
 			.datum({ tw: self.config.divideBy })
 			.append('g')
@@ -361,13 +355,18 @@ export function setRenderers(self) {
 				pill.showMenu(event, textElem.node())
 			})
 
-		g.append('title').text(
-			`${cl.Samples} are grouped by this gene or variable. Use the Samples -> 'Group Samples By' input in the controls bar to edit.`
-		)
+		g.append('title').text(`${cl.Samples} are grouped by this gene or variable. Click to edit.`)
+
+		const customMenuOptions = []
+		if (self.config.legendValueFilter.lst?.find(l => l.legendGrpName == self.config.divideBy.id)?.tvs.values.length) {
+			customMenuOptions.push({ label: 'Show hidden values', callback: self.showDeletedSampleGroups })
+		}
 
 		const pill = await termsettingInit({
 			menuOptions: '{edit,replace,remove}',
 			//numericEditMenuVersion: opts.numericEditMenuVersion,
+
+			customMenuOptions, //custom menu options other than menuOptions
 			vocabApi: self.app.vocabApi,
 			vocab: self.state.vocab,
 			//activeCohort: opts.state?.activeCohort,
@@ -391,7 +390,8 @@ export function setRenderers(self) {
 					type: 'plot_edit',
 					id: self.id,
 					config: {
-						divideBy: tw
+						divideBy: tw,
+						legendValueFilter: self.mayRemoveTvsEntry(self.config.divideBy)
 					}
 				})
 			}

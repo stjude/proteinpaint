@@ -628,6 +628,8 @@ function setInteractivity(self) {
 			options.push({ label: 'Remove', callback: self.removeTerm } as opt)
 		}
 
+		if (self.opts.customMenuOptions) options.push(...self.opts.customMenuOptions)
+
 		self.openMenu = menuHolder || tip.d
 		self.openMenu
 			.selectAll('div')
