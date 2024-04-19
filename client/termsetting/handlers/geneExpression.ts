@@ -18,20 +18,6 @@ importSubtype()
     resuable try/catch block for import statement
 */
 
-const bins = {
-	default: {
-		mode: 'discrete',
-		type: 'regular-bin',
-		bin_size: 1,
-		startinclusive: false,
-		stopinclusive: true,
-		first_bin: {
-			startunbounded: true,
-			stop: 0
-		}
-	}
-}
-
 export async function getHandler(self) {
 	const numEditVers = self.opts.numericEditMenuVersion as string[]
 	const subtype = numEditVers.length > 1 ? 'toggle' : numEditVers[0] // defaults to 'discrete'
@@ -41,13 +27,15 @@ export async function getHandler(self) {
 
 export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
 	if (!tw.q.mode) {
-		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'discrete'
+		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'continuous'
 	}
-	const subtype = tw.term.type == TermTypes.GENE_EXPRESSION ? 'toggle' : tw.q.mode
-	tw.q = bins
-	tw.term.bins = bins
-	tw.term.id = tw.term.gene //the id should be the gene so that the edit works when generating the density plot
-	tw.id = tw.term.gene
+	if (!tw.term.bins) {
+		const d = await vocabApi.getGeneExpViolinPlotData({ gene: tw.term.gene })
+		tw.q = structuredClone(d.bins.default)
+		tw.term.bins = d.bins
+	}
+	tw.term.id = tw.term.gene //solve id!!
+
 	return tw
 }
 

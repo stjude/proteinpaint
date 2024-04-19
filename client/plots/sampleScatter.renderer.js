@@ -73,7 +73,7 @@ export function setRenderers(self) {
 			self.config.stopColor[chart.id] = rgb(gradientColor).darker().toString()
 		}
 
-		if (self.config.colorTW?.q.mode === 'continuous' || self.config.colorTW.term.type == TermTypes.GENE_EXPRESSION) {
+		if (self.config.colorTW?.q.mode === 'continuous') {
 			const [min, max] = chart.cohortSamples
 				.filter(s => !self.config.colorTW.term.values || !(s.category in self.config.colorTW.term.values))
 				.reduce(
@@ -330,10 +330,7 @@ export function setRenderers(self) {
 	}
 
 	self.getColor = function (c, chart) {
-		if (
-			(self.config.colorTW?.q.mode == 'continuous' || self.config.colorTW.term.type == TermTypes.GENE_EXPRESSION) &&
-			'sampleId' in c
-		) {
+		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) {
 			const color = chart.colorGenerator(c.category)
 			return color
 		}
@@ -721,10 +718,7 @@ export function setRenderers(self) {
 					.style('font-weight', 'bold')
 				offsetY += step
 
-				if (
-					self.config.colorTW?.q?.mode === 'continuous' ||
-					self.config.colorTW.term.type == TermTypes.GENE_EXPRESSION
-				) {
+				if (self.config.colorTW?.q?.mode === 'continuous') {
 					const gradientWidth = 150
 					const [min, max] = chart.colorGenerator.domain()
 					const gradientScale = d3Linear().domain([min, max]).range([0, gradientWidth])

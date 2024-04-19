@@ -1,11 +1,12 @@
 import { Menu } from '#dom/menu'
 import { addGeneSearchbox } from '#dom/genesearch'
-import { TermTypes } from '../../shared/common.js'
+import { TermTypes } from '#shared/common.js'
 export class SearchHandler {
 	callback: any
-
+	app: any
 	init(opts) {
 		this.callback = opts.callback
+		this.app = opts.app
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
@@ -17,7 +18,8 @@ export class SearchHandler {
 		})
 	}
 
-	async selectGene(name) {
-		if (name) this.callback({ id: name, name, gene: name, type: TermTypes.GENE_EXPRESSION })
+	async selectGene(gene) {
+		if (!gene) throw new Error('No gene selected')
+		this.callback({ gene, type: TermTypes.GENE_EXPRESSION, name: gene })
 	}
 }

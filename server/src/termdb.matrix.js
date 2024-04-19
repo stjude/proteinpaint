@@ -61,6 +61,7 @@ Returns:
 */
 
 export async function getData(q, ds, genome) {
+	console.log('terms', q.terms)
 	try {
 		validateArg(q, ds, genome)
 		return await getSampleData(q)

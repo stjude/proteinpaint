@@ -53,8 +53,10 @@ q = {
 }
 */
 
-export async function getGeneExpViolinPlotData(q, res, ds, genome) {
-	const gene = q.termid
+export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
+	const gene = q.gene
+	if (!gene) throw 'gene is required'
+	if (ds.queries.geneExpression.gene2density[gene]) return ds.queries.geneExpression.gene2density[gene]
 	const args = {
 		genome: q.genome,
 		dslabel: q.label,
@@ -79,18 +81,38 @@ export async function getGeneExpViolinPlotData(q, res, ds, genome) {
 	const plot = { label: 'All samples', values: samples, plotValueCount: samples.length, minvalue: min, maxvalue: max }
 	const axisScale = scaleLinear().domain([min, max]).range([0, q.svgw])
 	plot.density = getBinsDensity(axisScale, plot, true, q.ticks)
+	delete plot.values
+	const step = (max - min) / 10
+
 	const result = {
 		min,
 		max,
 		plots: [plot], // each element is data for one plot: {label=str, values=[]}
-		pvalues: []
+		pvalues: [],
+		bins: {
+			default: {
+				mode: 'discrete',
+				type: 'regular-bin',
+				bin_size: step,
+				startinclusive: false,
+				stopinclusive: true,
+				first_bin: {
+					startunbounded: true,
+					stop: min + step
+				},
+				last_bin: {
+					start: max - step,
+					stopunbounded: true
+				}
+			}
+		}
 	}
-
+	ds.queries.geneExpression.gene2density[gene] = result
 	return result
 }
 
 export async function trigger_getViolinPlotData(q, res, ds, genome) {
-	if (q.termType == TermTypes.GENE_EXPRESSION) return await getGeneExpViolinPlotData(q, res, ds, genome)
+	if (q.gene) return await trigger_getGeneExpViolinPlotData(q, res, ds, genome)
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
 	const termid = term.id
 	if (!term) throw '.termid invalid'

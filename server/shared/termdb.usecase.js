@@ -9,7 +9,8 @@ export const graphableTypes = new Set([
 	'snplst',
 	'snplocus',
 	'geneVariant',
-	'samplelst'
+	'samplelst',
+	'geneExpression'
 ])
 /*
 	isUsableTerm() will

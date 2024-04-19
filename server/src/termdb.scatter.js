@@ -249,7 +249,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		if (!q.colorTW) {
 			sample.category = 'Default'
 		} else {
-			if (q.colorTW?.q?.mode === 'continuous' || q.colorTW?.term.type === TermTypes.GENE_EXPRESSION) {
+			if (q.colorTW?.q?.mode === 'continuous') {
 				if (dbSample) sample.category = dbSample[q.colorTW.term.id || q.colorTW.term.name].value
 			} else processSample(dbSample, sample, q.colorTW, results[divideBy].colorMap, 'category')
 		}

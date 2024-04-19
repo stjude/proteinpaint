@@ -16,14 +16,14 @@ const useCases = {
 	filter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	dictionary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES],
-	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
+	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
 	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION], //This case covers dynamic scatters with coordinates from numeric terms
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
 	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES], //Later on can support other term types like snplocus, snplst, geneVariant
 	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
-	default: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
+	default: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
 	regression: [TermTypeGroups.DICTIONARY_VARIABLES]
 }
 
@@ -107,7 +107,7 @@ export class TermTypeSearch {
 			const termTypeGroup = typeGroup[type]
 			let label = termTypeGroup
 			if (type == TermTypes.GENE_VARIANT) {
-				const labels = []
+				const labels: string[] = []
 				if (this.app.vocabApi.termdbConfig.queries.snvindel) labels.push('Mutation')
 				if (this.app.vocabApi.termdbConfig.queries.cnv) labels.push('CNV')
 				if (this.app.vocabApi.termdbConfig.queries.svfusion) labels.push('Fusion')
@@ -158,6 +158,7 @@ export class TermTypeSearch {
 			const handler = this.handlerByType[type]
 			await handler.init({
 				holder,
+				app: this.app,
 				genomeObj: this.genomeObj,
 				callback: term => this.selectTerm(term)
 			})

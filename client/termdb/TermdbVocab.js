@@ -453,6 +453,28 @@ export class TermdbVocab extends Vocab {
 		return d
 	}
 
+	async getGeneExpViolinPlotData(arg, _body = {}) {
+		// the violin plot may still render when not in session,
+		// but not have an option to list samples
+		const headers = this.mayGetAuthHeaders('termdb')
+		const body = Object.assign(
+			{
+				getGeneExpressionData: 1,
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel,
+				isKDE: arg.isKDE || true,
+				ticks: arg.ticks || 20,
+				svgw: arg.svgw || 200
+			},
+			arg,
+			_body
+		)
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		const d = await dofetch3('termdb/geneExpViolin', { headers, body })
+
+		return d
+	}
+
 	async getPercentile(term_id, percentile_lst, filter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
 		if (percentile_lst.find(p => !Number.isInteger(p))) throw 'non-integer percentiles found'

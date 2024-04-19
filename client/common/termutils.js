@@ -118,6 +118,7 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
 						}
 					}) && true
+			} else if (t.term.type == 'geneExpression') {
 			} else {
 				throw 'unknown term type'
 			}

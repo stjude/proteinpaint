@@ -589,6 +589,8 @@ function validatePlotTerm(t, vocabApi) {
 			break
 		case 'samplelst':
 			break
+		case 'geneExpression':
+			break
 		default:
 			if (t.term.isgenotype) {
 				// don't do anything for now

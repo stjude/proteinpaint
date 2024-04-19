@@ -306,6 +306,7 @@ type RnaseqGeneCount = {
 // the geneExpression query
 export type GeneExpressionQueryGdc = {
 	src: 'gdcapi' | string
+	gene2density?: { [index: string]: any }
 }
 
 export type GeneExpressionQueryNative = {
@@ -315,6 +316,7 @@ export type GeneExpressionQueryNative = {
 	samples?: number[]
 	nochr?: boolean
 	get?: (param: any) => void
+	gene2density?: { [index: string]: any }
 }
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
