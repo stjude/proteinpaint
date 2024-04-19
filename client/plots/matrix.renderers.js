@@ -358,7 +358,8 @@ export function setRenderers(self) {
 		g.append('title').text(`${cl.Samples} are grouped by this gene or variable. Click to edit.`)
 
 		const customMenuOptions = []
-		if (self.config.legendValueFilter.lst?.find(l => l.legendGrpName == self.config.divideBy.id)?.tvs.values.length) {
+		const tvsKey = ['integer', 'float'].includes(self.config.divideBy.type) ? 'ranges' : 'values'
+		if (self.config.legendValueFilter.lst?.find(l => l.legendGrpName == self.config.divideBy.id)?.tvs[tvsKey]?.length) {
 			customMenuOptions.push({ label: 'Show hidden values', callback: self.showDeletedSampleGroups })
 		}
 
