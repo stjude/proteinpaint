@@ -76,7 +76,7 @@ export async function getGeneExpViolinPlotData(q, res, ds, genome) {
 		if (max < value) max = value
 		samples.push(value)
 	}
-	const plot = { label: 'All samples', values: samples, plotValueCount: samples.length }
+	const plot = { label: 'All samples', values: samples, plotValueCount: samples.length, minvalue: min, maxvalue: max }
 	const axisScale = scaleLinear().domain([min, max]).range([0, q.svgw])
 	plot.density = getBinsDensity(axisScale, plot, true, q.ticks)
 	const result = {

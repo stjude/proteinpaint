@@ -22,16 +22,12 @@ const bins = {
 	default: {
 		mode: 'discrete',
 		type: 'regular-bin',
-		bin_size: 10,
+		bin_size: 1,
 		startinclusive: false,
 		stopinclusive: true,
 		first_bin: {
 			startunbounded: true,
-			stop: 10
-		},
-		last_bin: {
-			start: 100,
-			stopunbounded: true
+			stop: 0
 		}
 	}
 }
@@ -48,7 +44,7 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'discrete'
 	}
 	const subtype = tw.term.type == TermTypes.GENE_EXPRESSION ? 'toggle' : tw.q.mode
-	tw.q.bin_size = 10
+	tw.q = bins
 	tw.term.bins = bins
 	tw.term.id = tw.term.gene //the id should be the gene so that the edit works when generating the density plot
 	tw.id = tw.term.gene
