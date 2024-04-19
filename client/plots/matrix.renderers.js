@@ -358,9 +358,9 @@ export function setRenderers(self) {
 		g.append('title').text(`${cl.Samples} are grouped by this gene or variable. Click to edit.`)
 
 		const customMenuOptions = []
-		const tvsKey = ['integer', 'float'].includes(self.config.divideBy.type) ? 'ranges' : 'values'
+		const tvsKey = ['integer', 'float'].includes(self.config.divideBy.term.type) ? 'ranges' : 'values'
 		if (self.config.legendValueFilter.lst?.find(l => l.legendGrpName == self.config.divideBy.id)?.tvs[tvsKey]?.length) {
-			customMenuOptions.push({ label: 'Show hidden values', callback: self.showDeletedSampleGroups })
+			customMenuOptions.push({ label: `Show filtered ${cl.samples}`, callback: self.showDeletedSampleGroups })
 		}
 
 		const pill = await termsettingInit({

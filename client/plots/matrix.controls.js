@@ -180,7 +180,8 @@ export class MatrixControls {
 							return tw
 						},
 						processConfig: config => {
-							config.legendValueFilter = this.parent.mayRemoveTvsEntry(this.parent.config.divideBy)
+							if (this.parent.config.divideBy)
+								config.legendValueFilter = this.parent.mayRemoveTvsEntry(this.parent.config.divideBy)
 						},
 						getBodyParams: () => {
 							const currentGeneNames = this.parent.termOrder
