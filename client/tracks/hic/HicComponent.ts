@@ -105,7 +105,7 @@ export class HicComponent {
 		}
 	}
 
-	async fetchData(obj) {
+	async fetchData(obj: any) {
 		if (this.data?.length) this.data = []
 		if (this.state.currView == 'genome') {
 			const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
@@ -137,13 +137,13 @@ export class HicComponent {
 		}
 	}
 
-	setResolution(appState) {
+	setResolution(appState: any) {
 		const state = this.app.getState(appState)
 		this.calResolution = this.resolution.getResolution(state, this.hic) as number
 		return this.calResolution
 	}
 
-	async setDataArgs(appState) {
+	async setDataArgs(appState: any) {
 		const currView = this.state[this.state.currView]
 		const args = {
 			nmeth: currView.nmeth,
