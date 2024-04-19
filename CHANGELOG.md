@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.55.0
 
 Features:
 - oncoMatrix: after hiding a category from divideBy term, add an option to divideBy button to bring it back
