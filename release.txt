@@ -1,1 +1,2 @@
-
+Fixes:
+- prevent showing a blank CNV legend in the lolllipop app
