@@ -179,9 +179,7 @@ function addGenomicQueries(c, ds, genome) {
 	if (q.geneCnv) {
 		// gdc cnv is gene-level cnv but still expose as ".cnv{}" to see if client can handle it the same way as segment-based cnv.
 		// if it won't work, change to q2.geneCnv{} instead
-		if (!q2.cnv) {
-			q2.cnv = {}
-		}
+		//if (!q2.cnv) q2.cnv = {} // do not expose geneCnv to client, this causes blank cnv legend to show for gdc mds3 tk
 	}
 
 	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes
