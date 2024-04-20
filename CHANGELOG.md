@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.55.1
 
 Fixes:
 - prevent showing a blank CNV legend in the lolllipop app
