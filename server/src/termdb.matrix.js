@@ -61,7 +61,6 @@ Returns:
 */
 
 export async function getData(q, ds, genome) {
-	console.log('terms', q.terms)
 	try {
 		validateArg(q, ds, genome)
 		return await getSampleData(q)
@@ -163,10 +162,24 @@ async function getSampleData(q) {
 				genes: [{ gene: tw.term.gene }]
 			}
 			const data = await q.ds.queries.geneExpression.get(args)
+			const bins = tw.q
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				const values = data.gene2sample2value.get(tw.term.gene)
-				const value = Number(values[sampleId])
+				let value = Number(values[sampleId]).toFixed(2)
+				if (tw.q.mode == 'discrete') {
+					let bin
+					if (value < bins.first_bin.stop) bin = 0
+					else bin = parseInt((value - bins.first_bin.stop) / bins.bin_size) + 1
+					if (bin == 0) value = (bins.startinclusive ? '<= ' : '< ') + bins.first_bin.stop
+					else if (bins.startinclusive ? value >= bins.last_bin.start : value > bins.last_bin.start)
+						value = (bins.startinclusive ? '>= ' : '> ') + bins.last_bin.start
+					else {
+						const start = (bins.first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
+						const stop = (bins.first_bin.stop + bin * bins.bin_size).toFixed(2)
+						value = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
+					}
+				}
 				samples[sampleId][tw.term.id] = { key: value, value }
 			}
 			/** pp filter */

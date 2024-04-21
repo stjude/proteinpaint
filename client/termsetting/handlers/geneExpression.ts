@@ -31,7 +31,8 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 		tw.q = structuredClone(d.bins.default) //we should not overwrite the default
 		tw.q.mode = 'continuous'
 		tw.term.bins = d.bins
-	} else if (!tw.q.mode) tw.q.mode = 'continuous'
+	}
+	tw.q.mode = 'continuous'
 
 	tw.term.id = tw.term.gene //solve id!!
 	return tw

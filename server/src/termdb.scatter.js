@@ -239,7 +239,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		if (!q.divideByTW) sample.z = 0
 		if (!q.scaleDotTW) sample.scale = 1
 		else {
-			const value = dbSample?.[q.scaleDotTW.id]?.key
+			const value = dbSample?.[q.scaleDotTW.id || q.scaleDotTW.term.name]?.key
 			if (!value || !isComputable(q.scaleDotTW.term, value)) continue
 			sample.scale = value
 		}
@@ -392,6 +392,22 @@ function order(map, tw, refs) {
 		entries.sort((a, b) => {
 			if (a[0] < b[0]) return -1
 			if (a[0] > b[0]) return 1
+			return 0
+		})
+	} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
+		entries = Object.entries(map)
+		const floatRegex = /^[+-]?\d+(\.\d+)?/
+		entries.sort((a, b) => {
+			if (a[0].startsWith('<')) return -1
+			if (a[0].startsWith('>')) return 1
+			let num1 = a[0].match(floatRegex)
+			let num2 = b[0].match(floatRegex)
+			if (!num1 || !num2) return -1
+			num1 = parseFloat(num1[0])
+			num2 = parseFloat(num2[0])
+
+			if (num1 < num2) return -1
+			if (num1 > num2) return 1
 			return 0
 		})
 	} else if (!refs?.byTermId[tw.term.id]?.bins) {
