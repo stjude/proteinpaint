@@ -180,7 +180,7 @@ async function getSampleData(q) {
 						value = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
 					}
 				}
-				samples[sampleId][tw.term.id] = { key: value, value }
+				samples[sampleId][tw.$id] = { key: value, value }
 			}
 			/** pp filter */
 		} else {

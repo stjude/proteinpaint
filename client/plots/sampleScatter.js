@@ -159,6 +159,7 @@ class Scatter {
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
 		const results = await this.app.vocabApi.getScatterData(reqOpts)
+		console.log(results)
 		if (results.error) throw results.error
 		this.charts = []
 		let i = 0

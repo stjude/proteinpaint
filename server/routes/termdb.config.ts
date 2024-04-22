@@ -249,6 +249,7 @@ function getAllowedTermTypes(ds) {
 		// same logic in trigger_findterm()
 		typeSet.add('geneVariant')
 	}
+	if (ds?.queries?.geneExpression) typeSet.add('geneExpression')
 
 	return [...typeSet]
 }

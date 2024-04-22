@@ -20,6 +20,6 @@ export class SearchHandler {
 
 	async selectGene(gene) {
 		if (!gene) throw new Error('No gene selected')
-		this.callback({ gene, type: TermTypes.GENE_EXPRESSION, name: gene })
+		this.callback({ id: gene, gene, type: TermTypes.GENE_EXPRESSION, name: gene })
 	}
 }
