@@ -37,7 +37,13 @@ const idPrefix = `_geneVariant_AUTOID_${+new Date()}_`
 let id = 0
 
 export function fillTW(tw: GeneVariantTW, vocabApi?: VocabApi) {
-	if (!tw.id) tw.id = idPrefix + id++
+	if (!tw.id) {
+		if (tw.term.id) {
+			tw.id = tw.term.id
+		} else {
+			tw.id = idPrefix + id++
+		}
+	}
 	if (!tw.term.id) tw.term.id = tw.id
 	if (tw.id != tw.term.id) throw 'the given ids (tw.id and tw.term.id) are different'
 	if (!tw.term.gene && !(tw.term.chr && tw.term.start && tw.term.stop)) throw 'no gene or position specified'

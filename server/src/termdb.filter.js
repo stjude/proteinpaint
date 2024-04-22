@@ -47,8 +47,11 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			// .CTEname: str
 		} else if (!item.tvs) {
 			throw `filter item should have a 'tvs' or 'lst' property`
-		} else if (item.tvs.term.id && !ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)) {
-			// some tvs such as geneVariant and samplelst don't have term id
+		} else if (
+			item.tvs.term.id &&
+			item.tvs.term.type != 'geneVariant' &&
+			!ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)
+		) {
 			throw 'invalid term id in tvs'
 		} else if (item.tvs.term.type == 'categorical') {
 			f = get_categorical(item.tvs, CTEname_i)
