@@ -35,7 +35,7 @@
                         "type": "mds3",
                         "name": "BCF with samples",
                         "bcf": {
-                            "file": "files/hg38/TermdbTest/TermdbTest.bcf.gz"
+                            "file": "proteinpaint_demo/hg38/bcf/test.bcf.gz"
                         }
                     }
                 ]
