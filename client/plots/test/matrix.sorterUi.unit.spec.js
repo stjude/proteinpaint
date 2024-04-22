@@ -345,6 +345,7 @@ tape('hidden values', async test => {
 	// config is a reference to the mutable object
 	const s = config.settings.matrix
 	const ui = uiApi.Inner
+	const tipNode = ui.dom.tip.d.node()
 	const a = config.settings.matrix.sortOptions.a
 	ui.expandedSection = a.sortPriority[0].label
 	a.sortPriority[0].tiebreakers[1].isOrdered = true
@@ -366,7 +367,7 @@ tape('hidden values', async test => {
 	const hiddenBtn = tr1.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-add]')
 	hiddenBtn.click()
 
-	const unusedVals = tr1.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-vals]')
+	const unusedVals = tipNode.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-vals]')
 	const n = 1
 	test.equal(
 		unusedVals.querySelectorAll(':scope>div').length,
@@ -382,7 +383,9 @@ tape('hidden values', async test => {
 		.nextSibling.querySelectorAll('tr')[0]
 
 	const valuesDiv_a = tr1_a.querySelector('.sjpp-matrix-sorter-ui-value')
-	const unusedVals_a = tr1_a.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-vals]')
+	const hiddenBtn_a = tr1_a.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-add]')
+	hiddenBtn_a.click()
+	const unusedVals_a = tipNode.querySelector('[data-testid=sjpp-matrix-sorter-ui-hidden-vals]')
 	test.deepEqual(
 		[valuesDiv_a.querySelectorAll(':scope>div').length, unusedVals_a.querySelectorAll(':scope>div').length],
 		[m - 1, n + 1],

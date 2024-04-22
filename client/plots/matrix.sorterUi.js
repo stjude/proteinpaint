@@ -7,7 +7,6 @@ import { mclass } from '#shared/common'
 import { getConfigForShowAll } from './matrix.interactivity'
 import { setComputedConfig } from './matrix.config'
 
-const tip = new Menu({ padding: '' })
 const alphabet = `ABCDEFGHIJKLMNOPQRSTUVWXYZ`.split('')
 
 /*
@@ -19,7 +18,7 @@ export function getSorterUi(opts) {
 	const parent = controls.parent
 	const s = parent.config.settings.matrix
 	const l = s.controlLabels
-	const unusedDisplayByLabel = new Map()
+	const tip = new Menu({ padding: '', parent_menu: parent.app.tip?.d.node() })
 
 	let input,
 		theads = [],
@@ -27,6 +26,7 @@ export function getSorterUi(opts) {
 		dragged = {}
 
 	const self = {
+		dom: { tip },
 		opts,
 		highlightColor: 'none',
 		label: `Sort ${l.Samples}`,
@@ -35,6 +35,7 @@ export function getSorterUi(opts) {
 		expanded: opts.expanded || false,
 		expandedSection: opts.expandedSection || '',
 		init(overrides = {}) {
+			tip.clear().hide()
 			const s = copyMerge(`{}`, parent.config.settings.matrix, overrides)
 			self.settings = s
 			self.activeOption = structuredClone(s.sortOptions[s.sortSamplesBy])
@@ -192,7 +193,6 @@ export function getSorterUi(opts) {
 
 						if (tb.notUsed?.length) {
 							const notUsed = td2.append('div')
-							if (!unusedDisplayByLabel.has(tb.label)) unusedDisplayByLabel.set(tb.label, 'none')
 
 							notUsed //.append('td')
 								.append('div')
@@ -203,42 +203,7 @@ export function getSorterUi(opts) {
 								.style('padding', '3px 5px')
 								.style('cursor', 'pointer')
 								.html(`+Add`)
-								.on('click', () => {
-									unusedDisplayByLabel.set(
-										tb.label,
-										unusedDisplayByLabel.get(tb.label) == 'inline-block' ? 'none' : 'inline-block'
-									)
-									availDiv.style('display', unusedDisplayByLabel.get(tb.label))
-								})
-
-							const availDiv = notUsed
-								.append('div')
-								.attr('data-testid', 'sjpp-matrix-sorter-ui-hidden-vals')
-								.style('margin-top', '3px')
-								.style('vertical-align', 'top')
-								.style('padding-left', '12px')
-								.style('display', unusedDisplayByLabel.get(tb.label))
-
-							availDiv
-								.selectAll('div')
-								.data(
-									tb.notUsed.map((key, index) => ({
-										lstName: 'notUsed',
-										key,
-										cls: mclass[key],
-										tb,
-										dragstart: trackDraggedValue,
-										dragover: highlightValue,
-										dragleave: unhighlightValue,
-										drop: adjustValueOrder,
-										filterByClass: s.filterByClass,
-										index
-									}))
-								)
-								.enter()
-								.append('div')
-								.style('display', 'inline-block')
-								.each(setValueDiv)
+								.on('click', showNotUsedValues)
 						}
 					}
 
@@ -520,6 +485,40 @@ export function getSorterUi(opts) {
 				[s.sortSamplesBy]: self.activeOption
 			}
 		})
+	}
+
+	function showNotUsedValues(event, tb) {
+		event?.stopPropagation()
+		const availDiv = tip
+			.clear()
+			.d.append('div')
+			.attr('data-testid', 'sjpp-matrix-sorter-ui-hidden-vals')
+			.style('margin-top', '3px')
+			.style('vertical-align', 'top')
+			.style('padding-left', '12px')
+
+		availDiv
+			.selectAll('div')
+			.data(
+				tb.notUsed.map((key, index) => ({
+					lstName: 'notUsed',
+					key,
+					cls: mclass[key],
+					tb,
+					dragstart: trackDraggedValue,
+					dragover: highlightValue,
+					dragleave: unhighlightValue,
+					drop: adjustValueOrder,
+					filterByClass: s.filterByClass,
+					index
+				}))
+			)
+			.enter()
+			.append('div')
+			.style('display', 'block')
+			.each(setValueDiv)
+
+		tip.showunder(event.target)
 	}
 
 	function apply() {

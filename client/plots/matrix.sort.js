@@ -359,7 +359,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 	}
 
 	// Similar to Oncoprint sorting
-	sortOptions.a = {
+	sortOptions.a = s.sortOptions?.a || {
 		//label: l.Mutation + ' categories', //'CNV+SSM > SSM-only > CNV-only',
 		// altLabels: {
 		// 	mutationOnly: 'SSM',
@@ -534,8 +534,12 @@ function defaultSorter(a, b) {
 
 export function getMclassSorter(self) {
 	const s = self.settings.matrix
+	// subsequent code does not work when s.sortSamplesBy == 'name', but a mclass sorter function
+	// may still be needed for non-matrix-column-sorting use cases such as for legend entries.
+	// In that case, use a default sorting option that is known to sort by mutation classes
+	const activeOption = s.sortOptions[s.sortSamplesBy].sortPriority ? s.sortOptions[s.sortSamplesBy] : s.sortOptions.a
 	const mclassPriority = []
-	s.sortOptions[s.sortSamplesBy].sortPriority.forEach(obj => {
+	activeOption.sortPriority.forEach(obj => {
 		if (obj.types.includes('geneVariant')) {
 			// Extract 'order' arrays from each tiebreaker and filter 'WT' and 'Blank'
 			obj.tiebreakers.forEach(tiebreaker => {
