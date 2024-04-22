@@ -14,7 +14,6 @@ import { getId } from '#mass/nav'
 import { minDotSize, maxDotSize } from './sampleScatter.js'
 import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
-import { TermTypes } from '../shared/common.js'
 
 const defaultSize = 64
 export function setRenderers(self) {

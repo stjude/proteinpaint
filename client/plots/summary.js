@@ -7,6 +7,7 @@ import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
 import { getDefaultScatterSettings } from './sampleScatter.js'
 import { Tabs } from '../dom/toggleButtons'
+import { isNumeric } from '../shared/common.js'
 
 //import {  } from ''
 
@@ -62,7 +63,6 @@ class SummaryPlot {
 	async main() {
 		this.dom.errdiv.style('display', 'none')
 		this.config = structuredClone(this.state.config)
-
 		if (!this.components.plots[this.config.childType]) {
 			await this.setComponent(this.config)
 		}
@@ -166,14 +166,12 @@ function setRenderers(self) {
 						const term = self.config?.term
 						const term2 = self.config?.term2
 						if (term) {
-							const mode =
-								term?.term.type == 'float' || term?.term.type == 'integer' ? 'discrete' : term?.q.mode || 'discrete'
+							const mode = isNumeric(term?.term) ? 'discrete' : term?.q.mode || 'discrete'
 							config.term = await self.getWrappedTermCopy(term, mode)
 						}
 
 						if (term2) {
-							const mode =
-								term2.term.type == 'float' || term2.term.type == 'integer' ? 'discrete' : term2.q.mode || 'discrete'
+							const mode = isNumeric(term2.term) ? 'discrete' : term2.q.mode || 'discrete'
 							config.term2 = await self.getWrappedTermCopy(term2, mode)
 						}
 						return config
@@ -185,19 +183,13 @@ function setRenderers(self) {
 					childType: 'violin',
 					label: 'Violin',
 					disabled: d => false,
-					isVisible: () =>
-						self.config?.term.term.type === 'integer' ||
-						self.config?.term.term.type === 'float' ||
-						self.config?.term2?.term.type === 'integer' ||
-						self.config?.term2?.term.type === 'float',
+					isVisible: () => isNumeric(self.config?.term?.term) || isNumeric(self.config?.term2?.term),
 					getConfig: async () => {
 						const term = self.config?.term
 						const term2 = self.config.term2
 
 						let _term, _term2
-						term.term.type === 'integer' || term.term.type === 'float'
-							? (self.violinContTerm = 'term')
-							: (self.violinContTerm = 'term2')
+						isNumeric(term?.term) ? (self.violinContTerm = 'term') : (self.violinContTerm = 'term2')
 
 						//If the first term was continuous or is coming as continuous
 						if ((self.violinContTerm && self.violinContTerm === 'term') || term.q?.mode == 'continuous') {

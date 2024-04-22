@@ -1125,3 +1125,8 @@ export const TermTypeGroups = {
 	SNP_LIST: 'SNP List',
 	SNP_LOCUS: 'SNP Locus'
 }
+
+export function isNumeric(term) {
+	if (!term) return false
+	return term.type == TermTypes.INTEGER || term.type == TermTypes.FLOAT || term.type == TermTypes.GENE_EXPRESSION
+}
