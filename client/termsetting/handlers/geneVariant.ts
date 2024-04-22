@@ -37,6 +37,8 @@ const idPrefix = `_geneVariant_AUTOID_${+new Date()}_`
 let id = 0
 
 export function fillTW(tw: GeneVariantTW, vocabApi?: VocabApi) {
+	// TODO: set term.id=term.name.
+	// TODO: term.id should be required
 	if (!tw.id) {
 		if (tw.term.id) {
 			tw.id = tw.term.id

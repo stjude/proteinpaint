@@ -20,6 +20,8 @@ export class SearchHandler {
 	}
 
 	async selectGene(geneSearch) {
+		// TODO: set term.id=term.name
+		// TODO: term.id should be required
 		if (geneSearch.geneSymbol) {
 			this.callback({
 				id: idPrefix + id++,
