@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Disco plot: added hambuger menu
+- Disco plot: added option to render CNVs as heatmap and barchart
+- Disco plot: added option to set percentile for CNV rendering
+
 
 ## 2.55.1
 
