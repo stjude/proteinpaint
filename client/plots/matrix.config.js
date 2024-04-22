@@ -190,10 +190,9 @@ export async function getPlotConfig(opts = {}, app) {
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
 	const m = config.settings.matrix
-
-	;(m.sortOptions = getSortOptions(app.vocabApi.termdbConfig, controlLabels, m)),
-		// harcode these overrides for now
-		(m.duration = 0)
+	m.sortOptions = getSortOptions(app.vocabApi.termdbConfig, controlLabels, m)
+	// harcode these overrides for now
+	m.duration = 0
 	// force auto-dimensions for colw
 	m.colw = 0
 	// support deprecated sortSamplesBy value from a saved session

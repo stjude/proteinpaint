@@ -2,6 +2,14 @@ const tape = require('tape')
 const termjson = require('../../test/testdata/termjson').termjson
 const helpers = require('../../test/front.helpers.js')
 const { sleep, detectLst, detectGte } = require('../../test/test.helpers.js')
+const { getSortOptions } = require('../../plots/matrix.sort.js')
+const {
+	proteinChangingMutations,
+	truncatingMutations,
+	synonymousMutations,
+	mutationClasses,
+	CNVClasses
+} = require('#shared/common')
 
 /*************************
  reusable helper functions
@@ -591,7 +599,7 @@ tape('sort samples by sample name', function (test) {
 	}
 })
 
-tape('sort samples by Mutation categories', function (test) {
+tape('sort samples by Mutation categories, not sorted by CNV', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
 	runpp({
@@ -639,11 +647,11 @@ tape('sort samples by Mutation categories', function (test) {
 		)
 		const rects = matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g')._groups[0]
 		const index_3346 = Array.from(rects).find(rect => rect.textContent == '3346').__data__.index
-		test.true(index_3346 < 10, `should be in the expected order`)
+		test.true(index_3346 < 10, `sample 3346 should be in the expected order (not sorted by CNV)`)
 		const index_2660 = Array.from(rects).find(rect => rect.textContent == '2660').__data__.index
-		test.true(index_2660 > 9, `should be in the expected order`)
+		test.equal(index_2660, 8, `sample 2660 should be in the expected order (not sorted by CNV)`)
 		const index_3472 = Array.from(rects).find(rect => rect.textContent == '3472').__data__.index
-		test.true(index_3472 > 9, `should be in the expected order`)
+		test.true(index_3472 > 9, `sample 3472 should be in the expected order (not sorted by CNV)`)
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
@@ -652,6 +660,21 @@ tape('sort samples by Mutation categories', function (test) {
 tape('sort samples by CNV+SSM > SSM-only', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(5)
+	const sortOptions = getSortOptions(
+		undefined,
+		{},
+		{
+			proteinChangingMutations,
+			truncatingMutations,
+			synonymousMutations,
+			mutationClasses,
+			CNVClasses
+		}
+	)
+
+	const cnvtb = sortOptions.a.sortPriority[0].tiebreakers[2]
+	cnvtb.disabled = false
+
 	runpp({
 		state: {
 			nav: {
@@ -660,12 +683,17 @@ tape('sort samples by CNV+SSM > SSM-only', function (test) {
 			plots: [
 				{
 					chartType: 'matrix',
+					legendValueFilter: {
+						type: 'tvslst',
+						lst: []
+					},
 					settings: {
 						// the matrix autocomputes the colw based on available screen width,
 						// need to set an exact screen width for consistent tests using getBBox()
 						matrix: {
 							availContentWidth: 1200,
-							sortSamplesBy: 'b'
+							sortSamplesBy: 'a',
+							sortOptions
 						}
 					},
 					termgroups: [
@@ -704,7 +732,7 @@ tape('sort samples by CNV+SSM > SSM-only', function (test) {
 		const index_2660 = r.find(rect => rect.textContent == '2660').__data__.index
 		test.equal(index_2660, 11, `should be in the expected order`)
 		const index_3472 = r.find(rect => rect.textContent == '3472').__data__.index
-		test.true(index_3472, r.length - 1, `should be in the expected order`)
+		test.equal(index_3472, r.length - 1, `should be in the expected order`)
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
