@@ -142,14 +142,12 @@ export class TermdbVocab extends Vocab {
 			const term = opts[_key]
 			if (!term) continue
 			const key = _key == 'term' ? 'term1' : _key
-			if ('id' in term.term) {
+			// will need to generalize to also consider type=geneExpression
+			if ('id' in term.term && term.term.type != 'geneVariant') {
 				params.push(key + '_id=' + encodeURIComponent(term.term.id))
-			}
-			//we'll assume that it is okay to handle all nonDictionaryTerms this way, not just geneVariant term //if (term.term.type == 'geneVariant')
-			else {
+			} else {
 				params.push(key + '=' + encodeURIComponent(JSON.stringify(term.term)))
 			}
-
 			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
 			params.push(key + '_q=' + q_to_param(term.q))
 		}

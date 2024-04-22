@@ -177,12 +177,12 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 	bins.push([])
 	let customSampleID = 1
 	const term1 = map.get(1) ? map.get(1).term : null
-	const id1 = term1?.id ? term1.id : term1?.name
+	const id1 = term1?.id && term1?.type != 'geneVariant' ? term1.id : term1?.name
 	if (id1 && data.refs.byTermId[id1]?.bins) bins.push(data.refs.byTermId[id1]?.bins)
 	else bins.push([])
 
 	const term2 = map.get(2) ? map.get(2).term : null
-	const id2 = term2?.id ? term2.id : term2?.name
+	const id2 = term2?.id && term1?.type != 'geneVariant' ? term2.id : term2?.name
 	if (id2 && data.refs.byTermId[id2]?.bins) bins.push(data.refs.byTermId[id2]?.bins)
 	else bins.push([])
 
