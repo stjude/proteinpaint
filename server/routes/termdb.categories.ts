@@ -88,7 +88,19 @@ function init({ genomes }) {
 }
 
 async function trigger_getcategories(
-	q: { tid: string | number; type: string; filter: any; term1_q: any; currentGeneNames?: string[]; rglst?: any },
+	q: {
+		tid: string | number
+		type: string
+		filter: any
+		term1_q: any
+		name?: string
+		gene?: string
+		chr?: number
+		start?: number
+		stop?: number
+		currentGeneNames?: string[]
+		rglst?: any
+	},
 	res: { send: (arg0: { lst: any[]; orderedLabels?: any }) => void },
 	tdb: { q: { termjsonByOneid: (arg0: any) => any } },
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
@@ -97,14 +109,25 @@ async function trigger_getcategories(
 	// thin wrapper of get_summary
 	// works for all types of terms
 	if (!q.tid) throw '.tid missing'
-	const term =
-		q.type == 'geneVariant' ? { name: q.tid, type: 'geneVariant', isleaf: true } : tdb.q.termjsonByOneid(q.tid)
+	let term
+	if (q.type == 'geneVariant') {
+		term = { name: q.name, type: 'geneVariant', isleaf: true }
+		if (q.gene) {
+			term.gene = q.gene
+		} else {
+			term.chr = q.chr
+			term.start = q.start
+			term.stop = q.stop
+		}
+	} else {
+		term = tdb.q.termjsonByOneid(q.tid)
+	}
 
 	const arg = {
 		filter: q.filter,
 		terms:
 			q.type == 'geneVariant'
-				? [{ term: term, q: { isAtomic: true } }]
+				? [{ term, q: { isAtomic: true } }]
 				: [{ id: q.tid, term, q: q.term1_q || getDefaultQ(term, q) }],
 		currentGeneNames: q.currentGeneNames, // optional, from mds3 mayAddGetCategoryArgs()
 		rglst: q.rglst // optional, from mds3 mayAddGetCategoryArgs()
@@ -126,7 +149,7 @@ async function trigger_getcategories(
 		}
 		const sampleCountedFor = new Set() // if the sample is counted
 		for (const [sampleId, sampleData] of Object.entries(samples)) {
-			const values = sampleData[q.tid].values
+			const values = sampleData[q.name].values
 			sampleCountedFor.clear()
 			/* values here is an array of result entires, one or more entries for each dt. e.g.
 			[
