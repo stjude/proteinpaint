@@ -1,1 +1,5 @@
+Features:
+- Disco plot: added hambuger menu
+- Disco plot: added option to render CNVs as heatmap and barchart
+- Disco plot: added option to set percentile for CNV rendering
 
