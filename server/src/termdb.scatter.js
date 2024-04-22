@@ -310,7 +310,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 }
 
 function hasValue(dbSample, tw) {
-	const key = dbSample?.[tw?.term?.id || tw?.term?.name]?.key
+	const key = dbSample?.[`${tw?.term?.id && tw?.term?.type != 'geneVariant' ? tw?.term?.id : tw?.term?.name}`]?.key
 	const hasKey = key !== undefined
 	if (!hasKey) console.log(JSON.stringify(dbSample) + ' missing value for the term ' + JSON.stringify(tw))
 	return hasKey
