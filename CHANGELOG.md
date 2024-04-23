@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- GDC sequence reads viz no longer limits slicing range; the only limit is slice file size
+
+
 ## 2.56.0
 
 Features:
