@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.56.0
 
 Features:
 - Disco plot: added hambuger menu
