@@ -23,16 +23,7 @@ export async function launch() {
 
 		// no error from server initiation
 		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)
-		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
-		// a serverconfig.preListenScript may rely on detecting this exact pre-listen() message
-		console.log(`\nValidation succeeded.\n`)
 
-		// may not need to load server routes if exiting early
-		const exitMessage = handle_argv(process.argv)
-		if (exitMessage) {
-			console.log(exitMessage)
-			return
-		}
 		console.log('setting app middlewares ...')
 		const app = express()
 		app.disable('x-powered-by')
@@ -70,6 +61,17 @@ export async function launch() {
 		})
 
 		oldApp.setRoutes(app, genomes, serverconfig)
+
+		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
+		// a serverconfig.preListenScript may rely on detecting this exact pre-listen() message
+		console.log(`\nValidation succeeded.\n`)
+
+		// may exit early depending on command-line options
+		const exitMessage = handle_argv(process.argv)
+		if (exitMessage) {
+			console.log(exitMessage)
+			return
+		}
 
 		await startServer(app)
 		return app
