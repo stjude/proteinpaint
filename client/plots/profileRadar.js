@@ -25,14 +25,12 @@ class profileRadar extends profilePlot {
 		this.terms = this.config[this.config.plot].terms
 		for (const row of this.terms) {
 			this.rowCount++
-			if (row.term1) {
-				this.twLst.push(row.term1.score)
-				this.twLst.push(row.term1.maxScore)
-			}
-			if (row.term2) {
-				this.twLst.push(row.term2.score)
-				this.twLst.push(row.term2.maxScore)
-			}
+
+			this.twLst.push(row.term1.score)
+			if (row.term1.maxScore.id) this.twLst.push(row.term1.maxScore)
+			this.twLst.push(row.term2.score)
+
+			if (row.term2.maxScore.id) this.twLst.push(row.term2.maxScore)
 		}
 		await this.setControls()
 		this.angle = (Math.PI * 2) / this.terms.length
@@ -43,7 +41,7 @@ class profileRadar extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const width = 1500
+		const width = 1300
 		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -75,8 +73,8 @@ class profileRadar extends profilePlot {
 
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 390},${y + 100})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 390},${y - 200})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 390},${y - 200})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 390},${y})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -150,10 +148,6 @@ class profileRadar extends profilePlot {
 				.attr('pointer-events', 'none')
 		}
 
-		if (this.state.dslabel == 'ProfileAbbrev') {
-			const uiG = this.legendG.append('g').attr('transform', `translate(0, 30)`)
-			this.addEndUserImpressionNote(uiG)
-		}
 		this.addFilterLegend()
 
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
@@ -164,6 +158,7 @@ class profileRadar extends profilePlot {
 
 		const item2 = `${config[config.plot].term2.name} ${abbrev}`
 		this.addLegendItem(item2, color2, 1, '5, 5')
+		this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
 	}
 
 	addData(field, iangle, i, data) {
@@ -265,14 +260,17 @@ export async function getPlotConfig(opts, app) {
 		const terms = config[opts.plot].terms
 		const twlst = []
 		for (const row of terms) {
-			if (row.term1) {
-				row.term1.score.q = row.term1.maxScore.q = { mode: 'continuous' }
-				twlst.push(row.term1.score)
+			row.term1.score.q = { mode: 'continuous' }
+			twlst.push(row.term1.score)
+			if (row.term1.maxScore.id) {
+				row.term1.maxScore.q = { mode: 'continuous' }
 				twlst.push(row.term1.maxScore)
 			}
-			if (row.term2) {
-				row.term2.score.q = row.term2.maxScore.q = { mode: 'continuous' }
-				twlst.push(row.term2.score)
+			row.term1.score.q = { mode: 'continuous' }
+
+			twlst.push(row.term2.score)
+			if (row.term2.maxScore.id) {
+				row.term2.maxScore.q = { mode: 'continuous' }
 				twlst.push(row.term2.maxScore)
 			}
 		}

@@ -498,18 +498,19 @@ export class profilePlot {
 			//not specified when called
 			//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
 			isAggregate = this.settings.isAggregate || this.sampleData == null //if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
-		if (!isAggregate) {
-			const score = this.sampleData[d.score.$id]?.value
-			const maxScore = this.sampleData[d.maxScore.$id]?.value
-			const percentage = (score / maxScore) * 100
-			return Math.round(percentage)
-		} else {
-			const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
+		if (isAggregate) {
+			const maxScore = d.maxScore.$id ? this.data.lst[0]?.[d.maxScore.$id]?.value : d.maxScore
 			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
 			scores.sort((s1, s2) => s1 - s2)
 			const middle = Math.floor(scores.length / 2)
 			const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
 			return Math.round(score)
+		} else {
+			const score = this.sampleData[d.score.$id]?.value
+			const maxScore = d.maxScore.$id ? this.sampleData[d.maxScore.$id]?.value : d.maxScore //if maxScore is not a term, it is a number
+			console.log(score, maxScore)
+			const percentage = (score / maxScore) * 100
+			return Math.round(percentage)
 		}
 	}
 }

@@ -64,8 +64,8 @@ class profileRadarFacility extends profilePlot {
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 120})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 420},${y - 200})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 420},${y - 180})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 420},${y + 10})`)
 
 		const rows = []
 		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Global' }]
