@@ -181,10 +181,7 @@ tape('Case in cohort filter', test => {
 	}
 })
 
-///////////// !!!!!!!!!!!!
-///////////// reenable this test after soft launch
-///////////// !!!!!!!!!!!!
-tape.skip('Case NOT in cohort filter', test => {
+tape('Case NOT in cohort filter', test => {
 	const holder = getHolder()
 	runproteinpaint({
 		holder,
