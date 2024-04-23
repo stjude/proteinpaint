@@ -379,20 +379,15 @@ class Hicstat {
 		// this.dom.controlsDiv.view.text('Detailed')
 		//nmeth2select(hic, this.detailview, true)
 		//matrixType2select(this.detailview, this, true)
-
 		// this.ingenome = false
 		// this.inchrpair = false
 		// this.indetail = true
 		// this.inhorizontal = false
-
 		// const isintrachr = chrx == chry
 		//showBtns(this)
-
 		//if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
-
 		// // default view span
 		// const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
-
 		//let resolution: number | null = null
 		// for (const res of hic.bpresolution) {
 		// 	if (viewrangebpw / res > minimumbinnum_bp) {
@@ -408,82 +403,71 @@ class Hicstat {
 		// while ((binpx * viewrangebpw) / resolution! < mincanvassize_detail) {
 		// 	binpx += 2
 		// }
-
 		// px width of x and y blocks
 		// const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution!)
-		const blockwidth = 500
-		this.detailview.xb!.width = blockwidth
-		this.detailview.yb!.width = blockwidth
-
+		// const blockwidth = 500
+		// this.detailview.xb!.width = blockwidth
+		// this.detailview.yb!.width = blockwidth
 		/************** middle canvas *****************/
-
-		const canvasholder = this.dom.plotDiv.plot
-			.append('div')
-			.style('position', 'relative')
-			.style('width', blockwidth + 'px')
-			.style('height', blockwidth + 'px')
-			.style('overflow', 'hidden')
-
-		const canvas = canvasholder
-			.append('canvas')
-			.style('display', 'block')
-			.style('position', 'absolute')
-			.attr('width', blockwidth)
-			.attr('height', blockwidth)
-			.attr('left', '10px')
-			.attr('top', '10px')
-			.on('mousedown', (event: MouseEvent) => {
-				const body = d3select(document.body)
-				const x = event.clientX
-				const y = event.clientY
-				const oldx = Number.parseInt(canvas.style('left'))
-				const oldy = Number.parseInt(canvas.style('top'))
-				body.on('mousemove', event => {
-					const xoff = event.clientX - x
-					const yoff = event.clientY - y
-					this.detailview.xb!.panning(xoff)
-					this.detailview.yb!.panning(yoff)
-					canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
-				})
-				body.on('mouseup', (event: MouseEvent) => {
-					body.on('mousemove', null).on('mouseup', null)
-					const xoff = event.clientX - x
-					const yoff = event.clientY - y
-					this.detailview.xb!.pannedby(xoff)
-					this.detailview.yb!.pannedby(yoff)
-				})
-			})
-		const ctx = canvas.node()!.getContext('2d')
-
-		this.detailview.canvas = canvas
-		this.detailview.ctx = ctx
-
-		await detailViewUpdateHic(hic, this)
-
+		// const canvasholder = this.dom.plotDiv.plot
+		// 	.append('div')
+		// 	.style('position', 'relative')
+		// 	.style('width', blockwidth + 'px')
+		// 	.style('height', blockwidth + 'px')
+		// 	.style('overflow', 'hidden')
+		// const canvas = canvasholder
+		// 	.append('canvas')
+		// 	.style('display', 'block')
+		// 	.style('position', 'absolute')
+		// 	.attr('width', blockwidth)
+		// 	.attr('height', blockwidth)
+		// 	.attr('left', '10px')
+		// 	.attr('top', '10px')
+		// 	.on('mousedown', (event: MouseEvent) => {
+		// 		const body = d3select(document.body)
+		// 		const x = event.clientX
+		// 		const y = event.clientY
+		// 		const oldx = Number.parseInt(canvas.style('left'))
+		// 		const oldy = Number.parseInt(canvas.style('top'))
+		// 		body.on('mousemove', event => {
+		// 			const xoff = event.clientX - x
+		// 			const yoff = event.clientY - y
+		// 			this.detailview.xb!.panning(xoff)
+		// 			this.detailview.yb!.panning(yoff)
+		// 			canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
+		// 		})
+		// 		body.on('mouseup', (event: MouseEvent) => {
+		// 			body.on('mousemove', null).on('mouseup', null)
+		// 			const xoff = event.clientX - x
+		// 			const yoff = event.clientY - y
+		// 			this.detailview.xb!.pannedby(xoff)
+		// 			this.detailview.yb!.pannedby(yoff)
+		// 		})
+		// 	})
+		// const ctx = canvas.node()!.getContext('2d')
+		// this.detailview.canvas = canvas
+		// this.detailview.ctx = ctx
+		// await detailViewUpdateHic(hic, this)
 		/******** common parameter for x/y block ********/
-
-		const arg: any = {
-			// noresize: true,
-			// nobox: true,
-			// butrowbottom: true,
-			// style: {
-			// 	margin: this.detailview.bbmargin + 'px'
-			// },
-			// genome: hic.genome,
-			// hostURL: hic.hostURL,
-			// width: blockwidth,
-			// leftheadw: 20,
-			// rightheadw: 40,
-			// tklst: []
-		}
+		// const arg: any = {
+		// 	noresize: true,
+		// 	nobox: true,
+		// 	butrowbottom: true,
+		// 	style: {
+		// 		margin: this.detailview.bbmargin + 'px'
+		// 	},
+		// 	genome: hic.genome,
+		// 	hostURL: hic.hostURL,
+		// 	// width: blockwidth,
+		// 	leftheadw: 20,
+		// 	rightheadw: 40,
+		// 	tklst: []
+		// }
 		// client.first_genetrack_tolist(hic.genome, arg.tklst)
-
 		// duplicate arg for y
 		// const arg2: any = {}
 		// for (const k in arg) arg2[k] = arg[k]
-
 		/******************* x block ******************/
-
 		// let xfirsttime = true
 		// arg.chr = this.x.chr
 		// arg.start = this.x.start
@@ -499,7 +483,6 @@ class Hicstat {
 		// 	'width',
 		// 	2 * this.detailview.bbmargin! + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
 		// )
-
 		// if (xfirsttime) {
 		// 	xfirsttime = false
 		// 	// must do this:
@@ -517,27 +500,21 @@ class Hicstat {
 		// blocklazyload(arg).then(block => {
 		// 	this.detailview.xb = block
 		// })
-
 		/******************* y block ******************/
-
 		// const sheath = this.dom.plotDiv.yAxis
 		// 	.append('div')
 		// 	.style('position', 'relative')
 		// 	.style('width', '200px') // dummy size
 		// 	.style('height', '800px')
-
 		// const rotor = sheath
 		// 	.append('div')
 		// 	.style('position', 'absolute')
 		// 	.style('bottom', '0px')
 		// 	.style('transform', 'rotate(-90deg)')
 		// 	.style('transform-origin', 'left bottom')
-
 		// let yfirsttime = true
-
 		// arg2.rotated = true
 		// arg2.showreverse = true
-
 		// arg2.chr = this.y.chr
 		// arg2.start = this.y.start
 		// arg2.stop = this.y.stop
@@ -560,12 +537,10 @@ class Hicstat {
 		// 		-xoff + this.detailview.bbmargin! + this.detailview.yb!.rightheadw + this.detailview.yb!.rpad + 'px'
 		// 	)
 		// }
-
 		// const buttonrowh = 30
 		// arg2.onsetheight = bbh => {
 		// 	rotor.transition().style('left', this.detailview.bbmargin + bbh + buttonrowh + 'px')
 		// }
-
 		// blocklazyload(arg2).then(block => {
 		// 	this.detailview.yb = block
 		// })
