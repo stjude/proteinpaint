@@ -115,7 +115,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (q.tw?.term.type == TermTypes.GENE_EXPRESSION)
 		//to support new types we pass the termwrapper object
 		return await trigger_getGeneExpViolinPlotData(q, res, ds, genome)
-	console.log('q', q)
+
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
 	if (!term) throw '.termid invalid'
 	//term on backend should always be an integer term

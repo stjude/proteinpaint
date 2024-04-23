@@ -225,7 +225,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 					isLast = true
 				}
 			} else {
-				const field = q.divideByTW.$id || q.divideByTW.term.id
+				const field = q.divideByTW.$id
 				const key = dbSample[field]?.key
 				if (key == null) continue
 				divideBy = q.divideByTW.term.values?.[key]?.label || key
@@ -249,7 +249,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			sample.category = 'Default'
 		} else {
 			if (q.colorTW?.q?.mode === 'continuous') {
-				if (dbSample) sample.category = dbSample[q.colorTW.$id || q.colorTW.term.id].value
+				if (dbSample) sample.category = dbSample[q.colorTW.$id].value
 			} else processSample(dbSample, sample, q.colorTW, results[divideBy].colorMap, 'category')
 		}
 
@@ -308,7 +308,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 }
 
 function hasValue(dbSample, tw) {
-	const key = dbSample?.[tw?.$id || tw?.term.id]?.key
+	const key = dbSample?.[tw?.$id]?.key
 	const hasKey = key !== undefined
 	if (!hasKey) console.log(JSON.stringify(dbSample) + ' missing value for the term ' + JSON.stringify(tw))
 	return hasKey
@@ -318,7 +318,7 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 	let value = null
 	if (tw.term.type == 'geneVariant') assignGeneVariantValue(dbSample, sample, tw, categoryMap, category)
 	else {
-		value = dbSample?.[tw.$id || tw.term.id]?.key
+		value = dbSample?.[tw.$id]?.key
 		if (tw.term.values?.[value]?.label) {
 			value = tw.term.values?.[value]?.label
 			sample.hidden[category] = tw.q.hiddenValues ? value in tw.q.hiddenValues : false

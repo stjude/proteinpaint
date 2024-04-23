@@ -111,7 +111,7 @@ async function trigger_getcategories(
 	if (!q.tid) throw '.tid missing'
 	let term
 	if (q.type == 'geneVariant') {
-		term = { name: q.name, type: 'geneVariant', isleaf: true }
+		term = { id: q.name, name: q.name, type: 'geneVariant', isleaf: true }
 		if (q.gene) {
 			term.gene = q.gene
 		} else {
@@ -149,7 +149,8 @@ async function trigger_getcategories(
 		}
 		const sampleCountedFor = new Set() // if the sample is counted
 		for (const [sampleId, sampleData] of Object.entries(samples)) {
-			const values = sampleData[q.name].values
+			const key = (q.tid || q.name)! //as the request is done from the server side the results are indexed by term id or name
+			const values = sampleData[key].values
 			sampleCountedFor.clear()
 			/* values here is an array of result entires, one or more entries for each dt. e.g.
 			[

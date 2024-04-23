@@ -112,7 +112,7 @@ async function getSampleData(q) {
 	const sampleFilterSet = await mayGetSampleFilterSet(q, nonDictTerms) // conditionally returns a set of sample ids
 
 	for (const tw of nonDictTerms) {
-		const $id = tw.$id || tw.term.id
+		if (!tw.$id) tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
@@ -148,7 +148,7 @@ async function getSampleData(q) {
 				const snp2value = {}
 				for (const [snp, o] of value.id2value) snp2value[snp] = o.value
 
-				samples[sampleId][tw.$id || tw.term.id] = snp2value
+				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
 			const args = {
@@ -317,7 +317,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	).catch(console.error)
 
 	// for "samplelst" term, term.id is missing and must use term.name
-	values.push(...termWrappers.map(tw => tw.$id))
+	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}
@@ -353,6 +353,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			// add next term value to .values[]
 			samples[sample][term_id].values.push({ key, value })
 		}
+		console.log(samples[sample])
 	}
 
 	return [samples, byTermId]

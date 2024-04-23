@@ -56,7 +56,7 @@ export function getHandler(self) {
 			try {
 				const d = await self.vocabApi.getViolinPlotData(
 					{
-						termid: self.term.id,
+						tw: { $id: self.$id, id: self.id, term: self.term, q: self.q },
 						gene: self.term.gene,
 						filter: self.filter,
 						svgw: self.num_obj.plot_size.width
