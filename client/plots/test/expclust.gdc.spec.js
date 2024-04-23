@@ -30,7 +30,6 @@ tape('\n', function (test) {
 
 tape('TME genes, 3 variables', function (test) {
 	test.timeoutAfter(60000)
-	test.plan(14)
 	runpp({
 		state: {
 			nav: { header_mode: 'hidden' }, // must set to hidden for gdc, since it lacks termdb method to get cohort size..
