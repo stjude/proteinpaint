@@ -249,7 +249,6 @@ const readpanel_DN_maxlength = 20 // Variable to define whether a deletion is re
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 const gdcHashSecret = Math.random.toString()
-const gdcSliceCacheRequestRegionMaxSize = 300000 // max region size to slice and cache file for
 
 /**************************
       gdc security
@@ -293,13 +292,9 @@ export default function (genomes) {
 
 				clientdownloadgdcslice:1
 					present on clicking download button in block
-
-				stream2download:true
-					present at slice to download (by streaming), no cache file is created
-					file position can be "unmapped" or coord
 				*/
 
-				validateGdcFilePositionWithMaxLimit(req)
+				validateGdcFilePosition(req)
 
 				// to access ds.getHostHeaders(), assign query.__genomes so later code can access gdc ds object as needed
 				req.query.__genomes = genomes
@@ -312,11 +307,7 @@ export default function (genomes) {
 
 				// authorized! can proceed
 
-				if (req.query.stream2download) {
-					// download the slice directly to client, do not write to cache file (app runs in "download mode")
-					await streamGdcBam2response(req, res)
-					return
-				}
+				//if (req.query.stream2download) { await streamGdcBam2response(req, res) return } // no longer used
 
 				// compute persistent cache file name using uuid etc; cache file name is never revealed to client
 				req.query.file = getGDCcacheFileName(req)
@@ -373,16 +364,13 @@ async function clientdownloadgdcsliceFromCache_withDenial(req, res) {
 	res.end(Buffer.from(data, 'binary'))
 }
 
-/* if query is from bam slice download, will not limit request range, per discussion on 2/13/2024
-otherwise, a cache file will be created for the slice and a max region size is applied as a crude measure
-to limit cache file size; this does not guard against high depth bam
-in future, a good fix will need gdc to make bam coverage bigwig files available.
-before slicing, query bw file to estimate total cumulative depth over requested region
-if cumulative depth is above a cutoff, deny. this allows to guard against amplified region or hbb gene expression etc 
-and will allow to relax max range limit e.g. to 1Mb over a sparsely covered region and make the app less restrictive
-still bigwig estimation is approximate due to use of summary layers when zoommed out
+/* 
+to visualize a bam tk, a cache file will be created for the slice
+no limit on request region size
+limit on cache file size by cacheMaxSize (data amount calculated on the fly while streaming)
+this allows to slice large region on a low-depth file, and can auto-abort in case of high-depth file
 */
-function validateGdcFilePositionWithMaxLimit(req) {
+function validateGdcFilePosition(req) {
 	if (!req.query.gdcFilePosition) throw 'gdcFileUUID is present but gdcFilePosition is missing'
 	if (typeof req.query.gdcFilePosition != 'string') throw 'gdcFilePosition is not string'
 	if (req.query.gdcFilePosition == 'unmapped') return // in download mode
@@ -392,10 +380,6 @@ function validateGdcFilePositionWithMaxLimit(req) {
 	const start = Number(tmp[1]),
 		stop = Number(tmp[2])
 	if (!Number.isInteger(start) || !Number.isInteger(stop) || start > stop) throw 'gdcFilePosition invalid start/stop'
-
-	if (req.query.stream2download) return // to download and do not write to cache. do not apply limit
-	if (stop - start > gdcSliceCacheRequestRegionMaxSize)
-		throw `Slice range exceeds ${fileSize(gdcSliceCacheRequestRegionMaxSize)} limit. Please choose a smaller range.`
 }
 
 function getGdcDs(genomes) {
@@ -3536,6 +3520,7 @@ async function downloadGdcBam2cacheFile_withDenial(req) {
 	return sizes
 }
 
+/* not in use: client now calls slicing api directly to download
 async function streamGdcBam2response(req, res) {
 	const { host, headers } = getGdcDs(req.query.__genomes).getHostHeaders(req.query)
 	headers.compression = false // see comments in get_gdc_bam()
@@ -3564,6 +3549,7 @@ async function streamGdcBam2response(req, res) {
 		res.send({ error: e.message || e })
 	}
 }
+*/
 
 /*
 	BAM deletion is prioritized by last modified time, not access time (to avoid relatime issues),

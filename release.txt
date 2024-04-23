@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC sequence reads viz no longer limits slicing range; the only limit is slice file size
