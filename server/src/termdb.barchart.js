@@ -102,8 +102,8 @@ export async function barchart_data(q, ds, tdb) {
 		let term = null
 		if (q[`term${i}_id`]) {
 			const id = q[`term${i}_id`]
-			term = { id, q: q[`term${i}_q`], term: { id } }
-		} else if (q[`term${i}`]) term = { term: q[`term${i}`], q: q[`term${i}_q`] }
+			term = { id, q: q[`term${i}_q`], term: { id }, $id: q[`term${i}_$id`] }
+		} else if (q[`term${i}`]) term = { term: q[`term${i}`], q: q[`term${i}_q`], $id: q[`term${i}_$id`] }
 		if (term) map.set(i, term)
 	}
 	const terms = [...map.values()]
@@ -113,13 +113,15 @@ export async function barchart_data(q, ds, tdb) {
 	const bins = []
 	if (data.samples) {
 		if (map.get(1)?.term?.type == 'geneVariant' || map.get(2)?.term?.type == 'geneVariant') {
+			console.log()
 			//when term1 or term2 is a geneVariant term
 			processGeneVariantSamples(map, bins, data, samplesMap, ds)
 		} else {
 			for (let i = 0; i <= 2; i++) {
 				const q = map.get(i)?.q
-				const term = map.get(i) ? map.get(i).term : null
-				const id = term?.id ? term.id : term?.name
+				const tw = map.get(i)
+				const term = tw?.term || null
+				const id = tw?.$id ? tw.$id : term?.id ? term.id : term?.name
 				if (id && data.refs.byTermId[id]?.bins) bins.push(data.refs.byTermId[id]?.bins)
 				else bins.push([])
 				if (q?.binColored) {
@@ -176,13 +178,15 @@ export async function barchart_data(q, ds, tdb) {
 function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 	bins.push([])
 	let customSampleID = 1
-	const term1 = map.get(1) ? map.get(1).term : null
-	const id1 = term1?.id && term1?.type != 'geneVariant' ? term1.id : term1?.name
+	const tw1 = map.get(1)
+	const term1 = tw1?.term || null
+	const id1 = tw1?.$id ? tw1.$id : term1?.id && term1?.type != 'geneVariant' ? term1.id : term1?.name
 	if (id1 && data.refs.byTermId[id1]?.bins) bins.push(data.refs.byTermId[id1]?.bins)
 	else bins.push([])
 
-	const term2 = map.get(2) ? map.get(2).term : null
-	const id2 = term2?.id && term1?.type != 'geneVariant' ? term2.id : term2?.name
+	const tw2 = map.get(2)
+	const term2 = tw2?.term || null
+	const id2 = tw2?.$id ? tw2.$id : term2?.id && term1?.type != 'geneVariant' ? term2.id : term2?.name
 	if (id2 && data.refs.byTermId[id2]?.bins) bins.push(data.refs.byTermId[id2]?.bins)
 	else bins.push([])
 

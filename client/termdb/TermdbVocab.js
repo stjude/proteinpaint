@@ -139,17 +139,18 @@ export class TermdbVocab extends Vocab {
 
 		for (const _key of ['term0', 'term', 'term2']) {
 			// "term" on client is "term1" at backend
-			const term = opts[_key]
-			if (!term) continue
+			const tw = opts[_key]
+			if (!tw) continue
 			const key = _key == 'term' ? 'term1' : _key
+			params.push(key + '_$id=' + encodeURIComponent(tw.$id))
 			// will need to generalize to also consider type=geneExpression
-			if ('id' in term.term && term.term.type != 'geneVariant') {
-				params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if ('id' in tw.term && tw.term.type != 'geneVariant') {
+				params.push(key + '_id=' + encodeURIComponent(tw.term.id))
 			} else {
-				params.push(key + '=' + encodeURIComponent(JSON.stringify(term.term)))
+				params.push(key + '=' + encodeURIComponent(JSON.stringify(tw.term)))
 			}
-			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
-			params.push(key + '_q=' + q_to_param(term.q))
+			if (!tw.q) throw 'plot.' + _key + '.q{} missing: ' + tw.term.id
+			params.push(key + '_q=' + q_to_param(tw.q))
 		}
 
 		if (opts.filter) {
@@ -779,8 +780,6 @@ export class TermdbVocab extends Vocab {
 					if (data.error) throw data.error
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 					for (const tw of copies) {
-						const idn = tw.term.type == 'geneVariant' ? tw.term.name : tw.term.id
-
 						for (const sampleId in data.samples) {
 							const sample = data.samples[sampleId]
 							// ignore sample objects that are not annotated by other keys besides 'sample'
@@ -803,8 +802,7 @@ export class TermdbVocab extends Vocab {
 								}
 								samples[sampleId] = s
 							}
-							const row = samples[sampleId]
-							if (idn in sample) row[tw.$id] = sample[idn]
+							if (tw.$id in sample) samples[sampleId][tw.$id] = sample[tw.$id]
 						}
 
 						for (const sampleId in data.refs.bySampleId) {
@@ -812,8 +810,8 @@ export class TermdbVocab extends Vocab {
 						}
 
 						refs.byTermId[tw.$id] = tw
-						if (idn in data.refs.byTermId) {
-							refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[idn])
+						if (tw.$id in data.refs.byTermId) {
+							refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[tw.$id])
 						}
 					}
 					numResponses++
@@ -903,35 +901,6 @@ export class TermdbVocab extends Vocab {
 		} catch (e) {
 			throw e
 		}
-	}
-
-	// get a tw copy with the correct identifier and without $id
-	// for better GET caching by the browser
-	getTwMinCopy(tw) {
-		const copy = { term: {}, q: tw.q }
-		if (tw.term.type == 'geneVariant') {
-			copy.term.name = tw.term.name
-			copy.term.type = tw.term.type
-			if (tw.term.gene) {
-				copy.term.gene = tw.term.gene
-			} else {
-				copy.term.chr = tw.term.chr
-				copy.term.start = tw.term.start
-				copy.term.stop = tw.term.stop
-			}
-		} else if ('id' in tw || 'id' in tw.term) {
-			copy.term.id = tw.id || tw.term.id
-			if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
-				// added following so getData will not break
-				copy.term.type = tw.term.type
-				copy.term.name = tw.term.name
-			}
-		} else {
-			copy.term.name = tw.term.name
-			copy.term.type = tw.term.type
-			copy.term.values = tw.term.values
-		}
-		return copy
 	}
 
 	// ids: [str], where str are string term IDS or names
