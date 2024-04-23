@@ -5,6 +5,7 @@ import { getExample } from '#termdb/test/vocabData'
 
 const vocab = getExample()
 const vocabApi = vocabInit({ state: { vocab } })
+console.log(7, vocabApi)
 
 /*
 Tests:

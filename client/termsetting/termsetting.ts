@@ -37,11 +37,32 @@ opts{}
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable
-const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
-let $id = 0
+//const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
+//let $id = 0
 
-export function get$id() {
-	return <string>`${$id++}${idSuffix}`
+export async function get$id(minTwCopy) {
+	if (!minTwCopy) return <string>`${$id++}${idSuffix}`
+	delete minTwCopy.$id
+	return await digestMessage(JSON.stringify(minTwCopy))
+}
+
+const encoder = new TextEncoder()
+
+async function digestMessage(message) {
+	const msgUint8 = encoder.encode(message) // encode as (utf-8) Uint8Array
+	const hashBuffer = await crypto.subtle.digest('SHA-1', msgUint8) // hash the message
+	const hashArray = Array.from(new Uint8Array(hashBuffer)) // convert buffer to byte array
+	const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('') // convert bytes to hex string
+	return hexToBase64(hashHex).replace('=', '-') // shorten from 40 to 28 chars
+}
+
+function hexToBase64(hexStr) {
+	return btoa(
+		[...hexStr].reduce(
+			(acc, _, i) => (acc += !((i - 1) & 1) ? String.fromCharCode(parseInt(hexStr.substring(i - 1, i + 1), 16)) : ''),
+			''
+		)
+	)
 }
 
 const defaultOpts: { menuOptions: string; menuLayout: string } = {
@@ -911,7 +932,7 @@ export async function fillTermWrapper(
 	defaultQByTsHandler?: DefaultQByTsHandler
 ): Promise<TermWrapper> {
 	tw.isAtomic = true
-	if (!tw.$id) tw.$id = get$id()
+	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	if (!tw.term && tw.id) {
 		const terms = await getDictTerms([tw], vocabApi)
 		tw.term = terms[tw.id]
@@ -936,7 +957,7 @@ export async function fillTermWrapper(
 }
 
 async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
-	if (!tw.$id) tw.$id = get$id()
+	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw)) //; console.log(953, tw.$id)
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric' : (t as string)
 	let _

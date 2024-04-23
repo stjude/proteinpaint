@@ -111,11 +111,12 @@ async function getSampleData(q) {
 	const sampleFilterSet = await mayGetSampleFilterSet(q, nonDictTerms) // conditionally returns a set of sample ids
 
 	for (const tw of nonDictTerms) {
+		const $id = tw.$id || tw.term.id
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
 			if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
-				byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
+				byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 			}
 
 			const data = await q.ds.mayGetGeneVariantData(tw, q)
@@ -128,7 +129,7 @@ async function getSampleData(q) {
 					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				}
 				if (samples[sampleId]) {
-					samples[sampleId][tw.term.name] = value[tw.term.name]
+					samples[sampleId][tw.$id] = value[tw.term.name]
 				}
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
@@ -146,7 +147,7 @@ async function getSampleData(q) {
 				const snp2value = {}
 				for (const [snp, o] of value.id2value) snp2value[snp] = o.value
 
-				samples[sampleId][tw.term.id] = snp2value
+				samples[sampleId][tw.$id || tw.term.id] = snp2value
 			}
 		} else {
 			throw 'unknown type of non-dictionary term'
@@ -250,8 +251,8 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const samples = {} // to return
 	const byTermId = {} // to return
-
-	const twByTermId = {}
+	//const twBy$id = {}
+	const tw$IdByIndex = {}
 	const filter = await getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
@@ -259,28 +260,30 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
+			tw$IdByIndex[i] = tw.$id
 			const CTE = await get_term_cte(q, values, i, filter, tw)
+			const $id = tw.$id || tw.term.id
 			if (CTE.bins) {
-				byTermId[tw.term.id] = { bins: CTE.bins }
+				byTermId[$id] = { bins: CTE.bins }
 			}
 			if (CTE.events) {
-				byTermId[tw.term.id] = { events: CTE.events }
+				byTermId[$id] = { events: CTE.events }
 			}
 			if (tw.term.values) {
 				const values = Object.values(tw.term.values)
 				if (values.find(v => 'order' in v)) {
-					byTermId[tw.term.id] = {
+					byTermId[$id] = {
 						keyOrder: values.sort((a, b) => a.order - b.order).map(v => v.key)
 					}
 				}
 			}
-			if ('id' in tw.term) twByTermId[tw.term.id] = tw
+			//if ('id' in tw.term) twBy$id[$id] = tw
 			return CTE
 		})
 	).catch(console.error)
 
 	// for "samplelst" term, term.id is missing and must use term.name
-	values.push(...termWrappers.map(tw => tw.term.id || tw.term.name))
+	values.push(...termWrappers.map(tw => tw.$id))
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}
@@ -296,10 +299,10 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 
-	for (const { sample, term_id, key, value } of rows) {
+	for (const { sample, key, term_id, value } of rows) {
 		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
-		const tw = twByTermId[term_id]
+		//const term_id = tw$IdByIndex[i]; console.log(305, term_id) //twBy$id[term_id]
 		// this assumes unique term key/value for a given sample
 		// samples[sample][term_id] = { key, value }
 
@@ -384,7 +387,8 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		}
 
 		for (const tw of termWrappers) {
-			const v = s[tw.term.id]
+			const $id = tw.$id || tw.term.id
+			const v = s[$id]
 			////////////////////////////
 			// somehow value can be undefined! must skip them
 			////////////////////////////
@@ -394,12 +398,12 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 				// "v" can be array
 				// e.g. "age of diagnosis"
 				////////////////////////////
-				s2[tw.term.id] = {
+				s2[$id] = {
 					key: v[0],
 					value: v[0]
 				}
 			} else if (v != undefined && v != null) {
-				s2[tw.term.id] = {
+				s2[$id] = {
 					key: v,
 					value: v
 				}
