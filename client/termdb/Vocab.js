@@ -139,6 +139,35 @@ export class Vocab {
 		})
 	}
 
+	// get a tw copy with the correct identifier and without $id
+	// for better GET caching by the browser
+	getTwMinCopy(tw) {
+		const copy = { $id: tw.$id, term: {}, q: tw.q }
+		if (tw.term?.type == 'geneVariant') {
+			copy.term.name = tw.term.name
+			copy.term.type = tw.term.type
+			if (tw.term.gene) {
+				copy.term.gene = tw.term.gene
+			} else {
+				copy.term.chr = tw.term.chr
+				copy.term.start = tw.term.start
+				copy.term.stop = tw.term.stop
+			}
+		} else if ('id' in tw || (tw.term && 'id' in tw.term)) {
+			copy.term.id = tw.id || tw.term.id
+			if (tw.term?.type == 'snplst' || tw.term?.type == 'snplocus') {
+				// added following so getData will not break
+				copy.term.type = tw.term.type
+				copy.term.name = tw.term.name
+			}
+		} else {
+			copy.term.name = tw.term?.name
+			copy.term.type = tw.term?.type
+			copy.term.values = tw.term?.values
+		}
+		return copy
+	}
+
 	cacheTermQ(term, q) {
 		// only save q with a user or automatically assigned name
 		if (!q.reuseId) throw `missing term q.reuseId for term.id='${term.id}'`

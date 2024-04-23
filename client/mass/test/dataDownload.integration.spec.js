@@ -78,7 +78,13 @@ tape('Data download with no selected terms', test => {
 tape('Data download with terms selected', test => {
 	test.timeoutAfter(1000)
 
-	const terms = [{ id: 'sex' }, { id: 'agedx' }, { id: 'genetic_race' }, { id: 'aaclassic_5' }, { id: 'Arrhythmias' }]
+	const terms = [
+		{ $id: 0, id: 'sex' },
+		{ $id: 1, id: 'agedx' },
+		{ $id: 2, id: 'genetic_race' },
+		{ $id: 3, id: 'aaclassic_5' },
+		{ $id: 4, id: 'Arrhythmias' }
+	]
 
 	runpp({
 		state: {
@@ -110,7 +116,7 @@ tape('Data download with terms selected', test => {
 			`Should render "${dataDownload.Inner.activeSamples.length} samples" next to Download button`
 		)
 
-		if (test._ok) dataDownload.Inner.app.destroy()
+		//if (test._ok) dataDownload.Inner.app.destroy()
 		test.end()
 	}
 })
