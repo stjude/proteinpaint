@@ -83,7 +83,7 @@ const entityTypes = [
 
 const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 
-const maxCaseNumber = 100 // max number of cases to request based on cohort, setting to 200 doesn't work
+const maxCaseNumber = 150 // max number of cases to request based on cohort
 const listCaseFileSize = 1000 // max number of bam files to request based on case ids
 
 let queryApi
@@ -440,8 +440,7 @@ async function getCaseFiles(filter0, q, ds) {
 	}
 	return {
 		case2files,
-		total: re.data?.pagination?.total,
-		loaded: listCaseFileSize,
+		total: Math.min(listCaseFileSize, re.data?.pagination?.total), // actual number of bam files pulled from api and returned to client. asks api to return up to listCaseFileSize number of files. due to filtering may return less than that
 		// in bam slice download app (versus sequence reads viz) client calls api directly thus need the rest host. since client always makes this request, send the host url to client
 		restapihost: ds.getHostHeaders(q).host.rest
 	}

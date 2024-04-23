@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC bam slicing ui show actual number of available bam files which can be lower than 1000, fix scrollbar appearance
