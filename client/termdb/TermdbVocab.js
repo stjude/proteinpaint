@@ -735,7 +735,6 @@ export class TermdbVocab extends Vocab {
 					.filter(tw => tw.term.type === 'geneVariant')
 					.map(tw => tw.term.name)
 					.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
-
 		const allTerms2update = opts.terms.slice() // make copy of array as it will be truncated to empty. do not modify original
 
 		let numResponses = 0
