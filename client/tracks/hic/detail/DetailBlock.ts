@@ -68,31 +68,40 @@ export class DetailBlock {
 		return runPpArgs
 	}
 
-	setMethods(canvas: any, sheath?: any) {
+	setMethods(canvasHolder: any, canvas: any, sheath?: any) {
 		const runPpMethods = {
-			onloadalltk_always: () => this.onload(canvas, sheath),
+			onloadalltk_always: (bb: any) => this.onload(bb, canvasHolder, canvas, sheath),
 			onpanning: (xoff: number) => this.onpanning(xoff, canvas, this.isYblock)
 		}
 		if (this.isYblock) {
 			//Button row height default is 30
 			runPpMethods['onsetheight'] = (bbh: number) => {
-				this.holder.transition().style('height', `${bbh + this.bbmargin + 30}px`)
+				this.holder.transition().style('left', `${bbh + this.bbmargin + 30}px`)
 			}
 		}
 		return runPpMethods
 	}
 
-	onload(canvas: any, sheath?: any) {
-		if (this.isYblock) sheath.transition().style('height', `${this.bbw}px`)
+	onload(bb: any, canvasHolder: any, canvas: any, sheath?: any) {
+		//Calculate from the rendered block and apply as the default for canvas/heatmap rendering
+		const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.bbmargin
+		this.bbw = bbw
+		if (this.isYblock) {
+			sheath.transition().style('height', `${bbw}px`)
+			canvasHolder.style('height', `${bbw}px`)
+		} else canvasHolder.style('width', `${bbw}px`)
 		if (this.firstRender) {
 			this.firstRender = false
-			if (!this.isYblock) {
-				canvas.transition().style('left', `${this.defaultLeft}px`)
+			if (this.isYblock) {
+				const top = this.bbmargin + bb.rightheadw + bb.rpad
+				canvas.transition().style('top', `${top}px`)
+				this.defaultTop = top
 			} else {
-				canvas.transition().style('top', `${this.defaultTop}px`)
+				const left = this.bbmargin + bb.leftheadw + bb.lpad
+				canvas.transition().style('left', `${left}px`)
+				this.defaultLeft = left
 			}
 		}
-		//TODO: recreate detailViewUpdateRegionFromBlock function
 	}
 
 	onpanning(xoff: number, canvas: any, isYBlock: boolean) {
@@ -100,13 +109,15 @@ export class DetailBlock {
 		else canvas.style('top', `${-xoff + this.defaultTop}px`)
 	}
 
-	loadBlock(chrObj: ChrPosition, canvas: any, sheath?: any) {
+	async loadBlock(chrObj: ChrPosition, canvasHolder: any, canvas: any, sheath?: any) {
 		const runPpArgs = this.setArgs(chrObj)
-		const runPpMethods = this.isYblock ? this.setMethods(canvas, sheath) : this.setMethods(canvas)
+		const runPpMethods = this.isYblock
+			? this.setMethods(canvasHolder, canvas, sheath)
+			: this.setMethods(canvasHolder, canvas)
 
 		const args = Object.assign(runPpArgs, runPpMethods)
 
-		blocklazyload(args).then(block => {
+		await blocklazyload(args).then(block => {
 			//access the block methods
 			this.block = block
 		})

@@ -26,6 +26,7 @@ export class DetailView {
 
 	xBlock: any
 	yBlock: any
+	canvasHolder: any
 	canvas: any
 	ctx: any
 
@@ -39,8 +40,17 @@ export class DetailView {
 		this.app = opts.app
 		this.hic = opts.hic
 		this.plotDiv = opts.plotDiv
-		this.sheath = opts.plotDiv.yAxis.append('div')
-		this.rotor = this.sheath.append('div')
+		this.sheath = opts.plotDiv.yAxis
+			.append('div')
+			.style('position', 'relative')
+			.style('width', '200px')
+			.style('height', '800px')
+		this.rotor = this.sheath
+			.append('div')
+			.style('position', 'absolute')
+			.style('bottom', '0px')
+			.style('transform', 'rotate(-90deg)')
+			.style('transform-origin', 'left bottom')
 		this.items = opts.items
 		this.parent = opts.parent
 		this.errList = this.parent('errList') as any
@@ -57,23 +67,14 @@ export class DetailView {
 
 	setDefaultBinPx() {
 		if (!this.calResolution || !this.viewRangeBpw) throw `Missing either the calculated resolution of default view span`
+
 		while ((this.binpx * this.viewRangeBpw) / this.calResolution < this.minCanvasSize) {
 			this.binpx += 2
 		}
 	}
 
-	renderYBlockHolder() {
-		this.sheath.style('position', 'relative').style('width', '200px').style('height', '800px')
-
-		this.rotor
-			.style('position', 'absolute')
-			.style('bottom', '0px')
-			.style('transform', 'rotate(-90deg)')
-			.style('transform-origin', 'left bottom')
-	}
-
 	renderCanvas(blockwidth: number) {
-		const canvasHolder = this.plotDiv.plot
+		this.canvasHolder = this.plotDiv.plot
 			.append('div')
 			.style('position', 'relative')
 			.style('width', `${this.xBlock.bbw}px`)
@@ -81,7 +82,7 @@ export class DetailView {
 			.style('overflow', 'hidden')
 
 		//main canvas
-		this.canvas = canvasHolder
+		this.canvas = this.canvasHolder
 			.append('canvas')
 			.style('display', 'block')
 			.style('position', 'absolute')
@@ -124,14 +125,28 @@ export class DetailView {
 		this.yBlock = new DetailBlock(this.hic, blockwidth, this.bbmargin, this.rotor, true)
 
 		this.renderCanvas(blockwidth)
-		this.renderYBlockHolder()
 
 		const state = this.parent('state') as any
 
-		this.xBlock.loadBlock(state.x, this.canvas)
-		this.yBlock.loadBlock(state.y, this.canvas, this.sheath)
+		await this.xBlock.loadBlock(state.x, this.canvasHolder, this.canvas)
+		await this.yBlock.loadBlock(state.y, this.canvasHolder, this.canvas, this.sheath)
 
-		this.ctx = this.canvas.node().getContext('2d') as CanvasRenderingContext2D
+		//Unnecessary
+		// this.app.dispatch({
+		// 	type: 'view_update',
+		// 	config: {
+		// 		x: {
+		// 			chr: this.xBlock.block.rglst[0].chr,
+		// 			start: this.xBlock.block.rglst[0].start,
+		// 			stop: this.xBlock.block.rglst[0].stop
+		// 		},
+		// 		y: {
+		// 			chr: this.yBlock.block.rglst[0].chr,
+		// 			start: this.yBlock.block.rglst[0].start,
+		// 			stop: this.yBlock.block.rglst[0].stop
+		// 		}
+		// 	}
+		// })
 
 		await this.update(this.items)
 	}
@@ -139,6 +154,9 @@ export class DetailView {
 	async update(items: { items: number[][] }) {
 		this.items = items
 		const state = this.parent('state') as any
+
+		this.ctx = this.canvas.node().getContext('2d') as CanvasRenderingContext2D
+
 		const [coords, canvaswidth, canvasheight] = this.coordinates.getCoordinates(
 			state.x,
 			state.y,
@@ -163,6 +181,7 @@ export class DetailView {
 				'detail'
 			)
 		}
+		this.canvas.style('left', `${this.xBlock.defaultLeft}px`).style('top', `${this.yBlock.defaultTop}px`)
 		// This does not work. Do not do this
 		// this.canvas.attr('width', canvaswidth).attr('height', canvasheight)
 	}

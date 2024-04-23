@@ -37,10 +37,10 @@ export class DataMapper {
 			}
 		}
 
-		// //Do not use Math.min() or Math.max(). Causes stack overflow
+		// Do not use Math.min() or Math.max(). Causes stack overflow
 		const sortedVlst = vlst.sort((a: number, b: number) => a - b)
 		const max = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
 		const min = sortedVlst[0]
-		return [Math.floor(min), Math.floor(max)]
+		return [min, max]
 	}
 }

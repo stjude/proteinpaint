@@ -291,6 +291,25 @@ class ControlPanel {
 					'chrpair'
 				)
 			}
+		} else if (this.parent('activeView') == 'detail') {
+			const view = this.parent('detail')
+			const xCoord = view.xBlock.block.rglst[0]
+			const yCoord = view.yBlock.block.rglst[0]
+			this.app.dispatch({
+				type: 'view_update',
+				config: {
+					x: {
+						chr: xCoord.chr,
+						start: xCoord.start,
+						stop: xCoord.stop
+					},
+					y: {
+						chr: yCoord.chr,
+						start: yCoord.start,
+						stop: yCoord.stop
+					}
+				}
+			})
 		}
 	}
 
