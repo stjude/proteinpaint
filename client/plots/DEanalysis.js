@@ -4,9 +4,11 @@ import * as d3axis from 'd3-axis'
 import { controlsInit } from './controls'
 import { select as d3select } from 'd3-selection'
 import { getCompInit, copyMerge } from '#rx'
+import { dofetch3 } from '#common/dofetch'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import { d3lasso } from '../common/lasso'
 import { downloadTable } from '../dom/table'
+import { Genome } from '#shared/types/genome.ts'
 /*
 
 opts{}
@@ -76,6 +78,18 @@ class DEanalysis {
 				boxLabel: ''
 			},
 			{
+				label: 'Gene overrepresentation analysis',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'gene_ora',
+				title: 'Toggle between analyzing upregulated, downregulated or both genes',
+				options: [
+					{ label: 'upregulated', value: 'upregulated' },
+					{ label: 'downregulated', value: 'downregulated' },
+					{ label: 'both', value: 'both' }
+				]
+			},
+			{
 				label: 'P-value',
 				type: 'radio',
 				chartType: 'DEanalysis',
@@ -113,7 +127,7 @@ class DEanalysis {
 		}
 
 		if (this.settings.pvaluetable == true) {
-			// This currently does not work as hiearchial clustering code needs to be changed
+			// This currently does not work as hierarchial clustering code needs to be changed
 			inputs.push({
 				label: 'Hierarchial Clustering',
 				type: 'radio',
@@ -179,7 +193,7 @@ class DEanalysis {
 	}
 }
 
-function render_volcano(self, output) {
+async function render_volcano(self, output) {
 	/*
 m {}
 - gene
@@ -258,7 +272,6 @@ add:
 		.append('circle')
 		.attr('stroke', d => {
 			let color
-			//console.log("Gene name:", d.gene_name, " Gene Symbol:", d.gene_symbol, " original p-value:", d.original_p_value, " adjusted p-value:", d.adjusted_p_value)
 			if (
 				p_value_adjusted_original == 'adjusted' &&
 				d.adjusted_p_value > p_value_cutoff &&
@@ -426,6 +439,53 @@ add:
 				resize: true
 			})
 		}
+
+		if (self.settings.gene_ora) {
+			console.log('Run gene ora:', self.settings.gene_ora)
+			console.log('output.data:', output.data)
+			const sample_genes = []
+			const background_genes = []
+			console.log('self:', self)
+			console.log('fold_change_cutoff:', fold_change_cutoff)
+
+			if (self.settings.gene_ora == 'upregulated') {
+				for (const gene of output.data) {
+					if (fold_change_cutoff < Math.abs(gene.fold_change) && gene.fold_change > 0) {
+						sample_genes.push(gene.gene_symbol)
+					} else {
+						background_genes.push(gene.gene_symbol)
+					}
+				}
+			} else if (self.settings.gene_ora == 'downregulated') {
+				for (const gene of output.data) {
+					if (fold_change_cutoff < Math.abs(gene.fold_change) && gene.fold_change < 0) {
+						sample_genes.push(gene.gene_symbol)
+					} else {
+						background_genes.push(gene.gene_symbol)
+					}
+				}
+			} else if (self.settings.gene_ora == 'both') {
+				for (const gene of output.data) {
+					if (fold_change_cutoff < Math.abs(gene.fold_change)) {
+						sample_genes.push(gene.gene_symbol)
+					} else {
+						background_genes.push(gene.gene_symbol)
+					}
+				}
+			} else {
+				console.log('Unrecognized option')
+			}
+			console.log('sample_genes:', sample_genes.length)
+			console.log('background_genes:', background_genes.length)
+			const body = {
+				sample_genes: sample_genes.toString(),
+				background_genes: background_genes.toString(),
+				dbfile: self.app.opts.genome.termdbs.msigdb.label,
+				genome: self.app.vocabApi.opts.state.vocab.genome,
+				geneSetGroup: 'BP: subset of GO'
+			}
+			const data = await dofetch3('genesetOverrepresentation', { body })
+		}
 	}
 	return svg
 }
@@ -444,7 +504,8 @@ export async function getPlotConfig(opts, app) {
 					foldchange: 2,
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
-					method: undefined
+					method: undefined,
+					gene_ora: undefined
 				}
 			}
 		}
