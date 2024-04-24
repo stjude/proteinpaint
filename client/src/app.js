@@ -461,16 +461,12 @@ async function makeheader(app, obj, jwt) {
 			link: 'https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing'
 		},
 		{
-			label: 'Make a Study View',
-			link: 'https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE'
-		},
-		{
 			label: 'URL parameters',
 			link: 'https://github.com/stjude/proteinpaint/wiki/URL-parameters'
 		},
 		{
 			label: 'All tutorials',
-			link: 'https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing'
+			link: 'https://github.com/stjude/proteinpaint/wiki/'
 		},
 		{
 			label: 'User community',
