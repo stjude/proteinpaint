@@ -196,6 +196,16 @@ export function setInteractivity(self) {
 								break
 							}
 						}
+						if (onClick) {
+							row
+								.append('td')
+								.append('button')
+								.text('Lollipop')
+								.on('click', async e => {
+									await self.openLollipop(label)
+									self.dom.tip.hide()
+								})
+						}
 					}
 
 					let chars = node.value.toString().length
@@ -240,15 +250,6 @@ export function setInteractivity(self) {
 								.append('button')
 								.text('Met Array')
 								.on('click', async e => self.openMetArray(sample))
-						if (tw?.term.type == 'geneVariant')
-							row
-								.append('td')
-								.append('button')
-								.text('Lollipop')
-								.on('click', async e => {
-									await self.openLollipop(tw.term.name)
-									self.dom.tip.hide()
-								})
 					}
 				}
 			}
