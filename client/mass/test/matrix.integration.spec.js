@@ -1229,7 +1229,8 @@ tape('avoid race condition', function (test) {
 		matrix.Inner.app.vocabApi.getAnnotatedSampleData = async (opts, _refs = {}) => {
 			await sleep(i)
 			i = 0
-			return await matrix.Inner.app.vocabApi.origGetAnnotatedSampleData(opts, _refs)
+			const data = await matrix.Inner.app.vocabApi.origGetAnnotatedSampleData(opts, _refs)
+			return data
 		}
 		// set up the postRender callback before triggering rerenders via app.dispatch
 		matrix.on('postRender.test', async () => {
@@ -1263,8 +1264,8 @@ tape('avoid race condition', function (test) {
 							{
 								name: '',
 								lst: [
-									{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
-									{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
+									{ $id: 0, term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
+									{ $id: 1, term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
 								]
 							}
 						]
@@ -1279,7 +1280,7 @@ tape('avoid race condition', function (test) {
 							termgroups: [
 								{
 									name: '',
-									lst: [{ term: { gene: 'BCR', name: 'BCR', type: 'geneVariant', isleaf: true } }]
+									lst: [{ $id: 3, term: { gene: 'BCR', name: 'BCR', type: 'geneVariant', isleaf: true } }]
 								}
 							]
 						}
