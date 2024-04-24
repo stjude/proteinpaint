@@ -112,6 +112,7 @@ export function setInteractivity(self) {
 		const div = self.dom.tooltip.d.style('padding', '5px')
 		const hasMetArrayPlot = self.state.termdbConfig.queries?.singleSampleGenomeQuantification
 		const hasDiscoPlot = self.state.termdbConfig.queries?.singleSampleMutation
+
 		if (samples.length > 1)
 			div
 				.append('div')
@@ -127,7 +128,9 @@ export function setInteractivity(self) {
 		if (showCoords)
 			for (const node of nodes) {
 				if (samples.length > 1) table.append('tr').append('td').attr('colspan', 3).style('border-top', '1px solid #aaa')
-				for (const child of node.children) addCategory(child)
+				for (const child of node.children) {
+					addCategory(child)
+				}
 			}
 		else
 			for (const node of nodes) {
@@ -197,10 +200,10 @@ export function setInteractivity(self) {
 					const g = svg.append('g').attr('transform', 'translate(10, 14)')
 					g.append('path').attr('d', shape).attr('fill', color).attr('stroke', '#aaa')
 					const text = g.append('text').attr('x', 12).attr('y', 6).attr('font-size', '0.9em')
-
 					const span2 = text.append('tspan').text(node.value).attr('fill', fontColor)
 				} else td.style('padding', '2px').text(`${node.value}`)
 			}
+
 			for (const child of node.children) if (!child.added) addCategory(child)
 			if (node.children.length == 0 && displaySample) {
 				for (const sample of node.samples) {
@@ -210,15 +213,15 @@ export function setInteractivity(self) {
 							row.append('td').style('color', '#aaa').text(k)
 							row.append('td').text(v)
 						}
+
 					row = table.append('tr')
 					row.append('td').style('color', '#aaa').text('Sample')
-
 					row.append('td').style('padding', '2px').text(sample.sample)
 					if ('sampleId' in sample && onClick) {
 						row
 							.append('td')
 							.append('button')
-							.text('View')
+							.text('Sample view')
 							.on('click', e => self.openSampleView(sample))
 						if (hasDiscoPlot)
 							row
@@ -233,6 +236,17 @@ export function setInteractivity(self) {
 								.append('button')
 								.text('Met Array')
 								.on('click', async e => self.openMetArray(sample))
+
+						if (self.config.colorTW && self.config.colorTW.term.type == 'geneVariant') {
+							row
+								.append('td')
+								.append('button')
+								.text('Lollipop')
+								.on('click', async e => {
+									await self.openLollipop(self.config.colorTW)
+									self.dom.tip.hide()
+								})
+						}
 					}
 				}
 			}
@@ -325,6 +339,29 @@ export function setInteractivity(self) {
 			sandbox.body,
 			self.app.opts.genome
 		)
+	}
+
+	self.openLollipop = async function (t) {
+		self.dom.tooltip.hide()
+		self.onClick = false
+		const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
+		sandbox.header.text(t.term.name)
+		const arg = {
+			holder: sandbox.body.append('div').style('margin', '20px'),
+			genome: self.app.opts.genome,
+			nobox: true,
+			query: t.term.name,
+			tklst: [
+				{
+					type: 'mds3',
+					dslabel: self.app.opts.state.vocab.dslabel,
+					filter0: self.state.filter0,
+					filterObj: self.state.filter
+				}
+			]
+		}
+		const _ = await import('#src/block.init')
+		await _.default(arg)
 	}
 
 	self.onLegendClick = function (chart, legendG, name, key, e, category) {
