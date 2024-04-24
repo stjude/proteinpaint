@@ -102,17 +102,18 @@ export class DetailBlock {
 			sheath.transition().style('height', `${this.bbw}px`)
 			canvasHolder.style('height', `${this.bbw}px`)
 		} else canvasHolder.style('width', `${this.bbw}px`)
-		if (this.firstRender) {
-			this.firstRender = false
-			if (this.isYblock) {
-				this.defaultTop = this.bbmargin + this.block.rightheadw + this.block.rpad
-				canvas.style('top', `${this.defaultTop}px`)
-			} else {
-				this.defaultLeft = this.bbmargin + this.block.leftheadw + this.block.lpad
-				canvas.style('left', `${this.defaultLeft}px`)
-			}
-			return
+		//Reason for tracking first render?
+		// if (this.firstRender) {
+		// 	this.firstRender = false
+		if (this.isYblock) {
+			this.defaultTop = this.bbmargin + this.block.rightheadw + this.block.rpad
+			canvas.style('top', `${this.defaultTop}px`)
+		} else {
+			this.defaultLeft = this.bbmargin + this.block.leftheadw + this.block.lpad
+			canvas.style('left', `${this.defaultLeft}px`)
 		}
+		// 	return
+		// }
 
 		const config = this.isYblock
 			? {
