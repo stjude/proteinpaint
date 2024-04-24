@@ -106,6 +106,7 @@ class Scatter {
 		return {
 			config,
 			termfilter: appState.termfilter,
+			filter0: appState.termfilter.filter0,
 			supportedChartTypes: appState.termdbConfig.supportedChartTypes[cohortKey],
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab,

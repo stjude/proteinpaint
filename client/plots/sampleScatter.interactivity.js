@@ -7,6 +7,7 @@ import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2, addNewGroup } from '../mass/groups'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
+import { getSampleFilter } from '../termsetting/handlers/samplelst'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
@@ -246,7 +247,7 @@ export function setInteractivity(self) {
 								.append('button')
 								.text('Lollipop')
 								.on('click', async e => {
-									await self.openLollipop(tw.term.name)
+									await self.openLollipop(tw.term.name, sample.sampleId)
 									self.dom.tip.hide()
 								})
 					}
@@ -343,7 +344,13 @@ export function setInteractivity(self) {
 		)
 	}
 
-	self.openLollipop = async function (label) {
+	self.openLollipop = async function (label, sampleId) {
+		const sampleFilter = getSampleFilter(parseInt(sampleId))
+		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+		const filter = filterJoin([filterUiRoot, sampleFilter])
+		filter.tag = 'filterUiRoot'
+
+		console.log('filter', filter)
 		self.dom.tooltip.hide()
 		self.onClick = false
 		const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
@@ -358,7 +365,7 @@ export function setInteractivity(self) {
 					type: 'mds3',
 					dslabel: self.app.opts.state.vocab.dslabel,
 					filter0: self.state.filter0,
-					filterObj: self.state.filter
+					filterObj: filter
 				}
 			]
 		}
