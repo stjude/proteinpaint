@@ -89,6 +89,6 @@ export class HorizontalView {
 
 	update() {
 		//Not required.
-		//TODO: hide controls so this never fires
+		//If controls are added back. Implement changes here.
 	}
 }
