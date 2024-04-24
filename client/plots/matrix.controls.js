@@ -6,6 +6,8 @@ import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
+import { make_radios } from '#dom/radiobutton'
+import { make_one_checkbox } from '#dom/checkbox'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 import { select } from 'd3-selection'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
@@ -24,7 +26,6 @@ export class MatrixControls {
 		const s = state.config.settings.matrix
 		if (this.parent.setClusteringBtn)
 			this.parent.setClusteringBtn(this.opts.holder, (event, data) => this.callback(event, data))
-		//this.setSortBtn(s)
 		this.setSamplesBtn(s)
 		this.setGenesBtn(s)
 		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster') {
@@ -69,30 +70,231 @@ export class MatrixControls {
 			.on(`keyup.matrix-${this.parent.id}`, this.keyboardNavHandler)
 	}
 
-	setSortBtn(s) {
-		let ui
-
-		this.opts.holder
-			.append('button')
-			.html('Sort')
-			.on('click', () => {
-				const tip = this.parent.app.tip
-				tip.clear()
-				if (ui) ui.main()
-				else
-					ui = getSorterUi({
-						controls: this,
-						holder: tip.d,
-						tip
-						//expandedSection: this.parent.config.settings.matrix.sortOptions.a?.sortPriority[0]?.label || ''
-					})
-				tip.showunder(event.target)
-			})
-	}
-
 	setSamplesBtn(s) {
 		const l = s.controlLabels
 		const parent = this.parent
+		const rows = [
+			{
+				label: `Maximum # ${l.Samples}`,
+				title: `Limit the number of displayed ${l.samples}`,
+				type: 'number',
+				chartType: 'matrix',
+				settingsKey: 'maxSample',
+				getDisplayStyle(plot) {
+					return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+				}
+			},
+			{
+				label: `Group ${l.Samples} By`,
+				title: `Select a variable with discrete values to group ${l.samples}`,
+				type: 'term',
+				chartType: 'matrix',
+				configKey: 'divideBy',
+				vocabApi: this.opts.app.vocabApi,
+				state: {
+					vocab: this.opts.vocab
+					//activeCohort: appState.activeCohort
+				},
+				getDisplayStyle(plot) {
+					return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+				},
+				processInput: tw => {
+					if (tw) fillTermWrapper(tw)
+					return tw
+				},
+				processConfig: config => {
+					if (this.parent.config.divideBy)
+						config.legendValueFilter = this.parent.mayRemoveTvsEntry(this.parent.config.divideBy)
+				},
+				getBodyParams: () => {
+					const currentGeneNames = this.parent.termOrder
+						.filter(t => t.tw.term.type === 'geneVariant')
+						.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
+					return { currentGeneNames }
+				}
+			},
+			{
+				label: `Sort ${l.Sample} Groups`,
+				title: `Set how to sort ${l.sample} groups`,
+				type: 'radio',
+				chartType: 'matrix',
+				settingsKey: 'sortSampleGrpsBy',
+				options: [
+					{
+						label: 'Predefined or Group Name',
+						value: 'name',
+						title: `Sort by group name`
+					},
+					{
+						label: `${l.Sample} Count`,
+						value: 'sampleCount',
+						title: `Sort by the number of samples in the group`
+					},
+					{
+						label: `Hits`,
+						value: 'hits',
+						title: `Sort by the total number of variants for every ${l.sample} in the group`
+					}
+				],
+				getDisplayStyle(plot) {
+					return plot.divideBy && !plot.hierCluster ? 'table-row' : 'none'
+				}
+			},
+			{
+				label: `${l.Sample} Group Label Character Limit`,
+				title: `Truncate the ${l.sample} group label if it exceeds this maximum number of characters`,
+				type: 'number',
+				chartType: 'matrix',
+				settingsKey: 'sampleGrpLabelMaxChars',
+				getDisplayStyle(plot) {
+					return plot.divideBy && !plot.hierCluster ? 'table-row' : 'none'
+				}
+			},
+			{
+				label: `${l.Sample} Label Character Limit`,
+				title: `Truncate the ${l.sample} label if it exceeds this maximum number of characters`,
+				type: 'number',
+				chartType: 'matrix',
+				settingsKey: 'collabelmaxchars'
+			},
+			{
+				label: `Group ${l.Samples} By`,
+				title: `Select a variable with discrete values to group ${l.samples}`,
+				type: 'term',
+				chartType: 'matrix',
+				configKey: 'divideBy',
+				vocabApi: this.opts.app.vocabApi,
+				state: {
+					vocab: this.opts.vocab
+					//activeCohort: appState.activeCohort
+				},
+				getDisplayStyle(plot) {
+					return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+				},
+				processInput: tw => {
+					if (tw) fillTermWrapper(tw)
+					return tw
+				},
+				getBodyParams: () => {
+					const currentGeneNames = this.parent.termOrder
+						.filter(t => t.tw.term.type === 'geneVariant')
+						.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
+					return { currentGeneNames }
+				}
+			}
+		]
+
+		if (s.useSorterUi) {
+			// can be specified as termdbconfig.matrix.settings.useSorterUi = true in dataset js file
+			rows.push({
+				label: `Sort ${l.Samples} By`,
+				title: ``,
+				type: 'custom',
+				init(self) {
+					//const opts = { controls, holder, debug: true, setComputedConfig }
+					self.dom.row.on('mouseover', function () {
+						this.style.backgroundColor = '#fff'
+						this.style.textShadow = 'none'
+					})
+
+					return getSorterUi({
+						controls: this,
+						holder: self.dom.inputTd,
+						tip: this.parent.app.tip
+						//expandedSection: this.parent.config.settings.matrix.sortOptions.a?.sortPriority[0]?.label || ''
+					})
+				}
+			})
+		} else {
+			// default: do not use the new sorter UI
+			rows.push({
+				label: `Sort ${l.Sample} Priority`,
+				title: `Set how to sort ${l.samples}`,
+				type: 'custom',
+				init(self) {
+					const ssmDiv = self.dom.inputTd.append('div')
+					ssmDiv.append('span').html('SSM')
+					const { inputs } = make_radios({
+						// holder, options, callback, styles
+						holder: ssmDiv.append('span'),
+						options: [
+							{ label: 'by consequence', value: 'consequence' },
+							{ label: 'by presence', value: 'presence', checked: true }
+						],
+						styles: {
+							display: 'inline-block'
+						},
+						callback: sortByMutation => {
+							const sortOptions = parent.config.settings.matrix.sortOptions
+							const activeOption = sortOptions.a
+							const mutTb = activeOption.sortPriority[0].tiebreakers[1] //; console.log(244, mutTb, activeOption)
+							mutTb.disabled = !sortByMutation
+							mutTb.isOrdered = sortByMutation
+
+							parent.app.dispatch({
+								type: 'plot_edit',
+								id: parent.id,
+								config: {
+									settings: {
+										matrix: {
+											sortByMutation, // needed to show the correct status for checkbox, but actual sorting behavior
+											sortOptions // is based on sortOptions.a[*].tiebreaker[*][disabled, isOrdered]
+										}
+									}
+								}
+							})
+						}
+					})
+
+					inputs.style('margin', '2px 0 0 2px').style('vertical-align', 'top')
+					const cnvDiv = self.dom.inputTd.append('div')
+					cnvDiv.append('span').html('CNV')
+					// holder, labeltext, callback, checked, divstyle
+					const input = make_one_checkbox({
+						holder: cnvDiv.append('span'),
+						divstyle: { display: 'inline-block' },
+						checked: false,
+						labeltext: 'sort by CNV',
+						callback: () => {
+							const sortByCNV = input.property('checked')
+							const sortOptions = parent.config.settings.matrix.sortOptions
+							const activeOption = sortOptions.a
+							const cnvTb = activeOption.sortPriority[0].tiebreakers[2]
+							console.log(244, cnvTb, activeOption)
+							cnvTb.disabled = !sortByCNV
+							cnvTb.isOrdered = sortByCNV
+
+							parent.app.dispatch({
+								type: 'plot_edit',
+								id: parent.id,
+								config: {
+									settings: {
+										matrix: {
+											sortByCNV, // needed to show the correct status for checkbox, but actual sorting behavior
+											sortOptions // is based on sortOptions.a[*].tiebreaker[*][disabled, isOrdered]
+										}
+									}
+								}
+							})
+						}
+					})
+
+					//self.dom.inputTd.append('div').append('span').html('By case name')
+
+					return {
+						main: plot => {
+							const s = plot.settings.matrix
+							// ssm
+							inputs.property('checked', d => d.value == s.sortByMutation)
+							// cnv
+							input.property('checked', s.sortByCNV)
+							cnvDiv.style('display', s.showMatrixCNV != 'none' && !s.allMatrixCNVHidden ? 'block' : 'none')
+						}
+					}
+				}
+			})
+		}
+
 		this.opts.holder
 			.append('button')
 			//.property('disabled', d => d.disabled)
@@ -100,135 +302,7 @@ export class MatrixControls {
 				label: l.Samples || `Samples`,
 				getCount: () =>
 					'sampleCount' in this.overrides ? this.overrides.sampleCount : this.parent.sampleOrder?.length || 0,
-				rows: [
-					{
-						label: `Maximum # ${l.Samples}`,
-						title: `Limit the number of displayed ${l.samples}`,
-						type: 'number',
-						chartType: 'matrix',
-						settingsKey: 'maxSample',
-						getDisplayStyle(plot) {
-							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
-						}
-					},
-					{
-						label: `Group ${l.Samples} By`,
-						title: `Select a variable with discrete values to group ${l.samples}`,
-						type: 'term',
-						chartType: 'matrix',
-						configKey: 'divideBy',
-						vocabApi: this.opts.app.vocabApi,
-						state: {
-							vocab: this.opts.vocab
-							//activeCohort: appState.activeCohort
-						},
-						getDisplayStyle(plot) {
-							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
-						},
-						processInput: tw => {
-							if (tw) fillTermWrapper(tw)
-							return tw
-						},
-						processConfig: config => {
-							if (this.parent.config.divideBy)
-								config.legendValueFilter = this.parent.mayRemoveTvsEntry(this.parent.config.divideBy)
-						},
-						getBodyParams: () => {
-							const currentGeneNames = this.parent.termOrder
-								.filter(t => t.tw.term.type === 'geneVariant')
-								.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
-							return { currentGeneNames }
-						}
-					},
-					{
-						label: `Sort ${l.Sample} Groups`,
-						title: `Set how to sort ${l.sample} groups`,
-						type: 'radio',
-						chartType: 'matrix',
-						settingsKey: 'sortSampleGrpsBy',
-						options: [
-							{
-								label: 'Predefined or Group Name',
-								value: 'name',
-								title: `Sort by group name`
-							},
-							{
-								label: `${l.Sample} Count`,
-								value: 'sampleCount',
-								title: `Sort by the number of samples in the group`
-							},
-							{
-								label: `Hits`,
-								value: 'hits',
-								title: `Sort by the total number of variants for every ${l.sample} in the group`
-							}
-						],
-						getDisplayStyle(plot) {
-							return plot.divideBy && !plot.hierCluster ? 'table-row' : 'none'
-						}
-					},
-					{
-						label: `${l.Sample} Group Label Character Limit`,
-						title: `Truncate the ${l.sample} group label if it exceeds this maximum number of characters`,
-						type: 'number',
-						chartType: 'matrix',
-						settingsKey: 'sampleGrpLabelMaxChars',
-						getDisplayStyle(plot) {
-							return plot.divideBy && !plot.hierCluster ? 'table-row' : 'none'
-						}
-					},
-					{
-						label: `${l.Sample} Label Character Limit`,
-						title: `Truncate the ${l.sample} label if it exceeds this maximum number of characters`,
-						type: 'number',
-						chartType: 'matrix',
-						settingsKey: 'collabelmaxchars'
-					},
-					{
-						label: `Group ${l.Samples} By`,
-						title: `Select a variable with discrete values to group ${l.samples}`,
-						type: 'term',
-						chartType: 'matrix',
-						configKey: 'divideBy',
-						vocabApi: this.opts.app.vocabApi,
-						state: {
-							vocab: this.opts.vocab
-							//activeCohort: appState.activeCohort
-						},
-						getDisplayStyle(plot) {
-							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
-						},
-						processInput: tw => {
-							if (tw) fillTermWrapper(tw)
-							return tw
-						},
-						getBodyParams: () => {
-							const currentGeneNames = this.parent.termOrder
-								.filter(t => t.tw.term.type === 'geneVariant')
-								.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
-							return { currentGeneNames }
-						}
-					},
-					{
-						label: `Sort ${l.Samples} By`,
-						title: ``,
-						type: 'custom',
-						init(self) {
-							//const opts = { controls, holder, debug: true, setComputedConfig }
-							self.dom.row.on('mouseover', function () {
-								this.style.backgroundColor = '#fff'
-								this.style.textShadow = 'none'
-							})
-
-							return getSorterUi({
-								controls: this,
-								holder: self.dom.inputTd,
-								tip: this.parent.app.tip
-								//expandedSection: this.parent.config.settings.matrix.sortOptions.a?.sortPriority[0]?.label || ''
-							})
-						}
-					}
-				]
+				rows
 			})
 			.html(d => d.label)
 			.style('margin', '2px 0')
