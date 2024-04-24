@@ -19,7 +19,9 @@ export function setInteractivity(self) {
 				self.dom.tooltip.hide()
 				return
 			}
-			if (!onClick) self.dom.tooltip.hide() //dont hide current tooltip if mouse moved away, may want to scroll
+			if (!onClick) {
+				self.dom.tooltip.hide()
+			} //dont hide current tooltip if mouse moved away, may want to scroll
 			return
 		}
 		const s2 = event.target.__data__
@@ -170,6 +172,7 @@ export function setInteractivity(self) {
 				if (samples.length > 1 && !displaySample) label = label + ` (${node.samples.length})`
 				row.append('td').style('color', '#aaa').text(label)
 				const td = row.append('td')
+
 				if (showIcon) {
 					const color =
 						tw == self.config.colorTW
@@ -193,7 +196,18 @@ export function setInteractivity(self) {
 								break
 							}
 						}
+						if (onClick) {
+							row
+								.append('td')
+								.append('button')
+								.text('Lollipop')
+								.on('click', async e => {
+									await self.openLollipop(label)
+									self.dom.tip.hide()
+								})
+						}
 					}
+
 					let chars = node.value.toString().length
 					const width = chars * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '25px')
@@ -236,17 +250,6 @@ export function setInteractivity(self) {
 								.append('button')
 								.text('Met Array')
 								.on('click', async e => self.openMetArray(sample))
-
-						if (self.config.colorTW && self.config.colorTW.term.type == 'geneVariant') {
-							row
-								.append('td')
-								.append('button')
-								.text('Lollipop')
-								.on('click', async e => {
-									await self.openLollipop(self.config.colorTW)
-									self.dom.tip.hide()
-								})
-						}
 					}
 				}
 			}
@@ -341,16 +344,16 @@ export function setInteractivity(self) {
 		)
 	}
 
-	self.openLollipop = async function (t) {
+	self.openLollipop = async function (label) {
 		self.dom.tooltip.hide()
 		self.onClick = false
 		const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
-		sandbox.header.text(t.term.name)
+		sandbox.header.text(label)
 		const arg = {
 			holder: sandbox.body.append('div').style('margin', '20px'),
 			genome: self.app.opts.genome,
 			nobox: true,
-			query: t.term.name,
+			query: label,
 			tklst: [
 				{
 					type: 'mds3',
