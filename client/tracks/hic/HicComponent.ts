@@ -1,7 +1,7 @@
 import { getCompInit } from '#rx'
 import { HicstrawDom, MainPlotDiv } from '../../types/hic.ts'
 import { ChrPairView } from './chrpair/ChrPairView.ts'
-// import { HorizontalView } from './horizontal/HorizontalView.ts'
+import { HorizontalView } from './horizontal/HorizontalView.ts'
 import { DetailView } from './detail/DetailView.ts'
 import { GenomeView } from './genome/GenomeView.ts'
 import { controlPanelInit } from './controls/ControlPanel.ts'
@@ -21,6 +21,7 @@ export class HicComponent {
 	genome: any
 	chrpair: any
 	detail: any
+	horizontal: any
 	app: any
 	dataMapper: DataMapper
 	activeView: string
@@ -99,7 +100,15 @@ export class HicComponent {
 			})
 			this.detail.render()
 		} else if (this.state.currView === 'horizontal') {
-			//this.horizonalView = new HorizontalView.main()
+			this.horizontal = new HorizontalView({
+				plotDiv: this.plotDiv,
+				hic: this.hic,
+				app: this.app,
+				parent: (prop: any) => {
+					return this[prop]
+				}
+			})
+			this.horizontal.render()
 		} else {
 			throw Error(`Unknown view: ${this.state.currView}`)
 		}
@@ -207,11 +216,13 @@ export class HicComponent {
 
 	async main(appState: any) {
 		if (this.skipMain == false) {
-			const args = await this.setDataArgs(appState)
-			await this.fetchData(args)
-			const [min, max] = this.dataMapper.sortData(this.data)
-			this.min = min
-			this.max = max
+			if (this.state.currView != 'horizontal') {
+				const args = await this.setDataArgs(appState)
+				await this.fetchData(args)
+				const [min, max] = this.dataMapper.sortData(this.data)
+				this.min = min
+				this.max = max
+			}
 
 			if (this.activeView != this.state.currView) {
 				if (this.activeView == 'genome') {
