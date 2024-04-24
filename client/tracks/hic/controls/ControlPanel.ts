@@ -195,8 +195,29 @@ class ControlPanel {
 			.style('display', this.state.currView == 'detail' ? 'contents' : 'none') as any
 		this.addLabel(this.controls.zoomDiv, 'ZOOM')
 		const zoomDiv = this.controls.zoomDiv.append('td')
-		this.controls.zoomIn = zoomDiv.append('button').style('margin-right', '10px').text('In')
-		this.controls.zoomOut = zoomDiv.append('button').style('margin-right', '10px').text('Out')
+
+		this.controls.zoomIn = zoomDiv
+			.append('button')
+			.style('margin-right', '10px')
+			.text('In')
+			.on('click', () => {
+				const detailView = this.parent('detail')
+				const xBlock = detailView.xBlock.block
+				const yBlock = detailView.yBlock.block
+				xBlock.zoomblock(2, false)
+				yBlock.zoomblock(2, false)
+			})
+		this.controls.zoomOut = zoomDiv
+			.append('button')
+			.style('margin-right', '10px')
+			.text('Out')
+			.on('click', () => {
+				const detailView = this.parent('detail')
+				const xBlock = detailView.xBlock.block
+				const yBlock = detailView.yBlock.block
+				xBlock.zoomblock(2, true)
+				yBlock.zoomblock(2, true)
+			})
 	}
 
 	showBtns() {
@@ -293,23 +314,19 @@ class ControlPanel {
 			}
 		} else if (this.parent('activeView') == 'detail') {
 			const view = this.parent('detail')
-			const xCoord = view.xBlock.block.rglst[0]
-			const yCoord = view.yBlock.block.rglst[0]
-			this.app.dispatch({
-				type: 'view_update',
-				config: {
-					x: {
-						chr: xCoord.chr,
-						start: xCoord.start,
-						stop: xCoord.stop
-					},
-					y: {
-						chr: yCoord.chr,
-						start: yCoord.start,
-						stop: yCoord.stop
-					}
-				}
-			})
+			for (const [xCoord, yCoord, width, height, value] of view.coords as any) {
+				this.colorizeElement.colorizeElement(
+					xCoord,
+					yCoord,
+					value,
+					view.ctx,
+					width,
+					height,
+					this.parent('min') as number,
+					this.parent('max') as number,
+					'detail'
+				)
+			}
 		}
 	}
 
