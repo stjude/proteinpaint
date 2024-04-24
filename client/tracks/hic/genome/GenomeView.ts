@@ -270,25 +270,25 @@ export class GenomeView {
 // /** Default normalization method if none returned from the server. Exported to parsing and controls script*/
 // export const defaultnmeth = 'NONE'
 
-const atdev_chrnum = 8
+// const atdev_chrnum = 8
 
-const hardcode_wholegenomechrlabwidth = 100
-/** when clicking on chrpairview, to set a initial view range for detail view, the number of bins to cover at the clicked point */
-const initialbinnum_detail = 20
-/** at bp resolution, minimum bin number */
-const minimumbinnum_bp = 200
-/** mininum canvas w/h, detail view */
-const mincanvassize_detail = 500
-/** minimum bin num for fragment */
-const minimumbinnum_frag = 100
-/** span at breakpoint when clicking an sv from x/y view to show horizontal view */
-const default_svpointspan = 500000
-/** default max value percentage for hicstraw track */
-const default_hicstrawmaxvperc = 5
-/** default px width of subpanels */
-const default_subpanelpxwidth = 600
+// const hardcode_wholegenomechrlabwidth = 100
+// /** when clicking on chrpairview, to set a initial view range for detail view, the number of bins to cover at the clicked point */
+// const initialbinnum_detail = 20
+// /** at bp resolution, minimum bin number */
+// const minimumbinnum_bp = 200
+// /** mininum canvas w/h, detail view */
+// const mincanvassize_detail = 500
+// /** minimum bin num for fragment */
+// const minimumbinnum_frag = 100
+// /** span at breakpoint when clicking an sv from x/y view to show horizontal view */
+// const default_svpointspan = 500000
+// /** default max value percentage for hicstraw track */
+// const default_hicstrawmaxvperc = 5
+// /** default px width of subpanels */
+// const default_subpanelpxwidth = 600
 
-const subpanel_bordercolor = 'rgba(200,0,0,.1)'
+// const subpanel_bordercolor = 'rgba(200,0,0,.1)'
 
 /**
  * Parses input file and renders plot. Whole genome view renders as the default.
@@ -303,310 +303,310 @@ const subpanel_bordercolor = 'rgba(200,0,0,.1)'
  * - Possibly type Pane can be import somewhere??
  * - Maybe make a class for each view?? See comments in utility functions
  */
-class Hicstat {
-	holder: Div
-	debugmode: boolean
-	dom: HicstrawDom
-	/** Collection of error messages. Appears to the user in bulk when self.error() fires. */
-	errList: string[]
-	/** Rendering properities specific to the horizontal (2 chr subpanel pair) view */
-	horizontalview: Partial<HorizontalView>
-	/** Rendering properities specific to the detail view */
-	detailview: Partial<DetailView>
-	/** Required position attributes for every view except for the whole genome view. Only chr pair does not need start or stop. */
-	x: Partial<{
-		chr: string
-		start: number
-		stop: number
-	}>
-	y: Partial<{
-		chr: string
-		start: number
-		stop: number
-	}>
+// class Hicstat {
+// 	holder: Div
+// 	debugmode: boolean
+// 	dom: HicstrawDom
+// 	/** Collection of error messages. Appears to the user in bulk when self.error() fires. */
+// 	errList: string[]
+// 	/** Rendering properities specific to the horizontal (2 chr subpanel pair) view */
+// 	horizontalview: Partial<HorizontalView>
+// 	/** Rendering properities specific to the detail view */
+// 	detailview: Partial<DetailView>
+// 	/** Required position attributes for every view except for the whole genome view. Only chr pair does not need start or stop. */
+// 	x: Partial<{
+// 		chr: string
+// 		start: number
+// 		stop: number
+// 	}>
+// 	y: Partial<{
+// 		chr: string
+// 		start: number
+// 		stop: number
+// 	}>
 
-	constructor(hic: any, debugmode: boolean) {
-		this.holder = hic.holder
-		this.debugmode = debugmode
-		this.dom = {
-			errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
-			controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true).style('display', 'inline-block'),
-			infoBarDiv: hic.holder.append('div').classed('sjpp-hic-infobar', true).style('display', 'inline-block'),
-			loadingDiv: d3select('body').append('div').attr('id', 'sjpp-loading-overlay'),
-			plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block'),
-			tip: new client.Menu()
-		}
-		this.errList = []
+// 	constructor(hic: any, debugmode: boolean) {
+// 		this.holder = hic.holder
+// 		this.debugmode = debugmode
+// 		this.dom = {
+// 			errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
+// 			controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true).style('display', 'inline-block'),
+// 			infoBarDiv: hic.holder.append('div').classed('sjpp-hic-infobar', true).style('display', 'inline-block'),
+// 			loadingDiv: d3select('body').append('div').attr('id', 'sjpp-loading-overlay'),
+// 			plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block'),
+// 			tip: new client.Menu()
+// 		}
+// 		this.errList = []
 
-		this.horizontalview = {
-			args: {
-				hostURL: hic.hostURL,
-				jwt: hic.jwt,
-				genome: hic.genome,
-				nobox: 1
-			}
-		}
-		this.detailview = {
-			bbmargin: 1,
-			xb: {
-				leftheadw: 20,
-				rightheadw: 40,
-				lpad: 1,
-				rpad: 1
-			} as DetailViewAxis,
-			yb: {
-				leftheadw: 20,
-				rightheadw: 40,
-				lpad: 1,
-				rpad: 1
-			} as DetailViewAxis
-		}
-		this.x = {}
-		this.y = {}
-	}
+// 		this.horizontalview = {
+// 			args: {
+// 				hostURL: hic.hostURL,
+// 				jwt: hic.jwt,
+// 				genome: hic.genome,
+// 				nobox: 1
+// 			}
+// 		}
+// 		this.detailview = {
+// 			bbmargin: 1,
+// 			xb: {
+// 				leftheadw: 20,
+// 				rightheadw: 40,
+// 				lpad: 1,
+// 				rpad: 1
+// 			} as DetailViewAxis,
+// 			yb: {
+// 				leftheadw: 20,
+// 				rightheadw: 40,
+// 				lpad: 1,
+// 				rpad: 1
+// 			} as DetailViewAxis
+// 		}
+// 		this.x = {}
+// 		this.y = {}
+// 	}
 
-	// async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
-	// this.dom.controlsDiv.view.text('Detailed')
-	//nmeth2select(hic, this.detailview, true)
-	//matrixType2select(this.detailview, this, true)
-	// this.ingenome = false
-	// this.inchrpair = false
-	// this.indetail = true
-	// this.inhorizontal = false
-	// const isintrachr = chrx == chry
-	//showBtns(this)
-	//if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
-	// // default view span
-	// const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
-	//let resolution: number | null = null
-	// for (const res of hic.bpresolution) {
-	// 	if (viewrangebpw / res > minimumbinnum_bp) {
-	// 		resolution = res
-	// 		break
-	// 	}
-	// }
-	// if (resolution == null) {
-	// 	// use finest
-	// 	resolution = hic.bpresolution[hic.bpresolution.length - 1]
-	// }
-	// let binpx = 2
-	// while ((binpx * viewrangebpw) / resolution! < mincanvassize_detail) {
-	// 	binpx += 2
-	// }
-	// px width of x and y blocks
-	// const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution!)
-	// const blockwidth = 500
-	// this.detailview.xb!.width = blockwidth
-	// this.detailview.yb!.width = blockwidth
-	/************** middle canvas *****************/
-	// const canvasholder = this.dom.plotDiv.plot
-	// 	.append('div')
-	// 	.style('position', 'relative')
-	// 	.style('width', blockwidth + 'px')
-	// 	.style('height', blockwidth + 'px')
-	// 	.style('overflow', 'hidden')
-	// const canvas = canvasholder
-	// 	.append('canvas')
-	// 	.style('display', 'block')
-	// 	.style('position', 'absolute')
-	// 	.attr('width', blockwidth)
-	// 	.attr('height', blockwidth)
-	// 	.attr('left', '10px')
-	// 	.attr('top', '10px')
-	// 	.on('mousedown', (event: MouseEvent) => {
-	// 		const body = d3select(document.body)
-	// 		const x = event.clientX
-	// 		const y = event.clientY
-	// 		const oldx = Number.parseInt(canvas.style('left'))
-	// 		const oldy = Number.parseInt(canvas.style('top'))
-	// 		body.on('mousemove', event => {
-	// 			const xoff = event.clientX - x
-	// 			const yoff = event.clientY - y
-	// 			this.detailview.xb!.panning(xoff)
-	// 			this.detailview.yb!.panning(yoff)
-	// 			canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
-	// 		})
-	// 		body.on('mouseup', (event: MouseEvent) => {
-	// 			body.on('mousemove', null).on('mouseup', null)
-	// 			const xoff = event.clientX - x
-	// 			const yoff = event.clientY - y
-	// 			this.detailview.xb!.pannedby(xoff)
-	// 			this.detailview.yb!.pannedby(yoff)
-	// 		})
-	// 	})
-	// const ctx = canvas.node()!.getContext('2d')
-	// this.detailview.canvas = canvas
-	// this.detailview.ctx = ctx
-	// await detailViewUpdateHic(hic, this)
-	/******** common parameter for x/y block ********/
-	// const arg: any = {
-	// 	noresize: true,
-	// 	nobox: true,
-	// 	butrowbottom: true,
-	// 	style: {
-	// 		margin: this.detailview.bbmargin + 'px'
-	// 	},
-	// 	genome: hic.genome,
-	// 	hostURL: hic.hostURL,
-	// 	// width: blockwidth,
-	// 	leftheadw: 20,
-	// 	rightheadw: 40,
-	// 	tklst: []
-	// }
-	// client.first_genetrack_tolist(hic.genome, arg.tklst)
-	// duplicate arg for y
-	// const arg2: any = {}
-	// for (const k in arg) arg2[k] = arg[k]
-	/******************* x block ******************/
-	// let xfirsttime = true
-	// arg.chr = this.x.chr
-	// arg.start = this.x.start
-	// arg.stop = this.x.stop
-	// arg.holder = this.dom.plotDiv.xAxis
-	// arg.onloadalltk_always = async (bb: any) => {
-	/**Replace with Block type when defined later */
-	/*
+// async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
+// this.dom.controlsDiv.view.text('Detailed')
+//nmeth2select(hic, this.detailview, true)
+//matrixType2select(this.detailview, this, true)
+// this.ingenome = false
+// this.inchrpair = false
+// this.indetail = true
+// this.inhorizontal = false
+// const isintrachr = chrx == chry
+//showBtns(this)
+//if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
+// // default view span
+// const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
+//let resolution: number | null = null
+// for (const res of hic.bpresolution) {
+// 	if (viewrangebpw / res > minimumbinnum_bp) {
+// 		resolution = res
+// 		break
+// 	}
+// }
+// if (resolution == null) {
+// 	// use finest
+// 	resolution = hic.bpresolution[hic.bpresolution.length - 1]
+// }
+// let binpx = 2
+// while ((binpx * viewrangebpw) / resolution! < mincanvassize_detail) {
+// 	binpx += 2
+// }
+// px width of x and y blocks
+// const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution!)
+// const blockwidth = 500
+// this.detailview.xb!.width = blockwidth
+// this.detailview.yb!.width = blockwidth
+/************** middle canvas *****************/
+// const canvasholder = this.dom.plotDiv.plot
+// 	.append('div')
+// 	.style('position', 'relative')
+// 	.style('width', blockwidth + 'px')
+// 	.style('height', blockwidth + 'px')
+// 	.style('overflow', 'hidden')
+// const canvas = canvasholder
+// 	.append('canvas')
+// 	.style('display', 'block')
+// 	.style('position', 'absolute')
+// 	.attr('width', blockwidth)
+// 	.attr('height', blockwidth)
+// 	.attr('left', '10px')
+// 	.attr('top', '10px')
+// 	.on('mousedown', (event: MouseEvent) => {
+// 		const body = d3select(document.body)
+// 		const x = event.clientX
+// 		const y = event.clientY
+// 		const oldx = Number.parseInt(canvas.style('left'))
+// 		const oldy = Number.parseInt(canvas.style('top'))
+// 		body.on('mousemove', event => {
+// 			const xoff = event.clientX - x
+// 			const yoff = event.clientY - y
+// 			this.detailview.xb!.panning(xoff)
+// 			this.detailview.yb!.panning(yoff)
+// 			canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
+// 		})
+// 		body.on('mouseup', (event: MouseEvent) => {
+// 			body.on('mousemove', null).on('mouseup', null)
+// 			const xoff = event.clientX - x
+// 			const yoff = event.clientY - y
+// 			this.detailview.xb!.pannedby(xoff)
+// 			this.detailview.yb!.pannedby(yoff)
+// 		})
+// 	})
+// const ctx = canvas.node()!.getContext('2d')
+// this.detailview.canvas = canvas
+// this.detailview.ctx = ctx
+// await detailViewUpdateHic(hic, this)
+/******** common parameter for x/y block ********/
+// const arg: any = {
+// 	noresize: true,
+// 	nobox: true,
+// 	butrowbottom: true,
+// 	style: {
+// 		margin: this.detailview.bbmargin + 'px'
+// 	},
+// 	genome: hic.genome,
+// 	hostURL: hic.hostURL,
+// 	// width: blockwidth,
+// 	leftheadw: 20,
+// 	rightheadw: 40,
+// 	tklst: []
+// }
+// client.first_genetrack_tolist(hic.genome, arg.tklst)
+// duplicate arg for y
+// const arg2: any = {}
+// for (const k in arg) arg2[k] = arg[k]
+/******************* x block ******************/
+// let xfirsttime = true
+// arg.chr = this.x.chr
+// arg.start = this.x.start
+// arg.stop = this.x.stop
+// arg.holder = this.dom.plotDiv.xAxis
+// arg.onloadalltk_always = async (bb: any) => {
+/**Replace with Block type when defined later */
+/*
 			cannot apply transition to canvasholder
 			it may prevent resetting width when both x and y are changing
 			*/
-	// canvasholder.style(
-	// 	'width',
-	// 	2 * this.detailview.bbmargin! + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
-	// )
-	// if (xfirsttime) {
-	// 	xfirsttime = false
-	// 	// must do this:
-	// 	canvas.transition().style('left', this.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
-	// 	return
-	// }
-	// 	await detailViewUpdateRegionFromBlock(hic, this)
-	// }
-	// arg.onpanning = (xoff: number) => {
-	// 	canvas.style(
-	// 		'left',
-	// 		xoff + this.detailview.bbmargin! + this.detailview.xb!.leftheadw + this.detailview.xb!.lpad + 'px'
-	// 	)
-	// }
-	// blocklazyload(arg).then(block => {
-	// 	this.detailview.xb = block
-	// })
-	/******************* y block ******************/
-	// const sheath = this.dom.plotDiv.yAxis
-	// 	.append('div')
-	// 	.style('position', 'relative')
-	// 	.style('width', '200px') // dummy size
-	// 	.style('height', '800px')
-	// const rotor = sheath
-	// 	.append('div')
-	// 	.style('position', 'absolute')
-	// 	.style('bottom', '0px')
-	// 	.style('transform', 'rotate(-90deg)')
-	// 	.style('transform-origin', 'left bottom')
-	// let yfirsttime = true
-	// arg2.rotated = true
-	// arg2.showreverse = true
-	// arg2.chr = this.y.chr
-	// arg2.start = this.y.start
-	// arg2.stop = this.y.stop
-	// arg2.holder = rotor
-	// arg2.onloadalltk_always = async bb => {
-	// const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.detailview.bbmargin!
-	// sheath.transition().style('height', bbw + 'px')
-	// canvasholder.style('height', bbw + 'px')
-	// if (yfirsttime) {
-	// 	yfirsttime = false
-	// 	// must do this:
-	// 	canvas.transition().style('top', this.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
-	// 	return
-	// }
-	// 	await detailViewUpdateRegionFromBlock(hic, this)
-	// }
-	// arg2.onpanning = xoff => {
-	// 	canvas.style(
-	// 		'top',
-	// 		-xoff + this.detailview.bbmargin! + this.detailview.yb!.rightheadw + this.detailview.yb!.rpad + 'px'
-	// 	)
-	// }
-	// const buttonrowh = 30
-	// arg2.onsetheight = bbh => {
-	// 	rotor.transition().style('left', this.detailview.bbmargin + bbh + buttonrowh + 'px')
-	// }
-	// blocklazyload(arg2).then(block => {
-	// 	this.detailview.yb = block
-	// })
-	/*
+// canvasholder.style(
+// 	'width',
+// 	2 * this.detailview.bbmargin! + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
+// )
+// if (xfirsttime) {
+// 	xfirsttime = false
+// 	// must do this:
+// 	canvas.transition().style('left', this.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
+// 	return
+// }
+// 	await detailViewUpdateRegionFromBlock(hic, this)
+// }
+// arg.onpanning = (xoff: number) => {
+// 	canvas.style(
+// 		'left',
+// 		xoff + this.detailview.bbmargin! + this.detailview.xb!.leftheadw + this.detailview.xb!.lpad + 'px'
+// 	)
+// }
+// blocklazyload(arg).then(block => {
+// 	this.detailview.xb = block
+// })
+/******************* y block ******************/
+// const sheath = this.dom.plotDiv.yAxis
+// 	.append('div')
+// 	.style('position', 'relative')
+// 	.style('width', '200px') // dummy size
+// 	.style('height', '800px')
+// const rotor = sheath
+// 	.append('div')
+// 	.style('position', 'absolute')
+// 	.style('bottom', '0px')
+// 	.style('transform', 'rotate(-90deg)')
+// 	.style('transform-origin', 'left bottom')
+// let yfirsttime = true
+// arg2.rotated = true
+// arg2.showreverse = true
+// arg2.chr = this.y.chr
+// arg2.start = this.y.start
+// arg2.stop = this.y.stop
+// arg2.holder = rotor
+// arg2.onloadalltk_always = async bb => {
+// const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.detailview.bbmargin!
+// sheath.transition().style('height', bbw + 'px')
+// canvasholder.style('height', bbw + 'px')
+// if (yfirsttime) {
+// 	yfirsttime = false
+// 	// must do this:
+// 	canvas.transition().style('top', this.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
+// 	return
+// }
+// 	await detailViewUpdateRegionFromBlock(hic, this)
+// }
+// arg2.onpanning = xoff => {
+// 	canvas.style(
+// 		'top',
+// 		-xoff + this.detailview.bbmargin! + this.detailview.yb!.rightheadw + this.detailview.yb!.rpad + 'px'
+// 	)
+// }
+// const buttonrowh = 30
+// arg2.onsetheight = bbh => {
+// 	rotor.transition().style('left', this.detailview.bbmargin + bbh + buttonrowh + 'px')
+// }
+// blocklazyload(arg2).then(block => {
+// 	this.detailview.yb = block
+// })
+/*
 		//XXX this won't work, will duplicate the chunk for block, try named chunk
 		import('./block').then(p=>{
 			hic.detailview.yb = new p.Block(arg2)
 		})
 		*/
-	// }
+// }
 
-	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
-		//if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
+// 	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
+// 		//if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
 
-		const regionx = { chr: this.x.chr, start: this.x.start, stop: this.x.stop }
-		const regiony = { chr: this.y.chr, start: this.y.start, stop: this.y.stop }
+// 		const regionx = { chr: this.x.chr, start: this.x.start, stop: this.x.stop }
+// 		const regiony = { chr: this.y.chr, start: this.y.start, stop: this.y.stop }
 
-		const tracks = [
-			{
-				type: client.tkt.hicstraw,
-				file: hic.file,
-				enzyme: hic.enzyme,
-				maxpercentage: default_hicstrawmaxvperc,
-				pyramidup: 1,
-				name: hic.name
-			}
-		]
-		if (hic.tklst) {
-			for (const t of hic.tklst) {
-				tracks.push(t)
-			}
-		}
-		client.first_genetrack_tolist(hic.genome, tracks)
-		const arg: any = {
-			holder: this.dom.plotDiv.plot,
-			hostURL: hic.hostURL,
-			jwt: hic.jwt,
-			genome: hic.genome,
-			nobox: 1,
-			tklst: tracks
-		}
-		if (
-			regionx.chr == regiony.chr &&
-			Math.max(regionx.start!, regiony.start!) < Math.min(regionx.stop!, regiony.stop!)
-		) {
-			// x/y overlap
-			arg.chr = regionx.chr
-			arg.start = Math.min(regionx.start!, regiony.start!)
-			arg.stop = Math.max(regionx.stop!, regiony.stop!)
-		} else {
-			arg.chr = regionx.chr
-			arg.start = regionx.start
-			arg.stop = regionx.stop
-			arg.width = default_subpanelpxwidth
-			arg.subpanels = [
-				{
-					chr: regiony.chr,
-					start: regiony.start,
-					stop: regiony.stop,
-					width: default_subpanelpxwidth,
-					leftpad: 10,
-					leftborder: subpanel_bordercolor
-				}
-			]
-		}
-		this.horizontalview.args = arg //save so can reload when switching back from detail view
-		blocklazyload(arg)
+// 		const tracks = [
+// 			{
+// 				type: client.tkt.hicstraw,
+// 				file: hic.file,
+// 				enzyme: hic.enzyme,
+// 				maxpercentage: default_hicstrawmaxvperc,
+// 				pyramidup: 1,
+// 				name: hic.name
+// 			}
+// 		]
+// 		if (hic.tklst) {
+// 			for (const t of hic.tklst) {
+// 				tracks.push(t)
+// 			}
+// 		}
+// 		client.first_genetrack_tolist(hic.genome, tracks)
+// 		const arg: any = {
+// 			holder: this.dom.plotDiv.plot,
+// 			hostURL: hic.hostURL,
+// 			jwt: hic.jwt,
+// 			genome: hic.genome,
+// 			nobox: 1,
+// 			tklst: tracks
+// 		}
+// 		if (
+// 			regionx.chr == regiony.chr &&
+// 			Math.max(regionx.start!, regiony.start!) < Math.min(regionx.stop!, regiony.stop!)
+// 		) {
+// 			// x/y overlap
+// 			arg.chr = regionx.chr
+// 			arg.start = Math.min(regionx.start!, regiony.start!)
+// 			arg.stop = Math.max(regionx.stop!, regiony.stop!)
+// 		} else {
+// 			arg.chr = regionx.chr
+// 			arg.start = regionx.start
+// 			arg.stop = regionx.stop
+// 			arg.width = default_subpanelpxwidth
+// 			arg.subpanels = [
+// 				{
+// 					chr: regiony.chr,
+// 					start: regiony.start,
+// 					stop: regiony.stop,
+// 					width: default_subpanelpxwidth,
+// 					leftpad: 10,
+// 					leftborder: subpanel_bordercolor
+// 				}
+// 			]
+// 		}
+// 		this.horizontalview.args = arg //save so can reload when switching back from detail view
+// 		blocklazyload(arg)
 
-		this.dom.controlsDiv.detailViewBtn.style('display', 'block').on('click', async () => {
-			// await this.init_detailView(hic, chrx, chry, x, y)
-		})
+// 		this.dom.controlsDiv.detailViewBtn.style('display', 'block').on('click', async () => {
+// 			// await this.init_detailView(hic, chrx, chry, x, y)
+// 		})
 
-		// this.dom.infoBarDiv.colorScaleDiv.style('display', 'none')
-		// this.dom.infoBarDiv.colorScaleLabel.style('display', 'none')
-	}
-}
+// 		// this.dom.infoBarDiv.colorScaleDiv.style('display', 'none')
+// 		// this.dom.infoBarDiv.colorScaleLabel.style('display', 'none')
+// 	}
+// }
 
 //////////////////// __detail view__ ////////////////////
 
