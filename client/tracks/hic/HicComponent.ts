@@ -65,6 +65,11 @@ export class HicComponent {
 		return appState
 	}
 
+	reactsTo(action: any) {
+		if (action.type.startsWith('view')) return true
+		else return false
+	}
+
 	async initView() {
 		if (this.state.currView == 'genome') {
 			this.genome = new GenomeView({
@@ -215,6 +220,7 @@ export class HicComponent {
 	}
 
 	async main(appState: any) {
+		this.app.dispatch({ type: 'loading_active', active: true })
 		if (this.skipMain == false) {
 			if (this.state.currView != 'horizontal') {
 				const args = await this.setDataArgs(appState)

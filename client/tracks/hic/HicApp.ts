@@ -2,9 +2,9 @@ import { getAppInit } from '#rx'
 import { hicStoreInit } from './HicStore'
 import { Div, Elem } from '../../types/d3'
 import { showErrorsWithCounter } from '../../dom/sayerror'
-//import { loadingInit } from './dom/loadingOverlay'
+import { loadingInit } from './dom/LoadingOverlay.ts'
 import { viewCompInit } from './HicComponent.ts'
-import * as client from '#src/client'
+import { Menu } from '#src/client'
 import { select as d3select } from 'd3-selection'
 import { hicParseFile } from './data/parseData'
 
@@ -18,7 +18,7 @@ class HicApp {
 		infoBarDiv: Div | Elem
 		loadingDiv: Div | Elem
 		plotDiv: Div | Elem
-		tip: client.Menu
+		tip: Menu
 	}
 	errList: string[]
 	hic: {
@@ -68,10 +68,9 @@ class HicApp {
 				.style('vertical-align', 'top')
 				.style('padding', '5px')
 				.style('border', 'solid 0.5px #ccc'),
-			loadingDiv: d3select('body').append('div'),
-			// .attr('id', 'sjpp-loading-overlay'),
+			loadingDiv: d3select('body').append('div').attr('id', 'sjpp-loading-overlay'),
 			plotDiv: opts.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block'),
-			tip: new client.Menu()
+			tip: new Menu()
 		}
 		this.errList = []
 	}
@@ -158,11 +157,10 @@ class HicApp {
 			this.state = await this.store.copyState()
 
 			this.components = {
-				// loadingOverlay: await loadingInit({
-				// 	app: this.api,
-				// 	state: this.state,
-				// 	loadingDiv: this.dom.loadingDiv
-				// }),
+				loadingOverlay: await loadingInit({
+					app: this.api,
+					loadingDiv: this.dom.loadingDiv
+				}),
 				view: await viewCompInit({
 					app: this.api,
 					state: this.state,
