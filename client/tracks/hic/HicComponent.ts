@@ -220,9 +220,10 @@ export class HicComponent {
 	}
 
 	async main(appState: any) {
-		this.app.dispatch({ type: 'loading_active', active: true })
 		if (this.skipMain == false) {
 			if (this.state.currView != 'horizontal') {
+				this.app.dispatch({ type: 'loading_active', active: true })
+
 				const args = await this.setDataArgs(appState)
 				await this.fetchData(args)
 				const [min, max] = this.dataMapper.sortData(this.data)
