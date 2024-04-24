@@ -9,9 +9,14 @@ class ControlPanel {
 	type: 'controlPanel'
 	app: any
 	controls: {
+		horizontalRow?: any
+		normalizationRow?: any
 		nmeth?: any
+		minCutoffRow?: any
 		inputBpMinV?: any
+		maxCutoffRow?: any
 		inputBpMaxV?: any
+		matrixTypeRow?: any
 		matrixType?: any
 		view?: any
 		genomeViewBtn?: any
@@ -86,11 +91,20 @@ class ControlPanel {
 			.style('display', menuVisible ? 'block' : 'none')
 		const menuTable = menu.append('table').style('border-spacing', '3px')
 
+		//Message for horizontal view
+		this.controls.horizontalRow = menuTable
+			.append('tr')
+			.style('display', this.state.currView == 'horizontal' ? 'contents' : 'none') as any
+		this.addLabel(this.controls.horizontalRow, 'Use Config')
+		this.controls.horizontalRow
+			.append('td')
+			.html('To change:<ul><li>Normalization method</li><li>Cutoff values</li><li>Matrix type</li></ol>')
+
 		//Normalization
-		const normalizationRow = menuTable.append('tr') as any
-		this.addLabel(normalizationRow, 'NORMALIZATION')
+		this.controls.normalizationRow = menuTable.append('tr') as any
+		this.addLabel(this.controls.normalizationRow, 'NORMALIZATION')
 		this.controls.nmeth = new NormalizationMethodControl(
-			normalizationRow.append('td').attr('class', 'sjpp-nmeth-select'),
+			this.controls.normalizationRow.append('td').attr('class', 'sjpp-nmeth-select'),
 			this.hic.normalization,
 			this.state.defaultNmeth,
 			this.nmethCallback
@@ -99,27 +113,27 @@ class ControlPanel {
 
 		//***Cutoffs
 		//Min CUTOFF
-		const minCutoffRow = menuTable.append('tr') as any
-		this.addLabel(minCutoffRow, 'Min CUTOFF')
+		this.controls.minCutoffRow = menuTable.append('tr') as any
+		this.addLabel(this.controls.minCutoffRow, 'Min CUTOFF')
 		this.controls.inputBpMinV = new CutoffControl(
-			minCutoffRow.append('td'),
+			this.controls.minCutoffRow.append('td'),
 			this.parent('min'),
 			this.minCallback
 		).render()
 
 		//Max CUTOFF
-		const maxCutoffRow = menuTable.append('tr') as any
-		this.addLabel(maxCutoffRow, 'Max CUTOFF')
+		this.controls.maxCutoffRow = menuTable.append('tr') as any
+		this.addLabel(this.controls.maxCutoffRow, 'Max CUTOFF')
 		this.controls.inputBpMaxV = new CutoffControl(
-			maxCutoffRow.append('td'),
+			this.controls.maxCutoffRow.append('td'),
 			this.parent('max'),
 			this.maxCallback
 		).render()
 
 		//Matrix type
-		const matrixTypeRow = menuTable.append('tr') as any
-		this.addLabel(matrixTypeRow, 'matrix type')
-		this.controls.matrixType = new MatrixTypeControl(matrixTypeRow.append('td'), this.matrixTypeCallback)
+		this.controls.matrixTypeRow = menuTable.append('tr') as any
+		this.addLabel(this.controls.matrixTypeRow, 'matrix type')
+		this.controls.matrixType = new MatrixTypeControl(this.controls.matrixTypeRow.append('td'), this.matrixTypeCallback)
 		this.controls.matrixType.render()
 
 		const viewRow = menuTable.append('tr') as any
@@ -346,6 +360,14 @@ class ControlPanel {
 		})
 	}
 
+	showHideControls() {
+		this.controls.normalizationRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
+		this.controls.minCutoffRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
+		this.controls.maxCutoffRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
+		this.controls.matrixTypeRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
+		this.controls.horizontalRow.style('display', this.state.currView == 'horizontal' ? 'contents' : 'none')
+	}
+
 	main(appState) {
 		this.state = this.app.getState(appState)
 
@@ -363,6 +385,7 @@ class ControlPanel {
 		this.controls.inputBpMaxV.property('value', this.parent('max'))
 
 		this.showBtns()
+		this.showHideControls()
 	}
 }
 
