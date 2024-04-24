@@ -228,17 +228,17 @@ export class GenomeView {
 		blocklazyload(arg)
 	}
 
-	async render() {
+	render() {
 		this.viewRender.render()
 		this.gridElementsRenderer.render(this.hic.holder)
 		if (this.hic.sv && this.hic.sv.items) {
 			this.makeSv()
 		}
 
-		await this.update(this.data)
+		this.update(this.data)
 	}
 
-	async update(data) {
+	update(data) {
 		this.data = data
 		this.min = this.parent('min') as number
 		this.max = this.parent('max') as number
@@ -256,17 +256,7 @@ export class GenomeView {
 			obj.data = this.gridFormattedData.formatData(data.items, this.binpx, this.resolution)
 
 			for (const [xPx, yPx, value] of obj.data) {
-				await this.colorizeElement.colorizeElement(
-					xPx,
-					yPx,
-					value,
-					obj,
-					this.binpx,
-					this.binpx,
-					this.min,
-					this.max,
-					'genome'
-				)
+				this.colorizeElement.colorizeElement(xPx, yPx, value, obj, this.binpx, this.binpx, this.min, this.max, 'genome')
 			}
 
 			obj.img.attr('xlink:href', obj.canvas.toDataURL())
@@ -620,11 +610,11 @@ class Hicstat {
 
 //////////////////// __detail view__ ////////////////////
 
-async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
-	self.x = self.detailview.xb.rglst[0]
-	self.y = self.detailview.yb.rglst[0]
-	await detailViewUpdateHic(hic, self)
-}
+// async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
+// 	self.x = self.detailview.xb.rglst[0]
+// 	self.y = self.detailview.yb.rglst[0]
+// 	await detailViewUpdateHic(hic, self)
+// }
 
 /**
  * call when coordinate changes

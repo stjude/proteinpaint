@@ -143,16 +143,16 @@ export class ChrPairView {
 		return this.hic.chrorder.indexOf(this.parent('state').x.chr) < this.hic.chrorder.indexOf(this.parent('state').y.chr)
 	}
 
-	async render() {
+	render() {
 		this.calResolution = this.parent('calResolution')
 		this.setDefaultBinpx()
 		this.renderAxes()
 		this.renderCanvas()
 
-		await this.update(this.items)
+		this.update(this.items)
 	}
 
-	async update(items: { items: number[][] }) {
+	update(items: { items: number[][] }) {
 		this.items = items
 		const firstisx = this.isFirstX()
 		const isintrachr = this.parent('state').x.chr === this.parent('state').y.chr

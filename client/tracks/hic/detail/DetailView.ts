@@ -80,7 +80,6 @@ export class DetailView {
 			.style('width', `${this.xBlock.bbw}px`)
 			.style('height', `${this.yBlock.bbw}px`)
 			.style('overflow', 'hidden')
-
 		//main canvas
 		this.canvas = this.canvasHolder
 			.append('canvas')
@@ -121,8 +120,8 @@ export class DetailView {
 
 		const blockwidth = Math.ceil((this.binpx * this.viewRangeBpw!) / this.calResolution)
 
-		this.xBlock = new DetailBlock(this.hic, blockwidth, this.bbmargin, this.plotDiv.xAxis, false)
-		this.yBlock = new DetailBlock(this.hic, blockwidth, this.bbmargin, this.rotor, true)
+		this.xBlock = new DetailBlock(this.app, this.hic, blockwidth, this.bbmargin, this.plotDiv.xAxis, false)
+		this.yBlock = new DetailBlock(this.app, this.hic, blockwidth, this.bbmargin, this.rotor, true)
 
 		this.renderCanvas(blockwidth)
 
@@ -131,27 +130,10 @@ export class DetailView {
 		await this.xBlock.loadBlock(state.x, this.canvasHolder, this.canvas)
 		await this.yBlock.loadBlock(state.y, this.canvasHolder, this.canvas, this.sheath)
 
-		//Unnecessary
-		// this.app.dispatch({
-		// 	type: 'view_update',
-		// 	config: {
-		// 		x: {
-		// 			chr: this.xBlock.block.rglst[0].chr,
-		// 			start: this.xBlock.block.rglst[0].start,
-		// 			stop: this.xBlock.block.rglst[0].stop
-		// 		},
-		// 		y: {
-		// 			chr: this.yBlock.block.rglst[0].chr,
-		// 			start: this.yBlock.block.rglst[0].start,
-		// 			stop: this.yBlock.block.rglst[0].stop
-		// 		}
-		// 	}
-		// })
-
-		await this.update(this.items)
+		this.update(this.items)
 	}
 
-	async update(items: { items: number[][] }) {
+	update(items: { items: number[][] }) {
 		this.items = items
 		const state = this.parent('state') as any
 
@@ -181,7 +163,6 @@ export class DetailView {
 				'detail'
 			)
 		}
-		this.canvas.style('left', `${this.xBlock.defaultLeft}px`).style('top', `${this.yBlock.defaultTop}px`)
 		// This does not work. Do not do this
 		// this.canvas.attr('width', canvaswidth).attr('height', canvasheight)
 	}
