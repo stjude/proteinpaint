@@ -365,182 +365,182 @@ class Hicstat {
 		this.y = {}
 	}
 
-	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
-		// this.dom.controlsDiv.view.text('Detailed')
-		//nmeth2select(hic, this.detailview, true)
-		//matrixType2select(this.detailview, this, true)
-		// this.ingenome = false
-		// this.inchrpair = false
-		// this.indetail = true
-		// this.inhorizontal = false
-		// const isintrachr = chrx == chry
-		//showBtns(this)
-		//if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
-		// // default view span
-		// const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
-		//let resolution: number | null = null
-		// for (const res of hic.bpresolution) {
-		// 	if (viewrangebpw / res > minimumbinnum_bp) {
-		// 		resolution = res
-		// 		break
-		// 	}
-		// }
-		// if (resolution == null) {
-		// 	// use finest
-		// 	resolution = hic.bpresolution[hic.bpresolution.length - 1]
-		// }
-		// let binpx = 2
-		// while ((binpx * viewrangebpw) / resolution! < mincanvassize_detail) {
-		// 	binpx += 2
-		// }
-		// px width of x and y blocks
-		// const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution!)
-		// const blockwidth = 500
-		// this.detailview.xb!.width = blockwidth
-		// this.detailview.yb!.width = blockwidth
-		/************** middle canvas *****************/
-		// const canvasholder = this.dom.plotDiv.plot
-		// 	.append('div')
-		// 	.style('position', 'relative')
-		// 	.style('width', blockwidth + 'px')
-		// 	.style('height', blockwidth + 'px')
-		// 	.style('overflow', 'hidden')
-		// const canvas = canvasholder
-		// 	.append('canvas')
-		// 	.style('display', 'block')
-		// 	.style('position', 'absolute')
-		// 	.attr('width', blockwidth)
-		// 	.attr('height', blockwidth)
-		// 	.attr('left', '10px')
-		// 	.attr('top', '10px')
-		// 	.on('mousedown', (event: MouseEvent) => {
-		// 		const body = d3select(document.body)
-		// 		const x = event.clientX
-		// 		const y = event.clientY
-		// 		const oldx = Number.parseInt(canvas.style('left'))
-		// 		const oldy = Number.parseInt(canvas.style('top'))
-		// 		body.on('mousemove', event => {
-		// 			const xoff = event.clientX - x
-		// 			const yoff = event.clientY - y
-		// 			this.detailview.xb!.panning(xoff)
-		// 			this.detailview.yb!.panning(yoff)
-		// 			canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
-		// 		})
-		// 		body.on('mouseup', (event: MouseEvent) => {
-		// 			body.on('mousemove', null).on('mouseup', null)
-		// 			const xoff = event.clientX - x
-		// 			const yoff = event.clientY - y
-		// 			this.detailview.xb!.pannedby(xoff)
-		// 			this.detailview.yb!.pannedby(yoff)
-		// 		})
-		// 	})
-		// const ctx = canvas.node()!.getContext('2d')
-		// this.detailview.canvas = canvas
-		// this.detailview.ctx = ctx
-		// await detailViewUpdateHic(hic, this)
-		/******** common parameter for x/y block ********/
-		// const arg: any = {
-		// 	noresize: true,
-		// 	nobox: true,
-		// 	butrowbottom: true,
-		// 	style: {
-		// 		margin: this.detailview.bbmargin + 'px'
-		// 	},
-		// 	genome: hic.genome,
-		// 	hostURL: hic.hostURL,
-		// 	// width: blockwidth,
-		// 	leftheadw: 20,
-		// 	rightheadw: 40,
-		// 	tklst: []
-		// }
-		// client.first_genetrack_tolist(hic.genome, arg.tklst)
-		// duplicate arg for y
-		// const arg2: any = {}
-		// for (const k in arg) arg2[k] = arg[k]
-		/******************* x block ******************/
-		// let xfirsttime = true
-		// arg.chr = this.x.chr
-		// arg.start = this.x.start
-		// arg.stop = this.x.stop
-		// arg.holder = this.dom.plotDiv.xAxis
-		// arg.onloadalltk_always = async (bb: any) => {
-		/**Replace with Block type when defined later */
-		/*
+	// async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
+	// this.dom.controlsDiv.view.text('Detailed')
+	//nmeth2select(hic, this.detailview, true)
+	//matrixType2select(this.detailview, this, true)
+	// this.ingenome = false
+	// this.inchrpair = false
+	// this.indetail = true
+	// this.inhorizontal = false
+	// const isintrachr = chrx == chry
+	//showBtns(this)
+	//if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
+	// // default view span
+	// const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
+	//let resolution: number | null = null
+	// for (const res of hic.bpresolution) {
+	// 	if (viewrangebpw / res > minimumbinnum_bp) {
+	// 		resolution = res
+	// 		break
+	// 	}
+	// }
+	// if (resolution == null) {
+	// 	// use finest
+	// 	resolution = hic.bpresolution[hic.bpresolution.length - 1]
+	// }
+	// let binpx = 2
+	// while ((binpx * viewrangebpw) / resolution! < mincanvassize_detail) {
+	// 	binpx += 2
+	// }
+	// px width of x and y blocks
+	// const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution!)
+	// const blockwidth = 500
+	// this.detailview.xb!.width = blockwidth
+	// this.detailview.yb!.width = blockwidth
+	/************** middle canvas *****************/
+	// const canvasholder = this.dom.plotDiv.plot
+	// 	.append('div')
+	// 	.style('position', 'relative')
+	// 	.style('width', blockwidth + 'px')
+	// 	.style('height', blockwidth + 'px')
+	// 	.style('overflow', 'hidden')
+	// const canvas = canvasholder
+	// 	.append('canvas')
+	// 	.style('display', 'block')
+	// 	.style('position', 'absolute')
+	// 	.attr('width', blockwidth)
+	// 	.attr('height', blockwidth)
+	// 	.attr('left', '10px')
+	// 	.attr('top', '10px')
+	// 	.on('mousedown', (event: MouseEvent) => {
+	// 		const body = d3select(document.body)
+	// 		const x = event.clientX
+	// 		const y = event.clientY
+	// 		const oldx = Number.parseInt(canvas.style('left'))
+	// 		const oldy = Number.parseInt(canvas.style('top'))
+	// 		body.on('mousemove', event => {
+	// 			const xoff = event.clientX - x
+	// 			const yoff = event.clientY - y
+	// 			this.detailview.xb!.panning(xoff)
+	// 			this.detailview.yb!.panning(yoff)
+	// 			canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
+	// 		})
+	// 		body.on('mouseup', (event: MouseEvent) => {
+	// 			body.on('mousemove', null).on('mouseup', null)
+	// 			const xoff = event.clientX - x
+	// 			const yoff = event.clientY - y
+	// 			this.detailview.xb!.pannedby(xoff)
+	// 			this.detailview.yb!.pannedby(yoff)
+	// 		})
+	// 	})
+	// const ctx = canvas.node()!.getContext('2d')
+	// this.detailview.canvas = canvas
+	// this.detailview.ctx = ctx
+	// await detailViewUpdateHic(hic, this)
+	/******** common parameter for x/y block ********/
+	// const arg: any = {
+	// 	noresize: true,
+	// 	nobox: true,
+	// 	butrowbottom: true,
+	// 	style: {
+	// 		margin: this.detailview.bbmargin + 'px'
+	// 	},
+	// 	genome: hic.genome,
+	// 	hostURL: hic.hostURL,
+	// 	// width: blockwidth,
+	// 	leftheadw: 20,
+	// 	rightheadw: 40,
+	// 	tklst: []
+	// }
+	// client.first_genetrack_tolist(hic.genome, arg.tklst)
+	// duplicate arg for y
+	// const arg2: any = {}
+	// for (const k in arg) arg2[k] = arg[k]
+	/******************* x block ******************/
+	// let xfirsttime = true
+	// arg.chr = this.x.chr
+	// arg.start = this.x.start
+	// arg.stop = this.x.stop
+	// arg.holder = this.dom.plotDiv.xAxis
+	// arg.onloadalltk_always = async (bb: any) => {
+	/**Replace with Block type when defined later */
+	/*
 			cannot apply transition to canvasholder
 			it may prevent resetting width when both x and y are changing
 			*/
-		// canvasholder.style(
-		// 	'width',
-		// 	2 * this.detailview.bbmargin! + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
-		// )
-		// if (xfirsttime) {
-		// 	xfirsttime = false
-		// 	// must do this:
-		// 	canvas.transition().style('left', this.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
-		// 	return
-		// }
-		// 	await detailViewUpdateRegionFromBlock(hic, this)
-		// }
-		// arg.onpanning = (xoff: number) => {
-		// 	canvas.style(
-		// 		'left',
-		// 		xoff + this.detailview.bbmargin! + this.detailview.xb!.leftheadw + this.detailview.xb!.lpad + 'px'
-		// 	)
-		// }
-		// blocklazyload(arg).then(block => {
-		// 	this.detailview.xb = block
-		// })
-		/******************* y block ******************/
-		// const sheath = this.dom.plotDiv.yAxis
-		// 	.append('div')
-		// 	.style('position', 'relative')
-		// 	.style('width', '200px') // dummy size
-		// 	.style('height', '800px')
-		// const rotor = sheath
-		// 	.append('div')
-		// 	.style('position', 'absolute')
-		// 	.style('bottom', '0px')
-		// 	.style('transform', 'rotate(-90deg)')
-		// 	.style('transform-origin', 'left bottom')
-		// let yfirsttime = true
-		// arg2.rotated = true
-		// arg2.showreverse = true
-		// arg2.chr = this.y.chr
-		// arg2.start = this.y.start
-		// arg2.stop = this.y.stop
-		// arg2.holder = rotor
-		// arg2.onloadalltk_always = async bb => {
-		// const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.detailview.bbmargin!
-		// sheath.transition().style('height', bbw + 'px')
-		// canvasholder.style('height', bbw + 'px')
-		// if (yfirsttime) {
-		// 	yfirsttime = false
-		// 	// must do this:
-		// 	canvas.transition().style('top', this.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
-		// 	return
-		// }
-		// 	await detailViewUpdateRegionFromBlock(hic, this)
-		// }
-		// arg2.onpanning = xoff => {
-		// 	canvas.style(
-		// 		'top',
-		// 		-xoff + this.detailview.bbmargin! + this.detailview.yb!.rightheadw + this.detailview.yb!.rpad + 'px'
-		// 	)
-		// }
-		// const buttonrowh = 30
-		// arg2.onsetheight = bbh => {
-		// 	rotor.transition().style('left', this.detailview.bbmargin + bbh + buttonrowh + 'px')
-		// }
-		// blocklazyload(arg2).then(block => {
-		// 	this.detailview.yb = block
-		// })
-		/*
+	// canvasholder.style(
+	// 	'width',
+	// 	2 * this.detailview.bbmargin! + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
+	// )
+	// if (xfirsttime) {
+	// 	xfirsttime = false
+	// 	// must do this:
+	// 	canvas.transition().style('left', this.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
+	// 	return
+	// }
+	// 	await detailViewUpdateRegionFromBlock(hic, this)
+	// }
+	// arg.onpanning = (xoff: number) => {
+	// 	canvas.style(
+	// 		'left',
+	// 		xoff + this.detailview.bbmargin! + this.detailview.xb!.leftheadw + this.detailview.xb!.lpad + 'px'
+	// 	)
+	// }
+	// blocklazyload(arg).then(block => {
+	// 	this.detailview.xb = block
+	// })
+	/******************* y block ******************/
+	// const sheath = this.dom.plotDiv.yAxis
+	// 	.append('div')
+	// 	.style('position', 'relative')
+	// 	.style('width', '200px') // dummy size
+	// 	.style('height', '800px')
+	// const rotor = sheath
+	// 	.append('div')
+	// 	.style('position', 'absolute')
+	// 	.style('bottom', '0px')
+	// 	.style('transform', 'rotate(-90deg)')
+	// 	.style('transform-origin', 'left bottom')
+	// let yfirsttime = true
+	// arg2.rotated = true
+	// arg2.showreverse = true
+	// arg2.chr = this.y.chr
+	// arg2.start = this.y.start
+	// arg2.stop = this.y.stop
+	// arg2.holder = rotor
+	// arg2.onloadalltk_always = async bb => {
+	// const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.detailview.bbmargin!
+	// sheath.transition().style('height', bbw + 'px')
+	// canvasholder.style('height', bbw + 'px')
+	// if (yfirsttime) {
+	// 	yfirsttime = false
+	// 	// must do this:
+	// 	canvas.transition().style('top', this.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
+	// 	return
+	// }
+	// 	await detailViewUpdateRegionFromBlock(hic, this)
+	// }
+	// arg2.onpanning = xoff => {
+	// 	canvas.style(
+	// 		'top',
+	// 		-xoff + this.detailview.bbmargin! + this.detailview.yb!.rightheadw + this.detailview.yb!.rpad + 'px'
+	// 	)
+	// }
+	// const buttonrowh = 30
+	// arg2.onsetheight = bbh => {
+	// 	rotor.transition().style('left', this.detailview.bbmargin + bbh + buttonrowh + 'px')
+	// }
+	// blocklazyload(arg2).then(block => {
+	// 	this.detailview.yb = block
+	// })
+	/*
 		//XXX this won't work, will duplicate the chunk for block, try named chunk
 		import('./block').then(p=>{
 			hic.detailview.yb = new p.Block(arg2)
 		})
 		*/
-	}
+	// }
 
 	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		//if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
@@ -600,7 +600,7 @@ class Hicstat {
 		blocklazyload(arg)
 
 		this.dom.controlsDiv.detailViewBtn.style('display', 'block').on('click', async () => {
-			await this.init_detailView(hic, chrx, chry, x, y)
+			// await this.init_detailView(hic, chrx, chry, x, y)
 		})
 
 		// this.dom.infoBarDiv.colorScaleDiv.style('display', 'none')
@@ -625,344 +625,344 @@ class Hicstat {
  * @param self
  * @returns
  */
-async function detailViewUpdateHic(hic: any, self: any) {
-	const xstart = self.x.start
-	const xstop = self.x.stop
-	const ystart = self.y.start
-	const ystop = self.y.stop
+// async function detailViewUpdateHic(hic: any, self: any) {
+// 	const xstart = self.x.start
+// 	const xstop = self.x.stop
+// 	const ystart = self.y.start
+// 	const ystop = self.y.stop
 
-	const maxbpwidth = Math.max(xstop - xstart, ystop - ystart)
-	let resolution = null
-	for (const res of hic.bpresolution) {
-		if (maxbpwidth / res > minimumbinnum_bp) {
-			resolution = res
-			break
-		}
-	}
+// 	const maxbpwidth = Math.max(xstop - xstart, ystop - ystart)
+// 	let resolution = null
+// 	for (const res of hic.bpresolution) {
+// 		if (maxbpwidth / res > minimumbinnum_bp) {
+// 			resolution = res
+// 			break
+// 		}
+// 	}
 
-	try {
-		/** Format data for x fragment and query server for x data*/
-		const xfragment = await getXFragData(hic, resolution, self)
-		if (!xfragment) {
-			// use bpresolution, not fragment
-			self.detailview.resolution = resolution
-			// self.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
-			// fixed bin size only for bp bins
-			// self.detailview.xbinpx = self.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
-			// self.detailview.ybinpx = self.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
-		} else {
-			//got fragment index for x
-			if (xfragment.error) throw { message: xfragment.error }
-			if (!xfragment.items) throw { message: '.items[] missing for x view range enzyme fragment' }
-			const [err, map, start, stop] = hicparsefragdata(xfragment.items)
-			if (err) throw { message: err }
-			self.detailview.frag.xid2coord = map
-			self.detailview.frag.xstartfrag = start
-			self.detailview.frag.xstopfrag = stop
+// 	try {
+// 		/** Format data for x fragment and query server for x data*/
+// 		const xfragment = await getXFragData(hic, resolution, self)
+// 		if (!xfragment) {
+// 			// use bpresolution, not fragment
+// 			self.detailview.resolution = resolution
+// 			// self.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
+// 			// fixed bin size only for bp bins
+// 			// self.detailview.xbinpx = self.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
+// 			// self.detailview.ybinpx = self.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
+// 		} else {
+// 			//got fragment index for x
+// 			if (xfragment.error) throw { message: xfragment.error }
+// 			if (!xfragment.items) throw { message: '.items[] missing for x view range enzyme fragment' }
+// 			const [err, map, start, stop] = hicparsefragdata(xfragment.items)
+// 			if (err) throw { message: err }
+// 			self.detailview.frag.xid2coord = map
+// 			self.detailview.frag.xstartfrag = start
+// 			self.detailview.frag.xstopfrag = stop
 
-			const yfragment = await getYFragData(hic, self)
-			if (yfragment) {
-				// got fragment index for y
-				if (yfragment.error) throw { message: yfragment.error }
-				if (!yfragment.items) throw { message: '.items[] missing' }
-				const [err, map, start, stop] = hicparsefragdata(yfragment.items)
-				if (err) throw { message: err }
-				if (self.x.chr == self.y.chr) {
-					/*
-				intra chr
-				frag id to coord mapping goes to same bin for great merit
-				*/
-					for (const [id, pos] of map) {
-						self.detailview.frag.xid2coord.set(id, pos)
-					}
+// 			const yfragment = await getYFragData(hic, self)
+// 			if (yfragment) {
+// 				// got fragment index for y
+// 				if (yfragment.error) throw { message: yfragment.error }
+// 				if (!yfragment.items) throw { message: '.items[] missing' }
+// 				const [err, map, start, stop] = hicparsefragdata(yfragment.items)
+// 				if (err) throw { message: err }
+// 				if (self.x.chr == self.y.chr) {
+// 					/*
+// 				intra chr
+// 				frag id to coord mapping goes to same bin for great merit
+// 				*/
+// 					for (const [id, pos] of map) {
+// 						self.detailview.frag.xid2coord.set(id, pos)
+// 					}
 
-					self.detailview.frag.yid2coord = self.detailview.frag.xid2coord
-				} else {
-					self.detailview.frag.yid2coord = map
-				}
-				self.detailview.frag.ystartfrag = start
-				self.detailview.frag.ystopfrag = stop
+// 					self.detailview.frag.yid2coord = self.detailview.frag.xid2coord
+// 				} else {
+// 					self.detailview.frag.yid2coord = map
+// 				}
+// 				self.detailview.frag.ystartfrag = start
+// 				self.detailview.frag.ystopfrag = stop
 
-				/** x/y fragment range defined
-				 * find out resolution
-				 */
-				const maxfragspan = Math.max(
-					self.detailview.frag.xstopfrag - self.detailview.frag.xstartfrag,
-					self.detailview.frag.ystopfrag - self.detailview.frag.ystartfrag
-				)
-				//let resolution: number | null = null
-				for (const r of hic.fragresolution) {
-					if (maxfragspan / r > minimumbinnum_frag) {
-						resolution = r
-						break
-					}
-				}
-				if (resolution == null) {
-					resolution = hic.fragresolution[hic.fragresolution.length - 1]
-				}
-				self.dom.infoBarDiv.resolution.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
-				self.detailview.resolution = resolution
-			}
-		}
-		getdata_detail(hic, self)
-	} catch (err: any) {
-		self.errList.push(err.message || err)
-		if (err.stack) console.log(err.stack)
-	}
+// 				/** x/y fragment range defined
+// 				 * find out resolution
+// 				 */
+// 				const maxfragspan = Math.max(
+// 					self.detailview.frag.xstopfrag - self.detailview.frag.xstartfrag,
+// 					self.detailview.frag.ystopfrag - self.detailview.frag.ystartfrag
+// 				)
+// 				//let resolution: number | null = null
+// 				for (const r of hic.fragresolution) {
+// 					if (maxfragspan / r > minimumbinnum_frag) {
+// 						resolution = r
+// 						break
+// 					}
+// 				}
+// 				if (resolution == null) {
+// 					resolution = hic.fragresolution[hic.fragresolution.length - 1]
+// 				}
+// 				self.dom.infoBarDiv.resolution.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
+// 				self.detailview.resolution = resolution
+// 			}
+// 		}
+// 		getdata_detail(hic, self)
+// 	} catch (err: any) {
+// 		self.errList.push(err.message || err)
+// 		if (err.stack) console.log(err.stack)
+// 	}
 
-	if (self.errList.length) self.error(self.errList)
-}
+// 	if (self.errList.length) self.error(self.errList)
+// }
 
-async function getXFragData(hic: any, resolution: any, self: any) {
-	if (resolution != null) {
-		// using bp resolution
-		delete self.detailview.frag
-		return
-	}
-	if (!hic.enzyme) {
-		// no enzyme available
-		resolution = hic.bpresolution[hic.bpresolution.length - 1]
-		delete self.detailview.frag
-		return
-	}
+// async function getXFragData(hic: any, resolution: any, self: any) {
+// 	if (resolution != null) {
+// 		// using bp resolution
+// 		delete self.detailview.frag
+// 		return
+// 	}
+// 	if (!hic.enzyme) {
+// 		// no enzyme available
+// 		resolution = hic.bpresolution[hic.bpresolution.length - 1]
+// 		delete self.detailview.frag
+// 		return
+// 	}
 
-	/*
-		convert x/y view range coordinate to enzyme fragment index
-		using the span of frag index to figure out resolution (# of fragments)
-		*/
-	self.detailview.frag = {}
+// 	/*
+// 		convert x/y view range coordinate to enzyme fragment index
+// 		using the span of frag index to figure out resolution (# of fragments)
+// 		*/
+// 	self.detailview.frag = {}
 
-	// query fragment index for x
-	const arg = {
-		getdata: 1,
-		getBED: 1,
-		file: hic.enzymefile,
-		rglst: [{ chr: self.x.chr, start: self.x.start, stop: self.x.stop }]
-	}
-	return await getBedData(arg, self)
-}
+// 	// query fragment index for x
+// 	const arg = {
+// 		getdata: 1,
+// 		getBED: 1,
+// 		file: hic.enzymefile,
+// 		rglst: [{ chr: self.x.chr, start: self.x.start, stop: self.x.stop }]
+// 	}
+// 	return await getBedData(arg, self)
+// }
 
-async function getYFragData(hic: any, self: any) {
-	const arg = {
-		getdata: 1,
-		getBED: 1,
-		file: hic.enzymefile,
-		rglst: [{ chr: self.y.chr, start: self.y.start, stop: self.y.stop }]
-	}
+// async function getYFragData(hic: any, self: any) {
+// 	const arg = {
+// 		getdata: 1,
+// 		getBED: 1,
+// 		file: hic.enzymefile,
+// 		rglst: [{ chr: self.y.chr, start: self.y.start, stop: self.y.stop }]
+// 	}
 
-	return getBedData(arg, self)
-}
+// 	return getBedData(arg, self)
+// }
 
-async function getBedData(arg: any, self: any) {
-	try {
-		return await client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
-	} catch (e: any) {
-		self.errList.push(e.message || e)
-		if (e.stack) console.log(e.stack)
-	}
-}
+// async function getBedData(arg: any, self: any) {
+// 	try {
+// 		return await client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
+// 	} catch (e: any) {
+// 		self.errList.push(e.message || e)
+// 		if (e.stack) console.log(e.stack)
+// 	}
+// }
 
-function getdata_detail(hic: any, self: any) {
-	/*
-	x/y view range and resolution have all been set
-	request hic data and paint canvas
-	*/
+// function getdata_detail(hic: any, self: any) {
+// 	/*
+// 	x/y view range and resolution have all been set
+// 	request hic data and paint canvas
+// 	*/
 
-	const resolution = self.detailview.resolution
-	const ctx = self.detailview.ctx
-	const chrx = self.x.chr
-	const chry = self.y.chr
+// 	const resolution = self.detailview.resolution
+// 	const ctx = self.detailview.ctx
+// 	const chrx = self.x.chr
+// 	const chry = self.y.chr
 
-	const fg = self.detailview.frag
+// 	const fg = self.detailview.frag
 
-	// genomic coordinates
-	const xstart = self.x.start
-	const xstop = self.x.stop
-	const ystart = self.y.start
-	const ystop = self.y.stop
+// 	// genomic coordinates
+// 	const xstart = self.x.start
+// 	const xstop = self.x.stop
+// 	const ystart = self.y.start
+// 	const ystop = self.y.stop
 
-	const par: HicstrawArgs = {
-		matrixType: self.detailview.matrixType,
-		file: hic.file,
-		url: hic.url,
-		pos1:
-			(hic.nochr ? chrx.replace('chr', '') : chrx) +
-			':' +
-			(fg ? fg.xstartfrag + ':' + fg.xstopfrag : xstart + ':' + xstop),
-		pos2:
-			(hic.nochr ? chry.replace('chr', '') : chry) +
-			':' +
-			(fg ? fg.ystartfrag + ':' + fg.ystopfrag : ystart + ':' + ystop),
-		nmeth: self.detailview.nmeth,
-		resolution: resolution
-	}
+// 	const par: HicstrawArgs = {
+// 		matrixType: self.detailview.matrixType,
+// 		file: hic.file,
+// 		url: hic.url,
+// 		pos1:
+// 			(hic.nochr ? chrx.replace('chr', '') : chrx) +
+// 			':' +
+// 			(fg ? fg.xstartfrag + ':' + fg.xstopfrag : xstart + ':' + xstop),
+// 		pos2:
+// 			(hic.nochr ? chry.replace('chr', '') : chry) +
+// 			':' +
+// 			(fg ? fg.ystartfrag + ':' + fg.ystopfrag : ystart + ':' + ystop),
+// 		nmeth: self.detailview.nmeth,
+// 		resolution: resolution
+// 	}
 
-	if (fg) {
-		par.isfrag = true
-	}
+// 	if (fg) {
+// 		par.isfrag = true
+// 	}
 
-	fetch(
-		new Request(hic.hostURL + '/hicdata', {
-			method: 'POST',
-			body: JSON.stringify(par)
-		})
-	)
-		.then(data => {
-			return data.json()
-		})
-		.then(data => {
-			self.detailview.canvas.attr('width', self.detailview.xb.width).attr('height', self.detailview.yb.width)
+// 	fetch(
+// 		new Request(hic.hostURL + '/hicdata', {
+// 			method: 'POST',
+// 			body: JSON.stringify(par)
+// 		})
+// 	)
+// 		.then(data => {
+// 			return data.json()
+// 		})
+// 		.then(data => {
+// 			self.detailview.canvas.attr('width', self.detailview.xb.width).attr('height', self.detailview.yb.width)
 
-			const canvaswidth = Number.parseInt(self.detailview.canvas.attr('width'))
-			const canvasheight = Number.parseInt(self.detailview.canvas.attr('height'))
-			ctx.clearRect(0, 0, canvaswidth, canvasheight)
+// 			const canvaswidth = Number.parseInt(self.detailview.canvas.attr('width'))
+// 			const canvasheight = Number.parseInt(self.detailview.canvas.attr('height'))
+// 			ctx.clearRect(0, 0, canvaswidth, canvasheight)
 
-			// pixel per bp
-			const xpxbp = canvaswidth / (xstop - xstart)
-			const ypxbp = canvasheight / (ystop - ystart)
+// 			// pixel per bp
+// 			const xpxbp = canvaswidth / (xstop - xstart)
+// 			const ypxbp = canvasheight / (ystop - ystart)
 
-			if (data.error) throw { message: data.error.error }
-			if (!data.items || data.items.length == 0) {
-				return
-			}
+// 			if (data.error) throw { message: data.error.error }
+// 			if (!data.items || data.items.length == 0) {
+// 				return
+// 			}
 
-			let firstisx = false
-			const isintrachr = chrx == chry
-			if (isintrachr) {
-				firstisx = xstart < ystart
-			} else {
-				//firstisx = tell_firstisx(hic, chrx, chry)
-			}
+// 			let firstisx = false
+// 			const isintrachr = chrx == chry
+// 			if (isintrachr) {
+// 				firstisx = xstart < ystart
+// 			} else {
+// 				//firstisx = tell_firstisx(hic, chrx, chry)
+// 			}
 
-			const lst = [] as number[][]
-			let err = 0
+// 			const lst = [] as number[][]
+// 			let err = 0
 
-			const vlst = [] as number[]
-			for (const [n1, n2, v] of data.items) {
-				/*
-			genomic position and length of either the bin, or the fragment
-			*/
-				vlst.push(v)
+// 			const vlst = [] as number[]
+// 			for (const [n1, n2, v] of data.items) {
+// 				/*
+// 			genomic position and length of either the bin, or the fragment
+// 			*/
+// 				vlst.push(v)
 
-				let coord1, coord2, span1, span2
+// 				let coord1, coord2, span1, span2
 
-				if (fg) {
-					// the beginning fragment index
-					const idx_start = firstisx ? n1 : n2
-					const idy_start = firstisx ? n2 : n1
+// 				if (fg) {
+// 					// the beginning fragment index
+// 					const idx_start = firstisx ? n1 : n2
+// 					const idy_start = firstisx ? n2 : n1
 
-					/*
-				convert fragment id to coordinate
+// 					/*
+// 				convert fragment id to coordinate
 
-				start: start of idx_start
-				stop: stop of idx_start + resolution
-				*/
+// 				start: start of idx_start
+// 				stop: stop of idx_start + resolution
+// 				*/
 
-					// convert x
-					if (fg.xid2coord.has(idx_start)) {
-						const [a, b] = fg.xid2coord.get(idx_start)
-						coord1 = a
-						span1 = b - a // note this likely to be replaced by [idx_start+resolution]
-					} else {
-						console.log('[x id error] x: ' + idx_start + ' y: ' + idy_start)
-						err++
-						continue
-					}
-					{
-						// the end of fragment id of x, it may be out of range!
-						const id_stop = idx_start + resolution
+// 					// convert x
+// 					if (fg.xid2coord.has(idx_start)) {
+// 						const [a, b] = fg.xid2coord.get(idx_start)
+// 						coord1 = a
+// 						span1 = b - a // note this likely to be replaced by [idx_start+resolution]
+// 					} else {
+// 						console.log('[x id error] x: ' + idx_start + ' y: ' + idy_start)
+// 						err++
+// 						continue
+// 					}
+// 					{
+// 						// the end of fragment id of x, it may be out of range!
+// 						const id_stop = idx_start + resolution
 
-						if (fg.xid2coord.has(id_stop)) {
-							const [a, b] = fg.xid2coord.get(id_stop)
-							span1 = b - coord1
-						}
-					}
+// 						if (fg.xid2coord.has(id_stop)) {
+// 							const [a, b] = fg.xid2coord.get(id_stop)
+// 							span1 = b - coord1
+// 						}
+// 					}
 
-					// convert y
-					if (fg.yid2coord.has(idy_start)) {
-						const [a, b] = fg.yid2coord.get(idy_start)
-						coord2 = a
-						span2 = b - a
-					} else {
-						console.log('[y id error] x: ' + idx_start + ' y: ' + idy_start)
-						err++
-						continue
-					}
-					{
-						// the end of fragment id of x, it may be out of range!
-						const id_stop = idy_start + resolution
+// 					// convert y
+// 					if (fg.yid2coord.has(idy_start)) {
+// 						const [a, b] = fg.yid2coord.get(idy_start)
+// 						coord2 = a
+// 						span2 = b - a
+// 					} else {
+// 						console.log('[y id error] x: ' + idx_start + ' y: ' + idy_start)
+// 						err++
+// 						continue
+// 					}
+// 					{
+// 						// the end of fragment id of x, it may be out of range!
+// 						const id_stop = idy_start + resolution
 
-						if (fg.yid2coord.has(id_stop)) {
-							const [a, b] = fg.yid2coord.get(id_stop)
-							span2 = b - coord2
-						}
-					}
-				} else {
-					/*
-				bp bin resolution
-				*/
+// 						if (fg.yid2coord.has(id_stop)) {
+// 							const [a, b] = fg.yid2coord.get(id_stop)
+// 							span2 = b - coord2
+// 						}
+// 					}
+// 				} else {
+// 					/*
+// 				bp bin resolution
+// 				*/
 
-					coord1 = firstisx ? n1 : n2
-					coord2 = firstisx ? n2 : n1
-					span1 = resolution
-					span2 = resolution
-				}
+// 					coord1 = firstisx ? n1 : n2
+// 					coord2 = firstisx ? n2 : n1
+// 					span1 = resolution
+// 					span2 = resolution
+// 				}
 
-				if (isintrachr) {
-					if (coord1 > xstart - span1 && coord1 < xstop && coord2 > ystart - span2 && coord2 < ystop) {
-						lst.push([
-							Math.floor((coord1 - xstart) * xpxbp),
-							Math.floor((coord2 - ystart) * ypxbp),
-							Math.ceil(span1 * xpxbp),
-							Math.ceil(span2 * ypxbp),
-							v
-						])
-					}
-					if (coord2 > xstart - span2 && coord2 < xstop && coord1 > ystart && coord1 < ystop) {
-						lst.push([
-							Math.floor((coord2 - xstart) * xpxbp),
-							Math.floor((coord1 - ystart) * ypxbp),
-							Math.ceil(span2 * xpxbp),
-							Math.ceil(span1 * ypxbp),
-							v
-						])
-					}
-					continue
-				}
+// 				if (isintrachr) {
+// 					if (coord1 > xstart - span1 && coord1 < xstop && coord2 > ystart - span2 && coord2 < ystop) {
+// 						lst.push([
+// 							Math.floor((coord1 - xstart) * xpxbp),
+// 							Math.floor((coord2 - ystart) * ypxbp),
+// 							Math.ceil(span1 * xpxbp),
+// 							Math.ceil(span2 * ypxbp),
+// 							v
+// 						])
+// 					}
+// 					if (coord2 > xstart - span2 && coord2 < xstop && coord1 > ystart && coord1 < ystop) {
+// 						lst.push([
+// 							Math.floor((coord2 - xstart) * xpxbp),
+// 							Math.floor((coord1 - ystart) * ypxbp),
+// 							Math.ceil(span2 * xpxbp),
+// 							Math.ceil(span1 * ypxbp),
+// 							v
+// 						])
+// 					}
+// 					continue
+// 				}
 
-				// inter chr
-				lst.push([
-					Math.floor((coord1 - xstart) * xpxbp),
-					Math.floor((coord2 - ystart) * ypxbp),
-					Math.ceil(span1 * xpxbp),
-					Math.ceil(span2 * ypxbp),
-					v
-				])
+// 				// inter chr
+// 				lst.push([
+// 					Math.floor((coord1 - xstart) * xpxbp),
+// 					Math.floor((coord2 - ystart) * ypxbp),
+// 					Math.ceil(span1 * xpxbp),
+// 					Math.ceil(span2 * ypxbp),
+// 					v
+// 				])
 
-				// done this line
-			}
-			// done all lines
+// 				// done this line
+// 			}
+// 			// done all lines
 
-			// setViewCutoff(vlst, self.detailview, self)
+// 			// setViewCutoff(vlst, self.detailview, self)
 
-			for (const [x, y, w, h, v] of lst) {
-				//colorizeElement(x, y, v, self.detailview, self, ctx, w, h)
-			}
+// 			for (const [x, y, w, h, v] of lst) {
+// 				//colorizeElement(x, y, v, self.detailview, self, ctx, w, h)
+// 			}
 
-			self.detailview.data = lst
-		})
+// 			self.detailview.data = lst
+// 		})
 
-		.catch(err => {
-			self.errList.push(err.message || err)
-			if (err.stack) console.log(err.stack)
-		})
-		.then(() => {
-			if (self.errList.length) self.error(self.errList)
-			self.detailview.canvas
-				.style('left', self.detailview.bbmargin + self.detailview.xb.leftheadw + self.detailview.xb.lpad + 'px')
-				.style('top', self.detailview.bbmargin + self.detailview.yb.rightheadw + self.detailview.yb.rpad + 'px')
-		})
-}
+// 		.catch(err => {
+// 			self.errList.push(err.message || err)
+// 			if (err.stack) console.log(err.stack)
+// 		})
+// 		.then(() => {
+// 			if (self.errList.length) self.error(self.errList)
+// 			self.detailview.canvas
+// 				.style('left', self.detailview.bbmargin + self.detailview.xb.leftheadw + self.detailview.xb.lpad + 'px')
+// 				.style('top', self.detailview.bbmargin + self.detailview.yb.rightheadw + self.detailview.yb.rpad + 'px')
+// 		})
+// }
 
 export function hicparsefragdata(items: any) {
 	const id2coord = new Map()

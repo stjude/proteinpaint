@@ -29,6 +29,7 @@ export class DetailView {
 	canvasHolder: any
 	canvas: any
 	ctx: any
+	coords: any
 
 	/** Defaults **/
 	binpx = 2
@@ -147,10 +148,10 @@ export class DetailView {
 			this.canvas,
 			this.dataMapper['fragData']
 		)
-
+		this.coords = coords
 		this.ctx.clearRect(0, 0, canvaswidth, canvasheight)
 
-		for (const [xCoord, yCoord, width, height, value] of coords as any) {
+		for (const [xCoord, yCoord, width, height, value] of this.coords as any) {
 			this.colorizeElement.colorizeElement(
 				xCoord,
 				yCoord,
