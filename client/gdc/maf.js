@@ -154,6 +154,7 @@ const mafColumns = [
 	{ column: 'GDC_FILTER', selected: true },
 	{ column: 'COSMIC', selected: true },
 	{ column: 'hotspot', selected: true },
+	{ column: 'tumor_bam_uuid', selected: true },
 	{ column: 'normal_bam_uuid', selected: true },
 	{ column: 'RNA_Support', selected: true },
 	{ column: 'RNA_depth', selected: true },
