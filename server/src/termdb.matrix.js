@@ -353,7 +353,6 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			// add next term value to .values[]
 			samples[sample][term_id].values.push({ key, value })
 		}
-		console.log(samples[sample])
 	}
 
 	return [samples, byTermId]
