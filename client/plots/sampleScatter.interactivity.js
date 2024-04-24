@@ -349,7 +349,10 @@ export function setInteractivity(self) {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, sampleFilter])
 		filter.tag = 'filterUiRoot'
-
+		self.app.dispatch({
+			type: 'filter_replace',
+			filter
+		})
 		console.log('filter', filter)
 		self.dom.tooltip.hide()
 		self.onClick = false
