@@ -577,7 +577,7 @@ export async function bamsliceui({
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.total} BAM files`)
 		else handle.text(`Or, browse first ${data.loaded} BAM files out of ${data.total} total`)
 		*/
-		handle.text(`Or, Browse ${data.loaded} Available BAM Files`)
+		handle.text(`Or, Browse ${data.total} Available BAM Files`)
 
 		// count number of bams per assay, allow checkbox to alter true/false for each assay here
 		const assays = new Map() // k: assay, v: {count:int, checked:bool}
@@ -621,7 +621,7 @@ export async function bamsliceui({
 				const tableDiv = tip.d
 					.append('div')
 					.style('margin', '10px')
-					.style('overflow-y', 'scroll')
+					.attr('class', 'sjpp_show_scrollbar')
 					.style('height', '300px')
 					.style('resize', 'vertical')
 				makeTable(tableDiv)

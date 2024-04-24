@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - GDC sequence reads viz no longer limits slicing range; the only limit is slice file size
+- GDC bam slicing ui show actual number of available bam files which can be lower than 1000, fix scrollbar appearance
 
 
 ## 2.56.0
