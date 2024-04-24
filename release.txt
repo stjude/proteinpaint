@@ -1,1 +1,5 @@
+Fixes:
+- replace 'view' with 'Sample view' on tsne sample label clicking
 
+Features:
+- enable 'lollipop' plot btn through tsne sample clicking for geneVariant terms
