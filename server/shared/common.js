@@ -1130,3 +1130,9 @@ export function isNumeric(term) {
 	if (!term) return false
 	return term.type == TermTypes.INTEGER || term.type == TermTypes.FLOAT || term.type == TermTypes.GENE_EXPRESSION
 }
+
+export function isNonDictionary(type) {
+	if (!type) throw new Error('Type is not defined')
+	const types = [TermTypes.SNP_LIST, TermTypes.SNP_LOCUS, TermTypes.GENE_EXPRESSION, TermTypes.GENE_VARIANT]
+	return types.includes(type)
+}

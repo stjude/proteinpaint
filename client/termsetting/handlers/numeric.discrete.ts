@@ -74,11 +74,11 @@ async function showBinsMenu(self, div: any) {
 	div.append('div').style('padding', '10px').style('text-align', 'center').html('Getting distribution data ...<br/>')
 	try {
 		if (!self.vocabApi) throw `Missing .vocabApi{} [numeric.discrete showBinsMenu()]`
-		console.log(self)
+
 		const d = await self.vocabApi.getViolinPlotData(
 			{
 				termid: self.term.id,
-				tw: { $id: self.$id, id: self.id, term: self.term, q: self.q },
+				termType: self.term.type,
 				filter: self.filter,
 				svgw: self.num_obj.plot_size.width / window.devicePixelRatio,
 				strokeWidth: 0.2

@@ -311,7 +311,6 @@ class ViolinPlot {
 		const { term, term2, settings } = this.config
 		const s = this.settings
 		const arg = {
-			tw: term,
 			filter: this.state.termfilter.filter,
 			svgw: s.svgw / window.devicePixelRatio,
 			orientation: s.orientation,

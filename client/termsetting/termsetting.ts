@@ -41,7 +41,7 @@ opts{}
 //let $id = 0
 
 export async function get$id(minTwCopy) {
-	if (!minTwCopy) return <string>`${$id++}${idSuffix}`
+	if (!minTwCopy) return null
 	delete minTwCopy.$id
 	return await digestMessage(JSON.stringify(minTwCopy))
 }

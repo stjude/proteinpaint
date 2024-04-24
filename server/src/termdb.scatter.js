@@ -238,7 +238,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		if (!q.divideByTW) sample.z = 0
 		if (!q.scaleDotTW) sample.scale = 1
 		else {
-			const value = dbSample?.[q.scaleDotTW.id || q.scaleDotTW.term.name]?.key
+			const value = dbSample?.[q.scaleDotTW.$id]?.key
 			if (!value || !isComputable(q.scaleDotTW.term, value)) continue
 			sample.scale = value
 		}

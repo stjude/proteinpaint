@@ -54,7 +54,7 @@ q = {
 */
 
 export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
-	const gene = q.tw?.term.gene || q.gene
+	const gene = q.termid
 	if (!gene) throw 'gene is required'
 	if (ds.queries.geneExpression.gene2density[gene]) return ds.queries.geneExpression.gene2density[gene]
 	const args = {
@@ -112,7 +112,7 @@ export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
 }
 
 export async function trigger_getViolinPlotData(q, res, ds, genome) {
-	if (q.tw?.term.type == TermTypes.GENE_EXPRESSION)
+	if (q.termType == TermTypes.GENE_EXPRESSION)
 		//to support new types we pass the termwrapper object
 		return await trigger_getGeneExpViolinPlotData(q, res, ds, genome)
 
@@ -121,8 +121,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	//term on backend should always be an integer term
 	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
 
-	if (!q.tw) q.tw = { id: q.termid, term, q: { mode: 'continuous' } }
-	const twLst = [q.tw]
+	const tw = { id: q.termid, term, q: { mode: 'continuous' } }
+	const twLst = [tw]
 
 	if (q.divideTw) {
 		if (q.divideTw !== null && q.divideTw !== undefined && typeof q.divideTw === 'object' && !('id' in q.divideTw)) {
@@ -145,16 +145,15 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		)
 	}
 
-	if (q.scale) scaleData(q, data)
+	if (q.scale) scaleData(q, data, tw)
 
-	const valuesObject = divideValues(q, data)
+	const valuesObject = divideValues(q, data, tw)
 	const result = resultObj(valuesObject, data, q)
 
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result)
 
 	createCanvasImg(q, result, ds)
-
 	if (res) res.send(result)
 	else return result
 }
@@ -202,18 +201,18 @@ function numericBins(overlayTerm, data) {
 
 // scale sample data
 // divide keys and values by scaling factor - this is important for regression UI when running association tests.
-function scaleData(q, data, term) {
+function scaleData(q, data, tw) {
 	if (!q.scale) return
 	const scale = Number(q.scale)
 	for (const [k, v] of Object.entries(data.samples)) {
-		if (!v[q.tw.$id]) continue
-		if (term.values?.[v[q.tw.$id]?.value]?.uncomputable) continue
-		v[q.tw.$id].key = v[q.tw.$id].key / scale
-		v[q.tw.$id].value = v[q.tw.$id].value / scale
+		if (!v[tw.$id]) continue
+		if (tw.term.values?.[v[tw.$id]?.value]?.uncomputable) continue
+		v[tw.$id].key = v[tw.$id].key / scale
+		v[tw.$id].value = v[tw.$id].value / scale
 	}
 }
 
-function divideValues(q, data) {
+function divideValues(q, data, tw) {
 	const overlayTerm = q.divideTw
 	const useLog = q.unit == 'log'
 
@@ -227,12 +226,12 @@ function divideValues(q, data) {
 
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
-		const value = v[q.tw.$id]
+		const value = v[tw.$id]
 		if (!Number.isFinite(value?.value)) continue
 
-		if (q.tw.term.values?.[value.key]?.uncomputable) {
+		if (tw.term.values?.[value.key]?.uncomputable) {
 			//skip these values from rendering in plot but show in legend as uncomputable categories
-			const label = q.tw.term.values[value.key].label // label of this uncomputable category
+			const label = tw.term.values[value.key].label // label of this uncomputable category
 			uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			continue
 		}

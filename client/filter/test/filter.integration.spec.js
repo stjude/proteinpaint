@@ -452,7 +452,6 @@ tape('+NEW button interaction', async test => {
 	)
 	// simulate creating the initial filter
 	await addDemographicSexFilter(opts, opts.holder.node().querySelector('.sja_new_filter_btn'))
-	return
 	test.equal(opts.filterData.lst.length, 1, 'should create a one-entry filter.lst[]')
 	test.equal(
 		opts.holder.select('.sja_new_filter_btn').style('display'),

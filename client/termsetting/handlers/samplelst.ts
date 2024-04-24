@@ -126,11 +126,9 @@ export function getSamplelstTW(groups: any, name = 'groups', notIn = true) {
 			values: samples
 		})
 	}
-	const $id = get$id()
 	const tw = {
-		$id,
 		isAtomic: true,
-		term: { $id, name, type: 'samplelst', values },
+		term: { name, type: 'samplelst', values },
 		q: {
 			groups: qgroups,
 			groupsetting: { disabled }
@@ -165,11 +163,9 @@ export function getSamplelstTWFromIds(ids: number[]) {
 		values
 	}
 
-	const $id = get$id()
 	const tw = {
-		$id,
 		isAtomic: true,
-		term: { $id, name, type: 'samplelst', values: { [name]: { key: name, list: values } } },
+		term: { name, type: 'samplelst', values: { [name]: { key: name, list: values } } },
 		q: {
 			groups: [qgroup]
 		}
