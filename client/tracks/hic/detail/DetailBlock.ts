@@ -5,15 +5,16 @@ import { Selection } from 'd3-selection'
 import blocklazyload from '#src/block.lazyload'
 
 export class DetailBlock {
+	app: any
 	hic: any
 	width: number
 	bbmargin: number
 	/** either the x axis or rotor in y axis */
 	holder: Elem | Selection<HTMLDivElement, any, any, any>
 	bbw: number
-	defaultLeft: number
-	defaultTop: number
 	isYblock: boolean
+	defaultTop: number
+	defaultLeft: number
 
 	block: any
 
@@ -25,12 +26,14 @@ export class DetailBlock {
 	firstRender = true
 
 	constructor(
+		app: any,
 		hic: any,
 		blockwidth: number,
 		bbmargin: number,
 		holder: Elem | Selection<HTMLDivElement, any, any, any>,
 		isYblock: boolean
 	) {
+		this.app = app
 		this.hic = hic
 		this.width = blockwidth
 		this.bbmargin = bbmargin
@@ -70,42 +73,74 @@ export class DetailBlock {
 
 	setMethods(canvasHolder: any, canvas: any, sheath?: any) {
 		const runPpMethods = {
-			onloadalltk_always: (bb: any) => this.onload(bb, canvasHolder, canvas, sheath),
-			onpanning: (xoff: number) => this.onpanning(xoff, canvas, this.isYblock)
+			onloadalltk_always: async () => {
+				await this.onload(canvasHolder, canvas, sheath)
+			},
+			onpanning: (xoff: number) => this.onpanning(xoff, canvas)
 		}
 		if (this.isYblock) {
 			//Button row height default is 30
 			runPpMethods['onsetheight'] = (bbh: number) => {
+				//this.holder = rotor for y block
 				this.holder.transition().style('left', `${bbh + this.bbmargin + 30}px`)
 			}
 		}
 		return runPpMethods
 	}
 
-	onload(bb: any, canvasHolder: any, canvas: any, sheath?: any) {
+	async onload(canvasHolder: any, canvas: any, sheath?: any) {
 		//Calculate from the rendered block and apply as the default for canvas/heatmap rendering
-		const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.bbmargin
-		this.bbw = bbw
+		this.bbw =
+			this.block.leftheadw +
+			this.block.lpad +
+			this.block.width +
+			this.block.rpad +
+			this.block.rightheadw +
+			2 * this.bbmargin
+
 		if (this.isYblock) {
-			sheath.transition().style('height', `${bbw}px`)
-			canvasHolder.style('height', `${bbw}px`)
-		} else canvasHolder.style('width', `${bbw}px`)
+			sheath.transition().style('height', `${this.bbw}px`)
+			canvasHolder.style('height', `${this.bbw}px`)
+		} else canvasHolder.style('width', `${this.bbw}px`)
 		if (this.firstRender) {
 			this.firstRender = false
 			if (this.isYblock) {
-				const top = this.bbmargin + bb.rightheadw + bb.rpad
-				canvas.transition().style('top', `${top}px`)
-				this.defaultTop = top
+				this.defaultTop = this.bbmargin + this.block.rightheadw + this.block.rpad
+				canvas.style('top', `${this.defaultTop}px`)
 			} else {
-				const left = this.bbmargin + bb.leftheadw + bb.lpad
-				canvas.transition().style('left', `${left}px`)
-				this.defaultLeft = left
+				this.defaultLeft = this.bbmargin + this.block.leftheadw + this.block.lpad
+				canvas.style('left', `${this.defaultLeft}px`)
 			}
+			return
 		}
+
+		const config = this.isYblock
+			? {
+					y: {
+						chr: this.block.rglst[0].chr,
+						start: this.block.rglst[0].start,
+						stop: this.block.rglst[0].stop
+					}
+			  }
+			: {
+					x: {
+						chr: this.block.rglst[0].chr,
+						start: this.block.rglst[0].start,
+						stop: this.block.rglst[0].stop
+					}
+			  }
+		/**Dispatches on change per block
+		 * Should only dispatch once per change (e.g. changing
+			the coordinates, zooming, etc.
+		)*/
+		this.app.dispatch({
+			type: 'view_update',
+			config
+		})
 	}
 
-	onpanning(xoff: number, canvas: any, isYBlock: boolean) {
-		if (isYBlock) canvas.style('left', `${xoff + this.defaultLeft}px`)
+	onpanning(xoff: number, canvas: any) {
+		if (!this.isYblock) canvas.style('left', `${xoff + this.defaultLeft}px`)
 		else canvas.style('top', `${-xoff + this.defaultTop}px`)
 	}
 
@@ -117,7 +152,7 @@ export class DetailBlock {
 
 		const args = Object.assign(runPpArgs, runPpMethods)
 
-		await blocklazyload(args).then(block => {
+		await blocklazyload(args).then(async (block: any) => {
 			//access the block methods
 			this.block = block
 		})

@@ -224,7 +224,7 @@ export class HicComponent {
 				this.activeView = this.state.currView
 				this.initView()
 			} else {
-				await this[this.state.currView].update(this.data)
+				this[this.state.currView].update(this.data)
 			}
 			this.infoBar.update()
 		} else {
