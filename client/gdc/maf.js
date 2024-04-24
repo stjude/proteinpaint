@@ -12,13 +12,14 @@ let user selects some, for the backend to generate an aggregated maf file and do
 filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
 	simply pass to backend to include in api queries
-
+callbacks{ postRender() }
 */
 
 const tip = new Menu()
 
 // list of columns to show in MAF file table
 const tableColumns = [{ label: 'Case' }, { label: 'Project' }, { label: 'Samples' }, { label: 'File Size' }]
+
 // list of gdc maf file columns; selected ones are used for output
 const mafColumns = [
 	{ column: 'Hugo_Symbol', selected: true },
@@ -323,6 +324,7 @@ async function getFilesAndShowTable(obj) {
 		resize: true,
 		div: obj.tableDiv.append('div'),
 		selectAll: true,
+		dataTestId: 'sja_mafFileTable',
 		buttons: [
 			{
 				text: 'Aggregate selected MAF files and download',
