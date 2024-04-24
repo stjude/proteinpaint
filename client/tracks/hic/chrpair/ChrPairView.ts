@@ -172,5 +172,7 @@ export class ChrPairView {
 				'chrpair'
 			)
 		}
+
+		this.app.dispatch({ type: 'loading_active', active: false })
 	}
 }

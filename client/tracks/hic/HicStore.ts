@@ -4,6 +4,7 @@ class HicStore {
 	type: 'store'
 	defaultState: {
 		defaultNmeth: string
+		loading: boolean
 	}
 	actions: any
 	state: any
@@ -12,7 +13,8 @@ class HicStore {
 	constructor() {
 		this.type = 'store'
 		this.defaultState = {
-			defaultNmeth: 'NONE'
+			defaultNmeth: 'NONE',
+			loading: true
 		}
 	}
 }
@@ -38,5 +40,8 @@ HicStore.prototype.actions = {
 			const opts = Object.assign(this.state, action.config)
 			this.state = opts
 		}
+	},
+	loading_active(action: { active: boolean }) {
+		this.state.loading = action.active
 	}
 }
