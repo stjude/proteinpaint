@@ -102,6 +102,7 @@ export const hicData = {
 		v8: {
 			bpresolution: v8.bpresolution,
 			chrlst: [
+				'chrAll',
 				'chr1',
 				'chr2',
 				'chr3',

@@ -1,7 +1,7 @@
-import { Elem } from '../../../types/d3'
+import { Elem, Div } from '../../../types/d3'
 
 export class MatrixTypeControl {
-	holder: Elem
+	holder: Elem | Div
 	values = [
 		{ label: 'Observed', value: 'observed' },
 		{ label: 'Expected', value: 'expected' },
@@ -14,7 +14,7 @@ export class MatrixTypeControl {
 	callback: (matrixType: string) => void
 	matrixSelect: any
 
-	constructor(holder: Elem, callback: (matrixType: string) => void) {
+	constructor(holder: Elem | Div, callback: (matrixType: string) => void) {
 		this.holder = holder
 		this.callback = callback
 	}

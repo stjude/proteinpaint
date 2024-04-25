@@ -1,12 +1,12 @@
 import { first_genetrack_tolist } from '../../../src/client'
-import { MainPlotDiv } from '../../../types/hic.ts'
+import { MainPlotDiv, ReturnedItems } from '../../../types/hic.ts'
 import blocklazyload from '#src/block.lazyload'
 
 export class HorizontalView {
 	app: any
 	hic: any
 	plotDiv: MainPlotDiv
-	items: { items: number[][] }
+	items: ReturnedItems
 	parent: (prop: string) => string | number
 
 	/** Defaults*/

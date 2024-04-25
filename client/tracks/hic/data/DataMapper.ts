@@ -8,8 +8,7 @@ export class DataMapper {
 	sortData(data: any) {
 		const vlst: number[] = []
 		if (data?.items && data?.items.length) {
-			//chrpair view
-			//eventually horizontal and detail view
+			//chrpair and detail views
 			for (const i of data.items) {
 				vlst.push(i[2])
 			}
@@ -21,7 +20,7 @@ export class DataMapper {
 				 * squares for chrM-chr*. Errors still appear for the user.
 				 * TODO: Move to server side???
 				 */
-				if ((d?.lead == 'chrM' && !d.items.length) || (d?.lead == 'chrY' && !d.items.length)) {
+				if ((d.lead == 'chrM' && !d.items.length) || (d.lead == 'chrY' && !d.items.length)) {
 					blankChrs.push(d.lead)
 					continue
 				}

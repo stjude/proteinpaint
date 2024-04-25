@@ -1,4 +1,4 @@
-import { MainPlotDiv } from '../../../types/hic.ts'
+import { MainPlotDiv, ReturnedItems } from '../../../types/hic.ts'
 import { axisstyle, font } from '#src/client'
 import { axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
@@ -7,6 +7,7 @@ import { pointer } from 'd3-selection'
 import { ColorizeElement } from '../dom/ColorizeElement.ts'
 import { Positions } from '../data/Positions.ts'
 import { GridElementsFormattedData } from '../data/GridElementsFormattedData.ts'
+import { FirstChrX } from '../data/FirstChrX.ts'
 
 export class ChrPairView {
 	/** opts */
@@ -14,7 +15,7 @@ export class ChrPairView {
 	hic: any
 	plotDiv: MainPlotDiv
 	parent: (prop: string) => any
-	items: { items: number[][] }
+	items: ReturnedItems
 	colorizeElement: ColorizeElement
 	positions: Positions
 	formattedData: GridElementsFormattedData
@@ -138,11 +139,6 @@ export class ChrPairView {
 		})
 	}
 
-	isFirstX() {
-		if (this.parent('state').x.chr == this.parent('state').y.chr) return true
-		return this.hic.chrorder.indexOf(this.parent('state').x.chr) < this.hic.chrorder.indexOf(this.parent('state').y.chr)
-	}
-
 	render() {
 		this.calResolution = this.parent('calResolution')
 		this.setDefaultBinpx()
@@ -152,9 +148,9 @@ export class ChrPairView {
 		this.update(this.items)
 	}
 
-	update(items: { items: number[][] }) {
+	update(items: ReturnedItems) {
 		this.items = items
-		const firstisx = this.isFirstX()
+		const firstisx = new FirstChrX(this.hic.chrorder, this.parent('state').x.chr, this.parent('state').y.chr).isFirstX()
 		const isintrachr = this.parent('state').x.chr === this.parent('state').y.chr
 		this.data = this.formattedData.formatData(items.items, this.binpx, this.calResolution!, firstisx, isintrachr)
 
