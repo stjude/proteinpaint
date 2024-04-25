@@ -916,6 +916,42 @@ function coord2legend(tk, event, r, start, stop, gm, block, h) {
 	tk.tktip.show(event.clientX, gm.__tkg.node().getBoundingClientRect().top + h - 10)
 }
 
+//////////////// render domain legend ///////////////
+
+// all link types. makelink() arg is element returned by getdomaintypes()
+const domainLinks = [
+	{
+		key: 'CDD',
+		makelink: domaintype => `https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=${domaintype.CDD}`
+	},
+	{
+		key: 'Pfam',
+		makelink: domaintype => `https://www.ebi.ac.uk/interpro/entry/pfam/PF${domaintype.Pfam.substr(4)}`
+	},
+	{
+		key: 'SMART',
+		makelink: domaintype =>
+			`https://smart.embl.de/smart/do_annotation.pl?BLAST=DUMMY&DOMAIN=${domaintype.SMART.substr(5)}`
+	},
+	{
+		key: 'COG',
+		makelink: domaintype => `https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=${domaintype.COG}`
+	},
+	{
+		key: 'PRK',
+		makelink: domaintype => `https://www.ncbi.nlm.nih.gov/proteinclusters?term=${domaintype.PRK}`
+	},
+	{
+		key: 'pmid', // may support comma-joined ids
+		makelink: domaintype => `https://pubmed.ncbi.nlm.nih.gov/${domaintype.pmid}/`,
+		txt: domaintype => `PubMed ${domaintype.pmid}`
+	},
+	{
+		key: 'url',
+		makelink: domaintype => domaintype.url,
+		txt: () => 'Reference'
+	}
+]
 async function domainlegend(tk, block) {
 	if (!block.legend || !block.legend.holder) {
 		// block not support legend
@@ -935,40 +971,6 @@ async function domainlegend(tk, block) {
 	// get unique list of domain types from current gm (note that it may not cover all domains from all gm which could be minor issue)
 	// any customizations to the domains (visibility and color), apply to all gm
 	const domainTypes = client.getdomaintypes(block.usegm)
-
-	const links = [
-		{
-			key: 'CDD',
-			makelink: domaintype => `https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=${domaintype.CDD}`
-		},
-		{
-			key: 'Pfam',
-			makelink: domaintype => `https://www.ebi.ac.uk/interpro/entry/pfam/PF${domaintype.Pfam.substr(4)}`
-		},
-		{
-			key: 'SMART',
-			makelink: domaintype =>
-				`https://smart.embl.de/smart/do_annotation.pl?BLAST=DUMMY&DOMAIN=${domaintype.SMART.substr(5)}`
-		},
-		{
-			key: 'COG',
-			makelink: domaintype => `https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=${domaintype.COG}`
-		},
-		{
-			key: 'PRK',
-			makelink: domaintype => `https://www.ncbi.nlm.nih.gov/proteinclusters?term=${domaintype.PRK}`
-		},
-		{
-			key: 'pmid', // may support comma-joined ids
-			makelink: domaintype => `https://pubmed.ncbi.nlm.nih.gov/${domaintype.pmid}/`,
-			txt: domaintype => `PubMed ${domaintype.pmid}`
-		},
-		{
-			key: 'url',
-			makelink: domaintype => domaintype.url,
-			txt: () => 'Reference'
-		}
-	]
 
 	const menuOptions = [
 		{
@@ -1084,8 +1086,10 @@ async function domainlegend(tk, block) {
 				.on('change', event => {
 					domaintype.fill = event.target.value
 					for (const p of block.allgm) {
-						const findDomain = p.pdomains.find(pd => pd.name + pd.description == domaintype.key)
-						if (findDomain) findDomain.color = event.target.value
+						// a gm may have more than 1 domain instances of this type. thus use .filter() to find all of them but not .find() to find only 1st one
+						p.pdomains
+							.filter(pd => pd.name + pd.description == domaintype.key)
+							.forEach(i => (i.color = event.target.value))
 					}
 					updateItems()
 					// Same as above
@@ -1099,7 +1103,7 @@ async function domainlegend(tk, block) {
 		this span. */
 	legendRows.append('span').each(function (domaintype) {
 		const holder = d3select(this)
-		for (const link of links) {
+		for (const link of domainLinks) {
 			if (domaintype[link.key]) {
 				holder
 					.append('a')
