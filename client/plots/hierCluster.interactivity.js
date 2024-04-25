@@ -71,6 +71,7 @@ export function addSelectedSamplesOptions(clickedSampleNames, event) {
 		.attr('class', 'sja_menuoption')
 		.style('border-radius', '0px')
 		.html(d => d.label)
+		.attr('data-testid', d => `hierCluster_dendro_menu_${d.label.split(' ')[0]}`)
 		.on('click', event => {
 			this.dom.dendroClickMenu.d.selectAll('*').remove()
 			event.target.__data__.callback()
