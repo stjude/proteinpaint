@@ -85,35 +85,6 @@ export class MatrixControls {
 				}
 			},
 			{
-				label: `Group ${l.Samples} By`,
-				title: `Select a variable with discrete values to group ${l.samples}`,
-				type: 'term',
-				chartType: 'matrix',
-				configKey: 'divideBy',
-				vocabApi: this.opts.app.vocabApi,
-				state: {
-					vocab: this.opts.vocab
-					//activeCohort: appState.activeCohort
-				},
-				getDisplayStyle(plot) {
-					return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
-				},
-				processInput: tw => {
-					if (tw) fillTermWrapper(tw)
-					return tw
-				},
-				processConfig: config => {
-					if (this.parent.config.divideBy)
-						config.legendValueFilter = this.parent.mayRemoveTvsEntry(this.parent.config.divideBy)
-				},
-				getBodyParams: () => {
-					const currentGeneNames = this.parent.termOrder
-						.filter(t => t.tw.term.type === 'geneVariant')
-						.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
-					return { currentGeneNames }
-				}
-			},
-			{
 				label: `Sort ${l.Sample} Groups`,
 				title: `Set how to sort ${l.sample} groups`,
 				type: 'radio',
@@ -174,6 +145,10 @@ export class MatrixControls {
 				processInput: tw => {
 					if (tw) fillTermWrapper(tw)
 					return tw
+				},
+				processConfig: config => {
+					if (this.parent.config.divideBy)
+						config.legendValueFilter = this.parent.mayRemoveTvsEntry(this.parent.config.divideBy)
 				},
 				getBodyParams: () => {
 					const currentGeneNames = this.parent.termOrder
