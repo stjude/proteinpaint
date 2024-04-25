@@ -8,6 +8,7 @@ import { createCanvas } from 'canvas'
 import { getBinsDensity } from '../../server/shared/violin.bins'
 import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
+import { TermTypes } from '#shared/common.js'
 
 /*
 q = {
@@ -52,14 +53,76 @@ q = {
 }
 */
 
-export async function trigger_getViolinPlotData(q, res, ds, genome) {
-	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
+export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
+	const gene = q.termid
+	if (!gene) throw 'gene is required'
+	if (ds.queries.geneExpression.gene2density[gene]) return ds.queries.geneExpression.gene2density[gene]
+	const args = {
+		genome: q.genome,
+		dslabel: q.label,
+		clusterMethod: 'hierarchical',
+		/** distance method */
+		distanceMethod: 'euclidean',
+		/** Data type */
+		dataType: 3,
+		genes: [{ gene }]
+	}
+	const data = await ds.queries.geneExpression.get(args)
+	let min = Infinity,
+		max = -Infinity
+	const samples = []
+	for (const sampleId in data.gene2sample2value.get(gene)) {
+		const values = data.gene2sample2value.get(gene)
+		const value = Number(values[sampleId])
+		if (min > value) min = value
+		if (max < value) max = value
+		samples.push(value)
+	}
+	const plot = { label: 'All samples', values: samples, plotValueCount: samples.length, minvalue: min, maxvalue: max }
+	const axisScale = scaleLinear().domain([min, max]).range([0, q.svgw])
+	plot.density = getBinsDensity(axisScale, plot, true, q.ticks)
+	delete plot.values
+	const step = (max - min) / 10
 
+	const result = {
+		min,
+		max,
+		plots: [plot], // each element is data for one plot: {label=str, values=[]}
+		pvalues: [],
+		bins: {
+			default: {
+				mode: 'discrete',
+				type: 'regular-bin',
+				bin_size: step,
+				startinclusive: false,
+				stopinclusive: true,
+				first_bin: {
+					startunbounded: true,
+					stop: min + step
+				},
+				last_bin: {
+					start: max - step,
+					stopunbounded: true
+				}
+			}
+		}
+	}
+	ds.queries.geneExpression.gene2density[gene] = result
+	return result
+}
+
+export async function trigger_getViolinPlotData(q, res, ds, genome) {
+	if (q.termType == TermTypes.GENE_EXPRESSION)
+		//to support new types we pass the termwrapper object
+		return await trigger_getGeneExpViolinPlotData(q, res, ds, genome)
+
+	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
 	if (!term) throw '.termid invalid'
 	//term on backend should always be an integer term
 	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
 
-	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
+	const tw = { id: q.termid, term, q: { mode: 'continuous' } }
+	const twLst = [tw]
 
 	if (q.divideTw) {
 		if (q.divideTw !== null && q.divideTw !== undefined && typeof q.divideTw === 'object' && !('id' in q.divideTw)) {
@@ -72,7 +135,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
-
 	//get ordered labels to sort keys in key2values
 	if (q.divideTw && data.refs.byTermId[q.divideTw?.id]) {
 		data.refs.byTermId[q.divideTw?.id].orderedLabels = getOrderedLabels(
@@ -83,24 +145,22 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		)
 	}
 
-	if (q.scale) scaleData(q, data, term)
+	if (q.scale) scaleData(q, data, tw)
 
-	const valuesObject = divideValues(q, data, term, q.divideTw)
-
+	const valuesObject = divideValues(q, data, tw)
 	const result = resultObj(valuesObject, data, q)
 
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result)
 
 	createCanvasImg(q, result, ds)
-
 	if (res) res.send(result)
 	else return result
 }
 
 // compute pvalues using wilcoxon rank sum test
-export async function wilcoxon(term, result) {
-	if (!term) return
+export async function wilcoxon(divideTw, result) {
+	if (!divideTw) return
 	const numPlots = result.plots.length
 	if (numPlots < 2) return
 
@@ -141,18 +201,19 @@ function numericBins(overlayTerm, data) {
 
 // scale sample data
 // divide keys and values by scaling factor - this is important for regression UI when running association tests.
-function scaleData(q, data, term) {
+function scaleData(q, data, tw) {
 	if (!q.scale) return
 	const scale = Number(q.scale)
 	for (const [k, v] of Object.entries(data.samples)) {
-		if (!v[term.id]) continue
-		if (term.values?.[v[term.id]?.value]?.uncomputable) continue
-		v[term.id].key = v[term.id].key / scale
-		v[term.id].value = v[term.id].value / scale
+		if (!v[tw.$id]) continue
+		if (tw.term.values?.[v[tw.$id]?.value]?.uncomputable) continue
+		v[tw.$id].key = v[tw.$id].key / scale
+		v[tw.$id].value = v[tw.$id].value / scale
 	}
 }
 
-function divideValues(q, data, term, overlayTerm) {
+function divideValues(q, data, tw) {
+	const overlayTerm = q.divideTw
 	const useLog = q.unit == 'log'
 
 	const key2values = new Map()
@@ -165,41 +226,42 @@ function divideValues(q, data, term, overlayTerm) {
 
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
-		const value = v[term.id]?.value
-		if (!Number.isFinite(value)) continue
+		const value = v[tw.$id]
+		if (!Number.isFinite(value?.value)) continue
 
-		if (term.values?.[value]?.uncomputable) {
+		if (tw.term.values?.[value.key]?.uncomputable) {
 			//skip these values from rendering in plot but show in legend as uncomputable categories
-			const label = term.values[value].label // label of this uncomputable category
+			const label = tw.term.values[value.key].label // label of this uncomputable category
 			uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			continue
 		}
 
-		if (useLog && value <= 0) {
+		if (useLog && value.value <= 0) {
 			skipNonPositiveCount++
 			continue
 		}
 
-		if (min > value) min = value
-		if (max < value) max = value
+		if (min > value.value) min = value.value
+		if (max < value.value) max = value.value
 
 		if (useLog === 'log') {
-			if (min === 0) min = Math.max(min, value)
+			if (min === 0) min = Math.max(min, value.value)
 		}
 
 		if (overlayTerm) {
-			if (!v[overlayTerm?.id]) continue
+			if (!v[overlayTerm?.$id]) continue
+			const value2 = v[overlayTerm.$id]
 			// if there is no value for q.divideTw then skip this
-			if (overlayTerm.term?.values?.[v[overlayTerm.id]?.key]?.uncomputable) {
-				const label = overlayTerm.term.values[v[overlayTerm.id]?.value]?.label // label of this uncomputable category
+			if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
+				const label = overlayTerm.term.values[value2?.key]?.label // label of this uncomputable category
 				uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			}
 
-			if (!key2values.has(v[overlayTerm.id]?.key)) key2values.set(v[overlayTerm.id]?.key, [])
-			key2values.get(v[overlayTerm.id]?.key).push(value)
+			if (!key2values.has(value2.key)) key2values.set(value2.key, [])
+			key2values.get(value2.key).push(value.value)
 		} else {
 			if (!key2values.has('All samples')) key2values.set('All samples', [])
-			key2values.get('All samples').push(value)
+			key2values.get('All samples').push(value.value)
 		}
 	}
 	return {

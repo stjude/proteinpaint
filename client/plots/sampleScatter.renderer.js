@@ -73,10 +73,12 @@ export function setRenderers(self) {
 		}
 
 		if (self.config.colorTW?.q.mode === 'continuous') {
-			const [min, max] = chart.cohortSamples.reduce(
-				(s, d) => [d.category < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
-				[chart.cohortSamples[0].category, chart.cohortSamples[0].category]
-			)
+			const [min, max] = chart.cohortSamples
+				.filter(s => !self.config.colorTW.term.values || !(s.category in self.config.colorTW.term.values))
+				.reduce(
+					(s, d) => [d.category < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
+					[chart.cohortSamples[0].category, chart.cohortSamples[0].category]
+				)
 			chart.colorGenerator = d3Linear()
 				.domain([min, max])
 				.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
@@ -720,13 +722,8 @@ export function setRenderers(self) {
 					const [min, max] = chart.colorGenerator.domain()
 					const gradientScale = d3Linear().domain([min, max]).range([0, gradientWidth])
 					const gradientStep = (max - min) / 4
-					const axis = axisTop(gradientScale).tickValues([
-						min,
-						min + gradientStep,
-						min + 2 * gradientStep,
-						min + 3 * gradientStep,
-						max
-					])
+					const tickValues = [min, min + gradientStep, min + 2 * gradientStep, min + 3 * gradientStep, max]
+					const axis = axisTop(gradientScale).tickValues(tickValues)
 					colorG.append('g').attr('transform', `translate(0, 100)`).call(axis)
 					chart.startRect = colorG
 						.append('rect')
@@ -798,7 +795,7 @@ export function setRenderers(self) {
 			}
 		}
 		if (self.config.scaleDotTW) {
-			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight})`)
+			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 100})`)
 			self.drawScaleDotLegend(chart)
 		}
 		if (self.config.shapeTW) {

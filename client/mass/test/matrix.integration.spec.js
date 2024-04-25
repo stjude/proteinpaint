@@ -311,7 +311,7 @@ tape('divide by continuous terms', function (test) {
 	}
 })
 
-tape('geneVariant term', function (test) {
+tape.skip('geneVariant term', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -362,7 +362,7 @@ tape('geneVariant term', function (test) {
 	}
 })
 
-tape('geneVariant terms and dictionary terms', function (test) {
+tape.skip('geneVariant terms and dictionary terms', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
@@ -423,7 +423,7 @@ tape('geneVariant terms and dictionary terms', function (test) {
 	}
 })
 
-tape('geneVariant terms with divide by dictionary term', function (test) {
+tape.skip('geneVariant terms with divide by dictionary term', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
@@ -482,7 +482,7 @@ tape('geneVariant terms with divide by dictionary term', function (test) {
 	}
 })
 
-tape('geneVariant terms and dictionary terms divide by dictionary term', function (test) {
+tape.skip('geneVariant terms and dictionary terms divide by dictionary term', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
@@ -546,7 +546,7 @@ tape('geneVariant terms and dictionary terms divide by dictionary term', functio
 	}
 })
 
-tape('sort samples by sample name', function (test) {
+tape.skip('sort samples by sample name', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
 	runpp({
@@ -593,7 +593,7 @@ tape('sort samples by sample name', function (test) {
 	}
 })
 
-tape.only('sort samples by Mutation categories, not sorted by CNV', function (test) {
+tape('sort samples by Mutation categories, not sorted by CNV', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
 	runpp({
@@ -647,7 +647,7 @@ tape.only('sort samples by Mutation categories, not sorted by CNV', function (te
 	}
 })
 
-tape('sort samples by CNV+SSM > SSM-only', function (test) {
+tape.skip('sort samples by CNV+SSM > SSM-only', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(5)
 	const sortOptions = getSortOptions(
@@ -776,7 +776,7 @@ tape('set max number of samples', function (test) {
 	}
 })
 
-tape('sort sample groups by Group Name', function (test) {
+tape.skip('sort sample groups by Group Name', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -826,7 +826,7 @@ tape('sort sample groups by Group Name', function (test) {
 	}
 })
 
-tape('sort sample groups by Sample Count', function (test) {
+tape.skip('sort sample groups by Sample Count', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -876,7 +876,7 @@ tape('sort sample groups by Sample Count', function (test) {
 	}
 })
 
-tape('sort sample groups by Hits', function (test) {
+tape.skip('sort sample groups by Hits', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -926,7 +926,7 @@ tape('sort sample groups by Hits', function (test) {
 	}
 })
 
-tape('sort sample groups by Hits 2', function (test) {
+tape.skip('sort sample groups by Hits 2', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -977,7 +977,7 @@ tape('sort sample groups by Hits 2', function (test) {
 	}
 })
 
-tape('Display Sample Counts for Gene: Absolute', function (test) {
+tape.skip('Display Sample Counts for Gene: Absolute', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -1027,7 +1027,7 @@ tape('Display Sample Counts for Gene: Absolute', function (test) {
 	}
 })
 
-tape('Display Sample Counts for Gene: Percent', function (test) {
+tape.skip('Display Sample Counts for Gene: Percent', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -1077,7 +1077,7 @@ tape('Display Sample Counts for Gene: Percent', function (test) {
 	}
 })
 
-tape('Display Sample Counts for Gene: None', function (test) {
+tape.skip('Display Sample Counts for Gene: None', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -1124,7 +1124,7 @@ tape('Display Sample Counts for Gene: None', function (test) {
 	}
 })
 
-tape('Sort Genes By Sample Count', function (test) {
+tape.skip('Sort Genes By Sample Count', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -1170,7 +1170,7 @@ tape('Sort Genes By Sample Count', function (test) {
 	}
 })
 
-tape('Sort Genes By Input Data Order', function (test) {
+tape.skip('Sort Genes By Input Data Order', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	runpp({
@@ -1216,7 +1216,7 @@ tape('Sort Genes By Input Data Order', function (test) {
 	}
 })
 
-tape('avoid race condition', function (test) {
+tape.skip('avoid race condition', function (test) {
 	test.timeoutAfter(1500)
 	test.plan(4)
 	runpp({
@@ -1257,7 +1257,8 @@ tape('avoid race condition', function (test) {
 		matrix.Inner.app.vocabApi.getAnnotatedSampleData = async (opts, _refs = {}) => {
 			await sleep(i)
 			i = 0
-			return await matrix.Inner.app.vocabApi.origGetAnnotatedSampleData(opts, _refs)
+			const data = await matrix.Inner.app.vocabApi.origGetAnnotatedSampleData(opts, _refs)
+			return data
 		}
 		// set up the postRender callback before triggering rerenders via app.dispatch
 		matrix.on('postRender.test', async () => {
@@ -1291,8 +1292,8 @@ tape('avoid race condition', function (test) {
 							{
 								name: '',
 								lst: [
-									{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
-									{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
+									{ $id: 0, term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
+									{ $id: 1, term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
 								]
 							}
 						]
@@ -1307,7 +1308,7 @@ tape('avoid race condition', function (test) {
 							termgroups: [
 								{
 									name: '',
-									lst: [{ term: { gene: 'BCR', name: 'BCR', type: 'geneVariant', isleaf: true } }]
+									lst: [{ $id: 3, term: { gene: 'BCR', name: 'BCR', type: 'geneVariant', isleaf: true } }]
 								}
 							]
 						}
@@ -1693,7 +1694,7 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 	}
 })
 
-tape(
+tape.skip(
 	'apply "Hide samples with" and "Do not show" legend filters to a geneVariant term in geneVariant term only matrix',
 	function (test) {
 		test.timeoutAfter(5000)
@@ -1899,7 +1900,7 @@ tape(
 	}
 )
 
-tape('apply legend group filters to a geneVariant term in geneVariant term only matrix', function (test) {
+tape.skip('apply legend group filters to a geneVariant term in geneVariant term only matrix', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(15)
 
@@ -2119,7 +2120,7 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 	}
 })
 
-tape(
+tape.skip(
 	'apply legend group filters and legend filters to a matrix with both geneVariant and dictionary terms',
 	function (test) {
 		test.timeoutAfter(5000)

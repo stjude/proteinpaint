@@ -89,14 +89,14 @@ class Term1ui {
 export const term1uiInit = getCompInit(Term1ui)
 
 function setRenderers(self) {
-	self.initUI = function() {
+	self.initUI = function () {
 		// label to be updated later after getting plot state via api.main()
 		// <td> left
 		self.dom.td1 = self.dom.tr.append('td').attr('class', 'sja-termdb-config-row-label')
 		// <td> right
 		self.dom.td2 = self.dom.tr.append('td')
 	}
-	self.render = async function() {
+	self.render = async function () {
 		/* state and plot are frozen from app.state
 		 */
 		const plot = this.state.plot
@@ -130,6 +130,8 @@ function setRenderers(self) {
 			case 'geneVariant':
 				break
 			case 'samplelst':
+				break
+			case 'geneExpression':
 				break
 			default:
 				throw 'unknown term type'

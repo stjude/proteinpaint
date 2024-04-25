@@ -41,7 +41,7 @@ opts{}
 //let $id = 0
 
 export async function get$id(minTwCopy) {
-	if (!minTwCopy) return <string>`${$id++}${idSuffix}`
+	if (!minTwCopy) return null
 	delete minTwCopy.$id
 	return await digestMessage(JSON.stringify(minTwCopy))
 }
@@ -895,35 +895,31 @@ export async function fillTwLst(
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
 ): Promise<void> {
-	const dictTerms = await getDictTerms(twlst, vocabApi)
+	await mayHydrateDictTw(twlst, vocabApi)
 	const promises: Promise<TermWrapper>[] = []
 	for (const tw of twlst) {
-		if (!tw.term) {
-			// maybe already fill-in tw.term in getDictTerms() and rename that function to maySetMissingTwTerm(),
-			// since the results from getDictTerms() is always used to fill-in tw.term anyway
-			if (tw.id === undefined || tw.id === '') throw 'missing both .id and .term'
-			tw.term = dictTerms[tw.id]
-		}
 		promises.push(fillTermWrapper(tw, vocabApi, defaultQByTsHandler))
 	}
 	await Promise.all(promises)
 }
 
-async function getDictTerms(twlst: TwLst, vocabApi: VocabApi) {
+// fill in tw.term{} from a dehydrated state
+// a dictionary tw can be simply expressed as {id:str} and this function will fill in the term object.
+// a non-dict term will always have a term object, so this function will not be applied to non-dict term
+async function mayHydrateDictTw(twlst: TwLst, vocabApi: VocabApi) {
 	const ids: string[] = []
 	for (const tw of twlst) {
-		// non-dictionary tw would always have a tw.term, so only dictionary tw will be tracked here
-		if (!tw.term) {
-			if (tw.id === undefined || tw.id === '') throw 'missing both .id and .term'
-			ids.push(tw.id)
-		}
+		if (tw.term) continue
+		if (tw.id === undefined || tw.id === '') throw 'missing both .id and .term'
+		ids.push(tw.id)
 	}
-	// ids only have dictionary terms
 	const terms = ids.length ? await vocabApi.getTerms(ids) : {}
 	for (const id of ids) {
 		if (!terms[id]) throw `missing dictionary term for id=${id}`
+		for (const tw of twlst) {
+			if (tw.id in terms) tw.term = terms[tw.id]
+		}
 	}
-	return terms
 }
 
 export async function fillTermWrapper(
@@ -934,8 +930,7 @@ export async function fillTermWrapper(
 	tw.isAtomic = true
 	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	if (!tw.term && tw.id) {
-		const terms = await getDictTerms([tw], vocabApi)
-		tw.term = terms[tw.id]
+		await mayHydrateDictTw([tw], vocabApi)
 	}
 
 	// tw.term{} is valid, now make sure that tw.id makes sense

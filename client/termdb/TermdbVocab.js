@@ -433,6 +433,7 @@ export class TermdbVocab extends Vocab {
 		const body = Object.assign(
 			{
 				getViolinPlotData: 1,
+				termid: arg.term?.id,
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
 				embedder: window.location.hostname,
@@ -449,6 +450,28 @@ export class TermdbVocab extends Vocab {
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const d = await dofetch3('termdb/violin', { headers, body })
+
+		return d
+	}
+
+	async getGeneExpViolinPlotData(arg, _body = {}) {
+		// the violin plot may still render when not in session,
+		// but not have an option to list samples
+		const headers = this.mayGetAuthHeaders('termdb')
+		const body = Object.assign(
+			{
+				getGeneExpressionData: 1,
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel,
+				isKDE: arg.isKDE || true,
+				ticks: arg.ticks || 20,
+				svgw: arg.svgw || 200
+			},
+			arg,
+			_body
+		)
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		const d = await dofetch3('termdb/geneExpViolin', { headers, body })
 
 		return d
 	}

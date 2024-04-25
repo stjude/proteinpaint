@@ -8,6 +8,7 @@ import serverconfig from './serverconfig'
 import * as utils from './utils'
 import * as termdbsql from './termdb.sql'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
+import { TermTypes, isNonDictionary } from '#shared/common.js'
 
 /*
 
@@ -79,7 +80,7 @@ function validateArg(q, ds, genome) {
 
 	for (const tw of q.terms) {
 		// TODO clean up
-		if (tw.term.type != 'geneVariant') {
+		if (tw?.term?.type && !isNonDictionary(tw.term.type)) {
 			if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
 			if (!tw.q) console.log('do something??')
 		}
@@ -109,9 +110,8 @@ async function getSampleData(q) {
 	}
 
 	const sampleFilterSet = await mayGetSampleFilterSet(q, nonDictTerms) // conditionally returns a set of sample ids
-
 	for (const tw of nonDictTerms) {
-		const $id = tw.$id || tw.term.id
+		if (!tw.$id) tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
@@ -147,8 +147,41 @@ async function getSampleData(q) {
 				const snp2value = {}
 				for (const [snp, o] of value.id2value) snp2value[snp] = o.value
 
-				samples[sampleId][tw.$id || tw.term.id] = snp2value
+				samples[sampleId][tw.$id] = snp2value
 			}
+		} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
+			const args = {
+				genome: q.ds.genome,
+				dslabel: q.ds.label,
+				clusterMethod: 'hierarchical',
+				/** distance method */
+				distanceMethod: 'euclidean',
+				/** Data type */
+				dataType: 3,
+				genes: [{ gene: tw.term.gene }]
+			}
+			const data = await q.ds.queries.geneExpression.get(args)
+			const bins = tw.q
+			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
+				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				const values = data.gene2sample2value.get(tw.term.gene)
+				let value = Number(values[sampleId]).toFixed(2)
+				if (tw.q.mode == 'discrete') {
+					let bin
+					if (value < bins.first_bin.stop) bin = 0
+					else bin = parseInt((value - bins.first_bin.stop) / bins.bin_size) + 1
+					if (bin == 0) value = (bins.startinclusive ? '<= ' : '< ') + bins.first_bin.stop
+					else if (bins.startinclusive ? value >= bins.last_bin.start : value > bins.last_bin.start)
+						value = (bins.startinclusive ? '>= ' : '> ') + bins.last_bin.start
+					else {
+						const start = (bins.first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
+						const stop = (bins.first_bin.stop + bin * bins.bin_size).toFixed(2)
+						value = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
+					}
+				}
+				samples[sampleId][tw.$id] = { key: value, value }
+			}
+			/** pp filter */
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}
@@ -204,8 +237,8 @@ function divideTerms(lst) {
 	const dict = [],
 		nonDict = []
 	for (const tw of lst) {
-		const type = tw.term.type
-		if (type == 'snplst' || type == 'snplocus' || type == 'geneVariant') {
+		const type = tw.term?.type
+		if (type && isNonDictionary(type)) {
 			nonDict.push(tw)
 		} else {
 			dict.push(tw)
@@ -260,19 +293,20 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
+			if (!tw.$id) tw.$id = tw.term.id || tw.term.name
 			tw$IdByIndex[i] = tw.$id
 			const CTE = await get_term_cte(q, values, i, filter, tw)
 			const $id = tw.$id || tw.term.id
 			if (CTE.bins) {
-				byTermId[$id] = { bins: CTE.bins }
+				byTermId[tw.$id] = { bins: CTE.bins }
 			}
 			if (CTE.events) {
-				byTermId[$id] = { events: CTE.events }
+				byTermId[tw.$id] = { events: CTE.events }
 			}
 			if (tw.term.values) {
 				const values = Object.values(tw.term.values)
 				if (values.find(v => 'order' in v)) {
-					byTermId[$id] = {
+					byTermId[tw.$id] = {
 						keyOrder: values.sort((a, b) => a.order - b.order).map(v => v.key)
 					}
 				}
@@ -283,7 +317,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	).catch(console.error)
 
 	// for "samplelst" term, term.id is missing and must use term.name
-	values.push(...termWrappers.map(tw => tw.$id))
+	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}
@@ -364,7 +398,7 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	if (q.currentGeneNames) {
 		q2.geneTwLst = []
 		for (const n of q.currentGeneNames) {
-			q2.geneTwLst.push({ term: { gene: n, name: n, type: 'geneVariant' } })
+			q2.geneTwLst.push({ term: { id: n, gene: n, name: n, type: 'geneVariant' } })
 		}
 	} else {
 		/* do not throw here
@@ -387,7 +421,8 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		}
 
 		for (const tw of termWrappers) {
-			const $id = tw.$id || tw.term.id
+			const $id = tw.$id || tw.term.id || tw.term.name
+			if (!tw.$id) tw.$id = $id
 			const v = s[$id]
 			////////////////////////////
 			// somehow value can be undefined! must skip them
