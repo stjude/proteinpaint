@@ -13,6 +13,7 @@ kodama = "0.3"
 rayon = "1.7.0"
 bgzip = "0.3.1"
 petgraph = "0.6.3"
+rusqlite="0.31.0"
 ndarray = "0.15.6"
 nalgebra = {version = "0.32.2", features = ["serde-serialize"]}
 plotters = "0.3.4"
@@ -31,8 +32,6 @@ tokio = { version="1", features = ["full"] }
 reqwest = "0.11"
 flate2 = "1"
 futures = "0.3"
-
-
 
 [profile.release]
 lto = "fat"
@@ -83,3 +82,7 @@ path="src/wilcoxon.rs"
 [[bin]]
 name="DEanalysis"
 path="src/DEanalysis.rs"
+
+[[bin]]
+name="genesetORA"
+path="src/genesetORA.rs"
