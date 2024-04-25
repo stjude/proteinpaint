@@ -4,7 +4,7 @@ import setViolinRenderer from './violin.renderer'
 import htmlLegend from '../dom/html.legend'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
-import { plotColor } from '../shared/common'
+import { plotColor, isNumeric } from '../shared/common'
 
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
@@ -263,7 +263,6 @@ class ViolinPlot {
 		await this.getDescrStats()
 
 		const args = this.validateArgs()
-
 		this.data = await this.app.vocabApi.getViolinPlotData(args)
 
 		if (this.settings.plotThickness == undefined) {
@@ -300,7 +299,7 @@ class ViolinPlot {
 		if (this.config.term2) terms.push(this.config.term2)
 		if (this.config.term0) terms.push(this.config.term0)
 		for (const t of terms) {
-			if (t.term.type == 'integer' || t.term.type == 'float') {
+			if (isNumeric(t.term)) {
 				const data = await this.app.vocabApi.getDescrStats(t.id, this.state.termfilter.filter, this.config.settings)
 				if (data.error) throw data.error
 				t.q.descrStats = data.values
@@ -342,15 +341,16 @@ class ViolinPlot {
 				// scale the data on the server-side
 				arg.scale = term.q.scale
 			}
-		} else if ((term.term.type === 'float' || term.term.type === 'integer') && term.q.mode === 'continuous') {
-			arg.termid = term.id
+		} else if (isNumeric(term.term) && term.q.mode === 'continuous') {
+			arg.term = term
 			if (term2) arg.divideTw = term2
-		} else if ((term2?.term?.type === 'float' || term2?.term?.type === 'integer') && term2.q.mode === 'continuous') {
+		} else if (isNumeric(term2?.term) && term2.q.mode === 'continuous') {
 			if (term2) arg.termid = term2.id
 			arg.divideTw = term
 		} else {
 			throw 'both term1 and term2 are not numeric/continuous'
 		}
+		arg.termType = term.type
 		return arg
 	}
 }

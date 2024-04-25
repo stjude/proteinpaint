@@ -22,6 +22,7 @@ export function handle_request_closure(genomes) {
 		for (const i of [0, 1, 2]) {
 			const termnum = 'term' + i
 			const termnum_id = termnum + '_id'
+			const termnum_type = termnum + '_type'
 			if (typeof q[termnum_id] == 'string') {
 				q[termnum_id] = decodeURIComponent(q[termnum_id])
 			} else if (typeof q[termnum] == 'string') {
@@ -121,7 +122,7 @@ export async function barchart_data(q, ds, tdb) {
 				const q = map.get(i)?.q
 				const tw = map.get(i)
 				const term = tw?.term || null
-				const id = tw?.$id ? tw.$id : term?.id ? term.id : term?.name
+				const id = tw?.$id
 				if (id && data.refs.byTermId[id]?.bins) bins.push(data.refs.byTermId[id]?.bins)
 				else bins.push([])
 				if (q?.binColored) {

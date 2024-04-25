@@ -1,9 +1,6 @@
 import { Menu } from '#dom/menu'
 import { addGeneSearchbox } from '#dom/genesearch'
 
-const idPrefix = `_geneVariant_AUTOID_${+new Date()}_`
-let id = 0
-
 export class SearchHandler {
 	callback: any
 
@@ -20,11 +17,9 @@ export class SearchHandler {
 	}
 
 	async selectGene(geneSearch) {
-		// TODO: set term.id=term.name
-		// TODO: term.id should be required
 		if (geneSearch.geneSymbol) {
 			this.callback({
-				id: idPrefix + id++,
+				id: geneSearch.geneSymbol,
 				gene: geneSearch.geneSymbol,
 				name: geneSearch.geneSymbol,
 				type: 'geneVariant'
@@ -32,7 +27,8 @@ export class SearchHandler {
 		} else if (geneSearch.chr && geneSearch.start && geneSearch.stop) {
 			const { chr, start, stop } = geneSearch
 			// name should be 1-based coordinate
-			this.callback({ id: idPrefix + id++, chr, start, stop, name: `${chr}:${start + 1}-${stop}`, type: 'geneVariant' })
+			const name = `${chr}:${start + 1}-${stop}`
+			this.callback({ id: name, chr, start, stop, name, type: 'geneVariant' })
 		} else {
 			throw 'no gene or position specified'
 		}

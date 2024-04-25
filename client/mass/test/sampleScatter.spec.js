@@ -148,7 +148,7 @@ tape('PNET plot + filter + colorTW=gene', function (test) {
 			lst: [{ type: 'tvs', tvs: { term: { id: 'Gender' }, values: [{ key: 'M', label: 'Male' }] } }]
 		}
 	}
-	s2.plots[0].colorTW = { term: { type: 'geneVariant', name: 'TP53' } }
+	s2.plots[0].colorTW = { term: { type: 'geneVariant', name: 'TP53', gene: 'TP53' } }
 
 	runpp({
 		state: s2,

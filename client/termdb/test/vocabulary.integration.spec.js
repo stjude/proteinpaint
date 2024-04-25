@@ -402,7 +402,7 @@ tape('getTdbDataUrl()', async test => {
 	result = termdbVocabApi.getTdbDataUrl(opts)
 	test.equal(
 		result,
-		`/termdb?embedder=${window.location.hostname}&term1_id=agedx&term1_q=%7B%22id%22%3A%22agedx%22%2C%22name%22%3A%22Age%20at%20Cancer%20Diagnosis%22%2C%22unit%22%3A%22Years%22%2C%22type%22%3A%22float%22%2C%22bins%22%3A%7B%22label_offset%22%3A1%2C%22default%22%3A%7B%22type%22%3A%22regular-bin%22%2C%22label_offset%22%3A1%2C%22bin_size%22%3A3%2C%22startinclusive%22%3Atrue%2C%22first_bin%22%3A%7B%22startunbounded%22%3Atrue%2C%22stop%22%3A2%7D%7D%2C%22less%22%3A%7B%22type%22%3A%22regular-bin%22%2C%22label_offset%22%3A1%2C%22bin_size%22%3A5%2C%22startinclusive%22%3Atrue%2C%22first_bin%22%3A%7B%22startunbounded%22%3Atrue%2C%22stop%22%3A5%7D%2C%22last_bin%22%3A%7B%22stopunbounded%22%3Atrue%2C%22start%22%3A15%7D%7D%7D%2C%22isleaf%22%3Atrue%7D&genome=hg38-test&dslabel=TermdbTest`,
+		`/termdb?embedder=${window.location.hostname}&term1_$id=undefined&term1_id=agedx&term1_q=%7B%22id%22%3A%22agedx%22%2C%22name%22%3A%22Age%20at%20Cancer%20Diagnosis%22%2C%22unit%22%3A%22Years%22%2C%22type%22%3A%22float%22%2C%22bins%22%3A%7B%22label_offset%22%3A1%2C%22default%22%3A%7B%22type%22%3A%22regular-bin%22%2C%22label_offset%22%3A1%2C%22bin_size%22%3A3%2C%22startinclusive%22%3Atrue%2C%22first_bin%22%3A%7B%22startunbounded%22%3Atrue%2C%22stop%22%3A2%7D%7D%2C%22less%22%3A%7B%22type%22%3A%22regular-bin%22%2C%22label_offset%22%3A1%2C%22bin_size%22%3A5%2C%22startinclusive%22%3Atrue%2C%22first_bin%22%3A%7B%22startunbounded%22%3Atrue%2C%22stop%22%3A5%7D%2C%22last_bin%22%3A%7B%22stopunbounded%22%3Atrue%2C%22start%22%3A15%7D%7D%7D%2C%22isleaf%22%3Atrue%7D&genome=hg38-test&dslabel=TermdbTest`,
 		message
 	)
 

@@ -1,5 +1,7 @@
 import { NumericTerm, NumericQ, NumericTW } from '../../shared/types/terms/numeric'
 import { VocabApi } from '../../shared/types/index'
+import { TermTypes } from '../../shared/common.js'
+import { GeneExpressionTW } from 'shared/types/terms/geneExpression.js'
 
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 
@@ -23,13 +25,17 @@ export async function getHandler(self) {
 	return await _.getHandler(self)
 }
 
-export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
-	if (!tw.q.mode) {
-		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'discrete'
+export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+	if (!tw.term.bins) {
+		const d = await vocabApi.getGeneExpViolinPlotData({ termid: tw.term.id }) //the id it is the gene
+		tw.q = structuredClone(d.bins.default) //we should not overwrite the default
+		tw.q.mode = 'continuous'
+		tw.term.bins = d.bins
 	}
-	const subtype = tw.term.type == 'float' || tw.term.type == 'integer' ? 'toggle' : tw.q.mode
-	const _ = await importSubtype(subtype)
-	return await _.fillTW(tw, vocabApi, defaultQ)
+	tw.q.mode = 'continuous'
+
+	tw.term.id = tw.term.gene //solve id!!
+	return tw
 }
 
 async function importSubtype(subtype: string | undefined) {
