@@ -1,5 +1,4 @@
 import tape from 'tape'
-import * as d3s from 'd3-selection'
 import { dofetch2 } from '../../../common/dofetch.js'
 import { hicData } from './hicData.ts'
 import { hicparsestat } from '../../../tracks/hic/data/parseData.ts'
@@ -34,6 +33,7 @@ tape('\n', test => {
 	test.end()
 })
 
+//TODO: Get rid of getGenomes, only supply what's need, and move to unit test
 tape('hicparsestat()', async test => {
 	test.plan(13)
 
@@ -126,7 +126,7 @@ tape('hicparsestat()', async test => {
 	result = hicparsestat(hic, j)
 	test.equal(hic.fragresolution, j['Fragment-delimited resolutions'], message)
 })
-
+//Replacing with ParseFragData
 tape.skip('hicparsefragdata()', test => {
 	//test.plan()
 	test.end()

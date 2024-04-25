@@ -1,7 +1,7 @@
 import { dofetch2 } from '../../../src/client'
 import { ChrPosition } from '../../../types/hic.ts'
 
-export type FragCoord = { start: number; stop: number }
+type FragCoord = { start: number; stop: number }
 
 export class DetailViewDataFetcher {
 	obj = {

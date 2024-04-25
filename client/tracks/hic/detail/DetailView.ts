@@ -1,4 +1,4 @@
-import { MainPlotDiv } from '../../../types/hic.ts'
+import { MainPlotDiv, ReturnedItems } from '../../../types/hic.ts'
 import { Resolution } from '../data/Resolution.ts'
 import { ColorizeElement } from '../dom/ColorizeElement.ts'
 import { DetailBlock } from './DetailBlock.ts'
@@ -20,7 +20,7 @@ export class DetailView {
 	viewRangeBpw: number | undefined
 	calResolution: number | null = null
 	dataMapper: DetailViewDataMapper
-	items: { items: number[][] }
+	items: ReturnedItems
 	coordinates: DetailCoordinates
 	errList: string[]
 
@@ -134,7 +134,7 @@ export class DetailView {
 		this.update(this.items)
 	}
 
-	update(items: { items: number[][] }) {
+	update(items: ReturnedItems) {
 		this.items = items
 		const state = this.parent('state') as any
 

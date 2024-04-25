@@ -35,12 +35,10 @@ export class Resolution {
 				// use finest
 				resolution = hic.bpresolution[hic.bpresolution.length - 1]
 			}
-
 			return resolution
-		} else if (state.currView == 'horizontal') {
-			//TODO
 		} else {
 			this.error(`Unknown view: ${state.currView}`)
+			throw `Unknown view: ${state.currView}`
 		}
 	}
 

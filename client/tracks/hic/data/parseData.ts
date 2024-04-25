@@ -1,5 +1,5 @@
-import * as client from '#src/client'
-import * as common from '#shared/common'
+import { dofetch, dofetch2 } from '#src/client'
+import { contigNameNoChr2 } from '../../../shared/common'
 
 /**
 ********* EXPORTED *********
@@ -78,7 +78,7 @@ export async function hicParseFile(hic: any, debugmode: boolean, errList: string
 	// 2. stat the hic file
 	try {
 		if (hic.sv && hic.sv.file) {
-			const re = await client.dofetch(hic.hostURL + '/textfile', {
+			const re = await dofetch(hic.hostURL + '/textfile', {
 				method: 'POST',
 				body: JSON.stringify({ file: hic.sv.file, jwt: hic.jwt })
 			})
@@ -88,7 +88,7 @@ export async function hicParseFile(hic: any, debugmode: boolean, errList: string
 			hic.sv.header = header
 			hic.sv.items = items
 		}
-		const data = await client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
+		const data = await dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
 		if (data.error) {
 			errList.push(data.error)
 			return
@@ -101,13 +101,6 @@ export async function hicParseFile(hic: any, debugmode: boolean, errList: string
 			console.log(err.stack)
 		}
 	}
-	// /** Default args for each view */
-	// const initialNmeth = hic.normalization.length ? hic.normalization[0] : defaultnmeth
-
-	// self.genomeview.nmeth = initialNmeth
-	// self.chrpairview.nmeth = initialNmeth
-	// self.detailview.nmeth = initialNmeth
-
 	return hic
 }
 
@@ -227,7 +220,7 @@ export function hicparsestat(hic: any, j: any) {
 	for (const chr in j.Chromosomes) {
 		chrlst.push(chr)
 	}
-	const [nochrcount, haschrcount] = common.contigNameNoChr2(hic.genome, chrlst)
+	const [nochrcount, haschrcount] = contigNameNoChr2(hic.genome, chrlst)
 	if (nochrcount + haschrcount == 0) return 'chromosome names do not match with genome build'
 	if (nochrcount > 0) {
 		hic.nochr = true
@@ -243,7 +236,7 @@ export function hicparsestat(hic: any, j: any) {
 		}
 	}
 }
-
+//Replace with ParseFragData
 export function hicparsefragdata(items: any) {
 	const id2coord = new Map()
 	let min: number | null = null,

@@ -1,13 +1,13 @@
-import { Elem } from '../../../types/d3'
+import { Elem, Div } from '../../../types/d3'
 
 export class NormalizationMethodControl {
 	defaultNmeth: string
-	holder: Elem
+	holder: Elem | Div
 	normalization: string[]
 	callback: (nmeth: string) => void
 	nmethSelect: any
 
-	constructor(holder: Elem, normalization: string[], defaultNmeth: string, callback: (nmeth: string) => void) {
+	constructor(holder: Elem | Div, normalization: string[], defaultNmeth: string, callback: (nmeth: string) => void) {
 		this.holder = holder
 		this.normalization = normalization
 		this.defaultNmeth = defaultNmeth

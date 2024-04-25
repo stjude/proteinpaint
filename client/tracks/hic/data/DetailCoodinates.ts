@@ -1,3 +1,6 @@
+import { ChrPosition } from 'types/hic'
+import { FirstChrX } from './FirstChrX'
+
 export class DetailCoordinates {
 	hic: any
 	errlist: string[]
@@ -7,16 +10,9 @@ export class DetailCoordinates {
 		this.errlist = errlist
 	}
 
-	isFirstX(chrx, chry) {
-		if (chrx.chr == chry.chr) return true
-		return this.hic.chrorder.indexOf(chrx.chr) < this.hic.chrorder.indexOf(chry.chr)
-	}
-
-	getCoordinates(chrx, chry, data, resolution, canvas, fragData?) {
-		const isFirstX = this.isFirstX(chrx, chry)
-		const isintrachr = chrx == chry
-
-		const list: any[] = []
+	getCoordinates(chrx: ChrPosition, chry: ChrPosition, data: any, resolution: number, canvas: any, fragData?: any) {
+		const isFirstX = new FirstChrX(this.hic.chrorder, chrx.chr, chry.chr).isFirstX()
+		const isintrachr = chrx.chr == chry.chr
 
 		const canvaswidth = Number.parseInt(canvas.attr('width'))
 		const canvasheight = Number.parseInt(canvas.attr('height'))
@@ -25,6 +21,22 @@ export class DetailCoordinates {
 		const xpxbp = canvaswidth / (chrx.stop - chrx.start)
 		const ypxbp = canvasheight / (chry.stop - chry.start)
 
+		const list = this.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data, fragData)
+		return [list, canvaswidth, canvasheight]
+	}
+
+	calculateCoordinates(
+		isFirstX: boolean,
+		isintrachr: boolean,
+		xpxbp: number,
+		ypxbp: number,
+		resolution: number,
+		chrx: ChrPosition,
+		chry: ChrPosition,
+		data: any,
+		fragData?: any
+	) {
+		const list: any[] = []
 		for (const [xCoord, yCoord, value] of data.items) {
 			let coord1: number, coord2: number, span1: number, span2: number
 
@@ -115,6 +127,6 @@ export class DetailCoordinates {
 				value
 			])
 		}
-		return [list, canvaswidth, canvasheight]
+		return list
 	}
 }

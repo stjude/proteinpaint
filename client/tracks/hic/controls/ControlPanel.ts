@@ -33,9 +33,6 @@ class ControlPanel {
 	colorizeElement: ColorizeElement
 	error: any
 
-	state: any
-	hasStatePreMain = true
-
 	constructor(opts) {
 		this.type = 'controlPanel'
 		this.controls = {}
@@ -43,7 +40,6 @@ class ControlPanel {
 		this.controlsDiv = opts.controlsDiv
 		this.hic = opts.hic
 		this.colorizeElement = new ColorizeElement()
-		// this.state = opts.state
 		this.parent = opts.parent
 		this.error = opts.error
 	}
@@ -62,7 +58,7 @@ class ControlPanel {
 	}
 
 	init() {
-		this.state = this.app.getState()
+		const state = this.app.getState()
 		const menuWrapper = this.controlsDiv
 			.style('background', 'rgb(253, 250, 244)')
 			.style('vertical-align', 'top')
@@ -96,7 +92,7 @@ class ControlPanel {
 		this.controls.nmeth = new NormalizationMethodControl(
 			this.controls.normalizationRow.append('td').attr('class', 'sjpp-nmeth-select'),
 			this.hic.normalization,
-			this.state.defaultNmeth,
+			state.defaultNmeth,
 			this.nmethCallback
 		)
 		this.controls.nmeth.render()
@@ -159,10 +155,10 @@ class ControlPanel {
 					view: 'chrpair',
 					config: {
 						x: {
-							chr: this.state.x.chr
+							chr: state.x.chr
 						},
 						y: {
-							chr: this.state.y.chr
+							chr: state.y.chr
 						}
 					}
 				})
@@ -196,7 +192,7 @@ class ControlPanel {
 
 		this.controls.zoomDiv = menuTable
 			.append('tr')
-			.style('display', this.state.currView == 'detail' ? 'contents' : 'none') as any
+			.style('display', state.currView == 'detail' ? 'contents' : 'none') as any
 		this.addLabel(this.controls.zoomDiv, 'ZOOM')
 		const zoomDiv = this.controls.zoomDiv.append('td')
 
@@ -225,22 +221,19 @@ class ControlPanel {
 	}
 
 	showBtns() {
-		this.controls.genomeViewBtn.style('display', this.state.currView === 'genome' ? 'none' : 'inline-block')
-		if (this.state.currView === 'detail') {
-			this.controls.chrpairViewBtn
-				.html(`&#8810; Entire ${this.state.x.chr}-${this.state.y.chr}`)
-				.style('display', 'block')
+		const state = this.app.getState()
+		this.controls.genomeViewBtn.style('display', state.currView === 'genome' ? 'none' : 'inline-block')
+		if (state.currView === 'detail') {
+			this.controls.chrpairViewBtn.html(`&#8810; Entire ${state.x.chr}-${state.y.chr}`).style('display', 'block')
 			//Only show horizontalViewBtn and zoom buttons in detail view
 			this.controls.horizontalViewBtn.style('display', 'block')
 			this.controls.zoomDiv.style('display', 'contents')
 			//Hide previously shown detail view btn
 			this.controls.detailViewBtn.style('display', 'none')
-		} else if (this.state.currView === 'horizontal') {
+		} else if (state.currView === 'horizontal') {
 			//Only show chrpairViewBtn if in horizonal or detail view
 			//Include chr x and chr y in the button text
-			this.controls.chrpairViewBtn
-				.html(`&#8810; Entire ${this.state.x.chr}-${this.state.y.chr}`)
-				.style('display', 'block')
+			this.controls.chrpairViewBtn.html(`&#8810; Entire ${state.x.chr}-${state.y.chr}`).style('display', 'block')
 			//Only show detailViewBtn in horizontal view
 			this.controls.detailViewBtn.style('display', 'block')
 			//Hide if horizontal and zoom btns if previously displayed
@@ -335,39 +328,42 @@ class ControlPanel {
 	}
 
 	nmethCallback = (v: string) => {
+		const state = this.app.getState()
 		this.app.dispatch({
 			type: 'view_update',
-			view: this.state.currView,
+			view: state.currView,
 			config: { nmeth: v }
 		})
 	}
 
 	matrixTypeCallback = (v: string) => {
+		const state = this.app.getState()
 		this.app.dispatch({
 			type: 'view_update',
-			view: this.state.currView,
+			view: state.currView,
 			config: { matrixType: v }
 		})
 	}
 
 	showHideControls() {
-		this.controls.normalizationRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
-		this.controls.minCutoffRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
-		this.controls.maxCutoffRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
-		this.controls.matrixTypeRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
+		const state = this.app.getState()
+		this.controls.normalizationRow.style('display', state.currView == 'horizontal' ? 'none' : '')
+		this.controls.minCutoffRow.style('display', state.currView == 'horizontal' ? 'none' : '')
+		this.controls.maxCutoffRow.style('display', state.currView == 'horizontal' ? 'none' : '')
+		this.controls.matrixTypeRow.style('display', state.currView == 'horizontal' ? 'none' : '')
 	}
 
 	main(appState) {
-		this.state = this.app.getState(appState)
+		const state = this.app.getState(appState)
 
-		this.controls.nmeth.update(this.state[this.state.currView].nmeth)
-		this.controls.matrixType.update(this.state[this.state.currView].matrixType)
+		this.controls.nmeth.update(state[state.currView].nmeth)
+		this.controls.matrixType.update(state[state.currView].matrixType)
 
-		this.controls.zoomDiv.style('display', this.state.currView == 'detail' ? 'contents' : 'none')
-		if (this.state.currView == 'chrpair') {
-			this.controls.view.text(`${this.state.x.chr}-${this.state.y.chr} Pair`)
+		this.controls.zoomDiv.style('display', state.currView == 'detail' ? 'contents' : 'none')
+		if (state.currView == 'chrpair') {
+			this.controls.view.text(`${state.x.chr}-${state.y.chr} Pair`)
 		} else {
-			this.controls.view.text(this.state.currView.charAt(0).toUpperCase() + this.state.currView.slice(1))
+			this.controls.view.text(state.currView.charAt(0).toUpperCase() + state.currView.slice(1))
 		}
 
 		this.controls.inputBpMinV.property('value', this.parent('min'))

@@ -6,7 +6,6 @@ export class DetailViewDataMapper {
 	hic: any
 	dataFetcher: DetailViewDataFetcher
 	minBinNum_bp = 20
-	//resolution: number | null = null
 	errList: string[]
 	parent: (prop: string, v?: number) => string | number
 	frag = {
@@ -95,9 +94,6 @@ export class DetailViewDataMapper {
 	}
 
 	async getData(chrx: ChrPosition, chry: ChrPosition) {
-		// this.updateResolution(chrx, chry)
-		// if (!this.resolution) return
-
 		this.fragData = (await this.getFragData(chrx, chry)) as any
 		return await this.dataFetcher.fetchData(
 			this.hic,

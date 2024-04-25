@@ -1,11 +1,12 @@
-import { Elem } from '../../../types/d3'
+import { Elem, Div } from '../../../types/d3'
 
+//This could be a global input class
 export class CutoffControl {
-	holder: Elem
+	holder: Elem | Div
 	value: number
 	callback: (f: string | number) => void
 
-	constructor(holder: Elem, value: number, callback: (f: string | number) => void) {
+	constructor(holder: Elem | Div, value: number, callback: (f: string | number) => void) {
 		this.holder = holder
 		this.value = value
 		this.callback = callback

@@ -1,8 +1,7 @@
-import { Selection } from 'd3-selection'
 import * as client from '#src/client'
 import blocklazyload from '#src/block.lazyload'
 import { MainPlotDiv } from '../../../types/hic.ts'
-
+import { Pane } from '../../../types/global.ts'
 import { SvgSvg, SvgG } from '../../../types/d3'
 import { ColorizeElement } from '../dom/ColorizeElement.ts'
 import { GridViewModel } from '../viewmodel/GridViewModel.ts'
@@ -11,13 +10,6 @@ import { GridElementsRenderer } from '../grid/GridElementsRenderer.ts'
 import { GridElementData } from '../grid/GridElementData.ts'
 import { GridElementDom } from '../grid/GridElementDom.ts'
 import { GridElementsFormattedData } from '../data/GridElementsFormattedData.ts'
-
-type Pane = {
-	pain: Selection<HTMLDivElement, any, any, any>
-	mini: boolean
-	header: Selection<HTMLDivElement, any, any, any>
-	body: Selection<any, any, any, any>
-}
 
 export class GenomeView {
 	viewModel: GridViewModel
@@ -257,30 +249,4 @@ export class GenomeView {
 		}
 		this.app.dispatch({ type: 'loading_active', active: false })
 	}
-}
-
-export function hicparsefragdata(items: any) {
-	const id2coord = new Map()
-	let min: number | null = null,
-		max: number | any
-
-	for (const i of items) {
-		// id of first fragment
-		if (!i.rest || !i.rest[0]) {
-			return ['items[].rest data problem']
-		}
-		const id = Number.parseInt(i.rest[0])
-		if (Number.isNaN(id)) {
-			return [i.start + '.' + i.stop + ' invalid fragment id: ' + i.rest[0]]
-		}
-		id2coord.set(id, [i.start, i.stop])
-		if (min == null) {
-			min = id
-			max = id
-		} else {
-			min = Math.min(min, id)
-			max = Math.max(max, id)
-		}
-	}
-	return [null, id2coord, min, max]
 }

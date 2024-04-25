@@ -1,4 +1,4 @@
-import { bplen } from '#shared/common'
+import { bplen } from '../shared/common'
 import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { axisBottom } from 'd3-axis'
@@ -203,7 +203,7 @@ function setResolution(tk: any, block: any) {
 					client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
 						if (data.error) throw data.error
 						if (!data.items) throw '.items[] missing at mapping coord to fragment index'
-
+						//Replace with ParseFragData
 						const [err, map, start, stop] = hicparsefragdata(data.items)
 						if (err) throw err
 						r.frag = {
