@@ -59,4 +59,13 @@ async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentati
 	const rust_output = await run_rust('genesetORA', JSON.stringify(gene_overrepresentation_input))
 	const time2 = new Date()
 	console.log('rust_output:', rust_output)
+	let result
+	for (const line of rust_output.split('\n')) {
+		if (line.startsWith('pathway_p_values:')) {
+			result = JSON.parse(line.replace('pathway_p_values:', ''))
+		} else {
+			console.log(line)
+		}
+	}
+	console.log('result:', result)
 }
