@@ -448,6 +448,7 @@ add:
 			console.log('self:', self)
 			console.log('fold_change_cutoff:', fold_change_cutoff)
 
+			// Need to handle those genes which do not have a name
 			if (self.settings.gene_ora == 'upregulated') {
 				for (const gene of output.data) {
 					if (fold_change_cutoff < Math.abs(gene.fold_change) && gene.fold_change > 0) {
@@ -480,7 +481,6 @@ add:
 			const body = {
 				sample_genes: sample_genes.toString(),
 				background_genes: background_genes.toString(),
-				dbfile: self.app.opts.genome.termdbs.msigdb.label,
 				genome: self.app.vocabApi.opts.state.vocab.genome,
 				geneSetGroup: 'BP: subset of GO'
 			}
