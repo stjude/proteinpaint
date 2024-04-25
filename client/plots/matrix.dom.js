@@ -56,7 +56,11 @@ export function setMatrixDom(opts) {
 			.on('mousedown', this.seriesesGMousedown)
 			.on('mousemove', this.seriesesGMousemove),
 		//.on('mouseup', this.seriesesGMouseup),
-		seriesesG: rectsG.append('g').attr('class', 'sjpp-matrix-serieses-g').on('mousedown', this.seriesesGMousedown),
+		seriesesG: rectsG
+			.append('g')
+			.attr('class', 'sjpp-matrix-serieses-g')
+			.attr('data-testid', 'sjpp_matrix_mainG_serieses')
+			.on('mousedown', this.seriesesGMousedown),
 		//.on('mousemove', this.seriesesGMousemove)
 		//.on('mouseup', this.seriesesGMouseup),
 

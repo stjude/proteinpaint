@@ -305,6 +305,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 			.append('button')
 			.style('margin-right', '10px')
 			.text('Disco plot')
+			.attr('data-testid', 'proteinpaint_disc_table_disco_button')
 			.on('click', async () => {
 				tk.itemtip.hide() // hide tooltip so it won't block
 				await createDiscoInSandbox(tk, block, sample, thisMutation)

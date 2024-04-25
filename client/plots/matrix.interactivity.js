@@ -235,6 +235,7 @@ export function setInteractivity(self) {
 			const menuDiv = self.dom.clickMenu.d
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'oncoMatrix_termLabel_disco_button')
 				.text('Disco plot')
 				.on('click', async event => {
 					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
@@ -509,6 +510,7 @@ function setTermActions(self) {
 				.append('button')
 				.style('text-align', 'center')
 				.html('Lollipop')
+				.attr('data-testid', 'oncoMatrix_cell_lollipop_button')
 				.on('click', async () => {
 					await self.launchGB(t)
 					self.dom.tip.hide()

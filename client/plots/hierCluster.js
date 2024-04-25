@@ -43,6 +43,7 @@ export class HierCluster extends Matrix {
 			.attr('clip-path', `url(#${this.hcClipId})`)
 			.append('g')
 			.attr('class', 'sjpp-matrix-dendrogram')
+			.attr('data-testid', 'hierCluster_top_dendrogram')
 			.on('click', event => {
 				const clickedClusterId = this.getClusterFromTopDendrogram(event)
 				if (clickedClusterId) {
@@ -60,7 +61,11 @@ export class HierCluster extends Matrix {
 				// rerender the col Dendrogram
 				this.plotDendrogramHclust(true)
 			})
-		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
+		this.dom.leftDendrogram = this.dom.svg
+			.insert('g', 'g')
+			.attr('class', 'sjpp-matrix-dendrogram')
+			.attr('data-testid', 'hierCluster_left_dendrogram')
+		//.attr('clip-path', `url(#${this.seriesClipId})`)
 	}
 
 	async setHierClusterData(_data = {}) {
