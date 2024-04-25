@@ -122,13 +122,13 @@ async function trigger_getcategories(
 	} else {
 		term = tdb.q.termjsonByOneid(q.tid)
 	}
-
+	const tw =
+		q.type == 'geneVariant'
+			? { term, q: { isAtomic: true } }
+			: { id: q.tid, term, q: q.term1_q || getDefaultQ(term, q) }
 	const arg = {
 		filter: q.filter,
-		terms:
-			q.type == 'geneVariant'
-				? [{ term, q: { isAtomic: true } }]
-				: [{ id: q.tid, term, q: q.term1_q || getDefaultQ(term, q) }],
+		terms: [tw],
 		currentGeneNames: q.currentGeneNames, // optional, from mds3 mayAddGetCategoryArgs()
 		rglst: q.rglst // optional, from mds3 mayAddGetCategoryArgs()
 	}
@@ -149,7 +149,7 @@ async function trigger_getcategories(
 		}
 		const sampleCountedFor = new Set() // if the sample is counted
 		for (const [sampleId, sampleData] of Object.entries(samples)) {
-			const key = (q.tid || q.name)! //as the request is done from the server side the results are indexed by term id or name
+			const key = tw.$id //getData indexes terms by tw.$id, that may be $id or the term id or the name
 			const values = sampleData[key].values
 			sampleCountedFor.clear()
 			/* values here is an array of result entires, one or more entries for each dt. e.g.
