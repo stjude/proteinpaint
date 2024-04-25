@@ -9,7 +9,6 @@ class ControlPanel {
 	type: 'controlPanel'
 	app: any
 	controls: {
-		horizontalRow?: any
 		normalizationRow?: any
 		nmeth?: any
 		minCutoffRow?: any
@@ -90,15 +89,6 @@ class ControlPanel {
 			.attr('class', 'sjpp-hic-menu')
 			.style('display', menuVisible ? 'block' : 'none')
 		const menuTable = menu.append('table').style('border-spacing', '3px')
-
-		//Message for horizontal view
-		this.controls.horizontalRow = menuTable
-			.append('tr')
-			.style('display', this.state.currView == 'horizontal' ? 'contents' : 'none') as any
-		this.addLabel(this.controls.horizontalRow, 'Use Config')
-		this.controls.horizontalRow
-			.append('td')
-			.html('To change:<ul><li>Normalization method</li><li>Cutoff values</li><li>Matrix type</li></ol>')
 
 		//Normalization
 		this.controls.normalizationRow = menuTable.append('tr') as any
@@ -365,7 +355,6 @@ class ControlPanel {
 		this.controls.minCutoffRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
 		this.controls.maxCutoffRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
 		this.controls.matrixTypeRow.style('display', this.state.currView == 'horizontal' ? 'none' : '')
-		this.controls.horizontalRow.style('display', this.state.currView == 'horizontal' ? 'contents' : 'none')
 	}
 
 	main(appState) {
