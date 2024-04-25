@@ -1,3 +1,4 @@
+//import fs from 'fs'
 import {
 	genesetOverrepresentationRequest,
 	genesetOverrepresentationResponse
@@ -27,7 +28,6 @@ export const api = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			console.log('Hello')
 			//console.log("req.query:",req.query)
 			const results = await run_genesetOverrepresentation_analysis(
 				req.query as genesetOverrepresentationRequest,
@@ -40,7 +40,23 @@ function init({ genomes }) {
 	}
 }
 
-async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentationRequest, genomes: Any) {
-	console.log('genomes:', genomes[q.genome].termdbs)
+async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentationRequest, genomes: any) {
+	console.log('genomes:', genomes[q.genome].termdbs.msigdb.cohort.db.connection.name)
 	console.log('q:', q.genome)
+	if (!genomes[q.genome].termdbs) throw 'termdb database is not available for ' + q.genome
+	const gene_overrepresentation_input = {
+		sample_genes: q.sample_genes,
+		background_genes: q.background_genes,
+		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name
+	}
+
+	//fs.writeFile('test.txt', JSON.stringify(gene_overrepresentation_input), function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
+
+	const time1 = new Date()
+	const rust_output = await run_rust('genesetORA', JSON.stringify(gene_overrepresentation_input))
+	const time2 = new Date()
+	console.log('rust_output:', rust_output)
 }
