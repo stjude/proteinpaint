@@ -3,7 +3,11 @@
 use json::JsonValue;
 use r_mathlib;
 use rusqlite::{Connection, Result};
+use serde::{Deserialize, Serialize};
+use serde_json;
+use std::cmp::Ordering;
 use std::io;
+use std::time::Instant;
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
@@ -23,11 +27,12 @@ struct pathway_genes {
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
-#[derive(Debug)]
-#[allow(dead_code)]
+#[derive(Debug, Serialize, Deserialize)]
+//#[allow(dead_code)]
 struct pathway_p_value {
     GO_id: String,
-    p_value: f64,
+    p_value_original: f64,
+    p_value_adjusted: Option<f64>,
 }
 
 fn calculate_hypergeometric_p_value(
@@ -67,6 +72,7 @@ fn main() -> Result<()> {
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
+                    let run_time = Instant::now();
                     let db_input: &JsonValue = &json_string["db"];
                     let db;
                     match db_input.as_str() {
@@ -144,7 +150,8 @@ fn main() -> Result<()> {
                                         if p_value.is_nan() == false {
                                             pathway_p_values.push(pathway_p_value {
                                                 GO_id: n.GO_id,
-                                                p_value: p_value,
+                                                p_value_original: p_value,
+                                                p_value_adjusted: None,
                                             })
                                         }
                                     }
@@ -157,7 +164,11 @@ fn main() -> Result<()> {
                         }
                         Err(_) => panic!("sqlite database file not found"),
                     }
-                    println!("pathway_p_values:{:?}", pathway_p_values);
+                    println!("pathway_p_values:{}", adjust_p_values(pathway_p_values));
+                    println!(
+                        "Time for calculating gene overrepresentation:{:?}",
+                        run_time.elapsed()
+                    );
                 }
                 Err(error) => println!("Incorrect json:{}", error),
             }
@@ -165,4 +176,60 @@ fn main() -> Result<()> {
         Err(error) => println!("Piping error: {}", error),
     }
     Ok(())
+}
+
+fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>) -> String {
+    // Sorting p-values in ascending order
+    original_p_values.as_mut_slice().sort_by(|a, b| {
+        (a.p_value_original)
+            .partial_cmp(&b.p_value_original)
+            .unwrap_or(Ordering::Equal)
+    });
+
+    let mut adjusted_p_values: Vec<pathway_p_value> = Vec::with_capacity(original_p_values.len());
+    let mut old_p_value: f64 = 0.0;
+    let mut rank: f64 = original_p_values.len() as f64;
+    for j in 0..original_p_values.len() {
+        let i = original_p_values.len() - j - 1;
+
+        //println!("p_val:{}", p_val);
+        let mut adjusted_p_val: f64 =
+            original_p_values[i].p_value_original * (original_p_values.len() as f64 / rank); // adjusted p-value = original_p_value * (N/rank)
+        if adjusted_p_val > 1.0 {
+            // p_value should NEVER be greater than 1
+            adjusted_p_val = 1.0;
+        }
+        //println!("Original p_value:{}", original_p_values[i].p_value);
+        //println!("Raw adjusted p_value:{}", adjusted_p_value);
+        if i != original_p_values.len() - 1 {
+            if adjusted_p_val > old_p_value {
+                adjusted_p_val = old_p_value;
+            }
+        }
+        old_p_value = adjusted_p_val;
+        //println!("adjusted_p_value:{}", adjusted_p_val);
+        rank -= 1.0;
+
+        adjusted_p_values.push(pathway_p_value {
+            GO_id: original_p_values[i].GO_id.clone(),
+            p_value_original: original_p_values[i].p_value_original,
+            p_value_adjusted: Some(adjusted_p_val),
+        });
+    }
+    adjusted_p_values.as_mut_slice().sort_by(|a, b| {
+        (a.p_value_adjusted.unwrap())
+            .partial_cmp(&b.p_value_adjusted.unwrap())
+            .unwrap_or(Ordering::Equal)
+    });
+
+    let mut output_string = "[".to_string();
+    for i in 0..adjusted_p_values.len() {
+        let j = adjusted_p_values.len() - i - 1;
+        output_string += &serde_json::to_string(&adjusted_p_values[j]).unwrap();
+        if j > 0 {
+            output_string += &",".to_string();
+        }
+    }
+    output_string += &"]".to_string();
+    output_string
 }
