@@ -44,9 +44,6 @@ export function getSorterUi(opts) {
 				{
 					label: 'For each selected row, sort cases by matching data',
 					notDraggable: true,
-					handler(div) {
-						//div.append('button').html('Select a row')
-					},
 					tiebreakers: [],
 					handler: handleSelectedTerms
 				},
@@ -75,6 +72,8 @@ export function getSorterUi(opts) {
 				j = 0
 
 			for (const sd of sectionData) {
+				const hasTbOrder = sd.tiebreakers?.[0]?.order || sd.handler
+
 				const thead = table
 					.append('thead')
 					.datum(sd)
@@ -93,13 +92,14 @@ export function getSorterUi(opts) {
 					.style('vertical-align', 'top')
 					.style('font-weight', 400)
 					.html(alphabet[j++])
-					.on('click', toggleSection)
+					.on('click', hasTbOrder ? toggleSection : null)
 				const td2 = tr
 					.append('th')
 					.style('padding', '5px')
 					.style('vertical-align', 'top')
 					.style('text-align', 'left')
-					.on('click', toggleSection)
+					.style('cursor', hasTbOrder ? 'pointer' : '')
+					.on('click', hasTbOrder ? toggleSection : null)
 				td2.append('span').style('margin-right', '12px').style('font-weight', 400).html(sd.label)
 
 				tr.append('th')
@@ -107,10 +107,10 @@ export function getSorterUi(opts) {
 					.style('vertical-align', 'top')
 					.style('text-align', 'center')
 					.style('font-weight', 400)
-					.style('cursor', 'pointer')
+					.style('cursor', hasTbOrder ? 'pointer' : '')
 					.append('span')
-					.html('Details')
-					.on('click', toggleSection)
+					.html(hasTbOrder ? 'Details' : '&nbsp;')
+					.on('click', hasTbOrder ? toggleSection : null)
 
 				const tbody = table
 					.append('tbody')
@@ -118,14 +118,19 @@ export function getSorterUi(opts) {
 					.style('display', self.expandedSection == 'all' || self.expandedSection == sd.label ? '' : 'none')
 
 				for (const tb of sd.tiebreakers) {
-					// TODO: should handle dictionary variables
-					if (!sd.types?.includes('geneVariant') || tb.skip) continue
+					if (tb.skip) continue
+					if (!sd.types?.includes('geneVariant')) {
+						// TODO: display inputs to customize sorting of dictionary variable values,
+						// currently the value order is arbitrary
+						continue
+					}
+
 					const tr = tbody
 						.append('tr')
 						.on('mouseover', undoMouseoverHighlights)
 						.datum(tb)
-						.attr('draggable', !tb.disabled)
-						.attr('droppable', !tb.disabled)
+						.attr('draggable', !tb.disabled && sd.types?.length)
+						.attr('droppable', !tb.disabled && sd.types?.length)
 						.on('dragstart', trackDraggedTieBreaker)
 						.on('dragover', highlightTieBreaker)
 						.on('dragleave', unhighlightTieBreaker)
@@ -142,7 +147,7 @@ export function getSorterUi(opts) {
 						)
 						.datum(tb)
 					td1.style('padding', '5px').style('vertical-align', 'top').style('text-align', 'center')
-					td1.append('span').html(!tb.disabled ? i : '') // TODO: show pr
+					td1.append('span').html(!tb.disabled ? i : '') // TODO: show priority
 					//td1.append('br')
 
 					const td2 = tr
