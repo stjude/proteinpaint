@@ -1,2 +1,1 @@
-Fixes:
-- Updated protein domain color is applied to all instances of this domain, not just first one
+
