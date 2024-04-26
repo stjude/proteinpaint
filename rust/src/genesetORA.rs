@@ -30,7 +30,7 @@ struct pathway_genes {
 #[derive(Debug, Serialize, Deserialize)]
 //#[allow(dead_code)]
 struct pathway_p_value {
-    GO_id: String,
+    pathway_name: String,
     p_value_original: f64,
     p_value_adjusted: Option<f64>,
 }
@@ -149,7 +149,7 @@ fn main() -> Result<()> {
                                         );
                                         if p_value.is_nan() == false {
                                             pathway_p_values.push(pathway_p_value {
-                                                GO_id: n.GO_id,
+                                                pathway_name: n.GO_id,
                                                 p_value_original: p_value,
                                                 p_value_adjusted: None,
                                             })
@@ -211,7 +211,7 @@ fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>) -> String {
         rank -= 1.0;
 
         adjusted_p_values.push(pathway_p_value {
-            GO_id: original_p_values[i].GO_id.clone(),
+            pathway_name: original_p_values[i].pathway_name.clone(),
             p_value_original: original_p_values[i].p_value_original,
             p_value_adjusted: Some(adjusted_p_val),
         });

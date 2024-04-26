@@ -1,7 +1,3 @@
-//export type genesetOverrepresentationResponse = {
-//
-//}
-
 export type genesetOverrepresentationRequest = {
 	sample_genes: string
 	background_genes: string
@@ -10,5 +6,7 @@ export type genesetOverrepresentationRequest = {
 }
 
 export type genesetOverrepresentationResponse = {
-	pathways: string
+	pathway_name: string
+	p_value_original: number
+	p_value_adjusted: number
 }
