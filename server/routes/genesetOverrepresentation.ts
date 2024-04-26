@@ -4,9 +4,6 @@ import {
 	genesetOverrepresentationResponse
 } from '#shared/types/routes/genesetOverrepresentation.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import path from 'path'
-import got from 'got'
-import serverconfig from '#src/serverconfig.js'
 
 export const api = {
 	endpoint: 'genesetOverrepresentation',
@@ -41,8 +38,8 @@ function init({ genomes }) {
 }
 
 async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentationRequest, genomes: any) {
-	console.log('genomes:', genomes[q.genome].termdbs.msigdb.cohort.db.connection.name)
-	console.log('q:', q.genome)
+	//console.log('genomes:', genomes[q.genome].termdbs.msigdb.cohort.db.connection.name)
+	//console.log('q:', q.genome)
 	if (!genomes[q.genome].termdbs) throw 'termdb database is not available for ' + q.genome
 	const gene_overrepresentation_input = {
 		sample_genes: q.sample_genes,
@@ -55,10 +52,10 @@ async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentati
 	//	if (err) return console.log(err)
 	//})
 
-	const time1 = new Date()
+	const time1 = new Date().valueOf()
 	const rust_output = await run_rust('genesetORA', JSON.stringify(gene_overrepresentation_input))
-	const time2 = new Date()
-	console.log('rust_output:', rust_output)
+	const time2 = new Date().valueOf()
+	console.log('Time taken to run rust gene over representation pipeline:', time2 - time1, 'ms')
 	let result
 	for (const line of rust_output.split('\n')) {
 		if (line.startsWith('pathway_p_values:')) {
@@ -67,5 +64,6 @@ async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentati
 			console.log(line)
 		}
 	}
-	console.log('result:', result)
+	//console.log('result:', result)
+	return result as genesetOverrepresentationResponse
 }

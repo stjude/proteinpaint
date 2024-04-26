@@ -441,12 +441,12 @@ add:
 		}
 
 		if (self.settings.gene_ora) {
-			console.log('Run gene ora:', self.settings.gene_ora)
-			console.log('output.data:', output.data)
+			//console.log('Run gene ora:', self.settings.gene_ora)
+			//console.log('output.data:', output.data)
 			const sample_genes = []
 			const background_genes = []
-			console.log('self:', self)
-			console.log('fold_change_cutoff:', fold_change_cutoff)
+			//console.log('self:', self)
+			//console.log('fold_change_cutoff:', fold_change_cutoff)
 
 			// Need to handle those genes which do not have a name
 			if (self.settings.gene_ora == 'upregulated') {
@@ -485,6 +485,32 @@ add:
 				geneSetGroup: 'BP: subset of GO'
 			}
 			const data = await dofetch3('genesetOverrepresentation', { body })
+			//console.log("data:",data)
+
+			// Generating the table
+			self.gene_ora_table_cols = [
+				{ label: 'Pathway name' },
+				{ label: 'Original p-value (linear scale)' },
+				{ label: 'Adjusted p-value (linear scale)' }
+			]
+			self.gene_ora_table_rows = []
+			for (const pathway of data) {
+				self.gene_ora_table_rows.push([
+					{ value: pathway.pathway_name },
+					{ value: pathway.p_value_original },
+					{ value: pathway.p_value_adjusted }
+				])
+			}
+
+			const d_ora = self.dom.tableDiv.append('div').html(`<br>Gene over-representation results`)
+			renderTable({
+				columns: self.gene_ora_table_cols,
+				rows: self.gene_ora_table_rows,
+				div: d_ora,
+				showLines: true,
+				maxHeight: '30vh',
+				resize: true
+			})
 		}
 	}
 	return svg
