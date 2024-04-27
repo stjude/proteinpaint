@@ -64,8 +64,8 @@ export async function getPlotConfig(opts = {}, app) {
 				sampleNameFilter: '',
 				sortSamplesBy: 'a',
 				sortPriority: undefined, // will be filled-in
-				sortByMutation: 'consequence',
-				sortByCNV: true,
+				sortByMutation: 'consequence', // TODO: deprecate and instead set the matching sortOptions.a.sortPriority[*].tiebreakers[*].isOrdered
+				sortByCNV: true, // TODO: deprecate and instead set the matching sortOptions.a.sortPriority[*].tiebreakers[*].isOrdered
 				//sortOptions: getSortOptions(app.vocabApi.termdbConfig, controlLabels),
 				sortSampleGrpsBy: 'name', // 'hits' | 'name' | 'sampleCount'
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
