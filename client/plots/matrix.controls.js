@@ -235,7 +235,6 @@ export class MatrixControls {
 							const sortOptions = parent.config.settings.matrix.sortOptions
 							const activeOption = sortOptions.a
 							const cnvTb = activeOption.sortPriority[0].tiebreakers[2]
-							console.log(244, cnvTb, activeOption)
 							cnvTb.disabled = !sortByCNV
 							cnvTb.isOrdered = sortByCNV
 
