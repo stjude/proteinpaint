@@ -228,7 +228,7 @@ function getSortSamplesByClass(st, self, rows, s) {
 	if (sortSamples.disabled) return () => 0
 
 	const m = self.config.settings.matrix
-	const includeSSM = m.showMatrixMutation != 'none' && !m.allMatrixMutationHidden
+	const includeSSM = m.showMatrixMutation != 'none' && !m.allMatrixMutationHidden && m.sortByMutation == 'consequence'
 	const includeCNV = m.showMatrixCNV != 'none' && !m.allMatrixCNVHidden
 	const order = sortSamples.order.filter(
 		includeSSM && includeCNV
