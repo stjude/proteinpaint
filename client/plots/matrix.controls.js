@@ -202,9 +202,9 @@ export class MatrixControls {
 						callback: sortByMutation => {
 							const sortOptions = parent.config.settings.matrix.sortOptions
 							const activeOption = sortOptions.a
-							const mutTb = activeOption.sortPriority[0].tiebreakers[1] //; console.log(244, mutTb, activeOption)
+							const mutTb = activeOption.sortPriority[0].tiebreakers[1]
 							mutTb.disabled = !sortByMutation
-							mutTb.isOrdered = sortByMutation
+							mutTb.isOrdered = sortByMutation === 'consequence'
 
 							parent.app.dispatch({
 								type: 'plot_edit',
