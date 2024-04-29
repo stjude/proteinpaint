@@ -153,7 +153,9 @@ export class MatrixControls {
 				getBodyParams: () => {
 					const currentGeneNames = this.parent.termOrder
 						.filter(t => t.tw.term.type === 'geneVariant')
-						.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
+						.map(t =>
+							t.tw.term.chr ? `${t.tw.term.chr}:${t.tw.term.start}-${t.tw.term.stop}` : t.tw.term.gene || t.tw.term.name
+						) // TODO term.gene replaces term.name
 					return { currentGeneNames }
 				}
 			}
