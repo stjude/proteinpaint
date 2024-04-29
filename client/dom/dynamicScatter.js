@@ -32,15 +32,12 @@ export function addDynamicScatterForm(tip, app) {
 		.text('Submit')
 		.property('disabled', true)
 		.on('click', () => {
-			xterm.q = { mode: 'continuous' }
-			yterm.q = { mode: 'continuous' }
-
 			app.dispatch({
 				type: 'plot_create',
 				config: {
 					chartType: 'sampleScatter',
-					term: xterm,
-					term2: yterm,
+					term: { id: xterm.id, term: xterm, q: { mode: 'continuous' } },
+					term2: { id: yterm.id, term: yterm, q: { mode: 'continuous' } },
 					name: 'Dynamic scatter'
 				}
 			})

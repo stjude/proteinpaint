@@ -507,7 +507,6 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 	})
 }
 
-export const tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34 })
 export async function showTermsTree(
 	div,
 	callback,
@@ -518,6 +517,7 @@ export async function showTermsTree(
 	shift = true,
 	disable_terms = []
 ) {
+	const tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34, parent_menu: tip.d.node() })
 	tip2.clear()
 	if (shift) tip2.showunderoffset(div.node())
 	else tip2.showunder(div.node())
