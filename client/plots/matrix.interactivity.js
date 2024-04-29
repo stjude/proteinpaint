@@ -399,7 +399,9 @@ function setTermActions(self) {
 				for (const g of self.config.termgroups) {
 					for (const t of g.lst) {
 						if (t.term.type == 'geneVariant') {
-							if (t.term.gene) {
+							if (t.term.chr) {
+								currentGeneNames.push(`${t.term.chr}:${t.term.start}-${t.term.stop}`)
+							} else if (t.term.gene) {
 								currentGeneNames.push(t.term.gene)
 							} else if (t.term.name) {
 								currentGeneNames.push(t.term.name)
