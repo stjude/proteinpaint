@@ -956,7 +956,7 @@ export async function fillTermWrapper(
 }
 
 async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
-	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw)) //; console.log(953, tw.$id)
+	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric' : (t as string)
 	let _

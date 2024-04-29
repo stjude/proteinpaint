@@ -144,7 +144,7 @@ export class TermdbVocab extends Vocab {
 			const key = _key == 'term' ? 'term1' : _key
 			params.push(key + '_$id=' + encodeURIComponent(tw.$id))
 			// will need to generalize to also consider type=geneExpression
-			if ('id' in tw.term && tw.term.type != 'geneVariant') {
+			if ('id' in tw.term && (!tw.term?.type || !nonDictionaryTermTypes.has(tw.term.type))) {
 				params.push(key + '_id=' + encodeURIComponent(tw.term.id))
 			} else {
 				params.push(key + '=' + encodeURIComponent(JSON.stringify(tw.term)))
@@ -791,7 +791,7 @@ export class TermdbVocab extends Vocab {
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 			if (
 				this.vocab.dslabel == 'GDC' &&
-				copies.find(tw => tw.term.id && tw.term.type != 'geneVariant') &&
+				copies.find(tw => tw.term.id && (!tw.term?.type || !nonDictionaryTermTypes.has(tw.term.type))) &&
 				currentGeneNames?.length
 			) {
 				//term is dictionary term and there are gene terms,

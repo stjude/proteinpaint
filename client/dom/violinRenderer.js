@@ -3,7 +3,7 @@ import { line, curveMonotoneX } from 'd3-shape'
 import { rgb, brushX, axisTop } from 'd3'
 
 export class violinRenderer {
-	constructor(holder, plot, width = 500, height = 100, shiftx = 20, shifty = 30, callback = null, scaleFactor = 1) {
+	constructor(holder, plot, width = 500, height = 100, shiftx = 20, shifty = 20, callback = null, scaleFactor = 1) {
 		this.holder = holder
 		this.plot = plot
 		this.width = width
