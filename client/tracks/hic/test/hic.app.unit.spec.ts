@@ -582,7 +582,7 @@ tape('MatrixTypeControl - render()', test => {
 })
 
 //Test callback from Controls?
-tape('NormalizationMethodControl - render()', test => {
+tape('NormalizationMethodControl - render() and update()', test => {
 	test.plan(4)
 	const holder = getHolder()
 	const normalization = ['VC', 'VC_SQRT', 'VC_SQRT_VC']
@@ -597,7 +597,7 @@ tape('NormalizationMethodControl - render()', test => {
 	test.equal(nmeth1.nmethSelect.node().tagName, 'SELECT', 'Should render a dropdown element.')
 	const options = nmeth1.nmethSelect.node().options
 	const includeNone = Array.from(options).some((o: any) => o.value == 'NONE')
-	test.ok(!includeNone, 'Should include a NONE option. None is set in app.')
+	test.ok(!includeNone, 'Should not include a NONE option. None is set in app.')
 
 	//No normalization methods
 	const nmeth2 = new NormalizationMethodControl(holder, [], defaultNmeth, callback)
