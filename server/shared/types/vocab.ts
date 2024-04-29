@@ -21,8 +21,7 @@ export type VocabApi = {
 	getterm: (f: any) => Term
 	getTerms: (f: any) => any
 	getTermdbConfig: () => any
-	getViolinPlotData: (f: any, params: any) => void
-	getGeneExpViolinPlotData: (f: any) => any
+	getViolinPlotData: (args: any, _body?: any) => any
 	getTwMinCopy(tw: TermWrapper): any
 	uncacheTermQ: (term: Term, q: any) => any
 	hasVerifiedToken: () => boolean

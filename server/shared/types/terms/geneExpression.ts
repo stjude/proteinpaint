@@ -10,12 +10,6 @@ GeneExpressionTermSettingInstance
 */
 
 export type GeneExpressionQ = BaseQ & {
-	// termType: 'GeneExpression'
-	cnvGainCutoff?: number
-	cnvMaxLength?: number
-	cnvMinAbsValue?: number
-	cnvLossCutoff?: number
-	exclude: any //an array maybe?
 	mode: 'continuous'
 }
 
