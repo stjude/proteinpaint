@@ -27,7 +27,7 @@ export async function getHandler(self) {
 
 export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
 	if (!tw.term.bins) {
-		const d = await vocabApi.getGeneExpViolinPlotData({ termid: tw.term.id }) //the id it is the gene
+		const d = await vocabApi.getViolinPlotData({ termid: tw.term.id, termType: TermTypes.GENE_EXPRESSION }) //the id it is the gene
 		tw.q = structuredClone(d.bins.default) //we should not overwrite the default
 		tw.q.mode = 'continuous'
 		tw.term.bins = d.bins
