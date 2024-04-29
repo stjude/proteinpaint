@@ -34,8 +34,11 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 }
 
 export function fillTW(tw: GeneVariantTW, vocabApi?: VocabApi) {
-	if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop)))
-		throw 'no gene or position specified'
+	if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop))) {
+		// support saved states that have the older geneVariant term data shape
+		if (tw.term.name) tw.term.gene = tw.term.name
+		else throw 'no gene or position specified'
+	}
 	if (!tw.term.name) tw.term.name = tw.term.gene || `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
 	if (!tw.term.id) tw.term.id = tw.term.name
 
