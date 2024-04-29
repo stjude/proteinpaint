@@ -1,3 +1,4 @@
+import { isNonDictionary } from '#shared/common.js'
 /*
 nested filter documented at:
 https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit?pli=1#heading=h.eeqtb17pxcp0
@@ -49,7 +50,7 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			throw `filter item should have a 'tvs' or 'lst' property`
 		} else if (
 			item.tvs.term.id &&
-			item.tvs.term.type != 'geneVariant' &&
+			(!item.tvs.term.type || !isNonDictionary(item.tvs.term.type)) &&
 			!ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)
 		) {
 			throw 'invalid term id in tvs'

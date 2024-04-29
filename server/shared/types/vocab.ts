@@ -1,4 +1,4 @@
-import { Term } from './terms/tw.ts'
+import { Term, TermWrapper } from './terms/tw.ts'
 import { Filter } from './filter.ts'
 import { UseCase } from './termsetting.ts'
 
@@ -23,6 +23,7 @@ export type VocabApi = {
 	getTermdbConfig: () => any
 	getViolinPlotData: (f: any, params: any) => void
 	getGeneExpViolinPlotData: (f: any) => any
+	getTwMinCopy(tw: TermWrapper): any
 	uncacheTermQ: (term: Term, q: any) => any
 	hasVerifiedToken: () => boolean
 	tokenVerificationMessage: string

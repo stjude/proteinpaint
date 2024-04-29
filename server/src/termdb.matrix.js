@@ -336,7 +336,6 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	for (const { sample, key, term_id, value } of rows) {
 		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
-		//const term_id = tw$IdByIndex[i]; console.log(305, term_id) //twBy$id[term_id]
 		// this assumes unique term key/value for a given sample
 		// samples[sample][term_id] = { key, value }
 
