@@ -168,15 +168,34 @@ async function getSampleData(q) {
 				let value = Number(values[sampleId]).toFixed(2)
 				if (tw.q.mode == 'discrete') {
 					let bin
-					if (value < bins.first_bin.stop) bin = 0
-					else bin = parseInt((value - bins.first_bin.stop) / bins.bin_size) + 1
-					if (bin == 0) value = (bins.startinclusive ? '<= ' : '< ') + bins.first_bin.stop
-					else if (bins.startinclusive ? value >= bins.last_bin.start : value > bins.last_bin.start)
-						value = (bins.startinclusive ? '>= ' : '> ') + bins.last_bin.start
-					else {
-						const start = (bins.first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
-						const stop = (bins.first_bin.stop + bin * bins.bin_size).toFixed(2)
-						value = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
+					if (tw.q.type == 'regular-bin') {
+						if (value < bins.first_bin.stop) bin = 0
+						else bin = parseInt((value - bins.first_bin.stop) / bins.bin_size) + 1
+						if (bin == 0) value = (bins.startinclusive ? '<= ' : '< ') + bins.first_bin.stop
+						else if (bins.startinclusive ? value >= bins.last_bin.start : value > bins.last_bin.start)
+							value = (bins.startinclusive ? '>= ' : '> ') + bins.last_bin.start
+						else {
+							const start = (bins.first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
+							const stop = (bins.first_bin.stop + bin * bins.bin_size).toFixed(2)
+							value = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
+						}
+					} else if (tw.q.type == 'custom-bin') {
+						let bin = bins.lst.findIndex(
+							b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
+						)
+						if (bin == -1)
+							bin = bins.lst.findIndex(
+								b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
+							)
+						if (bin == -1)
+							bin = bins.lst.findIndex(
+								b =>
+									(value > b.start && value < b.stop) ||
+									(b.startinclusive && value == b.start) ||
+									(b.stopinclusive && value == b.stop)
+							)
+
+						value = bins.lst[bin].label
 					}
 				}
 				samples[sampleId][tw.$id] = { key: value, value }
