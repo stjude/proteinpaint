@@ -82,7 +82,7 @@ export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
 	const axisScale = scaleLinear().domain([min, max]).range([0, q.svgw])
 	plot.density = getBinsDensity(axisScale, plot, true, q.ticks)
 	delete plot.values
-	const step = (max - min) / 10
+	const step = Math.round((max - min) * 10) / 100 // round to 2 decimal places
 
 	const result = {
 		min,

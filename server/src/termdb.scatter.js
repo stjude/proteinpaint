@@ -395,15 +395,25 @@ function order(map, tw, refs) {
 		})
 	} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
 		entries = Object.entries(map)
-		const floatRegex = /^[+-]?\d+(\.\d+)?/
+		//this logic to sort may be reduced using some bin methods
 		entries.sort((a, b) => {
-			if (a[0].startsWith('<')) return -1
-			if (a[0].startsWith('>')) return 1
-			let num1 = a[0].match(floatRegex)
-			let num2 = b[0].match(floatRegex)
-			if (!num1 || !num2) return -1
-			num1 = parseFloat(num1[0])
-			num2 = parseFloat(num2[0])
+			let num1, num2
+			if (tw.q.type == 'custom-bin') {
+				const bin1 = tw.q.lst?.find(bin => bin.label == a[0])
+				const bin2 = tw.q.lst?.find(bin => bin.label == b[0])
+				if (bin1.startunbounded) return -1
+				if (bin2.startunbounded) return 1
+				if (bin1.stopunbounded) return 1
+				if (bin2.stopunbounded) return -1
+				num1 = bin1.stop
+				num2 = bin2.stop
+			} else {
+				const floatRegex = /(.*?)[+-]?\d+(\.\d+)$/
+				num1 = a[0].match(floatRegex)
+				num2 = b[0].match(floatRegex)
+				num1 = parseFloat(num1[0])
+				num2 = parseFloat(num2[0])
+			}
 
 			if (num1 < num2) return -1
 			if (num1 > num2) return 1
