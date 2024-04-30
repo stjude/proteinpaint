@@ -143,7 +143,7 @@ export class MatrixControls {
 					return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
 				},
 				processInput: tw => {
-					if (tw) fillTermWrapper(tw)
+					if (tw) fillTermWrapper(tw, this.opts.app.vocabApi)
 					return tw
 				},
 				processConfig: config => {
@@ -1349,7 +1349,7 @@ export class MatrixControls {
 			termlst.map(async _term => {
 				const term = structuredClone(_term)
 				const tw = 'id' in term ? { id: term.id, term } : { term }
-				await fillTermWrapper(tw)
+				await fillTermWrapper(tw, this.opts.app.vocabApi)
 				return tw
 			})
 		)

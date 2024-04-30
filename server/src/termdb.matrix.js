@@ -262,11 +262,11 @@ function divideTerms(lst) {
 		nonDict = []
 	for (const tw of lst) {
 		const type = tw.term?.type
-		if (type && isNonDictionary(type)) {
-			nonDict.push(tw)
-		} else {
-			dict.push(tw)
-		}
+		if (type) {
+			if (isNonDictionary(type)) nonDict.push(tw)
+			else dict.push(tw)
+		} else if (tw.term?.id) dict.push(tw) // TODO: detect using term.type as part of request payload
+		else nonDict.push(tw) // TODO: detect using term.type as part of request payload
 	}
 	return [dict, nonDict]
 }
@@ -444,9 +444,10 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		}
 
 		for (const tw of termWrappers) {
-			const $id = tw.$id || tw.term.id || tw.term.name
+			const id = tw.term.id || tw.term.name
+			const $id = tw.$id || id
 			if (!tw.$id) tw.$id = $id
-			const v = s[$id]
+			const v = s[id]
 			////////////////////////////
 			// somehow value can be undefined! must skip them
 			////////////////////////////

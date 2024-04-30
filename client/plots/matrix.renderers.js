@@ -383,7 +383,7 @@ export function setRenderers(self) {
 			callback: tw => {
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
-				if (tw) fillTermWrapper(tw)
+				if (tw) fillTermWrapper(tw, self.app.vocabApi)
 				//if (opts.processInput) opts.processInput(tw)
 				pill.main(tw ? tw : { term: null, q: null })
 				box.datum({ tw })

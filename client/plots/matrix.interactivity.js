@@ -958,7 +958,7 @@ function setTermActions(self) {
 			termlst.map(async _term => {
 				const term = structuredClone(_term)
 				const tw = 'id' in term ? { id: term.id, term } : { term }
-				await fillTermWrapper(tw)
+				await fillTermWrapper(tw, self.app.vocabApi)
 				return tw
 			})
 		)
