@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.57.0
 
 Features:
 - enable 'lollipop' plot btn through tsne sample clicking for geneVariant terms
