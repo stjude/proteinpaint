@@ -304,6 +304,9 @@ export async function init(arg, holder, genomes) {
 }
 
 async function getGenes(arg, settings) {
+	// the app and its vocabApi is not available initially, so supply a default vocabApi
+	const vocabApi = { getTwMinCopy }
+
 	// genes are not predefined. query to get top genes using the current cohort
 	const body = {
 		maxGenes: settings.maxGenes,
@@ -318,7 +321,34 @@ async function getGenes(arg, settings) {
 	return await Promise.all(
 		// do tempfix of "data.genes.slice(0,3).map" for faster testing
 		data.genes.map(async i => {
-			return await fillTermWrapper({ term: { gene: i.gene, type: 'geneVariant' } })
+			return await fillTermWrapper({ term: { gene: i.gene, type: 'geneVariant' } }, vocabApi)
 		})
 	)
+}
+
+function getTwMinCopy(tw) {
+	const copy = { $id: tw.$id, term: {}, q: tw.q }
+	if (tw.term?.type == 'geneVariant') {
+		copy.term.name = tw.term.name
+		copy.term.type = tw.term.type
+		if (tw.term.gene) {
+			copy.term.gene = tw.term.gene
+		} else {
+			copy.term.chr = tw.term.chr
+			copy.term.start = tw.term.start
+			copy.term.stop = tw.term.stop
+		}
+	} else if ('id' in tw || (tw.term && 'id' in tw.term)) {
+		copy.term.id = tw.id || tw.term.id
+		if (tw.term?.type == 'snplst' || tw.term?.type == 'snplocus') {
+			// added following so getData will not break
+			copy.term.type = tw.term.type
+			copy.term.name = tw.term.name
+		}
+	} else {
+		copy.term.name = tw.term?.name
+		copy.term.type = tw.term?.type
+		copy.term.values = tw.term?.values
+	}
+	return copy
 }
