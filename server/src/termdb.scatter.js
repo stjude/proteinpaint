@@ -135,7 +135,7 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 		let refSamples, cohortSamples
 		if (q.coordTWs.length == 2) {
 			refSamples = []
-			cohortSamples = await getScatterCoordinates(req, q, ds)
+			cohortSamples = await getCoordinates(req, q, ds, genome)
 		} else {
 			if (!q.plotName) throw `Neither plot name or coordinates where provided`
 			if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
@@ -449,7 +449,29 @@ function order(map, tw, refs) {
 	return entries
 }
 
-export async function getScatterCoordinates(req, q, ds, type = 'sample') {
+export async function getCoordinates(req, q, ds, genome) {
+	const terms = [q.coordTWs[0], q.coordTWs[1]]
+	if (q.divideByTW) terms.push(q.divideByTW)
+	const data = await getData({ filter: q.filter, terms }, ds, genome)
+	const canDisplay = authApi.canDisplaySampleIds(req, ds)
+	const samples = []
+	for (const sampleId in data.samples) {
+		const values = data.samples[sampleId]
+		const x = values[q.coordTWs[0].$id]?.value
+		const y = values[q.coordTWs[1].$id]?.value
+		const z = q.divideByTW ? values[q.divideByTW?.$id]?.value : 0
+
+		if (x == undefined || y == undefined || z == undefined) continue
+		const sample = { sampleId, x: parseFloat(x), y: parseFloat(y), z: parseFloat(z) }
+		if (canDisplay) sample.sample = ds.sampleId2Name.get(sampleId)
+		const computable =
+			isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y) && isComputable(q.divideByTW?.term, z)
+		if (sample && computable) samples.push(sample)
+	}
+	return samples
+}
+
+export async function getCoordinatesFromDictTerms(req, q, ds, type = 'sample') {
 	q.ds = ds
 	const samples = []
 	if (q.coordTWs.length != 2) return samples
