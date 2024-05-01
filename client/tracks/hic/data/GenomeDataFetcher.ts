@@ -24,7 +24,8 @@ export class GenomeDataFetcher {
 					resolution: obj.resolution,
 					matrixType: obj.matrixType,
 					file: this.hic.file,
-					url: this.hic.url
+					url: this.hic.url,
+					nochr: this.hic.nochr
 				})
 			})
 

@@ -43,12 +43,14 @@ function init() {
 				return req.query.chrlst.slice(0, i + 1).map((follow, j) => {
 					if (j <= i) {
 						return new Promise<void>((resolve, reject): void => {
+							const pos1 = req.query.nochr ? lead.replace('chr', '') : lead
+							const pos2 = req.query.nochr ? follow.replace('chr', '') : follow
 							const par = [
 								matrixType,
 								req.query.nmeth || 'NONE',
 								file,
-								lead.replace('chr', ''),
-								follow.replace('chr', ''),
+								pos1,
+								pos2,
 								req.query.isfrag ? 'FRAG' : 'BP',
 								req.query.resolution
 							]
