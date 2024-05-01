@@ -451,33 +451,41 @@ add:
 			// Need to handle those genes which do not have a name
 			if (self.settings.gene_ora == 'upregulated') {
 				for (const gene of output.data) {
-					if (fold_change_cutoff < Math.abs(gene.fold_change) && gene.fold_change > 0) {
-						sample_genes.push(gene.gene_symbol)
-					} else {
-						background_genes.push(gene.gene_symbol)
+					if (gene.gene_symbol.length > 0) {
+						// Do not include blank rows
+						if (fold_change_cutoff < Math.abs(gene.fold_change) && gene.fold_change > 0) {
+							sample_genes.push(gene.gene_symbol)
+						} else {
+							background_genes.push(gene.gene_symbol)
+						}
 					}
 				}
 			} else if (self.settings.gene_ora == 'downregulated') {
 				for (const gene of output.data) {
-					if (fold_change_cutoff < Math.abs(gene.fold_change) && gene.fold_change < 0) {
-						sample_genes.push(gene.gene_symbol)
-					} else {
-						background_genes.push(gene.gene_symbol)
+					if (gene.gene_symbol.length > 0) {
+						// Do not include blank rows
+						if (fold_change_cutoff < Math.abs(gene.fold_change) && gene.fold_change < 0) {
+							sample_genes.push(gene.gene_symbol)
+						} else {
+							background_genes.push(gene.gene_symbol)
+						}
 					}
 				}
 			} else if (self.settings.gene_ora == 'both') {
 				for (const gene of output.data) {
-					if (fold_change_cutoff < Math.abs(gene.fold_change)) {
-						sample_genes.push(gene.gene_symbol)
-					} else {
-						background_genes.push(gene.gene_symbol)
+					if (gene.gene_symbol.length > 0) {
+						// Do not include blank rows
+						if (fold_change_cutoff < Math.abs(gene.fold_change)) {
+							sample_genes.push(gene.gene_symbol)
+						} else {
+							background_genes.push(gene.gene_symbol)
+						}
 					}
 				}
 			} else {
 				console.log('Unrecognized option')
 			}
-			console.log('sample_genes:', sample_genes.length)
-			console.log('background_genes:', background_genes.length)
+
 			const body = {
 				sample_genes: sample_genes.toString(),
 				background_genes: background_genes.toString(),
@@ -486,6 +494,15 @@ add:
 			}
 			const data = await dofetch3('genesetOverrepresentation', { body })
 			//console.log("data:",data)
+
+			self.dom.detailsDiv
+				.append('div')
+				.html(
+					'Number of sample genes used for gene over representation analysis:' +
+						sample_genes.length +
+						'<br>Number of background genes used for gene over representation analysis:' +
+						background_genes.length
+				)
 
 			// Generating the table
 			self.gene_ora_table_cols = [
@@ -502,6 +519,7 @@ add:
 				])
 			}
 
+			self.dom.tableDiv.selectAll('*').remove()
 			const d_ora = self.dom.tableDiv.append('div').html(`<br>Gene over-representation results`)
 			renderTable({
 				columns: self.gene_ora_table_cols,
