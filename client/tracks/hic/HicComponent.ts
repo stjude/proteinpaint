@@ -70,7 +70,7 @@ export class HicComponent {
 		else return false
 	}
 
-	async initView() {
+	initView() {
 		if (this.state.currView == 'genome') {
 			this.genome = new GenomeView({
 				plotDiv: this.plotDiv,
@@ -157,7 +157,7 @@ export class HicComponent {
 		return this.calResolution
 	}
 
-	async setDataArgs(appState: any) {
+	setDataArgs(appState: any) {
 		const currView = this.state[this.state.currView]
 		const args = {
 			nmeth: currView.nmeth,
@@ -189,7 +189,7 @@ export class HicComponent {
 			this.min = min
 			this.max = max
 
-			await this.initView()
+			this.initView()
 
 			this.components = {
 				controls: await controlPanelInit({
@@ -224,7 +224,7 @@ export class HicComponent {
 			if (this.state.currView != 'horizontal') {
 				this.app.dispatch({ type: 'loading_active', active: true })
 
-				const args = await this.setDataArgs(appState)
+				const args = this.setDataArgs(appState)
 				await this.fetchData(args)
 				const [min, max] = this.dataMapper.sortData(this.data)
 				this.min = min

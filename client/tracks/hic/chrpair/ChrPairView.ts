@@ -28,7 +28,7 @@ export class ChrPairView {
 
 	binpx = 1
 	/** padding on the ends of x/y chr coordinate axes */
-	axispad = 10
+	readonly axispad = 10
 	calResolution: number | null = null
 	data: number[][] = []
 

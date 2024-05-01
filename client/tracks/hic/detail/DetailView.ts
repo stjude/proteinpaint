@@ -33,9 +33,8 @@ export class DetailView {
 
 	/** Defaults **/
 	binpx = 2
-	initialBinNum = 20
-	minCanvasSize = 500
-	bbmargin = 1
+	readonly minCanvasSize = 500
+	readonly bbmargin = 1
 
 	constructor(opts: any) {
 		this.app = opts.app
@@ -144,7 +143,7 @@ export class DetailView {
 			state.x,
 			state.y,
 			this.items,
-			this.calResolution,
+			this.calResolution as number,
 			this.canvas,
 			this.dataMapper['fragData']
 		)

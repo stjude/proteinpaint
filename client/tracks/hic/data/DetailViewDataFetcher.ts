@@ -41,7 +41,7 @@ export class DetailViewDataFetcher {
 			return await dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
 		} catch (e: any) {
 			this.errList.push(e.message || e)
-			if (e.stack) console.log(e.stack)
+			console.error(e.stack)
 		}
 	}
 
@@ -92,7 +92,7 @@ export class DetailViewDataFetcher {
 			return data
 		} catch (e: any) {
 			this.errList.push(e.message || e)
-			if (e.stack) console.log(e.stack)
+			console.error(e.stack)
 		}
 	}
 

@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { Div, Elem } from '../types/d3'
+import { Elem } from '../types/d3'
 import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from '#dom/axisstyle'
 
@@ -35,7 +35,7 @@ export class ColorScale {
 	/** Required */
 	data: any
 	/** Required */
-	holder: Elem | Div
+	holder: Elem
 	position: string
 	/** Optional. Attributes for the svg*/
 	svg: {

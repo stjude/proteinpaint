@@ -12,16 +12,13 @@ import * as d3s from 'd3-selection'
 import { CutoffControl } from '../controls/CutoffControl.ts'
 import { MatrixTypeControl } from '../controls/MatrixTypeControl.ts'
 import { NormalizationMethodControl } from '../controls/NormalizationMethodControl.ts'
+import { Elem } from 'types/d3'
 
 function getHolder() {
-	return (
-		d3s
-			.select('body')
-			.append('div')
-			// .style('border', '1px solid #aaa')
-			.style('padding', '5px')
-			.style('margin', '5px')
-	)
+	return d3s.select('body').append('div')
+	// .style('border', '1px solid #aaa')
+	// .style('padding', '5px')
+	// .style('margin', '5px')
 }
 
 type MockState = {
@@ -543,13 +540,13 @@ tape('DetailCoordinates - calculateCoordinates()', test => {
 //Test callback from Controls?
 tape('CutoffControl - render()', test => {
 	test.plan(2)
-	const holder = getHolder()
+	const holder: any = getHolder()
 	const value = 3
 	const callback = () => {
-		//I'm a comment so ts doesn't complain
+		//TODO: Add test for callback
 	}
 
-	const cutoff = new CutoffControl(holder, value, callback)
+	const cutoff = new CutoffControl(holder as Elem, value, callback)
 	cutoff.render()
 
 	const input = holder.select('input')
@@ -566,12 +563,12 @@ tape('CutoffControl - render()', test => {
 //Test callback from Controls?
 tape('MatrixTypeControl - render()', test => {
 	test.plan(2)
-	const holder = getHolder()
+	const holder: any = getHolder()
 	const callback = () => {
-		//I'm a comment so ts doesn't complain
+		//TODO: Add test for callback
 	}
 
-	const matrixType = new MatrixTypeControl(holder, callback)
+	const matrixType = new MatrixTypeControl(holder as Elem, callback)
 	matrixType.render()
 
 	const options = matrixType.matrixSelect.node().options
@@ -584,15 +581,15 @@ tape('MatrixTypeControl - render()', test => {
 //Test callback from Controls?
 tape('NormalizationMethodControl - render() and update()', test => {
 	test.plan(4)
-	const holder = getHolder()
+	const holder: any = getHolder()
 	const normalization = ['VC', 'VC_SQRT', 'VC_SQRT_VC']
 	const defaultNmeth = 'NONE'
 	const callback = () => {
-		//I'm a comment so ts doesn't complain
+		//TODO: Add test for callback
 	}
 
 	//With normalization methods
-	const nmeth1 = new NormalizationMethodControl(holder, normalization, defaultNmeth, callback)
+	const nmeth1 = new NormalizationMethodControl(holder as Elem, normalization, defaultNmeth, callback)
 	nmeth1.render()
 	test.equal(nmeth1.nmethSelect.node().tagName, 'SELECT', 'Should render a dropdown element.')
 	const options = nmeth1.nmethSelect.node().options

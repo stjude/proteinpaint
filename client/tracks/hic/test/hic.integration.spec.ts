@@ -126,8 +126,3 @@ tape('hicparsestat()', async test => {
 	result = hicparsestat(hic, j)
 	test.equal(hic.fragresolution, j['Fragment-delimited resolutions'], message)
 })
-//Replacing with ParseFragData
-tape.skip('hicparsefragdata()', test => {
-	//test.plan()
-	test.end()
-})
