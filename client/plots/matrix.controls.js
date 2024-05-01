@@ -1117,27 +1117,30 @@ export class MatrixControls {
 				mode: selectedGroup.mode,
 				minNumGenes: selectedGroup.mode == 'expression' ? 3 : 1,
 				vocabApi: this.opts.app.vocabApi,
-				callback: ({ geneList, groupName }) => {
+				callback: async ({ geneList, groupName }) => {
 					if (!selectedGroup) throw `missing selectedGroup`
 					tip.hide()
 					const group = selectedGroup.status == 'new' ? { name: groupName, lst: [] } : tg[selectedGroup.index]
 					if (selectedGroup.status == 'new') tg.push(group)
 					const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
-					const tws = geneList.map(d => {
-						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-						let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
-						if (!tw)
-							tw = {
-								$id: get$id(),
-								term: {
-									gene: d.symbol || d.gene,
-									name: d.symbol || d.gene,
-									type: 'geneVariant'
-								},
-								q: {}
+					const tws = await Promise.all(
+						geneList.map(async d => {
+							const term = {
+								gene: d.symbol || d.gene,
+								name: d.symbol || d.gene,
+								type: 'geneVariant'
 							}
-						return tw
-					})
+							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+							if (!tw) {
+								tw = { term, q: {} }
+								tw.$id = await get$id(this.opts.app.vocabApi.getTwMinCopy(tw))
+							} else if (!tw.$id) {
+								tw.$id = await get$id(this.opts.app.vocabApi.getTwMinCopy({ term }))
+							}
+							return tw
+						})
+					)
 					group.lst = [...lst, ...tws]
 					if (!group.lst.length) tg.splice(selectedGroup.index, 1)
 					app.dispatch({

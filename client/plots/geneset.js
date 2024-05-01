@@ -144,10 +144,7 @@ class GenesetComp {
 			callback: async result => {
 				const twlst = await Promise.all(
 					result.geneList.map(async i => {
-						return await fillTermWrapper(
-							{ term: { gene: i.gene || i.name || i, type: 'geneVariant' } },
-							this.app.vocabApi
-						)
+						return fillTermWrapper({ term: { gene: i.gene || i.name || i, type: 'geneVariant' } }, this.app.vocabApi)
 					})
 				)
 
