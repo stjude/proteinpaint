@@ -183,7 +183,8 @@ class TdbApp {
 					holder: this.dom.termTypeSearchDiv,
 					topbar: this.dom.topbar,
 					genome: this.opts.vocabApi?.app?.opts?.genome,
-					click_term: this.opts.tree?.click_term
+					click_term: this.opts.tree?.click_term,
+					submit_lst: this.opts.tree?.submit_lst
 				}),
 				tree: treeInit({
 					app: this.api,
