@@ -213,7 +213,7 @@ function showSnvindelHelp(div) {
 		Position types:
 		<ul><li>Codon position: integer, 1-based (do not use for noncoding gene)</li>
 		<li>RNA position: integer, 1-based, beginning from transcription start site</li>
-		<li>Genomic position: chromosome name and 1-based coordinate joined by colon, e.g. chr1:2345</li></ul>`
+		<li>Genomic position: integer, 1-based coordinate</li></ul>`
 		)
 	mclasscolor2table(infodiv1.append('table').style('margin-top', '3px'), true)
 }
