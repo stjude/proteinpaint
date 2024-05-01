@@ -1,7 +1,7 @@
 export class Resolution {
 	error: (f: string | string[]) => void
-	initialBinNum = 20
-	minBinNum_bp = 200
+	readonly initialBinNum = 20
+	readonly minBinNum_bp = 200
 
 	constructor(error: (f: string | string[]) => void) {
 		this.error = error

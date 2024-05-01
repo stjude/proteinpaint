@@ -19,10 +19,10 @@ export class DetailBlock {
 	block: any
 
 	/** Defaults */
-	leftheadw = 20
-	rightheadw = 40
-	lpad = 1
-	rpad = 1
+	readonly leftheadw = 20
+	readonly rightheadw = 40
+	readonly lpad = 1
+	readonly rpad = 1
 	firstRender = true
 
 	constructor(
@@ -73,8 +73,8 @@ export class DetailBlock {
 
 	setMethods(canvasHolder: any, canvas: any, sheath?: any) {
 		const runPpMethods = {
-			onloadalltk_always: async () => {
-				await this.onload(canvasHolder, canvas, sheath)
+			onloadalltk_always: () => {
+				this.onload(canvasHolder, canvas, sheath)
 			},
 			onpanning: (xoff: number) => this.onpanning(xoff, canvas)
 		}
@@ -88,7 +88,7 @@ export class DetailBlock {
 		return runPpMethods
 	}
 
-	async onload(canvasHolder: any, canvas: any, sheath?: any) {
+	onload(canvasHolder: any, canvas: any, sheath?: any) {
 		//Calculate from the rendered block and apply as the default for canvas/heatmap rendering
 		this.bbw =
 			this.block.leftheadw +

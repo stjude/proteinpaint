@@ -13,11 +13,11 @@ class HicApp {
 	api: any
 	components: any
 	dom: {
-		errorDiv: Div | Elem
-		controlsDiv: Div | Elem
-		infoBarDiv: Div | Elem
-		loadingDiv: Div | Elem
-		plotDiv: Div | Elem
+		errorDiv: Elem
+		controlsDiv: Elem
+		infoBarDiv: Elem
+		loadingDiv: Div
+		plotDiv: Elem
 		tip: Menu
 	}
 	errList: string[]
@@ -26,7 +26,7 @@ class HicApp {
 		file?: string
 		url?: string
 		genome: any
-		holder: Div | Elem
+		holder: Div
 		hostUrl: string
 		name: string
 		position1?: string
@@ -172,12 +172,8 @@ class HicApp {
 			}
 			await this.api.dispatch()
 		} catch (e: any) {
-			if (e.stack) console.log(e.stack)
+			console.error(e.stack)
 		}
-	}
-
-	main() {
-		//I'm a comment so ts doesn't complain
 	}
 }
 

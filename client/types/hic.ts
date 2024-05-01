@@ -1,44 +1,8 @@
-// import { BaseTrackArgs } from './tracks.ts'
 import { Selection } from 'd3'
 import { Div, Elem, Tr } from './d3'
 import { NormalizationMethodControl } from '../tracks/hic/controls/NormalizationMethodControl'
 import { MatrixTypeControl } from '../tracks/hic/controls/MatrixTypeControl'
 import { CutoffControl } from '../tracks/hic/controls/CutoffControl'
-
-// type SharedArgs = {
-// 	/** HiC file path from tp/ */
-// 	file?: string
-// 	/** Remote HiC file URL */
-// 	url?: string
-// }
-
-// type RestrictionEnzyme = 'Dpnll' | 'EcoRl' | 'Hindlll' | 'MboI' | 'Ncol'
-
-// export type HicRunProteinPaintTrackArgs = BaseTrackArgs &
-// 	SharedArgs & {
-// 		/** Specifies the track type
-// 		 * TODO: maybe move 'type' to BaseBlockArgs
-// 		 */
-// 		type: 'hicstraw'
-// 		name: string
-// 		percentile_max: number
-// 		mincutoff: number
-// 		/** Indicates whether the tip of the track points up or down */
-// 		pyramidup: number | boolean
-// 		enzyme: RestrictionEnzyme
-// 		/** Normalization method for the queried data */
-// 		normalizationmethod: string | string[]
-// 	}
-
-// export type HicstrawArgs = SharedArgs & {
-// 	matrixType: 'observed' | 'expected' | 'oe'
-// 	pos1: string
-// 	pos2: string
-// 	/** Normalization method for the queried data */
-// 	nmeth: string[]
-// 	resolution: number
-// 	isfrag?: boolean
-// }
 
 export type MainPlotDiv = {
 	append: (s: string) => any
@@ -109,34 +73,3 @@ export type ReturnedItems = { items: number[][] }
 export type CoordinatesData = { items: [number, number, number][] }
 
 export type ChrPosition = { chr: string; start: number; stop: number }
-
-// export type HicstrawInput = {
-// 	atdev: boolean
-// 	bpresolution: number[]
-// 	chrlst: string[]
-// 	chrorder: string[]
-// 	enzyme: string
-// 	enzymefile: string
-// 	file: string
-// 	fragresolution: number[]
-// 	genome: {
-// 		chrlookup: string[]
-// 		hicenzymefragment: number
-// 		majorchrorder: string[]
-// 	}
-// 	hostURL: string
-// 	/** TODO: define this somewhere */
-// 	jwt: any
-// 	name: string
-// 	nochr: boolean
-// 	normalization: string[]
-// 	sv: {
-// 		file: string
-// 		header: string
-// 		items: any
-// 	}
-// 	/** TODO: corresponds to eventual TrackEntry shared type */
-// 	tklst: any
-// 	url: string
-// 	version: string
-// }

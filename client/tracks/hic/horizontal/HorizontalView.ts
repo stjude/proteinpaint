@@ -87,8 +87,8 @@ export class HorizontalView {
 		blocklazyload(arg)
 	}
 
-	update() {
-		//Not required.
-		//If controls are added back. Implement changes here.
-	}
+	// update() {
+	// 	//Not required.
+	// 	//If controls are added back. Implement changes here.
+	// }
 }

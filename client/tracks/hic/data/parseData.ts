@@ -240,7 +240,7 @@ export function hicparsestat(hic: any, j: any) {
 export function hicparsefragdata(items: any) {
 	const id2coord = new Map()
 	let min: number | null = null,
-		max: number | any
+		max: number
 
 	for (const i of items) {
 		// id of first fragment
@@ -257,8 +257,8 @@ export function hicparsefragdata(items: any) {
 			max = id
 		} else {
 			min = Math.min(min, id)
-			max = Math.max(max, id)
+			max = Math.max(max!, id)
 		}
 	}
-	return [null, id2coord, min, max]
+	return [null, id2coord, min, max!]
 }

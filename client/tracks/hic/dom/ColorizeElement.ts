@@ -1,5 +1,5 @@
 export class ColorizeElement {
-	async colorizeElement(
+	colorizeElement(
 		/** x coordinate */
 		xCoord: number,
 		/** y coordinate */
