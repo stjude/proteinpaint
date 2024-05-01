@@ -44,7 +44,8 @@ async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentati
 	const gene_overrepresentation_input = {
 		sample_genes: q.sample_genes,
 		background_genes: q.background_genes,
-		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name
+		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
+		gene_set_group: q.geneSetGroup
 	}
 
 	//fs.writeFile('test.txt', JSON.stringify(gene_overrepresentation_input), function (err) {

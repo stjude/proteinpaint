@@ -79,6 +79,12 @@ fn main() -> Result<()> {
                         Some(db_string) => db = db_string.to_string(),
                         None => panic!("db file path is missing"),
                     }
+                    let genesetgroup;
+                    let genesetgroup_input: &JsonValue = &json_string["gene_set_group"];
+                    match genesetgroup_input.as_str() {
+                        Some(genesetgroup_string) => genesetgroup = genesetgroup_string.to_string(),
+                        None => panic!("genesetgroup is missing"),
+                    }
                     let sample_genes_input: &JsonValue = &json_string["sample_genes"];
                     let sample_genes: Vec<&str> =
                         sample_genes_input.as_str().unwrap().split(",").collect();
@@ -91,9 +97,20 @@ fn main() -> Result<()> {
                         .collect();
                     //println!("sample_genes:{:?}", sample_genes);
                     //println!("background_genes:{:?}", background_genes);
+
+                    if sample_genes.len() == 0 {
+                        panic!("No sample genes provided");
+                    } else if background_genes.len() == 0 {
+                        panic!("No background genes provided");
+                    }
+                    let num_items_output = 100; // Number of top pathways to be specified in the output
+
                     let conn = Connection::open(db)?;
-                    let stmt_result =
-                        conn.prepare("select id from terms where parent_id='BP: subset of GO'");
+                    let stmt_result = conn.prepare(
+                        &("select id from terms where parent_id='".to_owned()
+                            + &genesetgroup
+                            + "'"),
+                    );
                     match stmt_result {
                         Ok(mut stmt) => {
                             #[allow(non_snake_case)]
@@ -164,7 +181,10 @@ fn main() -> Result<()> {
                         }
                         Err(_) => panic!("sqlite database file not found"),
                     }
-                    println!("pathway_p_values:{}", adjust_p_values(pathway_p_values));
+                    println!(
+                        "pathway_p_values:{}",
+                        adjust_p_values(pathway_p_values, num_items_output)
+                    );
                     println!(
                         "Time for calculating gene overrepresentation:{:?}",
                         run_time.elapsed()
@@ -178,7 +198,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>) -> String {
+fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>, num_items_output: usize) -> String {
     // Sorting p-values in ascending order
     original_p_values.as_mut_slice().sort_by(|a, b| {
         (a.p_value_original)
@@ -223,10 +243,10 @@ fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>) -> String {
     });
 
     let mut output_string = "[".to_string();
-    for i in 0..adjusted_p_values.len() {
+    for i in 0..num_items_output {
         let j = adjusted_p_values.len() - i - 1;
         output_string += &serde_json::to_string(&adjusted_p_values[j]).unwrap();
-        if j > 0 {
+        if i < num_items_output - 1 {
             output_string += &",".to_string();
         }
     }
