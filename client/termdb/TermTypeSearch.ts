@@ -1,3 +1,4 @@
+import { Term } from 'shared/types/termdb.js'
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
 import { TermTypeGroups, TermTypes } from '../shared/common.js'
@@ -50,12 +51,14 @@ export class TermTypeSearch {
 	state: any
 	genomeObj: any
 	handlerByType: Dict
-	click_term: any
+	click_term: (term: Term) => void
+	submit_lst: (terms: Array<Term>) => void
 
 	constructor(opts) {
 		this.type = 'termTypeSearch'
 		this.genomeObj = opts.genome
 		this.click_term = opts.click_term
+		this.submit_lst = opts.submit_lst
 
 		this.dom = { holder: opts.holder, topbar: opts.topbar }
 
@@ -98,7 +101,8 @@ export class TermTypeSearch {
 		return {
 			termTypeGroup: appState.termTypeGroup,
 			usecase: appState.tree.usecase,
-			isVisible: !appState.submenu.term
+			isVisible: !appState.submenu.term,
+			selectedTerms: appState.selectedTerms
 		}
 	}
 
@@ -139,8 +143,6 @@ export class TermTypeSearch {
 						this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 					continue
 				}
-				if (state.usecase.target == 'matrix' && state.usecase.detail == 'termgroups' && type == TermTypes.GENE_VARIANT)
-					continue //Not supported yet to select multiple geneVariants
 				//In most cases the target is enough to know what terms are allowed
 				if (!state.usecase.target || useCases[state.usecase.target]?.includes(termTypeGroup))
 					this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
@@ -167,7 +169,14 @@ export class TermTypeSearch {
 	//This callback will be called by the handlers when a term is selected
 	selectTerm(term) {
 		if (this.click_term) this.click_term(term)
-		else
+		else if (this.submit_lst) {
+			this.app.dispatch({
+				type: 'app_refresh',
+				state: {
+					selectedTerms: [...this.state.selectedTerms, term]
+				}
+			})
+		} else
 			this.app.dispatch({
 				type: 'submenu_set',
 				submenu: { term, type: 'tvs' }
