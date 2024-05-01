@@ -19,12 +19,13 @@
                 ]
             },
             "testSpec": {
-                "expected": {"circle": 3 }
+                "expected": { "circle": 3 }
             }
         },
         {
             "label": "Variant-sample BCF matrix",
-            "urlparam": "?genome=hg38&gene=p53&mds3bcffile=BCF_Demo_samples,files/hg38/TermdbTest/TermdbTest.bcf.gz",
+            "download": "https://proteinpaint.stjude.org/ppdemo/hg38/bcf/bcfDemoFiles.tar.gz",
+            "urlparam": "?genome=hg38&gene=p53&mds3bcffile=BCF_Demo_samples,proteinpaint_demo/hg38/bcf/test.bcf.gz",
             "runargs": {
                 "nobox": 1,
                 "noheader": 1,
@@ -41,7 +42,7 @@
                 ]
             },
             "testSpec": {
-                "expected": {"circle": 3 }
+                "expected": { "circle": 3 }
             }
         }
     ],
