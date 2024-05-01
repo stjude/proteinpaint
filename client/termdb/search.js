@@ -90,7 +90,6 @@ class TermSearch {
 		this.dom.input.attr('placeholder', 'Search ' + this.state.termTypeGroup)
 		this.clear()
 		this.dom.holder.style('display', this.state.isVisible ? 'block' : 'none')
-		this.renderSelectedNonDictTerms()
 	}
 
 	// targetType optional, see vocab.findTerm()
@@ -164,11 +163,6 @@ function setRenderers(self) {
 			.style('border-left', self.opts.resultsHolder ? '' : 'solid 1px rgb(133,182,225)')
 			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
-
-		self.dom.nonDictDiv = self.dom.holder.append('div').style('margin', '0px 0px 10px 10px').style('display', 'none')
-
-		self.dom.nonDictDiv.append('div').style('font-weight', 600).html('Selected genes')
-		self.dom.selectedNonDictDiv = self.dom.nonDictDiv.append('div')
 	}
 
 	self.getPrompt = state => {
@@ -327,30 +321,6 @@ function setRenderers(self) {
 		self.dom.resultDiv_terms.selectAll('*').remove()
 		self.dom.resultDiv.style('display', 'none')
 		self.dom.resultCntDiv.style('display', 'none')
-	}
-
-	self.renderSelectedNonDictTerms = function () {
-		// this is to show selected genes during multi-selection
-		// FIXME no way to unselect a gene here
-		const lst = self.state.selectedTerms.filter(t => nonDictionaryTermTypes.has(t.type))
-		self.dom.nonDictDiv.style('display', lst.length ? '' : 'none')
-
-		const genes = self.dom.selectedNonDictDiv.selectAll('div').data(lst, d => d.name)
-
-		genes.exit().remove()
-		genes
-			.enter()
-			.append('div')
-			.style('display', 'inline-block')
-			.style('margin', '1px')
-			.style('padding', '5px 8px')
-			.style('background-color', 'rgba(255, 194, 10,0.5)')
-			.style('border-radius', '6px')
-			.html(d => d.name)
-		/*.each(function(){
-				const div = select(this)
-				div.append('')
-			})*/
 	}
 }
 
