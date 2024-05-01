@@ -665,7 +665,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		// Call mass UI without search bar
 		const runppArg = {
 			holder: sandboxDiv.body.append('div').style('margin', '20px').style('overflow-x', 'auto').node(),
-			host: window.location.origin
+			host: par.runargs.host || window.location.origin
 		}
 
 		const callpp = JSON.parse(JSON.stringify(par.runargs))
