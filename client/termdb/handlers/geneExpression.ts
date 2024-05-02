@@ -1,11 +1,7 @@
 import { Menu } from '#dom/menu'
 import { addGeneSearchbox } from '#dom/genesearch'
-// in rollup, the #shared alias breaks using the dynamic-import-vars plugin,
-// presumably because the handler code is dynamically imported and the plugin
-// is not aware of the subpath "imports" object in client/package.json
-// use relative paths to shared code for now
-// TODO: extract the shared code into `@sjcrh/proteinpaint-core` or `...-shared`
-import { TermTypes } from '../../shared/common.js'
+import { TermTypes } from '#shared/common'
+
 export class SearchHandler {
 	callback: any
 	app: any
