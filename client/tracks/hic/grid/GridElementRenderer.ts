@@ -70,10 +70,10 @@ export class GridElementRenderer {
 						view: 'chrpair',
 						config: {
 							x: {
-								chr: lead
+								chr: follow
 							},
 							y: {
-								chr: follow
+								chr: lead
 							}
 						}
 					})
@@ -85,5 +85,4 @@ export class GridElementRenderer {
 			obj.ctx2 = obj.ctx
 		}
 	}
-	
 }

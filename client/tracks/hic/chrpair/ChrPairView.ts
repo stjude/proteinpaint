@@ -39,7 +39,7 @@ export class ChrPairView {
 		this.items = opts.items
 		this.parent = opts.parent
 		this.chrxlen = this.hic.genome.chrlookup[this.parent('state').x.chr.toUpperCase()].len
-		this.chrylen = this.hic.genome.chrlookup[this.parent('state').x.chr.toUpperCase()].len
+		this.chrylen = this.hic.genome.chrlookup[this.parent('state').y.chr.toUpperCase()].len
 		this.maxchrlen = Math.max(this.chrxlen, this.chrylen)
 		this.colorizeElement = new ColorizeElement()
 		this.positions = new Positions(opts.error)
@@ -152,7 +152,14 @@ export class ChrPairView {
 		this.items = items
 		const firstisx = new FirstChrX(this.hic.chrorder, this.parent('state').x.chr, this.parent('state').y.chr).isFirstX()
 		const isintrachr = this.parent('state').x.chr === this.parent('state').y.chr
-		this.data = this.formattedData.formatData(items.items, this.binpx, this.calResolution!, firstisx, isintrachr)
+		this.data = this.formattedData.formatData(
+			'chrpair',
+			items.items,
+			this.binpx,
+			this.calResolution!,
+			firstisx,
+			isintrachr
+		)
 
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
 		for (const [x, y, v] of this.data) {
