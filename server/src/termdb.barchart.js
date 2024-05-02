@@ -114,7 +114,6 @@ export async function barchart_data(q, ds, tdb) {
 	const bins = []
 	if (data.samples) {
 		if (map.get(1)?.term?.type == 'geneVariant' || map.get(2)?.term?.type == 'geneVariant') {
-			console.log()
 			//when term1 or term2 is a geneVariant term
 			processGeneVariantSamples(map, bins, data, samplesMap, ds)
 		} else {

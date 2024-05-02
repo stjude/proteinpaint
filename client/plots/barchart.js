@@ -13,7 +13,7 @@ import { renderTable } from '../dom/table'
 import { fillTermWrapper } from '#termsetting'
 import { getColors } from '#shared/common'
 import { mclass } from '#shared/common'
-import { plotColor } from '../shared/common'
+import { isNumeric, plotColor } from '../shared/common'
 
 class Barchart {
 	constructor(opts) {
@@ -270,8 +270,8 @@ class Barchart {
 		if (this.config.term2) terms.push(this.config.term2)
 		if (this.config.term0) terms.push(this.config.term0)
 		for (const t of terms) {
-			if (t.term.type == 'integer' || t.term.type == 'float') {
-				const data = await this.app.vocabApi.getDescrStats(t.id, this.state.termfilter.filter)
+			if (isNumeric(t)) {
+				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter.filter)
 				if (data.error) throw data.error
 				t.q.descrStats = data.values
 			}

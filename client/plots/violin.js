@@ -300,7 +300,7 @@ class ViolinPlot {
 		if (this.config.term0) terms.push(this.config.term0)
 		for (const t of terms) {
 			if (isNumeric(t.term)) {
-				const data = await this.app.vocabApi.getDescrStats(t.id, this.state.termfilter.filter, this.config.settings)
+				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter.filter, this.config.settings)
 				if (data.error) throw data.error
 				t.q.descrStats = data.values
 			}
@@ -350,7 +350,6 @@ class ViolinPlot {
 		} else {
 			throw 'both term1 and term2 are not numeric/continuous'
 		}
-		arg.termType = term.type
 		return arg
 	}
 }

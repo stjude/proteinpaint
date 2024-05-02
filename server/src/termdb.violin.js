@@ -54,7 +54,7 @@ q = {
 */
 
 export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
-	const gene = q.termid
+	const gene = q.term.term.gene
 	if (!gene) throw 'gene is required'
 	if (ds.queries.geneExpression.gene2density[gene]) return ds.queries.geneExpression.gene2density[gene]
 	const args = {
@@ -112,7 +112,7 @@ export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
 }
 
 export async function trigger_getViolinPlotData(q, res, ds, genome) {
-	if (q.termType == TermTypes.GENE_EXPRESSION)
+	if (q.term?.term.type == TermTypes.GENE_EXPRESSION)
 		//to support new types we pass the termwrapper object
 		return await trigger_getGeneExpViolinPlotData(q, res, ds, genome)
 
