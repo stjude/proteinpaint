@@ -937,7 +937,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	.
 	*/
 
-	if (q._tk.file) {
+	if (q._tk.file || q._tk.url) {
 		await utils.init_one_vcf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
 	} else if (q._tk.chr2files) {
 		// record stringified sample json array from first chr
