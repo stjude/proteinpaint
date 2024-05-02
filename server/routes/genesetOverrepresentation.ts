@@ -62,7 +62,7 @@ async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentati
 		if (line.startsWith('pathway_p_values:')) {
 			result = JSON.parse(line.replace('pathway_p_values:', ''))
 		} else {
-			console.log(line)
+			//console.log(line)
 		}
 	}
 	//console.log('result:', result)

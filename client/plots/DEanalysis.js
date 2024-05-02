@@ -447,7 +447,7 @@ add:
 			//console.log('output.data:', output.data)
 			const sample_genes = []
 			const background_genes = []
-			console.log('self:', self)
+			//console.log('self:', self)
 			//console.log('fold_change_cutoff:', fold_change_cutoff)
 
 			// Need to handle those genes which do not have a name
@@ -457,9 +457,8 @@ add:
 						// Do not include blank rows
 						if (fold_change_cutoff < Math.abs(gene.fold_change) && gene.fold_change > 0) {
 							sample_genes.push(gene.gene_symbol)
-						} else {
-							background_genes.push(gene.gene_symbol)
 						}
+						background_genes.push(gene.gene_symbol)
 					}
 				}
 			} else if (self.settings.gene_ora == 'downregulated') {
@@ -468,9 +467,8 @@ add:
 						// Do not include blank rows
 						if (fold_change_cutoff < Math.abs(gene.fold_change) && gene.fold_change < 0) {
 							sample_genes.push(gene.gene_symbol)
-						} else {
-							background_genes.push(gene.gene_symbol)
 						}
+						background_genes.push(gene.gene_symbol)
 					}
 				}
 			} else if (self.settings.gene_ora == 'both') {
@@ -479,9 +477,8 @@ add:
 						// Do not include blank rows
 						if (fold_change_cutoff < Math.abs(gene.fold_change)) {
 							sample_genes.push(gene.gene_symbol)
-						} else {
-							background_genes.push(gene.gene_symbol)
 						}
+						background_genes.push(gene.gene_symbol)
 					}
 				}
 			} else {
