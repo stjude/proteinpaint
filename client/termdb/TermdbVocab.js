@@ -470,11 +470,11 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb/getpercentile', { body })
 	}
 
-	async getDescrStats(term_id, filter, settings) {
+	async getDescrStats(tw, filter, settings) {
 		// for a numeric term, get descriptive statistics
 		// mean, median, standard deviation, min, max
 		const body = {
-			tid: term_id,
+			tw,
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			settings

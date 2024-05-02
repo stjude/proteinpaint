@@ -45,18 +45,18 @@ async function getTermdbVocabApi(opts = {}) {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- vocabulary -***-')
 	test.end()
 })
 
 /* vocabInit tests */
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- vocabInit Tests (main vocab function)-***-')
 	test.end()
 })
 
-tape('getPercentile()', async function(test) {
+tape('getPercentile()', async function (test) {
 	test.timeoutAfter(100)
 	test.plan(13)
 
@@ -186,7 +186,7 @@ tape('q_to_param()', async test => {
 })
 
 /* FrontendVocab tests */
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- FrontendVocab Tests -***-')
 	test.end()
 })
@@ -311,7 +311,7 @@ tape('findTerm()', async test => {
 	// result = await vocabFrontend.findTerm()
 })
 
-tape('getPercentile() - FrontendVocab directly', async function(test) {
+tape('getPercentile() - FrontendVocab directly', async function (test) {
 	//Test FrontendVocab getPercentile() method directly
 	test.timeoutAfter(100)
 	test.plan(13)
@@ -427,7 +427,7 @@ tape('getDescrStats()', async test => {
 	test.equal(result.values[7].value, 0.35, `Should get the correct value for ${result.values[7].id}`)
 
 	testId = 'c'
-	msg = `Should throw for non-numeric data`
+	msg = `Should throw error for non-numeric data`
 	try {
 		const modifiedTestVocab = getExample()
 		modifiedTestVocab.sampleannotation[11] = { c: Infinity, d: 0 }
