@@ -48,7 +48,7 @@
         {
             "label": "Remote BCF file",
             "download": "https://proteinpaint.stjude.org/ppdemo/hg38/bcf/bcfDemoFiles.tar.gz",
-            "message": "If the index file is not available at the same location, please include <code>.indexURL</code> in the BCF object.",
+            "message": "If the index file is not available at the same URL or named differently, please include <code>.indexURL</code> in the BCF object.",
             "urlparam": "?genome=hg38&gene=p53&mds3bcfurl=remote,https://proteinpaint.stjude.org/ppdemo/hg38/bcf/test.bcf.gz",
             "runargs": {
                 "nobox": 1,
