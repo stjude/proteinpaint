@@ -2,7 +2,6 @@ import { getInitFxn, copyMerge, deepEqual } from '../rx/index'
 import { Menu } from '../dom/menu'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
-import { nonDictionaryTermTypes } from '../shared/termdb.usecase'
 import { Term, Q, TermWrapper, TwLst } from '../shared/types/terms/tw'
 import {
 	DetermineQ,
@@ -17,10 +16,10 @@ import { TermSettingOpts, Handler, PillData } from './types'
 import { CategoricalQ } from '../shared/types/terms/categorical'
 import { NumericQ } from '../shared/types/terms/numeric'
 import { SnpsQ } from '../shared/types/terms/snps'
+import { isDictionaryType } from '../shared/common.js'
 
 /*
 ********************* EXPORTED
-nonDictionaryTermTypes
 termsettingInit()
 getPillNameDefault()
 fillTermWrapper()
@@ -267,7 +266,7 @@ export class TermSetting {
 			// term is optional
 			if (!d.term.type) throw 'data.term.type missing'
 			// hardcode non
-			if (!nonDictionaryTermTypes.has(d.term.type)) {
+			if (isDictionaryType(d.term.type)) {
 				if (!d.term.id) throw 'data.term.id missing'
 				if (!d.term.name) throw 'data.term.name missing'
 			}

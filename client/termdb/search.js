@@ -3,9 +3,9 @@ import { select, selectAll } from 'd3-selection'
 import { sayerror } from '../dom/sayerror.ts'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
-import { isUsableTerm, nonDictionaryTermTypes } from '#shared/termdb.usecase'
+import { isUsableTerm } from '#shared/termdb.usecase'
 import { keyupEnter } from '#src/client'
-import { TermTypeGroups } from '../shared/common.js'
+import { TermTypeGroups, isNonDictionaryType } from '../shared/common.js'
 
 /*
 steps:
@@ -288,7 +288,7 @@ function setRenderers(self) {
 
 					if (term.type == 'geneVariant' && self.opts.handleGeneVariant) {
 						self.opts.handleGeneVariant(term)
-					} else if (nonDictionaryTermTypes.has(term.type)) {
+					} else if (isNonDictionaryType(term.type)) {
 						self.app.dispatch({
 							type: 'app_refresh',
 							state: {
