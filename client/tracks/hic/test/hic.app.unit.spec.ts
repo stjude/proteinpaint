@@ -286,7 +286,7 @@ tape('GridElementsFormattedData - formatData()', test => {
 		isIntraChr = false
 
 	//No isFirstChrX or isIntraChr supplied, applicable for the genome view
-	result = formattedData.formatData(items, binpx, resolution)
+	result = formattedData.formatData('genome', items, binpx, resolution)
 	test.notEqual(result, items, 'Should return a new formated array.')
 	expected = [
 		[0, 0, 90],
@@ -303,7 +303,7 @@ tape('GridElementsFormattedData - formatData()', test => {
 	)
 
 	//X first but not intra-chromosomal
-	result = formattedData.formatData(items, binpx, resolution, isFirstChrX, isIntraChr)
+	result = formattedData.formatData('chrpair', items, binpx, resolution, isFirstChrX, isIntraChr)
 	let badValues = 0
 	let badCoords = 0
 	for (const item of result) {
@@ -338,7 +338,7 @@ tape('GridElementsFormattedData - formatData()', test => {
 	resolution = 500000
 	isFirstChrX = true
 	isIntraChr = true
-	result = formattedData.formatData(items, binpx, resolution, isFirstChrX, isIntraChr)
+	result = formattedData.formatData('genome', items, binpx, resolution, isFirstChrX, isIntraChr)
 
 	test.equal(result.length, items.length * 2, 'Should double size for reversed coorindates')
 	let noReverse = 0
@@ -372,7 +372,7 @@ tape('GridElementsFormattedData - formatData()', test => {
 	resolution = 1000000
 	isFirstChrX = false
 	isIntraChr = false
-	result = formattedData.formatData(items, binpx, resolution, isFirstChrX, isIntraChr)
+	result = formattedData.formatData('genome', items, binpx, resolution, isFirstChrX, isIntraChr)
 	expected = [
 		[0, 0, 311],
 		[4, 0, 94],
