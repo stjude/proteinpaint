@@ -1135,8 +1135,7 @@ const nonDictTypes = new Set([
 	TermTypes.SNP_LIST,
 	TermTypes.SNP_LOCUS,
 	TermTypes.GENE_EXPRESSION,
-	TermTypes.GENE_VARIANT,
-	TermTypes.SAMPLELST
+	TermTypes.GENE_VARIANT
 ])
 
 export function isDictionaryType(type) {

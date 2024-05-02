@@ -16,7 +16,7 @@ import { TermSettingOpts, Handler, PillData } from './types'
 import { CategoricalQ } from '../shared/types/terms/categorical'
 import { NumericQ } from '../shared/types/terms/numeric'
 import { SnpsQ } from '../shared/types/terms/snps'
-import { isDictionaryType } from '../shared/common.js'
+import { TermTypes, isDictionaryType } from '../shared/common.js'
 
 /*
 ********************* EXPORTED
@@ -267,7 +267,7 @@ export class TermSetting {
 			if (!d.term.type) throw 'data.term.type missing'
 			// hardcode non
 			if (isDictionaryType(d.term.type)) {
-				if (!d.term.id) throw 'data.term.id missing'
+				if (!d.term.id && d.term.type != TermTypes.SAMPLELST) throw 'data.term.id missing'
 				if (!d.term.name) throw 'data.term.name missing'
 			}
 		}
