@@ -604,6 +604,17 @@ export async function get_tklst(urlp, genomeobj) {
 			})
 		}
 	}
+	if (urlp.has('mds3bcfurl')) {
+		// "name,url,indexURL" to remote file. indexURL is optional when the index file is not co-locating with the bcf file
+		const [tkname, url, indexURL] = urlp.get('mds3bcfurl').split(',')
+		if (tkname && url) {
+			tklst.push({
+				type: client.tkt.mds3,
+				name: tkname,
+				bcf: { url, indexURL }
+			})
+		}
+	}
 
 	if (urlp.has('arcfile')) {
 		const lst = urlp.get('arcfile').split(',')
