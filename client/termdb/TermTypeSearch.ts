@@ -1,7 +1,7 @@
-import { Term } from 'shared/types/termdb.js'
+import { Term } from '#shared/types/termdb.ts'
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
-import { TermTypeGroups, TermTypes } from '../shared/common.js'
+import { TermTypeGroups, TermTypes } from '#shared/common'
 
 type Dict = {
 	[key: string]: any
