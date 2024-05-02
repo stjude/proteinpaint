@@ -236,7 +236,7 @@ export class GenomeView {
 			if (obj.canvas2) {
 				obj.ctx2!.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
 			}
-			obj.data = this.gridFormattedData.formatData(data.items, this.binpx, this.resolution)
+			obj.data = this.gridFormattedData.formatData('genome', data.items, this.binpx, this.resolution)
 
 			for (const [xPx, yPx, value] of obj.data) {
 				this.colorizeElement.colorizeElement(xPx, yPx, value, obj, this.binpx, this.binpx, this.min, this.max, 'genome')
