@@ -1,1 +1,5 @@
+Features:
+- Significant improvements to the whole genome hic app including: faster load, ability to launch the chromosome pair and detail view from runproteinpaint(), rendering fixes, additional min cutoff input, and change to reactive app.
 
+Fixes:
+- No empty gdc filter elements will be created when mapping pp filter to GDC format

@@ -1,7 +1,7 @@
 /*
 f{}
 	filter object
-returns a GDC filter object
+returns a GDC filter object, or null if no filter
 
 GDC filter: https://docs.gdc.cancer.gov/API/Users_Guide/Search_and_Retrieval/
 
@@ -91,7 +91,7 @@ export function filter2GDCfilter(f) {
 		}
 		throw 'unknown tvs structure when converting to gdc filter'
 	}
-	return obj
+	return obj.content.length ? obj : null
 }
 
 /*
