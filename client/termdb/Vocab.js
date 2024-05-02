@@ -140,7 +140,7 @@ export class Vocab {
 		})
 	}
 
-	// get a tw copy with the correct identifier and without $id
+	// get a minimum copy of tw
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
 		const copy = { $id: tw.$id, term: {}, q: tw.q }
@@ -168,7 +168,17 @@ export class Vocab {
 		} else {
 			copy.term.name = tw.term?.name
 			copy.term.type = tw.term?.type
-			copy.term.values = tw.term?.values
+			if (tw.term?.type == 'geneVariant') {
+				if (tw.term.gene) {
+					copy.term.gene = tw.term.gene
+				} else {
+					copy.term.chr = tw.term.chr
+					copy.term.start = tw.term.start
+					copy.term.stop = tw.term.stop
+				}
+			} else {
+				copy.term.values = tw.term?.values
+			}
 		}
 
 		return copy

@@ -928,28 +928,16 @@ export async function fillTermWrapper(
 ): Promise<TermWrapper> {
 	tw.isAtomic = true
 	if (!tw.term && tw.id) {
+		// hydrate tw.term using tw.id
 		await mayHydrateDictTwLst([tw], vocabApi)
 	}
-
-	// tw.term{} is now valid
-
-	// TODO: should strip tw.id because it is no longer necessary
-	// TODO: should remove usage of tw.id in the codebase after hydration
-
-	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
-	if ((tw.id == undefined || tw.id === '') && tw.term.id) {
-		tw.id = tw.term.id
-	}
-	if (tw.id && tw.term.id) {
-		if (tw.id != tw.term.id) throw 'the given ids (tw.id and tw.term.id) are different'
-	}
-
+	// tw.id is no longer needed
+	delete tw.id
 	if (!tw.q) tw.q = {}
+	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	tw.q.isAtomic = true
-
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQByTsHandler)
-
 	mayValidateQmode(tw)
 	return tw
 }
@@ -961,8 +949,6 @@ async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHand
 	let _
 	if (tw.term.type) {
 		try {
-			// TODO: in the fillTW() of each term type handler, should specify
-			// whether the term is a dictionary term (possibly by setting an .isDictionary flag)
 			_ = await import(`./handlers/${type}.ts`)
 		} catch (error) {
 			throw `Type ${type} does not exist`
