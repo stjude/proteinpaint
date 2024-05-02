@@ -326,6 +326,7 @@ class ViolinPlot {
 		}
 
 		if (this.opts.mode == 'minimal') {
+			arg.term = term
 			// assume a single term for minimal plot
 			if (term2) throw 'only a single term allowed for minimal plot'
 			arg.termid = term.id
@@ -346,6 +347,7 @@ class ViolinPlot {
 			if (term2) arg.divideTw = term2
 		} else if (isNumericTerm(term2?.term) && term2.q.mode === 'continuous') {
 			if (term2) arg.termid = term2.id
+			arg.term = term2
 			arg.divideTw = term
 		} else {
 			throw 'both term1 and term2 are not numeric/continuous'

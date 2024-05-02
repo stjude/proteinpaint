@@ -443,7 +443,8 @@ export class TermdbVocab extends Vocab {
 				datasymbol: arg.datasymbol || 'rug',
 				orientation: arg.orientation || 'horizontal',
 				radius: arg.radius || 3,
-				svgw: arg.svgw
+				svgw: arg.svgw || 200,
+				unit: arg.unit || 'abs'
 			},
 			arg,
 			_body
