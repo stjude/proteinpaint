@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 General:
 - Update custom mutation data instruction.
 
+Features:
+- Significant improvements to the whole genome hic app including: faster load, ability to launch the chromosome pair and detail view from runproteinpaint(), rendering fixes, additional min cutoff input, and change to reactive app.
+
 Fixes:
 - Filter mutations checkbox is not shown for if there is no CGC
 - Bcf url argument for mds3 tracks fixed.
