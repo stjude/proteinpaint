@@ -30,6 +30,11 @@ export default class Disco {
 	private features: any
 	private isOpen: boolean
 	private discoInteractions: DiscoInteractions
+
+	private stateViewModelMapper?: ViewModelMapper
+	private viewModel?: ViewModel
+	private recreateViewModel = false
+
 	constructor(opts: any) {
 		this.type = 'Disco'
 		this.opts = opts
@@ -38,11 +43,18 @@ export default class Disco {
 	}
 
 	async init() {
+		const state = this.app.getState()
+		const settings = state.plots.find(p => p.id === this.id).settings
+
+		this.stateViewModelMapper = new ViewModelMapper(settings)
+		this.viewModel = this.stateViewModelMapper.map(state)
+
 		const holder = this.opts.holder
 		// Figure out why we need to set the background color here
 		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const topbar = controlsHolder.append('div')
 		const config_div = controlsHolder.append('div')
+		const configInputsOptions = this.getConfigInputsOptions(this.viewModel)
 
 		this.features = await multiInit({
 			topbar: topBarInit({
@@ -61,47 +73,64 @@ export default class Disco {
 				id: this.id,
 				holder: config_div,
 				isOpen: () => this.isOpen,
-				inputs: [
-					{
-						boxLabel: 'Cancer Gene Census genes',
-						label: `Filter mutations`,
-						type: 'checkbox',
-						chartType: 'Disco',
-						settingsKey: 'prioritizeGeneLabelsByGeneSets',
-						title: 'Only show mutations for Cancer Gene Census genes'
-					},
-					{
-						label: 'CNV capping',
-						type: 'number',
-						chartType: 'Disco',
-						settingsKey: 'cnvCapping',
-						title: 'Cnv capping',
-						min: 0
-					},
-					{
-						boxLabel: '',
-						label: 'CNV rendering type',
-						type: 'radio',
-						chartType: 'Disco',
-						settingsKey: 'cnvRenderingType',
-						title: 'CNV rendering type',
-						options: [
-							{ label: 'Heatmap', value: CnvRenderingType.heatmap },
-							{ label: 'Bar', value: CnvRenderingType.bar }
-						]
-					},
-					{
-						label: 'CNV percentile',
-						type: 'number',
-						chartType: 'Disco',
-						settingsKey: 'cnvPercentile',
-						title: 'Cnv percentile',
-						min: 1,
-						max: 100
-					}
-				]
+				inputs: configInputsOptions
 			})
 		})
+	}
+
+	private getConfigInputsOptions(viewModel: ViewModel) {
+		const configInputsOptions: Array<any> = []
+
+		if (viewModel.settings.Disco.showPrioritizeGeneLabelsByGeneSets) {
+			const filterMutationsGenesCheckbox = [
+				{
+					boxLabel: viewModel.genesetName,
+					label: `Filter mutations`,
+					type: 'checkbox',
+					chartType: 'Disco',
+					settingsKey: 'prioritizeGeneLabelsByGeneSets',
+					title: `Only show mutations for ${viewModel.genesetName} genes`
+				}
+			]
+
+			configInputsOptions.push(...filterMutationsGenesCheckbox)
+		}
+
+		const mandatoryConfigInputOptions = [
+			{
+				label: 'CNV capping',
+				type: 'number',
+				chartType: 'Disco',
+				settingsKey: 'cnvCapping',
+				title: 'Cnv capping',
+				min: 0
+			},
+			{
+				boxLabel: '',
+				label: 'CNV rendering type',
+				type: 'radio',
+				chartType: 'Disco',
+				settingsKey: 'cnvRenderingType',
+				title: 'CNV rendering type',
+				options: [
+					{ label: 'Heatmap', value: CnvRenderingType.heatmap },
+					{ label: 'Bar', value: CnvRenderingType.bar }
+				]
+			},
+			{
+				label: 'CNV percentile',
+				type: 'number',
+				chartType: 'Disco',
+				settingsKey: 'cnvPercentile',
+				title: 'Cnv percentile',
+				min: 1,
+				max: 100
+			}
+		]
+
+		configInputsOptions.push(...mandatoryConfigInputOptions)
+
+		return configInputsOptions
 	}
 
 	async main(): Promise<void> {
@@ -110,36 +139,34 @@ export default class Disco {
 
 		this.isOpen = settings.Disco.isOpen
 
-		const stateViewModelMapper = new ViewModelMapper(settings)
-		const viewModel = stateViewModelMapper.map(this.app.getState())
-
-		const holder = this.opts.holder
-		// TODO change this
-		holder.select('div[id="sjpp_disco_plot_holder_div"]').remove()
-		const svgDiv = holder.append('div').attr('id', 'sjpp_disco_plot_holder_div').style('display', 'inline-block')
-
-		// TODO render this in the legend
-		const displayedElementsCount =
-			viewModel.settings.Disco.prioritizeGeneLabelsByGeneSets &&
-			viewModel.settings.Disco.showPrioritizeGeneLabelsByGeneSets
-				? viewModel.filteredSnvDataLength
-				: viewModel.snvDataLengthAll
-
-		// TODO calculate viewModel.filteredSnvDataLength always
-		const appState = this.app.getState()
-
-		for (const name in this.features) {
-			this.features[name].update({ state: this.state, appState })
+		if (this.recreateViewModel) {
+			this.stateViewModelMapper = new ViewModelMapper(settings)
+			this.viewModel = this.stateViewModelMapper.map(this.app.getState())
 		}
+		this.recreateViewModel = true
 
-		const legendRenderer = new LegendRenderer(viewModel.cappedCnvMaxAbsValue, settings.label.fontSize)
+		if (this.viewModel) {
+			const holder = this.opts.holder
+			// TODO change this
+			holder.select('div[id="sjpp_disco_plot_holder_div"]').remove()
+			const svgDiv = holder.append('div').attr('id', 'sjpp_disco_plot_holder_div').style('display', 'inline-block')
 
-		const discoRenderer = new DiscoRenderer(
-			this.getRingRenderers(settings, viewModel, this.discoInteractions.geneClickListener),
-			legendRenderer
-		)
+			// TODO calculate viewModel.filteredSnvDataLength always
+			const appState = this.app.getState()
 
-		discoRenderer.render(svgDiv, viewModel)
+			for (const name in this.features) {
+				this.features[name].update({ state: this.state, appState })
+			}
+
+			const legendRenderer = new LegendRenderer(this.viewModel.cappedCnvMaxAbsValue, settings.label.fontSize)
+
+			const discoRenderer = new DiscoRenderer(
+				this.getRingRenderers(settings, this.viewModel, this.discoInteractions.geneClickListener),
+				legendRenderer
+			)
+
+			discoRenderer.render(svgDiv, this.viewModel)
+		}
 	}
 
 	getState(appState: any) {
@@ -175,6 +202,7 @@ export default class Disco {
 
 		return renderersMap
 	}
+
 	toggleVisibility(isOpen: boolean) {
 		this.app.dispatch({
 			type: 'plot_edit',

@@ -1,1 +1,2 @@
-
+Fixes:
+- Filter mutations checkbox is not shown for if there is no CGC
