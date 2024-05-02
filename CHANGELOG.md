@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 General:
 - Update custom mutation data instruction.
 
+Fixes:
+- Filter mutations checkbox is not shown for if there is no CGC
+
 
 ## 2.57.0
 
