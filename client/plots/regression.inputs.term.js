@@ -1,5 +1,4 @@
 import { termsettingInit } from '#termsetting'
-import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { getNormalRoot } from '#filter'
 import { get_bin_label } from '#shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
@@ -7,6 +6,7 @@ import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '../termsetting/handlers/snplst.sampleSum.ts'
 import { get_defaultQ4fillTW } from './regression'
+import { isDictionaryType } from '../shared/common.js'
 
 /*
 class instance is an input
@@ -186,7 +186,7 @@ export class InputTerm {
 
 		if (!tw.q) throw '.term.q missing on this input'
 
-		if (!tw.q.mode && !nonDictionaryTermTypes.has(tw.term.type)) {
+		if (!tw.q.mode && isDictionaryType(tw.term.type)) {
 			// fill in q.mode for dictionary terms
 			if (tw.term.type == 'categorical' || tw.term.type == 'condition' || tw.term.type == 'survival')
 				tw.q.mode = 'discrete'

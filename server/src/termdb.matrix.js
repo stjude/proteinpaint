@@ -8,7 +8,7 @@ import serverconfig from './serverconfig'
 import * as utils from './utils'
 import * as termdbsql from './termdb.sql'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
-import { TermTypes, isNonDictionary } from '#shared/common.js'
+import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/common.js'
 
 /*
 
@@ -80,7 +80,7 @@ function validateArg(q, ds, genome) {
 
 	for (const tw of q.terms) {
 		// TODO clean up
-		if (tw?.term?.type && !isNonDictionary(tw.term.type)) {
+		if (tw?.term?.type && isDictionaryType(tw.term.type)) {
 			if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
 			if (!tw.q) console.log('do something??')
 		}
@@ -263,7 +263,7 @@ function divideTerms(lst) {
 	for (const tw of lst) {
 		const type = tw.term?.type
 		if (type) {
-			if (isNonDictionary(type)) nonDict.push(tw)
+			if (isNonDictionaryType(type)) nonDict.push(tw)
 			else dict.push(tw)
 		} else if (tw.term?.id) dict.push(tw) // TODO: detect using term.type as part of request payload
 		else nonDict.push(tw) // TODO: detect using term.type as part of request payload

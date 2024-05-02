@@ -9,7 +9,7 @@ import {
 	synonymousMutations,
 	mutationClasses,
 	CNVClasses,
-	isNonDictionary
+	isDictionaryType
 } from '#shared/common'
 
 export async function getPlotConfig(opts = {}, app) {
@@ -210,7 +210,7 @@ export async function getPlotConfig(opts = {}, app) {
 		for (const tw of grp.lst) {
 			// force the saved session to request the most up-to-data dictionary term data from server
 			// TODO: should generalize to any dictionary term
-			if (tw.id && (!tw.term?.type || !isNonDictionary(tw.term.type))) delete tw.term
+			if (tw.id && (!tw.term?.type || !isDictionaryType(tw.term.type))) delete tw.term
 			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
 	}
