@@ -150,15 +150,16 @@ class ControlPanel {
 			.style('padding', '2px')
 			.style('margin', '4px 0px')
 			.on('click', async () => {
+				const currState = this.app.getState()
 				await this.app.dispatch({
 					type: 'view_change',
 					view: 'chrpair',
 					config: {
 						x: {
-							chr: state.x.chr
+							chr: currState.x.chr
 						},
 						y: {
-							chr: state.y.chr
+							chr: currState.y.chr
 						}
 					}
 				})
