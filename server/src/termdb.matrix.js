@@ -150,6 +150,7 @@ async function getSampleData(q) {
 				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
+			console.log(tw)
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
@@ -164,9 +165,8 @@ async function getSampleData(q) {
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				const values = data.gene2sample2value.get(tw.term.gene)
-				let value = Number(values[sampleId]).toFixed(2)
+				let value = Number(values[sampleId])
 				if (tw.q.mode == 'discrete') value = getBinValue(tw, value)
-
 				samples[sampleId][tw.$id] = { key: value, value }
 			}
 			/** pp filter */
