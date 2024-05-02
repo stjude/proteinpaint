@@ -9,6 +9,7 @@ General:
 
 Fixes:
 - Filter mutations checkbox is not shown for if there is no CGC
+- Bcf url argument for mds3 tracks fixed.
 
 
 ## 2.57.0
