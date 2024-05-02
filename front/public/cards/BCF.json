@@ -44,6 +44,30 @@
             "testSpec": {
                 "expected": { "circle": 3 }
             }
+        },
+        {
+            "label": "Remote BCF file",
+            "download": "https://proteinpaint.stjude.org/ppdemo/hg38/bcf/bcfDemoFiles.tar.gz",
+            "message": "If the index file is not available at the same location, please include <code>.indexURL</code> in the BCF object.",
+            "urlparam": "?genome=hg38&gene=p53&mds3bcfurl=remote,https://proteinpaint.stjude.org/ppdemo/hg38/bcf/test.bcf.gz",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "gene": "TP53",
+                "tracks": [
+                    {
+                        "type": "mds3",
+                        "name": "BCF with samples",
+                        "bcf": {
+                            "url": "https://proteinpaint.stjude.org/ppdemo/hg38/bcf/test.bcf.gz"
+                        }
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": { "circle": 3 }
+            }
         }
     ],
     "buttons": [
