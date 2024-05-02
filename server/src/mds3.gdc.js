@@ -233,10 +233,12 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 		f.content.push(q.filter0)
 	}
 	if (q.filterObj) {
-		f.content.push(filter2GDCfilter(q.filterObj))
+		const g = filter2GDCfilter(q.filterObj)
+		if (g) f.content.push(g)
 	}
 	if (q.filter) {
-		f.content.push(filter2GDCfilter(q.filter))
+		const g = filter2GDCfilter(q.filter)
+		if (g) f.content.push(g)
 	}
 	const json = { size: 10000, fields: 'case_id' }
 	if (f.content.length) json.case_filters = f
@@ -574,7 +576,8 @@ export function validate_query_geneCnv(ds) {
 			filters.content.push(cnvsGetFilter0(p.filter0))
 		}
 		if (p.filterObj) {
-			filters.content.push(filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj))
+			const g = filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj)
+			if (g) filters.content.push(g)
 		}
 		return filters
 	}
@@ -700,9 +703,8 @@ export function validate_query_geneCnv2(ds) {
 			f.case_filters.content.push(p.filter0)
 		}
 		if (p.filterObj) {
-			f.case_filters.content.push(
-				filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj)
-			)
+			const g = filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj)
+			if (g) f.case_filters.content.push(g)
 		}
 		if (!f.case_filters.content.length) delete f.case_filters // allow to speed up
 		return f
@@ -1491,7 +1493,8 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 		filters.content.push(q.filter0)
 	}
 	if (q.filterObj) {
-		filters.content.push(filter2GDCfilter(q.filterObj))
+		const g = filter2GDCfilter(q.filterObj)
+		if (g) filters.content.push(g)
 	}
 
 	const dictTwLst = [] // get all dictionary terms from twLst, for querying /cases API
@@ -1721,7 +1724,8 @@ function termid2size_filters(p, ds) {
 		f.filters.content.push(p.filter0)
 	}
 	if (p.filterObj) {
-		f.filters.content.push(filter2GDCfilter(p.filterObj))
+		const g = filter2GDCfilter(p.filterObj)
+		if (g) f.filters.content.push(g)
 	}
 	return f
 }
@@ -2129,7 +2133,8 @@ const isoform2ssm_query1_getvariant = {
 			f.case_filters.content.push(p.filter0)
 		}
 		if (p.filterObj) {
-			f.case_filters.content.push(filter2GDCfilter(p.filterObj))
+			const g = filter2GDCfilter(p.filterObj)
+			if (g) f.case_filters.content.push(g)
 		}
 		if (!f.case_filters.content.length) delete f.case_filters // allow to speed up
 		return f
@@ -2258,7 +2263,8 @@ const isoform2ssm_query2_getcase = {
 			f.case_filters.content.push(p.filter0)
 		}
 		if (p.filterObj) {
-			f.case_filters.content.push(filter2GDCfilter(p.filterObj))
+			const g = filter2GDCfilter(p.filterObj)
+			if (g) f.case_filters.content.push(g)
 		}
 		addTid2value_to_filter(p.tid2value, f.case_filters.content, ds)
 		if (!f.case_filters.content.length) delete f.case_filters // do not use empty case_filters to speed up query (Jason Stiles 3/28/24)
