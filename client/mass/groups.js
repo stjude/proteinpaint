@@ -282,7 +282,9 @@ function initUI(self) {
 		.style('border-left', 'solid 1px black')
 		.style('padding', '10px')
 
-	self.dom.holder.on('click', event => tip2.hide())
+	self.dom.holder.on('click', event => {
+		if (tip2) tip2.hide()
+	})
 }
 
 async function updateUI(self) {
@@ -506,7 +508,7 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 		config
 	})
 }
-
+let tip2
 export async function showTermsTree(
 	div,
 	callback,
@@ -517,7 +519,7 @@ export async function showTermsTree(
 	shift = true,
 	disable_terms = []
 ) {
-	const tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34, parent_menu: tip.d.node() })
+	if (!tip2) tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34, parent_menu: tip.d.node() })
 	tip2.clear()
 	if (shift) tip2.showunderoffset(div.node())
 	else tip2.showunder(div.node())
