@@ -78,18 +78,6 @@ class DEanalysis {
 				boxLabel: ''
 			},
 			{
-				label: 'Gene overrepresentation analysis',
-				type: 'radio',
-				chartType: 'DEanalysis',
-				settingsKey: 'gene_ora',
-				title: 'Toggle between analyzing upregulated, downregulated or both genes',
-				options: [
-					{ label: 'upregulated', value: 'upregulated' },
-					{ label: 'downregulated', value: 'downregulated' },
-					{ label: 'both', value: 'both' }
-				]
-			},
-			{
 				label: 'P-value',
 				type: 'radio',
 				chartType: 'DEanalysis',
@@ -125,7 +113,21 @@ class DEanalysis {
 			this.settings.method = output.method
 			this.state.config = output.method
 		}
-
+		if (this.app.opts.genome.termdbs) {
+			// Check if genome build contains termdbs, only then enable gene ora
+			inputs.push({
+				label: 'Gene overrepresentation analysis',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'gene_ora',
+				title: 'Toggle between analyzing upregulated, downregulated or both genes',
+				options: [
+					{ label: 'upregulated', value: 'upregulated' },
+					{ label: 'downregulated', value: 'downregulated' },
+					{ label: 'both', value: 'both' }
+				]
+			})
+		}
 		if (this.settings.pvaluetable == true) {
 			// This currently does not work as hierarchial clustering code needs to be changed
 			inputs.push({
@@ -440,12 +442,12 @@ add:
 			})
 		}
 
-		if (self.settings.gene_ora) {
+		if (self.settings.gene_ora && self.app.opts.genome.termdbs) {
 			//console.log('Run gene ora:', self.settings.gene_ora)
 			//console.log('output.data:', output.data)
 			const sample_genes = []
 			const background_genes = []
-			//console.log('self:', self)
+			console.log('self:', self)
 			//console.log('fold_change_cutoff:', fold_change_cutoff)
 
 			// Need to handle those genes which do not have a name
