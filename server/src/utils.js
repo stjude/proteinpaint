@@ -222,7 +222,7 @@ export async function init_one_vcf(tk, genome, isbcf) {
 		await validate_tabixfile(tk.file)
 	} else if (tk.url) {
 		filelocation = tk.url
-		tk.dir = await utils.cache_index(tk.url, tk.indexURL)
+		tk.dir = await cache_index(tk.url, tk.indexURL)
 	} else {
 		throw 'no file or url given for vcf file'
 	}
