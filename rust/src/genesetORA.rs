@@ -1,3 +1,4 @@
+// The hypergeometric distribution is computed based on the implementation in https://rdrr.io/github/GuangchuangYu/DOSE/src/R/enricher_internal.R
 // Syntax: cd .. && cargo build --release && cat ~/sjpp/test.txt | target/release/genesetORA
 #![allow(non_snake_case)]
 use json::JsonValue;
