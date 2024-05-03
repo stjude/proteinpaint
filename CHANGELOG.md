@@ -9,6 +9,7 @@ General:
 
 Features:
 - Significant improvements to the whole genome hic app including: faster load, ability to launch the chromosome pair and detail view from runproteinpaint(), rendering fixes, additional min cutoff input, and change to reactive app.
+- support dataset-specific healthcheck information
 
 Fixes:
 - Filter mutations checkbox is not shown for if there is no CGC
