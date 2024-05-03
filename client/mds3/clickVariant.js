@@ -139,10 +139,10 @@ async function click2sunburst(d, tk, block, tippos) {
 	}
 	if (d.aa) {
 		arg.cx = d.aa.x
-		arg.cy = skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1)
+		arg.cy = skewer_sety(d, tk) + d.yoffset * (tk.skewer.pointup ? -1 : 1)
 	} else {
 		arg.cx = d.x
-		arg.cy = d.y + ((tk.aboveprotein ? 1 : -1) * tk.skewer.stem1) / 2
+		arg.cy = d.y + ((tk.skewer.pointup ? 1 : -1) * tk.skewer.stem1) / 2
 		// not to show list button in sunburst in case mlst has different data types
 	}
 	if (d.mlst.length == 1) {

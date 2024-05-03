@@ -92,7 +92,7 @@ function menu_variants(tk, block) {
 		.append('div')
 		.text('List')
 		.attr('class', 'sja_menuoption')
-		.attr('data-testid', 'sja_list_menuoption')
+		.attr('data-testid', 'sja_list_menuoption') // FIXME mds3tk_variantleftlabel_list
 		.style('border-radius', '0px')
 		.on('click', () => {
 			listSkewerData(tk, block)
@@ -122,6 +122,8 @@ function menu_variants(tk, block) {
 
 	const vm = tk.skewer.viewModes.find(n => n.inuse) // view mode that's in use. following menu options depends on it
 	if (vm.type == 'skewer') {
+		// show options related to skewer mode
+
 		// showmode=1/0 means expanded/folded skewer, defined in skewer.render.js
 		const expandCount = tk.skewer.data.reduce((i, j) => i + j.showmode, 0)
 		if (expandCount > 0) {
@@ -130,7 +132,7 @@ function menu_variants(tk, block) {
 				.append('div')
 				.text('Collapse')
 				.attr('class', 'sja_menuoption')
-				.attr('data-testid', 'sja_collapse_menuoption')
+				.attr('data-testid', 'sja_collapse_menuoption') // mds3tk_variantleftlabel_collapse
 				.style('border-radius', '0px')
 				.on('click', () => {
 					fold_glyph(tk.skewer.data, tk)
@@ -141,13 +143,24 @@ function menu_variants(tk, block) {
 				.append('div')
 				.text('Expand')
 				.attr('class', 'sja_menuoption')
-				.attr('data-testid', 'sja_expand_menuoption')
+				.attr('data-testid', 'sja_expand_menuoption') // mds3tk_variantleftlabel_expand
 				.style('border-radius', '0px')
 				.on('click', () => {
 					settle_glyph(tk, block)
 					tk.menutip.hide()
 				})
 		}
+
+		tk.menutip.d
+			.append('div')
+			.text(tk.skewer.pointup ? 'Point down' : 'Point up')
+			.attr('class', 'sja_menuoption')
+			.style('border-radius', '0px')
+			.on('click', () => {
+				tk.skewer.pointup = !tk.skewer.pointup
+				tk.load()
+				tk.menutip.hide()
+			})
 	} else if (vm.type == 'numeric') {
 		// only show this opt in numeric mode; delete when label hiding works for skewer mode
 

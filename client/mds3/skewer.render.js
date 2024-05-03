@@ -119,7 +119,7 @@ export function skewer_make(tk, block) {
 		.append('g')
 		.attr(
 			'transform',
-			d => 'translate(0,' + (d.aa.showmode == modefold ? 0 : d.yoffset * (tk.aboveprotein ? -1 : 1)) + ')'
+			d => 'translate(0,' + (d.aa.showmode == modefold ? 0 : d.yoffset * (tk.skewer.pointup ? -1 : 1)) + ')'
 		)
 		.attr('class', 'sja_aa_discg')
 		.each(function (d) {
@@ -313,14 +313,13 @@ export function skewer_make(tk, block) {
 		.attr('fill-opacity', 0)
 		.attr('stroke', 'none')
 		.attr('r', d => d.maxradius + 1)
-		.attr('cy', d => (tk.aboveprotein ? -1 : 1) * d.maxradius)
+		.attr('cy', d => (tk.skewer.pointup ? -1 : 1) * d.maxradius)
 		.attr('transform', d => `scale(${d.showmode == modefold ? '1,1' : '0.01,0.01'})`) // "scale(0)" will not make the circle disappear on safari
 		.on('mouseover', (event, d) => {
-			const abp = tk.aboveprotein
 			let cumh = 0
 			let boxw = 0
 			const hpad = 5
-			const tiph = abp ? 7 : 14
+			const tiph = tk.skewer.pointup ? 7 : 14
 			for (const g of d.groups) {
 				g.pica_fontsize = Math.max(11, g.radius)
 				cumh += g.pica_fontsize + 1
@@ -337,7 +336,7 @@ export function skewer_make(tk, block) {
 			const boxh = cumh + 5
 			tk.pica.g
 				.append('rect')
-				.attr('y', abp ? -boxh : 0)
+				.attr('y', tk.skewer.pointup ? -boxh : 0)
 				.attr('width', boxw)
 				.attr('height', boxh)
 				.attr('fill', 'white')
@@ -352,7 +351,7 @@ export function skewer_make(tk, block) {
 				.append('g')
 				.attr('transform', (g, i) => {
 					cumh += g.pica_fontsize + 1
-					return 'translate(' + hpad + ',' + cumh * (abp ? -1 : 1) + ')'
+					return 'translate(' + hpad + ',' + cumh * (tk.skewer.pointup ? -1 : 1) + ')'
 				})
 			_g.append('text')
 				.text(g => g.mnameCompact || g.mlst[0].mname)
@@ -361,38 +360,38 @@ export function skewer_make(tk, block) {
 					g.pica_mlabelwidth = this.getBBox().width
 				})
 				.attr('fill', d => tk.color4disc(d.mlst[0]))
-				.attr('dominant-baseline', abp ? 'hanging' : 'auto')
+				.attr('dominant-baseline', tk.skewer.pointup ? 'hanging' : 'auto')
 			const firstlabw = d.groups[0].pica_mlabelwidth
 			tk.pica.x = d.x - hpad - firstlabw / 2
-			tk.pica.y = d.y + (abp ? -1 : 1) * (d.maxradius * 2 + tiph + 2)
+			tk.pica.y = d.y + (tk.skewer.pointup ? -1 : 1) * (d.maxradius * 2 + tiph + 2)
 			tk.pica.g.attr('transform', 'translate(' + tk.pica.x + ',' + tk.pica.y + ')')
 			_g.filter(g => g.occurrence > 1)
 				.append('text')
 				.text(g => 'x' + g.occurrence)
 				.attr('x', g => g.pica_mlabelwidth + 5)
 				.attr('font-size', g => g.pica_fontsize)
-				.attr('dominant-baseline', abp ? 'hanging' : 'auto')
+				.attr('dominant-baseline', tk.skewer.pointup ? 'hanging' : 'auto')
 				.attr('fill', '#9e9e9e')
 			const handle = tk.pica.g
 				.append('g')
-				.attr('transform', 'translate(' + (hpad + firstlabw / 2) + ',' + (abp ? 1 : -1) + ')')
+				.attr('transform', 'translate(' + (hpad + firstlabw / 2) + ',' + (tk.skewer.pointup ? 1 : -1) + ')')
 			handle
 				.append('line')
-				.attr('y2', (abp ? 1 : -1) * tiph)
+				.attr('y2', (tk.skewer.pointup ? 1 : -1) * tiph)
 				.attr('stroke', '#858585')
 				.attr('shape-rendering', 'crispEdges')
 			handle
 				.append('line')
 				.attr('x1', -1)
 				.attr('x2', -1)
-				.attr('y2', (abp ? 1 : -1) * tiph)
+				.attr('y2', (tk.skewer.pointup ? 1 : -1) * tiph)
 				.attr('stroke', 'white')
 				.attr('shape-rendering', 'crispEdges')
 			handle
 				.append('line')
 				.attr('x1', 1)
 				.attr('x2', 1)
-				.attr('y2', (abp ? 1 : -1) * tiph)
+				.attr('y2', (tk.skewer.pointup ? 1 : -1) * tiph)
 				.attr('stroke', 'white')
 				.attr('shape-rendering', 'crispEdges')
 		})
@@ -480,7 +479,7 @@ export function skewer_make(tk, block) {
 }
 
 export function skewer_sety(d, tk) {
-	if (tk.aboveprotein) {
+	if (tk.skewer.pointup) {
 		if (d.showmode == modefold) {
 			return tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3 - d.foldyoffset
 		}
@@ -491,7 +490,7 @@ export function skewer_sety(d, tk) {
 }
 
 function skewer_setstem(d, tk) {
-	if (tk.aboveprotein) {
+	if (tk.skewer.pointup) {
 		if (d.showmode == modefold) {
 			return 'M0,0v0l0,0v' + d.foldyoffset
 		}
@@ -574,7 +573,6 @@ export function settle_glyph(tk, block) {
 
 export function unfold_glyph(newlst, tk, block) {
 	const dur = 1000
-	const abp = tk.aboveprotein
 	// set up new items
 	const expanded = new Set() // d.x as key
 	const folded = new Set()
@@ -601,7 +599,7 @@ export function unfold_glyph(newlst, tk, block) {
 			.transition()
 			.duration(dur)
 			.attr('transform', d => {
-				d.y = d.yoffset * (abp ? -1 : 1)
+				d.y = d.yoffset * (tk.skewer.pointup ? -1 : 1)
 				return 'translate(0,' + d.y + ')'
 			})
 		setTimeout(function () {
@@ -619,15 +617,15 @@ export function unfold_glyph(newlst, tk, block) {
 		set
 			.selectAll('.sja_aa_ssk_kick')
 			.attr('transform', 'scale(1)')
-			.attr('y', abp ? 0 : -tk.skewer.stem1)
+			.attr('y', tk.skewer.pointup ? 0 : -tk.skewer.stem1)
 		set
 			.selectAll('.sja_aa_ssk_bg')
 			.attr('transform', 'scale(1)')
-			.attr('y', abp ? 0 : -tk.skewer.stem1)
+			.attr('y', tk.skewer.pointup ? 0 : -tk.skewer.stem1)
 		set
 			.selectAll('.sja_aa_ssk_text')
 			.attr('transform', 'scale(1)')
-			.attr('y', ((abp ? 1 : -1) * tk.skewer.stem1) / 2)
+			.attr('y', ((tk.skewer.pointup ? 1 : -1) * tk.skewer.stem1) / 2)
 		set.selectAll('.sja_aa_skkick').attr('transform', 'scale(0.01,0.01)') // safari fix
 		let counter = 0
 		set
@@ -648,7 +646,6 @@ export function unfold_glyph(newlst, tk, block) {
 
 function unfold_update(tk, block) {
 	const dur = 1000
-	const abp = tk.aboveprotein
 	const alllst = [] // already expanded
 	const hash = new Set() // d.x0 as key
 	const x1 = 0
@@ -699,7 +696,10 @@ function unfold_update(tk, block) {
 		.transition()
 		.duration(dur)
 		.attr('fill-opacity', 1)
-		.attr('transform', d => 'scale(1) rotate(' + (d.aa.slabelrotate ? (abp ? '-' : '') + '90' : '0') + ')')
+		.attr(
+			'transform',
+			d => 'scale(1) rotate(' + (d.aa.slabelrotate ? (tk.skewer.pointup ? '-' : '') + '90' : '0') + ')'
+		)
 	tk.slabel_forcerotate = false
 }
 
@@ -797,7 +797,6 @@ function horiplace0(items, allwidth) {
 export function fold_glyph(lst, tk) {
 	if (lst.length == 0) return
 	const dur = 1000
-	const abp = tk.aboveprotein
 	// total number of discs, determines if disc details are visible prior to folding
 	const hash = new Set()
 	for (const d of lst) {
@@ -820,7 +819,7 @@ export function fold_glyph(lst, tk) {
 		.selectAll('.sja_aa_discg')
 		.transition()
 		.duration(dur)
-		.attr('transform', d => 'translate(0,' + (abp ? '-' : '') + d.aa.maxradius + ')')
+		.attr('transform', d => 'translate(0,' + (tk.skewer.pointup ? '-' : '') + d.aa.maxradius + ')')
 	set.selectAll('.sja_aa_disckick').attr('transform', 'scale(0)')
 	set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 0).attr('stroke-opacity', 0)
 	set.selectAll('.sja_aa_disclabel').transition().duration(dur).attr('fill-opacity', 0).attr('transform', 'scale(0)') // hide this label so it won't be tred

@@ -25,6 +25,7 @@ make_skewer_data
 * skewer data structure *
 *************************
 tk.skewer{}
+	.pointup
 	.rawmlst[] -- comes from server-returned data.skewer[]
 	.g
 	.data[]
@@ -114,8 +115,6 @@ export function may_render_skewer(data, tk, block) {
 	// possible to plug in new skewer.*.js scripts to support additional mode types
 
 	if (currentMode.type != 'skewer') throw 'mode.type is not "skewer"'
-
-	tk.aboveprotein = true
 
 	if (data && !data.skewer && block.usegm && block.gmmode != 'genomic' && block.pannedpx != undefined) {
 		// when data.skewer is not given
