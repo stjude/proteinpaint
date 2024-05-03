@@ -1,1 +1,2 @@
-
+Features
+Added support to the geneExpression term type
