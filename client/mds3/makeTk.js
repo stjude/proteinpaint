@@ -302,7 +302,9 @@ function mayInitSkewer(tk) {
 		// border color of a box over a highlighted data
 		hlBoxColor: tk.mds.hlBoxColor || 'red',
 		// default to show dot labels
-		hideDotLabels: false
+		hideDotLabels: false,
+		// true for pointing up
+		pointup: true
 	}
 	setSkewerMode(tk) // adds skewer.viewModes[]
 }
