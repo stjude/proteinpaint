@@ -28,10 +28,11 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
 	tw.term.id = tw.term.gene //solve id!!
 	if (!tw.term.bins) {
-		const d = await vocabApi.getAnnotatedSampleData({ terms: [tw] }) //it will create default bins
-		tw.q = structuredClone(d.plots[0].defaultBins) //we should not overwrite the default
-		tw.q.mode = 'continuous'
-		tw.term.bins = { default: d.plots[0].defaultBins }
+		// TODO: use a server route with less sample detail in the response?
+		// or keep using getAnnotatedSampleData which can be easily reused
+		// when switching between continuous/discrete modes
+		const d = await vocabApi.getAnnotatedSampleData({ terms: [tw] })
+		if (d.refs.byTermId[tw.$id]?.bins) tw.term.bins = d.refs.byTermId[tw.$id].bins
 	}
 	return tw
 }
