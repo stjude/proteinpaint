@@ -16,6 +16,7 @@ Fixes:
 - Filter mutations checkbox is not shown for if there is no CGC
 - Bcf url argument for mds3 tracks fixed.
 - No empty gdc filter elements will be created when mapping pp filter to GDC format
+- show the incomplete caching message in the gene expression app
 
 
 ## 2.57.0
