@@ -14,16 +14,7 @@ export class GridElementsFormattedData {
 			const xPx = Math.floor(xCoord / resolution) * binpx
 			const yPx = Math.floor(yCoord / resolution) * binpx
 			if (view == 'genome') {
-				if (isFirstChrX || isIntraChr) {
-					const x = isFirstChrX ? xPx : yPx
-					const y = isFirstChrX ? yPx : xPx
-					formattedData.push([x, y, value])
-					if (isIntraChr) {
-						formattedData.push([y, x, value])
-					}
-				} else {
-					formattedData.push([xPx, yPx, value])
-				}
+				formattedData.push([xPx, yPx, value])
 			}
 			if (view == 'chrpair') {
 				const x = isFirstChrX ? xPx : yPx
