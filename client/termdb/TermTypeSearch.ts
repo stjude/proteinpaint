@@ -18,7 +18,7 @@ const useCases = {
 	dictionary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION],
 	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
-	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
+	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
 	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION], //This case covers scaleBy and dynamic scatters with coordinates from numeric terms
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
 	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES], //Later on can support other term types like snplocus, snplst, geneVariant

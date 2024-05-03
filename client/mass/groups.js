@@ -508,7 +508,7 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 		config
 	})
 }
-let tip2
+let tip2 // tip 2 is used for showing the terms tree, which is a submenu of the main tip, created here for reuse
 export async function showTermsTree(
 	div,
 	callback,

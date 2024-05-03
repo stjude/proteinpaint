@@ -150,7 +150,8 @@ async function getSampleData(q) {
 				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
-			console.log(tw)
+			if (tw.q.lst) byTermId[tw.$id] = { bins: tw.q.lst }
+
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
@@ -161,13 +162,15 @@ async function getSampleData(q) {
 				dataType: 3,
 				genes: [{ gene: tw.term.gene }]
 			}
+
 			const data = await q.ds.queries.geneExpression.get(args)
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				const values = data.gene2sample2value.get(tw.term.gene)
-				let value = Number(values[sampleId])
-				if (tw.q.mode == 'discrete') value = getBinValue(tw, value)
-				samples[sampleId][tw.$id] = { key: value, value }
+				const value = Number(values[sampleId])
+				let key = value
+				if (tw.q.mode == 'discrete') key = getBinValue(tw, value)
+				samples[sampleId][tw.$id] = { key, value }
 			}
 			/** pp filter */
 		} else {
@@ -197,7 +200,7 @@ async function getSampleData(q) {
 	return { samples, refs: { byTermId, bySampleId } }
 }
 
-function getBinValue(tw, value) {
+export function getBinValue(tw, value) {
 	if (!tw.q.mode == 'discrete') throw 'getBinValue() called for non-discrete term'
 	const bins = tw.q
 	let bin
