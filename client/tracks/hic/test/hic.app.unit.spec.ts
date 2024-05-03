@@ -125,20 +125,21 @@ tape('DataMapper - sortData()', test => {
 	test.equal(detailMax, 1, 'Should return the closest number to the max value for detail view max')
 })
 
-tape.skip('parseData - parseSV()', test => {
-	//test.plan(2)
-	//TODO
-})
+//TODOs
+// tape.skip('parseData - parseSV()', test => {
+// 	//test.plan(2)
+// 	//TODO
+// })
 
-tape.skip('parseData - parseSVheader()', test => {
-	//test.plan(2)
-	//TODO
-})
+// tape.skip('parseData - parseSVheader()', test => {
+// 	//test.plan(2)
+// 	//TODO
+// })
 
-tape.skip('parseData - parseSVline()', test => {
-	//test.plan(2)
-	//TODO
-})
+// tape.skip('parseData - parseSVline()', test => {
+// 	//test.plan(2)
+// 	//TODO
+// })
 
 tape('Positions - class and setPositions()', test => {
 	test.plan(4)
@@ -610,7 +611,7 @@ tape('NormalizationMethodControl - render() and update()', test => {
 tape('DetailDataFetcher - class and isFragData()', test => {
 	test.plan(3)
 
-	let result: any, resolution: number | null
+	let result, resolution
 
 	const fetcher = new DetailDataFetcher([])
 	test.ok(fetcher instanceof DetailDataFetcher, 'Should construct DetailDataFetcher class properly.')
