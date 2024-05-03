@@ -358,8 +358,8 @@ export function setInteractivity(self) {
 				{
 					type: 'mds3',
 					dslabel: self.app.opts.state.vocab.dslabel,
-					filter0: self.state.filter0,
-					filterObj: self.state.filter
+					filter0: self.state.termfilter.filter0,
+					filterObj: self.state.termfilter.filter
 				}
 			]
 		}
