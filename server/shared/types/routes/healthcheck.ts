@@ -46,6 +46,9 @@ export type HealthCheckResponse = {
 	status: 'ok' | 'error'
 	genomes: BuildByGenome
 	versionInfo: VersionInfo
+	byDataset: {
+		[dslabel: string]: any
+	}
 	auth?: {
 		errors?: string[]
 	}[]
