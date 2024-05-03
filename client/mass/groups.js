@@ -296,7 +296,7 @@ async function updateUI(self) {
 	// create "Add new group" button
 	filterPromptInit({
 		holder: self.dom.addNewGroupBtnHolder,
-		vocab: self.app.opts.state.vocab,
+		vocabApi: self.app.vocabApi,
 		emptyLabel: 'Add group',
 		termdbConfig: self.state.termdbConfig,
 		callback: f => {
@@ -392,12 +392,11 @@ async function updateUI(self) {
 	}
 
 	renderTable(tableArg)
-
 	for (const [i, row] of tableArg.rows.entries()) {
 		const group = groups[i]
 		filterInit({
 			holder: row[3].__td,
-			vocab: self.app.opts.state.vocab,
+			vocabApi: self.app.vocabApi,
 			termdbConfig: self.state.termdbConfig,
 			callback: f => {
 				if (!f || f.lst.length == 0) {

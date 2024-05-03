@@ -307,8 +307,8 @@ function setRenderers(self) {
 		self.dom.submenu = self.dom.tip.d.append('div')
 		termdb.appInit({
 			holder: self.dom.submenu,
+			vocabApi: self.app.vocabApi,
 			state: {
-				vocab: self.state.vocab,
 				activeCohort: self.state.activeCohort,
 				nav: {
 					header_mode: 'search_only'
