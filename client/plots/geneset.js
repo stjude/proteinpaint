@@ -71,7 +71,12 @@ class GenesetComp {
 		} catch (e) {
 			// may ignore this error
 			if (e == 'stale sequenceId' || e.name == 'AbortError') return
-			else throw e
+			else {
+				if (this.opts.showWaitMessage) {
+					this.dom.body.style('margin', '20px').html(e)
+				}
+				throw e
+			}
 		}
 	}
 

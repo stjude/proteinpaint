@@ -1,1 +1,2 @@
-
+Fixes:
+- show the incomplete caching message in the gene expression app
