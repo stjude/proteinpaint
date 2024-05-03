@@ -337,7 +337,7 @@ tape('GridElementsFormattedData - formatData()', test => {
 	resolution = 500000
 	isFirstChrX = true
 	isIntraChr = true
-	result = formattedData.formatData('genome', items, binpx, resolution, isFirstChrX, isIntraChr)
+	result = formattedData.formatData('chrpair', items, binpx, resolution, isFirstChrX, isIntraChr)
 
 	test.equal(result.length, items.length * 2, 'Should double size for reversed coorindates')
 	let noReverse = 0
@@ -371,14 +371,14 @@ tape('GridElementsFormattedData - formatData()', test => {
 	resolution = 1000000
 	isFirstChrX = false
 	isIntraChr = false
-	result = formattedData.formatData('genome', items, binpx, resolution, isFirstChrX, isIntraChr)
+	result = formattedData.formatData('chrpair', items, binpx, resolution, isFirstChrX, isIntraChr)
 	expected = [
 		[0, 0, 311],
-		[4, 0, 94],
-		[8, 0, 34],
-		[12, 0, 59]
+		[0, 4, 94],
+		[0, 8, 34],
+		[0, 12, 59]
 	]
-	test.deepEqual(result, expected, 'Should a less process array for neither X first nor intra-chromosomal')
+	test.deepEqual(result, expected, 'Should simply process the array if neither X first nor intra-chromosomal')
 })
 
 /************* Data tests specific to detail view *************/
