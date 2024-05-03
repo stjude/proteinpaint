@@ -6,7 +6,7 @@ export const api = {
 	methods: {
 		get: {
 			init({ genomes }) {
-				return async (req: undefined, res: any): Promise<void> => {
+				return async (req: any, res: any): Promise<void> => {
 					try {
 						const health = (await getStat(genomes)) as HealthCheckResponse
 						const q = req.query
