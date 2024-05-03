@@ -178,6 +178,7 @@ async function getSampleData(q) {
 				samples[sampleId][tw.$id] = { key, value }
 			}
 			if (tw.q.lst) byTermId[tw.$id] = { bins: tw.q.lst }
+			else if (tw.term.bins) byTermId[tw.$id] = { bins: tw.term.bins }
 
 			/** pp filter */
 		} else {
