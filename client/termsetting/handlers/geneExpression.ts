@@ -1,6 +1,5 @@
-import { NumericTerm, NumericQ, NumericTW } from '../../shared/types/terms/numeric'
+import { NumericQ } from '../../shared/types/terms/numeric'
 import { VocabApi } from '../../shared/types/index'
-import { TermTypes } from '../../shared/common.js'
 import { GeneExpressionTW } from 'shared/types/terms/geneExpression.js'
 
 /*
@@ -26,15 +25,14 @@ export async function getHandler(self) {
 }
 
 export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
+	tw.term.id = tw.term.gene //solve id!!
 	if (!tw.term.bins) {
-		const d = await vocabApi.getViolinPlotData({ termid: tw.term.id, term: tw }) //it will create default bins
+		const d = await vocabApi.getAnnotatedSampleData({ terms: [tw] }) //it will create default bins
 		tw.q = structuredClone(d.plots[0].defaultBins) //we should not overwrite the default
 		tw.q.mode = 'continuous'
 		tw.term.bins = { default: d.plots[0].defaultBins }
 	}
-	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
-
-	tw.term.id = tw.term.gene //solve id!!
 	return tw
 }
 
