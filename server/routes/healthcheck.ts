@@ -9,6 +9,16 @@ export const api = {
 				return async (req: undefined, res: any): Promise<void> => {
 					try {
 						const health = (await getStat(genomes)) as HealthCheckResponse
+						const q = req.query
+						if (q.dslabel) {
+							for (const gn in genomes) {
+								const ds = genomes[gn]?.datasets?.[q.dslabel]
+								if (!ds?.getHealth) continue
+								if (!health.byDataset) health.byDataset = {}
+								if (!health.byDataset[q.dslabel]) health.byDataset[q.dslabel] = {}
+								health.byDataset[q.dslabel][gn] = ds.getHealth(ds)
+							}
+						}
 						res.send(health)
 					} catch (e: any) {
 						res.send({ status: 'error', error: e.message || e })
