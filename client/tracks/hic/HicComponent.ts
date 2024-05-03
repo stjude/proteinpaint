@@ -138,12 +138,8 @@ export class HicComponent {
 			} else {
 				const chrx = this.state.x
 				const chry = this.state.y
-				obj['lead'] = `${
-					chrx.start && chrx.stop ? `${chrx.chr}:${chrx.start}-${chrx.stop}` : chrx.chr.replace('chr', '')
-				}`
-				obj['follow'] = `${
-					chry.start && chry.stop ? `${chry.chr}:${chry.start}-${chry.stop}` : chry.chr.replace('chr', '')
-				}`
+				obj['lead'] = `${chrx.start && chrx.stop ? `${chrx.chr}:${chrx.start}-${chrx.stop}` : chrx.chr}`
+				obj['follow'] = `${chry.start && chry.stop ? `${chry.chr}:${chry.start}-${chry.stop}` : chry.chr}`
 			}
 
 			const dataFetcher = new DataFetcher(this.hic, true, this.errList)
