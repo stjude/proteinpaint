@@ -1,20 +1,34 @@
 import tape from 'tape'
 import { hicData } from './hicData.ts'
-//import { GenomeDataFetcher } from '../data/GenomeDataFetcher.ts'
+import { GenomeDataFetcher } from '../data/GenomeDataFetcher.ts'
 import { DataFetcher } from '../../../tracks/hic/data/DataFetcher.ts'
 import { DetailDataFetcher } from '../../../tracks/hic/data/DetailDataFetcher.ts'
-//import { DetailDataMapper } from '../../../tracks/hic/data/DetailDataMapper.ts'
 
 tape('\n', test => {
 	test.pass('-***- hic app integration tracks/hic -***-')
 	test.end()
 })
 
+/**
+ * Unsure about testing the DetailDataMapper class until confirming if the
+ * reference files are available on CI.
+ */
+
 /******** Data Request Functions *********/
 
-tape.skip('GenomeDataFetcher - class and getData()', test => {
+//TODO: This may take too long on CI. Need to confirm.
+//Sometimes remote file unable to fetch all data. Need guidance
+tape.skip('GenomeDataFetcher - class and getData()', async test => {
 	// test.plan(2)
-	//TODO
+
+	const mockHic = Object.assign(hicData.hic.v8, { url: 'https://proteinpaint.stjude.org/ppdemo/hg19/hic/hic_demo.hic' })
+
+	const fetcher = new GenomeDataFetcher(mockHic, false, [])
+	test.ok(fetcher instanceof GenomeDataFetcher, 'Should construct DataFetcher class properly.')
+
+	const testObj = { matrixType: 'observed', nmeth: 'NONE', resolution: 2500000 }
+	const data = await fetcher.getData(testObj)
+	console.log(data)
 
 	test.end()
 })
