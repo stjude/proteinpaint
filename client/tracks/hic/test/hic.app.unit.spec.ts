@@ -13,12 +13,10 @@ import { CutoffControl } from '../controls/CutoffControl.ts'
 import { MatrixTypeControl } from '../controls/MatrixTypeControl.ts'
 import { NormalizationMethodControl } from '../controls/NormalizationMethodControl.ts'
 import { Elem } from 'types/d3'
+import { DetailDataFetcher } from '../../../tracks/hic/data/DetailDataFetcher.ts'
 
 function getHolder() {
 	return d3s.select('body').append('div')
-	// .style('border', '1px solid #aaa')
-	// .style('padding', '5px')
-	// .style('margin', '5px')
 }
 
 type MockState = {
@@ -607,4 +605,63 @@ tape('NormalizationMethodControl - render() and update()', test => {
 	test.equal(nmeth2.nmethSelect.node().innerHTML, defaultNmeth, `Should display only the default value=${defaultNmeth}`)
 
 	if (test['_ok']) holder.remove()
+})
+
+tape('DetailDataFetcher - class and isFragData()', test => {
+	test.plan(3)
+
+	let result: any, resolution: number | null
+
+	const fetcher = new DetailDataFetcher([])
+	test.ok(fetcher instanceof DetailDataFetcher, 'Should construct DetailDataFetcher class properly.')
+
+	//Null resolution
+	resolution = null
+	result = fetcher.isFragData(hicData.hic.v8, null)
+	test.equal(resolution, null, `Should return a null resolution because hic.enzyme is present.`)
+
+	// With resolution
+	resolution = 1000000
+	result = fetcher.isFragData(hicData.hic.v8, resolution)
+	test.equal(resolution, 1000000, 'Resolution should remain unchanged.')
+
+	// Without enzyme and null resolution
+	// resolution = null
+	// const copyHic = hicData.hic.v8
+	// copyHic.enzyme = 'none'
+	// result = fetcher.isFragData(copyHic, null)
+	// test.equal(result, 5000, 'Should return the last bp resolution when enzyme is none and resolution is null.')
+})
+
+tape('DetailDataFetcher - formatFragArgs()', test => {
+	test.plan(1)
+
+	const fetcher = new DetailDataFetcher([])
+	const copyHic = hicData.hic.v8
+	copyHic['enzymefile'] = 'anno/hicFragment/hic.MboI.hg38.gz'
+	const chr = { chr: 'chr1', start: 0, stop: 1000000 }
+	const result = fetcher.formatFragArgs(copyHic['enzymefile'], chr)
+	const expected = {
+		getdata: 1,
+		getBED: 1,
+		file: 'anno/hicFragment/hic.MboI.hg38.gz',
+		rglst: [chr]
+	}
+	test.deepEqual(result, expected, 'Should return the correct formatted arguments.')
+})
+
+tape('DetailDataFetcher - determinePosition()', test => {
+	test.plan(2)
+
+	let result: any
+
+	const fetcher = new DetailDataFetcher([])
+	const chr = { chr: 'chr1', start: 0, stop: 1000000 }
+	const frag = { start: 500, stop: 5000 }
+	result = fetcher.determinePosition(hicData.hic.v8, chr, frag)
+	test.equal(result, '1:500:5000', 'Should return the correct position for fragment.')
+
+	const mockHic = Object.assign(hicData.hic.v8, { nochr: false })
+	result = fetcher.determinePosition(mockHic, chr, frag)
+	test.equal(result, 'chr1:500:5000', 'Should return the correct position for fragment and "chr" positions.')
 })

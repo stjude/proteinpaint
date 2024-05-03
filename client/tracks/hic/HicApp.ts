@@ -1,5 +1,6 @@
 import { getAppInit } from '#rx'
 import { hicStoreInit } from './HicStore'
+import { RestrictionEnzyme } from '../../types/hic'
 import { Div, Elem } from '../../types/d3'
 import { showErrorsWithCounter } from '../../dom/sayerror'
 import { loadingInit } from './dom/LoadingOverlay.ts'
@@ -22,7 +23,7 @@ class HicApp {
 	}
 	errList: string[]
 	hic: {
-		enzyme?: string
+		enzyme?: RestrictionEnzyme
 		file?: string
 		url?: string
 		genome: any

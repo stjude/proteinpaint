@@ -73,3 +73,5 @@ export type ReturnedItems = { items: number[][] }
 export type CoordinatesData = { items: [number, number, number][] }
 
 export type ChrPosition = { chr: string; start: number; stop: number }
+
+export type RestrictionEnzyme = 'none' | 'HindIII' | 'NcoI' | 'MboI' | 'DpnII' | 'BglII' | 'EcoRI' | 'BamHI'

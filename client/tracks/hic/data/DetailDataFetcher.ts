@@ -36,7 +36,7 @@ export class DetailDataFetcher {
 	 * @param errList
 	 * @returns
 	 */
-	async getBedData(arg: any) {
+	async getBedData(arg: { getdata: number; getBED: number; file: string; rglst: ChrPosition[] }) {
 		try {
 			return await dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
 		} catch (e: any) {
