@@ -152,7 +152,7 @@ function getZscore(l: number[]) {
 export async function validate_query_geneExpression(ds: any, genome: any) {
 	const q: GeneExpressionQuery = ds.queries.geneExpression
 	if (!q) return
-	q.gene2density = {}
+	q.gene2bins = {}
 
 	if (q.src == 'gdcapi') {
 		gdc_validate_query_geneExpression(ds as GeneExpressionQueryGdc, genome)

@@ -96,6 +96,7 @@ function validateArg(q, ds, genome) {
 async function getSampleData(q) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
+	console.log(dictTerms, nonDictTerms)
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
 	/* samples={}
 	this object collects term annotation data on all samples; even if there's no dict term it still return blank {}
@@ -150,8 +151,6 @@ async function getSampleData(q) {
 				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
-			if (tw.q.lst) byTermId[tw.$id] = { bins: tw.q.lst }
-
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
@@ -162,16 +161,24 @@ async function getSampleData(q) {
 				dataType: 3,
 				genes: [{ gene: tw.term.gene }]
 			}
-
 			const data = await q.ds.queries.geneExpression.get(args)
+			if (!tw.term.bins) {
+				if (q.ds.queries.geneExpression.gene2bins[tw.term.gene])
+					tw.term.bins = { default: q.ds.queries.geneExpression.gene2bins[tw.term.gene] }
+				else tw.term.bins = { default: getDefaultGeneExpBins(q, tw, data) }
+				if (!tw.q.mode) tw.q = JSON.parse(JSON.stringify(tw.term.bins.default))
+			}
+
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				const values = data.gene2sample2value.get(tw.term.gene)
 				const value = Number(values[sampleId])
 				let key = value
-				if (tw.q.mode == 'discrete') key = getBinValue(tw, value)
+				if (tw.q?.mode == 'discrete') key = getBinLabel(tw.q, value)
 				samples[sampleId][tw.$id] = { key, value }
 			}
+			if (tw.q.lst) byTermId[tw.$id] = { bins: tw.q.lst }
+
 			/** pp filter */
 		} else {
 			throw 'unknown type of non-dictionary term'
@@ -199,41 +206,76 @@ async function getSampleData(q) {
 
 	return { samples, refs: { byTermId, bySampleId } }
 }
-
-export function getBinValue(tw, value) {
-	if (!tw.q.mode == 'discrete') throw 'getBinValue() called for non-discrete term'
-	const bins = tw.q
-	let bin
-	if (tw.q.type == 'regular-bin') {
-		if (value < bins.first_bin.stop) bin = 0
-		else bin = parseInt((value - bins.first_bin.stop) / bins.bin_size) + 1
-		if (bin == 0) value = (bins.startinclusive ? '<= ' : '< ') + bins.first_bin.stop.toFixed(2)
-		else if (bins.startinclusive ? value >= bins.last_bin.start : value > bins.last_bin.start)
-			value = (bins.startinclusive ? '>= ' : '> ') + bins.last_bin.start.toFixed(2)
-		else {
-			const start = (bins.first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
-			const stop = (bins.first_bin.stop + bin * bins.bin_size).toFixed(2)
-			value = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
-		}
-	} else if (tw.q.type == 'custom-bin') {
-		let bin = bins.lst.findIndex(
-			b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
-		)
-		if (bin == -1)
-			bin = bins.lst.findIndex(
-				b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
-			)
-		if (bin == -1)
-			bin = bins.lst.findIndex(
-				b =>
-					(value > b.start && value < b.stop) ||
-					(b.startinclusive && value == b.start) ||
-					(b.stopinclusive && value == b.stop)
-			)
-
-		value = bins.lst[bin].label
+function getDefaultGeneExpBins(q, tw, data) {
+	let min = Infinity
+	let max = -Infinity
+	//find min and max to build bins
+	for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
+		const values = data.gene2sample2value.get(tw.term.gene)
+		const value = Number(values[sampleId])
+		min = Math.min(min, value)
+		max = Math.max(max, value)
 	}
-	return value
+	const step = Math.round((max - min) * 10) / 100 // round to 2 decimal places
+
+	const lst = []
+	for (let i = min; i < max; i += step) {
+		lst.push({
+			start: i,
+			stop: i + step,
+			startinclusive: false,
+			stopinclusive: true
+		})
+	}
+	const defaultBins = {
+		mode: 'discrete',
+		type: 'regular-bin',
+		bin_size: step,
+		startinclusive: false,
+		stopinclusive: true,
+		first_bin: {
+			startunbounded: true,
+			stop: min + step
+		},
+		last_bin: {
+			start: max - step,
+			stopunbounded: true
+		},
+		lst
+	}
+	for (const bin of defaultBins.lst) bin.name = bin.label = getBinLabel(defaultBins, bin.stop)
+	q.ds.queries.geneExpression.gene2bins[tw.term.gene] = defaultBins
+
+	return defaultBins
+}
+
+export function getBinLabel(bins, value) {
+	value = Math.round(value * 100) / 100 //to keep 2 decimal places
+
+	let bin = bins.lst.findIndex(
+		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
+	)
+	if (bin == -1)
+		bin = bins.lst.findIndex(
+			b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
+		)
+	if (bin == -1)
+		bin = bins.lst.findIndex(
+			b =>
+				(value > b.start && value < b.stop) ||
+				(b.startinclusive && value == b.start) ||
+				(b.stopinclusive && value == b.stop)
+		)
+	let label
+	if (bin == 0) label = (bins.startinclusive ? '<= ' : '< ') + bins.first_bin.stop.toFixed(2)
+	else if (bins.startinclusive ? value >= bins.last_bin.start : value > bins.last_bin.start)
+		label = (bins.startinclusive ? '>= ' : '> ') + bins.last_bin.start.toFixed(2)
+	else {
+		const start = (bins.first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
+		const stop = (bins.first_bin.stop + bin * bins.bin_size).toFixed(2)
+		label = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
+	}
+	return label
 }
 
 async function mayGetSampleFilterSet(q, nonDictTerms) {

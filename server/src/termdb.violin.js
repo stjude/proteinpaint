@@ -1,17 +1,11 @@
 import { scaleLinear, scaleLog } from 'd3'
-import serverconfig from './serverconfig'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import path from 'path'
-import { write_file } from './utils'
 import { getData } from './termdb.matrix'
 import { createCanvas } from 'canvas'
 import { getBinsDensity } from '../../server/shared/violin.bins'
 import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
-import { TermTypes, isDictionaryType, isNonDictionaryType, isNumericTerm } from '#shared/common.js'
-import { get_bin_label } from '#shared/termdb.bins.js'
-import { getBinValue } from './termdb.matrix.js'
-
+import { isNumericTerm } from '#shared/common.js'
 /*
 q = {
   getViolinPlotData: '1',
@@ -70,8 +64,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		}
 		twLst.push(q.divideTw)
 		q.term2_q = q.divideTw.q
-	} else if (q.term.term.type == TermTypes.GENE_EXPRESSION && ds.queries.geneExpression.gene2density[q.term.term.gene])
-		return ds.queries.geneExpression.gene2density[q.term.term.gene]
+	}
 
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
@@ -266,50 +259,11 @@ function resultObj(valuesObject, data, q, ds) {
 				values,
 				plotValueCount: values.length
 			}
-			if (q.term?.term.type == TermTypes.GENE_EXPRESSION) {
-				plot.defaultBins = getDefaultBins(q.term, valuesObject)
-				ds.queries.geneExpression.gene2density[q.term.term.gene] = result
-			}
 
 			result.plots.push(plot)
 		}
 	}
 	return result
-}
-
-function getDefaultBins(tw, valuesObject) {
-	const step = Math.round((valuesObject.minMaxValues.max - valuesObject.minMaxValues.min) * 10) / 100 // round to 2 decimal places
-
-	const lst = []
-	for (let i = valuesObject.minMaxValues.min; i < valuesObject.minMaxValues.max; i += step) {
-		const tick = Math.round((i + step) * 100) / 100
-		const label = getBinValue(tw, tick)
-		lst.push({
-			start: i,
-			stop: i + step,
-			startinclusive: false,
-			stopinclusive: true,
-			label,
-			name: label
-		})
-	}
-	const defaultBins = {
-		mode: 'discrete',
-		type: 'regular-bin',
-		bin_size: step,
-		startinclusive: false,
-		stopinclusive: true,
-		first_bin: {
-			startunbounded: true,
-			stop: valuesObject.minMaxValues.min + step
-		},
-		last_bin: {
-			start: valuesObject.minMaxValues.max - step,
-			stopunbounded: true
-		},
-		lst
-	}
-	return defaultBins
 }
 
 function createCanvasImg(q, result, ds) {
