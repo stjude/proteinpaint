@@ -132,7 +132,7 @@ function gdcValidateQuery(ds: any, genome: any) {
 		}
 
 		// disable when caching is incomplete (particularly cases with gene exp data); to prevent showing wrong data on client
-		if (!ds.__gdc.doneCaching) throw 'The server has not finished caching the case IDs: try again in ~2 minutes'
+		if (!ds.__gdc.doneCaching) throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
 
 		// based on current cohort, get list of cases with exp data, as input of next api query
 		const caseLst = await gdcGetCasesWithExpressionDataFromCohort(q, ds)

@@ -118,9 +118,9 @@ export async function init(arg, holder, genomes) {
 				dslabel: gdcDslabel,
 				termfilter: { filter0: arg.filter0 },
 				plots: [
-					// initialize with a geneset component, in case the genes lst is empty
-					// this will be replace with the actual matrix/hierCluster app once
-					// a valid geneset is selected
+					// initialize with a geneset component, in case the genes lst is empty.
+					// This will be replaced with the actual matrix/hierCluster app once
+					// a valid geneset is selected.
 					{
 						chartType: 'geneset',
 						toolName: 'OncoMatrix',
