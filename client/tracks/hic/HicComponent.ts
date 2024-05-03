@@ -8,7 +8,7 @@ import { controlPanelInit } from './controls/ControlPanel.ts'
 import { InfoBar } from './dom/InfoBar.ts'
 import { DataMapper } from './data/DataMapper.ts'
 import { GenomeDataFetcher } from './data/GenomeDataFetcher.ts'
-import { DetailViewDataMapper } from './data/DetailViewDataMapper.ts'
+import { DetailDataMapper } from './data/DetailDataMapper.ts'
 import { DataFetcher } from './data/DataFetcher.ts'
 import { Resolution } from './data/Resolution.ts'
 
@@ -129,7 +129,7 @@ export class HicComponent {
 				if (value) this[prop] = value
 				return this[prop]
 			}
-			const detailMapper = new DetailViewDataMapper(this.hic, this.errList, parent)
+			const detailMapper = new DetailDataMapper(this.hic, this.errList, parent)
 			this.data = await detailMapper.getData(this.state.x, this.state.y)
 		} else {
 			if (!this.state?.x?.chr || !this.state?.y?.chr) {

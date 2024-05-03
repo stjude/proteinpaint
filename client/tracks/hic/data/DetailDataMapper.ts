@@ -1,10 +1,10 @@
-import { DetailViewDataFetcher } from './DetailViewDataFetcher'
+import { DetailDataFetcher } from './DetailDataFetcher'
 import { ChrPosition } from '../../../types/hic.ts'
 import { ParseFragData } from './ParseFragData'
 
-export class DetailViewDataMapper {
+export class DetailDataMapper {
 	hic: any
-	dataFetcher: DetailViewDataFetcher
+	dataFetcher: DetailDataFetcher
 	minBinNum_bp = 20
 	errList: string[]
 	parent: (prop: string, v?: number) => string | number
@@ -17,7 +17,7 @@ export class DetailViewDataMapper {
 	constructor(hic: any, errList: string[], parent: any) {
 		this.hic = hic
 		this.errList = errList
-		this.dataFetcher = new DetailViewDataFetcher(errList)
+		this.dataFetcher = new DetailDataFetcher(errList)
 		this.parent = parent
 	}
 

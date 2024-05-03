@@ -3,7 +3,7 @@ import { Resolution } from '../data/Resolution.ts'
 import { ColorizeElement } from '../dom/ColorizeElement.ts'
 import { DetailBlock } from './DetailBlock.ts'
 import { select, Selection } from 'd3-selection'
-import { DetailViewDataMapper } from '../data/DetailViewDataMapper.ts'
+import { DetailDataMapper } from '../data/DetailDataMapper.ts'
 import { DetailCoordinates } from '../data/DetailCoodinates.ts'
 import { Elem } from 'types/d3'
 
@@ -19,7 +19,7 @@ export class DetailView {
 	colorizeElement: ColorizeElement
 	viewRangeBpw: number | undefined
 	calResolution: number | null = null
-	dataMapper: DetailViewDataMapper
+	dataMapper: DetailDataMapper
 	items: ReturnedItems
 	coordinates: DetailCoordinates
 	errList: string[]
@@ -61,7 +61,7 @@ export class DetailView {
 			(this.parent('state') as any).x,
 			(this.parent('state') as any).y
 		)
-		this.dataMapper = new DetailViewDataMapper(this.hic, opts.error, opts.parent)
+		this.dataMapper = new DetailDataMapper(this.hic, opts.error, opts.parent)
 		this.coordinates = new DetailCoordinates(this.hic, this.errList)
 	}
 

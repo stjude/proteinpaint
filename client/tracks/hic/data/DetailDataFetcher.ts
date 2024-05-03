@@ -3,7 +3,7 @@ import { ChrPosition } from '../../../types/hic.ts'
 
 type FragCoord = { start: number; stop: number }
 
-export class DetailViewDataFetcher {
+export class DetailDataFetcher {
 	obj = {
 		rglst: [] as ChrPosition[]
 	}
