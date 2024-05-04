@@ -96,7 +96,6 @@ function validateArg(q, ds, genome) {
 async function getSampleData(q) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
-	console.log(dictTerms, nonDictTerms)
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
 	/* samples={}
 	this object collects term annotation data on all samples; even if there's no dict term it still return blank {}
@@ -165,8 +164,13 @@ async function getSampleData(q) {
 			if (!tw.term.bins) {
 				if (q.ds.queries.geneExpression.gene2bins[tw.term.gene])
 					tw.term.bins = { default: q.ds.queries.geneExpression.gene2bins[tw.term.gene] }
-				else tw.term.bins = { default: getDefaultGeneExpBins(q, tw, data) }
-				if (!tw.q.mode) tw.q = JSON.parse(JSON.stringify(tw.term.bins.default))
+				else tw.term.bins = { default: getDefaultGeneExpBins(q.ds, tw, data) }
+			}
+
+			if (!tw.q.lst) {
+				const mode = tw.q.mode || 'continuous'
+				tw.q = JSON.parse(JSON.stringify(tw.term.bins.default))
+				tw.q.mode = mode
 			}
 
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
@@ -207,7 +211,7 @@ async function getSampleData(q) {
 
 	return { samples, refs: { byTermId, bySampleId } }
 }
-function getDefaultGeneExpBins(q, tw, data) {
+export function getDefaultGeneExpBins(ds, tw, data) {
 	let min = Infinity
 	let max = -Infinity
 	//find min and max to build bins
@@ -245,7 +249,7 @@ function getDefaultGeneExpBins(q, tw, data) {
 		lst
 	}
 	for (const bin of defaultBins.lst) bin.name = bin.label = getBinLabel(defaultBins, bin.stop)
-	q.ds.queries.geneExpression.gene2bins[tw.term.gene] = defaultBins
+	ds.queries.geneExpression.gene2bins[tw.term.gene] = defaultBins
 
 	return defaultBins
 }
@@ -268,12 +272,14 @@ export function getBinLabel(bins, value) {
 				(b.stopinclusive && value == b.stop)
 		)
 	let label
-	if (bin == 0) label = (bins.startinclusive ? '<= ' : '< ') + bins.first_bin.stop.toFixed(2)
-	else if (bins.startinclusive ? value >= bins.last_bin.start : value > bins.last_bin.start)
-		label = (bins.startinclusive ? '>= ' : '> ') + bins.last_bin.start.toFixed(2)
+	const first_bin = bins.lst[0]
+	const last_bin = bins.lst[bins.lst.length - 1]
+	if (bin == 0) label = (bins.startinclusive ? '<= ' : '< ') + bins.lst[0].stop.toFixed(2)
+	else if (bins.startinclusive ? value >= last_bin.start : value > last_bin.start)
+		label = (bins.startinclusive ? '>= ' : '> ') + last_bin.start.toFixed(2)
 	else {
-		const start = (bins.first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
-		const stop = (bins.first_bin.stop + bin * bins.bin_size).toFixed(2)
+		const start = (first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
+		const stop = (first_bin.stop + bin * bins.bin_size).toFixed(2)
 		label = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
 	}
 	return label

@@ -7,7 +7,7 @@ import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getSampleScatter } from './termdb.scatter.js'
 import { trigger_getLowessCurve } from './termdb.scatter.js'
-import { getData, getSamplesPerFilter } from './termdb.matrix.js'
+import { getData, getSamplesPerFilter, getDefaultGeneExpBins } from './termdb.matrix.js'
 import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
 import { authApi } from './auth.js'
@@ -74,6 +74,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
 			if (q.for == 'getSamplesByName') return get_AllSamplesByName(q, req, res, ds)
 			if (q.for == 'DEanalysis') return await get_DEanalysis(q, res, ds)
+			if (q.for == 'getDefaultGeneExpBins') return trigger_getDefaultGeneExpBins(q, ds, res)
 
 			throw "termdb: doesn't know what to do"
 		} catch (e) {
@@ -462,4 +463,25 @@ async function LDoverlay(q, ds, res) {
 		}
 	})
 	res.send({ lst })
+}
+
+async function trigger_getDefaultGeneExpBins(q, ds, res) {
+	const tw = q.tw
+	const args = {
+		genome: q.genome,
+		dslabel: q.dslabel,
+		clusterMethod: 'hierarchical',
+		/** distance method */
+		distanceMethod: 'euclidean',
+		/** Data type */
+		dataType: 3,
+		genes: [{ gene: tw.term.gene }]
+	}
+	const data = await ds.queries.geneExpression.get(args)
+	let defaultBins
+	if (ds.queries.geneExpression.gene2bins[tw.term.gene])
+		defaultBins = { default: ds.queries.geneExpression.gene2bins[tw.term.gene] }
+	else defaultBins = { default: getDefaultGeneExpBins(ds, tw, data) }
+
+	res.send({ defaultBins })
 }

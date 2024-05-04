@@ -151,6 +151,7 @@ export class Vocab {
 			if (tw.term.gene) {
 				copy.term.gene = tw.term.gene
 			} else if (tw.term.type.startsWith('gene')) {
+				//quick fix that should be fixed later
 				copy.term.chr = tw.term.chr
 				copy.term.start = tw.term.start
 				copy.term.stop = tw.term.stop

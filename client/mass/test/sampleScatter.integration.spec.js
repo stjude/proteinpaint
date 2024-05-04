@@ -407,7 +407,7 @@ tape('Invalid colorTW.term', async function (test) {
 			}
 		})
 		const errorbar = await detectGte({ elem: holder.node(), selector: '.sja_errorbar' })
-		const error = 'Error: Type not defined for {"term":{"id":"Not real data"},"isAtomic":true'
+		const error = 'Error: Error: Type is not defined [sampleScatter getPlotConfig()]'
 		test.true(errorbar[0].innerText.startsWith(error), `Should display, "${error}...".`)
 	} catch (e) {
 		test.fail(e)

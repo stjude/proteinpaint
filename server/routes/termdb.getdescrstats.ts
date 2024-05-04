@@ -1,7 +1,6 @@
 import { getdescrstatsRequest, getdescrstatsResponse } from '#shared/types/routes/termdb.getdescrstats.ts'
-import { get_rows_by_one_key } from '../src/termdb.sql.js'
 import Summarystats from '../shared/descriptive.stats.js'
-import { getData } from '../src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.js'
 
 export const api: any = {
 	endpoint: 'termdb/descrstats',
