@@ -23,6 +23,7 @@ export type VocabApi = {
 	getTermdbConfig: () => any
 	getViolinPlotData: (args: any, _body?: any) => any
 	getAnnotatedSampleData: (args: any) => any
+	getDefaultGeneExpBins: (args: any) => any
 	getTwMinCopy(tw: TermWrapper): any
 	uncacheTermQ: (term: Term, q: any) => any
 	hasVerifiedToken: () => boolean
