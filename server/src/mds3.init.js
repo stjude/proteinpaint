@@ -672,7 +672,7 @@ function mayAdd_refseq2ensembl(ds, genome) {
 
 /* generate getter as ds.queries.snvindel.byrange.get() when both bcffile(no samples) and maffile are provided
 
-Called to initiate official dataset, in sthis script 
+Called to initiate official dataset, in this script 
 
 getter input:
 .rglst=[ {chr, start, stop} ] (required)
@@ -853,15 +853,13 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 					pos = Number(l[1]) - 1,
 					refallele = l[2],
 					altallele = l[3]
-				const ssm_id = [chr, pos, refallele, altallele].join(ssmIdFieldsSeparator)
-				if (!variantSamples.hasOwnProperty(ssm_id)) {
-					variantSamples[ssm_id] = []
-				}
 				const sample = l[sampleIdx]
 				const sampleInt = ds.sampleName2Id.get(sample)
-				if (limitSamples && !limitSamples.has(sampleInt)) {
-					return // Skip this line if sampleInt is not found in limitSamples
-				}
+				if (limitSamples && !limitSamples.has(sampleInt)) return // this sample is filtered out
+
+				// this same passes filter, associate with a ssm_id
+				const ssm_id = [chr, pos, refallele, altallele].join(ssmIdFieldsSeparator)
+				if (!variantSamples.hasOwnProperty(ssm_id)) variantSamples[ssm_id] = []
 
 				const sampleObj = { sample_id: sampleInt }
 				if (param.addFormatValues) {

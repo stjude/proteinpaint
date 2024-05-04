@@ -1,1 +1,2 @@
-
+Fixes:
+- COSMIC mds3 track bug fix, number of variants will go down in subtrack with sample filtering
