@@ -102,6 +102,7 @@ tape('section visibility toggling', async test => {
 tape('simulated section drag/drop', async test => {
 	const { uiApi, controls, config, parent, opts } = await getControls()
 	const s = config.settings.matrix
+	const prevSettings = structuredClone(s)
 	const ui = uiApi.Inner
 	const activeOptionBeforeDrag = structuredClone(ui.activeOption)
 	const th = opts.holder
@@ -124,7 +125,7 @@ tape('simulated section drag/drop', async test => {
 
 	test.deepEqual(
 		activeOptionBeforeDrag.sortPriority,
-		config.settings.matrix.sortOptions[s.sortSamplesBy].sortPriority,
+		prevSettings.sortOptions[s.sortSamplesBy].sortPriority,
 		'should not adjust the sortPriority/table before clicking apply, after drag/drop'
 	)
 
@@ -143,6 +144,7 @@ tape('simulated section drag/drop', async test => {
 tape('simulated tiebreaker drag/drop', async test => {
 	const { uiApi, controls, config, parent, opts } = await getControls()
 	const s = config.settings.matrix
+	const prevSettings = structuredClone(s)
 	const ui = uiApi.Inner
 	const activeOptionBeforeDrag = structuredClone(ui.activeOption)
 	const thead0 = opts.holder
@@ -187,7 +189,7 @@ tape('simulated tiebreaker drag/drop', async test => {
 
 	test.deepEqual(
 		activeOptionBeforeDrag.sortPriority[0].tiebreakers,
-		config.settings.matrix.sortOptions[s.sortSamplesBy].sortPriority[0].tiebreakers,
+		prevSettings.sortOptions[s.sortSamplesBy].sortPriority[0].tiebreakers,
 		'should not adjust the tiebreakers before clicking apply, after drag/drop'
 	)
 

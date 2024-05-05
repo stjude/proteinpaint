@@ -289,19 +289,21 @@ function getSortSamplesByClass(st, self, rows, s) {
 			cls.set(row.sample, nextRound)
 			return
 		}
+
 		const vals = values.map(v => v.class)
-		let str = sortSamples.isOrdered ? '' : 'x'
-		for (const mcls of order) {
-			if (sortSamples.isOrdered) str += vals.includes(mcls) ? '1' : 'x'
-			else if (vals.includes(mcls)) {
-				str = '1'
-				break
-			}
+		if (!order.find(mcls => vals.includes(mcls))) {
+			// there is no matching values, force the sorting to the next round of tiebreakers
+			cls.set(row.sample, nextRound)
+			return
+		} else if (!sortSamples.isOrdered) {
+			cls.set(row.sample, '1')
+		} else {
+			// each sample will be mapped to a sortable string (for ease of sorting comparison),
+			// derived from concatenating an array of characters equivalent to indicate
+			// natching or not matching an ordered mclass
+			const str = order.map(mcls => (vals.includes(mcls) ? '1' : 'x'))
+			cls.set(row.sample, str)
 		}
-		// each sample will be mapped to a sortable string (for ease of sorting comparison),
-		// derived from concatenating an array of numbers equivalent to values that match
-		// the mclass sortPriority
-		cls.set(row.sample, str)
 	}
 
 	// not calling setSortIndex in advance based on the benchmark notes above

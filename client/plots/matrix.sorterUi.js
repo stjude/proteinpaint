@@ -16,7 +16,7 @@ const alphabet = `ABCDEFGHIJKLMNOPQRSTUVWXYZ`.split('')
 export function getSorterUi(opts) {
 	const { controls, holder } = opts
 	const parent = controls.parent
-	const s = parent.config.settings.matrix
+	const s = structuredClone(parent.config.settings.matrix)
 	const l = s.controlLabels
 	const tip = new Menu({ padding: '', parent_menu: parent.app.tip?.d.node() })
 
@@ -36,7 +36,8 @@ export function getSorterUi(opts) {
 		expandedSection: opts.expandedSection || '',
 		init(overrides = {}, _opts = {}) {
 			tip.clear().hide()
-			const s = copyMerge(`{}`, parent.config.settings.matrix, overrides)
+			if (parent.config.settings.matrix != s) copyMerge(s, parent.config.settings.matrix)
+			if (s !== overrides) copyMerge(s, overrides)
 			self.settings = s
 			self.activeOption = structuredClone(s.sortOptions[s.sortSamplesBy])
 
@@ -58,7 +59,10 @@ export function getSorterUi(opts) {
 			opts.holder.selectAll('*').remove()
 			const topDiv = opts.holder.append('div').style('text-align', 'right')
 			topDiv.append('button').html('Apply').on('click', apply)
-			topDiv.append('button').html('Reset').on('click', self.init)
+			topDiv
+				.append('button')
+				.html('Reset')
+				.on('click', (event, d) => self.init())
 
 			const table = opts.holder.append('table')
 
@@ -77,7 +81,7 @@ export function getSorterUi(opts) {
 				const thead = table
 					.append('thead')
 					.datum(sd)
-					.attr('draggable', !sd.notDraggable)
+					.property('draggable', !sd.notDraggable)
 					.attr('droppable', true) //!sd.notDraggable)
 					.on('dragstart', trackDraggedSection)
 					.on('dragover', highlightSection)
@@ -129,8 +133,8 @@ export function getSorterUi(opts) {
 						.append('tr')
 						.on('mouseover', undoMouseoverHighlights)
 						.datum(tb)
-						.attr('draggable', !tb.disabled && sd.types?.length)
-						.attr('droppable', !tb.disabled && sd.types?.length)
+						.attr('draggable', !tb.disabled && sd.types?.length !== 0)
+						.attr('droppable', !tb.disabled && sd.types?.length !== 0)
 						.on('dragstart', trackDraggedTieBreaker)
 						.on('dragover', highlightTieBreaker)
 						.on('dragleave', unhighlightTieBreaker)
@@ -160,7 +164,7 @@ export function getSorterUi(opts) {
 
 					if (!tb.disabled) {
 						const label = td2.append('label')
-						label.append('span').html(' (use data list order ')
+						label.append('span').html('<br>(use data list order ')
 						if (!tb.isOrdered) tb.isOrdered = false
 						const checkbox = label
 							.append('input')
@@ -383,9 +387,10 @@ export function getSorterUi(opts) {
 			//.on('mouseover', () => )
 			.on('click', () => {
 				if (title.length) {
-					const div = tip.clear().d.append('div').style('max-width', '200px').style('padding', '5px')
-					div.append('div').html(title.join('<br>'))
-					tip.showunder(this)
+					const cls = 'sjpp-matrix-sorter-value-note'
+					div.selectAll(`.${cls}`).remove()
+					const note = div.append('div').attr('class', cls).style('max-width', '200px').style('padding', '5px')
+					note.html(title.join('<br>'))
 					if (d.filterByClass[d.key]) return
 				}
 
