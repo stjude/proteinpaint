@@ -231,7 +231,7 @@ export function setComputedConfig(config) {
 	const s = config.settings.matrix
 	const allClasses = [...s.mutationClasses, ...s.CNVClasses]
 
-	s.filterByClass = {}
+	s.filterByClass = { isAtomic: true }
 	for (const f of config.legendGrpFilter.lst) {
 		if (!f.dt) continue
 		allClasses
@@ -253,7 +253,7 @@ export function setComputedConfig(config) {
 			})
 		else throw `unhandled tvs from legendValueFilter`
 	}
-	s.hiddenVariants = Object.keys(s.filterByClass)
+	s.hiddenVariants = Object.keys(s.filterByClass).filter(c => c !== 'isAtomic')
 
 	const hiddenCNVs = new Set(s.hiddenVariants.filter(key => mclass[key]?.dt === dtcnv))
 	s.hiddenCNVs = [...hiddenCNVs]
