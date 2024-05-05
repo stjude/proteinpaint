@@ -432,6 +432,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 					},
 					{
 						label: 'Cases with CNV data > without',
+						mayToggle: true,
 						filter: {
 							values: [
 								{
@@ -446,6 +447,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 					},
 					{
 						disabled: true,
+						mayToggle: true,
 						label: 'Cases with consequence data',
 						filter: {
 							values: [

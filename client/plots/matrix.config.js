@@ -65,8 +65,8 @@ export async function getPlotConfig(opts = {}, app) {
 				sampleNameFilter: '',
 				sortSamplesBy: 'a',
 				sortPriority: undefined, // will be filled-in
-				sortByMutation: 'consequence', // TODO: deprecate and instead set the matching sortOptions.a.sortPriority[*].tiebreakers[*].isOrdered
-				sortByCNV: true, // TODO: deprecate and instead set the matching sortOptions.a.sortPriority[*].tiebreakers[*].isOrdered
+				sortByMutation: 'consequence', // TODO: compute from the matching sortOptions.a.sortPriority[*].tiebreakers[*].isOrdered
+				sortByCNV: true, // TODO: compute from the matching sortOptions.a.sortPriority[*].tiebreakers[*].isOrdered
 				//sortOptions: getSortOptions(app.vocabApi.termdbConfig, controlLabels),
 				sortSampleGrpsBy: 'name', // 'hits' | 'name' | 'sampleCount'
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
@@ -276,4 +276,11 @@ export function setComputedConfig(config) {
 		? 'onlyTruncating'
 		: 'bySelection'
 	s.allMatrixMutationHidden = hiddenMutations.size == s.mutationClasses.length
+
+	const tiebreakers =
+		s.sortOptions.a?.sortPriority.find(sp => sp.types.length == 1 && sp.types[0] == 'geneVariant')?.tiebreakers || []
+
+	s.sortByMutation = tiebreakers.find(tb => tb.filter?.values[0]?.dt === 1).isOrdered ? 'consequence' : 'presence'
+
+	s.sortByCNV = tiebreakers.find(tb => tb.filter?.values[0]?.dt === 4).disabled !== true
 }

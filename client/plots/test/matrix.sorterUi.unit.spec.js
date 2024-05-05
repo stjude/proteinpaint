@@ -223,9 +223,9 @@ tape('tiebreaker disabled', async test => {
 	const trs = thead1.nextSibling.querySelectorAll('tr')
 
 	test.equal(
-		select(trs[0].lastChild).select('button').html(),
-		'Disable',
-		'should indicate that the protein-changing tiebreaker is active'
+		select(trs[0].lastChild).select('button').node(),
+		null,
+		`should not have an enable/disable toggle button for the protein-changing tiebreaker that is not configured with 'mayToggle: true'`
 	)
 
 	test.equal(
