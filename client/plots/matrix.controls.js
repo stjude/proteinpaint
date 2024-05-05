@@ -72,6 +72,7 @@ export class MatrixControls {
 
 	setSamplesBtn(s) {
 		const l = s.controlLabels
+		const controls = this
 		const parent = this.parent
 		const rows = [
 			{
@@ -165,20 +166,22 @@ export class MatrixControls {
 			label: `Sort ${l.Sample} Priority`,
 			title: `Set how to sort ${l.samples}`,
 			type: 'custom',
-			init(self) {
+			// the "input" argument is created by controls
+			init(input) {
 				const m = parent.config.settings.matrix
-
-				self.dom.inputTd.style('padding', '5px')
-				const btnsDiv = self.dom.inputTd.append('div').style('margin-bottom', '5px')
+				if (!controls.activeTab) controls.activeTab = 'basic'
+				input.dom.inputTd.style('padding', '5px')
+				const btnsDiv = input.dom.inputTd.append('div').style('margin-bottom', '5px')
 				const basicBtn = btnsDiv
 					.append('div')
 					.style('display', 'inline-block')
 					.style('padding-right', '5px')
 					.style('border-right', '2px solid black')
-					.style('text-decoration', 'underline')
+					.style('text-decoration', controls.activeTab == 'basic' ? 'underline' : '')
 					.style('cursor', 'pointer')
 					.html('Basic')
 					.on('click', () => {
+						controls.activeTab = 'basic'
 						basicBtn.style('text-decoration', 'underline')
 						advancedBtn.style('text-decoration', '')
 						basicDiv.style('display', '')
@@ -188,16 +191,18 @@ export class MatrixControls {
 					.append('div')
 					.style('display', 'inline-block')
 					.style('margin-left', '5px')
+					.style('text-decoration', controls.activeTab == 'advanced' ? 'underline' : '')
 					.style('cursor', 'pointer')
 					.html('Advanced')
 					.on('click', () => {
+						controls.activeTab = 'advanced'
 						basicBtn.style('text-decoration', '')
 						advancedBtn.style('text-decoration', 'underline')
 						basicDiv.style('display', 'none')
 						advancedDiv.style('display', '')
 					})
 
-				const basicDiv = self.dom.inputTd.append('div')
+				const basicDiv = input.dom.inputTd.append('div').style('display', controls.activeTab == 'basic' ? '' : 'none')
 				const ssmDiv = basicDiv.append('div')
 				ssmDiv.append('span').html('SSM')
 				const { inputs } = make_radios({
@@ -239,13 +244,13 @@ export class MatrixControls {
 
 				cnvDiv.append('span').html('CNV')
 				// holder, labeltext, callback, checked, divstyle
-				const input = make_one_checkbox({
+				const checkbox = make_one_checkbox({
 					holder: cnvDiv.append('span'),
 					divstyle: { display: 'inline-block' },
 					checked: m.sortByCNV,
 					labeltext: 'sort by CNV',
 					callback: () => {
-						const sortByCNV = input.property('checked')
+						const sortByCNV = checkbox.property('checked')
 						const sortOptions = parent.config.settings.matrix.sortOptions
 						const activeOption = sortOptions.a
 						const cnvTb = activeOption.sortPriority[0].tiebreakers[2]
@@ -267,17 +272,23 @@ export class MatrixControls {
 					}
 				})
 
-				const advancedDiv = self.dom.inputTd.append('div').style('display', 'none')
-				self.dom.row.on('mouseover', function () {
+				const advancedDiv = input.dom.inputTd
+					.append('div')
+					.style('display', controls.activeTab == 'advanced' ? '' : 'none')
+				input.dom.row.on('mouseover', function () {
 					this.style.backgroundColor = '#fff'
 					this.style.textShadow = 'none'
 				})
 
-				return getSorterUi({
-					controls: this,
-					holder: advancedDiv,
-					tip: this.parent.app.tip
-				})
+				if (!controls.sorterUi) {
+					controls.sorterUi = getSorterUi({
+						controls: this,
+						holder: advancedDiv,
+						tip: this.parent.app.tip
+					})
+				} else {
+					controls.sorterUi.main(this.parent.config.settings.matrix, { holder: advancedDiv })
+				}
 
 				return {
 					main: plot => {
@@ -285,7 +296,7 @@ export class MatrixControls {
 						// ssm
 						inputs.property('checked', d => d.value == s.sortByMutation)
 						// cnv
-						input.property('checked', s.sortByCNV)
+						checkbox.property('checked', s.sortByCNV)
 						cnvDiv.style('display', s.showMatrixCNV != 'none' && !s.allMatrixCNVHidden ? 'block' : 'none')
 					}
 				}

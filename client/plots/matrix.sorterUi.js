@@ -34,7 +34,7 @@ export function getSorterUi(opts) {
 		type: 'custom',
 		expanded: opts.expanded || false,
 		expandedSection: opts.expandedSection || '',
-		init(overrides = {}) {
+		init(overrides = {}, _opts = {}) {
 			tip.clear().hide()
 			const s = copyMerge(`{}`, parent.config.settings.matrix, overrides)
 			self.settings = s
@@ -54,7 +54,7 @@ export function getSorterUi(opts) {
 					tiebreakers: []
 				}
 			]
-
+			Object.assign(opts, _opts) // on update, new opts, such as a new holder dom element, may be provided
 			opts.holder.selectAll('*').remove()
 			const topDiv = opts.holder.append('div').style('text-align', 'right')
 			topDiv.append('button').html('Apply').on('click', apply)
