@@ -214,11 +214,13 @@ export function getSorterUi(opts) {
 
 					const td3 = tr.append('td').style('text-align', 'center').style('vertical-align', 'top')
 
-					const btn = td3
-						.append('button')
-						.datum(tb)
-						.html(tb.disabled ? 'Enable' : 'Disable')
-						.on('click', toggleTieBreakerDisabled)
+					if (tb.mayToggle) {
+						td3
+							.append('button')
+							.datum(tb)
+							.html(tb.disabled ? 'Enable' : 'Disable')
+							.on('click', toggleTieBreakerDisabled)
+					}
 				}
 
 				const lastTr = tbody.append('tr').attr('draggable', true).on('mouseover', undoMouseoverHighlights)
@@ -422,7 +424,7 @@ export function getSorterUi(opts) {
 			.append('span')
 			.style('cursor', 'pointer')
 			.style('text-decoration', d.filterByClass[d.key] == 'case' ? 'line-through' : '')
-			.html((d.filterByClass[d.key] ? '(<i>not used</i>) ' : '') + d.cls.label)
+			.html(d.cls.label + (d.filterByClass[d.key] ? ' (<i>not used since this value is hidden</i>)' : ''))
 
 		const toggle = div
 			.append('div')

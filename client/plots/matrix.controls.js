@@ -161,115 +161,136 @@ export class MatrixControls {
 			}
 		]
 
-		if (s.useSorterUi) {
-			// can be specified as termdbconfig.matrix.settings.useSorterUi = true in dataset js file
-			rows.push({
-				label: `Sort ${l.Samples} By`,
-				title: `Set how to sort ${l.samples}`,
-				type: 'custom',
-				init(self) {
-					//const opts = { controls, holder, debug: true, setComputedConfig }
-					self.dom.row.on('mouseover', function () {
-						this.style.backgroundColor = '#fff'
-						this.style.textShadow = 'none'
+		rows.push({
+			label: `Sort ${l.Sample} Priority`,
+			title: `Set how to sort ${l.samples}`,
+			type: 'custom',
+			init(self) {
+				const m = parent.config.settings.matrix
+
+				self.dom.inputTd.style('padding', '5px')
+				const btnsDiv = self.dom.inputTd.append('div').style('margin-bottom', '5px')
+				const basicBtn = btnsDiv
+					.append('div')
+					.style('display', 'inline-block')
+					.style('padding-right', '5px')
+					.style('border-right', '2px solid black')
+					.style('text-decoration', 'underline')
+					.style('cursor', 'pointer')
+					.html('Basic')
+					.on('click', () => {
+						basicBtn.style('text-decoration', 'underline')
+						advancedBtn.style('text-decoration', '')
+						basicDiv.style('display', '')
+						advancedDiv.style('display', 'none')
+					})
+				const advancedBtn = btnsDiv
+					.append('div')
+					.style('display', 'inline-block')
+					.style('margin-left', '5px')
+					.style('cursor', 'pointer')
+					.html('Advanced')
+					.on('click', () => {
+						basicBtn.style('text-decoration', '')
+						advancedBtn.style('text-decoration', 'underline')
+						basicDiv.style('display', 'none')
+						advancedDiv.style('display', '')
 					})
 
-					return getSorterUi({
-						controls: this,
-						holder: self.dom.inputTd,
-						tip: this.parent.app.tip
-						//expandedSection: this.parent.config.settings.matrix.sortOptions.a?.sortPriority[0]?.label || ''
-					})
-				}
-			})
-		} else {
-			// default: do not use the new sorter UI
-			rows.push({
-				label: `Sort ${l.Sample} Priority`,
-				title: `Set how to sort ${l.samples}`,
-				type: 'custom',
-				init(self) {
-					const ssmDiv = self.dom.inputTd.append('div')
-					ssmDiv.append('span').html('SSM')
-					const { inputs } = make_radios({
-						// holder, options, callback, styles
-						holder: ssmDiv.append('span'),
-						options: [
-							{ label: 'by consequence', value: 'consequence' },
-							{ label: 'by presence', value: 'presence', checked: true }
-						],
-						styles: {
-							display: 'inline-block'
-						},
-						callback: sortByMutation => {
-							const sortOptions = parent.config.settings.matrix.sortOptions
-							const activeOption = sortOptions.a
-							const mutTb = activeOption.sortPriority[0].tiebreakers[1]
-							mutTb.disabled = !sortByMutation
-							mutTb.isOrdered = sortByMutation === 'consequence'
+				const basicDiv = self.dom.inputTd.append('div')
+				const ssmDiv = basicDiv.append('div')
+				ssmDiv.append('span').html('SSM')
+				const { inputs } = make_radios({
+					// holder, options, callback, styles
+					holder: ssmDiv.append('span'),
+					options: [
+						{ label: 'by consequence', value: 'consequence', checked: m.sortByMutation === 'consequence' },
+						{ label: 'by presence', value: 'presence', checked: m.sortByMutation === 'presence' }
+					],
+					styles: {
+						display: 'inline-block'
+					},
+					callback: sortByMutation => {
+						const sortOptions = parent.config.settings.matrix.sortOptions
+						const activeOption = sortOptions.a
+						const mutTb = activeOption.sortPriority[0].tiebreakers[1]
+						mutTb.disabled = !sortByMutation
+						mutTb.isOrdered = sortByMutation === 'consequence'
 
-							parent.app.dispatch({
-								type: 'plot_edit',
-								id: parent.id,
-								config: {
-									settings: {
-										matrix: {
-											sortByMutation, // needed to show the correct status for checkbox, but actual sorting behavior
-											sortOptions // is based on sortOptions.a[*].tiebreaker[*][disabled, isOrdered]
-										}
+						parent.app.dispatch({
+							type: 'plot_edit',
+							id: parent.id,
+							config: {
+								settings: {
+									matrix: {
+										sortByMutation, // needed to show the correct status for checkbox, but actual sorting behavior
+										sortOptions // is based on sortOptions.a[*].tiebreaker[*][disabled, isOrdered]
 									}
 								}
-							})
-						}
-					})
+							}
+						})
+					}
+				})
 
-					inputs.style('margin', '2px 0 0 2px').style('vertical-align', 'top')
-					const cnvDiv = self.dom.inputTd.append('div')
-					cnvDiv.append('span').html('CNV')
-					// holder, labeltext, callback, checked, divstyle
-					const input = make_one_checkbox({
-						holder: cnvDiv.append('span'),
-						divstyle: { display: 'inline-block' },
-						checked: false,
-						labeltext: 'sort by CNV',
-						callback: () => {
-							const sortByCNV = input.property('checked')
-							const sortOptions = parent.config.settings.matrix.sortOptions
-							const activeOption = sortOptions.a
-							const cnvTb = activeOption.sortPriority[0].tiebreakers[2]
-							cnvTb.disabled = !sortByCNV
-							cnvTb.isOrdered = sortByCNV
+				inputs.style('margin', '2px 0 0 2px').style('vertical-align', 'top')
+				const cnvDiv = basicDiv
+					.append('div')
+					.style('display', m.showMatrixCNV != 'none' && !m.allMatrixCNVHidden ? 'block' : 'none')
 
-							parent.app.dispatch({
-								type: 'plot_edit',
-								id: parent.id,
-								config: {
-									settings: {
-										matrix: {
-											sortByCNV, // needed to show the correct status for checkbox, but actual sorting behavior
-											sortOptions // is based on sortOptions.a[*].tiebreaker[*][disabled, isOrdered]
-										}
+				cnvDiv.append('span').html('CNV')
+				// holder, labeltext, callback, checked, divstyle
+				const input = make_one_checkbox({
+					holder: cnvDiv.append('span'),
+					divstyle: { display: 'inline-block' },
+					checked: m.sortByCNV,
+					labeltext: 'sort by CNV',
+					callback: () => {
+						const sortByCNV = input.property('checked')
+						const sortOptions = parent.config.settings.matrix.sortOptions
+						const activeOption = sortOptions.a
+						const cnvTb = activeOption.sortPriority[0].tiebreakers[2]
+						cnvTb.disabled = !sortByCNV
+						cnvTb.isOrdered = sortByCNV
+
+						parent.app.dispatch({
+							type: 'plot_edit',
+							id: parent.id,
+							config: {
+								settings: {
+									matrix: {
+										sortByCNV, // needed to show the correct status for checkbox, but actual sorting behavior
+										sortOptions // is based on sortOptions.a[*].tiebreaker[*][disabled, isOrdered]
 									}
 								}
-							})
-						}
-					})
+							}
+						})
+					}
+				})
 
-					//self.dom.inputTd.append('div').append('span').html('By case name')
+				const advancedDiv = self.dom.inputTd.append('div').style('display', 'none')
+				self.dom.row.on('mouseover', function () {
+					this.style.backgroundColor = '#fff'
+					this.style.textShadow = 'none'
+				})
 
-					return {
-						main: plot => {
-							const s = plot.settings.matrix
-							// ssm
-							inputs.property('checked', d => d.value == s.sortByMutation)
-							// cnv
-							input.property('checked', s.sortByCNV)
-							cnvDiv.style('display', s.showMatrixCNV != 'none' && !s.allMatrixCNVHidden ? 'block' : 'none')
-						}
+				return getSorterUi({
+					controls: this,
+					holder: advancedDiv,
+					tip: this.parent.app.tip
+				})
+
+				return {
+					main: plot => {
+						const s = plot.settings.matrix
+						// ssm
+						inputs.property('checked', d => d.value == s.sortByMutation)
+						// cnv
+						input.property('checked', s.sortByCNV)
+						cnvDiv.style('display', s.showMatrixCNV != 'none' && !s.allMatrixCNVHidden ? 'block' : 'none')
 					}
 				}
-			})
-		}
+			}
+		})
 
 		this.opts.holder
 			.append('button')
