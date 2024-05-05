@@ -17,6 +17,7 @@ Fixes:
 - Bcf url argument for mds3 tracks fixed.
 - No empty gdc filter elements will be created when mapping pp filter to GDC format
 - show the incomplete caching message in the gene expression app
+- COSMIC mds3 track bug fix, number of variants will go down in subtrack with sample filtering
 
 
 ## 2.57.0
