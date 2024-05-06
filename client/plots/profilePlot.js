@@ -72,7 +72,9 @@ export class profilePlot {
 
 	getList(tw) {
 		const values = Object.values(tw.term.values)
-		const data = this.filtersData.lst.filter(sample => this.samplesPerFilter[tw.id].includes(parseInt(sample.sample)))
+		const data = this.filtersData.lst.filter(sample =>
+			this.samplesPerFilter[tw.term.id].includes(parseInt(sample.sample))
+		)
 		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
 
 		for (const value of values) {
@@ -80,7 +82,7 @@ export class profilePlot {
 			value.disabled = !sampleValues.includes(value.label)
 		}
 		values.unshift({ label: '', value: '' })
-		if (!(tw.id in this.settings)) this.settings[tw.id] = values[0].label
+		if (!(tw.term.id in this.settings)) this.settings[tw.term.id] = values[0].label
 		return values
 	}
 
@@ -109,7 +111,7 @@ export class profilePlot {
 		const filters = {}
 		for (const tw of this.config.filterTWs) {
 			const filter = this.getFilter(tw)
-			if (filter) filters[tw.id] = filter
+			if (filter) filters[tw.term.id] = filter
 		}
 
 		//Dictionary with samples applying all the filters but not the one from the current term id
@@ -390,7 +392,7 @@ export class profilePlot {
 	}
 
 	clearFiltersExcept(ids) {
-		for (const tw of this.config.filterTWs) if (!ids.includes(tw.id)) this.settings[tw.id] = ''
+		for (const tw of this.config.filterTWs) if (!ids.includes(tw.term.id)) this.settings[tw.term.id] = ''
 		if (this.config.chartType != 'profileRadarFacility') this.settings.site = ''
 	}
 
@@ -404,7 +406,7 @@ export class profilePlot {
 		const excluded = []
 		if (tw) excluded.push(tw.$id)
 		const lst = []
-		for (const tw of this.config.filterTWs) this.processTW(tw, this.settings[tw.id], excluded, lst)
+		for (const tw of this.config.filterTWs) this.processTW(tw, this.settings[tw.term.id], excluded, lst)
 
 		const tvslst = {
 			type: 'tvslst',
@@ -429,7 +431,7 @@ export class profilePlot {
 
 	addFilterLegend() {
 		if (!this.settings.site || this.config.chartType == 'profileRadarFacility') {
-			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.id])
+			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id])
 			this.filterG
 				.attr('font-size', '0.9em')
 				.append('text')
@@ -437,7 +439,7 @@ export class profilePlot {
 				.style('font-weight', 'bold')
 				.text(hasFilters ? 'Filters' : 'No filter applied')
 				.attr('transform', `translate(0, -5)`)
-			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.id])
+			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		}
 		if (this.settings.site && this.config.chartType != 'profileRadarFacility') {
 			const label = this.sites.find(s => s.value == this.settings.site).label
