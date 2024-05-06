@@ -38,7 +38,7 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const widht = 1450
+		const widht = 1550
 		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')

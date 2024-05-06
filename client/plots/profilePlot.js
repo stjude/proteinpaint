@@ -154,6 +154,8 @@ export class profilePlot {
 			filter,
 			termsPerRequest: 30
 		})
+		console.log(this.twLst)
+		console.log('data', this.data)
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
 
@@ -333,7 +335,7 @@ export class profilePlot {
 						callback: value => this.setSite(value)
 					})
 				}
-				if (this.settings.site) this.sampleData = this.data.lst.find(s => s.sample == this.settings.site)
+				if (this.settings.site) this.sampleData = this.data.samples[Number(this.settings.site)]
 				else this.sampleData = null
 			}
 		} else {
@@ -349,7 +351,7 @@ export class profilePlot {
 						termsPerRequest: 30,
 						filter: getSampleFilter(parseInt(id))
 					})
-					this.sampleData = result.lst[0]
+					this.sampleData = result.samples[Number(this.settings.site)]
 				} //Admin
 				else {
 					result = await this.app.vocabApi.getAnnotatedSampleData({
@@ -360,7 +362,7 @@ export class profilePlot {
 						return { label: result.refs.bySampleId[s.sample].label, value: s.sample }
 					})
 					if (!this.settings.site) this.settings.site = result.lst[0].sample
-					this.sampleData = result.lst[this.settings.site]
+					this.sampleData = result.samples[Number(this.settings.site)]
 				}
 				inputs.unshift({
 					label: 'Site',
@@ -391,7 +393,7 @@ export class profilePlot {
 
 	clearFiltersExcept(ids) {
 		for (const tw of this.config.filterTWs) if (!ids.includes(tw.id)) this.settings[tw.id] = ''
-		this.settings.site = ''
+		if (this.config.chartType != 'profileRadarFacility') this.settings.site = ''
 	}
 
 	setSite(site) {
@@ -499,7 +501,7 @@ export class profilePlot {
 			//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
 			isAggregate = this.settings.isAggregate || this.sampleData == null //if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
 		if (isAggregate) {
-			const maxScore = d.maxScore.$id ? this.data.lst[0]?.[d.maxScore.$id]?.value : d.maxScore
+			const maxScore = d.maxScore.id ? this.data.lst[0]?.[d.maxScore.$id]?.value : d.maxScore
 			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
 			scores.sort((s1, s2) => s1 - s2)
 			const middle = Math.floor(scores.length / 2)
@@ -507,8 +509,7 @@ export class profilePlot {
 			return Math.round(score)
 		} else {
 			const score = this.sampleData[d.score.$id]?.value
-			const maxScore = d.maxScore.$id ? this.sampleData[d.maxScore.$id]?.value : d.maxScore //if maxScore is not a term, it is a number
-			console.log(score, maxScore)
+			const maxScore = d.maxScore.id ? this.sampleData[d.maxScore.$id]?.value : d.maxScore //if maxScore is not a term, it is a number
 			const percentage = (score / maxScore) * 100
 			return Math.round(percentage)
 		}
