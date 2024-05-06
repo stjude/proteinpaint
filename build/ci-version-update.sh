@@ -34,11 +34,17 @@ if [[ "$UPDATED" == "" ]]; then
   exit 1
 fi
 
+VERSION="$(node -p "require('./package.json').version")"
+if [[ $UPDATED == *"rust"* ]]; then
+  cd rust
+  npm pkg set "pp_release_tag"="v$VERSION"
+  cd ..
+fi
+
 ########################
 # Update the change log
 ########################
 
-VERSION="$(node -p "require('./package.json').version")"
 if [[ "$VERTYPE" != "pre"* ]]; then
   if [[ "$(grep 'Unreleased' CHANGELOG.md)" == "" ]]; then
     echo "No unreleased changes to publish"
