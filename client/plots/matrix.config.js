@@ -208,8 +208,12 @@ export async function getPlotConfig(opts = {}, app) {
 	const promises = []
 	for (const grp of config.termgroups) {
 		for (const tw of grp.lst) {
-			// force the saved session to request the most up-to-data dictionary term data from server
-			if (!tw.term?.type || isDictionaryType(tw.term.type)) delete tw.term
+			// may force the saved session to request the most up-to-data dictionary term data from server
+			if (!tw.term?.type || isDictionaryType(tw.term.type)) {
+				// NOTE: some test or demo cases may hardcode a dictionary tw.term and not have a tw.id,
+				//       in that case should not replace the tw.term with data from server
+				if (tw.id) delete tw.term
+			}
 			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
 	}

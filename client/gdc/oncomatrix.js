@@ -3,6 +3,7 @@ import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { fillTermWrapper } from '#termsetting'
 import { copyMerge } from '#rx'
+import { vocabInit } from '#termdb/vocabulary'
 
 /*
 test with http://localhost:3000/example.gdc.matrix.html
@@ -109,6 +110,11 @@ export async function init(arg, holder, genomes) {
 		if (!Number.isInteger(settings.matrix.maxGenes)) settings.matrix.maxGenes = 50
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
+
+		const vocabApi = await vocabInit({
+			state: { vocab: { genome: gdcGenome, dslabel: gdcDslabel } }
+		})
+		vocabApi.getTermdbConfig()
 
 		const plotAppApi = await appInit({
 			holder: select(arg.holder).select('.sja_root_holder'),
@@ -246,7 +252,11 @@ export async function init(arg, holder, genomes) {
 											break
 										}
 									}
-									const genes = await getGenes(arg, { maxGenes: value, geneFilter: settings.matrix.geneFilter })
+									const genes = await getGenes(
+										arg,
+										{ maxGenes: value, geneFilter: settings.matrix.geneFilter },
+										vocabApi
+									)
 									api.update({
 										termgroups: [{ lst: genes }],
 										settings: {
@@ -303,10 +313,7 @@ export async function init(arg, holder, genomes) {
 	}
 }
 
-async function getGenes(arg, settings) {
-	// the app and its vocabApi is not available initially, so supply a default vocabApi
-	const vocabApi = { getTwMinCopy }
-
+async function getGenes(arg, settings, vocabApi) {
 	// genes are not predefined. query to get top genes using the current cohort
 	const body = {
 		maxGenes: settings.maxGenes,
@@ -324,31 +331,4 @@ async function getGenes(arg, settings) {
 			return await fillTermWrapper({ term: { gene: i.gene, type: 'geneVariant' } }, vocabApi)
 		})
 	)
-}
-
-function getTwMinCopy(tw) {
-	const copy = { $id: tw.$id, term: {}, q: tw.q }
-	if (tw.term?.type == 'geneVariant') {
-		copy.term.name = tw.term.name
-		copy.term.type = tw.term.type
-		if (tw.term.gene) {
-			copy.term.gene = tw.term.gene
-		} else {
-			copy.term.chr = tw.term.chr
-			copy.term.start = tw.term.start
-			copy.term.stop = tw.term.stop
-		}
-	} else if ('id' in tw || (tw.term && 'id' in tw.term)) {
-		copy.term.id = tw.id || tw.term.id
-		if (tw.term?.type == 'snplst' || tw.term?.type == 'snplocus') {
-			// added following so getData will not break
-			copy.term.type = tw.term.type
-			copy.term.name = tw.term.name
-		}
-	} else {
-		copy.term.name = tw.term?.name
-		copy.term.type = tw.term?.type
-		copy.term.values = tw.term?.values
-	}
-	return copy
 }
