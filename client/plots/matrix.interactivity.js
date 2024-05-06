@@ -1430,10 +1430,10 @@ function setSampleGroupActions(self) {
 		const term = tw.term
 		if (term.type == 'categorical') {
 			term.$id = tw.$id
-			const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(l => l.legendGrpName == tw.id)
+			const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(l => l.legendGrpName == tw.term.id)
 			if (filterGrpIndex == -1) {
 				const filterNew = {
-					legendGrpName: tw.id,
+					legendGrpName: tw.term.id,
 					type: 'tvs',
 					tvs: {
 						isnot: true,
@@ -1449,7 +1449,7 @@ function setSampleGroupActions(self) {
 		} else if (term.type == 'integer' || term.type == 'float') {
 			term.$id = tw.$id
 			const filterNew = {
-				legendGrpName: tw.id,
+				legendGrpName: tw.term.id,
 				type: 'tvs',
 				tvs: {
 					isnot: true,
@@ -1473,7 +1473,7 @@ function setSampleGroupActions(self) {
 		if (!self.config.divideBy) return
 
 		const tw = self.activeLabel?.grp?.tw || self.config.divideBy
-		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(l => l.legendGrpName !== tw.id)
+		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(l => l.legendGrpName !== tw.term.id)
 
 		self.app.dispatch({
 			type: 'plot_edit',

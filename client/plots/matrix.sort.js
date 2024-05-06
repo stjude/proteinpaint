@@ -1,6 +1,4 @@
-/*
-	
-*/
+import { isNonDictionary } from '#shared/common'
 
 export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
@@ -72,7 +70,10 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 				? []
 				: self.termOrder
 						// sort against only dictionary terms in this tie-breaker
-						.filter(t => !t.tw.sortSamples && t.tw.id && !selectedTerms.find(tw => tw.$id === t.tw.$id))
+						.filter(
+							t =>
+								!t.tw.sortSamples && !isNonDictionary(t.tw.term.type) && !selectedTerms.find(tw => tw.$id === t.tw.$id)
+						)
 						.map(t => Object.assign({ sortSamples: { by: 'values' } }, t.tw))
 
 		const unSelectedNonDictTerms =
@@ -80,7 +81,10 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 				? []
 				: self.termOrder
 						// sort against only non-dictionary terms in this tie-breaker
-						.filter(t => !t.tw.sortSamples && !t.tw.id && !selectedTerms.find(tw => tw.$id === t.tw.$id))
+						.filter(
+							t =>
+								!t.tw.sortSamples && isNonDictionary(t.tw.term.type) && !selectedTerms.find(tw => tw.$id === t.tw.$id)
+						)
 						.map(t => Object.assign({ sortSamples: { by: 'hits' } }, t.tw))
 
 		sorterTerms.push(...unSelectedNonDictTerms, ...unSelectedDictTerms)
