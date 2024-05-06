@@ -1,0 +1,13 @@
+name: Rust Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Echo "Hello word."
+        run: |
+          echo "Hello word."
