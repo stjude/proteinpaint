@@ -154,8 +154,6 @@ export class profilePlot {
 			filter,
 			termsPerRequest: 30
 		})
-		console.log(this.twLst)
-		console.log('data', this.data)
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
 
