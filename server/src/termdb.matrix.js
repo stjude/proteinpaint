@@ -161,17 +161,6 @@ async function getSampleData(q) {
 				genes: [{ gene: tw.term.gene }]
 			}
 			const data = await q.ds.queries.geneExpression.get(args)
-			if (!tw.term.bins) {
-				if (q.ds.queries.geneExpression.gene2bins[tw.term.gene])
-					tw.term.bins = { default: q.ds.queries.geneExpression.gene2bins[tw.term.gene] }
-				else tw.term.bins = { default: getDefaultGeneExpBins(q.ds, tw, data) }
-			}
-
-			if (!tw.q.lst) {
-				const mode = tw.q.mode || 'continuous'
-				tw.q = JSON.parse(JSON.stringify(tw.term.bins.default))
-				tw.q.mode = mode
-			}
 
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
