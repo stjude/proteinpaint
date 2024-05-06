@@ -28,7 +28,7 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
 	tw.term.id = tw.term.gene //solve id!!
 	if (!tw.term.bins) {
-		const { defaultBins } = await vocabApi.getDefaultGeneExpBins({ tw })
+		const defaultBins = await vocabApi.getDefaultGeneExpBins({ tw })
 		tw.term.bins = defaultBins
 	}
 	if (!tw.q.lst) {

@@ -9,6 +9,7 @@ import * as utils from './utils'
 import * as termdbsql from './termdb.sql'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
 import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/common.js'
+import { get_bin_label } from '#shared/termdb.bins.js'
 
 /*
 
@@ -200,48 +201,6 @@ async function getSampleData(q) {
 
 	return { samples, refs: { byTermId, bySampleId } }
 }
-export function getDefaultGeneExpBins(ds, tw, data) {
-	let min = Infinity
-	let max = -Infinity
-	//find min and max to build bins
-	for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
-		const values = data.gene2sample2value.get(tw.term.gene)
-		const value = Number(values[sampleId])
-		min = Math.min(min, value)
-		max = Math.max(max, value)
-	}
-	const step = Math.round((max - min) * 10) / 100 // round to 2 decimal places
-
-	const lst = []
-	for (let i = min; i < max; i += step) {
-		lst.push({
-			start: i,
-			stop: i + step,
-			startinclusive: false,
-			stopinclusive: true
-		})
-	}
-	const defaultBins = {
-		mode: 'discrete',
-		type: 'regular-bin',
-		bin_size: step,
-		startinclusive: false,
-		stopinclusive: true,
-		first_bin: {
-			startunbounded: true,
-			stop: min + step
-		},
-		last_bin: {
-			start: max - step,
-			stopunbounded: true
-		},
-		lst
-	}
-	for (const bin of defaultBins.lst) bin.name = bin.label = getBinLabel(defaultBins, bin.stop)
-	ds.queries.geneExpression.gene2bins[tw.term.gene] = defaultBins
-
-	return defaultBins
-}
 
 export function getBinLabel(bins, value) {
 	value = Math.round(value * 100) / 100 //to keep 2 decimal places
@@ -260,18 +219,7 @@ export function getBinLabel(bins, value) {
 				(b.startinclusive && value == b.start) ||
 				(b.stopinclusive && value == b.stop)
 		)
-	let label
-	const first_bin = bins.lst[0]
-	const last_bin = bins.lst[bins.lst.length - 1]
-	if (bin == 0) label = (bins.startinclusive ? '<= ' : '< ') + bins.lst[0].stop.toFixed(2)
-	else if (bins.startinclusive ? value >= last_bin.start : value > last_bin.start)
-		label = (bins.startinclusive ? '>= ' : '> ') + last_bin.start.toFixed(2)
-	else {
-		const start = (first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
-		const stop = (first_bin.stop + bin * bins.bin_size).toFixed(2)
-		label = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
-	}
-	return label
+	return get_bin_label(bins.lst[bin], bins)
 }
 
 async function mayGetSampleFilterSet(q, nonDictTerms) {
