@@ -590,7 +590,7 @@ function setInteractivity(self) {
 					if (t.term) tw = t as TermWrapper
 					else {
 						const term = t as Term
-						tw = { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
+						tw = { term, q: { isAtomic: true }, isAtomic: true }
 					}
 
 					if (self.opts.customFillTw) self.opts.customFillTw(tw)

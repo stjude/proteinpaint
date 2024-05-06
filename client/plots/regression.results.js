@@ -152,7 +152,7 @@ export class RegressionResults {
 		*/
 		for (const i of this.parent.inputs.independent.inputLst) {
 			if (!i.term) continue
-			if (i.term.id == tid) return i
+			if (i.term.term.id == tid) return i
 			if (i.term.term && i.term.term.snps) {
 				// is a snplst or snplocus term with .snps[]
 				for (const snp of i.term.term.snps) {
