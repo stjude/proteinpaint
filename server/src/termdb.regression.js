@@ -155,6 +155,8 @@ function parse_q(q, ds) {
 	q.outcome.q.computableValuesOnly = true
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
+	// no longer need outcome.id now that outcome.term is rehydrated
+	delete q.outcome.id
 
 	// independent
 	if (!q.independent) throw 'independent[] missing'
@@ -187,13 +189,15 @@ function parse_q(q, ds) {
 		if (!tw.id) throw '.id missing for an independent term'
 		tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
 		if (!tw.term) throw `invalid independent term='${tw.id}'`
+		// no longer need tw.id now that tw.term is rehydrated
+		delete tw.id
 	}
 	// interaction between independent terms
 	for (const i of q.independent) {
 		if (!i.interactions) i.interactions = []
 		for (const x of i.interactions) {
 			// TODO allow tw.interactions[] array to contain snpid instead of snplst term id
-			if (!q.independent.find(y => y.id == x)) throw 'interacting term id missing from independent[]: ' + x
+			if (!q.independent.find(y => y.term.id == x)) throw 'interacting term id missing from independent[]: ' + x
 		}
 	}
 }
@@ -255,7 +259,7 @@ Rinput {
 function makeRinput(q, sampledata) {
 	// outcome variable
 	const outcome = {
-		id: q.outcome.id,
+		id: q.outcome.term.id,
 		name: q.outcome.term.name,
 		rtype: 'numeric' // always numeric because (1) linear regression: values are continuous, (2) logistic regression: values get converted to 0/1, (3) cox regression: time-to-event is continuous and event is 0/1
 	}
@@ -269,14 +273,14 @@ function makeRinput(q, sampledata) {
 	if (q.regressionType == 'cox') {
 		// for cox regression, outcome needs to be time-to-event data
 		outcome.timeToEvent = {
-			timeId: q.outcome.id + '_time',
-			eventId: q.outcome.id + '_event',
+			timeId: q.outcome.term.id + '_time',
+			eventId: q.outcome.term.id + '_event',
 			timeScale: q.outcome.q.timeScale
 		}
 		if (outcome.timeToEvent.timeScale == 'age') {
 			// age time scale
-			outcome.timeToEvent.agestartId = q.outcome.id + '_agestart'
-			outcome.timeToEvent.ageendId = q.outcome.id + '_ageend'
+			outcome.timeToEvent.agestartId = q.outcome.term.id + '_agestart'
+			outcome.timeToEvent.ageendId = q.outcome.term.id + '_ageend'
 		}
 	}
 
@@ -296,11 +300,11 @@ function makeRinput(q, sampledata) {
 	const data = []
 	for (const tmp of sampledata) {
 		const { sample, id2value } = tmp
-		if (!id2value.has(q.outcome.id)) {
+		if (!id2value.has(q.outcome.term.id)) {
 			tmp.noOutcome = true // to be able to skip this sample in snplocusPostprocess
 			continue
 		}
-		const out = id2value.get(q.outcome.id)
+		const out = id2value.get(q.outcome.term.id)
 
 		let skipsample = false
 		for (const tw of q.independent) {
@@ -320,7 +324,7 @@ function makeRinput(q, sampledata) {
 					}
 				}
 			} else {
-				const independent = id2value.get(tw.id)
+				const independent = id2value.get(tw.term.id)
 				if (!independent) {
 					skipsample = true
 					break
@@ -391,7 +395,7 @@ function makeRinput(q, sampledata) {
 function makeRvariable_dictionaryTerm(tw, independent, q) {
 	// tw is a dictionary term
 	const thisTerm = {
-		id: tw.id,
+		id: tw.term.id,
 		name: tw.term.name,
 		type: tw.q.mode == 'spline' ? 'spline' : 'other',
 		rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor'
@@ -400,7 +404,7 @@ function makeRvariable_dictionaryTerm(tw, independent, q) {
 	if (tw.interactions.length > 0) {
 		thisTerm.interactions = []
 		for (const id of tw.interactions) {
-			const tw2 = q.independent.find(i => i.id == id)
+			const tw2 = q.independent.find(i => i.term.id == id)
 			if (tw2.type == 'snplst') {
 				// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
 				for (const s of tw2.highAFsnps.keys()) thisTerm.interactions.push(s)
@@ -453,7 +457,7 @@ function makeRvariable_snps(tw, independent, q) {
 				// another term (tw2) is interacting with this snplst term
 				// in R input establish tw2's interaction with this snp
 				if (!thisSnp.interactions) thisSnp.interactions = []
-				thisSnp.interactions.push(tw2.id)
+				thisSnp.interactions.push(tw2.term.id)
 			}
 		}
 		independent.push(thisSnp)
@@ -1168,7 +1172,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	const CTEs = await Promise.all(terms.map(async (t, i) => await get_term_cte(q, values, i, filter, t))).catch(
 		console.error
 	)
-	values.push(...terms.map(d => d.id))
+	values.push(...terms.map(d => d.term.id))
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
@@ -1191,7 +1195,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 
 	// parse the processed rows
 	for (const { sample, term_id, key, value } of rows) {
-		const term = terms.find(term => term.id == term_id)
+		const term = terms.find(term => term.term.id == term_id)
 
 		if (!samples.has(sample)) {
 			samples.set(sample, { sample, id2value: new Map() })
@@ -1216,7 +1220,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	const deletesamples = new Set()
 	for (const o of samples.values()) {
 		for (const t of terms) {
-			if (!o.id2value.has(t.id)) {
+			if (!o.id2value.has(t.term.id)) {
 				deletesamples.add(o.sample)
 				break
 			}
@@ -1233,7 +1237,7 @@ function processCoxConditionOutcomeRows(rows, outcome, ageEndOffset) {
 	if (!ageEndOffset) throw 'missing age end offset'
 	const prows = []
 	for (const row of rows) {
-		if (row.term_id == outcome.id) {
+		if (row.term_id == outcome.term.id) {
 			// outcome row
 
 			// event: event status code

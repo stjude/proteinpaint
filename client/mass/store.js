@@ -517,7 +517,7 @@ function validateGenericPlot(p, vocabApi) {
 		} catch (e) {
 			throw 'plot.term2 error: ' + e
 		}
-		if (p.term.term.type == 'condition' && p.term.id == p.term2.id) {
+		if (p.term.term.type == 'condition' && p.term.term.id == p.term2.term.id) {
 			// term and term2 are the same CHC, potentially allows grade-subcondition overlay
 			if (p.term.q.bar_by_grade && p.term2.q.bar_by_grade)
 				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_grade'
@@ -559,8 +559,6 @@ function validatePlotTerm(t, vocabApi) {
 	if (!t.term) throw '.term{} missing'
 	if (!vocabApi.graphable(t.term)) throw '.term is not graphable (not a valid type)'
 	if (!t.term.name) throw '.term.name missing'
-	t.id = t.term.id
-
 	if (!t.q) throw '.q{} missing'
 	// term-type specific validation of q
 	switch (t.term.type) {

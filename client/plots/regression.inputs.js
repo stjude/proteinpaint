@@ -137,10 +137,10 @@ export class RegressionInputs {
 
 	setDisableTerms() {
 		this.disable_terms = []
-		if (this.config.outcome && this.config.outcome.term) this.disable_terms.push(this.config.outcome.id)
+		if (this.config.outcome && this.config.outcome.term) this.disable_terms.push(this.config.outcome.term.id)
 		if (this.config.independent) {
 			for (const vb of this.config.independent) {
-				this.disable_terms.push(vb.id)
+				this.disable_terms.push(vb.term.id)
 			}
 		}
 	}
@@ -259,7 +259,7 @@ function setRenderers(self) {
 		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
 			// key function (2nd arg) uses a function to determine how datum and element are joined by variable id
-			.data(section.inputLst, input => input.term && input.term.id)
+			.data(section.inputLst, input => input.term && input.term.term.id)
 
 		inputs.exit().each(removeInput)
 
@@ -279,14 +279,14 @@ function setRenderers(self) {
 			if (section.configKey == 'independent') {
 				if (!variable.interactions) variable.interactions = []
 				for (const id of variable.interactions) {
-					const tw = selected.find(i => i.id == id)
+					const tw = selected.find(i => i.term.id == id)
 					if (!tw) throw 'interacting partner not found in independents: ' + id
 					if (!tw.interactions) tw.interactions = []
-					if (!tw.interactions.includes(variable.id)) tw.interactions.push(variable.id)
+					if (!tw.interactions.includes(variable.term.id)) tw.interactions.push(variable.term.id)
 				}
 			}
 
-			const input = section.inputLst.find(input => input.term && input.term.id == variable.id)
+			const input = section.inputLst.find(input => input.term && input.term.term.id == variable.term.id)
 			if (!input) {
 				section.inputLst.push(
 					new InputTerm({
@@ -347,14 +347,12 @@ function setInteractivity(self) {
 				// delete this term.id from those other input term.interactions
 				for (const other of input.section.inputLst) {
 					if (!other.term || !other.term.interactions) continue
-					const i = other.term.interactions.indexOf(input.term.id)
+					const i = other.term.interactions.indexOf(input.term.term.id)
 					if (i != -1) other.term.interactions.splice(i, 1)
 				}
 			}
 		} else {
 			// variable is selected for this input
-
-			variable.id = variable.term.id // when switching between continuous/discrete for independent, variable.id missing (termsetting issue?)
 
 			const prevTerm = input.term
 
@@ -367,7 +365,7 @@ function setInteractivity(self) {
 				for example adjusting a group other than the refGrp, the refGrp may be 
 				reused if there happen to be sample counts for it.
 			*/
-			if (prevTerm && variable.id === prevTerm.id) {
+			if (prevTerm && variable.term.id === prevTerm.term.id) {
 				for (const k in prevTerm) {
 					// reapply any unedited key-values to the variable, such as refGrp
 					if (!(k in variable)) variable[k] = prevTerm[k]
@@ -379,7 +377,7 @@ function setInteractivity(self) {
 				// this is a spline term, delete existing interactions with this term
 				for (const other of input.section.inputLst) {
 					if (!other.term || !other.term.interactions) continue
-					const i = other.term.interactions.indexOf(input.term.id)
+					const i = other.term.interactions.indexOf(input.term.term.id)
 					if (i != -1) other.term.interactions.splice(i, 1)
 				}
 				variable.interactions = []

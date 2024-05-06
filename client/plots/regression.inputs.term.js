@@ -199,7 +199,7 @@ export class InputTerm {
 
 		// get term categories
 		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.parent.filter, body)
-		if (!data) throw `no data for term.id='${tw.id}'`
+		if (!data) throw `no data for term.id='${tw.term.id}'`
 		if (data.error) throw data.error
 
 		mayRunSnplstTask(tw, data)
@@ -434,7 +434,9 @@ export class InputTerm {
 		self.dom.tip.d
 			.append('div')
 			.selectAll('div')
-			.data(self.parent.config.independent.filter(tw => tw && tw.id !== self.term.id && tw.q.mode != 'spline'))
+			.data(
+				self.parent.config.independent.filter(tw => tw && tw.term.id !== self.term.term.id && tw.q.mode != 'spline')
+			)
 			.enter()
 			.append('div')
 			.style('margin', '5px')
@@ -443,7 +445,7 @@ export class InputTerm {
 				const checkbox = elem
 					.append('input')
 					.attr('type', 'checkbox')
-					.property('checked', self.term.interactions.includes(tw.id))
+					.property('checked', self.term.interactions.includes(tw.term.id))
 
 				elem.append('span').text(' ' + tw.term.name)
 			})
@@ -456,12 +458,12 @@ export class InputTerm {
 				self.dom.tip.hide()
 				self.term.interactions = []
 				self.dom.tip.d.selectAll('input').each(function (tw) {
-					if (select(this).property('checked')) self.term.interactions.push(tw.id)
+					if (select(this).property('checked')) self.term.interactions.push(tw.term.id)
 				})
 				for (const tw of self.parent.config.independent) {
-					const i = tw.interactions.indexOf(self.term.id)
-					if (self.term.interactions.includes(tw.id)) {
-						if (i == -1) tw.interactions.push(self.term.id)
+					const i = tw.interactions.indexOf(self.term.term.id)
+					if (self.term.interactions.includes(tw.term.id)) {
+						if (i == -1) tw.interactions.push(self.term.term.id)
 					} else if (i != -1) {
 						tw.interactions.splice(i, 1)
 					}
@@ -491,7 +493,7 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 		return
 	}
 
-	const data = await vocabApi.getPercentile(tw.id, [50], filter)
+	const data = await vocabApi.getPercentile(tw.term.id, [50], filter)
 	if (data.error || !data.values.length || !Number.isFinite(data.values[0]))
 		throw 'cannot get median value: ' + (data.error || 'no data')
 	const median = tw.term.type == 'integer' ? Math.round(data.values[0]) : Number(data.values[0].toFixed(2))
