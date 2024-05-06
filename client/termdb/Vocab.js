@@ -143,6 +143,7 @@ export class Vocab {
 	// get a minimum copy of tw
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
+		if (!tw.id && !tw.term) throw `missing both tw.id && tw.term for ${JSON.stringify(tw)}`
 		const copy = { $id: tw.$id, term: {}, q: tw.q }
 		if (!isDictionaryType(tw.term?.type)) {
 			if (tw.term.id) copy.term.id = tw.term.id
