@@ -1,17 +1,18 @@
 import tape from 'tape'
 import { hicData } from './hicData.ts'
 import { GenomeDataFetcher } from '../data/GenomeDataFetcher.ts'
-import { DataFetcher } from '../../../tracks/hic/data/DataFetcher.ts'
-import { DetailDataFetcher } from '../../../tracks/hic/data/DetailDataFetcher.ts'
+import { DataFetcher } from '../data/DataFetcher.ts'
+import { DetailDataFetcher } from '../data/DetailDataFetcher.ts'
 
 tape('\n', test => {
 	test.pass('-***- hic app integration tracks/hic -***-')
 	test.end()
 })
 
-/**
- * Unsure about testing the DetailDataMapper class until confirming if the
- * reference files are available on CI.
+/** Run this file manually. Takes too long to run on CI. 
+ * Notes: 
+ * - Not able to test DetailDataMapper .getYFragData() and .getXFragData() methods 
+ * until the reference files are available on CI.
  */
 
 /******** Data Request Functions *********/
@@ -61,7 +62,7 @@ tape('DataFetcher - class and getData()', async test => {
 	test.deepEqual(slicedData, expected, 'Should fetch data from hic file properly.')
 })
 
-// Enzyme file available on CI?
+// Enzyme file or any other reference file not available on CI. Run test manually
 tape.skip('DetailDataFetcher - getBedData()', async test => {
 	test.plan(2)
 
@@ -79,16 +80,6 @@ tape.skip('DetailDataFetcher - getBedData()', async test => {
 	const expectedLast = { rest: ['2051'], chr: 'chr1', start: 995927, stop: 1000059, rglst: [{ idx: 0 }] }
 	test.deepEqual(result.items[result.items.length - 1], expectedLast, 'Should fetch data from hic file properly.')
 })
-
-// // TODO: need to verify if reference files are on CI.
-// tape.skip('DetailDataFetcher - getXFragData()', async test => {
-// 	//TODO
-// })
-
-// // TODO: need to verify if reference files are on CI.
-// tape.skip('DetailDataFetcher - getYFragData()', async test => {
-// 	//TODO
-// })
 
 tape('DetailDataFetcher - fetchData()', async test => {
 	test.plan(5)
