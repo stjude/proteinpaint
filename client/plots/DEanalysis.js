@@ -485,48 +485,19 @@ add:
 				console.log('Unrecognized option')
 			}
 
-			const body = {
+			const geneORAparams = {
 				sample_genes: sample_genes.toString(),
 				background_genes: background_genes.toString(),
 				genome: self.app.vocabApi.opts.state.vocab.genome,
 				geneSetGroup: 'BP: subset of GO'
 			}
-			const data = await dofetch3('genesetOverrepresentation', { body })
-			//console.log("data:",data)
-
-			self.dom.detailsDiv
-				.append('div')
-				.html(
-					'Number of sample genes used for gene over representation analysis:' +
-						sample_genes.length +
-						'<br>Number of background genes used for gene over representation analysis:' +
-						background_genes.length
-				)
-
-			// Generating the table
-			self.gene_ora_table_cols = [
-				{ label: 'Pathway name' },
-				{ label: 'Original p-value (linear scale)' },
-				{ label: 'Adjusted p-value (linear scale)' }
-			]
-			self.gene_ora_table_rows = []
-			for (const pathway of data) {
-				self.gene_ora_table_rows.push([
-					{ value: pathway.pathway_name },
-					{ value: pathway.p_value_original },
-					{ value: pathway.p_value_adjusted }
-				])
+			const config = {
+				chartType: 'geneORA',
+				geneORAparams: geneORAparams
 			}
-
-			self.dom.tableDiv.selectAll('*').remove()
-			const d_ora = self.dom.tableDiv.append('div').html(`<br>Gene over-representation results`)
-			renderTable({
-				columns: self.gene_ora_table_cols,
-				rows: self.gene_ora_table_rows,
-				div: d_ora,
-				showLines: true,
-				maxHeight: '30vh',
-				resize: true
+			self.app.dispatch({
+				type: 'plot_create',
+				config
 			})
 		}
 	}
