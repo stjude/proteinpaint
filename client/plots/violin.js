@@ -329,7 +329,6 @@ class ViolinPlot {
 			arg.term = term
 			// assume a single term for minimal plot
 			if (term2) throw 'only a single term allowed for minimal plot'
-			arg.termid = term.id
 			if (term.q.mode == 'spline') {
 				// term may be cubic spline from regression analysis
 				// render knot values as vertical lines on the plot
@@ -346,7 +345,6 @@ class ViolinPlot {
 			arg.term = term
 			if (term2) arg.divideTw = term2
 		} else if (isNumericTerm(term2?.term) && term2.q.mode === 'continuous') {
-			if (term2) arg.termid = term2.id
 			arg.term = term2
 			arg.divideTw = term
 		} else {
