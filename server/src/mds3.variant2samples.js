@@ -42,8 +42,10 @@ export function validate_variant2samples(ds) {
 			const term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
 			if (!term) throw 'term not found for one of variant2samples.twLst: ' + tw.id
 			tw.term = term
+			// tw.term is hydrated, no longer need tw.id
+			delete tw.id
 			// tw.q{} must be set
-			if (!tw.q) throw 'tw.q{} missing for one of variant2samples.twLst: ' + tw.id
+			if (!tw.q) throw 'tw.q{} missing for one of variant2samples.twLst: ' + tw.term.id
 			// validate tw.q by term type?
 		}
 	}
@@ -57,8 +59,10 @@ export function validate_variant2samples(ds) {
 			const term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
 			if (!term) throw 'term not found for one of variant2samples.sunburst_twLst: ' + tw.id
 			tw.term = term
+			// tw.term is hydrated, no longer need tw.id
+			delete tw.id
 			// tw.q{} must be set
-			if (!tw.q) throw 'tw.q{} missing for one of variant2samples.sunburst_twLst: ' + tw.id
+			if (!tw.q) throw 'tw.q{} missing for one of variant2samples.sunburst_twLst: ' + tw.term.id
 		}
 	}
 
@@ -392,9 +396,9 @@ function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
 	// right now does not observe tw setting
 	for (const s of samples.values()) {
 		for (const tw of twLst) {
-			const v = ds.cohort.termdb.q.getSample2value(tw.id, s.sample_id)
+			const v = ds.cohort.termdb.q.getSample2value(tw.term.id, s.sample_id)
 			if (v[0]) {
-				s[tw.id] = v[0].value
+				s[tw.term.id] = v[0].value
 			}
 		}
 	}
@@ -435,7 +439,7 @@ async function make_sunburst(mutatedSamples, ds, q) {
 	const nodes = stratinput(
 		mutatedSamples,
 		q.twLst.map(tw => {
-			return { k: tw.id }
+			return { k: tw.term.id }
 		})
 	)
 	for (const node of nodes) {
@@ -503,17 +507,17 @@ async function make_summary(mutatedSamples, ds, q) {
 	for (const tw of q.twLst) {
 		if (!tw.term) continue
 		if (tw.term.type == 'categorical') {
-			const cat2count = make_summary_categorical(mutatedSamples, tw.id)
+			const cat2count = make_summary_categorical(mutatedSamples, tw.term.id)
 			// k: category string, v: sample count
 
 			entries.push({
-				termid: tw.id,
+				termid: tw.term.id,
 				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
 		} else if (tw.term.type == 'integer' || tw.term.type == 'float') {
 			const density_data = await get_densityplot(tw.term, mutatedSamples)
 			entries.push({
-				termid: tw.id,
+				termid: tw.term.id,
 				density_data
 			})
 		} else {
@@ -648,7 +652,7 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 	// v: set of category labels
 	// if term id is not found, it will use all categories retrieved from api queries
 	const id2categories = new Map()
-	for (const tw of twLst) id2categories.set(tw.id, new Set())
+	for (const tw of twLst) id2categories.set(tw.term.id, new Set())
 
 	const useall = nodes ? false : true // to use all categories returned from api query
 
@@ -681,7 +685,7 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 	}
 
 	// get term[0] category total, not dependent on other terms
-	const id0 = twLst[0].id
+	const id0 = twLst[0].term.id
 	{
 		// make new q{} with filters, for termid2totalsize2.get()
 		// must not directly submit q{} to .get([], q), this will filter to only those mutated samples rather than category total size
@@ -704,7 +708,7 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 	}
 
 	// get term[1] category total, conditional on id0
-	const id1 = twLst?.[1]?.id
+	const id1 = twLst?.[1]?.term.id
 	if (id1) {
 		const promises = []
 		// for every id0 category, get id1 category/count conditional on it
@@ -733,7 +737,7 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 	}
 
 	// get term[2] category total, conditional on term1+term2 combinations
-	const id2 = twLst?.[2]?.id
+	const id2 = twLst?.[2]?.term.id
 	if (id2) {
 		// has query method for this term, query in combination with id0 & id1 categories
 		const promises = []

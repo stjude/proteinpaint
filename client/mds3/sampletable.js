@@ -188,13 +188,13 @@ async function make_singleSampleTable(s, arg) {
 			const [cell1, cell2] = table.addRow()
 			cell1.text(tw.term.name).style('text-overflow', 'ellipsis')
 			cell2.style('text-overflow', 'ellipsis')
-			if (tw.id in s) {
-				if (Array.isArray(s[tw.id])) {
+			if (tw.term.id in s) {
+				if (Array.isArray(s[tw.term.id])) {
 					if (tw.baseURL) {
 						// TODO convert to display value
-						cell2.html(s[tw.id].map(i => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
+						cell2.html(s[tw.term.id].map(i => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
 					} else {
-						cell2.html(s[tw.id].join('<br>'))
+						cell2.html(s[tw.term.id].join('<br>'))
 					}
 				} else {
 					// single value
@@ -254,8 +254,8 @@ async function make_singleSampleTable(s, arg) {
 
 // get display value for a tw from a sample
 function twDisplayValueFromSample(s, tw) {
-	if (!(tw.id in s)) return ''
-	const v = s[tw.id]
+	if (!(tw.term.id in s)) return ''
+	const v = s[tw.term.id]
 	if (tw.term.values?.[v]?.label) return tw.term.values[v].label
 
 	const vc = tw.term.valueConversion
