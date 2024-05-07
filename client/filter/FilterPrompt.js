@@ -1,6 +1,6 @@
 import { getInitFxn, Bus } from '#rx'
 import { Filter } from './FilterClass'
-import { getNormalRoot, getFilterItemByTag } from './filter.utils'
+import { getNormalRoot, getFilterItemByTag, findParent } from './filter.utils'
 
 // use this as a non-rx, stateless component
 // BUT where there a filterUiRoot tag is used and would need to be handled
@@ -25,6 +25,8 @@ class FilterPrompt extends Filter {
 			getNormalRoot: () => getNormalRoot(this.rawFilter),
 			getPromise: name => this.promises[name]
 		}
+
+		if (opts.debug) this.api.Inner = this
 	}
 
 	async main(rawFilter, opts = {}) {
