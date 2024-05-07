@@ -423,7 +423,7 @@ async function call_barchart_data(twLst, q, combination, ds) {
 		if (!tw.term) continue
 		if (tw.term.type == 'categorical') {
 			const _q = {
-				term1_id: tw.id,
+				term1_id: tw.term.id,
 				term1_q: { type: 'values' },
 				filter
 			}
@@ -439,7 +439,7 @@ async function call_barchart_data(twLst, q, combination, ds) {
 			for (const s of out.data.charts[0].serieses) {
 				lst.push([s.seriesId, s.total])
 			}
-			termid2values.set(tw.id, lst)
+			termid2values.set(tw.term.id, lst)
 		}
 	}
 	if (combination) return [termid2values, combination]

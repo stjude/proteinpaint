@@ -195,7 +195,7 @@ async function showSummary4terms(data, div, tk, block) {
 	for (const { termid, numbycategory } of data) {
 		tabs.push({
 			label:
-				tk.mds.variant2samples.twLst.find(i => i.id == termid).term.name +
+				tk.mds.variant2samples.twLst.find(i => i.term.id == termid).term.name +
 				(numbycategory
 					? `<span style="opacity:.8;font-size:.8em;float:right;margin-left: 5px;">n=${numbycategory.length}</span>`
 					: '')
@@ -250,7 +250,7 @@ numbycategory = []
 	[2] = total number of cases from this category
 */
 function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
-	const tw = tk.mds.variant2samples.twLst.find(i => i.id == termid)
+	const tw = tk.mds.variant2samples.twLst.find(i => i.term.id == termid)
 	if (!tw) throw 'showSummary4oneTerm(): tw not found from variant2samples.twLst'
 
 	const rows = []

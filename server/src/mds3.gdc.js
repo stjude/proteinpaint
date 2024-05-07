@@ -1221,18 +1221,6 @@ function getBin(bins, v) {
 	}
 }
 
-function prepTwLst(lst) {
-	// {id} and {term:{id}} are both converted to {id, term:{id}}
-	for (const tw of lst) {
-		if (tw.id == undefined || tw.id == '') {
-			if (!tw?.term?.id) throw 'tw.id and tw.term are both missing'
-			tw.id = tw.term.id
-		} else if (!tw.term) {
-			tw.term = { id: tw.id }
-		}
-	}
-}
-
 /* for variant2samples query
 obtain a list of samples, to be used for subsequent purposes (sent to client for table/matrix, summarize etc)
 
@@ -1252,7 +1240,7 @@ q{}
 
 twLst[]
 	array of termwrapper objects, for sample-annotating terms (not geneVariant)
-	tw.id is appended to "&fields="
+	tw.term.id is appended to "&fields="
 	e.g. case.disease_type, case.diagnoses.primary_diagnosis
 	and to parse out as sample attributes
 
@@ -1285,8 +1273,6 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		return await querySamplesTwlst4hierCluster(q, twLst, ds)
 	}
 
-	prepTwLst(twLst)
-
 	if (geneTwLst) {
 		if (!Array.isArray(geneTwLst)) throw 'geneTwLst not array'
 		// temporarily create q.isoforms[] to do ssm query
@@ -1314,9 +1300,9 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	/* this function can identify sample either by case uuid, or sample submitter id
 	for simplicity, always request these two different values
 	*/
-	if (!twLst.some(i => i.id == 'case.observation.sample.tumor_sample_uuid'))
+	if (!twLst.some(i => i.term.id == 'case.observation.sample.tumor_sample_uuid'))
 		twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
-	if (!twLst.some(i => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
+	if (!twLst.some(i => i.term.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
 
 	if (q.get == 'samples') {
 		// getting list of samples (e.g. for table display)
@@ -1327,16 +1313,16 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			// must be from mds3 tk; in such case should return following info
 
 			// need ssm id to associate with ssm (when displaying in sample table?)
-			if (!twLst.some(i => i.id == 'ssm.ssm_id')) twLst.push({ term: { id: 'ssm.ssm_id' } })
+			if (!twLst.some(i => i.term.id == 'ssm.ssm_id')) twLst.push({ term: { id: 'ssm.ssm_id' } })
 
 			// need read depth info
 			// TODO should only add when getting list of samples with mutation for a gene
 			// TODO not when adding a dict term in matrix?
-			if (!twLst.some(i => i.id == 'case.observation.read_depth.t_alt_count'))
+			if (!twLst.some(i => i.term.id == 'case.observation.read_depth.t_alt_count'))
 				twLst.push({ term: { id: 'case.observation.read_depth.t_alt_count' } })
-			if (!twLst.some(i => i.id == 'case.observation.read_depth.t_depth'))
+			if (!twLst.some(i => i.term.id == 'case.observation.read_depth.t_depth'))
 				twLst.push({ term: { id: 'case.observation.read_depth.t_depth' } })
-			if (!twLst.some(i => i.id == 'case.observation.read_depth.n_depth'))
+			if (!twLst.some(i => i.term.id == 'case.observation.read_depth.n_depth'))
 				twLst.push({ term: { id: 'case.observation.read_depth.n_depth' } })
 		}
 	}
@@ -1594,8 +1580,6 @@ output
 	if combination is given, returns [ map, combination ] instead
 */
 export async function get_termlst2size(twLst, q, combination, ds) {
-	prepTwLst(twLst)
-
 	// convert each term id to {path}
 	// id=case.project.project_id, convert to path=project__project_id, for graphql
 	// required for the graphql query of termid2size_query()
@@ -1604,8 +1588,8 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 		if (!tw.term) continue
 		if (tw.term.type != 'categorical') continue // only run for categorical terms
 		termPaths.push({
-			id: tw.id,
-			path: tw.id.replace('case.', '').replace(/\./g, '__'),
+			id: tw.term.id,
+			path: tw.term.id.replace('case.', '').replace(/\./g, '__'),
 			type: tw.term.type
 		})
 	}
