@@ -532,9 +532,9 @@ function getLegendGrps(termNum, self) {
 		addDescriptiveStats(t2, legendGrps, headingStyle, self)
 
 	addUncomputableValues(
-		t1?.q.mode === 'continuous' && Object.keys(t1?.q.hiddenValues).length > 0
+		t1?.q.mode === 'continuous' && t1?.q.hiddenValues && Object.keys(t1?.q.hiddenValues).length > 0
 			? t1
-			: t2?.q.mode === 'continuous' && Object.keys(t2?.q.hiddenValues).length > 0
+			: t2?.q.mode === 'continuous' && t2?.q.hiddenValues && Object.keys(t2?.q.hiddenValues).length > 0
 			? t2
 			: null,
 		legendGrps,

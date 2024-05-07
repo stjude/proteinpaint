@@ -158,7 +158,8 @@ class profileRadar extends profilePlot {
 
 		const item2 = `${config[config.plot].term2.name} ${abbrev}`
 		this.addLegendItem(item2, color2, 1, '5, 5')
-		this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
+		if (this.state.dslabel == 'ProfileAbbrev')
+			this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
 	}
 
 	addData(field, iangle, i, data) {
@@ -266,8 +267,7 @@ export async function getPlotConfig(opts, app) {
 				row.term1.maxScore.q = { mode: 'continuous' }
 				twlst.push(row.term1.maxScore)
 			}
-			row.term1.score.q = { mode: 'continuous' }
-
+			row.term2.score.q = { mode: 'continuous' }
 			twlst.push(row.term2.score)
 			if (row.term2.maxScore.id) {
 				row.term2.maxScore.q = { mode: 'continuous' }

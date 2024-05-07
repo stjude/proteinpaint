@@ -1,10 +1,10 @@
 import { q_to_param } from './vocabulary'
 import { Vocab } from './Vocab'
 import { dofetch3, isInSession } from '../common/dofetch'
-import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
+import { isDictionaryType } from '#shared/common'
 
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
@@ -144,7 +144,7 @@ export class TermdbVocab extends Vocab {
 			const key = _key == 'term' ? 'term1' : _key
 			params.push(key + '_$id=' + encodeURIComponent(tw.$id))
 			// will need to generalize to also consider type=geneExpression
-			if ('id' in tw.term && (!tw.term?.type || !nonDictionaryTermTypes.has(tw.term.type))) {
+			if ('id' in tw.term && (!tw.term?.type || isDictionaryType(tw.term.type))) {
 				params.push(key + '_id=' + encodeURIComponent(tw.term.id))
 			} else {
 				params.push(key + '=' + encodeURIComponent(JSON.stringify(tw.term)))
@@ -443,7 +443,8 @@ export class TermdbVocab extends Vocab {
 				datasymbol: arg.datasymbol || 'rug',
 				orientation: arg.orientation || 'horizontal',
 				radius: arg.radius || 3,
-				svgw: arg.svgw
+				svgw: arg.svgw || 200,
+				unit: arg.unit || 'abs'
 			},
 			arg,
 			_body
@@ -470,11 +471,11 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb/getpercentile', { body })
 	}
 
-	async getDescrStats(term_id, filter, settings) {
+	async getDescrStats(tw, filter, settings) {
 		// for a numeric term, get descriptive statistics
 		// mean, median, standard deviation, min, max
 		const body = {
-			tid: term_id,
+			tw,
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			settings
@@ -769,7 +770,7 @@ export class TermdbVocab extends Vocab {
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 			if (
 				this.vocab.dslabel == 'GDC' &&
-				copies.find(tw => tw.term.id && (!tw.term?.type || !nonDictionaryTermTypes.has(tw.term.type))) &&
+				copies.find(tw => tw.term.id && (!tw.term?.type || isDictionaryType(tw.term.type))) &&
 				currentGeneNames?.length
 			) {
 				//term is dictionary term and there are gene terms,
@@ -854,7 +855,7 @@ export class TermdbVocab extends Vocab {
 		}
 		try {
 			if (opts.loadingDiv) opts.loadingDiv.html(`Processing data ...`)
-			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
+			const dictTerm$ids = opts.terms.filter(tw => isDictionaryType(tw.term.type)).map(tw => tw.$id)
 			// const lst = Object.values(samples)
 
 			// NOTE: Reactivated so that filtering works as expectd for pnet, mbmeta, etc
@@ -952,6 +953,24 @@ export class TermdbVocab extends Vocab {
 		if (opts.divideByTW) body.divideByTW = opts.divideByTW
 		if (opts.scaleDotTW) body.scaleDotTW = opts.scaleDotTW
 
+		return await dofetch3('termdb', { headers, body })
+	}
+
+	async getDefaultGeneExpBins(opts) {
+		// the scatter plot may still render when not in session,
+		// but not have an option to list samples
+		const headers = this.mayGetAuthHeaders('termdb')
+
+		// dofetch* mayAdjustRequest() will automatically
+		// convert to GET query params or POST body, as needed
+		const body = {
+			for: 'getDefaultGeneExpBins',
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			tw: opts.tw,
+
+			embedder: window.location.hostname
+		}
 		return await dofetch3('termdb', { headers, body })
 	}
 

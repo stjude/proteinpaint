@@ -1,5 +1,3 @@
-export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant', 'samplelst'])
-
 export const graphableTypes = new Set([
 	'categorical',
 	'integer',

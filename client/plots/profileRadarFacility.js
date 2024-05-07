@@ -38,7 +38,7 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const widht = 1450
+		const widht = 1550
 		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -153,9 +153,9 @@ class profileRadarFacility extends profilePlot {
 
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-		this.addLegendItem(this.config[this.config.plot].score, color1, 0, '5, 5')
 		const siteLabel = this.sites.find(s => s.value == this.settings.site).label
-		this.addLegendItem(siteLabel, color2, 1, 'none')
+		this.addLegendItem(siteLabel, color2, 0, 'none')
+		this.addLegendItem(this.config[this.config.plot].score, color1, 1, '5, 5')
 	}
 
 	addData(iangle, i, data, isFacility) {

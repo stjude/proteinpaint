@@ -1,15 +1,11 @@
 import { scaleLinear, scaleLog } from 'd3'
-import serverconfig from './serverconfig'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import path from 'path'
-import { write_file } from './utils'
 import { getData } from './termdb.matrix'
 import { createCanvas } from 'canvas'
 import { getBinsDensity } from '../../server/shared/violin.bins'
 import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
-import { TermTypes } from '#shared/common.js'
-
+import { isNumericTerm } from '#shared/common.js'
 /*
 q = {
   getViolinPlotData: '1',
@@ -53,76 +49,13 @@ q = {
 }
 */
 
-export async function trigger_getGeneExpViolinPlotData(q, res, ds, genome) {
-	const gene = q.termid
-	if (!gene) throw 'gene is required'
-	if (ds.queries.geneExpression.gene2density[gene]) return ds.queries.geneExpression.gene2density[gene]
-	const args = {
-		genome: q.genome,
-		dslabel: q.label,
-		clusterMethod: 'hierarchical',
-		/** distance method */
-		distanceMethod: 'euclidean',
-		/** Data type */
-		dataType: 3,
-		genes: [{ gene }]
-	}
-	const data = await ds.queries.geneExpression.get(args)
-	let min = Infinity,
-		max = -Infinity
-	const samples = []
-	for (const sampleId in data.gene2sample2value.get(gene)) {
-		const values = data.gene2sample2value.get(gene)
-		const value = Number(values[sampleId])
-		if (min > value) min = value
-		if (max < value) max = value
-		samples.push(value)
-	}
-	const plot = { label: 'All samples', values: samples, plotValueCount: samples.length, minvalue: min, maxvalue: max }
-	const axisScale = scaleLinear().domain([min, max]).range([0, q.svgw])
-	plot.density = getBinsDensity(axisScale, plot, true, q.ticks)
-	delete plot.values
-	const step = Math.round((max - min) * 10) / 100 // round to 2 decimal places
-
-	const result = {
-		min,
-		max,
-		plots: [plot], // each element is data for one plot: {label=str, values=[]}
-		pvalues: [],
-		bins: {
-			default: {
-				mode: 'discrete',
-				type: 'regular-bin',
-				bin_size: step,
-				startinclusive: false,
-				stopinclusive: true,
-				first_bin: {
-					startunbounded: true,
-					stop: min + step
-				},
-				last_bin: {
-					start: max - step,
-					stopunbounded: true
-				}
-			}
-		}
-	}
-	ds.queries.geneExpression.gene2density[gene] = result
-	return result
-}
-
 export async function trigger_getViolinPlotData(q, res, ds, genome) {
-	if (q.termType == TermTypes.GENE_EXPRESSION)
-		//to support new types we pass the termwrapper object
-		return await trigger_getGeneExpViolinPlotData(q, res, ds, genome)
-
-	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
+	const term = q.term?.term ? q.term.term : ds.cohort.termdb.q.termjsonByOneid(q.termid)
 	if (!term) throw '.termid invalid'
 	//term on backend should always be an integer term
-	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
+	if (!isNumericTerm(term)) throw 'term type is not numeric'
 
-	const tw = { id: q.termid, term, q: { mode: 'continuous' } }
-	const twLst = [tw]
+	const twLst = [q.term]
 
 	if (q.divideTw) {
 		if (q.divideTw !== null && q.divideTw !== undefined && typeof q.divideTw === 'object' && !('id' in q.divideTw)) {
@@ -145,10 +78,10 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		)
 	}
 
-	if (q.scale) scaleData(q, data, tw)
+	if (q.scale) scaleData(q, data, q.term)
 
-	const valuesObject = divideValues(q, data, tw)
-	const result = resultObj(valuesObject, data, q)
+	const valuesObject = divideValues(q, data, q.term)
+	const result = resultObj(valuesObject, data, q, ds)
 
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result)
@@ -223,10 +156,10 @@ function divideValues(q, data, tw) {
 	//create object to store uncomputable values and label
 	const uncomputableValueObj = {}
 	let skipNonPositiveCount = 0 // if useLog=true, record number of <=0 values skipped
-
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
 		const value = v[tw.$id]
+
 		if (!Number.isFinite(value?.value)) continue
 
 		if (tw.term.values?.[value.key]?.uncomputable) {
@@ -297,7 +230,7 @@ function sortKey2values(data, key2values, overlayTerm) {
 	return key2values
 }
 
-function resultObj(valuesObject, data, q) {
+function resultObj(valuesObject, data, q, ds) {
 	const overlayTerm = q.divideTw
 	const result = {
 		min: valuesObject.minMaxValues.min,
@@ -321,14 +254,15 @@ function resultObj(valuesObject, data, q) {
 					Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
 			})
 		} else {
-			result.plots.push({
+			const plot = {
 				label: 'All samples',
 				values,
 				plotValueCount: values.length
-			})
+			}
+
+			result.plots.push(plot)
 		}
 	}
-
 	return result
 }
 
@@ -408,7 +342,6 @@ function createCanvasImg(q, result, ds) {
 
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values)
-
 		delete plot.values
 	}
 	result.biggestBin = biggestBin

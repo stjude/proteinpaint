@@ -15,6 +15,9 @@ import { getResult as geneSearch } from './gene.js'
 import { searchSNP } from '../routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/common.js'
+import initBinConfig from '#shared/termdb.initbinconfig'
+import * as bins from '#shared/termdb.bins.js'
+
 /*
 ********************** EXPORTED
 handle_request_closure
@@ -74,6 +77,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
 			if (q.for == 'getSamplesByName') return get_AllSamplesByName(q, req, res, ds)
 			if (q.for == 'DEanalysis') return await get_DEanalysis(q, res, ds)
+			if (q.for == 'getDefaultGeneExpBins') return trigger_getDefaultGeneExpBins(q, ds, res)
 
 			throw "termdb: doesn't know what to do"
 		} catch (e) {
@@ -462,4 +466,37 @@ async function LDoverlay(q, ds, res) {
 		}
 	})
 	res.send({ lst })
+}
+
+async function trigger_getDefaultGeneExpBins(q, ds, res) {
+	const tw = q.tw
+	if (ds.queries.geneExpression.gene2bins[tw.term.gene])
+		return { default: ds.queries.geneExpression.gene2bins[tw.term.gene] }
+
+	const args = {
+		genome: q.genome,
+		dslabel: q.dslabel,
+		clusterMethod: 'hierarchical',
+		/** distance method */
+		distanceMethod: 'euclidean',
+		/** Data type */
+		dataType: 3,
+		genes: [{ gene: tw.term.gene }]
+	}
+	const data = await ds.queries.geneExpression.get(args)
+	const lst = []
+	let min = Infinity
+	let max = -Infinity
+	for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
+		const values = data.gene2sample2value.get(tw.term.gene)
+		const value = Number(values[sampleId])
+		if (value < min) min = value
+		if (value > max) max = value
+		lst.push(value)
+	}
+	let binconfig = initBinConfig(lst)
+	binconfig.lst = bins.compute_bins(binconfig, () => {
+		return { min, max }
+	})
+	res.send({ default: binconfig })
 }

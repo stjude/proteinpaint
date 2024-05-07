@@ -8,7 +8,8 @@ import serverconfig from './serverconfig'
 import * as utils from './utils'
 import * as termdbsql from './termdb.sql'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
-import { TermTypes, isNonDictionary } from '#shared/common.js'
+import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/common.js'
+import { get_bin_label } from '#shared/termdb.bins.js'
 
 /*
 
@@ -80,7 +81,7 @@ function validateArg(q, ds, genome) {
 
 	for (const tw of q.terms) {
 		// TODO clean up
-		if (tw?.term?.type && !isNonDictionary(tw.term.type)) {
+		if (tw?.term?.type && isDictionaryType(tw.term.type)) {
 			if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
 			if (!tw.q) console.log('do something??')
 		}
@@ -161,14 +162,18 @@ async function getSampleData(q) {
 				genes: [{ gene: tw.term.gene }]
 			}
 			const data = await q.ds.queries.geneExpression.get(args)
+
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				const values = data.gene2sample2value.get(tw.term.gene)
-				let value = Number(values[sampleId]).toFixed(2)
-				if (tw.q.mode == 'discrete') value = getBinValue(tw, value)
-
-				samples[sampleId][tw.$id] = { key: value, value }
+				const value = Number(values[sampleId])
+				let key = value
+				if (tw.q?.mode == 'discrete') key = getBinLabel(tw.q, value)
+				samples[sampleId][tw.$id] = { key, value }
 			}
+			if (tw.q.lst) byTermId[tw.$id] = { bins: tw.q.lst }
+			else if (tw.term.bins) byTermId[tw.$id] = { bins: tw.term.bins }
+
 			/** pp filter */
 		} else {
 			throw 'unknown type of non-dictionary term'
@@ -197,40 +202,24 @@ async function getSampleData(q) {
 	return { samples, refs: { byTermId, bySampleId } }
 }
 
-function getBinValue(tw, value) {
-	if (!tw.q.mode == 'discrete') throw 'getBinValue() called for non-discrete term'
-	const bins = tw.q
-	let bin
-	if (tw.q.type == 'regular-bin') {
-		if (value < bins.first_bin.stop) bin = 0
-		else bin = parseInt((value - bins.first_bin.stop) / bins.bin_size) + 1
-		if (bin == 0) value = (bins.startinclusive ? '<= ' : '< ') + bins.first_bin.stop.toFixed(2)
-		else if (bins.startinclusive ? value >= bins.last_bin.start : value > bins.last_bin.start)
-			value = (bins.startinclusive ? '>= ' : '> ') + bins.last_bin.start.toFixed(2)
-		else {
-			const start = (bins.first_bin.stop + (bin - 1) * bins.bin_size).toFixed(2)
-			const stop = (bins.first_bin.stop + bin * bins.bin_size).toFixed(2)
-			value = start + ` to ${bins.stopinclusive ? '<= ' : '< '}` + stop
-		}
-	} else if (tw.q.type == 'custom-bin') {
-		let bin = bins.lst.findIndex(
-			b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
-		)
-		if (bin == -1)
-			bin = bins.lst.findIndex(
-				b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
-			)
-		if (bin == -1)
-			bin = bins.lst.findIndex(
-				b =>
-					(value > b.start && value < b.stop) ||
-					(b.startinclusive && value == b.start) ||
-					(b.stopinclusive && value == b.stop)
-			)
+export function getBinLabel(bins, value) {
+	value = Math.round(value * 100) / 100 //to keep 2 decimal places
 
-		value = bins.lst[bin].label
-	}
-	return value
+	let bin = bins.lst.findIndex(
+		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
+	)
+	if (bin == -1)
+		bin = bins.lst.findIndex(
+			b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
+		)
+	if (bin == -1)
+		bin = bins.lst.findIndex(
+			b =>
+				(value > b.start && value < b.stop) ||
+				(b.startinclusive && value == b.start) ||
+				(b.stopinclusive && value == b.stop)
+		)
+	return get_bin_label(bins.lst[bin], bins)
 }
 
 async function mayGetSampleFilterSet(q, nonDictTerms) {
@@ -263,7 +252,7 @@ function divideTerms(lst) {
 	for (const tw of lst) {
 		const type = tw.term?.type
 		if (type) {
-			if (isNonDictionary(type)) nonDict.push(tw)
+			if (isNonDictionaryType(type)) nonDict.push(tw)
 			else dict.push(tw)
 		} else if (tw.term?.id) dict.push(tw) // TODO: detect using term.type as part of request payload
 		else nonDict.push(tw) // TODO: detect using term.type as part of request payload

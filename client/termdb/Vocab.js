@@ -1,4 +1,5 @@
 import { dofetch3, isInSession } from '#common/dofetch'
+import { isDictionaryType } from '#shared/common'
 
 export class Vocab {
 	constructor(opts) {
@@ -143,16 +144,20 @@ export class Vocab {
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
 		const copy = { $id: tw.$id, term: {}, q: tw.q }
-		if (tw.term?.type == 'geneVariant') {
+		if (!isDictionaryType(tw.term?.type)) {
+			if (tw.term.id) copy.term.id = tw.term.id
 			copy.term.name = tw.term.name
 			copy.term.type = tw.term.type
 			if (tw.term.gene) {
 				copy.term.gene = tw.term.gene
-			} else {
+			} else if (tw.term.type.startsWith('gene')) {
+				//quick fix that should be fixed later
 				copy.term.chr = tw.term.chr
 				copy.term.start = tw.term.start
 				copy.term.stop = tw.term.stop
-			}
+			} /* else {
+				// TODO: minimize other non-dictionary term types
+			}*/
 		} else if ('id' in tw || (tw.term && 'id' in tw.term)) {
 			copy.term.id = tw.id || tw.term.id
 			if (tw.term?.type == 'snplst' || tw.term?.type == 'snplocus') {
@@ -165,6 +170,7 @@ export class Vocab {
 			copy.term.type = tw.term?.type
 			copy.term.values = tw.term?.values
 		}
+
 		return copy
 	}
 

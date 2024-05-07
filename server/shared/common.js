@@ -1126,7 +1126,7 @@ export const TermTypeGroups = {
 	SNP_LOCUS: 'SNP Locus'
 }
 
-export function isNumeric(term) {
+export function isNumericTerm(term) {
 	if (!term) return false
 	return term.type == TermTypes.INTEGER || term.type == TermTypes.FLOAT || term.type == TermTypes.GENE_EXPRESSION
 }
@@ -1137,7 +1137,12 @@ const nonDictTypes = new Set([
 	TermTypes.GENE_EXPRESSION,
 	TermTypes.GENE_VARIANT
 ])
-export function isNonDictionary(type) {
+
+export function isDictionaryType(type) {
+	return !isNonDictionaryType(type)
+}
+
+export function isNonDictionaryType(type) {
 	if (!type) throw new Error('Type is not defined')
 	return nonDictTypes.has(type)
 }
