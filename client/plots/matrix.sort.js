@@ -405,7 +405,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 						order: ['Fuserna' /*'WT', 'Blank'*/]
 					},
 					{
-						label: 'Cases with protein changing mutations > without',
+						label: 'Cases with truncating mutations > without',
 						filter: {
 							values: [
 								{
@@ -416,7 +416,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 						by: 'class',
 						isOrdered: false,
 						order: [
-							...s.proteinChangingMutations
+							...s.truncatingMutations
 							// // truncating
 							// 'F', // FRAMESHIFT
 							// 'N', // NONSENSE
@@ -430,7 +430,10 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 
 							// // point
 							// 'M' // MISSENSE
-						]
+						],
+						// do not have the option to add unused protein-changing mutations,
+						// because the "truncating" label for this tiebreaker will not make sense
+						notUsed: []
 					},
 					{
 						label: 'Cases with CNV data > without',
@@ -448,9 +451,9 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 						order: ['CNV_amp', 'CNV_loss']
 					},
 					{
-						disabled: true,
+						disabled: false,
 						mayToggle: true,
-						label: 'Cases with consequence data',
+						label: 'Cases with protein-changing mutations > without',
 						filter: {
 							values: [
 								{
@@ -459,30 +462,11 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 							]
 						},
 						by: 'class',
-						isOrdered: true,
-						order: [
-							// truncating
-							'F', // FRAMESHIFT
-							'N', // NONSENSE
-							'L', // SPLICE
-							'P', // SPLICE_REGION
-
-							// indel
-							'D', // PROTEINDEL
-							'I', // PROTEININS
-							'ProteinAltering',
-
-							// point
-							'M' // MISSENSE
-						],
-						notUsed: [
-							// noncoding
-							'Utr3',
-							'Utr5',
-							'S', //SILENT
-							'Intron',
-							'noncoding'
-						]
+						isOrdered: false,
+						// by default, do not include truncating mutations here since they may
+						// already be used in the tiebreaker with truncating mutations
+						order: s.proteinChangingMutations.filter(mcls => !s.truncatingMutations.includes(mcls)),
+						notUsed: s.truncatingMutations
 					}
 				]
 			},
