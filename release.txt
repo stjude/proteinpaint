@@ -1,2 +1,1 @@
-Fixes:
-- import findParent in the groups component and create tests
+

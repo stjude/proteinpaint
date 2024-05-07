@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- import findParent in the groups component and create tests
+
 
 ## 2.58.0
 
