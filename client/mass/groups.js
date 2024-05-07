@@ -515,7 +515,7 @@ export async function showTermsTree(
 	callback,
 	app,
 	tip,
-	state = { tree: { usecase: { detail: 'term' } } },
+	state = { tree: { usecase: { target: 'default', detail: 'term' } } },
 	closeParent = true,
 	shift = true,
 	disable_terms = []

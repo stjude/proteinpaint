@@ -330,7 +330,8 @@ export function setInteractivity(self) {
 			state: {
 				activeCohort: self.activeCohort,
 				header_mode: 'search_only',
-				termfilter: { filter: self.getAdjustedRoot(filter.$id, filter.join) }
+				termfilter: { filter: self.getAdjustedRoot(filter.$id, filter.join) },
+				tree: { usecase: { target: 'filter' } }
 			},
 			tree: {
 				disable_terms:
