@@ -286,21 +286,23 @@ function initUI(self) {
 }
 
 async function updateUI(self) {
-	// reset prompt button;
 	// prompt button is an instance to a blank filter, can only make the button after state is filled
-	// but not in init()
-	self.dom.addNewGroupBtnHolder.selectAll('*').remove()
+	// but not in instance.init()
 
-	// create "Add new group" button
-	filterPromptInit({
-		holder: self.dom.addNewGroupBtnHolder,
-		vocab: self.app.opts.state.vocab,
-		emptyLabel: 'Add group',
-		termdbConfig: self.state.termdbConfig,
-		callback: f => {
-			addNewGroup(self.app, f, groups)
-		}
-	}).main(self.getMassFilter()) // provide mass filter to limit the term tree
+	// create "Add new group" button as needed
+	if (!self.filterPrompt)
+		self.filterPrompt = await filterPromptInit({
+			holder: self.dom.addNewGroupBtnHolder,
+			vocab: self.app.opts.state.vocab,
+			emptyLabel: 'Add group',
+			termdbConfig: self.state.termdbConfig,
+			callback: f => {
+				addNewGroup(self.app, f, groups)
+			},
+			debug: self.opts.debug
+		})
+	// filterPrompt.main() always empties the filterUiRoot data
+	self.filterPrompt.main(self.getMassFilter()) // provide mass filter to limit the term tree
 
 	// duplicate groups[] array to mutate and add to action.state for dispatching
 	const groups = structuredClone(self.state.groups)
