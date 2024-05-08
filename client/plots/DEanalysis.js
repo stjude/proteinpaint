@@ -488,8 +488,7 @@ add:
 			const geneORAparams = {
 				sample_genes: sample_genes.toString(),
 				background_genes: background_genes.toString(),
-				genome: self.app.vocabApi.opts.state.vocab.genome,
-				geneSetGroup: 'BP: subset of GO'
+				genome: self.app.vocabApi.opts.state.vocab.genome
 			}
 			const config = {
 				chartType: 'geneORA',
