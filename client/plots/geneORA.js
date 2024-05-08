@@ -38,7 +38,7 @@ class geneORA {
 		}
 	}
 
-	async setControls(output) {
+	async setControls() {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
@@ -50,40 +50,28 @@ class geneORA {
 				min: 0,
 				max: 1
 			},
+			//{
+			//	label: 'Gene overrepresentation analysis results',
+			//	type: 'checkbox',
+			//	chartType: 'geneORA',
+			//	settingsKey: 'geneORA',
+			//	title: 'Display table showing original and adjusted pvalues corresponding to each significant pathway',
+			//	boxLabel: ''
+			//},
 			{
-				label: 'Fold change (log scale)',
-				type: 'number',
-				chartType: 'geneORA',
-				settingsKey: 'foldchange',
-				title: 'Fold change',
-				min: -10,
-				max: 10
-			},
-			{
-				label: 'P-value table',
-				type: 'checkbox',
-				chartType: 'geneORA',
-				settingsKey: 'pvaluetable',
-				title: 'Display table showing original and adjusted pvalues for all significant genes',
-				boxLabel: ''
-			}
-		]
-
-		if (this.app.opts.genome.termdbs) {
-			// Check if genome build contains termdbs, only then enable gene ora
-			inputs.push({
-				label: 'Gene overrepresentation analysis',
+				label: 'Pathway',
 				type: 'radio',
 				chartType: 'geneORA',
-				settingsKey: 'gene_ora',
-				title: 'Toggle between analyzing upregulated, downregulated or both genes',
+				settingsKey: 'pathway',
+				title: 'Display table showing original and adjusted pvalues corresponding to each significant pathway',
+				boxLabel: '',
 				options: [
-					{ label: 'upregulated', value: 'upregulated' },
-					{ label: 'downregulated', value: 'downregulated' },
-					{ label: 'both', value: 'both' }
+					{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
+					{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
+					{ label: 'CC: subset of GO', value: 'CC: subset of GO' }
 				]
-			})
-		}
+			}
+		]
 
 		this.components = {
 			controls: await controlsInit({
@@ -108,10 +96,9 @@ class geneORA {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.geneORA
+		await this.setControls()
 		//console.log("this.config:",this.config)
 		//console.log("this.settings:",this.settings)
-		const output = await this.app.vocabApi.rungeneORA(this.config.geneORAparams)
-		await this.setControls(output)
 		//const state = this.app.getState()
 		//console.log('state:', state)
 		//if (state.customTerms[0].name) {
@@ -131,11 +118,11 @@ class geneORA {
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
 			.text('GENE OVERREPRESENTATION ANALYSIS')
-		render_geneORA(this, output, this.config.geneORAparams)
+		render_geneORA(this)
 	}
 }
 
-async function render_geneORA(self, output, input) {
+async function render_geneORA(self) {
 	/*
 m {}
 - gene
@@ -146,42 +133,45 @@ m {}
 add:
 - vo_circle
 	*/
+	if (self.settings.pathway) {
+		self.dom.detailsDiv.selectAll('*').remove()
+		self.config.geneORAparams.geneSetGroup = self.settings.pathway
+		const output = await self.app.vocabApi.rungeneORA(self.config.geneORAparams)
+		self.dom.detailsDiv
+			.append('div')
+			.html(
+				'Number of sample genes used for gene over representation analysis:' +
+					self.config.geneORAparams.sample_genes.split(',').length +
+					'<br>Number of background genes used for gene over representation analysis:' +
+					self.config.geneORAparams.background_genes.split(',').length
+			)
 
-	console.log('input:', input)
-	self.dom.detailsDiv
-		.append('div')
-		.html(
-			'Number of sample genes used for gene over representation analysis:' +
-				input.sample_genes.split(',').length +
-				'<br>Number of background genes used for gene over representation analysis:' +
-				input.background_genes.split(',').length
-		)
+		// Generating the table
+		self.gene_ora_table_cols = [
+			{ label: 'Pathway name' },
+			{ label: 'Original p-value (linear scale)' },
+			{ label: 'Adjusted p-value (linear scale)' }
+		]
+		self.gene_ora_table_rows = []
+		for (const pathway of output) {
+			self.gene_ora_table_rows.push([
+				{ value: pathway.pathway_name },
+				{ value: pathway.p_value_original },
+				{ value: pathway.p_value_adjusted }
+			])
+		}
 
-	// Generating the table
-	self.gene_ora_table_cols = [
-		{ label: 'Pathway name' },
-		{ label: 'Original p-value (linear scale)' },
-		{ label: 'Adjusted p-value (linear scale)' }
-	]
-	self.gene_ora_table_rows = []
-	for (const pathway of output) {
-		self.gene_ora_table_rows.push([
-			{ value: pathway.pathway_name },
-			{ value: pathway.p_value_original },
-			{ value: pathway.p_value_adjusted }
-		])
+		self.dom.tableDiv.selectAll('*').remove()
+		const d_ora = self.dom.tableDiv.append('div').html(`<br>Gene over-representation results`)
+		renderTable({
+			columns: self.gene_ora_table_cols,
+			rows: self.gene_ora_table_rows,
+			div: d_ora,
+			showLines: true,
+			maxHeight: '30vh',
+			resize: true
+		})
 	}
-
-	self.dom.tableDiv.selectAll('*').remove()
-	const d_ora = self.dom.tableDiv.append('div').html(`<br>Gene over-representation results`)
-	renderTable({
-		columns: self.gene_ora_table_cols,
-		rows: self.gene_ora_table_rows,
-		div: d_ora,
-		showLines: true,
-		maxHeight: '30vh',
-		resize: true
-	})
 }
 
 export async function getPlotConfig(opts, app) {
@@ -192,11 +182,7 @@ export async function getPlotConfig(opts, app) {
 			settings: {
 				geneORA: {
 					pvalue: 0.05,
-					foldchange: 2,
-					pvaluetable: false,
-					adjusted_original_pvalue: 'adjusted',
-					method: undefined,
-					gene_ora: undefined
+					pathway: undefined
 				}
 			}
 		}
