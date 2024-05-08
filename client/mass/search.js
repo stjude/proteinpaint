@@ -127,7 +127,7 @@ function setRenderers(self) {
 						type: 'plot_create',
 						config: {
 							chartType: term.type == 'survival' ? 'survival' : 'summary',
-							term: { id: term.id, term }
+							term: { term }
 						}
 					})
 					self.clear({ hide: true })

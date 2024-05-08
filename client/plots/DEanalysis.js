@@ -608,7 +608,7 @@ export async function openHiercluster(term, samplelstTW, app, id, newId) {
 	// barchart config.term{} name is confusing, as it is actually a termsetting object, not t    erm
 	// thus convert the given term into a termwrapper
 	// tw.q can be missing and will be filled in with default setting
-	const tw = term.term ? term : { id: term.id, term }
+	const tw = term.term ? term : { term }
 
 	let config = {
 		chartType: 'hierCluster',

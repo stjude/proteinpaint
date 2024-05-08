@@ -304,7 +304,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
-			if (!tw.$id) tw.$id = tw.term.id || tw.term.name
+			if (!tw.$id) throw 'tw.$id is missing'
 			const CTE = await get_term_cte(q, values, i, filter, tw)
 			if (CTE.bins) {
 				byTermId[tw.$id] = { bins: CTE.bins }
