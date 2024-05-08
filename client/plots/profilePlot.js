@@ -187,7 +187,7 @@ export class profilePlot {
 						type: 'dropdown',
 						chartType,
 						options: this.regions,
-						settingsKey: this.config.regionTW.id,
+						settingsKey: this.config.regionTW.term.id,
 						callback: value => this.setRegion(value)
 					},
 					{
@@ -195,64 +195,64 @@ export class profilePlot {
 						type: 'dropdown',
 						chartType,
 						options: this.countries,
-						settingsKey: this.config.countryTW.id,
-						callback: value => this.setFilterValue(this.config.countryTW.id, value)
+						settingsKey: this.config.countryTW.term.id,
+						callback: value => this.setFilterValue(this.config.countryTW.term.id, value)
 					},
 					{
 						label: 'Income group',
 						type: 'dropdown',
 						chartType,
 						options: this.incomes,
-						settingsKey: this.config.incomeTW.id,
-						callback: value => this.setFilterValue(this.config.incomeTW.id, value)
+						settingsKey: this.config.incomeTW.term.id,
+						callback: value => this.setFilterValue(this.config.incomeTW.term.id, value)
 					},
 					{
 						label: 'Facility type',
 						type: 'dropdown',
 						chartType,
 						options: this.types,
-						settingsKey: this.config.typeTW.id,
-						callback: value => this.setFilterValue(this.config.typeTW.id, value)
+						settingsKey: this.config.typeTW.term.id,
+						callback: value => this.setFilterValue(this.config.typeTW.term.id, value)
 					},
 					{
 						label: this.config.teachingStatusTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.teachingStates,
-						settingsKey: this.config.teachingStatusTW.id,
-						callback: value => this.setFilterValue(this.config.teachingStatusTW.id, value)
+						settingsKey: this.config.teachingStatusTW.term.id,
+						callback: value => this.setFilterValue(this.config.teachingStatusTW.term.id, value)
 					},
 					{
 						label: this.config.referralStatusTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.referralStates,
-						settingsKey: this.config.referralStatusTW.id,
-						callback: value => this.setFilterValue(this.config.referralStatusTW.id, value)
+						settingsKey: this.config.referralStatusTW.term.id,
+						callback: value => this.setFilterValue(this.config.referralStatusTW.term.id, value)
 					},
 					{
 						label: this.config.fundingSourceTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.fundingSources,
-						settingsKey: this.config.fundingSourceTW.id,
-						callback: value => this.setFilterValue(this.config.fundingSourceTW.id, value)
+						settingsKey: this.config.fundingSourceTW.term.id,
+						callback: value => this.setFilterValue(this.config.fundingSourceTW.term.id, value)
 					},
 					{
 						label: this.config.hospitalVolumeTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.hospitalVolumes,
-						settingsKey: this.config.hospitalVolumeTW.id,
-						callback: value => this.setFilterValue(this.config.hospitalVolumeTW.id, value)
+						settingsKey: this.config.hospitalVolumeTW.term.id,
+						callback: value => this.setFilterValue(this.config.hospitalVolumeTW.term.id, value)
 					},
 					{
 						label: this.config.yearOfImplementationTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.yearsOfImplementation,
-						settingsKey: this.config.yearOfImplementationTW.id,
-						callback: value => this.setFilterValue(this.config.yearOfImplementationTW.id, value)
+						settingsKey: this.config.yearOfImplementationTW.term.id,
+						callback: value => this.setFilterValue(this.config.yearOfImplementationTW.term.id, value)
 					}
 				]
 			)
@@ -385,8 +385,8 @@ export class profilePlot {
 
 	setRegion(region) {
 		const config = this.config
-		this.settings[config.regionTW.id] = region
-		this.clearFiltersExcept([config.regionTW.id])
+		this.settings[config.regionTW.term.id] = region
+		this.clearFiltersExcept([config.regionTW.term.id])
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -487,9 +487,11 @@ export class profilePlot {
 
 	getDownloadFilename() {
 		this.downloadCount++
-		let filename = `${this.type}${this.component ? this.component : ''}${this.settings[this.config.regionTW.id]}${
-			this.settings[this.config.countryTW.id]
-		}${this.settings[this.config.incomeTW.id]}${this.settings[this.config.typeTW.id]}${this.downloadCount}.svg`
+		let filename = `${this.type}${this.component ? this.component : ''}${this.settings[this.config.regionTW.term.id]}${
+			this.settings[this.config.countryTW.term.id]
+		}${this.settings[this.config.incomeTW.term.id]}${this.settings[this.config.typeTW.term.id]}${
+			this.downloadCount
+		}.svg`
 		filename = filename.split(' ').join('_')
 		return filename
 	}

@@ -188,6 +188,7 @@ async function make_singleSampleTable(s, arg) {
 			const [cell1, cell2] = table.addRow()
 			cell1.text(tw.term.name).style('text-overflow', 'ellipsis')
 			cell2.style('text-overflow', 'ellipsis')
+			// TODO: use tw.$id to accomodate non-dictionary terms
 			if (tw.term.id in s) {
 				if (Array.isArray(s[tw.term.id])) {
 					if (tw.baseURL) {

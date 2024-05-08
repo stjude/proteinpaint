@@ -41,9 +41,6 @@ class Divide {
 			getBodyParams: this.opts.getBodyParams,
 			callback: term0 => {
 				// term0 is {term,q} and can be null
-				if (term0) {
-					term0.id = term0.term.id
-				}
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
@@ -97,20 +94,14 @@ class Divide {
 export const divideInit = getCompInit(Divide)
 
 function setRenderers(self) {
-	self.initUI = function() {
-		self.dom.tr
-			.append('td')
-			.text('Divide by')
-			.attr('class', 'sja-termdb-config-row-label')
+	self.initUI = function () {
+		self.dom.tr.append('td').text('Divide by').attr('class', 'sja-termdb-config-row-label')
 		const td = self.dom.tr.append('td')
-		self.dom.menuBtn = td
-			.append('div')
-			.attr('class', 'sja_clbtext2')
-			.on('click', self.showMenu)
+		self.dom.menuBtn = td.append('div').attr('class', 'sja_clbtext2').on('click', self.showMenu)
 		self.dom.pilldiv = td.append('div')
 		self.dom.tip = new Menu({ padding: '0px' })
 	}
-	self.updateUI = function() {
+	self.updateUI = function () {
 		const plot = this.state.config
 		self.dom.tr.style('display', '')
 
@@ -133,7 +124,7 @@ function setRenderers(self) {
 		self.dom.pilldiv.style('display', 'inline-block')
 		self.updatePill()
 	}
-	self.showMenu = function() {
+	self.showMenu = function () {
 		self.pill.showTree(self.dom.menuBtn.node())
 	}
 }

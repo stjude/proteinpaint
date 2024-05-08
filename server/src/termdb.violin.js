@@ -58,10 +58,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const twLst = [q.term]
 
 	if (q.divideTw) {
-		if (q.divideTw !== null && q.divideTw !== undefined && typeof q.divideTw === 'object' && !('id' in q.divideTw)) {
-			q.divideTw.id = q.divideTw.term.name
-			q.divideTw.term.id = q.divideTw.term.name
-		}
 		twLst.push(q.divideTw)
 		q.term2_q = q.divideTw.q
 	}
@@ -69,10 +65,10 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 	//get ordered labels to sort keys in key2values
-	if (q.divideTw && data.refs.byTermId[q.divideTw?.id]) {
-		data.refs.byTermId[q.divideTw?.id].orderedLabels = getOrderedLabels(
+	if (q.divideTw && data.refs.byTermId[q.divideTw.term.id]) {
+		data.refs.byTermId[q.divideTw.term.id].orderedLabels = getOrderedLabels(
 			q.divideTw,
-			data.refs.byTermId[q.divideTw?.id]?.bins,
+			data.refs.byTermId[q.divideTw.term.id]?.bins,
 			undefined,
 			q.divideTw.q
 		)

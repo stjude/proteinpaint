@@ -297,8 +297,6 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const samples = {} // to return
 	const byTermId = {} // to return
-	//const twBy$id = {}
-	const tw$IdByIndex = {}
 	const filter = await getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
@@ -307,9 +305,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
 			if (!tw.$id) tw.$id = tw.term.id || tw.term.name
-			tw$IdByIndex[i] = tw.$id
 			const CTE = await get_term_cte(q, values, i, filter, tw)
-			const $id = tw.$id || tw.term.id
 			if (CTE.bins) {
 				byTermId[tw.$id] = { bins: CTE.bins }
 			}

@@ -75,7 +75,6 @@ class Term1ui {
 							will replace plot.term with {q}
 							*/
 							isAtomic: true,
-							id: this.state.plot.term.term.id,
 							term: JSON.parse(JSON.stringify(this.state.plot.term.term)),
 							q: data.q
 						}
