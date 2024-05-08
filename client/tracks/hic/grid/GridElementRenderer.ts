@@ -29,7 +29,7 @@ export class GridElementRenderer {
 			.on('click', async () => {
 				//maybe pass as a callback instead of passing app for dispatch?
 				await this.app.dispatch({
-					type: 'view_change',
+					type: 'view_create',
 					view: 'chrpair',
 					config: {
 						x: {
@@ -66,7 +66,7 @@ export class GridElementRenderer {
 				.attr('y', obj.x)
 				.on('click', async () => {
 					await this.app.dispatch({
-						type: 'view_change',
+						type: 'view_create',
 						view: 'chrpair',
 						config: {
 							x: {
