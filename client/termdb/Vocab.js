@@ -143,12 +143,13 @@ export class Vocab {
 	// get a minimum copy of tw
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
-		if (!tw.id && !tw.term) throw `missing both tw.id && tw.term for ${JSON.stringify(tw)}`
 		const copy = { $id: tw.$id, term: {}, q: tw.q }
-		if (!isDictionaryType(tw.term?.type)) {
-			if (tw.term.id) copy.term.id = tw.term.id
-			copy.term.name = tw.term.name
-			copy.term.type = tw.term.type
+		copy.term.id = tw.term?.id
+		copy.term.name = tw.term?.name
+		copy.term.type = tw.term?.type
+		if (isDictionaryType(tw.term?.type)) {
+			copy.term.values = tw.term?.values
+		} else {
 			if (tw.term.gene) {
 				copy.term.gene = tw.term.gene
 			} else if (tw.term.type.startsWith('gene')) {
@@ -159,29 +160,7 @@ export class Vocab {
 			} /* else {
 				// TODO: minimize other non-dictionary term types
 			}*/
-		} else if ('id' in tw || (tw.term && 'id' in tw.term)) {
-			copy.term.id = tw.id || tw.term.id
-			if (tw.term?.type == 'snplst' || tw.term?.type == 'snplocus') {
-				// added following so getData will not break
-				copy.term.type = tw.term.type
-				copy.term.name = tw.term.name
-			}
-		} else {
-			copy.term.name = tw.term?.name
-			copy.term.type = tw.term?.type
-			if (tw.term?.type == 'geneVariant') {
-				if (tw.term.gene) {
-					copy.term.gene = tw.term.gene
-				} else {
-					copy.term.chr = tw.term.chr
-					copy.term.start = tw.term.start
-					copy.term.stop = tw.term.stop
-				}
-			} else {
-				copy.term.values = tw.term?.values
-			}
 		}
-
 		return copy
 	}
 
