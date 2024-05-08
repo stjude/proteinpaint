@@ -135,7 +135,7 @@ class ControlPanel {
 			.html('&#8810; Genome')
 			.on('click', async () => {
 				await this.app.dispatch({
-					type: 'view_change',
+					type: 'view_create',
 					view: 'genome',
 					config: {
 						x: {},
@@ -152,7 +152,7 @@ class ControlPanel {
 			.on('click', async () => {
 				const currState = this.app.getState()
 				await this.app.dispatch({
-					type: 'view_change',
+					type: 'view_create',
 					view: 'chrpair',
 					config: {
 						x: {
@@ -173,7 +173,7 @@ class ControlPanel {
 			.html('Horizontal View &#8811;')
 			.on('click', async () => {
 				await this.app.dispatch({
-					type: 'view_change',
+					type: 'view_create',
 					view: 'horizontal'
 				})
 			})
@@ -186,7 +186,7 @@ class ControlPanel {
 			.html('&#8810; Detailed View')
 			.on('click', async () => {
 				await this.app.dispatch({
-					type: 'view_change',
+					type: 'view_create',
 					view: 'detail'
 				})
 			})

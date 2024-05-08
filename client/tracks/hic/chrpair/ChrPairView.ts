@@ -130,7 +130,7 @@ export class ChrPairView {
 			this.hic
 		)
 		this.app.dispatch({
-			type: 'view_change',
+			type: 'view_create',
 			view: 'detail',
 			config: {
 				x: xObj,
