@@ -133,12 +133,10 @@ function applyEdits(self) {
 			// no valid value, delete the optional attribute to indicate last bin is automatic
 			delete self.q.last_bin
 		}
-		if (!self.term.id) throw `Missing tw.id [numeric.binary applyEdits()]`
 		self.numqByTermIdModeType[self.term.id].discrete['regular-bin'] = JSON.parse(JSON.stringify(self.q))
 	} else {
 		if (self.dom.bins_table.selectAll('input').node().value) {
 			self.q.lst = processCustomBinInputs(self)
-			if (!self.term.id) throw `Missing tw.id [numeric.binary applyEdits()]`
 			self.numqByTermIdModeType[self.term.id].discrete['custom-bin'] = JSON.parse(JSON.stringify(self.q))
 		}
 	}
@@ -202,7 +200,6 @@ function setqDefaults(self) {
 
 	const cache = self.numqByTermIdModeType
 	const t = self.term
-	if (!t.id) throw `Missing term.id [numeric.discrete setqDefaults()]`
 	if (!cache[t.id]) cache[t.id] = {}
 
 	if (!cache[t.id].discrete) {

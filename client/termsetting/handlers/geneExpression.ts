@@ -26,7 +26,6 @@ export async function getHandler(self) {
 
 export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
-	tw.term.id = tw.term.gene //solve id!!
 	if (!tw.term.bins) {
 		const defaultBins = await vocabApi.getDefaultGeneExpBins({ tw })
 		tw.term.bins = defaultBins
