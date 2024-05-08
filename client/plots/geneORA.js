@@ -42,7 +42,7 @@ class geneORA {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'P-value significance (linear scale)',
+				label: 'P-value filter cutoff (linear scale)',
 				type: 'number',
 				chartType: 'geneORA',
 				settingsKey: 'pvalue',
@@ -50,14 +50,17 @@ class geneORA {
 				min: 0,
 				max: 1
 			},
-			//{
-			//	label: 'Gene overrepresentation analysis results',
-			//	type: 'checkbox',
-			//	chartType: 'geneORA',
-			//	settingsKey: 'geneORA',
-			//	title: 'Display table showing original and adjusted pvalues corresponding to each significant pathway',
-			//	boxLabel: ''
-			//},
+			{
+				label: 'P-value filter type',
+				type: 'radio',
+				chartType: 'geneORA',
+				settingsKey: 'adjusted_original_pvalue',
+				title: 'Toggle between original and adjusted pvalues for volcano plot',
+				options: [
+					{ label: 'adjusted', value: 'adjusted' },
+					{ label: 'original', value: 'original' }
+				]
+			},
 			{
 				label: 'Pathway',
 				type: 'radio',
@@ -97,22 +100,6 @@ class geneORA {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.geneORA
 		await this.setControls()
-		//console.log("this.config:",this.config)
-		//console.log("this.settings:",this.settings)
-		//const state = this.app.getState()
-		//console.log('state:', state)
-		//if (state.customTerms[0].name) {
-		//	const headerText = state.customTerms[0].name
-		//	this.dom.header
-		//		.append('span')
-		//		.style('color', '#999999')
-		//		.text(headerText)
-		//		.append('span')
-		//		.style('font-size', '0.75em')
-		//		.style('opacity', 0.6)
-		//		.style('padding-left', '10px')
-		//		.text('DIFFERENTIAL EXPRESSION')
-		//} else {
 		this.dom.header
 			.style('opacity', 0.6)
 			.style('padding-left', '10px')
@@ -154,11 +141,22 @@ add:
 		]
 		self.gene_ora_table_rows = []
 		for (const pathway of output) {
-			self.gene_ora_table_rows.push([
-				{ value: pathway.pathway_name },
-				{ value: pathway.p_value_original },
-				{ value: pathway.p_value_adjusted }
-			])
+			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.p_value_adjusted) {
+				self.gene_ora_table_rows.push([
+					{ value: pathway.pathway_name },
+					{ value: pathway.p_value_original },
+					{ value: pathway.p_value_adjusted }
+				])
+			} else if (
+				self.settings.adjusted_original_pvalue == 'original' &&
+				self.settings.pvalue >= pathway.p_value_original
+			) {
+				self.gene_ora_table_rows.push([
+					{ value: pathway.pathway_name },
+					{ value: pathway.p_value_original },
+					{ value: pathway.p_value_adjusted }
+				])
+			}
 		}
 
 		self.dom.tableDiv.selectAll('*').remove()
@@ -181,7 +179,8 @@ export async function getPlotConfig(opts, app) {
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
 				geneORA: {
-					pvalue: 0.05,
+					pvalue: 1.0,
+					adjusted_original_pvalue: 'adjusted',
 					pathway: undefined
 				}
 			}
