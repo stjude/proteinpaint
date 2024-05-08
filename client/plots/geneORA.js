@@ -182,7 +182,8 @@ export async function getPlotConfig(opts, app) {
 					pvalue: 1.0,
 					adjusted_original_pvalue: 'adjusted',
 					pathway: undefined
-				}
+				},
+				controls: { isOpen: true }
 			}
 		}
 		return copyMerge(config, opts)
