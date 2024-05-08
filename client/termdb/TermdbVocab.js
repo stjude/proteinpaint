@@ -568,20 +568,10 @@ export class TermdbVocab extends Vocab {
 			getcategories: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
-			tid: term.id,
+			term,
 			..._body
 		}
-		if (term.type == 'geneVariant') {
-			body.type = 'geneVariant'
-			body.name = term.name
-			if (term.gene) {
-				body.gene = term.gene
-			} else {
-				body.chr = term.chr
-				body.start = term.start
-				body.stop = term.stop
-			}
-		}
+
 		if (filter) {
 			body.filter = getNormalRoot(filter)
 		}

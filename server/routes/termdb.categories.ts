@@ -1,6 +1,7 @@
 import { getcategoriesRequest, getcategoriesResponse } from '#shared/types/routes/termdb.categories.ts'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
+import { Term } from '#shared/types/termdb.ts'
 
 export const api: any = {
 	endpoint: 'termdb/categories',
@@ -21,14 +22,7 @@ export const api: any = {
 							dslabel: 'TermdbTest',
 							embedder: 'localhost',
 							getcategories: 1,
-							tid: 'diaggrp',
-							term1_q: {
-								isAtomic: true,
-								hiddenValues: {},
-								type: 'values',
-								groupsetting: { disabled: true },
-								mode: 'discrete'
-							},
+							term: { id: 'diaggrp' },
 							filter: {
 								type: 'tvslst',
 								in: true,
@@ -89,43 +83,20 @@ function init({ genomes }) {
 
 async function trigger_getcategories(
 	q: {
-		tid: string | number
-		type: string
-		filter: any
+		term: Term
 		term1_q: any
-		name?: string
-		gene?: string
-		chr?: number
-		start?: number
-		stop?: number
+		filter: any
 		currentGeneNames?: string[]
 		rglst?: any
 	},
+
 	res: { send: (arg0: { lst: any[]; orderedLabels?: any }) => void },
 	tdb: { q: { termjsonByOneid: (arg0: any) => any } },
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
 	genome: any
 ) {
-	// thin wrapper of get_summary
-	// works for all types of terms
-	if (!q.tid) throw '.tid missing'
-	let term
-	if (q.type == 'geneVariant') {
-		term = { id: q.name, name: q.name, type: 'geneVariant', isleaf: true }
-		if (q.gene) {
-			term.gene = q.gene
-		} else {
-			term.chr = q.chr
-			term.start = q.start
-			term.stop = q.stop
-		}
-	} else {
-		term = tdb.q.termjsonByOneid(q.tid)
-	}
-	const tw =
-		q.type == 'geneVariant'
-			? { $id: q.gene || q.name || q.tid, term, q: { isAtomic: true } }
-			: { $id: q.tid, id: q.tid, term, q: q.term1_q || getDefaultQ(term, q) }
+	const tid = q.term.id
+	const tw = { term: q.term, q: q.term1_q || getDefaultQ(q.term, q) }
 	const arg = {
 		filter: q.filter,
 		terms: [tw],
@@ -137,7 +108,7 @@ async function trigger_getcategories(
 	if (data.error) throw data.error
 
 	const lst = [] as any[]
-	if (q.type == 'geneVariant') {
+	if (q.term.type == 'geneVariant') {
 		const samples = data.samples as { [sampleId: string]: any }
 		const dtClassMap = new Map()
 		if (ds.assayAvailability?.byDt) {
@@ -149,7 +120,7 @@ async function trigger_getcategories(
 		}
 		const sampleCountedFor = new Set() // if the sample is counted
 		for (const [sampleId, sampleData] of Object.entries(samples)) {
-			const key = tw.$id //getData indexes terms by tw.$id, that may be $id or the term id or the name
+			const key = tw.$id //getData inits tw.$id to the term id or the name as it is empty
 			const values = sampleData[key].values
 			sampleCountedFor.clear()
 			/* values here is an array of result entires, one or more entries for each dt. e.g.
@@ -197,7 +168,7 @@ async function trigger_getcategories(
 		// k: category key
 		// v: number of samples
 		for (const sid in data.samples) {
-			const v = data.samples[sid][q.tid]
+			const v = data.samples[sid][tid]
 			if (!v) continue
 			if (!('key' in v)) continue
 			key2count.set(v.key, 1 + (key2count.get(v.key) || 0))
@@ -207,17 +178,17 @@ async function trigger_getcategories(
 				samplecount: count,
 				key,
 				label:
-					data.refs?.byTermId?.[q.tid]?.events?.find((e: { event: any }) => e.event === key).label ||
-					term?.values?.[key]?.label ||
+					data.refs?.byTermId?.[tid]?.events?.find((e: { event: any }) => e.event === key).label ||
+					q.term?.values?.[key]?.label ||
 					key
 			})
 		}
 	}
 
 	const orderedLabels = getOrderedLabels(
-		term,
-		data.refs?.byTermId?.[q.tid]?.bins || [],
-		data.refs?.byTermId?.[q.tid]?.events,
+		q.term,
+		data.refs?.byTermId?.[tid]?.bins || [],
+		data.refs?.byTermId?.[tid]?.events,
 		q.term1_q
 	)
 	if (orderedLabels.length) {
@@ -230,7 +201,7 @@ async function trigger_getcategories(
 }
 
 function getDefaultQ(
-	term: { type: string; bins: { default: any } },
+	term: Term,
 	q: {
 		mode?: any
 		breaks?: any
