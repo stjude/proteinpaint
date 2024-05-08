@@ -246,7 +246,11 @@ export class HicComponent {
 			this.skipMain = false
 		}
 
-		if (this.errList.length) this.error(this.errList)
+		if (this.errList.length) {
+			this.error(this.errList)
+			//Turn off loading overlay when data fetch requests persist, etc.
+			this.app.dispatch({ type: 'loading_active' })
+		}
 	}
 }
 
