@@ -178,6 +178,7 @@ export type Term = {
 	values?: TermValues
 	unit?: string
 	valueConversion?: ValueConversion
+	bins?: any
 }
 
 export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'

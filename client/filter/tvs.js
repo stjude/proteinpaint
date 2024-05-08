@@ -2,6 +2,7 @@ import * as rx from '../rx'
 import { select } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { renderTable } from '../dom/table'
+import { isNumericTerm } from '#shared/common'
 
 /*
 ********************** EXPORTED
@@ -59,7 +60,7 @@ class TVS {
 	async setHandler() {
 		if (!this.tvs || !this.tvs.term) return
 		const term = this.tvs.term
-		const type = term.type == 'integer' || term.type == 'float' ? 'numeric' : term.type // 'categorical', 'condition', 'survival', etc
+		const type = isNumericTerm(term) ? 'numeric' : term.type // 'categorical', 'condition', 'survival', etc
 		if (!this.handlerByType[type]) {
 			try {
 				const _ = await import(`./tvs.${type}.js`)
