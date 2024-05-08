@@ -209,10 +209,11 @@ export async function getPlotConfig(opts = {}, app) {
 	for (const grp of config.termgroups) {
 		for (const tw of grp.lst) {
 			// may force the saved session to request the most up-to-data dictionary term data from server
+			// TODO: should skip samplelst term here
 			if (!tw.term?.type || isDictionaryType(tw.term.type)) {
 				if (!tw.id) {
 					if (!tw.term.id) throw `missing tw.id and tw.term.id`
-					tw.id = tw.term.id // will allow tw to be rehydrated with new term data from server
+					tw.id = tw.term.id // tw.id will be used to rehydrate tw with new term data from server. tw.id will be deleted following rehydration.
 				}
 				delete tw.term
 			}

@@ -1,4 +1,4 @@
-import { isNonDictionary } from '#shared/common'
+import { isDictionaryType } from '../shared/common'
 
 export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
@@ -72,7 +72,7 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 						// sort against only dictionary terms in this tie-breaker
 						.filter(
 							t =>
-								!t.tw.sortSamples && !isNonDictionary(t.tw.term.type) && !selectedTerms.find(tw => tw.$id === t.tw.$id)
+								!t.tw.sortSamples && isDictionaryType(t.tw.term.type) && !selectedTerms.find(tw => tw.$id === t.tw.$id)
 						)
 						.map(t => Object.assign({ sortSamples: { by: 'values' } }, t.tw))
 
@@ -83,7 +83,7 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 						// sort against only non-dictionary terms in this tie-breaker
 						.filter(
 							t =>
-								!t.tw.sortSamples && isNonDictionary(t.tw.term.type) && !selectedTerms.find(tw => tw.$id === t.tw.$id)
+								!t.tw.sortSamples && !isDictionaryType(t.tw.term.type) && !selectedTerms.find(tw => tw.$id === t.tw.$id)
 						)
 						.map(t => Object.assign({ sortSamples: { by: 'hits' } }, t.tw))
 

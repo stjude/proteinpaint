@@ -49,7 +49,6 @@ export function setInteractivity(self) {
 						config: {
 							[label]: {
 								isAtomic: true,
-								id: term.id,
 								term: term.term,
 								q: getUpdatedQfromClick(plot, term, isHidden)
 							}
@@ -141,7 +140,6 @@ export function setInteractivity(self) {
 					config: {
 						term2: {
 							isAtomic: true,
-							id: self.config.term2.id,
 							term: self.config.term2.term,
 							q: getUpdatedQfromClick(plot, self.config.term2, false)
 						}
@@ -221,7 +219,6 @@ export function setInteractivity(self) {
 						config: {
 							[termNum]: {
 								isAtomic: true,
-								id: term.id,
 								term: term.term,
 								q: getUpdatedQfromClick(plot, term, isHidden)
 							}
