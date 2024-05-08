@@ -95,7 +95,8 @@ async function trigger_getcategories(
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
 	genome: any
 ) {
-	const tw: TermWrapper = { term: q.term, q: q.term1_q || getDefaultQ(q.term, q) }
+	const $id = Math.random().toString()
+	const tw: TermWrapper = { $id, term: q.term, q: q.term1_q || getDefaultQ(q.term, q) }
 	const arg = {
 		filter: q.filter,
 		terms: [tw],
@@ -104,8 +105,6 @@ async function trigger_getcategories(
 	}
 
 	const data = await getData(arg, ds, genome)
-	const id = tw.$id!
-
 	if (data.error) throw data.error
 
 	const lst = [] as any[]
@@ -121,7 +120,7 @@ async function trigger_getcategories(
 		}
 		const sampleCountedFor = new Set() // if the sample is counted
 		for (const [sampleId, sampleData] of Object.entries(samples)) {
-			const key = tw.$id! //getData inits tw.$id to the term id or the name as it is empty
+			const key = $id
 			const values = sampleData[key].values
 			sampleCountedFor.clear()
 			/* values here is an array of result entires, one or more entries for each dt. e.g.
@@ -169,7 +168,7 @@ async function trigger_getcategories(
 		// k: category key
 		// v: number of samples
 		for (const sid in data.samples) {
-			const v = data.samples[sid][id]
+			const v = data.samples[sid][$id]
 			if (!v) continue
 			if (!('key' in v)) continue
 			key2count.set(v.key, 1 + (key2count.get(v.key) || 0))
@@ -179,7 +178,7 @@ async function trigger_getcategories(
 				samplecount: count,
 				key,
 				label:
-					data.refs?.byTermId?.[id]?.events?.find((e: { event: any }) => e.event === key).label ||
+					data.refs?.byTermId?.[$id]?.events?.find((e: { event: any }) => e.event === key).label ||
 					q.term?.values?.[key]?.label ||
 					key
 			})
@@ -188,8 +187,8 @@ async function trigger_getcategories(
 
 	const orderedLabels = getOrderedLabels(
 		q.term,
-		data.refs?.byTermId?.[id]?.bins || [],
-		data.refs?.byTermId?.[id]?.events,
+		data.refs?.byTermId?.[$id]?.bins || [],
+		data.refs?.byTermId?.[$id]?.events,
 		q.term1_q
 	)
 	if (orderedLabels.length) {
