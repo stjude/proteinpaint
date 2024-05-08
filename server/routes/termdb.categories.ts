@@ -1,6 +1,7 @@
 import { getcategoriesRequest, getcategoriesResponse } from '#shared/types/routes/termdb.categories.ts'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
+import { TermWrapper } from '#types'
 
 export const api: any = {
 	endpoint: 'termdb/categories',
@@ -21,14 +22,17 @@ export const api: any = {
 							dslabel: 'TermdbTest',
 							embedder: 'localhost',
 							getcategories: 1,
-							tid: 'diaggrp',
-							term1_q: {
-								isAtomic: true,
-								hiddenValues: {},
-								type: 'values',
-								groupsetting: { disabled: true },
-								mode: 'discrete'
+							tw: {
+								term: { id: 'diaggrp' },
+								q: {
+									isAtomic: true,
+									hiddenValues: {},
+									type: 'values',
+									groupsetting: { disabled: true },
+									mode: 'discrete'
+								}
 							},
+
 							filter: {
 								type: 'tvslst',
 								in: true,
@@ -89,15 +93,8 @@ function init({ genomes }) {
 
 async function trigger_getcategories(
 	q: {
-		tid: string | number
-		type: string
+		tw: TermWrapper
 		filter: any
-		term1_q: any
-		name?: string
-		gene?: string
-		chr?: number
-		start?: number
-		stop?: number
 		currentGeneNames?: string[]
 		rglst?: any
 	},
@@ -106,26 +103,7 @@ async function trigger_getcategories(
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
 	genome: any
 ) {
-	// thin wrapper of get_summary
-	// works for all types of terms
-	if (!q.tid) throw '.tid missing'
-	let term
-	if (q.type == 'geneVariant') {
-		term = { id: q.name, name: q.name, type: 'geneVariant', isleaf: true }
-		if (q.gene) {
-			term.gene = q.gene
-		} else {
-			term.chr = q.chr
-			term.start = q.start
-			term.stop = q.stop
-		}
-	} else {
-		term = tdb.q.termjsonByOneid(q.tid)
-	}
-	const tw =
-		q.type == 'geneVariant'
-			? { $id: q.gene || q.name || q.tid, term, q: { isAtomic: true } }
-			: { $id: q.tid, id: q.tid, term, q: q.term1_q || getDefaultQ(term, q) }
+	const tw = q.tw
 	const arg = {
 		filter: q.filter,
 		terms: [tw],
@@ -137,7 +115,7 @@ async function trigger_getcategories(
 	if (data.error) throw data.error
 
 	const lst = [] as any[]
-	if (q.type == 'geneVariant') {
+	if (q.tw.term.type == 'geneVariant') {
 		const samples = data.samples as { [sampleId: string]: any }
 		const dtClassMap = new Map()
 		if (ds.assayAvailability?.byDt) {

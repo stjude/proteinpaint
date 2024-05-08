@@ -5,6 +5,7 @@ import { getNormalRoot } from '#filter'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
 import { isDictionaryType } from '#shared/common'
+import { fillTermWrapper } from 'termsetting/termsetting'
 
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
@@ -568,20 +569,10 @@ export class TermdbVocab extends Vocab {
 			getcategories: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
-			tid: term.id,
+			tw: fillTermWrapper({ term }),
 			..._body
 		}
-		if (term.type == 'geneVariant') {
-			body.type = 'geneVariant'
-			body.name = term.name
-			if (term.gene) {
-				body.gene = term.gene
-			} else {
-				body.chr = term.chr
-				body.start = term.start
-				body.stop = term.stop
-			}
-		}
+
 		if (filter) {
 			body.filter = getNormalRoot(filter)
 		}
