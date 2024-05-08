@@ -36,8 +36,8 @@ export function addDynamicScatterForm(tip, app) {
 				type: 'plot_create',
 				config: {
 					chartType: 'sampleScatter',
-					term: { id: xterm.id, term: xterm, q: { mode: 'continuous' } },
-					term2: { id: yterm.id, term: yterm, q: { mode: 'continuous' } },
+					term: { term: xterm, q: { mode: 'continuous' } },
+					term2: { term: yterm, q: { mode: 'continuous' } },
 					name: 'Dynamic scatter'
 				}
 			})

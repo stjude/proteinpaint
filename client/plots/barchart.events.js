@@ -24,7 +24,6 @@ export default function getHandlers(self) {
 			config: {
 				term: {
 					isAtomic: true,
-					id: term.id,
 					term: term.term,
 					q: getUpdatedQfromClick(d, term, true)
 				}
@@ -263,7 +262,6 @@ function handleColorClick(d, self, color) {
 		config: {
 			[termNum]: {
 				isAtomic: true,
-				id: term.id,
 				term: term.term,
 				q: getUpdatedQfromClick(d, term, d.isHidden, binColored)
 			}
@@ -336,7 +334,6 @@ export function hideCategory(d, self, isHidden) {
 		config: {
 			[termNum]: {
 				isAtomic: true,
-				id: term.id,
 				term: term.term,
 				q: getUpdatedQfromClick(d, term, isHidden)
 			}
@@ -395,7 +392,6 @@ function handle_click(event, self, chart) {
 					config: {
 						term: {
 							isAtomic: true,
-							id: term.id,
 							term: term.term,
 							q: getUpdatedQfromClick({ id: d.seriesId, type: 'col' }, term, true)
 						}
@@ -416,7 +412,6 @@ function handle_click(event, self, chart) {
 						config: {
 							term2: {
 								isAtomic: true,
-								id: term2.id,
 								term: term2.term,
 								q: getUpdatedQfromClick({ id: d.dataId, type: 'row' }, term2, true)
 							}

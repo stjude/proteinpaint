@@ -11,7 +11,7 @@ import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { renderTable } from '../dom/table'
 import { fillTermWrapper } from '#termsetting'
-import { getColors, mclass, isNumericTerm, plotColor } from '#shared/common'
+import { getColors, mclass, isNumericTerm, plotColor } from '../shared/common'
 
 class Barchart {
 	constructor(opts) {
@@ -268,8 +268,8 @@ class Barchart {
 		if (this.config.term2) terms.push(this.config.term2)
 		if (this.config.term0) terms.push(this.config.term0)
 		for (const t of terms) {
-			if (isNumericTerm(t)) {
-				const data = await this.app.vocabApi.getDescrStats(t.term.id, this.state.termfilter.filter)
+			if (isNumericTerm(t.term)) {
+				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter.filter)
 				if (data.error) throw data.error
 				t.q.descrStats = data.values
 			}
@@ -319,7 +319,7 @@ class Barchart {
 	}
 
 	mayResetHidden(term, term2, term0) {
-		const combinedTermIds = (term && term.id) + ';;' + (term2 && term2.id) + ';;' + (term0 && term0.id)
+		const combinedTermIds = (term && term.term.id) + ';;' + (term2 && term2.term.id) + ';;' + (term0 && term0.term.id)
 		if (combinedTermIds === this.currCombinedTermIds) return
 		// only reset hidden if terms have changed
 		for (const chart of this.currServerData.charts) {
