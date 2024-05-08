@@ -56,13 +56,6 @@ export const byReqKey = {
 		const v = Number(value)
 		// more tests?
 		return v
-	},
-	term(value) {
-		const termWrapper = typeof value == 'string' ? JSON.parse(value) : value
-		if (!('id' in termWrapper) && termWrapper.term?.type && isDictionaryType(termWrapper.term.type))
-			throw 'missing termWrapper.id'
-		if (!('q' in termWrapper)) throw 'missing termWrapper.q'
-		return termWrapper
 	}
 }
 
