@@ -1,0 +1,52 @@
+name: Publish Rust Env Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_secret:
+        type: string
+        description: Build secret
+
+  push:
+    branches:
+      - publish-rust-env-image
+
+jobs:
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secret
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
+            echo "Wrong build secret."
+            exit 1
+          fi
+
+      - name: Check user permission
+        if: github.event_name == 'workflow_dispatch'
+        id: check
+        uses: scherermichael-oss/action-has-permission@master
+        with:
+          required-permission: write
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Login to GitHub Container Registry
+        run: |
+          echo $CR_PAT | docker login ghcr.io -u stjude --password-stdin
+        env:
+          CR_PAT: ${{ secrets.PAT }}
+
+
+      - name: Build image
+        run: |
+          cd container/rust
+          sh build.sh
+          
+          docker push ghcr.io/stjude/rust:latest

@@ -45,6 +45,7 @@
     "url": "https://github.com/stjude/proteinpaint"
   },
   "devDependencies": {
+    "gfda gdas": "gdsafa",
     "@types/d3": "^7.4.0",
     "@types/estree": "^1.0.1",
     "@types/minimatch": "^5.1.2",
