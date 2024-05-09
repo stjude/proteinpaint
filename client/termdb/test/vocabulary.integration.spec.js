@@ -587,6 +587,7 @@ tape('getRegressionData()', async test => {
 			id: 'agedx',
 			isAtomic: true,
 			term: {
+				id: 'agedx',
 				name: 'Age (years) at Cancer Diagnosis',
 				type: 'float',
 				bins: {
@@ -607,7 +608,7 @@ tape('getRegressionData()', async test => {
 				refGrp: '2',
 				term: {
 					groupsetting: { inuse: false },
-					id: 'genetic_race',
+					id: 'sex',
 					name: 'Sex',
 					type: 'categorical',
 					values: { 1: { label: 'Male' }, 2: { label: 'Female' } }
@@ -678,6 +679,7 @@ tape('getRegressionData()', async test => {
 	opts.independent[0] = opts.outcome
 	opts.outcome = {
 		id: 'hrtavg',
+		term: termjson['hrtavg'],
 		q: {
 			mode: 'binary',
 			type: 'custom-bin',
@@ -699,6 +701,7 @@ tape('getRegressionData()', async test => {
 	opts.regressionType = type
 	opts.outcome = {
 		id: 'Arrhythmias',
+		term: termjson['Arrhythmias'],
 		q: {
 			mode: 'cox',
 			bar_by_grade: true,

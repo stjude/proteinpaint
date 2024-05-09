@@ -263,7 +263,7 @@ export class TermdbVocab extends Vocab {
         .independent[ {id, term, q, refGrp}, ... ]
     */
 	async getRegressionData(opts) {
-		if (nonDictionaryTermTypes.has(opts.outcome.term.type)) throw 'outcome must be dictionary term'
+		if (!isDictionaryType(opts.outcome.term.type)) throw 'outcome must be dictionary term'
 		const outcome = { id: opts.outcome.term.id, q: JSON.parse(JSON.stringify(opts.outcome.q)) }
 		if (!outcome.q.mode && opts.regressionType == 'linear') outcome.q.mode = 'continuous'
 		const contQkeys = ['mode', 'scale']

@@ -361,7 +361,7 @@ tape('test basic controls', function (test) {
 				term2
 			}
 		})
-		test.true(violin.Inner.app.Inner.state.plots[0].term2.id === 'genetic_race', 'Overlay term changed')
+		test.true(violin.Inner.app.Inner.state.plots[0].term2.term.id === 'genetic_race', 'Overlay term changed')
 	}
 
 	async function changeScaleToLog(violin, violinDiv) {
