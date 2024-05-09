@@ -35,6 +35,7 @@ import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVari
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
 import { validate_query_geneExpression } from '#routes/termdb.cluster.ts'
 import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
+import { getResult } from '#src/gene.js'
 
 /*
 init
@@ -2481,6 +2482,7 @@ if the model is canonical, the isoform will be usable for screening csq annotati
 */
 async function mayMapGeneName2coord(term, genome) {
 	if (term.name.startsWith('chr') && term.name.includes(':') && term.name.includes('-')) {
+		// FIXME TODO haphazard guessing if name is coord or gene symbol!! should change to passing whole term obj
 		const [chr, pos] = term.name.split(':')
 		const [start, stop] = pos.split('-').map(Number)
 		term.chr = chr
@@ -2488,15 +2490,12 @@ async function mayMapGeneName2coord(term, genome) {
 		term.stop = stop
 	}
 	if (term.chr && Number.isInteger(term.start) && Number.isInteger(term.stop)) return
+
 	// coord missing, fill in chr/start/stop by querying with gene
 	if (!term.gene) throw 'both term.gene and term.chr/start/stop missing'
-	// may reuse code from route genelookup?deep=1
-	const lst = genome.genedb.getjsonbyname.all(term.gene)
-	if (lst.length == 0) throw 'unknown gene name'
-	const tmp = lst.find(i => i.isdefault) || lst[0]
-	const gm = JSON.parse(tmp.genemodel)
-	if (!gm.chr || !Number.isInteger(gm.start) || !Number.isInteger(gm.stop))
-		throw 'invalid chr/start/stop from returned gm'
+	const result = getResult(genome, { input: term.gene, deep: 1 })
+	if (!result.gmlst || result.gmlst.length == 0) throw 'unknown gene name'
+	const gm = result.gmlst.find(i => i.isdefault) || result.gmlst[0]
 	term.chr = gm.chr
 	term.start = gm.start
 	term.stop = gm.stop
@@ -2506,11 +2505,9 @@ async function mayMapGeneName2isoform(term, genome) {
 	if (term.isoform && typeof term.isoform == 'string') return
 	// isoform missing, query canonical isoform by name
 	if (!term.gene) throw 'term.gene missing'
-	const lst = genome.genedb.getjsonbyname.all(term.gene)
-	if (lst.length == 0) return // no match, do not crash
-	const tmp = lst.find(i => i.isdefault) || lst[0]
-	const gm = JSON.parse(tmp.genemodel)
-	if (!gm.isoform) throw 'isoform missing from returned gm'
+	const result = getResult(genome, { input: term.gene, deep: 1 })
+	if (!result.gmlst || result.gmlst.length == 0) throw 'unknown gene name'
+	const gm = result.gmlst.find(i => i.isdefault) || result.gmlst[0]
 	term.isoform = gm.isoform
 }
 
