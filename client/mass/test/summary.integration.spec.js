@@ -419,6 +419,10 @@ tape('Overlay continuity, term: "aaclassic_5", term2: "sex"', test => {
 		// NOTE: detect a rendered violin viz element, not the holder which may still be empty
 		// by the time test.equal is called below
 		await detectOne({ elem: summary.Inner.dom.holder.body.node(), selector: '.sjpp-violin-plot' })
-		test.equal(plots.violin.Inner.config.term2.id, testTerm, `Overlay term = ${testTerm} carried over to violin plot`)
+		test.equal(
+			plots.violin.Inner.config.term2.term.id,
+			testTerm,
+			`Overlay term = ${testTerm} carried over to violin plot`
+		)
 	}
 })

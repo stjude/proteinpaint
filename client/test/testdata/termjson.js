@@ -108,13 +108,13 @@ exports.termjson = {
 			}
 		},
 		values: {
-			'0': { label: '0: No condition' },
-			'1': { label: '1: Mild' },
-			'2': { label: '2: Moderate' },
-			'3': { label: '3: Severe' },
-			'4': { label: '4: Life-threatening' },
-			'5': { label: '5: Death' },
-			'9': { label: 'Unknown status', uncomputable: true }
+			0: { label: '0: No condition' },
+			1: { label: '1: Mild' },
+			2: { label: '2: Moderate' },
+			3: { label: '3: Severe' },
+			4: { label: '4: Life-threatening' },
+			5: { label: '5: Death' },
+			9: { label: 'Unknown status', uncomputable: true }
 		}
 	},
 	aaclassic_5: {
@@ -172,10 +172,30 @@ exports.termjson = {
 			}
 		},
 		values: {
-			'0': { label: 'Not exposed', uncomputable: true },
+			0: { label: 'Not exposed', uncomputable: true },
 			'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
 			'-9999': { label: 'Unknown treatment record', uncomputable: true }
 		}
+	},
+	hrtavg: {
+		type: 'float',
+		bins: {
+			default: {
+				type: 'regular-bin',
+				startinclusive: true,
+				bin_size: 500,
+				first_bin: { stop: 500 },
+				last_bin: { start: 3500 }
+			}
+		},
+		values: {
+			'-8888': { label: 'exposed, dose unknown', uncomputable: true },
+			'-9999': { label: 'unknown exposure', uncomputable: true }
+		},
+		name: 'Average dose to heart + TBI, cGy',
+		skip0forPercentile: true,
+		id: 'hrtavg',
+		isleaf: true
 	},
 	'Cardiac dysrhythmia': {
 		id: 'Cardiac dysrhythmia',
@@ -213,13 +233,13 @@ exports.termjson = {
 			}
 		},
 		values: {
-			'0': { label: '0: No condition' },
-			'1': { label: '1: Mild' },
-			'2': { label: '2: Moderate' },
-			'3': { label: '3: Severe' },
-			'4': { label: '4: Life-threatening' },
-			'5': { label: '5: Death' },
-			'9': { label: 'Unknown status', uncomputable: true }
+			0: { label: '0: No condition' },
+			1: { label: '1: Mild' },
+			2: { label: '2: Moderate' },
+			3: { label: '3: Severe' },
+			4: { label: '4: Life-threatening' },
+			5: { label: '5: Death' },
+			9: { label: 'Unknown status', uncomputable: true }
 		}
 	}
 }

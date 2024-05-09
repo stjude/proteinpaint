@@ -716,7 +716,7 @@ function getTermValues(d, self) {
 			}
 			termValues.push(tvs)
 		} else if (term.term.type == 'condition') {
-			if (!t2 || t1.id != t2.id) {
+			if (!t2 || t1.term.id != t2.term.id) {
 				termValues.push(
 					Object.assign(
 						{
@@ -728,7 +728,7 @@ function getTermValues(d, self) {
 				)
 			}
 
-			if (term == t1 && t2 && term.term.id == t2.id) {
+			if (term == t1 && t2 && term.term.id == t2.term.id) {
 				const q2 = t2.q
 				const term2Label =
 					t2.term.values && d.dataId in t2.term.values ? self.config.term2.values[d.dataId].label : d.dataId

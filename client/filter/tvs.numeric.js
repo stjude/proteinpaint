@@ -117,16 +117,16 @@ async function fillMenu(self, div, tvs) {
 		try {
 			const data = await self.opts.vocabApi.getViolinPlotData(
 				{
-					termid: tvs.term.id,
-					term: { id: tvs.term.id, term: tvs.term, q: { mode: 'continuous' } },
+					term: { term: tvs.term, q: { mode: 'continuous' } },
 					filter: self.filter,
 					svgw: self.num_obj.plot_size.width / window.devicePixelRatio
 				},
 				self.opts.getCategoriesArguments
 			)
+			if (data.error) throw data.error
 			self.num_obj.density_data = convertViolinData(data)
 		} catch (err) {
-			console.log(err)
+			throw err
 		}
 	} else {
 		// frontend vocab lacks this method, return no density data so ui will not show the plot

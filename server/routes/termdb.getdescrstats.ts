@@ -78,6 +78,7 @@ function init({ genomes }) {
 async function trigger_getdescrstats(q: any, res: any, ds: any, genome: any) {
 	const terms = [q.tw] //pass
 	const data = await getData({ filter: q.filter, terms }, ds, genome)
+	if (data.error) throw data.error
 
 	const values: number[] = []
 	for (const key in data.samples) {
