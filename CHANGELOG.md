@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Mds3 backend reuse gene search helper to be able to find a gene by isoform access in addition to symbol
+
 
 ## 2.58.1
 
