@@ -503,7 +503,7 @@ export class profilePlot {
 			//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
 			isAggregate = this.settings.isAggregate || this.sampleData == null //if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
 		if (isAggregate) {
-			const maxScore = d.maxScore.id ? this.data.lst[0]?.[d.maxScore.$id]?.value : d.maxScore
+			const maxScore = d.maxScore.term ? this.data.lst[0]?.[d.maxScore.$id]?.value : d.maxScore
 			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
 			scores.sort((s1, s2) => s1 - s2)
 			const middle = Math.floor(scores.length / 2)
@@ -511,7 +511,7 @@ export class profilePlot {
 			return Math.round(score)
 		} else {
 			const score = this.sampleData[d.score.$id]?.value
-			const maxScore = d.maxScore.id ? this.sampleData[d.maxScore.$id]?.value : d.maxScore //if maxScore is not a term, it is a number
+			const maxScore = d.maxScore.term ? this.sampleData[d.maxScore.$id]?.value : d.maxScore //if maxScore is not a term, it is a number
 			const percentage = (score / maxScore) * 100
 			return Math.round(percentage)
 		}
