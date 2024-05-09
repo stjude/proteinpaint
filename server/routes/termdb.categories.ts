@@ -82,16 +82,9 @@ function init({ genomes }) {
 }
 
 async function trigger_getcategories(
-	q: {
-		term: Term
-		term1_q: any
-		filter: any
-		currentGeneNames?: string[]
-		rglst?: any
-	},
-
-	res: { send: (arg0: { lst: any[]; orderedLabels?: any }) => void },
-	tdb: { q: { termjsonByOneid: (arg0: any) => any } },
+	q,
+	res: any,
+	tdb: any,
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
 	genome: any
 ) {
