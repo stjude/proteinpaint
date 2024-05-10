@@ -6,18 +6,21 @@ import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.
 
 /***************** Test Layout *****************:
 
-1.  'term1 as numeric and term2 categorical, test median rendering'
-2.  'render violin plot'
-3.  'test basic controls'
-4.  'test label clicking, filtering and hovering'
-5.  'test hide option on label clicking'
-6.  'term1 as numeric and term2 numeric, change median size'
-7.  'term1 as categorical and term2 numeric'
-8. 	'term1 as numerical and term2 condition'
-9.  'test samplelst term2'
-10. 'test uncomputable categories legend'
-11. 'Load linear regression-violin UI'
-12. 'test change in plot length and thickness for new custom group variable'
+term1 as numeric and term2 categorical, test median rendering
+render violin plot
+test basic controls
+test label clicking, filtering and hovering
+test hide option on label clicking
+term1 as numeric and term2 numeric, change median size
+term1=categorical, term2=numeric
+term1=numeric, term2=survival
+term1=numeric, term2=condition
+term1=geneExp, term2=categorical
+term1=geneExp, term2=survival
+test samplelst term2
+test uncomputable categories legend
+Load linear regression-violin UI
+test change in plot length and thickness for new custom group variable
 
 ***********************************************/
 
@@ -325,7 +328,6 @@ tape('test basic controls', function (test) {
 				}
 			}
 		})
-		//await sleep(20)
 		test.true(
 			violin.Inner.app.Inner.state.plots[0].settings.violin.strokeWidth === testStrokeWidth,
 			`Stroke width changed to ${testStrokeWidth}`
@@ -653,28 +655,20 @@ tape('term1 as numeric and term2 numeric, change median size', function (test) {
 	}
 })
 
-tape.skip('term1 as categorical and term2 numeric', function (test) {
-	test.timeoutAfter(1000)
+tape('term1=categorical, term2=numeric', function (test) {
 	runpp({
 		state: {
-			nav: {
-				header_mode: 'hide_search'
-			},
 			plots: [
 				{
 					chartType: 'summary',
 					childType: 'violin',
 					term: {
-						id: 'sex',
+						id: 'diaggrp',
 						isAtomic: true
 					},
 					term2: {
 						id: 'agedx',
-						q: {
-							mode: 'continuous',
-							hiddenValues: {},
-							isAtomic: true
-						}
+						q: { mode: 'continuous' }
 					}
 				}
 			]
@@ -686,19 +680,56 @@ tape.skip('term1 as categorical and term2 numeric', function (test) {
 		}
 	})
 	async function runTests(violin) {
-		//TODO
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolin(violin, violinDiv)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
+	async function testViolin(violin, violinDiv) {
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
+		test.ok(groups, 'Categorical groups exist')
+	}
 })
 
-tape('term1 as numerical and term2 condition', function (test) {
-	test.timeoutAfter(3000)
+tape('term1=numeric, term2=survival', function (test) {
 	runpp({
 		state: {
-			nav: {
-				header_mode: 'hide_search'
-			},
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						id: 'agedx',
+						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'efs'
+					}
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolin(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+	async function testViolin(violin, violinDiv) {
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
+		test.ok(groups, 'survival groups exist')
+	}
+})
+
+tape('term1=numeric, term2=condition', function (test) {
+	runpp({
+		state: {
+			nav: { header_mode: 'hide_search' },
 			plots: [
 				{
 					chartType: 'summary',
@@ -706,11 +737,7 @@ tape('term1 as numerical and term2 condition', function (test) {
 					term: {
 						id: 'agedx',
 						isAtomic: true,
-						q: {
-							mode: 'continuous',
-							hiddenValues: {},
-							isAtomic: true
-						}
+						q: { mode: 'continuous' }
 					},
 					term2: {
 						id: 'Hearing loss'
@@ -739,6 +766,75 @@ tape('term1 as numerical and term2 condition', function (test) {
 			violin.Inner.data.plots.map(k => k.label),
 			'Order of conditional categories in term2 is accurate'
 		)
+	}
+})
+
+tape('term1=geneExp, term2=categorical', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'diaggrp'
+					}
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolin(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+	async function testViolin(violin, violinDiv) {
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
+		test.ok(groups, 'categorical groups exist')
+	}
+})
+tape('term1=geneExp, term2=survival', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'efs'
+					}
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolin(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+	async function testViolin(violin, violinDiv) {
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
+		test.ok(groups, 'survival groups exist')
 	}
 })
 
