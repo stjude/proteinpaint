@@ -990,22 +990,24 @@ export async function bamsliceui({
 
 			// when clicking "Back To" button and resubmit another region, the same file info will be reused and must avoid inserting duplicating entries here
 			{
-				// update file size
 				const i = file.about.find(i => i.k == 'Slice file size')
-				if (i) {
-					// this file has been sliced before and already has the record; do not add duplicate record
-					i.v = fileStat.size
-				} else {
-					// this file does not have the record
-					file.about.push({ k: 'Slice file size', v: fileStat.size })
-				}
+				if (i) i.v = fileStat.size
+				else file.about.push({ k: 'Slice file size', v: fileStat.size })
 			}
 			if (fileStat.time) {
 				const i = file.about.find(i => i.k == 'Stream time')
 				if (i) i.v = Math.round(fileStat.time) + ' seconds'
 				else file.about.push({ k: 'Stream time', v: Math.round(fileStat.time) + ' seconds' })
 			}
-			if (fileStat.truncated) file.about.push({ k: 'Truncated', v: 'BAM slice size exceeds limit and is truncated' })
+			if (fileStat.truncated) {
+				// insert entry if not found
+				if (!file.about.find(i => i.k == 'Truncated'))
+					file.about.push({ k: 'Truncated', v: 'BAM slice size exceeds limit and is truncated' })
+			} else {
+				// delete entry if found
+				const i = file.about.findIndex(i => i.k == 'Truncated')
+				if (i > 0) file.about.splice(i, 1)
+			}
 		}
 
 		formdiv.style('display', 'none')
