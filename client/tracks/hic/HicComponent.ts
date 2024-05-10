@@ -186,7 +186,7 @@ export class HicComponent {
 				resolution: this.setResolution(appState)
 			}
 			await this.fetchData(obj)
-			if (this.data?.items?.length > 0) {
+			if (this.data?.length > 0 || this.data?.items?.length > 0) {
 				const [min, max] = this.dataMapper.sortData(this.data)
 
 				this.min = min
@@ -230,7 +230,7 @@ export class HicComponent {
 
 				const args = this.setDataArgs(appState)
 				await this.fetchData(args)
-				if (this.data?.items?.length > 0) {
+				if (this.data?.length > 0 || this.data?.items?.length > 0) {
 					const [min, max] = this.dataMapper.sortData(this.data)
 					this.min = min
 					this.max = max
