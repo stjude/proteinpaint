@@ -495,8 +495,6 @@ async function trigger_getDefaultGeneExpBins(q, ds, res) {
 		lst.push(value)
 	}
 	let binconfig = initBinConfig(lst)
-	binconfig.lst = bins.compute_bins(binconfig, () => {
-		return { min, max }
-	})
-	res.send({ default: binconfig })
+
+	res.send({ default: binconfig, min, max })
 }

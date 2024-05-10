@@ -77,7 +77,7 @@ async function showBinsMenu(self, div: any) {
 
 		const d = await self.vocabApi.getViolinPlotData(
 			{
-				term: { term: self.term, q: { mode: 'continuous' } },
+				term: { term: self.term, q: self.q },
 				filter: self.filter,
 				svgw: self.num_obj.plot_size.width / window.devicePixelRatio,
 				strokeWidth: 0.2
