@@ -48,11 +48,9 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			// .CTEname: str
 		} else if (!item.tvs) {
 			throw `filter item should have a 'tvs' or 'lst' property`
-		} else if (
-			item.tvs.term.id &&
-			(!item.tvs.term.type || !isNonDictionaryType(item.tvs.term.type)) &&
-			!ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)
-		) {
+		} else if (isNonDictionaryType(item.tvs.term.type)) {
+			f = { CTEname: CTEname_i, CTEs: [`${CTEname_i} AS (select id as sample from sampleidmap)`], values: [] }
+		} else if (item.tvs.term.id && !ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)) {
 			throw 'invalid term id in tvs'
 		} else if (item.tvs.term.type == 'categorical') {
 			f = get_categorical(item.tvs, CTEname_i)
