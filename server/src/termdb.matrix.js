@@ -162,6 +162,14 @@ async function getSampleData(q) {
 				})
 				byTermId[tw.$id] = { bins: lst }
 			}
+			const filters = q.filter.lst.filter(
+				item => item.tvs.term.type == TermTypes.GENE_EXPRESSION && item.tvs.term.gene == tw.term.gene
+			)
+			const ranges = []
+			for (const f of filters) {
+				ranges.push(...f.tvs.ranges)
+			}
+
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
@@ -311,26 +319,31 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
-		termWrappers.map(async (tw, i) => {
-			if (!tw.$id) tw.$id = tw.term.id || tw.term.name
-			const CTE = await get_term_cte(q, values, i, filter, tw)
-			if (CTE.bins) {
-				byTermId[tw.$id] = { bins: CTE.bins }
-			}
-			if (CTE.events) {
-				byTermId[tw.$id] = { events: CTE.events }
-			}
-			if (tw.term.values) {
-				const values = Object.values(tw.term.values)
-				if (values.find(v => 'order' in v)) {
-					byTermId[tw.$id] = {
-						keyOrder: values.sort((a, b) => a.order - b.order).map(v => v.key)
+
+		termWrappers
+			.filter(tw => isDictionaryType(tw.term.type))
+			.map(async (tw, i) => {
+				if (!tw.$id) tw.$id = tw.term.id || tw.term.name
+				tw$IdByIndex[i] = tw.$id
+				const CTE = await get_term_cte(q, values, i, filter, tw)
+				const $id = tw.$id || tw.term.id
+				if (CTE.bins) {
+					byTermId[tw.$id] = { bins: CTE.bins }
+				}
+				if (CTE.events) {
+					byTermId[tw.$id] = { events: CTE.events }
+				}
+				if (tw.term.values) {
+					const values = Object.values(tw.term.values)
+					if (values.find(v => 'order' in v)) {
+						byTermId[tw.$id] = {
+							keyOrder: values.sort((a, b) => a.order - b.order).map(v => v.key)
+						}
 					}
 				}
-			}
-			//if ('id' in tw.term) twBy$id[$id] = tw
-			return CTE
-		})
+				//if ('id' in tw.term) twBy$id[$id] = tw
+				return CTE
+			})
 	).catch(console.error)
 
 	// for "samplelst" term, term.id is missing and must use term.name
