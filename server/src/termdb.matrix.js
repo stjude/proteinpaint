@@ -156,10 +156,11 @@ async function getSampleData(q) {
 			if (tw.q?.mode == 'discrete') {
 				const min = tw.term.bins.min
 				const max = tw.term.bins.max
-
-				lst = compute_bins(tw.q, () => {
-					return { min, max }
-				})
+				lst =
+					tw.q.lst ||
+					compute_bins(tw.q, () => {
+						return { min, max }
+					})
 				byTermId[tw.$id] = { bins: lst }
 			}
 			const filters = q.filter.lst.filter(
@@ -169,7 +170,6 @@ async function getSampleData(q) {
 			for (const f of filters) {
 				ranges.push(...f.tvs.ranges)
 			}
-
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
@@ -186,7 +186,14 @@ async function getSampleData(q) {
 				const values = data.gene2sample2value.get(tw.term.gene)
 				const value = Number(values[sampleId])
 				let key = value
-				if (tw.q?.mode == 'discrete') key = getBinLabel(tw.q, lst, value)
+				if (ranges.length) {
+					const filterBin = getBin(ranges, value)
+					if (filterBin == -1) continue
+				}
+				if (tw.q?.mode == 'discrete') {
+					const bin = getBin(lst, value)
+					key = get_bin_label(lst[bin], tw.q)
+				}
 				samples[sampleId][tw.$id] = { key, value }
 			}
 
@@ -218,7 +225,7 @@ async function getSampleData(q) {
 	return { samples, refs: { byTermId, bySampleId } }
 }
 
-export function getBinLabel(bins, lst, value) {
+export function getBin(lst, value) {
 	value = Math.round(value * 100) / 100 //to keep 2 decimal places
 
 	let bin = lst.findIndex(
@@ -235,7 +242,7 @@ export function getBinLabel(bins, lst, value) {
 				(b.startinclusive && value == b.start) ||
 				(b.stopinclusive && value == b.stop)
 		)
-	return get_bin_label(lst[bin], bins)
+	return bin
 }
 
 async function mayGetSampleFilterSet(q, nonDictTerms) {
@@ -319,12 +326,10 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
-
 		termWrappers
-			.filter(tw => isDictionaryType(tw.term.type))
+			.filter(tw => !tw.term.type || isDictionaryType(tw.term.type))
 			.map(async (tw, i) => {
 				if (!tw.$id) tw.$id = tw.term.id || tw.term.name
-				tw$IdByIndex[i] = tw.$id
 				const CTE = await get_term_cte(q, values, i, filter, tw)
 				const $id = tw.$id || tw.term.id
 				if (CTE.bins) {
