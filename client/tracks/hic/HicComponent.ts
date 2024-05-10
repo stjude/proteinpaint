@@ -131,6 +131,12 @@ export class HicComponent {
 			}
 			const detailMapper = new DetailDataMapper(this.hic, this.errList, parent)
 			this.data = await detailMapper.getData(this.state.x, this.state.y)
+			/** Don't do this */
+			// if (this.data.items.length == 0) {
+			// const x = this.hic.bpresolution.indexOf(this.calResolution)
+			// this.calResolution = this.hic.bpresolution[x + 1]
+			// this.data = await detailMapper.getData(this.state.x, this.state.y)
+			// }
 		} else {
 			if (!this.state?.x?.chr || !this.state?.y?.chr) {
 				this.errList.push(`No positions provided for ${this.activeView} view.`)
@@ -180,13 +186,15 @@ export class HicComponent {
 				resolution: this.setResolution(appState)
 			}
 			await this.fetchData(obj)
-			const [min, max] = this.dataMapper.sortData(this.data)
+			if (this.data?.items?.length > 0) {
+				const [min, max] = this.dataMapper.sortData(this.data)
 
-			this.min = min
-			this.max = max
-
+				this.min = min
+				this.max = max
+			} else {
+				this.errList.push('No data returned.')
+			}
 			this.initView()
-
 			this.components = {
 				controls: await controlPanelInit({
 					app: this.app,
@@ -222,9 +230,13 @@ export class HicComponent {
 
 				const args = this.setDataArgs(appState)
 				await this.fetchData(args)
-				const [min, max] = this.dataMapper.sortData(this.data)
-				this.min = min
-				this.max = max
+				if (this.data?.items?.length > 0) {
+					const [min, max] = this.dataMapper.sortData(this.data)
+					this.min = min
+					this.max = max
+				} else {
+					this.errList.push('No data returned.')
+				}
 			}
 
 			if (this.activeView != this.state.currView) {
@@ -249,7 +261,7 @@ export class HicComponent {
 		if (this.errList.length) {
 			this.error(this.errList)
 			//Turn off loading overlay when data fetch requests persist, etc.
-			this.app.dispatch({ type: 'loading_active' })
+			this.app.dispatch({ type: 'loading_active', active: false })
 		}
 	}
 }

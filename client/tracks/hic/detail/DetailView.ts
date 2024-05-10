@@ -134,6 +134,10 @@ export class DetailView {
 	}
 
 	update(items: ReturnedItems) {
+		if (items.items.length == 0) {
+			this.app.dispatch({ type: 'loading_active', active: false })
+			return
+		}
 		this.items = items
 		const state = this.parent('state') as any
 
