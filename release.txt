@@ -1,1 +1,2 @@
-
+Features:
+- GDC bam app can visualize truncated bam slice when streaming is terminated due to hitting max size

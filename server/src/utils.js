@@ -572,14 +572,30 @@ export function stripJsScript(text) {
 	*/
 }
 
-export async function bam_ifnochr(file, genome, dir) {
+// fileIsTruncated=true when the bam file is truncated, e.g. from gdc slicing
+export async function bam_ifnochr(file, genome, dir, fileIsTruncated) {
 	const lines = []
-	await get_lines_bigfile({
-		isbam: true,
-		args: ['view', '-H', file],
-		dir,
-		callback: line => lines.push(line)
-	})
+
+	try {
+		await get_lines_bigfile({
+			isbam: true,
+			args: ['view', '-H', file],
+			dir,
+			callback: line => lines.push(line)
+		})
+	} catch (e) {
+		/*
+		if fileIsTruncated=true, samtools view -H will print one line to stderr while continue to output all header lines
+		in such case must ignore the err, for truncated gdc slice to work
+		*/
+		if (fileIsTruncated && e.endsWith(SAMTOOLS_ERR_MSG.view)) {
+			// expected. ignore this err and continue to parse header lines
+		} else {
+			// unexpected err
+			throw e
+		}
+	}
+
 	if (lines.length == 0) throw 'cannot list bam header lines'
 	const chrlst = []
 	for (const line of lines) {
@@ -838,4 +854,16 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 	if (use.metaKey) body[use.metaKey] = { id, cacheFile }
 	// may add back other response metadata as needed
 	return { body }
+}
+
+//////////////////////////////
+//         fragile!!        //
+//////////////////////////////
+// these error messages are printed by samtools 1.19.2 and are required for detecting and using truncated gdc bams.
+// if in a new version they change such messages on a whim, our gdc bam tk features will break!!
+export const SAMTOOLS_ERR_MSG = {
+	// from "samtools view"
+	view: 'EOF marker is absent. The input is probably truncated',
+	// from "samtools quickcheck"
+	quickcheck: 'was missing EOF block when one should be present.'
 }
