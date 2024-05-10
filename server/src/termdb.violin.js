@@ -51,6 +51,7 @@ q = {
 
 export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const term = q.term?.term ? q.term.term : ds.cohort.termdb.q.termjsonByOneid(q.termid)
+	if (!q.term.q?.mode) q.term.q.mode = 'continuous'
 	if (!term) throw '.termid invalid'
 	//term on backend should always be an integer term
 	if (!isNumericTerm(term)) throw 'term type is not numeric'

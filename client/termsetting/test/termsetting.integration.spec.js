@@ -462,7 +462,6 @@ tape('Numerical term: fixed bins', async test => {
 			q: termjson['agedx'].bins.default
 		}
 	})
-
 	await opts.pill.main(opts.tsData)
 
 	// create enter event to use for inputs of bin edit menu

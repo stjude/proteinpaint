@@ -9,7 +9,7 @@ import * as utils from './utils'
 import * as termdbsql from './termdb.sql'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
 import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/common.js'
-import { get_bin_label } from '#shared/termdb.bins.js'
+import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 
 /*
 
@@ -112,7 +112,8 @@ async function getSampleData(q) {
 
 	const sampleFilterSet = await mayGetSampleFilterSet(q, nonDictTerms) // conditionally returns a set of sample ids
 	for (const tw of nonDictTerms) {
-		if (!tw.$id) tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
+		if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
+
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
@@ -151,6 +152,16 @@ async function getSampleData(q) {
 				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
+			let lst
+			if (tw.q?.mode == 'discrete') {
+				const min = tw.term.bins.min
+				const max = tw.term.bins.max
+
+				lst = compute_bins(tw.q, () => {
+					return { min, max }
+				})
+				byTermId[tw.$id] = { bins: lst }
+			}
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
@@ -162,17 +173,14 @@ async function getSampleData(q) {
 				genes: [{ gene: tw.term.gene }]
 			}
 			const data = await q.ds.queries.geneExpression.get(args)
-
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				const values = data.gene2sample2value.get(tw.term.gene)
 				const value = Number(values[sampleId])
 				let key = value
-				if (tw.q?.mode == 'discrete') key = getBinLabel(tw.q, value)
+				if (tw.q?.mode == 'discrete') key = getBinLabel(tw.q, lst, value)
 				samples[sampleId][tw.$id] = { key, value }
 			}
-			if (tw.q.lst) byTermId[tw.$id] = { bins: tw.q.lst }
-			else if (tw.term.bins) byTermId[tw.$id] = { bins: tw.term.bins }
 
 			/** pp filter */
 		} else {
@@ -202,24 +210,24 @@ async function getSampleData(q) {
 	return { samples, refs: { byTermId, bySampleId } }
 }
 
-export function getBinLabel(bins, value) {
+export function getBinLabel(bins, lst, value) {
 	value = Math.round(value * 100) / 100 //to keep 2 decimal places
 
-	let bin = bins.lst.findIndex(
+	let bin = lst.findIndex(
 		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
 	)
 	if (bin == -1)
-		bin = bins.lst.findIndex(
+		bin = lst.findIndex(
 			b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
 		)
 	if (bin == -1)
-		bin = bins.lst.findIndex(
+		bin = lst.findIndex(
 			b =>
 				(value > b.start && value < b.stop) ||
 				(b.startinclusive && value == b.start) ||
 				(b.stopinclusive && value == b.stop)
 		)
-	return get_bin_label(bins.lst[bin], bins)
+	return get_bin_label(lst[bin], bins)
 }
 
 async function mayGetSampleFilterSet(q, nonDictTerms) {

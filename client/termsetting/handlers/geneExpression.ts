@@ -26,15 +26,14 @@ export async function getHandler(self) {
 
 export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
+	const mode = tw.q.mode || 'continuous'
+
 	if (!tw.term.bins) {
 		const defaultBins = await vocabApi.getDefaultGeneExpBins({ tw })
 		tw.term.bins = defaultBins
-	}
-	if (!tw.q.lst) {
-		const mode = tw.q.mode || 'continuous'
 		tw.q = JSON.parse(JSON.stringify(tw.term.bins.default))
-		tw.q.mode = mode
 	}
+	tw.q.mode = mode
 	return tw
 }
 

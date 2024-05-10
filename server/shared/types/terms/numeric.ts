@@ -73,6 +73,8 @@ type PresetNumericBins = {
 	label_offset?: number
 	label_offset_ignored?: boolean
 	rounding?: string
+	min?: number
+	max?: number
 }
 
 export type NumericTerm = Term & {
