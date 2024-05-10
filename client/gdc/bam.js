@@ -985,24 +985,27 @@ export async function bamsliceui({
 				return
 			}
 
-			const gdc_bam_files = await dofetch3('tkbam', { headers, body })
-			if (gdc_bam_files.error) throw gdc_bam_files.error
-			if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'gdc_bam_files not non empty array'
+			const fileStat = await dofetch3('tkbam', { headers, body }) // stat about the cached gdc bam slice file
+			if (fileStat.error) throw fileStat.error
 
-			// This will need to be changed to a loop when viewing multiple regions in the same sample
-			const { filesize } = gdc_bam_files[0]
-
+			// when clicking "Back To" button and resubmit another region, the same file info will be reused and must avoid inserting duplicating entries here
 			{
 				// update file size
 				const i = file.about.find(i => i.k == 'Slice file size')
 				if (i) {
 					// this file has been sliced before and already has the record; do not add duplicate record
-					i.v = filesize
+					i.v = fileStat.size
 				} else {
 					// this file does not have the record
-					file.about.push({ k: 'Slice file size', v: filesize })
+					file.about.push({ k: 'Slice file size', v: fileStat.size })
 				}
 			}
+			if (fileStat.time) {
+				const i = file.about.find(i => i.k == 'Stream time')
+				if (i) i.v = Math.round(fileStat.time) + ' seconds'
+				else file.about.push({ k: 'Stream time', v: Math.round(fileStat.time) + ' seconds' })
+			}
+			if (fileStat.truncated) file.about.push({ k: 'Truncated', v: 'BAM slice size exceeds limit and is truncated' })
 		}
 
 		formdiv.style('display', 'none')
@@ -1023,8 +1026,8 @@ export async function bamsliceui({
 				gdcFile: {
 					uuid: file.file_id,
 					// SV_EXPAND
-					// tk remembers position for which slice is requested. this position is sent to backend to make the hashed cache file name persistent
-					position: par.chr + '.' + par.start + '.' + par.stop
+					// tk remembers position for which slice is requested. this position is sent to backend to make the hashed cache file name persistent; must compose string consistently as chr:start-stop; using different separator will result in different hash
+					position: par.chr + ':' + par.start + '-' + par.stop
 				},
 				aboutThisFile: file.about
 			}

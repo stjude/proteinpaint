@@ -19,6 +19,14 @@ import { fileSize } from '../shared/fileSize.js'
 const clustalo_read_alignment = serverconfig.clustalo
 
 /*
+TODO
+separate into new routes
+/bam - tk rendering/read/align etc. for both gdc and non-gdc files
+/bam/read - get one read
+/bam/gdc/list - querying and listing files from gdc
+/bam/gdc/cache - query gdc slicing api and cache on pp
+
+
 XXX quick fix to be removed/disabled later
 -- __tempscore 
 
@@ -731,7 +739,7 @@ async function getFilefullpathOrUrl(req) {
 	if (req.query.gdcFileUUID) {
 		// is gdc bam slice, join with cache dir
 		const cachefile = path.join(serverconfig.cachedir_bam, req.query.file)
-		// before the file is accessed, test if missing! if so re-slice in case the query runs on a different worker..
+		// before the file is accessed, test if missing! if so re-slice in case the query runs on a different worker on the gdc environment..
 		await mayReSliceFile(req, cachefile)
 		return [cachefile, null]
 	}
@@ -747,12 +755,14 @@ async function get_q(genome, req) {
 	const q = {
 		genome,
 		file: filefullpath,
+		fileIsTruncated: await samtoolsQuickcheck(filefullpath), // flag to record status and used repeatedly
 		dir,
 		asPaired: req.query.asPaired,
 		getcolorscale: req.query.getcolorscale,
 		//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
 		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 	}
+
 	if (req.query.pileupheight) {
 		q.pileupheight = Number(req.query.pileupheight)
 		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
@@ -829,7 +839,7 @@ async function get_q(genome, req) {
 		q.nochr = typeof req.query.nochr == 'string' ? JSON.parse(req.query.nochr) : req.query.nochr // parse "true" into json true
 	} else {
 		// info not provided
-		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir)
+		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir, q.fileIsTruncated)
 	}
 	q.regions = req.query.regions
 	if (!Array.isArray(q.regions) || q.regions.length == 0) throw 'q.regions[] not non-empty array'
@@ -876,7 +886,7 @@ async function mayReSliceFile(req, cachefile) {
 		// slice file not found; force to download slice here
 
 		const bakRegions = req.query.regions
-		const tmp = req.query.gdcFilePosition.split('.')
+		const tmp = req.query.gdcFilePosition.split(/[.:-]/)
 		req.query.regions = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
 		await downloadGdcBam2cacheFile_withDenial(req)
 		req.query.regions = bakRegions
@@ -1361,19 +1371,32 @@ async function determine_downsampling(q, regions) {
 	let totalreads = 0 // total number of reads from all regions
 	for (const r of regions) {
 		const args = ['view', '-c', q.file]
-		if (!q.gdc_case_id) {
+
+		if (q.fileIsTruncated) {
+			// is truncated gdc slice. do not supply region
+		} else {
 			args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop)
 		}
-		await utils.get_lines_bigfile({
-			isbam: true,
-			args,
-			dir: q.dir,
-			callback: line => {
-				const c = Number(line)
-				if (!Number.isInteger(c)) throw 'total number of reads from a region not integer'
-				totalreads += c
+
+		try {
+			await utils.get_lines_bigfile({
+				isbam: true,
+				args,
+				dir: q.dir,
+				callback: line => {
+					const c = Number(line)
+					if (!Number.isInteger(c)) throw 'total number of reads from a region not integer'
+					totalreads += c
+				}
+			})
+		} catch (e) {
+			if (q.fileIsTruncated && e.includes(utils.SAMTOOLS_ERR_MSG.view)) {
+				// expected err with truncated file, ignore
+			} else {
+				// unexpected err
+				throw e
 			}
-		})
+		}
 	}
 	if (totalreads < maxreadcount * 1.1) {
 		// no downsampling
@@ -1399,37 +1422,50 @@ if too many reads, kill the process and insert a message
 async function query_region(r, q) {
 	r.lines = []
 	const args = ['view', q.file]
-	if (!q.gdc_case_id) {
-		// not a gdc slice, use region in querying
+
+	if (q.fileIsTruncated) {
+		// file is truncated, which could be the case for gdc slice. read through all reads. do not supply query region to not to break samtools view
+	} else {
+		// normal file
 		args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop)
 	}
-	await utils.get_lines_bigfile({
-		isbam: true,
-		args,
-		dir: q.dir,
-		callback: (line, ps) => {
-			// Show/Hide PCR optical duplicates
-			const flag = line.split('\t')[1]
-			if (flag & 0x400 && q.drop_pcrduplicates) {
-				return
-			}
-			// Show/Hide secondary alignments
-			if (flag & 0x800 && q.drop_supplementary_alignments) {
-				return
-			}
-			if (q.downsample) {
-				// apply downsampling based on the ratio specified in .keep and .skip
-				const d = q.downsample
-				d.pointer++
-				if (d.pointer >= d.keep && d.pointer < d.keep + d.skip) {
+
+	try {
+		await utils.get_lines_bigfile({
+			isbam: true,
+			args,
+			dir: q.dir,
+			callback: (line, ps) => {
+				// Show/Hide PCR optical duplicates
+				const flag = line.split('\t')[1]
+				if (flag & 0x400 && q.drop_pcrduplicates) {
 					return
 				}
-				if (d.pointer >= d.keep + d.skip) d.pointer = 0 // restart pointer
-			}
+				// Show/Hide secondary alignments
+				if (flag & 0x800 && q.drop_supplementary_alignments) {
+					return
+				}
+				if (q.downsample) {
+					// apply downsampling based on the ratio specified in .keep and .skip
+					const d = q.downsample
+					d.pointer++
+					if (d.pointer >= d.keep && d.pointer < d.keep + d.skip) {
+						return
+					}
+					if (d.pointer >= d.keep + d.skip) d.pointer = 0 // restart pointer
+				}
 
-			r.lines.push(line)
+				r.lines.push(line)
+			}
+		})
+	} catch (e) {
+		if (q.fileIsTruncated && e.includes(utils.SAMTOOLS_ERR_MSG.view)) {
+			// expected err with truncated file, ignore
+		} else {
+			// unexpected err
+			throw e
 		}
-	})
+	}
 }
 
 /*
@@ -1454,14 +1490,17 @@ at r.ntwidth<1:
 */
 async function run_samtools_depth(q, r) {
 	const bplst = []
-	const args = [
-		'depth',
-		'-r',
-		(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-		'-g',
-		'DUP',
-		q.file || q.url
-	]
+	const args = ['depth']
+
+	if (q.fileIsTruncated) {
+	} else {
+		args.push('-r')
+		args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop)
+	}
+	args.push('-g')
+	args.push('DUP')
+	args.push(q.file || q.url)
+
 	// Show/Hide PCR optical duplicates
 	if (q.drop_pcrduplicates) {
 		args.push('-G')
@@ -1471,32 +1510,43 @@ async function run_samtools_depth(q, r) {
 		args.push('-G')
 		args.push('0x800')
 	}
-	await utils.get_lines_bigfile({
-		isbam: true,
-		args: args,
-		dir: q.dir,
-		callback: line => {
-			const l = line.split('\t')
-			const position = Number.parseInt(l[1]) - 1 // change to 0-based
-			const depth = Number.parseInt(l[2])
-			if (r.ntwidth >= 1) {
-				// zoomed in, one element per basepair
-				bplst.push({ position, total: depth })
-				return
-			}
-			// zoomed out, sum all basepairs covered by each pixel
-			const bpidx = Math.floor((position - r.start) * r.ntwidth) // array index of bplst
-			if (!bplst[bpidx]) {
-				bplst[bpidx] = {
-					position,
-					sum: 0, // temp
-					count: 0 // temp
+
+	try {
+		await utils.get_lines_bigfile({
+			isbam: true,
+			args: args,
+			dir: q.dir,
+			callback: line => {
+				const l = line.split('\t')
+				const position = Number.parseInt(l[1]) - 1 // change to 0-based
+				const depth = Number.parseInt(l[2])
+				if (r.ntwidth >= 1) {
+					// zoomed in, one element per basepair
+					bplst.push({ position, total: depth })
+					return
 				}
+				// zoomed out, sum all basepairs covered by each pixel
+				const bpidx = Math.floor((position - r.start) * r.ntwidth) // array index of bplst
+				if (!bplst[bpidx]) {
+					bplst[bpidx] = {
+						position,
+						sum: 0, // temp
+						count: 0 // temp
+					}
+				}
+				bplst[bpidx].sum += depth
+				bplst[bpidx].count++
 			}
-			bplst[bpidx].sum += depth
-			bplst[bpidx].count++
+		})
+	} catch (e) {
+		if (q.fileIsTruncated && e.includes(utils.SAMTOOLS_ERR_MSG.view)) {
+			// expected err with truncated file, ignore
+		} else {
+			// unexpected err
+			throw e
 		}
-	})
+	}
+
 	if (r.ntwidth < 1) {
 		// get average for each bin
 		for (const b of bplst) {
@@ -3100,6 +3150,7 @@ async function route_getread(genome, req) {
 
 async function query_oneread(req, r) {
 	const [_file, dir] = await getFilefullpathOrUrl(req)
+	const fileIsTruncated = await samtoolsQuickcheck(_file)
 	let firstseg, lastseg, readstart, readstop, lst // array of reads to be returned
 
 	if (req.query.unknownorder) {
@@ -3110,69 +3161,81 @@ async function query_oneread(req, r) {
 		readstop = req.query.readstop
 	}
 
-	await utils.get_lines_bigfile({
-		isbam: true,
-		args: [
-			'view',
-			_file,
-			(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
-		],
-		dir,
-		callback: (line, ps) => {
-			if (line.split('\t')[0] != req.query.qname) return
-			const s = parse_one_segment({ sam_info: line, keepallboxes: true, keepmatepos: true, keepunmappedread: true }, r)
-			if (!s) return
-			if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
-			if (
-				(req.query.start != s.segstart_original || req.query.stop != s.segstop) &&
-				!req.query.paired &&
-				!req.query.show_unmapped
-			)
-				return
-			if (req.query.show_unmapped && req.query.getfirst) {
-				// In case first read is mapped and second unmapped
-				if (s.islast) {
-					ps.kill()
-					lst = [s]
+	const args = ['view', _file]
+	if (!fileIsTruncated)
+		args.push((req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop)
+
+	try {
+		await utils.get_lines_bigfile({
+			isbam: true,
+			args,
+			dir,
+			callback: (line, ps) => {
+				if (line.split('\t')[0] != req.query.qname) return
+				const s = parse_one_segment(
+					{ sam_info: line, keepallboxes: true, keepmatepos: true, keepunmappedread: true },
+					r
+				)
+				if (!s) return
+				if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
+				if (
+					(req.query.start != s.segstart_original || req.query.stop != s.segstop) &&
+					!req.query.paired &&
+					!req.query.show_unmapped
+				)
 					return
-				}
-			} else if (req.query.show_unmapped && req.query.getlast) {
-				// In case first read is mapped and second unmapped
-				if (s.isfirst) {
-					ps.kill()
-					lst = [s]
-					return
-				}
-			} else if (req.query.getfirst) {
-				if (s.isfirst) {
-					ps.kill()
-					lst = [s]
-					return
-				}
-			} else if (req.query.getlast) {
-				if (s.islast) {
-					ps.kill()
-					lst = [s]
-					return
-				}
-			} else if (req.query.unknownorder) {
-				if (s.segstart == readstart && s.segstop == readstop) {
-					ps.kill()
-					lst = [s]
-					return
-				}
-			} else {
-				// get both
-				if (s.isfirst) firstseg = s
-				else if (s.islast) lastseg = s
-				if (firstseg && lastseg) {
-					ps.kill()
-					lst = [firstseg, lastseg]
-					return
+				if (req.query.show_unmapped && req.query.getfirst) {
+					// In case first read is mapped and second unmapped
+					if (s.islast) {
+						ps.kill()
+						lst = [s]
+						return
+					}
+				} else if (req.query.show_unmapped && req.query.getlast) {
+					// In case first read is mapped and second unmapped
+					if (s.isfirst) {
+						ps.kill()
+						lst = [s]
+						return
+					}
+				} else if (req.query.getfirst) {
+					if (s.isfirst) {
+						ps.kill()
+						lst = [s]
+						return
+					}
+				} else if (req.query.getlast) {
+					if (s.islast) {
+						ps.kill()
+						lst = [s]
+						return
+					}
+				} else if (req.query.unknownorder) {
+					if (s.segstart == readstart && s.segstop == readstop) {
+						ps.kill()
+						lst = [s]
+						return
+					}
+				} else {
+					// get both
+					if (s.isfirst) firstseg = s
+					else if (s.islast) lastseg = s
+					if (firstseg && lastseg) {
+						ps.kill()
+						lst = [firstseg, lastseg]
+						return
+					}
 				}
 			}
+		})
+	} catch (e) {
+		if (fileIsTruncated && e.includes(utils.SAMTOOLS_ERR_MSG.view)) {
+			// expected err with truncated file, ignore
+		} else {
+			// unexpected err
+			throw e
 		}
-	})
+	}
 
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
@@ -3510,14 +3573,13 @@ async function downloadGdcBam2cacheFile_withDenial(req) {
 	// download one bam slice for each region
 	const regions = req.query.regions
 	if (!Array.isArray(regions) || regions.length == 0) throw 'req.query.regions[] not non-empty array'
-	const sizes = []
-	// FIXME NOTE FUTURE SOLUTION
-	// should use one slice file for multi region view. find a way to concatenate sliced reads from multiple regions into one cache file
+	let fileStat
 	for (const r of regions) {
-		const filesize = await get_gdc_bam(r.chr, r.start, r.stop, req.query.gdcFileUUID, getGDCcacheFileName(req), req)
-		sizes.push({ filesize })
+		// FIXME NOTE FUTURE SOLUTION
+		// use one slice file for multi region view. find a way to concatenate sliced reads from multiple regions into one cache file
+		fileStat = await get_gdc_bam(r.chr, r.start, r.stop, req.query.gdcFileUUID, getGDCcacheFileName(req), req)
 	}
-	return sizes
+	return fileStat
 }
 
 /* not in use: client now calls slicing api directly to download
@@ -3689,24 +3751,40 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
 	const url = path.join(host.rest, '/slicing/view/', gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop)
 
+	let timeTaken4streaming = 0
+
 	try {
 		const time = Math.round(Date.now() / 1000)
+
+		let fileIsTruncated = false
+		/* set to true at:
+		1) when cache file doesn't exist, a new one is streamed from gdc api and terminated due to exceeding max size limit
+		2) when cache file exists, samtools quickcheck found EOF missing
+
+		when set to true, do not throw and abort. do not index this bam and just read all its reads without supplying a coordinate.
+
+		per Zhenyu 5/8/2024, "samtools view" will work on a truncated bam:
+		"BAM are bgzip block compressed, so the last block will not be open if truncated, but previous blocks should be fine"
+		thus a truncated bam that's big enough should be viewable for all its blocks except the last one
+		*but* a truncated bam that's too small to have only one block won't work
+		a bam too small shouldn't be a concern as gdc streaming is only terminated at 100Mb
+		also no need to worry about appending EOF marker to such bam, it doesn't matter
+		*/
 
 		if (await utils.file_not_exist(fullpath)) {
 			// bam file not found. download
 
 			const sourceStream = got.stream(url, { method: 'GET', headers })
 			const writeStream = fs.createWriteStream(fullpath)
-			let totalBytes = 0,
-				tooBigTerminated = false
+			let totalBytes = 0
 
 			// not doing sourceStream.on('data'), since it always ends in ERR_STREAM_WRITE_AFTER_END, in that data are still being written to write stream that's already closed
 			const transformStream = new Transform({
 				transform(chunk, encoding, callback) {
 					totalBytes += chunk.length
 					if (totalBytes > serverconfig.features.gdcBam.cacheMaxSize) {
+						fileIsTruncated = true
 						callback(null, null) // stop the pipeline
-						tooBigTerminated = true // set flag to true to signal this state to later code
 					} else {
 						callback(null, chunk) // continue with the current chunk
 					}
@@ -3716,7 +3794,9 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 			// not using sourceStream.pipe() so no need to deal with those callbacks as on(close) and on(error)
 			await pipeline(sourceStream, transformStream, writeStream)
 
+			/* no longer aborts when streaming is killed
 			if (tooBigTerminated) {
+				//await appendEOF2truncatedFile2(fullpath)
 				try {
 					await fs.promises.stat(fullpath)
 					await fs.promises.unlink(fullpath) // do it after successful stat to be safe
@@ -3729,33 +3809,61 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 					serverconfig.features.gdcBam.cacheMaxSize
 				)}. Please reduce query region size and try again.`
 			}
+			*/
 
 			if (await utils.file_not_exist(fullpath)) throw 'BAM file slice is not found after downloading' // unknown error
+
+			timeTaken4streaming = Date.now() / 1000 - time
 		} else {
 			// bam file found, no need to re-download
 			// change the modify times to prevent automated deletion with mayDeleteCacheFiles()
 			await fs.promises.utimes(fullpath, time, time)
 		}
 
-		const baiFilePath = fullpath + '.bai'
-		if (await utils.file_not_exist(baiFilePath)) {
-			// index file not found. do indexing
-			await index_bam(fullpath)
-			// index file is supposed to be produced
-			if (await utils.file_not_exist(baiFilePath)) {
-				throw 'index file is missing after indexing'
-			}
+		fileIsTruncated = await samtoolsQuickcheck(fullpath)
+		// false for normal file, true for truncated, throw if any other issue
+
+		if (fileIsTruncated) {
+			// cache file is truncated. do not index (will fail) and view as is
 		} else {
-			// change the modify times to prevent automated deletion with mayDeleteCacheFiles()
-			await fs.promises.utimes(baiFilePath, time, time)
+			// cache file is whole. index it to allow faster query
+			const baiFilePath = fullpath + '.bai'
+			if (await utils.file_not_exist(baiFilePath)) {
+				// index file not found. do indexing
+				await index_bam(fullpath)
+				// index file is supposed to be produced
+				if (await utils.file_not_exist(baiFilePath)) {
+					throw 'index file is missing after indexing'
+				}
+			} else {
+				// change the modify times to prevent automated deletion with mayDeleteCacheFiles()
+				await fs.promises.utimes(baiFilePath, time, time)
+			}
 		}
 
-		const s = await fs.promises.stat(fullpath)
-		return bplen(s.size, true)
+		const fileStat = { size: bplen((await fs.promises.stat(fullpath)).size, true) }
+		if (fileIsTruncated) fileStat.truncated = 1
+		if (timeTaken4streaming) fileStat.time = timeTaken4streaming
+		return fileStat
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		throw 'Error with BAM slicing: ' + (e.message || e)
 	}
+}
+
+async function samtoolsQuickcheck(file) {
+	try {
+		await utils.get_lines_bigfile({
+			isbam: true,
+			args: ['quickcheck', file],
+			callback: line => {}
+		})
+	} catch (e) {
+		// on any error, it outputs line(s) to standard error. catch such error and assess
+		if (e.trim().endsWith(utils.SAMTOOLS_ERR_MSG.quickcheck)) return true // file is truncated. return true
+		throw 'unhandled bam check error: ' + e
+	}
+	return false // no output. file is fine. return false
 }
 
 async function index_bam(file) {
