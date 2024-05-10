@@ -11,10 +11,10 @@ export class MatrixTypeControl {
 		// { label: 'Log(Observed + 1)', value: 'log(obs+1)'},
 		// { label: 'Observed Pearson', value: 'op'}
 	]
-	callback: (matrixType: string) => void
+	callback: (value: string, prop: 'matrixType') => void
 	matrixSelect: any
 
-	constructor(holder: Elem, callback: (matrixType: string) => void) {
+	constructor(holder: Elem, callback: (value: string, prop: 'matrixType') => void) {
 		this.holder = holder
 		this.callback = callback
 	}
@@ -24,7 +24,7 @@ export class MatrixTypeControl {
 			.style('margin-right', '10px')
 			.append('select')
 			.on('change', async () => {
-				this.callback(this.matrixSelect.node().value)
+				this.callback(this.matrixSelect.node().value, 'matrixType')
 			})
 		for (const matrixType of this.values) {
 			this.matrixSelect.append('option').text(matrixType.label).attr('value', matrixType.value)

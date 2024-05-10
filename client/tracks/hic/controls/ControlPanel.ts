@@ -93,7 +93,7 @@ class ControlPanel {
 			this.controls.normalizationRow.append('td').attr('class', 'sjpp-nmeth-select'),
 			this.hic.normalization,
 			state.defaultNmeth,
-			this.nmethCallback
+			this.dropdownCallback
 		)
 		this.controls.nmeth.render()
 
@@ -119,7 +119,7 @@ class ControlPanel {
 		//Matrix type
 		this.controls.matrixTypeRow = menuTable.append('tr') as any
 		this.addLabel(this.controls.matrixTypeRow, 'matrix type')
-		this.controls.matrixType = new MatrixTypeControl(this.controls.matrixTypeRow.append('td'), this.matrixTypeCallback)
+		this.controls.matrixType = new MatrixTypeControl(this.controls.matrixTypeRow.append('td'), this.dropdownCallback)
 		this.controls.matrixType.render()
 
 		const viewRow = menuTable.append('tr') as any
@@ -202,23 +202,23 @@ class ControlPanel {
 			.style('margin-right', '10px')
 			.text('In')
 			.on('click', () => {
-				const detailView = this.parent('detail')
-				const xBlock = detailView.xBlock.block
-				const yBlock = detailView.yBlock.block
-				xBlock.zoomblock(2, false)
-				yBlock.zoomblock(2, false)
+				this.zoomBlockCallback(false)
 			})
 		this.controls.zoomOut = zoomDiv
 			.append('button')
 			.style('margin-right', '10px')
 			.text('Out')
 			.on('click', () => {
-				const detailView = this.parent('detail')
-				const xBlock = detailView.xBlock.block
-				const yBlock = detailView.yBlock.block
-				xBlock.zoomblock(2, true)
-				yBlock.zoomblock(2, true)
+				this.zoomBlockCallback(true)
 			})
+	}
+
+	zoomBlockCallback = (bool: boolean) => {
+		const detailView = this.parent('detail')
+		const xBlock = detailView.xBlock.block
+		const yBlock = detailView.yBlock.block
+		xBlock.zoomblock(2, bool)
+		yBlock.zoomblock(2, bool)
 	}
 
 	showBtns() {
@@ -328,21 +328,12 @@ class ControlPanel {
 		}
 	}
 
-	nmethCallback = (v: string) => {
+	dropdownCallback = (v: string, prop: string) => {
 		const state = this.app.getState()
 		this.app.dispatch({
 			type: 'view_update',
 			view: state.currView,
-			config: { nmeth: v }
-		})
-	}
-
-	matrixTypeCallback = (v: string) => {
-		const state = this.app.getState()
-		this.app.dispatch({
-			type: 'view_update',
-			view: state.currView,
-			config: { matrixType: v }
+			config: { [prop]: v }
 		})
 	}
 
