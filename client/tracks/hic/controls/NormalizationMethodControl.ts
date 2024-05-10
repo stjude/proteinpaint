@@ -4,10 +4,15 @@ export class NormalizationMethodControl {
 	defaultNmeth: string
 	holder: Elem
 	normalization: string[]
-	callback: (nmeth: string) => void
+	callback: (value: string, prop: 'nmeth') => void
 	nmethSelect: any
 
-	constructor(holder: Elem, normalization: string[], defaultNmeth: string, callback: (nmeth: string) => void) {
+	constructor(
+		holder: Elem,
+		normalization: string[],
+		defaultNmeth: string,
+		callback: (value: string, prop: 'nmeth') => void
+	) {
 		this.holder = holder
 		this.normalization = normalization
 		this.defaultNmeth = defaultNmeth
@@ -23,7 +28,7 @@ export class NormalizationMethodControl {
 				.append('select')
 				.on('change', async () => {
 					const nmeth = this.nmethSelect.node().value
-					this.callback(nmeth)
+					this.callback(nmeth, 'nmeth')
 				})
 			for (const n of this.normalization) {
 				this.nmethSelect.append('option').text(n)
