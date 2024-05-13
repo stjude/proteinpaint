@@ -1,3 +1,5 @@
+import { ChrPosition } from 'types/hic'
+
 export class Resolution {
 	error: (f: string | string[]) => void
 	readonly initialBinNum = 20
@@ -67,5 +69,18 @@ export class Resolution {
 		const chrpairResolution = this.getChrPairResolution(hic, x, y)
 		if (!chrpairResolution) return
 		return chrpairResolution * this.initialBinNum
+	}
+
+	updateDetailResolution(bpresolution: any, x: ChrPosition, y: ChrPosition) {
+		let resolution = null
+		/** Pick the biggest span, then choose the next lowest resolution */
+		const maxBpWidth = Math.max(x.stop - x.start, y.stop - y.start)
+		for (const res of bpresolution) {
+			if (maxBpWidth <= res) {
+				resolution = bpresolution[bpresolution.indexOf(res) - 1]
+				break
+			}
+		}
+		return resolution
 	}
 }

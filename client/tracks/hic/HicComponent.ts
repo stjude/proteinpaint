@@ -147,9 +147,13 @@ export class HicComponent {
 				obj['lead'] = `${chrx.start && chrx.stop ? `${chrx.chr}:${chrx.start}-${chrx.stop}` : chrx.chr}`
 				obj['follow'] = `${chry.start && chry.stop ? `${chry.chr}:${chry.start}-${chry.stop}` : chry.chr}`
 			}
-
 			const dataFetcher = new DataFetcher(this.hic, true, this.errList)
 			this.data = await dataFetcher.getData(obj)
+			if (this.data.items.length == 0) {
+				/** Maybe change logic to recursive fun? */
+				this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
+				this.data = await dataFetcher.getData(obj)
+			}
 		}
 	}
 
