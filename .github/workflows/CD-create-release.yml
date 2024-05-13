@@ -138,7 +138,7 @@ jobs:
         id: rename_rust_binaries
         run: |
           PP_RUST_TAG="$(node -p "require('./rust/package.json').version")";
-          PP_TAG="$(node -p "require('./package.json').version")";
+          PP_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
           echo "::set-output name=pp_tag::$PP_TAG";
           RENAMED="rust-binaries-$PP_RUST_TAG-linux-x64.tar.gz"
           tar -czvf "$RENAMED" -C rust-binaries .
