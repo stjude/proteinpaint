@@ -63,7 +63,7 @@ class geneORA {
 			},
 			{
 				label: 'Pathway',
-				type: 'radio',
+				type: 'dropdown',
 				chartType: 'geneORA',
 				settingsKey: 'pathway',
 				title: 'Display table showing original and adjusted pvalues corresponding to each significant pathway',
