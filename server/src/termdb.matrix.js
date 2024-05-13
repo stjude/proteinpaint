@@ -163,13 +163,7 @@ async function getSampleData(q) {
 					})
 				byTermId[tw.$id] = { bins: lst }
 			}
-			const filters = q.filter.lst.filter(
-				item => item.tvs.term.type == TermTypes.GENE_EXPRESSION && item.tvs.term.gene == tw.term.gene
-			)
-			const ranges = []
-			for (const f of filters) {
-				ranges.push(...f.tvs.ranges)
-			}
+
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
@@ -182,14 +176,14 @@ async function getSampleData(q) {
 			}
 			const data = await q.ds.queries.geneExpression.get(args)
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
-				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				if (!(sampleId in samples)) {
+					if (dictTerms.length) continue // only create a sample entry/row when it is not already filtered out by not having any dictionary term values
+					if (sampleFilterSet && !sampleFilterSet.has(Number(sampleId))) continue
+					samples[sampleId] = { sample: sampleId }
+				}
 				const values = data.gene2sample2value.get(tw.term.gene)
 				const value = Number(values[sampleId])
 				let key = value
-				if (ranges.length) {
-					const filterBin = getBin(ranges, value)
-					if (filterBin == -1) continue
-				}
 				if (tw.q?.mode == 'discrete') {
 					const bin = getBin(lst, value)
 					key = get_bin_label(lst[bin], tw.q)
@@ -246,11 +240,11 @@ export function getBin(lst, value) {
 }
 
 async function mayGetSampleFilterSet(q, nonDictTerms) {
-	// if snplst/snplocus term is present, they will need the set of samples passing filter, to only return gt data for those samples
-	if (!nonDictTerms.find(i => i.term.type == 'snplst' || i.term.type == 'snplocus')) {
-		// no such term
-		return
-	}
+	// // if snplst/snplocus term is present, they will need the set of samples passing filter, to only return gt data for those samples
+	// if (!nonDictTerms.find(i => i.term.type == 'snplst' || i.term.type == 'snplocus')) {
+	// 	// no such term
+	// 	return
+	// }
 	if (!q.filter) return // no filter, allow snplst/snplocus to return data for all samples
 	return new Set((await get_samples(q.filter, q.ds)).map(i => i.id))
 }

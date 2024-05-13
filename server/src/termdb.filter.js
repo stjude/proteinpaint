@@ -1,4 +1,6 @@
-import { isNonDictionaryType } from '#shared/common.js'
+import { isDictionaryType, TermTypes } from '#shared/common'
+import { getBin } from './termdb.matrix.js'
+
 /*
 nested filter documented at:
 https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit?pli=1#heading=h.eeqtb17pxcp0
@@ -48,9 +50,13 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			// .CTEname: str
 		} else if (!item.tvs) {
 			throw `filter item should have a 'tvs' or 'lst' property`
-		} else if (isNonDictionaryType(item.tvs.term.type)) {
-			f = { CTEname: CTEname_i, CTEs: [`${CTEname_i} AS (select id as sample from sampleidmap)`], values: [] }
-		} else if (item.tvs.term.id && !ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)) {
+		} else if (item.tvs.term.type == TermTypes.GENE_EXPRESSION) {
+			f = await get_geneExpression(item.tvs, CTEname_i, ds)
+		} else if (
+			item.tvs.term.id &&
+			isDictionaryType(item.tvs.term.type) &&
+			!ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)
+		) {
 			throw 'invalid term id in tvs'
 		} else if (item.tvs.term.type == 'categorical') {
 			f = get_categorical(item.tvs, CTEname_i)
@@ -214,6 +220,40 @@ async function get_geneVariant(tvs, CTEname, ds) {
 		values: [...samplenames],
 		CTEname
 	}
+}
+
+async function get_geneExpression(tvs, CTEname, ds) {
+	const args = {
+		genome: ds.genome,
+		dslabel: ds.label,
+		clusterMethod: 'hierarchical',
+		/** distance method */
+		distanceMethod: 'euclidean',
+		/** Data type */
+		dataType: 3,
+		genes: [{ gene: tvs.term.gene }]
+	}
+	const data = await ds.queries.geneExpression.get(args)
+	const samples = []
+	for (const sampleId in data.gene2sample2value.get(tvs.term.gene)) {
+		const values = data.gene2sample2value.get(tvs.term.gene)
+		const value = Number(values[sampleId])
+		const filterBin = getBin(tvs.ranges, value)
+		if (filterBin != -1) samples.push(sampleId)
+	}
+	const result = {
+		CTEs: [
+			`
+		  ${CTEname} AS (
+				SELECT id as sample
+				FROM sampleidmap
+				WHERE id IN (${samples.map(i => '?').join(', ')})
+			)`
+		],
+		values: [...samples],
+		CTEname
+	}
+	return result
 }
 
 function get_numerical(tvs, CTEname, ds) {
