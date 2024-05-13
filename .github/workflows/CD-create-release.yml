@@ -97,7 +97,7 @@ jobs:
             echo "updated_rust=false" >> $GITHUB_ENV
           fi
           
-          CHANGES=$(node build/getLatestReleaseChanges.js)
+          CHANGES="Add changes manually here."
           echo "latest_release_changes=$CHANGES" >> $GITHUB_ENV
 
         env:
