@@ -84,7 +84,7 @@ async function trigger_getdescrstats(q: any, res: any, ds: any, genome: any) {
 	for (const key in data.samples) {
 		const sample = data.samples[key]
 		const value = sample[q.tw.$id].value
-		if (q.tw.values?.[value]?.uncomputable) {
+		if (q.tw.q.hiddenValues?.[value]) {
 			// skip uncomputable values
 			continue
 		}

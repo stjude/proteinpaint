@@ -159,9 +159,9 @@ function divideValues(q, data, tw) {
 
 		if (!Number.isFinite(value?.value)) continue
 
-		if (tw.term.values?.[value.key]?.uncomputable) {
+		if (tw.term.values?.[value.value]?.uncomputable) {
 			//skip these values from rendering in plot but show in legend as uncomputable categories
-			const label = tw.term.values[value.key].label // label of this uncomputable category
+			const label = tw.term.values[value.value].label // label of this uncomputable category
 			uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			continue
 		}
