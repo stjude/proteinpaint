@@ -84,12 +84,12 @@ jobs:
             exclude="-x=container";
           fi
 
-#          . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
+
           TAG="v2.59.0"
                
           echo "::set-output name=tag_name::$TAG"
           
-#          ./build/ci-npm-publish.sh "$UPDATED"
+
           UPDATED="rust"
           echo "::set-output name=updated_workspaces::$UPDATED"   
           
@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-docker@rust_ci_build
+        uses: stjude/proteinpaint/.github/actions/publish-docker@master
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -171,7 +171,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-docker
+        uses: stjude/proteinpaint/.github/actions/publish-docker@master
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
