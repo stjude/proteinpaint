@@ -1,5 +1,6 @@
 import * as client from '../src/client'
 import { renderTable } from '../dom/table'
+import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
 
@@ -55,7 +56,7 @@ class geneORA {
 				]
 			},
 			{
-				label: 'Pathway',
+				label: 'Gene set group',
 				type: 'dropdown',
 				chartType: 'geneORA',
 				settingsKey: 'pathway',
@@ -118,7 +119,7 @@ add:
 	if (self.settings.pathway) {
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.config.geneORAparams.geneSetGroup = self.settings.pathway
-		const output = await self.app.vocabApi.rungeneORA(self.config.geneORAparams)
+		const output = await rungeneORA(self.config.geneORAparams)
 		self.dom.detailsDiv
 			.append('div')
 			.html(
@@ -130,7 +131,7 @@ add:
 
 		// Generating the table
 		self.gene_ora_table_cols = [
-			{ label: 'Pathway name' },
+			{ label: 'Gene set group' },
 			{ label: 'Original p-value (linear scale)' },
 			{ label: 'Adjusted p-value (linear scale)' }
 		]
@@ -206,4 +207,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			chartType: 'geneORA'
 		}
 	})
+}
+
+async function rungeneORA(body) {
+	return await dofetch3('genesetOverrepresentation', { body })
 }

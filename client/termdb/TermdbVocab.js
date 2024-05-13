@@ -1171,10 +1171,6 @@ export class TermdbVocab extends Vocab {
 			}
 		})
 	}
-
-	async rungeneORA(body) {
-		return await dofetch3('genesetOverrepresentation', { body })
-	}
 }
 
 /*
