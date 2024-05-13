@@ -9,7 +9,7 @@
 	"scripts": {
 		"dev": "cargo build --release",
 		"build": "cargo build --release",
-		"postinstall": "if [ ! -d ./test ] & [ ! -d ./target/release ]; then cargo build --release; fi",
+		"postinstall": "if [ ! -d ./test ] & [ ! -d ./target/release ]; then node ./downloadBinariesOrCompileSource.js; fi",
 		"test": "tape **/test/*.spec.js",
 		"test:unit": "tape **/test/*.unit.spec.js",
 		"test:integration": "echo 'TODO: rust integration tests'"
@@ -25,12 +25,16 @@
 		"index.js",
 		"Cargo.toml",
 		"src",
+		"downloadBinariesOrCompileSource.js",
 		"LICENSE/*"
 	],
 	"bugs": {
 		"url": "https://github.com/stjude/proteinpaint"
 	},
 	"homepage": "https://github.com/stjude/proteinpaint#readme",
+	"dependencies": {
+		"tar": "^7.1.0"
+	},
 	"devDependencies": {
 		"tape": "^5.2.2"
 	}

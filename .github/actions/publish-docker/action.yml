@@ -1,0 +1,71 @@
+name: 'Publish Docker Image'
+description: 'Build and publish Docker image to GitHub Container Registry.'
+inputs:
+  PAT:
+    description: 'PAT secret'
+    required: true
+  GITHUB_ACTOR:
+    description: 'github_actor'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Login to Github
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ inputs.GITHUB_ACTOR }}
+        password: ${{ inputs.PAT }}
+
+
+    - name: Login to GitHub Container Registry
+      shell: bash
+      run: |
+        echo $CR_PAT | docker login ghcr.io -u stjude --password-stdin
+      env:
+        CR_PAT: ${{ inputs.PAT }}
+
+    - name: Build and Publish Docker Images
+      id: docker-publish
+      shell: bash
+      run: |
+        sleep 90;
+        
+        cd container;
+        ./build2.sh -r "ghcr.io/stjude/" server;
+        TAG="$(node -p "require('./server/package.json').version")";
+        HASH="$(git rev-parse --short HEAD)";
+        
+        ./build2.sh -r "ghcr.io/stjude/" full;
+        TAG="$(node -p "require('./full/package.json').version")";
+        
+        echo "::set-output name=docker_version::$TAG-$HASH";
+        else
+        echo "::set-output name=docker_version::NO_VERSION";
+
+
+    - name: get pp version
+      id: pp-version
+      uses: martinbeentjes/npm-get-version-action@main
+
+    - name: get front version
+      id: front-version
+      uses: martinbeentjes/npm-get-version-action@main
+      with:
+        path: front
+
+    - name: get server version
+      id: server-version
+      uses: martinbeentjes/npm-get-version-action@main
+      with:
+        path: server
+
+    - name: Run deploy action
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ secrets.PAT }}
+        repository: stjude/sj-pp
+        event-type: version-update
+        client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}"}'

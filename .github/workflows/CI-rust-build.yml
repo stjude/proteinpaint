@@ -1,13 +1,25 @@
 name: Rust Build
 
 on:
-  workflow_dispatch:
+  workflow_call:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/stjude/rust:latest
 
     steps:
-      - name: Echo "Hello word."
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: build rust
         run: |
-          echo "Hello word."
+          cd rust && cargo build --release
+          ./extract_binaries.sh
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-binaries
+          path: rust/extracted_binaries

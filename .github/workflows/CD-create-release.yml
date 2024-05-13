@@ -27,12 +27,14 @@ on:
         description: Build secret
 
 jobs:
-  build:
+  publish-npm:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     timeout-minutes: 20
+    outputs:
+      updated_rust: ${{ steps.version_bump.outputs.updated_rust }}
     steps:
       - name: Check secret
         run: |
@@ -74,6 +76,7 @@ jobs:
       - run: npm ci
 
       - name: Run version bump
+        id: version_bump
         run: |
           exclude="";
 
@@ -82,59 +85,92 @@ jobs:
           fi
 
           . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
-
+          
+          echo "::set-output name=tag_name::$TAG"
+          
           ./build/ci-npm-publish.sh "$UPDATED"
+          
+          echo "::set-output name=updated_workspaces::$UPDATED"   
+          
+          if [[ $UPDATED == *"rust"* ]]; then
+             echo "::set-output name=updated_rust::true"
+          else
+            echo "::set-output name=updated_rust::false"
+          fi
+          
+          CHANGES=$(node build/getLatestReleaseChanges.js)
+          echo "::set-output name=latest_release_changes::$CHANGES"
+
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
 
-      - name: Login to GitHub Container Registry
-        run: |
-          echo $CR_PAT | docker login ghcr.io -u stjude --password-stdin
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
-          CR_PAT: ${{ secrets.PAT }}
-
-      - name: Build and Publish Docker Images
-        id: docker-publish
-        run: 
-          sleep 90;
-          
-          if [ "${{ github.event.inputs.include }}" = "npm packages + Docker image" ]; then
-            cd container;
-            ./build2.sh -r "ghcr.io/stjude/" server;
-            TAG="$(node -p "require('./server/package.json').version")";
-            HASH="$(git rev-parse --short HEAD)";
-            docker push ghcr.io/stjude/ppserver:$TAG-$HASH;
-            docker push ghcr.io/stjude/ppserver:latest;
-
-            ./build2.sh -r "ghcr.io/stjude/" full;
-            TAG="$(node -p "require('./full/package.json').version")";
-            docker push ghcr.io/stjude/ppfull:$TAG-$HASH;
-            docker push ghcr.io/stjude/ppfull:latest;
-            echo "::set-output name=docker_version::$TAG-$HASH";
-          else
-            echo "::set-output name=docker_version::NO_VERSION";
-          fi
-
-      - name: get pp version
-        id: pp-version
-        uses: martinbeentjes/npm-get-version-action@main
-
-      - name: get front version
-        id: front-version
-        uses: martinbeentjes/npm-get-version-action@main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          path: front
+          tag_name: ${{ steps.version_bump.outputs.tag_name }}
+          release_name: ${{ steps.version_bump.outputs.tag_name }}
+          body: |
+            ${{ steps.version_bump.outputs.latest_release_changes }}
+          draft: false
+          prerelease: false
 
-      - name: get server version
-        id: server-version
-        uses: martinbeentjes/npm-get-version-action@main
-        with:
-          path: server
+  rust-build:
+    if: needs.publish-npm.outputs.updated_rust == 'true'
+    needs: publish-npm
+    uses: ./.github/workflows/CI-rust-build.yml
 
-      - name: Run deploy action
-        uses: peter-evans/repository-dispatch@v2
+  upload-rust-assets:
+    needs: rust-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
         with:
           token: ${{ secrets.PAT }}
-          repository: stjude/sj-pp
-          event-type: version-update
-          client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}"}'
+
+      - name: Download Rust Binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binaries
+          path: rust-binaries
+
+      - name: Rename Rust Binaries
+        id: rename_rust_binaries
+        run: |
+          PP_RUST_TAG="$(node -p "require('./rust/package.json').version")";
+          PP_TAG="$(node -p "require('./package.json').version")";
+          echo "::set-output name=pp_tag::PP_TAG";
+          RENAMED="rust-binaries-$PP_RUST_TAG-linux-x64.tar.gz"
+          tar -czvf "$RENAMED" -C rust-binaries .
+          echo "::set-output name=renamed_rust_binaries::$RENAMED";
+
+      - uses: AButler/upload-release-assets@v3.0
+        with:
+          files: "${{ steps.rename_rust_binaries.outputs.renamed_rust_binaries }}"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          release-tag: ${{ steps.rename_rust_binaries.outputs.pp_tag }}
+
+
+  publish-docker-no-new-rust-module:
+    if: needs.publish-npm.outputs.updated_rust == 'false' && github.event.inputs.include == 'npm packages + Docker image'
+    needs: publish-npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish docker image
+        uses: stjude/proteinpaint/.github/actions/publish-docker@rust_ci_build
+        with:
+          PAT: ${{ secrets.PAT }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  publish-docker-with-new-rust-module:
+    if: github.event.inputs.include == 'npm packages + Docker image'
+    needs: upload-rust-assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish docker image
+        uses: stjude/proteinpaint/.github/actions/publish-docker@rust_ci_build
+        with:
+          PAT: ${{ secrets.PAT }}
+          GITHUB_ACTOR: ${{ github.actor }}
