@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.59.0
 
 Features:
 - GDC bam app can visualize truncated bam slice when streaming is terminated due to hitting max size
