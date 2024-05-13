@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- fixed rendering of barchart and violin when terms have uncomputable categories
+
+
 ## 2.59.0
 
 Features:

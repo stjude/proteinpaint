@@ -1,2 +1,1 @@
-Fixes:
-- fixed rendering of barchart and violin when terms have uncomputable categories
+
