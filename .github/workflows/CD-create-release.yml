@@ -85,11 +85,11 @@ jobs:
           fi
 
 
-          TAG="v2.59.0"
+          . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
           
           echo "::set-output name=tag_name::$TAG"
           
-          UPDATED="rust"
+          ./build/ci-npm-publish.sh "$UPDATED"
           
           if [[ $UPDATED == *"rust"* ]]; then
              echo "::set-output name=updated_rust::true"
@@ -97,7 +97,7 @@ jobs:
             echo "::set-output name=updated_rust::false"
           fi
           
-          CHANGES="Enter changes here"
+          CHANGES="[CHANGELOG.md](https://github.com/stjude/proteinpaint/blob/master/CHANGELOG.md)"
           echo "::set-output name=latest_release_changes::$CHANGES"
 
         env:
