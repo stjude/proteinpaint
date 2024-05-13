@@ -38,7 +38,7 @@ runs:
         TAG="$(node -p "require('./server/package.json').version")";
         HASH="$(git rev-parse --short HEAD)";
         docker push "ghcr.io/stjude/ppserver:$TAG-$HASH";
-        docker push "ghcr.io/stjude/ppserver:lates
+        docker push "ghcr.io/stjude/ppserver:latest";
         
         ./build2.sh -r "ghcr.io/stjude/" full;
         TAG="$(node -p "require('./full/package.json').version")";
