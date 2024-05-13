@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GDC bam app can visualize truncated bam slice when streaming is terminated due to hitting max size
+- Supported geneExpression filtering
 
 Fixes:
 - Mds3 backend reuse gene search helper to be able to find a gene by isoform access in addition to symbol

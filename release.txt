@@ -1,4 +1,1 @@
-Features
-
-- Supported geneExpression filtering
 
