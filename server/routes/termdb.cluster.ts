@@ -14,6 +14,7 @@ import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { dtgeneexpression } from '#shared/common.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
+import { getResult as getResultGene } from '#src/gene.js'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -213,17 +214,16 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
 		for (const g of param.genes) {
-			// FIXME newly added geneVariant terms from client to be changed to {gene} but not {name}
 			if (!g.gene) continue
 
 			if (!g.chr) {
 				// quick fix: newly added gene from client will lack chr/start/stop
-				const lst = genome.genedb.getjsonbyname.all(g.gene)
-				if (lst.length == 0) continue
-				const j = JSON.parse(lst.find(i => i.isdefault).genemodel || lst[0].genemodel)
-				g.start = j.start
-				g.stop = j.stop
-				g.chr = j.chr
+				const re = getResultGene(genome, { input: g.gene, deep: 1 })
+				if (!re.gmlst || re.gmlst.length == 0) throw 'unknown gene'
+				const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0]
+				g.start = i.start
+				g.stop = i.stop
+				g.chr = i.chr
 			}
 
 			const s2v = {}
