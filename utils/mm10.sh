@@ -55,5 +55,5 @@ curl https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.HindIII.mm10.gz.t
 curl https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.mm10.gz -O
 curl https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.mm10.gz.tbi -O
 curl https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.mm10.gz -O
-curl https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.mm10.gz .tbi-O
+curl https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.mm10.gz .tbi -O
 
