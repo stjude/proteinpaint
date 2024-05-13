@@ -1,14 +1,7 @@
 import * as client from '../src/client'
 import { renderTable } from '../dom/table'
-import * as d3axis from 'd3-axis'
 import { controlsInit } from './controls'
-import { select as d3select } from 'd3-selection'
 import { getCompInit, copyMerge } from '#rx'
-import { dofetch3 } from '#common/dofetch'
-import { scaleLog, scaleLinear } from 'd3-scale'
-import { d3lasso } from '../common/lasso'
-import { downloadTable } from '../dom/table'
-import { Genome } from '#shared/types/genome.ts'
 
 const hlcolor = '#ffa200'
 const tip = new client.Menu()
