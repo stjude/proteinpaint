@@ -157,10 +157,12 @@ async function getSampleData(q) {
 				const min = tw.term.bins.min
 				const max = tw.term.bins.max
 				lst =
-					tw.q.lst ||
-					compute_bins(tw.q, () => {
-						return { min, max }
-					})
+					tw.q.type == 'regular-bin'
+						? compute_bins(tw.q, () => {
+								return { min, max }
+						  })
+						: tw.q.lst
+
 				byTermId[tw.$id] = { bins: lst }
 			}
 
