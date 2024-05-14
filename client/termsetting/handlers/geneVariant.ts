@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
-import { mclass, dt2label } from '#shared/common'
-import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW } from '#shared/types/index'
+import { mclass, dt2label } from '../../shared/common'
+import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW } from '../../shared/types/index'
 
 /* 
 instance attributes
@@ -33,18 +33,44 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 	}
 }
 
-export function fillTW(tw: GeneVariantTW, vocabApi?: VocabApi) {
+export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 	if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop))) {
 		// support saved states that have the older geneVariant term data shape
 		if (tw.term.name) tw.term.gene = tw.term.name
 		else throw 'no gene or position specified'
 	}
 	if (!tw.term.name) tw.term.name = tw.term.gene || `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
-	if (!tw.term.id) tw.term.id = tw.term.name
+	if (!tw.term.id) tw.term.id = tw.term.name // TODO: is this necessary?
+
+	if (!tw.q.groupsetting) tw.q.groupsetting = {}
+	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false
+
+	if (!tw.q.dts) {
+		const byDt = vocabApi.termdbConfig.assayAvailability.byDt
+		if (!byDt) throw 'no dts specified in dataset'
+		// set default dt to be first dt in dataset
+		const dt = Object.keys(byDt)[0]
+		const dts = { [dt]: { label: dt2label[dt] } }
+		/*const dts = {
+			1: {label: dt2label[1]},
+			4: {label: dt2label[4]},
+		}*/
+		const byOrigin = byDt[dt].byOrigin
+		if (byOrigin) {
+			for (const origin in byOrigin) {
+				dts[dt][origin] = { label: byOrigin[origin].label }
+			}
+		}
+		tw.q.dts = dts
+	}
+
+	for (const dt in tw.q.dts) {
+		if (!(dt in dt2label)) throw 'dt value not supported'
+	}
 
 	{
 		// apply optional ds-level configs for this specific term
-		const c = vocabApi?.termdbConfig.customTwQByType?.geneVariant
+		const c = vocabApi.termdbConfig.customTwQByType?.geneVariant
 		if (c && tw.term.name) {
 			//if (c) valid js code but `&& tw.term.name` required to avoid type error
 			// order of overide: 1) do not override existing settings in tw.q{} 2) c.byGene[thisGene] 3) c.default{}

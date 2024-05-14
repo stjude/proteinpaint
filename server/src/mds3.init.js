@@ -2337,16 +2337,17 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			// has some code duplication with mds3.load.js query_snvindel() etc
 			// primary concern is tw.term may be missing coord/isoform to perform essential query
 
-			if (ds.queries.snvindel) {
+			if (ds.queries.snvindel && tw.q.dts[dtsnvindel]) {
 				const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
 				mlst.push(...lst)
 			}
 
-			if (ds.queries.svfusion) {
+			if (ds.queries.svfusion && (tw.q.dts[dtfusionrna] || tw.q.dts[dtsv])) {
 				const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
 				mlst.push(...lst)
 			}
-			if (ds.queries.cnv) {
+
+			if (ds.queries.cnv && tw.q.dts[dtcnv]) {
 				const lst = await getCnvByTw(ds, tw, genome, q)
 				mlst.push(...lst)
 			}
@@ -2428,24 +2429,24 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			}
 		}
 
-		await mayAddDataAvailability(q, ds, data, tw.term.name)
+		await mayAddDataAvailability(q, ds, data, tw)
 
 		return data
 	}
 }
 
-async function mayAddDataAvailability(q, ds, data, tname) {
+async function mayAddDataAvailability(q, ds, data, tw) {
 	if (!ds.assayAvailability?.byDt) return
 	// get samples passing filter if filter is in use
 	const sampleFilter = q.filter ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
-	for (const dtKey in ds.assayAvailability.byDt) {
+	for (const dtKey in tw.q.dts) {
 		const dt = ds.assayAvailability.byDt[dtKey]
 		if (dt.byOrigin) {
 			for (const origin in dt.byOrigin) {
 				const sub_dt = dt.byOrigin[origin]
-				addDataAvailability(dtKey, sub_dt, data, tname, origin, sampleFilter)
+				addDataAvailability(dtKey, sub_dt, data, tw.term.name, origin, sampleFilter)
 			}
-		} else addDataAvailability(dtKey, dt, data, tname, false, sampleFilter)
+		} else addDataAvailability(dtKey, dt, data, tw.term.name, false, sampleFilter)
 	}
 }
 
