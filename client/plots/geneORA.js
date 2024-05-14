@@ -1,11 +1,11 @@
-import * as client from '../src/client'
 import { renderTable } from '../dom/table'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
+import { Menu } from '../dom/menu'
 
 const hlcolor = '#ffa200'
-const tip = new client.Menu()
+const tip = new Menu()
 class geneORA {
 	constructor() {
 		this.type = 'geneORA'
