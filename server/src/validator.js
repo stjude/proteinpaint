@@ -1,5 +1,3 @@
-import { isDictionaryType } from '#shared/common'
-
 const byIpAddr = {}
 
 export function floodCatch(req, res, error) {

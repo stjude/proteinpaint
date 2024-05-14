@@ -1,7 +1,7 @@
 import { Term } from '#shared/types/termdb.ts'
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
-import { TermTypeGroups, TermTypes } from '#shared/common'
+import { TermTypeGroups, TermTypes, typeGroup } from '#shared/terms'
 
 type Dict = {
 	[key: string]: any
@@ -26,20 +26,6 @@ const useCases = {
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
 	default: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	regression: [TermTypeGroups.DICTIONARY_VARIABLES]
-}
-
-//The dataset provides the allowed term types that are then mapped to the term type groups
-//Depending on the dataset types and the use case only certain term type groups/tabs are allowed
-export const typeGroup = {
-	categorical: TermTypeGroups.DICTIONARY_VARIABLES,
-	condition: TermTypeGroups.DICTIONARY_VARIABLES,
-	float: TermTypeGroups.DICTIONARY_VARIABLES,
-	integer: TermTypeGroups.DICTIONARY_VARIABLES,
-	survival: TermTypeGroups.DICTIONARY_VARIABLES,
-	geneVariant: TermTypeGroups.MUTATION_CNV_FUSION,
-	snplst: TermTypeGroups.SNP_LIST,
-	snplocus: TermTypeGroups.SNP_LOCUS,
-	geneExpression: TermTypeGroups.GENE_EXPRESSION
 }
 
 export class TermTypeSearch {

@@ -3,7 +3,7 @@ import { select, selectAll } from 'd3-selection'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
-import { TermTypeGroups } from '../shared/common.js'
+import { TermTypeGroups } from '../shared/terms'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'

@@ -8,9 +8,9 @@ import {
 	truncatingMutations,
 	synonymousMutations,
 	mutationClasses,
-	CNVClasses,
-	isDictionaryType
+	CNVClasses
 } from '#shared/common'
+import { isDictionaryType } from '#shared/terms'
 
 export async function getPlotConfig(opts = {}, app) {
 	const controlLabels = {

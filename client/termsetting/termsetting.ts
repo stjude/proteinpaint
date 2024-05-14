@@ -16,7 +16,7 @@ import { TermSettingOpts, Handler, PillData } from './types'
 import { CategoricalQ } from '../shared/types/terms/categorical'
 import { NumericQ } from '../shared/types/terms/numeric'
 import { SnpsQ } from '../shared/types/terms/snps'
-import { TermTypes, isDictionaryType } from '../shared/common'
+import { TermTypes, isDictionaryType } from '../shared/terms'
 
 /*
 ********************* EXPORTED

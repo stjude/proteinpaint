@@ -8,7 +8,7 @@ import serverconfig from './serverconfig'
 import * as utils from './utils'
 import * as termdbsql from './termdb.sql'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
-import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/common.js'
+import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/terms'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 
 /*
@@ -187,6 +187,7 @@ async function getSampleData(q) {
 				const value = Number(values[sampleId])
 				let key = value
 				if (tw.q?.mode == 'discrete') {
+					//check binary mode
 					const bin = getBin(lst, value)
 					key = get_bin_label(lst[bin], tw.q)
 				}

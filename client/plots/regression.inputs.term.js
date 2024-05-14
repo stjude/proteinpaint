@@ -6,7 +6,7 @@ import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '../termsetting/handlers/snplst.sampleSum.ts'
 import { get_defaultQ4fillTW } from './regression'
-import { isDictionaryType } from '#shared/common.js'
+import { isDictionaryType } from '#shared/terms'
 
 /*
 class instance is an input

@@ -5,7 +5,7 @@ import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { keyupEnter } from '#src/client'
-import { TermTypeGroups, isNonDictionaryType } from '#shared/common.js'
+import { TermTypeGroups, isNonDictionaryType } from '#shared/terms'
 
 /*
 steps:

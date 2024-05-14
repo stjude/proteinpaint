@@ -3,11 +3,12 @@ import path from 'path'
 import serverconfig from './serverconfig.js'
 import { schemeCategory20, getColors } from '#shared/common.js'
 import { interpolateSqlValues } from './termdb.sql.js'
-import { mclass, dt2label, morigin, TermTypes } from '#shared/common.js'
+import { mclass, dt2label, morigin } from '#shared/common.js'
+import { TermTypes } from '#shared/terms.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import { authApi } from './auth.js'
 import run_R from './run_R.js'
-import { write_file, read_file } from './utils.js'
+import { read_file } from './utils.js'
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)

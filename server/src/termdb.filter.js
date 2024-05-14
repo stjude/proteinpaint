@@ -1,4 +1,4 @@
-import { isDictionaryType, TermTypes } from '#shared/common'
+import { isDictionaryType, TermTypes } from '#shared/terms'
 import { getBin } from './termdb.matrix.js'
 
 /*
