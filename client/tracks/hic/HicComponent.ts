@@ -37,7 +37,9 @@ export class HicComponent {
 	calResolution: number | null = null
 	firstRender = true
 	min = 0
+	absMin = 0
 	max = 0
+	absMax = 0
 	hasStatePreMain = true
 
 	constructor(opts) {
@@ -185,8 +187,8 @@ export class HicComponent {
 		await this.fetchData(args)
 		if (this.data?.length > 0 || this.data?.items?.length > 0) {
 			const [min, max] = this.dataMapper.sortData(this.data)
-			this.min = min
-			this.max = max
+			this.min = this.absMin = min
+			this.max = this.absMax = max
 		} else {
 			if (this.state.currView != 'genome') {
 				/** Show error message when no data returned. */
@@ -208,9 +210,10 @@ export class HicComponent {
 					if (value) this[prop] = value
 					return this[prop]
 				},
-				error: this.error
+				error: this.error.bind(this)
 			})
 		}
+
 		this.infoBar = new InfoBar({
 			app: this.app,
 			infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
