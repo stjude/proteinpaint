@@ -172,7 +172,15 @@ class HicApp {
 			}
 			await this.api.dispatch()
 		} catch (e: any) {
-			console.error(e.stack)
+			console.error(e.stack || e)
+		}
+	}
+
+	main() {
+		if (this.errList.length) {
+			this.error(this.errList)
+			this.dom.loadingDiv.style('display', 'none')
+			return
 		}
 	}
 }
