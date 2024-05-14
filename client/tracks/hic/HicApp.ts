@@ -21,7 +21,6 @@ class HicApp {
 		plotDiv: Elem
 		tip: Menu
 	}
-	errList: string[]
 	hic: {
 		enzyme?: RestrictionEnzyme
 		file?: string
@@ -42,6 +41,7 @@ class HicApp {
 	/** Required for rx */
 	type: 'app'
 	views = ['genome', 'chrpair', 'detail', 'horizontal']
+	errList: string[] = []
 
 	constructor(opts) {
 		this.type = 'app'
@@ -73,7 +73,6 @@ class HicApp {
 			plotDiv: opts.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block'),
 			tip: new Menu()
 		}
-		this.errList = []
 	}
 
 	async error(err: string | string[]) {
