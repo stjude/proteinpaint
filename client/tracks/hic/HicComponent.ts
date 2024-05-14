@@ -188,7 +188,13 @@ export class HicComponent {
 			this.min = min
 			this.max = max
 		} else {
-			this.errList.push('No data returned.')
+			if (this.state.currView != 'genome') {
+				/** Show error message when no data returned. */
+				const state = this.app.getState(appState)
+				const xPosMessage = state.x?.start ? `${state.x.chr}:${state.x.start}-${state.x.stop}` : state.x.chr
+				const yPosMessage = state.y?.start ? `${state.y.chr}:${state.y.start}-${state.y.stop}` : state.y.chr
+				this.errList.push(`No data returned for ${xPosMessage} and ${yPosMessage}`)
+			}
 		}
 	}
 
