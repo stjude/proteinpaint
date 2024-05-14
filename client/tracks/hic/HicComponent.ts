@@ -227,6 +227,10 @@ export class HicComponent {
 	}
 
 	async main(appState: any) {
+		if (this.errList.length) {
+			this.app.dispatch({ type: 'loading_active', active: false })
+			return
+		}
 		const state = this.app.getState(appState)
 		if (this.firstRender == true) {
 			this.firstRender = false
