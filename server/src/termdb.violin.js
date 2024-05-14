@@ -5,7 +5,7 @@ import { createCanvas } from 'canvas'
 import { getBinsDensity } from '../../server/shared/violin.bins'
 import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
-import { isNumericTerm } from '#shared/terms.js'
+import { isNumericTerm } from '#shared/terms.ts'
 /*
 q = {
   getViolinPlotData: '1',

@@ -14,7 +14,7 @@ import { authApi } from './auth.js'
 import { getResult as geneSearch } from './gene.js'
 import { searchSNP } from '../routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
-import { TermTypeGroups } from '#shared/terms.js'
+import { TermTypeGroups } from '#shared/terms.ts'
 import initBinConfig from '#shared/termdb.initbinconfig'
 import * as bins from '#shared/termdb.bins.js'
 
@@ -173,23 +173,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 	const terms = []
 
 	try {
-		//Snp list and Snp locus will have their own UI
-		if (q.targetType == 'snp') {
-			if (!ds.queries?.snvindel?.allowSNPs) throw 'this dataset does not support snp search'
-			// must convert to lowercase e.g. "rs" but not "RS" for bigbed file search to work
-			const lst = await searchSNP({ byName: true, lst: [str.toLowerCase()] }, genome)
-			for (const s of lst) {
-				terms.push({
-					type: 'geneVariant',
-					name: s.name,
-					subtype: 'snp',
-					chr: s.chrom,
-					start: s.chromStart,
-					stop: s.chromEnd,
-					alleles: s.alleles
-				})
-			}
-		} else if (q.targetType == TermTypeGroups.MUTATION_CNV_FUSION) {
+		if (q.targetType.label == TermTypeGroups.MUTATION_CNV_FUSION.label) {
 			const mayUseGeneVariant = isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')
 
 			if (ds.mayGetMatchingGeneNames && mayUseGeneVariant) {
@@ -233,7 +217,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 					// err is likely "invalid character in gene name". ignore and continue
 				}
 			}
-		} else if (q.targetType == TermTypeGroups.DICTIONARY_VARIABLES) {
+		} else if (q.targetType.label == TermTypeGroups.DICTIONARY_VARIABLES.label) {
 			const _terms = await termdb.q.findTermByName(str, q.cohortStr, q.treeFilter, q.usecase)
 
 			terms.push(..._terms.map(copy_term))

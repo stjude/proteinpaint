@@ -5,7 +5,7 @@ const vocabData = require('./vocabData')
 const TermdbVocab = require('../TermdbVocab').TermdbVocab
 const FrontendVocab = require('../FrontendVocab').FrontendVocab
 const d3s = require('d3-selection')
-const { TermTypeGroups } = require('../../shared/terms.js')
+const { TermTypeGroups } = require('../../shared/terms.ts')
 const testAppInit = require('../../test/test.helpers').testAppInit
 const termjson = require('../../test/testdata/termjson').termjson
 

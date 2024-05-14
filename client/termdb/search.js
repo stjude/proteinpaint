@@ -68,16 +68,9 @@ class TermSearch {
 
 	isTermTypeSupported() {
 		const termTypeGroup = this.state.termTypeGroup
-
-		if (
-			termTypeGroup == TermTypeGroups.SNP_LIST ||
-			termTypeGroup == TermTypeGroups.SNP_LOCUS ||
-			termTypeGroup == TermTypeGroups.MUTATION_SIGNATURE ||
-			termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION ||
-			termTypeGroup == TermTypeGroups.GENE_EXPRESSION
-		)
-			return false
-		return true
+		const supportedGroups = [TermTypeGroups.DICTIONARY_VARIABLES.label]
+		if (supportedGroups.includes(termTypeGroup.label)) return true
+		return false
 	}
 
 	async main() {
@@ -87,7 +80,7 @@ class TermSearch {
 			return
 		}
 		this.dom.input.node().value = ''
-		this.dom.input.attr('placeholder', 'Search ' + this.state.termTypeGroup)
+		this.dom.input.attr('placeholder', 'Search ' + this.state.termTypeGroup.label)
 		this.clear()
 		this.dom.holder.style('display', this.state.isVisible ? 'block' : 'none')
 	}

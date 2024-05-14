@@ -94,8 +94,8 @@ export class TermTypeSearch {
 
 	async addTabsAllowed(state) {
 		for (const type of this.types) {
-			const termTypeGroup = typeGroup[type]
-			let label = termTypeGroup
+			const termTypeGroup: any = Object.values(TermTypeGroups).find(group => group.types.includes(type))
+			let label = termTypeGroup.label
 			if (type == TermTypes.GENE_VARIANT) {
 				const labels: string[] = []
 				if (this.app.vocabApi.termdbConfig.queries.snvindel) labels.push('Mutation')
@@ -111,7 +111,7 @@ export class TermTypeSearch {
 			} catch (e) {
 				throw `error with handler='./handlers/${type}.ts': ${e}`
 			}
-			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
+			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup.label)) {
 				//In regression snplocus and snplst are only allowed for the input variable, disabled for now
 				// if (state.usecase.target == 'regression' && (type == 'snplocus' || type == 'snplst' || type == TermTypes.GENE_VARIANT)) {
 				// 	if (state.usecase.detail == 'independent')
@@ -138,11 +138,11 @@ export class TermTypeSearch {
 
 	async setTermTypeGroup(type, termTypeGroup) {
 		await this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
-		const tab = this.tabs.find(tab => tab.termTypeGroup == termTypeGroup)
+		const tab = this.tabs.find(tab => tab.termTypeGroup.label == termTypeGroup.label)
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
 
-		if (tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+		if (tab.termTypeGroup.label != TermTypeGroups.DICTIONARY_VARIABLES.label) {
 			const handler = this.handlerByType[type]
 			await handler.init({
 				holder,
