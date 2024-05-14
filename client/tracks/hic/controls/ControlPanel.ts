@@ -17,8 +17,6 @@ class ControlPanel {
 		inputBpMaxV?: any
 		matrixTypeRow?: any
 		matrixType?: any
-		widthRow?: any
-		width?: any
 		view?: any
 		genomeViewBtn?: any
 		chrpairViewBtn?: any
@@ -123,34 +121,6 @@ class ControlPanel {
 		this.addLabel(this.controls.matrixTypeRow, 'matrix type')
 		this.controls.matrixType = new MatrixTypeControl(this.controls.matrixTypeRow.append('td'), this.dropdownCallback)
 		this.controls.matrixType.render()
-
-		this.controls.widthRow = menuTable.append('tr') as any
-		this.addLabel(this.controls.widthRow, 'PLOT WIDTH')
-		this.controls.width = this.controls.widthRow
-			.append('td')
-			.style('margin-right', '10px')
-			.append('input')
-			.attr('type', 'number')
-			.style('width', '80px')
-			.style('margin-left', '0px')
-			.attr('type', 'number')
-			.on('keyup', async (event: KeyboardEvent) => {
-				if (event.code != 'Enter') return
-				const v: any = (event.target as HTMLInputElement).value
-				// await this.app.dispatch({
-				// 	type: 'view_update',
-				// 	view: this.parent('activeView'),
-				// 	config: {
-				// 		width: v
-				// 	}
-				// })
-
-				const plot = this.parent('plotDiv').plot.select('canvas').node()
-				const ctx = plot.getContext('2d')
-				const saveContent = ctx.getImageData(0, 0, plot.width, plot.height)
-				plot.width = v
-				ctx.putImageData(saveContent, 0, 0)
-			})
 
 		//View with description, buttons, and zoom when appropriate
 		const viewRow = menuTable.append('tr') as any
@@ -380,7 +350,6 @@ class ControlPanel {
 		this.controls.minCutoffRow.style('display', state.currView == 'horizontal' ? 'none' : '')
 		this.controls.maxCutoffRow.style('display', state.currView == 'horizontal' ? 'none' : '')
 		this.controls.matrixTypeRow.style('display', state.currView == 'horizontal' ? 'none' : '')
-		this.controls.widthRow.style('display', state.currView == 'chrpair' ? '' : 'none')
 	}
 
 	main(appState) {
@@ -398,9 +367,6 @@ class ControlPanel {
 
 		this.controls.inputBpMinV.property('value', this.parent('min'))
 		this.controls.inputBpMaxV.property('value', this.parent('max'))
-
-		const plot = this.parent('plotDiv').plot.select('canvas').node() as HTMLCanvasElement
-		this.controls.width.property('value', plot.clientWidth)
 
 		this.showBtns()
 		this.showHideControls()
