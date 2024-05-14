@@ -174,7 +174,9 @@ async function getSampleData(q) {
 				distanceMethod: 'euclidean',
 				/** Data type */
 				dataType: 3,
-				genes: [{ gene: tw.term.gene }]
+				genes: [{ gene: tw.term.gene }],
+				filter: q.filter,
+				filter0: q.filter0
 			}
 			const data = await q.ds.queries.geneExpression.get(args)
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {

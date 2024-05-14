@@ -44,21 +44,6 @@ export const typeGroup = {
 	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION
 }
 
-export const groupTypes = {
-	[TermTypeGroups.DICTIONARY_VARIABLES]: [
-		TermTypes.CATEGORICAL,
-		TermTypes.INTEGER,
-		TermTypes.FLOAT,
-		TermTypes.CONDITION,
-		TermTypes.SURVIVAL,
-		TermTypes.SAMPLELST
-	],
-	[TermTypeGroups.MUTATION_CNV_FUSION]: [TermTypes.GENE_VARIANT],
-	[TermTypeGroups.GENE_EXPRESSION]: [TermTypes.GENE_EXPRESSION],
-	[TermTypeGroups.SNP_LIST]: [TermTypes.SNP_LIST],
-	[TermTypeGroups.SNP_LOCUS]: [TermTypes.SNP_LOCUS]
-}
-
 const nonDictTypes = new Set([
 	TermTypes.SNP_LIST,
 	TermTypes.SNP_LOCUS,
