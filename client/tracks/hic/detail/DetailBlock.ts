@@ -72,6 +72,8 @@ export class DetailBlock {
 	}
 
 	setMethods(canvasHolder: any, canvas: any, sheath?: any) {
+		/** Inherited methods used elsewhere is pannedby, panning, zoomblock, etc.
+		 * Refer to block.js for those methodsv*/
 		const runPpMethods = {
 			onloadalltk_always: () => {
 				this.onload(canvasHolder, canvas, sheath)

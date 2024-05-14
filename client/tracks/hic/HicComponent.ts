@@ -137,6 +137,10 @@ export class HicComponent {
 			// this.calResolution = this.hic.bpresolution[x + 1]
 			// this.data = await detailMapper.getData(this.state.x, this.state.y)
 			// }
+			if (this.data.items.length == 0) {
+				this.calResolution = this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
+				this.data = await detailMapper.getData(this.state.x, this.state.y)
+			}
 		} else {
 			if (!this.state?.x?.chr || !this.state?.y?.chr) {
 				this.errList.push(`No positions provided for ${this.activeView} view.`)
@@ -149,11 +153,6 @@ export class HicComponent {
 			}
 			const dataFetcher = new DataFetcher(this.hic, true, this.errList)
 			this.data = await dataFetcher.getData(obj)
-			if (this.data.items.length == 0) {
-				/** Maybe change logic to recursive fun? */
-				this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
-				this.data = await dataFetcher.getData(obj)
-			}
 		}
 	}
 
