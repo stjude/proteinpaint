@@ -69,15 +69,8 @@ class TermSearch {
 	isTermTypeSupported() {
 		const termTypeGroup = this.state.termTypeGroup
 
-		if (
-			termTypeGroup == TermTypeGroups.SNP_LIST ||
-			termTypeGroup == TermTypeGroups.SNP_LOCUS ||
-			termTypeGroup == TermTypeGroups.MUTATION_SIGNATURE ||
-			termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION ||
-			termTypeGroup == TermTypeGroups.GENE_EXPRESSION
-		)
-			return false
-		return true
+		if (termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES) return true
+		return false
 	}
 
 	async main() {
