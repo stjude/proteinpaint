@@ -15,16 +15,6 @@ export class Resolution {
 			const resolution = this.getChrPairResolution(hic, state.x, state.y)
 			return resolution
 		} else if (state.currView == 'detail') {
-			// /**Must obtain the resolution for the chr pair before calculating the resolution for the region. */
-			// const viewRangeBpW = this.getDefaultViewSpan(hic, state.x, state.y)
-			// if (!viewRangeBpW) throw `No default span calculated for detail view`
-			// let resolution = null
-			// for (const res of hic.bpresolution) {
-			// 	if (viewRangeBpW / res > this.minBinNum_bp) {
-			// 		resolution = res
-			// 		break
-			// 	}
-			// }
 			const maxBpWidth = Math.max(state.x.stop - state.x.start, state.y.stop - state.y.start)
 			let resolution = null
 			for (const res of hic.bpresolution) {
@@ -73,13 +63,17 @@ export class Resolution {
 
 	updateDetailResolution(bpresolution: any, x: ChrPosition, y: ChrPosition) {
 		let resolution = null
-		/** Pick the biggest span, then choose the next lowest resolution */
-		const maxBpWidth = Math.max(x.stop - x.start, y.stop - y.start)
+		/** Pick the smallest span, then choose the next lowest resolution */
+		const maxBpWidth = Math.min(x.stop - x.start, y.stop - y.start)
 		for (const res of bpresolution) {
 			if (maxBpWidth <= res) {
 				resolution = bpresolution[bpresolution.indexOf(res) - 1]
 				break
 			}
+		}
+		if (resolution == null) {
+			// use finest
+			resolution = bpresolution[bpresolution.length - 1]
 		}
 		return resolution
 	}
