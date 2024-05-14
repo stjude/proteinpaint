@@ -30,11 +30,12 @@ export class HicComponent {
 		controls: []
 	}
 	data: any
+	genomedata: any
 	infoBar: any
 	error: any
 	resolution: Resolution
 	calResolution: number | null = null
-	skipMain = true
+	firstRender = true
 	min = 0
 	max = 0
 	hasStatePreMain = true
@@ -122,8 +123,13 @@ export class HicComponent {
 	async fetchData(obj: any) {
 		if (this.data?.length) this.data = []
 		if (this.state.currView == 'genome') {
-			const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
-			this.data = await genomeFetcher.getData(obj)
+			/** When returning to the genome view, use cached data */
+			if (this.activeView != 'genome') this.data = this.genomedata
+			else {
+				const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
+				this.genomedata = await genomeFetcher.getData(obj)
+				this.data = this.genomedata
+			}
 		} else if (this.state.currView == 'detail') {
 			const parent = (prop: string, value?: string | number) => {
 				if (value) this[prop] = value
@@ -131,12 +137,6 @@ export class HicComponent {
 			}
 			const detailMapper = new DetailDataMapper(this.hic, this.errList, parent)
 			this.data = await detailMapper.getData(this.state.x, this.state.y)
-			/** Don't do this */
-			// if (this.data.items.length == 0) {
-			// const x = this.hic.bpresolution.indexOf(this.calResolution)
-			// this.calResolution = this.hic.bpresolution[x + 1]
-			// this.data = await detailMapper.getData(this.state.x, this.state.y)
-			// }
 			if (this.data.items.length == 0) {
 				this.calResolution = this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
 				this.data = await detailMapper.getData(this.state.x, this.state.y)
@@ -163,86 +163,72 @@ export class HicComponent {
 	}
 
 	setDataArgs(appState: any) {
-		const currView = this.state[this.state.currView]
+		const state = this.app.getState(appState)
+		const currView = state[state.currView]
 		const args = {
 			nmeth: currView.nmeth,
 			resolution: this.setResolution(appState),
 			matrixType: currView.matrixType
 		}
 
-		if (this.state.currView == 'chrpair') {
+		if (state.currView == 'chrpair') {
 			//pos1
-			args['lead'] = this.state.x.chr
+			args['lead'] = state.x.chr
 			//pos2
-			args['follow'] = this.state.y.chr
+			args['follow'] = state.y.chr
 		}
 		return args
 	}
 
-	async init(appState: any) {
-		try {
-			this.activeView = this.state.currView
-			const currView = this.state[this.state.currView]
-			const obj = {
-				matrixType: currView.matrixType,
-				nmeth: currView.nmeth,
-				resolution: this.setResolution(appState)
-			}
-			await this.fetchData(obj)
-			if (this.data?.length > 0 || this.data?.items?.length > 0) {
-				const [min, max] = this.dataMapper.sortData(this.data)
-
-				this.min = min
-				this.max = max
-			} else {
-				this.errList.push('No data returned.')
-			}
-			this.initView()
-			this.components = {
-				controls: await controlPanelInit({
-					app: this.app,
-					controlsDiv: this.dom.controlsDiv,
-					hic: this.hic,
-					state: this.state,
-					parent: (prop: string, value?: string | number) => {
-						if (value) this[prop] = value
-						return this[prop]
-					},
-					error: this.error
-				})
-			}
-			this.infoBar = new InfoBar({
-				app: this.app,
-				infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
-				hic: this.hic,
-				parent: (prop: string) => {
-					return this[prop]
-				},
-				resolution: this.calResolution
-			})
-			this.infoBar.render()
-		} catch (e: any) {
-			this.errList.push(e.message || e)
+	async getViewData(appState: any) {
+		const args = this.setDataArgs(appState)
+		await this.fetchData(args)
+		if (this.data?.length > 0 || this.data?.items?.length > 0) {
+			const [min, max] = this.dataMapper.sortData(this.data)
+			this.min = min
+			this.max = max
+		} else {
+			this.errList.push('No data returned.')
 		}
 	}
 
+	async init() {
+		this.components = {
+			controls: await controlPanelInit({
+				app: this.app,
+				controlsDiv: this.dom.controlsDiv,
+				hic: this.hic,
+				parent: (prop: string, value?: string | number) => {
+					if (value) this[prop] = value
+					return this[prop]
+				},
+				error: this.error
+			})
+		}
+		this.infoBar = new InfoBar({
+			app: this.app,
+			infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
+			hic: this.hic,
+			parent: (prop: string) => {
+				return this[prop]
+			},
+			resolution: this.calResolution
+		})
+		this.infoBar.render()
+	}
+
 	async main(appState: any) {
-		if (this.skipMain == false) {
-			if (this.state.currView != 'horizontal') {
+		const state = this.app.getState(appState)
+		if (this.firstRender == true) {
+			this.firstRender = false
+			await this.getViewData(appState)
+			this.initView()
+		} else {
+			if (state.currView != 'horizontal') {
 				this.app.dispatch({ type: 'loading_active', active: true })
-
-				const args = this.setDataArgs(appState)
-				await this.fetchData(args)
-				if (this.data?.length > 0 || this.data?.items?.length > 0) {
-					const [min, max] = this.dataMapper.sortData(this.data)
-					this.min = min
-					this.max = max
-				} else {
-					this.errList.push('No data returned.')
-				}
+				await this.getViewData(appState)
 			}
-
-			if (this.activeView != this.state.currView) {
+			if (this.activeView != state.currView) {
 				if (this.activeView == 'genome') {
 					this.genome.svg.remove()
 				} else {
@@ -250,16 +236,13 @@ export class HicComponent {
 					this.plotDiv.yAxis.selectAll('*').remove()
 					this.plotDiv.plot.selectAll('*').remove()
 				}
-				this.activeView = this.state.currView
+				this.activeView = state.currView
 				this.initView()
 			} else {
-				this[this.state.currView].update(this.data)
+				this[state.currView].update(this.data)
 			}
-			this.infoBar.update()
-		} else {
-			//main() skipped on init() to avoid confusing behavior
-			this.skipMain = false
 		}
+		this.infoBar.update()
 
 		if (this.errList.length) {
 			this.error(this.errList)
