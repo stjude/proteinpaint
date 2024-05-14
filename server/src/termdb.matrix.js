@@ -251,6 +251,7 @@ async function mayGetSampleFilterSet(q, nonDictTerms) {
 	// 	return
 	// }
 	if (!q.filter) return // no filter, allow snplst/snplocus to return data for all samples
+	if (!q.ds.cohort?.db) return // only for sqlite db
 	return new Set((await get_samples(q.filter, q.ds)).map(i => i.id))
 }
 
