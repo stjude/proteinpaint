@@ -54,23 +54,29 @@ class geneORA {
 					{ label: 'adjusted', value: 'adjusted' },
 					{ label: 'original', value: 'original' }
 				]
-			},
-			{
-				label: 'Gene set group',
-				type: 'dropdown',
-				chartType: 'geneORA',
-				settingsKey: 'pathway',
-				title: 'Display table showing original and adjusted pvalues corresponding to each significant pathway',
-				boxLabel: '',
-				options: [
-					{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
-					{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
-					{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
-					{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
-					{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' }
-				]
 			}
 		]
+
+		const geneSet = {
+			label: 'Gene set group',
+			type: 'dropdown',
+			chartType: 'geneORA',
+			settingsKey: 'pathway',
+			title: 'Display table showing original and adjusted pvalues corresponding to each significant pathway',
+			boxLabel: '',
+			options: [
+				{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
+				{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
+				{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
+				{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
+				{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' }
+			]
+		}
+		if (!this.settings.pathway) {
+			geneSet.options.unshift({ label: '-', value: '-' })
+			this.settings.pathway = '-'
+		}
+		inputs.push(geneSet)
 
 		this.components = {
 			controls: await controlsInit({
@@ -116,16 +122,16 @@ m {}
 add:
 - vo_circle
 	*/
-	if (self.settings.pathway) {
+	if (self.settings.pathway != '-') {
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.config.geneORAparams.geneSetGroup = self.settings.pathway
 		const output = await rungeneORA(self.config.geneORAparams)
 		self.dom.detailsDiv
 			.append('div')
 			.html(
-				'Number of sample genes used for gene over representation analysis:' +
+				'Number of sample genes:' +
 					self.config.geneORAparams.sample_genes.split(',').length +
-					'<br>Number of background genes used for gene over representation analysis:' +
+					'<br>Number of background genes:' +
 					self.config.geneORAparams.background_genes.split(',').length
 			)
 
