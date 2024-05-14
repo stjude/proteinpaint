@@ -1,4 +1,5 @@
 import * as client from '../src/client'
+import { Menu } from '../dom/menu'
 import { renderTable } from '../dom/table'
 import * as d3axis from 'd3-axis'
 import { controlsInit } from './controls'
@@ -21,7 +22,7 @@ this{}
 */
 
 const hlcolor = '#ffa200'
-const tip = new client.Menu()
+const tip = new Menu()
 class DEanalysis {
 	constructor() {
 		this.type = 'DEanalysis'
