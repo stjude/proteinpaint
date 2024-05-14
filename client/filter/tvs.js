@@ -2,7 +2,7 @@ import * as rx from '../rx'
 import { select } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { renderTable } from '../dom/table'
-import { isNumericTerm } from '#shared/common'
+import { isNumericTerm } from '#shared/terms'
 
 /*
 ********************** EXPORTED

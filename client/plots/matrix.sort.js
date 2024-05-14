@@ -1,4 +1,4 @@
-import { isDictionaryType } from '../shared/common'
+import { isDictionaryType } from '../shared/terms'
 
 export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings

@@ -14,7 +14,7 @@ import { authApi } from './auth.js'
 import { getResult as geneSearch } from './gene.js'
 import { searchSNP } from '../routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
-import { TermTypeGroups } from '#shared/common.js'
+import { TermTypeGroups } from '#shared/terms.js'
 import initBinConfig from '#shared/termdb.initbinconfig'
 import * as bins from '#shared/termdb.bins.js'
 

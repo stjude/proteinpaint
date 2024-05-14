@@ -4,7 +4,7 @@ import { dofetch3, isInSession } from '../common/dofetch'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { isDictionaryType } from '#shared/common'
+import { isDictionaryType } from '#shared/terms'
 
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
