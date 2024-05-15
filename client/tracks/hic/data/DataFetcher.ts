@@ -1,4 +1,4 @@
-import { dofetch2 } from '#src/client'
+import { dofetch3 } from '#src/client'
 
 export class DataFetcher {
 	hic: any
@@ -24,7 +24,7 @@ export class DataFetcher {
 		}
 
 		try {
-			const data = await dofetch2('hicdata?', {
+			const data = await dofetch3('hicdata?', {
 				method: 'POST',
 				body: JSON.stringify(arg)
 			})
