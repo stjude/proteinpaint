@@ -86,9 +86,14 @@ export class InfoBar {
 	}
 
 	update() {
-		//need to account for fragments in detail view later
-		const resolutionText = bplen(this.parent('calResolution') || this.resolution)
-		this.resolutionDiv.text(`${resolutionText} bp`)
+		const res = this.parent('calResolution') || this.resolution
+		let resolutionText: string
+		if (res < Math.min(this.hic.bpresolution)) {
+			resolutionText = `${res} fragment${res > 1 ? 's' : ''}`
+		} else {
+			resolutionText = bplen(res)
+		}
+		this.resolutionDiv.text(resolutionText)
 		if (this.parent('state').currView == 'horizontal') {
 			this.colorScaleLabel.style('display', 'none')
 			this.colorScaleDiv.style('display', 'none')

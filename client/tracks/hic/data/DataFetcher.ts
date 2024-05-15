@@ -36,8 +36,7 @@ export class DataFetcher {
 			return data
 		} catch (e: any) {
 			this.errList.push(e.message || e)
-			console.error(e.stack)
-			return
+			if (e.stack) console.error(e.stack)
 		}
 	}
 }
