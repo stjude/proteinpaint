@@ -12,8 +12,10 @@ class ControlPanel {
 		normalizationRow?: any
 		nmeth?: any
 		minCutoffRow?: any
+		minCutoffLabel?: any
 		inputBpMinV?: any
 		maxCutoffRow?: any
+		maxCutoffLabel?: any
 		inputBpMaxV?: any
 		matrixTypeRow?: any
 		matrixType?: any
@@ -100,7 +102,8 @@ class ControlPanel {
 		//***Cutoffs
 		//Min CUTOFF
 		this.controls.minCutoffRow = menuTable.append('tr') as any
-		this.addLabel(this.controls.minCutoffRow, 'Min CUTOFF')
+		//Text updates dynamically from hic component in main()
+		this.controls.minCutoffLabel = this.addLabel(this.controls.minCutoffRow, '')
 		this.controls.inputBpMinV = new CutoffControl(
 			this.controls.minCutoffRow.append('td'),
 			this.parent('min'),
@@ -109,7 +112,8 @@ class ControlPanel {
 
 		//Max CUTOFF
 		this.controls.maxCutoffRow = menuTable.append('tr') as any
-		this.addLabel(this.controls.maxCutoffRow, 'Max CUTOFF')
+		//Text updates dynamically from hic component in main()
+		this.controls.maxCutoffLabel = this.addLabel(this.controls.maxCutoffRow, '')
 		this.controls.inputBpMaxV = new CutoffControl(
 			this.controls.maxCutoffRow.append('td'),
 			this.parent('max'),
@@ -367,6 +371,8 @@ class ControlPanel {
 
 		this.controls.inputBpMinV.property('value', this.parent('min'))
 		this.controls.inputBpMaxV.property('value', this.parent('max'))
+		this.controls.minCutoffLabel.text(`MIN CUTOFF (>= ${Number(this.parent('absMin').toFixed(2))})`)
+		this.controls.maxCutoffLabel.text(`MAX CUTOFF (<= ${Number(this.parent('absMax').toFixed(2))})`)
 
 		this.showBtns()
 		this.showHideControls()
