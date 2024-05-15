@@ -1,15 +1,12 @@
 import path from 'path'
 import { get_samples, get_term_cte, interpolateSqlValues } from './termdb.sql'
 import { getFilterCTEs } from './termdb.filter'
-import run_R from './run_R'
-import fs from 'fs'
-import imagesize from 'image-size'
 import serverconfig from './serverconfig'
-import * as utils from './utils'
-import * as termdbsql from './termdb.sql'
+import { read_file } from './utils'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
 import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/terms'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
+import { dtgeneexpression } from '#shared/common.js'
 
 /*
 
@@ -171,10 +168,8 @@ async function getSampleData(q) {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
 				clusterMethod: 'hierarchical',
-				/** distance method */
-				distanceMethod: 'euclidean',
-				/** Data type */
-				dataType: 3,
+				distanceMethod: 'euclidean', // TODO refactor get() and remove these arg
+				dataType: dtgeneexpression,
 				genes: [{ gene: tw.term.gene }],
 				filter: q.filter,
 				filter0: q.filter0
@@ -490,7 +485,7 @@ export async function mayInitiateMatrixplots(ds) {
 	for (const p of ds.cohort.matrixplots.plots) {
 		if (!p.name) throw '.name missing from one of matrixplots.plots[]'
 		if (p.file) {
-			const matrixConfig = await utils.read_file(path.join(serverconfig.tpmasterdir, p.file))
+			const matrixConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
 			p.matrixConfig = JSON.parse(matrixConfig)
 			if (p.getConfig) p.matrixConfig = p.getConfig(p.matrixConfig)
 		} else {
