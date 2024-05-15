@@ -126,7 +126,7 @@ export class HicComponent {
 		if (this.data?.length) this.data = []
 		if (this.state.currView == 'genome') {
 			/** When returning to the genome view, use cached data */
-			if (this.activeView != 'genome') this.data = this.genomedata
+			if (this.activeView != 'genome' && this.genomedata?.length) this.data = this.genomedata
 			else {
 				const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
 				this.genomedata = await genomeFetcher.getData(obj)
@@ -186,9 +186,10 @@ export class HicComponent {
 		const args = this.setDataArgs(appState)
 		await this.fetchData(args)
 		if (this.data?.length > 0 || this.data?.items?.length > 0) {
-			const [min, max] = this.dataMapper.sortData(this.data)
+			const [min, max, absMax] = this.dataMapper.sortData(this.data)
 			this.min = this.absMin = min
-			this.max = this.absMax = max
+			this.max = max
+			this.absMax = absMax
 		} else {
 			if (this.state.currView != 'genome') {
 				/** Show error message when no data returned. */
