@@ -69,7 +69,8 @@ class geneORA {
 				{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
 				{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
 				{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
-				{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' }
+				{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
+				{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
 			]
 		}
 		if (!this.settings.pathway) {

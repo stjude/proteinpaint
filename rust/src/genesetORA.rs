@@ -178,7 +178,6 @@ fn main() -> Result<()> {
                                     }
                                 }
                             }
-                            println!("Number of pathway entries:{}", iter);
                         }
                         Err(_) => panic!("sqlite database file not found"),
                     }
@@ -201,7 +200,10 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>, num_items_output: usize) -> String {
+fn adjust_p_values(
+    mut original_p_values: Vec<pathway_p_value>,
+    mut num_items_output: usize,
+) -> String {
     // Sorting p-values in ascending order
     original_p_values.as_mut_slice().sort_by(|a, b| {
         (a.p_value_original)
@@ -244,6 +246,10 @@ fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>, num_items_output
             .partial_cmp(&b.p_value_adjusted.unwrap())
             .unwrap_or(Ordering::Equal)
     });
+
+    if num_items_output > adjusted_p_values.len() {
+        num_items_output = adjusted_p_values.len()
+    }
 
     let mut output_string = "[".to_string();
     for i in 0..num_items_output {
