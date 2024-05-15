@@ -14,6 +14,7 @@ import { setAppMiddlewares } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
 import { authApi } from './auth.js'
 import * as phewas from './termdb.phewas.js'
+import { sendMessageToSlack } from './postOnSlack.js'
 
 const basepath = serverconfig.basepath || ''
 
@@ -95,12 +96,29 @@ export async function launch() {
 		if (exitCode) console.error('\n!!!\n' + err + '\n\n')
 		else console.log('\n!!!\n' + err + '\n\n')
 		/*
-		when the app server is monitored by another process via the command line,
-		process.exit(1) is required to stop execution flow with `set -e`
-		and thereby avoid unnecessary endless restarts of an invalid server
-		init with bad config, data, and/or code
-		*/
-		process.exit(exitCode)
+        when the app server is monitored by another process via the command line,
+        process.exit(1) is required to stop execution flow with `set -e`
+        and thereby avoid unnecessary endless restarts of an invalid server
+        init with bad config, data, and/or code
+        */
+
+		if (serverconfig.slackWebhookUrl) {
+			const url = serverconfig.URL
+			const message = `Startup error on: ${url} \n` + `${err.stack ? err.stack : err}`
+			await sendMessageToSlack(
+				serverconfig.slackWebhookUrl,
+				message,
+				path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+			)
+				.then(() => {
+					process.exit(exitCode)
+				})
+				.catch(() => {
+					process.exit(exitCode)
+				})
+		} else {
+			process.exit(exitCode)
+		}
 	}
 }
 
