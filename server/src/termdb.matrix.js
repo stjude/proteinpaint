@@ -110,7 +110,8 @@ async function getSampleData(q) {
 		return { samples, refs: { byTermId, bySampleId: {} } }
 	}
 
-	const sampleFilterSet = await mayGetSampleFilterSet(q, nonDictTerms) // conditionally returns a set of sample ids
+	const sampleFilterSet = await mayGetSampleFilterSet4snplst(q, nonDictTerms) // conditionally returns a set of sample ids, FIXME *only* for snplst and snplocus data download in supported ds, not for anything else. TODO remove this bad quick fix
+
 	for (const tw of nonDictTerms) {
 		if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
 
@@ -244,14 +245,13 @@ export function getBin(lst, value) {
 	return bin
 }
 
-async function mayGetSampleFilterSet(q, nonDictTerms) {
+async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {
 	// // if snplst/snplocus term is present, they will need the set of samples passing filter, to only return gt data for those samples
-	// if (!nonDictTerms.find(i => i.term.type == 'snplst' || i.term.type == 'snplocus')) {
-	// 	// no such term
-	// 	return
-	// }
+	if (!nonDictTerms.find(i => i.term.type == 'snplst' || i.term.type == 'snplocus')) {
+		// no such term
+		return
+	}
 	if (!q.filter) return // no filter, allow snplst/snplocus to return data for all samples
-	if (!q.ds.cohort?.db) return // only for sqlite db
 	return new Set((await get_samples(q.filter, q.ds)).map(i => i.id))
 }
 
