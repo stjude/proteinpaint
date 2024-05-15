@@ -182,8 +182,6 @@ async function getSampleData(q) {
 			const data = await q.ds.queries.geneExpression.get(args)
 			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
 				if (!(sampleId in samples)) {
-					if (dictTerms.length) continue // only create a sample entry/row when it is not already filtered out by not having any dictionary term values
-					if (sampleFilterSet && !sampleFilterSet.has(Number(sampleId))) continue
 					samples[sampleId] = { sample: sampleId }
 				}
 				const values = data.gene2sample2value.get(tw.term.gene)
@@ -221,7 +219,6 @@ async function getSampleData(q) {
 			bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }
 		}
 	}
-
 	return { samples, refs: { byTermId, bySampleId } }
 }
 
@@ -388,7 +385,6 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			samples[sample][term_id].values.push({ key, value })
 		}
 	}
-
 	return [samples, byTermId]
 }
 
@@ -453,12 +449,12 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		const s2 = {
 			sample: s.sample_id
 		}
-
 		for (const tw of termWrappers) {
 			const id = tw.term.id || tw.term.name
 			const $id = tw.$id || id
 			if (!tw.$id) tw.$id = $id
 			const v = s[id]
+
 			////////////////////////////
 			// somehow value can be undefined! must skip them
 			////////////////////////////
