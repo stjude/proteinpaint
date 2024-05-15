@@ -295,11 +295,11 @@ async function updateUI(self) {
 	if (!self.filterPrompt)
 		self.filterPrompt = await filterPromptInit({
 			holder: self.dom.addNewGroupBtnHolder,
-			vocab: self.app.opts.state.vocab,
+			vocabApi: self.app.vocabApi,
 			emptyLabel: 'Add group',
 			termdbConfig: self.state.termdbConfig,
 			callback: f => {
-				addNewGroup(self.app, f, groups)
+				addNewGroup(self.app, f, self.state.groups)
 			},
 			debug: self.opts.debug
 		})

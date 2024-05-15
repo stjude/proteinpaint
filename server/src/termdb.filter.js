@@ -54,7 +54,7 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			f = await get_geneExpression(item.tvs, CTEname_i, ds)
 		} else if (
 			item.tvs.term.id &&
-			isDictionaryType(item.tvs.term.type) &&
+			(!item.tvs.term.type || isDictionaryType(item.tvs.term.type)) &&
 			!ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)
 		) {
 			throw 'invalid term id in tvs'
