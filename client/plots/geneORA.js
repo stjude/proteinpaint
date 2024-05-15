@@ -132,7 +132,9 @@ add:
 				'Number of sample genes:' +
 					self.config.geneORAparams.sample_genes.split(',').length +
 					'<br>Number of background genes:' +
-					self.config.geneORAparams.background_genes.split(',').length
+					self.config.geneORAparams.background_genes.split(',').length +
+					'<br>Number of pathways analyzed:' +
+					output.num_pathways
 			)
 
 		// Generating the table
@@ -142,7 +144,7 @@ add:
 			{ label: 'Adjusted p-value (linear scale)' }
 		]
 		self.gene_ora_table_rows = []
-		for (const pathway of output) {
+		for (const pathway of output.pathways) {
 			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.p_value_adjusted) {
 				self.gene_ora_table_rows.push([
 					{ value: pathway.pathway_name },

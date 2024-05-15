@@ -112,12 +112,12 @@ fn main() -> Result<()> {
                             + &genesetgroup
                             + "'"),
                     );
+                    let mut iter = 0;
                     match stmt_result {
                         Ok(mut stmt) => {
                             #[allow(non_snake_case)]
                             let GO_iter =
                                 stmt.query_map([], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
-                            let mut iter = 0;
                             #[allow(non_snake_case)]
                             for GO_term in GO_iter {
                                 iter += 1;
@@ -182,10 +182,12 @@ fn main() -> Result<()> {
                         }
                         Err(_) => panic!("sqlite database file not found"),
                     }
-                    println!(
-                        "pathway_p_values:{}",
-                        adjust_p_values(pathway_p_values, num_items_output)
-                    );
+                    let output_string = "{\"num_pathways\":".to_string()
+                        + &iter.to_string()
+                        + &",\"pathways\":"
+                        + &adjust_p_values(pathway_p_values, num_items_output)
+                        + &"}";
+                    println!("pathway_p_values:{}", output_string);
                     println!(
                         "Time for calculating gene overrepresentation:{:?}",
                         run_time.elapsed()
