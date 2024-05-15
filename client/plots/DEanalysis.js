@@ -1,4 +1,4 @@
-import * as client from '../src/client'
+import { axisstyle, make_table_2col } from '../src/client'
 import { Menu } from '../dom/menu'
 import { renderTable } from '../dom/table'
 import * as d3axis from 'd3-axis'
@@ -361,12 +361,12 @@ add:
 		logfc0line.attr('x1', xscale(0)).attr('x2', xscale(0)).attr('y2', height)
 
 		svg.attr('width', yaxisw + xpad + width + rightpad).attr('height', toppad + height + ypad + xaxish)
-		client.axisstyle({
+		axisstyle({
 			axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
 			color: 'black',
 			showline: true
 		})
-		client.axisstyle({
+		axisstyle({
 			axis: xaxisg.call(d3axis.axisBottom().scale(xscale)),
 			color: 'black',
 			showline: true
@@ -392,7 +392,7 @@ add:
 			maxlogpv = Math.max(maxlogpv, pv)
 		}
 		yscale.domain([minlogpv, maxlogpv])
-		client.axisstyle({
+		axisstyle({
 			axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
 			color: 'black',
 			showline: true
@@ -559,7 +559,7 @@ function circlemouseover(event, d) {
 		{ k: 'log original p-value', v: d.original_p_value },
 		{ k: 'log adjusted p-value', v: d.adjusted_p_value }
 	]
-	client.make_table_2col(tip.d, lst)
+	make_table_2col(tip.d, lst)
 
 	if (!d.ma_label) {
 		d3select(d.ma_circle).attr('fill-opacity', 0.9)
