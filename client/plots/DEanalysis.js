@@ -1,4 +1,5 @@
-import { axisstyle, make_table_2col } from '../src/client'
+import { axisstyle } from '#dom/axisstyle'
+import { table2col } from '#dom/table2col'
 import { Menu } from '../dom/menu'
 import { renderTable } from '../dom/table'
 import * as d3axis from 'd3-axis'
@@ -559,7 +560,7 @@ function circlemouseover(event, d) {
 		{ k: 'log original p-value', v: d.original_p_value },
 		{ k: 'log adjusted p-value', v: d.adjusted_p_value }
 	]
-	make_table_2col(tip.d, lst)
+	table2col(tip.d, lst)
 
 	if (!d.ma_label) {
 		d3select(d.ma_circle).attr('fill-opacity', 0.9)
