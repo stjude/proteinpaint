@@ -38,7 +38,7 @@ export class GenomeDataFetcher {
 			return res.data
 		} catch (e: any) {
 			this.errList.push(e.message || e)
-			console.error(e.stack)
+			if (e.stack) console.error(e.stack)
 		}
 	}
 }

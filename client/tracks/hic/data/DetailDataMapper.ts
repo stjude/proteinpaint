@@ -78,7 +78,7 @@ export class DetailDataMapper {
 			}
 		} catch (e: any) {
 			this.errList.push(e.message || e)
-			console.error(e.stack)
+			if (e.stack) console.error(e.stack)
 		}
 	}
 
