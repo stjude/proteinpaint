@@ -70,7 +70,7 @@ export class InfoBar {
 
 		//TODO: Include upper line to show min cutoff when min < 0
 		this.colorScale = new ColorScale({
-			barheight: 10,
+			barheight: 14,
 			barwidth: 85,
 			holder: this.colorScaleDiv,
 			startColor: this.startColor,
@@ -79,6 +79,7 @@ export class InfoBar {
 			tickPosition: 'bottom',
 			data: [this.parent('min'), this.parent('max')],
 			ticks: 2,
+			tickSize: 3,
 			width: 120
 		})
 		await this.colorScale.render()
