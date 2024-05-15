@@ -1,4 +1,4 @@
-import { dofetch2 } from '#src/client'
+import { dofetch3 } from '#src/client'
 
 export class GenomeDataFetcher {
 	hic: any
@@ -16,7 +16,7 @@ export class GenomeDataFetcher {
 		if (this.data.length) this.data = []
 		if (!obj?.matrixType) obj.matrixType = 'observed'
 		try {
-			const res = await dofetch2('hicgenome?', {
+			const res = await dofetch3('hicgenome?', {
 				method: 'POST',
 				body: JSON.stringify({
 					chrlst: this.hic.chrlst,
