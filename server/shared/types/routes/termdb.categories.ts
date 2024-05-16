@@ -1,5 +1,5 @@
 import { Filter } from '../filter.ts'
-import { Term } from '#shared/types/term.ts'
+import { Term } from '#shared/types/terms/term.ts'
 
 export type getcategoriesRequest = {
 	genome: string

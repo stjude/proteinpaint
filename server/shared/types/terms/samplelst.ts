@@ -1,4 +1,4 @@
-import { Term, BaseQ } from '../term.ts'
+import { Term, BaseQ } from './term.ts'
 import { TermWrapper } from './tw.js'
 import { TermSettingInstance } from '../termsetting.ts'
 

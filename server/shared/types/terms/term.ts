@@ -5,7 +5,8 @@ import { NumericQ } from './numeric.ts'
 import { GeneVariantQ } from './geneVariant.ts'
 import { SampleLstQ } from './samplelst.ts'
 import { SnpsQ } from './snps.ts'
-import { Term, Q } from './tw.ts'
+import { Q } from './tw.ts'
+import { PresetNumericBins } from './numeric.ts'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -91,6 +92,7 @@ export type Term = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
+	bins?: PresetNumericBins
 	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
 }
 
