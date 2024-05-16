@@ -1,4 +1,5 @@
-import { Term, BaseQ, BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting } from './term.ts'
+import { Term, BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting } from './term.ts'
+import { BaseQ } from './term.ts'
 
 /**
  *
@@ -81,7 +82,7 @@ export type NumericTerm = Term & {
 	id: string
 	// these concrete term.type values make it clear that only these are numeric,
 	// "categorical", "condition", and other term.types are not included in this union
-	type: 'integer' | 'float'
+	type: 'integer' | 'float' | 'geneExpression'
 	bins: PresetNumericBins
 	values?: TermValues
 	/*densityNotAvailable?: boolean //Not used?

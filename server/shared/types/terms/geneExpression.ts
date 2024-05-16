@@ -1,5 +1,7 @@
-import { TermWrapper, BaseQ, Term } from '../termdb.ts'
+import { TermWrapper } from '../tw.ts'
+import { BaseQ } from '../term.ts'
 import { TermSettingInstance } from '../termsetting.ts'
+import { NumericTerm } from './numeric.js'
 
 /*
 --------EXPORTED--------
@@ -18,9 +20,8 @@ export type GeneExpressionTW = TermWrapper & {
 	term: GeneExpressionTerm
 }
 
-export type GeneExpressionTerm = Term & {
+export type GeneExpressionTerm = NumericTerm & {
 	gene: string
-	bins: any
 }
 
 export type GeneExpressionTermSettingInstance = TermSettingInstance & {
