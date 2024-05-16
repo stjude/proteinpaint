@@ -107,7 +107,7 @@ class geneORA {
 			.style('opacity', 0.6)
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
-			.text('GENE OVERREPRESENTATION ANALYSIS')
+			.text('GENE SET OVERREPRESENTATION ANALYSIS')
 		render_geneORA(this)
 	}
 }

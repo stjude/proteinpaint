@@ -118,7 +118,7 @@ class DEanalysis {
 		if (this.app.opts.genome.termdbs) {
 			// Check if genome build contains termdbs, only then enable gene ora
 			inputs.push({
-				label: 'Gene overrepresentation analysis',
+				label: 'Gene set overrepresentation analysis',
 				type: 'radio',
 				chartType: 'DEanalysis',
 				settingsKey: 'gene_ora',
@@ -416,13 +416,13 @@ add:
 		self.dom.detailsDiv
 			.append('div')
 			.html(
-				'Percentage of significant genes:' +
+				'Percentage of significant genes: ' +
 					((num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)).toFixed(2) +
-					'<br>Number of significant genes:' +
+					'<br>Number of significant genes: ' +
 					num_significant_genes +
-					'<br>Sample size of group1:' +
+					'<br>Sample size of group1: ' +
 					sample_size1 +
-					'<br>Sample size of group2:' +
+					'<br>Sample size of group2: ' +
 					sample_size2
 			)
 		self.table_cols = [
@@ -560,7 +560,12 @@ function circlemouseover(event, d) {
 		{ k: 'log original p-value', v: d.original_p_value },
 		{ k: 'log adjusted p-value', v: d.adjusted_p_value }
 	]
-	table2col(tip.d, lst)
+	const table = table2col({ holder: tip.d })
+	for (const item of lst) {
+		const [td1, td2] = table.addRow()
+		td1.text(item.k)
+		td2.text(item.v)
+	}
 
 	if (!d.ma_label) {
 		d3select(d.ma_circle).attr('fill-opacity', 0.9)
