@@ -129,18 +129,28 @@ add:
 		self.config.geneORAparams.geneSetGroup = self.settings.pathway
 		const output = await rungeneORA(self.config.geneORAparams)
 		const table_stats = table2col({ holder: self.dom.detailsDiv })
-		const [td1, td2] = table_stats.addRow()
-		td1.text('')
-		td2.text('Count')
-		const [td3, td4] = table_stats.addRow()
-		td3.text('Sample genes')
-		td4.text(self.config.geneORAparams.sample_genes.split(',').length)
-		const [td5, td6] = table_stats.addRow()
-		td5.text('Background genes')
-		td6.text(self.config.geneORAparams.background_genes.split(',').length)
-		const [td7, td8] = table_stats.addRow()
-		td7.text('Pathways analyzed')
-		td8.text(output.num_pathways)
+		const [t1, t2] = table_stats.addRow()
+		t2.style('text-align', 'center').style('font-size', '0.8em').style('opacity', '0.8').text('COUNT')
+		const addStats = [
+			{
+				label: 'Sample genes',
+				values: self.config.geneORAparams.sample_genes.split(',').length
+			},
+			{
+				label: 'Background genes',
+				values: self.config.geneORAparams.background_genes.split(',').length
+			},
+			{
+				label: 'Pathways analyzed',
+				values: output.num_pathways
+			}
+		]
+
+		for (const dataRow of addStats) {
+			const [td1, td2] = table_stats.addRow()
+			td1.text(dataRow.label)
+			td2.style('text-align', 'end').text(dataRow.values)
+		}
 
 		// Generating the table
 		self.gene_ora_table_cols = [
@@ -153,8 +163,8 @@ add:
 			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.p_value_adjusted) {
 				self.gene_ora_table_rows.push([
 					{ value: pathway.pathway_name },
-					{ value: pathway.p_value_original },
-					{ value: pathway.p_value_adjusted }
+					{ value: pathway.p_value_original.toPrecision(4) },
+					{ value: pathway.p_value_adjusted.toPrecision(4) }
 				])
 			} else if (
 				self.settings.adjusted_original_pvalue == 'original' &&
@@ -162,14 +172,14 @@ add:
 			) {
 				self.gene_ora_table_rows.push([
 					{ value: pathway.pathway_name },
-					{ value: pathway.p_value_original },
-					{ value: pathway.p_value_adjusted }
+					{ value: pathway.p_value_original.toPrecision(4) },
+					{ value: pathway.p_value_adjusted.toPrecision(4) }
 				])
 			}
 		}
 
 		self.dom.tableDiv.selectAll('*').remove()
-		const d_ora = self.dom.tableDiv.append('div').html(`<br>Gene over-representation results`)
+		const d_ora = self.dom.tableDiv.append('div')
 		renderTable({
 			columns: self.gene_ora_table_cols,
 			rows: self.gene_ora_table_rows,
