@@ -7,7 +7,8 @@ import {
 	BaseTW,
 	EmptyGroupSetting,
 	PredefinedGroupSetting,
-	CustomGroupSetting
+	CustomGroupSetting,
+	ValuesGroup
 } from './term.ts'
 
 /*
@@ -32,15 +33,6 @@ export type CategoricalValuesObject = {
 	values: {
 		[key: string]: BaseValue
 	}
-	groupsetting: EmptyGroupSetting
-}
-
-export type ValuesGroup = {
-	name: string
-	values: {
-		key: string
-		label: string
-	}[]
 	groupsetting: EmptyGroupSetting
 }
 
