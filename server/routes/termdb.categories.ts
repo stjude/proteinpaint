@@ -214,7 +214,7 @@ function getDefaultQ(
 ) {
 	if (term.type == 'categorical') return {}
 	if (term.type == 'survival') return {}
-	if (term.type == 'integer' || term.type == 'float') return term.bins.default
+	if (term.type == 'integer' || term.type == 'float') return term.bins!.default
 	if (term.type == 'condition') {
 		return {
 			mode: q.mode,

@@ -68,7 +68,7 @@ export type CustomNumericBinConfig = {
 	rounding: string
 }*/
 
-type PresetNumericBins = {
+export type PresetNumericBins = {
 	default: RegularNumericBinConfig | CustomNumericBinConfig
 	less: RegularNumericBinConfig | CustomNumericBinConfig
 	label_offset?: number

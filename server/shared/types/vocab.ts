@@ -1,4 +1,5 @@
-import { Term, TermWrapper } from './terms/tw.ts'
+import { TermWrapper } from './terms/tw.ts'
+import { Term } from './terms/term.ts'
 import { Filter } from './filter.ts'
 import { UseCase } from './termsetting.ts'
 

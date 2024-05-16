@@ -2,7 +2,7 @@ import { getInitFxn, copyMerge, deepEqual } from '../rx/index'
 import { Menu } from '../dom/menu'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
-import { Term, Q, TermWrapper, TwLst } from '../shared/types/terms/tw'
+import { Q, TermWrapper, TwLst } from '../shared/types/terms/tw'
 import {
 	DetermineQ,
 	VocabApi,
@@ -10,7 +10,8 @@ import {
 	UseCase,
 	NoTermPromptOptsEntry,
 	Filter,
-	SampleCountsEntry
+	SampleCountsEntry,
+	Term
 } from '../shared/types/index'
 import { TermSettingOpts, Handler, PillData } from './types'
 import { CategoricalQ } from '../shared/types/terms/categorical'
