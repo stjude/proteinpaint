@@ -254,26 +254,22 @@ class ControlPanel {
 	}
 
 	minCallback = (v: string | number) => {
-		this.parent('min', Number(v))
 		if (Number(v) > Number(this.parent('max'))) {
 			this.error('Min cutoff cannot be greater than max cutoff')
-		} else if (Number(v) < Number(this.parent('absMin'))) {
-			this.error(`Min cutoff cannot be less than minimum value = ${this.parent('absMin')}`)
 		} else {
+			this.parent('min', Number(v))
 			this.reColorHeatmap()
 			this.parent('infoBar').update()
 		}
 	}
 
 	maxCallback = (v: string | number) => {
-		this.parent('max', Number(v))
 		if (Number(v) < Number(this.parent('min'))) {
 			this.error(`Max cutoff cannot be less than min cutoff`)
 		} else if (Number(v) < 0) {
 			this.error(`Max cutoff cannot be less than 0`)
-		} else if (Number(v) > Number(this.parent('absMax'))) {
-			this.error(`Max cutoff cannot be greater than maxiumum value = ${this.parent('absMax')}`)
 		} else {
+			this.parent('max', Number(v))
 			this.reColorHeatmap()
 			this.parent('infoBar').update()
 		}
