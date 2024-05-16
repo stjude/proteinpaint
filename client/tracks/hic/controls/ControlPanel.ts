@@ -371,8 +371,8 @@ class ControlPanel {
 
 		this.controls.inputBpMinV.property('value', this.parent('min'))
 		this.controls.inputBpMaxV.property('value', this.parent('max'))
-		this.controls.minCutoffLabel.text(`MIN CUTOFF (>= ${Number(this.parent('absMin').toFixed(2))})`)
-		this.controls.maxCutoffLabel.text(`MAX CUTOFF (<= ${Number(this.parent('absMax').toFixed(2))})`)
+		this.controls.minCutoffLabel.html(`MIN CUTOFF <br>(>= ${Number(this.parent('absMin').toFixed(6))})`)
+		this.controls.maxCutoffLabel.html(`MAX CUTOFF <br>(<= ${Number(this.parent('absMax').toFixed(6))})`)
 
 		this.showBtns()
 		this.showHideControls()
