@@ -1,5 +1,4 @@
 import { BaseTW, BaseQ, Term } from './term.ts'
-import { TermWrapper } from './tw.ts'
 import { TermSettingInstance, InstanceDom, UseCase } from '../termsetting.ts'
 import { VocabApi } from '../vocab.ts'
 import { Tvs, Filter } from '../filter.ts'

@@ -1,7 +1,6 @@
 export * from './genome.ts'
 export * from './dataset.ts'
 export * from './termsetting.ts'
-export * from './termdb.ts'
 export * from './filter.ts'
 export * from './vocab.ts'
 export * from './terms/categorical.ts'

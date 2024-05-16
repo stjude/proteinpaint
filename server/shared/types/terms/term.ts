@@ -1,4 +1,11 @@
 import { Filter } from '../filter.ts'
+import { CategoricalQ } from './terms/categorical.ts'
+import { ConditionQ } from './terms/condition.ts'
+import { NumericQ } from './terms/numeric.ts'
+import { GeneVariantQ } from './terms/geneVariant.ts'
+import { SampleLstQ } from './terms/samplelst.ts'
+import { SnpsQ } from './terms/snps.ts'
+import { Term, Q } from './terms/tw.ts'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -86,12 +93,106 @@ export type Term = {
 	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
 }
 
+type HiddenValues = {
+	[index: string]: number
+}
+
+export type RangeEntry = {
+	//Used binconfig.lst[] and in tvs.ranges[]
+	start?: number
+	startunbounded?: boolean
+	startinclusive?: boolean
+	stop?: number
+	stopunbounded?: boolean
+	stopinclusive?: boolean
+	label?: string //for binconfig.lst[]
+	value?: string //for tvs.ranges[]
+	range?: any //No idea what this is
+}
+
+export type GroupSetting = {
+	/** If true, apply and will require the following attributes */
+	inuse?: boolean
+	disabled?: boolean
+	useIndex?: number
+	/**Value is array index of term.groupsetting.lst[] */
+	predefined_groupset_idx?: number
+	lst?: GroupSetEntry[]
+	/** When “predefined_groupset_idx” is undefined, will use this set of groups.
+	This is a custom set of groups either copied from predefined set, or created with UI.
+	Custom set definition is the same as a predefined set. */
+	customset?: BaseGroupSet
+}
+
 export type BaseQ = {
-	mode?: string
-	isAtomic?: true
-	reuseId?: string
+	groups?: any // Not documented but appears in condition and samplelst?? same as groupsetting?
+	groupsetting?: GroupSetting
+	/**Automatically set by fillTermWrapper()
+	Applies to barchart, survival plot, and cuminc plot.
+	Contains categories of a term to be hidden in its chart. This should only apply to client-side rendering, and should not be part of “dataName” when requesting data from server. Server will always provide a summary for all categories. It’s up to the client to show/hide categories.
+	This allows the key visibility to be stored in state, while toggling visibility will not trigger data re-request.
+	Currently termsetting menu does not manage this attribute. It’s managed by barchart legend.
+	*/
+	hiddenValues?: HiddenValues
+	/**indicates this object should not be extended by a copy-merge tool */
+	isAtomic?: boolean
+	/** Describes list of custom bins. */
+	lst?: RangeEntry[]
 	name?: string
-	hiddenValues?: {
-		[key: string]: boolean | number
+	mode?:
+		| 'discrete'
+		/** Binary is a special case of discrete. */
+		| 'binary'
+		| 'continuous'
+		/** Only for numeric terms in regression analysis. Requires q.knots */
+		| 'spline'
+		/** Only applies to condition term. Requires q.breaks[] to have one grade value.*/
+		| 'cuminc'
+		/** Only applies to condition term for cox regression outcome. Requires q.breaks[] to have one grade value, for event and q.timeScale.*/
+		| 'cox'
+
+	reuseId?: string
+	/** To define ways to divide up cohort based on a term, using methods specific to term types.*/
+	type?: /** Requires term.values{} to access categories for categorical term, and grade for condition term */
+	| 'values'
+		/** Applies to numeric terms */
+		| 'regular-bin'
+		/** Applies to numeric terms */
+		| 'custom-bin'
+		/** Applies to categorical and condition terms */
+		| 'predefined-groupset'
+		/** Applies to categorical and condition terms */
+		| 'custom-groupset'
+		| 'custom-samplelst'
+}
+
+/*** types supporting Term types ***/
+
+export type Subconditions = {
+	[index: string | number]: {
+		label: string
 	}
 }
+
+type ValueConversion = {
+	/**name of unit for the original value */
+	fromUnit: string
+	/** name of converted unit.
+	when converting day to year, resulting value will be `X year Y day`, that the fromUnit is used to indicate residue days from the last year; it's also printed in termsetting ui
+	this logic does not hold if converting from year to day, should detect if scaleFactor is >1 or <1 */
+	toUnit: string
+}
+
+export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
+	? NumericQ
+	: T extends 'categorical'
+	? CategoricalQ
+	: T extends 'condition'
+	? ConditionQ
+	: T extends 'geneVariant'
+	? GeneVariantQ
+	: T extends 'samplelst'
+	? SampleLstQ
+	: T extends 'snplst' | 'snplocus'
+	? SnpsQ
+	: Q

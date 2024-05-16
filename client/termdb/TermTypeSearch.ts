@@ -1,4 +1,4 @@
-import { Term } from '#shared/types/termdb.ts'
+import { Term } from '#shared/types/terms/term.ts'
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
 import { TermTypeGroups, TermTypes, typeGroup } from '#shared/terms'
