@@ -9,10 +9,16 @@ import {
 } from '#shared/types/routes/termdb.cluster.ts'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import { GeneExpressionQuery, GeneExpressionQueryNative, GeneExpressionQueryGdc } from '#shared/types/dataset.ts'
+import {
+	GeneExpressionQuery,
+	GeneExpressionQueryNative,
+	GeneExpressionQueryGdc,
+	MetaboliteIntensityQuery,
+	MetaboliteIntensityQueryNative
+} from '#shared/types/dataset.ts'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
-import { dtgeneexpression } from '#shared/common.js'
+import { dtgeneexpression, dtmetaboliteintensity } from '#shared/common.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
 
@@ -177,6 +183,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 	{
 		// is a gene-by-sample matrix file
 		const lines = await utils.get_header_tabix(q.file)
+		console.log(lines[0])
 		if (!lines[0]) throw 'header line missing from ' + q.file
 		const l = lines[0].split('\t')
 		if (l.slice(0, 4).join('\t') != '#chr\tstart\tstop\tgene') throw 'header line has wrong content for columns 1-4'
@@ -249,5 +256,90 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
 		return { gene2sample2value, byTermId, bySampleId }
+	}
+}
+
+export async function validate_query_metaboliteIntensity(ds: any, genome: any) {
+	const q: MetaboliteIntensityQuery = ds.queries.metabolomics
+	if (!q) return
+	q.metabolite2bins = {}
+
+	if (q.src == 'native') {
+		await validateMetaboliteIntensityNative(q as MetaboliteIntensityQueryNative, ds, genome)
+		return
+	}
+	throw 'unknown queries.metabolomics.src'
+}
+
+async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNative, ds: any, genome: any) {
+	if (!q.file.startsWith(serverconfig.tpmasterdir)) q.file = path.join(serverconfig.tpmasterdir, q.file)
+	if (!q.samples) q.samples = []
+	await utils.validate_txtfile(q.file)
+	q.samples = [] as number[]
+
+	{
+		// is a metabolite-by-sample matrix file
+		const lines = await utils.get_header_txt(q.file)
+		console.log(lines[0])
+		if (!lines[0].startsWith('#Metabolites')) throw 'header line missing from ' + q.file
+		const l = lines[0].split('\t')
+		for (let i = 1; i < l.length; i++) {
+			const id = ds.cohort.termdb.q.sampleName2id(l[i])
+			if (id == undefined) throw 'queries.metabolomics: unknown sample from header: ' + l[i]
+			q.samples.push(id)
+		}
+		console.log(q.samples.length, 'samples from metaboliteIntensity of', ds.label)
+	}
+
+	q.get = async (param: TermdbClusterRequest) => {
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, must still return expected structure with no data
+			return { metabolite2sample2value: new Set(), byTermId: {}, bySampleId: {} }
+		}
+
+		// has at least 1 sample passing filter and with intensity data
+		// TODO what if there's just 1 sample not enough for clustering?
+		const bySampleId = {}
+		const samples = q.samples || []
+		if (limitSamples) {
+			for (const sid of limitSamples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		} else {
+			// use all samples with exp data
+			for (const sid of samples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		}
+
+		const metabolite2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
+
+		for (const m of param.metabolites) {
+			if (!m.metabolite) continue
+
+			const s2v = {}
+			await utils.get_lines_txtfile({
+				args: [q.file],
+				callback: line => {
+					const l = line.split('\t')
+					// case-insensitive match! FIXME if g.gene is alias won't work
+					if (l[0].toLowerCase() != m.metabolite.toLowerCase()) return
+					for (let i = 1; i < l.length; i++) {
+						const sampleId = samples[i - 1]
+						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
+						if (!l[i]) continue // blank string
+						const v = Number(l[i])
+						if (Number.isNaN(v)) throw 'exp value not number'
+						s2v[sampleId] = v
+					}
+				}
+			} as any)
+			// Above!! add "as any" to suppress a npx tsc alert
+			if (Object.keys(s2v).length) metabolite2sample2value.set(g.gene, s2v) // only add gene if has data
+		}
+		// pass blank byTermId to match with expected output structure
+		const byTermId = {}
+		return { metabolite2sample2value, byTermId, bySampleId }
 	}
 }

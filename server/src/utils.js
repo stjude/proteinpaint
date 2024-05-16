@@ -20,6 +20,7 @@ file_is_readable
 init_one_vcf
 init_one_vcfMaf
 validate_tabixfile
+validate_txtfile
 tabix_is_nochr
 write_file
 write_tmpfile
@@ -27,11 +28,13 @@ read_file
 file_not_exist
 file_not_readable
 get_lines_bigfile
+get_lines_txtfile
 query_bigbed_by_coord
 query_bigbed_by_name
 get_header_tabix
 get_header_vcf
 get_header_bcf
+get_header_txt
 get_fasta
 connect_db
 loadfile_ssid
@@ -335,6 +338,11 @@ export async function validate_tabixfile(file) {
 	}
 }
 
+export async function validate_txtfile(file) {
+	if (await file_not_exist(file)) throw file + ' file not exist'
+	if (await file_not_readable(file)) throw file + ' file not readable'
+}
+
 export async function tabix_is_nochr(file, dir, genome) {
 	// also works for bcf file!
 	const lines = []
@@ -377,6 +385,17 @@ export async function get_header_tabix(file, dir) {
 		}
 	})
 	return lines
+}
+export async function get_header_txt(file, dir) {
+	// file is full path file
+	return new Promise((resolve, reject) => {
+		const ps = spawn('head', ['-n', '1', file], { cwd: dir })
+		const out = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.on('close', () => {
+			resolve(out)
+		})
+	})
 }
 export function get_header_bcf(file, dir) {
 	// file is full path or url
@@ -432,6 +451,28 @@ export function get_lines_bigfile({ args, dir, callback, isbcf, isbam }) {
 		ps.on('close', () => {
 			const e = em.join('').trim()
 			if (e && !tabixnoterror(e)) {
+				reject(e)
+			}
+			resolve()
+		})
+	})
+}
+
+export function get_lines_txtfile({ args, dir, callback }) {
+	if (!args) throw 'args is missing'
+	if (!Array.isArray(args)) throw 'args[] is not array'
+	if (args.length == 0) throw 'args[] empty array'
+	if (!callback) throw 'callback is missing'
+	if (typeof callback != 'function') throw 'callback() not a function'
+	return new Promise((resolve, reject) => {
+		const ps = spawn('cat', args, { cwd: dir })
+		const rl = readline.createInterface({ input: ps.stdout })
+		const em = []
+		rl.on('line', line => callback(line, ps))
+		ps.stderr.on('data', d => em.push(d))
+		ps.on('close', () => {
+			const e = em.join('').trim()
+			if (e) {
 				reject(e)
 			}
 			resolve()

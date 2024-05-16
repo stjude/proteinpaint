@@ -1,16 +1,17 @@
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == TermTypes.CATEGORICAL instead of type == 'categorical'
 export const TermTypes = {
+	GENE_VARIANT: 'geneVariant',
+	GENE_EXPRESSION: 'geneExpression',
 	CATEGORICAL: 'categorical',
 	INTEGER: 'integer',
 	FLOAT: 'float',
+	SNP_LIST: 'snplst',
+	SNP_LOCUS: 'snplocus',
 	CONDITION: 'condition',
 	SURVIVAL: 'survival',
 	SAMPLELST: 'samplelst',
-	GENE_VARIANT: 'geneVariant',
-	GENE_EXPRESSION: 'geneExpression',
-	SNP_LIST: 'snplst',
-	SNP_LOCUS: 'snplocus'
+	METABOLITE_INTENSITY: 'metaboliteIntensity'
 }
 
 export const TermTypeGroups = {
@@ -22,7 +23,7 @@ export const TermTypeGroups = {
 	GENE_EXPRESSION: 'Gene Expression',
 	PROTEIN_EXPRESSION: 'Protein Expression',
 	SPLICE_JUNCTION: 'Splice Junction',
-	METABOLITE: 'Metabolite',
+	METABOLITE_INTENSITY: 'Metabolite Intensity',
 	GSEA: 'GSEA',
 	MUTATION_SIGNATURE: 'Mutation Signature',
 	SNP_LIST: 'SNP List',

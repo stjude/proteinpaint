@@ -33,7 +33,7 @@ import { add_bcf_variant_filter } from './termdb.snp.js'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
-import { validate_query_geneExpression } from '#routes/termdb.cluster.ts'
+import { validate_query_geneExpression, validate_query_metaboliteIntensity } from '#routes/termdb.cluster.ts'
 import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 
@@ -70,6 +70,7 @@ validate_query_cnv
 validate_query_probe2cnv
 validate_query_ld
 validate_query_geneExpression
+validate_query_metaboliteIntensity
 validate_query_rnaseqGeneCount
 validate_query_singleSampleGenomeQuantification
 validate_query_singleSampleGbtk
@@ -117,6 +118,7 @@ export async function init(ds, genome, _servconfig) {
 		await validate_query_cnv(ds, genome)
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
+		await validate_query_metaboliteIntensity(ds, genome)
 		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)

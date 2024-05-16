@@ -303,6 +303,16 @@ type RnaseqGeneCount = {
 	file: string
 }
 
+// the metabolite query
+export type MetaboliteIntensityQueryNative = {
+	src: 'native' | string
+	file: string
+	samples?: number[]
+	get?: (param: any) => void
+	metabolite2bins?: { [index: string]: any }
+}
+export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
+
 // the geneExpression query
 export type GeneExpressionQueryGdc = {
 	src: 'gdcapi' | string
