@@ -1,4 +1,4 @@
-import { Term, BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting } from './term.ts'
+import { Term, BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting, BaseTerm } from './term.ts'
 import { BaseQ } from './term.ts'
 
 /**
@@ -78,7 +78,7 @@ export type PresetNumericBins = {
 	max?: number
 }
 
-export type NumericTerm = Term & {
+export type NumericTerm = BaseTerm & {
 	id: string
 	// these concrete term.type values make it clear that only these are numeric,
 	// "categorical", "condition", and other term.types are not included in this union
