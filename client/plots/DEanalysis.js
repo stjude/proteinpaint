@@ -413,18 +413,20 @@ add:
 			text_string = '-log10(original P value)'
 		}
 		ylab.text(text_string)
-		self.dom.detailsDiv
-			.append('div')
-			.html(
-				'Percentage of significant genes: ' +
-					((num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)).toFixed(2) +
-					'<br>Number of significant genes: ' +
-					num_significant_genes +
-					'<br>Sample size of group1: ' +
-					sample_size1 +
-					'<br>Sample size of group2: ' +
-					sample_size2
-			)
+		const table_stats = table2col({ holder: self.dom.detailsDiv })
+		const [td1, td2] = table_stats.addRow()
+		td1.text('Percentage of significant genes')
+		td2.text(((num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)).toFixed(2))
+		const [td3, td4] = table_stats.addRow()
+		td3.text('Number of significant genes')
+		td4.text(num_significant_genes)
+		const [td5, td6] = table_stats.addRow()
+		td5.text('Sample size of group1')
+		td6.text(sample_size1)
+		const [td7, td8] = table_stats.addRow()
+		td7.text('Sample size of group2')
+		td8.text(sample_size2)
+
 		self.table_cols = [
 			{ label: 'Gene Name' },
 			{ label: 'Gene Symbol' },

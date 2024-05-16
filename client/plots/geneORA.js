@@ -1,4 +1,5 @@
 import { renderTable } from '../dom/table'
+import { table2col } from '#dom/table2col'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
@@ -127,16 +128,19 @@ add:
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.config.geneORAparams.geneSetGroup = self.settings.pathway
 		const output = await rungeneORA(self.config.geneORAparams)
-		self.dom.detailsDiv
-			.append('div')
-			.html(
-				'Number of sample genes:' +
-					self.config.geneORAparams.sample_genes.split(',').length +
-					'<br>Number of background genes:' +
-					self.config.geneORAparams.background_genes.split(',').length +
-					'<br>Number of pathways analyzed:' +
-					output.num_pathways
-			)
+		const table_stats = table2col({ holder: self.dom.detailsDiv })
+		const [td1, td2] = table_stats.addRow()
+		td1.text('')
+		td2.text('Count')
+		const [td3, td4] = table_stats.addRow()
+		td3.text('Sample genes')
+		td4.text(self.config.geneORAparams.sample_genes.split(',').length)
+		const [td5, td6] = table_stats.addRow()
+		td5.text('Background genes')
+		td6.text(self.config.geneORAparams.background_genes.split(',').length)
+		const [td7, td8] = table_stats.addRow()
+		td7.text('Pathways analyzed')
+		td8.text(output.num_pathways)
 
 		// Generating the table
 		self.gene_ora_table_cols = [
