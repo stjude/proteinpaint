@@ -129,14 +129,19 @@ export class ColorScale {
 	updateAxis() {
 		const start = Number(this.data[0].toFixed(2))
 		const stop = Number(this.data[this.data.length - 1].toFixed(2))
-		this.bar.scale = scaleLinear().domain([start, stop]).range([0, this.barwidth])
+		const tickValues = [start, stop]
 		this.bar.scaleAxis.selectAll('*').remove()
 
 		if (start < 0 && stop > 0) {
+			tickValues.splice(1, 0, 0)
+			this.bar.scale = scaleLinear()
+				.domain(tickValues)
+				.range([0, this.barwidth / 2, this.barwidth])
 			this.bar.gradientStart!.attr('offset', '0%').attr('stop-color', this.bar.startColor as string)
 			this.bar.gradientMid!.attr('offset', '50%').attr('stop-color', this.bar.midColor as string)
 			this.bar.gradientEnd!.attr('offset', '100%').attr('stop-color', this.bar.endColor as string)
 		} else {
+			this.bar.scale = scaleLinear().domain(tickValues).range([0, this.barwidth])
 			this.bar.gradientStart!.attr('offset', '0%').attr('stop-color', this.bar.startColor as string)
 			this.bar
 				.gradientMid!.attr('offset', start >= 0 ? '0%' : '100%')
@@ -147,7 +152,7 @@ export class ColorScale {
 		this.bar.scaleAxis
 			.transition()
 			.duration(500)
-			.call(axisBottom(this.bar.scale).tickValues([start, stop]).tickSize(this.tickSize))
+			.call(axisBottom(this.bar.scale).tickValues(tickValues).tickSize(this.tickSize))
 	}
 
 	updateScale() {
