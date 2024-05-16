@@ -131,7 +131,7 @@ class HicApp {
 			if (!this.hic.state[this.hic.state.currView]?.matrixType) {
 				this.hic.state[this.hic.state.currView].matrixType = 'observed'
 			}
-			if (!this.hic.state[this.hic.state.currView]?.nemth) {
+			if (!this.hic.state[this.hic.state.currView]?.nmeth) {
 				this.hic.state[this.hic.state.currView].nmeth = nmeth
 			}
 		}
