@@ -231,7 +231,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 				distanceMethod: 'euclidean',
 				/** Data type */
 				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
-				metabolites: []
+				metabolites: [q.findterm]
 			}
 			const data = await ds.queries.metabolomics.get(args)
 			console.log(data)

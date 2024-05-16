@@ -310,9 +310,9 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 		}
 
 		const metabolite2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
-
+		console.log('param.metabolites', param.metabolites)
 		for (const m of param.metabolites) {
-			if (!m.metabolite) continue
+			if (!m) continue
 
 			const s2v = {}
 			await utils.get_lines_txtfile({
@@ -320,7 +320,7 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 				callback: line => {
 					const l = line.split('\t')
 					// case-insensitive match! FIXME if g.gene is alias won't work
-					if (l[0].toLowerCase() != m.metabolite.toLowerCase()) return
+					if (l[0].toLowerCase() != m.toLowerCase()) return
 					for (let i = 1; i < l.length; i++) {
 						const sampleId = samples[i - 1]
 						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used

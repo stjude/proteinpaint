@@ -22,8 +22,8 @@ export type TermdbClusterRequest = {
 	/** Data type */
 	dataType: 3 // create union to support more types
 	/** List of genes TODO can be non-genes when dataType is generalized */
-	genes?: Gene[]
-	metabolites?: string[]
+	genes?: Gene[] | undefined
+	metabolites?: string[] | undefined
 	/** pp filter */
 	filter?: Filter
 	/** todo gdc filter */
