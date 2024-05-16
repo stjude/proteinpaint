@@ -98,31 +98,34 @@ tape('\n', test => {
 
 tape('DataMapper - sortData()', test => {
 	//No need to test the differences between version 8 and 9
-	test.plan(8)
+	test.plan(11)
 	const mapper = new DataMapper(hicData.hic.v8)
 	let data: any
 
 	//Genome view
 	data = mockGenomeData
-	const [genomeMin, genomeMax] = mapper.sortData(data)
+	const [genomeMin, genomeMax, genomeAbsMax] = mapper.sortData(data)
 	const findM = hicData.hic.v8.chrlst.indexOf('chrM')
 	const findY = hicData.hic.v8.chrlst.indexOf('chrY')
 	test.equal(genomeMin, 343, 'Should return the smallest number in test set for genome view min.')
-	test.equal(genomeMax, 116455, 'Should return the closest number to the max value for genome view max.')
+	test.equal(genomeMax, 116455, 'Should return the 99 percentile of the max value for genome view max.')
+	test.equal(genomeAbsMax, 116455, 'Should return the max value for genome view.')
 	test.equal(findM, -1, 'Should remove chrM from hic.chrlst.')
 	test.equal(findY, -1, 'Should remove chrY from hic.chrlst.')
 
 	//Chrpair view
 	data = mockChrPairData
-	const [chrpairMin, chrpairMax] = mapper.sortData(data)
+	const [chrpairMin, chrpairMax, chrpairAbsMax] = mapper.sortData(data)
 	test.equal(chrpairMin, 58, 'Should return the smallest number in test set for chrpair view min')
-	test.equal(chrpairMax, 112, 'Should return the closest number to the max value for chrpair view max')
+	test.equal(chrpairMax, 112, 'Should returnthe 99 percentile of the max value for chrpair view max')
+	test.equal(chrpairAbsMax, 112, 'Should return the max value for chrpair view')
 
 	//Detail view
 	data = mockDetailData
-	const [detailMin, detailMax] = mapper.sortData(data)
+	const [detailMin, detailMax, detailAbsMax] = mapper.sortData(data)
 	test.equal(detailMin, 1, 'Should return the smallest number in test set for detail view min')
-	test.equal(detailMax, 1, 'Should return the closest number to the max value for detail view max')
+	test.equal(detailMax, 1, 'Should return the 99 percentile of the max value for detail view max')
+	test.equal(detailAbsMax, 1, 'Should return the max value for detail view')
 })
 
 //TODOs
