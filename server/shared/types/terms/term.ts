@@ -36,6 +36,7 @@ export type ValuesGroup = {
 	type: 'values'
 	values: { key: number | string; label: string }[]
 	color?: string
+	groupsetting: EmptyGroupSetting
 }
 
 export type FilterGroup = {
