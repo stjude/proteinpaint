@@ -183,7 +183,6 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 	{
 		// is a gene-by-sample matrix file
 		const lines = await utils.get_header_tabix(q.file)
-		console.log(lines[0])
 		if (!lines[0]) throw 'header line missing from ' + q.file
 		const l = lines[0].split('\t')
 		if (l.slice(0, 4).join('\t') != '#chr\tstart\tstop\tgene') throw 'header line has wrong content for columns 1-4'
@@ -192,7 +191,6 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 			if (id == undefined) throw 'queries.geneExpression: unknown sample from header: ' + l[i]
 			q.samples.push(id)
 		}
-		console.log(q.samples.length, 'samples from geneExpression of', ds.label)
 	}
 
 	q.get = async (param: TermdbClusterRequest) => {
@@ -280,7 +278,6 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 	{
 		// is a metabolite-by-sample matrix file
 		const lines = await utils.get_header_txt(q.file)
-		console.log(lines[0])
 		if (!lines[0].startsWith('#Metabolites')) throw 'header line missing from ' + q.file
 		const l = lines[0].split('\t')
 		for (let i = 1; i < l.length; i++) {
@@ -288,7 +285,6 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 			if (id == undefined) throw 'queries.metabolomics: unknown sample from header: ' + l[i]
 			q.samples.push(id)
 		}
-		console.log(q.samples.length, 'samples from metaboliteIntensity of', ds.label)
 	}
 
 	q.get = async (param: TermdbClusterRequest) => {
