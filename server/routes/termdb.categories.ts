@@ -3,6 +3,7 @@ import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
 import { Term } from '#shared/types/terms/term.ts'
 import { TermWrapper } from '#shared/types/terms/tw.ts'
+import { NumericTerm } from '#shared/types/terms/numeric.ts'
 
 export const api: any = {
 	endpoint: 'termdb/categories',
@@ -195,7 +196,7 @@ async function trigger_getcategories(
 }
 
 function getDefaultQ(
-	term: Term,
+	term: Term | NumericTerm,
 	q: {
 		mode?: any
 		breaks?: any

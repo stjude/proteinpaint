@@ -1,5 +1,5 @@
-import { TermWrapper } from '../tw.ts'
-import { BaseQ } from '../term.ts'
+import { TermWrapper } from './tw.ts'
+import { BaseQ } from './term.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 import { NumericTerm } from './numeric.js'
 

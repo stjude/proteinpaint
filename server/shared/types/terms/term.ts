@@ -1,11 +1,11 @@
 import { Filter } from '../filter.ts'
-import { CategoricalQ } from './terms/categorical.ts'
-import { ConditionQ } from './terms/condition.ts'
-import { NumericQ } from './terms/numeric.ts'
-import { GeneVariantQ } from './terms/geneVariant.ts'
-import { SampleLstQ } from './terms/samplelst.ts'
-import { SnpsQ } from './terms/snps.ts'
-import { Term, Q } from './terms/tw.ts'
+import { CategoricalQ } from './categorical.ts'
+import { ConditionQ } from './condition.ts'
+import { NumericQ } from './numeric.ts'
+import { GeneVariantQ } from './geneVariant.ts'
+import { SampleLstQ } from './samplelst.ts'
+import { SnpsQ } from './snps.ts'
+import { Term, Q } from './tw.ts'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
