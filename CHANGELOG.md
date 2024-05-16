@@ -4,8 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Data for the hic whole genome view is cached for faster load. Additional UI improvements in the hic app.
+
 Fixes:
 - fixed rendering of barchart and violin when terms have uncomputable categories
+- Fixed issues with the resolution in the hic detail view.
 
 
 ## 2.59.0

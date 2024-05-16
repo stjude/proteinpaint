@@ -1,4 +1,1 @@
-Features
-- Data for the hic whole genome view is cached for faster load. Additional UI improvements in the hic app.
-Fixes
-- Fixed issues with the resolution in the hic detail view.
+
