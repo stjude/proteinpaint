@@ -1,6 +1,6 @@
 import { NumericQ } from '../../shared/types/terms/numeric'
 import { VocabApi } from '../../shared/types/index'
-import { GeneExpressionTW } from '../../shared/types/terms/geneExpression.js'
+import { MetaboliteIntensityTW } from '../../shared/types/terms/metaboliteIntensity'
 
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 
@@ -24,7 +24,7 @@ export async function getHandler(self) {
 	return await _.getHandler(self)
 }
 
-export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+export async function fillTW(tw: MetaboliteIntensityTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
 	const mode = tw.q.mode || 'continuous'
 
