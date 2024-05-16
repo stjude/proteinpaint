@@ -162,7 +162,6 @@ q.targetType
 	"category" TODO
 */
 async function trigger_findterm(q, res, termdb, ds, genome) {
-	console.log('trigger_findterm', q)
 	// TODO improve logic
 
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
@@ -238,8 +237,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 			const foundTerms = []
 			for (const termId in data.byTermId) {
 				const value = data.byTermId[termId]
-				if (value.label.toLowerCase().includes(q.findterm.toLowerCase()))
-					foundTerms.push({ name: value.label, type: 'metaboliteIntensity' })
+				foundTerms.push({ name: value, type: 'metaboliteIntensity' })
 			}
 			terms.push(...foundTerms)
 		}

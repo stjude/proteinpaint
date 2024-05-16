@@ -218,7 +218,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		// only valid genes with data are added. invalid genes or genes missing from data file is not added. backend returned genes is allowed to be fewer than supplied by client
 		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
-		for (const g of param.genes) {
+		for (const g of param.genes!) {
 			if (!g.gene) continue
 
 			if (!g.chr) {
@@ -311,7 +311,7 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 
 		const metabolite2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
 		console.log('param.metabolites', param.metabolites)
-		for (const m of param.metabolites) {
+		for (const m of param.metabolites!) {
 			if (!m) continue
 
 			const s2v = {}
@@ -319,8 +319,8 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 				args: [q.file],
 				callback: line => {
 					const l = line.split('\t')
-					// case-insensitive match! FIXME if g.gene is alias won't work
-					if (l[0].toLowerCase() != m.toLowerCase()) return
+					console.log('l', l)
+					if (!l[0].toLowerCase().includes(m.toLowerCase())) return
 					for (let i = 1; i < l.length; i++) {
 						const sampleId = samples[i - 1]
 						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
@@ -332,7 +332,7 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 				}
 			} as any)
 			// Above!! add "as any" to suppress a npx tsc alert
-			if (Object.keys(s2v).length) metabolite2sample2value.set(g.gene, s2v) // only add gene if has data
+			if (Object.keys(s2v).length) metabolite2sample2value.set(m, s2v) // only add gene if has data
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}

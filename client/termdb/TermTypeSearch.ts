@@ -100,7 +100,6 @@ export class TermTypeSearch {
 	async addTabsAllowed(state) {
 		for (const type of this.types) {
 			const termTypeGroup = typeGroup[type]
-			console.log('termTypeGroup', termTypeGroup)
 			let label = termTypeGroup
 			if (type == TermTypes.GENE_VARIANT) {
 				const labels: string[] = []
@@ -151,7 +150,10 @@ export class TermTypeSearch {
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
 
-		if (tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+		if (
+			tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
+			tab.termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
+		) {
 			const handler = this.handlerByType[type]
 			await handler.init({
 				holder,
