@@ -391,7 +391,7 @@ export async function get_header_txt(file, dir) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn('head', ['-n', '1', file], { cwd: dir })
 		const out = []
-		ps.stdout.on('data', i => out.push(i))
+		ps.stdout.on('data', i => out.push(i.toString().trim()))
 		ps.on('close', () => {
 			resolve(out)
 		})
