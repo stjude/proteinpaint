@@ -1,12 +1,13 @@
 import { Filter } from '../filter.ts'
-import { CategoricalQ } from './categorical.ts'
-import { ConditionQ } from './condition.ts'
-import { NumericQ } from './numeric.ts'
-import { GeneVariantQ } from './geneVariant.ts'
-import { SampleLstQ } from './samplelst.ts'
-import { SnpsQ } from './snps.ts'
+import { CategoricalQ, CategoricalTerm } from './categorical.ts'
+import { ConditionQ, ConditionTerm } from './condition.ts'
+import { NumericQ, NumericTerm } from './numeric.ts'
+import { GeneVariantQ, GeneVariantTerm } from './geneVariant.ts'
+import { SampleLstQ, SampleLstTerm } from './samplelst.ts'
+import { SnpsQ, SnpsTerm } from './snps.ts'
 import { Q } from './tw.ts'
 import { PresetNumericBins } from './numeric.ts'
+import { Numeric } from 'd3'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -83,7 +84,7 @@ export type EmptyGroupSetting = {
 	disabled?: true
 }
 
-export type Term = {
+export type BaseTerm = {
 	id: string
 	name: string
 	type: string
@@ -92,9 +93,10 @@ export type Term = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
-	bins?: PresetNumericBins
 	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
 }
+export type Term = BaseTerm &
+	(NumericTerm | CategoricalTerm | ConditionTerm | GeneVariantTerm | SampleLstTerm | SnpsTerm)
 
 type HiddenValues = {
 	[index: string]: number

@@ -196,7 +196,7 @@ async function trigger_getcategories(
 }
 
 function getDefaultQ(
-	term: Term | NumericTerm,
+	term: Term,
 	q: {
 		mode?: any
 		breaks?: any

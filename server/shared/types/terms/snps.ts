@@ -1,4 +1,4 @@
-import { BaseTW, BaseQ, Term } from './term.ts'
+import { BaseTW, BaseQ, BaseTerm } from './term.ts'
 import { TermSettingInstance, InstanceDom, UseCase } from '../termsetting.ts'
 import { VocabApi } from '../vocab.ts'
 import { Tvs, Filter } from '../filter.ts'
@@ -65,7 +65,7 @@ export type SnpsEntry = {
 	pos?: number
 }
 
-export type SnpsTerm = Term & {
+export type SnpsTerm = BaseTerm & {
 	id: string
 	reachedVariantLimit?: boolean
 	snps?: SnpsEntry[]

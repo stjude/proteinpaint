@@ -1,6 +1,6 @@
 //import { TermWrapper, BaseQ } from '../termdb'
 import {
-	Term,
+	BaseTerm,
 	BaseValue,
 	TermValues,
 	BaseQ,
@@ -44,7 +44,7 @@ export type GroupSet = {
 	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
 }
 
-export type CategoricalTerm = Term & {
+export type CategoricalTerm = BaseTerm & {
 	type: 'categorical'
 	values: CategoricalValuesObject
 	//groupsetting: { disabled?: boolean | undefined } //, lst?: GroupSet }

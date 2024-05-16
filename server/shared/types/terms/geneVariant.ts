@@ -1,5 +1,5 @@
 import { TermWrapper } from './tw.ts'
-import { BaseQ, Term } from './term.ts'
+import { BaseQ, BaseTerm } from './term.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /*
@@ -25,12 +25,12 @@ export type GeneVariantTW = TermWrapper & {
 }
 
 export type GeneVariantTerm =
-	| (Term & {
+	| (BaseTerm & {
 			chr: string
 			start: number
 			stop: number
 	  })
-	| (Term & {
+	| (BaseTerm & {
 			gene: string
 	  })
 
