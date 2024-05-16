@@ -42,7 +42,8 @@ export const typeGroup = {
 	[TermTypes.GENE_VARIANT]: TermTypeGroups.MUTATION_CNV_FUSION,
 	[TermTypes.SNP_LIST]: TermTypeGroups.SNP_LIST,
 	[TermTypes.SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
-	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION
+	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
+	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY
 }
 
 const nonDictTypes = new Set([

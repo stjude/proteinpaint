@@ -15,7 +15,12 @@ The tree target is used to determine the allowed term types.
 const useCases = {
 	matrix: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
 	filter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
-	dictionary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
+	dictionary: [
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION],
 	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
 	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
@@ -95,6 +100,7 @@ export class TermTypeSearch {
 	async addTabsAllowed(state) {
 		for (const type of this.types) {
 			const termTypeGroup = typeGroup[type]
+			console.log('termTypeGroup', termTypeGroup)
 			let label = termTypeGroup
 			if (type == TermTypes.GENE_VARIANT) {
 				const labels: string[] = []
@@ -104,7 +110,10 @@ export class TermTypeSearch {
 				label = labels.join('/')
 			}
 			try {
-				if (termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+				if (
+					termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
+					termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
+				) {
 					const _ = await import(`./handlers/${type}.ts`)
 					this.handlerByType[type] = await new _.SearchHandler()
 				}

@@ -70,6 +70,8 @@ class TermSearch {
 		const termTypeGroup = this.state.termTypeGroup
 
 		if (termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES) return true
+		if (termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY) return true
+
 		return false
 	}
 

@@ -162,6 +162,7 @@ q.targetType
 	"category" TODO
 */
 async function trigger_findterm(q, res, termdb, ds, genome) {
+	console.log('trigger_findterm', q)
 	// TODO improve logic
 
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
@@ -221,6 +222,26 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 			const _terms = await termdb.q.findTermByName(str, q.cohortStr, q.treeFilter, q.usecase)
 
 			terms.push(..._terms.map(copy_term))
+		} else if (q.targetType == TermTypeGroups.METABOLITE_INTENSITY) {
+			const args = {
+				genome: q.genome,
+				dslabel: q.dslabel,
+				clusterMethod: 'hierarchical',
+				/** distance method */
+				distanceMethod: 'euclidean',
+				/** Data type */
+				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
+				metabolites: []
+			}
+			const data = await ds.queries.metabolomics.get(args)
+			console.log(data)
+			const foundTerms = []
+			for (const termId in data.byTermId) {
+				const value = data.byTermId[termId]
+				if (value.label.toLowerCase().includes(q.findterm.toLowerCase()))
+					foundTerms.push({ name: value.label, type: 'metaboliteIntensity' })
+			}
+			terms.push(...foundTerms)
 		}
 		const id2ancestors = {}
 		terms.forEach(term => {
