@@ -192,7 +192,7 @@ class DEanalysis {
 			.style('opacity', 0.6)
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
-			.text('DIFFERENTIAL EXPRESSION')
+			.text('DIFFERENTIAL GENE EXPRESSION')
 		render_volcano(this, output)
 	}
 }
@@ -286,9 +286,9 @@ add:
 				self.table_rows.push([
 					{ value: d.gene_name },
 					{ value: d.gene_symbol },
-					{ value: d.fold_change },
-					{ value: Math.pow(10, -d.original_p_value) },
-					{ value: Math.pow(10, -d.adjusted_p_value) }
+					{ value: d.fold_change.toPrecision(4) },
+					{ value: Math.pow(10, -d.original_p_value).toPrecision(4) },
+					{ value: Math.pow(10, -d.adjusted_p_value).toPrecision(4) }
 				])
 			} else if (
 				p_value_adjusted_original == 'original' &&
@@ -414,18 +414,30 @@ add:
 		}
 		ylab.text(text_string)
 		const table_stats = table2col({ holder: self.dom.detailsDiv })
-		const [td1, td2] = table_stats.addRow()
-		td1.text('Percentage of significant genes')
-		td2.text(((num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)).toFixed(2))
-		const [td3, td4] = table_stats.addRow()
-		td3.text('Number of significant genes')
-		td4.text(num_significant_genes)
-		const [td5, td6] = table_stats.addRow()
-		td5.text('Sample size of group1')
-		td6.text(sample_size1)
-		const [td7, td8] = table_stats.addRow()
-		td7.text('Sample size of group2')
-		td8.text(sample_size2)
+		const addStats = [
+			{
+				label: 'Percentage of significant genes',
+				value: ((num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)).toPrecision(2)
+			},
+			{
+				label: 'Number of significant genes',
+				value: num_significant_genes
+			},
+			{
+				label: 'Group1 sample size',
+				value: sample_size1
+			},
+			{
+				label: 'Group2 sample size',
+				value: sample_size2
+			}
+		]
+
+		for (const dataRow of addStats) {
+			const [td1, td2] = table_stats.addRow()
+			td1.text(dataRow.label)
+			td2.style('text-align', 'end').text(dataRow.value)
+		}
 
 		self.table_cols = [
 			{ label: 'Gene Name' },
@@ -558,9 +570,9 @@ function circlemouseover(event, d) {
 	const lst = [
 		{ k: 'gene_name', v: d.gene_name },
 		{ k: 'gene_symbol', v: d.gene_symbol },
-		{ k: 'log fold change', v: d.fold_change },
-		{ k: 'log original p-value', v: d.original_p_value },
-		{ k: 'log adjusted p-value', v: d.adjusted_p_value }
+		{ k: 'log fold change', v: d.fold_change.toPrecision(6) },
+		{ k: 'log original p-value', v: d.original_p_value.toPrecision(6) },
+		{ k: 'log adjusted p-value', v: d.adjusted_p_value.toPrecision(6) }
 	]
 	const table = table2col({ holder: tip.d })
 	for (const item of lst) {
