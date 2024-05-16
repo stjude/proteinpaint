@@ -124,7 +124,7 @@ jobs:
         with:
           payload: |
             {
-              "status": "${{ job.status }}",
+              "status": "${{ job.status }} https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
               "commit": "${{ env.SHORT_SHA }}",
               "date-time": "${{ steps.current-time.outputs.formattedTime }}"
             }
