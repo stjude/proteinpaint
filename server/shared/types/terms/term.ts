@@ -94,6 +94,7 @@ export type BaseTerm = {
 	isleaf?: boolean
 	values?: TermValues
 	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
+	bins?: PresetNumericBins
 }
 export type Term = BaseTerm &
 	(NumericTerm | CategoricalTerm | ConditionTerm | GeneVariantTerm | SampleLstTerm | SnpsTerm)
