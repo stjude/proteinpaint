@@ -368,6 +368,8 @@ fn main() {
             match input_json {
                 Ok(json_string) => {
                     let now = Instant::now();
+                    let min_count = json_string["min_count"].as_f64().to_owned();
+                    let min_total_count = json_string["min_total_count"].as_f64().to_owned();
                     let case_string = &json_string["case"].to_owned().as_str().unwrap().to_string();
                     let control_string = &json_string["control"]
                         .to_owned()
@@ -388,6 +390,8 @@ fn main() {
                     let filtering_time = Instant::now();
                     let (filtered_matrix, lib_sizes, filtered_genes, filtered_gene_symbols) =
                         filter_by_expr(
+                            min_count,
+                            min_total_count,
                             &input_matrix,
                             case_indexes.len(),
                             control_indexes.len(),
@@ -948,6 +952,8 @@ fn calc_quantile(mut input: Vec<f64>, p: f64) -> f64 {
 }
 
 fn filter_by_expr(
+    min_count_option: Option<f64>,
+    min_total_count_option: Option<f64>,
     raw_data: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     num_diseased: usize,
     num_control: usize,
@@ -961,8 +967,26 @@ fn filter_by_expr(
 ) {
     // Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>
     #[allow(non_upper_case_globals)]
-    const MIN_COUNT: f64 = 10.0; // Value of constant from R implementation
-    const MIN_TOTAL_COUNT: f64 = 15.0; // Value of constant from R implementation
+    let (min_count, min_total_count);
+    match min_count_option {
+        Some(x) => {
+            min_count = x;
+        }
+        None => {
+            min_count = 10.0;
+        }
+    }
+
+    match min_total_count_option {
+        Some(x) => {
+            min_total_count = x;
+        }
+        None => {
+            min_total_count = 15.0;
+        }
+    }
+    //const min_count: f64 = 10.0; // Value of constant from R implementation
+    //const min_total_count: f64 = 15.0; // Value of constant from R implementation
     const LARGE_N: f64 = 10.0; // Value of constant from R implementation
     const MIN_PROP: f64 = 0.7; // Value of constant from R implementation
 
@@ -989,7 +1013,7 @@ fn filter_by_expr(
     //println!("lib_sizes:{:?}", lib_sizes);
     //println!("min_sample_size:{}", min_sample_size);
     let median_lib_size = Data::new(lib_sizes.clone()).median();
-    let cpm_cutoff = (MIN_COUNT / median_lib_size) * 1000000.0;
+    let cpm_cutoff = (min_count / median_lib_size) * 1000000.0;
     //println!("cpm_cutoff:{}", cpm_cutoff);
     let cpm_matrix = cpm(&raw_data);
     const TOL: f64 = 1e-14; // Value of constant from R implementation
@@ -1018,7 +1042,7 @@ fn filter_by_expr(
         //}
 
         let mut keep_total_bool = false;
-        if row_sums[(row, 0)] as f64 >= MIN_TOTAL_COUNT - TOL {
+        if row_sums[(row, 0)] as f64 >= min_total_count - TOL {
             keep_total_bool = true;
             //keep_total.push(keep_total_bool);
             //positive_total += 1;
