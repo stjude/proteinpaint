@@ -60,7 +60,7 @@ class DEanalysis {
 				settingsKey: 'min_count',
 				title: 'Min count',
 				min: 0,
-				max: 100
+				max: 10000
 			},
 			{
 				label: 'Min total count',
@@ -69,7 +69,7 @@ class DEanalysis {
 				settingsKey: 'min_total_count',
 				title: 'Min total count',
 				min: 0,
-				max: 100
+				max: 10000
 			},
 			{
 				label: 'P-value significance (linear scale)',
@@ -430,6 +430,10 @@ add:
 			{
 				label: 'Number of significant genes',
 				value: num_significant_genes
+			},
+			{
+				label: 'Number of total genes',
+				value: num_significant_genes + num_non_significant_genes
 			},
 			{
 				label: 'Group1 sample size',
