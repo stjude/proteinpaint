@@ -14,7 +14,12 @@ The tree target is used to determine the allowed term types.
 
 const useCases = {
 	matrix: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
-	filter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
+	filter: [
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
 	dictionary: [
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.MUTATION_CNV_FUSION,

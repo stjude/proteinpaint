@@ -252,7 +252,6 @@ function setRenderers(self) {
 					.style('cursor', 'default')
 					.on('click', () => {
 						if (self.opts.click_term) {
-							console.log('click', term)
 							self.opts.click_term(term)
 						} else {
 							self.app.opts.tree.click_term_wrapper(term)
