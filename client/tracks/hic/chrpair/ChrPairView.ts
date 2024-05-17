@@ -29,6 +29,7 @@ export class ChrPairView {
 	binpx = 1
 	/** padding on the ends of x/y chr coordinate axes */
 	readonly axispad = 10
+	readonly axisLabelFontSize = 15
 	calResolution: number | null = null
 	data: number[][] = []
 
@@ -69,7 +70,7 @@ export class ChrPairView {
 			.append('text')
 			.text(this.parent('state').y.chr)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', 15)
+			.attr('font-size', this.axisLabelFontSize)
 			.attr('font-family', font)
 			.attr('dominant-baseline', 'central')
 			.attr('transform', 'rotate(90)')
@@ -82,14 +83,14 @@ export class ChrPairView {
 		})
 
 		// x axis
-		const svgX = this.plotDiv.xAxis.append('svg')
+		const svgX = this.plotDiv.xAxis.append('svg').style('margin-top', '-4px')
 		const w = Math.ceil(this.chrxlen / this.calResolution) * this.binpx
 		svgX.attr('height', 100).attr('width', this.axispad * 2 + w)
 		svgX
 			.append('text')
 			.attr('data-testid', 'sjpp-chrpair-svg-x')
 			.text(this.parent('state').x.chr)
-			.attr('font-size', 15)
+			.attr('font-size', this.axisLabelFontSize)
 			.attr('font-family', font)
 			.attr('x', this.axispad + w / 2)
 			.attr('text-anchor', 'middle')
