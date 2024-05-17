@@ -107,8 +107,7 @@ export class InfoBar {
 
 			if (min < 0) {
 				this.colorScale.bar.startColor = 'blue'
-				const distFromZero = Math.max(Math.abs(min), max)
-				this.colorScale.data = [-distFromZero, distFromZero]
+				this.colorScale.data = [min, max]
 			} else {
 				this.colorScale.bar.startColor = 'white'
 				this.colorScale.data = [0, max]
