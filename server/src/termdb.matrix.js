@@ -192,6 +192,17 @@ async function getSampleData(q) {
 
 			/** pp filter */
 		} else if (tw.term.type == TermTypes.METABOLITE_INTENSITY) {
+			let lst
+			if (tw.q?.mode == 'discrete') {
+				const min = tw.term.bins.min
+				const max = tw.term.bins.max
+				lst =
+					tw.q.type == 'regular-bin'
+						? compute_bins(tw.q, () => {
+								return { min, max }
+						  })
+						: tw.q.lst
+			}
 			const args = {
 				genome: q.genome,
 				dslabel: q.dslabel,

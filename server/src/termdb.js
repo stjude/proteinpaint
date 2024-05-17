@@ -517,7 +517,6 @@ async function trigger_getDefaultBins(q, ds, res) {
 			lst.push(value)
 		}
 	}
-	console.log('lst', lst)
 	let binconfig = initBinConfig(lst)
 
 	res.send({ default: binconfig, min, max })
