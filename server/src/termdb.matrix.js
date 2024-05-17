@@ -6,7 +6,7 @@ import { read_file } from './utils'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
 import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/terms'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
-import { dtgeneexpression } from '#shared/common.js'
+import { dtgeneexpression, dtmetaboliteintensity } from '#shared/common.js'
 
 /*
 
@@ -191,6 +191,32 @@ async function getSampleData(q) {
 			}
 
 			/** pp filter */
+		} else if (tw.term.type == TermTypes.METABOLITE_INTENSITY) {
+			const args = {
+				genome: q.genome,
+				dslabel: q.dslabel,
+				clusterMethod: 'hierarchical',
+				/** distance method */
+				distanceMethod: 'euclidean',
+				/** Data type */
+				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
+				metabolites: [tw.term.name]
+			}
+			const data = await q.ds.queries.metaboliteIntensity.get(args)
+			const termData = data.metabolite2sample2value.get(tw.term.name)
+			for (const sample in termData) {
+				if (!(sample in samples)) {
+					samples[sample] = { sample }
+				}
+				const value = termData[sample]
+				let key = value
+				if (tw.q?.mode == 'discrete') {
+					//check binary mode
+					const bin = getBin(lst, value)
+					key = get_bin_label(lst[bin], tw.q)
+				}
+				samples[sample][tw.$id] = { key, value }
+			}
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}

@@ -1,3 +1,5 @@
+import { TermTypes } from './terms.js'
+
 export const graphableTypes = new Set([
 	'categorical',
 	'integer',
@@ -8,7 +10,8 @@ export const graphableTypes = new Set([
 	'snplocus',
 	'geneVariant',
 	'samplelst',
-	'geneExpression'
+	'geneExpression',
+	TermTypes.METABOLITE_INTENSITY
 ])
 /*
 	isUsableTerm() will

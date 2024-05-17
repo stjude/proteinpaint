@@ -310,7 +310,6 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 		}
 
 		const metabolite2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
-		console.log('param.metabolites', param.metabolites)
 		for (const m of param.metabolites!) {
 			if (!m) continue
 
@@ -320,7 +319,6 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 				args: [q.file],
 				callback: line => {
 					const l = line.split('\t')
-					console.log('l', l)
 					if (!l[0].toLowerCase().includes(m.toLowerCase())) return
 					metabolite = l[0]
 					for (let i = 1; i < l.length; i++) {

@@ -506,11 +506,18 @@ async function trigger_getDefaultBins(q, ds, res) {
 			distanceMethod: 'euclidean',
 			/** Data type */
 			dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
-			metabolites: [{ metabolite: tw.term.metabolite }]
+			metabolites: [tw.term.name]
 		}
 		const data = await ds.queries.metaboliteIntensity.get(args)
-		console.log(data)
+		const termData = data.metabolite2sample2value.get(tw.term.name)
+		for (const sample in termData) {
+			const value = termData[sample]
+			if (value < min) min = value
+			if (value > max) max = value
+			lst.push(value)
+		}
 	}
+	console.log('lst', lst)
 	let binconfig = initBinConfig(lst)
 
 	res.send({ default: binconfig, min, max })

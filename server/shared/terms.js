@@ -50,7 +50,8 @@ const nonDictTypes = new Set([
 	TermTypes.SNP_LIST,
 	TermTypes.SNP_LOCUS,
 	TermTypes.GENE_EXPRESSION,
-	TermTypes.GENE_VARIANT
+	TermTypes.GENE_VARIANT,
+	TermTypes.METABOLITE_INTENSITY
 ])
 
 export function isNumericTerm(term) {

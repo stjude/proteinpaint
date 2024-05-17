@@ -230,7 +230,7 @@ function setRenderers(self) {
 		*/
 		if ((self.opts.click_term || self.app.opts?.tree?.click_term_wrapper) && uses.has('plot')) {
 			// to click a graphable term, show as blue button
-			if ('id' in term && self.opts.disable_terms?.includes(term.id)) {
+			if (self.opts.disable_terms?.includes(term.id)) {
 				// but it's disabled
 				button
 					.attr('class', 'sja_tree_click_term_disabled')
@@ -252,6 +252,7 @@ function setRenderers(self) {
 					.style('cursor', 'default')
 					.on('click', () => {
 						if (self.opts.click_term) {
+							console.log('click', term)
 							self.opts.click_term(term)
 						} else {
 							self.app.opts.tree.click_term_wrapper(term)
