@@ -1167,6 +1167,8 @@ export class TermdbVocab extends Vocab {
 				genome: this.state.vocab.genome,
 				dslabel: this.state.vocab.dslabel,
 				samplelst: config.samplelst,
+				min_count: config.settings.DEanalysis.min_count,
+				min_total_count: config.settings.DEanalysis.min_total_count,
 				method: config.settings.DEanalysis.method
 			}
 		})
