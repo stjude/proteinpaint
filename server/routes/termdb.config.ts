@@ -249,7 +249,7 @@ function getAllowedTermTypes(ds) {
 		typeSet.add('geneVariant')
 	}
 	if (ds?.queries?.geneExpression) typeSet.add(TermTypes.GENE_EXPRESSION)
-	if (ds?.queries?.metabolomics) typeSet.add(TermTypes.METABOLITE_INTENSITY)
+	if (ds?.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 
 	return [...typeSet]
 }

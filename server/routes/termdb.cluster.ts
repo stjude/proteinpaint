@@ -258,7 +258,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 }
 
 export async function validate_query_metaboliteIntensity(ds: any, genome: any) {
-	const q: MetaboliteIntensityQuery = ds.queries.metabolomics
+	const q: MetaboliteIntensityQuery = ds.queries.metaboliteIntensity
 	if (!q) return
 	q.metabolite2bins = {}
 
@@ -266,7 +266,7 @@ export async function validate_query_metaboliteIntensity(ds: any, genome: any) {
 		await validateMetaboliteIntensityNative(q as MetaboliteIntensityQueryNative, ds, genome)
 		return
 	}
-	throw 'unknown queries.metabolomics.src'
+	throw 'unknown queries.metaboliteIntensity.src'
 }
 
 async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNative, ds: any, genome: any) {
@@ -282,7 +282,7 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 		const l = lines[0].split('\t')
 		for (let i = 1; i < l.length; i++) {
 			const id = ds.cohort.termdb.q.sampleName2id(l[i])
-			if (id == undefined) throw 'queries.metabolomics: unknown sample from header: ' + l[i]
+			if (id == undefined) throw 'queries.metaboliteIntensity: unknown sample from header: ' + l[i]
 			q.samples.push(id)
 		}
 	}

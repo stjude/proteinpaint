@@ -232,7 +232,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
 				metabolites: [q.findterm]
 			}
-			const data = await ds.queries.metabolomics.get(args)
+			const data = await ds.queries.metaboliteIntensity.get(args)
 			console.log(data)
 			const foundTerms = []
 			for (const termId in data.byTermId) {
@@ -510,7 +510,7 @@ async function trigger_getDefaultBins(q, ds, res) {
 			dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
 			metabolites: [{ metabolite: tw.term.metabolite }]
 		}
-		const data = await ds.queries.metabolomics.get(args)
+		const data = await ds.queries.metaboliteIntensity.get(args)
 		console.log(data)
 	}
 	let binconfig = initBinConfig(lst)
