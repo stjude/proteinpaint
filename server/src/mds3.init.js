@@ -1611,6 +1611,8 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			case: cases_string,
 			control: controls_string,
 			input_file: q.file,
+			min_count: param.min_count,
+			min_total_count: param.min_total_count,
 			output_path: path.join(serverconfig.binpath, 'utils')
 		}
 		//console.log("expression_input:",expression_input)
