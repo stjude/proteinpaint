@@ -54,6 +54,24 @@ class DEanalysis {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
+				label: 'Min count',
+				type: 'number',
+				chartType: 'DEanalysis',
+				settingsKey: 'min_count',
+				title: 'Min count',
+				min: 0,
+				max: 100
+			},
+			{
+				label: 'Min total count',
+				type: 'number',
+				chartType: 'DEanalysis',
+				settingsKey: 'min_total_count',
+				title: 'Min total count',
+				min: 0,
+				max: 100
+			},
+			{
 				label: 'P-value significance (linear scale)',
 				type: 'number',
 				chartType: 'DEanalysis',
@@ -115,6 +133,7 @@ class DEanalysis {
 			this.settings.method = output.method
 			this.state.config = output.method
 		}
+
 		if (this.app.opts.genome.termdbs) {
 			// Check if genome build contains termdbs, only then enable gene ora
 			inputs.push({
@@ -170,24 +189,10 @@ class DEanalysis {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.DEanalysis
-		const output = await this.app.vocabApi.runDEanalysis(this.state.config)
+		const output = await this.app.vocabApi.runDEanalysis(this.config) // "this.config" was changed from "this.state.config". Hope this does not create any problems.
 		output.mid_sample_size_cutoff = 8 // mid sample size cutoff for method toggle to appear
 		output.high_sample_size_cutoff = 30 // high sample size cutoff for method toggle to not appear, so that very high sample-size groups are not analyzed by edgeR. The exact cutoff value will need to be determined with more examples.
 		await this.setControls(output)
-		//const state = this.app.getState()
-		//console.log('state:', state)
-		//if (state.customTerms[0].name) {
-		//	const headerText = state.customTerms[0].name
-		//	this.dom.header
-		//		.append('span')
-		//		.style('color', '#999999')
-		//		.text(headerText)
-		//		.append('span')
-		//		.style('font-size', '0.75em')
-		//		.style('opacity', 0.6)
-		//		.style('padding-left', '10px')
-		//		.text('DIFFERENTIAL EXPRESSION')
-		//} else {
 		this.dom.header
 			.style('opacity', 0.6)
 			.style('padding-left', '10px')
@@ -266,6 +271,9 @@ add:
 			d.vo_g = this
 		})
 	const fold_change_cutoff = self.settings.foldchange
+	//console.log("self.settings:",self.settings)
+	//self.config.settings.DEanalysis.min_count = self.settings.min_count
+	//self.config.settings.DEanalysis.min_total_count = self.settings.min_total_count
 	if (self.settings.pvalue == 0) throw 'p-value significance cannot be zero'
 	const p_value_cutoff = -Math.log10(self.settings.pvalue)
 	const p_value_adjusted_original = self.settings.adjusted_original_pvalue
@@ -531,6 +539,8 @@ export async function getPlotConfig(opts, app) {
 				DEanalysis: {
 					pvalue: 0.05,
 					foldchange: 2,
+					min_count: 10,
+					min_total_count: 15,
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
 					method: undefined,
