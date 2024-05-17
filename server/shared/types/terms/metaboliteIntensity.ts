@@ -1,4 +1,6 @@
-import { TermWrapper, BaseQ, Term } from '../termdb.ts'
+import { TermWrapper } from './tw.ts'
+import { BaseQ } from './term.ts'
+import { NumericTerm } from './numeric.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /*
@@ -18,7 +20,7 @@ export type MetaboliteIntensityTW = TermWrapper & {
 	term: MetaboliteIntensityTerm
 }
 
-export type MetaboliteIntensityTerm = Term & {
+export type MetaboliteIntensityTerm = NumericTerm & {
 	metabolite: string
 	bins: any
 }

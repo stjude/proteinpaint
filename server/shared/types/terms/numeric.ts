@@ -79,10 +79,10 @@ export type PresetNumericBins = {
 }
 
 export type NumericTerm = BaseTerm & {
-	id: string
+	id?: string
 	// these concrete term.type values make it clear that only these are numeric,
 	// "categorical", "condition", and other term.types are not included in this union
-	type: 'integer' | 'float' | 'geneExpression'
+	type: 'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'
 	bins: PresetNumericBins
 	values?: TermValues
 	/*densityNotAvailable?: boolean //Not used?
