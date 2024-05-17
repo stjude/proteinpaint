@@ -106,6 +106,7 @@ export class TermTypeSearch {
 				if (this.app.vocabApi.termdbConfig.queries.snvindel) labels.push('Mutation')
 				if (this.app.vocabApi.termdbConfig.queries.cnv) labels.push('CNV')
 				if (this.app.vocabApi.termdbConfig.queries.svfusion) labels.push('Fusion')
+				if (labels.length == 0) continue
 				label = labels.join('/')
 			}
 			try {

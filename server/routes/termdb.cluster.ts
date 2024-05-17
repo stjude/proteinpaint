@@ -315,12 +315,14 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 			if (!m) continue
 
 			const s2v = {}
+			let metabolite = m
 			await utils.get_lines_txtfile({
 				args: [q.file],
 				callback: line => {
 					const l = line.split('\t')
 					console.log('l', l)
 					if (!l[0].toLowerCase().includes(m.toLowerCase())) return
+					metabolite = l[0]
 					for (let i = 1; i < l.length; i++) {
 						const sampleId = samples[i - 1]
 						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
@@ -329,10 +331,9 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 						if (Number.isNaN(v)) throw 'exp value not number'
 						s2v[sampleId] = v
 					}
+					if (Object.keys(s2v).length) metabolite2sample2value.set(metabolite, s2v) // only add metabolite if it has data
 				}
 			} as any)
-			// Above!! add "as any" to suppress a npx tsc alert
-			if (Object.keys(s2v).length) metabolite2sample2value.set(m, s2v) // only add gene if has data
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}

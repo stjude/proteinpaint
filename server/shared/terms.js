@@ -55,7 +55,12 @@ const nonDictTypes = new Set([
 
 export function isNumericTerm(term) {
 	if (!term) return false
-	return term.type == TermTypes.INTEGER || term.type == TermTypes.FLOAT || term.type == TermTypes.GENE_EXPRESSION
+	return (
+		term.type == TermTypes.INTEGER ||
+		term.type == TermTypes.FLOAT ||
+		term.type == TermTypes.GENE_EXPRESSION ||
+		term.type == TermTypes.METABOLITE_INTENSITY
+	)
 }
 
 export function isDictionaryType(type) {
