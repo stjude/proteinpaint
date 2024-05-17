@@ -70,6 +70,8 @@ class TermSearch {
 		const termTypeGroup = this.state.termTypeGroup
 
 		if (termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES) return true
+		if (termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY) return true
+
 		return false
 	}
 
@@ -228,7 +230,7 @@ function setRenderers(self) {
 		*/
 		if ((self.opts.click_term || self.app.opts?.tree?.click_term_wrapper) && uses.has('plot')) {
 			// to click a graphable term, show as blue button
-			if ('id' in term && self.opts.disable_terms?.includes(term.id)) {
+			if (self.opts.disable_terms?.includes(term.id)) {
 				// but it's disabled
 				button
 					.attr('class', 'sja_tree_click_term_disabled')

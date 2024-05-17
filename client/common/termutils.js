@@ -1,3 +1,4 @@
+import { TermTypes } from '#shared/terms'
 import { dofetch3 } from '../src/client'
 
 /*
@@ -118,7 +119,8 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
 						}
 					}) && true
-			} else if (t.term.type == 'geneExpression') {
+			} else if (t.term.type == TermTypes.GENE_EXPRESSION) {
+			} else if (t.term.type == TermTypes.METABOLITE_INTENSITY) {
 			} else {
 				throw 'unknown term type'
 			}

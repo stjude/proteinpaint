@@ -946,7 +946,7 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb', { headers, body })
 	}
 
-	async getDefaultGeneExpBins(opts) {
+	async getDefaultBins(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termdb')
@@ -954,7 +954,7 @@ export class TermdbVocab extends Vocab {
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
 		const body = {
-			for: 'getDefaultGeneExpBins',
+			for: 'getDefaultBins',
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			tw: opts.tw,

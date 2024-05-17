@@ -14,8 +14,18 @@ The tree target is used to determine the allowed term types.
 
 const useCases = {
 	matrix: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
-	filter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
-	dictionary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
+	filter: [
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
+	dictionary: [
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
 	summary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION],
 	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
 	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
@@ -101,10 +111,14 @@ export class TermTypeSearch {
 				if (this.app.vocabApi.termdbConfig.queries.snvindel) labels.push('Mutation')
 				if (this.app.vocabApi.termdbConfig.queries.cnv) labels.push('CNV')
 				if (this.app.vocabApi.termdbConfig.queries.svfusion) labels.push('Fusion')
+				if (labels.length == 0) continue
 				label = labels.join('/')
 			}
 			try {
-				if (termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+				if (
+					termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
+					termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
+				) {
 					const _ = await import(`./handlers/${type}.ts`)
 					this.handlerByType[type] = await new _.SearchHandler()
 				}
@@ -142,7 +156,10 @@ export class TermTypeSearch {
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
 
-		if (tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+		if (
+			tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
+			tab.termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
+		) {
 			const handler = this.handlerByType[type]
 			await handler.init({
 				holder,

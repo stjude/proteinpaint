@@ -1,6 +1,7 @@
 import { getCompInit } from '../rx'
 import { termsettingInit } from '#termsetting'
 import { getNormalRoot } from '#filter'
+import { TermTypes } from '#shared/terms'
 
 /*
 for configuring term1; wraps termsetting
@@ -130,7 +131,9 @@ function setRenderers(self) {
 				break
 			case 'samplelst':
 				break
-			case 'geneExpression':
+			case TermTypes.GENE_EXPRESSION:
+				break
+			case TermTypes.METABOLITE_INTENSITY:
 				break
 			default:
 				throw 'unknown term type'

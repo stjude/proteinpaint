@@ -1,16 +1,17 @@
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == TermTypes.CATEGORICAL instead of type == 'categorical'
 export const TermTypes = {
+	GENE_VARIANT: 'geneVariant',
+	GENE_EXPRESSION: 'geneExpression',
 	CATEGORICAL: 'categorical',
 	INTEGER: 'integer',
 	FLOAT: 'float',
+	SNP_LIST: 'snplst',
+	SNP_LOCUS: 'snplocus',
 	CONDITION: 'condition',
 	SURVIVAL: 'survival',
 	SAMPLELST: 'samplelst',
-	GENE_VARIANT: 'geneVariant',
-	GENE_EXPRESSION: 'geneExpression',
-	SNP_LIST: 'snplst',
-	SNP_LOCUS: 'snplocus'
+	METABOLITE_INTENSITY: 'metaboliteIntensity'
 }
 
 export const TermTypeGroups = {
@@ -22,7 +23,7 @@ export const TermTypeGroups = {
 	GENE_EXPRESSION: 'Gene Expression',
 	PROTEIN_EXPRESSION: 'Protein Expression',
 	SPLICE_JUNCTION: 'Splice Junction',
-	METABOLITE: 'Metabolite',
+	METABOLITE_INTENSITY: 'Metabolite Intensity',
 	GSEA: 'GSEA',
 	MUTATION_SIGNATURE: 'Mutation Signature',
 	SNP_LIST: 'SNP List',
@@ -41,19 +42,26 @@ export const typeGroup = {
 	[TermTypes.GENE_VARIANT]: TermTypeGroups.MUTATION_CNV_FUSION,
 	[TermTypes.SNP_LIST]: TermTypeGroups.SNP_LIST,
 	[TermTypes.SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
-	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION
+	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
+	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY
 }
 
 const nonDictTypes = new Set([
 	TermTypes.SNP_LIST,
 	TermTypes.SNP_LOCUS,
 	TermTypes.GENE_EXPRESSION,
-	TermTypes.GENE_VARIANT
+	TermTypes.GENE_VARIANT,
+	TermTypes.METABOLITE_INTENSITY
 ])
 
 export function isNumericTerm(term) {
 	if (!term) return false
-	return term.type == TermTypes.INTEGER || term.type == TermTypes.FLOAT || term.type == TermTypes.GENE_EXPRESSION
+	return (
+		term.type == TermTypes.INTEGER ||
+		term.type == TermTypes.FLOAT ||
+		term.type == TermTypes.GENE_EXPRESSION ||
+		term.type == TermTypes.METABOLITE_INTENSITY
+	)
 }
 
 export function isDictionaryType(type) {

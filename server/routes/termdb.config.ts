@@ -3,6 +3,7 @@ import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js'
 import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.js'
+import { TermTypes } from '#shared/terms.js'
 
 export const api: any = {
 	endpoint: 'termdb/config',
@@ -247,7 +248,8 @@ function getAllowedTermTypes(ds) {
 		// same logic in trigger_findterm()
 		typeSet.add('geneVariant')
 	}
-	if (ds?.queries?.geneExpression) typeSet.add('geneExpression')
+	if (ds?.queries?.geneExpression) typeSet.add(TermTypes.GENE_EXPRESSION)
+	if (ds?.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 
 	return [...typeSet]
 }

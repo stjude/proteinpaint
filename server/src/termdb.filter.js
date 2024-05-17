@@ -1,5 +1,6 @@
 import { isDictionaryType, TermTypes } from '#shared/terms'
 import { getBin } from './termdb.matrix.js'
+import { dtmetaboliteintensity, dtgeneexpression } from '#shared/common.js'
 
 /*
 nested filter documented at:
@@ -52,6 +53,8 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			throw `filter item should have a 'tvs' or 'lst' property`
 		} else if (item.tvs.term.type == TermTypes.GENE_EXPRESSION) {
 			f = await get_geneExpression(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
+			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
 		} else if (
 			item.tvs.term.id &&
 			(!item.tvs.term.type || isDictionaryType(item.tvs.term.type)) &&
@@ -230,7 +233,7 @@ async function get_geneExpression(tvs, CTEname, ds) {
 		/** distance method */
 		distanceMethod: 'euclidean',
 		/** Data type */
-		dataType: 3,
+		dataType: dtgeneexpression,
 		genes: [{ gene: tvs.term.gene }]
 	}
 	const data = await ds.queries.geneExpression.get(args)
@@ -240,6 +243,41 @@ async function get_geneExpression(tvs, CTEname, ds) {
 		const value = Number(values[sampleId])
 		const filterBin = getBin(tvs.ranges, value)
 		if (filterBin != -1) samples.push(sampleId)
+	}
+	const result = {
+		CTEs: [
+			`
+		  ${CTEname} AS (
+				SELECT id as sample
+				FROM sampleidmap
+				WHERE id IN (${samples.map(i => '?').join(', ')})
+			)`
+		],
+		values: [...samples],
+		CTEname
+	}
+	return result
+}
+
+async function get_metaboliteIntensity(tvs, CTEname, ds) {
+	const args = {
+		genome: ds.genome,
+		dslabel: ds.label,
+		clusterMethod: 'hierarchical',
+		/** distance method */
+		distanceMethod: 'euclidean',
+		/** Data type */
+		dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
+		metabolites: [tvs.term.name]
+	}
+	const data = await ds.queries.metaboliteIntensity.get(args)
+	const termData = data.metabolite2sample2value.get(tvs.term.name)
+	const samples = []
+
+	for (const sample in termData) {
+		const value = termData[sample]
+		const filterBin = getBin(tvs.ranges, value)
+		if (filterBin != -1) samples.push(sample)
 	}
 	const result = {
 		CTEs: [

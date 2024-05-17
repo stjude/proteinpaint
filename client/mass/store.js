@@ -2,6 +2,7 @@ import { getStoreInit } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { getFilterItemByTag, findParent } from '#filter/filter'
 import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
+import { TermTypes } from '../shared/terms.js'
 
 // to distinguish from IDs assigned by other code or users
 const idPrefix = '_MASS_AUTOID_' + Math.random().toString().slice(-6)
@@ -588,7 +589,9 @@ function validatePlotTerm(t, vocabApi) {
 			break
 		case 'samplelst':
 			break
-		case 'geneExpression':
+		case TermTypes.GENE_EXPRESSION:
+			break
+		case TermTypes.METABOLITE_INTENSITY:
 			break
 		default:
 			if (t.term.isgenotype) {
