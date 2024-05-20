@@ -1,4 +1,4 @@
-// cd .. && cargo build --release && json='{"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
+// cd .. && cargo build --release && json='{"min_count":10,"min_total_count":15,"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
 // cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/DEanalysis
 #![allow(non_snake_case)]
 use json;
@@ -368,8 +368,22 @@ fn main() {
             match input_json {
                 Ok(json_string) => {
                     let now = Instant::now();
-                    let min_count = json_string["min_count"].as_f64().to_owned();
-                    let min_total_count = json_string["min_total_count"].as_f64().to_owned();
+                    let min_count_option = json_string["min_count"].as_f64().to_owned();
+                    let min_total_count_option = json_string["min_total_count"].as_f64().to_owned();
+                    let min_count;
+                    match min_count_option {
+                        Some(x) => min_count = x,
+                        None => {
+                            panic!("min_count is missing a value")
+                        }
+                    }
+                    let min_total_count;
+                    match min_total_count_option {
+                        Some(x) => min_total_count = x,
+                        None => {
+                            panic!("min_total_count is missing a value")
+                        }
+                    }
                     let case_string = &json_string["case"].to_owned().as_str().unwrap().to_string();
                     let control_string = &json_string["control"]
                         .to_owned()
@@ -675,6 +689,7 @@ fn adjust_p_values_bonferroni(original_p_values: Vec<PValueIndexes>) -> Vec<Adju
     adjusted_p_values
 }
 
+// Original TMM normalization source code in edgeR: https://rdrr.io/bioc/edgeR/src/R/calcNormFactors.R
 fn tmm_normalization(
     input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     lib_sizes: &Vec<f64>,
@@ -951,9 +966,10 @@ fn calc_quantile(mut input: Vec<f64>, p: f64) -> f64 {
     qs_final
 }
 
+// Original filterByExpr source code in edgeR: https://rdrr.io/bioc/edgeR/src/R/filterByExpr.R
 fn filter_by_expr(
-    min_count_option: Option<f64>,
-    min_total_count_option: Option<f64>,
+    min_count: f64,
+    min_total_count: f64,
     raw_data: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     num_diseased: usize,
     num_control: usize,
@@ -966,25 +982,6 @@ fn filter_by_expr(
     Vec<String>,
 ) {
     // Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>
-    #[allow(non_upper_case_globals)]
-    let (min_count, min_total_count);
-    match min_count_option {
-        Some(x) => {
-            min_count = x;
-        }
-        None => {
-            min_count = 10.0;
-        }
-    }
-
-    match min_total_count_option {
-        Some(x) => {
-            min_total_count = x;
-        }
-        None => {
-            min_total_count = 15.0;
-        }
-    }
     //const min_count: f64 = 10.0; // Value of constant from R implementation
     //const min_total_count: f64 = 15.0; // Value of constant from R implementation
     const LARGE_N: f64 = 10.0; // Value of constant from R implementation
