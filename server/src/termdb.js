@@ -333,9 +333,10 @@ async function get_matrix(q, req, res, ds, genome) {
 	}
 	const data = await getData(q, ds, genome)
 	if (authApi.canDisplaySampleIds(req, ds)) {
-		for (const sample of Object.values(data.samples)) {
-			sample.sampleName = ds.sampleId2Name.get(sample.sample)
-		}
+		if (data.samples)
+			for (const sample of Object.values(data.samples)) {
+				sample.sampleName = ds.sampleId2Name.get(sample.sample)
+			}
 	}
 	res.send(data)
 }
