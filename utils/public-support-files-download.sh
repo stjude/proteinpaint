@@ -54,7 +54,7 @@ cd db/
 curl https://proteinpaint.stjude.org/ppSupport/db/proteindomain.db -O
 
 cd ../msigdb/
-curl https://proteinpaint.stjude.org/ppSupport/msigdb/db -O
+curl https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs  -O
 
 cd ../../hg19/
 curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg19.bcf.gz -O
