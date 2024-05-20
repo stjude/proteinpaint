@@ -1,7 +1,6 @@
-import { Term } from '#shared/types/terms/term.ts'
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
-import { TermTypeGroups, TermTypes, typeGroup } from '#shared/terms'
+import { TermTypeGroups, TermTypes, typeGroup, Term } from '#shared/terms'
 
 type Dict = {
 	[key: string]: any
@@ -13,7 +12,12 @@ The tree target is used to determine the allowed term types.
  */
 
 const useCases = {
-	matrix: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
+	matrix: [
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
 	filter: [
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.MUTATION_CNV_FUSION,

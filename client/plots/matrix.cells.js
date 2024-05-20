@@ -1,5 +1,6 @@
 import { convertUnits } from '#shared/helpers'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
+import { TermTypes } from '../shared/terms'
 /*
 	cell: a matrix cell data
 	tw: termwrapper
@@ -230,6 +231,8 @@ export const setCellProps = {
 	categorical: setCategoricalCellProps,
 	integer: setNumericCellProps,
 	float: setNumericCellProps,
+	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
+	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps,
 	/* !!! TODO: later, may allow survival terms as a matrix row in server/shared/termdb.usecase.js, 
 	   but how - quantitative, categorical, etc? */
 	//survival: setNumericCellProps,
