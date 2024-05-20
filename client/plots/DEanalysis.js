@@ -468,6 +468,8 @@ add:
 				maxHeight: '150vh',
 				resize: true
 			})
+		} else {
+			self.dom.tableDiv.selectAll('*').remove()
 		}
 
 		if (self.settings.gene_ora && self.app.opts.genome.termdbs) {
