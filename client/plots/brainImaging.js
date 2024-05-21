@@ -4,10 +4,10 @@ import { topBarInit } from './controls.btns'
 import { configUiInit } from './controls.config'
 import { dofetch3 } from '#common/dofetch'
 
-class BrainMRI {
+class BrainImaging {
 	constructor(opts) {
 		this.opts = opts
-		this.type = 'brainMRI'
+		this.type = 'brainImaging'
 		this.isOpen = true
 	}
 
@@ -23,8 +23,8 @@ class BrainMRI {
 				app: this.app,
 				id: this.id,
 				downloadHandler: () => {
-					const imgElement = holder.select('div[id="sjpp_brainMRI_holder_div"] img').node()
-					const downloadImgName = 'brainMRI'
+					const imgElement = holder.select('div[id="sjpp_brainImaging_holder_div"] img').node()
+					const downloadImgName = 'brainImaging'
 					const a = document.createElement('a')
 					document.body.appendChild(a)
 
@@ -61,7 +61,7 @@ class BrainMRI {
 			{
 				label: 'Sagittal',
 				type: 'number',
-				chartType: 'brainMRI',
+				chartType: 'brainImaging',
 				settingsKey: 'brainImageL',
 				title: 'Sagittal',
 				min: 0,
@@ -70,7 +70,7 @@ class BrainMRI {
 			{
 				label: 'Coronal',
 				type: 'number',
-				chartType: 'brainMRI',
+				chartType: 'brainImaging',
 				settingsKey: 'brainImageF',
 				title: 'Coronal',
 				min: 0,
@@ -79,7 +79,7 @@ class BrainMRI {
 			{
 				label: 'Axial',
 				type: 'number',
-				chartType: 'brainMRI',
+				chartType: 'brainImaging',
 				settingsKey: 'brainImageT',
 				title: 'Axial',
 				min: 0,
@@ -92,11 +92,11 @@ class BrainMRI {
 
 	async main() {
 		const settings = this.state.settings
-		this.isOpen = settings.brainMRI.isOpen
+		this.isOpen = settings.brainImaging.isOpen
 
 		const holder = this.opts.holder
-		holder.select('div[id="sjpp_brainMRI_holder_div"]').remove()
-		const pngDiv = holder.append('div').attr('id', 'sjpp_brainMRI_holder_div').style('display', 'inline-block')
+		holder.select('div[id="sjpp_brainImaging_holder_div"]').remove()
+		const pngDiv = holder.append('div').attr('id', 'sjpp_brainImaging_holder_div').style('display', 'inline-block')
 
 		const appState = this.app.getState()
 
@@ -108,9 +108,9 @@ class BrainMRI {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			NIdata: { dataType: appState.args.queryKey, sample: appState.args.sampleName + '.nii' },
-			l: settings.brainMRI.brainImageL,
-			f: settings.brainMRI.brainImageF,
-			t: settings.brainMRI.brainImageT
+			l: settings.brainImaging.brainImageL,
+			f: settings.brainImaging.brainImageF,
+			t: settings.brainImaging.brainImageT
 		}
 		const data = await dofetch3('mds3', { body })
 		if (data.error) throw data.error
@@ -137,20 +137,20 @@ class BrainMRI {
 			id: this.opts.id,
 			config: {
 				settings: {
-					brainMRI: { isOpen: !isOpen }
+					brainImaging: { isOpen: !isOpen }
 				}
 			}
 		})
 	}
 }
 
-export const brainMRI = getCompInit(BrainMRI)
-export const componentInit = brainMRI
+export const brainImaging = getCompInit(BrainImaging)
+export const componentInit = brainImaging
 
 export async function getPlotConfig(opts) {
 	const settings = {
-		brainMRI: { brainImageL: 76, brainImageF: 116, brainImageT: 80 }
+		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 }
 	}
-	const config = { chartType: 'brainMRI', settings }
+	const config = { chartType: 'brainImaging', settings }
 	return copyMerge(config, opts)
 }

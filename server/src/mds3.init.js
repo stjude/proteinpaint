@@ -1898,7 +1898,7 @@ async function validate_query_NIdata(ds, genome) {
 				}
 
 				return new Promise((resolve, reject) => {
-					const ps = spawn('python3', ['proteinpaint/python/src/plotBrainMRI.py', refFile, sampleFile, l, f, t])
+					const ps = spawn('python3', ['proteinpaint/python/src/plotBrainImaging.py', refFile, sampleFile, l, f, t])
 					let imgData = []
 					ps.stdout.on('data', data => {
 						imgData.push(data)

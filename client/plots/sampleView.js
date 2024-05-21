@@ -276,7 +276,7 @@ class SampleView {
 
 	async setControls(q) {
 		this.dom.controlsDiv.selectAll('*').remove()
-		const showBrainMRI = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainMRI
+		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		const inputs = [
 			{
 				boxLabel: 'Visible',
@@ -303,7 +303,7 @@ class SampleView {
 				title: `Option to show/hide single sample plots`
 			}
 		]
-		if (q.NIdata && showBrainMRI) {
+		if (q.NIdata && showBrainImaging) {
 			inputs.push({
 				boxLabel: 'Visible',
 				label: 'brain MRI',
@@ -559,8 +559,8 @@ class SampleView {
 				}
 			}
 		}
-		const showBrainMRI = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainMRI
-		if (state.termdbConfig.queries?.NIdata && showBrainMRI) {
+		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
+		if (state.termdbConfig.queries?.NIdata && showBrainImaging) {
 			for (const k in state.termdbConfig.queries?.NIdata) {
 				let div = plotsDiv.append('div')
 				for (const sample of samples) {
@@ -569,8 +569,8 @@ class SampleView {
 					if (this.state.samples.length > 1)
 						plotDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 
-					const brainMRIImport = await import('./plot.brainMRI.js')
-					brainMRIImport.default(
+					const brainImagingImport = await import('./plot.brainImaging.js')
+					brainImagingImport.default(
 						state.termdbConfig,
 						state.vocab.dslabel,
 						k,

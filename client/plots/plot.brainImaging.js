@@ -4,7 +4,7 @@ export default async function (termdbConfig, dslabel, queryKey, sample, holder, 
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
-		// must do this check to make sure this ds supports brainMRI
+		// must do this check to make sure this ds supports brainImaging
 		if (typeof termdbConfig?.queries?.NIdata != 'object') throw 'termdbConfig.queries.NIdata{} not object'
 		const q = termdbConfig.queries.NIdata[queryKey]
 		if (!q) throw 'invalid queryKey'
@@ -12,7 +12,7 @@ export default async function (termdbConfig, dslabel, queryKey, sample, holder, 
 		if (typeof genomeObj != 'object') throw 'genomeObj{} not object'
 
 		// request data
-		const brainMRI_arg = {
+		const brainImaging_arg = {
 			sampleName: sample.sample_id,
 			genome: genomeObj,
 			queryKey
@@ -23,10 +23,10 @@ export default async function (termdbConfig, dslabel, queryKey, sample, holder, 
 			state: {
 				genome: genomeObj.name,
 				dslabel: dslabel,
-				args: brainMRI_arg,
+				args: brainImaging_arg,
 				plots: [
 					{
-						chartType: 'brainMRI',
+						chartType: 'brainImaging',
 						overrides
 					}
 				]
@@ -42,9 +42,9 @@ export default async function (termdbConfig, dslabel, queryKey, sample, holder, 
 
 function computeOverrides(o) {
 	const overrides = structuredClone(o)
-	if (!overrides.brainMRI) overrides.brainMRI = {}
+	if (!overrides.brainImaging) overrides.brainImaging = {}
 	if (!overrides.downloadImgName) {
-		overrides.downloadImgName = 'brainMRI'
+		overrides.downloadImgName = 'brainImaging'
 	}
 	return overrides
 }

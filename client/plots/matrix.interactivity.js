@@ -256,8 +256,8 @@ export function setInteractivity(self) {
 					self.dom.clickMenu.d.selectAll('*').remove()
 				})
 		}
-		const showBrainMRI = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainMRI
-		if (q.NIdata && showBrainMRI) {
+		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
+		if (q.NIdata && showBrainImaging) {
 			for (const k in q.NIdata) {
 				const menuDiv = self.dom.clickMenu.d
 					.append('div')
@@ -266,7 +266,7 @@ export function setInteractivity(self) {
 					.on('click', async () => {
 						const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 						sandbox.header.text(sample.sample_id)
-						;(await import('./plot.brainMRI.js')).default(
+						;(await import('./plot.brainImaging.js')).default(
 							self.state.termdbConfig,
 							self.state.vocab.dslabel,
 							k,
