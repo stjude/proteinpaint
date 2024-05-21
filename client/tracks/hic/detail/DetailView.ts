@@ -13,14 +13,13 @@ export class DetailView {
 	plotDiv: MainPlotDiv
 	sheath: Elem
 	rotor: Selection<HTMLDivElement, any, any, any>
-	data: any
 	parent: (prop: string) => string | number
 	resolution: Resolution
 	colorizeElement: ColorizeElement
 	viewRangeBpw: number | undefined
 	calResolution: number | null = null
 	dataMapper: DetailDataMapper
-	items: ReturnedItems
+	data: ReturnedItems
 	coordinates: DetailCoordinates
 	errList: string[]
 
@@ -51,7 +50,7 @@ export class DetailView {
 			.style('bottom', '0px')
 			.style('transform', 'rotate(-90deg)')
 			.style('transform-origin', 'left bottom')
-		this.items = opts.items
+		this.data = opts.data
 		this.parent = opts.parent
 		this.errList = this.parent('errList') as any
 		this.resolution = new Resolution(opts.error)
@@ -149,15 +148,15 @@ export class DetailView {
 		await this.xBlock.loadBlock(state.x, this.canvasHolder, this.canvas)
 		await this.yBlock.loadBlock(state.y, this.canvasHolder, this.canvas, this.sheath)
 
-		this.update(this.items)
+		this.update(this.data)
 	}
 
-	update(items: ReturnedItems) {
-		if (items.items.length == 0) {
+	update(data: ReturnedItems) {
+		if (data.items.length == 0) {
 			this.app.dispatch({ type: 'loading_active', active: false })
 			return
 		}
-		this.items = items
+		this.data = data
 		const state = this.parent('state') as any
 
 		this.ctx = this.canvas.node().getContext('2d') as CanvasRenderingContext2D
@@ -165,7 +164,7 @@ export class DetailView {
 		const [coords, canvaswidth, canvasheight] = this.coordinates.getCoordinates(
 			state.x,
 			state.y,
-			this.items,
+			this.data,
 			this.calResolution as number,
 			this.canvas,
 			this.dataMapper['fragData']
