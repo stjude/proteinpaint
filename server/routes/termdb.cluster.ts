@@ -287,6 +287,30 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 		}
 	}
 
+	q.find = async (param: TermdbClusterRequest) => {
+		// if !q.metabolites, read all metabolites from file
+		if (!q.metabolites) {
+			const metabolites = [] as string[]
+			await utils.get_lines_txtfile({
+				args: [q.file],
+				callback: line => {
+					const l = line.split('\t')
+					if (l[0].startsWith('#Metabolites')) return
+					metabolites.push(l[0])
+				}
+			} as any)
+			q.metabolites = metabolites
+		}
+		const matches = []
+		for (const m of param.metabolites!) {
+			if (!m) continue
+			for (const metabolite of q.metabolites) {
+				if (metabolite.toLowerCase().includes(m.toLowerCase())) matches.push(metabolite)
+			}
+		}
+		return { matches }
+	}
+
 	q.get = async (param: TermdbClusterRequest) => {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
