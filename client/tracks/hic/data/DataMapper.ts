@@ -1,8 +1,10 @@
 export class DataMapper {
 	hic: any
+	readonly percentile: number
 
-	constructor(hic: any) {
+	constructor(hic: any, percentile?: number) {
 		this.hic = hic
+		this.percentile = percentile ? percentile / 100 : 0.99
 	}
 
 	sortData(data: any) {
@@ -38,7 +40,7 @@ export class DataMapper {
 
 		// Do not use Math.min() or Math.max(). Causes stack overflow
 		const sortedVlst = vlst.sort((a: number, b: number) => a - b)
-		const max = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
+		const max = sortedVlst[Math.floor(sortedVlst.length * this.percentile)] as number
 		const min = sortedVlst[0]
 		return [min, max, sortedVlst[sortedVlst.length - 1]]
 	}

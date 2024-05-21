@@ -58,7 +58,7 @@ export class HicComponent {
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		this.app = opts.app
-		this.dataMapper = new DataMapper(this.hic)
+		this.dataMapper = new DataMapper(this.hic, opts.state.maxCutoffPercentile)
 		this.activeView = this.state.currView
 		this.error = opts.error
 		this.resolution = new Resolution(this.error)
