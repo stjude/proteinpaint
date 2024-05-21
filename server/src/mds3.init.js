@@ -23,7 +23,7 @@ import {
 	mclasscnvgain,
 	mclasscnvloss
 } from '#shared/common.js'
-import { get_samples } from './termdb.sql.js'
+import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.js'
 import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from './termdb.scatter.js'
@@ -2300,8 +2300,9 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop)))
 			throw 'no gene or position specified'
 
-		const mlst = [] // collect raw data points
-
+		if (tw.term.subtype == 'snp') throw 'not supported'
+		/* the 'mlst' in this 'if' code block is no longer supported due
+		to the new code changes introduced below
 		if (tw.term.subtype == 'snp') {
 			// query term is one snp; it should only work for snvindel
 			if (!ds.queries.snvindel?.allowSNPs) throw 'snvindel does not allow snp'
@@ -2331,36 +2332,26 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				}
 				mlst.push(_m)
 			}
-		} else {
-			// query term is not snp
-			// should be either gene or region, and will work for all data types
-			// has some code duplication with mds3.load.js query_snvindel() etc
-			// primary concern is tw.term may be missing coord/isoform to perform essential query
+		}*/
+		// query term is not snp
+		// should be either gene or region, and will work for all data types
+		// has some code duplication with mds3.load.js query_snvindel() etc
+		// primary concern is tw.term may be missing coord/isoform to perform essential query
+		const dt = tw.q.dt
+		const mlst =
+			dt == dtsnvindel
+				? await getSnvindelByTerm(ds, tw.term, genome, q)
+				: dt == dtfusionrna || dt == dtsv
+				? await getSvfusionByTerm(ds, tw.term, genome, q)
+				: dt == dtcnv
+				? await getCnvByTw(ds, tw, genome, q)
+				: ds.queries.geneCnv
+				? await getGenecnvByTerm(ds, tw.term, genome, q)
+				: null
 
-			if (ds.queries.snvindel && tw.q.dts[dtsnvindel]) {
-				const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
-				mlst.push(...lst)
-			}
+		if (!mlst) throw 'unable to retrieve mutation data'
 
-			if (ds.queries.svfusion && (tw.q.dts[dtfusionrna] || tw.q.dts[dtsv])) {
-				const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
-				mlst.push(...lst)
-			}
-
-			if (ds.queries.cnv && tw.q.dts[dtcnv]) {
-				const lst = await getCnvByTw(ds, tw, genome, q)
-				mlst.push(...lst)
-			}
-			//if (ds.queries.probe2cnv) { const lst = await getProbe2cnvByTw(ds, tw, genome, q) mlst.push(...lst) }
-
-			if (ds.queries.geneCnv) {
-				const lst = await getGenecnvByTerm(ds, tw.term, genome, q)
-				mlst.push(...lst)
-			}
-		}
-
-		const data = new Map() // to return
-
+		const sample2mlst = new Map()
 		for (const m of mlst) {
 			/*
 			m={
@@ -2382,16 +2373,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			if (!Array.isArray(m.samples)) continue
 
 			for (const s of m.samples) {
-				if (!data.has(s.sample_id)) {
-					data.set(s.sample_id, { sample: s.sample_id })
-				}
-
-				if (!data.get(s.sample_id)[tw.term.name]) {
-					data.get(s.sample_id)[tw.term.name] = { key: tw.term.name, label: tw.term.name, values: [] }
-				}
-
 				// create new m2{} for each mutation in each sample
-
 				const m2 = {
 					gene: tw.term.name,
 					isoform: m.isoform,
@@ -2408,7 +2390,17 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				}
 
 				if (s.formatK2v) {
-					// this sample have format values, flatten those
+					// sample has format values
+					if (tw.q.origin) {
+						// origin specified
+						if (!Object.keys(s.formatK2v).includes('origin')) throw 'format does not include origin'
+						if (s.formatK2v['origin'] != tw.q.origin) {
+							// mutation origin does not match specified origin
+							// skip sample
+							continue
+						}
+					}
+					// flatten format values
 					for (const k in s.formatK2v) {
 						m2[k] = s.formatK2v[k]
 					}
@@ -2425,58 +2417,76 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					m2.pairlst = m.pairlst
 				}
 
-				data.get(s.sample_id)[tw.term.name].values.push(m2)
+				if (!sample2mlst.has(s.sample_id)) sample2mlst.set(s.sample_id, [])
+				const lst = sample2mlst.get(s.sample_id)
+				lst.push(m2)
+				sample2mlst.set(s.sample_id, lst)
 			}
 		}
 
-		await mayAddDataAvailability(q, ds, data, tw)
+		await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, q.filter)
+
+		const groupset = get_active_groupset(tw.term, tw.q)
+
+		const data = new Map() // to return
+		for (const [sample, mlst] of sample2mlst) {
+			// get first group of groupset with a mutation value
+			// that matches a mutation in the sample
+			// NOTE: this depends on .groups[] being arranged in order
+			// of priority (see client/termsetting/handlers/geneVariant.ts)
+			const mclasses = mlst.map(m => m.class)
+			const group = groupset.groups.find(group => {
+				return group.values.some(v => mclasses.includes(v.key))
+			})
+			if (!group) throw 'unable to assign sample to group'
+			// assign sample to group
+			data.set(sample, {
+				sample,
+				[tw.$id]: { key: group.name, label: group.name, values: mlst }
+			})
+		}
 
 		return data
 	}
 }
 
-async function mayAddDataAvailability(q, ds, data, tw) {
+async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter) {
 	if (!ds.assayAvailability?.byDt) return
-	// get samples passing filter if filter is in use
-	const sampleFilter = q.filter ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
-	for (const dtKey in tw.q.dts) {
-		const dt = ds.assayAvailability.byDt[dtKey]
-		if (dt.byOrigin) {
-			for (const origin in dt.byOrigin) {
-				const sub_dt = dt.byOrigin[origin]
-				addDataAvailability(dtKey, sub_dt, data, tw.term.name, origin, sampleFilter)
-			}
-		} else addDataAvailability(dtKey, dt, data, tw.term.name, false, sampleFilter)
+	const sampleFilter = filter ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
+	const _dt = ds.assayAvailability.byDt[dtKey]
+	if (!_dt) throw 'unable to retrieve dt from dataset'
+	const dt = origin ? _dt.byOrigin[origin] : _dt
+	if (!dt) throw 'invalid dt'
+	for (const sid of dt.yesSamples) {
+		// sample has been assayed
+		// if sample does not have annotated mutation for dt
+		// then it will be annotated as wildtype
+		addDataAvailability(sid, sample2mlst, dtKey, 'WT', origin, sampleFilter)
+	}
+	for (const sid of dt.noSamples) {
+		// sample has not been assayed
+		// if sample does not have annotated mutation for dt
+		// then it will be annotated as blank (i.e., not tested)
+
+		// TODO: sample that has not been assayed should not
+		// have annotation for mutation, right? If so, the code
+		// needs to make sure that the sample has no mutation annotation
+		addDataAvailability(sid, sample2mlst, dtKey, 'Blank', origin, sampleFilter)
 	}
 }
 
-function addDataAvailability(dtKey, dt, data, tname, origin, sampleFilter) {
-	for (const sid of dt.yesSamples) {
-		if (sampleFilter && !sampleFilter.has(sid)) continue
-		if (!data.has(sid)) data.set(sid, { sample: sid })
-		const sampleData = data.get(sid)
-		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
-		if (origin) {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
-				sampleData[tname].values.push({ dt: Number.parseInt(dtKey), class: 'WT', _SAMPLEID_: sid, origin: origin })
-		} else {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey))
-				sampleData[tname].values.push({ dt: Number.parseInt(dtKey), class: 'WT', _SAMPLEID_: sid })
-		}
+function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilter) {
+	if (sampleFilter && !sampleFilter.has(sid)) return
+	if (!sample2mlst.has(sid)) sample2mlst.set(sid, [])
+	const mlst = sample2mlst.get(sid)
+	if (!mlst.some(m => m.dt == dtKey)) {
+		// sample does not have a mutation for this dt
+		// sample will be annotated with the given mclass for this dt
+		const m = { dt: Number(dtKey), class: mclass, _SAMPLEID_: sid }
+		if (origin) m.origin = origin
+		mlst.push(m)
 	}
-	for (const sid of dt.noSamples) {
-		if (sampleFilter && !sampleFilter.has(sid)) continue
-		if (!data.has(sid)) data.set(sid, { sample: sid })
-		const sampleData = data.get(sid)
-		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
-		if (origin) {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
-				sampleData[tname].values.push({ dt: Number.parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid, origin: origin })
-		} else {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey))
-				sampleData[tname].values.push({ dt: Number.parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid })
-		}
-	}
+	sample2mlst.set(sid, mlst)
 }
 
 /*

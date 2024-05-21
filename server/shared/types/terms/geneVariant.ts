@@ -17,7 +17,8 @@ export type GeneVariantQ = BaseQ & {
 	cnvMinAbsValue?: number
 	cnvLossCutoff?: number
 	exclude: any //an array maybe?
-	dts: object
+	dt: number
+	origin?: string
 }
 
 export type GeneVariantTW = TermWrapper & {
