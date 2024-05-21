@@ -115,7 +115,7 @@ tape('click_term', test => {
 	runpp({
 		tree: {
 			click_term: modifier_callback,
-			disable_terms: [{ id: 'Cardiomyopathy' }]
+			disable_terms: [{ id: 'Cardiomyopathy', type: 'condition' }]
 		},
 		search: {
 			callbacks: {
@@ -168,7 +168,7 @@ tape('tree.click_term2select_tvs', test => {
 	runpp({
 		tree: {
 			click_term2select_tvs: () => {},
-			disable_terms: [{ id: 'Cardiomyopathy' }]
+			disable_terms: [{ id: 'Cardiomyopathy', type: 'condition' }]
 		},
 		search: {
 			callbacks: {
