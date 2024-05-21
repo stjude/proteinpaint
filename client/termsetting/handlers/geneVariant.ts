@@ -1,6 +1,7 @@
 import { select } from 'd3-selection'
-import { mclass, dt2label } from '../../shared/common'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtsv, dtfusionrna } from '../../shared/common'
 import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW } from '../../shared/types/index'
+import { PredefinedGroupSetting } from '../../shared/types/terms/term'
 
 /* 
 instance attributes
@@ -41,31 +42,137 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 	}
 	if (!tw.term.name) tw.term.name = tw.term.gene || `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
 	if (!tw.term.id) tw.term.id = tw.term.name // TODO: is this necessary?
+	if (!('type' in tw.q)) tw.q.type = 'values' // TODO: is this necessary to specify? Note that q.type = 'values' works with predefined groupsetting for geneVariant term.
 
-	if (!tw.q.groupsetting) tw.q.groupsetting = {}
-	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false
+	// dts
+	const ds_dts = [] // dts specified in dataset
+	for (const query of Object.keys(vocabApi.termdbConfig.queries)) {
+		if (query == 'snvindel') ds_dts.push(dtsnvindel)
+		else if (query == 'cnv') ds_dts.push(dtcnv)
+		else if (query == 'svfusion') ds_dts.push(dtfusionrna)
+		else if (query == 'sv') ds_dts.push(dtsv) // TODO: is this correct?
+		else continue
+	}
+	if (!tw.q.dt) tw.q.dt = ds_dts[0] // default dt will be first in dataset
+	if (!(tw.q.dt in dt2label)) throw 'invalid dt'
+	if (!ds_dts.includes(tw.q.dt)) throw 'dt not supported in dataset'
 
-	if (!tw.q.dts) {
-		const byDt = vocabApi.termdbConfig.assayAvailability.byDt
-		if (!byDt) throw 'no dts specified in dataset'
-		// set default dt to be first dt in dataset
-		const dt = Object.keys(byDt)[0]
-		const dts = { [dt]: { label: dt2label[dt] } }
-		/*const dts = {
-			1: {label: dt2label[1]},
-			4: {label: dt2label[4]},
-		}*/
-		const byOrigin = byDt[dt].byOrigin
-		if (byOrigin) {
-			for (const origin in byOrigin) {
-				dts[dt][origin] = { label: byOrigin[origin].label }
-			}
-		}
-		tw.q.dts = dts
+	// origin
+	// TODO: verify that 'vocabApi.termdbConfig.assayAvailability.byDt[dt].byOrigin' will always be defined in dataset when dt has multiple origins
+	if (vocabApi.termdbConfig.assayAvailability?.byDt[tw.q.dt]?.byOrigin) {
+		// dt has multiple origins in dataset
+		// so an origin must be specified
+		if (!tw.q.origin) tw.q.origin = 'somatic' /*'germline'*/
+		if (!(tw.q.origin in vocabApi.termdbConfig.assayAvailability.byDt[tw.q.dt].byOrigin)) throw 'invalid dt origin'
 	}
 
-	for (const dt in tw.q.dts) {
-		if (!(dt in dt2label)) throw 'dt value not supported'
+	// groupsetting
+	// fill tw.term.groupsetting
+	// TODO: verify 'protein_changing_keys' and 'truncating_keys'
+	console.log('mclass:', mclass)
+	const protein_changing_keys = new Set(['D', 'F', 'I', 'L', 'M', 'N', 'P', 'ProteinAltering', 'Fuserna', 'SV'])
+	const truncating_keys = new Set(['F', 'L', 'N', 'SV'])
+	if (!tw.term.groupsetting) {
+		tw.term.groupsetting = { disabled: false }
+		/* for each groupsetting, groups[] is ordered by priority
+		for example: for the 'Protein-changing vs. rest' groupsetting, the
+		'Protein-changing' group is listed first in groups[] so that samples
+		that have both missense and silent mutations are classified in the
+		'Protein-changing' group */
+		const lst = [
+			{
+				name: 'Mutated vs. wildtype',
+				groups: [
+					{
+						name: 'Mutated',
+						values: Object.keys(mclass)
+							.filter(key => key != 'WT' && key != 'Blank')
+							.map(key => {
+								return { key, dt: mclass[key].dt, label: mclass[key].label }
+							})
+					},
+					{
+						name: 'Wildtype',
+						values: [{ key: 'WT', label: 'Wildtype' }]
+					},
+					{
+						name: 'Not tested',
+						values: [{ key: 'Blank', label: 'Not tested' }]
+					}
+				]
+			},
+			{
+				name: 'Protein-changing vs. rest',
+				groups: [
+					{
+						name: 'Protein-changing',
+						values: Object.keys(mclass)
+							.filter(key => protein_changing_keys.has(key))
+							.map(key => {
+								return { key, dt: mclass[key].dt, label: mclass[key].label }
+							})
+					},
+					{
+						name: 'Rest',
+						values: Object.keys(mclass)
+							.filter(key => !protein_changing_keys.has(key) && key != 'Blank')
+							.map(key => {
+								return { key, dt: mclass[key].dt, label: mclass[key].label }
+							})
+					},
+					{
+						name: 'Not tested',
+						values: [{ key: 'Blank', label: 'Not tested' }]
+					}
+				]
+			},
+			{
+				name: 'Truncating vs. rest',
+				groups: [
+					{
+						name: 'Truncating',
+						values: Object.keys(mclass)
+							.filter(key => truncating_keys.has(key))
+							.map(key => {
+								return { key, dt: mclass[key].dt, label: mclass[key].label }
+							})
+					},
+					{
+						name: 'Rest',
+						values: Object.keys(mclass)
+							.filter(key => !truncating_keys.has(key) && key != 'Blank')
+							.map(key => {
+								return { key, dt: mclass[key].dt, label: mclass[key].label }
+							})
+					},
+					{
+						name: 'Not tested',
+						values: [{ key: 'Blank', label: 'Not tested' }]
+					}
+				]
+			}
+		]
+		tw.term.groupsetting.lst = lst
+	}
+
+	// fill tw.q.groupsetting
+	if (!tw.q.groupsetting) tw.q.groupsetting = {}
+	delete tw.q.groupsetting.disabled
+	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = true
+	if (tw.q.groupsetting.inuse) {
+		const gs = tw.q.groupsetting as PredefinedGroupSetting
+		/* is the following necessary? (copied from client/termsetting/handlers/categorical.ts). useIndex does not seem to be used in the codebase.
+		if (
+			gs.lst &&
+			//Typescript emits error that .useIndex could be undefined
+			gs.useIndex &&
+			//Fix checks if property is present
+			gs.useIndex >= 0 &&
+			gs.lst[gs.useIndex]
+		) {
+			gs.predefined_groupset_idx = gs.useIndex
+		}*/
+		gs.predefined_groupset_idx = 2
 	}
 
 	{
@@ -101,6 +208,8 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 	} else {
 		tw.q.cnvLossCutoff = -0.2
 	}
+
+	console.log('tw:', structuredClone(tw))
 }
 
 function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
