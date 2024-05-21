@@ -77,7 +77,7 @@ export function equals(t1, t2) {
 	if (!t1) throw new Error('Term is not defined ' + t1)
 	if (!t2) throw new Error('Term is not defined ' + t2)
 	if (t1.type !== t2.type) return false //term types are different
-	if (isDictionaryType(t1.type) && isDictionaryType(t2.type)) return t1.id === t2.id
+	if (isDictionaryType(t1.type) && isDictionaryType(t2.type) && t1.type != TermTypes.SAMPLELST) return t1.id === t2.id
 	switch (t1.type) {
 		case TermTypes.GENE_EXPRESSION:
 			return t1.gene == t2.gene
@@ -85,6 +85,12 @@ export function equals(t1, t2) {
 			return t1.name == t2.name
 		case TermTypes.GENE_VARIANT:
 			return t1.gene == t2.gene || (t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop)
+
+		// TO DO: Add more cases
+		// case TermTypes.SNP_LIST:
+		// case TermTypes.SNP_LOCUS:
+		// case TermTypes.SAMPLELST:
+
 		default:
 			return false
 	}
