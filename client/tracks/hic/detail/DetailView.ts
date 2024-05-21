@@ -114,11 +114,30 @@ export class DetailView {
 			}) as Selection<HTMLCanvasElement, any, any, any>
 	}
 
+	getCanvasResolution() {
+		/** Use to find the resolution for the dom elements
+		 * This is oftern a different value than the resolution used for the data
+		 */
+		let canvasresolution: number | null = null
+		for (const res of this.hic.bpresolution) {
+			if (this.viewRangeBpw! / res > 200) {
+				canvasresolution = res
+				break
+			}
+		}
+		if (canvasresolution == null) {
+			// use finest
+			canvasresolution = this.hic.bpresolution[this.hic.bpresolution.length - 1]
+		}
+
+		return canvasresolution
+	}
+
 	async render() {
 		this.calResolution = this.parent('calResolution') as number
 		this.setDefaultBinPx()
 
-		const blockwidth = Math.ceil((this.binpx * this.viewRangeBpw!) / this.calResolution)
+		const blockwidth = Math.ceil((this.binpx * this.viewRangeBpw!) / this.getCanvasResolution()!)
 
 		this.xBlock = new DetailBlock(this.app, this.hic, blockwidth, this.bbmargin, this.plotDiv.xAxis, false)
 		this.yBlock = new DetailBlock(this.app, this.hic, blockwidth, this.bbmargin, this.rotor, true)
