@@ -206,6 +206,13 @@ function addGenomicQueries(c, ds, genome) {
 		}
 	}
 
+	if (q.HnEImages) {
+		q2.HnEImages = {}
+		for (const k in q.HnEImages) {
+			q2.HnEImages[k] = JSON.parse(JSON.stringify(q.HnEImages[k]))
+		}
+	}
+
 	if (q.singleSampleGbtk) {
 		q2.singleSampleGbtk = {}
 		for (const k in q.singleSampleGbtk) {
@@ -213,6 +220,7 @@ function addGenomicQueries(c, ds, genome) {
 			delete q2.singleSampleGbtk[k].folder
 		}
 	}
+
 	if (q.rnaseqGeneCount) {
 		q2.rnaseqGeneCount = true
 	}
