@@ -25,12 +25,12 @@ const runpp = helpers.getRunPp('termdb', {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- termdb/search -***-')
 	test.end()
 })
 
-tape('term search, default behavior with barchart usecase', function(test) {
+tape('term search, default behavior with barchart usecase', function (test) {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {
@@ -115,7 +115,7 @@ tape('click_term', test => {
 	runpp({
 		tree: {
 			click_term: modifier_callback,
-			disable_terms: ['Cardiomyopathy']
+			disable_terms: [{ id: 'Cardiomyopathy' }]
 		},
 		search: {
 			callbacks: {
@@ -168,7 +168,7 @@ tape('tree.click_term2select_tvs', test => {
 	runpp({
 		tree: {
 			click_term2select_tvs: () => {},
-			disable_terms: ['Cardiomyopathy']
+			disable_terms: [{ id: 'Cardiomyopathy' }]
 		},
 		search: {
 			callbacks: {

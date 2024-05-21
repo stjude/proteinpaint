@@ -72,3 +72,20 @@ export function isNonDictionaryType(type) {
 	if (!type) throw new Error('Type is not defined')
 	return nonDictTypes.has(type)
 }
+
+export function equals(t1, t2) {
+	if (!t1) throw new Error('Term is not defined ' + t1)
+	if (!t2) throw new Error('Term is not defined ' + t2)
+	if (t1.type !== t2.type) return false //term types are different
+	if (isDictionaryType(t1.type) && isDictionaryType(t2.type)) return t1.id === t2.id
+	switch (t1.type) {
+		case TermTypes.GENE_EXPRESSION:
+			return t1.gene == t2.gene
+		case TermTypes.METABOLITE_INTENSITY:
+			return t1.name == t2.name
+		case TermTypes.GENE_VARIANT:
+			return t1.gene == t2.gene || (t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop)
+		default:
+			return false
+	}
+}

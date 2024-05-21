@@ -465,10 +465,8 @@ async function trigger_getDefaultBins(q, ds, res) {
 	const lst = []
 	let min = Infinity
 	let max = -Infinity
-	if (tw.term.type == TermTypes.GENE_EXPRESSION) {
-		if (ds.queries.geneExpression.gene2bins[tw.term.gene])
-			return { default: ds.queries.geneExpression.gene2bins[tw.term.gene] }
 
+	if (tw.term.type == TermTypes.GENE_EXPRESSION) {
 		const args = {
 			genome: q.genome,
 			dslabel: q.dslabel,
