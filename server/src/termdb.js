@@ -232,10 +232,10 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
 				metabolites: [q.findterm]
 			}
-			const data = await ds.queries.metaboliteIntensity.get(args)
+			const data = await ds.queries.metaboliteIntensity.find(args)
 			const foundTerms = []
-			for (const metabolite of data.metabolite2sample2value) {
-				foundTerms.push({ name: metabolite[0], type: 'metaboliteIntensity' })
+			for (const metabolite of data.matches) {
+				foundTerms.push({ name: metabolite, type: 'metaboliteIntensity' })
 			}
 			terms.push(...foundTerms)
 		}
