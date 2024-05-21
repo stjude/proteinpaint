@@ -50,7 +50,7 @@ class SampleView {
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
 		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
-		if (hasPlots) await this.setControls()
+		if (hasPlots) await this.setControls(q)
 	}
 
 	async setSampleSelect(appState) {
@@ -154,6 +154,7 @@ class SampleView {
 					if (this.state.hasPlots) {
 						for (const div of this.discoPlots) div.style('display', 'none')
 						for (const div of this.singleSamplePlots) div.style('display', 'none')
+						for (const div of this.brainPlots) div.style('display', 'none')
 					}
 				}
 			})
@@ -273,40 +274,51 @@ class SampleView {
 		if (this.settings.showDictionary) this.renderSampleDictionary()
 	}
 
-	async setControls() {
+	async setControls(q) {
 		this.dom.controlsDiv.selectAll('*').remove()
-
+		const showBrainMRI = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainMRI
+		const inputs = [
+			{
+				boxLabel: 'Visible',
+				label: 'Dictionary',
+				type: 'checkbox',
+				chartType: 'sampleView',
+				settingsKey: 'showDictionary',
+				title: `Option to show/hide dictionary table with sample values`
+			},
+			{
+				boxLabel: 'Visible',
+				label: 'Disco plot',
+				type: 'checkbox',
+				chartType: 'sampleView',
+				settingsKey: 'showDisco',
+				title: `Option to show/hide disco plots`
+			},
+			{
+				boxLabel: 'Visible',
+				label: 'Single sample',
+				type: 'checkbox',
+				chartType: 'sampleView',
+				settingsKey: 'showSingleSample',
+				title: `Option to show/hide single sample plots`
+			}
+		]
+		if (q.NIdata && showBrainMRI) {
+			inputs.push({
+				boxLabel: 'Visible',
+				label: 'brain MRI',
+				type: 'checkbox',
+				chartType: 'sampleView',
+				settingsKey: 'showBrain',
+				title: `Option to show/hide brain MRI plots`
+			})
+		}
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
 				id: this.id,
 				holder: this.dom.controlsDiv,
-				inputs: [
-					{
-						boxLabel: 'Visible',
-						label: 'Dictionary',
-						type: 'checkbox',
-						chartType: 'sampleView',
-						settingsKey: 'showDictionary',
-						title: `Option to show/hide dictionary table with sample values`
-					},
-					{
-						boxLabel: 'Visible',
-						label: 'Disco plot',
-						type: 'checkbox',
-						chartType: 'sampleView',
-						settingsKey: 'showDisco',
-						title: `Option to show/hide disco plots`
-					},
-					{
-						boxLabel: 'Visible',
-						label: 'Single sample',
-						type: 'checkbox',
-						chartType: 'sampleView',
-						settingsKey: 'showSingleSample',
-						title: `Option to show/hide single sample plots`
-					}
-				]
+				inputs
 			})
 		}
 	}
@@ -497,6 +509,9 @@ class SampleView {
 			if (this.settings.showSingleSample)
 				div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
 			else div.style('display', 'none')
+		for (const div of this.brainPlots)
+			if (this.settings.showBrain) div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
+			else div.style('display', 'none')
 	}
 
 	async renderPlots(state, samples) {
@@ -504,6 +519,8 @@ class SampleView {
 		const plotsDiv = this.dom.plotsDiv
 		this.discoPlots = []
 		this.singleSamplePlots = []
+		this.brainPlots = []
+
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			let div = plotsDiv.append('div')
 			for (const sample of samples) {
@@ -537,6 +554,28 @@ class SampleView {
 						k,
 						{ sample_id: sample.sampleName },
 						plotDiv.insert('div'),
+						this.app.opts.genome
+					)
+				}
+			}
+		}
+		const showBrainMRI = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainMRI
+		if (state.termdbConfig.queries?.NIdata && showBrainMRI) {
+			for (const k in state.termdbConfig.queries?.NIdata) {
+				let div = plotsDiv.append('div')
+				for (const sample of samples) {
+					const plotDiv = div.insert('div').style('display', 'inline-block')
+					this.brainPlots.push(plotDiv)
+					if (this.state.samples.length > 1)
+						plotDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
+
+					const brainMRIImport = await import('./plot.brainMRI.js')
+					brainMRIImport.default(
+						state.termdbConfig,
+						state.vocab.dslabel,
+						k,
+						{ sample_id: sample.sampleName },
+						plotDiv,
 						this.app.opts.genome
 					)
 				}
@@ -694,7 +733,7 @@ function setInteractivity(self) {
 
 export async function getPlotConfig(opts) {
 	const settings = {
-		sampleView: { showDictionary: true, showDisco: true, showSingleSample: true }
+		sampleView: { showDictionary: true, showDisco: true, showSingleSample: true, showBrain: true }
 	}
 	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings }
 	return copyMerge(config, opts)
