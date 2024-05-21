@@ -2,6 +2,7 @@ import serverconfig from './serverconfig'
 import { connect_db } from './utils'
 import { isUsableTerm } from '../shared/termdb.usecase'
 import { authApi } from './auth'
+import { numericTypes } from '#shared/terms.js'
 
 /*
 server_init_db_queries()
@@ -471,7 +472,7 @@ export function server_init_db_queries(ds) {
 				supportedChartTypes[r.cohort].add('survival')
 			if (r.type == 'condition' && !supportedChartTypes[r.cohort].has('cuminc'))
 				supportedChartTypes[r.cohort].add('cuminc')
-			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
+			if (numericTypes.has(r.type)) numericTypeCount[r.cohort] += r.samplecount
 		}
 
 		/*

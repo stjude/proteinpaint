@@ -53,15 +53,15 @@ const nonDictTypes = new Set([
 	TermTypes.GENE_VARIANT,
 	TermTypes.METABOLITE_INTENSITY
 ])
-
+export const numericTypes = new Set([
+	TermTypes.INTEGER,
+	TermTypes.FLOAT,
+	TermTypes.GENE_EXPRESSION,
+	TermTypes.METABOLITE_INTENSITY
+])
 export function isNumericTerm(term) {
 	if (!term) return false
-	return (
-		term.type == TermTypes.INTEGER ||
-		term.type == TermTypes.FLOAT ||
-		term.type == TermTypes.GENE_EXPRESSION ||
-		term.type == TermTypes.METABOLITE_INTENSITY
-	)
+	return numericTypes.has(term.type)
 }
 
 export function isDictionaryType(type) {

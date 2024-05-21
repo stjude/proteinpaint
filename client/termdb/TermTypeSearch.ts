@@ -30,15 +30,34 @@ const useCases = {
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY
 	],
-	summary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION],
-	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
-	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
-	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION], //This case covers scaleBy and dynamic scatters with coordinates from numeric terms
+	summary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION, TermTypeGroups.METABOLITE_INTENSITY],
+	barchart: [
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
+	violin: [
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
+	sampleScatter: [
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	], //This case covers scaleBy and dynamic scatters with coordinates from numeric terms
 	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
 	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES], //Later on can support other term types like snplocus, snplst, geneVariant
-	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
+	survival: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION, TermTypeGroups.METABOLITE_INTENSITY],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
-	default: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
+	default: [
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
 	regression: [TermTypeGroups.DICTIONARY_VARIABLES]
 }
 
