@@ -58,7 +58,8 @@ class DEanalysis {
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'min_count',
-				title: 'Min count',
+				title:
+					'Parameter for filtering genes based on relative read counts of a gene with respect to others in the same sample',
 				min: 0,
 				max: 10000
 			},
@@ -67,7 +68,7 @@ class DEanalysis {
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'min_total_count',
-				title: 'Min total count',
+				title: 'Cutoff for filtering genes based on absolute total read counts for a gene across all samples',
 				min: 0,
 				max: 10000
 			},
@@ -630,7 +631,6 @@ export async function openHiercluster(term, samplelstTW, app, id, newId) {
 }
 
 async function runDEanalysis(self) {
-	console.log('self:', self)
 	return await dofetch3('termdb', {
 		body: {
 			for: 'DEanalysis',
