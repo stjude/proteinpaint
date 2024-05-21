@@ -189,7 +189,7 @@ class DEanalysis {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.DEanalysis
-		const output = await this.app.vocabApi.runDEanalysis(this.config) // "this.config" was changed from "this.state.config". Hope this does not create any problems.
+		const output = await runDEanalysis(this) // "this.config" was changed from "this.state.config". Hope this does not create any problems.
 		output.mid_sample_size_cutoff = 8 // mid sample size cutoff for method toggle to appear
 		output.high_sample_size_cutoff = 30 // high sample size cutoff for method toggle to not appear, so that very high sample-size groups are not analyzed by edgeR. The exact cutoff value will need to be determined with more examples.
 		await this.setControls(output)
@@ -626,5 +626,20 @@ export async function openHiercluster(term, samplelstTW, app, id, newId) {
 	await app.dispatch({
 		type: 'plot_create',
 		config
+	})
+}
+
+async function runDEanalysis(self) {
+	console.log('self:', self)
+	return await dofetch3('termdb', {
+		body: {
+			for: 'DEanalysis',
+			genome: self.app.vocabApi.vocab.genome,
+			dslabel: self.app.vocabApi.vocab.dslabel,
+			samplelst: self.config.samplelst,
+			min_count: self.settings.min_count,
+			min_total_count: self.settings.min_total_count,
+			method: self.settings.method
+		}
 	})
 }
