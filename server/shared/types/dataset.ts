@@ -231,6 +231,22 @@ type SingleSampleMutationQuery = {
 	discoSkipChrM?: true
 }
 
+type NIdataQuery = {
+	Ref1: NIdataQueryRef
+}
+
+type NIdataQueryRef = {
+	referenceFile: string
+	samples: string
+	parameters?: NIdataQueryRefParams
+}
+
+type NIdataQueryRefParams = {
+	l: number // index of slice for default sagittal plane
+	f: number // index of slice for default coronal plane
+	t: number // index of slice for default axial plane
+}
+
 type TopVariablyExpressedGenesQuery = {
 	src: 'gdcapi' | 'native' | string
 	// to add optional parameters
@@ -422,6 +438,7 @@ type Mds3Queries = {
 	svfusion?: SvFusion
 	cnv?: CnvSegment
 	singleSampleMutation?: SingleSampleMutationQuery
+	NIdata?: NIdataQuery
 	geneExpression?: GeneExpressionQuery
 	rnaseqGeneCount?: RnaseqGeneCount
 	topMutatedGenes?: TopMutatedGenes
