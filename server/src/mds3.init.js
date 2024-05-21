@@ -123,6 +123,7 @@ export async function init(ds, genome, _servconfig) {
 		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)
+		await validate_query_NIdata(ds, genome)
 		await validate_query_singleSampleGbtk(ds, genome)
 		//await validate_query_probe2cnv(ds, genome)
 		await validate_query_singleCell(ds, genome)
@@ -506,6 +507,13 @@ function copy_queries(ds, dscopy) {
 		for (const k in ds.queries.singleSampleGbtk) {
 			copy.singleSampleGbtk[k] = JSON.parse(JSON.stringify(ds.queries.singleSampleGbtk[k]))
 			delete copy.singleSampleGbtk[k].folder
+		}
+	}
+
+	if (ds.queries.NIdata) {
+		copy.NIdata = {}
+		for (const k in ds.queries.NIdata) {
+			copy.NIdata[k] = JSON.parse(JSON.stringify(ds.queries.NIdata[k]))
 		}
 	}
 
@@ -1868,6 +1876,49 @@ async function validate_query_singleSampleGenomeQuantification(ds, genome) {
 			}
 		} else {
 			throw 'unknown query method for singleSampleGenomeQuantification'
+		}
+	}
+}
+
+async function validate_query_NIdata(ds, genome) {
+	const q = ds.queries.NIdata
+	if (!q) return
+	for (const key in q) {
+		if (q[key].referenceFile && q[key].samples) {
+			q[key].get = async (sampleName, l, f, t) => {
+				const refFile = path.join(serverconfig.tpmasterdir, q[key].referenceFile)
+				const sampleFile = path.join(serverconfig.tpmasterdir, q[key].samples, sampleName)
+
+				try {
+					await fs.promises.stat(sampleFile)
+				} catch (e) {
+					if (e.code == 'EACCES') throw 'cannot read file, permission denied'
+					if (e.code == 'ENOENT') throw 'no data for this sample'
+					throw 'failed to load data'
+				}
+
+				return new Promise((resolve, reject) => {
+					const ps = spawn('python3', ['proteinpaint/python/src/plotBrainMRI.py', refFile, sampleFile, l, f, t])
+					let imgData = []
+					ps.stdout.on('data', data => {
+						imgData.push(data)
+					})
+					ps.stderr.on('data', data => console.error(`stderr: ${data}`))
+
+					ps.on('close', code => {
+						if (code === 0) {
+							const imageBuffer = Buffer.concat(imgData)
+							const base64Data = imageBuffer.toString('base64')
+							const imgUrl = `data:image/png;base64,${base64Data}`
+							resolve(imgUrl)
+						} else {
+							reject(new Error(`Python script exited with code ${code}`))
+						}
+					})
+				})
+			}
+		} else {
+			throw 'no reference or sample files'
 		}
 	}
 }

@@ -497,6 +497,7 @@ function validatePlot(p, vocabApi) {
 		} else if (p.chartType == 'sampleView') {
 		} else if (p.chartType == 'profileRadar' || p.chartType == 'profileRadarFacility') {
 		} else if (p.chartType == 'singleCellPlot') {
+		} else if (p.chartType == 'brainMRI') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}

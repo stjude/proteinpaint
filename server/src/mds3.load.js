@@ -200,6 +200,14 @@ async function load_driver(q, ds) {
 		if (!p) throw 'invalid dataType'
 		return await p.get(q.singleSampleGenomeQuantification.sample, q.devicePixelRatio)
 	}
+
+	if (q.NIdata) {
+		if (!ds.queries.NIdata) throw 'brainMRI not supported on this dataset'
+		const p = ds.queries.NIdata[q.NIdata.dataType]
+		if (!p) throw 'invalid dataType'
+		return await p.get(q.NIdata.sample, q.l, q.f, q.t)
+	}
+
 	if (q.singleSampleGbtk) {
 		if (!ds.queries.singleSampleGbtk) throw 'not supported on this dataset'
 		const p = ds.queries.singleSampleGbtk[q.singleSampleGbtk.dataType]

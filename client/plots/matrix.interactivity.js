@@ -256,6 +256,29 @@ export function setInteractivity(self) {
 					self.dom.clickMenu.d.selectAll('*').remove()
 				})
 		}
+		const showBrainMRI = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainMRI
+		if (q.NIdata && showBrainMRI) {
+			for (const k in q.NIdata) {
+				const menuDiv = self.dom.clickMenu.d
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Neuro Image: ' + k)
+					.on('click', async () => {
+						const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
+						sandbox.header.text(sample.sample_id)
+						;(await import('./plot.brainMRI.js')).default(
+							self.state.termdbConfig,
+							self.state.vocab.dslabel,
+							k,
+							sample,
+							sandbox.body,
+							self.app.opts.genome
+						)
+						menuDiv.remove()
+						self.dom.clickMenu.d.selectAll('*').remove()
+					})
+			}
+		}
 
 		const l = self.settings.matrix.controlLabels
 		const rows = []
