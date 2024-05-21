@@ -6,6 +6,7 @@ import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dts
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 import { renderTable } from '../dom/table.ts'
+import { dofetch3 } from '#common/dofetch'
 
 let inputIndex = 0
 const svgIcons = {
@@ -256,6 +257,64 @@ export function setInteractivity(self) {
 					self.dom.clickMenu.d.selectAll('*').remove()
 				})
 		}
+
+		const showHnEImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showHnEImages
+		if (q.HnEImages && showHnEImages) {
+			async function fetchHnEImages() {
+				return dofetch3('sampledzimages', {
+					body: {
+						genome: self.app.opts.genome.name,
+						dslabel: self.state.vocab.dslabel,
+						sample_id: sample.sample_id
+					}
+				})
+			}
+			const menuDiv = self.dom.clickMenu.d
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'oncoMatrix_termLabel_dzi_button')
+				.style('display', 'none')
+				.text('H&E Images (0)')
+
+			const images = fetchHnEImages()
+
+			images.then(data => {
+				menuDiv.style('display', 'block')
+				menuDiv.text(`H&E Images (${data.sampleDZImages.length})`)
+				menuDiv.on('click', async _ => {
+					menuDiv.remove()
+					self.dom.clickMenu.d.selectAll('*').remove()
+
+					const subMenuDiv = self.dom.clickMenu.d.append('div')
+					subMenuDiv.append('div').text('H&E Images').style('padding', '3px 5px').style('text-align', 'center')
+
+					const t = subMenuDiv.append('table')
+					for (let i = 0; i < data.sampleDZImages.length; i++) {
+						const tr = t.append('tr').attr('class', 'sja_menuoption sja_sharp_border')
+						tr.append('td')
+							.append('div')
+							.text('Image ' + (i + 1))
+							.style('padding', '3px 5px')
+						tr.append('td').append('div').text(data.sampleDZImages[i]).style('padding', '3px 5px')
+
+						tr.on('click', async event => {
+							const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
+							sandbox.header.text(sample.sample_id)
+							;(await import('./dziviewer/plot.dzi.js')).default(
+								self.state.vocab.dslabel,
+								sandbox.body,
+								self.app.opts.genome,
+								sample.sample_id,
+								data.sampleDZImages[i]
+							)
+
+							subMenuDiv.remove()
+							self.dom.clickMenu.d.selectAll('*').remove()
+						})
+					}
+				})
+			})
+		}
 		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		if (q.NIdata && showBrainImaging) {
 			for (const k in q.NIdata) {
@@ -397,6 +456,7 @@ function setResizeHandler(self) {
 		if (resizeId) clearTimeout(resizeId)
 		if (self.dimensions && self.layout) resizeId = setTimeout(resize, 200)
 	})
+
 	function resize() {
 		// !!! this.abortCtl.abort()
 		if (self.dimensions && self.layout) self.main()
@@ -1025,9 +1085,9 @@ function setTermActions(self) {
 	}
 
 	self.showSortMenu = () => {
-		/* 
+		/*
 			sort rows and samples by:
-			- #hits 
+			- #hits
 
 			sort samples by #hits against
 			- draggable divs of term names
@@ -1037,10 +1097,10 @@ function setTermActions(self) {
 
 			[ ] move this row [above || below] [all rows || term names]
 
-			[ ] sort samples against this term: 
+			[ ] sort samples against this term:
 					// by: *hits _values _mutation class
 					// priority: *first _last _order# [ ]
-			
+
 			Apply
 		*/
 
@@ -2606,7 +2666,13 @@ function setLengendActions(self) {
 									isnot: true,
 									legendFilterType: 'geneVariant_hard', // indicates this matrix legend filter is hard filter
 									term: { type: 'geneVariant' },
-									values: [{ dt: targetData.dt, origin: targetData.origin, mclasslst: [targetData.key] }]
+									values: [
+										{
+											dt: targetData.dt,
+											origin: targetData.origin,
+											mclasslst: [targetData.key]
+										}
+									]
 								}
 							}
 							self.config.legendValueFilter.lst.push(filterNew)
@@ -2995,6 +3061,7 @@ function showStackedStyle(targetData, self) {
 		config: self.config
 	})
 }
+
 function showOnlyTrunc(menuGrp, targetData, self) {
 	menuGrp.hide()
 	// when the legend group is not hidden and show a "show only the truncating mutations" option
