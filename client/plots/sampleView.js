@@ -306,11 +306,11 @@ class SampleView {
 		if (q.NIdata && showBrainImaging) {
 			inputs.push({
 				boxLabel: 'Visible',
-				label: 'brain MRI',
+				label: 'brain imaging',
 				type: 'checkbox',
 				chartType: 'sampleView',
 				settingsKey: 'showBrain',
-				title: `Option to show/hide brain MRI plots`
+				title: `Option to show/hide brain imaging`
 			})
 		}
 		this.components = {
