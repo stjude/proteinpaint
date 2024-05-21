@@ -74,48 +74,28 @@ export class HicComponent {
 	}
 
 	initView() {
+		const opts = {
+			plotDiv: this.plotDiv,
+			hic: this.hic,
+			app: this.app,
+			parent: (prop: any) => {
+				return this[prop]
+			}
+		}
 		if (this.state.currView == 'genome') {
-			this.genome = new GenomeView({
-				plotDiv: this.plotDiv,
-				hic: this.hic,
-				app: this.app,
-				data: this.data,
-				parent: (prop: any) => {
-					return this[prop]
-				}
-			})
+			opts['data'] = this.data
+			this.genome = new GenomeView(opts)
 			this.genome.render()
 		} else if (this.state.currView === 'chrpair') {
-			this.chrpair = new ChrPairView({
-				plotDiv: this.plotDiv,
-				hic: this.hic,
-				app: this.app,
-				items: this.data,
-				parent: (prop: any) => {
-					return this[prop]
-				}
-			})
+			opts['items'] = this.data
+			this.chrpair = new ChrPairView(opts)
 			this.chrpair.render()
 		} else if (this.state.currView === 'detail') {
-			this.detail = new DetailView({
-				plotDiv: this.plotDiv,
-				hic: this.hic,
-				app: this.app,
-				items: this.data,
-				parent: (prop: any) => {
-					return this[prop]
-				}
-			})
+			opts['data'] = this.data
+			this.detail = new DetailView(opts)
 			this.detail.render()
 		} else if (this.state.currView === 'horizontal') {
-			this.horizontal = new HorizontalView({
-				plotDiv: this.plotDiv,
-				hic: this.hic,
-				app: this.app,
-				parent: (prop: any) => {
-					return this[prop]
-				}
-			})
+			this.horizontal = new HorizontalView(opts)
 			this.horizontal.render()
 		} else {
 			throw Error(`Unknown view: ${this.state.currView}`)
