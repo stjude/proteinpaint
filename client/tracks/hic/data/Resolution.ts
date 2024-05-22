@@ -16,17 +16,9 @@ export class Resolution {
 			return resolution
 		} else if (state.currView == 'detail') {
 			const maxBpWidth = Math.max(state.x.stop - state.x.start, state.y.stop - state.y.start)
-			let resolution = null
-			for (const res of hic.bpresolution) {
-				if (maxBpWidth / res > this.minBinNum_bp) {
-					resolution = res
-					break
-				}
-			}
-			if (resolution == null) {
-				// use finest
-				resolution = hic.bpresolution[hic.bpresolution.length - 1]
-			}
+
+			const resolution = this.findResFromArray(maxBpWidth, this.minBinNum_bp, hic.bpresolution, true)
+
 			return resolution
 		} else {
 			this.error(`Unknown view: ${state.currView}`)
@@ -39,19 +31,29 @@ export class Resolution {
 		const chrylen = hic.genome.chrlookup[y.chr.toUpperCase()].len
 		const maxchrlen = Math.max(chrxlen, chrylen)
 
-		let resolution = null
+		const resolution: number | null = this.findResFromArray(maxchrlen, this.minBinNum_bp, hic.bpresolution)
 
-		for (let i = 0; i < hic.bpresolution.length; i++) {
-			const res = hic.bpresolution[i]
-			if (maxchrlen / res > 200) {
-				resolution = res
-				break
-			}
-		}
 		if (resolution == null) {
 			this.error(`No suitable resolution for ${x.chr}-${y.chr} pair.`)
 			return
 		}
+		return resolution
+	}
+
+	findResFromArray(max: number, defaultValue: number, resolutionArray: number[], returnNum?: boolean): number | null {
+		let resolution: number | null = null
+		for (const res of resolutionArray) {
+			if (max / res > defaultValue) {
+				resolution = res
+				break
+			}
+		}
+
+		if (returnNum && resolution == null) {
+			// use finest
+			resolution = resolutionArray[resolutionArray.length - 1]
+		}
+
 		return resolution
 	}
 
