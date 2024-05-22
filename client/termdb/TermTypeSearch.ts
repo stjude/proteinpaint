@@ -27,8 +27,6 @@ const useCasesExcluded = {
 		TermTypeGroups.METABOLITE_INTENSITY
 	],
 	dataDownload: [
-		TermTypeGroups.SNP_LOCUS,
-		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY
@@ -42,7 +40,12 @@ const useCasesExcluded = {
 	],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
 	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	regression: [TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS]
+	regression: [
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	]
 }
 
 export class TermTypeSearch {
