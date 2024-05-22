@@ -222,19 +222,9 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 
 			terms.push(..._terms.map(copy_term))
 		} else if (q.targetType == TermTypeGroups.METABOLITE_INTENSITY) {
-			const args = {
-				genome: q.genome,
-				dslabel: q.dslabel,
-				clusterMethod: 'hierarchical',
-				/** distance method */
-				distanceMethod: 'euclidean',
-				/** Data type */
-				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
-				metabolites: [q.findterm]
-			}
-			const data = await ds.queries.metaboliteIntensity.find(args)
+			const { matches } = await ds.queries.metaboliteIntensity.find([q.findterm])
 			const foundTerms = []
-			for (const metabolite of data.matches) {
+			for (const metabolite of matches) {
 				foundTerms.push({ name: metabolite, type: 'metaboliteIntensity' })
 			}
 			terms.push(...foundTerms)
