@@ -311,7 +311,7 @@ export type MetaboliteIntensityQueryNative = {
 	// _metabolites,used to dynamically built cache of metabolite names to speed up search
 	_metabolites?: string[]
 	get?: (param: any) => void
-	find?: (param: any) => void
+	find?: (param: string[]) => void
 	metabolite2bins?: { [index: string]: any }
 }
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
