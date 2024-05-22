@@ -1882,7 +1882,7 @@ async function validate_query_singleSampleGenomeQuantification(ds, genome) {
 
 async function validate_query_NIdata(ds, genome) {
 	const q = ds.queries.NIdata
-	if (!q) return
+	if (!q || !serverconfig.features?.showBrainImaging) return
 	for (const key in q) {
 		if (q[key].referenceFile && q[key].samples) {
 			q[key].get = async (sampleName, l, f, t) => {
