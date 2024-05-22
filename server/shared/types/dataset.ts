@@ -308,7 +308,9 @@ export type MetaboliteIntensityQueryNative = {
 	src: 'native' | string
 	file: string
 	samples?: number[]
+	_metabolites?: string[]
 	get?: (param: any) => void
+	find?: (param: any) => void
 	metabolite2bins?: { [index: string]: any }
 }
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
