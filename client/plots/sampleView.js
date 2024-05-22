@@ -290,7 +290,7 @@ class SampleView {
 			}
 		]
 
-		if (q && q.singleSampleMutation) {
+		if (q?.singleSampleMutation) {
 			inputs.push({
 				boxLabel: 'Visible',
 				label: 'Disco plot',
@@ -301,7 +301,7 @@ class SampleView {
 			})
 		}
 
-		if (q && q.singleSampleGenomeQuantification) {
+		if (q?.singleSampleGenomeQuantification) {
 			inputs.push({
 				boxLabel: 'Visible',
 				label: 'Single sample',
@@ -312,7 +312,7 @@ class SampleView {
 			})
 		}
 
-		if (q && q.NIdata && showBrainImaging) {
+		if (q?.NIdata && showBrainImaging) {
 			inputs.push({
 				boxLabel: 'Visible',
 				label: 'brain imaging',
