@@ -222,7 +222,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 
 			terms.push(..._terms.map(copy_term))
 		} else if (q.targetType == TermTypeGroups.METABOLITE_INTENSITY) {
-			const { matches } = await ds.queries.metaboliteIntensity.find([q.findterm])
+			const matches = await ds.queries.metaboliteIntensity.find([q.findterm])
 			const foundTerms = []
 			for (const metabolite of matches) {
 				foundTerms.push({ name: metabolite, type: 'metaboliteIntensity' })

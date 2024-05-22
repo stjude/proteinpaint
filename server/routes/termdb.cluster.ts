@@ -311,7 +311,7 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 				}
 			}
 		}
-		return { matches }
+		return matches
 	}
 
 	q.get = async (param: TermdbClusterRequest) => {
