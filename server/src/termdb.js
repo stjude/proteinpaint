@@ -462,12 +462,13 @@ async function LDoverlay(q, ds, res) {
 
 async function trigger_getDefaultBins(q, ds, res) {
 	const tw = q.tw
+	if (!ds.queries[tw.term.type]) throw 'term type not supported by this dataset'
+
 	const lst = []
 	let min = Infinity
 	let max = -Infinity
 	const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
 	if (binsCache[tw.term.name]) return binsCache[tw.term.name]
-	if (!ds.queries[tw.term.type]) throw 'term type not supported by this dataset'
 
 	if (tw.term.type == TermTypes.GENE_EXPRESSION) {
 		const args = {
