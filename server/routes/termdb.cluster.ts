@@ -287,7 +287,7 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 		}
 	}
 
-	q.find = async (param: TermdbClusterRequest) => {
+	q.find = async (metabolites: string[]) => {
 		// if !q.metabolites, read all metabolites from file
 		console.log(param)
 		if (!q._metabolites) {
@@ -303,7 +303,7 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 			q._metabolites = metabolites
 		}
 		const matches = []
-		for (const m of param.metabolites!) {
+		for (const m of metabolites) {
 			if (!m) continue
 			for (const metabolite of q._metabolites) {
 				if (metabolite.toLowerCase().includes(m.toLowerCase())) {
