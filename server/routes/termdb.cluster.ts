@@ -308,7 +308,7 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 				if (metabolite.toLowerCase().includes(m.toLowerCase())) matches.push(metabolite)
 			}
 		}
-		return { matches }
+		return matches
 	}
 
 	q.get = async (param: TermdbClusterRequest) => {
