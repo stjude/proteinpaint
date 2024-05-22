@@ -54,21 +54,20 @@ class DEanalysis {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'Min count',
+				label: 'Minimum read count',
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'min_count',
-				title:
-					'Parameter for filtering genes based on relative read counts of a gene with respect to others in the same sample',
+				title: 'Relative cpm cutoff for filtering a gene compared to all samples and genes in dataset',
 				min: 0,
 				max: 10000
 			},
 			{
-				label: 'Min total count',
+				label: 'Minimum total read count',
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'min_total_count',
-				title: 'Cutoff for filtering genes based on absolute total read counts for a gene across all samples',
+				title: 'Minimum total read count required for each sample',
 				min: 0,
 				max: 10000
 			},
