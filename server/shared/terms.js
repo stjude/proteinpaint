@@ -74,8 +74,8 @@ export function isNonDictionaryType(type) {
 }
 
 export function equals(t1, t2) {
-	if (!t1) throw new Error('Term is not defined ' + t1)
-	if (!t2) throw new Error('Term is not defined ' + t2)
+	if (!t1) throw new Error('First term is not defined ')
+	if (!t2) throw new Error('Second term is not defined ')
 	if (t1.type !== t2.type) return false //term types are different
 	if (isDictionaryType(t1.type) && isDictionaryType(t2.type) && t1.type != TermTypes.SAMPLELST) return t1.id === t2.id
 	switch (t1.type) {

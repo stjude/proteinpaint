@@ -188,6 +188,7 @@ function setRenderers(self) {
 	}
 	self.showTerms = data => {
 		// add disabled terms to opts.disable_terms
+
 		if (self.opts.disable_terms) {
 			data.lst.forEach(t => {
 				if (t.disabled) self.opts.disable_terms.push(t)
@@ -229,7 +230,7 @@ function setRenderers(self) {
 		*/
 		if ((self.opts.click_term || self.app.opts?.tree?.click_term_wrapper) && uses.has('plot')) {
 			// to click a graphable term, show as blue button
-			if (self.opts.disable_terms?.find(term2 => equals(term, term2))) {
+			if (term && self.opts.disable_terms?.find(term2 => equals(term, term2))) {
 				// but it's disabled
 				button
 					.attr('class', 'sja_tree_click_term_disabled')

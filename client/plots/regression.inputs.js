@@ -137,10 +137,10 @@ export class RegressionInputs {
 
 	setDisableTerms() {
 		this.disable_terms = []
-		if (this.config.outcome && this.config.outcome.term) this.disable_terms.push(this.config.outcome.term.id)
+		if (this.config.outcome && this.config.outcome.term) this.disable_terms.push(this.config.outcome.term)
 		if (this.config.independent) {
 			for (const vb of this.config.independent) {
-				this.disable_terms.push(vb.term.id)
+				this.disable_terms.push(vb.term)
 			}
 		}
 	}

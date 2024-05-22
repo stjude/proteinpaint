@@ -91,7 +91,7 @@ class Overlay {
 		const a = {
 			activeCohort: this.state.activeCohort,
 			filter: this.state.filter,
-			disable_terms: [plot.term.id]
+			disable_terms: [plot.term]
 		}
 		{
 			// if cohort selection is enabled
@@ -104,9 +104,9 @@ class Overlay {
 		if (plot.term2) {
 			a.term = plot.term2.term
 			a.q = plot.term2.q
-			a.disable_terms.push(plot.term2.id)
+			a.disable_terms.push(plot.term2)
 		}
-		if (plot.term0) a.disable_terms.push(plot.term0.id)
+		if (plot.term0) a.disable_terms.push(plot.term0)
 		if (!this.pill) this.initPill()
 		this.pill.main(a)
 	}

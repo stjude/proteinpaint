@@ -106,7 +106,7 @@ function setRenderers(self) {
 		// add disabled terms to opts.disable_terms
 		if (self.opts.disable_terms)
 			data.lst.forEach(t => {
-				if (t.disabled) self.opts.disable_terms.push(t.id)
+				if (t.disabled) self.opts.disable_terms.push(t)
 			})
 		self.clear({ hide: !data.lst.length })
 		if (data.lst.length) {
