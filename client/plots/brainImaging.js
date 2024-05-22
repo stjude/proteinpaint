@@ -1,5 +1,4 @@
-import { getCompInit, copyMerge } from '#rx'
-import { multiInit } from '../rx'
+import { getCompInit, copyMerge, multiInit } from '#rx'
 import { topBarInit } from './controls.btns'
 import { configUiInit } from './controls.config'
 import { dofetch3 } from '#common/dofetch'

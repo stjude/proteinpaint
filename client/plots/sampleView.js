@@ -49,8 +49,7 @@ class SampleView {
 		await this.setSampleSelect(appState)
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
-		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
-		if (hasPlots) await this.setControls(q)
+		await this.setControls(q)
 	}
 
 	async setSampleSelect(appState) {
@@ -202,7 +201,9 @@ class SampleView {
 
 		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
 		const q = appState.termdbConfig.queries
-		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
+		const hasPlots = q
+			? q.singleSampleGenomeQuantification || q.singleSampleMutation || (q.NIdata && showBrainImaging)
+			: false
 		const state = {
 			config,
 			termfilter: appState.termfilter,
@@ -214,6 +215,7 @@ class SampleView {
 			samples,
 			singleSampleGenomeQuantification: q?.singleSampleGenomeQuantification,
 			singleSampleMutation: q?.singleSampleMutation,
+			NIdata: q?.NIdata,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationPayload: this.app.vocabApi.tokenVerificationPayload,
 			hasPlots,
@@ -285,25 +287,32 @@ class SampleView {
 				chartType: 'sampleView',
 				settingsKey: 'showDictionary',
 				title: `Option to show/hide dictionary table with sample values`
-			},
-			{
+			}
+		]
+
+		if (q && q.singleSampleMutation) {
+			inputs.push({
 				boxLabel: 'Visible',
 				label: 'Disco plot',
 				type: 'checkbox',
 				chartType: 'sampleView',
 				settingsKey: 'showDisco',
 				title: `Option to show/hide disco plots`
-			},
-			{
+			})
+		}
+
+		if (q && q.singleSampleGenomeQuantification) {
+			inputs.push({
 				boxLabel: 'Visible',
 				label: 'Single sample',
 				type: 'checkbox',
 				chartType: 'sampleView',
 				settingsKey: 'showSingleSample',
 				title: `Option to show/hide single sample plots`
-			}
-		]
-		if (q.NIdata && showBrainImaging) {
+			})
+		}
+
+		if (q && q.NIdata && showBrainImaging) {
 			inputs.push({
 				boxLabel: 'Visible',
 				label: 'brain imaging',
