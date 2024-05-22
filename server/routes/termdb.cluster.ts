@@ -219,7 +219,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				// quick fix: newly added gene from client will lack chr/start/stop
 				const re = getResultGene(genome, { input: g.gene, deep: 1 })
 				if (!re.gmlst || re.gmlst.length == 0) {
-					console.warn('unknown gene:' + g.gene) //throw 'unknown gene'
+					console.warn('unknown gene:' + g.gene) // TODO unknown genes should be notified to client
 					continue
 				}
 				const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0]

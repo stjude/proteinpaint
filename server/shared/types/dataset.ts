@@ -308,6 +308,7 @@ export type MetaboliteIntensityQueryNative = {
 	src: 'native' | string
 	file: string
 	samples?: number[]
+	// _metabolites,used to dynamically built cache of metabolite names to speed up search
 	_metabolites?: string[]
 	get?: (param: any) => void
 	find?: (param: any) => void
