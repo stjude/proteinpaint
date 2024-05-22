@@ -461,14 +461,21 @@ async function LDoverlay(q, ds, res) {
 }
 
 async function trigger_getDefaultBins(q, ds, res) {
+	/* only works for non-dict terms declared in ds.queries{}
+NOTE using following pattern:
+	1. tw.term.type identical key is used both for ds.queries{} as well as bin cache named `[type]2bins`
+	2. bin cache is indexed by term.name
+CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it breaks!
+*/
 	const tw = q.tw
-	if (!ds.queries[tw.term.type]) throw 'term type not supported by this dataset'
+	if (!ds.queries?.[tw.term.type]) throw 'term type not supported by this dataset'
+
+	const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
+	if (binsCache[tw.term.name]) return res.send(binsCache[tw.term.name])
 
 	const lst = []
 	let min = Infinity
 	let max = -Infinity
-	const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
-	if (binsCache[tw.term.name]) return binsCache[tw.term.name]
 	try {
 		if (tw.term.type == TermTypes.GENE_EXPRESSION) {
 			const args = {
@@ -510,7 +517,7 @@ async function trigger_getDefaultBins(q, ds, res) {
 				lst.push(value)
 			}
 		}
-		let binconfig = initBinConfig(lst)
+		const binconfig = initBinConfig(lst)
 		binsCache[tw.term.name] = { default: binconfig, min, max }
 		res.send({ default: binconfig, min, max })
 	} catch (e) {
