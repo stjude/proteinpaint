@@ -289,7 +289,6 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 
 	q.find = async (metabolites: string[]) => {
 		// if !q.metabolites, read all metabolites from file
-		console.log(param)
 		if (!q._metabolites) {
 			const metabolites = [] as string[]
 			await utils.get_lines_txtfile({
