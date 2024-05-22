@@ -1903,8 +1903,10 @@ async function validate_query_NIdata(ds, genome) {
 					ps.stdout.on('data', data => {
 						imgData.push(data)
 					})
-					ps.stderr.on('data', data => console.error(`stderr: ${data}`))
-
+					ps.stderr.on('data', data => {
+						console.error(`stderr: ${data}`)
+						reject(new Error(`Python script filed: ${data}`))
+					})
 					ps.on('close', code => {
 						if (code === 0) {
 							const imageBuffer = Buffer.concat(imgData)
