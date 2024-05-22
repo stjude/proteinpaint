@@ -27,6 +27,8 @@ const useCasesExcluded = {
 		TermTypeGroups.METABOLITE_INTENSITY
 	],
 	dataDownload: [
+		//TermTypeGroups.SNP_LOCUS, //this tabs require that the handler for this term type to be implemented
+		//TermTypeGroups.SNP_LIST, //this tabs require that the handler for this term type to be implemented
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY
