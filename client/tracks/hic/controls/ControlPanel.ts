@@ -19,6 +19,8 @@ class ControlPanel {
 		inputBpMaxV?: any
 		matrixTypeRow?: any
 		matrixType?: any
+		widthRow?: any
+		width?: any
 		view?: any
 		genomeViewBtn?: any
 		chrpairViewBtn?: any
@@ -125,6 +127,29 @@ class ControlPanel {
 		this.addLabel(this.controls.matrixTypeRow, 'matrix type')
 		this.controls.matrixType = new MatrixTypeControl(this.controls.matrixTypeRow.append('td'), this.dropdownCallback)
 		this.controls.matrixType.render()
+
+		this.controls.widthRow = menuTable.append('tr') as any
+		this.addLabel(this.controls.widthRow, 'WIDTH')
+		this.controls.width = this.controls.widthRow.append('td')
+
+		this.controls.width
+			.style('margin-right', '10px')
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '80px')
+			.style('margin-left', '0px')
+			.attr('type', 'number')
+			.property('value', state.width)
+			.on('keyup', async (event: KeyboardEvent) => {
+				if (event.code != 'Enter') return
+				const v: any = (event.target as HTMLInputElement).value
+				this.app.dispatch({
+					type: 'view_update',
+					config: {
+						width: v
+					}
+				})
+			})
 
 		//View with description, buttons, and zoom when appropriate
 		const viewRow = menuTable.append('tr') as any
@@ -235,7 +260,7 @@ class ControlPanel {
 			this.controls.horizontalViewBtn.style('display', 'block')
 			this.controls.zoomDiv.style('display', 'contents')
 			//Hide previously shown detail view btn
-			this.controls.detailViewBtn.style('display', 'none')
+			this.controls.detailViewBtn.style('display', '')
 		} else if (state.currView === 'horizontal') {
 			//Only show chrpairViewBtn if in horizonal or detail view
 			//Include chr x and chr y in the button text
@@ -250,6 +275,7 @@ class ControlPanel {
 			this.controls.horizontalViewBtn.style('display', 'none')
 			this.controls.detailViewBtn.style('display', 'none')
 			this.controls.zoomDiv.style('display', 'none')
+			this.controls.widthRow.style('display', 'none')
 		}
 	}
 
@@ -350,6 +376,7 @@ class ControlPanel {
 		this.controls.minCutoffRow.style('display', state.currView == 'horizontal' ? 'none' : '')
 		this.controls.maxCutoffRow.style('display', state.currView == 'horizontal' ? 'none' : '')
 		this.controls.matrixTypeRow.style('display', state.currView == 'horizontal' ? 'none' : '')
+		this.controls.widthRow.style('display', state.currView == 'detail' ? 'contents' : 'none')
 	}
 
 	main(appState) {
@@ -365,6 +392,7 @@ class ControlPanel {
 			this.controls.view.text(state.currView.charAt(0).toUpperCase() + state.currView.slice(1))
 		}
 
+		this.controls.width.select('input').property('value', state.width)
 		this.controls.inputBpMinV.property('value', this.parent('min'))
 		this.controls.inputBpMaxV.property('value', this.parent('max'))
 		this.controls.minCutoffLabel.html(`MIN CUTOFF <br>(>= ${Number(this.parent('absMin').toFixed(6))})`)
