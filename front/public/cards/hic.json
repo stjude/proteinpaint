@@ -1,5 +1,5 @@
 {
-    "ribbonMessage": "Versions 7, 8 and 9 Hi-C files are accepted.<br> See the new example for displaying a hic data across two chromosomes.",
+    "ribbonMessage": "See new view examples",
     "ppcalls": [
         {
             "label": "Hi-C",
@@ -67,6 +67,79 @@
             "testSpec": {
                 "expected": {
                     "image": 1
+                }
+            }
+        },
+        {
+            "label": "Whole genome",
+            "message": "",
+            "runargs": {
+                "parseurl": true,
+                "noheader": true,
+                "nobox": 1,
+                "hic": {
+                    "genome":"hg19",
+                    "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                    "enzyme": "MboI"
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "svg": 1
+                }
+            }
+        },
+        {
+            "label": "Chromosome pair",
+            "message": "",
+            "runargs": {
+                "parseurl": true,
+                "noheader": true,
+                "nobox": 1,
+                "hic": {
+                    "genome":"hg19",
+                    "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                    "enzyme": "MboI",
+                    "position1": "chr17",
+                    "position2": "chr1",
+                    "state" : {
+                        "chrpair": {
+                            "nmeth": "VC",
+                            "matrixType": "log(oe)"
+                        }
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "svg": 1
+                }
+            }
+        },
+        {
+            "label": "Detail",
+            "message": "",
+            "runargs": {
+                "parseurl": true,
+                "noheader": true,
+                "nobox": 1,
+                "hic": {
+                    "genome":"hg19",
+                    "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                    "enzyme": "MboI",
+                    "position1": "chr2:182001302-202001302",
+		            "position2": "chr1:7626953-27626953",
+                    "state" : {
+                        "detail": {
+                            "nmeth": "VC",
+                            "matrixType": "observed"
+                        }
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "svg": 1
                 }
             }
         }
