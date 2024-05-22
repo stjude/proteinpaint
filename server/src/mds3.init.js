@@ -6,6 +6,7 @@ import { Readable } from 'stream'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import run_R from './run_R'
 import * as gdc from './mds3.gdc.js'
 import { initGDCdictionary } from './termdb.gdc.js'
 import { validate_variant2samples, ssmIdFieldsSeparator } from './mds3.variant2samples.js'
@@ -1637,28 +1638,13 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		) {
 			// edgeR will be used for DE analysis
 			const time1 = new Date()
-			const r_output = await run_edgeR(
-				path.join(serverconfig.binpath, 'utils', 'edge.R'),
-				JSON.stringify(expression_input)
+			result = JSON.parse(
+				await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
 			)
 			const time2 = new Date()
 			console.log('Time taken to run edgeR:', time2 - time1, 'ms')
 			param.method = 'edgeR'
-			//console.log("r_output:",r_output)
-
-			//for (const line of r_output.split('\n')) {
-			//    console.log("line:",line)
-			//    if (line.includes("output_json:")) {
-			//	     //console.log(line.replace(",output_json:",""))
-			//  	     result=JSON.parse(line.replace(",output_json:",""))
-			//      } else {
-			//          //console.log(line)
-			//      }
-			//}
-
-			const tmpfile = path.join(serverconfig.binpath, 'utils', 'r_output.txt')
-			result = JSON.parse(fs.readFileSync(tmpfile, 'utf8'))
-			fs.unlink(tmpfile, () => {})
+			//console.log("result:",result)
 		} else if (param.method == 'wilcoxon') {
 			// Wilcoxon test will be used for DE analysis
 			const time1 = new Date()
@@ -1706,43 +1692,6 @@ function getFirstLine(file) {
 		ps.on('close', code => {
 			if (code != 0) reject('head command exited with non-zero status and this error: ' + out2.join(''))
 			resolve(out1.join(''))
-		})
-	})
-}
-async function run_edgeR(Rscript, input_data) {
-	return new Promise((resolve, reject) => {
-		const binpath = path.join(serverconfig.Rscript, Rscript)
-		const ps = spawn(serverconfig.Rscript, [Rscript])
-		const stdout = []
-		const stderr = []
-
-		try {
-			Readable.from(input_data).pipe(ps.stdin)
-		} catch (error) {
-			ps.kill()
-			let errmsg = error
-			if (stderr.length) errmsg += `killed edgeR('${Rscript}'), stderr: ${stderr.join('').trim()}`
-			reject(errmsg)
-		}
-
-		ps.stdout.on('data', data => stdout.push(data))
-		ps.stderr.on('data', data => stderr.push(data))
-		ps.on('error', err => {
-			if (stderr.length) console.log(`edgeR('${Rscript}') ps.on('error') stderr:`, stderr)
-			reject(err)
-		})
-		ps.on('close', code => {
-			if (code !== 0) reject(`spawned '${Rscript}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
-			//else if (stderr.length) {
-			//	// handle rust stderr
-			//	const err = stderr.join('').trim()
-			//	const errmsg = `edgeR('${Rscript}') emitted standard error\n stderr: ${err}`
-			//	//reject(errmsg)
-			//}
-			else {
-				//console.log("stdout:",stdout)
-				resolve(stdout.toString())
-			}
 		})
 	})
 }
