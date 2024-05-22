@@ -467,47 +467,48 @@ async function trigger_getDefaultBins(q, ds, res) {
 	let max = -Infinity
 	const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
 	if (binsCache[tw.term.name]) return binsCache[tw.term.name]
-	if (ds.queries[tw.term.type])
-		if (tw.term.type == TermTypes.GENE_EXPRESSION) {
-			const args = {
-				genome: q.genome,
-				dslabel: q.dslabel,
-				clusterMethod: 'hierarchical',
-				/** distance method */
-				distanceMethod: 'euclidean',
-				/** Data type */
-				dataType: dtgeneexpression,
-				genes: [{ gene: tw.term.gene }]
-			}
-			const data = await ds.queries.geneExpression.get(args)
+	if (!ds.queries[tw.term.type]) throw 'term type not supported by this dataset'
 
-			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
-				const values = data.gene2sample2value.get(tw.term.gene)
-				const value = Number(values[sampleId])
-				if (value < min) min = value
-				if (value > max) max = value
-				lst.push(value)
-			}
-		} else if (tw.term.type == TermTypes.METABOLITE_INTENSITY) {
-			const args = {
-				genome: q.genome,
-				dslabel: q.dslabel,
-				clusterMethod: 'hierarchical',
-				/** distance method */
-				distanceMethod: 'euclidean',
-				/** Data type */
-				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
-				metabolites: [tw.term.name]
-			}
-			const data = await ds.queries.metaboliteIntensity.get(args)
-			const termData = data.metabolite2sample2value.get(tw.term.name)
-			for (const sample in termData) {
-				const value = termData[sample]
-				if (value < min) min = value
-				if (value > max) max = value
-				lst.push(value)
-			}
+	if (tw.term.type == TermTypes.GENE_EXPRESSION) {
+		const args = {
+			genome: q.genome,
+			dslabel: q.dslabel,
+			clusterMethod: 'hierarchical',
+			/** distance method */
+			distanceMethod: 'euclidean',
+			/** Data type */
+			dataType: dtgeneexpression,
+			genes: [{ gene: tw.term.gene }]
 		}
+		const data = await ds.queries.geneExpression.get(args)
+
+		for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
+			const values = data.gene2sample2value.get(tw.term.gene)
+			const value = Number(values[sampleId])
+			if (value < min) min = value
+			if (value > max) max = value
+			lst.push(value)
+		}
+	} else if (tw.term.type == TermTypes.METABOLITE_INTENSITY) {
+		const args = {
+			genome: q.genome,
+			dslabel: q.dslabel,
+			clusterMethod: 'hierarchical',
+			/** distance method */
+			distanceMethod: 'euclidean',
+			/** Data type */
+			dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
+			metabolites: [tw.term.name]
+		}
+		const data = await ds.queries.metaboliteIntensity.get(args)
+		const termData = data.metabolite2sample2value.get(tw.term.name)
+		for (const sample in termData) {
+			const value = termData[sample]
+			if (value < min) min = value
+			if (value > max) max = value
+			lst.push(value)
+		}
+	}
 	let binconfig = initBinConfig(lst)
 	binsCache[tw.term.name] = { default: binconfig, min, max }
 	res.send({ default: binconfig, min, max })

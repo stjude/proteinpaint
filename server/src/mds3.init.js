@@ -1419,7 +1419,7 @@ async function validate_query_ld(ds, genome) {
 export async function validate_query_metaboliteIntensity(ds, genome) {
 	const q = ds.queries.metaboliteIntensity
 	if (!q) return
-	q.metabolite2bins = {}
+	q.metaboliteIntensity2bins = {}
 
 	if (q.src == 'native') {
 		await validateMetaboliteIntensityNative(q, ds, genome)
