@@ -19,15 +19,27 @@ const useCasesExcluded = {
 	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	violin: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	cuminc: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.GENE_VARIANT],
+	cuminc: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
 	dataDownload: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
-		TermTypeGroups.GENE_VARIANT,
+		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY
 	], //Later on can support other term types like snplocus, snplst, geneVariant, non dictionary terms
-	survival: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	survival: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
 	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	regression: [TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS]
@@ -129,8 +141,8 @@ export class TermTypeSearch {
 				if (state.usecase.target == 'sampleScatter' && type == TermTypes.GENE_VARIANT) {
 					if (state.usecase.detail == 'numeric') continue
 				}
-				//In most cases the target is enough to know what terms are allowed
-				if (!state.usecase.target || useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
+
+				if (state.usecase.target && useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
 
 				this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 			}
