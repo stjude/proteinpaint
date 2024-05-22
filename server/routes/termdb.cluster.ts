@@ -302,7 +302,8 @@ async function validateMetaboliteIntensityNative(q: MetaboliteIntensityQueryNati
 			} as any)
 			q._metabolites = metabolites
 		}
-		const matches = []
+
+		const matches = [] as string[]
 		for (const m of metabolites) {
 			if (!m) continue
 			for (const metabolite of q._metabolites) {
