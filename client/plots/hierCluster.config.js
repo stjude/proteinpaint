@@ -137,25 +137,29 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		geneList,
 		mode: 'expression',
 		vocabApi: app.vocabApi,
-		callback: ({ geneList, groupName }) => {
+		callback: async ({ geneList, groupName }) => {
 			if (!selectedGroup) throw `missing selectedGroup`
 			tip.hide()
 			const group = { name: groupName || name, lst: [], type: 'hierCluster' }
 			const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
-			const tws = geneList.map(d => {
-				//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-				let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
-				if (!tw)
-					tw = {
-						$id: get$id(),
-						term: {
-							name: d.symbol || d.gene,
-							type: 'geneVariant'
-						},
-						q: {}
+			const tws = await Promise.all(
+				geneList.map(async d => {
+					const term = {
+						gene: d.symbol || d.gene,
+						name: d.symbol || d.gene,
+						type: 'geneVariant'
 					}
-				return tw
-			})
+					//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+					let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+					if (!tw) {
+						tw = { term, q: {} }
+						tw.$id = await get$id()
+					} else if (!tw.$id) {
+						tw.$id = await get$id()
+					}
+					return tw
+				})
+			)
 			group.lst = [...lst, ...tws]
 			if (!group.lst.length) tg.splice(selectedGroup.index, 1)
 
