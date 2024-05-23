@@ -43,7 +43,7 @@ export class ChrPairView {
 		this.chrylen = this.hic.genome.chrlookup[this.parent('state').y.chr.toUpperCase()].len
 		this.maxchrlen = Math.max(this.chrxlen, this.chrylen)
 		this.colorizeElement = new ColorizeElement()
-		this.positions = new Positions(opts.error)
+		this.positions = new Positions(opts.error, this.parent('state').minBinNum_bp)
 		this.formattedData = new GridElementsFormattedData()
 	}
 

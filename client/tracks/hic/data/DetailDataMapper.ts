@@ -5,7 +5,6 @@ import { ParseFragData } from './ParseFragData'
 export class DetailDataMapper {
 	hic: any
 	dataFetcher: DetailDataFetcher
-	minBinNum_bp = 20
 	errList: string[]
 	parent: (prop: string, v?: number) => string | number
 	frag = {

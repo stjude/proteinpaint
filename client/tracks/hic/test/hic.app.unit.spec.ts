@@ -147,7 +147,7 @@ tape('DataMapper - sortData()', test => {
 tape('Positions - class and setPositions()', test => {
 	test.plan(4)
 
-	const positions = new Positions(mockError)
+	const positions = new Positions(mockError, 200)
 	const chrx = { chr: 'chr1' }
 	const chry = { chr: 'chr2' }
 
@@ -156,7 +156,7 @@ tape('Positions - class and setPositions()', test => {
 	test.ok(positions instanceof Positions, 'Should construct positions class properly.')
 	test.equal(positions.error, mockError, 'Should set error lst correctly.')
 
-	result = positions.setPosition(260.12890625, 62.7734375, 3, chrx, chry, mockHic)
+	result = positions.setPosition(260.12890625, 62.7734375, 3, chrx, chry, mockHic, 20, 200)
 	test.deepEqual(
 		result,
 		[
@@ -167,7 +167,7 @@ tape('Positions - class and setPositions()', test => {
 	)
 
 	//Out of bounds
-	result = positions.setPosition(1000, 1000, 3, chrx, chry, mockHic)
+	result = positions.setPosition(1000, 1000, 3, chrx, chry, mockHic, 20, 200)
 	test.deepEqual(
 		result,
 		[
@@ -185,8 +185,6 @@ tape('Resolution class', test => {
 
 	const resolution = new Resolution(mockError)
 	test.ok(resolution instanceof Resolution, 'Should construct resolution class properly.')
-	test.equal(resolution.initialBinNum, 20, 'Should set Resolution.initialBinNum to 20.')
-	test.equal(resolution.minBinNum_bp, 200, 'Should set Resolution.minBinNum_bp to 200.')
 	test.equal(
 		typeof resolution.getChrPairResolution,
 		'function',
@@ -249,7 +247,7 @@ tape('Resolution - getChrPairResolution()', test => {
 	const chrx = { chr: 'chr1' }
 	const chry = { chr: 'chr2' }
 
-	const result = resolution.getChrPairResolution(mockHic, chrx, chry)
+	const result = resolution.getChrPairResolution(mockHic, chrx, chry, 200)
 	test.ok(Number.isInteger(result), 'Should return number for chr pair resolution.')
 	test.equal(result, 1000000, 'Should return the correct resolution for chr pair.')
 })
@@ -261,7 +259,7 @@ tape('Resolution - getDefaultViewSpan()', test => {
 	const chrx = { chr: 'chr1' }
 	const chry = { chr: 'chr2' }
 
-	const result = resolution.getDefaultViewSpan(mockHic, chrx, chry)
+	const result = resolution.getDefaultViewSpan(mockHic, chrx, chry, 20, 200)
 	test.ok(Number.isInteger(result), 'Should return number for default span.')
 	test.equal(result, 20000000, 'Should return the correct resolution for default span.')
 })

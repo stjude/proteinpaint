@@ -2,8 +2,6 @@ import { ChrPosition } from 'types/hic'
 
 export class Resolution {
 	error: (f: string | string[]) => void
-	readonly initialBinNum = 20
-	readonly minBinNum_bp = 200
 
 	constructor(error: (f: string | string[]) => void) {
 		this.error = error
@@ -12,12 +10,12 @@ export class Resolution {
 	getResolution(state: any, hic: any) {
 		if (state.currView == 'genome') return hic['bpresolution'][0]
 		if (state.currView == 'chrpair') {
-			const resolution = this.getChrPairResolution(hic, state.x, state.y)
+			const resolution = this.getChrPairResolution(hic, state.x, state.y, state.minBinNum_bp)
 			return resolution
 		} else if (state.currView == 'detail') {
 			const maxBpWidth = Math.max(state.x.stop - state.x.start, state.y.stop - state.y.start)
 
-			const resolution = this.findResFromArray(maxBpWidth, this.minBinNum_bp, hic.bpresolution)
+			const resolution = this.findResFromArray(maxBpWidth, state.minBinNum_bp, hic.bpresolution)
 
 			return resolution
 		} else {
@@ -26,12 +24,12 @@ export class Resolution {
 		}
 	}
 
-	getChrPairResolution(hic: any, x: any, y: any) {
+	getChrPairResolution(hic: any, x: any, y: any, minBinNum_bp: number) {
 		const chrxlen = hic.genome.chrlookup[x.chr.toUpperCase()].len
 		const chrylen = hic.genome.chrlookup[y.chr.toUpperCase()].len
 		const maxchrlen = Math.max(chrxlen, chrylen)
 
-		const resolution = this.findResFromArray(maxchrlen, this.minBinNum_bp, hic.bpresolution)
+		const resolution = this.findResFromArray(maxchrlen, minBinNum_bp, hic.bpresolution)
 
 		if (resolution == null) {
 			this.error(`No suitable resolution for ${x.chr}-${y.chr} pair.`)
@@ -57,8 +55,8 @@ export class Resolution {
 		return resolution
 	}
 
-	getDefaultViewSpan(hic: any, x: any, y: any, initialBinNum: number) {
-		const chrpairResolution = this.getChrPairResolution(hic, x, y)
+	getDefaultViewSpan(hic: any, x: any, y: any, initialBinNum: number, minBinNum_bp: number) {
+		const chrpairResolution = this.getChrPairResolution(hic, x, y, minBinNum_bp)
 		if (!chrpairResolution) return
 		return chrpairResolution * initialBinNum
 	}
