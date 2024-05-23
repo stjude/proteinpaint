@@ -323,9 +323,10 @@ async function get_matrix(q, req, res, ds, genome) {
 	}
 	const data = await getData(q, ds, genome)
 	if (authApi.canDisplaySampleIds(req, ds)) {
-		for (const sample of Object.values(data.samples)) {
-			sample.sampleName = ds.sampleId2Name.get(sample.sample)
-		}
+		if (data.samples)
+			for (const sample of Object.values(data.samples)) {
+				sample.sampleName = ds.sampleId2Name.get(sample.sample)
+			}
 	}
 	res.send(data)
 }
@@ -460,54 +461,67 @@ async function LDoverlay(q, ds, res) {
 }
 
 async function trigger_getDefaultBins(q, ds, res) {
+	/* only works for non-dict terms declared in ds.queries{}
+NOTE using following pattern:
+	1. tw.term.type identical key is used both for ds.queries{} as well as bin cache named `[type]2bins`
+	2. bin cache is indexed by term.name
+CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it breaks!
+*/
 	const tw = q.tw
+	if (!ds.queries?.[tw.term.type]) throw 'term type not supported by this dataset'
+
+	const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
+	if (binsCache[tw.term.name]) return res.send(binsCache[tw.term.name])
+
 	const lst = []
 	let min = Infinity
 	let max = -Infinity
-	if (tw.term.type == TermTypes.GENE_EXPRESSION) {
-		if (ds.queries.geneExpression.gene2bins[tw.term.gene])
-			return { default: ds.queries.geneExpression.gene2bins[tw.term.gene] }
+	try {
+		if (tw.term.type == TermTypes.GENE_EXPRESSION) {
+			const args = {
+				genome: q.genome,
+				dslabel: q.dslabel,
+				clusterMethod: 'hierarchical',
+				/** distance method */
+				distanceMethod: 'euclidean',
+				/** Data type */
+				dataType: dtgeneexpression,
+				genes: [{ gene: tw.term.gene }]
+			}
+			const data = await ds.queries.geneExpression.get(args)
 
-		const args = {
-			genome: q.genome,
-			dslabel: q.dslabel,
-			clusterMethod: 'hierarchical',
-			/** distance method */
-			distanceMethod: 'euclidean',
-			/** Data type */
-			dataType: dtgeneexpression,
-			genes: [{ gene: tw.term.gene }]
+			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
+				const values = data.gene2sample2value.get(tw.term.gene)
+				const value = Number(values[sampleId])
+				if (value < min) min = value
+				if (value > max) max = value
+				lst.push(value)
+			}
+		} else if (tw.term.type == TermTypes.METABOLITE_INTENSITY) {
+			const args = {
+				genome: q.genome,
+				dslabel: q.dslabel,
+				clusterMethod: 'hierarchical',
+				/** distance method */
+				distanceMethod: 'euclidean',
+				/** Data type */
+				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
+				metabolites: [tw.term.name]
+			}
+			const data = await ds.queries.metaboliteIntensity.get(args)
+			const termData = data.metabolite2sample2value.get(tw.term.name)
+			for (const sample in termData) {
+				const value = termData[sample]
+				if (value < min) min = value
+				if (value > max) max = value
+				lst.push(value)
+			}
 		}
-		const data = await ds.queries.geneExpression.get(args)
-
-		for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
-			const values = data.gene2sample2value.get(tw.term.gene)
-			const value = Number(values[sampleId])
-			if (value < min) min = value
-			if (value > max) max = value
-			lst.push(value)
-		}
-	} else if (tw.term.type == TermTypes.METABOLITE_INTENSITY) {
-		const args = {
-			genome: q.genome,
-			dslabel: q.dslabel,
-			clusterMethod: 'hierarchical',
-			/** distance method */
-			distanceMethod: 'euclidean',
-			/** Data type */
-			dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
-			metabolites: [tw.term.name]
-		}
-		const data = await ds.queries.metaboliteIntensity.get(args)
-		const termData = data.metabolite2sample2value.get(tw.term.name)
-		for (const sample in termData) {
-			const value = termData[sample]
-			if (value < min) min = value
-			if (value > max) max = value
-			lst.push(value)
-		}
+		const binconfig = initBinConfig(lst)
+		binsCache[tw.term.name] = { default: binconfig, min, max }
+		res.send({ default: binconfig, min, max })
+	} catch (e) {
+		console.log(e)
+		res.send({ error: e.message || e })
 	}
-	let binconfig = initBinConfig(lst)
-
-	res.send({ default: binconfig, min, max })
 }

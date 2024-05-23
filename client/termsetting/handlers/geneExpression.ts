@@ -30,6 +30,7 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 
 	if (!tw.term.bins) {
 		const defaultBins = await vocabApi.getDefaultBins({ tw })
+		if ('error' in defaultBins) throw defaultBins.error
 		tw.term.bins = defaultBins
 		tw.q = JSON.parse(JSON.stringify(tw.term.bins.default))
 	}

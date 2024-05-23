@@ -5,7 +5,7 @@ import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { keyupEnter } from '#src/client'
-import { TermTypeGroups, isNonDictionaryType } from '#shared/terms'
+import { TermTypeGroups, isNonDictionaryType, equals } from '#shared/terms'
 
 /*
 steps:
@@ -188,9 +188,10 @@ function setRenderers(self) {
 	}
 	self.showTerms = data => {
 		// add disabled terms to opts.disable_terms
+
 		if (self.opts.disable_terms) {
 			data.lst.forEach(t => {
-				if (t.disabled) self.opts.disable_terms.push(t.id)
+				if (t.disabled) self.opts.disable_terms.push(t)
 			})
 		}
 		self.clear()
@@ -222,7 +223,6 @@ function setRenderers(self) {
 		const tr = select(this)
 		const button = tr.append('td').text(term.name)
 		const uses = isUsableTerm(term, self.state.usecase)
-
 		/*
 		below, both callbacks are made in app.js validateOpts()
 		1. self.opts.click_term() is for selecting to tvs
@@ -230,7 +230,7 @@ function setRenderers(self) {
 		*/
 		if ((self.opts.click_term || self.app.opts?.tree?.click_term_wrapper) && uses.has('plot')) {
 			// to click a graphable term, show as blue button
-			if (self.opts.disable_terms?.includes(term.id)) {
+			if (term && self.opts.disable_terms?.find(term2 => equals(term, term2))) {
 				// but it's disabled
 				button
 					.attr('class', 'sja_tree_click_term_disabled')

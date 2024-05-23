@@ -1,4 +1,4 @@
-import { TermTypes } from './terms.js'
+import { TermTypes, isNumericTerm } from './terms.js'
 
 export const graphableTypes = new Set([
 	'categorical',
@@ -85,7 +85,7 @@ export function isUsableTerm(term, _usecase, ds) {
 
 		case 'sampleScatter':
 			if (usecase.detail == 'numeric') {
-				if (term.type == 'float' || term.type == 'integer') {
+				if (isNumericTerm(term)) {
 					uses.add('plot')
 				}
 				if (hasNumericChild(child_types)) uses.add('branch')

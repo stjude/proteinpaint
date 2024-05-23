@@ -260,7 +260,7 @@ function setRenderers(self) {
 		// add disabled terms to opts.disable_terms
 		if (self.opts.disable_terms) {
 			term.terms.forEach(t => {
-				if (t.disabled) self.opts.disable_terms.push(t.id)
+				if (t.disabled) self.opts.disable_terms.push(t)
 			})
 		}
 

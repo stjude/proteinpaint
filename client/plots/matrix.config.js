@@ -207,6 +207,7 @@ export async function getPlotConfig(opts = {}, app) {
 
 	const promises = []
 	for (const grp of config.termgroups) {
+		grp.lst = JSON.parse(JSON.stringify(grp.lst))
 		for (const tw of grp.lst) {
 			// may force the saved session to request the most up-to-data dictionary term data from server
 			// TODO: should skip samplelst term here

@@ -360,6 +360,7 @@
                 {
                     "term": {
                         "name": "TP53",
+                        "gene": "TP53",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,
@@ -374,6 +375,7 @@
                 {
                     "term": {
                         "name": "KRAS",
+                        "gene": "KRAS",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,
@@ -403,6 +405,7 @@
                 {
                     "term": {
                         "name": "TP53",
+                        "gene": "TP53",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,
@@ -417,6 +420,7 @@
                 {
                     "term": {
                         "name": "AKT1",
+                        "gene": "AKT1",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,
@@ -431,6 +435,7 @@
                 {
                     "term": {
                         "name": "KRAS",
+                        "gene": "KRAS",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,
@@ -445,6 +450,7 @@
                 {
                     "term": {
                         "name": "BCR",
+                        "gene": "BCR",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,
@@ -478,6 +484,7 @@
                 {
                     "term": {
                         "name": "TP53",
+                        "gene": "TP53",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,
@@ -492,6 +499,7 @@
                 {
                     "term": {
                         "name": "KRAS",
+                        "gene": "KRAS",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,
@@ -522,6 +530,7 @@
                 {
                     "term": {
                         "name": "TP53",
+                        "gene": "TP53",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,
@@ -536,6 +545,7 @@
                 {
                     "term": {
                         "name": "KRAS",
+                        "gene": "KRAS",
                         "type": "geneVariant"
                     },
                     "isAtomic": true,

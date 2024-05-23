@@ -1,7 +1,6 @@
-import { Term } from '#shared/types/terms/term.ts'
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
-import { TermTypeGroups, TermTypes, typeGroup } from '#shared/terms'
+import { TermTypeGroups, TermTypes, typeGroup, Term } from '#shared/terms'
 
 type Dict = {
 	[key: string]: any
@@ -12,30 +11,43 @@ When searching for terms, depending on the use case, only certain types of terms
 The tree target is used to determine the allowed term types.
  */
 
-const useCases = {
-	matrix: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
-	filter: [
-		TermTypeGroups.DICTIONARY_VARIABLES,
+const useCasesExcluded = {
+	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	violin: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	cuminc: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY
 	],
-	dictionary: [
-		TermTypeGroups.DICTIONARY_VARIABLES,
+	dataDownload: [
+		//TermTypeGroups.SNP_LOCUS, //this tabs require that the handler for this term type to be implemented
+		//TermTypeGroups.SNP_LIST, //this tabs require that the handler for this term type to be implemented
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	], //Later on can support other term types like snplocus, snplst, geneVariant, non dictionary terms
+	survival: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY
 	],
-	summary: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION],
-	barchart: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
-	violin: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION, TermTypeGroups.GENE_EXPRESSION],
-	sampleScatter: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.GENE_EXPRESSION], //This case covers scaleBy and dynamic scatters with coordinates from numeric terms
-	cuminc: [TermTypeGroups.DICTIONARY_VARIABLES],
-	dataDownload: [TermTypeGroups.DICTIONARY_VARIABLES], //Later on can support other term types like snplocus, snplst, geneVariant
-	survival: [TermTypeGroups.DICTIONARY_VARIABLES],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
-	default: [TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.MUTATION_CNV_FUSION],
-	regression: [TermTypeGroups.DICTIONARY_VARIABLES]
+	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	regression: [
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	]
 }
 
 export class TermTypeSearch {
@@ -126,26 +138,18 @@ export class TermTypeSearch {
 				throw `error with handler='./handlers/${type}.ts': ${e}`
 			}
 			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
-				//In regression snplocus and snplst are only allowed for the input variable, disabled for now
-				// if (state.usecase.target == 'regression' && (type == 'snplocus' || type == 'snplst' || type == TermTypes.GENE_VARIANT)) {
-				// 	if (state.usecase.detail == 'independent')
-				// 		this.tabs.push({ label, callback: () => this.setTermTypeGroup(termTypeGroup), termTypeGroup })
-				// 	continue
-				// }
+				//regression snp cases will be handled when the search handler is added
 				if (state.usecase.target == 'regression' && type == TermTypes.GENE_VARIANT) {
-					if (state.usecase.detail == 'independent')
-						this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
-					continue
+					if (state.usecase.detail != 'independent') continue
 				}
 				//In sampleScatter geneVariant is only allowed if detail is not numeric, like when building a dynamic scatter
 				if (state.usecase.target == 'sampleScatter' && type == TermTypes.GENE_VARIANT) {
-					if (state.usecase.detail != 'numeric')
-						this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
-					continue
+					if (state.usecase.detail == 'numeric') continue
 				}
-				//In most cases the target is enough to know what terms are allowed
-				if (!state.usecase.target || useCases[state.usecase.target]?.includes(termTypeGroup))
-					this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
+
+				if (state.usecase.target && useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
+
+				this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 			}
 		}
 	}

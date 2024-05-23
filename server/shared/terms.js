@@ -53,15 +53,15 @@ const nonDictTypes = new Set([
 	TermTypes.GENE_VARIANT,
 	TermTypes.METABOLITE_INTENSITY
 ])
-
+export const numericTypes = new Set([
+	TermTypes.INTEGER,
+	TermTypes.FLOAT,
+	TermTypes.GENE_EXPRESSION,
+	TermTypes.METABOLITE_INTENSITY
+])
 export function isNumericTerm(term) {
 	if (!term) return false
-	return (
-		term.type == TermTypes.INTEGER ||
-		term.type == TermTypes.FLOAT ||
-		term.type == TermTypes.GENE_EXPRESSION ||
-		term.type == TermTypes.METABOLITE_INTENSITY
-	)
+	return numericTypes.has(term.type)
 }
 
 export function isDictionaryType(type) {
@@ -71,4 +71,27 @@ export function isDictionaryType(type) {
 export function isNonDictionaryType(type) {
 	if (!type) throw new Error('Type is not defined')
 	return nonDictTypes.has(type)
+}
+
+export function equals(t1, t2) {
+	if (!t1) throw new Error('First term is not defined ')
+	if (!t2) throw new Error('Second term is not defined ')
+	if (t1.type !== t2.type) return false //term types are different
+	if (isDictionaryType(t1.type) && isDictionaryType(t2.type) && t1.type != TermTypes.SAMPLELST) return t1.id === t2.id
+	switch (t1.type) {
+		case TermTypes.GENE_EXPRESSION:
+			return t1.gene == t2.gene
+		case TermTypes.METABOLITE_INTENSITY:
+			return t1.name == t2.name
+		case TermTypes.GENE_VARIANT:
+			return t1.gene == t2.gene || (t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop)
+
+		// TO DO: Add more cases
+		// case TermTypes.SNP_LIST:
+		// case TermTypes.SNP_LOCUS:
+		// case TermTypes.SAMPLELST:
+
+		default:
+			return false
+	}
 }

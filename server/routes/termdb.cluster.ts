@@ -153,7 +153,7 @@ function getZscore(l: number[]) {
 export async function validate_query_geneExpression(ds: any, genome: any) {
 	const q: GeneExpressionQuery = ds.queries.geneExpression
 	if (!q) return
-	q.gene2bins = {}
+	q.geneExpression2bins = {} //this dict is used to store the default bin config for each gene searched, so it doesn't have to be recalculated each time
 
 	if (q.src == 'gdcapi') {
 		gdc_validate_query_geneExpression(ds as GeneExpressionQueryGdc, genome)
@@ -250,6 +250,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
+		if (gene2sample2value.size == 0) throw 'no data available for the input ' + param.genes?.map(g => g.gene).join(', ')
 		return { gene2sample2value, byTermId, bySampleId }
 	}
 }

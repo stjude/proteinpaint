@@ -78,14 +78,14 @@ class Divide {
 		const a = {
 			activeCohort: this.state.activeCohort,
 			filter: this.state.filter,
-			disable_terms: [plot.term.id]
+			disable_terms: [plot.term]
 		}
 		if (plot.term0) {
 			a.term = plot.term0.term
 			a.q = plot.term0.q
-			a.disable_terms.push(plot.term0.id)
+			a.disable_terms.push(plot.term0)
 		}
-		if (plot.term2) a.disable_terms.push(plot.term2.id)
+		if (plot.term2) a.disable_terms.push(plot.term2)
 		if (!this.pill) this.initPill()
 		this.pill.main(a)
 	}

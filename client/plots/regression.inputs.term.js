@@ -478,6 +478,7 @@ function getQSetter4outcome(regressionType) {
 	return {
 		integer: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		float: regressionType == 'logistic' ? maySetTwoBins : setContMode,
+		geneExpression: regressionType == 'logistic' ? maySetTwoBins : setContMode, //Added geneExpression, but still breaks, need to fix
 		categorical: maySetTwoGroups,
 		condition: setQ4tteOutcome,
 		survival: setQ4tteOutcome

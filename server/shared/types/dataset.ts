@@ -328,14 +328,14 @@ export type MetaboliteIntensityQueryNative = {
 	_metabolites?: string[]
 	get?: (param: any) => void
 	find?: (param: string[]) => void
-	metabolite2bins?: { [index: string]: any }
+	metaboliteIntensity2bins?: { [index: string]: any }
 }
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
 // the geneExpression query
 export type GeneExpressionQueryGdc = {
 	src: 'gdcapi' | string
-	gene2bins?: { [index: string]: any }
+	geneExpression2bins?: { [index: string]: any }
 }
 
 export type GeneExpressionQueryNative = {
@@ -345,8 +345,8 @@ export type GeneExpressionQueryNative = {
 	samples?: number[]
 	nochr?: boolean
 	get?: (param: any) => void
+	geneExpression2bins?: { [index: string]: any }
 	//This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper
-	gene2bins?: { [index: string]: any }
 }
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 

@@ -656,6 +656,7 @@ tape('term1 as numeric and term2 numeric, change median size', function (test) {
 })
 
 tape('term1=categorical, term2=numeric', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -692,6 +693,7 @@ tape('term1=categorical, term2=numeric', function (test) {
 })
 
 tape('term1=numeric, term2=survival', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -727,6 +729,7 @@ tape('term1=numeric, term2=survival', function (test) {
 })
 
 tape('term1=numeric, term2=condition', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: { header_mode: 'hide_search' },
@@ -770,6 +773,7 @@ tape('term1=numeric, term2=condition', function (test) {
 })
 
 tape('term1=geneExp, term2=categorical', function (test) {
+	test.timeoutAfter(1000)
 	runpp({
 		state: {
 			plots: [
@@ -804,6 +808,7 @@ tape('term1=geneExp, term2=categorical', function (test) {
 	}
 })
 tape('term1=geneExp, term2=survival', function (test) {
+	test.timeoutAfter(1000)
 	runpp({
 		state: {
 			plots: [
