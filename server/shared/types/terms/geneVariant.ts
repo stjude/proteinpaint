@@ -17,7 +17,7 @@ export type GeneVariantQ = BaseQ & {
 	cnvMinAbsValue?: number
 	cnvLossCutoff?: number
 	exclude: any //an array maybe?
-	dt: number
+	dt?: number
 	origin?: string
 }
 
