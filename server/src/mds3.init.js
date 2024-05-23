@@ -2337,113 +2337,150 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// should be either gene or region, and will work for all data types
 		// has some code duplication with mds3.load.js query_snvindel() etc
 		// primary concern is tw.term may be missing coord/isoform to perform essential query
-		const dt = tw.q.dt
-		const mlst =
-			dt == dtsnvindel
-				? await getSnvindelByTerm(ds, tw.term, genome, q)
-				: dt == dtfusionrna || dt == dtsv
-				? await getSvfusionByTerm(ds, tw.term, genome, q)
-				: dt == dtcnv
-				? await getCnvByTw(ds, tw, genome, q)
-				: ds.queries.geneCnv
-				? await getGenecnvByTerm(ds, tw.term, genome, q)
-				: null
 
-		if (!mlst) throw 'unable to retrieve mutation data'
-
+		// prepare dts to query
+		// if specific dt is requested, then query only that dt
+		// otherwise, query all dts in dataset
 		const sample2mlst = new Map()
-		for (const m of mlst) {
-			/*
-			m={
-				dt
-				class
-				mname
-				samples:[
-					{
-					sample_id: int or string
-					...
-					},
-				]
-			}
-
-			for official datasets using a sqlite db that contains integer2string sample mapping, "sample_id" is integer id 
-			for gdc dataset not using a sqlite db, no sample integer id is kept on server. "sample_id" is string id
-			*/
-
-			if (!Array.isArray(m.samples)) continue
-
-			for (const s of m.samples) {
-				// create new m2{} for each mutation in each sample
-				const m2 = {
-					gene: tw.term.name,
-					isoform: m.isoform,
-					dt: m.dt,
-					chr: tw.term.chr,
-					class: m.class,
-					pos: m.pos || (m.start ? m.start + '-' + m.stop : ''),
-					mname: m.mname
-				}
-
-				if ('value' in m) {
-					// for what?
-					m2.value = m.value
-				}
-
-				if (s.formatK2v) {
-					// sample has format values
-					if (tw.q.origin) {
-						// origin specified
-						if (!Object.keys(s.formatK2v).includes('origin')) throw 'format does not include origin'
-						if (s.formatK2v['origin'] != tw.q.origin) {
-							// mutation origin does not match specified origin
-							// skip sample
-							continue
-						}
-					}
-					// flatten format values
-					for (const k in s.formatK2v) {
-						m2[k] = s.formatK2v[k]
-					}
-				}
-
-				// can supply dt specific attributes
-				if (m.dt == dtsnvindel) {
-					if (s.GT) {
-						// is sample genotype from snp query
-						m2.value = s.GT
-						m2.key = s.GT
-					}
-				} else if (m.dt == dtfusionrna || m.dt == dtsv) {
-					m2.pairlst = m.pairlst
-				}
-
-				if (!sample2mlst.has(s.sample_id)) sample2mlst.set(s.sample_id, [])
-				const lst = sample2mlst.get(s.sample_id)
-				lst.push(m2)
-				sample2mlst.set(s.sample_id, lst)
-			}
+		const dts = []
+		if (tw.q.dt) {
+			dts.push(tw.q.dt)
+		} else {
+			if (ds.queries.snvindel) dts.push(dtsnvindel)
+			if (ds.queries.svfusion) dts.push(dtfusionrna)
+			if (ds.queries.cnv) dts.push(dtcnv)
+			if (ds.queries.geneCnv) dts.push('geneCnv')
 		}
 
-		await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, q.filter)
+		// retrieve mutation data for each dt
+		for (const dt of dts) {
+			const mlst =
+				dt == dtsnvindel
+					? await getSnvindelByTerm(ds, tw.term, genome, q)
+					: dt == dtfusionrna || dt == dtsv
+					? await getSvfusionByTerm(ds, tw.term, genome, q)
+					: dt == dtcnv
+					? await getCnvByTw(ds, tw, genome, q)
+					: dt == 'geneCnv'
+					? await getGenecnvByTerm(ds, tw.term, genome, q)
+					: null
+
+			if (!mlst.length) throw 'unable to retrieve mutation data'
+
+			for (const m of mlst) {
+				/*
+				m={
+					dt
+					class
+					mname
+					samples:[
+						{
+						sample_id: int or string
+						...
+						},
+					]
+				}
+
+				for official datasets using a sqlite db that contains integer2string sample mapping, "sample_id" is integer id 
+				for gdc dataset not using a sqlite db, no sample integer id is kept on server. "sample_id" is string id
+				*/
+
+				if (!Array.isArray(m.samples)) continue
+
+				for (const s of m.samples) {
+					// create new m2{} for each mutation in each sample
+					const m2 = {
+						gene: tw.term.name,
+						isoform: m.isoform,
+						dt: m.dt,
+						chr: tw.term.chr,
+						class: m.class,
+						pos: m.pos || (m.start ? m.start + '-' + m.stop : ''),
+						mname: m.mname
+					}
+
+					if ('value' in m) {
+						// for what?
+						m2.value = m.value
+					}
+
+					if (s.formatK2v) {
+						// sample has format values
+						if (tw.q.origin) {
+							// origin specified
+							if (!Object.keys(s.formatK2v).includes('origin')) throw 'format does not include origin'
+							if (s.formatK2v['origin'] != tw.q.origin) {
+								// mutation origin does not match specified origin
+								// skip sample
+								continue
+							}
+						}
+						// flatten format values
+						for (const k in s.formatK2v) {
+							m2[k] = s.formatK2v[k]
+						}
+					}
+
+					// can supply dt specific attributes
+					if (m.dt == dtsnvindel) {
+						if (s.GT) {
+							// is sample genotype from snp query
+							m2.value = s.GT
+							m2.key = s.GT
+						}
+					} else if (m.dt == dtfusionrna || m.dt == dtsv) {
+						m2.pairlst = m.pairlst
+					}
+
+					if (!sample2mlst.has(s.sample_id)) sample2mlst.set(s.sample_id, [])
+					const lst = sample2mlst.get(s.sample_id)
+					lst.push(m2)
+					sample2mlst.set(s.sample_id, lst)
+				}
+			}
+
+			await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, q.filter)
+		}
 
 		const groupset = get_active_groupset(tw.term, tw.q)
 
 		const data = new Map() // to return
 		for (const [sample, mlst] of sample2mlst) {
-			// get first group of groupset with a mutation value
-			// that matches a mutation in the sample
-			// NOTE: this depends on .groups[] being arranged in order
-			// of priority (see client/termsetting/handlers/geneVariant.ts)
 			const mclasses = mlst.map(m => m.class)
-			const group = groupset.groups.find(group => {
-				return group.values.some(v => mclasses.includes(v.key))
-			})
-			if (!group) throw 'unable to assign sample to group'
-			// assign sample to group
-			data.set(sample, {
-				sample,
-				[tw.$id]: { key: group.name, label: group.name, values: mlst }
-			})
+			if (groupset) {
+				// groupsetting is active
+				// get first group of groupset with a mutation value
+				// that matches a mutation in the sample
+				// NOTE: this depends on .groups[] being arranged in order
+				// of priority (see client/termsetting/handlers/geneVariant.ts)
+				const group = groupset.groups.find(group => {
+					return group.values.some(v => mclasses.includes(v.key))
+				})
+				if (!group) throw 'unable to assign sample to group'
+				// assign sample to group
+				data.set(sample, {
+					sample,
+					[tw.$id]: { key: group.name, label: group.name, values: mlst }
+				})
+			} else {
+				// groupsetting is not active
+				// cannot assign sample to a specific key because .values[]
+				// contains mutations from multiple dts and origins
+				// will handle classification of samples in a different script
+				// by setting key0 to be the dt/origin of the term (in order
+				// to divide the plot by dt/origin) and setting key1 to be the
+				// mutation class of the term. Note that this key1 should
+				// discriminate between samples that only have a certain
+				// mutation from samples that have multiple mutations,
+				// for example: samples with only missense mutations should
+				// have the key 'Missense only' and samples with both missense
+				// and frameshift mutations should have the key 'Missense and
+				// frameshift'
+				data.set(sample, {
+					sample,
+					[tw.$id]: { label: tw.term.name, values: mlst }
+				})
+			}
 		}
 
 		return data
@@ -2453,25 +2490,31 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter) {
 	if (!ds.assayAvailability?.byDt) return
 	const sampleFilter = filter ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
-	const _dt = ds.assayAvailability.byDt[dtKey]
+	const _dt = structuredClone(ds.assayAvailability.byDt[dtKey])
 	if (!_dt) throw 'unable to retrieve dt from dataset'
-	const dt = origin ? _dt.byOrigin[origin] : _dt
-	if (!dt) throw 'invalid dt'
-	for (const sid of dt.yesSamples) {
-		// sample has been assayed
-		// if sample does not have annotated mutation for dt
-		// then it will be annotated as wildtype
-		addDataAvailability(sid, sample2mlst, dtKey, 'WT', origin, sampleFilter)
+	const dts = []
+	if (_dt.byOrigin) {
+		for (const o in _dt.byOrigin) {
+			if (origin && origin != o) continue // if specific origin is requested then restrict to that origin
+			const dt = _dt.byOrigin[o]
+			dt.origin = o
+			dts.push(dt)
+		}
+	} else {
+		dts.push(_dt)
 	}
-	for (const sid of dt.noSamples) {
-		// sample has not been assayed
-		// if sample does not have annotated mutation for dt
-		// then it will be annotated as blank (i.e., not tested)
-
-		// TODO: sample that has not been assayed should not
-		// have annotation for mutation, right? If so, the code
-		// needs to make sure that the sample has no mutation annotation
-		addDataAvailability(sid, sample2mlst, dtKey, 'Blank', origin, sampleFilter)
+	for (const dt of dts) {
+		for (const sid of dt.yesSamples) {
+			// sample has been assayed
+			// if sample does not have annotated mutation for dt
+			// then it will be annotated as wildtype
+			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter)
+		}
+		for (const sid of dt.noSamples) {
+			// sample has not been assayed
+			// annotate the sample as not tested
+			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter)
+		}
 	}
 }
 
@@ -2479,12 +2522,18 @@ function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilt
 	if (sampleFilter && !sampleFilter.has(sid)) return
 	if (!sample2mlst.has(sid)) sample2mlst.set(sid, [])
 	const mlst = sample2mlst.get(sid)
-	if (!mlst.some(m => m.dt == dtKey)) {
-		// sample does not have a mutation for this dt
-		// sample will be annotated with the given mclass for this dt
-		const m = { dt: Number(dtKey), class: mclass, _SAMPLEID_: sid }
-		if (origin) m.origin = origin
-		mlst.push(m)
+	if (origin) {
+		if (!mlst.some(m => m.dt == dtKey && m.origin == origin)) {
+			// sample does not have a mutation with this origin for this dt
+			// sample will be annotated with the given mclass for the given origin
+			mlst.push({ dt: Number(dtKey), class: mclass, origin, _SAMPLEID_: sid })
+		}
+	} else {
+		if (!mlst.some(m => m.dt == dtKey)) {
+			// sample does not have a mutation for this dt
+			// sample will be annotated with the given mclass
+			mlst.push({ dt: Number(dtKey), class: mclass, _SAMPLEID_: sid })
+		}
 	}
 	sample2mlst.set(sid, mlst)
 }

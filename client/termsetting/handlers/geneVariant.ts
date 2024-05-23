@@ -44,32 +44,8 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 	if (!tw.term.id) tw.term.id = tw.term.name // TODO: is this necessary?
 	if (!('type' in tw.q)) tw.q.type = 'values' // TODO: is this necessary to specify? Note that q.type = 'values' works with predefined groupsetting for geneVariant term.
 
-	// dts
-	const ds_dts = [] // dts specified in dataset
-	for (const query of Object.keys(vocabApi.termdbConfig.queries)) {
-		if (query == 'snvindel') ds_dts.push(dtsnvindel)
-		else if (query == 'cnv') ds_dts.push(dtcnv)
-		else if (query == 'svfusion') ds_dts.push(dtfusionrna)
-		else if (query == 'sv') ds_dts.push(dtsv) // TODO: is this correct?
-		else continue
-	}
-	if (!tw.q.dt) tw.q.dt = ds_dts[0] // default dt will be first in dataset
-	if (!(tw.q.dt in dt2label)) throw 'invalid dt'
-	if (!ds_dts.includes(tw.q.dt)) throw 'dt not supported in dataset'
-
-	// origin
-	// TODO: verify that 'vocabApi.termdbConfig.assayAvailability.byDt[dt].byOrigin' will always be defined in dataset when dt has multiple origins
-	if (vocabApi.termdbConfig.assayAvailability?.byDt[tw.q.dt]?.byOrigin) {
-		// dt has multiple origins in dataset
-		// so an origin must be specified
-		if (!tw.q.origin) tw.q.origin = 'somatic' /*'germline'*/
-		if (!(tw.q.origin in vocabApi.termdbConfig.assayAvailability.byDt[tw.q.dt].byOrigin)) throw 'invalid dt origin'
-	}
-
 	// groupsetting
 	// fill tw.term.groupsetting
-	// TODO: verify 'protein_changing_keys' and 'truncating_keys'
-	console.log('mclass:', mclass)
 	const protein_changing_keys = new Set(['D', 'F', 'I', 'L', 'M', 'N', 'P', 'ProteinAltering', 'Fuserna', 'SV'])
 	const truncating_keys = new Set(['F', 'L', 'N', 'SV'])
 	if (!tw.term.groupsetting) {
@@ -160,6 +136,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 	delete tw.q.groupsetting.disabled
 	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = true
 	if (tw.q.groupsetting.inuse) {
+		// groupsetting is active
 		const gs = tw.q.groupsetting as PredefinedGroupSetting
 		/* is the following necessary? (copied from client/termsetting/handlers/categorical.ts). useIndex does not seem to be used in the codebase.
 		if (
@@ -172,7 +149,29 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 		) {
 			gs.predefined_groupset_idx = gs.useIndex
 		}*/
-		gs.predefined_groupset_idx = 2
+		gs.predefined_groupset_idx = 1
+
+		// specify a single dt
+		const ds_dts = [] // dts specified in dataset
+		for (const query of Object.keys(vocabApi.termdbConfig.queries)) {
+			if (query == 'snvindel') ds_dts.push(dtsnvindel)
+			else if (query == 'cnv') ds_dts.push(dtcnv)
+			else if (query == 'svfusion') ds_dts.push(dtfusionrna)
+			else if (query == 'sv') ds_dts.push(dtsv) // TODO: is this correct?
+			else continue
+		}
+		if (!tw.q.dt) tw.q.dt = ds_dts[0] // default dt will be first in dataset
+		if (!(tw.q.dt in dt2label)) throw 'invalid dt'
+		if (!ds_dts.includes(tw.q.dt)) throw 'dt not supported in dataset'
+
+		// specify a single origin
+		// TODO: verify that 'vocabApi.termdbConfig.assayAvailability.byDt[dt].byOrigin' will always be defined in dataset when dt has multiple origins
+		if (vocabApi.termdbConfig.assayAvailability?.byDt[tw.q.dt]?.byOrigin) {
+			// dt has multiple origins in dataset
+			// so an origin must be specified
+			if (!tw.q.origin) tw.q.origin = 'somatic' /*'germline'*/
+			if (!(tw.q.origin in vocabApi.termdbConfig.assayAvailability.byDt[tw.q.dt].byOrigin)) throw 'invalid dt origin'
+		}
 	}
 
 	{

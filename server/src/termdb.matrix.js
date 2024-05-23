@@ -119,14 +119,14 @@ async function getSampleData(q) {
 			const data = await q.ds.mayGetGeneVariantData(tw, q)
 
 			for (const [sampleId, value] of data.entries()) {
-				if (!(tw.term.name in value)) continue
+				if (!(tw.$id in value)) continue
 				if (!dictTerms.length) {
 					// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
 					// FIXME invalid assumption for data downloading
 					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				}
 				if (samples[sampleId]) {
-					samples[sampleId][tw.$id] = value[tw.term.name]
+					samples[sampleId][tw.$id] = value[tw.$id]
 				}
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
