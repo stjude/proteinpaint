@@ -8,12 +8,19 @@ export class Positions {
 		this.error = error
 		this.resolution = new Resolution(this.error)
 	}
-	setPosition(x: number, y: number, binpx: number, chrx: { chr: string }, chry: { chr: string }, hic: any) {
-		const initialbinnum_detail = 20
-
+	setPosition(
+		x: number,
+		y: number,
+		binpx: number,
+		chrx: { chr: string },
+		chry: { chr: string },
+		hic: any,
+		initialBinNum: number,
+		width
+	) {
+		// const actualBinNum = Math.floor((initialCanvasSize/ width) * initialBinNum)
 		const resolution = this.resolution.getChrPairResolution(hic, chrx, chry)
-
-		const viewrangebpw = resolution! * initialbinnum_detail
+		const viewrangebpw = resolution! * initialBinNum
 
 		let coordx = Math.max(1, Math.floor((x * resolution!) / binpx) - viewrangebpw / 2)
 		let coordy = Math.max(1, Math.floor((y * resolution!) / binpx) - viewrangebpw / 2)

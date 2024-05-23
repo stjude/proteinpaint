@@ -87,7 +87,7 @@ export class InfoBar {
 	}
 
 	update() {
-		const res = this.parent('calResolution') || this.resolution
+		const res = this.parent('calcResolution') || this.resolution
 		let resolutionText: string
 		if (res < Math.min(this.hic.bpresolution)) {
 			resolutionText = `${res} fragment${res > 1 ? 's' : ''}`

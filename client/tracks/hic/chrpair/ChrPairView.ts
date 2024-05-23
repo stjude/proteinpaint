@@ -30,7 +30,7 @@ export class ChrPairView {
 	/** padding on the ends of x/y chr coordinate axes */
 	readonly axispad = 10
 	readonly axisLabelFontSize = 15
-	calResolution: number | null = null
+	calcResolution: number | null = null
 	data: number[][] = []
 
 	constructor(opts) {
@@ -48,19 +48,19 @@ export class ChrPairView {
 	}
 
 	setDefaultBinpx() {
-		if (this.calResolution == null) return
+		if (this.calcResolution == null) return
 		//this.binpx default is 1
-		while ((this.binpx * this.maxchrlen) / this.calResolution < 600) {
+		while ((this.binpx * this.maxchrlen) / this.calcResolution < 600) {
 			this.binpx++
 		}
 	}
 
 	renderAxes() {
-		if (this.calResolution == null) return
+		if (this.calcResolution == null) return
 
 		//y axis
 		const svgY = this.plotDiv.yAxis.append('svg')
-		const h = Math.ceil(this.chrylen / this.calResolution) * this.binpx
+		const h = Math.ceil(this.chrylen / this.calcResolution) * this.binpx
 		svgY.attr('width', 100).attr('height', this.axispad * 2 + h)
 
 		svgY
@@ -84,7 +84,7 @@ export class ChrPairView {
 
 		// x axis
 		const svgX = this.plotDiv.xAxis.append('svg').style('margin-top', '-4px')
-		const w = Math.ceil(this.chrxlen / this.calResolution) * this.binpx
+		const w = Math.ceil(this.chrxlen / this.calcResolution) * this.binpx
 		svgX.attr('height', 100).attr('width', this.axispad * 2 + w)
 		svgX
 			.append('text')
@@ -116,8 +116,8 @@ export class ChrPairView {
 			})
 			.node()
 
-		this.canvas.width = Math.ceil(this.chrxlen / this.calResolution!) * this.binpx
-		this.canvas.height = Math.ceil(this.chrylen / this.calResolution!) * this.binpx
+		this.canvas.width = Math.ceil(this.chrxlen / this.calcResolution!) * this.binpx
+		this.canvas.height = Math.ceil(this.chrylen / this.calcResolution!) * this.binpx
 		this.ctx = this.canvas.getContext('2d')
 	}
 
@@ -128,7 +128,9 @@ export class ChrPairView {
 			this.binpx,
 			this.parent('state').x,
 			this.parent('state').y,
-			this.hic
+			this.hic,
+			this.parent('state').initialBinNum,
+			this.parent('state').settings.widthHeightPx
 		)
 		this.app.dispatch({
 			type: 'view_create',
@@ -141,7 +143,7 @@ export class ChrPairView {
 	}
 
 	render() {
-		this.calResolution = this.parent('calResolution')
+		this.calcResolution = this.parent('calcResolution')
 		this.setDefaultBinpx()
 		this.renderAxes()
 		this.renderCanvas()
@@ -157,7 +159,7 @@ export class ChrPairView {
 			'chrpair',
 			items.items,
 			this.binpx,
-			this.calResolution!,
+			this.calcResolution!,
 			firstisx,
 			isintrachr
 		)

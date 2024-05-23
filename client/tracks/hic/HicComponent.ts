@@ -34,7 +34,7 @@ export class HicComponent {
 	infoBar: any
 	error: any
 	resolution: Resolution
-	calResolution: number | null = null
+	calcResolution: number | null = null
 	firstRender = true
 	min = 0
 	absMin = 0
@@ -119,8 +119,8 @@ export class HicComponent {
 			}
 			const detailMapper = new DetailDataMapper(this.hic, this.errList, parent)
 			this.data = await detailMapper.getData(this.state.x, this.state.y)
-			if (this.data.items.length == 0) {
-				this.calResolution = this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
+			if (!this.data.items || this.data.items.length == 0) {
+				this.calcResolution = this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
 				this.data = await detailMapper.getData(this.state.x, this.state.y)
 			}
 		} else {
@@ -140,8 +140,8 @@ export class HicComponent {
 
 	setResolution(appState: any) {
 		const state = this.app.getState(appState)
-		this.calResolution = this.resolution.getResolution(state, this.hic) as number
-		return this.calResolution
+		this.calcResolution = this.resolution.getResolution(state, this.hic) as number
+		return this.calcResolution
 	}
 
 	setDataArgs(appState: any) {
@@ -202,7 +202,7 @@ export class HicComponent {
 			parent: (prop: string) => {
 				return this[prop]
 			},
-			resolution: this.calResolution
+			resolution: this.calcResolution
 		})
 		this.infoBar.render()
 	}

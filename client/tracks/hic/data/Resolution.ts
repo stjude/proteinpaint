@@ -17,7 +17,7 @@ export class Resolution {
 		} else if (state.currView == 'detail') {
 			const maxBpWidth = Math.max(state.x.stop - state.x.start, state.y.stop - state.y.start)
 
-			const resolution = this.findResFromArray(maxBpWidth, this.minBinNum_bp, hic.bpresolution, true)
+			const resolution = this.findResFromArray(maxBpWidth, this.minBinNum_bp, hic.bpresolution)
 
 			return resolution
 		} else {
@@ -31,7 +31,7 @@ export class Resolution {
 		const chrylen = hic.genome.chrlookup[y.chr.toUpperCase()].len
 		const maxchrlen = Math.max(chrxlen, chrylen)
 
-		const resolution: number | null = this.findResFromArray(maxchrlen, this.minBinNum_bp, hic.bpresolution)
+		const resolution = this.findResFromArray(maxchrlen, this.minBinNum_bp, hic.bpresolution)
 
 		if (resolution == null) {
 			this.error(`No suitable resolution for ${x.chr}-${y.chr} pair.`)
@@ -57,10 +57,10 @@ export class Resolution {
 		return resolution
 	}
 
-	getDefaultViewSpan(hic: any, x: any, y: any) {
+	getDefaultViewSpan(hic: any, x: any, y: any, initialBinNum: number) {
 		const chrpairResolution = this.getChrPairResolution(hic, x, y)
 		if (!chrpairResolution) return
-		return chrpairResolution * this.initialBinNum
+		return chrpairResolution * initialBinNum
 	}
 
 	updateDetailResolution(bpresolution: any, x: ChrPosition, y: ChrPosition) {

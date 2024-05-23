@@ -129,7 +129,8 @@ class ControlPanel {
 		this.controls.matrixType.render()
 
 		this.controls.widthRow = menuTable.append('tr') as any
-		this.addLabel(this.controls.widthRow, 'WIDTH')
+		//Leave the spaces in the label so it appears nicely in the menu
+		this.addLabel(this.controls.widthRow, 'WIDTH / height')
 		this.controls.width = this.controls.widthRow.append('td')
 
 		this.controls.width
@@ -146,7 +147,7 @@ class ControlPanel {
 				this.app.dispatch({
 					type: 'view_update',
 					config: {
-						width: v
+						settings: { widthHeightPx: v }
 					}
 				})
 			})
@@ -392,7 +393,7 @@ class ControlPanel {
 			this.controls.view.text(state.currView.charAt(0).toUpperCase() + state.currView.slice(1))
 		}
 
-		this.controls.width.select('input').property('value', state.width)
+		this.controls.width.select('input').property('value', state.settings.widthHeightPx)
 		this.controls.inputBpMinV.property('value', this.parent('min'))
 		this.controls.inputBpMaxV.property('value', this.parent('max'))
 		this.controls.minCutoffLabel.html(`MIN CUTOFF <br>(>= ${Number(this.parent('absMin').toFixed(6))})`)

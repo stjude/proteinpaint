@@ -21,24 +21,13 @@ export class DetailDataMapper {
 		this.parent = parent
 	}
 
-	// updateResolution(x: ChrPosition, y: ChrPosition) {
-	// 	const maxBpWidth = Math.max(x.stop - x.start, y.stop - y.start)
-	// 	for (const res of this.hic.bpresolution) {
-	// 		if (maxBpWidth / res > this.minBinNum_bp) {
-	// 			this.resolution = res
-	// 			break
-	// 		}
-	// 	}
-	// 	return this.resolution
-	// }
-
 	async getFragData(chrx: ChrPosition, chry: ChrPosition) {
 		try {
-			const xFragData = await this.dataFetcher.getXFragData(this.hic, this.parent('calResolution') as number, chrx)
+			const xFragData = await this.dataFetcher.getXFragData(this.hic, this.parent('calcResolution') as number, chrx)
 			// if (!xFragData) {
 			// 	//skipped the initial resolution calculation
 			// 	//no need for this step
-			// 	//this.parent('calResolution', this.resolution!)
+			// 	//this.parent('calcResolution', this.resolution!)
 			// 	//TODO: update canvas with and height
 			// } else {
 			if (xFragData) {
@@ -98,7 +87,7 @@ export class DetailDataMapper {
 		return await this.dataFetcher.fetchData(
 			this.hic,
 			this.parent('state')['detail'],
-			this.parent('calResolution') as number,
+			this.parent('calcResolution') as number,
 			chrx,
 			chry,
 			this.fragData as any
