@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.60.0
 
 Features:
 - Data for the hic whole genome view is cached for faster load. Additional UI improvements in the hic app.
