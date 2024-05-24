@@ -580,7 +580,9 @@ export async function getPlotConfig(opts, app) {
 					isOpen: false // control panel is hidden by default
 				},
 				sampleScatter: settings
-			}
+			},
+			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
+			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
 		// may apply term-specific changes to the default object
 		const result = copyMerge(config, opts)
