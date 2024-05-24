@@ -108,6 +108,7 @@ export class DetailView {
 					body.on('mousemove', null).on('mouseup', null)
 					const xoff = event.clientX - x
 					const yoff = event.clientY - y
+					console.log(xoff)
 					this.xBlock.block.pannedby(xoff)
 					this.yBlock.block.pannedby(yoff)
 				})
@@ -155,23 +156,18 @@ export class DetailView {
 		this.data = data
 		const state = this.parent('state') as any
 
-		const holderChange =
-			Number.parseInt(this.canvasHolder.style('width')) -
-			Number.parseInt(this.canvas.attr('width')) +
-			state.settings.widthHeightPx
+		const initialWidth = Number.parseInt(this.canvas.attr('width'))
+		const holderChange = Number.parseInt(this.canvasHolder.style('width')) - initialWidth + state.settings.widthHeightPx
+
 		this.canvasHolder.style('width', `${holderChange}px`).style('height', `${holderChange}px`)
 		this.canvas.attr('width', `${state.settings.widthHeightPx}px`).attr('height', `${state.settings.widthHeightPx}px`)
 
 		this.xBlock.block.width = state.settings.widthHeightPx
-		this.xBlock.width = state.settings.widthHeightPx
-		// this.xBlock.bbw = holderChange
 		this.yBlock.block.width = state.settings.widthHeightPx
-		this.yBlock.width = state.settings.widthHeightPx
-		// this.yBlock.bbw = holderChange
-		// console.log('change', holderChange)
 
-		this.xBlock.block
-		this.yBlock.block
+		//Reloads the block without changing the genomic position
+		this.xBlock.block.zoom2px(0, initialWidth)
+		this.yBlock.block.zoom2px(0, initialWidth)
 
 		this.ctx = this.canvas.node().getContext('2d') as CanvasRenderingContext2D
 

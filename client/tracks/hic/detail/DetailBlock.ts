@@ -23,7 +23,7 @@ export class DetailBlock {
 	readonly rightheadw = 40
 	readonly lpad = 1
 	readonly rpad = 1
-	firstRender = true
+	// firstRender = true
 
 	constructor(
 		app: any,
