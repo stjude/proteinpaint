@@ -23,6 +23,7 @@ type MockState = {
 	currView: string
 	x: ChrPosition
 	y: ChrPosition
+	minBinNum_bp: number
 }
 
 const mockHic = {
@@ -213,7 +214,8 @@ tape('Resolution - getResolution()', test => {
 	state = {
 		currView: 'chrpair',
 		x: { chr: 'chr1' },
-		y: { chr: 'chr2' }
+		y: { chr: 'chr2' },
+		minBinNum_bp: 200
 	} as MockState
 	result = resolution.getResolution(state, mockHic)
 	test.ok(Number.isInteger(result), 'Should return number for chr pair view resolution from general function')
@@ -223,7 +225,8 @@ tape('Resolution - getResolution()', test => {
 	state = {
 		currView: 'detail',
 		x: { chr: 'chr2', start: 182001302, stop: 202001302 },
-		y: { chr: 'chr1', start: 7626953, stop: 27626953 }
+		y: { chr: 'chr1', start: 7626953, stop: 27626953 },
+		minBinNum_bp: 200
 	} as MockState
 	result = resolution.getResolution(state, mockHic)
 	test.ok(Number.isInteger(result), 'Should return number for detail view resolution from general function')
