@@ -4,12 +4,13 @@ import { axisLeft, axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { sayerror } from '../dom/sayerror.ts'
 import { dofetch3 } from '#common/dofetch'
-import { getColors } from '#shared/common'
+import { getColors, plotColor } from '#shared/common'
 import { zoom as d3zoom } from 'd3-zoom'
 import { renderTable } from '../dom/table.ts'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
+import { color, rgb } from 'd3'
 
 /*
 this
@@ -38,6 +39,8 @@ class singleCellPlot {
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		window.sc = this
+		this.startGradient = {}
+		this.stopGradient = {}
 	}
 
 	async init(appState) {
@@ -178,6 +181,7 @@ class singleCellPlot {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
 			for (const plot of result.plots) {
+				plot.id = plot.name.replace(/\s+/g, '')
 				this.renderPlot(plot)
 			}
 			this.refName = result.refName
@@ -225,6 +229,7 @@ class singleCellPlot {
 		svg.append('text').attr('transform', `translate(20, 30)`).style('font-weight', 'bold').text(`${plot.name}`)
 
 		plot.svg = svg
+
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
 			.on('zoom', e => this.handleZoom(e, mainG, plot))
@@ -243,13 +248,36 @@ class singleCellPlot {
 			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y) + 40})`)
 			.append('circle')
 			.attr('r', 1.5)
-			.attr('fill', d => colorMap[d.category])
+			.attr('fill', d => this.getColor(d, plot))
 			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
+	}
+
+	getColor(d, plot) {
+		if (this.colorContinuous) return plot.colorGenerator(d.value)
+		return plot.colorMap[d.category]
 	}
 
 	handleZoom(e, mainG, plot) {
 		mainG.attr('transform', e.transform)
 		plot.zoom = e.transform.scale(1).k
+	}
+
+	initAxes(plot) {
+		const s0 = plot.cells[0]
+		const [xMin, xMax, yMin, yMax] = plot.cells.reduce(
+			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+			[s0.x, s0.x, s0.y, s0.y]
+		)
+		const r = 5
+		plot.xAxisScale = d3Linear()
+			.domain([xMin, xMax])
+			.range([0 + r, this.settings.svgh - 5])
+		plot.axisBottom = axisBottom(plot.xAxisScale)
+		plot.yAxisScale = d3Linear()
+			.domain([yMax, yMin])
+			.range([0 + r, this.settings.svgh - r])
+		plot.axisLeft = axisLeft(plot.yAxisScale)
+		plot.zoom = 1
 	}
 
 	renderLegend(plot, colorMap) {
@@ -262,6 +290,11 @@ class singleCellPlot {
 		this.legendRendered = true
 
 		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.8em')
+		this.colorContinuous = true
+		if (this.colorContinuous) {
+			this.renderColorGradient(plot, legendG)
+			return
+		}
 
 		legendG
 			.append('text')
@@ -312,22 +345,102 @@ class singleCellPlot {
 		}
 	}
 
-	initAxes(plot) {
-		const s0 = plot.cells[0]
-		const [xMin, xMax, yMin, yMax] = plot.cells.reduce(
-			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[s0.x, s0.x, s0.y, s0.y]
-		)
-		const r = 5
-		plot.xAxisScale = d3Linear()
-			.domain([xMin, xMax])
-			.range([0 + r, this.settings.svgh - 5])
-		plot.axisBottom = axisBottom(plot.xAxisScale)
-		plot.yAxisScale = d3Linear()
-			.domain([yMax, yMin])
-			.range([0 + r, this.settings.svgh - r])
-		plot.axisLeft = axisLeft(plot.yAxisScale)
-		plot.zoom = 1
+	renderColorGradient(plot, legendG) {
+		const colorGradient = rgb(plotColor)
+		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(2)
+		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(2)
+
+		const gradient = legendG
+			.append('defs')
+			.append('linearGradient')
+			.attr('id', `linear-gradient-${plot.id}`)
+			.attr('x1', '0%')
+			.attr('y1', '0%')
+			.attr('x2', '100%')
+			.attr('y2', '0%')
+		this.startGradient[plot.name] = gradient
+			.append('stop')
+			.attr('offset', '0%')
+			.attr('stop-color', this.config.startColor[plot.name])
+		this.stopGradient[plot.name] = gradient
+			.append('stop')
+			.attr('offset', '100%')
+			.attr('stop-color', this.config.stopColor[plot.name])
+
+		const startColor = this.config.startColor[plot.name]
+		const stopColor = this.config.stopColor[plot.name]
+		let offsetY = 25
+		const step = 20
+		plot.cells = plot.cells.map(cell => ({ ...cell, value: Math.random() }))
+		const values = plot.cells.map(cell => cell.value)
+		const [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+		plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
+
+		const gradientWidth = 100
+		const gradientScale = d3Linear().domain([min, max]).range([0, gradientWidth])
+		const gradientStep = (max - min) / 4
+		const tickValues = [min, min + gradientStep, min + 2 * gradientStep, min + 3 * gradientStep, max]
+		const axis = axisTop(gradientScale).tickValues(tickValues)
+		legendG.append('g').attr('transform', `translate(0, 100)`).call(axis)
+		plot.startRect = legendG
+			.append('rect')
+			.attr('x', -25)
+			.attr('y', 100)
+			.attr('width', 20)
+			.attr('height', 20)
+			.style('fill', startColor)
+			.on('click', e => this.editColor(plot, 'startColor', plot.startRect))
+		plot.stopRect = legendG
+			.append('rect')
+			.attr('x', gradientWidth + 5)
+			.attr('y', 100)
+			.attr('width', 20)
+			.attr('height', 20)
+			.style('fill', stopColor)
+			.on('click', e => this.editColor(plot, 'stopColor', plot.stopRect))
+
+		const rect = legendG
+			.append('rect')
+			.attr('x', 0)
+			.attr('y', 100)
+			.attr('width', gradientWidth)
+			.attr('height', 20)
+			.style('fill', `url(#linear-gradient-${plot.id})`)
+
+		offsetY += step
+	}
+
+	editColor(plot, colorKey, elem) {
+		const color = this.config[colorKey][plot.name]
+		const colorMenu = new Menu({ padding: '3px' })
+		const input = colorMenu
+			.clear()
+			.d.append('Label')
+			.text('Color:')
+			.append('input')
+			.attr('type', 'color')
+			.attr('value', rgb(color).formatHex())
+			.on('change', () => {
+				const color = input.node().value
+				this.changeGradientColor(plot, colorKey, elem, color)
+				colorMenu.hide()
+			})
+		colorMenu.showunder(elem.node(), false)
+	}
+
+	changeGradientColor = function (plot, colorKey, elem, color) {
+		const hexColor = rgb(color).formatHex()
+		this.config[colorKey][plot.name] = hexColor
+		elem.style('fill', hexColor)
+
+		plot.colorGenerator = d3Linear().range([this.config.startColor[plot.name], this.config.stopColor[plot.name]])
+		this.startGradient[plot.name].attr('stop-color', this.config.startColor[plot.name])
+		this.stopGradient[plot.name].attr('stop-color', this.config.stopColor[plot.name])
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: this.config
+		})
 	}
 
 	distance(x1, y1, x2, y2, plot) {
@@ -536,7 +649,9 @@ export async function getPlotConfig(opts, app) {
 			hiddenClusters: [],
 			settings: {
 				singleCellPlot: settings
-			}
+			},
+			startColor: {},
+			stopColor: {}
 		}
 		// may apply term-specific changes to the default object
 		const result = copyMerge(config, opts)
