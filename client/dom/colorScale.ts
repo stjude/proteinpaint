@@ -1,7 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import { Elem, SvgG } from '../types/d3'
 import { axisBottom, axisTop } from 'd3-axis'
-import { axisstyle } from '#dom/axisstyle'
+import { axisstyle } from './axisstyle'
 import { Selection } from 'd3-selection'
 
 type ColorScaleOpts = {
@@ -53,6 +53,8 @@ export class ColorScale {
 	/** Optional. Number of ticks to show. Cannot be zero. Default is 4. */
 	ticks: number
 	tickSize: number
+	/** Options. Font size of the text labels */
+	fontSize: number
 
 	constructor(opts: any) {
 		this.barheight = opts.barheight || 14
@@ -73,6 +75,7 @@ export class ColorScale {
 		this.tickPosition = opts.tickPosition || 'bottom'
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
+		this.fontSize = opts.fontSize || 10
 	}
 
 	async render() {
@@ -111,7 +114,7 @@ export class ColorScale {
 		axisstyle({
 			axis: this.bar.scaleAxis.call(axis),
 			showline: true,
-			fontsize: '3px'
+			fontsize: this.fontSize
 		})
 	}
 
@@ -119,6 +122,14 @@ export class ColorScale {
 		const axis = this.tickPosition === 'top' ? axisTop(this.bar.scale) : axisBottom(this.bar.scale)
 		axis.ticks(this.ticks).tickSize(this.tickSize)
 		return axis
+	}
+
+	setAxis(tickValues: number[]) {
+		if (this.tickPosition === 'top') {
+			return axisTop(this.bar.scale).tickValues(tickValues).tickSize(this.tickSize)
+		} else {
+			return axisBottom(this.bar.scale).tickValues(tickValues).tickSize(this.tickSize)
+		}
 	}
 
 	updateColors() {
@@ -149,10 +160,11 @@ export class ColorScale {
 			this.bar.gradientEnd!.attr('offset', '100%').attr('stop-color', this.bar.endColor as string)
 		}
 
-		this.bar.scaleAxis
-			.transition()
-			.duration(500)
-			.call(axisBottom(this.bar.scale).tickValues(tickValues).tickSize(this.tickSize))
+		this.bar.scaleAxis.transition().duration(500).call(this.setAxis(tickValues))
+
+		for (const label of this.bar.scaleAxis.selectAll('text').nodes()) {
+			label.style.fontSize = `${this.fontSize}px`
+		}
 	}
 
 	updateScale() {

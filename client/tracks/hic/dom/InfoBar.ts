@@ -72,15 +72,17 @@ export class InfoBar {
 		this.colorScale = new ColorScale({
 			barheight: 14,
 			barwidth: 85,
+			data: [this.parent('min'), this.parent('max')],
+			fontSize: 12,
+			height: 35,
+			width: 120,
 			holder: this.colorScaleDiv,
 			startColor: this.startColor,
 			endColor: this.endColor,
 			position: '20,0',
-			tickPosition: 'bottom',
-			data: [this.parent('min'), this.parent('max')],
 			ticks: 2,
-			tickSize: 3,
-			width: 120
+			tickPosition: 'bottom',
+			tickSize: 3
 		})
 		await this.colorScale.render()
 		this.update()
