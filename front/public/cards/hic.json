@@ -1,5 +1,5 @@
 {
-    "ribbonMessage": "See new view examples",
+    "ribbonMessage": "We're excited to show off our improved plots of Hi-C data! See the new examples for the whole genome, chromosome pair, and detail view in the tabs below. Please see the updated documentation by clicking on the below for more information.",
     "ppcalls": [
         {
             "label": "Hi-C",
@@ -72,7 +72,7 @@
         },
         {
             "label": "Whole genome",
-            "message": "",
+            "message": "Click on any chromosome pair to see the Hi-C data for that pair.",
             "runargs": {
                 "parseurl": true,
                 "noheader": true,
@@ -91,7 +91,7 @@
         },
         {
             "label": "Chromosome pair",
-            "message": "",
+            "message": "Click anywhere within the plot to launch a detail view of the select region.",
             "runargs": {
                 "parseurl": true,
                 "noheader": true,
@@ -118,7 +118,6 @@
         },
         {
             "label": "Detail",
-            "message": "",
             "runargs": {
                 "parseurl": true,
                 "noheader": true,
