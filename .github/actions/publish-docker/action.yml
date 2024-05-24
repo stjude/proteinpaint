@@ -32,6 +32,7 @@ runs:
       shell: bash
       run: |
         sleep 90;
+        git pull
         
         cd container;
         ./build2.sh -r "ghcr.io/stjude/" server;
