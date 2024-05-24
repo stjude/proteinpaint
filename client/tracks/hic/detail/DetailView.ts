@@ -195,8 +195,6 @@ export class DetailView {
 				'detail'
 			)
 		}
-		// This does not work. Do not do this
-		// this.canvas.attr('width', canvaswidth).attr('height', canvasheight)
 
 		this.app.dispatch({ type: 'loading_active', active: false })
 	}

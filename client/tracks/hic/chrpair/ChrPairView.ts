@@ -129,8 +129,7 @@ export class ChrPairView {
 			this.parent('state').x,
 			this.parent('state').y,
 			this.hic,
-			this.parent('state').initialBinNum,
-			this.parent('state').settings.widthHeightPx
+			this.parent('state').initialBinNum
 		)
 		this.app.dispatch({
 			type: 'view_create',

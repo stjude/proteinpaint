@@ -17,10 +17,8 @@ export class Positions {
 		chrx: { chr: string },
 		chry: { chr: string },
 		hic: any,
-		initialBinNum: number,
-		width
+		initialBinNum: number
 	) {
-		// const actualBinNum = Math.floor((initialCanvasSize/ width) * initialBinNum)
 		const resolution = this.resolution.getChrPairResolution(hic, chrx, chry, this.minBinNum_bp)
 		const viewrangebpw = resolution! * initialBinNum
 
