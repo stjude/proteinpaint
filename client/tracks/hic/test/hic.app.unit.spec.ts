@@ -98,6 +98,7 @@ tape('\n', test => {
 /************* General data tests *************/
 
 tape('DataMapper - sortData()', test => {
+	test.timeoutAfter(300)
 	//No need to test the differences between version 8 and 9
 	test.plan(11)
 	const mapper = new DataMapper(hicData.hic.v8)
@@ -146,6 +147,7 @@ tape('DataMapper - sortData()', test => {
 // })
 
 tape('Positions - class and setPositions()', test => {
+	test.timeoutAfter(300)
 	test.plan(4)
 
 	const positions = new Positions(mockError, 200)
@@ -177,11 +179,10 @@ tape('Positions - class and setPositions()', test => {
 		],
 		'Should handle out of bounds positions'
 	)
-
-	test.end()
 })
 
 tape('Resolution class', test => {
+	test.timeoutAfter(300)
 	test.plan(3)
 
 	const resolution = new Resolution(mockError)
@@ -192,11 +193,10 @@ tape('Resolution class', test => {
 		'Should have a Resolution.getChrPairResolution function'
 	)
 	test.equal(typeof resolution.getDefaultViewSpan, 'function', 'Should have a Resolution.getDefaultViewSpan function.')
-
-	test.end()
 })
 
 tape('Resolution - getResolution()', test => {
+	test.timeoutAfter(300)
 	test.plan(7)
 	const resolution = new Resolution(mockError)
 
@@ -244,6 +244,7 @@ tape('Resolution - getResolution()', test => {
 })
 
 tape('Resolution - getChrPairResolution()', test => {
+	test.timeoutAfter(300)
 	test.plan(2)
 	const resolution = new Resolution(mockError)
 
@@ -256,6 +257,7 @@ tape('Resolution - getChrPairResolution()', test => {
 })
 
 tape('Resolution - getDefaultViewSpan()', test => {
+	test.timeoutAfter(300)
 	test.plan(2)
 	const resolution = new Resolution(mockError)
 
@@ -270,6 +272,7 @@ tape('Resolution - getDefaultViewSpan()', test => {
 /************* Data tests specific to genome and chrpair view *************/
 
 tape('GridElementsFormattedData - formatData()', test => {
+	test.timeoutAfter(300)
 	test.plan(9)
 
 	const formattedData = new GridElementsFormattedData()
@@ -389,6 +392,7 @@ tape('GridElementsFormattedData - formatData()', test => {
 
 //TODO: Needs real example to test
 tape('ParseFragData class', test => {
+	test.timeoutAfter(300)
 	test.plan(4)
 	const mockData = []
 
@@ -407,6 +411,7 @@ tape('ParseFragData class', test => {
 })
 
 tape('FirstChrX - class and isFirstX()', test => {
+	test.timeoutAfter(300)
 	test.plan(5)
 
 	let chrx = { chr: 'chr2' },
@@ -435,6 +440,7 @@ tape('FirstChrX - class and isFirstX()', test => {
 
 //TODO: Needs an example with frag data
 tape('DetailCoordinates - getCoordinates()', test => {
+	test.timeoutAfter(300)
 	test.plan(1)
 
 	const holder = getHolder()
@@ -466,7 +472,8 @@ tape('DetailCoordinates - getCoordinates()', test => {
 })
 //TODO: Needs an example with frag data
 tape('DetailCoordinates - calculateCoordinates()', test => {
-	// test.plan(2)
+	test.timeoutAfter(300)
+	test.plan(2)
 
 	const coordinates = new DetailCoordinates(hicData.hic.v8, errLst)
 	const xpxbp = 0.00004
@@ -532,26 +539,25 @@ tape('DetailCoordinates - calculateCoordinates()', test => {
 	//Need example data that will work for intra-chromosomal code
 	// data = { items: [[16000000, 16050000, 178]] }
 	// result = coordinates.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data, fragData)
-
-	test.end()
 })
 
 tape('DetailDataFetcher - class and isFragData()', test => {
+	test.timeoutAfter(300)
 	test.plan(3)
 
-	let result, resolution
+	let resolution
 
 	const fetcher = new DetailDataFetcher([])
 	test.ok(fetcher instanceof DetailDataFetcher, 'Should construct DetailDataFetcher class properly.')
 
 	//Null resolution
 	resolution = null
-	result = fetcher.isFragData(hicData.hic.v8, null)
+	fetcher.isFragData(hicData.hic.v8, null)
 	test.equal(resolution, null, `Should return a null resolution because hic.enzyme is present.`)
 
 	// With resolution
 	resolution = 1000000
-	result = fetcher.isFragData(hicData.hic.v8, resolution)
+	fetcher.isFragData(hicData.hic.v8, resolution)
 	test.equal(resolution, 1000000, 'Resolution should remain unchanged.')
 
 	// Without enzyme and null resolution
@@ -563,6 +569,7 @@ tape('DetailDataFetcher - class and isFragData()', test => {
 })
 
 tape('DetailDataFetcher - formatFragArgs()', test => {
+	test.timeoutAfter(300)
 	test.plan(1)
 
 	const fetcher = new DetailDataFetcher([])
@@ -580,6 +587,7 @@ tape('DetailDataFetcher - formatFragArgs()', test => {
 })
 
 tape('DetailDataFetcher - determinePosition()', test => {
+	test.timeoutAfter(300)
 	test.plan(2)
 
 	let result: any
@@ -599,6 +607,7 @@ tape('DetailDataFetcher - determinePosition()', test => {
 
 //Test callback from Controls?
 tape('CutoffControl - render()', test => {
+	test.timeoutAfter(300)
 	test.plan(2)
 	const holder: any = getHolder()
 	const value = 3
@@ -622,6 +631,7 @@ tape('CutoffControl - render()', test => {
 
 //Test callback from Controls?
 tape('MatrixTypeControl - render()', test => {
+	test.timeoutAfter(300)
 	test.plan(2)
 	const holder: any = getHolder()
 	const callback = () => {
@@ -640,6 +650,7 @@ tape('MatrixTypeControl - render()', test => {
 
 //Test callback from Controls?
 tape('NormalizationMethodControl - render() and update()', test => {
+	test.timeoutAfter(300)
 	test.plan(4)
 	const holder: any = getHolder()
 	const normalization = ['VC', 'VC_SQRT', 'VC_SQRT_VC']
