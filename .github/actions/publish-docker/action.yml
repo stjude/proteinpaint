@@ -47,7 +47,6 @@ runs:
         docker push "ghcr.io/stjude/ppfull:latest";
         
         echo "::set-output name=docker_version::$TAG-$HASH";
-        echo "::set-output name=docker_version::NO_VERSION";
 
 
     - name: get pp version
