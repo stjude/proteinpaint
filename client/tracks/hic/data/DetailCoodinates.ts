@@ -22,7 +22,7 @@ export class DetailCoordinates {
 		const ypxbp = canvasheight / (chry.stop - chry.start)
 
 		const list = this.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data, fragData)
-		return [list, canvaswidth, canvasheight]
+		return list
 	}
 
 	calculateCoordinates(

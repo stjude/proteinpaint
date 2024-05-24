@@ -181,7 +181,7 @@ tape('Positions - class and setPositions()', test => {
 })
 
 tape('Resolution class', test => {
-	test.plan(5)
+	test.plan(3)
 
 	const resolution = new Resolution(mockError)
 	test.ok(resolution instanceof Resolution, 'Should construct resolution class properly.')
@@ -448,16 +448,13 @@ tape('DetailCoordinates - getCoordinates()', test => {
 	//No frag data
 	const result = coordinates.getCoordinates(chrx, chry, data, 50000, canvas, fragData)
 	const expected = [
-		[
-			[-463, -26, 1, 1, 1],
-			[-463, -21, 1, 1, 1],
-			[-463, -19, 1, 1, 1],
-			[-463, -18, 1, 1, 1],
-			[-463, -17, 1, 1, 1]
-		],
-		100,
-		100
+		[-463, -26, 1, 1, 1],
+		[-463, -21, 1, 1, 1],
+		[-463, -19, 1, 1, 1],
+		[-463, -18, 1, 1, 1],
+		[-463, -17, 1, 1, 1]
 	]
+
 	test.deepEqual(result, expected, 'Should return the correct coordinates when no frag data is supplied.')
 
 	//TODO: Frag Data

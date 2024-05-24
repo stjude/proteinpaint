@@ -147,7 +147,7 @@ class ControlPanel {
 				this.app.dispatch({
 					type: 'view_update',
 					config: {
-						settings: { widthHeightPx: v }
+						settings: { widthHeightPx: Number.parseInt(v) }
 					}
 				})
 			})
