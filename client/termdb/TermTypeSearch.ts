@@ -1,6 +1,7 @@
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
 import { TermTypeGroups, TermTypes, typeGroup, Term } from '#shared/terms'
+import { select } from 'd3-selection'
 
 type Dict = {
 	[key: string]: any
@@ -47,6 +48,13 @@ const useCasesExcluded = {
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY
+	],
+	hierCluster: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.GENE_EXPRESSION
 	]
 }
 
@@ -67,12 +75,22 @@ export class TermTypeSearch {
 		this.genomeObj = opts.genome
 		this.click_term = opts.click_term
 		this.submit_lst = opts.submit_lst
-
-		this.dom = { holder: opts.holder, topbar: opts.topbar }
-
+		const selectedTermsDiv = opts.topbar
+			.append('div')
+			.append('div')
+			.style('width', '99%')
+			.style('display', 'flex')
+			.style('flex-wrap', 'wrap')
+			.style('gap', '5px')
+			.style('min-height', '20px')
+			.style('border', 'solid 1px #aaa')
+			.style('margin', '10px 0px')
+			.style('padding', '6px 2px')
+			.style('min-height', '30px')
 		this.types = []
 		this.tabs = []
 		this.handlerByType = {}
+		this.dom = { holder: opts.holder, topbar: opts.topbar, selectedTermsDiv }
 	}
 
 	async init(appState) {
@@ -81,7 +99,10 @@ export class TermTypeSearch {
 
 		const state = this.getState(appState)
 		await this.addTabsAllowed(state)
-		if (this.tabs.length == 1) return
+		this.app.dispatch({ type: 'set_term_type_group', value: this.tabs[0].termTypeGroup })
+
+		if (this.tabs.length == 1 && this.tabs[0].termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES) return
+
 		new Tabs({
 			holder: this.dom.holder,
 			tabsPosition: 'vertical',
@@ -98,11 +119,73 @@ export class TermTypeSearch {
 	reactsTo(action) {
 		if (action.type.startsWith('submenu_')) return true //may change tree visibility
 		if (action.type == 'set_term_type_group') return true
+		if (action.type == 'app_refresh') return true
 	}
 
 	main() {
 		this.dom.holder.style('display', this.state.isVisible ? 'inline-block' : 'none')
 		this.dom.topbar.style('display', this.state.isVisible ? 'inline-block' : 'none')
+		if (this.submit_lst) {
+			this.renderTermsSelected()
+			this.dom.selectedTermsDiv.style('display', this.state.selectedTerms.length > 0 ? 'inline-block' : 'none')
+		} else this.dom.selectedTermsDiv.style('display', 'none')
+		this.renderTermsSelected()
+	}
+
+	renderTermsSelected() {
+		this.dom.selectedTermsDiv.selectAll('*').remove()
+		this.dom.selectedTermsDiv
+			.selectAll('div')
+			.data(this.state.selectedTerms)
+			.enter()
+			.append('div')
+			.attr('title', 'click to delete')
+			.attr('class', 'sja_menuoption')
+			.attr('tabindex', 0)
+			.style('position', 'relative')
+			.style('display', 'inline-block')
+			.style('padding', '5px 16px 5px 9px')
+			.style('margin-left', '5px')
+			.each(renderTerm)
+			.on('click', (e, t) => this.deleteTerm(e, t))
+			.on('mouseover', function (event) {
+				const deleteSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
+				<path stroke='#f00' d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+				</svg>`
+				const div = select(event.target)
+				div
+					.append('div')
+					.style('margin-left', '4px')
+					.classed('sjpp_deletebt', true)
+					.style('display', 'inline-block')
+					.style('position', 'absolute')
+					.style('right', '0px')
+					.style('top', '0px')
+
+					.style('transform', 'scale(0.6)')
+					.style('pointer-events', 'none')
+					.html(deleteSvg)
+			})
+			.on('mouseout', function (event) {
+				select(event.target).select('.sjpp_deletebt').remove()
+			})
+
+		function renderTerm(this: any, term) {
+			const div = select(this).style('border-radius', '5px')
+			div.insert('div').style('display', 'inline-block').html(term.name)
+		}
+	}
+
+	deleteTerm(e, t) {
+		const i = this.state.selectedTerms.findIndex(term => term.name === t.name)
+		if (i != -1) {
+			const selectedTerms = [...this.state.selectedTerms]
+			selectedTerms.splice(i, 1)
+			this.app.dispatch({
+				type: 'app_refresh',
+				state: { selectedTerms }
+			})
+		}
 	}
 
 	getState(appState) {
@@ -126,17 +209,7 @@ export class TermTypeSearch {
 				if (labels.length == 0) continue
 				label = labels.join('/')
 			}
-			try {
-				if (
-					termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
-					termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
-				) {
-					const _ = await import(`./handlers/${type}.ts`)
-					this.handlerByType[type] = await new _.SearchHandler()
-				}
-			} catch (e) {
-				throw `error with handler='./handlers/${type}.ts': ${e}`
-			}
+
 			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
 				//regression snp cases will be handled when the search handler is added
 				if (state.usecase.target == 'regression' && type == TermTypes.GENE_VARIANT) {
@@ -149,6 +222,17 @@ export class TermTypeSearch {
 
 				if (state.usecase.target && useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
 
+				try {
+					if (
+						termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
+						termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
+					) {
+						const _ = await import(`./handlers/${type}.ts`)
+						this.handlerByType[type] = await new _.SearchHandler()
+					}
+				} catch (e) {
+					throw `error with handler='./handlers/${type}.ts': ${e}`
+				}
 				this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 			}
 		}

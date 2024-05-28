@@ -29,8 +29,7 @@ const defaultState = {
 			join: '',
 			lst: []
 		}
-	},
-	termTypeGroup: TermTypeGroups.DICTIONARY_VARIABLES
+	}
 }
 
 // one store for the whole tdb app

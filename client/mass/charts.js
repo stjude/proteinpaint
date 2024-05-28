@@ -1,6 +1,7 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter/filter'
+import { TermTypes } from '../shared/terms'
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -25,7 +26,6 @@ class MassCharts {
 
 		const chartTypesByCohort = JSON.parse(JSON.stringify(appState.termdbConfig?.supportedChartTypes || {}))
 		// {}, key is cohortstr, value is list of supported chart types under this cohort
-
 		const state = {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
@@ -45,7 +45,6 @@ class MassCharts {
 
 			state.supportedChartTypes.push('dictionary')
 		}
-
 		return state
 	}
 
@@ -209,6 +208,14 @@ function getChartTypeList(self, state) {
 			}
 		}
 	]
+	if (state.termdbConfig.allowedTermTypes.includes(TermTypes.METABOLITE_INTENSITY)) {
+		buttons.push({
+			label: 'Metabolite Intensity',
+			chartType: 'hierCluster',
+			clickTo: self.showTree_selectlst,
+			usecase: { target: 'hierCluster', detail: 'metaboliteIntensity' }
+		})
+	}
 	for (const field in state?.termdbConfig.renamedChartTypes || []) {
 		const btn = buttons.find(b => b.chartType === field)
 		if (btn) {
@@ -221,7 +228,6 @@ function getChartTypeList(self, state) {
 function setRenderers(self) {
 	self.makeButtons = function (state) {
 		const chartTypeList = getChartTypeList(self, state)
-
 		self.dom.btns = self.dom.holder
 			.selectAll('button')
 			.data(chartTypeList)
@@ -288,7 +294,7 @@ function setRenderers(self) {
 
 	self.showTree_selectlst = async chart => {
 		self.dom.tip.clear()
-		if (chart.usecase.label) {
+		if (chart.usecase?.label) {
 			self.dom.tip.d
 				.append('div')
 				.style('margin', '3px 5px')
@@ -302,7 +308,6 @@ function setRenderers(self) {
 			id: getId(),
 			config: { chartType: chart.chartType }
 		}
-
 		const termdb = await import('../termdb/app')
 		self.dom.submenu = self.dom.tip.d.append('div')
 		termdb.appInit({
