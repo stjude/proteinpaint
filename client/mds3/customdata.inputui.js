@@ -180,7 +180,7 @@ function parsePositionFromGm(selecti, str, gm) {
 	if (selecti == 2) {
 		return [gm.chr, value - 1]
 	}
-	throw 'unknown selecti'
+	throw 'unknown selection'
 }
 // instructions for mutation
 function showSnvindelHelp(div) {
@@ -253,7 +253,7 @@ function showSvfusionHelp(div) {
 		Break-end position types:
 		<ul><li>Codon position: integer, 1-based</li>
 		<li>RNA position: integer, 1-based, beginning from transcription start site</li>
-		<li>Genomic position: chromosome name and 1-based coordinate joined by colon, e.g. chr1:2345</li></ul>
+		<li>Genomic position: 1-based coordinate</li></ul>
 		Either one of the isoforms must be already displayed.`
 		)
 }
