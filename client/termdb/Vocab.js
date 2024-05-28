@@ -144,22 +144,17 @@ export class Vocab {
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
 		const copy = { $id: tw.$id, term: {}, q: tw.q }
-		copy.term.id = tw.term?.id
-		copy.term.name = tw.term?.name
-		copy.term.type = tw.term?.type
 		if (isDictionaryType(tw.term?.type)) {
+			copy.term.id = tw.term?.id
+			copy.term.name = tw.term?.name
+			copy.term.type = tw.term?.type
 			copy.term.values = tw.term?.values
 		} else {
-			if (tw.term.gene) {
-				copy.term.gene = tw.term.gene
-			} else if (tw.term.type.startsWith('gene')) {
-				//quick fix that should be fixed later
-				copy.term.chr = tw.term.chr
-				copy.term.start = tw.term.start
-				copy.term.stop = tw.term.stop
-			} /* else {
-				// TODO: minimize other non-dictionary term types
-			}*/
+			// passing whole tw.term for non-dictionary term because
+			// different term types need different term properties passed
+			// to backend (e.g., geneVariant term needs term.groupsetting,
+			// geneExpression term needs term.chr, term.start, and term.stop)
+			copy.term = tw.term
 		}
 		return copy
 	}

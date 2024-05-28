@@ -134,7 +134,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 	// fill tw.q.groupsetting
 	if (!tw.q.groupsetting) tw.q.groupsetting = {}
 	delete tw.q.groupsetting.disabled
-	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = true
+	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false
 	if (tw.q.groupsetting.inuse) {
 		// groupsetting is active
 		const gs = tw.q.groupsetting as PredefinedGroupSetting
@@ -149,7 +149,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 		) {
 			gs.predefined_groupset_idx = gs.useIndex
 		}*/
-		gs.predefined_groupset_idx = 1
+		gs.predefined_groupset_idx = 0
 
 		// specify a single dt
 		const ds_dts = [] // dts specified in dataset
@@ -207,8 +207,6 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 	} else {
 		tw.q.cnvLossCutoff = -0.2
 	}
-
-	console.log('tw:', structuredClone(tw))
 }
 
 function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {

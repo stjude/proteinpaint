@@ -73,12 +73,29 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 
 export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
-	cell.label = value.label || self.mclass[value.class]?.label || ''
-	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
-	// may overriden by a color scale by dt, if applicable below
-	cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
-	cell.class = value.class
-	cell.value = value
+	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color // TODO: may fill in tw.q.values{} based on groupsetting
+	if (tw.q.groupsetting.inuse) {
+		// groupsetting not in use
+		// use anno to fill in cell
+		cell.label = anno.label
+		cell.fill = ['Mutated', 'Protein-changing', 'Truncating'].includes(anno.key)
+			? '#FF0000'
+			: ['Wildtype', 'Rest'].includes(anno.key)
+			? /*'#D3D3D3'*/ '#0000FF'
+			: anno.key == 'Not tested'
+			? /*'#fff'*/ '#00FF00'
+			: '#000000'
+		cell.value = { value: anno.key, dt: tw.q.dt, origin: tw.q.origin }
+	} else {
+		// groupsetting not in use
+		// use value to fill in cell
+		cell.label = value.label || self.mclass[value.class]?.label || ''
+		// may overriden by a color scale by dt, if applicable below
+		cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
+		cell.class = value.class
+		cell.value = value
+	}
+
 	const colw = self.dimensions.colw
 	if (s.cellEncoding == '') {
 		cell.height = s.rowh / values.length
@@ -108,8 +125,9 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 		throw `cannot set cell props for dt = '${value.dt}'`
 	}
 
-	// need to distinguish between not tested or wildtype by dt: snvindel vs CNV vs SV, etc
-	if (value.class == 'Blank' || value.class == 'WT') {
+	// when not using groupsetting, need to distinguish between
+	// not tested or wildtype by dt: snvindel vs CNV vs SV, etc
+	if (!tw.q.groupsetting.inuse && (value.class == 'Blank' || value.class == 'WT')) {
 		cell.label = `${self.dt2label[value.dt]} ${cell.label}`
 	}
 	//if (value.origin) cell.label = `${self.morigin[value.origin].label} ${cell.label}`
@@ -117,7 +135,19 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 	const byDt = self.state.termdbConfig.assayAvailability?.byDt
 	// return the corresponding legend item data
 	const order = value.class == 'CNV_loss' ? -2 : value.class?.startsWith('CNV_') ? -1 : 0
-	if (value.dt == dtcnv) {
+	if (tw.q.groupsetting.inuse) {
+		const group =
+			tw.legend?.group || tw.q.origin
+				? `${tw.q.origin[0].toUpperCase() + tw.q.origin.slice(1)} ${self.dt2label[tw.q.dt]}`
+				: self.dt2label[tw.q.dt]
+		return {
+			ref: t.ref,
+			group,
+			value: anno.key,
+			order: -2,
+			entry: { key: anno.key, label: cell.label, fill: cell.fill, order, dt: tw.q.dt, origin: tw.q.origin }
+		}
+	} else if (value.dt == dtcnv) {
 		if (t.scales && value.class.startsWith('CNV_')) {
 			const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
 			const { maxLoss, maxGain, minLoss, minGain } = t.scales
