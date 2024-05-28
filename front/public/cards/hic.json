@@ -1,5 +1,5 @@
 {
-    "ribbonMessage": "Versions 7, 8 and 9 Hi-C files are accepted.<br> See the new example for displaying a hic data across two chromosomes.",
+    "ribbonMessage": "We're excited to show off our improved plots of Hi-C data! See the new examples for the whole genome, chromosome pair, and detail view in the tabs below. Please see the updated documentation by clicking on the below for more information.",
     "ppcalls": [
         {
             "label": "Hi-C",
@@ -69,12 +69,84 @@
                     "image": 1
                 }
             }
+        },
+        {
+            "label": "Whole genome",
+            "message": "Click on any chromosome pair to see the Hi-C data for that pair.",
+            "runargs": {
+                "parseurl": true,
+                "noheader": true,
+                "nobox": 1,
+                "hic": {
+                    "genome":"hg19",
+                    "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                    "enzyme": "MboI"
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "svg": 1
+                }
+            }
+        },
+        {
+            "label": "Chromosome pair",
+            "message": "Click anywhere within the plot to launch a detail view of the select region.",
+            "runargs": {
+                "parseurl": true,
+                "noheader": true,
+                "nobox": 1,
+                "hic": {
+                    "genome":"hg19",
+                    "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                    "enzyme": "MboI",
+                    "position1": "chr17",
+                    "position2": "chr1",
+                    "state" : {
+                        "chrpair": {
+                            "nmeth": "VC",
+                            "matrixType": "log(oe)"
+                        }
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "svg": 1
+                }
+            }
+        },
+        {
+            "label": "Detail",
+            "runargs": {
+                "parseurl": true,
+                "noheader": true,
+                "nobox": 1,
+                "hic": {
+                    "genome":"hg19",
+                    "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                    "enzyme": "MboI",
+                    "position1": "chr2:182001302-202001302",
+		            "position2": "chr1:7626953-27626953",
+                    "state" : {
+                        "detail": {
+                            "nmeth": "VC",
+                            "matrixType": "observed"
+                        }
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "svg": 1
+                }
+            }
         }
     ],
     "buttons": [
         {
             "name": "Documentation",
-            "link": "https://github.com/stjude/proteinpaint/wiki/Hi%E2%80%90C"
+            "link": "https://github.com/stjude/proteinpaint/wiki/Interaction-Tracks:-Hi%E2%80%90C-and-Arc"
         }
     ]
 }
