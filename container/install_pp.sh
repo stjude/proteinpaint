@@ -194,6 +194,7 @@ if [ "$DOWNLOAD" = true ]; then
       curl https://proteinpaint.stjude.org/ppSupport/genes.hg19.db -O
       curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg19.gz -O
       curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg19.gz.tbi -O
+      curl https://proteinpaint.stjude.org/ppSupport/dbsnp-slice/dbsnp.hg19.bb -O
    fi
    
    if [ "$hg38" = true ]; then
@@ -204,6 +205,7 @@ if [ "$DOWNLOAD" = true ]; then
       curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -O
       curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz -O
       curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz.tbi -O
+      curl https://proteinpaint.stjude.org/ppSupport/dbsnp-slice/dbsnp.hg38.bb -O
    fi    
    
    cd db/
@@ -211,6 +213,10 @@ if [ "$DOWNLOAD" = true ]; then
    
    cd ../msigdb/
    curl https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs -O
+
+   cd ../../utils/meme/motif_databases/HUMAN/
+   curl https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme -O
+   curl https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv -O
 fi
 
 cd $CURRENT_DIR
