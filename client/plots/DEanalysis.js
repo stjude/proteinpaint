@@ -638,9 +638,8 @@ export async function openHiercluster(term, samplelstTW, app, id, newId) {
 }
 
 async function runDEanalysis(self) {
-	return await dofetch3('termdb', {
+	return await dofetch3('DEanalysis', {
 		body: {
-			for: 'DEanalysis',
 			genome: self.app.vocabApi.vocab.genome,
 			dslabel: self.app.vocabApi.vocab.dslabel,
 			samplelst: self.config.samplelst,
