@@ -2,8 +2,6 @@ import { ChrPosition } from 'types/hic'
 
 export class Resolution {
 	error: (f: string | string[]) => void
-	readonly initialBinNum = 20
-	readonly minBinNum_bp = 200
 
 	constructor(error: (f: string | string[]) => void) {
 		this.error = error
@@ -12,21 +10,13 @@ export class Resolution {
 	getResolution(state: any, hic: any) {
 		if (state.currView == 'genome') return hic['bpresolution'][0]
 		if (state.currView == 'chrpair') {
-			const resolution = this.getChrPairResolution(hic, state.x, state.y)
+			const resolution = this.getChrPairResolution(hic, state.x, state.y, state.minBinNum_bp)
 			return resolution
 		} else if (state.currView == 'detail') {
 			const maxBpWidth = Math.max(state.x.stop - state.x.start, state.y.stop - state.y.start)
-			let resolution = null
-			for (const res of hic.bpresolution) {
-				if (maxBpWidth / res > this.minBinNum_bp) {
-					resolution = res
-					break
-				}
-			}
-			if (resolution == null) {
-				// use finest
-				resolution = hic.bpresolution[hic.bpresolution.length - 1]
-			}
+
+			const resolution = this.findResFromArray(maxBpWidth, state.minBinNum_bp, hic.bpresolution)
+
 			return resolution
 		} else {
 			this.error(`Unknown view: ${state.currView}`)
@@ -34,20 +24,13 @@ export class Resolution {
 		}
 	}
 
-	getChrPairResolution(hic: any, x: any, y: any) {
+	getChrPairResolution(hic: any, x: any, y: any, minBinNum_bp: number) {
 		const chrxlen = hic.genome.chrlookup[x.chr.toUpperCase()].len
 		const chrylen = hic.genome.chrlookup[y.chr.toUpperCase()].len
 		const maxchrlen = Math.max(chrxlen, chrylen)
 
-		let resolution = null
+		const resolution = this.findResFromArray(maxchrlen, minBinNum_bp, hic.bpresolution)
 
-		for (let i = 0; i < hic.bpresolution.length; i++) {
-			const res = hic.bpresolution[i]
-			if (maxchrlen / res > 200) {
-				resolution = res
-				break
-			}
-		}
 		if (resolution == null) {
 			this.error(`No suitable resolution for ${x.chr}-${y.chr} pair.`)
 			return
@@ -55,10 +38,27 @@ export class Resolution {
 		return resolution
 	}
 
-	getDefaultViewSpan(hic: any, x: any, y: any) {
-		const chrpairResolution = this.getChrPairResolution(hic, x, y)
+	findResFromArray(max: number, defaultValue: number, resolutionArray: number[], returnNum?: boolean): number | null {
+		let resolution: number | null = null
+		for (const res of resolutionArray) {
+			if (max / res > defaultValue) {
+				resolution = res
+				break
+			}
+		}
+
+		if (returnNum && resolution == null) {
+			// use finest
+			resolution = resolutionArray[resolutionArray.length - 1]
+		}
+
+		return resolution
+	}
+
+	getDefaultViewSpan(hic: any, x: any, y: any, initialBinNum: number, minBinNum_bp: number) {
+		const chrpairResolution = this.getChrPairResolution(hic, x, y, minBinNum_bp)
 		if (!chrpairResolution) return
-		return chrpairResolution * this.initialBinNum
+		return chrpairResolution * initialBinNum
 	}
 
 	updateDetailResolution(bpresolution: any, x: ChrPosition, y: ChrPosition) {

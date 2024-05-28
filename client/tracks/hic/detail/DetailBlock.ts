@@ -23,7 +23,7 @@ export class DetailBlock {
 	readonly rightheadw = 40
 	readonly lpad = 1
 	readonly rpad = 1
-	firstRender = true
+	firstRender = 0
 
 	constructor(
 		app: any,
@@ -132,14 +132,19 @@ export class DetailBlock {
 						stop: this.block.rglst[0].stop
 					}
 			  }
-		/**Dispatches on change per block
-		 * Should only dispatch once per change (e.g. changing
-			the coordinates, zooming, etc.
-		)*/
-		this.app.dispatch({
-			type: 'view_update',
-			config
-		})
+		if (this.firstRender > 2) {
+			/**Dispatches on change per block
+			 * Should only dispatch once per change (e.g. changing
+			 * the coordinates, zooming, etc.)
+			 */
+			this.app.dispatch({
+				type: 'view_update',
+				config
+			})
+		} else {
+			//Reduce server requests on first load
+			this.firstRender++
+		}
 	}
 
 	onpanning(xoff: number, canvas: any) {

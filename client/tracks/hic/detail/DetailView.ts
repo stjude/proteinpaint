@@ -13,14 +13,13 @@ export class DetailView {
 	plotDiv: MainPlotDiv
 	sheath: Elem
 	rotor: Selection<HTMLDivElement, any, any, any>
-	data: any
-	parent: (prop: string) => string | number
+	parent: (prop: any) => string | number
 	resolution: Resolution
 	colorizeElement: ColorizeElement
-	viewRangeBpw: number | undefined
-	calResolution: number | null = null
+	viewRangeBpW: number | undefined
+	calcResolution: number | null = null
 	dataMapper: DetailDataMapper
-	items: ReturnedItems
+	data: ReturnedItems
 	coordinates: DetailCoordinates
 	errList: string[]
 
@@ -33,7 +32,6 @@ export class DetailView {
 
 	/** Defaults **/
 	binpx = 2
-	readonly minCanvasSize = 500
 	readonly bbmargin = 1
 
 	constructor(opts: any) {
@@ -51,27 +49,29 @@ export class DetailView {
 			.style('bottom', '0px')
 			.style('transform', 'rotate(-90deg)')
 			.style('transform-origin', 'left bottom')
-		this.items = opts.items
+		this.data = opts.data
 		this.parent = opts.parent
 		this.errList = this.parent('errList') as any
 		this.resolution = new Resolution(opts.error)
 		this.colorizeElement = new ColorizeElement()
-		this.viewRangeBpw = this.resolution.getDefaultViewSpan(
+		this.viewRangeBpW = this.resolution.getDefaultViewSpan(
 			this.hic,
 			(this.parent('state') as any).x,
-			(this.parent('state') as any).y
+			(this.parent('state') as any).y,
+			(this.parent('state') as any).initialBinNum,
+			(this.parent('state') as any).minBinNum_bp
 		)
 		this.dataMapper = new DetailDataMapper(this.hic, opts.error, opts.parent)
 		this.coordinates = new DetailCoordinates(this.hic, this.errList)
 	}
 
-	setDefaultBinPx() {
-		if (!this.calResolution || !this.viewRangeBpw) throw `Missing either the calculated resolution of default view span`
+	// setDefaultBinPx() {
+	// 	if (!this.calcResolution || !this.viewRangeBpW) throw `Missing either the calculated resolution of default view span`
 
-		while ((this.binpx * this.viewRangeBpw) / this.calResolution < this.minCanvasSize) {
-			this.binpx += 2
-		}
-	}
+	// 	while ((this.binpx * this.viewRangeBpW) / this.calcResolution < (this.parent('state') as any).settings.width) {
+	// 		this.binpx += 2
+	// 	}
+	// }
 
 	renderCanvas(blockwidth: number) {
 		this.canvasHolder = this.plotDiv.plot
@@ -89,8 +89,8 @@ export class DetailView {
 			//Starting width and height to render the canvas
 			.attr('width', blockwidth)
 			.attr('height', blockwidth)
-			.attr('left', `${this.xBlock.defaultLeft}px`)
-			.attr('top', `${this.yBlock.defaultTop}px`)
+			// .attr('left', `${this.xBlock.defaultLeft}px`)
+			// .attr('top', `${this.yBlock.defaultTop}px`)
 			.on('mousedown', (event: MouseEvent) => {
 				const body = select(document.body)
 				const x = event.clientX
@@ -108,6 +108,7 @@ export class DetailView {
 					body.on('mousemove', null).on('mouseup', null)
 					const xoff = event.clientX - x
 					const yoff = event.clientY - y
+					console.log(xoff)
 					this.xBlock.block.pannedby(xoff)
 					this.yBlock.block.pannedby(yoff)
 				})
@@ -115,44 +116,71 @@ export class DetailView {
 	}
 
 	async render() {
-		this.calResolution = this.parent('calResolution') as number
-		this.setDefaultBinPx()
-
-		const blockwidth = Math.ceil((this.binpx * this.viewRangeBpw!) / this.calResolution)
-
-		this.xBlock = new DetailBlock(this.app, this.hic, blockwidth, this.bbmargin, this.plotDiv.xAxis, false)
-		this.yBlock = new DetailBlock(this.app, this.hic, blockwidth, this.bbmargin, this.rotor, true)
-
-		this.renderCanvas(blockwidth)
+		this.calcResolution = this.parent('calcResolution') as number
+		// this.setDefaultBinPx()
 
 		const state = this.parent('state') as any
+
+		// const canvasresolution = this.resolution.findResFromArray(
+		// 	this.viewRangeBpW!,
+		// 	state.minBinNum_bp,
+		// 	this.hic.bpresolution,
+		// 	true
+		// ) as number
+
+		// const blockwidth = Math.ceil((this.binpx * this.viewRangeBpW!) / canvasresolution)
+
+		this.xBlock = new DetailBlock(
+			this.app,
+			this.hic,
+			state.settings.widthHeightPx,
+			this.bbmargin,
+			this.plotDiv.xAxis,
+			false
+		)
+		this.yBlock = new DetailBlock(this.app, this.hic, state.settings.widthHeightPx, this.bbmargin, this.rotor, true)
+
+		this.renderCanvas(state.settings.widthHeightPx)
 
 		await this.xBlock.loadBlock(state.x, this.canvasHolder, this.canvas)
 		await this.yBlock.loadBlock(state.y, this.canvasHolder, this.canvas, this.sheath)
 
-		this.update(this.items)
+		this.update(this.data)
 	}
 
-	update(items: ReturnedItems) {
-		if (items.items.length == 0) {
+	async update(data: ReturnedItems) {
+		if (data.items.length == 0) {
 			this.app.dispatch({ type: 'loading_active', active: false })
 			return
 		}
-		this.items = items
+		this.data = data
 		const state = this.parent('state') as any
+
+		const initialWidth = Number.parseInt(this.canvas.attr('width'))
+		const holderChange = Number.parseInt(this.canvasHolder.style('width')) - initialWidth + state.settings.widthHeightPx
+
+		this.canvasHolder.style('width', `${holderChange}px`).style('height', `${holderChange}px`)
+		this.canvas.attr('width', `${state.settings.widthHeightPx}px`).attr('height', `${state.settings.widthHeightPx}px`)
+
+		this.xBlock.block.width = state.settings.widthHeightPx
+		this.yBlock.block.width = state.settings.widthHeightPx
+
+		//Reloads the block without changing the genomic position
+		this.xBlock.block.zoom2px(0, initialWidth)
+		this.yBlock.block.zoom2px(0, initialWidth)
 
 		this.ctx = this.canvas.node().getContext('2d') as CanvasRenderingContext2D
 
-		const [coords, canvaswidth, canvasheight] = this.coordinates.getCoordinates(
+		const coords = this.coordinates.getCoordinates(
 			state.x,
 			state.y,
-			this.items,
-			this.calResolution as number,
+			this.data,
+			this.calcResolution as number,
 			this.canvas,
 			this.dataMapper['fragData']
 		)
 		this.coords = coords
-		this.ctx.clearRect(0, 0, canvaswidth, canvasheight)
+		this.ctx.clearRect(0, 0, state.settings.widthHeightPx, state.settings.widthHeightPx)
 
 		for (const [xCoord, yCoord, width, height, value] of this.coords as any) {
 			this.colorizeElement.colorizeElement(
@@ -167,8 +195,6 @@ export class DetailView {
 				'detail'
 			)
 		}
-		// This does not work. Do not do this
-		// this.canvas.attr('width', canvaswidth).attr('height', canvasheight)
 
 		this.app.dispatch({ type: 'loading_active', active: false })
 	}

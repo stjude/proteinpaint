@@ -5,16 +5,26 @@ class HicStore {
 	defaultState: {
 		defaultNmeth: string
 		loading: boolean
+		readonly minBinNum_bp: 200
+		readonly initialBinNum: 20
+		settings: {
+			widthHeightPx: number
+		}
 	}
 	actions: any
 	state: any
-	views = ['genome', 'chrpair', 'detail', 'horizontal']
+	readonly views = ['genome', 'chrpair', 'detail', 'horizontal']
 
 	constructor() {
 		this.type = 'store'
 		this.defaultState = {
 			defaultNmeth: 'NONE',
-			loading: true
+			loading: true,
+			minBinNum_bp: 200,
+			initialBinNum: 20,
+			settings: {
+				widthHeightPx: 800
+			}
 		}
 	}
 }

@@ -23,15 +23,24 @@ class HicApp {
 	}
 	hic: {
 		enzyme?: RestrictionEnzyme
+		/** Either file or url required */
 		file?: string
+		/** Either file or url required */
 		url?: string
 		genome: any
 		holder: Div
 		hostUrl: string
+		/** Track name that appears in horizontal view */
 		name: string
+		/** x position. Only chr required for chpair view. chr#:####-#### format for detail view */
 		position1?: string
+		/** y position. Only chr required for chpair view. chr#:####-#### format for detail view */
 		position2?: string
+		/** set the percentile for max cutoff for all views */
+		maxCutoffPercentile?: number
 		tklist?: any[]
+		/** Define nmeth and matrix type for all views with the state
+		 * (e.g. { genome: { nmeth: 'VC' matrixType: 'observed' }, chrpair:{...}, detail: {...}, horizontal: {...} } ) */
 		state?: any
 		jwt?: any
 	}
@@ -55,6 +64,7 @@ class HicApp {
 			jwt: opts.jwt,
 			position1: opts.position1,
 			position2: opts.position2,
+			maxCutoffPercentile: opts.maxCutoffPercentile,
 			name: 'name' in opts ? opts.name : 'Hi-C',
 			tklist: 'tklst' in opts ? opts.tklst : [],
 			state: 'state' in opts ? opts.state : {}
@@ -115,6 +125,8 @@ class HicApp {
 	}
 
 	getViewsConfig() {
+		if (this.hic.maxCutoffPercentile) this.hic.state.maxCutoffPercentile = this.hic.maxCutoffPercentile
+
 		/** Generally NONE is not listed in the norm meth array.
 		 * Must add before setting the views configs.*/
 		let nmeth: string | string[]

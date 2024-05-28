@@ -29,7 +29,8 @@ export class ChrPairView {
 	binpx = 1
 	/** padding on the ends of x/y chr coordinate axes */
 	readonly axispad = 10
-	calResolution: number | null = null
+	readonly axisLabelFontSize = 15
+	calcResolution: number | null = null
 	data: number[][] = []
 
 	constructor(opts) {
@@ -42,24 +43,24 @@ export class ChrPairView {
 		this.chrylen = this.hic.genome.chrlookup[this.parent('state').y.chr.toUpperCase()].len
 		this.maxchrlen = Math.max(this.chrxlen, this.chrylen)
 		this.colorizeElement = new ColorizeElement()
-		this.positions = new Positions(opts.error)
+		this.positions = new Positions(opts.error, this.parent('state').minBinNum_bp)
 		this.formattedData = new GridElementsFormattedData()
 	}
 
 	setDefaultBinpx() {
-		if (this.calResolution == null) return
+		if (this.calcResolution == null) return
 		//this.binpx default is 1
-		while ((this.binpx * this.maxchrlen) / this.calResolution < 600) {
+		while ((this.binpx * this.maxchrlen) / this.calcResolution < 600) {
 			this.binpx++
 		}
 	}
 
 	renderAxes() {
-		if (this.calResolution == null) return
+		if (this.calcResolution == null) return
 
 		//y axis
 		const svgY = this.plotDiv.yAxis.append('svg')
-		const h = Math.ceil(this.chrylen / this.calResolution) * this.binpx
+		const h = Math.ceil(this.chrylen / this.calcResolution) * this.binpx
 		svgY.attr('width', 100).attr('height', this.axispad * 2 + h)
 
 		svgY
@@ -69,7 +70,7 @@ export class ChrPairView {
 			.append('text')
 			.text(this.parent('state').y.chr)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', 15)
+			.attr('font-size', this.axisLabelFontSize)
 			.attr('font-family', font)
 			.attr('dominant-baseline', 'central')
 			.attr('transform', 'rotate(90)')
@@ -82,14 +83,14 @@ export class ChrPairView {
 		})
 
 		// x axis
-		const svgX = this.plotDiv.xAxis.append('svg')
-		const w = Math.ceil(this.chrxlen / this.calResolution) * this.binpx
+		const svgX = this.plotDiv.xAxis.append('svg').style('margin-top', '-4px')
+		const w = Math.ceil(this.chrxlen / this.calcResolution) * this.binpx
 		svgX.attr('height', 100).attr('width', this.axispad * 2 + w)
 		svgX
 			.append('text')
 			.attr('data-testid', 'sjpp-chrpair-svg-x')
 			.text(this.parent('state').x.chr)
-			.attr('font-size', 15)
+			.attr('font-size', this.axisLabelFontSize)
 			.attr('font-family', font)
 			.attr('x', this.axispad + w / 2)
 			.attr('text-anchor', 'middle')
@@ -115,8 +116,8 @@ export class ChrPairView {
 			})
 			.node()
 
-		this.canvas.width = Math.ceil(this.chrxlen / this.calResolution!) * this.binpx
-		this.canvas.height = Math.ceil(this.chrylen / this.calResolution!) * this.binpx
+		this.canvas.width = Math.ceil(this.chrxlen / this.calcResolution!) * this.binpx
+		this.canvas.height = Math.ceil(this.chrylen / this.calcResolution!) * this.binpx
 		this.ctx = this.canvas.getContext('2d')
 	}
 
@@ -127,7 +128,8 @@ export class ChrPairView {
 			this.binpx,
 			this.parent('state').x,
 			this.parent('state').y,
-			this.hic
+			this.hic,
+			this.parent('state').initialBinNum
 		)
 		this.app.dispatch({
 			type: 'view_create',
@@ -140,7 +142,7 @@ export class ChrPairView {
 	}
 
 	render() {
-		this.calResolution = this.parent('calResolution')
+		this.calcResolution = this.parent('calcResolution')
 		this.setDefaultBinpx()
 		this.renderAxes()
 		this.renderCanvas()
@@ -156,7 +158,7 @@ export class ChrPairView {
 			'chrpair',
 			items.items,
 			this.binpx,
-			this.calResolution!,
+			this.calcResolution!,
 			firstisx,
 			isintrachr
 		)

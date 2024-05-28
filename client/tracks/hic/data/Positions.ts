@@ -2,18 +2,25 @@ import { Resolution } from './Resolution.ts'
 
 export class Positions {
 	resolution: Resolution
+	minBinNum_bp: number
 	error: (f: string | string[]) => void
 
-	constructor(error: (f: string | string[]) => void) {
+	constructor(error: (f: string | string[]) => void, minBinNum_bp: number) {
 		this.error = error
 		this.resolution = new Resolution(this.error)
+		this.minBinNum_bp = minBinNum_bp
 	}
-	setPosition(x: number, y: number, binpx: number, chrx: { chr: string }, chry: { chr: string }, hic: any) {
-		const initialbinnum_detail = 20
-
-		const resolution = this.resolution.getChrPairResolution(hic, chrx, chry)
-
-		const viewrangebpw = resolution! * initialbinnum_detail
+	setPosition(
+		x: number,
+		y: number,
+		binpx: number,
+		chrx: { chr: string },
+		chry: { chr: string },
+		hic: any,
+		initialBinNum: number
+	) {
+		const resolution = this.resolution.getChrPairResolution(hic, chrx, chry, this.minBinNum_bp)
+		const viewrangebpw = resolution! * initialBinNum
 
 		let coordx = Math.max(1, Math.floor((x * resolution!) / binpx) - viewrangebpw / 2)
 		let coordy = Math.max(1, Math.floor((y * resolution!) / binpx) - viewrangebpw / 2)

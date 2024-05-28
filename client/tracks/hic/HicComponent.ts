@@ -34,7 +34,7 @@ export class HicComponent {
 	infoBar: any
 	error: any
 	resolution: Resolution
-	calResolution: number | null = null
+	calcResolution: number | null = null
 	firstRender = true
 	min = 0
 	absMin = 0
@@ -58,7 +58,7 @@ export class HicComponent {
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		this.app = opts.app
-		this.dataMapper = new DataMapper(this.hic)
+		this.dataMapper = new DataMapper(this.hic, opts.state.maxCutoffPercentile)
 		this.activeView = this.state.currView
 		this.error = opts.error
 		this.resolution = new Resolution(this.error)
@@ -74,48 +74,28 @@ export class HicComponent {
 	}
 
 	initView() {
+		const opts = {
+			plotDiv: this.plotDiv,
+			hic: this.hic,
+			app: this.app,
+			parent: (prop: any) => {
+				return this[prop]
+			}
+		}
 		if (this.state.currView == 'genome') {
-			this.genome = new GenomeView({
-				plotDiv: this.plotDiv,
-				hic: this.hic,
-				app: this.app,
-				data: this.data,
-				parent: (prop: any) => {
-					return this[prop]
-				}
-			})
+			opts['data'] = this.data
+			this.genome = new GenomeView(opts)
 			this.genome.render()
 		} else if (this.state.currView === 'chrpair') {
-			this.chrpair = new ChrPairView({
-				plotDiv: this.plotDiv,
-				hic: this.hic,
-				app: this.app,
-				items: this.data,
-				parent: (prop: any) => {
-					return this[prop]
-				}
-			})
+			opts['items'] = this.data
+			this.chrpair = new ChrPairView(opts)
 			this.chrpair.render()
 		} else if (this.state.currView === 'detail') {
-			this.detail = new DetailView({
-				plotDiv: this.plotDiv,
-				hic: this.hic,
-				app: this.app,
-				items: this.data,
-				parent: (prop: any) => {
-					return this[prop]
-				}
-			})
+			opts['data'] = this.data
+			this.detail = new DetailView(opts)
 			this.detail.render()
 		} else if (this.state.currView === 'horizontal') {
-			this.horizontal = new HorizontalView({
-				plotDiv: this.plotDiv,
-				hic: this.hic,
-				app: this.app,
-				parent: (prop: any) => {
-					return this[prop]
-				}
-			})
+			this.horizontal = new HorizontalView(opts)
 			this.horizontal.render()
 		} else {
 			throw Error(`Unknown view: ${this.state.currView}`)
@@ -139,8 +119,8 @@ export class HicComponent {
 			}
 			const detailMapper = new DetailDataMapper(this.hic, this.errList, parent)
 			this.data = await detailMapper.getData(this.state.x, this.state.y)
-			if (this.data.items.length == 0) {
-				this.calResolution = this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
+			if (!this.data.items || this.data.items.length == 0) {
+				this.calcResolution = this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
 				this.data = await detailMapper.getData(this.state.x, this.state.y)
 			}
 		} else {
@@ -160,8 +140,8 @@ export class HicComponent {
 
 	setResolution(appState: any) {
 		const state = this.app.getState(appState)
-		this.calResolution = this.resolution.getResolution(state, this.hic) as number
-		return this.calResolution
+		this.calcResolution = this.resolution.getResolution(state, this.hic) as number
+		return this.calcResolution
 	}
 
 	setDataArgs(appState: any) {
@@ -222,7 +202,7 @@ export class HicComponent {
 			parent: (prop: string) => {
 				return this[prop]
 			},
-			resolution: this.calResolution
+			resolution: this.calcResolution
 		})
 		this.infoBar.render()
 	}

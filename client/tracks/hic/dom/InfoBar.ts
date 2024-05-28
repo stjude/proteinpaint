@@ -72,22 +72,24 @@ export class InfoBar {
 		this.colorScale = new ColorScale({
 			barheight: 14,
 			barwidth: 85,
+			data: [this.parent('min'), this.parent('max')],
+			fontSize: 12,
+			height: 35,
+			width: 120,
 			holder: this.colorScaleDiv,
 			startColor: this.startColor,
 			endColor: this.endColor,
 			position: '20,0',
-			tickPosition: 'bottom',
-			data: [this.parent('min'), this.parent('max')],
 			ticks: 2,
-			tickSize: 3,
-			width: 120
+			tickPosition: 'bottom',
+			tickSize: 3
 		})
 		await this.colorScale.render()
 		this.update()
 	}
 
 	update() {
-		const res = this.parent('calResolution') || this.resolution
+		const res = this.parent('calcResolution') || this.resolution
 		let resolutionText: string
 		if (res < Math.min(this.hic.bpresolution)) {
 			resolutionText = `${res} fragment${res > 1 ? 's' : ''}`
@@ -107,8 +109,7 @@ export class InfoBar {
 
 			if (min < 0) {
 				this.colorScale.bar.startColor = 'blue'
-				const distFromZero = Math.max(Math.abs(min), max)
-				this.colorScale.data = [-distFromZero, distFromZero]
+				this.colorScale.data = [min, max]
 			} else {
 				this.colorScale.bar.startColor = 'white'
 				this.colorScale.data = [0, max]
