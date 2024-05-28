@@ -4,10 +4,12 @@
 set -euo pipefail
 
 USAGE="Usage:
-	./install_pp.sh [-g] [-tp] 
+	./install_pp.sh [-g] [-t] [-e] [-tag] 
 
 	-g GENOME BUILDS: (hg19/hg38) Separate multiple genome builds using ','; Currently only support hg19 and hg38. Will add other genome builds later. 
 	-t TP_DIRECTORY: Path to tp directory
+        -e EXISTING (optional)(true/false): Does supporting data need to be downloaded? If yes, then no download will occur
+        -tag TAG (optional): TAG of PP build. By default it uses "'latest'"
 "
 
 #################
@@ -16,7 +18,9 @@ USAGE="Usage:
 
 BUILDS=""
 TP=""
-while getopts ":g:t:h:" opt; do
+DOWNLOAD=true
+TAG=latest # can change to a version number like 2.11.2
+while getopts ":g:t:h:e:" opt; do
 	case "${opt}" in
 	g)      BUILDS=${OPTARG}
                 ;;
@@ -27,6 +31,16 @@ while getopts ":g:t:h:" opt; do
 		echo "$USAGE"
 		exit 1
 		;;
+	e)	if [[ ${OPTARG} = true || ${OPTARG} = false ]]; then
+                    DOWNLOAD=${OPTARG}
+		else
+		    echo "-e=${OPTARG} not supported"
+		    echo "$USAGE"
+		    exit 1
+		fi    
+		;;
+	tag)    TAG=${OPTARG}
+		;;
         *)
   	        echo "Unrecognized parameter. Use -h to display usage."
   	        exit 1
@@ -34,17 +48,25 @@ while getopts ":g:t:h:" opt; do
 	esac
 done
 
+echo "DOWNLOAD:$DOWNLOAD"	  
 # Download docker image and run it
 
-TAG=latest # can change to a version number like 2.11.2
 IMAGE_NAME=ghcr.io/stjude/ppfull:$TAG # may use ppserver:$TAG for server-only image
-docker pull $IMAGE_NAME
+docker pull $IMAGE_NAME || exit 1 # It can fail if the TAG is not correct
 
 # download the run helper scripts
-wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/run.sh
-wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/createPPNetwork.sh
-wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/verify.sh
-wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/validateConfig.js
+if [[ ! -f "run.sh" ]]; then
+  wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/run.sh
+fi
+if [[ ! -f "createPPNetwork.sh" ]]; then
+  wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/createPPNetwork.sh
+fi
+if [[ ! -f "verify.sh" ]]; then
+  wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/verify.sh
+fi
+if [[ ! -f "validateConfig.js" ]]; then
+  wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/validateConfig.js
+fi
 chmod a+x *
 
 echo "BUILDS:$BUILDS"
@@ -130,8 +152,8 @@ elif [[ "$hg38" = true && "$hg19" = true ]]; then
 fi    
 
 echo '   ],' >> serverconfig.json
-echo "   \"tpmasterdir\": \"${TP}\"," >> serverconfig.json
-echo "   \"cachedir\": \"${TP}\"," >> serverconfig.json # For now using TP dir as cache dir
+echo "   \"tpmasterdir\": \"${TP_FOLDER}\"," >> serverconfig.json
+echo "   \"cachedir\": \"${TP_FOLDER}\"," >> serverconfig.json # For now using TP dir as cache dir
 echo "   \"URL\": \"http://localhost:3456\"," >> serverconfig.json
 echo "   \"gfClient\": \"/home/root/pp/tools/gfClient\"," >> serverconfig.json
 echo "   \"port\": 3000," >> serverconfig.json
@@ -145,47 +167,51 @@ if [[ ! -d "$TP_FOLDER" ]]; then
   mkdir -p $TP_FOLDER
 fi
 cd $TP_FOLDER
-mkdir -p genomes/ anno/db/ anno/msigdb/ hg19/ hg38/ utils/meme/motif_databases/HUMAN/
-
-cd genomes/
-if [ "$hg19" = true ]; then
-   curl https://proteinpaint.stjude.org/ppGenomes/hg19.gz -O
-   curl https://proteinpaint.stjude.org/ppGenomes/hg19.gz.fai -O
-   curl https://proteinpaint.stjude.org/ppGenomes/hg19.gz.gzi -O
-fi    
-
-if [ "$hg38" = true ]; then
-   curl https://proteinpaint.stjude.org/ppGenomes/hg38.gz -O
-   curl https://proteinpaint.stjude.org/ppGenomes/hg38.gz.fai -O
-   curl https://proteinpaint.stjude.org/ppGenomes/hg38.gz.gzi -O
-fi    
-
-cd ../anno/
-if [ "$hg19" = true ]; then
-   curl https://proteinpaint.stjude.org/ppSupport/refGene.hg19.gz -O
-   curl https://proteinpaint.stjude.org/ppSupport/refGene.hg19.gz.tbi -O
-   curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz -O
-   curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz.tbi -O
-   curl https://proteinpaint.stjude.org/ppSupport/genes.hg19.db -O
-   curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg19.gz -O
-   curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg19.gz.tbi -O
+if [ "$DOWNLOAD" = true ]; then
+   curl https://proteinpaint.stjude.org/ppSupport/ppdemo_bam.tar.gz -O # This tarball only contains the BAM slices which are shown in http://proteinpaint.stjude.org/bam 
+   tar zxvf ppdemo_bam.tar.gz # Releases the "proteinpaint_demo/" folder under $TP_FOLDER 
+   mkdir -p genomes/ anno/db/ anno/msigdb/ hg19/ hg38/ utils/meme/motif_databases/HUMAN/
+   
+   cd genomes/
+   if [ "$hg19" = true ]; then
+      curl https://proteinpaint.stjude.org/ppGenomes/hg19.gz -O
+      curl https://proteinpaint.stjude.org/ppGenomes/hg19.gz.fai -O
+      curl https://proteinpaint.stjude.org/ppGenomes/hg19.gz.gzi -O
+   fi    
+   
+   if [ "$hg38" = true ]; then
+      curl https://proteinpaint.stjude.org/ppGenomes/hg38.gz -O
+      curl https://proteinpaint.stjude.org/ppGenomes/hg38.gz.fai -O
+      curl https://proteinpaint.stjude.org/ppGenomes/hg38.gz.gzi -O
+   fi    
+   
+   cd ../anno/
+   if [ "$hg19" = true ]; then
+      curl https://proteinpaint.stjude.org/ppSupport/refGene.hg19.gz -O
+      curl https://proteinpaint.stjude.org/ppSupport/refGene.hg19.gz.tbi -O
+      curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz -O
+      curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz.tbi -O
+      curl https://proteinpaint.stjude.org/ppSupport/genes.hg19.db -O
+      curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg19.gz -O
+      curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg19.gz.tbi -O
+   fi
+   
+   if [ "$hg38" = true ]; then
+      curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz -O
+      curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi -O
+      curl https://proteinpaint.stjude.org/ppSupport/gencode.v43.hg38.gz -O
+      curl https://proteinpaint.stjude.org/ppSupport/gencode.v43.hg38.gz.tbi -O
+      curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -O
+      curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz -O
+      curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz.tbi -O
+   fi    
+   
+   cd db/
+   curl https://proteinpaint.stjude.org/ppSupport/db/proteindomain.db -O
+   
+   cd ../msigdb/
+   curl https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs -O
 fi
-
-if [ "$hg38" = true ]; then
-   curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz -O
-   curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi -O
-   curl https://proteinpaint.stjude.org/ppSupport/gencode.v43.hg38.gz -O
-   curl https://proteinpaint.stjude.org/ppSupport/gencode.v43.hg38.gz.tbi -O
-   curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -O
-   curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz -O
-   curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz.tbi -O
-fi    
-
-cd db/
-curl https://proteinpaint.stjude.org/ppSupport/db/proteindomain.db -O
-
-cd ../msigdb/
-curl https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs -O
 
 cd $CURRENT_DIR
 # Run the docker image
