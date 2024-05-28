@@ -75,7 +75,6 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'getProfileFacilities') return get_ProfileFacilities(q, req, res, ds, tdb)
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
 			if (q.for == 'getSamplesByName') return get_AllSamplesByName(q, req, res, ds)
-			if (q.for == 'DEanalysis') return await get_DEanalysis(q, res, ds)
 			if (q.for == 'getDefaultBins') return trigger_getDefaultBins(q, ds, res)
 
 			throw "termdb: doesn't know what to do"
@@ -389,12 +388,6 @@ async function get_AllSamplesByName(q, req, res, ds) {
 		for (const [key, value] of ds.sampleName2Id) sampleName2Id.set(key, { id: value })
 	}
 	res.send(Object.fromEntries(sampleName2Id))
-}
-
-async function get_DEanalysis(q, res, ds) {
-	if (!ds.queries?.rnaseqGeneCount) throw 'not enabled by this dataset'
-	const result = await ds.queries.rnaseqGeneCount.get(q)
-	res.send(result)
 }
 
 function get_mds3queryDetails(res, ds) {
