@@ -40,7 +40,7 @@ export class DetailCoordinates {
 		for (const [xCoord, yCoord, value] of data.items) {
 			let coord1: number, coord2: number, span1: number, span2: number
 
-			if (fragData && fragData.length) {
+			if (fragData) {
 				// the beginning fragment index
 				const idx_start = isFirstX ? xCoord : yCoord
 				const idy_start = isFirstX ? yCoord : xCoord
@@ -52,8 +52,8 @@ export class DetailCoordinates {
 				*/
 				// convert x
 
-				if (fragData.xid2coord && fragData.xid2coord.has(idx_start)) {
-					const [a, b] = fragData.xid2coord.get(idx_start)
+				if (fragData.x.id2coord && fragData.x.id2coord.has(idx_start)) {
+					const [a, b] = fragData.x.id2coord.get(idx_start)
 					coord1 = a
 					span1 = b - a // note this likely to be replaced by [idx_start+resolution]
 				} else {
@@ -65,15 +65,15 @@ export class DetailCoordinates {
 					// the end of fragment id of x, it may be out of range!
 					const id_stop = idx_start + resolution
 
-					if (fragData.xid2coord.has(id_stop)) {
-						const [a, b] = fragData.xid2coord.get(id_stop)
+					if (fragData.x.id2coord.has(id_stop)) {
+						const [a, b] = fragData.x.id2coord.get(id_stop)
 						span1 = b - coord1
 					}
 				}
 
 				// convert y
-				if (fragData.yid2coord.has(idy_start)) {
-					const [a, b] = fragData.yid2coord.get(idy_start)
+				if (fragData.y.id2coord.has(idy_start)) {
+					const [a, b] = fragData.y.id2coord.get(idy_start)
 					coord2 = a
 					span2 = b - a
 				} else {
@@ -84,8 +84,8 @@ export class DetailCoordinates {
 					// the end of fragment id of x, it may be out of range!
 					const id_stop = idy_start + resolution
 
-					if (fragData.yid2coord.has(id_stop)) {
-						const [a, b] = fragData.yid2coord.get(id_stop)
+					if (fragData.y.id2coord.has(id_stop)) {
+						const [a, b] = fragData.y.id2coord.get(id_stop)
 						span2 = b - coord2
 					}
 				}
