@@ -1,5 +1,20 @@
 #!/bin/bash
-# syntax: ./install_pp.sh -g hg19,hg38 -t /path/to/pp_data
+
+## NOTE: This script installs the ProteinPaint server and supporting data for a new user. Currently, it only supports hg19 and hg38 reference genome builds and will add other genome builds later. The only tool that is setup currently is BAM track. 
+
+## The script does the following:
+
+# 1. download the supporting data (e.g reference genome build data) if it is not already present. 
+# 2. download the docker image and run it. The script will also download the run helper scripts if they are not already present. 
+# 3. create the serverconfig.json file based on the genome builds specified. The script will also create the 'TP' directory if it is not already present, alongwith the directory structure and download the supporting data if it is not already present. 
+
+## To run a local instance of PP, do the following:
+
+# first cd into 'TP' directory and download the install_pp.sh script using the command:
+# wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/install_pp.sh
+
+# then under the same 'TP' directory run the script using the command:
+# sh ./install_pp.sh -g hg19,hg38 -t /path/to/tp
 
 set -euo pipefail
 
@@ -87,6 +102,7 @@ fi
 
 hg19=false
 hg38=false
+
 # Iterating through all genome builds
 num_genome_builds=0
 for element in "${array[@]}"; do
@@ -104,8 +120,8 @@ for element in "${array[@]}"; do
 done
 
 echo $num_genome_builds
-# Create serverconfig.json file
 
+# Create a serverconfig.json file (required by the PP server)
 if [ $num_genome_builds -eq 0 ]; then
     echo "No applicable reference genome build specified"
     exit 1
@@ -116,7 +132,7 @@ echo '   "debugmode": true,' >> serverconfig.json
 echo '   "defaultgenome": "hg38",' >> serverconfig.json
 echo '   "genomes": [' >> serverconfig.json
 
-# For now, restricting only to human reference genome builds
+# Download the genome builds
 if [[ "$hg19" = true && "$hg38" = false ]]; then
     echo '       {' >> serverconfig.json
     echo '          "name": "hg19",' >> serverconfig.json
@@ -157,7 +173,7 @@ echo "}" >> serverconfig.json
 
 CURRENT_DIR=$PWD
 
-# Create TP dir if not present
+# Create TP directory if not present
 if [[ ! -d "$TP_FOLDER" ]]; then
   mkdir -p $TP_FOLDER
 fi
@@ -217,5 +233,6 @@ if [ "$DOWNLOAD" = true ]; then
 fi
 
 cd $CURRENT_DIR
+
 # Run the docker image
 ./run.sh $IMAGE_NAME
