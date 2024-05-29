@@ -6,16 +6,16 @@
 
 # 1. download the supporting data (e.g reference genome build data) if it is not already present. 
 # 2. download the docker image and run it. The script will also download the run helper scripts if they are not already present. 
-# 3. create the serverconfig.json file based on the genome builds specified. The script will also create the 'TP' directory if it is not already present, alongwith the directory structure and download the supporting data if it is not already present. 
+# 3. create the serverconfig.json file based on the genome builds specified. The script will also create the data directory (data_directory) if it is not already present, alongwith the directory structure and download the supporting data if it is not already present. 
 
 ## To run a local instance of PP, do the following:
 
-# 1. first cd into 'TP' directory and download the install_pp.sh script using the command:
+# 1. first cd into 'data_directory' and download the install_pp.sh script using the command:
 # wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/install_pp.sh
-# 2. then under the same 'TP' directory run the script using the command:
-# sh ./install_pp.sh -g hg19,hg38 -t /path/to/tp
+# 2. then under the same 'data_directory' run the script using the command:
+# sh ./install_pp.sh -g hg19,hg38 -t /path/to/data_directory
 # 3. Now on your browser, go to http://localhost:3456 to access the ProteinPaint server.
-
+# 4. After finishing analyzing data using PP, the docker image can be stopped using the command: docker stop pp && docker rm pp
 set -euo pipefail
 
 USAGE="Usage:
