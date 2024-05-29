@@ -27,7 +27,18 @@ on:
         description: Build secret
 
 jobs:
+  check-user-permissions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check user permission
+        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
+        with:
+          BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_BUILD_SECRET: ${{ github.event.inputs.build_secret }}
+
   publish-npm:
+    needs: check-user-permissions
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -36,29 +47,6 @@ jobs:
     outputs:
       updated_rust: ${{ steps.version_bump.outputs.updated_rust }}
     steps:
-      - name: Check secret
-        run: |
-          if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
-            echo "Wrong build secret."
-            exit 1
-          fi
-
-      - name: Check user permission
-        id: check
-        uses: scherermichael-oss/action-has-permission@master
-        with:
-          required-permission: write
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Exit if user doesn't have write permission
-        run: |
-          if [ "${{ steps.check.outputs.has-permission }}" = "false" ]
-            then
-            echo "Only users with write permission are allowed to execute this workflow manually."
-            exit 1
-          fi
-
       - uses: actions/checkout@v3
         with:
           token: ${{ secrets.PAT }}
@@ -83,7 +71,6 @@ jobs:
           if [ "${{ github.event.inputs.include }}" = "npm packages only" ]; then
             exclude="-x=container";
           fi
-
 
           . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
           
@@ -125,34 +112,10 @@ jobs:
     needs: rust-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Upload rust assets
+        uses: stjude/proteinpaint/.github/actions/upload-rust-assets@master
         with:
-          token: ${{ secrets.PAT }}
-
-      - name: Download Rust Binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: rust-binaries
-          path: rust-binaries
-
-      - name: Rename Rust Binaries
-        id: rename_rust_binaries
-        run: |
-          git pull
-          git fetch --all --tags
-          PP_RUST_TAG="$(node -p "require('./rust/package.json').version")";
-          PP_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
-          echo "::set-output name=pp_tag::$PP_TAG";
-          RENAMED="rust-binaries-$PP_RUST_TAG-linux-x64.tar.gz"
-          tar -czvf "$RENAMED" -C rust-binaries .
-          echo "::set-output name=renamed_rust_binaries::$RENAMED";
-
-      - uses: AButler/upload-release-assets@v3.0
-        with:
-          files: "${{ steps.rename_rust_binaries.outputs.renamed_rust_binaries }}"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          release-tag: ${{ steps.rename_rust_binaries.outputs.pp_tag }}
-
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-docker-no-new-rust-module:
     if: needs.publish-npm.outputs.updated_rust == 'false' && github.event.inputs.include == 'npm packages + Docker image'

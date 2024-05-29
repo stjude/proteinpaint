@@ -1,0 +1,35 @@
+name: 'Upload rust assets'
+description: 'Upload rust assets to latest release'
+inputs:
+  GITHUB_TOKEN:
+    description: 'Github token'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v3
+
+    - name: Download Rust Binaries
+      uses: actions/download-artifact@v4
+      with:
+        name: rust-binaries
+        path: rust-binaries
+
+    - name: Rename Rust Binaries
+      shell: bash
+      id: rename_rust_binaries
+      run: |
+        git pull
+        git fetch --all --tags
+        PP_RUST_TAG="$(node -p "require('./rust/package.json').version")";
+        PP_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+        echo "::set-output name=pp_tag::$PP_TAG";
+        RENAMED="rust-binaries-$PP_RUST_TAG-linux-x64.tar.gz"
+        tar -czvf "$RENAMED" -C rust-binaries .
+        echo "::set-output name=renamed_rust_binaries::$RENAMED";
+
+    - uses: AButler/upload-release-assets@v3.0
+      with:
+        files: "${{ steps.rename_rust_binaries.outputs.renamed_rust_binaries }}"
+        repo-token: ${{ inputs.GITHUB_TOKEN }}
+        release-tag: ${{ steps.rename_rust_binaries.outputs.pp_tag }}

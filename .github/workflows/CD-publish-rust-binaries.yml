@@ -11,8 +11,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check user permission
-        uses: stjude/proteinpaint/.github/actions/check-user-permissions@new-workflows
+        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
         with:
           BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_BUILD_SECRET: ${{ github.event.inputs.build_secret }}
+
+  rust-build:
+    needs: check-user-permissions
+    uses: ./.github/workflows/CI-rust-build.yml
+
+  upload-rust-assets:
+    needs: rust-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload rust assets
+        uses: stjude/proteinpaint/.github/actions/upload-rust-assets@master
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
