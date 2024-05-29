@@ -8,7 +8,7 @@ USAGE="Usage:
 
 	-g GENOME BUILDS: (hg19/hg38) Separate multiple genome builds using ','; Currently only support hg19 and hg38. Will add other genome builds later. 
 	-t TP_DIRECTORY: Path to tp directory
-        -e EXISTING (optional)(true/false): Does supporting data need to be downloaded? If yes, then no download will occur
+        -e EXISTING (optional)(true/false): Does supporting data need to be downloaded? If true, then no download will occur
         -tag TAG (optional): TAG of PP build. By default it uses "'latest'"
 "
 
@@ -48,7 +48,6 @@ while getopts ":g:t:h:e:" opt; do
 	esac
 done
 
-echo "DOWNLOAD:$DOWNLOAD"	  
 # Download docker image and run it
 
 IMAGE_NAME=ghcr.io/stjude/ppfull:$TAG # may use ppserver:$TAG for server-only image
@@ -93,17 +92,13 @@ num_genome_builds=0
 for element in "${array[@]}"; do
     echo "$element"
     if [ "$element" = "hg19" ]; then
-        echo "This is hg19"
 	hg19=true
-	echo $hg19
 	num_genome_builds=$((num_genome_builds+1))
     elif [ "$element" = "hg38" ]; then
-        echo "This is hg38"
 	hg38=true
-	echo $hg38
 	num_genome_builds=$((num_genome_builds+1))
     else
-	echo "None of these"
+	echo "None of the genome builds currently available"
 	exit 1
     fi	
 done
@@ -207,7 +202,9 @@ if [ "$DOWNLOAD" = true ]; then
       curl https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz.tbi -O
       curl https://proteinpaint.stjude.org/ppSupport/dbsnp-slice/dbsnp.hg38.bb -O
    fi    
-   
+
+   curl https://proteinpaint.stjude.org/ppSupport/hicfiles.tgz -O
+   tar zxvf hicfiles.tgz # Releases the "hicFragment/" and "hicTAD/" folders under anno/
    cd db/
    curl https://proteinpaint.stjude.org/ppSupport/db/proteindomain.db -O
    
