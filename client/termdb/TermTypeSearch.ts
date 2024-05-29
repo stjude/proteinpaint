@@ -200,10 +200,12 @@ export class TermTypeSearch {
 
 	getState(appState) {
 		return {
+			dslabel: appState.dslabel,
 			termTypeGroup: appState.termTypeGroup,
 			usecase: appState.tree.usecase,
 			isVisible: !appState.submenu.term,
-			selectedTerms: appState.selectedTerms
+			selectedTerms: appState.selectedTerms,
+			termfilter: appState.termfilter
 		}
 	}
 
@@ -237,16 +239,8 @@ export class TermTypeSearch {
 						const _ = await import(`./handlers/${type}.ts`)
 						this.handlerByType[type] = await new _.SearchHandler()
 						if (!this.handlerByType[type].init) throw 'init not implemented'
-						if (this.handlerByType[type].loadTopTerms)
-							this.dom.submitDiv
-								.append('button')
-								.style('margin-left', '5px')
-								.text('Load top terms')
-								.on('click', () => {
-									const terms = this.handlerByType[type].getTopTerms(this.dom.selectedTermsDiv)
-									this.selectTerms(terms)
-								})
-					} else this.loadTopTerms(type)
+					}
+					this.addLoadTopTerms(type)
 				} catch (e) {
 					throw `error with handler='./handlers/${type}.ts': ${e}`
 				}
@@ -259,16 +253,20 @@ export class TermTypeSearch {
 		return termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES || termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY
 	}
 
-	loadTopTerms(type) {
-		let terms
-		if (type == TermTypes.METABOLITE_INTENSITY) terms = [] //call endpoint to get top metabolites
-		if (terms)
+	async addLoadTopTerms(type) {
+		if (type == TermTypes.METABOLITE_INTENSITY)
+			//maybe later other types are supported
 			this.dom.submitDiv
 				.append('button')
 				.style('margin-left', '5px')
 				.text('Load top terms')
-				.on('click', () => {
-					const terms = this.handlerByType[type].getTopTerms()
+				.on('click', async () => {
+					const args = {
+						filter0: this.state.termfilter.filter0,
+						filter: this.state.termfilter.filter,
+						type
+					}
+					const terms = await this.app.vocabApi.getTopTermsByType(args)
 					this.selectTerms(terms)
 				})
 	}

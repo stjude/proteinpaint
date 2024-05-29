@@ -35,6 +35,8 @@ import { validate_query_singleSampleMutation } from '#routes/termdb.singleSample
 import { validate_query_geneExpression } from '#routes/termdb.cluster.ts'
 import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
+import { validate_query_getTopTermsByType } from '#routes/termdb.getTopTermsByType.ts'
+import { TermTypes } from '#shared/terms.js'
 
 /*
 init
@@ -119,6 +121,7 @@ export async function init(ds, genome, _servconfig) {
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
 		await validate_query_metaboliteIntensity(ds, genome)
+		await validate_query_getTopTermsByType(ds, genome) //will be used to get top terms when supported
 		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)
