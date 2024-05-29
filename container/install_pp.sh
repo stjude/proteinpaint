@@ -4,12 +4,12 @@
 set -euo pipefail
 
 USAGE="Usage:
-	./install_pp.sh [-g] [-t] [-e] [-tag] 
+	./install_pp.sh [-g] [-t] [-d] [-v] 
 
 	-g GENOME BUILDS: (hg19/hg38) Separate multiple genome builds using ','; Currently only support hg19 and hg38. Will add other genome builds later. 
 	-t TP_DIRECTORY: Path to tp directory
-        -e EXISTING (optional)(true/false): Does supporting data need to be downloaded? If true, then no download will occur
-        -tag TAG (optional): TAG of PP build. By default it uses "'latest'"
+        -d DOWNLOAD SUPPORTING DATA (optional)(true/false): Is supporting data (e.g reference genome build data) already present? If false, then no download will occur
+        -v VERSION NUMBER (optional): VERSION of PP build. By default it uses "'latest'"
 "
 
 #################
@@ -20,7 +20,7 @@ BUILDS=""
 TP=""
 DOWNLOAD=true
 TAG=latest # can change to a version number like 2.11.2
-while getopts ":g:t:h:e:" opt; do
+while getopts ":g:t:h:d:v:" opt; do
 	case "${opt}" in
 	g)      BUILDS=${OPTARG}
                 ;;
@@ -31,15 +31,15 @@ while getopts ":g:t:h:e:" opt; do
 		echo "$USAGE"
 		exit 1
 		;;
-	e)	if [[ ${OPTARG} = true || ${OPTARG} = false ]]; then
+	d)	if [[ ${OPTARG} = true || ${OPTARG} = false ]]; then
                     DOWNLOAD=${OPTARG}
 		else
-		    echo "-e=${OPTARG} not supported"
+		    echo "-e=${OPTARG} not supported, must be 'true' or 'false'"
 		    echo "$USAGE"
 		    exit 1
 		fi    
 		;;
-	tag)    TAG=${OPTARG}
+	v)    TAG=${OPTARG}
 		;;
         *)
   	        echo "Unrecognized parameter. Use -h to display usage."
