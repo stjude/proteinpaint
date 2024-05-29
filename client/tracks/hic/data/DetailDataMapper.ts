@@ -11,7 +11,6 @@ export class DetailDataMapper {
 		x: {},
 		y: {}
 	}
-	fragData = []
 
 	constructor(hic: any, errList: string[], parent: any) {
 		this.hic = hic
@@ -76,14 +75,13 @@ export class DetailDataMapper {
 	}
 
 	async getData(chrx: ChrPosition, chry: ChrPosition) {
-		// this.fragData = (await this.getFragData(chrx, chry)) as any
 		return await this.dataFetcher.fetchData(
 			this.hic,
 			this.parent('state')['detail'],
 			this.parent('calcResolution') as number,
 			chrx,
 			chry,
-			this.fragData as any
+			this.frag as any
 		)
 	}
 }
