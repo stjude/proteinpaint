@@ -164,7 +164,7 @@ fi
 
 echo '   ],' >> serverconfig.json
 echo "   \"tpmasterdir\": \"${TP_FOLDER}\"," >> serverconfig.json
-echo "   \"cachedir\": \"${TP_FOLDER}\"," >> serverconfig.json # For now using TP dir as cache dir
+echo "   \"cachedir\": \"${TP_FOLDER}/cache_dir\"," >> serverconfig.json
 echo "   \"URL\": \"http://localhost:3456\"," >> serverconfig.json
 echo "   \"gfClient\": \"/home/root/pp/tools/gfClient\"," >> serverconfig.json
 echo "   \"port\": 3000," >> serverconfig.json
@@ -176,6 +176,10 @@ CURRENT_DIR=$PWD
 # Create TP directory if not present
 if [[ ! -d "$TP_FOLDER" ]]; then
   mkdir -p $TP_FOLDER
+fi
+# Create cache directory if not present
+if [[ ! -d "${TP_FOLDER}/cache_dir" ]]; then
+  mkdir -p $TP_FOLDER/cache_dir
 fi
 cd $TP_FOLDER
 if [ "$DOWNLOAD" = true ]; then
