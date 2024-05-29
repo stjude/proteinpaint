@@ -6,6 +6,7 @@ class HicStore {
 		defaultNmeth: string
 		loading: boolean
 		readonly minBinNum_bp: 200
+		readonly minFragSpan: 200
 		readonly initialBinNum: 20
 		settings: {
 			widthHeightPx: number
@@ -21,6 +22,7 @@ class HicStore {
 			defaultNmeth: 'NONE',
 			loading: true,
 			minBinNum_bp: 200,
+			minFragSpan: 200,
 			initialBinNum: 20,
 			settings: {
 				widthHeightPx: 800

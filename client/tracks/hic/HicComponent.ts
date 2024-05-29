@@ -30,10 +30,15 @@ export class HicComponent {
 		controls: []
 	}
 	data: any
-	genomedata: any
+	genomeData = []
+	fragData: any
 	infoBar: any
 	error: any
 	resolution: Resolution
+	// genomeFetcher: GenomeDataFetcher
+	detailDataMapper: DetailDataMapper
+	// dataFetcher: DataFetcher
+	parent: (prop: any) => string | number
 	calcResolution: number | null = null
 	firstRender = true
 	min = 0
@@ -62,6 +67,12 @@ export class HicComponent {
 		this.activeView = this.state.currView
 		this.error = opts.error
 		this.resolution = new Resolution(this.error)
+		this.parent = (prop: any) => {
+			return this[prop]
+		}
+		// this.genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
+		this.detailDataMapper = new DetailDataMapper(this.hic, this.errList, this.parent)
+		// this.dataFetcher = new DataFetcher(this.hic, true, this.errList)
 	}
 
 	getState(appState: any) {
@@ -106,23 +117,27 @@ export class HicComponent {
 		if (this.data?.length) this.data = []
 		if (this.state.currView == 'genome') {
 			/** When returning to the genome view, use cached data */
-			if (this.activeView != 'genome' && this.genomedata?.length) this.data = this.genomedata
+			if (this.activeView != 'genome' && this.genomeData?.length) this.data = this.genomeData
 			else {
 				const genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
-				this.genomedata = await genomeFetcher.getData(obj)
-				this.data = this.genomedata
+				this.genomeData = await genomeFetcher.getData(obj)
+				this.data = this.genomeData
 			}
 		} else if (this.state.currView == 'detail') {
-			const parent = (prop: string, value?: string | number) => {
-				if (value) this[prop] = value
-				return this[prop]
-			}
-			const detailMapper = new DetailDataMapper(this.hic, this.errList, parent)
-			this.data = await detailMapper.getData(this.state.x, this.state.y)
-			if (!this.data.items || this.data.items.length == 0) {
-				this.calcResolution = this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
-				this.data = await detailMapper.getData(this.state.x, this.state.y)
-			}
+			// const parent = (prop: string, value?: string | number) => {
+			// 	if (value) this[prop] = value
+			// 	return this[prop]
+			// }
+			// const detailMapper = new DetailDataMapper(this.hic, this.errList, parent)
+			// if (this.fragData) {
+			// 	this.data = this.fragData
+			// 	return
+			// }
+			this.data = await this.detailDataMapper.getData(this.state.x, this.state.y)
+			// if (!this.data.items || this.data.items.length == 0) {
+			// 	this.calcResolution = this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
+			// 	this.data = await this.detailDataMapper.getData(this.state.x, this.state.y)
+			// }
 		} else {
 			if (!this.state?.x?.chr || !this.state?.y?.chr) {
 				this.errList.push(`No positions provided for ${this.activeView} view.`)
@@ -138,21 +153,41 @@ export class HicComponent {
 		}
 	}
 
-	setResolution(appState: any) {
+	async setResolution(appState: any) {
 		const state = this.app.getState(appState)
 		this.calcResolution = this.resolution.getResolution(state, this.hic) as number
+		if (state.currView == 'detail' && this.calcResolution == null) {
+			/** When the resolution returns null in detail view must calculate the
+			 * frag resolution by getting the frag data. Request data here so it's only
+			 * requested once, instead of requested again (possibly multiple times) in fetchData().
+			 */
+			await this.detailDataMapper.getFragData(state.x, state.y)
+			this.fragData = this.detailDataMapper.frag as any
+			const maxFragSpan = Math.max(
+				this.fragData.x.stop - this.fragData.x.start,
+				this.fragData.y.stop - this.fragData.y.start
+			)
+			this.calcResolution = this.resolution.findResFromArray(
+				maxFragSpan,
+				state.minFragSpan,
+				this.hic.fragresolution,
+				true
+			)
+		} else {
+			// clear frag data so it's not used in fetchData()
+			this.fragData = null
+		}
 		return this.calcResolution
 	}
 
-	setDataArgs(appState: any) {
+	async setDataArgs(appState: any) {
 		const state = this.app.getState(appState)
 		const currView = state[state.currView]
 		const args = {
 			nmeth: currView.nmeth,
-			resolution: this.setResolution(appState),
+			resolution: await this.setResolution(appState),
 			matrixType: currView.matrixType
 		}
-
 		if (state.currView == 'chrpair') {
 			//pos1
 			args['lead'] = state.x.chr
@@ -163,7 +198,7 @@ export class HicComponent {
 	}
 
 	async getViewData(appState: any) {
-		const args = this.setDataArgs(appState)
+		const args = await this.setDataArgs(appState)
 		await this.fetchData(args)
 		if (this.data?.length > 0 || this.data?.items?.length > 0) {
 			const [min, max, absMax] = this.dataMapper.sortData(this.data)
@@ -201,8 +236,8 @@ export class HicComponent {
 			hic: this.hic,
 			parent: (prop: string) => {
 				return this[prop]
-			},
-			resolution: this.calcResolution
+			}
+			//resolution: this.calcResolution
 		})
 		this.infoBar.render()
 	}

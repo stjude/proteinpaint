@@ -23,12 +23,6 @@ export class DetailDataMapper {
 	async getFragData(chrx: ChrPosition, chry: ChrPosition) {
 		try {
 			const xFragData = await this.dataFetcher.getXFragData(this.hic, this.parent('calcResolution') as number, chrx)
-			// if (!xFragData) {
-			// 	//skipped the initial resolution calculation
-			// 	//no need for this step
-			// 	//this.parent('calcResolution', this.resolution!)
-			// 	//TODO: update canvas with and height
-			// } else {
 			if (xFragData) {
 				if (!xFragData.items) {
 					this.errList.push(`No fragment data returned for ${chrx.chr}:${chrx.start}-${chrx.stop}`)
@@ -82,7 +76,7 @@ export class DetailDataMapper {
 	}
 
 	async getData(chrx: ChrPosition, chry: ChrPosition) {
-		this.fragData = (await this.getFragData(chrx, chry)) as any
+		// this.fragData = (await this.getFragData(chrx, chry)) as any
 		return await this.dataFetcher.fetchData(
 			this.hic,
 			this.parent('state')['detail'],
