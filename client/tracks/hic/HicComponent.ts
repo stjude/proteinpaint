@@ -124,20 +124,7 @@ export class HicComponent {
 				this.data = this.genomeData
 			}
 		} else if (this.state.currView == 'detail') {
-			// const parent = (prop: string, value?: string | number) => {
-			// 	if (value) this[prop] = value
-			// 	return this[prop]
-			// }
-			// const detailMapper = new DetailDataMapper(this.hic, this.errList, parent)
-			// if (this.fragData) {
-			// 	this.data = this.fragData
-			// 	return
-			// }
 			this.data = await this.detailDataMapper.getData(this.state.x, this.state.y)
-			// if (!this.data.items || this.data.items.length == 0) {
-			// 	this.calcResolution = this.resolution.updateDetailResolution(this.hic.bpresolution, this.state.x, this.state.y)
-			// 	this.data = await this.detailDataMapper.getData(this.state.x, this.state.y)
-			// }
 		} else {
 			if (!this.state?.x?.chr || !this.state?.y?.chr) {
 				this.errList.push(`No positions provided for ${this.activeView} view.`)
@@ -237,7 +224,6 @@ export class HicComponent {
 			parent: (prop: string) => {
 				return this[prop]
 			}
-			//resolution: this.calcResolution
 		})
 		this.infoBar.render()
 	}
