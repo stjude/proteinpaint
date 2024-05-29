@@ -14,9 +14,7 @@ export class Resolution {
 			return resolution
 		} else if (state.currView == 'detail') {
 			const maxBpWidth = Math.max(state.x.stop - state.x.start, state.y.stop - state.y.start)
-
 			const resolution = this.findResFromArray(maxBpWidth, state.minBinNum_bp, hic.bpresolution)
-
 			return resolution
 		} else {
 			this.error(`Unknown view: ${state.currView}`)
