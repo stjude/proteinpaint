@@ -9,7 +9,6 @@ export class InfoBar {
 	labelRow: Tr
 	valueRow: Tr
 	parent: any
-	resolution: number
 
 	resolutionDiv: any
 	colorScaleLabel: any
@@ -30,7 +29,6 @@ export class InfoBar {
 		this.labelRow = table.append('tr')
 		this.valueRow = table.append('tr')
 		this.parent = opts.parent
-		this.resolution = opts.resolution
 	}
 
 	addLabel = (text: string) => {
@@ -89,9 +87,9 @@ export class InfoBar {
 	}
 
 	update() {
-		const res = this.parent('calcResolution') || this.resolution
+		const res = this.parent('calcResolution') as number
 		let resolutionText: string
-		if (res < Math.min(this.hic.bpresolution)) {
+		if (res < this.hic.bpresolution[this.hic.bpresolution.length - 1]) {
 			resolutionText = `${res} fragment${res > 1 ? 's' : ''}`
 		} else {
 			resolutionText = bplen(res)
