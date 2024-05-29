@@ -32,7 +32,7 @@ export class DetailDataMapper {
 				if (this.errList.length) return
 
 				this.frag.x = {
-					map: xParse.id2coord,
+					id2coord: xParse.id2coord,
 					start: xParse.min,
 					stop: xParse.max
 				}
@@ -67,11 +67,11 @@ export class DetailDataMapper {
 	determineMap(map: Map<number, number[]>, chrx: ChrPosition, chry: ChrPosition) {
 		if (chrx.chr == chry.chr) {
 			for (const [id, pos] of map) {
-				this.frag.x['map'].set(id, pos)
+				this.frag.x['id2coord'].set(id, pos)
 			}
-			this.frag.y['map'] = this.frag.x['map']
+			this.frag.y['id2coord'] = this.frag.x['id2coord']
 		} else {
-			this.frag.y['map'] = map
+			this.frag.y['id2coord'] = map
 		}
 	}
 
