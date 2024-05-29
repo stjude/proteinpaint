@@ -90,7 +90,7 @@ export class TermTypeSearch {
 		this.types = []
 		this.tabs = []
 		this.handlerByType = {}
-		this.dom = { holder: opts.holder, topbar: opts.topbar, selectedTermsDiv }
+		this.dom = { holder: opts.holder, topbar: opts.topbar, selectedTermsDiv, submitDiv: opts.submitDiv }
 	}
 
 	async init(appState) {
@@ -99,6 +99,14 @@ export class TermTypeSearch {
 
 		const state = this.getState(appState)
 		await this.addTabsAllowed(state)
+		if (this.submit_lst)
+			//multiple terms can be selected
+			this.dom.clearbt = this.dom.submitDiv
+				.append('button')
+				.style('margin-left', '5px')
+				.text('Clear')
+				.on('click', () => this.selectTerms([]))
+
 		if (this.tabs.length == 0) throw 'No term types allowed for this use case'
 		this.app.dispatch({ type: 'set_term_type_group', value: this.tabs[0].termTypeGroup })
 
@@ -131,6 +139,7 @@ export class TermTypeSearch {
 			this.dom.selectedTermsDiv.style('display', this.state.selectedTerms.length > 0 ? 'inline-block' : 'none')
 		} else this.dom.selectedTermsDiv.style('display', 'none')
 		this.renderTermsSelected()
+		if (this.dom.clearbt) this.dom.clearbt.property('disabled', this.state.selectedTerms.length == 0)
 	}
 
 	renderTermsSelected() {
@@ -224,13 +233,20 @@ export class TermTypeSearch {
 				if (state.usecase.target && useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
 
 				try {
-					if (
-						termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
-						termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
-					) {
+					if (!this.usesDefaultSearch(termTypeGroup)) {
 						const _ = await import(`./handlers/${type}.ts`)
 						this.handlerByType[type] = await new _.SearchHandler()
-					}
+						if (!this.handlerByType[type].init) throw 'init not implemented'
+						if (this.handlerByType[type].loadTopTerms)
+							this.dom.submitDiv
+								.append('button')
+								.style('margin-left', '5px')
+								.text('Load top terms')
+								.on('click', () => {
+									const terms = this.handlerByType[type].getTopTerms(this.dom.selectedTermsDiv)
+									this.selectTerms(terms)
+								})
+					} else this.loadTopTerms(type)
 				} catch (e) {
 					throw `error with handler='./handlers/${type}.ts': ${e}`
 				}
@@ -239,6 +255,32 @@ export class TermTypeSearch {
 		}
 	}
 
+	usesDefaultSearch(termTypeGroup) {
+		return termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES || termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY
+	}
+
+	loadTopTerms(type) {
+		let terms
+		if (type == TermTypes.METABOLITE_INTENSITY) terms = [] //call endpoint to get top metabolites
+		if (terms)
+			this.dom.submitDiv
+				.append('button')
+				.style('margin-left', '5px')
+				.text('Load top terms')
+				.on('click', () => {
+					const terms = this.handlerByType[type].getTopTerms()
+					this.selectTerms(terms)
+				})
+	}
+
+	selectTerms(terms) {
+		this.app.dispatch({
+			type: 'app_refresh',
+			state: {
+				selectedTerms: terms
+			}
+		})
+	}
 	async setTermTypeGroup(type, termTypeGroup) {
 		await this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
 		const tab = this.tabs.find(tab => tab.termTypeGroup == termTypeGroup)
