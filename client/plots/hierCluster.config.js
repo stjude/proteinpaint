@@ -3,6 +3,7 @@ import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
 import { dtgeneexpression } from '#shared/common.js'
 import { fillTermWrapper, get$id } from '#termsetting'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
+import { NumericModes, TermTypes } from '../shared/terms.js'
 
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
@@ -161,6 +162,41 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					return tw
 				})
 			)
+
+			if (tws.length == 1) {
+				const gene = tws[0].term.gene
+				const tw = { term: { name: gene, gene, type: TermTypes.GENE_EXPRESSION }, q: { mode: NumericModes.continuous } }
+
+				app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'summary',
+						term: tw
+					}
+				})
+				return
+			}
+
+			if (tws.length == 2) {
+				const gene = tws[0].term.gene
+				const tw = { term: { name: gene, gene, type: TermTypes.GENE_EXPRESSION }, q: { mode: NumericModes.continuous } }
+				const gene2 = tws[1].term.gene
+				const tw2 = {
+					term: { name: gene2, gene: gene2, type: TermTypes.GENE_EXPRESSION },
+					q: { mode: NumericModes.continuous }
+				}
+
+				console.log(tw, tw2)
+				app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'summary',
+						term: tw,
+						term2: tw2
+					}
+				})
+				return
+			}
 			group.lst = [...lst, ...tws]
 			if (!group.lst.length) tg.splice(selectedGroup.index, 1)
 

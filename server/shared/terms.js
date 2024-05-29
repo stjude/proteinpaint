@@ -1,3 +1,8 @@
+export const NumericModes = {
+	continuous: 'continuous',
+	discrete: 'discrete'
+}
+
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == TermTypes.CATEGORICAL instead of type == 'categorical'
 export const TermTypes = {
