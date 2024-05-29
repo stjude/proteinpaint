@@ -247,7 +247,11 @@ tape('sortPriority by Mutation categories, default no value sorting, that uses a
 	test.deepEqual(
 		sampleNames,
 		[
-			[2, 3, 1],
+			// NOTE on 5/29/2024:
+			// When prioritizing truncating mutations, samples with F (truncating)
+			// will be sorted before samples with only M (non-truncating)
+			// for a given gene row
+			[3, 2, 1],
 			[5, 4]
 		],
 		'should sort the samples by dt then value'
@@ -256,9 +260,9 @@ tape('sortPriority by Mutation categories, default no value sorting, that uses a
 		simpleMatrix(sampleNames, self.termOrder, rows),
 		// prettier-ignore
 		[ 
-			[ '2', '3', ' ', '5', ' ' ], 
-			[ '2', ' ', '1', '5', ' ' ], 
-			[ ' ', '3', '1', ' ', '4' ] 
+			[ '3', '2', ' ', '5', ' ' ], 
+			[ ' ', '2', '1', '5', ' ' ], 
+			[ '3', ' ', '1', ' ', '4' ] 
 		],
 		'should sort sample and rows in the expected order'
 	)
@@ -373,7 +377,7 @@ tape('custom sortPriority, without filter', async test => {
 	test.deepEqual(
 		sampleNames,
 		[
-			[2, 3, 1],
+			[3, 2, 1],
 			[5, 4]
 		],
 		'should sort the samples by dt then value'
@@ -382,9 +386,9 @@ tape('custom sortPriority, without filter', async test => {
 		simpleMatrix(sampleNames, self.termOrder, rows),
 		// prettier-ignore
 		[ 
-			[ '2', '3', ' ', '5', ' ' ], 
-			[ '2', ' ', '1', '5', ' ' ], 
-			[ ' ', '3', '1', ' ', '4' ] 
+			[ '3', '2', ' ', '5', ' ' ], 
+			[ ' ', '2', '1', '5', ' ' ], 
+			[ '3', ' ', '1', ' ', '4' ] 
 		],
 		'should sort sample and rows in the expected order'
 	)
