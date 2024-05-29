@@ -1,0 +1,39 @@
+name: 'Check user permissions'
+description: 'Checks whether the user has write permission'
+inputs:
+  INPUT_BUILD_SECRET:
+    description: 'Input build secret'
+    required: true
+  BUILD_SECRET:
+    description: 'Build secret'
+    required: true
+  GITHUB_TOKEN:
+    description: 'Github token'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Check secret
+      shell: bash
+      run: |
+        if [ "${{ inputs.INPUT_BUILD_SECRET }}" != "${{ input.BUILD_SECRET }}" ]; then
+          echo "Wrong build secret."
+          exit 1
+        fi
+
+    - name: Check user permission
+      id: check
+      uses: scherermichael-oss/action-has-permission@master
+      with:
+        required-permission: write
+      env:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+
+    - name: Exit if user doesn't have write permission
+      shell: bash
+      run: |
+        if [ "${{ steps.check.outputs.has-permission }}" = "false" ]
+          then
+          echo "Only users with write permission are allowed to execute this workflow manually."
+          exit 1
+        fi
