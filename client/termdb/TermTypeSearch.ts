@@ -94,11 +94,12 @@ export class TermTypeSearch {
 	}
 
 	async init(appState) {
-		this.types = this.app.vocabApi.termdbConfig?.allowedTermTypes
+		this.types = this.app.vocabApi.termdbConfig?.allowedTermTypes || ['categorical'] //if no types it is a custom vocab for testing
 		if (!this.types) return
 
 		const state = this.getState(appState)
 		await this.addTabsAllowed(state)
+		if (this.tabs.length == 0) throw 'No term types allowed for this use case'
 		this.app.dispatch({ type: 'set_term_type_group', value: this.tabs[0].termTypeGroup })
 
 		if (this.tabs.length == 1 && this.tabs[0].termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES) return

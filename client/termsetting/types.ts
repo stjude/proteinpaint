@@ -71,7 +71,7 @@ type BaseTermSettingOpts = {
 	//Optional
 	abbrCutoff?: number
 	activeCohort?: number
-	disable_terms?: string[]
+	disable_terms?: Term[]
 	handler: Handler
 	noTermPromptOptions?: NoTermPromptOptsEntry[]
 }

@@ -97,7 +97,7 @@ export class TermSetting {
 	activeCohort?: number
 	placeholder?: string
 	durations: { exit: number }
-	disable_terms?: string[]
+	disable_terms?: Term[]
 	usecase?: UseCase
 	abbrCutoff?: number
 	$id?: string
