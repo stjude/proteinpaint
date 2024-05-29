@@ -55,6 +55,7 @@ export class DetailDataMapper {
 					}
 
 					this.determineMap(yParse.id2coord, chrx, chry)
+					return this.frag
 				}
 			}
 		} catch (e: any) {
@@ -63,7 +64,7 @@ export class DetailDataMapper {
 		}
 	}
 
-	determineMap(map, chrx: ChrPosition, chry: ChrPosition) {
+	determineMap(map: Map<number, number[]>, chrx: ChrPosition, chry: ChrPosition) {
 		if (chrx.chr == chry.chr) {
 			for (const [id, pos] of map) {
 				this.frag.x['map'].set(id, pos)
@@ -74,14 +75,14 @@ export class DetailDataMapper {
 		}
 	}
 
-	async getData(chrx: ChrPosition, chry: ChrPosition) {
+	async getData(chrx: ChrPosition, chry: ChrPosition, fragCoords?: { x: any; y: any }) {
 		return await this.dataFetcher.fetchData(
 			this.hic,
 			this.parent('state')['detail'],
 			this.parent('calcResolution') as number,
 			chrx,
 			chry,
-			this.frag as any
+			fragCoords
 		)
 	}
 }

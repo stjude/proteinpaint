@@ -124,7 +124,7 @@ export class HicComponent {
 				this.data = this.genomeData
 			}
 		} else if (this.state.currView == 'detail') {
-			this.data = await this.detailDataMapper.getData(this.state.x, this.state.y)
+			this.data = await this.detailDataMapper.getData(this.state.x, this.state.y, this.fragData)
 		} else {
 			if (!this.state?.x?.chr || !this.state?.y?.chr) {
 				this.errList.push(`No positions provided for ${this.activeView} view.`)
@@ -148,8 +148,7 @@ export class HicComponent {
 			 * frag resolution by getting the frag data. Request data here so it's only
 			 * requested once, instead of requested again (possibly multiple times) in fetchData().
 			 */
-			await this.detailDataMapper.getFragData(state.x, state.y)
-			this.fragData = this.detailDataMapper.frag as any
+			this.fragData = await this.detailDataMapper.getFragData(state.x, state.y)
 			const maxFragSpan = Math.max(
 				this.fragData.x.stop - this.fragData.x.start,
 				this.fragData.y.stop - this.fragData.y.start
