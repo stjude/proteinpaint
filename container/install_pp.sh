@@ -10,11 +10,11 @@
 
 ## To run a local instance of PP, do the following:
 
-# first cd into 'TP' directory and download the install_pp.sh script using the command:
+# 1. first cd into 'TP' directory and download the install_pp.sh script using the command:
 # wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/install_pp.sh
-
-# then under the same 'TP' directory run the script using the command:
+# 2. then under the same 'TP' directory run the script using the command:
 # sh ./install_pp.sh -g hg19,hg38 -t /path/to/tp
+# 3. Now on your browser, go to http://localhost:3456 to access the ProteinPaint server.
 
 set -euo pipefail
 
