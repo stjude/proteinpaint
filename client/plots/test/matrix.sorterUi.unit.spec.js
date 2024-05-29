@@ -231,18 +231,18 @@ tape('tiebreaker disabled', async test => {
 	)
 
 	test.equal(
-		select(trs[2].lastChild).select('button').html(),
+		select(trs[1].lastChild).select('button').html(),
 		'Enable',
 		'should indicate that the CNV tiebreaker is not active'
 	)
 
-	select(trs[2].lastChild).select('button').node().click()
+	select(trs[1].lastChild).select('button').node().click()
 	const activeTieBreakers = ui.activeOption.sortPriority[0].tiebreakers
 	ui.apply()
 
 	test.deepEqual(
-		activeTieBreakers[2].disabled,
-		config.settings.matrix.sortOptions[s.sortSamplesBy].sortPriority[0].tiebreakers[2]?.disabled,
+		activeTieBreakers[1].disabled,
+		config.settings.matrix.sortOptions[s.sortSamplesBy].sortPriority[0].tiebreakers[1]?.disabled,
 		'should adjust the CNV tiebreaker disabled after clicking apply'
 	)
 
