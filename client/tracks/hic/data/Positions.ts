@@ -11,6 +11,17 @@ export class Positions {
 		this.resolution = new Resolution(this.error)
 		this.minBinNum_bp = minBinNum_bp
 	}
+	/**
+	 *
+	 * @param x x coordinate of pointer
+	 * @param y y coordinate of pointer
+	 * @param binpx
+	 * @param chrx x chr from state
+	 * @param chry y chr from state
+	 * @param hic
+	 * @param initialBinNum Set in the state
+	 * @returns
+	 */
 	setPosition(
 		x: number,
 		y: number,
@@ -18,7 +29,6 @@ export class Positions {
 		chrx: { chr: string },
 		chry: { chr: string },
 		hic: any,
-		/** Set in the state */
 		initialBinNum: number
 	) {
 		const resolution = this.resolution.getChrPairResolution(hic, chrx, chry, this.minBinNum_bp)
