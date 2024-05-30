@@ -117,21 +117,13 @@ export class DetailBlock {
 		// 	return
 		// }
 
-		const config = this.isYblock
-			? {
-					y: {
-						chr: this.block.rglst[0].chr,
-						start: this.block.rglst[0].start,
-						stop: this.block.rglst[0].stop
-					}
-			  }
-			: {
-					x: {
-						chr: this.block.rglst[0].chr,
-						start: this.block.rglst[0].start,
-						stop: this.block.rglst[0].stop
-					}
-			  }
+		const config = {
+			[this.isYblock ? 'y' : 'x']: {
+				chr: this.block.rglst[0].chr,
+				start: this.block.rglst[0].start,
+				stop: this.block.rglst[0].stop
+			}
+		}
 		if (this.firstRender >= 2) {
 			/**Dispatches on change per block
 			 * Should only dispatch once per change (e.g. changing

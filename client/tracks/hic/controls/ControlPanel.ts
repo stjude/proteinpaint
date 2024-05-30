@@ -246,10 +246,8 @@ class ControlPanel {
 
 	zoomBlockCallback = (bool: boolean) => {
 		const detailView = this.parent('detail')
-		const xBlock = detailView.xBlock.block
-		const yBlock = detailView.yBlock.block
-		xBlock.zoomblock(2, bool)
-		yBlock.zoomblock(2, bool)
+		detailView.xBlock.block.zoomblock(2, bool)
+		detailView.yBlock.block.zoomblock(2, bool)
 	}
 
 	showBtns() {

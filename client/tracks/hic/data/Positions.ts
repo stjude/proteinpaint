@@ -2,6 +2,7 @@ import { Resolution } from './Resolution.ts'
 
 export class Positions {
 	resolution: Resolution
+	/** Set in the state */
 	minBinNum_bp: number
 	error: (f: string | string[]) => void
 
@@ -17,6 +18,7 @@ export class Positions {
 		chrx: { chr: string },
 		chry: { chr: string },
 		hic: any,
+		/** Set in the state */
 		initialBinNum: number
 	) {
 		const resolution = this.resolution.getChrPairResolution(hic, chrx, chry, this.minBinNum_bp)
