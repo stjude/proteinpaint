@@ -638,7 +638,7 @@ export async function openHiercluster(term, samplelstTW, app, id, newId) {
 }
 
 async function runDEanalysis(self) {
-	return await dofetch3('DEanalysis', {
+	const output = await dofetch3('DEanalysis', {
 		body: {
 			genome: self.app.vocabApi.vocab.genome,
 			dslabel: self.app.vocabApi.vocab.dslabel,
@@ -648,4 +648,6 @@ async function runDEanalysis(self) {
 			method: self.settings.method
 		}
 	})
+	if (output.error) console.log('server side error:', output.error)
+	return output
 }

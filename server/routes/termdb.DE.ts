@@ -1,8 +1,10 @@
 //import fs from 'fs'
+import path from 'path'
 import { DERequest, DEResponse } from 'shared/types/routes/termdb.DE.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { get_ds_tdb } from '#src/termdb.js'
 import run_R from '../src/run_R'
+import serverconfig from '../src/serverconfig.js'
 
 export const api = {
 	endpoint: 'DEanalysis',
@@ -32,6 +34,7 @@ function init({ genomes }) {
 			res.send(results)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
+			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}
 }
@@ -47,7 +50,7 @@ async function run_DE(param: DERequest, ds: Any) {
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
 	const group1names = []
-	let group1names_not_found = 0
+	//let group1names_not_found = 0
 	//const group1names_not_found_list = []
 	for (const s of param.samplelst.groups[0].values) {
 		if (!Number.isInteger(s.sampleId)) continue
@@ -56,12 +59,12 @@ async function run_DE(param: DERequest, ds: Any) {
 		if (q.allSampleSet.has(n)) {
 			group1names.push(n)
 		} else {
-			group1names_not_found += 1
+			//group1names_not_found += 1
 			//group1names_not_found_list.push(n)
 		}
 	}
 	const group2names = []
-	let group2names_not_found = 0
+	//let group2names_not_found = 0
 	//const group2names_not_found_list = []
 	for (const s of param.samplelst.groups[1].values) {
 		if (!Number.isInteger(s.sampleId)) continue
@@ -70,7 +73,7 @@ async function run_DE(param: DERequest, ds: Any) {
 		if (q.allSampleSet.has(n)) {
 			group2names.push(n)
 		} else {
-			group2names_not_found += 1
+			//group2names_not_found += 1
 			//group2names_not_found_list.push(n)
 		}
 	}
