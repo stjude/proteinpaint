@@ -19,7 +19,7 @@ jobs:
 
   rust-build:
     needs: check-user-permissions
-    uses: ./.github/workflows/CI-rust-build.yml
+    uses: ./.github/workflows/CD-rust-build.yml
 
   upload-rust-assets:
     needs: rust-build

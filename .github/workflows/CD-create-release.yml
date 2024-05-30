@@ -106,7 +106,7 @@ jobs:
   rust-build:
     if: needs.publish-npm.outputs.updated_rust == 'true'
     needs: publish-npm
-    uses: ./.github/workflows/CI-rust-build.yml
+    uses: ./.github/workflows/CD-rust-build.yml
 
   upload-rust-assets:
     needs: rust-build

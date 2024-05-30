@@ -11,36 +11,22 @@ on:
   workflow_call: {}
 
 jobs:
+  check-user-permissions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check user permission
+        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
+        with:
+          BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_BUILD_SECRET: ${{ github.event.inputs.build_secret }}
+
   build:
+    needs: check-user-permissions
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Check secret
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
-            echo "Wrong build secret."
-            exit 1
-          fi 
-
-      - name: Check user permission
-        if: github.event_name == 'workflow_dispatch'
-        id: check
-        uses: scherermichael-oss/action-has-permission@master
-        with:
-          required-permission: write
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Exit if user doesn't have write permission
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          if [ "${{ steps.check.outputs.has-permission }}" = "false" ]; then
-            echo "Only users with write permission are allowed to execute this workflow."
-            exit 1
-          fi
-
       - uses: actions/checkout@v3
         with:
           fetch-depth: 10
