@@ -16,7 +16,7 @@ runs:
     - name: Check secret
       shell: bash
       run: |
-        if [ "${{ inputs.INPUT_BUILD_SECRET }}" != "${{ input.BUILD_SECRET }}" ]; then
+        if [ "${{ inputs.INPUT_BUILD_SECRET }}" != "${{ inputs.BUILD_SECRET }}" ]; then
           echo "Wrong build secret."
           exit 1
         fi
