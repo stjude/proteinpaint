@@ -1,11 +1,14 @@
-import { dtgeneexpression } from '#shared/common.js'
+import { TermTypes } from '../shared/terms'
 
 export function maySetSandboxHeader() {
 	// run only once upon init, after state and dataType is given
 	if (!this.dom.header) return // no header
 	switch (this.config.settings.hierCluster.dataType) {
-		case dtgeneexpression:
+		case TermTypes.GENE_EXPRESSION:
 			this.dom.header.text('Gene Expression Clustering')
+			break
+		case TermTypes.METABOLITE_INTENSITY:
+			this.dom.header.text('Metabolite Intensity Clustering')
 			break
 		default:
 			throw 'unknown hierCluster.dataType to set header'

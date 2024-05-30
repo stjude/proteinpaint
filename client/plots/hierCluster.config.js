@@ -1,11 +1,11 @@
 import { copyMerge } from '../rx'
 import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
-import { dtgeneexpression } from '#shared/common.js'
 import { fillTermWrapper, get$id } from '#termsetting'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 import { NumericModes, TermTypes } from '../shared/terms.js'
 
 export async function getPlotConfig(opts = {}, app) {
+	console.log('getPlotConfig', opts)
 	opts.chartType = 'hierCluster'
 	const config = await getMatrixPlotConfig(opts, app)
 	// opts.genes will be processed as the hierCluster term group.lst
@@ -19,7 +19,7 @@ export async function getPlotConfig(opts = {}, app) {
 		- non-gene genomic stuff that resolves into numeric quantities (cpg meth)
 		- metabolite
 		*/
-		dataType: dtgeneexpression,
+		dataType: opts.termgroups?.[0]?.termType || TermTypes.GENE_EXPRESSION,
 		// TODO: may adjust the default group name based on automatically detected term types
 		// otherwise, should define it via opts or overrides
 		termGroupName: 'Gene Expression',
@@ -55,11 +55,11 @@ export async function getPlotConfig(opts = {}, app) {
 	hcTermGroup.type = 'hierCluster' // ensure that the group.type is correct for recovered legacy sessions
 
 	if (!hcTermGroup.lst?.length) {
-		const genes = opts.genes || []
-		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
+		const genes = opts.terms || []
+		if (!Array.isArray(opts.terms)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
 		const twlst = []
-		for (const i of opts.genes) {
+		for (const i of opts.terms) {
 			let tw
 			// FIXME: should not hardcode term type here
 			// hierarchical clustering will need to be performed
@@ -186,7 +186,6 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					q: { mode: NumericModes.continuous }
 				}
 
-				console.log(tw, tw2)
 				app.dispatch({
 					type: 'plot_create',
 					config: {

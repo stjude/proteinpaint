@@ -1,6 +1,5 @@
 import { isDictionaryType, TermTypes } from '#shared/terms'
 import { getBin } from './termdb.matrix.js'
-import { dtmetaboliteintensity, dtgeneexpression } from '#shared/common.js'
 
 /*
 nested filter documented at:
@@ -233,13 +232,13 @@ async function get_geneExpression(tvs, CTEname, ds) {
 		/** distance method */
 		distanceMethod: 'euclidean',
 		/** Data type */
-		dataType: dtgeneexpression,
+		dataType: TermTypes.GENE_EXPRESSION,
 		genes: [{ gene: tvs.term.gene }]
 	}
 	const data = await ds.queries.geneExpression.get(args)
 	const samples = []
-	for (const sampleId in data.gene2sample2value.get(tvs.term.gene)) {
-		const values = data.gene2sample2value.get(tvs.term.gene)
+	for (const sampleId in data.term2sample2value.get(tvs.term.gene)) {
+		const values = data.term2sample2value.get(tvs.term.gene)
 		const value = Number(values[sampleId])
 		const filterBin = getBin(tvs.ranges, value)
 		if (filterBin != -1) samples.push(sampleId)
@@ -267,11 +266,11 @@ async function get_metaboliteIntensity(tvs, CTEname, ds) {
 		/** distance method */
 		distanceMethod: 'euclidean',
 		/** Data type */
-		dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
+		dataType: TermTypes.METABOLITE_INTENSITY, //metabolite intensity type defined for the dataset???
 		metabolites: [tvs.term.name]
 	}
 	const data = await ds.queries.metaboliteIntensity.get(args)
-	const termData = data.metabolite2sample2value.get(tvs.term.name)
+	const termData = data.term2sample2value.get(tvs.term.name)
 	const samples = []
 
 	for (const sample in termData) {

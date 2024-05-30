@@ -1,4 +1,4 @@
-import { Term, BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting, BaseTerm } from './term.ts'
+import { BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting, BaseTerm } from './term.ts'
 import { BaseQ } from './term.ts'
 
 /**

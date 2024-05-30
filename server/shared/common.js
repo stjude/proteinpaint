@@ -31,7 +31,6 @@ export const dtdel = 7
 export const dtnloss = 8
 export const dtcloss = 9
 export const dtloh = 10 // to be used in svcnv track
-export const dtmetaboliteintensity = 11
 export const plotColor = '#ce768e'
 
 export const dt2label = {
@@ -44,8 +43,7 @@ export const dt2label = {
 	[dtnloss]: 'N-loss',
 	[dtcloss]: 'C-loss',
 	[dtloh]: 'LOH',
-	[dtgeneexpression]: 'Gene Expression',
-	[dtmetaboliteintensity]: 'Metabolite Intensity'
+	[dtgeneexpression]: 'Gene Expression'
 }
 
 export const mclass = {

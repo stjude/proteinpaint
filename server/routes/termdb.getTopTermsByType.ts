@@ -84,7 +84,6 @@ function nativeValidateQuery(ds: any, type: string) {
 				samples.push(n)
 			}
 		}
-		console.log('samples', samples)
 
 		// call rust to compute top genes on these samples
 		const terms = await computeTopTerms(q, ds, typeQuery.file, samples)

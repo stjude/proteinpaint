@@ -5,11 +5,11 @@ import * as interactivity from './hierCluster.interactivity'
 import { dofetch3 } from '#common/dofetch'
 import { extent } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
-import { dtgeneexpression } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { getNormalRoot } from '#filter'
 export * from './hierCluster.config'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
+import { TermTypes } from '../shared/terms'
 /*
 FIXME items
 
@@ -181,8 +181,8 @@ export class HierCluster extends Matrix {
 			join: 'and',
 			lst: state.config.legendValueFilter.lst.filter(f => !f.tvs.legendFilterType)
 		}
-		const genes = this.getClusterRowTermsAsParameter()
-		if (!genes.length) throw 'no data'
+		const terms = this.getClusterRowTermsAsParameter()
+		if (!terms.length) throw 'no data'
 		// !!! NOTE !!!
 		// all parameters here must remove payload properties that are
 		// not relevant to the data request, so that the dofetch and/or
@@ -196,12 +196,13 @@ export class HierCluster extends Matrix {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
 			dataType: s.dataType,
-			genes,
 			clusterMethod: s.clusterMethod,
 			distanceMethod: s.distanceMethod,
+			terms,
 			filter: getNormalRoot(filterJoin([state.filter, dictionaryLegendFilter])),
 			filter0: state.filter0
 		}
+
 		return body
 	}
 
@@ -263,14 +264,22 @@ export class HierCluster extends Matrix {
 	*/
 	getClusterRowTermsAsParameter() {
 		const lst = []
-		if (this.config.settings.hierCluster.dataType == dtgeneexpression) {
+		if (this.config.settings.hierCluster.dataType == TermTypes.GENE_EXPRESSION) {
 			/* all items from .lst[] are expected to be {gene} */
 			for (const tw of this.hcTermGroup.lst) {
-				if (tw.term.type != 'geneVariant') throw 'not geneVariant term while dataType==dtgeneexpression'
+				if (tw.term.type != 'geneVariant') throw 'not geneVariant term while dataType==geneExpression'
 				// see notes above, avoid modifying the state unnecessarily
 				// ** select the properties to include **, since GDC term.values (computed incrementally)
 				// or cohort-dependent term.categories2samplecount can affect caching
 				lst.push({ name: tw.term.name, type: tw.term.type, gene: tw.term.gene || tw.term.name })
+			}
+		} else if (this.config.settings.hierCluster.dataType == TermTypes.METABOLITE_INTENSITY) {
+			/* all items from .lst[] are expected to be {gene} */
+			for (const tw of this.hcTermGroup.lst) {
+				// see notes above, avoid modifying the state unnecessarily
+				// ** select the properties to include **, since GDC term.values (computed incrementally)
+				// or cohort-dependent term.categories2samplecount can affect caching
+				lst.push({ name: tw.term.name, type: tw.term.type })
 			}
 		} else {
 			throw 'unknown dataType'

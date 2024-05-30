@@ -1487,7 +1487,7 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, must still return expected structure with no data
-			return { metabolite2sample2value: new Set(), byTermId: {}, bySampleId: {} }
+			return { term2sample2value: new Set(), byTermId: {}, bySampleId: {} }
 		}
 
 		// has at least 1 sample passing filter and with intensity data
@@ -1505,17 +1505,18 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 			}
 		}
 
-		const metabolite2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
+		const term2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
 		for (const m of param.metabolites) {
+			console.log('metabolite:', m)
 			if (!m) continue
 
 			const s2v = {}
-			let metabolite = m
+			let metabolite = m.name
 			await utils.get_lines_txtfile({
 				args: [q.file],
 				callback: line => {
 					const l = line.split('\t')
-					if (!l[0].toLowerCase().includes(m.toLowerCase())) return
+					if (!l[0].toLowerCase().includes(metabolite.toLowerCase())) return
 					metabolite = l[0]
 					for (let i = 1; i < l.length; i++) {
 						const sampleId = samples[i - 1]
@@ -1525,13 +1526,13 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 						if (Number.isNaN(v)) throw 'exp value not number'
 						s2v[sampleId] = v
 					}
-					if (Object.keys(s2v).length) metabolite2sample2value.set(metabolite, s2v) // only add metabolite if it has data
+					if (Object.keys(s2v).length) term2sample2value.set(metabolite, s2v) // only add metabolite if it has data
 				}
 			})
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
-		return { metabolite2sample2value, byTermId, bySampleId }
+		return { term2sample2value, byTermId, bySampleId }
 	}
 }
 

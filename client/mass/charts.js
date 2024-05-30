@@ -1,7 +1,7 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter/filter'
-import { TermTypes } from '../shared/terms'
+import { NumericModes, TermTypes } from '../shared/terms'
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -213,7 +213,11 @@ function getChartTypeList(self, state) {
 			label: 'Metabolite Intensity',
 			chartType: 'hierCluster',
 			clickTo: self.showTree_selectlst,
-			usecase: { target: 'hierCluster', detail: 'metaboliteIntensity' }
+			usecase: { target: 'hierCluster', detail: 'termgroups' },
+			processSelection: termlst => {
+				const twlst = termlst.map(term => ({ term, q: { mode: NumericModes.continuous } }))
+				return [{ name: 'group1', lst: twlst, type: 'hierCluster', termType: TermTypes.METABOLITE_INTENSITY }]
+			}
 		})
 	}
 	for (const field in state?.termdbConfig.renamedChartTypes || []) {
