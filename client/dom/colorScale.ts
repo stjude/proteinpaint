@@ -3,6 +3,7 @@ import { Elem, SvgG } from '../types/d3'
 import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from './axisstyle'
 import { Selection } from 'd3-selection'
+import { format as d3format } from 'd3-format'
 
 type ColorScaleOpts = {
 	g: SvgG
@@ -138,9 +139,12 @@ export class ColorScale {
 	}
 
 	updateAxis() {
-		const start = Number(this.data[0].toFixed(2))
-		const stop = Number(this.data[this.data.length - 1].toFixed(2))
-		const tickValues = [start, stop]
+		const start = this.data[0] < 0.01 ? this.data[0] : Number(this.data[0].toFixed(2))
+		const stop =
+			this.data[this.data.length - 1] < 0.01
+				? this.data[this.data.length - 1]
+				: Number(this.data[this.data.length - 1].toFixed(2))
+		const tickValues = [start, stop].map(d => Number(d3format('.1e')(d)))
 		this.bar.scaleAxis.selectAll('*').remove()
 
 		if (start < 0 && stop > 0) {
