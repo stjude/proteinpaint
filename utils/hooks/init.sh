@@ -15,7 +15,7 @@ cd $PPDIR
 STATUS="$(which pre-commit)"
 if [[ "$STATUS" == "" || "$STATUS" == "pre-commit not found" ]]; then 
     echo "installing the pre-commit utility using pip3"
-    pip3 install pre-commit
+    pip3 install pre-commit --break-system-packages
     echo "setting the global pre-commit template directory"
     git config --global init.templateDir ~/.git-template
     pre-commit init-templatedir ~/.git-template
