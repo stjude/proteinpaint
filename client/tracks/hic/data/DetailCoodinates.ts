@@ -10,16 +10,20 @@ export class DetailCoordinates {
 		this.errlist = errlist
 	}
 
-	getCoordinates(chrx: ChrPosition, chry: ChrPosition, data: any, resolution: number, canvas: any, fragData?: any) {
+	getCoordinates(
+		chrx: ChrPosition,
+		chry: ChrPosition,
+		data: any,
+		resolution: number,
+		widthHeightPx: number,
+		fragData?: any
+	) {
 		const isFirstX = new FirstChrX(this.hic.chrorder, chrx.chr, chry.chr).isFirstX()
 		const isintrachr = chrx.chr == chry.chr
 
-		const canvaswidth = Number.parseInt(canvas.attr('width'))
-		const canvasheight = Number.parseInt(canvas.attr('height'))
-
 		// pixel per bp
-		const xpxbp = canvaswidth / (chrx.stop - chrx.start)
-		const ypxbp = canvasheight / (chry.stop - chry.start)
+		const xpxbp = widthHeightPx / (chrx.stop - chrx.start)
+		const ypxbp = widthHeightPx / (chry.stop - chry.start)
 
 		const list = this.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data, fragData)
 		return list
@@ -52,7 +56,7 @@ export class DetailCoordinates {
 				*/
 				// convert x
 
-				if (fragData.x.id2coord && fragData.x.id2coord.has(idx_start)) {
+				if (fragData.x.id2coord.has(idx_start)) {
 					const [a, b] = fragData.x.id2coord.get(idx_start)
 					coord1 = a
 					span1 = b - a // note this likely to be replaced by [idx_start+resolution]

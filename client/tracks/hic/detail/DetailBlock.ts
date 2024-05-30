@@ -132,7 +132,7 @@ export class DetailBlock {
 						stop: this.block.rglst[0].stop
 					}
 			  }
-		if (this.firstRender > 2) {
+		if (this.firstRender >= 2) {
 			/**Dispatches on change per block
 			 * Should only dispatch once per change (e.g. changing
 			 * the coordinates, zooming, etc.)
