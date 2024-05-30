@@ -175,8 +175,8 @@ export class DetailView {
 			state.x,
 			state.y,
 			this.data,
-			this.calcResolution as number,
-			this.canvas,
+			this.parent('calcResolution') as number,
+			state.settings.widthHeightPx,
 			this.parent('fragData') as any
 		)
 		this.coords = coords
