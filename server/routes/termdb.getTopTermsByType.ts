@@ -36,7 +36,6 @@ function init({ genomes }) {
 
 			const t = Date.now()
 			const terms = await ds.queries[type].getTopTerms(q)
-			console.log('topTerms', Date.now() - t, 'ms')
 			res.send({ terms } as TermdbTopTermsByTypeResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -60,7 +59,6 @@ export function validate_query_getTopTermsByType(ds: any, genome: any) {
 function nativeValidateQuery(ds: any, type: string) {
 	ds.queries[type].getTopTerms = async (q: TermdbTopTermsByTypeRequest) => {
 		const typeQuery = ds.queries[type] //query to search top terms by type
-		console.log('typeQuery', typeQuery)
 		// get list of samples that are used in current analysis; gE.samples[] contains all sample integer ids with exp data
 		const samples = [] as string[]
 		if (q.filter) {
@@ -92,7 +90,6 @@ function nativeValidateQuery(ds: any, type: string) {
 }
 
 async function computeTopTerms(q, ds, file, samples) {
-	console.log('computeTopTerms', q, ds, file, samples)
 	const rustpath = path.join(__dirname, 'computeTopTerms')
 	const args = [q, ds, file, samples]
 	const result = await run_rust(rustpath, args)

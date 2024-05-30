@@ -5,7 +5,6 @@ import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', b
 import { NumericModes, TermTypes } from '../shared/terms.js'
 
 export async function getPlotConfig(opts = {}, app) {
-	console.log('getPlotConfig', opts)
 	opts.chartType = 'hierCluster'
 	const config = await getMatrixPlotConfig(opts, app)
 	// opts.genes will be processed as the hierCluster term group.lst

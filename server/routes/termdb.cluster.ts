@@ -254,7 +254,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
-		if (term2sample2value.size == 0) throw 'no data available for the input ' + param.genes?.map(g => g.gene).join(', ')
+		if (term2sample2value.size == 0) throw 'no data available for the input ' + param.terms?.map(g => g.name).join(', ')
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }
