@@ -3,7 +3,7 @@ type Items = { rest: string[]; chr: string; start: number; stop: number; rglst: 
 export class ParseFragData {
 	id2coord = new Map()
 	min: number | null = null
-	max: number | any
+	max: number | null = null
 	items: Items[] = []
 	errLst: string[]
 
@@ -25,7 +25,7 @@ export class ParseFragData {
 				this.max = id
 			} else {
 				this.min = Math.min(this.min, id)
-				this.max = Math.max(this.max, id)
+				this.max = Math.max(this.max as number, id)
 			}
 		}
 	}

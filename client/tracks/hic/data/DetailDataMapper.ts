@@ -50,6 +50,7 @@ export class DetailDataMapper {
 					if (this.errList.length) return
 
 					this.frag.y = {
+						id2coord: new Map(),
 						start: yParse.min,
 						stop: yParse.max
 					}

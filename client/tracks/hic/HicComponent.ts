@@ -161,7 +161,7 @@ export class HicComponent {
 				true
 			)
 		} else {
-			// clear frag data so it's not used in fetchData()
+			// clear frag data so it's not used in fetchData() on view_update
 			this.fragData = null
 		}
 		return this.calcResolution
