@@ -2299,6 +2299,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'
 		if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop)))
 			throw 'no gene or position specified'
+		if (tw.q.groupsetting.inuse && !tw.q.dt) throw 'tw.q.dt must be defined when groupsetting is used'
 
 		if (tw.term.subtype == 'snp') throw 'not supported'
 		/* the 'mlst' in this 'if' code block is no longer supported due
@@ -2343,7 +2344,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// otherwise, query all dts in dataset
 		const sample2mlst = new Map()
 		const dts = []
-		if (tw.q.dt) {
+		if (tw.q.groupsetting.inuse) {
 			dts.push(tw.q.dt)
 		} else {
 			if (ds.queries.snvindel) dts.push(dtsnvindel)
