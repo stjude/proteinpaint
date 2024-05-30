@@ -1,7 +1,8 @@
+/** Note */
 export type DERequest = {
 	genome: string
 	dslabel: string
-	samplelst: Any // Determine the correct type of this variable later to ensure type-safety
+	samplelst: any // {number[] number[]} // Determine the correct type of this variable later to ensure type-safety
 	min_count: number
 	min_total_count: number
 	method?: string
