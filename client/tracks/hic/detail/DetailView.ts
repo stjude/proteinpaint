@@ -174,7 +174,7 @@ export class DetailView {
 		const coords = this.coordinates.getCoordinates(
 			state.x,
 			state.y,
-			this.data,
+			this.parent('data'),
 			this.parent('calcResolution') as number,
 			state.settings.widthHeightPx,
 			this.parent('fragData') as any

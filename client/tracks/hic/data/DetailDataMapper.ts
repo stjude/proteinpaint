@@ -53,9 +53,7 @@ export class DetailDataMapper {
 						start: yParse.min,
 						stop: yParse.max
 					}
-
 					this.determineMap(yParse.id2coord, chrx, chry)
-					return this.frag
 				}
 			}
 		} catch (e: any) {

@@ -148,7 +148,8 @@ export class HicComponent {
 			 * frag resolution by getting the frag data. Request data here so it's only
 			 * requested once, instead of requested again (possibly multiple times) in fetchData().
 			 */
-			this.fragData = await this.detailDataMapper.getFragData(state.x, state.y)
+			await this.detailDataMapper.getFragData(state.x, state.y)
+			this.fragData = this.detailDataMapper.frag
 			const maxFragSpan = Math.max(
 				this.fragData.x.stop - this.fragData.x.start,
 				this.fragData.y.stop - this.fragData.y.start
