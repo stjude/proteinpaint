@@ -110,7 +110,7 @@ class ControlPanel {
 			this.controls.minCutoffRow.append('td'),
 			this.parent('min'),
 			this.minCallback
-		).render()
+		).render({ width: '120px' })
 
 		//Max CUTOFF
 		this.controls.maxCutoffRow = menuTable.append('tr') as any
@@ -120,7 +120,7 @@ class ControlPanel {
 			this.controls.maxCutoffRow.append('td'),
 			this.parent('max'),
 			this.maxCallback
-		).render()
+		).render({ width: '120px' })
 
 		//Matrix type
 		this.controls.matrixTypeRow = menuTable.append('tr') as any
@@ -391,11 +391,20 @@ class ControlPanel {
 			this.controls.view.text(state.currView.charAt(0).toUpperCase() + state.currView.slice(1))
 		}
 
+		const formatAbsMin =
+			this.parent('absMin') < 0.00001
+				? Number(this.parent('absMin')).toExponential(1)
+				: Number(this.parent('absMin').toFixed(6))
+		const formatAbsMax =
+			this.parent('absMax') < 0.00001
+				? Number(this.parent('absMax')).toExponential(1)
+				: Number(this.parent('absMax').toFixed(6))
+
 		this.controls.width.select('input').property('value', state.settings.widthHeightPx)
 		this.controls.inputBpMinV.property('value', this.parent('min'))
 		this.controls.inputBpMaxV.property('value', this.parent('max'))
-		this.controls.minCutoffLabel.html(`MIN CUTOFF <br>(>= ${Number(this.parent('absMin').toFixed(6))})`)
-		this.controls.maxCutoffLabel.html(`MAX CUTOFF <br>(<= ${Number(this.parent('absMax').toFixed(6))})`)
+		this.controls.minCutoffLabel.html(`MIN CUTOFF <br>(>= ${formatAbsMin})`)
+		this.controls.maxCutoffLabel.html(`MAX CUTOFF <br>(<= ${formatAbsMax})`)
 
 		this.showBtns()
 		this.showHideControls()
