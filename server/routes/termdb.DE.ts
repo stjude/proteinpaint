@@ -1,6 +1,7 @@
 //import fs from 'fs'
 import { DERequest, DEResponse } from 'shared/types/routes/termdb.DE.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { get_ds_tdb } from '#src/termdb.js'
 import run_R from '../src/run_R'
 
 export const api = {
@@ -20,10 +21,14 @@ export const api = {
 	}
 }
 
-function init() {
+function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			const results = await run_DE(req.query as DERequest)
+			const q = req.query
+			const genome = genomes[q.genome]
+			if (!genome) throw 'invalid genome'
+			const [ds] = get_ds_tdb(genome, q)
+			const results = await run_DE(req.query as DERequest, ds)
 			res.send(results)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -31,13 +36,16 @@ function init() {
 	}
 }
 
-async function run_DE(param: DERequest) {
-	console.log('param:', param)
+async function run_DE(param: DERequest, ds: Any) {
 	if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
 	if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
 	// txt file uses string sample name, must convert integer sample id to string
 	// txt file uses string sample name, must convert integer sample id to string
+
+	const q = ds.queries.rnaseqGeneCount
+	if (!q) return
+	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
 	const group1names = []
 	let group1names_not_found = 0
 	//const group1names_not_found_list = []
@@ -86,10 +94,9 @@ async function run_DE(param: DERequest) {
 		control: controls_string,
 		input_file: q.file,
 		min_count: param.min_count,
-		min_total_count: param.min_total_count,
-		output_path: path.join(serverconfig.binpath, 'utils')
+		min_total_count: param.min_total_count
 	}
-	console.log('expression_input:', expression_input)
+	//console.log('expression_input:', expression_input)
 	//fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
 	//	// For catching input to rust pipeline, in case of an error
 	//	if (err) return console.log(err)
@@ -136,5 +143,6 @@ async function run_DE(param: DERequest) {
 		console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
 		param.method = 'wilcoxon'
 	}
+	//console.log("result:",result)
 	return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
 }
