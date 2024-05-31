@@ -1,1 +1,2 @@
-
+Fixes:
+- Do not trim text returned by gdc gene expression /values API to handle the case of missing value cases at the end

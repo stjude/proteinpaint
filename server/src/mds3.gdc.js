@@ -281,7 +281,12 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 			}
 		})
 		.text()
-	const lines = re.trim().split('\n')
+
+	/* do not trim on any line!
+	had ran into a scenario that /values endpoint may return blank columns for missing exp values, and when those columns are at the end of each line, trim() will cause the last line to have mismatching number of columns
+	(blank column may be explained by pp cache is mismatching with a new data release, awaiting further confirmation)
+	*/
+	const lines = re.split('\n')
 	if (lines.length <= 1) throw 'less than 1 line from tsv response.body'
 
 	// header line:
@@ -300,6 +305,9 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 
 	// each line is data from one gene
 	for (let i = 1; i < lines.length; i++) {
+		// since it no longer trims, this detects when text ends with a newline character and escapes it
+		if (!lines[i]) continue
+
 		const l = lines[i].split('\t')
 		if (l.length != caseHeader.length + 1) throw 'number of fields in gene line does not equal header'
 		const ensg = l[0]
