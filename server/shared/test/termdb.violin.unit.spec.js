@@ -38,6 +38,7 @@ tape('compute bins given an array', function (test) {
 		{ x0: 9, density: 0.03808785560913728 },
 		{ x0: 9.5, density: 0.03465146873165242 },
 		{ x0: 10, density: 0.02784412516636495 },
+		{ x0: 10, density: 0.02784412516636495 },
 		{ x0: 10, density: 0.02784412516636495 }
 	]
 	const result = getBinsDensity(axisScale, v, true, 20)

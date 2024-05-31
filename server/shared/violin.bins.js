@@ -43,7 +43,10 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {
 		: getBinsHist(scale, plot.values, ticks, valuesMin, valuesMax)
 
 	result.bins.unshift({ x0: valuesMin, density: result.densityMin }) //This allows to start the plot from min prob, avoids rendering issues
-	result.bins.push({ x0: valuesMax, density: result.densityMin }) //This allows to finish the plot from min prob
+
+	//This allows to finish the plot on the min prob
+	result.bins.push({ x0: valuesMax, density: result.bins[result.bins.length - 1].density })
+	result.bins.push({ x0: valuesMax, density: result.densityMin })
 	return result
 }
 
