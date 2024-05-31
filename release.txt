@@ -1,2 +1,1 @@
-Features:
-- Adding sorting samples options for hierCluster
+
