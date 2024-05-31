@@ -12,7 +12,7 @@ export class GenomeDataFetcher {
 		this.errList = errList || []
 	}
 
-	async getData(obj) {
+	async getData(obj: { nmeth: number; resolution: number; matrixType: string }) {
 		if (this.data.length) this.data = []
 		if (!obj?.matrixType) obj.matrixType = 'observed'
 		try {
