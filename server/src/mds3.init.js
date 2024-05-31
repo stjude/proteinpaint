@@ -1516,6 +1516,8 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 				args: [q.file],
 				callback: line => {
 					const l = line.split('\t')
+					console.log('l:', l)
+					console.log('metabolite:', metabolite)
 					if (l[0].toLowerCase() != metabolite.toLowerCase()) return
 					metabolite = l[0]
 					console.log('found metabolite:', metabolite)

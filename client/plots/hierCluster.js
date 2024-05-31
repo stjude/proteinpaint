@@ -266,27 +266,8 @@ export class HierCluster extends Matrix {
 
 	*/
 	getClusterRowTermsAsParameter() {
-		const lst = []
-		if (this.config.settings.hierCluster.dataType == TermTypes.GENE_EXPRESSION) {
-			/* all items from .lst[] are expected to be {gene} */
-			for (const tw of this.hcTermGroup.lst) {
-				if (tw.term.type != 'geneVariant') throw 'not geneVariant term while dataType==geneExpression'
-				// see notes above, avoid modifying the state unnecessarily
-				// ** select the properties to include **, since GDC term.values (computed incrementally)
-				// or cohort-dependent term.categories2samplecount can affect caching
-				lst.push({ name: tw.term.name, type: tw.term.type, gene: tw.term.gene || tw.term.name })
-			}
-		} else if (this.config.settings.hierCluster.dataType == TermTypes.METABOLITE_INTENSITY) {
-			/* all items from .lst[] are expected to be {gene} */
-			for (const tw of this.hcTermGroup.lst) {
-				// see notes above, avoid modifying the state unnecessarily
-				// ** select the properties to include **, since GDC term.values (computed incrementally)
-				// or cohort-dependent term.categories2samplecount can affect caching
-				lst.push({ name: tw.term.name, type: tw.term.type })
-			}
-		} else {
-			throw 'unknown dataType'
-		}
+		const lst = [...this.hcTermGroup.lst.map(tw => tw.term)]
+		console.log('lst', lst)
 		// this helps caching by having a more consistent URL string
 		lst.sort((a, b) => (a.name < b.name ? -1 : 1))
 		return lst

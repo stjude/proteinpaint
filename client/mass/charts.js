@@ -209,18 +209,29 @@ function getChartTypeList(self, state) {
 		}
 	]
 	if (state.termdbConfig.allowedTermTypes.includes(TermTypes.METABOLITE_INTENSITY)) {
-		buttons.push({
+		const chart = {
 			label: 'Metabolite Intensity',
 			chartType: 'summary',
 			clickTo: self.showTree_selectlst,
-			usecase: { target: 'summary', detail: 'term' },
-			processSelection: termlst => {
-				let twlst = termlst.map(term => ({ term, q: { mode: NumericModes.continuous } }))
-				if (termlst.length == 1) {
-					return twlst[0]
-				}
+			usecase: { target: 'summary', detail: 'term' }
+		}
+		chart.processSelection = termlst => {
+			let twlst = termlst.map(term => ({
+				term: JSON.parse(JSON.stringify(term)),
+				q: { mode: NumericModes.continuous }
+			}))
+			if (twlst.length == 1) {
+				return twlst[0]
+			} else if (twlst.length == 2) {
+				chart.action.config.term2 = twlst[1]
+				return twlst[0]
+			} else {
+				chart.action.config.chartType = 'hierCluster'
+				chart.usecase = { target: 'hierCluster', detail: 'termgroups' }
+				return [{ name: 'hierCluster', lst: twlst, type: 'hierCluster' }]
 			}
-		})
+		}
+		buttons.push(chart)
 	}
 	for (const field in state?.termdbConfig.renamedChartTypes || []) {
 		const btn = buttons.find(b => b.chartType === field)
@@ -314,6 +325,7 @@ function setRenderers(self) {
 			id: getId(),
 			config: { chartType: chart.chartType }
 		}
+		chart.action = action
 		const termdb = await import('../termdb/app')
 		self.dom.submenu = self.dom.tip.d.append('div')
 		termdb.appInit({
