@@ -109,12 +109,20 @@ export async function barchart_data(q, ds, tdb) {
 	}
 	const terms = [...map.values()]
 	const data = await getData({ filter: q.filter, terms }, q.ds, q.genome)
+	if (data.error) throw data.error
 
 	const samplesMap = new Map()
 	const bins = []
 	if (data.samples) {
-		if (map.get(1)?.term?.type == 'geneVariant' || map.get(2)?.term?.type == 'geneVariant') {
-			//when term1 or term2 is a geneVariant term
+		const t1 = map.get(1)
+		const t2 = map.get(2)
+		if (
+			(t1?.term?.type == 'geneVariant' && !t1.q.groupsetting.inuse) ||
+			(t2?.term?.type == 'geneVariant' && !t2.q.groupsetting.inuse)
+		) {
+			// term1 or term2 is a geneVariant term that is not using groupsetting
+			// data will need to be handled using specialized logic
+			// data from geneVariant term using groupsetting can be handled using regular logic
 			processGeneVariantSamples(map, bins, data, samplesMap, ds)
 		} else {
 			for (let i = 0; i <= 2; i++) {
@@ -145,11 +153,22 @@ export async function barchart_data(q, ds, tdb) {
 							//console.log(`Sample ${sampleId} has no term ${id} value, filtered out`)
 							samplesMap.set(sampleId, null)
 						} else {
-							// this series key will not deduplicate multi-valued samples (those that belong to multiple groups)
-							item[`key${i}`] = i != 1 ? value.key : value.values?.map(v => v.key) || [value.key]
-							item[`val${i}`] = value.value
-							// the dedupkey1 will separate out multi-valued samples
-							if (i === 1) item.dedupkey1 = value.values ? [`${value.values.length}-value samples`] : [value.key]
+							if (tw.term.type == 'geneVariant') {
+								// geneVariant term using groupsetting
+								// value{} will have a .key property (group assignment) and
+								// a .values[] property (mutation data)
+								// only value.key should be used for plotting
+								// FIXME: since value.values[] is not considered for plotting,
+								// item.dedupkey cannot be supported for geneVariant term
+								item[`key${i}`] = i != 1 ? value.key : [value.key]
+								item[`val${i}`] = value.key
+							} else {
+								// this series key will not deduplicate multi-valued samples (those that belong to multiple groups)
+								item[`key${i}`] = i != 1 ? value.key : value.values?.map(v => v.key) || [value.key]
+								item[`val${i}`] = value.value
+								// the dedupkey1 will separate out multi-valued samples
+								if (i === 1) item.dedupkey1 = value.values ? [`${value.values.length}-value samples`] : [value.key]
+							}
 						}
 					} else {
 						item[`key${i}`] = ''

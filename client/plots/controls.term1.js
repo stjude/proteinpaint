@@ -128,6 +128,7 @@ function setRenderers(self) {
 			case 'survival':
 				break
 			case 'geneVariant':
+				self.dom.td1.text('Group variants')
 				break
 			case 'samplelst':
 				break
