@@ -1936,14 +1936,6 @@ function setLabelDragEvents(self, prefix) {
 		//const cls = event.target.className?.baseVal || event.target.parentNode.className?.baseVal || ''
 		if (event.target.innerHTML.includes('grouped by')) return
 		if (event.target.tagName === 'text') {
-			if (
-				self.chartType == 'hierCluster' &&
-				event.target.__data__.grp.name == self.config.settings.hierCluster.termGroupName
-			) {
-				// do not change color when hovering over for hierCluster gene expression term group name label
-				// as the term group menu is disabled for hierCluster gene expression term group for now
-				return
-			}
 			select(event.target).style('fill', 'blue')
 		}
 		if (!self.dragged) return
