@@ -162,12 +162,14 @@ export class DetailView {
 		this.canvasHolder.style('width', `${holderChange}px`).style('height', `${holderChange}px`)
 		this.canvas.attr('width', `${state.settings.widthHeightPx}px`).attr('height', `${state.settings.widthHeightPx}px`)
 
-		this.xBlock.block.width = state.settings.widthHeightPx
-		this.yBlock.block.width = state.settings.widthHeightPx
-
-		//Reloads the block without changing the genomic position
-		this.xBlock.block.zoom2px(0, initialWidth)
-		this.yBlock.block.zoom2px(0, initialWidth)
+		//Only reload the block here if the width and height changed
+		if (this.xBlock.block.width != state.settings.widthHeightPx) {
+			this.xBlock.block.width = state.settings.widthHeightPx
+			this.yBlock.block.width = state.settings.widthHeightPx
+			//Reloads the block without changing the genomic position
+			this.xBlock.block.zoom2px(0, initialWidth)
+			this.yBlock.block.zoom2px(0, initialWidth)
+		}
 
 		this.ctx = this.canvas.node().getContext('2d') as CanvasRenderingContext2D
 
