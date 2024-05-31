@@ -1,9 +1,9 @@
 //import fs from 'fs'
 import path from 'path'
-import { DERequest, DEResponse } from 'shared/types/routes/termdb.DE.ts'
+import { DERequest, DEResponse } from '../shared/types/routes/termdb.DE.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { get_ds_tdb } from '#src/termdb.js'
-import run_R from '../src/run_R'
+import { get_ds_tdb } from '../src/termdb.js'
+import run_R from '../src/run_R.js'
 import serverconfig from '../src/serverconfig.js'
 
 export const api = {
@@ -39,7 +39,7 @@ function init({ genomes }) {
 	}
 }
 
-async function run_DE(param: DERequest, ds: Any) {
+async function run_DE(param: DERequest, ds: any) {
 	/*
 	param{}
 		samplelst{}
@@ -55,7 +55,7 @@ async function run_DE(param: DERequest, ds: Any) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
-	const group1names = []
+	const group1names = [] as string[]
 	//let group1names_not_found = 0
 	//const group1names_not_found_list = []
 	for (const s of param.samplelst.groups[0].values) {
@@ -69,7 +69,7 @@ async function run_DE(param: DERequest, ds: Any) {
 			//group1names_not_found_list.push(n)
 		}
 	}
-	const group2names = []
+	const group2names = [] as string[]
 	//let group2names_not_found = 0
 	//const group2names_not_found_list = []
 	for (const s of param.samplelst.groups[1].values) {
@@ -115,19 +115,19 @@ async function run_DE(param: DERequest, ds: Any) {
 	let result
 	if ((group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) || param.method == 'edgeR') {
 		// edgeR will be used for DE analysis
-		const time1 = new Date()
+		const time1 = new Date().valueOf()
 		result = JSON.parse(
 			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
 		)
-		const time2 = new Date()
+		const time2 = new Date().valueOf()
 		console.log('Time taken to run edgeR:', time2 - time1, 'ms')
 		param.method = 'edgeR'
 		//console.log("result:",result)
 	} else if (param.method == 'wilcoxon') {
 		// Wilcoxon test will be used for DE analysis
-		const time1 = new Date()
+		const time1 = new Date().valueOf()
 		const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
-		const time2 = new Date()
+		const time2 = new Date().valueOf()
 		for (const line of rust_output.split('\n')) {
 			if (line.startsWith('adjusted_p_values:')) {
 				result = JSON.parse(line.replace('adjusted_p_values:', ''))
@@ -139,9 +139,9 @@ async function run_DE(param: DERequest, ds: Any) {
 		param.method = 'wilcoxon'
 	} else {
 		// Wilcoxon test will be used for DE analysis
-		const time1 = new Date()
+		const time1 = new Date().valueOf()
 		const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
-		const time2 = new Date()
+		const time2 = new Date().valueOf()
 		for (const line of rust_output.split('\n')) {
 			if (line.startsWith('adjusted_p_values:')) {
 				result = JSON.parse(line.replace('adjusted_p_values:', ''))
