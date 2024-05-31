@@ -1,7 +1,4 @@
-import {
-	TermdbTopTermsByTypeRequest,
-	TermdbTopTermsByTypeResponse
-} from '#shared/types/routes/termdb.getTopTermsByType.ts'
+import { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse } from '#shared/types/termdb.getTopTermsByType.ts'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
@@ -84,15 +81,14 @@ function nativeValidateQuery(ds: any, type: string) {
 		}
 
 		// call rust to compute top genes on these samples
-		const terms = await computeTopTerms(q, ds, typeQuery.file, samples)
+		const terms = await computeTopTerms(q, ds, typeQuery.file, samples, type)
 		return terms
 	}
 }
 
-async function computeTopTerms(q, ds, file, samples) {
+async function computeTopTerms(q, ds, file, samples, type) {
 	// The param option to calculate variance.
 	// It supports variance as well as interquartile region.
-	console.log(q)
 	const input_json = {
 		input_file: file,
 		samples: samples.join(','),
@@ -105,13 +101,9 @@ async function computeTopTerms(q, ds, file, samples) {
 	for (const item of rust_result_list) {
 		if (item.includes('output_json')) {
 			output_json = JSON.parse(item.replace('output_json:', ''))
-		} else {
-			console.log(item)
 		}
 	}
-	console.log(output_json)
-	//const varMetabolite = output_json.map(i => {name: i.metabolite, type: "metaboliteIntensity"})
-	console.log(varMetabolite)
+	const varMetabolite = output_json.map(i => ({ name: i.metabolite, type }))
 	return varMetabolite
 }
 

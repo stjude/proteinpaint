@@ -5,16 +5,16 @@ import {
 	TermdbClusterResponse,
 	Clustering,
 	ValidResponse,
-	SingletermResponse
+	SinglegeneResponse
 } from '#shared/types/routes/termdb.cluster.ts'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { GeneExpressionQuery, GeneExpressionQueryNative, GeneExpressionQueryGdc } from '#shared/types/dataset.ts'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import { dtgeneexpression } from '#shared/common.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
-import { TermTypes } from '#shared/terms.js'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -42,11 +42,8 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			if (ds.__gdc && !ds.__gdc.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if (q.dataType == TermTypes.GENE_EXPRESSION) {
+			if (q.dataType == dtgeneexpression) {
 				if (!ds.queries?.geneExpression) throw 'no geneExpression data on this dataset'
-				result = (await getResult(q, ds)) as TermdbClusterResponse
-			} else if (q.dataType == TermTypes.METABOLITE_INTENSITY) {
-				if (!ds.queries?.metaboliteIntensity) throw 'no metaboliteIntensity data on this dataset'
 				result = (await getResult(q, ds)) as TermdbClusterResponse
 			} else {
 				throw 'unknown q.dataType ' + q.dataType
@@ -63,18 +60,17 @@ function init({ genomes }) {
 }
 
 async function getResult(q: TermdbClusterRequest, ds: any) {
-	const type = q.dataType
-	const { term2sample2value, byTermId, bySampleId } = await ds.queries[type].get(q)
-	if (term2sample2value.size == 0) throw 'no data'
-	if (term2sample2value.size == 1) {
-		// get data for only 1 term; still return data, may create violin plot later
-		const g = Array.from(term2sample2value.keys())[0]
-		return { term: g, data: term2sample2value.get(g) } as SingletermResponse
+	const { gene2sample2value, byTermId, bySampleId } = await ds.queries.geneExpression.get(q)
+	if (gene2sample2value.size == 0) throw 'no data'
+	if (gene2sample2value.size == 1) {
+		// get data for only 1 gene; still return data, may create violin plot later
+		const g = Array.from(gene2sample2value.keys())[0]
+		return { gene: g, data: gene2sample2value.get(g) } as SinglegeneResponse
 	}
 
-	// have data for multiple terms, run clustering
+	// have data for multiple genes, run clustering
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
-	const clustering: Clustering = await doClustering(term2sample2value, q)
+	const clustering: Clustering = await doClustering(gene2sample2value, q)
 	if (serverconfig.debugmode) console.log('clustering done:', Date.now() - t, 'ms')
 	return { clustering, byTermId, bySampleId } as ValidResponse
 }
@@ -179,7 +175,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 	q.samples = [] as number[]
 
 	{
-		// is a term-by-sample matrix file
+		// is a gene-by-sample matrix file
 		const lines = await utils.get_header_tabix(q.file)
 		if (!lines[0]) throw 'header line missing from ' + q.file
 		const l = lines[0].split('\t')
@@ -195,7 +191,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Set(), byTermId: {}, bySampleId: {} }
+			return { gene2sample2value: new Set(), byTermId: {}, bySampleId: {} }
 		}
 
 		// has at least 1 sample passing filter and with exp data
@@ -214,9 +210,9 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		}
 
 		// only valid genes with data are added. invalid genes or genes missing from data file is not added. backend returned genes is allowed to be fewer than supplied by client
-		const term2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
+		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
-		for (const g of param.terms!) {
+		for (const g of param.genes!) {
 			if (!g.gene) continue
 
 			if (!g.chr) {
@@ -250,11 +246,11 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				}
 			} as any)
 			// Above!! add "as any" to suppress a npx tsc alert
-			if (Object.keys(s2v).length) term2sample2value.set(g.gene, s2v) // only add gene if has data
+			if (Object.keys(s2v).length) gene2sample2value.set(g.gene, s2v) // only add gene if has data
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
-		if (term2sample2value.size == 0) throw 'no data available for the input ' + param.terms?.map(g => g.name).join(', ')
-		return { term2sample2value, byTermId, bySampleId }
+		if (gene2sample2value.size == 0) throw 'no data available for the input ' + param.genes?.map(g => g.gene).join(', ')
+		return { gene2sample2value, byTermId, bySampleId }
 	}
 }

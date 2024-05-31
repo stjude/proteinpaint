@@ -1,5 +1,5 @@
 //import GdcFilter0 from './filter.gdc'
-import { Term } from 'terms/term.js'
+import { Term } from '../terms/term.ts'
 import { Filter } from '../filter.ts'
 
 export type TermdbTopTermsByTypeRequest = {
