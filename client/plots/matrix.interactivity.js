@@ -497,8 +497,9 @@ function setTermActions(self) {
 
 		self.dom.shortcutDiv = self.dom.menutop.append('div')
 
-		// Do not show shortcuts for hierCluster for now
-		if (self.chartType !== 'hierCluster') self.showShortcuts(t, self.dom.shortcutDiv)
+		// Do not show shortcuts for hierCluster if top dendrogram is visible
+		if (self.chartType !== 'hierCluster' || !self.config.settings.hierCluster.clusterSamples)
+			self.showShortcuts(t, self.dom.shortcutDiv)
 
 		self.dom.twMenuDiv = self.dom.menutop.append('div')
 		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
@@ -643,7 +644,9 @@ function setTermActions(self) {
 					{
 						icon: 'left',
 						title: `Sort ${l.samples} against this ${vartype}`,
-						disabled: t.tw.sortSamples?.priority === 0 || self.type == 'hierCluster',
+						disabled:
+							t.tw.sortSamples?.priority === 0 ||
+							(self.type == 'hierCluster' && self.config.settings.hierCluster.clusterSamples),
 						fill: sortRevertable ? 'rgba(200,100,100,0.5)' : '',
 						handler: sortRevertable ? self.unsortSamplesAgainstTerm : self.sortSamplesAgainstTerm
 					},
@@ -720,6 +723,7 @@ function setTermActions(self) {
 		event?.stopPropagation()
 		const t = self.activeLabel
 		const [tcopy] = self.getSorterTerms(t)
+		if (t.grp.type == 'hierCluster') tcopy.sortSamples.by = 'values'
 		const termgroups = self.termGroups
 		termgroups[t.grpIndex].lst[t.lstIndex] = tcopy
 		for (const g of termgroups) {
@@ -1932,14 +1936,6 @@ function setLabelDragEvents(self, prefix) {
 		//const cls = event.target.className?.baseVal || event.target.parentNode.className?.baseVal || ''
 		if (event.target.innerHTML.includes('grouped by')) return
 		if (event.target.tagName === 'text') {
-			if (
-				self.chartType == 'hierCluster' &&
-				event.target.__data__.grp.name == self.config.settings.hierCluster.termGroupName
-			) {
-				// do not change color when hovering over for hierCluster gene expression term group name label
-				// as the term group menu is disabled for hierCluster gene expression term group for now
-				return
-			}
 			select(event.target).style('fill', 'blue')
 		}
 		if (!self.dragged) return

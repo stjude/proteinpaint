@@ -39,7 +39,9 @@ export function plotDendrogramHclust(plotColOnly) {
 		yDendrogramHeight = this.settings.hierCluster.yDendrogramHeight
 
 	// plot column dendrogram
-	{
+	if (!this.settings.hierCluster.clusterSamples) {
+		this.dom.topDendrogram.selectAll('*').remove()
+	} else {
 		const height2px = getHclustHeightScalefactor(col.height, yDendrogramHeight)
 
 		const height = yDendrogramHeight + 0.0000001

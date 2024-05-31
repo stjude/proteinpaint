@@ -165,7 +165,7 @@ export class MatrixControls {
 			// can be specified as termdbconfig.matrix.settings.useSorterUi = true in dataset js file
 			rows.push({
 				label: `Sort ${l.Samples} By`,
-				title: ``,
+				title: `Set how to sort ${l.samples}`,
 				type: 'custom',
 				init(self) {
 					//const opts = { controls, holder, debug: true, setComputedConfig }
@@ -278,7 +278,8 @@ export class MatrixControls {
 				label: l.Samples || `Samples`,
 				getCount: () =>
 					'sampleCount' in this.overrides ? this.overrides.sampleCount : this.parent.sampleOrder?.length || 0,
-				rows
+				rows,
+				customInputs: this.updateSamplesControls
 			})
 			.html(d => d.label)
 			.style('margin', '2px 0')
@@ -1317,6 +1318,13 @@ export class MatrixControls {
 		}
 		if (m.addMutationCNVButtons && parent.chartType !== 'hierCluster' && m.showMatrixMutation == 'bySelection')
 			parent.mutationControlCallback('bySelection')
+	}
+	updateSamplesControls(self, app, parent, table) {
+		if (parent.chartType == 'hierCluster' && parent.config.settings.hierCluster.clusterSamples) {
+			const l = parent.config.settings.matrix.controlLabels
+			const sortingControl = table.select(`tr[title='Set how to sort ${l.samples}']`)
+			sortingControl.style('display', 'none')
+		}
 	}
 
 	async addDictMenu(app, parent, tr, holder = undefined) {
