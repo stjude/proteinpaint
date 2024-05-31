@@ -65,14 +65,6 @@ export class DetailView {
 		this.coordinates = new DetailCoordinates(this.hic, this.errList)
 	}
 
-	// setDefaultBinPx() {
-	// 	if (!this.calcResolution || !this.viewRangeBpW) throw `Missing either the calculated resolution of default view span`
-
-	// 	while ((this.binpx * this.viewRangeBpW) / this.calcResolution < (this.parent('state') as any).settings.width) {
-	// 		this.binpx += 2
-	// 	}
-	// }
-
 	renderCanvas(blockwidth: number) {
 		this.canvasHolder = this.plotDiv.plot
 			.append('div')
@@ -117,18 +109,7 @@ export class DetailView {
 
 	async render() {
 		this.calcResolution = this.parent('calcResolution') as number
-		// this.setDefaultBinPx()
-
 		const state = this.parent('state') as any
-
-		// const canvasresolution = this.resolution.findResFromArray(
-		// 	this.viewRangeBpW!,
-		// 	state.minBinNum_bp,
-		// 	this.hic.bpresolution,
-		// 	true
-		// ) as number
-
-		// const blockwidth = Math.ceil((this.binpx * this.viewRangeBpW!) / canvasresolution)
 
 		this.xBlock = new DetailBlock(
 			this.app,

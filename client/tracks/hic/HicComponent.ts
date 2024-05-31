@@ -35,9 +35,7 @@ export class HicComponent {
 	infoBar: any
 	error: any
 	resolution: Resolution
-	// genomeFetcher: GenomeDataFetcher
 	detailDataMapper: DetailDataMapper
-	// dataFetcher: DataFetcher
 	parent: (prop: any) => string | number
 	calcResolution: number | null = null
 	firstRender = true
@@ -70,9 +68,7 @@ export class HicComponent {
 		this.parent = (prop: any) => {
 			return this[prop]
 		}
-		// this.genomeFetcher = new GenomeDataFetcher(this.hic, true, this.errList)
 		this.detailDataMapper = new DetailDataMapper(this.hic, this.errList, this.parent)
-		// this.dataFetcher = new DataFetcher(this.hic, true, this.errList)
 	}
 
 	getState(appState: any) {
@@ -150,7 +146,7 @@ export class HicComponent {
 			 */
 			await this.detailDataMapper.getFragData(state.x, state.y)
 			this.fragData = this.detailDataMapper.frag
-			const maxFragSpan = Math.max(
+			const maxFragSpan = Math.min(
 				this.fragData.x.stop - this.fragData.x.start,
 				this.fragData.y.stop - this.fragData.y.start
 			)
@@ -230,6 +226,9 @@ export class HicComponent {
 
 	async main(appState: any) {
 		if (this.errList.length) {
+			/** Turn off the loading overlay when file parsing errors
+			 * (i.e. user enters hicfile=xx as a URL parameter)
+			 */
 			this.app.dispatch({ type: 'loading_active', active: false })
 			return
 		}
