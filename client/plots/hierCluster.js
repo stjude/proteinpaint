@@ -194,11 +194,10 @@ export class HierCluster extends Matrix {
 		// Checking if cluster and distance method for hierarchial clustering is valid
 		if (!clusterMethodLst.find(i => i.value == s.clusterMethod)) throw 'Invalid cluster method'
 		if (!distanceMethodLst.find(i => i.value == s.distanceMethod)) throw 'Invalid distance method'
-
 		const body = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
-			dataType: s.dataType,
+			dataType: state.config.dataType || TermTypes.GENE_EXPRESSION,
 			clusterMethod: s.clusterMethod,
 			distanceMethod: s.distanceMethod,
 			terms,

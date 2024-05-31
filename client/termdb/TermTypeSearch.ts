@@ -49,7 +49,7 @@ const useCasesExcluded = {
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY
 	],
-	hierCluster: [
+	metaboliteIntensity: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,

@@ -1507,7 +1507,6 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 
 		const term2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
 		for (const m of param.terms) {
-			console.log('metabolite:', m)
 			if (!m) continue
 
 			const s2v = {}
@@ -1516,11 +1515,8 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 				args: [q.file],
 				callback: line => {
 					const l = line.split('\t')
-					console.log('l:', l)
-					console.log('metabolite:', metabolite)
 					if (l[0].toLowerCase() != metabolite.toLowerCase()) return
 					metabolite = l[0]
-					console.log('found metabolite:', metabolite)
 					for (let i = 1; i < l.length; i++) {
 						const sampleId = samples[i - 1]
 						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used

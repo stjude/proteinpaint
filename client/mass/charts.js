@@ -213,7 +213,7 @@ function getChartTypeList(self, state) {
 			label: 'Metabolite Intensity',
 			chartType: 'summary',
 			clickTo: self.showTree_selectlst,
-			usecase: { target: 'summary', detail: 'term' }
+			usecase: { target: 'metaboliteIntensity', detail: 'term' }
 		}
 		chart.processSelection = termlst => {
 			let twlst = termlst.map(term => ({
@@ -221,12 +221,15 @@ function getChartTypeList(self, state) {
 				q: { mode: NumericModes.continuous }
 			}))
 			if (twlst.length == 1) {
+				chart.action.config.chartType = 'summary'
 				return twlst[0]
 			} else if (twlst.length == 2) {
+				chart.action.config.chartType = 'summary'
 				chart.action.config.term2 = twlst[1]
 				return twlst[0]
 			} else {
 				chart.action.config.chartType = 'hierCluster'
+				chart.action.config.dataType = TermTypes.METABOLITE_INTENSITY
 				chart.usecase = { target: 'hierCluster', detail: 'termgroups' }
 				return [{ name: 'hierCluster', lst: twlst, type: 'hierCluster' }]
 			}
