@@ -23,7 +23,17 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 		},
 
 		getPillStatus() {
-			return { text: self.q.exclude?.length ? 'matching variants' : 'any variant class' }
+			if (self.q.groupsetting.inuse) {
+				const labels = []
+				labels.push(dt2label[self.q.dt])
+				const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt]?.byOrigin
+				if (byOrigin) labels.push(byOrigin[self.q.origin]?.label || self.q.origin)
+				const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+				labels.push(groupset.name)
+				return { text: labels.join(' - ') }
+			} else {
+				return { text: self.q.exclude?.length ? 'matching variants' : 'any variant class' }
+			}
 		},
 
 		//validateQ(data: Q) {},
@@ -181,8 +191,6 @@ function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const dtDiv = groupsDiv.append('div').style('margin-top', '15px')
 	const originDiv = groupsDiv.append('div').style('margin-top', '15px')
 	const groupsetDiv = groupsDiv.append('div').style('margin-top', '15px')
-
-	// TODO: add apply button. Try to implement in barchart.
 
 	// radio buttons for whether or not to group variants
 	optsDiv.append('div').style('font-weight', 'bold').text('Group variants')
