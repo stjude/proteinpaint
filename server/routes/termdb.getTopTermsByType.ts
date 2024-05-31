@@ -109,8 +109,10 @@ async function computeTopTerms(q, ds, file, samples) {
 			console.log(item)
 		}
 	}
-	const result = output_json.map(i => i.metabolite)
-	return result
+	console.log(output_json)
+	//const varMetabolite = output_json.map(i => {name: i.metabolite, type: "metaboliteIntensity"})
+	console.log(varMetabolite)
+	return varMetabolite
 }
 
 function gdcValidateQuery(ds: any, genome: any, type: string) {

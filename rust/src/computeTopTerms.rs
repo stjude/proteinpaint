@@ -146,6 +146,7 @@ fn main() {
 		if i > metabolite_infos.len() - num_metabolites {
 			output_string += &",".to_string();
 		}
-		println!("output_json:{}", output_string);
 	}
+	output_string += &"]".to_string();
+	println!("output_json:{}", output_string);
 }

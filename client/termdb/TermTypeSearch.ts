@@ -266,8 +266,8 @@ export class TermTypeSearch {
 						filter: this.state.termfilter.filter,
 						type
 					}
-					const terms = await this.app.vocabApi.getTopTermsByType(args)
-					this.selectTerms(terms)
+					const result = await this.app.vocabApi.getTopTermsByType(args)
+					this.selectTerms(result.terms)
 				})
 	}
 
