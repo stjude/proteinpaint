@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.61.0
 
 Features:
 - Adding sorting samples options for hierCluster
