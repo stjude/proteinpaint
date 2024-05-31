@@ -86,3 +86,7 @@ path="src/DEanalysis.rs"
 [[bin]]
 name="genesetORA"
 path="src/genesetORA.rs"
+
+[[bin]]
+name="computeTopTerms"
+path="src/computeTopTerms.rs"

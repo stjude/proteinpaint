@@ -90,9 +90,26 @@ function nativeValidateQuery(ds: any, type: string) {
 }
 
 async function computeTopTerms(q, ds, file, samples) {
-	const rustpath = path.join(__dirname, 'computeTopTerms')
-	const args = [q, ds, file, samples]
-	const result = await run_rust(rustpath, args)
+	// The param option to calculate variance.
+	// It supports variance as well as interquartile region.
+	console.log(q)
+	const input_json = {
+		input_file: file,
+		samples: samples.join(','),
+		param: 'var'
+	}
+	const rust_result = await run_rust('computeTopTerms', JSON.stringify(input_json))
+	const rust_result_list = rust_result.split('\n')
+
+	let output_json
+	for (const item of rust_result_list) {
+		if (item.includes('output_json')) {
+			output_json = JSON.parse(item.replace('output_json:', ''))
+		} else {
+			console.log(item)
+		}
+	}
+	const result = output_json.map(i => i.metabolite)
 	return result
 }
 
