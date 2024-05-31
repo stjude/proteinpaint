@@ -211,12 +211,14 @@ function getChartTypeList(self, state) {
 	if (state.termdbConfig.allowedTermTypes.includes(TermTypes.METABOLITE_INTENSITY)) {
 		buttons.push({
 			label: 'Metabolite Intensity',
-			chartType: 'hierCluster',
+			chartType: 'summary',
 			clickTo: self.showTree_selectlst,
-			usecase: { target: 'hierCluster', detail: 'termgroups' },
+			usecase: { target: 'summary', detail: 'term' },
 			processSelection: termlst => {
-				const twlst = termlst.map(term => ({ term, q: { mode: NumericModes.continuous } }))
-				return [{ name: 'group1', lst: twlst, type: 'hierCluster', termType: TermTypes.METABOLITE_INTENSITY }]
+				let twlst = termlst.map(term => ({ term, q: { mode: NumericModes.continuous } }))
+				if (termlst.length == 1) {
+					return twlst[0]
+				}
 			}
 		})
 	}
@@ -326,8 +328,10 @@ function setRenderers(self) {
 			},
 			tree: {
 				submit_lst: termlst => {
+					console.log(chart)
 					const data = chart.processSelection ? chart.processSelection(termlst) : termlst
 					action.config[chart.usecase.detail] = data
+					console.log(action)
 					self.dom.tip.hide()
 					self.app.dispatch(action)
 				}

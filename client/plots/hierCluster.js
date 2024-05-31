@@ -163,7 +163,10 @@ export class HierCluster extends Matrix {
 
 	async requestData({ signal }) {
 		const body = this.currRequestOpts?.hierCluster || this.getHCRequestBody(this.state)
-		return await dofetch3('termdb/cluster', { body, signal })
+		console.log('hierCluster.requestData', body)
+		const data = await dofetch3('termdb/cluster', { body, signal })
+		console.log('data', data)
+		return data
 	}
 
 	getHCRequestBody(state) {

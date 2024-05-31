@@ -1101,7 +1101,7 @@ export class TermdbVocab extends Vocab {
 	async getTopTermsByType(args) {
 		args.genome = this.state.vocab.genome
 		args.dslabel = this.state.vocab.dslabel
-		return await dofetch3('termdb/getTopTermsByType', { method: 'GET', body: arg })
+		return await dofetch3('termdb/getTopTermsByType', { method: 'GET', body: args })
 	}
 
 	/* 

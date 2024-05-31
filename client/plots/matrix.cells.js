@@ -243,6 +243,8 @@ export const maySetEmptyCell = {
 	geneVariant: setVariantEmptyCell,
 	integer: setNumericEmptyCell,
 	float: setNumericEmptyCell,
+	geneExpression: setNumericEmptyCell,
+	metaboliteIntensity: setNumericEmptyCell,
 	categorical: setDefaultEmptyCell
 }
 

@@ -27,7 +27,6 @@ export function getMatrixRequestOpts(state) {
 		this.chartType == 'hierCluster'
 			? state.config.termgroups.filter(grp => grp.type != 'hierCluster')
 			: state.config.termgroups
-
 	for (const grp of termgroups) {
 		terms.push(...getNormalizedTwLstCopy(grp.lst))
 	}
@@ -88,7 +87,6 @@ export async function setData(_data) {
 	const abortCtrl = new AbortController()
 	opts.signal = abortCtrl.signal
 	opts.loadingDiv = this.chartType != 'hierCluster' && this.dom.loadingDiv
-
 	const [data, stale] = await this.api.detectStale(() => this.app.vocabApi.getAnnotatedSampleData(opts, _data), {
 		abortCtrl
 	})
