@@ -1,5 +1,5 @@
 import { TermWrapper } from './tw.ts'
-import { BaseQ, BaseTerm } from './term.ts'
+import { BaseQ, BaseTerm, PredefinedGroupSetting } from './term.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /*
@@ -17,6 +17,7 @@ export type GeneVariantQ = BaseQ & {
 	cnvMinAbsValue?: number
 	cnvLossCutoff?: number
 	exclude: any //an array maybe?
+	groupsetting: PredefinedGroupSetting
 	dt?: number
 	origin?: string
 }

@@ -1,7 +1,7 @@
-import { select } from 'd3-selection'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtsv, dtfusionrna } from '../../shared/common'
-import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW } from '../../shared/types/index'
+import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW, GeneVariantQ } from '../../shared/types/index'
 import { make_radios } from '#dom/radiobutton'
+import { copyMerge } from '../../rx'
 
 /* 
 instance attributes
@@ -44,7 +44,7 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 	}
 }
 
-export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
+export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 	if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop))) {
 		// support saved states that have the older geneVariant term data shape
 		if (tw.term.name) tw.term.gene = tw.term.name
@@ -53,6 +53,12 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 	if (!tw.term.name) tw.term.name = tw.term.gene || `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
 	if (!tw.term.id) tw.term.id = tw.term.name // TODO: is this necessary?
 	if (!('type' in tw.q)) tw.q.type = 'values' // TODO: is this necessary to specify? Note that q.type = 'values' works with predefined groupsetting for geneVariant term.
+
+	// merge defaultQ into tw.q
+	if (defaultQ) {
+		;(defaultQ as GeneVariantQ).isAtomic = true
+		copyMerge(tw.q, defaultQ)
+	}
 
 	// groupsetting
 	// fill tw.term.groupsetting
@@ -145,6 +151,24 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi) {
 	if (!tw.q.groupsetting) tw.q.groupsetting = {}
 	delete tw.q.groupsetting.disabled
 	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false
+	if (tw.q.groupsetting.inuse) {
+		// groupsetting in use
+		// fill a single data type
+		const ds_dts = getDsDts(vocabApi.termdbConfig.queries)
+		if (!tw.q.dt) tw.q.dt = ds_dts[0]
+		// fill a single orign, if applicable
+		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[tw.q.dt]?.byOrigin
+		if (byOrigin) {
+			if (!tw.q.origin || !(tw.q.origin in byOrigin)) tw.q.origin = Object.keys(byOrigin)[0]
+		}
+		// fill a single groupset index
+		const groupset_idxs = getGroupsetIdxs(tw.q.dt)
+		if (
+			!tw.q.groupsetting.predefined_groupset_idx ||
+			!groupset_idxs.includes(tw.q.groupsetting.predefined_groupset_idx)
+		)
+			tw.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+	}
 
 	{
 		// apply optional ds-level configs for this specific term
@@ -269,14 +293,7 @@ function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		// relevant to the dt, for example the 'Protein-changing vs. rest'
 		// groupset is relevant to SNV/indel and SV mutations but not
 		// to CNV mutations
-		const groupset_idxs =
-			self.q.dt == dtsnvindel || self.q.dt == dtsv
-				? [0, 1, 2]
-				: self.q.dt == dtcnv
-				? [0]
-				: self.q.dt == dtfusionrna
-				? [0, 1]
-				: null
+		const groupset_idxs = getGroupsetIdxs(self.q.dt)
 		// render the relevant predefined groupsets as radio buttons
 		if (
 			!self.q.groupsetting.predefined_groupset_idx ||
@@ -399,4 +416,13 @@ function getDsDts(ds_queries) {
 		else continue
 	}
 	return ds_dts
+}
+
+// get indices of predefined groupsets that are
+// relevant to given dt
+function getGroupsetIdxs(dt) {
+	const groupset_idxs =
+		dt == dtsnvindel || dt == dtsv ? [0, 1, 2] : dt == dtcnv ? [0] : dt == dtfusionrna ? [0, 1] : null
+
+	return groupset_idxs
 }
