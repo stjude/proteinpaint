@@ -89,6 +89,11 @@ class ViolinPlot {
 				// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
 
 				usecase: { target: 'violin', detail: 'term2' },
+				defaultQ4fillTW: {
+					geneVariant: {
+						groupsetting: { inuse: true }
+					}
+				},
 				callback: value => (this.settings.plotThickness = undefined)
 			},
 			{
