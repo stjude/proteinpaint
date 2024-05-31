@@ -182,6 +182,28 @@ export function setClusteringBtn(holder, callback) {
 			label: `Clustering`,
 			rows: [
 				{
+					label: 'Cluster Samples',
+					title: 'Option to enable sample clustering, instead of enable sample sorting.',
+					type: 'checkbox',
+					chartType: 'hierCluster',
+					settingsKey: 'clusterSamples',
+					boxLabel: 'Cluster samples (Disable samples sorting)',
+					callback: checked => {
+						if (!checked) {
+							this.config.settings.hierCluster.yDendrogramHeight = 0
+							this.config.settings.hierCluster.clusterSamples = false
+						} else {
+							this.config.settings.hierCluster.yDendrogramHeight = 200
+							this.config.settings.hierCluster.clusterSamples = true
+						}
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: this.id,
+							config: this.config
+						})
+					}
+				},
+				{
 					label: `Clustering Method`,
 					title: `Sets which clustering method to use`,
 					type: 'radio',
@@ -202,7 +224,10 @@ export function setClusteringBtn(holder, callback) {
 					title: `The maximum height to render the column dendrogram`,
 					type: 'number',
 					chartType: 'hierCluster',
-					settingsKey: 'yDendrogramHeight'
+					settingsKey: 'yDendrogramHeight',
+					getDisplayStyle(plot) {
+						return plot.settings.hierCluster.clusterSamples ? 'table-row' : 'none'
+					}
 				},
 				{
 					label: `Row Dendrogram Width`,

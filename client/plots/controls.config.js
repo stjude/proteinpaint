@@ -523,6 +523,7 @@ function setCheckboxInput(opts) {
 		.attr('type', 'checkbox')
 		.on('change', () => {
 			const value = self.dom.input.property('checked')
+			if (opts.callback) opts.callback(value)
 			opts.dispatch({
 				type: 'plot_edit',
 				id: opts.id,

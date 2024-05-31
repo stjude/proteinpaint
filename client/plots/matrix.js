@@ -138,6 +138,7 @@ export class Matrix {
 			termdbConfig: appState.termdbConfig,
 			clusterMethod: config.settings.hierCluster?.clusterMethod,
 			distanceMethod: config.settings.hierCluster?.distanceMethod,
+			clusterSamples: config.settings.hierCluster?.clusterSamples,
 			nav: appState.nav
 		}
 	}

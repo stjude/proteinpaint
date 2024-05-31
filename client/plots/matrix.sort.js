@@ -3,7 +3,7 @@ import { isDictionaryType } from '../shared/terms'
 export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
 	validateSettings(s)
-	if (self.config.chartType == 'hierCluster') {
+	if (self.config.chartType == 'hierCluster' && self.config.settings.hierCluster.clusterSamples) {
 		return self.hcSampleSorter
 	}
 
@@ -153,6 +153,18 @@ function getSortSamplesByValues(st, self, rows, s) {
 		return (a, b) => {
 			if ($id in a && $id in b) {
 				return a[$id]?.value - b[$id]?.value
+			}
+			if ($id in a) return -1
+			if ($id in b) return 1
+			return 0
+		}
+	}
+
+	if (t.grp.type == 'hierCluster') {
+		return (a, b) => {
+			if ($id in a && $id in b) {
+				// may need to support other term types
+				return a[$id]?.values[0].value - b[$id]?.values[0].value
 			}
 			if ($id in a) return -1
 			if ($id in b) return 1
