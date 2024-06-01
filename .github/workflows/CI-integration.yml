@@ -17,9 +17,9 @@ jobs:
       - id: set-build-secret
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "::set-output name=BUILD_SECRET::${{ secrets.BUILD_SECRET }}"
-          else
             echo "::set-output name=BUILD_SECRET::${{ github.event.inputs.build_secret }}"
+          else
+            echo "::set-output name=BUILD_SECRET::${{ secrets.BUILD_SECRET }}"
           fi
       - name: Check user permission
         uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
