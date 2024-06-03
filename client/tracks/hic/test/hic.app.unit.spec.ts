@@ -91,6 +91,46 @@ const mockDetailData = {
 	]
 }
 
+const mockItems4Frag = {
+	items: [
+		[305702, 305703, 5],
+		[305702, 305704, 3],
+		[305703, 305704, 6],
+		[305704, 305705, 10],
+		[305705, 305706, 5],
+		[305705, 305707, 3],
+		[305706, 305707, 2],
+		[305705, 305708, 2],
+		[305706, 305708, 3],
+		[305704, 305709, 1],
+		[305706, 305709, 4],
+		[305703, 305712, 1]
+	]
+}
+
+const mockFragData = {
+	x: {
+		id2coord: new Map([
+			[305702, [128782687, 128783313]],
+			[305703, [128783313, 128783740]],
+			[305704, [128783740, 128784252]],
+			[305705, [128784252, 128784852]]
+		]),
+		start: 305702,
+		stop: 305743
+	},
+	y: {
+		id2coord: new Map([
+			[305702, [128782687, 128783313]],
+			[305703, [128783313, 128783740]],
+			[305704, [128783740, 128784252]],
+			[305705, [128784252, 128784852]]
+		]),
+		start: 305702,
+		stop: 305743
+	}
+}
+
 tape('\n', test => {
 	test.pass('-***- hic app unit tracks/hic -***-')
 	test.end()
@@ -159,7 +199,7 @@ tape('Positions - class and setPositions()', test => {
 	test.ok(positions instanceof Positions, 'Should construct positions class properly.')
 	test.equal(positions.error, mockError, 'Should set error lst correctly.')
 
-	result = positions.setPosition(260.12890625, 62.7734375, 3, chrx, chry, mockHic, 20, 200)
+	result = positions.setPosition(260.12890625, 62.7734375, 3, chrx, chry, mockHic, 20)
 	test.deepEqual(
 		result,
 		[
@@ -170,7 +210,7 @@ tape('Positions - class and setPositions()', test => {
 	)
 
 	//Out of bounds
-	result = positions.setPosition(1000, 1000, 3, chrx, chry, mockHic, 20, 200)
+	result = positions.setPosition(1000, 1000, 3, chrx, chry, mockHic, 20)
 	test.deepEqual(
 		result,
 		[
@@ -390,11 +430,55 @@ tape('GridElementsFormattedData - formatData()', test => {
 
 /************* Data tests specific to detail view *************/
 
-//TODO: Needs real example to test
 tape('ParseFragData class', test => {
-	test.timeoutAfter(300)
-	test.plan(4)
-	const mockData = []
+	// test.timeoutAfter(300)
+	test.plan(6)
+	const mockData = [
+		{
+			rest: ['305702'],
+			chr: 'chr8',
+			start: 128782687,
+			stop: 128783313,
+			rglst: [
+				{
+					idx: 0
+				}
+			]
+		},
+		{
+			rest: ['305703'],
+			chr: 'chr8',
+			start: 128783313,
+			stop: 128783740,
+			rglst: [
+				{
+					idx: 0
+				}
+			]
+		},
+		{
+			rest: ['305704'],
+			chr: 'chr8',
+			start: 128783740,
+			stop: 128784252,
+			rglst: [
+				{
+					idx: 0
+				}
+			]
+		},
+		{
+			rest: ['305705'],
+			chr: 'chr8',
+			start: 128784252,
+			stop: 128784852,
+			rglst: [
+				{
+					idx: 0
+				}
+			]
+		}
+	]
 
 	//Check class construction
 	const parseFragData = new ParseFragData(errLst, mockData)
@@ -402,12 +486,14 @@ tape('ParseFragData class', test => {
 	test.ok(Array.isArray(parseFragData.errLst), 'Should set error list correctly.')
 	test.ok(Array.isArray(parseFragData.items), 'Should set items array correctly.')
 	test.ok(parseFragData.id2coord instanceof Map, 'Should generate a .id2coord Map.')
-	// Uncomment when mockData available
-	// test.ok(Number.isInteger(parseFragData.min), 'Should generate .min to a number.')
-	// test.ok(Number.isInteger(parseFragData.max), 'Should generate .max to a number.')
-
-	// TODO: Add more tests checking value when example available
-	// test.end()
+	test.ok(
+		Number.isInteger(parseFragData.min) && parseFragData.min == 305702,
+		'Should generate the correct .min as a number.'
+	)
+	test.ok(
+		Number.isInteger(parseFragData.max) && parseFragData.max == 305705,
+		'Should generate the correct .max as a number.'
+	)
 })
 
 tape('FirstChrX - class and isFirstX()', test => {
@@ -438,62 +524,56 @@ tape('FirstChrX - class and isFirstX()', test => {
 	test.equal(result, true, 'Should return true when intra-chromosomal.')
 })
 
-//TODO: Needs an example with frag data
 tape('DetailCoordinates - getCoordinates()', test => {
 	test.timeoutAfter(300)
 	test.plan(1)
 
-	const holder = getHolder()
 	const coordinates = new DetailCoordinates(hicData.hic.v8, errLst)
 	const chrx = { chr: 'chr2', start: 182001302, stop: 202001302 }
 	const chry = { chr: 'chr1', start: 7626953, stop: 27626953 }
-	const data = mockDetailData
-	const canvas = holder.append('canvas').attr('width', 100).attr('height', 100)
 
-	const fragData = []
-	// let result: (number | any[])[],
-	// expected: (number | any)[]
+	let result: (number | any[])[], expected: (number | any)[]
 
 	//No frag data
-	const result = coordinates.getCoordinates(chrx, chry, data, 50000, canvas, fragData)
-	const expected = [
-		[-463, -26, 1, 1, 1],
-		[-463, -21, 1, 1, 1],
-		[-463, -19, 1, 1, 1],
-		[-463, -18, 1, 1, 1],
-		[-463, -17, 1, 1, 1]
+	result = coordinates.getCoordinates(chrx, chry, mockDetailData, 50000, 800)
+	expected = [
+		[-3699, -206, 2, 2, 1],
+		[-3699, -168, 2, 2, 1],
+		[-3699, -146, 2, 2, 1],
+		[-3699, -144, 2, 2, 1],
+		[-3699, -132, 2, 2, 1]
 	]
-
 	test.deepEqual(result, expected, 'Should return the correct coordinates when no frag data is supplied.')
 
-	//TODO: Frag Data
-
-	if (test['_ok']) holder.remove()
+	//Frag Data
+	result = coordinates.getCoordinates(chrx, chry, mockItems4Frag, 50000, 800, mockFragData)
+	expected = [
+		[-2129, 4846, 1, 15],
+		[-2129, 4846, 1, 1, 3],
+		[-2129, 4846, 1, 1, 6],
+		[-2129, 4846, 1, 1, 10]
+	]
 })
-//TODO: Needs an example with frag data
+
 tape('DetailCoordinates - calculateCoordinates()', test => {
 	test.timeoutAfter(300)
-	test.plan(2)
+	test.plan(3)
 
 	const coordinates = new DetailCoordinates(hicData.hic.v8, errLst)
 	const xpxbp = 0.00004
 	const ypxbp = 0.00004
 	const resolution = 50000
-	const chrx = { chr: 'chr2', start: 182001302, stop: 202001302 }
-	const chry = { chr: 'chr1', start: 7626953, stop: 27626953 }
-	const fragData = []
-	const isintrachr = false
 
 	let isFirstX = false,
-		// isintrachr = false,
-		// chry = { chr: 'chr1', start: 7626953, stop: 27626953 },
+		isintrachr = false,
+		chrx = { chr: 'chr2', start: 182001302, stop: 202001302 },
+		chry = { chr: 'chr1', start: 7626953, stop: 27626953 },
 		data = mockDetailData,
-		// fragData = [],
 		result: any,
 		expected: any
 
 	//No frag data, not first x, nor intra-chromosomal
-	result = coordinates.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data, fragData)
+	result = coordinates.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data)
 	expected = [
 		[-3699, -206, 2, 2, 1],
 		[-3699, -168, 2, 2, 1],
@@ -516,7 +596,7 @@ tape('DetailCoordinates - calculateCoordinates()', test => {
 			[30500000, 30650000, 97]
 		]
 	}
-	result = coordinates.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data, fragData)
+	result = coordinates.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data)
 	expected = [
 		[-6065, 920, 2, 2, 89],
 		[-6063, 920, 2, 2, 64],
@@ -528,17 +608,34 @@ tape('DetailCoordinates - calculateCoordinates()', test => {
 		'Should return the correct coordinates when first x but not intra-chromosomal and no frag data provided.'
 	)
 
-	//TODO: Need data that will work
-	//Intra-chromosomal and First X
-	// isintrachr = true
-	// chry = { chr: 'chr2', start: 30298177, stop: 50298177 }
-	// data = { items: [[30300000, 34050000, 1], [30400000, 34050000, 1], [30450000, 34050000, 2] ]}
-	// result = coordinates.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data, fragData)
-	// test.deepEqual(result, [], 'Should return the correct coordinates when is first x, intra-chromosomal, and no frag data provided.')
-
-	//Need example data that will work for intra-chromosomal code
-	// data = { items: [[16000000, 16050000, 178]] }
-	// result = coordinates.calculateCoordinates(isFirstX, isintrachr, xpxbp, ypxbp, resolution, chrx, chry, data, fragData)
+	// Intra-chromosomal and First X
+	isintrachr = true
+	chrx = { chr: 'chr8', start: 128782746, stop: 128795246 }
+	chry = { chr: 'chr8', start: 128782746, stop: 128795246 }
+	result = coordinates.calculateCoordinates(
+		isFirstX,
+		isintrachr,
+		xpxbp,
+		ypxbp,
+		resolution,
+		chrx,
+		chry,
+		mockItems4Frag,
+		mockFragData
+	)
+	expected = [
+		[-1, 0, 1, 1, 5],
+		[-1, 0, 1, 1, 3],
+		[0, 0, 1, 1, 6],
+		[0, 0, 1, 1, 6],
+		[0, 0, 1, 1, 10],
+		[0, 0, 1, 1, 10]
+	]
+	test.deepEqual(
+		result,
+		expected,
+		'Should return the correct coordinates when is first x, intra-chromosomal, and no frag data provided.'
+	)
 })
 
 tape('DetailDataFetcher - class and isFragData()', test => {
