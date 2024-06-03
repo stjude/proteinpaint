@@ -259,7 +259,7 @@ class ControlPanel {
 			this.controls.horizontalViewBtn.style('display', 'block')
 			this.controls.zoomDiv.style('display', 'contents')
 			//Hide previously shown detail view btn
-			this.controls.detailViewBtn.style('display', '')
+			this.controls.detailViewBtn.style('display', 'none')
 		} else if (state.currView === 'horizontal') {
 			//Only show chrpairViewBtn if in horizonal or detail view
 			//Include chr x and chr y in the button text
