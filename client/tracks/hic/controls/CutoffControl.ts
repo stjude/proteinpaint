@@ -12,12 +12,12 @@ export class CutoffControl {
 		this.callback = callback
 	}
 
-	render(opts: any) {
+	render(opts?: { width: string }) {
 		const cutoffDiv = this.holder
 			.style('margin-right', '10px')
 			.append('input')
 			.attr('type', 'number')
-			.style('width', 'width' in opts ? opts.width : '80px')
+			.style('width', opts && 'width' in opts ? opts.width : '80px')
 			.style('margin-left', '0px')
 			.attr('type', 'number')
 			.property('value', this.value)

@@ -139,13 +139,9 @@ export class ColorScale {
 	}
 
 	updateAxis() {
-		const start = this.data[0] < 0.000000001 ? this.data[0] : Number(this.data[0].toFixed(2))
-		const stop =
-			this.data[this.data.length - 1] < 0.0000000001
-				? this.data[this.data.length - 1]
-				: Number(this.data[this.data.length - 1].toFixed(2))
-		// Show values in scientific notation
-		const tickValues = [start, stop].map(d => Number(d3format('.1e')(d)))
+		const start = Number(this.data[0].toFixed(2))
+		const stop = Number(this.data[this.data.length - 1].toFixed(2))
+		const tickValues = [start, stop]
 		this.bar.scaleAxis.selectAll('*').remove()
 
 		if (start < 0 && stop > 0) {
