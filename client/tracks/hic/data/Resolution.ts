@@ -14,7 +14,13 @@ export class Resolution {
 			return resolution
 		} else if (state.currView == 'detail') {
 			const maxBpWidth = Math.max(state.x.stop - state.x.start, state.y.stop - state.y.start)
-			const resolution = this.findResFromArray(maxBpWidth, state.minBinNum_bp, hic.bpresolution)
+			let resolution = this.findResFromArray(maxBpWidth, state.minBinNum_bp, hic.bpresolution)
+			if (resolution == null && !hic.enzyme) {
+				//Do not allow zooming to fragment resolution when enzyme is not defined
+				resolution = hic.bpresolution[hic.bpresolution.length - 1]
+			}
+			/** if resolution is still null, will calculate frag data
+			 * and fragment resolution in HicComponent setResolution()*/
 			return resolution
 		} else {
 			this.error(`Unknown view: ${state.currView}`)
@@ -57,22 +63,5 @@ export class Resolution {
 		const chrpairResolution = this.getChrPairResolution(hic, x, y, minBinNum_bp)
 		if (!chrpairResolution) return
 		return chrpairResolution * initialBinNum
-	}
-
-	updateDetailResolution(bpresolution: any, x: ChrPosition, y: ChrPosition) {
-		let resolution = null
-		/** Pick the smallest span, then choose the next lowest resolution */
-		const maxBpWidth = Math.min(x.stop - x.start, y.stop - y.start)
-		for (const res of bpresolution) {
-			if (maxBpWidth <= res) {
-				resolution = bpresolution[bpresolution.indexOf(res) - 1]
-				break
-			}
-		}
-		if (resolution == null) {
-			// use finest
-			resolution = bpresolution[bpresolution.length - 1]
-		}
-		return resolution
 	}
 }
