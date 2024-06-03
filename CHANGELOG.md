@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- handle prebuilt matrix plots to work with the advanced sorter UI
+
 
 ## 2.61.0
 
