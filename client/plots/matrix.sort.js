@@ -1,4 +1,5 @@
 import { isDictionaryType } from '../shared/terms'
+import { dtsnvindel, dtfusionrna, dtcnv, mclasscnvgain, mclasscnvloss } from '#shared/common'
 
 export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
@@ -268,12 +269,12 @@ function getSortSamplesByClass(st, self, rows, s) {
 	const cls = new Map()
 	// Example idea:
 	//
-	// sortPriority order = ['CNV_amp', 'CNV_loss', 'F', 'N', 'L', 'P']
+	// sortPriority order = [mclasscnvgain, mclasscnvloss, 'F', 'N', 'L', 'P']
 	// if sample.values has a matching mclass in order, map to '1', otherwise map to 'x'
 	//
-	// sample1.values: ['CNV_amp', 'F']       => '1x1xxx'  // first sample by string order
-	// sample2.values: ['CNV_amp', 'P']       => '1xxxx1'
-	// sample3.values: ['CNV_loss', 'F', 'L'] => 'x11x1x'
+	// sample1.values: [mclasscnvgain, 'F']       => '1x1xxx'  // first sample by string order
+	// sample2.values: [mclasscnvgain, 'P']       => '1xxxx1'
+	// sample3.values: [mclasscnvloss, 'F', 'L'] => 'x11x1x'
 	// sample4.values: ['F', 'N']             => 'xx11xx'
 	// sample5.values: ['noncoding]           => 'z'       // next round of tiebreakers
 
@@ -378,7 +379,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 
 	// Similar to Oncoprint sorting
 	sortOptions.a = s.sortOptions?.a
-		? reshapeSortPriority(s.sortOptions.a)
+		? reshapeSortPriority(s.sortOptions.a, l)
 		: {
 				//label: l.Mutation + ' categories', //'CNV+SSM > SSM-only > CNV-only',
 				// altLabels: {
@@ -389,16 +390,16 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 				order: 1, // this is used for list order as a sorter option in a dropdown
 				sortPriority: [
 					{
-						label: 'For each gene mutation, sort cases by matching data',
+						label: `For each gene mutation, sort ${l.samples} by matching data`,
 						types: ['geneVariant'],
 						tiebreakers: [
 							{
 								skip: !s.mutationClasses.includes('Fuserna'), // not visible, cannot be enabled
-								label: 'Cases with Fusion RNASeq > without',
+								label: `${l.Samples} with Fusion RNASeq > without`,
 								filter: {
 									values: [
 										{
-											dt: 2
+											dt: dtfusionrna
 										}
 									]
 								},
@@ -407,11 +408,11 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 								order: ['Fuserna' /*'WT', 'Blank'*/]
 							},
 							{
-								label: 'Cases with truncating mutations > without',
+								label: `${l.Samples} with truncating mutations > without`,
 								filter: {
 									values: [
 										{
-											dt: 1
+											dt: dtsnvindel
 										}
 									]
 								},
@@ -438,28 +439,28 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 								notUsed: []
 							},
 							{
-								label: 'Cases with CNV data > without',
+								label: `${l.Samples} with CNV data > without`,
 								mayToggle: true,
 								filter: {
 									values: [
 										{
-											dt: 4
+											dt: dtcnv
 										}
 									]
 								},
 								by: 'class',
 								isOrdered: true,
 								disabled: true, // visible, can be enabled
-								order: ['CNV_amp', 'CNV_loss']
+								order: [mclasscnvgain, mclasscnvloss]
 							},
 							{
 								disabled: false,
 								mayToggle: true,
-								label: 'Cases with protein-changing mutations > without',
+								label: `${l.Samples} with protein-changing mutations > without`,
 								filter: {
 									values: [
 										{
-											dt: 1
+											dt: dtsnvindel
 										}
 									]
 								},
@@ -473,7 +474,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 						]
 					},
 					{
-						label: 'For each dictionary variable, sort cases by matching data',
+						label: `For each dictionary variable, sort ${l.samples} by matching data`,
 						types: ['categorical', 'integer', 'float', 'survival'],
 						tiebreakers: [
 							{
@@ -573,17 +574,18 @@ export function getMclassSorter(self) {
 // to support saved sessions before the advanced sorter UI was developed and released:
 // combine all geneVariant sortPriority entries into one and apply default labels + flags
 // where applicable
-export function reshapeSortPriority(sortOption) {
+export function reshapeSortPriority(sortOption, labels) {
+	const l = labels
 	let geneVariantsEntry
 	for (const sp of sortOption.sortPriority) {
 		if (sp.types.includes('categorical')) {
-			if (!sp.label) sp.label = 'For each dictionary variable, sort cases by matching data'
+			if (!sp.label) sp.label = `For each dictionary variable, sort ${l.samples} by matching data`
 			continue
 		}
 		if (!sp.types?.includes('geneVariant')) continue
 		if (!geneVariantsEntry) {
 			geneVariantsEntry = sp
-			if (!sp.label) sp.label = 'For each gene mutation, sort cases by matching data'
+			if (!sp.label) sp.label = `For each gene mutation, sort ${l.samples} by matching data`
 		} else {
 			geneVariantsEntry.tiebreakers.push(...sp.tiebreakers)
 			sp.toBeDeleted = true
@@ -592,26 +594,30 @@ export function reshapeSortPriority(sortOption) {
 
 	for (const tb of geneVariantsEntry.tiebreakers) {
 		//if (tb.by != 'class') continue
-		if (tb.filter?.values?.find(v => v.dt == 2)) {
+		if (tb.filter?.values?.find(v => v.dt == dtfusionrna)) {
 			const defaults = {
-				label: 'Cases with Fusion RNASeq > without',
+				label: `${l.Samples} with Fusion RNASeq > without`,
 				isOrdered: true,
 				disabled: false,
 				mayToggle: true
 			}
 			Object.assign(tb, defaults, tb)
-		} else if (tb.filter?.values?.find(v => v.dt == 1)) {
+		} else if (tb.filter?.values?.find(v => v.dt == dtsnvindel)) {
+			const label =
+				tb.order.includes(mclasscnvgain) || tb.order.includes(mclasscnvloss)
+					? `${l.Samples} with SSM + CNV > SSM only`
+					: `${l.Samples} with mutations`
 			const defaults = {
-				label: 'Cases with SSM + CNV > SSM only',
+				label,
 				isOrdered: true,
 				disabled: false,
 				mayToggle: true
 			}
 			Object.assign(tb, defaults, tb)
-		} else if (tb.order.length == 2 && tb.order.includes('CNV_amp') && tb.order.includes('CNV_loss')) {
+		} else if (tb.order.length == 2 && tb.order.includes(mclasscnvgain) && tb.order.includes(mclasscnvloss)) {
 			const defaults = {
-				label: 'Cases with CNV onlyr > without',
-				filter: { values: [{ dt: 4 }] },
+				label: `${l.Samples} with CNV only > without`,
+				filter: { values: [{ dt: dtcnv }] },
 				by: 'class',
 				isOrdered: true,
 				disabled: false,

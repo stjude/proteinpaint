@@ -171,6 +171,7 @@ export class MatrixControls {
 				const m = parent.config.settings.matrix
 				if (!controls.activeTab) controls.activeTab = 'basic'
 				input.dom.inputTd.style('padding', '5px')
+				// **** !!! TODO: use dom/toggleButtons to create tabbed sections !!!
 				const btnsDiv = input.dom.inputTd.append('div').style('margin-bottom', '5px')
 				const basicBtn = btnsDiv
 					.append('div')
