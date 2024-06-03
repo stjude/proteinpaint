@@ -377,111 +377,113 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 	}
 
 	// Similar to Oncoprint sorting
-	sortOptions.a = s.sortOptions?.a || {
-		//label: l.Mutation + ' categories', //'CNV+SSM > SSM-only > CNV-only',
-		// altLabels: {
-		// 	mutationOnly: 'SSM',
-		// 	cnvOnly: 'CNV',
-		// },
-		value: 'a',
-		order: 1, // this is used for list order as a sorter option in a dropdown
-		sortPriority: [
-			{
-				label: 'For each gene mutation, sort cases by matching data',
-				types: ['geneVariant'],
-				tiebreakers: [
+	sortOptions.a = s.sortOptions?.a
+		? reshapeSortPriority(s.sortOptions.a)
+		: {
+				//label: l.Mutation + ' categories', //'CNV+SSM > SSM-only > CNV-only',
+				// altLabels: {
+				// 	mutationOnly: 'SSM',
+				// 	cnvOnly: 'CNV',
+				// },
+				value: 'a',
+				order: 1, // this is used for list order as a sorter option in a dropdown
+				sortPriority: [
 					{
-						skip: !s.mutationClasses.includes('Fuserna'), // not visible, cannot be enabled
-						label: 'Cases with Fusion RNASeq > without',
-						filter: {
-							values: [
-								{
-									dt: 2
-								}
-							]
-						},
-						by: 'class',
-						isOrdered: false,
-						order: ['Fuserna' /*'WT', 'Blank'*/]
-					},
-					{
-						label: 'Cases with truncating mutations > without',
-						filter: {
-							values: [
-								{
-									dt: 1
-								}
-							]
-						},
-						by: 'class',
-						isOrdered: false,
-						order: [
-							...s.truncatingMutations
-							// // truncating
-							// 'F', // FRAMESHIFT
-							// 'N', // NONSENSE
-							// 'L', // SPLICE
-							// 'P', // SPLICE_REGION
+						label: 'For each gene mutation, sort cases by matching data',
+						types: ['geneVariant'],
+						tiebreakers: [
+							{
+								skip: !s.mutationClasses.includes('Fuserna'), // not visible, cannot be enabled
+								label: 'Cases with Fusion RNASeq > without',
+								filter: {
+									values: [
+										{
+											dt: 2
+										}
+									]
+								},
+								by: 'class',
+								isOrdered: false,
+								order: ['Fuserna' /*'WT', 'Blank'*/]
+							},
+							{
+								label: 'Cases with truncating mutations > without',
+								filter: {
+									values: [
+										{
+											dt: 1
+										}
+									]
+								},
+								by: 'class',
+								isOrdered: false,
+								order: [
+									...s.truncatingMutations
+									// // truncating
+									// 'F', // FRAMESHIFT
+									// 'N', // NONSENSE
+									// 'L', // SPLICE
+									// 'P', // SPLICE_REGION
 
-							// // indel
-							// 'D', // PROTEINDEL
-							// 'I', // PROTEININS
-							// 'ProteinAltering',
+									// // indel
+									// 'D', // PROTEINDEL
+									// 'I', // PROTEININS
+									// 'ProteinAltering',
 
-							// // point
-							// 'M' // MISSENSE
-						],
-						// do not have the option to add unused protein-changing mutations,
-						// because the "truncating" label for this tiebreaker will not make sense
-						notUsed: []
+									// // point
+									// 'M' // MISSENSE
+								],
+								// do not have the option to add unused protein-changing mutations,
+								// because the "truncating" label for this tiebreaker will not make sense
+								notUsed: []
+							},
+							{
+								label: 'Cases with CNV data > without',
+								mayToggle: true,
+								filter: {
+									values: [
+										{
+											dt: 4
+										}
+									]
+								},
+								by: 'class',
+								isOrdered: true,
+								disabled: true, // visible, can be enabled
+								order: ['CNV_amp', 'CNV_loss']
+							},
+							{
+								disabled: false,
+								mayToggle: true,
+								label: 'Cases with protein-changing mutations > without',
+								filter: {
+									values: [
+										{
+											dt: 1
+										}
+									]
+								},
+								by: 'class',
+								isOrdered: false,
+								// by default, do not include truncating mutations here since they may
+								// already be used in the tiebreaker with truncating mutations
+								order: s.proteinChangingMutations.filter(mcls => !s.truncatingMutations.includes(mcls)),
+								notUsed: s.truncatingMutations
+							}
+						]
 					},
 					{
-						label: 'Cases with CNV data > without',
-						mayToggle: true,
-						filter: {
-							values: [
-								{
-									dt: 4
-								}
-							]
-						},
-						by: 'class',
-						isOrdered: true,
-						disabled: true, // visible, can be enabled
-						order: ['CNV_amp', 'CNV_loss']
-					},
-					{
-						disabled: false,
-						mayToggle: true,
-						label: 'Cases with protein-changing mutations > without',
-						filter: {
-							values: [
-								{
-									dt: 1
-								}
-							]
-						},
-						by: 'class',
-						isOrdered: false,
-						// by default, do not include truncating mutations here since they may
-						// already be used in the tiebreaker with truncating mutations
-						order: s.proteinChangingMutations.filter(mcls => !s.truncatingMutations.includes(mcls)),
-						notUsed: s.truncatingMutations
+						label: 'For each dictionary variable, sort cases by matching data',
+						types: ['categorical', 'integer', 'float', 'survival'],
+						tiebreakers: [
+							{
+								label: 'Values',
+								by: 'values'
+							}
+						]
 					}
 				]
-			},
-			{
-				label: 'For each dictionary variable, sort cases by matching data',
-				types: ['categorical', 'integer', 'float', 'survival'],
-				tiebreakers: [
-					{
-						label: 'Values',
-						by: 'values'
-					}
-				]
-			}
-		]
-	}
+		  }
 
 	// legacy support for testing, do not display in a control UI
 	sortOptions.name = {
@@ -566,4 +568,59 @@ export function getMclassSorter(self) {
 			: mclassPriority.indexOf(a.class) - mclassPriority.indexOf(b.class)
 	}
 	return sorter
+}
+
+// to support saved sessions before the advanced sorter UI was developed and released:
+// combine all geneVariant sortPriority entries into one and apply default labels + flags
+// where applicable
+export function reshapeSortPriority(sortOption) {
+	let geneVariantsEntry
+	for (const sp of sortOption.sortPriority) {
+		if (sp.types.includes('categorical')) {
+			if (!sp.label) sp.label = 'For each dictionary variable, sort cases by matching data'
+			continue
+		}
+		if (!sp.types?.includes('geneVariant')) continue
+		if (!geneVariantsEntry) {
+			geneVariantsEntry = sp
+			if (!sp.label) sp.label = 'For each gene mutation, sort cases by matching data'
+		} else {
+			geneVariantsEntry.tiebreakers.push(...sp.tiebreakers)
+			sp.toBeDeleted = true
+		}
+	}
+
+	for (const tb of geneVariantsEntry.tiebreakers) {
+		//if (tb.by != 'class') continue
+		if (tb.filter?.values?.find(v => v.dt == 2)) {
+			const defaults = {
+				label: 'Cases with Fusion RNASeq > without',
+				isOrdered: true,
+				disabled: false,
+				mayToggle: true
+			}
+			Object.assign(tb, defaults, tb)
+		} else if (tb.filter?.values?.find(v => v.dt == 1)) {
+			const defaults = {
+				label: 'Cases with SSM + CNV > SSM only',
+				isOrdered: true,
+				disabled: false,
+				mayToggle: true
+			}
+			Object.assign(tb, defaults, tb)
+		} else if (tb.order.length == 2 && tb.order.includes('CNV_amp') && tb.order.includes('CNV_loss')) {
+			const defaults = {
+				label: 'Cases with CNV onlyr > without',
+				filter: { values: [{ dt: 4 }] },
+				by: 'class',
+				isOrdered: true,
+				disabled: false,
+				mayToggle: true
+			}
+			Object.assign(tb, defaults, tb)
+		}
+	}
+
+	sortOption.sortPriority = sortOption.sortPriority.filter(sp => !sp.toBeDeleted)
+	return sortOption
 }
