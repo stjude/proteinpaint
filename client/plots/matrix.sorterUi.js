@@ -43,14 +43,14 @@ export function getSorterUi(opts) {
 
 			sectionData = [
 				{
-					label: 'For each selected row, sort cases by matching data',
+					label: `For each selected row, sort ${l.samples} by matching data`,
 					notDraggable: true,
 					tiebreakers: [],
 					handler: handleSelectedTerms
 				},
 				...self.activeOption.sortPriority,
 				{
-					label: 'Sort cases by name, alphabetically',
+					label: `Sort ${l.samples} by name, alphabetically`,
 					notDraggable: true,
 					tiebreakers: []
 				}
@@ -362,7 +362,7 @@ export function getSorterUi(opts) {
 		if (title.length) title.unshift(`To use this data value for sorting ${l.samples}:`)
 		// else {
 		// 	if (d.filterByClass[d.key] == 'value') title.push('Hidden value')
-		// 	if (d.filterByClass[d.key] == 'case') title.push('Case filter')
+		// 	if (d.filterByClass[d.key] == 'case') title.push(`${l.Sample} filter`)
 		// 	if (title.length) title.unshift(`This data value was not used to sort ${l.cases}, since ${reason}: to use `)
 		// }
 
@@ -395,7 +395,7 @@ export function getSorterUi(opts) {
 				}
 
 				// if () title.push('Hidden value')
-				// if (d.filterByClass[d.key] == 'case') title.push('Case filter')
+				// if (d.filterByClass[d.key] == 'case') title.push(`${l.Sample} filter`)
 
 				const targetLstName = d.lstName == 'order' ? 'notUsed' : 'order'
 				if (!d.tb[targetLstName]) d.tb[targetLstName] = []
