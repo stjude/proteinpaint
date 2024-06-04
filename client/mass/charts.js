@@ -2,6 +2,7 @@ import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter/filter'
 import { NumericModes, TermTypes } from '../shared/terms'
+import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -211,8 +212,14 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Gene Expression',
+			chartType: 'geneExpression',
+			clickTo: self.showGenesetEditUI,
+			usecase: { target: 'geneExpression' }
+		},
+		{
 			label: 'Metabolite Intensity',
-			chartType: 'summary', // TODO change to metaboliteIntensity
+			chartType: 'metaboliteIntensity', // TODO change to metaboliteIntensity
 			clickTo: self.showTree_selectlst,
 			usecase: { target: 'metaboliteIntensity', detail: 'term' },
 			updateActionBySelectedTerms: (action, termlst) => {
@@ -316,6 +323,106 @@ function setRenderers(self) {
 		})
 	}
 
+	self.showGenesetEditUI = async chart => {
+		const geneList = []
+		const app = self.app
+		const tip = self.dom.tip
+		const holder = self.dom.tip.d
+		holder.selectAll('*').remove()
+		const div = holder.append('div').style('padding', '5px')
+		const label = div.append('label')
+		label.append('span').text('Create ')
+		let name
+		const nameInput = label
+			.append('input')
+			.style('margin', '2px 5px')
+			.style('width', '210px')
+			.attr('placeholder', 'Group Name')
+			.on('input', () => {
+				name = nameInput.property('value')
+			})
+		const selectedGroup = {
+			index: 0,
+			name,
+			label: name,
+			lst: [],
+			status: 'new'
+		}
+
+		showGenesetEdit({
+			holder: holder.append('div'),
+			/* running hier clustering and the editing group is the group used for clustering
+		pass this mode value to inform ui to support the optional button "top variably exp gene"
+		this is hardcoded for the purpose of gene expression and should be improved
+		*/
+			genome: app.opts.genome,
+			geneList,
+			mode: 'expression',
+			vocabApi: app.vocabApi,
+			callback: async ({ geneList, groupName }) => {
+				if (!selectedGroup) throw `missing selectedGroup`
+				tip.hide()
+				const group = { name: groupName || name, lst: [], type: 'hierCluster' }
+				const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+				const tws = await Promise.all(
+					geneList.map(async d => {
+						const term = {
+							gene: d.symbol || d.gene,
+							name: d.symbol || d.gene,
+							type: 'geneExpression'
+						}
+						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+						let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+						if (!tw) {
+							tw = { term, q: {} }
+						}
+						return tw
+					})
+				)
+
+				if (tws.length == 1) {
+					const tw = tws[0]
+					app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'summary',
+							term: tw
+						}
+					})
+					return
+				}
+
+				if (tws.length == 2) {
+					const tw = tws[0]
+					const tw2 = tws[1]
+					app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'summary',
+							term: tw,
+							term2: tw2
+						}
+					})
+					return
+				}
+				group.lst = [...lst, ...tws]
+				if (!group.lst.length) tg.splice(selectedGroup.index, 1)
+
+				// close geneset edit ui after clicking submit
+				holder.selectAll('*').remove()
+
+				app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'hierCluster',
+						termgroups: [group],
+						dataType: TermTypes.GENE_EXPRESSION
+					}
+				})
+			}
+		})
+	}
+
 	self.showTree_selectlst = async chart => {
 		self.dom.tip.clear()
 		if (chart.usecase?.label) {
@@ -346,6 +453,8 @@ function setRenderers(self) {
 			},
 			tree: {
 				submit_lst: termlst => {
+					const data = chart.processSelection ? chart.processSelection(termlst) : termlst
+					action.config[chart.usecase.detail] = data
 					if (chart.updateActionBySelectedTerms) chart.updateActionBySelectedTerms(action, termlst)
 					self.dom.tip.hide()
 					self.app.dispatch(action)

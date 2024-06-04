@@ -74,8 +74,7 @@ export function getSerieses(data) {
 				const cell = Object.assign({ key, siblingCells }, cellTemplate)
 				cell.valueIndex = i
 				let cellProps = setCellProps[t.tw.term.type]
-				if (this.type == 'hierCluster' && t.tw.term.type == TermTypes.METABOLITE_INTENSITY)
-					cellProps = setGeneVariantCellProps
+				if (this.type == 'hierCluster') cellProps = setGeneVariantCellProps
 				// will assign x, y, width, height, fill, label, order, etc
 				const legend = cellProps(cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
 				if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
