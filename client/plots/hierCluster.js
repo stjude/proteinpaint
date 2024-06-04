@@ -10,6 +10,7 @@ import { getNormalRoot } from '#filter'
 export * from './hierCluster.config'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
 import { TermTypes } from '../shared/terms'
+import { dtgeneexpression, dtmetaboliteintensity } from '../shared/common'
 /*
 FIXME items
 
@@ -114,7 +115,10 @@ export class HierCluster extends Matrix {
 					values: [
 						{
 							sample: column.name,
-							dt: this.state.config.dataType,
+							dt:
+								this.state.config.dataType == TermTypes.GENE_EXPRESSION
+									? this.settings.hierCluster.dataType
+									: dtmetaboliteintensity,
 							label: s.termGroupName,
 							// gene: tw.term.name,
 							// chr: tw.term.chr,
