@@ -460,6 +460,7 @@ NOTE using following pattern:
 CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it breaks!
 */
 	const tw = q.tw
+	console.log(tw)
 	if (!ds.queries?.[tw.term.type]) throw 'term type not supported by this dataset'
 
 	const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
@@ -480,6 +481,7 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 			terms: [tw.term]
 		}
 		const data = await ds.queries[tw.term.type].get(args)
+		console.log(data)
 		const termData = data.term2sample2value.get(tw.term.name)
 		for (const sample in termData) {
 			const value = termData[sample]

@@ -98,7 +98,6 @@ export class TermTypeSearch {
 		if (!this.types) return
 
 		const state = this.getState(appState)
-		console.log('TermTypeSearch', state)
 		await this.addTabsAllowed(state)
 		if (this.submit_lst)
 			//multiple terms can be selected

@@ -55,7 +55,7 @@ export type ValidResponse = {
 
 //response of just 1 gene, thus unable to do clustering
 export type SingletermResponse = {
-	term: string
+	term: Term
 	data: any
 }
 

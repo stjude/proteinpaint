@@ -163,9 +163,8 @@ export class HierCluster extends Matrix {
 
 	async requestData({ signal }) {
 		const body = this.currRequestOpts?.hierCluster || this.getHCRequestBody(this.state)
-		console.log('hierCluster.requestData', body)
 		const data = await dofetch3('termdb/cluster', { body, signal })
-		console.log('data', data)
+		console.log('hierCluster data', data)
 		return data
 	}
 
@@ -204,7 +203,6 @@ export class HierCluster extends Matrix {
 			filter: getNormalRoot(filterJoin([state.filter, dictionaryLegendFilter])),
 			filter0: state.filter0
 		}
-
 		return body
 	}
 
@@ -266,7 +264,6 @@ export class HierCluster extends Matrix {
 	*/
 	getClusterRowTermsAsParameter() {
 		const lst = [...this.hcTermGroup.lst.map(tw => tw.term)]
-		console.log('lst', lst)
 		// this helps caching by having a more consistent URL string
 		lst.sort((a, b) => (a.name < b.name ? -1 : 1))
 		return lst

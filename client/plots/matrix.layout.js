@@ -134,7 +134,6 @@ export function setLabelsAndScales() {
 				sampleName.length <= s.collabelmaxchars ? sampleName : sampleName.slice(0, s.collabelmaxchars) + '…'
 
 			const anno = sample.row[t.tw.$id]
-			console.log(anno)
 			if (!anno) continue
 			// This is the second call to classifyValues(), to determine case/hit counts for row labels
 			const { filteredValues, countedValues, renderedValues } = this.classifyValues(

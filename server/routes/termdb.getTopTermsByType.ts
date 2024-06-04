@@ -1,4 +1,7 @@
-import { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse } from '#shared/types/termdb.getTopTermsByType.ts'
+import {
+	TermdbTopTermsByTypeRequest,
+	TermdbTopTermsByTypeResponse
+} from '#shared/types/routes/termdb.getTopTermsByType.ts'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
@@ -81,12 +84,13 @@ function nativeValidateQuery(ds: any, type: string) {
 		}
 
 		// call rust to compute top genes on these samples
-		const terms = await computeTopTerms(q, ds, typeQuery.file, samples, type)
+		const terms = await computeTopTerms(typeQuery.file, samples, type)
 		return terms
 	}
 }
 
-async function computeTopTerms(q, ds, file, samples, type) {
+async function computeTopTerms(file, samples, type) {
+	//should support multiple term types
 	// The param option to calculate variance.
 	// It supports variance as well as interquartile region.
 	const input_json = {

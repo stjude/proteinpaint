@@ -1,7 +1,6 @@
 import { TermWrapper } from './tw.ts'
 import { BaseQ, BaseTerm } from './term.ts'
 import { TermSettingInstance } from '../termsetting.ts'
-import { Gene } from 'routes/gdc.topMutatedGenes.js'
 
 /*
 --------EXPORTED--------
