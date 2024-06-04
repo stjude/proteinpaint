@@ -1531,7 +1531,6 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
-		console.log('param!!!', param.terms)
 		if (term2sample2value.size == 0) throw 'no data available for the input ' + param.terms?.map(g => g.name).join(', ')
 		return { term2sample2value, byTermId, bySampleId }
 	}

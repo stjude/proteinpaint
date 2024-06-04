@@ -89,7 +89,7 @@ export class HierCluster extends Matrix {
 				// for now backend returns {gene:str, data:{}} if there's only 1 eligible gene
 				throw `Cannot do clustering: data is only available for 1 gene (${d.gene}). Try again by adding more genes.`
 			}
-			throw 'Cannot do clustering: invalid server response (lacks .clustering{})'
+			//throw 'Cannot do clustering: invalid server response (lacks .clustering{})'
 		}
 		this.hierClusterData = d
 
@@ -114,12 +114,11 @@ export class HierCluster extends Matrix {
 					values: [
 						{
 							sample: column.name,
-							dt: this.settings.hierCluster.dataType,
-							class: 'geneexpression', // FIXME since there's no class defined for dtgeneexpression in common.js, best not to require value.class
+							dt: this.state.config.dataType,
 							label: s.termGroupName,
-							gene: tw.term.name,
-							chr: tw.term.chr,
-							pos: `${tw.term.start}-${tw.term.stop}`,
+							// gene: tw.term.name,
+							// chr: tw.term.chr,
+							// pos: `${tw.term.start}-${tw.term.stop}`,
 							value
 							// the color will be computed in matrix.cells, so that
 							// it can get updated even when there are no nonsetting state diff
@@ -164,7 +163,6 @@ export class HierCluster extends Matrix {
 	async requestData({ signal }) {
 		const body = this.currRequestOpts?.hierCluster || this.getHCRequestBody(this.state)
 		const data = await dofetch3('termdb/cluster', { body, signal })
-		console.log('hierCluster data', data)
 		return data
 	}
 

@@ -343,10 +343,8 @@ function setRenderers(self) {
 			},
 			tree: {
 				submit_lst: termlst => {
-					console.log(chart)
 					const data = chart.processSelection ? chart.processSelection(termlst) : termlst
 					action.config[chart.usecase.detail] = data
-					console.log(action)
 					self.dom.tip.hide()
 					self.app.dispatch(action)
 				}

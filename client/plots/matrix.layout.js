@@ -119,7 +119,6 @@ export function setLabelsAndScales() {
 			t.grp.label = name.length <= s.termGrpLabelMaxChars ? name : name.slice(0, s.termGrpLabelMaxChars) + '…'
 			processedLabels.termGrpByName[name] = t.grp.label
 		}
-
 		for (const sample of this.sampleOrder) {
 			if (countedSamples.has(sample.row.sample)) continue
 			const name = sample.grp.name || ''
@@ -288,7 +287,8 @@ export function setLabelsAndScales() {
 
 	// need to assign scales to terms after the loop above so each term has the global maxLoss, maxGain, minLoss, minGain
 	for (const t of this.termOrder) {
-		if (t.tw.term.type == 'geneVariant') {
+		if (t.tw.term.type == 'geneVariant' || t.tw.term.type == 'geneExpression') {
+			console.log('cnvValues', this.cnvValues)
 			if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
 				t.scales = {
 					loss: interpolateBlues,

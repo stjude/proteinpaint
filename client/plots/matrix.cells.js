@@ -71,7 +71,7 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	return { ref: t.ref, group, value: anno.key, entry: { key, label: cell.label, fill: cell.fill } }
 }
 
-function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
+export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
 	cell.label = value.label || self.mclass[value.class].label
 	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
@@ -117,7 +117,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 
 	const byDt = self.state.termdbConfig.assayAvailability?.byDt
 	// return the corresponding legend item data
-	const order = value.class == 'CNV_loss' ? -2 : value.class.startsWith('CNV_') ? -1 : 0
+	const order = value.class == 'CNV_loss' ? -2 : value.class?.startsWith('CNV_') ? -1 : 0
 	if (value.dt == dtcnv) {
 		if (t.scales && value.class.startsWith('CNV_')) {
 			const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
@@ -232,7 +232,7 @@ export const setCellProps = {
 	integer: setNumericCellProps,
 	float: setNumericCellProps,
 	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
-	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps,
+	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps, //replaced later for setGeneVariantCellProps if hierCluster
 	/* !!! TODO: later, may allow survival terms as a matrix row in server/shared/termdb.usecase.js, 
 	   but how - quantitative, categorical, etc? */
 	//survival: setNumericCellProps,

@@ -481,7 +481,6 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 			terms: [tw.term]
 		}
 		const data = await ds.queries[tw.term.type].get(args)
-		console.log(data)
 		const termData = data.term2sample2value.get(tw.term.name)
 		for (const sample in termData) {
 			const value = termData[sample]
