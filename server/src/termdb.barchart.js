@@ -158,8 +158,9 @@ export async function barchart_data(q, ds, tdb) {
 								// value{} will have a .key property (group assignment) and
 								// a .values[] property (mutation data)
 								// only value.key should be used for plotting
-								// FIXME: since value.values[] is not considered for plotting,
-								// item.dedupkey cannot be supported for geneVariant term
+								// NOTE: item.dedupkey is not necessary because
+								// geneVariant groupsetting assignment will
+								// never be ambiguous
 								item[`key${i}`] = i != 1 ? value.key : [value.key]
 								item[`val${i}`] = value.key
 							} else {
