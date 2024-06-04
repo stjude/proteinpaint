@@ -2368,7 +2368,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					? await getCnvByTw(ds, tw, genome, q)
 					: dt == 'geneCnv'
 					? await getGenecnvByTerm(ds, tw.term, genome, q)
-					: null
+					: []
 
 			if (!mlst.length) throw 'unable to retrieve mutation data'
 
@@ -2462,28 +2462,16 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					return group.values.some(v => mclasses.includes(v.key))
 				})
 				if (!group) throw 'unable to assign sample to group'
-				// assign sample to group
+				// .key will be the name of the assigned group
 				data.set(sample, {
 					sample,
 					[tw.$id]: { key: group.name, label: group.name, values: mlst }
 				})
 			} else {
 				// groupsetting is not active
-				// cannot assign sample to a specific key because .values[]
-				// contains mutations from multiple dts and origins
-				// will handle classification of samples in a different script
-				// by setting key0 to be the dt/origin of the term (in order
-				// to divide the plot by dt/origin) and setting key1 to be the
-				// mutation class of the term. Note that this key1 should
-				// discriminate between samples that only have a certain
-				// mutation from samples that have multiple mutations,
-				// for example: samples with only missense mutations should
-				// have the key 'Missense only' and samples with both missense
-				// and frameshift mutations should have the key 'Missense and
-				// frameshift'
 				data.set(sample, {
 					sample,
-					[tw.$id]: { label: tw.term.name, values: mlst }
+					[tw.$id]: { key: tw.term.name, label: tw.term.name, values: mlst }
 				})
 			}
 		}

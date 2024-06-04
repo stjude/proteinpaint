@@ -221,7 +221,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		let divideBy = 'Default'
 		if (q.divideByTW && q.divideByTW.q.mode != 'continuous') {
 			sample.z = 0
-			if (q.divideByTW.term.type == 'geneVariant') {
+			if (q.divideByTW.term.type == 'geneVariant' && !q.divideByTW.q.groupsetting.inuse) {
 				divideBy = getMutation(true, dbSample, q.divideByTW)
 				if (divideBy == null) {
 					divideBy = getMutation(false, dbSample, q.divideByTW)
@@ -286,7 +286,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 						value.color = scheme[i]
 						i--
 					}
-				} else if (q.colorTW.term.type != 'geneVariant') value.color = k2c(category)
+				} else if (!(q.colorTW.term.type == 'geneVariant' && !q.colorTW.q.groupsetting.inuse))
+					value.color = k2c(category)
 			}
 		}
 		let i = 1
@@ -320,7 +321,8 @@ function hasValue(dbSample, tw) {
 
 function processSample(dbSample, sample, tw, categoryMap, category) {
 	let value = null
-	if (tw.term.type == 'geneVariant') assignGeneVariantValue(dbSample, sample, tw, categoryMap, category)
+	if (tw.term.type == 'geneVariant' && !tw.q.groupsetting.inuse)
+		assignGeneVariantValue(dbSample, sample, tw, categoryMap, category)
 	else {
 		value = dbSample?.[tw.$id]?.key
 		if (tw.term.values?.[value]?.label) {
@@ -390,7 +392,7 @@ function getCategory(mutation) {
 function order(map, tw, refs) {
 	let entries = []
 	if (!tw || map.size == 0) return entries
-	if (tw.term.type == 'geneVariant') {
+	if (tw.term.type == 'geneVariant' && !tw.q.groupsetting.inuse) {
 		entries = Object.entries(map)
 		entries.sort((a, b) => {
 			if (a[0] < b[0]) return -1

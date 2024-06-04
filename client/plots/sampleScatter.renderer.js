@@ -690,7 +690,7 @@ export function setRenderers(self) {
 			)}`
 			const colorRefCategory = chart.colorLegend.get('Ref')
 
-			if (self.config.colorTW?.term?.type == 'geneVariant')
+			if (self.config.colorTW?.term?.type == 'geneVariant' && !self.config.colorTW?.q.groupsetting.inuse)
 				offsetY = self.renderGeneVariantLegend(
 					chart,
 					offsetX,
@@ -792,10 +792,14 @@ export function setRenderers(self) {
 			self.drawScaleDotLegend(chart)
 		}
 		if (self.config.shapeTW) {
-			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
+			offsetX = !self.config.colorTW
+				? 0
+				: self.config.colorTW.term.type == 'geneVariant' && !self.config.colorTW.q.groupsetting.inuse
+				? 300
+				: 200
 			offsetY = 60
 			title = `${getTitle(self.config.shapeTW.term.name)}`
-			if (self.config.shapeTW.term.type == 'geneVariant')
+			if (self.config.shapeTW.term.type == 'geneVariant' && !self.config.shapeTW.q.groupsetting.inuse)
 				self.renderGeneVariantLegend(chart, offsetX, offsetY, legendG, self.config.shapeTW, 'shape', chart.shapeLegend)
 			else {
 				const shapeG = legendG.append('g')

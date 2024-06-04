@@ -31,6 +31,8 @@ class Overlay {
 		if (!o.holder) throw 'opts.holder missing'
 	}
 	initPill() {
+		if (!this.opts.defaultQ4fillTW) this.opts.defaultQ4fillTW = {}
+		this.opts.defaultQ4fillTW['geneVariant'] = { groupsetting: { inuse: true } } // geneVariant term should always use groupsetting when used as overlay term
 		this.pill = termsettingInit({
 			vocabApi: this.app.vocabApi,
 			vocab: this.state.vocab,

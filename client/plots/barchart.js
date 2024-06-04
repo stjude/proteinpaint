@@ -461,8 +461,12 @@ class Barchart {
 					visibleTotalsByChartSeriesId[series.seriesId] = series.visibleTotal
 				for (const data of series.data) {
 					data.seriesId = series.seriesId
-					if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
-						//when term1 or term2 is a geneVariant term, totalsByDataId: {dataId: {chartId:total, ...}, ...}
+					if (
+						(t1.term.type == 'geneVariant' && !t1.q.groupsetting.inuse) ||
+						(t2?.term.type == 'geneVariant' && !t2?.q.groupsetting.inuse)
+					) {
+						//term1 or term2 is a geneVariant term not using groupsetting
+						//totalsByDataId: {dataId: {chartId:total, ...}, ...}
 						if (!(data.dataId in this.totalsByDataId)) {
 							this.totalsByDataId[data.dataId] = {}
 						}
@@ -470,7 +474,8 @@ class Barchart {
 							? this.totalsByDataId[data.dataId][chart.chartId] + data.total
 							: 0 + data.total
 					} else {
-						//when term1 or term2 isn't a geneVariant term, totalsByDataId: {dataId: total, ...}
+						//term1 or term2 isn't a geneVariant term not using groupsetting
+						//totalsByDataId: {dataId: total, ...}
 						if (!(data.dataId in this.totalsByDataId)) {
 							this.totalsByDataId[data.dataId] = 0
 						}
@@ -543,13 +548,13 @@ class Barchart {
 
 	setTerm2Color(result) {
 		if (!this.config.term2) return
-		this.term2toColor[result.dataId] = this.getColor(this.config.term2.term, result.dataId, this.bins?.[2])
+		this.term2toColor[result.dataId] = this.getColor(this.config.term2, result.dataId, this.bins?.[2])
 	}
 
-	getColor(term, label, bins) {
-		if (!term) return
-		if (term.values) {
-			for (const [key, v] of Object.entries(term.values)) {
+	getColor(t, label, bins) {
+		if (!t.term) return
+		if (t.term.values) {
+			for (const [key, v] of Object.entries(t.term.values)) {
 				if (!v.color) continue
 				if (key === label) return v.color
 				if (v.label === label) return v.color
@@ -558,7 +563,7 @@ class Barchart {
 		const bin = bins?.find(bin => bin.label == label)
 		if (bin?.color) return bin.color
 
-		if (term.type == 'geneVariant') return this.getMutationColor(label)
+		if (t.term.type == 'geneVariant' && !t.q.groupsetting.inuse) return this.getMutationColor(label)
 
 		return rgb(this.colorScale(label)).toString()
 	}
@@ -593,7 +598,10 @@ class Barchart {
 	getLegendGrps() {
 		const t1 = this.config.term
 		const t2 = this.config.term2
-		if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
+		if (
+			(t1.term.type == 'geneVariant' && !t1.q.groupsetting.inuse) ||
+			(t2?.term.type == 'geneVariant' && !t2?.q.groupsetting.inuse)
+		) {
 			const legendGrps = []
 			for (const chart of this.chartsData.charts) {
 				legendGrps.push(this.getOneLegendGrps(chart))
@@ -649,7 +657,8 @@ class Barchart {
 					const total =
 						t2?.term?.type == 'condition'
 							? 0
-							: t1.term.type == 'geneVariant' || t2?.term?.type == 'geneVariant'
+							: (t1.term.type == 'geneVariant' && !t1.q.groupsetting.inuse) ||
+							  (t2?.term.type == 'geneVariant' && !t2?.q.groupsetting.inuse)
 							? chart.serieses.filter(filter).reduce(reducer, 0)
 							: this.currServerData.charts.reduce((sum, chart) => {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)
