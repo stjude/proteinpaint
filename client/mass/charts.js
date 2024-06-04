@@ -113,6 +113,9 @@ function getChartTypeList(self, state) {
 		required for clickTo=prepPlot
 		describe private details for creating a chart of a particular type
 		to be attached to action and used by store
+
+	.updateActionBySelectedTerms:
+		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
 	*/
 	const buttons = [
 		{
@@ -206,36 +209,37 @@ function getChartTypeList(self, state) {
 			config: {
 				chartType: 'singleCellPlot'
 			}
-		}
-	]
-	if (state.termdbConfig.allowedTermTypes.includes(TermTypes.METABOLITE_INTENSITY)) {
-		const chart = {
+		},
+		{
 			label: 'Metabolite Intensity',
-			chartType: 'summary',
+			chartType: 'summary', // TODO change to metaboliteIntensity
 			clickTo: self.showTree_selectlst,
-			usecase: { target: 'metaboliteIntensity', detail: 'term' }
-		}
-		chart.processSelection = termlst => {
-			let twlst = termlst.map(term => ({
-				term: JSON.parse(JSON.stringify(term)),
-				q: { mode: NumericModes.continuous }
-			}))
-			if (twlst.length == 1) {
-				chart.action.config.chartType = 'summary'
-				return twlst[0]
-			} else if (twlst.length == 2) {
-				chart.action.config.chartType = 'summary'
-				chart.action.config.term2 = twlst[1]
-				return twlst[0]
-			} else {
-				chart.action.config.chartType = 'hierCluster'
-				chart.action.config.dataType = TermTypes.METABOLITE_INTENSITY
-				chart.usecase = { target: 'hierCluster', detail: 'termgroups' }
-				return [{ name: 'hierCluster', lst: twlst, type: 'hierCluster' }]
+			usecase: { target: 'metaboliteIntensity', detail: 'term' },
+			updateActionBySelectedTerms: (action, termlst) => {
+				const twlst = termlst.map(term => ({
+					term: structuredClone(term),
+					q: { mode: NumericModes.continuous }
+				}))
+				if (twlst.length == 1) {
+					// violin
+					action.config.chartType = 'summary'
+					action.config.term = twlst[0]
+					return
+				}
+				if (twlst.length == 2) {
+					// scatter
+					action.config.chartType = 'summary'
+					action.config.term = twlst[0]
+					action.config.term2 = twlst[1]
+					return
+				}
+				// 3 or more terms, launch clustering
+				action.config.chartType = 'hierCluster'
+				action.config.dataType = TermTypes.METABOLITE_INTENSITY
+				action.config.termgroups = [{ name: 'hierCluster', lst: twlst, type: 'hierCluster' }]
 			}
 		}
-		buttons.push(chart)
-	}
+	]
 	for (const field in state?.termdbConfig.renamedChartTypes || []) {
 		const btn = buttons.find(b => b.chartType === field)
 		if (btn) {
@@ -326,9 +330,8 @@ function setRenderers(self) {
 		const action = {
 			type: 'plot_create',
 			id: getId(),
-			config: { chartType: chart.chartType }
+			config: { chartType: chart.chartType } // NOTE if chartType is intermediary, action will be updated on term selection
 		}
-		chart.action = action
 		const termdb = await import('../termdb/app')
 		self.dom.submenu = self.dom.tip.d.append('div')
 		termdb.appInit({
@@ -343,8 +346,7 @@ function setRenderers(self) {
 			},
 			tree: {
 				submit_lst: termlst => {
-					const data = chart.processSelection ? chart.processSelection(termlst) : termlst
-					action.config[chart.usecase.detail] = data
+					if (chart.updateActionBySelectedTerms) chart.updateActionBySelectedTerms(action, termlst)
 					self.dom.tip.hide()
 					self.app.dispatch(action)
 				}
