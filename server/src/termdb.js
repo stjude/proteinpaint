@@ -460,7 +460,6 @@ NOTE using following pattern:
 CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it breaks!
 */
 	const tw = q.tw
-	console.log(tw)
 	if (!ds.queries?.[tw.term.type]) throw 'term type not supported by this dataset'
 
 	const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]

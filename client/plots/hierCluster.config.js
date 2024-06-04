@@ -18,7 +18,7 @@ export async function getPlotConfig(opts = {}, app) {
 		- non-gene genomic stuff that resolves into numeric quantities (cpg meth)
 		- metabolite
 		*/
-		dataType: opts.termgroups?.[0]?.termType || TermTypes.GENE_EXPRESSION,
+		dataType: config.dataType,
 		// TODO: may adjust the default group name based on automatically detected term types
 		// otherwise, should define it via opts or overrides
 		termGroupName: 'Gene Expression',
@@ -205,7 +205,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				type: 'plot_create',
 				config: {
 					chartType: 'hierCluster',
-					termgroups: [group]
+					termgroups: [group],
+					dataType: TermTypes.GENE_EXPRESSION
 				}
 			})
 		}

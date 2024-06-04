@@ -194,7 +194,7 @@ export class HierCluster extends Matrix {
 		const body = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
-			dataType: state.config.dataType || TermTypes.GENE_EXPRESSION,
+			dataType: state.config.dataType,
 			clusterMethod: s.clusterMethod,
 			distanceMethod: s.distanceMethod,
 			terms,

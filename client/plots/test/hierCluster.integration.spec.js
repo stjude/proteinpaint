@@ -4,6 +4,7 @@ import { sleep, detectOne, detectGte, detectLst, detectAttr } from '../../test/t
 import { select } from 'd3-selection'
 import { appInit } from '../plot.app.js'
 import { fillTermWrapper } from '#termsetting'
+import { TermTypes } from '#shared/terms.js'
 
 /*************************
  reusable helper functions
@@ -22,6 +23,7 @@ async function getHierClusterApp(_opts = {}) {
 			plots: [
 				{
 					chartType: 'hierCluster',
+					dataType: TermTypes.GENE_EXPRESSION,
 					settings: {
 						hierCluster: {
 							termGroupName: 'Gene Expression (CGC genes only)'

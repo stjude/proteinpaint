@@ -4,11 +4,14 @@ export function maySetSandboxHeader() {
 	// run only once upon init, after state and dataType is given
 	if (!this.dom.header) return // no header
 	switch (this.config.dataType) {
+		case TermTypes.GENE_EXPRESSION:
+			this.dom.header.text('Gene Expression Clustering')
+			break
 		case TermTypes.METABOLITE_INTENSITY:
 			this.dom.header.text('Metabolite Intensity Clustering')
 			break
 		default:
-			this.dom.header.text('Gene Expression Clustering')
+			throw `dataType '${this.config.dataType}' not recognized`
 	}
 }
 

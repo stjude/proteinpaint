@@ -1,6 +1,7 @@
 import { appInit } from '#plots/plot.app.js'
 import { select } from 'd3-selection'
 import { copyMerge } from '#rx'
+import { TermTypes } from '../shared/terms'
 
 /*
 test with http://localhost:3000/example.gdc.exp.html
@@ -166,7 +167,8 @@ export async function init(arg, holder, genomes) {
 								divideBy: arg.divideBy || undefined,
 								// moved default settings to gdc.hg38.js termdb[chartType].settings
 								// but can still override in the runpp() argument
-								settings
+								settings,
+								dataType: TermTypes.GENE_EXPRESSION
 							}
 						})
 					}
