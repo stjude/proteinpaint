@@ -167,7 +167,6 @@ case_ids:[]
 	required for hitting /gene_selection to screen ensg list before returning
 */
 async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
-	console.log('geneExpression_getGenes()', genes)
 	// convert given gene symbols to ENSG for api query
 	const ensgLst = []
 	// convert ensg back to symbol for using in data structure
@@ -220,7 +219,6 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 		}
 		// some genes from ensgLst may be left out ensgLst2, e.g. HOXA1 from test example;
 		// later can comment above code to double-check as /values is able to return data for HOXA1 so why is it left out here?
-		//console.log(ensgLst, ensgLst2)
 		return [ensgLst2, ensg2symbol]
 	} catch (e) {
 		throw e
@@ -246,12 +244,9 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		console.log(host, headers)
 		const re = await ky.post(path.join(host.rest, 'cases'), { timeout: false, headers, json }).json()
-		console.log('gdcGetCasesWithExpressionDataFromCohort()', re)
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		const lst = []
-		console.log(ds.__gdc.casesWithExpData)
 		for (const h of re.data.hits) {
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
 				lst.push(h.id)

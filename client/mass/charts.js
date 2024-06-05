@@ -176,11 +176,7 @@ function getChartTypeList(self, state) {
 			chartType: 'genomeBrowser',
 			clickTo: self.loadChartSpecificMenu
 		},
-		{
-			label: 'Gene Expression',
-			chartType: 'hierCluster',
-			clickTo: self.loadChartSpecificMenu
-		},
+
 		{
 			label: 'Differential Expression',
 			chartType: 'DEanalysis',
@@ -212,6 +208,7 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			//This chart may be later on extended to support other gene expression data types
 			label: 'Gene Expression',
 			chartType: 'geneExpression',
 			clickTo: self.showGenesetEditUI,

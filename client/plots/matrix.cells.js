@@ -105,7 +105,7 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = 0
 	} else {
-		throw `cannot set cell props for '${value.dt}'`
+		throw `cannot set cell props for dt = '${value.dt}'`
 	}
 
 	// need to distinguish between not tested or wildtype by dt: snvindel vs CNV vs SV, etc
