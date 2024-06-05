@@ -1083,6 +1083,7 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 async function checkExpressionAvailability(ds) {
 	// hardcodes this url since the api is only in uat now. replace with path.join() when it's in prod
 	const { host, headers } = ds.getHostHeaders()
+	console.log(host, headers)
 	const url = `${host.geneExp}/gene_expression/availability`
 
 	try {
@@ -1100,6 +1101,7 @@ async function checkExpressionAvailability(ds) {
 
 		delete ds.__gdc.caseIds
 	} catch (e) {
+		console.log(e)
 		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
 		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
 		// when api is releated to public prod, must throw here and abort

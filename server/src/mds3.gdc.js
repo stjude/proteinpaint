@@ -120,7 +120,6 @@ samples are determined based on filter/filter0:
 */
 export function gdc_validate_query_geneExpression(ds, genome) {
 	ds.queries.geneExpression.get = async q => {
-		console.log('gdc_validate_query_geneExpression()', q)
 		if (!Array.isArray(q.terms)) throw 'q.terms[] not array'
 
 		// getter returns this data structure
@@ -130,7 +129,6 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 
 		// get all cases from current filter
 		const caseLst = await gdcGetCasesWithExpressionDataFromCohort(q, ds) // list of case uuid
-		console.log('caseLst:', caseLst)
 		if (caseLst.length == 0) return { term2sample2value, byTermId: {} } // no cases with exp data
 
 		const t2 = new Date()
@@ -256,7 +254,6 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 		const lst = []
 		console.log(ds.__gdc.casesWithExpData)
 		for (const h of re.data.hits) {
-			console.log(h)
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
 				lst.push(h.id)
 				if (lst.length == 1000) {
