@@ -39,6 +39,14 @@ function init({ genomes }) {
 			if (!sampleId) throw 'invalid sampleId'
 			if (illegalpath(req.query.file)) throw `illegalpath filepath`
 
+			const filename = path.basename(req.query.file)
+			const allowedExtensions = ['.dzi', '.jpeg', '.png']
+			const extension = path.extname(filename)
+
+			if (!allowedExtensions.includes(extension)) {
+				throw `Invalid file extension. Allowed extensions are ${allowedExtensions.join(', ')}`
+			}
+
 			imagePath = path.join(
 				`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.imageBySampleFolder}`,
 				`${sampleId}/${req.query.file}`
