@@ -23,6 +23,7 @@ export const OUT_frame = false
 
 export const dtsnvindel = 1
 export const dtfusionrna = 2
+export const dtgeneexpression = 3
 export const dtcnv = 4
 export const dtsv = 5
 export const dtitd = 6
@@ -31,7 +32,6 @@ export const dtnloss = 8
 export const dtcloss = 9
 export const dtloh = 10 // to be used in svcnv track
 export const plotColor = '#ce768e'
-export const dtgeneexpression = 10
 export const dtmetaboliteintensity = 11
 
 export const dt2label = {

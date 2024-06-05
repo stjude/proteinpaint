@@ -71,7 +71,6 @@ export async function getPlotConfig(opts = {}, app) {
 				if (!i.gene) i.gene = i.name
 				tw = { term: i }
 			}
-			tw.q = { mode: 'discrete' } //this is the expected mode for hierCluster
 			await fillTermWrapper(tw, app.vocabApi)
 			twlst.push(tw)
 		}

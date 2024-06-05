@@ -79,7 +79,6 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 	cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
 	cell.class = value.class
 	cell.value = value
-	console.log(value)
 	const colw = self.dimensions.colw
 	if (s.cellEncoding == '') {
 		cell.height = s.rowh / values.length
@@ -100,13 +99,13 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y = height * 0.33333
 		}
-	} else if (value.dt == dtcnv || value.dt >= dtgeneexpression) {
+	} else if (value.dt == dtcnv || value.dt == dtgeneexpression || value.dt == dtmetaboliteintensity) {
 		cell.height = s.rowh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = 0
 	} else {
-		throw `cannot set cell props for dt='${value.dt}'`
+		throw `cannot set cell props for '${value.dt}'`
 	}
 
 	// need to distinguish between not tested or wildtype by dt: snvindel vs CNV vs SV, etc
@@ -232,7 +231,7 @@ export const setCellProps = {
 	integer: setNumericCellProps,
 	float: setNumericCellProps,
 	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
-	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps, //replaced later for setGeneVariantCellProps if hierCluster
+	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps,
 	/* !!! TODO: later, may allow survival terms as a matrix row in server/shared/termdb.usecase.js, 
 	   but how - quantitative, categorical, etc? */
 	//survival: setNumericCellProps,
