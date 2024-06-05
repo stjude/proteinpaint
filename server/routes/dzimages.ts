@@ -37,10 +37,12 @@ function init({ genomes }) {
 			const sampleId = req.params.sampleId
 			if (!sampleId) throw 'invalid sampleId'
 
-			imagePath = path.join(
-				`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.imageBySampleFolder}`,
-				`${sampleId}/${req.params[0]}`
-			)
+			const sampleBaseDir = path.resolve(`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.imageBySampleFolder}`)
+			imagePath = path.resolve(sampleBaseDir, `${sampleId}/${req.params[0]}`)
+
+			if (!imagePath.startsWith(sampleBaseDir)) {
+				throw 'Invalid path'
+			}
 		} catch (e: any) {
 			console.log(e)
 		}
