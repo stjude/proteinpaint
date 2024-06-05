@@ -19,7 +19,7 @@ export default class DziViewer {
 
 		const viewer = OpenSeadragon({
 			id: 'openseadragon-viewer',
-			tileSources: `dzimages/${state.sample_id}/${state.dzimage}?genome=${state.genome}&dslabel=${state.dslabel}`,
+			tileSources: `dzimages/${state.sample_id}?genome=${state.genome}&dslabel=${state.dslabel}&file=${state.dzimage}`,
 			prefixUrl: 'https://openseadragon.github.io/openseadragon/images/',
 			showNavigator: true
 		})
