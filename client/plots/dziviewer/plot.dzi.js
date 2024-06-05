@@ -1,4 +1,4 @@
-export default async function (dslabel, holder, genomeObj, sample_id, dzimage) {
+export default async function (dslabel, holder, genomeObj, sample_id, dzimages) {
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
@@ -9,7 +9,7 @@ export default async function (dslabel, holder, genomeObj, sample_id, dzimage) {
 				genome: genomeObj.name,
 				dslabel: dslabel,
 				sample_id: sample_id,
-				dzimage: dzimage,
+				dzimages: dzimages,
 
 				plots: [
 					{
