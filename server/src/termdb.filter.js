@@ -233,7 +233,7 @@ async function get_geneExpression(tvs, CTEname, ds) {
 		distanceMethod: 'euclidean',
 		/** Data type */
 		dataType: TermTypes.GENE_EXPRESSION,
-		genes: [{ gene: tvs.term.gene }]
+		terms: [{ gene: tvs.term.gene, type: TermTypes.GENE_EXPRESSION }]
 	}
 	const data = await ds.queries.geneExpression.get(args)
 	const samples = []

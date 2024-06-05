@@ -79,7 +79,7 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 	cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
 	cell.class = value.class
 	cell.value = value
-
+	console.log(value)
 	const colw = self.dimensions.colw
 	if (s.cellEncoding == '') {
 		cell.height = s.rowh / values.length
