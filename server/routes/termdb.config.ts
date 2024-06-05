@@ -207,9 +207,8 @@ function addGenomicQueries(c, ds, genome) {
 	}
 
 	if (q.DZImages) {
-		q2.DZImages = {}
-		for (const k in q.DZImages) {
-			q2.DZImages[k] = JSON.parse(JSON.stringify(q.DZImages[k]))
+		q2.DZImages = {
+			type: q.DZImages.type
 		}
 	}
 
