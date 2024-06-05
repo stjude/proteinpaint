@@ -22,13 +22,6 @@ UI elements:
 	- submitButton()
 
 obj:{ data:[ {terms} ] }
-
-
-Documentation: https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit
-
-
-Long term plans: 
-Will include sample annotation matrix, longitudinal data, sample ID hierarcy and molecular data (see old sketch: https://docs.google.com/drawings/d/1x3BgBbUF2ChkOGCXkA-fW8r46EbT_ZEqNZgwyTXLTXE/edit)
 */
 
 export function init_databrowserUI(holder, debugmode) {
@@ -72,7 +65,7 @@ function infoSection(div) {
 	div.append('div').style('margin', '10px').style('opacity', '0.65').html(`
 			<ul>
                 <li>
-                    Please see the <a href="https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit" target="_blank">documentation</a> for more information.
+                    Please see the <a href="https://github.com/stjude/proteinpaint/wiki/Data-Browser" target="_blank">documentation</a> for more information.
                 </li>
 				<li>
 					Download an example data dictionary <a href="https://proteinpaint.stjude.org/ppdemo/databrowser/dictionaryDemoData.tar.gz" target="_self" "download>here</a>.
