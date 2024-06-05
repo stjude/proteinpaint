@@ -258,8 +258,8 @@ export function setInteractivity(self) {
 				})
 		}
 
-		const showHnEImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showHnEImages
-		if (q.HnEImages && showHnEImages) {
+		const showDZImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showDZImages
+		if (q.DZImages && showDZImages) {
 			async function fetchHnEImages() {
 				return dofetch3('sampledzimages', {
 					body: {

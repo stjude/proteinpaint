@@ -35,7 +35,7 @@ function init({ genomes }) {
 			const sampleId = req.query.sample_id
 
 			const sampleDZImagesPath = path.join(
-				`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.imageBySampleFolder}`,
+				`${serverconfig.tpmasterdir}/${ds.queries.DZImages.imageBySampleFolder}`,
 				sampleId
 			)
 			const sampleDZImages = getDZImages(sampleDZImagesPath)

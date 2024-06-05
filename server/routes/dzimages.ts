@@ -48,7 +48,7 @@ function init({ genomes }) {
 			}
 
 			imagePath = path.join(
-				`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.imageBySampleFolder}`,
+				`${serverconfig.tpmasterdir}/${ds.queries.DZImages.imageBySampleFolder}`,
 				`${sampleId}/${req.query.file}`
 			)
 

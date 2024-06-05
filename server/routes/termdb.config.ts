@@ -206,10 +206,10 @@ function addGenomicQueries(c, ds, genome) {
 		}
 	}
 
-	if (q.HnEImages) {
-		q2.HnEImages = {}
-		for (const k in q.HnEImages) {
-			q2.HnEImages[k] = JSON.parse(JSON.stringify(q.HnEImages[k]))
+	if (q.DZImages) {
+		q2.DZImages = {}
+		for (const k in q.DZImages) {
+			q2.DZImages[k] = JSON.parse(JSON.stringify(q.DZImages[k]))
 		}
 	}
 
