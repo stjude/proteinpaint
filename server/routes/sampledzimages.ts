@@ -3,7 +3,7 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 
 /*
-given a sample, return it's singlecell data from dataset
+given a sample, return all deep zoom images for specified dataset
 */
 
 export const api: any = {
