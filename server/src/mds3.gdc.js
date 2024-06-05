@@ -135,7 +135,6 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		mayLog(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
 
 		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.terms, genome, caseLst, ds, q)
-		console.log('ensgLst:', ensgLst, ensg2symbol)
 
 		if (ensgLst.length == 0) return { term2sample2value, byTermId: {} } // no valid genes
 

@@ -100,7 +100,7 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y = height * 0.33333
 		}
-	} else if (value.dt == dtcnv || value.dt == dtgeneexpression) {
+	} else if (value.dt == dtcnv || value.dt >= dtgeneexpression) {
 		cell.height = s.rowh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
