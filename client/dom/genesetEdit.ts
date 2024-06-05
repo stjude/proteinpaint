@@ -34,6 +34,7 @@ type showGenesetEditArg = {
 	vocabApi: any
 	geneList?: {
 		gene: string
+		mutationStat?: { class: string; count: number }[]
 	}[]
 	titleText?: string
 }
@@ -251,18 +252,20 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	}
 
 	function renderGenes() {
-		const orderedGenes = geneList.sort((a, b) => {
-			if (a.gene < b.gene) return -1
-			if (a.gene > b.gene) return 1
-			return 0
-		})
+		const hasStat = geneList.some(g => g.mutationStat)
+		if (!hasStat)
+			geneList.sort((a, b) => {
+				if (a.gene < b.gene) return -1
+				if (a.gene > b.gene) return 1
+				return 0
+			})
 		api.dom.geneHoldingDiv.selectAll('*').remove()
 
 		api.statColor2label = new Map()
 
 		api.dom.geneHoldingDiv
 			.selectAll('div')
-			.data(orderedGenes || [])
+			.data(geneList || [])
 			.enter()
 			.append('div')
 			.attr('title', 'click to delete')
