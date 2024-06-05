@@ -3,7 +3,7 @@ import serverconfig from '#src/serverconfig.js'
 import { illegalpath } from '#src/utils.js'
 
 /*
-return deep zoom image tiles
+return .dzi file and deep zoom image tiles for specified sample and dataset
 */
 
 const routePath = 'dzimages'
