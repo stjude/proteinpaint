@@ -275,14 +275,14 @@ export function setInteractivity(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.attr('data-testid', 'oncoMatrix_termLabel_dzi_button')
 				.style('display', 'none')
-				.text('H&E Images (0)')
+				.text(`${q.DZImages.type} Images (0)`)
 
 			const images = fetchHnEImages()
 
 			images.then(data => {
 				if (data.sampleDZImages.length === 0) return
 				menuDiv.style('display', 'block')
-				menuDiv.text(`H&E Images (${data.sampleDZImages.length})`)
+				menuDiv.text(`${q.DZImages.type} Images (${data.sampleDZImages.length})`)
 				menuDiv.on('click', async _ => {
 					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 					sandbox.header.text(sample.sample_id)
