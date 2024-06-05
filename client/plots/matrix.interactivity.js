@@ -269,6 +269,7 @@ export function setInteractivity(self) {
 					}
 				})
 			}
+
 			const menuDiv = self.dom.clickMenu.d
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -282,36 +283,18 @@ export function setInteractivity(self) {
 				menuDiv.style('display', 'block')
 				menuDiv.text(`H&E Images (${data.sampleDZImages.length})`)
 				menuDiv.on('click', async _ => {
+					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
+					sandbox.header.text(sample.sample_id)
+					;(await import('./dziviewer/plot.dzi.js')).default(
+						self.state.vocab.dslabel,
+						sandbox.body,
+						self.app.opts.genome,
+						sample.sample_id,
+						data.sampleDZImages
+					)
+
 					menuDiv.remove()
 					self.dom.clickMenu.d.selectAll('*').remove()
-
-					const subMenuDiv = self.dom.clickMenu.d.append('div')
-					subMenuDiv.append('div').text('H&E Images').style('padding', '3px 5px').style('text-align', 'center')
-
-					const t = subMenuDiv.append('table')
-					for (let i = 0; i < data.sampleDZImages.length; i++) {
-						const tr = t.append('tr').attr('class', 'sja_menuoption sja_sharp_border')
-						tr.append('td')
-							.append('div')
-							.text('Image ' + (i + 1))
-							.style('padding', '3px 5px')
-						tr.append('td').append('div').text(data.sampleDZImages[i]).style('padding', '3px 5px')
-
-						tr.on('click', async event => {
-							const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
-							sandbox.header.text(sample.sample_id)
-							;(await import('./dziviewer/plot.dzi.js')).default(
-								self.state.vocab.dslabel,
-								sandbox.body,
-								self.app.opts.genome,
-								sample.sample_id,
-								data.sampleDZImages[i]
-							)
-
-							subMenuDiv.remove()
-							self.dom.clickMenu.d.selectAll('*').remove()
-						})
-					}
 				})
 			})
 		}

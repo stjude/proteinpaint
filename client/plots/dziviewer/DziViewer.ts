@@ -17,11 +17,18 @@ export default class DziViewer {
 		const holder = this.opts.holder
 		holder.append('div').attr('id', 'openseadragon-viewer').style('width', ' 800px').style('height', ' 800px')
 
+		const tileSources: Array<string> = []
+
+		for (const dzimage of state.dzimages) {
+			tileSources.push(`dzimages/${state.sample_id}?genome=${state.genome}&dslabel=${state.dslabel}&file=${dzimage}`)
+		}
+
 		const viewer = OpenSeadragon({
 			id: 'openseadragon-viewer',
-			tileSources: `dzimages/${state.sample_id}?genome=${state.genome}&dslabel=${state.dslabel}&file=${state.dzimage}`,
+			tileSources: tileSources,
 			prefixUrl: 'https://openseadragon.github.io/openseadragon/images/',
-			showNavigator: true
+			showNavigator: true,
+			sequenceMode: tileSources.length > 1
 		})
 	}
 }
