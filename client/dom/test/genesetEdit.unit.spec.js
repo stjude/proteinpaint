@@ -130,7 +130,7 @@ tape('gene deletion', function (test) {
 tape('submit button', function (test) {
 	test.timeoutAfter(100)
 	const vocabApi = {} //Fake vocab api returning  some genes
-	const geneList = [{ gene: 'TP53' }, { gene: 'KRAS' }]
+	const geneList = [{ gene: 'KRAS' }, { gene: 'TP53' }]
 	const geneLstCopy = structuredClone(geneList)
 	const menu = new Menu({ padding: '0px' })
 	const ui = showGenesetEdit({
