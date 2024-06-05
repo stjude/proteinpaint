@@ -1,6 +1,14 @@
 To run python/src/dzi.py on mac, you need to install the following packages:
 
 brew install python
+
+Homebrew's python formula now points to Python 3 by default.
+Verify that python3 is installed by running:
+
+python3 --version
+
+Install vips for managing large images:
+
 brew install vips
 
 Init a virtual environment and tun the script as follows:
