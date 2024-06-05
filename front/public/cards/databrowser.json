@@ -1,22 +1,22 @@
 {
-  "intro": "By uploading a dictionary in the Data Browser, one can explore the structure of their custom data. <br><br>Options to upload sample annotation and other data types are in development.", 
-  "ppcalls":[
+  "intro": "By uploading a dictionary in the Data Browser, one can explore the structure of their custom data.",
+  "ppcalls": [
     {
-        "isUi": true,
-        "runargs": {
-            "noheader": true,
-            "nobox": 1, 
-            "parseurl": false, 
-            "tkui": "databrowser"
-        }
+      "isUi": true,
+      "runargs": {
+        "noheader": true,
+        "nobox": 1,
+        "parseurl": false,
+        "tkui": "databrowser"
+      }
     },
     {
       "label": "Custom Data",
-      "download":"https://proteinpaint.stjude.org/ppdemo/databrowser/dictionaryDemoData.tar.gz",
+      "download": "https://proteinpaint.stjude.org/ppdemo/databrowser/dictionaryDemoData.tar.gz",
       "runargs": {
         "noheader": true,
-        "nobox":true,
-        "mass":{
+        "nobox": true,
+        "mass": {
           "state": {
             "vocab": {
               "terms": [
@@ -36,12 +36,12 @@
                   "groupsetting": {
                     "disabled": true
                   },
-                "id": "Gender",
-                "isleaf": true,
-                "name": "Gender",
-                "parent_id": "Demographic",
-                "type": "categorical",
-                "values": {
+                  "id": "Gender",
+                  "isleaf": true,
+                  "name": "Gender",
+                  "parent_id": "Demographic",
+                  "type": "categorical",
+                  "values": {
                     "Female": {
                       "color": "pink",
                       "key": "Female",
@@ -52,101 +52,101 @@
                       "key": "Male",
                       "label": "Male"
                     }
-                }
-              },
-              {
-              "bins": {
-                "default": {
-                  "bin_size": 0.5,
-                  "first_bin": {
-                    "stop": 0.5
-                  },
+                  }
+                },
+                {
+                  "bins": {
+                    "default": {
+                      "bin_size": 0.5,
+                      "first_bin": {
+                        "stop": 0.5
+                      },
                       "rounding": ".1f",
                       "startinclusive": true,
                       "type": "regular-bin"
                     }
                   },
-              "id": "Age",
-              "isleaf": true,
-              "parent_id": "Demographic",
-              "name": "Age at Diagnosis",
-              "type": "float",
-              "values": {}
-            },
-            {
-              "type": "categorical",
-              "values": {
-                "3-6 yrs": {
-                  "key": "3-6 yrs",
-                  "label": "3-6 yrs",
-                  "color": "green"
+                  "id": "Age",
+                  "isleaf": true,
+                  "parent_id": "Demographic",
+                  "name": "Age at Diagnosis",
+                  "type": "float",
+                  "values": {}
                 },
-                "<3 yrs": {
-                  "key": "<3 yrs",
-                  "label": "<3 yrs",
-                  "color": "orange"
-                }
-              },
-              "isleaf": true,
-              "id": "Age Group",
-              "name": "Age Group",
-              "parent_id": "Demographic",
-              "groupsetting": {
-                "disabled": true
-              }
-            },
-            {
-              "type": "categorical",
-              "values": {
-                "Dead ": {
-                  "key": "Dead ",
-                  "label": "Dead "
-                },
-                "Alive": {
-                  "key": "Alive",
-                  "label": "Alive"
-                }
-              },
-              "isleaf": true,
-              "id": "Alive/Dead",
-              "name": "Alive/Dead",
-              "parent_id": "Prognosis",
-              "groupsetting": {
-                "disabled": true
-              }
-            },
-            {
-              "groupsetting": {
-                  "disabled": true
-                },
-              "id": "Progresssive Disease",
-              "isleaf": true,
-              "name": "Progresssive Disease",
-              "parent_id": "Prognosis",
-              "type": "categorical",
-              "values": {
-                  "No": {
-                    "color": "red",
-                    "key": "No",
-                      "label": "No"
+                {
+                  "type": "categorical",
+                  "values": {
+                    "3-6 yrs": {
+                      "key": "3-6 yrs",
+                      "label": "3-6 yrs",
+                      "color": "green"
+                    },
+                    "<3 yrs": {
+                      "key": "<3 yrs",
+                      "label": "<3 yrs",
+                      "color": "orange"
+                    }
                   },
-                  "Yes": {
-                    "color": "green",
-                    "key": "Yes",
-                    "label": "Yes"
+                  "isleaf": true,
+                  "id": "Age Group",
+                  "name": "Age Group",
+                  "parent_id": "Demographic",
+                  "groupsetting": {
+                    "disabled": true
+                  }
+                },
+                {
+                  "type": "categorical",
+                  "values": {
+                    "Dead ": {
+                      "key": "Dead ",
+                      "label": "Dead "
+                    },
+                    "Alive": {
+                      "key": "Alive",
+                      "label": "Alive"
+                    }
+                  },
+                  "isleaf": true,
+                  "id": "Alive/Dead",
+                  "name": "Alive/Dead",
+                  "parent_id": "Prognosis",
+                  "groupsetting": {
+                    "disabled": true
+                  }
+                },
+                {
+                  "groupsetting": {
+                    "disabled": true
+                  },
+                  "id": "Progresssive Disease",
+                  "isleaf": true,
+                  "name": "Progresssive Disease",
+                  "parent_id": "Prognosis",
+                  "type": "categorical",
+                  "values": {
+                    "No": {
+                      "color": "red",
+                      "key": "No",
+                      "label": "No"
+                    },
+                    "Yes": {
+                      "color": "green",
+                      "key": "Yes",
+                      "label": "Yes"
+                    }
                   }
                 }
-              }
-          ],
-          "sampleannotation": {
-            "0": {
-              "Age": 5,
-              "Gender": "Male",
-              "Alive/Dead": "Dead",
-              "Age Group": "3-6 yrs",
-              "Progresssive Disease": "No"
-            },
-            "1": {
+              ],
+              "sampleannotation": {
+                "0": {
+                  "Age": 5,
+                  "Gender": "Male",
+                  "Alive/Dead": "Dead",
+                  "Age Group": "3-6 yrs",
+                  "Progresssive Disease": "No"
+                },
+                "1": {
                   "Age": 2,
                   "Gender": "Female",
                   "Alive/Dead": "Alive",
@@ -181,53 +181,57 @@
                   "Age Group": "3-6 yrs",
                   "Progresssive Disease": "No"
                 },
-                    "6": {
-                      "Age": 2,
-                      "Gender": "Male",
-                      "Alive/Dead": "Alive",
-                      "Age Group": "<3 yrs",
-                      "Progresssive Disease": "No"
-                    },
-                    "7": {
-                      "Age": 4,
-                      "Gender": "Male",
-                      "Alive/Dead": "Dead",
-                      "Age Group": "3-6 yrs",
-                      "Progresssive Disease": "Yes"
-                    },
-                    "8": {
-                      "Age": 5,
-                      "Gender": "Female",
-                      "Alive/Dead": "Alive",
-                      "Age Group": "3-6 yrs",
-                      "Progresssive Disease": "Yes"
-                    },
-                    "9": {
-                      "Age": 5,
-                      "Gender": "Male",
-                      "Alive/Dead": "Alive",
-                      "Age Group": "3-6 yrs",
-                      "Progresssive Disease": "No"
-                    }
+                "6": {
+                  "Age": 2,
+                  "Gender": "Male",
+                  "Alive/Dead": "Alive",
+                  "Age Group": "<3 yrs",
+                  "Progresssive Disease": "No"
+                },
+                "7": {
+                  "Age": 4,
+                  "Gender": "Male",
+                  "Alive/Dead": "Dead",
+                  "Age Group": "3-6 yrs",
+                  "Progresssive Disease": "Yes"
+                },
+                "8": {
+                  "Age": 5,
+                  "Gender": "Female",
+                  "Alive/Dead": "Alive",
+                  "Age Group": "3-6 yrs",
+                  "Progresssive Disease": "Yes"
+                },
+                "9": {
+                  "Age": 5,
+                  "Gender": "Male",
+                  "Alive/Dead": "Alive",
+                  "Age Group": "3-6 yrs",
+                  "Progresssive Disease": "No"
+                }
               }
             },
-            "plots": [{
-              "chartType": "dictionary"
-            }]
+            "plots": [
+              {
+                "chartType": "dictionary"
+              }
+            ]
           }
         }
       },
       "testSpec": {
         "timeout": 7000,
-        "expected": { "button": 1 }
-    }
+        "expected": {
+          "button": 1
+        }
+      }
     },
     {
       "label": "Survivorship Study",
-      "runargs":{
+      "runargs": {
         "noheader": true,
-        "nobox":true,
-        "termdb":{
+        "nobox": true,
+        "termdb": {
           "state": {
             "vocab": {
               "dslabel": "SJLife",
@@ -244,15 +248,18 @@
       ],
       "testSpec": {
         "timeout": 7000,
-        "expected": { "input": 1, "button": 1 }
+        "expected": {
+          "input": 1,
+          "button": 1
+        }
       }
     },
     {
       "label": "MSigDB",
-      "runargs":{
+      "runargs": {
         "noheader": true,
-        "nobox":true,
-        "termdb":{
+        "nobox": true,
+        "termdb": {
           "state": {
             "vocab": {
               "dslabel": "msigdb",
@@ -269,8 +276,17 @@
       ],
       "testSpec": {
         "timeout": 7000,
-        "expected": { "input": 1, "button": 1 }
+        "expected": {
+          "input": 1,
+          "button": 1
+        }
       }
+    }
+  ],
+  "buttons": [
+    {
+      "name": "Documentation",
+      "link": "https://github.com/stjude/proteinpaint/wiki/Data-Browser"
     }
   ]
 }
