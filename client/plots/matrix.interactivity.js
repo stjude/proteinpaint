@@ -181,7 +181,7 @@ export function setInteractivity(self) {
 		self.dom.matrixCellHoverOver.clear()
 	}
 
-	self.mouseclick = function (event, data) {
+	self.mouseclick = async function (event, data) {
 		// clicking only show actions for available genomic data; can later expand to non-genomic data and custom overrides
 		const q = self.state.termdbConfig.queries
 		if (!q) return // no genomic queries
@@ -260,16 +260,6 @@ export function setInteractivity(self) {
 
 		const showDZImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showDZImages
 		if (q.DZImages && showDZImages) {
-			async function fetchHnEImages() {
-				return dofetch3('sampledzimages', {
-					body: {
-						genome: self.app.opts.genome.name,
-						dslabel: self.state.vocab.dslabel,
-						sample_id: sample.sample_id
-					}
-				})
-			}
-
 			const menuDiv = self.dom.clickMenu.d
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -277,10 +267,15 @@ export function setInteractivity(self) {
 				.style('display', 'none')
 				.text(`${q.DZImages.type} Images (0)`)
 
-			const images = fetchHnEImages()
+			const data = await dofetch3('sampledzimages', {
+				body: {
+					genome: self.app.opts.genome.name,
+					dslabel: self.state.vocab.dslabel,
+					sample_id: sample.sample_id
+				}
+			})
 
-			images.then(data => {
-				if (data.sampleDZImages.length === 0) return
+			if (data.sampleDZImages?.length > 0) {
 				menuDiv.style('display', 'block')
 				menuDiv.text(`${q.DZImages.type} Images (${data.sampleDZImages.length})`)
 				menuDiv.on('click', async _ => {
@@ -297,8 +292,9 @@ export function setInteractivity(self) {
 					menuDiv.remove()
 					self.dom.clickMenu.d.selectAll('*').remove()
 				})
-			})
+			}
 		}
+
 		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		if (q.NIdata && showBrainImaging) {
 			for (const k in q.NIdata) {
