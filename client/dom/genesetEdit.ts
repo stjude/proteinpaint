@@ -251,13 +251,18 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	}
 
 	function renderGenes() {
+		const orderedGenes = geneList.sort((a, b) => {
+			if (a.gene < b.gene) return -1
+			if (a.gene > b.gene) return 1
+			return 0
+		})
 		api.dom.geneHoldingDiv.selectAll('*').remove()
 
 		api.statColor2label = new Map()
 
 		api.dom.geneHoldingDiv
 			.selectAll('div')
-			.data(geneList || [])
+			.data(orderedGenes || [])
 			.enter()
 			.append('div')
 			.attr('title', 'click to delete')

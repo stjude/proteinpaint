@@ -9,7 +9,7 @@ import { filterJoin } from '#filter'
 import { getNormalRoot } from '#filter'
 export * from './hierCluster.config'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
-import { TermTypes } from '../shared/terms'
+import { TermTypes, TermTypes2Dt } from '../shared/terms'
 import { dtgeneexpression, dtmetaboliteintensity } from '../shared/common'
 /*
 FIXME items
@@ -104,7 +104,6 @@ export class HierCluster extends Matrix {
 		/* see comments inside plotDendrogramHclust() on structure of d.clustering.row{} and col{}
 		assumes c.col is samples and c.row is non-sample things (genes for now); later may flip to c.row be samples instead!!
 		*/
-
 		for (const [i, column] of c.col.order.entries()) {
 			samples[column.name] = { sample: column.name }
 			for (const [j, row] of c.row.order.entries()) {
@@ -115,10 +114,7 @@ export class HierCluster extends Matrix {
 					values: [
 						{
 							sample: column.name,
-							dt:
-								this.state.config.dataType == TermTypes.GENE_EXPRESSION
-									? this.settings.hierCluster.dataType
-									: dtmetaboliteintensity,
+							dt: TermTypes2Dt[this.state.config.dataType],
 							label: s.termGroupName,
 							// gene: tw.term.name,
 							// chr: tw.term.chr,

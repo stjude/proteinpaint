@@ -61,7 +61,6 @@ export function getSerieses(data) {
 			const height = !s.transpose ? s.rowh / numRects : colw
 			const width = !s.transpose ? colw : colw / values.length
 			const siblingCells = []
-
 			if (!anno || !anno.renderedValues?.length) {
 				if (!so.grp.isExcluded && (s.useCanvas || so.grp)) {
 					const cell = getEmptyCell(cellTemplate, s, this.dimensions)

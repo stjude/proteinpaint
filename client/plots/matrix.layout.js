@@ -149,7 +149,7 @@ export function setLabelsAndScales() {
 				t.counts.samples += 1
 				t.counts.hits += anno.countedValues.length
 				if (t.tw.q?.mode == 'continuous') {
-					const v = anno.value
+					const v = anno.value || anno.values?.[0]?.value
 					if (!t.tw.term.values?.[v]?.uncomputable) {
 						if (!('minval' in t.counts) || t.counts.minval > v) t.counts.minval = v
 						if (!('maxval' in t.counts) || t.counts.maxval < v) t.counts.maxval = v
