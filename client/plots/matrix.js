@@ -175,6 +175,7 @@ export class Matrix {
 				// dispatch notifications, so use app.save()
 				this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
 			} catch (e) {
+				console.log(e)
 				if (e == 'no data') {
 					this.showNoMatchingDataMessage()
 					return

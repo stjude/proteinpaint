@@ -53,8 +53,7 @@ export async function getPlotConfig(opts = {}, app) {
 	hcTermGroup.type = 'hierCluster' // ensure that the group.type is correct for recovered legacy sessions
 
 	if (!hcTermGroup.lst?.length) {
-		const genes = opts.terms || []
-		if (!Array.isArray(opts.terms)) throw 'opts.genes[] not array (may show geneset edit ui)'
+		if (!Array.isArray(opts.terms)) throw 'opts.terms[] not array (may show geneset edit ui)'
 
 		const twlst = []
 		for (const i of opts.terms) {

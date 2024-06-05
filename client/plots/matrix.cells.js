@@ -73,7 +73,7 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 
 export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
-	cell.label = value.label || self.mclass[value.class].label
+	cell.label = value.label || self.mclass[value.class]?.label || ''
 	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
 	// may overriden by a color scale by dt, if applicable below
 	cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color

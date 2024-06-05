@@ -120,7 +120,8 @@ samples are determined based on filter/filter0:
 */
 export function gdc_validate_query_geneExpression(ds, genome) {
 	ds.queries.geneExpression.get = async q => {
-		if (!Array.isArray(q.genes)) throw 'q.genes[] not array'
+		console.log('gdc_validate_query_geneExpression()', q)
+		if (!Array.isArray(q.terms)) throw 'q.terms[] not array'
 
 		// getter returns this data structure
 		const term2sample2value = new Map() // k: gene symbol, v: { <case submitter id>: value }
@@ -129,17 +130,19 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 
 		// get all cases from current filter
 		const caseLst = await gdcGetCasesWithExpressionDataFromCohort(q, ds) // list of case uuid
+		console.log('caseLst:', caseLst)
 		if (caseLst.length == 0) return { term2sample2value, byTermId: {} } // no cases with exp data
 
 		const t2 = new Date()
 		mayLog(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
 
-		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst, ds, q)
+		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.terms, genome, caseLst, ds, q)
+		console.log('ensgLst:', ensgLst, ensg2symbol)
 
 		if (ensgLst.length == 0) return { term2sample2value, byTermId: {} } // no valid genes
 
 		const t3 = new Date()
-		mayLog(ensgLst.length, 'out of', q.genes.length, 'genes selected for exp:', t3 - t2, 'ms')
+		mayLog(ensgLst.length, 'out of', q.terms.length, 'genes selected for exp:', t3 - t2, 'ms')
 		const byTermId = {}
 		for (const g of ensgLst) {
 			const geneSymbol = ensg2symbol.get(g)
@@ -167,6 +170,7 @@ case_ids:[]
 	required for hitting /gene_selection to screen ensg list before returning
 */
 async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
+	console.log('geneExpression_getGenes()', genes)
 	// convert given gene symbols to ENSG for api query
 	const ensgLst = []
 	// convert ensg back to symbol for using in data structure
@@ -245,10 +249,14 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
+		console.log(host, headers)
 		const re = await ky.post(path.join(host.rest, 'cases'), { timeout: false, headers, json }).json()
+		console.log('gdcGetCasesWithExpressionDataFromCohort()', re)
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		const lst = []
+		console.log(ds.__gdc.casesWithExpData)
 		for (const h of re.data.hits) {
+			console.log(h)
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
 				lst.push(h.id)
 				if (lst.length == 1000) {
