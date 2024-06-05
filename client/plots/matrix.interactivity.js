@@ -280,6 +280,7 @@ export function setInteractivity(self) {
 			const images = fetchHnEImages()
 
 			images.then(data => {
+				if (data.sampleDZImages.length === 0) return
 				menuDiv.style('display', 'block')
 				menuDiv.text(`H&E Images (${data.sampleDZImages.length})`)
 				menuDiv.on('click', async _ => {
