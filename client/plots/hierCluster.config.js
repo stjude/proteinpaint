@@ -20,7 +20,7 @@ export async function getPlotConfig(opts = {}, app) {
 		dataType: config.dataType,
 		// TODO: may adjust the default group name based on automatically detected term types
 		// otherwise, should define it via opts or overrides
-		termGroupName: 'Gene Expression',
+		termGroupName: 'Expression',
 		clusterSamples: true,
 		clusterMethod: 'average', // complete
 		distanceMethod: 'euclidean',

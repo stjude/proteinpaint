@@ -150,7 +150,7 @@ export function setLabelsAndScales() {
 				t.counts.hits += anno.countedValues.length
 				if (t.tw.q?.mode == 'continuous') {
 					const v = anno.value || anno.values?.[0]?.value
-					if (!t.tw.term.values?.[v]?.uncomputable) {
+					if (v && !t.tw.term.values?.[v]?.uncomputable) {
 						if (!('minval' in t.counts) || t.counts.minval > v) t.counts.minval = v
 						if (!('maxval' in t.counts) || t.counts.maxval < v) t.counts.maxval = v
 					}
@@ -222,7 +222,6 @@ export function setLabelsAndScales() {
 				}
 			}
 		}
-
 		t.label = t.tw.label || t.tw.term.name
 		if (t.label.length > s.rowlabelmaxchars) t.label = t.label.slice(0, s.rowlabelmaxchars - 1) + '…'
 		const termGroupName = this.config?.settings.hierCluster?.termGroupName
@@ -260,6 +259,7 @@ export function setLabelsAndScales() {
 				tickValues,
 				full: scaleLinear().domain(tickValues).range([1, barh])
 			}
+			console.lo
 			if (t.counts.maxval >= 0) {
 				const domainMin = rangeSpansZero ? 0 : t.counts.minval
 				t.scales.pos = scaleLinear().domain([domainMin, t.counts.maxval]).range([1, t.counts.posMaxHt])

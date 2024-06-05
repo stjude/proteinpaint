@@ -1,5 +1,5 @@
 import { convertUnits } from '#shared/helpers'
-import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
+import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv, dtmetaboliteintensity } from '#shared/common'
 import { TermTypes } from '../shared/terms'
 /*
 	cell: a matrix cell data
@@ -170,10 +170,10 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 			order: -1,
 			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 		}
-	} else if (value.dt == dtgeneexpression) {
+	} else if (value.dt >= dtgeneexpression) {
 		return {
 			ref: t.ref,
-			group: self.config.settings.hierCluster?.termGroupName || 'Gene Expression',
+			group: self.config.settings.hierCluster?.termGroupName || 'Expression',
 			value: value.class,
 			order: -1,
 			entry: {
