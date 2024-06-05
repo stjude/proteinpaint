@@ -14,7 +14,6 @@ import { authApi } from './auth.js'
 import { getResult as geneSearch } from './gene.js'
 import { searchSNP } from '../routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
-import { dtmetaboliteintensity, dtgeneexpression } from '#shared/common.js'
 import { TermTypeGroups, TermTypes } from '#shared/terms.js'
 import initBinConfig from '#shared/termdb.initbinconfig'
 /*
@@ -470,46 +469,25 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 	let min = Infinity
 	let max = -Infinity
 	try {
-		if (tw.term.type == TermTypes.GENE_EXPRESSION) {
-			const args = {
-				genome: q.genome,
-				dslabel: q.dslabel,
-				clusterMethod: 'hierarchical',
-				/** distance method */
-				distanceMethod: 'euclidean',
-				/** Data type */
-				dataType: dtgeneexpression,
-				genes: [{ gene: tw.term.gene }]
-			}
-			const data = await ds.queries.geneExpression.get(args)
-
-			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
-				const values = data.gene2sample2value.get(tw.term.gene)
-				const value = Number(values[sampleId])
-				if (value < min) min = value
-				if (value > max) max = value
-				lst.push(value)
-			}
-		} else if (tw.term.type == TermTypes.METABOLITE_INTENSITY) {
-			const args = {
-				genome: q.genome,
-				dslabel: q.dslabel,
-				clusterMethod: 'hierarchical',
-				/** distance method */
-				distanceMethod: 'euclidean',
-				/** Data type */
-				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
-				metabolites: [tw.term.name]
-			}
-			const data = await ds.queries.metaboliteIntensity.get(args)
-			const termData = data.metabolite2sample2value.get(tw.term.name)
-			for (const sample in termData) {
-				const value = termData[sample]
-				if (value < min) min = value
-				if (value > max) max = value
-				lst.push(value)
-			}
+		const args = {
+			genome: q.genome,
+			dslabel: q.dslabel,
+			clusterMethod: 'hierarchical',
+			/** distance method */
+			distanceMethod: 'euclidean',
+			/** Data type */
+			dataType: tw.term.type,
+			terms: [tw.term]
 		}
+		const data = await ds.queries[tw.term.type].get(args)
+		const termData = data.term2sample2value.get(tw.term.name)
+		for (const sample in termData) {
+			const value = termData[sample]
+			if (value < min) min = value
+			if (value > max) max = value
+			lst.push(value)
+		}
+
 		const binconfig = initBinConfig(lst)
 		binsCache[tw.term.name] = { default: binconfig, min, max }
 		res.send({ default: binconfig, min, max })

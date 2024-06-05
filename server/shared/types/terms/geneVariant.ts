@@ -24,15 +24,20 @@ export type GeneVariantTW = TermWrapper & {
 	term: GeneVariantTerm
 }
 
-export type GeneVariantTerm =
-	| (BaseTerm & {
-			chr: string
-			start: number
-			stop: number
-	  })
-	| (BaseTerm & {
-			gene: string
-	  })
+export type GeneVariantCoordTerm = BaseTerm & {
+	chr: string
+	start: number
+	stop: number
+}
+
+export type GeneVariantGeneTerm = BaseTerm & {
+	gene: string
+	chr?: string
+	start?: number
+	stop?: number
+}
+
+export type GeneVariantTerm = GeneVariantCoordTerm | GeneVariantGeneTerm
 
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
 	q: GeneVariantQ

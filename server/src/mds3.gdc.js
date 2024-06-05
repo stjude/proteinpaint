@@ -120,41 +120,41 @@ samples are determined based on filter/filter0:
 */
 export function gdc_validate_query_geneExpression(ds, genome) {
 	ds.queries.geneExpression.get = async q => {
-		if (!Array.isArray(q.genes)) throw 'q.genes[] not array'
+		if (!Array.isArray(q.terms)) throw 'q.terms[] not array'
 
 		// getter returns this data structure
-		const gene2sample2value = new Map() // k: gene symbol, v: { <case submitter id>: value }
+		const term2sample2value = new Map() // k: gene symbol, v: { <case submitter id>: value }
 
 		const t1 = new Date()
 
 		// get all cases from current filter
 		const caseLst = await gdcGetCasesWithExpressionDataFromCohort(q, ds) // list of case uuid
-		if (caseLst.length == 0) return { gene2sample2value, byTermId: {} } // no cases with exp data
+		if (caseLst.length == 0) return { term2sample2value, byTermId: {} } // no cases with exp data
 
 		const t2 = new Date()
 		mayLog(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
 
-		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst, ds, q)
+		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.terms, genome, caseLst, ds, q)
 
-		if (ensgLst.length == 0) return { gene2sample2value, byTermId: {} } // no valid genes
+		if (ensgLst.length == 0) return { term2sample2value, byTermId: {} } // no valid genes
 
 		const t3 = new Date()
-		mayLog(ensgLst.length, 'out of', q.genes.length, 'genes selected for exp:', t3 - t2, 'ms')
+		mayLog(ensgLst.length, 'out of', q.terms.length, 'genes selected for exp:', t3 - t2, 'ms')
 		const byTermId = {}
 		for (const g of ensgLst) {
 			const geneSymbol = ensg2symbol.get(g)
 			byTermId[geneSymbol] = { gencodeId: g } // store ensemble gene ID in byTermId
-			gene2sample2value.set(geneSymbol, new Map())
+			term2sample2value.set(geneSymbol, new Map())
 		}
 
-		const bySampleId = await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
-		/* returns mapping from uuid to submitter id; since uuid is used in gene2sample2value, but need to display submitter id on ui
+		const bySampleId = await getExpressionData(q, ensgLst, caseLst, ensg2symbol, term2sample2value, ds)
+		/* returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
 		 */
 
 		const t4 = new Date()
 		mayLog('gene-case matrix built:', t4 - t3, 'ms')
 
-		return { gene2sample2value, byTermId, bySampleId }
+		return { term2sample2value, byTermId, bySampleId }
 	}
 }
 
@@ -219,7 +219,6 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 		}
 		// some genes from ensgLst may be left out ensgLst2, e.g. HOXA1 from test example;
 		// later can comment above code to double-check as /values is able to return data for HOXA1 so why is it left out here?
-		//console.log(ensgLst, ensgLst2)
 		return [ensgLst2, ensg2symbol]
 	} catch (e) {
 		throw e
@@ -264,7 +263,7 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 	}
 }
 
-async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample2value, ds) {
+async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, term2sample2value, ds) {
 	const { host, headers } = ds.getHostHeaders(q)
 	// do not use headers here that has accept: 'application/json' ???
 	// headers.accept = 'text/plain'
@@ -312,7 +311,7 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 				//console.log(ensg, sample, l[j + 1]) continue
 				throw 'non-numeric exp value from gdc'
 			}
-			gene2sample2value.get(symbol)[sample] = v
+			term2sample2value.get(symbol)[sample] = v
 		}
 	}
 	return bySampleId

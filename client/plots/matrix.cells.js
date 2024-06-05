@@ -1,5 +1,5 @@
 import { convertUnits } from '#shared/helpers'
-import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
+import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv, dtmetaboliteintensity } from '#shared/common'
 import { TermTypes } from '../shared/terms'
 /*
 	cell: a matrix cell data
@@ -71,15 +71,14 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	return { ref: t.ref, group, value: anno.key, entry: { key, label: cell.label, fill: cell.fill } }
 }
 
-function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
+export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
-	cell.label = value.label || self.mclass[value.class].label
+	cell.label = value.label || self.mclass[value.class]?.label || ''
 	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
 	// may overriden by a color scale by dt, if applicable below
 	cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
 	cell.class = value.class
 	cell.value = value
-
 	const colw = self.dimensions.colw
 	if (s.cellEncoding == '') {
 		cell.height = s.rowh / values.length
@@ -100,13 +99,13 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y = height * 0.33333
 		}
-	} else if (value.dt == dtcnv || value.dt == dtgeneexpression) {
+	} else if (value.dt == dtcnv || value.dt == dtgeneexpression || value.dt == dtmetaboliteintensity) {
 		cell.height = s.rowh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = 0
 	} else {
-		throw `cannot set cell props for dt='${value.dt}'`
+		throw `cannot set cell props for dt = '${value.dt}'`
 	}
 
 	// need to distinguish between not tested or wildtype by dt: snvindel vs CNV vs SV, etc
@@ -117,7 +116,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 
 	const byDt = self.state.termdbConfig.assayAvailability?.byDt
 	// return the corresponding legend item data
-	const order = value.class == 'CNV_loss' ? -2 : value.class.startsWith('CNV_') ? -1 : 0
+	const order = value.class == 'CNV_loss' ? -2 : value.class?.startsWith('CNV_') ? -1 : 0
 	if (value.dt == dtcnv) {
 		if (t.scales && value.class.startsWith('CNV_')) {
 			const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
@@ -170,10 +169,10 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 			order: -1,
 			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 		}
-	} else if (value.dt == dtgeneexpression) {
+	} else if (value.dt >= dtgeneexpression) {
 		return {
 			ref: t.ref,
-			group: self.config.settings.hierCluster?.termGroupName || 'Gene Expression',
+			group: self.config.settings.hierCluster?.termGroupName || 'Expression',
 			value: value.class,
 			order: -1,
 			entry: {
@@ -243,6 +242,8 @@ export const maySetEmptyCell = {
 	geneVariant: setVariantEmptyCell,
 	integer: setNumericEmptyCell,
 	float: setNumericEmptyCell,
+	geneExpression: setNumericEmptyCell,
+	metaboliteIntensity: setNumericEmptyCell,
 	categorical: setDefaultEmptyCell
 }
 

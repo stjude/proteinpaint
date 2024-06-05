@@ -2710,7 +2710,7 @@ function setLengendActions(self) {
 				div
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text(`Do not show ${mclass[targetData.key].label}`)
+					.text(`Do not show ${mclass[targetData.key]?.label}`)
 					.on('click', () => {
 						menuGrp.hide()
 						// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class

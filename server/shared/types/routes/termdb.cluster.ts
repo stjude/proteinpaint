@@ -1,5 +1,7 @@
 import { ErrorResponse } from './errorResponse.ts'
 import { Filter } from '../filter.ts'
+import { Term } from '../terms/term.ts'
+import { GeneVariantTerm } from '../terms/geneVariant.ts'
 
 export type Gene = {
 	/** gene symbol, required */
@@ -20,10 +22,9 @@ export type TermdbClusterRequest = {
 	/** distance method */
 	distanceMethod: string
 	/** Data type */
-	dataType: 3 // create union to support more types
+	dataType: string
 	/** List of genes TODO can be non-genes when dataType is generalized */
-	genes?: Gene[] | undefined
-	metabolites?: string[] | undefined
+	terms: Term[] | GeneVariantTerm[]
 	/** pp filter */
 	filter?: Filter
 	/** todo gdc filter */
@@ -53,9 +54,9 @@ export type ValidResponse = {
 }
 
 //response of just 1 gene, thus unable to do clustering
-export type SinglegeneResponse = {
-	gene: string
+export type SingletermResponse = {
+	term: Term
 	data: any
 }
 
-export type TermdbClusterResponse = ErrorResponse | ValidResponse | SinglegeneResponse
+export type TermdbClusterResponse = ErrorResponse | ValidResponse | SingletermResponse

@@ -5,11 +5,12 @@ import * as interactivity from './hierCluster.interactivity'
 import { dofetch3 } from '#common/dofetch'
 import { extent } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
-import { dtgeneexpression } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { getNormalRoot } from '#filter'
 export * from './hierCluster.config'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
+import { TermTypes, TermTypes2Dt } from '../shared/terms'
+import { dtgeneexpression, dtmetaboliteintensity } from '../shared/common'
 /*
 FIXME items
 
@@ -89,7 +90,7 @@ export class HierCluster extends Matrix {
 				// for now backend returns {gene:str, data:{}} if there's only 1 eligible gene
 				throw `Cannot do clustering: data is only available for 1 gene (${d.gene}). Try again by adding more genes.`
 			}
-			throw 'Cannot do clustering: invalid server response (lacks .clustering{})'
+			//throw 'Cannot do clustering: invalid server response (lacks .clustering{})'
 		}
 		this.hierClusterData = d
 
@@ -103,7 +104,6 @@ export class HierCluster extends Matrix {
 		/* see comments inside plotDendrogramHclust() on structure of d.clustering.row{} and col{}
 		assumes c.col is samples and c.row is non-sample things (genes for now); later may flip to c.row be samples instead!!
 		*/
-
 		for (const [i, column] of c.col.order.entries()) {
 			samples[column.name] = { sample: column.name }
 			for (const [j, row] of c.row.order.entries()) {
@@ -114,12 +114,11 @@ export class HierCluster extends Matrix {
 					values: [
 						{
 							sample: column.name,
-							dt: this.settings.hierCluster.dataType,
-							class: 'geneexpression', // FIXME since there's no class defined for dtgeneexpression in common.js, best not to require value.class
+							dt: TermTypes2Dt[this.state.config.dataType],
 							label: s.termGroupName,
-							gene: tw.term.name,
-							chr: tw.term.chr,
-							pos: `${tw.term.start}-${tw.term.stop}`,
+							// gene: tw.term.name,
+							// chr: tw.term.chr,
+							// pos: `${tw.term.start}-${tw.term.stop}`,
 							value
 							// the color will be computed in matrix.cells, so that
 							// it can get updated even when there are no nonsetting state diff
@@ -163,7 +162,8 @@ export class HierCluster extends Matrix {
 
 	async requestData({ signal }) {
 		const body = this.currRequestOpts?.hierCluster || this.getHCRequestBody(this.state)
-		return await dofetch3('termdb/cluster', { body, signal })
+		const data = await dofetch3('termdb/cluster', { body, signal })
+		return data
 	}
 
 	getHCRequestBody(state) {
@@ -181,8 +181,8 @@ export class HierCluster extends Matrix {
 			join: 'and',
 			lst: state.config.legendValueFilter.lst.filter(f => !f.tvs.legendFilterType)
 		}
-		const genes = this.getClusterRowTermsAsParameter()
-		if (!genes.length) throw 'no data'
+		const terms = this.getClusterRowTermsAsParameter()
+		if (!terms.length) throw 'no data'
 		// !!! NOTE !!!
 		// all parameters here must remove payload properties that are
 		// not relevant to the data request, so that the dofetch and/or
@@ -191,14 +191,13 @@ export class HierCluster extends Matrix {
 		// Checking if cluster and distance method for hierarchial clustering is valid
 		if (!clusterMethodLst.find(i => i.value == s.clusterMethod)) throw 'Invalid cluster method'
 		if (!distanceMethodLst.find(i => i.value == s.distanceMethod)) throw 'Invalid distance method'
-
 		const body = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
-			dataType: s.dataType,
-			genes,
+			dataType: state.config.dataType,
 			clusterMethod: s.clusterMethod,
 			distanceMethod: s.distanceMethod,
+			terms,
 			filter: getNormalRoot(filterJoin([state.filter, dictionaryLegendFilter])),
 			filter0: state.filter0
 		}
@@ -262,19 +261,7 @@ export class HierCluster extends Matrix {
 
 	*/
 	getClusterRowTermsAsParameter() {
-		const lst = []
-		if (this.config.settings.hierCluster.dataType == dtgeneexpression) {
-			/* all items from .lst[] are expected to be {gene} */
-			for (const tw of this.hcTermGroup.lst) {
-				if (tw.term.type != 'geneVariant') throw 'not geneVariant term while dataType==dtgeneexpression'
-				// see notes above, avoid modifying the state unnecessarily
-				// ** select the properties to include **, since GDC term.values (computed incrementally)
-				// or cohort-dependent term.categories2samplecount can affect caching
-				lst.push({ name: tw.term.name, type: tw.term.type, gene: tw.term.gene || tw.term.name })
-			}
-		} else {
-			throw 'unknown dataType'
-		}
+		const lst = [...this.hcTermGroup.lst.map(tw => tw.term)]
 		// this helps caching by having a more consistent URL string
 		lst.sort((a, b) => (a.name < b.name ? -1 : 1))
 		return lst

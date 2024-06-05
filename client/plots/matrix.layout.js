@@ -119,7 +119,6 @@ export function setLabelsAndScales() {
 			t.grp.label = name.length <= s.termGrpLabelMaxChars ? name : name.slice(0, s.termGrpLabelMaxChars) + '…'
 			processedLabels.termGrpByName[name] = t.grp.label
 		}
-
 		for (const sample of this.sampleOrder) {
 			if (countedSamples.has(sample.row.sample)) continue
 			const name = sample.grp.name || ''
@@ -223,7 +222,6 @@ export function setLabelsAndScales() {
 				}
 			}
 		}
-
 		t.label = t.tw.label || t.tw.term.name
 		if (t.label.length > s.rowlabelmaxchars) t.label = t.label.slice(0, s.rowlabelmaxchars - 1) + '…'
 		const termGroupName = this.config?.settings.hierCluster?.termGroupName
@@ -234,7 +232,6 @@ export function setLabelsAndScales() {
 					: ((100 * t.counts.samples) / this.sampleOrder.length).toFixed(1) + '%'
 			t.label = `${t.label} (${count})`
 		}
-
 		if (t.tw.q?.mode == 'continuous') {
 			if (!t.tw.settings) t.tw.settings = {}
 			if (!t.tw.settings.barh) t.tw.settings.barh = s.barh
@@ -289,7 +286,7 @@ export function setLabelsAndScales() {
 
 	// need to assign scales to terms after the loop above so each term has the global maxLoss, maxGain, minLoss, minGain
 	for (const t of this.termOrder) {
-		if (t.tw.term.type == 'geneVariant') {
+		if (t.tw.term.type == 'geneVariant' || t.tw.term.type == 'geneExpression') {
 			if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
 				t.scales = {
 					loss: interpolateBlues,

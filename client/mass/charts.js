@@ -1,6 +1,8 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter/filter'
+import { NumericModes, TermTypes } from '../shared/terms'
+import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -25,7 +27,6 @@ class MassCharts {
 
 		const chartTypesByCohort = JSON.parse(JSON.stringify(appState.termdbConfig?.supportedChartTypes || {}))
 		// {}, key is cohortstr, value is list of supported chart types under this cohort
-
 		const state = {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
@@ -45,7 +46,6 @@ class MassCharts {
 
 			state.supportedChartTypes.push('dictionary')
 		}
-
 		return state
 	}
 
@@ -114,6 +114,9 @@ function getChartTypeList(self, state) {
 		required for clickTo=prepPlot
 		describe private details for creating a chart of a particular type
 		to be attached to action and used by store
+
+	.updateActionBySelectedTerms:
+		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
 	*/
 	const buttons = [
 		{
@@ -173,11 +176,7 @@ function getChartTypeList(self, state) {
 			chartType: 'genomeBrowser',
 			clickTo: self.loadChartSpecificMenu
 		},
-		{
-			label: 'Hierarchical Clustering',
-			chartType: 'hierCluster',
-			clickTo: self.loadChartSpecificMenu
-		},
+
 		{
 			label: 'Differential Expression',
 			chartType: 'DEanalysis',
@@ -207,6 +206,42 @@ function getChartTypeList(self, state) {
 			config: {
 				chartType: 'singleCellPlot'
 			}
+		},
+		{
+			//This chart may be later on extended to support other gene expression data types
+			label: 'Gene Expression',
+			chartType: 'geneExpression',
+			clickTo: self.showGenesetEditUI,
+			usecase: { target: 'geneExpression' }
+		},
+		{
+			label: 'Metabolite Intensity',
+			chartType: 'metaboliteIntensity', // TODO change to metaboliteIntensity
+			clickTo: self.showTree_selectlst,
+			usecase: { target: 'metaboliteIntensity', detail: 'term' },
+			updateActionBySelectedTerms: (action, termlst) => {
+				const twlst = termlst.map(term => ({
+					term: structuredClone(term),
+					q: { mode: NumericModes.continuous }
+				}))
+				if (twlst.length == 1) {
+					// violin
+					action.config.chartType = 'summary'
+					action.config.term = twlst[0]
+					return
+				}
+				if (twlst.length == 2) {
+					// scatter
+					action.config.chartType = 'summary'
+					action.config.term = twlst[0]
+					action.config.term2 = twlst[1]
+					return
+				}
+				// 3 or more terms, launch clustering
+				action.config.chartType = 'hierCluster'
+				action.config.dataType = TermTypes.METABOLITE_INTENSITY
+				action.config.termgroups = [{ name: 'hierCluster', lst: twlst, type: 'hierCluster' }]
+			}
 		}
 	]
 	for (const field in state?.termdbConfig.renamedChartTypes || []) {
@@ -221,7 +256,6 @@ function getChartTypeList(self, state) {
 function setRenderers(self) {
 	self.makeButtons = function (state) {
 		const chartTypeList = getChartTypeList(self, state)
-
 		self.dom.btns = self.dom.holder
 			.selectAll('button')
 			.data(chartTypeList)
@@ -286,9 +320,109 @@ function setRenderers(self) {
 		})
 	}
 
+	self.showGenesetEditUI = async chart => {
+		const geneList = []
+		const app = self.app
+		const tip = self.dom.tip
+		const holder = self.dom.tip.d
+		holder.selectAll('*').remove()
+		const div = holder.append('div').style('padding', '5px')
+		const label = div.append('label')
+		label.append('span').text('Create ')
+		let name
+		const nameInput = label
+			.append('input')
+			.style('margin', '2px 5px')
+			.style('width', '210px')
+			.attr('placeholder', 'Group Name')
+			.on('input', () => {
+				name = nameInput.property('value')
+			})
+		const selectedGroup = {
+			index: 0,
+			name,
+			label: name,
+			lst: [],
+			status: 'new'
+		}
+
+		showGenesetEdit({
+			holder: holder.append('div'),
+			/* running hier clustering and the editing group is the group used for clustering
+		pass this mode value to inform ui to support the optional button "top variably exp gene"
+		this is hardcoded for the purpose of gene expression and should be improved
+		*/
+			genome: app.opts.genome,
+			geneList,
+			mode: 'expression',
+			vocabApi: app.vocabApi,
+			callback: async ({ geneList, groupName }) => {
+				if (!selectedGroup) throw `missing selectedGroup`
+				tip.hide()
+				const group = { name: groupName || name, lst: [], type: 'hierCluster' }
+				const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+				const tws = await Promise.all(
+					geneList.map(async d => {
+						const term = {
+							gene: d.symbol || d.gene,
+							name: d.symbol || d.gene,
+							type: 'geneExpression'
+						}
+						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+						let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+						if (!tw) {
+							tw = { term, q: {} }
+						}
+						return tw
+					})
+				)
+
+				if (tws.length == 1) {
+					const tw = tws[0]
+					app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'summary',
+							term: tw
+						}
+					})
+					return
+				}
+
+				if (tws.length == 2) {
+					const tw = tws[0]
+					const tw2 = tws[1]
+					app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'summary',
+							term: tw,
+							term2: tw2
+						}
+					})
+					return
+				}
+				group.lst = [...lst, ...tws]
+				if (!group.lst.length) tg.splice(selectedGroup.index, 1)
+
+				// close geneset edit ui after clicking submit
+				holder.selectAll('*').remove()
+
+				app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'hierCluster',
+						termgroups: [group],
+						dataType: TermTypes.GENE_EXPRESSION
+					}
+				})
+			}
+		})
+	}
+
 	self.showTree_selectlst = async chart => {
 		self.dom.tip.clear()
-		if (chart.usecase.label) {
+		if (chart.usecase?.label) {
 			self.dom.tip.d
 				.append('div')
 				.style('margin', '3px 5px')
@@ -300,9 +434,8 @@ function setRenderers(self) {
 		const action = {
 			type: 'plot_create',
 			id: getId(),
-			config: { chartType: chart.chartType }
+			config: { chartType: chart.chartType } // NOTE if chartType is intermediary, action will be updated on term selection
 		}
-
 		const termdb = await import('../termdb/app')
 		self.dom.submenu = self.dom.tip.d.append('div')
 		termdb.appInit({
@@ -319,6 +452,7 @@ function setRenderers(self) {
 				submit_lst: termlst => {
 					const data = chart.processSelection ? chart.processSelection(termlst) : termlst
 					action.config[chart.usecase.detail] = data
+					if (chart.updateActionBySelectedTerms) chart.updateActionBySelectedTerms(action, termlst)
 					self.dom.tip.hide()
 					self.app.dispatch(action)
 				}

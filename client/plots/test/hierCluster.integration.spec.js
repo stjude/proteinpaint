@@ -4,6 +4,7 @@ import { sleep, detectOne, detectGte, detectLst, detectAttr } from '../../test/t
 import { select } from 'd3-selection'
 import { appInit } from '../plot.app.js'
 import { fillTermWrapper } from '#termsetting'
+import { TermTypes } from '#shared/terms.js'
 
 /*************************
  reusable helper functions
@@ -22,6 +23,7 @@ async function getHierClusterApp(_opts = {}) {
 			plots: [
 				{
 					chartType: 'hierCluster',
+					dataType: TermTypes.GENE_EXPRESSION,
 					settings: {
 						hierCluster: {
 							termGroupName: 'Gene Expression (CGC genes only)'
@@ -37,7 +39,7 @@ async function getHierClusterApp(_opts = {}) {
 					termgroups: [], // _opts.termgroups || [],
 					// !!! there will be an initial load error since this is an empty geneset,
 					// !!! but will be ignored since it's not relevant to this test
-					genes: _opts.genes || []
+					terms: _opts.terms || []
 					//genes,
 					//settings
 				}
@@ -81,7 +83,7 @@ tape('\n', function (test) {
 tape('basic render', async test => {
 	test.timeoutAfter(2000)
 	const { app, hc } = await getHierClusterApp({
-		genes: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+		terms: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
 	})
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 4, 'should render 4 gene rows')
 	if (test._ok) app.destroy()
@@ -96,7 +98,7 @@ tape('avoid race condition', async test => {
 	// !!!
 	test.timeoutAfter(2000)
 	const { app, hc } = await getHierClusterApp({
-		genes: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+		terms: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
 	})
 	const termgroups = structuredClone(hc.config.termgroups)
 	termgroups[0].lst = await Promise.all([
@@ -155,7 +157,7 @@ tape('dendrogram click', async function (test) {
 
 	let numRenders = 0
 	const { app, hc } = await getHierClusterApp({
-		genes: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+		terms: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
 	})
 
 	const img = await detectOne({ elem: hc.dom.topDendrogram.node(), selector: 'image' })

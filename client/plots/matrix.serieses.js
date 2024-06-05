@@ -1,4 +1,5 @@
-import { setCellProps, getEmptyCell, maySetEmptyCell } from './matrix.cells'
+import { setCellProps, getEmptyCell, maySetEmptyCell, setGeneVariantCellProps } from './matrix.cells'
+import { TermTypes } from '../shared/terms.js'
 
 export function getSerieses(data) {
 	const s = this.settings.matrix
@@ -60,7 +61,6 @@ export function getSerieses(data) {
 			const height = !s.transpose ? s.rowh / numRects : colw
 			const width = !s.transpose ? colw : colw / values.length
 			const siblingCells = []
-
 			if (!anno || !anno.renderedValues?.length) {
 				if (!so.grp.isExcluded && (s.useCanvas || so.grp)) {
 					const cell = getEmptyCell(cellTemplate, s, this.dimensions)
@@ -72,9 +72,9 @@ export function getSerieses(data) {
 			for (const [i, value] of values.entries()) {
 				const cell = Object.assign({ key, siblingCells }, cellTemplate)
 				cell.valueIndex = i
-
+				let cellProps = setCellProps[t.tw.term.type]
 				// will assign x, y, width, height, fill, label, order, etc
-				const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
+				const legend = cellProps(cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
 				if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
 				if (legend) {
 					for (const l of [legendGroups, so.grp.legendGroups]) {

@@ -1,3 +1,9 @@
+import { dtgeneexpression, dtmetaboliteintensity } from './common.js'
+export const NumericModes = {
+	continuous: 'continuous',
+	discrete: 'discrete'
+}
+
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == TermTypes.CATEGORICAL instead of type == 'categorical'
 export const TermTypes = {
@@ -12,6 +18,11 @@ export const TermTypes = {
 	SURVIVAL: 'survival',
 	SAMPLELST: 'samplelst',
 	METABOLITE_INTENSITY: 'metaboliteIntensity'
+}
+
+export const TermTypes2Dt = {
+	[TermTypes.GENE_EXPRESSION]: dtgeneexpression,
+	[TermTypes.METABOLITE_INTENSITY]: dtmetaboliteintensity
 }
 
 export const TermTypeGroups = {

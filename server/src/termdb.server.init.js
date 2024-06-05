@@ -506,13 +506,16 @@ export function server_init_db_queries(ds) {
 			}
 			if (ds.queries.geneExpression) {
 				for (const cohort in supportedChartTypes) {
-					supportedChartTypes[cohort].push('hierCluster')
+					supportedChartTypes[cohort].push('geneExpression')
 					supportedChartTypes[cohort].push('sampleScatter')
 				}
 				// TODO support clustering on dict terms
 			}
 			if (ds.queries.metaboliteIntensity)
-				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('sampleScatter')
+				for (const cohort in supportedChartTypes) {
+					supportedChartTypes[cohort].push('sampleScatter')
+					supportedChartTypes[cohort].push('metaboliteIntensity')
+				}
 			if (ds.queries.rnaseqGeneCount) {
 				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('DEanalysis')
 			}

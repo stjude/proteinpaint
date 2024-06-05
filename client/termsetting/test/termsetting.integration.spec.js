@@ -1043,7 +1043,7 @@ tape('Conditional term', async test => {
 	// tip.hide()
 	test.end()
 })
-
+//Custom vocab needs to have the allowedTermTypes supported by the dataset
 tape('Custom vocabulary', async test => {
 	test.timeoutAfter(5000)
 	test.plan(6)
@@ -1053,7 +1053,7 @@ tape('Custom vocabulary', async test => {
 			menuOptions: 'all',
 			tsData: {
 				term: vocab.terms.find(d => d.id === 'c'),
-				disable_terms: ['c'],
+				disable_terms: [{ id: 'c', name: 'c', type: 'categorical' }],
 				q: { type: 'values' } // assumes the test term 'c' is a categorical term
 			},
 			vocab

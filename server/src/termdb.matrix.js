@@ -6,7 +6,6 @@ import { read_file } from './utils'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
 import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/terms'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
-import { dtgeneexpression, dtmetaboliteintensity } from '#shared/common.js'
 
 /*
 
@@ -149,7 +148,7 @@ async function getSampleData(q) {
 
 				samples[sampleId][tw.$id] = snp2value
 			}
-		} else if (tw.term.type == TermTypes.GENE_EXPRESSION) {
+		} else if (tw.term.type == TermTypes.GENE_EXPRESSION || tw.term.type == TermTypes.METABOLITE_INTENSITY) {
 			let lst
 			if (tw.q?.mode == 'discrete') {
 				const min = tw.term.bins.min
@@ -169,17 +168,17 @@ async function getSampleData(q) {
 				dslabel: q.ds.label,
 				clusterMethod: 'hierarchical',
 				distanceMethod: 'euclidean', // TODO refactor get() and remove these arg
-				dataType: dtgeneexpression,
-				genes: [{ gene: tw.term.gene }],
+				dataType: tw.term.type,
+				terms: [tw.term],
 				filter: q.filter,
 				filter0: q.filter0
 			}
-			const data = await q.ds.queries.geneExpression.get(args)
-			for (const sampleId in data.gene2sample2value.get(tw.term.gene)) {
+			const data = await q.ds.queries[tw.term.type].get(args)
+			for (const sampleId in data.term2sample2value.get(tw.term.name)) {
 				if (!(sampleId in samples)) {
 					samples[sampleId] = { sample: sampleId }
 				}
-				const values = data.gene2sample2value.get(tw.term.gene)
+				const values = data.term2sample2value.get(tw.term.name)
 				const value = Number(values[sampleId])
 				let key = value
 				if (tw.q?.mode == 'discrete') {
@@ -191,43 +190,6 @@ async function getSampleData(q) {
 			}
 
 			/** pp filter */
-		} else if (tw.term.type == TermTypes.METABOLITE_INTENSITY) {
-			let lst
-			if (tw.q?.mode == 'discrete') {
-				const min = tw.term.bins.min
-				const max = tw.term.bins.max
-				lst =
-					tw.q.type == 'regular-bin'
-						? compute_bins(tw.q, () => {
-								return { min, max }
-						  })
-						: tw.q.lst
-			}
-			const args = {
-				genome: q.genome,
-				dslabel: q.dslabel,
-				clusterMethod: 'hierarchical',
-				/** distance method */
-				distanceMethod: 'euclidean',
-				/** Data type */
-				dataType: dtmetaboliteintensity, //metabolite intensity type defined for the dataset???
-				metabolites: [tw.term.name]
-			}
-			const data = await q.ds.queries.metaboliteIntensity.get(args)
-			const termData = data.metabolite2sample2value.get(tw.term.name)
-			for (const sample in termData) {
-				if (!(sample in samples)) {
-					samples[sample] = { sample }
-				}
-				const value = termData[sample]
-				let key = value
-				if (tw.q?.mode == 'discrete') {
-					//check binary mode
-					const bin = getBin(lst, value)
-					key = get_bin_label(lst[bin], tw.q)
-				}
-				samples[sample][tw.$id] = { key, value }
-			}
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}

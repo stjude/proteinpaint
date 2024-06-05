@@ -152,7 +152,6 @@ export function getSampleGroups(data) {
 	for (const grp of sampleGrpsArr) {
 		this.asListedSampleOrder.push(...grp.lst.map(s => s.sample))
 	}
-
 	const selectedDictTerms = this.termOrder.filter(t => t.tw.sortSamples && t.tw.term.type != 'geneVariant')
 	// initial sorting for ungrouped samples, prioritizes grouping by gene variant, skippin other sorters at this step
 	const noGrpSampleSorter = getSampleSorter(this, s, data.lst, {
