@@ -1,5 +1,6 @@
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
+import { illegalpath } from '#src/utils.js'
 
 /*
 return deep zoom image tiles
@@ -8,7 +9,7 @@ return deep zoom image tiles
 const routePath = 'dzimages'
 
 export const api: any = {
-	endpoint: `${routePath}/:sampleId/*`,
+	endpoint: `${routePath}/:sampleId`,
 	methods: {
 		get: {
 			init,
@@ -36,21 +37,24 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			const sampleId = req.params.sampleId
 			if (!sampleId) throw 'invalid sampleId'
+			if (illegalpath(req.query.file)) throw `illegalpath filepath`
 
-			const sampleBaseDir = path.resolve(`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.imageBySampleFolder}`)
-			imagePath = path.resolve(sampleBaseDir, `${sampleId}/${req.params[0]}`)
+			imagePath = path.join(
+				`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.imageBySampleFolder}`,
+				`${sampleId}/${req.query.file}`
+			)
 
-			if (!imagePath.startsWith(sampleBaseDir)) {
-				throw 'Invalid path'
-			}
+			res.sendFile(imagePath, (err: any) => {
+				if (err) {
+					res.status(404).send('Image not found')
+				}
+			})
 		} catch (e: any) {
 			console.log(e)
+			res.send({
+				status: 'error',
+				error: e.error || e
+			})
 		}
-
-		res.sendFile(imagePath, (err: any) => {
-			if (err) {
-				res.status(404).send('Image not found')
-			}
-		})
 	}
 }
