@@ -34,7 +34,10 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			const sampleId = req.query.sample_id
 
-			const sampleDZImagesPath = path.join(`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.samples}`, sampleId)
+			const sampleDZImagesPath = path.join(
+				`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.imageBySampleFolder}`,
+				sampleId
+			)
 			const sampleDZImages = getDZImages(sampleDZImagesPath)
 			res.send({ sampleDZImages })
 		} catch (e: any) {

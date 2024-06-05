@@ -8,7 +8,7 @@ return deep zoom image tiles
 const routePath = 'dzimages'
 
 export const api: any = {
-	endpoint: `${routePath}/*`,
+	endpoint: `${routePath}/:sampleId/*`,
 	methods: {
 		get: {
 			init,
@@ -34,10 +34,12 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[req.query.dslabel]
 			if (!ds) throw 'invalid dataset name'
+			const sampleId = req.params.sampleId
+			if (!sampleId) throw 'invalid sampleId'
 
 			imagePath = path.join(
-				`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.samples}`,
-				req.path.split(`/${routePath}`)[1]
+				`${serverconfig.tpmasterdir}/${ds.queries.HnEImages.imageBySampleFolder}`,
+				`${sampleId}/${req.params[0]}`
 			)
 		} catch (e: any) {
 			console.log(e)
