@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - handle prebuilt matrix plots to work with the advanced sorter UI
+- scope PP-specific css resets and styles to the root holder, such as the previously unscoped h2 style
 
 
 ## 2.61.0
