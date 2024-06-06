@@ -18,9 +18,9 @@ export async function getPlotConfig(opts = {}, app) {
 		- metabolite
 		*/
 		dataType: config.dataType,
-		// TODO: may adjust the default group name based on automatically detected term types
-		// otherwise, should define it via opts or overrides
-		termGroupName: 'Expression',
+		// adjust the default group name based on automatically detected term types
+		// Done in matrix.cells.js: setHierClusterCellProps
+		// termGroupName: 'Expression',
 		clusterSamples: true,
 		clusterMethod: 'average', // complete
 		distanceMethod: 'euclidean',

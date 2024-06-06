@@ -232,7 +232,7 @@ export function setLabelsAndScales() {
 					: ((100 * t.counts.samples) / this.sampleOrder.length).toFixed(1) + '%'
 			t.label = `${t.label} (${count})`
 		}
-		if (t.tw.q?.mode == 'continuous') {
+		if (t.grp.type !== 'hierCluster' && t.tw.q?.mode == 'continuous') {
 			if (!t.tw.settings) t.tw.settings = {}
 			if (!t.tw.settings.barh) t.tw.settings.barh = s.barh
 			if (!('gap' in t.tw.settings)) t.tw.settings.gap = 4

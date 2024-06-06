@@ -169,24 +169,6 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 			order: -1,
 			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 		}
-	} else if (value.dt >= dtgeneexpression) {
-		return {
-			ref: t.ref,
-			group: self.config.settings.hierCluster?.termGroupName || 'Expression',
-			value: value.class,
-			order: -1,
-			entry: {
-				key: value.class,
-				label: '',
-				scale: self.geneExpValues.scale,
-				domain: [0, 0.5, 1],
-				minLabel: self.geneExpValues.min,
-				maxLabel: self.geneExpValues.max,
-				order,
-				dt: value.dt,
-				origin: value.origin
-			}
-		}
 	} else {
 		const controlLabels = self.settings.matrix.controlLabels
 		const group =
@@ -204,6 +186,47 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 	}
 }
 
+export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
+	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
+	cell.label = value.label || self.mclass?.[value.class]?.label || ''
+	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
+	// may overriden by a color scale by dt, if applicable below
+	cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
+	cell.class = value.class
+	cell.value = value
+	const colw = self.dimensions.colw
+
+	cell.height = s.rowh / values.length
+	cell.width = colw
+	cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+	cell.y = height * i
+
+	const groupName = self.config.settings.hierCluster?.termGroupName
+		? self.config.settings.hierCluster?.termGroupName
+		: tw.term.type == 'geneExpression'
+		? 'Expression'
+		: tw.term.type == 'metaboliteIntensity'
+		? 'Intensity'
+		: 'Heatmap color scale'
+
+	return {
+		ref: t.ref,
+		group: groupName,
+		value: value.class,
+		order: -1,
+		entry: {
+			key: value.class,
+			label: '',
+			scale: self.hierClusterValues.scale,
+			domain: [0, 0.5, 1],
+			minLabel: self.hierClusterValues.min,
+			maxLabel: self.hierClusterValues.max,
+			order: 0,
+			dt: value.dt,
+			origin: value.origin
+		}
+	}
+}
 export function getEmptyCell(cellTemplate, s, d) {
 	const cell = Object.assign({}, cellTemplate)
 	cell.fill = s.cellbg
@@ -230,20 +253,17 @@ export const setCellProps = {
 	categorical: setCategoricalCellProps,
 	integer: setNumericCellProps,
 	float: setNumericCellProps,
-	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
-	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps,
 	/* !!! TODO: later, may allow survival terms as a matrix row in server/shared/termdb.usecase.js, 
 	   but how - quantitative, categorical, etc? */
 	//survival: setNumericCellProps,
-	geneVariant: setGeneVariantCellProps
+	geneVariant: setGeneVariantCellProps,
+	hierCluster: setHierClusterCellProps
 }
 
 export const maySetEmptyCell = {
 	geneVariant: setVariantEmptyCell,
 	integer: setNumericEmptyCell,
 	float: setNumericEmptyCell,
-	geneExpression: setNumericEmptyCell,
-	metaboliteIntensity: setNumericEmptyCell,
 	categorical: setDefaultEmptyCell
 }
 

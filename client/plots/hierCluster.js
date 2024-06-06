@@ -11,11 +11,6 @@ export * from './hierCluster.config'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
 import { TermTypes, TermTypes2Dt } from '../shared/terms'
 import { dtgeneexpression, dtmetaboliteintensity } from '../shared/common'
-/*
-FIXME items
-
-- should not hardcode this.geneExpValues, incompatible for future expansion
-*/
 
 export class HierCluster extends Matrix {
 	constructor(opts) {
@@ -238,13 +233,13 @@ export class HierCluster extends Matrix {
 		}
 		const absMax = Math.min(hc.zScoreCap, Math.max(...extent(globalMinMaxes).map(Math.abs)))
 		const [min, max] = [-absMax, absMax]
-		// what's purpose of assigning this.geneExpValues{}, to signal something to matrix code?
-		this.geneExpValues = { scale, min, max }
+		// what's purpose of assigning this.hierClusterValues{}, to signal something to matrix code?
+		this.hierClusterValues = { scale, min, max }
 	}
 
 	getValueColor(value) {
 		const zScoreCap = this.settings.hierCluster.zScoreCap
-		return this.geneExpValues.scale((value - -zScoreCap) / (zScoreCap * 2))
+		return this.hierClusterValues.scale((value - -zScoreCap) / (zScoreCap * 2))
 	}
 
 	/* returns list of gene terms as request parameter, e.g. {gene,chr,start,stop}

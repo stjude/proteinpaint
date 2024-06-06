@@ -72,7 +72,7 @@ export function getSerieses(data) {
 			for (const [i, value] of values.entries()) {
 				const cell = Object.assign({ key, siblingCells }, cellTemplate)
 				cell.valueIndex = i
-				let cellProps = setCellProps[t.tw.term.type]
+				const cellProps = t.grp.type == 'hierCluster' ? setCellProps['hierCluster'] : setCellProps[t.tw.term.type]
 				// will assign x, y, width, height, fill, label, order, etc
 				const legend = cellProps(cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
 				if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
@@ -116,7 +116,10 @@ export function getSerieses(data) {
 			}
 
 			if (s.showGrid == 'rect' && !so.grp.isExcluded) {
-				const cell = maySetEmptyCell[t.tw.term.type]?.(siblingCells, cellTemplate, s, this.dimensions)
+				const cell =
+					t.grp.type == 'hierCluster'
+						? getEmptyCell(cellTemplate, s, this.dimensions)
+						: maySetEmptyCell[t.tw.term.type]?.(siblingCells, cellTemplate, s, this.dimensions)
 				if (cell) emptyGridCells.push(cell)
 			}
 		}

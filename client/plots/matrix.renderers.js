@@ -198,7 +198,7 @@ export function setRenderers(self) {
 					.attr('transform', side.attr.labelGTransform)
 
 				if (!g.select(':scope>text').size()) g.append('text')
-				const showContAxis = !side.isGroup && lab.tw?.q?.mode == 'continuous'
+				const showContAxis = !side.isGroup && lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous'
 				const labelText = side.label(lab)
 				const text = g.select(':scope>text').attr('fill', '#000')
 
@@ -214,7 +214,7 @@ export function setRenderers(self) {
 
 				if (!Array.isArray(labelText)) {
 					text.text(labelText)
-					text.attr('y', lab.tw?.q?.mode == 'continuous' ? 10 : 0)
+					text.attr('y', lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous' ? 10 : 0)
 				} else {
 					const tspan = text.selectAll('tspan').data(labelText)
 					tspan.exit().remove()
