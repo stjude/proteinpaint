@@ -1,5 +1,3 @@
-import { scaleLinear } from 'd3-scale'
-import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import * as vcf from '#shared/vcf'
 import * as coord from './coord'

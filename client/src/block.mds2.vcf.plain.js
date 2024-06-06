@@ -1,12 +1,7 @@
-import { select as d3select } from 'd3-selection'
-import { format as d3format } from 'd3-format'
-import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as common from '#shared/common'
 import * as client from './client'
-import * as coord from './coord'
-import { vcf_m_color, divide_data_to_group } from './block.mds2.vcf'
-import { vcf_clickvariant } from './block.mds2.vcf.clickvariant'
+import { divide_data_to_group } from './block.mds2.vcf'
 
 /*
 
@@ -133,11 +128,7 @@ export function render(data, r, _g, tk, block) {
 			*/
 
 			y += grp.radius
-			g.append('circle')
-				.attr('cy', -y)
-				.attr('r', grp.radius)
-				.attr('fill', grp.color)
-				.attr('stroke', 'white')
+			g.append('circle').attr('cy', -y).attr('r', grp.radius).attr('fill', grp.color).attr('stroke', 'white')
 
 			if (grp.radius >= 8) {
 				// big enough dot, show # of items
@@ -174,9 +165,7 @@ export function render(data, r, _g, tk, block) {
 				})
 			y += grp.radius
 		}
-		g.append('line')
-			.attr('y2', -b.offset)
-			.attr('stroke', b.groups[0].color)
+		g.append('line').attr('y2', -b.offset).attr('stroke', b.groups[0].color)
 	}
 	return maxheight
 }

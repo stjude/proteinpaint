@@ -1,6 +1,4 @@
 import { dofetch3 } from '#common/dofetch'
-import { scaleLinear } from 'd3-scale'
-import { axisTop } from 'd3-axis'
 import { legend_newrow } from '#src/block.legend'
 import { showLDlegend } from '../plots/regression.results'
 import { interpolateRgb } from 'd3-interpolate'
@@ -47,10 +45,7 @@ returns sum of heights of LD panels
 			}
 
 			if (r.img) {
-				g.append('image')
-					.attr('width', r.width)
-					.attr('height', r.img.height)
-					.attr('xlink:href', r.img.src)
+				g.append('image').attr('width', r.width).attr('height', r.img.height).attr('xlink:href', r.img.src)
 				tkheight = Math.max(tkheight, r.img.height)
 				continue
 			}

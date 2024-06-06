@@ -1,4 +1,3 @@
-import { select as d3select } from 'd3-selection'
 import * as client from '../client'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisLeft, axisRight } from 'd3-axis'
@@ -339,12 +338,7 @@ export default function plot_2dvaf(data, cfg, holder) {
 		.attr('font-family', client.font)
 		.attr('fill', gray)
 	const axis_xdp = axe_xdp.append('g')
-	const dotg_xdp = axe_xdp
-		.append('g')
-		.selectAll()
-		.data(data)
-		.enter()
-		.append('g')
+	const dotg_xdp = axe_xdp.append('g').selectAll().data(data).enter().append('g')
 	const circle_xdp = dotg_xdp
 		.append('circle')
 		.attr('fill', d => d.color || xcolor)
@@ -366,12 +360,7 @@ export default function plot_2dvaf(data, cfg, holder) {
 		.append('line') // .5 vertical mid line
 		.attr('stroke', 'white')
 		.attr('stroke-width', 2)
-	const dotg_center = plotg_center
-		.append('g')
-		.selectAll()
-		.data(data)
-		.enter()
-		.append('g')
+	const dotg_center = plotg_center.append('g').selectAll().data(data).enter().append('g')
 	const circle_center = dotg_center
 		.append('circle')
 		.attr('fill', d => d.color || centercolor)
@@ -428,11 +417,7 @@ export default function plot_2dvaf(data, cfg, holder) {
 		if (axedp_yleft) {
 			axedp_yleft.attr('transform', 'translate(' + (yvafwidth + sp + ydpheight) + ',' + (toppad + yheight) + ')')
 			axisdp_yleft.attr('transform', 'translate(0,' + (5 + radius) + ')')
-			rectdp_yleft
-				.attr('x', -ydpheight)
-				.attr('y', -yheight)
-				.attr('width', ydpheight)
-				.attr('height', yheight)
+			rectdp_yleft.attr('x', -ydpheight).attr('y', -yheight).attr('width', ydpheight).attr('height', yheight)
 			midlinedp_yleft
 				.attr('x1', -ydpheight)
 				.attr('y1', -yheight / 2)
@@ -449,10 +434,7 @@ export default function plot_2dvaf(data, cfg, holder) {
 					')'
 			)
 			axisdp_yright.attr('transform', 'translate(0,' + (5 + radius) + ')')
-			rectdp_yright
-				.attr('y', -yheight)
-				.attr('width', ydpheight)
-				.attr('height', yheight)
+			rectdp_yright.attr('y', -yheight).attr('width', ydpheight).attr('height', yheight)
 			midlinedp_yright
 				.attr('y1', -yheight / 2)
 				.attr('y2', -yheight / 2)
@@ -474,10 +456,7 @@ export default function plot_2dvaf(data, cfg, holder) {
 
 		// center 2dvaf
 		plotg_center.attr('transform', 'translate(' + (yvafwidth + sp + ydpheight + sp2) + ',' + (toppad + yheight) + ')')
-		rect_center
-			.attr('y', -yheight)
-			.attr('width', xwidth)
-			.attr('height', yheight)
+		rect_center.attr('y', -yheight).attr('width', xwidth).attr('height', yheight)
 		midline_xcenter
 			.attr('y1', -yheight / 2)
 			.attr('y2', -yheight / 2)
