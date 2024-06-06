@@ -55,6 +55,7 @@ if (!serverconfig.clustalo) serverconfig.clustalo = 'clustalo'
 if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
 if (!serverconfig.gfServer) serverconfig.gfServer = 'gfServer'
 if (!serverconfig.gfClient) serverconfig.gfClient = 'gfClient'
+if (!serverconfig.plotBrainImaging) serverconfig.plotBrainImaging = 'proteinpaint/python/src/plotBrainImaging.py'
 
 /******************
 	APPLY OVERRIDES 

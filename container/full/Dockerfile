@@ -7,7 +7,7 @@ ARG VERSION=2.58.1-0
 # Full app update
 #########################
 
-FROM ghcr.io/stjude/ppfull:$VERSION
+FROM ppfull:latest
 
 ARG IMGREV=""
 ARG IMGVER=""

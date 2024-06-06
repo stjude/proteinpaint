@@ -28,11 +28,18 @@ RUN apt-get update && apt-get install -y \
 	g++ \
     pkg-config \
     cmake \
+    python3.11-venv \
 	## clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/ \
   && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
+RUN python3 -m venv /opt/venv
+
+RUN /opt/venv/bin/pip install --upgrade pip && \
+    /opt/venv/bin/pip install nibabel matplotlib numpy
+
+ENV PATH="/opt/venv/bin:$PATH"
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
@@ -81,7 +88,6 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         echo "unknown ARCH='$ARCH'" && \
         exit 1; \
     fi
-
 
 #####################
 # Server-only install
