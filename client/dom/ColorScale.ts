@@ -1,18 +1,19 @@
 import { scaleLinear } from 'd3-scale'
-import { Elem, SvgG } from '../types/d3'
+import { Elem, _Element_ } from '../types/d3'
 import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from './axisstyle'
 import { Selection } from 'd3-selection'
+import { ScaleLinear } from 'd3-scale'
 
 type ColorScaleDom = {
-	gradientStart: Selection<SVGStopElement, any, any, any>
-	gradientMid: Selection<SVGStopElement, any, any, any>
-	gradientEnd: Selection<SVGStopElement, any, any, any>
-	scale: any
-	scaleAxis: any
+	gradientStart: Selection<SVGStopElement, any, SVGLinearGradientElement, any>
+	gradientMid: Selection<SVGStopElement, any, SVGLinearGradientElement, any>
+	gradientEnd: Selection<SVGStopElement, any, SVGLinearGradientElement, any>
+	scale: ScaleLinear<number, number, never>
+	scaleAxis: Selection<SVGGElement, any, any, any>
 }
 
-/** Work in Progress! Update as needed. 
+/** Work in Progress! Update as needed.
  * Intended to be a reusable color scale throughout the platform. Also intended to be
  * highly customizable.
  *
@@ -23,11 +24,11 @@ type ColorScaleDom = {
  * This will allow only the color bar to be implemented without additional code (e.g. ld track)
  */
 export class ColorScale {
+	dom: ColorScaleDom
 	/** The height of the color bar. */
 	barheight: number
 	/** The width of the color bar */
 	barwidth: number
-	dom: ColorScaleDom
 	/** Color shown on the left, start of the scale. Default is white */
 	startColor: string
 	/** Color shown in the center of the scale.*/
@@ -36,10 +37,9 @@ export class ColorScale {
 	endColor: string
 	/** Required */
 	data: number[]
-	/** Required */
-	holder: Elem
+	/** Optional but recommendend. Sets the position of the color scale in the holder. Default is 0,0*/
 	position: string
-	/** Optional. Attributes for the svg*/
+	/** Optional but recommendend. Attributes for the svg*/
 	svg: {
 		/** Optional. Default is 100 */
 		width: number
@@ -50,18 +50,37 @@ export class ColorScale {
 	tickPosition: 'top' | 'bottom'
 	/** Optional. Number of ticks to show. Cannot be zero. Default is 4. */
 	ticks: number
+	/** Optional. Size of the ticks in px. Default is 1 */
 	tickSize: number
 	/** Options. Font size of the text labels */
 	fontSize: number
 
-	constructor(opts: any) {
+	constructor(opts: {
+		/** Required */
+		holder: Elem
+		data: number[]
+		/** Optional */
+		barheight?: number
+		barwidth?: number
+		startColor?: string
+		midColor?: string
+		endColor?: string
+		position?: string
+		/** svg.width */
+		width?: number
+		/** svg.height */
+		height?: number
+		tickPosition?: 'top' | 'bottom'
+		ticks?: number
+		tickSize?: number
+		fontSize?: number
+	}) {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
-		this.startColor =  opts.startColor || 'white'
+		this.startColor = opts.startColor || 'white'
 		this.midColor = opts.midColor || 'white'
 		this.endColor = opts.endColor || 'red'
-		this.data = opts.data || [0, 1]
-		this.holder = opts.holder
+		this.data = opts.data
 		//TODO change this so it detects the holder size
 		this.position = opts.position || '0,0'
 		this.svg = {
@@ -73,28 +92,21 @@ export class ColorScale {
 		this.tickSize = opts.tickSize || 1
 		this.fontSize = opts.fontSize || 10
 
-		const scaleSvg = this.holder.append('svg').attr('width', this.svg.width).attr('height', this.svg.height)
+		if (!opts.holder) throw new Error('No holder provided for color scale.')
+		if (!opts.data) throw new Error('No data provided for color scale.')
 
+		const scaleSvg = opts.holder.append('svg').attr('width', this.svg.width).attr('height', this.svg.height)
 		const barG = scaleSvg.append('g').attr('transform', `translate(${this.position})`)
-
 		const defs = barG.append('defs')
 		const id = Math.random().toString()
-		const gradient = defs.append('linearGradient').attr('id', id)
-
-		const gradStart = gradient
-			.append('stop')
-			.attr('offset', 0)
-			.attr('stop-color', this.startColor)
-		const gradientMid = gradient
-			.append('stop')
-			.attr('offset', 0.5)
-			.attr('stop-color', this.midColor)
-		const gradEnd = gradient
-			.append('stop')
-			.attr('offset', 1)
-			.attr('stop-color', this.endColor)
 
 		//Color bar
+		const gradient = defs.append('linearGradient').attr('id', id)
+
+		const gradientStart = gradient.append('stop').attr('offset', 0).attr('stop-color', this.startColor)
+		const gradientMid = gradient.append('stop').attr('offset', 0.5).attr('stop-color', this.midColor)
+		const gradientEnd = gradient.append('stop').attr('offset', 1).attr('stop-color', this.endColor)
+
 		barG
 			.append('rect')
 			.attr('height', this.barheight)
@@ -102,18 +114,20 @@ export class ColorScale {
 			.attr('fill', 'url(#' + id + ')')
 
 		const scaleAxis = barG.append('g').attr('transform', `translate(0, ${this.barheight + 2})`)
-
-		const start = Number(this.data[0].toFixed(2))
-		const stop = Number(this.data[this.data.length - 1].toFixed(2))
-		const scale = scaleLinear().domain([start, stop]).range([0, this.barwidth])
+		this.formatData()
+		const scale = scaleLinear().domain(this.data).range([0, this.barwidth])
 
 		this.dom = {
-			gradientStart: gradStart,
+			gradientStart,
 			gradientMid,
-			gradientEnd: gradEnd,
+			gradientEnd,
 			scale,
 			scaleAxis
 		}
+	}
+
+	formatData() {
+		this.data = this.data.map(d => Number(d.toFixed(2)))
 	}
 
 	render() {
@@ -146,13 +160,14 @@ export class ColorScale {
 	}
 
 	updateAxis() {
-		const start = Number(this.data[0].toFixed(2))
-		const stop = Number(this.data[this.data.length - 1].toFixed(2))
+		this.formatData()
+		const start = this.data[0]
+		const stop = this.data[this.data.length - 1]
 		const tickValues = [start, stop]
 		this.dom.scaleAxis.selectAll('*').remove()
 
 		if (start < 0 && stop > 0) {
-			tickValues.splice(1, 0, 0)
+			tickValues.splice(this.data.length / 2, 0, 0)
 			this.dom.scale = scaleLinear()
 				.domain(tickValues)
 				.range([0, this.barwidth / 2, this.barwidth])
@@ -162,17 +177,13 @@ export class ColorScale {
 		} else {
 			this.dom.scale = scaleLinear().domain(tickValues).range([0, this.barwidth])
 			this.dom.gradientStart.attr('offset', '0%').attr('stop-color', this.startColor)
-			this.dom
-				.gradientMid.attr('offset', start >= 0 ? '0%' : '100%')
-				.attr('stop-color', start >= 0 ? (this.startColor) : (this.endColor))
+			this.dom.gradientMid
+				.attr('offset', start >= 0 ? '0%' : '100%')
+				.attr('stop-color', start >= 0 ? this.startColor : this.endColor)
 			this.dom.gradientEnd.attr('offset', '100%').attr('stop-color', this.endColor)
 		}
 
 		this.dom.scaleAxis.transition().duration(500).call(this.setAxis(tickValues))
-
-		for (const label of this.dom.scaleAxis.selectAll('text').nodes()) {
-			label.style.fontSize = `${this.fontSize}px`
-		}
 	}
 
 	updateScale() {
