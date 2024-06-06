@@ -1,1 +1,2 @@
-
+Fixes:
+- scope PP-specific css resets and styles to the root holder, such as the previously unscoped h2 style
