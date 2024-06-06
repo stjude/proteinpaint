@@ -257,14 +257,18 @@ export const setCellProps = {
 	   but how - quantitative, categorical, etc? */
 	//survival: setNumericCellProps,
 	geneVariant: setGeneVariantCellProps,
-	hierCluster: setHierClusterCellProps
+	hierCluster: setHierClusterCellProps,
+	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
+	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps
 }
 
 export const maySetEmptyCell = {
 	geneVariant: setVariantEmptyCell,
 	integer: setNumericEmptyCell,
 	float: setNumericEmptyCell,
-	categorical: setDefaultEmptyCell
+	categorical: setDefaultEmptyCell,
+	[TermTypes.GENE_EXPRESSION]: setNumericEmptyCell,
+	[TermTypes.METABOLITE_INTENSITY]: setNumericEmptyCell
 }
 
 function setVariantEmptyCell(siblingCells, cellTemplate, s, d) {
