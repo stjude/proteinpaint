@@ -89,9 +89,6 @@ cp ../server/app-server.mjs .
 echo "building ${MODE}ppbase image"
 docker buildx build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
 
-echo "building ${MODE}pprust image"
-docker buildx build . --file ./Dockerfile --target pprust --tag "${MODE}pprust:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
-
 echo "building ${MODE}ppserver image"
 docker buildx build . --file ./Dockerfile --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
