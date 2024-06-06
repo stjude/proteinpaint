@@ -8,7 +8,6 @@ import { ColorScale } from '../ColorScale'
     - ColorScale.render() - top
     - ColorScale.updateColors()
     - ColorScale.updateAxis()
-
 */
 
 /**************
@@ -178,6 +177,6 @@ tape('ColorScale.updateScale()', test => {
 	test.equal(ticks[0].__data__, testColorScale.data[0], 'Should call updateAxis() and update the first tick to -5')
 	test.equal(ticks[1].__data__, 0, 'Should insert a middle tick at 0')
 
-	// if (test['_ok']) holder.remove()
+	if (test['_ok']) holder.remove()
 	test.end()
 })
