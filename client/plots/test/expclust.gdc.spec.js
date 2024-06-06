@@ -1,26 +1,14 @@
 import * as helpers from '../../test/front.helpers.js'
 import tape from 'tape'
-import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
+import { detectOne } from '../../test/test.helpers.js'
 import { runproteinpaint } from '#src/app'
 import { select } from 'd3-selection'
-
-/*************************
- reusable helper functions
-**************************/
-
-const runpp = helpers.getRunPp('mass', {
-	state: {
-		dslabel: 'GDC',
-		genome: 'hg38'
-	},
-	debug: 1
-})
 
 /**************
  test sections
 
-TME genes, 3 variables
-launch gene exp clustering using runproteinpaint with launchGdcHierCluster
+TME genes and dictionary variables
+gdc laucher with top variably expressed genes, for gliomas
 
 ***************/
 tape('\n', function (test) {
@@ -28,7 +16,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('TME genes, 3 variables', function (test) {
+tape('TME genes and dictionary variables', function (test) {
 	test.timeoutAfter(60000)
 	runpp({
 		state: {
@@ -36,33 +24,16 @@ tape('TME genes, 3 variables', function (test) {
 			plots: [
 				{
 					chartType: 'hierCluster',
+					dataType: 'geneExpression',
+					/* not needed, reenable to add other customizations
 					settings: {
 						hierCluster: {
 							termGroupName: 'Gene Expression (CGC genes only)'
 						}
 					},
-					genes: [
-						{ gene: 'KIF11' },
-						{ gene: 'BUB1B' },
-						{ gene: 'BUB1' },
-						{ gene: 'CDK1' },
-						{ gene: 'CDC20' },
-						{ gene: 'AURKB' },
-						{ gene: 'TPX2' },
-						{ gene: 'CCNB2' },
-						{ gene: 'CCNA2' },
-						{ gene: 'TOP2A' },
-						{ gene: 'AURKA' },
-						{ gene: 'KIF20A' },
-						{ gene: 'KIF2C' },
-						{ gene: 'CDCA8' }
-					],
-					termgroups: [
-						{
-							name: 'Variables',
-							lst: [{ id: 'case.disease_type' }, { id: 'case.primary_site' }, { id: 'case.demographic.gender' }]
-						}
-					]
+					*/
+					terms: TMEgenes,
+					termgroups: [{ name: 'Variables', lst: dictTerms }]
 				}
 			]
 		},
@@ -92,8 +63,8 @@ tape('TME genes, 3 variables', function (test) {
 		test.equal(hierCluster.Inner.dom.seriesesG.selectAll('image').size(), 1, `should render 1 <image> element`)
 		test.equal(
 			hierCluster.Inner.dom.svg.selectAll('.sjpp-matrix-term-label-g').node().querySelectorAll('text').length,
-			17,
-			`should render 17 <series> elements`
+			TMEgenes.length + dictTerms.length,
+			`should render ${TMEgenes.length + dictTerms.length} <series> elements`
 		)
 		test.pass('hierCluster rendered')
 	}
@@ -230,7 +201,9 @@ tape('TME genes, 3 variables', function (test) {
 	}
 })
 
-tape('launch gene exp clustering using runproteinpaint with launchGdcHierCluster', async function (test) {
+tape('gdc laucher with top variably expressed genes, for gliomas', async function (test) {
+	const maxGeneCount = 5
+
 	await runproteinpaint({
 		holder: select('body').append('div').node(),
 		noheader: 1,
@@ -241,15 +214,66 @@ tape('launch gene exp clustering using runproteinpaint with launchGdcHierCluster
 		},
 		settings: {
 			hierCluster: {
-				maxGenes: 50
+				maxGenes: maxGeneCount
 			}
 		},
 		termgroups: [
 			{
 				name: 'Variables',
-				lst: [{ id: 'case.disease_type' }, { id: 'case.primary_site' }, { id: 'case.demographic.gender' }]
+				lst: dictTerms
 			}
-		]
+		],
+		opts: {
+			hierCluster: {
+				callbacks: {
+					'postRender.test': runTests
+				}
+			}
+		}
 	})
-	test.end()
+
+	async function runTests(hierCluster) {
+		hierCluster.on('postRender.test', null)
+
+		await detectOne({ elem: hierCluster.Inner.dom.seriesesG.node(), selector: 'image' })
+		test.equal(hierCluster.Inner.dom.seriesesG.selectAll('image').size(), 1, `should render 1 <image> element`)
+		test.equal(
+			hierCluster.Inner.dom.svg.selectAll('.sjpp-matrix-term-label-g').node().querySelectorAll('text').length,
+			maxGeneCount + dictTerms.length,
+			`should render ${maxGeneCount + dictTerms.length} <series> elements`
+		)
+
+		if (test._ok) hierCluster.Inner.app.destroy()
+		test.end()
+	}
 })
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('mass', {
+	state: {
+		dslabel: 'GDC',
+		genome: 'hg38'
+	},
+	debug: 1
+})
+
+const TMEgenes = [
+	{ gene: 'KIF11' },
+	{ gene: 'BUB1B' },
+	{ gene: 'BUB1' },
+	{ gene: 'CDK1' },
+	{ gene: 'CDC20' },
+	{ gene: 'AURKB' },
+	{ gene: 'TPX2' },
+	{ gene: 'CCNB2' },
+	{ gene: 'CCNA2' },
+	{ gene: 'TOP2A' },
+	{ gene: 'AURKA' },
+	{ gene: 'KIF20A' },
+	{ gene: 'KIF2C' },
+	{ gene: 'CDCA8' }
+]
+const dictTerms = [{ id: 'case.disease_type' }, { id: 'case.primary_site' }, { id: 'case.demographic.gender' }]
