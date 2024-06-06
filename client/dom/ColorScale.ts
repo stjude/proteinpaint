@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { Elem, _Element_ } from '../types/d3'
+import { Elem } from '../types/d3'
 import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from './axisstyle'
 import { Selection } from 'd3-selection'

@@ -82,7 +82,7 @@ export class InfoBar {
 			tickPosition: 'bottom',
 			tickSize: 3
 		})
-		await this.colorScale.render()
+		this.colorScale.render()
 		this.update()
 	}
 

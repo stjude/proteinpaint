@@ -1,9 +1,10 @@
 import { bplen } from '../shared/common'
 import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
-import { axisBottom } from 'd3-axis'
-import { scaleLinear } from 'd3-scale'
+// import { axisBottom } from 'd3-axis'
+// import { scaleLinear } from 'd3-scale'
 import { hicparsestat, hicparsefragdata } from '../tracks/hic/data/parseData.ts'
+import { ColorScale } from '../dom/ColorScale.ts'
 
 /*
 single-sample hic
@@ -96,7 +97,7 @@ export function loadTk(tk: any, block: any) {
 		.then(() => {
 			if (tk.data.length == 0) {
 				tk.height_main = 100
-				tk.colorscale.g.attr('transform', 'scale(0)')
+				// tk.colorscale.g.attr('transform', 'scale(0)')
 				tk.img.attr('width', 0)
 				throw tk.name + ': no data in view range'
 			}
@@ -797,28 +798,30 @@ function drawCanvas(tk: any, block: any) {
 
 	tk.img.attr('width', canvaswidth).attr('height', canvasheight).attr('xlink:href', canvas.toDataURL())
 
-	// update colorscale
-	tk.colorscale.g.attr('transform', 'scale(1) ' + tk.colorscale.positionstr)
-	tk.colorscale.scale.domain([0, maxv])
-	if (tk.mincutoff != undefined && tk.mincutoff != 0) {
-		const x = Math.min(tk.colorscale.barwidth, tk.colorscale.scale(tk.mincutoff))
-		tk.colorscale.tick_mincutoff.attr('x1', x).attr('x2', x).attr('stroke', 'black')
-		tk.colorscale.label_mincutoff.attr('x', x).text(tk.mincutoff)
-	} else {
-		tk.colorscale.tick_mincutoff.attr('stroke', 'none')
-		tk.colorscale.label_mincutoff.text('')
-	}
-	client.axisstyle({
-		axis: tk.colorscale.axisg.call(axisBottom(tk.colorscale.scale).tickValues([0, maxv])),
-		showline: 1,
-		color: 'black'
-	})
+	// // update colorscale
+	// tk.colorscale.g.attr('transform', 'scale(1) ' + tk.colorscale.positionstr)
+	// tk.colorscale.scale.domain([0, maxv])
+	// if (tk.mincutoff != undefined && tk.mincutoff != 0) {
+	// 	const x = Math.min(tk.colorscale.barwidth, tk.colorscale.scale(tk.mincutoff))
+	// 	tk.colorscale.tick_mincutoff.attr('x1', x).attr('x2', x).attr('stroke', 'black')
+	// 	tk.colorscale.label_mincutoff.attr('x', x).text(tk.mincutoff)
+	// } else {
+	// 	tk.colorscale.tick_mincutoff.attr('stroke', 'none')
+	// 	tk.colorscale.label_mincutoff.text('')
+	// }
+	// client.axisstyle({
+	// 	axis: tk.colorscale.axisg.call(axisBottom(tk.colorscale.scale).tickValues([0, maxv])),
+	// 	showline: 1,
+	// 	color: 'black'
+	// })
+	tk.colorScale.data = [0, maxv]
+	tk.colorScale.updateScale()
 
 	tk.height_main = tk.toppad + Math.max(tk.left_labelheight, canvasheight) + tk.bottompad
 }
 
 function resize_label(tk: any, block: any) {
-	tk.leftLabelMaxwidth = tk.colorscale.barwidth
+	tk.leftLabelMaxwidth = tk.colorScale.barwidth
 	tk.tklabel.each(function (this: any) {
 		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 	})
@@ -891,47 +894,75 @@ function makeTk(tk: any, block: any) {
 		laby += labyspace + block.labelfontsize
 	}
 
-	tk.colorscale = {}
+	// tk.colorscale = {}
 	{
-		tk.colorscale.barwidth = 100
-		laby += labyspace
+		// laby += labyspace + 100
 		const barheight = 14
+		const barwidth = 100
+		const space = 1
+		const holder = tk.gleft
+			.append('g')
+			.attr('transform', `scale(1), translate(${block.tkleftlabel_xshift - barwidth}, ${laby})`)
 
-		tk.colorscale.positionstr = 'translate(' + (block.tkleftlabel_xshift - tk.colorscale.barwidth) + ', ' + laby + ')'
+		tk.colorScale = new ColorScale({
+			barheight,
+			barwidth,
+			//data will update after loading data
+			data: [0, 1],
+			fontSize: 12,
+			height: 45,
+			width: 120,
+			holder,
+			endColor: tk.color,
+			position: `0,${barheight + space}`,
+			ticks: 2,
+			tickPosition: 'bottom',
+			tickSize: 2
+		})
 
-		const g = tk.gleft.append('g').attr('transform', tk.colorscale.positionstr)
+		tk.colorScale.render()
 
-		tk.colorscale.g = g
+		// tk.colorscale.barwidth = 100
+		// laby += labyspace
+		// const barheight = 14
 
-		const defs = g.append('defs')
-		const id = Math.random().toString()
-		const gradient = defs.append('linearGradient').attr('id', id)
-		gradient.append('stop').attr('offset', 0).attr('stop-color', 'white')
-		tk.colorscale.gradientstop = gradient.append('stop').attr('offset', 1)
+		// tk.colorscale.positionstr = 'translate(' + (block.tkleftlabel_xshift - tk.colorscale.barwidth) + ', ' + laby + ')'
 
-		updatetkcolor_client(tk)
+		// const g = tk.gleft.append('g').attr('transform', tk.colorscale.positionstr)
 
-		const space = 1 // y space between bar and axis
+		// tk.colorscale.g = g
 
-		tk.colorscale.bar = g
-			.append('rect')
-			.attr('height', barheight)
-			.attr('width', tk.colorscale.barwidth)
-			.attr('fill', 'url(#' + id + ')')
-		tk.colorscale.axisg = g.append('g').attr('transform', 'translate(0,' + (barheight + space) + ')')
-		tk.colorscale.scale = scaleLinear().range([0, tk.colorscale.barwidth])
+		// const defs = g.append('defs')
+		// const id = Math.random().toString()
+		// const gradient = defs.append('linearGradient').attr('id', id)
+		// gradient.append('stop').attr('offset', 0).attr('stop-color', 'white')
+		// tk.colorscale.gradientstop = gradient.append('stop').attr('offset', 1)
 
-		// min cutoff indicator
-		tk.colorscale.tick_mincutoff = g
-			.append('line')
-			.attr('y1', barheight + space - 3)
-			.attr('y2', barheight + space)
-		tk.colorscale.label_mincutoff = g
-			.append('text')
-			.attr('text-anchor', 'middle')
-			.attr('font-family', client.font)
-			.attr('font-size', 12)
-			.attr('y', barheight + space - 4)
+		// updatetkcolor_client(tk)
+		tk.colorScale.endColor = tk.color
+		tk.colorScale.updateColors()
+
+		// const space = 1 // y space between bar and axis
+
+		// tk.colorscale.bar = g
+		// 	.append('rect')
+		// 	.attr('height', barheight)
+		// 	.attr('width', tk.colorscale.barwidth)
+		// 	.attr('fill', 'url(#' + id + ')')
+		// tk.colorscale.axisg = g.append('g').attr('transform', 'translate(0,' + (barheight + space) + ')')
+		// tk.colorscale.scale = scaleLinear().range([0, tk.colorscale.barwidth])
+
+		// // min cutoff indicator
+		// tk.colorscale.tick_mincutoff = g
+		// 	.append('line')
+		// 	.attr('y1', barheight + space - 3)
+		// 	.attr('y2', barheight + space)
+		// tk.colorscale.label_mincutoff = g
+		// 	.append('text')
+		// 	.attr('text-anchor', 'middle')
+		// 	.attr('font-family', client.font)
+		// 	.attr('font-size', 12)
+		// 	.attr('y', barheight + space - 4)
 
 		laby += barheight + 10 + block.labelfontsize
 	}
@@ -950,10 +981,10 @@ function makeTk(tk: any, block: any) {
 	})
 }
 
-function updatetkcolor_client(tk: any) {
-	// call after updating color, only on client
-	tk.colorscale.gradientstop.attr('stop-color', tk.color)
-}
+// function updatetkcolor_client(tk: any) {
+// 	// call after updating color, only on client
+// 	tk.colorscale.gradientstop.attr('stop-color', tk.color)
+// }
 
 function configPanel(tk: any, block: any) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
@@ -978,9 +1009,10 @@ function configPanel(tk: any, block: any) {
 			.style('margin-left', '5px')
 			.attr('type', 'color')
 			.property('value', tk.color)
-			.on('change', event => {
-				tk.color = event.target.value
-				updatetkcolor_client(tk)
+			.on('change', (event: MouseEvent) => {
+				tk.color = (event.target as HTMLInputElement).value
+				tk.colorScale.endColor = tk.color
+				tk.colorScale.updateScale()
 				drawCanvas(tk, block)
 			})
 	}
