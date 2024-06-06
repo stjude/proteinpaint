@@ -105,3 +105,23 @@ tape('ColorScale.updateColors()', test => {
 	if (test['_ok']) holder.remove()
 	test.end()
 })
+
+tape('ColorScale.updateAxis()', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+
+	const testColorScale = getColorScale({ holder })
+	testColorScale.render()
+
+	testColorScale.data = [0, 5]
+	testColorScale.updateAxis()
+
+	const ticks = holder.selectAll('text').nodes()
+
+	test.equal(ticks[0].__data__, testColorScale.data[0], 'Should update the first tick to 0')
+	test.equal(ticks[1].__data__, testColorScale.data[1], 'Should update the last tick to 5')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
