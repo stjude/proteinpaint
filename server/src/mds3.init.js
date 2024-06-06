@@ -2369,8 +2369,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					? await getGenecnvByTerm(ds, tw.term, genome, q)
 					: []
 
-			if (!mlst.length) throw 'unable to retrieve mutation data'
-
 			for (const m of mlst) {
 				/*
 				m={
