@@ -54,7 +54,7 @@ tape('new ColorScale()', test => {
 	test.ok(testColorScale.position == '0,0', 'Should set default value of 0,0 for position')
 	test.ok(testColorScale.svg.width == 100, 'Should set default value of 100 for svg.width')
 	test.ok(testColorScale.svg.height == 30, 'Should set default value of 30 for svg.height')
-	test.ok(testColorScale.tickPosition == 'bottom', 'Should set default value of bottom for tickPosition')
+	test.ok(testColorScale.topTicks == false, 'Should set default value of false for topTicks')
 	test.ok(testColorScale.ticks == 5, 'Should set default value of 5 for ticks')
 	test.ok(testColorScale.tickSize == 1, 'Should set default value of 1 for tickSize')
 	test.ok(testColorScale.fontSize == 10, 'Should set default value of 10 for fontSize')
@@ -85,8 +85,8 @@ tape('ColorScale.render() - default bottom', test => {
 	)
 
 	const childNodes = holder.select('svg > g').node().childNodes
-	test.equal(childNodes[1].nodeName, 'rect', 'Should render color bar before the axis when tickPosition is bottom')
-	test.equal(childNodes[2].nodeName, 'g', 'Should render axis after the color bar tickPosition is bottom')
+	test.equal(childNodes[1].nodeName, 'rect', 'Should render color bar before the axis when topTicks is false')
+	test.equal(childNodes[2].nodeName, 'g', 'Should render axis after the color bar topTicks is false')
 
 	test.equal(
 		holder.selectAll('text').nodes().length,
@@ -102,12 +102,12 @@ tape('ColorScale.render() - top', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
-	const testColorScale = getColorScale({ holder, tickPosition: 'top', position: '10,15' })
+	const testColorScale = getColorScale({ holder, topTicks: true, position: '10,15' })
 	testColorScale.render()
 
 	const childNodes = holder.select('svg > g').node().childNodes
-	test.equal(childNodes[0].nodeName, 'rect', 'Should render axis before the color bar when tickPosition is top')
-	test.equal(childNodes[1].nodeName, 'g', 'Should render color bar after the axis when tickPosition is top')
+	test.equal(childNodes[0].nodeName, 'rect', 'Should render axis before the color bar when topTicks is true')
+	test.equal(childNodes[1].nodeName, 'g', 'Should render color bar after the axis when topTicks is true')
 
 	if (test['_ok']) holder.remove()
 	test.end()

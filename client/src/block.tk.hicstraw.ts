@@ -916,7 +916,6 @@ function makeTk(tk: any, block: any) {
 			endColor: tk.color,
 			position: `0,${barheight + space}`,
 			ticks: 2,
-			tickPosition: 'bottom',
 			tickSize: 2
 		})
 

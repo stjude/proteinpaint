@@ -79,7 +79,6 @@ export class InfoBar {
 			endColor: this.endColor,
 			position: '20,0',
 			ticks: 2,
-			tickPosition: 'bottom',
 			tickSize: 3
 		})
 		this.colorScale.render()

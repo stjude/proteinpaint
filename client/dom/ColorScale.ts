@@ -46,8 +46,8 @@ export class ColorScale {
 		/** Optional. Default is 30.*/
 		height: number
 	}
-	/** Optional. Placement of numbered ticks. Default is bottom */
-	tickPosition: 'top' | 'bottom'
+	/** Optional. Placement of numbered ticks. Default is false */
+	topTicks: boolean
 	/** Optional. Number of ticks to show. Cannot be zero. Default is 4. */
 	ticks: number
 	/** Optional. Size of the ticks in px. Default is 1 */
@@ -70,7 +70,7 @@ export class ColorScale {
 		width?: number
 		/** svg.height */
 		height?: number
-		tickPosition?: 'top' | 'bottom'
+		topTicks?: boolean
 		ticks?: number
 		tickSize?: number
 		fontSize?: number
@@ -87,7 +87,7 @@ export class ColorScale {
 			width: opts.width || 100,
 			height: opts.height || 30
 		}
-		this.tickPosition = opts.tickPosition || 'bottom'
+		this.topTicks = opts.topTicks || false
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
 		this.fontSize = opts.fontSize || 10
@@ -101,7 +101,7 @@ export class ColorScale {
 		const barG = scaleSvg.append('g').attr('transform', `translate(${this.position})`)
 		const id = Math.random().toString()
 
-		if (this.tickPosition === 'top') {
+		if (this.topTicks === true) {
 			const { scale, scaleAxis } = this.makeAxis(barG, id)
 			const { gradientStart, gradientMid, gradientEnd } = this.makeColorBar(barG, id)
 			this.dom = { scale, scaleAxis, gradientStart, gradientMid, gradientEnd }
@@ -134,7 +134,7 @@ export class ColorScale {
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
 
-		if (this.tickPosition === 'bottom') scaleAxis.attr('transform', `translate(0, ${this.barheight + 2})`)
+		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight + 2})`)
 
 		const scale = scaleLinear().domain(this.data).range([0, this.barwidth])
 
@@ -156,13 +156,13 @@ export class ColorScale {
 	}
 
 	getAxis() {
-		const axis = this.tickPosition === 'top' ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
+		const axis = this.topTicks === true ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
 		axis.ticks(this.ticks).tickSize(this.tickSize)
 		return axis
 	}
 
 	setAxis(tickValues: number[]) {
-		if (this.tickPosition === 'top') {
+		if (this.topTicks === true) {
 			return axisTop(this.dom.scale).tickValues(tickValues).tickSize(this.tickSize)
 		} else {
 			return axisBottom(this.dom.scale).tickValues(tickValues).tickSize(this.tickSize)
