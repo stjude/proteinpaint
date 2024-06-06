@@ -286,7 +286,7 @@ export function setLabelsAndScales() {
 
 	// need to assign scales to terms after the loop above so each term has the global maxLoss, maxGain, minLoss, minGain
 	for (const t of this.termOrder) {
-		if (t.tw.term.type == 'geneVariant' || t.tw.term.type == 'geneExpression') {
+		if (t.tw.term.type == 'geneVariant') {
 			if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
 				t.scales = {
 					loss: interpolateBlues,
