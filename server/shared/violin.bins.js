@@ -64,8 +64,6 @@ function gaussianKernelWithoutBandwidth(u) {
 
 function kde(kernel, thresholds, data, valuesMin, valuesMax) {
 	let bandwidth = completeCVBandwidth(data) / 2
-	console.log(bandwidth)
-	//if (bandwidth == 0 || isNaN(bandwidth)) bandwidth = 1
 	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d, bandwidth))])
 	const bins = []
 	let densityMax = 0,
