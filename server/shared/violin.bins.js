@@ -58,12 +58,46 @@ function gaussianKernel(u, bandwidth) {
 	return Math.abs((u /= bandwidth)) <= 1 ? (0.75 * (1 - u * u) * Math.exp((-u * u) / 2)) / Math.sqrt(2 * Math.PI) : 0
 }
 
-function gaussianKernelWithoutBandwidth(u) {
-	return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
+function quantileSeq(data, p) {
+	const sorted = data.slice().sort((a, b) => a - b)
+	const index = Math.floor((sorted.length - 1) * p)
+	const fraction = (sorted.length - 1) * p - index
+	return (1 - fraction) * sorted[index] + fraction * sorted[index + 1]
+}
+
+function sheatherJonesBandwidth(data, kernel) {
+	const n = data.length
+	const qn = 1.281551565545 // Quantile for normal distribution at 90% confidence
+
+	const sortedData = data.slice().sort((a, b) => a - b)
+	const q25 = quantileSeq(sortedData, 0.25) // 25th percentile (lower quartile)
+	const q75 = quantileSeq(sortedData, 0.75) // 75th percentile (upper quartile)
+	const iqr = q75 - q25 // Interquartile range
+
+	const dev = stdDev(data) // Sample standard deviation
+	const h0 = Math.min(dev, iqr / qn)
+
+	const m = Math.sqrt(((n + 1) * (n + 3)) / (6 * (n - 1)))
+	const sigmaHat = Math.min(dev, m * h0)
+
+	const bandwidth = 1.06 * sigmaHat * Math.pow(n, -0.2)
+
+	if (isNaN(bandwidth) || !isFinite(bandwidth)) {
+		// console.error("Error computing bandwidth: NaN or infinite value encountered");
+		// console.log("Data:", data);
+		// console.log("Sorted Data:", sortedData);
+		// console.log("Quantiles:", q25, q75);
+		// console.log("IQR:", iqr);
+		// console.log("Std Dev:", stdDev);
+		// console.log("h0:", h0);
+		// console.log("sigmaHat:", sigmaHat);
+	}
+
+	return bandwidth
 }
 
 function kde(kernel, thresholds, data, valuesMin, valuesMax) {
-	let bandwidth = completeCVBandwidth(data) / 2
+	let bandwidth = sheatherJonesBandwidth(data)
 	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d, bandwidth))])
 	const bins = []
 	let densityMax = 0,
@@ -89,39 +123,6 @@ function kdeWithoutX(data, x, bandwidth, kernel) {
 	)
 }
 
-function LOOCV(data, bandwidth, kernel) {
-	let totalError = 0
-
-	for (let i = 0; i < data.length; i++) {
-		const leaveOutPoint = data[i]
-		const trainData = data.filter((_, index) => index !== i)
-
-		const estimate = kdeWithoutX(trainData, leaveOutPoint, bandwidth, kernel)
-		const trueDensity = kdeWithoutX(data, leaveOutPoint, bandwidth, kernel)
-
-		totalError += Math.log(estimate) - Math.log(trueDensity)
-	}
-
-	return Math.exp(totalError / data.length)
-}
-
-function completeCVBandwidth(data, kernel = gaussianKernelWithoutBandwidth) {
-	const n = data.length
-	let bestBandwidth = 0
-	let minError = Infinity
-
-	for (let bandwidth = 0.1; bandwidth <= 2.0; bandwidth += 0.1) {
-		const error = LOOCV(data, bandwidth, kernel)
-
-		if (error < minError) {
-			minError = error
-			bestBandwidth = bandwidth
-		}
-	}
-
-	return bestBandwidth
-}
-
 function mean(data) {
 	return data.reduce((sum, value) => sum + value, 0) / data.length
 }
@@ -131,13 +132,6 @@ function stdDev(data) {
 	const squaredDifferences = data.map(value => Math.pow(value - meanValue, 2))
 	const variance = squaredDifferences.reduce((sum, value) => sum + value, 0) / data.length
 	return Math.sqrt(variance)
-}
-
-function quantileSeq(data, p) {
-	const sortedData = data.slice().sort((a, b) => a - b)
-	const index = Math.floor(p * (sortedData.length - 1))
-	const fraction = p * (sortedData.length - 1) - index
-	return (1 - fraction) * sortedData[index] + fraction * sortedData[index + 1]
 }
 
 function silvermanBandwidth(data) {
