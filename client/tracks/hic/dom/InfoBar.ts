@@ -1,4 +1,4 @@
-import { ColorScale } from '../../../dom/colorScale'
+import { ColorScale } from '../../../dom/ColorScale'
 import { Tr } from '../../../types/d3'
 import { bplen } from '../../../shared/common'
 
