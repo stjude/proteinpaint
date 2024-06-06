@@ -1,4 +1,12 @@
-@import 'normalize.css/normalize.css';
+/*
+    see client/generateScopedCss.js on how to generate style-normalize-*.css
+
+    also see a TODO comment in client/src/app.js, of dynamically importing
+    style-normalize-unscoped.css only if it's known to not conflict in
+    the embedder portal
+*/
+@import './style-normalize-unscoped.css';
+@import './style-normalize-scoped.css';
 @import 'highlight.js/styles/github.css';
 /*
 html {
@@ -14,13 +22,21 @@ table {
 }
 */
 
+/*
+    !!! NOTE !!!
+    FireFox does not support the @scope (selector) syntax
+    that can enclose all affected rules inside a nested block,
+    so for now, will need to prepend the .sja_root_holder scope for each selector
+*/
 
 /***************************************
 CSS properties that are not covered 
 by normalize.css are covered here
+
+!!! make sure to scope to sja_root_holder
 ****************************************/
 
-h2 {
+.sja_root_holder h2 {
     margin-block-start: 0.83em;
     margin-block-end: 0.83em;
 }

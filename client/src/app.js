@@ -181,6 +181,9 @@ export function runproteinpaint(arg) {
 				// TODO??: server-side rendered viz should see client-side arg.commonOverrides ???
 				common.applyOverrides(Object.assign(data.commonOverrides || {}, arg.commonOverrides || {}))
 			}
+			// TODO: may import(style-normalize-unscoped.css) here for pp portals
+			//       where is it certain html, body css resets will not conflict with portal styles;
+			//       will also need to remove the import of the unscoped.css file from style.css
 			if (data.targetPortal && data.targetPortal == 'gdc') await import('./style.gdc.css') // actual string value will let webpack find and bundle this optional stylesheet
 			// genome data init
 			for (const genomename in app.genomes) {
