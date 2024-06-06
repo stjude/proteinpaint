@@ -188,11 +188,9 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 
 export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
-	cell.label = value.label || self.mclass?.[value.class]?.label || ''
-	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
+	cell.label = value.value
 	// may overriden by a color scale by dt, if applicable below
-	cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
-	cell.class = value.class
+	cell.fill = self.getValueColor?.(value.value)
 	cell.value = value
 	const colw = self.dimensions.colw
 
@@ -212,18 +210,15 @@ export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width
 	return {
 		ref: t.ref,
 		group: groupName,
-		value: value.class,
 		order: -1,
 		entry: {
-			key: value.class,
 			label: '',
 			scale: self.hierClusterValues.scale,
 			domain: [0, 0.5, 1],
 			minLabel: self.hierClusterValues.min,
 			maxLabel: self.hierClusterValues.max,
 			order: 0,
-			dt: value.dt,
-			origin: value.origin
+			dt: value.dt
 		}
 	}
 }
