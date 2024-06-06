@@ -240,7 +240,7 @@ function getChartTypeList(self, state) {
 				// 3 or more terms, launch clustering
 				action.config.chartType = 'hierCluster'
 				action.config.dataType = TermTypes.METABOLITE_INTENSITY
-				action.config.termgroups = [{ name: 'hierCluster', lst: twlst, type: 'hierCluster' }]
+				action.config.termgroups = [{ name: 'Metabolite Intensity Cluster', lst: twlst, type: 'hierCluster' }]
 			}
 		}
 	]
