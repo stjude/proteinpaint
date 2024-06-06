@@ -484,8 +484,8 @@ function setTermActions(self) {
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
 				const t = self.activeLabel || self.lastactiveLabel
 				if (tw) {
-					// users could midify the term label, need to update tw.label to the latest label
-					tw.label = t.label
+					// users could modify the term label, need to update tw.label to the latest label
+					tw.label = t.tw.label
 					if (t && t.tw) tw.$id = t.tw.$id
 					const legendValueFilter = self.mayRemoveTvsEntry(tw)
 					self.pill.main(tw)

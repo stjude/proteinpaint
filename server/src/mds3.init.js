@@ -2305,10 +2305,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				throw 'predefined_groupset_idx is not an integer value'
 		}
 
-		if (tw.term.subtype == 'snp') throw 'not supported'
-		/* the 'mlst' in this 'if' code block is no longer supported due
-		to the new code changes introduced below
 		if (tw.term.subtype == 'snp') {
+			throw 'subtype snp not supported'
 			// query term is one snp; it should only work for snvindel
 			if (!ds.queries.snvindel?.allowSNPs) throw 'snvindel does not allow snp'
 			const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
@@ -2337,7 +2335,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				}
 				mlst.push(_m)
 			}
-		}*/
+		}
+
 		// query term is not snp
 		// should be either gene or region, and will work for all data types
 		// has some code duplication with mds3.load.js query_snvindel() etc
@@ -2465,7 +2464,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// .key will be the name of the assigned group
 				data.set(sample, {
 					sample,
-					[tw.$id]: { key: group.name, label: group.name, values: mlst }
+					[tw.$id]: { key: group.name, label: group.name, value: group.name, values: mlst }
 				})
 			} else {
 				// groupsetting is not active

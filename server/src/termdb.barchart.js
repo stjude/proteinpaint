@@ -155,14 +155,15 @@ export async function barchart_data(q, ds, tdb) {
 						} else {
 							if (tw.term.type == 'geneVariant') {
 								// geneVariant term using groupsetting
-								// value{} will have a .key property (group assignment) and
-								// a .values[] property (mutation data)
-								// only value.key should be used for plotting
-								// NOTE: item.dedupkey is not necessary because
-								// geneVariant groupsetting assignment will
-								// never be ambiguous
+								// value{} will have .key, .value, and .values[]
+								// .key and .value are both the group
+								// assignment of the sample and should be
+								// used for plotting
+								// .values[] contains the mutation data of
+								// the sample and should not be used for
+								// plotting/dedpulication
 								item[`key${i}`] = i != 1 ? value.key : [value.key]
-								item[`val${i}`] = value.key
+								item[`val${i}`] = value.value
 							} else {
 								// this series key will not deduplicate multi-valued samples (those that belong to multiple groups)
 								item[`key${i}`] = i != 1 ? value.key : value.values?.map(v => v.key) || [value.key]
