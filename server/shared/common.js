@@ -16,11 +16,20 @@ export const defaultcolor = rgb('#8AB1D4').darker()
 export const default_text_color = rgb('#aaa').darker().darker()
 
 export const exoncolor = '#4F8053'
+export const plotColor = '#ce768e'
 
 // something that has something to do with coding gene reading frame
 export const IN_frame = true
 export const OUT_frame = false
 
+/********************************
+*        on dt usage            *
+*********************************
+- once a dt value is decided and used with actual dataset,
+  the value must not be altered, since dataset file may hardcode such value and reassigning to a new integer will break!
+- never test dt value by range e.g. if(dt>10), it breaks! only test equality!
+- in code import variable from here and DO NOT use literal values, to make code tractable
+*/
 export const dtsnvindel = 1
 export const dtfusionrna = 2
 export const dtgeneexpression = 3
@@ -30,9 +39,9 @@ export const dtitd = 6
 export const dtdel = 7
 export const dtnloss = 8
 export const dtcloss = 9
-export const dtloh = 10 // to be used in svcnv track
-export const plotColor = '#ce768e'
+export const dtloh = 10
 export const dtmetaboliteintensity = 11
+// add new dt value here, and DO NOT change value of existing dt!
 
 export const dt2label = {
 	[dtsnvindel]: 'SNV/indel',
@@ -44,7 +53,8 @@ export const dt2label = {
 	[dtnloss]: 'N-loss',
 	[dtcloss]: 'C-loss',
 	[dtloh]: 'LOH',
-	[dtgeneexpression]: 'Gene Expression'
+	[dtgeneexpression]: 'Gene Expression',
+	[dtmetaboliteintensity]: 'Metabolite Intensity'
 }
 
 export const mclass = {
