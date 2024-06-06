@@ -58,9 +58,14 @@ function gaussianKernel(u, bandwidth) {
 	return Math.abs((u /= bandwidth)) <= 1 ? (0.75 * (1 - u * u) * Math.exp((-u * u) / 2)) / Math.sqrt(2 * Math.PI) : 0
 }
 
+function gaussianKernelWithoutBandwidth(u) {
+	return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
+}
+
 function kde(kernel, thresholds, data, valuesMin, valuesMax) {
-	let bandwidth = silvermanBandwidth(data)
-	if (bandwidth == 0 || isNaN(bandwidth)) bandwidth = 1
+	let bandwidth = completeCVBandwidth(data) / 2
+	console.log(bandwidth)
+	//if (bandwidth == 0 || isNaN(bandwidth)) bandwidth = 1
 	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d, bandwidth))])
 	const bins = []
 	let densityMax = 0,
@@ -75,6 +80,48 @@ function kde(kernel, thresholds, data, valuesMin, valuesMax) {
 	}
 
 	return { bins, densityMin, densityMax }
+}
+
+function kdeWithoutX(data, x, bandwidth, kernel) {
+	return (
+		data.reduce((sum, xi) => {
+			return sum + kernel((x - xi) / bandwidth)
+		}, 0) /
+		(data.length * bandwidth)
+	)
+}
+
+function LOOCV(data, bandwidth, kernel) {
+	let totalError = 0
+
+	for (let i = 0; i < data.length; i++) {
+		const leaveOutPoint = data[i]
+		const trainData = data.filter((_, index) => index !== i)
+
+		const estimate = kdeWithoutX(trainData, leaveOutPoint, bandwidth, kernel)
+		const trueDensity = kdeWithoutX(data, leaveOutPoint, bandwidth, kernel)
+
+		totalError += Math.log(estimate) - Math.log(trueDensity)
+	}
+
+	return Math.exp(totalError / data.length)
+}
+
+function completeCVBandwidth(data, kernel = gaussianKernelWithoutBandwidth) {
+	const n = data.length
+	let bestBandwidth = 0
+	let minError = Infinity
+
+	for (let bandwidth = 0.1; bandwidth <= 2.0; bandwidth += 0.1) {
+		const error = LOOCV(data, bandwidth, kernel)
+
+		if (error < minError) {
+			minError = error
+			bestBandwidth = bandwidth
+		}
+	}
+
+	return bestBandwidth
 }
 
 function mean(data) {
