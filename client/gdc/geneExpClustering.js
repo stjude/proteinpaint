@@ -71,6 +71,7 @@ export async function init(arg, holder, genomes) {
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
 		const plotAppApi = await appInit({
+			debug: arg.debug,
 			holder: select(arg.holder).select('.sja_root_holder'),
 			genome,
 			state: {
