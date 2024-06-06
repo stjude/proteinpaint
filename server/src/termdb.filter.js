@@ -168,7 +168,7 @@ function get_samplelst(tvs, CTEname) {
 }
 
 async function get_geneVariant(tvs, CTEname, ds) {
-	const tw = { term: tvs.term, q: {} }
+	const tw = { $id: Math.random().toString(), term: tvs.term, q: {} }
 	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
 	/*
 	data here is map of sampleId-mutationData pairs, e.g.
@@ -177,7 +177,7 @@ async function get_geneVariant(tvs, CTEname, ds) {
 	*/
 	const samplenames = []
 	for (const [key, value] of data) {
-		const sampleValues = value[tvs.term.name].values
+		const sampleValues = value[tw.$id].values
 		/*
 		sampleVlaues here is an array of results for each available dt for the sampleID. e.g.
 		[

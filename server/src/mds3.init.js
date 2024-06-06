@@ -2299,7 +2299,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'
 		if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop)))
 			throw 'no gene or position specified'
-		if (tw.q.groupsetting.inuse) {
+		if (tw.q.groupsetting?.inuse) {
 			if (!Number.isInteger(tw.q.dt)) throw 'dt is not an integer value'
 			if (!Number.isInteger(tw.q.groupsetting.predefined_groupset_idx))
 				throw 'predefined_groupset_idx is not an integer value'
@@ -2347,7 +2347,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// otherwise, query all dts in dataset
 		const sample2mlst = new Map()
 		const dts = []
-		if (tw.q.groupsetting.inuse) {
+		if (tw.q.groupsetting?.inuse) {
 			dts.push(tw.q.dt)
 		} else {
 			if (ds.queries.snvindel) dts.push(dtsnvindel)
