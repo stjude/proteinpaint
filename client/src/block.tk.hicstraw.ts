@@ -896,7 +896,6 @@ function makeTk(tk: any, block: any) {
 
 	// tk.colorscale = {}
 	{
-		// laby += labyspace + 100
 		const barheight = 14
 		const barwidth = 100
 		const space = 1
@@ -914,7 +913,7 @@ function makeTk(tk: any, block: any) {
 			width: 120,
 			holder,
 			endColor: tk.color,
-			position: `0,${barheight + space}`,
+			position: `4,${barheight + space}`,
 			ticks: 2,
 			tickSize: 2
 		})

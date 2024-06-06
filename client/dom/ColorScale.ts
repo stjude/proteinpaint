@@ -97,7 +97,11 @@ export class ColorScale {
 
 		this.formatData()
 
-		const scaleSvg = opts.holder.append('svg').attr('data-testid', 'sjpp-color-scale').attr('height', this.svg.height)
+		const scaleSvg = opts.holder
+			.append('svg')
+			.attr('data-testid', 'sjpp-color-scale')
+			.attr('width', this.svg.width)
+			.attr('height', this.svg.height)
 		const barG = scaleSvg.append('g').attr('transform', `translate(${this.position})`)
 		const id = Math.random().toString()
 
