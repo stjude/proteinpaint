@@ -201,10 +201,11 @@ tape('TME genes and dictionary variables', function (test) {
 	}
 })
 
-tape('gdc laucher with top variably expressed genes, for gliomas', async function (test) {
+tape('gdc laucher with top variably expressed genes, for gliomas', function (test) {
 	const maxGeneCount = 5
 
-	await runproteinpaint({
+	runproteinpaint({
+		debug: true,
 		holder: select('body').append('div').node(),
 		noheader: 1,
 		launchGdcHierCluster: true,
