@@ -95,13 +95,13 @@ export class ColorScale {
 		if (!opts.holder) throw new Error('No holder provided for color scale.')
 		if (!opts.data) throw new Error('No data provided for color scale.')
 
-		const scaleSvg = opts.holder.append('svg').attr('width', this.svg.width).attr('height', this.svg.height)
+		const scaleSvg = opts.holder.append('svg').attr('data-testid', 'sjpp-color-scale').attr('height', this.svg.height)
 		const barG = scaleSvg.append('g').attr('transform', `translate(${this.position})`)
 		const defs = barG.append('defs')
 		const id = Math.random().toString()
 
 		//Color bar
-		const gradient = defs.append('linearGradient').attr('id', id)
+		const gradient = defs.append('linearGradient').attr('data-testid', 'sjpp-color-scale-bar').attr('id', id)
 
 		const gradientStart = gradient.append('stop').attr('offset', 0).attr('stop-color', this.startColor)
 		const gradientMid = gradient.append('stop').attr('offset', 0.5).attr('stop-color', this.midColor)
@@ -113,7 +113,10 @@ export class ColorScale {
 			.attr('width', this.barwidth)
 			.attr('fill', 'url(#' + id + ')')
 
-		const scaleAxis = barG.append('g').attr('transform', `translate(0, ${this.barheight + 2})`)
+		const scaleAxis = barG
+			.append('g')
+			.attr('data-testid', 'sjpp-color-scale-axis')
+			.attr('transform', `translate(0, ${this.barheight + 2})`)
 		this.formatData()
 		const scale = scaleLinear().domain(this.data).range([0, this.barwidth])
 
