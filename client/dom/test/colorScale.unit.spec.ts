@@ -1,8 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { Elem } from '../../types/d3'
 import { ColorScale } from '../ColorScale'
-import { get } from 'http'
 
 function getHolder() {
 	return d3s
@@ -80,6 +78,29 @@ tape('ColorScale.render()', test => {
 		testColorScale.ticks + 1,
 		'Should append the correct number of ticks to scale'
 	)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('ColorScale.updateColors()', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+
+	const testColorScale = getColorScale({ holder })
+	testColorScale.render()
+
+	testColorScale.startColor = 'blue'
+	testColorScale.midColor = 'purple'
+	testColorScale.endColor = 'green'
+
+	testColorScale.updateColors()
+
+	const gradientStops = holder.selectAll('stop').nodes()
+	test.equal(gradientStops[0].getAttribute('stop-color'), 'blue', 'Should update startColor')
+	test.equal(gradientStops[1].getAttribute('stop-color'), 'purple', 'Should update midColor')
+	test.equal(gradientStops[2].getAttribute('stop-color'), 'green', 'Should update endColor')
 
 	if (test['_ok']) holder.remove()
 	test.end()

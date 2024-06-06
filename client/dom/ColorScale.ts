@@ -159,6 +159,7 @@ export class ColorScale {
 
 	updateColors() {
 		this.dom.gradientStart.attr('stop-color', this.startColor)
+		this.dom.gradientMid.attr('stop-color', this.midColor)
 		this.dom.gradientEnd.attr('stop-color', this.endColor)
 	}
 
