@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { Elem } from '../types/d3'
+import { Elem, SvgG } from '../types/d3'
 import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from './axisstyle'
 import { Selection } from 'd3-selection'
@@ -78,7 +78,7 @@ export class ColorScale {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
 		this.startColor = opts.startColor || 'white'
-		this.midColor = opts.midColor || 'white'
+		this.midColor = opts.midColor || 'red'
 		this.endColor = opts.endColor || 'red'
 		this.data = opts.data
 		//TODO change this so it detects the holder size
@@ -95,38 +95,50 @@ export class ColorScale {
 		if (!opts.holder) throw new Error('No holder provided for color scale.')
 		if (!opts.data) throw new Error('No data provided for color scale.')
 
+		this.formatData()
+
 		const scaleSvg = opts.holder.append('svg').attr('data-testid', 'sjpp-color-scale').attr('height', this.svg.height)
 		const barG = scaleSvg.append('g').attr('transform', `translate(${this.position})`)
-		const defs = barG.append('defs')
 		const id = Math.random().toString()
+
+		if (this.tickPosition === 'top') {
+			const { scale, scaleAxis } = this.makeAxis(barG, id)
+			const { gradientStart, gradientMid, gradientEnd } = this.makeColorBar(barG, id)
+			this.dom = { scale, scaleAxis, gradientStart, gradientMid, gradientEnd }
+		} else {
+			const { gradientStart, gradientMid, gradientEnd } = this.makeColorBar(barG, id)
+			const { scale, scaleAxis } = this.makeAxis(barG, id)
+			this.dom = { scale, scaleAxis, gradientStart, gradientMid, gradientEnd }
+		}
+	}
+
+	makeColorBar(div: SvgG, id: string) {
+		const defs = div.append('defs')
 
 		//Color bar
 		const gradient = defs.append('linearGradient').attr('data-testid', 'sjpp-color-scale-bar').attr('id', id)
 
-		const gradientStart = gradient.append('stop').attr('offset', 0).attr('stop-color', this.startColor)
-		const gradientMid = gradient.append('stop').attr('offset', 0.5).attr('stop-color', this.midColor)
-		const gradientEnd = gradient.append('stop').attr('offset', 1).attr('stop-color', this.endColor)
+		const gradientStart = gradient.append('stop').attr('offset', '0%').attr('stop-color', this.startColor)
+		const gradientMid = gradient.append('stop').attr('offset', '100%').attr('stop-color', this.midColor)
+		const gradientEnd = gradient.append('stop').attr('offset', '100%').attr('stop-color', this.endColor)
 
-		barG
+		return { gradientStart, gradientMid, gradientEnd }
+	}
+
+	makeAxis(div: SvgG, id: string) {
+		div
 			.append('rect')
 			.attr('height', this.barheight)
 			.attr('width', this.barwidth)
 			.attr('fill', 'url(#' + id + ')')
 
-		const scaleAxis = barG
-			.append('g')
-			.attr('data-testid', 'sjpp-color-scale-axis')
-			.attr('transform', `translate(0, ${this.barheight + 2})`)
-		this.formatData()
+		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
+
+		if (this.tickPosition === 'bottom') scaleAxis.attr('transform', `translate(0, ${this.barheight + 2})`)
+
 		const scale = scaleLinear().domain(this.data).range([0, this.barwidth])
 
-		this.dom = {
-			gradientStart,
-			gradientMid,
-			gradientEnd,
-			scale,
-			scaleAxis
-		}
+		return { scaleAxis, scale }
 	}
 
 	formatData() {
