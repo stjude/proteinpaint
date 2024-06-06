@@ -75,67 +75,20 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
 	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color // TODO: may fill in tw.q.values{} based on groupsetting
 	if (tw.q.groupsetting.inuse) {
-		// groupsetting not in use
-		// use anno to fill in cell
-		cell.label = anno.label
-		cell.fill = ['Mutated', 'Protein-changing', 'Truncating'].includes(anno.key)
+		// groupsetting in use
+		// value is name of group assignment
+		cell.label = value
+		// TODO: import getColors() from client/shared/common.js
+		cell.fill = ['Mutated', 'Protein-changing', 'Truncating'].includes(value)
 			? '#FF0000'
 			: ['Wildtype', 'Rest'].includes(anno.key)
 			? /*'#D3D3D3'*/ '#0000FF'
 			: anno.key == 'Not tested'
 			? /*'#fff'*/ '#00FF00'
 			: '#000000'
-		cell.value = { value: anno.key, dt: tw.q.dt, origin: tw.q.origin }
-	} else {
-		// groupsetting not in use
-		// use value to fill in cell
-		cell.label = value.label || self.mclass[value.class]?.label || ''
-		// may overriden by a color scale by dt, if applicable below
-		cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
-		cell.class = value.class
-		cell.value = value
-	}
-
-	const colw = self.dimensions.colw
-	if (s.cellEncoding == '') {
-		cell.height = s.rowh / values.length
-		cell.width = colw
+		cell.value = { value, dt: tw.q.dt, origin: tw.q.origin }
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
-	} else if (value.dt == dtsnvindel || value.dt == dtfusionrna) {
-		if (s.cellEncoding == 'single') {
-			// when CNV is not displayed, show as tall bar
-			cell.height = s.rowh
-			cell.width = colw
-			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
-			cell.y = 0
-		} else {
-			const divisor = 3
-			cell.height = s.rowh / divisor
-			cell.width = colw
-			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
-			cell.y = height * 0.33333
-		}
-	} else if (value.dt == dtcnv || value.dt == dtgeneexpression || value.dt == dtmetaboliteintensity) {
-		cell.height = s.rowh
-		cell.width = colw
-		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
-		cell.y = 0
-	} else {
-		throw `cannot set cell props for dt = '${value.dt}'`
-	}
-
-	// when not using groupsetting, need to distinguish between
-	// not tested or wildtype by dt: snvindel vs CNV vs SV, etc
-	if (!tw.q.groupsetting.inuse && (value.class == 'Blank' || value.class == 'WT')) {
-		cell.label = `${self.dt2label[value.dt]} ${cell.label}`
-	}
-	//if (value.origin) cell.label = `${self.morigin[value.origin].label} ${cell.label}`
-
-	const byDt = self.state.termdbConfig.assayAvailability?.byDt
-	// return the corresponding legend item data
-	const order = value.class == 'CNV_loss' ? -2 : value.class?.startsWith('CNV_') ? -1 : 0
-	if (tw.q.groupsetting.inuse) {
 		const group =
 			tw.legend?.group || tw.q.origin
 				? `${tw.q.origin[0].toUpperCase() + tw.q.origin.slice(1)} ${self.dt2label[tw.q.dt]}`
@@ -145,34 +98,91 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 			group,
 			value: anno.key,
 			order: -2,
-			entry: { key: anno.key, label: cell.label, fill: cell.fill, order, dt: tw.q.dt, origin: tw.q.origin }
+			entry: { key: anno.key, label: cell.label, fill: cell.fill, dt: tw.q.dt, origin: tw.q.origin }
 		}
-	} else if (value.dt == dtcnv) {
-		if (t.scales && value.class.startsWith('CNV_')) {
-			const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
-			const { maxLoss, maxGain, minLoss, minGain } = t.scales
-			value.scaledValue = value.value < 0 ? value.value / minLoss : value.value / maxGain
-			cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
+	} else {
+		// groupsetting not in use
+		// value is mutation object
+		cell.label = value.label || self.mclass[value.class].label
+		// may be overriden by a color scale by dt, if applicable below
+		cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
+		cell.class = value.class
+		cell.value = value
 
-			return {
-				ref: t.ref,
-				group: 'CNV',
-				value: value.class,
-				order: -1,
-				entry: {
-					key: value.class,
-					label: cell.label,
-					scale: value.class == 'CNV_loss' ? t.scales.loss : t.scales.gain,
-					domain: value.class == 'CNV_loss' ? [0, -minLoss] : [0, maxGain],
-					minLabel: 0,
-					maxLabel: value.class == 'CNV_loss' ? minLoss : maxGain,
-					order,
-					dt: value.dt,
-					origin: value.origin
+		const colw = self.dimensions.colw
+		if (s.cellEncoding == '') {
+			cell.height = s.rowh / values.length
+			cell.width = colw
+			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+			cell.y = height * i
+		} else if (value.dt == dtsnvindel || value.dt == dtfusionrna) {
+			if (s.cellEncoding == 'single') {
+				// when CNV is not displayed, show as tall bar
+				cell.height = s.rowh
+				cell.width = colw
+				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+				cell.y = 0
+			} else {
+				const divisor = 3
+				cell.height = s.rowh / divisor
+				cell.width = colw
+				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+				cell.y = height * 0.33333
+			}
+		} else if (value.dt == dtcnv || value.dt == dtgeneexpression) {
+			cell.height = s.rowh
+			cell.width = colw
+			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+			cell.y = 0
+		} else {
+			throw `cannot set cell props for dt='${value.dt}'`
+		}
+
+		// distinguish between not tested or wildtype by
+		// dt: snvindel vs CNV vs SV, etc
+		if (value.class == 'Blank' || value.class == 'WT') {
+			cell.label = `${self.dt2label[value.dt]} ${cell.label}`
+		}
+
+		// return the corresponding legend item data
+		const byDt = self.state.termdbConfig.assayAvailability?.byDt
+		const order = value.class == 'CNV_loss' ? -2 : value.class.startsWith('CNV_') ? -1 : 0
+		if (value.dt == dtcnv) {
+			if (t.scales && value.class.startsWith('CNV_')) {
+				const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
+				const { maxLoss, maxGain, minLoss, minGain } = t.scales
+				value.scaledValue = value.value < 0 ? value.value / minLoss : value.value / maxGain
+				cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
+
+				return {
+					ref: t.ref,
+					group: 'CNV',
+					value: value.class,
+					order: -1,
+					entry: {
+						key: value.class,
+						label: cell.label,
+						scale: value.class == 'CNV_loss' ? t.scales.loss : t.scales.gain,
+						domain: value.class == 'CNV_loss' ? [0, -minLoss] : [0, maxGain],
+						minLabel: 0,
+						maxLabel: value.class == 'CNV_loss' ? minLoss : maxGain,
+						order,
+						dt: value.dt,
+						origin: value.origin
+					}
+				}
+			} else {
+				const group = 'CNV'
+				return {
+					ref: t.ref,
+					group,
+					value: value.class,
+					order: -1,
+					entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 				}
 			}
-		} else {
-			const group = 'CNV'
+		} else if (value.dt == dtfusionrna && byDt?.[dtfusionrna]) {
+			const group = 'Fusion RNA'
 			return {
 				ref: t.ref,
 				group,
@@ -180,38 +190,47 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 				order: -1,
 				entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 			}
-		}
-	} else if (value.dt == dtfusionrna && byDt?.[dtfusionrna]) {
-		const group = 'Fusion RNA'
-		return {
-			ref: t.ref,
-			group,
-			value: value.class,
-			order: -1,
-			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
-		}
-	} else if (value.dt == dtsv && byDt?.[dtsv]) {
-		const group = 'Structural Variation'
-		return {
-			ref: t.ref,
-			group,
-			value: value.class,
-			order: -1,
-			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
-		}
-	} else {
-		const controlLabels = self.settings.matrix.controlLabels
-		const group =
-			tw.legend?.group ||
-			(value.origin
-				? `${value.origin[0].toUpperCase() + value.origin.slice(1)} ${controlLabels.Mutations}`
-				: controlLabels.Mutations)
-		return {
-			ref: t.ref,
-			group,
-			value: value.class,
-			order: -2,
-			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
+		} else if (value.dt == dtsv && byDt?.[dtsv]) {
+			const group = 'Structural Variation'
+			return {
+				ref: t.ref,
+				group,
+				value: value.class,
+				order: -1,
+				entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
+			}
+		} else if (value.dt == dtgeneexpression) {
+			return {
+				ref: t.ref,
+				group: self.config.settings.hierCluster?.termGroupName || 'Gene Expression',
+				value: value.class,
+				order: -1,
+				entry: {
+					key: value.class,
+					label: '',
+					scale: self.geneExpValues.scale,
+					domain: [0, 0.5, 1],
+					minLabel: self.geneExpValues.min,
+					maxLabel: self.geneExpValues.max,
+					order,
+					dt: value.dt,
+					origin: value.origin
+				}
+			}
+		} else {
+			const controlLabels = self.settings.matrix.controlLabels
+			const group =
+				tw.legend?.group ||
+				(value.origin
+					? `${value.origin[0].toUpperCase() + value.origin.slice(1)} ${controlLabels.Mutations}`
+					: controlLabels.Mutations)
+			return {
+				ref: t.ref,
+				group,
+				value: value.class,
+				order: -2,
+				entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
+			}
 		}
 	}
 }

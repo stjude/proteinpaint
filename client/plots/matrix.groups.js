@@ -228,7 +228,7 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		: values.filter(v => sample_match_termvaluesetting(v, isSpecific[0], tw.term, sample))
 
 	const renderedValues = []
-	if (tw.term.type != 'geneVariant') renderedValues.push(...filteredValues)
+	if (tw.term.type != 'geneVariant' || tw.q.groupsetting.inuse) renderedValues.push(...filteredValues)
 	else {
 		// filteredValues.sort((a, b) => getMclassOrder(a) - getMclassOrder(b))
 		filteredValues.sort(this.mclassSorter)
@@ -261,10 +261,22 @@ export function classifyValues(anno, tw, grp, s, sample) {
 	return {
 		filteredValues,
 		countedValues: filteredValues.filter(v => {
-			/*** do not count wildtype and not tested as hits ***/
 			if (tw.term.type == 'geneVariant') {
-				if (v.class == 'WT' || v.class == 'Blank') return false
-				if (s.geneVariantCountSamplesSkipMclass.includes(v.class)) return false
+				if (!tw.q.groupsetting.inuse) {
+					// groupsetting not in use
+					// values are mutation classes
+					// do not count WT, blank, or skipped classes
+					if (v.class == 'WT' || v.class == 'Blank' || s.geneVariantCountSamplesSkipMclass.includes(v.class))
+						return false
+				} else {
+					// groupsetting in use
+					// values are group assignments
+					// only count assignments to group with highest priority
+					// in groupset
+					const groupset = tw.term.groupsetting.lst[tw.q.groupsetting.predefined_groupset_idx]
+					const group = groupset.groups[0]
+					if (v != group.name) return false
+				}
 			}
 			return true
 		}),
