@@ -228,7 +228,7 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		: values.filter(v => sample_match_termvaluesetting(v, isSpecific[0], tw.term, sample))
 
 	const renderedValues = []
-	if (tw.term.type != 'geneVariant' || tw.q.groupsetting.inuse) renderedValues.push(...filteredValues)
+	if (tw.term.type != 'geneVariant' || tw.q?.groupsetting?.inuse) renderedValues.push(...filteredValues)
 	else {
 		// filteredValues.sort((a, b) => getMclassOrder(a) - getMclassOrder(b))
 		filteredValues.sort(this.mclassSorter)
@@ -262,7 +262,7 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		filteredValues,
 		countedValues: filteredValues.filter(v => {
 			if (tw.term.type == 'geneVariant') {
-				if (!tw.q.groupsetting.inuse) {
+				if (!tw.q?.groupsetting?.inuse) {
 					// groupsetting not in use
 					// values are mutation classes
 					// do not count WT, blank, or skipped classes

@@ -580,7 +580,7 @@ function makesql_survival(tablename, term, q, values, filter) {
 }
 
 export function get_active_groupset(term, q) {
-	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) return
+	if (!q?.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) return
 	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
 		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
 		if (!term.groupsetting) throw 'term.groupsetting missing when q.predefined_groupset_idx in use'
