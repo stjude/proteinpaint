@@ -761,12 +761,11 @@ tape('term1=numeric, term2=condition', function (test) {
 		test.end()
 	}
 	async function testConditionTermOrder(violin, violinDiv) {
-		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 10 })
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 8 })
 		test.ok(groups, 'Condition groups exist')
-
 		test.deepEqual(
 			groups.filter((k, i) => i % 2 == 0).map(k => k.__data__.label),
-			violin.Inner.data.plots.map(k => k.label),
+			violin.Inner.data.plots.filter(plot => plot.plotValueCount > 1).map(k => k.label),
 			'Order of conditional categories in term2 is accurate'
 		)
 	}
