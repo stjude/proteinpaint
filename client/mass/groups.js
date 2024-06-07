@@ -3,7 +3,6 @@ import { Menu } from '#dom/menu'
 import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from '#filter/filter'
 import { appInit } from '#termdb/app'
 import { renderTable } from '../dom/table.ts'
-import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
 import { get$id } from '#termsetting'
 import { getActiveCohortStr } from './charts'
 import { getColors } from '#shared/common'
@@ -603,4 +602,106 @@ export function addNewGroup(app, filter, groups) {
 		type: 'app_refresh',
 		state: { groups }
 	})
+}
+
+export function getSamplelstTWFromIds(ids) {
+	const qgroups = []
+	let samples
+	const name = 'group'
+	const values = ids.map(id => {
+		return { sampleId: id }
+	})
+	const qgroup = {
+		name: name,
+		in: true,
+		values
+	}
+
+	const tw = {
+		isAtomic: true,
+		term: { name, type: 'samplelst', values: { [name]: { key: name, list: values } } },
+		q: {
+			groups: [qgroup]
+		}
+	}
+	return tw
+}
+
+export function getFilter(samplelstTW) {
+	let i = 0
+	let noEdit = true
+	for (const field in samplelstTW.term.values) {
+		const values = samplelstTW.q.groups[i].values
+		samplelstTW.term.values[field].list = values
+		if (values[0] && 'sample' in values[0]) noEdit = false
+		i++
+	}
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: { term: samplelstTW.term },
+				noEdit
+			}
+		]
+	}
+	return filter
+}
+
+export function getSampleFilter(sampleId) {
+	const group = { name: '', index: 0, items: [{ sampleId }] }
+	const samplelst = getSamplelstTW([group], '', false)
+	const filter = getFilter(samplelst)
+	return filter
+}
+
+export function getSamplelstTW(groups, name = 'groups', notIn = true) {
+	let disabled = true
+	const values = {}
+	const qgroups = []
+	let samples
+	for (const group of groups) {
+		values[group.name] = { key: group.name, label: group.name, color: group.color }
+		samples = getGroupSamples(group)
+		const qgroup = {
+			name: group.name,
+			in: true,
+			values: samples
+		}
+		qgroups.push(qgroup)
+	}
+	if (groups.length == 1 && notIn) {
+		const name2 = 'Not in ' + groups[0].name
+		values[name2] = { key: name2, label: name2, color: '#aaa' }
+		qgroups.push({
+			name: name2,
+			in: false,
+			values: samples
+		})
+	}
+	const tw = {
+		isAtomic: true,
+		term: { name, type: 'samplelst', values },
+		q: {
+			groups: qgroups,
+			groupsetting: { disabled }
+		}
+	}
+	return tw
+
+	function getGroupSamples(group) {
+		const values = []
+		for (const item of group.items) {
+			const value = { sampleId: item.sampleId }
+			if ('sample' in item) {
+				disabled = false
+				value.sample = item.sample
+			}
+			values.push(value)
+		}
+		return values
+	}
 }

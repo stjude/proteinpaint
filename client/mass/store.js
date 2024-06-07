@@ -1,7 +1,7 @@
 import { getStoreInit } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { getFilterItemByTag, findParent } from '#filter/filter'
-import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
+import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { TermTypes } from '../shared/terms.js'
 
 // to distinguish from IDs assigned by other code or users

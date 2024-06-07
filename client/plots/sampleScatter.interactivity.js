@@ -3,15 +3,26 @@ import { renderTable } from '../dom/table.ts'
 import { mclass } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
-import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2, addNewGroup } from '../mass/groups'
+import { getFilter } from '../mass/groups.js'
+import {
+	addPlotMenuItem,
+	showTermsTree,
+	addMatrixMenuItems,
+	openSummaryPlot,
+	tip2,
+	addNewGroup,
+	getSamplelstTWFromIds,
+	getSamplelstTW
+} from '../mass/groups'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
+import { searchSampleInput, getSamplesRelated } from './sampleView.js'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
 		const onClick = event.type == 'click'
 		self.onClick = onClick
+		if (onClick) self.searchMenu?.hide()
 
 		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) {
 			if (self.onClick && onClick) {
@@ -479,70 +490,22 @@ export function setInteractivity(self) {
 		})
 	}
 
-	self.searchSample = function (e) {
-		const menu = new Menu({ padding: '3px' })
-		let group
-		const input = menu.d.append('input').on('keyup', event => {
-			if (event.code == 'Escape') {
-				if (group) {
-					self.config.groups.splice(group.index, 1)
-					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-				}
-				menu.hide()
-				return
-			}
-			if (event.code == 'Enter' && group) {
-				//Enter
-				if (group.items.length == 0) msgDiv.text('Invalid group')
-				else {
-					const group = self.config.groups[self.config.groups.length - 1]
-					self.config.groups.splice(group.index, 1) //was added temporarily
-					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-
-					group.fromSearch = false
-					group.showOnly = false
-					const tw = getSamplelstTW([group])
-					self.addToFilter(tw)
-					const filter = getFilter(tw)
-					addNewGroup(self.app, filter, self.state.groups)
-					menu.hide()
-				}
-				return
-			}
-			// ok to not await here, since no returned value is required
-			// and menu.hide() does not need to wait for the dispatch to finish
-			const value = input.node().value.toUpperCase()
-			const items = []
-			for (const chart of self.charts)
-				for (const sample of chart.cohortSamples) {
-					if (
-						sample.sample.toUpperCase().includes(value) ||
-						sample.category?.toUpperCase().includes(value) ||
-						sample.shape?.toUpperCase().includes(value)
-					)
-						items.push(sample)
-				}
-			if (items.length == 0) {
-				msgDiv.text('No samples found')
-			} else msgDiv.text('')
-			if (self.config.groups.length > 0 && self.config.groups[self.config.groups.length - 1].fromSearch) {
-				group = self.config.groups[self.config.groups.length - 1]
-				group.items = items
-			} else {
-				group = {
-					name: `Group ${self.config.groups.length + 1}`,
-					items,
-					index: self.config.groups.length,
-					showOnly: true,
-					fromSearch: true
-				}
-				self.config.groups.push(group)
-			}
-			self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+	self.searchSample = async function (e) {
+		if (!this.searchMenu) this.searchMenu = new Menu({ padding: '3px' })
+		this.searchMenu.clear()
+		this.samplesData = await this.app.vocabApi.getSamplesByName({
+			filter: self.state.termfilter.filter
 		})
+		const callback = sampleName => {
+			if (this.samplesData[sampleName]) {
+				const samples = getSamplesRelated(this.samplesData, sampleName)
+				const samplelsttw = getSamplelstTWFromIds(samples.map(s => s.sampleId))
+				self.addToFilter(samplelsttw)
+			}
+		}
+		searchSampleInput(this.searchMenu.d, this.samplesData, callback)
 
-		const msgDiv = menu.d.append('div').style('padding-left', '5px')
-		menu.show(e.clientX, e.clientY, false)
+		this.searchMenu.show(e.clientX, e.clientY, false)
 	}
 
 	self.getCategoryInfo = function (d, category) {
