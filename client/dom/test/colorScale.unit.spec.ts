@@ -25,7 +25,10 @@ function getHolder() {
 
 function getColorScale(opts) {
 	const _opts = {
-		data: [0, 1]
+		data: [0, 1],
+		width: 150,
+		position: '6,0',
+		midColor: 'red'
 	}
 
 	return new ColorScale(Object.assign(_opts, opts))
@@ -44,12 +47,12 @@ tape('new ColorScale()', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
-	const testColorScale = getColorScale({ holder })
+	const testColorScale = new ColorScale({ holder, data: [0, 1] })
 
 	test.ok(testColorScale.barheight == 14, 'Should set default value of 14 for barheight')
 	test.ok(testColorScale.barwidth == 100, 'Should set default value of 100 for barwidth')
 	test.ok(testColorScale.startColor == 'white', 'Should set default value of white for startColor')
-	test.ok(testColorScale.midColor == 'red', 'Should set default value of red for midColor')
+	test.ok(testColorScale.midColor == 'white', 'Should set default value of white for midColor')
 	test.ok(testColorScale.endColor == 'red', 'Should set default value of red for endColor')
 	test.ok(testColorScale.position == '0,0', 'Should set default value of 0,0 for position')
 	test.ok(testColorScale.svg.width == 100, 'Should set default value of 100 for svg.width')
@@ -176,6 +179,35 @@ tape('ColorScale.updateScale()', test => {
 	const ticks = holder.selectAll('text').nodes()
 	test.equal(ticks[0].__data__, testColorScale.data[0], 'Should call updateAxis() and update the first tick to -5')
 	test.equal(ticks[1].__data__, 0, 'Should insert a middle tick at 0')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Show value in color bar and update', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+	const testColorScale = getColorScale({ holder, data: [0, 40], markedValue: 15 })
+	testColorScale.render()
+
+	const valueElems = holder.selectAll('.sjpp-color-scale-marked').nodes()
+	test.equal(valueElems[0].nodeName, 'line', 'Should render tick mark for marked value')
+	test.equal(valueElems[1].nodeName, 'text', 'Should render text label for marked value')
+	test.equal(
+		valueElems[1].innerHTML,
+		testColorScale.markedValue?.toString(),
+		'Should render the correct value for marked value'
+	)
+
+	testColorScale.markedValue = 30
+	testColorScale.updateValueInColorBar()
+	const valueLabel = holder.select('text[data-testid="sjpp-color-scale-marked-label"]').node()
+	test.equal(
+		valueLabel.innerHTML,
+		testColorScale.markedValue?.toString(),
+		'Should update the label to match the new marked value'
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()

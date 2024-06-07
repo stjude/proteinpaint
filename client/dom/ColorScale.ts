@@ -4,13 +4,20 @@ import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from './axisstyle'
 import { Selection } from 'd3-selection'
 import { ScaleLinear } from 'd3-scale'
+import { font } from '../src/client'
+
+type StopElem = Selection<SVGStopElement, any, SVGLinearGradientElement, any>
 
 type ColorScaleDom = {
-	gradientStart: Selection<SVGStopElement, any, SVGLinearGradientElement, any>
-	gradientMid: Selection<SVGStopElement, any, SVGLinearGradientElement, any>
-	gradientEnd: Selection<SVGStopElement, any, SVGLinearGradientElement, any>
+	/** Stops are to change the colors within the color bar*/
+	gradientStart: StopElem
+	gradientMid: StopElem
+	gradientEnd: StopElem
 	scale: ScaleLinear<number, number, never>
-	scaleAxis: Selection<SVGGElement, any, any, any>
+	scaleAxis: SvgG
+	/** Present when important value is indicated in opts */
+	label?: Selection<SVGTextElement, any, any, any>
+	line?: Selection<SVGLineElement, any, any, any>
 }
 
 /** Work in Progress! Update as needed.
@@ -49,6 +56,10 @@ export class ColorScale {
 	tickSize: number
 	/** Optional. Font size in px of the text labels. */
 	fontSize: number
+	/** Optional. Shows a value in the color bar for the default, bottom axis
+	 * This value cannot be zero at initialization.
+	 */
+	markedValue?: number | null
 
 	constructor(opts: {
 		/** Required */
@@ -69,11 +80,12 @@ export class ColorScale {
 		ticks?: number
 		tickSize?: number
 		fontSize?: number
+		markedValue?: number
 	}) {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
 		this.startColor = opts.startColor || 'white'
-		this.midColor = opts.midColor || 'red'
+		this.midColor = opts.midColor || 'white'
 		this.endColor = opts.endColor || 'red'
 		this.data = opts.data
 		//TODO change this so it detects the holder size
@@ -86,6 +98,7 @@ export class ColorScale {
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
 		this.fontSize = opts.fontSize || 10
+		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
 
 		if (!opts.holder) throw new Error('No holder provided for color scale.')
 		if (!opts.data) throw new Error('No data provided for color scale.')
@@ -108,7 +121,12 @@ export class ColorScale {
 			const { gradientStart, gradientMid, gradientEnd } = this.makeColorBar(barG, id)
 			const { scale, scaleAxis } = this.makeAxis(barG, id)
 			this.dom = { scale, scaleAxis, gradientStart, gradientMid, gradientEnd }
+			if (this.markedValue !== null) this.markedValueInColorBar(barG)
 		}
+	}
+
+	formatData() {
+		this.data = this.data.map(d => Number(d.toFixed(2)))
 	}
 
 	makeColorBar(div: SvgG, id: string) {
@@ -135,11 +153,30 @@ export class ColorScale {
 
 		const scale = scaleLinear().domain(this.data).range([0, this.barwidth])
 
-		return { scaleAxis, scale }
+		return { scale, scaleAxis }
 	}
 
-	formatData() {
-		this.data = this.data.map(d => Number(d.toFixed(2)))
+	markedValueInColorBar(div: SvgG) {
+		if (!this.markedValue || this.topTicks == true) return
+
+		this.dom.line = div
+			.append('line')
+			.classed('sjpp-color-scale-marked', true)
+			.attr('data-testid', 'sjpp-color-scale-marked-tick')
+			.attr('y1', this.barheight - 2)
+			.attr('y2', this.barheight + 1)
+			.attr('stroke', 'black')
+
+		this.dom.label = div
+			.append('text')
+			.classed('sjpp-color-scale-marked', true)
+			.attr('data-testid', 'sjpp-color-scale-marked-label')
+			.attr('text-anchor', 'middle')
+			.attr('font-family', font)
+			.attr('font-size', this.fontSize)
+			.attr('y', this.barheight - 3)
+
+		this.updateValueInColorBar()
 	}
 
 	render() {
@@ -199,8 +236,19 @@ export class ColorScale {
 		this.dom.scaleAxis.transition().duration(500).call(this.setAxis(tickValues))
 	}
 
+	updateValueInColorBar() {
+		if (!this.markedValue || this.topTicks == true) return
+		if (!this.dom.line || !this.dom.label) throw new Error('Missing dom elements to update value in color bar.')
+
+		const x = Math.min(this.barwidth, this.dom.scale(this.markedValue))
+
+		this.dom.line.attr('x1', x).attr('x2', x)
+		this.dom.label.attr('x', x).text(Math.floor(this.markedValue))
+	}
+
 	updateScale() {
 		this.updateColors()
 		this.updateAxis()
+		this.updateValueInColorBar()
 	}
 }

@@ -1,8 +1,6 @@
 import { bplen } from '../shared/common'
 import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
-// import { axisBottom } from 'd3-axis'
-// import { scaleLinear } from 'd3-scale'
 import { hicparsestat, hicparsefragdata } from '../tracks/hic/data/parseData.ts'
 import { ColorScale } from '../dom/ColorScale.ts'
 
@@ -798,23 +796,8 @@ function drawCanvas(tk: any, block: any) {
 
 	tk.img.attr('width', canvaswidth).attr('height', canvasheight).attr('xlink:href', canvas.toDataURL())
 
-	// // update colorscale
-	// tk.colorscale.g.attr('transform', 'scale(1) ' + tk.colorscale.positionstr)
-	// tk.colorscale.scale.domain([0, maxv])
-	// if (tk.mincutoff != undefined && tk.mincutoff != 0) {
-	// 	const x = Math.min(tk.colorscale.barwidth, tk.colorscale.scale(tk.mincutoff))
-	// 	tk.colorscale.tick_mincutoff.attr('x1', x).attr('x2', x).attr('stroke', 'black')
-	// 	tk.colorscale.label_mincutoff.attr('x', x).text(tk.mincutoff)
-	// } else {
-	// 	tk.colorscale.tick_mincutoff.attr('stroke', 'none')
-	// 	tk.colorscale.label_mincutoff.text('')
-	// }
-	// client.axisstyle({
-	// 	axis: tk.colorscale.axisg.call(axisBottom(tk.colorscale.scale).tickValues([0, maxv])),
-	// 	showline: 1,
-	// 	color: 'black'
-	// })
 	tk.colorScale.data = [0, maxv]
+	tk.colorScale.markedValue = tk.mincutoff
 	tk.colorScale.updateScale()
 
 	tk.height_main = tk.toppad + Math.max(tk.left_labelheight, canvasheight) + tk.bottompad
@@ -894,8 +877,8 @@ function makeTk(tk: any, block: any) {
 		laby += labyspace + block.labelfontsize
 	}
 
-	// tk.colorscale = {}
 	{
+		// Render the color scale in the left label
 		const barheight = 14
 		const barwidth = 100
 		const space = 1
@@ -915,52 +898,10 @@ function makeTk(tk: any, block: any) {
 			endColor: tk.color,
 			position: `6,${barheight + space}`,
 			ticks: 2,
-			tickSize: 2
+			tickSize: 2,
+			markedValue: tk.mincutoff
 		})
-
 		tk.colorScale.render()
-
-		// tk.colorscale.barwidth = 100
-		// laby += labyspace
-		// const barheight = 14
-
-		// tk.colorscale.positionstr = 'translate(' + (block.tkleftlabel_xshift - tk.colorscale.barwidth) + ', ' + laby + ')'
-
-		// const g = tk.gleft.append('g').attr('transform', tk.colorscale.positionstr)
-
-		// tk.colorscale.g = g
-
-		// const defs = g.append('defs')
-		// const id = Math.random().toString()
-		// const gradient = defs.append('linearGradient').attr('id', id)
-		// gradient.append('stop').attr('offset', 0).attr('stop-color', 'white')
-		// tk.colorscale.gradientstop = gradient.append('stop').attr('offset', 1)
-
-		// updatetkcolor_client(tk)
-		tk.colorScale.endColor = tk.color
-		tk.colorScale.updateColors()
-
-		// const space = 1 // y space between bar and axis
-
-		// tk.colorscale.bar = g
-		// 	.append('rect')
-		// 	.attr('height', barheight)
-		// 	.attr('width', tk.colorscale.barwidth)
-		// 	.attr('fill', 'url(#' + id + ')')
-		// tk.colorscale.axisg = g.append('g').attr('transform', 'translate(0,' + (barheight + space) + ')')
-		// tk.colorscale.scale = scaleLinear().range([0, tk.colorscale.barwidth])
-
-		// // min cutoff indicator
-		// tk.colorscale.tick_mincutoff = g
-		// 	.append('line')
-		// 	.attr('y1', barheight + space - 3)
-		// 	.attr('y2', barheight + space)
-		// tk.colorscale.label_mincutoff = g
-		// 	.append('text')
-		// 	.attr('text-anchor', 'middle')
-		// 	.attr('font-family', client.font)
-		// 	.attr('font-size', 12)
-		// 	.attr('y', barheight + space - 4)
 
 		laby += barheight + 10 + block.labelfontsize
 	}
@@ -978,11 +919,6 @@ function makeTk(tk: any, block: any) {
 		configPanel(tk, block)
 	})
 }
-
-// function updatetkcolor_client(tk: any) {
-// 	// call after updating color, only on client
-// 	tk.colorscale.gradientstop.attr('stop-color', tk.color)
-// }
 
 function configPanel(tk: any, block: any) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
