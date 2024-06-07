@@ -1,2 +1,1 @@
-Features:
-- geneVariant term now supports grouping variants into predefined groups
+
