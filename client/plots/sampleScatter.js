@@ -390,8 +390,18 @@ class Scatter {
 					if (tw?.term.type == 'integer' || tw?.term.type == 'float') tw.q = { mode: 'continuous' }
 				}
 			})
+		} else {
+			inputs.push({
+				label: 'Sample size',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'threeSize',
+				title: 'Sample size',
+				min: 0,
+				max: 1,
+				step: 0.001
+			})
 		}
-
 		if (this.config.term) {
 			inputs.unshift(
 				...[
@@ -643,7 +653,8 @@ export function getDefaultScatterSettings() {
 		opacity: 0.8,
 		defaultColor: plotColor,
 		regression: 'None',
-		fov: 50
+		fov: 50,
+		threeSize: 0.002
 	}
 }
 
