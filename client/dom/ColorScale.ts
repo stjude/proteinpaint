@@ -16,43 +16,38 @@ type ColorScaleDom = {
 /** Work in Progress! Update as needed.
  * Intended to be a reusable color scale throughout the platform. Also intended to be
  * highly customizable.
- *
- * TODO:
- *  - May conside moving the number line to a separate class. Allow the scale to be
- * implemented independent of the entire color scale.
- *  - Likewise may create a super class to handle the number line and color scale.
- * This will allow only the color bar to be implemented without additional code (e.g. ld track)
  */
+
 export class ColorScale {
 	dom: ColorScaleDom
-	/** The height of the color bar. */
+	/** Optional but recommended. The height of the color bar in px. Default is 14. */
 	barheight: number
-	/** The width of the color bar */
+	/** Optional but recommended. The width of the color bar in px. Default is 100. */
 	barwidth: number
-	/** Color shown on the left, start of the scale. Default is white */
+	/** Optional. Color shown on the left, start of the scale. Default is white. */
 	startColor: string
-	/** Color shown in the center of the scale.*/
+	/** Optional. Color shown in the center of the scale. */
 	midColor: string
-	/** Color shown on the right, end of the scale. Default is red */
+	/** Optional. Color shown on the right, end of the scale. Default is red. */
 	endColor: string
 	/** Required */
 	data: number[]
-	/** Optional but recommendend. Sets the position of the color scale in the holder. Default is 0,0*/
+	/** Optional but recommendend. Sets the position of the color scale in the holder. Default is 0,0. */
 	position: string
-	/** Optional but recommendend. Attributes for the svg*/
+	/** Optional but recommendend. Attributes for the svg. */
 	svg: {
 		/** Optional. Default is 100 */
 		width: number
 		/** Optional. Default is 30.*/
 		height: number
 	}
-	/** Optional. Placement of numbered ticks. Default is false */
+	/** Optional. Placement of numbered ticks. Default is false (i.e. placement below the color bar). */
 	topTicks: boolean
 	/** Optional. Number of ticks to show. Cannot be zero. Default is 4. */
 	ticks: number
-	/** Optional. Size of the ticks in px. Default is 1 */
+	/** Optional. Size of the ticks in px. Default is 1. */
 	tickSize: number
-	/** Options. Font size of the text labels */
+	/** Optional. Font size in px of the text labels. */
 	fontSize: number
 
 	constructor(opts: {
@@ -118,8 +113,6 @@ export class ColorScale {
 
 	makeColorBar(div: SvgG, id: string) {
 		const defs = div.append('defs')
-
-		//Color bar
 		const gradient = defs.append('linearGradient').attr('data-testid', 'sjpp-color-scale-bar').attr('id', id)
 
 		const gradientStart = gradient.append('stop').attr('offset', '0%').attr('stop-color', this.startColor)

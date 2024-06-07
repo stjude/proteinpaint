@@ -913,7 +913,7 @@ function makeTk(tk: any, block: any) {
 			width: 120,
 			holder,
 			endColor: tk.color,
-			position: `4,${barheight + space}`,
+			position: `6,${barheight + space}`,
 			ticks: 2,
 			tickSize: 2
 		})
