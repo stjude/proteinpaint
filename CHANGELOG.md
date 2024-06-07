@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Limit the css reset to not conflict with embedder styles, by using scoped normalize css rules
+
 
 ## 2.61.1
 
