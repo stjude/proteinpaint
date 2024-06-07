@@ -8,7 +8,7 @@
  * 2. Prevent adjustments of font size after orientation changes in iOS.
  */
 
-.sja_root_holder html {
+html {
   line-height: 1.15; /* 1 */
   -webkit-text-size-adjust: 100%; /* 2 */
 }
@@ -20,6 +20,6 @@
  * Remove the margin in all browsers.
  */
 
-.sja_root_holder body {
+body {
   margin: 0;
 }

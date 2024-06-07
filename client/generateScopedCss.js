@@ -20,6 +20,7 @@ const cssStr = fs.readFileSync(cssFile).toString('utf-8').trim()
 const lines = cssStr.split('\n')
 const unscopedRules = []
 const scopedRules = []
+const sjCls = ['.sja_root_holder', '.sja_menu_div', '.sja_pane']
 
 let currTag,
 	unclosed = false,
@@ -38,7 +39,11 @@ for (const line of lines) {
 		unclosed = true
 		currTag = l.split(' ')[0]
 		currRulesArr = currTag == 'html' || currTag == 'body' ? unscopedRules : scopedRules
-		currRulesArr.push(`.sja_root_holder ${line}`)
+		if (currRulesArr == unscopedRules) currRulesArr.push(line)
+		else {
+			const selector = line.replace('{', '').replace(',', '').trim()
+			currRulesArr.push(sjCls.map(cls => `${cls} ${selector}`).join(', ') + (line.includes('{') ? ' {' : ''))
+		}
 	} else if (!currTag || currTag == 'html' || currTag == 'body') {
 		currRulesArr.push(line)
 	} else if (unclosed) {
@@ -52,9 +57,7 @@ for (const line of lines) {
 const outputFile = process.argv[3]
 if (!outputFile) {
 	console.log(unscopedRules.join('\n'))
-	console.log('@scope (.sja_root_holder) {')
 	console.log(scopedRules.join('\n'))
-	console.log('}')
 } else {
 	fs.writeFileSync(`${outputFile}-unscoped.css`, unscopedRules.join('\n'), { encoding: 'utf8' })
 	fs.writeFileSync(`${outputFile}-scoped.css`, scopedRules.join('\n'), { encoding: 'utf8' })
