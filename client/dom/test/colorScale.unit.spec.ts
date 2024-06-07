@@ -7,6 +7,7 @@ import { ColorScale } from '../ColorScale'
     - ColorScale.render() - default bottom
     - ColorScale.render() - top
     - ColorScale.updateColors()
+	- markedValue - Show value in color bar and update
     - ColorScale.updateAxis()
 */
 
@@ -130,9 +131,9 @@ tape('ColorScale.updateColors()', test => {
 	testColorScale.updateColors()
 
 	const gradientStops = holder.selectAll('stop').nodes()
-	test.equal(gradientStops[0].getAttribute('stop-color'), 'blue', 'Should update startColor')
-	test.equal(gradientStops[1].getAttribute('stop-color'), 'purple', 'Should update midColor')
-	test.equal(gradientStops[2].getAttribute('stop-color'), 'green', 'Should update endColor')
+	test.equal(gradientStops[0].getAttribute('stop-color'), testColorScale.startColor, 'Should update startColor')
+	test.equal(gradientStops[1].getAttribute('stop-color'), testColorScale.midColor, 'Should update midColor')
+	test.equal(gradientStops[2].getAttribute('stop-color'), testColorScale.endColor, 'Should update endColor')
 
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -157,34 +158,7 @@ tape('ColorScale.updateAxis()', test => {
 	test.end()
 })
 
-tape('ColorScale.updateScale()', test => {
-	test.timeoutAfter(100)
-
-	const holder = getHolder() as any
-	const testColorScale = getColorScale({ holder })
-	testColorScale.render()
-
-	testColorScale.endColor = 'blue'
-	testColorScale.data = [-5, 5]
-
-	testColorScale.updateScale()
-
-	const gradientStops = holder.selectAll('stop').nodes()
-	test.equal(
-		gradientStops[2].getAttribute('stop-color'),
-		'blue',
-		'Should call updateColors() and update the end color to blue'
-	)
-
-	const ticks = holder.selectAll('text').nodes()
-	test.equal(ticks[0].__data__, testColorScale.data[0], 'Should call updateAxis() and update the first tick to -5')
-	test.equal(ticks[1].__data__, 0, 'Should insert a middle tick at 0')
-
-	if (test['_ok']) holder.remove()
-	test.end()
-})
-
-tape('Show value in color bar and update', test => {
+tape('markedValue - Show value in color bar and update', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
@@ -202,6 +176,41 @@ tape('Show value in color bar and update', test => {
 
 	testColorScale.markedValue = 30
 	testColorScale.updateValueInColorBar()
+	const valueLabel = holder.select('text[data-testid="sjpp-color-scale-marked-label"]').node()
+	test.equal(
+		valueLabel.innerHTML,
+		testColorScale.markedValue?.toString(),
+		'Should update the label to match the new marked value'
+	)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('ColorScale.updateScale()', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+	const testColorScale = getColorScale({ holder, markedValue: 1 })
+	testColorScale.render()
+
+	testColorScale.endColor = 'blue'
+	testColorScale.data = [-5, 5]
+	testColorScale.markedValue = -1
+
+	testColorScale.updateScale()
+
+	const gradientStops = holder.selectAll('stop').nodes()
+	test.equal(
+		gradientStops[2].getAttribute('stop-color'),
+		testColorScale.endColor,
+		'Should call updateColors() and update the end color to blue'
+	)
+
+	const ticks = holder.selectAll('text').nodes()
+	test.equal(ticks[0].__data__, testColorScale.data[0], 'Should call updateAxis() and update the first tick to -5')
+	test.equal(ticks[1].__data__, 0, 'Should insert a middle tick at 0')
+
 	const valueLabel = holder.select('text[data-testid="sjpp-color-scale-marked-label"]').node()
 	test.equal(
 		valueLabel.innerHTML,
