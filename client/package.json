@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-client",
-  "version": "2.61.0",
+  "version": "2.61.1",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "module": "dist/app.js",
@@ -53,8 +53,8 @@
     "@rollup/plugin-terser": "^0.4.3",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/d3": "^7.4.3",
-    "@typescript-eslint/eslint-plugin": "^5.60.0",
     "@types/openseadragon": "^3.0.10",
+    "@typescript-eslint/eslint-plugin": "^5.60.0",
     "babel-loader": "^8.2.2",
     "css-loader": "^6.7.1",
     "d3": "^7.6.1",

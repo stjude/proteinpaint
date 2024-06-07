@@ -1,5 +1,5 @@
 {
-	"version": "2.60.0",
+	"version": "2.61.1",
 	"name": "@sjcrh/proteinpaint-rust",
 	"description": "Rust-based utilities for proteinpaint",
 	"main": "index.js",
@@ -38,5 +38,5 @@
 	"devDependencies": {
 		"tape": "^5.2.2"
 	},
-	"pp_release_tag": "v2.60.0"
+	"pp_release_tag": "v2.61.1"
 }
