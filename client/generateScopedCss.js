@@ -42,7 +42,7 @@ for (const line of lines) {
 		if (currRulesArr == unscopedRules) currRulesArr.push(line)
 		else {
 			const selector = line.replace('{', '').replace(',', '').trim()
-			currRulesArr.push(sjCls.map(cls => `${cls} ${selector}`).join(', ') + (line.includes('{') ? ' {' : ''))
+			currRulesArr.push(sjCls.map(cls => `${cls} ${selector}`).join(', ') + (line.includes('{') ? ' {' : ','))
 		}
 	} else if (!currTag || currTag == 'html' || currTag == 'body') {
 		currRulesArr.push(line)
