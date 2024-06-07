@@ -202,6 +202,14 @@ tape('TME genes and dictionary variables', function (test) {
 })
 
 tape('gdc laucher with top variably expressed genes, for gliomas', function (test) {
+	/* 
+Edgar's notes on test not using getRunPp(); can move these notes to a better place:
+
+- when using postRender callback, should not have an async tape callback function. The issue was the await runproteinpaint(...) inside the tape callback was causing a promise to be awaited on and which tape considered as resolved as soon as the runproteinpaint() call was done, so the test wasn't actually waiting on the postRender
+
+- debug: true has to be included as an argument, otherwise the Inner reference is not created. This is only done in dev/test environments to prevent malicious embedders from accessing private object properties
+*/
+
 	const maxGeneCount = 5
 
 	runproteinpaint({
