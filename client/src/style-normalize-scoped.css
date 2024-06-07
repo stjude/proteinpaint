@@ -3,7 +3,7 @@
  * Render the `main` element consistently in IE.
  */
 
-.sja_root_holder main {
+.sja_root_holder main, .sja_menu_div main, .sja_pane main {
   display: block;
 }
 
@@ -12,7 +12,7 @@
  * `article` contexts in Chrome, Firefox, and Safari.
  */
 
-.sja_root_holder h1 {
+.sja_root_holder h1, .sja_menu_div h1, .sja_pane h1 {
   font-size: 2em;
   margin: 0.67em 0;
 }
@@ -25,7 +25,7 @@
  * 2. Show the overflow in Edge and IE.
  */
 
-.sja_root_holder hr {
+.sja_root_holder hr, .sja_menu_div hr, .sja_pane hr {
   box-sizing: content-box; /* 1 */
   height: 0; /* 1 */
   overflow: visible; /* 2 */
@@ -36,7 +36,7 @@
  * 2. Correct the odd `em` font sizing in all browsers.
  */
 
-.sja_root_holder pre {
+.sja_root_holder pre, .sja_menu_div pre, .sja_pane pre {
   font-family: monospace, monospace; /* 1 */
   font-size: 1em; /* 2 */
 }
@@ -48,7 +48,7 @@
  * Remove the gray background on active links in IE 10.
  */
 
-.sja_root_holder a {
+.sja_root_holder a, .sja_menu_div a, .sja_pane a {
   background-color: transparent;
 }
 
@@ -57,7 +57,7 @@
  * 2. Add the correct text decoration in Chrome, Edge, IE, Opera, and Safari.
  */
 
-.sja_root_holder abbr[title] {
+.sja_root_holder abbr[title], .sja_menu_div abbr[title], .sja_pane abbr[title] {
   border-bottom: none; /* 1 */
   text-decoration: underline; /* 2 */
   text-decoration: underline dotted; /* 2 */
@@ -67,8 +67,8 @@
  * Add the correct font weight in Chrome, Edge, and Safari.
  */
 
-.sja_root_holder b,
-.sja_root_holder strong {
+.sja_root_holder b, .sja_menu_div b, .sja_pane b,
+.sja_root_holder strong, .sja_menu_div strong, .sja_pane strong {
   font-weight: bolder;
 }
 
@@ -77,9 +77,9 @@
  * 2. Correct the odd `em` font sizing in all browsers.
  */
 
-.sja_root_holder code,
-.sja_root_holder kbd,
-.sja_root_holder samp {
+.sja_root_holder code, .sja_menu_div code, .sja_pane code,
+.sja_root_holder kbd, .sja_menu_div kbd, .sja_pane kbd,
+.sja_root_holder samp, .sja_menu_div samp, .sja_pane samp {
   font-family: monospace, monospace; /* 1 */
   font-size: 1em; /* 2 */
 }
@@ -88,7 +88,7 @@
  * Add the correct font size in all browsers.
  */
 
-.sja_root_holder small {
+.sja_root_holder small, .sja_menu_div small, .sja_pane small {
   font-size: 80%;
 }
 
@@ -97,19 +97,19 @@
  * all browsers.
  */
 
-.sja_root_holder sub,
-.sja_root_holder sup {
+.sja_root_holder sub, .sja_menu_div sub, .sja_pane sub,
+.sja_root_holder sup, .sja_menu_div sup, .sja_pane sup {
   font-size: 75%;
   line-height: 0;
   position: relative;
   vertical-align: baseline;
 }
 
-.sja_root_holder sub {
+.sja_root_holder sub, .sja_menu_div sub, .sja_pane sub {
   bottom: -0.25em;
 }
 
-.sja_root_holder sup {
+.sja_root_holder sup, .sja_menu_div sup, .sja_pane sup {
   top: -0.5em;
 }
 
@@ -120,7 +120,7 @@
  * Remove the border on images inside links in IE 10.
  */
 
-.sja_root_holder img {
+.sja_root_holder img, .sja_menu_div img, .sja_pane img {
   border-style: none;
 }
 
@@ -132,11 +132,11 @@
  * 2. Remove the margin in Firefox and Safari.
  */
 
-.sja_root_holder button,
-.sja_root_holder input,
-.sja_root_holder optgroup,
-.sja_root_holder select,
-.sja_root_holder textarea {
+.sja_root_holder button, .sja_menu_div button, .sja_pane button,
+.sja_root_holder input, .sja_menu_div input, .sja_pane input,
+.sja_root_holder optgroup, .sja_menu_div optgroup, .sja_pane optgroup,
+.sja_root_holder select, .sja_menu_div select, .sja_pane select,
+.sja_root_holder textarea, .sja_menu_div textarea, .sja_pane textarea {
   font-family: inherit; /* 1 */
   font-size: 100%; /* 1 */
   line-height: 1.15; /* 1 */
@@ -148,8 +148,8 @@
  * 1. Show the overflow in Edge.
  */
 
-.sja_root_holder button,
-.sja_root_holder input { /* 1 */
+.sja_root_holder button, .sja_menu_div button, .sja_pane button,
+.sja_root_holder input  /* 1 */, .sja_menu_div input  /* 1 */, .sja_pane input  /* 1 */ {
   overflow: visible;
 }
 
@@ -158,8 +158,8 @@
  * 1. Remove the inheritance of text transform in Firefox.
  */
 
-.sja_root_holder button,
-.sja_root_holder select { /* 1 */
+.sja_root_holder button, .sja_menu_div button, .sja_pane button,
+.sja_root_holder select  /* 1 */, .sja_menu_div select  /* 1 */, .sja_pane select  /* 1 */ {
   text-transform: none;
 }
 
@@ -167,10 +167,10 @@
  * Correct the inability to style clickable types in iOS and Safari.
  */
 
-.sja_root_holder button,
-.sja_root_holder [type="button"],
-.sja_root_holder [type="reset"],
-.sja_root_holder [type="submit"] {
+.sja_root_holder button, .sja_menu_div button, .sja_pane button,
+.sja_root_holder [type="button"], .sja_menu_div [type="button"], .sja_pane [type="button"],
+.sja_root_holder [type="reset"], .sja_menu_div [type="reset"], .sja_pane [type="reset"],
+.sja_root_holder [type="submit"], .sja_menu_div [type="submit"], .sja_pane [type="submit"] {
   -webkit-appearance: button;
 }
 
@@ -178,10 +178,10 @@
  * Remove the inner border and padding in Firefox.
  */
 
-.sja_root_holder button::-moz-focus-inner,
-.sja_root_holder [type="button"]::-moz-focus-inner,
-.sja_root_holder [type="reset"]::-moz-focus-inner,
-.sja_root_holder [type="submit"]::-moz-focus-inner {
+.sja_root_holder button::-moz-focus-inner, .sja_menu_div button::-moz-focus-inner, .sja_pane button::-moz-focus-inner,
+.sja_root_holder [type="button"]::-moz-focus-inner, .sja_menu_div [type="button"]::-moz-focus-inner, .sja_pane [type="button"]::-moz-focus-inner,
+.sja_root_holder [type="reset"]::-moz-focus-inner, .sja_menu_div [type="reset"]::-moz-focus-inner, .sja_pane [type="reset"]::-moz-focus-inner,
+.sja_root_holder [type="submit"]::-moz-focus-inner, .sja_menu_div [type="submit"]::-moz-focus-inner, .sja_pane [type="submit"]::-moz-focus-inner {
   border-style: none;
   padding: 0;
 }
@@ -190,10 +190,10 @@
  * Restore the focus styles unset by the previous rule.
  */
 
-.sja_root_holder button:-moz-focusring,
-.sja_root_holder [type="button"]:-moz-focusring,
-.sja_root_holder [type="reset"]:-moz-focusring,
-.sja_root_holder [type="submit"]:-moz-focusring {
+.sja_root_holder button:-moz-focusring, .sja_menu_div button:-moz-focusring, .sja_pane button:-moz-focusring,
+.sja_root_holder [type="button"]:-moz-focusring, .sja_menu_div [type="button"]:-moz-focusring, .sja_pane [type="button"]:-moz-focusring,
+.sja_root_holder [type="reset"]:-moz-focusring, .sja_menu_div [type="reset"]:-moz-focusring, .sja_pane [type="reset"]:-moz-focusring,
+.sja_root_holder [type="submit"]:-moz-focusring, .sja_menu_div [type="submit"]:-moz-focusring, .sja_pane [type="submit"]:-moz-focusring {
   outline: 1px dotted ButtonText;
 }
 
@@ -201,7 +201,7 @@
  * Correct the padding in Firefox.
  */
 
-.sja_root_holder fieldset {
+.sja_root_holder fieldset, .sja_menu_div fieldset, .sja_pane fieldset {
   padding: 0.35em 0.75em 0.625em;
 }
 
@@ -212,7 +212,7 @@
  *    `fieldset` elements in all browsers.
  */
 
-.sja_root_holder legend {
+.sja_root_holder legend, .sja_menu_div legend, .sja_pane legend {
   box-sizing: border-box; /* 1 */
   color: inherit; /* 2 */
   display: table; /* 1 */
@@ -225,7 +225,7 @@
  * Add the correct vertical alignment in Chrome, Firefox, and Opera.
  */
 
-.sja_root_holder progress {
+.sja_root_holder progress, .sja_menu_div progress, .sja_pane progress {
   vertical-align: baseline;
 }
 
@@ -233,7 +233,7 @@
  * Remove the default vertical scrollbar in IE 10+.
  */
 
-.sja_root_holder textarea {
+.sja_root_holder textarea, .sja_menu_div textarea, .sja_pane textarea {
   overflow: auto;
 }
 
@@ -242,8 +242,8 @@
  * 2. Remove the padding in IE 10.
  */
 
-.sja_root_holder [type="checkbox"],
-.sja_root_holder [type="radio"] {
+.sja_root_holder [type="checkbox"], .sja_menu_div [type="checkbox"], .sja_pane [type="checkbox"],
+.sja_root_holder [type="radio"], .sja_menu_div [type="radio"], .sja_pane [type="radio"] {
   box-sizing: border-box; /* 1 */
   padding: 0; /* 2 */
 }
@@ -252,8 +252,8 @@
  * Correct the cursor style of increment and decrement buttons in Chrome.
  */
 
-.sja_root_holder [type="number"]::-webkit-inner-spin-button,
-.sja_root_holder [type="number"]::-webkit-outer-spin-button {
+.sja_root_holder [type="number"]::-webkit-inner-spin-button, .sja_menu_div [type="number"]::-webkit-inner-spin-button, .sja_pane [type="number"]::-webkit-inner-spin-button,
+.sja_root_holder [type="number"]::-webkit-outer-spin-button, .sja_menu_div [type="number"]::-webkit-outer-spin-button, .sja_pane [type="number"]::-webkit-outer-spin-button {
   height: auto;
 }
 
@@ -262,7 +262,7 @@
  * 2. Correct the outline style in Safari.
  */
 
-.sja_root_holder [type="search"] {
+.sja_root_holder [type="search"], .sja_menu_div [type="search"], .sja_pane [type="search"] {
   -webkit-appearance: textfield; /* 1 */
   outline-offset: -2px; /* 2 */
 }
@@ -271,7 +271,7 @@
  * Remove the inner padding in Chrome and Safari on macOS.
  */
 
-.sja_root_holder [type="search"]::-webkit-search-decoration {
+.sja_root_holder [type="search"]::-webkit-search-decoration, .sja_menu_div [type="search"]::-webkit-search-decoration, .sja_pane [type="search"]::-webkit-search-decoration {
   -webkit-appearance: none;
 }
 
@@ -280,7 +280,7 @@
  * 2. Change font properties to `inherit` in Safari.
  */
 
-.sja_root_holder ::-webkit-file-upload-button {
+.sja_root_holder ::-webkit-file-upload-button, .sja_menu_div ::-webkit-file-upload-button, .sja_pane ::-webkit-file-upload-button {
   -webkit-appearance: button; /* 1 */
   font: inherit; /* 2 */
 }
@@ -292,7 +292,7 @@
  * Add the correct display in Edge, IE 10+, and Firefox.
  */
 
-.sja_root_holder details {
+.sja_root_holder details, .sja_menu_div details, .sja_pane details {
   display: block;
 }
 
@@ -300,7 +300,7 @@
  * Add the correct display in all browsers.
  */
 
-.sja_root_holder summary {
+.sja_root_holder summary, .sja_menu_div summary, .sja_pane summary {
   display: list-item;
 }
 
@@ -311,7 +311,7 @@
  * Add the correct display in IE 10+.
  */
 
-.sja_root_holder template {
+.sja_root_holder template, .sja_menu_div template, .sja_pane template {
   display: none;
 }
 
@@ -319,6 +319,6 @@
  * Add the correct display in IE 10.
  */
 
-.sja_root_holder [hidden] {
+.sja_root_holder [hidden], .sja_menu_div [hidden], .sja_pane [hidden] {
   display: none;
 }
