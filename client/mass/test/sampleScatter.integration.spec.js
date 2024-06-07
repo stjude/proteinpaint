@@ -11,8 +11,7 @@ import {
 	detectGte,
 	detectOne
 } from '../../test/test.helpers'
-import { getSamplelstTW } from '#termsetting/handlers/samplelst'
-import { openSummaryPlot, openPlot } from '../groups'
+import { openSummaryPlot, openPlot, getSamplelstTW } from '../groups'
 import { rgb } from 'd3-color'
 import { mclass } from '#shared/common'
 

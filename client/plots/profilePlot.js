@@ -3,7 +3,7 @@ import { filterJoin } from '#filter'
 import { controlsInit } from './controls'
 import { fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
-import { getSampleFilter } from '../termsetting/handlers/samplelst'
+import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']

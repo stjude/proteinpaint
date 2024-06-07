@@ -7,7 +7,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom, axisTop } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
-import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
+import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { regressionPoly } from 'd3-regression'
 import { line } from 'd3'
 import { getId } from '#mass/nav'
@@ -340,13 +340,6 @@ export function setRenderers(self) {
 
 	self.getOpacity = function (c) {
 		if ('sampleId' in c) {
-			for (const group of self.config.groups)
-				if (group.showOnly) {
-					for (const sample of group.items)
-						if (c.sampleId == sample.sampleId)
-							return c.hidden?.['category'] || c.hidden?.['shape'] ? 0 : self.settings.opacity
-					return 0
-				}
 			const opacity = c.hidden?.['category'] || c.hidden?.['shape'] ? 0 : self.settings.opacity
 			return opacity
 		}

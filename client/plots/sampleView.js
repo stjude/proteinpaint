@@ -738,7 +738,7 @@ export function searchSampleInput(holder, samplesData, callback) {
 }
 
 //Get samples related through parent
-function getSamplesRelated(samplesData, sampleName) {
+export function getSamplesRelated(samplesData, sampleName) {
 	let lastName = sampleName
 	const samplesArray = Object.values(samplesData)
 	let lastSample = samplesArray.find(s => s.ancestor_name == lastName)

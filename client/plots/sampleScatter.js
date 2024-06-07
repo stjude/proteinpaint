@@ -24,7 +24,7 @@ import { getActiveCohortStr } from '../mass/charts'
 import { addDynamicScatterForm } from '#dom/dynamicScatter'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { rebaseGroupFilter } from '../mass/groups'
+import { rebaseGroupFilter, getFilter } from '../mass/groups'
 import { plotColor } from '../shared/common.js'
 import { filterJoin } from '#filter'
 
@@ -500,24 +500,26 @@ class Scatter {
 	}
 
 	getFilter() {
-		if (!this.settings.sampleCategory) return this.state.termfilter.filter
-		const tw = this.config.sampleCategory.tw
-		const value =
-			'sampleCategory' in this.settings ? this.settings.sampleCategory : this.config.sampleCategory.defaultValue
 		const tvslst = {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: [
-				{
-					type: 'tvs',
-					tvs: {
-						term: tw.term,
-						values: [{ key: value }]
-					}
-				}
-			]
+			lst: []
 		}
+		const sampleCategory =
+			'sampleCategory' in this.settings ? this.settings.sampleCategory : this.config.sampleCategory?.defaultValue
+
+		if (sampleCategory) {
+			const tw = this.config.sampleCategory.tw
+			tvslst.lst.push({
+				type: 'tvs',
+				tvs: {
+					term: tw.term,
+					values: [{ key: sampleCategory }]
+				}
+			})
+		}
+
 		const filter = filterJoin([this.state.termfilter.filter, tvslst])
 		return filter
 	}
