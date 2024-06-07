@@ -104,48 +104,12 @@ class SampleView {
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
 		} else {
-			const limit = 100
 			this.samplesData = await this.app.vocabApi.getSamplesByName({
 				filter: getNormalRoot(appState.termfilter?.filter)
 			})
-			const allSamples = []
-			for (const sample in this.samplesData)
-				if (this.samplesData[sample].type == 'root' || this.samplesData[sample].type == null)
-					//If the dataset has no ancestors, all the samples should be root'
-					allSamples.push(sample)
-			const isBigDataset = allSamples.length > 10000
-
-			if (allSamples.length == 0)
-				//Happens if it requires sign in first
-				return
-			const sampleName = allSamples[0]
-			this.sample = config.sample || { sampleId: this.samplesData[sampleName].id, sampleName }
-			const input = this.dom.sampleDiv
-				.append('input')
-				.attr('list', 'sampleDatalist')
-				.property('autocomplete', 'off')
-				.attr('placeholder', sampleName)
-				.style('width', '400px')
-			const datalist = this.dom.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
-			addOptions(allSamples, this)
-			input.on('keyup', e => {
-				datalist.selectAll('*').remove()
-				const str = input.node().value.toLowerCase()
-				const options = []
-				for (const sample of allSamples) {
-					if (sample.toLowerCase().startsWith(str)) options.push(sample)
-					if (options.length == limit && allSamples.length > 10000) break
-				}
-				for (const sample of allSamples) {
-					if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
-					if (options.length == limit && allSamples.length > 10000) break
-				}
-				if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options, this)
-			})
-			input.on('change', e => {
-				const sampleName = input.node().value
+			const callback = sampleName => {
 				if (this.samplesData[sampleName]) {
-					const samples = this.getSamples(sampleName)
+					const samples = getSamplesRelated(this.samplesData, sampleName)
 
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 				} else {
@@ -156,48 +120,30 @@ class SampleView {
 						for (const div of this.brainPlots) div.style('display', 'none')
 					}
 				}
-			})
-			function addOptions(options, parent) {
-				datalist
-					.selectAll('option')
-					.data(options.filter((s, i) => i < limit))
-					.enter()
-					.append('option')
-					.attr('value', d => d)
-					.attr(
-						'label',
-						(d, i) =>
-							parent.getLabel(d) +
-							(i + 1 == limit
-								? isBigDataset
-									? `Showing first ${i + 1} hits`
-									: `Showing ${i + 1} of ${options.length} hits`
-								: i + 1 === options.length && i > 0
-								? `  (Found ${options.length} hits)`
-								: '')
-					)
 			}
-		}
+			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, callback)
+			this.sample = config.sample || { sampleId: this.samplesData[sampleName].id, sampleName }
 
-		this.dom.downloadbt = sampleDiv
-			.insert('button')
-			.style('margin-left', '10px')
-			.style('vertical-align', 'top')
-			.text('Download data')
-			.on('click', e => {
-				this.downloadData()
-			})
-		this.dom.messageDiv = sampleDiv
-			.insert('div')
-			.style('display', 'inline-block')
-			.style('display', 'none')
-			.style('vertical-align', 'top')
-			.html('&nbsp;&nbsp;Downloading data ...')
+			this.dom.downloadbt = sampleDiv
+				.insert('button')
+				.style('margin-left', '10px')
+				.style('vertical-align', 'top')
+				.text('Download data')
+				.on('click', e => {
+					this.downloadData()
+				})
+			this.dom.messageDiv = sampleDiv
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('display', 'none')
+				.style('vertical-align', 'top')
+				.html('&nbsp;&nbsp;Downloading data ...')
+		}
 	}
 
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
-		let samples = config.samples || this.getSamples(this.sample.sampleName)
+		let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.sampleName)
 
 		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
 		const q = appState.termdbConfig.queries
@@ -232,31 +178,6 @@ class SampleView {
 		}
 
 		return state
-	}
-
-	//Get samples related through parent
-	getSamples(sampleName) {
-		let lastName = sampleName
-		const samplesArray = Object.values(this.samplesData)
-		let lastSample = samplesArray.find(s => s.ancestor_name == lastName)
-		while (lastSample) {
-			lastName = lastSample.name
-			lastSample = samplesArray.find(s => s.ancestor_name == lastName)
-		}
-		let sampleData = this.samplesData[lastName]
-		if (!sampleData) return []
-		const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
-		while (sampleData.ancestor_name) {
-			if (this.samplesData[sampleData.ancestor_name]?.type != 'root')
-				samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
-			sampleData = this.samplesData[sampleData.ancestor_name]
-		}
-		return samples
-	}
-
-	getLabel(sampleName) {
-		const samples = this.getSamples(sampleName)
-		return samples.map(s => s.sampleName).join(' > ')
 	}
 
 	async main() {
@@ -746,4 +667,92 @@ export async function getPlotConfig(opts) {
 	}
 	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings }
 	return copyMerge(config, opts)
+}
+
+export function searchSampleInput(holder, samplesData, callback) {
+	const limit = 100
+
+	const allSamples = []
+	for (const sample in samplesData)
+		if (samplesData[sample].type == 'root' || samplesData[sample].type == null)
+			//If the dataset has no ancestors, all the samples should be root'
+			allSamples.push(sample)
+	const isBigDataset = allSamples.length > 10000
+
+	if (allSamples.length == 0)
+		//Happens if it requires sign in first
+		return
+	const sampleName = allSamples[0]
+	const input = holder
+		.append('input')
+		.attr('list', 'sampleDatalist')
+		.property('autocomplete', 'off')
+		.attr('placeholder', sampleName)
+		.style('width', '400px')
+	const datalist = holder.append('datalist').attr('id', 'sampleDatalist')
+	addOptions(allSamples)
+	input.on('keyup', e => {
+		datalist.selectAll('*').remove()
+		const str = input.node().value.toLowerCase()
+		const options = []
+		for (const sample of allSamples) {
+			if (sample.toLowerCase().startsWith(str)) options.push(sample)
+			if (options.length == limit && allSamples.length > 10000) break
+		}
+		for (const sample of allSamples) {
+			if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
+			if (options.length == limit && allSamples.length > 10000) break
+		}
+		if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options, this)
+	})
+	input.on('change', e => {
+		const sampleName = input.node().value
+		callback(sampleName)
+	})
+	function addOptions(options) {
+		datalist
+			.selectAll('option')
+			.data(options.filter((s, i) => i < limit))
+			.enter()
+			.append('option')
+			.attr('value', d => d)
+			.attr(
+				'label',
+				(d, i) =>
+					getLabel(d) +
+					(i + 1 == limit
+						? isBigDataset
+							? `Showing first ${i + 1} hits`
+							: `Showing ${i + 1} of ${options.length} hits`
+						: i + 1 === options.length && i > 0
+						? `  (Found ${options.length} hits)`
+						: '')
+			)
+	}
+
+	function getLabel(sampleName) {
+		const samples = getSamplesRelated(samplesData, sampleName)
+		return samples.map(s => s.sampleName).join(' > ')
+	}
+	return sampleName
+}
+
+//Get samples related through parent
+function getSamplesRelated(samplesData, sampleName) {
+	let lastName = sampleName
+	const samplesArray = Object.values(samplesData)
+	let lastSample = samplesArray.find(s => s.ancestor_name == lastName)
+	while (lastSample) {
+		lastName = lastSample.name
+		lastSample = samplesArray.find(s => s.ancestor_name == lastName)
+	}
+	let sampleData = samplesData[lastName]
+	if (!sampleData) return []
+	const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
+	while (sampleData.ancestor_name) {
+		if (samplesData[sampleData.ancestor_name]?.type != 'root')
+			samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
+		sampleData = samplesData[sampleData.ancestor_name]
+	}
+	return samples
 }
