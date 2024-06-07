@@ -102,6 +102,7 @@
     "src/checkReadingFrame.js",
     "src/bedj.parseBed.js",
     "utils/*.R",
+    "utils/*.py",
     "LICENSE/*"
   ],
   "bugs": {

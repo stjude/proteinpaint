@@ -28,11 +28,13 @@ RUN apt-get update && apt-get install -y \
 	g++ \
     pkg-config \
     cmake \
+    python3-matplotlib \
+    python3-nibabel \
+    python3-numpy \
 	## clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/ \
   && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
-
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
@@ -81,7 +83,6 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         echo "unknown ARCH='$ARCH'" && \
         exit 1; \
     fi
-
 
 #####################
 # Server-only install

@@ -55,6 +55,7 @@ if (!serverconfig.clustalo) serverconfig.clustalo = 'clustalo'
 if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
 if (!serverconfig.gfServer) serverconfig.gfServer = 'gfServer'
 if (!serverconfig.gfClient) serverconfig.gfClient = 'gfClient'
+// NOTE: will set other cmd paths that require binpath after it's filled-in below
 
 /******************
 	APPLY OVERRIDES 
@@ -103,6 +104,8 @@ if (!serverconfig.binpath) {
 		}
 	}
 }
+// defaults tool paths, for those that require binpath
+if (!serverconfig.plotBrainImaging) serverconfig.plotBrainImaging = `${serverconfig.binpath}/utils/plotBrainImaging.py`
 
 if (serverconfig.debugmode) {
 	// only apply optional routeSetters in debugmode
