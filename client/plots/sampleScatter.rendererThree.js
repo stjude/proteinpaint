@@ -45,8 +45,9 @@ export function setRenderersThree(self) {
 		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
 		const tex = getCircle(128)
+		console.log(self.settings.threeSize)
 		const material = new THREE.PointsMaterial({
-			size: 0.001,
+			size: self.settings.threeSize,
 			sizeAttenuation: true,
 			transparent: true,
 			opacity: self.settings.opacity,
