@@ -208,9 +208,11 @@ async function getSamples(req, ds, plot) {
 
 async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	const results = {}
+	let fCount = 0
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
 		if (!dbSample) {
+			fCount++
 			//console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
 		}
@@ -258,6 +260,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		else sample.shape = 'Ref'
 		results[divideBy].samples.push(sample)
 	}
+	if (fCount) console.log(fCount + ' samples not in the database or filtered')
 	//To choose a color scheme we pass the max number of categories
 	let max = 0
 	for (const [divideBy, result] of Object.entries(results)) max = Math.max(max, Object.keys(result.colorMap).length)
