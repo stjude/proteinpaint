@@ -2,7 +2,6 @@ import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import * as client from './client'
 import { dofetch3, setAuth } from '#common/dofetch'
 import { findgenemodel_bysymbol } from './gene'
-import './style.css'
 import * as common from '#shared/common'
 import { bulkui, bulkembed } from './bulk.ui'
 import { string2pos, invalidcoord } from './coord'
@@ -19,7 +18,16 @@ import { Menu } from '#dom/menu'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { InputSearch } from '../dom/search.ts'
 import { findAppDrawerElements, findgenelst, findgene2paint } from './omniSearch'
+import './style.css' // will be bundled separately as a css file
 
+// !!! TODO !!!
+// - this may not work if this is used directly as an esm module
+// - and with a different bundler, such as in GFF
+// load the bundled css
+let link = document.createElement('link')
+link.rel = 'stylesheet'
+link.href = './dist/app.css'
+document.head.appendChild(link)
 /*
 
 exports a global function runproteinpaint()
