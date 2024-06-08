@@ -51,7 +51,6 @@ class TdbApp {
 			customTermDiv: treeDiv.append('div').style('margin', '10px'),
 			submitDiv,
 			submitBtn,
-			topbar,
 			filterDiv: topbar.append('div').style('display', 'none'),
 			errdiv: opts.holder.append('div'),
 			tip: new Menu({ padding: '5px' })

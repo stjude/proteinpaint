@@ -336,7 +336,7 @@ async function mayShowAuthUi(init, path) {
 			return obj
 		}, {})
 		const q = Object.assign({}, body, params)
-		const route = path.split('?')[0].split('//')[1].split('/').slice(1).join('/')
+		const route = ((path.split('?')[0] || '').split('//')[1] || '').split('/').slice(1).join('/')
 		if (q.dslabel == a.dslabel && (a.route == '/**' || route == a.route)) {
 			if (dsAuthOk.has(a)) return ok
 			// dofetch should show the authUi only when all routes ('/**') are protected

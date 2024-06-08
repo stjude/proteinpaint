@@ -204,7 +204,7 @@ if single sample, use max junction read count
 					.attr('font-family', client.font)
 					.attr('font-size', Math.max(minfontsize, j.radius))
 					.text(j.data.length)
-					.each(function() {
+					.each(function () {
 						const b = this.getBBox()
 						const newrad = Math.sqrt(Math.pow(b.width, 2) + Math.pow(b.height, 2)) / 2
 						j.radius = Math.max(j.radius, newrad)
@@ -284,11 +284,7 @@ if single sample, use max junction read count
 		.range([tk.axisheight, 0])
 
 	client.axisstyle({
-		axis: tk.leftaxis.call(
-			axisRight()
-				.scale(tk.yscale)
-				.ticks(6, '.0f')
-		),
+		axis: tk.leftaxis.call(axisRight().scale(tk.yscale).ticks(6, '.0f')),
 		color: 'black',
 		showline: true
 	})
@@ -347,7 +343,7 @@ if single sample, use max junction read count
 		.enter()
 		.append('g')
 		.attr('transform', d => set_jug(d))
-		.each(function(j) {
+		.each(function (j) {
 			j.jugg = this
 		})
 
@@ -371,7 +367,7 @@ if single sample, use max junction read count
 		.attr('x1', d => set_leg_x1(d))
 		.attr('y2', d => set_leg_y(d, tk))
 		.attr('stroke-opacity', d => set_lineopacity(d))
-		.each(function(d) {
+		.each(function (d) {
 			d.leg1 = this
 		})
 		.classed('sja_jug_leg1', true)
@@ -382,7 +378,7 @@ if single sample, use max junction read count
 		.attr('y1', d => set_leg_y(d, tk))
 		.attr('stroke-opacity', d => set_lineopacity(d))
 		.classed('sja_jug_leg2', true)
-		.each(function(d) {
+		.each(function (d) {
 			d.leg2 = this
 		})
 	const jug2 = jug
@@ -399,7 +395,7 @@ if single sample, use max junction read count
 		.attr('y1', d => set_stem_y1(d))
 		.attr('y2', d => set_stem_y2(d, tk))
 		.attr('stroke-opacity', d => set_lineopacity(d))
-		.each(function(d) {
+		.each(function (d) {
 			d.stem = this
 		})
 	jug2
@@ -545,71 +541,71 @@ export function horiplace(lst, width, tk) {
 	}
 	set_all(tk)
 	return
+	// !!! why return before this code block !!!
+	// todo.sort((a, b) => {
+	// 	return a.tox - b.tox
+	// })
 
-	todo.sort((a, b) => {
-		return a.tox - b.tox
-	})
+	// // push all to left
+	// // set initial x for all for shifting
+	// let cumx = todo.length == 0 ? 0 : todo[0].radius2
+	// for (const i of todo) {
+	// 	i.x = cumx + i.radius2
+	// 	cumx += i.radius2 * 2
+	// 	/*
+	// 	i.x=cumx+i.radius2
+	// 	if(i.x0<0) {
+	// 		// left out
+	// 		i.x=Math.max(i.x, i.x1-i.radius2*2)
+	// 	} else if(i.x1>width) {
+	// 		i.x=Math.max(i.x, i.x0+i.radius2*2)
+	// 	}
+	// 	cumx=i.x+i.radius2
+	// 	*/
+	// }
 
-	// push all to left
-	// set initial x for all for shifting
-	let cumx = todo.length == 0 ? 0 : todo[0].radius2
-	for (const i of todo) {
-		i.x = cumx + i.radius2
-		cumx += i.radius2 * 2
-		/*
-		i.x=cumx+i.radius2
-		if(i.x0<0) {
-			// left out
-			i.x=Math.max(i.x, i.x1-i.radius2*2)
-		} else if(i.x1>width) {
-			i.x=Math.max(i.x, i.x0+i.radius2*2)
-		}
-		cumx=i.x+i.radius2
-		*/
-	}
-
-	for (let i = 0; i < todo.length; i++) {
-		while (1) {
-			let currsum = 0,
-				newsum = 0
-			for (let j = i; j < todo.length; j++) {
-				const k = todo[j]
-				// detect conditions to stop
-				if (j > 0) {
-					const prev = todo[j - 1]
-					if (prev.x + prev.radius2 <= k.x - k.radius2) {
-						// not overlapping with previous
-						if (k.x >= k.tox) {
-							// so it can stop
-							break
-						}
-					}
-				} else {
-					if (k.x >= k.tox) {
-						// the first one, it can stop too
-						break
-					}
-				}
-				const z = todo[todo.length - 1]
-				if (z.x + z.radius2 >= width) {
-					// last one out of range
-					break
-				}
-				currsum += Math.abs(k.x - k.tox)
-				k.x++
-				newsum += Math.abs(k.x - k.tox)
-			}
-			if (newsum < currsum) {
-			} else {
-				// reject
-				for (let j = i; j < todo.length; j++) {
-					todo[j].x--
-				}
-				break
-			}
-		}
-	}
-	set_all(tk)
+	// for (let i = 0; i < todo.length; i++) {
+	// 	while (1) {
+	// 		let currsum = 0,
+	// 			newsum = 0
+	// 		for (let j = i; j < todo.length; j++) {
+	// 			const k = todo[j]
+	// 			// detect conditions to stop
+	// 			if (j > 0) {
+	// 				const prev = todo[j - 1]
+	// 				if (prev.x + prev.radius2 <= k.x - k.radius2) {
+	// 					// not overlapping with previous
+	// 					if (k.x >= k.tox) {
+	// 						// so it can stop
+	// 						break
+	// 					}
+	// 				}
+	// 			} else {
+	// 				if (k.x >= k.tox) {
+	// 					// the first one, it can stop too
+	// 					break
+	// 				}
+	// 			}
+	// 			const z = todo[todo.length - 1]
+	// 			if (z.x + z.radius2 >= width) {
+	// 				// last one out of range
+	// 				break
+	// 			}
+	// 			currsum += Math.abs(k.x - k.tox)
+	// 			k.x++
+	// 			newsum += Math.abs(k.x - k.tox)
+	// 		}
+	// 		if (newsum < currsum) {
+	// 		} else {
+	// 			// reject
+	// 			for (let j = i; j < todo.length; j++) {
+	// 				todo[j].x--
+	// 			}
+	// 			break
+	// 		}
+	// 	}
+	// }
+	// set_all(tk)
 }
 
 export function automode(tk, usemode, blockwidth) {
@@ -834,7 +830,7 @@ function foldedjunctioninfo(d, tk) {
 			.attr('x', pad)
 			.attr('y', y + fontsize / 2)
 			.attr('dominant-baseline', 'central')
-			.each(function() {
+			.each(function () {
 				width = this.getBBox().width
 			})
 		y += fontsize
@@ -850,7 +846,7 @@ function foldedjunctioninfo(d, tk) {
 			.attr('x', pad)
 			.attr('y', y + fontsize / 2)
 			.attr('dominant-baseline', 'central')
-			.each(function() {
+			.each(function () {
 				width = Math.max(width, this.getBBox().width)
 			})
 		y += fontsize
@@ -863,7 +859,7 @@ function foldedjunctioninfo(d, tk) {
 			.attr('x', pad)
 			.attr('y', y + fontsize / 2)
 			.attr('dominant-baseline', 'central')
-			.each(function() {
+			.each(function () {
 				width = Math.max(width, this.getBBox().width)
 			})
 		y += fontsize
@@ -878,7 +874,7 @@ function foldedjunctioninfo(d, tk) {
 			.attr('x', pad)
 			.attr('y', y + fontsize / 2)
 			.attr('dominant-baseline', 'central')
-			.each(function() {
+			.each(function () {
 				width = Math.max(width, this.getBBox().width)
 			})
 		y += fontsize
@@ -1047,10 +1043,7 @@ function junctionsamplespread(j, tk, block) {
 		})
 		*/
 
-	j.qmg = jugg
-		.append('g')
-		.attr('class', 'sja_jug_qmg')
-		.attr('transform', set_qmg(j, tk))
+	j.qmg = jugg.append('g').attr('class', 'sja_jug_qmg').attr('transform', set_qmg(j, tk))
 
 	const opacity = 0.8
 
@@ -1212,11 +1205,11 @@ function samplejunctiontooltip(j, sample, tk, holder) {
 
 function get_leftLabelMaxwidth(tk) {
 	const collectlabw = []
-	tk.tklabel.each(function() {
+	tk.tklabel.each(function () {
 		collectlabw.push(this.getBBox().width)
 	})
 	if (tk.label_mcount) {
-		tk.label_mcount.each(function() {
+		tk.label_mcount.each(function () {
 			collectlabw.push(this.getBBox().width)
 		})
 	}

@@ -12,7 +12,7 @@ export function validate_oldds(ds) {
 	if (ds.geneexpression) {
 		if (ds.geneexpression.maf) {
 			try {
-				ds.geneexpression.maf.get = eval('(' + ds.geneexpression.maf.get + ')')
+				ds.geneexpression.maf.get = new Function(ds.geneexpression.maf.get)
 			} catch (e) {
 				return 'invalid Javascript for get() of expression.maf of ' + ds.label
 			}
@@ -63,7 +63,7 @@ export function validate_oldds(ds) {
 		for (const at of ds.snvindel_attributes) {
 			if (at.get) {
 				try {
-					at.get = eval('(' + at.get + ')')
+					at.get = new Function(at.get)
 				} catch (e) {
 					return 'invalid Javascript for getter of ' + JSON.stringify(at)
 				}
@@ -71,7 +71,7 @@ export function validate_oldds(ds) {
 				for (const at2 of at.lst) {
 					if (at2.get) {
 						try {
-							at2.get = eval('(' + at2.get + ')')
+							at2.get = new Function(at2.get)
 						} catch (e) {
 							return 'invalid Javascript for getter of ' + JSON.stringify(at2)
 						}
@@ -109,8 +109,8 @@ export function validate_oldds(ds) {
 	if (ds.url4variant) {
 		// quick fix for clinvar
 		for (const u of ds.url4variant) {
-			u.makelabel = eval('(' + u.makelabel + ')')
-			u.makeurl = eval('(' + u.makeurl + ')')
+			u.makelabel = new Function(u.makelabel)
+			u.makeurl = new Function(u.makeurl)
 		}
 	}
 

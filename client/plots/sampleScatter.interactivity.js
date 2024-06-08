@@ -9,7 +9,6 @@ import {
 	showTermsTree,
 	addMatrixMenuItems,
 	openSummaryPlot,
-	tip2,
 	addNewGroup,
 	getSamplelstTWFromIds,
 	getSamplelstTW
