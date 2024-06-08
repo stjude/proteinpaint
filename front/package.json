@@ -4,8 +4,7 @@
 	"main": "src/index.js",
 	"bin": "init.js",
 	"scripts": {
-		"dev": "ln -s ../client/dist ../public/dist; rm -rf ../public/bin; mkdir ../public/bin; ln src/index.js ../public/bin/proteinpaint.js",
-		"#dev": "webpack --env NODE_ENV=development --watch --progress --color",
+		"dev": "webpack --env NODE_ENV=development --watch --progress --color",
 		"prepack": "rm -rf public/bin && rm -rf *.tgz && webpack && tar -czf bundles.tgz public/bin",
 		"test:unit": "echo 'TODO: front integration tests'",
 		"test:integration": "echo 'TODO: front integration tests'"
