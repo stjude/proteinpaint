@@ -6,18 +6,22 @@
 </head>
 <body style="margin:0px;width:100%;height:100%">
 	
-<script src="bin/proteinpaint.js" charset="utf-8"></script>
-
+<!-- <script type='module' src="./dist/app.js" charset="utf-8"></script>
+ -->
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
 <div id=aaa style="margin:10px"></div>
 
 <script>
-runproteinpaint({
-	//host: 'https://ppr.stjude.org',
-	holder:document.getElementById('aaa'),
-	parseurl:true,
-})
+(async ()=>{ console.log('test')
+	const { runproteinpaint } = await import('./dist/app.js')
+
+	runproteinpaint({
+		//host: 'https://ppr.stjude.org',
+		holder:document.getElementById('aaa'),
+		parseurl:true,
+	})
+})()
 </script>
 
 </body>

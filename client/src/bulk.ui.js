@@ -433,7 +433,7 @@ export function bulkin(p, callback = null) {
 		if (cohort.dbexpression) {
 			if (cohort.dbexpression.tidy) {
 				try {
-					cohort.dbexpression.tidy = eval('(' + cohort.dbexpression.tidy + ')')
+					cohort.dbexpression.tidy = new Function(cohort.dbexpression.tidy)
 				} catch (e) {
 					err('invalid JavaScript for dbexpression.tidy')
 					// disable whole thing

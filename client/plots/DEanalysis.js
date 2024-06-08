@@ -10,7 +10,6 @@ import { dofetch3 } from '#common/dofetch'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import { d3lasso } from '../common/lasso'
 import { downloadTable } from '../dom/table'
-import { Genome } from '#shared/types/genome.ts'
 /*
 
 opts{}

@@ -1,7 +1,6 @@
 import * as client from './client'
 import * as common from '#shared/common'
 import * as vcf from '#shared/vcf'
-import * as path from 'path'
 import { stratify } from 'd3-hierarchy'
 
 /*
@@ -88,10 +87,7 @@ export function itemtable(arg) {
 	for (const [dt, lst] of dt2mlst) {
 		const div = holder.append('div').style('margin', '10px')
 		if (dt2mlst.size > 1) {
-			div
-				.append('p')
-				.text(common.dt2label[dt])
-				.style('color', '#858585')
+			div.append('p').text(common.dt2label[dt]).style('color', '#858585')
 		}
 		switch (dt) {
 			case common.dtsnvindel:
@@ -324,10 +320,7 @@ function table_snvindel(mlst, holder, tk, block) {
 		const table = client.make_table_2col(holder, data)
 		if (hasSNP) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.attr('colspan', 2)
-				.style('color', '#9e9e9e')
-				.text('dbSNP')
+			tr.append('td').attr('colspan', 2).style('color', '#9e9e9e').text('dbSNP')
 			snpfind.says = tr.append('td').text('loading...')
 		}
 		// a row of possible buttons
@@ -389,7 +382,7 @@ function table_snvindel(mlst, holder, tk, block) {
 		buttrow
 			.append('button')
 			.text('Table columns')
-			.on('click', function() {
+			.on('click', function () {
 				if (h_col.style('display') == 'block') {
 					this.style.color = 'black'
 					client.disappear(h_col)
@@ -402,7 +395,7 @@ function table_snvindel(mlst, holder, tk, block) {
 			snpfind.button = buttrow
 				.append('button')
 				.text('loading...')
-				.on('click', function() {
+				.on('click', function () {
 					if (h_snp.style('display') == 'block') {
 						this.style.color = 'black'
 						client.disappear(h_snp)
@@ -421,7 +414,7 @@ function table_snvindel(mlst, holder, tk, block) {
 			buttrow
 				.append('button')
 				.text('Legend')
-				.on('click', function() {
+				.on('click', function () {
 					if (h_leg.style('display') == 'block') {
 						this.style.color = 'black'
 						client.disappear(h_leg)
@@ -431,41 +424,25 @@ function table_snvindel(mlst, holder, tk, block) {
 					}
 				})
 		}
-		h_col = holder
-			.append('div')
-			.style('margin', '10px')
-			.style('display', 'none')
+		h_col = holder.append('div').style('margin', '10px').style('display', 'none')
 		for (const at of tk.snvindelattr) {
 			const id = Math.random()
-			const check = h_col
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('id', id)
+			const check = h_col.append('input').attr('type', 'checkbox').attr('id', id)
 			if (!at.hide) check.attr('checked', true)
 			check.on('change', () => {
 				at.hide = !check.node().checked
 				table_sort(mlst, table, tk.snvindelattr, tk)
 			})
-			h_col
-				.append('label')
-				.attr('for', id)
-				.text(at.label)
+			h_col.append('label').attr('for', id).text(at.label)
 			h_col.append('br')
 		}
 		if (hasSNP) {
-			h_snp = holder
-				.append('div')
-				.style('margin', '10px')
-				.style('display', 'none')
+			h_snp = holder.append('div').style('margin', '10px').style('display', 'none')
 			snpfind.holder = h_snp
 			snpfind.says = h_snp
 		}
 		if (tk.ds && tk.ds.snvindel_legend) {
-			h_leg = holder
-				.append('div')
-				.style('display', 'none')
-				.style('width', '300px')
-				.html(tk.ds.snvindel_legend)
+			h_leg = holder.append('div').style('display', 'none').style('width', '300px').html(tk.ds.snvindel_legend)
 		}
 	}
 
@@ -517,10 +494,7 @@ function table_snvindel(mlst, holder, tk, block) {
 				.classed('sja_variantpagesnv', true)
 				.text('Variant Page')
 				.on('click', event => {
-					const table = tk.tktip
-						.clear()
-						.showunder(event.target)
-						.d.append('table')
+					const table = tk.tktip.clear().showunder(event.target).d.append('table')
 					for (const variant of vlst) {
 						const tr = table.append('tr')
 						// aa change
@@ -727,10 +701,7 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 	// first row of buttons
 
 	const row1 = holder.append('div').style('margin-top', '10px')
-	row1
-		.append('span')
-		.text(m.type)
-		.style('padding-right', '10px')
+	row1.append('span').text(m.type).style('padding-right', '10px')
 	row1
 		.append('span')
 		.text(m.chr + ':' + (m.pos + 1))
@@ -1081,7 +1052,9 @@ function info2table_value(icfg, lst, i) {
 	// field config attributes are processed based on order of precedence
 	if (field.eval) {
 		// somehow decodeURIComponent() won't work here!!
-		value = eval('"' + value + '"')
+		// TODO: use a more specific string-to-code conversion
+		// per https://esbuild.github.io/content-types/#direct-eval
+		value = (0, eval)('"' + value + '"')
 	}
 	if (field.isurl) return '<a href=' + value + ' target=_blank>' + value + '</a>'
 	if (field.appendUrl) {
@@ -1355,7 +1328,10 @@ export function runtimeattr_snvindel(tk, mlst) {
 				case 'ref':
 					lst.push({
 						label: 'Allele',
-						lst: [{ label: 'Ref', get: m => m.ref }, { label: 'Alt', get: m => m.alt }]
+						lst: [
+							{ label: 'Ref', get: m => m.ref },
+							{ label: 'Alt', get: m => m.alt }
+						]
 					})
 					break
 				case 'pmid':
@@ -1947,10 +1923,7 @@ function vcfsamplelistbutton(m, holder, tk) {
 		.on('click', event => {
 			tk.tktip.showunder(event.target).clear()
 			const table = tk.tktip.d.append('table')
-			const tr = table
-				.append('tr')
-				.style('font-size', '.8em')
-				.style('color', '#858585')
+			const tr = table.append('tr').style('font-size', '.8em').style('color', '#858585')
 			tr.append('td').text('Name')
 			tr.append('td').text('Genotype')
 
@@ -1967,9 +1940,7 @@ function vcfsamplelistbutton(m, holder, tk) {
 			for (const s of samplelst) {
 				const tr = table.append('tr')
 				tr.append('td').text(s.sampleobj.name)
-				tr.append('td')
-					.style('padding-left', '10px')
-					.text(s.genotype)
+				tr.append('td').style('padding-left', '10px').text(s.genotype)
 				if (hasgt) {
 					tr.append('td')
 						.style('padding-left', '10px')
@@ -1980,9 +1951,7 @@ function vcfsamplelistbutton(m, holder, tk) {
 					for (const a in s.allele2readcount) {
 						lst.push(a + ':' + s.allele2readcount[a])
 					}
-					tr.append('td')
-						.style('padding-left', '10px')
-						.text(lst.join(', '))
+					tr.append('td').style('padding-left', '10px').text(lst.join(', '))
 				}
 			}
 		})
@@ -2132,16 +2101,13 @@ function variant2imgbutton(m, buttonrow, imgholder, tk, block) {
 		.on('click', async () => {
 			if (loaded) return
 			loaded = true
-			const wait = imgholder
-				.append('div')
-				.style('margin', '20px')
-				.text('Loading...')
+			const wait = imgholder.append('div').style('margin', '20px').text('Loading...')
 			try {
 				const data = await client.dofetch('img', {
-					file: path.join(
+					file: [
 						tk.variant2img.path,
 						m.chr + '.' + (m.pos + 1) + '.' + m.ref + '.' + m.alt + '.' + tk.variant2img.ext
-					)
+					].join('/')
 				})
 				if (data.error) throw data.error
 				wait.remove()
@@ -2360,10 +2326,7 @@ function mayshowcovmafplot(m, tk, holder) {
 		const name2sgp = {}
 
 		for (const g of plotgroups) {
-			let div = row
-				.append('div')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top')
+			let div = row.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 			if (plotgroups.length > 1) {
 				// more than 1 group, emphasis
@@ -2535,10 +2498,7 @@ function make_url4variant(holder, m, items) {
 function make_button4variant(holder, m, lst) {
 	lst.forEach(item => {
 		if (!item.makebutton) return
-		const div = holder
-			.append('div')
-			.style('display', 'inline-block')
-			.style('margin', '0px 10px 2px 3px')
+		const div = holder.append('div').style('display', 'inline-block').style('margin', '0px 10px 2px 3px')
 		item.makebutton(m, div.node())
 	})
 }
@@ -2903,9 +2863,6 @@ function handle_samplecart(mlst, holder, tk, block) {
 		samplelst: [...sampleset],
 		id: nameset.size ? [...nameset][0] : block.usegm ? block.usegm.name : '',
 		basket: 'Gene Mutation',
-		container: holder
-			.append('div')
-			.style('margin-left', '10px')
-			.append('div')
+		container: holder.append('div').style('margin-left', '10px').append('div')
 	})
 }

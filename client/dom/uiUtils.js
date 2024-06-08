@@ -176,7 +176,7 @@ export function makeResetBtn(div, obj, selector) {
 		.on('click', async () => {
 			d3selectAll(selector).property('value', '')
 			if (obj.data) {
-				obj.data = typeof obj.data == 'string' ? '' : typeof obj.data == 'array' ? [] : {}
+				obj.data = typeof obj.data == 'string' ? '' : Array.isArray(obj.data) ? [] : {}
 			}
 		})
 

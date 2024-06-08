@@ -260,7 +260,7 @@ function setMathExprInput(opts) {
 		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
 			const value = self.dom.input.property('value')
-			const number = Number(eval(value))
+			const number = Number(value)
 			if (isNaN(number)) throw `non-numeric value for ${opts.settingsKey}='${value}'`
 			textByNumber[number] = value
 			opts.dispatch({
@@ -279,7 +279,7 @@ function setMathExprInput(opts) {
 	const api = {
 		main(plot) {
 			const value = plot.settings[opts.chartType][opts.settingsKey]
-			const number = typeof value == 'number' ? value : Number(eval(value))
+			const number = typeof value == 'number' ? value : Number(value)
 			if (typeof value != 'number') textByNumber[number] = value
 			self.dom.input.property('value', value in textByNumber ? textByNumber[number] : value)
 		}

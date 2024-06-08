@@ -2,7 +2,6 @@ import blockinit from './block.init'
 import * as client from './client'
 import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
-import path from 'path'
 import * as mdsjson from './app.mdsjson'
 import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
@@ -256,7 +255,7 @@ upon error, throw err message as a string
 			genome,
 			file,
 			url,
-			name: path.basename(file || url),
+			name: path.split('/').pop(), //.basename(file || url),
 			hostURL: arg.hostURL,
 			enzyme: urlp.get('enzyme'),
 			holder: arg.holder

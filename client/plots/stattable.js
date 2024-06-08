@@ -29,8 +29,7 @@ class TdbStatTable {
 					barchart: config.settings.barchart
 				}
 			},
-			filter: appState.termfilter.filter,
-			activeCohort: appState.activeCohort
+			filter: appState.termfilter.filter
 		}
 	}
 
@@ -64,12 +63,9 @@ class TdbStatTable {
 }
 
 function setRenderers(self) {
-	self.render = function(data) {
+	self.render = function (data) {
 		// table for statistical summary
-		self.dom.div
-			.style('display', 'block')
-			.selectAll('*')
-			.remove()
+		self.dom.div.style('display', 'block').selectAll('*').remove()
 
 		let exposed_data = ''
 

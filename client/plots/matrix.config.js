@@ -93,7 +93,6 @@ export async function getPlotConfig(opts = {}, app) {
 				colgspace: 8,
 				colglabelpos: true,
 				collabelpos: 'bottom',
-				collabelmaxchars: 40,
 				collabelvisible: true,
 				collabelgap: 5,
 				collabelpad: 1,
