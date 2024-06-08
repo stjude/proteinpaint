@@ -6,7 +6,7 @@ build({
 	bundle: true,
 	platform: 'browser',
 	outdir: path.join(__dirname, './dist'),
-	chunkNames: '[hash].proteinpaint.js',
+	//chunkNames: '[hash].app',
 	sourcemap: true,
 	splitting: true,
 	format: 'esm',

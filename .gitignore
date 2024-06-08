@@ -7,9 +7,7 @@
 */*/node_modules*/
 npm-debug.log
 dist/*
-*/dist/
-*/*/dist/
-*/*/*/dist/
+**/dist
 
 server/app.js
 server/genome/*.js
