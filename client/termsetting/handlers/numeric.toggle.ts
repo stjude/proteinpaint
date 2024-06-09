@@ -3,7 +3,7 @@ import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import { copyMerge } from '../../rx'
 import { PillData, HandlerGenerator, Handler } from '../types'
 import { VocabApi } from '../../shared/types/vocab.ts'
-import roundValue from '#shared/roundValue'
+import { roundValue } from '#shared/roundValue'
 import {
 	NumericTerm,
 	NumericQ,

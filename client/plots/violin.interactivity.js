@@ -1,7 +1,7 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { renderTable } from '../dom/table'
 import { to_svg } from '#src/client'
-import roundValue from '../../server/shared/roundValue'
+import { roundValueAuto } from '../../server/shared/roundValue'
 import { rgb } from 'd3'
 
 export function setInteractivity(self) {
@@ -173,7 +173,7 @@ export function setInteractivity(self) {
 		if (!data?.samples) return
 		const sampleIdArr = []
 		for (const [c, k] of Object.entries(data.samples))
-			sampleIdArr.push([{ value: data.refs.bySampleId[c].label }, { value: roundValue(k[term.$id].value, 1) }])
+			sampleIdArr.push([{ value: data.refs.bySampleId[c].label }, { value: roundValueAuto(k[term.$id].value) }])
 
 		const tableDiv = self.app.tip.d.append('div')
 		const columns = [{ label: 'Sample' }, { label: 'Value' }]
