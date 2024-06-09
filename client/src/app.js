@@ -761,8 +761,10 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.testInternals && app.debugmode) {
+		console.log(763)
 		// !!! TODO: configure rollup to ignore this import
-		// await import('../test/internals.js')
+		await import('../test/internals.js')
+		console.log(765)
 	}
 	if (arg.tkui) {
 		launch_tkUIs(arg, app)

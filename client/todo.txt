@@ -3,8 +3,9 @@
 ## Before merging to master
 - reenable test/internals.js
 - use proteinpaint.js instead of front.app.js as script src in index.html
+- update package-lock.json
 
 ## Post-esbuild migration
-- remove webpack-related as dependencies everywhere
+- remove webpack-related dependencies everywhere: may create a new workspace for tests, node polyfill deps for tape and esbuild
 - remove nodemon from pp and sjpp scripts, dependencies: why was this retained, maybe for pm2?
-
+- clean up front and server deps: nodemon, node-watch, etc
