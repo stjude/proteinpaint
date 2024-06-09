@@ -61,6 +61,7 @@
     "d3-beeswarm": "0.0.4",
     "d3-regression": "^1.3.10",
     "debounce": "^1.2.0",
+    "esbuild-plugin-polyfill-node": "^0.3.0",
     "highlight.js": "~11.2.0",
     "html-webpack-plugin": "^5.5.0",
     "minimatch": "^3.1.2",

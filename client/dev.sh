@@ -10,8 +10,10 @@ node \
 	--watch-path=./mds3 \
 	--watch-path=./plots \
 	--watch-path=./rx \
+	--watch-path=./src \
 	--watch-path=./termdb \
 	--watch-path=./termsetting \
 	--watch-path=./tracks \
 	--watch-path=./types \
-	esbuild.config.js
+	--watch-path=./package.json \
+	esbuild.config.cjs

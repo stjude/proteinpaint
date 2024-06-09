@@ -102,7 +102,7 @@ exports.findMatchingSpecs = findMatchingSpecs
 
 function getFromCache(pattern) {
 	if (specsCache[pattern]) return specsCache[pattern]
-	// prefer minimatch() against in-memoery cache, which is much faster than glob.sync() against disk
+	// prefer minimatch() against in-memory cache, which is much faster than glob.sync() against disk
 	return specsCache['*']?.filter(f => minimatch(f, pattern))
 }
 
