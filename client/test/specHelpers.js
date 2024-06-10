@@ -56,16 +56,17 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 	// in internals.js
 	//
 	// the import code to write to the target file
-	// const importCode = specs.matched.map(file => `import '../${file}'`).join('\n')
+	const importCode = specs.matched.map(file => `import '../${file}'`).join('\n')
 	// the current import code as found in the target file
-	// const currImportCode = getImportedSpecs(targetFile)
-	// if (currImportCode != importCode || !currImportCode.includes(importCode)) {
-	// 	const prevModTime = await getModTime(wpCompileTime)
-	// 	console.log(`Writing ${specs.n} import(s) of test specs to '${targetFile}'.`)
-	// 	// editing the targetFile would trigger rebundling by webpack
-	// 	fs.writeFileSync(targetFile, importCode, { encoding: 'utf8' })
-	// 	await monitorBundling(prevModTime)
-	// }
+	const currImportCode = getImportedSpecs(targetFile)
+	console.log(61, [importCode, currImportCode])
+	if (currImportCode != importCode || !currImportCode.includes(importCode)) {
+		const prevModTime = await getModTime(wpCompileTime)
+		console.log(`Writing ${specs.n} import(s) of test specs to '${targetFile}'.`)
+		// editing the targetFile would trigger rebundling by webpack
+		fs.writeFileSync(targetFile, importCode, { encoding: 'utf8' })
+		await monitorBundling(prevModTime)
+	}
 	return specs
 }
 

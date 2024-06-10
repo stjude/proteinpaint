@@ -71,7 +71,7 @@ Cargo.lock
 
 test/copies/*
 test/testers/*
-client/test/internals.js
+client/test/internals*.js
 client/test/wpCompileTime.js
 
 cairo-*/*

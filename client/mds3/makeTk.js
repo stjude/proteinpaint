@@ -261,7 +261,8 @@ function loadTk_finish_closure(tk, block) {
 			tk.bottompad
 
 		if (data) {
-			updateLegend(data, tk, block)
+			/*if (data.error) throw data.error // TODO: may need to handle data.error, can be propagated here? 
+			else*/ updateLegend(data, tk, block)
 		}
 
 		tk.leftLabelMaxwidth = Math.max(tk.leftlabels.maxwidth + tk.leftlabels.xoff, tk.skewer ? tk.skewer.maxwidth : 0)
