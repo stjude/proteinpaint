@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.62.0
 
 Features:
 - geneVariant term now supports grouping variants into predefined groups
