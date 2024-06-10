@@ -55,6 +55,7 @@ tape('Data download with no selected terms', test => {
 	})
 
 	function runTests(dataDownload) {
+		dataDownload.on('postRender.test', null)
 		const ddDom = dataDownload.Inner.dom
 
 		test.equal(ddDom.terms.node().querySelectorAll('.term_name_btn').length, 0, `Should render no term pills`)
@@ -76,7 +77,7 @@ tape('Data download with no selected terms', test => {
 })
 
 tape('Data download with terms selected', test => {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(2000)
 
 	const terms = [
 		{ $id: 0, id: 'sex' },
@@ -102,8 +103,15 @@ tape('Data download with terms selected', test => {
 		}
 	})
 
-	function runTests(dataDownload) {
+	async function runTests(dataDownload) {
+		dataDownload.on('postRender.test', null)
 		const ddDom = dataDownload.Inner.dom
+
+		await detectGte({
+			elem: ddDom.terms.node(),
+			selector: '.term_name_btn',
+			count: 5
+		})
 
 		test.equal(
 			ddDom.terms.node().querySelectorAll('.term_name_btn').length,
@@ -116,7 +124,7 @@ tape('Data download with terms selected', test => {
 			`Should render "${dataDownload.Inner.activeSamples.length} samples" next to Download button`
 		)
 
-		//if (test._ok) dataDownload.Inner.app.destroy()
+		if (test._ok) dataDownload.Inner.app.destroy()
 		test.end()
 	}
 })

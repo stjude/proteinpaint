@@ -119,13 +119,14 @@ tape('click_term', test => {
 		},
 		search: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
 
 	let app
 	function runTests(search) {
+		search.on('postRender.test', null)
 		app = search.Inner.app
 		const tree = search.Inner.app.getComponents('tree')
 		helpers
@@ -172,13 +173,14 @@ tape('tree.click_term2select_tvs', test => {
 		},
 		search: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
 
 	let tree, app
 	function runTests(search) {
+		search.on('postRender.test', null)
 		app = search.Inner.app.Inner
 		tree = app.components.tree
 		helpers
