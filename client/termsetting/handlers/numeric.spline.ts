@@ -58,7 +58,7 @@ export function getHandler(self) {
 					{
 						term: { term: self.term, q: self.q },
 						filter: self.filter,
-						svgw: self.num_obj.plot_size.width
+						svgw: self.num_obj.plot_size.width / window.devicePixelRatio
 					},
 					self.opts.getBodyParams?.()
 				)

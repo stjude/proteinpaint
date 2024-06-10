@@ -434,6 +434,7 @@ export async function getCoordinates(req, q, ds, genome) {
 	if (q.divideByTW) terms.push(q.divideByTW)
 	const data = await getData({ filter: q.filter, terms }, ds, genome)
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
+	console.log('canDisplay', canDisplay)
 	const samples = []
 	for (const sampleId in data.samples) {
 		const values = data.samples[sampleId]
@@ -443,7 +444,8 @@ export async function getCoordinates(req, q, ds, genome) {
 
 		if (x == undefined || y == undefined || z == undefined) continue
 		const sample = { sampleId, x: parseFloat(x), y: parseFloat(y), z: parseFloat(z) }
-		if (canDisplay) sample.sample = ds.sampleId2Name.get(sampleId)
+
+		if (canDisplay) sample.sample = ds.sampleId2Name.get(Number(sampleId))
 		const computable =
 			isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y) && isComputable(q.divideByTW?.term, z)
 		if (sample && computable) samples.push(sample)

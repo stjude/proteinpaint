@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { brushX } from 'd3-brush'
-import roundValue from '#shared/roundValue'
+import { roundValue } from '#shared/roundValue'
 
 /*
 ********************** EXPORTED

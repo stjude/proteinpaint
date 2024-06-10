@@ -1,14 +1,14 @@
 {
 	"private": true,
 	"name": "@sjcrh/ppfull",
-	"version": "2.61.2",
+	"version": "2.62.0",
 	"bin": "app-full.js",
 	"scripts": {
 		"release": ""
 	},
 	"dependencies": {
-		"@sjcrh/proteinpaint-front": "2.61.2",
-		"@sjcrh/proteinpaint-server": "2.61.1"
+		"@sjcrh/proteinpaint-front": "2.62.0",
+		"@sjcrh/proteinpaint-server": "2.62.0"
 	},
 	"files": [
 		"app-full.js"
