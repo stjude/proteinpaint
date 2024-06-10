@@ -59,7 +59,7 @@ export function getHandler(self) {
 				{
 					term: { term: self.term, q: self.q },
 					filter: self.filter,
-					svgw: self.num_obj.plot_size.width
+					svgw: self.num_obj.plot_size.width / window.devicePixelRatio
 				},
 				self.opts.getBodyParams?.()
 			)
@@ -74,7 +74,7 @@ export function getHandler(self) {
 				self.num_obj.plot_size.height
 			)
 			self.num_obj.svg = self.vr.svg
-			self.dom.bins_div = div.append('div').style('padding', '5px')
+			self.dom.bins_div = div.append('div').style('padding', '4px')
 
 			setqDefaults(self)
 			setDensityPlot(self)
