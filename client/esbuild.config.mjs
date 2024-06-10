@@ -5,10 +5,10 @@ import { context } from 'esbuild'
 import { fileURLToPath } from 'url'
     
 const __dirname = path.dirname(fileURLToPath(import.meta.url)) 
-execSync(`node ${__dirname}/emitImports.mjs > ${__dirname}/test/internals.js`)
+execSync(`node ${__dirname}/emitImports.mjs > ${__dirname}/test/internals-esm.js`)
 
 const ctx = await context({
-	entryPoints: ['./src/app.js', './test/internals.js'],
+	entryPoints: ['./src/app.js', './test/internals-esm.js'],
 	bundle: true,
 	platform: 'browser',
 	outdir: path.join(__dirname, './dist'),
@@ -72,12 +72,12 @@ function dirnamePlugin () {
 
     setup(build) {
       build.onLoad({ filter }, ({ path: _filePath }) => {
-          const fileExt = _filePath.split('.').pop()
-          let filePath = _filePath
-          if (!fileExt.endsWith('js') && !fileExt.endsWith('ts')) {
-            if (fs.existsSync(filePath + '.js')) filePath += '.js'
-            if (fs.existsSync(filePath + '.js')) filePath += '.ts'
-          }
+        const fileExt = _filePath.split('.').pop()
+        let filePath = _filePath
+        if (!fileExt.endsWith('js') && !fileExt.endsWith('ts')) {
+          if (fs.existsSync(filePath + '.js')) filePath += '.js'
+          if (fs.existsSync(filePath + '.js')) filePath += '.ts'
+        }
         if (filePath.includes('/tape/')) {
           let contents = fs.readFileSync(filePath, "utf8")
           const loader = path.extname(filePath).substring(1)

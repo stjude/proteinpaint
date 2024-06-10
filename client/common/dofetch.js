@@ -433,7 +433,11 @@ function mayAddJwtToRequest(init, body, url) {
 	}
 	if (!dslabel || !jwtByDsRoute[dslabel]) return
 	const h = url.split('//')
-	const route = (h[1] || h[0]).split('/')[1].split('?')[0]
+	// TODO: use a more reliable way to detect the url path without host or params, hash
+	const route = (h[1] || h[0])
+		.split('/')
+		.find(p => p != '')
+		.split('?')[0]
 	const jwt = jwtByDsRoute[dslabel][route] || jwtByDsRoute[dslabel]['/**']
 	if (jwt) init.headers.authorization = 'Bearer ' + btoa(jwt)
 }
