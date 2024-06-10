@@ -19,7 +19,7 @@
     "predev": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
     "bundle": "cd client; webpack --env NODE_ENV=development --watch --color; cd ..",
     "dev": "npm run bundle -- --progress",
-    "esm": "cd client; rm -rf dist; ./dev.sh; ",
+    "esm": "cd client; ./dev.sh; ",
     "start": "tsx watch ./server/start.js",
     "dev1": "trap 'kill %1' INT; npm run bundle & npm start",
     "server": "trap 'kill %1' INT; npm run dev -w @sjcrh/proteinpaint-server & npm start",

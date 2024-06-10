@@ -1,6 +1,6 @@
 import minimatch from 'minimatch'
 window.process = require('process')
-const params = getParams() //; console.log(3, params)
+const params = getParams()
 
 const CURRSPECDIR = params.dir ? `./${params.dir}` : '.'
 const NESTEDSPECDIR = params.dir ? `./**/${params.dir}` : './**'
@@ -9,6 +9,7 @@ const exclude = 'exclude' in params ? params.exclude : SPECNAME.includes('_x_.')
 const patterns = [`${CURRSPECDIR}/test/${SPECNAME}.spec.*s`, `${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`]
 
 export function matchSpecs(filepath) {
+	if (!params.dir && !params.name) return false
 	for (const pattern of patterns) {
 		if (pattern && minimatch(filepath, pattern)) return true
 	}

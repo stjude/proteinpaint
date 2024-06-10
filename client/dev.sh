@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rm -rf ./dist
+
 node \
 	--watch-path=./appdrawer \
 	--watch-path=./common \
