@@ -3,7 +3,7 @@ import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 import { Vocab } from './Vocab'
-import roundValue from '#shared/roundValue'
+import { roundValue } from '#shared/roundValue'
 import computePercentile from '../../server/shared/compute.percentile'
 import { isNumeric } from '#shared/helpers'
 

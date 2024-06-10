@@ -1,5 +1,5 @@
 import { rgb } from 'd3-color'
-import roundValue from '#shared/roundValue'
+import { roundValue } from '#shared/roundValue'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import HelvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.json'
@@ -27,7 +27,7 @@ export function setRenderersThree(self) {
 			.attr('transform', 'translate(20, 0)')
 		self.renderLegend(chart, step)
 
-		const fov = 66
+		const fov = self.settings.threeFOV
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
@@ -45,7 +45,6 @@ export function setRenderersThree(self) {
 		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
 		const tex = getCircle(128)
-		console.log(self.settings.threeSize)
 		const material = new THREE.PointsMaterial({
 			size: self.settings.threeSize,
 			sizeAttenuation: true,

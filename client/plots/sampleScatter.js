@@ -400,7 +400,17 @@ class Scatter {
 				min: 0,
 				max: 1,
 				step: 0.001
-			})
+			}),
+				inputs.push({
+					label: 'Field of Vision',
+					type: 'number',
+					chartType: 'sampleScatter',
+					settingsKey: 'threeFOV',
+					title: 'Field of Vision',
+					min: 50,
+					max: 90,
+					step: 1
+				})
 		}
 		if (this.config.term) {
 			inputs.unshift(
@@ -654,7 +664,8 @@ export function getDefaultScatterSettings() {
 		defaultColor: plotColor,
 		regression: 'None',
 		fov: 50,
-		threeSize: 0.002
+		threeSize: 0.002,
+		threeFOV: 70
 	}
 }
 
