@@ -34,7 +34,7 @@ export function decimalPlacesUntilFirstNonZero(number) {
 
 	// Iterate through characters after the decimal point
 	let decimalPlaces = 0
-	for (const i = decimalIndex + 1; i < numberStr.length; i++) {
+	for (let i = decimalIndex + 1; i < numberStr.length; i++) {
 		// Increment the count of decimal places until a non-zero digit is found
 		if (numberStr[i] === '0') {
 			decimalPlaces++
