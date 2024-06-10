@@ -1,12 +1,14 @@
-const path = require('path')
-const fs = require("fs")
-const { build } = require('esbuild')
-const { polyfillNode } = require('esbuild-plugin-polyfill-node')
-const { execSync } = require('child_process')
-
+import path from 'path'
+import fs from 'fs'
+import { execSync } from 'child_process'
+import { polyfillNode } from 'esbuild-plugin-polyfill-node'
+import { context } from 'esbuild'
+import { fileURLToPath } from 'url'
+    
+const __dirname = path.dirname(fileURLToPath(import.meta.url)) 
 execSync(`node ${__dirname}/emitImports.mjs > ${__dirname}/test/internals.js`)
 
-build({
+const ctx = await context({
 	entryPoints: ['./src/app.js', './test/internals.js'],
 	bundle: true,
 	platform: 'browser',
@@ -18,20 +20,40 @@ build({
 	//external: ['*.spec.js'],
 	plugins: [
     replaceNodeBuiltIns(),
-    dirnamePlugin()
-  ]
-})
+    dirnamePlugin(),
+    logRebuild()
+  ],
+  logLevel: 'error' // !!! TODO: also show warnings !!!
+});
+
+console.log('watching files ...')
+await ctx.watch()
+
+function logRebuild() {
+  return {
+    name: 'logBuildStage',
+    setup({ onStart, onEnd }) {
+      var t
+      onStart(() => {
+        t = Date.now()
+      })
+      onEnd(() => {
+        console.log('rebuild finished in', Date.now() - t, 'ms')
+      })
+    }
+  }
+}
 
 function replaceNodeBuiltIns() {
   // NOTE: These polyfills are installed by node-polyfill-webpack-plugin,
   // and will still be required as devDependencies after removing webpack 
   // and its plugins post-esbuild migration
   const replace = {
-    path: require.resolve('path-browserify'),
-    stream: require.resolve('stream-browserify'),
-    // 'fs': require.resolve('./src/fs.cjs'),
-    // 'util': require.resolve('./src/util.cjs'),
-    // 'url': require.resolve('url/'),
+    path: import.meta.resolve('path-browserify').replace('file://', ''),
+    stream: import.meta.resolve('stream-browserify').replace('file://', ''),
+    // 'fs': path.resolve('./src/fs.cjs'),
+    // 'util': path.resolve('./src/util.cjs'),
+    // 'url': path.resolve('url/'),
   }
   const filter = RegExp(`^(${Object.keys(replace).join('|')})$`)
   return {
