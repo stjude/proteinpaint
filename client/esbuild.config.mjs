@@ -1,7 +1,6 @@
 import path from 'path'
 import fs from 'fs'
 import { execSync } from 'child_process'
-import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 import { context } from 'esbuild'
 import { fileURLToPath } from 'url'
     
