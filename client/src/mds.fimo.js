@@ -1,8 +1,6 @@
 import * as client from './client'
-import * as common from '#shared/common'
 import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 
 /*
 
@@ -142,10 +140,7 @@ function init_ui(obj) {
 				obj.flankspan = v
 				do_query(obj)
 			})
-		td.append('span')
-			.style('font-size', '0.7em')
-			.style('opacity', 0.5)
-			.text('Press ENTER to update')
+		td.append('span').style('font-size', '0.7em').style('opacity', 0.5).text('Press ENTER to update')
 	}
 	// p thresh
 	{
@@ -168,10 +163,7 @@ function init_ui(obj) {
 				obj.fimo_thresh = v
 				do_query(obj)
 			})
-		td.append('span')
-			.style('font-size', '0.7em')
-			.style('opacity', 0.5)
-			.text('Press ENTER to update')
+		td.append('span').style('font-size', '0.7em').style('opacity', 0.5).text('Press ENTER to update')
 	}
 
 	// minimum logp for display
@@ -195,10 +187,7 @@ function init_ui(obj) {
 				obj.minabslogp = v
 				do_query(obj)
 			})
-		td.append('span')
-			.style('font-size', '0.7em')
-			.style('opacity', 0.5)
-			.text('Press ENTER to update')
+		td.append('span').style('font-size', '0.7em').style('opacity', 0.5).text('Press ENTER to update')
 	}
 
 	// dom
@@ -311,11 +300,7 @@ if expression is available, draw placeholder for each factor and query
 				profile.motifs.push({
 					motif: motif,
 					g: pg,
-					message: pg
-						.append('text')
-						.text('Loading...')
-						.attr('dominant-baseline', 'central')
-						.attr('fill', '#ccc')
+					message: pg.append('text').text('Loading...').attr('dominant-baseline', 'central').attr('fill', '#ccc')
 				})
 			}
 
@@ -495,17 +480,14 @@ function draw_motif_simplified(data, obj) {
 function motif_tooltip(motif, obj, event) {
 	obj.tip.clear()
 	if (motif.attr) {
-		obj.tip.d
-			.append('div')
-			.text('MOTIF')
-			.style('font-weight', 'bold')
-		const lst1 = [{ k: 'P-values', v: htmlpvalue(motif, obj) }, { k: 'Strand', v: motif.strand }]
+		obj.tip.d.append('div').text('MOTIF').style('font-weight', 'bold')
+		const lst1 = [
+			{ k: 'P-values', v: htmlpvalue(motif, obj) },
+			{ k: 'Strand', v: motif.strand }
+		]
 		client.make_table_2col(obj.tip.d, lst1)
 
-		obj.tip.d
-			.append('div')
-			.text('FACTOR')
-			.style('font-weight', 'bold')
+		obj.tip.d.append('div').text('FACTOR').style('font-weight', 'bold')
 		const lst2 = []
 		for (const k in motif.attr) {
 			lst2.push({ k: k, v: motif.attr[k] })
@@ -580,26 +562,14 @@ function make_legend(data, obj) {
 	{
 		// loss
 		const grad = defs.append('linearGradient').attr('id', loss_id)
-		grad
-			.append('stop')
-			.attr('offset', '0%')
-			.attr('stop-color', obj.losscolor)
-		grad
-			.append('stop')
-			.attr('offset', '100%')
-			.attr('stop-color', 'white')
+		grad.append('stop').attr('offset', '0%').attr('stop-color', obj.losscolor)
+		grad.append('stop').attr('offset', '100%').attr('stop-color', 'white')
 	}
 	{
 		// gain
 		const grad = defs.append('linearGradient').attr('id', gain_id)
-		grad
-			.append('stop')
-			.attr('offset', '0%')
-			.attr('stop-color', 'white')
-		grad
-			.append('stop')
-			.attr('offset', '100%')
-			.attr('stop-color', obj.gaincolor)
+		grad.append('stop').attr('offset', '0%').attr('stop-color', 'white')
+		grad.append('stop').attr('offset', '100%').attr('stop-color', obj.gaincolor)
 	}
 
 	svg
@@ -719,16 +689,10 @@ async function load_factorprofile_genevalueonesample(obj, profile) {
 				min = Math.min(min, data.result[g])
 				max = Math.max(max, data.result[g])
 			}
-			const scale = scaleLinear()
-				.domain([min, max])
-				.range([0, profile.width])
+			const scale = scaleLinear().domain([min, max]).range([0, profile.width])
 
 			client.axisstyle({
-				axis: profile.axisg.call(
-					axisTop()
-						.scale(scale)
-						.ticks(4)
-				),
+				axis: profile.axisg.call(axisTop().scale(scale).ticks(4)),
 				showline: 1
 			})
 
@@ -796,36 +760,20 @@ function factorprofile_genevalue_onegene_makeboxplot(obj, profile, gene, data) {
 
 		if (data.w1 != undefined) {
 			// has valid values for boxplot, could be missing
-			m.boxplot.hline = m.g
-				.append('line')
-				.attr('stroke', profile.color)
-				.attr('shape-rendering', 'crispEdges')
-			m.boxplot.linew1 = m.g
-				.append('line')
-				.attr('stroke', profile.color)
-				.attr('shape-rendering', 'crispEdges')
-			m.boxplot.linew2 = m.g
-				.append('line')
-				.attr('stroke', profile.color)
-				.attr('shape-rendering', 'crispEdges')
+			m.boxplot.hline = m.g.append('line').attr('stroke', profile.color).attr('shape-rendering', 'crispEdges')
+			m.boxplot.linew1 = m.g.append('line').attr('stroke', profile.color).attr('shape-rendering', 'crispEdges')
+			m.boxplot.linew2 = m.g.append('line').attr('stroke', profile.color).attr('shape-rendering', 'crispEdges')
 			m.boxplot.box = m.g
 				.append('rect')
 				.attr('fill', 'white')
 				.attr('stroke', profile.color)
 				.attr('shape-rendering', 'crispEdges')
-			m.boxplot.linep50 = m.g
-				.append('line')
-				.attr('stroke', profile.color)
-				.attr('shape-rendering', 'crispEdges')
+			m.boxplot.linep50 = m.g.append('line').attr('stroke', profile.color).attr('shape-rendering', 'crispEdges')
 		}
 		// outliers
 		if (data.out) {
 			for (const d of data.out) {
-				const circle = m.g
-					.append('circle')
-					.attr('stroke', profile.color)
-					.attr('fill', 'white')
-					.attr('fill-opacity', 0)
+				const circle = m.g.append('circle').attr('stroke', profile.color).attr('fill', 'white').attr('fill-opacity', 0)
 				m.boxplot.out.push({
 					value: d.value,
 					circle: circle
@@ -844,9 +792,7 @@ function factorprofile_genevalue_updatescale(obj, profile) {
 		max = Math.max(max, g.max)
 	}
 
-	const scale = scaleLinear()
-		.domain([min, max])
-		.range([0, profile.width])
+	const scale = scaleLinear().domain([min, max]).range([0, profile.width])
 
 	const h = obj.motifrowheight - 2
 
@@ -863,10 +809,7 @@ function factorprofile_genevalue_updatescale(obj, profile) {
 				const p25 = scale(r.p25)
 				const p50 = scale(r.p50)
 				const p75 = scale(r.p75)
-				bp.hline
-					.transition()
-					.attr('x1', w1)
-					.attr('x2', w2)
+				bp.hline.transition().attr('x1', w1).attr('x2', w2)
 				bp.linew1
 					.transition()
 					.attr('x1', w1)
@@ -902,11 +845,7 @@ function factorprofile_genevalue_updatescale(obj, profile) {
 	}
 
 	client.axisstyle({
-		axis: profile.axisg.transition().call(
-			axisTop()
-				.scale(scale)
-				.ticks(4)
-		),
+		axis: profile.axisg.transition().call(axisTop().scale(scale).ticks(4)),
 		showline: 1
 	})
 }

@@ -1,9 +1,8 @@
 import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import { renderSandboxFormDiv } from '../dom/sandbox.ts'
-import { scaleLog, scaleLinear } from 'd3-scale'
+import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
-import { format as d3format } from 'd3-format'
 import blocklazyload from './block.lazyload'
 import { d3lasso } from '../common/lasso'
 

@@ -1,8 +1,7 @@
 import { select as d3select } from 'd3-selection'
 import { format as d3format } from 'd3-format'
-import { axisTop, axisLeft, axisRight } from 'd3-axis'
+import { axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from '#shared/common'
 import * as client from './client'
 import { vcf_m_color, divide_data_to_group } from './block.mds2.vcf'
 import { vcf_clickvariant } from './block.mds2.vcf.clickvariant'
@@ -124,9 +123,7 @@ function numeric_make(nm, r, _g, data, tk, block) {
 
 	setup_axis_scale(r, nm, tk)
 
-	const numscale = scaleLinear()
-		.domain([nm.minvalue, nm.maxvalue])
-		.range([0, nm.axisheight])
+	const numscale = scaleLinear().domain([nm.minvalue, nm.maxvalue]).range([0, nm.axisheight])
 
 	// set m._y
 	for (const d of data) {
@@ -164,7 +161,7 @@ function numeric_make(nm, r, _g, data, tk, block) {
 				.text(mnamegetter(m.mname))
 				.attr('font-family', client.font)
 				.attr('font-size', m.radius * 2 - 2)
-				.each(function() {
+				.each(function () {
 					m.labwidth = this.getBBox().width
 				})
 				.remove()
@@ -266,7 +263,7 @@ function numeric_make(nm, r, _g, data, tk, block) {
 		.enter()
 		.append('g')
 		.attr('class', 'sja_skg2')
-		.each(function(d) {
+		.each(function (d) {
 			// compute radius for each group
 			d.g = this
 		})
@@ -299,7 +296,7 @@ function numeric_make(nm, r, _g, data, tk, block) {
 		.enter()
 		.append('g')
 		.attr('class', 'sja_aa_discg')
-		.each(function(m) {
+		.each(function (m) {
 			m.g = this
 		})
 
@@ -349,7 +346,7 @@ function numeric_make(nm, r, _g, data, tk, block) {
 	const textlabels = discg
 		.filter(m => m.labattop || m.labatbottom)
 		.append('text')
-		.each(function(m) {
+		.each(function (m) {
 			m.textlabel = this
 		})
 		.text(m => mnamegetter(m.mname))
@@ -649,7 +646,7 @@ function m_mouseover(m, nm, tk) {
 			.attr('font-size', fontsize)
 			.attr('font-family', client.font)
 			.text(w)
-			.each(function() {
+			.each(function () {
 				textw = Math.max(textw, this.getBBox().width)
 			})
 			.remove()
@@ -909,12 +906,8 @@ render axis
 		.remove()
 
 	// axis is inverse of numscale
-	const thisscale = scaleLinear()
-		.domain([nm.minvalue, nm.maxvalue])
-		.range([nm.axisheight, 0])
-	const thisaxis = axisLeft()
-		.scale(thisscale)
-		.ticks(4)
+	const thisscale = scaleLinear().domain([nm.minvalue, nm.maxvalue]).range([nm.axisheight, 0])
+	const thisaxis = axisLeft().scale(thisscale).ticks(4)
 	if (nm.isinteger) {
 		thisaxis.tickFormat(d3format('d'))
 		if (nm.maxvalue - nm.minvalue < 3) {
@@ -946,7 +939,7 @@ render axis
 	// axis label, text must wrap
 	// read the max tick label width first
 	let maxw = 0
-	tk.leftaxis_vcfrow.selectAll('text').each(function() {
+	tk.leftaxis_vcfrow.selectAll('text').each(function () {
 		maxw = Math.max(maxw, this.getBBox().width)
 	})
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw + 15)
@@ -965,7 +958,7 @@ render axis
 				.attr('y', y + (nm.dotwidth + 1) * i)
 				.attr('x', -(maxw + 15))
 				.text(text)
-				.each(function() {
+				.each(function () {
 					maxlabelw = Math.max(maxlabelw, this.getBBox().width + 15 + maxw)
 				})
 		})

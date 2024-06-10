@@ -7,7 +7,6 @@
 import { scaleLinear } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import { rgb as d3rgb } from 'd3-color'
-import { transition } from 'd3-transition'
 import * as common from '#shared/common'
 import { set_base_zindex } from '#common/globals'
 import { dofetch, dofetch2, dofetch3 } from '../common/dofetch'

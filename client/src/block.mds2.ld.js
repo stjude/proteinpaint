@@ -1,4 +1,3 @@
-import * as common from '#shared/common'
 import * as client from './client'
 import { make_one_checkbox } from '../dom/checkbox'
 import { scaleLinear } from 'd3-scale'
@@ -43,7 +42,7 @@ returns sum of heights of LD panels
 			.attr('font-size', block.labelfontsize)
 			.attr('x', block.tkleftlabel_xshift)
 			.attr('text-anchor', 'end')
-			.each(function() {
+			.each(function () {
 				tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 			})
 
@@ -65,10 +64,7 @@ returns sum of heights of LD panels
 			}
 
 			if (r.img) {
-				g.append('image')
-					.attr('width', r.width)
-					.attr('height', r.img.height)
-					.attr('xlink:href', r.img.src)
+				g.append('image').attr('width', r.width).attr('height', r.img.height).attr('xlink:href', r.img.src)
 				rowheight = Math.max(rowheight, r.img.height)
 				continue
 			}
@@ -95,11 +91,7 @@ export function may_create_ldlegend(tk, block) {
 	if (!tk.ld) return
 	const row = tk.legend.table.append('tr')
 	// td1
-	row
-		.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.3)
-		.html('LD r<sup>2</sup>')
+	row.append('td').style('text-align', 'right').style('opacity', 0.3).html('LD r<sup>2</sup>')
 
 	// td2
 	const td = row.append('td').style('padding', '10px')
@@ -165,10 +157,7 @@ export function may_create_ldlegend(tk, block) {
 			select.append('option').text(ld.name)
 		}
 
-		const colorbardiv = div
-			.append('div')
-			.style('display', 'none')
-			.style('margin-left', '10px')
+		const colorbardiv = div.append('div').style('display', 'none').style('margin-left', '10px')
 
 		const colorlst = []
 		for (let i = 0; i <= 1; i += 0.1) {
@@ -185,27 +174,14 @@ export function may_create_ldlegend(tk, block) {
 				.attr('transform', 'translate(' + xpad + ',' + axisheight + ')')
 				.call(
 					axisTop()
-						.scale(
-							scaleLinear()
-								.domain([0, 1])
-								.range([0, axiswidth])
-						)
+						.scale(scaleLinear().domain([0, 1]).range([0, axiswidth]))
 						.ticks(4)
 				),
 			fontsize: 12
 		})
-		const grad = svg
-			.append('defs')
-			.append('linearGradient')
-			.attr('id', 'grad')
-		grad
-			.append('stop')
-			.attr('offset', '0%')
-			.attr('stop-color', tk.ld.overlay.color_0)
-		grad
-			.append('stop')
-			.attr('offset', '100%')
-			.attr('stop-color', tk.ld.overlay.color_1)
+		const grad = svg.append('defs').append('linearGradient').attr('id', 'grad')
+		grad.append('stop').attr('offset', '0%').attr('stop-color', tk.ld.overlay.color_0)
+		grad.append('stop').attr('offset', '100%').attr('stop-color', tk.ld.overlay.color_1)
 		svg
 			.append('rect')
 			.attr('x', xpad)
