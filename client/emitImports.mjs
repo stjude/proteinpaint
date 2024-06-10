@@ -17,7 +17,7 @@ const cwd = process.cwd()
 const __dirname = import.meta.dirname
 
 const specs = glob.sync('./**/test/*.spec.*', { cwd: __dirname })
-console.log(`import { matchSpecs } from './matchSpecs.mjs'`)
+console.log(`import { matchSpecs } from './matchSpecs.js'`)
 // do not await on the dynamic import(), tape seems to collects all tests
 // within a given time so that they can all run in sequence, otherwise
 // if awaited, only the first spec file will run (tape seems to consider 

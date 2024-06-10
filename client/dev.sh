@@ -16,6 +16,6 @@ node \
 	--watch-path=./tracks \
 	--watch-path=./types \
 	--watch-path=./package.json \
-	--watch-path=./test/matchSpecs.mjs \
+	--watch-path=./test/matchSpecs.js \
 	--watch-path=./emitImports.mjs \
 	esbuild.config.cjs
