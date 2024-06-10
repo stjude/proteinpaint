@@ -4,7 +4,7 @@ import { setDensityPlot, DensityData } from './density'
 import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
 import { Tabs } from '../../dom/toggleButtons'
 import { make_radios } from '../../dom/radiobutton'
-import { getPillNameDefault } from '../termsetting'
+import { fillTermWrapper, getPillNameDefault } from '../termsetting'
 import { convertViolinData } from '../../filter/tvs.numeric'
 import { PillData, RangeEntry, NumericQ } from '../../shared/types/index'
 import { violinRenderer } from '../../dom/violinRenderer.js'
@@ -74,16 +74,17 @@ async function showBinsMenu(self, div: any) {
 	div.append('div').style('padding', '10px').style('text-align', 'center').html('Getting distribution data ...<br/>')
 	try {
 		if (!self.vocabApi) throw `Missing .vocabApi{} [numeric.discrete showBinsMenu()]`
-
+		const tw = await fillTermWrapper({ term: self.term, q: self.q }, self.vocabApi) //the q for the discrete mode may need to be initialized
 		const d = await self.vocabApi.getViolinPlotData(
 			{
-				term: { term: self.term, q: self.q },
+				term: tw,
 				filter: self.filter,
 				svgw: self.num_obj.plot_size.width / window.devicePixelRatio,
 				strokeWidth: 0.2
 			},
 			self.opts.getBodyParams?.()
 		)
+		self.q = JSON.parse(JSON.stringify(tw.q)) //copy the q from the termwrapper to be able to change it, the tw q is readonly
 		self.num_obj.density_data = convertViolinData(d)
 	} catch (err) {
 		console.log(err)
