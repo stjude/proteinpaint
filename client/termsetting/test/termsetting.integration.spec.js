@@ -3,7 +3,7 @@ import * as d3s from 'd3-selection'
 import { getExample } from '../../termdb/test/vocabData'
 import { vocabInit } from '../../termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
-import { termsettingInit, termsetting_fill_q } from '#termsetting'
+import { termsettingInit } from '#termsetting'
 import { sleep, detectLst, detectGte, whenGone } from '../../test/test.helpers'
 /*
 Tests:

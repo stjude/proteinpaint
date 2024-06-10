@@ -1698,7 +1698,7 @@ tape('Rx filter state inputs', async test => {
 	TODO: Write a helper function to test rx components 
 	independent of apps */
 
-	const filterData = {
+	let filterData = {
 		type: 'tvslst',
 		in: true,
 		join: '',

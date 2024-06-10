@@ -1,14 +1,21 @@
+import minimatch from 'minimatch'
 window.process = require('process')
-const params = getParams()
+const params = getParams()//; console.log(3, params)
 
-export function matchSpecs(filepath) {
-	if (!params.dir && !params.dir) return false
-	const f = filepath.split('/')
-	const fname = f.pop()
-	const fpath = f.join('/')
-	const matchedDir = !params.dir || fpath.startsWith('./' + params.dir)
-	const matchedName = !params.name || fname.startsWith(params.name)
-	return matchedDir && matchedName
+const CURRSPECDIR = params.dir ? `./${params.dir}` : '.'
+const NESTEDSPECDIR = params.dir ? `./**/${params.dir}` : './**'
+const SPECNAME = params.name || '*'
+const exclude = 'exclude' in params ? params.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
+const patterns = [
+	`${CURRSPECDIR}/test/${SPECNAME}.spec.*s`,
+	`${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`,
+]; console.log(patterns)
+
+export function matchSpecs(filepath) { console.log(filepath)
+	for(const pattern of patterns) {  if (filepath.includes('integration')) console.log(12, minimatch(filepath, pattern), pattern, filepath)
+		if (pattern && minimatch(filepath, pattern)) return true
+	}
+	return false
 }
 
 function getParams() {
