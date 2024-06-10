@@ -47,19 +47,25 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 	// may exit now if this function is meant to just
 	// create a missing target file and not overwrite
 	if (opts.name == '?') return
-
 	const specs = findMatchingSpecs(opts)
+	// !!! TODO: deprecate this server route !!!
+	// With esbuild esm build, all spec files can be bundled quickly for the browser,
+	// and the spec pattern matching/filtering can be done easily on the client-side
+	// bundled internals.js code. Previously, bundling all the spec files can take a while
+	// with webpack, so a server route was triggered to generate only minimal requires()
+	// in internals.js
+	//
 	// the import code to write to the target file
-	const importCode = specs.matched.map(file => `import '../${file}'`).join('\n')
+	// const importCode = specs.matched.map(file => `import '../${file}'`).join('\n')
 	// the current import code as found in the target file
-	const currImportCode = getImportedSpecs(targetFile)
-	if (currImportCode != importCode || !currImportCode.includes(importCode)) {
-		const prevModTime = await getModTime(wpCompileTime)
-		console.log(`Writing ${specs.n} import(s) of test specs to '${targetFile}'.`)
-		// editing the targetFile would trigger rebundling by webpack
-		fs.writeFileSync(targetFile, importCode, { encoding: 'utf8' })
-		await monitorBundling(prevModTime)
-	}
+	// const currImportCode = getImportedSpecs(targetFile)
+	// if (currImportCode != importCode || !currImportCode.includes(importCode)) {
+	// 	const prevModTime = await getModTime(wpCompileTime)
+	// 	console.log(`Writing ${specs.n} import(s) of test specs to '${targetFile}'.`)
+	// 	// editing the targetFile would trigger rebundling by webpack
+	// 	fs.writeFileSync(targetFile, importCode, { encoding: 'utf8' })
+	// 	await monitorBundling(prevModTime)
+	// }
 	return specs
 }
 

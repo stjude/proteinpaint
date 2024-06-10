@@ -42,6 +42,8 @@
   }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src='./front.app.js'></script>
+  <script src='./dist/test/internals.js' type='module'></script>
 </head>
 <body>
 <div class='docs-subheader'>
@@ -51,15 +53,15 @@
   <span>For faster repeated reload of unchanged test code, add a <span class='code-snippet'>reuse=1</span> parameter to the URL.</span>
 </div>
 <div style='position: absolute; right: 20px; margin: 20px; font-family: Menlo, Courier;'>
-  <button><a href='testrun.html?name=*.unit'>All unit tests</a></button>
-  <button><a href='testrun.html?name=*.integration'>All integration tests</a></button>
+  <button><a href='?name=*.unit'>All unit tests</a></button>
+  <button><a href='?name=*.integration'>All integration tests</a></button>
   <span> or </span>
   <span class='code-snippet'>npm run test:integration --workspace=client</span>
 </div>
 <div style='padding: 5px 30px'>
   <h1>
     <span id='testrun-back-arrows' style='display: none'>&lt;&lt; </span>
-    <a href='testrun.html' style='text-decoration: underline;'>client/</a>
+    <a href='specrun.html' style='text-decoration: underline;'>client/</a>
     <span id='testrun-curr-test' style='font-weight: 400; color: #aaa'></span>
   </h1>
   <div id='testrun-loading-div'></div>
@@ -111,7 +113,7 @@ async function showAvailableSpecs() {
         dirDiv
           .append('h3')
           .append('a')
-          .attr('href', d => `testrun.html?dir=${dir.path}`)
+          .attr('href', d => `?dir=${dir.path}`)
           .text(dirName)
 
         dirDiv.append('div')
@@ -123,7 +125,7 @@ async function showAvailableSpecs() {
             .attr('class', 'testrun-file-div')
             .style('font-weight', d => d.isActive ? 600 : '')
             .append('a')
-            .attr('href', d => `testrun.html?dir=${d.dir}&name=${d.name}`)
+            .attr('href', d => `?dir=${d.dir}&name=${d.name}`)
             .style('color', d => d.isActive ? activeColor : '')
             .text(d => d.name)
       })
@@ -169,27 +171,28 @@ async function triggerImportSpecs(params) {
   // }
 
   try {
-    // const opts = {
-    //   method: 'POST',
-    //   headers: {
-    //     'content-type': 'application/json'
-    //   },
-    //   body: JSON.stringify(params)
-    // }
-    // loadingDiv.html('Loading tests ...')
-    // const specs = await fetch('/specs', opts).then(r => r.json())
+    const opts = {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(params)
+    }
+    loadingDiv.html('Loading tests ...')
+    const specs = await fetch('/specs', opts).then(r => r.json())
     // if (specs.error) {
     //   loadingDiv.html(`Error: ${specs.error}`)
     // } else {
     //   console.log('Specs: ', specs)
-      currTest.text(specs.pattern.split('/client/')[1])
+      //currTest.text(specs.pattern.split('/client/')[1])
       //if (specs.n) await sleep(specs*10)
-      d3.select('body')
-        .append('script')
-        .attr('src', '/front.app.js')
-        .on('load', async ()=>{
-          runproteinpaint({noheader: true, testInternals: true})
-        })
+      // d3.select('body')
+      //   .append('script')
+      //   .attr('src', '/front.app.js')
+      //   .on('load', async ()=>{
+      //     runproteinpaint({noheader: true, testInternals: true})
+      //   })
+      // runproteinpaint({noheader: true})
       const df = specs.exclude === '_x_.' ? ' (default)' : ''
       const info = `[exclude glob='${specs.exclude}'${df}]`
       loadingDiv.html(`See the test results in the browser console. ${info}`)

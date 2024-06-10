@@ -7,7 +7,7 @@ const { execSync } = require('child_process')
 execSync(`node ${__dirname}/emitImports.mjs > ${__dirname}/test/internals.js`)
 
 build({
-	entryPoints: ['./src/app.js'],
+	entryPoints: ['./src/app.js', './test/internals.js'],
 	bundle: true,
 	platform: 'browser',
 	outdir: path.join(__dirname, './dist'),
