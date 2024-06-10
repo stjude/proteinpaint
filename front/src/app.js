@@ -1,7 +1,24 @@
+// KEEP THIS ppsrc DECLARATION AT THE TOP SCOPE !!!
+// need to know the script src when pp is first loaded
+// the source context may be lost after the pp script is loaded
+// and a different script gets loaded in the page
+const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
+const hostpath = ppsrc.replace('front.app.js', '')
+
+// load the bundled css
+let link = document.createElement('link')
+link.rel = 'stylesheet'
+// NOTE: hostpath is required when PP is used by an external embedder/portal/html
+link.href = `${hostpath}/dist/app.css`
+document.head.appendChild(link)
+
 window.runproteinpaint = async arg => {
 	// requires the following symlink to be present:
 	// public/bin -> proteinpaint-client/dist symlink
-	const { runproteinpaint } = await import('../dist/app.js')
+	//
+	// NOTE: hostpath is required when PP is used by an external embedder/portal/html
+	//
+	const { runproteinpaint } = await import(`${hostpath}/dist/app.js`)
 	if (arg) return await runproteinpaint(arg)
 	window.runproteinpaint = runproteinpaint
 }
