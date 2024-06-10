@@ -18,18 +18,12 @@ import { Menu } from '#dom/menu'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { InputSearch } from '../dom/search.ts'
 import { findAppDrawerElements, findgenelst, findgene2paint } from './omniSearch'
-import './style.css' // will be bundled separately as a css file
+// depending on the bundler, stylesheets may be outputted separately as a css file
+// and thus require the embedder or runpp caller to manually include a link rel='stylesheet',
+// or the bundled code itself may dynamically attach that link stylesheet
+import './style.css'
 
-// !!! TODO !!!
-// - this may not work if this is used directly as an esm module
-// - and with a different bundler, such as in GFF
-// load the bundled css
-let link = document.createElement('link')
-link.rel = 'stylesheet'
-link.href = './dist/app.css'
-document.head.appendChild(link)
 /*
-
 exports a global function runproteinpaint()
 will be called for launching anything from pp
 returns a promise that resolve to something e.g. block
@@ -270,6 +264,7 @@ function setHostUrl(arg, app) {
 	if (!app.hostURL) {
 		if (ppsrc.includes('://')) {
 			// use the script source as the host URL
+			// TODO: this may not work if the pp server endpoints is exposed from a non-root basepath
 			app.hostURL = ppsrc.split('://')[0] + '://' + ppsrc.split('://')[1].split('/')[0]
 		} else {
 			app.hostURL = ''
@@ -761,10 +756,8 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.testInternals && app.debugmode) {
-		console.log(763)
 		// !!! TODO: configure rollup to ignore this import
 		await import('../test/internals.js')
-		console.log(765)
 	}
 	if (arg.tkui) {
 		launch_tkUIs(arg, app)
