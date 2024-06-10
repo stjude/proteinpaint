@@ -67,7 +67,9 @@
   <div id='testrun-loading-div'></div>
 </div>
 <div id='main-div'></div>
-<script>
+<script type='module'>
+import { runTests } from './dist/test/internals.js'
+
 const backArrows = d3.select('#testrun-back-arrows')
 const currTest = d3.select('#testrun-curr-test')
 const loadingDiv = d3.select('#testrun-loading-div')
@@ -196,6 +198,7 @@ async function triggerImportSpecs(params) {
       const df = specs.exclude === '_x_.' ? ' (default)' : ''
       const info = `[exclude glob='${specs.exclude}'${df}]`
       loadingDiv.html(`See the test results in the browser console. ${info}`)
+      runTests()
     //}
   } catch(e) {
     throw e

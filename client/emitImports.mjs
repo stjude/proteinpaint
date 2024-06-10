@@ -18,9 +18,10 @@ const __dirname = import.meta.dirname
 
 const specs = glob.sync('./**/test/*.spec.*', { cwd: __dirname })
 console.log(`import { matchSpecs } from './matchSpecs.js'`)
+console.log(`export function runTests() {`)
 // do not await on the dynamic import(), tape seems to collects all tests
 // within a given time so that they can all run in sequence, otherwise
 // if awaited, only the first spec file will run (tape seems to consider 
 // all tests done at that point)
-specs.forEach(f => console.log(`if (matchSpecs('${f}')) import('.${f}')`))
-
+specs.forEach(f => console.log(`\tif (matchSpecs('${f}')) import('.${f}')`))
+console.log(`}`)

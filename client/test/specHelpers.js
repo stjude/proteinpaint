@@ -121,7 +121,7 @@ function getImportedSpecs(targetFile, format = '') {
 		if (!importedSpecs) return []
 		const specs = importedSpecs
 			.split('\n')
-			.filter(line => line != '')
+			.filter(line => line.includes('import'))
 			.map(line => line.split(' ')[1].slice(1, -1))
 		return specs
 	} else {
