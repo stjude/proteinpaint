@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- show a border on select dropdown elements, within sja scope
+
 DevOps:
 - replace client dev scripts and html to use esbuild-bundled code
 
