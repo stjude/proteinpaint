@@ -9,7 +9,7 @@ const hostpath = ppsrc.replace('front.app.js', '')
 let link = document.createElement('link')
 link.rel = 'stylesheet'
 // NOTE: hostpath is required when PP is used by an external embedder/portal/html
-link.href = `${hostpath}/dist/src/app.css`
+link.href = `${hostpath}/dist/app.css`
 document.head.appendChild(link)
 
 window.runproteinpaint = async arg => {
@@ -18,7 +18,7 @@ window.runproteinpaint = async arg => {
 	//
 	// NOTE: hostpath is required when PP is used by an external embedder/portal/html
 	//
-	const { runproteinpaint } = await import(`${hostpath}/dist/src/app.js`)
+	const { runproteinpaint } = await import(`${hostpath}/dist/app.js`)
 	if (arg) return await runproteinpaint(arg)
 	window.runproteinpaint = runproteinpaint
 }

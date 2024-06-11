@@ -16,6 +16,7 @@ const ctx = await context({
 	bundle: true,
 	platform: 'browser',
 	outdir: path.join(__dirname, './dist'),
+  outbase: 'src',
 	//chunkNames: '[hash].app',
 	sourcemap: true,
 	splitting: true,
