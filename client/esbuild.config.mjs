@@ -9,7 +9,7 @@ execSync(`node ${__dirname}/emitImports.mjs > ${__dirname}/test/internals-esm.js
 
 const ctx = await context({
 	entryPoints: [
-    './src/style.css', // TODO: this is supposed to prevent duplicate css files, not working
+    './src/style-normalize-unscoped.css', // TODO: this is supposed to prevent duplicate css files, not working
     './src/app.js', 
     './test/internals-esm.js'
   ],
@@ -25,6 +25,7 @@ const ctx = await context({
 	plugins: [
     replaceNodeBuiltIns(),
     dirnamePlugin(),
+    cssLoader(),
     logRebuild()
   ],
   logLevel: 'error' // !!! TODO: also show warnings !!!
@@ -99,5 +100,22 @@ function dirnamePlugin() {
         }
       });
     },
+  }
+}
+
+function cssLoader() {
+  return {
+    name: 'cssLoader',
+    setup(build) {
+      build.onLoad({ filter: /\.css$/ }, async (args) => {
+        const css = fs.readFileSync(args.path, 'utf8');
+        const contents = `
+          const styles = new CSSStyleSheet();
+          styles.replaceSync(\`${css.replaceAll(/[`$]/gm, '\\$&')}\`);
+          document.adoptedStyleSheets.push(styles)
+        `;
+        return { contents };
+      });
+    }
   }
 }

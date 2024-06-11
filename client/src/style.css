@@ -5,8 +5,10 @@
     style-normalize-unscoped.css only if it's known to not conflict in
     the embedder portal
 */
+/* directly import these in src/app.js so that they will be processed as CSSStyleSheet
 @import './style-normalize-scoped.css';
 @import 'highlight.js/styles/github.css';
+*/
 /*
 html {
     height:100%;

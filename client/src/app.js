@@ -1,3 +1,9 @@
+// depending on the bundler, stylesheets may be outputted separately as a css file
+// and thus require the embedder or runpp caller to manually include a link rel='stylesheet',
+// or the bundled code itself may dynamically attach that link stylesheet
+import './style-normalize-scoped.css'
+import 'highlight.js/styles/github.css'
+import './style.css'
 import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import * as client from './client'
 import { dofetch3, setAuth } from '#common/dofetch'
@@ -18,10 +24,6 @@ import { Menu } from '#dom/menu'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { InputSearch } from '../dom/search.ts'
 import { findAppDrawerElements, findgenelst, findgene2paint } from './omniSearch'
-// depending on the bundler, stylesheets may be outputted separately as a css file
-// and thus require the embedder or runpp caller to manually include a link rel='stylesheet',
-// or the bundled code itself may dynamically attach that link stylesheet
-import './style.css'
 
 /*
 exports a global function runproteinpaint()
