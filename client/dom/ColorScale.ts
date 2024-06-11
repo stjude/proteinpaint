@@ -39,7 +39,7 @@ export class ColorScale {
 	endColor: string
 	/** Required */
 	data: number[]
-	/** Optional but recommendend. Sets the position of the color scale in the holder. Default is 0,0. */
+	/** Optional but recommendend. Sets the position of the color scale (i.e. svg) in the holder. Default is 0,0. */
 	position: string
 	/** Optional but recommendend. Attributes for the svg. */
 	svg: {
