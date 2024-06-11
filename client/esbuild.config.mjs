@@ -39,10 +39,11 @@ function logRebuild() {
     setup({ onStart, onEnd }) {
       var t
       onStart(() => {
+        console.log('\n--- starting client rebuild... ---\n')
         t = Date.now()
       })
       onEnd(() => {
-        console.log('rebuild finished in', Date.now() - t, 'ms')
+        console.log('\n--- client rebuild finished in', Date.now() - t, 'ms ---\n')
       })
     }
   }
