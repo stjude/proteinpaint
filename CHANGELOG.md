@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+DevOps:
+- replace client dev scripts and html to use esbuild-bundled code
+
 
 ## 2.62.0
 
