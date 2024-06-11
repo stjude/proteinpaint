@@ -5,12 +5,13 @@
 const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
 const hostpath = ppsrc.replace('front.app.js', '')
 
+// NOTE: stylesheets are currently handled by a custom esbuild plugin
 // load the bundled css
-let link = document.createElement('link')
-link.rel = 'stylesheet'
-// NOTE: hostpath is required when PP is used by an external embedder/portal/html
-link.href = `${hostpath}/dist/app.css`
-document.head.appendChild(link)
+// let link = document.createElement('link')
+// link.rel = 'stylesheet'
+// // NOTE: hostpath is required when PP is used by an external embedder/portal/html
+// link.href = `${hostpath}/dist/app.css`
+// document.head.appendChild(link)
 
 window.runproteinpaint = async arg => {
 	// requires the following symlink to be present:
