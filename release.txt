@@ -1,1 +1,2 @@
-
+Fixes:
+- show a border on select dropdown elements, within sja scope

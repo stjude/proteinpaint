@@ -148,6 +148,7 @@ by normalize.css are covered here
     padding-right: 30px; /* padding between text and arrow */
     background-size: auto;
     background-position: right;
+    border: 1px solid #ccc;
 }
 
 .sja_root_holder textarea,
