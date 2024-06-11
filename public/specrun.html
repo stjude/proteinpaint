@@ -86,9 +86,10 @@ if (!Object.keys(params).length) {
 }
 
 function updateNavCrumbs(display, params={}) {
-  const dir = params.dir ? `/${params.dir}` : '/**/test'
-  const name = params.name ? `${params.name}.spec.js` : '*'
-  currTest.style('display', display).text(`${dir}/${name}`)
+  const NESTEDSPECDIR = params.dir ? `**/${params.dir}` : '**'
+  const SPECNAME = params.name || '*'
+  const pattern = `${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`
+  currTest.style('display', display).text(pattern)
   backArrows.style('display', display)
   if (display == 'none') loadingDiv.html(
     `Click on a directory or file name to trigger a test. ` +
@@ -196,7 +197,7 @@ async function triggerImportSpecs(params) {
       //     runproteinpaint({noheader: true, testInternals: true})
       //   })
       // runproteinpaint({noheader: true})
-    const internals = await import('./dist/test/internals-esm.js')
+    const internals = await import('./dist/_.._/test/internals-esm.js')
     const specs = {exclude: '', matched: []}//internals.getSpecs()}
     const df = specs.exclude === '_x_.' ? ' (default)' : ''
     const info = `[exclude glob='${specs.exclude}'${df}]`

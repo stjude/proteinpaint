@@ -17,6 +17,7 @@ const cwd = process.cwd()
 const __dirname = import.meta.dirname
 
 const specs = glob.sync('./**/test/*.spec.*', { cwd: __dirname })
+
 console.log(`import { matchSpecs, specsMatched } from './matchSpecs.js'`)
 console.log(`import tape from 'tape'`)
 console.log(`
@@ -24,13 +25,13 @@ console.log(`
 // to prevent an early-loaded and very fast test from closing the
 // tape harness and ignoring late-loaded tests 
 let assertAllTestLoaded
-tape('all imported specs', test => {
+tape('loading of all import(spec)', test => {
 	const exp = 5000
 	test.timeoutAfter(exp)
 	const start = Date.now()
 	test.plan(1)
 	assertAllTestLoaded = () => {
-		if (Date.now() - start < exp) test.pass('should finish loading before this assertion is called')
+		if (Date.now() - start < exp) test.pass('should finish before this assertion is called')
 		// else the timeoutAfter will be triggered without an assertion
 		test.end()
 	}
