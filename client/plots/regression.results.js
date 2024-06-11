@@ -1,11 +1,12 @@
 import { sayerror } from '../dom/sayerror.ts'
 import { scaleLinear, scaleLog } from 'd3-scale'
-import { axisBottom, axisTop } from 'd3-axis'
-import { axisstyle } from '#dom/axisstyle'
-import { first_genetrack_tolist } from '#common/1stGenetk'
+import { axisBottom } from 'd3-axis'
+import { axisstyle } from '../dom/axisstyle'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
-import { drawBoxplot } from '#dom/boxplot'
+import { drawBoxplot } from '../dom/boxplot'
 import { makeSsmLink } from '../dom/ssmLink.ts'
+import { ColorScale } from '../dom/ColorScale'
 
 /*************
 can dynamically add following attributes
@@ -1254,39 +1255,28 @@ export function showLDlegend(div, colorScale) {
 	for (let i = 0; i <= 1; i += 0.1) {
 		colorlst.push(colorScale(i))
 	}
-	const svg = colorbardiv.append('svg')
+
 	const axisheight = 20
 	const barheight = 15
 	const xpad = 10
 	const axiswidth = 150
-	axisstyle({
-		axis: svg
-			.append('g')
-			.attr('transform', 'translate(' + xpad + ',' + axisheight + ')')
-			.call(
-				axisTop()
-					.scale(scaleLinear().domain([0, 1]).range([0, axiswidth]))
-					.ticks(4)
-			),
-		fontsize: 12
+
+	const colorScaleElem = new ColorScale({
+		holder: colorbardiv,
+		data: [0, 1],
+		topTicks: true,
+		width: xpad * 2 + axiswidth,
+		height: axisheight + barheight,
+		barheight,
+		barwidth: axiswidth,
+		fontSize: 12,
+		startColor: colorlst[0],
+		midColor: colorlst[colorlst.length - 1],
+		endColor: colorlst[colorlst.length - 1],
+		position: `${xpad},${axisheight}`,
+		tickSize: 4
 	})
-
-	const id = 'grad' + Math.random()
-	const grad = svg.append('defs').append('linearGradient').attr('id', id)
-	grad.append('stop').attr('offset', '0%').attr('stop-color', colorlst[0])
-	grad
-		.append('stop')
-		.attr('offset', '100%')
-		.attr('stop-color', colorlst[colorlst.length - 1])
-	svg
-		.append('rect')
-		.attr('x', xpad)
-		.attr('y', axisheight)
-		.attr('width', axiswidth)
-		.attr('height', barheight)
-		.attr('fill', `url(#${id})`)
-
-	svg.attr('width', xpad * 2 + axiswidth).attr('height', axisheight + barheight)
+	colorScaleElem.render()
 }
 
 function getMtooltipValues(m, regressionType) {
