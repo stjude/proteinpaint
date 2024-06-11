@@ -1,1 +1,2 @@
-
+DevOps:
+- replace client dev scripts and html to use esbuild-bundled code

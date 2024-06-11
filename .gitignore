@@ -30,6 +30,8 @@ server/src/hicstat.js
 server/package*/*
 
 **/public/bin/*
+!public/bin/proteinpaint.js
+!public/bin/dist
 public/tmp/*
 /container/deps/public/cards/
 public/data/*

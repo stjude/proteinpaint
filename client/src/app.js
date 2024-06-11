@@ -234,12 +234,6 @@ runproteinpaint.getStatus = async function getStatus(outputAs = '') {
 		.catch(console.error)
 }
 
-// KEEP THIS ppsrc DECLARATION AT THE TOP SCOPE !!!
-// need to know the script src when pp is first loaded
-// the source context may be lost after the pp script is loaded
-// and a different script gets loaded in the page
-const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
-
 function setHostUrl(arg, app) {
 	// attaching hostURL to app will allow different hostURLs for each holder
 	// when calling runproteinpaint() multiple times in the same page
@@ -264,13 +258,10 @@ function setHostUrl(arg, app) {
 	}
 
 	if (!app.hostURL) {
-		if (ppsrc.includes('://')) {
-			// use the script source as the host URL
-			// TODO: this may not work if the pp server endpoints is exposed from a non-root basepath
-			app.hostURL = ppsrc.split('://')[0] + '://' + ppsrc.split('://')[1].split('/')[0]
-		} else {
-			app.hostURL = ''
-		}
+		// assume that this script is loaded from a full image service,
+		// with the expected server base path is the grandparent path of /bin/dist
+		app.hostURL = import.meta.url.split('/bin/dist')[0]
+		console.log(263, app.hostURL, import.meta.url)
 	}
 
 	// strip trailing slash
@@ -757,10 +748,6 @@ async function parseEmbedThenUrl(arg, app) {
 		return await launchmass(arg, app)
 	}
 
-	if (arg.testInternals && app.debugmode) {
-		// !!! TODO: configure rollup to ignore this import
-		// await import('../test/internals.js')
-	}
 	if (arg.tkui) {
 		launch_tkUIs(arg, app)
 	}

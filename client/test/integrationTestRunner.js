@@ -5,7 +5,7 @@ export function testrunproteinpaint() {
 }
 
 async function importIntegrationTests() {
-	var context = require.context('../', true, /\.integration.spec.js$/)
+	var context = require.context('../', true, /\.integration.spec.(js|ts)$/)
 	context.keys().forEach(context)
 	module.exports = context
 }

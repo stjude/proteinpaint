@@ -94,7 +94,7 @@ jobs:
           ./run.sh ppserver:latest
           sleep 10
           cd ..
-          xvfb-run --auto-servernum npm run test:integration-ci
+          xvfb-run --auto-servernum npm run test:integration
 
       - name: Get current time
         uses: josStorer/get-current-time@v2.0.2

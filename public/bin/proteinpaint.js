@@ -1,0 +1,1 @@
+../../front/src/app.js
