@@ -75,9 +75,12 @@ export function setInteractivity(self) {
 			? [scale.invert(selection[0]), scale.invert(selection[1])]
 			: [scale.invert(selection[1]), scale.invert(selection[0])]
 
+		//Text shown above the options in the menu
+		const range2Show = `${start.toFixed(3)} < x < ${end.toFixed(3)}`
+
 		const options = [
 			{
-				label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
+				label: `Add filter`,
 				callback: getAddFilterCallback(t1, t2, self, plot, start, end)
 			}
 		]
@@ -88,12 +91,17 @@ export function setInteractivity(self) {
 				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
 			})
 		}
-		self.displayMenu(event, options, plot)
+		self.displayMenu(event, options, range2Show)
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.displayMenu = function (event, options, plot) {
+	self.displayMenu = function (event, options, range2Show) {
 		self.app.tip.d.selectAll('*').remove()
+
+		//For testing and debugging
+		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
+
+		self.app.tip.d.append('div').text(`Range: ${range2Show}`)
 
 		//show menu options for label clicking and brush selection
 		self.app.tip.d
@@ -109,7 +117,8 @@ export function setInteractivity(self) {
 				d.callback()
 				self.dom.tableHolder.style('display', 'none')
 			})
-		self.addEditColorToMenu(plot)
+		//Color picker available in the control panel
+		// self.addEditColorToMenu(plot)
 		self.app.tip.show(event.clientX, event.clientY)
 	}
 
