@@ -42,6 +42,7 @@
   }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src='./bin/proteinpaint.js'></script>
 </head>
 <body>
 <div class='docs-subheader'>
@@ -51,8 +52,8 @@
   <span>For faster repeated reload of unchanged test code, add a <span class='code-snippet'>reuse=1</span> parameter to the URL.</span>
 </div>
 <div style='position: absolute; right: 20px; margin: 20px; font-family: Menlo, Courier;'>
-  <button><a href='testrun.html?name=*.unit'>All unit tests</a></button>
-  <button><a href='testrun.html?name=*.integration'>All integration tests</a></button>
+  <button><a class='allTestsBtn' href='?name=*.unit'>All unit tests</a></button>
+  <button><a class='allTestsBtn' href='?name=*.integration'>All integration tests</a></button>
   <span> or </span>
   <span class='code-snippet'>npm run test:integration --workspace=client</span>
 </div>
@@ -66,6 +67,10 @@
 </div>
 <div id='main-div'></div>
 <script>
+const time = Date.now()
+d3.selectAll('.allTestsBtn').each(function() {
+  this.href += `&time=${time}`
+})
 const backArrows = d3.select('#testrun-back-arrows')
 const currTest = d3.select('#testrun-curr-test')
 const loadingDiv = d3.select('#testrun-loading-div')
@@ -81,9 +86,10 @@ if (!Object.keys(params).length) {
 }
 
 function updateNavCrumbs(display, params={}) {
-  const dir = params.dir ? `/${params.dir}` : '/**/test'
-  const name = params.name ? `${params.name}.spec.js` : '*'
-  currTest.style('display', display).text(`${dir}/${name}`)
+  const NESTEDSPECDIR = params.dir ? `**/${params.dir}` : '**'
+  const SPECNAME = params.name || '*'
+  const pattern = `${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`
+  currTest.style('display', display).text(pattern)
   backArrows.style('display', display)
   if (display == 'none') loadingDiv.html(
     `Click on a directory or file name to trigger a test. ` +
@@ -111,7 +117,7 @@ async function showAvailableSpecs() {
         dirDiv
           .append('h3')
           .append('a')
-          .attr('href', d => `testrun.html?dir=${dir.path}`)
+          .attr('href', d => `?dir=${dir.path}&time=${time}`)
           .text(dirName)
 
         dirDiv.append('div')
@@ -123,7 +129,7 @@ async function showAvailableSpecs() {
             .attr('class', 'testrun-file-div')
             .style('font-weight', d => d.isActive ? 600 : '')
             .append('a')
-            .attr('href', d => `testrun.html?dir=${d.dir}&name=${d.name}`)
+            .attr('href', d => `?dir=${d.dir}&name=${d.name}&time=${time}`)
             .style('color', d => d.isActive ? activeColor : '')
             .text(d => d.name)
       })
@@ -157,16 +163,16 @@ async function triggerImportSpecs(params) {
     if (!('exclude' in params)) params.exclude = ''
   }
   
-  if (params.reuse) {
-    d3.select('body')
-      .append('script')
-      .attr('src', '/bin/proteinpaint.js')
-      .on('load', async ()=>{
-        runproteinpaint({noheader: true, testInternals: true})
-      })
+  // if (params.reuse) {
+  //   d3.select('body')
+  //     .append('script')
+  //     .attr('src', '/bin/proteinpaint.js')
+  //     .on('load', async ()=>{
+  //       runproteinpaint({noheader: true, testInternals: true})
+  //     })
 
-    return
-  }
+  //   return
+  // }
 
   try {
     const opts = {
@@ -177,23 +183,25 @@ async function triggerImportSpecs(params) {
       body: JSON.stringify(params)
     }
     loadingDiv.html('Loading tests ...')
-    const specs = await fetch('/specs', opts).then(r => r.json())
-    if (specs.error) {
-      loadingDiv.html(`Error: ${specs.error}`)
-    } else {
-      console.log('Specs: ', specs)
-      currTest.text(specs.pattern.split('/client/')[1])
-      if (specs.n) await sleep(specs*10)
-      d3.select('body')
-        .append('script')
-        .attr('src', '/bin/proteinpaint.js')
-        .on('load', async ()=>{
-          runproteinpaint({noheader: true, testInternals: true})
-        })
-      const df = specs.exclude === '_x_.' ? ' (default)' : ''
-      const info = `[exclude glob='${specs.exclude}'${df}]`
-      loadingDiv.html(`See the test results in the browser console. ${info}`)
-    }
+    // const specs = await fetch('/specs', opts).then(r => r.json())
+    // if (specs.error) {
+    //   loadingDiv.html(`Error: ${specs.error}`)
+    // } else {
+    //   console.log('Specs: ', specs)
+      //currTest.text(specs.pattern.split('/client/')[1])
+      //if (specs.n) await sleep(specs*10)
+      // d3.select('body')
+      //   .append('script')
+      //   .attr('src', '/front.app.js')
+      //   .on('load', async ()=>{
+      //     runproteinpaint({noheader: true, testInternals: true})
+      //   })
+      // runproteinpaint({noheader: true})
+    const internals = await import('./dist/_.._/test/internals-esm.js')
+    const specs = {exclude: '', matched: []}//internals.getSpecs()}
+    const df = specs.exclude === '_x_.' ? ' (default)' : ''
+    const info = `[exclude glob='${specs.exclude}'${df}]`
+    loadingDiv.html(`See the test results in the browser console. ${info}`)
   } catch(e) {
     throw e
   }

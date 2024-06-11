@@ -3,7 +3,7 @@
 // the source context may be lost after the pp script is loaded
 // and a different script gets loaded in the page
 const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
-const hostpath = ppsrc.replace('front.app.js', '')
+const hostpath = ppsrc.replace('/proteinpaint.js', '')
 
 // NOTE: stylesheets are currently handled by a custom esbuild plugin
 // load the bundled css
@@ -20,7 +20,12 @@ window.runproteinpaint = async arg => {
 	// NOTE: hostpath is required when PP is used by an external embedder/portal/html
 	//
 	const { runproteinpaint } = await import(`${hostpath}/dist/app.js`)
-	if (arg) return await runproteinpaint(arg)
+	if (arg) {
+		// assume that this script is loaded from a full image service,
+		// with the expected server base path is the parent path of /bin
+		if (!arg.host) arg.host = hostpath.replace('/bin', '')
+		return await runproteinpaint(arg)
+	}
 	window.runproteinpaint = runproteinpaint
 }
 

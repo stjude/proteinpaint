@@ -9,19 +9,18 @@ execSync(`node ${__dirname}/emitImports.mjs > ${__dirname}/test/internals-esm.js
 
 const ctx = await context({
 	entryPoints: [
-    './src/style-normalize-unscoped.css', // TODO: this is supposed to prevent duplicate css files, not working
+    //'./src/style-normalize-unscoped.css', // TODO: this is supposed to prevent duplicate css files, not working
     './src/app.js', 
-    './test/internals-esm.js'
+    './test/internals-esm.js' // TODO: do not include in prod build, once esbuild replaces rollup
   ],
 	bundle: true,
 	platform: 'browser',
 	outdir: path.join(__dirname, './dist'),
   outbase: 'src',
-	//chunkNames: '[hash].app',
+	//chunkNames: '[hash].app', // TODO: enable for prod build?
 	sourcemap: true,
 	splitting: true,
 	format: 'esm',
-	//external: ['*.spec.js'],
 	plugins: [
     replaceNodeBuiltIns(),
     dirnamePlugin(),
@@ -29,7 +28,7 @@ const ctx = await context({
     logRebuild()
   ],
   logLevel: 'error' // !!! TODO: also show warnings !!!
-});
+})
 
 console.log('watching files ...')
 await ctx.watch()
