@@ -82,17 +82,6 @@ function sheatherJonesBandwidth(data, kernel) {
 
 	const bandwidth = 1.06 * sigmaHat * Math.pow(n, -0.2)
 
-	if (isNaN(bandwidth) || !isFinite(bandwidth)) {
-		// console.error("Error computing bandwidth: NaN or infinite value encountered");
-		// console.log("Data:", data);
-		// console.log("Sorted Data:", sortedData);
-		// console.log("Quantiles:", q25, q75);
-		// console.log("IQR:", iqr);
-		// console.log("Std Dev:", stdDev);
-		// console.log("h0:", h0);
-		// console.log("sigmaHat:", sigmaHat);
-	}
-
 	return bandwidth
 }
 
