@@ -1,7 +1,7 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { renderTable } from '../dom/table'
 import { to_svg } from '#src/client'
-import { roundValue, roundValueAuto } from '../shared/roundValue'
+import { roundValueAuto } from '../shared/roundValue'
 import { rgb } from 'd3'
 
 export function setInteractivity(self) {
@@ -98,7 +98,7 @@ export function setInteractivity(self) {
 		//For testing and debugging
 		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
 
-		self.app.tip.d.append('div').text(`Range: ${roundValueAuto(start, 2)} < x < ${roundValueAuto(end, 2)}`)
+		self.app.tip.d.append('div').text(`From ${roundValueAuto(start, 2)} to ${roundValueAuto(end, 2)}`)
 
 		//show menu options for label clicking and brush selection
 		self.app.tip.d
