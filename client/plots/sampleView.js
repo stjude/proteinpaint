@@ -198,6 +198,7 @@ class SampleView {
 	}
 
 	async setControls(q) {
+		console.log('setControls', q)
 		this.dom.controlsDiv.selectAll('*').remove()
 		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		const inputs = [
@@ -232,6 +233,16 @@ class SampleView {
 				title: `Option to show/hide single sample plots`
 			})
 		}
+		if (q?.images) {
+			inputs.push({
+				boxLabel: 'Visible',
+				label: 'Images',
+				type: 'checkbox',
+				chartType: 'sampleView',
+				settingsKey: 'showImages',
+				title: `Option to show/hide images`
+			})
+		}
 
 		if (q?.NIdata && showBrainImaging) {
 			inputs.push({
@@ -243,6 +254,7 @@ class SampleView {
 				title: `Option to show/hide brain imaging`
 			})
 		}
+		console.log('inputs', inputs)
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -442,6 +454,9 @@ class SampleView {
 		for (const div of this.brainPlots)
 			if (this.settings.showBrain) div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
 			else div.style('display', 'none')
+		for (const div of this.imagePlots)
+			if (this.settings.showImages) div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
+			else div.style('display', 'none')
 	}
 
 	async renderPlots(state, samples) {
@@ -450,6 +465,7 @@ class SampleView {
 		this.discoPlots = []
 		this.singleSamplePlots = []
 		this.brainPlots = []
+		this.imagePlots = []
 
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			let div = plotsDiv.append('div')
@@ -509,6 +525,17 @@ class SampleView {
 						this.app.opts.genome
 					)
 				}
+			}
+		}
+		if (state.termdbConfig?.queries?.images) {
+			let div = plotsDiv.append('div')
+			for (const sample of samples) {
+				const cellDiv = div.append('div').style('display', 'inline-block')
+				this.imagePlots.push(cellDiv)
+				if (this.state.samples.length > 1)
+					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
+				const imagePlotImport = await import('./imagePlot.js')
+				imagePlotImport.renderImagePlot(state, cellDiv, sample.sampleName)
 			}
 		}
 	}
@@ -663,7 +690,7 @@ function setInteractivity(self) {
 
 export async function getPlotConfig(opts) {
 	const settings = {
-		sampleView: { showDictionary: true, showDisco: true, showSingleSample: true, showBrain: true }
+		sampleView: { showDictionary: true, showDisco: true, showSingleSample: true, showBrain: true, showImages: true }
 	}
 	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings }
 	return copyMerge(config, opts)

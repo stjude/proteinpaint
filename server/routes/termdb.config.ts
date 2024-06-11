@@ -109,6 +109,7 @@ function make(q, res, ds, genome) {
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
 	addGenomicQueries(c, ds, genome)
+	addImageQueries(c, ds)
 
 	res.send({ termdbConfig: c })
 }
@@ -119,7 +120,14 @@ function addRestrictAncestries(c, tdb) {
 		return { name: i.name, tvs: i.tvs, PCcount: i.PCcount }
 	})
 }
-
+function addImageQueries(c, ds) {
+	const q = ds.queries
+	const q2 = c.queries
+	console.log(c, ds)
+	if (q.images) {
+		q2.images = q.images
+	}
+}
 function addScatterplots(c, ds) {
 	if (!ds.cohort.scatterplots) return
 	// this dataset has premade scatterplots. reveal to client
