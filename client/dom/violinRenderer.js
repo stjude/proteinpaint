@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { line, curveMonotoneX } from 'd3-shape'
+import { line, curveBasis } from 'd3-shape'
 import { rgb, brushX, axisTop } from 'd3'
 
 export class violinRenderer {
@@ -60,7 +60,7 @@ export class violinRenderer {
 	renderArea(invert) {
 		if (this.plot.densityMax == 0) return
 		const areaBuilder = line()
-			.curve(curveMonotoneX)
+			.curve(curveBasis)
 			.x(d => this.axisScale(d.x0))
 			.y(d => (invert ? -this.wScale(d.density) : this.wScale(d.density)))
 
