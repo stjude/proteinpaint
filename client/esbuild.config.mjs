@@ -8,7 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 execSync(`node ${__dirname}/emitImports.mjs > ${__dirname}/test/internals-esm.js`)
 
 const ctx = await context({
-	entryPoints: ['./src/app.js', './test/internals-esm.js'],
+	entryPoints: [
+    './src/style.css', // TODO: this is supposed to prevent duplicate css files, not working
+    './src/app.js', 
+    './test/internals-esm.js'
+  ],
 	bundle: true,
 	platform: 'browser',
 	outdir: path.join(__dirname, './dist'),
@@ -52,20 +56,22 @@ function replaceNodeBuiltIns() {
     stream: import.meta.resolve('stream-browserify').replace('file://', ''),
     // 'fs': path.resolve('./src/fs.cjs'),
     // 'util': path.resolve('./src/util.cjs'),
-    // 'url': path.resolve('url/'),
+    // 'url': path.resolve('url/')
   }
   const filter = RegExp(`^(${Object.keys(replace).join('|')})$`)
   return {
     name: 'replaceNodeBuiltIns',
     setup(build) {
-      build.onResolve({ filter }, arg => ({
-        path: replace[arg.path]
-      }))
+      build.onResolve({ filter }, arg => {
+        return {
+          path: replace[arg.path]
+        }
+      }) 
     }
   }
 }
 
-function dirnamePlugin () {
+function dirnamePlugin() {
   const filter = new RegExp(/^(?:.*[\\\/])?node_modules(?:[\\\/].*)?$/) // /.*/
   return {
     name: "dirnamePlugin",

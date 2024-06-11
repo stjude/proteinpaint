@@ -52,8 +52,8 @@
   <span>For faster repeated reload of unchanged test code, add a <span class='code-snippet'>reuse=1</span> parameter to the URL.</span>
 </div>
 <div style='position: absolute; right: 20px; margin: 20px; font-family: Menlo, Courier;'>
-  <button><a href='?name=*.unit'>All unit tests</a></button>
-  <button><a href='?name=*.integration'>All integration tests</a></button>
+  <button><a class='allTestsBtn' href='?name=*.unit'>All unit tests</a></button>
+  <button><a class='allTestsBtn' href='?name=*.integration'>All integration tests</a></button>
   <span> or </span>
   <span class='code-snippet'>npm run test:integration --workspace=client</span>
 </div>
@@ -66,7 +66,11 @@
   <div id='testrun-loading-div'></div>
 </div>
 <div id='main-div'></div>
-<script type='module'>
+<script>
+const time = Date.now()
+d3.selectAll('.allTestsBtn').each(function() {
+  this.href += `&time=${time}`
+})
 const backArrows = d3.select('#testrun-back-arrows')
 const currTest = d3.select('#testrun-curr-test')
 const loadingDiv = d3.select('#testrun-loading-div')
@@ -112,7 +116,7 @@ async function showAvailableSpecs() {
         dirDiv
           .append('h3')
           .append('a')
-          .attr('href', d => `?dir=${dir.path}`)
+          .attr('href', d => `?dir=${dir.path}&time=${time}`)
           .text(dirName)
 
         dirDiv.append('div')
@@ -124,7 +128,7 @@ async function showAvailableSpecs() {
             .attr('class', 'testrun-file-div')
             .style('font-weight', d => d.isActive ? 600 : '')
             .append('a')
-            .attr('href', d => `?dir=${d.dir}&name=${d.name}`)
+            .attr('href', d => `?dir=${d.dir}&name=${d.name}&time=${time}`)
             .style('color', d => d.isActive ? activeColor : '')
             .text(d => d.name)
       })
@@ -178,7 +182,7 @@ async function triggerImportSpecs(params) {
       body: JSON.stringify(params)
     }
     loadingDiv.html('Loading tests ...')
-    const specs = await fetch('/specs', opts).then(r => r.json())
+    // const specs = await fetch('/specs', opts).then(r => r.json())
     // if (specs.error) {
     //   loadingDiv.html(`Error: ${specs.error}`)
     // } else {
@@ -192,11 +196,11 @@ async function triggerImportSpecs(params) {
       //     runproteinpaint({noheader: true, testInternals: true})
       //   })
       // runproteinpaint({noheader: true})
-      await sleep(specs*10)
-      const df = specs.exclude === '_x_.' ? ' (default)' : ''
-      const info = `[exclude glob='${specs.exclude}'${df}]`
-      loadingDiv.html(`See the test results in the browser console. ${info}`)
-      await import('./dist/test/internals-esm.js')
+    const internals = await import('./dist/test/internals-esm.js')
+    const specs = {exclude: '', matched: []}//internals.getSpecs()}
+    const df = specs.exclude === '_x_.' ? ' (default)' : ''
+    const info = `[exclude glob='${specs.exclude}'${df}]`
+    loadingDiv.html(`See the test results in the browser console. ${info}`)
   } catch(e) {
     throw e
   }

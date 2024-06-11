@@ -8,10 +8,15 @@ const SPECNAME = params.name || '*'
 const exclude = 'exclude' in params ? params.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
 const patterns = [`${CURRSPECDIR}/test/${SPECNAME}.spec.*s`, `${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`]
 
+export const specsMatched = []
+
 export function matchSpecs(filepath) {
 	if (!params.dir && !params.name) return false
 	for (const pattern of patterns) {
-		if (pattern && minimatch(filepath, pattern)) return true
+		if (pattern && minimatch(filepath, pattern)) {
+			specsMatched.push(filepath)
+			return true
+		}
 	}
 	return false
 }
