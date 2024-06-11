@@ -261,7 +261,6 @@ function setHostUrl(arg, app) {
 		// assume that this script is loaded from a full image service,
 		// with the expected server base path is the grandparent path of /bin/dist
 		app.hostURL = import.meta.url.split('/bin/dist')[0]
-		console.log(263, app.hostURL, import.meta.url)
 	}
 
 	// strip trailing slash
