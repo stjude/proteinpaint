@@ -184,7 +184,7 @@ export class ColorScale {
 
 		axisstyle({
 			axis: this.dom.scaleAxis.call(axis),
-			showline: true,
+			showline: false,
 			fontsize: this.fontSize
 		})
 	}

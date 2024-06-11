@@ -1274,7 +1274,7 @@ export function showLDlegend(div, colorScale) {
 		midColor: colorlst[colorlst.length - 1],
 		endColor: colorlst[colorlst.length - 1],
 		position: `${xpad},${axisheight}`,
-		tickSize: 4
+		tickSize: 6
 	})
 	colorScaleElem.render()
 }
