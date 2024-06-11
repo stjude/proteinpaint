@@ -59,7 +59,7 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 	const importCode = specs.matched.map(file => `import '../${file}'`).join('\n')
 	// the current import code as found in the target file
 	const currImportCode = getImportedSpecs(targetFile)
-	console.log(61, [importCode, currImportCode])
+
 	if (currImportCode != importCode || !currImportCode.includes(importCode)) {
 		const prevModTime = await getModTime(wpCompileTime)
 		console.log(`Writing ${specs.n} import(s) of test specs to '${targetFile}'.`)
