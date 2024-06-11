@@ -1,7 +1,7 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { renderTable } from '../dom/table'
 import { to_svg } from '#src/client'
-import { roundValueAuto } from '../../server/shared/roundValue'
+import { roundValue, roundValueAuto } from '../shared/roundValue'
 import { rgb } from 'd3'
 
 export function setInteractivity(self) {
@@ -75,9 +75,6 @@ export function setInteractivity(self) {
 			? [scale.invert(selection[0]), scale.invert(selection[1])]
 			: [scale.invert(selection[1]), scale.invert(selection[0])]
 
-		//Text shown above the options in the menu
-		const range2Show = `${start.toFixed(3)} < x < ${end.toFixed(3)}`
-
 		const options = [
 			{
 				label: `Add filter`,
@@ -91,17 +88,17 @@ export function setInteractivity(self) {
 				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
 			})
 		}
-		self.displayMenu(event, options, range2Show)
+		self.displayMenu(event, options, start, end)
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.displayMenu = function (event, options, range2Show) {
+	self.displayMenu = function (event, options, start, end) {
 		self.app.tip.d.selectAll('*').remove()
 
 		//For testing and debugging
 		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
 
-		self.app.tip.d.append('div').text(`Range: ${range2Show}`)
+		self.app.tip.d.append('div').text(`Range: ${roundValueAuto(start, 2)} < x < ${roundValueAuto(end, 2)}`)
 
 		//show menu options for label clicking and brush selection
 		self.app.tip.d
