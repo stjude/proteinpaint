@@ -123,7 +123,6 @@ function addRestrictAncestries(c, tdb) {
 function addImageQueries(c, ds) {
 	const q = ds.queries
 	const q2 = c.queries
-	console.log(c, ds)
 	if (q.images) {
 		q2.images = q.images
 	}

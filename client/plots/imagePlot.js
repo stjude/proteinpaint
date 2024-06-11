@@ -15,11 +15,13 @@ class imagePlot {
 			controlsHolder: holder.append('div'),
 			imageHolder: holder.append('div')
 		}
-		const path = state.imagesFolder + `/${config.sampleName}`
-		const url = URL.createObjectURL(path)
-		console.log('src', url)
-		this.dom.imageHolder.append('img').append('src', src)
 		this.setControls()
+		const url = `http://localhost:3000/static/st_jude_logo.png`
+		this.dom.imageHolder
+			.append('img')
+			.attr('src', url)
+			.attr('width', config.settings.imagePlot.width)
+			.attr('height', config.settings.imagePlot.height)
 	}
 
 	async setControls() {
@@ -54,8 +56,7 @@ class imagePlot {
 		return {
 			config,
 			termfilter: appState.termfilter,
-			vocab: appState.vocab,
-			imagesFolder: appState.termdbConfig.queries.images.folder
+			vocab: appState.vocab
 		}
 	}
 }

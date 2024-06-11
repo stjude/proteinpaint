@@ -198,7 +198,6 @@ class SampleView {
 	}
 
 	async setControls(q) {
-		console.log('setControls', q)
 		this.dom.controlsDiv.selectAll('*').remove()
 		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		const inputs = [
@@ -254,7 +253,6 @@ class SampleView {
 				title: `Option to show/hide brain imaging`
 			})
 		}
-		console.log('inputs', inputs)
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -535,7 +533,7 @@ class SampleView {
 				if (this.state.samples.length > 1)
 					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 				const imagePlotImport = await import('./imagePlot.js')
-				imagePlotImport.renderImagePlot(state, cellDiv, sample.sampleName)
+				imagePlotImport.renderImagePlot(state, cellDiv, sample)
 			}
 		}
 	}
