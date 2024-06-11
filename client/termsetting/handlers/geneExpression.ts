@@ -25,6 +25,8 @@ export async function getHandler(self) {
 }
 
 export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+	if (typeof tw.term.gene != 'string' || !tw.term.gene) throw 'geneExpression tw.term.gene must be non-empty string'
+	if (!tw.term.name) tw.term.name = tw.term.gene // auto fill if .name is missing
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
 	const mode = tw.q.mode || 'continuous'
 
