@@ -241,11 +241,13 @@ upon error, throw err message as a string
 
 	if (urlp.has('hicfile') || urlp.has('hicurl')) {
 		// whole-genome view
-		let file, url
+		let file, url, name
 		if (urlp.has('hicfile')) {
 			file = urlp.get('hicfile')
+			name = file.split('/').pop()
 		} else {
 			url = urlp.get('hicurl')
+			name = url.split('/').pop()
 		}
 		const gn = urlp.get('genome')
 		if (!gn) throw 'genome is required for hic'
@@ -255,7 +257,7 @@ upon error, throw err message as a string
 			genome,
 			file,
 			url,
-			name: path.split('/').pop(), //.basename(file || url),
+			name, //.basename(file || url),
 			hostURL: arg.hostURL,
 			enzyme: urlp.get('enzyme'),
 			holder: arg.holder

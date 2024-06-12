@@ -723,6 +723,7 @@ async function parseEmbedThenUrl(arg, app) {
 			})
 		} catch (e) {
 			app.error0(e)
+			console.error(e.stack || e)
 		}
 	}
 
