@@ -197,7 +197,7 @@ async function triggerImportSpecs(params) {
       //     runproteinpaint({noheader: true, testInternals: true})
       //   })
       // runproteinpaint({noheader: true})
-    const internals = await import('./bin/dist/_.._/test/internals-esm.js')
+    const internals = await import('./bin/dist/_.._/test/internals-dev.js')
     const specs = {exclude: '', matched: []}//internals.getSpecs()}
     const df = specs.exclude === '_x_.' ? ' (default)' : ''
     const info = `[exclude glob='${specs.exclude}'${df}]`

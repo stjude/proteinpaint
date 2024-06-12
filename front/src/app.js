@@ -22,7 +22,7 @@ window.runproteinpaint = async arg => {
 	const { runproteinpaint } = await import(`${hostpath}/dist/app.js`)
 	if (arg) {
 		// assume that this script is loaded from a full image service,
-		// with the expected server base path is the parent path of /bin
+		// where the expected server base path is the parent path of /bin
 		if (!arg.host) arg.host = hostpath.replace('/bin', '')
 		return await runproteinpaint(arg)
 	}

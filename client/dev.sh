@@ -2,6 +2,6 @@
 
 rm -rf ./dist
 
-ln -sf $(pwd)/dist ./../public/bin/
-
-node esbuild.config.mjs
+node emitImports.mjs > ./test/internals-dev.js
+ln -sf $(pwd)/dist ../public/bin/
+ENV=dev node esbuild.config.mjs

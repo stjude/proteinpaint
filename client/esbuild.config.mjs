@@ -1,21 +1,24 @@
 import path from 'path'
 import fs from 'fs'
-import { execSync } from 'child_process'
 import { context } from 'esbuild'
 import { fileURLToPath } from 'url'
     
-const __dirname = path.dirname(fileURLToPath(import.meta.url)) 
-execSync(`node ${__dirname}/emitImports.mjs > ${__dirname}/test/internals-esm.js`)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const ENV = process.env.ENV
+
+const entryPoints = ['./src/app.js']
+entryPoints.push(`./test/internals-${ENV}.js`)
 
 const ctx = await context({
-	entryPoints: [
-    //'./src/style-normalize-unscoped.css', // TODO: this is supposed to prevent duplicate css files, not working
-    './src/app.js', 
-    './test/internals-esm.js' // TODO: do not include in prod build, once esbuild replaces rollup
-  ],
+	entryPoints,
 	bundle: true,
 	platform: 'browser',
-	outdir: path.join(__dirname, './dist'),
+  // - in dev, there is an existing public/dist -> client/dist symlink 
+  //   to ensure that the same bundle is used for locally-developed 
+  //   embedder portals like GFF
+  // - for CLI tests such as in CI, the bundles can be outputted directly
+  //   to the test runner's static (public) dir  
+	outdir: path.join(__dirname, ENV == 'test' ? '../public/bin/test' : './dist'),
   outbase: 'src',
 	//chunkNames: '[hash].app', // TODO: enable for prod build?
 	sourcemap: true,
@@ -30,8 +33,12 @@ const ctx = await context({
   logLevel: 'error' // !!! TODO: also show warnings !!!
 })
 
-console.log('watching files ...')
-await ctx.watch()
+if (ENV == 'dev') {
+  console.log('watching files ...')
+  await ctx.watch()
+} else {
+  ctx.rebuild()
+}
 
 function logRebuild() {
   return {
@@ -44,6 +51,7 @@ function logRebuild() {
       })
       onEnd(() => {
         console.log('\n--- client rebuild finished in', Date.now() - t, 'ms ---\n')
+        if (ENV != 'dev') ctx.dispose()
       })
     }
   }
