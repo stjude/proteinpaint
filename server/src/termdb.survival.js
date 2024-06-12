@@ -4,7 +4,6 @@ import { write_file } from './utils'
 import fs from 'fs'
 import serverconfig from './serverconfig'
 import run_R from './run_R'
-import { TermTypes } from '#shared/terms.js'
 
 export async function get_survival(q, ds) {
 	try {

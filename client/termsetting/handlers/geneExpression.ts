@@ -29,7 +29,7 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 	if (typeof tw.term.gene != 'string' || !tw.term.gene) throw 'geneExpression tw.term.gene must be non-empty string'
 	if (!tw.term.name) tw.term.name = tw.term.gene // auto fill if .name is missing
 
-	if (!tw.q?.mode) tw.q = { mode: 'discrete' } // supply default q if missing
+	if (!tw.q?.mode) tw.q = { mode: 'continuous' } // supply default q if missing
 	if (defaultQ) copyMerge(tw.q, defaultQ) // override if default is given
 
 	if (!tw.term.bins) {

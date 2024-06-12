@@ -1,7 +1,8 @@
 import { getCompInit } from '../rx'
 import { termsettingInit } from '#termsetting'
-import { Menu } from '../src/client'
+import { Menu } from '../dom/menu'
 import { getNormalRoot } from '#filter'
+import { TermTypes } from '#shared/terms.js'
 
 /*
 model after overlay2.js
@@ -29,7 +30,11 @@ class Divide {
 	}
 	initPill() {
 		if (!this.opts.defaultQ4fillTW) this.opts.defaultQ4fillTW = {}
-		this.opts.defaultQ4fillTW['geneVariant'] = { groupsetting: { inuse: true } } // geneVariant term should always use groupsetting when used as divide term
+
+		// default settings by term type
+		this.opts.defaultQ4fillTW[TermTypes.GENE_VARIANT] = { groupsetting: { inuse: true } } // geneVariant term should always use groupsetting when used as divide term
+		this.opts.defaultQ4fillTW[TermTypes.GENE_EXPRESSION] = { mode: 'discrete' } // will be nice to use smaller number of bins even binary
+
 		this.pill = termsettingInit({
 			vocabApi: this.app.vocabApi,
 			vocab: this.state.vocab,
