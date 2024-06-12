@@ -148,6 +148,19 @@ class DEanalysis {
 				]
 			})
 		}
+
+		if (this.app.opts.genome.termdbs) {
+			// Check if genome build contains termdbs, only then enable gene ora
+			inputs.push({
+				label: 'Gene set enrichment analysis',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'gsea',
+				title: 'Gene set enrichment analysis',
+				options: [{ label: 'Submit', value: 'Submit' }]
+			})
+		}
+
 		if (this.settings.pvaluetable == true) {
 			// This currently does not work as hierarchial clustering code needs to be changed
 			inputs.push({
@@ -536,6 +549,23 @@ add:
 				config
 			})
 		}
+
+		if (self.settings.gsea && self.app.opts.genome.termdbs) {
+			const gsea_params = {
+				genes: output.data.map(i => i.gene_symbol),
+				fold_change: output.data.map(i => i.fold_change),
+				genome: self.app.vocabApi.opts.state.vocab.genome
+			}
+			//console.log("gsea_params:",gsea_params)
+			const config = {
+				chartType: 'gsea',
+				gsea_params: gsea_params
+			}
+			self.app.dispatch({
+				type: 'plot_create',
+				config
+			})
+		}
 	}
 	return svg
 }
@@ -557,7 +587,8 @@ export async function getPlotConfig(opts, app) {
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
 					method: undefined,
-					gene_ora: undefined
+					gene_ora: undefined,
+					gsea: undefined
 				}
 			}
 		}
