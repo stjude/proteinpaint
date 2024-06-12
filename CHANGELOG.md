@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Allow to add survival terms to oncoMatrix
+
 Fixes:
 - show a border on select dropdown elements, within sja scope
 
