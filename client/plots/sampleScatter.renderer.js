@@ -340,6 +340,7 @@ export function setRenderers(self) {
 
 	self.getOpacity = function (c) {
 		if ('sampleId' in c) {
+			if (self.filterSampleStr) if (!c.sample?.toLowerCase().includes(self.filterSampleStr.toLowerCase())) return 0
 			const opacity = c.hidden?.['category'] || c.hidden?.['shape'] ? 0 : self.settings.opacity
 			return opacity
 		}

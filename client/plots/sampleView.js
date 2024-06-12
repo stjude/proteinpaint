@@ -669,7 +669,7 @@ export async function getPlotConfig(opts) {
 	return copyMerge(config, opts)
 }
 
-export function searchSampleInput(holder, samplesData, callback) {
+export function searchSampleInput(holder, samplesData, callback, keyUpCallback) {
 	const limit = 100
 
 	const allSamples = []
@@ -694,6 +694,7 @@ export function searchSampleInput(holder, samplesData, callback) {
 	input.on('keyup', e => {
 		datalist.selectAll('*').remove()
 		const str = input.node().value.toLowerCase()
+		if (keyUpCallback) keyUpCallback(str)
 		const options = []
 		for (const sample of allSamples) {
 			if (sample.toLowerCase().startsWith(str)) options.push(sample)

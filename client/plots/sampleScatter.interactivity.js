@@ -494,21 +494,26 @@ export function setInteractivity(self) {
 	}
 
 	self.searchSample = async function (e) {
-		if (!this.searchMenu) this.searchMenu = new Menu({ padding: '3px' })
-		this.searchMenu.clear()
-		this.samplesData = await this.app.vocabApi.getSamplesByName({
-			filter: self.state.termfilter.filter
-		})
-		const callback = sampleName => {
-			if (this.samplesData[sampleName]) {
-				const samples = getSamplesRelated(this.samplesData, sampleName)
-				const samplelsttw = getSamplelstTWFromIds(samples.map(s => s.sampleId))
-				self.addToFilter(samplelsttw)
+		if (!this.searchMenu) {
+			this.searchMenu = new Menu({ padding: '3px' })
+			this.samplesData = await this.app.vocabApi.getSamplesByName({
+				filter: self.state.termfilter.filter
+			})
+			const callback = sampleName => {
+				// if (this.samplesData[sampleName]) {
+				// 	const samples = getSamplesRelated(this.samplesData, sampleName)
+				// 	const samplelsttw = getSamplelstTWFromIds(samples.map(s => s.sampleId))
+				// 	self.addToFilter(samplelsttw)
+				// }
 			}
+			searchSampleInput(this.searchMenu.d, this.samplesData, callback, str => self.filterSamples(str))
 		}
-		searchSampleInput(this.searchMenu.d, this.samplesData, callback)
-
 		this.searchMenu.show(e.clientX, e.clientY, false)
+	}
+
+	self.filterSamples = function (str) {
+		this.filterSampleStr = str
+		self.render()
 	}
 
 	self.getCategoryInfo = function (d, category) {
