@@ -47,6 +47,7 @@ function init({ genomes }) {
 
 export function validate_query_TopVariablyExpressedGenes(ds: any, genome: any) {
 	const q = ds.queries.topVariablyExpressedGenes
+	console.log('validate_query_TopVariablyExpressedGenes', q)
 	if (!q) return
 	if (q.src == 'gdcapi') {
 		gdcValidateQuery(ds, genome)

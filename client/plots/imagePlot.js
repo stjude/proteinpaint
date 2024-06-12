@@ -6,22 +6,27 @@ class imagePlot {
 		this.type = 'imagePlot'
 	}
 
-	init(appState) {
+	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
 		const holder = this.opts.holder.append('div')
 		this.dom = {
 			holder,
-			controlsHolder: holder.append('div'),
-			imageHolder: holder.append('div')
+			controlsHolder: holder.append('div').style('display', 'inline-block'),
+			imageHolder: holder.append('div').style('display', 'inline-block')
 		}
 		this.setControls()
-		const url = `http://localhost:3000/static/st_jude_logo.png`
-		this.dom.imageHolder
-			.append('img')
-			.attr('src', url)
-			.attr('width', config.settings.imagePlot.width)
-			.attr('height', config.settings.imagePlot.height)
+		const result = await this.app.vocabApi.getSampleImages(config.sample.sampleId)
+		if (result.error) throw result.error
+		console.log('result', result)
+		for (const img of result.images) {
+			this.dom.imageHolder
+				.append('img')
+				.style('padding', '10px')
+				.attr('src', img.src)
+				.attr('width', config.settings.imagePlot.width)
+				.attr('height', config.settings.imagePlot.height)
+		}
 	}
 
 	async setControls() {
@@ -88,7 +93,7 @@ export const imagePlotInit = getCompInit(imagePlot)
 // this alias will allow abstracted dynamic imports
 export const componentInit = imagePlotInit
 
-export async function renderImagePlot(state, holder, sampleName) {
+export async function renderImagePlot(state, holder, sample) {
 	const opts = {
 		holder,
 
@@ -98,7 +103,7 @@ export async function renderImagePlot(state, holder, sampleName) {
 			plots: [
 				{
 					chartType: 'imagePlot',
-					sampleName
+					sample
 				}
 			]
 		}
