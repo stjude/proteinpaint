@@ -34,13 +34,7 @@ const useCasesExcluded = {
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY
 	], //Later on can support other term types like snplocus, snplst, geneVariant, non dictionary terms
-	survival: [
-		TermTypeGroups.SNP_LOCUS,
-		TermTypeGroups.SNP_LIST,
-		TermTypeGroups.MUTATION_CNV_FUSION,
-		TermTypeGroups.GENE_EXPRESSION,
-		TermTypeGroups.METABOLITE_INTENSITY
-	],
+	survival: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
 	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	regression: [
@@ -230,6 +224,10 @@ export class TermTypeSearch {
 				//In sampleScatter geneVariant is only allowed if detail is not numeric, like when building a dynamic scatter
 				if (state.usecase.target == 'sampleScatter' && type == TermTypes.GENE_VARIANT) {
 					if (state.usecase.detail == 'numeric') continue
+				}
+
+				if (state.usecase.target == 'survival' && termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+					if (state.usecase.detail == 'term') continue
 				}
 
 				if (state.usecase.target && useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
