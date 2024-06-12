@@ -141,16 +141,19 @@ export function getFilterName(f) {
 				if (vc) {
 					if ('start' in r) startName = convertUnits(r.start, vc.fromUnit, vc.toUnit, vc.scaleFactor, true)
 					if ('stop' in r) stopName = convertUnits(r.stop, vc.fromUnit, vc.toUnit, vc.scaleFactor, true)
-				} else if (ttype == 'integer') {
-					if ('start' in r) startName = Math.floor(r.start)
-					if ('stop' in r) stopName = Math.floor(r.stop)
 				} else {
-					if ('start' in r) startName = r.start
-					if ('stop' in r) stopName = r.stop
-				}
+					// no conversion, numeric values are shown as is
+					if (ttype == 'integer') {
+						if ('start' in r) startName = Math.floor(r.start)
+						if ('stop' in r) stopName = Math.floor(r.stop)
+					} else {
+						if ('start' in r) startName = r.start
+						if ('stop' in r) stopName = r.stop
+					}
 
-				//Converts extremely long decimals into an appropriate label length
-				;[startName, stopName] = niceNumLabels([startName, stopName])
+					//Converts extremely long decimals into an appropriate label length
+					;[startName, stopName] = niceNumLabels([startName, stopName])
+				}
 
 				if (tvs.isnot) {
 					if (r.startunbounded) return `x ${r.stopinclusive ? '>' : '>='} ${stopName}`
