@@ -494,6 +494,7 @@ function validatePlot(p, vocabApi) {
 		} else if (p.chartType == 'profilePolar' || p.chartType == 'polar') {
 		} else if (p.chartType == 'DEanalysis') {
 		} else if (p.chartType == 'geneORA') {
+		} else if (p.chartType == 'gsea') {
 		} else if (p.chartType == 'sampleView') {
 		} else if (p.chartType == 'profileRadar' || p.chartType == 'profileRadarFacility') {
 		} else if (p.chartType == 'singleCellPlot') {
