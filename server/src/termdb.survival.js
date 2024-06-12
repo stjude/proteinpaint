@@ -4,6 +4,7 @@ import { write_file } from './utils'
 import fs from 'fs'
 import serverconfig from './serverconfig'
 import run_R from './run_R'
+import { TermTypes } from '#shared/terms.js'
 
 export async function get_survival(q, ds) {
 	try {
@@ -183,9 +184,8 @@ function getSeriesKey(ot, d) {
 		if (d[n].values.length > tested.length) return 'Not tested'
 		// TODO: more helpful message or throw
 		return 'Not sure'
-	}
-
-	throw `cannot get series key for term='${n}'`
+	} else if (d[ot.name]) return d[ot.name].key
+	else throw `cannot get series key for term='${n}'`
 }
 
 function getOrderedLabels(term, bins = []) {
