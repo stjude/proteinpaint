@@ -54,7 +54,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (!q.term.q?.mode) q.term.q.mode = 'continuous'
 	if (!term) throw '.termid invalid'
 	//term on backend should always be an integer term
-	if (!isNumericTerm(term)) throw 'term type is not numeric'
+	if (!isNumericTerm(term) && term.type !== 'survival') throw 'term type is not numeric or survival'
 
 	const twLst = [q.term]
 

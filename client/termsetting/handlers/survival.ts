@@ -1,10 +1,13 @@
 import { getPillNameDefault } from '#termsetting'
 import { TermWrapper, VocabApi, TermSettingInstance, PillData } from '#shared/types/index'
+import { getHandler as getHandlerNumericToggle } from './numeric.toggle'
 
 export function getHandler(self: TermSettingInstance) {
 	return {
-		showEditMenu() {
-			//ignore
+		async showEditMenu(div: any) {
+			// survival uses the showEditMenu method from numeric.toggle
+			const NumericToggleHandler = await getHandlerNumericToggle(self)
+			await NumericToggleHandler.showEditMenu(div)
 		},
 		getPillStatus() {
 			//ignore

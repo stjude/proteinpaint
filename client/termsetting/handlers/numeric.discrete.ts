@@ -91,6 +91,12 @@ async function showBinsMenu(self, div: any) {
 	}
 
 	div.selectAll('*').remove()
+	if (self.term.type == 'survival') {
+		// survival terms have a different discrete UI than numeric terms
+		self.dom.discreteSur_div = div.append('div').style('padding', '4px')
+		renderSurvivalDiscreteButton(self)
+		return
+	}
 	self.dom.num_holder = div
 	self.dom.density_div = div.append('div')
 	self.vr = new violinRenderer(
@@ -135,7 +141,8 @@ function applyEdits(self) {
 			delete self.q.last_bin
 		}
 		self.numqByTermIdModeType[self.term.id].discrete['regular-bin'] = JSON.parse(JSON.stringify(self.q))
-	} else {
+	} else if (self.term.type !== 'survival') {
+		// do not need to processCustomBinInputs for survival terms
 		if (self.dom.bins_table.selectAll('input').node().value) {
 			self.q.lst = processCustomBinInputs(self)
 			self.numqByTermIdModeType[self.term.id].discrete['custom-bin'] = JSON.parse(JSON.stringify(self.q))
@@ -680,4 +687,18 @@ function renderButtons(self) {
 			delete self.numqByTermIdModeType[self.term.id]
 			showBinsMenu(self, self.dom.num_holder)
 		})
+}
+
+function renderSurvivalDiscreteButton(self) {
+	const noteDiv = self.dom.discreteSur_div.append('div')
+
+	noteDiv.append('div').style('font-size', '.8em').style('margin', '5px').html(`
+			Display survival outcomes as exit codes <br>
+		`)
+	const btndiv = self.dom.discreteSur_div.append('div')
+	btndiv
+		.append('button')
+		.style('margin', '5px')
+		.html('Apply')
+		.on('click', () => applyEdits(self))
 }
