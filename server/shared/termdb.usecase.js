@@ -60,7 +60,6 @@ export function isUsableTerm(term, _usecase, ds) {
 	switch (usecase.target) {
 		case 'barchart':
 		case 'summary':
-		case 'matrix':
 			if (usecase.detail == 'term0' && term.type == 'geneVariant') {
 				// hide geneVariant terms for Divide by
 				return uses
@@ -71,6 +70,11 @@ export function isUsableTerm(term, _usecase, ds) {
 			}
 			if (term.type && term.type !== 'survival') uses.add('plot')
 			if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
+			return uses
+
+		case 'matrix':
+			if (term.type) uses.add('plot')
+			if (!term.isleaf) uses.add('branch')
 			return uses
 
 		case 'table':

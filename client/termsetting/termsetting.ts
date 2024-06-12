@@ -625,12 +625,7 @@ function setInteractivity(self) {
 			options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
 		}
 
-		if (
-			self.q &&
-			!self.q.groupsetting?.disabled &&
-			self.term.type != 'survival' &&
-			minimatch('edit', self.opts.menuOptions)
-		) {
+		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
 			// hide edit option for survival term because its showEditMenu() is disabled
 			options.push({ label: 'Edit', callback: self.handler!.showEditMenu } as opt)
 		}
