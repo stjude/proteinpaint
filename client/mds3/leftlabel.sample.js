@@ -1,11 +1,12 @@
 import { makelabel } from './leftlabel'
 import { Tabs } from '../dom/toggleButtons'
 import { displaySampleTable } from './sampletable'
-import { fillbar } from '#dom/fillbar'
+import { fillbar } from '../dom/fillbar'
 import { renderTable } from '../dom/table'
-import { filterInit, getNormalRoot } from '#filter'
-import { convertUnits } from '#shared/helpers'
+import { filterInit, getNormalRoot } from '../filter/filter'
+import { convertUnits } from '../shared/helpers'
 import { violinRenderer } from '../dom/violinRenderer'
+import { niceNumLabels } from '../dom/niceNumLabels.ts'
 
 /*
 makeSampleLabel()
@@ -147,6 +148,9 @@ export function getFilterName(f) {
 					if ('start' in r) startName = r.start
 					if ('stop' in r) stopName = r.stop
 				}
+
+				//Converts extremely long decimals into an appropriate label length
+				;[startName, stopName] = niceNumLabels([startName, stopName])
 
 				if (tvs.isnot) {
 					if (r.startunbounded) return `x ${r.stopinclusive ? '>' : '>='} ${stopName}`
