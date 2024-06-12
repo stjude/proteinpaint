@@ -11,6 +11,7 @@ const patterns = [`${CURRSPECDIR}/test/${SPECNAME}.spec.*s`, `${NESTEDSPECDIR}/t
 export const specsMatched = []
 
 export function matchSpecs(filepath) {
+	if (window.testHost) return true
 	if (!params.dir && !params.name) return false
 	for (const pattern of patterns) {
 		if (pattern && minimatch(filepath, pattern)) {

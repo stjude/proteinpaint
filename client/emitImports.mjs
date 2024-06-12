@@ -16,10 +16,15 @@ const mode = process.argv[2]
 const cwd = process.cwd()
 const __dirname = import.meta.dirname
 
-const specs = glob.sync('./**/test/*.spec.*', { cwd: __dirname })
+const namePattern = process.argv[2] || '*.spec.*'
+// prevent excessive imports
+if (!namePattern.includes('.spec.')) throw `namePattern does not include '.spec'`
+
+const specs = glob.sync(`./**/test/${namePattern}`, { cwd: __dirname })
 
 console.log(`import { matchSpecs, specsMatched } from './matchSpecs.js'`)
 console.log(`import tape from 'tape'`)
+
 console.log(`
 // keep an initial test open until all spec modules have been loaded,
 // to prevent an early-loaded and very fast test from closing the
@@ -47,5 +52,5 @@ console.log(`// this resolves after all test modules are loaded,
 // but likely before all test code are fully evaluated and completed 
 Promise.all(promises).then(()=>assertAllTestLoaded())
 `)
-console.log(`export function getSpecs() { return specsMatched }`)
 
+console.log(`export function getSpecs() { return specsMatched }`)
