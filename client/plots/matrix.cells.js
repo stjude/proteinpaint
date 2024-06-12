@@ -60,6 +60,38 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 	}
 }
 
+function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
+	const key = tw.q?.mode == 'continuous' ? anno.value : anno.key
+	cell.key = key
+	cell.label = tw.q?.mode == 'continuous' ? (tw.term.unit ? `${key}(${tw.term.unit})` : key) : 'Exit code: ' + key
+	cell.fill = key == 1 ? '#ff7f0e' : '#1f77b4'
+	cell.order = 0
+	if (tw.q?.mode == 'continuous') {
+		if (!tw.settings) tw.settings = {}
+		if (!tw.settings.barh) tw.settings.barh = s.barh
+		if (!('gap' in tw.settings)) tw.settings.gap = 4
+
+		cell.fill = '#555'
+		if (s.transpose) {
+			cell.height = t.scale(cell.key)
+			cell.x = tw.settings.gap
+		} else {
+			const vc = cell.term.valueConversion
+			const renderV = vc ? cell.key * vc.scaleFactor : cell.key
+			cell.height = cell.key >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
+			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+			cell.y =
+				cell.key >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : t.counts.posMaxHt + t.tw.settings.gap
+			cell.convertedValueLabel = vc ? convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor) : ''
+		}
+	} else {
+		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+		cell.y = height * i
+		const group = tw.legend?.group || tw.$id
+		return { ref: t.ref, group, value: key, entry: { key, label: cell.label, fill: cell.fill } }
+	}
+}
+
 function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const values = tw.term.values || {}
 	const key = anno.key
@@ -297,9 +329,7 @@ export const setCellProps = {
 	categorical: setCategoricalCellProps,
 	integer: setNumericCellProps,
 	float: setNumericCellProps,
-	/* !!! TODO: later, may allow survival terms as a matrix row in server/shared/termdb.usecase.js, 
-	   but how - quantitative, categorical, etc? */
-	//survival: setNumericCellProps,
+	survival: setSurvivalCellProps,
 	geneVariant: setGeneVariantCellProps,
 	hierCluster: setHierClusterCellProps,
 	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
@@ -311,6 +341,7 @@ export const maySetEmptyCell = {
 	integer: setNumericEmptyCell,
 	float: setNumericEmptyCell,
 	categorical: setDefaultEmptyCell,
+	survival: setNumericEmptyCell,
 	[TermTypes.GENE_EXPRESSION]: setNumericEmptyCell,
 	[TermTypes.METABOLITE_INTENSITY]: setNumericEmptyCell
 }
