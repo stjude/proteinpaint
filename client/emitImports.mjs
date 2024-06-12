@@ -21,9 +21,10 @@ const namePattern = process.argv[2] || '*.spec.*'
 if (!namePattern.includes('.spec.')) throw `namePattern does not include '.spec'`
 
 const specs = glob.sync(`./**/test/${namePattern}`, { cwd: __dirname })
+//const specs = _specs.filter(s => s.includes('tvs.unit'))
 
-console.log(`import { matchSpecs, specsMatched } from './matchSpecs.js'`)
-console.log(`import tape from 'tape'`)
+console.log(`const { matchSpecs, specsMatched } = await import('./matchSpecs.js'); console.log(Object.keys(window.process))`)
+console.log(`const tape = (await import('tape')).default`)
 
 console.log(`
 // keep an initial test open until all spec modules have been loaded,
@@ -51,6 +52,7 @@ specs.forEach(f => console.log(`if (matchSpecs('${f}')) promises.push(import('.$
 console.log(`// this resolves after all test modules are loaded, 
 // but likely before all test code are fully evaluated and completed 
 Promise.all(promises).then(()=>assertAllTestLoaded())
+console.log('*** done ***')
 `)
 
 console.log(`export function getSpecs() { return specsMatched }`)

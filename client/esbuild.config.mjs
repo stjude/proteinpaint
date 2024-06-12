@@ -2,6 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import { context } from 'esbuild'
 import { fileURLToPath } from 'url'
+import { polyfillNode } from "esbuild-plugin-polyfill-node"
     
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ENV = process.env.ENV
@@ -25,7 +26,8 @@ const ctx = await context({
 	splitting: true,
 	format: 'esm',
 	plugins: [
-    replaceNodeBuiltIns(),
+    polyfillNode(),
+    //replaceNodeBuiltIns(),
     dirnamePlugin(),
     cssLoader(),
     logRebuild()

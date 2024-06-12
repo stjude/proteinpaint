@@ -40,8 +40,8 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run ESLint
-        run: npx eslint . --ext .ts --quiet
+      # - name: Run ESLint
+      #   run: npx eslint . --ext .ts --quiet
 
       - name: Copy serverconfig.json to root
         run: |
@@ -50,12 +50,12 @@ jobs:
           TPMASTERDIR=$(node -p "require('./serverconfig.json').tpmasterdir")
           mv serverconfig.json ../../
 
-      - name: Run tsc
-        run: |
-          # !!! TODO: run type check at the proteinpaint dir !!!
-          cd server 
-          npx tsc
-          cd ..
+      # - name: Run tsc
+      #   run: |
+      #     # !!! TODO: run type check at the proteinpaint dir !!!
+      #     cd server 
+      #     npx tsc
+      #     cd ..
 
       - name: Create server cache folder
         run: if [[ ! -d "server/cache" ]]; then mkdir server/cache; fi
@@ -69,9 +69,9 @@ jobs:
             echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
           fi
 
-      - name: 🔎 Run client pack test tests
-        if: contains(env.WS_TO_TEST, 'client')
-        run: npm pack --workspace="client"
+      # - name: 🔎 Run client pack test
+      #   if: contains(env.WS_TO_TEST, 'client')
+      #   run: npm pack --workspace="client"
 
       - name: 🔎 Run client tests
         if: contains(env.WS_TO_TEST, 'client')

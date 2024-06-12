@@ -1,5 +1,9 @@
+import process from 'process'
 import minimatch from 'minimatch'
-window.process = require('process')
+
+window.process = process
+console.log(Object.keys(process))
+
 const params = getParams()
 
 const CURRSPECDIR = params.dir ? `./${params.dir}` : '.'
