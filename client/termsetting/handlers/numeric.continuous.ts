@@ -44,7 +44,7 @@ export function getHandler(self) {
 			}
 			const d = await self.vocabApi.getViolinPlotData(
 				{
-					term: {term: self.term, q: self.q },
+					term: { term: self.term, q: self.q },
 					filter: self.filter,
 					svgw: plot_size.width / window.devicePixelRatio
 				},
@@ -81,6 +81,12 @@ export function getHandler(self) {
 
 			const btndiv = div.append('div').style('padding', '3px 10px')
 
+			if (self.term.type == 'survival') {
+				// Add a note to show that time to event is displayed
+				btndiv.append('div').style('font-size', '.8em').style('margin', '20px 5px 5px 5px').html(`
+						Display survival outcomes as time to event (${self.term.unit})
+					`)
+			}
 			btndiv
 				.append('button')
 				.style('margin', '5px')
