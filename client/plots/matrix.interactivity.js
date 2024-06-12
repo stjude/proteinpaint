@@ -1495,7 +1495,7 @@ function setSampleGroupActions(self) {
 
 		const tw = self.activeLabel.grp.tw
 		const term = tw.term
-		if (term.type == 'categorical') {
+		if (term.type == 'categorical' || term.type == 'survival') {
 			term.$id = tw.$id
 			const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(l => l.legendGrpName == tw.term.id)
 			if (filterGrpIndex == -1) {
@@ -1510,7 +1510,7 @@ function setSampleGroupActions(self) {
 				}
 				self.config.legendValueFilter.lst.push(filterNew)
 			} else {
-				// the filter for the categorical term exist, but the current legend key is not there.
+				// the filter for the categorical or survival term exist, but the current legend key is not there.
 				self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: self.activeLabel.grp.id })
 			}
 		} else if (term.type == 'integer' || term.type == 'float') {
@@ -2599,7 +2599,7 @@ function setLengendActions(self) {
 				// legend value filter works for the terms in self.termOrder
 				return
 			}
-			if (legendTerm.type == 'categorical') {
+			if (legendTerm.type == 'categorical' || legendTerm.type == 'survival') {
 				legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
 					l => l.legendGrpName == targetData.termid && l.tvs.values.find(v => v.key == targetData.key)
 				)
@@ -2659,7 +2659,7 @@ function setLengendActions(self) {
 						} else {
 							// for a non-geneVariant term
 							const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
-							if (term.type == 'categorical') {
+							if (term.type == 'categorical' || term.type == 'survival') {
 								term.$id = targetData.$id
 								const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
 									l => l.legendGrpName == targetData.termid
@@ -2676,7 +2676,7 @@ function setLengendActions(self) {
 									}
 									self.config.legendValueFilter.lst.push(filterNew)
 								} else {
-									// the filter for the categorical term exist, but the current legend key is not there.
+									// the filter for the categorical or survival term exist, but the current legend key is not there.
 									self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: targetData.key })
 								}
 							} else if (term.type == 'integer' || term.type == 'float') {
@@ -2700,7 +2700,7 @@ function setLengendActions(self) {
 						if (targetData.dt) self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
 						else {
 							const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
-							if (term.type == 'categorical') {
+							if (term.type == 'categorical' || term.type == 'survival') {
 								const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
 									l => l.legendGrpName == targetData.termid
 								)
@@ -2850,7 +2850,7 @@ function setLengendActions(self) {
 						*/
 
 						// for a non-geneVariant term
-						if (term.type == 'categorical') {
+						if (term.type == 'categorical' || term.type == 'survival') {
 							term.$id = targetData.$id
 							for (const l of legendGrp.items) {
 								if (l.key == targetData.key) continue

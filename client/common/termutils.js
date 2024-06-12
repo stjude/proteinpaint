@@ -38,6 +38,8 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 				samplevalue = geneVariant$ids.map(g => row[g]).filter(s => s) // filter out the genes that are not annotated for the sample
 			} else if (t.term.type == 'integer' || t.term.type == 'float') {
 				samplevalue = row[t.term.id] || row[t.term.$id]?.key
+			} else if (t.term.type == 'survival') {
+				samplevalue = row[t.term.$id]?.key
 			} else {
 				samplevalue = row[t.term.id] || row[t.term.$id]?.value
 			}
@@ -108,7 +110,15 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 						: t.values.find(d => d.key == anno)
 				}
 			} else if (t.term.type == 'survival') {
-				// don't do anything?
+				if (samplevalue === undefined) {
+					// this sample has no anno for this term, check isnot
+					if (t.isnot) thistermmatch = !thistermmatch
+					if (thistermmatch) numberofmatchedterms++
+					continue
+					// t may be frozen, should not modify to attach valueset if missing
+				}
+				const valueset = t.valueset ? t.valueset : new Set(t.values.map(i => i.key))
+				thistermmatch = valueset.has(samplevalue)
 			} else if (t.term.type == 'geneVariant' && t.legendFilterType == 'geneVariant_hard') {
 				// handle a matrix legend hard filter
 				// values: [{ dt, origin, mclasslst:[key] }]
