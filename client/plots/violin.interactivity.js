@@ -1,8 +1,9 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { renderTable } from '../dom/table'
 import { to_svg } from '#src/client'
-import { roundValue, roundValueAuto } from '../shared/roundValue'
+import { roundValueAuto } from '../shared/roundValue'
 import { rgb } from 'd3'
+import { niceNumLabels } from '../dom/niceNumLabels'
 
 export function setInteractivity(self) {
 	self.download = () => {
@@ -98,7 +99,9 @@ export function setInteractivity(self) {
 		//For testing and debugging
 		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
 
-		self.app.tip.d.append('div').text(`From ${roundValue(start, 2)} to ${roundValue(end, 2)}`)
+		const [niceStart, niceEnd] = niceNumLabels([start, end])
+
+		self.app.tip.d.append('div').text(`From ${niceStart} to ${niceEnd}`)
 
 		//show menu options for label clicking and brush selection
 		self.app.tip.d
