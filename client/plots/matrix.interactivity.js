@@ -536,10 +536,7 @@ function setTermActions(self) {
 		termMenuWaitDiv.remove()
 
 		self.dom.shortcutDiv = self.dom.menutop.append('div')
-
-		// Do not show shortcuts for hierCluster if top dendrogram is visible
-		if (self.chartType !== 'hierCluster' || !self.config.settings.hierCluster.clusterSamples)
-			self.showShortcuts(t, self.dom.shortcutDiv)
+		self.showShortcuts(t, self.dom.shortcutDiv)
 
 		self.dom.twMenuDiv = self.dom.menutop.append('div')
 		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
@@ -684,9 +681,8 @@ function setTermActions(self) {
 					{
 						icon: 'left',
 						title: `Sort ${l.samples} against this ${vartype}`,
-						disabled:
-							t.tw.sortSamples?.priority === 0 ||
-							(self.type == 'hierCluster' && self.config.settings.hierCluster.clusterSamples),
+						// should not disable sorting when hierCluster has top dendrogram
+						disabled: t.tw.sortSamples?.priority === 0 && !self.config.settings.hierCluster?.clusterSamples,
 						fill: sortRevertable ? 'rgba(200,100,100,0.5)' : '',
 						handler: sortRevertable ? self.unsortSamplesAgainstTerm : self.sortSamplesAgainstTerm
 					},
@@ -775,12 +771,17 @@ function setTermActions(self) {
 			}
 		}
 
+		if (self.chartType == 'hierCluster') {
+			// remove top dendrogram after sortting samples in hierCluster
+			self.config.settings.hierCluster.clusterSamples = false
+			self.config.settings.hierCluster.yDendrogramHeight = 0
+		}
+
+		self.config.termgroups = termgroups
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.opts.id,
-			config: {
-				termgroups
-			}
+			config: self.config
 		})
 		self.dom.tip.hide()
 	}
