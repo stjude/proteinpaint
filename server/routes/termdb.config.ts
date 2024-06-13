@@ -124,7 +124,7 @@ function addImageQueries(c, ds) {
 	const q = ds.queries
 	const q2 = c.queries
 	if (q.images) {
-		q2.images = q.images
+		q2.images = {} //nothing to pass to the client for now, but the key must be present
 	}
 }
 function addScatterplots(c, ds) {
