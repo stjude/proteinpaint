@@ -13,4 +13,4 @@ npx webpack --config=./webpack.tape.config.mjs
 ENV=test node esbuild.config.mjs 
 
 INITJS='window.testHost="http://localhost:3000";import("/bin/test/_.._/test/internals-test.js");'
-echo "$INITJS" > test/init-esm.js
+echo "$INITJS" | npx tape-run --static ../public
