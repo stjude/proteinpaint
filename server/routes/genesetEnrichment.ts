@@ -44,11 +44,20 @@ async function run_genesetEnrichment_analysis(q: genesetEnrichmentRequest, genom
 		gene_set_group: q.geneSetGroup
 	}
 	console.log('serverconfig.binpath:', serverconfig.binpath)
-	console.log('genesetenrichment_input:', JSON.stringify(genesetenrichment_input))
-	const gsea_output: unknown = run_gsea(
-		path.join(serverconfig.binpath, 'python/src', 'gsea.py'),
-		JSON.stringify(genesetenrichment_input)
+	//console.log('__dirname:',__dirname)
+	//console.log('genesetenrichment_input:', JSON.stringify(genesetenrichment_input))
+
+	fs.writeFile('test.txt', JSON.stringify(genesetenrichment_input), function (err) {
+		// For catching input to rust pipeline, in case of an error
+		if (err) return console.log(err)
+	})
+
+	console.log('file:', path.join(serverconfig.binpath, '../python/src', 'gsea.py'))
+	const gsea_output = await run_gsea(
+		path.join(serverconfig.binpath, '../python/src', 'gsea.py'),
+		'/' + JSON.stringify(genesetenrichment_input)
 	)
+	console.log('gsea_output:', gsea_output)
 	return gsea_output as genesetEnrichmentResponse
 }
 
@@ -62,7 +71,10 @@ async function run_gsea(path, data) {
 		const _stdout = []
 		const _stderr = []
 		// spawn python process
-		const sp = spawn(serverconfig.py_path, path)
+		let python_path = 'python3'
+		if (serverconfig.py_path) python_path = serverconfig.py_path
+		const sp = spawn(python_path, [path])
+		//console.log("data:",data)
 		if (data) {
 			// stream input data into python
 			try {
@@ -77,8 +89,8 @@ async function run_gsea(path, data) {
 			}
 		}
 		// store stdout and stderr from python
-		//sp.stdout.on('data', data => _stdout.push(data))
-		//sp.stderr.on('data', data => _stderr.push(data))
+		sp.stdout.on('data', data => _stdout.push(data))
+		sp.stderr.on('data', data => _stderr.push(data))
 		sp.on('error', err => reject(err))
 		// return stdout and stderr when python process closes
 		sp.on('close', code => {
@@ -92,7 +104,7 @@ async function run_gsea(path, data) {
 				reject(errmsg)
 			}
 			if (stderr) {
-				// handle R stderr
+				// handle python stderr
 				const errmsg = `python process emitted standard error\npython stderr: ${stderr}`
 				reject(errmsg)
 			}
