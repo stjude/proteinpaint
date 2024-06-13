@@ -251,7 +251,7 @@ export function setRenderers(self) {
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
 			.attr('stroke', c => self.getColor(c, chart))
-			.attr('stroke-width', c => (self.getOpacity(c) == 0 ? 0 : 1))
+			.attr('stroke-width', c => self.getStrokeWidth(c))
 			.style('fill-opacity', c => self.getOpacity(c))
 		symbols
 			.enter()
@@ -262,11 +262,22 @@ export function setRenderers(self) {
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
 			.attr('stroke', c => self.getColor(c, chart))
-			.attr('stroke-width', c => (self.getOpacity(c) == 0 ? 0 : 1))
+			.attr('stroke-width', c => self.getStrokeWidth(c))
 			.style('fill-opacity', c => self.getOpacity(c))
 			.transition()
 			.duration(duration)
 		self.mayRenderRegression()
+	}
+
+	self.getStrokeWidth = function (c) {
+		const opacity = self.getOpacity(c)
+		if (opacity <= 0.2)
+			//hidden by filter or search
+			return 0
+		if (opacity == 1.2)
+			//samples searched
+			return 2
+		return 1
 	}
 
 	self.processData = async function () {
@@ -340,7 +351,10 @@ export function setRenderers(self) {
 
 	self.getOpacity = function (c) {
 		if ('sampleId' in c) {
-			if (self.filterSampleStr) if (!c.sample?.toLowerCase().includes(self.filterSampleStr.toLowerCase())) return 0
+			if (self.filterSampleStr) {
+				if (!c.sample?.toLowerCase().includes(self.filterSampleStr.toLowerCase())) return 0.2
+				else return 1.2
+			}
 			const opacity = c.hidden?.['category'] || c.hidden?.['shape'] ? 0 : self.settings.opacity
 			return opacity
 		}
@@ -679,9 +693,10 @@ export function setRenderers(self) {
 		let fontSize = Math.min(0.8, 20 / chart.colorLegend.size)
 		if (fontSize < 0.5) fontSize = 0.5
 		const colorG = legendG.style('font-size', `${fontSize}em`)
-		const title0 = self.config.term0
+		let title0 = self.config.term0
 			? `${chart.id}, n=${chart.cohortSamples.length}`
 			: `${chart.cohortSamples.length} ${self.config.sampleType ? self.config.sampleType + 's' : 'samples'}`
+		if (self.filterSampleStr) title0 += `, search = ${self.filterSampleStr}`
 		colorG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
 		offsetY += step + 10
 		if (self.config.colorTW || self.config.colorColumn) {
