@@ -1,10 +1,10 @@
 import { select } from 'd3-selection'
 import { scaleLinear } from 'd3'
-import { keyupEnter } from '#src/client'
 import { addBrushes, addNewBrush } from './tvs.density'
 import { NumericRangeInput } from '#dom/numericRangeInput'
 import { convertUnits } from '#shared/helpers'
 import { violinRenderer } from '../dom/violinRenderer'
+import { niceNumLabels } from '#dom/niceNumLabels'
 
 /*
 ********************** EXPORTED
@@ -74,8 +74,8 @@ function format_val_text(range, term) {
 		if ('start' in range) startName = convertUnits(range.start, vc.fromUnit, vc.toUnit, vc.scaleFactor)
 		if ('stop' in range) stopName = convertUnits(range.stop, vc.fromUnit, vc.toUnit, vc.scaleFactor)
 	} else {
-		startName = range.start
-		stopName = range.stop
+		//Format non-converted values into concise text
+		;[startName, stopName] = niceNumLabels([range.start, range.stop])
 	}
 	if (range.startunbounded) return `${x} ${range.stopinclusive ? '&le;' : '&lt;'} ${stopName}`
 
