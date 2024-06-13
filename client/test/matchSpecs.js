@@ -4,11 +4,14 @@ import minimatch from 'minimatch'
 window.process = process
 
 const params = getParams()
-const CURRSPECDIR = params.dir ? `./${params.dir}` : '.'
-const NESTEDSPECDIR = params.dir ? `./**/${params.dir}` : './**'
+//const CURRSPECDIR = params.dir ? `./${params.dir}` : '.'
+const NESTEDSPECDIR = params.dir ? `**/${params.dir}` : '**'
 const SPECNAME = params.name || '*'
 const exclude = 'exclude' in params ? params.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
-const patterns = [`${CURRSPECDIR}/test/${SPECNAME}.spec.*s`, `${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`]
+const patterns = [
+	//`${CURRSPECDIR}/test/${SPECNAME}.spec.*s`,
+	`${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`
+]
 
 export const specsMatched = []
 
