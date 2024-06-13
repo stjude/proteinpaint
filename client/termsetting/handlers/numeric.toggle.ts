@@ -3,7 +3,7 @@ import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import { copyMerge } from '../../rx'
 import { PillData, HandlerGenerator, Handler } from '../types'
 import { VocabApi } from '../../shared/types/vocab.ts'
-import { roundValue } from '#shared/roundValue'
+import { roundValueAuto } from '#shared/roundValue'
 import {
 	NumericTerm,
 	NumericQ,
@@ -165,7 +165,7 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: Defaul
 			if (!q.type || q.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
 			const result = await vocabApi.getPercentile(tw.term.id!, [50])
 			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
-			const median = roundValue(result.values[0], 2)
+			const median = roundValueAuto(result.values[0])
 			if (!Number.isFinite(median)) throw 'median value not a number'
 			const medianQ = JSON.parse(JSON.stringify(defaultQ))
 			delete medianQ.preferredBins
