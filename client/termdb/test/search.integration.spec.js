@@ -1,6 +1,6 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
-const helpers = require('../../test/front.helpers.js')
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import helpers from '../../test/front.helpers.js'
 
 /*
 Tests:

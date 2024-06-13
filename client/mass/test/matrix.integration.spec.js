@@ -1,15 +1,15 @@
-const tape = require('tape')
-const termjson = require('../../test/testdata/termjson').termjson
-const helpers = require('../../test/front.helpers.js')
-const { sleep, detectLst, detectGte } = require('../../test/test.helpers.js')
-const { getSortOptions } = require('../../plots/matrix.sort.js')
-const {
+import tape from 'tape'
+import { termjson } from '../../test/testdata/termjson'
+import helpers from '../../test/front.helpers.js'
+import { sleep, detectLst, detectGte } from '../../test/test.helpers.js'
+import { getSortOptions } from '../../plots/matrix.sort.js'
+import {
 	proteinChangingMutations,
 	truncatingMutations,
 	synonymousMutations,
 	mutationClasses,
 	CNVClasses
-} = require('#shared/common')
+} from '#shared/common'
 
 /*************************
  reusable helper functions

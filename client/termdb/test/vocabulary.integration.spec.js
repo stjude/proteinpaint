@@ -1,13 +1,13 @@
-const tape = require('tape')
-const helpers = require('../../test/front.helpers.js')
-const vocabInit = require('../vocabulary').vocabInit
-const vocabData = require('./vocabData')
-const TermdbVocab = require('../TermdbVocab').TermdbVocab
-const FrontendVocab = require('../FrontendVocab').FrontendVocab
-const d3s = require('d3-selection')
-const { TermTypeGroups } = require('../../shared/terms.js')
-const testAppInit = require('../../test/test.helpers').testAppInit
-const termjson = require('../../test/testdata/termjson').termjson
+import tape from 'tape'
+import helpers from '../../test/front.helpers.js'
+import { vocabInit } from '../vocabulary'
+import vocabData from './vocabData'
+import { TermdbVocab } from '../TermdbVocab'
+import { FrontendVocab } from '../FrontendVocab'
+import * as d3s from 'd3-selection'
+import { TermTypeGroups } from '../../shared/terms.js'
+import { testAppInit } from '../../test/test.helpers'
+import { termjson } from '../../test/testdata/termjson'
 
 /*
 Tests:

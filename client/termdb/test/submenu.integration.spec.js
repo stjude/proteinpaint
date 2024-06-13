@@ -1,7 +1,7 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
-const termjson = require('../../test/testdata/termjson').termjson
-const helpers = require('../../test/front.helpers.js')
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import { termjson } from '../../test/testdata/termjson'
+import helpers from '../../test/front.helpers.js'
 
 /*
 Tests:
@@ -26,12 +26,12 @@ const runpp = helpers.getRunPp('termdb', {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- termdb/submenu -***-')
 	test.end()
 })
 
-tape('no tree.click_term2select_tvs callback', function(test) {
+tape('no tree.click_term2select_tvs callback', function (test) {
 	test.timeoutAfter(2000)
 
 	runpp({
@@ -50,7 +50,7 @@ tape('no tree.click_term2select_tvs callback', function(test) {
 	}
 })
 
-tape('with callback, but no submenu.term', function(test) {
+tape('with callback, but no submenu.term', function (test) {
 	test.timeoutAfter(5000)
 
 	runpp({
@@ -76,7 +76,7 @@ tape('with callback, but no submenu.term', function(test) {
 	}
 })
 
-tape('with callback and submenu.term', function(test) {
+tape('with callback and submenu.term', function (test) {
 	test.timeoutAfter(5000)
 
 	runpp({

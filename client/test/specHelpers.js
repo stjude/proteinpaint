@@ -79,6 +79,7 @@ function findMatchingSpecs(opts) {
 	const specs =
 		getFromCache(pattern) ||
 		glob.sync(pattern, { cwd: path.join(__dirname, `../**`) }).filter(f => !exclude || !f.includes(exclude))
+	specs.sort()
 	if (!specsCache[pattern]) specsCache[pattern] = specs
 	if (SPECDIR == '**' && SPECNAME == '*') {
 		// this is a request for all spec files, can cache the results for

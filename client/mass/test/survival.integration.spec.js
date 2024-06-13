@@ -1,7 +1,7 @@
-const tape = require('tape')
-const termjson = require('../../test/testdata/termjson').termjson
-const helpers = require('../../test/front.helpers.js')
-const { detectOne, detectGte } = require('../../test/test.helpers.js')
+import tape from 'tape'
+import termjson from '../../test/testdata/termjson'
+import helpers from '../../test/front.helpers.js'
+import { detectOne, detectGte } from '../../test/test.helpers.js'
 
 /*
 Tests:
