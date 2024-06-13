@@ -242,7 +242,6 @@ function addRangeTableNoDensity(self, tvs) {
 
 	range.min = 'min' in tvs.term ? tvs.term.min : null
 	range.max = 'max' in tvs.term ? tvs.term.max : null
-
 	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, applyRange)
 
 	brush.apply_btn = tr
@@ -304,7 +303,6 @@ function enterRange(self, tr, brush, i) {
 		.text('Range ' + (i + 1) + ': ')
 
 	brush.equation_td = range_tr.append('td').style('width', '150px')
-
 	brush.rangeInput = new NumericRangeInput(brush.equation_td, brush.range, apply)
 
 	makeRangeButtons(self, brush)
