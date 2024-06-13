@@ -4,7 +4,9 @@ const fs = require('fs')
 const { merge } = require('webpack-merge')
 const webpack = require('webpack')
 
-babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
+// TODO: delete webpack use, once esbuild migration is fully tested and unlikely to be reverted
+
+let babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
 babelrc = JSON.parse(babelrc)
 
 const commonConfig = {

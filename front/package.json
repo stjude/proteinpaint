@@ -1,12 +1,14 @@
 {
 	"name": "@sjcrh/proteinpaint-front",
 	"version": "2.63.1",
+	"browser": "src/app.js",
 	"main": "src/index.js",
 	"bin": "init.js",
 	"scripts": {
 		"dev": "webpack --env NODE_ENV=development --watch --progress --color",
+		"//TODO": "# delete webpack use, once esbuild migration is fully tested and unlikely to be reverted",
 		"prepack": "rm -rf public/bin && rm -rf *.tgz && webpack && tar -czf bundles.tgz public/bin",
-		"test:unit": "echo 'TODO: front integration tests'",
+		"test:unit": "echo 'TODO: front unit tests'",
 		"test:integration": "echo 'TODO: front integration tests'"
 	},
 	"devDependencies": {

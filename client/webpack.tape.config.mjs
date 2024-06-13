@@ -2,14 +2,15 @@ import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
 import path from 'path'
 import fs from 'fs'
 import webpack from 'webpack'
-import { fileURLToPath } from 'url'
+
+// TODO: 
+// use a good esbuild node polyfill plugin to avoid having to use webpack,
+// to bundle and supplies tape lib with missing node libs
 
 const __dirname = import.meta.dirname
 
 let babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
 babelrc = JSON.parse(babelrc)
-
-
 
 export default {
 	mode: 'development',

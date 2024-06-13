@@ -3,6 +3,8 @@ const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
 
+// TODO: delete webpack use, once esbuild migration is fully tested and unlikely to be reverted
+
 module.exports = function getPortalConfig(env = {}) {
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',

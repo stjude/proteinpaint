@@ -28,6 +28,7 @@
     "test:unit": "./test.sh *.unit.spec.*",
     "test:integration": "./test.sh *.integration.spec.*",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
+    "//TODO": "# replace rollup with esbuild",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w --bundleConfigAsCjs",
     "build": "rm -rf dist && rollup -c ./rollup.config.js",
     "prepack": "rm -rf dist && rollup -c ./rollup.config.js && npm run sedver",
