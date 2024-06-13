@@ -2,10 +2,8 @@ import process from 'process'
 import minimatch from 'minimatch'
 
 window.process = process
-console.log(Object.keys(process))
 
 const params = getParams()
-
 const CURRSPECDIR = params.dir ? `./${params.dir}` : '.'
 const NESTEDSPECDIR = params.dir ? `./**/${params.dir}` : './**'
 const SPECNAME = params.name || '*'

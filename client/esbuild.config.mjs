@@ -27,7 +27,7 @@ const ctx = await context({
 	format: 'esm',
 	plugins: [
     polyfillNode(),
-    //replaceNodeBuiltIns(),
+    replaceNodeBuiltIns(),
     dirnamePlugin(),
     cssLoader(),
     logRebuild()
@@ -64,8 +64,9 @@ function replaceNodeBuiltIns() {
   // and will still be required as devDependencies after removing webpack 
   // and its plugins post-esbuild migration
   const replace = {
-    path: import.meta.resolve('path-browserify').replace('file://', ''),
-    stream: import.meta.resolve('stream-browserify').replace('file://', ''),
+    tape: import.meta.resolve('./test/tape.bundle.js').replace('file://', ''),
+    //path: import.meta.resolve('path-browserify').replace('file://', ''),
+    //stream: import.meta.resolve('stream-browserify').replace('file://', ''),
     // 'fs': path.resolve('./src/fs.cjs'),
     // 'util': path.resolve('./src/util.cjs'),
     // 'url': path.resolve('url/')
