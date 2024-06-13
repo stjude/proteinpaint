@@ -1,8 +1,8 @@
-const tape = require('tape')
-const helpers = require('../../test/front.helpers.js')
-const store = require('../store')
-//const ds = require('@sjcrh/proteinpaint-server/dataset/termdb.test.js')
-const rx = require('../../rx')
+import tape from 'tape'
+import helpers from '../../test/front.helpers.js'
+import * as store from '../store'
+//import ds from '@sjcrh/proteinpaint-server/dataset/termdb.test.js')
+import * as rx from '../../rx'
 
 /*
 Tests:
@@ -25,12 +25,12 @@ const runpp = helpers.getRunPp('termdb', {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- termdb/store -***-')
 	test.end()
 })
 
-tape('init errors', function(test) {
+tape('init errors', function (test) {
 	test.timeoutAfter(1300)
 	test.plan(3)
 	runpp({
@@ -86,7 +86,7 @@ tape('init errors', function(test) {
 	}
 })
 
-tape('state: no cohort.termdb.selectCohort', function(test) {
+tape('state: no cohort.termdb.selectCohort', function (test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -108,7 +108,7 @@ tape('state: no cohort.termdb.selectCohort', function(test) {
 	}
 })
 
-tape('state rehydrate: default cohort', function(test) {
+tape('state rehydrate: default cohort', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -156,7 +156,7 @@ tape('state rehydrate: default cohort', function(test) {
 	}
 })
 
-tape('state rehydrate: activeCohort=1', function(test) {
+tape('state rehydrate: activeCohort=1', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -205,7 +205,7 @@ tape('state rehydrate: activeCohort=1', function(test) {
 	}
 })
 
-tape('state rehydrate: by cohortFilter', function(test) {
+tape('state rehydrate: by cohortFilter', function (test) {
 	test.timeoutAfter(3000)
 	// copied from server/dataset/termdb.test.js
 	const selectCohort = {
@@ -232,8 +232,7 @@ tape('state rehydrate: by cohortFilter', function(test) {
 				label: 'Combined ABC+XYZ',
 				shortLabel: 'ABC+XYZ',
 				// show note under label in smaller text size
-				note:
-					'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.'
+				note: 'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.'
 			}
 		]
 	}

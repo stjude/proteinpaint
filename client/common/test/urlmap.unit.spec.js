@@ -1,5 +1,5 @@
-const tape = require('tape')
-const urlmap = require('../urlmap').default
+import tape from 'tape'
+import urlmap from '../urlmap'
 
 /*************************
  reusable helper functions

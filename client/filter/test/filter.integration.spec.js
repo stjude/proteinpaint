@@ -1,14 +1,14 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
-const {
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import {
 	filterInit,
 	filterRxCompInit,
 	getNormalRoot,
 	filterJoin,
 	getFilterItemByTag,
 	filterPromptInit
-} = require('../filter')
-const { sleep, detectLst, detectOne, detectGte, whenVisible } = require('../../test/test.helpers.js')
+} from '../filter'
+import { sleep, detectLst, detectOne, detectGte, whenVisible } from '../../test/test.helpers.js'
 
 /*********
 Tests:

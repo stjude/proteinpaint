@@ -1,8 +1,8 @@
-const { showGenesetEdit } = require('../genesetEdit.ts')
-const tape = require('tape')
-const { select } = require('d3-selection')
-const { hg38, hg19 } = require('../../test/testdata/genomes')
-const { Menu } = require('#dom/menu')
+import { showGenesetEdit } from '../genesetEdit.ts'
+import tape from 'tape'
+import { select } from 'd3-selection'
+import { hg38, hg19 } from '../../test/testdata/genomes'
+import { Menu } from '#dom/menu'
 
 /*************************
  reusable helper functions

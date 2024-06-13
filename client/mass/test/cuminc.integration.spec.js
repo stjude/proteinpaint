@@ -1,8 +1,8 @@
-const tape = require('tape')
-const helpers = require('../../test/front.helpers.js')
-const termjson = require('../../test/testdata/termjson').termjson
-const { select, selectAll } = require('d3-selection')
-const { detectOne, detectGte } = require('../../test/test.helpers.js')
+import tape from 'tape'
+import helpers from '../../test/front.helpers.js'
+import { termjson } from '../../test/testdata/termjson'
+import { select, selectAll } from 'd3-selection'
+import { detectOne, detectGte } from '../../test/test.helpers.js'
 
 /*
 Tests:

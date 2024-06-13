@@ -1,11 +1,10 @@
-'use strict'
-const tape = require('tape')
-const termjson = require('../../test/testdata/termjson').termjson
-const helpers = require('../../test/front.helpers.js')
-const { sleep, detectLst, detectOne } = require('../../test/test.helpers.js')
-const getFilterItemByTag = require('../../filter/filter').getFilterItemByTag
-const vocabData = require('../../termdb/test/vocabData')
-const hideCategory = require('../../plots/barchart.events.js').hideCategory
+import tape from 'tape'
+import { termjson } from '../../test/testdata/termjson'
+import helpers from '../../test/front.helpers.js'
+import { sleep, detectLst, detectOne } from '../../test/test.helpers.js'
+import { getFilterItemByTag } from '../../filter/filter'
+import vocabData from '../../termdb/test/vocabData'
+import { hideCategory } from '../../plots/barchart.events.js'
 
 /*
 TODO cover all combinations

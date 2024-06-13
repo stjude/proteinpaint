@@ -1,7 +1,7 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
-const { detectOne, detectZero, detectGte, whenVisible, detectLst, sleep } = require('../../test/test.helpers')
-const { runproteinpaint } = require('../../test/front.helpers.js')
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import { detectOne, detectZero, detectGte, whenVisible, detectLst, sleep } from '../../test/test.helpers'
+import { runproteinpaint } from '../../test/front.helpers.js'
 
 /**************
  test sections
