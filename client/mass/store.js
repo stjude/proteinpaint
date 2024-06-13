@@ -507,10 +507,8 @@ function validatePlot(p, vocabApi) {
 }
 
 function validateGenericPlot(p, vocabApi) {
-	// console.log(p)
-	if (!p.term) throw 'plot error: plot.term{} not an object'
 	try {
-		validatePlotTerm(p.chartType == 'regression' ? p.outcome : p.term, vocabApi)
+		if (p.term) validatePlotTerm(p.chartType == 'regression' ? p.outcome : p.term, vocabApi)
 	} catch (e) {
 		throw 'plot.term error: ' + e
 	}

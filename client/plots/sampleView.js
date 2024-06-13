@@ -128,7 +128,7 @@ class SampleView {
 				.insert('button')
 				.style('margin-left', '10px')
 				.style('vertical-align', 'top')
-				.text('Download data')
+				.text('Download')
 				.on('click', e => {
 					this.downloadData()
 				})
@@ -147,9 +147,8 @@ class SampleView {
 
 		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
 		const q = appState.termdbConfig.queries
-		const hasPlots = q
-			? q.singleSampleGenomeQuantification || q.singleSampleMutation || (q.NIdata && showBrainImaging)
-			: false
+		const hasPlots = Object.keys(q).length > 0
+
 		const state = {
 			config,
 			termfilter: appState.termfilter,
