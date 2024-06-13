@@ -10,8 +10,8 @@
 
 import fs from 'fs'
 import path from 'path'
+import * as glob from 'glob'
 
-const { default: glob } = await import('glob')
 const mode = process.argv[2]
 const cwd = process.cwd()
 const __dirname = import.meta.dirname
