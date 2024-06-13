@@ -23,6 +23,32 @@ export function setAppMiddlewares(app) {
 		app.use(staticDir)
 	}
 
+	if (serverconfig.jwt) {
+		console.log('JWT is activated')
+		app.use((req, res, next) => {
+			let j = {}
+			if (req.body && req.method == 'POST') {
+				// a preceding middleware assumes all POST contents are json-encoded and processed by bodyParser()
+				j = req.body
+			}
+			const jwt = j.jwt
+				? j.jwt
+				: req.headers && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
+				? req.headers.authorization.split(' ')[1]
+				: null
+			if (!jwt) return res.send({ error: 'json web token missing' })
+
+			jsonwebtoken.verify(jwt, serverconfig.jwt.secret, (err, decode) => {
+				if (err) return res.send({ error: 'Invalid token' })
+
+				// FIXME do not hardcode required attribute, replace with a list
+				if (!decode[serverconfig.jwt.permissioncheck]) return res.send({ error: 'Not authorized' })
+
+				next()
+			})
+		})
+	}
+
 	app.use(compression())
 
 	app.use((req, res, next) => {
