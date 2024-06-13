@@ -104,8 +104,6 @@ if (!serverconfig.binpath) {
 		}
 	}
 }
-// defaults tool paths, for those that require binpath
-if (!serverconfig.plotBrainImaging) serverconfig.plotBrainImaging = `${serverconfig.binpath}/utils/plotBrainImaging.py`
 
 if (serverconfig.debugmode) {
 	// only apply optional routeSetters in debugmode
