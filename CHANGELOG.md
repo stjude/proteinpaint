@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Fix setHostUrl function.
 
 ## 2.63.0
 
