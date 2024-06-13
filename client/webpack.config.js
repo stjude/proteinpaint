@@ -4,7 +4,8 @@ const path = require('path')
 const fs = require('fs')
 const SpecHelpersWpPlugin = require('./test/specHelpers.js').SpecHelpersWpPlugin
 const webpack = require('webpack')
-//const HtmlWebpackPlugin = require('html-webpack-plugin')
+
+// TODO: delete webpack use, once esbuild migration is fully tested and unlikely to be reverted
 
 let babelrc
 try {
