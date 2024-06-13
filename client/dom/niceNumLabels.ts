@@ -19,5 +19,5 @@ export function niceNumLabels(nums: number[]) {
 	 */
 	const decimals2Show = abs >= 10 ? 0 : abs >= 1 ? 1 : zeroDecimalNum + 2
 
-	return nums.map(num => Number(num.toFixed(decimals2Show)))
+	return nums.map(num => Number(num).toFixed(decimals2Show))
 }

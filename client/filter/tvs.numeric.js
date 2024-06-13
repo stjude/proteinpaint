@@ -4,7 +4,7 @@ import { addBrushes, addNewBrush } from './tvs.density'
 import { NumericRangeInput } from '#dom/numericRangeInput'
 import { convertUnits } from '#shared/helpers'
 import { violinRenderer } from '../dom/violinRenderer'
-import { niceNumLabels } from '#dom/niceNumLabels'
+import { niceNumLabels } from '../dom/niceNumLabels.ts'
 
 /*
 ********************** EXPORTED
