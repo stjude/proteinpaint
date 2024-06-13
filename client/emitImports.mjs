@@ -23,10 +23,11 @@ if (!namePattern.includes('.spec.')) throw `namePattern does not include '.spec'
 const specs = glob.sync(`./**/test/${namePattern}`, { cwd: __dirname })
 //const specs = _specs.filter(s => s.includes('tvs.unit'))
 
-console.log(`const { matchSpecs, specsMatched } = await import('./matchSpecs.js'); console.log(Object.keys(window.process))`)
-console.log(`const tape = (await import('tape')).default`)
+console.log(`import { matchSpecs, specsMatched } from './matchSpecs.js'`)
+console.log(`import tape from './tape.bundle.js'`)
 
 console.log(`
+console.log(tape)
 // keep an initial test open until all spec modules have been loaded,
 // to prevent an early-loaded and very fast test from closing the
 // tape harness and ignoring late-loaded tests 
