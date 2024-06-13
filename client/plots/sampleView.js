@@ -114,11 +114,9 @@ class SampleView {
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 				} else {
 					this.dom.tableDiv.style('display', 'none')
-					if (this.state.hasPlots) {
-						for (const div of this.discoPlots) div.style('display', 'none')
-						for (const div of this.singleSamplePlots) div.style('display', 'none')
-						for (const div of this.brainPlots) div.style('display', 'none')
-					}
+					for (const div of this.discoPlots) div.style('display', 'none')
+					for (const div of this.singleSamplePlots) div.style('display', 'none')
+					for (const div of this.brainPlots) div.style('display', 'none')
 				}
 			}
 			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, callback)
@@ -147,7 +145,6 @@ class SampleView {
 
 		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
 		const q = appState.termdbConfig.queries
-		const hasPlots = Object.keys(q).length > 0
 
 		const state = {
 			config,
@@ -163,7 +160,6 @@ class SampleView {
 			NIdata: q?.NIdata,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationPayload: this.app.vocabApi.tokenVerificationPayload,
-			hasPlots,
 			termdbConfig: appState.termdbConfig,
 			vocab: appState.vocab
 		}
@@ -184,7 +180,7 @@ class SampleView {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
 		await this.renderPlots(this.state, this.state.samples)
-		if (this.state.hasPlots) this.showVisiblePlots()
+		this.showVisiblePlots()
 
 		this.termsById = this.getTermsById(this.state)
 		this.sampleDataByTermId = {}

@@ -40,13 +40,11 @@ function init({ genomes }) {
 }
 
 export function validate_query_getSampleImages(ds: any, genome: any) {
-	if (ds.queries.images) {
-		const q = ds.queries.images
-		if (!q) return
-		//if (q.src == 'gdcapi') gdcValidateQuery(ds, genome, q.sampleId)
-		//reading images locally is the only option supported
-		nativeValidateQuery(ds)
-	}
+	const q = ds.queries.images
+	if (!q) return
+	//if (q.src == 'gdcapi') gdcValidateQuery(ds, genome, q.sampleId)
+	//reading images locally is the only option supported so far
+	nativeValidateQuery(ds)
 }
 
 function nativeValidateQuery(ds: any) {
@@ -58,7 +56,6 @@ function nativeValidateQuery(ds: any) {
 }
 
 async function getSampleImages(ds: any, folder: string, sampleId: number) {
-	console.log('getSampleImages', folder, sampleId)
 	const sql = `SELECT * FROM images WHERE sample = ${sampleId}`
 	const rows = ds.cohort.db.connection.prepare(sql).all()
 	const images: Image[] = []
