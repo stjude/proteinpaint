@@ -51,7 +51,6 @@ export function validate_query_getSampleImages(ds: any, genome: any) {
 
 function nativeValidateQuery(ds: any) {
 	ds.queries.images.getSampleImages = async (q: TermdbGetSampleImagesRequest) => {
-		console.log('nativeValidateQuery', q)
 		const folder = ds.queries.images.folder //query to search top terms by type
 		const images = await getSampleImages(ds, folder, q.sampleId)
 		return images
@@ -69,7 +68,7 @@ async function getSampleImages(ds: any, folder: string, sampleId: number) {
 		const data = await fs.promises.readFile(file)
 
 		images.push({
-			src: 'data:image/jpeg;base64,' + new Buffer.from(data).toString('base64')
+			src: 'data:image/jpeg;base64,' + Buffer.from(data).toString('base64')
 		})
 	}
 	return images
