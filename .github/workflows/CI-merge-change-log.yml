@@ -44,3 +44,9 @@ jobs:
             git pull --rebase
             git push origin $BRANCH
           fi
+
+      - name: Update proteipaint subproject commit in sjpp
+        run: |
+          cd .. 
+          git add ./proteinpaint
+          git commit -m "update latest proteipaint subproject commit"
