@@ -101,7 +101,6 @@ class gsea {
 	}
 
 	async main() {
-		console.log('this.state.config:', this.state.config)
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.gsea
 		await this.setControls()
@@ -128,24 +127,16 @@ add:
 	if (self.settings.pathway != '-') {
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.config.gsea_params.geneSetGroup = self.settings.pathway
-		console.log('self:', self)
+		const wait = self.dom.detailsDiv.append('div').text('Loading...')
 		const output = await rungsea(self.config.gsea_params)
-		console.log('output:', output)
+		wait.remove()
 		const table_stats = table2col({ holder: self.dom.detailsDiv })
 		const [t1, t2] = table_stats.addRow()
 		t2.style('text-align', 'center').style('font-size', '0.8em').style('opacity', '0.8').text('COUNT')
 		const addStats = [
 			{
-				label: 'Sample genes',
-				values: self.config.gseaparams.sample_genes.split(',').length
-			},
-			{
-				label: 'Background genes',
-				values: self.config.gseaparams.background_genes.split(',').length
-			},
-			{
 				label: 'Pathways analyzed',
-				values: output.num_pathways
+				values: Object.keys(output).length
 			}
 		]
 
@@ -156,37 +147,50 @@ add:
 		}
 
 		// Generating the table
-		self.gene_ora_table_cols = [
-			{ label: 'Gene set group' },
-			{ label: 'Original p-value (linear scale)' },
-			{ label: 'Adjusted p-value (linear scale)' }
+		self.gsea_table_cols = [
+			{ label: 'Pathway name' },
+			{ label: 'enrichment score' },
+			{ label: 'normalized enrichment score' },
+			{ label: 'Geneset size' },
+			{ label: 'pvalue' },
+			{ label: 'sidak' },
+			{ label: 'FDR' },
+			{ label: 'Leading edge' }
 		]
-		self.gene_ora_table_rows = []
-		for (const pathway of output.pathways) {
-			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.p_value_adjusted) {
-				self.gene_ora_table_rows.push([
-					{ value: pathway.pathway_name },
-					{ value: pathway.p_value_original.toPrecision(4) },
-					{ value: pathway.p_value_adjusted.toPrecision(4) }
+		self.gsea_table_rows = []
+		for (const pathway_name of Object.keys(output)) {
+			const pathway = output[pathway_name]
+			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.fdr) {
+				self.gsea_table_rows.push([
+					{ value: pathway_name },
+					{ value: pathway.es },
+					{ value: pathway.nes },
+					{ value: pathway.geneset_size },
+					{ value: pathway.pval.toPrecision(4) },
+					{ value: pathway.sidak.toPrecision(4) },
+					{ value: pathway.fdr.toPrecision(4) },
+					{ value: pathway.leading_edge }
 				])
-			} else if (
-				self.settings.adjusted_original_pvalue == 'original' &&
-				self.settings.pvalue >= pathway.p_value_original
-			) {
-				self.gene_ora_table_rows.push([
-					{ value: pathway.pathway_name },
-					{ value: pathway.p_value_original.toPrecision(4) },
-					{ value: pathway.p_value_adjusted.toPrecision(4) }
+			} else if (self.settings.adjusted_original_pvalue == 'original' && self.settings.pvalue >= pathway.pval) {
+				self.gsea_table_rows.push([
+					{ value: pathway_name },
+					{ value: pathway.es },
+					{ value: pathway.nes },
+					{ value: pathway.geneset_size },
+					{ value: pathway.pval.toPrecision(4) },
+					{ value: pathway.sidak.toPrecision(4) },
+					{ value: pathway.fdr.toPrecision(4) },
+					{ value: pathway.leading_edge }
 				])
 			}
 		}
 
 		self.dom.tableDiv.selectAll('*').remove()
-		const d_ora = self.dom.tableDiv.append('div')
+		const d_gsea = self.dom.tableDiv.append('div')
 		renderTable({
-			columns: self.gene_ora_table_cols,
-			rows: self.gene_ora_table_rows,
-			div: d_ora,
+			columns: self.gsea_table_cols,
+			rows: self.gsea_table_rows,
+			div: d_gsea,
 			showLines: true,
 			maxHeight: '30vh',
 			resize: true

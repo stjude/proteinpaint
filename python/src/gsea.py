@@ -48,9 +48,7 @@ try:
                 query2=f"select genes from term2genes where id='" + row[0]  + "'"
                 cursor.execute(query2)
                 rows2 = cursor.fetchall()
-                #print (json.loads(rows2[0][0])) # .replace("[","").replace("]","")
                 row3=json.loads(rows2[0][0])
-                #print (list(map(extract_symbols,row3)))
                 msigdb_library[row[0]] = list(map(extract_symbols,row3))
             
             #print ("msigdb_library:",msigdb_library)
@@ -60,19 +58,16 @@ try:
             stop_loop_time = time.time()
             execution_time = stop_loop_time - start_loop_time
             print(f"Execution time: {execution_time} seconds")
-            
-            # read signature as pandas dataframe
-            #signature = pd.read_csv("https://github.com/MaayanLab/blitzgsea/raw/main/testing/ageing_muscle_gtex.tsv")
             signature=pd.DataFrame(df)
             
             # run enrichment analysis
             start_gsea_time = time.time()
             if __name__ == "__main__":
-               result = blitz.gsea(signature, msigdb_library)
+               result = blitz.gsea(signature, msigdb_library).T
                print ("result:",result.to_json())
             stop_gsea_time = time.time()   
             gsea_time = stop_gsea_time - start_gsea_time
-            #print (f"GSEA time: {gsea_time} seconds")
+            print (f"GSEA time: {gsea_time} seconds")
             
     else:
        pass 
