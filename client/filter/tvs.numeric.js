@@ -164,7 +164,7 @@ async function fillMenu(self, div, tvs) {
 	// svg
 	//self.num_obj.svg = self.num_obj.num_div.append('svg')
 	//makeDensityPlot(density_plot_opts)
-	self.vr = new violinRenderer(self.num_obj.num_div, self.num_obj.density_data)
+	self.vr = new violinRenderer(self.num_obj.num_div, self.num_obj.density_data, self.num_obj.xpad, self.num_obj.ypad)
 	self.vr.render()
 	self.num_obj.svg = self.vr.svg
 
@@ -181,7 +181,6 @@ async function fillMenu(self, div, tvs) {
 		ranges.push(range)
 		//}
 	}
-
 	// add brush_g for tvs brushes
 	self.num_obj.brush_g = self.num_obj.svg
 		.append('g')
@@ -193,7 +192,7 @@ async function fillMenu(self, div, tvs) {
 
 	self.num_obj.xscale = scaleLinear()
 		.domain([minvalue, maxvalue])
-		.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
+		.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width + self.num_obj.plot_size.xpad])
 
 	self.num_obj.ranges = ranges
 	self.num_obj.brushes = []
