@@ -8,6 +8,7 @@ Fixes:
 - bug fix to only apply niceNumLabels() when numeric tvs is not unbounded
 - bug fix to allow for interactions with molecular variables in regression analysis
 - test run on all genome tabix files on server launch to detect old index file issue early
+- add missing jsonwebtoken import
 
 DevOps:
 - use esbuild in client unit and integration tests
