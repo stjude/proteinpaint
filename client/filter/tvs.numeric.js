@@ -68,18 +68,35 @@ function format_val_text(range, term) {
 		const lt = `<span style='vertical-align: top; font-size: 0.9em'>&lt;</span>`
 		return `<span>${inf('﹣')} ${lt} ${x} ${lt} ${inf('﹢')}</span>`
 	}
-	let startName, stopName
+
+	/* logic about value converting:
+	if term.valueConversion is present, will convert e.g. from day to years. this takes higher priority
+	else, if range is one-sided, return as is
+	else, apply nice method to adjust digits. this requires a start-stop range
+	*/
+
 	const vc = term.valueConversion
+
+	if (range.startunbounded)
+		return `${x} ${range.stopinclusive ? '&le;' : '&lt;'} ${
+			vc ? convertUnits(range.stop, vc.fromUnit, vc.toUnit, vc.scaleFactor) : range.stop
+		}`
+
+	if (range.stopunbounded)
+		return `${x} ${range.startinclusive ? '&ge;' : '&gt;'} ${
+			vc ? convertUnits(range.start, vc.fromUnit, vc.toUnit, vc.scaleFactor) : range.start
+		}`
+
+	// range is not unbounded and can apply nice method if there's no vc
+
+	let startName, stopName
 	if (vc) {
-		if ('start' in range) startName = convertUnits(range.start, vc.fromUnit, vc.toUnit, vc.scaleFactor)
-		if ('stop' in range) stopName = convertUnits(range.stop, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+		startName = convertUnits(range.start, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+		stopName = convertUnits(range.stop, vc.fromUnit, vc.toUnit, vc.scaleFactor)
 	} else {
 		//Rms excessive number of decimals
 		;[startName, stopName] = niceNumLabels([range.start, range.stop])
 	}
-	if (range.startunbounded) return `${x} ${range.stopinclusive ? '&le;' : '&lt;'} ${stopName}`
-
-	if (range.stopunbounded) return `${x} ${range.startinclusive ? '&ge;' : '&gt;'} ${startName}`
 
 	return `${startName} 
 			${range.startinclusive ? '&le;' : '&lt;'}
