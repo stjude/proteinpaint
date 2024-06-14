@@ -336,6 +336,16 @@ export async function validate_tabixfile(file) {
 		// tbi exists
 		if (await file_not_readable(tbi)) throw '.tbi index file not readable'
 	}
+
+	// test to list chrs on the file, to detect the "index file is older than .gz file" issue early, and abort server launch
+	try {
+		await get_lines_bigfile({
+			args: ['-l', file],
+			callback: () => {}
+		})
+	} catch (e) {
+		throw e
+	}
 }
 
 export async function validate_txtfile(file) {

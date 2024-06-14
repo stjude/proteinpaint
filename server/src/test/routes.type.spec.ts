@@ -1,7 +1,7 @@
 import tape from 'tape'
 import path from 'path'
 import fs from 'fs'
-import { initdb } from '../genome.initdb.js'
+import { initdb } from './genome.initdb.js'
 import { init as mds3_init } from '../mds3.init.js'
 import * as checkers from '../../shared/checkers/index.ts'
 import serverconfig from '../serverconfig.js'
