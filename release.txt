@@ -1,2 +1,1 @@
-Fixes:
-- test run on all genome tabix files on server launch to detect old index file issue early
+
