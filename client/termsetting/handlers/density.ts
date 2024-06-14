@@ -69,7 +69,7 @@ export async function setDensityPlot(self) {
 
 		self.num_obj.xscale = scaleLinear()
 			.domain([minvalue, maxvalue])
-			.range([numObj.plot_size.xpad, numObj.plot_size.width - numObj.plot_size.xpad])
+			.range([numObj.plot_size.xpad, numObj.plot_size.width + numObj.plot_size.xpad])
 
 		self.num_obj.ranges = []
 		if (self.q.first_bin) {
