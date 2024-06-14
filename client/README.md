@@ -11,20 +11,22 @@ This should be installed as a workspace, follow the README at the project root.
 From the proteinpaint/client directory:
 ```bash
 npm run dev # generates bundles to public/bin
-npm test # tests the client code
-npm run browser # bundles the front-end spec files for use at localhost:[port]/testrun.html
-npm run gdc # runs the gdc tests
+# the client dev script is usually called together with server start
+# for St. Jude developers, that's `npm run dev` from the supermodule/parent repo
 ```
 
 ## Test
 
-NOTE: Running `npm test` at the project root will run both client and server tests.
+You can view and run tests from `http://localhost:3000`, if you have a full dev environment running.
 
-`npm test` to run all available client-side tests.
+```bash
 
-To run a specific file with a $namepattern (such as filter): `node ./test/import-specs.js name=$namepattern && npm run tape`.
-For example, `node ./test/import-specs.js name=**/termsetting* && npm run tape`
+npm run test:unit
+npm run test:integration
 
+./test.sh *tvs.*.spec.*
+
+# not recommended: `npm test` to run all available client-side tests.
 
 ## Build
 
