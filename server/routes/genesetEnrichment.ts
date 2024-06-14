@@ -1,9 +1,9 @@
-import { genesetEnrichmentRequest, genesetEnrichmentResponse } from '#shared/types/routes/genesetEnrichment.ts'
+import { genesetEnrichmentRequest, genesetEnrichmentResponse } from '../shared/types/routes/genesetEnrichment.ts'
 import fs from 'fs'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
 import path from 'path'
-import serverconfig from '../src/serverconfig'
+import serverconfig from '../src/serverconfig.js'
 
 export const api = {
 	endpoint: 'genesetEnrichment',
@@ -25,7 +25,6 @@ export const api = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			console.log('req.query:', req.query)
 			const results = await run_genesetEnrichment_analysis(req.query as genesetEnrichmentRequest, genomes)
 			res.send(results as genesetEnrichmentResponse)
 		} catch (e: any) {
@@ -47,12 +46,12 @@ async function run_genesetEnrichment_analysis(q: genesetEnrichmentRequest, genom
 	//console.log('__dirname:',__dirname)
 	//console.log('genesetenrichment_input:', JSON.stringify(genesetenrichment_input))
 
-	fs.writeFile('test.txt', JSON.stringify(genesetenrichment_input), function (err) {
-		// For catching input to rust pipeline, in case of an error
-		if (err) return console.log(err)
-	})
+	//fs.writeFile('test.txt', '/' + JSON.stringify(genesetenrichment_input), function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 
-	const gsea_output = await run_gsea(
+	const gsea_output: any = await run_gsea(
 		path.join(serverconfig.binpath, '../python/src', 'gsea.py'),
 		'/' + JSON.stringify(genesetenrichment_input) // "/" is needed for python to accept the bracket "{" as a bracket
 	)
@@ -76,8 +75,8 @@ async function run_gsea(path, data) {
 		throw `${path} does not exist`
 	}
 	return new Promise((resolve, reject) => {
-		const _stdout = []
-		const _stderr = []
+		const _stdout: any[] = []
+		const _stderr: any[] = []
 		// spawn python process
 		let python_path = 'python3'
 		if (serverconfig.py_path) python_path = serverconfig.py_path

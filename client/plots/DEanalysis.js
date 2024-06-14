@@ -149,7 +149,7 @@ class DEanalysis {
 			})
 		}
 
-		if (this.app.opts.genome.termdbs) {
+		if (this.app.opts.genome.termdbs && !this.settings.gsea) {
 			// Check if genome build contains termdbs, only then enable gene ora
 			inputs.push({
 				label: 'Gene set enrichment analysis',
