@@ -2,19 +2,14 @@ import path from 'path'
 import fs from 'fs'
 import { context } from 'esbuild'
 import { fileURLToPath } from 'url'
-import { polyfillNode } from "esbuild-plugin-polyfill-node"
-    
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ENV = process.env.ENV
 
 const entryPoints = ['./src/app.js']
 entryPoints.push(`./test/internals-${ENV}.js`)
 
-const libReplacers = ENV == 'dev'  
-  ? [nodeLibToBrowser()]
-  : ENV == 'test'
-  ? [polyfillNode(), nodeLibToBrowser()]
-  : []
+const libReplacers = ENV == 'dev' || ENV == 'test' ? [nodeLibToBrowser()] : []
 
 const ctx = await context({
 	entryPoints,
@@ -68,11 +63,7 @@ function nodeLibToBrowser() {
   // NOTE: These polyfills are installed by node-polyfill-webpack-plugin,
   // and will still be required as devDependencies after removing webpack 
   // and its plugins post-esbuild migration
-  const replace = ENV == 'test' 
-    ? {
-      tape: import.meta.resolve('./test/tape.bundle.js').replace('file://', '')
-    } 
-    : ENV == 'dev' 
+  const replace = ENV == 'dev' || ENV == 'test' 
     ? {
       path: import.meta.resolve('path-browserify').replace('file://', ''),
       stream: import.meta.resolve('stream-browserify').replace('file://', ''),
@@ -81,7 +72,7 @@ function nodeLibToBrowser() {
 
   const filter = RegExp(`^(${Object.keys(replace).join('|')})$`)
   return {
-    name: 'replaceNodeBuiltIns',
+    name: 'nodeLibToBrowser',
     setup(build) {
       build.onResolve({ filter }, arg => {
         return {

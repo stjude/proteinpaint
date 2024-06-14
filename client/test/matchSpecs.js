@@ -2,6 +2,11 @@ import process from 'process'
 import minimatch from 'minimatch'
 
 window.process = process
+if (!process.stdout) {
+	console.log('setting process.stdout() ...')
+	const { default: stdout } = await import('browser-stdout')
+	process.stdout = stdout()
+}
 
 const params = getParams()
 //const CURRSPECDIR = params.dir ? `./${params.dir}` : '.'
