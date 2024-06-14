@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - bug fix to only apply niceNumLabels() when numeric tvs is not unbounded
+- bug fix to allow for interactions with molecular variables in regression analysis
 
 
 ## 2.63.1
