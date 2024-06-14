@@ -189,8 +189,8 @@ export default function getHandlers(self) {
 					// because a patient could have multiple 'Sub-condition', 'Most recent grade' or 'Any grade', and as a result could
 					// be counted multiple times.
 					return s.unit == 'pct'
-						? '% of patients'
-						: '# of patients ' +
+						? '% of samples'
+						: '# of samples ' +
 								(term.q.bar_by_children || term.q.value_by_most_recent || term.q.value_by_computable_grade
 									? ''
 									: `(n=${visibleTotal})`)
