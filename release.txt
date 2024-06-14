@@ -1,1 +1,2 @@
-
+Fixes:
+- add missing jsonwebtoken import
