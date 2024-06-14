@@ -1,2 +1,1 @@
-DevOps:
-- use esbuild in client unit and integration tests
+

@@ -8,6 +8,9 @@ Fixes:
 - bug fix to only apply niceNumLabels() when numeric tvs is not unbounded
 - bug fix to allow for interactions with molecular variables in regression analysis
 
+DevOps:
+- use esbuild in client unit and integration tests
+
 
 ## 2.63.1
 
