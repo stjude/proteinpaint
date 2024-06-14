@@ -21,7 +21,7 @@ const namePattern = process.argv[2] || '*.spec.*'
 if (!namePattern.includes('.spec.')) throw `namePattern does not include '.spec'`
 
 const specs = glob.sync(`./**/test/${namePattern}`, { cwd: __dirname })
-//const specs = _specs.filter(s => s.includes('tvs.unit'))
+specs.sort()
 
 console.log(`import { matchSpecs, specsMatched } from './matchSpecs.js'`)
 console.log(`import tape from 'tape'`)

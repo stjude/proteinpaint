@@ -9,6 +9,8 @@ import dynamicImportVars from '@rollup/plugin-dynamic-import-vars'
 import typescript from '@rollup/plugin-typescript'
 import path from 'path'
 
+// TODO: uninstall rollup, once esbuild migration is fully tested and unlikely to be reverted
+
 const production = !process.env.ROLLUP_WATCH && process.env.NODE_ENV !== 'dev'
 
 function onwarn(message, warn) {
