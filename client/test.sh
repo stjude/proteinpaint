@@ -9,7 +9,7 @@ rm -rf ../public/bin/test
 TESTFILE=test/internals-test.js
 node emitImports.mjs $NAMEPATTERN > ./$TESTFILE
 
-if [[ ! -f "./$TESTFILE" ]]; then 
+if [[ ! -f "./tape.bundle.js" ]]; then 
 	# assume that the tape lib rarely changes in local testing environment;
 	# this does not affect the CI environment, where the runner will install
 	# from a freshly cloned repo and will always have to create the tape.bundle
