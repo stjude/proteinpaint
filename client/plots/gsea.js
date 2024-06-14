@@ -161,25 +161,61 @@ add:
 		for (const pathway_name of Object.keys(output)) {
 			const pathway = output[pathway_name]
 			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.fdr) {
+				let pval
+				if (pathway.pval) {
+					pval = pathway.pval.toPrecision(4)
+				} else {
+					pval = pathway.pval
+				}
+				let sidak
+				if (pathway.sidak) {
+					sidak = pathway.sidak.toPrecision(4)
+				} else {
+					sidak = pathway.sidak
+				}
+				let fdr
+				if (pathway.fdr) {
+					fdr = pathway.fdr.toPrecision(4)
+				} else {
+					fdr = pathway.fdr
+				}
 				self.gsea_table_rows.push([
 					{ value: pathway_name },
-					{ value: pathway.es },
-					{ value: pathway.nes },
+					{ value: pathway.es.toPrecision(4) },
+					{ value: pathway.nes.toPrecision(4) },
 					{ value: pathway.geneset_size },
-					{ value: pathway.pval.toPrecision(4) },
-					{ value: pathway.sidak.toPrecision(4) },
-					{ value: pathway.fdr.toPrecision(4) },
+					{ value: pval },
+					{ value: sidak },
+					{ value: fdr },
 					{ value: pathway.leading_edge }
 				])
 			} else if (self.settings.adjusted_original_pvalue == 'original' && self.settings.pvalue >= pathway.pval) {
+				let pval
+				if (pathway.pval) {
+					pval = pathway.pval.toPrecision(4)
+				} else {
+					pval = pathway.pval
+				}
+				let sidak
+				if (pathway.sidak) {
+					sidak = pathway.sidak.toPrecision(4)
+				} else {
+					sidak = pathway.sidak
+				}
+				let fdr
+				if (pathway.fdr) {
+					fdr = pathway.fdr.toPrecision(4)
+				} else {
+					fdr = pathway.fdr
+				}
 				self.gsea_table_rows.push([
 					{ value: pathway_name },
-					{ value: pathway.es },
-					{ value: pathway.nes },
+					{ value: pathway.es.toPrecision(4) },
+					{ value: pathway.nes.toPrecision(4) },
 					{ value: pathway.geneset_size },
-					{ value: pathway.pval.toPrecision(4) },
-					{ value: pathway.sidak.toPrecision(4) },
-					{ value: pathway.fdr.toPrecision(4) },
+					{ value: pval },
+					{ value: sidak },
+					{ value: fdr },
 					{ value: pathway.leading_edge }
 				])
 			}

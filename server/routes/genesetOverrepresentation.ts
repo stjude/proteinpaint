@@ -2,7 +2,7 @@
 import {
 	genesetOverrepresentationRequest,
 	genesetOverrepresentationResponse
-} from '#shared/types/routes/genesetOverrepresentation.ts'
+} from '../shared/types/routes/genesetOverrepresentation.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 
 export const api = {
