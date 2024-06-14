@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.63.2
 
 Fixes:
 - bug fix to only apply niceNumLabels() when numeric tvs is not unbounded
