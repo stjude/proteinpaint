@@ -1,1 +1,2 @@
-
+Fixes
+- bug fix to allow for interactions with molecular variables in regression analysis 
