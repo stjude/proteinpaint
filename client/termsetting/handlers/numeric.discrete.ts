@@ -501,7 +501,8 @@ function renderLastBinInputs(self, tr: any) {
 		],
 		callback: v => {
 			if (v == 'auto') {
-				delete self.q.last_bin!.start
+				delete self.q.last_bin
+				// if just deleting last_bin.start and keeps q.last_bin{}, density plot may set last_bin.bin='last' and will break bin validation
 				edit_div.style('display', 'none')
 				self.renderBinLines(self, self.q as NumericQ)
 				setDensityPlot(self)
