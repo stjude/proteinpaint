@@ -43,7 +43,7 @@ async function run_genesetEnrichment_analysis(q: genesetEnrichmentRequest, genom
 		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
 		gene_set_group: q.geneSetGroup
 	}
-	console.log('serverconfig.binpath:', serverconfig.binpath)
+
 	//console.log('__dirname:',__dirname)
 	//console.log('genesetenrichment_input:', JSON.stringify(genesetenrichment_input))
 
@@ -52,13 +52,21 @@ async function run_genesetEnrichment_analysis(q: genesetEnrichmentRequest, genom
 		if (err) return console.log(err)
 	})
 
-	console.log('file:', path.join(serverconfig.binpath, '../python/src', 'gsea.py'))
 	const gsea_output = await run_gsea(
 		path.join(serverconfig.binpath, '../python/src', 'gsea.py'),
-		'/' + JSON.stringify(genesetenrichment_input)
+		'/' + JSON.stringify(genesetenrichment_input) // "/" is needed for python to accept the bracket "{" as a bracket
 	)
-	console.log('gsea_output:', gsea_output)
-	return gsea_output as genesetEnrichmentResponse
+
+	let result
+	for (const line of gsea_output.split('\n')) {
+		if (line.startsWith('result: ')) {
+			result = JSON.parse(line.replace('result: ', ''))
+		} else {
+			console.log(line)
+		}
+	}
+	//console.log('result:', result)
+	return result as genesetEnrichmentResponse
 }
 
 async function run_gsea(path, data) {
