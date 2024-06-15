@@ -63,15 +63,22 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const key = tw.q?.mode == 'continuous' ? anno.value : anno.key
 	cell.key = key
-	cell.label = tw.q?.mode == 'continuous' ? (tw.term.unit ? `${key}(${tw.term.unit})` : key) : 'Exit code: ' + key
-	cell.fill = key == 1 ? '#ff7f0e' : '#1f77b4'
+	cell.label =
+		tw.q?.mode == 'continuous'
+			? tw.term.unit
+				? `${key}(${tw.term.unit})`
+				: key
+			: tw.term.values?.[key].label
+			? tw.term.values?.[key].label
+			: 'Exit code: ' + key
+	cell.fill = key == 1 ? '#a1a3a6' : '#a3c88b'
 	cell.order = 0
 	if (tw.q?.mode == 'continuous') {
 		if (!tw.settings) tw.settings = {}
 		if (!tw.settings.barh) tw.settings.barh = s.barh
 		if (!('gap' in tw.settings)) tw.settings.gap = 4
-
-		cell.fill = '#555'
+		cell.exitCodeKey = tw.term.values?.[anno.key].label || 'Exit code: ' + anno.key
+		cell.fill = anno.key == 1 ? '#a1a3a6' : '#a3c88b'
 		if (s.transpose) {
 			cell.height = t.scale(cell.key)
 			cell.x = tw.settings.gap
@@ -85,6 +92,7 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 			cell.convertedValueLabel = vc ? convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor) : ''
 		}
 	} else {
+		cell.timeToEventKey = anno.value
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
 		const group = tw.legend?.group || tw.$id
