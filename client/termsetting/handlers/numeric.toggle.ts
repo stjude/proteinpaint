@@ -63,7 +63,7 @@ export async function getHandler(self) {
 	if (self.opts.numericEditMenuVersion!.includes('continuous')) {
 		tabs.push({
 			mode: 'continuous',
-			label: 'Continuous',
+			label: self.term.type == 'survival' ? 'Time to Event' : 'Continuous',
 			callback: self.tabCallback
 		})
 	}
@@ -71,7 +71,7 @@ export async function getHandler(self) {
 	if (self.opts.numericEditMenuVersion!.includes('discrete')) {
 		tabs.push({
 			mode: 'discrete',
-			label: 'Discrete',
+			label: self.term.type == 'survival' ? 'Exit code' : 'Discrete',
 			callback: self.tabCallback
 		})
 	}
