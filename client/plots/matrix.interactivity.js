@@ -61,6 +61,10 @@ export function setInteractivity(self) {
 			.style('display', '')
 
 		if (d.term.type != 'geneVariant') {
+			let survivalInfo
+			if (d.term.type == 'survival' && d.exitCodeKey) {
+				survivalInfo = d.term.values?.[d.exitCodeKey]?.label || d.exitCodeKey
+			}
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label}</td></tr>`)
 			rows.push(
 				`<tr>
@@ -69,10 +73,18 @@ export function setInteractivity(self) {
 						<span style="display:inline-block; width:12px; height:12px; background-color:${
 							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 						}" ></span>
-						${d.convertedValueLabel || d.label}
+						${survivalInfo || d.convertedValueLabel || d.label}
 					</td>
 				</tr>`
 			)
+			if (d.term.type == 'survival') {
+				const timeToEventKey =
+					'Time to Event: ' +
+					(d.timeToEventKey
+						? d.timeToEventKey + (d.term.unit ? `(${d.term.unit})` : '')
+						: d.convertedValueLabel || d.label)
+				rows.push(`<tr><td></td><td>${timeToEventKey}</td></tr>`)
+			}
 		} else if (d.term.type == 'geneVariant') {
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label || d.value?.sample}</td></tr>`)
 			rows.push(`<tr><td>Gene:</td><td>${d.term.name}</td></tr>`)
