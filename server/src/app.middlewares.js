@@ -14,13 +14,18 @@ import jsonwebtoken from 'jsonwebtoken'
 const basepath = serverconfig.basepath || ''
 
 export function setAppMiddlewares(app) {
+	app.use((req, res, next) => {
+		setHeaders(res)
+		next()
+	})
+
 	if (serverconfig.users) {
 		// { user1 : pass1, user2: pass2, ... }
 		app.use(basicAuth({ users: serverconfig.users, challenge: true }))
 	}
 
 	if (!serverconfig.backend_only) {
-		const staticDir = express.static(path.join(process.cwd(), './public'), { setHeaders })
+		const staticDir = express.static(path.join(process.cwd(), './public'))
 		app.use(staticDir)
 	}
 
@@ -104,7 +109,6 @@ export function setAppMiddlewares(app) {
 		}
 		Object.freeze(req.query.__protected__)
 
-		setHeaders(res)
 		res.header(
 			'Access-Control-Allow-Origin',
 			req.get('origin') || req.get('referrer') || req.protocol + '://' + req.get('host').split(':')[0] || '*'
