@@ -2,6 +2,8 @@ import { getCompInit, copyMerge } from '#rx'
 import { select } from 'd3-selection'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
+import dziviewer from './dziviewer/plot.dzi'
+import { dofetch3 } from '#src/client'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -529,6 +531,25 @@ class SampleView {
 					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 				const imagePlotImport = await import('./imagePlot.js')
 				imagePlotImport.renderImagePlot(state, cellDiv, sample)
+			}
+		}
+
+		if (state.termdbConfig.queries?.DZImages) {
+			let div = plotsDiv.append('div')
+
+			for (const sample of samples) {
+				const cellDiv = div.append('div').style('display', 'inline-block')
+
+				const data = await dofetch3('sampledzimages', {
+					body: {
+						genome: this.app.opts.genome.name,
+						dslabel: this.state.vocab.dslabel,
+						sample_id: sample.sampleName
+					}
+				})
+				if (data.sampleDZImages?.length > 0) {
+					dziviewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleDZImages)
+				}
 			}
 		}
 	}
