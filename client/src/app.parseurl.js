@@ -85,14 +85,6 @@ upon error, throw err message as a string
 		return
 	}
 
-	//////////// to delete
-	if (urlp.has('mdsjsonform')) {
-		const _ = await import('./mdsjsonform')
-		await _.init_mdsjsonform(arg)
-		// will not process other url parameters
-		return
-	}
-
 	if (urlp.has('termdb')) {
 		const value = urlp.get('termdb')
 		const state = typeof value === 'string' ? JSON.parse(value) : value
@@ -630,17 +622,6 @@ export async function get_tklst(urlp, genomeobj) {
 				})
 			}
 		}
-	}
-
-	if (urlp.has('mdsjsoncache')) {
-		const re = await client.dofetch2('mdsjsonform', {
-			method: 'POST',
-			body: JSON.stringify({ draw: urlp.get('mdsjsoncache') })
-		})
-		if (re.error) throw re.error
-		mdsjson.validate_mdsjson(re.json)
-		const tk = mdsjson.get_json_tk(re.json)
-		tklst.push(tk)
 	}
 
 	if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {

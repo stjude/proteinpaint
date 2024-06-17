@@ -683,11 +683,6 @@ async function parseEmbedThenUrl(arg, app) {
 		return
 	}
 
-	if (arg.mdsjsonform) {
-		await launchmdsjsonform(arg, app)
-		return
-	}
-
 	if (arg.selectGenomeWithTklst) {
 		await launchSelectGenomeWithTklst(arg, app)
 		return
@@ -1313,13 +1308,6 @@ function launchfusioneditor(arg, app) {
 	import('./svmr').then(p => {
 		p.svmrparseinput(arg.fusioneditor, app.error0, genomeobj, app.holder0, app.hostURL, arg.jwt)
 	})
-}
-
-async function launchmdsjsonform(arg, app) {
-	if (arg.mdsjsonform.uionly) {
-		const _ = await import('./mdsjsonform')
-		await _.init_mdsjsonform({ holder: app.holder0, genomes: app.genomes })
-	}
 }
 
 async function launchSelectGenomeWithTklst(arg, app) {
