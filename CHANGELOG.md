@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 
+## 2.63.3-2
+
+Features:
+- Matrix plot survival term improvements: mouseover time-to-event and exit code info, color coding
+
+## 2.63.3-1
+
+Fixes:
+- Replace "patients" with "samples" in barchart plots
+
+
+## 2.63.3-0
+
+Fixes:
+- Fix termsetting scale for density plots
+
 ## 2.63.2
 
 Fixes:
