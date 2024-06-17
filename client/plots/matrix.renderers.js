@@ -399,10 +399,12 @@ export function setRenderers(self) {
 				})
 			}
 		})
-		pill.main({
+		const arg = {
 			term: self.config.divideBy.term,
 			q: self.config.divideBy.q
-		})
+		}
+		if (self.config.divideBy.$id) arg.$id = self.config.divideBy.$id
+		pill.main(arg)
 	}
 
 	self.adjustSvgDimensions = async function (prevTranspose) {
