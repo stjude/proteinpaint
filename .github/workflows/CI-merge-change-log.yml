@@ -50,3 +50,4 @@ jobs:
           cd .. 
           git add ./proteinpaint
           git commit -m "update latest proteipaint subproject commit"
+          git push origin master
