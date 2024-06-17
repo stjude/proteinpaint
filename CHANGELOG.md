@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- make the matrix react to divide-by term edits
+- make the matrix react to divide-by term edits from the label click
+
 
 ## 2.63.3-2
 
