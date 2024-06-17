@@ -31,10 +31,12 @@ RUN apt-get update && apt-get install -y \
     python3-matplotlib \
     python3-nibabel \
     python3-numpy \
+    pip3 \
 	## clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/ \
-  && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+  && rm -rf /tmp/downloaded_packages/ /tmp/*.rds \
+  && pip3 install blitzgsea
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
