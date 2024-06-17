@@ -1,1 +1,3 @@
-
+Fixes:
+- make the matrix react to divide-by term edits
+- make the matrix react to divide-by term edits from the label click
