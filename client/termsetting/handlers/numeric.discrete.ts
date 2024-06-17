@@ -73,18 +73,15 @@ async function showBinsMenu(self, div: any) {
 	div.selectAll('*').remove()
 	div.append('div').style('padding', '10px').style('text-align', 'center').html('Getting distribution data ...<br/>')
 	try {
-		if (!self.vocabApi) throw `Missing .vocabApi{} [numeric.discrete showBinsMenu()]`
-		const tw = await fillTermWrapper({ term: self.term, q: self.q }, self.vocabApi) //the q for the discrete mode may need to be initialized
 		const d = await self.vocabApi.getViolinPlotData(
 			{
-				term: tw,
+				term: { term: self.term, q: { mode: 'continuous' } },
 				filter: self.filter,
 				svgw: self.num_obj.plot_size.width / window.devicePixelRatio,
 				strokeWidth: 0.2
 			},
 			self.opts.getBodyParams?.()
 		)
-		self.q = JSON.parse(JSON.stringify(tw.q)) //copy the q from the termwrapper to be able to change it, the tw q is readonly
 		self.num_obj.density_data = convertViolinData(d)
 	} catch (err) {
 		console.log(err)
