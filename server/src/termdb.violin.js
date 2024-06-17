@@ -51,18 +51,17 @@ q = {
 
 export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const term = q.term?.term ? q.term.term : ds.cohort.termdb.q.termjsonByOneid(q.termid)
-	if (!q.term.q?.mode) q.term.q.mode = 'continuous'
-	if (!term) throw '.termid invalid'
+	if (!term) throw 'term invalid: ' + term
+	const tw = { term, $id: q.term.$id, q: { mode: 'continuous' } }
 	//term on backend should always be an integer term
 	if (!isNumericTerm(term) && term.type !== 'survival') throw 'term type is not numeric or survival'
 
-	const twLst = [q.term]
+	const twLst = [tw]
 
 	if (q.divideTw) {
 		twLst.push(q.divideTw)
 		q.term2_q = q.divideTw.q
 	}
-
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 	//get ordered labels to sort keys in key2values
@@ -75,9 +74,9 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		)
 	}
 
-	if (q.scale) scaleData(q, data, q.term)
+	if (q.scale) scaleData(q, data, tw)
 
-	const valuesObject = divideValues(q, data, q.term)
+	const valuesObject = divideValues(q, data, tw)
 	const result = resultObj(valuesObject, data, q, ds)
 
 	// wilcoxon test data to return to client
@@ -156,7 +155,6 @@ function divideValues(q, data, tw) {
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
 		const value = v[tw.$id]
-
 		if (!Number.isFinite(value?.value)) continue
 
 		if (tw.term.values?.[value.value]?.uncomputable) {
