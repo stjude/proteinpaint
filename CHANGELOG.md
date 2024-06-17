@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.63.3
 
 Fixes:
 - make the matrix react to divide-by term edits
