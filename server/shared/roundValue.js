@@ -15,7 +15,7 @@ export function roundValue(value, digits) {
 }
 
 export function roundValueAuto(value) {
-	let digits = value > 1 ? 2 : decimalPlacesUntilFirstNonZero(value) + 2
+	let digits = Math.abs(value) > 1 ? 2 : decimalPlacesUntilFirstNonZero(value) + 2
 
 	return roundValue(value, digits)
 }
