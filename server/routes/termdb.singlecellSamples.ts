@@ -79,7 +79,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome)
 	} else if (q.data.src == 'native') {
-		validateDataNative(q.data as SingleCellDataNative, ds)
+		validateDataNative(q.data as SingleCellDataNative)
 	} else {
 		throw 'unknown singleCell.data.src'
 	}
@@ -87,7 +87,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 
 	if (q.geneExpression) {
 		if (q.geneExpression.src == 'native') {
-			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative, ds)
+			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
 		} else if (q.geneExpression.src == 'gdcapi') {
 			// TODO
 		} else {
@@ -117,7 +117,7 @@ async function validateSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	}
 }
 
-function validateDataNative(D: SingleCellDataNative, ds: any) {
+function validateDataNative(D: SingleCellDataNative) {
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
@@ -168,7 +168,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 	}
 }
 
-function validateGeneExpressionNative(G: SingleCellGeneExpressionNative, ds: any) {
+function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 	G.get = async (q: any) => {
 		// q {sample:str, gene:str}
 		const tsvfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample)
