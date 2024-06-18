@@ -10,7 +10,8 @@ import { renderTable } from '../dom/table.ts'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { color, rgb } from 'd3'
+import { rgb } from 'd3'
+import { addGeneSearchbox } from '../dom/genesearch'
 
 /*
 this
@@ -45,9 +46,26 @@ class singleCellPlot {
 
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
+
+		const state = this.getState(appState)
+		const q = state.termdbConfig.queries
+		console.log(state, q)
 		//read files data
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		if (q.singleCell) {
+			const searchGeneDiv = this.mainDiv.append('div').style('padding', '10px')
+			searchGeneDiv.append('label').html('Overlay gene:')
+			const geneSearch = addGeneSearchbox({
+				tip: new Menu({ padding: '0px' }),
+				genome: this.app.opts.genome,
+				row: searchGeneDiv,
+				geneOnly: true,
+				callback: () => console.log,
+				hideHelp: true,
+				focusOff: true
+			})
+		}
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 
 		if (this.tableOnPlot) {
