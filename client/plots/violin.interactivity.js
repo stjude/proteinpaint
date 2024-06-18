@@ -256,8 +256,9 @@ export function setInteractivity(self) {
 
 		tvslst.lst[lstIdx].tvs.ranges = [
 			{
-				start: rangeStart,
-				stop: rangeStop,
+				//Only show integers for integer terms
+				start: term.term.type == 'integer' ? Math.round(rangeStart) : rangeStart,
+				stop: term.term.type == 'integer' ? Math.round(rangeStop) : rangeStop,
 				startinclusive: true,
 				stopinclusive: true,
 				startunbounded: self.displayLabelClickMenu.called == false ? true : false,
