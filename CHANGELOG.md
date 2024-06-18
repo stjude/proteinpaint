@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.63.4
 
 Fixes:
 - fix the generation of Function constructor argument
