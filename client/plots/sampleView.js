@@ -254,7 +254,7 @@ class SampleView {
 		if (q?.DZImages) {
 			inputs.push({
 				boxLabel: 'Visible',
-				label: 'Deep zoom',
+				label: q.DZImages.type,
 				type: 'checkbox',
 				chartType: 'sampleView',
 				settingsKey: 'showDzi',
