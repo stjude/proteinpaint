@@ -40,8 +40,10 @@ RUN apt-get update && apt-get install -y \
 
 RUN python3 -m venv /opt/venv
 
-RUN /opt/venv/bin/pip install --upgrade pip && \
-    /opt/venv/bin/pip install blitzgsea
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN pip install --upgrade pip && \
+    pip install blitzgsea
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
