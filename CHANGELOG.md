@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- fix the generation of Function constructor argument
+- fix the generation of Function constructor arguments for dataset configured data getters and mappers
+
 
 ## 2.63.3
 
