@@ -79,7 +79,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome)
 	} else if (q.data.src == 'native') {
-		validateDataNative(q.data as SingleCellDataNative)
+		validateDataNative(q.data as SingleCellDataNative, ds)
 	} else {
 		throw 'unknown singleCell.data.src'
 	}
@@ -87,7 +87,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 
 	if (q.geneExpression) {
 		if (q.geneExpression.src == 'native') {
-			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
+			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative, ds)
 		} else if (q.geneExpression.src == 'gdcapi') {
 			// TODO
 		} else {
@@ -117,7 +117,7 @@ async function validateSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	}
 }
 
-function validateDataNative(D: SingleCellDataNative) {
+function validateDataNative(D: SingleCellDataNative, ds: any) {
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
@@ -168,7 +168,7 @@ function validateDataNative(D: SingleCellDataNative) {
 	}
 }
 
-function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
+function validateGeneExpressionNative(G: SingleCellGeneExpressionNative, ds: any) {
 	G.get = async (q: any) => {
 		// q {sample:str, gene:str}
 		const tsvfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample)
@@ -184,11 +184,11 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 
 function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string[]) {
 	return new Promise((resolve, reject) => {
-		const cp = spawn('grep', ['-m', '1', gene + '\t', tsvfile])
-		const out: string[] = [],
-			err: string[] = []
-		cp.stdout.on('data', d => out.push(d))
-		cp.stderr.on('data', d => err.push(d))
+		const cp = spawn('grep', ['-m', 1, gene + '\t', tsvfile])
+		const out = [],
+			err = []
+		cp.stdout.on('data', (d: any) => out.push(d))
+		cp.stderr.on('data', (d: any) => err.push(d))
 		cp.on('close', () => {
 			const e = err.join('')
 			if (e) reject(e)
