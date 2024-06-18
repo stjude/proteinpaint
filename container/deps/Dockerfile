@@ -31,12 +31,17 @@ RUN apt-get update && apt-get install -y \
     python3-matplotlib \
     python3-nibabel \
     python3-numpy \
-    pip3 \
+    python3-pip \
+    python3-venv \
 	## clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/ \
-  && rm -rf /tmp/downloaded_packages/ /tmp/*.rds \
-  && pip3 install blitzgsea
+  && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
+RUN python3 -m venv /opt/venv
+
+RUN /opt/venv/bin/pip install --upgrade pip && \
+    /opt/venv/bin/pip install blitzgsea
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
