@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- bug fix to pass terms[] when filtering by metaboliteIntensity
+
+
 ## 2.63.4
 
 Fixes:
