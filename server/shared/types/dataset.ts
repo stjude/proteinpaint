@@ -350,6 +350,23 @@ export type GeneExpressionQueryNative = {
 }
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
+export type SingleCellGeneExpressionNative = {
+	src: 'native'
+	/** path to gene-by-cell matrices per sample
+	each matrix file:
+		- is named by sample name
+		- is a tab-delimited text file
+		- has a header line: `gene \t cell1 \t cell2 ...`
+		- each gene has a line with gene symbol at first column, and sctransform values in rest columns
+
+	note that such matrices should be available for all samples present from queries.singleCell.samples{}
+	if a sample is missing its matrix in this folder, it may cause unexpected behavior
+	*/
+	folder: string
+	/** dynamically added getter */
+	get?: (q: any) => any
+}
+
 export type SingleCellSamplesNative = {
 	src: 'native' | string
 	/*
@@ -406,8 +423,13 @@ export type SingleCellDataNative = {
 }
 
 export type SingleCellQuery = {
+	/** methods to identify samples with singlecell data,
+	for client to list those samples, or determine if to invoke plot in sampleView of a sample */
 	samples: SingleCellSamplesGdc | SingleCellSamplesNative
+	/** defines tsne/umap type of clustering maps for each sample */
 	data: SingleCellDataGdc | SingleCellDataNative
+	/** defines available gene-level expression values for each cell of each sample */
+	geneExpression?: SingleCellGeneExpressionNative
 }
 
 type LdQuery = {

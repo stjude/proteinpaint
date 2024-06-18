@@ -108,8 +108,7 @@ function make(q, res, ds, genome) {
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
-	addGenomicQueries(c, ds, genome)
-	addImageQueries(c, ds)
+	addNonDictionaryQueries(c, ds, genome)
 
 	res.send({ termdbConfig: c })
 }
@@ -119,13 +118,6 @@ function addRestrictAncestries(c, tdb) {
 	c.restrictAncestries = tdb.restrictAncestries.map(i => {
 		return { name: i.name, tvs: i.tvs, PCcount: i.PCcount }
 	})
-}
-function addImageQueries(c, ds) {
-	const q = ds.queries
-	const q2 = c.queries
-	if (q.images) {
-		q2.images = {} //nothing to pass to the client for now, but the key must be present
-	}
 }
 function addScatterplots(c, ds) {
 	if (!ds.cohort.scatterplots) return
@@ -153,7 +145,10 @@ function addMatrixplots(c, ds) {
 	})
 }
 
-function addGenomicQueries(c, ds, genome) {
+/* ds.queries{} contains query methods for non-dictionary data types
+including genomic, molecular, imaging etc
+*/
+function addNonDictionaryQueries(c, ds, genome) {
 	const q = ds.queries
 	if (!q) return
 	// this ds supports genomic query methods
@@ -231,6 +226,7 @@ function addGenomicQueries(c, ds, genome) {
 		q2.rnaseqGeneCount = true
 	}
 	if (q.singleCell) {
+		// samples and data are required properties
 		q2.singleCell = {
 			samples: {
 				firstColumnName: q.singleCell.samples.firstColumnName,
@@ -242,6 +238,13 @@ function addGenomicQueries(c, ds, genome) {
 				refName: q.singleCell.data.refName
 			}
 		}
+		if (q.singleCell.geneExpression) {
+			// optional data type
+			q2.singleCell.geneExpression = {}
+		}
+	}
+	if (q.images) {
+		q2.images = {} //nothing to pass to the client for now, but the key must be present
 	}
 }
 
