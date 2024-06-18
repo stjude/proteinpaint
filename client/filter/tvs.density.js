@@ -114,8 +114,8 @@ function applyBrush(self, elem, brush) {
 		)
 }
 
-/** Updates the range returned from the brushing into rounded values
- * or integers. Exported for testing only.
+/** Updates the number range returned from the brushing into
+ * rounded values or integers. Exported for testing only.
  */
 export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalue, type) {
 	range.start = convertRangeValue(xscale, s[0])
@@ -126,9 +126,9 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
 	range.startunbounded = min == range.start && inputRange.startunbounded
 	range.stopunbounded = max == range.stop && inputRange.stopunbounded
 	//Do not show decimals for integer types
-	if (!range.startunbounded && !range.stopunbounded && type == 'integer') {
-		range.start = Math.round(range.start)
-		range.stop = Math.round(range.stop)
+	if (type == 'integer') {
+		range.start = range.startunbounded ? '' : Math.round(range.start)
+		range.stop = range.stopunbounded ? '' : Math.round(range.stop)
 	}
 }
 
