@@ -38,12 +38,15 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/ \
   && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
-RUN python3 -m venv /opt/venv
-
 ENV PATH="/opt/venv/bin:$PATH"
 
-RUN pip install --upgrade pip && \
-    pip install blitzgsea
+RUN python3 -m venv /opt/venv && \
+    pip install --upgrade pip && \
+    pip install blitzgsea matplotlib nibabel numpy && \
+    ## clean up
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/downloaded_packages/ /tmp/*.rds
+
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
