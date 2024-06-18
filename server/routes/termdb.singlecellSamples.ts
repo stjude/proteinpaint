@@ -1,8 +1,14 @@
 import fs from 'fs'
 import path from 'path'
-import { read_file } from '#src/utils.js'
+import { spawn } from 'child_process'
+import { read_file, get_header_txt } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import { SingleCellQuery, SingleCellSamplesNative, SingleCellDataNative } from '#shared/types/dataset.ts'
+import {
+	SingleCellQuery,
+	SingleCellSamplesNative,
+	SingleCellDataNative,
+	SingleCellGeneExpressionNative
+} from '#shared/types/dataset.ts'
 import {
 	Sample,
 	TermdbSinglecellsamplesRequest,
@@ -64,7 +70,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	if (q.samples.src == 'gdcapi') {
 		gdc_validate_query_singleCell_samples(ds, genome)
 	} else if (q.samples.src == 'native') {
-		getSamplesNative(q.samples as SingleCellSamplesNative, ds)
+		validateSamplesNative(q.samples as SingleCellSamplesNative, ds)
 	} else {
 		throw 'unknown singleCell.samples.src'
 	}
@@ -73,14 +79,25 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome)
 	} else if (q.data.src == 'native') {
-		getDataNative(q.data as SingleCellDataNative, ds)
+		validateDataNative(q.data as SingleCellDataNative)
 	} else {
 		throw 'unknown singleCell.data.src'
 	}
 	// q.data.get() added
+
+	if (q.geneExpression) {
+		if (q.geneExpression.src == 'native') {
+			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
+		} else if (q.geneExpression.src == 'gdcapi') {
+			// TODO
+		} else {
+			throw 'unknown singleCell.geneExpression.src'
+		}
+		// q.geneExpression.get() added
+	}
 }
 
-async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
+async function validateSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	// for now use this quick fix method to pull sample ids annotated by this term
 	// to support situation where not all samples from a dataset has sc data
 	const samples = {}
@@ -100,7 +117,7 @@ async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	}
 }
 
-function getDataNative(D: SingleCellDataNative, ds: any) {
+function validateDataNative(D: SingleCellDataNative) {
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
@@ -149,4 +166,43 @@ function getDataNative(D: SingleCellDataNative, ds: any) {
 			return { error: e.message || e }
 		}
 	}
+}
+
+function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
+	G.get = async (q: any) => {
+		// q {sample:str, gene:str}
+		const tsvfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample)
+		try {
+			await fs.promises.stat(tsvfile)
+		} catch (e: any) {
+			throw 'geneExp matrix file not found or readable for this sample'
+		}
+		const header = await get_header_txt(tsvfile)
+		return await grepMatrix4geneExpression(tsvfile, q.gene, header)
+	}
+}
+
+function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string[]) {
+	return new Promise((resolve, reject) => {
+		const cp = spawn('grep', ['-m', '1', gene + '\t', tsvfile])
+		const out: string[] = [],
+			err: string[] = []
+		cp.stdout.on('data', d => out.push(d))
+		cp.stderr.on('data', d => err.push(d))
+		cp.on('close', () => {
+			const e = err.join('')
+			if (e) reject(e)
+			// got data
+			const l = out.join('').split('\t')
+			if (l.length != header.length)
+				reject(`number of fields differ between data line and header: ${l.length} ${header.length}`)
+			const cell2value = {} // key: cell barcode in header, value: exp value
+			for (let i = 1; i < l.length; i++) {
+				const v = Number(l[i])
+				if (Number.isNaN(v)) continue // invalid value
+				cell2value[header[i]] = v
+			}
+			resolve(cell2value)
+		})
+	})
 }
