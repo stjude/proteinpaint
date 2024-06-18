@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import dziviewer from './dziviewer/plot.dzi'
-import { dofetch3 } from '#src/client'
+import { dofetch3 } from '#common/dofetch'
 
 const root_ID = 'root'
 const samplesLimit = 15
