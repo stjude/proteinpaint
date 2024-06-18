@@ -99,7 +99,10 @@ export function setInteractivity(self) {
 		//For testing and debugging
 		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
 
-		const [niceStart, niceEnd] = niceNumLabels([start, end])
+		const [niceStart, niceEnd] =
+			self.config.term.term.type == 'integer'
+				? [Number(start).toFixed(0), Number(end).toFixed(0)]
+				: niceNumLabels([start, end])
 
 		self.app.tip.d.append('div').text(`From ${niceStart} to ${niceEnd}`)
 

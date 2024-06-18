@@ -93,6 +93,10 @@ function applyBrush(self, elem, brush) {
 			max = roundValueAuto(max)
 			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
 			range.stopunbounded = max == range.stop && inputRange.stopunbounded
+			if (!range.startunbounded && !range.stopunbounded && self.tvs.term.type == 'integer') {
+				range.start = range.start.toFixed(0)
+				range.stop = range.stop.toFixed(0)
+			}
 			const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
 			const stop = range.stopunbounded ? '' : inputRange.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
 			// update inputs from brush move
