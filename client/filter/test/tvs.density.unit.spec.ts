@@ -108,10 +108,7 @@ tape('updateTempRanges', test => {
 	updateTempRanges(testSelf.num_obj.xscale, s, range2, range2, 1962, 2012, 'discrete')
 	test.ok(
 		range2.start != origRange2.start && range2.start == 1987.9,
-		'Should update start value in the original range and include the '
+		'Should update start value in the original range.'
 	)
-	test.ok(
-		range2.stop != origRange2.stop && range2.stop == 1997.9,
-		'Should update stop value in the original range and round to integer'
-	)
+	test.ok(range2.stop != origRange2.stop && range2.stop == 1997.9, 'Should update stop value in the original range.')
 })
