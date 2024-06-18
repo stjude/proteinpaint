@@ -28,9 +28,6 @@ RUN apt-get update && apt-get install -y \
 	g++ \
     pkg-config \
     cmake \
-    python3-matplotlib \
-    python3-nibabel \
-    python3-numpy \
     python3-pip \
     python3-venv \
 	## clean up
