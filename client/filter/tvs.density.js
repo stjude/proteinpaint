@@ -83,20 +83,8 @@ function applyBrush(self, elem, brush) {
 				return
 			}
 			//update temp_ranges
-			range.start = Number(xscale.invert(s[0]))
-			range.stop = Number(xscale.invert(s[1]))
-			let min = Number(minvalue)
-			let max = Number(maxvalue)
-			range.start = roundValueAuto(range.start)
-			range.stop = roundValueAuto(range.stop)
-			min = roundValueAuto(min)
-			max = roundValueAuto(max)
-			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
-			range.stopunbounded = max == range.stop && inputRange.stopunbounded
-			if (!range.startunbounded && !range.stopunbounded && self.tvs.term.type == 'integer') {
-				range.start = range.start.toFixed(0)
-				range.stop = range.stop.toFixed(0)
-			}
+			updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalue, self.tvs.term.type)
+
 			const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
 			const stop = range.stopunbounded ? '' : inputRange.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
 			// update inputs from brush move
@@ -124,6 +112,26 @@ function applyBrush(self, elem, brush) {
 				? '#23cba7'
 				: '#777777'
 		)
+}
+
+export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalue, type) {
+	range.start = convertRangeValue(xscale, s[0])
+	range.stop = convertRangeValue(xscale, s[1])
+	const min = roundValueAuto(Number(minvalue))
+	const max = roundValueAuto(Number(maxvalue))
+	//Limit by the brush, not by the user
+	range.startunbounded = min == range.start && inputRange.startunbounded
+	range.stopunbounded = max == range.stop && inputRange.stopunbounded
+	//Do not show decimals for integer types
+	if (!range.startunbounded && !range.stopunbounded && type == 'integer') {
+		range.start = Number(range.start.toFixed(0))
+		range.stop = Number(range.stop.toFixed(0))
+	}
+}
+
+function convertRangeValue(xscale, sidx) {
+	let value = Number(xscale.invert(sidx))
+	return roundValueAuto(value)
 }
 
 //Add new blank range temporary, save after entering values
