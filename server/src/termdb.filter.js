@@ -262,12 +262,7 @@ async function get_metaboliteIntensity(tvs, CTEname, ds) {
 	const args = {
 		genome: ds.genome,
 		dslabel: ds.label,
-		clusterMethod: 'hierarchical',
-		/** distance method */
-		distanceMethod: 'euclidean',
-		/** Data type */
-		dataType: TermTypes.METABOLITE_INTENSITY, //metabolite intensity type defined for the dataset???
-		metabolites: [tvs.term.name]
+		terms: [tvs.term]
 	}
 	const data = await ds.queries.metaboliteIntensity.get(args)
 	const termData = data.term2sample2value.get(tvs.term.name)

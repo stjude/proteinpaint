@@ -472,11 +472,6 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 		const args = {
 			genome: q.genome,
 			dslabel: q.dslabel,
-			clusterMethod: 'hierarchical',
-			/** distance method */
-			distanceMethod: 'euclidean',
-			/** Data type */
-			dataType: tw.term.type,
 			terms: [tw.term]
 		}
 		const data = await ds.queries[tw.term.type].get(args)
