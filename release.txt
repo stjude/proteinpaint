@@ -1,1 +1,3 @@
-
+Fixes:
+- fix the generation of Function constructor argument
+- fix the generation of Function constructor arguments for dataset configured data getters and mappers

@@ -2109,7 +2109,7 @@ function dsqueryresult_geneexpression(data, tk, block) {
 	}
 	if (data.config.maf) {
 		try {
-			data.config.maf.get = new Function(data.config.maf.get)
+			data.config.maf.get = new Function(...data.config.maf.get)
 		} catch (e) {
 			block.error('invalid javascript for config.maf.get of ' + tk.ds.label)
 			return

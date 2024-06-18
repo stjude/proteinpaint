@@ -21,10 +21,10 @@ export function initLegacyDataset(ds, genome, serverconfig) {
 		for (const at of ds.snvindel_attributes) {
 			if (at.lst) {
 				for (const a2 of at.lst) {
-					a2.get = a2.get.toString()
+					a2.get = getFunctionConstructorArgs(a2.get)
 				}
 			} else {
-				at.get = at.get.toString()
+				at.get = getFunctionConstructorArgs(at.get)
 			}
 		}
 	}
@@ -96,8 +96,8 @@ export function initLegacyDataset(ds, genome, serverconfig) {
 		for (const u of ds.url4variant) {
 			if (!u.makelabel) throw 'makelabel() missing for one item of url4variant from ' + ds.label
 			if (!u.makeurl) throw 'makeurl() missing for one item of url4variant from ' + ds.label
-			u.makelabel = u.makelabel.toString()
-			u.makeurl = u.makeurl.toString()
+			u.makelabel = getFunctionConstructorArgs(u.makelabel)
+			u.makeurl = getFunctionConstructorArgs(u.makeurl)
 		}
 	}
 }
@@ -170,11 +170,29 @@ function legacyds_init_one_query(q, ds, genome) {
 		if (q.isgeneexpression) {
 			if (!q.config) return 'config object missing for gene expression query of ' + q.name
 			if (q.config.maf) {
-				q.config.maf.get = q.config.maf.get.toString()
+				q.config.maf.get = getFunctionConstructorArgs(q.config.maf.get)
 			}
 		}
 		return
 	}
 
 	return 'do not know how to parse query: ' + q.name
+}
+
+function getFunctionConstructorArgs(fxn) {
+	// new Function() constructor requires a separate argument string
+	// for each function argument, and then the function body as the last argument, see
+	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/Function
+	const lines = fxn
+		.toString()
+		.split('\n')
+		.map(f => f.trim())
+	const line0 = lines.shift()
+	const args =
+		line0.includes('(') && line0.includes(')')
+			? line0.split('(')[1].split(')')[0].trim().split(',')
+			: line0.split('=>')[0].replace('async ', '').trim().split(' ')
+	if (lines[lines.length - 1] == '}') lines.pop()
+	args.push(lines.join('\n'))
+	return args
 }
