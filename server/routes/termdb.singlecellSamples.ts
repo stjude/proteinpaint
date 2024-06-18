@@ -184,11 +184,11 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 
 function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string[]) {
 	return new Promise((resolve, reject) => {
-		const cp = spawn('grep', ['-m', 1, gene + '\t', tsvfile])
-		const out = [],
-			err = []
-		cp.stdout.on('data', (d: any) => out.push(d))
-		cp.stderr.on('data', (d: any) => err.push(d))
+		const cp = spawn('grep', ['-m', '1', gene + '\t', tsvfile])
+		const out: string[] = [],
+			err: string[] = []
+		cp.stdout.on('data', d => out.push(d))
+		cp.stderr.on('data', d => err.push(d))
 		cp.on('close', () => {
 			const e = err.join('')
 			if (e) reject(e)

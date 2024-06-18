@@ -366,6 +366,8 @@ export type SingleCellGeneExpressionNative = {
 	if a sample is missing its matrix in this folder, it may cause unexpected behavior
 	*/
 	folder: string
+	/** dynamically added getter */
+	get?: (q: any) => any
 }
 
 export type SingleCellSamplesNative = {
