@@ -60,7 +60,7 @@ class SampleView {
 		const sampleDiv = this.dom.sampleDiv
 		if (this.dom.header) this.dom.header.html(`Sample View`)
 
-		if (config.samples) {
+		if (config.samples && config.samples.length > 1) {
 			const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
 
 			const select = sampleDiv
@@ -250,6 +250,18 @@ class SampleView {
 				title: `Option to show/hide brain imaging`
 			})
 		}
+
+		if (q?.DZImages) {
+			inputs.push({
+				boxLabel: 'Visible',
+				label: 'Deep zoom',
+				type: 'checkbox',
+				chartType: 'sampleView',
+				settingsKey: 'showDzi',
+				title: `Option to show/hide deep zoom images`
+			})
+		}
+
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -439,19 +451,12 @@ class SampleView {
 
 	showVisiblePlots() {
 		this.dom.sampleDiv.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
-		for (const div of this.discoPlots)
-			if (this.settings.showDisco) div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
-			else div.style('display', 'none')
+		for (const div of this.discoPlots) div.style('display', this.settings.showDisco ? 'table-cell' : 'none')
 		for (const div of this.singleSamplePlots)
-			if (this.settings.showSingleSample)
-				div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
-			else div.style('display', 'none')
-		for (const div of this.brainPlots)
-			if (this.settings.showBrain) div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
-			else div.style('display', 'none')
-		for (const div of this.imagePlots)
-			if (this.settings.showImages) div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
-			else div.style('display', 'none')
+			div.style('display', this.settings.showSingleSample ? 'table-cell' : 'none')
+		for (const div of this.brainPlots) div.style('display', this.settings.showBrain ? 'table-cell' : 'none')
+		for (const div of this.imagePlots) div.style('display', this.settings.showImages ? 'table-cell' : 'none')
+		for (const div of this.dziPlots) div.style('display', this.settings.showDzi ? 'table-cell' : 'none')
 	}
 
 	async renderPlots(state, samples) {
@@ -461,6 +466,7 @@ class SampleView {
 		this.singleSamplePlots = []
 		this.brainPlots = []
 		this.imagePlots = []
+		this.dziPlots = []
 
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			let div = plotsDiv.append('div')
@@ -533,13 +539,10 @@ class SampleView {
 				imagePlotImport.renderImagePlot(state, cellDiv, sample)
 			}
 		}
-
 		if (state.termdbConfig.queries?.DZImages) {
 			let div = plotsDiv.append('div')
 
 			for (const sample of samples) {
-				const cellDiv = div.append('div').style('display', 'inline-block')
-
 				const data = await dofetch3('sampledzimages', {
 					body: {
 						genome: this.app.opts.genome.name,
@@ -548,6 +551,8 @@ class SampleView {
 					}
 				})
 				if (data.sampleDZImages?.length > 0) {
+					const cellDiv = div.append('div').style('display', 'inline-block')
+					this.dziPlots.push(cellDiv)
 					dziviewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleDZImages)
 				}
 			}
@@ -704,7 +709,14 @@ function setInteractivity(self) {
 
 export async function getPlotConfig(opts) {
 	const settings = {
-		sampleView: { showDictionary: true, showDisco: true, showSingleSample: true, showBrain: true, showImages: true }
+		sampleView: {
+			showDictionary: true,
+			showDisco: true,
+			showSingleSample: true,
+			showBrain: true,
+			showImages: true,
+			showDzi: true
+		}
 	}
 	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings }
 	return copyMerge(config, opts)
