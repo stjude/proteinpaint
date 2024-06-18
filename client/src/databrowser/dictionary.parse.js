@@ -146,6 +146,10 @@ export function parseDictionary(input) {
 		//If no level cols provided, use key/Variable col as single level. Will print the id as name
 		if (!levelColIndexes.length) levelColIndexes.push(variableIndex)
 
+		/** Old implementation
+		 * .attributes is passed to the term obj (see below) but not used.
+		 * Leaving parsing code as an option for the future.
+		 */
 		const additionalAttrIndexes = header.findIndex(l => l.toLowerCase().includes('additional attributes'))
 
 		// caching and/or tracking variables
@@ -243,6 +247,7 @@ function parseCategories(type, catJSON, addAttrJSON, lineNum, varName) {
 	const term = {
 		type,
 		values: catJSON == '' || catJSON == undefined ? {} : JSON.parse(catJSON),
+		/** .attributes not in use. Leaving as an option for future use. */
 		attributes: addAttrJSON == '' || addAttrJSON == undefined ? {} : JSON.parse(addAttrJSON)
 	}
 
