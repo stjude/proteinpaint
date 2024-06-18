@@ -13,9 +13,9 @@ export function niceNumLabels(nums: number[]) {
 
 	// Find the number of decimals
 	const zeroDecimalNum = decimalPlacesUntilFirstNonZero(abs)
-	/** > 10, no decimals
-	 *  10 - 1, 1 decimal
-	 * <= 1, 1 decimal past the first non-zero
+	/** >= 10: no decimals
+	 *  10< - 1: 1 decimal
+	 *  < 1: 1 decimal past the first non-zero
 	 */
 	const decimals2Show = abs >= 10 ? 0 : abs >= 1 ? 1 : zeroDecimalNum + 2
 
