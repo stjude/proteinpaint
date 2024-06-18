@@ -247,6 +247,7 @@ function parseCategories(type, catJSON, addAttrJSON, lineNum, varName) {
 	const term = {
 		type,
 		values: catJSON == '' || catJSON == undefined ? {} : JSON.parse(catJSON),
+		/** .attributes not in use. Leaving as an option for future use. */
 		attributes: addAttrJSON == '' || addAttrJSON == undefined ? {} : JSON.parse(addAttrJSON)
 	}
 
