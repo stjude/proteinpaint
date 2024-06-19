@@ -443,6 +443,16 @@ async function mayInitTermdb(tk, block) {
 		}
 		const _ = await import('#termdb/vocabulary')
 		tdb.vocabApi = _.vocabInit(arg)
+
+		if (!tdb.vocabApi.app) {
+			/**** Note!
+			when tk is doing sample filtering (e.g. a subtk), vocabApi will be passed to filter UI code
+			and filter UI will call termdb app with term type selector, which requires genome obj to be accessible
+			via vocabApi.app.opts.genome for gene search to function
+			here .app is missing, and since vocabApi is not frozen, this quick fix supplies it in entirely adhoc manner
+			*/
+			tdb.vocabApi.app = { opts: { genome: block.genome } }
+		}
 	}
 
 	tk.mds.termdbConfig = await tdb.vocabApi.getTermdbConfig()
