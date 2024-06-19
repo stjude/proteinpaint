@@ -1,1 +1,2 @@
-
+Fixes:
+- fix the detection of hierCluster term group when handling a gene expression cell click
