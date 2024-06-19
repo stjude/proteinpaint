@@ -367,13 +367,14 @@ export function setInteractivity(self) {
 				const v = c.value
 				const p = v.pairlst
 				const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
-				const label = v.value
-					? v.value
-					: p
-					? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
-					: v.mname
-					? `${v.mname} ${mclass[v.class].label}`
-					: mclass[v.class].label
+				const label =
+					c.t.grp.type == 'hierCluster'
+						? v.value
+						: p
+						? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
+						: v.mname
+						? `${v.mname} ${mclass[v.class].label}`
+						: mclass[v.class].label
 				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
 
 				if (!siblingCellLabels[dtLabel]) {
