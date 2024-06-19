@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - bug fix to pass terms[] when filtering by metaboliteIntensity
 - use diagnosis specific age cutoff for the CHC burden calculation
+- mds3 tk assigns vocabApi.app.opts.genome in adhoc manner for gene search to work in stateless filter UI
 
 
 ## 2.63.4
