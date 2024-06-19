@@ -40,7 +40,7 @@ load(survData)
 ############################ These are the input values in APP that users can change. Edgar, these should be the same as the APP before, variable names and units. #############
 ### Input the primary DX. 
 # pr=5
-agecut=40   ##### Edgar, This is not an user input paramter, but we input this. This depends on the DX. For example, here for CNS we use 40. For HL DX, it is 55. I will give this value for each DX.
+# agecut=40   ##### Edgar, This is not an user input paramter, but we input this. This depends on the DX. For example, here for CNS we use 40. For HL DX, it is 55. I will give this value for each DX.
 
 # # # Input person's values, 18 input X's , plus the input primary DX
 # 	sexval=1  #sex, take value 1 for male and 0 for female
@@ -88,6 +88,8 @@ newdata_chc_sampled=newdata_chc_sampled[newdata_chc_sampled$t.endage<=60,]
 
 # paste(names(input), input, sep = ":", collapse = ",")
 pr=input$diaggrp
+# agecut was previously hardcoded to 40 above
+agecut=c('1'=50, '2'=45, '3'=55, '4'=50, '5'=40, '6'=60, '7'=50, '8'=45, '9'=45, '10'=45, '11'=50 )[pr]
 sexval=input$sex
 newdata_chc_sampled$sex=input$sex # sexval
 newdata_chc_sampled$white=input$white # whiteval
