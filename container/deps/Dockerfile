@@ -35,6 +35,15 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/ \
   && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
+# `RUN source /path/to/venv/bin/activate` does not work, 
+# since any exported $PATH edit will apply to ONLY the current image layer,
+# while `ENV ...` will be propagated to subsequent steps/layers. 
+# Same issue with doing `RUN export $PATH='...;$PATH', also not propagated.
+# If serverconfig.python is not set, then the nodejs server code will
+# default to using the python path that's set here.
+# To test, `console.log(execSync(`which python3`, { encoding: 'utf8' }))`
+# before calling startServer() in `server/src/app.js`, the output 
+# should include a `venv/bin/python3` string
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN python3 -m venv /opt/venv && \
