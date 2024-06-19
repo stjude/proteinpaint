@@ -6,19 +6,18 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - bug fix to pass terms[] when filtering by metaboliteIntensity
+- use diagnosis specific age cutoff for the CHC burden calculation
 
 
 ## 2.63.4
 
 Fixes:
-- fix the generation of Function constructor argument
 - fix the generation of Function constructor arguments for dataset configured data getters and mappers
 
 
 ## 2.63.3
 
 Fixes:
-- make the matrix react to divide-by term edits
 - make the matrix react to divide-by term edits from the label click
 
 
