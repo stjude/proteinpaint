@@ -60,7 +60,7 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 
 		const arg = {
 			holder: tk.menutip.d.append('div').style('margin', '10px'),
-			vocab: tk.mds.termdb.vocabApi.state.vocab,
+			vocabApi: tk.mds.termdb.vocabApi,
 			callback: f => {
 				tk.filterObj = f
 				tk.load()
@@ -393,53 +393,4 @@ function menu_listSamples(buttonrow, data, tk, block) {
 				console.log(e)
 			}
 		})
-}
-
-async function unusedCode() {
-	const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)
-	if (!features.mds3barapp) {
-	}
-	// will use the "barapp" when serverconfig.features.mds3barapp evaluates to true
-	const holder = div.append('div')
-	/*.style('display', 'inline-grid')
-						.style('grid-template-columns', 'auto auto auto')
-						.style('grid-row-gap', '3px')
-						.style('align-items', 'center')
-						.style('justify-items', 'left')*/
-
-	const geneTerm = {
-		type: 'geneVariant',
-		isoform: block.usegm.isoform
-	}
-	rangequery_rglst(tk, block, geneTerm)
-
-	try {
-		const plot = await import('#plots/plot.app.js')
-		await plot.appInit({
-			holder,
-			vocab: tk.mds.termdb.vocabApi.state.vocab,
-			state: {
-				plots: [
-					{
-						chartType: 'summary',
-						childType: 'barchart',
-						term: {
-							id: termid
-						},
-						term2: {
-							term: geneTerm,
-							q: { mode: 'summary' }
-						},
-						settings: {
-							barchart: {
-								unit: 'pct'
-							}
-						}
-					}
-				]
-			}
-		})
-	} catch (e) {
-		throw e
-	}
 }
