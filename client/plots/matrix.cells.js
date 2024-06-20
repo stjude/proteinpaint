@@ -1,6 +1,7 @@
 import { convertUnits } from '#shared/helpers'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv, dtmetaboliteintensity } from '#shared/common'
 import { TermTypes } from '../shared/terms'
+import { colorScaleMap } from '../shared/common'
 /*
 	cell: a matrix cell data
 	tw: termwrapper
@@ -303,7 +304,7 @@ export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width
 		entry: {
 			label: '',
 			scale: self.hierClusterValues.scale,
-			domain: [0, 0.5, 1],
+			domain: colorScaleMap[self.settings.hierCluster.colorScale].domain,
 			minLabel: self.hierClusterValues.min,
 			maxLabel: self.hierClusterValues.max,
 			order: 0,
