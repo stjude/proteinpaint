@@ -4,6 +4,7 @@ import helpers from '../../test/front.helpers.js'
 /*
 Tests:
 	default behavior
+	default behavior, MSigDB (genome-level termdb, not ds)
 	click_term
 	click_term2select_tvs
 	rehydrated from saved state
@@ -20,6 +21,17 @@ const runpp = helpers.getRunPp('termdb', {
 		vocab: {
 			route: 'termdb',
 			dslabel: 'TermdbTest',
+			genome: 'hg38-test'
+		}
+	},
+	debug: 1
+})
+
+const runppMsigdb = helpers.getRunPp('termdb', {
+	state: {
+		vocab: {
+			route: 'termdb',
+			dslabel: 'msigdb',
 			genome: 'hg38-test'
 		}
 	},
@@ -141,6 +153,48 @@ tape('default behavior', function (test) {
 
 	function testFold(tree) {
 		test.equal(childdiv1.style.display, 'none', 'child DIV is now invisible')
+	}
+})
+
+tape('default behavior, MSigDB (genome-level termdb, not ds)', function (test) {
+	test.timeoutAfter(2000)
+
+	// this test is brief, in that the minified msigdb has only one parent level, and no expandable children
+
+	runppMsigdb({
+		tree: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(tree) {
+		testRoot(tree)
+		helpers.rideInit({ arg: tree, bus: tree, eventType: 'postRender.test' }).use(expandTerm1).to(testExpand1).done(test)
+	}
+
+	function testRoot(tree) {
+		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 2, 'should have 2 root terms')
+	}
+	const parentTerm = 'H: hallmark gene sets'
+	let termbtn1, childdiv1, parTermObj
+	function expandTerm1(tree) {
+		const btns = tree.Inner.dom.holder.node().querySelectorAll('.termbtn')
+		termbtn1 = [...btns].find(elem => elem.__data__.name.startsWith(parentTerm))
+		childdiv1 = termbtn1.parentNode.querySelectorAll('.termchilddiv')[0]
+		// click the button of the first term
+		termbtn1.click()
+	}
+
+	function testExpand1(tree) {
+		parTermObj = Object.values(tree.Inner.termsById).find(d => d.name == parentTerm)
+		test.equal(childdiv1.style.display, 'block', 'child DIV of first term is now visible')
+		test.equal(
+			childdiv1.querySelectorAll('.termdiv').length,
+			parTermObj.terms.length,
+			'child DIV now contains 2 sub terms'
+		)
 	}
 })
 
