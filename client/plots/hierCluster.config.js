@@ -27,7 +27,7 @@ export async function getPlotConfig(opts = {}, app) {
 		zScoreCap: 5,
 		xDendrogramHeight: 100,
 		yDendrogramHeight: 200,
-		colorScale: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] }
+		colorScale: 'blueWhiteRed'
 	}
 	const overrides = app.vocabApi.termdbConfig.hierCluster || {}
 	copyMerge(config.settings.hierCluster, overrides.settings, opts.settings?.hierCluster || {})
@@ -36,9 +36,6 @@ export async function getPlotConfig(opts = {}, app) {
 	{
 		const c = config.settings.hierCluster.colorScale
 		if (!c) throw 'colorScale missing'
-		if (!Array.isArray(c.domain) || c.domain.length == 0) throw 'colorScale.domain must be non-empty array'
-		if (!Array.isArray(c.range) || c.range.length == 0) throw 'colorScale.range must be non-empty array'
-		if (c.domain.length != c.range.length) throw 'colorScale domain[] and range[] of different length'
 	}
 
 	config.settings.matrix.collabelpos = 'top'

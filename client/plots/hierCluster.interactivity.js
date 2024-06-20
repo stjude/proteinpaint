@@ -242,6 +242,35 @@ export function setClusteringBtn(holder, callback) {
 					type: 'number',
 					chartType: 'hierCluster',
 					settingsKey: 'zScoreCap'
+				},
+				{
+					label: `color scheme`,
+					title: `Sets which color scheme to use`,
+					type: 'radio',
+					chartType: 'hierCluster',
+					settingsKey: 'colorScale',
+					options: [
+						{
+							label: 'Blue-White-Red',
+							value: 'blueWhiteRed',
+							title: `color scheme Blue-White-Red`
+						},
+						{
+							label: 'Green-Black-Red',
+							value: 'greenBlackRed',
+							title: `color scheme Green-Black-Red`
+						},
+						{
+							label: 'Blue-Yellow-Red',
+							value: 'blueYellowRed',
+							title: `color scheme Blue-Yellow-Red`
+						},
+						{
+							label: 'Green-White-Red',
+							value: 'greenWhiteRed',
+							title: `color scheme Green-White-Red`
+						}
+					]
 				}
 			]
 		})
