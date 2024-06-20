@@ -79,7 +79,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome)
 	} else if (q.data.src == 'native') {
-		validateDataNative(q.data as SingleCellDataNative)
+		validateDataNative(q.data as SingleCellDataNative, ds)
 	} else {
 		throw 'unknown singleCell.data.src'
 	}
@@ -117,7 +117,7 @@ async function validateSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	}
 }
 
-function validateDataNative(D: SingleCellDataNative) {
+function validateDataNative(D: SingleCellDataNative, ds: any) {
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
@@ -160,6 +160,12 @@ function validateDataNative(D: SingleCellDataNative) {
 				// no data available for this sample
 				return { nodata: true }
 			}
+			if (ds.queries.singleCell.geneExpression && q.gene) {
+				console.log('sample', q.sample, q.gene)
+				const geneExp = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
+				console.log(geneExp)
+				return { plots, geneExp }
+			}
 			return { plots }
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -194,6 +200,7 @@ function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string
 			if (e) reject(e)
 			// got data
 			const l = out.join('').split('\t')
+			console.log(l, header)
 			if (l.length != header.length)
 				reject(`number of fields differ between data line and header: ${l.length} ${header.length}`)
 			const cell2value = {} // key: cell barcode in header, value: exp value
