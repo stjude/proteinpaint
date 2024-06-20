@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- create minified msigdb and associate to hg38-test for CI
+
 
 ## 2.63.5
 
