@@ -1,7 +1,9 @@
 # Default to Docker Hub, but enable the base image to be pulled from a
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
+
 ARG VERSION=2.63.5
+
 
 #########################
 # Full app update
