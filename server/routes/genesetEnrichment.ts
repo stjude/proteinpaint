@@ -79,7 +79,7 @@ async function run_gsea(path, data) {
 		const _stderr: any[] = []
 		// spawn python process
 		let python_path = 'python3'
-		if (serverconfig.py_path) python_path = serverconfig.py_path
+		if (serverconfig.python) python_path = serverconfig.python
 		const sp = spawn(python_path, [path])
 		//console.log("data:",data)
 		if (data) {
