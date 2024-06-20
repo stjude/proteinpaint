@@ -183,7 +183,10 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		} catch (e: any) {
 			throw 'geneExp matrix file not found or readable for this sample'
 		}
-		const header = await get_header_txt(tsvfile)
+		const headerlines = await get_header_txt(tsvfile)
+		if (!headerlines[0]) throw 'no header line'
+		const header = headerlines[0].split('\t')
+		if (header.length == 0) throw 'blank header line'
 		return await grepMatrix4geneExpression(tsvfile, q.gene, header)
 	}
 }
