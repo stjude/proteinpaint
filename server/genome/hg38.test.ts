@@ -7,6 +7,18 @@ const genome: Genome = {
 		dbfile: 'anno/genes.hg38.test.db'
 	},
 
+	termdbs: {
+		msigdb: {
+			label: 'MSigDB',
+			cohort: {
+				db: { file: 'anno/msigdb/termdbtest/db' },
+				termdb: {
+					isGeneSetTermdb: true
+				}
+			}
+		}
+	},
+
 	tracks: [
 		{
 			__isgene: true,
