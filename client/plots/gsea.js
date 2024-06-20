@@ -161,6 +161,18 @@ add:
 		for (const pathway_name of Object.keys(output)) {
 			const pathway = output[pathway_name]
 			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.fdr) {
+				let es
+				if (pathway.es) {
+					es = pathway.es.toPrecision(4)
+				} else {
+					es = pathway.es
+				}
+				let nes
+				if (pathway.nes) {
+					nes = pathway.nes.toPrecision(4)
+				} else {
+					nes = pathway.nes
+				}
 				let pval
 				if (pathway.pval) {
 					pval = pathway.pval.toPrecision(4)
@@ -181,8 +193,8 @@ add:
 				}
 				self.gsea_table_rows.push([
 					{ value: pathway_name },
-					{ value: pathway.es.toPrecision(4) },
-					{ value: pathway.nes.toPrecision(4) },
+					{ value: es },
+					{ value: nes },
 					{ value: pathway.geneset_size },
 					{ value: pval },
 					{ value: sidak },
