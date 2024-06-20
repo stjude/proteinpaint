@@ -10,7 +10,7 @@ import { getNormalRoot } from '#filter'
 export * from './hierCluster.config'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
 import { TermTypes, TermTypes2Dt } from '../shared/terms'
-import { dtgeneexpression, dtmetaboliteintensity } from '../shared/common'
+import { colorScaleMap } from '../shared/common'
 
 export class HierCluster extends Matrix {
 	constructor(opts) {
@@ -226,7 +226,7 @@ export class HierCluster extends Matrix {
 
 	setHierColorScale(c) {
 		const hc = this.settings.hierCluster
-		const scale = scaleLinear(hc.colorScale.domain, hc.colorScale.range).clamp(true)
+		const scale = scaleLinear(colorScaleMap[hc.colorScale].domain, colorScaleMap[hc.colorScale].range).clamp(true)
 		const globalMinMaxes = []
 		for (const row of c.matrix) {
 			globalMinMaxes.push(...extent(row))

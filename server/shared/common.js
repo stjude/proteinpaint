@@ -1105,3 +1105,32 @@ export const mutationClasses = Object.values(mclass)
 export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
+
+export const colorScaleMap = {
+	blueWhiteRed: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] },
+	greenWhiteRed: { domain: [0, 0.5, 1], range: ['green', 'white', 'red'] },
+	blueYellowRed: {
+		domain: [0, 0.2, 0.4, 0.5, 0.6, 0.8, 1],
+		range: [
+			'rgb(69,117,180)',
+			'rgb(146,191,219)',
+			'rgb(225,243,248)',
+			'rgb(255,255,191)',
+			'rgb(254,224,144)',
+			'rgb(252,142,89)',
+			'rgb(215,48,39)'
+		]
+	},
+	greenBlackRed: {
+		domain: [0, 0.2, 0.4, 0.5, 0.6, 0.8, 1],
+		range: [
+			'rgb(0,255,0)',
+			'rgb(0,220,0)',
+			'rgb(0,130,0)',
+			'rgb(0,0,0)',
+			'rgb(130,0,0)',
+			'rgb(220,0,0)',
+			'rgb(255,0,0)'
+		]
+	}
+}

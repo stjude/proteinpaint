@@ -1,1 +1,2 @@
-
+Features:
+- Allow switching to other color scheme for hierCluster 
