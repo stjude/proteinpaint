@@ -14,10 +14,7 @@ import jsonwebtoken from 'jsonwebtoken'
 const basepath = serverconfig.basepath || ''
 
 export function setAppMiddlewares(app) {
-	app.use((req, res, next) => {
-		setHeaders(res)
-		next()
-	})
+	app.use(setHeaders)
 
 	if (serverconfig.users) {
 		// { user1 : pass1, user2: pass2, ... }
@@ -25,6 +22,8 @@ export function setAppMiddlewares(app) {
 	}
 
 	if (!serverconfig.backend_only) {
+		// NOTE: options = {setHeaders} is not needed here
+		// because it's already set at the beginning of this function
 		const staticDir = express.static(path.join(process.cwd(), './public'))
 		app.use(staticDir)
 	}
@@ -142,9 +141,12 @@ function log(req) {
 	)
 }
 
-function setHeaders(res) {
+function setHeaders(req, res, next) {
 	res.header('Vary', 'Origin')
-	res.header('Access-Control-Allow-Origin', '*')
+	res.header(
+		'Access-Control-Allow-Origin',
+		req.get('origin') || req.get('referrer') || req.protocol + '://' + req.get('host').split(':')[0] || '*'
+	)
 	res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD')
 	// embedder sites may use HTTP 2.0 which requires lowercased header key names
 	// must support mixed casing and all lowercased for compatibility
@@ -155,6 +157,9 @@ function setHeaders(res) {
 			', X-Auth-Token, X-Ds-Access-Token, X-SjPPDs-Sessionid' +
 			', x-auth-token, x-ds-access-token, x-sjppds-sessionid'
 	)
+	res.header('Access-Control-Allow-Credentials', true)
+
+	next()
 }
 
 function isNumeric(d) {
