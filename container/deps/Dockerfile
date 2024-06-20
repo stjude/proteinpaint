@@ -44,6 +44,7 @@ RUN apt-get update && apt-get install -y \
 # To test, `console.log(execSync(`which python3`, { encoding: 'utf8' }))`
 # before calling startServer() in `server/src/app.js`, the output 
 # should include a `venv/bin/python3` string
+
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN python3 -m venv /opt/venv && \
