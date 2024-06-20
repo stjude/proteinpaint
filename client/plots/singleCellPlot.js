@@ -49,7 +49,6 @@ class singleCellPlot {
 
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
-		console.log(state, q)
 		//read files data
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
@@ -61,7 +60,10 @@ class singleCellPlot {
 				genome: this.app.opts.genome,
 				row: searchGeneDiv,
 				geneOnly: true,
-				callback: () => console.log,
+				callback: () => {
+					const gene = geneSearch.geneSymbol
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene } })
+				},
 				hideHelp: true,
 				focusOff: true
 			})
@@ -190,6 +192,7 @@ class singleCellPlot {
 			sample = this.samples[0].sample
 			body.sample = this.samples[0].experiments?.[0]?.experimentID || this.samples[0].sample
 		}
+		if (this.state.config.gene) body.gene = this.state.config.gene
 		this.renderPlots(body)
 		if (this.dom.header) this.dom.header.html(`${sample} Single Cell Data`)
 	}
