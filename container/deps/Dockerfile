@@ -28,13 +28,22 @@ RUN apt-get update && apt-get install -y \
 	g++ \
     pkg-config \
     cmake \
-    python3-matplotlib \
-    python3-nibabel \
-    python3-numpy \
+    python3-pip \
+    python3-venv \
 	## clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/ \
   && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN python3 -m venv /opt/venv && \
+    pip install --upgrade pip && \
+    pip install blitzgsea matplotlib nibabel numpy && \
+    ## clean up
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/downloaded_packages/ /tmp/*.rds
+
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
