@@ -11,7 +11,7 @@ const genome: Genome = {
 		msigdb: {
 			label: 'MSigDB',
 			cohort: {
-				db: { file: 'anno/msigdb/termdbtest/db' },
+				db: { file: 'files/hg38/TermdbTest/msigdb/db' }, // nest file under TermdbTest since the folder is auto symlinked
 				termdb: {
 					isGeneSetTermdb: true
 				}
