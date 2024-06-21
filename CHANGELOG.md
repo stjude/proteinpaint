@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - create minified msigdb and associate to hg38-test for CI
+- set appropriate response headers for all responses
 
 
 ## 2.63.5
