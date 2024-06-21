@@ -149,11 +149,10 @@ function addMatrixplots(c, ds) {
 /* ds.queries{} contains query methods for non-dictionary data types
 including genomic, molecular, imaging etc
 */
-function addNonDictionaryQueries(c, ds, genome) {
+function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	// TODO: delete the following line, it's just an example to trigger a previous uncaught type error
 	// `cd proteinpaint/server; npx tsc` should emit an error for the following line, like
 	// routes/termdb.config.ts:156:6 - error TS18048: 'ds.queries' is possibly 'undefined'.
-	if (ds.queries.images) console.log('----- has ds.queries.images -----')
 	const q = ds.queries
 	if (!q) return
 	// this ds supports genomic query methods
