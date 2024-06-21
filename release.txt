@@ -1,2 +1,1 @@
-Fixes:
-- getFilterName() treats geneExp and metabolite same as float terms
+

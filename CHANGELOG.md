@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- getFilterName() treats geneExp and metabolite same as float terms
+
+
 ## 2.63.6
 
 Fixes:
