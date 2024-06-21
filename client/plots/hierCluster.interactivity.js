@@ -269,6 +269,11 @@ export function setClusteringBtn(holder, callback) {
 							label: 'Green-White-Red',
 							value: 'greenWhiteRed',
 							title: `color scheme Green-White-Red`
+						},
+						{
+							label: 'Blue-Black-Yellow',
+							value: 'blueBlackYellow',
+							title: `color scheme Blue-Black-Yellow`
 						}
 					]
 				}
