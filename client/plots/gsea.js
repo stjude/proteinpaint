@@ -5,8 +5,20 @@ import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '../dom/menu'
 
-const hlcolor = '#ffa200'
 const tip = new Menu()
+
+// table columns showing analysis results for each gene set
+const gsea_table_cols = [
+	{ label: 'Pathway name' },
+	{ label: 'enrichment score' },
+	{ label: 'normalized enrichment score' },
+	{ label: 'Geneset size' },
+	{ label: 'pvalue' },
+	{ label: 'sidak' },
+	{ label: 'FDR' },
+	{ label: 'Leading edge' }
+]
+
 class gsea {
 	constructor() {
 		this.type = 'gsea'
@@ -125,16 +137,6 @@ add:
 - vo_circle
 	*/
 	if (self.settings.pathway != '-') {
-		const gsea_table_cols = [
-			{ label: 'Pathway name' },
-			{ label: 'enrichment score' },
-			{ label: 'normalized enrichment score' },
-			{ label: 'Geneset size' },
-			{ label: 'pvalue' },
-			{ label: 'sidak' },
-			{ label: 'FDR' },
-			{ label: 'Leading edge' }
-		]
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.config.gsea_params.geneSetGroup = self.settings.pathway
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
@@ -157,7 +159,6 @@ add:
 		}
 
 		// Generating the table
-		self.gsea_table_cols = gsea_table_cols
 		self.gsea_table_rows = []
 		for (const pathway_name of Object.keys(output)) {
 			const pathway = output[pathway_name]
@@ -237,7 +238,7 @@ add:
 		self.dom.tableDiv.selectAll('*').remove()
 		const d_gsea = self.dom.tableDiv.append('div')
 		renderTable({
-			columns: self.gsea_table_cols,
+			columns: gsea_table_cols,
 			rows: self.gsea_table_rows,
 			div: d_gsea,
 			showLines: true,
