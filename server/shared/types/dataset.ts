@@ -1,3 +1,5 @@
+import { Mclass } from './Mclass.ts'
+
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -553,6 +555,7 @@ type MatrixSettingsControlLabels = {
 	Samples?: string
 	Sample?: string
 	Mutations?: string
+	Mutation?: string
 }
 
 type ExcludeClasses = {
@@ -664,10 +667,8 @@ type MatrixSettings = {
 	showHints?: string[]
 	displayDictRowWithNoValues?: boolean
 	addMutationCNVButtons?: boolean // allow to add two buttons (CNV and mutation) to control panel for selecting mclasses displayed on oncoMatrix
-}
-
-type Mclass = {
-	[index: string]: { color: string }
+	sortByMutation?: string // this is now computed from sortPriority[x].tiebreakers.find(tb => tb.filter?.values[0]?.dt === 1) ...
+	sortByCNV?: boolean // this is now computed from sortPriority[x].tiebreakers.find(tb => tb.filter?.values[0]?.dt === 4).isOrdered
 }
 
 type Matrix = {
@@ -677,6 +678,9 @@ type Matrix = {
 	settings?: MatrixSettings
 	/** matrix-specific mclass override? */
 	mclass?: Mclass
+	// TODO: improve definitions below
+	legendGrpFilter?: any
+	legendValueFilter?: any
 }
 
 type MatrixPlotsEntry = {
@@ -790,14 +794,7 @@ type Termdb = {
 		getSupportedChartTypes: (a: any) => any
 	}
 	termMatch2geneSet?: any
-	mclass?: {
-		[mclskey: string]: {
-			label?: string
-			color?: string
-			dt?: number | string
-			desc: string
-		}
-	}
+	mclass?: Mclass
 	lollipop?: any
 	hasAncestry?: boolean
 
@@ -1195,7 +1192,8 @@ export type Mds3 = BaseMds & {
 	dsinfo?: KeyVal[]
 	queries?: Mds3Queries
 	cohort?: Cohort
-	//termdb?: Termdb
+	// TODO: termdb should be nested under cohort
+	termdb?: Termdb
 	validate_filter0?: (f: any) => void
 	ssm2canonicalisoform?: GdcApi
 	variant2samples?: Variant2Samples
@@ -1206,6 +1204,9 @@ export type Mds3 = BaseMds & {
 		[termType: string]: {
 			[key: string]: any
 		}
+	}
+	getHealth?: (ds: any) => {
+		[key: string]: any
 	}
 }
 
