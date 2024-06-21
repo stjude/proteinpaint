@@ -101,7 +101,7 @@ class gsea {
 	}
 
 	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.gsea
 		await this.setControls()
 		this.dom.header
@@ -125,6 +125,16 @@ add:
 - vo_circle
 	*/
 	if (self.settings.pathway != '-') {
+		const gsea_table_cols = [
+			{ label: 'Pathway name' },
+			{ label: 'enrichment score' },
+			{ label: 'normalized enrichment score' },
+			{ label: 'Geneset size' },
+			{ label: 'pvalue' },
+			{ label: 'sidak' },
+			{ label: 'FDR' },
+			{ label: 'Leading edge' }
+		]
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.config.gsea_params.geneSetGroup = self.settings.pathway
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
@@ -147,16 +157,7 @@ add:
 		}
 
 		// Generating the table
-		self.gsea_table_cols = [
-			{ label: 'Pathway name' },
-			{ label: 'enrichment score' },
-			{ label: 'normalized enrichment score' },
-			{ label: 'Geneset size' },
-			{ label: 'pvalue' },
-			{ label: 'sidak' },
-			{ label: 'FDR' },
-			{ label: 'Leading edge' }
-		]
+		self.gsea_table_cols = gsea_table_cols
 		self.gsea_table_rows = []
 		for (const pathway_name of Object.keys(output)) {
 			const pathway = output[pathway_name]

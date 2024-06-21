@@ -39,7 +39,7 @@ async function run_genesetEnrichment_analysis(q: genesetEnrichmentRequest, genom
 	const genesetenrichment_input = {
 		genes: q.genes,
 		fold_change: q.fold_change,
-		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
+		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name, // For now msigdb has been added, but later databases other than msigdb may be used
 		gene_set_group: q.geneSetGroup
 	}
 
