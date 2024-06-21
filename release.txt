@@ -1,1 +1,2 @@
-
+Fixes:
+- use Mds3 ttype, to catch potential typescript errors, early in termdb/config route handler functions
