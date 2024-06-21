@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - getFilterName() treats geneExp and metabolite same as float terms
+- use Mds3 ttype, to catch potential typescript errors, early in termdb/config route handler functions
 
 
 ## 2.63.6
