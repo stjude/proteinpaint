@@ -493,6 +493,7 @@ add:
 		}
 
 		if (self.settings.gene_ora && self.app.opts.genome.termdbs) {
+			// Currently backend only uses msigdb, but in future may use other databases in genome.termdbs{}. In ui will need to generate a <select> to choose one key of termdbs{}.
 			//console.log('Run gene ora:', self.settings.gene_ora)
 			//console.log('output.data:', output.data)
 			const sample_genes = []
@@ -551,6 +552,7 @@ add:
 		}
 
 		if (self.settings.gsea && self.app.opts.genome.termdbs) {
+			// Currently backend only uses msigdb, but in future may use other databases in genome.termdbs{}. In ui will need to generate a <select> to choose one key of termdbs{}.
 			const gsea_params = {
 				genes: output.data.map(i => i.gene_symbol),
 				fold_change: output.data.map(i => i.fold_change),
