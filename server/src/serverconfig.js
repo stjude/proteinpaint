@@ -55,6 +55,7 @@ if (!serverconfig.clustalo) serverconfig.clustalo = 'clustalo'
 if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
 if (!serverconfig.gfServer) serverconfig.gfServer = 'gfServer'
 if (!serverconfig.gfClient) serverconfig.gfClient = 'gfClient'
+if (!serverconfig.python) serverconfig.python = 'python3'
 // NOTE: will set other cmd paths that require binpath after it's filled-in below
 
 /******************
