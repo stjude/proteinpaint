@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Allow switching to other color scheme for hierCluster
+
 Fixes:
 - getFilterName() treats geneExp and metabolite same as float terms
 - use Mds3 ttype, to catch potential typescript errors, early in termdb/config route handler functions
