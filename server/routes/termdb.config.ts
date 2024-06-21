@@ -4,7 +4,7 @@ import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js'
 import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.js'
 import { TermTypes } from '#shared/terms.js'
-import { Mds3 } from '#shared/types/index.ts'
+import { Mds3WithCohort } from '#shared/types/index.ts'
 
 export const api: any = {
 	endpoint: 'termdb/config',
@@ -68,14 +68,14 @@ returns:
 	a json object
 */
 
-function make(q, res, ds: Mds3, genome) {
+function make(q, res, ds: Mds3WithCohort, genome) {
 	const tdb = ds.cohort.termdb
 	// add attributes to this object to reveal to client
 
 	// add required attributes
 	const c: any = {
 		selectCohort: tdb.selectCohort, // optional
-		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
+		supportedChartTypes: tdb.q?.getSupportedChartTypes(q.embedder),
 		hiddenChartTypes: ds.cohort.hiddenChartTypes,
 		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getAllowedTermTypes(ds),
@@ -149,7 +149,7 @@ function addMatrixplots(c, ds) {
 /* ds.queries{} contains query methods for non-dictionary data types
 including genomic, molecular, imaging etc
 */
-function addNonDictionaryQueries(c, ds: Mds3, genome) {
+function addNonDictionaryQueries(c, ds, genome) {
 	// TODO: delete the following line, it's just an example to trigger a previous uncaught type error
 	// `cd proteinpaint/server; npx tsc` should emit an error for the following line, like
 	// routes/termdb.config.ts:156:6 - error TS18048: 'ds.queries' is possibly 'undefined'.

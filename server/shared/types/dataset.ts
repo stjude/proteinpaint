@@ -778,6 +778,21 @@ type Termdb = {
 		ssm?: UrlTemplateSsm | UrlTemplateSsm[] // ssm link definition
 	}
 
+	q?: {
+		getSupportedChartTypes: (a: any) => any
+	}
+	termMatch2geneSet?: any
+	mclass?: {
+		[mclskey: string]: {
+			label?: string
+			color?: string
+			dt?: number | string
+			desc: string
+		}
+	}
+	lollipop?: any
+	hasAncestry?: boolean
+
 	//GDC
 	termid2totalsize2?: GdcApi
 	dictionary?: GdcApi
@@ -861,7 +876,7 @@ export type Cohort = {
 	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }
 	mutationset?: MutationSet[]
 	db: FileObj
-	termdb?: Termdb
+	termdb: Termdb
 	scatterplots?: Scatterplots
 	// optional title of this ds, if missing use ds.label. shown on mass nav header. use blank string to not to show a label
 	title?: Title
@@ -1166,16 +1181,26 @@ export type Mds = BaseMds & {
 }
 
 export type Mds3 = BaseMds & {
+	label?: Title
 	isMds3: boolean
 	viewModes?: ViewMode[]
 	dsinfo?: KeyVal[]
 	queries?: Mds3Queries
 	cohort?: Cohort
-	termdb?: Termdb
+	//termdb?: Termdb
 	validate_filter0?: (f: any) => void
 	ssm2canonicalisoform?: GdcApi
 	variant2samples?: Variant2Samples
 	// !!! TODO: improve these type definitions below !!!
 	getHostHeaders?: (q: any) => any
 	serverconfigFeatures?: any
+	customTwQByType?: {
+		[termType: string]: {
+			[key: string]: any
+		}
+	}
+}
+
+export type Mds3WithCohort = Mds3 & {
+	cohort: Cohort
 }
