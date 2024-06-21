@@ -215,6 +215,7 @@ type SnvIndelQuery = {
 		gdcapi?: boolean
 		by: string
 	}
+	allowSNPs?: boolean
 }
 
 type SvFusion = {
@@ -401,6 +402,7 @@ export type SingleCellDataGdc = {
 	src: 'gdcapi' | string
 	sameLegend: boolean
 	get?: (q: any) => any
+	refName: string
 }
 type ColorColumn = {
 	index: number
@@ -474,6 +476,12 @@ type Mds3Queries = {
 		}
 	}
 	ld?: LdQuery
+	// TODO: improve the type definitions below
+	defaultCoord?: any
+	singleSampleGenomeQuantification?: any
+	DZImages?: any
+	images?: any
+	singleSampleGbtk?: any
 }
 
 /*** types supporting Termdb ***/
