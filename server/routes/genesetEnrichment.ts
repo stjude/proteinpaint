@@ -52,7 +52,7 @@ async function run_genesetEnrichment_analysis(q: genesetEnrichmentRequest, genom
 	//})
 
 	const gsea_output: any = await run_gsea(
-		path.join(serverconfig.binpath, '../python/src', 'gsea.py'),
+		`${serverconfig.binpath}/utils/gsea.py`,
 		'/' + JSON.stringify(genesetenrichment_input) // "/" is needed for python to accept the bracket "{" as a bracket
 	)
 
