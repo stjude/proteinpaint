@@ -183,9 +183,8 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		} catch (e: any) {
 			throw 'geneExp matrix file not found or readable for this sample'
 		}
-		const headerlines = await get_header_txt(tsvfile)
-		if (!headerlines[0]) throw 'no header line'
-		const header = headerlines[0].split('\t')
+		const headerline = (await get_header_txt(tsvfile)).join('')
+		const header = headerline.split('\t')
 		if (header.length == 0) throw 'blank header line'
 		return await grepMatrix4geneExpression(tsvfile, q.gene, header)
 	}
@@ -203,9 +202,10 @@ function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string
 			if (e) reject(e)
 			// got data
 			const l = out.join('').split('\t')
-			console.log(l, header)
-			if (l.length != header.length)
-				reject(`number of fields differ between data line and header: ${l.length} ${header.length}`)
+
+			// uncomment this check when data issue is fixed
+			//if (l.length != header.length) reject(`number of fields differ between data line and header: ${l.length} ${header.length}`)
+
 			const cell2value = {} // key: cell barcode in header, value: exp value
 			for (let i = 1; i < l.length; i++) {
 				const v = Number(l[i])
