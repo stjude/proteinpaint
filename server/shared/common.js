@@ -1110,27 +1110,15 @@ export const colorScaleMap = {
 	blueWhiteRed: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] },
 	greenWhiteRed: { domain: [0, 0.5, 1], range: ['green', 'white', 'red'] },
 	blueYellowRed: {
-		domain: [0, 0.2, 0.4, 0.5, 0.6, 0.8, 1],
-		range: [
-			'rgb(69,117,180)',
-			'rgb(146,191,219)',
-			'rgb(225,243,248)',
-			'rgb(255,255,191)',
-			'rgb(254,224,144)',
-			'rgb(252,142,89)',
-			'rgb(215,48,39)'
-		]
+		domain: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
+		range: ['#313695', '#649AC7', '#BCE1ED', '#FFFFBF', '#FDBE70', '#EA5839', '#A50026']
 	},
 	greenBlackRed: {
-		domain: [0, 0.2, 0.4, 0.5, 0.6, 0.8, 1],
-		range: [
-			'rgb(0,255,0)',
-			'rgb(0,220,0)',
-			'rgb(0,130,0)',
-			'rgb(0,0,0)',
-			'rgb(130,0,0)',
-			'rgb(220,0,0)',
-			'rgb(255,0,0)'
-		]
+		domain: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
+		range: ['#00FF00', '#14E10C', '#1AAF10', '#000000', '#B01205', '#E20E03', '#FF0000']
+	},
+	blueBlackYellow: {
+		domain: [0, 0.5, 1],
+		range: ['blue', 'black', 'yellow']
 	}
 }
