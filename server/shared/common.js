@@ -1118,7 +1118,7 @@ export const colorScaleMap = {
 		range: ['#00FF00', '#14E10C', '#1AAF10', '#000000', '#B01205', '#E20E03', '#FF0000']
 	},
 	blueBlackYellow: {
-		domain: [0, 0.5, 1],
-		range: ['blue', 'black', 'yellow']
+		domain: [0, 0.2, 0.4, 0.5, 0.6, 0.8, 1],
+		range: ['#0000FF', '#0000CC', '#000099', '#202020', '#999900', '#CCCC00', '#FFFF00']
 	}
 }
