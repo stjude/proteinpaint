@@ -5,7 +5,7 @@ import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '#common/urlmap'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { vcfparsemeta } from '#shared/vcf'
-import { getFilterName } from './leftlabel.sample'
+import { getFilterName } from './filterName'
 import { fillTermWrapper } from '#termsetting'
 
 /*

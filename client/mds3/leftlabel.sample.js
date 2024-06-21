@@ -4,9 +4,8 @@ import { displaySampleTable } from './sampletable'
 import { fillbar } from '../dom/fillbar'
 import { renderTable } from '../dom/table'
 import { filterInit, getNormalRoot } from '../filter/filter'
-import { convertUnits } from '../shared/helpers'
 import { violinRenderer } from '../dom/violinRenderer'
-import { niceNumLabels } from '../dom/niceNumLabels.ts'
+import { getFilterName } from './filterName'
 
 /*
 makeSampleLabel()
@@ -93,84 +92,6 @@ function mayAddGetCategoryArgs(arg, block) {
 		/////////////////////////////////////
 		arg.getCategoriesArguments = { rglst: structuredClone(block.rglst) }
 	}
-}
-
-export function getFilterName(f) {
-	// try to provide a meaningful name based on filter content
-
-	if (f.lst.length == 0) {
-		// this is possible when user has deleted the only tvs
-		return 'No filter'
-	}
-
-	if (f.lst.length == 1 && f.lst[0].type == 'tvs') {
-		// has only one tvs
-		const tvs = f.lst[0].tvs
-		if (!tvs) throw 'f.lst[0].tvs{} missing'
-		const ttype = tvs?.term?.type
-		if (ttype == 'categorical') {
-			// tvs is categorical
-			if (!Array.isArray(tvs.values)) throw 'f.lst[0].tvs.values not array'
-
-			const catKey = tvs.values[0].key
-			const catValue = tvs.term.values?.[catKey]?.label || catKey // only assess 1st category name; only use for display, not computing
-
-			if (tvs.values.length == 1) {
-				// tvs uses only 1 category
-				if ((tvs.term.name + catValue).length < 20) {
-					// term name plus category value has short length, show both
-					return tvs.term.name + (tvs.isnot ? '!=' : ': ') + catValue
-				}
-				// only show cat value
-				return (tvs.isnot ? '!' : '') + (catValue.length < 15 ? catValue : catValue.substring(0, 13) + '...')
-			}
-			// tvs uses more than 1 category, set label as "catValue (3)"
-			return `${tvs.isnot ? '!' : ''}${catValue.length < 12 ? catValue : catValue.substring(0, 10) + '...'} (${
-				tvs.values.length
-			})`
-		}
-		if (ttype == 'integer' || ttype == 'float') {
-			// if tvs is numeric, may show numeric range
-			if (!Array.isArray(tvs.ranges)) throw 'tvs.ranges not array'
-			if (tvs.ranges.length == 1) {
-				// single range
-				const r = tvs.ranges[0]
-
-				let startName, stopName // logic to compute print name and use if needed
-				const vc = tvs.term.valueConversion
-				if (vc) {
-					if ('start' in r) startName = convertUnits(r.start, vc.fromUnit, vc.toUnit, vc.scaleFactor, true)
-					if ('stop' in r) stopName = convertUnits(r.stop, vc.fromUnit, vc.toUnit, vc.scaleFactor, true)
-				} else {
-					// no conversion, numeric values are shown as is
-					if (ttype == 'integer') {
-						if ('start' in r) startName = Math.floor(r.start)
-						if ('stop' in r) stopName = Math.floor(r.stop)
-					} else {
-						if ('start' in r) startName = r.start
-						if ('stop' in r) stopName = r.stop
-					}
-
-					//Converts extremely long decimals into an appropriate label length
-					;[startName, stopName] = niceNumLabels([startName, stopName])
-				}
-
-				if (tvs.isnot) {
-					if (r.startunbounded) return `x ${r.stopinclusive ? '>' : '>='} ${stopName}`
-					if (r.stopunbounded) return `x ${r.startinclusive ? '<' : '<='} ${startName}`
-					return `!(${startName} ${stopName})`
-				}
-				if (r.startunbounded) return `x ${r.stopinclusive ? '<=' : '<'} ${stopName}`
-				if (r.stopunbounded) return `x ${r.startinclusive ? '>=' : '>'} ${startName}`
-				return `${startName}${r.startinclusive ? '<=' : '<'}x${r.stopinclusive ? '<=' : '<'}${stopName}`
-			}
-			// multiple ranges
-		} else {
-			throw 'unknown tvs term type'
-		}
-	}
-	// more than 1 tvs, may not able to generate
-	return 'Filter (' + f.lst.length + ')'
 }
 
 async function mayShowSummary(tk, block) {
