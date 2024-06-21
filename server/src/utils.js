@@ -396,14 +396,15 @@ export async function get_header_tabix(file, dir) {
 	})
 	return lines
 }
+
+// file is full path file; return one string of header line, trimmed
 export async function get_header_txt(file, dir) {
-	// file is full path file
 	return new Promise((resolve, reject) => {
-		const ps = spawn('head', ['-n', '1', file], { cwd: dir })
+		const ps = spawn('head', ['-1', file], { cwd: dir })
 		const out = []
-		ps.stdout.on('data', i => out.push(i.toString().trim()))
+		ps.stdout.on('data', i => out.push(i))
 		ps.on('close', () => {
-			resolve(out)
+			resolve(out.join('').trim())
 		})
 	})
 }

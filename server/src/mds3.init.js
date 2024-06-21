@@ -1448,9 +1448,8 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 
 	{
 		// is a metabolite-by-sample matrix file
-		const lines = await utils.get_header_txt(q.file)
-		if (!lines[0].startsWith('#Metabolites')) throw 'header line missing from ' + q.file
-		const l = lines[0].split('\t')
+		const line = await utils.get_header_txt(q.file)
+		const l = line.split('\t')
 		for (let i = 1; i < l.length; i++) {
 			const id = ds.cohort.termdb.q.sampleName2id(l[i])
 			if (id == undefined) throw 'queries.metaboliteIntensity: unknown sample from header: ' + l[i]
