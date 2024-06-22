@@ -11,6 +11,8 @@ export type Cell = {
 	z?: number
 	/** The cell may have different classifications, e.g. by cell type, CNV, FUSION, etc. */
 	category: string
+	/** Gene expression data for this cell */
+	geneExp?: number
 }
 
 export type Plot = {
