@@ -174,41 +174,10 @@ function gdcValidateQuery(ds: any, genome: any) {
 	}
 
 	function getGeneSelectionArg(q: any, caseLst: any) {
-		//to hide messy logic during testing phase
-
-		/* when api performance issue is resolved, return this
 		return {
 			case_ids: caseLst,
-			gene_type:'protein_coding',
-			selection_size: Number(q.maxGenes)
-		}
-		*/
-
-		//////////////////////////////////////////////////
-		//
-		// !!!!!!!!!!!!!!!! TEMPORARY !!!!!!!!!!!!!!!!!!!!
-		//
-		//////////////////////////////////////////////////
-		// limit the case_ids length, and restrict pool to CGC genes, otherwise the request times out !!!
-		// must revert asap
-		return {
-			case_ids: caseLst, //.slice(0, 20),
-			gene_ids: tempGetCGCgenes(genome),
+			gene_type: 'protein_coding',
 			selection_size: Number(q.maxGenes)
 		}
 	}
-}
-
-function tempGetCGCgenes(genome: any) {
-	const lst = [] as string[] // list of ENSG ids from cgc genes
-	// don't think there's need to preparse genome.geneset, as this function is only temporary
-	for (const s of genome.geneset[0].lst) {
-		const a = genome.genedb.getAliasByName.all(s)
-		if (a) {
-			for (const b of a) {
-				if (b.alias.startsWith('ENSG')) lst.push(b.alias)
-			}
-		}
-	}
-	return lst
 }

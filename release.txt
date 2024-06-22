@@ -1,1 +1,2 @@
-
+Fixes:
+- A requesting top variably expressed genes, no longer limit to CGC set
