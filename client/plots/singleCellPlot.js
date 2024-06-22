@@ -52,7 +52,7 @@ class singleCellPlot {
 		//read files data
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		if (q.singleCell) {
+		if (q.singleCell?.geneExpression) {
 			const searchGeneDiv = this.mainDiv.append('div').style('padding', '10px')
 			searchGeneDiv.append('label').html('Overlay gene:')
 			const geneSearch = addGeneSearchbox({
@@ -174,7 +174,6 @@ class singleCellPlot {
 	// or current.state != replcament.state
 	async main() {
 		this.config = structuredClone(this.state.config) // ?
-		console.log('this.config', this.config)
 
 		this.dom.tableDiv.selectAll('*').remove()
 		this.plots = []
@@ -216,7 +215,6 @@ class singleCellPlot {
 
 	renderPlot(plot) {
 		if (plot.cells.length == 0) return
-		console.log('plot', plot)
 		this.plots.push(plot)
 		let clusters = new Set(plot.cells.map(c => c.category))
 		clusters = Array.from(clusters).sort()

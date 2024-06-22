@@ -127,7 +127,6 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 	D.get = async q => {
 		// if sample is int, may convert to string
 		try {
-			console.log(q)
 			const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
 			let geneExpMap
 			if (ds.queries.singleCell.geneExpression && q.gene) {
@@ -160,7 +159,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					const category = l[plot.colorColumn?.index] || ''
 					if (!cellId) throw 'cell id missing'
 					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
-					const cell = { cellId, x, y, category }
+					const cell: Cell = { cellId, x, y, category }
 					if (geneExpMap) {
 						if (geneExpMap[cellId] !== undefined) {
 							cell.geneExp = geneExpMap[cellId]
