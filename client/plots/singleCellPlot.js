@@ -174,6 +174,7 @@ class singleCellPlot {
 	// or current.state != replcament.state
 	async main() {
 		this.config = structuredClone(this.state.config) // ?
+		console.log('this.config', this.config)
 
 		this.dom.tableDiv.selectAll('*').remove()
 		this.plots = []
@@ -214,6 +215,8 @@ class singleCellPlot {
 	}
 
 	renderPlot(plot) {
+		if (plot.cells.length == 0) return
+		console.log('plot', plot)
 		this.plots.push(plot)
 		let clusters = new Set(plot.cells.map(c => c.category))
 		clusters = Array.from(clusters).sort()
@@ -274,7 +277,7 @@ class singleCellPlot {
 	}
 
 	getColor(d, plot) {
-		if (this.colorContinuous) return plot.colorGenerator(d.value)
+		if (this.state.config.gene) return plot.colorGenerator(d.geneExp)
 		return plot.colorMap[d.category]
 	}
 
@@ -284,6 +287,7 @@ class singleCellPlot {
 	}
 
 	initAxes(plot) {
+		if (!plot.cells.length) return
 		const s0 = plot.cells[0]
 		const [xMin, xMax, yMin, yMax] = plot.cells.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
@@ -292,11 +296,11 @@ class singleCellPlot {
 		const r = 5
 		plot.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
-			.range([0 + r, this.settings.svgh - 5])
+			.range([0 + r, this.settings.svgh + r])
 		plot.axisBottom = axisBottom(plot.xAxisScale)
 		plot.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
-			.range([0 + r, this.settings.svgh - r])
+			.range([0 + r, this.settings.svgh + r])
 		plot.axisLeft = axisLeft(plot.yAxisScale)
 		plot.zoom = 1
 	}
@@ -311,8 +315,7 @@ class singleCellPlot {
 		this.legendRendered = true
 
 		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.8em')
-		this.colorContinuous = true
-		if (this.colorContinuous) {
+		if (this.state.config.gene) {
 			this.renderColorGradient(plot, legendG)
 			return
 		}
@@ -392,8 +395,7 @@ class singleCellPlot {
 		const stopColor = this.config.stopColor[plot.name]
 		let offsetY = 25
 		const step = 20
-		plot.cells = plot.cells.map(cell => ({ ...cell, value: Math.random() }))
-		const values = plot.cells.map(cell => cell.value)
+		const values = plot.cells.map(cell => cell.geneExp || 1)
 		const [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
 		plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
 

@@ -127,7 +127,13 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 	D.get = async q => {
 		// if sample is int, may convert to string
 		try {
+			console.log(q)
 			const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
+			let geneExpMap
+			if (ds.queries.singleCell.geneExpression && q.gene) {
+				geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
+			}
+
 			for (const plot of D.plots) {
 				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, q.sample + plot.fileSuffix)
 				try {
@@ -146,13 +152,21 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 				for (let i = 1; i < lines.length; i++) {
 					// each line is a cell
 					const l = lines[i].split('\t')
-					const cellId = l[0],
+					const cellId = lines.length > 3 ? l[0] : undefined,
 						x = Number(l[plot.coordsColumns.x]), // FIXME standardize, or define idx in plot
 						y = Number(l[plot.coordsColumns.y])
+					//if(l.length <= 3) continue //not enough columns
+
 					const category = l[plot.colorColumn?.index] || ''
 					if (!cellId) throw 'cell id missing'
 					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
-					cells.push({ cellId, x, y, category })
+					const cell = { cellId, x, y, category }
+					if (geneExpMap) {
+						if (geneExpMap[cellId] !== undefined) {
+							cell.geneExp = geneExpMap[cellId]
+							cells.push(cell)
+						}
+					} else cells.push(cell)
 				}
 				plots.push({ name: plot.name, cells, colorBy: plot.colorColumn?.name, colorMap: plot.colorColumn?.colorMap })
 			}
@@ -160,12 +174,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 				// no data available for this sample
 				return { nodata: true }
 			}
-			if (ds.queries.singleCell.geneExpression && q.gene) {
-				console.log('sample', q.sample, q.gene)
-				const geneExp = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
-				console.log(geneExp)
-				return { plots, geneExp }
-			}
+
 			return { plots }
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
