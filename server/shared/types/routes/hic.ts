@@ -1,4 +1,4 @@
-import { FileORURL } from '../fileOrUrl'
+import { FileORURL } from '../fileOrUrl.ts'
 
 /******** Types are for the hicdata and hicgenome endpoints ********/
 
