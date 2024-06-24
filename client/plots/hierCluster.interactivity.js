@@ -244,7 +244,7 @@ export function setClusteringBtn(holder, callback) {
 					settingsKey: 'zScoreCap'
 				},
 				{
-					label: `color scheme`,
+					label: `Color Scheme`,
 					title: `Sets which color scheme to use`,
 					type: 'radio',
 					chartType: 'hierCluster',
