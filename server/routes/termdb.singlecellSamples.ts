@@ -208,12 +208,20 @@ function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string
 			const e = err.join('')
 			if (e) reject(e)
 			// got data
-			const l = out.join('').trim().split('\t')
+
+			const cell2value = {} // key: cell barcode in header, value: exp value
+
+			const line = out.join('').trim() // should find one line of text
+			if (!line) {
+				// blank line. gene is not found and missed out in this experiment
+				resolve(cell2value)
+			}
+
+			const l = line.split('\t')
 
 			if (l.length != header.length)
 				reject(`number of fields differ between data line and header: ${l.length} ${header.length}`)
 
-			const cell2value = {} // key: cell barcode in header, value: exp value
 			for (let i = 1; i < l.length; i++) {
 				const v = Number(l[i])
 				if (Number.isNaN(v)) continue // invalid value
