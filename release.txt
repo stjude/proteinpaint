@@ -1,1 +1,2 @@
-
+Features
+- Single cell plots support now color by gene if geneExpression data it is provided

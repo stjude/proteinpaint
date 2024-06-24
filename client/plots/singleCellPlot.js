@@ -12,6 +12,7 @@ import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rgb } from 'd3'
 import { addGeneSearchbox } from '../dom/genesearch'
+import { roundValueAuto } from '../shared/roundValue.js'
 
 /*
 this
@@ -54,7 +55,7 @@ class singleCellPlot {
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		if (q.singleCell?.geneExpression) {
 			const searchGeneDiv = this.mainDiv.append('div').style('padding', '10px')
-			searchGeneDiv.append('label').html('Overlay gene:')
+			searchGeneDiv.append('label').html('Color by:')
 			const geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
 				genome: this.app.opts.genome,
@@ -244,9 +245,9 @@ class singleCellPlot {
 			.append('svg')
 			.attr('width', this.settings.svgw)
 			.attr('height', this.settings.svgh + 40)
-			//.on('mouseover', event => {
-			//	if (!this.onClick) this.showTooltip(event, plot)
-			//})
+			.on('mouseover', event => {
+				if (this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
+			})
 			.on('click', event => this.showTooltip(event, plot))
 		svg.append('text').attr('transform', `translate(20, 30)`).style('font-weight', 'bold').text(`${plot.name}`)
 
@@ -369,9 +370,10 @@ class singleCellPlot {
 
 	renderColorGradient(plot, legendG) {
 		const colorGradient = rgb(plotColor)
-		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(2)
-		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(2)
-
+		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(2).toString()
+		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(2).toString()
+		const startColor = this.config.startColor[plot.name]
+		const stopColor = this.config.stopColor[plot.name]
 		const gradient = legendG
 			.append('defs')
 			.append('linearGradient')
@@ -380,17 +382,9 @@ class singleCellPlot {
 			.attr('y1', '0%')
 			.attr('x2', '100%')
 			.attr('y2', '0%')
-		this.startGradient[plot.name] = gradient
-			.append('stop')
-			.attr('offset', '0%')
-			.attr('stop-color', this.config.startColor[plot.name])
-		this.stopGradient[plot.name] = gradient
-			.append('stop')
-			.attr('offset', '100%')
-			.attr('stop-color', this.config.stopColor[plot.name])
+		this.startGradient[plot.name] = gradient.append('stop').attr('offset', '0%').attr('stop-color', startColor)
+		this.stopGradient[plot.name] = gradient.append('stop').attr('offset', '100%').attr('stop-color', stopColor)
 
-		const startColor = this.config.startColor[plot.name]
-		const stopColor = this.config.stopColor[plot.name]
 		let offsetY = 25
 		const step = 20
 		const values = plot.cells.map(cell => cell.geneExp || 1)
@@ -450,13 +444,8 @@ class singleCellPlot {
 	}
 
 	changeGradientColor = function (plot, colorKey, elem, color) {
-		const hexColor = rgb(color).formatHex()
-		this.config[colorKey][plot.name] = hexColor
-		elem.style('fill', hexColor)
+		this.config[colorKey][plot.name] = color
 
-		plot.colorGenerator = d3Linear().range([this.config.startColor[plot.name], this.config.stopColor[plot.name]])
-		this.startGradient[plot.name].attr('stop-color', this.config.startColor[plot.name])
-		this.stopGradient[plot.name].attr('stop-color', this.config.stopColor[plot.name])
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
@@ -481,47 +470,28 @@ class singleCellPlot {
 			this.onClick = event.type == 'click'
 
 			const d = event.target.__data__
-			let threshold = 10 //min distance in pixels to be in the neighborhood
-			threshold = threshold / plot.zoom //Threshold should consider the zoom
-			const samples = plot.cells.filter(s => {
-				if (this.getOpacity(s) == 0) return false
-				const dist = this.distance(s.x, s.y, d.x, d.y, plot)
-				return dist < threshold
-			})
-			const tree = []
 
-			for (const sample of samples) {
-				const cluster = d.category
-
-				let node = tree.find(item => item.id == cluster)
-				if (!node) {
-					node = { id: cluster, parentId: null, samples: [sample], level: 1, category: null, children: [] }
-					tree.push(node)
-				} else {
-					node.samples.push(sample)
-				}
-			}
 			const menu = this.tip.clear()
 			const table = menu.d.append('table')
-			for (const node of tree) {
-				let tr = table.append('tr')
-				tr.append('td').style('color', '#aaa').text(plot.colorBy)
+			let tr = table.append('tr')
+			tr.append('td').style('color', '#aaa').text(plot.colorBy)
 
-				const cluster = node.id
-				const td = tr.append('td')
-				const svg = td.append('svg').attr('width', 150).attr('height', 20)
-				const x = 10
-				const y = 12
-				const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
-				g.append('circle').attr('fill', plot.colorMap[cluster]).attr('r', 4)
-				svg
-					.append('g')
-					.attr('transform', `translate(${x + 15}, ${y + 4})`)
-					.append('text')
-					.text(cluster)
+			const td = tr.append('td')
+			const svg = td.append('svg').attr('width', 150).attr('height', 20)
+			const x = 10
+			const y = 12
+			const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
+			g.append('circle').attr('fill', this.getColor(d, plot)).attr('r', 4)
+			svg
+				.append('g')
+				.attr('transform', `translate(${x + 15}, ${y + 4})`)
+				.append('text')
+				.text(d.category)
+
+			if (this.state.config.gene) {
 				tr = table.append('tr')
-				tr.append('td').style('color', '#aaa').text('cells')
-				tr.append('td').text(node.samples.length)
+				tr.append('td').style('color', '#aaa').text('Gene expression')
+				tr.append('td').text(roundValueAuto(d.geneExp))
 			}
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
