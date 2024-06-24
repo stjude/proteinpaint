@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.64.0
 
 Features:
 - Allow switching to other color scheme for hierCluster
