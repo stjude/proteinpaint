@@ -1,4 +1,4 @@
-import { HicdataRequest, HicdataResponse, Item } from '#shared/types/routes/hicdata.ts'
+import { HicGenomeRequest, HicGenomeResponse, Item } from '#shared/types/routes/hic.ts'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'
@@ -10,11 +10,29 @@ export const api: any = {
 		get: {
 			init,
 			request: {
-				typeId: 'HicdataRequest'
+				typeId: 'HicGenomeRequest'
 			},
 			response: {
-				typeId: 'HicdataResponse'
-			}
+				typeId: 'HicGenomeResponse'
+			},
+			examples: [
+				{
+					request: {
+						body: {
+							chrlst: ['chr1', 'chr2'],
+							embedder: 'localhost',
+							url: 'https://proteinpaint.stjude.org/ppdemo/hg19/hic/hic_demo.hic',
+							matrixType: 'observed',
+							nmeth: 'NONE',
+							nochr: true,
+							resolution: 2500000
+						}
+					},
+					response: {
+						header: { status: 200 }
+					}
+				}
+			]
 		},
 		post: {
 			alternativeFor: 'get',
@@ -24,8 +42,8 @@ export const api: any = {
 }
 
 function init() {
-	return async (req: any, res: any): Promise<void> => {
-		const data: { items: number[][]; lead: number; follow: number }[] = []
+	return async (req: { query: HicGenomeRequest }, res: any): Promise<void> => {
+		const data: { items: number[][]; lead: string; follow: string }[] = []
 		const erroutput: string[] = []
 
 		const [e, file, isurl] = fileurl({ query: req.query })
@@ -39,21 +57,13 @@ function init() {
 			req.query.matrixType == 'log(oe)' ? 'oe' : req.query.matrixType ? req.query.matrixType : 'observed'
 
 		const promises = req.query.chrlst
-			.map((lead, i) => {
-				return req.query.chrlst.slice(0, i + 1).map((follow, j) => {
+			.map((lead: string, i: number) => {
+				return req.query.chrlst.slice(0, i + 1).map((follow: string, j: number) => {
 					if (j <= i) {
 						return new Promise<void>((resolve, reject): void => {
 							const pos1 = req.query.nochr ? lead.replace('chr', '') : lead
 							const pos2 = req.query.nochr ? follow.replace('chr', '') : follow
-							const par = [
-								matrixType,
-								req.query.nmeth || 'NONE',
-								file,
-								pos1,
-								pos2,
-								req.query.isfrag ? 'FRAG' : 'BP',
-								req.query.resolution
-							]
+							const par = [matrixType, req.query.nmeth || 'NONE', file, pos1, pos2, 'BP', req.query.resolution]
 
 							const ps = spawn(serverconfig.hicstraw, par)
 							const rl = readline.createInterface({ input: ps.stdout })
@@ -77,9 +87,6 @@ function init() {
 									fieldnotnumerical++
 									return
 								}
-								if (req.query.mincutoff != undefined && v <= req.query.mincutoff) {
-									return
-								}
 								items.push([n1, n2, v] as Item)
 							})
 							data.push({ items, lead, follow })
@@ -99,7 +106,7 @@ function init() {
 			.flat()
 
 		Promise.allSettled(promises)
-			.then(() => res.send({ data: data, error: erroutput.join('') }))
+			.then(() => res.send({ data: data, error: erroutput.join('') } as HicGenomeResponse))
 			.catch(e => {
 				res.send({ error: e?.message || e })
 				if (e instanceof Error && e.stack) console.log(e)

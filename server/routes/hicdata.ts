@@ -1,4 +1,4 @@
-import { HicdataRequest, HicdataResponse, Item } from '#shared/types/routes/hicdata.ts'
+import { HicdataRequest, HicdataResponse, Item } from '#shared/types/routes/hic.ts'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'
@@ -14,16 +14,18 @@ export const api: any = {
 			},
 			response: {
 				typeId: 'HicdataResponse'
-			}
-			/*
+			},
 			examples: [
 				{
 					request: {
 						body: {
-							genome: 'hg38-test',
-							dslabel: 'TermdbTest',
 							embedder: 'localhost',
-							gettermbyid: 'subcohort'
+							url: 'https://proteinpaint.stjude.org/ppdemo/hg19/hic/hic_demo.hic',
+							matrixType: 'observed',
+							nmeth: 'NONE',
+							pos1: '3',
+							pos2: '2',
+							resolution: 1000000
 						}
 					},
 					response: {
@@ -31,7 +33,6 @@ export const api: any = {
 					}
 				}
 			]
-			*/
 		},
 		post: {
 			alternativeFor: 'get',
@@ -41,10 +42,10 @@ export const api: any = {
 }
 
 function init() {
-	return async (req: any, res: any): Promise<void> => {
+	return async (req: { query: HicdataRequest }, res: any): Promise<void> => {
 		try {
-			const payload = await handle_hicdata(req.query as HicdataRequest)
-			res.send(payload)
+			const payload = await handle_hicdata(req.query)
+			res.send(payload as HicdataResponse)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
@@ -103,7 +104,7 @@ function handle_hicdata(q: HicdataRequest) {
 			if (fieldnotnumerical)
 				reject({ error: fieldnotnumerical + ' lines have non-numerical values in any of the 3 fields' })
 
-			resolve({ items })
+			resolve({ items } as HicdataResponse)
 		})
 	})
 }
