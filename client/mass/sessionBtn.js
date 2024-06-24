@@ -86,6 +86,7 @@ class MassSessionBtn {
 				if (loc.includes('browser')) {
 					this.sessionName = id
 					const state = this.savedSessions[id]
+					await preprocessState(state, this.app)
 					const targetWindow = this.dom.tip.d.node().querySelector(`[name="${radioName}"]:checked`).value
 					if (targetWindow == 'current') {
 						this.app.dispatch({ type: 'app_refresh', state })
@@ -105,6 +106,7 @@ class MassSessionBtn {
 					const body = { id, route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
 					const res = await dofetch3(`/massSession?`, { headers, body })
 					if (!res.state) throw res.error || 'unable to get the cached session from the server'
+					await preprocessState(res.state, this.app)
 					this.savedSessions[id] = res.state
 
 					const targetWindow = this.dom.tip.d.node().querySelector(`[name="${radioName}"]:checked`).value
@@ -153,6 +155,7 @@ class MassSessionBtn {
 				}
 				this.sessionName = sessionName
 				const state = JSON.parse(json)
+				await preprocessState(state, this.app)
 				this.savedSessions[sessionName] = state
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
 				const targetWindow = this.dom.tip.d.node().querySelector(`[name="${radioName}"]:checked`).value
@@ -476,6 +479,28 @@ class MassSessionBtn {
 		setTimeout(() => {
 			this.dom.tip.hide()
 		}, 3500)
+	}
+}
+
+// may need to edit state based on updated expectations,
+// such as new or deprecated plot settings keys/values
+async function preprocessState(state, app) {
+	if (state.plots) {
+		const promises = []
+		for (const plot of state.plots) {
+			promises.push(
+				(async () => {
+					const _ = await import(`../plots/${plot.chartType}.js`)
+					return await _.getPlotConfig(plot, app)
+				})()
+			)
+		}
+		try {
+			await Promise.all(promises)
+		} catch (e) {
+			console.log(e)
+			app.printError(e)
+		}
 	}
 }
 
