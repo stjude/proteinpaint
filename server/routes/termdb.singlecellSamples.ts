@@ -163,9 +163,9 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					if (geneExpMap) {
 						if (geneExpMap[cellId] !== undefined) {
 							cell.geneExp = geneExpMap[cellId]
-							cells.push(cell)
 						}
-					} else cells.push(cell)
+					}
+					cells.push(cell)
 				}
 				plots.push({ name: plot.name, cells, colorBy: plot.colorColumn?.name, colorMap: plot.colorColumn?.colorMap })
 			}

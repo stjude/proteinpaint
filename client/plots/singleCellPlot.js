@@ -215,7 +215,6 @@ class singleCellPlot {
 	}
 
 	renderPlot(plot) {
-		if (plot.cells.length == 0) return
 		this.plots.push(plot)
 		let clusters = new Set(plot.cells.map(c => c.category))
 		clusters = Array.from(clusters).sort()
@@ -276,7 +275,10 @@ class singleCellPlot {
 	}
 
 	getColor(d, plot) {
-		if (this.state.config.gene) return plot.colorGenerator(d.geneExp)
+		if (this.state.config.gene) {
+			if (plot.colorGenerator) return plot.colorGenerator(d.geneExp)
+			return 'gray' //no gene expression data
+		}
 		return plot.colorMap[d.category]
 	}
 
@@ -369,6 +371,7 @@ class singleCellPlot {
 	}
 
 	renderColorGradient(plot, legendG) {
+		if (plot.cells.length == 0) return
 		const colorGradient = rgb(plotColor)
 		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(2).toString()
 		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(2).toString()
@@ -387,8 +390,13 @@ class singleCellPlot {
 
 		let offsetY = 25
 		const step = 20
-		const values = plot.cells.map(cell => cell.geneExp || 1)
-		const [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+		let min, max
+		const values = plot.cells[0]?.geneExp == undefined ? [] : plot.cells.map(cell => cell.geneExp)
+		if (values.length == 0) {
+			plot.colorGenerator = null
+			return
+		} else [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+
 		plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
 
 		const gradientWidth = 100
