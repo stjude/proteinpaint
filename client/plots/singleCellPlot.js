@@ -315,7 +315,7 @@ class singleCellPlot {
 		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) return
 		this.legendRendered = true
 
-		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.8em')
+		const legendG = legendSVG.append('g').attr('transform', `translate(25, 50)`).style('font-size', '0.8em')
 		if (this.state.config.gene) {
 			this.renderColorGradient(plot, legendG)
 			return
@@ -496,7 +496,7 @@ class singleCellPlot {
 				.append('text')
 				.text(d.category)
 
-			if (this.state.config.gene) {
+			if (d.geneExp) {
 				tr = table.append('tr')
 				tr.append('td').style('color', '#aaa').text('Gene expression')
 				tr.append('td').text(roundValueAuto(d.geneExp))
