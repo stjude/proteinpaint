@@ -286,7 +286,7 @@ class singleCellPlot {
 				})
 			svg.call(zoom)
 
-			const symbols = svg.selectAll('path').data(plot.cells)
+			const symbols = svg.selectAll('g').data(plot.cells)
 
 			symbols
 				.enter()
@@ -301,8 +301,8 @@ class singleCellPlot {
 			plot.plotDiv.style('display', display ? 'inline-block' : 'none')
 			if (!display) return
 			this.renderLegend(plot)
-			const symbols = plot.svg.selectAll('path').data(plot.cells)
-			symbols.exit().remove()
+			plot.svg.selectAll('g').remove()
+			const symbols = plot.svg.selectAll('g').data(plot.cells)
 
 			symbols
 				.enter()
