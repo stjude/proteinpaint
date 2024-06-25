@@ -134,6 +134,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 			}
 
 			for (const plot of D.plots) {
+				if (!q.plots.includes(plot.name)) continue
 				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, q.sample + plot.fileSuffix)
 				try {
 					await fs.promises.stat(tsvfile)
