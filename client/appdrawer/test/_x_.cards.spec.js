@@ -152,7 +152,7 @@ async function runTests(data, test) {
 
 	function runCallbackTest(t) {
 		const holder = getHolder()
-		const arg = { holder, host: window.location.origin }
+		const arg = { holder, host: sessionStorage.getItem('hostURL') }
 		const callback = tkInstance => {
 			numCallsTested++
 			for (const selector in t.call.testSpec.expected) {
@@ -179,7 +179,7 @@ async function runTests(data, test) {
 
 	function runTimedTest(t) {
 		const holder = getHolder()
-		const arg = { holder, host: window.location.origin }
+		const arg = { holder, host: sessionStorage.getItem('hostURL') }
 		const wait = t.call?.testSpec?.timeout || 5000
 
 		setTimeout(() => {
