@@ -246,14 +246,7 @@ function setRenderers(self) {
 					label: 'Scatter',
 					disabled: d => false,
 					isVisible: () => {
-						return (
-							(self.config?.term.term.type === 'integer' ||
-								self.config?.term.term.type === 'float' ||
-								self.config?.term2?.term.type === 'geneExpression') &&
-							(self.config?.term2?.term.type === 'integer' ||
-								self.config?.term2?.term.type === 'float' ||
-								self.config?.term2?.term.type === 'geneExpression')
-						)
+						return isNumericTerm(self.config?.term.term) && isNumericTerm(self.config?.term2?.term)
 					},
 					getConfig: async () => {
 						const _term = await self.getWrappedTermCopy(self.config?.term, 'continuous')
