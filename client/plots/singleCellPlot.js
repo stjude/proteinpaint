@@ -55,7 +55,7 @@ class singleCellPlot {
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		if (q.singleCell?.geneExpression) {
 			const searchGeneDiv = this.mainDiv.append('div').style('padding', '10px')
-			searchGeneDiv.append('label').html('Color by:')
+			searchGeneDiv.append('label').html('Gene expression:')
 			const geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
 				genome: this.app.opts.genome,
@@ -64,6 +64,9 @@ class singleCellPlot {
 				callback: () => {
 					const gene = geneSearch.geneSymbol
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene } })
+				},
+				emptyInputCallback: () => {
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene: null } })
 				},
 				hideHelp: true,
 				focusOff: true
@@ -174,7 +177,7 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
-		this.config = structuredClone(this.state.config) // ?
+		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 
 		this.dom.tableDiv.selectAll('*').remove()
 		this.plots = []
@@ -216,19 +219,21 @@ class singleCellPlot {
 
 	renderPlot(plot) {
 		this.plots.push(plot)
-		let clusters = new Set(plot.cells.map(c => c.category))
-		clusters = Array.from(clusters).sort()
-		const cat2Color = getColors(clusters.length + 2) //Helps to use the same color scheme in different samples
-		const colorMap = {}
-		for (const cluster of clusters)
-			colorMap[cluster] =
-				cluster == 'ref' || cluster == 'No'
-					? '#F2F2F2'
-					: plot.colorMap?.[cluster]
-					? plot.colorMap[cluster]
-					: cat2Color(cluster)
+		if (!this.state.config.gene) {
+			const colorMap = {}
+			let clusters = new Set(plot.cells.map(c => c.category))
+			clusters = Array.from(clusters).sort()
+			const cat2Color = getColors(clusters.length + 2) //Helps to use the same color scheme in different samples
+			for (const cluster of clusters)
+				colorMap[cluster] =
+					cluster == 'ref' || cluster == 'No'
+						? '#F2F2F2'
+						: plot.colorMap?.[cluster]
+						? plot.colorMap[cluster]
+						: cat2Color(cluster)
 
-		plot.colorMap = colorMap
+			plot.colorMap = colorMap
+		}
 		this.initAxes(plot)
 
 		plot.plotDiv = this.dom.tableDiv
@@ -238,7 +243,7 @@ class singleCellPlot {
 			.style('flex-grow', 1)
 		if (this.state.config.settings.singleCellPlot.showBorders) plot.plotDiv.style('border', '1px solid #aaa')
 
-		this.renderLegend(plot, colorMap)
+		this.renderLegend(plot)
 
 		const svg = plot.plotDiv
 			.append('svg')
@@ -306,7 +311,8 @@ class singleCellPlot {
 		plot.zoom = 1
 	}
 
-	renderLegend(plot, colorMap) {
+	renderLegend(plot) {
+		const colorMap = plot.colorMap
 		const legendSVG = plot.plotDiv
 			.append('svg')
 			.attr('width', 250)
