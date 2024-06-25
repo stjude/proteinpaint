@@ -222,6 +222,78 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 	}
 })
 
+tape('term1=geneExp, term2=categorical', function (test) {
+	test.timeoutAfter(5000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'diaggrp'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(barchart) {
+		const barchartDiv = barchart.Inner.dom.barchartDiv
+		await testBarchart(barchart, barchartDiv)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+	async function testBarchart(barchart, barchartDiv) {
+		const groups = await detectGte({ elem: barchartDiv.node(), selector: '.sjpp-bc-bar', count: 6 })
+		test.ok(groups, 'categorical groups exist')
+	}
+})
+
+tape('term1=geneExp, term2=survival', function (test) {
+	test.timeoutAfter(5000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'efs'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(barchart) {
+		const barchartDiv = barchart.Inner.dom.barchartDiv
+		await testBarchart(barchart, barchartDiv)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+	async function testBarchart(barchart, barchartDiv) {
+		const groups = await detectGte({ elem: barchartDiv.node(), selector: '.sjpp-bc-bar', count: 2 })
+		test.ok(groups, 'survival groups exist')
+	}
+})
+
 tape('term0=defaultbins, term1=categorical', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
