@@ -120,42 +120,53 @@ class singleCellPlot {
 
 		this.settings = {}
 
-		await this.setControls()
 		document.addEventListener('scroll', event => this?.tip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.tip.hide())
+		await this.setControls(state)
 	}
 
-	async setControls() {
+	async setControls(state) {
+		const inputs = [
+			{
+				label: 'Chart width',
+				type: 'number',
+				chartType: 'singleCellPlot',
+				settingsKey: 'svgw',
+				min: 300,
+				max: 1000
+			},
+			{
+				label: 'Chart height',
+				type: 'number',
+				chartType: 'singleCellPlot',
+				settingsKey: 'svgh',
+				min: 300,
+				max: 1000
+			},
+			{
+				label: 'Show borders',
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: 'showBorders',
+				boxLabel: 'Yes'
+			}
+		]
+		for (const plot of state.config.plotNames) {
+			const id = plot.replace(/\s+/g, '')
+			inputs.push({
+				label: `Show ${plot}`,
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: `show${id}`,
+				boxLabel: 'Yes'
+			})
+		}
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
 				id: this.id,
 				holder: this.dom.controlsHolder,
-				inputs: [
-					{
-						label: 'Chart width',
-						type: 'number',
-						chartType: 'singleCellPlot',
-						settingsKey: 'svgw',
-						min: 300,
-						max: 1000
-					},
-					{
-						label: 'Chart height',
-						type: 'number',
-						chartType: 'singleCellPlot',
-						settingsKey: 'svgh',
-						min: 300,
-						max: 1000
-					},
-					{
-						label: 'Show borders',
-						type: 'checkbox',
-						chartType: 'singleCellPlot',
-						settingsKey: 'showBorders',
-						boxLabel: 'Yes'
-					}
-				]
+				inputs
 			})
 		}
 		this.components.controls.on('downloadClick.singleCellPlot', () => {
@@ -183,8 +194,15 @@ class singleCellPlot {
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 
 		this.legendRendered = false
-
-		const body = { genome: this.state.genome, dslabel: this.state.dslabel }
+		const plots = []
+		for (const plot of this.config.plotNames) {
+			const id = plot.replace(/\s+/g, '')
+			const display = this.settings[`show${id}`]
+			if (display) plots.push(plot)
+			const plotRendered = this.plots.find(p => p.name == plot)
+			if (plotRendered) plotRendered.plotDiv.style('display', display ? 'inline-block' : 'none')
+		}
+		const body = { genome: this.state.genome, dslabel: this.state.dslabel, plots }
 		let sample
 		if (this.state.config.sample) {
 			// a sample has already been selected
@@ -261,7 +279,7 @@ class singleCellPlot {
 
 			const zoom = d3zoom()
 				.scaleExtent([0.5, 10])
-				.on('zoom', e => this.handleZoom(e, mainG, plot))
+				.on('zoom', e => this.handleZoom(e, plot))
 				.filter(event => {
 					if (event.type === 'wheel') return event.ctrlKey
 					return true
@@ -279,6 +297,9 @@ class singleCellPlot {
 				.attr('fill', d => this.getColor(d, plot))
 				.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
 		} else {
+			const display = this.settings[`show${plot.id}`]
+			plot.plotDiv.style('display', display ? 'inline-block' : 'none')
+			if (!display) return
 			this.renderLegend(plot)
 			const symbols = plot.svg.selectAll('path').data(plot.cells)
 			symbols.exit().remove()
@@ -302,8 +323,8 @@ class singleCellPlot {
 		return plot.colorMap[d.category]
 	}
 
-	handleZoom(e, mainG, plot) {
-		mainG.attr('transform', e.transform)
+	handleZoom(e, plot) {
+		plot.svg.attr('transform', e.transform)
 		plot.zoom = e.transform.scale(1).k
 	}
 
@@ -522,7 +543,7 @@ class singleCellPlot {
 				.append('text')
 				.text(d.category)
 
-			if (d.geneExp) {
+			if ('geneExp' in d) {
 				tr = table.append('tr')
 				tr.append('td').style('color', '#aaa').text('Gene expression')
 				tr.append('td').text(roundValueAuto(d.geneExp))
@@ -669,14 +690,21 @@ export const componentInit = scatterInit
 
 export async function getPlotConfig(opts, app) {
 	try {
+		const plots = app.vocabApi.termdbConfig?.queries?.singleCell.data.plots
 		const settings = getDefaultSingleCellSettings()
+		for (const name of plots) {
+			const id = name.replace(/\s+/g, '')
+			const key = `show${id}`
+			settings[key] = true
+		}
 		const config = {
 			hiddenClusters: [],
 			settings: {
 				singleCellPlot: settings
 			},
 			startColor: {},
-			stopColor: {}
+			stopColor: {},
+			plotNames: plots
 		}
 		// may apply term-specific changes to the default object
 		const result = copyMerge(config, opts)

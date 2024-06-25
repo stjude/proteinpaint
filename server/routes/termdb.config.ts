@@ -230,6 +230,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		q2.rnaseqGeneCount = true
 	}
 	if (q.singleCell) {
+		console.log('q.singleCell', q.singleCell.data.plots)
 		// samples and data are required properties
 		q2.singleCell = {
 			samples: {
@@ -239,7 +240,8 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 			},
 			data: {
 				sameLegend: q.singleCell.data.sameLegend,
-				refName: q.singleCell.data.refName
+				refName: q.singleCell.data.refName,
+				plots: q.singleCell.data.plots.map(p => p.name)
 			}
 		}
 		if (q.singleCell.geneExpression) {
