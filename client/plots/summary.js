@@ -247,8 +247,12 @@ function setRenderers(self) {
 					disabled: d => false,
 					isVisible: () => {
 						return (
-							(self.config?.term.term.type === 'integer' || self.config?.term.term.type === 'float') &&
-							(self.config?.term2?.term.type === 'integer' || self.config?.term2?.term.type === 'float')
+							(self.config?.term.term.type === 'integer' ||
+								self.config?.term.term.type === 'float' ||
+								self.config?.term2?.term.type === 'geneExpression') &&
+							(self.config?.term2?.term.type === 'integer' ||
+								self.config?.term2?.term.type === 'float' ||
+								self.config?.term2?.term.type === 'geneExpression')
 						)
 					},
 					getConfig: async () => {
