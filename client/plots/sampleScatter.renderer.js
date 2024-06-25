@@ -63,6 +63,7 @@ export function setRenderers(self) {
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 		const gradientColor = self.config.settings.sampleScatter.defaultColor
+		if (!self.config.startColor) self.config.startColor = self.config.stopColor = {}
 		if (!self.config.startColor[chart.id]) {
 			self.config.startColor[chart.id] = rgb(gradientColor).brighter().brighter().toString()
 		}
