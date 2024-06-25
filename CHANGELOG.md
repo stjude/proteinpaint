@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Single cell plots support now color by gene if geneExpression data it is provided
 
+Fixes:
+- Handle json payload for requests that contain authentication token
+
 
 ## 2.64.0
 
