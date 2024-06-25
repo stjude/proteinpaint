@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.65.0
 
 Features:
 - Single cell plots support now color by gene if geneExpression data it is provided
