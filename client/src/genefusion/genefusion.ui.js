@@ -107,7 +107,8 @@ function makeSubmit(div, obj, holder) {
 		} else {
 			d3select('.sjpp-app-ui').remove()
 			const runpp_arg = {
-				host: window.location.origin,
+				/** Do not use window.location.origin. See comment: line 180, renderContent(), client/appdrawer/adSandbox.js*/
+				host: sessionStorage.getItem('hostURL'),
 				nobox: true,
 				noheader: true,
 				parseurl: false,

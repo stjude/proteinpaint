@@ -178,7 +178,8 @@ function submitButton(div, obj, holder, genomes) {
 		.on('click', () => {
 			const runpp_arg = {
 				holder: holder.append('div').style('margin', '20px').node(),
-				host: window.location.origin
+				/** Do not use window.location.origin. See comment: line 180, renderContent(), client/appdrawer/adSandbox.js*/
+				host: sessionStorage.getItem('hostURL')
 			}
 			const bigwig_arg = validateInput(obj, genomes)
 			if (!bigwig_arg) return
