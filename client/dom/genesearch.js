@@ -60,6 +60,10 @@ function argument object {}
 	triggered when a valid hit is found, and has been written to RESULT object (see below)
 	no parameter is supplied
 
+.emptyInputCallback()
+	optional
+	triggered when the <input> is emptied. allows an app to de-select a gene in this way
+
 .hideHelp: true
 	if true, hide the text msg on the right of <input>
 
@@ -163,6 +167,14 @@ export function addGeneSearchbox(arg) {
 		.on('keyup', async event => {
 			const input = event.target
 			const v = input.value.trim()
+
+			if (arg.emptyInputCallback && v.length == 0 && keyupEnter(event)) {
+				// has such callback, should be triggered when <input> is emptied and hitting enter
+				tip.hide()
+				arg.emptyInputCallback()
+				return
+			}
+
 			if (v.length <= 1) return tip.hide()
 
 			// typed 2 or more chars, prompt user to press enter to search
