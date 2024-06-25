@@ -177,7 +177,12 @@ function renderContent(ppcalls, div, card, pageArgs) {
 
 	const runpp_arg = {
 		holder: div.append('div').style('margin', '20px').node(),
-		host: window.location.origin
+		/* Do not use window.location.origin
+		Will break the embedder (/genomes will be requested from https:/embedder.site.org/genomes, 
+		for example). It's very rare for an embedder to want to show this default "portal" header 
+		because external portals usually have their own headers, but it will affect simple html 
+		pages that embed a runpp() call where the app header is not hidden. */
+		host: sessionStorage.getItem('hostURL')
 	}
 
 	const callpp = JSON.parse(JSON.stringify(ppcalls.runargs))
@@ -201,7 +206,7 @@ function makeTopTabs(ppcalls, card, sandboxDiv, pageArgs) {
 					const runpp_arg = {
 						holder: tab.contentHolder.append('div').style('margin', '20px').node(),
 						sandbox_header: tab.contentHolder,
-						host: window.location.origin
+						host: sessionStorage.getItem('hostURL')
 					}
 
 					const callpp = JSON.parse(JSON.stringify(ppcalls[ui].runargs))
@@ -477,7 +482,7 @@ async function showCode(ppcalls, btns) {
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
 	const runppCode = hljs.highlight(
 		`runproteinpaint({
-    host: "${window.location.origin}",
+    host: "${sessionStorage.getItem('hostURL')}",
     holder: document.getElementById('a'),
     ` + // Fix for first argument not properly appearing underneath holder
 			JSON.stringify(ppcalls.runargs, '', 4)
@@ -665,7 +670,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		// Call mass UI without search bar
 		const runppArg = {
 			holder: sandboxDiv.body.append('div').style('margin', '20px').style('overflow-x', 'auto').node(),
-			host: par.runargs.host || window.location.origin
+			host: par.runargs.host || sessionStorage.getItem('hostURL')
 		}
 
 		const callpp = JSON.parse(JSON.stringify(par.runargs))
@@ -708,7 +713,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 			// Render the search parameters as a track
 			const runppArg = {
 				holder: resultDiv.append('div').style('margin', '20px').node(),
-				host: window.location.origin,
+				host: sessionStorage.getItem('hostURL'),
 				genome: par.genome.name
 			}
 			// Return only position or gene; avoid returning undefined values to runpp()
