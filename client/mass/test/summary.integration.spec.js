@@ -1,7 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-import { select, selectAll } from 'd3-selection'
-import { detectOne, detectGte, detectStyle } from '../../test/test.helpers.js'
+import { detectOne, detectStyle } from '../../test/test.helpers.js'
 
 /*
 Tests:
@@ -10,7 +9,7 @@ Tests:
 	Barchart & violin toggles, term: "diaggrp", term2: "agedx"
 	Barchart & violin toggles, term: "diaggrp", term2: "agedx"
 	Barchart & violin toggles, term: "agedx", term2: "diaggrp"
-	Barchart & violin toggles, term: "agedx", term2: "hrtavg"
+	Barchart, violin, and scatter toggles, term: "agedx", term2: "hrtavg"
 	Overlay continuity, term: "aaclassic_5", term2: "sex"
  */
 
@@ -269,20 +268,33 @@ tape('Barchart & violin toggles, term: "agedx", term2: "diaggrp"', test => {
 
 	async function runTests(summary) {
 		summary.on('postRender.test', null)
-		const sandboxDom = summary.Inner.dom
 
-		await testToggleButtons(summary, sandboxDom)
+		const toggles = summary.Inner.dom.chartToggles
+			.selectAll('div > div> button')
+			.nodes()
+			.filter(d => d.__data__.isVisible() == true)
+
+		testToggleButtonRendering(toggles)
+		await testToggleButtons(summary, toggles)
 
 		if (test._ok) summary.Inner.app.destroy()
 		test.end()
 	}
 
-	async function testToggleButtons(summary, sandboxDom) {
-		const toggles = sandboxDom.chartToggles
-			.selectAll('div > div> button')
-			.nodes()
-			.filter(d => d.__data__.isVisible() == true)
+	function testToggleButtonRendering(toggles) {
+		const tabLabels2Find = ['Barchart', 'Violin']
+		let foundLabels = 0
+		for (const toggle of toggles) {
+			if (tabLabels2Find.some(d => d == toggle.__data__.label)) ++foundLabels
+		}
+		test.equal(
+			tabLabels2Find.length,
+			toggles.length,
+			`Should render ${tabLabels2Find.length} tabs: ${tabLabels2Find} for <2 numeric terms`
+		)
+	}
 
+	async function testToggleButtons(summary, toggles) {
 		//Toggle to violin
 		toggles.find(d => d.__data__.childType == 'violin').click()
 		const foundTestPlot = await detectOne({
@@ -308,7 +320,7 @@ tape('Barchart & violin toggles, term: "agedx", term2: "diaggrp"', test => {
 	}
 })
 
-tape('Barchart & violin toggles, term: "agedx", term2: "hrtavg"', test => {
+tape('Barchart, violin, and scatter toggles, term: "agedx", term2: "hrtavg"', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -337,18 +349,32 @@ tape('Barchart & violin toggles, term: "agedx", term2: "hrtavg"', test => {
 		summary.on('postRender.test', null)
 		const sandboxDom = summary.Inner.dom
 
-		await testToggleButtons(summary, sandboxDom)
-
-		if (test._ok) summary.Inner.app.destroy()
-		test.end()
-	}
-
-	async function testToggleButtons(summary, sandboxDom) {
 		const toggles = sandboxDom.chartToggles
 			.selectAll('div > div> button')
 			.nodes()
 			.filter(d => d.__data__.isVisible() == true)
 
+		testToggleButtonRendering(toggles)
+		await testToggling(summary, toggles)
+
+		if (test._ok) summary.Inner.app.destroy()
+		test.end()
+	}
+
+	function testToggleButtonRendering(toggles) {
+		const tabLabels2Find = ['Barchart', 'Violin', 'Scatter']
+		let foundLabels = 0
+		for (const toggle of toggles) {
+			if (tabLabels2Find.some(d => d == toggle.__data__.label)) ++foundLabels
+		}
+		test.equal(
+			tabLabels2Find.length,
+			toggles.length,
+			`Should render ${tabLabels2Find.length} tabs: ${tabLabels2Find} for 2 numeric terms`
+		)
+	}
+
+	async function testToggling(summary, toggles) {
 		//Toggle to violin
 		toggles.find(d => d.__data__.childType == 'violin').click()
 		const foundTestPlot = await detectOne({
