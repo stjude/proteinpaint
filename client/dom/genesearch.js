@@ -172,6 +172,8 @@ export function addGeneSearchbox(arg) {
 				// has such callback, should be triggered when <input> is emptied and hitting enter
 				tip.hide()
 				arg.emptyInputCallback()
+				searchStat.word.text('')
+				searchStat.mark.html('')
 				return
 			}
 
