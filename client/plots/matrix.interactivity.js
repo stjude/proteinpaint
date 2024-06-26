@@ -7,6 +7,7 @@ import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 import { renderTable } from '../dom/table.ts'
 import { dofetch3 } from '#common/dofetch'
+import { TermTypes } from '../shared/terms'
 
 let inputIndex = 0
 const svgIcons = {
@@ -66,24 +67,34 @@ export function setInteractivity(self) {
 				survivalInfo = d.term.values?.[d.exitCodeKey]?.label || d.exitCodeKey
 			}
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label}</td></tr>`)
-			rows.push(
-				`<tr>
-					<td>${d.term.name}:</td>
-					<td>
-						<span style="display:inline-block; width:12px; height:12px; background-color:${
-							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-						}" ></span>
-						${survivalInfo || d.convertedValueLabel || d.label}
-					</td>
-				</tr>`
-			)
-			if (d.term.type == 'survival') {
-				const timeToEventKey =
-					'Time to Event: ' +
-					(d.timeToEventKey
-						? d.timeToEventKey + (d.term.unit ? `(${d.term.unit})` : '')
-						: d.convertedValueLabel || d.label)
-				rows.push(`<tr><td></td><td>${timeToEventKey}</td></tr>`)
+
+			if (survivalInfo || d.convertedValueLabel || d.label) {
+				// show term value row only when not undefined
+				if (d.term.type == TermTypes.GENE_EXPRESSION) {
+					rows.push(`<tr><td>Value Type:</td><td>Gene Expression</td></tr>`)
+				}
+				if (d.term.type == TermTypes.METABOLITE_INTENSITY) {
+					rows.push(`<tr><td>Value Type:</td><td>Metabolite Intensity</td></tr>`)
+				}
+				rows.push(
+					`<tr>
+						<td>${d.term.name}:</td>
+						<td>
+							<span style="display:inline-block; width:12px; height:12px; background-color:${
+								d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+							}" ></span>
+							${survivalInfo || d.convertedValueLabel || d.label}
+						</td>
+					</tr>`
+				)
+				if (d.term.type == 'survival') {
+					const timeToEventKey =
+						'Time to Event: ' +
+						(d.timeToEventKey
+							? d.timeToEventKey + (d.term.unit ? `(${d.term.unit})` : '')
+							: d.convertedValueLabel || d.label)
+					rows.push(`<tr><td></td><td>${timeToEventKey}</td></tr>`)
+				}
 			}
 		} else if (d.term.type == 'geneVariant') {
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label || d.value?.sample}</td></tr>`)
@@ -343,16 +354,25 @@ export function setInteractivity(self) {
 		} else rows.push(`<tr><td>${l.Sample}:</td><td>${sampleData.row._ref_.label || sampleData.value.sample}</td></tr>`)
 
 		if (sampleData.term && sampleData.term.type != 'geneVariant') {
-			rows.push(
-				`<tr><td>${sampleData.term.name}:</td>
-					<td> 
-						<span style="display:inline-block; width:12px; height:12px; background-color:${
-							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-						}" ></span>
-						${sampleData.convertedValueLabel || sampleData.label}
-					</td>
-				</tr>`
-			)
+			if (sampleData.convertedValueLabel || sampleData.label) {
+				// show term value row only when not undefined
+				if (sampleData.term.type == TermTypes.GENE_EXPRESSION) {
+					rows.push(`<tr><td>Value Type:</td><td>Gene Expression</td></tr>`)
+				}
+				if (sampleData.term.type == TermTypes.METABOLITE_INTENSITY) {
+					rows.push(`<tr><td>Value Type:</td><td>Metabolite Intensity</td></tr>`)
+				}
+				rows.push(
+					`<tr><td>${sampleData.term.name}:</td>
+						<td> 
+							<span style="display:inline-block; width:12px; height:12px; background-color:${
+								sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+							}" ></span>
+							${sampleData.convertedValueLabel || sampleData.label}
+						</td>
+					</tr>`
+				)
+			}
 		} else if (sampleData.term && sampleData.term.type == 'geneVariant' && sampleData.value) {
 			if (templates?.gene) {
 				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
