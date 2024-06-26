@@ -368,6 +368,7 @@ export type SingleCellGeneExpressionNative = {
 	folder: string
 	/** dynamically added getter */
 	get?: (q: any) => any
+	singleCellGeneExpression2bins: { [index: string]: any }
 }
 
 export type SingleCellSamplesNative = {

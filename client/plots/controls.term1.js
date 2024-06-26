@@ -136,6 +136,8 @@ function setRenderers(self) {
 				break
 			case TermTypes.METABOLITE_INTENSITY:
 				break
+			case TermTypes.SINGLECELL_GENE_EXPRESSION:
+				break
 			default:
 				throw 'unknown term type'
 		}

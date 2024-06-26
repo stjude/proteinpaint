@@ -81,6 +81,8 @@ function sheatherJonesBandwidth(data, kernel) {
 	const sigmaHat = Math.min(dev, m * h0)
 
 	const bandwidth = 1.06 * sigmaHat * Math.pow(n, -0.2)
+	if (bandwidth < 0.1) return 0.1
+	console.log('bandwidth', bandwidth)
 
 	return bandwidth
 }

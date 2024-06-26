@@ -156,7 +156,6 @@ function divideValues(q, data, tw) {
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
 		const value = v[tw.$id]
-
 		if (!Number.isFinite(value?.value)) continue
 
 		if (tw.term.values?.[value.value]?.uncomputable) {

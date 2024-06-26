@@ -17,7 +17,8 @@ export const TermTypes = {
 	CONDITION: 'condition',
 	SURVIVAL: 'survival',
 	SAMPLELST: 'samplelst',
-	METABOLITE_INTENSITY: 'metaboliteIntensity'
+	METABOLITE_INTENSITY: 'metaboliteIntensity',
+	SINGLECELL_GENE_EXPRESSION: 'singleCellGeneExpression'
 }
 
 export const TermTypes2Dt = {
@@ -62,13 +63,15 @@ const nonDictTypes = new Set([
 	TermTypes.SNP_LOCUS,
 	TermTypes.GENE_EXPRESSION,
 	TermTypes.GENE_VARIANT,
-	TermTypes.METABOLITE_INTENSITY
+	TermTypes.METABOLITE_INTENSITY,
+	TermTypes.SINGLECELL_GENE_EXPRESSION
 ])
 export const numericTypes = new Set([
 	TermTypes.INTEGER,
 	TermTypes.FLOAT,
 	TermTypes.GENE_EXPRESSION,
-	TermTypes.METABOLITE_INTENSITY
+	TermTypes.METABOLITE_INTENSITY,
+	TermTypes.SINGLECELL_GENE_EXPRESSION
 ])
 export function isNumericTerm(term) {
 	if (!term) return false

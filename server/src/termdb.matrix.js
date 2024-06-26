@@ -190,6 +190,38 @@ async function getSampleData(q) {
 			}
 
 			/** pp filter */
+		} else if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+			let lst
+			if (tw.q?.mode == 'discrete') {
+				const min = tw.term.bins.min
+				const max = tw.term.bins.max
+				lst =
+					tw.q.type == 'regular-bin'
+						? compute_bins(tw.q, () => {
+								return { min, max }
+						  })
+						: tw.q.lst
+
+				byTermId[tw.$id] = { bins: lst }
+			}
+			const geneExpMap = await q.ds.queries.singleCell.geneExpression.get({
+				sample: tw.term.sample,
+				gene: tw.term.gene
+			})
+			//samples are cells
+			for (const sampleId in geneExpMap) {
+				if (!(sampleId in samples)) {
+					samples[sampleId] = { sample: sampleId }
+				}
+				const value = geneExpMap[sampleId]
+				let key = value
+				if (tw.q?.mode == 'discrete') {
+					//check binary mode
+					const bin = getBin(lst, value)
+					key = get_bin_label(lst[bin], tw.q)
+				}
+				samples[sampleId][tw.$id] = { value, key }
+			}
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}

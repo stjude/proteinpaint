@@ -66,7 +66,6 @@ function init({ genomes }) {
 export async function validate_query_singleCell(ds: any, genome: any) {
 	const q = ds.queries.singleCell as SingleCellQuery
 	if (!q) return
-
 	if (q.samples.src == 'gdcapi') {
 		gdc_validate_query_singleCell_samples(ds, genome)
 	} else if (q.samples.src == 'native') {
@@ -184,6 +183,8 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 }
 
 function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
+	G.singleCellGeneExpression2bins = {} // cache for binning gene expression values
+
 	// per-sample matrix files are not validated up front, but are verified on the fly. subject to change
 	G.get = async (q: any) => {
 		// q {sample:str, gene:str}
