@@ -1,6 +1,9 @@
 import { Filter } from '../filter.ts'
+import { TermWrapper } from '../terms/tw.ts'
 
-export type getViolinRequest = {
+export type getViolinRequest = BaseRequest & (TermRequest | SinglecellGeneExpRequest)
+
+type BaseRequest = {
 	genome: string
 	dslabel: string
 	embedder: string
@@ -23,8 +26,29 @@ export type getViolinRequest = {
 	rightMargin: number
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit: string
-	termid: string
+	/** ? */
 	isKDE: boolean
+}
+
+// requesting violin by terms describing samples from a cohort
+type TermRequest = {
+	/** the tw of the numerical term to supply continuous values for computing violins, must have q.mode=continuous */
+	term: TermWrapper
+	/** the tw of a separate term to divide samples to groups and generate separate violins, must have q.mode=discrete/binary */
+	divdeTw?: TermWrapper
+}
+
+// requesting violin by gene expression in a single cell experiment. this data cannot be expressed as a term, thus the exception
+type SinglecellGeneExpRequest = {
+	/** presence of this property allows backend code to tell this query is about singlecell data */
+	singlecellGeneExpression: {
+		/** sample name for which the data is requested for */
+		sample: string
+		/** name of a single gene for which data is requested for */
+		gene: string
+		/** optional cell category to divide gene exp values to groups, usually sc file column? */
+		cellCategory?: string
+	}
 }
 
 interface binsEntries {
