@@ -61,7 +61,8 @@ function init({ genomes }) {
 }
 
 async function getResult(q: TermdbClusterRequest, ds: any) {
-	let _q = q
+	let _q: any = q // may assign adhoc flag, use "any" to avoid tsc err and no need to include the flag in the type doc
+
 	if (q.dataType == TermTypes.GENE_EXPRESSION) {
 		// gdc gene exp clustering analysis is restricted to max 1000 cases, this is done at ds.queries.geneExpression.get() in mds3.gdc.js. the same getter also serves non-clustering requests and that should not limit cases. add this flag to be able to conditionally limit cases in get()
 		_q = JSON.parse(JSON.stringify(q))
