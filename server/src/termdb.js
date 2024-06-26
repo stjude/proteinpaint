@@ -483,7 +483,7 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 			}
 		} else {
 			if (!ds.queries?.[tw.term.type]) throw 'term type not supported by this dataset'
-			const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
+			binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
 			if (binsCache[tw.term.name]) return res.send(binsCache[tw.term.name])
 
 			const args = {
