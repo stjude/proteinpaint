@@ -1,6 +1,6 @@
 import { NumericQ } from '../../shared/types/terms/numeric'
 import { VocabApi } from '../../shared/types/index'
-import { GeneExpressionTW } from '../../shared/types/terms/geneExpression.js'
+import { SingleCellGeneExpressionTW } from '../../shared/types/terms/singleCellGeneExpression.js'
 import { copyMerge } from '../../rx'
 
 /*
@@ -25,7 +25,7 @@ export async function getHandler(self) {
 	return await _.getHandler(self)
 }
 
-export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+export async function fillTW(tw: SingleCellGeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
 	if (typeof tw.term.gene != 'string' || !tw.term.gene)
 		throw 'singleCellGeneExpression tw.term.gene must be non-empty string'
 	if (!tw.term.name) tw.term.name = tw.term.gene // auto fill if .name is missing

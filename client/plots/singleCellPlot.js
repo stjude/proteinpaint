@@ -78,6 +78,7 @@ class singleCellPlot {
 			const violinBt = searchGeneDiv
 				.append('button')
 				.text('Open violin')
+				.style('margin-left', '2px')
 				.property('disabled', state.config.gene ? false : true)
 			violinBt.on('click', () => {
 				const gene = geneSearch.geneSymbol

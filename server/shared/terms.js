@@ -73,6 +73,13 @@ export const numericTypes = new Set([
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION
 ])
+
+const singleSampleTerms = new Set([TermTypes.SINGLECELL_GENE_EXPRESSION])
+
+export function isSingleSampleTerm(term) {
+	if (!term) return false
+	return singleSampleTerms.has(term.type)
+}
 export function isNumericTerm(term) {
 	if (!term) return false
 	return numericTypes.has(term.type)
