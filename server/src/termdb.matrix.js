@@ -166,12 +166,13 @@ async function getSampleData(q) {
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
-				clusterMethod: 'hierarchical',
-				distanceMethod: 'euclidean', // TODO refactor get() and remove these arg
 				dataType: tw.term.type,
 				terms: [tw.term],
 				filter: q.filter,
-				filter0: q.filter0
+				filter0: q.filter0,
+				/* quick fix for gdc dataset!
+				 */
+				geneExpUseAllSamples: true
 			}
 			const data = await q.ds.queries[tw.term.type].get(args)
 			for (const sampleId in data.term2sample2value.get(tw.term.name)) {
