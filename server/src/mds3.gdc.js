@@ -7,6 +7,8 @@ import { filter2GDCfilter } from './mds3.gdc.filter.js'
 import { write_tmpfile } from './utils.js'
 import serverconfig from './serverconfig.js'
 
+const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
+
 // convenient helper to only print log on dev environments, and reduce pollution on prod
 // TODO move to utils.js, also fix use of _serverconfig
 function mayLog(...args) {
@@ -111,8 +113,8 @@ q{}
 	optional, pp filter
 .terms[ {gene} ]
 	required. list of genes
-.geneExpUseAllSamples:true
-	see explanation in getData()
+.forClusteringAnalysis:true
+	optional. see explanation in routes/termdb.cluster.ts
 
 compose the gene-by-sample fpkm matrix
 genes are given from query parameter, and are double-checked by gene_selection API
@@ -122,6 +124,8 @@ samples are determined based on filter/filter0:
 */
 export function gdc_validate_query_geneExpression(ds, genome) {
 	ds.queries.geneExpression.get = async q => {
+		mayLog('Start gdc gene exp query...')
+
 		if (!Array.isArray(q.terms)) throw 'q.terms[] not array'
 
 		// getter returns this data structure
@@ -142,6 +146,7 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 
 		const t3 = new Date()
 		mayLog(ensgLst.length, 'out of', q.terms.length, 'genes selected for exp:', t3 - t2, 'ms')
+
 		const byTermId = {}
 		for (const g of ensgLst) {
 			const geneSymbol = ensg2symbol.get(g)
@@ -195,7 +200,10 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 		if (ensgLst.length > 100) break // max 100 genes
 	}
 
-	//return [ensgLst, ensg2symbol]
+	if (!q.forClusteringAnalysis) {
+		// the request is not for clustering analysis. do not perform gene selection step to speed up and use given genes as-is
+		return [ensgLst, ensg2symbol]
+	}
 
 	// per Zhenyu 9/26/23, user-elected genes must be screened so those with 0 value cross all samples will be left out
 	// so that valid SD-transformed value can be returned from /values api
@@ -207,7 +215,7 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 				headers,
 				timeout: false, // instead of 10 second default
 				json: {
-					case_ids, // case_ids.length>1000? case_ids.slice(0,1000) : case_ids,
+					case_ids,
 					gene_ids: ensgLst,
 					selection_size: ensgLst.length
 				}
@@ -242,11 +250,17 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 		if (g) f.content.push(g)
 	}
 
-	const json = {
-		// when using gene exp outside of clustering, will need to show ...
-		size: q.geneExpUseAllSamples ? 30000 : 10000,
-		fields: 'case_id'
+	const json = { fields: 'case_id' }
+
+	// set size, which is always required for /cases/
+	if (q.forClusteringAnalysis) {
+		// request is about clustering. the app will limit max number of allowed cases by hardcoded value. times 10 is a generous guess to allow for cases without gene exp data, as is from current cohort
+		json.size = maxCase4geneExpCluster * 10
+	} else {
+		// request is not about clustering. important to allow to return all gdc cases, thus when running oncomatrix without using any cohort, a gene exp term will be able to show values for *ALL* the cases with exp data!
+		json.size = ds.__gdc.caseid2submitter.size
 	}
+
 	if (f.content.length) json.case_filters = f
 
 	try {
@@ -257,8 +271,8 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 		for (const h of re.data.hits) {
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
 				lst.push(h.id)
-				if (!q.geneExpUseAllSamples && lst.length == 1000) {
-					// when ... max 1000 samples
+				if (q.forClusteringAnalysis && lst.length == maxCase4geneExpCluster) {
+					// when running clustering analysis, to not to overload things, stop collecting when max number of cases is reached
 					break
 				}
 			}

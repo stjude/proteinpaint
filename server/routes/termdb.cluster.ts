@@ -62,8 +62,15 @@ function init({ genomes }) {
 }
 
 async function getResult(q: TermdbClusterRequest, ds: any) {
-	const type = q.dataType
-	const { term2sample2value, byTermId, bySampleId } = await ds.queries[type].get(q)
+	let _q = q
+	if (q.dataType == TermTypes.GENE_EXPRESSION) {
+		// gdc gene exp clustering analysis is restricted to max 1000 cases, this is done at ds.queries.geneExpression.get() in mds3.gdc.js. the same getter also serves non-clustering requests and that should not limit cases. add this flag to be able to conditionally limit cases in get()
+		_q = JSON.parse(JSON.stringify(q))
+		_q.forClusteringAnalysis = true
+	}
+
+	const { term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q) // too strong assumption on queries[dt], may not work for single cell
+
 	if (term2sample2value.size == 0) throw 'no data'
 	if (term2sample2value.size == 1) {
 		// get data for only 1 gene; still return data, may create violin plot later

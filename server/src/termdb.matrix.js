@@ -169,10 +169,7 @@ async function getSampleData(q) {
 				dataType: tw.term.type,
 				terms: [tw.term],
 				filter: q.filter,
-				filter0: q.filter0,
-				/* quick fix for gdc dataset!
-				 */
-				geneExpUseAllSamples: true
+				filter0: q.filter0
 			}
 			const data = await q.ds.queries[tw.term.type].get(args)
 			for (const sampleId in data.term2sample2value.get(tw.term.name)) {
