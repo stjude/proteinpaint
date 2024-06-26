@@ -147,7 +147,7 @@ class singleCellPlot {
 				type: 'checkbox',
 				chartType: 'singleCellPlot',
 				settingsKey: 'showBorders',
-				boxLabel: 'Yes'
+				boxLabel: ''
 			}
 		]
 		for (const plotName of state.config.plotNames) {
