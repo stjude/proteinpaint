@@ -466,7 +466,7 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 	let binsCache
 	try {
 		if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
-			if (!ds.queries?.singleCell.geneExpression) throw 'term type not supported by this dataset'
+			if (!ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
 			binsCache = ds.queries.singleCell.geneExpression.singleCellGeneExpression2bins
 			if (binsCache[tw.term.gene]) return res.send(binsCache[tw.term.gene])
 

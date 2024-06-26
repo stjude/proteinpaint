@@ -189,6 +189,7 @@ async function getSampleData(q) {
 
 			/** pp filter */
 		} else if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+			if (!q.ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
 			let lst
 			if (tw.q?.mode == 'discrete') {
 				const min = tw.term.bins.min
@@ -202,7 +203,7 @@ async function getSampleData(q) {
 
 				byTermId[tw.$id] = { bins: lst }
 			}
-			const geneExpMap = await q.ds.queries.singleCell.geneExpression.get({
+			const geneExpMap = await q.ds.queries?.singleCell?.geneExpression.get({
 				sample: tw.term.sample,
 				gene: tw.term.gene
 			})
