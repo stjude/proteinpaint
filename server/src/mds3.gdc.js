@@ -109,8 +109,10 @@ q{}
 	optional, gdc hidden filter
 .filter
 	optional, pp filter
-.genes[ {gene} ]
+.terms[ {gene} ]
 	required. list of genes
+.geneExpUseAllSamples:true
+	see explanation in getData()
 
 compose the gene-by-sample fpkm matrix
 genes are given from query parameter, and are double-checked by gene_selection API
@@ -205,7 +207,7 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 				headers,
 				timeout: false, // instead of 10 second default
 				json: {
-					case_ids,
+					case_ids, // case_ids.length>1000? case_ids.slice(0,1000) : case_ids,
 					gene_ids: ensgLst,
 					selection_size: ensgLst.length
 				}
@@ -239,7 +241,12 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 		const g = filter2GDCfilter(q.filter)
 		if (g) f.content.push(g)
 	}
-	const json = { size: 10000, fields: 'case_id' }
+
+	const json = {
+		// when using gene exp outside of clustering, will need to show ...
+		size: q.geneExpUseAllSamples ? 30000 : 10000,
+		fields: 'case_id'
+	}
 	if (f.content.length) json.case_filters = f
 
 	try {
@@ -250,8 +257,8 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 		for (const h of re.data.hits) {
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
 				lst.push(h.id)
-				if (lst.length == 1000) {
-					// max 1000 samples
+				if (!q.geneExpUseAllSamples && lst.length == 1000) {
+					// when ... max 1000 samples
 					break
 				}
 			}
