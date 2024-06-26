@@ -13,6 +13,7 @@ import { select } from 'd3-selection'
 import { rgb } from 'd3'
 import { addGeneSearchbox } from '../dom/genesearch'
 import { roundValueAuto } from '../shared/roundValue.js'
+import { TermTypes } from '../shared/terms.js'
 
 /*
 this
@@ -61,15 +62,40 @@ class singleCellPlot {
 				genome: this.app.opts.genome,
 				row: searchGeneDiv,
 				geneOnly: true,
+				placeholder: state.config.gene || 'Gene',
 				callback: () => {
+					violinBt?.property('disabled', false)
 					const gene = geneSearch.geneSymbol
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene } })
 				},
 				emptyInputCallback: () => {
+					violinBt.property('disabled', true)
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene: null } })
 				},
 				hideHelp: true,
 				focusOff: true
+			})
+			const violinBt = searchGeneDiv
+				.append('button')
+				.text('Open violin')
+				.property('disabled', state.config.gene ? false : true)
+			violinBt.on('click', () => {
+				const gene = geneSearch.geneSymbol
+				this.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'violin',
+						term: {
+							term: {
+								type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+								id: gene,
+								gene,
+								name: gene,
+								sample: state.config.sample
+							}
+						}
+					}
+				})
 			})
 		}
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'

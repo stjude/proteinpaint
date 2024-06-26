@@ -460,29 +460,46 @@ NOTE using following pattern:
 CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it breaks!
 */
 	const tw = q.tw
-	if (!ds.queries?.[tw.term.type]) throw 'term type not supported by this dataset'
-
-	const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
-	if (binsCache[tw.term.name]) return res.send(binsCache[tw.term.name])
-
 	const lst = []
 	let min = Infinity
 	let max = -Infinity
+	let binsCache
 	try {
-		const args = {
-			genome: q.genome,
-			dslabel: q.dslabel,
-			terms: [tw.term]
-		}
-		const data = await ds.queries[tw.term.type].get(args)
-		const termData = data.term2sample2value.get(tw.term.name)
-		for (const sample in termData) {
-			const value = termData[sample]
-			if (value < min) min = value
-			if (value > max) max = value
-			lst.push(value)
-		}
+		if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+			if (!ds.queries?.singleCell.geneExpression) throw 'term type not supported by this dataset'
+			binsCache = ds.queries.singleCell.geneExpression.singleCellGeneExpression2bins
+			if (binsCache[tw.term.gene]) return res.send(binsCache[tw.term.gene])
 
+			const args = {
+				sample: tw.term.sample,
+				gene: tw.term.gene
+			}
+			const data = await ds.queries.singleCell.geneExpression.get(args)
+			for (const cell in data) {
+				const value = data[cell]
+				if (value < min) min = value
+				if (value > max) max = value
+				lst.push(value)
+			}
+		} else {
+			if (!ds.queries?.[tw.term.type]) throw 'term type not supported by this dataset'
+			const binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
+			if (binsCache[tw.term.name]) return res.send(binsCache[tw.term.name])
+
+			const args = {
+				genome: q.genome,
+				dslabel: q.dslabel,
+				terms: [tw.term]
+			}
+			const data = await ds.queries[tw.term.type].get(args)
+			const termData = data.term2sample2value.get(tw.term.name)
+			for (const sample in termData) {
+				const value = termData[sample]
+				if (value < min) min = value
+				if (value > max) max = value
+				lst.push(value)
+			}
+		}
 		const binconfig = initBinConfig(lst)
 		binsCache[tw.term.name] = { default: binconfig, min, max }
 		res.send({ default: binconfig, min, max })

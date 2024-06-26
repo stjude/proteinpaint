@@ -2,6 +2,7 @@ import initBinConfig from '#shared/termdb.initbinconfig'
 import { TermdbVocab } from './TermdbVocab'
 import { FrontendVocab } from './FrontendVocab'
 import { isNumeric } from '#shared/helpers'
+import { TermTypes } from 'shared/terms'
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -104,6 +105,8 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 					t.computableVals.push(val)
 				}
 			} else if (t.type == 'condition') {
+				//TODO: add logic for conditional terms
+			} else if (t.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 				//TODO: add logic for conditional terms
 			} else {
 				throw 'Term type not supported:' + t.type

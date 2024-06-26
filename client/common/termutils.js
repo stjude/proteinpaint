@@ -131,6 +131,7 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 					}) && true
 			} else if (t.term.type == TermTypes.GENE_EXPRESSION) {
 			} else if (t.term.type == TermTypes.METABOLITE_INTENSITY) {
+			} else if (t.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			} else {
 				throw 'unknown term type'
 			}
