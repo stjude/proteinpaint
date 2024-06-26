@@ -184,21 +184,28 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 }
 
 function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
+	// per-sample matrix files are not validated up front, but are verified on the fly. subject to change
 	G.get = async (q: any) => {
 		// q {sample:str, gene:str}
 		const tsvfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample)
+
+		const cell2value = {} // data returned by getter. key: cell barcode in header, value: exp value
+
 		try {
 			await fs.promises.stat(tsvfile)
 		} catch (e: any) {
-			throw 'geneExp matrix file not found or readable for this sample'
+			return cell2value
+			//throw 'geneExp matrix file not found or readable for this sample'
+			// do not throw when matrix file is unreabable, but returns blank data. this simplifies client logic
 		}
 		const header = (await get_header_txt(tsvfile)).split('\t')
 		if (header.length == 0) throw 'blank header line'
-		return await grepMatrix4geneExpression(tsvfile, q.gene, header)
+		await grepMatrix4geneExpression(tsvfile, q.gene, header, cell2value)
+		return cell2value
 	}
 }
 
-function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string[]) {
+function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string[], cell2value: any) {
 	return new Promise((resolve, reject) => {
 		const cp = spawn('grep', ['-m', '1', gene + '\t', tsvfile])
 		const out: string[] = [],
@@ -210,12 +217,10 @@ function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string
 			if (e) reject(e)
 			// got data
 
-			const cell2value = {} // key: cell barcode in header, value: exp value
-
 			const line = out.join('').trim() // should find one line of text
 			if (!line) {
 				// blank line. gene is not found and missed out in this experiment
-				resolve(cell2value)
+				resolve()
 			}
 
 			const l = line.split('\t')
@@ -228,7 +233,7 @@ function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string
 				if (Number.isNaN(v)) continue // invalid value
 				cell2value[header[i]] = v
 			}
-			resolve(cell2value)
+			resolve()
 		})
 	})
 }
