@@ -150,10 +150,10 @@ class singleCellPlot {
 				boxLabel: 'Yes'
 			}
 		]
-		for (const plot of state.config.plotNames) {
-			const id = plot.replace(/\s+/g, '')
+		for (const plotName of state.config.plotNames) {
+			const id = plotName.replace(/\s+/g, '')
 			inputs.push({
-				label: `Show ${plot}`,
+				label: plotName,
 				type: 'checkbox',
 				chartType: 'singleCellPlot',
 				settingsKey: `show${id}`,
