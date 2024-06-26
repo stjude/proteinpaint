@@ -1,1 +1,2 @@
-
+Fixes:
+- matrix: hover/click menu over geneexp/metabolite rows should indicate term type, and do not show undefined for missing data
