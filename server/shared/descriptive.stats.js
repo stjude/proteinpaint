@@ -15,6 +15,7 @@ export default function summaryStats(array) {
 
 	//compute mean
 	function mean(arr) {
+		if (arr.length === 0) throw new Error('No data provided')
 		return arr.reduce((a, b) => a + b) / n
 	}
 
