@@ -798,7 +798,7 @@ tape('term1=geneExp, term2=categorical', function (test) {
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolin(violin, violinDiv)
-		//if (test._ok) violin.Inner.app.destroy()
+		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 	async function testViolin(violin, violinDiv) {
@@ -1027,6 +1027,8 @@ tape('test samplelst term2', function (test) {
 })
 
 tape.only('term=agedx, term2=geneExp', function (test) {
+	test.timeoutAfter(3000)
+
 	runpp({
 		state: {
 			plots: [
@@ -1044,16 +1046,37 @@ tape.only('term=agedx, term2=geneExp', function (test) {
 				}
 			]
 		},
+		summary: {
+			callbacks: {
+				postRender: forceViolin
+			}
+		},
 		violin: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
+
+	async function forceViolin(summary) {
+		summary.on('postRender', null)
+		/** When both terms are continuous, the scatter plot is rendered by default.
+		 * This function forces the violin plot to render instead, rather than
+		 * changing the functionality of the summary plot itself.
+		 */
+		const violinPlot = summary.Inner.chartToggles.tabs.find(c => c.childType == 'violin')
+		const config = await violinPlot.getConfig()
+		await summary.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: summary.Inner.id,
+			config
+		})
+	}
+
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		// await testViolin(violin, violinDiv)
-		if (test._ok) violin.Inner.app.destroy()
+		// if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 	async function testViolin(violin, violinDiv) {
@@ -1069,6 +1092,7 @@ tape.only('term=agedx, term2=geneExp', function (test) {
 })
 
 // tape.only('term=agedx, term2=geneExp', function (test) {
+// test.timeoutAfter(3000)
 // 	runpp({
 // 		state: {
 // 			plots: [
@@ -1105,6 +1129,7 @@ tape.only('term=agedx, term2=geneExp', function (test) {
 
 // Regular binning
 // tape('term=agedx, term2=geneExp', function (test) {
+// test.timeoutAfter(3000)
 // 	runpp({
 // 		state: {
 // 			plots: [
