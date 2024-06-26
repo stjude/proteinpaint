@@ -1038,7 +1038,8 @@ tape.only('term=agedx, term2=geneExp', function (test) {
 						q: { mode: 'continuous' }
 					},
 					term: {
-						id: 'agedx'
+						id: 'agedx',
+						q: { mode: 'continuous' }
 					}
 				}
 			]
