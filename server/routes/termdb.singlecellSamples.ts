@@ -220,7 +220,7 @@ function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string
 			const line = out.join('').trim() // should find one line of text
 			if (!line) {
 				// blank line. gene is not found and missed out in this experiment
-				resolve()
+				resolve(null) // add null to avoid tsc err
 			}
 
 			const l = line.split('\t')
@@ -233,7 +233,7 @@ function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string
 				if (Number.isNaN(v)) continue // invalid value
 				cell2value[header[i]] = v
 			}
-			resolve()
+			resolve(null)
 		})
 	})
 }
