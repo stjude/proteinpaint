@@ -15,8 +15,7 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes } from '#shared/terms.js'
-import { Term } from '#shared/types/terms/term.ts'
-import { GeneVariantCoordTerm, GeneVariantGeneTerm } from '#types'
+import { GeneVariantGeneTerm } from '#types'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -223,7 +222,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		const term2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
 		for (const g of param.terms!) {
-			const geneTerm = g as GeneVariantGeneTerm
+			const geneTerm = g as GeneVariantGeneTerm // FIXME wrong
 			if (!geneTerm.gene) continue
 
 			if (!geneTerm.chr) {
