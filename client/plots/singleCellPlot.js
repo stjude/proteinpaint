@@ -40,7 +40,6 @@ class singleCellPlot {
 		this.type = 'singleCellPlot'
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
-		window.sc = this
 		this.startGradient = {}
 		this.stopGradient = {}
 		this.plots = []
@@ -158,7 +157,7 @@ class singleCellPlot {
 				type: 'checkbox',
 				chartType: 'singleCellPlot',
 				settingsKey: `show${id}`,
-				boxLabel: 'Yes'
+				boxLabel: ''
 			})
 		}
 		this.components = {
