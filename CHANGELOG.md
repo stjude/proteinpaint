@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- At oncomatrix, allow gene expression term to pull data on all cases
+
 
 ## 2.65.0
 

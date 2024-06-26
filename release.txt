@@ -1,2 +1,1 @@
-Fixes:
-- At oncomatrix, allow gene expression term to pull data on all cases
+
