@@ -771,7 +771,7 @@ tape('term1=numeric, term2=condition', function (test) {
 	}
 })
 
-tape.only('term1=geneExp, term2=categorical', function (test) {
+tape('term1=geneExp, term2=categorical', function (test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
@@ -1026,7 +1026,7 @@ tape('test samplelst term2', function (test) {
 	}
 })
 
-tape('term=agedx, term2=geneExp', function (test) {
+tape.only('term=agedx, term2=geneExp', function (test) {
 	runpp({
 		state: {
 			plots: [
@@ -1051,260 +1051,157 @@ tape('term=agedx, term2=geneExp', function (test) {
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		//await testViolin(violin, violinDiv)
-		//if (test._ok) violin.Inner.app.destroy()
+		// await testViolin(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 	async function testViolin(violin, violinDiv) {
 		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
 		test.ok(groups, 'categorical groups exist')
+
+		const agedx = await detectGte({ elem: violinDiv.node(), selector: '.agedx', count: 1 })
+		test.ok(agedx, 'agedx term exists')
+
+		const geneExp = await detectGte({ elem: violinDiv.node(), selector: '.geneExp', count: 1 })
+		test.ok(geneExp, 'geneExp term exists')
 	}
 })
+
+// tape.only('term=agedx, term2=geneExp', function (test) {
+// 	runpp({
+// 		state: {
+// 			plots: [
+// 				{
+// 					chartType: 'summary',
+// 					childType: 'violin',
+// 					term2: {
+// 						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+// 						q: { mode: 'continuous' }
+// 					},
+// 					term: {
+// 						id: 'agedx'
+// 					}
+// 				}
+// 			]
+// 		},
+// 		violin: {
+// 			callbacks: {
+// 				'postRender.test': runTests
+// 			}
+// 		}
+// 	})
+// 	async function runTests(violin) {
+// 		const violinDiv = violin.Inner.dom.violinDiv
+// 		//await testViolin(violin, violinDiv)
+// 		//if (test._ok) violin.Inner.app.destroy()
+// 		test.end()
+// 	}
+// 	async function testViolin(violin, violinDiv) {
+// 		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
+// 		test.ok(groups, 'categorical groups exist')
+// 	}
+// })
 
 // Regular binning
-tape('term=agedx, term2=geneExp', function (test) {
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'summary',
-					childType: 'violin',
-					term2: {
-						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
-						q: {
-							type: 'regular-bin',
-							startinclusive: true,
-							bin_size: 5,
-							first_bin: {
-								stop: 5
-							},
-							last_bin: {
-								start: 35
-							},
-							mode: 'discrete',
-							descrStats: [
-								{
-									id: 'total',
-									label: 'Total',
-									value: 60
-								},
-								{
-									id: 'min',
-									label: 'Minimum',
-									value: 0.92
-								},
-								{
-									id: 'p25',
-									label: '1st quartile',
-									value: 6.2
-								},
-								{
-									id: 'median',
-									label: 'Median',
-									value: 11.31
-								},
-								{
-									id: 'mean',
-									label: 'Mean',
-									value: 14.15
-								},
-								{
-									id: 'p75',
-									label: '3rd quartile',
-									value: 18
-								},
-								{
-									id: 'max',
-									label: 'Maximum',
-									value: 43.63
-								},
-								{
-									id: 'SD',
-									label: 'Standard deviation',
-									value: 10.98
-								},
-								{
-									id: 'variance',
-									label: 'Variance',
-									value: 120.49
-								},
-								{
-									id: 'IQR',
-									label: 'Inter-quartile range',
-									value: 11.81
-								}
-							]
-						}
-					},
-					term: {
-						id: 'agedx'
-					}
-				}
-			]
-		},
-		violin: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-	async function runTests(violin) {
-		const violinDiv = violin.Inner.dom.violinDiv
-		console.log(violin.Inner.config)
-		//await testViolin(violin, violinDiv)
-		//if (test._ok) violin.Inner.app.destroy()
-		test.end()
-	}
-	async function testViolin(violin, violinDiv) {
-		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
-		test.ok(groups, 'categorical groups exist')
-	}
-})
-
-// Custom binning
-tape('term=agedx, term2=geneExp', function (test) {
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'summary',
-					childType: 'violin',
-					term2: {
-						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
-						q: {
-							type: 'custom-bin',
-							mode: 'discrete',
-							lst: [
-								{
-									startunbounded: true,
-									stop: 15,
-									startinclusive: true,
-									stopinclusive: false,
-									label: '<15',
-									range: '<span style="font-family:Times;font-style:italic;">x</span>&nbsp;<15'
-								},
-								{
-									start: 15,
-									startinclusive: true,
-									stopinclusive: false,
-									stop: 20,
-									label: '15 to <20',
-									range: '15 ≤ <span style="font-family:Times;font-style:italic;">x</span> <20'
-								},
-								{
-									start: 20,
-									startinclusive: true,
-									stopinclusive: false,
-									stop: 25,
-									label: '20 to <25',
-									range: '20 ≤ <span style="font-family:Times;font-style:italic;">x</span> <25'
-								},
-								{
-									start: 25,
-									startinclusive: true,
-									stopinclusive: false,
-									stop: 30,
-									label: '25 to <30',
-									range: '25 ≤ <span style="font-family:Times;font-style:italic;">x</span> <30'
-								},
-								{
-									start: 30,
-									startinclusive: true,
-									stopinclusive: false,
-									stopunbounded: true,
-									label: '≥30',
-									range: '<span style="font-family:Times;font-style:italic;">x</span>&nbsp;≥30'
-								}
-							],
-							startinclusive: true,
-							bin_size: 5,
-							first_bin: {
-								stop: 5,
-								bin: 'first'
-							},
-							last_bin: {
-								start: 35,
-								bin: 'last'
-							},
-							isAtomic: true,
-							descrStats: [
-								{
-									id: 'total',
-									label: 'Total',
-									value: 60
-								},
-								{
-									id: 'min',
-									label: 'Minimum',
-									value: 0.92
-								},
-								{
-									id: 'p25',
-									label: '1st quartile',
-									value: 6.2
-								},
-								{
-									id: 'median',
-									label: 'Median',
-									value: 11.31
-								},
-								{
-									id: 'mean',
-									label: 'Mean',
-									value: 14.15
-								},
-								{
-									id: 'p75',
-									label: '3rd quartile',
-									value: 18
-								},
-								{
-									id: 'max',
-									label: 'Maximum',
-									value: 43.63
-								},
-								{
-									id: 'SD',
-									label: 'Standard deviation',
-									value: 10.98
-								},
-								{
-									id: 'variance',
-									label: 'Variance',
-									value: 120.49
-								},
-								{
-									id: 'IQR',
-									label: 'Inter-quartile range',
-									value: 11.81
-								}
-							]
-						}
-					},
-					term: {
-						id: 'agedx'
-					}
-				}
-			]
-		},
-		violin: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-	async function runTests(violin) {
-		const violinDiv = violin.Inner.dom.violinDiv
-		console.log(violin.Inner.config)
-		//await testViolin(violin, violinDiv)
-		//if (test._ok) violin.Inner.app.destroy()
-		test.end()
-	}
-	async function testViolin(violin, violinDiv) {
-		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
-		test.ok(groups, 'categorical groups exist')
-	}
-})
+// tape('term=agedx, term2=geneExp', function (test) {
+// 	runpp({
+// 		state: {
+// 			plots: [
+// 				{
+// 					chartType: 'summary',
+// 					childType: 'violin',
+// 					term2: {
+// 						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+// 						q: {
+// 							type: 'regular-bin',
+// 							startinclusive: true,
+// 							bin_size: 5,
+// 							first_bin: {
+// 								stop: 5
+// 							},
+// 							last_bin: {
+// 								start: 35
+// 							},
+// 							mode: 'discrete',
+// 							descrStats: [
+// 								{
+// 									id: 'total',
+// 									label: 'Total',
+// 									value: 60
+// 								},
+// 								{
+// 									id: 'min',
+// 									label: 'Minimum',
+// 									value: 0.92
+// 								},
+// 								{
+// 									id: 'p25',
+// 									label: '1st quartile',
+// 									value: 6.2
+// 								},
+// 								{
+// 									id: 'median',
+// 									label: 'Median',
+// 									value: 11.31
+// 								},
+// 								{
+// 									id: 'mean',
+// 									label: 'Mean',
+// 									value: 14.15
+// 								},
+// 								{
+// 									id: 'p75',
+// 									label: '3rd quartile',
+// 									value: 18
+// 								},
+// 								{
+// 									id: 'max',
+// 									label: 'Maximum',
+// 									value: 43.63
+// 								},
+// 								{
+// 									id: 'SD',
+// 									label: 'Standard deviation',
+// 									value: 10.98
+// 								},
+// 								{
+// 									id: 'variance',
+// 									label: 'Variance',
+// 									value: 120.49
+// 								},
+// 								{
+// 									id: 'IQR',
+// 									label: 'Inter-quartile range',
+// 									value: 11.81
+// 								}
+// 							]
+// 						}
+// 					},
+// 					term: {
+// 						id: 'agedx'
+// 						// continuous
+// 					}
+// 				}
+// 			]
+// 		},
+// 		violin: {
+// 			callbacks: {
+// 				'postRender.test': runTests
+// 			}
+// 		}
+// 	})
+// 	async function runTests(violin) {
+// 		const violinDiv = violin.Inner.dom.violinDiv
+// 		console.log(violin.Inner.config)
+// 		//await testViolin(violin, violinDiv)
+// 		//if (test._ok) violin.Inner.app.destroy()
+// 		test.end()
+// 	}
+// 	async function testViolin(violin, violinDiv) {
+// 		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
+// 		test.ok(groups, 'categorical groups exist')
+// 	}
+// })
 
 tape('test uncomputable categories legend', function (test) {
 	test.timeoutAfter(3000)
