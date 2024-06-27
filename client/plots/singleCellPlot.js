@@ -76,41 +76,43 @@ class singleCellPlot {
 			})
 			const violinBt = searchGeneDiv
 				.append('button')
-				.text('Open violin')
+				.text('Open violins')
 				.style('margin-left', '2px')
 				.property('disabled', state.config.gene ? false : true)
 			violinBt.on('click', () => {
 				const gene = geneSearch.geneSymbol || state.config.gene
-				const plot = this.plots[0]
-				const values = {}
-				for (const cluster of plot.clusters) {
-					values[cluster] = { key: cluster, value: cluster }
-				}
-				this.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'violin',
-						term: {
+
+				for (const plot of this.plots) {
+					const values = {}
+					for (const cluster of plot.clusters) {
+						values[cluster] = { key: cluster, value: cluster }
+					}
+					this.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'violin',
 							term: {
-								type: TermTypes.SINGLECELL_GENE_EXPRESSION,
-								id: gene,
-								gene,
-								name: gene,
-								sample: state.config.sample
-							}
-						},
-						term2: {
-							term: {
-								type: TermTypes.CELLTYPE,
-								id: TermTypes.CELLTYPE,
-								name: 'Cell type',
-								sample: state.config.sample,
-								plot: plot.name,
-								values
+								term: {
+									type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+									id: gene,
+									gene,
+									name: gene,
+									sample: state.config.sample
+								}
+							},
+							term2: {
+								term: {
+									type: TermTypes.CELLTYPE,
+									id: TermTypes.CELLTYPE,
+									name: 'Cell type',
+									sample: state.config.sample,
+									plot: plot.name,
+									values
+								}
 							}
 						}
-					}
-				})
+					})
+				}
 			})
 		}
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
