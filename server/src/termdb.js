@@ -467,9 +467,10 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 	try {
 		if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			if (!ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
-			binsCache = ds.queries.singleCell.geneExpression.singleCellGeneExpression2bins
-			if (binsCache[tw.term.gene]) return res.send(binsCache[tw.term.gene])
-
+			binsCache = ds.queries.singleCell.geneExpression.singleCellGeneExpression2bins[tw.term.sample]
+			if (!binsCache)
+				binsCache = ds.queries.singleCell.geneExpression.singleCellGeneExpression2bins[tw.term.sample] = {}
+			else if (binsCache[tw.term.gene]) return res.send(binsCache[tw.term.gene])
 			const args = {
 				sample: tw.term.sample,
 				gene: tw.term.gene
