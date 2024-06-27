@@ -18,7 +18,8 @@ export const TermTypes = {
 	SURVIVAL: 'survival',
 	SAMPLELST: 'samplelst',
 	METABOLITE_INTENSITY: 'metaboliteIntensity',
-	SINGLECELL_GENE_EXPRESSION: 'singleCellGeneExpression'
+	SINGLECELL_GENE_EXPRESSION: 'singleCellGeneExpression',
+	CELLTYPE: 'cellType'
 }
 
 export const TermTypes2Dt = {
@@ -64,7 +65,8 @@ const nonDictTypes = new Set([
 	TermTypes.GENE_EXPRESSION,
 	TermTypes.GENE_VARIANT,
 	TermTypes.METABOLITE_INTENSITY,
-	TermTypes.SINGLECELL_GENE_EXPRESSION
+	TermTypes.SINGLECELL_GENE_EXPRESSION,
+	TermTypes.CELLTYPE
 ])
 export const numericTypes = new Set([
 	TermTypes.INTEGER,

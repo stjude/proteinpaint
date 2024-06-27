@@ -221,6 +221,16 @@ async function getSampleData(q) {
 				}
 				samples[sampleId][tw.$id] = { value, key }
 			}
+		} else if (tw.term.type == TermTypes.CELLTYPE) {
+			const data = await q.ds.queries?.singleCell?.data.get({ sample: tw.term.sample, plots: [tw.term.plot] })
+			for (const cell of data.plots[0].cells) {
+				const sampleId = cell.cellId
+				if (!(sampleId in samples)) {
+					samples[sampleId] = { sample: sampleId }
+				}
+				const value = cell.category
+				samples[sampleId][tw.$id] = { value, key: value }
+			}
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}
