@@ -81,7 +81,7 @@ class singleCellPlot {
 				.style('margin-left', '2px')
 				.property('disabled', state.config.gene ? false : true)
 			violinBt.on('click', () => {
-				const gene = geneSearch.geneSymbol
+				const gene = geneSearch.geneSymbol || state.config.gene
 				this.app.dispatch({
 					type: 'plot_create',
 					config: {
