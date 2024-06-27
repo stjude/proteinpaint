@@ -4,6 +4,7 @@ import { getData } from '#src/termdb.matrix.js'
 import { Term } from '#shared/types/terms/term.ts'
 import { TermWrapper } from '#shared/types/terms/tw.ts'
 import { NumericTerm } from '#shared/types/terms/numeric.ts'
+import { TermTypes } from '#shared/terms.js'
 
 export const api: any = {
 	endpoint: 'termdb/categories',
@@ -231,5 +232,7 @@ function getDefaultQ(
 		}
 	}
 	if (term.type == 'geneVariant') return {}
+	if (term.type == TermTypes.CELLTYPE) return {}
+
 	throw 'unknown term type'
 }

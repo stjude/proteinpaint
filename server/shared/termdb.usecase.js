@@ -12,7 +12,8 @@ export const graphableTypes = new Set([
 	'samplelst',
 	'geneExpression',
 	TermTypes.METABOLITE_INTENSITY,
-	TermTypes.SINGLECELL_GENE_EXPRESSION
+	TermTypes.SINGLECELL_GENE_EXPRESSION,
+	TermTypes.CELLTYPE
 ])
 /*
 	isUsableTerm() will
