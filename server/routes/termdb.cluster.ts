@@ -15,8 +15,7 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes } from '#shared/terms.js'
-import { Term } from '#shared/types/terms/term.ts'
-import { GeneVariantCoordTerm, GeneVariantGeneTerm } from '#types'
+import { GeneVariantGeneTerm } from '#types'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -62,8 +61,16 @@ function init({ genomes }) {
 }
 
 async function getResult(q: TermdbClusterRequest, ds: any) {
-	const type = q.dataType
-	const { term2sample2value, byTermId, bySampleId } = await ds.queries[type].get(q)
+	let _q: any = q // may assign adhoc flag, use "any" to avoid tsc err and no need to include the flag in the type doc
+
+	if (q.dataType == TermTypes.GENE_EXPRESSION) {
+		// gdc gene exp clustering analysis is restricted to max 1000 cases, this is done at ds.queries.geneExpression.get() in mds3.gdc.js. the same getter also serves non-clustering requests and that should not limit cases. add this flag to be able to conditionally limit cases in get()
+		_q = JSON.parse(JSON.stringify(q))
+		_q.forClusteringAnalysis = true
+	}
+
+	const { term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q) // too strong assumption on queries[dt], may not work for single cell
+
 	if (term2sample2value.size == 0) throw 'no data'
 	if (term2sample2value.size == 1) {
 		// get data for only 1 gene; still return data, may create violin plot later
@@ -216,7 +223,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		const term2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
 		for (const g of param.terms!) {
-			const geneTerm = g as GeneVariantGeneTerm
+			const geneTerm = g as GeneVariantGeneTerm // FIXME wrong
 			if (!geneTerm.gene) continue
 
 			if (!geneTerm.chr) {

@@ -166,8 +166,6 @@ async function getSampleData(q) {
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
-				clusterMethod: 'hierarchical',
-				distanceMethod: 'euclidean', // TODO refactor get() and remove these arg
 				dataType: tw.term.type,
 				terms: [tw.term],
 				filter: q.filter,
