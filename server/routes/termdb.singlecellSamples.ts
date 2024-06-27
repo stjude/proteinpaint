@@ -183,13 +183,12 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 }
 
 function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
-	G.singleCellGeneExpression2bins = {} // cache for binning gene expression values
+	G.sample2gene2expressionBins = {} // cache for binning gene expression values
 
 	// per-sample matrix files are not validated up front, but are verified on the fly. subject to change
 	G.get = async (q: any) => {
 		// q {sample:str, gene:str}
 		const tsvfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample)
-
 		const cell2value = {} // data returned by getter. key: cell barcode in header, value: exp value
 
 		try {
@@ -225,7 +224,6 @@ function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string
 			}
 
 			const l = line.split('\t')
-
 			if (l.length != header.length)
 				reject(`number of fields differ between data line and header: ${l.length} ${header.length}`)
 
