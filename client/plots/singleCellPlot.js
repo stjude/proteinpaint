@@ -43,7 +43,6 @@ class singleCellPlot {
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		this.startGradient = {}
 		this.stopGradient = {}
-		this.plots = []
 	}
 
 	async init(appState) {
@@ -82,6 +81,11 @@ class singleCellPlot {
 				.property('disabled', state.config.gene ? false : true)
 			violinBt.on('click', () => {
 				const gene = geneSearch.geneSymbol || state.config.gene
+				const plot = this.plots[0]
+				const values = {}
+				for (const cluster of plot.clusters) {
+					values[cluster] = { key: cluster, value: cluster }
+				}
 				this.app.dispatch({
 					type: 'plot_create',
 					config: {
@@ -93,6 +97,16 @@ class singleCellPlot {
 								gene,
 								name: gene,
 								sample: state.config.sample
+							}
+						},
+						term2: {
+							term: {
+								type: TermTypes.CELLTYPE,
+								id: TermTypes.CELLTYPE,
+								name: 'Cell type',
+								sample: state.config.sample,
+								plot: plot.name,
+								values
 							}
 						}
 					}
@@ -225,8 +239,6 @@ class singleCellPlot {
 			const id = plot.replace(/\s+/g, '')
 			const display = this.settings[`show${id}`]
 			if (display) plots.push(plot)
-			const plotRendered = this.plots.find(p => p.name == plot)
-			if (plotRendered) plotRendered.plotDiv.style('display', display ? 'inline-block' : 'none')
 		}
 		const body = { genome: this.state.genome, dslabel: this.state.dslabel, plots }
 		let sample
@@ -245,14 +257,15 @@ class singleCellPlot {
 	}
 
 	async renderPlots(body) {
+		this.dom.tableDiv.selectAll('*').remove()
+		this.plots = []
+
 		try {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
 			for (const plot of result.plots) {
-				let plotRendered = this.plots.find(p => p.name == plot.name)
-				if (plotRendered) plotRendered.cells = plot.cells
-				else plot.id = plot.name.replace(/\s+/g, '')
-				this.renderPlot(plotRendered || plot)
+				plot.id = plot.name.replace(/\s+/g, '')
+				this.renderPlot(plot)
 			}
 			this.refName = result.refName
 		} catch (e) {
@@ -263,82 +276,62 @@ class singleCellPlot {
 	}
 
 	renderPlot(plot) {
-		if (!this.state.config.gene) {
-			const colorMap = {}
-			let clusters = new Set(plot.cells.map(c => c.category))
-			clusters = Array.from(clusters).sort()
-			const cat2Color = getColors(clusters.length + 2) //Helps to use the same color scheme in different samples
-			for (const cluster of clusters)
-				colorMap[cluster] =
-					cluster == 'ref' || cluster == 'No'
-						? '#F2F2F2'
-						: plot.colorMap?.[cluster]
-						? plot.colorMap[cluster]
-						: cat2Color(cluster)
+		const colorMap = {}
+		let clusters = new Set(plot.cells.map(c => c.category))
+		plot.clusters = Array.from(clusters).sort()
+		const cat2Color = getColors(plot.clusters.length + 2) //Helps to use the same color scheme in different samples
+		for (const cluster of plot.clusters)
+			colorMap[cluster] =
+				cluster == 'ref' || cluster == 'No'
+					? '#F2F2F2'
+					: plot.colorMap?.[cluster]
+					? plot.colorMap[cluster]
+					: cat2Color(cluster)
 
-			plot.colorMap = colorMap
-		}
-		if (!plot.plotDiv) {
-			this.plots.push(plot)
-			this.initAxes(plot)
+		plot.colorMap = colorMap
+		this.plots.push(plot)
+		this.initAxes(plot)
 
-			plot.plotDiv = this.dom.tableDiv
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '10px')
-				.style('flex-grow', 1)
-			if (this.state.config.settings.singleCellPlot.showBorders) plot.plotDiv.style('border', '1px solid #aaa')
+		plot.plotDiv = this.dom.tableDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '10px')
+			.style('flex-grow', 1)
+		if (this.state.config.settings.singleCellPlot.showBorders) plot.plotDiv.style('border', '1px solid #aaa')
 
-			this.renderLegend(plot)
+		this.renderLegend(plot)
 
-			const svg = plot.plotDiv
-				.append('svg')
-				.attr('width', this.settings.svgw)
-				.attr('height', this.settings.svgh + 40)
-				.on('mouseover', event => {
-					if (this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
-				})
-				.on('click', event => this.showTooltip(event, plot))
-			svg.append('text').attr('transform', `translate(20, 30)`).style('font-weight', 'bold').text(`${plot.name}`)
+		const svg = plot.plotDiv
+			.append('svg')
+			.attr('width', this.settings.svgw)
+			.attr('height', this.settings.svgh + 40)
+			.on('mouseover', event => {
+				if (this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
+			})
+			.on('click', event => this.showTooltip(event, plot))
+		svg.append('text').attr('transform', `translate(20, 30)`).style('font-weight', 'bold').text(`${plot.name}`)
 
-			plot.svg = svg
+		plot.svg = svg
 
-			const zoom = d3zoom()
-				.scaleExtent([0.5, 10])
-				.on('zoom', e => this.handleZoom(e, plot))
-				.filter(event => {
-					if (event.type === 'wheel') return event.ctrlKey
-					return true
-				})
-			svg.call(zoom)
+		const zoom = d3zoom()
+			.scaleExtent([0.5, 10])
+			.on('zoom', e => this.handleZoom(e, plot))
+			.filter(event => {
+				if (event.type === 'wheel') return event.ctrlKey
+				return true
+			})
+		svg.call(zoom)
 
-			const symbols = svg.selectAll('g').data(plot.cells)
+		const symbols = svg.selectAll('g').data(plot.cells)
 
-			symbols
-				.enter()
-				.append('g')
-				.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y) + 40})`)
-				.append('circle')
-				.attr('r', 1.5)
-				.attr('fill', d => this.getColor(d, plot))
-				.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
-		} else {
-			const display = this.settings[`show${plot.id}`]
-			plot.plotDiv.style('display', display ? 'inline-block' : 'none')
-			if (!display) return
-			this.renderLegend(plot)
-			plot.svg.selectAll('g').remove()
-			const symbols = plot.svg.selectAll('g').data(plot.cells)
-
-			symbols
-				.enter()
-				.append('g')
-				.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y) + 40})`)
-				.append('circle')
-				.attr('r', 1.5)
-				.attr('fill', d => this.getColor(d, plot))
-				.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
-		}
+		symbols
+			.enter()
+			.append('g')
+			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y) + 40})`)
+			.append('circle')
+			.attr('r', 1.5)
+			.attr('fill', d => this.getColor(d, plot))
+			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
 	}
 
 	getColor(d, plot) {
@@ -638,6 +631,7 @@ async function renderSamplesTable(div, self, state) {
 			if (rows[index][0].__experimentID) {
 				config.experimentID = rows[index][0].__experimentID
 			}
+
 			if (self.tableOnPlot) {
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
 			} else {
