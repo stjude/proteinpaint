@@ -67,7 +67,7 @@ export function setInteractivity(self) {
 		if (d.term.type != 'geneVariant') {
 			{
 				const [c1, c2] = table.addRow()
-				c1.html(`${l.Sample}:`)
+				c1.html(l.Sample)
 				c2.html(d.row._ref_.label)
 			}
 
@@ -81,12 +81,12 @@ export function setInteractivity(self) {
 				if (d.term.type == TermTypes.GENE_EXPRESSION) {
 					{
 						const [c1, c2] = table.addRow()
-						c1.html('Gene:')
+						c1.html('Gene')
 						c2.html(d.term.name)
 					}
 					{
 						const [c1, c2] = table.addRow()
-						c1.html('Gene Expression:')
+						c1.html('Gene Expression')
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 						}" ></span>
@@ -95,12 +95,12 @@ export function setInteractivity(self) {
 				} else if (d.term.type == TermTypes.METABOLITE_INTENSITY) {
 					{
 						const [c1, c2] = table.addRow()
-						c1.html('Metabolite:')
+						c1.html('Metabolite')
 						c2.html(d.term.name)
 					}
 					{
 						const [c1, c2] = table.addRow()
-						c1.html('Metabolite Intensity:')
+						c1.html('Metabolite Intensity')
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 						}" ></span>
@@ -108,7 +108,7 @@ export function setInteractivity(self) {
 					}
 				} else {
 					const [c1, c2] = table.addRow()
-					c1.html(`${d.term.name}:`)
+					c1.html(d.term.name)
 					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 						d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 					}" ></span>
@@ -129,12 +129,12 @@ export function setInteractivity(self) {
 		} else {
 			{
 				const [c1, c2] = table.addRow()
-				c1.html(`${l.Sample}:`)
+				c1.html(l.Sample)
 				c2.html(d.row._ref_.label || d.value?.sample)
 			}
 			{
 				const [c1, c2] = table.addRow()
-				c1.html('Gene:')
+				c1.html('Gene')
 				c2.html(d.term.name)
 			}
 
@@ -192,7 +192,7 @@ export function setInteractivity(self) {
 				}
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
 				const [c1, c2] = table.addRow()
-				c1.html(`${dtLabel}:`)
+				c1.html(dtLabel)
 				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
 					${classArray[0].label}`)
 				for (const classType of classArray.slice(1)) {
@@ -387,13 +387,13 @@ export function setInteractivity(self) {
 		if (templates?.sample) {
 			const name = sampleData[templates.sample.namekey] || sampleData.sample || sampleData.row.sample
 			const [c1, c2] = table.addRow()
-			c1.html(`${l.Sample}:`)
+			c1.html(l.Sample)
 			c2.html(
 				`<a href="${templates.sample.base}${name}" target="_blank">${sampleData.row._ref_.label} ${svgIcons.externalLink}</a>`
 			)
 		} else {
 			const [c1, c2] = table.addRow()
-			c1.html(`${l.Sample}:`)
+			c1.html(l.Sample)
 			c2.html(sampleData.row._ref_.label || sampleData.value.sample)
 		}
 		if (sampleData.term && sampleData.term.type != 'geneVariant') {
@@ -402,12 +402,12 @@ export function setInteractivity(self) {
 				if (sampleData.term.type == TermTypes.GENE_EXPRESSION) {
 					{
 						const [c1, c2] = table.addRow()
-						c1.html('Gene:')
+						c1.html('Gene')
 						c2.html(sampleData.term.name)
 					}
 					{
 						const [c1, c2] = table.addRow()
-						c1.html('Gene Expression:')
+						c1.html('Gene Expression')
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 						}" ></span>
@@ -416,12 +416,12 @@ export function setInteractivity(self) {
 				} else if (sampleData.term.type == TermTypes.METABOLITE_INTENSITY) {
 					{
 						const [c1, c2] = table.addRow()
-						c1.html('Metabolite:')
+						c1.html('Metabolite')
 						c2.html(sampleData.term.name)
 					}
 					{
 						const [c1, c2] = table.addRow()
-						c1.html('Metabolite Intensity:')
+						c1.html('Metabolite Intensity')
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 						}" ></span>
@@ -429,7 +429,7 @@ export function setInteractivity(self) {
 					}
 				} else {
 					const [c1, c2] = table.addRow()
-					c1.html(`${sampleData.term.name}`)
+					c1.html(sampleData.term.name)
 					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 						sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 					}" ></span>
@@ -440,13 +440,13 @@ export function setInteractivity(self) {
 			if (templates?.gene) {
 				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
 				const [c1, c2] = table.addRow()
-				c1.html('Gene:')
+				c1.html('Gene')
 				c2.html(
 					`<a href="${templates.gene.base}${name}" target="_blank">${sampleData.tw.term.name} ${svgIcons.externalLink}</a>`
 				)
 			} else {
 				const [c1, c2] = table.addRow()
-				c1.html('Gene:')
+				c1.html('Gene')
 				c2.html(sampleData.term.name)
 			}
 
@@ -474,7 +474,7 @@ export function setInteractivity(self) {
 			}
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
 				const [c1, c2] = table.addRow()
-				c1.html(`${dtLabel}:`)
+				c1.html(dtLabel)
 				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
 					${classArray[0].label}`)
 				for (const classType of classArray.slice(1)) {
