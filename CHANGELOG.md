@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - At oncomatrix, allow gene expression term to pull data on all cases
+- matrix: hover/click menu over geneexp/metabolite rows should indicate term type, and do not show undefined for missing data
 
 
 ## 2.65.0
