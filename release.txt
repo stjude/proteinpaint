@@ -1,3 +1,1 @@
 
-Features
-- Added use case to open the single cell gene expression violin of a sample

@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Added use case to open the single cell gene expression violin of a sample
+
 Fixes:
 - At oncomatrix, allow gene expression term to pull data on all cases
 
