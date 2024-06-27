@@ -2,6 +2,7 @@ import { mclass, dt2label, dtsnvindel, dtcnv, dtsv, dtfusionrna } from '../../sh
 import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW, GeneVariantQ } from '../../shared/types/index'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '../../rx'
+import { GroupSettingMethods } from './groupsetting.ts'
 
 /* 
 instance attributes
@@ -28,19 +29,39 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 				labels.push(dt2label[self.q.dt])
 				const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt]?.byOrigin
 				if (byOrigin) labels.push(byOrigin[self.q.origin]?.label || self.q.origin)
-				const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-				labels.push(groupset.name)
+				if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
+					const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+					labels.push(groupset.name)
+				} else if (self.q.groupsetting.customset) {
+					const n = self.q.groupsetting.customset.groups.length
+					labels.push(`Divided into ${n} groups`)
+				} else {
+					throw 'unknown setting for groupsetting'
+				}
 				return { text: labels.join(' - ') }
 			} else {
 				return { text: self.q.exclude?.length ? 'matching variants' : 'any variant class' }
 			}
 		},
 
-		//validateQ(data: Q) {},
+		//validateQ(data: Q) {}, //TODO: should enable 'validateQ'
 
 		async showEditMenu(div: Element) {
 			await makeEditMenu(self, div)
+		},
+
+		async postMain() {
+			//for rendering groupsetting menu
+			const body = self.opts.getBodyParams?.() || {}
+			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
+			self.category2samplecount = data.lst
 		}
+	}
+}
+
+function setMethods(self) {
+	self.validateGroupsetting = function () {
+		// harmonize with validateGroupsetting() from client/termsetting/handlers/categorical.ts
 	}
 }
 
@@ -89,7 +110,8 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 					},
 					{
 						name: 'Not tested',
-						values: [{ key: 'Blank', label: 'Not tested' }]
+						values: [{ key: 'Blank', label: 'Not tested' }],
+						uncomputable: true
 					}
 				]
 			},
@@ -114,7 +136,8 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 					},
 					{
 						name: 'Not tested',
-						values: [{ key: 'Blank', label: 'Not tested' }]
+						values: [{ key: 'Blank', label: 'Not tested' }],
+						uncomputable: true
 					}
 				]
 			},
@@ -139,7 +162,8 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 					},
 					{
 						name: 'Not tested',
-						values: [{ key: 'Blank', label: 'Not tested' }]
+						values: [{ key: 'Blank', label: 'Not tested' }],
+						uncomputable: true
 					}
 				]
 			}
@@ -205,16 +229,25 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 	}
 }
 
-function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
+async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const div = _div.append('div').style('padding', '5px').style('cursor', 'pointer')
 
 	div.append('div').style('font-size', '1.2rem').text(self.term.name)
 
 	const optsDiv = div.append('div').style('margin-top', '10px')
-	const groupsDiv = div.append('div').style('margin-left', '30px').style('display', 'none')
-	const dtDiv = groupsDiv.append('div').style('margin-top', '15px')
+	const groupsDiv = div
+		.append('div')
+		.style('display', 'none')
+		.style('margin', '5px 0px 0px 30px')
+		.style('vertical-align', 'top')
+	const dtDiv = groupsDiv.append('div')
 	const originDiv = groupsDiv.append('div').style('margin-top', '15px')
 	const groupsetDiv = groupsDiv.append('div').style('margin-top', '15px')
+	const draggablesDiv = div
+		.append('div')
+		.style('display', 'none')
+		.style('margin', '5px 0px 0px 10px')
+		.style('vertical-align', 'top')
 
 	// radio buttons for whether or not to group variants
 	optsDiv.append('div').style('font-weight', 'bold').text('Group variants')
@@ -224,10 +257,10 @@ function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			{ label: 'No variant grouping', value: false, checked: !self.q.groupsetting.inuse },
 			{ label: 'Assign variants to groups', value: true, checked: self.q.groupsetting.inuse }
 		],
-		callback: v => {
+		callback: async v => {
 			if (v) {
 				self.q.groupsetting.inuse = true
-				makeRadiosForGrouping()
+				await makeRadiosForGrouping()
 			} else {
 				self.q.groupsetting.inuse = false
 				delete self.q.dt
@@ -236,14 +269,15 @@ function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			}
 		}
 	})
-	if (radios.inputs.filter(':checked').datum().value) makeRadiosForGrouping()
+	if (radios.inputs.filter(':checked').datum().value) await makeRadiosForGrouping()
 
 	// make radio buttons for grouping variants
-	function makeRadiosForGrouping() {
-		groupsDiv.style('display', 'block')
+	async function makeRadiosForGrouping() {
+		groupsDiv.style('display', 'inline-block')
 		makeDtRadios()
 		mayMakeOriginRadios()
 		makeGroupsetRadios()
+		await mayMakeGroupsetDraggables()
 	}
 
 	// radio buttons for data type
@@ -259,6 +293,7 @@ function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 				self.q.dt = v
 				mayMakeOriginRadios()
 				makeGroupsetRadios()
+				mayMakeGroupsetDraggables()
 			}
 		})
 	}
@@ -283,6 +318,7 @@ function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			})),
 			callback: v => {
 				self.q.origin = v
+				mayMakeGroupsetDraggables()
 			}
 		})
 	}
@@ -310,8 +346,17 @@ function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			}),
 			callback: v => {
 				self.q.groupsetting.predefined_groupset_idx = v
+				mayMakeGroupsetDraggables()
 			}
 		})
+	}
+
+	// function for making groupset draggables
+	async function mayMakeGroupsetDraggables() {
+		draggablesDiv.style('display', 'inline-block')
+		draggablesDiv.selectAll('*').remove()
+		self.groupSettingInstance = new GroupSettingMethods(self, { holder: draggablesDiv, hideApply: true })
+		await self.groupSettingInstance.main()
 	}
 
 	// Apply button
@@ -320,6 +365,7 @@ function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.style('margin-top', '10px')
 		.text('Apply')
 		.on('click', () => {
+			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
 			self.runCallback()
 		})
 

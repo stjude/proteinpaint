@@ -2309,8 +2309,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			throw 'no gene or position specified'
 		if (tw.q?.groupsetting?.inuse) {
 			if (!Number.isInteger(tw.q.dt)) throw 'dt is not an integer value'
-			if (!Number.isInteger(tw.q.groupsetting.predefined_groupset_idx))
-				throw 'predefined_groupset_idx is not an integer value'
+			if (!Number.isInteger(tw.q.groupsetting.predefined_groupset_idx) && !tw.q.groupsetting.customset)
+				throw 'invalid predefined_groupset_idx and customset'
 		}
 
 		if (tw.term.subtype == 'snp') {
@@ -2466,8 +2466,9 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				const group = groupset.groups.find(group => {
 					return group.values.some(v => mclasses.includes(v.key))
 				})
-				if (!group) throw 'unable to assign sample to group'
-				// .key will be the name of the assigned group
+				if (!group) continue
+				// store sample data
+				// key will be the name of the assigned group
 				data.set(sample, {
 					sample,
 					[tw.$id]: { key: group.name, label: group.name, value: group.name, values: mlst }

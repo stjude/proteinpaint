@@ -3,6 +3,7 @@ import { select, Selection } from 'd3-selection'
 //import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '../../dom/sayerror'
 import { debounce } from 'debounce'
+import { mclass } from '../../shared/common'
 
 /*
 ---------Exported---------
@@ -22,6 +23,11 @@ Future plans:
 			User can simply change the group number. Switch back to the drag UI and see the updated list and change group names
 		- maybe increase the cap? but only from this UI, not drag and drop
 */
+
+type Opts = {
+	holder: HTMLElement // div holder for drag-and-drop
+	hideApply: boolean // whether to hide apply button
+}
 
 type ItemEntry = {
 	key: string //key returned from vocab.getCategories()
@@ -55,17 +61,19 @@ type GrpSetDom = {
 }
 
 export class GroupSettingMethods {
-	opts: any //a termsetting instance
+	tsInstance: any //a termsetting instance
+	opts: Opts //options for groupsetting
 	dom: Partial<GrpSetDom> //main menu dom elements before drag and drop divs are added
 	minGrpNum: number //minimum num of groups rendered (excluded categories + 2 groups)
 	defaultMaxGrpNum: number //default cutoff for num of groups. Used to calculate the actual max group num later
 	data: { groups: GrpEntry[]; values: ItemEntry[] }
 	initGrpSetUI: any //func init for groupsetting UI
 
-	constructor(opts) {
+	constructor(tsInstance, opts = {}) {
+		this.tsInstance = tsInstance
 		this.opts = opts
 		this.dom = {
-			menuWrapper: opts.dom.tip.d.append('div')
+			menuWrapper: opts.holder || tsInstance.dom.tip.d.append('div')
 		}
 		this.minGrpNum = 3
 		this.defaultMaxGrpNum = 5
@@ -73,19 +81,39 @@ export class GroupSettingMethods {
 		setRenderers(this)
 	}
 
-	validateOpts(opts) {
-		if (!opts.newMenu) opts.newMenu = true
-	}
-
 	processInput(data: DataInput) {
 		//add excluded categories, group 1, and group 2 indexes by default
 		//these three groups should always appear in the menu
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
 		const input = structuredClone(data)
-		if (this.opts.q?.groupsetting?.customset) {
+		if (this.tsInstance.q?.groupsetting?.customset) {
 			//customset created after user applies groupsetting
 			//returns found groups to data.groups and values for groups and excluded groups
 			this.formatCustomset(grpIdxes, input)
+		} else if (this.tsInstance.term.type == 'geneVariant') {
+			const dt = input.find(i => i.dt == this.tsInstance.q.dt)
+			const classes = dt.classes.byOrigin ? dt.classes.byOrigin[this.tsInstance.q.origin] : dt.classes
+			const groupset = this.tsInstance.term.groupsetting.lst[this.tsInstance.q.groupsetting.predefined_groupset_idx]
+			let computableGrpIdx = 0
+			for (const group of groupset.groups) {
+				const grpIdx = group.uncomputable ? 0 : ++computableGrpIdx
+				this.data.groups.push({
+					currentIdx: grpIdx,
+					type: 'values',
+					name: grpIdx === 0 ? 'Excluded categories' : group.name
+				})
+				grpIdxes.delete(grpIdx)
+				for (const [key, samplecount] of Object.entries(classes)) {
+					if (group.values.some(v => v.key == key)) {
+						this.data.values.push({
+							key,
+							label: mclass[key].label,
+							group: grpIdx,
+							samplecount
+						})
+					}
+				}
+			}
 		} else {
 			for (const v of Object.values(input)) {
 				if (v.uncomputable) return //Still necessary? Possibly taken care of termdb route... somewhere
@@ -108,15 +136,23 @@ export class GroupSettingMethods {
 		/*TODO: Logic below accounts for reformating data between getCategories and category2samplecount
 		in categorical.ts and condition.ts. This is probably unncessary in which case this section, including 
 		parts of main(), will be rewritten.*/
+		/*NOTE: this logic is actually necessary for re-populating sample
+		counts of categories within a custom groupset*/
 		this.data.values.forEach(v => {
 			//subconditions formated with count, categorical term values do not have a count
 			if (!v.samplecount) {
-				//find sample counts for each value once added to array
-				v.samplecount = this.opts.category2samplecount
-					? this.opts.category2samplecount.find(
-							(d: { key: string; label?: string; samplecount: number }) => d.key == v.key
-					  )?.samplecount
-					: 'n/a'
+				if (this.tsInstance.term.type == 'geneVariant') {
+					const dt = this.tsInstance.category2samplecount.find(i => i.dt == this.tsInstance.q.dt)
+					const classes = dt.classes.byOrigin ? dt.classes.byOrigin[this.tsInstance.q.origin] : dt.classes
+					v.samplecount = classes[v.key]
+				} else {
+					//find sample counts for each value once added to array
+					v.samplecount = this.tsInstance.category2samplecount
+						? this.tsInstance.category2samplecount.find(
+								(d: { key: string; label?: string; samplecount: number }) => d.key == v.key
+						  )?.samplecount
+						: 'n/a'
+				}
 			}
 		})
 
@@ -132,7 +168,7 @@ export class GroupSettingMethods {
 	}
 
 	formatCustomset(grpIdxes: Set<number>, input: DataInput) {
-		for (const [i, group] of this.opts.q.groupsetting.customset.groups.entries()) {
+		for (const [i, group] of this.tsInstance.q.groupsetting.customset.groups.entries()) {
 			if (group.uncomputable) return
 			this.data.groups.push({
 				currentIdx: Number(i) + 1,
@@ -147,8 +183,8 @@ export class GroupSettingMethods {
 				 */
 				const label = value.label
 					? value.label
-					: this.opts.category2samplecount
-					? this.opts.category2samplecount.find(
+					: this.tsInstance.category2samplecount
+					? this.tsInstance.category2samplecount.find(
 							(d: { key: string; label?: string; samplecount: number }) => d.key == value.key
 					  )?.label
 					: value.key
@@ -162,7 +198,22 @@ export class GroupSettingMethods {
 		}
 
 		//Find excluded values not returned in customset
-		if (this.data.values.length !== Object.keys(input).length && !this.opts.q.groupsetting.inuse) {
+		if (this.tsInstance.term.type == 'geneVariant') {
+			const dt = this.tsInstance.category2samplecount.find(i => i.dt == this.tsInstance.q.dt)
+			const classes = dt.classes.byOrigin ? dt.classes.byOrigin[this.tsInstance.q.origin] : dt.classes
+			if (this.data.values.length !== Object.keys(classes).length) {
+				for (const [key, samplecount] of Object.entries(classes)) {
+					if (!this.data.values.some(d => d.key == key)) {
+						this.data.values.push({
+							key,
+							label: mclass[key].label,
+							group: 0,
+							samplecount
+						})
+					}
+				}
+			}
+		} else if (this.data.values.length !== Object.keys(input).length && !this.tsInstance.q.groupsetting.inuse) {
 			Object.entries(input)
 				.filter((v: any) => !this.data.values.some(d => d.key == v[1].label))
 				.forEach(v => {
@@ -170,15 +221,15 @@ export class GroupSettingMethods {
 						key: v[0],
 						label: v[1].label,
 						group: 0,
-						samplecount: this.opts.category2samplecount
-							? this.opts.category2samplecount.find(
+						samplecount: this.tsInstance.category2samplecount
+							? this.tsInstance.category2samplecount.find(
 									(d: { key: string; label?: string; samplecount: number }) => d.key == v[0]
 							  )?.samplecount
 							: 'n/a'
 					})
 				})
-		} else if (this.data.values.length !== this.opts.category2samplecount.length) {
-			this.opts.category2samplecount
+		} else if (this.data.values.length !== this.tsInstance.category2samplecount.length) {
+			this.tsInstance.category2samplecount
 				.filter((v: ItemEntry) => !this.data.values.some(d => d.key == v.key))
 				.forEach((v: ItemEntry) => {
 					this.data.values.push({
@@ -193,7 +244,10 @@ export class GroupSettingMethods {
 
 	async main() {
 		try {
-			const input = this.opts.q?.groupsetting?.customset || this.opts.category2samplecount || this.opts.term.values
+			const input =
+				this.tsInstance.q?.groupsetting?.customset ||
+				this.tsInstance.category2samplecount ||
+				this.tsInstance.term.values
 			this.processInput(input)
 			await this.initGrpSetUI()
 		} catch (e: any) {
@@ -209,7 +263,7 @@ function setRenderers(self: any) {
 		Only allow adding the max feasible groups with cutoff of 5 + excluded categories*/
 		self.maxGrpNum =
 			self.data.values.length >= self.defaultMaxGrpNum ? self.defaultMaxGrpNum + 1 : self.data.values.length
-		if (self.newMenu == true) self.opts.dom.tip.clear().showunder(self.opts.dom.holder.node())
+		self.tsInstance.dom.tip.showunder(self.tsInstance.dom.holder.node())
 		// if (self.data.values.length > 10) {
 		// 	//Tabs functionality for later - leave it for layout testing
 		//	//TODO: move apply button up
@@ -218,7 +272,7 @@ function setRenderers(self: any) {
 		// 			label: 'Drag',
 		// 			callback:  async (event, tab) => {
 		// 				try {
-		// 					self.opts.showDraggables()
+		// 					self.tsInstance.showDraggables()
 		// 					delete tab.callback
 		// 				} catch (e: any) {
 		// 					if (e.stack) console.log(e.stack)
@@ -252,8 +306,8 @@ function setRenderers(self: any) {
 			.classed('sjpp_grpset_addGrp_btn', true) //for integration testing
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
-			.style('cursor', self.opts.q.mode == 'binary' ? 'default' : 'pointer')
-			.property('disabled', self.opts.q.mode == 'binary' ? true : self.data.groups.length >= self.maxGrpNum)
+			.style('cursor', self.tsInstance.q.mode == 'binary' ? 'default' : 'pointer')
+			.property('disabled', self.tsInstance.q.mode == 'binary' ? true : self.data.groups.length >= self.maxGrpNum)
 			.text('Add Group')
 			.on('click', async () => {
 				newGrpNum++
@@ -271,34 +325,15 @@ function setRenderers(self: any) {
 		self.dom.actionDiv.applyBtn = self.dom.actionDiv
 			.append('button')
 			.classed('sjpp_grpset_apply_btn', true) //for integration testing
-			.style('display', 'inline-block')
+			.style('display', self.opts.hideApply ? 'none' : 'inline-block')
 			.style('text-align', 'center')
 			.style('float', 'right')
 			.style('cursor', 'pointer')
 			.text('Apply')
 			.on('click', () => {
-				const customset: any = { groups: [] }
-				for (const group of self.data.groups) {
-					if (group.currentIdx === 0) continue
-					const groupValues = self.data.values
-						.filter((v: ItemEntry) => v.group == group.currentIdx)
-						.map((v: ItemEntry) => {
-							return { key: v.key, label: v.label }
-						})
-					if (groupValues.length == 0) continue
-					customset.groups.push({
-						name: group.name,
-						type: group.type,
-						values: groupValues
-					})
-				}
-				self.opts.q.type = 'custom-groupset'
-				self.opts.q.groupsetting = {
-					inuse: true,
-					customset: customset
-				}
-				self.opts.dom.tip.hide()
-				self.opts.runCallback()
+				self.processDraggables()
+				self.tsInstance.dom.tip.hide()
+				self.tsInstance.runCallback()
 			})
 
 		//Top message
@@ -337,6 +372,29 @@ function setRenderers(self: any) {
 				group.wrapper = select(this)
 				await initGroupDiv(group)
 			})
+	}
+
+	self.processDraggables = () => {
+		const customset: any = { groups: [] }
+		for (const group of self.data.groups) {
+			if (group.currentIdx === 0) continue
+			const groupValues = self.data.values
+				.filter((v: ItemEntry) => v.group == group.currentIdx)
+				.map((v: ItemEntry) => {
+					return { key: v.key, label: v.label }
+				})
+			if (groupValues.length == 0) continue
+			customset.groups.push({
+				name: group.name,
+				type: group.type,
+				values: groupValues
+			})
+		}
+		self.tsInstance.q.type = 'custom-groupset'
+		self.tsInstance.q.groupsetting = {
+			inuse: true,
+			customset: customset
+		}
 	}
 
 	let draggedItem: any

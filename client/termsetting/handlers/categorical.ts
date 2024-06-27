@@ -158,7 +158,7 @@ export function setCategoryMethods(self) {
 		// if (!activeGroup) await new GroupSettingMethods(Object.assign(self, {newMenu: true})).main()
 		// else {
 		//const valGrp = self.grpSet2valGrp(activeGroup)
-		await new GroupSettingMethods(Object.assign(self, { newMenu: true })).main()
+		await new GroupSettingMethods(self).main()
 		// }
 	}
 
