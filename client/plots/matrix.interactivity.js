@@ -8,6 +8,7 @@ import { Menu } from '#dom/menu'
 import { renderTable } from '../dom/table.ts'
 import { dofetch3 } from '#common/dofetch'
 import { TermTypes } from '../shared/terms'
+import { table2col } from '#dom/table2col'
 
 let inputIndex = 0
 const svgIcons = {
@@ -48,7 +49,6 @@ export function setInteractivity(self) {
 		const y = self.dimensions.yOffset
 		const s = self.settings.matrix
 		const l = s.controlLabels
-		const rows = []
 
 		self.dom.rowBeam
 			.attr('x', x)
@@ -61,44 +61,82 @@ export function setInteractivity(self) {
 			.attr('y', y)
 			.style('display', '')
 
+		self.dom.matrixCellHoverOver.clear()
+		const table = table2col({ holder: self.dom.matrixCellHoverOver.d.append('div') })
+
 		if (d.term.type != 'geneVariant') {
+			{
+				const [c1, c2] = table.addRow()
+				c1.html(`${l.Sample}:`)
+				c2.html(d.row._ref_.label)
+			}
+
 			let survivalInfo
-			if (d.term.type == 'survival' && d.exitCodeKey) {
+			if (d.term.type == TermTypes.SURVIVAL && d.exitCodeKey) {
 				survivalInfo = d.term.values?.[d.exitCodeKey]?.label || d.exitCodeKey
 			}
-			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label}</td></tr>`)
 
 			if (survivalInfo || d.convertedValueLabel || d.label) {
 				// show term value row only when not undefined
 				if (d.term.type == TermTypes.GENE_EXPRESSION) {
-					rows.push(`<tr><td>Value Type:</td><td>Gene Expression</td></tr>`)
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('Gene:')
+						c2.html(d.term.name)
+					}
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('Gene Expression:')
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+						}" ></span>
+							${d.convertedValueLabel || d.label}`)
+					}
+				} else if (d.term.type == TermTypes.METABOLITE_INTENSITY) {
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('Metabolite:')
+						c2.html(d.term.name)
+					}
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('Metabolite Intensity:')
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+						}" ></span>
+							${d.convertedValueLabel || d.label}`)
+					}
+				} else {
+					const [c1, c2] = table.addRow()
+					c1.html(`${d.term.name}:`)
+					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+						d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+					}" ></span>
+						${survivalInfo || d.convertedValueLabel || d.label}`)
 				}
-				if (d.term.type == TermTypes.METABOLITE_INTENSITY) {
-					rows.push(`<tr><td>Value Type:</td><td>Metabolite Intensity</td></tr>`)
-				}
-				rows.push(
-					`<tr>
-						<td>${d.term.name}:</td>
-						<td>
-							<span style="display:inline-block; width:12px; height:12px; background-color:${
-								d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-							}" ></span>
-							${survivalInfo || d.convertedValueLabel || d.label}
-						</td>
-					</tr>`
-				)
-				if (d.term.type == 'survival') {
+				if (d.term.type == TermTypes.SURVIVAL) {
 					const timeToEventKey =
 						'Time to Event: ' +
 						(d.timeToEventKey
 							? d.timeToEventKey + (d.term.unit ? `(${d.term.unit})` : '')
 							: d.convertedValueLabel || d.label)
-					rows.push(`<tr><td></td><td>${timeToEventKey}</td></tr>`)
+
+					const [c1, c2] = table.addRow()
+					c1.html('')
+					c2.html(timeToEventKey)
 				}
 			}
-		} else if (d.term.type == 'geneVariant') {
-			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label || d.value?.sample}</td></tr>`)
-			rows.push(`<tr><td>Gene:</td><td>${d.term.name}</td></tr>`)
+		} else {
+			{
+				const [c1, c2] = table.addRow()
+				c1.html(`${l.Sample}:`)
+				c2.html(d.row._ref_.label || d.value?.sample)
+			}
+			{
+				const [c1, c2] = table.addRow()
+				c1.html('Gene:')
+				c2.html(d.term.name)
+			}
 
 			const siblingCellLabels = {}
 			if (d.siblingCells)
@@ -111,7 +149,7 @@ export function setInteractivity(self) {
 					// list that label only once but with a hit count, instead of listing that same label
 					// as multiple table rows in the mouseover
 					const label =
-						c.label == self.config.settings.hierCluster?.termGroupName || v.value
+						c.t.grp.type == 'hierCluster'
 							? v.value
 							: p
 							? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
@@ -153,26 +191,18 @@ export function setInteractivity(self) {
 				*/
 				}
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
-				rows.push(`<tr>
-						   		<td>${dtLabel}:</td>
-								<td>
-									<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
-									${classArray[0].label}
-								</td>
-						    </tr>`)
+				const [c1, c2] = table.addRow()
+				c1.html(`${dtLabel}:`)
+				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
+					${classArray[0].label}`)
 				for (const classType of classArray.slice(1)) {
-					rows.push(`<tr>
-									<td></td>
-									<td>
-										<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
-										${classType.label}
-									</td>
-								</tr>`)
+					const [c1, c2] = table.addRow()
+					c1.html('')
+					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
+						${classType.label}`)
 				}
 			}
 		}
-		self.dom.matrixCellHoverOver.clear()
-		self.dom.matrixCellHoverOver.d.append('div').html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		self.dom.matrixCellHoverOver.show2(event.clientX, event.clientY)
 		self.dom.mainG.on('mouseout', self.mouseout)
 	}
@@ -208,7 +238,15 @@ export function setInteractivity(self) {
 		// clicking only show actions for available genomic data; can later expand to non-genomic data and custom overrides
 		const q = self.state.termdbConfig.queries
 		if (!q) return // no genomic queries
-		if (!q.singleSampleGenomeQuantification && !q.singleSampleMutation) return // only works for these queries
+		if (
+			!(
+				q.singleSampleGenomeQuantification ||
+				q.singleSampleMutation ||
+				(q.NIdata && showBrainImaging) ||
+				(q.DZImages && showDZImages)
+			)
+		)
+			return // only works for these queries
 
 		self.dom.mainG.on('mouseout', null)
 		delete self.imgBox
@@ -343,43 +381,74 @@ export function setInteractivity(self) {
 		}
 
 		const l = self.settings.matrix.controlLabels
-		const rows = []
+		const table = table2col({ holder: self.dom.clickMenu.d.append('div').append('span') })
 
 		const templates = self.state.termdbConfig.urlTemplates
 		if (templates?.sample) {
 			const name = sampleData[templates.sample.namekey] || sampleData.sample || sampleData.row.sample
-			rows.push(
-				`<tr><td>${l.Sample}:</td> <td><a href="${templates.sample.base}${name}" target="_blank">${sampleData.row._ref_.label} ${svgIcons.externalLink}</a></td></tr>`
+			const [c1, c2] = table.addRow()
+			c1.html(`${l.Sample}:`)
+			c2.html(
+				`<a href="${templates.sample.base}${name}" target="_blank">${sampleData.row._ref_.label} ${svgIcons.externalLink}</a>`
 			)
-		} else rows.push(`<tr><td>${l.Sample}:</td><td>${sampleData.row._ref_.label || sampleData.value.sample}</td></tr>`)
-
+		} else {
+			const [c1, c2] = table.addRow()
+			c1.html(`${l.Sample}:`)
+			c2.html(sampleData.row._ref_.label || sampleData.value.sample)
+		}
 		if (sampleData.term && sampleData.term.type != 'geneVariant') {
 			if (sampleData.convertedValueLabel || sampleData.label) {
 				// show term value row only when not undefined
 				if (sampleData.term.type == TermTypes.GENE_EXPRESSION) {
-					rows.push(`<tr><td>Value Type:</td><td>Gene Expression</td></tr>`)
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('Gene:')
+						c2.html(sampleData.term.name)
+					}
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('Gene Expression:')
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+						}" ></span>
+								${sampleData.convertedValueLabel || sampleData.label}`)
+					}
+				} else if (sampleData.term.type == TermTypes.METABOLITE_INTENSITY) {
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('Metabolite:')
+						c2.html(sampleData.term.name)
+					}
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('Metabolite Intensity:')
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+						}" ></span>
+							${sampleData.convertedValueLabel || sampleData.label}`)
+					}
+				} else {
+					const [c1, c2] = table.addRow()
+					c1.html(`${sampleData.term.name}`)
+					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+						sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+					}" ></span>
+						${sampleData.convertedValueLabel || sampleData.label}`)
 				}
-				if (sampleData.term.type == TermTypes.METABOLITE_INTENSITY) {
-					rows.push(`<tr><td>Value Type:</td><td>Metabolite Intensity</td></tr>`)
-				}
-				rows.push(
-					`<tr><td>${sampleData.term.name}:</td>
-						<td> 
-							<span style="display:inline-block; width:12px; height:12px; background-color:${
-								sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-							}" ></span>
-							${sampleData.convertedValueLabel || sampleData.label}
-						</td>
-					</tr>`
-				)
 			}
 		} else if (sampleData.term && sampleData.term.type == 'geneVariant' && sampleData.value) {
 			if (templates?.gene) {
 				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
-				rows.push(
-					`<tr><td>Gene:</td><td><a href="${templates.gene.base}${name}" target="_blank">${sampleData.tw.term.name} ${svgIcons.externalLink}</a></td></tr>`
+				const [c1, c2] = table.addRow()
+				c1.html('Gene:')
+				c2.html(
+					`<a href="${templates.gene.base}${name}" target="_blank">${sampleData.tw.term.name} ${svgIcons.externalLink}</a>`
 				)
-			} else rows.push(`<tr><td>Gene:</td><td>${sampleData.term.name}</td></tr>`)
+			} else {
+				const [c1, c2] = table.addRow()
+				c1.html('Gene:')
+				c2.html(sampleData.term.name)
+			}
 
 			const siblingCellLabels = {}
 			for (const c of sampleData.siblingCells) {
@@ -404,26 +473,18 @@ export function setInteractivity(self) {
 				}
 			}
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
-				rows.push(`<tr>
-								<td>${dtLabel}:</td>
-								<td>
-									<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
-									${classArray[0].label}
-								</td>
-						   </tr>`)
+				const [c1, c2] = table.addRow()
+				c1.html(`${dtLabel}:`)
+				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
+					${classArray[0].label}`)
 				for (const classType of classArray.slice(1)) {
-					rows.push(`<tr>
-									<td></td>
-									<td>
-										<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
-										${classType.label}
-									</td>
-							   </tr>`)
+					const [c1, c2] = table.addRow()
+					c1.html('')
+					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
+						${classType.label}`)
 				}
 			}
 		}
-		const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 9px')
-		menuDiv.append('span').html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		self.dom.clickMenu.show(event.clientX, event.clientY, false, true)
 	}
 
