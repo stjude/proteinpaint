@@ -1,6 +1,10 @@
 library(jsonlite)
 library(Matrix)
 
+# This script assumes the .Rds file is a gene
+# by sample matrix. Use this script to extract
+# the values per sample for a particular gene.
+
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) == 0) {
   stop("No arguments provided.")
