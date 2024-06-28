@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { termjson } from '../../test/testdata/termjson'
 import helpers from '../../test/front.helpers.js'
-import { sleep, detectLst, detectOne } from '../../test/test.helpers.js'
+import { sleep, detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
 import { getFilterItemByTag } from '../../filter/filter'
 import vocabData from '../../termdb/test/vocabData'
 import { hideCategory } from '../../plots/barchart.events.js'
@@ -14,6 +14,9 @@ Tests:
 	term1=categorical, term2=defaultbins
 	term0=defaultbins, term1=categorical
 	term1=geneVariant
+	term1=geneExp
+	term1=numeric term2=geneExp with default bins
+	term1=geneExp, term2=categorical
 	series visibility - q.hiddenValue
 	series visibility - numeric
 	series visibility - condition
@@ -222,78 +225,6 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 	}
 })
 
-tape('term1=geneExp, term2=categorical', function (test) {
-	test.timeoutAfter(5000)
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'summary',
-					childType: 'barchart',
-					term: {
-						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
-						q: { mode: 'continuous' }
-					},
-					term2: {
-						id: 'diaggrp'
-					}
-				}
-			]
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-	async function runTests(barchart) {
-		const barchartDiv = barchart.Inner.dom.barchartDiv
-		await testBarchart(barchart, barchartDiv)
-		if (test._ok) barchart.Inner.app.destroy()
-		test.end()
-	}
-	async function testBarchart(barchart, barchartDiv) {
-		const groups = await detectGte({ elem: barchartDiv.node(), selector: '.sjpp-bc-bar', count: 6 })
-		test.ok(groups, 'categorical groups exist')
-	}
-})
-
-tape('term1=geneExp, term2=survival', function (test) {
-	test.timeoutAfter(5000)
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'summary',
-					childType: 'barchart',
-					term: {
-						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
-						q: { mode: 'continuous' }
-					},
-					term2: {
-						id: 'efs'
-					}
-				}
-			]
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-	async function runTests(barchart) {
-		const barchartDiv = barchart.Inner.dom.barchartDiv
-		await testBarchart(barchart, barchartDiv)
-		if (test._ok) barchart.Inner.app.destroy()
-		test.end()
-	}
-	async function testBarchart(barchart, barchartDiv) {
-		const groups = await detectGte({ elem: barchartDiv.node(), selector: '.sjpp-bc-bar', count: 2 })
-		test.ok(groups, 'survival groups exist')
-	}
-})
-
 tape('term0=defaultbins, term1=categorical', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
@@ -313,9 +244,8 @@ tape('term0=defaultbins, term1=categorical', function (test) {
 		}
 	})
 
-	let barDiv
 	function testNumCharts(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
+		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
 		if (test._ok) barchart.Inner.app.destroy()
@@ -341,11 +271,123 @@ tape('term1=geneVariant', function (test) {
 		}
 	})
 
-	let barDiv
 	function testNumCharts(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
+		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
-		test.true(numCharts > 2, 'should have more than 2 charts by TP53')
+		test.true(numCharts > 2, 'Should have more than 2 charts by TP53 as a gene variant term')
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=geneExp', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						term: { type: 'geneExpression', gene: 'TP53', name: 'TP53' },
+						q: { mode: 'discrete' }
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+
+		const numBars = barDiv.selectAll('rect').size()
+		test.ok(
+			barDiv.selectAll('.pp-sbar-div').size() == 1 && barchart.Inner.config.term.bins.length && numBars,
+			'Should correctly render a bar chart for a gene expression term = TP53'
+		)
+
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=numeric term2=geneExp with default bins', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: { id: 'agedx' },
+					term2: {
+						term: { type: 'geneExpression', gene: 'TP53', name: 'TP53' },
+						q: { mode: 'discrete' }
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+
+		const numBarCalls = barDiv.selectAll('.bars-cell').size()
+		const tableRows = barDiv.selectAll('tr').size()
+		test.equal(
+			numBarCalls,
+			tableRows - 1,
+			'Should display the correct number of bars and table rows when overlaid by gene expression term.'
+		)
+
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=geneExp, term2=categorical', function (test) {
+	test.timeoutAfter(5000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'discrete' }
+					},
+					term2: {
+						id: 'diaggrp'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+
+		const numBarCells = await detectGte({ elem: barDiv.node(), selector: '.bars-cell', count: 22 })
+		const tableRows = await detectGte({ elem: barDiv.node(), selector: 'tr', count: 22 })
+		test.ok(
+			numBarCells >= tableRows,
+			'Should display the correct number of bars and table rows when gene expression term is overlaid by categorical term.'
+		)
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
