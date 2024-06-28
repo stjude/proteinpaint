@@ -232,7 +232,7 @@ function getDefaultQ(
 		}
 	}
 	if (term.type == 'geneVariant') return {}
-	if (term.type == TermTypes.CELLTYPE) return {}
+	if (term.type == TermTypes.SINGLECELL_CELLTYPE) return {}
 
 	throw 'unknown term type'
 }

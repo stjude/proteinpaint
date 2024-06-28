@@ -13,7 +13,7 @@ export const graphableTypes = new Set([
 	'geneExpression',
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
-	TermTypes.CELLTYPE
+	TermTypes.SINGLECELL_CELLTYPE
 ])
 /*
 	isUsableTerm() will

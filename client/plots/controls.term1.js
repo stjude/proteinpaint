@@ -138,7 +138,7 @@ function setRenderers(self) {
 				break
 			case TermTypes.SINGLECELL_GENE_EXPRESSION:
 				break
-			case TermTypes.CELLTYPE:
+			case TermTypes.SINGLECELL_CELLTYPE:
 				break
 			default:
 				throw 'unknown term type'

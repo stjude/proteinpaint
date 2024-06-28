@@ -221,14 +221,20 @@ async function getSampleData(q) {
 				}
 				samples[sampleId][tw.$id] = { value, key }
 			}
-		} else if (tw.term.type == TermTypes.CELLTYPE) {
+		} else if (tw.term.type == TermTypes.SINGLECELL_CELLTYPE) {
 			const data = await q.ds.queries?.singleCell?.data.get({ sample: tw.term.sample, plots: [tw.term.plot] })
+			const groups = tw.q?.groupsetting?.customset?.groups
 			for (const cell of data.plots[0].cells) {
 				const sampleId = cell.cellId
 				if (!(sampleId in samples)) {
 					samples[sampleId] = { sample: sampleId }
 				}
-				const value = cell.category
+				let value = cell.category
+				if (groups) {
+					//custom groups where created
+					const group = groups.find(g => Object.values(g.values).find(v => v.key == value))
+					if (group) value = group.name
+				}
 				samples[sampleId][tw.$id] = { value, key: value }
 			}
 		} else {

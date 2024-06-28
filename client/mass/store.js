@@ -595,7 +595,7 @@ function validatePlotTerm(t, vocabApi) {
 			break
 		case TermTypes.SINGLECELL_GENE_EXPRESSION:
 			break
-		case TermTypes.CELLTYPE:
+		case TermTypes.SINGLECELL_CELLTYPE:
 			break
 		default:
 			if (t.term.isgenotype) {
