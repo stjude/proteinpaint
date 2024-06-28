@@ -26,6 +26,7 @@ export async function getHandler(self) {
 }
 
 export async function fillTW(tw: SingleCellGeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+	if (!tw.term?.sample) throw 'singleCellGeneExpression tw.term.sample must be provided'
 	if (typeof tw.term.gene != 'string' || !tw.term.gene)
 		throw 'singleCellGeneExpression tw.term.gene must be non-empty string'
 	if (!tw.term.name) tw.term.name = tw.term.gene // auto fill if .name is missing
