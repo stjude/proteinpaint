@@ -10,7 +10,7 @@ import {
 	BaseGroupSet,
 	GroupEntry
 } from '../../shared/types/terms/term.ts'
-import { CategoricalQ, CategoricalTW } from '../../shared/types/terms/categorical.ts'
+import { CategoricalQ, SingleCellCellTypeTW } from '../../shared/types/terms/singleCellCellType.ts'
 import { PillData } from '../types.ts'
 import { copyMerge } from '../../rx/index.js'
 
@@ -367,7 +367,9 @@ export function setCategoryMethods(self) {
 	// }
 }
 
-export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ = null) {
+export function fillTW(tw: SingleCellCellTypeTW, vocabApi: VocabApi, defaultQ = null) {
+	if (!tw.term?.sample) throw 'missing term.sample'
+	if (!tw.term?.plot) throw 'missing term.plot'
 	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
 	if (!tw.q.groupsetting) tw.q.groupsetting = {}
 	if (!tw.term.groupsetting) tw.term.groupsetting = {}
