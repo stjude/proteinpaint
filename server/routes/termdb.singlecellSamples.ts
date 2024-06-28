@@ -1,6 +1,5 @@
 import fs from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
 import { read_file } from '#src/utils.js'
 import run_R from '#src/run_R.js'
 import serverconfig from '#src/serverconfig.js'
