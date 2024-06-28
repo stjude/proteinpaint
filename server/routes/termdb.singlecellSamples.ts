@@ -148,7 +148,6 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 						throw 'failed to load sc data file'
 					}
 					file2Lines[tsvfile] = (await read_file(tsvfile)).trim().split('\n')
-					console.log('read file', tsvfile)
 				}
 
 				const lines = file2Lines[tsvfile]

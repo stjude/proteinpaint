@@ -1,6 +1,6 @@
 import { GroupSettingMethods } from './groupsetting.ts'
 // import { filterInit } from '#filter'
-import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
+import { getPillNameDefault, set_hiddenvalues } from '../termsetting.ts'
 import { VocabApi } from '../../shared/types/index'
 import {
 	Term,
@@ -9,10 +9,10 @@ import {
 	CustomGroupSetting,
 	BaseGroupSet,
 	GroupEntry
-} from '../../shared/types/terms/term'
-import { CategoricalQ, CategoricalTW } from '../../shared/types/terms/categorical'
-import { PillData } from '../types'
-import { copyMerge } from '../../rx'
+} from '../../shared/types/terms/term.ts'
+import { CategoricalQ, CategoricalTW } from '../../shared/types/terms/categorical.ts'
+import { PillData } from '../types.ts'
+import { copyMerge } from '../../rx/index.js'
 
 /*
 ********************** EXPORTED

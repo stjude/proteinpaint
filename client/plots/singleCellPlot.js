@@ -106,8 +106,8 @@ class singleCellPlot {
 						},
 						term2: {
 							term: {
-								type: TermTypes.CELLTYPE,
-								id: TermTypes.CELLTYPE,
+								type: TermTypes.SINGLECELL_CELLTYPE,
+								id: TermTypes.SINGLECELL_CELLTYPE,
 								name: 'Cell type',
 								sample: state.config.sample,
 								plot: plot.name,
