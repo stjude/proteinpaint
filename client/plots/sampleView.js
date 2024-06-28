@@ -20,20 +20,24 @@ class SampleView {
 		const div = opts.holder
 			.append('div')
 			.style('display', 'flex')
+			.style('flex-direction', 'row')
 			.style('flex-wrap', 'wrap')
 			.style('justify-content', 'flex-start')
 			.style('width', '110vw')
 		const controlsDiv = div.insert('div').style('display', 'inline-block')
-		const leftDiv = div.insert('div').style('display', 'inline-block').style('vertical-align', 'top') //div besides controls, with dictionary
-		const plotsDiv = div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
+		const leftDiv = div.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+
+		const plotsDiv = div //div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
 		const sampleDiv = leftDiv.insert('div').style('display', 'inline-block').style('padding', '20px')
 
-		const tableDiv = leftDiv.insert('div').style('padding', '10px')
+		const tableDiv = leftDiv.insert('div').style('padding', '10px').style('width', '45vw')
+
 		const table = tableDiv.append('table').style('border-collapse', 'collapse')
 		const thead = table.append('thead')
 		this.dom = {
 			header: opts.header,
 			holder: opts.holder,
+			leftDiv,
 			controlsDiv,
 			sampleDiv,
 			tableDiv,
@@ -52,6 +56,7 @@ class SampleView {
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
 		await this.setControls(q)
+		await this.renderPlots(state, state.samples)
 	}
 
 	async setSampleSelect(appState) {
@@ -181,7 +186,6 @@ class SampleView {
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
-		await this.renderPlots(this.state, this.state.samples)
 		this.showVisiblePlots()
 
 		this.termsById = this.getTermsById(this.state)
@@ -207,6 +211,17 @@ class SampleView {
 				title: `Option to show/hide dictionary table with sample values`
 			}
 		]
+
+		if (q?.DZImages) {
+			inputs.push({
+				boxLabel: 'Visible',
+				label: q.DZImages.type,
+				type: 'checkbox',
+				chartType: 'sampleView',
+				settingsKey: 'showDzi',
+				title: `Option to show/hide deep zoom images`
+			})
+		}
 
 		if (q?.singleSampleMutation) {
 			inputs.push({
@@ -248,17 +263,6 @@ class SampleView {
 				chartType: 'sampleView',
 				settingsKey: 'showBrain',
 				title: `Option to show/hide brain imaging`
-			})
-		}
-
-		if (q?.DZImages) {
-			inputs.push({
-				boxLabel: 'Visible',
-				label: q.DZImages.type,
-				type: 'checkbox',
-				chartType: 'sampleView',
-				settingsKey: 'showDzi',
-				title: `Option to show/hide deep zoom images`
 			})
 		}
 
@@ -451,16 +455,23 @@ class SampleView {
 
 	showVisiblePlots() {
 		this.dom.sampleDiv.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
-		for (const div of this.discoPlots) div.style('display', this.settings.showDisco ? 'table-cell' : 'none')
-		for (const div of this.singleSamplePlots)
-			div.style('display', this.settings.showSingleSample ? 'table-cell' : 'none')
-		for (const div of this.brainPlots) div.style('display', this.settings.showBrain ? 'table-cell' : 'none')
-		for (const div of this.imagePlots) div.style('display', this.settings.showImages ? 'table-cell' : 'none')
-		for (const div of this.dziPlots) div.style('display', this.settings.showDzi ? 'table-cell' : 'none')
+		this.showPlotsFromCategory(this.discoPlots, 'showDisco')
+		this.showPlotsFromCategory(this.singleSamplePlots, 'showSingleSample')
+		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
+		this.showPlotsFromCategory(this.imagePlots, 'showImages')
+		this.showPlotsFromCategory(this.dziPlots, 'showDzi')
+	}
+
+	showPlotsFromCategory(plots, key) {
+		for (const div of plots) {
+			const visibleSample = this.state.samples.find(s => s.sampleName == div.sample.sampleName)
+			div.cellDiv.style('display', this.settings[key] && visibleSample ? 'table-cell' : 'none')
+		}
 	}
 
 	async renderPlots(state, samples) {
-		this.dom.plotsDiv.selectAll('*').remove()
+		//this.dom.plotsDiv.selectAll('*').remove()
+
 		const plotsDiv = this.dom.plotsDiv
 		this.discoPlots = []
 		this.singleSamplePlots = []
@@ -468,12 +479,33 @@ class SampleView {
 		this.imagePlots = []
 		this.dziPlots = []
 
+		if (state.termdbConfig.queries?.DZImages) {
+			let div = plotsDiv.append('div')
+			if (state.samples.length == 1) div.style('display', 'inline-block')
+			for (const sample of samples) {
+				const data = await dofetch3('sampledzimages', {
+					body: {
+						genome: this.app.opts.genome.name,
+						dslabel: state.vocab.dslabel,
+						sample_id: sample.sampleName
+					}
+				})
+				if (data.sampleDZImages?.length > 0) {
+					const cellDiv = div.append('div').style('display', 'inline-block')
+					this.dziPlots.push({ sample, cellDiv })
+					dziviewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleDZImages)
+				}
+			}
+		}
+
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			let div = plotsDiv.append('div')
+			if (state.samples.length == 1) div.style('display', 'inline-block')
+
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
-				this.discoPlots.push(cellDiv)
-				if (this.state.samples.length > 1)
+				this.discoPlots.push({ sample, cellDiv })
+				if (state.samples.length > 1)
 					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 				const discoPlotImport = await import('./plot.disco.js')
 				discoPlotImport.default(
@@ -488,11 +520,12 @@ class SampleView {
 		if (state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
 				let div = plotsDiv.append('div')
+				if (state.samples.length == 1) div.style('display', 'inline-block')
 				for (const sample of samples) {
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
 					const plotDiv = div.insert('div').style('display', 'table-cell').style('padding', '20px')
-					this.singleSamplePlots.push(plotDiv)
-					if (this.state.samples.length > 1)
+					this.singleSamplePlots.push({ sample, cellDiv: plotDiv })
+					if (state.samples.length > 1)
 						plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
 					const ssgqImport = await import('./plot.ssgq.js')
 					await ssgqImport.plotSingleSampleGenomeQuantification(
@@ -508,12 +541,15 @@ class SampleView {
 		}
 		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		if (state.termdbConfig.queries?.NIdata && showBrainImaging) {
+			if (state.samples.length == 1) div.style('display', 'inline-block')
+
 			for (const k in state.termdbConfig.queries?.NIdata) {
 				let div = plotsDiv.append('div')
+				if (state.samples.length == 1) div.style('display', 'inline-block')
 				for (const sample of samples) {
 					const plotDiv = div.insert('div').style('display', 'inline-block')
-					this.brainPlots.push(plotDiv)
-					if (this.state.samples.length > 1)
+					this.brainPlots.push({ sample, cellDiv: plotDiv })
+					if (state.samples.length > 1)
 						plotDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 
 					const brainImagingImport = await import('./plot.brainImaging.js')
@@ -530,31 +566,14 @@ class SampleView {
 		}
 		if (state.termdbConfig?.queries?.images) {
 			let div = plotsDiv.append('div')
+			if (state.samples.length == 1) div.style('display', 'inline-block')
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
-				this.imagePlots.push(cellDiv)
-				if (this.state.samples.length > 1)
+				this.imagePlots.push({ sample: cellDiv })
+				if (state.samples.length > 1)
 					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 				const imagePlotImport = await import('./imagePlot.js')
 				imagePlotImport.renderImagePlot(state, cellDiv, sample)
-			}
-		}
-		if (state.termdbConfig.queries?.DZImages) {
-			let div = plotsDiv.append('div')
-
-			for (const sample of samples) {
-				const data = await dofetch3('sampledzimages', {
-					body: {
-						genome: this.app.opts.genome.name,
-						dslabel: this.state.vocab.dslabel,
-						sample_id: sample.sampleName
-					}
-				})
-				if (data.sampleDZImages?.length > 0) {
-					const cellDiv = div.append('div').style('display', 'inline-block')
-					this.dziPlots.push(cellDiv)
-					dziviewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleDZImages)
-				}
 			}
 		}
 	}
