@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
-import { read_file, get_header_txt } from '#src/utils.js'
+import { read_file } from '#src/utils.js'
+import run_R from '#src/run_R.js'
 import serverconfig from '#src/serverconfig.js'
 import {
 	SingleCellQuery,
@@ -190,54 +190,27 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 	G.sample2gene2expressionBins = {} // cache for binning gene expression values
 
-	// per-sample matrix files are not validated up front, but are verified on the fly. subject to change
+	// per-sample rds files are not validated up front, and simply used as-is on the fly
 	G.get = async (q: any) => {
 		// q {sample:str, gene:str}
-		const tsvfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample)
-		const cell2value = {} // data returned by getter. key: cell barcode in header, value: exp value
-
+		const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample + '.rds')
 		try {
-			await fs.promises.stat(tsvfile)
+			await fs.promises.stat(rdsfile)
 		} catch (e: any) {
-			return cell2value
-			//throw 'geneExp matrix file not found or readable for this sample'
-			// do not throw when matrix file is unreabable, but returns blank data. this simplifies client logic
+			return {}
+			// do not throw when file is missing/unreabable, but returns blank data. this simplifies client logic
 		}
-		const header = (await get_header_txt(tsvfile)).split('\t')
-		if (header.length == 0) throw 'blank header line'
-		await grepMatrix4geneExpression(tsvfile, q.gene, header, cell2value)
-		return cell2value
+
+		let out // object of barcodes as keys, and values as value
+		try {
+			out = JSON.parse(
+				await run_R(path.join(serverconfig.binpath, 'utils', 'getGeneFromMatrix.R'), null, [rdsfile, q.gene])
+			)
+		} catch (e) {
+			// if gene is not found will emit such msg
+			return {}
+		}
+
+		return out
 	}
-}
-
-function grepMatrix4geneExpression(tsvfile: string, gene: string, header: string[], cell2value: any) {
-	return new Promise((resolve, reject) => {
-		const cp = spawn('grep', ['-m', '1', gene + '\t', tsvfile])
-		const out: string[] = [],
-			err: string[] = []
-		cp.stdout.on('data', d => out.push(d))
-		cp.stderr.on('data', d => err.push(d))
-		cp.on('close', () => {
-			const e = err.join('')
-			if (e) reject(e)
-			// got data
-
-			const line = out.join('').trim() // should find one line of text
-			if (!line) {
-				// blank line. gene is not found and missed out in this experiment
-				resolve(null) // add null to avoid tsc err
-			}
-
-			const l = line.split('\t')
-			if (l.length != header.length)
-				reject(`number of fields differ between data line and header: ${l.length} ${header.length}`)
-
-			for (let i = 1; i < l.length; i++) {
-				const v = Number(l[i])
-				if (Number.isNaN(v)) continue // invalid value
-				cell2value[header[i]] = v
-			}
-			resolve(null)
-		})
-	})
 }
