@@ -231,8 +231,13 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	}
 	if (q.singleCell) {
 		// samples and data are required properties
-		const plots: string[] =
-			'plots' in q.singleCell.data ? (q.singleCell.data as SingleCellDataNative).plots.map(p => p.name) : []
+		const plots: any[] =
+			'plots' in q.singleCell.data
+				? (q.singleCell.data as SingleCellDataNative).plots.map(p => ({
+						name: p.name,
+						colorColumn: p.colorColumn.name
+				  }))
+				: []
 		q2.singleCell = {
 			samples: {
 				firstColumnName: q.singleCell.samples.firstColumnName,

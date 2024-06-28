@@ -2,7 +2,7 @@ import initBinConfig from '#shared/termdb.initbinconfig'
 import { TermdbVocab } from './TermdbVocab'
 import { FrontendVocab } from './FrontendVocab'
 import { isNumeric } from '#shared/helpers'
-import { TermTypes } from 'shared/terms'
+import { TermTypes } from '#shared/terms'
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
