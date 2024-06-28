@@ -355,19 +355,11 @@ export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNa
 
 export type SingleCellGeneExpressionNative = {
 	src: 'native'
-	/** path to gene-by-cell matrices per sample
-	each matrix file:
-		- is named by sample name
-		- is a tab-delimited text file
-		- has a header line: `gene \t cell1 \t cell2 ...`
-		- each gene has a line with gene symbol at first column, and sctransform values in rest columns
-
-	note that such matrices should be available for all samples present from queries.singleCell.samples{}
-	if a sample is missing its matrix in this folder, it may cause unexpected behavior
-	*/
+	/** path to R rds files, each is a gene-by-cell matrix for a sample, with ".rdx" suffix. missing files are detected and handled */
 	folder: string
 	/** dynamically added getter */
 	get?: (q: any) => any
+	/** cached gene exp bins */
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 }
 
