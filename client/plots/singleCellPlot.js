@@ -299,6 +299,7 @@ class singleCellPlot {
 
 		plot.plotDiv = this.dom.tableDiv
 			.append('div')
+			.style('overflow', 'hidden')
 			.style('display', 'inline-block')
 			.style('padding', '10px')
 			.style('flex-grow', 1)
@@ -319,7 +320,7 @@ class singleCellPlot {
 		plot.svg = svg
 
 		const zoom = d3zoom()
-			.scaleExtent([0.5, 10])
+			.scaleExtent([0.5, 5])
 			.on('zoom', e => this.handleZoom(e, plot))
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
@@ -336,13 +337,20 @@ class singleCellPlot {
 			.append('circle')
 			.attr('r', 1.5)
 			.attr('fill', d => this.getColor(d, plot))
-			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
+			.style('fill-opacity', d => this.getOpacity(d))
+	}
+
+	getOpacity(d) {
+		if (this.config.hiddenClusters.includes(d.category)) return 0
+		return 0.7
 	}
 
 	getColor(d, plot) {
+		const noExpColor = '#FAFAFA'
 		if (this.state.config.gene) {
+			if (!d.geneExp) return noExpColor
 			if (plot.colorGenerator) return plot.colorGenerator(d.geneExp)
-			return 'gray' //no gene expression data
+			return noExpColor //no gene expression data for this plot
 		}
 		return plot.colorMap[d.category]
 	}
