@@ -2,12 +2,12 @@ import {
 	TermdbTopVariablyExpressedGenesRequest,
 	TermdbTopVariablyExpressedGenesResponse
 } from '#shared/types/routes/termdb.topVariablyExpressedGenes.ts'
-import { gdcGetCasesWithExpressionDataFromCohort } from '../src/mds3.gdc.js'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'
+import { makeFilter } from '#src/mds3.gdc.js'
 
 export const api = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -126,28 +126,23 @@ async function computeGenes4nativeDs(
 function gdcValidateQuery(ds: any, genome: any) {
 	ds.queries.topVariablyExpressedGenes.getGenes = async (q: TermdbTopVariablyExpressedGenesRequest) => {
 		if (serverconfig.features.gdcGenes) {
-			// for testing on dev, must not set on prod!! delete to trigger api query
-			console.log('!!GDC!! using serverconfig.features.gdcGenes[]')
+			console.log(
+				'!!GDC!! using serverconfig.features.gdcGenes[] but not live api query. only use this on DEV and never on PROD!'
+			)
 			return serverconfig.features.gdcGenes as string[]
 		}
 
-		// disable when caching is incomplete (particularly cases with gene exp data); to prevent showing wrong data on client
-		if (!ds.__gdc.doneCaching) throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-
-		// based on current cohort, get list of cases with exp data, as input of next api query
-		const caseLst = await gdcGetCasesWithExpressionDataFromCohort(q, ds)
-		if (caseLst.length == 0) {
-			// there are no cases with gene exp data
-			return [] as string[]
+		if (!ds.__gdc.doneCaching) {
+			// disable when caching is incomplete (particularly cases with gene exp data); to prevent showing wrong data on client
+			throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
 		}
 
-		// change to this when api is available on prod
 		const { host, headers } = ds.getHostHeaders(q)
 		const url = path.join(host.geneExp, '/gene_expression/gene_selection')
 		try {
 			const response = await got.post(url, {
 				headers,
-				body: JSON.stringify(getGeneSelectionArg(q, caseLst))
+				body: JSON.stringify(getGeneSelectionArg(q))
 			})
 
 			const re = JSON.parse(response.body)
@@ -173,29 +168,19 @@ function gdcValidateQuery(ds: any, genome: any) {
 		}
 	}
 
-	function getGeneSelectionArg(q: any, caseLst: any) {
-		//to hide messy logic during testing phase
-
-		/* when api performance issue is resolved, return this
-		return {
-			case_ids: caseLst,
-			gene_type:'protein_coding',
+	function getGeneSelectionArg(q: any) {
+		const arg = {
+			case_filters: makeFilter(q),
 			selection_size: Number(q.maxGenes)
 		}
-		*/
 
-		//////////////////////////////////////////////////
-		//
-		// !!!!!!!!!!!!!!!! TEMPORARY !!!!!!!!!!!!!!!!!!!!
-		//
-		//////////////////////////////////////////////////
-		// limit the case_ids length, and restrict pool to CGC genes, otherwise the request times out !!!
-		// must revert asap
-		return {
-			case_ids: caseLst, //.slice(0, 20),
-			gene_ids: tempGetCGCgenes(genome),
-			selection_size: Number(q.maxGenes)
-		}
+		// TODO DELETE THIS and replace with new logic
+		arg.gene_ids = tempGetCGCgenes(genome)
+
+		// TODO allow using all genes, or user-defined set
+		//arg.gene_type='protein_coding'
+
+		return arg
 	}
 }
 

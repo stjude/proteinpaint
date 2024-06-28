@@ -31,7 +31,9 @@ validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
 gdc_validate_query_geneExpression
-	gdcGetCasesWithExpressionDataFromCohort
+	geneExpression_getGenes
+	getExpressionData
+		getCases4expclustering
 gdc_validate_query_singleCell_samples
 gdc_validate_query_singleCell_data
 querySamples_gdcapi
@@ -131,16 +133,15 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		// getter returns this data structure
 		const term2sample2value = new Map() // k: gene symbol, v: { <case submitter id>: value }
 
-		const t1 = new Date()
-
-		// get all cases from current filter
-		const caseLst = await gdcGetCasesWithExpressionDataFromCohort(q, ds) // list of case uuid
-		if (caseLst.length == 0) return { term2sample2value, byTermId: {} } // no cases with exp data
-
 		const t2 = new Date()
-		mayLog(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
 
-		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.terms, genome, caseLst, ds, q)
+		let cases4clustering
+		if (q.forClusteringAnalysis) {
+			cases4clustering = await getCases4expclustering(q, ds)
+			mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', new Date() - t2, 'ms')
+		}
+
+		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.terms, cases4clustering, genome, ds, q)
 
 		if (ensgLst.length == 0) return { term2sample2value, byTermId: {} } // no valid genes
 
@@ -154,9 +155,8 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 			term2sample2value.set(geneSymbol, new Map())
 		}
 
-		const bySampleId = await getExpressionData(q, ensgLst, caseLst, ensg2symbol, term2sample2value, ds)
-		/* returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
-		 */
+		const bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2symbol, term2sample2value, ds)
+		// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
 
 		const t4 = new Date()
 		mayLog('gene-case matrix built:', t4 - t3, 'ms')
@@ -170,10 +170,8 @@ genes: []
 	list of gene coming from client query
 genome:
 	for converting symbol to ensg
-case_ids:[]
-	required for hitting /gene_selection to screen ensg list before returning
 */
-async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
+async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 	// convert given gene symbols to ENSG for api query
 	const ensgLst = []
 	// convert ensg back to symbol for using in data structure
@@ -215,7 +213,7 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 				headers,
 				timeout: false, // instead of 10 second default
 				json: {
-					case_ids,
+					case_ids: cases4clustering,
 					gene_ids: ensgLst,
 					selection_size: ensgLst.length
 				}
@@ -235,8 +233,8 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 	}
 }
 
-// return list of case uuid with gene exp data
-export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
+// make a gdc filter based on pp client request arguments
+export function makeFilter(q) {
 	const f = { op: 'and', content: [] }
 	if (q.filter0) {
 		f.content.push(q.filter0)
@@ -249,72 +247,40 @@ export async function gdcGetCasesWithExpressionDataFromCohort(q, ds) {
 		const g = filter2GDCfilter(q.filter)
 		if (g) f.content.push(g)
 	}
-
-	const json = { fields: 'case_id' }
-
-	// set size, which is always required for /cases/
-	if (q.forClusteringAnalysis) {
-		// request is about clustering. the app will limit max number of allowed cases by hardcoded value. times 10 is a generous guess to allow for cases without gene exp data, as is from current cohort
-		json.size = maxCase4geneExpCluster * 10
-	} else {
-		// request is not about clustering. important to allow to return all gdc cases, thus when running oncomatrix without using any cohort, a gene exp term will be able to show values for *ALL* the cases with exp data!
-		json.size = ds.__gdc.caseid2submitter.size
-	}
-
-	if (f.content.length) json.case_filters = f
-
-	try {
-		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky.post(path.join(host.rest, 'cases'), { timeout: false, headers, json }).json()
-		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
-		const lst = []
-		for (const h of re.data.hits) {
-			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
-				lst.push(h.id)
-				if (q.forClusteringAnalysis && lst.length == maxCase4geneExpCluster) {
-					// when running clustering analysis, to not to overload things, stop collecting when max number of cases is reached
-					break
-				}
-			}
-		}
-		return lst
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		throw e
-	}
+	return f
 }
 
-async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, term2sample2value, ds) {
+async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, term2sample2value, ds) {
+	const arg = {
+		gene_ids,
+		format: 'tsv',
+		tsv_units: 'uqfpkm'
+		//tsv_units: 'median_centered_log2_uqfpkm'
+	}
+
+	if (q.forClusteringAnalysis) {
+		/* is for clustering analysis. must retrieve list of cases passing filter and with exp data, and limit by max
+		otherwise the app will overload
+		*/
+		arg.case_ids = cases4clustering
+	} else {
+		// not for clustering analysis. do not limit by cases, so that e.g. a gene exp row will show all values in oncomatrix
+		arg.case_filters = makeFilter(q)
+	}
+
 	const { host, headers } = ds.getHostHeaders(q)
-	// do not use headers here that has accept: 'application/json' ???
-	// headers.accept = 'text/plain'
-	const re = await ky
-		.post(`${host.geneExp}/gene_expression/values`, {
-			timeout: false,
-			headers,
-			json: {
-				case_ids,
-				gene_ids,
-				format: 'tsv',
-				tsv_units: 'uqfpkm'
-				//tsv_units: 'median_centered_log2_uqfpkm'
-			}
-		})
-		.text()
+	const re = await ky.post(`${host.geneExp}/gene_expression/values`, { timeout: false, headers, json: arg }).text()
 	const lines = re.trim().split('\n')
 	if (lines.length <= 1) throw 'less than 1 line from tsv response.body'
 
 	// header line:
 	// gene \t case1 \t case 2 \t ...
 	const caseHeader = lines[0].split('\t').slice(1) // order of case uuid in tsv header
-	if (caseHeader.length != case_ids.length) throw 'sample column length != case_ids.length'
-	//const submitterHeader = [] // convert case ids from header into submitter ids, for including in data structure
 
 	const bySampleId = {}
 	for (const c of caseHeader) {
 		const s = ds.__gdc.caseid2submitter.get(c)
 		if (!s) throw 'case submitter id unknown for a uuid'
-		//submitterHeader.push(s)
 		bySampleId[c] = { label: s }
 	}
 
@@ -336,6 +302,35 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, term2sample
 		}
 	}
 	return bySampleId
+}
+
+// should only use for gene exp clustering
+async function getCases4expclustering(q, ds) {
+	const json = {
+		fields: 'case_id',
+		case_filters: makeFilter(q),
+		// hiercluster app will limit max number of allowed cases by hardcoded value. times 10 is a generous guess to allow for cases without gene exp data, as is from current cohort
+		size: maxCase4geneExpCluster * 10
+	}
+	try {
+		const { host, headers } = ds.getHostHeaders(q)
+		const re = await ky.post(path.join(host.rest, 'cases'), { timeout: false, headers, json }).json()
+		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
+		const lst = []
+		for (const h of re.data.hits) {
+			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
+				lst.push(h.id)
+				if (lst.length == maxCase4geneExpCluster) {
+					// to not to overload clustering app, stop collecting when max number of cases is reached
+					break
+				}
+			}
+		}
+		return lst
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		throw e
+	}
 }
 
 /* tandem rest api query
