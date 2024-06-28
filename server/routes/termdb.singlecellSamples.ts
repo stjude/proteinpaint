@@ -131,21 +131,27 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 			if (ds.queries.singleCell.geneExpression && q.gene) {
 				geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
 			}
-
+			const file2Lines = {}
 			for (const plot of D.plots) {
 				if (!q.plots.includes(plot.name)) continue
 				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, q.sample + plot.fileSuffix)
-				try {
-					await fs.promises.stat(tsvfile)
-				} catch (e: any) {
-					if (e.code == 'ENOENT') {
-						// no file found for this sample; allowed because sampleView tests if that sample has sc data or not
-						continue
+				//some plots share the same file, just read different columns
+				if (!file2Lines[tsvfile]) {
+					try {
+						await fs.promises.stat(tsvfile)
+					} catch (e: any) {
+						if (e.code == 'ENOENT') {
+							// no file found for this sample; allowed because sampleView tests if that sample has sc data or not
+							continue
+						}
+						if (e.code == 'EACCES') throw 'cannot read file, permission denied'
+						throw 'failed to load sc data file'
 					}
-					if (e.code == 'EACCES') throw 'cannot read file, permission denied'
-					throw 'failed to load sc data file'
+					file2Lines[tsvfile] = (await read_file(tsvfile)).trim().split('\n')
+					console.log('read file', tsvfile)
 				}
-				const lines = (await read_file(tsvfile)).trim().split('\n')
+
+				const lines = file2Lines[tsvfile]
 				// 1st line is header
 				const cells = [] as Cell[]
 				for (let i = 1; i < lines.length; i++) {

@@ -74,45 +74,48 @@ class singleCellPlot {
 				hideHelp: true,
 				focusOff: true
 			})
+			const select = searchGeneDiv.append('select')
+			for (const plot of state.termdbConfig?.queries.singleCell.data.plots) {
+				select.append('option').text(plot.colorColumn)
+			}
 			const violinBt = searchGeneDiv
 				.append('button')
-				.text('Open violins')
+				.text('Open violin')
 				.style('margin-left', '2px')
 				.property('disabled', state.config.gene ? false : true)
 			violinBt.on('click', () => {
 				const gene = geneSearch.geneSymbol || state.config.gene
-
-				for (const plot of this.plots) {
-					const values = {}
-					for (const cluster of plot.clusters) {
-						values[cluster] = { key: cluster, value: cluster }
-					}
-					this.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'violin',
+				const name = this.state.config.plots.find(p => p.colorColumn == select.node().value).name
+				const plot = this.plots.find(p => p.name == name)
+				const values = {}
+				for (const cluster of plot.clusters) {
+					values[cluster] = { key: cluster, value: cluster }
+				}
+				this.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'violin',
+						term: {
 							term: {
-								term: {
-									type: TermTypes.SINGLECELL_GENE_EXPRESSION,
-									id: gene,
-									gene,
-									name: gene,
-									sample: state.config.sample
-								}
-							},
-							term2: {
-								term: {
-									type: TermTypes.CELLTYPE,
-									id: TermTypes.CELLTYPE,
-									name: 'Cell type',
-									sample: state.config.sample,
-									plot: plot.name,
-									values
-								}
+								type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+								id: gene,
+								gene,
+								name: gene,
+								sample: state.config.sample
+							}
+						},
+						term2: {
+							term: {
+								type: TermTypes.CELLTYPE,
+								id: TermTypes.CELLTYPE,
+								name: 'Cell type',
+								sample: state.config.sample,
+								plot: plot.name,
+								values
 							}
 						}
-					})
-				}
+					}
+				})
 			})
 		}
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
@@ -193,10 +196,10 @@ class singleCellPlot {
 				boxLabel: ''
 			}
 		]
-		for (const plotName of state.config.plotNames) {
-			const id = plotName.replace(/\s+/g, '')
+		for (const plot of state.config.plots) {
+			const id = plot.name.replace(/\s+/g, '')
 			inputs.push({
-				label: plotName,
+				label: plot.name,
 				type: 'checkbox',
 				chartType: 'singleCellPlot',
 				settingsKey: `show${id}`,
@@ -237,10 +240,10 @@ class singleCellPlot {
 
 		this.legendRendered = false
 		const plots = []
-		for (const plot of this.config.plotNames) {
-			const id = plot.replace(/\s+/g, '')
+		for (const plot of this.config.plots) {
+			const id = plot.name.replace(/\s+/g, '')
 			const display = this.settings[`show${id}`]
-			if (display) plots.push(plot)
+			if (display) plots.push(plot.name)
 		}
 		const body = { genome: this.state.genome, dslabel: this.state.dslabel, plots }
 		let sample
@@ -714,8 +717,8 @@ export async function getPlotConfig(opts, app) {
 	try {
 		const plots = app.vocabApi.termdbConfig?.queries?.singleCell.data.plots
 		const settings = getDefaultSingleCellSettings()
-		for (const name of plots) {
-			const id = name.replace(/\s+/g, '')
+		for (const plot of plots) {
+			const id = plot.name.replace(/\s+/g, '')
 			const key = `show${id}`
 			settings[key] = true
 		}
@@ -726,7 +729,7 @@ export async function getPlotConfig(opts, app) {
 			},
 			startColor: {},
 			stopColor: {},
-			plotNames: plots
+			plots
 		}
 		// may apply term-specific changes to the default object
 		const result = copyMerge(config, opts)
