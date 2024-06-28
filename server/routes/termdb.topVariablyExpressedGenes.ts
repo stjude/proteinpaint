@@ -169,7 +169,8 @@ function gdcValidateQuery(ds: any, genome: any) {
 	}
 
 	function getGeneSelectionArg(q: any) {
-		const arg = {
+		const arg: any = {
+			// add any to avoid tsc err
 			case_filters: makeFilter(q),
 			selection_size: Number(q.maxGenes)
 		}
