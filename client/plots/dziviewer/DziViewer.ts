@@ -15,7 +15,7 @@ export default class DziViewer {
 	async init() {
 		const state = this.app.getState()
 		const holder = this.opts.holder
-		holder.append('div').attr('id', 'openseadragon-viewer').style('width', '80vw').style('height', ' 80vh')
+		holder.append('div').attr('id', 'openseadragon-viewer').style('width', '60vw').style('height', ' 60vh')
 
 		const tileSources: Array<string> = []
 
