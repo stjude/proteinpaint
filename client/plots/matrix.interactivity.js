@@ -1607,10 +1607,15 @@ function setSampleGroupActions(self) {
 				// the filter for the categorical or survival term exist, but the current legend key is not there.
 				self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: self.activeLabel.grp.id })
 			}
-		} else if (term.type == 'integer' || term.type == 'float') {
+		} else if (
+			term.type == 'integer' ||
+			term.type == 'float' ||
+			term.type == TermTypes.GENE_EXPRESSION ||
+			term.type == TermTypes.METABOLITE_INTENSITY
+		) {
 			term.$id = tw.$id
 			const filterNew = {
-				legendGrpName: tw.term.id,
+				legendGrpName: tw.term.id || tw.term.name,
 				type: 'tvs',
 				tvs: {
 					isnot: true,
@@ -1634,7 +1639,9 @@ function setSampleGroupActions(self) {
 		if (!self.config.divideBy) return
 
 		const tw = self.activeLabel?.grp?.tw || self.config.divideBy
-		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(l => l.legendGrpName !== tw.term.id)
+		self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+			l => l.legendGrpName !== tw.term.id && l.legendGrpName != tw.term.name
+		)
 
 		self.app.dispatch({
 			type: 'plot_edit',
@@ -2697,7 +2704,12 @@ function setLengendActions(self) {
 				legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
 					l => l.legendGrpName == targetData.termid && l.tvs.values.find(v => v.key == targetData.key)
 				)
-			} else if (legendTerm.type == 'integer' || legendTerm.type == 'float') {
+			} else if (
+				legendTerm.type == 'integer' ||
+				legendTerm.type == 'float' ||
+				legendTerm.type == TermTypes.GENE_EXPRESSION ||
+				legendTerm.type == TermTypes.METABOLITE_INTENSITY
+			) {
 				legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
 					l => l.legendGrpName == targetData.termid && l.tvs.ranges.find(r => r.name == targetData.key)
 				)
@@ -2773,7 +2785,12 @@ function setLengendActions(self) {
 									// the filter for the categorical or survival term exist, but the current legend key is not there.
 									self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: targetData.key })
 								}
-							} else if (term.type == 'integer' || term.type == 'float') {
+							} else if (
+								term.type == 'integer' ||
+								term.type == 'float' ||
+								term.type == TermTypes.GENE_EXPRESSION ||
+								term.type == TermTypes.METABOLITE_INTENSITY
+							) {
 								term.$id = targetData.$id
 								const filterNew = {
 									legendGrpName: targetData.termid,
@@ -2966,7 +2983,12 @@ function setLengendActions(self) {
 									self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: l.key })
 								}
 							}
-						} else if (term.type == 'integer' || term.type == 'float') {
+						} else if (
+							term.type == 'integer' ||
+							term.type == 'float' ||
+							term.type == TermTypes.GENE_EXPRESSION ||
+							term.type == TermTypes.METABOLITE_INTENSITY
+						) {
 							term.$id = targetData.$id
 							for (const l of legendGrp.items) {
 								if (l.key == targetData.key) continue

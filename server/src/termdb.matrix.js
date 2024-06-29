@@ -153,12 +153,14 @@ async function getSampleData(q) {
 			if (tw.q?.mode == 'discrete') {
 				const min = tw.term.bins.min
 				const max = tw.term.bins.max
-				lst =
-					tw.q.type == 'regular-bin'
-						? compute_bins(tw.q, () => {
-								return { min, max }
-						  })
-						: tw.q.lst
+				if (tw.q.type == 'regular-bin') {
+					lst = compute_bins(tw.q, () => {
+						return { min, max }
+					})
+					for (const b of lst) {
+						if (!('name' in b) && b.label) b.name = b.label
+					}
+				} else lst = tw.q.lst
 
 				byTermId[tw.$id] = { bins: lst }
 			}

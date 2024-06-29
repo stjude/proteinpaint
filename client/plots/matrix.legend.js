@@ -2,6 +2,7 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common'
+import { TermTypes } from '../shared/terms'
 
 export function getLegendData(legendGroups, refs, self) {
 	const s = this.settings.matrix
@@ -102,7 +103,12 @@ export function getLegendData(legendGroups, refs, self) {
 					}
 				}
 			} else {
-				if (f.tvs.term.type == 'integer' || f.tvs.term.type == 'float') {
+				if (
+					f.tvs.term.type == 'integer' ||
+					f.tvs.term.type == 'float' ||
+					f.tvs.term.type == TermTypes.GENE_EXPRESSION ||
+					f.tvs.term.type == TermTypes.METABOLITE_INTENSITY
+				) {
 					// create a legend only if the mode is discrete, no legend created for continuous mode
 					if (t.ref?.bins) {
 						for (const v of f.tvs.ranges) {
@@ -213,7 +219,7 @@ export function getLegendData(legendGroups, refs, self) {
 					const count = item.samples?.size
 					return {
 						$id,
-						termid: term.id,
+						termid: term.id || term.name,
 						key: item.key,
 						text: this.getLegendItemText(item, count, t, s),
 						color: t.scale || item.fill || this.colorScaleByTermId[grp](key),
