@@ -1,5 +1,6 @@
 import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
+import { TermTypes } from '../shared/terms'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -358,8 +359,17 @@ export function setRenderers(self) {
 		g.append('title').text(`${cl.Samples} are grouped by this gene or variable. Click to edit.`)
 
 		const customMenuOptions = []
-		const tvsKey = ['integer', 'float'].includes(self.config.divideBy.term.type) ? 'ranges' : 'values'
-		if (self.config.legendValueFilter.lst?.find(l => l.legendGrpName == self.config.divideBy.id)?.tvs[tvsKey]?.length) {
+		const tvsKey = ['integer', 'float', TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY].includes(
+			self.config.divideBy.term.type
+		)
+			? 'ranges'
+			: 'values'
+
+		if (
+			self.config.legendValueFilter.lst?.find(
+				l => l.legendGrpName == self.config.divideBy.term.id || l.legendGrpName == self.config.divideBy.term.name
+			)?.tvs[tvsKey]?.length
+		) {
 			customMenuOptions.push({ label: `Show filtered ${cl.samples}`, callback: self.showDeletedSampleGroups })
 		}
 
@@ -386,7 +396,10 @@ export function setRenderers(self) {
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
 				if (tw) fillTermWrapper(tw, self.app.vocabApi)
-				//if (opts.processInput) opts.processInput(tw)
+				if (tw?.term?.type == TermTypes.GENE_EXPRESSION || tw?.term?.type == TermTypes.METABOLITE_INTENSITY) {
+					// default mode for GENE_EXPRESSION and METABOLITE_INTENSITY is continous
+					tw.q.mode = 'discrete'
+				}
 				pill.main(tw ? tw : { term: null, q: null })
 				box.datum({ tw })
 				self.app.dispatch({

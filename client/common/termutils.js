@@ -36,7 +36,12 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 			let samplevalue
 			if (t.term.type == 'geneVariant') {
 				samplevalue = geneVariant$ids.map(g => row[g]).filter(s => s) // filter out the genes that are not annotated for the sample
-			} else if (t.term.type == 'integer' || t.term.type == 'float') {
+			} else if (
+				t.term.type == 'integer' ||
+				t.term.type == 'float' ||
+				t.term.type == TermTypes.GENE_EXPRESSION ||
+				t.term.type == TermTypes.METABOLITE_INTENSITY
+			) {
 				samplevalue = row[t.term.id] || row[t.term.$id]?.key
 			} else if (t.term.type == 'survival') {
 				samplevalue = row[t.term.$id]?.key
@@ -55,7 +60,12 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 				}
 				const valueset = t.valueset ? t.valueset : new Set(t.values.map(i => i.key))
 				thistermmatch = valueset.has(samplevalue)
-			} else if (t.term.type == 'integer' || t.term.type == 'float') {
+			} else if (
+				t.term.type == 'integer' ||
+				t.term.type == 'float' ||
+				t.term.type == TermTypes.GENE_EXPRESSION ||
+				t.term.type == TermTypes.METABOLITE_INTENSITY
+			) {
 				if (samplevalue === undefined) {
 					// this sample has no anno for this term, check isnot
 					if (t.isnot) thistermmatch = !thistermmatch
@@ -129,8 +139,6 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
 						}
 					}) && true
-			} else if (t.term.type == TermTypes.GENE_EXPRESSION) {
-			} else if (t.term.type == TermTypes.METABOLITE_INTENSITY) {
 			} else if (t.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			} else {
 				throw 'unknown term type'

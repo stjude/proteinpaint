@@ -240,7 +240,7 @@ export function setComputedConfig(config) {
 			})
 	}
 	for (const f of config.legendValueFilter.lst) {
-		if (!f.legendGrpName || !f.tvs?.term?.type.startsWith('gene')) continue
+		if (!f.legendGrpName || !f.tvs?.term?.type.startsWith('geneVariant')) continue
 		if (f.tvs.values?.[0].mclasslst)
 			f.tvs.values[0].mclasslst.forEach(key => {
 				s.filterByClass[key] = f.legendFilterType?.endsWith('_hard') ? 'case' : 'value'
