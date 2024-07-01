@@ -1,5 +1,4 @@
 import { BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting, BaseTerm } from './term.ts'
-import { BaseQ } from './term.ts'
 
 /**
  *
@@ -99,25 +98,24 @@ export type NumericTerm = BaseTerm & {
 
 export type BinnedNumericQ = RegularNumericBinConfig | CustomNumericBinConfig
 
-export type DiscreteNumericQ = BaseQ &
-	BinnedNumericQ & {
-		mode: 'discrete'
-	}
+export type DiscreteNumericQ = BinnedNumericQ & {
+	mode: 'discrete'
+}
 
 // TODO: test with live code that defines an actual binary q object
-export type BinaryNumericQ = BaseQ & {
+export type BinaryNumericQ = {
 	mode: 'binary'
 	type: 'custom-bin'
 	// tuple type with 2 members
 	lst: [StartUnboundedBin | FullyBoundedBin, StopUnboundedBin | FullyBoundedBin]
 }
 
-export type ContinuousNumericQ = BaseQ & {
+export type ContinuousNumericQ = {
 	mode: 'continuous'
 	//scale?: string
 }
 
-export type SplineNumericQ = BaseQ & {
+export type SplineNumericQ = {
 	mode: 'spline'
 	knots: {
 		value: number
