@@ -1,2 +1,1 @@
-Fixes:
-- Speed up top variably expressed genes query from gdc api, directly submit case filter and do not first retrieve list of cases
+
