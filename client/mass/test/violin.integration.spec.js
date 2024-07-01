@@ -775,6 +775,9 @@ tape('term1=geneExp, term2=categorical', function (test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [
 				{
 					chartType: 'summary',
@@ -811,6 +814,9 @@ tape('term1=geneExp, term2=survival', function (test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [
 				{
 					chartType: 'summary',
@@ -1027,10 +1033,13 @@ tape('test samplelst term2', function (test) {
 	}
 })
 
-tape.only('term=agedx, term2=geneExp with regular bins', function (test) {
+tape('term=agedx, term2=geneExp with regular bins', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [
 				{
 					chartType: 'summary',
@@ -1066,41 +1075,28 @@ tape.only('term=agedx, term2=geneExp with regular bins', function (test) {
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
 
-		console.log()
+		const numViolinPaths = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path' })
+		/** In this example, one of the plots has too few data points
+		 * to render a violin plot. Hence the -1. 2 .sjpp-vp-path make
+		 * one violin plot  */
+		test.equal(
+			numViolinPaths.length / 2,
+			violin.Inner.data.plots.length - 1,
+			'Should render the correct number of plots per the default bins for a gene expression term'
+		)
 
-		/** TODO: Test that the correct number of plots
-		 * render per the binsize and data range
-		 */
-
-		// Extract the bin size, first bin stop, and last bin start from the test setup
-		const binSize = violin.state.plots[0].term2.q.bin_size
-		const firstBinStop = violin.state.plots[0].term2.q.first_bin.stop
-		const lastBinStart = violin.state.plots[0].term2.q.last_bin.start
-
-		// Calculate the expected number of plots based on the extracted values
-		const expectedPlots = (lastBinStart - firstBinStop) / binSize
-
-		// Get the actual number of plots
-		const actualPlots = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path' })
-
-		// Assert that the actual number of plots equals the expected number of plots
-		test.equal(actualPlots.length, expectedPlots, 'The correct number of plots render per the binsize and data range')
-
-		// Assert that the actual number of plots equals the expected number of plots
-		// test.equal(actualPlots.length, expectedPlots, 'The correct number of plots render per the binsize and data range')
-
-		// const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
-		// test.ok(groups, 'categorical groups exist')
-
-		//if (test._ok) violin.Inner.app.destroy()
+		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 })
 
-tape.skip('term=agedx, term2=geneExp with custom bins', function (test) {
+tape('term=agedx, term2=geneExp with custom bins', function (test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [
 				{
 					chartType: 'summary',
@@ -1152,14 +1148,14 @@ tape.skip('term=agedx, term2=geneExp with custom bins', function (test) {
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
 
-		/** TODO: Test that the correct number of plots
-		 * render per the binsize and data range
-		 */
+		const numViolinPaths = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path' })
+		test.equal(
+			numViolinPaths.length / 2,
+			violin.Inner.data.plots.length,
+			'Should render the correct number of plots per the custom bins for a gene expression term'
+		)
 
-		// const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
-		// test.ok(groups, 'categorical groups exist')
-
-		//if (test._ok) violin.Inner.app.destroy()
+		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 })
