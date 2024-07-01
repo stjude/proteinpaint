@@ -27,7 +27,7 @@
     "postpack": "./dedupjs.sh",
     "dedup": "./dedupjs.sh",
     "//todo": "refactor or deprecate the scripts below",
-    "pretest": "tsc --esModuleInterop genome/*.ts dataset/*.ts && ./test/pretest.js",
+    "pretest": "tsc && ./test/pretest.js",
     "prepare": "ts-patch install",
     "pretest:type": "npm run checkers",
     "pretest:integration": "tsc --esModuleInterop genome/*.ts dataset/*.ts",
