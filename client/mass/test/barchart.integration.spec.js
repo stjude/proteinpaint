@@ -17,6 +17,9 @@ Tests:
 	term1=geneExp
 	term1=numeric term2=geneExp with default bins
 	term1=geneExp, term2=categorical
+	term1=condition, term2=gene exp with default bins
+	term1=TP53 gene exp, term2=BCR gene exp, both terms with default bins
+	term1=categorical, term0=gene exp with default bins
 	series visibility - q.hiddenValue
 	series visibility - numeric
 	series visibility - condition
@@ -326,7 +329,7 @@ tape('term1=numeric term2=geneExp with default bins', function (test) {
 					childType: 'barchart',
 					term: { id: 'agedx' },
 					term2: {
-						term: { type: 'geneExpression', gene: 'TP53', name: 'TP53' },
+						term: { type: 'geneExpression', gene: 'TP53' },
 						q: { mode: 'discrete' }
 					}
 				}
@@ -356,7 +359,7 @@ tape('term1=numeric term2=geneExp with default bins', function (test) {
 })
 
 tape('term1=geneExp, term2=categorical', function (test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -364,7 +367,7 @@ tape('term1=geneExp, term2=categorical', function (test) {
 					chartType: 'summary',
 					childType: 'barchart',
 					term: {
-						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						term: { gene: 'TP53', type: 'geneExpression' },
 						q: { mode: 'discrete' }
 					},
 					term2: {
@@ -385,10 +388,125 @@ tape('term1=geneExp, term2=categorical', function (test) {
 		const numBarCells = await detectGte({ elem: barDiv.node(), selector: '.bars-cell', count: 22 })
 		const tableRows = await detectGte({ elem: barDiv.node(), selector: 'tr', count: 22 })
 		test.ok(
-			numBarCells >= tableRows,
-			'Should display the correct number of bars and table rows when gene expression term is overlaid by categorical term.'
+			numBarCells.length >= tableRows.length,
+			'Should display the correct number of cells and table rows when gene expression term is overlaid by a categorical term.'
 		)
 		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=condition, term2=gene exp with default bins', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						id: 'Hearing loss'
+					},
+					term2: {
+						term: { gene: 'TP53', type: 'geneExpression' },
+						q: { mode: 'discrete' }
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+
+		const numBarCells = await detectGte({ elem: barDiv.node(), selector: '.bars-cell', count: 14 })
+		const tableRows = await detectGte({ elem: barDiv.node(), selector: 'tr', count: 14 })
+		test.ok(
+			numBarCells.length == tableRows.length,
+			'Should display the correct number of cells and table rows when gene expression term is overlaid by a conditional term.'
+		)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=TP53 gene exp, term2=BCR gene exp, both terms with default bins', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						term: { gene: 'TP53', type: 'geneExpression' },
+						q: { mode: 'discrete' }
+					},
+					term2: {
+						term: { gene: 'BCR', type: 'geneExpression' },
+						q: { mode: 'discrete' }
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+
+		const numBarCells = await detectGte({ elem: barDiv.node(), selector: '.bars-cell', count: 27 })
+		const tableRows = await detectGte({ elem: barDiv.node(), selector: 'tr', count: 28 })
+		test.ok(
+			numBarCells.length == tableRows.length - 1,
+			'Should display the correct number of cells and table rows when gene expression term is overlaid by a gene expression term.'
+		)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=categorical, term0=gene exp with default bins', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						id: 'diaggrp'
+					},
+					term0: {
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'discrete' }
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+
+		const numBarchart = await detectGte({ elem: barDiv.node(), selector: '.pp-bars-svg', count: 8 })
+		test.equal(
+			numBarchart.length,
+			8,
+			'Should display the correct number of barcharts when a categorical term is overlaid by a gene expression term.'
+		)
+		// if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
