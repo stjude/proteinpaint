@@ -7,7 +7,7 @@ import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 import { renderTable } from '../dom/table.ts'
 import { dofetch3 } from '#common/dofetch'
-import { TermTypes } from '../shared/terms'
+import { TermTypes, isNumericTerm } from '../shared/terms'
 import { table2col } from '#dom/table2col'
 
 let inputIndex = 0
@@ -1607,12 +1607,7 @@ function setSampleGroupActions(self) {
 				// the filter for the categorical or survival term exist, but the current legend key is not there.
 				self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: self.activeLabel.grp.id })
 			}
-		} else if (
-			term.type == 'integer' ||
-			term.type == 'float' ||
-			term.type == TermTypes.GENE_EXPRESSION ||
-			term.type == TermTypes.METABOLITE_INTENSITY
-		) {
+		} else if (isNumericTerm(term)) {
 			term.$id = tw.$id
 			const filterNew = {
 				legendGrpName: tw.term.id || tw.term.name,
@@ -2704,12 +2699,7 @@ function setLengendActions(self) {
 				legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
 					l => l.legendGrpName == targetData.termid && l.tvs.values.find(v => v.key == targetData.key)
 				)
-			} else if (
-				legendTerm.type == 'integer' ||
-				legendTerm.type == 'float' ||
-				legendTerm.type == TermTypes.GENE_EXPRESSION ||
-				legendTerm.type == TermTypes.METABOLITE_INTENSITY
-			) {
+			} else if (isNumericTerm(legendTerm)) {
 				legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
 					l => l.legendGrpName == targetData.termid && l.tvs.ranges.find(r => r.name == targetData.key)
 				)
@@ -2785,12 +2775,7 @@ function setLengendActions(self) {
 									// the filter for the categorical or survival term exist, but the current legend key is not there.
 									self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: targetData.key })
 								}
-							} else if (
-								term.type == 'integer' ||
-								term.type == 'float' ||
-								term.type == TermTypes.GENE_EXPRESSION ||
-								term.type == TermTypes.METABOLITE_INTENSITY
-							) {
+							} else if (isNumericTerm(term)) {
 								term.$id = targetData.$id
 								const filterNew = {
 									legendGrpName: targetData.termid,
@@ -2983,12 +2968,7 @@ function setLengendActions(self) {
 									self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: l.key })
 								}
 							}
-						} else if (
-							term.type == 'integer' ||
-							term.type == 'float' ||
-							term.type == TermTypes.GENE_EXPRESSION ||
-							term.type == TermTypes.METABOLITE_INTENSITY
-						) {
+						} else if (isNumericTerm(term)) {
 							term.$id = targetData.$id
 							for (const l of legendGrp.items) {
 								if (l.key == targetData.key) continue
