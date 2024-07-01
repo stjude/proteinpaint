@@ -30,7 +30,7 @@ class SampleView {
 		const plotsDiv = div //div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
 		const sampleDiv = leftDiv.insert('div').style('display', 'inline-block').style('padding', '20px')
 
-		const tableDiv = leftDiv.insert('div').style('padding', '10px').style('width', '45vw')
+		const tableDiv = leftDiv.insert('div').style('padding', '10px')
 
 		const table = tableDiv.append('table').style('border-collapse', 'collapse')
 		const thead = table.append('thead')
@@ -481,7 +481,7 @@ class SampleView {
 
 		if (state.termdbConfig.queries?.DZImages) {
 			let div = plotsDiv.append('div')
-			if (state.samples.length == 1) div.style('display', 'inline-block')
+			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
 				const data = await dofetch3('sampledzimages', {
 					body: {
@@ -500,7 +500,7 @@ class SampleView {
 
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			let div = plotsDiv.append('div')
-			if (state.samples.length == 1) div.style('display', 'inline-block')
+			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
@@ -520,7 +520,7 @@ class SampleView {
 		if (state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
 				let div = plotsDiv.append('div')
-				if (state.samples.length == 1) div.style('display', 'inline-block')
+				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '40vw')
 				for (const sample of samples) {
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
 					const plotDiv = div.insert('div').style('display', 'table-cell').style('padding', '20px')
@@ -545,7 +545,7 @@ class SampleView {
 
 			for (const k in state.termdbConfig.queries?.NIdata) {
 				let div = plotsDiv.append('div')
-				if (state.samples.length == 1) div.style('display', 'inline-block')
+				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 				for (const sample of samples) {
 					const plotDiv = div.insert('div').style('display', 'inline-block')
 					this.brainPlots.push({ sample, cellDiv: plotDiv })
@@ -566,7 +566,7 @@ class SampleView {
 		}
 		if (state.termdbConfig?.queries?.images) {
 			let div = plotsDiv.append('div')
-			if (state.samples.length == 1) div.style('display', 'inline-block')
+			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
 				this.imagePlots.push({ sample: cellDiv })
@@ -609,6 +609,7 @@ export const componentInit = sampleViewInit
 
 function setRenderers(self) {
 	self.renderSampleDictionary = function () {
+		if (self.state.samples.length == 1) self.dom.tableDiv.style('width', '48vw')
 		// use an array to support multiple visible samples,
 		// but prototyping with just one sample for now
 		const visibleSamples = []
