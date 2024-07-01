@@ -2,6 +2,7 @@ import { keyupEnter, gmlst2loci } from '#src/client'
 import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
 import { invalidcoord, string2pos } from '#src/coord'
+import { ClientCopyGenome } from '../types/global'
 
 /*
 *********************************** EXPORT
@@ -15,74 +16,66 @@ TODO
 -- dedup code with app header
 -- unify help message from gdc bam slicing ui and termsetting.snplst
 
-***********************************
-function argument object {}
+***********************************/
 
-.tip
-	required. menu instance to show list of matching genes
-
-.genome{}
-	required. client-side genome obj
-
-.row
-	required. d3 element in which <input> is created
-
-.defaultCoord{}
-	optional
-	read-only; this script should not try to modify it
-	if allowVariant is false, value can only be {chr, start, stop}
-	if allowVariant is true, value can also be {chr, pos, ref, alt, isVariant:true}
-	set to {chr, start, stop} to fill default position into <input>
-	when missing, just show placeholder
-
-.geneOnly: true
-	optional
+type GeneSearchBoxArg = {
+	/** required. menu instance to show list of matching genes */
+	tip: any,
+	/** required. d3 element in which <input> is created */
+	row: any,
+	placeholder?: string,
+	/** optional
 	if true, search for gene name only
 	input can be symbol or alias
 	result is {geneSymbol:str}, will not map to coord
 	cannot map isoform to gene name!
-	(later may need geneOrIsoform flag to query both)
-
-.geneSymbol: str
-	default gene name to fill into search box
-
-.allowVariant: true
-	if true, allow to enter chr.pos.ref.alt or hgvs (see next section)
-	otherwise, only allow chr:start-stop
-
-.focusOff: true
-	optional
+	(later may need geneOrIsoform flag to query both) */
+	geneOnly?: boolean,
+	/** if true, allow to enter chr.pos.ref.alt or hgvs (see next section)
+	otherwise, only allow chr:start-stop */
+	allowVariant?: boolean,
+	/** optional
 	If true, user must click on search box and enter instead of automatically 
-	focusing on search box. Use to render d3 animations smoothly.
-
-.callback()
-	optional
+	focusing on search box. Use to render d3 animations smoothly. */
+	focusOff?: boolean,
+	/** optional
 	triggered when a valid hit is found, and has been written to RESULT object (see below)
-	no parameter is supplied
+	no parameter is supplied */
+	callback?: () => void,
+	/** optional
+	triggered when the <input> is emptied. allows an app to de-select a gene in this way */
+	emptyInputCallback?: () => void,
+	/** if true, hide the text msg on the right of <input> */
+	hideHelp?: boolean,
+	/** optional
+	read-only; this script should not try to modify it
+	if allowVariant is false, value can only be {chr, start, stop}
+	if allowVariant is true, value can also be {chr, pos, ref, alt, isVariant:true}
+	set to {chr, start, stop} to fill default position into <input>
+	when missing, just show placeholder */
+	defaultCoord?: ResultArg,
+	/** required. client-side genome obj */
+	genome: ClientCopyGenome,
+	/** default gene name to fill into search box */
+	geneSymbol?: string
 
-.emptyInputCallback()
-	optional
-	triggered when the <input> is emptied. allows an app to de-select a gene in this way
-
-.hideHelp: true
-	if true, hide the text msg on the right of <input>
-
-***********************************
+}
+/*************************************
 by calling addGeneSearchbox(), it redirectly returns a RESULT object detailed below without await
+*/
 
-RESULT{}
-	.chr
-		"chr" is always included
-	.start
-	.stop
-		"start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp
-	.geneSymbol
-	.pos
-	.ref
-	.alt
-		"pos/ref/alt" are included when entered a variant
+/** "start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp */
+type NoVariantResult = { start: number, stop: number }
+/** "pos/ref/alt" are included when entered a variant */
+type VariantResult = { pos: number, ref: string, alt: string, isVariant: boolean}
+type ResultArg = (NoVariantResult | VariantResult) & {
+	/** is always included */
+	chr: string
+}
 
-***********************************
+type Result = Partial<NoVariantResult> & Partial<VariantResult> & { geneSymbol?: string,
+	fromWhat?: string, chr?: string}
+/***********************************
 if arg.callback() is not provided:
 	any match is silently written to RESULT
 	with repeated search the latest match is written to RESULT
@@ -130,15 +123,15 @@ insertion
 	parse to chr5.171410539.-.TCTG
 */
 
-export function addGeneSearchbox(arg) {
+export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
 		row = arg.row
 
-	let placeholder,
+	let placeholder: string,
 		width = 150
 
 	if ('placeholder' in arg) {
-		placeholder = arg.placeholder
+		placeholder = arg.placeholder!
 	} else if (arg.geneOnly) {
 		placeholder = 'Gene'
 		width = 100 // use shorter width for inputting only one gene name
@@ -243,9 +236,9 @@ export function addGeneSearchbox(arg) {
 				// abandon changes to <input>
 				tip.hide()
 				if (result.chr) {
-					getResult(result, result.fromWhat)
+					getResult(result, result.fromWhat!)
 				} else if (arg.defaultCoord) {
-					const d = arg.defaultCoord
+					const d = arg.defaultCoord as Result
 					input.value = d.chr + (d.isVariant ? '.' + d.pos + '.' + d.ref + '.' + d.alt : ':' + d.start + '-' + d.stop)
 				}
 				input.blur()
@@ -340,13 +333,13 @@ export function addGeneSearchbox(arg) {
 						}
 					})
 			}
-		} catch (e) {
+		} catch (e: any) {
 			tip.d.append('div').text(e.message || e)
 		}
 	}
 	const debouncer = debounce(inputIsCoordOrGenename, 500)
 
-	async function geneCoordSearch(s) {
+	async function geneCoordSearch(s: string) {
 		tip.hide()
 		try {
 			const data = await dofetch3('genelookup', {
@@ -389,12 +382,12 @@ export function addGeneSearchbox(arg) {
 						getResult(r, s + ', ' + r.name, r.name)
 					})
 			}
-		} catch (e) {
+		} catch (e: any) {
 			getResult(null, e.message || e)
 		}
 	}
 
-	async function searchSNP(s) {
+	async function searchSNP(s: string) {
 		const data = await dofetch3('snp', {
 			body: { byName: true, genome: arg.genome.name, lst: [s] }
 		})
@@ -404,10 +397,10 @@ export function addGeneSearchbox(arg) {
 		getResult({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd }, s)
 	}
 
-	const result = {}
+	const result: Result = {}
 
 	if (arg.defaultCoord) {
-		const d = arg.defaultCoord
+		const d = arg.defaultCoord as Result
 		if (d.isVariant) {
 			searchbox.property('value', d.chr + '.' + d.pos + '.' + d.ref + '.' + d.alt)
 			result.pos = d.pos
@@ -426,7 +419,7 @@ export function addGeneSearchbox(arg) {
 	if result is invalid, r is null, show &cross;
 	fromWhat is optional gene or snp name to show in search stat
 	*/
-	async function getResult(r, fromWhat, geneSymbol) {
+	async function getResult(r: Partial<Result> | null, fromWhat: string, geneSymbol?: string) {
 		if (r) {
 			// got hit (coord or variant), clear result{}
 			for (const k in result) delete result[k]
@@ -473,13 +466,13 @@ export function addGeneSearchbox(arg) {
 
 	if (arg.geneSymbol) {
 		searchbox.property('value', arg.geneSymbol)
-		setTimeout(() => getResult({ geneSymbol: arg.geneSymbol }, arg.geneSymbol), 10)
+		setTimeout(() => getResult({ geneSymbol: arg.geneSymbol }, arg.geneSymbol!), 10)
 	}
 
 	return result //searchbox
 }
 
-export async function string2variant(v, genome) {
+export async function string2variant(v: string, genome: ClientCopyGenome) {
 	// try to parse as simple variant
 	const variant = string2simpleVariant(v, genome)
 	if (variant) {
@@ -490,7 +483,7 @@ export async function string2variant(v, genome) {
 	return await string2hgvs(v, genome)
 }
 
-function string2simpleVariant(v, genome) {
+function string2simpleVariant(v: string, genome: ClientCopyGenome) {
 	// format: chr.pos.ref.alt
 	// this format has conflict with hgvs e.g. NG_012232.1(NM_004006.2):c.93+1G>T
 	// which is in fact not currently supported by this code
@@ -510,7 +503,7 @@ function string2simpleVariant(v, genome) {
 	}
 }
 
-async function string2hgvs(v, genome) {
+async function string2hgvs(v: string, genome: ClientCopyGenome) {
 	const tmp = v.split(':g.')
 	if (tmp.length != 2) {
 		// only supports "g." linear genomic reference. other ref types are not supported for now
@@ -534,7 +527,7 @@ async function string2hgvs(v, genome) {
 	return hgvs_snv(chr, tmp[1])
 }
 
-function hgvs_snv(chr, v) {
+function hgvs_snv(chr: string, v: string) {
 	// v: 104780214C>T
 	const tmp = v.match(/^(\d+)([ATCG])>([ATCG])$/)
 	if (!tmp || tmp.length != 4) {
@@ -553,7 +546,7 @@ function hgvs_snv(chr, v) {
 	}
 }
 
-function hgvs_ins(chr, v) {
+function hgvs_ins(chr: string, v: string) {
 	// chr5:g.171410539_171410540insTCTG
 	const [tmppos, altAllele] = v.split('ins')
 	if (!altAllele) return
@@ -569,7 +562,7 @@ function hgvs_ins(chr, v) {
 	}
 }
 
-async function hgvs_del(chr, v, genome) {
+async function hgvs_del(chr: string, v: string, genome: ClientCopyGenome) {
 	//chr17:g.7673802delCGCACCTCAAAGCTGTTC
 	const [tmppos, refAllele] = v.split('del')
 	if (refAllele) {
@@ -594,13 +587,13 @@ async function hgvs_del(chr, v, genome) {
 	return {
 		isVariant: true,
 		chr,
-		pos,
+		// pos, No variable to access??
 		ref: refAllele2,
 		alt: '-'
 	}
 }
 
-async function hgvs_delins(chr, v, genome) {
+async function hgvs_delins(chr: string, v: string, genome: ClientCopyGenome) {
 	// chr2:g.119955155_119955159delinsTTTTT
 	const tmp = v.match(/^(\d+)_(\d+)delins([ATCG]+)$/)
 	if (!tmp || tmp.length != 4) {
@@ -621,7 +614,7 @@ async function hgvs_delins(chr, v, genome) {
 	}
 }
 
-async function getRefAllele(chr, start, stop, genome) {
+async function getRefAllele(chr: string, start: number, stop: number, genome: ClientCopyGenome) {
 	const body = {
 		coord: chr + ':' + start + '-' + stop,
 		genome: genome.name
