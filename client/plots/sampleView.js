@@ -520,7 +520,7 @@ class SampleView {
 		if (state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
 				let div = plotsDiv.append('div')
-				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '40vw')
+				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 				for (const sample of samples) {
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
 					const plotDiv = div.insert('div').style('display', 'table-cell').style('padding', '20px')
