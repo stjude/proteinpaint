@@ -18,6 +18,8 @@ term1=numeric, term2=condition
 term1=geneExp, term2=categorical
 term1=geneExp, term2=survival
 test samplelst term2
+term=agedx, term2=geneExp with regular bins
+term=agedx, term2=geneExp with custom bins
 test uncomputable categories legend
 Load linear regression-violin UI
 test change in plot length and thickness for new custom group variable
