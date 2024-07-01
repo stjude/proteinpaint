@@ -1776,7 +1776,7 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 		ypad = 20,
 		xpad = 20,
 		plotWidth = 800,
-		axisWidth = 50
+		axisWidth = 10
 
 	let bpTotal = 0
 	for (const chr in genome.majorchr) {
