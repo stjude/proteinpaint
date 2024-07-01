@@ -266,6 +266,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 				delete self.q.dt
 				delete self.q.origin
 				groupsDiv.style('display', 'none')
+				draggablesDiv.style('display', 'none')
 			}
 		}
 	})
@@ -291,9 +292,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			options: ds_dts.map(dt => ({ label: dt2label[dt], value: dt, checked: dt == self.q.dt })),
 			callback: v => {
 				self.q.dt = v
-				mayMakeOriginRadios()
-				makeGroupsetRadios()
-				mayMakeGroupsetDraggables()
+				makeRadiosForGrouping()
 			}
 		})
 	}
@@ -318,37 +317,97 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			})),
 			callback: v => {
 				self.q.origin = v
-				mayMakeGroupsetDraggables()
+				makeRadiosForGrouping()
 			}
 		})
 	}
 
-	// radio buttons for variant grouping
+	// radio buttons for variant groupset
 	function makeGroupsetRadios() {
-		// specify the indices of the predefined groupsets that are
-		// relevant to the dt, for example the 'Protein-changing vs. rest'
-		// groupset is relevant to SNV/indel and SV mutations but not
-		// to CNV mutations
-		const groupset_idxs = getGroupsetIdxs(self.q.dt)
-		// render the relevant predefined groupsets as radio buttons
-		if (
-			!self.q.groupsetting.predefined_groupset_idx ||
-			!groupset_idxs.includes(self.q.groupsetting.predefined_groupset_idx)
-		)
-			self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
 		groupsetDiv.selectAll('*').remove()
 		groupsetDiv.append('div').style('font-weight', 'bold').text('Variant grouping')
-		make_radios({
+		// get groupset indices relevant to given dt
+		const groupset_idxs = getGroupsetIdxs(self.q.dt)
+		if (!groupset_idxs.includes(self.q.groupsetting.predefined_groupset_idx) && !self.q.groupsetting.customset) {
+			// groupsetting does not have valid predefined index or customset
+			// set to be predefined by default
+			self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+		}
+		const isPredefined = Number.isInteger(self.q.groupsetting.predefined_groupset_idx)
+		// radios for whether to use predefined groups or custom groups
+		const radios = make_radios({
 			holder: groupsetDiv,
-			options: groupset_idxs.map(i => {
-				const groupset = self.term.groupsetting.lst[i]
-				return { label: groupset.name, value: i, checked: i == self.q.groupsetting.predefined_groupset_idx }
-			}),
+			options: [
+				{ label: 'Predefined groups', value: 'predefined', checked: isPredefined },
+				{ label: 'Custom groups', value: 'custom', checked: !isPredefined }
+			],
 			callback: v => {
-				self.q.groupsetting.predefined_groupset_idx = v
-				mayMakeGroupsetDraggables()
+				if (v == 'predefined') {
+					self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+				} else {
+					predefinedGroupsetDiv.style('display', 'none')
+					delete self.q.groupsetting.predefined_groupset_idx
+				}
+				makeRadiosForGrouping()
 			}
 		})
+		// get the div of the predefined radio button and append
+		// new div for making radio buttons of predefined groupset options
+		const predefinedGroupsetDiv = radios.divs
+			.filter((d, i) => i === 0)
+			.append('div')
+			.style('margin', '5px 0px 0px 30px')
+		if (isPredefined) {
+			// groupsetting is predefined
+			// make radios for predefined groupsetting options
+			predefinedGroupsetDiv.style('display', 'block')
+			predefinedGroupsetDiv.selectAll('*').remove()
+			self.q.type = 'values'
+			delete self.q.groupsetting.customset
+			if (!groupset_idxs.includes(self.q.groupsetting.predefined_groupset_idx)) {
+				self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+			}
+			make_radios({
+				holder: predefinedGroupsetDiv,
+				options: groupset_idxs.map(i => {
+					const groupset = self.term.groupsetting.lst[i]
+					return { label: groupset.name, value: i, checked: i == self.q.groupsetting.predefined_groupset_idx }
+				}),
+				callback: v => {
+					self.q.groupsetting.predefined_groupset_idx = v
+					makeRadiosForGrouping()
+				}
+			})
+		} else {
+			// groupsetting is not predefined
+			// prepare custom groups
+			predefinedGroupsetDiv.style('display', 'none')
+			makeCustomGroups()
+		}
+	}
+
+	// function for preparing custom groups
+	function makeCustomGroups() {
+		self.q.type = 'custom-groupset'
+		const dt = self.category2samplecount.find(i => i.dt == self.q.dt)
+		const classes = dt.classes.byOrigin ? dt.classes.byOrigin[self.q.origin] : dt.classes
+		if (!self.q.groupsetting.customset) {
+			const groups = [
+				{
+					name: 'Group 1',
+					type: 'values',
+					values: Object.keys(classes).map(k => {
+						return { key: k, label: mclass[k].label }
+					})
+				},
+				{
+					name: 'Group 2',
+					type: 'values',
+					values: []
+				}
+			]
+			self.q.groupsetting.customset = { groups }
+		}
 	}
 
 	// function for making groupset draggables
