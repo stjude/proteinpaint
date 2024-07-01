@@ -486,6 +486,13 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('/termdb/descrstats', { body })
 	}
 
+	/**
+	 * Retrieve terms by ids from the term database.
+	 * @param {Array} ids - The array of term ids to retrieve
+	 * @param {string} [_dslabel=null] - The dataset label (optional)
+	 * @param {string} [_genome=null] - The genome identifier (optional)
+	 * @return {Object} The terms data retrieved based on the provided ids
+	 */
 	async getTerms(ids, _dslabel = null, _genome = null) {
 		if (!ids) throw 'getTerms: ids missing'
 		if (!Array.isArray(ids)) throw `invalid ids` // should use typescript
