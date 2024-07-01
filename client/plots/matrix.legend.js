@@ -2,7 +2,7 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common'
-import { TermTypes } from '../shared/terms'
+import { isNumericTerm } from '../shared/terms'
 
 export function getLegendData(legendGroups, refs, self) {
 	const s = this.settings.matrix
@@ -103,12 +103,7 @@ export function getLegendData(legendGroups, refs, self) {
 					}
 				}
 			} else {
-				if (
-					f.tvs.term.type == 'integer' ||
-					f.tvs.term.type == 'float' ||
-					f.tvs.term.type == TermTypes.GENE_EXPRESSION ||
-					f.tvs.term.type == TermTypes.METABOLITE_INTENSITY
-				) {
+				if (isNumericTerm(f.tvs.term)) {
 					// create a legend only if the mode is discrete, no legend created for continuous mode
 					if (t.ref?.bins) {
 						for (const v of f.tvs.ranges) {

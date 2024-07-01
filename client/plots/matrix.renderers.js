@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
-import { TermTypes } from '../shared/terms'
+import { isNumericTerm } from '../shared/terms'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -359,12 +359,7 @@ export function setRenderers(self) {
 		g.append('title').text(`${cl.Samples} are grouped by this gene or variable. Click to edit.`)
 
 		const customMenuOptions = []
-		const tvsKey = ['integer', 'float', TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY].includes(
-			self.config.divideBy.term.type
-		)
-			? 'ranges'
-			: 'values'
-
+		const tvsKey = isNumericTerm(self.config.divideBy.term) ? 'ranges' : 'values'
 		if (
 			self.config.legendValueFilter.lst?.find(
 				l => l.legendGrpName == self.config.divideBy.term.id || l.legendGrpName == self.config.divideBy.term.name
@@ -396,8 +391,9 @@ export function setRenderers(self) {
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
 				if (tw) fillTermWrapper(tw, self.app.vocabApi)
-				if (tw?.term?.type == TermTypes.GENE_EXPRESSION || tw?.term?.type == TermTypes.METABOLITE_INTENSITY) {
-					// default mode for GENE_EXPRESSION and METABOLITE_INTENSITY is continous
+				if (tw?.term && isNumericTerm(tw.term)) {
+					// any numeric term should be discrete when used as divideBy term
+					// tw is missing when dividedBy term deleted
 					tw.q.mode = 'discrete'
 				}
 				pill.main(tw ? tw : { term: null, q: null })
