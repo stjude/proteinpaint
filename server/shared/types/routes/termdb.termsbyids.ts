@@ -11,5 +11,5 @@ export type gettermsbyidsRequest = {
 }
 
 export type gettermsbyidsResponse = {
-	id: TermWrapper
+	terms: { [id: string]: TermWrapper }
 }
