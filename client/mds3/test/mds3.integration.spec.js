@@ -12,7 +12,9 @@ Official - mclass filtering
 Official - sample summaries table, create subtrack (tk.filterObj)
 Official - allow2selectSamples
 Incorrect dslabel
-TP53 custom data, no sample
+Custom cnv only, no sample
+Custom ssm only, no sample
+Custom cnv and ssm, no sample
 Custom variants, missing or invalid mclass
 Custom variants WITH samples (allows some to be without)
 Custom data with samples and sample selection
@@ -492,7 +494,7 @@ tape('Incorrect dslabel', test => {
 	}
 })
 
-tape('TP53 custom data, no sample', test => {
+tape('Custom ssm only, no sample', test => {
 	test.timeoutAfter(2000)
 	const holder = getHolder()
 
@@ -799,6 +801,113 @@ tape('Custom data with samples and sample selection', test => {
 			test.ok(
 				tableBtn[0] && tableBtn[0].innerText == buttonText,
 				`Sample table should contain a <button> with custom text`
+			)
+		}
+
+		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+
+tape('Custom cnv only, no sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_amp', value: 1 },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_loss', value: -1 },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 4, class: 'CNV_loss', value: -0.5 }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [
+			{
+				type: 'mds3',
+				name: 'Custom data',
+				custom_variants
+			}
+		],
+		onloadalltk_always: checkTrack
+	})
+	async function checkTrack(bb) {
+		const tk = bb.tklst.find(i => i.type == 'mds3')
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.length,
+			`All ${custom_variants.length} segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} variants`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
+			)
+		}
+
+		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+
+tape('Custom cnv and ssm, no sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_amp', value: 1 },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_loss', value: -1 },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 4, class: 'CNV_loss', value: -0.5 },
+		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1 },
+		{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1 },
+		{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1 }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [
+			{
+				type: 'mds3',
+				name: 'Custom data',
+				custom_variants
+			}
+		],
+		onloadalltk_always: checkTrack
+	})
+	async function checkTrack(bb) {
+		const tk = bb.tklst.find(i => i.type == 'mds3')
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.filter(i => i.dt == 4).length,
+			`All cnv segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} variants`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
 			)
 		}
 
