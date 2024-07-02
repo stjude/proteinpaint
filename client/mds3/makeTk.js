@@ -3,7 +3,7 @@ import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '#common/urlmap'
-import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common'
 import { vcfparsemeta } from '#shared/vcf'
 import { getFilterName } from './filterName'
 import { fillTermWrapper } from '#termsetting'
@@ -310,8 +310,15 @@ function mayInitSkewer(tk) {
 	setSkewerMode(tk) // adds skewer.viewModes[]
 }
 function mayInitCnv(tk) {
-	const cfg = tk.mds.termdbConfig?.queries?.cnv
-	if (!cfg) return // lack this
+	let cfg = tk.mds.termdbConfig?.queries?.cnv // the config object for rendering cnv
+	if (!cfg) {
+		// no cnv from native data. cnv can also come from custom data. check it
+		if (tk.mds.has_cnv) {
+			// has custom cnv. supply a blank obj as defaults
+			cfg = {}
+		}
+	}
+	if (!cfg) return // lack this. no cnv from this tk
 	tk.cnv = {
 		g: tk.glider.append('g'),
 		cnvMaxLength: cfg.cnvMaxLength, // if missing do not filter
@@ -400,7 +407,6 @@ async function get_ds(tk, block) {
 		tk.mds.has_skewer = true // enable skewer tk
 		await getbcfheader_customtk(tk, block.genome)
 	} else if (tk.custom_variants) {
-		tk.mds.has_skewer = true // enable skewer tk
 		validateCustomVariants(tk, block)
 		mayDeriveSkewerOccurrence4samples(tk)
 	} else {
@@ -771,11 +777,18 @@ makes no return
 function validateCustomVariants(tk, block) {
 	for (const m of tk.custom_variants) {
 		if (m.dt == dtsnvindel) {
+			tk.mds.has_skewer = true // enable skewer tk
 			validateCustomSnvindel(m)
 			continue
 		}
 		if (m.dt == dtfusionrna || m.dt == dtsv) {
+			tk.mds.has_skewer = true // enable skewer tk
 			validateCustomSvfusion(m, block)
+			continue
+		}
+		if (m.dt == dtcnv) {
+			tk.mds.has_cnv = true // enable cnv tk
+			m.ssm_id = m.chr + '.' + m.start + '.' + m.stop + '.' + m.class
 			continue
 		}
 		throw 'unknown dt for a custom variant'
@@ -874,7 +887,7 @@ this works for receiving data from mass-matrix gene label-clicking
 
 in custom_variants[] data points,
 if "sample_id" is present but "occurrence" is missing, do below:
-- dedup the list by merging m{} of same variant together
+- dedup the list by merging m{} of same variant together. only apply to ssm!
 - on unique m{}, create .samples[] to collect list of samples harboring that variant
 - derive m.occurrence:int, as the samples[] array length
 - enable tk.mds.variant2samples{}
@@ -901,10 +914,25 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 		// usecase: for displaying variant-only info, e.g. regression-snplocus, dbsnp, clinvar
 		return
 	}
+
 	// has .sample_id but lacks .occurrence, do things
+
+	// ungrouped events are stored here and combined to grouped ones.
+	// FIXME group fusion.
+	// lacks a way to group cnv
+	const ungrouped = []
+
 	const key2m = new Map()
-	// k: string key, v: m{} after deduplication, with occurrence:int
+	// k: mutation ssm_id, v: m{} after deduplication, with occurrence:int
+
 	for (const m of tk.custom_variants) {
+		if (m.dt != dtsnvindel) {
+			m.occurrence = 1
+			m.samples = [{ sample_id: m.sample_id }]
+			delete m.sample_id
+			ungrouped.push(m)
+			continue
+		}
 		const key = m.mname + '.' + m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
 		const m2 = key2m.get(key)
 		if (m2) {
@@ -924,7 +952,8 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 			key2m.set(key, m)
 		}
 	}
-	tk.custom_variants = []
+
+	tk.custom_variants = ungrouped
 	for (const m of key2m.values()) tk.custom_variants.push(m)
 	// enable variant2samples
 	if (!tk.mds.variant2samples) tk.mds.variant2samples = {}

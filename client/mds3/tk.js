@@ -3,7 +3,7 @@ import { makeTk } from './makeTk'
 import { may_render_skewer } from './skewer'
 import { may_render_cnv } from './cnv'
 import { make_leftlabels } from './leftlabel'
-import { mclass } from '#shared/common'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common'
 
 /*
 loadTk
@@ -30,7 +30,7 @@ export async function loadTk(tk, block) {
 		}
 
 		const data = await getData(tk, block)
-
+		console.log('tk data', data)
 		if (tk.uninitialized) {
 			tk.clear()
 			delete tk.uninitialized
@@ -313,7 +313,8 @@ by info_fields[] and variantcase_fields[]
 async function dataFromCustomVariants(tk, block) {
 	// return the same data{} object as server queries
 	const data = {
-		skewer: []
+		skewer: [], // for non-cnv data
+		cnv: [] // for cnv segments
 		// adds mclass2variantcount[] later
 	}
 
@@ -333,20 +334,30 @@ async function dataFromCustomVariants(tk, block) {
 	const m2c = new Map() // k: mclass, v: count
 
 	for (const m of tk.custom_variants) {
-		if (m.chr != block.rglst[0].chr) continue // may not work for subpanel
-		if (m.pos <= bbstart || m.pos >= bbstop) continue
+		if (m.dt == dtcnv) {
+			if (m.chr != block.rglst[0].chr) continue
+			if (Math.max(m.start, bbstart) > Math.min(m.stop, bbstop)) continue
+			data.cnv.push(m)
+		} else if (m.dt == dtsnvindel || m.dt == dtsv || m.dt == dtfusionrna) {
+			if (m.chr != block.rglst[0].chr) continue // may not work for subpanel
+			if (m.pos <= bbstart || m.pos >= bbstop) continue
 
-		// guard against missing or invalid class from custom data
-		// wrong values are silently converted to "X" for "nonstandard", which can alert user without needing a separate alert
-		if (!m.class) m.class = 'X' // missing class
-		if (!mclass[m.class]) m.class = 'X' // invalid class
+			// guard against missing or invalid class from custom data
+			// wrong values are silently converted to "X" for "nonstandard", which can alert user without needing a separate alert
+			if (!m.class) m.class = 'X' // missing class
+			if (!mclass[m.class]) m.class = 'X' // invalid class
 
+			if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
+
+			data.skewer.push(m)
+		} else {
+			throw 'unknown custom data dt'
+		}
 		// for hidden mclass, must count it so the legend will be able to show the hidden item
 		m2c.set(m.class, 1 + (m2c.get(m.class) || 0))
-		if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
-
-		data.skewer.push(m)
 	}
+
+	if (data.cnv.length == 0) delete data.cnv // important to delete to avoid triggering cnv logic
 
 	if (data.skewer.some(i => i.samples)) {
 		// has .samples[], get sample count

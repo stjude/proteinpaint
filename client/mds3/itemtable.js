@@ -538,7 +538,7 @@ export function table_cnv(arg, table) {
 		c1.text('Position')
 		c2.text(m.chr + ':' + m.start + '-' + m.stop)
 	}
-	{
+	if (m.samples) {
 		const [c1, c2] = table.addRow()
 		c1.text('Sample')
 		for (const s of m.samples) {
