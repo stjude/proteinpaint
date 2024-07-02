@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.66.0
 
 Features:
 - Added use case to open the single cell gene expression violin of a sample
