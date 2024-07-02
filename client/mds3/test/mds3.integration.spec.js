@@ -15,6 +15,7 @@ Incorrect dslabel
 Custom cnv only, no sample
 Custom ssm only, no sample
 Custom cnv and ssm, no sample
+Custom cnv and ssm, WITH sample
 Custom variants, missing or invalid mclass
 Custom variants WITH samples (allows some to be without)
 Custom data with samples and sample selection
@@ -912,6 +913,70 @@ tape('Custom cnv and ssm, no sample', test => {
 		}
 
 		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+
+tape.only('Custom cnv and ssm, WITH sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_amp', value: 1, sample: 's1' },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_loss', value: -1, sample: 's2' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 4, class: 'CNV_loss', value: -0.5, sample: 's3' },
+		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1, sample: 's3' },
+		{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1, sample: 's4' },
+		{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1, sample: 's1' }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [
+			{
+				type: 'mds3',
+				name: 'Custom data',
+				custom_variants: JSON.parse(JSON.stringify(custom_variants))
+			}
+		],
+		onloadalltk_always: checkTrack
+	})
+	async function checkTrack(bb) {
+		const tk = bb.tklst.find(i => i.type == 'mds3')
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.filter(i => i.dt == 4).length,
+			`All cnv segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} variants`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
+			)
+		}
+
+		{
+			// Test sample leftlabel
+			const lab = tk.leftlabels.doms.samples
+			test.ok(lab, '"Samples" leftlabel should be displayed')
+
+			const set = new Set(custom_variants.map(i => i.sample))
+			test.equal(lab.node().innerHTML, `${set.size} samples`, `Samples leftlabel should print "${set.size} samples"`)
+		}
+
+		if (0 && test._ok) {
 			tk.menutip.d.remove()
 			holder.remove()
 		}
