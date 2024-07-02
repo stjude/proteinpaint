@@ -920,7 +920,7 @@ tape('Custom cnv and ssm, no sample', test => {
 	}
 })
 
-tape.only('Custom cnv and ssm, WITH sample', test => {
+tape('Custom cnv and ssm, WITH sample', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
