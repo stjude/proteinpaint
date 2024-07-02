@@ -1106,6 +1106,139 @@ export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
 
+/*
+Term groupsetting used for geneVariant term
+NOTE: for each groupsetting, groups[] is ordered by priority
+for example: in the 'Protein-changing vs. rest' groupsetting, the
+'Protein-changing' group is listed first in groups[] so that samples
+that have both missense and silent mutations are classified in the
+'Protein-changing' group
+*/
+export const geneVariantTermGroupsetting = {
+	disabled: false,
+	lst: [
+		{
+			// SNV/indel groupsetting
+			name: 'Mutated vs. wildtype',
+			groups: [
+				{
+					name: 'Mutated',
+					values: mutationClasses
+						.filter(key => key != 'WT' && key != 'Blank')
+						.map(key => {
+							return { key, dt: mclass[key].dt, label: mclass[key].label }
+						})
+				},
+				{
+					name: 'Wildtype',
+					values: [{ key: 'WT', label: 'Wildtype' }]
+				},
+				{
+					name: 'Not tested',
+					values: [{ key: 'Blank', label: 'Not tested' }],
+					uncomputable: true
+				}
+			]
+		},
+		// SNV/indel groupsetting
+		{
+			name: 'Protein-changing vs. rest',
+			groups: [
+				{
+					name: 'Protein-changing',
+					values: proteinChangingMutations.map(key => {
+						return { key, dt: mclass[key].dt, label: mclass[key].label }
+					})
+				},
+				{
+					name: 'Rest',
+					values: Object.keys(mclass)
+						.filter(key => !proteinChangingMutations.includes(key) && key != 'Blank')
+						.map(key => {
+							return { key, dt: mclass[key].dt, label: mclass[key].label }
+						})
+				},
+				{
+					name: 'Not tested',
+					values: [{ key: 'Blank', label: 'Not tested' }],
+					uncomputable: true
+				}
+			]
+		},
+		// SNV/indel groupsetting
+		{
+			name: 'Truncating vs. rest',
+			groups: [
+				{
+					name: 'Truncating',
+					values: truncatingMutations.map(key => {
+						return { key, dt: mclass[key].dt, label: mclass[key].label }
+					})
+				},
+				{
+					name: 'Rest',
+					values: Object.keys(mclass)
+						.filter(key => !truncatingMutations.includes(key) && key != 'Blank')
+						.map(key => {
+							return { key, dt: mclass[key].dt, label: mclass[key].label }
+						})
+				},
+				{
+					name: 'Not tested',
+					values: [{ key: 'Blank', label: 'Not tested' }],
+					uncomputable: true
+				}
+			]
+		},
+		// CNV groupsetting
+		{
+			name: 'Gain vs. Loss vs. LOH vs. Wildtype',
+			groups: [
+				{
+					name: 'Copy number gain',
+					values: [{ key: 'CNV_amp', dt: mclass['CNV_amp'].dt, label: mclass['CNV_amp'].label }]
+				},
+				{
+					name: 'Copy number loss',
+					values: [{ key: 'CNV_loss', dt: mclass['CNV_loss'].dt, label: mclass['CNV_loss'].label }]
+				},
+				{
+					name: 'LOH',
+					values: [{ key: 'CNV_loh', dt: mclass['CNV_loh'].dt, label: mclass['CNV_loh'].label }]
+				},
+				{
+					name: 'Wildtype',
+					values: [{ key: 'WT', label: 'Wildtype' }]
+				},
+				{
+					name: 'Not tested',
+					values: [{ key: 'Blank', label: 'Not tested' }],
+					uncomputable: true
+				}
+			]
+		},
+		// SV fusion groupsetting
+		{
+			name: 'Fusion vs. Wildtype',
+			groups: [
+				{
+					name: 'Fusion transcript',
+					values: [{ key: 'Fuserna', dt: mclass['Fuserna'].dt, label: mclass['Fuserna'].label }]
+				},
+				{
+					name: 'Wildtype',
+					values: [{ key: 'WT', label: 'Wildtype' }]
+				},
+				{
+					name: 'Not tested',
+					values: [{ key: 'Blank', label: 'Not tested' }],
+					uncomputable: true
+				}
+			]
+		}
+	]
+}
+
 export const colorScaleMap = {
 	blueWhiteRed: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] },
 	greenWhiteRed: { domain: [0, 0.5, 1], range: ['green', 'white', 'red'] },

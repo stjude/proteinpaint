@@ -1,4 +1,4 @@
-import { mclass, dt2label, dtsnvindel, dtcnv, dtsv, dtfusionrna } from '../../shared/common'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '../../shared/common'
 import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW, GeneVariantQ } from '../../shared/types/index'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '../../rx'
@@ -82,96 +82,9 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 	}
 
 	// groupsetting
-	// fill tw.term.groupsetting
-	const protein_changing_keys = new Set(['D', 'F', 'I', 'L', 'M', 'N', 'P', 'ProteinAltering', 'Fuserna', 'SV'])
-	const truncating_keys = new Set(['F', 'L', 'N', 'SV'])
-	if (!tw.term.groupsetting) {
-		tw.term.groupsetting = { disabled: false }
-		/* for each groupsetting, groups[] is ordered by priority
-		for example: for the 'Protein-changing vs. rest' groupsetting, the
-		'Protein-changing' group is listed first in groups[] so that samples
-		that have both missense and silent mutations are classified in the
-		'Protein-changing' group */
-		const lst = [
-			{
-				name: 'Mutated vs. wildtype',
-				groups: [
-					{
-						name: 'Mutated',
-						values: Object.keys(mclass)
-							.filter(key => key != 'WT' && key != 'Blank')
-							.map(key => {
-								return { key, dt: mclass[key].dt, label: mclass[key].label }
-							})
-					},
-					{
-						name: 'Wildtype',
-						values: [{ key: 'WT', label: 'Wildtype' }]
-					},
-					{
-						name: 'Not tested',
-						values: [{ key: 'Blank', label: 'Not tested' }],
-						uncomputable: true
-					}
-				]
-			},
-			{
-				name: 'Protein-changing vs. rest',
-				groups: [
-					{
-						name: 'Protein-changing',
-						values: Object.keys(mclass)
-							.filter(key => protein_changing_keys.has(key))
-							.map(key => {
-								return { key, dt: mclass[key].dt, label: mclass[key].label }
-							})
-					},
-					{
-						name: 'Rest',
-						values: Object.keys(mclass)
-							.filter(key => !protein_changing_keys.has(key) && key != 'Blank')
-							.map(key => {
-								return { key, dt: mclass[key].dt, label: mclass[key].label }
-							})
-					},
-					{
-						name: 'Not tested',
-						values: [{ key: 'Blank', label: 'Not tested' }],
-						uncomputable: true
-					}
-				]
-			},
-			{
-				name: 'Truncating vs. rest',
-				groups: [
-					{
-						name: 'Truncating',
-						values: Object.keys(mclass)
-							.filter(key => truncating_keys.has(key))
-							.map(key => {
-								return { key, dt: mclass[key].dt, label: mclass[key].label }
-							})
-					},
-					{
-						name: 'Rest',
-						values: Object.keys(mclass)
-							.filter(key => !truncating_keys.has(key) && key != 'Blank')
-							.map(key => {
-								return { key, dt: mclass[key].dt, label: mclass[key].label }
-							})
-					},
-					{
-						name: 'Not tested',
-						values: [{ key: 'Blank', label: 'Not tested' }],
-						uncomputable: true
-					}
-				]
-			}
-		]
-		tw.term.groupsetting.lst = lst
-	}
-
-	// fill tw.q.groupsetting
+	// fill term.groupsetting
+	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
+	// fill q.groupsetting
 	if (!tw.q.groupsetting) tw.q.groupsetting = {}
 	delete tw.q.groupsetting.disabled
 	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false
@@ -187,11 +100,9 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 		}
 		// fill a single groupset index
 		const groupset_idxs = getGroupsetIdxs(tw.q.dt)
-		if (
-			!tw.q.groupsetting.predefined_groupset_idx ||
-			!groupset_idxs.includes(tw.q.groupsetting.predefined_groupset_idx)
-		)
+		if (!Number.isInteger(tw.q.groupsetting.predefined_groupset_idx) && !tw.q.groupsetting.customset) {
 			tw.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+		}
 	}
 
 	{
@@ -230,7 +141,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 }
 
 async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
-	const div = _div.append('div').style('padding', '5px').style('cursor', 'pointer')
+	const div = _div.append('div').style('padding', '8px')
 
 	div.append('div').style('font-size', '1.2rem').text(self.term.name)
 
@@ -265,20 +176,33 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 				self.q.groupsetting.inuse = false
 				delete self.q.dt
 				delete self.q.origin
+				clearGroupset(self)
 				groupsDiv.style('display', 'none')
 				draggablesDiv.style('display', 'none')
 			}
 		}
 	})
-	if (radios.inputs.filter(':checked').datum().value) await makeRadiosForGrouping()
+
+	if (self.q.groupsetting.inuse) await makeRadiosForGrouping()
 
 	// make radio buttons for grouping variants
 	async function makeRadiosForGrouping() {
 		groupsDiv.style('display', 'inline-block')
 		makeDtRadios()
 		mayMakeOriginRadios()
-		makeGroupsetRadios()
-		await mayMakeGroupsetDraggables()
+		const groupset_idxs = getGroupsetIdxs(self.q.dt)
+		if (self.q.dt == dtsnvindel) {
+			// dt is SNV/indel
+			// groupsetting is customizable
+			// display as radio buttons and draggables
+			makeGroupsetRadios(groupset_idxs)
+			await mayMakeGroupsetDraggables()
+		} else {
+			// dt is either CNV or SV Fusion
+			// groupsetting is fixed
+			// display as text
+			makeGroupsetText(groupset_idxs)
+		}
 	}
 
 	// radio buttons for data type
@@ -290,9 +214,10 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		make_radios({
 			holder: dtDiv,
 			options: ds_dts.map(dt => ({ label: dt2label[dt], value: dt, checked: dt == self.q.dt })),
-			callback: v => {
+			callback: async v => {
 				self.q.dt = v
-				makeRadiosForGrouping()
+				clearGroupset(self)
+				await makeRadiosForGrouping()
 			}
 		})
 	}
@@ -301,6 +226,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	function mayMakeOriginRadios() {
 		const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt]?.byOrigin
 		if (!byOrigin) {
+			delete self.q.origin
 			originDiv.style('display', 'none')
 			return
 		}
@@ -315,22 +241,19 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 				value: origin,
 				checked: origin == self.q.origin
 			})),
-			callback: v => {
+			callback: async v => {
 				self.q.origin = v
-				makeRadiosForGrouping()
+				clearGroupset(self)
+				await makeRadiosForGrouping()
 			}
 		})
 	}
 
 	// radio buttons for variant groupset
-	function makeGroupsetRadios() {
+	function makeGroupsetRadios(groupset_idxs) {
 		groupsetDiv.selectAll('*').remove()
 		groupsetDiv.append('div').style('font-weight', 'bold').text('Variant grouping')
-		// get groupset indices relevant to given dt
-		const groupset_idxs = getGroupsetIdxs(self.q.dt)
-		if (!groupset_idxs.includes(self.q.groupsetting.predefined_groupset_idx) && !self.q.groupsetting.customset) {
-			// groupsetting does not have valid predefined index or customset
-			// set to be predefined by default
+		if (!Number.isInteger(self.q.groupsetting.predefined_groupset_idx) && !self.q.groupsetting.customset) {
 			self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
 		}
 		const isPredefined = Number.isInteger(self.q.groupsetting.predefined_groupset_idx)
@@ -341,14 +264,15 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 				{ label: 'Predefined groups', value: 'predefined', checked: isPredefined },
 				{ label: 'Custom groups', value: 'custom', checked: !isPredefined }
 			],
-			callback: v => {
+			callback: async v => {
 				if (v == 'predefined') {
 					self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+					delete self.q.groupsetting.customset
 				} else {
 					predefinedGroupsetDiv.style('display', 'none')
-					delete self.q.groupsetting.predefined_groupset_idx
+					makeCustomGroups()
 				}
-				makeRadiosForGrouping()
+				await makeRadiosForGrouping()
 			}
 		})
 		// get the div of the predefined radio button and append
@@ -363,8 +287,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			predefinedGroupsetDiv.style('display', 'block')
 			predefinedGroupsetDiv.selectAll('*').remove()
 			self.q.type = 'values'
-			delete self.q.groupsetting.customset
-			if (!groupset_idxs.includes(self.q.groupsetting.predefined_groupset_idx)) {
+			if (!Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
 				self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
 			}
 			make_radios({
@@ -373,9 +296,9 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 					const groupset = self.term.groupsetting.lst[i]
 					return { label: groupset.name, value: i, checked: i == self.q.groupsetting.predefined_groupset_idx }
 				}),
-				callback: v => {
+				callback: async v => {
 					self.q.groupsetting.predefined_groupset_idx = v
-					makeRadiosForGrouping()
+					await makeRadiosForGrouping()
 				}
 			})
 		} else {
@@ -386,9 +309,22 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		}
 	}
 
+	function makeGroupsetText(groupset_idxs) {
+		// dt is either CNV or SV Fusion
+		// use fixed groupsetting
+		draggablesDiv.style('display', 'none')
+		delete self.groupSettingInstance
+		groupsetDiv.selectAll('*').remove()
+		groupsetDiv.append('div').style('font-weight', 'bold').text('Variant grouping')
+		self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+		const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+		groupsetDiv.append('div').style('margin', '5px 0px 0px 10px').text(groupset.name)
+	}
+
 	// function for preparing custom groups
 	function makeCustomGroups() {
 		self.q.type = 'custom-groupset'
+		delete self.q.groupsetting.predefined_groupset_idx
 		const dt = self.category2samplecount.find(i => i.dt == self.q.dt)
 		const classes = dt.classes.byOrigin ? dt.classes.byOrigin[self.q.origin] : dt.classes
 		if (!self.q.groupsetting.customset) {
@@ -421,10 +357,11 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	// Apply button
 	div
 		.append('button')
-		.style('margin-top', '10px')
+		.style('margin-top', '20px')
+		.style('display', 'block')
 		.text('Apply')
 		.on('click', () => {
-			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
+			if (self.q.groupsetting.inuse && self.groupSettingInstance) self.groupSettingInstance.processDraggables()
 			self.runCallback()
 		})
 
@@ -517,7 +454,6 @@ function getDsDts(ds_queries) {
 		if (query == 'snvindel') ds_dts.push(dtsnvindel)
 		else if (query == 'cnv') ds_dts.push(dtcnv)
 		else if (query == 'svfusion') ds_dts.push(dtfusionrna)
-		else if (query == 'sv') ds_dts.push(dtsv) // TODO: is this correct?
 		else continue
 	}
 	return ds_dts
@@ -526,8 +462,13 @@ function getDsDts(ds_queries) {
 // get indices of predefined groupsets that are
 // relevant to given dt
 function getGroupsetIdxs(dt) {
-	const groupset_idxs =
-		dt == dtsnvindel || dt == dtsv ? [0, 1, 2] : dt == dtcnv ? [0] : dt == dtfusionrna ? [0, 1] : null
-
+	const groupset_idxs = dt == dtsnvindel ? [0, 1, 2] : dt == dtcnv ? [3] : dt == dtfusionrna ? [4] : []
+	if (!groupset_idxs.length) throw 'groupset_idxs is empty'
 	return groupset_idxs
+}
+
+function clearGroupset(self) {
+	delete self.q.groupsetting.predefined_groupset_idx
+	delete self.q.groupsetting.customset
+	delete self.groupSettingInstance
 }

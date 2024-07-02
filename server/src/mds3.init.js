@@ -2466,7 +2466,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				const group = groupset.groups.find(group => {
 					return group.values.some(v => mclasses.includes(v.key))
 				})
-				if (!group) continue
+				if (!group || group.uncomputable) continue
 				// store sample data
 				// key will be the name of the assigned group
 				data.set(sample, {

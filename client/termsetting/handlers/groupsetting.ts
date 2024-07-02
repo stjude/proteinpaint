@@ -375,6 +375,9 @@ function setRenderers(self: any) {
 	}
 
 	self.processDraggables = () => {
+		// if no item was dragged
+		// then do not create custom groups
+		if (!draggedItem) return
 		const customset: any = { groups: [] }
 		for (const group of self.data.groups) {
 			if (group.currentIdx === 0) continue
