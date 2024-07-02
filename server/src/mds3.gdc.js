@@ -1894,20 +1894,27 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 }
 
 export function gdc_validate_query_singleCell_data(ds, genome) {
-	/*
-	q{}
-		sample: value is the file Id, one that's found by gdc_validate_query_singleCell_samples
-	*/
+	// q{} TermdbSinglecellDataRequest
 	ds.queries.singleCell.data.get = async q => {
-		console.log(q.plots)
 		const { host } = ds.getHostHeaders(q)
 		// do not use headers here that has accept: 'application/json'
 		const re = await ky(path.join(host.rest, 'data', q.sample), { timeout: false }).text()
 		const lines = re.trim().split('\n')
 		const datasetPlots = ds.queries.singleCell.data.plots
-		// first line is header
-		// cell_barcode	read_count	gene_count	seurat_cluster	UMAP_1	UMAP_2	UMAP3d_1	UMAP3d_2	UMAP3d_3	tSNE_1	tSNE_2	tSNE3d_1	tSNE3d_2	tSNE3d_3	PC_1	PC_2	PC_3	PC_4	PC_5	PC_6	PC_7	PC_8	PC_9	PC_10
-		// this tsv file has coord for 3 maps
+		/*
+		this tsv file has coord for 3 maps
+		first line is header:
+
+		0     cell_barcode
+		1     read_count
+		2     gene_count
+		3     seurat_cluster
+		4-8   UMAP_1	UMAP_2	UMAP3d_1	UMAP3d_2	UMAP3d_3	
+		9-13  tSNE_1	tSNE_2	tSNE3d_1	tSNE3d_2	tSNE3d_3
+		14-23 PC_1	PC_2	PC_3	PC_4	PC_5	PC_6	PC_7	PC_8	PC_9	PC_10
+
+		!! important !! file column index must match with x/y values of each plot in dataset/gdc.hg38.ts 
+		*/
 		const seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} }
 		const plots = q.plots.map(p => ({ cells: [], name: p }))
 		for (let i = 1; i < lines.length; i++) {

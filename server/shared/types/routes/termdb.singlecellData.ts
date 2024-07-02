@@ -32,6 +32,8 @@ export type TermdbSinglecellDataRequest = {
 	dslabel: string
 	/** Sample name */
 	sample: string
+	/** List of plot names from this sample to request data for */
+	plots: string[]
 }
 
 export type HasdataResponse = {
