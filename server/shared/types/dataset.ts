@@ -398,9 +398,16 @@ export type SingleCellDataGdc = {
 	sameLegend: boolean
 	get?: (q: any) => any
 	refName: string
+	plots: GDCSingleCellPlot[]
+}
+
+type GDCSingleCellPlot = {
+	name: string
+	colorColumn: ColorColumn
+	coordsColumns: { x: number; y: number }
 }
 type ColorColumn = {
-	index: number
+	index?: number
 	name: string
 	colorMap?: { [index: string]: string }
 }

@@ -1899,19 +1899,17 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		sample: value is the file Id, one that's found by gdc_validate_query_singleCell_samples
 	*/
 	ds.queries.singleCell.data.get = async q => {
+		console.log(q.plots)
 		const { host } = ds.getHostHeaders(q)
 		// do not use headers here that has accept: 'application/json'
 		const re = await ky(path.join(host.rest, 'data', q.sample), { timeout: false }).text()
 		const lines = re.trim().split('\n')
-
+		const datasetPlots = ds.queries.singleCell.data.plots
 		// first line is header
 		// cell_barcode	read_count	gene_count	seurat_cluster	UMAP_1	UMAP_2	UMAP3d_1	UMAP3d_2	UMAP3d_3	tSNE_1	tSNE_2	tSNE3d_1	tSNE3d_2	tSNE3d_3	PC_1	PC_2	PC_3	PC_4	PC_5	PC_6	PC_7	PC_8	PC_9	PC_10
 		// this tsv file has coord for 3 maps
-		const plotUmap = { name: 'UMAP', cells: [], colorBy: 'Cluster' },
-			plotTsne = { name: 'TSNE', cells: [], colorBy: 'Cluster' },
-			plotPca = { name: 'PCA', cells: [], colorBy: 'Cluster' },
-			seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} }
-
+		const seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} }
+		const plots = q.plots.map(p => ({ cells: [], name: p }))
 		for (let i = 1; i < lines.length; i++) {
 			const line = lines[i]
 			const l = line.split('\t')
@@ -1920,29 +1918,20 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			const clusterId = l[3]
 			if (!clusterId) throw 'seuratCluster missing from a line'
 			seuratClusterTerm.values[clusterId] = { label: 'Cluster ' + clusterId }
-
-			const umap1 = Number(l[4]),
-				umap2 = Number(l[5]),
-				// skip umap 3d
-				tsne1 = Number(l[9]),
-				tsne2 = Number(l[10]),
-				// skip tsne 3d
-				pc1 = Number(l[14]),
-				pc2 = Number(l[15])
-			if (Number.isNaN(umap1)) throw 'umap1 is nan'
-			if (Number.isNaN(umap2)) throw 'umap2 is nan'
-			if (Number.isNaN(tsne1)) throw 'tsne1 is nan'
-			if (Number.isNaN(tsne2)) throw 'tsne2 is nan'
-			if (Number.isNaN(pc1)) throw 'pc1 is nan'
-			if (Number.isNaN(pc2)) throw 'pc2 is nan'
-			const category = `Cluster ${clusterId}`
-			plotUmap.cells.push({ cellId, x: umap1, y: umap2, category })
-			plotTsne.cells.push({ cellId, x: tsne1, y: tsne2, category })
-			plotPca.cells.push({ cellId, x: pc1, y: pc2, category })
+			for (const plot of plots) {
+				const datasetPlot = datasetPlots.find(p => p.name == plot.name)
+				plot.colorBy = datasetPlot.colorColumn.name
+				const xpos = datasetPlot.coordsColumns.x
+				const ypos = datasetPlot.coordsColumns.y
+				const x = Number(l[xpos])
+				const y = Number(l[ypos])
+				if (Number.isNaN(x)) throw 'x is nan in plot ' + plot.name
+				if (Number.isNaN(y)) throw 'x is nan in plot ' + plot.name
+				const category = `Cluster ${clusterId}`
+				plot.cells.push({ cellId, x, y, category })
+			}
 		}
-		return {
-			plots: [plotTsne, plotUmap, plotPca]
-		}
+		return { plots }
 	}
 }
 
