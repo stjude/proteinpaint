@@ -28,7 +28,7 @@ export const api: any = {
  */
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as gettermsbyidsRequest
+		const q: gettermsbyidsRequest = req.query
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -59,7 +59,10 @@ async function trigger_gettermsbyid(
 	res: { send: (arg0: { terms: any }) => void },
 	tdb: { q: { termjsonByOneid: (arg0: any) => any } }
 ) {
-	const terms = {}
+	const terms: gettermsbyidsResponse = {
+		terms: {}
+	}
+
 	for (const id of q.ids) {
 		const term = tdb.q.termjsonByOneid(id)
 		if (term) {
@@ -72,5 +75,5 @@ async function trigger_gettermsbyid(
 	}
 	res.send({
 		terms
-	} as gettermsbyidsResponse)
+	})
 }
