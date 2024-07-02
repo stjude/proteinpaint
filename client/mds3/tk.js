@@ -30,7 +30,6 @@ export async function loadTk(tk, block) {
 		}
 
 		const data = await getData(tk, block)
-		console.log('tk data', data)
 		if (tk.uninitialized) {
 			tk.clear()
 			delete tk.uninitialized

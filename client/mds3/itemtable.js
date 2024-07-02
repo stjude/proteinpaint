@@ -168,9 +168,12 @@ async function itemtable_multiItems(arg) {
 		if (infoFields.length == 0) infoFields = null
 	}
 	// numeric value view mode object (that is not occurrence)
-	const numViewMode = arg.tk.skewer.viewModes.find(i => i.inuse && i.type == 'numeric' && i.byAttribute != 'occurrence')
-	if (numViewMode) {
-		columns.push({ label: numViewMode.label })
+	let numViewMode
+	if (arg.tk.skewer) {
+		numViewMode = arg.tk.skewer.viewModes.find(i => i.inuse && i.type == 'numeric' && i.byAttribute != 'occurrence')
+		if (numViewMode) {
+			columns.push({ label: numViewMode.label })
+		}
 	}
 
 	////////////////// generate table rows
