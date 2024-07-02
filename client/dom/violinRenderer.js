@@ -50,9 +50,13 @@ export class violinRenderer {
 					])
 					.on('end', async event => {
 						const selection = event.selection
-						const range_start = this.axisScale.invert(selection[0] - this.shiftx)
-						const range_end = this.axisScale.invert(selection[1] - this.shiftx)
-						this.callback({ range_start, range_end })
+						if (selection) {
+							const range_start = this.axisScale.invert(selection[0] - this.shiftx)
+							const range_end = this.axisScale.invert(selection[1] - this.shiftx)
+							this.callback({ range_start, range_end })
+						} else {
+							this.callback({ range_start: null, range_end: null })
+						}
 					})
 			)
 	}
