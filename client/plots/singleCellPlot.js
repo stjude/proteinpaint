@@ -52,9 +52,9 @@ class singleCellPlot {
 		const q = state.termdbConfig.queries
 		//read files data
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
-		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		if (q.singleCell?.geneExpression) {
-			const searchGeneDiv = this.mainDiv.append('div').style('padding', '10px')
+			const searchGeneDiv = mainDiv.append('div').style('padding', '10px')
 			searchGeneDiv.append('label').html('Gene expression:')
 			const geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
@@ -121,14 +121,15 @@ class singleCellPlot {
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 
 		if (this.tableOnPlot) {
-			this.sampleDiv = this.mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
+			this.sampleDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
 			await renderSamplesTable(this.sampleDiv, this, appState)
 		}
 		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
 		const controlsHolder = controlsDiv.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
-		const tableDiv = this.tableOnPlot ? this.opts.holder.append('div') : this.mainDiv.append('div')
-		tableDiv
+		const tableDiv = this.tableOnPlot ? this.opts.holder.append('div') : mainDiv.append('div')
+		const plotsDiv = mainDiv
+			.append('div')
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
 			.style('justify-content', 'flex-start')
@@ -140,7 +141,8 @@ class singleCellPlot {
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
 			controlsHolder,
-			tableDiv
+			tableDiv,
+			plotsDiv
 		}
 
 		// this.sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
@@ -262,7 +264,7 @@ class singleCellPlot {
 	}
 
 	async renderPlots(body) {
-		this.dom.tableDiv.selectAll('*').remove()
+		this.dom.plotsDiv.selectAll('*').remove()
 		this.plots = []
 
 		try {
@@ -275,7 +277,7 @@ class singleCellPlot {
 			this.refName = result.refName
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
-			sayerror(this.mainDiv, e)
+			sayerror(this.dom.plotsDiv, e)
 			return
 		}
 	}
@@ -297,7 +299,7 @@ class singleCellPlot {
 		this.plots.push(plot)
 		this.initAxes(plot)
 
-		plot.plotDiv = this.dom.tableDiv
+		plot.plotDiv = this.dom.plotsDiv
 			.append('div')
 			.style('overflow', 'hidden')
 			.style('display', 'inline-block')
