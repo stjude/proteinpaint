@@ -106,6 +106,7 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	menuOptions: string //all, edit, replace, remove
 	menuLayout?: string //horizonal, all
 	numericEditMenuVersion?: string[]
+	geneVariantEditMenuOnlyGrp?: boolean
 	numericContinuousEditOptions?: NumericContEditOptsEntry[]
 	placeholder?: string
 	placeholderIcon?: string //default '+'

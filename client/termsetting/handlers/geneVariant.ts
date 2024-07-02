@@ -162,7 +162,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 	// radio buttons for whether or not to group variants
 	optsDiv.append('div').style('font-weight', 'bold').text('Group variants')
-	const radios = make_radios({
+	make_radios({
 		holder: optsDiv,
 		options: [
 			{ label: 'No variant grouping', value: false, checked: !self.q.groupsetting.inuse },
@@ -182,6 +182,13 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			}
 		}
 	})
+
+	if (self.opts.geneVariantEditMenuOnlyGrp) {
+		// only show groupsetting options
+		// so that user does not turn off groupsetting
+		optsDiv.style('display', 'none')
+		groupsDiv.style('margin', '10px 0px 0px 00px')
+	}
 
 	if (self.q.groupsetting.inuse) await makeRadiosForGrouping()
 

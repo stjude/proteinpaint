@@ -45,6 +45,9 @@ class Divide {
 			debug: this.opts.debug,
 			menuOptions: 'all', // to show edit/replace/remove menu upon clicking pill
 			defaultQ4fillTW: this.opts.defaultQ4fillTW,
+			// edit menu of geneVariant term should only display
+			// groupsetting options
+			geneVariantEditMenuOnlyGrp: true,
 			getBodyParams: this.opts.getBodyParams,
 			callback: term0 => {
 				// term0 is {term,q} and can be null
