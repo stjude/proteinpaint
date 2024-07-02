@@ -42,7 +42,7 @@ export class violinRenderer {
 				.attr('transform', `translate(0, -${this.plot.radius || 3})`)
 
 		if (this.callback)
-			this.svg.call(
+			this.svg.append('g').call(
 				brushX()
 					.extent([
 						[this.shiftx, this.shifty],
@@ -50,6 +50,7 @@ export class violinRenderer {
 					])
 					.on('end', async event => {
 						const selection = event.selection
+						if (!selection) return
 						const range_start = this.axisScale.invert(selection[0] - this.shiftx)
 						const range_end = this.axisScale.invert(selection[1] - this.shiftx)
 						this.callback({ range_start, range_end })
