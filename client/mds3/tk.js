@@ -358,16 +358,24 @@ async function dataFromCustomVariants(tk, block) {
 
 	if (data.cnv.length == 0) delete data.cnv // important to delete to avoid triggering cnv logic
 
-	if (data.skewer.some(i => i.samples)) {
+	// count unique number of samples, if has such
+	const set = new Set()
+	if (data.skewer?.some(i => i.samples)) {
 		// has .samples[], get sample count
-		const set = new Set()
 		for (const m of data.skewer) {
 			if (m.samples) {
 				for (const s of m.samples) set.add(s.sample_id)
 			}
 		}
-		data.sampleTotalNumber = set.size
 	}
+	if (data.cnv?.some(i => i.samples)) {
+		for (const m of data.cnv) {
+			if (m.samples) {
+				for (const s of m.samples) set.add(s.sample_id)
+			}
+		}
+	}
+	if (set.size) data.sampleTotalNumber = set.size
 
 	data.mclass2variantcount = [...m2c]
 
