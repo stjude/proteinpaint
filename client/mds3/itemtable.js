@@ -168,9 +168,12 @@ async function itemtable_multiItems(arg) {
 		if (infoFields.length == 0) infoFields = null
 	}
 	// numeric value view mode object (that is not occurrence)
-	const numViewMode = arg.tk.skewer.viewModes.find(i => i.inuse && i.type == 'numeric' && i.byAttribute != 'occurrence')
-	if (numViewMode) {
-		columns.push({ label: numViewMode.label })
+	let numViewMode
+	if (arg.tk.skewer) {
+		numViewMode = arg.tk.skewer.viewModes.find(i => i.inuse && i.type == 'numeric' && i.byAttribute != 'occurrence')
+		if (numViewMode) {
+			columns.push({ label: numViewMode.label })
+		}
 	}
 
 	////////////////// generate table rows
@@ -538,7 +541,7 @@ export function table_cnv(arg, table) {
 		c1.text('Position')
 		c2.text(m.chr + ':' + m.start + '-' + m.stop)
 	}
-	{
+	if (m.samples) {
 		const [c1, c2] = table.addRow()
 		c1.text('Sample')
 		for (const s of m.samples) {

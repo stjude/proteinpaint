@@ -29,8 +29,6 @@ export function makeVariantLabel(data, tk, block, laby) {
 		tk.leftlabels.doms.variants.attr('data-testid', 'sja_variants_label')
 	}
 
-	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
-
 	let totalcount, showcount
 
 	if (tk.custom_variants) {
@@ -46,18 +44,24 @@ export function makeVariantLabel(data, tk, block, laby) {
 		return
 	}
 
-	/*
-	out of total, only a subset may be plotted
-	to count how many are plotted, check with mode type
-	if type=skewer, plotted data are at tk.skewer.data[]
-	else if type=numeric, plotted data are at tk.skewer.numericModes[?].data
-	*/
-	if (currentMode.type == 'skewer') {
-		showcount = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
-	} else if (currentMode.type == 'numeric') {
-		showcount = currentMode.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
-	} else {
-		throw 'unknown mode type'
+	// there is at least 1 variant shown. start to count
+	showcount = 0
+
+	if (tk.skewer) {
+		const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+		/*
+		out of total, only a subset may be plotted
+		to count how many are plotted, check with mode type
+		if type=skewer, plotted data are at tk.skewer.data[]
+		else if type=numeric, plotted data are at tk.skewer.numericModes[?].data
+		*/
+		if (currentMode.type == 'skewer') {
+			showcount = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
+		} else if (currentMode.type == 'numeric') {
+			showcount = currentMode.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
+		} else {
+			throw 'unknown mode type'
+		}
 	}
 
 	if (data.cnv) showcount += data.cnv.length // always count cnv when present, so as not to trigger "xx of yy" at variant label
@@ -95,85 +99,87 @@ function menu_variants(tk, block) {
 		.attr('data-testid', 'sja_list_menuoption') // FIXME mds3tk_variantleftlabel_list
 		.style('border-radius', '0px')
 		.on('click', () => {
-			listSkewerData(tk, block)
+			listVariantData(tk, block)
 		})
 
-	if (tk.skewer.hlssmid) {
-		tk.menutip.d
-			.append('div')
-			.text('Cancel highlight')
-			.style('border-radius', '0px')
-			.attr('class', 'sja_menuoption')
-			.on('click', () => {
-				delete tk.skewer.hlssmid
-				tk.skewer.hlBoxG.selectAll('*').remove()
-				const currentMode = tk.skewer.viewModes.find(i => i.inuse)
-				if (currentMode.type == 'skewer') {
-					// have to rerender under skewer mode, to rearrange skewers
-					settle_glyph(tk, block)
-				} else if (currentMode.type == 'numeric') {
-					// no need to rerender for numeric mode, the disks are fixed
-				} else {
-					throw 'unknown mode type'
-				}
-				tk.menutip.hide()
-			})
-	}
-
-	const vm = tk.skewer.viewModes.find(n => n.inuse) // view mode that's in use. following menu options depends on it
-	if (vm.type == 'skewer') {
-		// show options related to skewer mode
-
-		// showmode=1/0 means expanded/folded skewer, defined in skewer.render.js
-		const expandCount = tk.skewer.data.reduce((i, j) => i + j.showmode, 0)
-		if (expandCount > 0) {
-			// has expanded skewer
+	if (tk.skewer) {
+		if (tk.skewer.hlssmid) {
 			tk.menutip.d
 				.append('div')
-				.text('Collapse')
-				.attr('class', 'sja_menuoption')
-				.attr('data-testid', 'sja_collapse_menuoption') // mds3tk_variantleftlabel_collapse
+				.text('Cancel highlight')
 				.style('border-radius', '0px')
-				.on('click', () => {
-					fold_glyph(tk.skewer.data, tk)
-					tk.menutip.hide()
-				})
-		} else if (expandCount == 0) {
-			tk.menutip.d
-				.append('div')
-				.text('Expand')
 				.attr('class', 'sja_menuoption')
-				.attr('data-testid', 'sja_expand_menuoption') // mds3tk_variantleftlabel_expand
-				.style('border-radius', '0px')
 				.on('click', () => {
-					settle_glyph(tk, block)
+					delete tk.skewer.hlssmid
+					tk.skewer.hlBoxG.selectAll('*').remove()
+					const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+					if (currentMode.type == 'skewer') {
+						// have to rerender under skewer mode, to rearrange skewers
+						settle_glyph(tk, block)
+					} else if (currentMode.type == 'numeric') {
+						// no need to rerender for numeric mode, the disks are fixed
+					} else {
+						throw 'unknown mode type'
+					}
 					tk.menutip.hide()
 				})
 		}
 
-		tk.menutip.d
-			.append('div')
-			.text(tk.skewer.pointup ? 'Point down' : 'Point up')
-			.attr('class', 'sja_menuoption')
-			.style('border-radius', '0px')
-			.on('click', () => {
-				tk.skewer.pointup = !tk.skewer.pointup
-				tk.load()
-				tk.menutip.hide()
-			})
-	} else if (vm.type == 'numeric') {
-		// only show this opt in numeric mode; delete when label hiding works for skewer mode
+		const vm = tk.skewer.viewModes.find(n => n.inuse) // view mode that's in use. following menu options depends on it
+		if (vm.type == 'skewer') {
+			// show options related to skewer mode
 
-		tk.menutip.d
-			.append('div')
-			.text(tk.skewer.hideDotLabels ? 'Show all variant labels' : 'Hide all variant labels')
-			.attr('class', 'sja_menuoption')
-			.style('border-radius', '0px')
-			.on('click', () => {
-				tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
-				tk.load()
-				tk.menutip.hide()
-			})
+			// showmode=1/0 means expanded/folded skewer, defined in skewer.render.js
+			const expandCount = tk.skewer.data.reduce((i, j) => i + j.showmode, 0)
+			if (expandCount > 0) {
+				// has expanded skewer
+				tk.menutip.d
+					.append('div')
+					.text('Collapse')
+					.attr('class', 'sja_menuoption')
+					.attr('data-testid', 'sja_collapse_menuoption') // mds3tk_variantleftlabel_collapse
+					.style('border-radius', '0px')
+					.on('click', () => {
+						fold_glyph(tk.skewer.data, tk)
+						tk.menutip.hide()
+					})
+			} else if (expandCount == 0) {
+				tk.menutip.d
+					.append('div')
+					.text('Expand')
+					.attr('class', 'sja_menuoption')
+					.attr('data-testid', 'sja_expand_menuoption') // mds3tk_variantleftlabel_expand
+					.style('border-radius', '0px')
+					.on('click', () => {
+						settle_glyph(tk, block)
+						tk.menutip.hide()
+					})
+			}
+
+			tk.menutip.d
+				.append('div')
+				.text(tk.skewer.pointup ? 'Point down' : 'Point up')
+				.attr('class', 'sja_menuoption')
+				.style('border-radius', '0px')
+				.on('click', () => {
+					tk.skewer.pointup = !tk.skewer.pointup
+					tk.load()
+					tk.menutip.hide()
+				})
+		} else if (vm.type == 'numeric') {
+			// only show this opt in numeric mode; delete when label hiding works for skewer mode
+
+			tk.menutip.d
+				.append('div')
+				.text(tk.skewer.hideDotLabels ? 'Show all variant labels' : 'Hide all variant labels')
+				.attr('class', 'sja_menuoption')
+				.style('border-radius', '0px')
+				.on('click', () => {
+					tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
+					tk.load()
+					tk.menutip.hide()
+				})
+		}
 	}
 
 	if (!tk.custom_variants) {
@@ -193,7 +199,7 @@ function menu_variants(tk, block) {
 	mayAddSkewerModeOption(tk, block)
 }
 
-async function listSkewerData(tk, block) {
+async function listVariantData(tk, block) {
 	/* data: []
 	each element {}:
 	.x
@@ -202,27 +208,30 @@ async function listSkewerData(tk, block) {
 			.mname
 			.class
 	*/
-	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
-	let data
-	if (currentMode.type == 'skewer') {
-		data = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width)
-	} else if (currentMode.type == 'numeric') {
-		data = currentMode.data
-	} else {
-		throw 'unknown mode type'
-	}
 
 	tk.menutip.clear()
 
 	// group variants by dt; for each group, render with itemtable()
-
 	const dt2mlst = new Map()
-	for (const g of data) {
-		for (const m of g.mlst) {
-			if (!dt2mlst.has(m.dt)) dt2mlst.set(m.dt, [])
-			dt2mlst.get(m.dt).push(m)
+
+	if (tk.skewer) {
+		const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+		let data
+		if (currentMode.type == 'skewer') {
+			data = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width)
+		} else if (currentMode.type == 'numeric') {
+			data = currentMode.data
+		} else {
+			throw 'unknown mode type'
+		}
+		for (const g of data) {
+			for (const m of g.mlst) {
+				if (!dt2mlst.has(m.dt)) dt2mlst.set(m.dt, [])
+				dt2mlst.get(m.dt).push(m)
+			}
 		}
 	}
+
 	if (tk.cnv?.cnvLst) {
 		dt2mlst.set(dtcnv, tk.cnv.cnvLst)
 	}

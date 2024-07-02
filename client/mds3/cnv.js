@@ -25,9 +25,6 @@ export function may_render_cnv(data, tk, block) {
 	}
 
 	const [cnvBySample, cnvLst, absoluteMax] = prepData(data, tk, block)
-	/* each elem is a row, which holds cnv segments of a sample
-	{x1,x2} where x1<x2 no matter block is reversed or not, for onscreen rendering
-	*/
 	tk.cnv.cnvLst = cnvLst // raw list of events to be used in itemtable
 
 	// FIXME if this tk is subtk keep value from parent tk and do not overwrite
@@ -37,46 +34,42 @@ export function may_render_cnv(data, tk, block) {
 		true
 	)
 
-	const [rowheight, rowspace] = getRowHeight(cnvBySample, tk)
+	const [rowheight, rowspace] = getRowHeight(cnvBySample || cnvLst)
 
-	let y = 0
-	for (const sample of cnvBySample) {
-		// all cnv segments of same sample are rendered in same row by y
-		for (const c of sample.cnvs) {
-			const x1 = Math.max(0, c.x1),
-				x2 = Math.min(c.x2, block.width) // apply clip so segment box doesn't go beyond block
-			tk.cnv.g
-				.append('rect')
-				.attr('x', x1)
-				.attr('y', y)
-				.attr('width', x2 - x1)
-				.attr('height', rowheight)
-				.attr('fill', tk.cnv.colorScale(c.value))
-				.on('mouseover', event => {
-					event.target.setAttribute('stroke', 'black')
-					tk.itemtip.clear().show(event.clientX, event.clientY)
-					const table = table2col({ holder: tk.itemtip.d })
-					const cnv = structuredClone(c)
-					cnv.samples = [{ sample_id: sample.sample_id }]
-					table_cnv({ mlst: [cnv], tk }, table)
-				})
-				.on('mouseout', event => {
-					event.target.setAttribute('stroke', '')
-					tk.itemtip.hide()
-				})
+	/* rendering
+	when using samples:
+		each sample is a row, all cnv segments of this sample are rendered into this row; number of rows is number of unique samples
+	when not using samples:
+		total number of rows are determined by stacking segments
+	{x1,x2} where x1<x2 no matter block is reversed or not, for onscreen rendering
+	*/
+
+	if (cnvBySample) {
+		for (const sample of cnvBySample) {
+			// all cnv segments of same sample are rendered in same row. segments have already been sorted
+			// do not consider overlapping segments. sample is not supposed to have that
+			for (const c of sample.cnvs) {
+				plotOneSegment(c, sample.y * (rowheight + rowspace), rowheight, tk, block, sample)
+			}
 		}
-		y += rowheight + rowspace
+	} else {
+		// no sample
+		for (const c of cnvLst) {
+			plotOneSegment(c, c.y * (rowheight + rowspace), rowheight, tk, block)
+		}
 	}
-	tk.subtk2height.cnv = y
+
+	const rowc = (cnvBySample || cnvLst).length
+	tk.subtk2height.cnv = rowc * rowheight + (rowc - 1) * rowspace
 }
 
 function prepData(data, tk, block) {
+	// return following 3 variables. contents will vary depends on if sample is present
 	let maxAbsoluteValue = 0
-	const sample2cnv = new Map() // k: sample_id, v: [{chr/start/stop/value/x1/x2}]
-	const cnvLst = [] // raw list of events passing filter, each has structure of {samples:[]} to be used in itemtable
+	const sample2cnv = new Map() // k: sample_id, v: [{chr/start/stop/value/x1/x2}]. only populated when cnv has sample, in order to show cnvs from the same sample grouped together rather than scattered
+	const cnvLst = [] // raw list of events passing filter, each has structure of {samples:[]} to be used in itemtable. is used for cnv rendering when there's no sample
 
 	for (const v of data.cnv) {
-		// TODO report invalid data
 		if (!v.chr) continue
 		if (!Number.isFinite(v.value)) {
 			// no value. to cope with ds supplying qualitative calls
@@ -101,7 +94,7 @@ function prepData(data, tk, block) {
 
 		// the segment is visible
 
-		const j = { chr: v.chr, start: v.start, stop: v.stop, value: v.value, dt: v.dt }
+		const j = structuredClone(v)
 		if (t1.x > t2.x) {
 			// block is reverse
 			j.x1 = t2.x
@@ -111,40 +104,103 @@ function prepData(data, tk, block) {
 			j.x2 = t2.x
 		}
 
-		if (!Array.isArray(v.samples)) continue
-
 		// valid
-
-		cnvLst.push(v)
-
-		for (const s of v.samples) {
-			// {sample_id}
-			if (!sample2cnv.has(s.sample_id)) sample2cnv.set(s.sample_id, [])
-			sample2cnv.get(s.sample_id).push(structuredClone(j))
-		}
-
 		maxAbsoluteValue = Math.max(maxAbsoluteValue, Math.abs(v.value))
+		cnvLst.push(j)
+
+		if (Array.isArray(v.samples)) {
+			// this cnv has sample (meaning all events should have sample)
+			for (const s of v.samples) {
+				// {sample_id}
+				if (!sample2cnv.has(s.sample_id)) sample2cnv.set(s.sample_id, [])
+				sample2cnv.get(s.sample_id).push(structuredClone(j))
+			}
+		}
 	}
 
-	const samples = [] // flatten to array. each sample is one elem showing in one row
-	for (const [s, cnvs] of sample2cnv) {
-		samples.push({
-			sample_id: s,
-			cnvs,
-			x1: Math.min(...cnvs.map(i => i.x1)),
-			x2: Math.max(...cnvs.map(i => i.x2))
-		})
+	let samples
+	if (sample2cnv.size) {
+		// group cnv by samples
+		samples = [] // flatten to array. each sample is one elem showing in one row
+		for (const [s, cnvs] of sample2cnv) {
+			cnvs.sort((a, b) => a.x1 - b.x1) // important to guard against overlapping segments of a sample and allow such to be rendered
+			samples.push({
+				sample_id: s,
+				cnvs,
+				x1: Math.min(...cnvs.map(i => i.x1)),
+				x2: Math.max(...cnvs.map(i => i.x2))
+			})
+		}
+		samples.sort((a, b) => a.x1 - b.x1)
+		// each sample will be rendered into one row. no samples will share rows. do not perform stacking
+		for (let i = 0; i < samples.length; i++) samples[i].y = i
+	} else {
+		// not using samples. stack segments to plot
+		cnvLst.sort((a, b) => a.x1 - b.x1)
+		stackRows(cnvLst, 0)
 	}
-
-	samples.sort((a, b) => a.x1 - b.x1)
 
 	return [samples, cnvLst, Math.min(tk.cnv.absoluteValueRenderMax, maxAbsoluteValue)]
 }
 
 // use same sample number cutoff values in scale and capping
 const rhScale = scaleLinear([40, 120], [10, 1])
-function getRowHeight(samples, tk) {
+function getRowHeight(samples) {
 	if (samples.length > 120) return [1, 0]
 	if (samples.length < 40) return [10, 1]
 	return [Math.ceil(rhScale(samples.length)), 1]
+}
+
+function plotOneSegment(c, y, rowheight, tk, block, sample) {
+	const x1 = Math.max(0, c.x1),
+		x2 = Math.min(c.x2, block.width) // apply clip so segment box doesn't go beyond block
+	tk.cnv.g
+		.append('rect')
+		.attr('x', x1)
+		.attr('y', y)
+		.attr('width', x2 - x1)
+		.attr('height', rowheight)
+		.attr('fill', tk.cnv.colorScale(c.value))
+		.on('mouseover', event => {
+			event.target.setAttribute('stroke', 'black')
+			tk.itemtip.clear().show(event.clientX, event.clientY)
+			const table = table2col({ holder: tk.itemtip.d })
+			const cnv = structuredClone(c)
+
+			if (sample) {
+				// tricky! sample is optional
+				cnv.samples = [{ sample_id: sample.sample_id }]
+			}
+
+			table_cnv({ mlst: [cnv], tk }, table)
+		})
+		.on('mouseout', event => {
+			event.target.setAttribute('stroke', '')
+			tk.itemtip.hide()
+		})
+}
+
+/* TODO sharable function.
+lst:
+	each item {x1,x2}. on finish, .y=integer is assigned to every item as stack id, or row number
+spacing:
+	mininum spacing width between items in one stack
+*/
+function stackRows(lst, spacing) {
+	const stacks = [] // each value is screen x position of a stack
+	for (const item of lst) {
+		for (let i = 0; i < stacks.length; i++) {
+			if (stacks[i] + spacing < item.x1) {
+				// falls into this stack
+				stacks[i] = item.x2
+				item.y = i
+				break
+			}
+		}
+		if (!('y' in item)) {
+			// item goes to a new stack
+			item.y = stacks.length
+			stacks.push(item.x2)
+		}
+	}
 }
