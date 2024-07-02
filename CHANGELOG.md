@@ -12,6 +12,7 @@ Fixes:
 - matrix: hover/click menu over geneexp/metabolite rows should indicate term type, and do not show undefined for missing data
 - singlecell native gene exp data is loaded from rds file; no longer grep
 - Speed up top variably expressed genes query from gdc api, directly submit case filter and do not first retrieve list of cases
+- fix definitions for termsbyid route
 
 
 ## 2.65.0
