@@ -162,6 +162,7 @@ class singleCellPlot {
 			DEDiv.append('label').html('View differentially expresed genes of a cluster vs rest of cells:&nbsp;')
 			this.dom.deselect = DEDiv.append('select')
 			const DETableDiv = headerDiv.append('div')
+			this.dom.DETableDiv = DETableDiv
 			this.dom.deselect.append('option').text('')
 			this.dom.deselect.on('change', async e => {
 				DETableDiv.selectAll('*').remove()
@@ -174,7 +175,7 @@ class singleCellPlot {
 					this.state.config.experimentID || this.state.config.sample || this.samples[0]?.experiments[0]?.experimentID
 				const args = { genome: state.genome, dslabel: state.dslabel, categoryName, sample, columnName }
 				const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
-				const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'P-value' }]
+				const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
 				const rows = []
 				for (const gene of result.genes) {
 					const row = [
@@ -677,6 +678,10 @@ async function renderSamplesTable(div, self, state) {
 		div,
 		maxHeight,
 		noButtonCallback: index => {
+			if (self.dom.DETableDiv) {
+				self.dom.deselect.node().value = ''
+				self.dom.DETableDiv.selectAll('*').remove()
+			}
 			const sample = rows[index][0].value
 			const config = { chartType: 'singleCellPlot', sample }
 			if (rows[index][0].__experimentID) {
