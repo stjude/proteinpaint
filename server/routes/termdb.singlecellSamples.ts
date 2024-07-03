@@ -93,7 +93,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	}
 
 	if (q.DEgenes) {
-		validate_query_singleCell_DEgenes(ds, genome)
+		validate_query_singleCell_DEgenes(ds)
 		// q.DEgenes.get() added
 	}
 }
