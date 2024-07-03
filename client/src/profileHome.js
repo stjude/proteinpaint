@@ -1,4 +1,6 @@
 import { select } from 'd3-selection'
+import { Menu } from '#dom/menu'
+import { appInit } from '#termdb/app'
 
 /*
 holder: html dom
@@ -117,6 +119,11 @@ function addButtons(headerHolder, app, dslabel, isLoggedIn, site) {
 					site
 				)
 			)
+	if (isLoggedIn)
+		div
+			.append('button')
+			.text('Summary')
+			.on('click', e => launchSummaryPlot(e.target, app, preserveCheckbox.node().checked, isLoggedIn, site))
 
 	div.append('label').attr('for', 'preservePlots').text('Preserve Plots')
 	const preserveCheckbox = div.append('input').attr('id', 'preservePlots').attr('type', 'checkbox')
@@ -147,6 +154,36 @@ async function launchRadarPlot(app, chartType, header, plot, preserve, isLoggedI
 			site
 		}
 	})
+}
+
+async function launchSummaryPlot(button, app, preserve, isLoggedIn, site) {
+	/*
+		holder: the holder in the tooltip
+		chartsInstance: MassCharts instance
+			termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+			mass option is accessible at chartsInstance.app.opts{}
+		*/
+	const tip = new Menu()
+	const holder = tip.d
+	appInit({
+		holder,
+		vocabApi: app.vocabApi,
+		state: { tree: { usecase: { target: 'profile' } } },
+		tree: {
+			click_term: term => {
+				console.log('click_term', term)
+				app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'profileSummary',
+						isLoggedIn,
+						site
+					}
+				})
+			}
+		}
+	})
+	tip.showunder(button)
 }
 
 async function deletePlots(app) {
