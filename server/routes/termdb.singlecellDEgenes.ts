@@ -1,4 +1,3 @@
-import { SingleCellDEgeneGdc } from '#shared/types/dataset.ts'
 import {
 	TermdbSinglecellDEgenesRequest,
 	TermdbSinglecellDEgenesResponse
