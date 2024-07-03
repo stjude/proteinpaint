@@ -1805,8 +1805,9 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 	// q: TermdbSinglecellsamplesRequest
 	ds.queries.singleCell.samples.get = async q => {
 		// test! delete new loaders before client change
-		//console.log(await getSinglecellDEfile({sample:'C3L-00359'},ds))
+		//console.log(await getSinglecellDEfile('12246e82-cb5f-4b7e-a6bd-a120e000db49',{sample:'d8e936cb-6fc5-4808-97fd-23f429e1378d'},ds))
 		//console.log(await getSinglecellDEgenes({categoryName:'1'}, 'd8e936cb-6fc5-4808-97fd-23f429e1378d',ds))
+		//console.log(await getCaseidByFileid({sample:'d8e936cb-6fc5-4808-97fd-23f429e1378d'},ds))
 
 		const filters = {
 			op: 'and',
@@ -1901,37 +1902,85 @@ export function gdc_validate_query_singleCell_DEgenes(ds, genome) {
 	q{} TermdbSinglecellDEgenesRequest
 	*/
 	ds.queries.singleCell.DEgenes.get = async q => {
-		const degFileId = await getSinglecellDEfile(q, ds)
+		const caseuuid = await getCaseidByFileid(q.sample, ds)
+
+		const degFileId = await getSinglecellDEfile(caseuuid, q, ds)
 
 		const genes = await getSinglecellDEgenes(q, degFileId, ds)
 		return { genes }
 	}
 }
 
-async function getSinglecellDEfile(q, ds) {
-	// find the seurat.deg.tsv file for the requested experient, and return file id
-	// many cases have multiple sc experiments TODO q may need to provide seurat.analysis.tsv file id. the query should be able to pull corresponding seurat.deg.tsv file of the same experiment.
-	const filters = {
-		op: 'and',
-		content: [
-			{ op: '=', content: { field: 'data_format', value: 'tsv' } },
-			{ op: '=', content: { field: 'data_type', value: 'Differential Gene Expression' } },
-			{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
-		]
+async function getCaseidByFileid(q, ds) {
+	const json = {
+		size: 1,
+		fields: 'cases.case_id'
 	}
-	const case_filters = { op: 'and', content: [{ op: '=', content: { field: 'cases.submitter_id', value: q.sample } }] }
+	const { host, headers } = ds.getHostHeaders(q)
+	const re = await ky.post(path.join(host.rest, 'files', q.sample), { timeout: false, headers, json }).json()
+	if (!re.cases?.[0].case_id) throw 'structure not re.cases[].case_id'
+	return re.cases[0].case_id
+}
+
+async function getSinglecellDEfile(caseuuid, q, ds) {
+	// find the seurat.deg.tsv file for the requested experient, and return file id. many cases have multiple sc experiments. to identify the correct experiment, use q.sample which is seurat.analysis.tsv file id. find the matching deg.tsv
 
 	const json = {
-		filters,
+		filters: {
+			op: 'and',
+			content: [
+				{ op: '=', content: { field: 'data_format', value: 'mex' } },
+				{ op: '=', content: { field: 'data_type', value: 'Gene Expression Quantification' } },
+				{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
+			]
+		},
 		size: 100,
-		fields: 'id'
+		case_filters: { op: '=', content: { field: 'cases.case_id', value: caseuuid } },
+		fields: ['downstream_analyses.output_files.file_id', 'downstream_analyses.output_files.file_name'].join(',')
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
 	const re = await ky.post(path.join(host.rest, 'files'), { timeout: false, headers, json }).json()
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
-	if (!re.data.hits[0]) throw 're.data.hits[0] missing, no data for case?'
-	return re.data.hits[0].id
+	/* can have multiple hits. a hit looks like:
+	{
+    "id": "03845ba9-15a3-4216-b484-0489eb0fef90",
+    "downstream_analyses": [
+      {
+        "output_files": [
+          {
+            "file_name": "ea35f03e-2102-458a-849c-2ab2013545ca.seurat.1000x1000.loom",
+            "file_id": "0fa50788-e27c-4f9c-a1a8-be2e8686c000"
+          },
+          {
+            "file_name": "seurat.deg.tsv",
+            "file_id": "76ecc49d-60b7-4f43-a005-7a31be92bbfe"
+          },
+          {
+            "file_name": "seurat.analysis.tsv",
+            "file_id": "d9bc1a51-3d27-4b98-b133-7c17067e7cb5"
+          }
+        ]
+      }
+    ]
+  }
+
+	a hit is the MEX file of one singlecell experiment, from which the deg.tsv and analysis.tsv files are derived.
+	given the analysis.tsv file id (q.sample), find the deg.tsv file from the same experiment
+  */
+	for (const hit of re.data.hits) {
+		if (!hit.downstream_analyses) continue // some hits lack this
+		if (!Array.isArray(hit.downstream_analyses[0]?.output_files)) throw 'downstream_analyses[0].output_files[] missing'
+
+		// from output files of this experiment, find if the output_files[] array contains the requested analysis.tsv file
+		if (hit.downstream_analyses[0].output_files.find(f => f.file_id == q.sample)) {
+			// now find the deg.tsv file from output_files[] array
+			const f = hit.downstream_analyses[0].output_files.find(f => f.file_name == 'seurat.deg.tsv')
+			if (!f) throw 'a MEX downstream files has analysis.tsv but no deg.tsv'
+			return f.file_id
+		}
+	}
+	throw 'no matching seurat.deg.tsv file is found'
 }
 
 async function getSinglecellDEgenes(q, degFileId, ds) {
