@@ -553,22 +553,14 @@ function setTermActions(self) {
 			getBodyParams: () => {
 				const currentGeneNames = []
 				for (const g of self.config.termgroups) {
-					for (const t of g.lst) {
-						// TODO may not need to limit the term type
-						const tmp =
-							self.chartType == 'hierCluster'
-								? // sample counts should be based on clustered samples
-								  ['geneExpression']
-								: ['geneVariant', 'geneExpression']
+					// only consider hierCluster group for hierCluster plot
+					if (self.chartType == 'hierCluster' && g.type != 'hierCluster') continue
 
-						if (tmp.includes(t.term.type)) {
-							if (t.term.chr) {
-								currentGeneNames.push(`${t.term.chr}:${t.term.start}-${t.term.stop}`)
-							} else if (t.term.gene) {
-								currentGeneNames.push(t.term.gene)
-							} else if (t.term.name) {
-								currentGeneNames.push(t.term.name)
-							}
+					for (const t of g.lst) {
+						if (t.term.chr) {
+							currentGeneNames.push(`${t.term.chr}:${t.term.start}-${t.term.stop}`)
+						} else if (t.term.gene) {
+							currentGeneNames.push(t.term.gene)
 						}
 					}
 				}
