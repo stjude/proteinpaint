@@ -36,6 +36,9 @@ gdc_validate_query_geneExpression
 		getCases4expclustering
 gdc_validate_query_singleCell_samples
 gdc_validate_query_singleCell_data
+gdc_validate_query_singleCell_DEgenes
+	getSinglecellDEfile
+	getSinglecellDEgenes
 querySamples_gdcapi
 	querySamplesTwlst4hierCluster
 	flattenCaseByFields
@@ -1799,11 +1802,7 @@ async function convert2caseId(n, ds) {
 }
 
 export function gdc_validate_query_singleCell_samples(ds, genome) {
-	/*
-	q{}
-		filter0, optional
-	this is a sample getter, so it must return samples and files for each sample
-	*/
+	// q: TermdbSinglecellsamplesRequest
 	ds.queries.singleCell.samples.get = async q => {
 		const filters = {
 			op: 'and',
@@ -1891,6 +1890,123 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 			samples: [...case2files.values()]
 		}
 	}
+}
+
+export function gdc_validate_query_singleCell_DEgenes(ds, genome) {
+	/*
+	q{} TermdbSinglecellDEgenesRequest
+	*/
+	ds.queries.singleCell.DEgenes.get = async q => {
+		const caseuuid = await getCaseidByFileid(q, q.sample, ds)
+
+		const degFileId = await getSinglecellDEfile(caseuuid, q, ds)
+
+		const genes = await getSinglecellDEgenes(q, degFileId, ds)
+		return { genes }
+	}
+}
+
+// given a file uuid, find out the case uuid this file belongs to
+async function getCaseidByFileid(q, fileId, ds) {
+	const json = {
+		size: 1,
+		fields: 'cases.case_id'
+	}
+	const { host, headers } = ds.getHostHeaders(q)
+	const re = await ky.post(path.join(host.rest, 'files', fileId), { timeout: false, headers, json }).json()
+	if (!re.data?.cases?.[0].case_id) throw 'structure not re.data.cases[].case_id'
+	return re.data?.cases[0].case_id
+}
+
+async function getSinglecellDEfile(caseuuid, q, ds) {
+	// find the seurat.deg.tsv file for the requested experient, and return file id. many cases have multiple sc experiments. to identify the correct experiment, use q.sample which is seurat.analysis.tsv file id. find the matching deg.tsv
+
+	const json = {
+		filters: {
+			op: 'and',
+			content: [
+				{ op: '=', content: { field: 'data_format', value: 'mex' } },
+				{ op: '=', content: { field: 'data_type', value: 'Gene Expression Quantification' } },
+				{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
+			]
+		},
+		size: 100,
+		case_filters: { op: '=', content: { field: 'cases.case_id', value: caseuuid } },
+		fields: ['downstream_analyses.output_files.file_id', 'downstream_analyses.output_files.file_name'].join(',')
+	}
+
+	const { host, headers } = ds.getHostHeaders(q)
+	const re = await ky.post(path.join(host.rest, 'files'), { timeout: false, headers, json }).json()
+	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+	/* can have multiple hits. a hit looks like:
+	{
+    "id": "03845ba9-15a3-4216-b484-0489eb0fef90",
+    "downstream_analyses": [
+      {
+        "output_files": [
+          {
+            "file_name": "ea35f03e-2102-458a-849c-2ab2013545ca.seurat.1000x1000.loom",
+            "file_id": "0fa50788-e27c-4f9c-a1a8-be2e8686c000"
+          },
+          {
+            "file_name": "seurat.deg.tsv",
+            "file_id": "76ecc49d-60b7-4f43-a005-7a31be92bbfe"
+          },
+          {
+            "file_name": "seurat.analysis.tsv",
+            "file_id": "d9bc1a51-3d27-4b98-b133-7c17067e7cb5"
+          }
+        ]
+      }
+    ]
+  }
+
+	a hit is the MEX file of one singlecell experiment, from which the deg.tsv and analysis.tsv files are derived.
+	given the analysis.tsv file id (q.sample), find the deg.tsv file from the same experiment
+  */
+	for (const hit of re.data.hits) {
+		if (!hit.downstream_analyses) continue // some hits lack this
+		if (!Array.isArray(hit.downstream_analyses[0]?.output_files)) throw 'downstream_analyses[0].output_files[] missing'
+
+		// from output files of this experiment, find if the output_files[] array contains the requested analysis.tsv file
+		if (hit.downstream_analyses[0].output_files.find(f => f.file_id == q.sample)) {
+			// now find the deg.tsv file from output_files[] array
+			const f = hit.downstream_analyses[0].output_files.find(f => f.file_name == 'seurat.deg.tsv')
+			if (!f) throw 'a MEX downstream files has analysis.tsv but no deg.tsv'
+			return f.file_id
+		}
+	}
+	throw 'no matching seurat.deg.tsv file is found'
+}
+
+async function getSinglecellDEgenes(q, degFileId, ds) {
+	// with seurat.deg.tsv file id, read file content and find DE genes belonging to given cluster
+	const { host } = ds.getHostHeaders(q)
+	// do not use headers here that has accept: 'application/json'
+	const re = await ky(path.join(host.rest, 'data', degFileId), { timeout: false }).text()
+	const lines = re.trim().split('\n')
+	/*
+        this tsv file first line is header:
+        gene    gene_names      cluster avg_log2FC      p_val   p_val_adj       prop_in_cluster prop_out_cluster        avg_logFC
+
+        each line is a gene belonging to a cluster
+        */
+	const genes = []
+	for (let i = 1; i < lines.length; i++) {
+		const line = lines[i]
+		const l = line.split('\t')
+		if (l[2] == q.categoryName) {
+			// gene is for required cluster
+			const name = l[1]
+			if (!name) throw 'gene_names blank for a line: ' + line
+			const avg_log2FC = Number(l[3])
+			if (Number.isNaN(avg_log2FC)) throw 'avg_log2FC not number for a line ' + line
+			const p_val_adj = Number(l[5])
+			if (Number.isNaN(p_val_adj)) throw 'p_val_adj not number for a line ' + line
+			genes.push({ name, avg_log2FC, p_val_adj })
+		}
+	}
+	return genes
 }
 
 export function gdc_validate_query_singleCell_data(ds, genome) {

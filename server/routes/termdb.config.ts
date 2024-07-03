@@ -4,7 +4,7 @@ import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js'
 import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.js'
 import { TermTypes } from '#shared/terms.js'
-import { Mds3WithCohort, SingleCellDataNative } from '#shared/types/index.ts'
+import { Mds3WithCohort } from '#shared/types/index.ts'
 
 export const api: any = {
 	endpoint: 'termdb/config',
@@ -231,13 +231,6 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	}
 	if (q.singleCell) {
 		// samples and data are required properties
-		const plots: any[] =
-			'plots' in q.singleCell.data
-				? (q.singleCell.data as SingleCellDataNative).plots.map(p => ({
-						name: p.name,
-						colorColumn: p.colorColumn.name
-				  }))
-				: []
 		q2.singleCell = {
 			samples: {
 				firstColumnName: q.singleCell.samples.firstColumnName,
@@ -247,12 +240,17 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 			data: {
 				sameLegend: q.singleCell.data.sameLegend,
 				refName: q.singleCell.data.refName,
-				plots
+				plots: q.singleCell.data.plots.map(p => {
+					return { name: p.name, colorColumn: p.colorColumn.name }
+				})
 			}
 		}
+		// optional data types
 		if (q.singleCell.geneExpression) {
-			// optional data type
 			q2.singleCell.geneExpression = {}
+		}
+		if (q.singleCell.DEgenes) {
+			q2.singleCell.DEgenes = { columnName: q.singleCell.DEgenes.columnName }
 		}
 	}
 	if (q.images) {
