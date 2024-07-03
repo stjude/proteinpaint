@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Support inputing custom CNV segments in mds3 tk, improve cnv rendering
 
+Fixes:
+- provide null values to brush range if there is no selection on brushing
+
 
 ## 2.66.0
 
