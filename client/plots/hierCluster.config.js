@@ -57,14 +57,10 @@ export async function getPlotConfig(opts = {}, app) {
 			const tw = i.term ? i : { term: i }
 
 			if (!tw.term.type) {
-				if (tw.term.gene) {
-					// use geneExpression as default term type if term.type missing and term.gene presents
-					tw.term.type = 'geneExpression'
-				} else throw 'unable to assign default term type for hierCluster'
-			}
-
-			// May add other term type in hierCluster
-			if (!['geneExpression', 'metaboliteIntensity', 'float'].includes(tw.term.type)) {
+				// must provide term type for hierCluster
+				throw `term type is missing`
+			} else if (!['geneExpression', 'metaboliteIntensity', 'float'].includes(tw.term.type)) {
+				// May add other term type in hierCluster
 				throw 'term type not supported in hierCluster'
 			}
 			promises.push(fillTermWrapper(tw, app.vocabApi))

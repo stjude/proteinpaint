@@ -83,7 +83,12 @@ tape('\n', function (test) {
 tape('basic render', async test => {
 	test.timeoutAfter(2000)
 	const { app, hc } = await getHierClusterApp({
-		terms: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+		terms: [
+			{ gene: 'AKT1', type: 'geneExpression' },
+			{ gene: 'TP53', type: 'geneExpression' },
+			{ gene: 'BCR', type: 'geneExpression' },
+			{ gene: 'KRAS', type: 'geneExpression' }
+		]
 	})
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 4, 'should render 4 gene rows')
 	if (test._ok) app.destroy()
@@ -98,7 +103,12 @@ tape('avoid race condition', async test => {
 	// !!!
 	test.timeoutAfter(2000)
 	const { app, hc } = await getHierClusterApp({
-		terms: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+		terms: [
+			{ gene: 'AKT1', type: 'geneExpression' },
+			{ gene: 'TP53', type: 'geneExpression' },
+			{ gene: 'BCR', type: 'geneExpression' },
+			{ gene: 'KRAS', type: 'geneExpression' }
+		]
 	})
 	const termgroups = structuredClone(hc.config.termgroups)
 	termgroups[0].lst = await Promise.all([
@@ -157,7 +167,12 @@ tape('dendrogram click', async function (test) {
 
 	let numRenders = 0
 	const { app, hc } = await getHierClusterApp({
-		terms: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+		terms: [
+			{ gene: 'AKT1', type: 'geneExpression' },
+			{ gene: 'TP53', type: 'geneExpression' },
+			{ gene: 'BCR', type: 'geneExpression' },
+			{ gene: 'KRAS', type: 'geneExpression' }
+		]
 	})
 
 	const img = await detectOne({ elem: hc.dom.topDendrogram.node(), selector: 'image' })
