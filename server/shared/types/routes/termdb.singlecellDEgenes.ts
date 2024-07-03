@@ -5,17 +5,18 @@ export type TermdbSinglecellDEgenesRequest = {
 	genome: string
 	/** Dataset label */
 	dslabel: string
-	/** Sample name */
+	/** Sample name
+	for GDC the value is "seurat.analysis.tsv" file UUID rather than sample name. the file contains the analysis results for an experiment
+	*/
 	sample: string
-	/** column name to provide cell groups/clustering, for which DE genes are precomputed.
-	 */
+	/** column name to provide cell groups/clustering, for which DE genes are precomputed.  */
 	columnName: string
 	/** User selected cell group/cluster, corresponds to columnName, for which DE genes will be returned to client */
 	categoryName: string
 }
 
 export type HasdataResponse = {
-	/** List of plots from singlecell experiment of this sample */
+	/** list of significant DE genes for the given category in the sample */
 	genes: {
 		/** gene name */
 		name: string
