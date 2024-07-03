@@ -1307,12 +1307,9 @@ export class MatrixControls {
 		const groupSelect = label.append('select').style('margin', '2px 5px').style('width', '218px')
 
 		for (const [i, group] of groups.entries()) {
+			if (group.label) continue
 			if (group.name) group.label = group.name
-			else {
-				const targetTermType = group.type == 'hierCluster' ? 'geneExpression' : 'geneVariant'
-				const n = group.lst.filter(tw => tw.term?.type == targetTermType).length
-				group.label = n > 0 ? `${n} gene${n < 2 ? '' : 's'}` : `Unlabeled group #${i}`
-			}
+			else group.label = `Unlabeled group #${i}` // cannot assume "gene" group
 		}
 
 		groupSelect
