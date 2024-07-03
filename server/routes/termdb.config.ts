@@ -4,7 +4,7 @@ import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js'
 import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.js'
 import { TermTypes } from '#shared/terms.js'
-import { Mds3WithCohort, SingleCellDataNative } from '#shared/types/index.ts'
+import { Mds3WithCohort } from '#shared/types/index.ts'
 
 export const api: any = {
 	endpoint: 'termdb/config',
