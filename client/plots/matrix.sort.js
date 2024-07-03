@@ -150,10 +150,11 @@ function getSortSamplesByValues(st, self, rows, s) {
 	const { $id, sortSamples } = st
 	const t = self.termOrder.find(t => t.tw.$id === $id)
 
-	if (t.tw.q?.mode == 'continuous') {
+	if (t.grp.type == 'hierCluster') {
 		return (a, b) => {
 			if ($id in a && $id in b) {
-				return a[$id]?.value - b[$id]?.value
+				// may need to support other term types
+				return a[$id]?.values[0].value - b[$id]?.values[0].value
 			}
 			if ($id in a) return -1
 			if ($id in b) return 1
@@ -161,11 +162,10 @@ function getSortSamplesByValues(st, self, rows, s) {
 		}
 	}
 
-	if (t.grp.type == 'hierCluster') {
+	if (t.tw.q?.mode == 'continuous') {
 		return (a, b) => {
 			if ($id in a && $id in b) {
-				// may need to support other term types
-				return a[$id]?.values[0].value - b[$id]?.values[0].value
+				return a[$id]?.value - b[$id]?.value
 			}
 			if ($id in a) return -1
 			if ($id in b) return 1

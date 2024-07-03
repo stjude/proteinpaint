@@ -1,1 +1,2 @@
-
+Fixes:
+= hiercluster refactored not to pretend geneVariant term type

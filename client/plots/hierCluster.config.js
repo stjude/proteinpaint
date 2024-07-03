@@ -52,27 +52,26 @@ export async function getPlotConfig(opts = {}, app) {
 	if (!hcTermGroup.lst?.length) {
 		if (!Array.isArray(opts.terms)) throw 'opts.terms[] not array (may show geneset edit ui)'
 
-		const twlst = []
+		const promises = []
 		for (const i of opts.terms) {
-			let tw
-			// FIXME: should not hardcode term type here
-			// hierarchical clustering will need to be performed
-			// on any numeric term.
-			if (typeof i.term == 'object' && i.term.type == 'geneVariant') {
-				// i is already well-formed tw object
-				tw = i
-			} else {
-				// shape i into term{} and nest into tw{}
-				i.type = 'geneVariant'
-				if (!i.gene && !i.name) throw 'no gene or name present'
-				if (!i.gene) i.gene = i.name
-				tw = { term: i }
+			const tw = i.term ? i : { term: i }
+
+			if (!tw.term.type) {
+				if (tw.term.gene) {
+					// use geneExpression as default term type if term.type missing and term.gene presents
+					tw.term.type = 'geneExpression'
+				} else throw 'unable to assign default term type for hierCluster'
 			}
-			await fillTermWrapper(tw, app.vocabApi)
-			twlst.push(tw)
+
+			// May add other term type in hierCluster
+			if (!['geneExpression', 'metaboliteIntensity', 'float'].includes(tw.term.type)) {
+				throw 'term type not supported in hierCluster'
+			}
+			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
 
-		hcTermGroup.lst = twlst
+		// make parallel requests for defaultBins
+		hcTermGroup.lst = await Promise.all(promises)
 		if (config.termgroups.indexOf(hcTermGroup) == -1) config.termgroups.unshift(hcTermGroup)
 	}
 
