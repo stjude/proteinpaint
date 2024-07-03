@@ -1,2 +1,2 @@
 Fixes:
-= hiercluster refactored not to pretend geneVariant term type
+- hiercluster refactored not to pretend geneVariant term type
