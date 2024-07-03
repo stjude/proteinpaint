@@ -1,6 +1,6 @@
 import { first_genetrack_tolist } from '../common/1stGenetk'
 import { contigNameNoChr2 } from '#shared/common'
-import { addGeneSearchbox } from '../dom/genesearch'
+import { addGeneSearchbox } from '../dom/genesearch.ts'
 import { Menu } from '../dom/menu'
 
 /*
@@ -18,10 +18,7 @@ export async function init(arg, holder, genomes) {
 	holder.style('margin', '40px 20px 20px 20px')
 
 	const formdiv = holder.append('div')
-	formdiv
-		.append('p')
-		.text('To launch view, press ENTER at gene search.')
-		.style('opacity', 0.3)
+	formdiv.append('p').text('To launch view, press ENTER at gene search.').style('opacity', 0.3)
 
 	const blockholder = holder.append('div')
 

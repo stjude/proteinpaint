@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { addGeneSearchbox, string2variant } from '../genesearch'
+import { addGeneSearchbox, string2variant } from '../genesearch.ts'
 import { hg38 } from '../../test/testdata/genomes'
 import { Menu } from '../menu'
 import { detectOne, detectGte } from '../../test/test.helpers'

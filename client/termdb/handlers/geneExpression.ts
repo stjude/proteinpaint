@@ -1,5 +1,5 @@
 import { Menu } from '../../dom/menu'
-import { addGeneSearchbox } from '../../dom/genesearch'
+import { addGeneSearchbox } from '../../dom/genesearch.ts'
 import { TermTypes } from '../../shared/terms'
 
 export class SearchHandler {

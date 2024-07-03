@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { addGeneSearchbox } from '#dom/genesearch'
+import { addGeneSearchbox } from '../dom/genesearch.ts'
 import { Menu } from '#dom/menu'
 import { sayerror } from '../dom/sayerror.ts'
 import { dofetch3 } from '#common/dofetch'

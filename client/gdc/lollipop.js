@@ -1,4 +1,4 @@
-import { addGeneSearchbox } from '#dom/genesearch'
+import { addGeneSearchbox } from '../dom/genesearch.ts'
 import { Menu } from '#dom/menu'
 import { dofetch3 } from '#common/dofetch'
 import blockinit from '#src/block.init'

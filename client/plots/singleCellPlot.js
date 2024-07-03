@@ -11,7 +11,7 @@ import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rgb } from 'd3'
-import { addGeneSearchbox } from '../dom/genesearch'
+import { addGeneSearchbox } from '../dom/genesearch.ts'
 import { roundValueAuto } from '../shared/roundValue.js'
 import { TermTypes } from '../shared/terms.js'
 
