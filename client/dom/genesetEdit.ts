@@ -1,4 +1,4 @@
-import { addGeneSearchbox } from '#dom/genesearch'
+import { addGeneSearchbox } from '../dom/genesearch.ts'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 import { mclass, dt2color, dt2label } from '#shared/common'
