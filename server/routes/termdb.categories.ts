@@ -91,11 +91,10 @@ async function trigger_getcategories(
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
 	genome: any
 ) {
-	const $id = Math.random().toString()
-	const tw: TermWrapper = { $id, term: q.term, q: q.term1_q || getDefaultQ(q.term, q) }
+	const $id = q.tw.$id
 	const arg = {
 		filter: q.filter,
-		terms: [tw],
+		terms: [q.tw],
 		currentGeneNames: q.currentGeneNames, // optional, from mds3 mayAddGetCategoryArgs()
 		rglst: q.rglst // optional, from mds3 mayAddGetCategoryArgs()
 	}
@@ -103,8 +102,8 @@ async function trigger_getcategories(
 	const data = await getData(arg, ds, genome)
 	if (data.error) throw data.error
 
-	const lst = [] as any[]
-	if (q.term.type == 'geneVariant') {
+	const lst: any[] = []
+	if (q.tw.term.type == 'geneVariant') {
 		const samples = data.samples as { [sampleId: string]: any }
 		const dtClassMap = new Map()
 		if (ds.assayAvailability?.byDt) {
@@ -175,17 +174,17 @@ async function trigger_getcategories(
 				key,
 				label:
 					data.refs?.byTermId?.[$id]?.events?.find((e: { event: any }) => e.event === key).label ||
-					q.term?.values?.[key]?.label ||
+					q.tw.term?.values?.[key]?.label ||
 					key
 			})
 		}
 	}
 
 	const orderedLabels = getOrderedLabels(
-		q.term,
+		q.tw.term,
 		data.refs?.byTermId?.[$id]?.bins || [],
 		data.refs?.byTermId?.[$id]?.events,
-		q.term1_q
+		q.tw.q
 	)
 	if (orderedLabels.length) {
 		lst.sort((a, b) => orderedLabels.indexOf(a.label) - orderedLabels.indexOf(b.label))

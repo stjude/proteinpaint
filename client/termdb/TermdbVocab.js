@@ -5,6 +5,7 @@ import { getNormalRoot } from '#filter'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
 import { isDictionaryType } from '#shared/terms'
+import { fillTermWrapper } from '#termsetting'
 
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
@@ -574,11 +575,13 @@ export class TermdbVocab extends Vocab {
 		}
 
 		// use same query method for all dictionary terms
+		const tw = await fillTermWrapper({ term, q: _body.term1_q || {} }, this)
+		delete _body.term1_q // no longer needed, tw now contains updated q
 		const body = {
 			getcategories: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
-			term,
+			tw: this.getTwMinCopy(tw),
 			..._body
 		}
 

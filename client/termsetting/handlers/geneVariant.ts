@@ -53,11 +53,7 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 		async postMain() {
 			// for rendering groupsetting menu
 			const body = self.opts.getBodyParams?.() || {}
-			// remove groupsetting from term prior to server request
-			// TODO: implement getTwMinCopy() in getCategories()
-			const term = structuredClone(self.term)
-			delete term.groupsetting
-			const data = await self.vocabApi.getCategories(term, self.filter!, body)
+			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
 			self.category2samplecount = data.lst
 		}
 	}

@@ -921,11 +921,12 @@ export async function fillTermWrapper(
 	// tw.id is no longer needed
 	delete tw.id
 	if (!tw.q) tw.q = {}
-	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	tw.q.isAtomic = true
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQByTsHandler)
 	mayValidateQmode(tw)
+	// compute $id after tw is filled
+	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	return tw
 }
 
