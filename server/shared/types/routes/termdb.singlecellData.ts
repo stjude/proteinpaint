@@ -34,6 +34,8 @@ export type TermdbSinglecellDataRequest = {
 	sample: string
 	/** List of plot names from this sample to request data for */
 	plots: string[]
+	/** Gene name to retrieve expression data for all cells of the given sample, and to overlay on maps */
+	gene?: string
 }
 
 export type HasdataResponse = {

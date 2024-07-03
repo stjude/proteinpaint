@@ -14,7 +14,8 @@ import {
 	TermdbSinglecellsamplesRequest,
 	TermdbSinglecellsamplesResponse
 } from '#shared/types/routes/termdb.singlecellSamples.ts'
-import { Cell, Plot } from '#shared/types/routes/termdb.singlecellData.ts'
+import { Cell, Plot, TermdbSinglecellDataRequest } from '#shared/types/routes/termdb.singlecellData.ts'
+import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 
 /* route returns list of samples with sc data
@@ -24,7 +25,7 @@ this is due to the fact that sometimes not all samples in a dataset has sc data
 export const api: any = {
 	endpoint: 'termdb/singlecellSamples',
 	methods: {
-		get: {
+		all: {
 			init,
 			request: {
 				typeId: 'TermdbSinglecellsamplesRequest'
@@ -32,10 +33,6 @@ export const api: any = {
 			response: {
 				typeId: 'TermdbSinglecellsamplesResponse'
 			}
-		},
-		post: {
-			alternativeFor: 'get',
-			init
 		}
 	}
 }
@@ -93,6 +90,11 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 			throw 'unknown singleCell.geneExpression.src'
 		}
 		// q.geneExpression.get() added
+	}
+
+	if (q.DEgenes) {
+		validate_query_singleCell_DEgenes(ds, genome)
+		// q.DEgenes.get() added
 	}
 }
 
@@ -191,7 +193,9 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 	G.sample2gene2expressionBins = {} // cache for binning gene expression values
 
 	// per-sample rds files are not validated up front, and simply used as-is on the fly
-	G.get = async (q: any) => {
+
+	// client actually queries /termdb/singlecellData route for gene exp data
+	G.get = async (q: TermdbSinglecellDataRequest) => {
 		// q {sample:str, gene:str}
 		const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample + '.rds')
 		try {

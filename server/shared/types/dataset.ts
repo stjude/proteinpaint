@@ -401,6 +401,14 @@ export type SingleCellDataGdc = {
 	plots: GDCSingleCellPlot[]
 }
 
+export type SingleCellDEgeneGdc = {
+	src: 'gdcapi'
+	/** Column name.
+	this must be the colorColumn from one of the plots. so that at the client app, as soon as the plot data have been loaded and maps rendered, client will find out the cell groups based on this columnName value, and show a drop down of these groups on UI. user selects a group, and pass it as request body to backend to get DE genes for this group
+	*/
+	columnName: string
+}
+
 type GDCSingleCellPlot = {
 	name: string
 	colorColumn: ColorColumn
@@ -434,6 +442,8 @@ export type SingleCellQuery = {
 	data: SingleCellDataGdc | SingleCellDataNative
 	/** defines available gene-level expression values for each cell of each sample */
 	geneExpression?: SingleCellGeneExpressionNative
+	/** Precomputed top differentialy expressed genes for a cell cluster, against rest of cells */
+	DEgenes?: SingleCellDEgeneGdc
 }
 
 type LdQuery = {

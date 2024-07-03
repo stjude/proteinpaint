@@ -36,6 +36,7 @@ gdc_validate_query_geneExpression
 		getCases4expclustering
 gdc_validate_query_singleCell_samples
 gdc_validate_query_singleCell_data
+gdc_validate_query_singleCell_DEgenes
 querySamples_gdcapi
 	querySamplesTwlst4hierCluster
 	flattenCaseByFields
@@ -1799,12 +1800,11 @@ async function convert2caseId(n, ds) {
 }
 
 export function gdc_validate_query_singleCell_samples(ds, genome) {
-	/*
-	q{}
-		filter0, optional
-	this is a sample getter, so it must return samples and files for each sample
-	*/
+	// q: TermdbSinglecellsamplesRequest
 	ds.queries.singleCell.samples.get = async q => {
+		// test! delete
+		//console.log(await getSinglecellDEfile({sample:'C3L-00359'},ds))
+
 		const filters = {
 			op: 'and',
 			content: [
@@ -1892,6 +1892,46 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 		}
 	}
 }
+
+export function gdc_validate_query_singleCell_DEgenes(ds, genome) {
+	/*
+	q{} TermdbSinglecellDEgenesRequest
+	*/
+	ds.queries.singleCell.DEgenes.get = async q => {
+		const singlecellDEfile = await getSinglecellDEfile(q, ds)
+
+		const genes = await getSinglecellDEgenes(q, singlecellDEfile, ds)
+		return { genes }
+	}
+}
+
+async function getSinglecellDEfile(q, ds) {
+	// many cases have multiple sc experiments
+	// TODO q may need to provide seurat.analysis.tsv file id. the query should be able to pull corresponding seurat.deg.tsv file of the same experiment.
+	const filters = {
+		op: 'and',
+		content: [
+			{ op: '=', content: { field: 'data_format', value: 'tsv' } },
+			{ op: '=', content: { field: 'data_type', value: 'Differential Gene Expression' } },
+			{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
+		]
+	}
+	const case_filters = { op: 'and', content: [{ op: '=', content: { field: 'cases.submitter_id', value: q.sample } }] }
+
+	const json = {
+		filters,
+		size: 100,
+		fields: 'id'
+	}
+
+	const { host, headers } = ds.getHostHeaders(q)
+	const re = await ky.post(path.join(host.rest, 'files'), { timeout: false, headers, json }).json()
+	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+	if (!re.data.hits[0]) throw 're.data.hits[0] missing, no data for case?'
+	return re.data.hits[0].id
+}
+
+async function getSinglecellDEgenes(q, file, ds) {}
 
 export function gdc_validate_query_singleCell_data(ds, genome) {
 	// q{} TermdbSinglecellDataRequest
