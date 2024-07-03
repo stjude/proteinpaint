@@ -139,7 +139,7 @@ export class TermdbVocab extends Vocab {
 
 		for (const _key of ['term0', 'term', 'term2']) {
 			// "term" on client is "term1" at backend
-			const tw = opts[_key]
+			const tw = this.getTwMinCopy(opts[_key])
 			if (!tw) continue
 			const key = _key == 'term' ? 'term1' : _key
 			params.push(key + '_$id=' + encodeURIComponent(tw.$id))
@@ -431,6 +431,8 @@ export class TermdbVocab extends Vocab {
 		// the violin plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termdb')
+		arg.term = this.getTwMinCopy(arg.term)
+		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
 		const body = Object.assign(
 			{
 				getViolinPlotData: 1,
@@ -940,15 +942,15 @@ export class TermdbVocab extends Vocab {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			plotName: opts.name,
-			coordTWs: opts.coordTWs,
+			coordTWs: opts.coordTWs.map(tw => this.getTwMinCopy(tw)),
 			filter: getNormalRoot(opts.filter),
 			embedder: window.location.hostname
 		}
 		if (opts.colorColumn) body.colorColumn = opts.colorColumn
-		if (opts.colorTW) body.colorTW = opts.colorTW
-		if (opts.shapeTW) body.shapeTW = opts.shapeTW
-		if (opts.divideByTW) body.divideByTW = opts.divideByTW
-		if (opts.scaleDotTW) body.scaleDotTW = opts.scaleDotTW
+		if (opts.colorTW) body.colorTW = this.getTwMinCopy(opts.colorTW)
+		if (opts.shapeTW) body.shapeTW = this.getTwMinCopy(opts.shapeTW)
+		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
+		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 
 		return await dofetch3('termdb', { headers, body })
 	}

@@ -21,7 +21,8 @@ import {
 	mclassfusionrna,
 	mclasssv,
 	mclasscnvgain,
-	mclasscnvloss
+	mclasscnvloss,
+	geneVariantTermGroupsetting
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.js'
@@ -2312,6 +2313,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			if (!Number.isInteger(tw.q.groupsetting.predefined_groupset_idx) && !tw.q.groupsetting.customset)
 				throw 'invalid predefined_groupset_idx and customset'
 		}
+		// rehydrate term.groupsetting
+		if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
 
 		if (tw.term.subtype == 'snp') {
 			throw 'subtype snp not supported'
