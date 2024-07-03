@@ -314,7 +314,11 @@ class singleCellPlot {
 		const colorMap = {}
 		let clusters = new Set(plot.cells.map(c => c.category))
 
-		plot.clusters = Array.from(clusters).sort()
+		plot.clusters = Array.from(clusters).sort((a, b) => {
+			const num1 = parseInt(a.split(' ')[1])
+			const num2 = parseInt(b.split(' ')[1])
+			return num1 - num2
+		})
 		if (this.dom.deselect && !this.legendRendered)
 			//first plot
 			for (const cluster of plot.clusters) this.dom.deselect.append('option').text(cluster)
