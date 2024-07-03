@@ -1,1 +1,2 @@
-
+Fixes:
+- provide null values to brush range if there is no selection on brushing
