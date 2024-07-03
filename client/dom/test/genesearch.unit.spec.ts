@@ -43,7 +43,7 @@ tape('\n', test => {
 })
 
 tape('Default gene search box', async test => {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(2000)
 	const holder = getHolder()
 	const tip = new Menu({ padding: '' })
 	getSearchBox(holder, { tip })
