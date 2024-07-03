@@ -1,4 +1,2 @@
-
-Features
-
--- If provided by the dataset allowed to view differentially expresed genes of a cluster vs rest of cells in the singleCellPlot
+Fixes:
+- hiercluster refactored not to pretend geneVariant term type

@@ -83,7 +83,12 @@ tape('\n', function (test) {
 tape('basic render', async test => {
 	test.timeoutAfter(2000)
 	const { app, hc } = await getHierClusterApp({
-		terms: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+		terms: [
+			{ gene: 'AKT1', type: 'geneExpression' },
+			{ gene: 'TP53', type: 'geneExpression' },
+			{ gene: 'BCR', type: 'geneExpression' },
+			{ gene: 'KRAS', type: 'geneExpression' }
+		]
 	})
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 4, 'should render 4 gene rows')
 	if (test._ok) app.destroy()
@@ -98,12 +103,17 @@ tape('avoid race condition', async test => {
 	// !!!
 	test.timeoutAfter(2000)
 	const { app, hc } = await getHierClusterApp({
-		terms: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+		terms: [
+			{ gene: 'AKT1', type: 'geneExpression' },
+			{ gene: 'TP53', type: 'geneExpression' },
+			{ gene: 'BCR', type: 'geneExpression' },
+			{ gene: 'KRAS', type: 'geneExpression' }
+		]
 	})
 	const termgroups = structuredClone(hc.config.termgroups)
 	termgroups[0].lst = await Promise.all([
-		fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant' } }, app.vocabApi),
-		fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } }, app.vocabApi)
+		fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneExpression' } }, app.vocabApi),
+		fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }, app.vocabApi)
 	])
 	const responseDelay = 250
 	hc.__wait = responseDelay
@@ -125,9 +135,9 @@ tape('avoid race condition', async test => {
 			hc.__wait = 0
 			const termgroups = structuredClone(hc.config.termgroups)
 			termgroups[0].lst = await Promise.all([
-				fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant' } }, app.vocabApi),
-				fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } }, app.vocabApi),
-				fillTermWrapper({ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant' } }, app.vocabApi)
+				fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneExpression' } }, app.vocabApi),
+				fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }, app.vocabApi),
+				fillTermWrapper({ term: { gene: 'KRAS', name: 'KRAS', type: 'geneExpression' } }, app.vocabApi)
 			])
 			app.dispatch({
 				type: 'plot_edit',
@@ -157,7 +167,12 @@ tape('dendrogram click', async function (test) {
 
 	let numRenders = 0
 	const { app, hc } = await getHierClusterApp({
-		terms: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+		terms: [
+			{ gene: 'AKT1', type: 'geneExpression' },
+			{ gene: 'TP53', type: 'geneExpression' },
+			{ gene: 'BCR', type: 'geneExpression' },
+			{ gene: 'KRAS', type: 'geneExpression' }
+		]
 	})
 
 	const img = await detectOne({ elem: hc.dom.topDendrogram.node(), selector: 'image' })

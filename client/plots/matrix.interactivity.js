@@ -2,7 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 import { renderTable } from '../dom/table.ts'
@@ -553,15 +553,14 @@ function setTermActions(self) {
 			getBodyParams: () => {
 				const currentGeneNames = []
 				for (const g of self.config.termgroups) {
+					// only consider hierCluster group for hierCluster plot
+					if (self.chartType == 'hierCluster' && g.type != 'hierCluster') continue
+
 					for (const t of g.lst) {
-						if (t.term.type == 'geneVariant') {
-							if (t.term.chr) {
-								currentGeneNames.push(`${t.term.chr}:${t.term.start}-${t.term.stop}`)
-							} else if (t.term.gene) {
-								currentGeneNames.push(t.term.gene)
-							} else if (t.term.name) {
-								currentGeneNames.push(t.term.name)
-							}
+						if (t.term.chr) {
+							currentGeneNames.push(`${t.term.chr}:${t.term.start}-${t.term.stop}`)
+						} else if (t.term.gene) {
+							currentGeneNames.push(t.term.gene)
 						}
 					}
 				}
@@ -636,7 +635,12 @@ function setTermActions(self) {
 		labelEditDiv.append('span').text(`${l.Term} `)
 
 		const twlabel = t.tw.label || t.tw.term.name
-		const vartype = t.tw.term.type == 'geneVariant' ? 'gene' : 'variable'
+		const vartype =
+			t.tw.term.type == 'geneVariant' || t.tw.term.type == TermTypes.GENE_EXPRESSION
+				? 'gene'
+				: t.tw.term.type == TermTypes.METABOLITE_INTENSITY
+				? 'metabolite'
+				: 'variable'
 		self.dom.twLabelInput = labelEditDiv
 			.append('input')
 			.attr('type', 'text')
@@ -757,7 +761,12 @@ function setTermActions(self) {
 		//div.append('span').html('Shortcuts: ')
 
 		// sorting icons
-		const vartype = t.tw.term.type == 'geneVariant' ? 'gene' : 'variable'
+		const vartype =
+			t.tw.term.type == 'geneVariant' || t.tw.term.type == TermTypes.GENE_EXPRESSION
+				? 'gene'
+				: t.tw.term.type == TermTypes.METABOLITE_INTENSITY
+				? 'metabolite'
+				: 'variable'
 		const sortRevertable = self.type != 'hierCluster' && t.tw.sortSamples?.priority !== undefined
 		div
 			.append('span')
@@ -2545,13 +2554,12 @@ function setZoomPanActions(self) {
 function setLengendActions(self) {
 	self.legendLabelMouseover = event => {
 		const targetData = event.target.__data__
-		if (!targetData || targetData.dt == dtgeneexpression) {
+		if (!targetData || targetData.dt == dtgeneexpression || targetData.dt == dtmetaboliteintensity) {
 			// for gene expression don't use legend as filter
 			return
 		}
 		if (!targetData.isLegendItem && !targetData.dt) {
 			// do not change color when its a non-genevariant legend group name
-			// or when its a genevariant legend group name for hierCluster
 			return
 		}
 		const legendGrpHidden =
@@ -2578,7 +2586,7 @@ function setLengendActions(self) {
 
 	self.legendLabelMouseup = event => {
 		const targetData = event.target.__data__
-		if (!targetData || targetData.dt == dtgeneexpression) {
+		if (!targetData || targetData.dt == dtgeneexpression || targetData.dt == dtmetaboliteintensity) {
 			// for gene expression don't use legend as filter
 			return
 		}

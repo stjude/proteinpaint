@@ -163,6 +163,7 @@ export class MatrixControls {
 						config.legendValueFilter = this.parent.mayRemoveTvsEntry(this.parent.config.divideBy)
 				},
 				getBodyParams: () => {
+					// hierCluster hides the groupBy, so no need to consider gene expression term type
 					const currentGeneNames = this.parent.termOrder
 						.filter(t => t.tw.term.type === 'geneVariant')
 						.map(t =>
@@ -355,7 +356,10 @@ export class MatrixControls {
 			//.property('disabled', d => d.disabled)
 			.datum({
 				label: 'Genes',
-				getCount: () => this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length || 0,
+				getCount: () =>
+					this.parent.termOrder?.filter(
+						t => t.tw.term.type == 'geneVariant' || t.tw.term.type == TermTypes.GENE_EXPRESSION
+					).length || 0,
 				customInputs: this.appendGeneInputs,
 				rows: [
 					{
@@ -965,8 +969,6 @@ export class MatrixControls {
 														(hasAssayAvailability ? `${dt2label[v.dt]}:` : '') +
 														cnvValue
 												)
-											} else if (v.dt == dtgeneexpression) {
-												allVariant.push(v.origin ? `${v.origin}:${v.value}` : v.value)
 											} else if (v.dt == dtfusionrna || v.dt == dtsv) {
 												allVariant.push(
 													(v.origin ? `${v.origin} ` : '') +
@@ -979,6 +981,11 @@ export class MatrixControls {
 											}
 										}
 										row.push(allVariant.join('|'))
+									} else if (
+										tw.term.type == TermTypes.GENE_EXPRESSION ||
+										tw.term.type == TermTypes.METABOLITE_INTENSITY
+									) {
+										row.push(s[tw.$id]?.renderedValues?.[0]?.value || '')
 									} else {
 										row.push(s[tw.$id]?.renderedValues?.[0] || s[tw.$id]?.value || '')
 									}
@@ -1167,13 +1174,15 @@ export class MatrixControls {
 					tip.hide()
 					const group = selectedGroup.status == 'new' ? { name: groupName, lst: [] } : tg[selectedGroup.index]
 					if (selectedGroup.status == 'new') tg.push(group)
-					const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+					const targetTermType = selectedGroup.mode == 'expression' ? 'geneExpression' : 'geneVariant'
+					// remove gene terms to be replaced by the new lst, keep all other term types in the group
+					const lst = group.lst.filter(tw => tw.term.type != targetTermType)
 					const tws = await Promise.all(
 						geneList.map(async d => {
 							const term = {
 								gene: d.symbol || d.gene,
 								name: d.symbol || d.gene,
-								type: 'geneVariant'
+								type: targetTermType
 							}
 							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
 							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
@@ -1298,11 +1307,9 @@ export class MatrixControls {
 		const groupSelect = label.append('select').style('margin', '2px 5px').style('width', '218px')
 
 		for (const [i, group] of groups.entries()) {
+			if (group.label) continue
 			if (group.name) group.label = group.name
-			else {
-				const n = group.lst.filter(tw => tw.term?.type == 'geneVariant').length
-				group.label = n > 0 ? `${n} gene${n < 2 ? '' : 's'}` : `Unlabeled group #${i}`
-			}
+			else group.label = `Unlabeled group #${i}` // cannot assume "gene" group
 		}
 
 		groupSelect

@@ -26,13 +26,17 @@ export async function getHandler(self) {
 }
 
 export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
-	if (typeof tw.term.gene != 'string' || !tw.term.gene) throw 'geneExpression tw.term.gene must be non-empty string'
+	if (typeof tw.term !== 'object') throw 'tw.term is not an object'
+	if (!tw.term.gene && !tw.term.name) throw 'no gene or name present'
+	if (!tw.term.gene) tw.term.gene = tw.term.name
+	if (!tw.term.gene || typeof tw.term.gene != 'string') throw 'geneExpression tw.term.gene must be non-empty string'
+
 	if (!tw.term.name) tw.term.name = tw.term.gene // auto fill if .name is missing
 
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' } // supply default q if missing
 	if (defaultQ) copyMerge(tw.q, defaultQ) // override if default is given
 
-	if (!tw.term.bins) {
+	if (tw.q.mode !== 'continuous' && !tw.term.bins) {
 		/* gene term is missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range, and not worth it to precompute each gene's default bin with its actual exp data
 		here make a request to determine default bin for this term based on its data
 		(in gdc this adds significant pause when adding gene exp term to oncomatrix)

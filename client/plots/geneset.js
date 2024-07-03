@@ -126,12 +126,14 @@ class GenesetComp {
 	}
 
 	async getTwLst(genes) {
+		//TODO may support other opts.mode-to-term.type mapping
+		const type = this.opts.mode == 'expression' ? 'geneExpression' : 'geneVariant'
 		return await Promise.all(
 			// do tempfix of "data.genes.slice(0,3).map" for faster testing
 			genes.map(async i =>
 				typeof i == 'string'
-					? await fillTermWrapper({ term: { gene: i, type: 'geneVariant' } }, this.app.vocabApi)
-					: await fillTermWrapper({ term: { gene: i.gene || i.name, type: 'geneVariant' } }, this.app.vocabApi)
+					? await fillTermWrapper({ term: { gene: i, type } }, this.app.vocabApi)
+					: await fillTermWrapper({ term: { gene: i.gene || i.name, type } }, this.app.vocabApi)
 			)
 		)
 	}
