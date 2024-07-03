@@ -4,7 +4,8 @@ import {
 } from '#shared/types/routes/termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_DEgenes } from '#src/mds3.gdc.js'
 
-/* route returns
+/* 
+for a singlecell experiment, user selects a cell cluster, and the route returns DE genes of the cluster against rest of the cells
  */
 
 export const api: any = {

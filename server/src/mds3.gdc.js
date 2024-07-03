@@ -1804,11 +1804,6 @@ async function convert2caseId(n, ds) {
 export function gdc_validate_query_singleCell_samples(ds, genome) {
 	// q: TermdbSinglecellsamplesRequest
 	ds.queries.singleCell.samples.get = async q => {
-		// test! delete new loaders before client change
-		//console.log(await getSinglecellDEfile('12246e82-cb5f-4b7e-a6bd-a120e000db49',{sample:'d8e936cb-6fc5-4808-97fd-23f429e1378d'},ds))
-		//console.log(await getSinglecellDEgenes({categoryName:'1'}, 'd8e936cb-6fc5-4808-97fd-23f429e1378d',ds))
-		//console.log(await getCaseidByFileid({sample:'d8e936cb-6fc5-4808-97fd-23f429e1378d'},ds))
-
 		const filters = {
 			op: 'and',
 			content: [
@@ -1902,7 +1897,7 @@ export function gdc_validate_query_singleCell_DEgenes(ds, genome) {
 	q{} TermdbSinglecellDEgenesRequest
 	*/
 	ds.queries.singleCell.DEgenes.get = async q => {
-		const caseuuid = await getCaseidByFileid(q.sample, ds)
+		const caseuuid = await getCaseidByFileid(q, q.sample, ds)
 
 		const degFileId = await getSinglecellDEfile(caseuuid, q, ds)
 
@@ -1911,15 +1906,16 @@ export function gdc_validate_query_singleCell_DEgenes(ds, genome) {
 	}
 }
 
-async function getCaseidByFileid(q, ds) {
+// given a file uuid, find out the case uuid this file belongs to
+async function getCaseidByFileid(q, fileId, ds) {
 	const json = {
 		size: 1,
 		fields: 'cases.case_id'
 	}
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky.post(path.join(host.rest, 'files', q.sample), { timeout: false, headers, json }).json()
-	if (!re.cases?.[0].case_id) throw 'structure not re.cases[].case_id'
-	return re.cases[0].case_id
+	const re = await ky.post(path.join(host.rest, 'files', fileId), { timeout: false, headers, json }).json()
+	if (!re.data?.cases?.[0].case_id) throw 'structure not re.data.cases[].case_id'
+	return re.data?.cases[0].case_id
 }
 
 async function getSinglecellDEfile(caseuuid, q, ds) {
