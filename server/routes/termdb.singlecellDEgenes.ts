@@ -45,9 +45,9 @@ function init({ genomes }) {
 	}
 }
 
-export async function validate_query_singleCell_DEgenes(ds: any, genome: any) {
+export async function validate_query_singleCell_DEgenes(ds: any) {
 	if (ds.queries.singleCell.DEgenes.src == 'gdcapi') {
-		gdc_validate_query_singleCell_DEgenes(ds, genome)
+		gdc_validate_query_singleCell_DEgenes(ds)
 	} else {
 		throw 'unknown singleCell.DEgenes.src'
 	}

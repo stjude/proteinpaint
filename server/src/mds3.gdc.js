@@ -1892,7 +1892,7 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 	}
 }
 
-export function gdc_validate_query_singleCell_DEgenes(ds, genome) {
+export function gdc_validate_query_singleCell_DEgenes(ds) {
 	/*
 	q{} TermdbSinglecellDEgenesRequest
 	*/

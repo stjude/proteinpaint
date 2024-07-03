@@ -46,8 +46,6 @@ class singleCellPlot {
 	}
 
 	async init(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
-
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
 		//read files data
@@ -78,6 +76,17 @@ class singleCellPlot {
 			for (const plot of state.termdbConfig?.queries.singleCell.data.plots) {
 				select.append('option').text(plot.colorColumn)
 			}
+			select.on('change', async () => {
+				const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
+				const columnName = plot.columnName
+				const args = {
+					sample: state.config.sample.sampleName,
+					columnName,
+					category: select.node().value
+				}
+				const result = await this.app.vocabApi.getTopTermsByType(args)
+			})
+
 			const violinBt = searchGeneDiv
 				.append('button')
 				.text('Open violin')
@@ -118,15 +127,11 @@ class singleCellPlot {
 				})
 			})
 		}
+
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 
-		if (this.tableOnPlot) {
-			this.sampleDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
-			await renderSamplesTable(this.sampleDiv, this, appState)
-		}
-		const offsetX = 80
-		this.axisOffset = { x: offsetX, y: 30 }
 		const controlsHolder = controlsDiv.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+		const headerDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
 		const tableDiv = this.tableOnPlot ? this.opts.holder.append('div') : mainDiv.append('div')
 		const plotsDiv = mainDiv
 			.append('div')
@@ -134,6 +139,7 @@ class singleCellPlot {
 			.style('flex-wrap', 'wrap')
 			.style('justify-content', 'flex-start')
 			.style('width', '92vw')
+
 		this.dom = {
 			header: this.opts.header,
 			//holder,
@@ -144,26 +150,49 @@ class singleCellPlot {
 			tableDiv,
 			plotsDiv
 		}
+		if (this.tableOnPlot) {
+			await renderSamplesTable(headerDiv, this, appState)
+		}
 
-		// this.sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
-		// const sample = this.samples[0]
-		// const input = this.sampleDiv
-		// 	.append('input')
-		// 	.attr('list', 'sampleDatalist')
-		// 	.attr('placeholder', sample.sample)
-		// 	.style('width', '500px')
-		// 	.on('change', e => {
-		// 		const sample = input.node().value
-		// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: sample } })
-		// 	})
-		// const datalist = this.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
-		// datalist
-		// 	.selectAll('option')
-		// 	.data(this.samples)
-		// 	.enter()
-		// 	.append('option')
-		// 	.attr('value', d => d.sample)
-		// 	.attr('label', d => ('primarySite' in d ? `${d.primarySite} | ${d.diseaseType}` : ''))
+		const offsetX = 80
+		this.axisOffset = { x: offsetX, y: 30 }
+
+		if (q.singleCell?.DEgenes) {
+			const DEDiv = headerDiv.append('div').style('margin', '40px 0px 40px 0px')
+			DEDiv.append('label').html('View differentially expresed genes of a cluster vs rest of cells:&nbsp;')
+			this.dom.deselect = DEDiv.append('select')
+			const DETableDiv = headerDiv.append('div')
+			this.dom.DETableDiv = DETableDiv
+			this.dom.deselect.append('option').text('')
+			this.dom.deselect.on('change', async e => {
+				DETableDiv.selectAll('*').remove()
+
+				const categoryName = this.dom.deselect.node().value.split(' ')?.[1]
+				if (!categoryName) return
+
+				const columnName = state.termdbConfig.queries.singleCell.DEgenes.columnName
+				const sample =
+					this.state.config.experimentID || this.state.config.sample || this.samples[0]?.experiments[0]?.experimentID
+				const args = { genome: state.genome, dslabel: state.dslabel, categoryName, sample, columnName }
+				const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
+				const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
+				const rows = []
+				for (const gene of result.genes) {
+					const row = [
+						{ value: gene.name },
+						{ value: roundValueAuto(gene.avg_log2FC) },
+						{ value: roundValueAuto(gene.p_val_adj) }
+					]
+					rows.push(row)
+				}
+				renderTable({
+					rows,
+					columns,
+					resize: true,
+					div: DETableDiv
+				})
+			})
+		}
 
 		this.settings = {}
 
@@ -285,7 +314,15 @@ class singleCellPlot {
 	renderPlot(plot) {
 		const colorMap = {}
 		let clusters = new Set(plot.cells.map(c => c.category))
-		plot.clusters = Array.from(clusters).sort()
+
+		plot.clusters = Array.from(clusters).sort((a, b) => {
+			const num1 = parseInt(a.split(' ')[1])
+			const num2 = parseInt(b.split(' ')[1])
+			return num1 - num2
+		})
+		if (this.dom.deselect && !this.legendRendered)
+			//first plot
+			for (const cluster of plot.clusters) this.dom.deselect.append('option').text(cluster)
 		const cat2Color = getColors(plot.clusters.length + 2) //Helps to use the same color scheme in different samples
 		for (const cluster of plot.clusters)
 			colorMap[cluster] =
@@ -641,6 +678,10 @@ async function renderSamplesTable(div, self, state) {
 		div,
 		maxHeight,
 		noButtonCallback: index => {
+			if (self.dom.DETableDiv) {
+				self.dom.deselect.node().value = ''
+				self.dom.DETableDiv.selectAll('*').remove()
+			}
 			const sample = rows[index][0].value
 			const config = { chartType: 'singleCellPlot', sample }
 			if (rows[index][0].__experimentID) {
