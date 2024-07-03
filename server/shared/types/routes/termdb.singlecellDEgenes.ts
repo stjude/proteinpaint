@@ -19,10 +19,10 @@ export type HasdataResponse = {
 	genes: {
 		/** gene name */
 		name: string
-		/** p-value */
-		pvalue: number
+		/** adjusted p-value */
+		p_val_adj: number
 		/** log foldchange */
-		logfoldchange: number
+		avg_log2FC: number
 	}[]
 }
 

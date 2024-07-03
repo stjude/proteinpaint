@@ -30,7 +30,8 @@ export type TermdbSinglecellDataRequest = {
 	genome: string
 	/** Dataset label */
 	dslabel: string
-	/** Sample name */
+	/** Sample name for which the sc results will be shown.
+	for GDC the value is "seurat.analysis.tsv" file UUID rather than any sample name. the file contains the analysis results for an experiment */
 	sample: string
 	/** List of plot names from this sample to request data for */
 	plots: string[]

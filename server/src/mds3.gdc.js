@@ -37,6 +37,8 @@ gdc_validate_query_geneExpression
 gdc_validate_query_singleCell_samples
 gdc_validate_query_singleCell_data
 gdc_validate_query_singleCell_DEgenes
+	getSinglecellDEfile
+	getSinglecellDEgenes
 querySamples_gdcapi
 	querySamplesTwlst4hierCluster
 	flattenCaseByFields
@@ -1802,8 +1804,9 @@ async function convert2caseId(n, ds) {
 export function gdc_validate_query_singleCell_samples(ds, genome) {
 	// q: TermdbSinglecellsamplesRequest
 	ds.queries.singleCell.samples.get = async q => {
-		// test! delete
+		// test! delete new loaders before client change
 		//console.log(await getSinglecellDEfile({sample:'C3L-00359'},ds))
+		//console.log(await getSinglecellDEgenes({categoryName:'1'}, 'd8e936cb-6fc5-4808-97fd-23f429e1378d',ds))
 
 		const filters = {
 			op: 'and',
@@ -1898,16 +1901,16 @@ export function gdc_validate_query_singleCell_DEgenes(ds, genome) {
 	q{} TermdbSinglecellDEgenesRequest
 	*/
 	ds.queries.singleCell.DEgenes.get = async q => {
-		const singlecellDEfile = await getSinglecellDEfile(q, ds)
+		const degFileId = await getSinglecellDEfile(q, ds)
 
-		const genes = await getSinglecellDEgenes(q, singlecellDEfile, ds)
+		const genes = await getSinglecellDEgenes(q, degFileId, ds)
 		return { genes }
 	}
 }
 
 async function getSinglecellDEfile(q, ds) {
-	// many cases have multiple sc experiments
-	// TODO q may need to provide seurat.analysis.tsv file id. the query should be able to pull corresponding seurat.deg.tsv file of the same experiment.
+	// find the seurat.deg.tsv file for the requested experient, and return file id
+	// many cases have multiple sc experiments TODO q may need to provide seurat.analysis.tsv file id. the query should be able to pull corresponding seurat.deg.tsv file of the same experiment.
 	const filters = {
 		op: 'and',
 		content: [
@@ -1931,7 +1934,35 @@ async function getSinglecellDEfile(q, ds) {
 	return re.data.hits[0].id
 }
 
-async function getSinglecellDEgenes(q, file, ds) {}
+async function getSinglecellDEgenes(q, degFileId, ds) {
+	// with seurat.deg.tsv file id, read file content and find DE genes belonging to given cluster
+	const { host } = ds.getHostHeaders(q)
+	// do not use headers here that has accept: 'application/json'
+	const re = await ky(path.join(host.rest, 'data', degFileId), { timeout: false }).text()
+	const lines = re.trim().split('\n')
+	/*
+        this tsv file first line is header:
+        gene    gene_names      cluster avg_log2FC      p_val   p_val_adj       prop_in_cluster prop_out_cluster        avg_logFC
+
+        each line is a gene belonging to a cluster
+        */
+	const genes = []
+	for (let i = 1; i < lines.length; i++) {
+		const line = lines[i]
+		const l = line.split('\t')
+		if (l[2] == q.categoryName) {
+			// gene is for required cluster
+			const name = l[1]
+			if (!name) throw 'gene_names blank for a line: ' + line
+			const avg_log2FC = Number(l[3])
+			if (Number.isNaN(avg_log2FC)) throw 'avg_log2FC not number for a line ' + line
+			const p_val_adj = Number(l[5])
+			if (Number.isNaN(p_val_adj)) throw 'p_val_adj not number for a line ' + line
+			genes.push({ name, avg_log2FC, p_val_adj })
+		}
+	}
+	return genes
+}
 
 export function gdc_validate_query_singleCell_data(ds, genome) {
 	// q{} TermdbSinglecellDataRequest
