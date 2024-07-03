@@ -165,7 +165,10 @@ class singleCellPlot {
 			this.dom.deselect.append('option').text('')
 			this.dom.deselect.on('change', async e => {
 				DETableDiv.selectAll('*').remove()
-				const categoryName = this.dom.deselect.node().value.split(' ')[1]
+
+				const categoryName = this.dom.deselect.node().value.split(' ')?.[1]
+				if (!categoryName) return
+
 				const columnName = state.termdbConfig.queries.singleCell.DEgenes.columnName
 				const sample =
 					this.state.config.experimentID || this.state.config.sample || this.samples[0]?.experiments[0]?.experimentID
