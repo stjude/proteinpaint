@@ -166,7 +166,7 @@ class singleCellPlot {
 			this.dom.deselect.append('option').text('')
 			this.dom.deselect.on('change', async e => {
 				DETableDiv.selectAll('*').remove()
-
+				this.settings.show_gsea = true
 				const categoryName = this.dom.deselect.node().value.split(' ')?.[1]
 				if (!categoryName) return
 
@@ -177,6 +177,8 @@ class singleCellPlot {
 				const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
 				const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
 				const rows = []
+				const genes = []
+				const fold_changes = []
 				for (const gene of result.genes) {
 					const row = [
 						{ value: gene.name },
@@ -184,6 +186,8 @@ class singleCellPlot {
 						{ value: roundValueAuto(gene.p_val_adj) }
 					]
 					rows.push(row)
+					genes.push(gene.name)
+					fold_changes.push(gene.avg_log2FC)
 				}
 				renderTable({
 					rows,
@@ -191,6 +195,24 @@ class singleCellPlot {
 					resize: true,
 					div: DETableDiv
 				})
+
+				if (this.settings.show_gsea && this.app.opts.genome.termdbs) {
+					// Currently backend only uses msigdb, but in future may use other databases in genome.termdbs{}. In ui will need to generate a <select> to choose one key of termdbs{}.
+					const gsea_params = {
+						genes: genes,
+						fold_change: fold_changes,
+						genome: this.app.vocabApi.opts.state.vocab.genome
+					}
+					//console.log("gsea_params:",gsea_params)
+					const config = {
+						chartType: 'gsea',
+						gsea_params: gsea_params
+					}
+					this.app.dispatch({
+						type: 'plot_create',
+						config
+					})
+				}
 			})
 		}
 
@@ -227,6 +249,19 @@ class singleCellPlot {
 				boxLabel: ''
 			}
 		]
+		console.log('this.settings.show_gsea:', this.settings.show_gsea)
+		if (this.app.opts.genome.termdbs) {
+			// Needs to be silenced
+			// Check if genome build contains termdbs, only then enable gsea
+			inputs.push({
+				label: 'Gene set enrichment analysis',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'gsea',
+				title: 'Gene set enrichment analysis',
+				options: [{ label: 'Submit', value: 'Submit' }]
+			})
+		}
 		for (const plot of state.config.plots) {
 			const id = plot.name.replace(/\s+/g, '')
 			inputs.push({
@@ -795,6 +830,7 @@ export function getDefaultSingleCellSettings() {
 	return {
 		svgw: 420,
 		svgh: 420,
-		showBorders: false
+		showBorders: false,
+		show_gsea: false
 	}
 }
