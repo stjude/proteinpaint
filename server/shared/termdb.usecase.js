@@ -100,7 +100,11 @@ export function isUsableTerm(term, _usecase, ds) {
 				if (graphableTypes.has(term.type)) uses.add('plot')
 				if (!term.isleaf) uses.add('branch')
 			}
-
+		case 'profile':
+			if (!term.isleaf) {
+				uses.add('plot')
+				uses.add('branch')
+			}
 			return uses
 		case 'boxplot':
 			if (term.type == 'float' || term.type == 'integer') uses.add('plot')
