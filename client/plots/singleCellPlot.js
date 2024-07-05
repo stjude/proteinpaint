@@ -164,6 +164,7 @@ class singleCellPlot {
 			if (this.app.opts.genome.termdbs)
 				this.dom.GSEAbt = DEDiv.append('button')
 					.style('margin-left', '5px')
+					.property('disabled', true)
 					.text('Gene set enrichment analysis')
 					.on('click', e => {
 						const gsea_params = {
@@ -186,6 +187,7 @@ class singleCellPlot {
 			this.dom.deselect.on('change', async e => {
 				DETableDiv.selectAll('*').remove()
 				const categoryName = this.dom.deselect.node().value.split(' ')?.[1]
+				if (this.dom.GSEAbt) this.dom.GSEAbt.property('disabled', !categoryName)
 				if (!categoryName) return
 
 				const columnName = state.termdbConfig.queries.singleCell.DEgenes.columnName
@@ -288,7 +290,6 @@ class singleCellPlot {
 	// or current.state != replcament.state
 	async main() {
 		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
-
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 
 		this.legendRendered = false
@@ -703,6 +704,7 @@ async function renderSamplesTable(div, self, state) {
 			if (self.dom.DETableDiv) {
 				self.dom.deselect.node().value = ''
 				self.dom.DETableDiv.selectAll('*').remove()
+				if (self.dom.GSEAbt) self.dom.GSEAbt.property('disabled', true)
 			}
 			const sample = rows[index][0].value
 			const config = { chartType: 'singleCellPlot', sample }
