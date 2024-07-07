@@ -228,17 +228,7 @@ async function get_geneVariant(tvs, CTEname, ds) {
 }
 
 async function get_geneExpression(tvs, CTEname, ds) {
-	const args = {
-		genome: ds.genome,
-		dslabel: ds.label,
-		clusterMethod: 'hierarchical',
-		/** distance method */
-		distanceMethod: 'euclidean',
-		/** Data type */
-		dataType: TermTypes.GENE_EXPRESSION,
-		terms: [{ gene: tvs.term.gene, type: TermTypes.GENE_EXPRESSION }]
-	}
-	const data = await ds.queries.geneExpression.get(args)
+	const data = await ds.queries.geneExpression.get({ terms: [{ gene: tvs.term.gene }] })
 	const samples = []
 	for (const sampleId in data.term2sample2value.get(tvs.term.gene)) {
 		const values = data.term2sample2value.get(tvs.term.gene)
