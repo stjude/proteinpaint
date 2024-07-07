@@ -720,6 +720,7 @@ function setTermActions(self) {
 		const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 		sandbox.header.text(t.tw.term.name)
 		const arg = {
+			debugmode: self.app.opts.state.debug,
 			holder: sandbox.body.append('div').style('margin', '20px'),
 			genome: self.app.opts.genome,
 			nobox: true,
@@ -729,7 +730,8 @@ function setTermActions(self) {
 					type: 'mds3',
 					dslabel: self.app.opts.state.vocab.dslabel,
 					filter0: self.state.filter0,
-					filterObj: self.state.filter
+					// state.filter is frozen. make a copy and pass the writable obj to tk. currently in mds3 it always hydrates filter and modify it
+					filterObj: structuredClone(self.state.filter)
 				}
 			]
 		}

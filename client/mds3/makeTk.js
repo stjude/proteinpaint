@@ -1016,9 +1016,14 @@ function validateSelectSamples(tk) {
 	a._cart = [] // array to hold samples selected so far (e.g. separately from multiple mutations), for submitting to a.callback()
 }
 
+/* hydrate filter by filling tvs term obj.
+only works for dictionary terms e.g. term:{id:'xx'} with id but lacks type etc.
+provides convenience for hand coding dictionary filter
+do not work for non-dict terms! may fix later
+*/
 async function mayHydrateFilter(tk) {
 	if (!tk.filterObj) return
-	// hydrate filter by filling tvs term obj
+
 	if (typeof tk.filterObj != 'object') throw 'tk.filterObj{} is set but is not object'
 
 	await hydrate(tk.filterObj)
@@ -1026,8 +1031,10 @@ async function mayHydrateFilter(tk) {
 	async function hydrate(f) {
 		if (f.type == 'tvs') {
 			if (!f.tvs?.term) throw 'tvs.tvs.term missing'
-			if (!f.tvs.term.id) throw 'tvs.tvs.term.id missing'
-			f.tvs.term = await tk.mds.termdb.vocabApi.getterm(f.tvs.term.id)
+			if (f.tvs.term.id) {
+				// has term.id. allows term obj to be like {id:'xx'} and assumes it must be dict term
+				f.tvs.term = await tk.mds.termdb.vocabApi.getterm(f.tvs.term.id)
+			}
 			return
 		}
 		if (f.type == 'tvslst') {

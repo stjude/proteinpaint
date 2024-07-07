@@ -43,6 +43,8 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		const CTEname_i = CTEname + '_' + i
 		let f
 		if (item.type == 'tvslst') {
+			if (item.lst.length == 0) continue // do not process blank list
+
 			f = await getFilterCTEs(item, ds, CTEname_i)
 			// .filters: str, the CTE cascade, not used here!
 			// .CTEs: [] list of individual CTE string
@@ -78,6 +80,7 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		} else {
 			throw 'unknown term type'
 		}
+
 		thislevelCTEnames.push(f.CTEname)
 		CTEs.push(...f.CTEs)
 		values.push(...f.values)
