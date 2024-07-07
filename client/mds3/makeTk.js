@@ -7,6 +7,7 @@ import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common'
 import { vcfparsemeta } from '#shared/vcf'
 import { getFilterName } from './filterName'
 import { fillTermWrapper } from '#termsetting'
+import { rehydrateFilter } from '../filter/rehydrateFilter.js'
 
 /*
 this script exports one function "makeTk()" that will be called just once
@@ -126,7 +127,7 @@ export async function makeTk(tk, block) {
 
 	mayInitCnv(tk)
 
-	await mayHydrateFilter(tk)
+	if (tk.filterObj) await Promise.all(rehydrateFilter(tk.filterObj, tk.mds.termdb.vocabApi))
 
 	tk.tklabel.text(tk.mds.label || tk.name)
 
@@ -1014,34 +1015,4 @@ function validateSelectSamples(tk) {
 	}
 	if (typeof a.callback != 'function') throw 'allow2selectSamples.callback() is not function'
 	a._cart = [] // array to hold samples selected so far (e.g. separately from multiple mutations), for submitting to a.callback()
-}
-
-/* hydrate filter by filling tvs term obj.
-only works for dictionary terms e.g. term:{id:'xx'} with id but lacks type etc.
-provides convenience for hand coding dictionary filter
-do not work for non-dict terms! may fix later
-*/
-async function mayHydrateFilter(tk) {
-	if (!tk.filterObj) return
-
-	if (typeof tk.filterObj != 'object') throw 'tk.filterObj{} is set but is not object'
-
-	await hydrate(tk.filterObj)
-
-	async function hydrate(f) {
-		if (f.type == 'tvs') {
-			if (!f.tvs?.term) throw 'tvs.tvs.term missing'
-			if (f.tvs.term.id) {
-				// has term.id. allows term obj to be like {id:'xx'} and assumes it must be dict term
-				f.tvs.term = await tk.mds.termdb.vocabApi.getterm(f.tvs.term.id)
-			}
-			return
-		}
-		if (f.type == 'tvslst') {
-			if (!Array.isArray(f.lst)) throw 'tvslst.lst[] not array'
-			for (const t of f.lst) await hydrate(t)
-			return
-		}
-		throw 'type not tvs or tvslst'
-	}
 }
