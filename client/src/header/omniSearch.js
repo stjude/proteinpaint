@@ -196,7 +196,7 @@ export async function findgene2paint(str, app, genomename, jwt) {
 		}
 		first_genetrack_tolist(g, par.tklst)
 
-		import('./block')
+		import('../block.js')
 			.then(b => new b.Block(par))
 			.catch(err => {
 				app.error0(err)
