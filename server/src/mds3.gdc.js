@@ -42,6 +42,7 @@ gdc_validate_query_singleCell_DEgenes
 querySamples_gdcapi
 	querySamplesTwlstForGeneexpclustering
 	querySamplesTwlstNotForGeneexpclustering
+	querySamplesSurvival
 	flattenCaseByFields
 		mayApplyGroupsetting
 	may_add_readdepth
@@ -1319,7 +1320,71 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	return { byTermId, samples }
 }
 
-async function querySamplesSurvival(q, survivalTwLst, ds, samples) {}
+async function querySamplesSurvival(q, survivalTwLst, ds, samples) {
+	// build survival api filter
+	// XXX FIXME may not be sufficiently limiting cases by filter
+	const filter = { op: 'and', content: [] }
+	if (q.filter0) {
+		filter.content.push(q.filter0)
+	}
+
+	if (q.set_id) {
+		if (typeof q.set_id != 'string') throw '.set_id value not string'
+		filter.content.push({
+			op: 'in',
+			content: {
+				field: 'cases.case_id',
+				value: [q.set_id]
+			}
+		})
+	}
+	if (q.filterObj) {
+		const g = filter2GDCfilter(q.filterObj)
+		if (g) filter.content.push(g)
+	}
+	addTid2value_to_filter(q.tid2value, filter.content, ds)
+
+	// the survival term itself is not used in api query, since there's just one type of survival data from gdc and no need to distinguish
+	const { host, headers } = ds.getHostHeaders(q)
+	const re = await ky
+		.post('https://portal.gdc.cancer.gov/auth/api/v0/analysis/survival', {
+			timeout: false,
+			headers,
+			json: { filters: [filter] }
+		})
+		.json()
+	if (!Array.isArray(re.results?.[0].donors)) throw 're.results[0].donors[] not array'
+	for (const d of re.results[0].donors) {
+		/* each d:
+		{
+          "time": 2.0, // time to event in #days
+          "censored": true,
+          "survivalEstimate": 1, // percentage in 0-1 range, may be for km plot. no use here
+          "id": "e117fcf4-2c01-4b4d-8faf-5de7d0e839f1", // case uuid
+          "submitter_id": "TCGA-HT-A5R9",
+          "project_id": "TCGA-LGG"
+        },
+		*/
+		if (!d.id) throw 'd.id (case uuid) missing'
+		if (typeof d.censored != 'boolean') throw 'd.censored is not boolean'
+		if (!Number.isFinite(d.time)) throw 'd.time not number'
+		let s = samples.find(i => i.sample_id == d.id) // find existing sample
+		if (!s) {
+			// may create new and insert to samples[]
+			if (q.isHierCluster && !ds.__gdc.casesWithExpData.has(d.id)) {
+				// case does not have gene exp data; only cases with exp data are allowed
+				continue
+			}
+			s = { sample_id: d.id }
+			samples.push(s)
+		}
+		// assign survival data for this sample
+		s[survivalTwLst[0].term.id] = {
+			key: d.censored ? 1 : 0,
+			value: d.time // TODO convert to years
+		}
+	}
+}
 
 async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst) {
 	// not for gene exp clustering
@@ -1505,10 +1570,8 @@ async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTw
 }
 
 /*
-offshoot of querySamples_gdcapi()!
-
-** this only works for dict terms!! but not geneVariant aiming to load mutations
-*/
+ ** this only works for dict terms!! but not geneVariant aiming to load mutations
+ */
 async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	const filters = { op: 'and', content: [] }
 	/*

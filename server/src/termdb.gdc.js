@@ -152,6 +152,21 @@ export async function initGDCdictionary(ds) {
 	// k: term id, string with full path
 	// v: term obj
 
+	{
+		// declare hardcoded survival term! there is one api https://portal.gdc.cancer.gov/auth/api/v0/analysis/survival that serves one type of surv data, thus one hardcoded term. wip parent_id is not set, later can nest under a branch
+		const id = 'Overall Survival'
+		const term = {
+			id,
+			name: id,
+			type: 'survival',
+			isleaf: true,
+			included_types_set: new Set(), // apply to leaf terms, should have its own term.type
+			child_types_set: new Set() // empty for leaf terms
+		}
+		term.included_types_set.add('survival')
+		id2term.set(id, term)
+	}
+
 	// TODO switch to https://api.gdc.cancer.gov/cases/_mapping
 	const { host, headers } = ds.getHostHeaders()
 	const dictUrl = path.join(host.rest, 'ssm_occurrences/_mapping')
@@ -176,6 +191,7 @@ export async function initGDCdictionary(ds) {
 		categoricalCount = 0,
 		integerCount = 0,
 		floatCount = 0,
+		survivalCount = 0,
 		parentCount = 0
 
 	for (const fieldLine of re.fields) {
@@ -314,6 +330,7 @@ export async function initGDCdictionary(ds) {
 	if (categoricalCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'categorical' })
 	if (integerCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'integer' })
 	if (floatCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'float' })
+	if (survivalCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'survival' })
 
 	/**********************************
 	       additional prepping

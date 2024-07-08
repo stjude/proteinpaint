@@ -510,9 +510,15 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 					value: v[0]
 				}
 			} else if (v != undefined && v != null) {
-				s2[$id] = {
-					key: v,
-					value: v
+				if (typeof v == 'object') {
+					// v is {key,value}, should be for survival term
+					s2[$id] = v
+				} else {
+					// v is number/string, should be for non-survival term
+					s2[$id] = {
+						key: v,
+						value: v
+					}
 				}
 			}
 		}
