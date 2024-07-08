@@ -199,6 +199,7 @@ class singleCellPlot {
 				const rows = []
 				this.genes = []
 				this.fold_changes = []
+				result.genes.sort((a, b) => b.avg_log2FC - a.avg_log2FC)
 				for (const gene of result.genes) {
 					const row = [
 						{ value: gene.name },
