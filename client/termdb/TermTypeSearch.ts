@@ -62,7 +62,7 @@ export class TermTypeSearch {
 	genomeObj: any
 	handlerByType: Dict
 	click_term: (term: Term) => void
-	submit_lst: (terms: Array<Term>) => void
+	submit_lst?: (terms: Array<Term>) => void
 
 	constructor(opts) {
 		this.type = 'termTypeSearch'
@@ -280,6 +280,7 @@ export class TermTypeSearch {
 	async setTermTypeGroup(type, termTypeGroup) {
 		await this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
 		const tab = this.tabs.find(tab => tab.termTypeGroup == termTypeGroup)
+		if (!tab) return
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
 

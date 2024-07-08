@@ -1,7 +1,6 @@
 import { TermWrapper } from './tw.ts'
-import { BaseQ } from './term.ts'
+import { NumericTerm, NumericQ } from './numeric.ts'
 import { TermSettingInstance } from '../termsetting.ts'
-import { NumericTerm } from './numeric.ts'
 
 /*
 --------EXPORTED--------
@@ -11,9 +10,7 @@ GeneExpressionTermSettingInstance
 
 */
 
-export type GeneExpressionQ = BaseQ & {
-	mode: 'continuous'
-}
+export type GeneExpressionQ = NumericQ & { dt?: number }
 
 export type GeneExpressionTW = TermWrapper & {
 	q: GeneExpressionQ
