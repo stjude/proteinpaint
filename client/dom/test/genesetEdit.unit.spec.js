@@ -89,8 +89,7 @@ tape('Non-empty opts.geneList', function (test) {
 			genome: hg38,
 			geneList,
 			callback: () => {},
-			vocabApi,
-			geneList
+			vocabApi
 		})
 		test.equal(ui.dom.geneHoldingDiv.selectAll(':scope>div').size(), geneList.length, 'should render two gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
@@ -138,8 +137,7 @@ tape('submit button', function (test) {
 		genome: hg38,
 		geneList,
 		callback,
-		vocabApi,
-		geneList
+		vocabApi
 	})
 	geneList.slice(-1)
 	ui.dom.geneHoldingDiv.node().querySelector(':scope>div').click()
