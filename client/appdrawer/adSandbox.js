@@ -675,15 +675,20 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 	}
 
 	if (par.searchBar == 'none') {
+		//save to reset the hostURL if changes after runpp()
+		const originalURL = sessionStorage.getItem('hostURL')
 		// Call mass UI without search bar
 		const runppArg = {
 			holder: sandboxDiv.body.append('div').style('margin', '20px').style('overflow-x', 'auto').node(),
-			host: par.runargs.host || sessionStorage.getItem('hostURL')
+			host: par.runargs.host || originalURL
 		}
 
 		const callpp = JSON.parse(JSON.stringify(par.runargs))
 
 		runproteinpaint(Object.assign(runppArg, callpp))
+		//Reset the host if changed
+		if (originalURL != sessionStorage.getItem('hostURL')) sessionStorage.setItem('hostURL', originalURL)
+
 		return
 	}
 
