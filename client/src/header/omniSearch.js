@@ -1,24 +1,74 @@
 import { dofetch3 } from '#common/dofetch'
-import { openSandbox } from '../appdrawer/adSandbox'
-import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { string2pos } from './coord'
-import { newSandboxDiv } from '../dom/sandbox.ts'
-import * as parseurl from './app.parseurl'
+import { openSandbox } from '../../appdrawer/adSandbox'
+import { throwMsgWithFilePathAndFnName } from '../../dom/sayerror.ts'
+import { string2pos } from '../coord'
+import { newSandboxDiv } from '../../dom/sandbox.ts'
+import * as parseurl from '../app.parseurl'
 import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
-import blockinit from './block.init'
-
-//TODO: eventually move all functions involving input/search here
+import blockinit from '../block.init'
+import { select as d3select } from 'd3-selection'
 
 /*
 ----EXPORTED----
+searchItems()
+findgenelst()
+findgene2paint()
 
 ----Internal----
+findAppDrawerElements()
+getExampleNames()
+getFilteredElements()
 */
 
-export async function findAppDrawerElements(app, input, data, tip) {
+export async function searchItems(app, tip, help, jwt){
+	const userInput = d3select('input').property('value').trim()
+	const data = [
+		{
+			title: 'Genes',
+			default: true,
+			items: await findgenelst(userInput, app.selectgenome.property('value'), jwt),
+			color: '#F2F2F2',
+			callback: d => {
+				app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
+				tip.hide()
+				findgene2paint(d, app, app.selectgenome.property('value'), jwt)
+			}
+		}
+	]
+	await findAppDrawerElements(app, userInput, data, tip)
+	//Keep 'Help' section last
+	data.push({
+		title: 'Help',
+		default: false,
+		items: help.filter(d => d.label.toLowerCase().includes(userInput.toLowerCase())),
+		color: '#faebd9',
+		callback: d => {
+			window.open(d.link, d.label)
+		}
+	})
+
+	data.push({
+		title: 'Publications',
+		default: false,
+		items: await createPublicationsList(app),
+		color: '#faebd9',
+		callback: d => {
+			window.open(d.doi, d.title)
+		}
+	})
+	return data
+}
+
+async function createPublicationsList(app) {
 	const re = await dofetch3(app.cardsPath + '/index.json')
-	if (re.error) throwMsgWithFilePathAndFnName(`Problem retrieving cards/index.json`)
+	if (re.error) console.error(`Problem retrieving ../cards/index.json`)
+	return re.publications
+}
+
+async function findAppDrawerElements(app, input, data, tip) {
+	const re = await dofetch3(app.cardsPath + '/index.json')
+	if (re.error) throwMsgWithFilePathAndFnName(`Problem retrieving ../cards/index.json`)
 	const userInput = input.toLowerCase().trim()
 	const elements = [...re.elements]
 	let filteredElements

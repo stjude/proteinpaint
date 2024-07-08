@@ -10,20 +10,16 @@ import { dofetch3, setAuth } from '#common/dofetch'
 import { findgenemodel_bysymbol } from './gene'
 import * as common from '#shared/common'
 import { bulkui, bulkembed } from './bulk.ui'
-import { string2pos, invalidcoord } from './coord'
+import { string2pos } from './coord'
 import { loadstudycohort } from './tp.init'
-import { rgb as d3rgb } from 'd3-color'
 import blockinit from './block.init'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
-import { appDrawerInit } from '../appdrawer/app'
 import urlmap from '#common/urlmap'
-import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox.ts'
+import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 import { sayerror } from '../dom/sayerror'
 import { Menu } from '#dom/menu'
-import { first_genetrack_tolist } from '#common/1stGenetk'
-import { InputSearch } from '../dom/search.ts'
-import { findAppDrawerElements, findgenelst, findgene2paint } from './omniSearch'
+import { AppHeader } from './header/AppHeader.ts'
 
 /*
 exports a global function runproteinpaint()
@@ -205,7 +201,12 @@ export function runproteinpaint(arg) {
 				!window.location.search.includes('mass-session-file') &&
 				!window.location.search.includes('mass-session-url')
 			) {
-				makeheader(app, data, arg.jwt)
+				new AppHeader({
+					headtip,
+					app,
+					data,
+					jwt: arg.jwt
+				})
 			}
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
@@ -277,283 +278,6 @@ function setHostUrl(arg, app) {
 
 	// store fetch parameters
 	sessionStorage.setItem('hostURL', app.hostURL)
-}
-
-async function makeheader(app, obj, jwt) {
-	/*
-	app
-	obj: server returned data
-	jwt: token
-	*/
-	const color = d3rgb(common.defaultcolor)
-	const padw_lg = '13px'
-	const padw_input = '5px 10px'
-	const padw_sm = '7px 10px'
-	const doc_width = document.documentElement.clientWidth
-	// head
-	const row = app.holder
-		.append('div')
-		.style('white-space', 'nowrap')
-		.style(
-			'border-bottom',
-			true || doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
-		)
-
-	const headbox = row
-		.append('div')
-		.style('margin', '10px')
-		.style('padding', '8px')
-		.style('padding-bottom', '12px')
-		.style('display', 0 && doc_width < 1600 ? 'block' : 'inline-block')
-		.style(
-			'border-bottom',
-			0 && doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
-		)
-
-	// .style('border-radius', '5px')
-	// .style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
-	const headinfo = row
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', padw_sm)
-		.style('padding-left', '25px')
-		.style('font-size', '.8em')
-		.style('color', d3rgb(common.defaultcolor).darker())
-
-	{
-		// a row for server stats
-		const row = headinfo.append('div').style('padding-left', '15px')
-		row
-			.append('span')
-			.text('Code updated: ' + (obj.codedate || '??') + ', server launched: ' + (obj.launchdate || '??') + '.')
-		if (obj.hasblat) {
-			row
-				.append('a')
-				.style('margin-left', '10px')
-				.text('Running BLAT')
-				.on('click', async event => {
-					headtip.clear().showunder(event.target)
-					const div = headtip.d.append('div').style('margin', '10px')
-					const wait = div.append('div').text('Loading...')
-					try {
-						const data = await client.dofetch2('blat?serverstat=1')
-						if (data.error) throw data.error
-						if (!data.lst) throw 'invalid response'
-						wait.remove()
-						for (const i of data.lst) {
-							div.append('div').text(i)
-						}
-					} catch (e) {
-						wait.text(e.message || e)
-						if (e.stack) console.log(e.stack)
-					}
-				})
-		}
-	}
-	if (obj.headermessage) {
-		headinfo.append('div').html(obj.headermessage)
-	}
-
-	// 1
-	headbox
-		.append('div')
-		.text('ProteinPaint')
-		.style('display', 'inline-block')
-		.style('padding', padw_lg)
-		.style('color', common.defaultcolor)
-		.style('font-size', '1.3em')
-		.style('font-weight', 'bold')
-
-	// 2, search box
-	const tip = new Menu({ border: '', padding: '0px' })
-
-	const searchItems = async () => {
-		//TODO eventually move to omniSearch.js
-		const userInput = d3select('input').property('value').trim()
-		const data = [
-			{
-				title: 'Genes',
-				default: true,
-				items: await findgenelst(userInput, app.selectgenome.property('value'), jwt),
-				callback: gene => {
-					app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
-					tip.hide()
-					findgene2paint(gene, app, app.selectgenome.property('value'), jwt)
-				}
-			}
-		]
-		await findAppDrawerElements(app, userInput, data, tip)
-		//Keep 'Help' section last
-		data.push({
-			title: 'Help',
-			items: help.filter(d => d.label.toLowerCase().includes(userInput.toLowerCase())),
-			color: '#faebd9',
-			callback: d => {
-				window.open(d.link, d.label)
-			}
-		})
-		return data
-	}
-	//TODO eventually move to omniSearch.js
-
-	const omniSearch = new InputSearch({
-		holder: headbox,
-		tip,
-		style: {
-			padding: padw_sm,
-			border: `'solid 1px ${common.defaultcolor}`
-		},
-		size: 32,
-		placeholder: 'Gene, position, SNP, app, or dataset',
-		title: 'Search by gene, SNP, position, app, or dataset',
-		searchItems: searchItems
-	})
-
-	omniSearch.initUI()
-
-	const genome_select_div = headbox.append('div').attr('class', 'sjpp-genome-select-div').style('padding', padw_sm)
-
-	const get_placeholder = () => {
-		const currG = app.genomes[app.selectgenome.property('value')]
-		/** Defaults */
-		const opts2Show = ['Gene', 'position', 'app']
-		/** Show all the genomic options together */
-		if (currG.hasSNP) opts2Show.splice(2, 0, 'SNP')
-		if (Object.keys(currG.datasets).length) opts2Show.push('dataset')
-		const str = opts2Show.join(', ').replace(/,(?=[^,]*$)/, ', or')
-		return str
-	}
-
-	app.selectgenome = genome_select_div
-		.append('select')
-		.attr('title', 'Select a genome')
-		.attr('class', 'sjpp-genome-select')
-		.style('padding', padw_input)
-		.style('border', 'solid 1px ' + common.defaultcolor)
-		.on('change', () => {
-			update_genome_browser_btn(app)
-			omniSearch.updatePlaceholder(get_placeholder())
-		})
-
-	for (const n in app.genomes) {
-		app.selectgenome
-			.append('option')
-			.attr('n', n)
-			.text(app.genomes[n].species + ' ' + n)
-			.property('value', n)
-	}
-	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt)
-
-	app.drawer = await appDrawerInit({
-		holder: app.holder,
-		genomes: app.genomes,
-		drawerRow: app.holder
-			.append('div')
-			.style('position', 'relative')
-			.style('overflow-x', 'visible')
-			.style('overflow-y', 'hidden')
-			.classed('sjpp-drawer-row', true),
-		sandboxDiv: app.holder.append('div').style('margin-top', '15px').classed('sjpp-drawer-sandbox', true),
-		genome_browser_btn: app.genome_browser_btn,
-		debugmode: app.debugmode,
-		headbox,
-		padw_sm,
-		cardsPath: app.cardsPath
-	})
-
-	const help = [
-		/** Used in both the Help button and omni search */
-		{
-			label: 'Embed in your website',
-			link: 'https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing'
-		},
-		{
-			label: 'URL parameters',
-			link: 'https://github.com/stjude/proteinpaint/wiki/URL-parameters'
-		},
-		{
-			label: 'All tutorials',
-			link: 'https://github.com/stjude/proteinpaint/wiki/'
-		},
-		{
-			label: 'User community',
-			link: 'https://groups.google.com/g/proteinpaint'
-		},
-		{
-			label: 'License ProteinPaint',
-			link: 'https://www.stjude.org/research/why-st-jude/shared-resources/technology-licensing/technologies/proteinpaint-web-application-for-visualizing-genomic-data-sj-15-0021.html',
-			onlySearch: true
-		},
-		{
-			label: 'Our Team',
-			link: 'https://proteinpaint.stjude.org/team/',
-			onlySearch: true
-		}
-	]
-
-	headbox
-		.append('span')
-		.classed('sja_menuoption', true)
-		.style('padding', padw_sm)
-		.text('Help')
-		.on('click', async event => {
-			const p = event.target.getBoundingClientRect()
-			const div = headtip.clear().show(p.left - 0, p.top + p.height + 5)
-
-			await div.d
-				.append('div')
-				.style('padding', '5px 20px')
-				.selectAll('p')
-				.data(help.filter(d => !d.onlySearch))
-				.enter()
-				.append('p')
-				.html(d => `<a href=${d.link} target=_blank>${d.label}</a>`)
-		})
-}
-
-function make_genome_browser_btn(app, headbox, jwt) {
-	const padw = '8px'
-	const genome_btn_div = headbox.append('span')
-	const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
-
-	const g_browser_btn = genome_btn_div
-		.attr('class', 'sja_menuoption')
-		.attr('id', 'genome_btn')
-		.style('padding', padw)
-		.datum(genomename)
-		.text(genomename + ' genome browser')
-		.on('click', (event, genomename) => {
-			const g = app.genomes[genomename]
-			if (!g) {
-				alert('Invalid genome name: ' + genomename)
-				return
-			}
-			const sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
-			sandbox_div.header.text(genomename + ' genome browser')
-
-			const par = {
-				hostURL: app.hostURL,
-				jwt,
-				holder: sandbox_div.body,
-				genome: g,
-				chr: g.defaultcoord.chr,
-				start: g.defaultcoord.start,
-				stop: g.defaultcoord.stop,
-				nobox: true,
-				tklst: [],
-				debugmode: app.debugmode
-			}
-			first_genetrack_tolist(g, par.tklst)
-
-			import('./block').then(b => new b.Block(par))
-			app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
-		})
-	return g_browser_btn
-}
-
-function update_genome_browser_btn(app) {
-	app.genome_browser_btn.text(app.selectgenome.node().value + ' genome browser')
-	app.genome_browser_btn.datum(app.selectgenome.node().value)
 }
 
 async function parseEmbedThenUrl(arg, app) {

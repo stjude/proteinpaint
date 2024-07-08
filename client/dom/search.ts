@@ -24,7 +24,7 @@ type SearchGroupEntry = {
 type InputSearchOpts = {
 	holder: Elem
 	searchItems: () => SearchGroupEntry[]
-	app: any
+	app?: any
 	/** Menu tip. If not provided, created by default */
 	tip?: any
 	/** Add any css style here */
@@ -88,7 +88,7 @@ export class InputSearch {
 				.append('div')
 				.style('display', 'flex')
 				.selectAll()
-				.data(results.filter(r => r.items.length >= 1))
+				.data(results.filter(r => r.items?.length >= 1))
 				.enter()
 				.append('div')
 				.style('display', 'block')
