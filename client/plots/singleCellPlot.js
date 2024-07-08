@@ -343,9 +343,11 @@ class singleCellPlot {
 			const num2 = parseInt(b.split(' ')[1])
 			return num1 - num2
 		})
-		if (this.dom.deselect && !this.legendRendered)
+		if (this.dom.deselect && !this.legendRendered) {
 			//first plot
+			this.dom.deselect.selectAll('*').remove()
 			for (const cluster of plot.clusters) this.dom.deselect.append('option').text(cluster)
+		}
 		const cat2Color = getColors(plot.clusters.length + 2) //Helps to use the same color scheme in different samples
 		for (const cluster of plot.clusters)
 			colorMap[cluster] =
