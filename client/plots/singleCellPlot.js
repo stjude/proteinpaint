@@ -158,7 +158,7 @@ class singleCellPlot {
 		this.axisOffset = { x: offsetX, y: 30 }
 
 		if (q.singleCell?.DEgenes) {
-			const DEDiv = headerDiv.append('div').style('margin', '40px 0px 40px 0px')
+			const DEDiv = headerDiv.append('div').style('display', 'inline-block').style('padding', '10px')
 			DEDiv.append('label').html('View differentially expresed genes of a cluster vs rest of cells:&nbsp;')
 			this.dom.deselect = DEDiv.append('select')
 			if (this.app.opts.genome.termdbs)
@@ -183,7 +183,6 @@ class singleCellPlot {
 					})
 			const DETableDiv = headerDiv.append('div')
 			this.dom.DETableDiv = DETableDiv
-			this.dom.deselect.append('option').text('')
 			this.dom.deselect.on('change', async e => {
 				DETableDiv.selectAll('*').remove()
 				const categoryName = this.dom.deselect.node().value.split(' ')?.[1]
@@ -347,6 +346,7 @@ class singleCellPlot {
 		if (this.dom.deselect && !this.legendRendered) {
 			//first plot
 			this.dom.deselect.selectAll('*').remove()
+			this.dom.deselect.append('option').text('')
 			for (const cluster of plot.clusters) this.dom.deselect.append('option').text(cluster)
 		}
 		const cat2Color = getColors(plot.clusters.length + 2) //Helps to use the same color scheme in different samples
@@ -688,43 +688,70 @@ async function renderSamplesTable(div, self, state) {
 	})
 
 	const [rows, columns] = await getTableData(self, samples, state)
+	self.samples = samples
 
 	const selectedRows = []
 	let maxHeight = '40vh'
 	if (self.tableOnPlot) {
-		selectedRows.push(0)
-		self.samples = samples
-		maxHeight = '30vh'
-	}
-	renderTable({
-		rows,
-		columns,
-		resize: true,
-		singleMode: true,
-		div,
-		maxHeight,
-		noButtonCallback: index => {
-			if (self.dom.DETableDiv) {
-				self.dom.deselect.node().value = ''
-				self.dom.DETableDiv.selectAll('*').remove()
-				if (self.dom.GSEAbt) self.dom.GSEAbt.property('disabled', true)
-			}
-			const sample = rows[index][0].value
-			const config = { chartType: 'singleCellPlot', sample }
-			if (rows[index][0].__experimentID) {
-				config.experimentID = rows[index][0].__experimentID
-			}
+		//selectedRows.push(0)
 
-			if (self.tableOnPlot) {
-				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
-			} else {
-				// please explain
-				self.dom.tip.hide()
-				self.app.dispatch({ type: 'plot_create', config })
-			}
-		},
-		selectedRows
-	})
+		//maxHeight = '30vh'
+
+		const searchSampleInput = div.append('input').attr('list', 'sampleDatalist').attr('placeholder', rows[0][0].value)
+		const datalist = div.append('datalist').attr('id', 'sampleDatalist')
+		datalist
+			.selectAll('option')
+			.data(rows)
+			.enter()
+			.append('option')
+			.attr('value', d => {
+				return d[0].value
+			})
+			.attr('label', d => {
+				return d
+					.slice(2)
+					.map(d => d.value)
+					.join(' | ')
+			})
+		searchSampleInput.on('change', e => {
+			selectSample(self, e.target.value, rows)
+		})
+	} else {
+		renderTable({
+			rows,
+			columns,
+			resize: true,
+			singleMode: true,
+			div,
+			maxHeight,
+			noButtonCallback: index => {
+				selectSample(self, rows[index][0].value, rows, index)
+			},
+			selectedRows
+		})
+	}
+}
+
+function selectSample(self, sampleName, rows, index = null) {
+	if (self.dom.DETableDiv) {
+		self.dom.deselect.node().value = ''
+		self.dom.DETableDiv.selectAll('*').remove()
+		if (self.dom.GSEAbt) self.dom.GSEAbt.property('disabled', true)
+	}
+	if (!index) index = self.samples.findIndex(i => i.sample == sampleName)
+	const sample = rows[index][0].value
+	const config = { chartType: 'singleCellPlot', sample }
+	if (rows[index][0].__experimentID) {
+		config.experimentID = rows[index][0].__experimentID
+	}
+
+	if (self.tableOnPlot) {
+		self.app.dispatch({ type: 'plot_edit', id: self.id, config })
+	} else {
+		// please explain
+		self.dom.tip.hide()
+		self.app.dispatch({ type: 'plot_create', config })
+	}
 }
 
 async function getTableData(self, samples, state) {
