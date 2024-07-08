@@ -72,8 +72,8 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 		else throw 'no gene or position specified'
 	}
 	if (!tw.term.name) tw.term.name = tw.term.gene || `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
-	if (!tw.term.id) tw.term.id = tw.term.name // TODO: is this necessary?
-	if (!('type' in tw.q)) tw.q.type = 'values' // TODO: is this necessary to specify? Note that q.type = 'values' works with predefined groupsetting for geneVariant term.
+	if (!tw.term.id) tw.term.id = tw.term.name
+	if (!('type' in tw.q)) tw.q.type = 'values'
 
 	// merge defaultQ into tw.q
 	if (defaultQ) {
@@ -96,11 +96,12 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 		// fill a single orign, if applicable
 		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[tw.q.dt]?.byOrigin
 		if (byOrigin) {
-			if (!tw.q.origin || !(tw.q.origin in byOrigin)) tw.q.origin = Object.keys(byOrigin)[0]
+			if (!tw.q.origin || !(tw.q.origin in byOrigin)) tw.q.origin = 'somatic'
 		}
 		// fill a single groupset index
 		const groupset_idxs = getGroupsetIdxs(tw.q.dt)
 		if (!Number.isInteger(tw.q.groupsetting.predefined_groupset_idx) && !tw.q.groupsetting.customset) {
+			tw.q.type = 'predefined-groupset'
 			tw.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
 		}
 	}
@@ -157,7 +158,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const draggablesDiv = div
 		.append('div')
 		.style('display', 'none')
-		.style('margin', '5px 0px 0px 10px')
+		.style('margin-left', '20px')
 		.style('vertical-align', 'top')
 
 	// radio buttons for whether or not to group variants
@@ -237,13 +238,13 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			originDiv.style('display', 'none')
 			return
 		}
-		if (!self.q.origin || !(self.q.origin in byOrigin)) self.q.origin = Object.keys(byOrigin)[0]
+		if (!self.q.origin || !(self.q.origin in byOrigin)) self.q.origin = 'somatic'
 		originDiv.style('display', 'block')
 		originDiv.selectAll('*').remove()
 		originDiv.append('div').style('font-weight', 'bold').text('Variant origin')
 		make_radios({
 			holder: originDiv,
-			options: Object.keys(byOrigin).map(origin => ({
+			options: ['somatic', 'germline'].map(origin => ({
 				label: byOrigin[origin].label,
 				value: origin,
 				checked: origin == self.q.origin
@@ -261,6 +262,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		groupsetDiv.selectAll('*').remove()
 		groupsetDiv.append('div').style('font-weight', 'bold').text('Variant grouping')
 		if (!Number.isInteger(self.q.groupsetting.predefined_groupset_idx) && !self.q.groupsetting.customset) {
+			self.q.type = 'predefined-groupset'
 			self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
 		}
 		const isPredefined = Number.isInteger(self.q.groupsetting.predefined_groupset_idx)
@@ -273,6 +275,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			],
 			callback: async v => {
 				if (v == 'predefined') {
+					self.q.type = 'predefined-groupset'
 					self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
 					delete self.q.groupsetting.customset
 				} else {
@@ -293,7 +296,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			// make radios for predefined groupsetting options
 			predefinedGroupsetDiv.style('display', 'block')
 			predefinedGroupsetDiv.selectAll('*').remove()
-			self.q.type = 'values'
 			if (!Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
 				self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
 			}
@@ -323,6 +325,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		delete self.groupSettingInstance
 		groupsetDiv.selectAll('*').remove()
 		groupsetDiv.append('div').style('font-weight', 'bold').text('Variant grouping')
+		self.q.type = 'predefined-groupset'
 		self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
 		const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
 		groupsetDiv.append('div').style('margin', '5px 0px 0px 10px').text(groupset.name)
