@@ -14,6 +14,7 @@
     "#plots/*": "./plots/*",
     "#plots/disco/*": "./plots/disco/*",
     "#rx": "./rx/index.js",
+    "#types": "./shared/types/index.mts",
     "#shared/*": "@sjcrh/proteinpaint-server/shared/*",
     "#termdb/*": "./termdb/*.js",
     "#termsetting": "./termsetting/termsetting.ts",
