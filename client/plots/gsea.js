@@ -147,7 +147,7 @@ add:
 		t2.style('text-align', 'center').style('font-size', '0.8em').style('opacity', '0.8').text('COUNT')
 		const addStats = [
 			{
-				label: 'Pathways analyzed',
+				label: 'Gene sets analyzed',
 				values: Object.keys(output).length
 			}
 		]

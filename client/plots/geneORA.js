@@ -141,7 +141,7 @@ add:
 				values: self.config.geneORAparams.background_genes.split(',').length
 			},
 			{
-				label: 'Pathways analyzed',
+				label: 'Gene sets analyzed',
 				values: output.num_pathways
 			}
 		]
