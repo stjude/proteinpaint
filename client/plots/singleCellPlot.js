@@ -652,10 +652,6 @@ class singleCellPlot {
 	onMouseOut(event) {
 		this.tip.hide()
 	}
-
-	getOpacity(d) {
-		return this.config.hiddenClusters.includes(d.category) ? 0 : 1
-	}
 }
 
 export async function makeChartBtnMenu(holder, chartsInstance) {

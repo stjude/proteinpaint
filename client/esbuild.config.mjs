@@ -37,7 +37,7 @@ const ctx = await context({
     cssLoader(),
     logRebuild()
   ],
-  logLevel: 'error' // !!! TODO: also show warnings !!!
+  logLevel: 'warning'
 })
 
 if (ENV == 'dev') {

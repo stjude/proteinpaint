@@ -590,7 +590,6 @@ tape('target_percentiles()', function (test) {
 			{
 				bin_size: 3,
 				label_offset: 1,
-				first_bin: { start: 4 },
 				first_bin: { stopunbounded: 1, start_percentile: 80 }
 			},
 			get_summary

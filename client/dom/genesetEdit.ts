@@ -382,7 +382,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 				return
 			}
 		}
-		geneList.push({ gene })
+		if (gene) geneList.push({ gene })
 		renderGenes()
 	}
 
