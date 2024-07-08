@@ -10,6 +10,7 @@ Features:
 Fixes:
 - provide null values to brush range if there is no selection on brushing
 - hiercluster refactored not to pretend geneVariant term type
+- Centralize filter rehydration
 
 
 ## 2.66.0
