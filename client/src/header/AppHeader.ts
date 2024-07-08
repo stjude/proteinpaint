@@ -6,13 +6,15 @@ import { appDrawerInit } from '../../appdrawer/app.js'
 import { rgb as d3rgb } from 'd3-color'
 import * as common from '../../shared/common.js'
 import { Menu } from '../../dom/menu.js'
-// import { select as d3select } from 'd3-selection'
 import * as client from '../client'
+import { dofetch3 } from '#common/dofetch'
 
 type AppHeaderOpts = {
 	headtip: Menu
 	app: any
+	/** server returned data */
 	data: any
+	/** token */
 	jwt: any
 }
 
@@ -21,11 +23,12 @@ export class AppHeader {
 	app: any
 	data: any
 	jwt: any
+	publications: any
 	static help = [
 		/** Used in both the Help button and omni search */
 		{
 			label: 'Embed in your website',
-			link: 'https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing'
+			link: 'https://github.com/stjude/proteinpaint/wiki/Embedding'
 		},
 		{
 			label: 'URL parameters',
@@ -56,23 +59,24 @@ export class AppHeader {
 		this.app = opts.app
 		this.data = opts.data
 		this.jwt = opts.jwt
-
-		this.makeheader(this.app, this.data, this.jwt)
 	}
 
-	async makeheader(app, obj, jwt) {
-		/*
-        app
-        obj: server returned data
-        jwt: token
-        */
+	async createPublicationsList(app) {
+		const re = await dofetch3(app.cardsPath + '/citations.json')
+		if (re.error) console.error(`Problem retrieving ../cards/citations.json`)
+		this.publications = re.publications
+	}
+
+	async makeheader() {
+		await this.createPublicationsList(this.app)
+
 		const color = d3rgb(common.defaultcolor)
 		const padw_lg = '13px'
 		const padw_input = '5px 10px'
 		const padw_sm = '7px 10px'
 		const doc_width = document.documentElement.clientWidth
 		// head
-		const row = app.holder
+		const row = this.app.holder
 			.append('div')
 			.style('white-space', 'nowrap')
 			.style(
@@ -106,8 +110,10 @@ export class AppHeader {
 			const row = headinfo.append('div').style('padding-left', '15px')
 			row
 				.append('span')
-				.text('Code updated: ' + (obj.codedate || '??') + ', server launched: ' + (obj.launchdate || '??') + '.')
-			if (obj.hasblat) {
+				.text(
+					'Code updated: ' + (this.data.codedate || '??') + ', server launched: ' + (this.data.launchdate || '??') + '.'
+				)
+			if (this.data.hasblat) {
 				row
 					.append('a')
 					.style('margin-left', '10px')
@@ -131,8 +137,8 @@ export class AppHeader {
 					})
 			}
 		}
-		if (obj.headermessage) {
-			headinfo.append('div').html(obj.headermessage)
+		if (this.data.headermessage) {
+			headinfo.append('div').html(this.data.headermessage)
 		}
 
 		// 1
@@ -161,7 +167,7 @@ export class AppHeader {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore
 			searchItems: async () => {
-				return await searchItems(app, this.headtip, AppHeader.help, this.jwt)
+				return await searchItems(this.app, this.headtip, AppHeader.help, this.publications, this.jwt)
 			}
 		})
 
@@ -170,7 +176,7 @@ export class AppHeader {
 		const genome_select_div = headbox.append('div').attr('class', 'sjpp-genome-select-div').style('padding', padw_sm)
 
 		const get_placeholder = () => {
-			const currG = app.genomes[app.selectgenome.property('value')]
+			const currG = this.app.genomes[this.app.selectgenome.property('value')]
 			/** Defaults */
 			const opts2Show = ['Gene', 'position', 'app']
 			/** Show all the genomic options together */
@@ -180,43 +186,44 @@ export class AppHeader {
 			return str
 		}
 
-		app.selectgenome = genome_select_div
+		this.app.selectgenome = genome_select_div
 			.append('select')
 			.attr('title', 'Select a genome')
 			.attr('class', 'sjpp-genome-select')
 			.style('padding', padw_input)
 			.style('border', 'solid 1px ' + common.defaultcolor)
 			.on('change', () => {
-				this.update_genome_browser_btn(app)
+				this.update_genome_browser_btn(this.app)
 				omniSearch.updatePlaceholder(get_placeholder())
 			})
 
-		for (const n in app.genomes) {
-			app.selectgenome
+		for (const n in this.app.genomes) {
+			this.app.selectgenome
 				.append('option')
 				.attr('n', n)
-				.text(app.genomes[n].species + ' ' + n)
+				.text(this.app.genomes[n].species + ' ' + n)
 				.property('value', n)
 		}
-		app.genome_browser_btn = this.make_genome_browser_btn(app, headbox, jwt)
+		this.app.genome_browser_btn = this.make_genome_browser_btn(this.app, headbox, this.jwt)
 
-		app.drawer = await appDrawerInit({
-			holder: app.holder,
-			genomes: app.genomes,
-			drawerRow: app.holder
+		this.app.drawer = await appDrawerInit({
+			holder: this.app.holder,
+			genomes: this.app.genomes,
+			drawerRow: this.app.holder
 				.append('div')
 				.style('position', 'relative')
 				.style('overflow-x', 'visible')
 				.style('overflow-y', 'hidden')
 				.classed('sjpp-drawer-row', true),
-			sandboxDiv: app.holder.append('div').style('margin-top', '15px').classed('sjpp-drawer-sandbox', true),
-			genome_browser_btn: app.genome_browser_btn,
-			debugmode: app.debugmode,
+			sandboxDiv: this.app.holder.append('div').style('margin-top', '15px').classed('sjpp-drawer-sandbox', true),
+			genome_browser_btn: this.app.genome_browser_btn,
+			debugmode: this.app.debugmode,
 			headbox,
 			padw_sm,
-			cardsPath: app.cardsPath
+			cardsPath: this.app.cardsPath
 		})
 
+		//Help button
 		headbox
 			.append('span')
 			.classed('sja_menuoption', true)
@@ -235,6 +242,27 @@ export class AppHeader {
 					.append('p')
 					.html(d => `<a href=${d.link} target=_blank>${d.label}</a>`)
 			})
+
+		//Publications button
+		headbox
+			.append('span')
+			.classed('sja_menuoption', true)
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
+			.text('Publications')
+			.on('click', async event => {
+				const p = event.target.getBoundingClientRect()
+				const div = this.headtip.clear().show(p.left - 0, p.top + p.height + 5)
+
+				await div.d
+					.append('div')
+					.style('padding', '5px 20px')
+					.selectAll('p')
+					.data(this.publications)
+					.enter()
+					.append('p')
+					.html((d: any) => `<a href=${d.doi} target=_blank>${d.title}</a>`)
+			})
 	}
 
 	make_genome_browser_btn(app, headbox, jwt) {
@@ -248,7 +276,7 @@ export class AppHeader {
 			.style('padding', padw)
 			.datum(genomename)
 			.text(genomename + ' genome browser')
-			.on('click', genomename => {
+			.on('click', () => {
 				const g = app.genomes[genomename]
 				if (!g) {
 					alert('Invalid genome name: ' + genomename)
