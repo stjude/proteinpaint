@@ -1,1 +1,2 @@
-
+Fixes:
+- hiercluster: set missing term type based on data type
