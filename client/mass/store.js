@@ -3,6 +3,7 @@ import { dofetch3 } from '#common/dofetch'
 import { getFilterItemByTag, findParent } from '#filter/filter'
 import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { TermTypes } from '../shared/terms.js'
+import { rehydrateFilter } from '../filter/rehydrateFilter.js'
 
 // to distinguish from IDs assigned by other code or users
 const idPrefix = '_MASS_AUTOID_' + Math.random().toString().slice(-6)
@@ -180,22 +181,6 @@ class TdbStore {
 		}
 		await Promise.all(lst)
 	}
-}
-
-function rehydrateFilter(filter, vocabApi, proms = []) {
-	if (filter.type == 'tvslst') {
-		for (const f of filter.lst) rehydrateFilter(f, vocabApi, proms)
-	} else if (filter.type == 'tvs') {
-		if (!filter.tvs.term.name)
-			proms.push(
-				vocabApi.getterm(filter.tvs.term.id).then(term => {
-					filter.tvs.term = term
-				})
-			)
-	} else {
-		throw `cannot rehydrate filter.type='${filter.type}'`
-	}
-	return proms
 }
 
 /*

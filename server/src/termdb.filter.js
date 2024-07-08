@@ -43,6 +43,8 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		const CTEname_i = CTEname + '_' + i
 		let f
 		if (item.type == 'tvslst') {
+			if (item.lst.length == 0) continue // do not process blank list
+
 			f = await getFilterCTEs(item, ds, CTEname_i)
 			// .filters: str, the CTE cascade, not used here!
 			// .CTEs: [] list of individual CTE string
@@ -78,6 +80,7 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		} else {
 			throw 'unknown term type'
 		}
+
 		thislevelCTEnames.push(f.CTEname)
 		CTEs.push(...f.CTEs)
 		values.push(...f.values)
@@ -225,17 +228,7 @@ async function get_geneVariant(tvs, CTEname, ds) {
 }
 
 async function get_geneExpression(tvs, CTEname, ds) {
-	const args = {
-		genome: ds.genome,
-		dslabel: ds.label,
-		clusterMethod: 'hierarchical',
-		/** distance method */
-		distanceMethod: 'euclidean',
-		/** Data type */
-		dataType: TermTypes.GENE_EXPRESSION,
-		terms: [{ gene: tvs.term.gene, type: TermTypes.GENE_EXPRESSION }]
-	}
-	const data = await ds.queries.geneExpression.get(args)
+	const data = await ds.queries.geneExpression.get({ terms: [{ gene: tvs.term.gene }] })
 	const samples = []
 	for (const sampleId in data.term2sample2value.get(tvs.term.gene)) {
 		const values = data.term2sample2value.get(tvs.term.gene)

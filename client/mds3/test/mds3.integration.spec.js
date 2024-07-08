@@ -976,7 +976,7 @@ tape('Custom cnv and ssm, WITH sample', test => {
 			test.equal(lab.node().innerHTML, `${set.size} samples`, `Samples leftlabel should print "${set.size} samples"`)
 		}
 
-		if (0 && test._ok) {
+		if (test._ok) {
 			tk.menutip.d.remove()
 			holder.remove()
 		}

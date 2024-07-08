@@ -141,7 +141,7 @@ class genomeBrowser {
 				}
 				if (this.state.filter?.lst?.length > 0) {
 					// state has a non-empty filter, register at tk obj to pass to mds3 data queries
-					tk.filterObj = this.state.filter
+					tk.filterObj = structuredClone(this.state.filter)
 					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
 				}
 				await this.launchBlockWithTracks([tk])
