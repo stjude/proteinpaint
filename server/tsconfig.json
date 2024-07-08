@@ -4,7 +4,7 @@
     "rootDir": ".",
     "baseUrl": "./",
     "paths": {
-      "#types": ["./shared/types/index.ts"],
+      "#types": ["./shared/types/index.mts"],
       "#shared/types/*": ["./shared/types/*"],
       "#shared/*": ["./shared/*"],
       "#src/*": ["./src/*"],
