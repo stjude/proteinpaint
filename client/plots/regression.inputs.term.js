@@ -111,6 +111,9 @@ export class InputTerm {
 			// this temr is independent
 			// do not allow condition term
 			arg.numericEditMenuVersion = ['continuous', 'discrete', 'spline']
+			// for geneVariant term, only allow groupsetting
+			arg.defaultQ4fillTW['geneVariant'] = { groupsetting: { inuse: true } }
+			arg.geneVariantEditMenuOnlyGrp = true
 			return
 		}
 		throw 'unknown section.configKey: ' + this.section.configKey
@@ -271,7 +274,7 @@ export class InputTerm {
 							.join(', ')}`
 					)
 				}
-			} else if (tw.term.type == 'categorical') {
+			} else if (tw.term.type == 'categorical' || tw.term.type == 'geneVariant') {
 				this.termStatus.allowToSelectRefGrp = true
 			} else if (tw.term.type == 'condition') {
 				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'logistic') {

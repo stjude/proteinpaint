@@ -9,6 +9,8 @@ import serverconfig from './serverconfig.js'
 import * as utils from './utils.js'
 import * as termdbsql from './termdb.sql.js'
 import { runCumincR } from './termdb.cuminc.js'
+import { isDictionaryType } from '#shared/terms'
+
 /*
 
 **************** q{} object
@@ -167,30 +169,31 @@ function parse_q(q, ds) {
 
 		checkTwAncestryRestriction(tw, q, ds)
 
-		if (tw.type == 'snplst' || tw.type == 'snplocus') {
-			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
-			// tw for these terms lacks tw.term{}
-			if (!tw.q.cacheid) throw 'q.cacheid missing'
-			if (serverconfig.cache_snpgt.fileNameRegexp.test(tw.q.cacheid)) throw 'invalid cacheid'
-			if (typeof tw.q.snp2effAle != 'object') throw 'q.snp2effAle{} is not object'
-			if (!Number.isInteger(tw.q.alleleType)) throw 'q.alleleType is not integer'
-			if (!Number.isInteger(tw.q.geneticModel)) throw 'q.geneticModel is not integer'
-			if (tw.q.geneticModel == 3) {
-				if (typeof tw.q.snp2refGrp != 'object') throw 'q.snp2refGrp{} is not object when geneticMode=3'
+		if (isDictionaryType(tw.type)) {
+			// dictionary term
+			tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
+			if (!tw.id) throw '.id missing for an independent term'
+			tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
+			if (!tw.term) throw `invalid independent term='${tw.id}'`
+			// no longer need tw.id now that tw.term is rehydrated
+			delete tw.id
+		} else {
+			// non-dictionary term
+			if (tw.type == 'snplst' || tw.type == 'snplocus') {
+				if (!tw.q.cacheid) throw 'q.cacheid missing'
+				if (serverconfig.cache_snpgt.fileNameRegexp.test(tw.q.cacheid)) throw 'invalid cacheid'
+				if (typeof tw.q.snp2effAle != 'object') throw 'q.snp2effAle{} is not object'
+				if (!Number.isInteger(tw.q.alleleType)) throw 'q.alleleType is not integer'
+				if (!Number.isInteger(tw.q.geneticModel)) throw 'q.geneticModel is not integer'
+				if (tw.q.geneticModel == 3) {
+					if (typeof tw.q.snp2refGrp != 'object') throw 'q.snp2refGrp{} is not object when geneticMode=3'
+				}
+				if (tw.type == 'snplst') {
+					// missingGenotype is not needed for snplocus
+					if (!Number.isInteger(tw.q.missingGenotype)) throw 'q.missingGenotype is not integer for snplst'
+				}
 			}
-			if (tw.type == 'snplst') {
-				// missingGenotype is not needed for snplocus
-				if (!Number.isInteger(tw.q.missingGenotype)) throw 'q.missingGenotype is not integer for snplst'
-			}
-			continue
 		}
-		// tw is dictionary term
-		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
-		if (!tw.id) throw '.id missing for an independent term'
-		tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
-		if (!tw.term) throw `invalid independent term='${tw.id}'`
-		// no longer need tw.id now that tw.term is rehydrated
-		delete tw.id
 	}
 	// interaction between independent terms
 	for (const i of q.independent) {
@@ -1124,6 +1127,7 @@ Returns two data structures
 2.
 */
 async function getSampleData(q, terms, ds) {
+	// TODO: replace with getData() from termdb.matrix.js
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
 
@@ -1142,6 +1146,28 @@ async function getSampleData(q, terms, ds) {
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// each snp is one indepedent variable
 			await getSampleData_snplstOrLocus(tw, samples)
+		} else if (tw.type == 'geneVariant') {
+			// need $id to get geneVariant data
+			// set to tw.term.id because this is what is used
+			// by makeRinput() to extract sample data
+			// FIXME: this will create a conflict between multiple
+			// terms that have the same gene (e.g., TP53 geneVariant and
+			// TP53 geneExpression). Fine for now because geneExpression
+			// is not yet supported in regression, but need to migrate to
+			// getData() and use computed $id to fully solve this issue.
+			tw.$id = tw.term.id
+			const data = await q.ds.mayGetGeneVariantData(tw, q)
+			// append geneVariant data to samples map
+			for (const [sampleid, value] of data) {
+				if (!samples.has(sampleid)) {
+					// sample not present in samples map
+					// must have been filtered by q.filter
+					continue
+				}
+				const k = value[tw.$id].key
+				const v = value[tw.$id].value
+				samples.get(sampleid).id2value.set(tw.$id, { key: k, value: v })
+			}
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
@@ -1513,10 +1539,10 @@ function divideTerms(lst) {
 	const dict = [],
 		nonDict = []
 	for (const t of lst) {
-		if (t.type == 'snplst' || t.type == 'snplocus') {
-			nonDict.push(t)
-		} else {
+		if (isDictionaryType(t.type)) {
 			dict.push(t)
+		} else {
+			nonDict.push(t)
 		}
 	}
 	return [dict, nonDict]

@@ -103,7 +103,9 @@ async function trigger_getcategories(
 	if (data.error) throw data.error
 
 	const lst: any[] = []
-	if (q.tw.term.type == 'geneVariant') {
+	if (q.tw.term.type == 'geneVariant' && !q.tw.q.groupsetting.inuse) {
+		// specialized data processing for geneVariant term when
+		// groupsetting is not in use
 		const samples = data.samples as { [sampleId: string]: any }
 		const dtClassMap = new Map()
 		if (ds.assayAvailability?.byDt) {

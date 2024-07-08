@@ -265,7 +265,10 @@ export class TermdbVocab extends Vocab {
     */
 	async getRegressionData(opts) {
 		if (!isDictionaryType(opts.outcome.term.type)) throw 'outcome must be dictionary term'
-		const outcome = { id: opts.outcome.term.id, q: JSON.parse(JSON.stringify(opts.outcome.q)) }
+		const outcome = this.getTwMinCopy(opts.outcome)
+		outcome.id = outcome.term.id
+		outcome.q = JSON.parse(JSON.stringify(opts.outcome.q))
+		outcome.type = outcome.term.type // TODO: refactor backend to not require outcome.type (similar issue with independent variables, see below)
 		if (!outcome.q.mode && opts.regressionType == 'linear') outcome.q.mode = 'continuous'
 		const contQkeys = ['mode', 'scale']
 		outcome.refGrp = outcome.q.mode == 'continuous' ? 'NA' : opts.outcome.refGrp
@@ -283,7 +286,10 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			regressionType: opts.regressionType,
 			outcome,
-			independent: opts.independent.map(t => {
+			independent: opts.independent.map(tw => {
+				const t = this.getTwMinCopy(tw)
+				t.refGrp = tw.refGrp
+				t.interactions = tw.interactions
 				const q = JSON.parse(JSON.stringify(t.q))
 				delete q.values
 				delete q.totalCount
@@ -294,8 +300,11 @@ export class TermdbVocab extends Vocab {
 					}
 				}
 				return {
+					// TODO: refactor backend code to not have to pass
+					// term.id, term.type, and term.values separately
 					id: t.term.id,
 					q,
+					term: t.term,
 					type: t.term.type,
 					refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp,
 					interactions: t.interactions || [],
