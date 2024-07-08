@@ -1,1 +1,2 @@
-
+Features: 
+- New Publications button in the ProteinPaint header. Results are searchable in the omnisearch.
