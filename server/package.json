@@ -7,7 +7,7 @@
   "module": "src/app.js",
   "bin": "start.js",
   "imports": {
-    "#types": "./shared/types/index.mts",
+    "#types": "./shared/types/index.ts",
     "#shared/types/*": "./shared/types/*",
     "#shared/*": "./shared/*",
     "#src/*": "./src/*",

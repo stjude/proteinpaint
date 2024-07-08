@@ -2,7 +2,10 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "baseUrl": "./",
-    "target": "es2016"
+    "target": "es2016",
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler" // to skip errors related to import of types from ts files
   },
   "include": ["./**/*.ts"]
 }
