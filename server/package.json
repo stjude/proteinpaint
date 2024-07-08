@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-server",
-  "version": "2.66.0",
+  "version": "2.65.0",
   "type": "module",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "src/app.js",
@@ -30,7 +30,7 @@
     "pretest": "tsc && ./test/pretest.js",
     "prepare": "ts-patch install",
     "pretest:type": "npm run checkers",
-    "pretest:integration": "tsc --esModuleInterop genome/*.ts dataset/*.ts",
+    "pretest:integration": "tsc",
     "test:integration": "echo 'TODO: server integration tests'",
     "test:tsc": "tsc --esModuleInterop --noEmit --allowImportingTsExtensions ./shared/types/test/*.type.spec.ts"
   },
