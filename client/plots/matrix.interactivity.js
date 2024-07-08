@@ -720,7 +720,7 @@ function setTermActions(self) {
 		const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 		sandbox.header.text(t.tw.term.name)
 		const arg = {
-			debugmode: self.app.opts.state.debug,
+			debugmode: self.app.opts.debug,
 			holder: sandbox.body.append('div').style('margin', '20px'),
 			genome: self.app.opts.genome,
 			nobox: true,
