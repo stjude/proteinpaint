@@ -34,6 +34,15 @@
             "pmid": "37140547",
             "pmidURL": "https://ncbi.nlm.nih.gov/pmc/articles/PMC10182850/",
             "doi": "https://doi.org/10.1093/bioinformatics/btad300"
+        },
+        {
+            "id": 1005,
+            "title": "St. Jude Survivorship Portal: sharing and analyzing large clinical and genomic datasets from pediatric cancer survivors",
+            "year": "2024",
+            "journal": "Cancer Discovery",
+            "pmid": "38593228",
+            "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/38593228/",
+            "doi": "https://doi.org/10.1158/2159-8290.cd-23-1441"
         }
     ]
 }

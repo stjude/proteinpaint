@@ -214,7 +214,7 @@ function makeTopTabs(ppcalls, card, sandboxDiv, pageArgs) {
 					runproteinpaint(Object.assign(runpp_arg, callpp))
 					delete tab.callback
 				} catch (e) {
-					if (e.stack) console.log(e.stack)
+					if (e.stack) console.error(e.stack)
 					else throw e
 				}
 			}
@@ -229,7 +229,7 @@ function makeTopTabs(ppcalls, card, sandboxDiv, pageArgs) {
 					renderContent(ppcalls[notui], tab.contentHolder, card, pageArgs)
 					delete tab.callback
 				} catch (e) {
-					if (e.stack) console.log(e.stack)
+					if (e.stack) console.error(e.stack)
 					else throw e
 				}
 			}
@@ -245,7 +245,7 @@ function makeTopTabs(ppcalls, card, sandboxDiv, pageArgs) {
 					makeLeftsideTabMenu(card, tab.contentHolder, examplesOnly, sandboxDiv, pageArgs)
 					delete tab.callback
 				} catch (e) {
-					if (e.stack) console.log(e.stack)
+					if (e.stack) console.error(e.stack)
 					else throw e
 				}
 			}
@@ -392,7 +392,7 @@ async function addArrowBtns(args, type, bdiv, rdiv, pageArgs) {
 		//Only show citation in top div
 		const res = await dofetch3(`/${pageArgs.app.cardsPath}/citations.json`)
 		if (res.error) {
-			console.log(`Error: ${res.error}`)
+			console.error(`Error: ${res.error}`)
 			return
 		}
 		for (const pub of res.publications) {
@@ -614,7 +614,7 @@ async function showViewData(btns, data, pageArgs) {
 				for (const file of data) {
 					const res = await dofetch3(`/cardsjson?datafile=${file.file}&tabixCoord=${file.tabixQueryCoord}`)
 					if (res.error) {
-						console.log(`Error: ${res.error}`)
+						console.error(`Error: ${res.error}`)
 						return
 					}
 					const returnedContent = res.file
@@ -652,7 +652,8 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		name: res.button.name,
 		runargs: res.button.runargs,
 		searchBar: res.button.searchBar,
-		dsURLparam: res.button.dsURLparam
+		dsURLparam: res.button.dsURLparam,
+		citation: res.citation_id
 	}
 
 	const mainDiv = sandboxDiv.body
@@ -660,6 +661,13 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		.append('div')
 		.style('padding', '1em')
 		.style('border-bottom', '1px solid #d0e3ff')
+
+	//Add arrow button for citation
+	if (par.citation) {
+		const buttonsDiv = mainDiv.append('div').style('margin-bottom', '20px')
+		const buttonsContentDiv = mainDiv.append('div')
+		await addArrowBtns(par, 'main', buttonsDiv, buttonsContentDiv, pageArgs)
+	}
 
 	// Introduction div
 	if (par.intro) {
