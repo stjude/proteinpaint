@@ -10,7 +10,9 @@ import * as client from '../client'
 import { dofetch3 } from '#common/dofetch'
 
 type AppHeaderOpts = {
+	/** menu created in app.js */
 	headtip: Menu
+	/** runpp app */
 	app: any
 	/** server returned data */
 	data: any
@@ -23,9 +25,14 @@ export class AppHeader {
 	app: any
 	data: any
 	jwt: any
+	/** List of publications defined in the app drawer
+	 * Appears in button in the header and in search results
+	 */
 	publications: any
+	/** Used in both the Help button and omni search
+	 * .onlySearch is used to filter out items that should not appear in the Help button
+	 */
 	static help = [
-		/** Used in both the Help button and omni search */
 		{
 			label: 'Embed in your website',
 			link: 'https://github.com/stjude/proteinpaint/wiki/Embedding'
@@ -61,14 +68,14 @@ export class AppHeader {
 		this.jwt = opts.jwt
 	}
 
-	async createPublicationsList(app) {
-		const re = await dofetch3(app.cardsPath + '/citations.json')
+	async createPublicationsList() {
+		const re = await dofetch3(this.app.cardsPath + '/citations.json')
 		if (re.error) console.error(`Problem retrieving ../cards/citations.json`)
 		this.publications = re.publications
 	}
 
 	async makeheader() {
-		await this.createPublicationsList(this.app)
+		await this.createPublicationsList()
 
 		const color = d3rgb(common.defaultcolor)
 		const padw_lg = '13px'
