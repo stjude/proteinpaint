@@ -21,7 +21,7 @@ getExampleNames()
 getFilteredElements()
 */
 
-export async function searchItems(app, tip, help, jwt){
+export async function searchItems(app, tip, help, publications, jwt) {
 	const userInput = d3select('input').property('value').trim()
 	const data = [
 		{
@@ -47,23 +47,18 @@ export async function searchItems(app, tip, help, jwt){
 			window.open(d.link, d.label)
 		}
 	})
-
+	console.log(publications, help)
 	data.push({
 		title: 'Publications',
 		default: false,
-		items: await createPublicationsList(app),
-		color: '#faebd9',
+		items: publications.filter(d => d.title.toLowerCase().includes(userInput.toLowerCase())),
+		color: '#E6E6FA',
 		callback: d => {
+			console.log(d)
 			window.open(d.doi, d.title)
 		}
 	})
 	return data
-}
-
-async function createPublicationsList(app) {
-	const re = await dofetch3(app.cardsPath + '/index.json')
-	if (re.error) console.error(`Problem retrieving ../cards/index.json`)
-	return re.publications
 }
 
 async function findAppDrawerElements(app, input, data, tip) {

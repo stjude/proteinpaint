@@ -201,12 +201,14 @@ export function runproteinpaint(arg) {
 				!window.location.search.includes('mass-session-file') &&
 				!window.location.search.includes('mass-session-url')
 			) {
-				new AppHeader({
+				const appHeader = new AppHeader({
 					headtip,
 					app,
 					data,
 					jwt: arg.jwt
 				})
+
+				await appHeader.makeheader()
 			}
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')

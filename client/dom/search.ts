@@ -128,7 +128,7 @@ export class InputSearch {
 			.style('display', 'block')
 			.style('padding-left', '10px')
 			.style('background-color', result.color || '')
-			.text((d: any) => d.name || d.label || d)
+			.text((d: any) => d.name || d.label || d.title || d)
 			.on('click', (event: MouseEvent, item: any) => {
 				event.stopPropagation()
 				result.callback(item)
