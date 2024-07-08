@@ -1,4 +1,5 @@
-import { NumericQ } from '../../shared/types/terms/numeric'
+import { NumericQ, PresetNumericBins } from '../../shared/types/terms/numeric'
+import { BaseQ } from '../../shared/types/terms/term'
 import { VocabApi } from '../../shared/types/index'
 import { GeneExpressionTW } from '../../shared/types/terms/geneExpression.js'
 import { copyMerge } from '../../rx'
@@ -41,11 +42,11 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 		here make a request to determine default bin for this term based on its data
 		(in gdc this adds significant pause when adding gene exp term to oncomatrix)
 		*/
-		const defaultBins = await vocabApi.getDefaultBins({ tw })
-		if ('error' in defaultBins) throw defaultBins.error
-		tw.term.bins = defaultBins
+		const bins: PresetNumericBins = await vocabApi.getDefaultBins({ tw })
+		if ('error' in bins) throw bins.error
+		tw.term.bins = bins
 		const currMode = tw.q.mode // record current mode before q{} is overriden
-		tw.q = structuredClone(tw.term.bins.default)
+		Object.assign(tw.q, structuredClone(tw.term.bins.default))
 		tw.q.mode = currMode
 	}
 	return tw
