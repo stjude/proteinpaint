@@ -4,6 +4,7 @@ only works for dictionary terms e.g. term:{id:'xx'} with id but lacks type etc.
 provides convenience for hand coding dictionary filter
 
 TODO allow to work for non-dict terms
+TODO unit test
 
 args:
 - filter: modifiable filter obj
@@ -17,14 +18,14 @@ export function rehydrateFilter(filter, vocabApi, proms = []) {
 		for (const f of filter.lst) rehydrateFilter(f, vocabApi, proms)
 	} else if (filter.type == 'tvs') {
 		if (typeof filter.tvs?.term != 'object') throw 'a tvs lacks structure of .tvs.term{}'
-		if (filter.tvs.term.id && !filter.tvs.term.name)
+		if (filter.tvs.term.id && !filter.tvs.term.name) {
 			// has term.id. allows term obj to be like {id:'xx'} and assumes it must be dict term
-			console.log(filter.tvs.term.id)
-		proms.push(
-			vocabApi.getterm(filter.tvs.term.id).then(term => {
-				filter.tvs.term = term
-			})
-		)
+			proms.push(
+				vocabApi.getterm(filter.tvs.term.id).then(term => {
+					filter.tvs.term = term
+				})
+			)
+		}
 	} else {
 		throw `cannot rehydrate filter.type='${filter.type}'`
 	}
