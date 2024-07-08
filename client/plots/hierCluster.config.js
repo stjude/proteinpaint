@@ -57,8 +57,13 @@ export async function getPlotConfig(opts = {}, app) {
 			const tw = i.term ? i : { term: i }
 
 			if (!tw.term.type) {
-				// must provide term type for hierCluster
-				throw `term type is missing`
+				if (config.dataType) {
+					// set missing term type based on data type
+					tw.term.type = config.dataType
+				} else {
+					// must provide term type or data type for hierCluster
+					throw `term type and data type are both missing`
+				}
 			} else if (!['geneExpression', 'metaboliteIntensity', 'float'].includes(tw.term.type)) {
 				// May add other term type in hierCluster
 				throw 'term type not supported in hierCluster'
