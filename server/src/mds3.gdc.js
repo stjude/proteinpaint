@@ -40,7 +40,8 @@ gdc_validate_query_singleCell_DEgenes
 	getSinglecellDEfile
 	getSinglecellDEgenes
 querySamples_gdcapi
-	querySamplesTwlst4hierCluster
+	querySamplesTwlstForGeneexpclustering
+	querySamplesTwlstNotForGeneexpclustering
 	flattenCaseByFields
 		mayApplyGroupsetting
 	may_add_readdepth
@@ -1282,15 +1283,46 @@ returns:
 */
 
 export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
-	if (q.isHierCluster) {
-		/*
-		running gene exp clustering
-		must only restrict to cases with exp data
-		but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
-		*/
-		return await querySamplesTwlst4hierCluster(q, twLst, ds)
+	// step 1: separate survival vs non-survival terms
+	// survival terms requires different querying method. separate it from other dictionary terms
+
+	const survivalTwLst = [], // survival terms
+		dictTwLst = [] // non-survival dict terms
+	for (const tw of twLst) {
+		if (tw.term.type == 'survival') {
+			survivalTwLst.push(tw)
+		} else {
+			const t = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+			if (t) dictTwLst.push({ term: t, q: tw.q })
+		}
 	}
 
+	let byTermId = {},
+		samples = [] // returned data structures. both survival and other dict term data will be combined for return
+
+	// step 2: querying dict term data
+
+	if (q.isHierCluster) {
+		// running gene exp clustering, must only restrict to cases with exp data, but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
+		;[byTermId, samples] = await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
+	} else {
+		// not in gene exp clustering mode
+		;[byTermId, samples] = await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
+	}
+
+	// step 3: querying survival data
+
+	if (survivalTwLst.length) {
+		await querySamplesSurvival(q, survivalTwLst, ds, samples)
+	}
+
+	return { byTermId, samples }
+}
+
+async function querySamplesSurvival(q, survivalTwLst, ds, samples) {}
+
+async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst) {
+	// not for gene exp clustering
 	if (geneTwLst) {
 		if (!Array.isArray(geneTwLst)) throw 'geneTwLst not array'
 		// temporarily create q.isoforms[] to do ssm query
@@ -1315,43 +1347,33 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		}
 	}
 
+	const fieldset = new Set(dictTwLst.map(tw => tw.term.id)) // set of fields to request from ssm_occurrences api. tolerate insertion of duplicating fields
+
 	/* this function can identify sample either by case uuid, or sample submitter id
 	for simplicity, always request these two different values
 	*/
-	if (!twLst.some(i => i.term.id == 'case.observation.sample.tumor_sample_uuid'))
-		twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
-	if (!twLst.some(i => i.term.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
+	fieldset.add('case.observation.sample.tumor_sample_uuid')
+	fieldset.add('case.case_id')
 
 	if (q.get == 'samples') {
 		// getting list of samples (e.g. for table display)
-		// need following fields for table display, add to twLst[] if missing:
+		// need following fields for table display, add to fields[] if missing:
 
 		if (q.ssm_id_lst || q.isoform) {
 			// querying using list of ssm or single isoform
 			// must be from mds3 tk; in such case should return following info
 
 			// need ssm id to associate with ssm (when displaying in sample table?)
-			if (!twLst.some(i => i.term.id == 'ssm.ssm_id')) twLst.push({ term: { id: 'ssm.ssm_id' } })
+			fieldset.add('ssm.ssm_id')
 
 			// need read depth info
 			// TODO should only add when getting list of samples with mutation for a gene
 			// TODO not when adding a dict term in matrix?
-			if (!twLst.some(i => i.term.id == 'case.observation.read_depth.t_alt_count'))
-				twLst.push({ term: { id: 'case.observation.read_depth.t_alt_count' } })
-			if (!twLst.some(i => i.term.id == 'case.observation.read_depth.t_depth'))
-				twLst.push({ term: { id: 'case.observation.read_depth.t_depth' } })
-			if (!twLst.some(i => i.term.id == 'case.observation.read_depth.n_depth'))
-				twLst.push({ term: { id: 'case.observation.read_depth.n_depth' } })
+			fieldset.add('case.observation.read_depth.t_alt_count')
+			fieldset.add('case.observation.read_depth.t_depth')
+			fieldset.add('case.observation.read_depth.n_depth')
 		}
 	}
-
-	const dictTwLst = []
-	for (const tw of twLst) {
-		const t = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
-		if (t) dictTwLst.push({ term: t, q: tw.q })
-	}
-
-	const fields = twLst.map(tw => tw.term.id)
 
 	if (q.hiddenmclass) {
 		/* to drop mutations by pp class
@@ -1359,17 +1381,17 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		then filter by class
 		this has been coded up this way but is inefficient, better method would be for gdc api filter to include transcript and consequence limit
 		*/
-		fields.push('ssm.consequence.transcript.consequence_type')
-		fields.push('ssm.consequence.transcript.transcript_id')
-		fields.push('ssm.consequence.transcript.is_canonical')
+		fieldset.add('ssm.consequence.transcript.consequence_type')
+		fieldset.add('ssm.consequence.transcript.transcript_id')
+		fieldset.add('ssm.consequence.transcript.is_canonical')
 	}
 
 	if (q.rglst) {
-		fields.push('ssm.chromosome')
-		fields.push('ssm.start_position')
+		fieldset.add('ssm.chromosome')
+		fieldset.add('ssm.start_position')
 	}
 
-	const param = { size: 10000, fields: fields.join(',') }
+	const param = { size: 10000, fields: [...fieldset].join(',') }
 
 	// it may query with isoform
 	mayMapRefseq2ensembl(q, ds)
@@ -1479,7 +1501,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		combineSamplesById([s], id2samples, s.ssm_id)
 	}
 
-	return { byTermId, samples: [...id2samples.values()] }
+	return [byTermId, [...id2samples.values()]]
 }
 
 /*
@@ -1487,7 +1509,7 @@ offshoot of querySamples_gdcapi()!
 
 ** this only works for dict terms!! but not geneVariant aiming to load mutations
 */
-async function querySamplesTwlst4hierCluster(q, twLst, ds) {
+async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	const filters = { op: 'and', content: [] }
 	/*
 	do not pass entire list of cases with expression data as filter! too slow
@@ -1553,7 +1575,7 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 
 	const byTermId = mayApplyBinning(samples, dictTwLst)
 
-	return { byTermId, samples }
+	return [byTermId, samples]
 }
 
 function may_add_readdepth(acase, sample) {
