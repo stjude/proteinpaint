@@ -584,6 +584,9 @@ export class TermdbVocab extends Vocab {
 		}
 
 		// use same query method for all dictionary terms
+
+		// prepare termwrapper using fillTermWrapper(), which
+		// will also compute a $id for the termwrapper
 		const tw = await fillTermWrapper({ term, q: _body.term1_q || {} }, this)
 		delete _body.term1_q // no longer needed, tw now contains updated q
 		const body = {
