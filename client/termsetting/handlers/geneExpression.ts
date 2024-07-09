@@ -41,12 +41,7 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 		here make a request to determine default bin for this term based on its data
 		(in gdc this adds significant pause when adding gene exp term to oncomatrix)
 		*/
-		const bins: PresetNumericBins = await vocabApi.getDefaultBins({ tw })
-		if ('error' in bins) throw bins.error
-		tw.term.bins = bins
-		const currMode = tw.q.mode // record current mode before q{} is overriden
-		Object.assign(tw.q, structuredClone(tw.term.bins.default))
-		tw.q.mode = currMode
+		await vocabApi.setTermBins(tw)
 	}
 	return tw
 }

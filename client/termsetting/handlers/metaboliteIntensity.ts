@@ -1,6 +1,7 @@
 import { NumericQ } from '../../shared/types/terms/numeric'
 import { VocabApi } from '../../shared/types/index'
 import { MetaboliteIntensityTW } from '../../shared/types/terms/metaboliteIntensity'
+import { copyMerge } from '../../rx'
 
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 
@@ -26,14 +27,11 @@ export async function getHandler(self) {
 
 export async function fillTW(tw: MetaboliteIntensityTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
-	const mode = tw.q.mode || 'continuous'
+	if (defaultQ) copyMerge(tw.q, defaultQ) // override if default is given
 
 	if (!tw.term.bins) {
-		const defaultBins = await vocabApi.getDefaultBins({ tw })
-		tw.term.bins = defaultBins
-		tw.q = JSON.parse(JSON.stringify(tw.term.bins.default))
+		await vocabApi.setTermBins(tw)
 	}
-	tw.q.mode = mode
 	return tw
 }
 

@@ -72,12 +72,7 @@ export async function getHandler(self) {
 		if (!self.term.bins && self.term.type !== 'survival') {
 			// make the defaultBins request only when 'discrete' tab presents
 			const tw = { term: self.term, q: self.q }
-			const defaultBins = await self.vocabApi.getDefaultBins({ tw })
-			if ('error' in defaultBins) throw defaultBins.error
-			tw.term.bins = defaultBins
-			const currMode = tw.q.mode // record current mode before q{} is overriden
-			tw.q = structuredClone(tw.term.bins.default)
-			tw.q.mode = currMode
+			await self.vocabApi.setTermBins(tw)
 		}
 
 		tabs.push({
