@@ -5,14 +5,14 @@ import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 
 type GenesMenuArgs = {
 	tip: Menu
-	params: { param: GeneArgumentEntry[]; input?: any }[]
+	params: { param: GeneArgumentEntry; input?: any }[]
 	api: any
 	callback: (f?: number) => void
 }
 
 export class GenesMenu {
 	tip: Menu
-	params: { param: GeneArgumentEntry[]; input?: any }[]
+	params: { param: GeneArgumentEntry; input?: any }[]
 	api: any
 	callback: (f?: number) => void
 
