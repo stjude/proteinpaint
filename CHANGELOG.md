@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Support inputing custom CNV segments in mds3 tk, improve cnv rendering
 - Support overall survival data from gdc
+- New Publications button in the ProteinPaint header. Results are searchable in the omnisearch.
 
 Fixes:
 - provide null values to brush range if there is no selection on brushing
