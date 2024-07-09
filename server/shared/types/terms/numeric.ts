@@ -1,4 +1,4 @@
-import { BaseQ, BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting, BaseTerm } from './term.ts'
+import { BaseQ, BaseTW, TermValues, BaseTerm } from './term.ts'
 
 export type StartUnboundedBin = {
 	// where possible, assign a concrete value (true) when it is known in advance,

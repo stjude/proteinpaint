@@ -2,7 +2,6 @@
 import {
 	BaseTerm,
 	BaseValue,
-	TermValues,
 	BaseQ,
 	BaseTW,
 	EmptyGroupSetting,
@@ -64,7 +63,7 @@ export type CategoricalTW = BaseTW & {
 	q: CategoricalQ
 }
 
-type Cat2SampleCntEntry = { key: string; count: number }
+//type Cat2SampleCntEntry = { key: string; count: number }
 
 export type GroupSetInputValues = {
 	[index: string]: {

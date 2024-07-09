@@ -7,7 +7,6 @@ import { SampleLstQ, SampleLstTerm } from './samplelst.ts'
 import { SnpsQ, SnpsTerm } from './snps.ts'
 import { Q } from './tw.ts'
 import { PresetNumericBins } from './numeric.ts'
-import { Numeric } from 'd3'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -177,14 +176,15 @@ export type Subconditions = {
 	}
 }
 
-type ValueConversion = {
-	/**name of unit for the original value */
-	fromUnit: string
-	/** name of converted unit.
+// TODO: remove, not needed?
+//type ValueConversion = {
+/** name of unit for the original value */
+//fromUnit: string
+/** name of converted unit.
 	when converting day to year, resulting value will be `X year Y day`, that the fromUnit is used to indicate residue days from the last year; it's also printed in termsetting ui
 	this logic does not hold if converting from year to day, should detect if scaleFactor is >1 or <1 */
-	toUnit: string
-}
+//toUnit: string
+//}
 
 export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
 	? NumericQ

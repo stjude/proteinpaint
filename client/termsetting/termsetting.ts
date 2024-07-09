@@ -3,16 +3,7 @@ import { Menu } from '../dom/menu'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
 import { Q, TermWrapper, TwLst } from '../shared/types/terms/tw'
-import {
-	DetermineQ,
-	VocabApi,
-	Dom,
-	UseCase,
-	NoTermPromptOptsEntry,
-	Filter,
-	SampleCountsEntry,
-	Term
-} from '../shared/types/index'
+import { VocabApi, Dom, UseCase, NoTermPromptOptsEntry, Filter, SampleCountsEntry, Term } from '../shared/types/index'
 import { TermSettingOpts, Handler, PillData } from './types'
 import { CategoricalQ } from '../shared/types/terms/categorical'
 import { NumericQ } from '../shared/types/terms/numeric'
