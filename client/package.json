@@ -28,6 +28,7 @@
     "test": "./test.sh *.spec.js",
     "test:unit": "./test.sh *.unit.spec.*",
     "test:integration": "./test.sh *.integration.spec.*",
+    "tsc": "tsc -p tsconfig-x.json",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
     "//TODO": "# replace rollup with esbuild",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w --bundleConfigAsCjs",

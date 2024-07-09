@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "./**/geneVariant.ts", 
+    "./**/singleCellGeneExpression.ts",
+    "./**/hic.app.integration.spec-manual.ts",
+    "./dist/**/*"
+  ]
+}
