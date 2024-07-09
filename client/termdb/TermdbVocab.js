@@ -5,6 +5,7 @@ import { getNormalRoot } from '#filter'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
 import { isDictionaryType } from '#shared/terms'
+import { fillTermWrapper } from '#termsetting'
 
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
@@ -139,7 +140,7 @@ export class TermdbVocab extends Vocab {
 
 		for (const _key of ['term0', 'term', 'term2']) {
 			// "term" on client is "term1" at backend
-			const tw = opts[_key]
+			const tw = this.getTwMinCopy(opts[_key])
 			if (!tw) continue
 			const key = _key == 'term' ? 'term1' : _key
 			params.push(key + '_$id=' + encodeURIComponent(tw.$id))
@@ -264,7 +265,10 @@ export class TermdbVocab extends Vocab {
     */
 	async getRegressionData(opts) {
 		if (!isDictionaryType(opts.outcome.term.type)) throw 'outcome must be dictionary term'
-		const outcome = { id: opts.outcome.term.id, q: JSON.parse(JSON.stringify(opts.outcome.q)) }
+		const outcome = this.getTwMinCopy(opts.outcome)
+		outcome.id = outcome.term.id
+		outcome.q = JSON.parse(JSON.stringify(opts.outcome.q))
+		outcome.type = outcome.term.type // TODO: refactor backend to not require outcome.type (similar issue with independent variables, see below)
 		if (!outcome.q.mode && opts.regressionType == 'linear') outcome.q.mode = 'continuous'
 		const contQkeys = ['mode', 'scale']
 		outcome.refGrp = outcome.q.mode == 'continuous' ? 'NA' : opts.outcome.refGrp
@@ -282,7 +286,10 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			regressionType: opts.regressionType,
 			outcome,
-			independent: opts.independent.map(t => {
+			independent: opts.independent.map(tw => {
+				const t = this.getTwMinCopy(tw)
+				t.refGrp = tw.refGrp
+				t.interactions = tw.interactions
 				const q = JSON.parse(JSON.stringify(t.q))
 				delete q.values
 				delete q.totalCount
@@ -293,8 +300,11 @@ export class TermdbVocab extends Vocab {
 					}
 				}
 				return {
+					// TODO: refactor backend code to not have to pass
+					// term.id, term.type, and term.values separately
 					id: t.term.id,
 					q,
+					term: t.term,
 					type: t.term.type,
 					refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp,
 					interactions: t.interactions || [],
@@ -431,6 +441,8 @@ export class TermdbVocab extends Vocab {
 		// the violin plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termdb')
+		arg.term = this.getTwMinCopy(arg.term)
+		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
 		const body = Object.assign(
 			{
 				getViolinPlotData: 1,
@@ -572,11 +584,16 @@ export class TermdbVocab extends Vocab {
 		}
 
 		// use same query method for all dictionary terms
+
+		// prepare termwrapper using fillTermWrapper(), which
+		// will also compute a $id for the termwrapper
+		const tw = await fillTermWrapper({ term, q: _body.term1_q || {} }, this)
+		delete _body.term1_q // no longer needed, tw now contains updated q
 		const body = {
 			getcategories: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
-			term,
+			tw: this.getTwMinCopy(tw),
 			..._body
 		}
 
@@ -940,15 +957,15 @@ export class TermdbVocab extends Vocab {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			plotName: opts.name,
-			coordTWs: opts.coordTWs,
+			coordTWs: opts.coordTWs.map(tw => this.getTwMinCopy(tw)),
 			filter: getNormalRoot(opts.filter),
 			embedder: window.location.hostname
 		}
 		if (opts.colorColumn) body.colorColumn = opts.colorColumn
-		if (opts.colorTW) body.colorTW = opts.colorTW
-		if (opts.shapeTW) body.shapeTW = opts.shapeTW
-		if (opts.divideByTW) body.divideByTW = opts.divideByTW
-		if (opts.scaleDotTW) body.scaleDotTW = opts.scaleDotTW
+		if (opts.colorTW) body.colorTW = this.getTwMinCopy(opts.colorTW)
+		if (opts.shapeTW) body.shapeTW = this.getTwMinCopy(opts.shapeTW)
+		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
+		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 
 		return await dofetch3('termdb', { headers, body })
 	}

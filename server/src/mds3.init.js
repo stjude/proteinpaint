@@ -21,7 +21,8 @@ import {
 	mclassfusionrna,
 	mclasssv,
 	mclasscnvgain,
-	mclasscnvloss
+	mclasscnvloss,
+	geneVariantTermGroupsetting
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.js'
@@ -2309,9 +2310,11 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			throw 'no gene or position specified'
 		if (tw.q?.groupsetting?.inuse) {
 			if (!Number.isInteger(tw.q.dt)) throw 'dt is not an integer value'
-			if (!Number.isInteger(tw.q.groupsetting.predefined_groupset_idx))
-				throw 'predefined_groupset_idx is not an integer value'
+			if (!Number.isInteger(tw.q.groupsetting.predefined_groupset_idx) && !tw.q.groupsetting.customset)
+				throw 'invalid predefined_groupset_idx and customset'
 		}
+		// rehydrate term.groupsetting
+		if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
 
 		if (tw.term.subtype == 'snp') {
 			throw 'subtype snp not supported'
@@ -2466,8 +2469,9 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				const group = groupset.groups.find(group => {
 					return group.values.some(v => mclasses.includes(v.key))
 				})
-				if (!group) throw 'unable to assign sample to group'
-				// .key will be the name of the assigned group
+				if (!group || group.uncomputable) continue
+				// store sample data
+				// key will be the name of the assigned group
 				data.set(sample, {
 					sample,
 					[tw.$id]: { key: group.name, label: group.name, value: group.name, values: mlst }

@@ -47,6 +47,10 @@ class Overlay {
 			// overlay term can be continous for bar/violin; but not for cuminc plot, thus the option
 			numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 
+			// edit menu of geneVariant term should only display
+			// groupsetting options
+			geneVariantEditMenuOnlyGrp: true,
+
 			callback: term2 => {
 				// term2 is {term,q} and can be null
 				this.app.dispatch({

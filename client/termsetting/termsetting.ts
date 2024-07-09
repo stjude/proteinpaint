@@ -610,7 +610,7 @@ function setInteractivity(self) {
 		type opt = { label: string; callback: (f?: any) => void }
 		const options: opt[] = []
 
-		if (self.q.groupsetting?.inuse && self.q.mode != 'binary') {
+		if (self.q.groupsetting?.inuse && self.q.mode != 'binary' && self.term.type != 'geneVariant') {
 			// this instance is using a categorical term doing groupsetting; add option to cancel it
 			// as categorical edit menu cannot do the canceling
 			options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
@@ -921,11 +921,12 @@ export async function fillTermWrapper(
 	// tw.id is no longer needed
 	delete tw.id
 	if (!tw.q) tw.q = {}
-	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	tw.q.isAtomic = true
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQByTsHandler)
 	mayValidateQmode(tw)
+	// compute $id after tw is filled
+	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	return tw
 }
 
