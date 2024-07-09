@@ -66,6 +66,7 @@
     "highlight.js": "~11.2.0",
     "html-webpack-plugin": "^5.5.0",
     "minimatch": "^3.1.2",
+    "node-notifier": "^9.0.1",
     "node-polyfill-webpack-plugin": "^1.1.4",
     "normalize.css": "^8.0.1",
     "openseadragon": "^4.1.1",

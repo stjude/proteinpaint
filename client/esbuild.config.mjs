@@ -3,6 +3,7 @@ import fs from 'fs'
 import { context } from 'esbuild'
 import { fileURLToPath } from 'url'
 import { polyfillNode } from "esbuild-plugin-polyfill-node"
+import notifier from 'node-notifier'
     
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ENV = process.env.ENV
@@ -51,12 +52,21 @@ function logRebuild() {
   return {
     name: 'logBuildStage',
     setup({ onStart, onEnd }) {
-      var t
+      let t, numErrs
+
       onStart(() => {
         console.log('\n--- starting client rebuild... ---\n')
         t = Date.now()
       })
-      onEnd(() => {
+      onEnd((result) => { 
+        if (result.errors.length) {
+          numErrs = result.errors.length
+          notifier.notify({title: 'esbuild', message: `${numErrs} bundling errors`})
+        } else if (numErrs) {
+          numErrs = 0
+          // only notify of success if recovering from a bundling error
+          notifier.notify({title: 'esbuild', message: 'success, bundle ok'})
+        }
         console.log('\n--- client rebuild finished in', Date.now() - t, 'ms ---\n')
         if (ENV != 'dev') ctx.dispose()
       })
