@@ -6,7 +6,7 @@ import { Button, Div, Elem, _Element_ } from 'types/d3'
 import { ClientCopyGenome } from 'types/global'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
-import { GeneArguments } from '../../shared/types/dataset.ts'
+import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 
 type API = {
 	dom: {
@@ -30,11 +30,11 @@ type API = {
 	 * Derived from termdbConfig.queries.topMutatedGenes.arguments
 	 * input for the param is add in the gene set menu
 	 */
-	topMutatedGenesParams: { param: GeneArguments; input?: any }[]
+	topMutatedGenesParams: { param: GeneArgumentEntry; input?: any }[]
 	/** Derived from termdbConfig.queries.topVariablyExpressedGenes.arguments
 	 * input for the param is add in the gene set menu
 	 */
-	topVariablyExpressedGenesParams: { param: GeneArguments; input?: any }[]
+	topVariablyExpressedGenesParams: { param: GeneArgumentEntry; input?: any }[]
 	/** while rendering each gene button, if gene stat is available,
 	 * it records color and labels for each color,
 	 * to be shown in statLegendDiv */

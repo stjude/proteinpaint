@@ -270,30 +270,32 @@ type NIdataQueryRefParams = {
 }
 
 /** used for the gene set edit ui */
-export type GeneArguments = {
+export type GeneArgumentEntry = {
 	/** Dom element id
 	 * Use the cooresponding parameter name as the id
 	 */
 	id: string
 	/** label/prompt for the checkbox, input, etc. */
 	label: string
+	/** Optional: Creates subtext below the main label */
+	sublabel?: string
 	/** boolean and string creates a checkbox
 	 * number creates a text input
 	 */
-	type: boolean | string | number
+	type: 'boolean' | 'string' | 'number'
 	/** value of the input or checkbox
 	 * required if type is string. Otherwise, optional
 	 */
 	value: string | number
-}[]
+}
 
 type TopVariablyExpressedGenesQuery = {
 	src: 'gdcapi' | 'native' | string
-	arguments?: GeneArguments
+	arguments?: GeneArgumentEntry[]
 }
 
 type TopMutatedGenes = {
-	arguments?: GeneArguments
+	arguments?: GeneArgumentEntry[]
 }
 
 type TklstEntry = {
