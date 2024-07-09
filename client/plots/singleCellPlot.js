@@ -132,7 +132,8 @@ class singleCellPlot {
 
 		const controlsHolder = controlsDiv.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
 		const headerDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
-		const tableDiv = this.tableOnPlot ? this.opts.holder.append('div') : mainDiv.append('div')
+		const tableDiv = this.tableOnPlot ? headerDiv : mainDiv.append('div')
+		const deDiv = mainDiv.append('div').style('padding', '10px')
 		const plotsDiv = mainDiv
 			.append('div')
 			.style('display', 'flex')
@@ -148,6 +149,7 @@ class singleCellPlot {
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
 			controlsHolder,
 			tableDiv,
+			deDiv,
 			plotsDiv
 		}
 		if (this.tableOnPlot) {
@@ -158,11 +160,11 @@ class singleCellPlot {
 		this.axisOffset = { x: offsetX, y: 30 }
 
 		if (q.singleCell?.DEgenes) {
-			const DEDiv = headerDiv.append('div').style('margin', '40px 0px 40px 0px')
-			DEDiv.append('label').html('View differentially expresed genes of a cluster vs rest of cells:&nbsp;')
-			this.dom.deselect = DEDiv.append('select')
+			this.dom.deDiv.append('label').html('View differentially expresed genes of a cluster vs rest of cells:&nbsp;')
+			this.dom.deselect = this.dom.deDiv.append('select')
 			if (this.app.opts.genome.termdbs)
-				this.dom.GSEAbt = DEDiv.append('button')
+				this.dom.GSEAbt = this.dom.deDiv
+					.append('button')
 					.style('margin-left', '5px')
 					.property('disabled', true)
 					.text('Gene set enrichment analysis')
@@ -181,7 +183,7 @@ class singleCellPlot {
 							config
 						})
 					})
-			const DETableDiv = headerDiv.append('div')
+			const DETableDiv = this.dom.deDiv.append('div')
 			this.dom.DETableDiv = DETableDiv
 			this.dom.deselect.append('option').text('')
 			this.dom.deselect.on('change', async e => {
@@ -252,6 +254,14 @@ class singleCellPlot {
 				boxLabel: ''
 			}
 		]
+		if (this.tableOnPlot)
+			inputs.push({
+				label: 'Show samples',
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: 'showSamples',
+				boxLabel: ''
+			})
 		for (const plot of state.config.plots) {
 			const id = plot.name.replace(/\s+/g, '')
 			inputs.push({
@@ -292,7 +302,7 @@ class singleCellPlot {
 	async main() {
 		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
-
+		this.dom.tableDiv.style('display', this.settings.showSamples ? 'block' : 'none')
 		this.legendRendered = false
 		const plots = []
 		for (const plot of this.config.plots) {
@@ -347,6 +357,7 @@ class singleCellPlot {
 		if (this.dom.deselect && !this.legendRendered) {
 			//first plot
 			this.dom.deselect.selectAll('*').remove()
+			this.dom.deselect.append('option').text('')
 			for (const cluster of plot.clusters) this.dom.deselect.append('option').text(cluster)
 		}
 		const cat2Color = getColors(plot.clusters.length + 2) //Helps to use the same color scheme in different samples
@@ -677,6 +688,8 @@ async function renderSamplesTable(div, self, state) {
 		return
 	}
 	const samples = result.samples
+	self.samples = samples
+
 	samples.sort((elem1, elem2) => {
 		const result = elem1.primarySite?.localeCompare(elem2.primarySite)
 		if (result == 1 || result == -1) return result
@@ -689,7 +702,6 @@ async function renderSamplesTable(div, self, state) {
 	let maxHeight = '40vh'
 	if (self.tableOnPlot) {
 		selectedRows.push(0)
-		self.samples = samples
 		maxHeight = '30vh'
 	}
 	renderTable({
@@ -818,6 +830,7 @@ export function getDefaultSingleCellSettings() {
 	return {
 		svgw: 420,
 		svgh: 420,
-		showBorders: false
+		showBorders: false,
+		showSamples: true
 	}
 }
