@@ -41,7 +41,10 @@ type API = {
 	destroy: (_obj) => void
 }
 
-type Gene = { gene: string }
+type Gene = {
+	gene: string
+	mutationStat?: { class: string; count: number; dt?: number }[]
+}
 
 type CallbackArg = {
 	geneList: Gene[]
@@ -55,10 +58,7 @@ type GeneSetEditArg = {
 	minNumGenes?: number
 	callback: (arg: CallbackArg) => void
 	vocabApi: any
-	geneList?: {
-		gene: string
-		mutationStat?: { class: string; count: number }[]
-	}[]
+	geneList?: Gene[]
 	titleText?: string
 }
 
@@ -117,12 +117,13 @@ export class GeneSetEditUI {
 			.style('float', 'right')
 			.style('gap', '5px')
 
+		const addGene = this.addGene.bind(this)
 		this.geneSearch = addGeneSearchbox({
 			tip: this.tip2,
 			genome: this.genome,
 			row,
 			geneOnly: true,
-			callback: this.addGene,
+			callback: addGene,
 			hideHelp: true,
 			focusOff: true
 		})
@@ -312,26 +313,6 @@ export class GeneSetEditUI {
 		}
 	}
 
-	// addParameter(param, div: Div, apiParam: string) {
-	// 	let input
-	// 	if (param.type == 'boolean') {
-	// 		input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
-	// 		if (param.value) input.property('checked', param.value)
-	// 		div.append('label').html(param.label).attr('for', param.id)
-	// 	}
-	// 	//The parameter value will be used as the input value if the option is checked
-	// 	else if (param.type == 'string' && param.value) {
-	// 		input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
-	// 		input.property('checked', true)
-	// 		div.append('label').html(param.label).attr('for', param.id)
-	// 	} else if (param.type == 'number') {
-	// 		input = div.append('input').attr('type', 'number').style('width', '40px').attr('id', param.id)
-	// 		if (param.value) input.attr('value', param.value)
-	// 		div.append('span').html(param.label)
-	// 	}
-
-	// }
-
 	getInputValue({ param, input }) {
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
@@ -397,7 +378,7 @@ export class GeneSetEditUI {
 			})
 		this.api.dom.geneHoldingDiv.selectAll('*').remove()
 
-		// this.api.statColor2label = new Map()
+		const renderGene = this.renderGene.bind(this)
 
 		this.api.dom.geneHoldingDiv
 			.selectAll('div')
@@ -411,7 +392,10 @@ export class GeneSetEditUI {
 			.style('display', 'inline-block')
 			.style('padding', '5px 16px 5px 9px')
 			.style('margin-left', '5px')
-			.each(this.renderGene)
+			.each(function (this: any, gene) {
+				const div = select(this).style('border-radius', '5px')
+				renderGene(div, gene)
+			})
 			.on('click', this.deleteGene)
 			.on('mouseover', function (event) {
 				const div = select(event.target)
@@ -456,9 +440,7 @@ export class GeneSetEditUI {
 		if (hasChanged) this.api.dom.submitBtn!.node()!.focus()
 	}
 
-	renderGene(this: any, gene) {
-		const div = select(this).style('border-radius', '5px')
-
+	renderGene(div: Div, gene: Gene) {
 		if (gene.mutationStat) {
 			div.html(`${gene.gene}&nbsp;&nbsp;`)
 			for (const m of gene.mutationStat) {
@@ -473,10 +455,10 @@ export class GeneSetEditUI {
 					bgcolor = mclass[m.class].color
 					this.api.statColor2label.set(bgcolor, mclass[m.class].label)
 				} else if ('dt' in m) {
-					if (!dt2color[m.dt]) throw 'invalid stat dt'
-					bgcolor = dt2color[m.dt]
+					if (!dt2color[m['dt']]) throw 'invalid stat dt'
+					bgcolor = dt2color[m['dt']]
 					textcolor = 'white' // hardcode it for now
-					this.api.statColor2label.set(bgcolor, dt2label[m.dt])
+					this.api.statColor2label.set(bgcolor, dt2label[m['dt']])
 				} else {
 					throw 'stat missing dt/class'
 				}
@@ -496,7 +478,7 @@ export class GeneSetEditUI {
 		}
 	}
 
-	deleteGene(d) {
+	deleteGene(d: Gene) {
 		const i = this.geneList.findIndex(g => g.gene === d.gene)
 		if (i != -1) {
 			this.geneList.splice(i, 1)
