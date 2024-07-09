@@ -15,7 +15,7 @@ type KeyLabel = {
 	label: string
 }
 
-// a set of categories about a vcf INFO field
+/** a set of categories about a vcf INFO field */
 export type InfoFieldCategories = {
 	[index: string]: {
 		color: string
@@ -60,21 +60,26 @@ type GenomicPositionEntry = {
 
 type Chr2bcffile = { [index: string]: string }
 type bcfMafFile = {
-	bcffile: string // bcf file for only variants, no samples and FORMAT
-	maffile: string // maf file for sample mutations. bcf header contents with FORMAT and list of samples are copied into this maf as headers followed by the maf header starting with #chr, pos, ref, alt and sample. Each column after sample corresponds to the information in FORMAT. file is bgzipped and tabix indexed (tabix -c"#" -s 1 -b 2 -e 2 <maf.gz>)
+	/** bcf file for only variants, no samples and FORMAT */
+	bcffile: string
+	/** maf file for sample mutations. bcf header contents with FORMAT and list of samples are copied into this maf as headers followed by the maf header starting with #chr, pos, ref, alt and sample. Each column after sample corresponds to the information in FORMAT. file is bgzipped and tabix indexed (tabix -c"#" -s 1 -b 2 -e 2 <maf.gz>) */
+	maffile: string
 }
 
 type SnvindelByRange = {
-	// if true, served from gdc. no other parameters TODO change to src='gdc/native'
+	/** if true, served from gdc. no other parameters TODO change to src='gdc/native' */
 	gdcapi?: boolean
-
-	// local file can have following different setup
-	bcffile?: string // one single bcf file
-	chr2bcffile?: Chr2bcffile // one bcf file per chr
-	bcfMafFile?: bcfMafFile // bcf+maf combined
-
-	infoFields?: InfoFieldEntry[] // allow to apply special configurations to certain INFO fields of the bcf file
+	/**local file can have following different setup
+	 * one single bcf file */
+	bcffile?: string
+	/** one bcf file per chr */
+	chr2bcffile?: Chr2bcffile
+	/** bcf+maf combined */
+	bcfMafFile?: bcfMafFile
+	/** allow to apply special configurations to certain INFO fields of the bcf file */
+	infoFields?: InfoFieldEntry[]
 }
+
 type SvfusionByRange = {
 	file?: string
 }
@@ -166,12 +171,16 @@ type VariantFilter = {
 	terms: FilterTermEntry[]
 }
 
-// one set of AC and AN info fields to retrieve data for this population
+/** one set of AC and AN info fields to retrieve data for this population */
 type PopulationINFOset = {
-	key?: string // optional name for identifying this set, when the population is ancestry-stratified and a population has multiple sets
-	infokey_AC: string // required info field
-	infokey_AN: string // required info field
-	termfilter_value?: string // optional ...
+	/** optional name for identifying this set, when the population is ancestry-stratified and a population has multiple sets */
+	key?: string
+	/** required info field */
+	infokey_AC: string
+	/** required info field */
+	infokey_AN: string
+	/** Optional */
+	termfilter_value?: string
 }
 
 /* define method to retrieve allele AC/AN in a population, by using bcf INFO fields; population could be ancestry-stratified
@@ -184,23 +193,30 @@ two types of population are supported:
   sets[] has only 1 element
 */
 type Population = {
-	key: string // for identifying this element
-	label: string // display, in fact it can replace key since label should also be unique
-	// allow to set to true for race-stratified population, will adjust population AC/AN values based on admix coefficient for the dataset's cohort variants
-	// supposed to be "read-only" attribute and not modifiable in runtime
+	/** for identifying this element */
+	key: string
+	/** display, in fact it can replace key since label should also be unique*/
+	label: string
+	/** allow to set to true for race-stratified population, will adjust population AC/AN values based on admix coefficient for the dataset's cohort variants
+	 * supposed to be "read-only" attribute and not modifiable in runtime */
 	allowto_adjust_race?: boolean
-	adjust_race?: boolean // when above is true, this flag is flip switch for this adjustion
-	termfilter?: string // optional term id used for race adjusting, must correspond to a term in dataset db
-	sets: PopulationINFOset[] // if AC/AN of the population is ancestry-stratified, will be multiple elements of this array; otherwise just one
+	/** when above is true, this flag is flip switch for this adjustion */
+	adjust_race?: boolean
+	/** optional term id used for race adjusting, must correspond to a term in dataset db */
+	termfilter?: string
+	/** if AC/AN of the population is ancestry-stratified, will be multiple elements of this array; otherwise just one */
+	sets: PopulationINFOset[]
 }
 
-// a data type under ds.queries{}
+/** a data type under ds.queries{} */
 type SnvIndelQuery = {
 	forTrack?: boolean
-
-	// allow to query data by either isoform or range
-	byisoform?: GdcApi // isoform query is only used for gdc api
-	byrange: SnvindelByRange // query data by range
+	/** allow to query data by either isoform or range
+	 * isoform query is only used for gdc api
+	 */
+	byisoform?: GdcApi
+	/** query data by range */
+	byrange: SnvindelByRange
 
 	infoUrl?: URLEntry[]
 	skewerRim?: SkewerRim
@@ -245,23 +261,35 @@ type NIdataQueryRef = {
 }
 
 type NIdataQueryRefParams = {
-	l: number // index of slice for default sagittal plane
-	f: number // index of slice for default coronal plane
-	t: number // index of slice for default axial plane
+	/** index of slice for default sagittal plane */
+	l: number
+	/** index of slice for default coronal plane */
+	f: number
+	/** index of slice for default axial plane */
+	t: number
 }
+
+/** used for the gene set edit ui */
+type GeneArguments = {
+	/** Dom element id */
+	id: string
+	/** label/prompt appearring next to the checkbox, input, etc. */
+	label: string
+	/** boolean and string creates a checkbox
+	 * number creates a text input
+	 */
+	type: boolean | string | number
+	/** value of the input or checkbox */
+	value: string | number
+}[]
 
 type TopVariablyExpressedGenesQuery = {
 	src: 'gdcapi' | 'native' | string
-	// to add optional parameters
+	arguments?: GeneArguments
 }
 
 type TopMutatedGenes = {
-	arguments?: {
-		id: string
-		label: string
-		type: string
-		value: string
-	}[]
+	arguments?: GeneArguments
 }
 
 type TklstEntry = {
@@ -303,7 +331,7 @@ type CnvSegment = {
 }
 type CnvSegmentByRange = {
 	src: 'native' | 'gdcapi' | string
-	// only for src=native
+	/** only for src=native */
 	file?: string
 }
 
@@ -322,12 +350,12 @@ type RnaseqGeneCount = {
 	file: string
 }
 
-// the metabolite query
+/** the metabolite query */
 export type MetaboliteIntensityQueryNative = {
 	src: 'native' | string
 	file: string
 	samples?: number[]
-	// _metabolites,used to dynamically built cache of metabolite names to speed up search
+	/** _metabolites,used to dynamically built cache of metabolite names to speed up search */
 	_metabolites?: string[]
 	get?: (param: any) => void
 	find?: (param: string[]) => void
@@ -335,7 +363,7 @@ export type MetaboliteIntensityQueryNative = {
 }
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
-// the geneExpression query
+/** the geneExpression query */
 export type GeneExpressionQueryGdc = {
 	src: 'gdcapi' | string
 	geneExpression2bins?: { [index: string]: any }
@@ -348,8 +376,8 @@ export type GeneExpressionQueryNative = {
 	samples?: number[]
 	nochr?: boolean
 	get?: (param: any) => void
+	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
 	geneExpression2bins?: { [index: string]: any }
-	//This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper
 }
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
@@ -447,19 +475,19 @@ export type SingleCellQuery = {
 }
 
 type LdQuery = {
-	// each track obj defines a ld track
+	/** each track obj defines a ld track */
 	tracks: {
-		// for displaying and identifying a track. must not duplicate
+		/** for displaying and identifying a track. must not duplicate */
 		name: string
-		// relative path of ld .gz file
+		/** relative path of ld .gz file */
 		file: string
-		// dynamically added full path
+		/** dynamically added full path */
 		file0?: string
-		// dynamically added
+		/** dynamically added */
 		nochr?: boolean
-		// if to show by default
+		/** if to show by default */
 		shown: boolean
-		// max range allowed to show data
+		/** max range allowed to show data */
 		viewrangelimit: number
 	}[]
 	overlay: {
@@ -537,7 +565,8 @@ type ScatterPlotsEntry = {
 	file: string
 	coordsColumns?: { x: number; y: number; z?: number }
 	settings?: { [index: string]: any }
-	sampleType?: string // by default the dots are called "samples" on the plot, use this to call it by diff name e.g. "cells"
+	/** by default the dots are called "samples" on the plot, use this to call it by diff name e.g. "cells" */
+	sampleType?: string
 	/** a plot can be colored by either a dict term termsetting (colorTW) or file column values (colorColumn) */
 	colorTW?: { id: string }
 	colorColumn?: ColorColumn
@@ -669,16 +698,24 @@ type MatrixSettings = {
 	sortPriority?: SortPriorityEntry[]
 	ignoreCnvValues?: boolean
 	geneVariantCountSamplesSkipMclass?: string[]
-	truncatingMutations?: string[] // all the truncating mutations exist in the dataset
-	proteinChangingMutations?: string[] // all the protein-changing mutations mutations exist in the dataset
-	mutationClasses?: string[] // all the mutation classes exist in the dataset
-	CNVClasses?: string[] // all the CNV classes exist in the dataset
-	synonymousMutations?: string[] // all the synonymous mutations exist in the dataset
+	/** all the truncating mutations exist in the dataset */
+	truncatingMutations?: string[]
+	/** all the protein-changing mutations mutations exist in the dataset */
+	proteinChangingMutations?: string[]
+	/** all the mutation classes exist in the dataset */
+	mutationClasses?: string[]
+	/** all the CNV classes exist in the dataset */
+	CNVClasses?: string[]
+	/** all the synonymous mutations exist in the dataset */
+	synonymousMutations?: string[]
 	showHints?: string[]
 	displayDictRowWithNoValues?: boolean
-	addMutationCNVButtons?: boolean // allow to add two buttons (CNV and mutation) to control panel for selecting mclasses displayed on oncoMatrix
-	sortByMutation?: string // this is now computed from sortPriority[x].tiebreakers.find(tb => tb.filter?.values[0]?.dt === 1) ...
-	sortByCNV?: boolean // this is now computed from sortPriority[x].tiebreakers.find(tb => tb.filter?.values[0]?.dt === 4).isOrdered
+	/** allow to add two buttons (CNV and mutation) to control panel for selecting mclasses displayed on oncoMatrix */
+	addMutationCNVButtons?: boolean
+	/** this is now computed from sortPriority[x].tiebreakers.find(tb => tb.filter?.values[0]?.dt === 1) ... */
+	sortByMutation?: string
+	/** this is now computed from sortPriority[x].tiebreakers.find(tb => tb.filter?.values[0]?.dt === 4).isOrdered */
+	sortByCNV?: boolean
 }
 
 type Matrix = {
@@ -746,7 +783,8 @@ base type for deriving new types with new attributes
 
 */
 type UrlTemplateBase = {
-	base: string // must end with '/'
+	/** must end with '/' */
+	base: string
 	namekey: string
 	defaultText?: string
 }
@@ -761,7 +799,7 @@ export type UrlTemplateSsm = UrlTemplateBase & {
 
 /*** types supporting Cohort type ***/
 type Termdb = {
-	//Terms
+	/** Terms */
 	termIds?: TermIds
 	displaySampleIds?: boolean
 	converSampleIds?: boolean
@@ -774,7 +812,7 @@ type Termdb = {
 	cohortStartTimeMsg?: string
 	alwaysRefillCategoricalTermValues?: boolean
 	restrictAncestries?: RestrictAncestriesEntry[]
-	//Cohort specific
+	/** Cohort specific */
 	selectCohort?: SelectCohortEntry
 
 	/** quick fix to convert category values from a term to lower cases for comparison (case insensitive comparison)
@@ -790,14 +828,17 @@ type Termdb = {
 	matrixplots?: MatrixPlots
 	logscaleBase2?: boolean
 	chartConfigByType?: ChartConfigByType
-	//Functionality
+	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
 	multipleTestingCorrection?: MultipleTestingCorrection
 	urlTemplates?: {
-		gene?: UrlTemplateBase // gene link definition
-		sample?: UrlTemplateBase // sample link definition
-		ssm?: UrlTemplateSsm | UrlTemplateSsm[] // ssm link definition
+		/** gene link definition */
+		gene?: UrlTemplateBase
+		/** sample link definition */
+		sample?: UrlTemplateBase
+		/** ssm link definition */
+		ssm?: UrlTemplateSsm | UrlTemplateSsm[]
 	}
 
 	q?: {
@@ -829,7 +870,7 @@ type ChartConfig = {
 	[key: string]: any
 }
 
-// modified version of termwrapper
+/** modified version of termwrapper*/
 type Tw = {
 	id: string
 	q: unknown
@@ -863,7 +904,7 @@ type DtEntrySNV = {
 }
 
 type ByDt = {
-	//SNVs differentiate by sample origin. Non-SNV, no differentiation
+	/** SNVs differentiate by sample origin. Non-SNV, no differentiation*/
 	[index: number]: DtEntrySNV | BaseDtEntry
 }
 
@@ -893,7 +934,7 @@ export type Cohort = {
 	db: FileObj
 	termdb: Termdb
 	scatterplots?: Scatterplots
-	// optional title of this ds, if missing use ds.label. shown on mass nav header. use blank string to not to show a label
+	/** optional title of this ds, if missing use ds.label. shown on mass nav header. use blank string to not to show a label*/
 	title?: Title
 	cumburden?: {
 		files: {
