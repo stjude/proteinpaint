@@ -4,7 +4,7 @@ import { searchItems } from './omniSearch.js'
 import { newSandboxDiv } from '../../dom/sandbox.ts'
 import { appDrawerInit } from '../../appdrawer/app.js'
 import { rgb as d3rgb } from 'd3-color'
-import * as common from '../../shared/common.js'
+import { defaultcolor } from '../../shared/common.js'
 import { Menu } from '../../dom/menu.js'
 import { dofetch3 } from '#common/dofetch'
 
@@ -77,7 +77,7 @@ export class AppHeader {
 	async makeheader() {
 		await this.createPublicationsList()
 
-		const color = d3rgb(common.defaultcolor)
+		const color = d3rgb(defaultcolor)
 		const padw_lg = '13px'
 		const padw_input = '5px 10px'
 		const padw_sm = '7px 10px'
@@ -110,7 +110,7 @@ export class AppHeader {
 			.style('padding', padw_sm)
 			.style('padding-left', '25px')
 			.style('font-size', '.8em')
-			.style('color', d3rgb(common.defaultcolor).darker())
+			.style('color', d3rgb(defaultcolor).darker())
 
 		{
 			// a row for server stats
@@ -154,7 +154,7 @@ export class AppHeader {
 			.text('ProteinPaint')
 			.style('display', 'inline-block')
 			.style('padding', padw_lg)
-			.style('color', common.defaultcolor)
+			.style('color', defaultcolor)
 			.style('font-size', '1.3em')
 			.style('font-weight', 'bold')
 
@@ -166,7 +166,7 @@ export class AppHeader {
 			tip,
 			style: {
 				padding: padw_sm,
-				border: `'solid 1px ${common.defaultcolor}`
+				border: `'solid 1px ${defaultcolor}`
 			},
 			size: 32,
 			placeholder: 'Gene, position, SNP, app, or dataset',
@@ -196,7 +196,7 @@ export class AppHeader {
 			.attr('title', 'Select a genome')
 			.attr('class', 'sjpp-genome-select')
 			.style('padding', padw_input)
-			.style('border', 'solid 1px ' + common.defaultcolor)
+			.style('border', 'solid 1px ' + defaultcolor)
 			.on('change', () => {
 				this.update_genome_browser_btn(this.app)
 				omniSearch.updatePlaceholder(get_placeholder())
