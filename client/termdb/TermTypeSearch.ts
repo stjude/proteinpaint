@@ -30,9 +30,7 @@ const useCasesExcluded = {
 	dataDownload: [
 		//TermTypeGroups.SNP_LOCUS, //this tabs require that the handler for this term type to be implemented
 		//TermTypeGroups.SNP_LIST, //this tabs require that the handler for this term type to be implemented
-		TermTypeGroups.MUTATION_CNV_FUSION,
-		TermTypeGroups.GENE_EXPRESSION,
-		TermTypeGroups.METABOLITE_INTENSITY
+		TermTypeGroups.MUTATION_CNV_FUSION
 	], //Later on can support other term types like snplocus, snplst, geneVariant, non dictionary terms
 	survival: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
