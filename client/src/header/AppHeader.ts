@@ -171,8 +171,6 @@ export class AppHeader {
 			size: 32,
 			placeholder: 'Gene, position, SNP, app, or dataset',
 			title: 'Search by gene, SNP, position, app, or dataset',
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
 			searchItems: async () => {
 				return await searchItems(this.app, this.headtip, AppHeader.help, this.publications, this.jwt)
 			}

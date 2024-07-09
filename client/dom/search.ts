@@ -23,7 +23,8 @@ type SearchGroupEntry = {
 
 type InputSearchOpts = {
 	holder: Elem
-	searchItems: () => SearchGroupEntry[]
+	/** can be async or synchronous search */
+	searchItems: () => Promise<SearchGroupEntry[]> | SearchGroupEntry[]
 	app?: any
 	/** Menu tip. If not provided, created by default */
 	tip?: any
@@ -39,7 +40,7 @@ export class InputSearch {
 	holder: Elem
 	input: Input
 	tip: any
-	searchItems: () => SearchGroupEntry[]
+	searchItems: () => Promise<SearchGroupEntry[]> | SearchGroupEntry[]
 	style: any
 	size: number
 	placeholder: string
