@@ -7,5 +7,10 @@
     "module": "esnext",
     "moduleResolution": "bundler" // to skip errors related to import of types from ts files
   },
-  "include": ["./**/*.ts"]
+  "include": ["./**/*.ts"],
+  "exclude": [
+    "./**/geneVariant.ts", 
+    "./**/singleCellGeneExpression.ts",
+    "./**/hic.app.integration.spec-manual.ts"
+  ]
 }
