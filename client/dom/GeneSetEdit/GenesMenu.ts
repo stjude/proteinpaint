@@ -6,14 +6,14 @@ type GenesMenuArgs = {
 	tip: Menu
 	params: any
 	api: any
-	callback: () => void
+	callback: (f?: number) => void
 }
 
 export class GenesMenu {
 	tip: Menu
 	params: any
 	api: any
-	callback: () => void
+	callback: (f?: number) => void
 
 	constructor(opts: GenesMenuArgs) {
 		this.tip = opts.tip
@@ -21,7 +21,7 @@ export class GenesMenu {
 		this.api = opts.api
 		this.callback = opts.callback
 
-		this.tip.d.style('padding', '10px')
+		this.tip.d.style('padding', '15px')
 
 		this.render()
 	}
@@ -33,9 +33,12 @@ export class GenesMenu {
 		}
 
 		addButton({
-			div: this.tip.d,
+			div: this.tip.d.append('div').style('padding', '10px'),
 			text: 'Calculate genes',
-			callback: this.callback
+			callback: async () => {
+				await this.callback()
+				this.tip.hide()
+			}
 		})
 	}
 
@@ -52,7 +55,7 @@ export class GenesMenu {
 			input.property('checked', true)
 			div.append('label').html(param.label).attr('for', param.id)
 		} else if (param.type == 'number') {
-			input = div.append('input').attr('type', 'number').style('width', '40px').attr('id', param.id)
+			input = div.append('input').attr('type', 'number').style('width', '50px').attr('id', param.id)
 			if (param.value) input.attr('value', param.value)
 			div.append('span').html(param.label)
 		}

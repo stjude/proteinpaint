@@ -6,6 +6,7 @@ import { Button, Div, Elem, _Element_ } from 'types/d3'
 import { ClientCopyGenome } from 'types/global'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
+import { GeneArguments } from '../../shared/types/dataset.ts'
 
 type API = {
 	dom: {
@@ -29,15 +30,16 @@ type API = {
 	 * Derived from termdbConfig.queries.topMutatedGenes.arguments
 	 * input for the param is add in the gene set menu
 	 */
-	topMutatedGenesParams: any[]
+	topMutatedGenesParams: { param: GeneArguments; input?: any }[]
 	/** Derived from termdbConfig.queries.topVariablyExpressedGenes.arguments
 	 * input for the param is add in the gene set menu
 	 */
-	topVariablyExpressedGenesParams: any[]
+	topVariablyExpressedGenesParams: { param: GeneArguments; input?: any }[]
 	/** while rendering each gene button, if gene stat is available,
 	 * it records color and labels for each color,
 	 * to be shown in statLegendDiv */
 	statColor2label: Map<string, any>
+	/** destory the original menu (i.e. tip == opts.holder) */
 	destroy: (_obj) => void
 }
 
@@ -53,7 +55,9 @@ type CallbackArg = {
 type GeneSetEditArg = {
 	holder: Elem
 	genome: ClientCopyGenome
-	/** if provided, allow to load top variably mutated or expressed genes; later can be union of multiple mode strings */
+	/** Optional: if provided, allow to load top variably mutated or expressed genes;
+	 * if not provided, only allow to add genes manually
+	 * later can be union of multiple mode strings */
 	mode?: 'expression' | 'mutation'
 	minNumGenes?: number
 	callback: (arg: CallbackArg) => void
@@ -69,7 +73,7 @@ export class GeneSetEditUI {
 	/** termdb */
 	vocabApi: any
 	tip2: Menu
-	origLst: { gene: string; mutationStat?: { class: string; count: number }[] | undefined }[]
+	origLst: Gene[]
 	origNames: string
 	api: API
 	geneSearch: any //cheating
@@ -77,10 +81,7 @@ export class GeneSetEditUI {
 	menuList: { label: string; callback: (f?: any) => void }[]
 	mode?: 'expression' | 'mutation'
 	minNumGenes?: number
-	geneList: {
-		gene: string
-		mutationStat?: { class: string; count: number }[]
-	}[]
+	geneList: Gene[]
 	titleText?: string
 
 	constructor(opts: GeneSetEditArg) {
@@ -180,9 +181,7 @@ export class GeneSetEditUI {
 	}
 
 	getParams() {
-		// if (this.mode == 'mutation' && this.vocabApi.termdbConfig?.queries?.topMutatedGenes) {
-		//for testing
-		if (this.vocabApi.termdbConfig?.queries?.topMutatedGenes) {
+		if (this.mode == 'mutation' && this.vocabApi.termdbConfig?.queries?.topMutatedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topMutatedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topMutatedGenes.arguments)
 					this.api.topMutatedGenesParams.push({ param })
@@ -199,14 +198,14 @@ export class GeneSetEditUI {
 	createMenuList() {
 		if (this.api?.topMutatedGenesParams.length > 0) {
 			this.menuList.push({
-				label: 'Top mutated genes &#9660;',
+				label: 'Top mutated genes',
 				callback: async () => {
 					this.tip2.clear().showunder(this.api.dom.textControlDiv.node())
 					new GenesMenu({
 						tip: this.tip2,
 						params: this.api.topMutatedGenesParams,
 						api: this.api,
-						callback: async () => {
+						callback: async value => {
 							const args = {
 								filter0: this.vocabApi.state.termfilter.filter0
 							}
@@ -226,23 +225,26 @@ export class GeneSetEditUI {
 		}
 		if (this.api?.topVariablyExpressedGenesParams.length > 0) {
 			this.menuList.push({
-				label: 'Top variably expressed genes &#9660;',
+				label: 'Top variably expressed genes',
 				callback: () => {
 					this.tip2.clear().showunder(this.api.dom.textControlDiv.node())
 					new GenesMenu({
 						tip: this.tip2,
 						params: this.api.topVariablyExpressedGenesParams,
 						api: this.api,
-						callback: async () => {
+						callback: async value => {
 							const args: any = {
 								genome: this.vocabApi.state.vocab.genome,
-								dslabel: this.vocabApi.state.vocab.dslabel,
-								maxGenes: 50
+								dslabel: this.vocabApi.state.vocab.dslabel
 							}
 							// supply filters from app state
 							if (this.vocabApi.state.termfilter) {
 								if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
 								if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
+							}
+							for (const { param, input } of this.api.topVariablyExpressedGenesParams) {
+								const id = input.attr('id')
+								args[id] = this.getInputValue({ param, input })
 							}
 							const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
 
@@ -267,7 +269,7 @@ export class GeneSetEditUI {
 			for (const key in this.genome.termdbs) {
 				const tdb = this.genome.termdbs[key]
 				this.menuList.push({
-					label: `${tdb.label} gene set &#9660;`,
+					label: `${tdb.label} gene set`,
 					callback: async () => {
 						this.tip2.clear().showunder(this.api.dom.textControlDiv.node())
 						const termdb = await import('../../termdb/app.js')
@@ -306,7 +308,7 @@ export class GeneSetEditUI {
 				.style('text-decoration', 'underline')
 				.style('padding', '0px 10px')
 				.style('color', 'black')
-				.html(menu.label)
+				.html(`${menu.label} &#9660;`)
 				.on('click', async () => {
 					await menu.callback()
 				})
