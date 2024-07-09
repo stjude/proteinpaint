@@ -270,7 +270,7 @@ type NIdataQueryRefParams = {
 }
 
 /** used for the gene set edit ui */
-type GeneArguments = {
+export type GeneArguments = {
 	/** Dom element id
 	 * Use the cooresponding parameter name as the id
 	 */
