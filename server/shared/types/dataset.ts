@@ -271,15 +271,19 @@ type NIdataQueryRefParams = {
 
 /** used for the gene set edit ui */
 type GeneArguments = {
-	/** Dom element id */
+	/** Dom element id
+	 * Use the cooresponding parameter name as the id
+	 */
 	id: string
-	/** label/prompt appearring next to the checkbox, input, etc. */
+	/** label/prompt for the checkbox, input, etc. */
 	label: string
 	/** boolean and string creates a checkbox
 	 * number creates a text input
 	 */
 	type: boolean | string | number
-	/** value of the input or checkbox */
+	/** value of the input or checkbox
+	 * required if type is string. Otherwise, optional
+	 */
 	value: string | number
 }[]
 
