@@ -1353,8 +1353,7 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 	// the survival term itself is not used in api query, since there's just one type of survival data from gdc and no need to distinguish
 	const { host, headers } = ds.getHostHeaders(q)
 	const re = await ky
-		// hardcoded url in production environment. TODO check if works at all for qa environments
-		.post('https://portal.gdc.cancer.gov/auth/api/v0/analysis/survival', {
+		.post(path.join(host.rest, 'analysis/survival'), {
 			timeout: false,
 			headers,
 			json: { filters: [filter] }
