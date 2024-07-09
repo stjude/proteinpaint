@@ -607,7 +607,7 @@ function setTermActions(self) {
 		return self.config.chartType == 'hierCluster' && t.grp.type === 'hierCluster'
 			? '{remove,}'
 			: t.tw.term.type == 'geneVariant'
-			? '{replace,remove}'
+			? '{edit,replace,remove}'
 			: '*'
 	}
 
