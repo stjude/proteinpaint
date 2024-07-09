@@ -5,22 +5,34 @@ import { mclass, dt2color, dt2label } from '../../shared/common'
 import { Button, Div, Elem, _Element_ } from 'types/d3'
 import { ClientCopyGenome } from 'types/global'
 import { GenesMenu } from './GenesMenu'
+import { addButton } from './addButton.ts'
 
 type API = {
 	dom: {
 		tdbBtns: { [key: string]: any }
 		holder: Div
-		menuDiv: Div
+		/** text links above the gene holding div
+		 * Opens a menu to select genes from different datasets
+		 */
+		textControlDiv: Div
+		/** on click clears the gene holding div */
 		clearBtn: Button
 		restoreBtn: Button | null
 		/** gene holding area, shows bunch of gene buttons pending submission */
 		geneHoldingDiv: Div
 		/** legend area, to show available stats legend on genes */
 		statLegendDiv: Div
+		/** Submit button */
 		submitBtn: Button
 	}
-	/** originally .params */
+	/** originally .params and split into two
+	 * Derived from termdbConfig.queries.topMutatedGenes.arguments
+	 * input for the param is add in the gene set menu
+	 */
 	topMutatedGenesParams: any[]
+	/** Derived from termdbConfig.queries.topVariablyExpressedGenes.arguments
+	 * input for the param is add in the gene set menu
+	 */
 	topVariablyExpressedGenesParams: any[]
 	/** while rendering each gene button, if gene stat is available,
 	 * it records color and labels for each color,
@@ -117,17 +129,41 @@ export class GeneSetEditUI {
 
 		this.menuList = []
 
-		const textControlDiv = controlDiv.append('div')
 		this.api = {
 			dom: {
 				holder: div,
 				tdbBtns: {},
-				menuDiv: textControlDiv,
-				clearBtn: this.renderClearBtn(controlDiv),
-				restoreBtn: this.geneList?.length ? this.renderRestoreBtn(controlDiv) : null,
+				textControlDiv: controlDiv.append('div'),
+				clearBtn: addButton({
+					div: controlDiv,
+					text: 'Clear',
+					disabled: !this.geneList?.length,
+					callback: () => {
+						this.geneList = []
+						this.renderGenes()
+					}
+				}),
+				restoreBtn: this.geneList?.length
+					? addButton({
+							div: controlDiv,
+							disabled: true,
+							text: 'Restore',
+							callback: () => {
+								this.geneList = this.origLst
+								this.renderGenes()
+							}
+					  })
+					: null,
 				geneHoldingDiv: this.renderGeneHoldingDiv(div),
 				statLegendDiv: div.append('div'),
-				submitBtn: this.renderSubmitBtn(div)
+				submitBtn: addButton({
+					div: div.append('div').style('margin-top', '10px'),
+					text: 'Submit',
+					disabled: !this.geneList?.length,
+					callback: () => {
+						this.callback({ geneList: this.geneList })
+					}
+				})
 			},
 			topMutatedGenesParams: [],
 			topVariablyExpressedGenesParams: [],
@@ -139,7 +175,7 @@ export class GeneSetEditUI {
 
 		this.getParams()
 		this.createMenuList()
-		this.renderTextControls(textControlDiv)
+		this.renderTextControls(this.api.dom.textControlDiv)
 	}
 
 	getParams() {
@@ -161,28 +197,29 @@ export class GeneSetEditUI {
 
 	createMenuList() {
 		if (this.api?.topMutatedGenesParams.length > 0) {
-			this.tip2.clear().showunder(this.api.dom.menuDiv.node())
 			this.menuList.push({
 				label: 'Top mutated genes &#9660;',
 				callback: async () => {
+					this.tip2.clear().showunder(this.api.dom.textControlDiv.node())
 					new GenesMenu({
 						tip: this.tip2,
 						params: this.api.topMutatedGenesParams,
-						api: this.api
+						api: this.api,
+						callback: async () => {
+							const args = {
+								filter0: this.vocabApi.state.termfilter.filter0
+							}
+							for (const { param, input } of this.api.topMutatedGenesParams) {
+								const id = input.attr('id')
+								args[id] = this.getInputValue({ param, input })
+							}
+							const result = await this.vocabApi.getTopMutatedGenes(args)
+
+							this.geneList = []
+							this.geneList.push(...result.genes)
+							this.renderGenes()
+						}
 					})
-
-					// const args = {
-					// 	filter0: this.vocabApi.state.termfilter.filter0
-					// }
-					// for (const { param, input } of this.api.topMutatedGenesParams) {
-					// 	const id = input.attr('id')
-					// 	args[id] = this.getInputValue({ param, input })
-					// }
-					// const result = await this.vocabApi.getTopMutatedGenes(args)
-
-					// this.geneList = []
-					// this.geneList.push(...result.genes)
-					// this.renderGenes()
 				}
 			})
 		}
@@ -190,31 +227,31 @@ export class GeneSetEditUI {
 			this.menuList.push({
 				label: 'Top variably expressed genes &#9660;',
 				callback: () => {
+					this.tip2.clear().showunder(this.api.dom.textControlDiv.node())
 					new GenesMenu({
 						tip: this.tip2,
 						params: this.api.topVariablyExpressedGenesParams,
-						api: this.api
+						api: this.api,
+						callback: async () => {
+							const args: any = {
+								genome: this.vocabApi.state.vocab.genome,
+								dslabel: this.vocabApi.state.vocab.dslabel,
+								maxGenes: 50
+							}
+							// supply filters from app state
+							if (this.vocabApi.state.termfilter) {
+								if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
+								if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
+							}
+							const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
+
+							this.geneList = []
+							if (result.genes) {
+								for (const gene of result.genes) this.geneList.push({ gene })
+							}
+							this.renderGenes()
+						}
 					})
-
-					// event.target.disabled = true
-					// const args: any = {
-					// 	genome: this.vocabApi.state.vocab.genome,
-					// 	dslabel: this.vocabApi.state.vocab.dslabel,
-					// 	maxGenes: 50
-					// }
-					// // supply filters from app state
-					// if (this.vocabApi.state.termfilter) {
-					// 	if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
-					// 	if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
-					// }
-					// const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
-
-					// this.geneList = []
-					// if (result.genes) {
-					// 	for (const gene of result.genes) this.geneList.push({ gene })
-					// }
-					// this.renderGenes()
-					// event.target.disabled = false
 				}
 			})
 		}
@@ -230,8 +267,8 @@ export class GeneSetEditUI {
 				const tdb = this.genome.termdbs[key]
 				this.menuList.push({
 					label: `${tdb.label} gene set &#9660;`,
-					callback: async event => {
-						this.tip2.clear().showunder(event.target)
+					callback: async () => {
+						this.tip2.clear().showunder(this.api.dom.textControlDiv.node())
 						const termdb = await import('../../termdb/app.js')
 						termdb.appInit({
 							holder: this.tip2.d,
@@ -266,11 +303,11 @@ export class GeneSetEditUI {
 			div
 				.append('a')
 				.style('text-decoration', 'underline')
-				.style('padding', '0px 8px')
+				.style('padding', '0px 10px')
 				.style('color', 'black')
 				.html(menu.label)
-				.on('click', () => {
-					menu.callback()
+				.on('click', async () => {
+					await menu.callback()
 				})
 		}
 	}
@@ -304,28 +341,6 @@ export class GeneSetEditUI {
 		}
 	}
 
-	renderClearBtn(div: Div) {
-		return div
-			.append('button')
-			.property('disabled', !this.geneList?.length)
-			.text('Clear')
-			.on('click', () => {
-				this.geneList = []
-				this.renderGenes()
-			})
-	}
-
-	renderRestoreBtn(div: Div) {
-		return div
-			.append('button')
-			.property('disabled', true)
-			.text('Restore')
-			.on('click', () => {
-				this.geneList = this.origLst
-				this.renderGenes()
-			})
-	}
-
 	renderGeneHoldingDiv(div: Div) {
 		return div
 			.append('div')
@@ -335,7 +350,7 @@ export class GeneSetEditUI {
 			.style('gap', '5px')
 			.style('min-height', '20px')
 			.style('border', 'solid 1px #aaa')
-			.style('margin', '10px 0px')
+			.style('margin', '15px 0px')
 			.style('padding', '6px 2px')
 			.style('min-height', '30px')
 	}
@@ -357,17 +372,6 @@ export class GeneSetEditUI {
 			this.api.dom.statLegendDiv.append('span').html(` ${n} &nbsp;&nbsp;`)
 		}
 		return this.api.dom.statLegendDiv
-	}
-
-	renderSubmitBtn(div: Div) {
-		const footerDiv = div.append('div').style('margin-top', '10px')
-		return footerDiv
-			.append('button')
-			.property('disabled', !this.geneList?.length)
-			.text(`Submit`)
-			.on('click', () => {
-				this.callback({ geneList: this.geneList })
-			})
 	}
 
 	/** Functions supporting adding/removing genes from the geneHoldingDiv */
