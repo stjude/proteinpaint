@@ -25,8 +25,8 @@ Future plans:
 */
 
 type Opts = {
-	holder: HTMLElement // div holder for drag-and-drop
-	hideApply: boolean // whether to hide apply button
+	holder?: HTMLElement // div holder for drag-and-drop
+	hideApply?: boolean // whether to hide apply button
 }
 
 type ItemEntry = {
@@ -69,7 +69,7 @@ export class GroupSettingMethods {
 	data: { groups: GrpEntry[]; values: ItemEntry[] }
 	initGrpSetUI: any //func init for groupsetting UI
 
-	constructor(tsInstance, opts = {}) {
+	constructor(tsInstance, opts: Opts = {}) {
 		this.tsInstance = tsInstance
 		this.opts = opts
 		this.dom = {
@@ -91,6 +91,7 @@ export class GroupSettingMethods {
 			//returns found groups to data.groups and values for groups and excluded groups
 			this.formatCustomset(grpIdxes, input)
 		} else if (this.tsInstance.term.type == 'geneVariant') {
+			// @ts-expect-error, need to harmonize input data structure between dictionary term (no customset), geneVariant term (no custom set), and customset
 			const dt = input.find(i => i.dt == this.tsInstance.q.dt)
 			const classes = dt.classes.byOrigin ? dt.classes.byOrigin[this.tsInstance.q.origin] : dt.classes
 			const groupset = this.tsInstance.term.groupsetting.lst[this.tsInstance.q.groupsetting.predefined_groupset_idx]
@@ -109,6 +110,7 @@ export class GroupSettingMethods {
 							key,
 							label: mclass[key].label,
 							group: grpIdx,
+							// @ts-expect-error, will resolve when input data structure is harmonized (see above)
 							samplecount
 						})
 					}
@@ -208,6 +210,7 @@ export class GroupSettingMethods {
 							key,
 							label: mclass[key].label,
 							group: 0,
+							// @ts-expect-error, will resolve when input data structure is harmonized (see above)
 							samplecount
 						})
 					}
