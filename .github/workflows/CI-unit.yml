@@ -55,7 +55,8 @@ jobs:
           # !!! TODO: run type check at the proteinpaint dir !!!
           cd server 
           npx tsc
-          cd ..
+          cd ../client
+          npx tsc
 
       - name: Create server cache folder
         run: if [[ ! -d "server/cache" ]]; then mkdir server/cache; fi
