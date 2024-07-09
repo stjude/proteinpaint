@@ -1,9 +1,10 @@
-import { addGeneSearchbox } from '#dom/genesearch'
+import { addGeneSearchbox } from '../genesearch.ts'
 import { Menu } from '../menu'
 import { select } from 'd3-selection'
 import { mclass, dt2color, dt2label } from '../../shared/common'
 import { Button, Div, Elem, _Element_ } from 'types/d3'
 import { ClientCopyGenome } from 'types/global'
+import { GenesMenu } from './GenesMenu'
 
 type API = {
 	dom: {
@@ -20,7 +21,7 @@ type API = {
 	}
 	/** originally .params */
 	topMutatedGenesParams: any[]
-	topVariablyExpressedGeneParams: any[]
+	topVariablyExpressedGenesParams: any[]
 	/** while rendering each gene button, if gene stat is available,
 	 * it records color and labels for each color,
 	 * to be shown in statLegendDiv */
@@ -37,7 +38,7 @@ type CallbackArg = {
 type GeneSetEditArg = {
 	holder: Elem
 	genome: ClientCopyGenome
-	/** if provided, allow to load top variably expressed genes; later can be union of multiple mode strings */
+	/** if provided, allow to load top variably mutated or expressed genes; later can be union of multiple mode strings */
 	mode?: 'expression' | 'mutation'
 	minNumGenes?: number
 	callback: (arg: CallbackArg) => void
@@ -64,7 +65,7 @@ export class GeneSetEditUI {
 	menuList: { label: string; callback: (f?: any) => void }[]
 	mode?: 'expression' | 'mutation'
 	minNumGenes?: number
-	geneList?: {
+	geneList: {
 		gene: string
 		mutationStat?: { class: string; count: number }[]
 	}[]
@@ -115,13 +116,13 @@ export class GeneSetEditUI {
 		})
 
 		this.menuList = []
-		this.createMenuList(controlDiv)
 
+		const textControlDiv = controlDiv.append('div')
 		this.api = {
 			dom: {
 				holder: div,
 				tdbBtns: {},
-				menuDiv: this.renderTextControls(controlDiv),
+				menuDiv: textControlDiv,
 				clearBtn: this.renderClearBtn(controlDiv),
 				restoreBtn: this.geneList?.length ? this.renderRestoreBtn(controlDiv) : null,
 				geneHoldingDiv: this.renderGeneHoldingDiv(div),
@@ -129,69 +130,106 @@ export class GeneSetEditUI {
 				submitBtn: this.renderSubmitBtn(div)
 			},
 			topMutatedGenesParams: [],
-			topVariablyExpressedGeneParams: [],
+			topVariablyExpressedGenesParams: [],
 			statColor2label: new Map(),
 			destroy() {
 				opts.holder.remove()
 			}
 		}
+
+		this.getParams()
+		this.createMenuList()
+		this.renderTextControls(textControlDiv)
 	}
 
-	createMenuList(controlDiv: Div) {
-		if (this.mode == 'mutation' && this.vocabApi.termdbConfig?.queries?.topMutatedGenes) {
+	getParams() {
+		// if (this.mode == 'mutation' && this.vocabApi.termdbConfig?.queries?.topMutatedGenes) {
+		//for testing
+		if (this.vocabApi.termdbConfig?.queries?.topMutatedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topMutatedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topMutatedGenes.arguments)
-					this.addParameter(param, controlDiv, 'topMutatedGenesParams')
+					this.api.topMutatedGenesParams.push({ param })
 			}
+		}
+		if (this.mode == 'expression' && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
+			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
+				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments)
+					this.api.topVariablyExpressedGenesParams.push({ param })
+			}
+		}
+	}
+
+	createMenuList() {
+		if (this.api?.topMutatedGenesParams.length > 0) {
+			this.tip2.clear().showunder(this.api.dom.menuDiv.node())
 			this.menuList.push({
-				label: 'Top mutated genes',
+				label: 'Top mutated genes &#9660;',
 				callback: async () => {
-					const args = {
-						filter0: this.vocabApi.state.termfilter.filter0
-					}
-					for (const { param, input } of this.api.topMutatedGenesParams) {
-						const id = input.attr('id')
-						args[id] = this.getInputValue({ param, input })
-					}
-					const result = await this.vocabApi.getTopMutatedGenes(args)
+					new GenesMenu({
+						tip: this.tip2,
+						params: this.api.topMutatedGenesParams,
+						api: this.api
+					})
 
-					this.geneList = []
-					this.geneList.push(...result.genes)
-					this.renderGenes()
+					// const args = {
+					// 	filter0: this.vocabApi.state.termfilter.filter0
+					// }
+					// for (const { param, input } of this.api.topMutatedGenesParams) {
+					// 	const id = input.attr('id')
+					// 	args[id] = this.getInputValue({ param, input })
+					// }
+					// const result = await this.vocabApi.getTopMutatedGenes(args)
+
+					// this.geneList = []
+					// this.geneList.push(...result.genes)
+					// this.renderGenes()
 				}
 			})
 		}
-		if (this.mode == 'expression' && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGene) {
+		if (this.api?.topVariablyExpressedGenesParams.length > 0) {
 			this.menuList.push({
-				label: 'Top variably expressed genes',
-				callback: async event => {
-					event.target.disabled = true
-					const args: any = {
-						genome: this.vocabApi.state.vocab.genome,
-						dslabel: this.vocabApi.state.vocab.dslabel,
-						maxGenes: 50
-					}
-					// supply filters from app state
-					if (this.vocabApi.state.termfilter) {
-						if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
-						if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
-					}
-					const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
+				label: 'Top variably expressed genes &#9660;',
+				callback: () => {
+					new GenesMenu({
+						tip: this.tip2,
+						params: this.api.topVariablyExpressedGenesParams,
+						api: this.api
+					})
 
-					this.geneList = []
-					if (result.genes) {
-						for (const gene of result.genes) this.geneList.push({ gene })
-					}
-					this.renderGenes()
-					event.target.disabled = false
+					// event.target.disabled = true
+					// const args: any = {
+					// 	genome: this.vocabApi.state.vocab.genome,
+					// 	dslabel: this.vocabApi.state.vocab.dslabel,
+					// 	maxGenes: 50
+					// }
+					// // supply filters from app state
+					// if (this.vocabApi.state.termfilter) {
+					// 	if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
+					// 	if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
+					// }
+					// const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
+
+					// this.geneList = []
+					// if (result.genes) {
+					// 	for (const gene of result.genes) this.geneList.push({ gene })
+					// }
+					// this.renderGenes()
+					// event.target.disabled = false
 				}
 			})
 		}
+		//Placeholder code for future PR
+		// if (your.genesets) {
+		// 	this.menuList.push({
+		// 		label: `Your gene sets`,
+		// 		callback: async () => {}
+		// 	})
+		// }
 		if (this.genome?.termdbs?.msigdb) {
 			for (const key in this.genome.termdbs) {
 				const tdb = this.genome.termdbs[key]
 				this.menuList.push({
-					label: `Load ${tdb.label} gene set &#9660;`,
+					label: `${tdb.label} gene set &#9660;`,
 					callback: async event => {
 						this.tip2.clear().showunder(event.target)
 						const termdb = await import('../../termdb/app.js')
@@ -223,33 +261,39 @@ export class GeneSetEditUI {
 		}
 	}
 
-	renderTextControls(controlDiv: Div) {
-		const btnDiv = controlDiv.append('div')
+	renderTextControls(div: Div) {
 		for (const menu of this.menuList) {
-			controlDiv.append('a').style('text-decoration', 'underline').html(menu.label).on('click', menu.callback)
+			div
+				.append('a')
+				.style('text-decoration', 'underline')
+				.style('padding', '0px 8px')
+				.style('color', 'black')
+				.html(menu.label)
+				.on('click', () => {
+					menu.callback()
+				})
 		}
-		return btnDiv
 	}
 
-	addParameter(param, div: Div, apiParam: string) {
-		let input
-		if (param.type == 'boolean') {
-			input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
-			if (param.value) input.property('checked', param.value)
-			div.append('label').html(param.label).attr('for', param.id)
-		}
-		//The parameter value will be used as the input value if the option is checked
-		else if (param.type == 'string' && param.value) {
-			input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
-			input.property('checked', true)
-			div.append('label').html(param.label).attr('for', param.id)
-		} else if (param.type == 'number') {
-			input = div.append('input').attr('type', 'number').style('width', '40px').attr('id', param.id)
-			if (param.value) input.attr('value', param.value)
-			div.append('span').html(param.label)
-		}
-		this.api[`${apiParam}`].push({ param, input })
-	}
+	// addParameter(param, div: Div, apiParam: string) {
+	// 	let input
+	// 	if (param.type == 'boolean') {
+	// 		input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
+	// 		if (param.value) input.property('checked', param.value)
+	// 		div.append('label').html(param.label).attr('for', param.id)
+	// 	}
+	// 	//The parameter value will be used as the input value if the option is checked
+	// 	else if (param.type == 'string' && param.value) {
+	// 		input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
+	// 		input.property('checked', true)
+	// 		div.append('label').html(param.label).attr('for', param.id)
+	// 	} else if (param.type == 'number') {
+	// 		input = div.append('input').attr('type', 'number').style('width', '40px').attr('id', param.id)
+	// 		if (param.value) input.attr('value', param.value)
+	// 		div.append('span').html(param.label)
+	// 	}
+
+	// }
 
 	getInputValue({ param, input }) {
 		const value = input.node().value
@@ -322,7 +366,6 @@ export class GeneSetEditUI {
 			.property('disabled', !this.geneList?.length)
 			.text(`Submit`)
 			.on('click', () => {
-				if (!this.geneList) throw `geneList is not defined [GeneSetEdit renderSubmitBtn()]`
 				this.callback({ geneList: this.geneList })
 			})
 	}
@@ -330,7 +373,6 @@ export class GeneSetEditUI {
 	/** Functions supporting adding/removing genes from the geneHoldingDiv */
 	addGene() {
 		const gene = this.geneSearch.geneSymbol
-		if (!this.geneList) throw `geneList is not defined [GeneSetEdit addGene()]`
 		for (const item of this.geneList) {
 			if (item.gene == gene) {
 				window.alert(`The gene ${gene} has already been added`)
@@ -342,7 +384,6 @@ export class GeneSetEditUI {
 	}
 
 	renderGenes() {
-		if (!this.geneList) throw `geneList is not defined [GeneSetEdit renderGenes()]`
 		const hasStat = this.geneList.some(g => g.mutationStat)
 		if (!hasStat)
 			this.geneList.sort((a, b) => {
@@ -444,15 +485,14 @@ export class GeneSetEditUI {
 					.text(m.count)
 			}
 			/* enable different types of gene stats this way
-        } else if(gene.expStat) {
-        */
+		} else if(gene.expStat) {
+		*/
 		} else {
 			div.insert('div').style('display', 'inline-block').html(gene.gene)
 		}
 	}
 
 	deleteGene(d) {
-		if (!this.geneList) throw `geneList is not defined [GeneSetEdit deleteGene()]`
 		const i = this.geneList.findIndex(g => g.gene === d.gene)
 		if (i != -1) {
 			this.geneList.splice(i, 1)
