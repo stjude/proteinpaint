@@ -6,7 +6,6 @@ import { appDrawerInit } from '../../appdrawer/app.js'
 import { rgb as d3rgb } from 'd3-color'
 import * as common from '../../shared/common.js'
 import { Menu } from '../../dom/menu.js'
-import * as client from '../client'
 import { dofetch3 } from '#common/dofetch'
 
 type AppHeaderOpts = {
@@ -131,7 +130,7 @@ export class AppHeader {
 						const div = this.headtip.d.append('div').style('margin', '10px')
 						const wait = div.append('div').text('Loading...')
 						try {
-							const data = await client.dofetch2('blat?serverstat=1')
+							const data = await dofetch3('blat?serverstat=1')
 							if (data.error) throw data.error
 							if (!data.lst) throw 'invalid response'
 							wait.remove()
@@ -258,7 +257,7 @@ export class AppHeader {
 			.text('Publications')
 			.on('click', async event => {
 				const p = event.target.getBoundingClientRect()
-				const div = this.headtip.clear().show(p.left - 0, p.top + p.height + 5)
+				const div = this.headtip.clear().show(p.left - 150, p.top + p.height + 5)
 
 				await div.d
 					.append('div')

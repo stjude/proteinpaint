@@ -3,7 +3,7 @@
         {
             "id": 1001,
             "title": "Exploring genomic alteration in pediatric cancer using ProteinPaint",
-            "appHeaderTitle":"ProteinPaint: Zhou X etc",
+            "appHeaderTitle":"ProteinPaint: Zhou X et al",
             "year": "2016",
             "journal": "Nature Genetics",
             "pmid": "26711108",
@@ -12,7 +12,7 @@
         {
             "id": 1002,
             "title": "Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint",
-            "appHeaderTitle":"GenomePaint: Zhou X etc",
+            "appHeaderTitle":"GenomePaint: Zhou X et al",
             "year": "2021",
             "journal": "Cancer Cell",
             "pmid": "33434514",
@@ -31,7 +31,7 @@
         {
             "id": 1004,
             "title": "ppBAM: ProteinPaint BAM track for read alignment visualization and variant genotyping",
-            "appHeaderTitle":"ppBAM: Paul R etc",
+            "appHeaderTitle":"ppBAM: Paul R et al",
             "year": "2023",
             "journal": "Bioinformatics",
             "pmid": "37140547",
@@ -41,7 +41,7 @@
         {
             "id": 1005,
             "title": "St. Jude Survivorship Portal: sharing and analyzing large clinical and genomic datasets from pediatric cancer survivors",
-            "appHeaderTitle":"Survivorship Portal: Matt G etc",
+            "appHeaderTitle":"Survivorship Portal: Matt G et al",
             "year": "2024",
             "journal": "Cancer Discovery",
             "pmid": "38593228",
