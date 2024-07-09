@@ -43,6 +43,7 @@ querySamples_gdcapi
 	querySamplesTwlstForGeneexpclustering
 	querySamplesTwlstNotForGeneexpclustering
 	querySamplesSurvival
+		addSsmIsoformRegion4filter
 	flattenCaseByFields
 		mayApplyGroupsetting
 	may_add_readdepth
@@ -1314,19 +1315,24 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	// step 3: querying survival data
 
 	if (survivalTwLst.length) {
-		await querySamplesSurvival(q, survivalTwLst, ds, samples)
+		await querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst)
 	}
 
 	return { byTermId, samples }
 }
 
-async function querySamplesSurvival(q, survivalTwLst, ds, samples) {
+async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 	// build survival api filter
-	// XXX FIXME may not be sufficiently limiting cases by filter
 	const filter = { op: 'and', content: [] }
 	if (q.filter0) {
 		filter.content.push(q.filter0)
 	}
+
+	if (geneTwLst) q.isoforms = mapGenes2isoforms(geneTwLst, q.genome)
+
+	addSsmIsoformRegion4filter(filter.content, q, 'survival')
+
+	delete q.isoforms
 
 	if (q.set_id) {
 		if (typeof q.set_id != 'string') throw '.set_id value not string'
@@ -1347,6 +1353,7 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples) {
 	// the survival term itself is not used in api query, since there's just one type of survival data from gdc and no need to distinguish
 	const { host, headers } = ds.getHostHeaders(q)
 	const re = await ky
+		// hardcoded url in production environment. TODO check if works at all for qa environments
 		.post('https://portal.gdc.cancer.gov/auth/api/v0/analysis/survival', {
 			timeout: false,
 			headers,
@@ -1380,36 +1387,41 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples) {
 		}
 		// assign survival data for this sample
 		s[survivalTwLst[0].term.id] = {
-			key: d.censored ? 1 : 0,
+			key: d.censored ? 0 : 1,
 			value: d.time // TODO convert to years
 		}
 	}
 }
 
+function mapGenes2isoforms(geneTwLst, genome) {
+	if (!Array.isArray(geneTwLst)) throw 'geneTwLst not array'
+	const isoforms = []
+	for (const tw of geneTwLst) {
+		if (!tw?.term?.name) throw 'gene tw missing .term.name'
+		if (tw.term.isoform) {
+			// may need to convert refseq to gencode
+			isoforms.push(tw.term.isoform)
+		} else {
+			// convert
+			if (typeof genome != 'object') throw 'serverside genome obj missing, needed to map gene name to canonical isoform'
+			if (!genome?.genedb?.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
+			const data = genome.genedb.get_gene2canonicalisoform.get(tw.term.name)
+			if (!data?.isoform) {
+				// no isoform found
+				continue
+			}
+			isoforms.push(data.isoform)
+		}
+	}
+	return isoforms
+}
+
 async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst) {
 	// not for gene exp clustering
+
 	if (geneTwLst) {
-		if (!Array.isArray(geneTwLst)) throw 'geneTwLst not array'
-		// temporarily create q.isoforms[] to do ssm query
-		q.isoforms = []
-		for (const tw of geneTwLst) {
-			if (!tw?.term?.name) throw 'gene tw missing .term.name'
-			if (tw.term.isoform) {
-				// may need to convert refseq to gencode
-				q.isoforms.push(tw.term.isoform)
-			} else {
-				// convert
-				if (typeof q.genome != 'object')
-					throw 'serverside genome obj missing, needed to map gene name to canonical isoform'
-				if (!q.genome?.genedb?.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
-				const data = q.genome.genedb.get_gene2canonicalisoform.get(tw.term.name)
-				if (!data?.isoform) {
-					// no isoform found
-					continue
-				}
-				q.isoforms.push(data.isoform)
-			}
-		}
+		// temporarily create q.isoforms[] to do ssm query; will be deleted after query completes
+		q.isoforms = mapGenes2isoforms(geneTwLst, q.genome)
 	}
 
 	const fieldset = new Set(dictTwLst.map(tw => tw.term.id)) // set of fields to request from ssm_occurrences api. tolerate insertion of duplicating fields
@@ -2375,75 +2387,7 @@ const isoform2ssm_query2_getcase = {
 			case_filters: { op: 'and', content: [] }
 		}
 
-		/* if query provides isoform, rglst[] can be used alongside isoform to restrict ssm to part of isoform (when zoomed in)
-		if no ssm or isoform, rglst[] must be provided (querying from genomic mode)
-		*/
-		let hasSsmOrIsoform = false
-
-		if (p.ssm_id_lst) {
-			if (typeof p.ssm_id_lst != 'string') throw 'ssm_id_lst not string'
-			f.filters.content.push({
-				op: '=',
-				content: {
-					field: 'ssm.ssm_id',
-					value: p.ssm_id_lst.split(',')
-				}
-			})
-			hasSsmOrIsoform = true
-		} else if (p.isoform) {
-			f.filters.content.push({
-				op: '=',
-				content: {
-					field: 'ssms.consequence.transcript.transcript_id',
-					value: [p.isoform]
-				}
-			})
-			hasSsmOrIsoform = true
-		} else if (p.isoforms) {
-			if (!Array.isArray(p.isoforms)) throw '.isoforms[] not array'
-			f.filters.content.push({
-				op: 'in',
-				content: { field: 'ssms.consequence.transcript.transcript_id', value: p.isoforms }
-			})
-			hasSsmOrIsoform = true
-		}
-
-		{
-			let r
-			if (p.rglst) {
-				// !!!hardcoded to only one region!!!
-				r = p.rglst[0]
-				validateRegion(r)
-			}
-			if (hasSsmOrIsoform) {
-				if (r) {
-					// rglst[] is optional in this case; to filter out variants that are out of view range (e.g. zoomed in on protein) necessary when zooming in
-					f.filters.content.push({
-						op: '>=',
-						content: { field: 'ssms.start_position', value: r.start }
-					})
-					f.filters.content.push({
-						op: '<=',
-						content: { field: 'ssms.start_position', value: r.stop }
-					})
-				}
-			} else {
-				// rglst is required now
-				if (!r) throw '.ssm_id_lst, .isoform, .isoforms, .rglst[] are all missing'
-				f.filters.content.push({
-					op: '=',
-					content: { field: 'ssms.chromosome', value: r.chr }
-				})
-				f.filters.content.push({
-					op: '>=',
-					content: { field: 'ssms.start_position', value: r.start }
-				})
-				f.filters.content.push({
-					op: '<=',
-					content: { field: 'ssms.start_position', value: r.stop }
-				})
-			}
-		}
+		addSsmIsoformRegion4filter(f.filters.content, p, 'ssm_occurrences')
 
 		if (p.set_id) {
 			if (typeof p.set_id != 'string') throw '.set_id value not string'
@@ -2465,6 +2409,103 @@ const isoform2ssm_query2_getcase = {
 		addTid2value_to_filter(p.tid2value, f.case_filters.content, ds)
 		if (!f.case_filters.content.length) delete f.case_filters // do not use empty case_filters to speed up query (Jason Stiles 3/28/24)
 		return f
+	}
+}
+
+const endpoint2fields = {
+	ssm_occurrences: {
+		ssmid: 'ssm.ssm_id',
+		transcriptid: 'ssms.consequence.transcript.transcript_id',
+		start: 'ssms.start_position',
+		chr: 'ssms.chromosome'
+	},
+	survival: {
+		// Phil 7/8/24: survival endpoint case filtering are done through fields of https://api.gdc.cancer.gov/case_ssms/_mapping
+		ssmid: 'gene.ssm.ssm_id',
+		transcriptid: 'gene.ssm.consequence.transcript.annotation.transcript_id',
+		start: 'gene.ssm.start_position',
+		chr: 'gene.ssm.chromosome'
+	}
+}
+
+/*
+contentLst[]
+	- to which clauses of ssm/isoform/region filters will be added
+p{}
+	request param
+endpoint
+	the function is reusable for two endpoints: ssm_occurrences, survival. however each uses different field values
+*/
+function addSsmIsoformRegion4filter(contentLst, p, endpoint) {
+	const fields = endpoint2fields[endpoint]
+	if (!fields) throw 'unknown endpoint for looking up fields'
+
+	/* if query provides isoform, rglst[] can be used alongside isoform to restrict ssm to part of isoform (when zoomed in)
+		if no ssm or isoform, rglst[] must be provided (querying from genomic mode)
+		*/
+	let hasSsmOrIsoform = false
+
+	if (p.ssm_id_lst) {
+		if (typeof p.ssm_id_lst != 'string') throw 'ssm_id_lst not string'
+		contentLst.push({
+			op: '=',
+			content: {
+				field: fields.ssmid,
+				value: p.ssm_id_lst.split(',')
+			}
+		})
+		hasSsmOrIsoform = true
+	} else if (p.isoform) {
+		contentLst.push({
+			op: '=',
+			content: {
+				field: fields.transcriptid,
+				value: [p.isoform]
+			}
+		})
+		hasSsmOrIsoform = true
+	} else if (p.isoforms) {
+		if (!Array.isArray(p.isoforms)) throw '.isoforms[] not array'
+		contentLst.push({
+			op: 'in',
+			content: { field: fields.transcriptid, value: p.isoforms }
+		})
+		hasSsmOrIsoform = true
+	}
+
+	let r
+	if (p.rglst) {
+		// !!!hardcoded to only one region!!!
+		r = p.rglst[0]
+		validateRegion(r)
+	}
+	if (hasSsmOrIsoform) {
+		if (r) {
+			// rglst[] is optional in this case; to filter out variants that are out of view range (e.g. zoomed in on protein) necessary when zooming in
+			contentLst.push({
+				op: '>=',
+				content: { field: fields.start, value: r.start }
+			})
+			contentLst.push({
+				op: '<=',
+				content: { field: fields.start, value: r.stop }
+			})
+		}
+	} else {
+		// rglst is required now
+		if (!r) throw '.ssm_id_lst, .isoform, .isoforms, .rglst[] are all missing'
+		contentLst.push({
+			op: '=',
+			content: { field: fields.chr, value: r.chr }
+		})
+		contentLst.push({
+			op: '>=',
+			content: { field: fields.start, value: r.start }
+		})
+		contentLst.push({
+			op: '<=',
+			content: { field: fields.start, value: r.stop }
+		})
 	}
 }
 
