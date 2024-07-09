@@ -50,7 +50,11 @@ export async function searchItems(app, tip, help, publications, jwt) {
 	data.push({
 		title: 'Publications',
 		default: false,
-		items: publications.filter(d => d.title.toLowerCase().includes(userInput.toLowerCase())),
+		items: publications.filter(
+			d =>
+				d.title.toLowerCase().includes(userInput.toLowerCase()) ||
+				d.appHeaderTitle.toLowerCase().includes(userInput.toLowerCase())
+		),
 		color: '#E6E6FA',
 		callback: d => {
 			window.open(d.doi, d.title)

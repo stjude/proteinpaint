@@ -71,7 +71,8 @@ export class AppHeader {
 	async createPublicationsList() {
 		const re = await dofetch3(this.app.cardsPath + '/citations.json')
 		if (re.error) console.error(`Problem retrieving ../cards/citations.json`)
-		this.publications = re.publications
+		//Sort in reverse chronological order for the publications button
+		this.publications = re.publications.filter(d => d.appHeaderTitle).sort((a, b) => b.year - a.year)
 	}
 
 	async makeheader() {
@@ -266,7 +267,7 @@ export class AppHeader {
 					.data(this.publications)
 					.enter()
 					.append('p')
-					.html((d: any) => `<a href=${d.doi} target=_blank>${d.title}</a>`)
+					.html((d: any) => `<a href=${d.doi} target=_blank>${d.appHeaderTitle}, ${d.journal}, ${d.year}</a>`)
 			})
 	}
 
