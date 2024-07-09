@@ -912,7 +912,7 @@ async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 	for (const id of ids) {
 		if (!terms[id]) throw `missing dictionary term for id=${id}`
 		for (const tw of twlst) {
-			if (tw.id in terms) tw.term = terms[tw.id]
+			if (tw.id && tw.id in terms) tw.term = terms[tw.id]
 		}
 	}
 }

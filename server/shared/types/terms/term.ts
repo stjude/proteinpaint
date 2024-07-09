@@ -131,8 +131,6 @@ export type GroupSetting = {
 }
 
 export type BaseQ = {
-	groups?: any // Not documented but appears in condition and samplelst?? same as groupsetting?
-	groupsetting?: GroupSetting
 	/**Automatically set by fillTermWrapper()
 	Applies to barchart, survival plot, and cuminc plot.
 	Contains categories of a term to be hidden in its chart. This should only apply to client-side rendering, and should not be part of “dataName” when requesting data from server. Server will always provide a summary for all categories. It’s up to the client to show/hide categories.
@@ -142,9 +140,8 @@ export type BaseQ = {
 	hiddenValues?: HiddenValues
 	/**indicates this object should not be extended by a copy-merge tool */
 	isAtomic?: boolean
-	/** Describes list of custom bins. */
-	lst?: RangeEntry[]
 	name?: string
+
 	mode?:
 		| 'discrete'
 		/** Binary is a special case of discrete. */

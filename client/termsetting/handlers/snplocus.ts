@@ -78,7 +78,7 @@ async function makeEditMenu(self, div0: any) {
 		genome: self.opts.genomeObj,
 		tip: self.dom.tip2,
 		row: div.append('div').style('margin-top', '20px'),
-		defaultCoord: self.q && self.q.chr ? { chr: self.q.chr, start: self.q.start, stop: self.q.stop } : null
+		defaultCoord: self.q && self.q.chr ? { chr: self.q.chr, start: self.q.start, stop: self.q.stop } : undefined
 	})
 
 	div.select('.sja_genesearchinput').style('margin', '0px')

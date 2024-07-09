@@ -59,6 +59,7 @@ export type CategoricalQ = BaseQ & (CategoricalValuesObject | GroupSet)
  * @category TW
  */
 export type CategoricalTW = BaseTW & {
+	id: string
 	term: CategoricalTerm
 	q: CategoricalQ
 }
