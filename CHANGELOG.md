@@ -8,6 +8,8 @@ Features:
 - Support inputing custom CNV segments in mds3 tk, improve cnv rendering
 - Support overall survival data from gdc
 - New Publications button in the ProteinPaint header. Results are searchable in the omnisearch.
+- support drag-and-drop groupsetting for geneVariant term
+- support geneVariant term in regression analysis
 
 Fixes:
 - provide null values to brush range if there is no selection on brushing

@@ -1,3 +1,1 @@
-Features
-- support drag-and-drop groupsetting for geneVariant term
-- support geneVariant term in regression analysis
+
