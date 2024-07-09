@@ -37,7 +37,7 @@ export async function searchItems(app, tip, help, publications, jwt) {
 		}
 	]
 	await findAppDrawerElements(app, userInput, data, tip)
-	//Keep 'Help' section last
+	//Keep 'Help' section second last
 	data.push({
 		title: 'Help',
 		default: false,
@@ -47,14 +47,12 @@ export async function searchItems(app, tip, help, publications, jwt) {
 			window.open(d.link, d.label)
 		}
 	})
-	console.log(publications, help)
 	data.push({
 		title: 'Publications',
 		default: false,
 		items: publications.filter(d => d.title.toLowerCase().includes(userInput.toLowerCase())),
 		color: '#E6E6FA',
 		callback: d => {
-			console.log(d)
 			window.open(d.doi, d.title)
 		}
 	})
