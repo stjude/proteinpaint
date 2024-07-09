@@ -2,8 +2,6 @@ import { VocabApi } from '../shared/types/vocab.ts'
 import { Filter } from '../shared/types/filter.ts'
 import { Q, TermWrapper } from '../shared/types/terms/tw'
 import { Term } from '../shared/types/terms/term'
-import { CategoricalTerm, CategoricalQ, CategoricalTW } from '../shared/types/terms/categorical.ts'
-import { NumericTerm, NumericQ, NumericTW } from '../shared/types/terms/numeric.ts'
 
 /*
 

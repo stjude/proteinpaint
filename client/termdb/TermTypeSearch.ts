@@ -113,7 +113,7 @@ export class TermTypeSearch {
 			tabs: this.tabs
 		}).main()
 
-		for (const [i, d] of this.tabs.entries()) {
+		for (const [i] of this.tabs.entries()) {
 			const holder = this.tabs[i].contentHolder.style('padding-left', '20px')
 			holder.append('div')
 		}

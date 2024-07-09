@@ -1,5 +1,4 @@
 import { NumericQ, PresetNumericBins } from '../../shared/types/terms/numeric'
-import { BaseQ } from '../../shared/types/terms/term'
 import { VocabApi } from '../../shared/types/index'
 import { GeneExpressionTW } from '../../shared/types/terms/geneExpression.js'
 import { copyMerge } from '../../rx'
