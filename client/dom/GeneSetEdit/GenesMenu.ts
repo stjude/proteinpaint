@@ -1,21 +1,25 @@
 import { Menu } from '../menu'
 import { Div } from '../../types/d3'
+import { addButton } from './addButton.ts'
 
 type GenesMenuArgs = {
 	tip: Menu
 	params: any
 	api: any
+	callback: () => void
 }
 
 export class GenesMenu {
 	tip: Menu
 	params: any
 	api: any
+	callback: () => void
 
 	constructor(opts: GenesMenuArgs) {
 		this.tip = opts.tip
 		this.params = opts.params
 		this.api = opts.api
+		this.callback = opts.callback
 
 		this.tip.d.style('padding', '10px')
 
@@ -24,8 +28,15 @@ export class GenesMenu {
 
 	render() {
 		for (const param of this.params) {
-			this.addParameter(param.param, this.tip.d.append('div'))
+			const input = this.addParameter(param.param, this.tip.d.append('div'))
+			param.input = input
 		}
+
+		addButton({
+			div: this.tip.d,
+			text: 'Calculate genes',
+			callback: this.callback
+		})
 	}
 
 	addParameter(param, div: Div) {
@@ -45,5 +56,6 @@ export class GenesMenu {
 			if (param.value) input.attr('value', param.value)
 			div.append('span').html(param.label)
 		}
+		return input
 	}
 }
