@@ -9,11 +9,14 @@ const notifyDiv = select('body')
 	.style('right', '10px')
 	.style('font-size', '1.2em')
 	.style('background-color', 'rgba(250, 250, 250, 0.75)')
+	.style('z-index', 10000)
 
-let lastTimeStamp = 0
+let lastReload = 0
+
 sse.onmessage = event => {
+	// track last reload to prevent triggering infinite reload loop
+	if (lastReload === 0) lastReload = event.timeStamp
 	const data = JSON.parse(event.data) //; console.log(data)
-	const cls = 'sjpp-notification-banner'
 	const divs = notifyDiv.selectAll(`:scope>div`).data(data, d => d.key)
 
 	divs.exit().remove()
@@ -22,13 +25,14 @@ sse.onmessage = event => {
 		.style('border', d => `1px solid ${d.color || '#000'}`)
 		.html(d => `${d.key}: ${d.message}`)
 		.each(function (d) {
-			if (d.duration)
+			if (d.reload && event.timeStamp > lastReload) window.location.reload()
+			else if (d.duration) {
 				setTimeout(() => select(this).transition().duration(d.duration).style('opacity', 0).remove(), d.duration)
+			}
 		})
 	divs
 		.enter()
 		.append('div')
-		.attr('class', cls)
 		.style('margin', '5px')
 		.style('padding', '5px')
 		.style('border', d => `1px solid ${d.color || '#000'}`)
@@ -38,8 +42,10 @@ sse.onmessage = event => {
 			//select(this).remove()
 		})
 		.each(function (d) {
-			if (d.duration)
+			if (d.reload && event.timeStamp > lastReload) window.location.reload()
+			else if (d.duration) {
 				setTimeout(() => select(this).transition().duration(d.duration).style('opacity', 0).remove(), d.duration)
+			}
 		})
 }
 
