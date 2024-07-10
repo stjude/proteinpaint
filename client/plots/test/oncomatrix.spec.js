@@ -329,9 +329,9 @@ tape('2 geneVariant, 2 dict terms, 1 gene exp, 1 survival', function (test) {
 	async function runTests(matrix) {
 		matrix.on('postRender.test', null)
 
-		const numSeries = termlst2.length + 2 // why must plus 2?
+		const numSeries = termlst2.length
 		test.equal(
-			matrix.Inner.dom.svg.selectAll('.sjpp-matrix-term-label-g').node().querySelectorAll('text').length,
+			matrix.Inner.dom.svg.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label').size(),
 			numSeries,
 			`should render ${numSeries} <series> elements`
 		)
