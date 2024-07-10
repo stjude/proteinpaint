@@ -33,14 +33,16 @@ export default function setRoutes(app, basepath) {
 
 			setTimeout(async () => {
 				const files = await fs.promises.readdir(msgDir)
-				files.forEach(f => notifyOnFileChange('change', f))
+				files.forEach(f => notifyOnFileChange('change', f, [res]))
 			}, 0)
 		} catch (err) {
 			res.send(err)
 		}
 	})
 
-	async function notifyOnFileChange(eventType, fileName) {
+	// 3rd agument is to limit to an initial connection,
+	// to not trigger infinite reload loops across browser tabs/windows
+	async function notifyOnFileChange(eventType, fileName, initialConnection = undefined) {
 		try {
 			const f = path.join(msgDir, fileName)
 			if (!(await fs.promises.stat(f))) delete messages[fileName]
@@ -51,7 +53,8 @@ export default function setRoutes(app, basepath) {
 			}
 			const data = JSON.stringify(Object.values(messages)) //.map(d => ({key: d[0], message: d[1]})))
 			console.log(46, data)
-			for (const res of connections) {
+			const conn = initialConnection || connections
+			for (const res of conn) {
 				res.write(`event: message\n`)
 				res.write(`data: ${data}\n\n`)
 			}
