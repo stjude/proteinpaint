@@ -2,7 +2,7 @@ import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter/filter'
 import { NumericModes, TermTypes } from '../shared/terms'
-import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
+import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -346,7 +346,7 @@ function setRenderers(self) {
 			status: 'new'
 		}
 
-		showGenesetEdit({
+		new GeneSetEditUI({
 			holder: holder.append('div'),
 			/* running hier clustering and the editing group is the group used for clustering
 		pass this mode value to inform ui to support the optional button "top variably exp gene"

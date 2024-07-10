@@ -8,7 +8,7 @@ import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
 import { make_radios } from '#dom/radiobutton'
 import { make_one_checkbox } from '#dom/checkbox'
-import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
+import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
 import { select } from 'd3-selection'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
 import { TermTypes, TermTypeGroups, isNumericTerm } from '../shared/terms'
@@ -1158,7 +1158,7 @@ export class MatrixControls {
 			const geneList = selectedGroup.lst.map(item => {
 				return { gene: item.name }
 			}) //To do, selectedGroup.lst may replace name with gene as well
-			showGenesetEdit({
+			new GeneSetEditUI({
 				holder,
 				/* running hier clustering and the editing group is the group used for clustering
 			pass this mode value to inform ui to support the optional button "top variably exp gene"

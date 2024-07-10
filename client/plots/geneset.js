@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge, sleep } from '../rx'
-import { showGenesetEdit } from '../dom/genesetEdit.ts'
+import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
 
@@ -143,7 +143,7 @@ class GenesetComp {
 		this.dom.body
 			.append('p')
 			.text(`No default genes. Please change the cohort or define a gene set to launch ${this.state.config.toolName}.`)
-		showGenesetEdit({
+		new GeneSetEditUI({
 			holder: this.dom.body.append('div'),
 			genome: this.opts.genome,
 			mode: this.opts.mode,
