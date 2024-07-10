@@ -23,6 +23,7 @@ const runpp = helpers.getRunPp('mass', {
 2 geneVariant, 2 dict terms, divideBy
 2 geneVariant, 2 dict terms, 1 gene exp, 1 survival
 launch matrix with gdc launcher and top mutated genes, gliomas
+top mutated genes from APOLLO-LUAD, CNV only
 
 ***************/
 tape('\n', function (test) {
