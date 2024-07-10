@@ -8,6 +8,17 @@ import { defaultcolor } from '../../shared/common.js'
 import { Menu } from '../../dom/menu.js'
 import { dofetch3 } from '#common/dofetch'
 
+type Citation = {
+	id: number
+	title: string
+	appHeaderTitle: string
+	year: number
+	journal: string
+	pmid: number
+	pmidURL: string
+	doi: string
+}
+
 type AppHeaderOpts = {
 	/** menu created in app.js */
 	headtip: Menu
@@ -27,7 +38,7 @@ export class AppHeader {
 	/** List of publications defined in the app drawer
 	 * Appears in button in the header and in search results
 	 */
-	publications: any
+	publications: Citation[]
 	/** Used in both the Help button and omni search
 	 * .onlySearch is used to filter out items that should not appear in the Help button
 	 */
@@ -65,13 +76,16 @@ export class AppHeader {
 		this.app = opts.app
 		this.data = opts.data
 		this.jwt = opts.jwt
+		this.publications = []
 	}
 
 	async createPublicationsList() {
 		const re = await dofetch3(this.app.cardsPath + '/citations.json')
 		if (re.error) console.error(`Problem retrieving ../cards/citations.json`)
 		//Sort in reverse chronological order for the publications button
-		this.publications = re.publications.filter(d => d.appHeaderTitle).sort((a, b) => b.year - a.year)
+		this.publications = re?.publications?.length
+			? re.publications.filter((d: Citation) => d.appHeaderTitle).sort((a: Citation, b: Citation) => b.year - a.year)
+			: []
 	}
 
 	async makeheader() {
@@ -249,25 +263,28 @@ export class AppHeader {
 			})
 
 		//Publications button
-		headbox
-			.append('span')
-			.classed('sja_menuoption', true)
-			.style('padding', padw_sm)
-			.style('margin', '0px 5px')
-			.text('Publications')
-			.on('click', async event => {
-				const p = event.target.getBoundingClientRect()
-				const div = this.headtip.clear().show(p.left - 150, p.top + p.height + 5)
+		//Citations not available on CI server
+		if (this.publications.length > 0) {
+			headbox
+				.append('span')
+				.classed('sja_menuoption', true)
+				.style('padding', padw_sm)
+				.style('margin', '0px 5px')
+				.text('Publications')
+				.on('click', async event => {
+					const p = event.target.getBoundingClientRect()
+					const div = this.headtip.clear().show(p.left - 150, p.top + p.height + 5)
 
-				await div.d
-					.append('div')
-					.style('padding', '5px 20px')
-					.selectAll('p')
-					.data(this.publications)
-					.enter()
-					.append('p')
-					.html((d: any) => `<a href=${d.doi} target=_blank>${d.appHeaderTitle}, ${d.journal}, ${d.year}</a>`)
-			})
+					await div.d
+						.append('div')
+						.style('padding', '5px 20px')
+						.selectAll('p')
+						.data(this.publications)
+						.enter()
+						.append('p')
+						.html((d: any) => `<a href=${d.doi} target=_blank>${d.appHeaderTitle}, ${d.journal}, ${d.year}</a>`)
+				})
+		}
 	}
 
 	make_genome_browser_btn(app, headbox, jwt) {
