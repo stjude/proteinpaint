@@ -170,7 +170,7 @@ export function runproteinpaint(arg) {
 
 			if (data.debugmode) {
 				app.debugmode = true
-				import('./notify.js').catch(e => console.log(`debugmode: server-sent notifications is not setup`))
+				import('./notify.js').catch(e => console.log(`debugmode: server-sent notifications is not setup`, e))
 			}
 			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 

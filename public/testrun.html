@@ -49,7 +49,6 @@
   <span id='pp-test-runner-banner' class='code-snippet'>npm run dev</span> 
   must be active to (re)compile 
   <span class='code-snippet'>*.spec.js</span> files.
-  <span>For faster repeated reload of unchanged test code, add a <span class='code-snippet'>reuse=1</span> parameter to the URL.</span>
 </div>
 <div style='position: absolute; right: 20px; margin: 20px; font-family: Menlo, Courier;'>
   <button><a class='allTestsBtn' href='?name=*.unit'>All unit tests</a></button>
@@ -162,17 +161,6 @@ async function triggerImportSpecs(params) {
   if (params.name && params.name.startsWith('_x_.')) {
     if (!('exclude' in params)) params.exclude = ''
   }
-  
-  // if (params.reuse) {
-  //   d3.select('body')
-  //     .append('script')
-  //     .attr('src', '/bin/proteinpaint.js')
-  //     .on('load', async ()=>{
-  //       runproteinpaint({noheader: true, testInternals: true})
-  //     })
-
-  //   return
-  // }
 
   try {
     const opts = {
@@ -183,20 +171,6 @@ async function triggerImportSpecs(params) {
       body: JSON.stringify(params)
     }
     loadingDiv.html('Loading tests ...')
-    // const specs = await fetch('/specs', opts).then(r => r.json())
-    // if (specs.error) {
-    //   loadingDiv.html(`Error: ${specs.error}`)
-    // } else {
-    //   console.log('Specs: ', specs)
-      //currTest.text(specs.pattern.split('/client/')[1])
-      //if (specs.n) await sleep(specs*10)
-      // d3.select('body')
-      //   .append('script')
-      //   .attr('src', '/front.app.js')
-      //   .on('load', async ()=>{
-      //     runproteinpaint({noheader: true, testInternals: true})
-      //   })
-      // runproteinpaint({noheader: true})
     const internals = await import('./bin/dist/_.._/test/internals-dev.js')
     const specs = {exclude: '', matched: []}//internals.getSpecs()}
     const df = specs.exclude === '_x_.' ? ' (default)' : ''

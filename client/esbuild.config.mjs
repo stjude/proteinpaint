@@ -1,16 +1,15 @@
 import path from 'path'
 import fs from 'fs'
 import { context } from 'esbuild'
-import { fileURLToPath } from 'url'
 import { polyfillNode } from "esbuild-plugin-polyfill-node"
 import notifier from 'node-notifier'
 import serverconfig from '../server/src/serverconfig.js'
     
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = import.meta.dirname
 const ENV = process.env.ENV
 
 const entryPoints = ['./src/app.js']
-entryPoints.push(`./test/internals-${ENV}.js`)
+if (ENV != 'prod') entryPoints.push(`./test/internals-${ENV}.js`)
 
 const outdir = path.join(__dirname, ENV == 'test' ? '../public/bin/test' : './dist')
 
@@ -52,6 +51,7 @@ if (ENV == 'dev') {
 }
 
 function logRebuild() {
+  const messagesDir = path.join(serverconfig.sseDir, 'messages')
   return {
     name: 'logBuildStage',
     setup({ onStart, onEnd }) {
@@ -67,28 +67,25 @@ function logRebuild() {
             numErrs = result.errors.length
             const message = `${numErrs} client bundling error(s)`
             notifier.notify({title: 'esbuild', message})
-            const opts = {
-              method: 'POST',
-              body: JSON.stringify({
-                key: 'esbuild',
-                message
-              })
-            }
-            fetch(`http://localhost:${serverconfig.port}/notifications`, opts).catch(()=>console.log('ignored notification fetch error'))
+            const data = JSON.stringify({
+              key: 'esbuild',
+              message,
+              color: 'red'
+            })
+            fs.promises.writeFile(`${messagesDir}/esbuild`, data)
           } else if (numErrs) {
             numErrs = 0
             const message = 'success, client bundle ok'
             // only notify of success if recovering from a bundling error
             notifier.notify({title: 'esbuild', message})
-            const opts = {
-              method: 'POST',
-              body: JSON.stringify({
-                key: 'esbuild',
-                message,
-                status: 'ok'
-              })
-            }
-            fetch(`http://localhost:${serverconfig.port}/notifications`, opts).catch(()=>console.log('ignored notification fetch error'))
+            const data = JSON.stringify({
+              key: 'esbuild',
+              message,
+              status: 'ok',
+              color: 'green',
+              duration: 2500
+            })
+            fs.promises.writeFile(`${messagesDir}/esbuild`, data)
           }
         }
         console.log('\n--- client rebuild finished in', Date.now() - t, 'ms ---\n')
