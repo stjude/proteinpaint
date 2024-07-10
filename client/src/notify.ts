@@ -1,5 +1,23 @@
 import { select, selectAll } from 'd3-selection'
 
+// TODO: may move this to #shared/types/sse.ts so
+// that both server and client can type check against 
+// the same definitions
+type SseDataEntry = {
+	/** title of the message: each unique key will be associated with a rendered div, to either add, update, or remove */
+	key: string
+	message: string
+	/** if present, will be used for text and border color of message div */
+	color?: string
+	/** if present, will be used for rendering style transition and removal */
+	duration?: number
+	/** if set to true, will trigger a browser refresh/reload */
+	reload?: boolean
+	status?: string
+}
+
+type SseData = SseDataEntry[]
+
 // server-sent events
 const sse = new EventSource('/sse')
 const notifyDiv = select('body')
@@ -16,8 +34,8 @@ let lastReload = 0
 sse.onmessage = event => {
 	// track last reload to prevent triggering infinite reload loop
 	if (lastReload === 0) lastReload = event.timeStamp
-	const data = JSON.parse(event.data) //; console.log(data)
-	const divs = notifyDiv.selectAll(`:scope>div`).data(data, d => d.key)
+	const data: SseData = JSON.parse(event.data) //; console.log(data)
+	const divs = notifyDiv.selectAll(`:scope>div`).data(data, d => (d as SseDataEntry).key)
 
 	divs.exit().remove()
 	divs
@@ -27,7 +45,7 @@ sse.onmessage = event => {
 		.each(function (d) {
 			if (d.reload && event.timeStamp > lastReload) window.location.reload()
 			else if (d.duration) {
-				setTimeout(() => select(this).transition().duration(d.duration).style('opacity', 0).remove(), d.duration)
+				setTimeout(() => select(this).transition().duration(d.duration as number).style('opacity', 0).remove(), d.duration)
 			}
 		})
 	divs
@@ -44,7 +62,7 @@ sse.onmessage = event => {
 		.each(function (d) {
 			if (d.reload && event.timeStamp > lastReload) window.location.reload()
 			else if (d.duration) {
-				setTimeout(() => select(this).transition().duration(d.duration).style('opacity', 0).remove(), d.duration)
+				setTimeout(() => select(this).transition().duration(d.duration as number).style('opacity', 0).remove(), d.duration)
 			}
 		})
 }
