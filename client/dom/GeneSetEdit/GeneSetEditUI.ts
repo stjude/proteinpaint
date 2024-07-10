@@ -2,7 +2,7 @@ import { addGeneSearchbox } from '../genesearch.ts'
 import { Menu } from '../menu'
 import { select } from 'd3-selection'
 import { mclass, dt2color, dt2label } from '../../shared/common'
-import { Button, Div, Elem, _Element_ } from 'types/d3'
+import { Button, Div, Elem } from 'types/d3'
 import { ClientCopyGenome } from 'types/global'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
@@ -10,7 +10,6 @@ import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 
 type API = {
 	dom: {
-		tdbBtns: { [key: string]: any }
 		holder: Div
 		/** text links above the gene holding div
 		 * Opens a menu to select genes from different datasets
@@ -40,7 +39,7 @@ type API = {
 	 * to be shown in statLegendDiv */
 	statColor2label: Map<string, any>
 	/** destory the original menu (i.e. tip == opts.holder) */
-	destroy: (_obj) => void
+	destroy: () => void
 }
 
 type Gene = {
@@ -134,7 +133,6 @@ export class GeneSetEditUI {
 		this.api = {
 			dom: {
 				holder: div,
-				tdbBtns: {},
 				textControlDiv: controlDiv.append('div'),
 				clearBtn: addButton({
 					div: controlDiv,
@@ -174,10 +172,10 @@ export class GeneSetEditUI {
 				opts.holder.remove()
 			}
 		}
-
 		this.getParams()
 		this.createMenuList()
 		this.renderTextControls(this.api.dom.textControlDiv)
+		this.renderGenes()
 	}
 
 	getParams() {
@@ -205,7 +203,7 @@ export class GeneSetEditUI {
 						tip: this.tip2,
 						params: this.api.topMutatedGenesParams,
 						api: this.api,
-						callback: async value => {
+						callback: async () => {
 							const args = {
 								filter0: this.vocabApi.state.termfilter.filter0
 							}
@@ -232,7 +230,7 @@ export class GeneSetEditUI {
 						tip: this.tip2,
 						params: this.api.topVariablyExpressedGenesParams,
 						api: this.api,
-						callback: async value => {
+						callback: async () => {
 							const args: any = {
 								genome: this.vocabApi.state.vocab.genome,
 								dslabel: this.vocabApi.state.vocab.dslabel
@@ -381,6 +379,7 @@ export class GeneSetEditUI {
 		this.api.dom.geneHoldingDiv.selectAll('*').remove()
 
 		const renderGene = this.renderGene.bind(this)
+		const deleteGene = this.deleteGene.bind(this)
 
 		this.api.dom.geneHoldingDiv
 			.selectAll('div')
@@ -398,7 +397,7 @@ export class GeneSetEditUI {
 				const div = select(this).style('border-radius', '5px')
 				renderGene(div, gene)
 			})
-			.on('click', this.deleteGene)
+			.on('click', deleteGene)
 			.on('mouseover', function (event) {
 				const div = select(event.target)
 				div
