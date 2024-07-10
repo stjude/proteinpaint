@@ -64,7 +64,7 @@ export function setInteractivity(self) {
 		self.dom.matrixCellHoverOver.clear()
 		const table = table2col({ holder: self.dom.matrixCellHoverOver.d.append('div') })
 
-		if (d.term.type != 'geneVariant' || d.tw.q.groupsetting.inuse) {
+		if (d.term.type != 'geneVariant' || d.tw.q?.groupsetting?.inuse) {
 			// when groupsetting is used for geneVariant term, should treat as categorical term
 			{
 				const [c1, c2] = table.addRow()
@@ -397,7 +397,8 @@ export function setInteractivity(self) {
 			c1.html(l.Sample)
 			c2.html(sampleData.row._ref_.label || sampleData.value.sample)
 		}
-		if (sampleData.term && sampleData.term.type != 'geneVariant') {
+		if ((sampleData.term && sampleData.term.type != 'geneVariant') || sampleData.tw.q?.groupsetting?.inuse) {
+			// when groupsetting is used for geneVariant term, should treat as categorical term
 			if (sampleData.convertedValueLabel || sampleData.label) {
 				// show term value row only when not undefined
 				if (sampleData.term.type == TermTypes.GENE_EXPRESSION) {
