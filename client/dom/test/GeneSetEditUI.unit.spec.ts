@@ -50,7 +50,10 @@ tape('Empty opts.geneList', function (test) {
 		test.equal(ui.api.dom.geneHoldingDiv.selectAll(':scope>div').size(), 0, 'Should render 0 gene pills')
 		test.equal(ui.api.dom.submitBtn.property('disabled'), true, `Should have a disabled submit button`)
 		test.equal(ui.api.dom.clearBtn.property('disabled'), true, `Should have a disabled clear button`)
-		// test.false(ui.menuList.some(d => d.label.includes('mutated')), `should show load top genes button`)
+		test.false(
+			ui.menuList.some(d => d.label.includes('mutated')),
+			`should show load top genes button`
+		)
 
 		if (test['_ok']) ui.api.destroy()
 	}
@@ -74,7 +77,10 @@ tape('Empty opts.geneList', function (test) {
 		test.equal(ui.api.dom.geneHoldingDiv.selectAll(':scope>div').size(), 0, 'Should render 0 gene pills')
 		test.equal(ui.api.dom.submitBtn.property('disabled'), true, `Should have a disabled submit button`)
 		test.equal(ui.api.dom.clearBtn.property('disabled'), true, `Should have a disabled clear button`)
-		// test.false(ui.menuList.some(d => d.label.includes('mutated')), `should show load top genes button`)
+		test.false(
+			ui.menuList.some(d => d.label.includes('mutated')),
+			`should show load top genes button`
+		)
 
 		if (test['_ok']) ui.api.destroy()
 	}
@@ -111,7 +117,7 @@ tape('Non-empty opts.geneList', function (test) {
 	}
 })
 
-tape.only('gene deletion', function (test) {
+tape('gene deletion', function (test) {
 	test.timeoutAfter(100)
 
 	testHG38()
@@ -136,13 +142,13 @@ tape.only('gene deletion', function (test) {
 		ui.api.dom.geneHoldingDiv.node() as HTMLElement
 		;(ui.api.dom.geneHoldingDiv.node()!.querySelector(':scope>div') as HTMLElement).click()
 		test.equal(ui.api.dom.geneHoldingDiv.selectAll(':scope>div').size(), len - 1, `should render ${len - 1} gene pill`)
-		//  test.equal(ui.api.dom.submitBtn.property('disabled'), false, `should not have a disabled submit button`)
+		test.equal(ui.api.dom.submitBtn.property('disabled'), false, `should not have a disabled submit button`)
 
-		//  if (test['_ok']) ui.api.destroy()
+		if (test['_ok']) ui.api.destroy()
 	}
 })
 
-tape.skip('submit button', function (test) {
+tape('submit button', function (test) {
 	test.timeoutAfter(100)
 	const holder: any = getHolder()
 	const geneList: { gene: string }[] = [{ gene: 'KRAS' }, { gene: 'TP53' }]

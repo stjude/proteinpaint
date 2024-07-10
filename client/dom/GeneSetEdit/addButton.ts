@@ -1,13 +1,19 @@
+import { Button, Div } from 'types/d3'
+
+type AddBtnOpts = {
+	/** div to append the button */
+	div: Div
+	/** text to display on button */
+	text: string
+	/** callback on click */
+	callback: () => void
+	/** Optional: default is false */
+	disabled?: boolean
+}
 /**
  * Creates a button uniform in style for the entire UI
- * @param opts
- * @param opts.div: Required: div to append button to
- * @param opts.text: Required: text to display on button
- * @param opts.callback Required: callback on click
- * @param opts.disabled Optional: default is false
- * @returns uniform button
  */
-export function addButton(opts) {
+export function addButton(opts: AddBtnOpts): Button {
 	if (!opts.div || !opts.text || !opts.callback) throw new Error('Missing required parameters')
 	return opts.div
 		.append('button')

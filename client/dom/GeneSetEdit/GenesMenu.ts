@@ -33,11 +33,15 @@ export class GenesMenu {
 			param.input = input
 		}
 
-		addButton({
-			div: this.tip.d.append('div').style('padding', '20px'),
+		//Submits all the inputs from the menu to the callback
+		const calGenesBtn = addButton({
+			div: this.tip.d.append('div').style('padding', '20px').style('display', 'inline-block'),
 			text: 'Calculate genes',
 			callback: async () => {
+				calGenesBtn.property('disabled', true)
+				const wait = this.tip.d.append('div').style('display', 'inline-block').text('Loading...')
 				await this.callback()
+				wait.remove()
 				this.tip.hide()
 			}
 		})
@@ -71,9 +75,14 @@ export class GenesMenu {
 	addLabels(div: Div, elem: string, param: GeneArgumentEntry) {
 		if (!param.sublabel) div.append(elem).html(param.label).attr('for', param.id)
 		else {
-			const labelDiv = div.append('div').style('display', 'inline-block')
-			labelDiv.append(elem).style('display', 'block').html(param.label).attr('for', param.id)
-			labelDiv.append('span').style('display', 'block').style('font-size', '0.8em').html(param.sublabel)
+			const labelDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'middle')
+			labelDiv
+				.append(elem)
+				.style('display', 'block')
+				.style('padding-top', '3px')
+				.html(param.label)
+				.attr('for', param.id)
+			labelDiv.append('span').style('display', 'block').style('font-size', '0.75em').html(param.sublabel)
 		}
 	}
 }
