@@ -65,28 +65,28 @@ function logRebuild() {
         if (ENV == 'dev') {
           if (result.errors.length) {
             numErrs = result.errors.length
-            const message = `${numErrs} client bundling error(s)`
-            notifier.notify({title: 'esbuild', message})
+            const message = `${numErrs} esbuild error(s)`
+            notifier.notify({title: 'client', message})
             const data = JSON.stringify({
-              key: 'esbuild',
+              key: 'client',
               message,
               color: 'red'
             })
-            fs.promises.writeFile(`${messagesDir}/esbuild`, data)
+            fs.promises.writeFile(`${messagesDir}/client`, data)
           } else /*if (numErrs)*/ {
             numErrs = 0
-            const message = 'success, client bundle ok'
+            const message = 'success, esbuild ok'
             // only notify of success if recovering from a bundling error
-            notifier.notify({title: 'esbuild', message})
+            notifier.notify({title: 'client', message})
             const data = JSON.stringify({
-              key: 'esbuild',
+              key: 'client',
               message,
               status: 'ok',
               color: 'green',
               duration: 2500,
               reload: true
             })
-            fs.promises.writeFile(`${messagesDir}/esbuild`, data)
+            fs.promises.writeFile(`${messagesDir}/client`, data)
           }
         }
         console.log('\n--- client rebuild finished in', Date.now() - t, 'ms ---\n')

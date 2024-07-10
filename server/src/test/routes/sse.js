@@ -1,5 +1,5 @@
 // SSE = Server-Sent Events
-// https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events
+// see proteinpaint/.sse/README.md for background, design
 
 /* these routes are for dev environment only */
 import fs from 'fs'

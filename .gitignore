@@ -11,6 +11,7 @@ dist/*
 **/dist
 
 .sse/*
+!.sse/README.md
 
 server/app.js
 server/genome/*.js
