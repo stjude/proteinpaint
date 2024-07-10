@@ -1,1 +1,2 @@
-
+Fixes:
+- improve oncomatrix non-ci test to include gene expression and survival, and CNV-only cohort
