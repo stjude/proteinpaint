@@ -197,8 +197,8 @@ export class GeneSetEditUI {
 		if (this.api?.topMutatedGenesParams.length > 0) {
 			this.menuList.push({
 				label: 'Top mutated genes',
-				callback: async () => {
-					this.tip2.clear().showunder(this.api.dom.textControlDiv.node())
+				callback: async (event: Event) => {
+					this.tip2.clear().showunder(event.target)
 					new GenesMenu({
 						tip: this.tip2,
 						params: this.api.topMutatedGenesParams,
@@ -224,8 +224,8 @@ export class GeneSetEditUI {
 		if (this.api?.topVariablyExpressedGenesParams.length > 0) {
 			this.menuList.push({
 				label: 'Top variably expressed genes',
-				callback: () => {
-					this.tip2.clear().showunder(this.api.dom.textControlDiv.node())
+				callback: (event: Event) => {
+					this.tip2.clear().showunder(event.target)
 					new GenesMenu({
 						tip: this.tip2,
 						params: this.api.topVariablyExpressedGenesParams,
@@ -268,8 +268,8 @@ export class GeneSetEditUI {
 				const tdb = this.genome.termdbs[key]
 				this.menuList.push({
 					label: `${tdb.label} gene set`,
-					callback: async () => {
-						this.tip2.clear().showunder(this.api.dom.textControlDiv.node())
+					callback: async (event: Event) => {
+						this.tip2.clear().showunder(event.target)
 						const termdb = await import('../../termdb/app.js')
 						termdb.appInit({
 							holder: this.tip2.d,
@@ -307,8 +307,8 @@ export class GeneSetEditUI {
 				.style('padding', '0px 10px')
 				.style('color', 'black')
 				.html(`${menu.label} &#9660;`)
-				.on('click', async () => {
-					await menu.callback()
+				.on('click', async event => {
+					await menu.callback(event)
 				})
 		}
 	}
@@ -396,8 +396,9 @@ export class GeneSetEditUI {
 			.each(function (this: any, gene) {
 				const div = select(this).style('border-radius', '5px')
 				renderGene(div, gene)
+				div.on('click', () => deleteGene(gene))
 			})
-			.on('click', deleteGene)
+			// .on('click', deleteGene)
 			.on('mouseover', function (event) {
 				const div = select(event.target)
 				div
