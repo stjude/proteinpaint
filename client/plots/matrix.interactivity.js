@@ -64,7 +64,8 @@ export function setInteractivity(self) {
 		self.dom.matrixCellHoverOver.clear()
 		const table = table2col({ holder: self.dom.matrixCellHoverOver.d.append('div') })
 
-		if (d.term.type != 'geneVariant') {
+		if (d.term.type != 'geneVariant' || d.tw.q.groupsetting.inuse) {
+			// when groupsetting is used for geneVariant term, should treat as categorical term
 			{
 				const [c1, c2] = table.addRow()
 				c1.html(l.Sample)
