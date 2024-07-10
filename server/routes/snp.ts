@@ -122,6 +122,8 @@ function snp2hit(snp) {
 		chromEnd: Number(fields[2]),
 		name: fields[3],
 		observed: observed,
+		ref: ref,
+		alt: alts,
 		alleles: [ref, ...alts]
 	}
 	return hit

@@ -12,6 +12,7 @@ export const TermTypes = {
 	CATEGORICAL: 'categorical',
 	INTEGER: 'integer',
 	FLOAT: 'float',
+	SNP: 'snp',
 	SNP_LIST: 'snplst',
 	SNP_LOCUS: 'snplocus',
 	CONDITION: 'condition',
@@ -39,6 +40,7 @@ export const TermTypeGroups = {
 	METABOLITE_INTENSITY: 'Metabolite Intensity',
 	GSEA: 'GSEA',
 	MUTATION_SIGNATURE: 'Mutation Signature',
+	SNP: 'SNP Genotype',
 	SNP_LIST: 'SNP List',
 	SNP_LOCUS: 'SNP Locus'
 }
@@ -53,6 +55,7 @@ export const typeGroup = {
 	[TermTypes.SAMPLELST]: TermTypeGroups.DICTIONARY_VARIABLES,
 	[TermTypes.SURVIVAL]: TermTypeGroups.DICTIONARY_VARIABLES,
 	[TermTypes.GENE_VARIANT]: TermTypeGroups.MUTATION_CNV_FUSION,
+	[TermTypes.SNP]: TermTypeGroups.SNP,
 	[TermTypes.SNP_LIST]: TermTypeGroups.SNP_LIST,
 	[TermTypes.SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
 	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,

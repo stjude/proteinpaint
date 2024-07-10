@@ -65,7 +65,7 @@ by calling addGeneSearchbox(), it redirectly returns a RESULT object detailed be
 */
 
 /** "start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp */
-type GeneOrSNPResult = { start: number; stop: number }
+type GeneOrSNPResult = { start: number; stop: number; ref?: string; alt?: [] }
 /** "pos/ref/alt" are included when entered a variant */
 type VariantResult = { pos: number; ref: string; alt: string; isVariant: boolean }
 type ResultArg = (GeneOrSNPResult | VariantResult) & {
@@ -122,6 +122,8 @@ insertion
     chr5:g.171410539_171410540insTCTG
     parse to chr5.171410539.-.TCTG
 */
+
+// TODO: create a new flag or mode for querying a single snp
 
 export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
@@ -393,8 +395,9 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		})
 		if (data.error) throw data.error
 		if (!data.results || data.results.length == 0) throw 'Not a gene or SNP'
+		// TODO: if #snps > 1, then display snp hits in a menu
 		const r = data.results[0]
-		getResult({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd }, s)
+		getResult({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd, ref: r.ref, alt: r.alt }, s)
 	}
 
 	const result: Result = {}
@@ -436,6 +439,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				result.chr = r.chr
 				result.start = r.start
 				result.stop = r.stop
+				if (r.ref) result.ref = r.ref
+				if (r.alt) result.alt = r.alt
 			} else if (r.geneSymbol) {
 				// is only a gene symbol
 				searchbox.property('value', r.geneSymbol)
