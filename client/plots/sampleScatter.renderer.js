@@ -11,7 +11,7 @@ import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { regressionPoly } from 'd3-regression'
 import { line } from 'd3'
 import { getId } from '#mass/nav'
-import { minDotSize, maxDotSize } from './sampleScatter.js'
+import { minShapeSize, maxShapeSize } from './sampleScatter.js'
 import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
 
@@ -370,10 +370,10 @@ export function setRenderers(self) {
 			size = size * size
 			return self.symbols[index].size((size * factor) / self.zoom)()
 		} else {
-			const range = self.settings.maxDotSize - self.settings.minDotSize
+			const range = self.settings.maxShapeSize - self.settings.minShapeSize
 			if (self.settings.scaleDotOrder == 'Ascending')
-				size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
-			else size = self.settings.maxDotSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+				size = self.settings.minShapeSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+			else size = self.settings.maxShapeSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 			size = size * size
 			const scaledSize = (size * factor) / self.zoom
 			return self.symbols[index].size(scaledSize)()
@@ -888,8 +888,8 @@ export function setRenderers(self) {
 	self.drawScaleDotLegend = function (chart) {
 		const scaleG = chart.scaleG
 		scaleG.selectAll('*').remove()
-		const minRadius = (self.settings.minDotSize / 2) * self.zoom
-		const maxRadius = (self.settings.maxDotSize / 2) * self.zoom
+		const minRadius = (self.settings.minShapeSize / 2) * self.zoom
+		const maxRadius = (self.settings.maxShapeSize / 2) * self.zoom
 		const width = 30 * self.zoom
 
 		const order = self.settings.scaleDotOrder
@@ -978,14 +978,14 @@ export function setRenderers(self) {
 					.attr('min', '1')
 					.attr('max', '100')
 					.style('width', '50px')
-					.attr('value', self.settings.minDotSize)
+					.attr('value', self.settings.minShapeSize)
 					.on('change', () => {
 						let value = parseFloat(minInput.node().value)
-						if (value < minDotSize) {
-							value = minDotSize
-							minInput.node().value = minDotSize
+						if (value < minShapeSize) {
+							value = minShapeSize
+							minInput.node().value = minShapeSize
 						}
-						self.config.settings.sampleScatter.minDotSize = value
+						self.config.settings.sampleScatter.minShapeSize = value
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
@@ -999,14 +999,14 @@ export function setRenderers(self) {
 					.attr('min', '1')
 					.attr('max', '1000')
 					.style('width', '50px')
-					.attr('value', self.settings.maxDotSize)
+					.attr('value', self.settings.maxShapeSize)
 					.on('change', () => {
 						let value = parseFloat(maxInput.node().value)
-						if (value > maxDotSize) {
-							value = maxDotSize
-							maxInput.node().value = maxDotSize
+						if (value > maxShapeSize) {
+							value = maxShapeSize
+							maxInput.node().value = maxShapeSize
 						}
-						self.config.settings.sampleScatter.maxDotSize = value
+						self.config.settings.sampleScatter.maxShapeSize = value
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,

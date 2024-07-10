@@ -33,9 +33,6 @@ this
 			.sample
 */
 
-export const minDotSize = 9
-export const maxDotSize = 300
-
 class singleCellPlot {
 	constructor() {
 		this.type = 'singleCellPlot'
