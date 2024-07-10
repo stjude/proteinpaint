@@ -264,7 +264,7 @@ class Scatter {
 			label: 'Shape',
 			vocabApi: this.app.vocabApi
 		}
-		const dotSizeOption = {
+		const shapeSizeOption = {
 			label: 'Sample area',
 			type: 'number',
 			chartType: 'sampleScatter',
@@ -448,7 +448,7 @@ class Scatter {
 					inputs.splice(8, 0, orientation)
 					if (hasRef) inputs.splice(9, 0, refSizeOption)
 				} else {
-					inputs.splice(6, 0, dotSizeOption)
+					inputs.splice(6, 0, shapeSizeOption)
 					if (hasRef) inputs.splice(7, 0, refSizeOption)
 				}
 
@@ -496,7 +496,7 @@ class Scatter {
 				inputs.splice(6, 0, orientation)
 				if (hasRef) inputs.splice(7, 0, refSizeOption)
 			} else {
-				inputs.splice(4, 0, dotSizeOption)
+				inputs.splice(4, 0, shapeSizeOption)
 				if (hasRef) inputs.splice(5, 0, refSizeOption)
 			}
 			inputs.push(showAxes)
