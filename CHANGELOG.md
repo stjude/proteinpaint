@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.67.0
 
 Features:
 - Support inputing custom CNV segments in mds3 tk, improve cnv rendering
