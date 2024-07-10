@@ -264,14 +264,12 @@ export async function getPlotConfig(opts, app) {
 			if (row.term1.maxScore.id) {
 				row.term1.maxScore.q = { mode: 'continuous' }
 				twlst.push(row.term1.maxScore)
-				console.log('row.term1.maxScore', row.term1.maxScore)
 			}
 			row.term2.score.q = { mode: 'continuous' }
 			twlst.push(row.term2.score)
 			if (row.term2.maxScore.id) {
 				row.term2.maxScore.q = { mode: 'continuous' }
 				twlst.push(row.term2.maxScore)
-				console.log('row.term2.maxScore', row.term2.maxScore)
 			}
 		}
 		await fillTwLst(twlst, app.vocabApi)
