@@ -487,11 +487,7 @@ export class profilePlot {
 
 	getDownloadFilename() {
 		this.downloadCount++
-		let filename = `${this.type}${this.component ? this.component : ''}${this.settings[this.config.regionTW.term.id]}${
-			this.settings[this.config.countryTW.term.id]
-		}${this.settings[this.config.incomeTW.term.id]}${this.settings[this.config.typeTW.term.id]}${
-			this.downloadCount
-		}.svg`
+		let filename = `${this.type}${this.downloadCount}.svg`
 		filename = filename.split(' ').join('_')
 		return filename
 	}
@@ -504,10 +500,6 @@ export class profilePlot {
 			isAggregate = this.settings.isAggregate || this.sampleData == null //if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
 		if (isAggregate) {
 			const maxScore = d.maxScore.term ? this.data.lst[0]?.[d.maxScore.$id]?.value : d.maxScore
-			for (const sample of this.data.lst) {
-				const value = sample[d.score.$id]
-				//console.log(value)
-			}
 			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
 			scores.sort((s1, s2) => s1 - s2)
 			const middle = Math.floor(scores.length / 2)
