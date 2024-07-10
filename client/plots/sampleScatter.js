@@ -269,24 +269,24 @@ class Scatter {
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'size',
-			title: 'Sample area, in square pixels',
+			title: 'Sample size, squared gives you the sample area',
 			min: 0
 		}
 		const minDotSizeOption = {
-			label: 'Min area',
+			label: 'Min size',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'minDotSize',
-			title: 'Minimum area, in square pixels',
+			title: 'Minimum sample size',
 			min: minDotSize,
 			max: maxDotSize
 		}
 		const maxDotSizeOption = {
-			label: 'Max area',
+			label: 'Max size',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'maxDotSize',
-			title: 'Maximum area, in square pixels',
+			title: 'Maximum sample size',
 			min: minDotSize,
 			max: maxDotSize
 		}
@@ -651,11 +651,11 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 export function getDefaultScatterSettings() {
 	return {
-		size: 16,
-		minDotSize: 9,
-		maxDotSize: 144,
+		size: 4,
+		minDotSize: 3,
+		maxDotSize: 12,
 		scaleDotOrder: 'Ascending',
-		refSize: 9,
+		refSize: 3,
 		svgw: 500,
 		svgh: 500,
 		svgd: 500,

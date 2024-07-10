@@ -364,15 +364,17 @@ export function setRenderers(self) {
 	self.getShape = function (chart, c, factor = 1) {
 		const index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
 		const isRef = !('sampleId' in c)
+		let size
 		if (!self.config.scaleDotTW || isRef) {
-			const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
+			size = 'sampleId' in c ? self.settings.size : self.settings.refSize
+			size = size * size
 			return self.symbols[index].size((size * factor) / self.zoom)()
 		} else {
 			const range = self.settings.maxDotSize - self.settings.minDotSize
-			let size
 			if (self.settings.scaleDotOrder == 'Ascending')
 				size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 			else size = self.settings.maxDotSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+			size = size * size
 			const scaledSize = (size * factor) / self.zoom
 			return self.symbols[index].size(scaledSize)()
 		}
@@ -886,8 +888,8 @@ export function setRenderers(self) {
 	self.drawScaleDotLegend = function (chart) {
 		const scaleG = chart.scaleG
 		scaleG.selectAll('*').remove()
-		const minRadius = (Math.sqrt(self.settings.minDotSize) / 2) * self.zoom
-		const maxRadius = (Math.sqrt(self.settings.maxDotSize) / 2) * self.zoom
+		const minRadius = (self.settings.minDotSize / 2) * self.zoom
+		const maxRadius = (self.settings.maxDotSize / 2) * self.zoom
 		const width = 30 * self.zoom
 
 		const order = self.settings.scaleDotOrder

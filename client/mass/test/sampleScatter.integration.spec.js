@@ -281,8 +281,8 @@ tape('Test scale dot', function (test) {
 		const self = scatter.Inner
 		const chart = scatter.Inner.charts[0]
 		const dots = self.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		const minShape = self.symbols[0].size(self.settings.minDotSize)()
-		const maxShape = self.symbols[0].size(self.settings.maxDotSize)()
+		const minShape = self.symbols[0].size(self.settings.minDotSize * self.settings.minDotSize)()
+		const maxShape = self.symbols[0].size(self.settings.maxDotSize * self.settings.maxDotSize)()
 
 		test.true(dots.find(dot => dot.getAttribute('d') == minShape) != null, `Dots with the minimum size should be found`)
 		test.true(dots.find(dot => dot.getAttribute('d') == maxShape) != null, `Dots with the maximum size should be found`)
