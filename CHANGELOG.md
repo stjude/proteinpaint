@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+DevOps:
+- Trigger browser notiffications of dev events such as rebundling status
+
 
 ## 2.67.0
 

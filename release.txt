@@ -1,2 +1,1 @@
-DevOps:
-- Trigger browser notiffications of dev events such as rebundling status
+
