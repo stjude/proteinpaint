@@ -19,6 +19,8 @@ export function init(arg) {
 }
 
 async function loadDataset(headerHolder, dslabel) {
+	const profileIntroHolder = document.getElementById('profileIntro')
+	profileIntroHolder.innerHTML = ''
 	headerHolder.selectAll('*').remove()
 	const appHolder = select(document.getElementById('aaa'))
 	appHolder.selectAll('*').remove()
