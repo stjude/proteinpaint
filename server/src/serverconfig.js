@@ -111,7 +111,7 @@ if (serverconfig.debugmode) {
 	const routeSetters = []
 	const defaultDir = path.join(serverconfig.binpath, 'src/test/routes')
 	// will add testing routes as needed and if found, such as in dev environment
-	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js']
+	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js', 'notifications.js']
 
 	if (serverconfig.routeSetters) {
 		for (const f of serverconfig.routeSetters) {
