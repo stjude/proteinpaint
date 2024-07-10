@@ -41,8 +41,8 @@ NOTE
 "sample" and "category" attributes here are hardcoded
 
 */
-export const minDotSize = 9
-export const maxDotSize = 300
+export const minShapeSize = 9
+export const maxShapeSize = 300
 class Scatter {
 	constructor() {
 		this.type = 'sampleScatter'
@@ -272,23 +272,23 @@ class Scatter {
 			title: 'Sample size, squared gives you the sample area',
 			min: 0
 		}
-		const minDotSizeOption = {
+		const minShapeSizeOption = {
 			label: 'Min size',
 			type: 'number',
 			chartType: 'sampleScatter',
-			settingsKey: 'minDotSize',
+			settingsKey: 'minShapeSize',
 			title: 'Minimum sample size',
-			min: minDotSize,
-			max: maxDotSize
+			min: minShapeSize,
+			max: maxShapeSize
 		}
-		const maxDotSizeOption = {
+		const maxShapeSizeOption = {
 			label: 'Max size',
 			type: 'number',
 			chartType: 'sampleScatter',
-			settingsKey: 'maxDotSize',
+			settingsKey: 'maxShapeSize',
 			title: 'Maximum sample size',
-			min: minDotSize,
-			max: maxDotSize
+			min: minShapeSize,
+			max: maxShapeSize
 		}
 		const orientation = {
 			label: 'Scale order',
@@ -443,8 +443,8 @@ class Scatter {
 				inputs.splice(4, 0, shapeOption)
 				inputs.splice(5, 0, scaleDotOption)
 				if (this.config.scaleDotTW) {
-					inputs.splice(6, 0, minDotSizeOption)
-					inputs.splice(7, 0, maxDotSizeOption)
+					inputs.splice(6, 0, minShapeSizeOption)
+					inputs.splice(7, 0, maxShapeSizeOption)
 					inputs.splice(8, 0, orientation)
 					if (hasRef) inputs.splice(9, 0, refSizeOption)
 				} else {
@@ -491,8 +491,8 @@ class Scatter {
 			inputs.splice(2, 0, shapeOption)
 			inputs.splice(3, 0, scaleDotOption)
 			if (this.config.scaleDotTW) {
-				inputs.splice(4, 0, minDotSizeOption)
-				inputs.splice(5, 0, maxDotSizeOption)
+				inputs.splice(4, 0, minShapeSizeOption)
+				inputs.splice(5, 0, maxShapeSizeOption)
 				inputs.splice(6, 0, orientation)
 				if (hasRef) inputs.splice(7, 0, refSizeOption)
 			} else {
@@ -652,8 +652,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 export function getDefaultScatterSettings() {
 	return {
 		size: 4,
-		minDotSize: 3,
-		maxDotSize: 12,
+		minShapeSize: 3,
+		maxShapeSize: 12,
 		scaleDotOrder: 'Ascending',
 		refSize: 3,
 		svgw: 500,
