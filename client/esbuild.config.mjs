@@ -73,7 +73,7 @@ function logRebuild() {
               color: 'red'
             })
             fs.promises.writeFile(`${messagesDir}/esbuild`, data)
-          } else if (numErrs) {
+          } else /*if (numErrs)*/ {
             numErrs = 0
             const message = 'success, client bundle ok'
             // only notify of success if recovering from a bundling error
@@ -83,7 +83,8 @@ function logRebuild() {
               message,
               status: 'ok',
               color: 'green',
-              duration: 2500
+              duration: 2500,
+              reload: true
             })
             fs.promises.writeFile(`${messagesDir}/esbuild`, data)
           }

@@ -10,6 +10,8 @@ public/bin
 dist/*
 **/dist
 
+.sse/*
+
 server/app.js
 server/genome/*.js
 server/dataset/*.js

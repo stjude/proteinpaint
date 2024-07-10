@@ -138,7 +138,7 @@ if (serverconfig.debugmode) {
 	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
 	// server-sent events dir
-	serverconfig.sseDir = path.join(serverconfig.binpath, '../sse')
+	serverconfig.sseDir = path.join(serverconfig.binpath, '../.sse')
 }
 
 if (serverconfig.allow_env_overrides) {
