@@ -389,7 +389,7 @@ tape('launch matrix with gdc launcher and top mutated genes, gliomas', function 
 	}
 })
 
-tape.only('top mutated genes from APOLLO-LUAD, CNV only', function (test) {
+tape('top mutated genes from APOLLO-LUAD, CNV only', function (test) {
 	test.timeoutAfter(100000)
 	test.plan(2)
 	const holder = select('body').append('div').node()
