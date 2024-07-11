@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- improve oncomatrix non-ci test to include gene expression and survival, and CNV-only cohort
+
 DevOps:
 - Trigger browser notiffications of dev events such as rebundling status
 
