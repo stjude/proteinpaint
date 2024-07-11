@@ -692,7 +692,17 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		return
 	}
 
-	addDatasetGenomeBtns(mainDiv, genomes)
+	if (par.availableGenomes.length > 1) addDatasetGenomeBtns(mainDiv, genomes)
+	else {
+		//Show the default genome to the left of the search bar
+		mainDiv
+			.append('div')
+			.style('display', 'inline-block')
+			// .style('padding', '0.5em')
+			.style('margin-left', '20px')
+			.style('color', 'rgb(117, 115, 115)')
+			.text(par.availableGenomes[0])
+	}
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
 	const searchBarDiv = mainDiv.append('div').style('display', 'inline-block').style('padding', '0.5em')
 
@@ -742,25 +752,24 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 
 	function addDatasetGenomeBtns(div, genomes) {
 		div.append('div').style('display', 'inline-block').style('padding', '10px 10px 0px 20px')
-
 		const btns = []
-		if (par.availableGenomes.length == 1) {
-			// Show default genome as a non-functional button left of the search bar
+		// if (par.availableGenomes.length == 1) {
+		// 	// Show default genome as a non-functional button left of the search bar
+		// 	btns.push({
+		// 		label: par.availableGenomes[0],
+		// 		disabled: () => true,
+		// 		isVisible: () => true
+		// 	})
+		// } else {
+		par.availableGenomes.forEach(genome => {
 			btns.push({
-				label: par.availableGenomes[0],
-				disabled: () => true,
-				isVisible: () => true
+				label: genome,
+				callback: (event, tab) => {
+					par.genome = genomes[genome]
+				}
 			})
-		} else {
-			par.availableGenomes.forEach(genome => {
-				btns.push({
-					label: genome,
-					callback: (event, tab) => {
-						par.genome = genomes[genome]
-					}
-				})
-			})
-		}
+		})
+		// }
 		new Tabs({ holder: div, tabs: btns, noContent: true }).main()
 	}
 }
