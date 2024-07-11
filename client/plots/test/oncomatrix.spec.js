@@ -389,7 +389,7 @@ tape('launch matrix with gdc launcher and top mutated genes, gliomas', function 
 	}
 })
 
-tape('top mutated genes from APOLLO-LUAD, CNV only', function (test) {
+tape.only('top mutated genes from APOLLO-LUAD, CNV only', function (test) {
 	test.timeoutAfter(100000)
 	test.plan(2)
 	const holder = select('body').append('div').node()
@@ -419,6 +419,7 @@ tape('top mutated genes from APOLLO-LUAD, CNV only', function (test) {
 	})
 
 	async function runTests(matrix) {
+		//remove the default CNV filter for GDC (GDC hides CNV by default)
 		await matrix.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: matrix.id,
