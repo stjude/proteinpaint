@@ -1,11 +1,11 @@
 {
-    "ribbonMessage": "See the improved scatter plot! The new scatter plot contains features like grouping samples, exporting the image, plot configuration options, and more!",
     "ppcalls": [
         {
+            "label": "Tumor methylome tSNE",
             "message": "<ul style='line-height:1.5;'><li><strong>Change the plot configuration</strong>: click on the burger button (three stacked lines) in the top left of the plot. The menu provides options to change the term, dot sizes, etc.</li><li><strong>Create groups</strong>: click on the paint brush, lasso the samples of interest, and use the pop-up menu for next steps.</li><li>Open other plots and analysis tools by clicking on the grey buttons above the scatter plot.</li></ul> ",
             "runargs": {
                 "noheader": true,
-                "mass":{
+                "mass": {
                     "state": {
                         "vocab": {
                             "dslabel": "PNET",
@@ -24,8 +24,151 @@
                 }
             },
             "testSpec": {
-                "expected": { "rect": 1, "svg": 1 }
+                "expected": {
+                    "rect": 1,
+                    "svg": 1
+                }
             }
+        },
+        {
+            "label": "Dictionary variables",
+            "runargs": {
+                "noheader": true,
+                "mass": {
+                    "state": {
+                        "vocab": {
+                            "dslabel": "SJLife",
+                            "genome": "hg38"
+                        },
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
+                        "plots": [
+                            {
+                                "chartType": "sampleScatter",
+                                "name": "Dynamic scatter",
+                                "term": {
+                                    "term": {
+                                        "type": "float",
+                                        "bins": {
+                                            "default": {
+                                                "type": "regular-bin",
+                                                "startinclusive": true,
+                                                "bin_size": 5,
+                                                "first_bin": {
+                                                    "stop": 15
+                                                },
+                                                "last_bin": {
+                                                    "start": 45
+                                                }
+                                            }
+                                        },
+                                        "values": {
+                                            "-994": {
+                                                "label": "N/A: No campus visit",
+                                                "uncomputable": true
+                                            }
+                                        },
+                                        "name": "Age (years) at SJLIFE baseline assessment",
+                                        "id": "agebaseline",
+                                        "isleaf": true,
+                                        "included_types": [
+                                            "float"
+                                        ],
+                                        "__ancestors": [
+                                            "Age (years)",
+                                            "Demographic Variables"
+                                        ],
+                                        "__ancestorNames": [
+                                            "Age (years)",
+                                            "Demographic Variables"
+                                        ]
+                                    },
+                                    "q": {
+                                        "mode": "continuous",
+                                        "isAtomic": true,
+                                        "hiddenValues": {
+                                            "-994": 1
+                                        }
+                                    },
+                                    "isAtomic": true
+                                },
+                                "term2": {
+                                    "term": {
+                                        "type": "float",
+                                        "bins": {
+                                            "default": {
+                                                "type": "regular-bin",
+                                                "startinclusive": true,
+                                                "bin_size": 10,
+                                                "first_bin": {
+                                                    "stop": 45
+                                                }
+                                            }
+                                        },
+                                        "values": {
+                                            "-997": {
+                                                "label": "Not measured during exam",
+                                                "uncomputable": true
+                                            },
+                                            "-994": {
+                                                "label": "N/A: no campus visit",
+                                                "uncomputable": true
+                                            },
+                                            "-998": {
+                                                "label": "N/A: campus visit, exam not indicated",
+                                                "uncomputable": true
+                                            },
+                                            "-999": {
+                                                "label": "N/A: campus visit, no exam",
+                                                "uncomputable": true
+                                            }
+                                        },
+                                        "name": "Left ventricular ejection fraction 3D",
+                                        "id": "LV_Ejection_Fraction_3D",
+                                        "isleaf": true,
+                                        "included_types": [
+                                            "float"
+                                        ],
+                                        "__ancestors": [
+                                            "Clinical Assessments",
+                                            "Clinically-assessed Variables",
+                                            "ECHO"
+                                        ],
+                                        "__ancestorNames": [
+                                            "Clinical Assessments",
+                                            "Clinically-assessed Variables",
+                                            "Echocardiogram"
+                                        ]
+                                    },
+                                    "q": {
+                                        "mode": "continuous",
+                                        "isAtomic": true,
+                                        "hiddenValues": {
+                                            "-997": 1,
+                                            "-994": 1,
+                                            "-998": 1,
+                                            "-999": 1
+                                        }
+                                    },
+                                    "isAtomic": true                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "rect": 1,
+                    "svg": 1
+                }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://github.com/stjude/proteinpaint/wiki/Scatter-plot"
         }
     ]
 }
