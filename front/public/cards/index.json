@@ -321,6 +321,7 @@
             "description": "Single-cell omics viewer",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/singlecell-square.png",
             "sandboxJson": "singlecell",
+            "ribbon": { "text": "updated", "expireDate": "2024-08-15" },
             "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot", "umap"]
         },
         {
