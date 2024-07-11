@@ -349,17 +349,17 @@
             "image": "https://proteinpaint.stjude.org/ppdemo/images/matrix-square.png",
             "ribbon": { "text":"new", "expireDate": "2024-09-01" },
             "sandboxJson": "dataMatrix",
-            "searchterms": [""]
+            "searchterms": ["matrix"]
         },
         {
             "type": "card",
-            "name": "Gene Expression",
+            "name": "Gene Expression Clustering",
             "section": "apps",
             "description": " ",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/geneExpression-square.png",
             "ribbon": { "text":"new", "expireDate": "2024-09-01" },
             "sandboxJson": "geneExp",
-            "searchterms": [""]
+            "searchterms": ["clustering","expression","hierarchical"]
         }
     ]
 }
