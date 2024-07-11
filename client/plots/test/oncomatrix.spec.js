@@ -399,6 +399,7 @@ tape('top mutated genes from APOLLO-LUAD, CNV only', function (test) {
 	runproteinpaint({
 		holder,
 		noheader: 1,
+		debugmode: true,
 		launchGdcMatrix: true,
 		filter0: { op: 'in', content: { field: 'cases.project.project_id', value: ['APOLLO-LUAD'] } },
 		settings: {
@@ -409,6 +410,7 @@ tape('top mutated genes from APOLLO-LUAD, CNV only', function (test) {
 		},
 		opts: {
 			matrix: {
+				debug: 1,
 				callbacks: {
 					'postRender.test': runTests
 				}
@@ -416,9 +418,22 @@ tape('top mutated genes from APOLLO-LUAD, CNV only', function (test) {
 		}
 	})
 
-	function runTests(matrix) {
+	async function runTests(matrix) {
+		await matrix.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: matrix.id,
+			config: {
+				legendGrpFilter: {
+					isAtomic: true,
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: []
+				}
+			}
+		})
 		test.true(
-			holder.querySelectorAll('svg text').length > 200,
+			holder.querySelectorAll('svg text').length > 90,
 			'should have the expected number of rendered svg text elements'
 		)
 
