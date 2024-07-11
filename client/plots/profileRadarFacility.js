@@ -146,11 +146,6 @@ class profileRadarFacility extends profilePlot {
 				.attr('pointer-events', 'none')
 		}
 
-		if (this.state.dslabel == 'ProfileAbbrev') {
-			const uiG = this.legendG.append('g').attr('transform', `translate(0, -15)`)
-			this.addEndUserImpressionNote(uiG)
-		}
-
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		const siteLabel = this.sites.find(s => s.value == this.settings.site).label

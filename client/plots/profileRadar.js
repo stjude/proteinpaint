@@ -156,7 +156,10 @@ class profileRadar extends profilePlot {
 
 		const item2 = `${config[config.plot].term2.name} ${abbrev}`
 		this.addLegendItem(item2, color2, 1, '5, 5')
-		if (this.state.dslabel == 'ProfileAbbrev')
+		if (
+			this.state.dslabel == 'ProfileAbbrev' ||
+			(this.state.dslabel == 'ProfileFull' && this.state.config.plot == 'plot1')
+		)
 			this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
 	}
 
