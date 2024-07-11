@@ -1,4 +1,5 @@
 {
+  "//COMMENT": "intended for github CI, as tpmasterdir below is specific to set up in there",
   "debugmode": true,
   "defaultgenome": "hg38-test",
   "features": {

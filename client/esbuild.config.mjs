@@ -3,7 +3,6 @@ import fs from 'fs'
 import { context } from 'esbuild'
 import { polyfillNode } from "esbuild-plugin-polyfill-node"
 import notifier from 'node-notifier'
-import serverconfig from '../server/src/serverconfig.js'
     
 const __dirname = import.meta.dirname
 const ENV = process.env.ENV
@@ -51,7 +50,7 @@ if (ENV == 'dev') {
 }
 
 function logRebuild() {
-  const messagesDir = path.join(serverconfig.sseDir, 'messages')
+  const messagesDir = path.join(__dirname, '../.sse/messages')
   return {
     name: 'logBuildStage',
     setup({ onStart, onEnd }) {
