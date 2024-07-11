@@ -346,9 +346,19 @@
             "name": "Data Matrix",
             "section": "apps",
             "description": "Variable-by-sample map of mutations and metadata",
-            "image": "",
-            "ribbon": { "text":"new", "expireDate": "2023-10-31" },
+            "image": "https://proteinpaint.stjude.org/ppdemo/images/matrix-square.png",
+            "ribbon": { "text":"new", "expireDate": "2024-09-01" },
             "sandboxJson": "dataMatrix",
+            "searchterms": [""]
+        },
+        {
+            "type": "card",
+            "name": "Gene Expression",
+            "section": "apps",
+            "description": " ",
+            "image": "https://proteinpaint.stjude.org/ppdemo/images/geneExpression-square.png",
+            "ribbon": { "text":"new", "expireDate": "2024-09-01" },
+            "sandboxJson": "geneExp",
             "searchterms": [""]
         }
     ]

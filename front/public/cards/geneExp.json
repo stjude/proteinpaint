@@ -1,0 +1,207 @@
+{
+    "ppcalls": [
+        {
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "mass": {
+                    "state": {
+                        "dslabel": "GDC",
+                        "genome": "hg38",
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
+                        "termfilter": {
+                            "filter0": {
+                                "op": "and",
+                                "content": [
+                                    {
+                                        "op": "in",
+                                        "content": {
+                                            "field": "cases.project.project_id",
+                                            "value": [
+                                                "TCGA-GBM"
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "plots": [
+                            {
+                                "chartType": "hierCluster",
+                                "dataType": "geneExpression",
+                                "terms": [
+                                    {
+                                        "gene": "AKT1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "MYC",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "YAP1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "CD109",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "BCL6",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "BRAF",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "CDKN2A",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "CD34",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "ALDH1A3",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "CTNNB1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "CXCL14",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "E2F1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "EGFR",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "PTEN",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "FAT1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "FGFR1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "FOXM1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "IDH1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "IDH2",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "HOXA10",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "HOXA13",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "HOXA9",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "LAT1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "MAPK1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "MAPK3",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "MMP1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "MGMT",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "NOTCH3",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "PIK3CA",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "PDGFRA",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "RB1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "TP53",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "WWTR1",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "ATRX",
+                                        "type": "geneExpression"
+                                    },
+                                    {
+                                        "gene": "ROS1",
+                                        "type": "geneExpression"
+                                    }
+                                ],
+                                "termgroups": [
+                                    {
+                                        "name": "Variables",
+                                        "lst": [
+                                            {
+                                                "id": "case.diagnoses.age_at_diagnosis"
+                                            },
+                                            {
+                                                "id": "case.demographic.gender"
+                                            },
+                                            {
+                                                "id": "case.project.project_id"
+                                            },
+                                            {
+                                                "id": "case.tissue_source_site.name"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "rect": 5
+                }
+            }
+        }
+    ]
+}
