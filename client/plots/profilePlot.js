@@ -261,7 +261,7 @@ export class profilePlot {
 
 		if (chartType != 'profileRadarFacility')
 			inputs.push({
-				label: 'Add plot',
+				label: 'Open a plot for comparison using different filters',
 				type: 'checkbox',
 				chartType,
 				settingsKey: 'show2Plots',
