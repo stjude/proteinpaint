@@ -569,7 +569,7 @@ class SampleView {
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
-				this.imagePlots.push({ sample: cellDiv })
+				this.imagePlots.push({ sample, cellDiv })
 				if (state.samples.length > 1)
 					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 				const imagePlotImport = await import('./imagePlot.js')
