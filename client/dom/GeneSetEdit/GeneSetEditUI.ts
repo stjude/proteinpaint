@@ -269,7 +269,8 @@ export class GeneSetEditUI {
 				this.menuList.push({
 					label: `${tdb.label} gene set`,
 					callback: async (event: Event) => {
-						this.tip2.clear().showunder(event.target)
+						this.tip2.clear().showunder(this.api.dom.textControlDiv.node()!)
+						// this.tip2.clear().showunder(event.target)
 						const termdb = await import('../../termdb/app.js')
 						termdb.appInit({
 							holder: this.tip2.d,
@@ -307,7 +308,7 @@ export class GeneSetEditUI {
 				.style('padding', '0px 10px')
 				.style('color', 'black')
 				.html(`${menu.label} &#9660;`)
-				.on('click', async event => {
+				.on('click', async (event: Event) => {
 					await menu.callback(event)
 				})
 		}
@@ -438,7 +439,7 @@ export class GeneSetEditUI {
 		this.api.dom.restoreBtn?.property('disabled', !hasChanged)
 		// disable submit button when gene list not changed or is empty in expression mode
 		const minNum = this.minNumGenes || 0
-		this.api.dom.submitBtn.property('disabled', !hasChanged || this.geneList?.length < minNum)
+		this.api.dom.submitBtn.property('disabled', !hasChanged || this.geneList?.length < minNum || !this.geneList?.length)
 		if (hasChanged) this.api.dom.submitBtn!.node()!.focus()
 	}
 

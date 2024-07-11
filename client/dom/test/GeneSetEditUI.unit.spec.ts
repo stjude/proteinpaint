@@ -2,6 +2,7 @@ import { GeneSetEditUI } from '../GeneSetEdit/GeneSetEditUI'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { hg38, hg19 } from '../../test/testdata/genomes'
+import { detectGte } from 'test/test.helpers'
 
 /*************************
  reusable helper functions
@@ -117,7 +118,7 @@ tape('Non-empty opts.geneList', function (test) {
 	}
 })
 
-tape('gene deletion', function (test) {
+tape('Gene deletion', function (test) {
 	test.timeoutAfter(100)
 
 	testHG38()
@@ -148,7 +149,7 @@ tape('gene deletion', function (test) {
 	}
 })
 
-tape('submit button', function (test) {
+tape('Submit button', function (test) {
 	test.timeoutAfter(100)
 	const holder: any = getHolder()
 	const geneList: { gene: string }[] = [{ gene: 'KRAS' }, { gene: 'TP53' }]
@@ -174,6 +175,55 @@ tape('submit button', function (test) {
 	}
 })
 
-// /*** TODO: test clear, search genes, add from msigdb, etc ***/
+tape('Clear button', function (test) {
+	test.timeoutAfter(100)
+	const holder: any = getHolder()
+	const geneList: { gene: string }[] = [{ gene: 'KRAS' }, { gene: 'TP53' }]
+	const ui = new GeneSetEditUI({
+		holder,
+		genome: hg38,
+		geneList,
+		callback: () => {
+			//Comment so ts-linter doesn't complain
+		},
+		vocabApi: {}
+	})
 
-// // tape('clear button', function(test) {}
+	ui.api.dom.clearBtn.node()!.click()
+	test.equal(ui.api.dom.geneHoldingDiv.selectAll(':scope>div').size(), 0, `Should remove all gene pills`)
+	test.equal(ui.api.dom.submitBtn.property('disabled'), true, `Should disable submit button after clearing all genes`)
+
+	if (test['_ok']) ui.api.destroy()
+	test.end()
+})
+
+tape('MSigDB gene set', async function (test) {
+	test.timeoutAfter(100)
+	const holder: any = getHolder()
+	const geneList: { gene: string }[] = [{ gene: 'KRAS' }, { gene: 'TP53' }]
+	const ui = new GeneSetEditUI({
+		holder,
+		genome: hg38,
+		geneList,
+		callback: () => {
+			//Comment so ts-linter doesn't complain
+		},
+		vocabApi: {}
+	})
+
+	const options = await detectGte({
+		selector: '.termdiv',
+		target: ui.tip2.dnode,
+		count: 9,
+		trigger() {
+			ui.menuList.find(d => d.label.includes('MSigDB'))!.callback()
+		}
+	})
+	test.equal(options.length, 9, `Should display 9 MSigDB gene sets`)
+
+	if (test['_ok']) {
+		ui.tip2.hide()
+		ui.api.destroy()
+	}
+	test.end()
+})
