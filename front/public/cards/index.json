@@ -124,7 +124,6 @@
             "type": "card",
             "name": "BCF",
             "section": "tracks",
-            "ribbon": {"text": "new", "expireDate": "2024-05-15"},
             "description": "Custom variant calls",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/bcf-square.png",
             "sandboxJson": "BCF",
@@ -210,7 +209,6 @@
             "type": "card",
             "name": "Linkage Disequilibrium",
             "section": "tracks",
-            "ribbon": {"text": "new", "expireDate": "2024-03-01"},
             "description": "Non-random association of alleles at different loci",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/ld-square.png",
             "sandboxJson": "LD",
@@ -340,9 +338,18 @@
             "section": "apps",
             "description": "Circos-like plot of genome-wide mutational events",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/disco-square.png",
-            "ribbon": { "text":"new", "expireDate": "2023-10-31" },
             "sandboxJson": "disco",
             "searchterms": ["disco"]
+        },
+        {
+            "type": "card",
+            "name": "Data Matrix",
+            "section": "apps",
+            "description": "TODO: ADD A DESCRIPTION",
+            "image": "",
+            "ribbon": { "text":"new", "expireDate": "2023-10-31" },
+            "sandboxJson": "dataMatrix",
+            "searchterms": [""]
         }
     ]
 }
