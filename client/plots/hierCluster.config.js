@@ -66,6 +66,8 @@ export async function getPlotConfig(opts = {}, app) {
 			} else if (!['geneExpression', 'metaboliteIntensity', 'float'].includes(tw.term.type)) {
 				// May add other term type in hierCluster
 				throw 'term type not supported in hierCluster'
+			} else if (config.dataType && tw.term.type !== config.dataType) {
+				throw `cannot have term type ${tw.term.type} in ${config.dataType} term group`
 			}
 			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
