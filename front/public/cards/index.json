@@ -310,6 +310,7 @@
             "description": "2D scatter plot of samples & metadata",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/scatterplot-square.png",
             "sandboxJson": "scatterplot",
+            "ribbon": { "text": "updated", "expireDate": "2024-09-01" },
             "searchterms": ["tSNE", "lasso"]
         },
         {
