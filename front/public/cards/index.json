@@ -345,7 +345,7 @@
             "type": "card",
             "name": "Data Matrix",
             "section": "apps",
-            "description": "TODO: ADD A DESCRIPTION",
+            "description": "Variable-by-sample map of mutations and metadata",
             "image": "",
             "ribbon": { "text":"new", "expireDate": "2023-10-31" },
             "sandboxJson": "dataMatrix",
