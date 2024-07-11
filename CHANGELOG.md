@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- New Data Matrix and Gene Expression cards on the homepage
+
 
 ## 2.67.1
 
