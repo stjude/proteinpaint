@@ -85,7 +85,7 @@ class profileBarchart extends profilePlot {
 		const title =
 			this.state.dslabel == 'ProfileAbbrev'
 				? `Score-based Results for the ${this.component} Component by Module and Domain Compared with End-User Impression`
-				: `Objective and Subjective Score-Based Results for the ${this.component} Component by Module and Domain`
+				: `Objective and Subjective Score-based Results for the ${this.component} Component by Module and Domain`
 		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(title)
 		const svg = this.svg
 		const color = this.configComponent.component.color
