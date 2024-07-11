@@ -285,10 +285,9 @@ export class profilePlot {
 				inputs
 			})
 		}
-		if (this.state.isLoggedIn)
-			this.components.controls.on(`downloadClick.${chartType}`, () =>
-				downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
-			)
+		this.components.controls.on(`downloadClick.${chartType}`, () =>
+			downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
+		)
 		this.components.controls.on(`helpClick.${chartType}`, () => {
 			let link
 			if (this.state.dslabel == 'ProfileAbbrev') {
