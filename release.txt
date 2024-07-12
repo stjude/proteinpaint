@@ -1,1 +1,3 @@
-
+Features:
+- New continuous variables scatter plot example available from the scatter plot card on the homepage. 
+- New GDC sample disco plot example available from the disco card on the homepage.
