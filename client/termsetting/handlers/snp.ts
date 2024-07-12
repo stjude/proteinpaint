@@ -12,8 +12,10 @@ export async function getHandler(self) {
 	return {
 		getPillName() {
 			return self.term.name
+		},
+		getPillStatus() {
+			return { text: '' }
 		}
-		//getPillStatus()
 	}
 }
 

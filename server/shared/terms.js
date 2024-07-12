@@ -72,6 +72,7 @@ const nonDictTypes = new Set([
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.SINGLECELL_CELLTYPE
 ])
+
 export const numericTypes = new Set([
 	TermTypes.INTEGER,
 	TermTypes.FLOAT,
@@ -79,6 +80,8 @@ export const numericTypes = new Set([
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION
 ])
+
+const categoricalTypes = new Set([TermTypes.CATEGORICAL, TermTypes.SNP])
 
 const singleSampleTerms = new Set([TermTypes.SINGLECELL_GENE_EXPRESSION])
 
@@ -89,6 +92,10 @@ export function isSingleSampleTerm(term) {
 export function isNumericTerm(term) {
 	if (!term) return false
 	return numericTypes.has(term.type)
+}
+export function isCategoricalTerm(term) {
+	if (!term) return false
+	return categoricalTypes.has(term.type)
 }
 
 export function isDictionaryType(type) {
