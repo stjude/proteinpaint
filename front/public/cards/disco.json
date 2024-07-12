@@ -11,6 +11,7 @@
             }
         },
         {
+            "label": "Custom Data",
             "message": "In this plot, all chromosomes of the genome are arranged in a circle. Multiple rings along the circle indicates example data points of mutation, copy number change, and structural variation/fusion events. Gene labels are based on mutation and sv/fusion events.",
             "runargs": {
                 "noheader": true,
@@ -55,6 +56,26 @@
                             "strandB": "-"
                         }
                     ]
+                }
+            },
+            "testSpec": {
+                "button": 1,
+                "expected": {
+                    "svg": 1,
+                    "g": 2
+                }
+            }
+        },
+        {
+            "label": "GDC Data",
+            "runargs": {
+                "noheader": true,
+                "nobox": true,
+                "genome": "hg38",
+                "disco": {
+                    "dataset": "GDC",
+                    "genome": "hg38",
+                    "sample": "TCGA-85-7710-01A"
                 }
             },
             "testSpec": {
