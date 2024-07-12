@@ -45,8 +45,8 @@
                         },
                         "plots": [
                             {
-                                "chartType": "sampleScatter",
-                                "name": "Dynamic scatter",
+                                "chartType": "summary",
+					            "childType": "sampleScatter",
                                 "term": {
                                     "term": {
                                         "type": "float",
@@ -151,7 +151,55 @@
                                             "-999": 1
                                         }
                                     },
-                                    "isAtomic": true                                }
+                                    "isAtomic": true
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "rect": 1,
+                    "svg": 1
+                }
+            }
+        },
+        {
+            "label": "Gene expression",
+            "runargs": {
+                "noheader": true,
+                "mass": {
+                    "state": {
+                        "dslabel": "GDC",
+                        "genome": "hg38",
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
+                        "plots": [
+                            {
+                                "chartType": "sampleScatter",
+                                "name": "Dynamic scatter",
+                                "term": {
+                                    "term": {
+                                        "type": "geneExpression",
+                                        "gene": "TP53",
+                                        "name": "TP53"
+                                    },
+                                    "q": {
+                                        "mode": "continuous"
+                                    }
+                                },
+                                "term2": {
+                                    "term": {
+                                        "type": "geneExpression",
+                                        "gene": "AKT1",
+                                        "name": "AKT1"
+                                    },
+                                    "q": {
+                                        "mode": "continuous"
+                                    }
+                                }
                             }
                         ]
                     }
