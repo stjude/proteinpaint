@@ -1857,16 +1857,18 @@ export function gdcValidate_query_singleSampleMutation(ds, genome) {
 			if (!q.case_id) {
 				// not mapped to case id
 				// this is possible when the server just started and hasn't finished caching. thus must call this method to map
-				q.case_id = await convert2caseId(q.sample, ds)
+				q.case_id = await convert2caseId(q, ds)
 			}
 		}
 		return await getSingleSampleMutations(q, ds, genome)
 	}
 }
 
-async function convert2caseId(n, ds) {
+async function convert2caseId(q, ds) {
 	/*
-	convert all below to case.case_id
+	q={sample:str}
+
+	q.sample could be anything below. convert it to case.case_id
 	- case submitter id (TCGA-FR-A44A)
 	- aliquot id (d835e9c7-de84-4acd-ba30-516f396cbd84)
 	- sample submitter id (TCGA-B5-A1MR-01A)
@@ -1882,9 +1884,9 @@ async function convert2caseId(n, ds) {
 				filters: {
 					op: 'or',
 					content: [
-						{ op: '=', content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: [n] } },
-						{ op: '=', content: { field: 'submitter_id', value: [n] } },
-						{ op: '=', content: { field: 'samples.submitter_id', value: [n] } }
+						{ op: '=', content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: q.sample } },
+						{ op: '=', content: { field: 'submitter_id', value: q.sample } },
+						{ op: '=', content: { field: 'samples.submitter_id', value: q.sample } }
 					]
 				}
 			}
