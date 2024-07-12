@@ -1,15 +1,32 @@
-# 'cat ~/sjpp/test.txt | python gsea.py
+# cat ~/sjpp/test.txt | python gsea.py
 
 import blitzgsea as blitz
 import json
 import time
 import sys
 import sqlite3
+import os
 import pandas as pd
 
             
 def extract_symbols(x):
    return x['symbol'] 
+
+def extract_plot_data(signature, geneset, library, result):
+   signature = signature.copy()
+   signature.columns = ["i","v"]
+   signature = signature.sort_values("v", ascending=False).set_index("i")
+   signature = signature[~signature.index.duplicated(keep='first')]
+   if center:
+       signature.loc[:,"v"] -= np.mean(signature.loc[:,"v"])
+   signature_map = {}
+   for i,h in enumerate(signature.index):
+       signature_map[h] = i
+   
+   gs = set(library[geneset])
+   hits = [i for i,x in enumerate(signature.index) if x in gs]
+   
+   running_sum, es = blitz.enrichment_score(np.array(np.abs(signature.iloc[:,0])), signature_map, gs)
 
 try:
     # Try to read a single character from stdin without blocking
@@ -18,12 +35,13 @@ try:
         for line in sys.stdin:
             # Process each line
             json_object = json.loads(line)
-            db=json_object['db']
-            table_name=json_object['gene_set_group']
+            cachedir=json_object['cachedir']
             genes=json_object['genes']
             fold_change=json_object['fold_change']
+            table_name=json_object['geneset_group']
             df = {'Genes': genes, 'fold_change': fold_change}
-            
+            signature=pd.DataFrame(df)
+            db=json_object['db']
             # Connect to the SQLite database
             conn = sqlite3.connect(db)
             
@@ -38,7 +56,6 @@ try:
             
             # Fetch all rows from the executed SQL query
             rows = cursor.fetchall()
-            
             
             start_loop_time = time.time()
             msigdb_library={} 
@@ -58,16 +75,22 @@ try:
             stop_loop_time = time.time()
             execution_time = stop_loop_time - start_loop_time
             print(f"Execution time: {execution_time} seconds")
-            signature=pd.DataFrame(df)
-            
-            # run enrichment analysis
-            start_gsea_time = time.time()
-            if __name__ == "__main__":
-               result = blitz.gsea(signature, msigdb_library).T
-               print ("result:",result.to_json())
-            stop_gsea_time = time.time()   
-            gsea_time = stop_gsea_time - start_gsea_time
-            print (f"GSEA time: {gsea_time} seconds")
+            try: # Extract ES data to be plotted on client side
+               geneset_name=json_object['geneset_name']
+               print ("geneset_name:",geneset_name)
+               result = pd.read_pickle(os.path.join(cachedir,"result.pkl"))
+               extract_plot_data(signature, key, msigdb_library, result)
+            except KeyError: # Initial GSEA calculation, result saved to a pickle file
+               
+               # run enrichment analysis
+               start_gsea_time = time.time()
+               if __name__ == "__main__":
+                  result = blitz.gsea(signature, msigdb_library).T
+                  print ("result:",result.to_json())
+                  result.to_pickle(os.path.join(cachedir,"result.pkl"))
+               stop_gsea_time = time.time()   
+               gsea_time = stop_gsea_time - start_gsea_time
+               print (f"GSEA time: {gsea_time} seconds")
             
     else:
        pass 

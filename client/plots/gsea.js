@@ -140,6 +140,7 @@ add:
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.config.gsea_params.geneSetGroup = self.settings.pathway
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
+		console.log('self.config.gsea_params:', self.config.gsea_params)
 		const output = await rungsea(self.config.gsea_params)
 		wait.remove()
 		const table_stats = table2col({ holder: self.dom.detailsDiv })
@@ -243,7 +244,19 @@ add:
 			div: d_gsea,
 			showLines: true,
 			maxHeight: '30vh',
-			resize: true
+			resize: true,
+			noButtonCallback: async index => {
+				//console.log("index:",self.gsea_table_rows[index][0].value)
+				const body = {
+					genome: self.config.gsea_params.genome,
+					geneset_name: self.gsea_table_rows[index][0].value,
+					genes: self.config.gsea_params.genes,
+					fold_change: self.config.gsea_params.fold_change,
+					geneSetGroup: self.config.gsea_params.geneSetGroup
+				}
+				const plot_data = await rungsea(body)
+				console.log('plot_data:', plot_data)
+			}
 		})
 	}
 }
