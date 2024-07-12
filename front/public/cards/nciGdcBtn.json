@@ -1,7 +1,7 @@
 {
     "button": {
         "name": "NCI GDC",
-        "intro": "The NCI's Genomic Data Commmons <a href='https://gdc.cancer.gov/about-gdc' target='GDC homepage'>(GDC)</a> is a repository of harmonized datasets of large cancer cohorts. Following applications allow to access and visualize GDC datasets via on-the-fly query to the GDC API.<br><p style='margin: 10px 20px 0px;'><ul style='margin: 5px 15px;'><li><a href='/?appcard=gdcbam' target='GDC lollipop'>BAM slicing</a></li><li><a href='/?appcard=lollipop' target='GDC lollipop'>Coding mutation lollipop plot</a> (or use gene search box below)</li><li><a href='/?appcard=singlecell' target='GDC lollipop'>Single cell RNA-seq</a></li></ul></p>",
+        "intro": "The NCI's Genomic Data Commmons <a href='https://gdc.cancer.gov/about-gdc' target='GDC homepage'>(GDC)</a> is a repository of harmonized datasets of large cancer cohorts. Following applications allow to access and visualize GDC datasets via on-the-fly query to the GDC API.<br><p style='margin: 10px 20px 0px;'><ul style='margin: 5px 15px;'><li><a href='/?appcard=gdcbam' target='GDC lollipop'>BAM slicing</a></li><li><a href='/?appcard=lollipop' target='GDC lollipop'>Coding mutation lollipop plot</a> (or use gene search box below)</li><li><a href='/?appcard=singlecell' target='GDC lollipop'>Single cell RNA-seq</a></li><li><a href='/?appcard=disco' target='GDC disco'>Disco plot</a></li><li><a href='/?appcard=scatterplot' target='GDC scatterplot'>Scatter plot</a></li></ul></p>",
         "searchBar": "gene",
         "availableGenomes": ["hg38"],
         "dsURLparam": "mds3=GDC",
