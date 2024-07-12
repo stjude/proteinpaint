@@ -1,5 +1,5 @@
 {
-    "ribbonMessage": "We're excited to announce our newest app, the <b>Disco Plot!</b>",
+    "ribbonMessage": "Please see our new example using GDC data.",
     "ppcalls": [
         {
             "isUi": true,
@@ -67,15 +67,16 @@
             }
         },
         {
-            "label": "GDC Data",
+            "label": "GDC Sample Data",
+            "urlparam": "?genome=hg38&dslabel=GDC&disco=1&sample=TCGA-AP-A059-01A",
             "runargs": {
                 "noheader": true,
                 "nobox": true,
                 "genome": "hg38",
                 "disco": {
-                    "dataset": "GDC",
+                    "dslabel": "GDC",
                     "genome": "hg38",
-                    "sample": "TCGA-85-7710-01A"
+                    "sample_id": "TCGA-AP-A059-01A"
                 }
             },
             "testSpec": {
