@@ -340,6 +340,7 @@
             "description": "Circos-like plot of genome-wide mutational events",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/disco-square.png",
             "sandboxJson": "disco",
+            "ribbon": { "text":"new", "expireDate": "2024-09-01" },
             "searchterms": ["disco"]
         },
         {
