@@ -2,7 +2,6 @@ import { genesetEnrichmentRequest, genesetEnrichmentResponse } from '../shared/t
 import fs from 'fs'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
-import path from 'path'
 import serverconfig from '../src/serverconfig.js'
 
 export const api = {
@@ -40,12 +39,14 @@ async function run_genesetEnrichment_analysis(q: genesetEnrichmentRequest, genom
 		genes: q.genes,
 		fold_change: q.fold_change,
 		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name, // For now msigdb has been added, but later databases other than msigdb may be used
-		gene_set_group: q.geneSetGroup
+		geneset_group: q.geneSetGroup,
+		cachedir: serverconfig.cachedir,
+		geneset_name: q.geneset_name
 	}
 
 	//console.log('__dirname:',__dirname)
 	//console.log('genesetenrichment_input:', JSON.stringify(genesetenrichment_input))
-
+	//
 	//fs.writeFile('test.txt', '/' + JSON.stringify(genesetenrichment_input), function (err) {
 	//	// For catching input to rust pipeline, in case of an error
 	//	if (err) return console.log(err)
