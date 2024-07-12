@@ -111,7 +111,7 @@ if (serverconfig.debugmode) {
 	const routeSetters = []
 	const defaultDir = path.join(serverconfig.binpath, 'src/test/routes')
 	// will add testing routes as needed and if found, such as in dev environment
-	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js']
+	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js', 'sse.js']
 
 	if (serverconfig.routeSetters) {
 		for (const f of serverconfig.routeSetters) {
@@ -137,6 +137,8 @@ if (serverconfig.debugmode) {
 	// since the serverconfig.binpath prefix may
 	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
+	// server-sent events dir
+	serverconfig.sseDir = path.join(serverconfig.binpath, '../.sse')
 }
 
 if (serverconfig.allow_env_overrides) {

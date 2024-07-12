@@ -1,25 +1,27 @@
 {
     "ppcalls": [
-        {
-            "download": "https://proteinpaint.stjude.org/ppdemo/hg19/singlecell/singlecellDemoData.tar.gz",
-            "urlparam": "?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json",
-            "jsonpath": "proteinpaint_demo/hg19/singlecell/singlecell.json",
+{
+            "label": "GDC datasets",
+            "urlparam": "?noheader=1&mass={%22genome%22:%22hg38%22,%22dslabel%22:%22GDC%22,%22nav%22:{%22header_mode%22:%22hidden%22},%22plots%22:[{%22chartType%22:%22singleCellPlot%22}]}",
             "runargs": {
-                "noheader": 1,
-                "singlecell": {
-                    "genome": "hg19",
-                    "jsonfile":"proteinpaint_demo/hg19/singlecell/singlecell.json"
+                "noheader": true,
+                "nobox": true,
+                "mass": {
+                    "state": {
+                        "genome": "hg38",
+                        "dslabel": "GDC",
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
+                        "plots": [
+                            {
+                                "chartType": "singleCellPlot"
+                            }
+                        ]
+                    }
                 }
             },
-            "testSpec": {
-                "expected": {"canvas": 1 }
-            }
-        }
-    ],
-    "buttons": [
-        {
-            "name": "Documentation",
-            "link": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
+            "testSpec": { "expected": { "table": 1, "svg": 2 } }
         }
     ]
 }

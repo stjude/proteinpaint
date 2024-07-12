@@ -18,7 +18,6 @@ class imagePlot {
 		this.setControls()
 		const result = await this.app.vocabApi.getSampleImages(config.sample.sampleId)
 		if (result.error) throw result.error
-		console.log('result', result)
 		for (const img of result.images) {
 			this.dom.imageHolder
 				.append('img')

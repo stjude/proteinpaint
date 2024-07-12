@@ -17,21 +17,19 @@ class profileRadar extends profilePlot {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 		this.lineGenerator = d3.line()
+		this.twLst = []
+		this.terms = config[config.plot].terms
+		for (const row of this.terms) {
+			this.twLst.push(row.term1.score)
+			if (row.term1.maxScore.term) this.twLst.push(row.term1.maxScore)
+			this.twLst.push(row.term2.score)
+			if (row.term2.maxScore.term) this.twLst.push(row.term2.maxScore)
+		}
 	}
 
 	async main() {
 		await super.main()
-		this.twLst = []
-		this.terms = this.config[this.config.plot].terms
-		for (const row of this.terms) {
-			this.rowCount++
 
-			this.twLst.push(row.term1.score)
-			if (row.term1.maxScore.id) this.twLst.push(row.term1.maxScore)
-			this.twLst.push(row.term2.score)
-
-			if (row.term2.maxScore.id) this.twLst.push(row.term2.maxScore)
-		}
 		await this.setControls()
 		this.angle = (Math.PI * 2) / this.terms.length
 		this.plot()
@@ -158,7 +156,10 @@ class profileRadar extends profilePlot {
 
 		const item2 = `${config[config.plot].term2.name} ${abbrev}`
 		this.addLegendItem(item2, color2, 1, '5, 5')
-		if (this.state.dslabel == 'ProfileAbbrev')
+		if (
+			this.state.dslabel == 'ProfileAbbrev' ||
+			(this.state.dslabel == 'ProfileFull' && this.state.config.plot == 'plot1')
+		)
 			this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
 	}
 

@@ -16,19 +16,19 @@ class profileRadarFacility extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
-
-		this.lineGenerator = d3.line()
-	}
-
-	async main() {
-		await super.main()
 		this.twLst = []
-		this.terms = this.config[this.config.plot].terms
+		this.terms = config[config.plot].terms
 		for (const row of this.terms) {
 			this.rowCount++
 			this.twLst.push(row.score)
 			this.twLst.push(row.maxScore)
 		}
+		this.lineGenerator = d3.line()
+	}
+
+	async main() {
+		await super.main()
+
 		await this.setControls()
 
 		this.angle = (Math.PI * 2) / this.terms.length
@@ -144,11 +144,6 @@ class profileRadarFacility extends profilePlot {
 				.style('font-size', '0.8rem')
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
-		}
-
-		if (this.state.dslabel == 'ProfileAbbrev') {
-			const uiG = this.legendG.append('g').attr('transform', `translate(0, -15)`)
-			this.addEndUserImpressionNote(uiG)
 		}
 
 		this.addFilterLegend()

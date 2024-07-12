@@ -19,7 +19,6 @@ import urlmap from '#common/urlmap'
 import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 import { sayerror } from '../dom/sayerror'
 import { Menu } from '#dom/menu'
-import { AppHeader } from './header/AppHeader.ts'
 
 /*
 exports a global function runproteinpaint()
@@ -171,6 +170,7 @@ export function runproteinpaint(arg) {
 
 			if (data.debugmode) {
 				app.debugmode = true
+				import('./notify').catch(e => console.log(`debugmode: server-sent notifications is not setup`, e))
 			}
 			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
@@ -201,7 +201,8 @@ export function runproteinpaint(arg) {
 				!window.location.search.includes('mass-session-file') &&
 				!window.location.search.includes('mass-session-url')
 			) {
-				const appHeader = new AppHeader({
+				const _ = await import('./header/AppHeader.ts')
+				const appHeader = new _.AppHeader({
 					headtip,
 					app,
 					data,

@@ -988,6 +988,21 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb', { headers, body })
 	}
 
+	async setTermBins(tw) {
+		//TODO use the PresetNumericBins type for defaultBins
+		const defaultBins = await this.getDefaultBins({ tw })
+		if ('error' in defaultBins) throw defaultBins.error
+
+		const termIsFrozen = Object.isFrozen(tw.term)
+		if (termIsFrozen) tw.term = structuredClone(tw.term)
+
+		tw.term.bins = defaultBins
+		const currMode = tw.q.mode // record current mode before q{} is overriden
+		tw.q = tw.term.bins.default
+		tw.q.mode = currMode
+		if (termIsFrozen) Object.freeze(tw.term)
+	}
+
 	async getSingleSampleData(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples

@@ -1034,6 +1034,12 @@ function setTermActions(self) {
 		self.dom.editbtns = self.dom.menubody.append('div')
 		self.dom.editbody = self.dom.menubody.append('div')
 
+		if (self.activeLabel.grp.type == 'hierCluster') {
+			// for hierCluster term group, only allow to add current hierCluster term to current group
+			self.showDictTermSelection()
+			return
+		}
+
 		const grpNameDiv = self.dom.editbtns.append('div').style('margin', '10px 5px')
 		grpNameDiv.append('label').html(`Insert genes or variables in `)
 		self.dom.grpNameSelect = grpNameDiv.append('select').on('change', () => {
@@ -1105,6 +1111,11 @@ function setTermActions(self) {
 		//self.dom.dictTermBtn.style('text-decoration', 'underline')
 		//self.dom.textTermBtn.style('text-decoration', '')
 
+		const usecase = { target: 'matrix', detail: 'termgroups' }
+		if (self.activeLabel.grp.type == 'hierCluster') {
+			usecase.target = self.activeLabel.tw.term.type
+			usecase.detail = 'term'
+		}
 		const termdb = await import('../termdb/app')
 		self.dom.editbody.selectAll('*').remove()
 		termdb.appInit({
@@ -1117,7 +1128,7 @@ function setTermActions(self) {
 					header_mode: 'search_only'
 				},
 				tree: {
-					usecase: { target: 'matrix', detail: 'termgroups' }
+					usecase
 				}
 			},
 			tree: {
@@ -1138,10 +1149,24 @@ function setTermActions(self) {
 				return tw
 			})
 		)
-		const pos = select(`input[name='${self.insertRadioId}']:checked`).property('value')
+		const pos = self.insertRadioId && select(`input[name='${self.insertRadioId}']:checked`)?.property('value')
 		const t = self.activeLabel
 		const termgroups = self.termGroups
-		if (self.dom.grpNameSelect.property('value') == 'current') {
+
+		if (t.grp.type == 'hierCluster') {
+			const grp = termgroups[t.grpIndex]
+			grp.lst.splice(t.lstIndex + 1, 0, ...newterms)
+			self.app.dispatch({
+				type: 'plot_nestedEdits',
+				id: self.opts.id,
+				edits: [
+					{
+						nestedKeys: ['termgroups', t.grpIndex, 'lst'],
+						value: grp.lst
+					}
+				]
+			})
+		} else if (self.dom.grpNameSelect.property('value') == 'current') {
 			const grp = termgroups[t.grpIndex]
 			const i = pos == 'above' ? t.lstIndex : t.lstIndex + 1
 			// remove this element

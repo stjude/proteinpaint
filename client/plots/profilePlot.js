@@ -261,7 +261,7 @@ export class profilePlot {
 
 		if (chartType != 'profileRadarFacility')
 			inputs.push({
-				label: 'Add plot',
+				label: 'Open a plot for comparison using different filters',
 				type: 'checkbox',
 				chartType,
 				settingsKey: 'show2Plots',
@@ -285,10 +285,9 @@ export class profilePlot {
 				inputs
 			})
 		}
-		if (this.state.isLoggedIn)
-			this.components.controls.on(`downloadClick.${chartType}`, () =>
-				downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
-			)
+		this.components.controls.on(`downloadClick.${chartType}`, () =>
+			downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
+		)
 		this.components.controls.on(`helpClick.${chartType}`, () => {
 			let link
 			if (this.state.dslabel == 'ProfileAbbrev') {
@@ -487,11 +486,7 @@ export class profilePlot {
 
 	getDownloadFilename() {
 		this.downloadCount++
-		let filename = `${this.type}${this.component ? this.component : ''}${this.settings[this.config.regionTW.term.id]}${
-			this.settings[this.config.countryTW.term.id]
-		}${this.settings[this.config.incomeTW.term.id]}${this.settings[this.config.typeTW.term.id]}${
-			this.downloadCount
-		}.svg`
+		let filename = `${this.type}${this.downloadCount}.svg`
 		filename = filename.split(' ').join('_')
 		return filename
 	}

@@ -1,15 +1,16 @@
 import path from 'path'
 import fs from 'fs'
 import { context } from 'esbuild'
-import { fileURLToPath } from 'url'
 import { polyfillNode } from "esbuild-plugin-polyfill-node"
 import notifier from 'node-notifier'
     
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = import.meta.dirname
 const ENV = process.env.ENV
 
 const entryPoints = ['./src/app.js']
-entryPoints.push(`./test/internals-${ENV}.js`)
+if (ENV != 'prod') entryPoints.push(`./test/internals-${ENV}.js`)
+
+const outdir = path.join(__dirname, ENV == 'test' ? '../public/bin/test' : './dist')
 
 const libReplacers = ENV == 'dev'  
   ? [nodeLibToBrowser()]
@@ -26,7 +27,7 @@ const ctx = await context({
   //   embedder portals like GFF
   // - for CLI tests such as in CI, the bundles can be outputted directly
   //   to the test runner's static (public) dir  
-	outdir: path.join(__dirname, ENV == 'test' ? '../public/bin/test' : './dist'),
+	outdir,
   outbase: 'src',
 	//chunkNames: '[hash].app', // TODO: enable for prod build?
 	sourcemap: true,
@@ -49,6 +50,7 @@ if (ENV == 'dev') {
 }
 
 function logRebuild() {
+  const messagesDir = path.join(__dirname, '../.sse/messages')
   return {
     name: 'logBuildStage',
     setup({ onStart, onEnd }) {
@@ -59,13 +61,32 @@ function logRebuild() {
         t = Date.now()
       })
       onEnd((result) => { 
-        if (result.errors.length) {
-          numErrs = result.errors.length
-          notifier.notify({title: 'esbuild', message: `${numErrs} bundling errors`})
-        } else if (numErrs) {
-          numErrs = 0
-          // only notify of success if recovering from a bundling error
-          notifier.notify({title: 'esbuild', message: 'success, bundle ok'})
+        if (ENV == 'dev') {
+          if (result.errors.length) {
+            numErrs = result.errors.length
+            const message = `${numErrs} esbuild error(s)`
+            notifier.notify({title: 'client', message})
+            const data = JSON.stringify({
+              key: 'client',
+              message,
+              color: 'red'
+            })
+            fs.promises.writeFile(`${messagesDir}/client`, data)
+          } else /*if (numErrs)*/ {
+            numErrs = 0
+            const message = 'success, esbuild ok'
+            // only notify of success if recovering from a bundling error
+            notifier.notify({title: 'client', message})
+            const data = JSON.stringify({
+              key: 'client',
+              message,
+              status: 'ok',
+              color: 'green',
+              duration: 2500,
+              reload: true
+            })
+            fs.promises.writeFile(`${messagesDir}/client`, data)
+          }
         }
         console.log('\n--- client rebuild finished in', Date.now() - t, 'ms ---\n')
         if (ENV != 'dev') ctx.dispose()

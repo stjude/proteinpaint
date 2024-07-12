@@ -1,0 +1,52 @@
+{
+    "ppcalls": [
+        {
+            "label": "GDC Gliomas Cohort",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "parseurl": false,
+				"launchGdcMatrix": true,
+                "filter0": { "op": "in", "content": { "field": "cases.disease_type", "value":  "Gliomas" } },
+				"settings": { "matrix": { "maxGenes": 20, "maxSample": 10000 }},
+				"termgroups":[{"lst":[
+					{"id":"case.disease_type"},
+					{"id":"case.diagnoses.age_at_diagnosis","q":{"mode":"continuous"}}
+				]}]
+         	},
+            "testSpec": {
+                "expected": {
+                    "image": 1
+                }
+            }
+        },
+        {
+            "label": "PNET Tumor Cohort",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "parseurl": false,
+                "mass": {
+                    "state": {
+                        "dslabel": "PNET",
+                        "genome": "hg19",
+                        "nav": {
+                           "header_mode": "hidden"
+                        },
+                        "plots": [
+                            {
+                                "chartType": "matrix",
+                                "name": "Matrix plot"
+                            }
+                        ]
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "image": 1
+                }
+            }
+        }
+    ]
+}

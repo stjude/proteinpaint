@@ -218,6 +218,9 @@ function setNumberInput(opts) {
 						self.values[opts.settingsKey] !== Number(self.dom.inputs[input.settingsKey].property('value'))
 					debouncedDispatch(event.key !== 'Enter' && valueChanged)
 				})
+				.on('change', event => {
+					debouncedDispatch(false)
+				})
 			// the onchange event is too sensitive for a number input, and can cause premature dispatch
 			//.on('change', debouncedDispatch)
 		}

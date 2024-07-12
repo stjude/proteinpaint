@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 Features:
+- New Data Matrix and Gene Expression cards on the homepage
+
+Fixes:
+- hierCluster group Add_Rows ui can only add compatible terms
+
+
+## 2.67.1
+
+Fixes:
+- improve oncomatrix non-ci test to include gene expression and survival, and CNV-only cohort
+
+DevOps:
+- Trigger browser notiffications of dev events such as rebundling status
+
+
+## 2.67.0
+
+Features:
 - Support inputing custom CNV segments in mds3 tk, improve cnv rendering
 - Support overall survival data from gdc
 - New Publications button in the ProteinPaint header. Results are searchable in the omnisearch.

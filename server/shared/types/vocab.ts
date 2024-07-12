@@ -25,6 +25,7 @@ export type VocabApi = {
 	getViolinPlotData: (args: any, _body?: any) => any
 	getAnnotatedSampleData: (args: any) => any
 	getDefaultBins: (args: any) => any
+	setTermBins(tw: TermWrapper): any
 	getTwMinCopy(tw: TermWrapper): any
 	uncacheTermQ: (term: Term, q: any) => any
 	hasVerifiedToken: () => boolean

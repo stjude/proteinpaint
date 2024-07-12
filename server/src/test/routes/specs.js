@@ -23,19 +23,6 @@ export default function setRoutes(app, basepath) {
 			throw e
 		}
 	})
-
-	app.post('/specs', async (req, res) => {
-		try {
-			const q = req.body
-			const name = q.name || ''
-			const dir = q.dir || ''
-			const specs = await helpers.writeImportCode(q, targetFile)
-			res.send(specs)
-		} catch (e) {
-			console.log(e)
-			res.send({ error: e })
-		}
-	})
 }
 
 function replaceFilePath(f) {

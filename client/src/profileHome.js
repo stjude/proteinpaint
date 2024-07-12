@@ -19,6 +19,8 @@ export function init(arg) {
 }
 
 async function loadDataset(headerHolder, dslabel) {
+	const profileIntroHolder = document.getElementById('profileIntro')
+	profileIntroHolder.innerHTML = ''
 	headerHolder.selectAll('*').remove()
 	const appHolder = select(document.getElementById('aaa'))
 	appHolder.selectAll('*').remove()
@@ -36,10 +38,6 @@ async function loadDataset(headerHolder, dslabel) {
 	}
 	const _ = await import('../mass/app')
 	const app = await _.appInit(opts)
-	const queryString = window.location.search
-	const urlParams = new URLSearchParams(queryString)
-	const isLoggedIn = urlParams.get('isLoggedIn')
-	const site = urlParams.get('site')
 
 	addButtons(headerHolder, app, dslabel, isLoggedIn, site)
 	launchPlot(app, 'profilePolar', 'Polar Graph', false, isLoggedIn, site)

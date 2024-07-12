@@ -19,9 +19,11 @@ const runpp = helpers.getRunPp('mass', {
 /**************
  test sections
 
-2 genes, 2 dict terms
-2 genes, 2 dict terms, divideBy
-launch matrix using runproteinpaint with launchGdcMatrix
+2 geneVariant, 2 dict terms
+2 geneVariant, 2 dict terms, divideBy
+2 geneVariant, 2 dict terms, 1 gene exp, 1 survival
+launch matrix with gdc launcher and top mutated genes, gliomas
+top mutated genes from APOLLO-LUAD, CNV only
 
 ***************/
 tape('\n', function (test) {
@@ -29,9 +31,17 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('2 genes, 2 dict terms', function (test) {
+const termlst = [
+	{ term: { name: 'IDH1', type: 'geneVariant' } },
+	{ term: { name: 'EGFR', type: 'geneVariant' } },
+	{ id: 'case.disease_type' },
+	{ id: 'case.diagnoses.age_at_diagnosis' }
+]
+
+tape('2 geneVariant, 2 dict terms', function (test) {
 	test.timeoutAfter(20000)
 	test.plan(10)
+
 	runpp({
 		state: {
 			nav: { header_mode: 'hidden' }, // must set to hidden for gdc, since it lacks termdb method to get cohort size..
@@ -45,16 +55,7 @@ tape('2 genes, 2 dict terms', function (test) {
 							availContentWidth: 1200
 						}
 					},
-					termgroups: [
-						{
-							lst: [
-								{ term: { name: 'IDH1', type: 'geneVariant' } },
-								{ term: { name: 'EGFR', type: 'geneVariant' } },
-								{ id: 'case.disease_type' },
-								{ id: 'case.diagnoses.age_at_diagnosis' }
-							]
-						}
-					]
+					termgroups: [{ lst: termlst }]
 				}
 			]
 		},
@@ -84,8 +85,8 @@ tape('2 genes, 2 dict terms', function (test) {
 		test.equal(matrix.Inner.dom.seriesesG.selectAll('image').size(), 1, `should render 1 <image> element`)
 		test.equal(
 			matrix.Inner.dom.svg.selectAll('.sjpp-matrix-term-label-g').node().querySelectorAll('text').length,
-			4,
-			`should render 4 <series> elements`
+			termlst.length,
+			`should render ${termlst.length} <series> elements`
 		)
 	}
 
@@ -182,7 +183,7 @@ tape('2 genes, 2 dict terms', function (test) {
 	}
 })
 
-tape('2 genes, 2 dict terms, divideBy', function (test) {
+tape('2 geneVariant, 2 dict terms, divideBy', function (test) {
 	test.timeoutAfter(20000)
 	test.plan(5)
 	runpp({
@@ -201,16 +202,7 @@ tape('2 genes, 2 dict terms, divideBy', function (test) {
 					divideBy: {
 						id: 'case.disease_type'
 					},
-					termgroups: [
-						{
-							lst: [
-								{ term: { name: 'IDH1', type: 'geneVariant' } },
-								{ term: { name: 'EGFR', type: 'geneVariant' } },
-								{ id: 'case.disease_type' },
-								{ id: 'case.diagnoses.age_at_diagnosis' }
-							]
-						}
-					]
+					termgroups: [{ lst: termlst }]
 				}
 			]
 		},
@@ -305,10 +297,55 @@ tape('2 genes, 2 dict terms, divideBy', function (test) {
 	}
 })
 
-tape('launch matrix using runproteinpaint with launchGdcMatrix', function (test) {
-	test.timeoutAfter(100000)
+tape('2 geneVariant, 2 dict terms, 1 gene exp, 1 survival', function (test) {
+	test.timeoutAfter(20000)
 	test.plan(1)
+
+	const termlst2 = [...termlst, { term: { name: 'MYC', type: 'geneExpression' } }, { id: 'Overall Survival' }]
+	runpp({
+		state: {
+			nav: { header_mode: 'hidden' }, // must set to hidden for gdc, since it lacks termdb method to get cohort size..
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [{ lst: termlst2 }]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		const numSeries = termlst2.length
+		test.equal(
+			matrix.Inner.dom.svg.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label').size(),
+			numSeries,
+			`should render ${numSeries} <series> elements`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('launch matrix with gdc launcher and top mutated genes, gliomas', function (test) {
+	test.timeoutAfter(100000)
+	test.plan(2)
 	const holder = select('body').append('div').node()
+
+	const topGeneNum = 10
 
 	runproteinpaint({
 		holder,
@@ -320,20 +357,11 @@ tape('launch matrix using runproteinpaint with launchGdcMatrix', function (test)
 		},
 		settings: {
 			matrix: {
-				maxGenes: 10,
+				maxGenes: topGeneNum, // asks to load this number of top mutated genes. will be shown in a separate group from termlst
 				maxSample: 10000
 			}
 		},
-		termgroups: [
-			{
-				lst: [
-					{ term: { name: 'IDH1', type: 'geneVariant' } },
-					{ term: { name: 'EGFR', type: 'geneVariant' } },
-					{ id: 'case.disease_type' },
-					{ id: 'case.diagnoses.age_at_diagnosis' }
-				]
-			}
-		],
+		termgroups: [{ lst: termlst }],
 		opts: {
 			matrix: {
 				callbacks: {
@@ -348,7 +376,75 @@ tape('launch matrix using runproteinpaint with launchGdcMatrix', function (test)
 			holder.querySelectorAll('svg text').length > 200,
 			'should have the expected number of rendered svg text elements'
 		)
-		if (test._ok && matrix?.destroy) setTimeout(matrix.destroy, 1000)
+
+		const rowcount = topGeneNum + termlst.length
+		test.equal(
+			select(holder).selectAll('.sjpp-matrix-term-label-g').node().querySelectorAll('text').length,
+			rowcount,
+			`should render ${rowcount} <series> elements`
+		)
+
+		if (test._ok) setTimeout(matrix.destroy, 1000) // TODO why cannot directly run matrix.destroy()
+		test.end()
+	}
+})
+
+tape('top mutated genes from APOLLO-LUAD, CNV only', function (test) {
+	test.timeoutAfter(100000)
+	test.plan(2)
+	const holder = select('body').append('div').node()
+
+	const topGeneNum = 10
+
+	runproteinpaint({
+		holder,
+		noheader: 1,
+		debugmode: true,
+		launchGdcMatrix: true,
+		filter0: { op: 'in', content: { field: 'cases.project.project_id', value: ['APOLLO-LUAD'] } },
+		settings: {
+			matrix: {
+				maxGenes: topGeneNum,
+				maxSample: 10000
+			}
+		},
+		opts: {
+			matrix: {
+				debug: 1,
+				callbacks: {
+					'postRender.test': runTests
+				}
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		//remove the default CNV filter for GDC (GDC hides CNV by default)
+		await matrix.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: matrix.id,
+			config: {
+				legendGrpFilter: {
+					isAtomic: true,
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: []
+				}
+			}
+		})
+		test.true(
+			holder.querySelectorAll('svg text').length > 90,
+			'should have the expected number of rendered svg text elements'
+		)
+
+		test.equal(
+			select(holder).selectAll('.sjpp-matrix-term-label-g').node().querySelectorAll('text').length,
+			topGeneNum,
+			`should render ${topGeneNum} <series> elements`
+		)
+
+		if (test._ok) setTimeout(matrix.destroy, 1000)
 		test.end()
 	}
 })
