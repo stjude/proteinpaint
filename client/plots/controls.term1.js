@@ -132,6 +132,8 @@ function setRenderers(self) {
 				break
 			case 'samplelst':
 				break
+			case TermTypes.SNP:
+				break
 			case TermTypes.GENE_EXPRESSION:
 				break
 			case TermTypes.METABOLITE_INTENSITY:

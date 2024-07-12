@@ -119,15 +119,54 @@ async function getSampleData(q) {
 			const data = await q.ds.mayGetGeneVariantData(tw, q)
 
 			for (const [sampleId, value] of data.entries()) {
-				if (!(tw.$id in value)) continue
-				if (!dictTerms.length) {
-					// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
-					// FIXME invalid assumption for data downloading
-					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				samples[sampleId][tw.$id] = value[tw.$id]
+			}
+		} else if (tw.term.type == 'snp') {
+			const arg = {
+				addFormatValues: true,
+				filter0: q.filter0, // hidden filter
+				filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+				sessionid: q.sessionid
+			}
+			if (!(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop)))
+				throw 'snp term does not have valid coordinate'
+			arg.rglst = [tw.term]
+			// retrieve variant data
+			// will include all alleles of any snv or indel
+			// that overlaps the given coordinate
+			const _mlst = await q.ds.queries.snvindel.byrange.get(arg)
+			// filter for alleles of queried variant
+			const mlst = _mlst.filter(m => m.pos == tw.term.start && m.ref == tw.term.ref && tw.term.alt.includes(m.alt))
+			// parse sample genotypes
+			// can use mlst[0].samples because .samples[] will
+			// be identical for each element of mlst[]
+			for (const s of mlst[0].samples) {
+				if (!('GT' in s.formatK2v)) throw 'sample must have GT format'
+				const gt = s.formatK2v.GT
+				const alleles = []
+				for (const a of gt.split('/')) {
+					if (!a || a === '.') {
+						// gt is missing
+						// TODO: handle missing gt
+						continue
+					} else {
+						// gt is present
+						// allele is represented as index
+						const i = Number(a)
+						if (i === 0) {
+							// ref allele
+							alleles.push(tw.term.ref)
+						} else {
+							// alt allele
+							const m = mlst.find(m => i === m.altAlleleIdx)
+							if (!m) throw 'alt allele idx cannot be found'
+							alleles.push(m.alt)
+						}
+					}
 				}
-				if (samples[sampleId]) {
-					samples[sampleId][tw.$id] = value[tw.$id]
-				}
+				if (!(s.sample_id in samples)) samples[s.sample_id] = { sample: s.sample_id }
+				samples[s.sample_id][tw.$id] = { key: alleles.join('/'), value: alleles.join('/') }
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 			const sampleFilterSet = await mayGetSampleFilterSet4snplst(q, nonDictTerms) // conditionally returns a set of sample ids, FIXME *only* for snplst and snplocus data download in supported ds, not for anything else. TODO remove this bad quick fix

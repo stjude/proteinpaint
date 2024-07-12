@@ -568,6 +568,8 @@ function validatePlotTerm(t, vocabApi) {
 			if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
 				throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
 			break
+		case TermTypes.SNP:
+			break
 		case 'snplst':
 		case 'snplocus':
 		case 'geneVariant':

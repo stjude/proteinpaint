@@ -63,6 +63,7 @@ export const typeGroup = {
 }
 
 const nonDictTypes = new Set([
+	TermTypes.SNP,
 	TermTypes.SNP_LIST,
 	TermTypes.SNP_LOCUS,
 	TermTypes.GENE_EXPRESSION,
