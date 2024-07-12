@@ -31,7 +31,7 @@
             }
         },
         {
-            "label": "Dictionary variables",
+            "label": "Continuous variables",
             "runargs": {
                 "noheader": true,
                 "mass": {
@@ -47,112 +47,9 @@
                             {
                                 "chartType": "summary",
 					            "childType": "sampleScatter",
-                                "term": {
-                                    "term": {
-                                        "type": "float",
-                                        "bins": {
-                                            "default": {
-                                                "type": "regular-bin",
-                                                "startinclusive": true,
-                                                "bin_size": 5,
-                                                "first_bin": {
-                                                    "stop": 15
-                                                },
-                                                "last_bin": {
-                                                    "start": 45
-                                                }
-                                            }
-                                        },
-                                        "values": {
-                                            "-994": {
-                                                "label": "N/A: No campus visit",
-                                                "uncomputable": true
-                                            }
-                                        },
-                                        "name": "Age (years) at SJLIFE baseline assessment",
-                                        "id": "agebaseline",
-                                        "isleaf": true,
-                                        "included_types": [
-                                            "float"
-                                        ],
-                                        "__ancestors": [
-                                            "Age (years)",
-                                            "Demographic Variables"
-                                        ],
-                                        "__ancestorNames": [
-                                            "Age (years)",
-                                            "Demographic Variables"
-                                        ]
-                                    },
-                                    "q": {
-                                        "mode": "continuous",
-                                        "isAtomic": true,
-                                        "hiddenValues": {
-                                            "-994": 1
-                                        }
-                                    },
-                                    "isAtomic": true
-                                },
-                                "term2": {
-                                    "term": {
-                                        "type": "float",
-                                        "bins": {
-                                            "default": {
-                                                "type": "regular-bin",
-                                                "startinclusive": true,
-                                                "bin_size": 10,
-                                                "first_bin": {
-                                                    "stop": 45
-                                                }
-                                            }
-                                        },
-                                        "values": {
-                                            "-997": {
-                                                "label": "Not measured during exam",
-                                                "uncomputable": true
-                                            },
-                                            "-994": {
-                                                "label": "N/A: no campus visit",
-                                                "uncomputable": true
-                                            },
-                                            "-998": {
-                                                "label": "N/A: campus visit, exam not indicated",
-                                                "uncomputable": true
-                                            },
-                                            "-999": {
-                                                "label": "N/A: campus visit, no exam",
-                                                "uncomputable": true
-                                            }
-                                        },
-                                        "name": "Left ventricular ejection fraction 3D",
-                                        "id": "LV_Ejection_Fraction_3D",
-                                        "isleaf": true,
-                                        "included_types": [
-                                            "float"
-                                        ],
-                                        "__ancestors": [
-                                            "Clinical Assessments",
-                                            "Clinically-assessed Variables",
-                                            "ECHO"
-                                        ],
-                                        "__ancestorNames": [
-                                            "Clinical Assessments",
-                                            "Clinically-assessed Variables",
-                                            "Echocardiogram"
-                                        ]
-                                    },
-                                    "q": {
-                                        "mode": "continuous",
-                                        "isAtomic": true,
-                                        "hiddenValues": {
-                                            "-997": 1,
-                                            "-994": 1,
-                                            "-998": 1,
-                                            "-999": 1
-                                        }
-                                    },
-                                    "isAtomic": true
-                                }
+								"settings":{"sampleScatter":{ "regression":"Lowess"}},
+                                "term": { "id": "agebaseline","q":{"mode":"continuous"} },
+                                "term2": { "id": "LV_Ejection_Fraction_3D","q":{"mode":"continuous"} }
                             }
                         ]
                     }
