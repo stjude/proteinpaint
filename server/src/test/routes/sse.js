@@ -31,9 +31,12 @@ export default function setRoutes(app, basepath) {
 				connections.delete(res)
 			})
 
+			// emit the message on the next process tick, since the client connection
+			// would not be ready for a message while the initial fetch response is still active
 			setTimeout(async () => {
 				const files = await fs.promises.readdir(msgDir)
-				files.forEach(f => notifyOnFileChange('change', f, [res]))
+				// the 3rd argument type should match the variable connections Set type
+				files.forEach(f => notifyOnFileChange('change', f, new Set([res])))
 			}, 0)
 		} catch (err) {
 			res.send(err)
@@ -51,8 +54,7 @@ export default function setRoutes(app, basepath) {
 				if (!message) delete messages[fileName]
 				else messages[fileName] = JSON.parse(message)
 			}
-			const data = JSON.stringify(Object.values(messages)) //.map(d => ({key: d[0], message: d[1]})))
-			console.log(46, data)
+			const data = JSON.stringify(Object.values(messages))
 			const conn = initialConnection || connections
 			for (const res of conn) {
 				res.write(`event: message\n`)
