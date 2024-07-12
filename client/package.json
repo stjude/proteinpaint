@@ -4,6 +4,7 @@
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "module": "dist/app.js",
+  "browser": "dist/app.js",
   "imports": {
     "#src/*": "./src/*.js",
     "#common/*": "./common/*.js",
