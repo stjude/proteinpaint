@@ -1352,6 +1352,24 @@ async function launchDisco(arg, app) {
 	if (!arg.genome) throw '"genome" parameter missing'
 	const genomeObj = app.genomes[arg.genome]
 	if (!genomeObj) throw 'unknown genome'
-	const _ = await import('#plots/disco/launch.adhoc.ts')
-	return await _.launch(arg.disco, genomeObj, app.holder0)
+	if (arg.disco.sample_id) {
+		/** Opens a sample disco plot within a dataset
+		 * Required in disco:{}
+		 * .dslabel: dataset label
+		 * .genome: genome name
+		 * .sample_id: sample id
+		 */
+		const vocabApi = (await import('#termdb/vocabulary')).vocabInit({
+			state: { genome: genomeObj.name, dslabel: arg.disco.dslabel }
+		})
+		const termdbConfig = await vocabApi.getTermdbConfig()
+		await (
+			await import('#plots/plot.disco.js')
+		).default(termdbConfig, arg.disco.dslabel, { sample_id: arg.disco.sample_id }, app.holder, genomeObj)
+		return
+	} else {
+		/** Used to parse custom data from the UI or runpp() */
+		const _ = await import('#plots/disco/launch.adhoc.ts')
+		return await _.launch(arg.disco, genomeObj, app.holder0)
+	}
 }
