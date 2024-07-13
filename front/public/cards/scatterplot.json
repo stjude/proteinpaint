@@ -1,11 +1,11 @@
 {
-    "ribbonMessage": "See the improved scatter plot! The new scatter plot contains features like grouping samples, exporting the image, plot configuration options, and more!",
     "ppcalls": [
         {
+            "label": "Tumor methylome tSNE",
             "message": "<ul style='line-height:1.5;'><li><strong>Change the plot configuration</strong>: click on the burger button (three stacked lines) in the top left of the plot. The menu provides options to change the term, dot sizes, etc.</li><li><strong>Create groups</strong>: click on the paint brush, lasso the samples of interest, and use the pop-up menu for next steps.</li><li>Open other plots and analysis tools by clicking on the grey buttons above the scatter plot.</li></ul> ",
             "runargs": {
                 "noheader": true,
-                "mass":{
+                "mass": {
                     "state": {
                         "vocab": {
                             "dslabel": "PNET",
@@ -24,8 +24,49 @@
                 }
             },
             "testSpec": {
-                "expected": { "rect": 1, "svg": 1 }
+                "expected": {
+                    "rect": 1,
+                    "svg": 1
+                }
             }
+        },
+        {
+            "label": "Continuous variables",
+            "runargs": {
+                "noheader": true,
+                "mass": {
+                    "state": {
+                        "vocab": {
+                            "dslabel": "SJLife",
+                            "genome": "hg38"
+                        },
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
+                        "plots": [
+                            {
+                                "chartType": "summary",
+					            "childType": "sampleScatter",
+								"settings":{"sampleScatter":{ "regression":"Lowess"}},
+                                "term": { "id": "agebaseline","q":{"mode":"continuous"} },
+                                "term2": { "id": "LV_Ejection_Fraction_3D","q":{"mode":"continuous"} }
+                            }
+                        ]
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": {
+                    "rect": 1,
+                    "svg": 1
+                }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://github.com/stjude/proteinpaint/wiki/Scatter-plot"
         }
     ]
 }
