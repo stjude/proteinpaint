@@ -72,7 +72,16 @@ export function getSerieses(data) {
 			for (const [i, value] of values.entries()) {
 				const cell = Object.assign({ key, siblingCells }, cellTemplate)
 				cell.valueIndex = i
-				const cellProps = t.grp.type == 'hierCluster' ? setCellProps['hierCluster'] : setCellProps[t.tw.term.type]
+
+				// hierCluster terms have their own setCellProps
+				// when groupsetting is used for geneVariant term, should treat as categorical term				const cellProps = t.grp.type == 'hierCluster'
+				const cellProps =
+					t.grp.type == 'hierCluster'
+						? setCellProps['hierCluster']
+						: t.tw?.q?.groupsetting?.inuse && t.tw.term.type == 'geneVariant'
+						? setCellProps['categorical']
+						: setCellProps[t.tw.term.type]
+
 				// will assign x, y, width, height, fill, label, order, etc
 				const legend = cellProps(cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
 				if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
