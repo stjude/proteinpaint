@@ -1,1 +1,2 @@
-
+Features:
+- Enable edit option for geneVariant terms in oncoMatrix
