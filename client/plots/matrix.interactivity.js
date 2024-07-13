@@ -1955,8 +1955,9 @@ function setLabelDragEvents(self, prefix) {
 
 			const data = event.target.__data__
 
-			if (data.tw.term.type == 'geneVariant') {
-				// for geneVariant term, use subGroupCounts to show number of counted samples (WT and Blank are not counted)
+			if (data.tw.term.type == 'geneVariant' && !data.tw.q?.groupsetting?.inuse) {
+				// for geneVariant term, when groupsetting is used, use subGroupCounts to
+				// show number of counted samples (WT and Blank are not counted)
 				// and number of each class in the subGroup
 
 				//Sum of not tested samples in all group
@@ -2018,7 +2019,7 @@ function setLabelDragEvents(self, prefix) {
 				}
 			} else if (!self.config.divideBy) {
 				// non-geneVariant term, when matrix is not divided into multiple subGorups
-				const termLegend = self.legendData.find(t => t.name == data.label)
+				const termLegend = self.legendData.find(t => t.name == data.tw.term.name)
 				if (termLegend && termLegend.items) {
 					// when legend data is available
 					const t = div.append('table')
@@ -2072,7 +2073,7 @@ function setLabelDragEvents(self, prefix) {
 								: `<b>${counts.samplesTotal} of ${groupSampleTotal}`
 						)
 					const subGrp = self.sampleGroups.find(g => g.name == grpName)
-					const termLegend = subGrp.legendData.find(t => t.name == data.label)
+					const termLegend = subGrp.legendData.find(t => t.name == data.tw.term.name)
 
 					if (termLegend && termLegend.items) {
 						// when legend data is available
