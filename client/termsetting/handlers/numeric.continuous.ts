@@ -1,7 +1,6 @@
 import { getPillNameDefault } from '../termsetting'
 import { PillData, Term } from '../../shared/types/index'
 import { convertViolinData } from '../../filter/tvs.numeric'
-import { HandlerGenerator } from '../types'
 import { violinRenderer } from '../../dom/violinRenderer'
 
 /*
@@ -55,7 +54,6 @@ export function getHandler(self) {
 			const vr = new violinRenderer(densityDiv, density_data, plot_size.width, plot_size.height)
 
 			vr.render()
-			const svg = vr.svg
 
 			div.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
 
