@@ -10,6 +10,7 @@ Features:
 
 Fixes:
 - hierCluster group Add_Rows ui can only add compatible terms
+- filter0 is passed to violin request and improve to enable type checking
 
 
 ## 2.67.1
