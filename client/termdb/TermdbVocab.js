@@ -405,8 +405,7 @@ export class TermdbVocab extends Vocab {
     Inputs:
 
     arg{}
-        .termid=str
-            main term to create violin/boxplot with
+        .tw main term to create violin/boxplot with
         .divideTw={}
             optional termwrapper of 2nd term to divide cohort
             if given, will result in multiple plots, and pvalue computed for each pair of plots
@@ -441,11 +440,10 @@ export class TermdbVocab extends Vocab {
 		// the violin plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termdb')
-		arg.term = this.getTwMinCopy(arg.term)
+		arg.tw = this.getTwMinCopy(arg.tw)
 		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
 		const body = Object.assign(
 			{
-				getViolinPlotData: 1,
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
 				embedder: window.location.hostname,
@@ -462,6 +460,7 @@ export class TermdbVocab extends Vocab {
 			_body
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
+		// no need to do the same for filter0
 		const d = await dofetch3('termdb/violin', { headers, body })
 
 		return d

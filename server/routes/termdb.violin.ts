@@ -4,7 +4,7 @@ import { trigger_getViolinPlotData } from '#src/termdb.violin.js'
 export const api: any = {
 	endpoint: 'termdb/violin',
 	methods: {
-		get: {
+		all: {
 			init,
 			request: {
 				typeId: 'getViolinRequest'
@@ -50,10 +50,6 @@ export const api: any = {
 					}
 				}
 			]
-		},
-		post: {
-			alternativeFor: 'get',
-			init
 		}
 	}
 }
@@ -61,17 +57,17 @@ export const api: any = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		const q = req.query as getViolinRequest
+		let data
 		try {
-			const g = genomes[req.query.genome]
-			const ds = g.datasets[req.query.dslabel]
+			const g = genomes[q.genome]
 			if (!g) throw 'invalid genome name'
-			const data = await trigger_getViolinPlotData(req.query, null, ds, g) // as getViolinResponse
-			res.send(data as getViolinResponse)
-		} catch (e) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			res.send({ error: e?.message || e })
+			const ds = g.datasets?.[q.dslabel]
+			if (!ds) throw 'invalid ds'
+			data = (await trigger_getViolinPlotData(q, null, ds, g)) as getViolinResponse
+		} catch (e: any) {
+			data = { error: e?.message || e } as getViolinResponse
 			if (e instanceof Error && e.stack) console.log(e)
 		}
+		res.send(data)
 	}
 }
