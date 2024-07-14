@@ -56,7 +56,7 @@ export function getHandler(self) {
 			try {
 				const d = await self.vocabApi.getViolinPlotData(
 					{
-						term: { term: self.term, q: self.q },
+						tw: { term: self.term, q: self.q },
 						filter: self.filter,
 						svgw: self.num_obj.plot_size.width / window.devicePixelRatio
 					},
