@@ -10,8 +10,6 @@ export function getTermOrder(data) {
 	let totalIndex = 0,
 		visibleGrpIndex = 0
 
-	console.log('what is data', data)
-	console.log('what is this.termGroups', this.termGroups)
 	this.mclassSorter = getMclassSorter(this)
 	for (const [grpIndex, grp] of this.termGroups.entries()) {
 		const lst = [] // will derive a mutable copy of grp.lst
@@ -216,7 +214,6 @@ Given the anno of a term for a sample, generate the
     renderedValues (values rendered on matrix)
 */
 export function classifyValues(anno, tw, grp, s, sample) {
-	console.log({ anno, tw, grp, s, sample })
 	const values = 'value' in anno ? [anno.value] : anno.values
 	if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
 
