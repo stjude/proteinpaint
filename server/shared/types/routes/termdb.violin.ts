@@ -1,12 +1,20 @@
 import { Filter } from '../filter.ts'
+import { ErrorResponse } from './errorResponse.ts'
 
 export type getViolinRequest = {
 	genome: string
 	dslabel: string
 	embedder: string
+	/** main tw to fetch numeric data to show in violin */
+	tw: any
+	/** optional tw to divide tw data into multiple violins and show under one axis */
+	divideTw?: any
 	/** A number representing the device's pixel ratio, which may be used for rendering quality adjustments */
 	devicePixelRatio: number
-	filter: Filter
+	/** optional mass filter */
+	filter?: Filter
+	/** optional read-only invisible filter TODO GdcFilter0 */
+	filter0?: any
 	/** A number representing the width of the SVG (Scalable Vector Graphics) box, used for rendering the chart */
 	svgw: number
 	/** A string with two possible values: 'horizontal' or 'vertical', indicating the orientation of the chart, either horizontal or vertical */
@@ -23,7 +31,7 @@ export type getViolinRequest = {
 	rightMargin: number
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit: string
-	termid: string
+	/** ?? */
 	isKDE: boolean
 }
 
@@ -55,7 +63,9 @@ type plot = {
 	}
 }
 
-export type getViolinResponse = {
+export type getViolinResponse = ValidResponse | ErrorResponse
+
+type ValidResponse = {
 	min: number
 	max: number
 	plots: plot[]

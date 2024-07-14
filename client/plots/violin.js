@@ -313,6 +313,7 @@ class ViolinPlot {
 		const s = this.settings
 		const arg = {
 			filter: this.state.termfilter.filter,
+			filter0: this.state.termfilter.filter0,
 			svgw: s.svgw / window.devicePixelRatio,
 			orientation: s.orientation,
 			devicePixelRatio: window.devicePixelRatio,
@@ -327,7 +328,7 @@ class ViolinPlot {
 		}
 
 		if (this.opts.mode == 'minimal') {
-			arg.term = term
+			arg.tw = term
 			// assume a single term for minimal plot
 			if (term2) throw 'only a single term allowed for minimal plot'
 			if (term.q.mode == 'spline') {
@@ -343,10 +344,10 @@ class ViolinPlot {
 				arg.scale = term.q.scale
 			}
 		} else if (isNumericTerm(term.term) && term.q.mode === 'continuous') {
-			arg.term = term
+			arg.tw = term
 			if (term2) arg.divideTw = term2
 		} else if (isNumericTerm(term2?.term) && term2.q.mode === 'continuous') {
-			arg.term = term2
+			arg.tw = term2
 			arg.divideTw = term
 		} else {
 			throw 'both term1 and term2 are not numeric/continuous'
