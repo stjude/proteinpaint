@@ -55,6 +55,7 @@ class SampleView {
 		await this.setSampleSelect(appState)
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
+
 		await this.setControls(q)
 		await this.renderPlots(state, state.samples)
 	}
@@ -186,6 +187,7 @@ class SampleView {
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
+
 		this.showVisiblePlots()
 
 		this.termsById = this.getTermsById(this.state)
@@ -454,18 +456,25 @@ class SampleView {
 	}
 
 	showVisiblePlots() {
+		this.visiblePlots = false
 		this.dom.sampleDiv.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
 		this.showPlotsFromCategory(this.discoPlots, 'showDisco')
 		this.showPlotsFromCategory(this.singleSamplePlots, 'showSingleSample')
 		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
 		this.showPlotsFromCategory(this.imagePlots, 'showImages')
 		this.showPlotsFromCategory(this.dziPlots, 'showDzi')
+		if (this.state.samples.length == 1 && this.visiblePlots)
+			this.dom.tableDiv.style('max-width', '48vw').style('max-height', '40vw').attr('class', 'sjpp_show_scrollbar')
+		else this.dom.tableDiv.style('max-width', '100vw').style('max-height', '100vh').attr('class', '')
+		console.log('visiblePlots', this.visiblePlots)
 	}
 
 	showPlotsFromCategory(plots, key) {
 		for (const div of plots) {
 			const visibleSample = this.state.samples.find(s => s.sampleName == div.sample.sampleName)
-			div.cellDiv.style('display', this.settings[key] && visibleSample ? 'table-cell' : 'none')
+			const visiblePlot = this.settings[key] && visibleSample
+			if (visiblePlot) this.visiblePlots = true
+			div.cellDiv.style('display', visiblePlot ? 'table-cell' : 'none')
 		}
 	}
 
@@ -609,7 +618,6 @@ export const componentInit = sampleViewInit
 
 function setRenderers(self) {
 	self.renderSampleDictionary = function () {
-		if (self.state.samples.length == 1) self.dom.tableDiv.style('width', '48vw')
 		// use an array to support multiple visible samples,
 		// but prototyping with just one sample for now
 		const visibleSamples = []
