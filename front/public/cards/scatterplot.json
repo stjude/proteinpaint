@@ -12,6 +12,9 @@
                             "dslabel": "PNET",
                             "genome": "hg19"
                         },
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
                         "plots": [
                             {
                                 "chartType": "sampleScatter",
@@ -29,7 +32,8 @@
                     "rect": 1,
                     "svg": 1
                 }
-            }
+            },
+            "data_source": 1006
         },
         {
             "label": "Continuous variables",
@@ -75,7 +79,8 @@
                     "rect": 1,
                     "svg": 1
                 }
-            }
+            },
+            "data_source": 1005
         },
         {
             "label": "3D PCA",
@@ -113,7 +118,8 @@
                         ]
                     }
                 }
-            }
+            },
+            "data_source": 1005
         }
     ],
     "buttons": [

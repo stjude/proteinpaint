@@ -388,16 +388,19 @@ async function addArrowBtns(args, type, bdiv, rdiv, pageArgs) {
 	let btns = []
 	if (type == 'call') showCode(args, btns) //Only show Code for examples, not in top div
 	if (args.datapreview) showViewData(btns, args.datapreview, pageArgs)
-	if (args.citation || args.citation_id) {
+	if (args.citation || args.data_source) {
 		//Show citation for the entire card
-		//Or individual examples
+		//Or data_source for individual examples
 		const res = await dofetch3(`/${pageArgs.app.cardsPath}/citations.json`)
 		if (res.error) {
 			console.error(`Error: ${res.error}`)
 			return
 		}
 		for (const pub of res.publications) {
-			if (args.citation == pub.id || args.citation_id == pub.id) showCitation(btns, pub)
+			if (args.citation == pub.id || args.data_source == pub.id) {
+				const label = args.data_source ? 'Data Source' : 'Citation'
+				showCitation(btns, pub, label)
+			}
 		}
 	}
 	makeArrowButtons(args.arrowButtons, btns)
@@ -559,10 +562,10 @@ async function showJsonCode(ppcalls) {
 	return json_contents
 }
 
-function showCitation(btns, pub) {
-	//Push 'Citation' and div callback to `btns`. Create button in addArrowButtons
+function showCitation(btns, pub, label) {
+	//Push 'Citation' or 'Data Source' button and div callback to `btns`. Create button in addArrowButtons
 	btns.push({
-		name: 'Citation',
+		name: label,
 		callback: async rdiv => {
 			try {
 				rdiv
