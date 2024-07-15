@@ -48,6 +48,15 @@
             "pmid": "38593228",
             "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/38593228/",
             "doi": "https://doi.org/10.1158/2159-8290.cd-23-1441"
+        },
+        {
+            "id": 1006,
+            "title": "Molecular classification and outcome of children with rare CNS embryonal tumors: results from St. Jude Children's Research Hospital including the multi-center SJYC07 and SJMB03 clinical trials",
+            "year": "2022",
+            "journal": "Acta Neuropathologica",
+            "pmid": "35982322",
+            "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/35982322/",
+            "doi": "https://doi.org/10.1007/s00401-022-02484-7"
         }
     ]
 }
