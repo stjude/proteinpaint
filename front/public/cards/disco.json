@@ -68,7 +68,7 @@
         },
         {
             "label": "GDC Sample Data",
-            "urlparam": "?genome=hg38&dslabel=GDC&disco=1&sample=TCGA-AP-A059-01A",
+            "urlparam": "?genome=hg38&dslabel=GDC&disco=1&sample=TCGA-85-7710-01A",
             "runargs": {
                 "noheader": true,
                 "nobox": true,
@@ -76,7 +76,7 @@
                 "disco": {
                     "dslabel": "GDC",
                     "genome": "hg38",
-                    "sample_id": "TCGA-AP-A059-01A"
+                    "sample_id": "TCGA-85-7710-01A"
                 }
             },
             "testSpec": {
