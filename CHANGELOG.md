@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 Features:
 - New Data Matrix and Gene Expression cards on the homepage
 - Enable edit option for geneVariant terms in oncoMatrix
+- New continuous variables scatter plot example available from the scatter plot card on the homepage.
+- New GDC sample disco plot example available from the disco card on the homepage.
 
 Fixes:
 - hierCluster group Add_Rows ui can only add compatible terms
