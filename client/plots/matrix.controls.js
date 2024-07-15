@@ -1293,7 +1293,7 @@ export class MatrixControls {
 					this.parent.chartType == 'hierCluster' &&
 					(g.type == 'hierCluster' || g.name == this.parent.config.settings.hierCluster?.termGroupName)
 						? 'expression'
-						: '',
+						: 'mutation',
 				selected:
 					(this.parent.chartType == 'hierCluster' &&
 						(g.type == 'hierCluster' ||
