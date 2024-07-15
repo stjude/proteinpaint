@@ -525,8 +525,8 @@ class singleCellPlot {
 	renderColorGradient(plot, legendG) {
 		if (plot.cells.length == 0) return
 		const colorGradient = rgb(plotColor)
-		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(2).toString()
-		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(2).toString()
+		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(1).toString()
+		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
 		const startColor = this.config.startColor[plot.name]
 		const stopColor = this.config.stopColor[plot.name]
 		const gradient = legendG
