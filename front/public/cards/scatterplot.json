@@ -1,5 +1,5 @@
 {
-    "ribbonMessage": "Please see our newest example, Continuous Variables below.",
+    "ribbonMessage": "Please see our newest examples below: Continuous Variables and 3D PCA.",
     "ppcalls": [
         {
             "label": "Tumor methylome tSNE",
@@ -47,10 +47,24 @@
                         "plots": [
                             {
                                 "chartType": "summary",
-					            "childType": "sampleScatter",
-								"settings":{"sampleScatter":{ "regression":"Lowess"}},
-                                "term": { "id": "agebaseline","q":{"mode":"continuous"} },
-                                "term2": { "id": "LV_Ejection_Fraction_3D","q":{"mode":"continuous"} }
+                                "childType": "sampleScatter",
+                                "settings": {
+                                    "sampleScatter": {
+                                        "regression": "Lowess"
+                                    }
+                                },
+                                "term": {
+                                    "id": "agebaseline",
+                                    "q": {
+                                        "mode": "continuous"
+                                    }
+                                },
+                                "term2": {
+                                    "id": "LV_Ejection_Fraction_3D",
+                                    "q": {
+                                        "mode": "continuous"
+                                    }
+                                }
                             }
                         ]
                     }
@@ -60,6 +74,44 @@
                 "expected": {
                     "rect": 1,
                     "svg": 1
+                }
+            }
+        },
+        {
+            "label": "3D PCA",
+            "runargs": {
+                "noheader": true,
+                "mass": {
+                    "state": {
+                        "dslabel": "SJLife",
+                        "genome": "hg38",
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
+                        "plots": [
+                            {
+                                "chartType": "summary",
+                                "term": {
+                                    "id": "eur_sjlife_pc1",
+                                    "q": {
+                                        "mode": "continuous"
+                                    }
+                                },
+                                "term2": {
+                                    "id": "eur_sjlife_pc2",
+                                    "q": {
+                                        "mode": "continuous"
+                                    }
+                                },
+                                "term0": {
+                                    "id": "eur_sjlife_pc3",
+                                    "q": {
+                                        "mode": "continuous"
+                                    }
+                                }
+                            }
+                        ]
+                    }
                 }
             }
         }
