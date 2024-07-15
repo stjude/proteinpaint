@@ -357,7 +357,7 @@
             "type": "card",
             "name": "Gene Expression Clustering",
             "section": "apps",
-            "description": " ",
+            "description": "Hierarchial clustering of genes and samples",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/geneExpression-square.png",
             "ribbon": { "text":"new", "expireDate": "2024-09-01" },
             "sandboxJson": "geneExp",
