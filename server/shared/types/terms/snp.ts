@@ -1,6 +1,6 @@
-import { TermWrapper } from './tw'
-import { BaseQ, BaseTerm } from './term'
-import { TermSettingInstance } from '../termsetting'
+import { TermWrapper } from './tw.js'
+import { BaseQ, BaseTerm } from './term.js'
+import { TermSettingInstance } from '../termsetting.js'
 
 /*
 For term type 'snp'
