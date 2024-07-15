@@ -1,6 +1,8 @@
 {
+    "ribbonMessage": "We're pleased to present our reenvisioned sample matrix plot, with new filtering and sorting features. Please see the examples below.",
     "ppcalls": [
         {
+            "message": "This glioma matrix is available on the GDC Data Portal.",
             "label": "GDC Gliomas Cohort",
             "runargs": {
                 "nobox": 1,

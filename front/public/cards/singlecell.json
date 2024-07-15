@@ -1,6 +1,7 @@
 {
+    "ribbonMessage": "We're excited to present our reenvisioned single cell plot. Please see the example below.",
     "ppcalls": [
-{
+        {
             "label": "GDC datasets",
             "urlparam": "?noheader=1&mass={%22genome%22:%22hg38%22,%22dslabel%22:%22GDC%22,%22nav%22:{%22header_mode%22:%22hidden%22},%22plots%22:[{%22chartType%22:%22singleCellPlot%22}]}",
             "runargs": {
@@ -21,7 +22,12 @@
                     }
                 }
             },
-            "testSpec": { "expected": { "table": 1, "svg": 2 } }
+            "testSpec": {
+                "expected": {
+                    "table": 1,
+                    "svg": 2
+                }
+            }
         }
     ]
 }
