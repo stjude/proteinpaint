@@ -466,7 +466,6 @@ class SampleView {
 		if (this.state.samples.length == 1 && this.visiblePlots)
 			this.dom.tableDiv.style('max-width', '48vw').style('max-height', '40vw').attr('class', 'sjpp_show_scrollbar')
 		else this.dom.tableDiv.style('max-width', '').style('max-height', '').attr('class', '')
-		console.log('visiblePlots', this.visiblePlots)
 	}
 
 	showPlotsFromCategory(plots, key) {
