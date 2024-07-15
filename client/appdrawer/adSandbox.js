@@ -388,15 +388,16 @@ async function addArrowBtns(args, type, bdiv, rdiv, pageArgs) {
 	let btns = []
 	if (type == 'call') showCode(args, btns) //Only show Code for examples, not in top div
 	if (args.datapreview) showViewData(btns, args.datapreview, pageArgs)
-	if (type == 'main' && args.citation) {
-		//Only show citation in top div
+	if (args.citation || args.citation_id) {
+		//Show citation for the entire card
+		//Or individual examples
 		const res = await dofetch3(`/${pageArgs.app.cardsPath}/citations.json`)
 		if (res.error) {
 			console.error(`Error: ${res.error}`)
 			return
 		}
 		for (const pub of res.publications) {
-			if (args.citation == pub.id) showCitation(btns, pub)
+			if (args.citation == pub.id || args.citation_id == pub.id) showCitation(btns, pub)
 		}
 	}
 	makeArrowButtons(args.arrowButtons, btns)
@@ -568,12 +569,12 @@ function showCitation(btns, pub) {
 					.append('div')
 					.style('margin-left', '5w')
 					.html(
-						`<p style="display: inline-block;">${pub.title}. <em>${pub.journal}</em>, ${pub.year}. </p>
+						`<span style="display: inline-block;">${pub.title}. <em>${pub.journal}</em>, ${pub.year}.
 						${
 							pub.pmid
-								? `<p style="display: inline-block;">PMID: <a href="${pub.pmidURL}" target="_blank">${pub.pmid}</a></p>`
-								: `<p>doi: <a href="${pub.doi}" target="_blank style="display: inline-block;">${pub.doi}</a></p>`
-						}`
+								? ` PMID: <a href="${pub.pmidURL}" target="${pub.pmid}">${pub.pmid}</a>`
+								: ` doi: <a href="${pub.doi}" target="${pub.doi}">${pub.doi}</a>`
+						}</span>`
 					)
 			} catch (e) {
 				alert('Error: ' + e)
