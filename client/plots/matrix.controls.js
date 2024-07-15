@@ -1283,16 +1283,16 @@ export class MatrixControls {
 		//const label = grpDiv.append('label')
 		//label.append('span').html('')
 		const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
-
+		const s = this.parent.config.settings.hierCluster
 		const groups = tg.map((g, index) => {
 			return {
 				index,
 				name: g.name,
 				type: g.type,
 				lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
+				dataType: s.dataType,
 				mode:
-					this.parent.chartType == 'hierCluster' &&
-					(g.type == 'hierCluster' || g.name == this.parent.config.settings.hierCluster?.termGroupName)
+					this.parent.chartType == 'hierCluster' && (g.type == 'hierCluster' || g.name == s?.termGroupName)
 						? 'expression'
 						: // !!subject to change!!
 						// when group is not clustering, and ds has mutation, defaults to mutation
@@ -1301,8 +1301,7 @@ export class MatrixControls {
 						: '',
 				selected:
 					(this.parent.chartType == 'hierCluster' &&
-						(g.type == 'hierCluster' ||
-							(g.name && g.name == this.parent.config.settings.hierCluster?.termGroupName))) ||
+						(g.type == 'hierCluster' || (g.name && g.name == s?.termGroupName))) ||
 					g === firstGrpWithGeneTw
 			}
 		})
