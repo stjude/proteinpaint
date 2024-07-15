@@ -6,13 +6,13 @@ import time
 import sys
 import sqlite3
 import os
+import numpy as np
 import pandas as pd
-
             
 def extract_symbols(x):
    return x['symbol'] 
 
-def extract_plot_data(signature, geneset, library, result):
+def extract_plot_data(signature, geneset, library, result, center=True):
    signature = signature.copy()
    signature.columns = ["i","v"]
    signature = signature.sort_values("v", ascending=False).set_index("i")
@@ -27,7 +27,13 @@ def extract_plot_data(signature, geneset, library, result):
    hits = [i for i,x in enumerate(signature.index) if x in gs]
    
    running_sum, es = blitz.enrichment_score(np.array(np.abs(signature.iloc[:,0])), signature_map, gs)
-
+   running_sum = list(running_sum)
+   nn = np.where(np.abs(running_sum)==np.max(np.abs(running_sum)))[0][0]
+   #print ("nn:",nn)
+   #print ("running_sum:",running_sum)
+   #print ("es:",es)
+   running_sum_str=[str(elem) for elem in running_sum]
+   print ('result: {"nn":'+str(nn)+',"running_sum":"'+",".join(running_sum_str)+'","es":'+str(es)+'}')
 try:
     # Try to read a single character from stdin without blocking
     if sys.stdin.read(1):
@@ -77,9 +83,8 @@ try:
             print(f"Execution time: {execution_time} seconds")
             try: # Extract ES data to be plotted on client side
                geneset_name=json_object['geneset_name']
-               print ("geneset_name:",geneset_name)
                result = pd.read_pickle(os.path.join(cachedir,"result.pkl"))
-               extract_plot_data(signature, key, msigdb_library, result)
+               extract_plot_data(signature, geneset_name, msigdb_library, result)
             except KeyError: # Initial GSEA calculation, result saved to a pickle file
                
                # run enrichment analysis
