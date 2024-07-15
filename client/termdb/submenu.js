@@ -35,8 +35,15 @@ class TdbSubmenu {
 export const submenuInit = getCompInit(TdbSubmenu)
 
 function setRenderers(self) {
-	self.showTvsMenu = function(term) {
+	self.showTvsMenu = function (term) {
 		self.dom.holder.selectAll('*').remove()
+
+		self.dom.holder
+			.style('display', 'block')
+			.append('div')
+			.style('margin', '20px')
+			.text(`Variable selected: ${term.id}`)
+
 		self.dom.holder
 			.style('display', 'block')
 			.append('div')
