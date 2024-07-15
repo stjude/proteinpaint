@@ -65,7 +65,7 @@ by calling addGeneSearchbox(), it redirectly returns a RESULT object detailed be
 */
 
 /** "start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp */
-type GeneOrSNPResult = { start: number; stop: number; ref?: string; alt?: [] }
+type GeneOrSNPResult = { start: number; stop: number; ref?: string; alt?: string[] | string }
 /** "pos/ref/alt" are included when entered a variant */
 type VariantResult = { pos: number; ref: string; alt: string; isVariant: boolean }
 type ResultArg = (GeneOrSNPResult | VariantResult) & {
