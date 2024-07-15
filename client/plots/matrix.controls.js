@@ -1283,6 +1283,7 @@ export class MatrixControls {
 		//const label = grpDiv.append('label')
 		//label.append('span').html('')
 		const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
+
 		const groups = tg.map((g, index) => {
 			return {
 				index,
@@ -1293,7 +1294,11 @@ export class MatrixControls {
 					this.parent.chartType == 'hierCluster' &&
 					(g.type == 'hierCluster' || g.name == this.parent.config.settings.hierCluster?.termGroupName)
 						? 'expression'
-						: 'mutation',
+						: // !!subject to change!!
+						// when group is not clustering, and ds has mutation, defaults to mutation
+						this.parent.state.termdbConfig.queries?.snvindel
+						? 'mutation'
+						: '',
 				selected:
 					(this.parent.chartType == 'hierCluster' &&
 						(g.type == 'hierCluster' ||
