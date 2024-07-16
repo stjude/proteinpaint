@@ -17,29 +17,31 @@ class SampleView {
 	}
 
 	setDom(opts) {
-		const div = opts.holder
+		const div = opts.holder.append('div')
+
+		const controlsDiv = div.append('div').style('display', 'inline-block')
+		const headerDiv = div.append('div').style('display', 'inline-block').style('padding', '20px')
+		const contentDiv = div
 			.append('div')
 			.style('display', 'flex')
 			.style('flex-direction', 'row')
 			.style('flex-wrap', 'wrap')
 			.style('justify-content', 'flex-start')
-			.style('width', '110vw')
-		const controlsDiv = div.insert('div').style('display', 'inline-block')
-		const leftDiv = div.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+			.style('width', '100vw')
+		const tableDiv = contentDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 
-		const plotsDiv = div //div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
-		const sampleDiv = leftDiv.insert('div').style('display', 'inline-block').style('padding', '20px')
-
-		const tableDiv = leftDiv.insert('div').style('padding', '10px')
+		const plotsDiv = contentDiv //div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
+		const sampleDiv = headerDiv.insert('div').style('display', 'inline-block')
+		const showPlotsDiv = headerDiv.append('div').style('display', 'inline-block')
 
 		const table = tableDiv.append('table').style('border-collapse', 'collapse')
 		const thead = table.append('thead')
 		this.dom = {
 			header: opts.header,
 			holder: opts.holder,
-			leftDiv,
 			controlsDiv,
 			sampleDiv,
+			showPlotsDiv,
 			tableDiv,
 			table,
 			thead,
@@ -54,10 +56,9 @@ class SampleView {
 
 		await this.setSampleSelect(appState)
 		const state = this.getState(appState)
-		const q = state.termdbConfig.queries
-
-		await this.setControls(q)
 		await this.renderPlots(state, state.samples)
+
+		await this.setControls(state)
 	}
 
 	async setSampleSelect(appState) {
@@ -187,7 +188,6 @@ class SampleView {
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
-
 		this.showVisiblePlots()
 
 		this.termsById = this.getTermsById(this.state)
@@ -200,81 +200,107 @@ class SampleView {
 		if (this.settings.showDictionary) this.renderSampleDictionary()
 	}
 
-	async setControls(q) {
+	async setControls(state) {
+		const q = state.termdbConfig.queries
 		this.dom.controlsDiv.selectAll('*').remove()
 		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
-		const inputs = [
-			{
-				boxLabel: 'Visible',
-				label: 'Dictionary',
-				type: 'checkbox',
-				chartType: 'sampleView',
-				settingsKey: 'showDictionary',
-				title: `Option to show/hide dictionary table with sample values`
-			}
-		]
+		const hasPlots =
+			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.DZImages
+		if (hasPlots) {
+			this.dom.showPlotsDiv.append('label').style('padding-left', '10px').text('Show Dictionary')
+			this.dom.showPlotsDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { sampleView: { showDictionary: e.target.checked } } }
+					})
+				})
+		}
 
 		if (q?.DZImages) {
-			inputs.push({
-				boxLabel: 'Visible',
-				label: q.DZImages.type,
-				type: 'checkbox',
-				chartType: 'sampleView',
-				settingsKey: 'showDzi',
-				title: `Option to show/hide deep zoom images`
-			})
+			this.dom.showPlotsDiv.append('label').style('padding-left', '10px').text('Show DZI images')
+			this.dom.showPlotsDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { sampleView: { showDzi: e.target.checked } } }
+					})
+				})
 		}
 
 		if (q?.singleSampleMutation) {
-			inputs.push({
-				boxLabel: 'Visible',
-				label: 'Disco plot',
-				type: 'checkbox',
-				chartType: 'sampleView',
-				settingsKey: 'showDisco',
-				title: `Option to show/hide disco plots`
-			})
+			this.dom.showPlotsDiv.append('label').style('padding-left', '10px').text('Show Disco').attr('for', 'showDisco')
+			this.dom.showPlotsDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.attr('id', 'showDisco')
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { sampleView: { showDisco: e.target.checked } } }
+					})
+				})
 		}
 
 		if (q?.singleSampleGenomeQuantification) {
-			inputs.push({
-				boxLabel: 'Visible',
-				label: 'Single sample',
-				type: 'checkbox',
-				chartType: 'sampleView',
-				settingsKey: 'showSingleSample',
-				title: `Option to show/hide single sample plots`
-			})
+			this.dom.showPlotsDiv
+				.append('label')
+				.style('padding-left', '10px')
+				.text('Show Single Sample')
+				.attr('for', 'showDisco')
+			this.dom.showPlotsDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.attr('id', 'showDisco')
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { sampleView: { showSingleSample: e.target.checked } } }
+					})
+				})
 		}
 		if (q?.images) {
-			inputs.push({
-				boxLabel: 'Visible',
-				label: 'Images',
-				type: 'checkbox',
-				chartType: 'sampleView',
-				settingsKey: 'showImages',
-				title: `Option to show/hide images`
-			})
+			this.dom.showPlotsDiv.append('label').style('padding-left', '10px').text('Show Images').attr('for', 'showImages')
+			this.dom.showPlotsDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.attr('id', 'showImages')
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { sampleView: { showImages: e.target.checked } } }
+					})
+				})
 		}
 
 		if (q?.NIdata && showBrainImaging) {
-			inputs.push({
-				boxLabel: 'Visible',
-				label: 'brain imaging',
-				type: 'checkbox',
-				chartType: 'sampleView',
-				settingsKey: 'showBrain',
-				title: `Option to show/hide brain imaging`
-			})
-		}
-
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv,
-				inputs
-			})
+			this.dom.showPlotsDiv.append('label').text('Show brain imaging').attr('for', 'showBrainImaging')
+			this.dom.showPlotsDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.attr('id', 'showBrainImaging')
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { sampleView: { showBrainImaging: e.target.checked } } }
+					})
+				})
 		}
 	}
 
@@ -457,7 +483,6 @@ class SampleView {
 
 	showVisiblePlots() {
 		this.visiblePlots = false
-		this.dom.sampleDiv.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
 		this.showPlotsFromCategory(this.discoPlots, 'showDisco')
 		this.showPlotsFromCategory(this.singleSamplePlots, 'showSingleSample')
 		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
