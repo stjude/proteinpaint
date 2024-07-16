@@ -46,6 +46,10 @@ export async function getHandler(self) {
 		if (!tab) return
 		if (!self.q) throw `Missing .q{} [numeric.toggle getHandler()]`
 		self.q.mode = tab.mode
+		if (tab.mode == 'discrete' && !self.term.bins) {
+			const tw = { term: self.term, q: self.q }
+			await self.vocabApi.setTermBins(tw)
+		}
 		const typeMode = `numeric.${tab.mode}`
 		if (!self.handlerByType![typeMode]) {
 			const _: HandlerGenerator = await import(`./numeric.${tab.mode}.ts`)

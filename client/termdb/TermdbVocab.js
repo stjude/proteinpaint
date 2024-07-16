@@ -991,15 +991,13 @@ export class TermdbVocab extends Vocab {
 		//TODO use the PresetNumericBins type for defaultBins
 		const defaultBins = await this.getDefaultBins({ tw })
 		if ('error' in defaultBins) throw defaultBins.error
-
-		const termIsFrozen = Object.isFrozen(tw.term)
-		if (termIsFrozen) tw.term = structuredClone(tw.term)
-
+		// NOTE: if tw.term is frozen, creating an unfrozen copy here will
+		// not propagate changes to tw.term, since term.bins would be set
+		// for the copy and not the original tw.term
 		tw.term.bins = defaultBins
 		const currMode = tw.q.mode // record current mode before q{} is overriden
 		tw.q = tw.term.bins.default
 		tw.q.mode = currMode
-		if (termIsFrozen) Object.freeze(tw.term)
 	}
 
 	async getSingleSampleData(opts) {
