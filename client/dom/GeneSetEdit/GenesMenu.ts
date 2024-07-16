@@ -2,6 +2,7 @@ import { Menu } from '../menu'
 import { Div } from '../../types/d3'
 import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
+import { make_one_checkbox } from '../checkbox.js'
 
 type GenesMenuArgs = {
 	tip: Menu
@@ -56,9 +57,15 @@ export class GenesMenu {
 		}
 		//The parameter value will be used as the input value if the option is checked
 		else if (param.type == 'string' && param.value) {
-			input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
-			input.property('checked', true)
-			this.addLabels(div, 'label', param)
+			input = make_one_checkbox({
+				holder: div,
+				id: param.id,
+				checked: true,
+				labeltext: param.label,
+				callback: () => {
+					//Not used but required for func
+				}
+			})
 		} else if (param.type == 'number') {
 			input = div
 				.append('input')
