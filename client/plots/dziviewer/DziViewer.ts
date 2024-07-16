@@ -29,12 +29,12 @@ export default class DziViewer {
 			prefixUrl: 'https://openseadragon.github.io/openseadragon/images/',
 			showNavigator: true,
 			sequenceMode: tileSources.length > 1,
-			defaultZoomLevel: 1,
-			gestureSettingsMouse: {
-				clickToZoom: true,
-				scrollToZoom: false,
-				flickEnabled: true
-			}
+			defaultZoomLevel: 1
+			// gestureSettingsMouse: {
+			// 	clickToZoom: true,
+			// 	scrollToZoom: false,
+			// 	flickEnabled: true
+			// }
 		})
 	}
 }
