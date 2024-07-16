@@ -6,6 +6,7 @@ import { read_file } from './utils'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
 import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/terms'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
+import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 
 /*
 
@@ -60,7 +61,7 @@ Returns:
 export async function getData(q, ds, genome) {
 	try {
 		validateArg(q, ds, genome)
-		return await getSampleData(q)
+		return await getSampleData(q, ds)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
@@ -90,7 +91,7 @@ function validateArg(q, ds, genome) {
 	}
 }
 
-async function getSampleData(q) {
+async function getSampleData(q, ds) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
@@ -150,6 +151,22 @@ async function getSampleData(q) {
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION || tw.term.type == TermTypes.METABOLITE_INTENSITY) {
 			let lst
 			if (tw.q?.mode == 'discrete') {
+				if (!tw.term.bins) {
+					await new Promise(async (resolve, reject) => {
+						const _q = {
+							tw,
+							genome: ds.genome,
+							dslabel: ds.label
+						}
+						await trigger_getDefaultBins(_q, ds, {
+							send(bins) {
+								if (bins.error) throw reject(bins.error)
+								tw.term.bins = bins
+								resolve()
+							}
+						})
+					})
+				}
 				const min = tw.term.bins.min
 				const max = tw.term.bins.max
 				if (tw.q.type == 'regular-bin') {

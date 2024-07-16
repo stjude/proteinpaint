@@ -8,7 +8,7 @@ import { TermSettingOpts, Handler, PillData } from './types'
 import { CategoricalQ } from '../shared/types/terms/categorical'
 import { NumericQ } from '../shared/types/terms/numeric'
 import { SnpsQ } from '../shared/types/terms/snps'
-import { TermTypes, isDictionaryType } from '../shared/terms'
+import { TermTypes, isDictionaryType, isNumericTerm } from '../shared/terms'
 
 /*
 ********************* EXPORTED
@@ -544,6 +544,10 @@ function setInteractivity(self) {
 						// pass in default q{} to customize settings in edit menu
 						if (option.q) self.q = structuredClone(option.q)
 						await self.setHandler!(option.termtype)
+						if (isNumericTerm(self.term) && !self.term.bins && self.term.type != 'survival') {
+							const tw = { term: self.term, q: self.q }
+							await self.vocabApi.setTermBins(tw)
+						}
 						self.handler!.showEditMenu(self.dom.tip.d)
 					} else {
 						throw 'termtype missing'
@@ -618,7 +622,16 @@ function setInteractivity(self) {
 
 		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
 			// hide edit option for survival term because its showEditMenu() is disabled
-			options.push({ label: 'Edit', callback: self.handler!.showEditMenu } as opt)
+			options.push({
+				label: 'Edit',
+				callback: async div => {
+					if (self.term && isNumericTerm(self.term) && !self.term.bins && self.term.type != 'survival') {
+						const tw = { term: self.term, q: self.q }
+						await self.vocabApi.setTermBins(tw)
+					}
+					self.handler!.showEditMenu(div)
+				}
+			} as opt)
 		}
 
 		// Restored the reuse menu option for now, due to failing integration tests that will require more code changes to fix
