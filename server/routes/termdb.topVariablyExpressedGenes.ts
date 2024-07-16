@@ -105,7 +105,7 @@ async function computeGenes4nativeDs(
 		input_file: matrixFile,
 		samples: samples.join(','),
 		filter_extreme_values: true,
-		num_genes: Number(q.maxGenes),
+		num_genes: q.maxGenes,
 		param: 'var'
 	}
 	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
@@ -168,11 +168,12 @@ function gdcValidateQuery(ds: any, genome: any) {
 		}
 	}
 
-	function getGeneSelectionArg(q: any) {
+	function getGeneSelectionArg(q: TermdbTopVariablyExpressedGenesRequest) {
 		const arg: any = {
 			// add any to avoid tsc err
 			case_filters: makeFilter(q),
-			selection_size: Number(q.maxGenes)
+			selection_size: q.maxGenes,
+			min_median_log2_uqfpkm: q.min_median_log2_uqfpkm
 		}
 
 		// TODO DELETE THIS and replace with new logic
