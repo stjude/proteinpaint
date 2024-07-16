@@ -641,24 +641,6 @@ type MatrixSettingsControlLabels = {
 	Mutation?: string
 }
 
-type MatrixConfigFeaturesEntry = {
-	ismutation: number
-	label: string
-	position: string
-}
-
-type LimitSampleByEitherAnnotationEntry = {
-	key: string
-	value: string
-}
-
-type MatrixConfig = {
-	header: string
-	hidelegend_features: number
-	features: MatrixConfigFeaturesEntry[]
-	limitsamplebyeitherannotation: LimitSampleByEitherAnnotationEntry[]
-}
-
 type SurvPlotsEntry = {
 	name: string
 	serialtimekey: string
