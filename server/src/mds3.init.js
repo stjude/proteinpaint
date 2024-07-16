@@ -791,9 +791,9 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 			'query',
 			bcfpath,
 			'-r',
-			// plus 1 to stop, as rglst pos is 0-based, and bcf is 1-based
+			// plus 1 to start, as rglst pos is 0-based, and bcf is 1-based
 			param.rglst
-				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + (r.stop + 1))
+				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop)
 				.join(','),
 			'-f',
 			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\n'
@@ -1083,9 +1083,9 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			'query',
 			bcfpath,
 			'-r',
-			// plus 1 to stop, as rglst pos is 0-based, and bcf is 1-based
+			// plus 1 to start, as rglst pos is 0-based, and bcf is 1-based
 			param.rglst
-				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + (r.stop + 1))
+				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop)
 				.join(','),
 			'-f',
 			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\t%FORMAT\n'
@@ -2316,42 +2316,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// rehydrate term.groupsetting
 		if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
 
-		if (tw.term.subtype == 'snp') {
-			throw 'subtype snp not supported'
-			// query term is one snp; it should only work for snvindel
-			if (!ds.queries.snvindel?.allowSNPs) throw 'snvindel does not allow snp'
-			const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
-			const m = lst.find(m => tw.term.alleles.includes(m.ref) && tw.term.alleles.includes(m.alt))
-			if (m) {
-				const samples = []
-				for (const s of m.samples) {
-					if (!s.formatK2v?.GT) {
-						//console.log('formatK2v.GT missing')
-						continue
-					}
-					const alleles = []
-					for (const i of s.formatK2v.GT.split('/')) {
-						if (i == 0) alleles.push(m.ref)
-						else if (i == 1) alleles.push(m.alt)
-						else console.log('unknown allele idx')
-					}
-					const _s = {
-						key: alleles.join('/'),
-						value: alleles.join('/')
-					}
-					samples.push({ sample_id: s.sample_id, GT: alleles.join('/') })
-				}
-				const _m = {
-					samples
-				}
-				mlst.push(_m)
-			}
-		}
-
-		// query term is not snp
-		// should be either gene or region, and will work for all data types
-		// has some code duplication with mds3.load.js query_snvindel() etc
-		// primary concern is tw.term may be missing coord/isoform to perform essential query
+		// NOTE: the following has some code duplication with
+		// mds3.load.js query_snvindel() etc
+		// primary concern is tw.term may be missing coord/isoform
+		// to perform essential query
 
 		// prepare dts to query
 		// if specific dt is requested, then query only that dt

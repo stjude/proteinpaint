@@ -311,9 +311,12 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 			const pos = Number(tmp)
 			if (Number.isNaN(pos)) throw 'no integer position for snvindel from ssm id'
 
-			// new param with rglst as the variant position, also inherit q.tid2value if provided
+			// new param with rglst as the variant position
+			// pos is 0-based start coordinate, to convert to 0-based
+			// region need to set stop coordinate to be pos + 1
+			// also inherit q.tid2value if provided
 			const param = Object.assign({}, q, {
-				rglst: [{ chr, start: pos, stop: pos }]
+				rglst: [{ chr, start: pos, stop: pos + 1 }]
 			})
 
 			const mlst = await ds.queries.snvindel.byrange.get(param)

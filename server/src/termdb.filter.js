@@ -1,5 +1,5 @@
 import { isDictionaryType, TermTypes } from '#shared/terms'
-import { getBin } from './termdb.matrix.js'
+import { getBin, getSnpData } from './termdb.matrix.js'
 
 /*
 nested filter documented at:
@@ -77,6 +77,8 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			f = get_condition(item.tvs, CTEname_i)
 		} else if (item.tvs.term.type == 'geneVariant') {
 			f = await get_geneVariant(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.type == 'snp') {
+			f = await get_snp(item.tvs, CTEname_i, ds)
 		} else {
 			throw 'unknown term type'
 		}
@@ -225,6 +227,29 @@ async function get_geneVariant(tvs, CTEname, ds) {
 		values: [...samplenames],
 		CTEname
 	}
+}
+
+async function get_snp(tvs, CTEname, ds) {
+	// get sample genotypes for snp
+	const sampleGTs = await getSnpData({ term: tvs.term }, { ds })
+	// get genotypes of snp in filter
+	const filterGTs = tvs.values.map(v => v.key)
+	// filter for samples with genotypes in filter
+	const samples = sampleGTs.filter(s => filterGTs.includes(s.gt)).map(s => s.sample_id)
+	// build CTE
+	const result = {
+		CTEs: [
+			`
+		  ${CTEname} AS (
+				SELECT id as sample
+				FROM sampleidmap
+				WHERE id IN (${samples.map(i => '?').join(', ')})
+			)`
+		],
+		values: [...samples],
+		CTEname
+	}
+	return result
 }
 
 async function get_geneExpression(tvs, CTEname, ds) {

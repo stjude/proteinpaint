@@ -1,1 +1,2 @@
-
+Features
+- implemented the "snp" term type for summarizing and analyzing sample genotypes for a given SNP
