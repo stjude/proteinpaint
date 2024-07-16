@@ -46,10 +46,32 @@ class singleCellPlot {
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
 		//read files data
-		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
+		const controlsDiv = this.opts.holder
+			.insert('div')
+			.style('display', 'inline-block')
+			.attr('class', 'pp-termdb-plot-controls')
 		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const searchGeneDiv = mainDiv.append('div').style('padding', '10px').style('display', 'inline-block')
+		const tableDiv = mainDiv.append('div')
+		const headerDiv = mainDiv.append('div').style('padding', '10px')
+		const showPlotsDiv = headerDiv.append('div').style('display', 'inline-block')
+		const searchGeneDiv = headerDiv.append('div').style('padding', '10px').style('display', 'inline-block')
 
+		for (const plot of state.config.plots) {
+			const id = plot.name.replace(/\s+/g, '')
+			showPlotsDiv.append('label').style('padding-left', '10px').text(plot.name).attr('for', `show${id}`)
+			showPlotsDiv
+				.append('input')
+				.attr('id', `show${id}`)
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { singleCellPlot: { [`show${id}`]: e.target.checked } } }
+					})
+				})
+		}
 		if (q.singleCell?.geneExpression) {
 			searchGeneDiv.append('label').html('Gene expression:')
 			const geneSearch = addGeneSearchbox({
@@ -128,11 +150,8 @@ class singleCellPlot {
 
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 
-		const controlsHolder = controlsDiv.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
-		const headerDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
-		const tableDiv = this.tableOnPlot ? headerDiv : mainDiv.append('div').style('display', 'inline-block')
-		const deDiv = mainDiv.append('div').style('padding', '10px').style('display', 'inline-block')
-		const plotsDiv = searchGeneDiv
+		const deDiv = headerDiv.append('div').style('padding', '10px').style('display', 'inline-block')
+		const plotsDiv = mainDiv
 			.append('div')
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
@@ -145,13 +164,13 @@ class singleCellPlot {
 			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '60%'),
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
-			controlsHolder,
+			controlsHolder: controlsDiv,
 			tableDiv,
 			deDiv,
 			plotsDiv
 		}
 		if (this.tableOnPlot) {
-			await renderSamplesTable(headerDiv, this, appState)
+			await renderSamplesTable(tableDiv, this, appState)
 		}
 
 		const offsetX = 80
@@ -218,22 +237,6 @@ class singleCellPlot {
 				})
 			})
 		}
-		for (const plot of state.config.plots) {
-			const id = plot.name.replace(/\s+/g, '')
-			searchGeneDiv.append('label').style('padding-left', '10px').text(plot.name).attr('for', `show${id}`)
-			searchGeneDiv
-				.append('input')
-				.attr('id', `show${id}`)
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { sampleView: { showDictionary: e.target.checked } } }
-					})
-				})
-		}
 
 		this.settings = {}
 
@@ -276,16 +279,7 @@ class singleCellPlot {
 				settingsKey: 'showSamples',
 				boxLabel: ''
 			})
-		for (const plot of state.config.plots) {
-			const id = plot.name.replace(/\s+/g, '')
-			inputs.push({
-				label: plot.name,
-				type: 'checkbox',
-				chartType: 'singleCellPlot',
-				settingsKey: `show${id}`,
-				boxLabel: ''
-			})
-		}
+
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
