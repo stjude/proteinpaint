@@ -12,7 +12,7 @@
 	if set to true, box is checked by default
 */
 export function make_one_checkbox(arg) {
-	const { holder, labeltext, callback, checked, divstyle } = arg
+	const { holder, labeltext, callback, checked, divstyle, id } = arg
 
 	const div = holder.append('div')
 	if (divstyle) {
@@ -28,6 +28,7 @@ export function make_one_checkbox(arg) {
 			await callback(input.property('checked'))
 			input.property('disabled', false)
 		})
+	if (id) input.attr('id', id)
 	label.append('span').html('&nbsp;' + labeltext)
 	return input
 }
