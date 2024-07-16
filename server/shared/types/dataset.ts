@@ -651,13 +651,6 @@ type FeatureAttrs = {
 	excludeclasses?: ExcludeClasses
 }
 
-type CommonFeatureAttributes = {
-	querykeylst: string[]
-	cnv: FeatureAttrs
-	loh: FeatureAttrs
-	snvindel: FeatureAttrs
-}
-
 type MatrixConfigFeaturesEntry = {
 	ismutation: number
 	label: string
@@ -683,10 +676,6 @@ type GroupsEntry = {
 
 type Group = {
 	groups: GroupsEntry[]
-}
-
-type AnnotationSampleGroups = {
-	[index: string]: Group
 }
 
 type SurvPlotsEntry = {
