@@ -207,9 +207,14 @@ class SampleView {
 		const hasPlots =
 			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.DZImages
 		if (hasPlots) {
-			this.dom.showPlotsDiv.append('label').style('padding-left', '10px').text('Show Dictionary')
+			this.dom.showPlotsDiv
+				.append('label')
+				.style('padding-left', '10px')
+				.text('Show Dictionary')
+				.attr('for', 'showDictionary')
 			this.dom.showPlotsDiv
 				.append('input')
+				.attr('id', 'showDictionary')
 				.attr('type', 'checkbox')
 				.property('checked', true)
 				.on('change', e => {
@@ -257,12 +262,12 @@ class SampleView {
 				.append('label')
 				.style('padding-left', '10px')
 				.text('Show Single Sample')
-				.attr('for', 'showDisco')
+				.attr('for', 'showSingleSample')
 			this.dom.showPlotsDiv
 				.append('input')
 				.attr('type', 'checkbox')
 				.property('checked', true)
-				.attr('id', 'showDisco')
+				.attr('id', 'showSingleSample')
 				.on('change', e => {
 					this.app.dispatch({
 						type: 'plot_edit',
