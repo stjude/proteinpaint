@@ -2,6 +2,7 @@ import { getCompInit } from '../rx'
 import { termsettingInit } from '#termsetting'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter'
+import { isDictionaryType } from '#shared/terms'
 
 /*
 options for term2:
@@ -108,8 +109,12 @@ class Overlay {
 		}
 
 		if (plot.term2) {
-			a.term = plot.term2.term
-			a.q = plot.term2.q
+			const isDictTerm = isDictionaryType(plot.term2.term.type)
+			// assume that dictionary tw are complete after fillTermWrapper(),
+			// whereas non-dictionary terms may require additional term/q properties
+			// to be added when the pill edit UI is opened, so term/q must not be frozen
+			a.term = isDictTerm ? plot.term2.term : structuredClone(plot.term2.term)
+			a.q = isDictTerm ? plot.term2.q : structuredClone(plot.term2.q || {})
 			a.disable_terms.push(plot.term2)
 		}
 		if (plot.term0) a.disable_terms.push(plot.term0)
