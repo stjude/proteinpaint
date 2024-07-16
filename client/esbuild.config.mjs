@@ -83,7 +83,8 @@ function logRebuild() {
               status: 'ok',
               color: 'green',
               duration: 2500,
-              reload: true
+              reload: true,
+              time: Date.now()
             })
             fs.promises.writeFile(`${messagesDir}/client`, data)
           }

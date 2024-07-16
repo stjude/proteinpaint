@@ -36,7 +36,7 @@ export default function setRoutes(app, basepath) {
 			setTimeout(async () => {
 				const files = await fs.promises.readdir(msgDir)
 				// the 3rd argument type should match the variable connections Set type
-				files.forEach(f => notifyOnFileChange('change', f, new Set([res])))
+				files.forEach(f => !f.startsWith('.') && notifyOnFileChange('change', f, new Set([res])))
 			}, 0)
 		} catch (err) {
 			res.send(err)
@@ -52,7 +52,20 @@ export default function setRoutes(app, basepath) {
 			else {
 				const message = await fs.promises.readFile(f, { encoding: 'utf8' })
 				if (!message) delete messages[fileName]
-				else messages[fileName] = JSON.parse(message)
+				else {
+					try {
+						const m = JSON.parse(message)
+						if (m?.status == 'ok' && m.time && Date.now() - m.time > 5000) {
+							delete messages[fileName]
+						} else {
+							messages[fileName] = m
+						}
+					} catch (e) {
+						// TODO: handle parsing error
+						delete messages[fileName]
+						console.log(e)
+					}
+				}
 			}
 			const data = JSON.stringify(Object.values(messages))
 			const conn = initialConnection || connections
@@ -61,7 +74,7 @@ export default function setRoutes(app, basepath) {
 				res.write(`data: ${data}\n\n`)
 			}
 		} catch (e) {
-			console.log(59, e)
+			console.log(e)
 		}
 	}
 
