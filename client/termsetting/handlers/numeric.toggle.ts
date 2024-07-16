@@ -46,10 +46,6 @@ export async function getHandler(self) {
 		if (!tab) return
 		if (!self.q) throw `Missing .q{} [numeric.toggle getHandler()]`
 		self.q.mode = tab.mode
-		if (tab.mode == 'discrete' && !self.term.bins) {
-			const tw = { term: self.term, q: self.q }
-			await self.vocabApi.setTermBins(tw)
-		}
 		const typeMode = `numeric.${tab.mode}`
 		if (!self.handlerByType![typeMode]) {
 			const _: HandlerGenerator = await import(`./numeric.${tab.mode}.ts`)
@@ -73,12 +69,6 @@ export async function getHandler(self) {
 	}
 
 	if (self.opts.numericEditMenuVersion!.includes('discrete')) {
-		if (!self.term.bins && self.term.type !== 'survival') {
-			// make the defaultBins request only when 'discrete' tab presents
-			const tw = { term: self.term, q: self.q }
-			await self.vocabApi.setTermBins(tw)
-		}
-
 		tabs.push({
 			mode: 'discrete',
 			label: self.term.type == 'survival' ? 'Exit code' : 'Discrete',
