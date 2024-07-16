@@ -2220,11 +2220,7 @@ function setLabelDragEvents(self, prefix) {
 			delete self.dragged
 		} else if (prefix == 'term') {
 			self.showTermMenu(event)
-		} else if (
-			self.chartType !== 'hierCluster' ||
-			event.target.__data__.grp?.name !== self.config.settings.hierCluster.termGroupName
-		) {
-			// Do not show the term group menu for hierCluster gene expression term group
+		} else {
 			self.showTermGroupMenu(event)
 		}
 	}

@@ -1,1 +1,2 @@
-
+Fixes:
+- gene expression hierCluster group Add_Rows ui can only add gene expression terms
