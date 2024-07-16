@@ -2,7 +2,7 @@ import { getCompInit } from '../rx'
 import { termsettingInit } from '#termsetting'
 import { Menu } from '../dom/menu'
 import { getNormalRoot } from '#filter'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes, isDictionaryType } from '#shared/terms.js'
 
 /*
 model after overlay2.js
@@ -90,11 +90,17 @@ class Divide {
 			filter: this.state.filter,
 			disable_terms: [plot.term]
 		}
+
 		if (plot.term0) {
-			a.term = plot.term0.term
-			a.q = plot.term0.q
+			const isDictTerm = isDictionaryType(plot.term0.term.type)
+			// assume that dictionary tw are complete after fillTermWrapper(),
+			// whereas non-dictionary terms may require additional term/q properties
+			// to be added when the pill edit UI is opened, so term/q must not be frozen
+			a.term = isDictTerm ? plot.term0.term : structuredClone(plot.term0.term)
+			a.q = isDictTerm ? plot.term0.q : structuredClone(plot.term0.q || {})
 			a.disable_terms.push(plot.term0)
 		}
+
 		if (plot.term2) a.disable_terms.push(plot.term2)
 		if (!this.pill) this.initPill()
 		this.pill.main(a)
