@@ -28,25 +28,18 @@ class SampleView {
 			.style('flex-wrap', 'wrap')
 			.style('justify-content', 'flex-start')
 			.style('width', '100vw')
-		const tableDiv = contentDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		const plotsDiv = contentDiv //div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
 		const sampleDiv = headerDiv.insert('div').style('display', 'inline-block')
 		const showPlotsDiv = headerDiv.append('div').style('display', 'inline-block')
 
-		const table = tableDiv.append('table').style('border-collapse', 'collapse')
-		const thead = table.append('thead')
 		this.dom = {
 			header: opts.header,
 			holder: opts.holder,
 			controlsDiv,
 			sampleDiv,
 			showPlotsDiv,
-			tableDiv,
-			table,
-			thead,
-			theadrow: thead.append('tr'),
-			tbody: table.append('tbody'),
+
 			plotsDiv
 		}
 	}
@@ -56,7 +49,6 @@ class SampleView {
 
 		await this.setSampleSelect(appState)
 		const state = this.getState(appState)
-		await this.renderPlots(state, state.samples)
 
 		await this.setControls(state)
 	}
@@ -188,22 +180,24 @@ class SampleView {
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
-		this.showVisiblePlots()
+		this.dom.plotsDiv.selectAll('*').remove()
 
 		this.termsById = this.getTermsById(this.state)
 		this.sampleDataByTermId = {}
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
-		this.dom.table.style('display', this.settings.showDictionary ? 'block' : 'none')
 		this.dom.downloadbt.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
 
 		if (this.settings.showDictionary) this.renderSampleDictionary()
+		this.dom.tableDiv.style('display', this.settings.showDictionary ? 'block' : 'none')
+
+		await this.renderPlots(this.state, this.state.samples)
+		this.showVisiblePlots()
 	}
 
 	async setControls(state) {
 		const q = state.termdbConfig.queries
-		this.dom.controlsDiv.selectAll('*').remove()
 		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		const hasPlots =
 			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.DZImages
@@ -509,8 +503,6 @@ class SampleView {
 	}
 
 	async renderPlots(state, samples) {
-		//this.dom.plotsDiv.selectAll('*').remove()
-
 		const plotsDiv = this.dom.plotsDiv
 		this.discoPlots = []
 		this.singleSamplePlots = {}
@@ -649,22 +641,27 @@ export const componentInit = sampleViewInit
 
 function setRenderers(self) {
 	self.renderSampleDictionary = function () {
+		this.dom.tableDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('padding-left', '20px')
+		const table = this.dom.tableDiv.append('table').style('border-collapse', 'collapse')
+		const thead = table.append('thead')
+		const theadrow = thead.append('tr')
+		const tbody = table.append('tbody')
 		// use an array to support multiple visible samples,
 		// but prototyping with just one sample for now
 		const visibleSamples = []
 		for (const sample of self.state.samples) visibleSamples.push(self.sampleDataByTermId[sample.sampleId])
 		// for the column names, just need the first column name + sample data
-		self.renderTHead(['', ...self.state.samples.map(s => s.sampleName)])
+		self.renderTHead(['', ...self.state.samples.map(s => s.sampleName)], theadrow)
 		const tBodyData = self.orderedVisibleTerms.map((term, trIndex) => [
 			{ term }, // first column, no sample data
 			// create data to bind for each sample column
 			...visibleSamples.map(sample => ({ term, sample }))
 		])
-		self.renderTBody(tBodyData)
+		self.renderTBody(tBodyData, tbody)
 	}
 
-	self.renderTHead = function (data) {
-		const trs = self.dom.theadrow.selectAll('th').data(data)
+	self.renderTHead = function (data, theadrow) {
+		const trs = theadrow.selectAll('th').data(data)
 		trs.exit().remove()
 		trs.html(self.getThHtml)
 		trs.enter().append('th').style('padding', '5px 10px').style('text-align', 'end').html(self.getThHtml)
@@ -672,8 +669,8 @@ function setRenderers(self) {
 
 	self.getThHtml = d => d
 
-	self.renderTBody = function (data) {
-		const trs = self.dom.tbody.selectAll('tr').data(data)
+	self.renderTBody = function (data, tbody) {
+		const trs = tbody.selectAll('tr').data(data)
 		trs.exit().remove()
 		trs.each(self.renderTr)
 		trs.enter().append('tr').each(self.renderTr)
