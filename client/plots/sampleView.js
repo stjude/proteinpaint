@@ -220,6 +220,7 @@ class SampleView {
 		if (q?.DZImages) {
 			this.dom.showPlotsDiv
 				.append('input')
+				.attr('id', 'showDzi')
 				.attr('type', 'checkbox')
 				.property('checked', true)
 				.on('change', e => {
@@ -229,7 +230,7 @@ class SampleView {
 						config: { settings: { sampleView: { showDzi: e.target.checked } } }
 					})
 				})
-			this.dom.showPlotsDiv.append('label').text('Show DZI images')
+			this.dom.showPlotsDiv.append('label').attr('for', 'showDzi').text('Show DZI images')
 		}
 
 		if (q?.singleSampleMutation) {
