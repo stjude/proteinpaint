@@ -1295,7 +1295,7 @@ export class MatrixControls {
 						? s.dataType // is clustering group, pass dataType
 						: // !!subject to change!! when group is not clustering, and ds has mutation, defaults to MUTATION_CNV_FUSION
 						this.parent.state.termdbConfig.queries?.snvindel
-						? TermTypeGroups.MUTATION_CNV_FUSION
+						? TermTypes.GENE_VARIANT
 						: '',
 				selected:
 					(this.parent.chartType == 'hierCluster' &&
