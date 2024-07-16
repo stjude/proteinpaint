@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs'
+import { execSync } from 'child_process'
 import { context } from 'esbuild'
 import { polyfillNode } from "esbuild-plugin-polyfill-node"
 import notifier from 'node-notifier'
@@ -51,6 +52,8 @@ if (ENV == 'dev') {
 
 function logRebuild() {
   const messagesDir = path.join(__dirname, '../.sse/messages')
+  const internalsFilename = path.join(__dirname, `./test/internals-${ENV}.js`)
+  const emitImports = path.join(__dirname, 'emitImports.mjs')
   return {
     name: 'logBuildStage',
     setup({ onStart, onEnd }) {
@@ -58,6 +61,10 @@ function logRebuild() {
 
       onStart(() => {
         console.log('\n--- starting client rebuild... ---\n')
+        if (ENV == 'dev') {
+          console.log('emitting spec imports')
+          execSync(`node ${emitImports} > ${internalsFilename}`)
+        }
         t = Date.now()
       })
       onEnd((result) => { 

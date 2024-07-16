@@ -3,7 +3,6 @@
 set -euxo pipefail
 
 rm -rf ./dist
-node emitImports.mjs > ./test/internals-dev.js
 
 if [[ ! -d ../public/bin ]]; then
 	mkdir ../public/bin
