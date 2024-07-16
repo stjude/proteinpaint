@@ -641,16 +641,6 @@ type MatrixSettingsControlLabels = {
 	Mutation?: string
 }
 
-type ExcludeClasses = {
-	[index: string]: number
-}
-
-type FeatureAttrs = {
-	valuecutoff?: number
-	focalsizelimit?: number
-	excludeclasses?: ExcludeClasses
-}
-
 type MatrixConfigFeaturesEntry = {
 	ismutation: number
 	label: string
@@ -667,15 +657,6 @@ type MatrixConfig = {
 	hidelegend_features: number
 	features: MatrixConfigFeaturesEntry[]
 	limitsamplebyeitherannotation: LimitSampleByEitherAnnotationEntry[]
-}
-
-type GroupsEntry = {
-	name: string
-	matrixconfig: MatrixConfig
-}
-
-type Group = {
-	groups: GroupsEntry[]
 }
 
 type SurvPlotsEntry = {
