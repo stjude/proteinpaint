@@ -769,7 +769,7 @@ function setInteractivity(self) {
 }
 
 export async function getPlotConfig(opts, app) {
-	const q = app.getState().termdbConfig.queries
+	const q = app.getState()?.termdbConfig?.queries
 	const settings = {
 		sampleView: {
 			showDictionary: true,
