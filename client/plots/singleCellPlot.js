@@ -45,21 +45,37 @@ class singleCellPlot {
 	async init(appState) {
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
+		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
+
 		//read files data
 		const controlsDiv = this.opts.holder
 			.insert('div')
 			.style('display', 'inline-block')
 			.attr('class', 'pp-termdb-plot-controls')
 		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const tableDiv = mainDiv.append('div')
 		const headerDiv = mainDiv.append('div').style('padding', '10px')
-		const showPlotsDiv = headerDiv.append('div').style('display', 'inline-block')
+		const tableDiv = mainDiv.append('div')
+		const showDiv = headerDiv.append('div').style('display', 'inline-block')
 		const searchGeneDiv = headerDiv.append('div').style('padding', '10px').style('display', 'inline-block')
 
+		if (this.tableOnPlot) {
+			showDiv
+				.append('input')
+				.attr('id', `showSamples`)
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { singleCellPlot: { showSamples: e.target.checked } } }
+					})
+				})
+			showDiv.append('label').text('Show samples').attr('for', `showSamples`)
+		}
 		for (const plot of state.config.plots) {
 			const id = plot.name.replace(/\s+/g, '')
-			showPlotsDiv.append('label').style('padding-left', '10px').text(plot.name).attr('for', `show${id}`)
-			showPlotsDiv
+			showDiv
 				.append('input')
 				.attr('id', `show${id}`)
 				.attr('type', 'checkbox')
@@ -71,6 +87,7 @@ class singleCellPlot {
 						config: { settings: { singleCellPlot: { [`show${id}`]: e.target.checked } } }
 					})
 				})
+			showDiv.append('label').text(plot.name).attr('for', `show${id}`)
 		}
 		if (q.singleCell?.geneExpression) {
 			searchGeneDiv.append('label').html('Gene expression:')
@@ -147,8 +164,6 @@ class singleCellPlot {
 				})
 			})
 		}
-
-		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 
 		const deDiv = headerDiv.append('div').style('padding', '10px').style('display', 'inline-block')
 		const plotsDiv = mainDiv
