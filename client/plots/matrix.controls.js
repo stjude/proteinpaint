@@ -11,7 +11,7 @@ import { make_one_checkbox } from '#dom/checkbox'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 import { select } from 'd3-selection'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
-import { TermTypes, isNumericTerm } from '../shared/terms'
+import { TermTypes, TermTypeGroups, isNumericTerm } from '../shared/terms'
 
 const tip = new Menu({ padding: '' })
 
@@ -1290,14 +1290,12 @@ export class MatrixControls {
 				name: g.name,
 				type: g.type,
 				lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
-				dataType: s.dataType,
 				mode:
 					this.parent.chartType == 'hierCluster' && (g.type == 'hierCluster' || g.name == s?.termGroupName)
-						? 'expression'
-						: // !!subject to change!!
-						// when group is not clustering, and ds has mutation, defaults to mutation
+						? s.dataType // is clustering group, pass dataType
+						: // !!subject to change!! when group is not clustering, and ds has mutation, defaults to MUTATION_CNV_FUSION
 						this.parent.state.termdbConfig.queries?.snvindel
-						? 'mutation'
+						? TermTypeGroups.MUTATION_CNV_FUSION
 						: '',
 				selected:
 					(this.parent.chartType == 'hierCluster' &&
