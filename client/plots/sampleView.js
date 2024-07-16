@@ -490,7 +490,7 @@ class SampleView {
 		this.visiblePlots = false
 		this.showPlotsFromCategory(this.discoPlots, 'showDisco')
 		for (const ssgqKey in this.state.singleSampleGenomeQuantification)
-			this.showPlotsFromCategory(this.singleSamplePlots, ssgqKey)
+			this.showPlotsFromCategory(this.singleSamplePlots[ssgqKey], ssgqKey)
 		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
 		this.showPlotsFromCategory(this.imagePlots, 'showImages')
 		this.showPlotsFromCategory(this.dziPlots, 'showDzi')
@@ -513,7 +513,7 @@ class SampleView {
 
 		const plotsDiv = this.dom.plotsDiv
 		this.discoPlots = []
-		this.singleSamplePlots = []
+		this.singleSamplePlots = {}
 		this.brainPlots = []
 		this.imagePlots = []
 		this.dziPlots = []
@@ -558,12 +558,13 @@ class SampleView {
 		}
 		if (state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
+				this.singleSamplePlots[k] = []
 				let div = plotsDiv.append('div')
 				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 				for (const sample of samples) {
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
 					const plotDiv = div.insert('div').style('display', 'table-cell').style('padding', '20px')
-					this.singleSamplePlots.push({ sample, cellDiv: plotDiv })
+					this.singleSamplePlots[k].push({ sample, cellDiv: plotDiv })
 					if (state.samples.length > 1)
 						plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
 					const ssgqImport = await import('./plot.ssgq.js')
