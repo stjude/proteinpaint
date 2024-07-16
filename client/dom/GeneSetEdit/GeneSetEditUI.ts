@@ -7,6 +7,7 @@ import { ClientCopyGenome } from 'types/global'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
+import { TermTypes } from '../../shared/terms'
 
 type API = {
 	dom: {
@@ -54,10 +55,10 @@ type CallbackArg = {
 type GeneSetEditArg = {
 	holder: Elem
 	genome: ClientCopyGenome
-	/** Optional: if provided, allow to load top variably mutated or expressed genes;
-	 * if not provided, only allow to add genes manually
+	/** Optional: If provided, allow to load top variably mutated ('geneVariant') or
+	 * expressed genes ('geneExpression'). If not provided, only allow to add genes manually
 	 * later can be union of multiple mode strings */
-	mode?: 'expression' | 'mutation'
+	mode?: 'geneVariant' | 'geneExpression'
 	minNumGenes?: number
 	callback: (arg: CallbackArg) => void
 	vocabApi: any
@@ -78,7 +79,7 @@ export class GeneSetEditUI {
 	geneSearch: any //cheating
 	/** Objects detailing the menus to create above the api.dom.geneHoldingDiv as clickable links  */
 	menuList: { label: string; callback: (f?: any) => void }[]
-	mode?: 'expression' | 'mutation'
+	mode?: 'geneVariant' | 'geneExpression'
 	minNumGenes?: number
 	geneList: Gene[]
 	titleText?: string
@@ -179,13 +180,13 @@ export class GeneSetEditUI {
 	}
 
 	getParams() {
-		if (this.mode == 'mutation' && this.vocabApi.termdbConfig?.queries?.topMutatedGenes) {
+		if (this.mode == TermTypes.GENE_VARIANT && this.vocabApi.termdbConfig?.queries?.topMutatedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topMutatedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topMutatedGenes.arguments)
 					this.api.topMutatedGenesParams.push({ param })
 			}
 		}
-		if (this.mode == 'expression' && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
+		if (this.mode == TermTypes.GENE_EXPRESSION && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments)
 					this.api.topVariablyExpressedGenesParams.push({ param })
