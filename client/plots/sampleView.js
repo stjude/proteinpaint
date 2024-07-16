@@ -258,23 +258,25 @@ class SampleView {
 		}
 
 		if (q?.singleSampleGenomeQuantification) {
-			this.dom.showPlotsDiv
-				.append('label')
-				.style('padding-left', '10px')
-				.text('Show Single Sample')
-				.attr('for', 'showSingleSample')
-			this.dom.showPlotsDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.attr('id', 'showSingleSample')
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { sampleView: { showSingleSample: e.target.checked } } }
+			for (const ssgqKey in q.singleSampleGenomeQuantification) {
+				this.dom.showPlotsDiv
+					.append('label')
+					.style('padding-left', '10px')
+					.text('Show ' + ssgqKey)
+					.attr('for', 'showSingleSample')
+				this.dom.showPlotsDiv
+					.append('input')
+					.attr('type', 'checkbox')
+					.property('checked', true)
+					.attr('id', 'showSingleSample')
+					.on('change', e => {
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: this.id,
+							config: { settings: { sampleView: { showSingleSample: e.target.checked } } }
+						})
 					})
-				})
+			}
 		}
 		if (q?.images) {
 			this.dom.showPlotsDiv.append('label').style('padding-left', '10px').text('Show Images').attr('for', 'showImages')
