@@ -196,6 +196,7 @@ class SampleView {
 		root.terms = await this.requestTermRecursive(root)
 		this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
 		this.dom.table.style('display', this.settings.showDictionary ? 'block' : 'none')
+		this.dom.downloadbt.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
 
 		if (this.settings.showDictionary) this.renderSampleDictionary()
 	}
@@ -208,11 +209,6 @@ class SampleView {
 			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.DZImages
 		if (hasPlots) {
 			this.dom.showPlotsDiv
-				.append('label')
-				.style('padding-left', '10px')
-				.text('Show Dictionary')
-				.attr('for', 'showDictionary')
-			this.dom.showPlotsDiv
 				.append('input')
 				.attr('id', 'showDictionary')
 				.attr('type', 'checkbox')
@@ -224,10 +220,10 @@ class SampleView {
 						config: { settings: { sampleView: { showDictionary: e.target.checked } } }
 					})
 				})
+			this.dom.showPlotsDiv.append('label').text('Show Dictionary').attr('for', 'showDictionary')
 		}
 
 		if (q?.DZImages) {
-			this.dom.showPlotsDiv.append('label').style('padding-left', '10px').text('Show DZI images')
 			this.dom.showPlotsDiv
 				.append('input')
 				.attr('type', 'checkbox')
@@ -239,10 +235,10 @@ class SampleView {
 						config: { settings: { sampleView: { showDzi: e.target.checked } } }
 					})
 				})
+			this.dom.showPlotsDiv.append('label').text('Show DZI images')
 		}
 
 		if (q?.singleSampleMutation) {
-			this.dom.showPlotsDiv.append('label').style('padding-left', '10px').text('Show Disco').attr('for', 'showDisco')
 			this.dom.showPlotsDiv
 				.append('input')
 				.attr('type', 'checkbox')
@@ -255,16 +251,13 @@ class SampleView {
 						config: { settings: { sampleView: { showDisco: e.target.checked } } }
 					})
 				})
+			this.dom.showPlotsDiv.append('label').text('Show Disco').attr('for', 'showDisco')
 		}
 
 		if (q?.singleSampleGenomeQuantification) {
 			for (const ssgqKey in q.singleSampleGenomeQuantification) {
 				const label = ssgqKey.replace(/([a-z](?=[A-Z]))/g, '$1 ')
-				this.dom.showPlotsDiv
-					.append('label')
-					.style('padding-left', '10px')
-					.text('Show ' + label)
-					.attr('for', ssgqKey)
+
 				this.dom.showPlotsDiv
 					.append('input')
 					.attr('type', 'checkbox')
@@ -277,10 +270,13 @@ class SampleView {
 							config: { settings: { sampleView: { [ssgqKey]: e.target.checked } } }
 						})
 					})
+				this.dom.showPlotsDiv
+					.append('label')
+					.text('Show ' + label)
+					.attr('for', ssgqKey)
 			}
 		}
 		if (q?.images) {
-			this.dom.showPlotsDiv.append('label').style('padding-left', '10px').text('Show Images').attr('for', 'showImages')
 			this.dom.showPlotsDiv
 				.append('input')
 				.attr('type', 'checkbox')
@@ -293,10 +289,10 @@ class SampleView {
 						config: { settings: { sampleView: { showImages: e.target.checked } } }
 					})
 				})
+			this.dom.showPlotsDiv.append('label').text('Show Images').attr('for', 'showImages')
 		}
 
 		if (q?.NIdata && showBrainImaging) {
-			this.dom.showPlotsDiv.append('label').text('Show brain imaging').attr('for', 'showBrainImaging')
 			this.dom.showPlotsDiv
 				.append('input')
 				.attr('type', 'checkbox')
@@ -309,6 +305,7 @@ class SampleView {
 						config: { settings: { sampleView: { showBrainImaging: e.target.checked } } }
 					})
 				})
+			this.dom.showPlotsDiv.append('label').text('Show brain imaging').attr('for', 'showBrainImaging')
 		}
 	}
 
