@@ -48,8 +48,9 @@ class singleCellPlot {
 		//read files data
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const searchGeneDiv = mainDiv.append('div').style('padding', '10px').style('display', 'inline-block')
+
 		if (q.singleCell?.geneExpression) {
-			const searchGeneDiv = mainDiv.append('div').style('padding', '10px')
 			searchGeneDiv.append('label').html('Gene expression:')
 			const geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
@@ -129,9 +130,9 @@ class singleCellPlot {
 
 		const controlsHolder = controlsDiv.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
 		const headerDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
-		const tableDiv = this.tableOnPlot ? headerDiv : mainDiv.append('div')
-		const deDiv = mainDiv.append('div').style('padding', '10px')
-		const plotsDiv = mainDiv
+		const tableDiv = this.tableOnPlot ? headerDiv : mainDiv.append('div').style('display', 'inline-block')
+		const deDiv = mainDiv.append('div').style('padding', '10px').style('display', 'inline-block')
+		const plotsDiv = searchGeneDiv
 			.append('div')
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
@@ -216,6 +217,22 @@ class singleCellPlot {
 					div: DETableDiv
 				})
 			})
+		}
+		for (const plot of state.config.plots) {
+			const id = plot.name.replace(/\s+/g, '')
+			searchGeneDiv.append('label').style('padding-left', '10px').text(plot.name).attr('for', `show${id}`)
+			searchGeneDiv
+				.append('input')
+				.attr('id', `show${id}`)
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { sampleView: { showDictionary: e.target.checked } } }
+					})
+				})
 		}
 
 		this.settings = {}

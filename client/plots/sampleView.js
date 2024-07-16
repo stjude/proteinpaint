@@ -259,21 +259,22 @@ class SampleView {
 
 		if (q?.singleSampleGenomeQuantification) {
 			for (const ssgqKey in q.singleSampleGenomeQuantification) {
+				const label = ssgqKey.replace(/([a-z](?=[A-Z]))/g, '$1 ')
 				this.dom.showPlotsDiv
 					.append('label')
 					.style('padding-left', '10px')
-					.text('Show ' + ssgqKey)
-					.attr('for', 'showSingleSample')
+					.text('Show ' + label)
+					.attr('for', ssgqKey)
 				this.dom.showPlotsDiv
 					.append('input')
 					.attr('type', 'checkbox')
 					.property('checked', true)
-					.attr('id', 'showSingleSample')
+					.attr('id', ssgqKey)
 					.on('change', e => {
 						this.app.dispatch({
 							type: 'plot_edit',
 							id: this.id,
-							config: { settings: { sampleView: { showSingleSample: e.target.checked } } }
+							config: { settings: { sampleView: { [ssgqKey]: e.target.checked } } }
 						})
 					})
 			}
@@ -491,7 +492,8 @@ class SampleView {
 	showVisiblePlots() {
 		this.visiblePlots = false
 		this.showPlotsFromCategory(this.discoPlots, 'showDisco')
-		this.showPlotsFromCategory(this.singleSamplePlots, 'showSingleSample')
+		for (const ssgqKey in this.state.singleSampleGenomeQuantification)
+			this.showPlotsFromCategory(this.singleSamplePlots, ssgqKey)
 		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
 		this.showPlotsFromCategory(this.imagePlots, 'showImages')
 		this.showPlotsFromCategory(this.dziPlots, 'showDzi')
@@ -518,7 +520,7 @@ class SampleView {
 		this.brainPlots = []
 		this.imagePlots = []
 		this.dziPlots = []
-
+		const q = state.termdbConfig.queries
 		if (state.termdbConfig.queries?.DZImages) {
 			let div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
@@ -766,17 +768,20 @@ function setInteractivity(self) {
 	}
 }
 
-export async function getPlotConfig(opts) {
+export async function getPlotConfig(opts, app) {
+	const q = app.getState().termdbConfig.queries
 	const settings = {
 		sampleView: {
 			showDictionary: true,
 			showDisco: true,
-			showSingleSample: true,
 			showBrain: true,
 			showImages: true,
 			showDzi: true
 		}
 	}
+	if (q)
+		//Init show property for each genome quantification plot to true
+		for (const ssgqKey in q.singleSampleGenomeQuantification) settings.sampleView[ssgqKey] = true
 	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings }
 	return copyMerge(config, opts)
 }
