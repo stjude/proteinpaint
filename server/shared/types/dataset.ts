@@ -502,6 +502,44 @@ type LdQuery = {
 	}
 }
 
+/** one more multiple sets of genome-wide plots per sample, e.g. dna meth probe beta values. the plot has a Y axis and shows all chromosomes. each key is one set of such plot. there could be multiple sets */
+type SingleSampleGenomeQuantification = {
+	[index: string]: {
+		/** description of this data */
+		description: string
+		/** min value of Y axis */
+		min: number
+		/** max value of Y axis */
+		max: number
+		/** */
+		sample_id_key: string
+		/** folder path of data files per sample */
+		folder: string
+		/** plot color for positive values */
+		positiveColor: string
+		/** plot color for negative values */
+		negativeColor: string
+		/** optionally, link the plot to singleSampleGbtk, in that clicking on the plot will luanch a detailed block view defined by singleSampleGbtk */
+		singleSampleGbtk?: string
+	}
+}
+
+/** single sample genome browser track. each key corresponds to one track. currently hardcoded to "<sampleId>.gz" bedgraph files in the folder  */
+type SingleSampleGbtk = {
+	[index: string]: {
+		/** description of this data */
+		description: string
+		/** min value of Y axis */
+		min: number
+		/** max value of Y axis */
+		max: number
+		/** */
+		sample_id_key: string
+		/** folder path of data files per sample */
+		folder: string
+	}
+}
+
 type Mds3Queries = {
 	defaultBlock2GeneMode?: boolean
 	snvindel?: SnvIndelQuery
@@ -521,13 +559,13 @@ type Mds3Queries = {
 			gdcapi: true
 		}
 	}
+	/** unknown, verify if still needed */
+	defaultCoord?: string
 	ld?: LdQuery
-	// TODO: improve the type definitions below
-	defaultCoord?: any
-	singleSampleGenomeQuantification?: any
+	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
+	singleSampleGbtk?: SingleSampleGbtk
 	DZImages?: any
 	images?: any
-	singleSampleGbtk?: any
 }
 
 /*** types supporting Termdb ***/
@@ -649,12 +687,6 @@ type Group = {
 
 type AnnotationSampleGroups = {
 	[index: string]: Group
-}
-
-type AaaAnnotationSampleset2Matrix = {
-	key: string
-	commonfeatureattributes: CommonFeatureAttributes
-	groups: AnnotationSampleGroups
 }
 
 type SurvPlotsEntry = {
@@ -1229,7 +1261,6 @@ export type Mds = BaseMds & {
 	dbFile?: string
 	version?: { label: string; link: string }
 	gene2mutcount?: Gene2MutCount
-	aaaannotationsampleset2matrix?: AaaAnnotationSampleset2Matrix
 	locusAttribute?: LocusAttribute
 	alleleAttribute?: {
 		attributes: {
