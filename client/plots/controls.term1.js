@@ -1,7 +1,7 @@
 import { getCompInit } from '../rx'
 import { termsettingInit } from '#termsetting'
 import { getNormalRoot } from '#filter'
-import { TermTypes } from '#shared/terms'
+import { TermTypes, isDictionaryType } from '#shared/terms'
 
 /*
 for configuring term1; wraps termsetting
@@ -146,9 +146,15 @@ function setRenderers(self) {
 				throw 'unknown term type'
 		}
 		if (!self.pill) self.setPill()
+		const isDictTerm = isDictionaryType(plot.term.term.type)
+		// assume that dictionary tw are complete after fillTermWrapper(),
+		// whereas non-dictionary terms may require additional term/q properties
+		// to be added when the pill edit UI is opened, so term/q must not be frozen
+		const term = isDictTerm ? plot.term.term : structuredClone(plot.term.term)
+		const q = isDictTerm ? plot.term.q : structuredClone(plot.term.q)
 		await self.pill.main({
-			term: plot.term.term,
-			q: plot.term.q,
+			term,
+			q,
 			activeCohort: this.state.activeCohort,
 			filter: this.state.filter
 			// no need for disable_terms as pill won't show tree
