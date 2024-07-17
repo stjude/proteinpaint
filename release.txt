@@ -1,2 +1,1 @@
-Features:
-- allow the drag/drop of rows from non-clustered row groups
+
