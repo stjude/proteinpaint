@@ -1,7 +1,7 @@
 import { select, selectAll } from 'd3-selection'
 
 // TODO: may move this to #shared/types/sse.ts so
-// that both server and client can type check against 
+// that both server and client can type check against
 // the same definitions
 type SseDataEntry = {
 	/** title of the message: each unique key will be associated with a rendered div, to either add, update, or remove */
@@ -18,8 +18,6 @@ type SseDataEntry = {
 
 type SseData = SseDataEntry[]
 
-// server-sent events
-const sse = new EventSource('/sse')
 const notifyDiv = select('body')
 	.append('div')
 	.style('position', 'fixed')
@@ -29,42 +27,71 @@ const notifyDiv = select('body')
 	.style('background-color', 'rgba(250, 250, 250, 0.75)')
 	.style('z-index', 10000)
 
-let lastReload = 0
+let sse
+setSse()
 
-sse.onmessage = event => {
-	// track last reload to prevent triggering infinite reload loop
-	if (lastReload === 0) lastReload = event.timeStamp
-	const data: SseData = JSON.parse(event.data) //; console.log(data)
-	const divs = notifyDiv.selectAll(`:scope>div`).data(data, d => (d as SseDataEntry).key)
+function setSse() {
+	// server-sent events
+	sse = new EventSource('/sse')
 
-	divs.exit().remove()
-	divs
-		.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
-		.style('border', d => `1px solid ${d.color || '#000'}`)
-		.html(d => `${d.key}: ${d.message}`)
-		.each(function (d) {
-			if (d.reload && event.timeStamp > lastReload) window.location.reload()
-			else if (d.duration) {
-				setTimeout(() => select(this).transition().duration(d.duration as number).style('opacity', 0).remove(), d.duration)
-			}
-		})
-	divs
-		.enter()
-		.append('div')
-		.style('margin', '5px')
-		.style('padding', '5px')
-		.style('border', d => `1px solid ${d.color || '#000'}`)
-		.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
-		.html(d => `${d.key}: ${d.message}`)
-		.on('click', function (d) {
-			//select(this).remove()
-		})
-		.each(function (d) {
-			if (d.reload && event.timeStamp > lastReload) window.location.reload()
-			else if (d.duration) {
-				setTimeout(() => select(this).transition().duration(d.duration as number).style('opacity', 0).remove(), d.duration)
-			}
-		})
+	let lastReload = 0
+
+	sse.onmessage = event => {
+		// track last reload to prevent triggering infinite reload loop
+		if (lastReload === 0) lastReload = event.timeStamp
+		const data: SseData = JSON.parse(event.data)
+		const divs = notifyDiv.selectAll(`:scope>div`).data(data, d => (d as SseDataEntry).key)
+
+		divs.exit().remove()
+		divs
+			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
+			.style('border', d => `1px solid ${d.color || '#000'}`)
+			.html(d => `${d.key}: ${d.message}`)
+			.each(function (d) {
+				if (d.reload && event.timeStamp > lastReload) window.location.reload()
+				else if (d.duration) {
+					setTimeout(
+						() =>
+							select(this)
+								.transition()
+								.duration(d.duration as number)
+								.style('opacity', 0)
+								.remove(),
+						d.duration
+					)
+				}
+			})
+		divs
+			.enter()
+			.append('div')
+			.style('margin', '5px')
+			.style('padding', '5px')
+			.style('border', d => `1px solid ${d.color || '#000'}`)
+			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
+			.html(d => `${d.key}: ${d.message}`)
+			.on('click', function (d) {
+				//select(this).remove()
+			})
+			.each(function (d) {
+				if (d.reload && event.timeStamp > lastReload) window.location.reload()
+				else if (d.duration) {
+					setTimeout(
+						() =>
+							select(this)
+								.transition()
+								.duration(d.duration as number)
+								.style('opacity', 0)
+								.remove(),
+						d.duration
+					)
+				}
+			})
+	}
+
+	sse.onerror = err => console.log(err)
 }
 
-sse.onerror = err => console.log(err)
+document.addEventListener('visibilitychange', e => {
+	if (document.hidden) sse.close()
+	else if (!sse || sse.readyState === 2) setSse()
+})

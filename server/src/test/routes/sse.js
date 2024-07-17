@@ -27,7 +27,7 @@ export default function setRoutes(app, basepath) {
 			res.flushHeaders()
 
 			res.on('close', () => {
-				console.log('Client closed.')
+				//console.log('Client closed.')
 				connections.delete(res)
 			})
 
