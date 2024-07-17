@@ -59,10 +59,15 @@ type GeneSetEditArg = {
 	 * expressed genes ('geneExpression'). If not provided, only allow to add genes manually
 	 * later can be union of multiple mode strings */
 	mode?: 'geneVariant' | 'geneExpression'
+	/** Minimum number of genes to return in the callback */
 	minNumGenes?: number
+	/** What to do with the genes returned */
 	callback: (arg: CallbackArg) => void
+	/** passed termdb instance */
 	vocabApi: any
+	/** List of genes returned by the callback */
 	geneList?: Gene[]
+	/** Title appearing above the UI */
 	titleText?: string
 }
 
@@ -80,7 +85,7 @@ export class GeneSetEditUI {
 	/** Objects detailing the menus to create above the api.dom.geneHoldingDiv as clickable links  */
 	menuList: { label: string; callback: (f?: any) => void }[]
 	mode?: 'geneVariant' | 'geneExpression'
-	minNumGenes?: number
+	minNumGenes: number
 	geneList: Gene[]
 	titleText?: string
 
@@ -91,7 +96,7 @@ export class GeneSetEditUI {
 		this.vocabApi = opts.vocabApi
 		this.geneList = structuredClone(opts.geneList || [])
 		this.tip2 = new Menu({ padding: '0px', parent_menu: opts.holder.node(), test: 'test' })
-		if ('minNumGenes' in opts) this.minNumGenes = opts.minNumGenes
+		this.minNumGenes = opts.minNumGenes || 0
 		if ('mode' in opts) this.mode = opts.mode
 		if ('titleText' in opts) this.titleText = opts.titleText
 		this.origLst = structuredClone(this.geneList)
@@ -188,8 +193,43 @@ export class GeneSetEditUI {
 		}
 		if (this.mode == TermTypes.GENE_EXPRESSION && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
-				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments)
+				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
+					if (param.options) {
+						for (const opt of param.options) {
+							if (opt.type == 'tree') {
+								opt.callback = async holder => {
+									const termdb = await import('../../termdb/app.js')
+									termdb.appInit({
+										holder,
+										state: {
+											dslabel: opt.dslabel,
+											genome: this.genome.name,
+											nav: {
+												header_mode: 'search_only'
+											}
+										},
+										tree: {
+											click_term: () => {
+												//TODO
+											}
+										}
+									})
+								}
+							}
+							if (opt.type == 'text') {
+								opt.callback = async holder => {
+									holder.append('textarea')
+								}
+							}
+							if (opt.type == 'search') {
+								opt.callback = async holder => {
+									holder.append('input').attr('type', 'text')
+								}
+							}
+						}
+					}
 					this.api.topVariablyExpressedGenesParams.push({ param })
+				}
 			}
 		}
 	}
@@ -269,7 +309,7 @@ export class GeneSetEditUI {
 				const tdb = this.genome.termdbs[key]
 				this.menuList.push({
 					label: `${tdb.label} gene set`,
-					callback: async (event: Event) => {
+					callback: async () => {
 						this.tip2.clear().showunder(this.api.dom.textControlDiv.node()!)
 						// this.tip2.clear().showunder(event.target)
 						const termdb = await import('../../termdb/app.js')
@@ -439,8 +479,10 @@ export class GeneSetEditUI {
 		const hasChanged = this.origNames !== JSON.stringify(this.geneList.map(t => t.gene).sort())
 		this.api.dom.restoreBtn?.property('disabled', !hasChanged)
 		// disable submit button when gene list not changed or is empty in expression mode
-		const minNum = this.minNumGenes || 0
-		this.api.dom.submitBtn.property('disabled', !hasChanged || this.geneList?.length < minNum || !this.geneList?.length)
+		this.api.dom.submitBtn.property(
+			'disabled',
+			!hasChanged || this.geneList?.length < this.minNumGenes || !this.geneList?.length
+		)
 		if (hasChanged) this.api.dom.submitBtn!.node()!.focus()
 	}
 
