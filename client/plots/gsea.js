@@ -1,9 +1,12 @@
+import * as d3axis from 'd3-axis'
+import { axisstyle } from '#dom/axisstyle'
 import { renderTable } from '../dom/table'
 import { table2col } from '#dom/table2col'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '../dom/menu'
+import { scaleLog, scaleLinear } from 'd3-scale'
 
 const tip = new Menu()
 
@@ -255,9 +258,59 @@ add:
 					geneSetGroup: self.config.gsea_params.geneSetGroup
 				}
 				const plot_data = await rungsea(body)
-				console.log('plot_data:', plot_data)
+				render_gsea_plot(self, plot_data)
 			}
 		})
+	}
+}
+
+function render_gsea_plot(self, plot_data) {
+	console.log('self.dom.holder:', self.dom.holder)
+	const holder = self.dom.holder
+	console.log('plot_data:', plot_data)
+	holder.selectAll('*').remove()
+	const running_sum = plot_data.running_sum.split(',').map(x => parseFloat(x))
+	const es = parseFloat(plot_data.es)
+	console.log('running_sum:', running_sum)
+	const svg = holder.append('svg').attr('width', 100).attr('height', 100)
+	const yaxisg = svg.append('g')
+	const xaxisg = svg.append('g')
+	const xlab = xaxisg.append('text').text('Rank').attr('fill', 'black').attr('text-anchor', 'middle')
+	const ylab = yaxisg
+		.append('text')
+		.text('ES')
+		.attr('fill', 'black')
+		.attr('text-anchor', 'middle')
+		.attr('transform', 'rotate(-90)')
+	const xscale = scaleLinear().domain(running_sum).range([0, 100])
+	const yscale = scaleLinear().domain([0, 100]).range([0, 100])
+	//const xscale = scaleLinear().domain([Math.min(running_sum), Math.max(running_sum)]).range([0, 100])
+	axisstyle({
+		axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
+		color: 'black',
+		showline: true,
+		fontsize: '10'
+	})
+	axisstyle({
+		axis: xaxisg.call(d3axis.axisBottom().scale(xscale)),
+		color: 'black',
+		showline: true,
+		fontsize: '10'
+	})
+	const lines = svg.append('g')
+	//svg.selectAll(".axis text").style("font-size", "100px")
+	let gene_number = 0
+	let y1 = 0
+	for (const rs of running_sum) {
+		lines
+			.append('line') // attach a line
+			.style('stroke', 'green') // colour the line
+			.attr('x1', xscale(gene_number)) // x position of the first end of the line
+			.attr('y1', yscale(y1)) // y position of the first end of the line
+			.attr('x2', xscale(gene_number)) // x position of the second end of the line
+			.attr('y2', yscale(Math.abs(rs))) // y position of the second end of the line
+		gene_number += 1
+		y1 = Math.abs(rs)
 	}
 }
 
