@@ -991,13 +991,18 @@ export class TermdbVocab extends Vocab {
 		//TODO use the PresetNumericBins type for defaultBins
 		const defaultBins = await this.getDefaultBins({ tw })
 		if ('error' in defaultBins) throw defaultBins.error
-		// NOTE: if tw.term is frozen, creating an unfrozen copy here will
-		// not propagate changes to tw.term, since term.bins would be set
-		// for the copy and not the original tw.term
+		// NOTE: if term is frozen, creating an unfrozen copy here will
+		// not propagate changes to the original tw.term
 		tw.term.bins = defaultBins
-		const currMode = tw.q.mode // record current mode before q{} is overriden
-		tw.q = tw.term.bins.default
-		tw.q.mode = currMode
+		if (tw.q.mode == 'discrete' && !tw.q.type) {
+			// only fill-in tw.q if missing values are detected
+			const currMode = tw.q.mode // record current mode before q{} is overriden
+			// !!! must not swap tw.q = tw.term.bins.default since
+			// tw may have been constructed only as an argument for this function, and not as a persisted object elsewhere !!!
+			for (const key in tw.q) delete tw.q[key]
+			Object.assign(tw.q, tw.term.bins.default)
+			tw.q.mode = currMode
+		}
 	}
 
 	async getSingleSampleData(opts) {
