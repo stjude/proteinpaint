@@ -286,7 +286,15 @@ export type GeneArgumentEntry = {
 	/** value of the input or checkbox
 	 * required if type is string. Otherwise, optional
 	 */
-	value: string | number
+	value?: string | number
+	options?: {
+		/** TODO: add note here */
+		type: 'text' | 'tree' | 'search'
+		dslabel?: string
+		value: number
+		label: string
+		sublabel?: string
+	}[]
 }
 
 type TopVariablyExpressedGenesQuery = {
