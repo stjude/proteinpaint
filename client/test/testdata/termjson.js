@@ -73,6 +73,13 @@ exports.termjson = {
 		},
 		isleaf: true
 	},
+	os: {
+		id: 'os',
+		name: 'Overall survival',
+		type: 'survival',
+		unit: 'years',
+		isleaf: true
+	},
 	Arrhythmias: {
 		id: 'Arrhythmias',
 		name: 'Arrhythmias',
