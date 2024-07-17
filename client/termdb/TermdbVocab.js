@@ -987,21 +987,24 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb', { headers, body })
 	}
 
-	async setTermBins(tw) {
-		//TODO use the PresetNumericBins type for defaultBins
-		const defaultBins = await this.getDefaultBins({ tw })
-		if ('error' in defaultBins) throw defaultBins.error
+	// it's safer to separately treat term and q as persisted objects but not tw,
+	// since tw may have been constructed only as an argument for this function
+	// and not as a persisted object elsewhere
+	async setTermBins({ term, q }) {
+		//TODO use the PresetNumericBins type for presetBins
+		const presetBins = await this.getDefaultBins({ tw: { term, q } })
+		if ('error' in presetBins) throw presetBins.error
 		// NOTE: if term is frozen, creating an unfrozen copy here will
-		// not propagate changes to the original tw.term
-		tw.term.bins = defaultBins
-		if (tw.q.mode == 'discrete' && !tw.q.type) {
-			// only fill-in tw.q if missing values are detected
-			const currMode = tw.q.mode // record current mode before q{} is overriden
-			// !!! must not swap tw.q = tw.term.bins.default since
-			// tw may have been constructed only as an argument for this function, and not as a persisted object elsewhere !!!
-			for (const key in tw.q) delete tw.q[key]
-			Object.assign(tw.q, tw.term.bins.default)
-			tw.q.mode = currMode
+		// not propagate changes to the original term
+		term.bins = presetBins
+		if (q.mode == 'discrete' && !q.type) {
+			// only fill-in q if missing values are detected
+			const currMode = q.mode // record current mode before q{} is overriden
+			for (const key in q) {
+				if (key != 'isAtomic') delete q[key]
+			}
+			Object.assign(q, term.bins.default)
+			q.mode = currMode
 		}
 	}
 

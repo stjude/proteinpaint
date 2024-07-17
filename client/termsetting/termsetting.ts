@@ -545,8 +545,7 @@ function setInteractivity(self) {
 						if (option.q) self.q = structuredClone(option.q)
 						await self.setHandler!(option.termtype)
 						if (isNumericTerm(self.term) && !self.term.bins && self.term.type != 'survival') {
-							const tw = { term: self.term, q: self.q }
-							await self.vocabApi.setTermBins(tw)
+							await self.vocabApi.setTermBins({ term: self.term, q: self.q })
 						}
 						self.handler!.showEditMenu(self.dom.tip.d)
 					} else {
@@ -626,8 +625,7 @@ function setInteractivity(self) {
 				label: 'Edit',
 				callback: async div => {
 					if (self.term && isNumericTerm(self.term) && !self.term.bins && self.term.type != 'survival') {
-						const tw = { term: self.term, q: self.q }
-						await self.vocabApi.setTermBins(tw)
+						await self.vocabApi.setTermBins({ term: self.term, q: self.q })
 					}
 					self.handler!.showEditMenu(div)
 				}
