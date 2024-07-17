@@ -1930,8 +1930,8 @@ function setLabelDragEvents(self, prefix) {
 
 	self[`${prefix}LabelMouseover`] = (event, t) => {
 		if (prefix == 'term' && event.target.__data__?.tw && event.target.__data__.grp) {
-			if (self.chartType == 'hierCluster') {
-				// do not show term label hover over tooltip for hier claster
+			if (event.target.__data__.grp.type == 'hierCluster') {
+				// do allow to be dragged/dropped and do not show term label hover over tooltip for hier cluster
 				return
 			}
 			//show counts in each subgroup when hover over term label
