@@ -2448,3 +2448,655 @@ tape('cell brush zoom in', function (test) {
 		test.end()
 	}
 })
+
+tape('survival term in continous mode', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{
+									term: {
+										name: 'Overall survival',
+										type: 'survival',
+										isleaf: true,
+										unit: 'years',
+										id: 'os'
+									},
+									q: {
+										mode: 'continuous'
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			1,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			60,
+			`should render the expected number of cell rects`
+		)
+		//if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('survival term in discrete mode', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{
+									term: {
+										name: 'Overall survival',
+										type: 'survival',
+										isleaf: true,
+										unit: 'years',
+										id: 'os'
+									},
+									q: {
+										mode: 'continuous'
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			1,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			60,
+			`should render the expected number of cell rects`
+		)
+		//if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('survival term with divide by dictionary term', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(3)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					divideBy: {
+						id: 'sex'
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{
+									term: {
+										name: 'Overall survival',
+										type: 'survival',
+										isleaf: true,
+										unit: 'years',
+										id: 'os'
+									},
+									q: {
+										mode: 'continuous'
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			1,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			60,
+			`should render the expected number of cell rects`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			2,
+			`should render the expected number of cluster rects`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('dictionary term with divide by survival term', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(3)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					divideBy: {
+						id: 'os'
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{ id: 'agedx', term: termjson['agedx'] },
+								{ id: 'diaggrp', term: termjson['diaggrp'] },
+								{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			3,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			180,
+			`should render the expected number of cell rects`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			2,
+			`should render the expected number of cluster rects`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('apply "hide" and "show" legend filters to a survival term', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(10)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{
+									id: 'aaclassic_5',
+									q: {
+										mode: 'continuous'
+									}
+								},
+								{
+									id: 'genetic_race'
+									//q: { mode: 'values' } // or 'groupsetting'
+								},
+								{
+									id: 'agedx',
+									q: {
+										mode: 'discrete',
+										type: 'regular-bin',
+										bin_size: 5,
+										first_bin: {
+											startunbounded: true,
+											stop: 5,
+											stopinclusive: true
+										}
+									}
+								},
+								{
+									term: {
+										name: 'Overall survival',
+										type: 'survival',
+										isleaf: true,
+										unit: 'years',
+										id: 'os'
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		// 1. Hide
+		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('Alive')
+		)
+		legendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(options[0].innerText, 'Hide', `First option should be Hide`)
+		test.equal(options[1].innerText, 'Show only', `second option should be Show only`)
+		test.equal(options[2].innerText, 'Show all', `third option should be Show all`)
+
+		const rects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 228,
+			trigger: () => {
+				options[0].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			4,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		// 2. Show
+		const legendTexts2 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('Alive')
+		)
+		legendTexts2.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options2 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(options2[0].innerText, 'Show', `First option should be Show`)
+		test.equal(options2[1].innerText, 'Show only', `second option should be Show only`)
+		test.equal(options2[2].innerText, 'Show all', `third option should be Show all`)
+
+		const rects2 = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 240,
+			trigger: () => {
+				options2[0].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			4,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('apply "show only" and "show all" legend filters to a survival terms', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(14)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{
+									id: 'aaclassic_5',
+									q: {
+										mode: 'continuous'
+									}
+								},
+								{
+									id: 'genetic_race'
+									//q: { mode: 'values' } // or 'groupsetting'
+								},
+								{
+									id: 'agedx',
+									q: {
+										mode: 'discrete',
+										type: 'regular-bin',
+										bin_size: 5,
+										first_bin: {
+											startunbounded: true,
+											stop: 5,
+											stopinclusive: true
+										}
+									}
+								},
+								{
+									term: {
+										name: 'Overall survival',
+										type: 'survival',
+										isleaf: true,
+										unit: 'years',
+										id: 'os'
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		// 1. Show only
+		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('Alive')
+		)
+		legendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		const rects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 12,
+			trigger: () => {
+				options[1].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			4,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		// 2. second Show only
+		const secondLegendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('<5')
+		)
+		secondLegendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const secondOptions = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(secondOptions[0].innerText, 'Hide', `First option should be Hide`)
+		test.equal(secondOptions[1].innerText, 'Show only', `second option should be Show only`)
+		test.equal(secondOptions[2].innerText, 'Show all', `third option should be Show all`)
+
+		const secondRects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 4,
+			trigger: () => {
+				secondOptions[1].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			4,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		// 3. first show all
+		const thirdLegendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('<5')
+		)
+		thirdLegendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+		const thirdOptions = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(thirdOptions[0].innerText, 'Hide', `First option should be Hide`)
+		test.equal(thirdOptions[2].innerText, 'Show all', `third option should be Show all`)
+
+		const thirdRects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 12,
+			trigger: () => {
+				thirdOptions[2].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			4,
+			`should render the expected number of serieses`
+		)
+
+		// 4. Show all
+		const fourthLegendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('Alive')
+		)
+		fourthLegendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+		const fourthOptions = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(fourthOptions[0].innerText, 'Hide', `first option should be Hide`)
+		test.equal(fourthOptions[2].innerText, 'Show all', `third option should be Show all`)
+
+		const fourthRects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 240,
+			trigger: () => {
+				fourthOptions[2].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			4,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})

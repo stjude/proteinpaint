@@ -118,9 +118,10 @@ export function getLegendData(legendGroups, refs, self) {
 					}
 				} else if (f.tvs.term.type == 'survival') {
 					for (const v of f.tvs.values) {
+						const termValues = t.tw.term.values
 						legend.values[v.key] = {
 							key: v.key,
-							label: 'Exit code: ' + v.key,
+							label: termValues?.[v.key]?.label || 'Exit code: ' + v.key,
 							fill: v.key == 1 ? '#ff7f0e' : '#1f77b4',
 							crossedOut: true
 						}
