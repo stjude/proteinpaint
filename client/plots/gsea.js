@@ -272,18 +272,28 @@ function render_gsea_plot(self, plot_data) {
 	const running_sum = plot_data.running_sum.split(',').map(x => parseFloat(x))
 	const es = parseFloat(plot_data.es)
 	console.log('running_sum:', running_sum)
-	const svg = holder.append('svg').attr('width', 100).attr('height', 100)
+	const svg_width = 400
+	const svg_height = 400
+	const svg = holder.append('svg').attr('width', svg_width).attr('height', svg_height)
+	const toppad = 50
+	const rightpad = 50
+	const yaxisw = Math.max(50, svg_width / 8)
+	const xaxish = Math.max(50, svg_height / 8)
 	const yaxisg = svg.append('g')
 	const xaxisg = svg.append('g')
-	const xlab = xaxisg.append('text').text('Rank').attr('fill', 'black').attr('text-anchor', 'middle')
+	const xpad = svg_width / 50
+	const ypad = svg_height / 50
+	yaxisg.attr('transform', 'translate(' + (yaxisw + xpad) + ',' + (toppad - ypad) + ')')
+	xaxisg.attr('transform', 'translate(' + (yaxisw + xpad) + ',' + (svg_height - ypad) + ')')
+	const xlab = xaxisg.append('text').text('Rank').attr('fill', 'black').attr('text-anchor', 'middle') //.attr('transform', 'translate(' + 200 + ',' + 200 + ')')
 	const ylab = yaxisg
 		.append('text')
 		.text('ES')
 		.attr('fill', 'black')
 		.attr('text-anchor', 'middle')
 		.attr('transform', 'rotate(-90)')
-	const xscale = scaleLinear().domain(running_sum).range([0, 100])
-	const yscale = scaleLinear().domain([0, 100]).range([0, 100])
+	const xscale = scaleLinear().domain(running_sum).range([0, svg_width])
+	const yscale = scaleLinear().domain([0, 100]).range([0, svg_height])
 	//const xscale = scaleLinear().domain([Math.min(running_sum), Math.max(running_sum)]).range([0, 100])
 	axisstyle({
 		axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
@@ -297,6 +307,8 @@ function render_gsea_plot(self, plot_data) {
 		showline: true,
 		fontsize: '10'
 	})
+	//xscale.range([0, svg_width])
+	//yscale.range([svg_height, 0])
 	const lines = svg.append('g')
 	//svg.selectAll(".axis text").style("font-size", "100px")
 	let gene_number = 0
