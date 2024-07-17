@@ -14,7 +14,7 @@ The tree target is used to determine the allowed term types.
 
 const useCasesExcluded = {
 	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.GENE_EXPRESSION],
 	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
