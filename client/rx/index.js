@@ -112,6 +112,10 @@ function getInitPrepFxn(_Class_, prepFxn) {
 	return async opts => {
 		let self
 		try {
+			if (opts.app?.opts && 'debug' in opts.app.opts && !('debug' in opts) && opts != opts.app.opts) {
+				// propagate debugmode from app.opts, if not set directly on the current opts object
+				opts.debug = opts.app.opts.debug
+			}
 			// create a _Class_ instance with mutable private properties and methods
 			self = new _Class_(opts)
 			prepFxn(self, opts)
@@ -150,8 +154,8 @@ function getInitPrepFxn(_Class_, prepFxn) {
 			return api
 		} catch (error) {
 			console.log('error:', error)
-			if (self && self.bus) self.bus.emit('postInit', null, 0, error)
-			if (!self || !self.printError) throw error
+			if (self?.bus) self.bus.emit('postInit', null, 0, error)
+			if (!self?.printError) throw error
 		}
 	}
 }

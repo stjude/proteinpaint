@@ -170,7 +170,7 @@ export function runproteinpaint(arg) {
 
 			if (data.debugmode) {
 				app.debugmode = true
-				import('./notify').catch(e => console.log(`debugmode: server-sent notifications is not setup`, e))
+				import('./notify').catch(e => console.warn(`debugmode: server-sent notifications is not setup`, e))
 			}
 			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
@@ -487,6 +487,7 @@ async function parseEmbedThenUrl(arg, app) {
 		const res = await client.dofetch3(`/massSession?id=${arg.massSessionId}`)
 		if (res.error) throw res.error
 		const opts = {
+			debug: app.debugmode,
 			holder: app.holder0,
 			state: res.state,
 			genome: app.genomes[res.state.vocab.genome],
@@ -519,6 +520,7 @@ async function parseEmbedThenUrl(arg, app) {
 			state = JSON.parse(jsonURL.text)
 		}
 		const opts = {
+			debug: app.debugmode,
 			holder: app.holder0,
 			state,
 			genome: app.genomes[state.vocab.genome]
@@ -1219,6 +1221,7 @@ async function getGm(p, genome) {
 async function launchmass(arg, app) {
 	// arg is from runpp(arg)
 	const opts = arg.mass
+	if ('debugmode' in app) opts.debug = app.debugmode
 	if (!opts.holder) opts.holder = app.holder0
 	// if genome is defined, attach client-side genome object to opts to support gene search etc
 	if (opts.state) {

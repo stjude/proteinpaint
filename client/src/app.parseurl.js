@@ -125,6 +125,7 @@ upon error, throw err message as a string
 		const value = urlp.get('mass')
 		const state = typeof value === 'string' ? JSON.parse(value) : value
 		const opts = {
+			debug: arg.app.debugmode,
 			holder: arg.holder,
 			state
 		}
