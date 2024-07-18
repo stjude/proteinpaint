@@ -5,7 +5,6 @@ import { PillData, HandlerGenerator, Handler } from '../types'
 import { VocabApi } from '../../shared/types/vocab.ts'
 import { roundValueAuto } from '#shared/roundValue'
 import {
-	NumericTerm,
 	NumericQ,
 	NumericTW,
 	DefaultMedianQ,
