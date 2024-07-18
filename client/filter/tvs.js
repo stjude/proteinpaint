@@ -190,11 +190,7 @@ function setRenderers(self) {
 	self.makeValueTable = function (div, tvs, values, callback) {
 		if (values?.length == 0) return div
 		const containerDiv = div.append('div').style('font-size', '0.8rem')
-		self.clusionNote = containerDiv
-			.append('div')
-			.style('font-weight', 'bold')
-			.style('margin', '10px 0px 5px 10px')
-			.text(`Select 1 or more categories for ${tvs.isnot ? 'EXCLUSION' : 'INCLUSION'}`)
+
 		const tableDiv = containerDiv.append('div')
 		// add barchart bar_width for values
 		const maxCount = Math.max(...values.map(v => v.samplecount), 0)
@@ -290,8 +286,7 @@ function addExcludeCheckbox(holder, tvs, self) {
 		.style('margin-right', '3px')
 		.on('change', () => {
 			tvs.isnot = isNotInput.node().checked
-			if (self.clusionNote)
-				self.clusionNote.text(`Select 1 or more categories for ${tvs.isnot ? 'EXCLUSION' : 'INCLUSION'}`)
+
 			if (self.tableApi) {
 				self.tableApi.update({
 					selectedRowStyle: {
