@@ -290,7 +290,6 @@ export type GeneArgumentEntry = {
 	radiobuttons?: {
 		/** TODO: add note here */
 		type: 'text' | 'tree' | 'boolean'
-		dslabel?: string
 		value: number | string
 		label: string
 		sublabel?: string

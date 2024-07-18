@@ -1,6 +1,6 @@
 import { addGeneSearchbox } from '../genesearch.ts'
 import { Menu } from '../menu'
-import { select } from 'd3-selection'
+import { select, selectAll } from 'd3-selection'
 import { mclass, dt2color, dt2label } from '../../shared/common'
 import { Button, Div, Elem } from 'types/d3'
 import { ClientCopyGenome } from 'types/global'
@@ -202,7 +202,7 @@ export class GeneSetEditUI {
 									termdb.appInit({
 										holder,
 										state: {
-											dslabel: opt.dslabel,
+											dslabel: opt.value,
 											genome: this.genome.name,
 											nav: {
 												header_mode: 'search_only'
@@ -362,6 +362,12 @@ export class GeneSetEditUI {
 	}
 
 	getInputValue({ param, input }) {
+		if (param.type == 'boolean' && param?.radiobuttons) {
+			return input
+				.selectAll('input')
+				.nodes()
+				.find(i => i.checked).value
+		}
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
 		if (input.attr('type') == 'checkbox') {
