@@ -21,7 +21,7 @@ import {
 import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
 import { getActiveCohortStr } from '../mass/charts'
-import { addDynamicScatterForm } from '#dom/dynamicScatter'
+import { select2Terms } from '#dom/select2Terms'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rebaseGroupFilter, getFilter } from '../mass/groups'
@@ -646,8 +646,20 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				})
 		}
 	const formDiv = menuDiv.append('div')
-	if (!chartsInstance.state.termdbConfig.hiddenChartTypes?.includes('dynamicScatter'))
-		addDynamicScatterForm(chartsInstance.dom.tip, chartsInstance.app)
+	if (!chartsInstance.state.termdbConfig.hiddenChartTypes?.includes('dynamicScatter')) {
+		const callback = (xterm, yterm) => {
+			chartsInstance.app.dispatch({
+				type: 'plot_create',
+				config: {
+					chartType: 'sampleScatter',
+					term: { term: xterm, q: { mode: 'continuous' } },
+					term2: { term: yterm, q: { mode: 'continuous' } },
+					name: 'Dynamic Scatter'
+				}
+			})
+		}
+		select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'sampleScatter', 'numeric', callback)
+	}
 }
 
 export function getDefaultScatterSettings() {
