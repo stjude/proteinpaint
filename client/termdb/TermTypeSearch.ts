@@ -1,6 +1,7 @@
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
 import { TermTypeGroups, TermTypes, typeGroup, Term } from '#shared/terms'
+import { Term } from '#shared/types'
 import { select } from 'd3-selection'
 
 type Dict = {
@@ -10,11 +11,12 @@ type Dict = {
 /*
 When searching for terms, depending on the use case, only certain types of terms are allowed.
 The tree target is used to determine the allowed term types.
+NOTE: dataset-specific overrides may be applied when the TermTypeSearch is initialized
  */
 
 const useCasesExcluded = {
 	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.GENE_EXPRESSION],
+	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
@@ -95,6 +97,11 @@ export class TermTypeSearch {
 	async init(appState) {
 		this.types = this.app.vocabApi.termdbConfig?.allowedTermTypes || ['categorical'] //if no types it is a custom vocab for testing
 		if (!this.types) return
+
+		this.useCasesExcluded = Object.assign(
+			structuredClone(useCasesExcluded), // do not overwrite the original copy
+			this.app.vocabApi.termdbConfig?.useCasesExcluded || {}
+		)
 
 		const state = this.getState(appState)
 		await this.addTabsAllowed(state)
@@ -235,7 +242,7 @@ export class TermTypeSearch {
 					if (state.usecase.detail == 'term') continue
 				}
 
-				if (state.usecase.target && useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
+				if (state.usecase.target && this.useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
 
 				try {
 					if (!this.usesDefaultSearch(termTypeGroup)) {

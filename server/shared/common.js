@@ -12,6 +12,25 @@ import { rgb } from 'd3-color'
 import * as d3scale from 'd3-scale'
 import * as d3 from 'd3'
 
+// moved from `#shared/terms` to here, so that this can be passed as
+// part of 'common' argument to exported dataset js function, at server runtime
+export const TermTypeGroups = {
+	DICTIONARY_VARIABLES: 'Dictionary Variables',
+	MUTATION_CNV_FUSION: 'Mutation/CNV/Fusion',
+	VARIANT_GENOTYPE: 'Variant Genotype',
+	DNA_METHYLATION: 'DNA Methylation',
+	GENE_DEPENDENCY: 'Gene Dependency',
+	GENE_EXPRESSION: 'Gene Expression',
+	PROTEIN_EXPRESSION: 'Protein Expression',
+	SPLICE_JUNCTION: 'Splice Junction',
+	METABOLITE_INTENSITY: 'Metabolite Intensity',
+	GSEA: 'GSEA',
+	MUTATION_SIGNATURE: 'Mutation Signature',
+	SNP: 'SNP Genotype',
+	SNP_LIST: 'SNP List',
+	SNP_LOCUS: 'SNP Locus'
+}
+
 export const defaultcolor = rgb('#8AB1D4').darker()
 export const default_text_color = rgb('#aaa').darker().darker()
 

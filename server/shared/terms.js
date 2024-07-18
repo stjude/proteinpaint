@@ -1,4 +1,6 @@
-import { dtgeneexpression, dtmetaboliteintensity } from './common.js'
+import { dtgeneexpression, dtmetaboliteintensity, TermTypeGroups } from './common.js'
+// moved TermTypeGroups to `server/src/common.js`, so now has to re-export
+export { TermTypeGroups } from './common.js'
 export const NumericModes = {
 	continuous: 'continuous',
 	discrete: 'discrete'
@@ -26,23 +28,6 @@ export const TermTypes = {
 export const TermTypes2Dt = {
 	[TermTypes.GENE_EXPRESSION]: dtgeneexpression,
 	[TermTypes.METABOLITE_INTENSITY]: dtmetaboliteintensity
-}
-
-export const TermTypeGroups = {
-	DICTIONARY_VARIABLES: 'Dictionary Variables',
-	MUTATION_CNV_FUSION: 'Mutation/CNV/Fusion',
-	VARIANT_GENOTYPE: 'Variant Genotype',
-	DNA_METHYLATION: 'DNA Methylation',
-	GENE_DEPENDENCY: 'Gene Dependency',
-	GENE_EXPRESSION: 'Gene Expression',
-	PROTEIN_EXPRESSION: 'Protein Expression',
-	SPLICE_JUNCTION: 'Splice Junction',
-	METABOLITE_INTENSITY: 'Metabolite Intensity',
-	GSEA: 'GSEA',
-	MUTATION_SIGNATURE: 'Mutation Signature',
-	SNP: 'SNP Genotype',
-	SNP_LIST: 'SNP List',
-	SNP_LOCUS: 'SNP Locus'
 }
 
 //The dataset provides the allowed term types that are then mapped to the term type groups
