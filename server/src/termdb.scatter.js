@@ -216,7 +216,8 @@ async function getSamples(req, ds, plot) {
 	}
 }
 
-/* on coordTwData and otherData:
+/*
+on coordTwData and otherData:
 for prebuilt map:
 	coordTwData is undefined
 	otherData is set
@@ -225,6 +226,8 @@ for coord-by-tw:
 	otherData may be set or missing, if no color/shape term etc is requested
 
 to look up color/shape info, always use otherData.refs{}
+
+using such two objects is confusing, but is necessary in the case of gdc two-gene exp plot to avoid duplicating exp data queries which breaks the app
 */
 async function colorAndShapeSamples(refSamples, cohortSamples, coordTwData, otherData, q) {
 	const results = {}
