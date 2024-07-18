@@ -1,5 +1,5 @@
-import { isDictionaryType, TermTypes } from '#shared/terms'
-import { getBin, getSnpData } from './termdb.matrix.js'
+import { isDictionaryType, TermTypes, getBin } from '#shared/terms'
+import { getSnpData } from './termdb.matrix.js'
 
 /*
 nested filter documented at:

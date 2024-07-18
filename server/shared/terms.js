@@ -114,3 +114,23 @@ export function equals(t1, t2) {
 			return false
 	}
 }
+
+export function getBin(lst, value) {
+	value = Math.round(value * 100) / 100 //to keep 2 decimal places
+
+	let bin = lst.findIndex(
+		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
+	)
+	if (bin == -1)
+		bin = lst.findIndex(
+			b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
+		)
+	if (bin == -1)
+		bin = lst.findIndex(
+			b =>
+				(value > b.start && value < b.stop) ||
+				(b.startinclusive && value == b.start) ||
+				(b.stopinclusive && value == b.stop)
+		)
+	return bin
+}

@@ -4,7 +4,7 @@ import { getFilterCTEs } from './termdb.filter'
 import serverconfig from './serverconfig'
 import { read_file } from './utils'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
-import { TermTypes, isDictionaryType, isNonDictionaryType } from '#shared/terms'
+import { TermTypes, isDictionaryType, isNonDictionaryType, getBin } from '#shared/terms'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 
@@ -329,26 +329,6 @@ export async function getSnpData(tw, q) {
 		sampleGTs.push({ sample_id: s.sample_id, gt: alleles.join('/') })
 	}
 	return sampleGTs
-}
-
-export function getBin(lst, value) {
-	value = Math.round(value * 100) / 100 //to keep 2 decimal places
-
-	let bin = lst.findIndex(
-		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
-	)
-	if (bin == -1)
-		bin = lst.findIndex(
-			b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
-		)
-	if (bin == -1)
-		bin = lst.findIndex(
-			b =>
-				(value > b.start && value < b.stop) ||
-				(b.startinclusive && value == b.start) ||
-				(b.stopinclusive && value == b.stop)
-		)
-	return bin
 }
 
 async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {

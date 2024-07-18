@@ -4,6 +4,7 @@ import { fillTermWrapper } from '#termsetting'
 import { controlsInit } from './controls'
 import { Menu } from '#dom/menu'
 import { showTermsTree } from '../mass/groups'
+import { isNumeric } from '../shared/helpers'
 
 class Facet {
 	constructor(opts) {
@@ -25,25 +26,6 @@ class Facet {
 		await this.setControls()
 	}
 
-	getFilter(term, value, term2, value2) {
-		const filter = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: [
-				{
-					type: 'tvs',
-					tvs: { term, values: [value] }
-				},
-				{
-					type: 'tvs',
-					tvs: { term: term2, values: [value2] }
-				}
-			]
-		}
-		return filter
-	}
-
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 
@@ -62,50 +44,54 @@ class Facet {
 	async renderTable() {
 		const config = this.config
 		this.dom.mainDiv.selectAll('*').remove()
-		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '2px').append('tbody')
+		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
 
 		const tr = tbody.append('tr')
-		tr.append('td')
+		tr.append('th')
 
-		const term = config.term.term
-		const term2 = config.term2.term
-		for (const key in term.values) {
-			const value = term.values[key]
-			tr.append('td').text(value.label || value.key)
+		const result = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: [config.term, config.term2]
+		})
+		const categories = this.getCategories(config.term, result.lst)
+		for (const category of categories) {
+			tr.append('th').style('background-color', '#FAFAFA').text(category)
 		}
-		for (const key2 in term2.values) {
+		const categories2 = this.getCategories(config.term2, result.lst)
+		for (const category2 of categories2) {
 			const tr = tbody.append('tr')
-			let value2 = term2.values[key2]
-			value2.key = key2
-			const category = value2.label || value2.key
-			tr.append('td').text(category)
-			for (const key in term.values) {
-				let value = term.values[key]
-				value.key = key
-				const filter = this.getFilter(term, value, term2, value2)
-				const result = await this.app.vocabApi.getAnnotatedSampleData({
-					terms: [config.term, config.term2],
-					filter
-				})
-				const samples = result.lst.map(d => ({
-					sampleId: d.sample,
-					sampleName: result.refs.bySampleId[d.sample].label
-				}))
+			tr.append('td').style('background-color', '#FAFAFA').text(category2)
+			for (const category of categories) {
+				const samples = result.lst.filter(
+					s => s[config.term.$id]?.key == category && s[config.term2.$id]?.key == category2
+				)
 				const td = tr.append('td').style('background-color', '#FAFAFA')
 				if (samples.length > 0)
 					td.append('a')
-						.text(result.lst.length)
+						.text(samples.length)
 						.on('click', () => {
 							this.app.dispatch({
 								type: 'plot_create',
 								config: {
 									chartType: 'sampleView',
-									samples
+									samples: samples.map(d => ({
+										sampleId: d.sample,
+										sampleName: result.refs.bySampleId[d.sample].label
+									}))
 								}
 							})
 						})
 			}
 		}
+	}
+
+	getCategories(tw, data) {
+		const categories = []
+		for (const sample of data) {
+			const value = sample[tw.$id]
+			if (value) categories.push(value.key)
+		}
+		const set = new Set(categories)
+		return Array.from(set).sort()
 	}
 
 	async setControls() {
@@ -147,6 +133,26 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	selectTerms(chartsInstance.dom.tip, chartsInstance.app)
 }
 
+// export function getBin(lst, value) {
+// 	value = Math.round(value * 100) / 100 //to keep 2 decimal places
+
+// 	let bin = lst.findIndex(
+// 		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
+// 	)
+// 	if (bin == -1)
+// 		bin = lst.findIndex(
+// 			b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
+// 		)
+// 	if (bin == -1)
+// 		bin = lst.findIndex(
+// 			b =>
+// 				(value > b.start && value < b.stop) ||
+// 				(b.startinclusive && value == b.start) ||
+// 				(b.stopinclusive && value == b.stop)
+// 		)
+// 	return bin
+// }
+
 export function selectTerms(tip, app) {
 	const tip2 = new Menu({ padding: '5px' })
 	const coordsDiv = tip.d.append('div').style('padding', '5px') //.attr('class', 'sja_menuoption sja_sharp_border')
@@ -178,13 +184,16 @@ export function selectTerms(tip, app) {
 		.text('Submit')
 		.property('disabled', true)
 		.on('click', () => {
+			const config = {
+				chartType: 'facet',
+				term: { term: xterm },
+				term2: { term: yterm }
+			}
+			if (isNumeric(xterm)) config.term.q = { mode: 'discrete' }
+			if (isNumeric(yterm)) config.term2.q = { mode: 'discrete' }
 			app.dispatch({
 				type: 'plot_create',
-				config: {
-					chartType: 'facet',
-					term: { term: xterm, q: { mode: 'continuous' } },
-					term2: { term: yterm, q: { mode: 'continuous' } }
-				}
+				config
 			})
 			tip.hide()
 		})
