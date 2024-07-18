@@ -958,6 +958,7 @@ export class TermdbVocab extends Vocab {
 			plotName: opts.name,
 			coordTWs: opts.coordTWs.map(tw => this.getTwMinCopy(tw)),
 			filter: getNormalRoot(opts.filter),
+			filter0: opts.filter0,
 			embedder: window.location.hostname
 		}
 		if (opts.colorColumn) body.colorColumn = opts.colorColumn

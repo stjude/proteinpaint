@@ -129,6 +129,7 @@ class Scatter {
 			filter: this.getFilter(),
 			coordTWs
 		}
+		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 		if (c.colorColumn) opts.colorColumn = c.colorColumn
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
 		if (c.scaleDotTW) {
