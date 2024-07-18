@@ -91,6 +91,9 @@ async function trigger_getcategories(
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
 	genome: any
 ) {
+	// only one term per request, so can hardcode a known string tw.$id if missing
+	// and $id is not used in the response payload/metadata
+	if (!q.tw.$id) q.tw.$id = '_'
 	const $id = q.tw.$id
 	const arg = {
 		filter: q.filter,
@@ -103,7 +106,7 @@ async function trigger_getcategories(
 	if (data.error) throw data.error
 
 	const lst: any[] = []
-	if (q.tw.term.type == 'geneVariant' && !q.tw.q.groupsetting.inuse) {
+	if (q.tw.term.type == 'geneVariant' && !q.tw.q.groupsetting?.inuse) {
 		// specialized data processing for geneVariant term when
 		// groupsetting is not in use
 		const samples = data.samples as { [sampleId: string]: any }

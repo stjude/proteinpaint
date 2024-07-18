@@ -144,7 +144,8 @@ export class Vocab {
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
 		if (!tw) return
-		const copy = { $id: tw.$id, term: {}, q: tw.q }
+		const copy = { term: {}, q: tw.q }
+		if (tw.$id) copy.$id = tw.$id
 		if (tw.term) {
 			if (isDictionaryType(tw.term.type)) {
 				// dictionary term
