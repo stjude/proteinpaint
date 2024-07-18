@@ -1,4 +1,4 @@
-import { select, selectAll } from 'd3-selection'
+import { select } from 'd3-selection'
 
 // TODO: may move this to #shared/types/sse.ts so
 // that both server and client can type check against
@@ -49,41 +49,55 @@ function setSse() {
 		const data = _data //.filter(d => d.status != 'ok' || !d.time || now - d.time < 5000)
 		const divs = notifyDiv.selectAll(`:scope>div`).data(data, d => (d as SseDataEntry).key)
 
-	divs.exit().remove()
-	divs
-		.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
-		.style('border', d => `1px solid ${d.color || '#000'}`)
-		.html(d => `${d.key}: ${d.message}`)
-		.each(function (d) {
-			if (d.reload && event.timeStamp > lastReload) window.location.reload()
-			else if (d.duration) {
-				setTimeout(() => select(this).transition().duration(d.duration as number).style('opacity', 0).remove(), d.duration)
-			}
-		})
-	divs
-		.enter()
-		.append('div')
-		.style('margin', '5px')
-		.style('padding', '5px')
-		.style('border', d => `1px solid ${d.color || '#000'}`)
-		.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
-		.html(d => `${d.key}: ${d.message}`)
-		.on('click', function (d) {
-			//select(this).remove()
-		})
-		.each(function (d) {
-			if (d.reload && event.timeStamp > lastReload) window.location.reload()
-			else if (d.duration) {
-				setTimeout(() => select(this).transition().duration(d.duration as number).style('opacity', 0).remove(), d.duration)
-			}
-		})
-}
+		divs.exit().remove()
+		divs
+			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
+			.style('border', d => `1px solid ${d.color || '#000'}`)
+			.html(d => `${d.key}: ${d.message}`)
+			.each(function (d) {
+				if (d.reload && event.timeStamp > lastReload) window.location.reload()
+				else if (d.duration) {
+					setTimeout(
+						() =>
+							select(this)
+								.transition()
+								.duration(d.duration as number)
+								.style('opacity', 0)
+								.remove(),
+						d.duration
+					)
+				}
+			})
+		divs
+			.enter()
+			.append('div')
+			.style('margin', '5px')
+			.style('padding', '5px')
+			.style('border', d => `1px solid ${d.color || '#000'}`)
+			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
+			.html(d => `${d.key}: ${d.message}`)
+			.on('click', function () {
+				//select(this).remove()
+			})
+			.each(function (d) {
+				if (d.reload && event.timeStamp > lastReload) window.location.reload()
+				else if (d.duration) {
+					setTimeout(
+						() =>
+							select(this)
+								.transition()
+								.duration(d.duration as number)
+								.style('opacity', 0)
+								.remove(),
+						d.duration
+					)
+				}
+			})
+	}
 
 	sse.onerror = err => console.log(err)
 
-	function getHtml(d) {
-		return `${d.key}: ${d.reload && initialLoad != lastReload ? 'stale bundle?' : d.message}`
-	}
+	//function getHtml(d) { return `${d.key}: ${d.reload && initialLoad != lastReload ? 'stale bundle?' : d.message}` }
 }
 
 document.addEventListener('visibilitychange', () => {
