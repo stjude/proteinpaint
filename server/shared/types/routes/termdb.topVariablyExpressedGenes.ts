@@ -8,6 +8,7 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	dslabel: string
 	/** Number of top genes requested */
 	maxGenes: number
+	geneSet?: string[]
 	/** optional parameter. used for querying gdc api, not used for non-gdc ds */
 	min_median_log2_uqfpkm?: number
 	/** pp filter */

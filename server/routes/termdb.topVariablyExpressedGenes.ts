@@ -173,7 +173,8 @@ function gdcValidateQuery(ds: any, genome: any) {
 			// add any to avoid tsc err
 			case_filters: makeFilter(q),
 			selection_size: q.maxGenes,
-			min_median_log2_uqfpkm: q.min_median_log2_uqfpkm
+			min_median_log2_uqfpkm: q.min_median_log2_uqfpkm,
+			gene_set: q.geneSet
 		}
 
 		// TODO DELETE THIS and replace with new logic
