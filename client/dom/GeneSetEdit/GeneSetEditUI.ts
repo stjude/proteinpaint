@@ -1,6 +1,6 @@
 import { addGeneSearchbox } from '../genesearch.ts'
 import { Menu } from '../menu'
-import { select, selectAll } from 'd3-selection'
+import { select } from 'd3-selection'
 import { mclass, dt2color, dt2label } from '../../shared/common'
 import { Button, Div, Elem } from 'types/d3'
 import { ClientCopyGenome } from 'types/global'
@@ -8,6 +8,7 @@ import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 import { TermTypes } from '../../shared/terms'
+import { debounce } from 'debounce'
 
 type API = {
 	dom: {
@@ -209,8 +210,8 @@ export class GeneSetEditUI {
 											}
 										},
 										tree: {
-											click_term: () => {
-												//TODO
+											click_term: term => {
+												param.value = term
 											}
 										}
 									})
@@ -224,12 +225,21 @@ export class GeneSetEditUI {
 										.style('font-size', '0.8em')
 										.style('opactiy', 0.7)
 										.text('Enter genes separated by comma')
-									holder.append('textarea').style('display', 'block')
+									holder
+										.append('textarea')
+										.style('display', 'block')
+										.on(
+											'keyup',
+											debounce(function (this: any) {
+												param.value = this.value
+											}),
+											500
+										)
 								}
 							}
 							if (opt.type == 'boolean') {
 								opt.callback = async () => {
-									//TODO
+									param.value = opt.value
 								}
 							}
 						}
@@ -363,10 +373,12 @@ export class GeneSetEditUI {
 
 	getInputValue({ param, input }) {
 		if (param.type == 'boolean' && param?.radiobuttons) {
-			return input
+			const type = input
 				.selectAll('input')
 				.nodes()
 				.find(i => i.checked).value
+
+			return `${type};${param.value}`
 		}
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
