@@ -31,7 +31,7 @@ class SampleView {
 
 		const plotsDiv = contentDiv //div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
 		const sampleDiv = headerDiv.insert('div').style('display', 'inline-block')
-		const showPlotsDiv = headerDiv.append('div').style('display', 'inline-block')
+		const showPlotsDiv = headerDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		this.dom = {
 			header: opts.header,
@@ -187,7 +187,8 @@ class SampleView {
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
-		this.dom.downloadbt.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
+		if (this.dom.downloadbt)
+			this.dom.downloadbt.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
 
 		if (this.settings.showDictionary) this.renderSampleDictionary()
 		this.dom.tableDiv.style('display', this.settings.showDictionary ? 'block' : 'none')

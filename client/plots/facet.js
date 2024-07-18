@@ -82,11 +82,28 @@ class Facet {
 			for (const key in term.values) {
 				let value = term.values[key]
 				value.key = key
+				const filter = this.getFilter(term, value, term2, value2)
 				const result = await this.app.vocabApi.getAnnotatedSampleData({
 					terms: [config.term, config.term2],
-					filter: this.getFilter(term, value, term2, value2)
+					filter
 				})
-				tr.append('td').append('a').text(result.lst.length)
+				const samples = result.lst.map(d => ({
+					sampleId: d.sample,
+					sampleName: result.refs.bySampleId[d.sample].label
+				}))
+				const td = tr.append('td').style('background-color', '#FAFAFA')
+				if (samples.length > 0)
+					td.append('a')
+						.text(result.lst.length)
+						.on('click', () => {
+							this.app.dispatch({
+								type: 'plot_create',
+								config: {
+									chartType: 'sampleView',
+									samples
+								}
+							})
+						})
 			}
 		}
 	}
