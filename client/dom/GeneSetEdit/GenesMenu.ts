@@ -3,7 +3,7 @@ import { Div } from '../../types/d3'
 import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 import { make_one_checkbox } from '../checkbox.js'
-import { makeRadiosWithContentDivs } from './radioWtihContent.ts'
+import { makeRadiosWithContentDivs } from './radioWithContent.ts'
 
 type GenesMenuArgs = {
 	tip: Menu
@@ -52,8 +52,10 @@ export class GenesMenu {
 	addParameter(param, div: Div) {
 		let input
 		if (param.type == 'boolean') {
-			if (param?.options.length) {
-				makeRadiosWithContentDivs(param.options, div)
+			if (param?.radiobuttons.length) {
+				const hasChecked = param.radiobuttons.find((d: any) => d.checked)
+				if (!hasChecked) param.radiobuttons[0].checked = true
+				makeRadiosWithContentDivs(param.radiobuttons, div as any)
 			} else {
 				input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
 				if (param.value) input.property('checked', param.value)

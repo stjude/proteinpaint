@@ -287,11 +287,11 @@ export type GeneArgumentEntry = {
 	 * required if type is string. Otherwise, optional
 	 */
 	value?: string | number
-	options?: {
+	radiobuttons?: {
 		/** TODO: add note here */
-		type: 'text' | 'tree' | 'search'
+		type: 'text' | 'tree' | 'boolean'
 		dslabel?: string
-		value: number
+		value: number | string
 		label: string
 		sublabel?: string
 	}[]

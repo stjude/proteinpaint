@@ -194,8 +194,8 @@ export class GeneSetEditUI {
 		if (this.mode == TermTypes.GENE_EXPRESSION && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
-					if (param.options) {
-						for (const opt of param.options) {
+					if (param.radiobuttons) {
+						for (const opt of param.radiobuttons) {
 							if (opt.type == 'tree') {
 								opt.callback = async holder => {
 									const termdb = await import('../../termdb/app.js')
@@ -218,12 +218,18 @@ export class GeneSetEditUI {
 							}
 							if (opt.type == 'text') {
 								opt.callback = async holder => {
-									holder.append('textarea')
+									holder
+										.append('span')
+										.style('display', 'block')
+										.style('font-size', '0.8em')
+										.style('opactiy', 0.7)
+										.text('Enter genes separated by comma')
+									holder.append('textarea').style('display', 'block')
 								}
 							}
-							if (opt.type == 'search') {
-								opt.callback = async holder => {
-									holder.append('input').attr('type', 'text')
+							if (opt.type == 'boolean') {
+								opt.callback = async () => {
+									//TODO
 								}
 							}
 						}
