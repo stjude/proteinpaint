@@ -1,0 +1,11 @@
+[Install]
+WantedBy=default.target
+
+[Kube]
+# Point to the yaml file in the same directory
+Yaml=quadlet-tileserver.yml
+PublishPort=5000:5000
+Network=quadlet-pp.network
+
+[Service]
+Restart=always

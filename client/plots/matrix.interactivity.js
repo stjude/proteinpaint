@@ -392,6 +392,39 @@ export function setInteractivity(self) {
 			}
 		}
 
+		const showWSImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showWSImages
+
+		if (q.WSImages && showWSImages) {
+			const menuDiv = self.dom.clickMenu.d.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+
+			const data = await dofetch3('samplewsimages', {
+				body: {
+					genome: self.app.opts.genome.name,
+					dslabel: self.state.vocab.dslabel,
+					sample_id: sample.sample_id
+				}
+			})
+
+			if (data.sampleWSImages?.length > 0) {
+				menuDiv.style('display', 'block')
+				menuDiv.text(`Whole Slide Image`)
+				menuDiv.on('click', async _ => {
+					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
+					sandbox.header.text(sample.sample_id)
+					;(await import('./wsiviewer/plot.wsi')).default(
+						self.state.vocab.dslabel,
+						sandbox.body,
+						self.app.opts.genome,
+						sample.sample_id,
+						data.sampleWSImages[0]
+					)
+
+					menuDiv.remove()
+					self.dom.clickMenu.d.selectAll('*').remove()
+				})
+			}
+		}
+
 		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		if (q.NIdata && showBrainImaging) {
 			for (const k in q.NIdata) {

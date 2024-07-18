@@ -219,6 +219,12 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		}
 	}
 
+	if (q.WSImages) {
+		q2.WSImages = {
+			type: q.WSImages.type
+		}
+	}
+
 	if (q.singleSampleGbtk) {
 		q2.singleSampleGbtk = {}
 		for (const k in q.singleSampleGbtk) {

@@ -74,6 +74,16 @@ jobs:
 
           . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
           
+          echo "::set-output name=branch::$BRANCH"
+          
+          if [[ "$BRANCH" != "master" ]]; then
+            echo "::set-output name=draft::true"
+            echo "::set-output name=prerelease::true"
+          else
+            echo "::set-output name=draft::false"
+            echo "::set-output name=prerelease::false"
+          fi
+          
           echo "::set-output name=tag_name::$TAG"
           
           ./build/ci-npm-publish.sh "$UPDATED"
@@ -100,8 +110,8 @@ jobs:
           release_name: ${{ steps.version_bump.outputs.tag_name }}
           body: |
             ${{ steps.version_bump.outputs.latest_release_changes }}
-          draft: false
-          prerelease: false
+          draft: ${{ steps.version_bump.outputs.draft }}
+          prerelease: ${{ steps.version_bump.outputs.prerelease }}
 
   rust-build:
     if: needs.publish-npm.outputs.updated_rust == 'true'
@@ -123,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-docker@master
+        uses: stjude/proteinpaint/.github/actions/publish-docker@tiatoolbox
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -134,7 +144,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-docker@master
+        uses: stjude/proteinpaint/.github/actions/publish-docker@tiatoolbox
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}

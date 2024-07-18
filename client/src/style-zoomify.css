@@ -1,0 +1,19 @@
+.map {
+  width: 100%;
+  height: 400px;
+}
+
+.map .ol-custom-overviewmap,
+.map .ol-custom-overviewmap.ol-uncollapsible {
+  bottom: auto;
+  left: auto;
+  right: 6pt;
+  top: 6pt;
+}
+
+.ol-full-screen {
+  position: absolute;
+  right: auto;
+  left: 6pt;
+  top: 70pt;
+}

@@ -44,6 +44,7 @@
     "@babel/preset-typescript": "^7.21.4",
     "@babel/register": "^7.14.5",
     "@types/node": "^20.11.24",
+    "@types/qs": "^6.9.15",
     "@typescript-eslint/eslint-plugin": "^5.60.0",
     "babel-loader": "^8.2.2",
     "esbuild": "^0.19.12",
@@ -81,7 +82,9 @@
     "minimatch": "^3.1.2",
     "node-fetch": "^2.6.1",
     "partjson": "^0.58.2",
+    "qs": "^6.12.3",
     "tiny-async-pool": "^1.2.0",
+    "tough-cookie": "^4.1.4",
     "typedoc-plugin-missing-exports": "^2.0.1"
   },
   "repository": {
