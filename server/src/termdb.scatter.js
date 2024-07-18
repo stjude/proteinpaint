@@ -102,21 +102,20 @@ export async function mayInitiateScatterplots(ds) {
 }
 
 /*
+sample coordinates are retrieved from one of two sources:
+1. from a prebuilt plot. q.plotName is required to identify the plot on server
+2. from two numeric terms. determined by q.coordTWs[]
 
-
-q.colorTW is required
-q.shapeTW is optional
-
-Uses q.colorTW{}  categories to color dots.
-If q.shapeTW is provided uses categories to assign different shapes to dots
-Runs getData to get category assignment of all eligible samples(filtered) for colorTW and shapeTW
-
-The samples dropped by filter are missing from result.
-input:
-
-allSamples = []
-q = {}
-ds = {}
+args:
+req:
+	needed for access control
+q:
+	genome/dslabel
+	plotName
+	coordTWs[]
+	filter
+	filter0
+	colorTW
 
 output:
 
@@ -133,13 +132,18 @@ output:
 */
 export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 	try {
-		let refSamples, cohortSamples
+		let refSamples = [], // reference samples, those that are not in termdb and only present in prebuilt scatter map
+			cohortSamples, // cohort (or termdb) samples, those are annotated by terms
+			coordTwData // getData() returned obj. only when sample coordinates are determined by TW. if created, this will be used for colorAndShapeSamples()
+
 		if (q.coordTWs.length == 2) {
-			refSamples = []
-			cohortSamples = await getCoordinates(req, q, ds, genome)
+			const tmp = await getSampleCoordinatesByTerms(req, q, ds, genome)
+			cohortSamples = tmp[0]
+			coordTwData = tmp[1]
 		} else {
+			// no coordinate terms. check prebuilt map
 			if (!q.plotName) throw `Neither plot name or coordinates where provided`
-			if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
+			if (!Array.isArray(ds.cohort?.scatterplots?.plots)) throw 'not supported'
 			const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
 			if (!plot) throw `plot not found with plotName ${q.plotName}`
 
@@ -167,16 +171,22 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 				return
 			}
 		}
+
+		// for both coord-by-tw and prebuilt maps, may need to request sample data from additional terms e.g. color
+
 		const terms = []
-		if (q.coordTWs) terms.push(...q.coordTWs)
 		if (q.colorTW) terms.push(q.colorTW)
 		if (q.shapeTW) terms.push(q.shapeTW)
 		if (q.divideByTW) terms.push(q.divideByTW)
 		if (q.scaleDotTW) terms.push(q.scaleDotTW)
 
-		const data = await getData({ filter: q.filter, terms }, ds, genome)
-		if (data.error) throw data.error
-		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
+		let otherData
+		if (terms.length) {
+			otherData = await getData({ filter: q.filter, filter0: q.filter0, terms }, ds, genome)
+			if (otherData.error) throw otherData.error
+		}
+
+		const result = await colorAndShapeSamples(refSamples, cohortSamples, coordTwData, otherData, q)
 		res.send(result)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -206,16 +216,28 @@ async function getSamples(req, ds, plot) {
 	}
 }
 
-async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
+/* on coordTwData and otherData:
+for prebuilt map:
+	coordTwData is undefined
+	otherData is set
+for coord-by-tw:
+	coordTwData is set
+	otherData may be set or missing, if no color/shape term etc is requested
+
+to look up color/shape info, always use otherData.refs{}
+*/
+async function colorAndShapeSamples(refSamples, cohortSamples, coordTwData, otherData, q) {
 	const results = {}
 	let fCount = 0
 	for (const sample of cohortSamples) {
-		const dbSample = data.samples[sample.sampleId.toString()]
+		// use either data object to look up samples
+		const dbSample = (coordTwData || otherData).samples[sample.sampleId.toString()]
 		if (!dbSample) {
 			fCount++
 			//console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
 		}
+
 		let isLast = false
 		if ((q.colorTW && !hasValue(dbSample, q.colorTW)) || (q.shapeTW && !hasValue(dbSample, q.shapeTW))) continue
 		let divideBy = 'Default'
@@ -274,20 +296,26 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 			for (const [category, value] of colorEntries) {
 				let tvalue
-				if (q.colorTW.term.values?.[category]) tvalue = q.colorTW.term.values?.[category]
-				else
+				if (q.colorTW.term.values?.[category]) {
+					tvalue = q.colorTW.term.values?.[category]
+				} else {
 					for (const field in q.colorTW.term.values)
 						if (q.colorTW.term.values?.[field].label == category) tvalue = q.colorTW.term.values?.[field]
-				if (tvalue && 'color' in tvalue) value.color = tvalue.color
-				else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
-					const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
+				}
+
+				if (tvalue && 'color' in tvalue) {
+					value.color = tvalue.color
+				} else if (otherData?.refs?.byTermId[q.colorTW.term.id]?.bins) {
+					// always use otherData.refs to look up colorTW etc
+					const bin = otherData?.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
 					if (bin) value.color = bin.color
 					else {
 						value.color = scheme[i]
 						i--
 					}
-				} else if (!(q.colorTW.term.type == 'geneVariant' && !q.colorTW.q.groupsetting.inuse))
+				} else if (!(q.colorTW.term.type == 'geneVariant' && !q.colorTW.q.groupsetting.inuse)) {
 					value.color = k2c(category)
+				}
 			}
 		}
 		let i = 1
@@ -297,7 +325,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		}
 
 		result.colorLegend = q.colorTW
-			? order(result.colorMap, q.colorTW, data.refs)
+			? order(result.colorMap, q.colorTW, otherData?.refs)
 			: [['Default', { sampleCount: cohortSamples.length, color: 'blue' }]]
 		result.colorLegend.push([
 			'Ref',
@@ -306,7 +334,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				color: q.colorTW?.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : refColor
 			}
 		])
-		result.shapeLegend = order(result.shapeMap, q.shapeTW, data.refs)
+		result.shapeLegend = order(result.shapeMap, q.shapeTW, otherData?.refs)
 		result.shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
 	}
 	return results
@@ -429,12 +457,11 @@ function order(map, tw, refs) {
 	return entries
 }
 
-export async function getCoordinates(req, q, ds, genome) {
-	const terms = [q.coordTWs[0], q.coordTWs[1]]
+async function getSampleCoordinatesByTerms(req, q, ds, genome) {
+	const terms = q.coordTWs.slice()
 	if (q.divideByTW) terms.push(q.divideByTW)
-	const data = await getData({ filter: q.filter, terms }, ds, genome)
+	const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, ds, genome)
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
-	console.log('canDisplay', canDisplay)
 	const samples = []
 	for (const sampleId in data.samples) {
 		const values = data.samples[sampleId]
@@ -443,64 +470,26 @@ export async function getCoordinates(req, q, ds, genome) {
 		const z = q.divideByTW ? values[q.divideByTW?.$id]?.value : 0
 
 		if (x == undefined || y == undefined || z == undefined) continue
-		const sample = { sampleId, x: parseFloat(x), y: parseFloat(y), z: parseFloat(z) }
 
+		if (
+			!isComputable(q.coordTWs[0].term, x) ||
+			!isComputable(q.coordTWs[1].term, y) ||
+			!isComputable(q.divideByTW?.term, z)
+		) {
+			// any one of the coord value is uncomputable category, do not use this sample
+			continue
+		}
+
+		const sample = { sampleId, x: Number(x), y: Number(y), z: Number(z) } // TODO do not pass z when no divideByTW
 		if (canDisplay) sample.sample = ds.sampleId2Name.get(Number(sampleId))
-		const computable =
-			isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y) && isComputable(q.divideByTW?.term, z)
-		if (sample && computable) samples.push(sample)
+		samples.push(sample)
 	}
-	return samples
-}
-
-export async function getCoordinatesFromDictTerms(req, q, ds, type = 'sample') {
-	q.ds = ds
-	const samples = []
-	if (q.coordTWs.length != 2) return samples
-
-	const filter = await getFilterCTEs(q.filter, q.ds)
-	let sql = ''
-	if (filter) sql += interpolateSqlValues(`WITH ${filter.filters}`, filter.values.slice())
-	const xterm = q.coordTWs[0].term
-	const yterm = q.coordTWs[1].term
-	let zterm
-
-	if (q.divideByTW && q.divideByTW.q.mode == 'continuous') zterm = q.divideByTW.term
-
-	if (ds.cohort.db.tableColumns[`sample_${type}`]) {
-		sql += `SELECT ax.sample AS sampleId, ax.value as x, ay.value AS y , ${zterm ? 'az.value AS z' : '0 as z'}
-		FROM ${type}_samples s 
-		JOIN anno_${xterm.type} ax on ax.sample = s.id
-		JOIN anno_${yterm.type} ay on ay.sample = s.id
-		${zterm ? `JOIN anno_${zterm.type} az on az.sample = s.id and az.term_id = '${zterm.id}' ` : ''}
-		WHERE ax.term_id = '${xterm.id}' and ay.term_id = '${yterm.id}'`
-	} //Some datasets may not have sample view tables
-	else {
-		sql += `SELECT ax.sample AS sampleId, ax.value as x, ay.value AS y , ${zterm ? 'az.value AS z' : '0 as z'}
-		FROM sampleidmap s 
-		JOIN anno_${xterm.type} ax on ax.sample = s.id
-		JOIN anno_${yterm.type} ay on ay.sample = s.id
-		${zterm ? `JOIN anno_${zterm.type} az on az.sample = s.id and az.term_id = '${zterm.id}' ` : ''}
-		WHERE ax.term_id = '${xterm.id}' and ay.term_id = '${yterm.id}'`
-	}
-	if (filter) sql += ` AND ax.sample IN ${filter.CTEname}`
-
-	const rows = q.ds.cohort.db.connection.prepare(sql).all()
-	const canDisplay = authApi.canDisplaySampleIds(req, ds)
-	for (const { sampleId, x, y, z } of rows) {
-		const sample = { sampleId, x, y, z }
-		if (canDisplay) sample.sample = ds.sampleId2Name.get(sampleId)
-		const computable =
-			isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y) && isComputable(q.divideByTW?.term, z)
-		if (sample && computable) samples.push(sample)
-	}
-	return samples
+	return [samples, data]
 }
 
 function isComputable(term, value) {
 	if (!term) return true
-	const computable = !term.values?.[value]?.uncomputable
-	return computable
+	return !term.values?.[value]?.uncomputable
 }
 
 export async function trigger_getLowessCurve(req, q, res) {
