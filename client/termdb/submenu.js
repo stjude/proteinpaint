@@ -41,18 +41,19 @@ function setRenderers(self) {
 		self.dom.holder
 			.style('display', 'block')
 			.append('div')
-			.style('margin', '10px 0px 15px 10px')
-			.style('font-weight', 'bold')
-			.text(`${term.name}`)
-
-		self.dom.holder
-			.style('display', 'block')
-			.append('div')
 			.style('margin', '10px')
 			.append('span')
 			.html('&laquo; Back to variable selection')
 			.attr('class', 'sja_clbtext')
 			.on('click', () => self.app.dispatch({ type: 'submenu_set', submenu: {} }))
+
+		self.dom.holder
+			.style('display', 'block')
+			.append('div')
+			.style('margin', '15px 0px 5px 10px')
+			.style('font-weight', 'bold')
+			.style('font-size', '.9em')
+			.text(term.name)
 
 		showTvsMenu({
 			term,
