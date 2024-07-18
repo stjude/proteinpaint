@@ -1,4 +1,4 @@
-import { select, selectAll } from 'd3-selection'
+import { select } from 'd3-selection'
 
 // TODO: may move this to #shared/types/sse.ts so
 // that both server and client can type check against
@@ -46,7 +46,6 @@ function setSse() {
 			//window.location.reload()
 			//return
 		}
-		const now = Date.now()
 		const data = _data //.filter(d => d.status != 'ok' || !d.time || now - d.time < 5000)
 		const divs = notifyDiv.selectAll(`:scope>div`).data(data, d => (d as SseDataEntry).key)
 
@@ -77,9 +76,6 @@ function setSse() {
 			.style('border', d => `1px solid ${d.color || '#000'}`)
 			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
 			.html(getHtml)
-			.on('click', function (d) {
-				//select(this).remove()
-			})
 			.each(function (d) {
 				if (d.reload && event.timeStamp > lastReload) window.location.reload()
 				else if (d.duration && (!d.reload || initialLoad == lastReload)) {
@@ -103,7 +99,7 @@ function setSse() {
 	}
 }
 
-document.addEventListener('visibilitychange', e => {
+document.addEventListener('visibilitychange', () => {
 	if (document.hidden) sse.close()
 	else if (!sse || sse.readyState === 2) setSse()
 })
