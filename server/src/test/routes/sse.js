@@ -54,12 +54,7 @@ export default function setRoutes(app, basepath) {
 				if (!message) delete messages[fileName]
 				else {
 					try {
-						const m = JSON.parse(message)
-						if (m?.status == 'ok' && m.time && Date.now() - m.time > 5000) {
-							delete messages[fileName]
-						} else {
-							messages[fileName] = m
-						}
+						messages[fileName] = JSON.parse(message)
 					} catch (e) {
 						// TODO: handle parsing error
 						delete messages[fileName]

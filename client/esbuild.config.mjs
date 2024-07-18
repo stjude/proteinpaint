@@ -62,7 +62,7 @@ function logRebuild() {
       onStart(() => {
         console.log('\n--- starting client rebuild... ---\n')
         if (ENV == 'dev') {
-          console.log('emitting spec imports')
+          //console.log('emitting spec imports')
           execSync(`node ${emitImports} > ${internalsFilename}`)
         }
         t = Date.now()

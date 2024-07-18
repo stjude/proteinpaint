@@ -27,7 +27,8 @@ const notifyDiv = select('body')
 	.style('background-color', 'rgba(250, 250, 250, 0.75)')
 	.style('z-index', 10000)
 
-let sse
+let sse,
+	initialLoad = 0
 setSse()
 
 function setSse() {
@@ -38,15 +39,22 @@ function setSse() {
 
 	sse.onmessage = event => {
 		// track last reload to prevent triggering infinite reload loop
+		if (initialLoad === 0) initialLoad = event.timeStamp
 		if (lastReload === 0) lastReload = event.timeStamp
-		const data: SseData = JSON.parse(event.data)
+		const _data: SseData = JSON.parse(event.data)
+		if (event.timeStamp > lastReload && _data.find(d => d.reload)) {
+			//window.location.reload()
+			//return
+		}
+		const now = Date.now()
+		const data = _data //.filter(d => d.status != 'ok' || !d.time || now - d.time < 5000)
 		const divs = notifyDiv.selectAll(`:scope>div`).data(data, d => (d as SseDataEntry).key)
 
 		divs.exit().remove()
 		divs
 			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
 			.style('border', d => `1px solid ${d.color || '#000'}`)
-			.html(d => `${d.key}: ${d.message}`)
+			.html(getHtml)
 			.each(function (d) {
 				if (d.reload && event.timeStamp > lastReload) window.location.reload()
 				else if (d.duration) {
@@ -68,13 +76,13 @@ function setSse() {
 			.style('padding', '5px')
 			.style('border', d => `1px solid ${d.color || '#000'}`)
 			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
-			.html(d => `${d.key}: ${d.message}`)
+			.html(getHtml)
 			.on('click', function (d) {
 				//select(this).remove()
 			})
 			.each(function (d) {
 				if (d.reload && event.timeStamp > lastReload) window.location.reload()
-				else if (d.duration) {
+				else if (d.duration && (!d.reload || initialLoad == lastReload)) {
 					setTimeout(
 						() =>
 							select(this)
@@ -89,6 +97,10 @@ function setSse() {
 	}
 
 	sse.onerror = err => console.log(err)
+
+	function getHtml(d) {
+		return `${d.key}: ${d.reload && initialLoad != lastReload ? 'stale bundle?' : d.message}`
+	}
 }
 
 document.addEventListener('visibilitychange', e => {
