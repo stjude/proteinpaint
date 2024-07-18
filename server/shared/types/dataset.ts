@@ -850,6 +850,9 @@ type Termdb = {
 		gdcapi: boolean
 	}
 	hierCluster?: any
+	useCasesExcluded?: {
+		[useCaseTarget: string]: string[]
+	}
 }
 
 type ChartConfigByType = {
