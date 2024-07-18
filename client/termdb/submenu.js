@@ -43,7 +43,16 @@ function setRenderers(self) {
 			.append('div')
 			.style('margin', '10px 0px 15px 10px')
 			.style('font-weight', 'bold')
-			.text(`Variable selected: ${term.id}`)
+			.text(`${term.name}`)
+
+		self.dom.holder
+			.style('display', 'block')
+			.append('div')
+			.style('margin', '10px')
+			.append('span')
+			.html('&laquo; Back to variable selection')
+			.attr('class', 'sja_clbtext')
+			.on('click', () => self.app.dispatch({ type: 'submenu_set', submenu: {} }))
 
 		showTvsMenu({
 			term,
@@ -54,14 +63,5 @@ function setRenderers(self) {
 			getCategoriesArguments: self.app.opts.getCategoriesArguments,
 			callback: self.app.opts.tree.click_term2select_tvs
 		})
-
-		self.dom.holder
-			.style('display', 'block')
-			.append('div')
-			.style('margin', '10px')
-			.append('span')
-			.html('&laquo; Back to variable selection')
-			.attr('class', 'sja_clbtext')
-			.on('click', () => self.app.dispatch({ type: 'submenu_set', submenu: {} }))
 	}
 }
