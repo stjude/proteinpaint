@@ -10,7 +10,7 @@ import { PresetNumericBins } from './numeric.ts'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
- * @params $id    client-generated random unique identifier, to distinguish tw with the same term but different q, that are in the same payload
+ * @params $id    client-computed deterministic unique identifier, to distinguish tw with the same term but different q, that are in the same payload
  */
 export type BaseTW = {
 	id?: string
