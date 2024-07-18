@@ -1,6 +1,6 @@
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
-import { TermTypeGroups, TermTypes, typeGroup, Term } from '#shared/terms'
+import { TermTypeGroups, TermTypes, typeGroup } from '#shared/terms'
 import { Term } from '#shared/types'
 import { select } from 'd3-selection'
 
@@ -70,6 +70,9 @@ export class TermTypeSearch {
 	handlerByType: Dict
 	click_term: (term: Term) => void
 	submit_lst?: (terms: Array<Term>) => void
+	useCasesExcluded: {
+		[useCaseTarget: string]: string[]
+	}
 
 	constructor(opts) {
 		this.type = 'termTypeSearch'
@@ -92,16 +95,16 @@ export class TermTypeSearch {
 		this.tabs = []
 		this.handlerByType = {}
 		this.dom = { holder: opts.holder, topbar: opts.topbar, selectedTermsDiv, submitDiv: opts.submitDiv }
+		// do not overwrite the original copy; may apply overrides in init()
+		this.useCasesExcluded = structuredClone(useCasesExcluded)
 	}
 
 	async init(appState) {
 		this.types = this.app.vocabApi.termdbConfig?.allowedTermTypes || ['categorical'] //if no types it is a custom vocab for testing
 		if (!this.types) return
 
-		this.useCasesExcluded = Object.assign(
-			structuredClone(useCasesExcluded), // do not overwrite the original copy
-			this.app.vocabApi.termdbConfig?.useCasesExcluded || {}
-		)
+		if (this.app.vocabApi.termdbConfig?.useCasesExcluded)
+			Object.assign(this.useCasesExcluded, this.app.vocabApi.termdbConfig?.useCasesExcluded)
 
 		const state = this.getState(appState)
 		await this.addTabsAllowed(state)
