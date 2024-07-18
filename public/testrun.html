@@ -53,8 +53,6 @@
 <div style='position: absolute; right: 20px; margin: 20px; font-family: Menlo, Courier;'>
   <button><a class='allTestsBtn' href='?name=*.unit'>All unit tests</a></button>
   <button><a class='allTestsBtn' href='?name=*.integration'>All integration tests</a></button>
-  <span> or </span>
-  <span class='code-snippet'>npm run test:integration --workspace=client</span>
 </div>
 <div style='padding: 5px 30px'>
   <h1>
@@ -65,11 +63,22 @@
   <div id='testrun-loading-div'></div>
 </div>
 <div id='main-div'></div>
+
+<ul>
+  <li><code>npm run dev</code> must be active to (re)compile</li>
+  <li>Run all test on commandline, do <span class='code-snippet'>npm run test:integration --workspace=client</span> at /sjpp/proteinpaint/ directory</li>
+  <li>If tests are missing and console shows error with /specs?exclude= request, check your <code>sjpp/serverconfig.json</code> to make sure <span class='code-snippet'>"debugmode":true</span> is set at root level.</li>
+  <li>todo why specs is needed? any other things to explain how this page works</li>
+
+<ul>
+
 <script>
-const time = Date.now()
+
+const time = Date.now() // why need to add time to href?
 d3.selectAll('.allTestsBtn').each(function() {
   this.href += `&time=${time}`
 })
+
 const backArrows = d3.select('#testrun-back-arrows')
 const currTest = d3.select('#testrun-curr-test')
 const loadingDiv = d3.select('#testrun-loading-div')
@@ -92,7 +101,7 @@ function updateNavCrumbs(display, params={}) {
   backArrows.style('display', display)
   if (display == 'none') loadingDiv.html(
     `Click on a directory or file name to trigger a test. ` +
-    `Tests in <span style='color: ${activeColor}'>red</span> are currently imported in 'client/test/internals.js'.`
+    `Tests in <span style='color: ${activeColor}'>red</span> are currently imported in 'client/test/internals.js'.` // don't see any red color. is this outdated?
   )
 }
 
