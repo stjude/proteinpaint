@@ -45,6 +45,7 @@ class MassCharts {
 			// TODO: may want the server to decide this, and as defined for a dataset
 
 			state.supportedChartTypes.push('dictionary')
+			state.supportedChartTypes.push('facet') //any dataset should support facet
 		}
 		return state
 	}
@@ -197,6 +198,14 @@ function getChartTypeList(self, state) {
 			config: {
 				chartType: 'dataDownload',
 				terms: []
+			}
+		},
+		{
+			label: 'Facet',
+			clickTo: self.loadChartSpecificMenu,
+			chartType: 'facet',
+			config: {
+				chartType: 'facet'
 			}
 		},
 		{
