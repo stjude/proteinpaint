@@ -95,7 +95,7 @@ class TdbPlotControls {
 		if (!this.state) return
 		if (typeof isOpen == 'boolean') this.isOpen = isOpen
 		else {
-			const controls = this.state.config.settings?.controls
+			const controls = this.state.config.settings.controls
 			if (controls && 'isOpen' in controls) this.isOpen = controls.isOpen
 		}
 
