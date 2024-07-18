@@ -53,7 +53,11 @@ class Facet {
 		})
 		const categories = this.getCategories(config.term, result.lst)
 		for (const category of categories) {
-			tr.append('th').style('background-color', '#FAFAFA').text(category)
+			tr.append('th')
+				.style('text-align', 'left')
+				.style('background-color', '#FAFAFA')
+				.style('padding-right', '50px')
+				.text(category)
 		}
 		const categories2 = this.getCategories(config.term2, result.lst)
 		for (const category2 of categories2) {
@@ -86,8 +90,12 @@ class Facet {
 	getCategories(tw, data) {
 		const categories = []
 		for (const sample of data) {
-			const value = sample[tw.$id]
-			if (value) categories.push(value.key)
+			let key = sample[tw.$id]?.key
+			if (key) {
+				if (!isNaN(key)) key = Number(key)
+				const label = tw.term.values?.[key]?.label || key
+				categories.push(label)
+			}
 		}
 		const set = new Set(categories)
 		return Array.from(set).sort()
