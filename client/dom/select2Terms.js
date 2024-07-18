@@ -1,7 +1,7 @@
 import { showTermsTree } from '../mass/groups'
 import { Menu } from '#dom/menu'
 
-export function addDynamicScatterForm(tip, app) {
+export function select2Terms(tip, app, chartType, detail, callback) {
 	const tip2 = new Menu({ padding: '5px' })
 	const coordsDiv = tip.d.append('div').style('padding', '5px') //.attr('class', 'sja_menuoption sja_sharp_border')
 	coordsDiv.append('div').html('Select variables to plot').style('font-size', '0.9rem')
@@ -12,7 +12,7 @@ export function addDynamicScatterForm(tip, app) {
 		.attr('class', 'sja_filter_tag_btn add_term_btn')
 		.text('+')
 		.on('click', e => {
-			getTreeTerm(xtermDiv, term => (xterm = term))
+			getTreeTerm(xtermDiv, term => (xterm = term), detail)
 		})
 
 	const yDiv = coordsDiv.append('div').html('&nbsp;Y&nbsp;&nbsp;')
@@ -21,7 +21,7 @@ export function addDynamicScatterForm(tip, app) {
 		.attr('class', 'sja_filter_tag_btn add_term_btn')
 		.text('+')
 		.on('click', e => {
-			getTreeTerm(ytermDiv, term => (yterm = term))
+			getTreeTerm(ytermDiv, term => (yterm = term), detail)
 		})
 
 	const submitbt = coordsDiv
@@ -32,20 +32,12 @@ export function addDynamicScatterForm(tip, app) {
 		.text('Submit')
 		.property('disabled', true)
 		.on('click', () => {
-			app.dispatch({
-				type: 'plot_create',
-				config: {
-					chartType: 'sampleScatter',
-					term: { term: xterm, q: { mode: 'continuous' } },
-					term2: { term: yterm, q: { mode: 'continuous' } },
-					name: 'Dynamic scatter'
-				}
-			})
+			callback(xterm, yterm)
 			tip.hide()
 		})
 
-	function getTreeTerm(div, callback) {
-		const state = { tree: { usecase: { detail: 'numeric', target: 'sampleScatter' } } }
+	function getTreeTerm(div, callback, detail) {
+		const state = { tree: { usecase: { detail, target: chartType } } }
 		//state.nav = {header_mode: 'hide_search'}
 		const disable_terms = []
 		if (xterm) disable_terms.push(xterm)

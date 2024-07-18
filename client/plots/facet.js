@@ -2,9 +2,8 @@ import { getCompInit, copyMerge } from '#rx'
 import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit } from './controls'
-import { Menu } from '#dom/menu'
-import { showTermsTree } from '../mass/groups'
-import { isNumeric } from '../shared/helpers'
+import { select2Terms } from '#dom/select2Terms'
+import { isNumericTerm } from '../shared/terms'
 
 class Facet {
 	constructor(opts) {
@@ -130,97 +129,20 @@ class Facet {
 }
 
 export function makeChartBtnMenu(holder, chartsInstance) {
-	selectTerms(chartsInstance.dom.tip, chartsInstance.app)
-}
-
-// export function getBin(lst, value) {
-// 	value = Math.round(value * 100) / 100 //to keep 2 decimal places
-
-// 	let bin = lst.findIndex(
-// 		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
-// 	)
-// 	if (bin == -1)
-// 		bin = lst.findIndex(
-// 			b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
-// 		)
-// 	if (bin == -1)
-// 		bin = lst.findIndex(
-// 			b =>
-// 				(value > b.start && value < b.stop) ||
-// 				(b.startinclusive && value == b.start) ||
-// 				(b.stopinclusive && value == b.stop)
-// 		)
-// 	return bin
-// }
-
-export function selectTerms(tip, app) {
-	const tip2 = new Menu({ padding: '5px' })
-	const coordsDiv = tip.d.append('div').style('padding', '5px') //.attr('class', 'sja_menuoption sja_sharp_border')
-	coordsDiv.append('div').html('Select variables to plot').style('font-size', '0.9rem')
-	let xterm, yterm
-	const xDiv = coordsDiv.append('div').style('padding-top', '5px').html('&nbsp;X&nbsp;&nbsp;')
-	const xtermDiv = xDiv
-		.append('div')
-		.attr('class', 'sja_filter_tag_btn add_term_btn')
-		.text('+')
-		.on('click', e => {
-			getTreeTerm(xtermDiv, term => (xterm = term))
+	const callback = (xterm, yterm) => {
+		const config = {
+			chartType: 'facet',
+			term: { term: xterm },
+			term2: { term: yterm }
+		}
+		if (isNumericTerm(xterm)) config.term.q = { mode: 'discrete' }
+		if (isNumericTerm(yterm)) config.term2.q = { mode: 'discrete' }
+		chartsInstance.app.dispatch({
+			type: 'plot_create',
+			config
 		})
-
-	const yDiv = coordsDiv.append('div').html('&nbsp;Y&nbsp;&nbsp;')
-	const ytermDiv = yDiv
-		.append('div')
-		.attr('class', 'sja_filter_tag_btn add_term_btn')
-		.text('+')
-		.on('click', e => {
-			getTreeTerm(ytermDiv, term => (yterm = term))
-		})
-
-	const submitbt = coordsDiv
-		.append('div')
-		.style('float', 'right')
-		.style('padding', '5px')
-		.insert('button')
-		.text('Submit')
-		.property('disabled', true)
-		.on('click', () => {
-			const config = {
-				chartType: 'facet',
-				term: { term: xterm },
-				term2: { term: yterm }
-			}
-			if (isNumeric(xterm)) config.term.q = { mode: 'discrete' }
-			if (isNumeric(yterm)) config.term2.q = { mode: 'discrete' }
-			app.dispatch({
-				type: 'plot_create',
-				config
-			})
-			tip.hide()
-		})
-
-	function getTreeTerm(div, callback) {
-		const state = { tree: { usecase: { target: 'facet' } } }
-		//state.nav = {header_mode: 'hide_search'}
-		const disable_terms = []
-		if (xterm) disable_terms.push(xterm)
-		if (yterm) disable_terms.push(yterm)
-		showTermsTree(
-			div,
-			term => {
-				callback(term)
-				tip2.hide()
-				div.selectAll('*').remove()
-				div.text(term.name)
-				if (xterm != null && yterm != null) submitbt.property('disabled', false)
-			},
-			app,
-			tip,
-			state,
-			false,
-			false,
-			disable_terms
-		)
 	}
+	select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'facet', '', callback)
 }
 
 export const facetInit = getCompInit(Facet)

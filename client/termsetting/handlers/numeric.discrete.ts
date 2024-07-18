@@ -52,8 +52,7 @@ export function getHandler(self) {
 			const text = self.q?.name || self.q?.reuseId
 			if (text) return { text }
 			if (self.q.type == 'regular-bin') return { text: 'bin size=' + self.q.bin_size }
-			console.log('self.q', self.q)
-			return { text: self.q.lst?.length + ' bins' }
+			return { text: self.q.lst!.length + ' bins' }
 		},
 
 		async showEditMenu(div: any) {
