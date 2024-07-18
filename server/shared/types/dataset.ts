@@ -598,6 +598,7 @@ type Mds3Queries = {
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
 	DZImages?: any
+	WSImages?: any
 	images?: any
 }
 

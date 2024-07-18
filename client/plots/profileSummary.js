@@ -3,7 +3,6 @@ import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
-import { renderTable } from '../dom/table.js'
 import { loadFilterTerms } from './profilePlot.js'
 import { getDefaultProfilePlotSettings } from './profilePlot.js'
 

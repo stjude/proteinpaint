@@ -4,6 +4,7 @@ import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import dziviewer from './dziviewer/plot.dzi'
 import { dofetch3 } from '#common/dofetch'
+import wsiViewer from './wsiviewer/plot.wsi'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -527,6 +528,26 @@ class SampleView {
 					const cellDiv = div.append('div').style('display', 'inline-block')
 					this.dziPlots.push({ sample, cellDiv })
 					dziviewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleDZImages)
+				}
+			}
+		}
+
+		if (state.termdbConfig.queries?.WSImages) {
+			let div = plotsDiv.append('div')
+			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
+			for (const sample of samples) {
+				const data = await dofetch3('samplewsimages', {
+					body: {
+						genome: this.app.opts.genome.name,
+						dslabel: state.vocab.dslabel,
+						sample_id: sample.sampleName
+					}
+				})
+
+				if (data.sampleWSImages?.length > 0) {
+					const cellDiv = div.append('div').style('display', 'inline-block')
+					this.dziPlots.push({ sample, cellDiv })
+					wsiViewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleWSImages)
 				}
 			}
 		}
