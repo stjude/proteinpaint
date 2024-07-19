@@ -31,5 +31,5 @@ export type TermdbTopVariablyExpressedGenesResponse = {
 	/** Array of gene names TODO may change element to objs */
 	genes: string[]
 	/** Array of user inputted gene symbols not present in the returned genes */
-	notFoundGenes: string[]
+	notFound: string[]
 }

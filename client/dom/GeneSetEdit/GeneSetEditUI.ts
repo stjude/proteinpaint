@@ -9,6 +9,7 @@ import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 import { TermTypes } from '../../shared/terms'
 import { debounce } from 'debounce'
+import { sayerror } from '#dom/sayerror'
 
 type API = {
 	dom: {
@@ -19,7 +20,10 @@ type API = {
 		textControlDiv: Div
 		/** on click clears the gene holding div */
 		clearBtn: Button
+		/** on click populates the geneHoldingDiv with original gene list */
 		restoreBtn: Button | null
+		/** Show user errors on command */
+		errorDiv: Div
 		/** gene holding area, shows bunch of gene buttons pending submission */
 		geneHoldingDiv: Div
 		/** legend area, to show available stats legend on genes */
@@ -161,6 +165,7 @@ export class GeneSetEditUI {
 							}
 					  })
 					: null,
+				errorDiv: div.append('div').style('padding-top', '15px'),
 				geneHoldingDiv: this.renderGeneHoldingDiv(div),
 				statLegendDiv: div.append('div'),
 				submitBtn: addButton({
@@ -318,6 +323,13 @@ export class GeneSetEditUI {
 							this.geneList = []
 							if (result.genes) {
 								for (const gene of result.genes) this.geneList.push({ gene })
+							}
+							if (result.notFound) {
+								sayerror(
+									this.api.dom.errorDiv,
+									`Gene${result.notFound.length > 0 ? 's' : ''} not found: ${result.notFound.join(', ')}`
+								)
+								setTimeout(() => this.api.dom.errorDiv.selectAll('*').remove(), 3000)
 							}
 							this.renderGenes()
 						}

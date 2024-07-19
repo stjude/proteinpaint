@@ -38,21 +38,21 @@ function init({ genomes }) {
 			let genes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
 
 			const foundGenes = new Set()
-			const notFoundGenes = [] as string[]
+			const notFound = [] as string[]
 			if (req.query?.geneSet?.type != 'all') {
 				for (const g of req.query.geneSet.geneList) {
 					if (genes.includes(g)) foundGenes.add(g)
 					else if (req.query.geneSet.type == 'custom') {
 						// Only return not found genes for custom user inputs
 						// Not necessary for defined gene sets (e.g. msigdb)
-						notFoundGenes.push(g)
+						notFound.push(g)
 					}
 				}
 				genes = [...foundGenes]
 			}
 			if (serverconfig.debugmode) console.log('topVariablyExpressedGenes', Date.now() - t, 'ms')
 
-			res.send({ genes, notFoundGenes } as TermdbTopVariablyExpressedGenesResponse)
+			res.send({ genes, notFound } as TermdbTopVariablyExpressedGenesResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
