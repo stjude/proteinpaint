@@ -36,7 +36,7 @@
             "data_source": 1006
         },
         {
-            "label": "Continuous variables",
+            "label": "Age and heart",
             "runargs": {
                 "noheader": true,
                 "mass": {
@@ -122,7 +122,7 @@
             "data_source": 1005
         },
         {
-            "label": "Gene Expression",
+            "label": "GDC gene expression",
             "runargs": {
                 "noheader": true,
                 "mass": {
@@ -149,8 +149,7 @@
                                 "term": {
                                     "term": {
                                         "type": "geneExpression",
-                                        "gene": "TP53",
-                                        "name": "TP53"
+                                        "gene": "IDH1"
                                     },
                                     "q": {
                                         "mode": "continuous"
@@ -159,8 +158,7 @@
                                 "term2": {
                                     "term": {
                                         "type": "geneExpression",
-                                        "gene": "AKT1",
-                                        "name": "AKT1"
+                                        "gene": "EGFR"
                                     },
                                     "q": {
                                         "mode": "continuous"
