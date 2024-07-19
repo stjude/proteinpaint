@@ -228,7 +228,6 @@ export class GeneSetEditUI {
 								}
 							}
 							if (opt.type == 'text') {
-								console.log(226, 'text callback')
 								opt.callback = async (holder: Elem) => {
 									holder
 										.append('span')
@@ -329,7 +328,7 @@ export class GeneSetEditUI {
 									this.api.dom.errorDiv,
 									`Gene${result.notFound.length > 0 ? 's' : ''} not found: ${result.notFound.join(', ')}`
 								)
-								setTimeout(() => this.api.dom.errorDiv.selectAll('*').remove(), 3000)
+								setTimeout(() => this.api.dom.errorDiv.selectAll('*').remove(), 10000)
 							}
 							this.renderGenes()
 						}
