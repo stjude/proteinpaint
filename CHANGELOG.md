@@ -12,6 +12,7 @@ Features:
 - implemented the "snp" term type for summarizing and analyzing sample genotypes for a given SNP
 - allow the drag/drop of rows from non-clustered row groups
 - Added Facet plot to the UI
+- New gene expression example available from the scatter plot card on the homepage.
 
 Fixes:
 - hierCluster group Add_Rows ui can only add compatible terms
