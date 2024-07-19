@@ -16,6 +16,7 @@ Fixes:
 - hierCluster group Add_Rows ui can only add compatible terms
 - filter0 is passed to violin request and improve to enable type checking
 - gene expression hierCluster group Add_Rows ui can only add gene expression terms
+- pass filter0 at sampleScatter to enable gdc gene exp plot, remove duplicating backend call for gene exp data
 
 
 ## 2.67.1
