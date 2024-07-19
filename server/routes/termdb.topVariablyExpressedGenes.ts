@@ -35,10 +35,24 @@ function init({ genomes }) {
 			if (!ds.queries?.topVariablyExpressedGenes) throw 'not supported on dataset'
 
 			const t = Date.now()
-			const genes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
+			let genes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
+
+			const foundGenes = new Set()
+			const notFoundGenes = [] as string[]
+			if (req.query?.geneSet?.type != 'all') {
+				for (const g of req.query.geneSet.geneList) {
+					if (genes.includes(g)) foundGenes.add(g)
+					else if (req.query.geneSet.type == 'custom') {
+						// Only return not found genes for custom user inputs
+						// Not necessary for defined gene sets (e.g. msigdb)
+						notFoundGenes.push(g)
+					}
+				}
+				genes = [...foundGenes]
+			}
 			if (serverconfig.debugmode) console.log('topVariablyExpressedGenes', Date.now() - t, 'ms')
 
-			res.send({ genes } as TermdbTopVariablyExpressedGenesResponse)
+			res.send({ genes, notFoundGenes } as TermdbTopVariablyExpressedGenesResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
@@ -100,7 +114,12 @@ async function computeGenes4nativeDs(
 	matrixFile: string,
 	samples: string[]
 ) {
-	// The param option in input JSON is very important. It instructs what method will be used to calculate variation in the counts for a particular gene. It supports variance as well as interquartile region. This is based on the recommendation of this article https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full . This article recommends using interquartile region over variance.
+	/** The param option in input JSON is very important.
+	 * It instructs what method will be used to calculate variation in the counts for a particular gene.
+	 * It supports variance as well as interquartile region.
+	 * This is based on the recommendation of this article:
+	 * https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full.
+	 * This article recommends using interquartile region over variance.*/
 	const input_json = {
 		input_file: matrixFile,
 		samples: samples.join(','),
@@ -136,7 +155,6 @@ function gdcValidateQuery(ds: any, genome: any) {
 			// disable when caching is incomplete (particularly cases with gene exp data); to prevent showing wrong data on client
 			throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
 		}
-
 		const { host, headers } = ds.getHostHeaders(q)
 		const url = path.join(host.geneExp, '/gene_expression/gene_selection')
 		try {
@@ -173,8 +191,7 @@ function gdcValidateQuery(ds: any, genome: any) {
 			// add any to avoid tsc err
 			case_filters: makeFilter(q),
 			selection_size: q.maxGenes,
-			min_median_log2_uqfpkm: q.min_median_log2_uqfpkm,
-			gene_set: q.geneSet
+			min_median_log2_uqfpkm: q.min_median_log2_uqfpkm
 		}
 
 		// TODO DELETE THIS and replace with new logic

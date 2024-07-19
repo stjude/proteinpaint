@@ -196,9 +196,11 @@ export class GeneSetEditUI {
 			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 					if (param.radiobuttons) {
+						//set a default value
+						if (!param.value) param.value = param.radiobuttons[0].value
 						for (const opt of param.radiobuttons) {
 							if (opt.type == 'tree') {
-								opt.callback = async holder => {
+								opt.callback = async (holder: Elem) => {
 									const termdb = await import('../../termdb/app.js')
 									termdb.appInit({
 										holder,
@@ -210,20 +212,24 @@ export class GeneSetEditUI {
 											}
 										},
 										tree: {
-											click_term: term => {
-												param.value = term
+											click_term: (term: any) => {
+												param.value = {
+													type: opt.value,
+													geneList: term._geneset.map((t: any) => t.symbol)
+												}
 											}
 										}
 									})
 								}
 							}
 							if (opt.type == 'text') {
-								opt.callback = async holder => {
+								console.log(226, 'text callback')
+								opt.callback = async (holder: Elem) => {
 									holder
 										.append('span')
 										.style('display', 'block')
 										.style('font-size', '0.8em')
-										.style('opactiy', 0.7)
+										.style('opacity', 0.75)
 										.text('Enter genes separated by comma')
 									holder
 										.append('textarea')
@@ -231,7 +237,10 @@ export class GeneSetEditUI {
 										.on(
 											'keyup',
 											debounce(function (this: any) {
-												param.value = this.value
+												param.value = {
+													type: opt.value,
+													geneList: this.value.split(',').map((t: string) => t.trim())
+												}
 											}),
 											500
 										)
@@ -239,7 +248,10 @@ export class GeneSetEditUI {
 							}
 							if (opt.type == 'boolean') {
 								opt.callback = async () => {
-									param.value = opt.value
+									param.value = {
+										type: opt.value,
+										geneList: null
+									}
 								}
 							}
 						}
@@ -373,12 +385,7 @@ export class GeneSetEditUI {
 
 	getInputValue({ param, input }) {
 		if (param.type == 'boolean' && param?.radiobuttons) {
-			const type = input
-				.selectAll('input')
-				.nodes()
-				.find(i => i.checked).value
-
-			return `${type};${param.value}`
+			return param.value
 		}
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
