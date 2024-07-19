@@ -1,5 +1,6 @@
 //import GdcFilter0 from './filter.gdc'
 import { Filter } from '../filter.ts'
+import { ErrorResponse } from './errorResponse.ts'
 
 export type TermdbTopVariablyExpressedGenesRequest = {
 	/** Ref genome */
@@ -8,7 +9,7 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	dslabel: string
 	/** Number of top genes requested */
 	maxGenes: number
-	/** User defined preference to include all genes or a subset */
+	/** optional param defined by dataset. if to scan all or subset of genes */
 	geneSet?: {
 		/** Indicates the geneset to return
 		 * all - all genes
@@ -19,7 +20,7 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 		/** Sent as null for 'all' types. Otherwise a list of gene symbols */
 		geneList: string[] | null
 	}
-	/** optional parameter. used for querying gdc api, not used for non-gdc ds */
+	/** optional parameter defined in gdc dataset. not used for non-gdc ds */
 	min_median_log2_uqfpkm?: number
 	/** pp filter */
 	filter?: Filter
@@ -27,9 +28,9 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	filter0?: any //GdcFilter0
 }
 
-export type TermdbTopVariablyExpressedGenesResponse = {
+type ValidResponse = {
 	/** Array of gene names TODO may change element to objs */
 	genes: string[]
-	/** Array of user inputted gene symbols not present in the returned genes */
-	notFound: string[]
 }
+
+export type TermdbTopVariablyExpressedGenesResponse = ErrorResponse | ValidResponse
