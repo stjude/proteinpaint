@@ -63,7 +63,7 @@ function get_pill_label(tvs) {
 			return { txt: value.key || value.label }
 			console.log(tvs.term, v.key)
 		}
-		//console.error(`key "${v.key}" not found in values{} of ${tvs.term.name}`)
+		//console.error(`key "${v.key}" not found in values{} of ${tvs.term.name}`) // gdc terms always lacks list of categories since they are expensive to retrieve from api for every term, thus suppress this error
 		return { txt: v.key }
 	}
 	// multiple

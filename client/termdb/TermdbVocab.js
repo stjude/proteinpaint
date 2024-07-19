@@ -544,13 +544,12 @@ export class TermdbVocab extends Vocab {
 		return isUsableTerm(term).has('plot')
 	}
 
+	/*
+	accepts one term of any type, including categorical, non-categorical, and non-dictionary
+	return number of samples per category/bin/grade/group etc
+	optionally, caller can supply a {term1_q: {...}} key-object value in _body to customize categories
+	*/
 	async getCategories(term, filter, _body = {}) {
-		// works for both dictionary and non-dict term types
-		// for non-dict terms, will handle each type individually
-		// for dictionary terms, use same method to query backend termdb
-		// return number of samples per category/bin/grade/group etc
-		// optionally, caller can supply a {term1_q: {...}} key-object value in _body
-		// as this function does not deal with q by default
 		const headers = this.mayGetAuthHeaders()
 		if (term.type == 'snplst' || term.type == 'snplocus') {
 			const body = Object.assign(
@@ -582,11 +581,10 @@ export class TermdbVocab extends Vocab {
 			return { lst: l2 }
 		}
 
-		// use same query method for all dictionary terms
+		// no need to supply tw.$id: 1) this method is one term only and no need to distinguish multiple terms 2) backend will auto fill $id before retrieving data
 		const tw = { term, q: _body.term1_q || {} }
 		delete _body.term1_q // is now tw.q, so no longer needed
 		const body = {
-			getcategories: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			tw: this.getTwMinCopy(tw),

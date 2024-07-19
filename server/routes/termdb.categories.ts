@@ -1,10 +1,6 @@
 import { getcategoriesRequest, getcategoriesResponse } from '#shared/types/routes/termdb.categories.ts'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
-// import { Term } from '#shared/types/terms/term.ts'
-// import { TermWrapper } from '#shared/types/terms/tw.ts'
-// import { NumericTerm } from '#shared/types/terms/numeric.ts'
-// import { TermTypes } from '#shared/terms.js'
 
 export const api: any = {
 	endpoint: 'termdb/categories',
@@ -24,7 +20,6 @@ export const api: any = {
 							genome: 'hg38-test',
 							dslabel: 'TermdbTest',
 							embedder: 'localhost',
-							getcategories: 1,
 							term: { id: 'diaggrp' },
 							filter: {
 								type: 'tvslst',
@@ -75,9 +70,7 @@ function init({ genomes }) {
 			if (!tdb) throw 'invalid termdb object'
 
 			await trigger_getcategories(q, res, tdb, ds, g) // as getcategoriesResponse
-		} catch (e) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
+		} catch (e: any) {
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
@@ -85,7 +78,7 @@ function init({ genomes }) {
 }
 
 async function trigger_getcategories(
-	q,
+	q: getcategoriesRequest,
 	res: any,
 	tdb: any,
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
