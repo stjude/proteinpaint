@@ -19,21 +19,19 @@ export function makeRadiosWithContentDivs(options: any, div: Elem) {
 		.attr('name', (d: any) => d.label)
 		.attr('value', (d: any) => d.value)
 		.property('checked', (d: any) => d.checked)
-		.on('input', function (this: any, event: Event, d: any) {
+		.on('input', async function (this: any, event: Event, d: any) {
 			event.stopPropagation()
 			inputs.property('disabled', true)
 			inputs.property('checked', false)
 			div.selectAll('.contentDiv').style('display', 'none')
-			if (!d.contentDiv) {
-				d.contentDiv = d3select(this.parentNode)
-					.append('div')
-					.classed('contentDiv', true)
-					.style('padding-left', '25px')
-					.style('display', 'block')
-				d.callback(d.contentDiv)
-			} else {
-				d.contentDiv.style('display', 'block')
-			}
+
+			const contentDiv = d3select(this.parentNode)
+				.append('div')
+				.classed('contentDiv', true)
+				.style('padding-left', '25px')
+				.style('display', 'block')
+
+			await d.callback(contentDiv)
 			d3select(this).property('checked', true)
 			inputs.property('disabled', false)
 		})
