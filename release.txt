@@ -1,3 +1,1 @@
 
-Features:
-- Added Facet plot to the UI
