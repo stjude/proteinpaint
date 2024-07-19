@@ -1,1 +1,2 @@
-
+Features
+- New gene expression example available from the scatter plot card on the homepage.
