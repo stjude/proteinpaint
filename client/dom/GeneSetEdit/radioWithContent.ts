@@ -1,5 +1,5 @@
 import { select as d3select } from 'd3-selection'
-import { Elem, Div } from '../../types/d3'
+import { Elem } from '../../types/d3'
 
 export function makeRadiosWithContentDivs(options: any, div: Elem) {
 	const divs = div
@@ -20,6 +20,7 @@ export function makeRadiosWithContentDivs(options: any, div: Elem) {
 		.attr('value', (d: any) => d.value)
 		.property('checked', (d: any) => d.checked)
 		.on('input', function (this: any, event: Event, d: any) {
+			event.stopPropagation()
 			inputs.property('disabled', true)
 			inputs.property('checked', false)
 			div.selectAll('.contentDiv').style('display', 'none')

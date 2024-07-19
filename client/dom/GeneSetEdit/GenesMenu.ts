@@ -56,6 +56,7 @@ export class GenesMenu {
 				const hasChecked = param.radiobuttons.find((d: any) => d.checked)
 				if (!hasChecked) param.radiobuttons[0].checked = true
 				input = div.append('div').attr('id', param.id)
+				input.append('p').style('font-size', '0.8em').style('opacity', 0.75).text(param.label)
 				makeRadiosWithContentDivs(param.radiobuttons, input as any)
 			} else {
 				input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
