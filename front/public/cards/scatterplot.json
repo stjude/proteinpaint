@@ -120,6 +120,57 @@
                 }
             },
             "data_source": 1005
+        },
+        {
+            "label": "Gene Expression",
+            "runargs": {
+                "noheader": true,
+                "mass": {
+                    "state": {
+                        "vocab": {
+                            "dslabel": "GDC",
+                            "genome": "hg38"
+                        },
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
+                        "termfilter": {
+                            "filter0": {
+                                "op": "in",
+                                "content": {
+                                    "field": "cases.disease_type",
+                                    "value": "Gliomas"
+                                }
+                            }
+                        },
+                        "plots": [
+                            {
+                                "chartType": "summary",
+                                "term": {
+                                    "term": {
+                                        "type": "geneExpression",
+                                        "gene": "TP53",
+                                        "name": "TP53"
+                                    },
+                                    "q": {
+                                        "mode": "continuous"
+                                    }
+                                },
+                                "term2": {
+                                    "term": {
+                                        "type": "geneExpression",
+                                        "gene": "AKT1",
+                                        "name": "AKT1"
+                                    },
+                                    "q": {
+                                        "mode": "continuous"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
         }
     ],
     "buttons": [
