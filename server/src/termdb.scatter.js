@@ -179,8 +179,6 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 			}
 		}
 
-		// for both coord-by-tw and prebuilt maps, may need to request sample data from additional terms e.g. color
-
 		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
 		res.send(result)
 	} catch (e) {
