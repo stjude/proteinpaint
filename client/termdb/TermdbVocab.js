@@ -584,8 +584,7 @@ export class TermdbVocab extends Vocab {
 
 		// use same query method for all dictionary terms
 		const tw = { term: structuredClone(term), q: _body.term1_q || {} }
-		if (term.type == 'condition') await fillTermWrapper(tw, this)
-		delete _body.term1_q // no longer needed, tw now contains updated q
+		delete _body.term1_q // is now tw.q, so no longer needed
 		const body = {
 			getcategories: 1,
 			genome: this.state.vocab.genome,

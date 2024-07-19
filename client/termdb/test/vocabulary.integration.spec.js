@@ -1068,7 +1068,7 @@ tape('getCategories()', async test => {
 	let testTerm, filter, body, termCat
 
 	//Term and body args, no filter arg
-	body = { bar_by_grade: 1, value_by_max_grade: 1 }
+	body = { term1_q: { bar_by_grade: 1, value_by_max_grade: 1 } }
 	testTerm = termjson['Arrhythmias']
 	termCat = await termdbVocabApi.getCategories(testTerm, '', body)
 	test.equal(
@@ -1092,7 +1092,7 @@ tape('getCategories()', async test => {
 		],
 		$id: 'fake'
 	}
-	body = { bar_by_grade: 1, value_by_max_grade: 1 }
+	body = { term1_q: { bar_by_grade: 1, value_by_max_grade: 1 } }
 	termCat = await termdbVocabApi.getCategories(testTerm, filter, body)
 	test.equal(
 		termCat.orderedLabels.length,

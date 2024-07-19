@@ -590,7 +590,7 @@ tape('tvs: Condition', async test => {
 		pill.click()
 		editOpt.click()
 		const applyBtn = await detectGte({ target: tipd.node(), selector: '.sjpp_apply_btn' })
-		const body = { bar_by_grade: 1, value_by_max_grade: 1 }
+		const body = { term1_q: { bar_by_grade: 1, value_by_max_grade: 1 } }
 		const termCat = await opts.filter.Inner.vocabApi.getCategories(opts.filterData.lst[0].tvs.term, '', body)
 		test.equal(applyBtn.length, 1, 'Should have 1 button to apply value change')
 		test.equal(
