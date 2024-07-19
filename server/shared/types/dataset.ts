@@ -791,6 +791,7 @@ export type UrlTemplateSsm = UrlTemplateBase & {
 type Termdb = {
 	/** Terms */
 	termIds?: TermIds
+	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: boolean
 	converSampleIds?: boolean
 	allowedTermTypes?: string[]

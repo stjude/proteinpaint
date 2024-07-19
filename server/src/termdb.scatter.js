@@ -459,7 +459,9 @@ async function getSampleCoordinatesByTerms(req, q, ds, data) {
 		}
 
 		const sample = { sampleId, x: Number(x), y: Number(y), z: Number(z) } // TODO do not pass z when no divideByTW
-		if (canDisplay) sample.sample = ds.sampleId2Name.get(Number(sampleId))
+		if (canDisplay) {
+			sample.sample = data.refs.bySampleId[sampleId]?.label || sampleId
+		}
 		samples.push(sample)
 	}
 	return [samples, data]

@@ -323,7 +323,7 @@ async function get_matrix(q, req, res, ds, genome) {
 	if (authApi.canDisplaySampleIds(req, ds)) {
 		if (data.samples)
 			for (const sample of Object.values(data.samples)) {
-				sample.sampleName = ds.sampleId2Name.get(sample.sample)
+				sample.sampleName = data.refs.bySampleId?.[sample.sample]?.label || sample.sample
 			}
 	}
 	res.send(data)
