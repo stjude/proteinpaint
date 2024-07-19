@@ -64,7 +64,7 @@ class Facet {
 		for (const category2 of categories2) {
 			const tr = tbody.append('tr')
 			const label2 = config.term2.term.values?.[category2]?.label || category2
-			tr.append('td').style('background-color', '#FAFAFA').text(label2)
+			tr.append('td').style('background-color', '#FAFAFA').style('font-weight', 'bold').text(label2)
 			for (const category of categories) {
 				const samples = result.lst.filter(
 					s => s[config.term.$id]?.key == category && s[config.term2.$id]?.key == category2
