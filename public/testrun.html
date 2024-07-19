@@ -65,11 +65,13 @@
 <div id='main-div'></div>
 
 <ul>
-  <li><code>npm run dev</code> must be active to (re)compile</li>
-  <li>Run all test on commandline, do <span class='code-snippet'>npm run test:integration --workspace=client</span> at /sjpp/proteinpaint/ directory</li>
+  <li><span class='code-snippet'>npm run dev</span> (server process and client rebundling) must be active to (re)compile</li>
+  <li><span class='code-snippet'>/specs</span> response data is needed to render the cards.</li>
+  <li>Clicking on a card title or entry opens a URL with glob patterns to filter the spec filename that would run.</li>
   <li>If tests are missing and console shows error with /specs?exclude= request, check your <code>sjpp/serverconfig.json</code> to make sure <span class='code-snippet'>"debugmode":true</span> is set at root level.</li>
-  <li>todo why specs is needed? any other things to explain how this page works</li>
-
+  <li>To run tests on commandline, do <span class='code-snippet'>npm run test:integration --workspace=client</span> at /sjpp/proteinpaint/ directory.
+    Or, from the client dir, <span class='code-snippet'>npm run test:integration</span> or <span class='code-snippet'>npm run test:unit</span>
+  </li>
 <ul>
 
 <script>
