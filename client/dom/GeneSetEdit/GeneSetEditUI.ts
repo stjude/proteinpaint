@@ -9,7 +9,7 @@ import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 import { TermTypes } from '../../shared/terms'
 import { debounce } from 'debounce'
-import { sayerror } from '#dom/sayerror'
+import { sayerror } from '../sayerror'
 
 type API = {
 	dom: {
