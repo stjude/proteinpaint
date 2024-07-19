@@ -788,7 +788,7 @@ export function searchSampleInput(holder, samplesData, callback, keyUpCallback) 
 
 	const allSamples = []
 	for (const sample in samplesData)
-		if (samplesData[sample].type == 'root' || samplesData[sample].type == null)
+		if (samplesData[sample].type == 'root' || samplesData[sample].type == null || samplesData[sample].type == '')
 			//If the dataset has no ancestors, all the samples should be root'
 			allSamples.push(sample)
 	const isBigDataset = allSamples.length > 10000
