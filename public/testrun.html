@@ -78,7 +78,7 @@
 
 const time = Date.now() // why need to add time to href?
 d3.selectAll('.allTestsBtn').each(function() {
-  this.href += `&time=${time}`
+  //this.href += `&time=${time}`
 })
 
 const backArrows = d3.select('#testrun-back-arrows')
@@ -102,8 +102,7 @@ function updateNavCrumbs(display, params={}) {
   currTest.style('display', display).text(pattern)
   backArrows.style('display', display)
   if (display == 'none') loadingDiv.html(
-    `Click on a directory or file name to trigger a test. ` +
-    `Tests in <span style='color: ${activeColor}'>red</span> are currently imported in 'client/test/internals.js'.` // don't see any red color. is this outdated?
+    `Click on a directory or file name to trigger a test.`
   )
 }
 
@@ -127,7 +126,7 @@ async function showAvailableSpecs() {
         dirDiv
           .append('h3')
           .append('a')
-          .attr('href', d => `?dir=${dir.path}&time=${time}`)
+          .attr('href', d => `?dir=${dir.path}`)
           .text(dirName)
 
         dirDiv.append('div')
@@ -139,7 +138,7 @@ async function showAvailableSpecs() {
             .attr('class', 'testrun-file-div')
             .style('font-weight', d => d.isActive ? 600 : '')
             .append('a')
-            .attr('href', d => `?dir=${d.dir}&name=${d.name}&time=${time}`)
+            .attr('href', d => `?dir=${d.dir}&name=${d.name}`)
             .style('color', d => d.isActive ? activeColor : '')
             .text(d => d.name)
       })
@@ -183,7 +182,7 @@ async function triggerImportSpecs(params) {
     }
     loadingDiv.html('Loading tests ...')
     const internals = await import('./bin/dist/_.._/test/internals-dev.js')
-    const specs = {exclude: '', matched: []}//internals.getSpecs()}
+    const specs = {exclude: '', matched: []}
     const df = specs.exclude === '_x_.' ? ' (default)' : ''
     const info = `[exclude glob='${specs.exclude}'${df}]`
     loadingDiv.html(`See the test results in the browser console. ${info}`)
