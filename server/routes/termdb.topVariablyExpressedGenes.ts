@@ -26,6 +26,7 @@ export const api = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
+		let result
 		try {
 			const q = req.query as TermdbTopVariablyExpressedGenesRequest
 			const genome = genomes[q.genome]
@@ -35,27 +36,16 @@ function init({ genomes }) {
 			if (!ds.queries?.topVariablyExpressedGenes) throw 'not supported on dataset'
 
 			const t = Date.now()
-			let genes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
+			result = {
+				genes: await ds.queries.topVariablyExpressedGenes.getGenes(q)
+			} as TermdbTopVariablyExpressedGenesResponse
 
-			const foundGenes = new Set()
-			const notFound = [] as string[]
-			if (req.query?.geneSet?.type != 'all') {
-				for (const g of req.query.geneSet.geneList) {
-					if (genes.includes(g)) foundGenes.add(g)
-					else if (req.query.geneSet.type == 'custom') {
-						// Only return not found genes for custom user inputs
-						// Not necessary for defined gene sets (e.g. msigdb)
-						notFound.push(g)
-					}
-				}
-				genes = [...foundGenes]
-			}
 			if (serverconfig.debugmode) console.log('topVariablyExpressedGenes', Date.now() - t, 'ms')
-
-			res.send({ genes, notFound } as TermdbTopVariablyExpressedGenesResponse)
 		} catch (e: any) {
-			res.send({ status: 'error', error: e.message || e })
+			result = { status: e.status || 400, error: e.message || e } as TermdbTopVariablyExpressedGenesResponse
 		}
+
+		res.send(result)
 	}
 }
 
@@ -194,11 +184,17 @@ function gdcValidateQuery(ds: any, genome: any) {
 			min_median_log2_uqfpkm: q.min_median_log2_uqfpkm
 		}
 
-		// TODO DELETE THIS and replace with new logic
-		arg.gene_ids = tempGetCGCgenes(genome)
-
-		// TODO allow using all genes, or user-defined set
-		//arg.gene_type='protein_coding'
+		if (q.geneSet) {
+			if (q.geneSet.type == 'all') {
+				arg.gene_type = 'protein_coding'
+			} else if (q.geneSet.type == 'custom' || q.geneSet.type == 'msigdb') {
+				arg.gene_ids = q.geneSet.geneList
+			} else {
+				throw 'unknown q.geneSet.type'
+			}
+		} else {
+			arg.gene_type = 'protein_coding'
+		}
 
 		return arg
 	}
