@@ -286,12 +286,21 @@ export type GeneArgumentEntry = {
 	/** value of the input or checkbox
 	 * required if type is string. Otherwise, optional
 	 */
-	value?: string | number
+	value?: string | number | { type: string; value: string[] | null }
 	radiobuttons?: {
-		/** TODO: add note here */
-		type: 'text' | 'tree' | 'boolean'
+		/** Type of dom element to render underneath the radio
+		 * 'text': creates a text area input
+		 * 'tree': launches termdb app and the tree
+		 * 'boolean': No element is created
+		 */
+		type: 'text' | 'tree' | 'boolean' | string
+		/** value used to construct the server argument
+		 * also the element id in the gene set edit ui
+		 */
 		value: number | string
+		/** radio label */
 		label: string
+		/** Optional: smaller text that appears underneath the label */
 		sublabel?: string
 	}[]
 }
