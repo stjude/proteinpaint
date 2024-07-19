@@ -238,16 +238,20 @@ export class GeneSetEditUI {
 										.style('display', 'block')
 										.style('font-size', '0.8em')
 										.style('opacity', 0.75)
-										.text('Enter genes separated by comma')
+										.text('Enter genes separated by spaces or commas')
 									holder
 										.append('textarea')
 										.style('display', 'block')
 										.on(
 											'keyup',
 											debounce(function (this: any) {
+												const geneList = this.value
+													.split(/[\s,]+/)
+													.map((t: string) => t.trim())
+													.filter((t: string) => t !== '')
 												param.value = {
 													type: opt.value,
-													geneList: this.value.split(',').map((t: string) => t.trim())
+													geneList
 												}
 											}),
 											500
