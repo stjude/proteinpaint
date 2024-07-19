@@ -188,7 +188,9 @@ function gdcValidateQuery(ds: any, genome: any) {
 			if (q.geneSet.type == 'all') {
 				arg.gene_type = 'protein_coding'
 			} else if (q.geneSet.type == 'custom' || q.geneSet.type == 'msigdb') {
-				arg.gene_ids = q.geneSet.geneList
+				if (!Array.isArray(q.geneSet.geneList)) throw 'q.geneSet.geneList is not array'
+				arg.gene_ids = map2ensg(q.geneSet.geneList, genome)
+				if (arg.gene_ids.length == 0) throw 'no valid genes from custom gene set'
 			} else {
 				throw 'unknown q.geneSet.type'
 			}
@@ -198,4 +200,24 @@ function gdcValidateQuery(ds: any, genome: any) {
 
 		return arg
 	}
+}
+
+function map2ensg(lst: string[], genome: any) {
+	const ensg: string[] = []
+	for (const name: string of lst) {
+		if (name.startsWith('ENSG') && name.length == 15) {
+			ensg.push(name)
+			continue
+		}
+		const tmp: any = genome.genedb.getAliasByName.all(name)
+		if (Array.isArray(tmp)) {
+			for (const a of tmp) {
+				if (a.alias.startsWith('ENSG')) {
+					ensg.push(a.alias)
+					break
+				}
+			}
+		}
+	}
+	return ensg
 }
