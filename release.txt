@@ -1,1 +1,2 @@
-
+Features
+- In the gene set edit UI, user is able to choose returning all genes or compare against a predefined or custom gene set.
