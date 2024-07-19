@@ -40,10 +40,8 @@ export class GenesMenu {
 			div: this.tip.d.append('div').style('padding', '20px').style('display', 'inline-block'),
 			text: 'Calculate genes',
 			callback: async () => {
-				calGenesBtn.property('disabled', true)
-				const wait = this.tip.d.append('div').style('display', 'inline-block').text('Loading...')
+				calGenesBtn.property('disabled', true).text('Loading...')
 				await this.callback()
-				wait.remove()
 				this.tip.hide()
 			}
 		})
