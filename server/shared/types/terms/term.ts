@@ -32,6 +32,7 @@ export type TermValues = {
 	[key: string | number]: BaseValue
 }
 
+// THIS IS WRONG!!!!
 export type ValuesGroup = {
 	name: string
 	type: 'values'
@@ -166,6 +167,8 @@ export type BaseQ = {
 		/** Applies to categorical and condition terms */
 		| 'custom-groupset'
 		| 'custom-samplelst'
+
+	groupsetting?: GroupSetting // TODO XXX FIXME clean up all these mess!!!!
 }
 
 /*** types supporting Term types ***/
