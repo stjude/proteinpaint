@@ -1,10 +1,10 @@
 import { getcategoriesRequest, getcategoriesResponse } from '#shared/types/routes/termdb.categories.ts'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
-import { Term } from '#shared/types/terms/term.ts'
-import { TermWrapper } from '#shared/types/terms/tw.ts'
-import { NumericTerm } from '#shared/types/terms/numeric.ts'
-import { TermTypes } from '#shared/terms.js'
+// import { Term } from '#shared/types/terms/term.ts'
+// import { TermWrapper } from '#shared/types/terms/tw.ts'
+// import { NumericTerm } from '#shared/types/terms/numeric.ts'
+// import { TermTypes } from '#shared/terms.js'
 
 export const api: any = {
 	endpoint: 'termdb/categories',
@@ -119,7 +119,7 @@ async function trigger_getcategories(
 			}
 		}
 		const sampleCountedFor = new Set() // if the sample is counted
-		for (const [sampleId, sampleData] of Object.entries(samples)) {
+		for (const sampleData of Object.values(samples)) {
 			const key = $id
 			const values = sampleData[key].values
 			sampleCountedFor.clear()
