@@ -68,7 +68,7 @@ class MassSearch {
 			this.bus.emit('postSearch', [])
 			return
 		}
-		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.opts.usecase)
+		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.opts.usecase, this.opts.targetType)
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
 		} else {
