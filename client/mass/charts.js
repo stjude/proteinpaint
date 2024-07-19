@@ -201,7 +201,7 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Facet',
+			label: 'Facet Table',
 			clickTo: self.loadChartSpecificMenu,
 			chartType: 'facet',
 			config: {
