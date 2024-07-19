@@ -323,10 +323,10 @@ export class GeneSetEditUI {
 							if (result.genes) {
 								for (const gene of result.genes) this.geneList.push({ gene })
 							}
-							if (result.notFound) {
+							if (result.notFound.length) {
 								sayerror(
 									this.api.dom.errorDiv,
-									`Gene${result.notFound.length > 0 ? 's' : ''} not found: ${result.notFound.join(', ')}`
+									`Gene${result.notFound.length > 1 ? 's' : ''} not found: ${result.notFound.join(', ')}`
 								)
 								setTimeout(() => this.api.dom.errorDiv.selectAll('*').remove(), 10000)
 							}
