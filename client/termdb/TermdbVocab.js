@@ -583,7 +583,7 @@ export class TermdbVocab extends Vocab {
 		}
 
 		// use same query method for all dictionary terms
-		const tw = { term: structuredClone(term), q: _body.term1_q || {} }
+		const tw = { term, q: _body.term1_q || {} }
 		delete _body.term1_q // is now tw.q, so no longer needed
 		const body = {
 			getcategories: 1,
