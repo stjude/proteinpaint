@@ -211,8 +211,9 @@ export class GeneSetEditUI {
 							if (opt.type == 'tree') {
 								opt.callback = async (holder: Elem) => {
 									const termdb = await import('../../termdb/app.js')
-									termdb.appInit({
-										holder,
+									const treeDiv = holder.append('div')
+									await termdb.appInit({
+										holder: treeDiv,
 										state: {
 											dslabel: opt.value,
 											genome: this.genome.name,
@@ -222,10 +223,16 @@ export class GeneSetEditUI {
 										},
 										tree: {
 											click_term: (term: any) => {
+												holder
+													.append('div')
+													.classed('ts_pill sja_filter_tag_btn sja_tree_click_term termlabel', true)
+													.style('margin', '5px')
+													.text(`${term.id}`)
 												param.value = {
 													type: opt.value,
 													geneList: term._geneset.map((t: any) => t.symbol)
 												}
+												treeDiv.selectAll('*').remove()
 											}
 										}
 									})
