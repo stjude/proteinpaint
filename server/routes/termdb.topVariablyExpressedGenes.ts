@@ -204,7 +204,7 @@ function gdcValidateQuery(ds: any, genome: any) {
 
 function map2ensg(lst: string[], genome: any) {
 	const ensg: string[] = []
-	for (const name: string of lst) {
+	for (const name of lst) {
 		if (name.startsWith('ENSG') && name.length == 15) {
 			ensg.push(name)
 			continue
