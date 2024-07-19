@@ -787,7 +787,7 @@ export type UrlTemplateSsm = UrlTemplateBase & {
 	linkText?: string
 }
 
-/*** types supporting Cohort type ***/
+/*** type of ds.cohort.termdb{} ***/
 type Termdb = {
 	/** Terms */
 	termIds?: TermIds
@@ -850,7 +850,10 @@ type Termdb = {
 		gdcapi: boolean
 	}
 	hierCluster?: any
+
+	/** ds customization of rules on what term type to exclude for a usecase. used by gdc in that gene exp cannot be used for filtering */
 	useCasesExcluded?: {
+		/** key is target name (todo restrict values), value is array of 1 or more term types (todo restrict values) */
 		[useCaseTarget: string]: string[]
 	}
 }
