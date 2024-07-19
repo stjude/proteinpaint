@@ -643,7 +643,7 @@ export const componentInit = sampleViewInit
 
 function setRenderers(self) {
 	self.renderSampleDictionary = function () {
-		this.dom.tableDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('padding-left', '20px')
+		this.dom.tableDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('padding', '20px')
 		const table = this.dom.tableDiv.append('table').style('border-collapse', 'collapse')
 		const thead = table.append('thead')
 		const theadrow = thead.append('tr')
