@@ -199,17 +199,3 @@ function gdcValidateQuery(ds: any, genome: any) {
 		return arg
 	}
 }
-
-function tempGetCGCgenes(genome: any) {
-	const lst = [] as string[] // list of ENSG ids from cgc genes
-	// don't think there's need to preparse genome.geneset, as this function is only temporary
-	for (const s of genome.geneset[0].lst) {
-		const a = genome.genedb.getAliasByName.all(s)
-		if (a) {
-			for (const b of a) {
-				if (b.alias.startsWith('ENSG')) lst.push(b.alias)
-			}
-		}
-	}
-	return lst
-}
