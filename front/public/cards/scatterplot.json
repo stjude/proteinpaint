@@ -2,7 +2,7 @@
     "ribbonMessage": "Please see our newest examples below: Continuous Variables and 3D PCA.",
     "ppcalls": [
         {
-            "label": "Tumor methylome tSNE",
+            "label": "Tumor Methylome tSNE",
             "message": "<ul style='line-height:1.5;'><li><strong>Change the plot configuration</strong>: click on the burger button (three stacked lines) in the top left of the plot. The menu provides options to change the term, dot sizes, etc.</li><li><strong>Create groups</strong>: click on the paint brush, lasso the samples of interest, and use the pop-up menu for next steps.</li><li>Open other plots and analysis tools by clicking on the grey buttons above the scatter plot.</li></ul> ",
             "runargs": {
                 "noheader": true,
@@ -36,7 +36,7 @@
             "data_source": 1006
         },
         {
-            "label": "Age and heart",
+            "label": "Age and Heart",
             "runargs": {
                 "noheader": true,
                 "mass": {
@@ -122,7 +122,7 @@
             "data_source": 1005
         },
         {
-            "label": "GDC gene expression",
+            "label": "GDC Gene Expression",
             "runargs": {
                 "noheader": true,
                 "mass": {
