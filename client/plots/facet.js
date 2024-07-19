@@ -18,7 +18,7 @@ class Facet {
 			controlsHolder,
 			mainDiv
 		}
-		if (this.dom.header) this.dom.header.html('Facet')
+		if (this.dom.header) this.dom.header.html('Facet Table')
 	}
 
 	async init(appState) {
