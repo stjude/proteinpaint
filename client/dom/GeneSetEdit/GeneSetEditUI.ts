@@ -201,12 +201,6 @@ export class GeneSetEditUI {
 			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 					if (param.radiobuttons) {
-						//set a default value
-						if (!param.value)
-							param.value = {
-								type: param.radiobuttons[0].value,
-								geneList: null
-							}
 						for (const opt of param.radiobuttons) {
 							if (opt.type == 'tree') {
 								opt.callback = async (holder: Elem) => {
@@ -266,7 +260,7 @@ export class GeneSetEditUI {
 								}
 							}
 							if (opt.type == 'boolean') {
-								opt.callback = async () => {
+								opt.callback = () => {
 									param.value = {
 										type: opt.value,
 										geneList: null
@@ -313,6 +307,15 @@ export class GeneSetEditUI {
 			this.menuList.push({
 				label: 'Top variably expressed genes',
 				callback: (event: Event) => {
+					this.api.topVariablyExpressedGenesParams
+						.filter(p => p.param.type == 'boolean' && p.param?.radiobuttons && p.param?.value)
+						.forEach(p => {
+							if (typeof p.param.radiobuttons![0].value === 'string') {
+								p.param.value = { type: p.param.radiobuttons![0].value, value: null }
+							} else {
+								console.error(`Unexpected radio button value type: ${typeof p.param.radiobuttons![0].value}`)
+							}
+						})
 					this.tip2.clear().showunder(event.target)
 					new GenesMenu({
 						tip: this.tip2,
