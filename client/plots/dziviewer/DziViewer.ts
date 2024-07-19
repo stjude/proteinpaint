@@ -14,7 +14,7 @@ export default class DziViewer {
 
 	async init() {
 		const state = this.app.getState()
-		const holder = this.opts.holder
+		const holder = this.opts.holder.style('padding', '0px 50px')
 		holder.append('div').attr('id', 'openseadragon-viewer').style('width', '50vw').style('height', ' 50vw')
 
 		const tileSources: Array<string> = []
@@ -28,6 +28,7 @@ export default class DziViewer {
 			tileSources: tileSources,
 			prefixUrl: 'https://openseadragon.github.io/openseadragon/images/',
 			showNavigator: true,
+			navigatorAutoFade: false,
 			sequenceMode: tileSources.length > 1,
 			defaultZoomLevel: 1
 			// gestureSettingsMouse: {
