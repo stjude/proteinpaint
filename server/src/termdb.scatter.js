@@ -9,7 +9,6 @@ import { getFilterCTEs } from './termdb.filter.js'
 import { authApi } from './auth.js'
 import run_R from './run_R.js'
 import { read_file } from './utils.js'
-
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
 
@@ -136,8 +135,16 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 			cohortSamples, // cohort (or termdb) samples, those are annotated by terms
 			coordTwData // getData() returned obj. only when sample coordinates are determined by TW. if created, this will be used for colorAndShapeSamples()
 
+		const terms = []
+		if (q.colorTW) terms.push(q.colorTW)
+		if (q.shapeTW) terms.push(q.shapeTW)
+		if (q.divideByTW) terms.push(q.divideByTW)
+		if (q.scaleDotTW) terms.push(q.scaleDotTW)
+		if (q.coordTWs) for (const tw of q.coordTWs) terms.push(tw)
+		const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, ds, genome)
+
 		if (q.coordTWs.length == 2) {
-			const tmp = await getSampleCoordinatesByTerms(req, q, ds, genome)
+			const tmp = await getSampleCoordinatesByTerms(req, q, ds, data)
 			cohortSamples = tmp[0]
 			coordTwData = tmp[1]
 		} else {
@@ -174,19 +181,7 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 
 		// for both coord-by-tw and prebuilt maps, may need to request sample data from additional terms e.g. color
 
-		const terms = []
-		if (q.colorTW) terms.push(q.colorTW)
-		if (q.shapeTW) terms.push(q.shapeTW)
-		if (q.divideByTW) terms.push(q.divideByTW)
-		if (q.scaleDotTW) terms.push(q.scaleDotTW)
-
-		let otherData
-		if (terms.length) {
-			otherData = await getData({ filter: q.filter, filter0: q.filter0, terms }, ds, genome)
-			if (otherData.error) throw otherData.error
-		}
-
-		const result = await colorAndShapeSamples(refSamples, cohortSamples, coordTwData, otherData, q)
+		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
 		res.send(result)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -216,25 +211,12 @@ async function getSamples(req, ds, plot) {
 	}
 }
 
-/*
-on coordTwData and otherData:
-for prebuilt map:
-	coordTwData is undefined
-	otherData is set
-for coord-by-tw:
-	coordTwData is set
-	otherData may be set or missing, if no color/shape term etc is requested
-
-to look up color/shape info, always use otherData.refs{}
-
-using such two objects is confusing, but is necessary in the case of gdc two-gene exp plot to avoid duplicating exp data queries which breaks the app
-*/
-async function colorAndShapeSamples(refSamples, cohortSamples, coordTwData, otherData, q) {
+async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	const results = {}
 	let fCount = 0
 	for (const sample of cohortSamples) {
 		// use either data object to look up samples
-		const dbSample = (coordTwData || otherData).samples[sample.sampleId.toString()]
+		const dbSample = data.samples[sample.sampleId.toString()]
 		if (!dbSample) {
 			fCount++
 			//console.log(JSON.stringify(sample) + ' not in the database or filtered')
@@ -308,9 +290,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, coordTwData, othe
 
 				if (tvalue && 'color' in tvalue) {
 					value.color = tvalue.color
-				} else if (otherData?.refs?.byTermId[q.colorTW.term.id]?.bins) {
-					// always use otherData.refs to look up colorTW etc
-					const bin = otherData?.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
+				} else if (data?.refs?.byTermId[q.colorTW.term.id]?.bins) {
 					if (bin) value.color = bin.color
 					else {
 						value.color = scheme[i]
@@ -328,7 +308,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, coordTwData, othe
 		}
 
 		result.colorLegend = q.colorTW
-			? order(result.colorMap, q.colorTW, otherData?.refs)
+			? order(result.colorMap, q.colorTW, data.refs)
 			: [['Default', { sampleCount: cohortSamples.length, color: 'blue' }]]
 		result.colorLegend.push([
 			'Ref',
@@ -337,7 +317,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, coordTwData, othe
 				color: q.colorTW?.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : refColor
 			}
 		])
-		result.shapeLegend = order(result.shapeMap, q.shapeTW, otherData?.refs)
+		result.shapeLegend = order(result.shapeMap, q.shapeTW, data?.refs)
 		result.shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
 	}
 	return results
@@ -460,10 +440,7 @@ function order(map, tw, refs) {
 	return entries
 }
 
-async function getSampleCoordinatesByTerms(req, q, ds, genome) {
-	const terms = q.coordTWs.slice()
-	if (q.divideByTW) terms.push(q.divideByTW)
-	const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, ds, genome)
+async function getSampleCoordinatesByTerms(req, q, ds, data) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	const samples = []
 	for (const sampleId in data.samples) {
