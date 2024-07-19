@@ -9,7 +9,7 @@ import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 import { TermTypes } from '../../shared/terms'
 import { debounce } from 'debounce'
-import { sayerror } from '../sayerror'
+// import { sayerror } from '../sayerror'
 
 type API = {
 	dom: {
@@ -202,7 +202,11 @@ export class GeneSetEditUI {
 				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 					if (param.radiobuttons) {
 						//set a default value
-						if (!param.value) param.value = param.radiobuttons[0].value
+						if (!param.value)
+							param.value = {
+								type: param.radiobuttons[0].value,
+								geneList: null
+							}
 						for (const opt of param.radiobuttons) {
 							if (opt.type == 'tree') {
 								opt.callback = async (holder: Elem) => {
@@ -323,13 +327,13 @@ export class GeneSetEditUI {
 							if (result.genes) {
 								for (const gene of result.genes) this.geneList.push({ gene })
 							}
-							if (result.notFound.length) {
-								sayerror(
-									this.api.dom.errorDiv,
-									`Gene${result.notFound.length > 1 ? 's' : ''} not found: ${result.notFound.join(', ')}`
-								)
-								setTimeout(() => this.api.dom.errorDiv.selectAll('*').remove(), 10000)
-							}
+							// if (result.notFound.length) {
+							// 	sayerror(
+							// 		this.api.dom.errorDiv,
+							// 		`Gene${result.notFound.length > 1 ? 's' : ''} not found: ${result.notFound.join(', ')}`
+							// 	)
+							// 	setTimeout(() => this.api.dom.errorDiv.selectAll('*').remove(), 10000)
+							// }
 							this.renderGenes()
 						}
 					})
