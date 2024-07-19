@@ -308,7 +308,7 @@ export class GeneSetEditUI {
 				label: 'Top variably expressed genes',
 				callback: (event: Event) => {
 					this.api.topVariablyExpressedGenesParams
-						.filter(p => p.param.type == 'boolean' && p.param?.radiobuttons && p.param?.value)
+						.filter(p => p.param.type == 'boolean' && p.param?.radiobuttons)
 						.forEach(p => {
 							if (typeof p.param.radiobuttons![0].value === 'string') {
 								p.param.value = { type: p.param.radiobuttons![0].value, value: null }
