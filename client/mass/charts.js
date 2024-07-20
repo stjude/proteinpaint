@@ -363,7 +363,7 @@ function setRenderers(self) {
 		*/
 			genome: app.opts.genome,
 			geneList,
-			mode: 'expression',
+			mode: 'geneExpression',
 			vocabApi: app.vocabApi,
 			callback: async ({ geneList, groupName }) => {
 				if (!selectedGroup) throw `missing selectedGroup`
