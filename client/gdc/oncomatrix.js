@@ -139,7 +139,7 @@ export async function init(arg, holder, genomes) {
 			},
 			app: arg.opts?.app || {},
 			geneset: {
-				mode: 'geneVariant',
+				mode: 'geneVariant', // consistent mode value as GeneSetEdit
 				genome,
 				genes: arg.genes,
 				reactsTo(action) {

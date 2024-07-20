@@ -115,7 +115,7 @@ export async function init(arg, holder, genomes) {
 			),
 			matrix: arg.opts?.matrix || {},
 			geneset: {
-				mode: 'expression',
+				mode: 'geneExpression', // consistent with GeneSetEdit
 				genome,
 				genes: arg.genes,
 				reactsTo(action) {
@@ -128,8 +128,8 @@ export async function init(arg, holder, genomes) {
 					div.append('div').text('Loading genes that are top variably expressed in current cohort...')
 					// can delete cgc line when new api is online
 					div.append('div').style('font-size', '.8em').html(`
-						Genes are selected from 738 Cancer Gene Census genes.<br>
-						Only up to 1000 cases with gene expression data will be used to select genes.
+						Only up to 1000 cases with gene expression data will be used to select genes.<br>
+						Genes are selected from all protein-coding genes, may take over 1 minute.
 					`)
 				},
 				async callback(_genesetCompApi, twlst) {

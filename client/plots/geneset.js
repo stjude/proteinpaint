@@ -15,6 +15,7 @@ import { dofetch3 } from '#common/dofetch'
 // and to create a new plot within the same plot app, once a valid geneset is
 // obtained from the server.
 //
+// TODO need to document constructor option, and how client/gdc/* can use it to launch oncomatrix etc
 
 class GenesetComp {
 	constructor(opts) {
@@ -97,7 +98,7 @@ class GenesetComp {
 
 		// genes are not predefined. query to get top genes using the current cohort
 		let data
-		if (this.opts.mode == 'mutation') {
+		if (this.opts.mode == 'geneVariant') {
 			const body = {}
 			if (settings.maxGenes) body.maxGenes = settings.maxGenes
 			if (settings.geneFilter) body.geneFilter = settings.geneFilter
@@ -105,7 +106,7 @@ class GenesetComp {
 			// TODO change to /termdb/topMutatedGenes
 			// XXX this is optional query!! if ds is missing then should show input ui instead
 			data = await dofetch3('gdc/topMutatedGenes', { body, signal }, { cacheAs: 'decoded' })
-		} else if (this.opts.mode == 'expression') {
+		} else if (this.opts.mode == 'geneExpression') {
 			const body = {
 				genome: this.state.vocab.genome,
 				dslabel: this.state.vocab.dslabel,
@@ -114,6 +115,8 @@ class GenesetComp {
 			if (this.state.filter0) body.filter0 = this.state.filter0
 			// XXX this is optional query!! if ds is missing then should show input ui instead
 			data = await dofetch3('termdb/topVariablyExpressedGenes', { body, signal }, { cacheAs: 'decoded' })
+		} else {
+			throw 'unknown opts.mode [geneset.js]'
 		}
 
 		if (!data) throw 'invalid server response'
@@ -126,14 +129,13 @@ class GenesetComp {
 	}
 
 	async getTwLst(genes) {
-		//TODO may support other opts.mode-to-term.type mapping
-		const type = this.opts.mode == 'expression' ? 'geneExpression' : 'geneVariant'
+		// mode should equates to term type. if not the case then fix here
 		return await Promise.all(
 			// do tempfix of "data.genes.slice(0,3).map" for faster testing
 			genes.map(async i =>
 				typeof i == 'string'
-					? await fillTermWrapper({ term: { gene: i, type } }, this.app.vocabApi)
-					: await fillTermWrapper({ term: { gene: i.gene || i.name, type } }, this.app.vocabApi)
+					? await fillTermWrapper({ term: { gene: i, type: this.opts.mode } }, this.app.vocabApi)
+					: await fillTermWrapper({ term: { gene: i.gene || i.name, type: this.opts.mode } }, this.app.vocabApi)
 			)
 		)
 	}
