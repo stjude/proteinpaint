@@ -13,6 +13,7 @@ Features:
 - allow the drag/drop of rows from non-clustered row groups
 - Added Facet plot to the UI
 - New gene expression example available from the scatter plot card on the homepage.
+- In the gene set edit UI, user is able to choose returning all genes or compare against a predefined or custom gene set.
 
 Fixes:
 - hierCluster group Add_Rows ui can only add compatible terms
