@@ -292,7 +292,29 @@ export async function init(arg, holder, genomes) {
 					if (plotConfig) matrixApi = plotAppApi.getComponents(`plots.${plotConfig.id}`)
 				}
 
-				if ('filter0' in arg) {
+				if (arg.genes) {
+					// user geneset as saved and reused from GFF, reshaped to be {gene: string}[]
+					plotAppApi.dispatch({
+						type: 'plot_edit',
+						id: matrixApi.id,
+						config: {
+							termgroups: [
+								{
+									lst: await Promise.all(
+										arg.genes.map(async g => {
+											return await fillTermWrapper(
+												{
+													term: { gene: g.gene, type: 'geneVariant', name: g.gene }
+												},
+												vocabApi
+											)
+										})
+									)
+								}
+							]
+						}
+					})
+				} else if ('filter0' in arg) {
 					plotAppApi.dispatch({
 						type: 'filter_replace',
 						filter0: arg.filter0
