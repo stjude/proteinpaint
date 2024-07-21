@@ -31,9 +31,12 @@ let sse,
 	initialLoad = 0
 setSse()
 
+const host = sessionStorage.getItem('hostURL') || window.testHost || ''
+const sseUrl = host.endsWith('/') ? `${host}sse` : `${host}/sse`
+
 function setSse() {
 	// server-sent events
-	sse = new EventSource('/sse')
+	sse = new EventSource(sseUrl)
 
 	let lastReload = 0
 
