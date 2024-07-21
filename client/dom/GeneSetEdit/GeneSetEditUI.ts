@@ -53,11 +53,11 @@ type Gene = {
 	mutationStat?: { class: string; count: number; dt?: number }[]
 }
 
-type CallbackArg = {
+export type CallbackArg = {
 	geneList: Gene[]
 }
 
-type GeneSetEditArg = {
+export type GeneSetEditArg = {
 	holder: Elem
 	genome: ClientCopyGenome
 	/** Optional: If provided, allow to load top variably mutated ('geneVariant') or
