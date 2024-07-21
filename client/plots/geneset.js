@@ -1,23 +1,45 @@
 import { getCompInit, copyMerge, sleep } from '../rx'
-import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts'
+import { GeneSetEditUI /*, GeneSetEditArg, CallbackArg*/ } from '../dom/GeneSetEdit/GeneSetEditUI.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
 
 // This is a reactive geneset component, meant for use within plotApp.
+// The usage in client/gdc/oncomatrix.js and geneExpClustering.js is as follows:
 //
 // 1. plotApp is initialized with geneset as the first plot/component
 // 2. if there are opts.genes, geneset would simply call its opts.callback right away (not even render the edit UI)
 // 3. if not, then geneset would render the edit UI, and also use its opts.callback to supply the wrapped genes
-// 4. in the opts.callback, the matrix/hierCluster will dispatch plot_delete to remove the geneset as the plot,
+// 4. in opts.[matrix | hierCluster].callbacks.firstRender,
+//    the matrix/hierCluster will dispatch plot_delete to remove the geneset as the plot,
 //    and also plot_create to render the target plot (like matrix, hierCluster)
 //
-// The reactivity is rquired to toggle loading overlay visibility
+// The reactivity is required to toggle loading overlay visibility
 // and to create a new plot within the same plot app, once a valid geneset is
 // obtained from the server.
 //
-// TODO need to document constructor option, and how client/gdc/* can use it to launch oncomatrix etc
+// opts{}
+// .genome     see GeneSetArg.ClientCopyGenome
+// .holder     the DOM element where the geneset edit UI will be rendered
+// .genes[]    an array of strings gene symbols, see Note #2 above
+// .mode       'geneVariant' | 'geneExpression', see dom/GeneSetEdit for details
+// .callback   see GeneSetEditArg.callback in dom/GeneSetEdit
+// .reactsTo   the state changes that this component would react to, see example in matrix opts
+// .showWaitMessage(waitDiv)  optional function to display a custom message while genes are being loaded
 
 class GenesetComp {
+	// type: 'geneset'
+	// dom: {
+	// 	[domKey: string]: any // usually a d3-selection
+	// }
+	// opts: {
+	// 	holder: any
+	// 	genes: string[]
+	// 	mode: 'geneVariant' | 'geneExpression'
+	// 	callback: CallbackArg
+	// 	reactsTo?: (action: any) => boolean
+	// 	showWaitMessage?: (waitDiv: any) => void
+	// }
+
 	constructor(opts) {
 		this.type = 'geneset'
 
@@ -145,21 +167,23 @@ class GenesetComp {
 		this.dom.body
 			.append('p')
 			.text(`No default genes. Please change the cohort or define a gene set to launch ${this.state.config.toolName}.`)
-		new GeneSetEditUI({
-			holder: this.dom.body.append('div'),
-			genome: this.opts.genome,
-			mode: this.opts.mode,
-			vocabApi: this.app.vocabApi, //  await vocabInit({ state: { genome: gdcGenome, dslabel: gdcDslabel } }),
-			callback: async result => {
-				const twlst = await Promise.all(
-					result.geneList.map(async i => {
-						return fillTermWrapper({ term: { gene: i.gene || i.name || i, type: 'geneVariant' } }, this.app.vocabApi)
-					})
-				)
+		new GeneSetEditUI(
+			{
+				holder: this.dom.body.append('div'),
+				genome: this.opts.genome,
+				mode: this.opts.mode,
+				vocabApi: this.app.vocabApi, //  await vocabInit({ state: { genome: gdcGenome, dslabel: gdcDslabel } }),
+				callback: async result => {
+					const twlst = await Promise.all(
+						result.geneList.map(async i => {
+							return fillTermWrapper({ term: { gene: i.gene || i.name || i, type: 'geneVariant' } }, this.app.vocabApi)
+						})
+					)
 
-				this.opts.callback(this.api, twlst)
-			}
-		})
+					this.opts.callback(this.api, twlst)
+				}
+			} /*as GeneSetEditArg*/
+		)
 		this.dom.loadingOverlay?.style('display', 'none')
 	}
 
