@@ -1,4 +1,4 @@
-import got from 'got'
+import ky from 'ky'
 import path from 'path'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
@@ -47,9 +47,8 @@ initGDCdictionary
 	casesWithExpData Set
   }
 
-*/
 
-/* 
+
 sections from api return that are used to build in-memory termdb
 
 ******************* Part 1
@@ -146,6 +145,8 @@ re.expand: []
 
 // prefix for keys in re._mapping{}
 const mapping_prefix = 'ssm_occurrence_centrics'
+// wait time for next check on stale case-id cache, 5min
+const cacheCheckWait = 5 * 60 * 1000
 
 export async function initGDCdictionary(ds) {
 	const id2term = new Map()
@@ -333,67 +334,7 @@ export async function initGDCdictionary(ds) {
 	if (floatCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'float' })
 	if (survivalCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'survival' })
 
-	/**********************************
-	       additional prepping
-	       fill in various attr
-		   in ds.__gdc{}
-		   gather these arbitrary gdc stuff under __gdc{} to be safe
-	**********************************/
-
-	ds.__gdc = {
-		aliquot2submitter: {
-			cache: new Map(),
-			get: async aliquot_id => {
-				if (ds.__gdc.aliquot2submitter.cache.has(aliquot_id)) return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
-
-				/* 
-				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
-				simply return unconverted id to preserve performance
-				*/
-				return aliquot_id
-
-				// converts one id on the fly while the cache is still loading
-				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
-				//return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
-			}
-		},
-		// create new attr to map to case uuid, from 3 kinds of ids: aliquot, sample submitter, and case submitter
-		// this mapping serves case selection from mds3 and matrix, where input can be one of these different types
-		map2caseid: {
-			cache: new Map(),
-			get: input => {
-				return ds.__gdc.map2caseid.cache.get(input)
-				// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
-			}
-		},
-		caseid2submitter: new Map(), // k: case uuid, v: case submitter id
-		caseIds: new Set(), //
-		casesWithExpData: new Set(),
-		gdcOpenProjects: new Set(), // names of open-access projects
-		doneCaching: 0
-	}
-
-	try {
-		await getOpenProjects(ds)
-	} catch (e) {
-		console.log(e)
-		throw 'getOpenProjects() failed: ' + (e.message || e)
-	}
-
 	runRemainingWithoutAwait(ds)
-}
-
-async function runRemainingWithoutAwait(ds) {
-	// Important!
-	// do not await when calling this function, as following steps execute logic that are optional for server function, and should not halt server launch
-	// should await each step so they work in sequence
-	await testGDCapi(ds)
-	try {
-		await cacheSampleIdMapping(ds)
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
-	}
 }
 
 function mayAddTermAttribute(t) {
@@ -790,6 +731,30 @@ function makeTermdbQueries(ds, id2term) {
 	}
 }
 
+/****************************************************
+   remaining are gdc case id mapping caching logic
+*****************************************************
+
+Important!
+do not await when calling this function, as following steps execute logic that are optional for server function, and should not halt server launch
+should await each step so they work in sequence
+*/
+async function runRemainingWithoutAwait(ds) {
+	await testGDCapi(ds)
+	try {
+		// obtain case id mapping for the first time and store at ds.__gdc
+		await cacheSampleIdMapping(ds)
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
+	}
+
+	if (!serverconfig.features.noPeriodicCheckGdcCaseCache) {
+		// kick off stale cache check
+		setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
+	}
+}
+
 async function getOpenProjects(ds) {
 	const data = {
 		filters: {
@@ -830,7 +795,7 @@ async function getOpenProjects(ds) {
 }
 
 /* this function is called when the gdc mds3 dataset is initiated on a pp instance
-primary purpose is to catch malformed api URLs
+primary purpose is to catch malformed api URLs on dev environment
 when running this on sj prod server, the gdc api can be down due to maintainance, and we do not want to prevent our server from launching
 thus do not halt process if api is down
 */
@@ -893,11 +858,11 @@ if gets error:
 async function testRestApi(url) {
 	try {
 		const t = new Date()
-		const response = await got(url)
-		if (response.statusCode > 399) {
+		const response = await ky(url)
+		if (response.status > 399) {
 			// 400 and above are all error, do not use !=200 as redirect (300+) is allowed...
 			// TODO console log additional response msg to help diagnosis
-			return response.statusCode
+			return response.status
 		}
 		console.log('GDC API okay: ' + url, new Date() - t, 'ms')
 	} catch (e) {
@@ -921,14 +886,15 @@ async function testGraphqlApi(url, headers) {
 				}
 			}
 		}}`
-		const response = await got.post(url, {
+		const response = await ky.post(url, {
+			timeout: false,
 			headers,
-			body: JSON.stringify({ query, variables: {} })
+			json: { query, variables: {} }
 		})
-		if (response.statusCode > 399) {
+		if (response.status > 399) {
 			// 400 and above are all error, do not use !=200 as redirect (300+) is allowed...
 			// TODO console log additional response msg to help diagnosis
-			return response.statusCode
+			return response.status
 		}
 	} catch (e) {
 		console.log(e)
@@ -944,8 +910,52 @@ cache gdc sample id mappings
 - create a map from sample aliquot id to sample submitter id, for displaying in mds3 tk
 - create a map from differet ids to case uuid, for creating gdc cohort with selected samples
 - cache list of case uuids with expression data
+
+function will rerun when it detects stale case id cache
 */
 async function cacheSampleIdMapping(ds) {
+	// gather these arbitrary gdc stuff under __gdc{} to be safe
+	// do not freeze the object; they will be rewritten if cache is stale
+	ds.__gdc = {
+		aliquot2submitter: {
+			cache: new Map(),
+			get: async aliquot_id => {
+				if (ds.__gdc.aliquot2submitter.cache.has(aliquot_id)) return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
+
+				/* 
+				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
+				simply return unconverted id to preserve performance
+				*/
+				return aliquot_id
+
+				// converts one id on the fly while the cache is still loading
+				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
+				//return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
+			}
+		},
+		// create new attr to map to case uuid, from 3 kinds of ids: aliquot, sample submitter, and case submitter
+		// this mapping serves case selection from mds3 and matrix, where input can be one of these different types
+		map2caseid: {
+			cache: new Map(),
+			get: input => {
+				return ds.__gdc.map2caseid.cache.get(input)
+				// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
+			}
+		},
+		caseid2submitter: new Map(), // k: case uuid, v: case submitter id
+		caseIds: new Set(), //
+		casesWithExpData: new Set(),
+		gdcOpenProjects: new Set(), // names of open-access projects
+		doneCaching: false
+	}
+
+	try {
+		await getOpenProjects(ds)
+	} catch (e) {
+		console.log(e)
+		throw 'getOpenProjects() failed: ' + (e.message || e)
+	}
+
 	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
 	if ('stopGdcCacheAliquot' in serverconfig.features) {
 		// flag is set
@@ -978,7 +988,7 @@ async function cacheSampleIdMapping(ds) {
 		}
 	}
 
-	await checkExpressionAvailability(ds)
+	await getCasesWithGeneExpression(ds)
 
 	ds.__gdc.doneCaching = true
 	console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
@@ -1098,10 +1108,9 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 	return re.data?.pagination?.total
 }
 
-async function checkExpressionAvailability(ds) {
-	// hardcodes this url since the api is only in uat now. replace with path.join() when it's in prod
+async function getCasesWithGeneExpression(ds) {
 	const { host, headers } = ds.getHostHeaders()
-	const url = `${host.geneExp}/gene_expression/availability`
+	const url = path.join(host.geneExp, 'gene_expression/availability')
 
 	try {
 		const idLst = [...ds.__gdc.caseIds]
@@ -1121,5 +1130,42 @@ async function checkExpressionAvailability(ds) {
 		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
 		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
 		// when api is releated to public prod, must throw here and abort
+	}
+}
+
+async function mayReCacheCaseIdMapping(ds) {
+	if (await caseCacheIsStale(ds)) {
+		console.log('GDC: cache is stale. Re-caching...')
+		await cacheSampleIdMapping(ds)
+	}
+	// continue checking at the next time interval
+	setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
+}
+
+// check multiple numbers. on any mismatch, return true and trigger recaching
+async function caseCacheIsStale(ds) {
+	console.log('GDC: checking if cache is stale')
+
+	const { host, headers } = ds.getHostHeaders()
+
+	{
+		// check total number of cases
+		const re = await ky(path.join(host.rest, 'cases'), { headers }).json()
+		if (!Number.isInteger(re?.data?.pagination?.total)) throw 'data.pagination.total is not number'
+		console.log(re.data.pagination.total, ds.__gdc.caseid2submitter.size)
+		if (re.data.pagination.total != ds.__gdc.caseid2submitter.size) return true
+	}
+
+	if (0) {
+		// check total number of aliquots
+		// FIXME need method to count total number of aliquots
+		const re = await ky(path.join(host.rest, 'cases?fields=samples.portions.analytes.aliquots.aliquot_id'), {
+			headers
+		}).json()
+		if (!Number.isInteger(re?.data?.pagination?.total)) throw 'data.pagination.total is not number'
+		//console.log(re.data.pagination.total, ds.__gdc.aliquot2submitter.cache.size)
+	}
+	{
+		// TODO need method to count total number of cases with exp data
 	}
 }
