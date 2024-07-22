@@ -44,14 +44,24 @@ async function loadDataset(headerHolder, dslabel) {
 }
 
 function addButtons(headerHolder, app, dslabel, isLoggedIn, site) {
-	const div = headerHolder.append('div').style('display', 'inline-flex').style('gap', '5px')
+	const div = headerHolder
+		.append('div')
+		.style('display', 'inline-flex')
+		.style('gap', '5px')
+		.style('padding-left', '10px')
+	div
+		.append('button')
+		.text('Full PrOFILE')
+		.style('background-color', dslabel == 'ProfileFull' ? 'orange' : '')
+		.on('click', e => {
+			loadDataset(headerHolder, 'ProfileFull')
+		})
 
 	div
 		.append('button')
-		.text(dslabel == 'ProfileFull' ? 'Abbreviated PrOFILE' : 'Full PrOFILE')
-		.on('click', e =>
-			dslabel == 'ProfileFull' ? loadDataset(headerHolder, 'ProfileAbbrev') : loadDataset(headerHolder, 'ProfileFull')
-		)
+		.text('Abbreviated PrOFILE')
+		.style('background-color', dslabel == 'ProfileAbbrev' ? 'orange' : '')
+		.on('click', e => loadDataset(headerHolder, 'ProfileAbbrev'))
 	div
 		.append('button')
 		.text('Polar Graph')

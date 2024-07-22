@@ -40,7 +40,7 @@ export class profilePlot {
 			const suffix = config.isLoggedIn ? (config.site ? config.site : 'Admin') : 'Public'
 			this.opts.header.text(config.header ? config.header : config.chartType + ` / ${suffix}`)
 		}
-		const div = this.opts.holder.append('div')
+		const div = this.opts.holder.append('div').style('padding', '10px')
 		const holder2 = div.append('div').style('display', 'inline-block')
 		const mainDiv = div.append('div').style('display', 'inline-block')
 
@@ -270,7 +270,7 @@ export class profilePlot {
 			})
 		inputs.unshift(...additionalInputs)
 
-		if (this.type == 'profilePolar')
+		if (this.type != 'profileBarchart')
 			inputs.push({
 				label: 'Show table',
 				type: 'checkbox',
@@ -546,6 +546,7 @@ export async function loadFilterTerms(config, app) {
 export function getDefaultProfilePlotSettings() {
 	return {
 		show2Plots: false,
-		isAggregate: false
+		isAggregate: false,
+		showTable: true
 	}
 }
