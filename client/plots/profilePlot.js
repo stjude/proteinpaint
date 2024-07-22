@@ -41,8 +41,8 @@ export class profilePlot {
 			this.opts.header.text(config.header ? config.header : config.chartType + ` / ${suffix}`)
 		}
 		const div = this.opts.holder.append('div')
-		const holder2 = div.append('div')
-		const mainDiv = div.append('div')
+		const holder2 = div.append('div').style('display', 'inline-block')
+		const mainDiv = div.append('div').style('display', 'inline-block')
 
 		const controlsDiv = mainDiv.insert('div').style('display', 'inline-block').style('font-size', '0.8em')
 		const holder = mainDiv.insert('div').style('display', 'inline-block')
@@ -100,6 +100,7 @@ export class profilePlot {
 	async addPlot() {
 		this.plotAdded = true
 		const appState = this.state
+
 		const plotMod = await import('#plots/plot.app.js')
 		const plot = { chartType: this.type }
 		if (this.type == 'profileRadar' || this.type == 'profileRadarFacility') plot.plot = this.config.plot
