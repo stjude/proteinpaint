@@ -30,6 +30,7 @@ class ViolinPlot {
 			.attr('id', 'sjpp-vp-holder')
 
 		this.dom = {
+			header: this.opts.header,
 			loadingDiv: this.opts.holder
 				.append('div')
 				.style('position', 'absolute')
@@ -255,9 +256,8 @@ class ViolinPlot {
 		this.settings = this.config.settings.violin
 
 		if (this.config.chartType != this.type && this.config.childType != this.type) return
-
 		if (this.dom.header)
-			this.dom.header.text(
+			this.dom.header.html(
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
