@@ -1263,7 +1263,7 @@ export class MatrixControls {
 				triggerGenesetEdit(tip.d.append('div'))
 			})
 
-		if (parent.opts.customInputs.geneset) {
+		if (parent.opts.customInputs?.geneset) {
 			for (const btn of parent.opts.customInputs.geneset) {
 				td.append('button')
 					.html(btn.label)

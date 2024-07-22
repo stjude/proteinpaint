@@ -2,6 +2,8 @@ import { appInit } from '#plots/plot.app.js'
 import { select } from 'd3-selection'
 import { copyMerge } from '#rx'
 import { TermTypes } from '../shared/terms'
+import { fillTermWrapper } from '#termsetting'
+import { vocabInit } from '#termdb/vocabulary'
 
 /*
 test with http://localhost:3000/example.gdc.exp.html
@@ -69,6 +71,11 @@ export async function init(arg, holder, genomes) {
 		if (!Number.isInteger(settings.hierCluster.maxGenes)) settings.hierCluster.maxGenes = 100
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
+
+		const vocabApi = await vocabInit({
+			state: { vocab: { genome: gdcGenome, dslabel: gdcDslabel } }
+		})
+		vocabApi.getTermdbConfig()
 
 		const plotAppApi = await appInit({
 			debug: arg.debug,
@@ -212,12 +219,38 @@ export async function init(arg, holder, genomes) {
 		const api = {
 			type: 'hierCluster',
 			update: async _arg => {
+				console.log(214, _arg)
+				const plotConfig = plotAppApi.getState().plots.find(p => p.chartType == 'hierCluster')
 				if (!hierClusterApi) {
-					const plotConfig = plotAppApi.getState().plots.find(p => p.chartType == 'hierCluster')
 					if (plotConfig) hierClusterApi = plotAppApi.getComponents(`plots.${plotConfig.id}`)
 				}
 
-				if ('filter0' in _arg) {
+				if (_arg.genes) {
+					// user geneset as saved and reused from GFF, reshaped to be {gene: string}[]
+					const t0 = plotConfig.termgroups.find(g => g.type == 'hierCluster')
+					plotAppApi.dispatch({
+						type: 'plot_edit',
+						id: hierClusterApi.id,
+						config: {
+							termgroups: [
+								{
+									name: t0.name,
+									type: 'hierCluster',
+									lst: await Promise.all(
+										_arg.genes.map(async g => {
+											return await fillTermWrapper(
+												{
+													term: { gene: g.gene, type: 'geneExpression', name: g.gene }
+												},
+												vocabApi
+											)
+										})
+									)
+								}
+							]
+						}
+					})
+				} else if ('filter0' in _arg) {
 					plotAppApi.dispatch({
 						type: 'filter_replace',
 						filter0: _arg.filter0
