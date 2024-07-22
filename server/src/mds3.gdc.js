@@ -221,7 +221,8 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 				json: {
 					case_ids: cases4clustering,
 					gene_ids: ensgLst,
-					selection_size: ensgLst.length
+					selection_size: ensgLst.length,
+					min_median_log2_uqfpkm: 0.01
 				}
 			})
 			.json()
