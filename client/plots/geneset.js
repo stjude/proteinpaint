@@ -151,7 +151,6 @@ class GenesetComp {
 	}
 
 	async getTwLst(genes) {
-		// mode should equates to term type. if not the case then fix here
 		return await Promise.all(
 			// do tempfix of "data.genes.slice(0,3).map" for faster testing
 			genes.map(async i =>
