@@ -3,7 +3,8 @@ import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW, GeneVariantQ }
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '../../rx'
 import { GroupSettingMethods } from './groupsetting.ts'
-
+import { PredefinedGroupSetting, CustomGroupSetting } from '../../shared/types/index'
+import { GeneVariantGeneTerm } from '../../shared/types/index'
 /* 
 instance attributes
 
@@ -25,15 +26,16 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 
 		getPillStatus() {
 			if (self.q.groupsetting.inuse) {
-				const labels = []
+				const labels: string[] = []
 				labels.push(dt2label[self.q.dt])
-				const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt]?.byOrigin
-				if (byOrigin) labels.push(byOrigin[self.q.origin]?.label || self.q.origin)
-				if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-					const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+				const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt!]?.byOrigin
+				if (byOrigin && self.q.origin) labels.push(byOrigin[self.q.origin]?.label || self.q.origin)
+				if (Number.isInteger((self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx)) {
+					const groupset =
+						self.term.groupsetting['lst'][(self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx]
 					labels.push(groupset.name)
-				} else if (self.q.groupsetting.customset) {
-					const n = self.q.groupsetting.customset.groups.length
+				} else if ((self.q.groupsetting as CustomGroupSetting).customset) {
+					const n = (self.q.groupsetting as CustomGroupSetting).customset.groups.length
 					labels.push(`Divided into ${n} groups`)
 				} else {
 					throw 'unknown setting for groupsetting'
@@ -66,12 +68,16 @@ function setMethods(self) {
 }
 
 export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
-	if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop))) {
+	if (
+		!(tw.term as GeneVariantGeneTerm).gene &&
+		!(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop))
+	) {
 		// support saved states that have the older geneVariant term data shape
-		if (tw.term.name) tw.term.gene = tw.term.name
+		if (tw.term.name) (tw.term as GeneVariantGeneTerm).gene = tw.term.name
 		else throw 'no gene or position specified'
 	}
-	if (!tw.term.name) tw.term.name = tw.term.gene || `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
+	if (!tw.term.name)
+		tw.term.name = (tw.term as GeneVariantGeneTerm).gene || `${tw.term.chr}:${tw.term.start! + 1}-${tw.term.stop}`
 	if (!tw.term.id) tw.term.id = tw.term.name
 	if (!('type' in tw.q)) tw.q.type = 'values'
 
@@ -83,9 +89,9 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 
 	// groupsetting
 	// fill term.groupsetting
-	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
+	if (!tw.term.groupsetting) (tw.term.groupsetting as any) = geneVariantTermGroupsetting
 	// fill q.groupsetting
-	if (!tw.q.groupsetting) tw.q.groupsetting = {}
+	if (!tw.q.groupsetting) (tw.q.groupsetting as any) = {}
 	delete tw.q.groupsetting.disabled
 	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false
 	if (tw.q.groupsetting.inuse) {
@@ -100,9 +106,12 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 		}
 		// fill a single groupset index
 		const groupset_idxs = getGroupsetIdxs(tw.q.dt)
-		if (!Number.isInteger(tw.q.groupsetting.predefined_groupset_idx) && !tw.q.groupsetting.customset) {
+		if (
+			!Number.isInteger((tw.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx) &&
+			!(tw.q.groupsetting as CustomGroupSetting).customset
+		) {
 			tw.q.type = 'predefined-groupset'
-			tw.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+			;(tw.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx = groupset_idxs[0]
 		}
 	}
 
@@ -232,7 +241,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 	// radio buttons for variant origin
 	function mayMakeOriginRadios() {
-		const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt]?.byOrigin
+		const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[(self.q as any).dt]?.byOrigin
 		if (!byOrigin) {
 			delete self.q.origin
 			originDiv.style('display', 'none')
@@ -261,11 +270,14 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	function makeGroupsetRadios(groupset_idxs) {
 		groupsetDiv.selectAll('*').remove()
 		groupsetDiv.append('div').style('font-weight', 'bold').text('Variant grouping')
-		if (!Number.isInteger(self.q.groupsetting.predefined_groupset_idx) && !self.q.groupsetting.customset) {
+		if (
+			!Number.isInteger((self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx) &&
+			!(self.q.groupsetting as CustomGroupSetting).customset
+		) {
 			self.q.type = 'predefined-groupset'
-			self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+			;(self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx = groupset_idxs[0]
 		}
-		const isPredefined = Number.isInteger(self.q.groupsetting.predefined_groupset_idx)
+		const isPredefined = Number.isInteger((self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx)
 		// radios for whether to use predefined groups or custom groups
 		const radios = make_radios({
 			holder: groupsetDiv,
@@ -276,8 +288,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			callback: async v => {
 				if (v == 'predefined') {
 					self.q.type = 'predefined-groupset'
-					self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
-					delete self.q.groupsetting.customset
+					;(self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx = groupset_idxs[0]
+					delete self.q.groupsetting['customset']
 				} else {
 					predefinedGroupsetDiv.style('display', 'none')
 					makeCustomGroups()
@@ -296,17 +308,21 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			// make radios for predefined groupsetting options
 			predefinedGroupsetDiv.style('display', 'block')
 			predefinedGroupsetDiv.selectAll('*').remove()
-			if (!Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-				self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
+			if (!Number.isInteger((self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx)) {
+				;(self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx = groupset_idxs[0]
 			}
 			make_radios({
 				holder: predefinedGroupsetDiv,
 				options: groupset_idxs.map(i => {
-					const groupset = self.term.groupsetting.lst[i]
-					return { label: groupset.name, value: i, checked: i == self.q.groupsetting.predefined_groupset_idx }
+					const groupset = (self.term.groupsetting as PredefinedGroupSetting).lst[i]
+					return {
+						label: groupset.name,
+						value: i,
+						checked: i == (self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx
+					}
 				}),
 				callback: async v => {
-					self.q.groupsetting.predefined_groupset_idx = v
+					;(self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx = v
 					await makeRadiosForGrouping()
 				}
 			})
@@ -322,22 +338,24 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		// dt is either CNV or SV Fusion
 		// use fixed groupsetting
 		draggablesDiv.style('display', 'none')
-		delete self.groupSettingInstance
+		delete self['groupSettingInstance']
 		groupsetDiv.selectAll('*').remove()
 		groupsetDiv.append('div').style('font-weight', 'bold').text('Variant grouping')
 		self.q.type = 'predefined-groupset'
-		self.q.groupsetting.predefined_groupset_idx = groupset_idxs[0]
-		const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+		;(self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx = groupset_idxs[0]
+		const groupset = (self.term.groupsetting as PredefinedGroupSetting).lst[
+			(self.q.groupsetting as PredefinedGroupSetting).predefined_groupset_idx
+		]
 		groupsetDiv.append('div').style('margin', '5px 0px 0px 10px').text(groupset.name)
 	}
 
 	// function for preparing custom groups
 	function makeCustomGroups() {
 		self.q.type = 'custom-groupset'
-		delete self.q.groupsetting.predefined_groupset_idx
+		delete self.q.groupsetting['predefined_groupset_idx']
 		const dt = self.category2samplecount.find(i => i.dt == self.q.dt)
-		const classes = dt.classes.byOrigin ? dt.classes.byOrigin[self.q.origin] : dt.classes
-		if (!self.q.groupsetting.customset) {
+		const classes = dt.classes.byOrigin ? dt.classes.byOrigin[self.q.origin!] : dt.classes
+		if (!(self.q.groupsetting as CustomGroupSetting).customset) {
 			const groups = [
 				{
 					name: 'Group 1',
@@ -352,7 +370,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 					values: []
 				}
 			]
-			self.q.groupsetting.customset = { groups }
+			;(self.q.groupsetting as any).customset = { groups }
 		}
 	}
 
@@ -360,8 +378,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	async function mayMakeGroupsetDraggables() {
 		draggablesDiv.style('display', 'inline-block')
 		draggablesDiv.selectAll('*').remove()
-		self.groupSettingInstance = new GroupSettingMethods(self, { holder: draggablesDiv, hideApply: true })
-		await self.groupSettingInstance.main()
+		self['groupSettingInstance'] = new GroupSettingMethods(self, { holder: draggablesDiv, hideApply: true })
+		await self['groupSettingInstance'].main()
 	}
 
 	// Apply button
@@ -371,7 +389,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.style('display', 'block')
 		.text('Apply')
 		.on('click', () => {
-			if (self.q.groupsetting.inuse && self.groupSettingInstance) self.groupSettingInstance.processDraggables()
+			if (self.q.groupsetting.inuse && self['groupSettingInstance']) self['groupSettingInstance'].processDraggables()
 			self.runCallback()
 		})
 
@@ -458,8 +476,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 }
 
 // get dts specified in dataset
-function getDsDts(ds_queries) {
-	const ds_dts = []
+function getDsDts(ds_queries: any) {
+	const ds_dts: number[] = []
 	for (const query of Object.keys(ds_queries)) {
 		if (query == 'snvindel') ds_dts.push(dtsnvindel)
 		else if (query == 'cnv') ds_dts.push(dtcnv)
@@ -480,5 +498,5 @@ function getGroupsetIdxs(dt) {
 function clearGroupset(self) {
 	delete self.q.groupsetting.predefined_groupset_idx
 	delete self.q.groupsetting.customset
-	delete self.groupSettingInstance
+	delete self['groupSettingInstance']
 }

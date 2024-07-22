@@ -84,6 +84,8 @@ export type EmptyGroupSetting = {
 	disabled?: true
 }
 
+export type GroupSetting = PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
+
 export type BaseTerm = {
 	id: string
 	name: string
@@ -93,7 +95,7 @@ export type BaseTerm = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
-	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
+	groupsetting: GroupSetting
 	bins?: PresetNumericBins
 }
 export type Term = BaseTerm &
@@ -114,20 +116,6 @@ export type RangeEntry = {
 	label?: string //for binconfig.lst[]
 	value?: string //for tvs.ranges[]
 	range?: any //No idea what this is
-}
-
-export type GroupSetting = {
-	/** If true, apply and will require the following attributes */
-	inuse?: boolean
-	disabled?: boolean
-	useIndex?: number
-	/**Value is array index of term.groupsetting.lst[] */
-	predefined_groupset_idx?: number
-	lst?: GroupSetEntry[]
-	/** When “predefined_groupset_idx” is undefined, will use this set of groups.
-	This is a custom set of groups either copied from predefined set, or created with UI.
-	Custom set definition is the same as a predefined set. */
-	customset?: BaseGroupSet
 }
 
 export type BaseQ = {
@@ -168,7 +156,7 @@ export type BaseQ = {
 		| 'custom-groupset'
 		| 'custom-samplelst'
 
-	groupsetting?: GroupSetting // TODO XXX FIXME clean up all these mess!!!!
+	groupsetting?: GroupSetting
 }
 
 /*** types supporting Term types ***/
