@@ -144,6 +144,7 @@ class singleCellPlot {
 					type: 'plot_create',
 					config: {
 						chartType: 'violin',
+						settings: { violin: { plotThickness: 50 } },
 						term: {
 							term: {
 								type: TermTypes.SINGLECELL_GENE_EXPRESSION,
