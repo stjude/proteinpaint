@@ -1,4 +1,4 @@
-import { SvgG } from 'types/d3'
+import { SvgG } from '../../../types/d3'
 import { ChrsTooltips } from '../genome/ChrsTooltips'
 import { Selection } from 'd3-selection'
 

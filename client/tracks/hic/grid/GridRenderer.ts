@@ -1,5 +1,5 @@
 import { Grid } from './Grid.ts'
-import { SvgSvg, SvgG } from 'types/d3'
+import { SvgSvg, SvgG } from '../../../types/d3'
 
 export class GridRenderer {
 	private svg: SvgSvg

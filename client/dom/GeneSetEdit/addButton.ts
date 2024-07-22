@@ -1,4 +1,4 @@
-import { Button, Div } from 'types/d3'
+import { Button, Div } from '../../types/d3'
 
 type AddBtnOpts = {
 	/** div to append the button */

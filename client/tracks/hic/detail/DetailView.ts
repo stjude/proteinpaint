@@ -5,7 +5,7 @@ import { DetailBlock } from './DetailBlock.ts'
 import { select, Selection } from 'd3-selection'
 import { DetailDataMapper } from '../data/DetailDataMapper.ts'
 import { DetailCoordinates } from '../data/DetailCoodinates.ts'
-import { Elem } from 'types/d3'
+import { Elem } from '../../../types/d3'
 
 export class DetailView {
 	app: any
