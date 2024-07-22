@@ -9,7 +9,6 @@ import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 import { TermTypes } from '../../shared/terms'
 import { debounce } from 'debounce'
-// import { sayerror } from '../sayerror'
 
 type API = {
 	dom: {
@@ -22,8 +21,6 @@ type API = {
 		clearBtn: Button
 		/** on click populates the geneHoldingDiv with original gene list */
 		restoreBtn: Button | null
-		/** Show user errors on command */
-		errorDiv: Div
 		/** gene holding area, shows bunch of gene buttons pending submission */
 		geneHoldingDiv: Div
 		/** legend area, to show available stats legend on genes */
@@ -115,10 +112,14 @@ export class GeneSetEditUI {
 		}
 
 		const headerDiv = div.append('div')
-		//.style('white-space','nowrap')
+
 		const label = headerDiv.append('label')
 		label.append('span').html('Search')
-		const row = label.append('span')
+		const row = label
+			.append('div')
+			.style('display', 'inline-flex')
+			.style('align-items', 'center')
+			.style('margin', '8px 0px -5px 0px')
 
 		// a holder to render optional buttons
 		const controlDiv = headerDiv
@@ -165,7 +166,6 @@ export class GeneSetEditUI {
 							}
 					  })
 					: null,
-				errorDiv: div.append('div').style('padding-top', '15px'),
 				geneHoldingDiv: this.renderGeneHoldingDiv(div),
 				statLegendDiv: div.append('div'),
 				submitBtn: addButton({
@@ -341,13 +341,6 @@ export class GeneSetEditUI {
 							if (result.genes) {
 								for (const gene of result.genes) this.geneList.push({ gene })
 							}
-							// if (result.notFound.length) {
-							// 	sayerror(
-							// 		this.api.dom.errorDiv,
-							// 		`Gene${result.notFound.length > 1 ? 's' : ''} not found: ${result.notFound.join(', ')}`
-							// 	)
-							// 	setTimeout(() => this.api.dom.errorDiv.selectAll('*').remove(), 10000)
-							// }
 							this.renderGenes()
 						}
 					})
@@ -368,7 +361,6 @@ export class GeneSetEditUI {
 					label: `${tdb.label} gene set`,
 					callback: async () => {
 						this.tip2.clear().showunder(this.api.dom.textControlDiv.node()!)
-						// this.tip2.clear().showunder(event.target)
 						const termdb = await import('../../termdb/app.js')
 						termdb.appInit({
 							holder: this.tip2.d,
