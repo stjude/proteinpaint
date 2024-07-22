@@ -183,7 +183,6 @@ export async function getPlotConfig(opts, app) {
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
 		const config = copyMerge(structuredClone(defaults), opts)
 		const settings = getDefaultProfilePlotSettings()
-		settings.showTable = true
 		config.settings = {
 			profilePolar: settings,
 			controls: { isOpen: true }

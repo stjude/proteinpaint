@@ -38,7 +38,7 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const widht = 1550
+		const widht = 1300
 		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -68,7 +68,7 @@ class profileRadarFacility extends profilePlot {
 		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 420},${y + 10})`)
 
 		const rows = []
-		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Global' }]
+		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: `Facility` }, { label: 'Global' }]
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -78,7 +78,8 @@ class profileRadarFacility extends profilePlot {
 		for (const item of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
 			this.addData(iangle, i, data2, true)
-			const row = [{ value: item.module }, { value: this.getPercentage(item) }]
+			const color = item.score.term.color
+			const row = [{ color, disabled: true }, { value: item.module }, { value: this.getPercentage(item) }]
 
 			this.addData(iangle, i, data, false)
 			row.push({ value: this.getPercentage(item, true) })
