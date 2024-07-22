@@ -55,8 +55,8 @@ class singleCellPlot {
 		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const headerDiv = mainDiv.append('div').style('padding', '10px')
 		const tableDiv = mainDiv.append('div')
-		const showDiv = headerDiv.append('div').style('display', 'inline-block')
-		const searchGeneDiv = headerDiv.append('div').style('padding', '10px').style('display', 'inline-block')
+		const showDiv = headerDiv.append('div') //.style('display', 'inline-block')
+		const searchGeneDiv = headerDiv.append('div').style('padding-top', '10px').style('display', 'inline-block')
 
 		if (this.tableOnPlot) {
 			showDiv
@@ -98,18 +98,21 @@ class singleCellPlot {
 				geneOnly: true,
 				placeholder: state.config.gene || 'Gene',
 				callback: () => {
-					violinBt?.property('disabled', false)
+					violinBt?.style('display', 'inline-block')
+					select?.style('display', 'inline-block')
+
 					const gene = geneSearch.geneSymbol
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene } })
 				},
 				emptyInputCallback: () => {
-					violinBt.property('disabled', true)
+					violinBt.style('display', 'none')
+					select.style('display', 'none')
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene: null } })
 				},
 				hideHelp: true,
 				focusOff: true
 			})
-			const select = searchGeneDiv.append('select')
+			const select = searchGeneDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 			for (const plot of state.termdbConfig?.queries.singleCell.data.plots) {
 				select.append('option').text(plot.colorColumn)
 			}
@@ -128,7 +131,7 @@ class singleCellPlot {
 				.append('button')
 				.text('Open violin')
 				.style('margin-left', '2px')
-				.property('disabled', state.config.gene ? false : true)
+				.style('display', state.config.gene ? 'inline-block' : 'none')
 			violinBt.on('click', () => {
 				const gene = geneSearch.geneSymbol || state.config.gene
 				const name = this.state.config.plots.find(p => p.colorColumn == select.node().value).name
