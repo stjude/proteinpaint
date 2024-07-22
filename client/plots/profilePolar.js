@@ -71,7 +71,7 @@ class profilePolar extends profilePlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.style('margin-top', '45px')
+			.style('margin', '45px 20px')
 
 		this.svg
 			.append('text')
