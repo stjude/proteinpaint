@@ -61,7 +61,9 @@ class Facet {
 				.text(label)
 		}
 		const categories2 = this.getCategories(config.term2, result.lst)
+		const cells = {}
 		for (const category2 of categories2) {
+			cells[category2] = {}
 			const tr = tbody.append('tr')
 			const label2 = config.term2.term.values?.[category2]?.label || category2
 			tr.append('td').style('background-color', '#FAFAFA').style('font-weight', 'bold').text(label2)
@@ -69,24 +71,59 @@ class Facet {
 				const samples = result.lst.filter(
 					s => s[config.term.$id]?.key == category && s[config.term2.$id]?.key == category2
 				)
+				cells[category2][category] = { samples, selected: false }
 				const td = tr.append('td').style('background-color', '#FAFAFA')
 				if (samples.length > 0)
-					td.append('a')
-						.text(samples.length)
+					td.text(samples.length) //.append('a')
 						.on('click', () => {
-							this.app.dispatch({
-								type: 'plot_create',
-								config: {
-									chartType: 'sampleView',
-									samples: samples.map(d => ({
-										sampleId: d.sample,
-										sampleName: result.refs.bySampleId[d.sample].label
-									}))
+							const selected = (cells[category2][category].selected = !cells[category2][category].selected)
+							if (selected) {
+								td.style('border', '1px solid blue')
+							} else {
+								td.style('border', 'none')
+							}
+
+							for (const category2 of categories2) {
+								for (const category of categories) {
+									if (cells[category2][category].selected) {
+										showSamplesBt.property('disabled', false)
+										return
+									}
 								}
-							})
+							}
+							showSamplesBt.property('disabled', true)
 						})
 			}
 		}
+		const buttonDiv = this.dom.mainDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('margin', '20px')
+			.style('float', 'right')
+		const showSamplesBt = buttonDiv
+			.append('button')
+			.property('disabled', true)
+			.text('Show samples')
+			.on('click', () => {
+				const samples = []
+				for (const category2 of categories2) {
+					for (const category of categories) {
+						if (cells[category2][category].selected) {
+							samples.push(...cells[category2][category].samples)
+						}
+					}
+				}
+				this.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'sampleView',
+						samples: samples.map(d => ({
+							sampleId: d.sample,
+							sampleName: result.refs.bySampleId[d.sample].label
+						}))
+					}
+				})
+			})
 	}
 
 	getCategories(tw, data) {
