@@ -1160,21 +1160,23 @@ export class MatrixControls {
 			}) //To do, selectedGroup.lst may replace name with gene as well
 			new GeneSetEditUI({
 				holder,
+				genome: app.opts.genome,
+				geneList,
+				customInputs: this.parent.opts.customInputs?.geneset,
 				/* running hier clustering and the editing group is the group used for clustering
 			pass this mode value to inform ui to support the optional button "top variably exp gene"
 			this is hardcoded for the purpose of gene expression and should be improved
 			*/
-				genome: app.opts.genome,
-				geneList,
+
 				mode: selectedGroup.mode,
-				minNumGenes: selectedGroup.mode == 'expression' ? 3 : 1,
+				minNumGenes: selectedGroup.mode == 'geneExpression' ? 3 : 1,
 				vocabApi: this.opts.app.vocabApi,
 				callback: async ({ geneList, groupName }) => {
 					if (!selectedGroup) throw `missing selectedGroup`
 					tip.hide()
 					const group = selectedGroup.status == 'new' ? { name: groupName, lst: [] } : tg[selectedGroup.index]
 					if (selectedGroup.status == 'new') tg.push(group)
-					const targetTermType = selectedGroup.mode == 'expression' ? 'geneExpression' : 'geneVariant'
+					const targetTermType = selectedGroup.mode // == 'expression' ? 'geneExpression' : 'geneVariant'
 					// remove gene terms to be replaced by the new lst, keep all other term types in the group
 					const lst = group.lst.filter(tw => tw.term.type != targetTermType)
 					const tws = await Promise.all(
@@ -1263,47 +1265,47 @@ export class MatrixControls {
 				triggerGenesetEdit(tip.d.append('div'))
 			})
 
-		if (parent.opts.customInputs?.geneset) {
-			for (const btn of parent.opts.customInputs.geneset) {
-				td.append('button')
-					.html(btn.label)
-					.on('click', () => {
-						tip.hide()
-						btn.showInput({
-							callback: genesArr => {
-								const geneLst = genesArr.map(gene => ({ gene }))
-								// TODO: this may not be the first term group
-								let group = tg.find(g => g.lst.find(tw => tw.term?.type == 'geneVariant'))
-								if (!group) group = tg[0]
-								const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
-								const tws = geneLst.map(d => {
-									//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-									let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
-									if (!tw)
-										tw = {
-											$id: get$id(),
-											term: {
-												name: d.symbol || d.gene,
-												type: 'geneVariant'
-											},
-											q: {}
-										}
-									return tw
-								})
-								group.lst = [...lst, ...tws]
-								if (!group.lst.length) tg.splice(selectedGroup.index, 1)
-								app.dispatch({
-									type: 'plot_edit',
-									id: this.parent.id,
-									config: {
-										termgroups: tg
-									}
-								})
-							}
-						})
-					})
-			}
-		}
+		// if (parent.opts.customInputs?.geneset) {
+		// 	for (const btn of parent.opts.customInputs.geneset) {
+		// 		td.append('button')
+		// 			.html(btn.label)
+		// 			.on('click', () => {
+		// 				tip.hide()
+		// 				btn.showInput({
+		// 					callback: genesArr => {
+		// 						const geneLst = genesArr.map(gene => ({ gene }))
+		// 						// TODO: this may not be the first term group
+		// 						let group = tg.find(g => g.lst.find(tw => tw.term?.type == 'geneVariant'))
+		// 						if (!group) group = tg[0]
+		// 						const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+		// 						const tws = geneLst.map(d => {
+		// 							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+		// 							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+		// 							if (!tw)
+		// 								tw = {
+		// 									$id: get$id(),
+		// 									term: {
+		// 										name: d.symbol || d.gene,
+		// 										type: 'geneVariant'
+		// 									},
+		// 									q: {}
+		// 								}
+		// 							return tw
+		// 						})
+		// 						group.lst = [...lst, ...tws]
+		// 						if (!group.lst.length) tg.splice(selectedGroup.index, 1)
+		// 						app.dispatch({
+		// 							type: 'plot_edit',
+		// 							id: this.parent.id,
+		// 							config: {
+		// 								termgroups: tg
+		// 							}
+		// 						})
+		// 					}
+		// 				})
+		// 			})
+		// 	}
+		// }
 	}
 
 	setMenuBackBtn(holder, callback) {
