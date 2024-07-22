@@ -10,6 +10,8 @@ export class SearchHandler {
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
 			row: opts.holder,
+			snpOnly: true,
+			allowVariant: true,
 			callback: () => this.selectSnp(geneSearch),
 			hideHelp: true,
 			focusOff: true
@@ -17,8 +19,33 @@ export class SearchHandler {
 	}
 
 	async selectSnp(geneSearch) {
-		const { chr, start, stop, ref, alt, fromWhat } = geneSearch
-		if (!chr || !start || !stop || !ref || !alt || !fromWhat) throw 'missing snp metadata'
-		this.callback({ id: fromWhat, chr, start, stop, name: fromWhat, ref, alt, type: 'snp' })
+		const { chr, ref, alt, fromWhat } = geneSearch
+		if (!chr || !ref || !alt || !fromWhat) throw 'missing chr, ref, alt, or fromWhat of snp'
+		let start: number, stop: number
+		if (!geneSearch.start && !geneSearch.stop) {
+			if (geneSearch.pos) {
+				// coordinate is .pos if input to geneSearch was
+				// in variant/hgvs format
+				// TODO: harmonize geneSearch output (also see TODO below)
+				start = geneSearch.pos - 1
+				stop = geneSearch.pos
+			} else {
+				throw 'missing coordinate of snp'
+			}
+		} else {
+			start = geneSearch.start
+			stop = geneSearch.stop
+		}
+		const term = {
+			id: fromWhat,
+			chr,
+			start,
+			stop,
+			name: fromWhat,
+			ref,
+			alt: typeof alt == 'string' ? [alt] : alt, // is string if input to geneSearch was in variant or hgvs format // TODO: update genesearch.ts to parse alternative alleles from any input format into arrays
+			type: 'snp'
+		}
+		this.callback(term)
 	}
 }

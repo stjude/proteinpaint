@@ -32,6 +32,12 @@ type GeneSearchBoxArg = {
     cannot map isoform to gene name!
     (later may need geneOrIsoform flag to query both) */
 	geneOnly?: boolean
+	/** optional
+	if true, search for only snps
+	user must select a single snp
+	input can be dbSNP id, position, or variant format (chr.pos.ref.alt)
+	**/
+	snpOnly?: boolean
 	/** if true, allow to enter chr.pos.ref.alt or hgvs (see next section)
     otherwise, only allow chr:start-stop */
 	allowVariant?: boolean
@@ -95,7 +101,7 @@ partial support of hgvs https://varnomen.hgvs.org/recommendations/DNA/
 limited to substitution/insertion/deletion on "g."
 other references (o. m. c. n.) are not supported
 
-entered positions are 1-based, parse to 0-based
+entered positions are 1-based, parse to 0-based (TODO: this needs to be verified)
 
 snv
     given chr14:g.104780214C>T
@@ -123,8 +129,6 @@ insertion
     parse to chr5.171410539.-.TCTG
 */
 
-// TODO: create a new flag or mode for querying a single snp
-
 export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
 		row = arg.row
@@ -138,7 +142,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		placeholder = 'Gene'
 		width = 100 // use shorter width for inputting only one gene name
 	} else {
-		placeholder = 'Gene, position'
+		placeholder = arg.snpOnly ? 'Position' : 'Gene, position'
 		if (arg.genome.hasSNP) {
 			placeholder += ', dbSNP'
 			width += 40
@@ -190,50 +194,61 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				input.blur()
 				tip.hide()
 
-				if (arg.geneOnly) {
-					// searching gene only, yield result here
-					const hitgene = tip.d.select('.sja_menuoption')
-					if (hitgene.size() > 0 && hitgene.attr('isgene')) {
-						// matched with gene names, use the first one
-						const geneSymbol = hitgene.text()
-						getResult({ geneSymbol }, v)
-					} else {
-						// err
-						getResult(null, 'not a gene')
+				// try to parse as gene
+				// get first gene match from menu
+				if (!arg.snpOnly) {
+					const hitgene = tip.d.select(".sja_menuoption[isgene='1']")
+					if (hitgene.size()) {
+						// gene match
+						const geneSymbol = hitgene.datum()
+						arg.geneOnly ? getResult({ geneSymbol }, geneSymbol) : await geneCoordSearch(geneSymbol)
+						return
 					}
+				}
+				if (arg.geneOnly) {
+					getResult(null, 'Gene not found')
 					return
 				}
 
-				// if input can be parsed as either variant or coord
-				// then no need to match with gene/snp
-
+				// try to parse as variant format (chr.pos.ref.alt)
 				if (arg.allowVariant) {
 					const variant = await string2variant(v, arg.genome)
 					if (variant) {
-						getResult(variant, 'Valid variant')
+						getResult(variant, v)
 						return
 					}
 				}
 
+				// try to parse as snp (i.e., dbsnp entry)
+				// get first snp match from menu
+				const hitsnp = tip.d.select(".sja_menuoption[issnp='1']")
+				if (hitsnp.size()) {
+					// snp match
+					const hit = hitsnp.datum()
+					getResult(
+						{ chr: hit.chrom, start: hit.chromStart, stop: hit.chromEnd, ref: hit.ref, alt: hit.alt },
+						hit.name || v
+					)
+					return
+				}
+
+				if (arg.snpOnly) {
+					getResult(null, 'Variant not found')
+					return
+				}
+
+				// try to parse as coord
 				const pos = string2pos(v, arg.genome)
 				if (pos) {
-					// input is coordinate
 					getResult(pos, 'Valid coordinate')
 					return
 				}
-				// input is not coord; see if tip is showing gene matches
-				input.disabled = true
-				const hitgene = tip.d.select('.sja_menuoption')
-				if (hitgene.size() > 0 && hitgene.attr('isgene')) {
-					// matched with some gene names, query the first one
-					await geneCoordSearch(hitgene.text())
-				} else {
-					// directly search with input string for gene/snp match
-					await geneCoordSearch(v)
-				}
-				input.disabled = false
+
+				// no match
+				getResult(null, 'No match')
 				return
 			}
+
 			if (event.code == 'Escape') {
 				// abandon changes to <input>
 				tip.hide()
@@ -275,129 +290,139 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		word: row.append('span').style('margin-left', '5px').style('font-size', '.8em').style('opacity', 0.6)
 	}
 
-	async function inputIsCoordOrGenename() {
-		// doing quick check only, no snp query
-		// first check if input is coord; if so return and do not query for gene
-		// otherwise, query for gene name match
+	async function checkInput() {
+		// checking input format
 		const v = searchbox.property('value').trim()
 		if (!v) return
+		tip.showunder(searchbox.node()).clear()
 
-		if (arg.allowVariant) {
-			const variant = await string2variant(v, arg.genome)
-			if (variant) {
-				// is valid variant
-				// do not write to result
-				//getResult(variant, 'Valid variant')
+		// see if input is gene
+		if (!arg.snpOnly) {
+			const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: v } })
+			if (gene.error) throw gene.error
+			if (gene.hits?.length) {
+				tip.d
+					.selectAll('div')
+					.data(gene.hits)
+					.join('div')
+					.text(d => d)
+					.attr('class', 'sja_menuoption')
+					.style('border-radius', '0px')
+					.attr('isgene', 1)
+					.on('click', async (event, d) => {
+						if (arg.geneOnly) {
+							// finding gene only, got result
+							getResult({ geneSymbol: d }, d)
+							tip.hide()
+						} else {
+							// convert gene symbol to coord
+							await geneCoordSearch(d)
+						}
+					})
 				return
 			}
+		}
+
+		if (arg.geneOnly) return
+
+		// see if input is in variant format (chr.pos.ref.alt)
+		if (arg.allowVariant) {
+			const variant = await string2variant(v, arg.genome)
+			if (variant) return
+		}
+
+		// see if input is dbsnp id
+		const dbsnp = await dofetch3('snp', { body: { byName: true, genome: arg.genome.name, lst: [v] } })
+		if (dbsnp.error) throw dbsnp.error
+		if (dbsnp.results.length) {
+			// display hits in menu
+			displayVariantHits(tip, dbsnp.results)
+			return
 		}
 
 		// see if input is coord
 		const pos = string2pos(v, arg.genome, true)
 		if (pos) {
-			// input is coordinate
-			/*
-            const r = { chr: pos.chr, start: pos.start, stop: pos.stop }
-            if(pos.actualposition) {
-                r.start = pos.actualposition.position
-                r.stop = pos.actualposition.position+pos.actualposition.len
-            }
-            getResult(r, 'Valid coordinate')
-            */
+			if (arg.snpOnly) {
+				// only search for snps
+				// query dbsnp for snps with matching positions
+				// TODO: querying a position query where start=stop (e.g.,
+				// chr1:3-3) is currently not supported, but it should be.
+				// This should be supported when string2pos() is changed
+				// to always output 0-based position/coordinate (see the
+				// TODO below)
+				if (!pos.actualposition?.len) return
+				const chr = pos.chr
+				const start = pos.actualposition.position - 1 // convert to 0-based // TODO: should change string2pos() to always output 0-based position/coordinate
+				const stop = start + pos.actualposition.len
+				const ranges = [{ start, stop }]
+				const dbsnp = await dofetch3('snp', { body: { byCoord: true, genome: arg.genome.name, chr, ranges } })
+				if (dbsnp.error) throw dbsnp.error
+				if (dbsnp.results.length) {
+					/* dbsnp hits found
+					- hits will include variants whose coordinates overlap
+					with, but may not match the query coordinates (e.g.,
+					an indel will overlap with query coordinates, but its start coordinate may not match query start coordinate)
+					- if query is for multiple bases (e.g., chr1:1-5), then
+					display all hits
+					- if query is for a single base (e.g., chr1:3 or
+					chr1:3-4), then display hits whose start coordinate matches the query start coordinate*/
+					const variants =
+						pos.actualposition.len == 1 ? dbsnp.results.filter(hit => hit.chromStart == start) : dbsnp.results
+					// display variants in menu
+					displayVariantHits(tip, variants)
+				}
+			}
 			return
 		}
-
-		// input is neither variant or coord
-		// query for gene
-
-		tip.showunder(searchbox.node()).clear()
-		try {
-			const data = await dofetch3('genelookup', {
-				body: { genome: arg.genome.name, input: v }
-			})
-			if (data.error) throw data.error
-			if (!data.hits || data.hits.length == 0) return tip.hide()
-			for (const s of data.hits) {
-				tip.d
-					.append('div')
-					.text(s)
-					.attr('class', 'sja_menuoption')
-					.style('border-radius', '0px')
-					.attr('isgene', 1)
-					.on('click', () => {
-						if (arg.geneOnly) {
-							// finding gene only, got result
-							getResult({ geneSymbol: s }, s)
-							tip.hide()
-						} else {
-							// convert gene symbol to coord
-							geneCoordSearch(s)
-						}
-					})
-			}
-		} catch (e: any) {
-			tip.d.append('div').text(e.message || e)
-		}
 	}
-	const debouncer = debounce(inputIsCoordOrGenename, 500)
+	const debouncer = debounce(checkInput, 500)
 
-	async function geneCoordSearch(s: string) {
+	function displayVariantHits(tip, data) {
+		tip.d
+			.selectAll('div')
+			.data(data)
+			.join('div')
+			.text(d => {
+				const pos = `${d.chrom}:${d.chromStart + 1}`
+				const alleles = `${d.ref}>${d.alt.join(',')}`
+				return `${d.name} (${pos} ${alleles})`
+			})
+			.attr('class', 'sja_menuoption')
+			.style('border-radius', '0px')
+			.attr('issnp', 1)
+			.on('click', (event, d) => {
+				getResult({ chr: d.chrom, start: d.chromStart, stop: d.chromEnd, ref: d.ref, alt: d.alt }, d.name)
+				tip.hide()
+			})
+	}
+
+	async function geneCoordSearch(geneSymbol: string) {
+		// geneSymbol is a valid gene symbol
+		// retrieve its coordinates
 		tip.hide()
-		try {
-			const data = await dofetch3('genelookup', {
-				body: { genome: arg.genome.name, input: s, deep: 1 }
-			})
-			if (data.error) throw data.error
-			if (!data.gmlst || data.gmlst.length == 0) {
-				// no match to gene
-				if (arg.genome.hasSNP) {
-					if (s.toLowerCase().startsWith('rs')) {
-						// genome has snp and input looks like a snp
-						await searchSNP(s)
-					} else {
-						getResult(null, 'Not a gene or SNP')
-					}
-				} else {
-					getResult(null, 'No match to gene name')
-				}
-				return
-			}
-			// matches with some isoforms
-			const loci = gmlst2loci(data.gmlst)
-			if (loci.length == 1) {
-				// all isoforms are at the same locus
-				// in case searched by isoform, check gmlst[0].name as gene name instead
-				const geneSymbol = data.gmlst[0].name || s
-				getResult(loci[0], s, geneSymbol)
-				return
-			}
-			// isoform are spread across multiple discontinuous loci
-			tip.showunder(searchbox.node()).clear()
-			for (const r of loci) {
-				tip.d
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.style('border-radius', '0px')
-					.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
-					.on('click', () => {
-						tip.hide()
-						getResult(r, s + ', ' + r.name, r.name)
-					})
-			}
-		} catch (e: any) {
-			getResult(null, e.message || e)
-		}
-	}
-
-	async function searchSNP(s: string) {
-		const data = await dofetch3('snp', {
-			body: { byName: true, genome: arg.genome.name, lst: [s] }
-		})
+		const data = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: geneSymbol, deep: 1 } })
 		if (data.error) throw data.error
-		if (!data.results || data.results.length == 0) throw 'Not a gene or SNP'
-		// TODO: if #snps > 1, then display snp hits in a menu
-		const r = data.results[0]
-		getResult({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd, ref: r.ref, alt: r.alt }, s)
+		if (!data.gmlst?.length) throw 'cannot retrieve gene coordinates'
+		const loci = gmlst2loci(data.gmlst)
+		if (loci.length == 1) {
+			// all isoforms are at the same locus
+			getResult(loci[0], geneSymbol, geneSymbol)
+			return
+		}
+		// isoforms are spread across multiple discontinuous loci
+		tip.showunder(searchbox.node()).clear()
+		tip.d
+			.selectAll('div')
+			.data(loci)
+			.join('div')
+			.attr('class', 'sja_menuoption')
+			.style('border-radius', '0px')
+			.text(d => d.name + ' ' + d.chr + ':' + d.start + '-' + d.stop)
+			.on('click', (event, d) => {
+				tip.hide()
+				getResult(d, geneSymbol + ', ' + d.name, d.name)
+			})
 	}
 
 	const result: Result = {}

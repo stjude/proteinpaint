@@ -77,6 +77,9 @@ export async function searchSNP(q, genome) {
 			for (const snp of snps) {
 				const hit = snp2hit(snp)
 				if (q.alleleLst) {
+					/*
+					TODO: output of utils.query_bigbed_by_coord() is not guaranteed to yield variants with the same start position, even if r.stop - r.start is a single base (see documentation for bigBedToBed). Therefore, the alleles in q.alleleLst[] may be checked against variants with different start position.
+					*/
 					// given alleles must be found in a snp for it to be returned
 					let missing = false
 					for (const i of q.alleleLst) {
