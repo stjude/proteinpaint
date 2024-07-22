@@ -29,10 +29,10 @@ const notifyDiv = select('body')
 
 let sse,
 	initialLoad = 0
-setSse()
 
 const host = sessionStorage.getItem('hostURL') || window.testHost || ''
 const sseUrl = host.endsWith('/') ? `${host}sse` : `${host}/sse`
+setSse()
 
 function setSse() {
 	// server-sent events

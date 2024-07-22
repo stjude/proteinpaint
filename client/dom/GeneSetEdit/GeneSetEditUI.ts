@@ -90,12 +90,14 @@ export class GeneSetEditUI {
 	minNumGenes: number
 	geneList: Gene[]
 	titleText?: string
+	customInputs?: any
 
 	constructor(opts: GeneSetEditArg) {
 		this.holder = opts.holder
 		this.genome = opts.genome
 		this.callback = opts.callback
 		this.vocabApi = opts.vocabApi
+		this.customInputs = opts.customInputs
 		this.geneList = structuredClone(opts.geneList || [])
 		this.tip2 = new Menu({ padding: '0px', parent_menu: opts.holder.node(), test: 'test' })
 		this.minNumGenes = opts.minNumGenes || 0
@@ -388,6 +390,15 @@ export class GeneSetEditUI {
 				})
 			}
 		}
+		if (this.customInputs) {
+			for (const btn of this.customInputs) {
+				this.menuList.push({
+					label: btn.label,
+					callback: btn.showInput,
+					arg: 'callback'
+				})
+			}
+		}
 	}
 
 	renderTextControls(div: Div) {
@@ -399,7 +410,8 @@ export class GeneSetEditUI {
 				.style('color', 'black')
 				.html(`${menu.label} &#9660;`)
 				.on('click', async (event: Event) => {
-					await menu.callback(event)
+					if (menu.arg == 'callback') menu.callback({ callback: this.callback })
+					else await menu.callback(event)
 				})
 		}
 	}
