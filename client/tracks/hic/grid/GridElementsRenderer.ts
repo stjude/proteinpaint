@@ -1,6 +1,6 @@
 import { Grid } from './Grid'
 import { GridElementRenderer } from './GridElementRenderer'
-import { SvgG } from 'types/d3'
+import { SvgG } from '../../../types/d3'
 
 export class GridElementsRenderer {
 	grid: Grid

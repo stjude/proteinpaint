@@ -2,7 +2,7 @@ import { GeneSetEditUI } from '../GeneSetEdit/GeneSetEditUI'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { hg38, hg19 } from '../../test/testdata/genomes'
-import { detectGte } from 'test/test.helpers'
+import { detectGte } from '../../test/test.helpers'
 
 /*************************
  reusable helper functions

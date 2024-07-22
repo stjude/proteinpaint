@@ -1,5 +1,3 @@
-import { ChrPosition } from 'types/hic'
-
 export class Resolution {
 	error: (f: string | string[]) => void
 

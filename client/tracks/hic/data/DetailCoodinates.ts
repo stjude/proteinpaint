@@ -1,4 +1,4 @@
-import { ChrPosition } from 'types/hic'
+import { ChrPosition } from '../../../types/hic'
 import { FirstChrX } from './FirstChrX'
 
 export class DetailCoordinates {
