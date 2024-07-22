@@ -95,11 +95,8 @@ class Facet {
 						})
 			}
 		}
-		const buttonDiv = this.dom.mainDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('margin', '20px')
-			.style('float', 'right')
+		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
+		//.style('float', 'right')
 		const showSamplesBt = buttonDiv
 			.append('button')
 			.property('disabled', true)
