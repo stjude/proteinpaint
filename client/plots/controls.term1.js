@@ -133,6 +133,7 @@ function setRenderers(self) {
 			case 'samplelst':
 				break
 			case TermTypes.SNP:
+				self.dom.td1.text('Group genotypes')
 				break
 			case TermTypes.GENE_EXPRESSION:
 				break

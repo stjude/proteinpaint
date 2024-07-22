@@ -1,6 +1,7 @@
 import { VocabApi } from '../../shared/types/index'
 import { SnpTW, SnpQ } from '../../shared/types/terms/snp'
 import { copyMerge } from '../../rx'
+import { GroupSettingMethods } from './groupsetting.ts'
 
 /*
 ******** EXPORTED ********
@@ -13,8 +14,29 @@ export async function getHandler(self) {
 		getPillName() {
 			return self.term.name
 		},
+
 		getPillStatus() {
-			return { text: '' }
+			let text = ''
+			if (self.q.groupsetting.inuse) {
+				if (self.q.groupsetting.customset) {
+					const n = self.q.groupsetting.customset.groups.length
+					text = `Divided into ${n} groups`
+				} else {
+					throw 'unknown setting for groupsetting'
+				}
+			}
+			return { text }
+		},
+
+		async showEditMenu() {
+			await new GroupSettingMethods(self).main()
+		},
+
+		async postMain() {
+			// for rendering groupsetting menu
+			const body = self.opts.getBodyParams?.() || {}
+			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
+			self.category2samplecount = data.lst
 		}
 	}
 }
@@ -24,11 +46,20 @@ export async function fillTW(tw: SnpTW, vocabApi: VocabApi, defaultQ: SnpQ | nul
 	if (!tw.term.id || !tw.term.name) throw 'missing snp id/name'
 	if (!tw.term.chr || !tw.term.start || !tw.term.stop) throw 'incomplete position information'
 	if (!tw.term.ref || !tw.term.alt) 'missing allele information'
+	if (!('type' in tw.q)) tw.q.type = 'values'
 
 	if (defaultQ) {
 		// merge defaultQ into tw.q
 		copyMerge(tw.q, defaultQ)
 	}
+
+	// groupsetting
+	// fill term.groupsetting
+	if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
+	// fill q.groupsetting
+	if (!tw.q.groupsetting) tw.q.groupsetting = {}
+	delete tw.q.groupsetting.disabled
+	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false
 
 	return tw
 }

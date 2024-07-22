@@ -1,5 +1,5 @@
 import path from 'path'
-import { get_samples, get_term_cte, interpolateSqlValues } from './termdb.sql'
+import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql'
 import { getFilterCTEs } from './termdb.filter'
 import serverconfig from './serverconfig'
 import { read_file } from './utils'
@@ -125,9 +125,20 @@ async function getSampleData(q, ds) {
 			}
 		} else if (tw.term.type == 'snp') {
 			const sampleGTs = await getSnpData(tw, q)
+			const groupset = get_active_groupset(tw.term, tw.q)
 			for (const s of sampleGTs) {
 				if (!(s.sample_id in samples)) samples[s.sample_id] = { sample: s.sample_id }
-				samples[s.sample_id][tw.$id] = { key: s.gt, value: s.gt }
+				if (groupset) {
+					// groupsetting is active
+					const group = groupset.groups.find(group => {
+						return group.values.map(v => v.key).includes(s.gt)
+					})
+					if (!group) throw 'unable to assign sample to group'
+					samples[s.sample_id][tw.$id] = { key: group.name, value: group.name }
+				} else {
+					// groupsetting is not active
+					samples[s.sample_id][tw.$id] = { key: s.gt, value: s.gt }
+				}
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 			const sampleFilterSet = await mayGetSampleFilterSet4snplst(q, nonDictTerms) // conditionally returns a set of sample ids, FIXME *only* for snplst and snplocus data download in supported ds, not for anything else. TODO remove this bad quick fix
