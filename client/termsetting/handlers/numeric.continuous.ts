@@ -56,21 +56,24 @@ export function getHandler(self) {
 
 			vr.render()
 
-			const convert2ZCheckbox = make_one_checkbox({
-				holder: div,
-				labeltext: 'Convert to Z-Score',
-				checked: self.q.convert2ZScore ? true : false,
-				divstyle: { display: 'inline-block', padding: '3px 10px' },
-				callback: checked => {
-					self.q.convert2ZScore = checked
-					if (checked) {
-						// set the Scale values option to "No Scaling"
-						select.property('value', 1)
+			let convert2ZCheckbox
+			if (self.usecase?.target == 'matrix') {
+				convert2ZCheckbox = make_one_checkbox({
+					holder: div,
+					labeltext: 'Convert to Z-Score',
+					checked: self.q.convert2ZScore ? true : false,
+					divstyle: { display: 'inline-block', padding: '3px 10px' },
+					callback: checked => {
+						self.q.convert2ZScore = checked
+						if (checked) {
+							// set the Scale values option to "No Scaling"
+							select.property('value', 1)
 
-						delete self.q.scale
+							delete self.q.scale
+						}
 					}
-				}
-			})
+				})
+			}
 
 			const selectDiv = div.append('div').style('display', 'inline-block')
 			selectDiv.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
@@ -79,7 +82,7 @@ export function getHandler(self) {
 				if (!self.q) throw `Missing .q{} [numeric.continuous getHandler()]`
 				if (event.target.value != '1') {
 					// uncheck the convert to z-score checkbox
-					convert2ZCheckbox.property('checked', false)
+					if (convert2ZCheckbox) convert2ZCheckbox.property('checked', false)
 
 					self.q.scale = Number(event.target.value)
 				} else delete self.q.scale
