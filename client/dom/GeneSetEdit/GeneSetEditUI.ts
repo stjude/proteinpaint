@@ -394,8 +394,15 @@ export class GeneSetEditUI {
 			for (const btn of this.customInputs) {
 				this.menuList.push({
 					label: btn.label,
-					callback: btn.showInput,
-					arg: 'callback'
+					callback: () => {
+						btn.showInput({
+							callback: ({ geneList }) => {
+								this.geneList = geneList
+								this.renderGenes()
+							}
+						})
+					},
+					tagName: 'button'
 				})
 			}
 		}
@@ -403,16 +410,22 @@ export class GeneSetEditUI {
 
 	renderTextControls(div: Div) {
 		for (const menu of this.menuList) {
-			div
-				.append('a')
-				.style('text-decoration', 'underline')
-				.style('padding', '0px 10px')
-				.style('color', 'black')
-				.html(`${menu.label} &#9660;`)
-				.on('click', async (event: Event) => {
-					if (menu.arg == 'callback') menu.callback({ callback: this.callback })
-					else await menu.callback(event)
+			if (menu.tagName == 'button')
+				addButton({
+					div,
+					text: menu.label,
+					callback: menu.callback
 				})
+			else
+				div
+					.append('a')
+					.style('text-decoration', 'underline')
+					.style('padding', '0px 10px')
+					.style('color', 'black')
+					.html(`${menu.label} &#9660;`)
+					.on('click', async (event: Event) => {
+						await menu.callback(event)
+					})
 		}
 	}
 
