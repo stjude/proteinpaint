@@ -101,9 +101,7 @@ export function setInteractivity(self) {
 
 		if (self.displayBrushMenu.called == true) {
 			const [niceStart, niceEnd] =
-				self.config.term.term.type == 'integer' || self.config.term.term.type == 'float'
-					? [Math.round(start), Math.round(end)]
-					: niceNumLabels([start, end])
+				self.config.term.term.type == 'integer' ? [Math.round(start), Math.round(end)] : niceNumLabels([start, end])
 
 			self.app.tip.d.append('div').text(`From ${niceStart} to ${niceEnd}`)
 		}
