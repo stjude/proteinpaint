@@ -1,7 +1,5 @@
 import path from 'path'
-import { get_rows } from './termdb.sql'
-import { write_file } from './utils'
-import fs from 'fs'
+import { getData } from './termdb.matrix'
 import run_R from './run_R'
 import serverconfig from './serverconfig'
 
@@ -18,22 +16,45 @@ export async function get_incidence(q, ds) {
 		if (!Number.isFinite(minTimeSinceDx)) throw 'invalid minTimeSinceDx'
 		if (!Number.isFinite(minSampleSize)) throw 'invalid minSampleSize'
 		q.ds = ds
-		const results = { data: {} }
-		const rows = await get_rows(q)
-		if (!rows.lst.length) return results
+		const twLst = []
+		for (const i of [0, 1, 2]) {
+			const termnum = 'term' + i
+			const termnum_id = termnum + '_id'
+			if (typeof q[termnum_id] == 'string') {
+				q[termnum_id] = decodeURIComponent(q[termnum_id])
+				q[termnum] = q.ds.cohort.termdb.q.termjsonByOneid(q[termnum_id])
+			} else if (typeof q[termnum] == 'string') {
+				q[termnum] = JSON.parse(decodeURIComponent(q[termnum]))
+			}
 
-		// parse data rows
+			const termnum_q = termnum + '_q'
+			const termnum_$id = termnum + '_$id'
+
+			if (q[termnum]) twLst.push({ $id: q[termnum_$id], term: q[termnum], q: q[termnum_q] })
+		}
+
+		if (q.term1.type != 'condition') throw 'term1 must be condition term'
+		if (q.term2?.type == 'condition') throw 'overlay term cannot be condition term'
+		if (q.term0?.type == 'condition') throw 'divideBy term cannot be condition term'
+
+		const data = await getData({ terms: twLst, filter: q.filter }, ds, q.genome)
+		if (data.error) throw data.error
+
+		const results = { data: {} }
+		if (!Object.keys(data.samples).length) return results
+
+		// parse data
 		const byChartSeries = {}
-		for (const d of rows.lst) {
-			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string (see comments in get_rows())
-			const chartId = d.key0
-			const time = d.val1
-			const event = d.key1
-			const series = d.key2
+		for (const d of Object.values(data.samples)) {
+			if (twLst.map(tw => tw.$id).some(id => !Object.keys(d).includes(id))) continue // skip samples without data for all terms
+			const chartId = q.term0 ? d[q.term0_$id].key : ''
+			const time = d[q.term1_$id].value
+			const event = d[q.term1_$id].key
+			const series = q.term2 ? d[q.term2_$id].key : ''
 			if (!(chartId in byChartSeries)) byChartSeries[chartId] = []
 			byChartSeries[chartId].push({ time, event, series })
 		}
-		const bins = q.term2_id && rows.CTE2.bins ? rows.CTE2.bins : []
+		const bins = data.refs.byTermId[q.term2_$id]?.bins || []
 		results.refs = { bins }
 
 		// prepare R input
