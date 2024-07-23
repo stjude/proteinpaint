@@ -59,7 +59,7 @@ class profilePolar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-		const width = 1100
+		const width = 1000
 		const height = 600
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -75,7 +75,7 @@ class profilePolar extends profilePlot {
 
 		this.svg
 			.append('text')
-			.attr('transform', `translate(150, ${height - 40})`)
+			.attr('transform', `translate(150, ${height - 20})`)
 			.attr('font-weight', 'bold')
 			.text(config.title)
 
@@ -126,7 +126,7 @@ class profilePolar extends profilePlot {
 				div: this.dom.tableDiv,
 				showLines: true,
 				resize: true,
-				maxHeight: '70vh'
+				maxHeight: '50vh'
 			})
 
 		addCircle(50, 'C')
