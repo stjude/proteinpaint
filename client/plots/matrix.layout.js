@@ -101,6 +101,7 @@ export function setLabelsAndScales() {
 	for (const t of this.termOrder) {
 		const countedSamples = new Set()
 		t.counts = { samples: 0, hits: 0 }
+		const renderedContinuousVs = []
 
 		// store counts for each subGroup in subGroupCounts
 		t.counts.subGroupCounts = {}
@@ -170,6 +171,13 @@ export function setLabelsAndScales() {
 					}
 				}
 			}
+
+			if (t.tw.q?.mode == 'continuous' && renderedValues?.length && t.grp.type != 'hierCluster') {
+				// store the rendered continuous values into renderedContinuousVs to be used later
+				// do not do it for terms in hierCluster group
+				renderedContinuousVs.push(renderedValues[0].value || renderedValues[0])
+			}
+
 			const subGroup = t.counts.subGroupCounts?.[sample.grp.name]
 
 			const countedValuesNoSkip = anno.filteredValues.filter(v => {
@@ -233,6 +241,24 @@ export function setLabelsAndScales() {
 			t.label = `${t.label} (${count})`
 		}
 		if (t.grp.type !== 'hierCluster' && t.tw.q?.mode == 'continuous') {
+			const vc = t.tw.term.valueConversion
+			if (vc) {
+				// convert values
+				t.counts.minval *= vc.scaleFactor
+				t.counts.maxval *= vc.scaleFactor
+			}
+
+			if (renderedContinuousVs.length && t.tw.q.convert2ZScore) {
+				const mean = renderedContinuousVs.reduce((acc, val) => acc + val, 0) / renderedContinuousVs.length
+				const std = Math.sqrt(
+					renderedContinuousVs.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / renderedContinuousVs.length
+				)
+				t.mean = mean
+				t.std = std
+				t.counts.minval = (t.counts.minval - mean) / std
+				t.counts.maxval = (t.counts.maxval - mean) / std
+			}
+
 			if (!t.tw.settings) t.tw.settings = {}
 			if (!t.tw.settings.barh) t.tw.settings.barh = s.barh
 			if (!('gap' in t.tw.settings)) t.tw.settings.gap = 4
@@ -241,13 +267,6 @@ export function setLabelsAndScales() {
 			const rangeSpansZero = t.counts.minval < 0 && t.counts.maxval > 0
 			const ratio = t.counts.minval >= 0 ? 1 : t.counts.maxval / (absMin + t.counts.maxval)
 			t.counts.posMaxHt = ratio * barh
-
-			const vc = t.tw.term.valueConversion
-			if (vc) {
-				// convert values
-				t.counts.minval *= vc.scaleFactor
-				t.counts.maxval *= vc.scaleFactor
-			}
 
 			const tickValues =
 				// rangeSpansZero || t.counts.maxval <= 0
@@ -267,7 +286,7 @@ export function setLabelsAndScales() {
 				const domainMax = rangeSpansZero ? 0 : t.counts.maxval
 				t.scales.neg = scaleLinear()
 					.domain([domainMax, t.counts.minval])
-					.range([1, barh - t.counts.posMaxHt - t.tw.settings.gap])
+					.range([1, barh - t.counts.posMaxHt])
 			}
 		}
 
