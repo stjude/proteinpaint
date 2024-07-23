@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.68.0
 
 Features:
 - New Data Matrix and Gene Expression cards on the homepage
