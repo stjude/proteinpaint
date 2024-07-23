@@ -1,4 +1,4 @@
-import { BaseTerm, BaseQ, BaseValue, EmptyGroupSetting } from './term.ts'
+import { BaseTerm, BaseQ, BaseValue, TermGroupSetting } from './term.ts'
 import { TermWrapper } from './tw.ts'
 
 /*
@@ -18,7 +18,6 @@ export type ConditionValuesObject = {
 	values: {
 		[key: string]: BaseValue
 	}
-	groupsetting: EmptyGroupSetting
 }
 
 export type ConditionQ = BaseQ & {
@@ -45,7 +44,7 @@ export type ConditionQ = BaseQ & {
 
 export type ConditionTerm = BaseTerm & {
 	values: ConditionValuesObject
-	//groupsetting: { disabled?: boolean | undefined }
+	groupsetting: TermGroupSetting
 }
 
 /**

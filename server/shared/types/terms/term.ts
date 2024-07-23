@@ -6,7 +6,6 @@ import { GeneVariantQ, GeneVariantTerm } from './geneVariant.ts'
 import { SampleLstQ, SampleLstTerm } from './samplelst.ts'
 import { SnpsQ, SnpsTerm } from './snps.ts'
 import { Q } from './tw.ts'
-import { PresetNumericBins } from './numeric.ts'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -34,20 +33,19 @@ export type TermValues = {
 
 // THIS IS WRONG!!!!
 export type ValuesGroup = {
-	name: string
 	type: 'values'
 	values: { key: number | string; label: string }[]
-	color?: string
-	groupsetting: EmptyGroupSetting
+	// color?: string
 }
 
 export type FilterGroup = {
-	name: string
 	type: 'filter'
-	filter?: Filter
+	filter: Filter
 }
 
-export type GroupEntry = ValuesGroup | FilterGroup
+export type GroupEntry = (ValuesGroup | FilterGroup) & {
+	name: string
+}
 
 export type BaseGroupSet = {
 	groups: GroupEntry[]
@@ -59,29 +57,28 @@ export type GroupSetEntry = BaseGroupSet & {
 	is_subcondition?: boolean
 }
 
-export type CustomGroupSetting = {
+export type CustomQGroupSetting = {
 	/** When “predefined_groupset_idx” is undefined, will use this set of groups.
 	This is a custom set of groups either copied from predefined set, or created with UI.
 	Custom set definition is the same as a predefined set. */
 	customset: BaseGroupSet
-	disabled?: boolean
+	/** if false, not applied */
 	inuse?: boolean
-	lst?: GroupSetEntry[] // quick-fix
 }
 
-export type PredefinedGroupSetting = {
-	/** If true, apply and will require the following attributes */
-	inuse?: boolean
-	disabled?: boolean
-	useIndex?: number
-	/**Value is array index of term.groupsetting.lst[] */
+export type PredefinedQGroupSetting = {
+	/** If .inuse true, apply and will require predefined_groupset_idx */
+	/** Value is array index of term.groupsetting.lst[] */
 	predefined_groupset_idx: number
-	lst: GroupSetEntry[]
+	inuse: true
 }
 
-export type EmptyGroupSetting = {
-	inuse?: false
-	disabled?: true
+export type QGroupSetting = PredefinedQGroupSetting | CustomQGroupSetting
+
+export type TermGroupSetting = {
+	/** if there are only two values, means groupsetting definition is not applicable for the term */
+	disabled?: boolean
+	lst: GroupSetEntry[]
 }
 
 export type BaseTerm = {
@@ -93,8 +90,6 @@ export type BaseTerm = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
-	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
-	bins?: PresetNumericBins
 }
 export type Term = BaseTerm &
 	(NumericTerm | CategoricalTerm | ConditionTerm | GeneVariantTerm | SampleLstTerm | SnpsTerm)
@@ -116,20 +111,6 @@ export type RangeEntry = {
 	range?: any //No idea what this is
 }
 
-export type GroupSetting = {
-	/** If true, apply and will require the following attributes */
-	inuse?: boolean
-	disabled?: boolean
-	useIndex?: number
-	/**Value is array index of term.groupsetting.lst[] */
-	predefined_groupset_idx?: number
-	lst?: GroupSetEntry[]
-	/** When “predefined_groupset_idx” is undefined, will use this set of groups.
-	This is a custom set of groups either copied from predefined set, or created with UI.
-	Custom set definition is the same as a predefined set. */
-	customset?: BaseGroupSet
-}
-
 export type BaseQ = {
 	/**Automatically set by fillTermWrapper()
 	Applies to barchart, survival plot, and cuminc plot.
@@ -141,7 +122,6 @@ export type BaseQ = {
 	/**indicates this object should not be extended by a copy-merge tool */
 	isAtomic?: boolean
 	name?: string
-
 	mode?:
 		| 'discrete'
 		/** Binary is a special case of discrete. */
@@ -162,13 +142,13 @@ export type BaseQ = {
 		| 'regular-bin'
 		/** Applies to numeric terms */
 		| 'custom-bin'
-		/** Applies to categorical and condition terms */
+		/** Applies to categorical, condition, geneVariant, and singleCellCellType terms */
 		| 'predefined-groupset'
-		/** Applies to categorical and condition terms */
+		/** Applies to categorical, condition, geneVariant, and singleCellCellType terms */
 		| 'custom-groupset'
+		/** Applies to samplelst terms */
 		| 'custom-samplelst'
-
-	groupsetting?: GroupSetting // TODO XXX FIXME clean up all these mess!!!!
+	groupsetting?: QGroupSetting
 }
 
 /*** types supporting Term types ***/
