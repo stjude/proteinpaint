@@ -90,6 +90,7 @@ try:
                fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)
                fig.savefig(os.path.join(cachedir,"running_sum.png"), bbox_inches='tight')
                #extract_plot_data(signature, geneset_name, msigdb_library, result) # This returns raw data to client side, not currently used
+               print ('image: {"image_file":"running_sum.png"}')
             except KeyError: # Initial GSEA calculation, result saved to a pickle file
                
                # run enrichment analysis
