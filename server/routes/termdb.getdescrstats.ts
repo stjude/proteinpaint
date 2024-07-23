@@ -20,7 +20,7 @@ export const api: any = {
 							genome: 'hg38-test',
 							dslabel: 'TermdbTest',
 							embedder: 'localhost',
-							tid: 'hrtavg',
+							tw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
 							filter: {
 								type: 'tvslst',
 								in: true,
@@ -57,45 +57,41 @@ export const api: any = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		const q = req.query as getdescrstatsRequest
+		let result
 		try {
-			const g = genomes[req.query.genome]
-			if (!g) throw 'invalid genome name'
-			const ds = g.datasets[req.query.dslabel]
+			const genome = genomes[req.query.genome]
+			if (!genome) throw 'invalid genome name'
+			const ds = genome.datasets[req.query.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'invalid termdb object'
 
-			await trigger_getdescrstats(q, res, ds, g) // as getdescrstatsResponse
-		} catch (e) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			res.send({ error: e?.message || e })
-			if (e instanceof Error && e.stack) console.log(e)
-		}
-	}
-}
+			if (!q.tw.$id) q.tw.$id = '_' // current typing thinks tw$id is undefined. add this to avoid tsc err. delete this line when typing is fixed
+			const data = await getData({ filter: q.filter, filter0: q.filter0, terms: [q.tw] }, ds, genome)
+			if (data.error) throw data.error
 
-async function trigger_getdescrstats(q: any, res: any, ds: any, genome: any) {
-	const terms = [q.tw] //pass
-	const data = await getData({ filter: q.filter, terms }, ds, genome)
-	if (data.error) throw data.error
-
-	const values: number[] = []
-	for (const key in data.samples) {
-		const sample = data.samples[key]
-		const value = sample[q.tw.$id].value
-		if (q.tw.q.hiddenValues?.[value]) {
-			// skip uncomputable values
-			continue
-		}
-		//skip computing for zeros if scale is log.
-		if (q.settings?.violin?.unit === 'log') {
-			if (value === 0) {
-				continue
+			const values: number[] = []
+			for (const key in data.samples) {
+				const sample = data.samples[key]
+				const value = sample[q.tw.$id].value
+				if (q.tw.q.hiddenValues?.[value]) {
+					// skip uncomputable values
+					continue
+				}
+				//skip computing for zeros if scale is log.
+				if (q.logScale) {
+					if (value === 0) {
+						continue
+					}
+				}
+				values.push(Number(value))
 			}
-		}
-		values.push(parseFloat(value))
-	}
 
-	res.send(Summarystats(values) as getdescrstatsResponse)
+			result = Summarystats(values) as getdescrstatsResponse
+		} catch (e: any) {
+			if (e instanceof Error && e.stack) console.log(e)
+			result = { error: e?.message || e } as getdescrstatsResponse
+		}
+		res.send(result)
+	}
 }
