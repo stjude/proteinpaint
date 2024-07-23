@@ -152,7 +152,7 @@ add:
 		const addStats = [
 			{
 				label: 'Gene sets analyzed',
-				values: Object.keys(output).length
+				values: Object.keys(output.data).length
 			}
 		]
 
@@ -164,8 +164,8 @@ add:
 
 		// Generating the table
 		self.gsea_table_rows = []
-		for (const pathway_name of Object.keys(output)) {
-			const pathway = output[pathway_name]
+		for (const pathway_name of Object.keys(output.data)) {
+			const pathway = output.data[pathway_name]
 			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.fdr) {
 				let es
 				if (pathway.es) {
@@ -256,7 +256,8 @@ add:
 					geneset_name: self.gsea_table_rows[index][0].value,
 					genes: self.config.gsea_params.genes,
 					fold_change: self.config.gsea_params.fold_change,
-					geneSetGroup: self.config.gsea_params.geneSetGroup
+					geneSetGroup: self.config.gsea_params.geneSetGroup,
+					pickle_file: output.pickle_file
 				}
 				const holder = self.dom.holder
 				holder.selectAll('*').remove()

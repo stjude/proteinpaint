@@ -9,6 +9,8 @@ export type genesetEnrichmentRequest = {
 	geneSetGroup: string
 	/** Gene set name whose enrichment score is to be profiled */
 	geneset_name?: string
+	/** Pickle file to be queried for generating gsea image of a particular geneset */
+	pickle_file?: string
 }
 
 type pathway_attributes = {
@@ -28,7 +30,17 @@ type pathway_attributes = {
 	fdr: number
 }
 
+type gsea_result = {
+	/** array of pathway_attributes */
+	data: pathway_attributes[]
+	/** file name of pickle file containing the stored gsea result in cache directory */
+	pickle_file: string
+}
+
+/** Pass gsea image to client side */
+type gsea_image = any
+
 export type genesetEnrichmentResponse = {
-	/** array of pathway_attributes or any where an image (for plotting) is sent to client side */
-	pathway: pathway_attributes[] | any
+	/** gsea result or an image (for plotting) is sent to client side */
+	pathway: gsea_result | gsea_image
 }

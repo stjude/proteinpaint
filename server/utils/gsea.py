@@ -85,20 +85,30 @@ try:
             execution_time = stop_loop_time - start_loop_time
             print(f"Execution time: {execution_time} seconds")
             try: # Extract ES data to be plotted on client side
-               geneset_name=json_object['geneset_name']
-               result = pd.read_pickle(os.path.join(cachedir,"result.pkl"))
+               geneset_name=json_object['geneset_name'] # Checks if geneset_name is present, if yes it indicates the server request is for generating the image. It retrieves the result.pkl file and generates the image without having to recompute gsea again.
+               pickle_file=json_object['pickle_file']
+               result = pd.read_pickle(os.path.join(cachedir,pickle_file))
                fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)
-               fig.savefig(os.path.join(cachedir,"running_sum.png"), bbox_inches='tight')
+               random_num = np.random.rand()
+               png_filename = "gsea_plot_" + str(random_num) + ".png"
+               fig.savefig(os.path.join(cachedir,png_filename), bbox_inches='tight')
                #extract_plot_data(signature, geneset_name, msigdb_library, result) # This returns raw data to client side, not currently used
-               print ('image: {"image_file":"running_sum.png"}')
-            except KeyError: # Initial GSEA calculation, result saved to a pickle file
-               
+               print ('image: {"image_file":"' + png_filename + '"}')
+            except KeyError: #Initial GSEA calculation, result saved to a result.pkl pickle file               
                # run enrichment analysis
                start_gsea_time = time.time()
                if __name__ == "__main__":
                   result = blitz.gsea(signature, msigdb_library).T
-                  print ("result:",result.to_json())
-                  result.to_pickle(os.path.join(cachedir,"result.pkl"))
+                  random_num = np.random.rand()
+                  pickle_filename="gsea_result_"+ str(random_num) +".pkl"
+                  result.to_pickle(os.path.join(cachedir,pickle_filename))
+                  gsea_str='{"data":' + result.to_json() + '}'
+                  pickle_str='{"pickle_file":"' + pickle_filename + '"}'
+                  #print ("pickle_file:",pickle_str)
+                  gsea_dict = json.loads(gsea_str)
+                  pickle_dict = json.loads(pickle_str)
+                  result_dict = {**gsea_dict, **pickle_dict}
+                  print ("result:",json.dumps(result_dict))
                stop_gsea_time = time.time()   
                gsea_time = stop_gsea_time - start_gsea_time
                print (f"GSEA time: {gsea_time} seconds")
