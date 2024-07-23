@@ -41,11 +41,11 @@ export class profilePlot {
 			const suffix = config.isLoggedIn ? (config.site ? config.site : 'Admin') : 'Public'
 			this.opts.header.text(config.header ? config.header : config.chartType + ` / ${suffix}`)
 		}
-		const div = this.opts.holder.style('vertical-align', 'top') //.append('div').style('padding', '10px')
+		const div = this.opts.holder.append('div').style('display', 'inline-block')
 		const leftDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		const mainDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const holder2 = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const holder2 = this.opts.holder.append('div').style('display', 'inline-block')
 
 		const controlsDiv = leftDiv.append('div').style('display', 'inline-block').style('font-size', '0.8em')
 		const iconsDiv = leftDiv.append('div').style('margin-left', '16px').style('margin-top', '8px')
