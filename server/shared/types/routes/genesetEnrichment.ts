@@ -29,5 +29,6 @@ type pathway_attributes = {
 }
 
 export type genesetEnrichmentResponse = {
-	pathway: pathway_attributes[]
+	/** array of pathway_attributes or any where an image (for plotting) is sent to client side */
+	pathway: pathway_attributes[] | any
 }
