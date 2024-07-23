@@ -1,1 +1,2 @@
-
+Fixes:
+- pass filter0 in barchart request to work for gdc data

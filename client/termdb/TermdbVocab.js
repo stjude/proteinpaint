@@ -72,9 +72,9 @@ export class TermdbVocab extends Vocab {
         a structure from the termdb-barsql route
     */
 	async getNestedChartSeriesData(opts) {
-		const url = this.getTdbDataUrl(opts)
+		const [route, body] = this.getTdbDataUrl(opts)
 		const headers = this.mayGetAuthHeaders('termdb')
-		const data = await dofetch3(url, { headers }, this.opts.fetchOpts)
+		const data = await dofetch3(route, { headers, body }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 
 		const valuesByTermId = {}
@@ -130,49 +130,44 @@ export class TermdbVocab extends Vocab {
             optional divide-by term, {term, q}
         .filter
             optional filter object 
-        .ssid 
-            optional genotype parameter {ssid, mname, chr, pos}
+        .filter0
+            optional gdc filter
     */
 	getTdbDataUrl(opts) {
-		const params = [`embedder=${window.location.hostname}`]
-		if (opts.chartType == 'cuminc') params.push('getcuminc=1')
-		if (opts.chartType == 'survival') params.push('getsurvival=1')
+		const body = {
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			embedder: window.location.hostname
+		}
+		if (opts.chartType == 'cuminc') body.getcuminc = 1
+		if (opts.chartType == 'survival') body.getsurvival = 1
 
 		for (const _key of ['term0', 'term', 'term2']) {
 			// "term" on client is "term1" at backend
 			const tw = this.getTwMinCopy(opts[_key])
 			if (!tw) continue
 			const key = _key == 'term' ? 'term1' : _key
-			params.push(key + '_$id=' + encodeURIComponent(tw.$id))
+			body[key + '_$id'] = tw.$id
 			// will need to generalize to also consider type=geneExpression
 			if ('id' in tw.term && (!tw.term?.type || isDictionaryType(tw.term.type))) {
-				params.push(key + '_id=' + encodeURIComponent(tw.term.id))
+				body[key + '_id'] = tw.term.id
 			} else {
-				params.push(key + '=' + encodeURIComponent(JSON.stringify(tw.term)))
+				body[key] = tw.term
 			}
 			if (!tw.q) throw 'plot.' + _key + '.q{} missing: ' + tw.term.id
-			params.push(key + '_q=' + q_to_param(tw.q))
+			body[key + '_q'] = tw.q //q_to_param(tw.q) ????
 		}
 
 		if (opts.filter) {
 			const filter = getNormalRoot(opts.filter)
 			if (filter.lst.length) {
-				params.push('filter=' + encodeURIComponent(JSON.stringify(filter)))
+				body.filter = filter
 			}
 		}
+		if (opts.filter0) body.filter0 = opts.filter0
 
-		if (opts.ssid) {
-			params.push(
-				'term2_is_genotype=1',
-				'ssid=' + opts.ssid.ssid,
-				'mname=' + opts.ssid.mutation_name,
-				'chr=' + opts.ssid.chr,
-				'pos=' + opts.ssid.pos
-			)
-		}
-
-		if ('grade' in opts) params.push(`grade=${opts.grade}`)
-		if ('minSampleSize' in opts) params.push(`minSampleSize=${opts.minSampleSize}`)
+		if ('grade' in opts) body.grade = opts.grade
+		if ('minSampleSize' in opts) body.minSampleSize = opts.minSampleSize
 
 		if (opts.term2) {
 			//send the hidden group labels to server to ignore them when computing association test pvalues
@@ -184,13 +179,14 @@ export class TermdbVocab extends Vocab {
 					? Object.keys(opts.term2.q.hiddenValues).map(h => opts.term2.term.values?.[h]?.label || h)
 					: []
 			}
-			params.push(`hiddenValues=${encodeURIComponent(JSON.stringify(hiddenValues))}`)
+			body.hiddenValues = hiddenValues
 		}
+
 		// start of mds3 parameters for variant2sample query
-		if (opts.get) params.push('get=' + opts.get)
+		if (opts.get) body.get = opts.get
 		// end of mds3 parameters
-		const route = opts.chartType ? 'termdb' : 'termdb-barsql'
-		return `/${route}?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`
+
+		return [opts.chartType ? 'termdb' : 'termdb-barsql', body]
 	}
 
 	/*
