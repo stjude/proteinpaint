@@ -99,10 +99,14 @@ export function setInteractivity(self) {
 		//For testing and debugging
 		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
 
-		const [niceStart, niceEnd] =
-			self.config.term.term.type == 'integer' ? [Math.round(start), Math.round(end)] : niceNumLabels([start, end])
+		if (self.displayBrushMenu.called == true) {
+			const [niceStart, niceEnd] =
+				self.config.term.term.type == 'integer' || self.config.term.term.type == 'float'
+					? [Math.round(start), Math.round(end)]
+					: niceNumLabels([start, end])
 
-		self.app.tip.d.append('div').text(`From ${niceStart} to ${niceEnd}`)
+			self.app.tip.d.append('div').text(`From ${niceStart} to ${niceEnd}`)
+		}
 
 		//show menu options for label clicking and brush selection
 		self.app.tip.d
