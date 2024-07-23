@@ -165,7 +165,7 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
 
 		const t4 = new Date()
-		mayLog('gene-case matrix built:', t4 - t3, 'ms')
+		mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
 
 		return { term2sample2value, byTermId, bySampleId }
 	}

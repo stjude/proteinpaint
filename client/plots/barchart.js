@@ -258,6 +258,7 @@ class Barchart {
 	getDataRequestOpts() {
 		const c = this.config
 		const opts = { term: c.term, filter: this.state.termfilter.filter }
+		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
 		return opts
