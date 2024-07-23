@@ -1,11 +1,7 @@
 import { select } from 'd3-selection'
-import { deepEqual, copyMerge } from '#rx'
-import { make_radios } from '#dom/radiobutton'
-import { make_one_checkbox } from '#dom/checkbox'
+import { copyMerge } from '#rx'
 import { Menu } from '#dom/menu'
 import { mclass } from '#shared/common'
-import { getConfigForShowAll } from './matrix.interactivity'
-import { setComputedConfig } from './matrix.config'
 
 const alphabet = `ABCDEFGHIJKLMNOPQRSTUVWXYZ`.split('')
 

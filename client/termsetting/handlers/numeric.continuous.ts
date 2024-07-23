@@ -2,6 +2,7 @@ import { getPillNameDefault } from '../termsetting'
 import { PillData, Term } from '../../shared/types/index'
 import { convertViolinData } from '../../filter/tvs.numeric'
 import { violinRenderer } from '../../dom/violinRenderer'
+import { make_one_checkbox } from '#dom/checkbox'
 
 /*
 ********************** EXPORTED
@@ -55,25 +56,33 @@ export function getHandler(self) {
 
 			vr.render()
 
-			const convert2ZScoreDiv = div.append('div').style('display', 'inline-block').style('padding', '3px 10px')
+			const convert2ZCheckbox = make_one_checkbox({
+				holder: div,
+				labeltext: 'Convert to Z-Score',
+				checked: self.q.convert2ZScore ? true : false,
+				divstyle: { display: 'inline-block', padding: '3px 10px' },
+				callback: checked => {
+					self.q.convert2ZScore = checked
+					if (checked) {
+						// set the Scale values option to "No Scaling"
+						select.property('value', 1)
 
-			convert2ZScoreDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('id', 'convert2ZScoreCB')
-				.property('checked', self.q.convert2ZScore ? true : false)
-				.on('change', event => {
-					self.q.convert2ZScore = event.target.checked
-				})
+						delete self.q.scale
+					}
+				}
+			})
 
-			convert2ZScoreDiv.append('label').attr('for', 'convert2ZScoreCB').text('Convert to Z-Score')
+			const selectDiv = div.append('div').style('display', 'inline-block')
+			selectDiv.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
 
-			div.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
-
-			const select = div.append('select').on('change', (event: any) => {
+			const select = selectDiv.append('select').on('change', (event: any) => {
 				if (!self.q) throw `Missing .q{} [numeric.continuous getHandler()]`
-				if (event.target.value != '1') self.q.scale = Number(event.target.value)
-				else delete self.q.scale
+				if (event.target.value != '1') {
+					// uncheck the convert to z-score checkbox
+					convert2ZCheckbox.property('checked', false)
+
+					self.q.scale = Number(event.target.value)
+				} else delete self.q.scale
 			})
 
 			select
