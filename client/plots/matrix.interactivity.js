@@ -91,7 +91,7 @@ export function setInteractivity(self) {
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 						}" ></span>
-							${d.convertedValueLabel || d.label}`)
+							${d.convertedValueLabel || d.label}${d.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
 					}
 				} else if (d.term.type == TermTypes.METABOLITE_INTENSITY) {
 					{
@@ -105,7 +105,7 @@ export function setInteractivity(self) {
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 						}" ></span>
-							${d.convertedValueLabel || d.label}`)
+							${d.convertedValueLabel || d.label}${d.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
 					}
 				} else {
 					const [c1, c2] = table.addRow()
@@ -113,14 +113,17 @@ export function setInteractivity(self) {
 					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 						d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 					}" ></span>
-						${survivalInfo || d.convertedValueLabel || d.label}`)
+						${survivalInfo || d.convertedValueLabel || d.label}${
+						d.tw?.q?.convert2ZScore && d.term.type != 'survival' ? ' (Z-Score)' : ''
+					}`)
 				}
 				if (d.term.type == TermTypes.SURVIVAL) {
 					const timeToEventKey =
 						'Time to Event: ' +
 						(d.timeToEventKey
 							? d.timeToEventKey + (d.term.unit ? `(${d.term.unit})` : '')
-							: d.convertedValueLabel || d.label)
+							: d.convertedValueLabel || d.label) +
+						(d.tw?.q?.convert2ZScore ? ' (Z-Score)' : '')
 
 					const [c1, c2] = table.addRow()
 					c1.html('')
@@ -413,7 +416,7 @@ export function setInteractivity(self) {
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 						}" ></span>
-								${sampleData.convertedValueLabel || sampleData.label}`)
+								${sampleData.convertedValueLabel || sampleData.label}${sampleData.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
 					}
 				} else if (sampleData.term.type == TermTypes.METABOLITE_INTENSITY) {
 					{
@@ -427,7 +430,7 @@ export function setInteractivity(self) {
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 						}" ></span>
-							${sampleData.convertedValueLabel || sampleData.label}`)
+							${sampleData.convertedValueLabel || sampleData.label}${sampleData.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
 					}
 				} else {
 					const [c1, c2] = table.addRow()
@@ -435,7 +438,7 @@ export function setInteractivity(self) {
 					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 						sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 					}" ></span>
-						${sampleData.convertedValueLabel || sampleData.label}`)
+						${sampleData.convertedValueLabel || sampleData.label}${sampleData.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
 				}
 			}
 		} else if (sampleData.term && sampleData.term.type == 'geneVariant' && sampleData.value) {
