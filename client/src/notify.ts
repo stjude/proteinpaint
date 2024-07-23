@@ -30,7 +30,7 @@ const notifyDiv = select('body')
 let sse,
 	initialLoad = 0
 
-const host = sessionStorage.getItem('hostURL') || window.testHost || ''
+const host = sessionStorage.getItem('hostURL') || (window as any).testHost || ''
 const sseUrl = host.endsWith('/') ? `${host}sse` : `${host}/sse`
 setSse()
 
