@@ -11,7 +11,8 @@ import { colorScaleMap } from '../shared/common'
 	s: plotConfig.settings.matrix
 */
 function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
-	const key = anno.key
+	if (tw.q.convert2ZScore) cell.key = (cell.key - t.mean) / t.std
+	const key = cell.key
 	const values = tw.term.values || {}
 	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
 	cell.fill = anno.color || values[anno.key]?.color
@@ -62,7 +63,7 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 }
 
 function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
-	const key = tw.q?.mode == 'continuous' ? anno.value : anno.key
+	const key = tw.q?.mode !== 'continuous' ? anno.key : tw.q?.convert2ZScore ? (anno.value - t.mean) / t.std : anno.value
 	cell.key = key
 	cell.label =
 		tw.q?.mode == 'continuous'

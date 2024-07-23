@@ -55,6 +55,19 @@ export function getHandler(self) {
 
 			vr.render()
 
+			const convert2ZScoreDiv = div.append('div').style('display', 'inline-block').style('padding', '3px 10px')
+
+			convert2ZScoreDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('id', 'convert2ZScoreCB')
+				.property('checked', self.q.convert2ZScore ? true : false)
+				.on('change', event => {
+					self.q.convert2ZScore = event.target.checked
+				})
+
+			convert2ZScoreDiv.append('label').attr('for', 'convert2ZScoreCB').text('Convert to Z-Score')
+
 			div.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
 
 			const select = div.append('select').on('change', (event: any) => {

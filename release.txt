@@ -1,1 +1,2 @@
-
+Features:
+- matrix and hiercluster: allow to recompute term shown in continuous mode as zscore
