@@ -54,8 +54,11 @@ export type CallbackArg = {
 	geneList: Gene[]
 }
 
+/** optional instruction to add new button(s) and pull in gene sets by custom-designed means. used by gdc oncomatrix react wrapper to call the GFF gene set modal */
 type CustomInputs = {
+	/** button name */
 	label: string
+	/** callback to trigger upon clicking this button. should show some ui to collect gene names and bring them into holding box */
 	showInput: (arg: any) => void
 }[]
 
