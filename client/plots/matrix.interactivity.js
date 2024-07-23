@@ -554,6 +554,7 @@ function setTermActions(self) {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			numericEditMenuVersion: ['discrete', 'continuous'],
+			usecase: { target: 'matrix' },
 
 			getBodyParams: () => {
 				const currentGeneNames = []
