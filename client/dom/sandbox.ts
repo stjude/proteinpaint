@@ -135,7 +135,7 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 
 	const body = app_div
 		.append('div')
-		.attr('class', 'sjpp-output-sandbox-content, sjpp_show_scrollbar')
+		.attr('class', 'sjpp-output-sandbox-content sjpp_show_scrollbar')
 		.style('width', opts.style?.width || '95vw')
 
 	let isSandboxContentVisible = true
