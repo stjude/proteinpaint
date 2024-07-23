@@ -5,6 +5,7 @@ import { fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
+import { icons as icon_functions } from '#dom/control.icons'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
@@ -40,16 +41,21 @@ export class profilePlot {
 			const suffix = config.isLoggedIn ? (config.site ? config.site : 'Admin') : 'Public'
 			this.opts.header.text(config.header ? config.header : config.chartType + ` / ${suffix}`)
 		}
-		const div = this.opts.holder.append('div').style('padding', '10px')
-		const mainDiv = div.append('div').style('display', 'inline-block')
-		const holder2 = div.append('div').style('display', 'inline-block')
+		const div = this.opts.holder.style('vertical-align', 'top') //.append('div').style('padding', '10px')
+		const leftDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 
-		const controlsDiv = mainDiv.insert('div').style('display', 'inline-block').style('font-size', '0.8em')
+		const mainDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const holder2 = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+
+		const controlsDiv = leftDiv.append('div').style('display', 'inline-block').style('font-size', '0.8em')
+		const iconsDiv = leftDiv.append('div').style('margin-left', '16px').style('margin-top', '8px')
+
 		const holder = mainDiv.insert('div').style('display', 'inline-block')
 
 		const plotDiv = holder.append('div')
 		this.dom = {
 			controlsDiv,
+			iconsDiv,
 			holder,
 			plotDiv,
 			holder2
@@ -68,6 +74,44 @@ export class profilePlot {
 
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		document.addEventListener('scroll', event => this?.tip?.hide())
+
+		if (this.type != 'profileRadarFacility' && !config.isSecond) {
+			//Facility radar plot does not need to compare
+			const compareIconDiv = iconsDiv.append('div').style('margin-bottom', '20px')
+			const compareBt = compareIconDiv.append('button').style('border', 'none').style('background-color', 'transparent')
+			icon_functions['compare'](compareBt, { title: 'Add a plot for comparison' })
+
+			compareBt.on('click', async event => {
+				const comparison = (this.settings.comparison = !this.settings.comparison)
+				compareBt.style('background-color', comparison ? 'rgb(207, 226, 243)' : 'transparent')
+				await this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { settings: { [this.type]: this.settings } }
+				})
+
+				this.dom.holder2.selectAll('*').remove()
+				if (comparison) await this.addPlot()
+			})
+		}
+		if (this.type != 'profileBarchart') {
+			const tableIconDiv = iconsDiv.append('div')
+			const tableBt = tableIconDiv
+				.append('button')
+				.style('border', 'none')
+				.style('background-color', 'rgb(207, 226, 243)')
+			icon_functions['table'](tableBt, { title: 'Show table with data' })
+			tableBt.on('click', event => {
+				const show = !this.settings.showTable
+				tableBt.style('background-color', show ? 'rgb(207, 226, 243)' : 'transparent')
+				this.showTable(show)
+			})
+		}
+	}
+
+	async showTable(show) {
+		this.settings.showTable = show
+		await this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { [this.type]: this.settings } } })
 	}
 
 	getList(tw) {
@@ -89,20 +133,13 @@ export class profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
-		if (this.settings.show2Plots) {
-			if (!this.plotAdded) await this.addPlot()
-		} else {
-			if (this.plotAdded) this.dom.holder2.selectAll('*').remove()
-			this.plotAdded = false
-		}
 	}
 
 	async addPlot() {
 		this.plotAdded = true
 		const appState = this.state
-
 		const plotMod = await import('#plots/plot.app.js')
-		const plot = { chartType: this.type }
+		const plot = { chartType: this.type, isSecond: true }
 		if (this.type == 'profileRadar' || this.type == 'profileRadarFacility') plot.plot = this.config.plot
 		const opts = { holder: this.dom.holder2, state: { plots: [plot], vocab: appState.vocab } }
 		const plotAppApi = await plotMod.appInit(opts)
@@ -260,24 +297,8 @@ export class profilePlot {
 		}
 		await this.loadSampleData(chartType, inputs)
 
-		if (chartType != 'profileRadarFacility')
-			inputs.push({
-				label: 'Open a plot for comparison using different filters',
-				type: 'checkbox',
-				chartType,
-				settingsKey: 'show2Plots',
-				boxLabel: 'Yes'
-			})
 		inputs.unshift(...additionalInputs)
 
-		if (this.type != 'profileBarchart')
-			inputs.push({
-				label: 'Show table',
-				type: 'checkbox',
-				chartType,
-				settingsKey: 'showTable',
-				boxLabel: 'Yes'
-			})
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -545,7 +566,6 @@ export async function loadFilterTerms(config, app) {
 
 export function getDefaultProfilePlotSettings() {
 	return {
-		show2Plots: false,
 		isAggregate: false,
 		showTable: true
 	}
