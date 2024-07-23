@@ -1,14 +1,5 @@
 //import { TermWrapper, BaseQ } from '../termdb'
-import {
-	BaseTerm,
-	BaseValue,
-	BaseQ,
-	BaseTW,
-	EmptyGroupSetting,
-	PredefinedGroupSetting,
-	CustomGroupSetting,
-	ValuesGroup
-} from './term.ts'
+import { BaseTerm, BaseValue, BaseQ, BaseTW, QGroupSetting, TermGroupSetting, ValuesGroup } from './term.ts'
 
 /*
 --------EXPORTED--------
@@ -32,7 +23,6 @@ export type CategoricalValuesObject = {
 	values: {
 		[key: string]: BaseValue
 	}
-	groupsetting: EmptyGroupSetting
 }
 
 export type GroupSet = {
@@ -40,16 +30,15 @@ export type GroupSet = {
 	type?: 'predefined-groupset' | 'custom-groupset'
 	name: string
 	groups: ValuesGroup[]
-	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
 }
 
 export type CategoricalTerm = BaseTerm & {
 	type: 'categorical'
 	values: CategoricalValuesObject
-	//groupsetting: { disabled?: boolean | undefined } //, lst?: GroupSet }
+	groupsetting: TermGroupSetting & { useIndex: number }
 }
 
-export type CategoricalQ = BaseQ & (CategoricalValuesObject | GroupSet)
+export type CategoricalQ = BaseQ & QGroupSetting & (CategoricalValuesObject | GroupSet)
 
 /**
  * A categorical term wrapper object
