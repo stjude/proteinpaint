@@ -86,7 +86,7 @@ async function run_genesetEnrichment_analysis(q: genesetEnrichmentRequest, genom
 	if (data_found) {
 		return result as genesetEnrichmentResponse
 	} else if (image_found) {
-		const imagePath = path.join(serverconfig.cachedir, result.image_file)
+		const imagePath: unknown = path.join(serverconfig.cachedir, result.image_file)
 		return imagePath as genesetEnrichmentResponse // This is not correct type assignment, need to fix it later
 	}
 }
