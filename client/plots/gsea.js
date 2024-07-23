@@ -257,8 +257,15 @@ add:
 					fold_change: self.config.gsea_params.fold_change,
 					geneSetGroup: self.config.gsea_params.geneSetGroup
 				}
-				const plot_data = await rungsea(body)
-				render_gsea_plot(self, plot_data)
+				const image = await rungsea(body)
+				//render_gsea_plot(self, plot_data)
+				console.log('image:', image)
+				if (image.error) throw image.error
+				const holder = self.dom.holder
+				holder.selectAll('*').remove()
+				const svg_width = 400
+				const svg_height = 400
+				const img = holder.append('svg').attr('width', svg_width).attr('height', svg_height).attr('src', image.type)
 			}
 		})
 	}

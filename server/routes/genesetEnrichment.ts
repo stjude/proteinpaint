@@ -1,5 +1,6 @@
 import { genesetEnrichmentRequest, genesetEnrichmentResponse } from '../shared/types/routes/genesetEnrichment.ts'
 import fs from 'fs'
+import path from 'path'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
 import serverconfig from '../src/serverconfig.js'
@@ -25,7 +26,15 @@ function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const results = await run_genesetEnrichment_analysis(req.query as genesetEnrichmentRequest, genomes)
-			res.send(results as genesetEnrichmentResponse)
+			if (!req.query.geneset_name) {
+				res.send(results as genesetEnrichmentResponse)
+			} else {
+				res.sendFile(results, (err: any) => {
+					if (err) {
+						res.status(404).send('Image not found')
+					}
+				})
+			}
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
@@ -58,15 +67,28 @@ async function run_genesetEnrichment_analysis(q: genesetEnrichmentRequest, genom
 	)
 
 	let result
+	let data_found = false
+	let image_found = false
 	for (const line of gsea_output.split('\n')) {
+		// Parsing table output
 		if (line.startsWith('result: ')) {
 			result = JSON.parse(line.replace('result: ', ''))
+			data_found = true
+		} else if (line.startsWith('image: ')) {
+			// Getting image to be sent to client
+			result = JSON.parse(line.replace('image: ', ''))
+			image_found = true
 		} else {
 			console.log(line)
 		}
 	}
-	//console.log('result:', result)
-	return result as genesetEnrichmentResponse
+
+	if (data_found) {
+		return result as genesetEnrichmentResponse
+	} else if (image_found) {
+		const imagePath = path.join(serverconfig.cachedir, result.image_file)
+		return imagePath as genesetEnrichmentResponse // This is not correct type assignment, need to fix it later
+	}
 }
 
 async function run_gsea(path, data) {
