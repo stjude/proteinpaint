@@ -1,6 +1,6 @@
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
-import { TermTypeGroups, TermTypes, typeGroup } from '#shared/terms'
+import { TermTypeGroups, TermTypes, typeGroup, numericTypes } from '#shared/terms'
 import { Term } from '#shared/types'
 import { select } from 'd3-selection'
 
@@ -230,19 +230,32 @@ export class TermTypeSearch {
 				if (labels.length == 0) continue
 				label = labels.join('/')
 			}
+			if (type == TermTypes.SNP_LIST || type == TermTypes.SNP_LOCUS) {
+				// do not create tabs for snplst/snplocus terms as these
+				// terms do not have termdb search handlers
+				continue
+			}
 
 			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
-				//regression snp cases will be handled when the search handler is added
-				if (state.usecase.target == 'regression' && type == TermTypes.GENE_VARIANT) {
-					if (state.usecase.detail != 'independent') continue
-				}
-				//In sampleScatter geneVariant is only allowed if detail is not numeric, like when building a dynamic scatter
-				if (state.usecase.target == 'sampleScatter' && type == TermTypes.GENE_VARIANT) {
-					if (state.usecase.detail == 'numeric') continue
+				//regression snplst/snplocus cases will be handled when the search handler is added
+				if (state.usecase.target == 'regression') {
+					if (type == TermTypes.SNP) continue // same funcationality is covered by snplst/snplocus terms
+					if (type == TermTypes.GENE_VARIANT && state.usecase.detail != 'independent') continue
 				}
 
-				if (state.usecase.target == 'survival' && termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+				if (state.usecase.target == 'sampleScatter') {
+					if (state.usecase.detail == 'numeric' && !numericTypes.has(type)) continue
+				}
+
+				if (
+					(state.usecase.target == 'survival' || state.usecase.target == 'cuminc') &&
+					termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES
+				) {
 					if (state.usecase.detail == 'term') continue
+				}
+
+				if (state.usecase.target == 'dataDownload') {
+					if (type == TermTypes.SNP) continue // same funcationality is covered by snplst/snplocus terms
 				}
 
 				if (state.usecase.target && this.useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
