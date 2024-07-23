@@ -248,6 +248,15 @@ export function setLabelsAndScales() {
 				t.counts.maxval *= vc.scaleFactor
 			}
 
+			/*
+				compute mean and std on the client side using the renderedValues, instead of asking the server to 
+				transform the values when the data source does not actually change. That means re-reading 
+				db/files/external API for the same data on the server, it would impact the server less 
+				(by allowing caching and offloading computation) if the value transformation is done on 
+				the client. Also, in case some of the data/rendered filters are done on the client-side plot, 
+				then the server may not know which data are actually rendered, meaning the mean and stdev 
+				may not be computable on the server side.
+			*/
 			if (renderedContinuousVs.length && t.tw.q.convert2ZScore) {
 				const mean = renderedContinuousVs.reduce((acc, val) => acc + val, 0) / renderedContinuousVs.length
 				const std = Math.sqrt(
