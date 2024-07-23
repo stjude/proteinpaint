@@ -119,6 +119,7 @@ class profilePolar extends profilePlot {
 
 			i++
 		}
+		this.dom.tableDiv.selectAll('*').remove()
 		if (this.settings.showTable)
 			renderTable({
 				rows,
@@ -182,10 +183,10 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
 		const config = copyMerge(structuredClone(defaults), opts)
-		const settings = getDefaultProfilePlotSettings()
+		let settings = getDefaultProfilePlotSettings()
 		config.settings = {
 			profilePolar: settings,
-			controls: { isOpen: true }
+			controls: { isOpen: false }
 		}
 		const twlst = []
 		for (const data of config.terms) {
