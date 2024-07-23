@@ -360,9 +360,13 @@ function setRenderers(self) {
 		}
 
 		self.dom.btnDiv = self.dom.holder.append('div')
+		self.dom.content_holder = select(self.dom.holder.node().parentNode).append('div')
 	}
 
 	self.updateUI = async () => {
+		self.dom.btnDiv.selectAll('*').remove() //remove info button
+		self.dom.content_holder.selectAll('*').remove() //remove info content
+
 		if (!self.term) {
 			// no term
 			self.dom.nopilldiv.style('display', 'block')
@@ -376,8 +380,11 @@ function setRenderers(self) {
 		if (self.term.hashtmldetail) {
 			if (self.opts.buttons && !self.opts.buttons.includes('info')) self.opts.buttons.unshift('info')
 			else self.opts.buttons = ['info']
+		} else {
+			self.opts.buttons = []
 		}
-		if (self.opts.buttons) {
+
+		if (self.opts.buttons.length) {
 			self.dom.btnDiv
 				.selectAll('div')
 				.data(self.opts.buttons)
@@ -401,7 +408,6 @@ function setRenderers(self) {
 				const infoIcon_div = self.dom.btnDiv.selectAll('div').filter(function (this: BaseType) {
 					return select(this).text() === 'INFO'
 				})
-				const content_holder = select(self.dom.holder.node().parentNode).append('div')
 
 				// TODO: modify termInfoInit() to display term info in tip rather than in div
 				// can be content_tip: self.dom.tip.d to separate it from content_holder
@@ -409,7 +415,7 @@ function setRenderers(self) {
 				termInfo.termInfoInit({
 					vocabApi: self.opts.vocabApi,
 					icon_holder: infoIcon_div,
-					content_holder,
+					content_holder: self.dom.content_holder,
 					id: self.term.id,
 					state: { term: self.term }
 				})
