@@ -143,7 +143,7 @@ add:
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.config.gsea_params.geneSetGroup = self.settings.pathway
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
-		console.log('self.config.gsea_params:', self.config.gsea_params)
+		//console.log('self.config.gsea_params:', self.config.gsea_params)
 		const output = await rungsea(self.config.gsea_params)
 		wait.remove()
 		const table_stats = table2col({ holder: self.dom.detailsDiv })
@@ -247,6 +247,7 @@ add:
 			div: d_gsea,
 			showLines: true,
 			maxHeight: '30vh',
+			singleMode: true,
 			resize: true,
 			noButtonCallback: async index => {
 				//console.log("index:",self.gsea_table_rows[index][0].value)
@@ -257,21 +258,24 @@ add:
 					fold_change: self.config.gsea_params.fold_change,
 					geneSetGroup: self.config.gsea_params.geneSetGroup
 				}
-				const image = await rungsea(body)
-				//render_gsea_plot(self, plot_data)
-				console.log('image:', image)
-				if (image.error) throw image.error
 				const holder = self.dom.holder
 				holder.selectAll('*').remove()
-				const svg_width = 400
-				const svg_height = 400
-				const img = holder.append('svg').attr('width', svg_width).attr('height', svg_height).attr('src', image.type)
+				const wait = holder.append('div').text('Loading...')
+				const image = await rungsea(body)
+				wait.remove()
+				//render_gsea_plot(self, plot_data)
+				if (image.error) throw image.error
+				const imageUrl = URL.createObjectURL(image)
+				const png_width = 600
+				const png_height = 400
+				const img = holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', imageUrl)
 			}
 		})
 	}
 }
 
 function render_gsea_plot(self, plot_data) {
+	// This function is for client side rendering of the gsea plot. This is not currently used. May be used later if client side rendering is later desired.
 	console.log('self.dom.holder:', self.dom.holder)
 	const holder = self.dom.holder
 	console.log('plot_data:', plot_data)
