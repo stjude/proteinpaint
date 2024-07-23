@@ -14,6 +14,8 @@ Features:
 - Added Facet plot to the UI
 - New gene expression example available from the scatter plot card on the homepage.
 - In the gene set edit UI, user is able to choose returning all genes or compare against a predefined or custom gene set.
+- Handle custom matrix geneset input option
+- In GDC gene exp clustering, when screening user-defined gene sets, use a close-to-zero min_median_log2_uqfpkm parameter to keep more genes expressed at low level
 
 Fixes:
 - hierCluster group Add_Rows ui can only add compatible terms
