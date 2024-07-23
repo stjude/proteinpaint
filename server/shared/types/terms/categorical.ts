@@ -1,12 +1,13 @@
-//import { TermWrapper, BaseQ } from '../termdb'
 import { BaseTerm, BaseValue, BaseQ, BaseTW, QGroupSetting, TermGroupSetting, ValuesGroup } from './term.ts'
 
 /*
 --------EXPORTED--------
+CategoricalValuesObject
+CategoricalTerm
 CategoricalQ
 CategoricalTW
 CategoricaTermSettingInstance
-
+GroupSetInputValues
 */
 
 /**
@@ -52,11 +53,11 @@ export type CategoricalTW = BaseTW & {
 	q: CategoricalQ
 }
 
-//type Cat2SampleCntEntry = { key: string; count: number }
-
 export type GroupSetInputValues = {
 	[index: string]: {
-		label?: string | number //value's label on client
-		group?: number //value's current group index
+		/** value's label on client */
+		label?: string | number
+		/** value's current group index */
+		group?: number
 	}
 }
