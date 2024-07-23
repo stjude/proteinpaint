@@ -219,7 +219,6 @@ export async function init(arg, holder, genomes) {
 		const api = {
 			type: 'hierCluster',
 			update: async _arg => {
-				console.log(214, _arg)
 				const plotConfig = plotAppApi.getState().plots.find(p => p.chartType == 'hierCluster')
 				if (!hierClusterApi) {
 					if (plotConfig) hierClusterApi = plotAppApi.getComponents(`plots.${plotConfig.id}`)
