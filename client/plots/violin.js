@@ -301,7 +301,11 @@ class ViolinPlot {
 		if (this.config.term0) terms.push(this.config.term0)
 		for (const t of terms) {
 			if (isNumericTerm(t.term)) {
-				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter.filter, this.config.settings)
+				const data = await this.app.vocabApi.getDescrStats(
+					t,
+					this.state.termfilter,
+					this.config.settings?.violin?.unit == 'log'
+				)
 				if (data.error) throw data.error
 				t.q.descrStats = data.values
 			}
