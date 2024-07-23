@@ -54,6 +54,11 @@ export type CallbackArg = {
 	geneList: Gene[]
 }
 
+type CustomInputs = {
+	label: string
+	showInput: (arg: any) => void
+}[]
+
 export type GeneSetEditArg = {
 	holder: Elem
 	genome: ClientCopyGenome
@@ -71,6 +76,7 @@ export type GeneSetEditArg = {
 	geneList?: Gene[]
 	/** Title appearing above the UI */
 	titleText?: string
+	customInputs?: CustomInputs
 }
 
 export class GeneSetEditUI {
@@ -85,12 +91,16 @@ export class GeneSetEditUI {
 	api: API
 	geneSearch: any //cheating
 	/** Objects detailing the menus to create above the api.dom.geneHoldingDiv as clickable links  */
-	menuList: { label: string; callback: (f?: any) => void }[]
+	menuList: {
+		label: string
+		callback: (f?: any) => void
+		tagName?: string
+	}[]
 	mode?: 'geneVariant' | 'geneExpression'
 	minNumGenes: number
 	geneList: Gene[]
 	titleText?: string
-	customInputs?: any
+	customInputs?: CustomInputs
 
 	constructor(opts: GeneSetEditArg) {
 		this.holder = opts.holder
