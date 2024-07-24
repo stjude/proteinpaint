@@ -65,7 +65,7 @@ export function setInteractivity(self) {
 				}
 			})
 		}
-		self.displayMenu(event, options, plot, false)
+		self.displayMenu(event, options, plot)
 	}
 
 	self.displayBrushMenu = function (t1, t2, self, plot, selection, scale, isH) {
@@ -86,14 +86,16 @@ export function setInteractivity(self) {
 				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
 			})
 		}
-		self.displayMenu(event, options, plot, true, start, end)
+		self.displayMenu(event, options, plot, start, end)
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.displayMenu = function (event, options, plot, isBrush, start, end) {
+	self.displayMenu = function (event, options, plot, start, end) {
 		self.app.tip.d.selectAll('*').remove()
 		//For testing and debugging
 		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
+
+		const isBrush = start != null && end != null
 
 		if (isBrush) {
 			const [niceStart, niceEnd] =
