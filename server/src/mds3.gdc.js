@@ -1305,12 +1305,14 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 	// step 2: querying dict term data
 
-	if (q.isHierCluster) {
-		// running gene exp clustering, must only restrict to cases with exp data, but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
-		;[byTermId, samples] = await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
-	} else {
-		// not in gene exp clustering mode
-		;[byTermId, samples] = await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
+	if (dictTwLst.length) {
+		if (q.isHierCluster) {
+			// running gene exp clustering, must only restrict to cases with exp data, but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
+			;[byTermId, samples] = await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
+		} else {
+			// not in gene exp clustering mode
+			;[byTermId, samples] = await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
+		}
 	}
 
 	// step 3: querying survival data
@@ -2437,6 +2439,8 @@ p{}
 	request param
 endpoint
 	the function is reusable for two endpoints: ssm_occurrences, survival. however each uses different field values
+
+TODO duplicated code
 */
 function addSsmIsoformRegion4filter(contentLst, p, endpoint) {
 	const fields = endpoint2fields[endpoint]
@@ -2494,20 +2498,24 @@ function addSsmIsoformRegion4filter(contentLst, p, endpoint) {
 			})
 		}
 	} else {
-		// rglst is required now
-		if (!r) throw '.ssm_id_lst, .isoform, .isoforms, .rglst[] are all missing'
-		contentLst.push({
-			op: '=',
-			content: { field: fields.chr, value: r.chr }
-		})
-		contentLst.push({
-			op: '>=',
-			content: { field: fields.start, value: r.start }
-		})
-		contentLst.push({
-			op: '<=',
-			content: { field: fields.start, value: r.stop }
-		})
+		if (endpoint == 'survival') {
+			// using survival endpoint, meaning it's querying data for a survival term, allow all gene/ssm/region param to be missing, so the survival term can be added to a hiercluster map
+		} else if (endpoint == 'ssm_occurrences') {
+			// rglst is required now
+			if (!r) throw '.ssm_id_lst, .isoform, .isoforms, .rglst[] are all missing'
+			contentLst.push({
+				op: '=',
+				content: { field: fields.chr, value: r.chr }
+			})
+			contentLst.push({
+				op: '>=',
+				content: { field: fields.start, value: r.start }
+			})
+			contentLst.push({
+				op: '<=',
+				content: { field: fields.start, value: r.stop }
+			})
+		}
 	}
 }
 

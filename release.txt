@@ -1,1 +1,2 @@
-
+Fixes:
+- Allow to add survival term to GDC gene expression clustering map
