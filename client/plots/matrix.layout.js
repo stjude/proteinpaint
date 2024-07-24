@@ -175,7 +175,11 @@ export function setLabelsAndScales() {
 			if (t.tw.q?.mode == 'continuous' && renderedValues?.length && t.grp.type != 'hierCluster') {
 				// store the rendered continuous values into renderedContinuousVs to be used later
 				// do not do it for terms in hierCluster group
-				renderedContinuousVs.push(renderedValues[0].value || renderedValues[0])
+				renderedContinuousVs.push(
+					t.tw.term.valueConversion
+						? t.tw.term.valueConversion.scaleFactor * (renderedValues[0].value || renderedValues[0])
+						: renderedValues[0].value || renderedValues[0]
+				)
 			}
 
 			const subGroup = t.counts.subGroupCounts?.[sample.grp.name]
