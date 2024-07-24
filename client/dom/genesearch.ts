@@ -11,6 +11,7 @@ string2variant()
 
 
 TODO
+-- need ci tests
 -- allow to hide searchStat dom
 -- dedup code with block.js
 -- dedup code with app header
@@ -132,6 +133,11 @@ insertion
 export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
 		row = arg.row
+
+	if (arg.geneOnly && arg.snpOnly) {
+		row.append('span').text('.geneOnly and snpOnly cannot both be true')
+		return
+	}
 
 	let placeholder: string,
 		width = 150
