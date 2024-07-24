@@ -138,6 +138,10 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		row.append('span').text('.geneOnly and snpOnly cannot both be true')
 		return
 	}
+	if (arg.snpOnly && !arg.genome.hasSNP) {
+		row.append('span').text('cannot support snpOnly: genome lacks SNP')
+		return
+	}
 
 	let placeholder: string,
 		width = 150
