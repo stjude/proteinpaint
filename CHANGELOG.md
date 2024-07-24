@@ -10,6 +10,9 @@ General:
 Features:
 - matrix and hiercluster: allow to recompute term shown in continuous mode as zscore
 
+Fixes:
+- pass filter0 in barchart request to work for gdc data
+
 
 ## 2.68.0
 
