@@ -5,7 +5,6 @@ import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
 import { mclass, dt2label } from '#shared/common.js'
-import { isNumeric } from '#shared/helpers'
 
 const binLabelFormatter = format('.3r')
 
@@ -143,8 +142,7 @@ export async function barchart_data(q, ds, tdb) {
 					let item
 					if (samplesMap.get(sampleId)) item = samplesMap.get(sampleId)
 					else if (!samplesMap.has(sampleId)) {
-						const intSampleId = isNumeric(sampleId) ? Number(sampleId) : sampleId
-						item = { sample: intSampleId }
+						item = { sample: sampleId }
 						samplesMap.set(sampleId, item)
 					}
 					if (!item) continue
@@ -213,7 +211,6 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 	else bins.push([])
 
 	for (const [sampleId, values] of Object.entries(data.samples)) {
-		const intSampleId = isNumeric(sampleId) ? Number(sampleId) : sampleId
 		if (map.get(1)?.term?.type == 'geneVariant') {
 			const processedValues = []
 			const value1 = values[id1]
@@ -231,7 +228,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 						? sameDtOrigin.item[`key1`][mclass[v1.class].label] + 1
 						: 1
 				} else {
-					const item = { sample: customSampleID, name: ds.sampleId2Name.get(intSampleId) }
+					const item = { sample: customSampleID, name: ds.sampleId2Name.get(sampleId) }
 					item[`key1`] = mclass[v1.class].label
 					item[`val1`] = mclass[v1.class].label
 
@@ -278,7 +275,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 						? sameDtOrigin.item[`key2`][mclass[v2.class].label] + 1
 						: 1
 				} else {
-					const item = { sample: customSampleID, name: ds.sampleId2Name.get(intSampleId) }
+					const item = { sample: customSampleID, name: ds.sampleId2Name.get(sampleId) }
 					item[`key1`] = value1.key
 					item[`val1`] = value1.value
 
