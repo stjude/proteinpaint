@@ -69,7 +69,6 @@ export function setInteractivity(self) {
 	}
 
 	self.displayBrushMenu = function (t1, t2, self, plot, selection, scale, isH) {
-		self.displayBrushMenu.called = true
 		const [start, end] = isH
 			? [scale.invert(selection[0]), scale.invert(selection[1])]
 			: [scale.invert(selection[1]), scale.invert(selection[0])]
