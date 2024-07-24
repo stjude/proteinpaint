@@ -2,7 +2,7 @@ import { getCompInit } from '../rx'
 import { termsettingInit } from '#termsetting'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter'
-import { isDictionaryType } from '#shared/terms'
+import { TermTypes, isDictionaryType } from '#shared/terms'
 
 /*
 options for term2:
@@ -33,7 +33,10 @@ class Overlay {
 	}
 	initPill() {
 		if (!this.opts.defaultQ4fillTW) this.opts.defaultQ4fillTW = {}
-		this.opts.defaultQ4fillTW['geneVariant'] = { groupsetting: { inuse: true } } // geneVariant term should always use groupsetting when used as overlay term
+		this.opts.defaultQ4fillTW[TermTypes.GENE_VARIANT] = { groupsetting: { inuse: true } }
+		this.opts.defaultQ4fillTW[TermTypes.GENE_EXPRESSION] = { mode: 'discrete' }
+		this.opts.defaultQ4fillTW[TermTypes.METABOLITE_INTENSITY] = { mode: 'discrete' }
+
 		this.pill = termsettingInit({
 			vocabApi: this.app.vocabApi,
 			vocab: this.state.vocab,
