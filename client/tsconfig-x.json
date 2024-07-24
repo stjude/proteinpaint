@@ -2,9 +2,7 @@
   "extends": "./tsconfig.json",
   "exclude": [
     "./**/geneVariant.ts",
-    "./termsetting/handlers/snp.ts",
     "./**/singleCellGeneExpression.ts",
-    "./**/hic.app.integration.spec-manual.ts",
     "./dist/**/*"
   ]
 }
