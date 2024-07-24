@@ -3,7 +3,6 @@ import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW, GeneVariantQ }
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '../../rx'
 import { GroupSettingMethods } from './groupsetting.ts'
-
 /* 
 instance attributes
 
@@ -25,13 +24,13 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 
 		getPillStatus() {
 			if (self.q.groupsetting.inuse) {
-				const labels = []
+				const labels: string[] = []
 				labels.push(dt2label[self.q.dt])
-				const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt]?.byOrigin
-				if (byOrigin) labels.push(byOrigin[self.q.origin]?.label || self.q.origin)
+				const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt as number]?.byOrigin
+				if (byOrigin) labels.push(byOrigin[self.q.origin as string]?.label || self.q.origin)
 				if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
 					const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-					labels.push(groupset.name)
+					labels.push(groupset.name as string)
 				} else if (self.q.groupsetting.customset) {
 					const n = self.q.groupsetting.customset.groups.length
 					labels.push(`Divided into ${n} groups`)
@@ -86,7 +85,8 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
 	// fill q.groupsetting
 	if (!tw.q.groupsetting) tw.q.groupsetting = {}
-	delete tw.q.groupsetting.disabled
+	/** .disabled not on q.groupsetting */
+	// delete tw.q.groupsetting.disabled
 	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false
 	if (tw.q.groupsetting.inuse) {
 		// groupsetting in use
@@ -336,7 +336,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		self.q.type = 'custom-groupset'
 		delete self.q.groupsetting.predefined_groupset_idx
 		const dt = self.category2samplecount.find(i => i.dt == self.q.dt)
-		const classes = dt.classes.byOrigin ? dt.classes.byOrigin[self.q.origin] : dt.classes
+		const classes = dt.classes.byOrigin ? dt.classes.byOrigin[self.q.origin as string] : dt.classes
 		if (!self.q.groupsetting.customset) {
 			const groups = [
 				{
@@ -459,7 +459,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 // get dts specified in dataset
 function getDsDts(ds_queries) {
-	const ds_dts = []
+	const ds_dts: number[] = []
 	for (const query of Object.keys(ds_queries)) {
 		if (query == 'snvindel') ds_dts.push(dtsnvindel)
 		else if (query == 'cnv') ds_dts.push(dtcnv)
