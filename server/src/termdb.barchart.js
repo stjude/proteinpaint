@@ -5,6 +5,7 @@ import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
 import { mclass, dt2label } from '#shared/common.js'
+import { isNumeric } from '#shared/helpers'
 
 const binLabelFormatter = format('.3r')
 
@@ -142,7 +143,7 @@ export async function barchart_data(q, ds, tdb) {
 					let item
 					if (samplesMap.get(sampleId)) item = samplesMap.get(sampleId)
 					else if (!samplesMap.has(sampleId)) {
-						const intSampleId = parseInt(sampleId)
+						const intSampleId = isNumeric(sampleId) ? Number(sampleId) : sampleId
 						item = { sample: intSampleId }
 						samplesMap.set(sampleId, item)
 					}
@@ -212,7 +213,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 	else bins.push([])
 
 	for (const [sampleId, values] of Object.entries(data.samples)) {
-		const intSampleId = parseInt(sampleId)
+		const intSampleId = isNumeric(sampleId) ? Number(sampleId) : sampleId
 		if (map.get(1)?.term?.type == 'geneVariant') {
 			const processedValues = []
 			const value1 = values[id1]
