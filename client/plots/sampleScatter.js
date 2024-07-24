@@ -540,10 +540,34 @@ class Scatter {
 				}
 			})
 		}
-
-		const filter = filterJoin([this.state.termfilter.filter, tvslst])
+		const filters = [this.state.termfilter.filter, tvslst]
+		if (this.config.filter) filters.push(this.config.filter)
+		const filter = filterJoin(filters)
 		return filter
 	}
+}
+export function openScatterPlot(app, plot, filter = null) {
+	let config = {
+		chartType: 'sampleScatter',
+		name: plot.name,
+		filter
+	}
+	if (plot.sampleCategory)
+		config.sampleCategory = {
+			tw: JSON.parse(JSON.stringify(plot.sampleCategory.tw)),
+			order: plot.sampleCategory.order,
+			defaultValue: plot.sampleCategory.defaultValue
+		}
+	if (plot.sampleType) config.sampleType = plot.sampleType
+	if (plot.colorTW) config.colorTW = JSON.parse(JSON.stringify(plot.colorTW))
+	else if (plot.colorColumn) config.colorColumn = JSON.parse(JSON.stringify(plot.colorColumn))
+
+	if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
+	if (plot.settings) config.settings = JSON.parse(JSON.stringify(plot.settings))
+	app.dispatch({
+		type: 'plot_create',
+		config: config
+	})
 }
 
 export function downloadImage(imageURL) {
@@ -622,26 +646,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(plot.name)
 				.on('click', () => {
-					let config = {
-						chartType: 'sampleScatter',
-						name: plot.name
-					}
-					if (plot.sampleCategory)
-						config.sampleCategory = {
-							tw: JSON.parse(JSON.stringify(plot.sampleCategory.tw)),
-							order: plot.sampleCategory.order,
-							defaultValue: plot.sampleCategory.defaultValue
-						}
-					if (plot.sampleType) config.sampleType = plot.sampleType
-					if (plot.colorTW) config.colorTW = JSON.parse(JSON.stringify(plot.colorTW))
-					else if (plot.colorColumn) config.colorColumn = JSON.parse(JSON.stringify(plot.colorColumn))
-
-					if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
-					if (plot.settings) config.settings = JSON.parse(JSON.stringify(plot.settings))
-					chartsInstance.app.dispatch({
-						type: 'plot_create',
-						config: config
-					})
+					openScatterPlot(chartsInstance.app, plot)
 					chartsInstance.dom.tip.hide()
 				})
 		}
