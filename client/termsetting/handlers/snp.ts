@@ -1,5 +1,5 @@
 import { VocabApi } from '../../shared/types/index'
-import { SnpTW, SnpQ } from '../../shared/types/terms/snp'
+import { SnpTW, SnpQ, SnpTerm } from '../../shared/types/terms/snp'
 import { copyMerge } from '../../rx'
 import { GroupSettingMethods } from './groupsetting.ts'
 
@@ -55,11 +55,11 @@ export async function fillTW(tw: SnpTW, vocabApi: VocabApi, defaultQ: SnpQ | nul
 
 	// groupsetting
 	// fill term.groupsetting
-	if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
+	if (!tw.term.groupsetting) (tw.term as SnpTerm).groupsetting = { disabled: false }
 	// fill q.groupsetting
-	if (!tw.q.groupsetting) tw.q.groupsetting = {}
-	delete tw.q.groupsetting.disabled
-	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false
+	if (!tw.q.groupsetting) (tw.q.groupsetting as any) = {}
+
+	if (!('inuse' in tw.q.groupsetting)) (tw.q as SnpQ).groupsetting.inuse = false
 
 	return tw
 }

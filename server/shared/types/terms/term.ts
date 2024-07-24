@@ -66,21 +66,19 @@ export type CustomQGroupSetting = QGroupSetting & {
 	This is a custom set of groups either copied from predefined set, or created with UI.
 	Custom set definition is the same as a predefined set. */
 	customset: BaseGroupSet
-	inuse: boolean
 }
 
 export type PredefinedQGroupSetting = QGroupSetting & {
 	/** If .inuse true, apply and will require predefined_groupset_idx */
 	/** Value is array index of term.groupsetting.lst[] */
 	predefined_groupset_idx: number
-	inuse: boolean
 }
 
 export type TermGroupSetting = {
 	/** if there are only two categories, means groupsetting
 	 * definition is not applicable for the term */
 	disabled?: boolean
-	lst: GroupSetEntry[]
+	lst?: GroupSetEntry[]
 }
 
 export type BaseTerm = {
@@ -159,27 +157,3 @@ export type Subconditions = {
 		label: string
 	}
 }
-
-// TODO: remove, not needed?
-//type ValueConversion = {
-/** name of unit for the original value */
-//fromUnit: string
-/** name of converted unit.
-	when converting day to year, resulting value will be `X year Y day`, that the fromUnit is used to indicate residue days from the last year; it's also printed in termsetting ui
-	this logic does not hold if converting from year to day, should detect if scaleFactor is >1 or <1 */
-//toUnit: string
-//}
-
-export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
-	? NumericQ
-	: T extends 'categorical'
-	? CategoricalQ
-	: T extends 'condition'
-	? ConditionQ
-	: T extends 'geneVariant'
-	? GeneVariantQ
-	: T extends 'samplelst'
-	? SampleLstQ
-	: T extends 'snplst' | 'snplocus'
-	? SnpsQ
-	: Q
