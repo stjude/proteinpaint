@@ -5,7 +5,10 @@ import { TermSettingInstance } from '../termsetting.ts'
 /*
 --------EXPORTED--------
 GeneVariantQ
-GeneVariantTermWrapper
+GeneVariantTW
+GeneVariantTerm
+GeneVariantCoordTerm
+GeneVariantGeneTerm
 GeneVariantTermSettingInstance
 
 */
@@ -15,7 +18,7 @@ export type GeneVariantQ = BaseQ & {
 	cnvMaxLength?: number
 	cnvMinAbsValue?: number
 	cnvLossCutoff?: number
-	exclude: any //an array maybe?
+	exclude: string[]
 	groupsetting: QGroupSetting
 	dt?: number
 	origin?: string
@@ -26,24 +29,22 @@ export type GeneVariantTW = TermWrapper & {
 	term: GeneVariantTerm
 }
 
-export type GeneVariantCoordTerm = BaseTerm & {
+export type GeneVariantTerm = BaseTerm & {
+	groupsetting: TermGroupSetting
+}
+
+export type GeneVariantCoordTerm = GeneVariantTerm & {
 	chr: string
 	start: number
 	stop: number
 }
 
-export type GeneVariantGeneTerm = BaseTerm & {
+export type GeneVariantGeneTerm = GeneVariantTerm & {
 	gene: string
 	chr?: string
 	start?: number
 	stop?: number
 }
-
-export type GeneVariantTerm =
-	| GeneVariantCoordTerm
-	| (GeneVariantGeneTerm & {
-			groupsetting: TermGroupSetting
-	  })
 
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
 	q: GeneVariantQ

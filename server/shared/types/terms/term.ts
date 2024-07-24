@@ -31,20 +31,19 @@ export type TermValues = {
 	[key: string | number]: BaseValue
 }
 
-// THIS IS WRONG!!!!
-export type ValuesGroup = {
-	type: 'values'
-	values: { key: number | string; label: string }[]
-	// color?: string
-}
-
-export type FilterGroup = {
-	type: 'filter'
-	filter: Filter
-}
-
-export type GroupEntry = (ValuesGroup | FilterGroup) & {
+export type GroupEntry = {
 	name: string
+	/** `values` is the default. if `values`, values must be present
+	 * if `filter`, filter must be present */
+	type: 'values' | 'filter'
+}
+
+export type ValuesGroup = GroupEntry & {
+	values: { key: number | string; label: string }[]
+}
+
+export type FilterGroup = GroupEntry & {
+	filter: Filter
 }
 
 export type BaseGroupSet = {
@@ -57,26 +56,29 @@ export type GroupSetEntry = BaseGroupSet & {
 	is_subcondition?: boolean
 }
 
-export type CustomQGroupSetting = {
+export type QGroupSetting = {
+	/** if false, not applied */
+	inuse: boolean
+}
+
+export type CustomQGroupSetting = QGroupSetting & {
 	/** When “predefined_groupset_idx” is undefined, will use this set of groups.
 	This is a custom set of groups either copied from predefined set, or created with UI.
 	Custom set definition is the same as a predefined set. */
 	customset: BaseGroupSet
-	/** if false, not applied */
-	inuse?: boolean
+	inuse: boolean
 }
 
-export type PredefinedQGroupSetting = {
+export type PredefinedQGroupSetting = QGroupSetting & {
 	/** If .inuse true, apply and will require predefined_groupset_idx */
 	/** Value is array index of term.groupsetting.lst[] */
 	predefined_groupset_idx: number
-	inuse: true
+	inuse: boolean
 }
 
-export type QGroupSetting = PredefinedQGroupSetting | CustomQGroupSetting
-
 export type TermGroupSetting = {
-	/** if there are only two values, means groupsetting definition is not applicable for the term */
+	/** if there are only two categories, means groupsetting
+	 * definition is not applicable for the term */
 	disabled?: boolean
 	lst: GroupSetEntry[]
 }
@@ -148,7 +150,6 @@ export type BaseQ = {
 		| 'custom-groupset'
 		/** Applies to samplelst terms */
 		| 'custom-samplelst'
-	groupsetting?: QGroupSetting
 }
 
 /*** types supporting Term types ***/

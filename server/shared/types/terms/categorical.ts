@@ -18,7 +18,7 @@ GroupSetInputValues
  * @category TW
  */
 
-export type CategoricalValuesObject = {
+export type CategoricalValuesObject = CategoricalQ & {
 	mode: 'binary' | 'discrete'
 	type?: 'values'
 	values: {
@@ -26,7 +26,7 @@ export type CategoricalValuesObject = {
 	}
 }
 
-export type GroupSet = {
+export type GroupSet = CategoricalQ & {
 	mode: 'binary' | 'discrete'
 	type?: 'predefined-groupset' | 'custom-groupset'
 	name: string
@@ -39,7 +39,7 @@ export type CategoricalTerm = BaseTerm & {
 	groupsetting: TermGroupSetting & { useIndex: number }
 }
 
-export type CategoricalQ = BaseQ & QGroupSetting & (CategoricalValuesObject | GroupSet)
+export type CategoricalQ = BaseQ & { groupsetting: QGroupSetting }
 
 /**
  * A categorical term wrapper object
