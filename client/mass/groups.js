@@ -220,14 +220,34 @@ class MassGroups {
 			})
 		if (this.state.termdbConfig.scatterplots)
 			for (const plot of this.state.termdbConfig.scatterplots) {
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text(`Open ${plot.name}`)
-					.on('click', () => {
-						openScatterPlot(this.app, plot, getFilter(samplelstTW))
-						this.tip.hide()
-					})
+				if (plot.colorTW)
+					//the plot supports overlay by a color term
+					menuDiv
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text(`Open ${plot.name}`)
+						.on('click', () => {
+							let config = {
+								chartType: 'sampleScatter',
+								name: plot.name
+							}
+							if (plot.sampleCategory)
+								//if the plot filters by a sample category, like D1, R1
+								config.sampleCategory = {
+									tw: JSON.parse(JSON.stringify(plot.sampleCategory.tw)),
+									order: plot.sampleCategory.order,
+									defaultValue: plot.sampleCategory.defaultValue
+								}
+							if (plot.sampleType) config.sampleType = plot.sampleType //if the plot specifies the sample type to customize the legend
+							config.colorTW = JSON.parse(JSON.stringify(samplelstTW))
+
+							if (plot.settings) config.settings = JSON.parse(JSON.stringify(plot.settings)) //if the plot specifies settings
+							this.app.dispatch({
+								type: 'plot_create',
+								config: config
+							})
+							this.tip.hide()
+						})
 			}
 
 		this.tip.showunder(event.target)
