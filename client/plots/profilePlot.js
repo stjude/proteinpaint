@@ -107,6 +107,17 @@ export class profilePlot {
 				this.showTable(show)
 			})
 		}
+		icon_functions['restart'](iconsDiv.append('div').style('padding', '15px 5px'), {
+			title: 'Clear filters',
+			handler: async () => {
+				this.clearFiltersExcept([])
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { filter: this.getFilter(), settings: { [this.type]: this.settings } }
+				})
+			}
+		})
 	}
 
 	async showTable(show) {
@@ -453,12 +464,13 @@ export class profilePlot {
 	addFilterLegend() {
 		if (!this.settings.site || this.config.chartType == 'profileRadarFacility') {
 			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id])
+			const title = hasFilters ? 'Filters' : 'No filter applied'
 			this.filterG
 				.attr('font-size', '0.9em')
 				.append('text')
 				.attr('text-anchor', 'left')
 				.style('font-weight', 'bold')
-				.text(hasFilters ? 'Filters' : 'No filter applied')
+				.text(`${title} (n=${this.data.lst.length})`)
 				.attr('transform', `translate(0, -5)`)
 			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		}
