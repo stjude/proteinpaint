@@ -12,9 +12,7 @@ export class SearchHandler {
 			row: opts.holder,
 			snpOnly: true,
 			allowVariant: true,
-			callback: () => this.selectSnp(geneSearch),
-			hideHelp: true,
-			focusOff: true
+			callback: () => this.selectSnp(geneSearch)
 		})
 	}
 

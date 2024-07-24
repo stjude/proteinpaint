@@ -13,9 +13,7 @@ export class SearchHandler {
 			genome: opts.genomeObj,
 			row: opts.holder,
 			geneOnly: true,
-			callback: () => this.selectGene(geneSearch.geneSymbol),
-			hideHelp: true,
-			focusOff: true
+			callback: () => this.selectGene(geneSearch.geneSymbol)
 		})
 	}
 
