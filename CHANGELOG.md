@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- matrix and hiercluster: allow to recompute term shown in continuous mode as zscore
+
+
 ## 2.68.0
 
 Features:
