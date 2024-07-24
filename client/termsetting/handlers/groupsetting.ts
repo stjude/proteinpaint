@@ -378,9 +378,7 @@ function setRenderers(self: any) {
 	}
 
 	self.processDraggables = () => {
-		// if no item was dragged
-		// then do not create custom groups
-		if (!draggedItem) return
+		if (!draggedItem && !editedName) return // no groupset changes, so return
 		const customset: any = { groups: [] }
 		for (const group of self.data.groups) {
 			if (group.currentIdx === 0) continue
@@ -404,6 +402,7 @@ function setRenderers(self: any) {
 	}
 
 	let draggedItem: any
+	let editedName: boolean
 	async function initGroupDiv(group: GrpEntryWithDom) {
 		//Create the parent group div on load and with user actions on the top
 		const wrapper = group.currentIdx === 0 ? self.dom.excludedWrapper : self.dom.includedWrapper
@@ -514,6 +513,7 @@ function setRenderers(self: any) {
 	self.onKeyUp = async function (group: GrpEntryWithDom) {
 		//Detect unique name on change. If not a unique name, alert the user and disable apply button
 		if (group.name == group.input.node().value) return
+		editedName = true
 		const match = self.data.groups.filter((g: GrpEntryWithDom) => g.name == group.input.node().value)
 		if (match.length > 0) {
 			self.dom.actionDiv.applyBtn.property('disabled', true)
