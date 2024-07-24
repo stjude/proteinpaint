@@ -32,6 +32,14 @@ function init({ genomes }) {
 			} else {
 				// req.query.geneset_name is present, this will cause the geneset image to be generated. The python code will retrieve gsea_result_{random_number}.pkl from serverconfig.cachedir to generate the image (gsea_plot_{random_num}.png). This prevents having to rerun the entire gsea computation again.
 				res.sendFile(results, (err: any) => {
+					fs.unlink(results, del_err => {
+						if (del_err) {
+							console.error('Error deleting file ' + results + ':', del_err)
+						}
+						//else {
+						//	console.log('File ' + results + ' deleted successfully')
+						//}
+					})
 					if (err) {
 						res.status(404).send('Image not found')
 					}

@@ -142,6 +142,7 @@ add:
 	if (self.settings.pathway != '-') {
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.dom.holder.selectAll('*').remove()
+		self.dom.tableDiv.selectAll('*').remove()
 		self.config.gsea_params.geneSetGroup = self.settings.pathway
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
 		//console.log('self.config.gsea_params:', self.config.gsea_params)
