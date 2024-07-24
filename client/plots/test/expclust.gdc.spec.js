@@ -7,7 +7,7 @@ import { select } from 'd3-selection'
 /**************
  test sections
 
-TME genes and dictionary variables
+TME genes and dictionary variables, survival
 gdc laucher with top variably expressed genes, for gliomas
 
 ***************/
@@ -16,7 +16,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('TME genes and dictionary variables', function (test) {
+tape('TME genes and dictionary variables, survival', function (test) {
 	test.timeoutAfter(60000)
 	runpp({
 		state: {
@@ -285,4 +285,9 @@ const TMEgenes = [
 	{ gene: 'KIF2C' },
 	{ gene: 'CDCA8' }
 ]
-const dictTerms = [{ id: 'case.disease_type' }, { id: 'case.primary_site' }, { id: 'case.demographic.gender' }]
+const dictTerms = [
+	{ id: 'case.disease_type' },
+	{ id: 'case.primary_site' },
+	{ id: 'case.demographic.gender' },
+	{ id: 'Overall Survival' }
+]
