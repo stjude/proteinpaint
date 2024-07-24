@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.69.0
 
 General:
 - bug fix: when clicking labels on violin plot breaks on master
