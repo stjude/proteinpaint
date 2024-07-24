@@ -145,7 +145,7 @@ class Scatter {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.config = structuredClone(this.state.config)
 		if (this.config.settings.sampleScatter.regression !== 'None' && this.config.term0) {
 			if (this.charts) for (const chart of this.charts) chart.chartDiv.selectAll('*').remove()
 			this.dom.loadingDiv.style('display', 'block').html('Processing data...')
@@ -554,16 +554,16 @@ export function openScatterPlot(app, plot, filter = null) {
 	}
 	if (plot.sampleCategory)
 		config.sampleCategory = {
-			tw: JSON.parse(JSON.stringify(plot.sampleCategory.tw)),
+			tw: structuredClone(plot.sampleCategory.tw),
 			order: plot.sampleCategory.order,
 			defaultValue: plot.sampleCategory.defaultValue
 		}
 	if (plot.sampleType) config.sampleType = plot.sampleType
-	if (plot.colorTW) config.colorTW = JSON.parse(JSON.stringify(plot.colorTW))
-	else if (plot.colorColumn) config.colorColumn = JSON.parse(JSON.stringify(plot.colorColumn))
+	if (plot.colorTW) config.colorTW = structuredClone(plot.colorTW)
+	else if (plot.colorColumn) config.colorColumn = structuredClone(plot.colorColumn)
 
-	if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
-	if (plot.settings) config.settings = JSON.parse(JSON.stringify(plot.settings))
+	if ('shapeTW' in plot) config.shapeTW = structuredClone(plot.shapeTW)
+	if (plot.settings) config.settings = structuredClone(plot.settings)
 	app.dispatch({
 		type: 'plot_create',
 		config: config
@@ -702,7 +702,7 @@ export async function renderScatter(holder, state, plot) {
 					colorTW: plot.colorTW,
 					sampleType: plot.sampleType,
 					sampleCategory: {
-						tw: JSON.parse(JSON.stringify(plot.sampleCategory.tw)),
+						tw: structuredClone(plot.sampleCategory.tw),
 						order: plot.sampleCategory.order,
 						defaultValue: plot.sampleCategory.defaultValue
 					}
