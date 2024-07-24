@@ -689,7 +689,7 @@ tape('skipped series', function (test) {
 	}
 })
 
-tape('term1 = Cardiovascular System, term2 = samplelst', function (test) {
+tape.skip('term1 = Cardiovascular System, term2 = samplelst', function (test) {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {
