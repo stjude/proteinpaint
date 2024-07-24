@@ -7,7 +7,6 @@ import { get$id } from '#termsetting'
 import { getActiveCohortStr } from './charts'
 import { getColors } from '#shared/common'
 import { rgb } from 'd3-color'
-import { openScatterPlot } from '../plots/sampleScatter'
 /*
 this
 	app
