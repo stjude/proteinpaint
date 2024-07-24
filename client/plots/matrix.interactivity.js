@@ -121,7 +121,7 @@ export function setInteractivity(self) {
 					const timeToEventKey =
 						'Time to Event: ' +
 						(d.timeToEventKey
-							? d.timeToEventKey + (d.term.unit ? `(${d.term.unit})` : '')
+							? d.timeToEventKey + (d.term.unit && !d.tw?.q?.convert2ZScore ? `(${d.term.unit})` : '')
 							: d.convertedValueLabel || d.label) +
 						(d.tw?.q?.convert2ZScore ? ' (Z-Score)' : '')
 

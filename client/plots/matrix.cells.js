@@ -11,8 +11,7 @@ import { colorScaleMap } from '../shared/common'
 	s: plotConfig.settings.matrix
 */
 function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
-	if (tw.q.convert2ZScore) cell.key = (cell.key - t.mean) / t.std
-	const key = cell.key
+	const key = anno.key
 	const values = tw.term.values || {}
 	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
 	cell.fill = anno.color || values[anno.key]?.color
@@ -47,12 +46,18 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 			cell.x = tw.settings.gap // - cell.width
 		} else {
 			const vc = cell.term.valueConversion
-			const renderV = vc ? cell.key * vc.scaleFactor : cell.key
-			cell.height = cell.key >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
+			let renderV = vc ? cell.key * vc.scaleFactor : cell.key
+			if (tw.q.convert2ZScore) renderV = (renderV - t.mean) / t.std
+			cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : renderV
+			cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y =
-				cell.key >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : t.counts.posMaxHt + t.tw.settings.gap
-			cell.convertedValueLabel = vc ? convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor) : ''
+				renderV >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : t.counts.posMaxHt + t.tw.settings.gap
+			cell.convertedValueLabel = !vc
+				? ''
+				: tw.q.convert2ZScore
+				? renderV
+				: convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
 		}
 	} else {
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
@@ -63,7 +68,7 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 }
 
 function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
-	const key = tw.q?.mode !== 'continuous' ? anno.key : tw.q?.convert2ZScore ? (anno.value - t.mean) / t.std : anno.value
+	const key = tw.q?.mode == 'continuous' ? anno.value : anno.key
 	cell.key = key
 	cell.label =
 		tw.q?.mode == 'continuous'
@@ -86,12 +91,18 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 			cell.x = tw.settings.gap
 		} else {
 			const vc = cell.term.valueConversion
-			const renderV = vc ? cell.key * vc.scaleFactor : cell.key
-			cell.height = cell.key >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
+			let renderV = vc ? cell.key * vc.scaleFactor : cell.key
+			if (tw.q.convert2ZScore) renderV = (renderV - t.mean) / t.std
+			cell.label = tw.term.unit && !tw.q.convert2ZScore ? `${renderV}(${tw.term.unit})` : renderV
+			cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y =
-				cell.key >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : t.counts.posMaxHt + t.tw.settings.gap
-			cell.convertedValueLabel = vc ? convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor) : ''
+				renderV >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : t.counts.posMaxHt + t.tw.settings.gap
+			cell.convertedValueLabel = !vc
+				? ''
+				: tw.q.convert2ZScore
+				? renderV
+				: convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
 		}
 	} else {
 		cell.timeToEventKey = anno.value
