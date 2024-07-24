@@ -154,10 +154,6 @@ export function setCategoryMethods(self) {
 	self.showGrpOpts = async function () {
 		await new GroupSettingMethods(Object.assign(self, { newMenu: true })).main()
 	}
-
-	self.getQlst = () => {
-		//Leave function as it is required in the termsetting code.
-	}
 }
 
 export function fillTW(tw: SingleCellCellTypeTW, vocabApi: VocabApi, defaultQ = null) {
@@ -166,11 +162,11 @@ export function fillTW(tw: SingleCellCellTypeTW, vocabApi: VocabApi, defaultQ = 
 	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
 	if (!tw.q.groupsetting) (tw.q.groupsetting as any) = {}
 	if (!tw.term.groupsetting) (tw.term.groupsetting as any) = {}
-	//** .disabled is not used on q.groupsetting */
-	// if (tw.term.groupsetting.disabled) {
-	// 	tw.q.groupsetting.disabled = true
-	// 	return
-	// }
+	if (tw.term.groupsetting.disabled) {
+		//** .disabled is not used on q.groupsetting */
+		// tw.q.groupsetting.disabled = true
+		return
+	}
 	// delete tw.q.groupsetting.disabled
 	if (!('inuse' in tw.q.groupsetting!)) tw.q.groupsetting!.inuse = false // do not apply by default
 
