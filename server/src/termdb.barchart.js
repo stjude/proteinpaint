@@ -228,7 +228,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 						? sameDtOrigin.item[`key1`][mclass[v1.class].label] + 1
 						: 1
 				} else {
-					const item = { sample: customSampleID, name: ds.sampleId2Name.get(sampleId) }
+					const item = { sample: customSampleID }
 					item[`key1`] = mclass[v1.class].label
 					item[`val1`] = mclass[v1.class].label
 
@@ -275,7 +275,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 						? sameDtOrigin.item[`key2`][mclass[v2.class].label] + 1
 						: 1
 				} else {
-					const item = { sample: customSampleID, name: ds.sampleId2Name.get(sampleId) }
+					const item = { sample: customSampleID }
 					item[`key1`] = value1.key
 					item[`val1`] = value1.value
 
