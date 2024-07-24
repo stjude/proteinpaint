@@ -7,7 +7,7 @@ import { get$id } from '#termsetting'
 import { getActiveCohortStr } from './charts'
 import { getColors } from '#shared/common'
 import { rgb } from 'd3-color'
-
+import { openScatterPlot } from '../plots/sampleScatter'
 /*
 this
 	app
@@ -218,6 +218,17 @@ class MassGroups {
 				deleteCallback()
 				this.tip.hide()
 			})
+		if (this.state.termdbConfig.scatterplots)
+			for (const plot of this.state.termdbConfig.scatterplots) {
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(`Open ${plot.name}`)
+					.on('click', () => {
+						openScatterPlot(this.app, plot, getFilter(samplelstTW))
+						this.tip.hide()
+					})
+			}
 
 		this.tip.showunder(event.target)
 	}
