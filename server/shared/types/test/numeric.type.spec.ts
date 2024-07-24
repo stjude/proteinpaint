@@ -38,8 +38,7 @@ import { StartUnboundedBin, StopUnboundedBin, FullyBoundedBin, NumericTerm } fro
 				type: 'custom-bin',
 				lst: [{ start: 0, stop: 1 }]
 			}
-		},
-		groupsetting: {}
+		}
 	}
 
 	// @ts-expect-error, wrong term.type
