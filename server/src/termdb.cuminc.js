@@ -30,6 +30,13 @@ export async function get_incidence(q, ds) {
 			const termnum_q = termnum + '_q'
 			const termnum_$id = termnum + '_$id'
 
+			if (q[termnum] && !(termnum_$id in q)) {
+				// $id of edited term is undefined and will not get
+				// passed to backend
+				// as a quick fix, use term.id as $id
+				q[termnum_$id] = q[termnum].id
+			}
+
 			if (q[termnum]) twLst.push({ $id: q[termnum_$id], term: q[termnum], q: q[termnum_q] })
 		}
 
