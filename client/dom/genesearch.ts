@@ -134,13 +134,15 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
 		row = arg.row
 
+	const result: Result = {}
+
 	if (arg.geneOnly && arg.snpOnly) {
 		row.append('span').text('.geneOnly and snpOnly cannot both be true')
-		return
+		return result
 	}
 	if (arg.snpOnly && !arg.genome.hasSNP) {
 		row.append('span').text('cannot support snpOnly: genome lacks SNP')
-		return
+		return result
 	}
 
 	let placeholder: string,
@@ -434,8 +436,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				getResult(d, geneSymbol + ', ' + d.name, d.name)
 			})
 	}
-
-	const result: Result = {}
 
 	if (arg.defaultCoord) {
 		const d = arg.defaultCoord as Result
