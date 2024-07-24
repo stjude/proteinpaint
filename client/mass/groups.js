@@ -180,7 +180,7 @@ class MassGroups {
 	}
 
 	showGroupsMenu(event, tw, deleteCallback) {
-		const samplelstTW = JSON.parse(JSON.stringify(tw))
+		const samplelstTW = structuredClone(tw)
 		this.tip.clear()
 		const menuDiv = this.tip.d.append('div')
 		const id = this?.lastId
@@ -233,14 +233,14 @@ class MassGroups {
 							if (plot.sampleCategory)
 								//if the plot filters by a sample category, like D1, R1
 								config.sampleCategory = {
-									tw: JSON.parse(JSON.stringify(plot.sampleCategory.tw)),
+									tw: structuredClone(plot.sampleCategory.tw),
 									order: plot.sampleCategory.order,
 									defaultValue: plot.sampleCategory.defaultValue
 								}
 							if (plot.sampleType) config.sampleType = plot.sampleType //if the plot specifies the sample type to customize the legend
-							config.colorTW = JSON.parse(JSON.stringify(samplelstTW))
+							config.colorTW = structuredClone(samplelstTW)
 
-							if (plot.settings) config.settings = JSON.parse(JSON.stringify(plot.settings)) //if the plot specifies settings
+							if (plot.settings) config.settings = structuredClone(plot.settings) //if the plot specifies settings
 							this.app.dispatch({
 								type: 'plot_create',
 								config: config
