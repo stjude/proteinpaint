@@ -25,8 +25,6 @@ export function setInteractivity(self) {
 	}
 
 	self.displayLabelClickMenu = function (t1, t2, plot, event) {
-		self.displayLabelClickMenu.called = true
-
 		if (!t2 || self.data.plots.length === 1) {
 			return
 		}
@@ -35,7 +33,7 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter: ${plot.label.split(',')[0]}`,
-				callback: getAddFilterCallback(t1, t2, self, plot, label)
+				callback: getAddFilterCallback(t1, t2, self, plot, label, false)
 			},
 			{
 				label: `Hide: ${plot.label}`,
@@ -67,7 +65,7 @@ export function setInteractivity(self) {
 				}
 			})
 		}
-		self.displayMenu(event, options, plot)
+		self.displayMenu(event, options, plot, false)
 	}
 
 	self.displayBrushMenu = function (t1, t2, self, plot, selection, scale, isH) {
@@ -79,7 +77,7 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter`,
-				callback: getAddFilterCallback(t1, t2, self, plot, start, end)
+				callback: getAddFilterCallback(t1, t2, self, plot, start, end, true)
 			}
 		]
 
@@ -91,17 +89,16 @@ export function setInteractivity(self) {
 		}
 		plot.start = start
 		plot.end = end
-		self.displayMenu(event, options, plot)
+		self.displayMenu(event, options, plot, true)
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.displayMenu = function (event, options, plot) {
+	self.displayMenu = function (event, options, plot, isBrush) {
 		self.app.tip.d.selectAll('*').remove()
 		//For testing and debugging
 		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
 
-		if (self.displayBrushMenu.called == true && typeof plot.start === 'number' && typeof plot.end === 'number') {
-			self.displayBrushMenu.called = false
+		if (isBrush) {
 			const [niceStart, niceEnd] =
 				self.config.term.term.type == 'integer'
 					? [Math.round(plot.start), Math.round(plot.end)]
@@ -265,8 +262,8 @@ export function setInteractivity(self) {
 				stop: term.term.type == 'integer' ? Math.round(rangeStop) : rangeStop,
 				startinclusive: true,
 				stopinclusive: true,
-				startunbounded: self.displayLabelClickMenu.called == false ? true : false,
-				stopunbounded: self.displayLabelClickMenu.called == false ? true : false
+				startunbounded: false,
+				stopunbounded: false
 			}
 		]
 	}
@@ -308,7 +305,7 @@ export function setInteractivity(self) {
 	}
 }
 
-function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
+function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush) {
 	const tvslst = {
 		type: 'tvslst',
 		in: true,
@@ -320,7 +317,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 		if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
 			createTvsLstValues(t1, plot, tvslst, 0)
 
-			if (self.displayBrushMenu.called === true) {
+			if (isBrush) {
 				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
 			}
 		} else if (
@@ -338,17 +335,17 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 					stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
 				}
 			]
-			if (self.displayBrushMenu.called === true) {
+			if (isBrush) {
 				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
 			}
 		} else {
 			createTvsLstValues(t2, plot, tvslst, 0)
-			if (self.displayBrushMenu.called === true) {
+			if (isBrush) {
 				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
 			}
 		}
 	} else {
-		if (self.displayBrushMenu.called === true) {
+		if (isBrush) {
 			self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
 		}
 	}
