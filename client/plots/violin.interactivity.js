@@ -86,22 +86,18 @@ export function setInteractivity(self) {
 				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
 			})
 		}
-		plot.start = start
-		plot.end = end
-		self.displayMenu(event, options, plot, true)
+		self.displayMenu(event, options, plot, true, start, end)
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.displayMenu = function (event, options, plot, isBrush) {
+	self.displayMenu = function (event, options, plot, isBrush, start, end) {
 		self.app.tip.d.selectAll('*').remove()
 		//For testing and debugging
 		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
 
 		if (isBrush) {
 			const [niceStart, niceEnd] =
-				self.config.term.term.type == 'integer'
-					? [Math.round(plot.start), Math.round(plot.end)]
-					: niceNumLabels([plot.start, plot.end])
+				self.config.term.term.type == 'integer' ? [Math.round(start), Math.round(end)] : niceNumLabels([start, end])
 
 			self.app.tip.d.append('div').text(`From ${niceStart} to ${niceEnd}`)
 		}
