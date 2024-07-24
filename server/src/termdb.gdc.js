@@ -6,9 +6,10 @@ import { cachedFetch } from './utils'
 
 /*
 ********************   Comment   *****************
-this script only runs once, when PP server launches.
-it caches publicly available info from some GDC apis.
-it is not a route, it does not accept request parameters from client and does not use any user token.
+this script only runs once, when PP server/container launches.
+it is conditionally called by mds3.init.js when gdc dataset is present
+it caches publicly available info from some GDC apis, which doesn't require user token
+it is not a route, it does not accept request parameters from client
 upon any error, it throws exception and aborts launch.
 any error is considered critical and must be presented in full details in server log for diagnosis
 
@@ -23,6 +24,7 @@ initGDCdictionary
 		testGraphqlApi
 	cacheSampleIdMapping
 		fetchIdsFromGdcApi
+	runRemainingWithoutAwait
 
 
 ******************** major tasks *****************
@@ -145,8 +147,8 @@ re.expand: []
 
 // prefix for keys in re._mapping{}
 const mapping_prefix = 'ssm_occurrence_centrics'
-// wait time for next check on stale case-id cache, 5min
-const cacheCheckWait = 5 * 60 * 1000
+// wait time for next check on stale case-id cache, 5min. feature flag allows testing with short internal
+const cacheCheckWait = serverconfig.features.gdcCacheCheckWait || 5 * 60 * 1000
 
 export async function initGDCdictionary(ds) {
 	const id2term = new Map()
@@ -732,7 +734,11 @@ function makeTermdbQueries(ds, id2term) {
 }
 
 /****************************************************
-   remaining are gdc case id mapping caching logic
+   remaining tasks after dictionary is built:
+   1. cache gdc case id mapping, cases with exp data
+   2. open-access projects
+   3. api testing
+   4. continuous check for stale cache
 *****************************************************
 
 Important!
@@ -750,9 +756,18 @@ async function runRemainingWithoutAwait(ds) {
 	}
 
 	if (!serverconfig.features.noPeriodicCheckGdcCaseCache) {
+		// cache check is allowed. this is required for gdc prod environment and can be disabled on dev env.
 		// kick off stale cache check
 		setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
 	}
+}
+
+async function getApiStatus(ds) {
+	const { host, headers } = ds.getHostHeaders()
+	const re = await ky(path.join(host.rest, 'status'), { headers }).json()
+	if (!re.data_release) throw '.data_release missing'
+	return re.data_release
+	// TODO awaiting api change to return structured version info
 }
 
 async function getOpenProjects(ds) {
@@ -996,6 +1011,8 @@ async function cacheSampleIdMapping(ds) {
 	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
 	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
 	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
+
+	ds.__gdc.apiStatus = await getApiStatus(ds) // record /status endpoint result. subsequent stale cache check will requery /status and compare with this
 }
 
 /*
@@ -1148,24 +1165,6 @@ async function caseCacheIsStale(ds) {
 
 	const { host, headers } = ds.getHostHeaders()
 
-	{
-		// check total number of cases
-		const re = await ky(path.join(host.rest, 'cases'), { headers }).json()
-		if (!Number.isInteger(re?.data?.pagination?.total)) throw 'data.pagination.total is not number'
-		console.log(re.data.pagination.total, ds.__gdc.caseid2submitter.size)
-		if (re.data.pagination.total != ds.__gdc.caseid2submitter.size) return true
-	}
-
-	if (0) {
-		// check total number of aliquots
-		// FIXME need method to count total number of aliquots
-		const re = await ky(path.join(host.rest, 'cases?fields=samples.portions.analytes.aliquots.aliquot_id'), {
-			headers
-		}).json()
-		if (!Number.isInteger(re?.data?.pagination?.total)) throw 'data.pagination.total is not number'
-		//console.log(re.data.pagination.total, ds.__gdc.aliquot2submitter.cache.size)
-	}
-	{
-		// TODO need method to count total number of cases with exp data
-	}
+	const value = await getApiStatus(ds)
+	return ds.__gdc.apiStatus != value
 }
