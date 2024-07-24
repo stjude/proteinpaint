@@ -592,7 +592,7 @@ async function makeSampleSummary(self) {
 		if (self.filter) {
 			// tricky: detect if self.filter contains the same ancestry term
 			f = structuredClone(self.filter)
-			const idx = f.lst.findIndex(i => i.tvs?.term?.id == (self.q as SnpsQ).restrictAncestry.tvs.term.id)
+			const idx = f.lst.findIndex(i => i.tvs?.term?.id == (self.q.restrictAncestry.tvs.term as SnpsTerm).id)
 			if (idx != -1) {
 				// has the same term! must overwrite to avoid two tvs of the same ancestry term, each with a different ancestry which will result in 0 samples
 				f.lst[idx] = { type: 'tvs', tvs: self.q.restrictAncestry.tvs }

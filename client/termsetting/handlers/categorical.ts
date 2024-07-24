@@ -1,5 +1,4 @@
 import { GroupSettingMethods } from './groupsetting.ts'
-// import { filterInit } from '#filter'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import { VocabApi } from '../../shared/types/index'
 import { TermValues, BaseGroupSet, GroupEntry, PredefinedQGroupSetting } from '../../shared/types/terms/term'
@@ -156,10 +155,10 @@ export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ = null) {
 		return
 	}
 	// delete tw.q.groupsetting.disabled
-	if (!('inuse' in tw.q.groupsetting!)) tw.q.groupsetting!.inuse = false // do not apply by default
+	if (!('inuse' in (tw.q as CategoricalQ).groupsetting)) tw.q.groupsetting.inuse = false // do not apply by default
 
 	// inuse:false is either from automatic setup or predefined in state
-	if (tw.q.groupsetting!.inuse) {
+	if (tw.q.groupsetting.inuse) {
 		const gs = tw.q.groupsetting as PredefinedQGroupSetting
 		if (
 			tw.term.groupsetting.lst &&
