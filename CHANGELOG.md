@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- bug fix: when clicking labels on violin plot breaks on master
+
 Features:
 - matrix and hiercluster: allow to recompute term shown in continuous mode as zscore
 
