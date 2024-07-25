@@ -55,7 +55,7 @@ export async function fillTW(tw: SnpTW, vocabApi: VocabApi, defaultQ: SnpQ | nul
 
 	// groupsetting
 	// fill term.groupsetting
-	if (!tw.term.groupsetting) (tw.term as SnpTerm).groupsetting = { disabled: false }
+	if (!tw.term.groupsetting) (tw.term as SnpTerm).groupsetting = { disabled: false, lst: [] }
 	// fill q.groupsetting
 	if (!tw.q.groupsetting) (tw.q.groupsetting as any) = {}
 
