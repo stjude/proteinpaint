@@ -260,7 +260,6 @@ TdbStore.prototype.actions = {
 		if (plot.mayAdjustConfig) {
 			plot.mayAdjustConfig(plot, action.config)
 		}
-		validatePlot(plot, this.app.vocabApi)
 
 		if (action.config && 'cutoff' in action.config) {
 			plot.cutoff = action.config.cutoff
@@ -282,7 +281,6 @@ TdbStore.prototype.actions = {
 			const obj = edit.nestedKeys.reduce((obj, key) => obj[key], plot)
 			obj[lastKey] = edit.value
 		}
-		validatePlot(plot, this.app.vocabApi)
 	},
 
 	async plot_splice(action) {
@@ -448,148 +446,3 @@ const getTwsByChartType = {
 
 // must use the await keyword when using this storeInit()
 export const storeInit = getStoreInit(TdbStore)
-
-function validatePlot(p, vocabApi) {
-	/*
-	only work for hydrated plot object already in the state
-	not for the saved state
-	*/
-	if (!('id' in p)) throw 'plot error: plot.id missing'
-	try {
-		if (p.chartType == 'regression') {
-			validateRegressionPlot(p, vocabApi)
-		} else if (p.chartType == 'matrix' || p.chartType == 'hierCluster') {
-			if (!p.termgroups) throw `plot error: missing the config.termgroups for '${p.chartType}'`
-			if (!Array.isArray(p.termgroups)) `plot error: config.termgroups must be an array '${p.chartType}'`
-			if (!p.samplegroups) throw `plot error: missing the config.samplegroups for '${p.chartType}'`
-			if (!Array.isArray(p.samplegroups)) `plot error: config.samplegroups must be an array '${p.chartType}'`
-		} else if (p.chartType == 'dataDownload') {
-			if (!p.terms) throw `plot error: missing the config.terms for '${p.chartType}'`
-			if (!Array.isArray(p.terms)) `plot error: config.terms must be an array '${p.chartType}'`
-			for (const tw of p.terms) {
-				validatePlotTerm(tw, vocabApi)
-			}
-		} else if (p.chartType == 'sampleScatter') {
-			if (!p.name) throw `plot error: missing the plot name for '${p.chartType}'`
-			if (!p.colorTW) `plot error: missing the plot color term wrapper for '${p.chartType}'`
-			if (!p.file) `plot error: missing the plot coordinates file for '${p.chartType}'`
-		} else if (p.chartType == 'genomeBrowser') {
-		} else if (p.chartType == 'Disco') {
-		} else if (p.chartType == 'profileBarchart') {
-		} else if (p.chartType == 'profilePolar' || p.chartType == 'polar') {
-		} else if (p.chartType == 'DEanalysis') {
-		} else if (p.chartType == 'geneORA') {
-		} else if (p.chartType == 'gsea') {
-		} else if (p.chartType == 'sampleView') {
-		} else if (p.chartType == 'profileRadar' || p.chartType == 'profileRadarFacility') {
-		} else if (p.chartType == 'singleCellPlot') {
-		} else if (p.chartType == 'brainImaging') {
-		} else {
-			validateGenericPlot(p, vocabApi)
-		}
-	} catch (e) {
-		throw e
-	}
-}
-
-function validateGenericPlot(p, vocabApi) {
-	try {
-		if (p.term) validatePlotTerm(p.chartType == 'regression' ? p.outcome : p.term, vocabApi)
-	} catch (e) {
-		throw 'plot.term error: ' + e
-	}
-	if (p.term2) {
-		try {
-			validatePlotTerm(p.term2, vocabApi)
-		} catch (e) {
-			throw 'plot.term2 error: ' + e
-		}
-		if (p.term.term.type == 'condition' && p.term.term.id == p.term2.term.id) {
-			// term and term2 are the same CHC, potentially allows grade-subcondition overlay
-			if (p.term.q.bar_by_grade && p.term2.q.bar_by_grade)
-				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_grade'
-			if (p.term.q.bar_by_children && p.term2.q.bar_by_children)
-				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_children'
-		}
-	}
-	if (p.term0) {
-		try {
-			validatePlotTerm(p.term0, vocabApi)
-		} catch (e) {
-			throw 'plot.term0 error: ' + e
-		}
-	}
-}
-
-function validateRegressionPlot(p, vocabApi) {
-	if (!p.outcome) throw 'plot error: plot.outcome{} not an object'
-	try {
-		validatePlotTerm(p.chartType == 'regression' ? p.outcome : p.term, vocabApi)
-	} catch (e) {
-		throw 'plot.outcome error: ' + e
-	}
-
-	if (p.independent) {
-		for (const item of p.independent) {
-			validatePlotTerm(item, vocabApi)
-		}
-	}
-}
-
-function validatePlotTerm(t, vocabApi) {
-	/*
-	for p.term, p.term2, p.term0
-	{ id, term, q }
-	*/
-
-	// somehow plots are missing this
-	if (!t.term) throw '.term{} missing'
-	if (!vocabApi.graphable(t.term)) throw '.term is not graphable (not a valid type)'
-	if (!t.term.name) throw '.term.name missing'
-	if (!t.q) throw '.q{} missing'
-	// term-type specific validation of q
-	switch (t.term.type) {
-		case 'integer':
-		case 'float':
-		case 'survival':
-			// t.q is binning scheme, it is validated on server
-			break
-		case 'categorical':
-			if (t.q.groupsetting && !t.q.groupsetting.disabled) {
-				// groupsetting allowed on this term
-				if (!t.term.values) throw '.values{} missing when groupsetting is allowed'
-				// groupsetting is validated on server
-			}
-			// term may not have .values{} when groupsetting is disabled
-			break
-		case 'condition':
-			if (!t.term.values) throw '.values{} missing'
-			if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
-			if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
-				throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
-			break
-		case TermTypes.SNP:
-			break
-		case 'snplst':
-		case 'snplocus':
-		case 'geneVariant':
-			break
-		case 'samplelst':
-			break
-		case TermTypes.GENE_EXPRESSION:
-			break
-		case TermTypes.METABOLITE_INTENSITY:
-			break
-		case TermTypes.SINGLECELL_GENE_EXPRESSION:
-			break
-		case TermTypes.SINGLECELL_CELLTYPE:
-			break
-		default:
-			if (t.term.isgenotype) {
-				// don't do anything for now
-				console.log('to add in type:"genotype"')
-				break
-			}
-			throw `unknown term type='${t.term.type}'`
-	}
-}
