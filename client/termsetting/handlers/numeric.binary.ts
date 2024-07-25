@@ -59,6 +59,7 @@ export function getHandler(self) {
 				{
 					tw: { term: self.term, q: self.q },
 					filter: self.filter,
+					filter0: self.vocabApi.opts?.state?.termfilter?.filter0,
 					svgw: self.num_obj.plot_size.width / window.devicePixelRatio
 				},
 				self.opts.getBodyParams?.()
