@@ -291,6 +291,7 @@ export class AppHeader {
 		const padw = '8px'
 		const genome_btn_div = headbox.append('span')
 		const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
+		console.log(294, genomename)
 
 		const g_browser_btn = genome_btn_div
 			.attr('class', 'sja_menuoption')
@@ -299,13 +300,15 @@ export class AppHeader {
 			.datum(genomename)
 			.text(genomename + ' genome browser')
 			.on('click', () => {
-				const g = app.genomes[genomename]
+				//Grab the current genome selected
+				const genomeSelected = app.selectgenome.node().value
+				const g = app.genomes[genomeSelected]
 				if (!g) {
-					alert('Invalid genome name: ' + genomename)
+					alert('Invalid genome name: ' + genomeSelected)
 					return
 				}
 				const sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
-				sandbox_div.header.text(genomename + ' genome browser')
+				sandbox_div.header.text(genomeSelected + ' genome browser')
 
 				const par = {
 					hostURL: app.hostURL,
