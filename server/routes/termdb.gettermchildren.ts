@@ -43,16 +43,13 @@ function init({ genomes }) {
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
-			const [ds, tdb] =await get_ds_tdb(g, q)
+			const [ds, tdb] = await get_ds_tdb(g, q)
 			if (!ds) throw 'invalid dataset name'
 			if (!tdb) throw 'invalid termdb object'
 
-
 			await trigger_children(q, res, tdb)
 		} catch (e) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			res.send({ error: e?.message || e })
+			res.send({ error: e instanceof Error ? e.message : e })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}
