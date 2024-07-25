@@ -91,7 +91,7 @@ export function setInteractivity(self) {
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 						}" ></span>
-							${d.convertedValueLabel || d.label}${d.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
+							${d.convertedValueLabel || d.label}${d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' ? ' (Z-Score)' : ''}`)
 					}
 				} else if (d.term.type == TermTypes.METABOLITE_INTENSITY) {
 					{
@@ -105,29 +105,46 @@ export function setInteractivity(self) {
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 						}" ></span>
-							${d.convertedValueLabel || d.label}${d.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
+							${d.convertedValueLabel || d.label}${d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' ? ' (Z-Score)' : ''}`)
+					}
+				} else if (d.term.type == TermTypes.SURVIVAL) {
+					{
+						const [c1, c2] = table.addRow()
+						c1.html(d.term.name)
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+						}" ></span>
+							${survivalInfo || d.label}`)
+					}
+					const additionalInfo =
+						d.convertedValueLabel && d.label && d.tw?.q?.convert2ZScore
+							? ` (Z-Score: ${d.label})`
+							: d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous'
+							? '(Z-Score)'
+							: ''
+					const timeToEventKey =
+						'Time to Event: ' +
+						(d.timeToEventKey
+							? d.timeToEventKey + (d.term.unit ? `(${d.term.unit})` : '')
+							: (d.convertedValueLabel || d.label) + additionalInfo)
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('')
+						c2.html(timeToEventKey)
 					}
 				} else {
+					const additionalInfo =
+						d.convertedValueLabel && d.label && d.tw?.q?.convert2ZScore
+							? ` (Z-Score: ${d.label})`
+							: d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous'
+							? '(Z-Score)'
+							: ''
 					const [c1, c2] = table.addRow()
 					c1.html(d.term.name)
 					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 						d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
 					}" ></span>
-						${survivalInfo || d.convertedValueLabel || d.label}${
-						d.tw?.q?.convert2ZScore && d.term.type != 'survival' ? ' (Z-Score)' : ''
-					}`)
-				}
-				if (d.term.type == TermTypes.SURVIVAL) {
-					const timeToEventKey =
-						'Time to Event: ' +
-						(d.timeToEventKey
-							? d.timeToEventKey + (d.term.unit && !d.tw?.q?.convert2ZScore ? `(${d.term.unit})` : '')
-							: d.convertedValueLabel || d.label) +
-						(d.tw?.q?.convert2ZScore ? ' (Z-Score)' : '')
-
-					const [c1, c2] = table.addRow()
-					c1.html('')
-					c2.html(timeToEventKey)
+						${d.convertedValueLabel || d.label}${additionalInfo}`)
 				}
 			}
 		} else {
@@ -402,7 +419,12 @@ export function setInteractivity(self) {
 		}
 		if ((sampleData.term && sampleData.term.type != 'geneVariant') || sampleData.tw.q?.groupsetting?.inuse) {
 			// when groupsetting is used for geneVariant term, should treat as categorical term
-			if (sampleData.convertedValueLabel || sampleData.label) {
+			let survivalInfo
+			if (sampleData.term.type == TermTypes.SURVIVAL && sampleData.exitCodeKey) {
+				survivalInfo = sampleData.term.values?.[sampleData.exitCodeKey]?.label || sampleData.exitCodeKey
+			}
+
+			if (survivalInfo || sampleData.convertedValueLabel || sampleData.label) {
 				// show term value row only when not undefined
 				if (sampleData.term.type == TermTypes.GENE_EXPRESSION) {
 					{
@@ -416,7 +438,9 @@ export function setInteractivity(self) {
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 						}" ></span>
-								${sampleData.convertedValueLabel || sampleData.label}${sampleData.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
+								${sampleData.convertedValueLabel || sampleData.label}${
+							sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' ? ' (Z-Score)' : ''
+						}`)
 					}
 				} else if (sampleData.term.type == TermTypes.METABOLITE_INTENSITY) {
 					{
@@ -430,15 +454,48 @@ export function setInteractivity(self) {
 						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 						}" ></span>
-							${sampleData.convertedValueLabel || sampleData.label}${sampleData.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
+							${sampleData.convertedValueLabel || sampleData.label}${
+							sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' ? ' (Z-Score)' : ''
+						}`)
+					}
+				} else if (sampleData.term.type == TermTypes.SURVIVAL) {
+					{
+						const [c1, c2] = table.addRow()
+						c1.html(sampleData.term.name)
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+						}" ></span>
+							${survivalInfo || sampleData.label}`)
+					}
+					const additionalInfo =
+						sampleData.convertedValueLabel && sampleData.label && sampleData.tw?.q?.convert2ZScore
+							? ` (Z-Score: ${sampleData.label})`
+							: sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous'
+							? '(Z-Score)'
+							: ''
+					const timeToEventKey =
+						'Time to Event: ' +
+						(sampleData.timeToEventKey
+							? sampleData.timeToEventKey + (sampleData.term.unit ? `(${sampleData.term.unit})` : '')
+							: (sampleData.convertedValueLabel || sampleData.label) + additionalInfo)
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('')
+						c2.html(timeToEventKey)
 					}
 				} else {
+					const additionalInfo =
+						sampleData.convertedValueLabel && sampleData.label && sampleData.tw?.q?.convert2ZScore
+							? ` (Z-Score: ${sampleData.label})`
+							: sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous'
+							? '(Z-Score)'
+							: ''
 					const [c1, c2] = table.addRow()
 					c1.html(sampleData.term.name)
 					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
 						sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 					}" ></span>
-						${sampleData.convertedValueLabel || sampleData.label}${sampleData.tw?.q?.convert2ZScore ? ' (Z-Score)' : ''}`)
+						${sampleData.convertedValueLabel || sampleData.label}${additionalInfo}`)
 				}
 			}
 		} else if (sampleData.term && sampleData.term.type == 'geneVariant' && sampleData.value) {
