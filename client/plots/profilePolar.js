@@ -57,8 +57,8 @@ class profilePolar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-		const width = this.settings.comparison ? 700 : 1000
-		const height = 600
+		const width = this.settings.comparison ? 900 : 1000
+		const height = 700
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -73,7 +73,7 @@ class profilePolar extends profilePlot {
 
 		this.svg
 			.append('text')
-			.attr('transform', `translate(150, ${height - 20})`)
+			.attr('transform', `translate(130, ${height - 120})`)
 			.attr('font-weight', 'bold')
 			.text(config.title)
 
@@ -82,12 +82,12 @@ class profilePolar extends profilePlot {
 
 		// Create a polar grid.
 		const radius = this.radius
-		const x = 300
+		const x = 280
 		const y = 280
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 280}, ${y - 200})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 280},${y - 80})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 260},${y + 180})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
@@ -152,9 +152,9 @@ class profilePolar extends profilePlot {
 			this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
 			this.addLegendItem('B', '50-75% of possible scorable items', 2)
 			this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
-
-			this.addFilterLegend()
 		}
+		this.addFilterLegend()
+
 		function addCircle(percent, text = null) {
 			const circle = polarG
 				.append('circle')

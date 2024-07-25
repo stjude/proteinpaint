@@ -152,7 +152,7 @@ export class profilePlot {
 		this.plotAdded = true
 		const appState = this.state
 		const plotMod = await import('#plots/plot.app.js')
-		const plot = { chartType: this.type, settings: { [this.type]: this.settings } }
+		const plot = { chartType: this.type, settings: { [this.type]: { comparison: true, showTable: false } } }
 
 		if (this.type == 'profileRadar' || this.type == 'profileRadarFacility') plot.plot = this.config.plot
 		const opts = { holder: this.dom.holder2, state: { plots: [plot], vocab: appState.vocab } }

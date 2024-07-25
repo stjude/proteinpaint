@@ -40,7 +40,7 @@ class profileRadar extends profilePlot {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
 		const width = this.settings.comparison ? 900 : 1400
-		const height = 650
+		const height = 900
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -66,14 +66,14 @@ class profileRadar extends profilePlot {
 		const y = 290
 		this.svg
 			.append('text')
-			.attr('transform', `translate(60, ${height - 30})`)
+			.attr('transform', `translate(40, ${y + 340})`)
 			.attr('font-weight', 'bold')
 			.text(config[config.plot].title)
 
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 390},${y - 200})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 390},${y})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 380},${y + 180})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 370})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -153,8 +153,6 @@ class profileRadar extends profilePlot {
 				.attr('pointer-events', 'none')
 		}
 		if (!this.settings.comparison) {
-			this.addFilterLegend()
-
 			this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
 			let abbrev = config[config.plot].term1.abbrev ? `(${config[config.plot].term1.abbrev})` : ''
 			const item1 = `${config[config.plot].term1.name} ${abbrev}`
@@ -166,6 +164,7 @@ class profileRadar extends profilePlot {
 			if (this.state.dslabel == 'ProfileAbbrev')
 				this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
 		}
+		this.addFilterLegend()
 	}
 
 	addData(field, iangle, i, data) {
