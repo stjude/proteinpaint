@@ -204,6 +204,8 @@ class TdbTree {
 
 			this.termsById[copy.id] = copy
 		}
+		//having a reference to the parent is handy. Used for the profile plot use case where I need to select
+		// from a component -> module -> domain tree, the domain terms
 		if (terms) for (const child of terms) child.parent = term
 		return terms
 	}
