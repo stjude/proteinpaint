@@ -29,21 +29,21 @@ export type GeneVariantTW = TermWrapper & {
 	term: GeneVariantTerm
 }
 
-export type GeneVariantTerm = BaseTerm & {
-	groupsetting: TermGroupSetting
-}
+export type GeneVariantTerm = GeneVariantCoordTerm | GeneVariantGeneTerm
 
-export type GeneVariantCoordTerm = GeneVariantTerm & {
+export type GeneVariantCoordTerm = BaseTerm & {
 	chr: string
 	start: number
 	stop: number
+	groupsetting: TermGroupSetting
 }
 
-export type GeneVariantGeneTerm = GeneVariantTerm & {
+export type GeneVariantGeneTerm = BaseTerm & {
 	gene: string
 	chr?: string
 	start?: number
 	stop?: number
+	groupsetting: TermGroupSetting
 }
 
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
