@@ -77,6 +77,7 @@ async function showBinsMenu(self, div: any) {
 			{
 				tw: { term: self.term, q: { mode: 'continuous' } },
 				filter: self.filter,
+				filter0: self.vocabApi.opts?.state?.termfilter?.filter0,
 				svgw: self.num_obj.plot_size.width / window.devicePixelRatio,
 				strokeWidth: 0.2
 			},
