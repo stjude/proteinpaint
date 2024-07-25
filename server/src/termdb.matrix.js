@@ -160,9 +160,17 @@ async function getSampleData(q, ds) {
 				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION || tw.term.type == TermTypes.METABOLITE_INTENSITY) {
-			let lst
+			let lst // list of bins based on tw config
 			if (tw.q?.mode == 'discrete') {
 				if (!tw.term.bins) {
+					/* term lacks bins.
+					since all such term types do not have default bin and is dynamically computed in termsetting,
+					request body should still carry term.bins and this condition should not happen
+					at gene exp violin, when editing term1 via termsetting ui (but not summary chart tab Barchart) and change it from continuous to discrete and apply to make barchart,
+					this condition happens.
+					thus must keep this step as fail-safe
+					however it has high performance costs especially for gdc
+					*/
 					await new Promise(async (resolve, reject) => {
 						const _q = {
 							tw,
@@ -187,7 +195,10 @@ async function getSampleData(q, ds) {
 					for (const b of lst) {
 						if (!('name' in b) && b.label) b.name = b.label
 					}
-				} else lst = tw.q.lst
+				} else {
+					if (!tw.q.lst) throw 'q.mode is not regular-bin and q.lst[] is missing'
+					lst = tw.q.lst
+				}
 
 				byTermId[tw.$id] = { bins: lst }
 			}
@@ -215,21 +226,20 @@ async function getSampleData(q, ds) {
 				}
 				samples[sampleId][tw.$id] = { key, value }
 			}
-
-			/** pp filter */
 		} else if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			if (!q.ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
-			let lst
+			let lst // list of bins based on tw config
 			if (tw.q?.mode == 'discrete') {
 				const min = tw.term.bins.min
 				const max = tw.term.bins.max
-				lst =
-					tw.q.type == 'regular-bin'
-						? compute_bins(tw.q, () => {
-								return { min, max }
-						  })
-						: tw.q.lst
-
+				if (tw.q.type == 'regular-bin') {
+					lst = compute_bins(tw.q, () => {
+						return { min, max }
+					})
+				} else {
+					if (!tw.q.lst) throw 'q.type is not discrete and q.lst[] is missing'
+					lst = tw.q.lst
+				}
 				byTermId[tw.$id] = { bins: lst }
 			}
 			const geneExpMap = await q.ds.queries?.singleCell?.geneExpression.get({

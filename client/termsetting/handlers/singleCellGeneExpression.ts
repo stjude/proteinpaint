@@ -34,7 +34,7 @@ export async function fillTW(tw: SingleCellGeneExpressionTW, vocabApi: VocabApi,
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' } // supply default q if missing
 	if (defaultQ) copyMerge(tw.q, defaultQ) // override if default is given
 
-	if (!tw.term.bins) {
+	if (tw.q.mode != 'continuous' && !tw.term.bins) {
 		/* gene term is missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range, and not worth it to precompute each gene's default bin with its actual exp data
 		here make a request to determine default bin for this term based on its data
 		(in gdc this adds significant pause when adding gene exp term to oncomatrix)
