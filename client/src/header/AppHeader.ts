@@ -291,7 +291,6 @@ export class AppHeader {
 		const padw = '8px'
 		const genome_btn_div = headbox.append('span')
 		const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
-		console.log(294, genomename)
 
 		const g_browser_btn = genome_btn_div
 			.attr('class', 'sja_menuoption')
