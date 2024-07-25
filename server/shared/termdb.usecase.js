@@ -102,8 +102,10 @@ export function isUsableTerm(term, _usecase, ds) {
 			}
 		case 'profile':
 			if (!term.isleaf) {
-				uses.add('plot')
 				uses.add('branch')
+				if (term.parent?.parent?.parent) {
+					uses.add('plot')
+				}
 			}
 			return uses
 		case 'boxplot':

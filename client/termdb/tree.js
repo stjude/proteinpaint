@@ -201,8 +201,10 @@ class TdbTree {
 					copy.terms = t0.terms
 				}
 			}
+
 			this.termsById[copy.id] = copy
 		}
+		if (terms) for (const child of terms) child.parent = term
 		return terms
 	}
 
