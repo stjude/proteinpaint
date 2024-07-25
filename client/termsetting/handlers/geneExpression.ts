@@ -1,4 +1,4 @@
-import { NumericQ, PresetNumericBins } from '../../shared/types/terms/numeric'
+import { NumericQ } from '../../shared/types/terms/numeric'
 import { VocabApi } from '../../shared/types/index'
 import { GeneExpressionTW } from '../../shared/types/terms/geneExpression.js'
 import { copyMerge } from '../../rx'
