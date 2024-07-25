@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.70.0
 
 Features:
 - prototype periodic check if gdc case-id-cache is stale and re-cache
