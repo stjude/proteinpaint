@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Allow to add survival term to GDC gene expression clustering map
+
 
 ## 2.69.0
 
