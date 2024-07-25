@@ -1,6 +1,8 @@
 import { TermTypes } from '#shared/terms.js'
 import initBinConfig from '#shared/termdb.initbinconfig'
 
+// TODO convert to route
+
 export async function trigger_getDefaultBins(q, ds, res) {
 	/* only works for non-dict terms declared in ds.queries{}
 NOTE using following pattern:
@@ -12,7 +14,7 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 	const lst = []
 	let min = Infinity
 	let max = -Infinity
-	let binsCache
+	let binsCache // fine to cache bins for scrna genes, but not for cohort level data that's subject to filtering
 	try {
 		if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			if (!ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
@@ -32,12 +34,15 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 			}
 		} else {
 			if (!ds.queries?.[tw.term.type]) throw 'term type not supported by this dataset'
-			binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
-			if (binsCache[tw.term.name]) return res.send(binsCache[tw.term.name])
+			// this cache ignores filter, can lead to misleading result caused by different filter usage; also assumes that filter is infinite and impossible to cache
+			//binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
+			//if (binsCache[tw.term.name]) return res.send(binsCache[tw.term.name])
 
 			const args = {
 				genome: q.genome,
 				dslabel: q.dslabel,
+				filter: q.filter,
+				filter0: q.filter0,
 				terms: [tw.term]
 			}
 			const data = await ds.queries[tw.term.type].get(args)
@@ -50,7 +55,7 @@ CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it 
 			}
 		}
 		const binconfig = initBinConfig(lst)
-		binsCache[tw.term.name] = { default: binconfig, min, max }
+		if (binsCache) binsCache[tw.term.name] = { default: binconfig, min, max }
 		res.send({ default: binconfig, min, max })
 	} catch (e) {
 		console.log(e)
