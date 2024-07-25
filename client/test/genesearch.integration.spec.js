@@ -4,7 +4,6 @@ import { addGeneSearchbox, string2variant } from '../genesearch.ts'
 import { hg38 } from '../../test/testdata/genomes'
 import { Menu } from '../menu'
 import { detectOne, detectGte } from '../../test/test.helpers'
-import { mockServer } from '../../test/mockServer'
 
 /* Integration Tests
     - Gene search box server calls
@@ -54,16 +53,6 @@ tape('Gene search box server call', async test => {
 	test.ok(searchInput.tagName == 'INPUT', 'Should create an input element')
 	test.equal(searchInput.placeholder, 'Gene, position, dbSNP', 'Should display the default placeholder text')
 
-	// Mock server response
-	const server = mockServer({
-		'/genomes/hg38/genesearch': {
-			body: JSON.stringify([
-				{ gene: 'BRCA1', chr: 'chr17', start: 43044295, stop: 43125482 },
-				{ gene: 'BRCA2', chr: 'chr13', start: 32315474, stop: 32400266 }
-			])
-		}
-	})
-
 	// Check if the search box is functional
 	await detectOne({
 		target: tip.dnode,
@@ -87,7 +76,6 @@ tape('Gene search box server call', async test => {
 		holder.remove()
 	}
 
-	server.shutdown()
 	test.end()
 })
 
@@ -95,19 +83,6 @@ tape('string2variant() server call', async test => {
 	test.timeoutAfter(300)
 
 	let variant, expected
-
-	// Mock server response
-	const server = mockServer({
-		'/genomes/hg38/variant': {
-			body: JSON.stringify({
-				chr: 'chr1',
-				pos: 387689,
-				ref: 'A',
-				alt: 'G',
-				isVariant: true
-			})
-		}
-	})
 
 	// Simple variant
 	variant = await string2variant('chr1.387689.A.G', hg38)
@@ -136,6 +111,5 @@ tape('string2variant() server call', async test => {
 	expected = undefined
 	test.equal(variant, expected, 'Should return undefined if string input is missing a reference and alternate allele')
 
-	server.shutdown()
 	test.end()
 })
