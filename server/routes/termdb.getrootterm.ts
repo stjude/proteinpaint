@@ -1,7 +1,6 @@
 import { getroottermRequest, getroottermResponse } from '#shared/types/routes/termdb.getrootterm.ts'
 import { get_ds_tdb } from '#src/termdb.js'
 
-
 export const api: any = {
 	endpoint: 'termdb/rootterm',
 	methods: {
@@ -54,9 +53,7 @@ function init({ genomes }) {
 
 			await trigger_rootterm(q, res, tdb) // as getroottermResponse
 		} catch (e) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			res.send({ error: e?.message || e })
+			res.send({ error: e instanceof Error ? e.message : e })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}

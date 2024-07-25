@@ -13,7 +13,9 @@ import serverconfig from '../serverconfig.js'
 const genomes = {
 	// test genome js location can be hardcoded for testing
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore
+	// @ts-ignore, not meant for tsc which already excludes spec files
+	// in server/tsconfig.json, but for typia and typedoc to ignore type
+	// check warning/errors when generating tester functions and documentation
 	'hg38-test': __non_webpack_require__(path.join(import.meta.dirname, '../../server/genome/hg38.test.js'))
 }
 const g = genomes['hg38-test']
@@ -154,7 +156,9 @@ async function setDataset(g, d) {
 	*/
 	const jsfile = path.join(process.cwd(), d.jsfile)
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore
+	// @ts-ignore, not meant for tsc which already excludes spec files
+	// in server/tsconfig.json, but for typia and typedoc to ignore type
+	// check warning/errors when generating tester functions and documentation
 	const _ds = __non_webpack_require__(jsfile)
 	const ds = _ds.default || _ds
 

@@ -73,9 +73,7 @@ function init({ genomes }) {
 
 			await trigger_getnumericcategories(q, res, tdb, ds) // as getnumericcategoriesResponse
 		} catch (e) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			res.send({ error: e?.message || e })
+			res.send({ error: e instanceof Error ? e.message : e })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}

@@ -70,9 +70,7 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			await trigger_getpercentile(q, res, ds) // as getpercentileResponse
 		} catch (e) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			res.send({ error: e?.message || e })
+			res.send({ error: e instanceof Error ? e.message : e })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}
