@@ -19,8 +19,8 @@ self.term{}
 */
 
 //TODO move to common.ts??? Corresponds to client/shared/common.js
-type MClassEntry = { label: string; color: string; dt: number; desc: string; key: string }
-type GroupsEntry = { name: string; items: MClassEntry[] }
+// type MClassEntry = { label: string; color: string; dt: number; desc: string; key: string }
+// type GroupsEntry = { name: string; items: MClassEntry[] }
 
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
@@ -89,7 +89,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ = null) {
 		if (gt.gene) tw.term.name = gt.gene
 		//Check to see if all the parts of the position are present
 		else if (gt.chr && gt.start && gt.stop) tw.term.name = `${gt.chr}:${gt.start + 1}-${gt.stop}`
-		else throw 'All or part position or gene'
+		else throw 'Missing all or part position or gene'
 	}
 	if (!tw.term.id) tw.term.id = tw.term.name
 	if (!('type' in tw.q)) tw.q.type = 'values'
