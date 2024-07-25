@@ -28,10 +28,8 @@ class profilePolar extends profilePlot {
 
 	async main() {
 		await super.main()
-
 		await this.setControls()
 		this.angle = (Math.PI * 2) / this.config.terms.length
-
 		this.plot()
 	}
 
@@ -59,7 +57,7 @@ class profilePolar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-		const width = 1000
+		const width = this.settings.comparison ? 700 : 1000
 		const height = 600
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -143,18 +141,20 @@ class profilePolar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		this.legendG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text('Overall Score')
-			.attr('transform', `translate(0, -5)`)
+		if (!this.settings.comparison) {
+			this.legendG
+				.append('text')
+				.attr('text-anchor', 'left')
+				.style('font-weight', 'bold')
+				.text('Overall Score')
+				.attr('transform', `translate(0, -5)`)
 
-		this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
-		this.addLegendItem('B', '50-75% of possible scorable items', 2)
-		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
+			this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
+			this.addLegendItem('B', '50-75% of possible scorable items', 2)
+			this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 
-		this.addFilterLegend()
+			this.addFilterLegend()
+		}
 		function addCircle(percent, text = null) {
 			const circle = polarG
 				.append('circle')
@@ -181,13 +181,11 @@ class profilePolar extends profilePlot {
 export async function getPlotConfig(opts, app) {
 	try {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
+		defaults.settings = { profilePolar: getDefaultProfilePlotSettings() }
+
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
 		const config = copyMerge(structuredClone(defaults), opts)
-		let settings = getDefaultProfilePlotSettings()
-		config.settings = {
-			profilePolar: settings,
-			controls: { isOpen: false }
-		}
+		config.settings.controls = { isOpen: false }
 		const twlst = []
 		for (const data of config.terms) {
 			const scoreTerm = data.score
