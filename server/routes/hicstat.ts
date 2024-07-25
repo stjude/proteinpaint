@@ -45,7 +45,7 @@ function init() {
 			}
 			const out = await do_hicstat(file, isurl)
 			res.send({ out })
-		} catch (e: any) {
+		} catch (e) {
 			res.send({ error: e instanceof Error ? e.message : e })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
