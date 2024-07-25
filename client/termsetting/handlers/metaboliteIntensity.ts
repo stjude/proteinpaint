@@ -29,7 +29,7 @@ export async function fillTW(tw: MetaboliteIntensityTW, vocabApi: VocabApi, defa
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
 	if (defaultQ) copyMerge(tw.q, defaultQ) // override if default is given
 
-	if (!tw.term.bins) {
+	if (tw.q.mode != 'continuous' && !tw.term.bins) {
 		await vocabApi.setTermBins(tw)
 	}
 	return tw
