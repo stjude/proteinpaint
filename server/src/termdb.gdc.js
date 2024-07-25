@@ -166,6 +166,7 @@ export async function initGDCdictionary(ds) {
 			included_types_set: new Set(), // apply to leaf terms, should have its own term.type
 			child_types_set: new Set() // empty for leaf terms
 		}
+		mayAddTermAttribute(term)
 		term.included_types_set.add('survival')
 		id2term.set(id, term)
 	}
@@ -340,7 +341,7 @@ export async function initGDCdictionary(ds) {
 }
 
 function mayAddTermAttribute(t) {
-	if (t.id == 'case.diagnoses.age_at_diagnosis') {
+	if (t.id == 'case.diagnoses.age_at_diagnosis' || t.id == 'Overall Survival') {
 		//show the term by other units
 		// print 25868 as '70 years, 318 days'
 		t.valueConversion = {
