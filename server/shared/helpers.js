@@ -27,5 +27,5 @@ export function convertUnits(v, fromUnit, toUnit, scaleFactor, compact) {
 	}
 
 	if (compact) return `${toUnitV}${toUnit.charAt(0)}${fromUnitV}${fromUnit.charAt(0)}`
-	return `${toUnitV} ${toUnitV > 1 ? toUnit + 's' : ''} ${fromUnitV} ${fromUnitV > 1 ? fromUnit + 's' : ''}`
+	return `${toUnitV} ${toUnitV > 1 ? toUnit + 's' : toUnit} ${fromUnitV} ${fromUnitV > 1 ? fromUnit + 's' : fromUnit}`
 }
