@@ -37,9 +37,13 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 	if (defaultQ) copyMerge(tw.q, defaultQ) // override if default is given
 
 	if (tw.q.mode !== 'continuous' && !tw.term.bins) {
-		/* gene term is missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range, and not worth it to precompute each gene's default bin with its actual exp data
+		/* gene term is missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range,
+		and not worth it to precompute each gene's default bin with its actual exp data as cohort filter can not be predicted
 		here make a request to determine default bin for this term based on its data
-		(in gdc this adds significant pause when adding gene exp term to oncomatrix)
+
+		do not do this when tw.q.mode is continuous:
+		1. it will add significant delay to gene exp clustering, esp for gdc. bins are useless for hiercluster and the request will lock up server
+		2. the way setTermBins works, tw.q.type won't be filled and errors out
 		*/
 		await vocabApi.setTermBins(tw)
 	}
