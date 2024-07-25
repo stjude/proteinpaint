@@ -184,6 +184,12 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 
+		{
+			label: 'Differential Metabolites',
+			chartType: 'DManalysis',
+			clickTo: self.loadChartSpecificMenu
+		},
+
 		// adhoc chart, temporary fix for prototyping a specific ds
 		{
 			label: 'Profile Bar Plot',

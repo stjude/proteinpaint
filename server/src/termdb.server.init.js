@@ -515,6 +515,7 @@ export function server_init_db_queries(ds) {
 				for (const cohort in supportedChartTypes) {
 					supportedChartTypes[cohort].push('sampleScatter')
 					supportedChartTypes[cohort].push('metaboliteIntensity')
+					supportedChartTypes[cohort].push('DManalysis')
 				}
 			if (ds.queries.rnaseqGeneCount) {
 				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('DEanalysis')

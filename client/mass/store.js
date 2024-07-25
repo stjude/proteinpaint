@@ -478,6 +478,7 @@ function validatePlot(p, vocabApi) {
 		} else if (p.chartType == 'profileBarchart') {
 		} else if (p.chartType == 'profilePolar' || p.chartType == 'polar') {
 		} else if (p.chartType == 'DEanalysis') {
+		} else if (p.chartType == 'DManalysis') {
 		} else if (p.chartType == 'geneORA') {
 		} else if (p.chartType == 'gsea') {
 		} else if (p.chartType == 'sampleView') {

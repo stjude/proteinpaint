@@ -187,8 +187,13 @@ class MassGroups {
 		let row = menuDiv.append('div')
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
+		console.log(samplelstTW)
+		console.log(this.state.supportedChartTypes)
 		if (this.state.supportedChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
 			addDEPlotMenuItem(menuDiv, this, this.state, samplelstTW)
+
+		if (this.state.supportedChartTypes.includes('DManalysis') && samplelstTW.q.groups.length == 2)
+			addDMPlotMenuItem(menuDiv, this, this.state, samplelstTW)
 
 		if (this.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
@@ -280,6 +285,10 @@ function addDEPlotMenuItem(div, self, state, samplelstTW, tip) {
 				config
 			})
 		})
+}
+
+function addDMPlotMenuItem(div, self, state, samplelstTW, tip) {
+	div.append('div').attr('class', 'sja_menuoption sja_sharp_border').text('Differential metabolites')
 }
 
 function initUI(self) {
