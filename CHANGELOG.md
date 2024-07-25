@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- prototype periodic check if gdc case-id-cache is stale and re-cache
+
 Fixes:
 - Allow to add survival term to GDC gene expression clustering map
 
