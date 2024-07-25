@@ -39,7 +39,7 @@ class profileRadar extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const width = 1300
+		const width = this.settings.comparison ? 900 : 1400
 		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -152,19 +152,20 @@ class profileRadar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
+		if (!this.settings.comparison) {
+			this.addFilterLegend()
 
-		this.addFilterLegend()
+			this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
+			let abbrev = config[config.plot].term1.abbrev ? `(${config[config.plot].term1.abbrev})` : ''
+			const item1 = `${config[config.plot].term1.name} ${abbrev}`
+			this.addLegendItem(item1, color1, 0, 'none')
+			abbrev = config[config.plot].term2.abbrev ? `(${config[config.plot].term2.abbrev})` : ''
 
-		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
-		let abbrev = config[config.plot].term1.abbrev ? `(${config[config.plot].term1.abbrev})` : ''
-		const item1 = `${config[config.plot].term1.name} ${abbrev}`
-		this.addLegendItem(item1, color1, 0, 'none')
-		abbrev = config[config.plot].term2.abbrev ? `(${config[config.plot].term2.abbrev})` : ''
-
-		const item2 = `${config[config.plot].term2.name} ${abbrev}`
-		this.addLegendItem(item2, color2, 1, '5, 5')
-		if (this.state.dslabel == 'ProfileAbbrev')
-			this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
+			const item2 = `${config[config.plot].term2.name} ${abbrev}`
+			this.addLegendItem(item2, color2, 1, '5, 5')
+			if (this.state.dslabel == 'ProfileAbbrev')
+				this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
+		}
 	}
 
 	addData(field, iangle, i, data) {
@@ -255,14 +256,11 @@ class profileRadar extends profilePlot {
 export async function getPlotConfig(opts, app) {
 	try {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileRadar
-		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
-		let config = copyMerge(structuredClone(defaults), opts)
-		const settings = getDefaultProfilePlotSettings()
+		defaults.settings = { profileRadar: getDefaultProfilePlotSettings() }
 
-		config.settings = {
-			profileRadar: settings,
-			controls: { isOpen: false }
-		}
+		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
+		const config = copyMerge(structuredClone(defaults), opts)
+		config.settings.controls = { isOpen: false }
 		const terms = config[opts.plot].terms
 		const twlst = []
 		for (const row of terms) {

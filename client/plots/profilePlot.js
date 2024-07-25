@@ -75,7 +75,7 @@ export class profilePlot {
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		document.addEventListener('scroll', event => this?.tip?.hide())
 
-		if (this.type != 'profileRadarFacility' && !config.isSecond) {
+		if (this.type != 'profileRadarFacility' && !config.settings[this.type].comparison) {
 			//Facility radar plot does not need to compare
 			const compareIconDiv = iconsDiv.append('div').style('margin-bottom', '20px')
 			const compareBt = compareIconDiv.append('button').style('border', 'none').style('background-color', 'transparent')
@@ -83,6 +83,7 @@ export class profilePlot {
 
 			compareBt.on('click', async event => {
 				const comparison = (this.settings.comparison = !this.settings.comparison)
+				this.settings.showTable = !comparison
 				compareBt.style('background-color', comparison ? 'rgb(207, 226, 243)' : 'transparent')
 				await this.app.dispatch({
 					type: 'plot_edit',
@@ -96,14 +97,14 @@ export class profilePlot {
 		}
 		if (this.type != 'profileBarchart') {
 			const tableIconDiv = iconsDiv.append('div')
-			const tableBt = tableIconDiv
+			this.dom.tableBt = tableIconDiv
 				.append('button')
 				.style('border', 'none')
 				.style('background-color', 'rgb(207, 226, 243)')
-			icon_functions['table'](tableBt, { title: 'Show table with data' })
-			tableBt.on('click', event => {
+			icon_functions['table'](this.dom.tableBt, { title: 'Show table with data' })
+			this.dom.tableBt.on('click', event => {
 				const show = !this.settings.showTable
-				tableBt.style('background-color', show ? 'rgb(207, 226, 243)' : 'transparent')
+				this.dom.tableBt.style('background-color', show ? 'rgb(207, 226, 243)' : 'transparent')
 				this.showTable(show)
 			})
 		}
@@ -144,13 +145,15 @@ export class profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
+		this.dom.tableBt.style('background-color', this.settings.showTable ? 'rgb(207, 226, 243)' : 'transparent')
 	}
 
 	async addPlot() {
 		this.plotAdded = true
 		const appState = this.state
 		const plotMod = await import('#plots/plot.app.js')
-		const plot = { chartType: this.type, isSecond: true }
+		const plot = { chartType: this.type, settings: { [this.type]: this.settings } }
+
 		if (this.type == 'profileRadar' || this.type == 'profileRadarFacility') plot.plot = this.config.plot
 		const opts = { holder: this.dom.holder2, state: { plots: [plot], vocab: appState.vocab } }
 		const plotAppApi = await plotMod.appInit(opts)
@@ -498,15 +501,15 @@ export class profilePlot {
 		uiG.attr('font-size', '0.8em')
 		let textElem = uiG.append('text').attr('transform', `translate(0, 115)`)
 		textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression: ')
-		textElem.append('tspan').text('It is provided by the local liaison who completed the assessment in consultation')
+		textElem.append('tspan').text('It is provided by the local liaison who completed the assessment ')
 		uiG
 			.append('text')
 			.attr('transform', `translate(0, 140)`)
-			.text('with the PHO medical director or directly by the PHO medical director.')
+			.text('in consultation with the PHO medical director or directly by the PHO medical director.')
 		uiG
 			.append('text')
 			.attr('transform', `translate(0, 165)`)
-			.text('The end-user was asked to rate the current status of the domains and subdomains included for this module.')
+			.text('The end-user was asked to rate the current status of the domains and subdomains included.')
 	}
 
 	addLegendItem(category, description, index) {
