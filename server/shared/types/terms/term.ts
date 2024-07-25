@@ -56,29 +56,29 @@ export type GroupSetEntry = BaseGroupSet & {
 	is_subcondition?: boolean
 }
 
-export type QGroupSetting = {
-	/** if false, not applied */
-	inuse: boolean
-}
-
-export type CustomQGroupSetting = QGroupSetting & {
+export type CustomQGroupSetting = {
 	/** When “predefined_groupset_idx” is undefined, will use this set of groups.
 	This is a custom set of groups either copied from predefined set, or created with UI.
 	Custom set definition is the same as a predefined set. */
 	customset: BaseGroupSet
+	/**  if false, not applied */
+	inuse: boolean
 }
 
-export type PredefinedQGroupSetting = QGroupSetting & {
+export type PredefinedQGroupSetting = {
 	/** If .inuse true, apply and will require predefined_groupset_idx */
 	/** Value is array index of term.groupsetting.lst[] */
 	predefined_groupset_idx: number
+	inuse: boolean
 }
+
+export type QGroupSetting = CustomQGroupSetting | PredefinedQGroupSetting
 
 export type TermGroupSetting = {
 	/** if there are only two categories, means groupsetting
 	 * definition is not applicable for the term */
 	disabled?: boolean
-	lst?: GroupSetEntry[]
+	lst: GroupSetEntry[]
 }
 
 export type BaseTerm = {
