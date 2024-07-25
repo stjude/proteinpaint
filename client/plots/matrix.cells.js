@@ -47,17 +47,18 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 		} else {
 			const vc = cell.term.valueConversion
 			let renderV = vc ? cell.key * vc.scaleFactor : cell.key
-			if (tw.q.convert2ZScore) renderV = (renderV - t.mean) / t.std
-			cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : renderV
+			if (tw.q.convert2ZScore) {
+				renderV = (renderV - t.mean) / t.std
+
+				// show positive z-score as red and negative z-score as blue
+				cell.fill = renderV > 0 ? 'red' : 'blue'
+			}
+			cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : renderV.toFixed(2)
 			cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y =
 				renderV >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : t.counts.posMaxHt + t.tw.settings.gap
-			cell.convertedValueLabel = !vc
-				? ''
-				: tw.q.convert2ZScore
-				? renderV
-				: convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+			cell.convertedValueLabel = !vc ? '' : convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
 		}
 	} else {
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
@@ -93,19 +94,16 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 			const vc = cell.term.valueConversion
 			let renderV = vc ? cell.key * vc.scaleFactor : cell.key
 			if (tw.q.convert2ZScore) renderV = (renderV - t.mean) / t.std
-			cell.label = tw.term.unit && !tw.q.convert2ZScore ? `${renderV}(${tw.term.unit})` : renderV
+			cell.label = tw.term.unit && !tw.q.convert2ZScore ? `${renderV}(${tw.term.unit})` : renderV.toFixed(2)
 			cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y =
 				renderV >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : t.counts.posMaxHt + t.tw.settings.gap
-			cell.convertedValueLabel = !vc
-				? ''
-				: tw.q.convert2ZScore
-				? renderV
-				: convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+			cell.convertedValueLabel = !vc ? '' : convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
 		}
 	} else {
-		cell.timeToEventKey = anno.value
+		const vc = cell.term.valueConversion
+		cell.timeToEventKey = vc ? convertUnits(anno.value, vc.fromUnit, vc.toUnit, vc.scaleFactor) : anno.value
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
 		const group = tw.legend?.group || tw.$id
