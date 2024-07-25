@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - pp and gdc filter are passed to getDefaultBin request for gene exp terms etc. bins are always computed against cohort to be precise
+- violin data request at gene exp termsetting ui observes filter0
 
 
 ## 2.70.0
