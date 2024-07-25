@@ -58,7 +58,7 @@ export function getHandler(self) {
 					{
 						tw: { term: self.term, q: self.q },
 						filter: self.filter,
-						filter0: self.vocabApi.opts?.state?.termfilter?.filter0,
+						filter0: self.vocabApi.state?.termfilter?.filter0, // this is in sync with mass. do not use the one from vocabApi.opts which is initial state and is out of sync with changes
 						svgw: self.num_obj.plot_size.width / window.devicePixelRatio
 					},
 					self.opts.getBodyParams?.()
