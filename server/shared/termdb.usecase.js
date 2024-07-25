@@ -101,11 +101,10 @@ export function isUsableTerm(term, _usecase, ds) {
 				if (!term.isleaf) uses.add('branch')
 			}
 		case 'profile':
-			//tree to search for component-> module -> domain when opening a summary plot
 			if (!term.isleaf) {
 				uses.add('branch')
-				//the domains are the leafs and are selected to open the summary plot associated
-				if (term.parent?.parent?.parent) {
+				const ancestors = term.id.split('__').length //depends on using the __ naming convension!
+				if (ancestors > 2) {
 					uses.add('plot')
 				}
 			}

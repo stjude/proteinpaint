@@ -171,7 +171,6 @@ async function launchSummaryPlot(button, app, preserve, isLoggedIn, site) {
 		state: { tree: { usecase: { target: 'profile' } } },
 		tree: {
 			click_term: term => {
-				console.log('click_term', term)
 				app.dispatch({
 					type: 'plot_create',
 					config: {
