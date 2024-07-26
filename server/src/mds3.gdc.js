@@ -1390,7 +1390,7 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 		// assign survival data for this sample
 		s[survivalTwLst[0].term.id] = {
 			key: d.censored ? 0 : 1,
-			value: d.time // TODO convert to years
+			value: Number((d.time / 365).toFixed(2)) // convert to years
 		}
 	}
 }

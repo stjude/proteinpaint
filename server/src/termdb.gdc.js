@@ -163,6 +163,7 @@ export async function initGDCdictionary(ds) {
 			name: id,
 			type: 'survival',
 			isleaf: true,
+			unit: 'year', // api returns time-to-event in number of days, and mds3.gdc.js converts it to decimal years
 			included_types_set: new Set(), // apply to leaf terms, should have its own term.type
 			child_types_set: new Set() // empty for leaf terms
 		}
@@ -341,7 +342,7 @@ export async function initGDCdictionary(ds) {
 }
 
 function mayAddTermAttribute(t) {
-	if (t.id == 'case.diagnoses.age_at_diagnosis' || t.id == 'Overall Survival') {
+	if (t.id == 'case.diagnoses.age_at_diagnosis') {
 		//show the term by other units
 		// print 25868 as '70 years, 318 days'
 		t.valueConversion = {
