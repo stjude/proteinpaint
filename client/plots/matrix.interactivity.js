@@ -86,14 +86,20 @@ export function setInteractivity(self) {
 						c2.html(d.term.name)
 					}
 					{
+						const colorSquare =
+							(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+										d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+								  }" ></span>`
+								: ''
+
 						const [c1, c2] = table.addRow()
 						c1.html('Gene Expression')
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
-							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-						}" ></span>
-							${d.convertedValueLabel || d.label}${
-							d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
-						}`)
+						c2.html(
+							`${colorSquare} ${d.convertedValueLabel || d.label}${
+								d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
+							}`
+						)
 					}
 				} else if (d.term.type == TermTypes.METABOLITE_INTENSITY) {
 					{
@@ -102,14 +108,20 @@ export function setInteractivity(self) {
 						c2.html(d.term.name)
 					}
 					{
+						const colorSquare =
+							(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+										d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+								  }" ></span>`
+								: ''
+
 						const [c1, c2] = table.addRow()
 						c1.html('Metabolite Intensity')
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
-							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-						}" ></span>
-							${d.convertedValueLabel || d.label}${
-							d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
-						}`)
+						c2.html(
+							`${colorSquare} ${d.convertedValueLabel || d.label}${
+								d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
+							}`
+						)
 					}
 				} else if (d.term.type == TermTypes.SURVIVAL) {
 					{
@@ -134,14 +146,20 @@ export function setInteractivity(self) {
 						c2.html(timeToEventKey)
 					}
 				} else {
+					const colorSquare =
+						(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
+							? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+									d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+							  }" ></span>`
+							: ''
+
 					const [c1, c2] = table.addRow()
 					c1.html(d.term.name)
-					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
-						d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-					}" ></span>
-						${d.convertedValueLabel || d.label}${
-						d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
-					}`)
+					c2.html(
+						`${colorSquare} ${d.convertedValueLabel || d.label}${
+							d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
+						}`
+					)
 				}
 			}
 		} else {
@@ -430,16 +448,23 @@ export function setInteractivity(self) {
 						c2.html(sampleData.term.name)
 					}
 					{
+						const colorSquare =
+							(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
+							sampleData.tw.q.mode !== 'continuous'
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+										sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+								  }" ></span>`
+								: ''
+
 						const [c1, c2] = table.addRow()
 						c1.html('Gene Expression')
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
-							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-						}" ></span>
-							${sampleData.convertedValueLabel || sampleData.label}${
-							sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
-								? sampleData.zscoreLabel
-								: ''
-						}`)
+						c2.html(
+							`${colorSquare} ${sampleData.convertedValueLabel || sampleData.label}${
+								sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
+									? sampleData.zscoreLabel
+									: ''
+							}`
+						)
 					}
 				} else if (sampleData.term.type == TermTypes.METABOLITE_INTENSITY) {
 					{
@@ -448,16 +473,23 @@ export function setInteractivity(self) {
 						c2.html(sampleData.term.name)
 					}
 					{
+						const colorSquare =
+							(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
+							sampleData.tw.q.mode !== 'continuous'
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+										sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+								  }" ></span>`
+								: ''
+
 						const [c1, c2] = table.addRow()
 						c1.html('Metabolite Intensity')
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
-							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-						}" ></span>
-							${sampleData.convertedValueLabel || sampleData.label}${
-							sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
-								? sampleData.zscoreLabel
-								: ''
-						}`)
+						c2.html(
+							`${colorSquare} ${sampleData.convertedValueLabel || sampleData.label}${
+								sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
+									? sampleData.zscoreLabel
+									: ''
+							}`
+						)
 					}
 				} else if (sampleData.term.type == TermTypes.SURVIVAL) {
 					{
@@ -482,16 +514,23 @@ export function setInteractivity(self) {
 						c2.html(timeToEventKey)
 					}
 				} else {
+					const colorSquare =
+						(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
+						sampleData.tw.q.mode !== 'continuous'
+							? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+									sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+							  }" ></span>`
+							: ''
+
 					const [c1, c2] = table.addRow()
 					c1.html(sampleData.term.name)
-					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
-						sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-					}" ></span>
-						${sampleData.convertedValueLabel || sampleData.label}${
-						sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
-							? sampleData.zscoreLabel
-							: ''
-					}`)
+					c2.html(
+						`${colorSquare} ${sampleData.convertedValueLabel || sampleData.label}${
+							sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
+								? sampleData.zscoreLabel
+								: ''
+						}`
+					)
 				}
 			}
 		} else if (sampleData.term && sampleData.term.type == 'geneVariant' && sampleData.value) {
