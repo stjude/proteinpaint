@@ -184,13 +184,6 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 
-		// adhoc chart, temporary fix for prototyping a specific ds
-		{
-			label: 'Profile Bar Plot',
-			chartType: 'profileBarchart',
-			clickTo: self.showTree_select1term,
-			usecase: { detail: 'term' }
-		},
 		{
 			label: 'Data Download',
 			clickTo: self.prepPlot,
