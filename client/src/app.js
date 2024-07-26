@@ -168,7 +168,7 @@ export function runproteinpaint(arg) {
 			app.genomes = data.genomes
 			app.cardsPath = data.cardsPath
 
-			if (data.debugmode) {
+			if (data.debugmode && !data.features?.disableDevBrowserNotification) {
 				app.debugmode = true
 				import('./notify').catch(e => console.warn(`debugmode: server-sent notifications is not setup`, e))
 			}
