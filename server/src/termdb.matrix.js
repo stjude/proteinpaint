@@ -578,7 +578,6 @@ export async function mayInitiateMatrixplots(ds) {
 async function findListOfBins(q, tw, ds) {
 	// for non-dict terms which may lack tw.term.bins
 	if (tw.q.type == 'custom-bin') {
-		console.log(888, 'has')
 		if (Array.isArray(tw.q.lst)) return tw.q.lst
 		throw 'q.type is custom-bin but q.lst is missing' // when mode is custom bin, q.lst must always be present
 	}
@@ -592,7 +591,6 @@ async function findListOfBins(q, tw, ds) {
 			should be true for both q.type=regular-bin or q.type=custom-bin
 			*/
 			// term lacks bins. compute it on the fly. expensive step and not supposed to happen?
-			console.log(999, 'compute bins')
 			await new Promise(async (resolve, reject) => {
 				const _q = {
 					tw,
