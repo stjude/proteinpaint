@@ -3,9 +3,36 @@ import { Menu } from '#dom/menu'
 import { appInit } from '#termdb/app'
 
 /*
+logic for rendering the PrOFILE dashboard ui
+this is project-specific logic and is not part of mass ui or charts, 
+but an external layer on top of mass ui to provide project-specific customizations
+it will selectively launch mass apps based on dashboard logic
+
+purposes:
+
+1. at start, shows two buttons for two datasets ("abbreviated", "full").
+   this is due to that PrOFILE has two mds3 datasets, where a runpp({mass}) call cannot launch two ds.
+   clicking a button will allow to launch one ds via client/mass/app.js
+
+2. once a dataset is selected, display chart buttons available to that ds (the two ds has different sets of charts)
+   on clicking a chart button, it launches the chart via abridged mass ui
+
+3. manages any other dashboard interactivities that are out of scope of mass ui
+
+
+
+!! chart type names written in this scripts are crucial !!
+
+chart type names must correspond to keys in chartConfigByType{} of the dataset
+such charts are not declared in mass/charts.js so mass ui won't show them in charts tray
+mass store will simply import from ./plots/<chartType>.js,
+inside the js script it accesses its own configurations from termdbConfig.chartConfigByType[<chartType>] and render
+
+
 holder: html dom
 getDatasetAccessToken()
 */
+
 export function init(arg) {
 	const headerHolder = select(arg.holder)
 	headerHolder
