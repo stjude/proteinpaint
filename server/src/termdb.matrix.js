@@ -160,49 +160,11 @@ async function getSampleData(q, ds) {
 				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION || tw.term.type == TermTypes.METABOLITE_INTENSITY) {
-			let lst // list of bins based on tw config
-			if (tw.q?.mode == 'discrete') {
-				if (!tw.term.bins) {
-					/* term lacks bins.
-					since all such term types do not have default bin and is dynamically computed in termsetting,
-					request body should still carry term.bins and this condition should not happen
-					at gene exp violin, when editing term1 via termsetting ui (but not summary chart tab Barchart) and change it from continuous to discrete and apply to make barchart,
-					this condition happens.
-					thus must keep this step as fail-safe
-					however it has high performance costs especially for gdc
-					*/
-					await new Promise(async (resolve, reject) => {
-						const _q = {
-							tw,
-							genome: ds.genome,
-							dslabel: ds.label
-						}
-						await trigger_getDefaultBins(_q, ds, {
-							send(bins) {
-								if (bins.error) throw reject(bins.error)
-								tw.term.bins = bins
-								resolve()
-							}
-						})
-					})
-				}
-				const min = tw.term.bins.min
-				const max = tw.term.bins.max
-				if (tw.q.type == 'regular-bin') {
-					lst = compute_bins(tw.q, () => {
-						return { min, max }
-					})
-					for (const b of lst) {
-						if (!('name' in b) && b.label) b.name = b.label
-					}
-				} else {
-					if (!tw.q.lst) throw 'q.mode is not regular-bin and q.lst[] is missing'
-					lst = tw.q.lst
-				}
-
-				byTermId[tw.$id] = { bins: lst }
+			let lstOfBins // of this tw. only set when q.mode is discrete
+			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
+				lstOfBins = await findListOfBins(q, tw, ds)
+				byTermId[tw.$id] = { bins: lstOfBins }
 			}
-
 			const args = {
 				genome: q.ds.genome,
 				dslabel: q.ds.label,
@@ -219,10 +181,10 @@ async function getSampleData(q, ds) {
 				const values = data.term2sample2value.get(tw.term.name)
 				const value = Number(values[sampleId])
 				let key = value
-				if (tw.q?.mode == 'discrete') {
-					//check binary mode
-					const bin = getBin(lst, value)
-					key = get_bin_label(lst[bin], tw.q)
+				if (lstOfBins) {
+					// term is in binning mode. key should be changed into the label of the bin to which value belongs
+					const bin = getBin(lstOfBins, value)
+					key = get_bin_label(lstOfBins[bin], tw.q)
 				}
 				samples[sampleId][tw.$id] = { key, value }
 			}
@@ -611,4 +573,52 @@ export async function mayInitiateMatrixplots(ds) {
 			throw 'unknown data source of one of matrixplots.plots[]'
 		}
 	}
+}
+
+async function findListOfBins(q, tw, ds) {
+	// for non-dict terms which may lack tw.term.bins
+	if (tw.q.type == 'custom-bin') {
+		console.log(888, 'has')
+		if (Array.isArray(tw.q.lst)) return tw.q.lst
+		throw 'q.type is custom-bin but q.lst is missing' // when mode is custom bin, q.lst must always be present
+	}
+	if (tw.q.type == 'regular-bin') {
+		// is regular bin. must compute the bins from tw.term.bins
+		if (!tw.term.bins) {
+			/* term.bins will be missing when initially launching violin plot of such terms
+			in such case, edit term1 via termsetting ui (but not summary chart tab Barchart) and change it from continuous to discrete and apply to make barchart,
+			tw.term.bins will be missing but tw.q.lst[] will be present.
+			in such case, use it
+			should be true for both q.type=regular-bin or q.type=custom-bin
+			*/
+			// term lacks bins. compute it on the fly. expensive step and not supposed to happen?
+			console.log(999, 'compute bins')
+			await new Promise(async (resolve, reject) => {
+				const _q = {
+					tw,
+					genome: ds.genome,
+					dslabel: ds.label,
+					filter: q.filter,
+					filter0: q.filter0
+				}
+				await trigger_getDefaultBins(_q, ds, {
+					send(bins) {
+						if (bins.error) throw reject(bins.error)
+						tw.term.bins = bins
+						resolve()
+					}
+				})
+			})
+		}
+		const min = tw.term.bins.min
+		const max = tw.term.bins.max
+		const lst = compute_bins(tw.q, () => {
+			return { min, max }
+		})
+		for (const b of lst) {
+			if (!('name' in b) && b.label) b.name = b.label
+		}
+		return lst
+	}
+	throw 'unknown tw.q.type when q.mode is discrete'
 }

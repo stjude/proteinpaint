@@ -1,1 +1,2 @@
-
+Fixes:
+- improve getData() to handle missing bin config for gene exp term for better performance
