@@ -86,7 +86,6 @@ async function trigger_getnumericcategories(
 	ds: any
 ) {
 	if (!q.tid) throw '.tid missing'
-	const term = tdb.q.termjsonByOneid(q.tid)
 	const arg = {
 		ds,
 		term_id: q.tid,
