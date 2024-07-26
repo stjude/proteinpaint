@@ -237,7 +237,7 @@ export function setClusteringBtn(holder, callback) {
 					settingsKey: 'xDendrogramHeight'
 				},
 				{
-					label: `Z-Score Cap`,
+					label: `z-score Cap`,
 					title: `Cap the z-score scale to not exceed this absolute value`,
 					type: 'number',
 					chartType: 'hierCluster',

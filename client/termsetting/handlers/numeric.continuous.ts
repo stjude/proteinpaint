@@ -61,7 +61,7 @@ export function getHandler(self) {
 			if (self.usecase?.target == 'matrix') {
 				convert2ZCheckbox = make_one_checkbox({
 					holder: div,
-					labeltext: 'Convert to Z-Score',
+					labeltext: 'Convert to z-score',
 					checked: self.q.convert2ZScore ? true : false,
 					divstyle: { display: 'inline-block', padding: '3px 10px' },
 					callback: checked => {
