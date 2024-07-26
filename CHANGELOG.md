@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - on validating container, gdc logic will skip case caching and stale cache check
+- improve getData() to handle missing bin config for gene exp term for better performance
 
 
 ## 2.70.1
