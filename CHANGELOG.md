@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.70.1
 
 Fixes:
 - pp and gdc filter are passed to getDefaultBin request for gene exp terms etc. bins are always computed against cohort to be precise
