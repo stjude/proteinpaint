@@ -19,12 +19,15 @@ initGDCdictionary
 	assignDefaultBins
 	makeTermdbQueries
 	getOpenProjects
-	testGDCapi
-		testRestApi
-		testGraphqlApi
-	cacheSampleIdMapping
-		fetchIdsFromGdcApi
 	runRemainingWithoutAwait
+		testGDCapi
+			testRestApi
+			testGraphqlApi
+		mayCacheSampleIdMappingWithRegularCheck
+			cacheSampleIdMapping
+				fetchIdsFromGdcApi
+			mayReCacheCaseIdMapping
+				caseCacheIsStale
 
 
 ******************** major tasks *****************
@@ -751,17 +754,12 @@ async function runRemainingWithoutAwait(ds) {
 	await testGDCapi(ds)
 	try {
 		// obtain case id mapping for the first time and store at ds.__gdc
-		await cacheSampleIdMapping(ds)
+		await mayCacheSampleIdMappingWithRegularCheck(ds)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
 	}
-
-	if (!serverconfig.features.noPeriodicCheckGdcCaseCache) {
-		// cache check is allowed. this is required for gdc prod environment and can be disabled on dev env.
-		// kick off stale cache check
-		setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
-	}
+	// add any other gdc stuff
 }
 
 async function getApiStatus(ds) {
@@ -921,16 +919,38 @@ async function testGraphqlApi(url, headers) {
 	console.log('GDC GraphQL API okay: ' + url, new Date() - t, 'ms')
 }
 
-/*
-cache gdc sample id mappings
-** this is an optional step and can be skipped on dev machines **
-- create a map from sample aliquot id to sample submitter id, for displaying in mds3 tk
-- create a map from differet ids to case uuid, for creating gdc cohort with selected samples
-- cache list of case uuids with expression data
+async function mayCacheSampleIdMappingWithRegularCheck(ds) {
+	// may do it because it could be disabled by feature toggle
+	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
+	const fv = serverconfig.features.stopGdcCacheAliquot
+	if (fv === true) {
+		// do not cache at all. this flag is auto-set for container validation. running stale cache check will cause the server process not to quit, and break validation, thus must skip this when flag is true
+		console.log('GDC: sample IDs are not cached! No periodic check will take place!')
+		initGdcHolder(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder
+		///////////////////// NOTE ///////////////////////
+		// with missing cache for case id mapping and cases with exp data, any query using gdc gene exp data will not work!!
+		// this should be fine for container validation, but may not do so on a dev environment
+		return
+	}
+	if (Number.isInteger(fv) && fv > 0) {
+		// flag value is integer. allow to run a short test on dev machine
+		console.log('GDC: running limited sample ID caching')
+	} else {
+		// for any other flag value (or not set), will cache everything. this should be on prod server
+		console.log('GDC: caching complete sample ID mapping')
+	}
 
-function will rerun when it detects stale case id cache
-*/
-async function cacheSampleIdMapping(ds) {
+	await cacheSampleIdMapping(ds)
+
+	// regular check will only happen if mapping is actually cached
+	if (!serverconfig.features.noPeriodicCheckGdcCaseCache) {
+		// cache check is allowed. this is required for gdc prod environment and can be disabled on dev env.
+		// kick off stale cache check
+		setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
+	}
+}
+
+function initGdcHolder(ds) {
 	// gather these arbitrary gdc stuff under __gdc{} to be safe
 	// do not freeze the object; they will be rewritten if cache is stale
 	ds.__gdc = {
@@ -965,29 +985,25 @@ async function cacheSampleIdMapping(ds) {
 		gdcOpenProjects: new Set(), // names of open-access projects
 		doneCaching: false
 	}
+}
+
+/*
+cache gdc sample id mappings
+** this is an optional step and can be skipped on dev machines **
+- create a map from sample aliquot id to sample submitter id, for displaying in mds3 tk
+- create a map from differet ids to case uuid, for creating gdc cohort with selected samples
+- cache list of case uuids with expression data
+
+function will rerun when it detects stale case id cache
+*/
+async function cacheSampleIdMapping(ds) {
+	initGdcHolder(ds)
 
 	try {
 		await getOpenProjects(ds)
 	} catch (e) {
 		console.log(e)
 		throw 'getOpenProjects() failed: ' + (e.message || e)
-	}
-
-	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
-	if ('stopGdcCacheAliquot' in serverconfig.features) {
-		// flag is set
-		if (Number.isInteger(serverconfig.features.stopGdcCacheAliquot)) {
-			// flag value is integer (suppose to be positive integer)
-			// allow to run a short test on dev machine
-			console.log('GDC: running limited sample ID caching')
-		} else {
-			// flag value is not integer, do not run this function at all
-			console.log('GDC: sample IDs are not cached!')
-			return
-		}
-	} else {
-		// flag not set; this should be on prod server
-		console.log('GDC: caching complete sample ID mapping')
 	}
 
 	const size = 1000 // fetch 1000 ids at a time
