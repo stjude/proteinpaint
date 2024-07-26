@@ -64,16 +64,20 @@ class profileRadar extends profilePlot {
 		const radius = this.radius
 		const x = 370
 		const y = 290
-		this.svg
-			.append('text')
-			.attr('transform', `translate(40, ${y + 340})`)
-			.attr('font-weight', 'bold')
-			.text(config[config.plot].title)
+		if (!this.settings.comparison)
+			this.svg
+				.append('text')
+				.attr('transform', `translate(40, ${y + 340})`)
+				.attr('font-weight', 'bold')
+				.attr('font-size', '0.9rem')
+				.text(config[config.plot].title)
 
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 380},${y + 180})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 370})`)
+		this.filterG = this.svg
+			.append('g')
+			.attr('transform', `translate(${this.settings.comparison ? 150 : 40},${y + 370})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
