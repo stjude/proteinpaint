@@ -71,11 +71,12 @@ class profilePolar extends profilePlot {
 			.style('vertical-align', 'top')
 			.style('margin', '45px 20px')
 
-		this.svg
-			.append('text')
-			.attr('transform', `translate(130, ${height - 120})`)
-			.attr('font-weight', 'bold')
-			.text(config.title)
+		if (!this.settings.comparison)
+			this.svg
+				.append('text')
+				.attr('transform', `translate(130, ${height - 120})`)
+				.attr('font-weight', 'bold')
+				.text(config.title)
 
 		const rows = []
 		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: 'Score', align: 'center' }]
