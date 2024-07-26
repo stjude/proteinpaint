@@ -41,8 +41,8 @@ NOTE
 "sample" and "category" attributes here are hardcoded
 
 */
-export const minShapeSize = 9
-export const maxShapeSize = 300
+export const minShapeSize = 0.2
+export const maxShapeSize = 4
 class Scatter {
 	constructor() {
 		this.type = 'sampleScatter'
@@ -53,7 +53,7 @@ class Scatter {
 			symbolCross,
 			symbolWye,
 			symbolTriangle,
-			symbolDiamond,
+			//symbolDiamond,
 			symbolDiamond2,
 			symbolStar,
 			symbolPlus,
@@ -266,11 +266,11 @@ class Scatter {
 			vocabApi: this.app.vocabApi
 		}
 		const shapeSizeOption = {
-			label: 'Sample area',
+			label: 'Sample size',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'size',
-			title: 'Sample size, squared gives you the sample area',
+			title: 'Sample scale, increase to make the samples larger',
 			min: 0
 		}
 		const minShapeSizeOption = {
@@ -669,11 +669,11 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 export function getDefaultScatterSettings() {
 	return {
-		size: 4,
-		minShapeSize: 3,
-		maxShapeSize: 12,
+		size: 1,
+		minShapeSize: 0.2,
+		maxShapeSize: 4,
 		scaleDotOrder: 'Ascending',
-		refSize: 3,
+		refSize: 0.8,
 		svgw: 500,
 		svgh: 500,
 		svgd: 500,

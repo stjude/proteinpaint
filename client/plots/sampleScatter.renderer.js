@@ -16,6 +16,28 @@ import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
 
 const defaultSize = 64
+
+export const shapes = [
+	'M 8,8 m 8,0 a 8,8 0 1,0 -16,0 a 8,8 0 1,0 16,0', //circle filled
+	'M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16', //circle empty
+
+	'M7.022 1.566a1.13 1.13 0 0 1 1.96 0l6.857 11.667c.457.778-.092 1.767-.98 1.767H1.144c-.889 0-1.437-.99-.98-1.767z', //triangle filled
+	'M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057m1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z', //triangle empty
+
+	'M6.95.435c.58-.58 1.52-.58 2.1 0l6.515 6.516c.58.58.58 1.519 0 2.098L9.05 15.565c-.58.58-1.519.58-2.098 0L.435 9.05a1.48 1.48 0 0 1 0-2.098z', //diamond filled
+	'M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z', //diamond empty
+
+	'M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2z', //square filled
+	'M6.95.435c.58-.58 1.52-.58 2.1 0l6.515 6.516c.58.58.58 1.519 0 2.098L9.05 15.565c-.58.58-1.519.58-2.098 0L.435 9.05a1.48 1.48 0 0 1 0-2.098zm1.4.7a.495.495 0 0 0-.7 0L1.134 7.65a.495.495 0 0 0 0 .7l6.516 6.516a.495.495 0 0 0 .7 0l6.516-6.516a.495.495 0 0 0 0-.7L8.35 1.134z', //square empty
+
+	'M7.685.256a.5.5 0 0 1 .63 0l7.421 6.03a.5.5 0 0 1 .162.538l-2.788 8.827a.5.5 0 0 1-.476.349H3.366a.5.5 0 0 1-.476-.35L.102 6.825a.5.5 0 0 1 .162-.538l7.42-6.03Z', //pentagon filled
+	'M7.685 1.545a.5.5 0 0 1 .63 0l6.263 5.088a.5.5 0 0 1 .161.539l-2.362 7.479a.5.5 0 0 1-.476.349H4.099a.5.5 0 0 1-.476-.35L1.26 7.173a.5.5 0 0 1 .161-.54l6.263-5.087Zm8.213 5.28a.5.5 0 0 0-.162-.54L8.316.257a.5.5 0 0 0-.631 0L.264 6.286a.5.5 0 0 0-.162.538l2.788 8.827a.5.5 0 0 0 .476.349h9.268a.5.5 0 0 0 .476-.35l2.788-8.826Z', //pentagon empty
+
+	'M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2', //plus
+	'M14 10a6 6 0 0 1-12 0C2 5.686 5 0 8 0s6 5.686 6 10', //egg filled
+	'M8 15a5 5 0 0 1-5-5c0-1.956.69-4.286 1.742-6.12.524-.913 1.112-1.658 1.704-2.164C7.044 1.206 7.572 1 8 1s.956.206 1.554.716c.592.506 1.18 1.251 1.704 2.164C12.31 5.714 13 8.044 13 10a5 5 0 0 1-5 5m0 1a6 6 0 0 0 6-6c0-4.314-3-10-6-10S2 5.686 2 10a6 6 0 0 0 6 6' //egg empty
+]
+
 export function setRenderers(self) {
 	setRenderersThree(self)
 	self.render = function () {
@@ -246,7 +268,7 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('name', 'serie')
-			.attr('transform', c => translate(chart, c))
+			.attr('transform', c => transform(chart, c))
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
 			.attr('stroke', c => self.getColor(c, chart))
@@ -257,7 +279,7 @@ export function setRenderers(self) {
 			.append('path')
 			.attr('name', 'serie')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-			.attr('transform', c => translate(chart, c))
+			.attr('transform', c => transform(chart, c))
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
 			.attr('stroke', c => self.getColor(c, chart))
@@ -362,28 +384,24 @@ export function setRenderers(self) {
 	}
 
 	self.getShape = function (chart, c, factor = 1) {
-		const index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
+		const index = chart.shapeLegend.get(c.shape).shape % shapes.length //self.symbols.length
+		return shapes[index]
+	}
+
+	function transform(chart, c) {
+		const x = chart.xAxisScale(c.x)
+		const y = chart.yAxisScale(c.y)
 		const isRef = !('sampleId' in c)
 		let size
 		if (!self.config.scaleDotTW || isRef) {
 			size = 'sampleId' in c ? self.settings.size : self.settings.refSize
-			size = size * size
-			return self.symbols[index].size((size * factor) / self.zoom)()
 		} else {
 			const range = self.settings.maxShapeSize - self.settings.minShapeSize
 			if (self.settings.scaleDotOrder == 'Ascending')
 				size = self.settings.minShapeSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 			else size = self.settings.maxShapeSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
-			size = size * size
-			const scaledSize = (size * factor) / self.zoom
-			return self.symbols[index].size(scaledSize)()
 		}
-	}
-
-	function translate(chart, c) {
-		const x = chart.xAxisScale(c.x)
-		const y = chart.yAxisScale(c.y)
-		const transform = `translate(${x},${y})`
+		const transform = `translate(${x},${y}) scale(${(self.zoom * size) / 3})`
 		return transform
 	}
 
@@ -826,8 +844,8 @@ export function setRenderers(self) {
 				const color = 'gray'
 				for (const [key, shape] of chart.shapeLegend) {
 					if (key == 'Ref') continue
-					const index = shape.shape % self.symbols.length
-					const symbol = self.symbols[index].size(defaultSize)()
+					const index = shape.shape % shapes.length
+					const symbol = shapes[index]
 					const name = key
 					const count = shape.sampleCount
 					const hidden = self.config.shapeTW.q.hiddenValues ? key in self.config.shapeTW.q.hiddenValues : false
@@ -835,7 +853,7 @@ export function setRenderers(self) {
 
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
+						.attr('transform', c => `translate(${offsetX}, ${offsetY - 5}) scale(0.5)`)
 						.style('fill', color)
 						.attr('d', symbol)
 						.style('stroke', rgb(color).darker())
@@ -863,10 +881,9 @@ export function setRenderers(self) {
 
 			const circleG = g.append('g')
 			circleG
-				.append('circle')
-				.attr('cx', x)
-				.attr('cy', y)
-				.attr('r', radius)
+				.append('path')
+				.attr('d', shapes[0])
+				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.5)`)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
 			if (!self.config.colorColumn)
@@ -888,8 +905,8 @@ export function setRenderers(self) {
 	self.drawScaleDotLegend = function (chart) {
 		const scaleG = chart.scaleG
 		scaleG.selectAll('*').remove()
-		const minRadius = (self.settings.minShapeSize / 2) * self.zoom
-		const maxRadius = (self.settings.maxShapeSize / 2) * self.zoom
+		const minRadius = 4 * self.zoom
+		const maxRadius = 10 * self.zoom
 		const width = 30 * self.zoom
 
 		const order = self.settings.scaleDotOrder
@@ -1114,16 +1131,16 @@ export function setRenderers(self) {
 					const index = category.shape % self.symbols.length
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX - step}, ${offsetY - 5})`)
+						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(0.5)`)
 						.style('fill', 'gray')
-						.attr('d', self.symbols[index].size(64)())
+						.attr('d', shapes[index])
 						.style('stroke', rgb('gray').darker())
 				} else {
 					itemG
-						.append('circle')
-						.attr('cx', offsetX - step)
-						.attr('cy', offsetY - 5)
-						.attr('r', 5)
+						.append('path')
+						.attr('d', shapes[0])
+						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(0.5)`)
+
 						.style('fill', category.color)
 						.style('stroke', rgb(category.color).darker())
 					itemG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))

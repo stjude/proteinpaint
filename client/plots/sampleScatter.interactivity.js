@@ -17,6 +17,8 @@ import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
 import { searchSampleInput, getSamplesRelated } from './sampleView.js'
 
+import { shapes } from './sampleScatter.renderer.js'
+
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
 		const onClick = event.type == 'click'
@@ -194,7 +196,7 @@ export function setInteractivity(self) {
 						tw == self.config.colorTW
 							? chart.shapeLegend.get('Ref').shape % self.symbols.length
 							: chart.shapeLegend.get(sample.shape).shape % self.symbols.length
-					const shape = self.symbols[index].size(64)()
+					const shape = shapes[index]
 					let fontColor = 'black'
 					const whiteColor = rgb('white').toString()
 
@@ -222,7 +224,11 @@ export function setInteractivity(self) {
 					const width = chars * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '25px')
 					const g = svg.append('g').attr('transform', 'translate(10, 14)')
-					g.append('path').attr('d', shape).attr('fill', color).attr('stroke', '#aaa')
+					g.append('path')
+						.attr('d', shape)
+						.attr('fill', color)
+						.attr('stroke', '#aaa')
+						.attr('transform', 'translate(0, -2) scale(0.5)')
 					const text = g.append('text').attr('x', 12).attr('y', 6).attr('font-size', '0.9em')
 					const span2 = text.append('tspan').text(node.value).attr('fill', fontColor)
 				} else td.style('padding', '2px').text(`${node.value}`)

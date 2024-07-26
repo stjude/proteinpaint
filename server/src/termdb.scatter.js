@@ -299,7 +299,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				}
 			}
 		}
-		let i = 1
+		let i = 0
 		for (const [category, value] of Object.entries(result.shapeMap)) {
 			if (!('shape' in value)) value.shape = i
 			i++
