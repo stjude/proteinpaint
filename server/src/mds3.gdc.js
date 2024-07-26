@@ -12,7 +12,7 @@ const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp 
 // convenient helper to only print log on dev environments, and reduce pollution on prod
 // TODO move to utils.js, also fix use of _serverconfig
 function mayLog(...args) {
-	if (serverconfig.debugmode) console.log(args.join(' '))
+	if (serverconfig.debugmode) console.log(...args) // do not use args.join() to allow numbers printed in different color on terminal
 }
 
 /*
