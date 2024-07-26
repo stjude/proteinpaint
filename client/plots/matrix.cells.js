@@ -52,8 +52,16 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 
 				// show positive z-score as red and negative z-score as blue
 				cell.fill = renderV > 0 ? 'red' : 'blue'
+				cell.zscoreLabel = ` (Z-Score: ${renderV.toFixed(2)})`
 			}
-			cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : renderV.toFixed(2)
+			cell.label =
+				'label' in anno
+					? anno.label
+					: values[key]?.label
+					? values[key].label
+					: tw.term.unit
+					? `${cell.key.toFixed(2)} ${tw.term.unit}`
+					: cell.key.toFixed(2)
 			cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y =
@@ -74,7 +82,7 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 	cell.label =
 		tw.q?.mode == 'continuous'
 			? tw.term.unit
-				? `${key}(${tw.term.unit})`
+				? `${key} ${tw.term.unit}`
 				: key
 			: tw.term.values?.[key].label
 			? tw.term.values?.[key].label
@@ -93,8 +101,11 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 		} else {
 			const vc = cell.term.valueConversion
 			let renderV = vc ? cell.key * vc.scaleFactor : cell.key
-			if (tw.q.convert2ZScore) renderV = (renderV - t.mean) / t.std
-			cell.label = tw.term.unit && !tw.q.convert2ZScore ? `${renderV}(${tw.term.unit})` : renderV.toFixed(2)
+			if (tw.q.convert2ZScore) {
+				renderV = (renderV - t.mean) / t.std
+				cell.zscoreLabel = ` (Z-Score: ${renderV.toFixed(2)})`
+			}
+			cell.label = tw.term.unit ? `${cell.key.toFixed(2)} ${tw.term.unit}` : cell.key.toFixed(2)
 			cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y =
@@ -103,7 +114,7 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 		}
 	} else {
 		const vc = cell.term.valueConversion
-		cell.timeToEventKey = vc ? convertUnits(anno.value, vc.fromUnit, vc.toUnit, vc.scaleFactor) : anno.value
+		cell.timeToEventKey = vc ? convertUnits(anno.value, vc.fromUnit, vc.toUnit, vc.scaleFactor) : anno.value.toFixed(2)
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
 		const group = tw.legend?.group || tw.$id
