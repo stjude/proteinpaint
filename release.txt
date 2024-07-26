@@ -1,2 +1,1 @@
-Fixes:
-- on validating container, gdc logic will skip case caching and stale cache check
+

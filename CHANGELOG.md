@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- on validating container, gdc logic will skip case caching and stale cache check
+
 
 ## 2.70.1
 
