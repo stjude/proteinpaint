@@ -50,8 +50,8 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 			if (tw.q.convert2ZScore) {
 				renderV = (renderV - t.mean) / t.std
 
-				// show positive z-score as red and negative z-score as blue
-				cell.fill = renderV > 0 ? 'red' : 'blue'
+				// show positive z-score as soft red and negative z-score as soft blue
+				cell.fill = renderV > 0 ? '#FF6666' : '#6666FF'
 				cell.zscoreLabel = ` (z-score: ${renderV.toFixed(2)})`
 			}
 			cell.label =
