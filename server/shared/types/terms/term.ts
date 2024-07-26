@@ -1,11 +1,10 @@
 import { Filter } from '../filter.ts'
-import { CategoricalQ, CategoricalTerm } from './categorical.ts'
-import { ConditionQ, ConditionTerm } from './condition.ts'
-import { NumericQ, NumericTerm } from './numeric.ts'
-import { GeneVariantQ, GeneVariantTerm } from './geneVariant.ts'
-import { SampleLstQ, SampleLstTerm } from './samplelst.ts'
-import { SnpsQ, SnpsTerm } from './snps.ts'
-import { Q } from './tw.ts'
+import { CategoricalTerm } from './categorical.ts'
+import { ConditionTerm } from './condition.ts'
+import { NumericTerm } from './numeric.ts'
+import { GeneVariantTerm } from './geneVariant.ts'
+import { SampleLstTerm } from './samplelst.ts'
+import { SnpsTerm } from './snps.ts'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -31,18 +30,17 @@ export type TermValues = {
 	[key: string | number]: BaseValue
 }
 
-export type GroupEntry = {
-	name: string
-	/** `values` is the default. if `values`, values must be present
-	 * if `filter`, filter must be present */
-	type: 'values' | 'filter'
-}
+export type GroupEntry = ValuesGroup | FilterGroup
 
-export type ValuesGroup = GroupEntry & {
+export type ValuesGroup = {
+	name: string
+	type: 'values'
 	values: { key: number | string; label: string }[]
 }
 
-export type FilterGroup = GroupEntry & {
+export type FilterGroup = {
+	name: string
+	type: 'filter'
 	filter: Filter
 }
 
