@@ -130,6 +130,7 @@ export class AppHeader {
 			// a row for server stats
 			const row = headinfo.append('div').style('padding-left', '15px')
 			row
+				.attr('id', 'sjpp-serverstat')
 				.append('span')
 				.text(
 					'Code updated: ' + (this.data.codedate || '??') + ', server launched: ' + (this.data.launchdate || '??') + '.'
@@ -246,6 +247,7 @@ export class AppHeader {
 		headbox
 			.append('span')
 			.classed('sja_menuoption', true)
+			.attr('id', 'sjpp-header-help-btn')
 			.style('padding', padw_sm)
 			.text('Help')
 			.on('click', async event => {
@@ -268,6 +270,7 @@ export class AppHeader {
 			headbox
 				.append('span')
 				.classed('sja_menuoption', true)
+				.attr('id', 'sjpp-header-publications-btn')
 				.style('padding', padw_sm)
 				.style('margin', '0px 5px')
 				.text('Publications')
