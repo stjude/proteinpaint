@@ -39,8 +39,8 @@ export const api: any = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		const q = req.query as getroottermRequest
-		const cohortValues = q.cohortValues ? q.cohortValues : ''
-		const treeFilter = q.treeFilter ? q.treeFilter : ''
+		//const cohortValues = q.cohortValues ? q.cohortValues : ''
+		//const treeFilter = q.treeFilter ? q.treeFilter : ''
 		//res.send({ lst: await tdb.q.getRootTerms(cohortValues, treeFilter) })
 
 		try {
