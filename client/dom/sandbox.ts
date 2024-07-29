@@ -128,6 +128,7 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 
 	const header = header_row
 		.append('div')
+		.attr('id', 'sandbox-header-text')
 		.style('display', 'inline-flex')
 		.style('align-items', 'center')
 		.style('justify-content', 'left')
