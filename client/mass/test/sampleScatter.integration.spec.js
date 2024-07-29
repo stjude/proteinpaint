@@ -281,11 +281,18 @@ tape('Test scale dot', function (test) {
 		const self = scatter.Inner
 		const chart = scatter.Inner.charts[0]
 		const dots = self.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		const minShape = self.symbols[0].size(self.settings.minShapeSize * self.settings.minShapeSize)()
-		const maxShape = self.symbols[0].size(self.settings.maxShapeSize * self.settings.maxShapeSize)()
+		const minSize = (self.settings.minShapeSize * self.zoom) / 3
 
-		test.true(dots.find(dot => dot.getAttribute('d') == minShape) != null, `Dots with the minimum size should be found`)
-		test.true(dots.find(dot => dot.getAttribute('d') == maxShape) != null, `Dots with the maximum size should be found`)
+		const maxSize = (self.settings.maxShapeSize * self.zoom) / 3 //original icons are scaled to 0.3
+
+		test.true(
+			dots.find(dot => dot.getAttribute('transform').includes(`scale(${minSize})`)) != null,
+			`Dots with the minimum size should be found`
+		)
+		test.true(
+			dots.find(dot => dot.getAttribute('transform').includes(`scale(${maxSize})`)) != null,
+			`Dots with the maximum size should be found`
+		)
 		if (test._ok) holder.remove()
 		test.end()
 	}
