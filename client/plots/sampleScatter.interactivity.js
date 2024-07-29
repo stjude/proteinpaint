@@ -17,7 +17,7 @@ import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
 import { searchSampleInput, getSamplesRelated } from './sampleView.js'
 
-import { shapes } from './sampleScatter.renderer.js'
+import { shapes } from './sampleScatter.js'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
