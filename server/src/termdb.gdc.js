@@ -341,7 +341,13 @@ export async function initGDCdictionary(ds) {
 	if (floatCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'float' })
 	if (survivalCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'survival' })
 
-	runRemainingWithoutAwait(ds)
+	if (serverconfig.features.await4completeGdcCaseCache) {
+		// only use on dev environment. here as soon as server is launched, it will signal client to refresh (sse). if still caching asyncly, a gdc view may break due to incomplete cache, thus await a bit for cache to complete. also should use extApiCache
+		await runRemainingWithoutAwait(ds)
+	} else {
+		// use on prod, not to hold up container launch by caching
+		runRemainingWithoutAwait(ds)
+	}
 }
 
 function mayAddTermAttribute(t) {

@@ -42,6 +42,8 @@ gdc_validate_query_singleCell_DEgenes
 querySamples_gdcapi
 	querySamplesTwlstForGeneexpclustering
 	querySamplesTwlstNotForGeneexpclustering
+		querySamplesTwlstNotForGeneexpclustering_withGenomicFilter
+		querySamplesTwlstNotForGeneexpclustering_noGenomicFilter
 	querySamplesSurvival
 		addSsmIsoformRegion4filter
 	flattenCaseByFields
@@ -968,7 +970,7 @@ async function snvindel_byisoform(opts, ds) {
 
 	const [re_ssms, re_cases] = await Promise.all([p1, p2])
 
-	if (serverconfig.debugmode) console.log('gdc snvindel tandem queries', Date.now() - starttime)
+	mayLog('gdc snvindel tandem queries', Date.now() - starttime)
 
 	if (!Array.isArray(re_ssms?.data?.hits) || !Array.isArray(re_cases?.data?.hits))
 		throw 'ssm tandem query not returning data.hits[]'
@@ -1013,11 +1015,14 @@ examples of terms from termdb as below, note the dot-delimited value of term id
     type: 'categorical'
 }
 {
-  id: 'case.demographic.race',
-  name: 'Race',
+  id: 'case.project.project_id',
+  name: 'Project id',
+  groupsetting: { inuse: false },
   isleaf: true,
-  parent_id: 'demographic',
-  type: 'categorical'
+  type: 'categorical',
+  parent_id: 'case.project',
+  included_types: [ 'categorical' ],
+  child_types: []
 }
 {
   id: 'case.diagnoses.age_at_diagnosis',
@@ -1063,14 +1068,20 @@ this function "flattens" case{} to make the sample obj for easier use later
 }
 
 the flattening is done by splitting term id, and some hardcoded logic
+
+args:
+- sample: object to assign new pp term id key-value pairs to
+- caseObj: object returned by gdc api
+- tw: {term:{id}}
+- startIdx:
+	start with caseObj as "current" root
+	default is 1 as fields[0]='case', and caseObj is already the "case", so start from i=1
+	if caseObj data is returned by /cases/, use 0
 */
-function flattenCaseByFields(sample, caseObj, tw) {
+function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 	const fields = tw.term.id.split('.')
 
-	/* start with caseObj as "current" root
-	i=1 as fields[0]='case', and caseObj is already the "case", so start from i=1
-	*/
-	query(caseObj, 1)
+	query(caseObj, startIdx)
 
 	/* done searching; if available, a new value is now assigned to sample[term.id]
 	if value is a Set, convert to array
@@ -1422,10 +1433,20 @@ async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTw
 	// not for gene exp clustering
 
 	if (geneTwLst) {
-		// temporarily create q.isoforms[] to do ssm query; will be deleted after query completes
+		// temporarily create q.isoforms[] to filter for cases with ssm on these genes; will be deleted after query completes
 		q.isoforms = mapGenes2isoforms(geneTwLst, q.genome)
 	}
 
+	if (q.isoforms || q.isoform || q.ssm_id_lst || q.rglst) {
+		// using genomic filters
+		return await querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dictTwLst, ds, geneTwLst)
+	}
+	// no genomic filter
+	return await querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q, dictTwLst, ds)
+}
+
+// using genomic filter; assuming it's filtering for mutated cases, query ssm_occurrences endpoint
+async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dictTwLst, ds, geneTwLst) {
 	const fieldset = new Set(dictTwLst.map(tw => tw.term.id)) // set of fields to request from ssm_occurrences api. tolerate insertion of duplicating fields
 
 	/* this function can identify sample either by case uuid, or sample submitter id
@@ -1470,7 +1491,7 @@ async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTw
 		fieldset.add('ssm.start_position')
 	}
 
-	const param = { size: 10000, fields: [...fieldset].join(',') }
+	const param = { size: isoform2ssm_query2_getcase.size, fields: [...fieldset].join(',') }
 
 	// it may query with isoform
 	mayMapRefseq2ensembl(q, ds)
@@ -1581,6 +1602,79 @@ async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTw
 	}
 
 	return [byTermId, [...id2samples.values()]]
+}
+
+/*
+query samples without genomic filter, must use /cases/ endpoint but not ssm_occurrences,
+/cases returns up to 40K entries but /ssm_occurrences has 3M, too much
+
+this will only be used for oncomatrix (without gene mutation rows), and summary chart, and identify samples by case uuid rather than sample/aliquot
+
+this won't work for lollipop which uses ssm filters and identify samples by sample uuid
+
+dictionary term ids starting with "case." must be trimmed before using as /cases/ fields
+
+case_filter variable names can still be "cases.xx"
+*/
+async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q, dictTwLst, ds) {
+	const fieldset = new Set()
+	const updatedTwLst = [] // copy of dictTwLst by trimming "case."
+	const termIdMap = new Map() // map of new term id lacking "case." to original term id
+	for (const tw of dictTwLst) {
+		if (!tw.term.id) throw 'tw.term.id missing'
+		let t2 = tw
+		if (tw.term.id.startsWith('case.') || tw.term.id.startsWith('cases.')) {
+			t2 = JSON.parse(JSON.stringify(tw))
+			const l = tw.term.id.split('.')
+			t2.term.id = l.slice(1).join('.')
+			termIdMap.set(t2.term.id, tw.term.id)
+		}
+		updatedTwLst.push(t2)
+		fieldset.add(t2.term.id)
+	}
+
+	const param = {
+		size: ds.__gdc.caseid2submitter.size,
+		fields: [...fieldset].join(',')
+	}
+
+	const f = makeCasesFilter(q)
+	if (f) param.case_filters = { op: 'and', content: f }
+
+	const { host, headers } = ds.getHostHeaders(q) // will be reused below
+
+	const t1 = Date.now()
+
+	const re = await ky.post(path.join(host.rest, 'cases'), { timeout: false, headers, json: param }).json()
+
+	mayLog('gdc /cases queries', Date.now() - t1)
+
+	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits is not array for query'
+
+	const samples = []
+
+	for (const s of re.data.hits) {
+		if (!s.id) throw '.id case uuid missing from a hit'
+		const sample = {
+			sample_id: s.id
+		}
+
+		for (const tw of updatedTwLst) {
+			flattenCaseByFields(sample, s, tw, 0)
+		}
+		for (const [k1, k2] of termIdMap) {
+			if (k1 in sample) {
+				sample[k2] = sample[k1]
+				delete sample[k1]
+			}
+		}
+
+		samples.push(sample)
+	}
+
+	const byTermId = mayApplyBinning(samples, dictTwLst)
+
+	return [byTermId, samples]
 }
 
 /*
@@ -2416,6 +2510,29 @@ const isoform2ssm_query2_getcase = {
 	}
 }
 
+// create case_filters[] for /cases endpoint. check fields at https://api.gdc.cancer.gov/cases/_mapping
+function makeCasesFilter(p) {
+	const lst = []
+	if (p.set_id) {
+		if (typeof p.set_id != 'string') throw '.set_id value not string'
+		lst.push({
+			op: 'in',
+			content: {
+				field: 'case_id',
+				value: [p.set_id]
+			}
+		})
+	}
+	if (p.filter0) {
+		lst.push(p.filter0)
+	}
+	if (p.filterObj) {
+		const g = filter2GDCfilter(p.filterObj)
+		if (g) lst.push(g)
+	}
+	return lst.length ? lst : null
+}
+
 const endpoint2fields = {
 	ssm_occurrences: {
 		ssmid: 'ssm.ssm_id',
@@ -2440,7 +2557,6 @@ p{}
 endpoint
 	the function is reusable for two endpoints: ssm_occurrences, survival. however each uses different field values
 
-TODO duplicated code
 */
 function addSsmIsoformRegion4filter(contentLst, p, endpoint) {
 	const fields = endpoint2fields[endpoint]
@@ -2502,6 +2618,7 @@ function addSsmIsoformRegion4filter(contentLst, p, endpoint) {
 			// using survival endpoint, meaning it's querying data for a survival term, allow all gene/ssm/region param to be missing, so the survival term can be added to a hiercluster map
 		} else if (endpoint == 'ssm_occurrences') {
 			// rglst is required now
+			// ssm_occurrences endpoint requires genomic filters (ssm/isoform/rglst), since without them, this endpoint returns 3 million records which is hugely inefficient for retrieving case data without genomic filters. if need to retrieve case data without genomic filter, should use /cases/ endpoint instead
 			if (!r) throw '.ssm_id_lst, .isoform, .isoforms, .rglst[] are all missing'
 			contentLst.push({
 				op: '=',
