@@ -8,7 +8,6 @@ ui only works for gm mode
 
 TODO
 - allow it to for genomic mode too, so can input custom data for 
-- unit test
 - reuse ui on appdrawer card
 */
 
@@ -114,7 +113,7 @@ export default function (block) {
 export function parseMutation(l, mlst, selecti, block) {
 	// mutation: aachange, pos, class, sample
 	const _class = l[2].trim()
-	if (!common.mclass[_class]) throw 'invalid mutation class'
+	if (!common.mclass[_class]) throw `Invalid mutation class=${_class}`
 	const m = {
 		class: _class,
 		dt: common.dtsnvindel,
@@ -172,7 +171,7 @@ export async function parseFusion(l, mlst, selecti, block) {
 }
 
 export function parseCnv(l, mlst, selecti, block) {
-	const value = parsePosition(l)
+	const value = Number(l[2].trim())
 	if (!Number.isFinite(value)) throw 'CNV value is not number'
 	const m = {
 		chr: block.usegm.chr,
@@ -206,7 +205,7 @@ returns:
 throws on any err
 */
 export function parsePositionFromGm(selecti, str, gm) {
-	const value = parsePosition(str)
+	const value = parseInputPosition(str, gm.chr)
 	if (!Number.isInteger(value)) throw 'position is not integer'
 	if (selecti == 0) {
 		const p = coord.aa2gmcoord(value, gm)
@@ -224,13 +223,14 @@ export function parsePositionFromGm(selecti, str, gm) {
 	throw 'unknown selection'
 }
 
-export function parsePosition(str) {
+export function parseInputPosition(str, chr) {
 	let value
 	if (str.includes(':')) {
 		/** Allows users to submit the customary `chr##:`
 		 * position to avoid confusion.
 		 */
 		const tmp = str.split(':')
+		if (tmp[0] != chr) throw `Included chromsome=${tmp[0]} does not match current chromosome position=${chr}`
 		value = Number(tmp[1])
 	} else {
 		value = Number(str)
