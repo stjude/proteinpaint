@@ -1134,7 +1134,6 @@ that have both missense and silent mutations are classified in the
 'Protein-changing' group
 */
 export const geneVariantTermGroupsetting = {
-	disabled: false,
 	lst: [
 		{
 			// SNV/indel groupsetting

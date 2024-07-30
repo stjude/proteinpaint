@@ -30,12 +30,11 @@ export type TermValues = {
 	[key: string | number]: BaseValue
 }
 
-export type GroupEntry = ValuesGroup | FilterGroup
-
 export type ValuesGroup = {
 	name: string
 	type: 'values'
 	values: { key: number | string; label: string }[]
+	uncomputable?: boolean // if true, do not include this group in computations
 }
 
 export type FilterGroup = {
@@ -44,39 +43,48 @@ export type FilterGroup = {
 	filter: Filter
 }
 
-export type BaseGroupSet = {
+export type GroupEntry = ValuesGroup | FilterGroup
+
+type CustomSet = {
 	groups: GroupEntry[]
 }
 
-export type GroupSetEntry = BaseGroupSet & {
-	name?: string
+type Groupset = {
+	name: string
 	is_grade?: boolean
 	is_subcondition?: boolean
+	groups: GroupEntry[]
+}
+
+export type UnusedQGroupSetting = {
+	inuse: false
 }
 
 export type CustomQGroupSetting = {
 	/** When “predefined_groupset_idx” is undefined, will use this set of groups.
 	This is a custom set of groups either copied from predefined set, or created with UI.
 	Custom set definition is the same as a predefined set. */
-	customset: BaseGroupSet
+	type: 'custom'
+	customset: CustomSet
 	/**  if false, not applied */
-	inuse: boolean
+	inuse: true
 }
 
 export type PredefinedQGroupSetting = {
 	/** If .inuse true, apply and will require predefined_groupset_idx */
 	/** Value is array index of term.groupsetting.lst[] */
+	type: 'predefined'
 	predefined_groupset_idx: number
-	inuse: boolean
+	inuse: true
 }
 
-export type QGroupSetting = CustomQGroupSetting | PredefinedQGroupSetting
+export type QGroupSetting = UnusedQGroupSetting | CustomQGroupSetting | PredefinedQGroupSetting
 
 export type TermGroupSetting = {
 	/** if there are only two categories, means groupsetting
 	 * definition is not applicable for the term */
 	disabled?: boolean
-	lst: GroupSetEntry[]
+	lst: Groupset[]
 }
 
 export type BaseTerm = {

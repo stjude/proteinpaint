@@ -1,17 +1,6 @@
-import { TermWrapper } from './tw.ts'
-import { BaseQ, BaseTerm, QGroupSetting, TermGroupSetting } from './term.ts'
-import { TermSettingInstance } from '../termsetting.ts'
-
-/*
---------EXPORTED--------
-GeneVariantQ
-GeneVariantTW
-GeneVariantTerm
-GeneVariantCoordTerm
-GeneVariantGeneTerm
-GeneVariantTermSettingInstance
-
-*/
+import { TermWrapper } from './tw'
+import { BaseQ, BaseTerm, QGroupSetting, TermGroupSetting } from './term'
+import { TermSettingInstance } from '../termsetting'
 
 export type GeneVariantQ = BaseQ & {
 	cnvGainCutoff?: number
@@ -24,26 +13,28 @@ export type GeneVariantQ = BaseQ & {
 	origin?: string
 }
 
-export type GeneVariantTW = TermWrapper & {
-	q: GeneVariantQ
-	term: GeneVariantTerm
-}
+type GeneVariantBaseTerm = BaseTerm & { groupsetting: TermGroupSetting }
 
-export type GeneVariantTerm = GeneVariantCoordTerm | GeneVariantGeneTerm
-
-export type GeneVariantCoordTerm = BaseTerm & {
+type GeneVariantCoordTerm = GeneVariantBaseTerm & {
+	by: 'coord'
 	chr: string
 	start: number
 	stop: number
-	groupsetting: TermGroupSetting
 }
 
-export type GeneVariantGeneTerm = BaseTerm & {
+export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
+	by: 'gene'
 	gene: string
 	chr?: string
 	start?: number
 	stop?: number
-	groupsetting: TermGroupSetting
+}
+
+export type GeneVariantTerm = GeneVariantCoordTerm | GeneVariantGeneTerm
+
+export type GeneVariantTW = TermWrapper & {
+	q: GeneVariantQ
+	term: GeneVariantTerm
 }
 
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
