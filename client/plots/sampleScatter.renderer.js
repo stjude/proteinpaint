@@ -1078,7 +1078,7 @@ export function setRenderers(self) {
 	self.renderGeneVariantLegend = function (chart, offsetX, offsetY, legendG, tw, cname, map) {
 		const step = 125
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
-		let title = `${name}, n=${chart.cohortSamples.length}`
+		let title = name
 		const G = legendG.append('g').style('font-size', '0.9em')
 
 		G.append('text')
@@ -1098,11 +1098,11 @@ export function setRenderers(self) {
 			const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
 
 			G.append('text')
-				.attr('x', offsetX)
-				.attr('y', offsetY - 25)
+				.attr('x', offsetX - step)
+				.attr('y', offsetY)
 				.text(origin ? `${origin} ${dt2label[dt]}` : dt2label[dt])
 				.style('font-weight', 'bold')
-
+			offsetY += 25
 			for (const [key, category] of map) {
 				if (key == 'Ref') continue
 				if (!key.includes(dtlabel)) continue
@@ -1127,23 +1127,18 @@ export function setRenderers(self) {
 					itemG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
 				}
 				const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
+
 				G.append('g')
 					.append('text')
 					.attr('x', offsetX - step + 10)
 					.attr('y', offsetY)
 					.attr('name', 'sjpp-scatter-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
-					.text(mkey)
+					.text(mkey + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
 					.on('click', event =>
 						self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event, category)
 					)
 
-				const assay = key.split(', ')[1]
-				if (key.includes(dtlabel))
-					G.append('text')
-						.attr('x', offsetX)
-						.attr('y', offsetY)
-						.text(`${category.sampleCount}${category.hasOrigin ? assay[0] : ''}`)
 				offsetY += 25
 			}
 		}
