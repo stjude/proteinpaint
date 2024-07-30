@@ -478,7 +478,6 @@ export function setInteractivity(self) {
 				: { key: key, label: key }
 		const items = legendG.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
 		const itemG = items.find(item => key.startsWith(item.innerHTML))?.parentElement
-
 		if (itemG) itemG.style['text-decoration'] = hide ? 'line-through' : 'none'
 		if (!hide) delete tw.q.hiddenValues[key]
 		else tw.q.hiddenValues[key] = value
