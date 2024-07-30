@@ -291,14 +291,9 @@ class profileBarchart extends profilePlot {
 export async function getPlotConfig(opts, app) {
 	try {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileBarchart
-		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileBarchart'
+		defaults.settings = { profileBarchart: getDefaultProfilePlotSettings() }
 		const config = copyMerge(structuredClone(defaults), opts)
-		const settings = getDefaultProfilePlotSettings()
-
-		config.settings = {
-			profileBarchart: settings,
-			controls: { isOpen: false }
-		}
+		config.settings.controls = { isOpen: false }
 		const twlst = []
 		for (const component of config.plotByComponent) {
 			component.hasSubjectiveData = false
