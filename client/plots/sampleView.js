@@ -575,6 +575,7 @@ class SampleView {
 		}
 		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		if (state.termdbConfig.queries?.NIdata && showBrainImaging) {
+			let div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block')
 
 			for (const k in state.termdbConfig.queries?.NIdata) {
