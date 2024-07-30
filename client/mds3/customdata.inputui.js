@@ -111,7 +111,7 @@ export default function (block) {
 	printHelp(div)
 }
 
-function parseMutation(l, mlst, selecti, block) {
+export function parseMutation(l, mlst, selecti, block) {
 	// mutation: aachange, pos, class, sample
 	const _class = l[2].trim()
 	if (!common.mclass[_class]) throw 'invalid mutation class'
@@ -129,7 +129,7 @@ function parseMutation(l, mlst, selecti, block) {
 	mlst.push(m)
 }
 
-async function parseFusion(l, mlst, selecti, block) {
+export async function parseFusion(l, mlst, selecti, block) {
 	const m = {
 		class: common.mclassfusionrna,
 		dt: common.dtfusionrna
@@ -171,7 +171,7 @@ async function parseFusion(l, mlst, selecti, block) {
 	mlst.push(m)
 }
 
-function parseCnv(l, mlst, selecti, block) {
+export function parseCnv(l, mlst, selecti, block) {
 	const value = parsePosition(l)
 	if (!Number.isFinite(value)) throw 'CNV value is not number'
 	const m = {
@@ -205,7 +205,7 @@ returns:
 	[chr, pos]
 throws on any err
 */
-function parsePositionFromGm(selecti, str, gm) {
+export function parsePositionFromGm(selecti, str, gm) {
 	const value = parsePosition(str)
 	if (!Number.isInteger(value)) throw 'position is not integer'
 	if (selecti == 0) {
@@ -214,7 +214,7 @@ function parsePositionFromGm(selecti, str, gm) {
 		return [gm.chr, p]
 	}
 	if (selecti == 1) {
-		const p = coord.rna2gmcoord(value, block.usegm)
+		const p = coord.rna2gmcoord(value, gm)
 		if (p == null) throw 'cannot convert RNA position to genomic position'
 		return [gm.chr, p]
 	}
@@ -224,7 +224,7 @@ function parsePositionFromGm(selecti, str, gm) {
 	throw 'unknown selection'
 }
 
-function parsePosition(str) {
+export function parsePosition(str) {
 	let value
 	if (str.includes(':')) {
 		/** Allows users to submit the customary `chr##:`
