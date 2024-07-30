@@ -883,7 +883,7 @@ export function setRenderers(self) {
 	self.drawScaleDotLegend = function (chart) {
 		const scaleG = chart.scaleG
 		scaleG.selectAll('*').remove()
-		const width = 50
+		const width = 70
 
 		const minScale = self.settings.minShapeSize / 3
 		const maxScale = self.settings.maxShapeSize / 3
