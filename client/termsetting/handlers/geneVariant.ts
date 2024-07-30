@@ -15,8 +15,6 @@ self.term{}
 // type MClassEntry = { label: string; color: string; dt: number; desc: string; key: string }
 // type GroupsEntry = { name: string; items: MClassEntry[] }
 
-// TODO: depracate q.type = 'predefined-groupset'/'custom-groupset'
-
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
 	return {
