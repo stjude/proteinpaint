@@ -1,14 +1,18 @@
 import tape from 'tape'
-import { parseMutation, parseCnv, parsePositionFromGm, parseInputPosition } from '../customdata.inputui.js'
+import { parseMutation, parseFusion, parseCnv, parsePositionFromGm, parseInputPosition } from '../customdata.inputui.js'
 
 /* Tests
  - parseMutation()
+ - parseFusion()
  - parseCnv()
  - parsePositionFromGm()
  - parsePosition()
 */
 
-const block = {
+const mockBlock = {
+	genome: {
+		name: 'hg19'
+	},
 	usegm: {
 		name: 'TP53',
 		isoform: 'NM_000546',
@@ -66,7 +70,7 @@ tape('parseMutation()', function (test) {
 	input = ['MyMutation', '7674903', 'abc', 'sample1']
 	message = `Should throw for invalid mutation class`
 	try {
-		parseMutation(input, mlst, selecti, block)
+		parseMutation(input, mlst, selecti, mockBlock)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
@@ -76,7 +80,7 @@ tape('parseMutation()', function (test) {
 	input = ['', '7674903', 'M', 'sample1']
 	message = `Should throw for missing mutation name`
 	try {
-		parseMutation(input, mlst, selecti, block)
+		parseMutation(input, mlst, selecti, mockBlock)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
@@ -84,7 +88,7 @@ tape('parseMutation()', function (test) {
 
 	//With sample name
 	input = ['c.215C>G', 'chr17:7579472', 'M', 'sample1']
-	parseMutation(input, mlst, selecti, block)
+	parseMutation(input, mlst, selecti, mockBlock)
 	expected = {
 		class: 'M',
 		dt: 1,
@@ -98,7 +102,7 @@ tape('parseMutation()', function (test) {
 
 	//No sample name
 	input = ['c.215C>G', 'chr17:7579472', 'I']
-	parseMutation(input, mlst, selecti, block)
+	parseMutation(input, mlst, selecti, mockBlock)
 	expected = {
 		class: 'I',
 		dt: 1,
@@ -108,6 +112,69 @@ tape('parseMutation()', function (test) {
 		pos: 7579471
 	}
 	test.deepEqual(mlst[mlst.length - 1], expected, 'Should return correct mutation object without a sample property')
+
+	test.end()
+})
+
+tape('parseFusion()', async function (test) {
+	test.timeoutAfter(100)
+	let input: string[], expected: any, message: string
+	const mlst = []
+	const selecti = 2
+
+	input = []
+	message = `Should throw for missing gene 1`
+	try {
+		await parseFusion(input, mlst, selecti, mockBlock)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	input = ['PAX5']
+	message = `Should throw for missing gene 2`
+	try {
+		await parseFusion(input, mlst, selecti, mockBlock)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	input = ['PAX5', '', '37002646', 'JAK2', 'NM_004972', '5081726']
+	message = `Should throw for missing isoform 1`
+	try {
+		await parseFusion(input, mlst, selecti, mockBlock)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	input = ['PAX5', 'NM_016734', '37002646', 'JAK2', '', '5081726']
+	message = `Should throw for missing isoform 2`
+	try {
+		await parseFusion(input, mlst, selecti, mockBlock)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	input = ['PAX5', 'NM_016734', '', 'JAK2', 'NM_004972', '']
+	message = `Should throw for missing position 1`
+	try {
+		await parseFusion(input, mlst, selecti, mockBlock)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	input = ['PAX5', 'NM_016734', '37002646', 'JAK2', 'NM_004972', '']
+	message = `Should throw for missing position 2`
+	try {
+		await parseFusion(input, mlst, selecti, mockBlock)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
 
 	test.end()
 })
@@ -123,7 +190,7 @@ tape('parseCnv()', function (test) {
 	input = ['7674902', '7674903', 'abc', 'sample1']
 	const message = `Should throw for CNV value not being a number`
 	try {
-		parseCnv(input, mlst, selecti, block)
+		parseCnv(input, mlst, selecti, mockBlock)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
@@ -131,7 +198,7 @@ tape('parseCnv()', function (test) {
 
 	//With sample name
 	input = ['7578785', '7608909', '-1', 'sample1']
-	parseCnv(input, mlst, selecti, block)
+	parseCnv(input, mlst, selecti, mockBlock)
 	expected = {
 		chr: 'chr17',
 		dt: 4,
@@ -145,7 +212,7 @@ tape('parseCnv()', function (test) {
 
 	//No sample name
 	input = ['7578785', '7608909', '-1']
-	parseCnv(input, mlst, selecti, block)
+	parseCnv(input, mlst, selecti, mockBlock)
 	expected = {
 		chr: 'chr17',
 		dt: 4,
@@ -169,23 +236,23 @@ tape('parsePositionFromGm()', function (test) {
 	message = `Should throw for the position not being a number`
 	try {
 		str = 'abc'
-		result = parsePositionFromGm(selecti, str, block.usegm)
+		result = parsePositionFromGm(selecti, str, mockBlock.usegm)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
 	}
 
 	str = 'chr17:7675519'
-	result = parsePositionFromGm(selecti, str, block.usegm)
+	result = parsePositionFromGm(selecti, str, mockBlock.usegm)
 	test.true(
-		result[0] == block.usegm.chr && result[1] == 7669608,
+		result[0] == mockBlock.usegm.chr && result[1] == 7669608,
 		`Should return the chromosome from the gene and correct position for a codon`
 	)
 
 	message = `Should throw because cannot convert codon to genomic position`
 	try {
 		str = '55211628.7'
-		result = parsePositionFromGm(selecti, str, block.usegm)
+		result = parsePositionFromGm(selecti, str, mockBlock.usegm)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
@@ -194,16 +261,16 @@ tape('parsePositionFromGm()', function (test) {
 	//RNA position tests
 	selecti = 1
 	str = '7675519'
-	result = parsePositionFromGm(selecti, str, block.usegm)
+	result = parsePositionFromGm(selecti, str, mockBlock.usegm)
 	test.true(
-		result[0] == block.usegm.chr && result[1] == 7668420,
+		result[0] == mockBlock.usegm.chr && result[1] == 7668420,
 		`Should return the chromosome from the gene and correct position for a genomic position`
 	)
 
 	message = `Should throw because cannot convert RNA position to genomic position`
 	try {
 		str = '55211628.1'
-		result = parsePositionFromGm(selecti, str, block.usegm)
+		result = parsePositionFromGm(selecti, str, mockBlock.usegm)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
@@ -212,9 +279,9 @@ tape('parsePositionFromGm()', function (test) {
 	//Genomic position tests
 	selecti = 2
 	str = 'chr17:7675519'
-	result = parsePositionFromGm(selecti, str, block.usegm)
+	result = parsePositionFromGm(selecti, str, mockBlock.usegm)
 	test.true(
-		result[0] == block.usegm.chr && result[1] == 7675518,
+		result[0] == mockBlock.usegm.chr && result[1] == 7675518,
 		`Should return the chromosome from the gene and correct position for a genomic position`
 	)
 
