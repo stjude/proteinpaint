@@ -52,7 +52,8 @@ export default function (block) {
 				if (!line) continue // skip empty line
 
 				// tab has high priority as it will allow comma and space in mutation name
-				const l = line.split(line.includes('\t') ? '\t' : line.includes(' ') ? ' ' : ',')
+				// comma has 2nd priority as user may use spaces after commas
+				const l = line.split(line.includes('\t') ? '\t' : line.includes(',') ? ',' : ' ')
 
 				// each data type has different number of fields. having or not having sample will cause variable number of fields
 				try {
@@ -71,7 +72,7 @@ export default function (block) {
 						await parseFusion(l, mlst, selecti, block)
 						continue
 					}
-					throw 'line does not match mutation/fusion/cnv'
+					throw `Line="${l}" does not match the mutation, fusion, or cnv format. Please review.`
 				} catch (e) {
 					bad.push(line + ': ' + (e.message || e))
 				}
@@ -171,7 +172,7 @@ async function parseFusion(l, mlst, selecti, block) {
 }
 
 function parseCnv(l, mlst, selecti, block) {
-	const value = Number(l[2].trim())
+	const value = parsePosition(l)
 	if (!Number.isFinite(value)) throw 'CNV value is not number'
 	const m = {
 		chr: block.usegm.chr,
@@ -205,7 +206,7 @@ returns:
 throws on any err
 */
 function parsePositionFromGm(selecti, str, gm) {
-	const value = Number(str)
+	const value = parsePosition(str)
 	if (!Number.isInteger(value)) throw 'position is not integer'
 	if (selecti == 0) {
 		const p = coord.aa2gmcoord(value, gm)
@@ -221,6 +222,20 @@ function parsePositionFromGm(selecti, str, gm) {
 		return [gm.chr, value - 1]
 	}
 	throw 'unknown selection'
+}
+
+function parsePosition(str) {
+	let value
+	if (str.includes(':')) {
+		/** Allows users to submit the customary `chr##:`
+		 * position to avoid confusion.
+		 */
+		const tmp = str.split(':')
+		value = Number(tmp[1])
+	} else {
+		value = Number(str)
+	}
+	return value
 }
 
 // instructions for mutation
