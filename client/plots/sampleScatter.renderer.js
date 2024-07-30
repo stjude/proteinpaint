@@ -247,7 +247,7 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('name', 'serie')
-			.attr('transform', c => transform(chart, c))
+			.attr('transform', c => self.transform(chart, c))
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
 			.attr('stroke', c => self.getColor(c, chart))
@@ -258,7 +258,7 @@ export function setRenderers(self) {
 			.append('path')
 			.attr('name', 'serie')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-			.attr('transform', c => transform(chart, c))
+			.attr('transform', c => self.transform(chart, c))
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
 			.attr('stroke', c => self.getColor(c, chart))
@@ -367,7 +367,7 @@ export function setRenderers(self) {
 		return shapes[index]
 	}
 
-	function transform(chart, c) {
+	self.transform = function (chart, c, factor = 1) {
 		const x = chart.xAxisScale(c.x)
 		const y = chart.yAxisScale(c.y)
 		const isRef = !('sampleId' in c)
@@ -380,7 +380,7 @@ export function setRenderers(self) {
 				scale = self.settings.minShapeSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 			else scale = self.settings.maxShapeSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 		}
-		const transform = `translate(${x},${y}) scale(${(self.zoom * scale) / 3})` // original icons are scaled to 0.3
+		const transform = `translate(${x},${y}) scale(${(self.zoom * scale * factor) / 3})` // original icons are scaled to 0.3
 		return transform
 	}
 
@@ -399,7 +399,7 @@ export function setRenderers(self) {
 			if (self.lassoOn) {
 				chart.lasso
 					.items()
-					.attr('d', c => self.getShape(chart, c, 1 / 2))
+					.attr('transform', c => self.transform(chart, c, 1 / 2))
 					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('selected', false)
@@ -412,7 +412,7 @@ export function setRenderers(self) {
 
 				chart.lasso
 					.possibleItems()
-					.attr('d', c => self.getShape(chart, c, 2))
+					.attr('transform', c => self.transform(chart, c, 1.2))
 					.style('fill-opacity', c => self.getOpacity(c))
 					.classed('not_possible', false)
 					.classed('possible', true)
@@ -420,7 +420,7 @@ export function setRenderers(self) {
 				//Style the not possible dot
 				chart.lasso
 					.notPossibleItems()
-					.attr('d', c => self.getShape(chart, c, 1 / 2))
+					.attr('transform', c => self.transform(chart, c, 1 / 2))
 					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('possible', false)
@@ -435,14 +435,14 @@ export function setRenderers(self) {
 				chart.lasso.items().classed('not_possible', false).classed('possible', false)
 
 				// Style the selected dots
-				chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
+				chart.lasso.selectedItems().attr('transform', c => self.transform(chart, c, 1.3))
 				chart.lasso.items().style('fill-opacity', c => self.getOpacity(c))
 				self.selectedItems = []
 				for (const item of chart.lasso.selectedItems()) {
 					const data = item.__data__
 					if ('sampleId' in data && !(data.hidden['category'] || data.hidden['shape'])) self.selectedItems.push(item)
 				}
-				chart.lasso.notSelectedItems().attr('d', c => self.getShape(chart, c))
+				chart.lasso.notSelectedItems().attr('transform', c => self.transform(chart, c))
 
 				showLassoMenu(dragEnd.sourceEvent)
 			}
@@ -608,8 +608,8 @@ export function setRenderers(self) {
 				self.zoom = event.transform.scale(1).k
 				//on zoom in the particle size is kept
 				const symbols = chart.serie.selectAll('path[name="serie"')
-				symbols.attr('d', c => self.getShape(chart, c))
-				if (self.lassoOn) chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
+				symbols.attr('transform', c => self.transform(chart, c, 1))
+				if (self.lassoOn) chart.lasso.selectedItems().attr('transform', c => self.transform(chart, c, 1.2))
 				if (self.config.scaleDotTW) self.drawScaleDotLegend(chart)
 			}
 		}
