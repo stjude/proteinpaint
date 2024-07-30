@@ -27,7 +27,7 @@ NOTE
 */
 export const minShapeSize = 0.2
 export const maxShapeSize = 4
-
+//icons have size 16x16
 export const shapes = [
 	'M 8,8 m 8,0 a 8,8 0 1,0 -16,0 a 8,8 0 1,0 16,0', //circle filled
 	'M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16', //circle empty
@@ -660,7 +660,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 export function getDefaultScatterSettings() {
 	return {
 		size: 1,
-		minShapeSize: 0.2,
+		minShapeSize: 0.5,
 		maxShapeSize: 4,
 		scaleDotOrder: 'Ascending',
 		refSize: 0.8,
