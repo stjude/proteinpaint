@@ -230,7 +230,7 @@ export function parseInputPosition(str, chr) {
 		 * position to avoid confusion.
 		 */
 		const tmp = str.split(':')
-		if (tmp[0] != chr) throw `Included chromsome=${tmp[0]} does not match current chromosome position=${chr}`
+		if (tmp[0] != chr) throw `Included chromosome=${tmp[0]} does not match current chromosome position=${chr}`
 		value = Number(tmp[1])
 	} else {
 		value = Number(str)
