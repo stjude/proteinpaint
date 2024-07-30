@@ -74,7 +74,12 @@ export class profilePlot {
 
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		document.addEventListener('scroll', event => this?.tip?.hide())
-
+		icon_functions['pdf'](iconsDiv.append('div').style('padding', '0px 5px 15px 5px'), {
+			title: 'Clear filters',
+			handler: () => {
+				window.print()
+			}
+		})
 		if (this.type != 'profileRadarFacility' && !config.settings[this.type].comparison) {
 			//Facility radar plot does not need to compare
 			const compareIconDiv = iconsDiv.append('div').style('margin-bottom', '20px')
@@ -323,8 +328,7 @@ export class profilePlot {
 			})
 		}
 		this.components.controls.on(`downloadClick.${chartType}`, () =>
-			//downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
-			window.print()
+			downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
 		)
 		this.components.controls.on(`helpClick.${chartType}`, () => {
 			let link
