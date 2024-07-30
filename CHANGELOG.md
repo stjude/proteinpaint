@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- prototype to allow GDC dictionary terms to work for barchart and query data without any genomic filter
+
 
 ## 2.70.2
 

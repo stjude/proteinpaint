@@ -1,2 +1,1 @@
-Fixes:
-- prototype to allow GDC dictionary terms to work for barchart and query data without any genomic filter
+
