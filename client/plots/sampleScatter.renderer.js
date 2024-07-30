@@ -363,7 +363,7 @@ export function setRenderers(self) {
 	}
 
 	self.getShape = function (chart, c, factor = 1) {
-		const index = chart.shapeLegend.get(c.shape).shape % shapes.length //self.symbols.length
+		const index = chart.shapeLegend.get(c.shape).shape % shapes.length
 		return shapes[index]
 	}
 
@@ -1109,7 +1109,7 @@ export function setRenderers(self) {
 				const mkey = key.split(', ')[0]
 				const itemG = G.append('g')
 				if (cname == 'shape') {
-					const index = category.shape % self.symbols.length
+					const index = category.shape % shapes.length
 					itemG
 						.append('path')
 						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(0.5)`)
