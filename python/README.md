@@ -52,3 +52,10 @@ that has been set up, you can do one of the following:
 	- b. call `source path/to/.venv/bin/activate` in the same shell or terminal tab/window before running a package script
 	like `npm run dev` , `npm run test:integration`, etc.
 
+7. Once Python development and testing are finished, execute the following command from the proteinpaint/python directory to deactivate the currently active virtual environment:
+
+```sh
+source .venv/bin/deactivate
+```
+
+This is important to keep the GitHub hook working.
