@@ -15,6 +15,7 @@ import { minShapeSize, maxShapeSize } from './sampleScatter.js'
 import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
 import { shapes } from './sampleScatter.js'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export function setRenderers(self) {
 	setRenderersThree(self)
@@ -882,80 +883,83 @@ export function setRenderers(self) {
 	self.drawScaleDotLegend = function (chart) {
 		const scaleG = chart.scaleG
 		scaleG.selectAll('*').remove()
-		const minRadius = 4 * self.zoom
-		const maxRadius = 10 * self.zoom
-		const width = 30 * self.zoom
+		const width = 50
 
+		const minScale = self.settings.minShapeSize / 3
+		const maxScale = self.settings.maxShapeSize / 3
 		const order = self.settings.scaleDotOrder
+		const isAscending = order == 'Ascending'
+
 		const titleG = scaleG.append('g')
 
 		titleG.append('text').text(self.config.scaleDotTW.term.name).style('font-weight', 'bold')
-		let start = chart.scaleMin
-		if (start % 1 != 0) start = start.toFixed(1)
-		let end = chart.scaleMax
-		if (end % 1 != 0) end = end.toFixed(1)
-		const minG = scaleG.append('g').attr('transform', `translate(${40},${30})`)
+		const start = roundValueAuto(chart.scaleMin).toString()
+		const end = roundValueAuto(chart.scaleMax).toString()
+		const x = 10
+		const y = 40
+		const defaultSize = 16 //icons default size
+
+		const minSize = defaultSize * minScale
+		const maxSize = defaultSize * maxScale
+		const minRadius = minSize / 2
+		const maxRadius = maxSize / 2
+		const minG = scaleG.append('g').attr('transform', `translate(${x},${y})`)
 		const shift = 5 + start.toString().length * 7
-		const y = 20
-		minG
-			.append('circle')
-			.attr('r', order == 'Ascending' ? minRadius : maxRadius)
+		const minPath = minG
+			.append('path')
+			.attr('d', shapes[0])
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
-			.attr('transform', `translate(0,${y})`)
+			.attr(
+				'transform',
+				`translate(${isAscending ? -minRadius : -maxRadius}, ${isAscending ? -minRadius : -maxRadius}) scale(${
+					isAscending ? minScale : maxScale
+				})`
+			)
+
+		const maxG = scaleG.append('g').attr('transform', `translate(${width + x},${y})`)
+
+		const maxPath = maxG
+			.append('path')
+			.attr('d', shapes[0])
+			.style('fill', '#aaa')
+			.style('stroke', '#aaa')
+			.attr(
+				'transform',
+				`translate(${isAscending ? -maxRadius : -minRadius}, ${isAscending ? -maxRadius : -minRadius}) scale(${
+					isAscending ? maxScale : minScale
+				})`
+			)
 
 		minG
 			.append('text')
-			.attr('x', order == 'Ascending' ? -minRadius - shift : -maxRadius - shift)
-			.attr('y', y + 5)
+			.attr('x', isAscending ? -minRadius - shift : -maxRadius - shift)
+			.attr('y', 5)
 			.style('font-size', '.8em')
 			.attr('text-anchor', 'start')
 			.text(start)
 
-		const maxG = scaleG.append('g')
-		maxG
-			.attr('transform', `translate(${width + 40},${y + 30})`)
-			.append('circle')
-			.style('fill', '#aaa')
-			.style('stroke', '#aaa')
-			.attr('r', order == 'Ascending' ? maxRadius : minRadius)
 		maxG
 			.append('text')
-			.attr('x', order == 'Ascending' ? maxRadius + 10 : minRadius + 10)
+			.attr('x', isAscending ? maxSize + shift : minSize + shift)
 			.attr('y', 5)
 			.style('font-size', '.8em')
 			.text(end)
-		if (order == 'Ascending') {
-			minG
-				.append('line')
-				.attr('x1', 0)
-				.attr('y1', y - minRadius)
-				.attr('x2', width)
-				.attr('y2', y - maxRadius)
-				.style('stroke', '#aaa')
-			minG
-				.append('line')
-				.attr('x1', 0)
-				.attr('y1', y + minRadius)
-				.attr('x2', width)
-				.attr('y2', y + maxRadius)
-				.style('stroke', '#aaa')
-		} else {
-			minG
-				.append('line')
-				.attr('x1', 0)
-				.attr('y1', y - maxRadius)
-				.attr('x2', width)
-				.attr('y2', y - minRadius)
-				.style('stroke', '#aaa')
-			minG
-				.append('line')
-				.attr('x1', 0)
-				.attr('y1', y + maxRadius)
-				.attr('x2', width)
-				.attr('y2', y + minRadius)
-				.style('stroke', '#aaa')
-		}
+
+		minG
+			.append('line')
+			.attr('x1', 0)
+			.attr('y1', isAscending ? minRadius : maxRadius)
+			.attr('x2', width)
+			.attr('y2', isAscending ? maxRadius : minRadius)
+			.style('stroke', '#aaa')
+		minG
+			.append('line')
+			.attr('x1', 0)
+			.attr('y1', isAscending ? -minRadius : -maxRadius)
+			.attr('x2', width)
+			.attr('y2', isAscending ? -maxRadius : -minRadius)
+			.style('stroke', '#aaa')
 
 		scaleG
 			.append('rect')

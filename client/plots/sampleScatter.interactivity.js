@@ -194,8 +194,8 @@ export function setInteractivity(self) {
 							: self.settings.defaultColor
 					const index =
 						tw == self.config.colorTW
-							? chart.shapeLegend.get('Ref').shape % self.symbols.length
-							: chart.shapeLegend.get(sample.shape).shape % self.symbols.length
+							? chart.shapeLegend.get('Ref').shape % shapes.length
+							: chart.shapeLegend.get(sample.shape).shape % shapes.length
 					const shape = shapes[index]
 					let fontColor = 'black'
 					const whiteColor = rgb('white').toString()
