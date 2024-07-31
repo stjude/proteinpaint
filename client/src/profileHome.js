@@ -68,11 +68,11 @@ async function loadDataset(headerHolder, dslabel) {
 	const _ = await import('../mass/app')
 	const app = await _.appInit(opts)
 
-	addButtons(headerHolder, app, dslabel, isLoggedIn, site)
-	launchPlot(app, 'profilePolar', 'Polar Graph', isLoggedIn, site)
+	addButtons(headerHolder, app, dslabel, logged, site)
+	launchPlot(app, 'profilePolar', 'Polar Graph', logged, site)
 }
 
-function addButtons(headerHolder, app, dslabel, isLoggedIn, site) {
+function addButtons(headerHolder, app, dslabel, logged, site) {
 	const div = headerHolder
 		.append('div')
 		.style('display', 'inline-flex')
@@ -94,31 +94,31 @@ function addButtons(headerHolder, app, dslabel, isLoggedIn, site) {
 	div
 		.append('button')
 		.text('Polar Graph')
-		.on('click', e => launchPlot(app, 'profilePolar', 'Polar Graph', isLoggedIn, site))
+		.on('click', e => launchPlot(app, 'profilePolar', 'Polar Graph', logged, site))
 	div
 		.append('button')
 		.text('Bar Graph')
-		.on('click', e => launchPlot(app, 'profileBarchart', 'Bar Graph', isLoggedIn, site))
-	if (isLoggedIn)
+		.on('click', e => launchPlot(app, 'profileBarchart', 'Bar Graph', logged, site))
+	if (logged)
 		div
 			.append('button')
 			.text('Radar Graph 1')
-			.on('click', e => launchRadarPlot(app, 'profileRadarFacility', 'Radar Graph 1', 'plot1', isLoggedIn, site))
-	if (isLoggedIn)
+			.on('click', e => launchRadarPlot(app, 'profileRadarFacility', 'Radar Graph 1', 'plot1', logged, site))
+	if (logged)
 		div
 			.append('button')
 			.text('Radar Graph 2')
-			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar Graph 2', 'plot1', isLoggedIn, site))
-	if (dslabel == 'ProfileFull' && isLoggedIn)
+			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar Graph 2', 'plot1', logged, site))
+	if (dslabel == 'ProfileFull' && logged)
 		div
 			.append('button')
 			.text('Radar Graph 3')
-			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar Graph 3', 'plot2', isLoggedIn, site))
-	if (isLoggedIn)
+			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar Graph 3', 'plot2', logged, site))
+	if (logged)
 		div
 			.append('button')
 			.text('Summary')
-			.on('click', e => launchSummaryPlot(e.target, app, isLoggedIn, site))
+			.on('click', e => launchSummaryPlot(e.target, app, logged, site))
 
 	const deleteBt = div
 		.append('button')
@@ -126,32 +126,32 @@ function addButtons(headerHolder, app, dslabel, isLoggedIn, site) {
 		.text('Delete All')
 }
 
-async function launchPlot(app, chartType, header, isLoggedIn, site) {
+async function launchPlot(app, chartType, header, logged, site) {
 	const config = await app.dispatch({
 		type: 'plot_create',
 		config: {
 			chartType,
 			header,
-			isLoggedIn,
+			logged,
 			site
 		}
 	})
 }
 
-async function launchRadarPlot(app, chartType, header, plot, isLoggedIn, site) {
+async function launchRadarPlot(app, chartType, header, plot, logged, site) {
 	const config = await app.dispatch({
 		type: 'plot_create',
 		config: {
 			chartType,
 			plot,
 			header,
-			isLoggedIn,
+			logged,
 			site
 		}
 	})
 }
 
-async function launchSummaryPlot(button, app, isLoggedIn, site) {
+async function launchSummaryPlot(button, app, logged, site) {
 	/*
 		holder: the holder in the tooltip
 		chartsInstance: MassCharts instance
@@ -170,7 +170,7 @@ async function launchSummaryPlot(button, app, isLoggedIn, site) {
 					type: 'plot_create',
 					config: {
 						chartType: 'profileSummary',
-						isLoggedIn,
+						logged,
 						site
 					}
 				})

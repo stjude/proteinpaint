@@ -29,7 +29,7 @@ export class profilePlot {
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
 			vocab: appState.vocab,
-			isLoggedIn: config.isLoggedIn,
+			logged: config.logged,
 			site: config.site
 		}
 	}
@@ -38,7 +38,7 @@ export class profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 
 		if (this.opts.header) {
-			const suffix = config.isLoggedIn ? (config.site ? config.site : 'Admin') : 'Public'
+			const suffix = config.logged ? (config.site ? config.site : 'Admin') : 'Public'
 			this.opts.header.text(config.header ? config.header : config.chartType + ` / ${suffix}`)
 		}
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
@@ -131,7 +131,7 @@ export class profilePlot {
 					chartType: this.type,
 					insertBefore: this.id,
 					header: this.opts.header.text(),
-					isLoggedIn: this.state.config.isLoggedIn,
+					logged: this.state.config.logged,
 					site: this.state.config.site
 				}
 				if (this.type == 'profileRadarFacility' || this.type == 'profileRadar') config.plot = this.state.config.plot
@@ -236,7 +236,7 @@ export class profilePlot {
 		this.dom.controlsDiv.selectAll('*').remove()
 
 		let inputs = []
-		if (this.state.isLoggedIn && this.state.site && chartType != 'profileRadarFacility') {
+		if (this.state.logged && this.state.site && chartType != 'profileRadarFacility') {
 			const dataInput = {
 				label: 'Data',
 				type: 'radio',
@@ -250,12 +250,7 @@ export class profilePlot {
 
 			inputs.push(dataInput)
 		}
-		if (
-			!this.state.isLoggedIn ||
-			!this.state.site ||
-			this.settings.isAggregate ||
-			chartType == 'profileRadarFacility'
-		) {
+		if (!this.state.logged || !this.state.site || this.settings.isAggregate || chartType == 'profileRadarFacility') {
 			inputs.push(
 				...[
 					{
@@ -374,7 +369,7 @@ export class profilePlot {
 
 	async loadSampleData(chartType, inputs) {
 		if (chartType != 'profileRadarFacility') {
-			if (this.state.isLoggedIn) {
+			if (this.state.logged) {
 				if (this.state.site && !this.settings.isAggregate) {
 					const id = this.sampleidmap[this.state.site].id
 					this.settings.site = id
@@ -398,7 +393,7 @@ export class profilePlot {
 				else this.sampleData = null
 			}
 		} else {
-			if (this.state.isLoggedIn) {
+			if (this.state.logged) {
 				let result
 
 				if (this.state.site) {
