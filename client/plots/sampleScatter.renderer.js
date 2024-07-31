@@ -784,7 +784,7 @@ export function setRenderers(self) {
 					.append('path')
 					.attr('transform', c => `translate(${offsetX - 2}, ${offsetY - 5}) scale(0.5)`)
 					.style('fill', colorRefCategory.color)
-					.attr('d', shapes[0])
+					.attr('d', Object.values(shapes)[0])
 					.style('stroke', rgb(colorRefCategory.color).darker())
 
 				refColorG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', 'Ref', e, colorRefCategory))
@@ -822,8 +822,8 @@ export function setRenderers(self) {
 				const color = 'gray'
 				for (const [key, shape] of chart.shapeLegend) {
 					if (key == 'Ref') continue
-					const index = shape.shape % shapes.length
-					const symbol = shapes[index]
+					const index = shape.shape % Object.keys(shapes).length
+					const symbol = Object.values(shapes)[index]
 					const name = key
 					const count = shape.sampleCount
 					const hidden = self.config.shapeTW.q.hiddenValues ? key in self.config.shapeTW.q.hiddenValues : false
@@ -860,7 +860,7 @@ export function setRenderers(self) {
 			const circleG = g.append('g')
 			circleG
 				.append('path')
-				.attr('d', shapes[0])
+				.attr('d', Object.values(shapes)[0])
 				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.5)`)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
@@ -907,7 +907,7 @@ export function setRenderers(self) {
 		const shift = 5 + start.toString().length * 7
 		const minPath = minG
 			.append('path')
-			.attr('d', shapes[0])
+			.attr('d', Object.values(shapes)[0])
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
 			.attr(
@@ -921,7 +921,7 @@ export function setRenderers(self) {
 
 		const maxPath = maxG
 			.append('path')
-			.attr('d', shapes[0])
+			.attr('d', Object.values(shapes)[0])
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
 			.attr(
@@ -1109,17 +1109,17 @@ export function setRenderers(self) {
 				const mkey = key.split(', ')[0]
 				const itemG = G.append('g')
 				if (cname == 'shape') {
-					const index = category.shape % shapes.length
+					const index = category.shape % Object.keys(shapes).length
 					itemG
 						.append('path')
 						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(0.5)`)
 						.style('fill', 'gray')
-						.attr('d', shapes[index])
+						.attr('d', Object.values(shapes)[index])
 						.style('stroke', rgb('gray').darker())
 				} else {
 					itemG
 						.append('path')
-						.attr('d', shapes[0])
+						.attr('d', Object.values(shapes)[0])
 						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(0.5)`)
 
 						.style('fill', category.color)
