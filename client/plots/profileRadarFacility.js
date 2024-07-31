@@ -126,7 +126,7 @@ class profileRadarFacility extends profilePlot {
 			.style('stroke-dasharray', '5, 5')
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data))
-		if (this.state.isLoggedIn) {
+		if (this.state.logged) {
 			polarG
 				.append('g')
 				.append('path')
