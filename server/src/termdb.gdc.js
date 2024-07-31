@@ -11,7 +11,7 @@ it is conditionally called by mds3.init.js when gdc dataset is present
 it caches publicly available info from some GDC apis, which doesn't require user token
 it is not a route, it does not accept request parameters from client
 upon any error, it throws exception and aborts launch.
-any error is considered critical and must be presented in full details in server log for diagnosis
+any error is considered critical and must be presented in server log for diagnosis
 
 
 ********************   functions    *************
@@ -50,8 +50,11 @@ initGDCdictionary
   	map2caseid{ get() }
   	doneCaching: boolean, falg to indicate when the sample ID caching is done
 	casesWithExpData Set
+	caseid2submitter
+	apiStatus
   }
 
+- periodic check of stale cache and re-cache above
 
 
 sections from api return that are used to build in-memory termdb
@@ -1036,7 +1039,9 @@ async function cacheSampleIdMapping(ds) {
 	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
 	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
 
-	ds.__gdc.apiStatus = await getApiStatus(ds) // record /status endpoint result. subsequent stale cache check will requery /status and compare with this
+	// record /status endpoint result. subsequent stale cache check will requery /status and compare with this
+	// if this fetch fails, means the subsequent check won't work, and must abort launch
+	ds.__gdc.apiStatus = await getApiStatus(ds)
 }
 
 /*
@@ -1189,6 +1194,13 @@ async function caseCacheIsStale(ds) {
 
 	const { host, headers } = ds.getHostHeaders()
 
-	const value = await getApiStatus(ds)
+	let value
+	try {
+		value = await getApiStatus(ds)
+	} catch (e) {
+		console.warn('GDC: fetch api status failed on a check. skip and wait for next check')
+		return false
+	}
+
 	return ds.__gdc.apiStatus != value
 }
