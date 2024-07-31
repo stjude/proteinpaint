@@ -1,5 +1,5 @@
 {
-    "ribbonMessage": "Please see our newest examples below: Continuous Variables and 3D PCA.",
+    "ribbonMessage": "Please see our newest examples below: Age and Heart for continuous variables, 3D PCA, and GDC Gene Expression.",
     "ppcalls": [
         {
             "label": "Tumor Methylome tSNE",
