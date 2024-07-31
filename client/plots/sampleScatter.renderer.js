@@ -14,7 +14,7 @@ import { getId } from '#mass/nav'
 import { minShapeSize, maxShapeSize } from './sampleScatter.js'
 import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
-import { shapes } from './sampleScatter.js'
+import { shapes } from '../dom/shapes.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 export function setRenderers(self) {
@@ -363,8 +363,8 @@ export function setRenderers(self) {
 	}
 
 	self.getShape = function (chart, c, factor = 1) {
-		const index = chart.shapeLegend.get(c.shape).shape % shapes.length
-		return shapes[index]
+		const index = chart.shapeLegend.get(c.shape).shape % Object.keys(shapes).length
+		return Object.values(shapes)[index]
 	}
 
 	self.transform = function (chart, c, factor = 1) {

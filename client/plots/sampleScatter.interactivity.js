@@ -10,14 +10,12 @@ import {
 	addMatrixMenuItems,
 	openSummaryPlot,
 	addNewGroup,
-	getSamplelstTWFromIds,
 	getSamplelstTW
 } from '../mass/groups'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
-import { searchSampleInput, getSamplesRelated } from './sampleView.js'
-
-import { shapes } from './sampleScatter.js'
+import { searchSampleInput } from './sampleView.js'
+import { shapes } from '../dom/shapes.js'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
@@ -194,9 +192,9 @@ export function setInteractivity(self) {
 							: self.settings.defaultColor
 					const index =
 						tw == self.config.colorTW
-							? chart.shapeLegend.get('Ref').shape % shapes.length
-							: chart.shapeLegend.get(sample.shape).shape % shapes.length
-					const shape = shapes[index]
+							? chart.shapeLegend.get('Ref').shape % Object.keys(shapes).length
+							: chart.shapeLegend.get(sample.shape).shape % Object.keys(shapes).length
+					const shape = Object.values(shapes)[index]
 					let fontColor = 'black'
 					const whiteColor = rgb('white').toString()
 
