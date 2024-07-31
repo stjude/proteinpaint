@@ -1134,6 +1134,7 @@ that have both missense and silent mutations are classified in the
 'Protein-changing' group
 */
 export const geneVariantTermGroupsetting = {
+	disabled: false,
 	lst: [
 		{
 			// SNV/indel groupsetting
@@ -1145,7 +1146,7 @@ export const geneVariantTermGroupsetting = {
 					values: mutationClasses
 						.filter(key => key != 'WT' && key != 'Blank')
 						.map(key => {
-							return { key, dt: mclass[key].dt, label: mclass[key].label }
+							return { key, label: mclass[key].label }
 						})
 				},
 				{
@@ -1169,7 +1170,7 @@ export const geneVariantTermGroupsetting = {
 					type: 'values',
 					name: 'Protein-changing',
 					values: proteinChangingMutations.map(key => {
-						return { key, dt: mclass[key].dt, label: mclass[key].label }
+						return { key, label: mclass[key].label }
 					})
 				},
 				{
@@ -1178,7 +1179,7 @@ export const geneVariantTermGroupsetting = {
 					values: Object.keys(mclass)
 						.filter(key => !proteinChangingMutations.includes(key) && key != 'Blank')
 						.map(key => {
-							return { key, dt: mclass[key].dt, label: mclass[key].label }
+							return { key, label: mclass[key].label }
 						})
 				},
 				{
@@ -1197,7 +1198,7 @@ export const geneVariantTermGroupsetting = {
 					type: 'values',
 					name: 'Truncating',
 					values: truncatingMutations.map(key => {
-						return { key, dt: mclass[key].dt, label: mclass[key].label }
+						return { key, label: mclass[key].label }
 					})
 				},
 				{
@@ -1206,7 +1207,7 @@ export const geneVariantTermGroupsetting = {
 					values: Object.keys(mclass)
 						.filter(key => !truncatingMutations.includes(key) && key != 'Blank')
 						.map(key => {
-							return { key, dt: mclass[key].dt, label: mclass[key].label }
+							return { key, label: mclass[key].label }
 						})
 				},
 				{
@@ -1224,17 +1225,17 @@ export const geneVariantTermGroupsetting = {
 				{
 					type: 'values',
 					name: 'Copy number gain',
-					values: [{ key: 'CNV_amp', dt: mclass['CNV_amp'].dt, label: mclass['CNV_amp'].label }]
+					values: [{ key: 'CNV_amp', label: mclass['CNV_amp'].label }]
 				},
 				{
 					type: 'values',
 					name: 'Copy number loss',
-					values: [{ key: 'CNV_loss', dt: mclass['CNV_loss'].dt, label: mclass['CNV_loss'].label }]
+					values: [{ key: 'CNV_loss', label: mclass['CNV_loss'].label }]
 				},
 				{
 					type: 'values',
 					name: 'LOH',
-					values: [{ key: 'CNV_loh', dt: mclass['CNV_loh'].dt, label: mclass['CNV_loh'].label }]
+					values: [{ key: 'CNV_loh', label: mclass['CNV_loh'].label }]
 				},
 				{
 					type: 'values',
@@ -1256,7 +1257,7 @@ export const geneVariantTermGroupsetting = {
 				{
 					type: 'values',
 					name: 'Fusion transcript',
-					values: [{ key: 'Fuserna', dt: mclass['Fuserna'].dt, label: mclass['Fuserna'].label }]
+					values: [{ key: 'Fuserna', label: mclass['Fuserna'].label }]
 				},
 				{
 					type: 'values',

@@ -17,7 +17,7 @@ export class SearchHandler {
 	async selectGene(geneSearch) {
 		if (geneSearch.geneSymbol) {
 			this.callback({
-				by: 'gene',
+				kind: 'gene',
 				id: geneSearch.geneSymbol,
 				gene: geneSearch.geneSymbol,
 				name: geneSearch.geneSymbol,
@@ -27,7 +27,7 @@ export class SearchHandler {
 			const { chr, start, stop } = geneSearch
 			// name should be 1-based coordinate
 			const name = `${chr}:${start + 1}-${stop}`
-			this.callback({ by: 'coord', id: name, chr, start, stop, name, type: 'geneVariant' })
+			this.callback({ kind: 'coord', id: name, chr, start, stop, name, type: 'geneVariant' })
 		} else {
 			throw 'no gene or position specified'
 		}

@@ -1,5 +1,4 @@
-import { TermWrapper } from './tw'
-import { BaseQ, BaseTerm, QGroupSetting, TermGroupSetting } from './term'
+import { BaseQ, BaseTerm, GroupSettingTerm, BaseTW } from './term'
 import { TermSettingInstance } from '../termsetting'
 
 export type GeneVariantQ = BaseQ & {
@@ -8,31 +7,30 @@ export type GeneVariantQ = BaseQ & {
 	cnvMinAbsValue?: number
 	cnvLossCutoff?: number
 	exclude: string[]
-	groupsetting: QGroupSetting
 	dt?: number
 	origin?: string
 }
 
-type GeneVariantBaseTerm = BaseTerm & { groupsetting: TermGroupSetting }
+type GeneVariantBaseTerm = BaseTerm & { groupsetting: GroupSettingTerm }
 
 type GeneVariantCoordTerm = GeneVariantBaseTerm & {
-	by: 'coord'
+	kind: 'coord'
 	chr: string
 	start: number
 	stop: number
 }
 
 export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
-	by: 'gene'
+	kind: 'gene'
 	gene: string
 	chr?: string
 	start?: number
 	stop?: number
 }
 
-export type GeneVariantTerm = GeneVariantCoordTerm | GeneVariantGeneTerm
+export type GeneVariantTerm = GeneVariantGeneTerm | GeneVariantCoordTerm
 
-export type GeneVariantTW = TermWrapper & {
+export type GeneVariantTW = BaseTW & {
 	q: GeneVariantQ
 	term: GeneVariantTerm
 }
@@ -41,4 +39,5 @@ export type GeneVariantTermSettingInstance = TermSettingInstance & {
 	q: GeneVariantQ
 	term: GeneVariantTerm
 	category2samplecount: any
+	groupSettingInstance?: any
 }

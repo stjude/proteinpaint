@@ -1,10 +1,10 @@
-import { Filter } from '../filter.ts'
-import { CategoricalTerm } from './categorical.ts'
-import { ConditionTerm } from './condition.ts'
-import { NumericTerm } from './numeric.ts'
-import { GeneVariantTerm } from './geneVariant.ts'
-import { SampleLstTerm } from './samplelst.ts'
-import { SnpsTerm } from './snps.ts'
+import { Filter } from '../filter'
+import { CategoricalTerm } from './categorical'
+import { ConditionTerm } from './condition'
+import { NumericTerm } from './numeric'
+import { GeneVariantTerm } from './geneVariant'
+import { SampleLstTerm } from './samplelst'
+import { SnpsTerm } from './snps'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -45,10 +45,6 @@ export type FilterGroup = {
 
 export type GroupEntry = ValuesGroup | FilterGroup
 
-type CustomSet = {
-	groups: GroupEntry[]
-}
-
 type Groupset = {
 	name: string
 	is_grade?: boolean
@@ -56,35 +52,10 @@ type Groupset = {
 	groups: GroupEntry[]
 }
 
-export type UnusedQGroupSetting = {
-	inuse: false
-}
-
-export type CustomQGroupSetting = {
-	/** When “predefined_groupset_idx” is undefined, will use this set of groups.
-	This is a custom set of groups either copied from predefined set, or created with UI.
-	Custom set definition is the same as a predefined set. */
-	type: 'custom'
-	customset: CustomSet
-	/**  if false, not applied */
-	inuse: true
-}
-
-export type PredefinedQGroupSetting = {
-	/** If .inuse true, apply and will require predefined_groupset_idx */
-	/** Value is array index of term.groupsetting.lst[] */
-	type: 'predefined'
-	predefined_groupset_idx: number
-	inuse: true
-}
-
-export type QGroupSetting = UnusedQGroupSetting | CustomQGroupSetting | PredefinedQGroupSetting
-
-export type TermGroupSetting = {
-	/** if there are only two categories, means groupsetting
-	 * definition is not applicable for the term */
-	disabled?: boolean
-	lst: Groupset[]
+export type GroupSettingTerm = {
+	/** disabled=false when groupsetting is not applicable for term (e.g., when term has only two categories) */
+	disabled: boolean
+	lst?: Groupset[]
 }
 
 export type BaseTerm = {
@@ -97,6 +68,7 @@ export type BaseTerm = {
 	isleaf?: boolean
 	values?: TermValues
 }
+
 export type Term = BaseTerm &
 	(NumericTerm | CategoricalTerm | ConditionTerm | GeneVariantTerm | SampleLstTerm | SnpsTerm)
 
@@ -116,6 +88,22 @@ export type RangeEntry = {
 	value?: string //for tvs.ranges[]
 	range?: any //No idea what this is
 }
+
+type PredefinedGroupSettingQ = {
+	kind: 'predefined'
+	predefined_groupset_idx: number
+}
+
+type CustomGroupSet = {
+	groups: GroupEntry[]
+}
+
+type CustomGroupSettingQ = {
+	kind: 'custom'
+	customset: CustomGroupSet
+}
+
+type GroupSettingQ = PredefinedGroupSettingQ | CustomGroupSettingQ
 
 export type BaseQ = {
 	/**Automatically set by fillTermWrapper()
@@ -154,6 +142,7 @@ export type BaseQ = {
 		| 'custom-groupset'
 		/** Applies to samplelst terms */
 		| 'custom-samplelst'
+	groupsetting?: GroupSettingQ
 }
 
 /*** types supporting Term types ***/
