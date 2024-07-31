@@ -97,7 +97,7 @@ export class profilePlot {
 				})
 
 				this.dom.holder2.selectAll('*').remove()
-				if (comparison) await this.addPlot()
+				if (comparison) await this.comparePlots()
 			})
 		}
 		if (this.type != 'profileBarchart') {
@@ -121,6 +121,24 @@ export class profilePlot {
 					type: 'plot_edit',
 					id: this.id,
 					config: { filter: this.getFilter(), settings: { [this.type]: this.settings } }
+				})
+			}
+		})
+		icon_functions['add'](iconsDiv.append('div').style('padding', '5px'), {
+			title: 'Open new plot',
+			handler: async () => {
+				const config = {
+					chartType: this.type,
+					insertBefore: this.id,
+					header: this.opts.header.text(),
+					isLoggedIn: this.state.config.isLoggedIn,
+					site: this.state.config.site
+				}
+				if (this.type == 'profileRadarFacility' || this.type == 'profileRadar') config.plot = this.state.config.plot
+
+				this.app.dispatch({
+					type: 'plot_create',
+					config
 				})
 			}
 		})
@@ -154,7 +172,7 @@ export class profilePlot {
 			this.dom.tableBt.style('background-color', this.settings.showTable ? 'rgb(207, 226, 243)' : 'transparent')
 	}
 
-	async addPlot() {
+	async comparePlots() {
 		this.plotAdded = true
 		const appState = this.state
 		const plotMod = await import('#plots/plot.app.js')
