@@ -1,13 +1,5 @@
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '../../shared/common'
-import {
-	VocabApi,
-	GeneVariantTermSettingInstance,
-	GeneVariantTW,
-	LooseGeneVariantTW,
-	LooseCoordTerm,
-	LooseGeneTerm,
-	GeneVariantQ
-} from '../../shared/types/index'
+import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW, GeneVariantQ } from '../../shared/types/index'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '../../rx'
 import { GroupSettingMethods } from './groupsetting.ts'
