@@ -122,7 +122,7 @@ export const mclass = {
 	},
 	ProteinAltering: {
 		label: 'PROTEINALTERING',
-		color: '#b3523e',
+		color: '#a00058',
 		dt: dtsnvindel,
 		desc: 'An inframe complex change to the coding sequence',
 		key: 'ProteinAltering'
