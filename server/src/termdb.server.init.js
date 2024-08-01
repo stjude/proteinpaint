@@ -39,6 +39,7 @@ export function server_init_db_queries(ds) {
 	ds.cohort.db.connection = cn
 
 	const tables = listDbTables(cn)
+	ds.cohort.db.tables = tables
 	ds.cohort.db.tableColumns = {}
 	for (const table of tables) {
 		const columns = listTableColumns(cn, table)

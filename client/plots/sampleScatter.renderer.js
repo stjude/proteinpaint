@@ -805,11 +805,8 @@ export function setRenderers(self) {
 			self.drawScaleDotLegend(chart)
 		}
 		if (self.config.shapeTW) {
-			offsetX = !self.config.colorTW
-				? 0
-				: self.config.colorTW.term.type == 'geneVariant' && self.config.colorTW.q.type == 'values'
-				? 300
-				: 200
+
+			offsetX = !self.config.colorTW ? 0 : 300
 			offsetY = 60
 			title = `${getTitle(self.config.shapeTW.term.name)}`
 			if (self.config.shapeTW.term.type == 'geneVariant' && self.config.shapeTW.q.type == 'values')
