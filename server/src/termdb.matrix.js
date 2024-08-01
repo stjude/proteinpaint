@@ -426,18 +426,44 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-			SELECT sample, key, value, ? as term_id
-			FROM ${t.tablename}
+			SELECT sample, key, value, ? as term_id, s.type
+			FROM ${t.tablename} join sampleidmap s on sample = s.id
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
 			`
 		).join(`UNION ALL`)}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-
+	const sampleIds = []
+	let hasSample = false
+	let hasRoot = false
+	for (const row of rows) {
+		sampleIds.push(row.sample)
+		if (row.type == 'sample' || row.type == '') hasSample = true
+		if (row.type == 'root') hasRoot = true
+	}
+	let ancestry = []
+	if (q.ds.cohort.db.tables.has('sample_ancestry')) {
+		const ancestrySql = `select * from sample_ancestry where ancestor_id in (${sampleIds.join(',')})`
+		ancestry = q.ds.cohort.db.connection.prepare(ancestrySql).all()
+	}
+	const isMixed = hasRoot && hasSample
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 
-	for (const { sample, key, term_id, value } of rows) {
-		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
+	for (const { sample, key, term_id, value, type } of rows) {
+		const children = ancestry.filter(a => a.ancestor_id == sample).map(a => a.sample_id)
+		if (!isMixed || (isMixed && (type == 'sample' || type == ''))) {
+			if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
+			addSample(sample, term_id, key, value)
+		}
+		if (isMixed)
+			for (const child of children) {
+				if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
+				addSample(child, term_id, key, value)
+			}
+	}
+	return [samples, byTermId]
+
+	function addSample(sample, term_id, key, value) {
 		if (!samples[sample]) samples[sample] = { sample }
 		// this assumes unique term key/value for a given sample
 		// samples[sample][term_id] = { key, value }
@@ -456,7 +482,6 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			samples[sample][term_id].values.push({ key, value })
 		}
 	}
-	return [samples, byTermId]
 }
 
 async function mayQueryMutatedSamples(q) {
