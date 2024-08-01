@@ -431,11 +431,16 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			`
 		).join(`UNION ALL`)}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-
+	const ancestrySql = `select sample_id, ancestor_id from sample_ancestry where ancestor_id in (${rows
+		.map(row => row.sample)
+		.join(',')})`
+	const ancestry = q.ds.cohort.db.connection.prepare(ancestrySql).all()
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 
 	for (const { sample, key, term_id, value } of rows) {
+		const children = ancestry.filter(a => a.ancestor_id == sample).map(a => a.sample_id)
+
 		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
 		// this assumes unique term key/value for a given sample
@@ -453,6 +458,22 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			}
 			// add next term value to .values[]
 			samples[sample][term_id].values.push({ key, value })
+		}
+		for (const child of children) {
+			if (!samples[child]) samples[child] = { sample: child }
+			if (!samples[child][term_id]) {
+				// first value of term for a sample
+				samples[child][term_id] = { key, value }
+			} else {
+				// samples has multiple values for a term
+				// convert to .values[]
+				if (!samples[child][term_id].values) {
+					const firstvalue = samples[child][term_id] // first term value of the sample
+					samples[child][term_id] = { values: [firstvalue] } // convert to object with .values[]
+				}
+				// add next term value to .values[]
+				samples[child][term_id].values.push({ key, value })
+			}
 		}
 	}
 	return [samples, byTermId]
