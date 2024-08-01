@@ -36,32 +36,6 @@ export type GeneVariantGeneTerm =
 
 export type GeneVariantTerm = GeneVariantGeneTerm | GeneVariantCoordTerm
 
-export type LooseGeneTerm = GeneVariantBaseTerm & {
-	kind?: 'gene'
-	gene?: string
-	name: string
-}
-
-export type LooseCoordTerm = GeneVariantBaseTerm & {
-	kind?: 'coord'
-	name?: string
-	chr: string
-	start: number
-	stop: number
-}
-
-export type LooseGeneVariantTerm = LooseGeneTerm | LooseCoordTerm
-
-export type GeneVariantTW = BaseTW & {
-	q: GeneVariantQ
-	term: GeneVariantTerm
-}
-
-export type LooseGeneVariantTW = BaseTW & {
-	q: Partial<GeneVariantQ>
-	term: LooseGeneVariantTerm
-}
-
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
 	q: GeneVariantQ
 	term: GeneVariantTerm
