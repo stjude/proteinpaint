@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { appInit } from '#plots/plot.app.js'
+// import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit } from './controls'
 import { select2Terms } from '#dom/select2Terms'
@@ -35,64 +35,123 @@ class Facet {
 		}
 	}
 
-	main() {
+	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		this.renderTable()
+		await this.renderTable()
 	}
 
 	async renderTable() {
 		const config = this.config
 		this.dom.mainDiv.selectAll('*').remove()
+		//TODO: Set flag for whether to show samples or not
+		// const reqLogin = this.app.vocabApi.mayGetAuthHeaders()
+
 		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
 
-		const tr = tbody.append('tr')
-		tr.append('th')
+		const headerRow = tbody.append('tr')
+		//blank space left for row labels
+		headerRow.append('th')
 
-		const result = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: [config.term, config.term2]
-		})
-		const categories = this.getCategories(config.term, result.lst)
-		for (const category of categories) {
-			const label = config.term.term.values?.[category]?.label || category
-			tr.append('th')
+		config.settings = {
+			exclude: {
+				cols: Object.keys(config.term.q?.hiddenValues || {})
+					.filter(id => config.term.q.hiddenValues[id])
+					.map(id => {
+						return config.term.term.type == 'categorical'
+							? id
+							: config.settings.cols?.includes(id)
+							? id
+							: config.term.term.values[id]?.label
+							? config.term.term.values[id].label
+							: id
+					}),
+				rows: !config.term2?.q?.hiddenValues
+					? []
+					: Object.keys(config.term2.q.hiddenValues)
+							.filter(id => config.term2.q.hiddenValues[id])
+							.map(id =>
+								config.term2.term.type == 'categorical'
+									? id
+									: config.settings.rows?.includes(id)
+									? id
+									: config.term2.term.values[id]?.label
+									? config.term2.term.values[id].label
+									: id
+							)
+			}
+		}
+
+		const opts = { term: config.term, filter: this.state.termfilter.filter }
+		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
+		//Need to get the totals
+		if (isNumericTerm(opts.term.term)) {
+			const data = await this.app.vocabApi.getDescrStats(opts.term, this.state.termfilter)
+			if (data.error) throw data.error
+			opts.term.q.descrStats = data.values
+		}
+		if (config.term2) {
+			opts.term2 = config.term2
+			if (isNumericTerm(opts.term2.term)) {
+				const data = await this.app.vocabApi.getDescrStats(opts.term2, this.state.termfilter)
+				if (data.error) throw data.error
+				opts.term2.q.descrStats = data.values
+			}
+		}
+
+		const result = await this.app.vocabApi.getNestedChartSeriesData(opts)
+
+		const rows = new Map()
+
+		const filteredCols = result.data.charts[0].serieses.filter(
+			col => !config.settings.exclude.cols.some(i => i == col.seriesId)
+		)
+		//These rows are in the correct ascending order
+		//Set first and no need to sort later
+		result.data.refs.rows
+			.filter(row => !config.settings.exclude.rows.some(i => i == row))
+			.forEach(row => {
+				rows.set(row, new Map())
+				for (const col of filteredCols) {
+					rows.get(row).set(col.seriesId, { value: col.data.find(d => d.dataId == row)?.total || 0, selected: false })
+				}
+			})
+
+		for (const col of filteredCols) {
+			headerRow
+				.append('th')
 				.style('text-align', 'left')
 				.style('background-color', '#FAFAFA')
 				.style('padding-right', '50px')
-				.text(label)
+				.text(col.seriesId)
 		}
-		const categories2 = this.getCategories(config.term2, result.lst)
-		const cells = {}
-		for (const category2 of categories2) {
-			cells[category2] = {}
-			const tr = tbody.append('tr')
-			const label2 = config.term2.term.values?.[category2]?.label || category2
-			tr.append('td').style('background-color', '#FAFAFA').style('font-weight', 'bold').text(label2)
-			for (const category of categories) {
-				const samples = result.lst.filter(
-					s => s[config.term.$id]?.key == category && s[config.term2.$id]?.key == category2
-				)
-				cells[category2][category] = { samples, selected: false }
-				const td = tr.append('td').style('background-color', '#FAFAFA')
-				if (samples.length > 0)
-					td.text(samples.length) //.append('a')
-						.on('click', () => {
-							const selected = (cells[category2][category].selected = !cells[category2][category].selected)
-							if (selected) {
-								td.style('border', '1px solid blue')
-							} else {
-								td.style('border', 'none')
-							}
 
-							for (const category2 of categories2) {
-								for (const category of categories) {
-									if (cells[category2][category].selected) {
-										showSamplesBt.property('disabled', false)
-										return
-									}
+		for (const row of rows) {
+			const tr = tbody.append('tr')
+			tr.append('td').style('background-color', '#FAFAFA').style('font-weight', 'bold').text(row[0])
+			for (const col of row[1]) {
+				const cell = tr
+					.append('td')
+					.style('background-color', '#FAFAFA')
+					.text(col[1].value > 0 ? col[1].value : '')
+				if (col[1].value > 0) {
+					cell.on('click', () => {
+						const selected = (col[1].selected = !col[1].selected)
+						if (selected) {
+							cell.style('border', '1px solid blue')
+						} else {
+							cell.style('border', 'none')
+						}
+						for (const row of rows) {
+							for (const col of row[1]) {
+								if (col[1].selected) {
+									showSamplesBt.property('disabled', false)
+									return
 								}
 							}
-							showSamplesBt.property('disabled', true)
-						})
+						}
+						showSamplesBt.property('disabled', true)
+					})
+				}
 			}
 		}
 		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
@@ -101,12 +160,21 @@ class Facet {
 			.append('button')
 			.property('disabled', true)
 			.text('Show samples')
-			.on('click', () => {
+			.on('click', async () => {
 				const samples = []
-				for (const category2 of categories2) {
-					for (const category of categories) {
-						if (cells[category2][category].selected) {
-							samples.push(...cells[category2][category].samples)
+				const sampleList = await this.app.vocabApi.getAnnotatedSampleData({
+					filter: config.filter,
+					terms: [config.term, config.term2]
+				})
+				for (const row of rows) {
+					for (const col of row[1]) {
+						if (col[1].selected) {
+							const foundSamples = sampleList.lst
+								.filter(s => s[config.term.$id].key == col[0] && s[config.term2.$id].key == row[0])
+								.map(s => {
+									return { sampleId: s.sample, sampleName: s._ref_.label }
+								})
+							samples.push(...foundSamples)
 						}
 					}
 				}
@@ -114,26 +182,10 @@ class Facet {
 					type: 'plot_create',
 					config: {
 						chartType: 'sampleView',
-						samples: samples.map(d => ({
-							sampleId: d.sample,
-							sampleName: result.refs.bySampleId[d.sample].label
-						}))
+						samples
 					}
 				})
 			})
-	}
-
-	getCategories(tw, data) {
-		const categories = []
-		for (const sample of data) {
-			let key = sample[tw.$id]?.key
-			if (key) {
-				if (!isNaN(key)) key = Number(key)
-				categories.push(key)
-			}
-		}
-		const set = new Set(categories)
-		return Array.from(set).sort()
 	}
 
 	async setControls() {
