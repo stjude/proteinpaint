@@ -1,5 +1,13 @@
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '../../shared/common'
-import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW, GeneVariantQ } from '../../shared/types/index'
+import {
+	VocabApi,
+	GeneVariantTermSettingInstance,
+	GeneVariantTW,
+	LooseGeneVariantTW,
+	LooseCoordTerm,
+	LooseGeneTerm,
+	GeneVariantQ
+} from '../../shared/types/index'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '../../rx'
 import { GroupSettingMethods } from './groupsetting.ts'
@@ -65,6 +73,16 @@ function setMethods(self) {
 }
 
 export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVariantQ | null = null) {
+	if (!tw.term.id) tw.term.id = tw.term.name
+
+	if (!tw.term.kind) {
+		// support saved states that don't have term.kind, applied when rehydrating at runtime
+		const term: any = tw.term
+		if (term.gene || (term.name && !term.chr)) term.kind = 'gene'
+		else if (term.chr) term.kind = 'coord'
+		else throw 'unable to assign geneVariant term.kind'
+	}
+
 	if (tw.term.kind == 'gene') {
 		if (!tw.term.gene) {
 			if (!tw.term.name) throw 'no gene specified'
@@ -73,13 +91,12 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	} else if (tw.term.kind == 'coord') {
 		if (!tw.term.chr || !Number.isInteger(tw.term.start) || !Number.isInteger(tw.term.stop))
 			throw 'no position specified'
+		if (!tw.term.name) {
+			tw.term.name = `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
+		}
 	} else {
 		throw 'cannot recognize tw.term.kind'
 	}
-	if (!tw.term.name) {
-		tw.term.name = tw.term.kind == 'gene' ? tw.term.gene : `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
-	}
-	if (!tw.term.id) tw.term.id = tw.term.name
 
 	// merge defaultQ into tw.q
 	if (defaultQ) {
@@ -89,7 +106,8 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 
 	// groupsetting
 	// fill term.groupsetting
-	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
+	// !!! TODO: fix any type here, common.geneVariantTermGroupsetting should have the correct data shape or use a different type def !!!
+	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting as any
 	// fill q.groupsetting
 	if (tw.q.groupsetting) {
 		// groupsetting in use
