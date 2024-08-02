@@ -222,10 +222,8 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		// only valid genes with data are added. invalid genes or genes missing from data file is not added. backend returned genes is allowed to be fewer than supplied by client
 		const term2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
-		for (const g of param.terms!) {
-			const geneTerm = g as GeneVariantGeneTerm // FIXME wrong
-			if (!geneTerm.gene) continue
-
+		for (const geneTerm of param.terms) {
+			if (geneTerm.type != 'geneVariant' || geneTerm.kind == 'coord') continue
 			if (!geneTerm.chr) {
 				// quick fix: newly added gene from client will lack chr/start/stop
 				const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 })
@@ -264,7 +262,8 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
-		if (term2sample2value.size == 0) throw 'no data available for the input ' + param.terms?.map(g => g.gene).join(', ')
+		if (term2sample2value.size == 0)
+			throw 'no data available for the input ' + param.terms?.map(g => (g as GeneVariantGeneTerm).gene).join(', ')
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }

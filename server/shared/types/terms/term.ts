@@ -1,10 +1,10 @@
-import { Filter } from '../filter'
-import { CategoricalTerm } from './categorical'
-import { ConditionTerm } from './condition'
-import { NumericTerm } from './numeric'
-import { GeneVariantTerm } from './geneVariant'
-import { SampleLstTerm } from './samplelst'
-import { SnpsTerm } from './snps'
+import { Filter } from '../filter.js'
+import { CategoricalTerm } from './categorical.js'
+import { ConditionTerm } from './condition.js'
+import { NumericTerm } from './numeric.js'
+import { GeneVariantTerm } from './geneVariant.js'
+import { SampleLstTerm } from './samplelst.js'
+import { SnpsTerm } from './snps.js'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -147,18 +147,6 @@ export type MinBaseQ = {
 	/**indicates this object should not be extended by a copy-merge tool */
 	isAtomic?: boolean
 	name?: string
-	mode?:
-		| 'discrete'
-		/** Binary is a special case of discrete. */
-		| 'binary'
-		| 'continuous'
-		/** Only for numeric terms in regression analysis. Requires q.knots */
-		| 'spline'
-		/** Only applies to condition term. Requires q.breaks[] to have one grade value.*/
-		| 'cuminc'
-		/** Only applies to condition term for cox regression outcome. Requires q.breaks[] to have one grade value, for event and q.timeScale.*/
-		| 'cox'
-
 	reuseId?: string
 }
 
