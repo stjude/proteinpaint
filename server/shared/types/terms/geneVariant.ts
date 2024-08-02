@@ -8,8 +8,8 @@ import {
 	BaseTW,
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ
-} from './term'
-import { TermSettingInstance } from '../termsetting'
+} from './term.js'
+import { TermSettingInstance } from '../termsetting.js'
 
 type GeneVariantBaseTerm = BaseTerm & { groupsetting: EnabledTermGroupSetting }
 
@@ -24,15 +24,14 @@ type GeneVariantCoordTerm = GeneVariantBaseTerm &
 		kind: 'coord'
 	}
 
-export type GeneVariantGeneTerm =
-	| (GeneVariantBaseTerm & {
-			kind: 'gene'
-			gene: string
-	  })
-	| (GeneVariantBaseTerm & {
-			kind: 'gene'
-			gene: string
-	  } & Coord)
+export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
+	kind: 'gene'
+	gene: string
+	// these should exist together, but hard to code as atomic `& Coord` because it may need to be filled in
+	chr?: string
+	start?: number
+	stop?: number
+}
 
 export type GeneVariantTerm = GeneVariantGeneTerm | GeneVariantCoordTerm
 
