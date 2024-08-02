@@ -1,9 +1,18 @@
 import { getCompInit, copyMerge } from '#rx'
-// import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit } from './controls'
 import { select2Terms } from '#dom/select2Terms'
 import { isNumericTerm } from '../shared/terms'
+
+/*
+state {
+	term {} // tw to determine rows
+	term2 {} // tw to determine columns
+}
+
+facet table is always shown for secured or unsecured ds, as it does not reveal sample-level info
+click on table cells allow to select corresponding samples, this is only allowed when hasVerifiedToken() is true
+*/
 
 class Facet {
 	constructor(opts) {
@@ -255,7 +264,9 @@ export const componentInit = facetInit
 
 export async function getPlotConfig(opts, app) {
 	const config = { settings: {} }
+	if (!opts.term) throw '.term{} missing'
 	await fillTermWrapper(opts.term, app.vocabApi)
+	if (!opts.term2) throw '.term2{} missing'
 	await fillTermWrapper(opts.term2, app.vocabApi)
 	const result = copyMerge(config, opts)
 	return result
