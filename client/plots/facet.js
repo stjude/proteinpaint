@@ -43,11 +43,11 @@ class Facet {
 	async renderTable() {
 		const config = this.config
 		this.dom.mainDiv.selectAll('*').remove()
-		const seeSamplesAuth = this.app.vocabApi.hasVerifiedToken()
+		const samplesAuth = this.app.vocabApi.hasVerifiedToken()
 
 		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
 
-		const headerRow = tbody.append('tr')
+		const headerRow = tbody.append('tr').style('text-align', 'center')
 		//blank space left for row labels
 		headerRow.append('th')
 
@@ -82,19 +82,13 @@ class Facet {
 
 		const opts = { term: config.term, filter: this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
+
 		//Need to get the totals
-		if (isNumericTerm(opts.term.term)) {
-			const data = await this.app.vocabApi.getDescrStats(opts.term, this.state.termfilter)
-			if (data.error) throw data.error
-			opts.term.q.descrStats = data.values
-		}
+		await this.getDescrStats(opts.term)
+
 		if (config.term2) {
 			opts.term2 = config.term2
-			if (isNumericTerm(opts.term2.term)) {
-				const data = await this.app.vocabApi.getDescrStats(opts.term2, this.state.termfilter)
-				if (data.error) throw data.error
-				opts.term2.q.descrStats = data.values
-			}
+			await this.getDescrStats(opts.term2)
 		}
 
 		const result = await this.app.vocabApi.getNestedChartSeriesData(opts)
@@ -121,16 +115,22 @@ class Facet {
 				.style('text-align', 'left')
 				.style('background-color', '#FAFAFA')
 				.style('padding-right', '50px')
+				.attr('data-testid', 'sjpp-facet-col-header')
 				.text(col.seriesId)
 		}
 
 		for (const row of rows) {
 			const tr = tbody.append('tr')
-			tr.append('td').style('background-color', '#FAFAFA').style('font-weight', 'bold').text(row[0])
+			tr.append('td')
+				.style('background-color', '#FAFAFA')
+				.style('font-weight', 'bold')
+				.text(row[0])
+				.attr('data-testid', 'sjpp-facet-row-label')
 			for (const col of row[1]) {
 				const cell = tr
 					.append('td')
 					.style('background-color', '#FAFAFA')
+					.style('text-align', 'center')
 					.text(col[1].value > 0 ? col[1].value : '')
 				if (col[1].value > 0) {
 					cell.on('click', () => {
@@ -142,7 +142,7 @@ class Facet {
 						}
 						for (const row of rows) {
 							for (const col of row[1]) {
-								if (col[1].selected && seeSamplesAuth) {
+								if (col[1].selected && samplesAuth) {
 									showSamplesBt.property('disabled', false)
 									return
 								}
@@ -157,7 +157,7 @@ class Facet {
 		//.style('float', 'right')
 		const showSamplesBt = buttonDiv.append('button').property('disabled', true)
 
-		if (seeSamplesAuth) {
+		if (samplesAuth) {
 			showSamplesBt.text('Show samples').on('click', async () => {
 				const samples = []
 				const sampleList = await this.app.vocabApi.getAnnotatedSampleData({
@@ -186,6 +186,14 @@ class Facet {
 			})
 		} else {
 			showSamplesBt.text('Not available')
+		}
+	}
+
+	async getDescrStats(term) {
+		if (isNumericTerm(term.term)) {
+			const data = await this.app.vocabApi.getDescrStats(term, this.state.termfilter)
+			if (data.error) throw data.error
+			term.q.descrStats = data.values
 		}
 	}
 
