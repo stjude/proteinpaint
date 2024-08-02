@@ -43,8 +43,7 @@ class Facet {
 	async renderTable() {
 		const config = this.config
 		this.dom.mainDiv.selectAll('*').remove()
-		//TODO: Set flag for whether to show samples or not
-		// const reqLogin = this.app.vocabApi.mayGetAuthHeaders()
+		const seeSamplesAuth = this.app.vocabApi.hasVerifiedToken()
 
 		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
 
@@ -143,7 +142,7 @@ class Facet {
 						}
 						for (const row of rows) {
 							for (const col of row[1]) {
-								if (col[1].selected) {
+								if (col[1].selected && seeSamplesAuth) {
 									showSamplesBt.property('disabled', false)
 									return
 								}
@@ -156,11 +155,10 @@ class Facet {
 		}
 		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
 		//.style('float', 'right')
-		const showSamplesBt = buttonDiv
-			.append('button')
-			.property('disabled', true)
-			.text('Show samples')
-			.on('click', async () => {
+		const showSamplesBt = buttonDiv.append('button').property('disabled', true)
+
+		if (seeSamplesAuth) {
+			showSamplesBt.text('Show samples').on('click', async () => {
 				const samples = []
 				const sampleList = await this.app.vocabApi.getAnnotatedSampleData({
 					filter: config.filter,
@@ -186,6 +184,9 @@ class Facet {
 					}
 				})
 			})
+		} else {
+			showSamplesBt.text('Not available')
+		}
 	}
 
 	async setControls() {
