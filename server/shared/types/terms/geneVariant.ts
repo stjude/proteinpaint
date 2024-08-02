@@ -1,17 +1,16 @@
-import { BaseQ, BaseTerm, GroupSettingTerm, BaseTW } from './term'
+import {
+	MinBaseQ,
+	BaseTerm,
+	TermGroupSetting,
+	QGroupSetting,
+	ValuesQ,
+	BaseTW,
+	PredefinedGroupSettingQ,
+	CustomGroupSettingQ
+} from './term'
 import { TermSettingInstance } from '../termsetting'
 
-export type GeneVariantQ = BaseQ & {
-	cnvGainCutoff?: number
-	cnvMaxLength?: number
-	cnvMinAbsValue?: number
-	cnvLossCutoff?: number
-	exclude: string[]
-	dt?: number
-	origin?: string
-}
-
-type GeneVariantBaseTerm = BaseTerm & { groupsetting: GroupSettingTerm }
+type GeneVariantBaseTerm = BaseTerm & { groupsetting: TermGroupSetting }
 
 type Coord = {
 	chr: string
@@ -36,13 +35,26 @@ export type GeneVariantGeneTerm =
 
 export type GeneVariantTerm = GeneVariantGeneTerm | GeneVariantCoordTerm
 
+export type BaseGeneVariantQ = MinBaseQ & {
+	cnvGainCutoff?: number
+	cnvMaxLength?: number
+	cnvMinAbsValue?: number
+	cnvLossCutoff?: number
+	exclude: string[]
+	dt?: number
+	origin?: string
+}
+
+export type GeneVariantQ = BaseGeneVariantQ & (ValuesQ | PredefinedGroupSettingQ | CustomGroupSettingQ)
+
+export type GeneVariantTW = BaseTW & {
+	term: GeneVariantTerm
+	q: GeneVariantQ
+}
+
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
 	q: GeneVariantQ
 	term: GeneVariantTerm
 	category2samplecount: any
 	groupSettingInstance?: any
-}
-
-type ValuesQ = {
-	type?: 'values'
 }

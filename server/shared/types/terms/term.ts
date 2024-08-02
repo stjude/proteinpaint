@@ -32,7 +32,7 @@ export type TermValues = {
 
 export type ValuesGroup = {
 	name: string
-	type: 'values'
+	type: 'values' | string // can remove boolean fallback once problematic js files are converted to .ts and can declare `type: 'values' as const`
 	values: { key: number | string; label: string }[]
 	uncomputable?: boolean // if true, do not include this group in computations
 }
@@ -52,11 +52,16 @@ type Groupset = {
 	groups: GroupEntry[]
 }
 
-export type GroupSettingTerm = {
-	/** disabled=false when groupsetting is not applicable for term (e.g., when term has only two categories) */
-	disabled: boolean
-	lst?: Groupset[]
-}
+export type TermGroupSetting =
+	| {
+			/** disabled=false when groupsetting is not applicable for term (e.g., when term has only two categories) */
+			disabled: true | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: true as const`
+			lst?: []
+	  }
+	| {
+			disabled?: false | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: false as const`
+			lst: Groupset[]
+	  }
 
 export type BaseTerm = {
 	id: string
@@ -88,22 +93,6 @@ export type RangeEntry = {
 	value?: string //for tvs.ranges[]
 	range?: any //No idea what this is
 }
-
-type PredefinedGroupSettingQ = {
-	kind: 'predefined'
-	predefined_groupset_idx: number
-}
-
-type CustomGroupSet = {
-	groups: GroupEntry[]
-}
-
-type CustomGroupSettingQ = {
-	kind: 'custom'
-	customset: CustomGroupSet
-}
-
-type GroupSettingQ = PredefinedGroupSettingQ | CustomGroupSettingQ
 
 export type BaseQ = {
 	/**Automatically set by fillTermWrapper()
@@ -142,7 +131,61 @@ export type BaseQ = {
 		| 'custom-groupset'
 		/** Applies to samplelst terms */
 		| 'custom-samplelst'
-	groupsetting?: GroupSettingQ
+	groupsetting?: QGroupSetting
+}
+
+export type MinBaseQ = {
+	/**Automatically set by fillTermWrapper()
+	Applies to barchart, survival plot, and cuminc plot.
+	Contains categories of a term to be hidden in its chart. This should only apply to client-side rendering, and should not be part of “dataName” when requesting data from server. Server will always provide a summary for all categories. It’s up to the client to show/hide categories.
+	This allows the key visibility to be stored in state, while toggling visibility will not trigger data re-request.
+	Currently termsetting menu does not manage this attribute. It’s managed by barchart legend.
+	*/
+	hiddenValues?: HiddenValues
+	/**indicates this object should not be extended by a copy-merge tool */
+	isAtomic?: boolean
+	name?: string
+	mode?:
+		| 'discrete'
+		/** Binary is a special case of discrete. */
+		| 'binary'
+		| 'continuous'
+		/** Only for numeric terms in regression analysis. Requires q.knots */
+		| 'spline'
+		/** Only applies to condition term. Requires q.breaks[] to have one grade value.*/
+		| 'cuminc'
+		/** Only applies to condition term for cox regression outcome. Requires q.breaks[] to have one grade value, for event and q.timeScale.*/
+		| 'cox'
+
+	reuseId?: string
+}
+
+export type PredefinedGroupSettingQ = MinBaseQ & {
+	type: 'groupsetting'
+	groupsetting: {
+		kind: 'predefined'
+		predefined_groupset_idx: number
+		inuse?: boolean
+	}
+}
+
+export type CustomGroupSet = {
+	groups: GroupEntry[]
+}
+
+export type CustomGroupSettingQ = MinBaseQ & {
+	type: 'groupsetting'
+	groupsetting: {
+		kind: 'custom'
+		customset: CustomGroupSet
+		inuse?: boolean
+	}
+}
+
+export type QGroupSetting = PredefinedGroupSettingQ | CustomGroupSettingQ
+
+export type ValuesQ = MinBaseQ & {
+	type?: 'values'
 }
 
 /*** types supporting Term types ***/

@@ -1133,15 +1133,17 @@ for example: in the 'Protein-changing vs. rest' groupsetting, the
 that have both missense and silent mutations are classified in the
 'Protein-changing' group
 */
+
 export const geneVariantTermGroupsetting = {
-	disabled: false,
+	disabled: false, // as const, // TODO: may need to add is when converting common.js to .ts
+	type: 'custom',
 	lst: [
 		{
 			// SNV/indel groupsetting
 			name: 'Mutated vs. wildtype',
 			groups: [
 				{
-					type: 'values',
+					type: 'values', // as const, // TODO: may need to add is when converting common.js to .ts
 					name: 'Mutated',
 					values: mutationClasses
 						.filter(key => key != 'WT' && key != 'Blank')
