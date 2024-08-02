@@ -1,1 +1,2 @@
-
+Fixes
+- Facet table renders for all datasets.
