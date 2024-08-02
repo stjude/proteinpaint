@@ -36,10 +36,8 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 				const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt!]?.byOrigin
 				if (byOrigin) labels.push(byOrigin[self.q.origin!]?.label || self.q.origin)
 				if (self.q.groupsetting.kind == 'predefined') {
-					if (self.term.groupsetting.lst) {
-						const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-						labels.push(groupset.name)
-					} else throw 'missing self.term.groupsetting.lst'
+					const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+					labels.push(groupset.name)
 				} else if (self.q.groupsetting.kind == 'custom') {
 					const n = self.q.groupsetting.customset.groups.length
 					labels.push(`Divided into ${n} groups`)
@@ -324,10 +322,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			make_radios({
 				holder: predefinedGroupsetDiv,
 				options: groupset_idxs.map(i => {
-					if (self.term.groupsetting.lst) {
-						const groupset = self.term.groupsetting.lst[i]
-						return { label: groupset.name, value: i, checked: i == qgs.predefined_groupset_idx }
-					} else throw 'missing self.term.groupsetting.lst'
+					const groupset = self.term.groupsetting.lst[i]
+					return { label: groupset.name, value: i, checked: i == qgs.predefined_groupset_idx }
 				}),
 				callback: async v => {
 					qgs.predefined_groupset_idx = v
@@ -352,7 +348,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		groupsetDiv.append('div').style('font-weight', 'bold').text('Variant grouping')
 		// self.q.type = 'groupsetting' // already detected before calling makeRadiosForGrouping()
 		if (self.q.type == 'groupsetting') {
-			if (!self.term.groupsetting?.lst) throw 'missing term.groupsetting.lst'
 			self.q.groupsetting = { kind: 'predefined', predefined_groupset_idx: groupset_idxs[0] }
 			const groupset = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
 			groupsetDiv.append('div').style('margin', '5px 0px 0px 10px').text(groupset.name)
