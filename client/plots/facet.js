@@ -6,8 +6,8 @@ import { isNumericTerm } from '../shared/terms'
 
 /*
 state {
-	term {} // tw to determine rows
-	term2 {} // tw to determine columns
+	term {} // tw to determine columns
+	term2 {} // tw to determine rows
 }
 
 facet table is always shown for secured or unsecured ds, as it does not reveal sample-level info
@@ -35,7 +35,10 @@ class Facet {
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		if (this.dom.header) this.dom.header.html(`${config.term.term.name} / ${config.term2.term.name} Facet Table`)
+		if (this.dom.header)
+			this.dom.header.html(
+				`${config.term.term.name} <span style="font-size:.8em">(COLUMN)</span> ${config.term2.term.name} <span style="font-size:.8em">(ROW) &nbsp; FACET TABLE</span>`
+			)
 
 		return {
 			config,
@@ -125,7 +128,7 @@ class Facet {
 				.style('background-color', '#FAFAFA')
 				.style('padding-right', '50px')
 				.attr('data-testid', 'sjpp-facet-col-header')
-				.text(col.seriesId)
+				.text(config.term.term.values?.[col.seriesId]?.label || col.seriesId)
 		}
 
 		for (const row of rows) {
@@ -133,7 +136,7 @@ class Facet {
 			tr.append('td')
 				.style('background-color', '#FAFAFA')
 				.style('font-weight', 'bold')
-				.text(row[0])
+				.text(config.term2.term.values?.[row[0]].label || row[0])
 				.attr('data-testid', 'sjpp-facet-row-label')
 			for (const col of row[1]) {
 				const cell = tr
