@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Facet table renders for all datasets.
+
 
 ## 2.70.3
 
