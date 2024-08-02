@@ -52,7 +52,7 @@ return an array of sample names passing through the filter
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
 	let sql
 
-	if (ds.cohort.db.tableColumns[`sample_${type}s`]) {
+	if (ds.cohort.db.tableColumns[`${type}_samples`]) {
 		sql = filter
 			? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join ${type}_samples s on sample = s.id `
 			: `SELECT id, name FROM ${type}_samples`
@@ -92,7 +92,8 @@ return an array of sample names passing through the filter
 	return re
 }
 
-export async function get_samplecount(q, ds) {
+// we need to pass a type and count by type to differentiate root samples from samples
+export async function get_samplecount(q, ds, type = 'sample') {
 	/*
 must have q.filter (somehow it can either be str or {})
 as this is for showing number of samples pass a filter in header
@@ -112,8 +113,9 @@ return a sample count of sample names passing through the filter
 	const filter = await getFilterCTEs(j, ds)
 	const statement = `WITH ${filter.filters}
 		SELECT 'FILTERED_COHORT' as subcohort, count(distinct sample) as samplecount 
-		FROM ${filter.CTEname}`
-	return ds.cohort.db.connection.prepare(statement).all(filter.values)
+		FROM ${filter.CTEname}'`
+	const rows = ds.cohort.db.connection.prepare(statement).all(filter.values)
+	return rows
 }
 export async function get_summary_numericcategories(q) {
 	/*
