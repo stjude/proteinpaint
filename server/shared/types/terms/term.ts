@@ -52,15 +52,17 @@ type Groupset = {
 	groups: GroupEntry[]
 }
 
+export type EnabledTermGroupSetting = {
+	disabled?: false | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: false as const`
+	lst: Groupset[]
+}
+
 export type TermGroupSetting =
+	| EnabledTermGroupSetting
 	| {
 			/** disabled=false when groupsetting is not applicable for term (e.g., when term has only two categories) */
 			disabled: true | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: true as const`
 			lst?: []
-	  }
-	| {
-			disabled?: false | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: false as const`
-			lst: Groupset[]
 	  }
 
 export type BaseTerm = {

@@ -3,6 +3,7 @@ import {
 	BaseTerm,
 	TermGroupSetting,
 	QGroupSetting,
+	EnabledTermGroupSetting,
 	ValuesQ,
 	BaseTW,
 	PredefinedGroupSettingQ,
@@ -10,7 +11,7 @@ import {
 } from './term'
 import { TermSettingInstance } from '../termsetting'
 
-type GeneVariantBaseTerm = BaseTerm & { groupsetting: TermGroupSetting }
+type GeneVariantBaseTerm = BaseTerm & { groupsetting: EnabledTermGroupSetting }
 
 type Coord = {
 	chr: string
