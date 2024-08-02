@@ -425,56 +425,65 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-			SELECT sample, key, value, ? as term_id
-			FROM ${t.tablename}
+			SELECT sample, key, value, ? as term_id, s.type
+			FROM ${t.tablename} join sampleidmap s on sample = s.id
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
 			`
 		).join(`UNION ALL`)}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	const ancestrySql = `select sample_id, ancestor_id from sample_ancestry where ancestor_id in (${rows
-		.map(row => row.sample)
-		.join(',')})`
+	const sampleIds = []
+	let hasSample = false
+	let hasRoot = false
+	for (const row of rows) {
+		sampleIds.push(row.sample)
+		if (row.type == 'sample' || row.type == '') hasSample = true
+		if (row.type == 'root') hasRoot = true
+	}
+	const ancestrySql = `select * from sample_ancestry where ancestor_id in (${sampleIds.join(',')})`
 	const ancestry = q.ds.cohort.db.connection.prepare(ancestrySql).all()
+	const isMixed = hasRoot && hasSample
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 
-	for (const { sample, key, term_id, value } of rows) {
+	for (const { sample, key, term_id, value, type } of rows) {
 		const children = ancestry.filter(a => a.ancestor_id == sample).map(a => a.sample_id)
+		if (!isMixed || (isMixed && (type == 'sample' || type == ''))) {
+			if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
+			if (!samples[sample]) samples[sample] = { sample }
+			// this assumes unique term key/value for a given sample
+			// samples[sample][term_id] = { key, value }
 
-		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
-		if (!samples[sample]) samples[sample] = { sample }
-		// this assumes unique term key/value for a given sample
-		// samples[sample][term_id] = { key, value }
-
-		if (!samples[sample][term_id]) {
-			// first value of term for a sample
-			samples[sample][term_id] = { key, value }
-		} else {
-			// samples has multiple values for a term
-			// convert to .values[]
-			if (!samples[sample][term_id].values) {
-				const firstvalue = samples[sample][term_id] // first term value of the sample
-				samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
-			}
-			// add next term value to .values[]
-			samples[sample][term_id].values.push({ key, value })
-		}
-		for (const child of children) {
-			if (!samples[child]) samples[child] = { sample: child }
-			if (!samples[child][term_id]) {
+			if (!samples[sample][term_id]) {
 				// first value of term for a sample
-				samples[child][term_id] = { key, value }
+				samples[sample][term_id] = { key, value }
 			} else {
 				// samples has multiple values for a term
 				// convert to .values[]
-				if (!samples[child][term_id].values) {
-					const firstvalue = samples[child][term_id] // first term value of the sample
-					samples[child][term_id] = { values: [firstvalue] } // convert to object with .values[]
+				if (!samples[sample][term_id].values) {
+					const firstvalue = samples[sample][term_id] // first term value of the sample
+					samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
 				}
 				// add next term value to .values[]
-				samples[child][term_id].values.push({ key, value })
+				samples[sample][term_id].values.push({ key, value })
 			}
 		}
+		if (isMixed)
+			for (const child of children) {
+				if (!samples[child]) samples[child] = { sample: child }
+				if (!samples[child][term_id]) {
+					// first value of term for a sample
+					samples[child][term_id] = { key, value }
+				} else {
+					// samples has multiple values for a term
+					// convert to .values[]
+					if (!samples[child][term_id].values) {
+						const firstvalue = samples[child][term_id] // first term value of the sample
+						samples[child][term_id] = { values: [firstvalue] } // convert to object with .values[]
+					}
+					// add next term value to .values[]
+					samples[child][term_id].values.push({ key, value })
+				}
+			}
 	}
 	return [samples, byTermId]
 }
