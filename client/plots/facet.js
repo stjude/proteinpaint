@@ -27,7 +27,6 @@ class Facet {
 			controlsHolder,
 			mainDiv
 		}
-		if (this.dom.header) this.dom.header.html('Facet Table')
 	}
 
 	async init(appState) {
@@ -36,6 +35,7 @@ class Facet {
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
+		if (this.dom.header) this.dom.header.html(`${config.term.term.name} / ${config.term2.term.name} Facet Table`)
 
 		return {
 			config,
