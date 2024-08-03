@@ -3,12 +3,13 @@ import { getPillNameDefault, set_hiddenvalues } from '../termsetting.ts'
 import { VocabApi } from '../../shared/types/index'
 import {
 	TermValues,
-	PredefinedQGroupSetting,
-	CustomQGroupSetting,
+	PredefinedGroupSettingQ,
+	CustomGroupSettingQ,
 	TermGroupSetting,
 	BaseGroupSet,
 	GroupEntry
 } from '../../shared/types/terms/term.ts'
+import { CatPredefinedGroupSettingNested, CatCustomGroupSettingNested } from '../../shared/types/terms/categorical'
 import {
 	SingleCellQ,
 	SingleCellCellTypeTerm,
@@ -81,14 +82,14 @@ export async function getHandler(self) {
 				const tgs = t.groupsetting as TermGroupSetting
 				if (!tgs) throw `no term.groupsetting ${endNote}`
 
-				let groupset!: BaseGroupSet
+				let groupset: BaseGroupSet = { groups: [] }
 				if (q.groupsetting && q.type == 'predefined-groupset') {
-					const gs = q.groupsetting as PredefinedQGroupSetting
+					const gs = q.groupsetting as CatPredefinedGroupSettingNested
 					const idx = gs.predefined_groupset_idx as number
 					if (tgs.lst && !tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
 					else if (tgs.lst) groupset = tgs.lst[idx]
 				} else if (q.groupsetting) {
-					const gs = q.groupsetting as CustomQGroupSetting
+					const gs = q.groupsetting as CatCustomGroupSettingNested
 					if (!gs.customset) throw `no q.groupsetting.customset defined ${endNote}`
 					groupset = gs.customset
 				}
@@ -160,7 +161,8 @@ export function fillTW(tw: SingleCellCellTypeTW, vocabApi: VocabApi, defaultQ = 
 	if (!tw.term?.sample) throw 'missing term.sample'
 	if (!tw.term?.plot) throw 'missing term.plot'
 	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
-	if (!tw.q.groupsetting) (tw.q.groupsetting as any) = {}
+	if ((tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') && !tw.q.groupsetting)
+		(tw.q.groupsetting as any) = {}
 	if (!tw.term.groupsetting) (tw.term.groupsetting as any) = {}
 	if (tw.term.groupsetting.disabled) {
 		//** .disabled is not used on q.groupsetting */
@@ -168,20 +170,22 @@ export function fillTW(tw: SingleCellCellTypeTW, vocabApi: VocabApi, defaultQ = 
 		return
 	}
 	// delete tw.q.groupsetting.disabled
-	if (!('inuse' in (tw.q as SingleCellQ).groupsetting)) tw.q.groupsetting.inuse = false // do not apply by default
+	if (tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') {
+		if (tw.q.groupsetting.inuse === undefined) tw.q.groupsetting.inuse = false // do not apply by default
 
-	// inuse:false is either from automatic setup or predefined in state
-	if (tw.q.groupsetting.inuse) {
-		const gs = tw.q.groupsetting as PredefinedQGroupSetting
-		if (
-			tw.term.groupsetting.lst &&
-			//Typescript emits error that .useIndex could be undefined
-			tw.term.groupsetting.useIndex &&
-			//Fix checks if property is present
-			tw.term.groupsetting.useIndex >= 0 &&
-			tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
-		) {
-			gs.predefined_groupset_idx = tw.term.groupsetting.useIndex
+		// inuse:false is either from automatic setup or predefined in state
+		if (tw.q.groupsetting.inuse) {
+			const gs = tw.q.groupsetting as CatPredefinedGroupSettingNested
+			if (
+				tw.term.groupsetting.lst &&
+				//Typescript emits error that .useIndex could be undefined
+				tw.term.groupsetting.useIndex &&
+				//Fix checks if property is present
+				tw.term.groupsetting.useIndex >= 0 &&
+				tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
+			) {
+				gs.predefined_groupset_idx = tw.term.groupsetting.useIndex
+			}
 		}
 	}
 
