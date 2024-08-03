@@ -119,7 +119,10 @@ type SnvIndelFormat = {
 }
 
 type FilterValues = {
-	[index: string | number]: { label: string }
+	[index: string | number]: {
+		key?: string | number
+		label: string
+	}
 }
 
 type RangesEntry = {
@@ -134,10 +137,13 @@ type BaseTvsFilter = {
 }
 
 type TvsFilter = BaseTvsFilter & {
-	values?: (string | number)[]
+	values?: (string | number | { label: string })[]
 }
 
-type FilterTermEntry = BaseTvsFilter & {
+export type FilterTermEntry = BaseTvsFilter & {
+	id: string
+	name: string
+	type: string
 	parent_id: string | null
 	isleaf: boolean
 	values?: FilterValues
@@ -163,10 +169,8 @@ type Filter = {
 	lst?: FilterLstEntry[]
 }
 
-type VariantFilterOpts = { joinWith: string[] }
-
 type VariantFilter = {
-	opts: VariantFilterOpts
+	opts: { joinWith: string[] }
 	filter: Filter
 	terms: FilterTermEntry[]
 }
@@ -234,6 +238,8 @@ type SnvIndelQuery = {
 		by: string
 	}
 	allowSNPs?: boolean
+	vcfid4skewerName?: boolean
+	details?: any
 }
 
 type SvFusion = {
@@ -739,7 +745,10 @@ type Matrix = {
 type MatrixPlotsEntry = {
 	name: string
 	file: string
-	getConfig: (f: any) => void
+	settings?: {
+		[key: string]: any
+	}
+	getConfig?: (f: any) => void
 }
 
 type MatrixPlots = {
@@ -832,7 +841,6 @@ type Termdb = {
 
 	scatterplots?: Scatterplots
 	matrix?: Matrix
-	matrixplots?: MatrixPlots
 	logscaleBase2?: boolean
 	chartConfigByType?: ChartConfigByType
 	/** Functionality */
@@ -906,6 +914,7 @@ type BaseDtEntry = {
 	term_id: string
 	yes: { value: string[] }
 	no: { value: string[] }
+	label?: string
 }
 
 type SNVByOrigin = {
@@ -947,6 +956,7 @@ export type Cohort = {
 	db: FileObj
 	termdb: Termdb
 	scatterplots?: Scatterplots
+	matrixplots?: MatrixPlots
 	/** optional title of this ds, if missing use ds.label. shown on mass nav header. use blank string to not to show a label*/
 	title?: Title
 	cumburden?: {
