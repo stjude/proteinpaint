@@ -1,7 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "exclude": [
-    "./**/singleCellGeneExpression.ts",
     "./dist/**/*"
   ]
 }
