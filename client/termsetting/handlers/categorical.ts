@@ -1,8 +1,13 @@
 import { GroupSettingMethods } from './groupsetting.ts'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import { VocabApi } from '../../shared/types/index'
-import { TermValues, BaseGroupSet, GroupEntry, PredefinedQGroupSetting } from '../../shared/types/terms/term'
-import { CategoricalQ, CategoricalTerm, CategoricalTW } from '../../shared/types/terms/categorical'
+import { TermValues, BaseGroupSet, GroupEntry } from '../../shared/types/terms/term'
+import {
+	CategoricalQ,
+	CategoricalTerm,
+	CategoricalTW,
+	CatPredefinedGroupSettingNested
+} from '../../shared/types/terms/categorical'
 import { PillData } from '../types'
 import { copyMerge } from '../../rx'
 
@@ -48,7 +53,9 @@ export async function getHandler(self) {
 		validateQ(data: PillData) {
 			const t = data.term as CategoricalTerm
 			const q = data.q as CategoricalQ
-			const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
+			const endNote = `(${t.type}, mode='${
+				q.type != 'predefined-groupset' && q.type !== 'custom-groupset' && q.mode
+			}', type='${q.type}')`
 			// validate the configuration
 			if (q.type == 'values') {
 				if (!t.values) self.error = `no term.values defined ${endNote}`
@@ -70,16 +77,16 @@ export async function getHandler(self) {
 				const tgs = t.groupsetting
 				if (!tgs) throw `no term.groupsetting ${endNote}`
 
-				let groupset!: BaseGroupSet
-				if (q.groupsetting && q.type == 'predefined-groupset') {
+				let groupset: BaseGroupSet = { groups: [] } // TODO: should be able to declare as empty, initially?
+				if (q.type == 'predefined-groupset') {
 					const gs = q.groupsetting
-					const idx = gs['predefined_groupset_idx']
+					const idx = gs.predefined_groupset_idx
 					if (tgs.lst && !tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
 					else if (tgs.lst) groupset = tgs.lst[idx]
-				} else if (q.groupsetting) {
+				} else {
 					const gs = q.groupsetting
-					if (!gs['customset']) throw `no q.groupsetting.customset defined ${endNote}`
-					groupset = gs['customset']
+					if (!gs.customset) throw `no q.groupsetting.customset defined ${endNote}`
+					groupset = gs.customset
 				}
 
 				if (!groupset.groups.every((g: GroupEntry) => g.name !== undefined))
@@ -95,6 +102,7 @@ export async function getHandler(self) {
 						}
 					}
 				}
+
 				return
 			}
 			throw `unknown xxxx q.type='${q.type}' for categorical q.mode='${q.mode}'`
@@ -147,7 +155,8 @@ export function setCategoryMethods(self) {
 
 export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ = null) {
 	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
-	if (!tw.q.groupsetting) (tw.q.groupsetting as any) = {}
+	if ((tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') && !tw.q.groupsetting)
+		(tw.q.groupsetting as any) = {}
 	if (!tw.term.groupsetting) (tw.term.groupsetting as any) = {}
 	if (tw.term.groupsetting.disabled) {
 		/** .disabled not on q.groupsetting */
@@ -155,18 +164,20 @@ export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ = null) {
 		return
 	}
 	// delete tw.q.groupsetting.disabled
-	if (!('inuse' in (tw.q as CategoricalQ).groupsetting)) tw.q.groupsetting.inuse = false // do not apply by default
+	if (tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') {
+		if (tw.q.groupsetting.inuse === undefined) tw.q.groupsetting.inuse = false // do not apply by default
 
-	// inuse:false is either from automatic setup or predefined in state
-	if (tw.q.groupsetting.inuse) {
-		const gs = tw.q.groupsetting as PredefinedQGroupSetting
-		if (
-			tw.term.groupsetting.lst &&
-			//Fix checks if property is present
-			tw.term.groupsetting.useIndex >= 0 &&
-			tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
-		) {
-			gs.predefined_groupset_idx = tw.term.groupsetting.useIndex
+		// inuse:false is either from automatic setup or predefined in state
+		if (tw.q.groupsetting?.inuse && tw.q.type == 'predefined-groupset') {
+			const gs: CatPredefinedGroupSettingNested = tw.q.groupsetting
+			if (
+				tw.term.groupsetting.lst &&
+				//Fix checks if property is present
+				tw.term.groupsetting.useIndex >= 0 &&
+				tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
+			) {
+				gs.predefined_groupset_idx = tw.term.groupsetting.useIndex
+			}
 		}
 	}
 

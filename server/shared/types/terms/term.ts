@@ -43,6 +43,10 @@ export type FilterGroup = {
 	filter: Filter
 }
 
+export type BaseGroupSet = {
+	groups: GroupEntry[]
+}
+
 export type GroupEntry = ValuesGroup | FilterGroup
 
 type Groupset = {
@@ -107,6 +111,9 @@ export type BaseQ = {
 	/**indicates this object should not be extended by a copy-merge tool */
 	isAtomic?: boolean
 	name?: string
+
+	//{common: ...tw.q.common,  type: 'predefined-groupset', predefined_groupset_idx: 1 }
+
 	mode?:
 		| 'discrete'
 		/** Binary is a special case of discrete. */
@@ -150,26 +157,32 @@ export type MinBaseQ = {
 	reuseId?: string
 }
 
+export type PredefinedGroupSettingNested = {
+	kind: 'predefined'
+	predefined_groupset_idx: number
+	inuse?: boolean // temporary duplicate with inuse one level above, will be unnested soon
+}
+
 export type PredefinedGroupSettingQ = MinBaseQ & {
 	type: 'groupsetting'
-	groupsetting: {
-		kind: 'predefined'
-		predefined_groupset_idx: number
-		inuse?: boolean
-	}
+	inuse?: boolean
+	groupsetting: PredefinedGroupSettingNested
 }
 
 export type CustomGroupSet = {
 	groups: GroupEntry[]
 }
 
+export type CustomGroupSettingNested = {
+	kind: 'custom'
+	customset: CustomGroupSet
+	inuse?: boolean // temporary duplicate with inuse one level above, will be unnested soon
+}
+
 export type CustomGroupSettingQ = MinBaseQ & {
 	type: 'groupsetting'
-	groupsetting: {
-		kind: 'custom'
-		customset: CustomGroupSet
-		inuse?: boolean
-	}
+	inuse?: boolean
+	groupsetting: CustomGroupSettingNested
 }
 
 export type QGroupSetting = PredefinedGroupSettingQ | CustomGroupSettingQ

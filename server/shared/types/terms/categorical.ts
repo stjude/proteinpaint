@@ -1,4 +1,4 @@
-import { BaseTerm, BaseValue, BaseQ, BaseTW, QGroupSetting, TermGroupSetting, ValuesGroup } from './term.ts'
+import { BaseTerm, BaseValue, MinBaseQ, BaseTW, TermGroupSetting, ValuesGroup, GroupEntry } from './term.js'
 
 /*
 --------EXPORTED--------
@@ -18,13 +18,51 @@ GroupSetInputValues
  * @category TW
  */
 
-export type CategoricalValuesObject = CategoricalQ & {
+// TODO: import and reuse this type from types/term/term.ts, once unnested as q.groupsetting
+export type CatPredefinedGroupSettingNested = {
+	//kind: 'predefined-groupset'
+	predefined_groupset_idx: number
+	inuse?: boolean // temporary duplicate with inuse one level above, will be unnested soon
+}
+
+// TODO: import and reuse this type from types/term/term.ts, once unnested as q.groupsetting
+export type CatPredefinedGroupSettingQ = MinBaseQ & {
+	type: 'predefined-groupset'
+	mode?: 'binary'
+	inuse?: boolean
+	groupsetting: CatPredefinedGroupSettingNested
+}
+
+// TODO: import and reuse this type from types/term/term.ts, once unnested as q.groupsetting
+export type CatCustomGroupSet = {
+	groups: GroupEntry[]
+}
+
+// TODO: import and reuse this type from types/term/term.ts, once unnested as q.groupsetting
+export type CatCustomGroupSettingNested = {
+	//kind: 'custom-groupset'
+	customset: CatCustomGroupSet
+	inuse?: boolean // temporary duplicate with inuse one level above, will be unnested soon
+}
+
+// TODO: import and reuse this type from types/term/term.ts, once unnested as q.groupsetting
+export type CatCustomGroupSettingQ = MinBaseQ & {
+	type: 'custom-groupset'
+	mode?: 'binary'
+	inuse?: boolean
+	groupsetting: CatCustomGroupSettingNested
+}
+
+// TODO: import and reuse this type from types/term/term.ts, once unnested as q.groupsetting
+export type CategoricalValuesObject = MinBaseQ & {
 	mode: 'binary' | 'discrete'
 	type?: 'values'
 	values: {
 		[key: string]: BaseValue
 	}
 }
+
+export type CategoricalQ = CatPredefinedGroupSettingQ | CatCustomGroupSettingQ | CategoricalValuesObject
 
 export type GroupSet = CategoricalQ & {
 	mode: 'binary' | 'discrete'
@@ -38,8 +76,6 @@ export type CategoricalTerm = BaseTerm & {
 	values: CategoricalValuesObject
 	groupsetting: TermGroupSetting & { useIndex: number }
 }
-
-export type CategoricalQ = BaseQ & { groupsetting: QGroupSetting }
 
 /**
  * A categorical term wrapper object
