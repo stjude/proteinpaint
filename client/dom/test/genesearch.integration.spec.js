@@ -1,42 +1,23 @@
 import tape from 'tape'
-// import * as d3s from 'd3-selection'
 import { string2variant } from '../genesearch.ts'
 import { hg38 } from '../../test/testdata/genomes'
-// import { Menu } from '../menu'
 
 /* Tests
     - string2variant() - HGVS deletion and delins variants
+
+
+	TODO: 
+	- getRefAllele
+	- checkInput, snp and gene
+	- geneCoordSearch
 */
-
-/**************
- helper functions
-***************/
-
-// function getHolder() {
-// 	return d3s.select('body').append('div').style('padding', '5px').style('margin', '5px')
-// }
-
-// function getRow(holder) {
-// 	return holder.append('div').style('border', '1px solid #aaa').style('padding', '5px')
-// }
-
-// function getSearchBox(holder, opts = {}) {
-// 	const _opts = {
-// 		genome: hg38,
-// 		tip: new Menu({ padding: '' }),
-// 		row: getRow(holder)
-// 	}
-
-// 	const args = Object.assign(_opts, opts)
-// 	addGeneSearchbox(args)
-// }
 
 /**************
  integration tests
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/genesearch integration -***-')
+	test.pass('-***- dom/genesearch.integration -***-')
 	test.end()
 })
 
@@ -56,6 +37,32 @@ tape('string2variant() - HGVS deletion and delins variants', async test => {
 	}
 	test.deepEqual(variant, expected, 'Should parse HGVS string into a Deletion variant object')
 
+	variant = await string2variant('chr2:g.119955155_119955159delTTTTT', hg38)
+	expected = {
+		isVariant: true,
+		chr: 'chr2',
+		pos: 119955155,
+		ref: 'TTTTT',
+		alt: '-'
+	}
+	test.deepEqual(
+		variant,
+		expected,
+		'Should return correct deletion variant object when start and stop positions given.'
+	)
+
+	variant = await string2variant('chr17:g.abcdelCGCACCTCAAAGCTGTTC', hg38)
+	expected = undefined
+	test.equal(variant, expected, 'Should return undefined for invalid position for deletion format')
+
+	variant = await string2variant('chr2:g.abc_119955159delTTTTT', hg38)
+	expected = undefined
+	test.equal(variant, expected, 'Should return undefined for invalid start position for deletion format')
+
+	variant = await string2variant('chr2:g.119955155_abcdelTTTTT', hg38)
+	expected = undefined
+	test.equal(variant, expected, 'Should return undefined for invalid start position for deletion format')
+
 	//HGVS variant -> deletion/insertion
 	variant = await string2variant('chr2:g.119955155_119955159delinsTTTTT', hg38)
 	expected = {
@@ -66,6 +73,14 @@ tape('string2variant() - HGVS deletion and delins variants', async test => {
 		alt: 'TTTTT'
 	}
 	test.deepEqual(variant, expected, 'Should parse HGVS string into a Delins variant object')
+
+	variant = await string2variant('chr2:g._delinsTTTTT', hg38)
+	expected = undefined
+	test.equal(variant, expected, 'Should return undefined for invalid delins format')
+
+	variant = await string2variant('chr2:g.abc_119955159delinsTTTTT', hg38)
+	expected = undefined
+	test.equal(variant, expected, 'Should return undefined for invalid position for delins format')
 
 	test.end()
 })
