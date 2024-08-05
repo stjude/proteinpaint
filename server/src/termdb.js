@@ -319,7 +319,7 @@ async function get_matrix(q, req, res, ds, genome) {
 		res.send(plot.matrixConfig)
 		return
 	}
-	const data = await getData(q, ds, genome)
+	const data = await getData(q, ds, genome, true)
 	if (authApi.canDisplaySampleIds(req, ds)) {
 		if (data.samples)
 			for (const sample of Object.values(data.samples)) {

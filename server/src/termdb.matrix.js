@@ -58,10 +58,10 @@ Returns:
 }
 */
 
-export async function getData(q, ds, genome) {
+export async function getData(q, ds, genome, onlySamples = false) {
 	try {
 		validateArg(q, ds, genome)
-		return await getSampleData(q, ds)
+		return await getSampleData(q, ds, onlySamples)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
@@ -91,10 +91,10 @@ function validateArg(q, ds, genome) {
 	}
 }
 
-async function getSampleData(q, ds) {
+async function getSampleData(q, ds, onlySamples = false) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
-	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
+	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms, onlySamples)
 	/* samples={}
 	this object collects term annotation data on all samples; even if there's no dict term it still return blank {}
 	non-dict term data will be appended to it
@@ -371,11 +371,11 @@ output:
 		{ byTermId: {} }
 }
 */
-async function getSampleData_dictionaryTerms(q, termWrappers) {
+async function getSampleData_dictionaryTerms(q, termWrappers, onlySamples) {
 	if (!termWrappers.length) return [{}, {}]
 	if (q.ds?.cohort?.db) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
-		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
+		return await getSampleData_dictionaryTerms_termdb(q, termWrappers, onlySamples)
 	}
 	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms
 	 */
@@ -386,7 +386,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 	throw 'unknown method for dictionary terms'
 }
 
-export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
+export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, onlySamples = false) {
 	const samples = {} // to return
 	const byTermId = {} // to return
 	const filter = await getFilterCTEs(q.filter, q.ds)
@@ -438,6 +438,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		sampleIds.push(row.sample)
 		if (row.type == 'sample' || row.type == '') hasSample = true
 		if (row.type == 'root') hasRoot = true
+		console.log('row', row, hasRoot, hasSample)
 	}
 	let ancestry = []
 	if (q.ds.cohort.db.tables.has('sample_ancestry')) {
@@ -450,15 +451,18 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 
 	for (const { sample, key, term_id, value, type } of rows) {
 		const children = ancestry.filter(a => a.ancestor_id == sample).map(a => a.sample_id)
-		if (!isMixed || (isMixed && (type == 'sample' || type == ''))) {
-			if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
-			addSample(sample, term_id, key, value)
-		}
-		if (isMixed)
+		if (onlySamples || isMixed) {
 			for (const child of children) {
 				if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
 				addSample(child, term_id, key, value)
 			}
+		}
+		if (!isMixed && onlySamples && type == 'root') continue //matrix
+
+		if (!isMixed || (isMixed && (type == 'sample' || type == ''))) {
+			if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
+			addSample(sample, term_id, key, value)
+		}
 	}
 	return [samples, byTermId]
 

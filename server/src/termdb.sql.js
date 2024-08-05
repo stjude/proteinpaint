@@ -43,24 +43,16 @@ get_label4key
 
 */
 
-export async function get_samples(qfilter, ds, canDisplay = false, type = 'sample') {
+export async function get_samples(qfilter, ds, canDisplay = false) {
 	/*
 must have qfilter[]
 as the actual query is embedded in qfilter
 return an array of sample names passing through the filter
 */
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
-	let sql
-
-	if (ds.cohort.db.tableColumns[`${type}_samples`]) {
-		sql = filter
-			? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join ${type}_samples s on sample = s.id `
-			: `SELECT id, name FROM ${type}_samples`
-	} else {
-		sql = filter
-			? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id `
-			: `SELECT id, name FROM sampleidmap`
-	}
+	const sql = filter
+		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id `
+		: `SELECT id, name FROM sampleidmap`
 	const cmd = ds.cohort.db.connection.prepare(sql)
 	let re
 	if (filter) re = cmd.all(filter.values)
