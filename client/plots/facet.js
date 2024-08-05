@@ -55,14 +55,136 @@ class Facet {
 	async renderTable() {
 		const config = this.config
 		this.dom.mainDiv.selectAll('*').remove()
-		const samplesAuth = this.app.vocabApi.hasVerifiedToken()
-
 		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
-
 		const headerRow = tbody.append('tr').style('text-align', 'center')
 		//blank space left for row labels
 		headerRow.append('th')
 
+		const samplesAuth = this.app.vocabApi.hasVerifiedToken()
+		if (samplesAuth) {
+			/** If samples level data available, render interative
+			 * facet table. Clicking cells creates the list of samples
+			 * and on submit launches the sample view plot
+			 */
+			const { result, categories, categories2 } = await this.getSampleTableData(config)
+			for (const category of categories) {
+				const label = config.term.term.values?.[category]?.label || category
+				this.addHeader(headerRow, label)
+			}
+			this.renderSampleTable(tbody, config, result, categories, categories2)
+		} else {
+			/** If sample data is not available or not authorized for this user,
+			 * render a static table with counts. No interactivity. */
+			const { rows, filteredCols } = await this.getStaticTableData(config)
+			for (const col of filteredCols) {
+				const label = config.term.term.values?.[col.seriesId]?.label || col.seriesId
+				this.addHeader(headerRow, label)
+			}
+			this.renderStaticTable(tbody, config, rows, filteredCols)
+		}
+	}
+
+	renderSampleTable(tbody, config, result, categories, categories2) {
+		const cells = {}
+		for (const category2 of categories2) {
+			cells[category2] = {}
+			const tr = tbody.append('tr')
+			const label = config.term2.term.values?.[category2]?.label || category2
+			this.addRowLabel(tr, label)
+			for (const category of categories) {
+				const samples = result.lst.filter(
+					s => s[config.term.$id]?.key == category && s[config.term2.$id]?.key == category2
+				)
+				cells[category2][category] = { samples, selected: false }
+				const label = samples.length > 0 ? samples.length : ''
+				const td = this.addCellCount(tr, label)
+				if (samples.length > 0) {
+					td.on('click', () => {
+						const selected = (cells[category2][category].selected = !cells[category2][category].selected)
+						if (selected) {
+							td.style('border', '1px solid blue')
+						} else {
+							td.style('border', 'none')
+						}
+						for (const category2 of categories2) {
+							for (const category of categories) {
+								if (cells[category2][category].selected) {
+									showSamplesBt.property('disabled', false)
+									return
+								}
+							}
+						}
+						showSamplesBt.property('disabled', true)
+					})
+				}
+			}
+		}
+
+		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
+		//.style('float', 'right')
+		const showSamplesBt = buttonDiv
+			.append('button')
+			.property('disabled', true)
+			.text('Show samples')
+			.on('click', () => {
+				const samples = []
+				for (const category2 of categories2) {
+					for (const category of categories) {
+						if (cells[category2][category].selected) {
+							samples.push(...cells[category2][category].samples)
+						}
+					}
+				}
+				this.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'sampleView',
+						samples: samples.map(d => ({
+							sampleId: d.sample,
+							sampleName: result.refs.bySampleId[d.sample].label
+						}))
+					}
+				})
+			})
+	}
+
+	async getSampleTableData(config) {
+		const result = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: [config.term, config.term2]
+		})
+		const categories = this.getCategories(config.term, result.lst)
+
+		const categories2 = this.getCategories(config.term2, result.lst)
+
+		return { result, categories, categories2 }
+	}
+
+	getCategories(tw, data) {
+		const categories = []
+		for (const sample of data) {
+			let key = sample[tw.$id]?.key
+			if (key) {
+				if (!isNaN(key)) key = Number(key)
+				categories.push(key)
+			}
+		}
+		const set = new Set(categories)
+		return Array.from(set).sort()
+	}
+
+	renderStaticTable(tbody, config, rows) {
+		for (const row of rows) {
+			const tr = tbody.append('tr')
+			const label = config.term2.term.values?.[row[0]].label || row[0]
+			this.addRowLabel(tr, label)
+			for (const col of row[1]) {
+				const label = col[1].value > 0 ? col[1].value : ''
+				this.addCellCount(tr, label)
+			}
+		}
+	}
+
+	async getStaticTableData(config) {
 		config.settings = {
 			exclude: {
 				cols: Object.keys(config.term.q?.hiddenValues || {})
@@ -104,9 +226,7 @@ class Facet {
 		}
 
 		const result = await this.app.vocabApi.getNestedChartSeriesData(opts)
-
 		const rows = new Map()
-
 		const filteredCols = result.data.charts[0].serieses.filter(
 			col => !config.settings.exclude.cols.some(i => i == col.seriesId)
 		)
@@ -121,84 +241,7 @@ class Facet {
 				}
 			})
 
-		for (const col of filteredCols) {
-			headerRow
-				.append('th')
-				.style('text-align', 'left')
-				.style('background-color', '#FAFAFA')
-				.style('padding-right', '50px')
-				.attr('data-testid', 'sjpp-facet-col-header')
-				.text(config.term.term.values?.[col.seriesId]?.label || col.seriesId)
-		}
-
-		for (const row of rows) {
-			const tr = tbody.append('tr')
-			tr.append('td')
-				.style('background-color', '#FAFAFA')
-				.style('font-weight', 'bold')
-				.text(config.term2.term.values?.[row[0]].label || row[0])
-				.attr('data-testid', 'sjpp-facet-row-label')
-			for (const col of row[1]) {
-				const cell = tr
-					.append('td')
-					.style('background-color', '#FAFAFA')
-					.style('text-align', 'center')
-					.text(col[1].value > 0 ? col[1].value : '')
-				if (col[1].value > 0) {
-					cell.on('click', () => {
-						const selected = (col[1].selected = !col[1].selected)
-						if (selected) {
-							cell.style('border', '1px solid blue')
-						} else {
-							cell.style('border', 'none')
-						}
-						for (const row of rows) {
-							for (const col of row[1]) {
-								if (col[1].selected && samplesAuth) {
-									showSamplesBt.property('disabled', false)
-									return
-								}
-							}
-						}
-						showSamplesBt.property('disabled', true)
-					})
-				}
-			}
-		}
-		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
-		//.style('float', 'right')
-		const showSamplesBt = buttonDiv.append('button').property('disabled', true)
-
-		if (samplesAuth) {
-			showSamplesBt.text('Show samples').on('click', async () => {
-				const samples = []
-				const sampleList = await this.app.vocabApi.getAnnotatedSampleData({
-					filter: config.filter,
-					terms: [config.term, config.term2]
-				})
-				for (const row of rows) {
-					for (const col of row[1]) {
-						if (col[1].selected) {
-							const foundSamples = sampleList.lst
-								.filter(s => s[config.term.$id].key == col[0] && s[config.term2.$id].key == row[0])
-								.map(s => {
-									return { sampleId: s.sample, sampleName: s._ref_.label }
-								})
-							samples.push(...foundSamples)
-						}
-					}
-				}
-				this.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'sampleView',
-						samples
-					}
-				})
-			})
-		} else {
-			showSamplesBt.text('Not available')
-		}
+		return { rows, filteredCols }
 	}
 
 	async getDescrStats(term) {
@@ -207,6 +250,28 @@ class Facet {
 			if (data.error) throw data.error
 			term.q.descrStats = data.values
 		}
+	}
+
+	addHeader(headerRow, text) {
+		headerRow
+			.append('th')
+			.attr('data-testid', 'sjpp-facet-col-header')
+			.style('text-align', 'left')
+			.style('background-color', '#FAFAFA')
+			.style('padding-right', '50px')
+			.text(text)
+	}
+
+	addRowLabel(tr, label) {
+		tr.append('td')
+			.attr('data-testid', 'sjpp-facet-row-label')
+			.style('background-color', '#FAFAFA')
+			.style('font-weight', 'bold')
+			.text(label)
+	}
+
+	addCellCount(tr, label) {
+		return tr.append('td').style('background-color', '#FAFAFA').style('text-align', 'center').text(label)
 	}
 
 	async setControls() {
