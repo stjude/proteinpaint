@@ -97,6 +97,7 @@ export function getTermOrder(data) {
 		totalIndex += processedLst.length
 		visibleGrpIndex += 1
 	}
+	this.numTerms = termOrder.length
 	return termOrder
 }
 
