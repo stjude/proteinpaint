@@ -97,7 +97,9 @@ export async function getPlotConfig(opts = {}, app) {
 				collabelgap: 5,
 				collabelpad: 1,
 				collabelmaxchars: 32,
-				rowh: 18,
+				rowh: 0, //use 0 to auto-compute row height, previous default=18,
+				rowhMin: 1,
+				rowhMax: 20,
 				rowspace: 1,
 				rowgspace: 8,
 				rowlabelpos: 'left', // | 'right'

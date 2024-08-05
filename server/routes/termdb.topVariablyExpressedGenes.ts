@@ -8,6 +8,7 @@ import got from 'got'
 import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'
 import { makeFilter } from '#src/mds3.gdc.js'
+import { cachedFetch } from '#src/utils.js'
 
 export const api = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -148,12 +149,14 @@ function gdcValidateQuery(ds: any, genome: any) {
 		const { host, headers } = ds.getHostHeaders(q)
 		const url = path.join(host.geneExp, '/gene_expression/gene_selection')
 		try {
-			const response = await got.post(url, {
+			// cachedFetch will only cache a response if an external API URL is enabled in serverconfig.features.extApiCache
+			const response = await cachedFetch(url, {
+				method: 'POST',
 				headers,
-				body: JSON.stringify(getGeneSelectionArg(q))
+				body: getGeneSelectionArg(q) // JSON.stringify(getGeneSelectionArg(q))
 			})
 
-			const re = JSON.parse(response.body)
+			const re = response.body // JSON.parse(response.body)
 			// {"gene_selection":[{"gene_id":"ENSG00000141510","log2_uqfpkm_median":3.103430497010492,"log2_uqfpkm_stddev":0.8692021350485105,"symbol":"TP53"}, ... ]}
 
 			const genes = [] as string[]

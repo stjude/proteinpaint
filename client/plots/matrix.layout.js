@@ -62,7 +62,23 @@ export function setAutoDimensions(xOffset) {
 	}
 
 	if (this.autoDimensions.has('rowh')) {
-		this.computedSettings.rowh = Math.max(5, Math.round(screen.availHeight / this.numTerms))
+		const hch = this.state.config.settings.hierCluster?.yDendrogramHeight || 0
+		const availHeight = screen.availHeight - hch
+		this.computedSettings.rowh = Math.min(s.rowhMax, Math.max(s.rowhMin, Math.round(availHeight / this.numTerms)))
+		this.computedSettings.rowspace = this.computedSettings.rowh < 3 ? 0 : s.rowspace
+
+		// TODO: delete this console.log
+		console.log(
+			68,
+			availHeight,
+			this.computedSettings.rowh,
+			s.rowhMin,
+			s.rowhMax,
+			this.numTerms,
+			Math.round(availHeight / this.numTerms),
+			Math.max(s.rowhMin, Math.round(availHeight / this.numTerms)),
+			Math.min(s.rowhMax, Math.max(s.rowhMin, Math.round(availHeight / this.numTerms)))
+		)
 	}
 
 	copyMerge(this.settings.matrix, this.computedSettings)
