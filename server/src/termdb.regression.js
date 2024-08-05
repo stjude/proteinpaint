@@ -1206,9 +1206,10 @@ async function getSampleData_dictionaryTerms(q, terms) {
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-			SELECT sample, key, value, ? as term_id
+			SELECT sample, key, value, ? as term_id inner join sampleidmap s on s.id = sample
 			FROM ${t.tablename}
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
+			AND s.type != 'root'
 			`
 		).join(`UNION ALL`)}`
 
