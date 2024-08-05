@@ -151,19 +151,13 @@ class Facet {
 		const result = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: [config.term, config.term2]
 		})
-
-		let categories, categories2
-		categories = this.getCategories(config.term, result.lst)
-		if (isNumericTerm(config.term.term)) categories = this.orderColNames(categories)
-
-		categories2 = this.getCategories(config.term2, result.lst)
-		if (isNumericTerm(config.term2.term)) categories2 = this.orderColNames(categories2)
-
+		const categories = this.getCategories(config.term, result.lst)
+		const categories2 = this.getCategories(config.term2, result.lst)
 		return { result, categories, categories2 }
 	}
 
 	getCategories(tw, data) {
-		const categories = []
+		let categories = []
 		for (const sample of data) {
 			let key = sample[tw.$id]?.key
 			if (key) {
@@ -172,7 +166,18 @@ class Facet {
 			}
 		}
 		const set = new Set(categories)
-		return Array.from(set).sort()
+		categories = Array.from(set).sort()
+
+		if (isNumericTerm(tw.term)) {
+			Object.values(tw.term.values).forEach(i => {
+				if (i?.uncomputable) {
+					const index = categories.indexOf(i.label)
+					if (index > -1) categories.splice(index, 1)
+				}
+			})
+			categories = this.orderColNames(categories)
+		}
+		return categories
 	}
 
 	orderColNames(cols) {
@@ -209,6 +214,8 @@ class Facet {
 	}
 
 	async getStaticTableData(config) {
+		//*** Do show uncomputeable values when table is static
+
 		// config.settings = {
 		// 	exclude: {
 		// 		cols: Object.keys(config.term.q?.hiddenValues || {})
