@@ -326,7 +326,13 @@ type TklstEntry = {
 	name: string
 	sample?: string
 	file: string
+	level1?: string
 	defaultShown?: boolean
+	stackheight?: number
+	stackspace?: number
+	toppad?: number
+	bottompad?: number
+	onerow?: number // should be boolean???
 }
 
 type TrackLstEntry = {
@@ -376,6 +382,7 @@ type Probe2Cnv = {
 
 type RnaseqGeneCount = {
 	file: string
+	samplesFile?: string
 }
 
 /** the metabolite query */
@@ -573,6 +580,10 @@ type Mds3Queries = {
 	rnaseqGeneCount?: RnaseqGeneCount
 	topMutatedGenes?: TopMutatedGenes
 	topVariablyExpressedGenes?: TopVariablyExpressedGenesQuery
+	metaboliteIntensity?: {
+		src: 'native' | 'gdc'
+		file: string
+	}
 	trackLst?: TrackLstEntry[]
 	// TODO singleSampleGbtk
 	singleCell?: SingleCellQuery
@@ -728,6 +739,7 @@ type MatrixSettings = {
 	sortByMutation?: string
 	/** this is now computed from sortPriority[x].tiebreakers.find(tb => tb.filter?.values[0]?.dt === 4).isOrdered */
 	sortByCNV?: boolean
+	cnvUnit?: 'log2ratio' | 'segmedian'
 }
 
 type Matrix = {
