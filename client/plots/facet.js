@@ -89,8 +89,8 @@ class Facet {
 		for (const category2 of categories2) {
 			cells[category2] = {}
 			const tr = tbody.append('tr')
-			const label = config.term2.term.values?.[category2]?.label || category2
-			this.addRowLabel(tr, label)
+			const label2 = config.term2.term.values?.[category2]?.label || category2
+			this.addRowLabel(tr, label2)
 			for (const category of categories) {
 				const samples = result.lst.filter(
 					s => s[config.term.$id]?.key == category && s[config.term2.$id]?.key == category2
@@ -98,7 +98,7 @@ class Facet {
 				cells[category2][category] = { samples, selected: false }
 				const label = samples.length > 0 ? samples.length : ''
 				const td = this.addCellCount(tr, label)
-				if (samples.length > 0) {
+				if (samples.length > 0)
 					td.on('click', () => {
 						const selected = (cells[category2][category].selected = !cells[category2][category].selected)
 						if (selected) {
@@ -106,6 +106,7 @@ class Facet {
 						} else {
 							td.style('border', 'none')
 						}
+
 						for (const category2 of categories2) {
 							for (const category of categories) {
 								if (cells[category2][category].selected) {
@@ -116,10 +117,8 @@ class Facet {
 						}
 						showSamplesBt.property('disabled', true)
 					})
-				}
 			}
 		}
-
 		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
 		//.style('float', 'right')
 		const showSamplesBt = buttonDiv
@@ -152,9 +151,13 @@ class Facet {
 		const result = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: [config.term, config.term2]
 		})
-		const categories = this.getCategories(config.term, result.lst)
 
-		const categories2 = this.getCategories(config.term2, result.lst)
+		let categories, categories2
+		categories = this.getCategories(config.term, result.lst)
+		if (isNumericTerm(config.term.term)) categories = this.orderColNames(categories)
+
+		categories2 = this.getCategories(config.term2, result.lst)
+		if (isNumericTerm(config.term2.term)) categories2 = this.orderColNames(categories2)
 
 		return { result, categories, categories2 }
 	}
@@ -170,6 +173,27 @@ class Facet {
 		}
 		const set = new Set(categories)
 		return Array.from(set).sort()
+	}
+
+	orderColNames(cols) {
+		//Show ranges first, then strings
+		const tmpNums = []
+		const tmpStrings = []
+		for (const col of cols) {
+			const c = col.split(' to ')
+			const cx = c[0].replace(/[\>\≥\<\≤]/g, '')
+			const x = Number(cx)
+			if (!isNaN(x)) {
+				const key =
+					!c[1] && (col.includes('<') || col.includes('≤'))
+						? x - 1
+						: !c[1] && (col.includes('≥') || col.includes('>'))
+						? x + 1
+						: x
+				tmpNums.push({ key, label: col })
+			} else tmpStrings.push(cx)
+		}
+		return [...tmpNums.sort((a, b) => a.key - b.key).map(i => i.label), ...tmpStrings.sort()]
 	}
 
 	renderStaticTable(tbody, config, rows) {
