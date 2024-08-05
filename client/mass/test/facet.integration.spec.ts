@@ -58,7 +58,7 @@ tape('Render facet table', test => {
 		const headerNum = table.selectAll('th[data-testid="sjpp-facet-col-header"]').size()
 		test.equal(headerNum, 5, 'Should render 5 headers')
 		const rowNum = table.selectAll('td[data-testid="sjpp-facet-row-label"]').size()
-		test.equal(rowNum, 7, 'Should render 7 rows')
+		test.equal(rowNum, 10, 'Should render 10 rows')
 
 		const findSampleBtn = table.select('button').node()
 		test.true(
