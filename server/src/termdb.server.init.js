@@ -70,8 +70,13 @@ export function server_init_db_queries(ds) {
 	]
 
 	if (tables.has('sample_ancestry')) {
-		const num_rows = cn.prepare('SELECT count(*) as num_rows FROM sample_ancestry').get().num_rows
-		if (num_rows > 0) ds.cohort.termdb.hasAncestry = true
+		const rows = cn.prepare('SELECT * FROM sample_ancestry').all()
+		if (rows.length) ds.cohort.termdb.hasAncestry = true
+		ds.sample2Children = new Map()
+		for (const row of rows) {
+			if (!ds.sample2Children.has(row.ancestor_id)) ds.sample2Children.set(row.ancestor_id, [])
+			ds.sample2Children.get(row.ancestor_id).push(row.sample_id)
+		}
 	}
 	for (const table of schema_tables) if (!tables.has(table)) console.log(`${table} table missing!!!!!!!!!!!!!!!!!!!!`)
 	//throw `${table} table missing`
@@ -116,7 +121,7 @@ export function server_init_db_queries(ds) {
 		for (const { id, name, type } of s.all()) {
 			i2s.set(id, name)
 			s2i.set(name, id)
-			if (type == 'sample' || !type) totalCount++
+			if (type != 'root' || !type) totalCount++ //later on if more than two types we need to pass the type
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)

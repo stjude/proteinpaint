@@ -59,10 +59,10 @@ Returns:
 }
 */
 
-export async function getData(q, ds, genome) {
+export async function getData(q, ds, genome, onlyChildren = false) {
 	try {
 		validateArg(q, ds, genome)
-		return await getSampleData(q, ds)
+		return await getSampleData(q, ds, onlyChildren)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
@@ -92,10 +92,10 @@ function validateArg(q, ds, genome) {
 	}
 }
 
-async function getSampleData(q, ds) {
+async function getSampleData(q, ds, onlyChildren = false) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
-	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
+	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms, onlyChildren)
 	/* samples={}
 	this object collects term annotation data on all samples; even if there's no dict term it still return blank {}
 	non-dict term data will be appended to it
@@ -372,11 +372,11 @@ output:
 		{ byTermId: {} }
 }
 */
-async function getSampleData_dictionaryTerms(q, termWrappers) {
+async function getSampleData_dictionaryTerms(q, termWrappers, onlyChildren = false) {
 	if (!termWrappers.length) return [{}, {}]
 	if (q.ds?.cohort?.db) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
-		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
+		return await getSampleData_dictionaryTerms_termdb(q, termWrappers, onlyChildren)
 	}
 	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms
 	 */
@@ -387,7 +387,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 	throw 'unknown method for dictionary terms'
 }
 
-export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
+export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, onlyChildren) {
 	const samples = {} // to return
 	const byTermId = {} // to return
 	const filter = await getFilterCTEs(q.filter, q.ds)
@@ -426,40 +426,43 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-			SELECT sample, key, value, ? as term_id, s.type
-			FROM ${t.tablename} join sampleidmap s on sample = s.id
+			SELECT sample, key, value, ? as term_id
+			FROM ${t.tablename} 
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
 			`
 		).join(`UNION ALL`)}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	const sampleIds = []
-	let hasSample = false
+	let hasChildren = false
 	let hasRoot = false
 	for (const row of rows) {
 		sampleIds.push(row.sample)
-		if (row.type == 'sample' || row.type == '') hasSample = true
-		if (row.type == 'root') hasRoot = true
+		const type = q.ds.sampleId2Type.get(row.sample)
+		if (type == 'root') hasRoot = true
+		else hasChildren = true
 	}
-	let ancestry = []
-	if (q.ds.cohort.db.tables.has('sample_ancestry')) {
-		const ancestrySql = `select * from sample_ancestry where ancestor_id in (${sampleIds.join(',')})`
-		ancestry = q.ds.cohort.db.connection.prepare(ancestrySql).all()
-	}
-	const isMixed = hasRoot && hasSample
+
+	const isMixed = hasRoot && hasChildren
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
+	for (const { sample, key, term_id, value } of rows) {
+		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
+		const type = q.ds.sampleId2Type.get(sample)
 
-	for (const { sample, key, term_id, value, type } of rows) {
-		const children = ancestry.filter(a => a.ancestor_id == sample).map(a => a.sample_id)
-		if (!isMixed || (isMixed && (type == 'sample' || type == ''))) {
-			if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
+		const children = q.ds.sample2Children.get(sample)
+		if (onlyChildren || isMixed) {
+			//if some annotations are on parent and some on children or onlyChildren set to true add only children
+			if (children)
+				for (const child of children) {
+					addSample(child, term_id, key, value)
+				}
+		}
+		if (onlyChildren && type == 'root') continue //eg matrix
+
+		if (!isMixed || (isMixed && type != 'root')) {
+			//add annotations for samples or root samples found
 			addSample(sample, term_id, key, value)
 		}
-		if (isMixed)
-			for (const child of children) {
-				if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
-				addSample(child, term_id, key, value)
-			}
 	}
 	return [samples, byTermId]
 
