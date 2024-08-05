@@ -185,34 +185,34 @@ class Facet {
 	}
 
 	async getStaticTableData(config) {
-		config.settings = {
-			exclude: {
-				cols: Object.keys(config.term.q?.hiddenValues || {})
-					.filter(id => config.term.q.hiddenValues[id])
-					.map(id => {
-						return config.term.term.type == 'categorical'
-							? id
-							: config.settings.cols?.includes(id)
-							? id
-							: config.term.term.values[id]?.label
-							? config.term.term.values[id].label
-							: id
-					}),
-				rows: !config.term2?.q?.hiddenValues
-					? []
-					: Object.keys(config.term2.q.hiddenValues)
-							.filter(id => config.term2.q.hiddenValues[id])
-							.map(id =>
-								config.term2.term.type == 'categorical'
-									? id
-									: config.settings.rows?.includes(id)
-									? id
-									: config.term2.term.values[id]?.label
-									? config.term2.term.values[id].label
-									: id
-							)
-			}
-		}
+		// config.settings = {
+		// 	exclude: {
+		// 		cols: Object.keys(config.term.q?.hiddenValues || {})
+		// 			.filter(id => config.term.q.hiddenValues[id])
+		// 			.map(id => {
+		// 				return config.term.term.type == 'categorical'
+		// 					? id
+		// 					: config.settings.cols?.includes(id)
+		// 					? id
+		// 					: config.term.term.values[id]?.label
+		// 					? config.term.term.values[id].label
+		// 					: id
+		// 			}),
+		// 		rows: !config.term2?.q?.hiddenValues
+		// 			? []
+		// 			: Object.keys(config.term2.q.hiddenValues)
+		// 					.filter(id => config.term2.q.hiddenValues[id])
+		// 					.map(id =>
+		// 						config.term2.term.type == 'categorical'
+		// 							? id
+		// 							: config.settings.rows?.includes(id)
+		// 							? id
+		// 							: config.term2.term.values[id]?.label
+		// 							? config.term2.term.values[id].label
+		// 							: id
+		// 					)
+		// 	}
+		// }
 
 		const opts = { term: config.term, filter: this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
@@ -227,13 +227,14 @@ class Facet {
 
 		const result = await this.app.vocabApi.getNestedChartSeriesData(opts)
 		const rows = new Map()
-		const filteredCols = result.data.charts[0].serieses.filter(
-			col => !config.settings.exclude.cols.some(i => i == col.seriesId)
-		)
-		//These rows are in the correct ascending order
+
+		//These columns and rows are in the correct ascending order
 		//Set first and no need to sort later
+		const filteredCols = result.data.refs.cols
+			// .filter(col => !config.settings.exclude.cols.some(i => i == col.seriesId))
+			.map(col => result.data.charts[0].serieses.find(s => s.seriesId == col))
 		result.data.refs.rows
-			.filter(row => !config.settings.exclude.rows.some(i => i == row))
+			// .filter(row => !config.settings.exclude.rows.some(i => i == row))
 			.forEach(row => {
 				rows.set(row, new Map())
 				for (const col of filteredCols) {
