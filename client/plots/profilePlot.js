@@ -75,7 +75,7 @@ export class profilePlot {
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		document.addEventListener('scroll', event => this?.tip?.hide())
 		icon_functions['pdf'](iconsDiv.append('div').style('padding', '0px 5px 15px 5px'), {
-			title: 'Clear filters',
+			title: 'Download as PDF',
 			handler: () => {
 				window.print()
 			}
@@ -84,7 +84,7 @@ export class profilePlot {
 			//Facility radar plot does not need to compare
 			const compareIconDiv = iconsDiv.append('div').style('margin-bottom', '20px')
 			const compareBt = compareIconDiv.append('button').style('border', 'none').style('background-color', 'transparent')
-			icon_functions['compare'](compareBt, { title: 'Add a plot for comparison' })
+			icon_functions['compare'](compareBt, { title: 'Compare with another plot' })
 
 			compareBt.on('click', async event => {
 				const comparison = (this.settings.comparison = !this.settings.comparison)
@@ -433,6 +433,7 @@ export class profilePlot {
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
+		this.settings.site = '' //always clear site when a filter is changed
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
@@ -548,6 +549,7 @@ export class profilePlot {
 	}
 
 	getPercentage(d, isAggregate = null) {
+		console.log(d, isAggregate)
 		if (!d) return null
 		if (isAggregate == null)
 			//not specified when called
