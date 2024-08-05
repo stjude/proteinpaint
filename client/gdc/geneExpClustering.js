@@ -68,7 +68,7 @@ export async function init(arg, holder, genomes) {
 		if (!settings.hierCluster) settings.hierCluster = {}
 		if (typeof settings.hierCluster != 'object') throw 'arg.settings.hierCluster{} not object'
 		// set defaults
-		if (!Number.isInteger(settings.hierCluster.maxGenes)) settings.hierCluster.maxGenes = 100
+		if (!Number.isInteger(settings.hierCluster.maxGenes)) settings.hierCluster.maxGenes = 1000
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
