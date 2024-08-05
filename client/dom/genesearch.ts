@@ -618,7 +618,7 @@ async function hgvs_del(chr: string, v: string, genome: ClientCopyGenome) {
 		}
 	}
 	// deleted ref nt is not given. this info is coded in tmppos, either "333" or "333_334"
-	// TODO to be tested!!!
+
 	const [t1, t2] = tmppos.split('_')
 	const start = Number(t1)
 	const stop = t2 ? Number(t2) : start + 1
