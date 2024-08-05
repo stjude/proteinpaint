@@ -1,7 +1,7 @@
 import { clinsig } from './clinvar.js'
 import { Mds3 } from '#types'
 
-export default <Mds3>{
+export default {
 	isMds3: true,
 	dsinfo: [
 		{ k: 'Source', v: '<a href=http://www.ncbi.nlm.nih.gov/clinvar/ target=_blank>NCBI ClinVar</a>' },
@@ -51,4 +51,4 @@ export default <Mds3>{
 		]
 	},
 */
-}
+} satisfies Mds3

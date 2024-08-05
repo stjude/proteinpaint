@@ -25,7 +25,7 @@ reason:
 
 copyDataFilesFromRepo2Tp()
 
-export default <Mds3>{
+export default {
 	isMds3: true,
 	cohort: {
 		db: {
@@ -258,7 +258,7 @@ export default <Mds3>{
 			}
 		}
 	}
-}
+} satisfies Mds3
 
 function copyDataFilesFromRepo2Tp() {
 	// when running tests in a CI environment, the workflow script should copy
