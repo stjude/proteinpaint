@@ -425,7 +425,9 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-			SELECT sample, key, value, ? as term_id, s.type as type
+			SELECT sample, key, value, ? as term_id, ${
+				q.ds.cohort.db.tableColumns['sampleidmap'].includes('type') ? 's.type' : 'null'
+			} as type
 			FROM ${t.tablename} join sampleidmap s on sample = s.id
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
 			`
