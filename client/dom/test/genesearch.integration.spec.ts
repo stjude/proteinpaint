@@ -13,7 +13,7 @@ import { hg38 } from '../../test/testdata/genomes'
 */
 
 /**************
- integration tests
+ test sections
 ***************/
 
 tape('\n', test => {
