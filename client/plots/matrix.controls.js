@@ -1262,12 +1262,14 @@ export class MatrixControls {
 				tip.clear()
 				this.setMenuBackBtn(tip.d.append('div'), () => GenesBtn.click())
 				const name = nameInput.property('value')
+				const s = parent.config.settings.hierCluster
 				selectedGroup = {
 					index: tg.length,
 					name,
 					label: name,
 					lst: [],
-					status: 'new'
+					status: 'new',
+					mode: parent.state.termdbConfig.queries?.snvindel ? TermTypes.GENE_VARIANT : ''
 				}
 				triggerGenesetEdit(tip.d.append('div'))
 			})
