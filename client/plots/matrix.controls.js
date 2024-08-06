@@ -384,20 +384,6 @@ export class MatrixControls {
 					// 	processInput: tw => {},
 					// },
 					{
-						label: `Row Group Label Character Limit`,
-						title: `Truncate the row group label if it exceeds this maximum number of characters`,
-						type: 'number',
-						chartType: 'matrix',
-						settingsKey: 'termGrpLabelMaxChars'
-					},
-					{
-						label: `Row Label Character Limit`,
-						title: `Truncate the row label if it exceeds this maximum number of characters`,
-						type: 'number',
-						chartType: 'matrix',
-						settingsKey: 'rowlabelmaxchars'
-					},
-					{
 						label: 'Genomic Alterations Rendering',
 						title: `Set how to indicate a ${l.sample}'s applicable variant types in the same matrix cell`,
 						type: 'radio',
@@ -1122,7 +1108,7 @@ export class MatrixControls {
 
 		if (parent.opts.customInputs?.genes) {
 			// these are embedder portal specific controls
-			for (const inputConfig of parent.opts.customInputs?.genes) {
+			for (const inputConfig of parent.opts.customInputs.genes) {
 				inputConfig.chartType = 'matrix'
 				const holder = table.append('tr')
 				if (inputConfig.title) holder.attr('title', inputConfig.title)
@@ -1152,6 +1138,10 @@ export class MatrixControls {
 		const GenesBtn = this.btns.filter(d => d.label == 'Genes')?.node()
 		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
+
+		//the number of groups in the current matrix
+		const numOfGrps = tg.length
+
 		let selectedGroup
 		const triggerGenesetEdit = holder => {
 			holder.selectAll('*').remove()
@@ -1164,9 +1154,9 @@ export class MatrixControls {
 				geneList,
 				customInputs: this.parent.opts.customInputs?.geneset,
 				/* running hier clustering and the editing group is the group used for clustering
-			pass this mode value to inform ui to support the optional button "top variably exp gene"
-			this is hardcoded for the purpose of gene expression and should be improved
-			*/
+				pass this mode value to inform ui to support the optional button "top variably exp gene"
+				this is hardcoded for the purpose of gene expression and should be improved
+				*/
 
 				mode: selectedGroup.mode,
 				minNumGenes: selectedGroup.mode == 'geneExpression' ? 3 : 1,
@@ -1176,7 +1166,7 @@ export class MatrixControls {
 					tip.hide()
 					const group = selectedGroup.status == 'new' ? { name: groupName, lst: [] } : tg[selectedGroup.index]
 					if (selectedGroup.status == 'new') tg.push(group)
-					const targetTermType = selectedGroup.mode // == 'expression' ? 'geneExpression' : 'geneVariant'
+					const targetTermType = selectedGroup.mode == 'geneExpression' ? 'geneExpression' : 'geneVariant'
 					// remove gene terms to be replaced by the new lst, keep all other term types in the group
 					const lst = group.lst.filter(tw => tw.term.type != targetTermType)
 					const tws = await Promise.all(
@@ -1217,43 +1207,54 @@ export class MatrixControls {
 		}
 
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
-		const td = tr.append('td')
+		const td1 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
+		const editGrpDiv = td1.append('div')
 
-		const editBtn = td
+		const editBtn = editGrpDiv
 			.append('button')
-			.html('Edit Group')
+			.html(numOfGrps > 1 ? 'Edit Selected Group' : 'Edit Current Group')
 			.on('click', () => {
 				tip.clear()
 				this.setMenuBackBtn(tip.d.append('div').style('padding', '5px'), () => GenesBtn.click())
-				const { groups, groupSelect } = this.setTermGroupSelector(tip.d.append('div'), tg)
 				const genesetEdiUiHolder = tip.d.append('div')
-				groupSelect.on('change', () => {
-					selectedGroup = groups[groupSelect.property('value')]
-					triggerGenesetEdit(genesetEdiUiHolder)
-				})
-				const groupIndex = groupSelect.property('value')
-				selectedGroup = groups[groupIndex]
 				triggerGenesetEdit(genesetEdiUiHolder)
 			})
 
-		const createBtn = td
+		if (numOfGrps > 1) {
+			const { groups, groupSelect } = this.setTermGroupSelector(editGrpDiv, tg)
+			selectedGroup = groups.find(g => g.selected)
+			groupSelect.on('change', () => {
+				selectedGroup = groups[groupSelect.property('value')]
+			})
+		} else {
+			const s = parent.config.settings.hierCluster
+			const g = tg[0]
+			selectedGroup = {
+				index: 0,
+				name: g.name,
+				type: g.type,
+				lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
+				mode:
+					this.parent.chartType == 'hierCluster' && (g.type == 'hierCluster' || g.name == s?.termGroupName)
+						? s.dataType // is clustering group, pass dataType
+						: // !!subject to change!! when group is not clustering, and ds has mutation, defaults to MUTATION_CNV_FUSION
+						this.parent.state.termdbConfig.queries?.snvindel
+						? TermTypes.GENE_VARIANT
+						: '',
+				selected: true
+			}
+		}
+
+		const td2 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
+		const createNewGrpDiv = td2.append('div')
+
+		const createBtn = createNewGrpDiv
 			.append('button')
 			.html('Create Group')
+			.property('disabled', true)
 			.on('click', () => {
 				tip.clear()
 				this.setMenuBackBtn(tip.d.append('div'), () => GenesBtn.click())
-				const div = tip.d.append('div').style('padding', '5px')
-				const label = div.append('label')
-				label.append('span').text('Create ')
-				const nameInput = label
-					.append('input')
-					.style('margin', '2px 5px')
-					.style('width', '210px')
-					.attr('placeholder', 'Group Name')
-					.on('input', () => {
-						createBtn.property('disabled', !nameInput.property('value'))
-					})
-
 				const name = nameInput.property('value')
 				selectedGroup = {
 					index: tg.length,
@@ -1263,6 +1264,15 @@ export class MatrixControls {
 					status: 'new'
 				}
 				triggerGenesetEdit(tip.d.append('div'))
+			})
+
+		const nameInput = createNewGrpDiv
+			.append('input')
+			.style('margin', '2px 5px')
+			.style('width', '210px')
+			.attr('placeholder', 'Group Name')
+			.on('input', () => {
+				createBtn.property('disabled', !nameInput.property('value'))
 			})
 
 		// if (parent.opts.customInputs?.geneset) {
@@ -1323,7 +1333,6 @@ export class MatrixControls {
 	}
 
 	setTermGroupSelector(holder, tg) {
-		holder.style('padding', '5px')
 		//const label = grpDiv.append('label')
 		//label.append('span').html('')
 		const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
@@ -1348,10 +1357,7 @@ export class MatrixControls {
 			}
 		})
 
-		const label = holder.append('label')
-		label.append('span').text('Edit ')
-		const groupSelect = label.append('select').style('margin', '2px 5px').style('width', '218px')
-
+		const groupSelect = holder.append('select').style('width', '218px').style('margin', '2px 5px')
 		for (const [i, group] of groups.entries()) {
 			if (group.label) continue
 			if (group.name) group.label = group.name
