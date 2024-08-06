@@ -103,7 +103,7 @@ function addButtons(headerHolder, app, dslabel, logged, site) {
 	if (logged)
 		div
 			.append('button')
-			.text('Radar 1-Score-based')
+			.text('Radar 1-Score-based(Site)')
 			.on('click', e => launchRadarPlot(app, 'profileRadarFacility', 'Radar Graph 1', 'plot1', logged, site))
 	if (logged)
 		div
