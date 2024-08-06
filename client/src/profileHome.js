@@ -73,6 +73,7 @@ async function loadDataset(headerHolder, dslabel) {
 }
 
 function addButtons(headerHolder, app, dslabel, logged, site) {
+	const isFull = dslabel == 'ProfileFull'
 	const div = headerHolder
 		.append('div')
 		.style('display', 'inline-flex')
@@ -102,23 +103,23 @@ function addButtons(headerHolder, app, dslabel, logged, site) {
 	if (logged)
 		div
 			.append('button')
-			.text('Radar Graph 1')
+			.text('Radar 1-Score-based')
 			.on('click', e => launchRadarPlot(app, 'profileRadarFacility', 'Radar Graph 1', 'plot1', logged, site))
 	if (logged)
 		div
 			.append('button')
-			.text('Radar Graph 2')
+			.text('Radar 2-Impressions')
 			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar Graph 2', 'plot1', logged, site))
-	if (dslabel == 'ProfileFull' && logged)
+	if (isFull && logged)
 		div
 			.append('button')
-			.text('Radar Graph 3')
+			.text('Radar 3-Score-based(SC & POC)')
 			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar Graph 3', 'plot2', logged, site))
-	if (logged)
-		div
-			.append('button')
-			.text('Summary')
-			.on('click', e => launchSummaryPlot(e.target, app, logged, site))
+	// if (logged)
+	// 	div
+	// 		.append('button')
+	// 		.text('Summary')
+	// 		.on('click', e => launchSummaryPlot(e.target, app, logged, site))
 
 	const deleteBt = div
 		.append('button')

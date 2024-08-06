@@ -85,7 +85,9 @@ class profileBarchart extends profilePlot {
 		const title =
 			this.state.dslabel == 'ProfileAbbrev'
 				? `Score-based Results for the ${this.component} Component by Module and Domain Compared with End-User Impression`
-				: `Objective and Subjective Score-based Results for the ${this.component} Component by Module and Domain`
+				: `Objective ${this.component == 'Patients and Outcomes' ? '' : 'and Subjective '}Score-based Results for the ${
+						this.component
+				  } Component by Module and Domain`
 		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(title)
 		const svg = this.svg
 		const color = this.configComponent.component.color
@@ -216,6 +218,7 @@ class profileBarchart extends profilePlot {
 
 	drawRect(x, y, row, field, g) {
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
+
 		const d = row[field]
 		let subjectiveTerm = false
 		if ((row.name == 'Total Module' || row.name == 'End-user Impression*') && !row.term2) subjectiveTerm = true
@@ -225,6 +228,10 @@ class profileBarchart extends profilePlot {
 		const pairValue = field == 'term1' ? this.getPercentage(row.term2) : this.getPercentage(row.term1)
 		const width = value ? (value / 100) * barwidth : 0
 		if (value) {
+			const isObjective =
+				this.state.dslabel == 'ProfileFull' && this.settings.component == 'Patients and Outcomes'
+					? true
+					: !subjectiveTerm && (pairValue || !hasSubjectiveData)
 			const rect = g
 				.append('rect')
 				.attr('transform', `translate(${x + 10}, ${y})`)
@@ -233,7 +240,7 @@ class profileBarchart extends profilePlot {
 				.attr('y', 0)
 				.attr('width', width)
 				.attr('height', 20)
-			if (!subjectiveTerm && (pairValue || !hasSubjectiveData)) rect.attr('fill', termColor)
+			if (isObjective) rect.attr('fill', termColor)
 			else {
 				const termid = this.id + d.score.term.id
 				g.append('defs')

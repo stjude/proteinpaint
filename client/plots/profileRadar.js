@@ -167,6 +167,7 @@ class profileRadar extends profilePlot {
 			this.addLegendItem(item2, color2, 1, '5, 5')
 			if (this.state.dslabel == 'ProfileAbbrev')
 				this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
+			else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
 		}
 		this.addFilterLegend()
 	}

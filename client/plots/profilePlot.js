@@ -124,24 +124,25 @@ export class profilePlot {
 				})
 			}
 		})
-		icon_functions['add'](iconsDiv.append('div').style('padding', '5px'), {
-			title: 'Open new plot',
-			handler: async () => {
-				const config = {
-					chartType: this.type,
-					insertBefore: this.id,
-					header: this.opts.header.text(),
-					logged: this.state.config.logged,
-					site: this.state.config.site
-				}
-				if (this.type == 'profileRadarFacility' || this.type == 'profileRadar') config.plot = this.state.config.plot
+		if (!config.settings[this.type].comparison)
+			icon_functions['add'](iconsDiv.append('div').style('padding', '5px'), {
+				title: 'Open new plot',
+				handler: async () => {
+					const config = {
+						chartType: this.type,
+						insertBefore: this.id,
+						header: this.opts.header.text(),
+						logged: this.state.config.logged,
+						site: this.state.config.site
+					}
+					if (this.type == 'profileRadarFacility' || this.type == 'profileRadar') config.plot = this.state.config.plot
 
-				this.app.dispatch({
-					type: 'plot_create',
-					config
-				})
-			}
-		})
+					this.app.dispatch({
+						type: 'plot_create',
+						config
+					})
+				}
+			})
 	}
 
 	async showTable(show) {
@@ -531,6 +532,21 @@ export class profilePlot {
 			.text('The end-user was asked to rate the current status of the domains and subdomains included.')
 	}
 
+	addPOCNote(uiG) {
+		uiG.attr('font-size', '0.8em')
+		let textElem = uiG.append('text').attr('transform', `translate(0, 115)`)
+		textElem.append('tspan').attr('font-weight', 'bold').text('Point of Care (POC) Staff: ')
+		textElem.append('tspan').text('All members of the assessment team, ')
+		uiG
+			.append('text')
+			.attr('transform', `translate(0, 140)`)
+			.text('excluding the Site Coordinator. POC staff provide subjective information based ')
+		uiG
+			.append('text')
+			.attr('transform', `translate(0, 165)`)
+			.text('on their experience and perception about service delivery at the PHO facility.')
+	}
+
 	addLegendItem(category, description, index) {
 		const text = this.legendG
 			.append('text')
@@ -549,7 +565,6 @@ export class profilePlot {
 	}
 
 	getPercentage(d, isAggregate = null) {
-		console.log(d, isAggregate)
 		if (!d) return null
 		if (isAggregate == null)
 			//not specified when called
