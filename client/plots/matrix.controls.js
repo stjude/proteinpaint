@@ -1282,6 +1282,11 @@ export class MatrixControls {
 			.on('input', () => {
 				createBtn.property('disabled', !nameInput.property('value'))
 			})
+			.on('keyup', event => {
+				if (event.key == 'Enter' && !createBtn.property('disabled')) {
+					createBtn.node().click()
+				}
+			})
 
 		// if (parent.opts.customInputs?.geneset) {
 		// 	for (const btn of parent.opts.customInputs.geneset) {
