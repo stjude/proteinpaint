@@ -4,7 +4,8 @@ import { controlsInit } from './controls'
 import { select2Terms } from '#dom/select2Terms'
 import { isNumericTerm } from '../shared/terms'
 import { addNewGroup, getFilter, getSamplelstTW } from '../mass/groups'
-import { filterJoin, getFilterItemByTag } from '#filter'
+// import { filterJoin, getFilterItemByTag } from '#filter'
+import { Menu } from '#dom/menu'
 
 /*
 state {
@@ -27,7 +28,8 @@ class Facet {
 			holder: opts.holder.style('padding', '20px'),
 			header: opts.header,
 			controlsHolder,
-			mainDiv
+			mainDiv,
+			tip: opts.tip || new Menu()
 		}
 	}
 
@@ -58,6 +60,7 @@ class Facet {
 	async renderTable() {
 		const config = this.config
 		this.dom.mainDiv.selectAll('*').remove()
+		this.dom.tip.clear().hide()
 		const table = this.dom.mainDiv.append('table')
 		const tbody = table.append('tbody')
 		const headerRow = tbody.append('tr').style('text-align', 'center')
@@ -172,24 +175,48 @@ class Facet {
 				}
 			},
 			{
+				text: 'List samples',
+				callback: () => {
+					const samples = this.getSelectedSamples(categories, categories2, cells)
+					const sampleRows = samples.map(d => [
+						result.refs.bySampleId[d.sample].label,
+						d[config.columnTw.$id].key,
+						d[config.rowTw.$id].key
+					])
+					this.dom.tip.clear().showunder(buttonDiv.node())
+					// this.dom.tip.d.append('div').style('padding', '0px 5px 5px 5px').text('Selected samples:')
+					const tbody = this.dom.tip.d.append('table').append('tbody')
+					const headerRow = tbody.append('tr').style('text-align', 'center')
+					headerRow.append('th').text('Sample')
+					headerRow.append('th').text(config.columnTw.term.name)
+					headerRow.append('th').text(config.rowTw.term.name)
+					for (const row of sampleRows) {
+						const tr = tbody.append('tr')
+						tr.append('td').text(row[0])
+						tr.append('td').text(row[1])
+						tr.append('td').text(row[2])
+					}
+				}
+			},
+			{
 				text: 'Add group',
 				callback: () => {
 					this.addGroup(categories, categories2, cells)
 				}
-			},
-			{
-				text: 'Add group and filter',
-				callback: () => {
-					const groupFilter = this.addGroup(categories, categories2, cells)
-					const filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
-					const filter = filterJoin([filterUiRoot, groupFilter])
-					filter.tag = 'filterUiRoot'
-					this.app.dispatch({
-						type: 'filter_replace',
-						filter
-					})
-				}
 			}
+			// {
+			// 	text: 'Add group and filter',
+			// 	callback: () => {
+			// 		const groupFilter = this.addGroup(categories, categories2, cells)
+			// 		const filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
+			// 		const filter = filterJoin([filterUiRoot, groupFilter])
+			// 		filter.tag = 'filterUiRoot'
+			// 		this.app.dispatch({
+			// 			type: 'filter_replace',
+			// 			filter
+			// 		})
+			// 	}
+			// }
 		]
 
 		for (const btn of btns) {
