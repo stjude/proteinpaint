@@ -6,8 +6,8 @@ import { isNumericTerm } from '../shared/terms'
 
 /*
 state {
-	term {} // tw to determine columns
-	term2 {} // tw to determine rows
+	columnTw {} // tw to determine columns -> historically .term{}
+	rowTw {} // tw to determine rows -> historically .term2{}
 }
 
 facet table is always shown for secured or unsecured ds, as it does not reveal sample-level info
@@ -37,7 +37,7 @@ class Facet {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (this.dom.header)
 			this.dom.header.html(
-				`${config.term.term.name} <span style="font-size:.8em">(COLUMN)</span> ${config.term2.term.name} <span style="font-size:.8em">(ROW) &nbsp; FACET TABLE</span>`
+				`${config.columnTw.term.name} <span style="font-size:.8em">(COLUMN)</span> ${config.rowTw.term.name} <span style="font-size:.8em">(ROW) &nbsp; FACET TABLE</span>`
 			)
 
 		return {
@@ -54,11 +54,6 @@ class Facet {
 
 	async renderTable() {
 		const config = this.config
-		config.columnTw = config.term
-		config.rowTw = config.term2
-		delete config.term
-		delete config.term2
-
 		this.dom.mainDiv.selectAll('*').remove()
 		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
 		const headerRow = tbody.append('tr').style('text-align', 'center')
@@ -215,7 +210,7 @@ class Facet {
 			this.addRowLabel(tr, label)
 			for (const col of row[1]) {
 				const label = col[1].value > 0 ? col[1].value : ''
-				this.addCellCount(tr, label)
+				tr.append('td').style('background-color', '#FAFAFA').style('text-align', 'center').text(label)
 			}
 		}
 	}
@@ -252,18 +247,15 @@ class Facet {
 		// 	}
 		// }
 
-		const opts = { term: config.columnTw, filter: this.state.termfilter.filter }
+		const opts = { term: config.columnTw, term2: config.rowTw, filter: this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 
 		//Need to get the totals
 		await this.getDescrStats(opts.term)
-
-		if (config.rowTw) {
-			opts.term2 = config.rowTw
-			await this.getDescrStats(opts.term2)
-		}
+		await this.getDescrStats(opts.term2)
 
 		const result = await this.app.vocabApi.getNestedChartSeriesData(opts)
+		console.log('static', result)
 		const rows = new Map()
 
 		//These columns and rows are in the correct ascending order
@@ -308,10 +300,6 @@ class Facet {
 			.text(label)
 	}
 
-	addCellCount(tr, label) {
-		return tr.append('td').style('background-color', '#FAFAFA').style('text-align', 'center').text(label)
-	}
-
 	async setControls() {
 		const inputs = [
 			{
@@ -351,15 +339,12 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	const callback = (xterm, yterm) => {
 		const config = {
 			chartType: 'facet',
-			term: { term: xterm },
-			term2: { term: yterm }
+			columnTw: { term: xterm },
+			rowTw: { term: yterm }
 		}
 
-		//Do not rename, creating the mass state from this function
-		//config.term becomes config.columnTw in renderTable()
-		if (isNumericTerm(xterm)) config.term.term.q = { mode: 'discrete' }
-		//config.term2 becomes config.rowTw in renderTable()
-		if (isNumericTerm(yterm)) config.term2.term.q = { mode: 'discrete' }
+		if (isNumericTerm(xterm)) config.columnTw.term.q = { mode: 'discrete' }
+		if (isNumericTerm(yterm)) config.rowTw.term.q = { mode: 'discrete' }
 
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
@@ -375,10 +360,10 @@ export const componentInit = facetInit
 
 export async function getPlotConfig(opts, app) {
 	const config = { settings: {} }
-	if (!opts.term) throw '.term{} missing'
-	await fillTermWrapper(opts.term, app.vocabApi)
-	if (!opts.term2) throw '.term2{} missing'
-	await fillTermWrapper(opts.term2, app.vocabApi)
+	if (!opts.columnTw) throw '.columnTw{} missing'
+	await fillTermWrapper(opts.columnTw, app.vocabApi)
+	if (!opts.rowTw) throw '.rowTw{} missing'
+	await fillTermWrapper(opts.rowTw, app.vocabApi)
 	const result = copyMerge(config, opts)
 	return result
 }
