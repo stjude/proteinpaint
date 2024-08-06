@@ -330,7 +330,7 @@ class Facet {
 		headerRow
 			.append('th')
 			.attr('data-testid', 'sjpp-facet-col-header')
-			// .style('background-color', '#FAFAFA')
+			.style('border', '2.5px solid white')
 			.style('padding', '0px 25px')
 			.text(text)
 	}
@@ -338,7 +338,7 @@ class Facet {
 	addRowLabel(tr, label) {
 		tr.append('td')
 			.attr('data-testid', 'sjpp-facet-row-label')
-			// .style('background-color', '#FAFAFA')
+			.style('border', '2.5px solid white')
 			.style('font-weight', 'bold')
 			.text(label)
 	}
