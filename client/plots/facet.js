@@ -121,9 +121,7 @@ class Facet {
 				if (!samples.length) td.classed('highlightable-cell', true)
 				if (samples.length > 0) {
 					const colIdx = categories.indexOf(category) + 2
-					td
-						// .classed('sja_menuoption', true)
-						.style('background-color', '#F2F2F2')
+					td.classed('sja_menuoption', true)
 						.style('text-align', 'center')
 						.style('border', '2.5px solid white')
 						.text(samples.length)
