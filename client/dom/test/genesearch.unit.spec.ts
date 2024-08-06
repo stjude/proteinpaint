@@ -3,11 +3,10 @@ import * as d3s from 'd3-selection'
 import { addGeneSearchbox, string2variant } from '../genesearch.ts'
 import { hg38 } from '../../test/testdata/genomes'
 import { Menu } from '../menu'
-import { detectOne, detectGte } from '../../test/test.helpers'
 
 /* Tests
     - Default gene search box
-    - string2variant()
+    - string2variant() - simple variant and HGVS snv and insertion variants
 */
 
 /**************
@@ -38,7 +37,7 @@ function getSearchBox(holder, opts = {}) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/genesearch -***-')
+	test.pass('-***- dom/genesearch.unit-***-')
 	test.end()
 })
 
@@ -81,7 +80,7 @@ tape('Default gene search box', async test => {
 	test.end()
 })
 
-tape('string2variant()', async test => {
+tape('string2variant() - simple variant and HGVS snv and insertion variants', async test => {
 	test.timeoutAfter(300)
 
 	type VariantData = { chr: string; pos: number; ref: string; alt: string; isVariant: boolean } | undefined
@@ -98,7 +97,11 @@ tape('string2variant()', async test => {
 	}
 	test.deepEqual(variant, expected, 'Should parse string into a simple variant object')
 
-	//HGVS variant
+	variant = (await string2variant('chr1.387689', hg38)) as VariantData
+	expected = undefined
+	test.equal(variant, expected, 'Should return undefined if string input is missing a reference and alternate allele')
+
+	// HGVS variant -> snv
 	variant = (await string2variant('NC_000014.9:g.104776629T>C', hg38)) as VariantData
 	expected = {
 		isVariant: true,
@@ -107,10 +110,18 @@ tape('string2variant()', async test => {
 		ref: 'T',
 		alt: 'C'
 	}
+	test.deepEqual(variant, expected, 'Should parse HGVS string into a SNV variant object')
 
-	variant = (await string2variant('chr1.387689', hg38)) as VariantData
-	expected = undefined
-	test.equal(variant, expected, 'Should return undefined if string input is missing a reference and alternate allele')
+	// HGVS variant -> insert
+	variant = (await string2variant('chr5:g.171410539_171410540insTCTG', hg38)) as VariantData
+	expected = {
+		isVariant: true,
+		chr: 'chr5',
+		pos: 171410540,
+		ref: '-',
+		alt: 'TCTG'
+	}
+	test.deepEqual(variant, expected, 'Should parse HGVS string into an Insert variant object')
 
 	test.end()
 })

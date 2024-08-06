@@ -6,8 +6,8 @@ import { isNumericTerm } from '../shared/terms'
 
 /*
 state {
-	term {} // tw to determine columns
-	term2 {} // tw to determine rows
+	columnTw {} // tw to determine columns -> historically .term{}
+	rowTw {} // tw to determine rows -> historically .term2{}
 }
 
 facet table is always shown for secured or unsecured ds, as it does not reveal sample-level info
@@ -37,7 +37,7 @@ class Facet {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (this.dom.header)
 			this.dom.header.html(
-				`${config.term.term.name} <span style="font-size:.8em">(COLUMN)</span> ${config.term2.term.name} <span style="font-size:.8em">(ROW) &nbsp; FACET TABLE</span>`
+				`${config.columnTw.term.name} <span style="font-size:.8em">(COLUMN)</span> ${config.rowTw.term.name} <span style="font-size:.8em">(ROW) &nbsp; FACET TABLE</span>`
 			)
 
 		return {
@@ -54,33 +54,49 @@ class Facet {
 
 	async renderTable() {
 		const config = this.config
-		config.columnTw = config.term
-		config.rowTw = config.term2
-		delete config.term
-		delete config.term2
-
 		this.dom.mainDiv.selectAll('*').remove()
-		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
+		const table = this.dom.mainDiv.append('table')
+		const tbody = table.append('tbody')
 		const headerRow = tbody.append('tr').style('text-align', 'center')
 		//blank space left for row labels
 		headerRow.append('th')
 
 		const samplesAuth = this.app.vocabApi.hasVerifiedToken()
 		if (samplesAuth) {
+			//overrides the default sja_root table style
+			table.style('border-spacing', '0px')
 			/** If samples level data available, render interative
 			 * facet table. Clicking cells creates the list of samples
 			 * and on submit launches the sample view plot
 			 */
 			const { result, categories, categories2 } = await this.getSampleTableData(config)
+			if (!categories.length || !categories2.length) {
+				//Show message if no overlapping samples
+				this.dom.mainDiv
+					.append('div')
+					.style('padding', '0px 50px')
+					.style('font-size', '1.15em')
+					.text('No overlapping samples')
+				return
+			}
 			for (const category of categories) {
 				const label = config.columnTw.term.values?.[category]?.label || category
 				this.addHeader(headerRow, label)
 			}
 			this.renderSampleTable(tbody, config, result, categories, categories2)
 		} else {
+			table.style('border-spacing', '5px')
 			/** If sample data is not available or not authorized for this user,
 			 * render a static table with counts. No interactivity. */
 			const { rows, filteredCols } = await this.getStaticTableData(config)
+			if (!rows.size || !filteredCols.length) {
+				this.dom.mainDiv
+					.append('div')
+					.style('padding', '0px 50px')
+					.style('font-size', '1.15em')
+					.text('No overlapping samples')
+				return
+			}
 			for (const col of filteredCols) {
 				const label = config.columnTw.term.values?.[col.seriesId]?.label || col.seriesId
 				this.addHeader(headerRow, label)
@@ -102,10 +118,19 @@ class Facet {
 				)
 				cells[category2][category] = { samples, selected: false }
 				const td = tr.append('td')
-				if (samples.length > 0)
-					td.style('background-color', '#F2F2F2')
+				if (!samples.length) td.classed('highlightable-cell', true)
+				if (samples.length > 0) {
+					const colIdx = categories.indexOf(category) + 2
+					td.classed('sja_menuoption', true)
 						.style('text-align', 'center')
+						.style('border', '2.5px solid white')
 						.text(samples.length)
+						.on('mouseover', () => {
+							this.highlightColRow(tbody, tr, colIdx, '#fffec8')
+						})
+						.on('mouseout', () => {
+							this.highlightColRow(tbody, tr, colIdx, 'transparent')
+						})
 						.on('click', () => {
 							const selected = (cells[category2][category].selected = !cells[category2][category].selected)
 							if (selected) {
@@ -124,8 +149,10 @@ class Facet {
 							}
 							showSamplesBt.property('disabled', true)
 						})
+				}
 			}
 		}
+
 		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
 		//.style('float', 'right')
 		const showSamplesBt = buttonDiv
@@ -152,6 +179,18 @@ class Facet {
 					}
 				})
 			})
+	}
+
+	highlightColRow = (tbody, tr, colIdx, color) => {
+		tbody
+			.selectAll(`td.highlightable-cell:nth-child(${colIdx})`)
+			.style('background-color', `${color}`)
+			.style('border', `2.5px solid ${color}`)
+		tbody
+			.select(`th:nth-child(${colIdx})`)
+			.style('background-color', `${color}`)
+			.style('border', `2.5px solid ${color}`)
+		tr.style('background-color', `${color}`)
 	}
 
 	async getSampleTableData(config) {
@@ -215,7 +254,7 @@ class Facet {
 			this.addRowLabel(tr, label)
 			for (const col of row[1]) {
 				const label = col[1].value > 0 ? col[1].value : ''
-				this.addCellCount(tr, label)
+				tr.append('td').style('background-color', '#FAFAFA').style('text-align', 'center').text(label)
 			}
 		}
 	}
@@ -252,16 +291,12 @@ class Facet {
 		// 	}
 		// }
 
-		const opts = { term: config.columnTw, filter: this.state.termfilter.filter }
+		const opts = { term: config.columnTw, term2: config.rowTw, filter: this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 
 		//Need to get the totals
 		await this.getDescrStats(opts.term)
-
-		if (config.rowTw) {
-			opts.term2 = config.rowTw
-			await this.getDescrStats(opts.term2)
-		}
+		await this.getDescrStats(opts.term2)
 
 		const result = await this.app.vocabApi.getNestedChartSeriesData(opts)
 		const rows = new Map()
@@ -295,7 +330,7 @@ class Facet {
 		headerRow
 			.append('th')
 			.attr('data-testid', 'sjpp-facet-col-header')
-			// .style('background-color', '#FAFAFA')
+			.style('border', '2.5px solid white')
 			.style('padding', '0px 25px')
 			.text(text)
 	}
@@ -303,20 +338,16 @@ class Facet {
 	addRowLabel(tr, label) {
 		tr.append('td')
 			.attr('data-testid', 'sjpp-facet-row-label')
-			// .style('background-color', '#FAFAFA')
+			.style('border', '2.5px solid white')
 			.style('font-weight', 'bold')
 			.text(label)
-	}
-
-	addCellCount(tr, label) {
-		return tr.append('td').style('background-color', '#FAFAFA').style('text-align', 'center').text(label)
 	}
 
 	async setControls() {
 		const inputs = [
 			{
 				type: 'term',
-				configKey: 'term',
+				configKey: 'columnTw',
 				chartType: this.type,
 				usecase: { target: this.type },
 				title: 'Facet column categories',
@@ -326,7 +357,7 @@ class Facet {
 			},
 			{
 				type: 'term',
-				configKey: 'term2',
+				configKey: 'rowTw',
 				chartType: this.type,
 				usecase: { target: this.type },
 				title: 'Facet row categories',
@@ -351,15 +382,12 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	const callback = (xterm, yterm) => {
 		const config = {
 			chartType: 'facet',
-			term: { term: xterm },
-			term2: { term: yterm }
+			columnTw: { term: xterm },
+			rowTw: { term: yterm }
 		}
 
-		//Do not rename, creating the mass state from this function
-		//config.term becomes config.columnTw in renderTable()
-		if (isNumericTerm(xterm)) config.term.term.q = { mode: 'discrete' }
-		//config.term2 becomes config.rowTw in renderTable()
-		if (isNumericTerm(yterm)) config.term2.term.q = { mode: 'discrete' }
+		if (isNumericTerm(xterm)) config.columnTw.term.q = { mode: 'discrete' }
+		if (isNumericTerm(yterm)) config.rowTw.term.q = { mode: 'discrete' }
 
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
@@ -375,10 +403,10 @@ export const componentInit = facetInit
 
 export async function getPlotConfig(opts, app) {
 	const config = { settings: {} }
-	if (!opts.term) throw '.term{} missing'
-	await fillTermWrapper(opts.term, app.vocabApi)
-	if (!opts.term2) throw '.term2{} missing'
-	await fillTermWrapper(opts.term2, app.vocabApi)
+	if (!opts.columnTw) throw '.columnTw{} missing'
+	await fillTermWrapper(opts.columnTw, app.vocabApi)
+	if (!opts.rowTw) throw '.rowTw{} missing'
+	await fillTermWrapper(opts.rowTw, app.vocabApi)
 	const result = copyMerge(config, opts)
 	return result
 }
