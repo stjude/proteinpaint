@@ -152,6 +152,7 @@ class Facet {
 		}
 		const startPrompt = this.dom.mainDiv
 			.append('div')
+			.attr('data-testid', 'sjpp-facet-start-prompt')
 			.style('margin-top', '20px')
 			.style('color', 'red')
 			.text('Select samples to see data')
