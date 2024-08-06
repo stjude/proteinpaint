@@ -55,13 +55,16 @@ class Facet {
 	async renderTable() {
 		const config = this.config
 		this.dom.mainDiv.selectAll('*').remove()
-		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
+		const table = this.dom.mainDiv.append('table')
+		const tbody = table.append('tbody')
 		const headerRow = tbody.append('tr').style('text-align', 'center')
 		//blank space left for row labels
 		headerRow.append('th')
 
 		const samplesAuth = this.app.vocabApi.hasVerifiedToken()
 		if (samplesAuth) {
+			//overrides the default sja_root table style
+			table.style('border-spacing', '0px')
 			/** If samples level data available, render interative
 			 * facet table. Clicking cells creates the list of samples
 			 * and on submit launches the sample view plot
@@ -81,6 +84,7 @@ class Facet {
 			}
 			this.renderSampleTable(tbody, config, result, categories, categories2)
 		} else {
+			table.style('border-spacing', '5px')
 			/** If sample data is not available or not authorized for this user,
 			 * render a static table with counts. No interactivity. */
 			const { rows, filteredCols } = await this.getStaticTableData(config)
@@ -105,10 +109,21 @@ class Facet {
 				)
 				cells[category2][category] = { samples, selected: false }
 				const td = tr.append('td')
-				if (samples.length > 0)
-					td.style('background-color', '#F2F2F2')
+				if (!samples.length) td.classed('highlightable-cell', true)
+				if (samples.length > 0) {
+					const colIdx = categories.indexOf(category) + 2
+					td
+						// .classed('sja_menuoption', true)
+						.style('background-color', '#F2F2F2')
 						.style('text-align', 'center')
+						.style('border', '2.5px solid white')
 						.text(samples.length)
+						.on('mouseover', () => {
+							this.highlightColRow(tbody, tr, colIdx, '#fffec8')
+						})
+						.on('mouseout', () => {
+							this.highlightColRow(tbody, tr, colIdx, 'transparent')
+						})
 						.on('click', () => {
 							const selected = (cells[category2][category].selected = !cells[category2][category].selected)
 							if (selected) {
@@ -127,8 +142,10 @@ class Facet {
 							}
 							showSamplesBt.property('disabled', true)
 						})
+				}
 			}
 		}
+
 		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
 		//.style('float', 'right')
 		const showSamplesBt = buttonDiv
@@ -155,6 +172,18 @@ class Facet {
 					}
 				})
 			})
+	}
+
+	highlightColRow = (tbody, tr, colIdx, color) => {
+		tbody
+			.selectAll(`td.highlightable-cell:nth-child(${colIdx})`)
+			.style('background-color', `${color}`)
+			.style('border', `2.5px solid ${color}`)
+		tbody
+			.select(`th:nth-child(${colIdx})`)
+			.style('background-color', `${color}`)
+			.style('border', `2.5px solid ${color}`)
+		tr.style('background-color', `${color}`)
 	}
 
 	async getSampleTableData(config) {
