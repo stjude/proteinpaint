@@ -10,96 +10,15 @@ import { SnpsTerm } from './snps.js'
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
  * @params $id    client-computed deterministic unique identifier, to distinguish tw with the same term but different q, that are in the same payload
  */
-export type BaseTW = {
-	id?: string
-	$id?: string
-	isAtomic?: true
-}
 
-export type BaseValue = {
-	key?: string
-	uncomputable?: boolean
-	label?: string | number
-	order?: string
-	color?: string
-	group?: number
-	filter?: Filter
-}
-
-export type TermValues = {
-	[key: string | number]: BaseValue
-}
-
-export type ValuesGroup = {
-	name: string
-	type: 'values' | string // can remove boolean fallback once problematic js files are converted to .ts and can declare `type: 'values' as const`
-	values: { key: number | string; label: string }[]
-	uncomputable?: boolean // if true, do not include this group in computations
-}
-
-export type FilterGroup = {
-	name: string
-	type: 'filter'
-	filter: Filter
-}
-
-export type BaseGroupSet = {
-	groups: GroupEntry[]
-}
-
-export type GroupEntry = ValuesGroup | FilterGroup
-
-type Groupset = {
-	name: string
-	is_grade?: boolean
-	is_subcondition?: boolean
-	groups: GroupEntry[]
-}
-
-export type EnabledTermGroupSetting = {
-	disabled?: false | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: false as const`
-	lst: Groupset[]
-}
-
-export type TermGroupSetting =
-	| EnabledTermGroupSetting
-	| {
-			/** disabled=false when groupsetting is not applicable for term (e.g., when term has only two categories) */
-			disabled: true | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: true as const`
-			lst?: []
-	  }
-
-export type BaseTerm = {
-	id: string
-	name: string
-	type: string
-	child_types?: string[]
-	hashtmldetail?: boolean
-	included_types?: string[]
-	isleaf?: boolean
-	values?: TermValues
-}
-
-export type Term = BaseTerm &
-	(NumericTerm | CategoricalTerm | ConditionTerm | GeneVariantTerm | SampleLstTerm | SnpsTerm)
+/*** types supporting termwrapper q ***/
 
 type HiddenValues = {
 	[index: string]: number
 }
 
-export type RangeEntry = {
-	//Used binconfig.lst[] and in tvs.ranges[]
-	start?: number
-	startunbounded?: boolean
-	startinclusive?: boolean
-	stop?: number
-	stopunbounded?: boolean
-	stopinclusive?: boolean
-	label?: string //for binconfig.lst[]
-	value?: string //for tvs.ranges[]
-	range?: any //No idea what this is
-}
-
+// TODO: replace BaseQ with MinBaseQ (see below)
+// keeping BaseQ for now to not break old code
 export type BaseQ = {
 	/**Automatically set by fillTermWrapper()
 	Applies to barchart, survival plot, and cuminc plot.
@@ -111,9 +30,6 @@ export type BaseQ = {
 	/**indicates this object should not be extended by a copy-merge tool */
 	isAtomic?: boolean
 	name?: string
-
-	//{common: ...tw.q.common,  type: 'predefined-groupset', predefined_groupset_idx: 1 }
-
 	mode?:
 		| 'discrete'
 		/** Binary is a special case of discrete. */
@@ -140,9 +56,11 @@ export type BaseQ = {
 		| 'custom-groupset'
 		/** Applies to samplelst terms */
 		| 'custom-samplelst'
-	groupsetting?: QGroupSetting
 }
 
+// MinBaseQ is BaseQ without .mode and .type
+// MinBaseQ should eventually replace BaseQ because .mode and .type
+// should be specified in a term-type-specific manner
 export type MinBaseQ = {
 	/**Automatically set by fillTermWrapper()
 	Applies to barchart, survival plot, and cuminc plot.
@@ -157,38 +75,96 @@ export type MinBaseQ = {
 	reuseId?: string
 }
 
-export type PredefinedGroupSettingNested = {
-	kind: 'predefined'
+export type ValuesQ = {
+	type: 'values'
+}
+
+export type PredefinedGroupSettingQ = {
+	type: 'predefined-groupset'
 	predefined_groupset_idx: number
-	inuse?: boolean // temporary duplicate with inuse one level above, will be unnested soon
 }
 
-export type PredefinedGroupSettingQ = MinBaseQ & {
-	type: 'groupsetting'
-	inuse?: boolean
-	groupsetting: PredefinedGroupSettingNested
+export type CustomGroupSettingQ = {
+	type: 'custom-groupset'
+	customset: BaseGroupSet
 }
 
-export type CustomGroupSet = {
+export type GroupSettingQ = ValuesQ | PredefinedGroupSettingQ | CustomGroupSettingQ
+
+/*** types supporting termwrapper term ***/
+
+export type BaseValue = {
+	key?: string
+	uncomputable?: boolean
+	label?: string | number
+	order?: string
+	color?: string
+	group?: number
+	filter?: Filter
+}
+
+export type TermValues = {
+	[key: string | number]: BaseValue
+}
+
+export type BaseTerm = {
+	id: string
+	name: string
+	type: string
+	child_types?: string[]
+	hashtmldetail?: boolean
+	included_types?: string[]
+	isleaf?: boolean
+	values?: TermValues
+}
+
+export type Term = BaseTerm &
+	(NumericTerm | CategoricalTerm | ConditionTerm | GeneVariantTerm | SampleLstTerm | SnpsTerm)
+
+export type ValuesGroup = {
+	name: string
+	type: 'values' | string // can remove boolean fallback once problematic js files are converted to .ts and can declare `type: 'values' as const`
+	values: { key: number | string; label: string }[]
+	uncomputable?: boolean // if true, do not include this group in computations
+}
+
+export type FilterGroup = {
+	name: string
+	type: 'filter'
+	filter: Filter
+}
+
+export type GroupEntry = ValuesGroup | FilterGroup
+
+export type BaseGroupSet = {
 	groups: GroupEntry[]
 }
 
-export type CustomGroupSettingNested = {
-	kind: 'custom'
-	customset: CustomGroupSet
-	inuse?: boolean // temporary duplicate with inuse one level above, will be unnested soon
+type Groupset = {
+	name: string
+	is_grade?: boolean
+	is_subcondition?: boolean
+} & BaseGroupSet
+
+export type EnabledTermGroupSetting = {
+	disabled?: false | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: false as const`
+	lst: Groupset[]
 }
 
-export type CustomGroupSettingQ = MinBaseQ & {
-	type: 'groupsetting'
-	inuse?: boolean
-	groupsetting: CustomGroupSettingNested
-}
+export type TermGroupSetting =
+	| EnabledTermGroupSetting
+	| {
+			/** disabled=false when groupsetting is not applicable for term (e.g., when term has only two categories) */
+			disabled: true | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: true as const`
+			lst?: []
+	  }
 
-export type QGroupSetting = PredefinedGroupSettingQ | CustomGroupSettingQ
+/*** types supporting termwrapper ***/
 
-export type ValuesQ = MinBaseQ & {
-	type?: 'values'
+export type BaseTW = {
+	id?: string
+	$id?: string
+	isAtomic?: true
 }
 
 /*** types supporting Term types ***/
@@ -197,4 +173,19 @@ export type Subconditions = {
 	[index: string | number]: {
 		label: string
 	}
+}
+
+/*** other types ***/
+
+export type RangeEntry = {
+	//Used binconfig.lst[] and in tvs.ranges[]
+	start?: number
+	startunbounded?: boolean
+	startinclusive?: boolean
+	stop?: number
+	stopunbounded?: boolean
+	stopinclusive?: boolean
+	label?: string //for binconfig.lst[]
+	value?: string //for tvs.ranges[]
+	range?: any //No idea what this is
 }

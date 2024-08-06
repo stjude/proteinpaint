@@ -1,41 +1,7 @@
-import {
-	MinBaseQ,
-	BaseTerm,
-	TermGroupSetting,
-	QGroupSetting,
-	EnabledTermGroupSetting,
-	ValuesQ,
-	BaseTW,
-	PredefinedGroupSettingQ,
-	CustomGroupSettingQ
-} from './term.js'
-import { TermSettingInstance } from '../termsetting.js'
+import { MinBaseQ, BaseTerm, EnabledTermGroupSetting, BaseTW, GroupSettingQ } from './term'
+import { TermSettingInstance } from '../termsetting'
 
-type GeneVariantBaseTerm = BaseTerm & { groupsetting: EnabledTermGroupSetting }
-
-type Coord = {
-	chr: string
-	start: number
-	stop: number
-}
-
-type GeneVariantCoordTerm = GeneVariantBaseTerm &
-	Coord & {
-		kind: 'coord'
-	}
-
-export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
-	kind: 'gene'
-	gene: string
-	// these should exist together, but hard to code as atomic `& Coord` because it may need to be filled in
-	chr?: string
-	start?: number
-	stop?: number
-}
-
-export type GeneVariantTerm = GeneVariantGeneTerm | GeneVariantCoordTerm
-
-export type BaseGeneVariantQ = MinBaseQ & {
+export type GeneVariantBaseQ = MinBaseQ & {
 	cnvGainCutoff?: number
 	cnvMaxLength?: number
 	cnvMinAbsValue?: number
@@ -45,7 +11,29 @@ export type BaseGeneVariantQ = MinBaseQ & {
 	origin?: string
 }
 
-export type GeneVariantQ = BaseGeneVariantQ & (ValuesQ | PredefinedGroupSettingQ | CustomGroupSettingQ)
+export type GeneVariantQ = GeneVariantBaseQ & GroupSettingQ
+
+type GeneVariantBaseTerm = BaseTerm & { groupsetting: EnabledTermGroupSetting }
+
+type GeneVariantCoordTerm = GeneVariantBaseTerm & {
+	kind: 'coord'
+	chr: string
+	start: number
+	stop: number
+}
+
+export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
+	kind: 'gene'
+	gene: string
+	// chr,start,stop should exist together as a separate type called
+	// 'Coord', but hard to code as atomic `& Coord` because it may
+	// need to be filled in
+	chr?: string
+	start?: number
+	stop?: number
+}
+
+export type GeneVariantTerm = GeneVariantGeneTerm | GeneVariantCoordTerm
 
 export type GeneVariantTW = BaseTW & {
 	term: GeneVariantTerm
