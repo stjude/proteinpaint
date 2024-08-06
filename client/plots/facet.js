@@ -204,7 +204,7 @@ class Facet {
 	renderStaticTable(tbody, config, rows) {
 		for (const row of rows) {
 			const tr = tbody.append('tr')
-			const label = config.term2.term.values?.[row[0]].label || row[0]
+			const label = config.term2.term.values?.[row[0]]?.label || row[0]
 			this.addRowLabel(tr, label)
 			for (const col of row[1]) {
 				const label = col[1].value > 0 ? col[1].value : ''
