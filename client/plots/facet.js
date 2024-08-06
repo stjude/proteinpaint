@@ -61,7 +61,7 @@ class Facet {
 
 		this.dom.mainDiv.selectAll('*').remove()
 		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
-		const headerRow = tbody.append('tr')
+		const headerRow = tbody.append('tr').style('text-align', 'center')
 		//blank space left for row labels
 		headerRow.append('th')
 
@@ -293,9 +293,8 @@ class Facet {
 		headerRow
 			.append('th')
 			.attr('data-testid', 'sjpp-facet-col-header')
-			.style('text-align', 'center')
 			.style('background-color', '#FAFAFA')
-			.style('padding-right', '50px')
+			.style('padding', '0px 25px')
 			.text(text)
 	}
 
@@ -353,8 +352,13 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			term: { term: xterm },
 			term2: { term: yterm }
 		}
-		if (isNumericTerm(xterm)) config.columnTw.q = { mode: 'discrete' }
-		if (isNumericTerm(yterm)) config.rowTw.q = { mode: 'discrete' }
+
+		//Do not rename, creating the mass state from this function
+		//config.term becomes config.columnTw in renderTable()
+		if (isNumericTerm(xterm)) config.term.term.q = { mode: 'discrete' }
+		//config.term2 becomes config.rowTw in renderTable()
+		if (isNumericTerm(yterm)) config.term2.term.q = { mode: 'discrete' }
+
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
 			config
