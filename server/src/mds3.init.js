@@ -304,11 +304,14 @@ export async function validate_termdb(ds) {
 		// gdc does not use db connection
 		ds.sampleName2Id = new Map()
 		ds.sampleId2Name = new Map()
+		ds.sampleId2Type = new Map()
+
 		const sql = 'SELECT * FROM sampleidmap'
 		const rows = ds.cohort.db.connection.prepare(sql).all()
 		for (const r of rows) {
 			ds.sampleId2Name.set(r.id, r.name)
 			ds.sampleName2Id.set(r.name, r.id)
+			ds.sampleId2Type.set(r.id, r.type)
 		}
 
 		// XXX delete, not a good idea to dump all samples to client

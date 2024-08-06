@@ -425,10 +425,8 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-			SELECT sample, key, value, ? as term_id, ${
-				q.ds.cohort.db.tableColumns['sampleidmap'].includes('type') ? 's.type' : 'null'
-			} as type
-			FROM ${t.tablename} join sampleidmap s on sample = s.id
+			SELECT sample, key, value, ? as term_id
+			FROM ${t.tablename} 
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
 			`
 		).join(`UNION ALL`)}`
@@ -438,33 +436,30 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 	let hasRoot = false
 	for (const row of rows) {
 		sampleIds.push(row.sample)
-		if (row.type == 'root') hasRoot = true
+		const type = q.ds.sampleId2Type.get(row.sample)
+		if (type == 'root') hasRoot = true
 		else hasChildren = true
 	}
-	let ancestry = []
-	if (q.ds.cohort.db.tables.has('sample_ancestry')) {
-		const ancestrySql = `select * from sample_ancestry where ancestor_id in (${sampleIds.join(',')})`
-		ancestry = q.ds.cohort.db.connection.prepare(ancestrySql).all()
-	}
+
 	const isMixed = hasRoot && hasChildren
 	// if q.currentGeneNames is in use, must restrict to these samples
-	console.log('isMixed', isMixed, 'onlyChildren', onlyChildren, 'hasRoot', hasRoot, 'hasChildren', hasChildren)
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
-	for (const { sample, key, term_id, value, type } of rows) {
-		const children = ancestry.filter(a => a.ancestor_id == sample).map(a => a.sample_id)
+	for (const { sample, key, term_id, value } of rows) {
+		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
+		const type = q.ds.sampleId2Type.get(sample)
+
+		const children = q.ds.sample2Children.get(sample)
 		if (onlyChildren || isMixed) {
 			//if some annotations are on parent and some on children or onlyChildren set to true add only children
-			for (const child of children) {
-				if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
-				addSample(child, term_id, key, value)
-			}
+			if (children)
+				for (const child of children) {
+					addSample(child, term_id, key, value)
+				}
 		}
 		if (onlyChildren && type == 'root') continue //eg matrix
 
 		if (!isMixed || (isMixed && type != 'root')) {
 			//add annotations for samples or root samples found
-
-			if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
 			addSample(sample, term_id, key, value)
 		}
 	}

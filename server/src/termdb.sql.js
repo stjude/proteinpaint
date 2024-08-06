@@ -42,7 +42,7 @@ grade_age_select_clause
 get_label4key
 
 */
-
+//in the future we may need to pass the sample type when there are more types than root and not root
 export async function get_samples(qfilter, ds, canDisplay = false) {
 	/*
 must have qfilter[]
@@ -51,7 +51,7 @@ return an array of sample names passing through the filter
 */
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
 	const sql = filter
-		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id `
+		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
 		: `SELECT id, name FROM sampleidmap`
 	const cmd = ds.cohort.db.connection.prepare(sql)
 	let re
