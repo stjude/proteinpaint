@@ -67,6 +67,14 @@ class Facet {
 			 * and on submit launches the sample view plot
 			 */
 			const { result, categories, categories2 } = await this.getSampleTableData(config)
+			if (!categories.length || !categories2.length) {
+				this.dom.mainDiv
+					.append('div')
+					.style('padding', '0px 50px')
+					.style('font-size', '1.15em')
+					.text('No overlapping samples')
+				return
+			}
 			for (const category of categories) {
 				const label = config.columnTw.term.values?.[category]?.label || category
 				this.addHeader(headerRow, label)
@@ -304,7 +312,7 @@ class Facet {
 		const inputs = [
 			{
 				type: 'term',
-				configKey: 'term',
+				configKey: 'columnTw',
 				chartType: this.type,
 				usecase: { target: this.type },
 				title: 'Facet column categories',
@@ -314,7 +322,7 @@ class Facet {
 			},
 			{
 				type: 'term',
-				configKey: 'term2',
+				configKey: 'rowTw',
 				chartType: this.type,
 				usecase: { target: this.type },
 				title: 'Facet row categories',
