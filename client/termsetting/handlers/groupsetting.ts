@@ -4,6 +4,15 @@ import { select, Selection } from 'd3-selection'
 import { throwMsgWithFilePathAndFnName } from '../../dom/sayerror'
 import { debounce } from 'debounce'
 import { mclass } from '../../shared/common'
+import { TermSettingInstance } from '../../shared/types/termsetting'
+import {
+	ValuesGroup,
+	MinBaseQ,
+	PredefinedGroupSettingQ,
+	CustomGroupSettingQ,
+	GroupSettingQ
+} from '../../shared/types/terms/term'
+import { GeneVariantBaseQ, GeneVariantTerm } from '../../shared/types/terms/geneVariant'
 
 /*
 ---------Exported---------
@@ -28,9 +37,12 @@ type Opts = {
 	holder?: HTMLElement // div holder for drag-and-drop
 	hideApply?: boolean // whether to hide apply button
 }
-
+type TsInstance = TermSettingInstance & {
+	q: MinBaseQ & GroupSettingQ
+	category2samplecount: any
+}
 type ItemEntry = {
-	key: string //key returned from vocab.getCategories()
+	key: number | string //key returned from vocab.getCategories()
 	label: string //Text label of drag item
 	group: number //Current group index for item.
 	samplecount: number | string | null //Sample count number or 'n/a'
@@ -61,7 +73,7 @@ type GrpSetDom = {
 }
 
 export class GroupSettingMethods {
-	tsInstance: any //a termsetting instance
+	tsInstance: TsInstance // termsetting instance
 	opts: Opts //options for groupsetting
 	dom: Partial<GrpSetDom> //main menu dom elements before drag and drop divs are added
 	minGrpNum: number //minimum num of groups rendered (excluded categories + 2 groups)
@@ -86,69 +98,71 @@ export class GroupSettingMethods {
 		//these three groups should always appear in the menu
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
 		const input = structuredClone(data)
-		if (this.tsInstance.q?.groupsetting?.customset) {
+		if (this.tsInstance.q.type == 'custom-groupset') {
 			//customset created after user applies groupsetting
 			//returns found groups to data.groups and values for groups and excluded groups
 			this.formatCustomset(grpIdxes, input)
-		} else if (this.tsInstance.term.type == 'geneVariant') {
-			// @ts-expect-error, need to harmonize input data structure between dictionary term (no customset), geneVariant term (no custom set), and customset
-			const dt = input.find(i => i.dt == this.tsInstance.q.dt)
-			const classes = dt.classes.byOrigin ? dt.classes.byOrigin[this.tsInstance.q.origin] : dt.classes
-			const groupset = this.tsInstance.term.groupsetting.lst[this.tsInstance.q.groupsetting.predefined_groupset_idx]
-			let computableGrpIdx = 0
-			for (const group of groupset.groups) {
-				const grpIdx = group.uncomputable ? 0 : ++computableGrpIdx
-				this.data.groups.push({
-					currentIdx: grpIdx,
-					type: 'values',
-					name: grpIdx === 0 ? 'Excluded categories' : group.name
-				})
-				grpIdxes.delete(grpIdx)
-				for (const [key, samplecount] of Object.entries(classes)) {
-					if (group.values.some(v => v.key == key)) {
-						this.data.values.push({
-							key,
-							label: mclass[key].label,
-							group: grpIdx,
-							// @ts-expect-error, will resolve when input data structure is harmonized (see above)
-							samplecount
-						})
+		} else if (this.tsInstance.q.type == 'predefined-groupset') {
+			if (this.tsInstance.term.type == 'geneVariant') {
+				const q = this.tsInstance.q as GeneVariantBaseQ & PredefinedGroupSettingQ
+				const term = this.tsInstance.term as GeneVariantTerm
+				// @ts-expect-error, need to harmonize input data structure between dictionary term (no customset), geneVariant term (no custom set), and customset
+				const dt = input.find(i => i.dt == q.dt)
+				const classes = dt.classes.byOrigin ? dt.classes.byOrigin[q.origin] : dt.classes
+				const groupset = term.groupsetting.lst[q.predefined_groupset_idx]
+				let computableGrpIdx = 0
+				for (const g of groupset.groups) {
+					const group = g as ValuesGroup
+					const grpIdx = group.uncomputable ? 0 : ++computableGrpIdx
+					this.data.groups.push({
+						currentIdx: grpIdx,
+						type: 'values',
+						name: grpIdx === 0 ? 'Excluded categories' : group.name
+					})
+					grpIdxes.delete(grpIdx)
+					for (const [key, samplecount] of Object.entries(classes)) {
+						if (group.values.some(v => v.key == key)) {
+							this.data.values.push({
+								key,
+								label: mclass[key].label,
+								group: grpIdx,
+								// @ts-expect-error, will resolve when input data structure is harmonized (see above)
+								samplecount
+							})
+						}
 					}
 				}
-			}
-		} else {
-			for (const v of Object.values(input)) {
-				if (v.uncomputable) return //Still necessary? Possibly taken care of termdb route... somewhere
-				if (v?.group > this.defaultMaxGrpNum)
-					throwMsgWithFilePathAndFnName(
-						`The maximum number of groups is ${this.defaultMaxGrpNum}. The group index for value = ${v.label} is ${v.group}`
-					)
-				const value = {
-					key: v.key,
-					label: v.label,
-					group: v.group || 1,
-					samplecount: v.samplecount
+			} else {
+				for (const v of Object.values(input)) {
+					if (v.uncomputable) return //Still necessary? Possibly taken care of termdb route... somewhere
+					if (v?.group > this.defaultMaxGrpNum)
+						throwMsgWithFilePathAndFnName(
+							`The maximum number of groups is ${this.defaultMaxGrpNum}. The group index for value = ${v.label} is ${v.group}`
+						)
+					const value = {
+						key: v.key,
+						label: v.label,
+						group: v.group || 1,
+						samplecount: v.samplecount
+					}
+					this.data.values.push(value)
+					grpIdxes.add(value.group)
 				}
-				this.data.values.push(value)
-				grpIdxes.add(value.group)
 			}
 		}
+
 		if (this.data.values.length == 0) throwMsgWithFilePathAndFnName(`Missing values`)
 
-		/*TODO: Logic below accounts for reformating data between getCategories and category2samplecount
-		in categorical.ts and condition.ts. This is probably unncessary in which case this section, including 
-		parts of main(), will be rewritten.*/
-		/*NOTE: this logic is actually necessary for re-populating sample
-		counts of categories within a custom groupset*/
+		// re-populate missing sample counts, which can occur
+		// for a custom groupset
 		this.data.values.forEach(v => {
-			//subconditions formated with count, categorical term values do not have a count
 			if (!v.samplecount) {
 				if (this.tsInstance.term.type == 'geneVariant') {
-					const dt = this.tsInstance.category2samplecount.find(i => i.dt == this.tsInstance.q.dt)
-					const classes = dt.classes.byOrigin ? dt.classes.byOrigin[this.tsInstance.q.origin] : dt.classes
+					const q = this.tsInstance.q as GeneVariantBaseQ
+					const dt = this.tsInstance.category2samplecount.find(i => i.dt == q.dt)
+					const classes = dt.classes.byOrigin && q.origin ? dt.classes.byOrigin[q.origin] : dt.classes
 					v.samplecount = classes[v.key]
 				} else {
-					//find sample counts for each value once added to array
 					v.samplecount = this.tsInstance.category2samplecount
 						? this.tsInstance.category2samplecount.find(
 								(d: { key: string; label?: string; samplecount: number }) => d.key == v.key
@@ -170,7 +184,9 @@ export class GroupSettingMethods {
 	}
 
 	formatCustomset(grpIdxes: Set<number>, input: DataInput) {
-		for (const [i, group] of this.tsInstance.q.groupsetting.customset.groups.entries()) {
+		const q = this.tsInstance.q as CustomGroupSettingQ
+		for (const [i, g] of q.customset.groups.entries()) {
+			const group = g as ValuesGroup
 			if (group.uncomputable) return
 			this.data.groups.push({
 				currentIdx: Number(i) + 1,
@@ -201,8 +217,9 @@ export class GroupSettingMethods {
 
 		//Find excluded values not returned in customset
 		if (this.tsInstance.term.type == 'geneVariant') {
-			const dt = this.tsInstance.category2samplecount.find(i => i.dt == this.tsInstance.q.dt)
-			const classes = dt.classes.byOrigin ? dt.classes.byOrigin[this.tsInstance.q.origin] : dt.classes
+			const q = this.tsInstance.q as GeneVariantBaseQ
+			const dt = this.tsInstance.category2samplecount.find(i => i.dt == q.dt)
+			const classes = dt.classes.byOrigin && q.origin ? dt.classes.byOrigin[q.origin] : dt.classes
 			if (this.data.values.length !== Object.keys(classes).length) {
 				for (const [key, samplecount] of Object.entries(classes)) {
 					if (!this.data.values.some(d => d.key == key)) {
@@ -216,7 +233,11 @@ export class GroupSettingMethods {
 					}
 				}
 			}
-		} else if (this.data.values.length !== Object.keys(input).length && !this.tsInstance.q.groupsetting.inuse) {
+		} else if (
+			this.data.values.length !== Object.keys(input).length &&
+			this.tsInstance.q.type != 'predefined-groupset' &&
+			this.tsInstance.q.type != 'custom-groupset'
+		) {
 			Object.entries(input)
 				.filter((v: any) => !this.data.values.some(d => d.key == v[1].label))
 				.forEach(v => {
@@ -248,7 +269,7 @@ export class GroupSettingMethods {
 	async main() {
 		try {
 			const input =
-				this.tsInstance.q?.groupsetting?.customset ||
+				(this.tsInstance.q.type == 'custom-groupset' && this.tsInstance.q.customset) ||
 				this.tsInstance.category2samplecount ||
 				this.tsInstance.term.values
 			this.processInput(input)
@@ -395,10 +416,7 @@ function setRenderers(self: any) {
 			})
 		}
 		self.tsInstance.q.type = 'custom-groupset'
-		self.tsInstance.q.groupsetting = {
-			inuse: true,
-			customset: customset
-		}
+		self.tsInstance.q.customset = customset
 	}
 
 	let draggedItem: any
