@@ -36,10 +36,10 @@ tape('Render facet table', test => {
 			plots: [
 				{
 					chartType: 'facet',
-					term: {
+					columnTw: {
 						id: 'agedx'
 					},
-					term2: {
+					rowTw: {
 						id: 'diaggrp'
 					}
 				}
