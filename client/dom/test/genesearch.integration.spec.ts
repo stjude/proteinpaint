@@ -37,31 +37,38 @@ tape('string2variant() - HGVS deletion and delins variants', async test => {
 	}
 	test.deepEqual(variant, expected, 'Should parse HGVS string into a Deletion variant object')
 
-	variant = await string2variant('chr2:g.119955155_119955159delTTTTT', hg38)
+	variant = await string2variant('chr2:g.119955155_119955159del', hg38)
 	expected = {
 		isVariant: true,
 		chr: 'chr2',
-		pos: 119955155,
-		ref: 'TTTTT',
+		ref: 'AGCTG',
 		alt: '-'
 	}
 	test.deepEqual(
 		variant,
 		expected,
-		'Should return correct deletion variant object when start and stop positions given.'
+		'Should return correct deletion variant object when start and stop positions are present but not a reference allele.'
 	)
 
 	variant = await string2variant('chr17:g.abcdelCGCACCTCAAAGCTGTTC', hg38)
 	expected = undefined
 	test.equal(variant, expected, 'Should return undefined for invalid position for deletion format')
 
-	variant = await string2variant('chr2:g.abc_119955159delTTTTT', hg38)
-	expected = undefined
-	test.equal(variant, expected, 'Should return undefined for invalid start position for deletion format')
+	variant = await string2variant('chr2:g.abc_119955159del', hg38)
+	//expected = undefined
+	test.equal(
+		variant,
+		expected,
+		'Should return undefined for invalid start position for deletion with no reference allele'
+	)
 
-	variant = await string2variant('chr2:g.119955155_abcdelTTTTT', hg38)
-	expected = undefined
-	test.equal(variant, expected, 'Should return undefined for invalid start position for deletion format')
+	variant = await string2variant('chr2:g.119955155_abcdel', hg38)
+	//expected = undefined
+	test.equal(
+		variant,
+		expected,
+		'Should return undefined for invalid stop position for deletion with no reference allele'
+	)
 
 	//HGVS variant -> deletion/insertion
 	variant = await string2variant('chr2:g.119955155_119955159delinsTTTTT', hg38)
