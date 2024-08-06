@@ -71,6 +71,7 @@ class Facet {
 			 */
 			const { result, categories, categories2 } = await this.getSampleTableData(config)
 			if (!categories.length || !categories2.length) {
+				//Show message if no overlapping samples
 				this.dom.mainDiv
 					.append('div')
 					.style('padding', '0px 50px')
@@ -88,6 +89,14 @@ class Facet {
 			/** If sample data is not available or not authorized for this user,
 			 * render a static table with counts. No interactivity. */
 			const { rows, filteredCols } = await this.getStaticTableData(config)
+			if (!rows.size || !filteredCols.length) {
+				this.dom.mainDiv
+					.append('div')
+					.style('padding', '0px 50px')
+					.style('font-size', '1.15em')
+					.text('No overlapping samples')
+				return
+			}
 			for (const col of filteredCols) {
 				const label = config.columnTw.term.values?.[col.seriesId]?.label || col.seriesId
 				this.addHeader(headerRow, label)
@@ -292,7 +301,6 @@ class Facet {
 		await this.getDescrStats(opts.term2)
 
 		const result = await this.app.vocabApi.getNestedChartSeriesData(opts)
-		console.log('static', result)
 		const rows = new Map()
 
 		//These columns and rows are in the correct ascending order
