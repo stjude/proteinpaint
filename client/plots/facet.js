@@ -3,6 +3,8 @@ import { fillTermWrapper } from '#termsetting'
 import { controlsInit } from './controls'
 import { select2Terms } from '#dom/select2Terms'
 import { isNumericTerm } from '../shared/terms'
+import { addNewGroup, getFilter, getSamplelstTW } from '../mass/groups'
+import { filterJoin, getFilterItemByTag } from '#filter'
 
 /*
 state {
@@ -43,7 +45,8 @@ class Facet {
 		return {
 			config,
 			vocab: appState.vocab,
-			termfilter: appState.termfilter
+			termfilter: appState.termfilter,
+			groups: appState.groups
 		}
 	}
 
@@ -72,11 +75,7 @@ class Facet {
 			const { result, categories, categories2 } = await this.getSampleTableData(config)
 			if (!categories.length || !categories2.length) {
 				//Show message if no overlapping samples
-				this.dom.mainDiv
-					.append('div')
-					.style('padding', '0px 50px')
-					.style('font-size', '1.15em')
-					.text('No overlapping samples')
+				this.showNoSampleMessage(this.dom.mainDiv)
 				return
 			}
 			for (const category of categories) {
@@ -90,11 +89,7 @@ class Facet {
 			 * render a static table with counts. No interactivity. */
 			const { rows, filteredCols } = await this.getStaticTableData(config)
 			if (!rows.size || !filteredCols.length) {
-				this.dom.mainDiv
-					.append('div')
-					.style('padding', '0px 50px')
-					.style('font-size', '1.15em')
-					.text('No overlapping samples')
+				this.showNoSampleMessage(this.dom.mainDiv)
 				return
 			}
 			for (const col of filteredCols) {
@@ -136,49 +131,70 @@ class Facet {
 							if (selected) {
 								td.style('border', '1px solid blue')
 							} else {
-								td.style('border', 'none')
+								td.style('border', '2.5px solid white')
 							}
 
 							for (const category2 of categories2) {
 								for (const category of categories) {
 									if (cells[category2][category].selected) {
-										showSamplesBt.property('disabled', false)
+										buttonDiv.style('display', '')
+										startPrompt.style('display', 'none')
 										return
 									}
 								}
 							}
-							showSamplesBt.property('disabled', true)
 						})
 				}
 			}
 		}
-
-		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
-		//.style('float', 'right')
-		const showSamplesBt = buttonDiv
-			.append('button')
-			.property('disabled', true)
-			.text('Show samples')
-			.on('click', () => {
-				const samples = []
-				for (const category2 of categories2) {
-					for (const category of categories) {
-						if (cells[category2][category].selected) {
-							samples.push(...cells[category2][category].samples)
+		const startPrompt = this.dom.mainDiv
+			.append('div')
+			.style('margin-top', '20px')
+			.style('color', 'red')
+			.text('Select samples to see data')
+		const buttonDiv = this.dom.mainDiv.append('div').style('margin-top', '20px').style('display', 'none')
+		const btns = [
+			{
+				text: 'Show samples',
+				// disabled: () => {}, add this if needed later
+				callback: () => {
+					const samples = this.getSelectedSamples(categories, categories2, cells)
+					this.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'sampleView',
+							samples: samples.map(d => ({
+								sampleId: d.sample,
+								sampleName: result.refs.bySampleId[d.sample].label
+							}))
 						}
-					}
+					})
 				}
-				this.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'sampleView',
-						samples: samples.map(d => ({
-							sampleId: d.sample,
-							sampleName: result.refs.bySampleId[d.sample].label
-						}))
-					}
-				})
-			})
+			},
+			{
+				text: 'Add group',
+				callback: () => {
+					this.addGroup(categories, categories2, cells)
+				}
+			},
+			{
+				text: 'Add group and filter',
+				callback: () => {
+					const groupFilter = this.addGroup(categories, categories2, cells)
+					const filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
+					const filter = filterJoin([filterUiRoot, groupFilter])
+					filter.tag = 'filterUiRoot'
+					this.app.dispatch({
+						type: 'filter_replace',
+						filter
+					})
+				}
+			}
+		]
+
+		for (const btn of btns) {
+			this.addBtn(buttonDiv, btn)
+		}
 	}
 
 	highlightColRow = (tbody, tr, colIdx, color) => {
@@ -191,6 +207,38 @@ class Facet {
 			.style('background-color', `${color}`)
 			.style('border', `2.5px solid ${color}`)
 		tr.style('background-color', `${color}`)
+	}
+
+	addBtn(div, btn) {
+		return div
+			.append('button')
+			.classed('sja_menuoption', true)
+			.style('padding', '0px 10px')
+			.style('margin', '0px 5px')
+			.text(btn.text)
+			.on('click', btn.callback)
+	}
+
+	addGroup(categories, categories2, cells) {
+		const group = {
+			name: 'Group',
+			items: this.getSelectedSamples(categories, categories2, cells)
+		}
+		const filter = getFilter(getSamplelstTW([group]))
+		addNewGroup(this.app, filter, this.state.groups)
+		return filter
+	}
+
+	getSelectedSamples(categories, categories2, cells) {
+		const samples = []
+		for (const category2 of categories2) {
+			for (const category of categories) {
+				if (cells[category2][category].selected) {
+					samples.push(...cells[category2][category].samples)
+				}
+			}
+		}
+		return samples
 	}
 
 	async getSampleTableData(config) {
@@ -324,6 +372,11 @@ class Facet {
 			if (data.error) throw data.error
 			tw.q.descrStats = data.values
 		}
+	}
+
+	showNoSampleMessage(div) {
+		div.append('div').style('padding', '0px 50px').style('font-size', '1.15em').text('No overlapping samples')
+		return
 	}
 
 	addHeader(headerRow, text) {
