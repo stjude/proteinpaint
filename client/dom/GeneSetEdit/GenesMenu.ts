@@ -50,7 +50,7 @@ export class GenesMenu {
 	addParameter(param, div: Div) {
 		let input
 		if (param.type == 'boolean') {
-			if (param?.radiobuttons.length) {
+			if (param.radiobuttons && param?.radiobuttons.length) {
 				const hasChecked = param.radiobuttons.find((d: any) => d.checked)
 				if (!hasChecked) param.radiobuttons[0].checked = true
 				input = div.append('div').attr('id', param.id)

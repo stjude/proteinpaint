@@ -22,6 +22,10 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	}
 	/** optional parameter defined in gdc dataset. not used for non-gdc ds */
 	min_median_log2_uqfpkm?: number
+	/** filter extreme values: true/false */
+	filter_extreme_values?: number
+	/** Filter type: variance/inter-quartile region */
+	filter_type?: number
 	/** pp filter */
 	filter?: Filter
 	/** JSON, optional GDC cohort filter to restrict cases */
