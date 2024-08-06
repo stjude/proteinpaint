@@ -1139,9 +1139,6 @@ export class MatrixControls {
 		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
 
-		//the number of groups in the current matrix
-		const numOfGrps = tg.length
-
 		let selectedGroup
 		const triggerGenesetEdit = holder => {
 			holder.selectAll('*').remove()
@@ -1206,42 +1203,51 @@ export class MatrixControls {
 			})
 		}
 
+		//the number of groups in the current matrix that is editable: non-gene-expression hiercluster
+		// groups are not editable
+		const numOfEditableGrps = tg.filter(
+			g => g.type != 'hierCluster' || g.lst.find(tw => tw.term.type == 'geneExpression')
+		).length
+
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
-		const td1 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
-		const editGrpDiv = td1.append('div')
 
-		const editBtn = editGrpDiv
-			.append('button')
-			.html(numOfGrps > 1 ? 'Edit Selected Group' : 'Edit Current Group')
-			.on('click', () => {
-				tip.clear()
-				this.setMenuBackBtn(tip.d.append('div').style('padding', '5px'), () => GenesBtn.click())
-				const genesetEdiUiHolder = tip.d.append('div')
-				triggerGenesetEdit(genesetEdiUiHolder)
-			})
+		if (numOfEditableGrps > 0) {
+			const td1 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
+			const editGrpDiv = td1.append('div')
 
-		if (numOfGrps > 1) {
-			const { groups, groupSelect } = this.setTermGroupSelector(editGrpDiv, tg)
-			selectedGroup = groups.find(g => g.selected)
-			groupSelect.on('change', () => {
-				selectedGroup = groups[groupSelect.property('value')]
-			})
-		} else {
-			const s = parent.config.settings.hierCluster
-			const g = tg[0]
-			selectedGroup = {
-				index: 0,
-				name: g.name,
-				type: g.type,
-				lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
-				mode:
-					this.parent.chartType == 'hierCluster' && (g.type == 'hierCluster' || g.name == s?.termGroupName)
-						? s.dataType // is clustering group, pass dataType
-						: // !!subject to change!! when group is not clustering, and ds has mutation, defaults to MUTATION_CNV_FUSION
-						this.parent.state.termdbConfig.queries?.snvindel
-						? TermTypes.GENE_VARIANT
-						: '',
-				selected: true
+			const editBtn = editGrpDiv
+				.append('button')
+				.html(numOfEditableGrps > 1 ? 'Edit Selected Group' : 'Edit Current Group')
+				.on('click', () => {
+					tip.clear()
+					this.setMenuBackBtn(tip.d.append('div').style('padding', '5px'), () => GenesBtn.click())
+					const genesetEdiUiHolder = tip.d.append('div')
+					triggerGenesetEdit(genesetEdiUiHolder)
+				})
+
+			if (numOfEditableGrps > 1) {
+				const { groups, groupSelect } = this.setTermGroupSelector(editGrpDiv, tg)
+				selectedGroup = groups.find(g => g.selected)
+				groupSelect.on('change', () => {
+					selectedGroup = groups[groupSelect.property('value')]
+				})
+			} else {
+				const s = parent.config.settings.hierCluster
+				const g = tg.find(g => g.type != 'hierCluster' || g.lst.find(tw => tw.term.type == 'geneExpression'))
+				selectedGroup = {
+					index: 0,
+					name: g.name,
+					type: g.type,
+					lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
+					mode:
+						this.parent.chartType == 'hierCluster' && (g.type == 'hierCluster' || g.name == s?.termGroupName)
+							? s.dataType // is clustering group, pass dataType
+							: // !!subject to change!! when group is not clustering, and ds has mutation, defaults to MUTATION_CNV_FUSION
+							this.parent.state.termdbConfig.queries?.snvindel
+							? TermTypes.GENE_VARIANT
+							: '',
+					selected: true
+				}
 			}
 		}
 
