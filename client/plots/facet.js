@@ -54,9 +54,14 @@ class Facet {
 
 	async renderTable() {
 		const config = this.config
+		config.columnTw = config.term
+		config.rowTw = config.term2
+		delete config.term
+		delete config.term2
+
 		this.dom.mainDiv.selectAll('*').remove()
 		const tbody = this.dom.mainDiv.append('table').style('border-spacing', '5px').append('tbody')
-		const headerRow = tbody.append('tr').style('text-align', 'center')
+		const headerRow = tbody.append('tr')
 		//blank space left for row labels
 		headerRow.append('th')
 
@@ -68,7 +73,7 @@ class Facet {
 			 */
 			const { result, categories, categories2 } = await this.getSampleTableData(config)
 			for (const category of categories) {
-				const label = config.term.term.values?.[category]?.label || category
+				const label = config.columnTw.term.values?.[category]?.label || category
 				this.addHeader(headerRow, label)
 			}
 			this.renderSampleTable(tbody, config, result, categories, categories2)
@@ -77,7 +82,7 @@ class Facet {
 			 * render a static table with counts. No interactivity. */
 			const { rows, filteredCols } = await this.getStaticTableData(config)
 			for (const col of filteredCols) {
-				const label = config.term.term.values?.[col.seriesId]?.label || col.seriesId
+				const label = config.columnTw.term.values?.[col.seriesId]?.label || col.seriesId
 				this.addHeader(headerRow, label)
 			}
 			this.renderStaticTable(tbody, config, rows, filteredCols)
@@ -89,11 +94,11 @@ class Facet {
 		for (const category2 of categories2) {
 			cells[category2] = {}
 			const tr = tbody.append('tr')
-			const label2 = config.term2.term.values?.[category2]?.label || category2
+			const label2 = config.rowTw.term.values?.[category2]?.label || category2
 			this.addRowLabel(tr, label2)
 			for (const category of categories) {
 				const samples = result.lst.filter(
-					s => s[config.term.$id]?.key == category && s[config.term2.$id]?.key == category2
+					s => s[config.columnTw.$id]?.key == category && s[config.rowTw.$id]?.key == category2
 				)
 				cells[category2][category] = { samples, selected: false }
 				const label = samples.length > 0 ? samples.length : ''
@@ -149,10 +154,10 @@ class Facet {
 
 	async getSampleTableData(config) {
 		const result = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: [config.term, config.term2]
+			terms: [config.columnTw, config.rowTw]
 		})
-		const categories = this.getCategories(config.term, result.lst)
-		const categories2 = this.getCategories(config.term2, result.lst)
+		const categories = this.getCategories(config.columnTw, result.lst)
+		const categories2 = this.getCategories(config.rowTw, result.lst)
 		return { result, categories, categories2 }
 	}
 
@@ -204,7 +209,7 @@ class Facet {
 	renderStaticTable(tbody, config, rows) {
 		for (const row of rows) {
 			const tr = tbody.append('tr')
-			const label = config.term2.term.values?.[row[0]]?.label || row[0]
+			const label = config.rowTw.term.values?.[row[0]]?.label || row[0]
 			this.addRowLabel(tr, label)
 			for (const col of row[1]) {
 				const label = col[1].value > 0 ? col[1].value : ''
@@ -245,14 +250,14 @@ class Facet {
 		// 	}
 		// }
 
-		const opts = { term: config.term, filter: this.state.termfilter.filter }
+		const opts = { term: config.columnTw, filter: this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 
 		//Need to get the totals
 		await this.getDescrStats(opts.term)
 
-		if (config.term2) {
-			opts.term2 = config.term2
+		if (config.rowTw) {
+			opts.term2 = config.rowTw
 			await this.getDescrStats(opts.term2)
 		}
 
@@ -276,11 +281,11 @@ class Facet {
 		return { rows, filteredCols }
 	}
 
-	async getDescrStats(term) {
-		if (isNumericTerm(term.term)) {
-			const data = await this.app.vocabApi.getDescrStats(term, this.state.termfilter)
+	async getDescrStats(tw) {
+		if (isNumericTerm(tw.term)) {
+			const data = await this.app.vocabApi.getDescrStats(tw, this.state.termfilter)
 			if (data.error) throw data.error
-			term.q.descrStats = data.values
+			tw.q.descrStats = data.values
 		}
 	}
 
@@ -288,7 +293,7 @@ class Facet {
 		headerRow
 			.append('th')
 			.attr('data-testid', 'sjpp-facet-col-header')
-			.style('text-align', 'left')
+			.style('text-align', 'center')
 			.style('background-color', '#FAFAFA')
 			.style('padding-right', '50px')
 			.text(text)
@@ -348,8 +353,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			term: { term: xterm },
 			term2: { term: yterm }
 		}
-		if (isNumericTerm(xterm)) config.term.q = { mode: 'discrete' }
-		if (isNumericTerm(yterm)) config.term2.q = { mode: 'discrete' }
+		if (isNumericTerm(xterm)) config.columnTw.q = { mode: 'discrete' }
+		if (isNumericTerm(yterm)) config.rowTw.q = { mode: 'discrete' }
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
 			config
