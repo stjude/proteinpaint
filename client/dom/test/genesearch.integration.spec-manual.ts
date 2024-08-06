@@ -5,11 +5,8 @@ import { hg38 } from '../../test/testdata/genomes'
 /* Tests
     - string2variant() - HGVS deletion and delins variants
 
-
-	TODO: 
-	- getRefAllele
-	- checkInput, snp and gene
-	- geneCoordSearch
+*** Tests cannot be run on CI because the fasta file is not available ***
+Run manually as needed. 
 */
 
 /**************
@@ -41,7 +38,7 @@ tape('string2variant() - HGVS deletion and delins variants', async test => {
 	expected = {
 		isVariant: true,
 		chr: 'chr2',
-		ref: 'AGCTG',
+		ref: 'AGCTG',//on CI this shows as undefined because the fasta file is not available
 		alt: '-'
 	}
 	test.deepEqual(
@@ -76,7 +73,7 @@ tape('string2variant() - HGVS deletion and delins variants', async test => {
 		isVariant: true,
 		chr: 'chr2',
 		pos: 119955155,
-		ref: 'AGCTG',
+		ref: 'AGCTG',//on CI this shows as undefined because the fasta file is not available
 		alt: 'TTTTT'
 	}
 	test.deepEqual(variant, expected, 'Should parse HGVS string into a Delins variant object')
