@@ -101,27 +101,29 @@ class Facet {
 					s => s[config.columnTw.$id]?.key == category && s[config.rowTw.$id]?.key == category2
 				)
 				cells[category2][category] = { samples, selected: false }
-				const label = samples.length > 0 ? samples.length : ''
-				const td = this.addCellCount(tr, label)
+				const td = tr.append('td')
 				if (samples.length > 0)
-					td.on('click', () => {
-						const selected = (cells[category2][category].selected = !cells[category2][category].selected)
-						if (selected) {
-							td.style('border', '1px solid blue')
-						} else {
-							td.style('border', 'none')
-						}
+					td.style('background-color', '#F2F2F2')
+						.style('text-align', 'center')
+						.text(samples.length)
+						.on('click', () => {
+							const selected = (cells[category2][category].selected = !cells[category2][category].selected)
+							if (selected) {
+								td.style('border', '1px solid blue')
+							} else {
+								td.style('border', 'none')
+							}
 
-						for (const category2 of categories2) {
-							for (const category of categories) {
-								if (cells[category2][category].selected) {
-									showSamplesBt.property('disabled', false)
-									return
+							for (const category2 of categories2) {
+								for (const category of categories) {
+									if (cells[category2][category].selected) {
+										showSamplesBt.property('disabled', false)
+										return
+									}
 								}
 							}
-						}
-						showSamplesBt.property('disabled', true)
-					})
+							showSamplesBt.property('disabled', true)
+						})
 			}
 		}
 		const buttonDiv = this.dom.mainDiv.append('div').style('display', 'inline-block').style('margin-top', '20px')
@@ -293,7 +295,7 @@ class Facet {
 		headerRow
 			.append('th')
 			.attr('data-testid', 'sjpp-facet-col-header')
-			.style('background-color', '#FAFAFA')
+			// .style('background-color', '#FAFAFA')
 			.style('padding', '0px 25px')
 			.text(text)
 	}
@@ -301,7 +303,7 @@ class Facet {
 	addRowLabel(tr, label) {
 		tr.append('td')
 			.attr('data-testid', 'sjpp-facet-row-label')
-			.style('background-color', '#FAFAFA')
+			// .style('background-color', '#FAFAFA')
 			.style('font-weight', 'bold')
 			.text(label)
 	}
