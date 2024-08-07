@@ -619,13 +619,17 @@ function setInteractivity(self) {
 		type opt = { label: string; callback: (f?: any) => void }
 		const options: opt[] = []
 
-		if (self.q.groupsetting?.inuse && self.q.mode != 'binary' && self.term.type != 'geneVariant') {
-			// this instance is using a categorical term doing groupsetting; add option to cancel it
-			// as categorical edit menu cannot do the canceling
-			options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
+		if (self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset') {
+			// term is using groupsetting
+			// should provide option to cancel it
+			if (self.q.mode != 'binary' && self.term.type != 'geneVariant') {
+				// mode=binary will never use groupsetting
+				// geneVariant term can cancel groupsetting within edit menu
+				options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
+			}
 		}
 
-		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
+		if (self.q && !self.term.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
 			// hide edit option for survival term because its showEditMenu() is disabled
 			options.push({
 				label: 'Edit',

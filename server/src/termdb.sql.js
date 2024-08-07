@@ -580,18 +580,18 @@ function makesql_survival(tablename, term, q, values, filter) {
 }
 
 export function get_active_groupset(term, q) {
-	if (!q?.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) return
-	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
-		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
-		if (!term.groupsetting) throw 'term.groupsetting missing when q.predefined_groupset_idx in use'
-		if (!term.groupsetting.lst) throw 'term.groupsetting.lst missing when q.predefined_groupset_idx in use'
-		const s = term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
+	if (!q || term.groupsetting.disabled) return
+	if (q.type == 'predefined-groupset') {
+		if (!Number.isInteger(q.predefined_groupset_idx)) throw 'q.predefined_groupset_idx is not an integer'
+		if (q.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
+		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst is empty when q.predefined_groupset_idx in use'
+		const s = term.groupsetting.lst[q.predefined_groupset_idx]
 		if (!s) throw 'q.predefined_groupset_idx out of bound'
 		return s
-	} else if (q.groupsetting.customset) {
-		return q.groupsetting.customset
-	} else {
-		throw 'do not know how to get groupset'
+	}
+	if (q.type == 'custom-groupset') {
+		if (!q.customset) throw 'q.customset is missing'
+		return q.customset
 	}
 }
 

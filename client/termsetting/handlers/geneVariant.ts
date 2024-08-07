@@ -109,7 +109,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	// groupsetting
 	// fill term.groupsetting
 	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting satisfies TermGroupSetting
-	// fill q.groupsetting
+	// fill groupsetting properties in q
 	if (tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') {
 		// groupsetting in use
 		// must specify a single data type

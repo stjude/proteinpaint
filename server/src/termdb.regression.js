@@ -492,20 +492,18 @@ function getLogisticOutcomeNonref(outcome) {
 	// not condition term;
 	// depending on q.type, find the non-ref group and return its name, to be used in Y axis of spline plot
 	if (outcome.q.type == 'predefined-groupset') {
-		if (!outcome.q.groupsetting) throw 'outcome.q.groupsetting{} missing when type=predefined-groupset'
-		if (!Number.isInteger(outcome.q.groupsetting.predefined_groupset_idx))
+		if (!Number.isInteger(outcome.q.predefined_groupset_idx))
 			throw 'outcome.q.predefined_groupset_idx not integer when q.type is "predefined-groupset"'
 		if (!outcome.term.groupsetting) throw 'outcome.term.groupsetting missing'
-		const grpset = outcome.term.groupsetting.lst[outcome.q.groupsetting.predefined_groupset_idx]
+		const grpset = outcome.term.groupsetting.lst[outcome.q.predefined_groupset_idx]
 		if (!grpset) throw 'groupset not found by outcome.q.predefined_groupset_idx'
 		const nonrefgrp = grpset.groups.find(i => i.name != outcome.refGrp)
 		if (!nonrefgrp) throw 'non-ref group not found for predefined-groupset'
 		return nonrefgrp.name
 	}
 	if (outcome.q.type == 'custom-groupset') {
-		if (!outcome.q.groupsetting) throw 'outcome.q.groupsetting{} missing when type=predefined-groupset'
-		if (!outcome.q.groupsetting.customset) throw 'outcome.q.customset missing'
-		const nonrefgrp = outcome.q.groupsetting.customset.groups.find(i => i.name != outcome.refGrp)
+		if (!outcome.q.customset) throw 'outcome.q.customset missing'
+		const nonrefgrp = outcome.q.customset.groups.find(i => i.name != outcome.refGrp)
 		if (!nonrefgrp) throw 'non-ref group not found for custom-groupset'
 		return nonrefgrp.name
 	}

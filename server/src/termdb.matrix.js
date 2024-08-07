@@ -224,7 +224,7 @@ async function getSampleData(q, ds) {
 			}
 		} else if (tw.term.type == TermTypes.SINGLECELL_CELLTYPE) {
 			const data = await q.ds.queries?.singleCell?.data.get({ sample: tw.term.sample, plots: [tw.term.plot] })
-			const groups = tw.q?.groupsetting?.customset?.groups
+			const groups = tw.q?.customset?.groups
 			for (const cell of data.plots[0].cells) {
 				const sampleId = cell.cellId
 				if (!(sampleId in samples)) {
