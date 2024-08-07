@@ -104,17 +104,19 @@ function addButtons(headerHolder, app, dslabel, logged, site) {
 		div
 			.append('button')
 			.text('Radar 1-Score-based(Site)')
-			.on('click', e => launchRadarPlot(app, 'profileRadarFacility', 'Radar Graph 1', 'plot1', logged, site))
+			.on('click', e =>
+				launchRadarPlot(app, 'profileRadarFacility', 'Radar 1-Score-based(Site)', 'plot1', logged, site)
+			)
 	if (logged)
 		div
 			.append('button')
 			.text('Radar 2-Impressions')
-			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar Graph 2', 'plot1', logged, site))
+			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar 2-Impressions', 'plot1', logged, site))
 	if (isFull && logged)
 		div
 			.append('button')
 			.text('Radar 3-Score-based(SC & POC)')
-			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar Graph 3', 'plot2', logged, site))
+			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar 3-Score-based(SC & POC)', 'plot2', logged, site))
 	// if (logged)
 	// 	div
 	// 		.append('button')

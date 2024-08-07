@@ -74,7 +74,7 @@ class profileRadar extends profilePlot {
 
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 380},${y + 180})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 400},${y + 180})`)
 		this.filterG = this.svg
 			.append('g')
 			.attr('transform', `translate(${this.settings.comparison ? 150 : 40},${y + 370})`)
