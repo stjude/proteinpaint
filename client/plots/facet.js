@@ -141,13 +141,13 @@ class Facet {
 								for (const category of categories) {
 									if (cells[category2][category].selected) {
 										buttonDiv.style('display', '')
-										prompt.text('Select how to see sample data:')
+										prompt.text('Choose how to use samples:')
 										return
 									}
 								}
 							}
 							buttonDiv.style('display', 'none')
-							prompt.text('Select samples to see data')
+							prompt.text('Click on cells to select samples')
 						})
 				}
 			}
@@ -155,13 +155,13 @@ class Facet {
 		const prompt = this.dom.mainDiv
 			.append('div')
 			.attr('data-testid', 'sjpp-facet-start-prompt')
-			.style('margin-top', '20px')
-			.style('opacity', '0.75')
-			.text('Select samples to see data')
-		const buttonDiv = this.dom.mainDiv.append('div').style('margin-top', '20px').style('display', 'none')
+			.style('margin', '20px 0px 0px 15px')
+			.style('opacity', '0.7')
+			.text('Click on cells to select samples')
+		const buttonDiv = this.dom.mainDiv.append('div').style('margin', '20px 0px 0px 25px').style('display', 'none')
 		const btns = [
 			{
-				text: 'Show samples',
+				text: 'Show samples view',
 				// disabled: () => {}, add this if needed later
 				callback: () => {
 					const samples = this.getSelectedSamples(categories, categories2, cells)
@@ -202,7 +202,7 @@ class Facet {
 				}
 			},
 			{
-				text: 'Add group',
+				text: 'Create group',
 				callback: () => {
 					this.addGroup(categories, categories2, cells)
 				}
