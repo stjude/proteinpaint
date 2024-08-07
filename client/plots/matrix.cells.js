@@ -136,7 +136,7 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
 	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color // TODO: may fill in tw.q.values{} based on groupsetting
-	if (tw.q?.groupsetting?.inuse) {
+	if (tw.q?.type == 'predefined-groupset' || tw.q?.type == 'custom-groupset') {
 		// groupsetting in use
 		// value is name of group assignment
 		cell.label = value

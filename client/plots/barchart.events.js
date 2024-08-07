@@ -701,11 +701,9 @@ function getTermValues(d, self) {
 		const q = term.q //self.currServerData.refs.q[i]
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
-		if (q.groupsetting && q.groupsetting.inuse) {
+		if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
 			const groupset =
-				'predefined_groupset_idx' in q.groupsetting
-					? term.term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
-					: q.groupsetting.customset
+				q.type == 'predefined-groupset' ? term.term.groupsetting.lst[q.predefined_groupset_idx] : q.customset
 			const group = groupset.groups.find(g => g.name === key)
 			const tvs = { term: term.term, values: group.values, groupset_label: group.name }
 			if (term.term.type == 'condition') {

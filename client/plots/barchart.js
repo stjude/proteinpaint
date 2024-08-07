@@ -463,11 +463,11 @@ class Barchart {
 				for (const data of series.data) {
 					data.seriesId = series.seriesId
 					if (
-						(t1.term.type == 'geneVariant' && !t1.q.groupsetting.inuse) ||
-						(t2?.term.type == 'geneVariant' && !t2?.q.groupsetting.inuse)
+						(t1.term.type == 'geneVariant' && t1.q.type == 'values') ||
+						(t2?.term.type == 'geneVariant' && t2?.q.type == 'values')
 					) {
-						//term1 or term2 is a geneVariant term not using groupsetting
-						//totalsByDataId: {dataId: {chartId:total, ...}, ...}
+						// term1 or term2 is a geneVariant term not using groupsetting
+						// need specialized processing
 						if (!(data.dataId in this.totalsByDataId)) {
 							this.totalsByDataId[data.dataId] = {}
 						}
@@ -475,8 +475,6 @@ class Barchart {
 							? this.totalsByDataId[data.dataId][chart.chartId] + data.total
 							: 0 + data.total
 					} else {
-						//term1 or term2 isn't a geneVariant term not using groupsetting
-						//totalsByDataId: {dataId: total, ...}
 						if (!(data.dataId in this.totalsByDataId)) {
 							this.totalsByDataId[data.dataId] = 0
 						}
@@ -564,7 +562,7 @@ class Barchart {
 		const bin = bins?.find(bin => bin.label == label)
 		if (bin?.color) return bin.color
 
-		if (t.term.type == 'geneVariant' && !t.q.groupsetting.inuse) return this.getMutationColor(label)
+		if (t.term.type == 'geneVariant' && t.q.type == 'values') return this.getMutationColor(label)
 
 		return rgb(this.colorScale(label)).toString()
 	}
@@ -600,8 +598,8 @@ class Barchart {
 		const t1 = this.config.term
 		const t2 = this.config.term2
 		if (
-			(t1.term.type == 'geneVariant' && !t1.q.groupsetting.inuse) ||
-			(t2?.term.type == 'geneVariant' && !t2?.q.groupsetting.inuse)
+			(t1.term.type == 'geneVariant' && t1.q.type == 'values') ||
+			(t2?.term.type == 'geneVariant' && t2?.q.type == 'values')
 		) {
 			const legendGrps = []
 			for (const chart of this.chartsData.charts) {
@@ -658,8 +656,8 @@ class Barchart {
 					const total =
 						t2?.term?.type == 'condition'
 							? 0
-							: (t1.term.type == 'geneVariant' && !t1.q.groupsetting.inuse) ||
-							  (t2?.term.type == 'geneVariant' && !t2?.q.groupsetting.inuse)
+							: (t1.term.type == 'geneVariant' && t1.q.type == 'values') ||
+							  (t2?.term.type == 'geneVariant' && t2?.q.type == 'values')
 							? chart.serieses.filter(filter).reduce(reducer, 0)
 							: this.currServerData.charts.reduce((sum, chart) => {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)

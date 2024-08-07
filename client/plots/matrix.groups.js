@@ -232,8 +232,7 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		: values.filter(v => sample_match_termvaluesetting(v, isSpecific[0], tw.term, sample))
 
 	const renderedValues = []
-	if (tw.term.type != 'geneVariant' || tw.q?.groupsetting?.inuse) renderedValues.push(...filteredValues)
-	else {
+	if (tw.term.type == 'geneVariant' && tw.q?.type == 'values') {
 		// filteredValues.sort((a, b) => getMclassOrder(a) - getMclassOrder(b))
 		filteredValues.sort(this.mclassSorter)
 
@@ -254,6 +253,8 @@ export function classifyValues(anno, tw, grp, s, sample) {
 			}
 			filteredValues = sortedFilteredValues
 		}
+	} else {
+		renderedValues.push(...filteredValues)
 	}
 
 	// group stacked cell values to avoid striped pattern
@@ -266,7 +267,7 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		filteredValues,
 		countedValues: filteredValues.filter(v => {
 			if (tw.term.type == 'geneVariant') {
-				if (!tw.q?.groupsetting?.inuse) {
+				if (tw.q?.type == 'values') {
 					// groupsetting not in use
 					// values are mutation classes
 					// do not count WT, blank, or skipped classes
@@ -275,14 +276,10 @@ export function classifyValues(anno, tw, grp, s, sample) {
 				} else {
 					// groupsetting in use
 					// values are group assignments
-					// only count assignments to group with highest priority
-					// in groupset
-
+					// only count assignments to group with highest
+					// priority in groupset
 					const groupset =
-						'predefined_groupset_idx' in tw.q.groupsetting
-							? tw.term.groupsetting.lst[tw.q.groupsetting.predefined_groupset_idx]
-							: tw.q.groupsetting.customset
-
+						tw.q.type == 'predefined-groupset' ? tw.term.groupsetting.lst[tw.q.predefined_groupset_idx] : tw.q.customset
 					const group = groupset.groups[0]
 					if (v != group.name) return false
 				}
