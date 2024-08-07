@@ -146,6 +146,8 @@ class Facet {
 									}
 								}
 							}
+							buttonDiv.style('display', 'none')
+							startPrompt.style('display', '')
 						})
 				}
 			}
@@ -154,7 +156,7 @@ class Facet {
 			.append('div')
 			.attr('data-testid', 'sjpp-facet-start-prompt')
 			.style('margin-top', '20px')
-			.style('color', 'red')
+			.style('opacity', '0.75')
 			.text('Select samples to see data')
 		const buttonDiv = this.dom.mainDiv.append('div').style('margin-top', '20px').style('display', 'none')
 		const btns = [
