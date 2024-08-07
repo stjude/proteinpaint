@@ -111,7 +111,7 @@ async function computeGenes4nativeDs(
 	 * This is based on the recommendation of this article:
 	 * https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full.
 	 * This article recommends using interquartile region over variance.*/
-	//console.log("q:", q)
+
 	let filter_extreme_values = true
 	if (q.filter_extreme_values == 1) {
 		filter_extreme_values = true
@@ -119,21 +119,14 @@ async function computeGenes4nativeDs(
 		filter_extreme_values = false
 	}
 
-	let filter_type = 'var'
-	if (q.filter_type == 1) {
-		filter_type = 'var'
-	} else if (q.filter_type == 0) {
-		filter_type = 'iqr'
-	}
-
 	const input_json = {
 		input_file: matrixFile,
 		samples: samples.join(','),
 		filter_extreme_values: filter_extreme_values,
-		num_genes: q.maxGenes,
-		param: filter_type
+		num_genes: q.maxGenes
 	}
-	//console.log("input_json:", input_json)
+
+	if (q?.filter_type?.type) input_json['param'] = q.filter_type.type
 	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
 	const rust_output_list = rust_output.split('\n')
 
