@@ -1,6 +1,6 @@
 //import GdcFilter0 from './filter.gdc'
-import { Filter } from '../filter'
-import { ErrorResponse } from './errorResponse'
+import { Filter } from '../filter.ts'
+import { ErrorResponse } from './errorResponse.ts'
 
 export type TermdbTopVariablyExpressedGenesRequest = {
 	/** Ref genome */
