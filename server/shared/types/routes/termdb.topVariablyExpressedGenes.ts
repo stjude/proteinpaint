@@ -1,6 +1,6 @@
 //import GdcFilter0 from './filter.gdc'
-import { Filter } from '../filter.ts'
-import { ErrorResponse } from './errorResponse.ts'
+import { Filter } from '../filter'
+import { ErrorResponse } from './errorResponse'
 
 export type TermdbTopVariablyExpressedGenesRequest = {
 	/** Ref genome */
@@ -25,8 +25,9 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	/** filter extreme values: true/false */
 	filter_extreme_values?: number
 	/** Filter type: variance/inter-quartile region */
-	filter_type?: number
-	/** pp filter */
+	filter_type?: {
+		type: 'var' | 'iqr'
+	}
 	filter?: Filter
 	/** JSON, optional GDC cohort filter to restrict cases */
 	filter0?: any //GdcFilter0
