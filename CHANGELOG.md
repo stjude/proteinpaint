@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Facet table renders for all datasets.
+- oncomatrix and gene expression hiercluster genes menu: at editing a group, move the group selector from secondary menu to primary menu
 
 
 ## 2.70.3
