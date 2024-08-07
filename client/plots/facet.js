@@ -141,18 +141,18 @@ class Facet {
 								for (const category of categories) {
 									if (cells[category2][category].selected) {
 										buttonDiv.style('display', '')
-										startPrompt.style('display', 'none')
+										prompt.text('Select how to see sample data:')
 										return
 									}
 								}
 							}
 							buttonDiv.style('display', 'none')
-							startPrompt.style('display', '')
+							prompt.text('Select samples to see data')
 						})
 				}
 			}
 		}
-		const startPrompt = this.dom.mainDiv
+		const prompt = this.dom.mainDiv
 			.append('div')
 			.attr('data-testid', 'sjpp-facet-start-prompt')
 			.style('margin-top', '20px')
