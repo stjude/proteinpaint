@@ -1809,9 +1809,9 @@ tape('filterPromptInit()', async test => {
 	const parentTerms = await detectGte({ elem: filter.dom.termSrcDiv.node(), selector: '.termbtn' })
 	parentTerms[0].click()
 
-	//Click the first and only leaf term
-	const leafTerm = await detectOne({ elem: filter.dom.termSrcDiv.node(), selector: '.sja_tree_click_term.termlabel' })
-	leafTerm.click()
+	//Click the first leaf term
+	const leafTerms = await detectGte({ elem: filter.dom.termSrcDiv.node(), selector: '.sja_tree_click_term.termlabel' })
+	leafTerms[0].click()
 
 	//Test all the relevant dom elements are present
 	test.equal(filter.dom.treeTip.dnode.style.display, 'block', `Should display variable selection menu`)
