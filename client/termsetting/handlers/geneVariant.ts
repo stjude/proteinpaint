@@ -6,7 +6,7 @@ import {
 	GeneVariantTW,
 	GeneVariantTermSettingInstance
 } from '../../shared/types/terms/geneVariant'
-import { PredefinedGroupSettingQ } from '../../shared/types/terms/term'
+import { PredefinedGroupSettingQ, TermGroupSetting } from '../../shared/types/terms/term'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '../../rx'
 import { GroupSettingMethods } from './groupsetting.ts'
@@ -98,7 +98,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 		throw 'cannot recognize tw.term.kind'
 	}
 
-	if (!Object.hasOwn(tw.q, 'type')) tw.q.type = 'values'
+	if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values'
 
 	// merge defaultQ into tw.q
 	if (defaultQ) {
@@ -108,7 +108,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 
 	// groupsetting
 	// fill term.groupsetting
-	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
+	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting satisfies TermGroupSetting
 	// fill q.groupsetting
 	if (tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') {
 		// groupsetting in use
