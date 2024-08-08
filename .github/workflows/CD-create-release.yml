@@ -133,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-docker@tiatoolbox
+        uses: stjude/proteinpaint/.github/actions/publish-docker@master
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -144,7 +144,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-docker@tiatoolbox
+        uses: stjude/proteinpaint/.github/actions/publish-docker@master
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
