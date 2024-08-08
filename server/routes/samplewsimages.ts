@@ -3,7 +3,7 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 
 /*
-given a sample, return all deep zoom images for specified dataset
+given a sample, return all whole slide images for specified dataset
 */
 
 export const api: any = {
@@ -39,8 +39,6 @@ function init({ genomes }) {
 				sampleId
 			)
 
-			console.log('sampleId', sampleId)
-
 			const sampleWSImages = getWSImages(sampleWSImagesPath)
 			res.send({ sampleWSImages: sampleWSImages })
 		} catch (e: any) {
@@ -52,5 +50,5 @@ function init({ genomes }) {
 
 function getWSImages(sampleImagesPath: string): string[] {
 	const files = fs.readdirSync(sampleImagesPath)
-	return files.filter(file => ['.svs', '.mrxs'].includes(path.extname(file)))
+	return files.filter(file => ['.svs', '.mrxs', '.scn', '.ndpi', '.tiff'].includes(path.extname(file)))
 }
