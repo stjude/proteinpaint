@@ -356,7 +356,7 @@ tape('geneVariant term', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			114,
+			240,
 			`should render the expected number of cell rects`
 		)
 		if (test._ok) matrix.Inner.app.destroy()
@@ -412,7 +412,7 @@ tape('geneVariant terms and dictionary terms', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			522,
+			900,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -471,7 +471,7 @@ tape('geneVariant terms with divide by dictionary term', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			342,
+			720,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -535,7 +535,7 @@ tape('geneVariant terms and dictionary terms divide by dictionary term', functio
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			522,
+			900,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -1274,7 +1274,7 @@ tape('avoid race condition', function (test) {
 			const hits = rects.filter(d => d.key === 'BCR' && d.value.class != 'WT' && d.value.class != 'Blank')
 			test.equal(
 				rects.size(),
-				114,
+				240,
 				'should have the expected total number of matrix cell rects, inlcuding WT and not tested'
 			)
 			test.equal(hits.size(), 2, 'should have the expected number of matrix cell rects with hits')
@@ -1700,7 +1700,7 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 	}
 })
 
-tape.skip(
+tape(
 	'apply "Hide samples with" and "Do not show" legend filters to a geneVariant term in geneVariant term only matrix',
 	function (test) {
 		test.timeoutAfter(5000)
@@ -1906,7 +1906,7 @@ tape.skip(
 	}
 )
 
-tape.skip('apply legend group filters to a geneVariant term in geneVariant term only matrix', function (test) {
+tape('apply legend group filters to a geneVariant term in geneVariant term only matrix', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(15)
 
@@ -2126,7 +2126,7 @@ tape.skip('apply legend group filters to a geneVariant term in geneVariant term 
 	}
 })
 
-tape.skip(
+tape(
 	'apply legend group filters and legend filters to a matrix with both geneVariant and dictionary terms',
 	function (test) {
 		test.timeoutAfter(5000)
@@ -2712,7 +2712,7 @@ tape('dictionary term with divide by survival term', function (test) {
 	}
 })
 
-tape.skip('apply "hide" and "show" legend filters to a survival term', function (test) {
+tape('apply "hide" and "show" legend filters to a survival term', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(10)
 	runpp({
@@ -2784,7 +2784,7 @@ tape.skip('apply "hide" and "show" legend filters to a survival term', function 
 
 		// 1. Hide
 		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
-			d?.__data__?.text?.startsWith('Alive')
+			d?.__data__?.text?.startsWith('Exit code: 0')
 		)
 		legendTexts.dispatchEvent(
 			new MouseEvent('mouseup', {
@@ -2826,7 +2826,7 @@ tape.skip('apply "hide" and "show" legend filters to a survival term', function 
 
 		// 2. Show
 		const legendTexts2 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
-			d?.__data__?.text?.startsWith('Alive')
+			d?.__data__?.text?.startsWith('Exit code: 0')
 		)
 		legendTexts2.dispatchEvent(
 			new MouseEvent('mouseup', {
@@ -2871,7 +2871,7 @@ tape.skip('apply "hide" and "show" legend filters to a survival term', function 
 	}
 })
 
-tape.skip('apply "show only" and "show all" legend filters to a survival terms', function (test) {
+tape('apply "show only" and "show all" legend filters to a survival terms', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(14)
 	runpp({
@@ -2943,7 +2943,7 @@ tape.skip('apply "show only" and "show all" legend filters to a survival terms',
 
 		// 1. Show only
 		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
-			d?.__data__?.text?.startsWith('Alive')
+			d?.__data__?.text?.startsWith('Exit code: 0')
 		)
 		legendTexts.dispatchEvent(
 			new MouseEvent('mouseup', {
@@ -3058,7 +3058,7 @@ tape.skip('apply "show only" and "show all" legend filters to a survival terms',
 
 		// 4. Show all
 		const fourthLegendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
-			d?.__data__?.text?.startsWith('Alive')
+			d?.__data__?.text?.startsWith('Exit code: 0')
 		)
 		fourthLegendTexts.dispatchEvent(
 			new MouseEvent('mouseup', {
