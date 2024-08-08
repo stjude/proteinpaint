@@ -11,8 +11,8 @@ genomeObj={}
 
 sample_id
 
-tiamage = str
-	paths to WSI file
+wsimages = list<string>
+	list of WSI filenames to display
 
 */
 export default async function (dslabel, holder, genomeObj, sample_id, wsimages) {
