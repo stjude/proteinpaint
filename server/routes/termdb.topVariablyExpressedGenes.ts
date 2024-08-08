@@ -114,19 +114,24 @@ async function computeGenes4nativeDs(
 
 	let filter_extreme_values = true
 	if (q.filter_extreme_values == 1) {
+		// q.filter_extreme_values is an optional variable. If this is not defined, set filter_extreme_values = true
 		filter_extreme_values = true
 	} else if (q.filter_extreme_values == 0) {
 		filter_extreme_values = false
 	}
 
+	let filter_type = 'iqr'
+	if (q.filter_type?.type) filter_type = q.filter_type.type // q.filter_type is an optional variable and may not be defined. In that case, set filter_type = "iqr"
+
 	const input_json = {
 		input_file: matrixFile,
 		samples: samples.join(','),
 		filter_extreme_values: filter_extreme_values,
-		num_genes: q.maxGenes
+		num_genes: q.maxGenes,
+		param: filter_type
 	}
+	console.log('input_json:', input_json)
 
-	if (q?.filter_type?.type) input_json['param'] = q.filter_type.type
 	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
 	const rust_output_list = rust_output.split('\n')
 
