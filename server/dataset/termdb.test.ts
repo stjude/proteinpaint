@@ -222,39 +222,37 @@ export default {
 		topVariablyExpressedGenes: { src: 'native' }
 	},
 	assayAvailability: {
-		// use "genetic_race" as fake sources of assay availability
+		// term used below must be annotated on samples rather than patients(root). otherwise matrix will pull wrong samples for geneVariant term
 		byDt: {
 			// snvindel, differentiating sample origin
 			1: {
 				byOrigin: {
 					germline: {
-						term_id: 'genetic_race',
+						term_id: 'assayavailability_germline',
 						label: 'Germline', // human readable label of this origin
-						yes: { value: ['European Ancestry', 'Asian Ancestry'] },
-						no: { value: ['Multi-Ancestry-Admixed', 'African Ancestry'] }
+						yes: { value: ['1'] },
+						no: { value: ['2'] }
 					},
 					somatic: {
-						term_id: 'genetic_race',
+						term_id: 'wgs_curated',
 						label: 'Somatic',
-						yes: { value: ['European Ancestry', 'African Ancestry'] },
-						no: { value: ['Multi-Ancestry-Admixed', 'Asian Ancestry'] }
+						yes: { value: ['1'] },
+						no: { value: ['0'] } // the category doesn't exist in termdb but is still supplied since somatic.no{} is required
 					}
 				}
 			},
 
 			// fusion
 			2: {
-				//mutations are detected from RNAseq
-				term_id: 'genetic_race',
-				yes: { value: ['European Ancestry', 'African Ancestry'] },
-				no: { value: ['Asian Ancestry', 'Multi-Ancestry-Admixed'] }
+				term_id: 'assayavailability_fusion',
+				yes: { value: ['1'] },
+				no: { value: ['2'] }
 			},
 			// cnv
 			4: {
-				// mutations are detected from Methylation
-				term_id: 'genetic_race',
-				yes: { value: ['European Ancestry', 'African Ancestry'] },
-				no: { value: ['Asian Ancestry', 'Multi-Ancestry-Admixed'] }
+				term_id: 'assayavailability_cnv',
+				yes: { value: ['1'] },
+				no: { value: ['2'] }
 			}
 		}
 	}
