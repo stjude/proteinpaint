@@ -14,7 +14,6 @@ import TileSource from 'ol/source/Tile'
 import { Layer } from 'ol/layer'
 import Collection from 'ol/Collection'
 import BaseLayer from 'ol/layer/Base'
-import { Options } from 'ol-ext/control/LayerSwitcher'
 
 type GlobalMap<K, V> = globalThis.Map<K, V>
 
@@ -155,9 +154,9 @@ export default class WSIViewer {
 	}
 }
 
-export const tiaViewer = getCompInit(WSIViewer)
+export const wsiViewer = getCompInit(WSIViewer)
 
-export const componentInit = tiaViewer
+export const componentInit = wsiViewer
 
 export async function getPlotConfig() {
 	return {
