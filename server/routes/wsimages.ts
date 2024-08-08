@@ -2,12 +2,11 @@ import ky from 'ky'
 import qs from 'qs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import fs from 'fs'
 import { CookieJar } from 'tough-cookie'
 import { promisify } from 'util'
 
 /*
-return session_id and slide_dimensions for a sample 
+return session_id and slide_dimensions of the requested WSImage
 */
 
 const routePath = 'wsimages'
@@ -43,7 +42,6 @@ function init({ genomes }) {
 			const wsimage = req.query.wsimage
 			if (!wsimage) throw 'invalid wsimage'
 
-			// Create a new cookie jar instance
 			const cookieJar = new CookieJar()
 			const setCookie = promisify(cookieJar.setCookie.bind(cookieJar))
 			const getCookieString = promisify(cookieJar.getCookieString.bind(cookieJar))
@@ -71,12 +69,7 @@ function init({ genomes }) {
 			// Extract session_id from the cookie jar
 			const cookieString = await getCookieString(`${serverconfig.tileServerURL}/tileserver/session_id`)
 			const sessionId = cookieString.match(/session_id=([^;]*)/)?.[1]
-			console.log('sessionId', sessionId)
-
-			const sampleWSImagesPath = path.join(
-				`${serverconfig.tpmasterdir}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
-				wsimage
-			)
+			path.join(`${serverconfig.tpmasterdir}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`, wsimage)
 
 			const sampleWsiTileServer = path.join(
 				`${serverconfig.tileServerMount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
@@ -85,7 +78,7 @@ function init({ genomes }) {
 
 			const data = qs.stringify({ slide_path: sampleWsiTileServer })
 
-			// Make the PUT request with the extracted session_id
+			// Make the PUT request with the extracted session_id and load the wsi image to the TileServer
 			await ky.put(`${serverconfig.tileServerURL}/tileserver/slide`, {
 				body: data,
 				headers: {
@@ -110,8 +103,8 @@ function init({ genomes }) {
 				}
 			})
 
-			// Make the GET request
-			const getResponse: any = await ky
+			// Make the GET request to the TileServer get the image dimensions
+			const getWsiImageResponse: any = await ky
 				.get(`${serverconfig.tileServerURL}/tileserver/slide`, {
 					hooks: {
 						beforeRequest: [
@@ -124,10 +117,7 @@ function init({ genomes }) {
 				})
 				.json()
 
-			console.log('get response', getResponse)
-
-			// Respond to the client
-			res.status(200).json({ sessionId: sessionId, slide_dimensions: getResponse.slide_dimensions })
+			res.status(200).json({ sessionId: sessionId, slide_dimensions: getWsiImageResponse.slide_dimensions })
 		} catch (e: any) {
 			console.log(e)
 			res.send({
