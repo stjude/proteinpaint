@@ -13,13 +13,9 @@ export type GeneVariantBaseQ = MinBaseQ & {
 
 export type GeneVariantQ = GeneVariantBaseQ & GroupSettingQ
 
-type GeneVariantBaseTerm = BaseTerm & { groupsetting: EnabledTermGroupSetting }
-
-type GeneVariantCoordTerm = GeneVariantBaseTerm & {
-	kind: 'coord'
-	chr: string
-	start: number
-	stop: number
+type GeneVariantBaseTerm = BaseTerm & {
+	type: 'geneVariant'
+	groupsetting: EnabledTermGroupSetting
 }
 
 export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
@@ -31,6 +27,13 @@ export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
 	chr?: string
 	start?: number
 	stop?: number
+}
+
+type GeneVariantCoordTerm = GeneVariantBaseTerm & {
+	kind: 'coord'
+	chr: string
+	start: number
+	stop: number
 }
 
 export type GeneVariantTerm = GeneVariantGeneTerm | GeneVariantCoordTerm

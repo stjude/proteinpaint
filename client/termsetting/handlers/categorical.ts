@@ -1,13 +1,8 @@
 import { GroupSettingMethods } from './groupsetting.ts'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import { VocabApi } from '../../shared/types/index'
-import { TermValues, BaseGroupSet, GroupEntry } from '../../shared/types/terms/term'
-import {
-	CategoricalQ,
-	CategoricalTerm,
-	CategoricalTW,
-	CatPredefinedGroupSettingNested
-} from '../../shared/types/terms/categorical'
+import { BaseGroupSet, GroupEntry } from '../../shared/types/terms/term'
+import { CategoricalQ, CategoricalTerm, CategoricalTW } from '../../shared/types/terms/categorical'
 import { PillData } from '../types'
 import { copyMerge } from '../../rx'
 
@@ -50,62 +45,46 @@ export async function getHandler(self) {
 			return self.validateGroupsetting()
 		},
 
+		// TODO: can potentially remove validateQ() if type checking
+		// proves to be sufficient
 		validateQ(data: PillData) {
 			const t = data.term as CategoricalTerm
 			const q = data.q as CategoricalQ
-			const endNote = `(${t.type}, mode='${
-				q.type != 'predefined-groupset' && q.type !== 'custom-groupset' && q.mode
-			}', type='${q.type}')`
 			// validate the configuration
 			if (q.type == 'values') {
-				if (!t.values) self.error = `no term.values defined ${endNote}`
+				if (!t.values) self.error = 'no term.values defined'
 				if (q.mode == 'binary') {
-					if (Object.keys(t.values as TermValues).length != 2)
-						self.error = `term.values must have exactly two keys ${endNote}`
-
+					if (Object.keys(t.values).length != 2) self.error = 'term.values must have exactly two keys'
 					if (data.sampleCounts) {
 						for (const key in t.values) {
 							if (!data.sampleCounts.find(d => d.key === key))
-								self.error = `there are no samples for the required binary value=${key} ${endNote}`
+								self.error = `there are no samples for the required binary value=${key}`
 						}
 					}
 				}
-				return
-			}
-
-			if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
-				const tgs = t.groupsetting
-				if (!tgs) throw `no term.groupsetting ${endNote}`
-
-				let groupset: BaseGroupSet = { groups: [] } // TODO: should be able to declare as empty, initially?
+			} else if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
+				let groupset: BaseGroupSet
 				if (q.type == 'predefined-groupset') {
-					const gs = q.groupsetting
-					const idx = gs.predefined_groupset_idx
-					if (tgs.lst && !tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
-					else if (tgs.lst) groupset = tgs.lst[idx]
+					if (!t.groupsetting) throw 'no term.groupsetting'
+					if (!t.groupsetting.lst?.length) throw 'term.groupsetting.lst is empty'
+					groupset = t.groupsetting.lst[q.predefined_groupset_idx]
+					if (!groupset) throw 'no groupset entry for groupsetting.lst[predefined_groupset_idx]'
 				} else {
-					const gs = q.groupsetting
-					if (!gs.customset) throw `no q.groupsetting.customset defined ${endNote}`
-					groupset = gs.customset
+					groupset = q.customset
+					if (!groupset) throw 'invalid q.customset'
 				}
-
-				if (!groupset.groups.every((g: GroupEntry) => g.name !== undefined))
-					throw `every group in groupset must have 'name' defined ${endNote}`
-
+				if (groupset.groups.some((g: GroupEntry) => g.name === undefined))
+					throw 'every group in groupset must have .name defined'
 				if (q.mode == 'binary') {
-					if (groupset.groups.length != 2) throw `there must be exactly two groups ${endNote}`
-
+					if (groupset.groups.length != 2) throw 'there must be exactly two groups'
 					if (data.sampleCounts) {
 						for (const grp of groupset.groups) {
 							if (!data.sampleCounts.find(d => d.label === grp.name))
-								throw `there are no samples for the required binary value=${grp.name} ${endNote}`
+								throw `there are no samples for the required binary value=${grp.name}`
 						}
 					}
 				}
-
-				return
 			}
-			throw `unknown xxxx q.type='${q.type}' for categorical q.mode='${q.mode}'`
 		},
 
 		async postMain() {
@@ -153,37 +132,21 @@ export function setCategoryMethods(self) {
 	}
 }
 
-export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ = null) {
-	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
-	if ((tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') && !tw.q.groupsetting)
-		(tw.q.groupsetting as any) = {}
-	if (!tw.term.groupsetting) (tw.term.groupsetting as any) = {}
-	if (tw.term.groupsetting.disabled) {
-		/** .disabled not on q.groupsetting */
-		// 	tw.q.groupsetting.disabled = true
-		return
-	}
-	// delete tw.q.groupsetting.disabled
-	if (tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') {
-		if (tw.q.groupsetting.inuse === undefined) tw.q.groupsetting.inuse = false // do not apply by default
+export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ: CategoricalQ | null = null) {
+	if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values' // must fill default q.type if missing
 
-		// inuse:false is either from automatic setup or predefined in state
-		if (tw.q.groupsetting?.inuse && tw.q.type == 'predefined-groupset') {
-			const gs: CatPredefinedGroupSettingNested = tw.q.groupsetting
-			if (
-				tw.term.groupsetting.lst &&
-				//Fix checks if property is present
-				tw.term.groupsetting.useIndex >= 0 &&
-				tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
-			) {
-				gs.predefined_groupset_idx = tw.term.groupsetting.useIndex
-			}
-		}
+	if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
+
+	if (tw.q.type == 'predefined-groupset') {
+		if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'predefined_groupset_idx is not an integer'
+	}
+
+	if (tw.q.type == 'custom-groupset') {
+		if (!tw.q.customset) throw 'invalid customset'
 	}
 
 	if (defaultQ) {
-		//TODO change when Q objects separated out
-		;(defaultQ as CategoricalQ).isAtomic = true
+		defaultQ.isAtomic = true
 		// merge defaultQ into tw.q
 		copyMerge(tw.q, defaultQ)
 	}

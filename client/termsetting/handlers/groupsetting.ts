@@ -94,19 +94,41 @@ export class GroupSettingMethods {
 	}
 
 	processInput(data: DataInput) {
-		//add excluded categories, group 1, and group 2 indexes by default
-		//these three groups should always appear in the menu
+		// add excluded categories, group 1, and group 2 indexes by default
+		// these three groups should always appear in the menu
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
 		const input = structuredClone(data)
-		if (this.tsInstance.q.type == 'custom-groupset') {
-			//customset created after user applies groupsetting
-			//returns found groups to data.groups and values for groups and excluded groups
+		if (this.tsInstance.q.type == 'values') {
+			// q.type='values'
+			// if group assignments are attached to values then use these assignments
+			// otherwise group all values into a single group
+			for (const v of Object.values(input)) {
+				if (v.uncomputable) return //Still necessary? Possibly taken care of termdb route... somewhere
+				if (v?.group > this.defaultMaxGrpNum)
+					throwMsgWithFilePathAndFnName(
+						`The maximum number of groups is ${this.defaultMaxGrpNum}. The group index for value = ${v.label} is ${v.group}`
+					)
+				const value = {
+					key: v.key,
+					label: v.label,
+					group: v.group || 1,
+					samplecount: v.samplecount
+				}
+				this.data.values.push(value)
+				grpIdxes.add(value.group)
+			}
+		} else if (this.tsInstance.q.type == 'custom-groupset') {
+			// q.type = 'custom-groupset'
+			// user generated a custom groupset
+			// returns found groups to data.groups and values for groups and excluded groups
 			this.formatCustomset(grpIdxes, input)
 		} else if (this.tsInstance.q.type == 'predefined-groupset') {
+			// q.type = 'predefined-groupset'
+			// use the predefined groupset specified by user
 			if (this.tsInstance.term.type == 'geneVariant') {
 				const q = this.tsInstance.q as GeneVariantBaseQ & PredefinedGroupSettingQ
 				const term = this.tsInstance.term as GeneVariantTerm
-				// @ts-expect-error, need to harmonize input data structure between dictionary term (no customset), geneVariant term (no custom set), and customset
+				// @ts-expect-error, need to harmonize input data structure between dictionary and geneVariant terms (what about singleCellType and snp terms?)
 				const dt = input.find(i => i.dt == q.dt)
 				const classes = dt.classes.byOrigin ? dt.classes.byOrigin[q.origin] : dt.classes
 				const groupset = term.groupsetting.lst[q.predefined_groupset_idx]
@@ -132,23 +154,9 @@ export class GroupSettingMethods {
 						}
 					}
 				}
-			} else {
-				for (const v of Object.values(input)) {
-					if (v.uncomputable) return //Still necessary? Possibly taken care of termdb route... somewhere
-					if (v?.group > this.defaultMaxGrpNum)
-						throwMsgWithFilePathAndFnName(
-							`The maximum number of groups is ${this.defaultMaxGrpNum}. The group index for value = ${v.label} is ${v.group}`
-						)
-					const value = {
-						key: v.key,
-						label: v.label,
-						group: v.group || 1,
-						samplecount: v.samplecount
-					}
-					this.data.values.push(value)
-					grpIdxes.add(value.group)
-				}
 			}
+		} else {
+			throw 'q.type not recognized'
 		}
 
 		if (this.data.values.length == 0) throwMsgWithFilePathAndFnName(`Missing values`)

@@ -153,15 +153,18 @@ export class Vocab {
 				if (tw.term.name) copy.term.name = tw.term.name
 				if (tw.term.type) copy.term.type = tw.term.type
 				if (tw.term.values) copy.term.values = tw.term.values
+				if (tw.term.groupsetting) copy.term.groupsetting = tw.term.groupsetting
 			} else {
 				// non-dictionary term
-				// pass entire tw.term because different term types need
-				// different term properties passed to backend (e.g.,
-				// geneExpression and metaboliteIntensity terms need
-				// term.bins, but geneVariant term does not)
+				// pass entire tw.term because non-dictionary terms
+				// cannot get rehydrated on server-side
 				copy.term = structuredClone(tw.term)
-				// remove unnecesssary properties
-				delete copy.term.groupsetting // will get rehydrated on server-side
+				if (tw.term.type == 'geneVariant') {
+					// geneVariant has large term.groupsetting
+					// so remove it here and rehydrate it on server-side
+					// from shared/common.js
+					delete copy.term.groupsetting
+				}
 			}
 		}
 		return copy
