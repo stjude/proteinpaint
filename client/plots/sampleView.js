@@ -8,6 +8,9 @@ import wsiViewer from './wsiviewer/plot.wsi'
 
 const root_ID = 'root'
 const samplesLimit = 15
+
+const showWSImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showWSImages
+
 class SampleView {
 	constructor(opts) {
 		this.opts = opts
@@ -233,6 +236,22 @@ class SampleView {
 					})
 				})
 			this.dom.showPlotsDiv.append('label').attr('for', 'showDzi').text('Show DZI images')
+		}
+
+		if (q?.WSImages && showWSImages) {
+			this.dom.showPlotsDiv
+				.append('input')
+				.attr('id', 'showWsi')
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { sampleView: { showWsi: e.target.checked } } }
+					})
+				})
+			this.dom.showPlotsDiv.append('label').attr('for', 'showWsi').text('Show WSI images')
 		}
 
 		if (q?.singleSampleMutation) {
@@ -491,6 +510,7 @@ class SampleView {
 		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
 		this.showPlotsFromCategory(this.imagePlots, 'showImages')
 		this.showPlotsFromCategory(this.dziPlots, 'showDzi')
+		this.showPlotsFromCategory(this.wsiPlots, 'showWsi')
 		if (this.state.samples.length == 1 && this.visiblePlots)
 			this.dom.tableDiv.style('max-width', '48vw').style('max-height', '40vw').attr('class', 'sjpp_show_scrollbar')
 		else this.dom.tableDiv.style('max-width', '').style('max-height', '').attr('class', '')
@@ -512,6 +532,7 @@ class SampleView {
 		this.brainPlots = []
 		this.imagePlots = []
 		this.dziPlots = []
+		this.wsiPlots = []
 		const q = state.termdbConfig.queries
 		if (state.termdbConfig.queries?.DZImages) {
 			let div = plotsDiv.append('div')
@@ -532,7 +553,7 @@ class SampleView {
 			}
 		}
 
-		if (state.termdbConfig.queries?.WSImages) {
+		if (state.termdbConfig.queries?.WSImages && showWSImages) {
 			let div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
@@ -546,7 +567,7 @@ class SampleView {
 
 				if (data.sampleWSImages?.length > 0) {
 					const cellDiv = div.append('div').style('display', 'inline-block')
-					this.dziPlots.push({ sample, cellDiv })
+					this.wsiPlots.push({ sample, cellDiv })
 					wsiViewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleWSImages)
 				}
 			}
@@ -795,7 +816,8 @@ export async function getPlotConfig(opts, app) {
 			showDisco: true,
 			showBrain: true,
 			showImages: true,
-			showDzi: true
+			showDzi: true,
+			showWsi: true
 		}
 	}
 	if (q)
