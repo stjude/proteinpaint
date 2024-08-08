@@ -1,11 +1,13 @@
 import * as common from '#shared/common.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import ky from 'ky'
+import got from 'got'
 import path from 'path'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
 import { write_tmpfile } from './utils.js'
 import serverconfig from './serverconfig.js'
+import fs from 'fs'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
 
@@ -203,8 +205,11 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 				}
 			}
 		}
-		if (ensgLst.length > 100) break // max 100 genes
+		if (ensgLst.length > 800) break // max 100 genes
 	}
+
+	// TODO: detect when the list has already been screened per Zhenyu's instructions below
+	return [ensgLst, ensg2symbol]
 
 	if (!q.forClusteringAnalysis) {
 		// the request is not for clustering analysis. do not perform gene selection step to speed up and use given genes as-is
@@ -216,10 +221,36 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 	// https://docs.gdc.cancer.gov/Encyclopedia/pages/FPKM-UQ/
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
+
+		// fs.writeFileSync(`/Users/esioson/dev/sjpp/proteinpaint/geneexp.txt`, JSON.stringify({
+		// 		headers,
+		// 		//timeout: false, // instead of 10 second default
+		// 		body: {
+		// 			case_ids: cases4clustering,
+		// 			gene_ids: ensgLst,
+		// 			selection_size: ensgLst.length,
+		// 			min_median_log2_uqfpkm: 0.01
+		// 		}
+		// 	}), null, '  ')
+
+		// const _re = await fetch(`${host.geneExp}/gene_expression/gene_selection`, {
+		// 		headers,
+		// 		method: 'POST',
+		// 		//timeout: false, // instead of 10 second default
+		// 		body: JSON.stringify({
+		// 			case_ids: cases4clustering,
+		// 			gene_ids: ensgLst,
+		// 			selection_size: ensgLst.length,
+		// 			min_median_log2_uqfpkm: 0.01
+		// 		})
+		// 	}).catch(e => {throw e})
+
+		// const re = _re.json()
+
 		const re = await ky
 			.post(`${host.geneExp}/gene_expression/gene_selection`, {
 				headers,
-				timeout: false, // instead of 10 second default
+				timeout: 60000, //false, // instead of 10 second default
 				json: {
 					case_ids: cases4clustering,
 					gene_ids: ensgLst,
@@ -228,6 +259,7 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 				}
 			})
 			.json()
+
 		if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] not array'
 		const ensgLst2 = []
 		for (const i of re.gene_selection) {
@@ -238,6 +270,7 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 		// later can comment above code to double-check as /values is able to return data for HOXA1 so why is it left out here?
 		return [ensgLst2, ensg2symbol]
 	} catch (e) {
+		console.log(252, e)
 		throw e
 	}
 }
@@ -278,8 +311,16 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, ter
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky.post(`${host.geneExp}/gene_expression/values`, { timeout: false, headers, json: arg }).text()
-	const lines = re.trim().split('\n')
+	// TODO: may re-enable using ky, once issue with intermittent request 'terminated' error is fixed
+	// const re = await ky.post(`${host.geneExp}/gene_expression/values`, { timeout: false, headers, json: arg }).text()
+	// const lines = re.trim().split('\n')
+	const response = await got.post(`${host.geneExp}/gene_expression/values`, {
+		headers,
+		body: JSON.stringify(arg)
+	})
+	if (typeof response.body != 'string') throw 'response.body is not tsv text'
+	const lines = response.body.trim().split('\n')
+
 	if (lines.length <= 1) throw 'less than 1 line from tsv response.body'
 
 	// header line:
