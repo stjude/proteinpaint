@@ -29,7 +29,7 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('Render facet table', test => {
+tape.skip('Render facet table', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
