@@ -103,7 +103,7 @@ function menu_variants(tk, block) {
 		.style('border-radius', '0px')
 		.on('click', () => {
 			listVariantData(tk, block)
-			if (shapeBox) shapeBox.remove()
+			if (shapeBox) shapeBox.selectAll('*').remove()
 		})
 
 	if (tk.skewer) {
@@ -125,7 +125,7 @@ function menu_variants(tk, block) {
 					} else {
 						throw 'unknown mode type'
 					}
-					if (shapeBox) shapeBox.remove()
+					if (shapeBox) shapeBox.selectAll('*').remove()
 					tk.menutip.hide()
 				})
 		}
@@ -146,7 +146,7 @@ function menu_variants(tk, block) {
 					.style('border-radius', '0px')
 					.on('click', () => {
 						fold_glyph(tk.skewer.data, tk)
-						if (shapeBox) shapeBox.remove()
+						if (shapeBox) shapeBox.selectAll('*').remove()
 						tk.menutip.hide()
 					})
 			} else if (expandCount == 0) {
@@ -158,7 +158,7 @@ function menu_variants(tk, block) {
 					.style('border-radius', '0px')
 					.on('click', () => {
 						settle_glyph(tk, block)
-						if (shapeBox) shapeBox.remove()
+						if (shapeBox) shapeBox.selectAll('*').remove()
 						tk.menutip.hide()
 					})
 			}
@@ -170,10 +170,10 @@ function menu_variants(tk, block) {
 				.style('border-radius', '0px')
 				.on('click', () => {
 					tk.skewer.pointup = !tk.skewer.pointup
-					if (shapeBox) shapeBox.remove()
 					tk.load()
 					tk.menutip.hide()
 				})
+
 			const desiredShapes = [
 				shapes.emptyVerticalRectangle,
 				shapes.emptyCircle,
@@ -189,27 +189,27 @@ function menu_variants(tk, block) {
 			]
 			// change variant shape option
 			if (tk.filterObj) {
-				tk.menutip.d
+				const div = tk.menutip.d
 					.append('div')
 					.text(tk.skewer.changeVariantShape ? 'Change variant shape' : null)
 					.attr('class', 'sja_menuoption')
-					.style('border-radius', '0px')
-					.on('click', () => {
-						if (shapeBox) shapeBox.remove() // Remove existing shape box if any
-						shapeBox = tk.menutip.d.append('div').style('margin', '10px')
-						displayVectorGraphics({
-							holder: tk.menutip.d.append('div').style('margin', '10px'),
-							callbacks: {
-								onShapeClick: onShapeClick
-							},
-							tk: tk
-						})
+
+				shapeBox = div.append('div').style('margin-top', '10px')
+
+				div.on('click', () => {
+					displayVectorGraphics({
+						holder: shapeBox,
+						callbacks: {
+							onShapeClick: onShapeClick
+						},
+						tk: tk
 					})
+				})
 			} else return
 			function displayVectorGraphics(arg) {
 				const { holder, callbacks, tk } = arg
-
-				const vectorGraphicsDiv = holder.append('div').style('margin', '5px')
+				holder.selectAll('*').remove()
+				const vectorGraphicsDiv = holder.append('div')
 				vectorGraphicsDiv
 					.append('div')
 					.style('display', 'flex')
@@ -217,18 +217,15 @@ function menu_variants(tk, block) {
 					.style('align-items', 'center')
 					.style('justify-content', 'center')
 					.style('border', 'none')
-					.style('border-bottom', '1px solid lightgray')
 					.style('width', '100%')
 					.style('font-size', '20px')
-					.style('margin-top', '20px')
-					.text('Choose a shape')
+					.style('margin-top', '5px')
 
 				const shapesContainer = vectorGraphicsDiv
 					.append('div')
 					.style('display', 'flex')
 					.style('flex-wrap', 'wrap')
-					.style('margin-top', '20px')
-					.style('width', '300px')
+					.style('width', '340px')
 
 				desiredShapes.forEach((shapePath, index) => {
 					const shapeSvg = shapesContainer
@@ -263,7 +260,7 @@ function menu_variants(tk, block) {
 				.style('border-radius', '0px')
 				.on('click', () => {
 					tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
-					if (shapeBox) shapeBox.remove()
+					if (shapeBox) shapeBox.selectAll('*').remove()
 					tk.load()
 					tk.menutip.hide()
 				})
@@ -281,7 +278,7 @@ function menu_variants(tk, block) {
 			.on('click', () => {
 				downloadVariants(tk, block)
 				tk.menutip.hide()
-				if (shapeBox) shapeBox.remove()
+				if (shapeBox) shapeBox.selectAll('*').remove()
 			})
 	}
 
@@ -385,9 +382,10 @@ function mayAddSkewerModeOption(tk, block, shapeBox) {
 			.style('margin', '10px'),
 		options,
 		callback: async idx => {
+			if (shapeBox) shapeBox.selectAll('*').remove()
 			for (const i of tk.skewer.viewModes) i.inuse = false
 			tk.skewer.viewModes[idx].inuse = true
-			may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block, shapeBox)
+			may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
 			positionLeftlabelg(tk, block)
 			tk._finish()
 		}
