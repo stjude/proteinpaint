@@ -8,6 +8,7 @@ import { make_radios } from '../dom/radiobutton'
 import { rangequery_rglst } from './tk'
 import { samples2columnsRows, block2source } from './sampletable'
 import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtfusionrna } from '#shared/common'
+import { shapes } from '#dom/shapes'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track
@@ -92,6 +93,8 @@ export function makeVariantLabel(data, tk, block, laby) {
 }
 
 function menu_variants(tk, block) {
+	let shapeBox
+
 	tk.menutip.d
 		.append('div')
 		.text('List')
@@ -100,6 +103,7 @@ function menu_variants(tk, block) {
 		.style('border-radius', '0px')
 		.on('click', () => {
 			listVariantData(tk, block)
+			if (shapeBox) shapeBox.remove()
 		})
 
 	if (tk.skewer) {
@@ -121,6 +125,7 @@ function menu_variants(tk, block) {
 					} else {
 						throw 'unknown mode type'
 					}
+					if (shapeBox) shapeBox.remove()
 					tk.menutip.hide()
 				})
 		}
@@ -141,6 +146,7 @@ function menu_variants(tk, block) {
 					.style('border-radius', '0px')
 					.on('click', () => {
 						fold_glyph(tk.skewer.data, tk)
+						if (shapeBox) shapeBox.remove()
 						tk.menutip.hide()
 					})
 			} else if (expandCount == 0) {
@@ -152,6 +158,7 @@ function menu_variants(tk, block) {
 					.style('border-radius', '0px')
 					.on('click', () => {
 						settle_glyph(tk, block)
+						if (shapeBox) shapeBox.remove()
 						tk.menutip.hide()
 					})
 			}
@@ -163,9 +170,89 @@ function menu_variants(tk, block) {
 				.style('border-radius', '0px')
 				.on('click', () => {
 					tk.skewer.pointup = !tk.skewer.pointup
+					if (shapeBox) shapeBox.remove()
 					tk.load()
 					tk.menutip.hide()
 				})
+			const desiredShapes = [
+				shapes.emptyVerticalRectangle,
+				shapes.emptyCircle,
+				shapes.emptyShield,
+				shapes.emptyTriangle,
+				shapes.emptyDiamond,
+				shapes.plusIcon,
+				shapes.emptyEgg,
+				shapes.emptyPentagon,
+				shapes.emptyDiamondSuit,
+				shapes.emptySquare,
+				shapes.crossShape
+			]
+			// change variant shape option
+			if (tk.filterObj) {
+				tk.menutip.d
+					.append('div')
+					.text(tk.skewer.changeVariantShape ? 'Change variant shape' : null)
+					.attr('class', 'sja_menuoption')
+					.style('border-radius', '0px')
+					.on('click', () => {
+						if (shapeBox) shapeBox.remove() // Remove existing shape box if any
+						shapeBox = tk.menutip.d.append('div').style('margin', '10px')
+						displayVectorGraphics({
+							holder: tk.menutip.d.append('div').style('margin', '10px'),
+							callbacks: {
+								onShapeClick: onShapeClick
+							},
+							tk: tk
+						})
+					})
+			} else return
+			function displayVectorGraphics(arg) {
+				const { holder, callbacks, tk } = arg
+
+				const vectorGraphicsDiv = holder.append('div').style('margin', '5px')
+				vectorGraphicsDiv
+					.append('div')
+					.style('display', 'flex')
+					.style('flex-direction', 'row')
+					.style('align-items', 'center')
+					.style('justify-content', 'center')
+					.style('border', 'none')
+					.style('border-bottom', '1px solid lightgray')
+					.style('width', '100%')
+					.style('font-size', '20px')
+					.style('margin-top', '20px')
+					.text('Choose a shape')
+
+				const shapesContainer = vectorGraphicsDiv
+					.append('div')
+					.style('display', 'flex')
+					.style('flex-wrap', 'wrap')
+					.style('margin-top', '20px')
+					.style('width', '300px')
+
+				desiredShapes.forEach((shapePath, index) => {
+					const shapeSvg = shapesContainer
+						.append('svg')
+						.attr('width', 30)
+						.attr('height', 30)
+						.style('cursor', 'pointer')
+						.on('click', () => {
+							if (callbacks && typeof callbacks.onShapeClick === 'function') {
+								callbacks.onShapeClick(shapePath, tk)
+							}
+						})
+
+					shapeSvg.append('path').attr('d', shapePath).attr('fill', 'none').attr('stroke', 'black')
+				})
+			}
+
+			function onShapeClick(shapePath, tk) {
+				// Logic to change the pre-existing shape to the chosen shape
+				console.log('Shape clicked:', shapePath)
+
+				tk.load()
+				tk.menutip.hide()
+			}
 		} else if (vm.type == 'numeric') {
 			// only show this opt in numeric mode; delete when label hiding works for skewer mode
 
@@ -176,6 +263,7 @@ function menu_variants(tk, block) {
 				.style('border-radius', '0px')
 				.on('click', () => {
 					tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
+					if (shapeBox) shapeBox.remove()
 					tk.load()
 					tk.menutip.hide()
 				})
@@ -193,10 +281,11 @@ function menu_variants(tk, block) {
 			.on('click', () => {
 				downloadVariants(tk, block)
 				tk.menutip.hide()
+				if (shapeBox) shapeBox.remove()
 			})
 	}
 
-	mayAddSkewerModeOption(tk, block)
+	mayAddSkewerModeOption(tk, block, shapeBox)
 }
 
 async function listVariantData(tk, block) {
@@ -273,7 +362,7 @@ async function listVariantData(tk, block) {
 	}
 }
 
-function mayAddSkewerModeOption(tk, block) {
+function mayAddSkewerModeOption(tk, block, shapeBox) {
 	if (!tk.skewer) return
 	if (tk.skewer.viewModes.length <= 1) {
 		// only one possible mode, cannot toggle mode, do not add option
@@ -298,7 +387,7 @@ function mayAddSkewerModeOption(tk, block) {
 		callback: async idx => {
 			for (const i of tk.skewer.viewModes) i.inuse = false
 			tk.skewer.viewModes[idx].inuse = true
-			may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
+			may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block, shapeBox)
 			positionLeftlabelg(tk, block)
 			tk._finish()
 		}
