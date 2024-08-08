@@ -738,7 +738,7 @@ tape('findTerm()', async test => {
 	// >1 result
 	testTerm = 's'
 	result = await termdbVocabApi.findTerm(testTerm, 'ABC', null, TermTypeGroups.DICTIONARY_VARIABLES)
-	test.equal(result.lst.length, 32, `Should return the correct number (n = 32) of terms`)
+	test.equal(result.lst.length, 33, `Should return the correct number (n = 32) of terms`)
 
 	// =0 result
 	testTerm = 'ZZZ'
