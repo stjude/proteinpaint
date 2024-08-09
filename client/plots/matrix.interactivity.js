@@ -274,6 +274,9 @@ export function setInteractivity(self) {
 		// clicking only show actions for available genomic data; can later expand to non-genomic data and custom overrides
 		const q = self.state.termdbConfig.queries
 		if (!q) return // no genomic queries
+
+		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
+		const showDZImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showDZImages
 		if (
 			!(
 				q.singleSampleGenomeQuantification ||
@@ -355,7 +358,6 @@ export function setInteractivity(self) {
 				})
 		}
 
-		const showDZImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showDZImages
 		if (q.DZImages && showDZImages) {
 			const menuDiv = self.dom.clickMenu.d
 				.append('div')
@@ -392,7 +394,6 @@ export function setInteractivity(self) {
 			}
 		}
 
-		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		if (q.NIdata && showBrainImaging) {
 			for (const k in q.NIdata) {
 				const menuDiv = self.dom.clickMenu.d
