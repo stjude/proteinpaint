@@ -1,2 +1,1 @@
-Fixes:
-- Proper pass case filter to GenesTable gdc query so ssm case count can correspond to filter
+

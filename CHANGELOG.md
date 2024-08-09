@@ -9,6 +9,9 @@ Features:
 - Allow to divide hierCluster by a term
 - Allow to launch geneExpression hierCluster from custom variable
 
+Fixes:
+- Proper pass case filter to GenesTable gdc query so ssm case count can correspond to filter
+
 
 ## 2.70.4
 
