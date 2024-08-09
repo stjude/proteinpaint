@@ -883,8 +883,7 @@ tape('click non-group bar to add filter', function (test) {
 							}
 						]
 					},
-					q,
-					{ groupsetting: {} }
+					q
 				)
 			},
 			'should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
@@ -939,13 +938,8 @@ tape('click custom categorical group bar to add filter', function (test) {
 						id: 'diaggrp',
 						term: termjson['diaggrp'],
 						q: {
-							groupsetting: {
-								type: 'values',
-								disabled: false,
-								inuse: true,
-								//predefined_groupset_idx: INT,
-								customset
-							}
+							type: 'custom-groupset',
+							customset
 						}
 					}
 				}

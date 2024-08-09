@@ -248,7 +248,6 @@ export class TermdbVocab extends Vocab {
 				}
 			}
 			if (!term.q) term.q = {}
-			if (!term.q.groupsetting) term.q.groupsetting = {}
 		}
 	}
 

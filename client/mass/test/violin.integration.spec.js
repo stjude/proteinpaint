@@ -446,7 +446,7 @@ tape('test label clicking, filtering and hovering', function (test) {
 				{
 					tvs: {
 						term: {
-							groupsetting: { disbled: true },
+							groupsetting: { disabled: true },
 							id: 'sex',
 							isleaf: true,
 							name: 'Sex',
@@ -543,7 +543,6 @@ tape('test hide option on label clicking', function (test) {
 
 	function testHideOption(violin) {
 		const q = {
-			groupsetting: { disabled: true },
 			hiddenValues: { [violin.Inner.data.plots[0].label]: 1 },
 			isAtomic: true,
 			type: 'values'
@@ -1007,9 +1006,6 @@ tape('test samplelst term2', function (test) {
 									]
 								}
 							],
-							groupsetting: {
-								disabled: false
-							},
 							isAtomic: true,
 							type: 'custom-groupset'
 						}

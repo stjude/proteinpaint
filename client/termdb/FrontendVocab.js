@@ -98,7 +98,6 @@ export class FrontendVocab extends Vocab {
 				}
 			}
 			if (!term.q) term.q = {}
-			if (!term.q.groupsetting) term.q.groupsetting = {}
 		}
 	}
 

@@ -793,7 +793,6 @@ export function getSampleFilter(sampleId) {
 }
 
 export function getSamplelstTW(groups, name = 'groups', notIn = true) {
-	let disabled = true
 	const values = {}
 	const qgroups = []
 	let samples
@@ -819,10 +818,7 @@ export function getSamplelstTW(groups, name = 'groups', notIn = true) {
 	const tw = {
 		isAtomic: true,
 		term: { name, type: 'samplelst', values },
-		q: {
-			groups: qgroups,
-			groupsetting: { disabled }
-		}
+		q: { groups: qgroups }
 	}
 	return tw
 
@@ -831,7 +827,6 @@ export function getSamplelstTW(groups, name = 'groups', notIn = true) {
 		for (const item of group.items) {
 			const value = { sampleId: item.sampleId }
 			if ('sample' in item) {
-				disabled = false
 				value.sample = item.sample
 			}
 			values.push(value)

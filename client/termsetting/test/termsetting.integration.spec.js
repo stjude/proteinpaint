@@ -918,7 +918,7 @@ tape('Conditional term', async test => {
 					'Sinus tachycardia': { label: 'Sinus tachycardia' }
 				},
 				groupsetting: {
-					useIndex: -1,
+					disabled: false,
 					lst: [
 						{
 							name: 'Any condition vs normal',
@@ -946,8 +946,7 @@ tape('Conditional term', async test => {
 			q: {
 				mode: 'discrete',
 				breaks: [],
-				value_by_max_grade: true,
-				groupsetting: { inuse: false }
+				value_by_max_grade: true
 			}
 		}
 	})
