@@ -43,7 +43,7 @@ export default class WSIViewer {
 
 		holder.append('div').attr('id', 'wsi-viewer').style('width', '600px').style('height', '600px')
 
-		const firstLayer: TileLayer = layers.values()[0]
+		const firstLayer: TileLayer = layers[0]
 		const firstExtent = firstLayer?.getSource()?.getTileGrid()?.getExtent()
 
 		const map = this.getMap(layers, firstLayer)
@@ -57,7 +57,7 @@ export default class WSIViewer {
 
 	private getMap(layers: Array<TileLayer<Zoomify>>, firstLayer: TileLayer) {
 		return new Map({
-			layers: Array.from(layers.values()),
+			layers: layers,
 			target: 'wsi-viewer',
 			view: new View({
 				resolutions: firstLayer.getSource()?.getTileGrid()?.getResolutions()
