@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - In addition to launching the sample view, the user may also see a simplified list and/or create a group from selected samples from the facet table.
+- Allow to divide hierCluster by a term
+- Allow to launch geneExpression hierCluster from custom variable
 
 
 ## 2.70.4
