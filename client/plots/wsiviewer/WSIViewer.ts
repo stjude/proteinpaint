@@ -15,8 +15,6 @@ import { Layer } from 'ol/layer'
 import Collection from 'ol/Collection'
 import BaseLayer from 'ol/layer/Base'
 
-type GlobalMap<K, V> = globalThis.Map<K, V>
-
 export default class WSIViewer {
 	// following attributes are required by rx
 	private type: string
@@ -36,11 +34,16 @@ export default class WSIViewer {
 			return
 		}
 
-		holder.append('div').attr('id', 'wsi-viewer').style('width', '600px').style('height', '600px')
-
 		const layers = await this.getLayers(state)
 
-		const firstLayer: TileLayer = Array.from<TileLayer>(layers.values())[0]
+		if (layers.length === 0) {
+			holder.append('div').text('There was an error loading the WSI images. Please try again later.')
+			return
+		}
+
+		holder.append('div').attr('id', 'wsi-viewer').style('width', '600px').style('height', '600px')
+
+		const firstLayer: TileLayer = layers.values()[0]
 		const firstExtent = firstLayer?.getSource()?.getTileGrid()?.getExtent()
 
 		const map = this.getMap(layers, firstLayer)
@@ -52,7 +55,7 @@ export default class WSIViewer {
 		}
 	}
 
-	private getMap(layers: globalThis.Map<string, TileLayer<Zoomify>>, firstLayer: TileLayer) {
+	private getMap(layers: Array<TileLayer<Zoomify>>, firstLayer: TileLayer) {
 		return new Map({
 			layers: Array.from(layers.values()),
 			target: 'wsi-viewer',
@@ -103,7 +106,7 @@ export default class WSIViewer {
 	}
 
 	private async getLayers(state: any) {
-		const layers: GlobalMap<string, TileLayer<Zoomify>> = new globalThis.Map<string, TileLayer<Zoomify>>()
+		const layers: Array<TileLayer<Zoomify>> = []
 
 		for (let i = 0; i < state.wsimages.length; i++) {
 			const body = {
@@ -114,6 +117,10 @@ export default class WSIViewer {
 			}
 
 			const data = await dofetch3('wsimages', { body })
+
+			if (data.status === 'error') {
+				return []
+			}
 
 			const imgWidth = data.slide_dimensions[0]
 			const imgHeight = data.slide_dimensions[1]
@@ -136,7 +143,7 @@ export default class WSIViewer {
 			}
 			const layer = new TileLayer(options)
 
-			layers.set(data.sessionId, layer)
+			layers.push(layer)
 		}
 		return layers
 	}
