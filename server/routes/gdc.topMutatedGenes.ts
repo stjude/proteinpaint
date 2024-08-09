@@ -227,6 +227,8 @@ const queryV2: any = {
 		}
 
 		if (q.filter0) {
+			// Phil 8/9/2024: must set case filter to both "ssmCase" and "caseFilters" to get correct ssm affected counts
+			variables.ssmCase.content.push(JSON.parse(JSON.stringify(q.filter0)))
 			variables.caseFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
 			variables.geneCaseFilter.content.push(JSON.parse(JSON.stringify(q.filter0)))
 			variables.cnvLossFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
