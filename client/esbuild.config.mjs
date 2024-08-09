@@ -166,6 +166,15 @@ function cssLoader() {
     name: 'cssLoader',
     setup(build) {
       build.onLoad({ filter: /\.css$/ }, async (args) => {
+        // Exclude ol-ext CSS file from processing
+        const excludedFile = path.resolve('node_modules/ol-ext/dist/ol-ext.css');
+        if (args.path === excludedFile) {
+          return {
+            contents: '',
+            loader: 'file',
+          };
+        }
+
         const css = fs.readFileSync(args.path, 'utf8');
         const contents = `
           const styles = new CSSStyleSheet();
