@@ -30,6 +30,52 @@ export class GenesMenu {
 	}
 
 	render() {
+		console.log('this.params:', this.params)
+		// Check if maxGenes, filter_extreme_values and filter_type is defined in dataset. NOTE: This check should ONLY happen in native topVE NOT GDC. This is currently not implemented.
+
+		if (this.params.find(i => i.param.id == 'maxGenes')) {
+			//console.log("Found maxGenes")
+			//maxGenes = ds_options.find(i => i.id == "maxGenes").value
+		} else {
+			//console.log("Did not find maxGenes")
+			const pm = { id: 'maxGenes', label: 'Gene Count', type: 'number', value: 100 }
+			this.params.push({ param: pm as GeneArgumentEntry, input: null })
+		}
+
+		if (this.params.find(i => i.param.id == 'filter_extreme_values')) {
+			//console.log("Found filter_extreme_values")
+			//maxGenes = ds_options.find(i => i.id == "maxGenes").value
+		} else {
+			//console.log("Did not find filter_extreme_values")
+			const pm = { id: 'filter_extreme_values', label: 'Filter Extreme Values', type: 'boolean', value: true }
+			this.params.push({ param: pm as GeneArgumentEntry, input: null })
+		}
+
+		if (this.params.find(i => i.param.id == 'filter_type')) {
+			//console.log("Found filter_type")
+			//maxGenes = ds_options.find(i => i.id == "maxGenes").value
+		} else {
+			//console.log("Did not find filter_type")
+			const pm = {
+				id: 'filter_type',
+				label: 'Filter type',
+				type: 'boolean',
+				radiobuttons: [
+					{
+						type: 'boolean',
+						label: 'VAR',
+						value: 'var'
+					},
+					{
+						type: 'boolean',
+						label: 'IQR',
+						value: 'iqr'
+					}
+				]
+			}
+			this.params.push({ param: pm as GeneArgumentEntry, input: null })
+		}
+
 		for (const param of this.params) {
 			const input = this.addParameter(param.param, this.tip.d.append('div'))
 			param.input = input
