@@ -209,7 +209,6 @@ tape('getVocab(), custom', test => {
 			'function',
 			'should have a vocab.getCohortSampleCount function'
 		)
-		// Frontend.getFilteredSampleCount() returns { samplecount: 'TBD' }??
 		test.equal(typeof app.vocabApi.getDensityPlotData, 'function', 'should have a vocab.getDensityPlotData function')
 		test.equal(typeof app.vocabApi.getPercentile, 'function', 'should have a vocab.getPercentile function')
 		test.equal(typeof app.vocabApi.getDescrStats, 'function', 'should have a vocab.getDescrStats function')
@@ -839,17 +838,10 @@ tape('getFilteredSampleCount()', async test => {
 		]
 	}
 	result = await termdbVocabApi.getFilteredSampleCount(filterJSON)
-	test.equal(result, 24, `Should return simple sample count as number`)
+	test.equal(result, '24', `Should return simple sample count`)
 
-	//Return sample list
-	getSampleLst = 'list'
-	result = await termdbVocabApi.getFilteredSampleCount(filterJSON, getSampleLst)
+	result = await termdbVocabApi.getFilteredSampleList(filterJSON)
 	test.ok(Array.isArray(result), `Should return an array of sample objects`)
-
-	//Return sample list object
-	getSampleLst = '*'
-	result = await termdbVocabApi.getFilteredSampleCount(filterJSON, getSampleLst)
-	test.ok(result[0].samplecount == 24 && result[0].subcohort, `Should return object with .samplecount and .subcohort`)
 
 	test.end()
 })

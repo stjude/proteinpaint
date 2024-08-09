@@ -1187,6 +1187,7 @@ function mayAddAncestryPCs(tw, samples, ds) {
 	}
 }
 
+//check logic here, why it has another getSampleData_dictionaryTerms? we have to handle parent samples here
 async function getSampleData_dictionaryTerms(q, terms) {
 	// outcome can only be dictionary term so terms array must have at least 1 term
 	const samples = new Map()
@@ -1206,10 +1207,9 @@ async function getSampleData_dictionaryTerms(q, terms) {
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-			SELECT sample, key, value, ? as term_id inner join sampleidmap s on s.id = sample
+			SELECT sample, key, value, ? as term_id
 			FROM ${t.tablename}
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
-			AND s.type != 'root'
 			`
 		).join(`UNION ALL`)}`
 
@@ -1220,17 +1220,25 @@ async function getSampleData_dictionaryTerms(q, terms) {
 		q.regressionType == 'cox' && q.outcome.term.type == 'condition'
 			? processCoxConditionOutcomeRows(_rows, q.outcome, q.ds.cohort.termdb.ageEndOffset)
 			: _rows
-
 	// parse the processed rows
+	const types = new Set()
+	for (const row of rows) {
+		const type = q.ds.sampleId2Type.get(row.sample)
+		types.add(type)
+	}
 	for (const { sample, term_id, key, value } of rows) {
 		const term = terms.find(term => (term.term.id || term.term.name) == term_id)
+		addSample(sample, term_id, key, value)
+		
+	}
 
+	function addSample(sample, term_id, key, value) {
+		const term = terms.find(term => term.term.id || term.term.name == term_id)
 		if (!term) throw 'no term found'
 
 		if (!samples.has(sample)) {
 			samples.set(sample, { sample, id2value: new Map() })
 		}
-
 		if (samples.get(sample).id2value.has(term_id)) {
 			// can duplication happen?
 			throw `duplicate '${term_id}' entry for sample='${sample}'`
