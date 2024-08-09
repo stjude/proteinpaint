@@ -174,7 +174,8 @@ export function getClusterFromTopDendrogram(event) {
 }
 
 export function setClusteringBtn(holder, callback) {
-	const hc = this.settings.hierCluster
+	const cl = this.config.settings.matrix.controlLabels
+	const ClusterLabel = `Cluster ${cl.Samples}`
 	holder
 		.append('button')
 		//.property('disabled', d => d.disabled)
@@ -182,17 +183,18 @@ export function setClusteringBtn(holder, callback) {
 			label: `Clustering`,
 			rows: [
 				{
-					label: 'Cluster Samples',
-					title: 'Option to enable sample clustering, instead of enable sample sorting.',
+					label: ClusterLabel,
+					title: `Option to enable ${cl.samples} clustering, instead of enable ${cl.samples} sorting.`,
 					type: 'checkbox',
 					chartType: 'hierCluster',
 					settingsKey: 'clusterSamples',
-					boxLabel: 'Cluster samples (Disable samples sorting)',
+					boxLabel: `Cluster ${cl.samples} (Disable ${cl.samples} sorting)`,
 					callback: checked => {
 						if (!checked) {
 							this.config.settings.hierCluster.yDendrogramHeight = 0
 							this.config.settings.hierCluster.clusterSamples = false
 						} else {
+							this.config.divideBy = null
 							this.config.settings.hierCluster.yDendrogramHeight = 200
 							this.config.settings.hierCluster.clusterSamples = true
 						}
