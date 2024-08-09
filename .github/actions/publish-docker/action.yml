@@ -47,7 +47,8 @@ runs:
         docker push "ghcr.io/stjude/ppfull:latest";
         
         echo "::set-output name=docker_version::$TAG-$HASH";
-
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        echo "::set-output name=branch::$BRANCH";
 
     - name: get pp version
       id: pp-version
@@ -71,4 +72,4 @@ runs:
         token: ${{ inputs.PAT }}
         repository: stjude/sj-pp
         event-type: version-update
-        client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}"}'
+        client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}", "branch": "${{ steps.docker-publish.outputs.branch }}"}'

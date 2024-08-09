@@ -4,6 +4,8 @@ import { execSync } from 'child_process'
 import { context } from 'esbuild'
 import { polyfillNode } from "esbuild-plugin-polyfill-node"
 import notifier from 'node-notifier'
+import postcss from 'postcss'
+import escapeFix from './postcss-escape-fix.mjs';
     
 const __dirname = import.meta.dirname
 const ENV = process.env.ENV
@@ -162,18 +164,30 @@ function dirnamePlugin() {
 }
 
 function cssLoader() {
-  return {
-    name: 'cssLoader',
-    setup(build) {
-      build.onLoad({ filter: /\.css$/ }, async (args) => {
-        const css = fs.readFileSync(args.path, 'utf8');
-        const contents = `
+    return {
+        name: 'cssLoader',
+        setup(build) {
+            build.onLoad({ filter: /\.css$/ }, async (args) => {
+                if (args.path.includes('ol-ext/dist/ol-ext.css')) {
+                    const css = fs.readFileSync(args.path, 'utf8');
+                    const result = await postcss([escapeFix()]).process(css, { from: args.path });
+                    const contents = `
+            const styles = new CSSStyleSheet();
+            styles.replaceSync(\`${result.css.replace(/[`$]/gm, '\\$&')}\`);
+            document.adoptedStyleSheets.push(styles);
+          `;
+                    return { contents, loader: 'js' };
+                }
+
+                // Default handling for other CSS files
+                const css = fs.readFileSync(args.path, 'utf8');
+                const contents = `
           const styles = new CSSStyleSheet();
-          styles.replaceSync(\`${css.replaceAll(/[`$]/gm, '\\$&')}\`);
-          document.adoptedStyleSheets.push(styles)
+          styles.replaceSync(\`${css.replace(/[`$]/gm, '\\$&')}\`);
+          document.adoptedStyleSheets.push(styles);
         `;
-        return { contents };
-      });
-    }
-  }
+                return { contents, loader: 'js' };
+            });
+        }
+    };
 }

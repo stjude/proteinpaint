@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tile-server
+  labels:
+    app: tile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tile
+  template:
+    metadata:
+      labels:
+        app: tile
+    spec:
+      containers:
+        - name: tile
+          image: ghcr.io/stjude/tile-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - mountPath: /path/to/tp/
+              name: tp
+          resources:
+#            We just set the limits here, the requests are commented out
+#            requests:
+#              memory: "2Gi"
+#              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "1"
+      volumes:
+        - name: tp
+          hostPath:
+            path: /path/to/tp/
+            type: Directory
