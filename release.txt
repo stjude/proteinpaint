@@ -1,1 +1,3 @@
-
+Features:
+- Allow to divide hierCluster by a term
+- Allow to launch geneExpression hierCluster from custom variable
