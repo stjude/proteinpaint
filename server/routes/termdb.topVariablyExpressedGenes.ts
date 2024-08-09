@@ -141,7 +141,9 @@ async function computeGenes4nativeDs(
 		samples: samples.join(','),
 		filter_extreme_values: filter_extreme_values,
 		num_genes: q.maxGenes,
-		param: filter_type
+		param: filter_type,
+		min_count: 30, // This needs to be passed from UI, this should (preferably only shown in UI when filter_extreme_values = true)
+		min_total_count: 40 // This needs to be passed from UI (preferably only shown in UI when filter_extreme_values = true)
 	}
 	console.log('input_json:', input_json)
 
