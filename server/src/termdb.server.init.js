@@ -128,8 +128,9 @@ export function server_init_db_queries(ds) {
 
 		// if sampleidmap table is present, add this method to return sample count for datasets with and without subcohort
 		if (ds.cohort.termdb.selectCohort) {
-			// subcohort is enabled on this ds
-			const s = cn.prepare('SELECT cohort,sample_count from cohorts').all()
+			let s // subcohort is enabled on this ds
+			if (tables.has('cohort_types')) s = cn.prepare('SELECT * from cohort_types').all()
+			else s = cn.prepare('SELECT cohort,sample_count from cohorts').all()
 			const h = {}
 			for (const i of s) h[i.cohort] = i.sample_count
 			q.getcohortsamplecount = cohortKey => {

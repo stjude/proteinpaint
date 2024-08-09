@@ -1187,6 +1187,7 @@ function mayAddAncestryPCs(tw, samples, ds) {
 	}
 }
 
+//check logic here, why it has another getSampleData_dictionaryTerms? we have to handle parent samples here
 async function getSampleData_dictionaryTerms(q, terms) {
 	// outcome can only be dictionary term so terms array must have at least 1 term
 	const samples = new Map()
@@ -1206,10 +1207,9 @@ async function getSampleData_dictionaryTerms(q, terms) {
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-			SELECT sample, key, value, ? as term_id inner join sampleidmap s on s.id = sample
+			SELECT sample, key, value, ? as term_id
 			FROM ${t.tablename}
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
-			AND s.type != 'root'
 			`
 		).join(`UNION ALL`)}`
 
