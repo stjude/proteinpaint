@@ -128,7 +128,7 @@ export class GroupSettingMethods {
 			if (this.tsInstance.term.type == 'geneVariant') {
 				const q = this.tsInstance.q as GeneVariantBaseQ & PredefinedGroupSettingQ
 				const term = this.tsInstance.term as GeneVariantTerm
-				// @ts-expect-error, need to harmonize input data structure between dictionary and geneVariant terms (what about singleCellType and snp terms?)
+				// @ts-expect-error, need to harmonize input data structure between dictionary and geneVariant terms
 				const dt = input.find(i => i.dt == q.dt)
 				const classes = dt.classes.byOrigin ? dt.classes.byOrigin[q.origin] : dt.classes
 				const groupset = term.groupsetting.lst[q.predefined_groupset_idx]

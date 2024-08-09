@@ -1,4 +1,5 @@
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '../../shared/common'
+import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import { VocabApi } from '../../shared/types/vocab.ts'
 import {
 	GeneVariantBaseQ,
@@ -7,6 +8,7 @@ import {
 	GeneVariantTermSettingInstance
 } from '../../shared/types/terms/geneVariant'
 import { PredefinedGroupSettingQ, TermGroupSetting } from '../../shared/types/terms/term'
+import { PillData } from '../types'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '../../rx'
 import { GroupSettingMethods } from './groupsetting.ts'
@@ -26,8 +28,8 @@ self.term{}
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
 	return {
-		getPillName() {
-			return self.term.name
+		getPillName(d: PillData) {
+			return getPillNameDefault(self, d)
 		},
 
 		getPillStatus() {
@@ -51,8 +53,6 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 			}
 		},
 
-		//validateQ(data: Q) {}, //TODO: should enable 'validateQ'
-
 		async showEditMenu(div: Element) {
 			await makeEditMenu(self, div)
 		},
@@ -63,12 +63,6 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
 			self.category2samplecount = data.lst
 		}
-	}
-}
-
-function setMethods(self) {
-	self.validateGroupsetting = function () {
-		// harmonize with validateGroupsetting() from client/termsetting/handlers/categorical.ts
 	}
 }
 
@@ -86,7 +80,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	if (tw.term.kind == 'gene') {
 		if (!tw.term.gene) {
 			if (!tw.term.name) throw 'no gene specified'
-			tw.term.gene = tw.term.name //support saved states that have the older geneVariant term data shape
+			tw.term.gene = tw.term.name // support saved states that have the older geneVariant term data shape
 		}
 	} else if (tw.term.kind == 'coord') {
 		if (!tw.term.chr || !Number.isInteger(tw.term.start) || !Number.isInteger(tw.term.stop))
@@ -162,6 +156,8 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	} else {
 		tw.q.cnvLossCutoff = -0.2
 	}
+
+	set_hiddenvalues(tw.q, tw.term)
 }
 
 async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {

@@ -1,14 +1,12 @@
-import { TermWrapper } from './tw.ts'
-import { BaseQ, BaseTerm, QGroupSetting, TermGroupSetting } from './term.ts'
-import { TermSettingInstance } from '../termsetting.ts'
+import { TermWrapper } from './tw'
+import { BaseQ, BaseTerm, GroupSettingQ, TermGroupSetting } from './term'
+import { TermSettingInstance } from '../termsetting'
 
 /*
 For term type 'snp'
 */
 
-export type SnpQ = BaseQ & {
-	groupsetting: QGroupSetting
-}
+export type SnpQ = BaseQ & GroupSettingQ
 
 export type SnpTW = TermWrapper & {
 	q: SnpQ

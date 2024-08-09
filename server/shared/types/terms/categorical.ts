@@ -1,4 +1,5 @@
 import { BaseTerm, TermValues, MinBaseQ, GroupSettingQ, TermGroupSetting, BaseTW } from './term'
+import { TermSettingInstance } from '../termsetting'
 
 /**
  * A categorical term q object
@@ -27,6 +28,14 @@ export type CategoricalTerm = BaseTerm & {
 
 export type CategoricalTW = BaseTW & {
 	id: string
-	term: CategoricalTerm
 	q: CategoricalQ
+	term: CategoricalTerm
+}
+
+export type CategoricalTermSettingInstance = TermSettingInstance & {
+	q: CategoricalQ
+	term: CategoricalTerm
+	category2samplecount: any
+	validateGroupsetting: () => { text: string; bgcolor?: string }
+	error?: string
 }

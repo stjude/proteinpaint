@@ -448,7 +448,7 @@ export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ
 	}
 
 	// assign default if missing
-	if (!tw.q.mode) tw.q.mode = 'discrete'
+	if (!Object.keys(tw.q).includes('mode')) tw.q.mode = 'discrete'
 
 	// must set up bar/value flags before quiting for inuse:false
 	if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {

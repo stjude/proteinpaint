@@ -2,7 +2,12 @@ import { GroupSettingMethods } from './groupsetting.ts'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import { VocabApi } from '../../shared/types/index'
 import { BaseGroupSet, GroupEntry } from '../../shared/types/terms/term'
-import { CategoricalQ, CategoricalTerm, CategoricalTW } from '../../shared/types/terms/categorical'
+import {
+	CategoricalQ,
+	CategoricalTerm,
+	CategoricalTW,
+	CategoricalTermSettingInstance
+} from '../../shared/types/terms/categorical'
 import { PillData } from '../types'
 import { copyMerge } from '../../rx'
 
@@ -28,12 +33,10 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 ********************** INTERNAL
 */
 
-export async function getHandler(self) {
+export async function getHandler(self: CategoricalTermSettingInstance) {
 	setCategoryMethods(self)
 
 	return {
-		showEditMenu: self.showGrpOpts,
-
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
 		},
@@ -87,6 +90,10 @@ export async function getHandler(self) {
 			}
 		},
 
+		async showEditMenu() {
+			await new GroupSettingMethods(self).main()
+		},
+
 		async postMain() {
 			//for rendering groupsetting menu
 			const body = self.opts.getBodyParams?.() || {}
@@ -97,38 +104,29 @@ export async function getHandler(self) {
 			 * in other client side code. The data shape may differ until all the code is refactored.
 			 */
 			self.category2samplecount = data.lst
-			if (!self.term.values) {
-				self.q = {}
-			} // ...
 		}
 	}
 }
 
-export function setCategoryMethods(self) {
+export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 	self.validateGroupsetting = function () {
-		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
+		if (self.q.type == 'values') return { text: '' }
 		const text = self.q.name || self.q.reuseId
 		if (text) return { text }
-		if (self.q.groupsetting.predefined_groupset_idx && Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-			if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
-			if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
-			const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-			if (!i)
-				return {
-					text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
-					bgcolor: 'red'
-				}
+		if (self.q.type == 'predefined-groupset') {
+			if (!Number.isInteger(self.q.predefined_groupset_idx))
+				return { text: 'q.predefined_groupset_idx is not an integer', bgcolor: 'red' }
+			if (!self.term.groupsetting?.lst?.length) return { text: 'term.groupsetting is empty', bgcolor: 'red' }
+			const i = self.term.groupsetting.lst[self.q.predefined_groupset_idx]
+			if (!i) return { text: 'term.groupsetting.lst entry is missing', bgcolor: 'red' }
 			return { text: i.name }
 		}
-		if (self.q.groupsetting.customset) {
-			const n = self.q.groupsetting.customset.groups.length
+		if (self.q.type == 'custom-groupset') {
+			if (!self.q.customset) return { text: 'q.customset is missing', bgcolor: 'red' }
+			const n = self.q.customset.groups.length
 			return { text: 'Divided into ' + n + ' groups' }
 		}
 		return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
-	}
-
-	self.showGrpOpts = async function () {
-		await new GroupSettingMethods(self).main()
 	}
 }
 

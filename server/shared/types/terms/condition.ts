@@ -1,27 +1,13 @@
-import { BaseTerm, BaseQ, BaseValue, TermGroupSetting } from './term.ts'
-import { TermWrapper } from './tw.ts'
-
-/*
---------EXPORTED--------
-ConditionQ
-ConditionalTW
-
-*/
+import { BaseTerm, BaseQ, TermValues } from './term'
+import { TermWrapper } from './tw'
 
 /**
  * @category TW
  */
 
-export type ConditionValuesObject = {
-	mode: 'binary' | 'discrete'
-	type?: 'values'
-	values: {
-		[key: string]: BaseValue
-	}
-}
-
 export type ConditionQ = BaseQ & {
-	// termType: 'conditional'
+	mode: 'discrete' | 'binary' | 'cuminc' | 'cox'
+	type?: 'values'
 	bar_by_children?: boolean // 'true' if term is not a leaf and has subconditions
 	bar_by_grade?: boolean /* 'true' for barchart. Always 'true' for cuminc and logistic/cox outcome (children terms are not allowed for those cases)
 	when 'true', 'value_by_*' flags are effective.*/
@@ -43,8 +29,8 @@ export type ConditionQ = BaseQ & {
 }
 
 export type ConditionTerm = BaseTerm & {
-	values: ConditionValuesObject
-	groupsetting: TermGroupSetting
+	type: 'condition'
+	values: TermValues
 }
 
 /**
