@@ -112,6 +112,19 @@ async function computeGenes4nativeDs(
 	 * https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full.
 	 * This article recommends using interquartile region over variance.*/
 
+	//console.log("ds:", ds.queries.topVariablyExpressedGenes.arguments)
+	//const ds_options = ds.queries.topVariablyExpressedGenes.arguments
+
+	//let maxGenes = 100
+	//if (ds_options.find(i => i.id == "maxGenes")) {
+	//    maxGenes = ds_options.find(i => i.id == "maxGenes").value
+	//}
+	//
+	//let filter_extreme_values = true
+	//if (ds_options.find(i => i.id == "filter_extreme_values")) {
+	//    filter_extreme_values = ds_options.find(i => i.id == "filter_extreme_values").value
+	//}
+
 	let filter_extreme_values = true
 	if (q.filter_extreme_values == 1) {
 		// q.filter_extreme_values is an optional variable. If this is not defined, set filter_extreme_values = true
