@@ -9,6 +9,8 @@ import { getColors } from '#shared/common'
 import { rgb } from 'd3-color'
 import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
 import { TermTypes } from '#shared/terms'
+import { table2col } from '../dom/table2col'
+
 /*
 this
 	app
@@ -186,6 +188,19 @@ class MassGroups {
 		this.tip.clear()
 		const menuDiv = this.tip.d.append('div')
 		const id = this?.lastId
+
+		const groupsInfo = menuDiv.append('div')
+
+		const table = table2col({ holder: groupsInfo })
+		for (const [grpKey, grp] of Object.entries(tw.term.values)) {
+			const colorSquare = grp.color
+				? `<span style="display:inline-block; width:12px; height:12px; background-color:${grp.color}" ></span>`
+				: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
+			const [c1, c2] = table.addRow()
+			c1.html(`${colorSquare} ${grp.label}:`)
+			c2.html(`${grp.list.length} samples`)
+		}
+
 		let row = menuDiv.append('div')
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
