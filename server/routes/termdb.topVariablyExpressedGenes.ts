@@ -153,10 +153,10 @@ function gdcValidateQuery(ds: any, genome: any) {
 			const response = await cachedFetch(url, {
 				method: 'POST',
 				headers,
-				body: getGeneSelectionArg(q) // JSON.stringify(getGeneSelectionArg(q))
+				body: getGeneSelectionArg(q)
 			})
 
-			const re = response.body // JSON.parse(response.body)
+			const re = response.body
 			// {"gene_selection":[{"gene_id":"ENSG00000141510","log2_uqfpkm_median":3.103430497010492,"log2_uqfpkm_stddev":0.8692021350485105,"symbol":"TP53"}, ... ]}
 
 			const genes = [] as string[]

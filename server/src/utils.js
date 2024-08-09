@@ -10,7 +10,7 @@ import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
 import minimatch from 'minimatch'
 import crypto from 'crypto'
-import got from 'got'
+import nodeFetch from 'node-fetch'
 
 const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } = serverconfig
 
@@ -845,7 +845,7 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 	const cacheFile = cacheDir && path.join(cacheDir, id)
 
 	let body
-	if (cacheFile && fs.existsSync(cacheFile)) {
+	if (cacheFile && fs.existsSync(cacheFile) && !use.noCache) {
 		try {
 			// console.log(`Using cache file ${cacheFile}`)
 			const json = fs.readFileSync(cacheFile)?.toString('utf-8').trim()
@@ -868,35 +868,50 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 				}
 			}
 			const method = opts.method?.toLowerCase() || 'get'
-			const client = use.client || got
-			const response = await client[method](url, {
-				headers,
-				body:
-					method == 'get'
-						? undefined
-						: headers['content-type'].includes('json')
-						? JSON.stringify(opts.body || {})
-						: opts.body
-			})
+			let jsonBody
+			if (!use.client) {
+				opts.headers = headers
+				if (opts.body && typeof opts.body != 'string') opts.body = JSON.stringify(opts.body)
+				// NOTES:
+				// - For now, will use nodeFetch where simultaneous long-running requests can cause terminated or socket hangup errors.
+				// - In Node 20, it looks like undici (which is used by experimental native fetch in Node 20) may not be performing garbage cleanup
+				// and freeing-up resources like sockets. This issue seems to be fixed in Node 22, which will be active in October 2024.
+				// - In the meantime, replacing ky with node-fetch may be a good enough fix for edge cases of very large, long-running requests.
+				jsonBody = await nodeFetch(url, opts)
+					.then(r => r.json())
+					.catch(e => {
+						throw e
+					})
+			} else {
+				const client = use.client
+				const response = await client[method](url, {
+					headers,
+					body:
+						method == 'get'
+							? undefined
+							: headers['content-type'].includes('json')
+							? JSON.stringify(opts.body || {})
+							: opts.body
+				})
 
-			if (cacheFile) {
-				const jsonBody =
+				jsonBody =
 					typeof response.body == 'string'
 						? response.body
 						: headers.accept.includes('json')
 						? JSON.stringify(response.body)
 						: opts.response
+			}
 
-				fs.writeFileSync(cacheFile, jsonBody, { encoding: 'utf8' })
+			if (cacheFile) {
+				fs.writeFileSync(cacheFile, typeof jsonBody == 'string' ? jsonBody : JSON.stringify(jsonBody), {
+					encoding: 'utf8'
+				})
 			}
 
 			// the code that calls this function should expect a parsed JSON result,
 			// UNLESS the opts.headers.accept is overriden to a non-json content-type,
 			// in which case the caller should be ready to process the body as needed
-			body =
-				typeof response.body == 'string' && headers['accept'].includes('json')
-					? JSON.parse(response.body)
-					: response.body
+			body = typeof jsonBody == 'string' && headers['accept'].includes('json') ? JSON.parse(jsonBody) : jsonBody
 		} catch (e) {
 			throw e
 		}

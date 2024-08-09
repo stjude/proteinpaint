@@ -2,6 +2,7 @@ import * as common from '#shared/common.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import ky from 'ky'
 import got from 'got'
+import nodeFetch from 'node-fetch'
 import path from 'path'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
@@ -205,7 +206,7 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 				}
 			}
 		}
-		if (ensgLst.length > 800) break // max 100 genes
+		if (ensgLst.length > 1000) break // max 1000 genes
 	}
 
 	// TODO: detect when the list has already been screened per Zhenyu's instructions below
@@ -222,17 +223,7 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
 
-		// fs.writeFileSync(`/Users/esioson/dev/sjpp/proteinpaint/geneexp.txt`, JSON.stringify({
-		// 		headers,
-		// 		//timeout: false, // instead of 10 second default
-		// 		body: {
-		// 			case_ids: cases4clustering,
-		// 			gene_ids: ensgLst,
-		// 			selection_size: ensgLst.length,
-		// 			min_median_log2_uqfpkm: 0.01
-		// 		}
-		// 	}), null, '  ')
-
+		// test code to use native fetch
 		// const _re = await fetch(`${host.geneExp}/gene_expression/gene_selection`, {
 		// 		headers,
 		// 		method: 'POST',
@@ -243,14 +234,12 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 		// 			selection_size: ensgLst.length,
 		// 			min_median_log2_uqfpkm: 0.01
 		// 		})
-		// 	}).catch(e => {throw e})
-
-		// const re = _re.json()
+		// 	}).then(r => r.json()).catch(e => {throw e})
 
 		const re = await ky
 			.post(`${host.geneExp}/gene_expression/gene_selection`, {
 				headers,
-				timeout: 60000, //false, // instead of 10 second default
+				timeout: false, // instead of 10 second default
 				json: {
 					case_ids: cases4clustering,
 					gene_ids: ensgLst,
@@ -311,15 +300,34 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, ter
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-	// TODO: may re-enable using ky, once issue with intermittent request 'terminated' error is fixed
+
+	// NOTES:
+	// - For now, will use nodeFetch where simultaneous long-running requests can cause terminated or socket hangup errors.
+	// - In Node 20, it looks like undici (which is used by experimental native fetch in Node 20) may not be performing garbage cleanup
+	// and freeing-up resources like sockets. This issue seems to be fixed in Node 22, which will be active in October 2024.
+	// - In the meantime, replacing ky with node-fetch may be a good enough fix for edge cases of very large, long-running requests.
+	//
+	// --- keeping previous request code below for reference ---
+	//
 	// const re = await ky.post(`${host.geneExp}/gene_expression/values`, { timeout: false, headers, json: arg }).text()
 	// const lines = re.trim().split('\n')
-	const response = await got.post(`${host.geneExp}/gene_expression/values`, {
+	//
+	// const response = await got.post(`${host.geneExp}/gene_expression/values`, {
+	// 	headers,
+	// 	body: JSON.stringify(arg)
+	// })
+	// if (typeof response.body != 'string') throw 'response.body is not tsv text'
+	// const lines = response.body.trim().split('\n')
+	//
+
+	const re = await nodeFetch(`${host.geneExp}/gene_expression/values`, {
+		method: 'POST',
+		timeout: false,
 		headers,
 		body: JSON.stringify(arg)
-	})
-	if (typeof response.body != 'string') throw 'response.body is not tsv text'
-	const lines = response.body.trim().split('\n')
+	}).then(r => r.text())
+	if (typeof re != 'string') throw 'response.body is not tsv text'
+	const lines = re.trim().split('\n')
 
 	if (lines.length <= 1) throw 'less than 1 line from tsv response.body'
 
@@ -1359,9 +1367,11 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 	if (dictTwLst.length) {
 		if (q.isHierCluster) {
+			console.log(1365)
 			// running gene exp clustering, must only restrict to cases with exp data, but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
 			;[byTermId, samples] = await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
 		} else {
+			console.log(1368)
 			// not in gene exp clustering mode
 			;[byTermId, samples] = await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
 		}
@@ -1755,17 +1765,19 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky
-		.post(path.join(host.rest, 'cases'), {
-			timeout: false,
-			headers,
-			json: {
-				size: ds.__gdc.casesWithExpData.size,
-				fields: fields.join(','),
-				case_filters: filters.content.length ? filters : undefined
-			}
+	// NOTE: not using ky, until the issue with undici intermittent timeout/socket hangup is
+	// fully resolved, and which hapens only for long-running requests where possibly
+	// garbage collection is not being performed on http socket resources
+	const re = await nodeFetch(path.join(host.rest, 'cases'), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: JSON.stringify({
+			size: ds.__gdc.casesWithExpData.size,
+			fields: fields.join(','),
+			case_filters: filters.content.length ? filters : undefined
 		})
-		.json()
+	}).then(r => r.json())
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	const samples = []
