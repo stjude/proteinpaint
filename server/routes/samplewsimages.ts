@@ -39,7 +39,7 @@ function init({ genomes }) {
 				sampleId
 			)
 
-			const sampleWSImages = getWSImages(sampleWSImagesPath)
+			const sampleWSImages = await getWSImages(sampleWSImagesPath)
 			res.send({ sampleWSImages: sampleWSImages })
 		} catch (e: any) {
 			console.log(e)
@@ -48,7 +48,7 @@ function init({ genomes }) {
 	}
 }
 
-function getWSImages(sampleImagesPath: string): string[] {
-	const files = fs.readdirSync(sampleImagesPath)
+async function getWSImages(sampleImagesPath: string): Promise<string[]> {
+	const files = await fs.promises.readdir(sampleImagesPath)
 	return files.filter(file => ['.svs', '.mrxs', '.scn', '.ndpi', '.tiff'].includes(path.extname(file)))
 }
