@@ -1,1 +1,2 @@
-
+Features
+- Add Whole Slide Images Viewer to the project
