@@ -47,7 +47,7 @@ function init({ genomes }) {
 			const getCookieString = promisify(cookieJar.getCookieString.bind(cookieJar))
 
 			// Make the request to get the session_id
-			const sessionResponse = await ky.get(`${serverconfig.tileServerURL}/tileserver/session_id`, {
+			await ky.get(`${serverconfig.tileServerURL}/tileserver/session_id`, {
 				hooks: {
 					beforeRequest: [
 						async request => {
@@ -69,7 +69,6 @@ function init({ genomes }) {
 			// Extract session_id from the cookie jar
 			const cookieString = await getCookieString(`${serverconfig.tileServerURL}/tileserver/session_id`)
 			const sessionId = cookieString.match(/session_id=([^;]*)/)?.[1]
-			path.join(`${serverconfig.tpmasterdir}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`, wsimage)
 
 			const sampleWsiTileServer = path.join(
 				`${serverconfig.tileServerMount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
