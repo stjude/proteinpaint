@@ -9,8 +9,6 @@ import wsiViewer from './wsiviewer/plot.wsi'
 const root_ID = 'root'
 const samplesLimit = 15
 
-const showWSImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showWSImages
-
 class SampleView {
 	constructor(opts) {
 		this.opts = opts
@@ -238,7 +236,7 @@ class SampleView {
 			this.dom.showPlotsDiv.append('label').attr('for', 'showDzi').text('Show DZI images')
 		}
 
-		if (q?.WSImages && showWSImages) {
+		if (q?.WSImages) {
 			this.dom.showPlotsDiv
 				.append('input')
 				.attr('id', 'showWsi')
@@ -553,7 +551,7 @@ class SampleView {
 			}
 		}
 
-		if (state.termdbConfig.queries?.WSImages && showWSImages) {
+		if (state.termdbConfig.queries?.WSImages) {
 			let div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {

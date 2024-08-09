@@ -213,13 +213,13 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		}
 	}
 
-	if (q.DZImages) {
+	if (q.DZImages && serverconfig.features.showDZImages) {
 		q2.DZImages = {
 			type: q.DZImages.type
 		}
 	}
 
-	if (q.WSImages) {
+	if (q.WSImages && serverconfig.features.showWSImages) {
 		q2.WSImages = {
 			type: q.WSImages.type
 		}
