@@ -1,5 +1,5 @@
 import { BaseTerm, BaseValue, BaseQ, BaseTW, QGroupSetting, TermGroupSetting, ValuesGroup } from './term.ts'
-
+import { CategoricalQ } from './categorical.js'
 /*
 --------EXPORTED--------
 CategoricalValuesObject
@@ -19,7 +19,7 @@ GroupSetInputValues
  * @category TW
  */
 
-export type CategoricalValuesObject = {
+export type CategoricalValuesObject = SingleCellQ & {
 	mode: 'binary' | 'discrete'
 	type?: 'values'
 	values: {
@@ -27,7 +27,7 @@ export type CategoricalValuesObject = {
 	}
 }
 
-export type GroupSet = {
+export type GroupSet = SingleCellQ & {
 	mode: 'binary' | 'discrete'
 	type?: 'predefined-groupset' | 'custom-groupset'
 	name: string
@@ -45,7 +45,7 @@ export type SingleCellCellTypeTerm = BaseTerm & {
 	groupsetting: TermGroupSetting & { useIndex: number }
 }
 
-export type SingleCellQ = BaseQ & QGroupSetting & (CategoricalValuesObject | GroupSet)
+export type SingleCellQ = CategoricalQ
 
 export type SingleCellCellTypeTW = BaseTW & {
 	term: SingleCellCellTypeTerm

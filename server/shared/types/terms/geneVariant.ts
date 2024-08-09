@@ -1,52 +1,48 @@
-import { TermWrapper } from './tw.ts'
-import { BaseQ, BaseTerm, QGroupSetting, TermGroupSetting } from './term.ts'
-import { TermSettingInstance } from '../termsetting.ts'
+import { MinBaseQ, BaseTerm, EnabledTermGroupSetting, BaseTW, GroupSettingQ } from './term'
+import { TermSettingInstance } from '../termsetting'
 
-/*
---------EXPORTED--------
-GeneVariantQ
-GeneVariantTermWrapper
-GeneVariantTermSettingInstance
-
-*/
-
-export type GeneVariantQ = BaseQ & {
+export type GeneVariantBaseQ = MinBaseQ & {
 	cnvGainCutoff?: number
 	cnvMaxLength?: number
 	cnvMinAbsValue?: number
 	cnvLossCutoff?: number
-	exclude: any //an array maybe?
-	groupsetting: QGroupSetting
+	exclude: string[]
 	dt?: number
 	origin?: string
 }
 
-export type GeneVariantTW = TermWrapper & {
-	q: GeneVariantQ
-	term: GeneVariantTerm
-}
+export type GeneVariantQ = GeneVariantBaseQ & GroupSettingQ
 
-export type GeneVariantCoordTerm = BaseTerm & {
+type GeneVariantBaseTerm = BaseTerm & { groupsetting: EnabledTermGroupSetting }
+
+type GeneVariantCoordTerm = GeneVariantBaseTerm & {
+	kind: 'coord'
 	chr: string
 	start: number
 	stop: number
 }
 
-export type GeneVariantGeneTerm = BaseTerm & {
+export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
+	kind: 'gene'
 	gene: string
+	// chr,start,stop should exist together as a separate type called
+	// 'Coord', but hard to code as atomic `& Coord` because it may
+	// need to be filled in
 	chr?: string
 	start?: number
 	stop?: number
 }
 
-export type GeneVariantTerm =
-	| GeneVariantCoordTerm
-	| (GeneVariantGeneTerm & {
-			groupsetting: TermGroupSetting
-	  })
+export type GeneVariantTerm = GeneVariantGeneTerm | GeneVariantCoordTerm
+
+export type GeneVariantTW = BaseTW & {
+	term: GeneVariantTerm
+	q: GeneVariantQ
+}
 
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
 	q: GeneVariantQ
 	term: GeneVariantTerm
 	category2samplecount: any
+	groupSettingInstance?: any
 }
