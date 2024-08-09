@@ -388,7 +388,6 @@ async function getSampleData_dictionaryTerms(q, termWrappers, onlyChildren = fal
 }
 
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, onlyChildren) {
-	const samples = {} // to return
 	const byTermId = {} // to return
 	const filter = await getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
@@ -432,51 +431,47 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 			`
 		).join(`UNION ALL`)}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	const sampleIds = []
-	let hasChildren = false
-	let hasRoot = false
-	for (const row of rows) {
-		sampleIds.push(row.sample)
-		const type = q.ds.sampleId2Type.get(row.sample)
-		if (type == 'root') hasRoot = true
-		else hasChildren = true
-	}
+	const samples = await getSamples(q, rows, onlyChildren)
+	return [samples, byTermId]
+}
 
-	const isMixed = hasRoot && hasChildren
+export async function getSamples(q, rows, onlyChildren = false) {
+	const samples = {} // to return
+	const types = new Set()
+	for (const row of rows) {
+		const type = q.ds.sampleId2Type.get(row.sample)
+		types.add(type)
+	}
+	const isMixed = types.size > 1
+
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 	for (const { sample, key, term_id, value } of rows) {
-		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
-		const type = q.ds.sampleId2Type.get(sample)
-
 		const children = q.ds.sample2Children.get(sample)
-		if (onlyChildren || isMixed) {
+		if (isMixed || onlyChildren) {
 			//if some annotations are on parent and some on children or onlyChildren set to true add only children
-			if (children)
-				for (const child of children) {
-					addSample(child, term_id, key, value)
-				}
+			if (children) {
+				for (const child of children) addSample(child, term_id, key, value)
+				continue //only children are added
+			}
 		}
-		if (onlyChildren && type == 'root') continue //eg matrix
 
-		if (!isMixed || (isMixed && type != 'root')) {
-			//add annotations for samples or root samples found
-			addSample(sample, term_id, key, value)
-		}
+		//add  sample if there is only one type of sample, or if sample is leaf sample without children
+		if (!isMixed || (isMixed && !children)) addSample(sample, term_id, key, value)
 	}
-	return [samples, byTermId]
 
 	function addSample(sample, term_id, key, value) {
+		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) return // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
 		// this assumes unique term key/value for a given sample
 		// samples[sample][term_id] = { key, value }
-
 		if (!samples[sample][term_id]) {
 			// first value of term for a sample
 			samples[sample][term_id] = { key, value }
 		} else {
 			// samples has multiple values for a term
 			// convert to .values[]
+
 			if (!samples[sample][term_id].values) {
 				const firstvalue = samples[sample][term_id] // first term value of the sample
 				samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
@@ -485,6 +480,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 			samples[sample][term_id].values.push({ key, value })
 		}
 	}
+	return samples
 }
 
 async function mayQueryMutatedSamples(q) {

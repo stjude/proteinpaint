@@ -49,7 +49,9 @@ export function handle_request_closure(genomes) {
 			}
 			//if (q.gettermdbconfig) return termdbConfig.make(q, res, ds, genome)
 			//if (q.getcohortsamplecount) return res.send({ count: ds.cohort.termdb.q.getcohortsamplecount(q.cohort) })
-			if (q.getsamplecount) return res.send(await getSampleCount(req, q, ds))
+			if (q.getsamplecount) return res.send(await termdbsql.get_samplecount(q, ds))
+			if (q.getsamplelist) return res.send(await getSampleList(req, q, ds))
+
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
 			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
@@ -132,13 +134,10 @@ async function trigger_getsamples(q, res, ds) {
 	res.send({ samples })
 }
 
-async function getSampleCount(req, q, ds) {
+async function getSampleList(req, q, ds) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
-	if (q.getsamplecount == 'list') {
-		const samples = await termdbsql.get_samples(q.filter, ds, canDisplay)
-		return samples
-	}
-	return await termdbsql.get_samplecount(q, ds)
+	const samples = await termdbsql.get_samples(q.filter, ds, canDisplay)
+	return samples
 }
 
 export function copy_term(t) {

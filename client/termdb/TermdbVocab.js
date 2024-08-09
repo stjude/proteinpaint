@@ -374,26 +374,36 @@ export class TermdbVocab extends Vocab {
 
 	/** opts: 
 	 	filterJSON: JSON || string, required
-		getSampleLst: STR, optional
-			- 'count' (default) returns sample count
-			- 'list' returns sample list in array of [{id, name}....]
-			- '*' returns sample list array of [{samplecount, subcohort}]
+		returns sample list in array of [{id, name}....]
 	 */
-	async getFilteredSampleCount(filterJSON, getSampleLst) {
+	async getFilteredSampleList(filterJSON) {
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
-			getsamplecount: getSampleLst || 'count',
+			getsamplelist: 1,
 			filter: typeof filterJSON == 'string' ? filterJSON : getNormalRoot(filterJSON)
 		}
 		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw `missing data`
 		if (data.error) throw data.error
-		if (getSampleLst) {
-			if (!Array.isArray(data)) throw 'data is not array'
-			return data
+		if (!Array.isArray(data)) throw 'data is not array'
+		return data
+	}
+	/** opts: 
+	 	filterJSON: JSON || string, required
+		returns sample count per type
+	 */
+	async getFilteredSampleCount(filterJSON) {
+		const body = {
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			getsamplecount: 1,
+			filter: typeof filterJSON == 'string' ? filterJSON : getNormalRoot(filterJSON)
 		}
-		return data[0]?.samplecount || data.count || 0
+		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
+		if (!data) throw `missing data`
+		if (data.error) throw data.error
+		return data.count
 	}
 
 	/*

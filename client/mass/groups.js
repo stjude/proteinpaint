@@ -74,7 +74,7 @@ class MassGroups {
 		const processedSamples = new Set(),
 			overlap = []
 		for (const g of groups) {
-			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
+			const samples = await this.app.vocabApi.getFilteredSampleList(g.filter)
 			const items = []
 			for (const sample of samples) {
 				const item = { sampleId: sample.id }

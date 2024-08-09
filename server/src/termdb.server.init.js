@@ -116,29 +116,29 @@ export function server_init_db_queries(ds) {
 	if (tables.has('sampleidmap')) {
 		const i2s = new Map(),
 			s2i = new Map()
-		const s = cn.prepare('SELECT * FROM sampleidmap')
+		let rows = cn.prepare('SELECT * FROM sampleidmap').all()
 		let totalCount = 0
-		for (const { id, name, type } of s.all()) {
+		for (const { id, name } of rows) {
 			i2s.set(id, name)
 			s2i.set(name, id)
-			if (type != 'root' || !type) totalCount++ //later on if more than two types we need to pass the type
+			totalCount++ //for dbs without cohorts or types
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
+		if (tables.has('cohorts')) {
+			// if sampleidmap table is present, add this method to return sample count for datasets with and without subcohort
+			if (tables.has('cohort_types')) rows = cn.prepare('SELECT * from cohort_types').all()
+			else rows = cn.prepare('SELECT cohort,sample_count from cohorts').all()
 
-		// if sampleidmap table is present, add this method to return sample count for datasets with and without subcohort
-		if (ds.cohort.termdb.selectCohort) {
-			// subcohort is enabled on this ds
-			const s = cn.prepare('SELECT cohort,sample_count from cohorts').all()
-			const h = {}
-			for (const i of s) h[i.cohort] = i.sample_count
-			q.getcohortsamplecount = cohortKey => {
-				if (!cohortKey) return totalCount
-				return h[cohortKey] || 0
+			q.getCohortSampleCount = cohortKey => {
+				let counts = rows.filter(row => row.cohort == cohortKey).map(row => row.sample_count)
+				let total = counts.join('+')
+				if (total == '')
+					//older db does not have types or sample_count
+					total = totalCount
+				return total
 			}
-		} else {
-			q.getcohortsamplecount = () => totalCount
-		}
+		} else q.getCohortSampleCount = () => totalCount
 	}
 
 	if (tables.has('category2vcfsample')) {

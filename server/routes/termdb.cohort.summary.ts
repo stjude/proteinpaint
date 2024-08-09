@@ -24,7 +24,7 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
-			res.send({ count: ds.cohort.termdb.q.getcohortsamplecount(q.cohort) })
+			res.send({ count: ds.cohort.termdb.q.getCohortSampleCount(q.cohort) })
 		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
