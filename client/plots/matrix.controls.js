@@ -141,9 +141,6 @@ export class MatrixControls {
 					vocab: this.opts.vocab
 					//activeCohort: appState.activeCohort
 				},
-				getDisplayStyle(plot) {
-					return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
-				},
 				processInput: tw => {
 					if (tw) fillTermWrapper(tw, this.opts.app.vocabApi)
 					if (tw?.term && isNumericTerm(tw.term)) {
@@ -170,6 +167,24 @@ export class MatrixControls {
 							t.tw.term.chr ? `${t.tw.term.chr}:${t.tw.term.start}-${t.tw.term.stop}` : t.tw.term.gene || t.tw.term.name
 						) // TODO term.gene replaces term.name
 					return { currentGeneNames }
+				},
+				callback: tw => {
+					if (parent.chartType == 'hierCluster') {
+						if (tw) {
+							parent.app.dispatch({
+								type: 'plot_edit',
+								id: parent.id,
+								config: {
+									settings: {
+										hierCluster: {
+											yDendrogramHeight: 0,
+											clusterSamples: false
+										}
+									}
+								}
+							})
+						}
+					}
 				}
 			}
 		]

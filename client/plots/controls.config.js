@@ -669,6 +669,7 @@ async function setTermInput(opts) {
 		usecase: opts.usecase,
 		getBodyParams: opts.getBodyParams,
 		callback: tw => {
+			if (opts.callback) opts.callback(tw)
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
 			if (opts.processInput) opts.processInput(tw)
