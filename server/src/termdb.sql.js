@@ -85,7 +85,7 @@ return an array of sample names passing through the filter
 }
 
 // we need to pass a type and count by type to differentiate root samples from samples
-export async function get_samplecount(q, ds, type = 'sample') {
+export async function get_samplecount(q, ds) {
 	/*
 must have q.filter (somehow it can either be str or {})
 as this is for showing number of samples pass a filter in header
@@ -104,10 +104,17 @@ return a sample count of sample names passing through the filter
 
 	const filter = await getFilterCTEs(j, ds)
 	const statement = `WITH ${filter.filters}
-		SELECT 'FILTERED_COHORT' as subcohort, count(distinct sample) as samplecount 
-		FROM ${filter.CTEname}'`
+		SELECT distinct sample
+		FROM ${filter.CTEname}`
 	const rows = ds.cohort.db.connection.prepare(statement).all(filter.values)
-	return rows
+	const counts = {}
+	for (const row of rows) {
+		const type = ds.sampleId2Type[row.sample] || 'sample'
+		if (!(type in counts)) counts[type] = 0
+		counts[type] = counts[type] + 1
+	}
+	const count = Object.values(counts).join('+')
+	return { count }
 }
 export async function get_summary_numericcategories(q) {
 	/*
