@@ -171,7 +171,7 @@ class profileBarchart extends profilePlot {
 		if (this.state.dslabel == 'ProfileAbbrev') {
 			const uiG = this.legendG.append('g').attr('transform', `translate(420, 0)`)
 			this.addEndUserImpressionNote(uiG)
-		}
+		} else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(550, -80)`))
 
 		if (!hasSubjectiveData) return
 		drawLine(910, 120, 50, y, 'B')
