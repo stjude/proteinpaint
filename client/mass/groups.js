@@ -7,6 +7,8 @@ import { get$id } from '#termsetting'
 import { getActiveCohortStr } from './charts'
 import { getColors } from '#shared/common'
 import { rgb } from 'd3-color'
+import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
+import { TermTypes } from '#shared/terms'
 /*
 this
 	app
@@ -192,6 +194,9 @@ class MassGroups {
 
 		if (this.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
+
+		if (this.state.supportedChartTypes.includes('geneExpression'))
+			addHierClusterPlotMenuItem('geneExpression', menuDiv, 'Gene expression', this.tip, samplelstTW, id, this, true)
 
 		if (this.state.supportedChartTypes.includes('cuminc'))
 			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', this.tip, samplelstTW, id, this, true)
@@ -585,6 +590,66 @@ export function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, pare
 				tip,
 				state
 			)
+		})
+}
+
+export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
+	const itemDiv = div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.html(`${text}&nbsp;&nbsp;›`)
+		.on('click', () => {
+			if (!tip2) tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34, parent_menu: tip.d.node() })
+			tip2.clear()
+			tip2.showunderoffset(itemDiv.node())
+
+			new GeneSetEditUI({
+				holder: tip2.d,
+				genome: parent.app.opts.genome,
+				vocabApi: parent.app.vocabApi,
+				geneList: [],
+				callback: async ({ geneList, groupName }) => {
+					tip.hide()
+					const group = { name: groupName, lst: [], type: 'hierCluster' }
+					const lst = group.lst.filter(tw => tw.term.type != 'geneExpression')
+
+					const tws = await Promise.all(
+						geneList.map(async d => {
+							const term = {
+								gene: d.symbol || d.gene,
+								name: d.symbol || d.gene,
+								type: 'geneExpression'
+							}
+
+							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+							if (!tw) {
+								tw = { term, q: {} }
+							}
+							return tw
+						})
+					)
+
+					if (tws.length < 3) {
+						alert('gene expression hiercluster has to have >= 3 genes')
+						return
+					}
+					group.lst = [...lst, ...tws]
+
+					// close geneset edit ui after clicking submit
+					tip2.d.selectAll('*').remove()
+
+					parent.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'hierCluster',
+							termgroups: [group],
+							dataType: TermTypes.GENE_EXPRESSION,
+							divideBy: samplelstTW,
+							settings: { hierCluster: { yDendrogramHeight: 0, clusterSamples: false } }
+						}
+					})
+				}
+			})
 		})
 }
 
