@@ -8,7 +8,7 @@ Various JSON parameters:
    num_genes: The top num_genes (for e.g 10) that need to be reported in the output.
    param: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
 
- Example syntax: cd .. && cargo build --release && json='{"samples":"sample1,sample2,sample3","input_file":"/path/to/input/file","filter_extreme_values":true,"num_genes":100, "param":"var"}' && time echo $json | target/release/gene_variance
+ Example syntax: cd .. && cargo build --release && json='{"samples":"sample1,sample2,sample3","min_count":30,"min_total_count":20,"input_file":"/path/to/input/file","filter_extreme_values":true,"num_genes":100, "param":"var"}' && time echo $json | target/release/gene_variance
 */
 #![allow(non_snake_case)]
 use bgzip::BGZFReader;
@@ -112,9 +112,21 @@ fn calculate_variance(
     mut min_sample_size: f64,
     filter_extreme_values: bool,
     param: String,
+    min_count_option: Option<f64>,
+    min_total_count_option: Option<f64>,
 ) -> Vec<GeneInfo> {
-    const MIN_COUNT: f64 = 10.0; // Value of constant from R implementation
-    const MIN_TOTAL_COUNT: f64 = 15.0; // Value of constant from R implementation
+    let mut min_count: f64 = 10.0;
+    match min_count_option {
+        Some(x) => min_count = x,
+        None => {}
+    }
+    let mut min_total_count: f64 = 15.0;
+    match min_total_count_option {
+        Some(x) => min_total_count = x,
+        None => {}
+    }
+    //const MIN_COUNT: f64 = 10.0; // Value of constant from R implementation
+    //const MIN_TOTAL_COUNT: f64 = 15.0; // Value of constant from R implementation
     const LARGE_N: f64 = 10.0; // Value of constant from R implementation
     const MIN_PROP: f64 = 0.7; // Value of constant from R implementation
 
@@ -135,7 +147,7 @@ fn calculate_variance(
     //println!("lib_sizes:{:?}", lib_sizes);
     //println!("min_sample_size:{}", min_sample_size);
     let median_lib_size = Data::new(lib_sizes.clone()).median();
-    let cpm_cutoff = (MIN_COUNT / median_lib_size) * 1000000.0;
+    let cpm_cutoff = (min_count / median_lib_size) * 1000000.0;
     //println!("cpm_cutoff:{}", cpm_cutoff);
     let cpm_matrix = cpm(&input_matrix);
     const TOL: f64 = 1e-14; // Value of constant from R implementation
@@ -157,7 +169,7 @@ fn calculate_variance(
         }
 
         let mut keep_total_bool = false;
-        if row_sums[(row, 0)] as f64 >= MIN_TOTAL_COUNT - TOL {
+        if row_sums[(row, 0)] as f64 >= min_total_count - TOL {
             keep_total_bool = true;
             //keep_total.push(keep_total_bool);
             //positive_total += 1;
@@ -296,6 +308,20 @@ fn main() {
                         }
                     }
 
+                    let min_count_result = &json_string["min_count"];
+                    let mut min_count: Option<f64> = None;
+                    match min_count_result.as_f64() {
+                        Some(x) => min_count = Some(x),
+                        None => {}
+                    }
+
+                    let min_total_count_result = &json_string["min_total_count"];
+                    let mut min_total_count: Option<f64> = None;
+                    match min_total_count_result.as_f64() {
+                        Some(x) => min_total_count = Some(x),
+                        None => {}
+                    }
+
                     let samples_list: Vec<&str> = samples_string.split(",").collect();
                     let (input_matrix, gene_symbols) = input_data(&file_name, &samples_list);
                     let gene_infos = calculate_variance(
@@ -304,6 +330,8 @@ fn main() {
                         samples_list.len() as f64,
                         filter_extreme_values,
                         param.to_string(),
+                        min_count,
+                        min_total_count,
                     );
                     //println!("gene_infos:{:?}", gene_infos);
 
