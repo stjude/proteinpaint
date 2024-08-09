@@ -7,10 +7,6 @@ on:
         type: string
         description: Build secret
 
-  push:
-    branches:
-      - tile-server-docker
-
 jobs:
   check-user-permissions:
     runs-on: ubuntu-latest
