@@ -8,7 +8,8 @@ export function getTermOrder(data) {
 	this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 	const termOrder = []
 	let totalIndex = 0,
-		visibleGrpIndex = 0
+		visibleGrpIndex = 0,
+		numClusterTerms = 0
 
 	this.mclassSorter = getMclassSorter(this)
 	for (const [grpIndex, grp] of this.termGroups.entries()) {
@@ -50,6 +51,7 @@ export function getTermOrder(data) {
 				}
 			}
 			if (grp.type != 'hierCluster' || counts.samples) lst.push({ tw, counts, index })
+			if (grp.type == 'hierCluster') numClusterTerms++
 		}
 
 		// may override the settings.sortTermsBy with a sorter that is specific to a term group
@@ -98,6 +100,7 @@ export function getTermOrder(data) {
 		visibleGrpIndex += 1
 	}
 	this.numTerms = termOrder.length
+	this.numClusterTerms = numClusterTerms
 	return termOrder
 }
 

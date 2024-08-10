@@ -210,7 +210,7 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 	}
 
 	// TODO: detect when the list has already been screened per Zhenyu's instructions below
-	return [ensgLst, ensg2symbol]
+	//return [ensgLst, ensg2symbol]
 
 	if (!q.forClusteringAnalysis) {
 		// the request is not for clustering analysis. do not perform gene selection step to speed up and use given genes as-is

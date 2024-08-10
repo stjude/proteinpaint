@@ -30,10 +30,12 @@ export function setRenderers(self) {
 			self.dom.seriesesG.selectAll('g').remove()
 		}
 		if (s.useCanvas) {
+			console.log(32)
 			const _g = self.dom.seriesesG.selectAll('g')
 			const g = /*(_g.size() && _g) ||*/ self.dom.seriesesG.append('g').datum(this.serieses)
 			self.renderCanvas(this.serieses, g, d, s, _g, duration)
 		} else {
+			console.log(36)
 			self.dom.seriesesG
 				//.transition()
 				//.duration(duration)
@@ -108,7 +110,7 @@ export function setRenderers(self) {
 					self.dom.seriesesG
 						//.transition()
 						//.duration(duration)
-						.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+						.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${Math.max(d.yOffset)})`)
 
 					g.selectAll('image').remove()
 					g.append('image')
@@ -178,6 +180,7 @@ export function setRenderers(self) {
 	}
 
 	self.renderLabels = function (s, l, d, duration) {
+		console.log(180, 'clusterRowh', s.clusterRowh)
 		for (const direction of ['top', 'btm', 'left', 'right']) {
 			const side = l[direction]
 			side.box
@@ -206,8 +209,17 @@ export function setRenderers(self) {
 				text
 					//.transition()
 					//.duration(textduration)
-					//.attr('opacity', side.attr.fontSize < 6 || labelText === 'configure' ? 0.1 : 1)
-					.attr('font-size', side.attr.fontSize)
+					.attr(
+						'display',
+						lab.grp?.type === 'hierCluster'
+							? s.clusterRowh < 6
+								? 'none'
+								: ''
+							: side.attr.fontSize < 6 || labelText === 'configure'
+							? 'none'
+							: ''
+					)
+					.attr('font-size', lab.grp?.type === 'hierCluster' ? s.clusterRowh + 2 : side.attr.fontSize)
 					.attr('text-anchor', side.attr.labelAnchor)
 					.attr('transform', side.attr.labelTransform)
 					.attr('cursor', 'pointer')
@@ -215,7 +227,7 @@ export function setRenderers(self) {
 
 				if (!Array.isArray(labelText)) {
 					text.text(labelText)
-					text.attr('y', lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous' ? 10 : 0)
+					text.attr('y', lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous' ? 10 : -0.5 * s.clusterRowh)
 				} else {
 					const tspan = text.selectAll('tspan').data(labelText)
 					tspan.exit().remove()

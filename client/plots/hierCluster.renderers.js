@@ -36,7 +36,7 @@ export function plotDendrogramHclust(plotColOnly) {
 	.inputOrder[]  [str]
 	*/
 
-	const rowHeight = this.dimensions.dy,
+	const rowHeight = this.settings.matrix.clusterRowh + 1, //this.dimensions.dy,
 		xDendrogramHeight = this.settings.hierCluster.xDendrogramHeight,
 		colWidth = this.dimensions.dx,
 		yDendrogramHeight = this.settings.hierCluster.yDendrogramHeight
@@ -132,7 +132,14 @@ export function plotDendrogramHclust(plotColOnly) {
 			})
 		}
 
-		this.renderImage(this.dom.topDendrogram, canvas, width, height, xDendrogramHeight + 0.5 * colWidth, rowHeight)
+		this.renderImage(
+			this.dom.topDendrogram,
+			canvas,
+			width,
+			height,
+			xDendrogramHeight + 0.5 * colWidth,
+			rowHeight + s.margin.top + s.scrollHeight
+		)
 
 		col.mergedClusters = mergedClusters
 	}
@@ -207,8 +214,13 @@ export function plotDendrogramHclust(plotColOnly) {
 	const t = this.termOrder.find(t => t.grp.type == 'hierCluster' || t.grp.name == this.hcTermGroup.name)
 	const ty =
 		//t.labelOffset is commented out because it causes row dendrogram to be misrendered
-		t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
-	this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + 1.5 * rowHeight)
+		t.grpIndex * s.rowgspace +
+		t.prevGrpTotalIndex * rowHeight /* + (t.labelOffset || 0) */ +
+		t.totalHtAdjustments +
+		s.margin.top +
+		s.scrollHeight
+	const y = ty + yDendrogramHeight + rowHeight + (rowHeight < 6 ? 3 * rowHeight : 0)
+	this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, y)
 
 	row.mergedClusters = mergedClusters
 }
