@@ -305,7 +305,7 @@ export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width
 	cell.value = value
 	const colw = self.dimensions.colw
 
-	cell.height = s.rowh / values.length
+	cell.height = s.clusterRowh + 1 // values.length
 	cell.width = colw
 	cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 	cell.y = height * i

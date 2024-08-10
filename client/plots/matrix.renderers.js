@@ -30,12 +30,10 @@ export function setRenderers(self) {
 			self.dom.seriesesG.selectAll('g').remove()
 		}
 		if (s.useCanvas) {
-			console.log(32)
 			const _g = self.dom.seriesesG.selectAll('g')
 			const g = /*(_g.size() && _g) ||*/ self.dom.seriesesG.append('g').datum(this.serieses)
 			self.renderCanvas(this.serieses, g, d, s, _g, duration)
 		} else {
-			console.log(36)
 			self.dom.seriesesG
 				//.transition()
 				//.duration(duration)
@@ -180,7 +178,6 @@ export function setRenderers(self) {
 	}
 
 	self.renderLabels = function (s, l, d, duration) {
-		console.log(180, 'clusterRowh', s.clusterRowh)
 		for (const direction of ['top', 'btm', 'left', 'right']) {
 			const side = l[direction]
 			side.box
