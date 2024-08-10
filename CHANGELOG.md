@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.71.0
 
 Features:
 - In addition to launching the sample view, the user may also see a simplified list and/or create a group from selected samples from the facet table.
