@@ -66,7 +66,7 @@ export function setAutoDimensions(xOffset) {
 	const availHeight = screen.availHeight - hch
 	this.computedSettings.clusterRowh = Math.min(
 		s.rowhMax,
-		Math.max(s.rowhMin, Math.round(availHeight / this.numClusterTerms))
+		Math.max(s.rowhMin, Math.floor(availHeight / this.numClusterTerms))
 	)
 
 	// TODO: delete this console.log
