@@ -61,25 +61,29 @@ export function setAutoDimensions(xOffset) {
 		}
 	}
 
-	if (this.autoDimensions.has('rowh')) {
-		const hch = this.state.config.settings.hierCluster?.yDendrogramHeight || 0
-		const availHeight = screen.availHeight - hch
-		this.computedSettings.rowh = Math.min(s.rowhMax, Math.max(s.rowhMin, Math.round(availHeight / this.numTerms)))
-		this.computedSettings.rowspace = this.computedSettings.rowh < 3 ? 0 : s.rowspace
+	//if (this.autoDimensions.has('rowh')) {
+	const hch = this.state.config.settings.hierCluster?.yDendrogramHeight || 0
+	const availHeight = screen.availHeight - hch
+	this.computedSettings.clusterRowh = Math.min(
+		s.rowhMax,
+		Math.max(s.rowhMin, Math.round(availHeight / this.numClusterTerms))
+	)
 
-		// TODO: delete this console.log
-		console.log(
-			68,
-			availHeight,
-			this.computedSettings.rowh,
-			s.rowhMin,
-			s.rowhMax,
-			this.numTerms,
-			Math.round(availHeight / this.numTerms),
-			Math.max(s.rowhMin, Math.round(availHeight / this.numTerms)),
-			Math.min(s.rowhMax, Math.max(s.rowhMin, Math.round(availHeight / this.numTerms)))
-		)
-	}
+	// TODO: delete this console.log
+	console.log(
+		68,
+		availHeight,
+		'clusterRowh=',
+		this.computedSettings.clusterRowh,
+		//s.rowhMin,
+		//s.rowhMax,
+		'numClusterTerms=',
+		this.numClusterTerms,
+		Math.round(availHeight / this.numClusterTerms),
+		Math.max(s.rowhMin, Math.round(availHeight / this.numClusterTerms)),
+		Math.min(s.rowhMax, Math.max(s.rowhMin, Math.round(availHeight / this.numClusterTerms)))
+	)
+	//}
 
 	copyMerge(this.settings.matrix, this.computedSettings)
 }
@@ -320,7 +324,9 @@ export function setLabelsAndScales() {
 		}
 
 		t.totalHtAdjustments = totalHtAdjustments
-		t.rowHt = t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht
+		t.rowHt =
+			t.grp.type == 'hierCluster' ? s.clusterRowh : t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht
+		console.log(327, t.rowHt, s.clusterRowh)
 		const adjustment = t.rowHt - ht
 		totalHtAdjustments += adjustment
 
@@ -383,6 +389,7 @@ export function setLayout() {
 	}
 
 	const yOffset = layout.top.offset + s.margin.top + s.scrollHeight
+	console.log(506, { yOffset }, s.margin.top, s.scrollHeight)
 	const xOffset = layout.left.offset + s.margin.left
 
 	this.setAutoDimensions(xOffset)
