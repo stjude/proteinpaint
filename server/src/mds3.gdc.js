@@ -236,18 +236,17 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 		// 		})
 		// 	}).then(r => r.json()).catch(e => {throw e})
 
-		const re = await ky
-			.post(`${host.geneExp}/gene_expression/gene_selection`, {
-				headers,
-				timeout: false, // instead of 10 second default
-				json: {
-					case_ids: cases4clustering,
-					gene_ids: ensgLst,
-					selection_size: ensgLst.length,
-					min_median_log2_uqfpkm: 0.01
-				}
+		const re = await nodeFetch(`${host.geneExp}/gene_expression/gene_selection`, {
+			method: 'POST',
+			headers,
+			timeout: false, // instead of 10 second default
+			body: JSON.stringify({
+				case_ids: cases4clustering,
+				gene_ids: ensgLst,
+				selection_size: ensgLst.length,
+				min_median_log2_uqfpkm: 0.01
 			})
-			.json()
+		}).then(r => r.json())
 
 		if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] not array'
 		const ensgLst2 = []
