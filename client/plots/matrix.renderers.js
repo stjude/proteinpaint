@@ -16,6 +16,11 @@ export function setRenderers(self) {
 			// add 500 so that the column labels are not clipped
 			.attr('height', d.mainh + 500)
 
+		// const x = self.type == 'hierCluster' ? self.settings.hierCluster.xDendrogramHeight : 0
+		// const y = self.type == 'hierCluster' ? self.settings.hierCluster.yDendrogramHeight : 0
+		// self.dom.mainG
+		// 	.attr('transform', `translate(${x},${y})`)
+
 		self.renderSerieses(s, l, d, duration)
 		self.renderLabels(s, l, d, duration)
 		self.renderDivideByLabel(s, l, d, duration)
@@ -179,7 +184,6 @@ export function setRenderers(self) {
 
 	self.renderLabels = function (s, l, d, duration) {
 		for (const direction of ['top', 'btm', 'left', 'right']) {
-			console.log(181, direction)
 			const side = l[direction]
 			side.box
 				.style('display', side.display || '')
@@ -509,9 +513,8 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${legendX},${legendY})`)
 
 		const dy = l.top.display == 'none' ? 0 : topBox.height + s.collabelgap
-		const transform = self.dom.termLabelG.attr('transform')
-		console.log(508, transform, transform.replace(`, ${d.yOffset})`, `, ${d.yOffset + dy - 2 * s.rowspace})`))
-		//self.dom.termLabelG
+		// const transform = self.dom.termLabelG.attr('transform')
+		// self.dom.termLabelG
 		//.attr('transform', transform.replace(`, ${d.yOffset})`,`, ${d.yOffset + dy - s.clusterRowh})`))
 		if (hc.xDendrogramHeight) {
 			const dendroX = maxLabelWidth + xAdjust - l.left.offset + d.xOffset - d.dx / 2
@@ -524,9 +527,9 @@ export function setRenderers(self) {
 
 			// for easy reference when scrolling interactively
 			self.topDendroX = dendroX + d.seriesXoffset
-			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX}, ${-5 - dy - s.collabelgap})`)
+			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX}, 0)`)
 			const y = s.clusterRowh + (l.top.display == 'none' ? 0 : topBox.height)
-			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - maxLabelWidth - 10}, ${y})`)
+			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - maxLabelWidth - 10}, 0)`)
 		}
 	}
 }
