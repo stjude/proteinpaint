@@ -113,37 +113,45 @@ async function computeGenes4nativeDs(
 	 * This article recommends using interquartile region over variance.*/
 
 	//console.log("ds:", ds.queries.topVariablyExpressedGenes.arguments)
-	//const ds_options = ds.queries.topVariablyExpressedGenes.arguments
+	const ds_options = ds.queries.topVariablyExpressedGenes.arguments
 
-	//let maxGenes = 100
-	//if (ds_options.find(i => i.id == "maxGenes")) {
-	//    maxGenes = ds_options.find(i => i.id == "maxGenes").value
-	//}
-	//
-	//let filter_extreme_values = true
-	//if (ds_options.find(i => i.id == "filter_extreme_values")) {
-	//    filter_extreme_values = ds_options.find(i => i.id == "filter_extreme_values").value
-	//}
+	if (ds_options.find(i => i.id == 'maxGenes')) {
+		q.maxGenes = ds_options.find(i => i.id == 'maxGenes').value
+	} else if (!q.maxGenes) q.maxGenes = 100
 
-	let filter_extreme_values = true
-	if (q.filter_extreme_values == 1) {
+	if (ds_options.find(i => i.id == 'filter_extreme_values')) {
+		q.filter_extreme_values = ds_options.find(i => i.id == 'filter_extreme_values').value
+	} else if (q.filter_extreme_values == 1) {
 		// q.filter_extreme_values is an optional variable. If this is not defined, set filter_extreme_values = true
-		filter_extreme_values = true
+		q.filter_extreme_values = true
 	} else if (q.filter_extreme_values == 0) {
-		filter_extreme_values = false
+		q.filter_extreme_values = false
+	} else {
+		q.filter_extreme_values = true
 	}
 
-	let filter_type = 'iqr'
-	if (q.filter_type?.type) filter_type = q.filter_type.type // q.filter_type is an optional variable and may not be defined. In that case, set filter_type = "iqr"
+	if (ds_options.find(i => i.id == 'filter_type')) {
+		q.filter_type = ds_options.find(i => i.id == 'filter_type').value
+	} else {
+		q.filter_type = { type: 'iqr' } // q.filter_type is an optional variable and may not be defined. In that case, set filter_type = "iqr"
+	}
+
+	if (ds_options.find(i => i.id == 'min_count')) {
+		q.min_count = ds_options.find(i => i.id == 'min_count').value
+	} else if (!q.min_count) q.min_count = 10
+
+	if (ds_options.find(i => i.id == 'min_total_count')) {
+		q.min_total_count = ds_options.find(i => i.id == 'min_total_count').value
+	} else if (!q.min_total_count) q.min_total_count = 15
 
 	const input_json = {
 		input_file: matrixFile,
 		samples: samples.join(','),
-		filter_extreme_values: filter_extreme_values,
+		filter_extreme_values: q.filter_extreme_values,
 		num_genes: q.maxGenes,
-		param: filter_type,
-		min_count: 30, // This needs to be passed from UI, this should (preferably only shown in UI when filter_extreme_values = true)
-		min_total_count: 40 // This needs to be passed from UI (preferably only shown in UI when filter_extreme_values = true)
+		param: q.filter_type?.type,
+		min_count: q.min_count, // This needs to be passed from UI, this should (preferably only shown in UI when filter_extreme_values = true)
+		min_total_count: q.min_total_count // This needs to be passed from UI (preferably only shown in UI when filter_extreme_values = true)
 	}
 	console.log('input_json:', input_json)
 

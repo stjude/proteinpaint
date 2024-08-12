@@ -22,9 +22,13 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	}
 	/** optional parameter defined in gdc dataset. not used for non-gdc ds */
 	min_median_log2_uqfpkm?: number
-	/** filter extreme values: true/false */
+	/** filter extreme values (in native implementation): true/false */
 	filter_extreme_values?: number
-	/** Filter type: variance/inter-quartile region */
+	/** min_count of fpkm when filter_extreme_values (in native implementation) = true */
+	min_count?: number
+	/** min_total_count of fpkm when filter_extreme_values (in native implementation) = true */
+	min_total_count?: number
+	/** Filter type: variance/inter-quartile region (in native implementation) */
 	filter_type?: {
 		type: 'var' | 'iqr'
 	}
