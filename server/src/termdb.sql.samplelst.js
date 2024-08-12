@@ -12,7 +12,7 @@ export const sampleLstSql = {
 
 			sql += `SELECT id as sample, ? as key, ? as value
 				FROM sampleidmap
-				WHERE sample ${group.in ? '' : 'NOT'} IN (${samplesString}) AND type = '${type}' `
+				WHERE sample ${group.in ? '' : 'NOT'} IN (${samplesString}) AND sample_type = '${type}' `
 			if (i != tw.q.groups.length - 1) sql += 'UNION ALL '
 			values.push(group.name, group.name, ...samples)
 		}

@@ -374,12 +374,14 @@ async function get_AllSamplesByName(q, req, res, ds) {
 			? await get_samples_ancestry(q.filter, q.ds, true)
 			: await get_samples(q.filter, q.ds, true)
 		for (const sample of filteredSamples) {
-			sampleName2Id.set(sample.name, {
+			const name = ds.sampleId2Name.get(sample.id)
+			const sample_type = ds.sampleId2Type.get(sample.id)
+			sampleName2Id.set(name, {
 				id: sample.id,
-				name: sample.name,
+				name,
 				ancestor_id: sample.ancestor_id,
 				ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
-				type: sample.type
+				sample_type
 			})
 		}
 	} else {

@@ -3,6 +3,8 @@ import { select } from 'd3-selection'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import { dofetch3 } from '#common/dofetch'
+import wsiViewer from './wsiviewer/plot.wsi'
+import { isNumericTerm } from '../shared/terms.js'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -644,7 +646,7 @@ class SampleView {
 export function getTermValue(term, data) {
 	let value = data[term.id]?.value
 	if (value == null || value == undefined || value == 'undefined') return null
-	if (term.type == 'float' || term.type == 'integer') {
+	if (isNumericTerm(term)) {
 		value = term.values?.[value]?.label || term.values?.[value]?.key || value
 		if (isNaN(value)) return value
 		return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
@@ -730,7 +732,7 @@ function setRenderers(self) {
 		//const sampleId = Number(d.sample.sampleId)
 		const data = d.sample
 		const term = d.term
-		const isNumeric = term.type == 'integer' || term.type == 'float'
+		const isNumeric = isNumericTerm(term)
 		const value = getTermValue(d.term, d.sample)
 		const td = select(this)
 			.datum(d)
@@ -816,10 +818,12 @@ export function searchSampleInput(holder, samplesData, callback, keyUpCallback) 
 	const limit = 100
 
 	const allSamples = []
-	for (const sample in samplesData)
-		if (samplesData[sample].type == 'root' || samplesData[sample].type == null || samplesData[sample].type == '')
+	for (const sample in samplesData) {
+		const sample_type = samplesData[sample].sample_type
+		if (sample_type == 1 || sample_type == null)
 			//If the dataset has no ancestors, all the samples should be root'
 			allSamples.push(sample)
+	}
 	const isBigDataset = allSamples.length > 10000
 
 	if (allSamples.length == 0)
@@ -894,7 +898,8 @@ export function getSamplesRelated(samplesData, sampleName) {
 	if (!sampleData) return []
 	const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
 	while (sampleData.ancestor_name) {
-		if (samplesData[sampleData.ancestor_name]?.type != 'root')
+		if (samplesData[sampleData.ancestor_name]?.type != 1)
+			//not a root sample
 			samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
 		sampleData = samplesData[sampleData.ancestor_name]
 	}
