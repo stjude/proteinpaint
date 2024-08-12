@@ -18,6 +18,7 @@ export class ViewModelMapper {
 		L: 'exonic',
 		Utr3: 'exonic',
 		Utr5: 'exonic',
+		ProteinAltering: 'exonic',
 		mnv: 'non-exonic',
 		ITD: 'non-exonic',
 		insertion: 'non-exonic',
