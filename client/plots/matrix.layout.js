@@ -326,7 +326,6 @@ export function setLabelsAndScales() {
 		t.totalHtAdjustments = totalHtAdjustments
 		t.rowHt =
 			t.grp.type == 'hierCluster' ? s.clusterRowh : t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht
-		console.log(327, t.rowHt, s.clusterRowh)
 		const adjustment = t.rowHt - ht
 		totalHtAdjustments += adjustment
 
@@ -389,7 +388,6 @@ export function setLayout() {
 	}
 
 	const yOffset = layout.top.offset + s.margin.top + s.scrollHeight
-	console.log(506, { yOffset }, s.margin.top, s.scrollHeight)
 	const xOffset = layout.left.offset + s.margin.left
 
 	this.setAutoDimensions(xOffset)
@@ -427,7 +425,9 @@ export function setLayout() {
 		textpos: { coord: 'y', factor: -1 },
 		axisFxn: axisTop
 	}
-	if (layout.top.prefix == 'sample') layout.top.display = colw >= s.minLabelFontSize ? '' : 'none'
+	console.log(429, this.chartType)
+	if (layout.top.prefix == 'sample')
+		layout.top.display = this.chartType !== 'hierCluster' && colw >= s.minLabelFontSize ? '' : 'none'
 
 	const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 	layout.btm.attr = {
@@ -448,6 +448,7 @@ export function setLayout() {
 		_l_ == 'Grp'
 			? s.grpLabelFontSize
 			: Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad - s.rowspace, s.minLabelFontSize)
+	console.log(450, yOffset, leftFontSize)
 	layout.left.attr = {
 		boxTransform: `translate(${xOffset - s.rowlabelgap}, ${yOffset})`,
 		labelTransform: '',
