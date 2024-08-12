@@ -58,7 +58,7 @@ export async function init(arg, holder, genomes) {
 		genome,
 		tip,
 		row: geneInputDiv,
-		geneOnly: true,
+		searchOnly: 'gene',
 		callback: launchView,
 		geneSymbol: arg.geneSymbol
 	}

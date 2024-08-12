@@ -27,20 +27,18 @@ type GeneSearchBoxArg = {
 	/** Optional. The default is 'Gene, position' */
 	placeholder?: string
 	/** optional
-    if true, search for gene name only
+	 * if 'gene' =>
     input can be symbol or alias
     result is {geneSymbol:str}, will not map to coord
     cannot map isoform to gene name!
-    (later may need geneOrIsoform flag to query both) */
-	geneOnly?: boolean
-	/** optional
-	if true, search for only snps
+    (later may need geneOrIsoform flag to query both) 
+	if 'snp' =>
 	user must select a single snp
 	input can be dbSNP id, position, or variant format (chr.pos.ref.alt)
-	**/
-	snpOnly?: boolean
-	/** if true, allow to enter chr.pos.ref.alt or hgvs (see next section)
-    otherwise, only allow chr:start-stop */
+	allow to enter chr.pos.ref.alt or hgvs (see next section)
+    otherwise, only allow chr:start-stop
+	*/
+	searchOnly?: 'gene' | 'snp'
 	allowVariant?: boolean
 	/** optional
     If true, user must click on search box and enter instead of automatically 
@@ -136,12 +134,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 	const result: Result = {}
 
-	if (arg.geneOnly && arg.snpOnly) {
-		row.append('span').text('.geneOnly and snpOnly cannot both be true')
-		return result
-	}
-	if (arg.snpOnly && !arg.genome.hasSNP) {
-		row.append('span').text('cannot support snpOnly: genome lacks SNP')
+	if (arg?.searchOnly == 'snp' && !arg.genome.hasSNP) {
+		row.append('span').text('Cannot support .searchOnly = "snp". Genome lacks SNP')
 		return result
 	}
 
@@ -150,11 +144,11 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 	if ('placeholder' in arg) {
 		placeholder = arg.placeholder!
-	} else if (arg.geneOnly) {
+	} else if (arg?.searchOnly == 'gene') {
 		placeholder = 'Gene'
 		width = 100 // use shorter width for inputting only one gene name
 	} else {
-		placeholder = arg.snpOnly ? 'Position' : 'Gene, position'
+		placeholder = arg?.searchOnly == 'snp' ? 'Position' : 'Gene, position'
 		if (arg.genome.hasSNP) {
 			placeholder += ', dbSNP'
 			width += 40
@@ -208,16 +202,16 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 				// try to parse as gene
 				// get first gene match from menu
-				if (!arg.snpOnly) {
+				if (arg?.searchOnly != 'snp') {
 					const hitgene = tip.d.select(".sja_menuoption[isgene='1']")
 					if (hitgene.size()) {
 						// gene match
 						const geneSymbol = hitgene.datum()
-						arg.geneOnly ? getResult({ geneSymbol }, geneSymbol) : await geneCoordSearch(geneSymbol)
+						arg?.searchOnly == 'gene' ? getResult({ geneSymbol }, geneSymbol) : await geneCoordSearch(geneSymbol)
 						return
 					}
 				}
-				if (arg.geneOnly) {
+				if (arg?.searchOnly == 'gene') {
 					getResult(null, 'Gene not found')
 					return
 				}
@@ -244,7 +238,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					return
 				}
 
-				if (arg.snpOnly) {
+				if (arg?.searchOnly == 'snp') {
 					getResult(null, 'Variant not found')
 					return
 				}
@@ -309,7 +303,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		tip.showunder(searchbox.node()).clear()
 
 		// see if input is gene
-		if (!arg.snpOnly) {
+		if (arg?.searchOnly != 'snp') {
 			const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: v } })
 			if (gene.error) throw gene.error
 			if (gene.hits?.length) {
@@ -322,7 +316,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					.style('border-radius', '0px')
 					.attr('isgene', 1)
 					.on('click', async (event, d) => {
-						if (arg.geneOnly) {
+						if (arg?.searchOnly == 'gene') {
 							// finding gene only, got result
 							getResult({ geneSymbol: d }, d)
 							tip.hide()
@@ -335,7 +329,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			}
 		}
 
-		if (arg.geneOnly) return
+		if (arg?.searchOnly == 'gene') return
 
 		// see if input is in variant format (chr.pos.ref.alt)
 		if (arg.allowVariant) {
@@ -355,7 +349,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		// see if input is coord
 		const pos = string2pos(v, arg.genome, true)
 		if (pos) {
-			if (arg.snpOnly) {
+			if (arg?.searchOnly == 'snp') {
 				// only search for snps
 				// query dbsnp for snps with matching positions
 				// TODO: querying a position query where start=stop (e.g.,

@@ -12,7 +12,7 @@ export class SearchHandler {
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
 			row: opts.holder,
-			geneOnly: true,
+			searchOnly: 'gene',
 			callback: () => this.selectGene(geneSearch.geneSymbol)
 		})
 	}

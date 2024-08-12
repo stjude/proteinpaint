@@ -95,7 +95,7 @@ class singleCellPlot {
 				tip: new Menu({ padding: '0px' }),
 				genome: this.app.opts.genome,
 				row: searchGeneDiv,
-				geneOnly: true,
+				searchOnly: 'gene',
 				placeholder: state.config.gene || 'Gene',
 				callback: () => {
 					violinBt?.style('display', 'inline-block')
