@@ -32,7 +32,7 @@ class Divide {
 		if (!this.opts.defaultQ4fillTW) this.opts.defaultQ4fillTW = {}
 
 		// default settings by term type
-		this.opts.defaultQ4fillTW[TermTypes.GENE_VARIANT] = { groupsetting: { inuse: true } } // geneVariant term should always use groupsetting when used as divide term
+		this.opts.defaultQ4fillTW[TermTypes.GENE_VARIANT] = { type: 'predefined-groupset' } // geneVariant term should always use groupsetting when used as divide term
 		this.opts.defaultQ4fillTW[TermTypes.GENE_EXPRESSION] = { mode: 'discrete' } // will be nice to use smaller number of bins even binary
 
 		this.pill = termsettingInit({

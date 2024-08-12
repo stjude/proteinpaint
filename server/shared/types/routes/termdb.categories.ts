@@ -1,5 +1,5 @@
-import { Filter } from '../filter.ts'
-import { TermWrapper } from '#shared/types/terms/tw.ts'
+import { Filter } from '../filter'
+import { TermWrapper } from '../terms/tw'
 
 export type getcategoriesRequest = {
 	genome: string
@@ -7,9 +7,6 @@ export type getcategoriesRequest = {
 	embedder: string
 	/** termwrapper object */
 	tw: TermWrapper
-	/** optional q object to apply termsetting and passed to getData() to customize fetched categories.
-	use case e.g. logistic regression outcome variable is always binary */
-	term1_q?: { isAtomic: boolean; hiddenValues: object; type: string; groupsetting: { disabled: boolean }; mode: string }
 	filter?: Filter
 	/** quick fix only for gdc */
 	currentGeneNames?: string[]

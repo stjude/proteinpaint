@@ -237,7 +237,7 @@ export async function initGDCdictionary(ds) {
 				name,
 				included_types_set: new Set(), // apply to leaf terms, should have its own term.type
 				child_types_set: new Set(), // empty for leaf terms,
-				groupsetting: { inuse: false }
+				groupsetting: { disabled: false }
 			}
 
 			if (i == termLevels.length - 1) {

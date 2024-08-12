@@ -425,6 +425,7 @@ function setRenderers(self: any) {
 		}
 		self.tsInstance.q.type = 'custom-groupset'
 		self.tsInstance.q.customset = customset
+		delete self.tsInstance.q.predefined_groupset_idx
 	}
 
 	let draggedItem: any

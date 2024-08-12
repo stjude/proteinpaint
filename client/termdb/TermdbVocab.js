@@ -519,8 +519,7 @@ export class TermdbVocab extends Vocab {
 		if (data.error) throw 'getTerm: ' + data.error
 		for (const id in data.terms) {
 			const term = data.terms[id]
-			if (term.type == 'categorical' && !term.values && !term.groupsetting?.inuse)
-				this.missingCatValsByTermId[term.id] = term
+			if (term.type == 'categorical' && !term.values) this.missingCatValsByTermId[term.id] = term
 		}
 		return data.terms
 	}
