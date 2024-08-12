@@ -248,7 +248,7 @@
             "description": "Mutation heatmap",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/heatmap-square.png",
             "sandboxJson": "study",
-            "searchterms": ["heat map", "oncoprint"]
+            "searchterms": ["heatmap", "oncoprint"]
         },
         {
             "type": "card",
