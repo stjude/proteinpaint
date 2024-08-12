@@ -1,6 +1,6 @@
-import { TermWrapper } from './tw'
-import { BaseQ, BaseTerm, GroupSettingQ, TermGroupSetting } from './term'
-import { TermSettingInstance } from '../termsetting'
+import { TermWrapper } from './tw.ts'
+import { BaseQ, BaseTerm, GroupSettingQ, TermGroupSetting } from './term.ts'
+import { TermSettingInstance } from '../termsetting.ts'
 
 /*
 For term type 'snp'

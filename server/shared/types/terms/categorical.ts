@@ -1,5 +1,5 @@
-import { BaseTerm, TermValues, MinBaseQ, GroupSettingQ, TermGroupSetting, BaseTW } from './term'
-import { TermSettingInstance } from '../termsetting'
+import { BaseTerm, TermValues, MinBaseQ, GroupSettingQ, TermGroupSetting, BaseTW } from './term.ts'
+import { TermSettingInstance } from '../termsetting.ts'
 
 /**
  * A categorical term q object

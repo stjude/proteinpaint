@@ -1,5 +1,5 @@
-import { BaseTerm, BaseQ, TermValues } from './term'
-import { TermWrapper } from './tw'
+import { BaseTerm, BaseQ, TermValues } from './term.ts'
+import { TermWrapper } from './tw.ts'
 
 /**
  * @category TW

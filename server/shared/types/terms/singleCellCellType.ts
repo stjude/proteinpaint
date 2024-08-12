@@ -1,4 +1,4 @@
-import { BaseTerm, MinBaseQ, BaseTW, GroupSettingQ, TermGroupSetting, TermValues } from './term'
+import { BaseTerm, MinBaseQ, BaseTW, GroupSettingQ, TermGroupSetting, TermValues } from './term.ts'
 
 type SingleCellCellTypeBaseQ = MinBaseQ & { mode: 'discrete' | 'binary' }
 
