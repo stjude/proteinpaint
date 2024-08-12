@@ -1,0 +1,19 @@
+.sja_root_holder .map, .sja_menu_div .map, .sja_pane .map {
+  width: 100%;
+  height: 400px;
+}
+
+.sja_root_holder .map .ol-custom-overviewmap, .sja_menu_div .map .ol-custom-overviewmap, .sja_pane .map .ol-custom-overviewmap,
+.sja_root_holder .map .ol-custom-overviewmap.ol-uncollapsible, .sja_menu_div .map .ol-custom-overviewmap.ol-uncollapsible, .sja_pane .map .ol-custom-overviewmap.ol-uncollapsible {
+  bottom: auto;
+  left: auto;
+  right: 6pt;
+  top: 6pt;
+}
+
+.sja_root_holder .ol-full-screen, .sja_menu_div .ol-full-screen, .sja_pane .ol-full-screen {
+  position: absolute;
+  right: auto;
+  left: 6pt;
+  top: 70pt;
+}

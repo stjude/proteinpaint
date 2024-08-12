@@ -597,8 +597,23 @@ type Mds3Queries = {
 	ld?: LdQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
-	DZImages?: any
+	DZImages?: DZImages
+	WSImages?: WSImages
 	images?: any
+}
+
+export type DZImages = {
+	// type of the image, e.g. H&E
+	type: string
+	// path to the folder where sample images are stored
+	imageBySampleFolder: string
+}
+
+export type WSImages = {
+	// type of the image, e.g. H&E
+	type: string
+	// path to the folder where sample images are stored
+	imageBySampleFolder: string
 }
 
 /*** types supporting Termdb ***/

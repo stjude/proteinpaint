@@ -1,0 +1,49 @@
+name: Publish Tile Server Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_secret:
+        type: string
+        description: Build secret
+
+jobs:
+  check-user-permissions:
+    runs-on: ubuntu-latest
+    steps:
+      - id: set-build-secret
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "::set-output name=BUILD_SECRET::${{ github.event.inputs.build_secret }}"
+          else
+            echo "::set-output name=BUILD_SECRET::${{ secrets.BUILD_SECRET }}"
+          fi
+      - name: Check user permission
+        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
+        with:
+          BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
+
+  build:
+    needs: check-user-permissions
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Login to GitHub Container Registry
+        run: |
+          echo $CR_PAT | docker login ghcr.io -u stjude --password-stdin
+        env:
+          CR_PAT: ${{ secrets.PAT }}
+
+
+      - name: Build image
+        run: |
+          cd container/tileserver
+          sh build.sh
+          
+          docker push ghcr.io/stjude/tile-server:latest
