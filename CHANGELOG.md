@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - support up to 1000 genes in GDC Gene Expression Clustering tool
+- Add Whole Slide Images Viewer to the project
 
 
 ## 2.71.0
