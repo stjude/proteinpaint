@@ -39,7 +39,7 @@ type InputSearchOpts = {
 export class InputSearch {
 	holder: Elem
 	input: Input
-	tip: any
+	readonly tip: any
 	searchItems: () => Promise<SearchGroupEntry[]> | SearchGroupEntry[]
 	style: any
 	size: number
@@ -96,7 +96,7 @@ export class InputSearch {
 				.style('border-left', '0.5px solid lightgrey')
 				.each(this.showResultsList)
 		} catch (e: any) {
-			if (e.stack) console.log(e.stack)
+			if (e.stack) console.error(e.stack)
 			else throwMsgWithFilePathAndFnName(e)
 		}
 	}
@@ -133,6 +133,10 @@ export class InputSearch {
 			.on('click', (event: MouseEvent, item: any) => {
 				event.stopPropagation()
 				result.callback(item)
+				/** Use tip.hide() in callback,
+				 * This will allow the tip to remain open for other
+				 * use cases.
+				 * */
 			})
 	}
 

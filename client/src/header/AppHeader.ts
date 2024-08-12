@@ -174,11 +174,9 @@ export class AppHeader {
 			.style('font-weight', 'bold')
 
 		// 2, search box
-		const tip = new Menu({ border: '', padding: '0px' })
-
 		const omniSearch = new InputSearch({
 			holder: headbox,
-			tip,
+			tip: this.headtip,
 			style: {
 				padding: padw_sm,
 				border: `'solid 1px ${defaultcolor}`
