@@ -36,7 +36,7 @@ export function plotDendrogramHclust(plotColOnly) {
 	.inputOrder[]  [str]
 	*/
 
-	const rowHeight = this.settings.matrix.clusterRowh + 1, //this.dimensions.dy,
+	const rowHeight = this.settings.matrix.clusterRowh, //this.dimensions.dy,
 		{ xDendrogramHeight, yDendrogramHeight } = this.settings.hierCluster,
 		colWidth = this.dimensions.dx
 
@@ -137,7 +137,7 @@ export function plotDendrogramHclust(plotColOnly) {
 			width,
 			height,
 			xDendrogramHeight + 0.5 * colWidth,
-			rowHeight + s.margin.top + s.scrollHeight
+			s.margin.top + s.scrollHeight
 		)
 
 		col.mergedClusters = mergedClusters
