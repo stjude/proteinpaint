@@ -1,2 +1,1 @@
-Features:
-- support up to 1000 genes in GDC Gene Expression Clustering tool
+
