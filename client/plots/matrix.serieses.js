@@ -15,8 +15,9 @@ export function getSerieses(data) {
 		const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 		const isDivideByTerm = termid === divideByTermId
 		const emptyGridCells = []
-		const cellht = t.grp == 'hierCluster' ? s.clusterRowh : dy
-		const y = !s.transpose ? t.totalIndex * cellht + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0
+		const cellht = t.grp.type == 'hierCluster' ? s.clusterRowh : dy
+		const htAdjust = t.grp.type == 'hierCluster' ? 0 : t.totalHtAdjustments
+		const y = s.transpose ? 0 : t.totalIndex * cellht + t.visibleGrpIndex * s.rowgspace + htAdjust
 		const hoverY0 = (t.tw.settings?.gap || 0) + y
 		const series = {
 			t,
@@ -24,7 +25,7 @@ export function getSerieses(data) {
 			cells: [],
 			y,
 			hoverY0,
-			hoverY1: hoverY0 + (t.tw.settings?.barh || dy)
+			hoverY1: hoverY0 + (t.tw.settings?.barh || cellht)
 		}
 
 		for (const so of this.unfilteredSampleOrder) {
