@@ -29,7 +29,7 @@ tape('\n', test => {
 	test.end()
 })
 
-tape.skip('Render facet table', test => {
+tape('Render facet table', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -63,7 +63,7 @@ tape.skip('Render facet table', test => {
 
 		const prompt = table.select('div[data-testid="sjpp-facet-start-prompt"]')
 		test.true(
-			prompt && prompt.text() == 'Select samples to see data',
+			prompt && prompt.text() == 'Click on cells to select samples',
 			'Should render prompt to select cells on render.'
 		)
 
