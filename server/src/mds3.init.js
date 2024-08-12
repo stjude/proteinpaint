@@ -311,7 +311,7 @@ export async function validate_termdb(ds) {
 		for (const r of rows) {
 			ds.sampleId2Name.set(r.id, r.name)
 			ds.sampleName2Id.set(r.name, r.id)
-			ds.sampleId2Type.set(r.id, r.type)
+			ds.sampleId2Type.set(r.id, r.sample_type)
 		}
 
 		// XXX delete, not a good idea to dump all samples to client

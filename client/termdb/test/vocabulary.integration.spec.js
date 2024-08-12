@@ -838,7 +838,7 @@ tape('getFilteredSampleCount()', async test => {
 		]
 	}
 	result = await termdbVocabApi.getFilteredSampleCount(filterJSON)
-	test.equal(result, '24', `Should return simple sample count`)
+	test.equal(result, '24 samples', `Should return '24 samples'`)
 
 	result = await termdbVocabApi.getFilteredSampleList(filterJSON)
 	test.ok(Array.isArray(result), `Should return an array of sample objects`)

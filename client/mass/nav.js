@@ -399,20 +399,16 @@ function setRenderers(self) {
 							? this.innerHTML
 							: d.key == 'mid'
 							? self.activeCohortLabel
-							: 'n=' + self.samplecounts[self.activeCohortName]
+							: self.samplecounts[self.activeCohortName]
 					} else {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
 				} else if (d.subheader === 'filter') {
 					const filter = self.filterUiRoot ? self.filterUiRoot : { lst: [] }
 					if (filter.lst.length === 0) {
-						return d.key === 'mid'
-							? 'NONE'
-							: self.samplecounts['undefined']
-							? `n=${self.samplecounts['undefined']}`
-							: ''
+						return d.key === 'mid' ? 'NONE' : self.samplecounts['undefined'] ? `${self.samplecounts['undefined']}` : ''
 					} else {
-						const n = self.samplecounts[self.filterJSON] != undefined ? 'n=' + self.samplecounts[self.filterJSON] : ''
+						const n = self.samplecounts[self.filterJSON] != undefined ? '' + self.samplecounts[self.filterJSON] : ''
 						return d.key === 'mid' ? filter.lst.length : n
 					}
 				} else {

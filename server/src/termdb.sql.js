@@ -70,10 +70,10 @@ return an array of sample names passing through the filter
 */
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
 	let sql = filter
-		? `WITH ${filter.filters} SELECT sample as id, name, sa.ancestor_id, sampleidmap.type FROM ${filter.CTEname}
-			join sampleidmap on sample = sampleidmap.id left join sample_ancestry sa on sample = sa.sample_id and sa.distance = 1 union all 
-			select id, name, null as ancestor_id, 'root' as type from sample_ancestry sa join root_samples on sa.ancestor_id = id where sample_id in (select sample from ${filter.CTEname})` //Root samples need to be added
-		: `SELECT id, name, sa.ancestor_id, sampleidmap.type FROM sampleidmap left join sample_ancestry sa on id = sa.sample_id and sa.distance = 1`
+		? `WITH ${filter.filters} SELECT sample as id, sa.ancestor_id FROM ${filter.CTEname}
+			left join sample_ancestry sa on sample = sa.sample_id and sa.distance = 1 union all 
+			select id, null as ancestor_id from sample_ancestry sa join root_samples on sa.ancestor_id = id where sample_id in (select sample from ${filter.CTEname})` //Root samples need to be added
+		: `SELECT id, sa.ancestor_id FROM sampleidmap left join sample_ancestry sa on id = sa.sample_id and sa.distance = 1`
 
 	const cmd = ds.cohort.db.connection.prepare(sql)
 	let re
@@ -113,7 +113,8 @@ return a sample count of sample names passing through the filter
 		if (!(type in counts)) counts[type] = 0
 		counts[type] = counts[type] + 1
 	}
-	const count = Object.values(counts).join('+')
+	const keys = Object.keys(counts)
+	const count = keys.map(key => `${counts[key]} ${key}${counts[key] > 1 ? 's' : ''}`).join(' and ')
 	return { count }
 }
 export async function get_summary_numericcategories(q) {

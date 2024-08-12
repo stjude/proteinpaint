@@ -68,16 +68,22 @@ export function server_init_db_queries(ds) {
 		'anno_categorical',
 		'buildDate'
 	]
+	ds.sample2Children = new Map()
 
 	if (tables.has('sample_ancestry')) {
 		const rows = cn.prepare('SELECT * FROM sample_ancestry').all()
 		if (rows.length) ds.cohort.termdb.hasAncestry = true
-		ds.sample2Children = new Map()
 		for (const row of rows) {
 			if (!ds.sample2Children.has(row.ancestor_id)) ds.sample2Children.set(row.ancestor_id, [])
 			ds.sample2Children.get(row.ancestor_id).push(row.sample_id)
 		}
 	}
+	ds.types = {}
+	if (tables.has('sample_types')) {
+		const rows = cn.prepare('SELECT * FROM sample_types').all()
+		for (const row of rows) ds.types[row.id] = row.name
+	}
+
 	for (const table of schema_tables) if (!tables.has(table)) console.log(`${table} table missing!!!!!!!!!!!!!!!!!!!!`)
 	//throw `${table} table missing`
 	if (!tables.has('terms')) throw 'terms table missing'
@@ -127,12 +133,19 @@ export function server_init_db_queries(ds) {
 		q.sampleName2id = s => s2i.get(s)
 		if (tables.has('cohorts')) {
 			// if sampleidmap table is present, add this method to return sample count for datasets with and without subcohort
-			if (tables.has('cohort_types')) rows = cn.prepare('SELECT * from cohort_types').all()
+			if (tables.has('cohort_sample_types')) rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			else rows = cn.prepare('SELECT cohort,sample_count from cohorts').all()
-
+			const types = Object.keys(ds.types)
 			q.getCohortSampleCount = cohortKey => {
-				let counts = rows.filter(row => row.cohort == cohortKey).map(row => row.sample_count)
-				let total = counts.join('+')
+				let counts = rows
+					.filter(row => row.cohort == cohortKey)
+					.map(
+						row =>
+							`${row.sample_count} ${row.sample_type ? ds.types[row.sample_type] : 'sample'}${
+								row.sample_count > 1 ? 's' : ''
+							}`
+					)
+				let total = counts.join(' and ')
 				if (total == '')
 					//older db does not have types or sample_count
 					total = totalCount
