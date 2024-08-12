@@ -1,1 +1,2 @@
-
+Fixes:
+- fix the error that when hiercluster is using divideBy, the tw will not show in Cases menu for gdc"
