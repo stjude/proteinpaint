@@ -149,7 +149,7 @@ export class GeneSetEditUI {
 			tip: this.tip2,
 			genome: this.genome,
 			row,
-			geneOnly: true,
+			searchOnly: 'gene',
 			callback: addGene,
 			hideHelp: true,
 			focusOff: true

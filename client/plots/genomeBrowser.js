@@ -395,7 +395,6 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		tip: geneTip,
 		genome: genomeObj,
 		row: holder.append('div').style('margin', '10px'),
-		geneOnly: chartsInstance.state.termdbConfig.queries.defaultBlock2GeneMode,
 		callback: async () => {
 			// found a gene {chr,start,stop,geneSymbol}
 			// dispatch to create new plot
@@ -420,6 +419,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	if (!chartsInstance.state.termdbConfig.queries.defaultBlock2GeneMode) {
 		// block is not shown in gene mode, add default coord to arg
 		arg.defaultCoord = chartsInstance.state.termdbConfig.queries.defaultCoord
+	} else {
+		arg.searchOnly = 'gene'
 	}
 	const result = addGeneSearchbox(arg)
 }
