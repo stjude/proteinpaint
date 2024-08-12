@@ -512,10 +512,6 @@ export function setRenderers(self) {
 			//.duration(duration)
 			.attr('transform', `translate(${legendX},${legendY})`)
 
-		const dy = l.top.display == 'none' ? 0 : topBox.height + s.collabelgap
-		// const transform = self.dom.termLabelG.attr('transform')
-		// self.dom.termLabelG
-		//.attr('transform', transform.replace(`, ${d.yOffset})`,`, ${d.yOffset + dy - s.clusterRowh})`))
 		if (hc.xDendrogramHeight) {
 			const dendroX = maxLabelWidth + xAdjust - l.left.offset + d.xOffset - d.dx / 2
 			self.dom.hcClipRect
@@ -528,8 +524,8 @@ export function setRenderers(self) {
 			// for easy reference when scrolling interactively
 			self.topDendroX = dendroX + d.seriesXoffset
 			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX}, 0)`)
-			const y = s.clusterRowh + (l.top.display == 'none' ? 0 : topBox.height)
-			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - maxLabelWidth - 10}, 0)`)
+			const y = l.top.display == 'none' ? 0 : topBox.height + s.collabelgap
+			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - maxLabelWidth - 10}, ${y})`)
 		}
 	}
 }

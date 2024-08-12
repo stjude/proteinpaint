@@ -309,7 +309,9 @@ export function setLabelsAndScales() {
 		t.totalHtAdjustments = totalHtAdjustments
 		t.rowHt =
 			t.grp.type == 'hierCluster' ? s.clusterRowh : t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht
-		const adjustment = t.rowHt - ht // the difference actual computed row height - "standard" row is the adjustment
+		// adjustment is the difference in actual computed row height - "standard" row
+		// need to subtract s.rowspace for hierCluster row to remove gaps between heatmap rows
+		const adjustment = t.rowHt - ht - (t.grp.type == 'hierCluster' ? s.rowspace : 0)
 		totalHtAdjustments += adjustment
 
 		// adjustment when last row is in continous mode
