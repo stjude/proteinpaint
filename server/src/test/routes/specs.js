@@ -8,7 +8,7 @@ async function setHelpers() {
 	const clientTestDir = path.join(serverconfig.binpath, '../client/test')
 	// the target file will be dynamically imported by runproteinpaint(),
 	// if there is a 'testInternals' argument
-	targetFile = `${clientTestDir}/internals.js`
+	targetFile = `${clientTestDir}/internals-dev.js`
 	helpers = await import(`${clientTestDir}/specHelpers.js`)
 }
 setHelpers()
