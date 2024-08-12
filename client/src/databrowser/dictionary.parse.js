@@ -95,7 +95,7 @@ export function parseDictionary(input) {
 
 				if (type == 'categorical') {
 					terms[termId].values = {}
-					terms[termId].groupsetting = { inuse: false }
+					terms[termId].groupsetting = { disabled: false }
 				}
 				const values = cols[valuesIndex].trim().replace(/"/g, '').split(';')
 
@@ -254,7 +254,8 @@ function parseCategories(type, catJSON, addAttrJSON, lineNum, varName) {
 	validateNumericTermCategories(term)
 
 	if (term.type == 'categorical') {
-		term.groupsetting = { inuse: false }
+		// TODO: was set to false, verify correction to true??
+		term.groupsetting = { disabled: true }
 	}
 
 	return term
