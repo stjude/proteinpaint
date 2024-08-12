@@ -716,6 +716,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		genome: par.genome,
 		tip: new Menu({ padding: '' }),
 		row: searchBarDiv,
+		searchOnly: par.searchBar == 'gene' ? 'gene' : '',
 		focusOff: true,
 		callback: async div => {
 			//Creates search results as tracks, last to first
@@ -746,8 +747,6 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 			par.runargs.block == true
 				? (runppArg.position = `${coords.chr}:${coords.start}-${coords.stop}`) && (runppArg.nativetracks = 'Refgene')
 				: (runppArg.gene = coords.geneSymbol)
-
-			if (par.searchBar == 'gene') par.searchOnly = 'gene'
 
 			const callpp = JSON.parse(JSON.stringify(par.runargs))
 
