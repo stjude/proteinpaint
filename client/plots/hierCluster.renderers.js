@@ -211,11 +211,15 @@ export function plotDendrogramHclust(plotColOnly) {
 	}
 
 	const t = this.termOrder.find(t => t.grp.type == 'hierCluster' || t.grp.name == this.hcTermGroup.name)
-	const ty =
-		//t.labelOffset is commented out because it causes row dendrogram to be misrendered
-		t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * rowHeight /* + (t.labelOffset || 0) */ + t.totalHtAdjustments //+
-	s.margin.top + s.scrollHeight
-	const y = ty + yDendrogramHeight + rowHeight + (this.layout.top.displaty == 'none' ? 3 * rowHeight : 0)
+	const y =
+		// t.labelOffset is commented out because it is already handled in adjustSvgDimensions
+		t.grpIndex * s.rowgspace +
+		t.prevGrpTotalIndex * s.rowh /* + (t.labelOffset || 0) */ +
+		t.totalHtAdjustments +
+		s.margin.top +
+		s.scrollHeight +
+		// left dendrogram image must be lower than the top dendrogram image height
+		yDendrogramHeight
 	this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, y)
 
 	row.mergedClusters = mergedClusters

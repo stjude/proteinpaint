@@ -22,6 +22,7 @@ export function setMatrixDom(opts) {
 
 	const mainG = svg
 		.append('g')
+		.attr('class', 'sjpp-matrix-maing')
 		//.style('overflow', 'hidden')
 		.on('mouseover', this.showCellInfo)
 		.on('mousemove', this.showCellInfo)

@@ -68,23 +68,6 @@ export function setAutoDimensions(xOffset) {
 		s.rowhMax,
 		Math.max(s.rowhMin, Math.floor(availHeight / this.numClusterTerms))
 	)
-
-	// TODO: delete this console.log
-	console.log(
-		68,
-		availHeight,
-		'clusterRowh=',
-		this.computedSettings.clusterRowh,
-		//s.rowhMin,
-		//s.rowhMax,
-		'numClusterTerms=',
-		this.numClusterTerms,
-		Math.round(availHeight / this.numClusterTerms),
-		Math.max(s.rowhMin, Math.round(availHeight / this.numClusterTerms)),
-		Math.min(s.rowhMax, Math.max(s.rowhMin, Math.round(availHeight / this.numClusterTerms)))
-	)
-	//}
-
 	copyMerge(this.settings.matrix, this.computedSettings)
 }
 
@@ -326,7 +309,7 @@ export function setLabelsAndScales() {
 		t.totalHtAdjustments = totalHtAdjustments
 		t.rowHt =
 			t.grp.type == 'hierCluster' ? s.clusterRowh : t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht
-		const adjustment = t.rowHt - ht
+		const adjustment = t.rowHt - ht // the difference actual computed row height - "standard" row is the adjustment
 		totalHtAdjustments += adjustment
 
 		// adjustment when last row is in continous mode
@@ -425,7 +408,6 @@ export function setLayout() {
 		textpos: { coord: 'y', factor: -1 },
 		axisFxn: axisTop
 	}
-	console.log(429, this.chartType)
 	if (layout.top.prefix == 'sample')
 		layout.top.display = this.chartType !== 'hierCluster' && colw >= s.minLabelFontSize ? '' : 'none'
 
@@ -448,7 +430,6 @@ export function setLayout() {
 		_l_ == 'Grp'
 			? s.grpLabelFontSize
 			: Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad - s.rowspace, s.minLabelFontSize)
-	console.log(450, yOffset, leftFontSize)
 	layout.left.attr = {
 		boxTransform: `translate(${xOffset - s.rowlabelgap}, ${yOffset})`,
 		labelTransform: '',
