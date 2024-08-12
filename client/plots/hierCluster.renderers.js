@@ -37,9 +37,8 @@ export function plotDendrogramHclust(plotColOnly) {
 	*/
 
 	const rowHeight = this.settings.matrix.clusterRowh + 1, //this.dimensions.dy,
-		xDendrogramHeight = this.settings.hierCluster.xDendrogramHeight,
-		colWidth = this.dimensions.dx,
-		yDendrogramHeight = this.settings.hierCluster.yDendrogramHeight
+		{ xDendrogramHeight, yDendrogramHeight } = this.settings.hierCluster,
+		colWidth = this.dimensions.dx
 
 	// plot column dendrogram
 	if (!this.settings.hierCluster.clusterSamples) {
@@ -214,12 +213,9 @@ export function plotDendrogramHclust(plotColOnly) {
 	const t = this.termOrder.find(t => t.grp.type == 'hierCluster' || t.grp.name == this.hcTermGroup.name)
 	const ty =
 		//t.labelOffset is commented out because it causes row dendrogram to be misrendered
-		t.grpIndex * s.rowgspace +
-		t.prevGrpTotalIndex * rowHeight /* + (t.labelOffset || 0) */ +
-		t.totalHtAdjustments +
-		s.margin.top +
-		s.scrollHeight
-	const y = ty + yDendrogramHeight + rowHeight + (rowHeight < 6 ? 3 * rowHeight : 0)
+		t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * rowHeight /* + (t.labelOffset || 0) */ + t.totalHtAdjustments //+
+	s.margin.top + s.scrollHeight
+	const y = ty + yDendrogramHeight + rowHeight + (this.layout.top.displaty == 'none' ? 3 * rowHeight : 0)
 	this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, y)
 
 	row.mergedClusters = mergedClusters

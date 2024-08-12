@@ -53,7 +53,14 @@ export function setInteractivity(self) {
 		self.dom.rowBeam
 			.attr('x', x)
 			.attr('y', y + d.seriesY)
-			.attr('height', d.tw.settings?.barh ? d.tw.settings.barh + 2 * d.tw.settings.gap : s.rowh)
+			.attr(
+				'height',
+				d.tw.settings?.barh
+					? d.tw.settings.barh + 2 * d.tw.settings.gap
+					: d.t.grp.type == 'hierCluster'
+					? s.clusterRowh
+					: s.rowh
+			)
 			.style('display', '')
 
 		self.dom.colBeam

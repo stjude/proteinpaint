@@ -108,7 +108,7 @@ export function setRenderers(self) {
 					self.dom.seriesesG
 						//.transition()
 						//.duration(duration)
-						.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${Math.max(d.yOffset)})`)
+						.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
 					g.selectAll('image').remove()
 					g.append('image')
@@ -179,6 +179,7 @@ export function setRenderers(self) {
 
 	self.renderLabels = function (s, l, d, duration) {
 		for (const direction of ['top', 'btm', 'left', 'right']) {
+			console.log(181, direction)
 			const side = l[direction]
 			side.box
 				.style('display', side.display || '')
@@ -193,7 +194,7 @@ export function setRenderers(self) {
 
 			function renderLabel(lab) {
 				const g = select(this)
-				const textduration = g.attr('transform') ? duration : 0
+				//const textduration = g.attr('transform') ? duration : 0
 				g //.transition()
 					//.duration(textduration)
 					.attr('transform', side.attr.labelGTransform)
@@ -208,15 +209,13 @@ export function setRenderers(self) {
 					//.duration(textduration)
 					.attr(
 						'display',
-						lab.grp?.type === 'hierCluster'
-							? s.clusterRowh < 6
-								? 'none'
-								: ''
+						lab.grp?.type === 'hierCluster' && s.clusterRowh < 6
+							? 'none'
 							: side.attr.fontSize < 6 || labelText === 'configure'
 							? 'none'
 							: ''
 					)
-					.attr('font-size', lab.grp?.type === 'hierCluster' ? s.clusterRowh + 2 : side.attr.fontSize)
+					.attr('font-size', lab.grp?.type === 'hierCluster' ? s.clusterRowh : side.attr.fontSize)
 					.attr('text-anchor', side.attr.labelAnchor)
 					.attr('transform', side.attr.labelTransform)
 					.attr('cursor', 'pointer')
@@ -224,7 +223,14 @@ export function setRenderers(self) {
 
 				if (!Array.isArray(labelText)) {
 					text.text(labelText)
-					text.attr('y', lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous' ? 10 : -0.5 * s.clusterRowh)
+					text.attr(
+						'y',
+						lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous'
+							? 10
+							: lab.grp?.type === 'hierCluster'
+							? 0.3 * s.clusterRowh
+							: 0
+					)
 				} else {
 					const tspan = text.selectAll('tspan').data(labelText)
 					tspan.exit().remove()
@@ -304,7 +310,7 @@ export function setRenderers(self) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const x = 0 // lab.tw?.q?.mode == 'continuous' ? -30 : 0
-		lab.labelOffset = 0.7 * s.rowh
+		lab.labelOffset = 0.7 * (lab.grp.type == 'hierCluster' ? s.clusterRowh : s.rowh)
 		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + lab.labelOffset + lab.totalHtAdjustments
 		return `translate(${x},${y})`
 	}
@@ -438,6 +444,7 @@ export function setRenderers(self) {
 		await sleep(prevTranspose == s.transpose ? duration : s.duration)
 
 		const l = self.layout
+		// these are the label boxes
 		const topBox = l.top.box.node().getBBox()
 		const btmBox = l.btm.box.node().getBBox()
 		const leftBox = l.left.box.node().getBBox()
@@ -501,6 +508,11 @@ export function setRenderers(self) {
 			//.duration(duration)
 			.attr('transform', `translate(${legendX},${legendY})`)
 
+		const dy = l.top.display == 'none' ? 0 : topBox.height + s.collabelgap
+		const transform = self.dom.termLabelG.attr('transform')
+		console.log(508, transform, transform.replace(`, ${d.yOffset})`, `, ${d.yOffset + dy - 2 * s.rowspace})`))
+		//self.dom.termLabelG
+		//.attr('transform', transform.replace(`, ${d.yOffset})`,`, ${d.yOffset + dy - s.clusterRowh})`))
 		if (hc.xDendrogramHeight) {
 			const dendroX = maxLabelWidth + xAdjust - l.left.offset + d.xOffset - d.dx / 2
 			self.dom.hcClipRect
@@ -512,8 +524,8 @@ export function setRenderers(self) {
 
 			// for easy reference when scrolling interactively
 			self.topDendroX = dendroX + d.seriesXoffset
-			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX}, -5)`)
-			const y = -0.5 * s.rowh + (l.top.display == 'none' ? 0 : topBox.height)
+			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX}, ${-5 - dy - s.collabelgap})`)
+			const y = s.clusterRowh + (l.top.display == 'none' ? 0 : topBox.height)
 			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - maxLabelWidth - 10}, ${y})`)
 		}
 	}
