@@ -8,7 +8,6 @@ import { combineSamplesById } from './mds3.variant2samples.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
 import { write_tmpfile } from './utils.js'
 import serverconfig from './serverconfig.js'
-import fs from 'fs'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
 
@@ -1366,11 +1365,9 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 	if (dictTwLst.length) {
 		if (q.isHierCluster) {
-			console.log(1365)
 			// running gene exp clustering, must only restrict to cases with exp data, but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
 			;[byTermId, samples] = await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
 		} else {
-			console.log(1368)
 			// not in gene exp clustering mode
 			;[byTermId, samples] = await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
 		}
