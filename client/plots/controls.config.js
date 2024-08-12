@@ -668,15 +668,32 @@ async function setTermInput(opts) {
 		debug: opts.debug,
 		usecase: opts.usecase,
 		getBodyParams: opts.getBodyParams,
-		callback: tw => {
-			if (opts.callback) opts.callback(tw)
+		callback: async tw => {
+			// showing processing data ... before pill is set
+			opts.parent.dom.loadingDiv.selectAll('*').remove()
+			opts.parent.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
+			opts.parent.dom.svg.style('opacity', 0.1).style('pointer-events', 'none')
+			opts.parent.dom.loadingDiv.html('Processing data ...')
+
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
 			if (opts.processInput) opts.processInput(tw)
-			pill.main(tw ? tw : { term: null, q: null })
-			const config = {
-				[opts.configKey]: tw
-			}
+			await pill.main(tw ? tw : { term: null, q: null })
+
+			const config = !(tw && opts.parent.chartType == 'hierCluster' && configKey == 'divideBy')
+				? { [opts.configKey]: tw }
+				: Object.assign(
+						{ [opts.configKey]: tw },
+						{
+							settings: {
+								hierCluster: {
+									yDendrogramHeight: 0,
+									clusterSamples: false
+								}
+							}
+						}
+				  )
+
 			if (opts.processConfig) opts.processConfig(config) // do the custom config modification inside the processConfig function
 
 			opts.dispatch({
