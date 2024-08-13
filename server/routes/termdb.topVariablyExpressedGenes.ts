@@ -112,25 +112,27 @@ function addTopVEarg(q: any) {
 			id: 'filter_extreme_values',
 			label: 'Filter Extreme Values',
 			type: 'boolean',
-			value: true
-		},
-		{
-			id: 'min_count',
-			label: 'Min count',
-			type: 'number',
-			value: 10
-		},
-		{
-			id: 'min_total_count',
-			label: 'Min total count',
-			type: 'number',
-			value: 15
+			value: true,
+			options: [
+				{
+					id: 'min_count',
+					label: 'Min count',
+					type: 'number',
+					value: 10
+				},
+				{
+					id: 'min_total_count',
+					label: 'Min total count',
+					type: 'number',
+					value: 15
+				}
+			]
 		},
 		{
 			id: 'filter_type',
 			label: 'Filter type',
-			type: 'boolean',
-			radiobuttons: [
+			type: 'radio',
+			options: [
 				/** The param option in input JSON is very important.
 				 * It instructs what method will be used to calculate variation in the counts for a particular gene.
 				 * It supports variance as well as interquartile region.
