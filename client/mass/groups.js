@@ -621,8 +621,8 @@ export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstT
 			new GeneSetEditUI({
 				holder: tip2.d,
 				genome: parent.app.opts.genome,
-				vocabApi: parent.app.vocabApi,
 				geneList: [],
+				vocabApi: parent.app.vocabApi,
 				callback: async ({ geneList, groupName }) => {
 					tip.hide()
 					const group = { name: groupName, lst: [], type: 'hierCluster' }
@@ -644,14 +644,42 @@ export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstT
 						})
 					)
 
+					// close geneset edit ui after clicking submit
+					tip2.d.selectAll('*').remove()
+
+					if (tws.length == 1) {
+						const tw = tws[0]
+						parent.app.dispatch({
+							type: 'plot_create',
+							config: {
+								chartType: 'summary',
+								term: tw,
+								term2: samplelstTW
+							}
+						})
+						return
+					}
+
+					if (tws.length == 2) {
+						const tw = tws[0]
+						const tw2 = tws[1]
+						parent.app.dispatch({
+							type: 'plot_create',
+							config: {
+								chartType: 'summary',
+								term: tw,
+								term2: tw2,
+								colorTW: samplelstTW
+							}
+						})
+						return
+					}
+
 					if (tws.length < 3) {
 						alert('gene expression hiercluster has to have >= 3 genes')
 						return
 					}
 					group.lst = [...lst, ...tws]
-
-					// close geneset edit ui after clicking submit
-					tip2.d.selectAll('*').remove()
 
 					parent.app.dispatch({
 						type: 'plot_create',
