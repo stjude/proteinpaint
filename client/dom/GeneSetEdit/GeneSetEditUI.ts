@@ -215,8 +215,8 @@ export class GeneSetEditUI {
 		if (this.mode == TermTypes.GENE_EXPRESSION && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
-					if (param.radiobuttons) {
-						for (const opt of param.radiobuttons) {
+					if (param.options) {
+						for (const opt of param.options) {
 							if (opt.type == 'tree') {
 								opt.callback = async (holder: Elem) => {
 									const termdb = await import('../../termdb/app.js')
@@ -274,7 +274,7 @@ export class GeneSetEditUI {
 										)
 								}
 							}
-							if (opt.type == 'boolean') {
+							if (opt.type == 'radio') {
 								opt.callback = () => {
 									param.value = {
 										type: opt.value,
@@ -323,12 +323,12 @@ export class GeneSetEditUI {
 				label: 'Top variably expressed genes',
 				callback: (event: Event) => {
 					this.api.topVariablyExpressedGenesParams
-						.filter(p => p.param.type == 'boolean' && p.param?.radiobuttons)
+						.filter(p => p.param.type == 'radio' && p.param?.options)
 						.forEach(p => {
-							if (typeof p.param.radiobuttons![0].value === 'string') {
-								p.param.value = { type: p.param.radiobuttons![0].value, value: null }
+							if (typeof p.param.options![0].value === 'string') {
+								p.param.value = { type: p.param.options![0].value, value: null }
 							} else {
-								console.error(`Unexpected radio button value type: ${typeof p.param.radiobuttons![0].value}`)
+								console.error(`Unexpected radio button value type: ${typeof p.param.options![0].value}`)
 							}
 						})
 					this.tip2.clear().showunder(event.target)
@@ -362,13 +362,6 @@ export class GeneSetEditUI {
 				}
 			})
 		}
-		//Placeholder code for future PR
-		// if (your.genesets) {
-		// 	this.menuList.push({
-		// 		label: `Your gene sets`,
-		// 		callback: async () => {}
-		// 	})
-		// }
 		if (this.genome?.termdbs?.msigdb) {
 			for (const key in this.genome.termdbs) {
 				const tdb = this.genome.termdbs[key]
@@ -443,9 +436,7 @@ export class GeneSetEditUI {
 	}
 
 	getInputValue({ param, input }) {
-		if (param.type == 'boolean' && param?.radiobuttons) {
-			return param.value
-		}
+		if (param.type == 'radio') return param.value
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
 		if (input.attr('type') == 'checkbox') {
