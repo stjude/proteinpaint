@@ -68,7 +68,7 @@ function nativeValidateQuery(ds: any) {
 	if (!gE) throw 'topVariablyExpressedGenes query given but geneExpression missing'
 	if (gE.src != 'native') throw 'topVariablyExpressedGenes is native but geneExpression.src is not native'
 
-	if (ds.queries.topVariablyExpressedGenes.src == 'native') validateTopVEQueryArgs(ds.queries.topVariablyExpressedGenes)
+	validateTopVEObj(ds.queries.topVariablyExpressedGenes)
 
 	ds.queries.topVariablyExpressedGenes.getGenes = async (q: TermdbTopVariablyExpressedGenesRequest) => {
 		// get list of samples that are used in current analysis; gE.samples[] contains all sample integer ids with exp data
@@ -101,7 +101,7 @@ function nativeValidateQuery(ds: any) {
 	}
 }
 
-function validateTopVEQueryArgs(topVEObj) {
+function validateTopVEObj(topVEObj) {
 	/** These are standard arguments to show in the UI for "all" native top expressed
 	 * gene queries. To override in the dataset, add .arguments:[] to the dataset and
 	 * change the appropriate values in the obj.
