@@ -1894,7 +1894,10 @@ function setTermGroupActions(self) {
 			.style('display', 'none')
 			.style('margin-left', '5px')
 			.html('submit')
-			.on('click', self.updateTermGrpName)
+			.on('click', () => {
+				self.updateTermGrpName()
+				self.dom.tip.hide()
+			})
 
 		self.dom.menubody.style('padding', 0).selectAll('*').remove()
 
