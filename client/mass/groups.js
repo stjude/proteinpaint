@@ -675,10 +675,6 @@ export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstT
 						return
 					}
 
-					if (tws.length < 3) {
-						alert('gene expression hiercluster has to have >= 3 genes')
-						return
-					}
 					group.lst = [...lst, ...tws]
 
 					parent.app.dispatch({
