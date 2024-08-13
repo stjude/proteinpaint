@@ -8,66 +8,132 @@ import Zoomify from 'ol/source/Zoomify.js'
 import OverviewMap from 'ol/control/OverviewMap.js'
 import FullScreen from 'ol/control/FullScreen.js'
 import { dofetch3 } from '#common/dofetch'
-import 'ol-ext/dist/ol-ext.css'
-import LayerSwitcherImage from 'ol-ext/control/LayerSwitcherImage'
 import TileSource from 'ol/source/Tile'
-import { Layer } from 'ol/layer'
-import Collection from 'ol/Collection'
-import BaseLayer from 'ol/layer/Base'
+import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
+import Settings from '#plots/wsiviewer/Settings.ts'
+import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
+import { GetWSImagesRequest, GetWSImagesResponse } from '../../shared/types/routes/wsimages.ts'
 
 export default class WSIViewer {
 	// following attributes are required by rx
 	private type: string
+	private id: any
 	private opts: any
 	private app: any
+
+	private wsiViewerInteractions: WSIViewerInteractions
+
+	private thumbnailsContainer: any
 
 	constructor(opts: any) {
 		this.type = 'WSIViewer'
 		this.opts = opts
+		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
 	}
 
-	async init() {
+	async main(): Promise<void> {
 		const state = this.app.getState()
+
+		const settings = state.plots.find(p => p.id === this.id).settings as Settings
+
 		const holder = this.opts.holder
+
 		if (state.wsimages.length === 0) {
-			holder.append('div').text('No WSI images.')
+			holder.append('div').style('margin-left', '10px').text('No WSI images.')
 			return
 		}
 
 		const layers = await this.getLayers(state)
 
 		if (layers.length === 0) {
-			holder.append('div').text('There was an error loading the WSI images. Please try again later.')
+			holder
+				.append('div')
+				.style('margin-left', '10px')
+				.text('There was an error loading the WSI images. Please try again later.')
 			return
 		}
 
-		holder.append('div').attr('id', 'wsi-viewer').style('width', '600px').style('height', '600px')
+		this.generateThumbnails(layers, settings)
 
-		const firstLayer: TileLayer = layers[0]
-		const firstExtent = firstLayer?.getSource()?.getTileGrid()?.getExtent()
+		holder.select('div[id="wsi-viewer"]').remove()
 
-		const map = this.getMap(layers, firstLayer)
+		holder
+			.append('div')
+			.attr('id', 'wsi-viewer')
+			.style('width', settings.imageWidth)
+			.style('height', settings.imageHeight)
 
-		this.addControls(map, firstLayer)
+		const activeImage: TileLayer = layers[settings.displayedImageIndex]
+		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		if (firstExtent) {
-			map.getView().fit(firstExtent)
+		const map = this.getMap(activeImage)
+
+		this.addControls(map, activeImage)
+
+		if (activeImageExtent) {
+			map.getView().fit(activeImageExtent)
 		}
 	}
 
-	private getMap(layers: Array<TileLayer<Zoomify>>, firstLayer: TileLayer) {
+	private generateThumbnails(layers: Array<TileLayer<Zoomify>>, setting: Settings) {
+		if (!this.thumbnailsContainer) {
+			// First-time initialization
+			const holder = this.opts.holder
+			this.thumbnailsContainer = holder
+				.append('div')
+				.attr('id', 'thumbnails')
+				.style('width', '600px')
+				.style('height', '80px')
+				.style('display', 'flex')
+				.style('margin-left', '20px')
+				.style('margin-bottom', '20px')
+
+			for (let i = 0; i < layers.length; i++) {
+				const isActive = i === setting.displayedImageIndex
+				const thumbnail = this.thumbnailsContainer
+					.append('div')
+					.attr('id', `thumbnail${i}`)
+					.style('width', setting.thumbnailWidth)
+					.style('height', setting.thumbnailHeight)
+					.style('margin-right', '10px')
+					.style('display', 'flex')
+					.style('align-items', 'center')
+					.style('justify-content', 'center')
+					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
+					.on('click', () => {
+						this.wsiViewerInteractions.thumbnailClickListener(i)
+					})
+
+				thumbnail
+					.append('img')
+					.attr('src', layers[i].get('preview'))
+					.attr('alt', `Thumbnail ${i}`)
+					.style('max-width', '100%')
+					.style('height', 'auto')
+					.style('object-fit', 'cover')
+			}
+		} else {
+			// Update borders only
+			for (let i = 0; i < layers.length; i++) {
+				const isActive = i === setting.displayedImageIndex
+				this.thumbnailsContainer
+					.select(`#thumbnail${i}`)
+					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
+			}
+		}
+	}
+
+	private getMap(displayedImage: TileLayer) {
 		return new Map({
-			layers: layers,
+			layers: [displayedImage],
 			target: 'wsi-viewer',
 			view: new View({
-				resolutions: firstLayer.getSource()?.getTileGrid()?.getResolutions()
+				resolutions: displayedImage.getSource()?.getTileGrid()?.getResolutions()
 			})
 		})
 	}
 
 	private addControls(map: Map, firstLayer: TileLayer) {
-		map.addControl(new LayerSwitcherImage({ collapsed: true }))
-
 		const fullscreen = new FullScreen()
 		map.addControl(fullscreen)
 
@@ -81,42 +147,20 @@ export default class WSIViewer {
 		})
 
 		map.addControl(overviewMapControl)
-
-		map.getLayers().forEach(layer => {
-			layer.on('change:visible', () => {
-				const layer = this.findLastVisible(map.getLayers())
-				const extent = (layer as TileLayer)?.getSource()?.getTileGrid()?.getExtent()
-
-				if (extent) {
-					map.getView().fit(extent)
-					map.getView().changed()
-				}
-
-				overviewMapControl.getOverviewMap().getLayers().clear()
-				overviewMapControl
-					.getOverviewMap()
-					.getLayers()
-					.push(
-						new Tile({
-							source: layer.getSource() as TileSource
-						})
-					)
-			})
-		})
 	}
 
-	private async getLayers(state: any) {
+	private async getLayers(state: any): Promise<Array<TileLayer<Zoomify>>> {
 		const layers: Array<TileLayer<Zoomify>> = []
 
 		for (let i = 0; i < state.wsimages.length; i++) {
-			const body = {
+			const body: GetWSImagesRequest = {
 				genome: state.genome,
 				dslabel: state.dslabel,
 				sampleId: state.sample_id,
 				wsimage: state.wsimages[i]
 			}
 
-			const data = await dofetch3('wsimages', { body })
+			const data: GetWSImagesResponse = await dofetch3('wsimages', { body })
 
 			if (data.status === 'error') {
 				return []
@@ -138,26 +182,14 @@ export default class WSIViewer {
 				// title: "Set Title",
 				preview: `/tileserver/layer/slide/${data.sessionId}/zoomify/TileGroup0/0-0-0@1x.jpg`,
 				source: source,
-				baseLayer: true,
-				visible: i === 0
+				baseLayer: true
 			}
+
 			const layer = new TileLayer(options)
 
 			layers.push(layer)
 		}
 		return layers
-	}
-
-	findLastVisible(layers: Collection<BaseLayer>): Layer {
-		let lastVisibleIndex = -1
-		for (let i = layers.getLength() - 1; i >= 0; i--) {
-			if (layers.getArray()[i].getVisible()) {
-				lastVisibleIndex = i
-				break
-			}
-		}
-
-		return layers.getArray()[lastVisibleIndex] as Layer
 	}
 }
 
@@ -165,10 +197,11 @@ export const wsiViewer = getCompInit(WSIViewer)
 
 export const componentInit = wsiViewer
 
-export async function getPlotConfig() {
+export async function getPlotConfig(opts: any) {
 	return {
 		chartType: 'WSIViewer',
 		subfolder: 'wsiviewer',
-		extension: 'ts'
+		extension: 'ts',
+		settings: wsiViewerDefaults(opts.overrides)
 	}
 }
