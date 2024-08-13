@@ -288,12 +288,12 @@ export type GeneArgumentEntry = {
 	/** boolean and string creates a checkbox
 	 * number creates a text input
 	 */
-	type: 'boolean' | 'string' | 'number'
+	type: 'boolean' | 'string' | 'number' | 'radio'
 	/** value of the input or checkbox
 	 * required if type is string. Otherwise, optional
 	 */
 	value?: string | boolean | number | { type: string; value: string[] | null }
-	radiobuttons?: {
+	options?: {
 		/** Type of dom element to render underneath the radio
 		 * 'text': creates a text area input
 		 * 'tree': launches termdb app and the tree
