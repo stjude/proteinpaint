@@ -50,14 +50,25 @@ export class GenesMenu {
 	addParameter(param, div: Div) {
 		let input
 		if (param.type == 'boolean') {
-			if (param.radiobuttons && param?.radiobuttons.length) {
-				const hasChecked = param.radiobuttons.find((d: any) => d.checked)
-				if (!hasChecked) param.radiobuttons[0].checked = true
-				input = div.append('div').attr('id', param.id)
-				input.append('p').style('font-size', '0.8em').style('opacity', 0.75).text(param.label)
-				makeRadiosWithContentDivs(param.radiobuttons, input as any)
+			if (param?.options?.length) {
+				/* Use for checkboxes that expand to show additional options when checked. */
+				const holder = div.append('div')
+				const contentDiv = div.append('div').style('padding-left', '20px')
+				input = holder.append('input').style('padding', '2px').attr('type', 'checkbox').attr('id', param.id)
+				this.addLabels(holder, 'label', param)
+				for (const option of param.options) {
+					this.addParameter(option, contentDiv.append('div').style('display', 'block'))
+				}
+				if (param.value) {
+					input.property('checked', param.value)
+					contentDiv.style('display', 'block')
+				} else contentDiv.style('display', 'none')
+				input.on('change', (event: MouseEvent) => {
+					event.stopPropagation()
+					contentDiv.style('display', input.property('checked') ? 'block' : 'none')
+				})
 			} else {
-				input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
+				input = div.append('input').style('padding', '2px').attr('type', 'checkbox').attr('id', param.id)
 				if (param.value) input.property('checked', param.value)
 				this.addLabels(div, 'label', param)
 			}
@@ -82,6 +93,13 @@ export class GenesMenu {
 				.attr('id', param.id)
 			if (param.value) input.attr('value', param.value)
 			this.addLabels(div, 'span', param)
+		} else if (param.type == 'radio') {
+			if (!param?.options.length) throw new Error('Radio buttons must have options')
+			const hasChecked = param.options.find((d: any) => d.checked)
+			if (!hasChecked) param.options[0].checked = true
+			input = div.append('div').attr('id', param.id)
+			input.append('p').style('font-size', '0.8em').style('opacity', 0.75).text(param.label)
+			makeRadiosWithContentDivs(param.options, input as any)
 		}
 		return input
 	}
