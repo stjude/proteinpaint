@@ -30,7 +30,6 @@ export class GenesMenu {
 	}
 
 	render() {
-		//console.log('this.params:', this.params)
 		for (const param of this.params) {
 			const input = this.addParameter(param.param, this.tip.d.append('div'))
 			param.input = input
