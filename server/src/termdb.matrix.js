@@ -7,6 +7,7 @@ import { getSampleData_snplstOrLocus } from './termdb.regression'
 import { TermTypes, isDictionaryType, isNonDictionaryType, getBin } from '#shared/terms'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
+import { geneVariantTermGroupsetting } from '#shared/common.js'
 
 /*
 
@@ -458,14 +459,23 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	return [samples, byTermId]
 }
 
-// FIXME this never runs
 async function mayQueryMutatedSamples(q) {
 	if (!q.currentGeneNames) return // no genes, do not query mutated samples and do not limit
 	// has genes. query samples mutated on any of these genes, collect sample id into a set and return
 	const sampleSet = new Set()
 	for (const geneName of q.currentGeneNames) {
-		const tw = { term: { gene: geneName, name: geneName, type: 'geneVariant' }, q: { type: 'values' } }
-		const data = await q.ds.mayGetGeneVariantData(tw)
+		// TODO: use fillTW() here
+		const tw = {
+			term: {
+				kind: 'gene',
+				gene: geneName,
+				name: geneName,
+				type: 'geneVariant',
+				groupsetting: geneVariantTermGroupsetting
+			},
+			q: { type: 'values' }
+		}
+		const data = await q.ds.mayGetGeneVariantData(tw, q)
 		for (const sampleId of data.keys()) {
 			sampleSet.add(sampleId)
 		}

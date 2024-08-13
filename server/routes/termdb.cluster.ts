@@ -1,6 +1,7 @@
 import path from 'path'
 import run_R from '#src/run_R.js'
 import {
+	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequest,
 	TermdbClusterResponse,
 	Clustering,
@@ -197,7 +198,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		}
 	}
 
-	q.get = async (param: TermdbClusterRequest) => {
+	q.get = async (param: TermdbClusterRequestGeneExpression) => {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, must still return expected structure with no data
@@ -223,33 +224,34 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		const term2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
 		for (const geneTerm of param.terms) {
-			if (geneTerm.type != 'geneExpression' && geneTerm.type != 'geneVariant') {
-				if (!geneTerm.chr) {
-					// quick fix: newly added gene from client will lack chr/start/stop
-					const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 })
-					if (!re.gmlst || re.gmlst.length == 0) {
-						console.warn('unknown gene:' + geneTerm.gene) // TODO unknown genes should be notified to client
-						continue
-					}
-					const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0]
-					geneTerm.start = i.start
-					geneTerm.stop = i.stop
-					geneTerm.chr = i.chr
+			if (!geneTerm.gene) continue
+			if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop)) {
+				// need to supply chr/start/stop to query
+				// legacy fpkm files
+				// will not be necessary once these files are retired
+				const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 })
+				if (!re.gmlst || re.gmlst.length == 0) {
+					console.warn('unknown gene:' + geneTerm.gene) // TODO unknown genes should be notified to client
+					continue
 				}
-			} else if ((geneTerm as GeneVariantTerm).kind != 'coord') {
-				continue
+				const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0]
+				geneTerm.start = i.start
+				geneTerm.stop = i.stop
+				geneTerm.chr = i.chr
 			}
 
 			const s2v = {}
+			if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop))
+				throw 'missing chr/start/stop'
 			await utils.get_lines_bigfile({
 				args: [
 					q.file,
-					(q.nochr ? geneTerm.chr?.replace('chr', '') : geneTerm.chr) + ':' + geneTerm.start + '-' + geneTerm.stop
-				], // must do g.chr?.replace to avoid tsc error
+					(q.nochr ? geneTerm.chr.replace('chr', '') : geneTerm.chr) + ':' + geneTerm.start + '-' + geneTerm.stop
+				],
 				callback: line => {
 					const l = line.split('\t')
 					// case-insensitive match! FIXME if g.gene is alias won't work
-					if (l[3].toLowerCase() != (geneTerm as GeneExpressionTerm).gene.toLowerCase()) return
+					if (l[3].toLowerCase() != geneTerm.gene.toLowerCase()) return
 					for (let i = 4; i < l.length; i++) {
 						const sampleId = samples[i - 4]
 						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
@@ -259,14 +261,12 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 						s2v[sampleId] = v
 					}
 				}
-			} as any)
-			// Above!! add "as any" to suppress a npx tsc alert
-			if (Object.keys(s2v).length) term2sample2value.set((geneTerm as GeneExpressionTerm).gene, s2v) // only add gene if has data
+			})
+			if (Object.keys(s2v).length) term2sample2value.set(geneTerm.gene, s2v) // only add gene if has data
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
-		if (term2sample2value.size == 0)
-			throw 'no data available for the input ' + param.terms?.map(g => (g as GeneVariantGeneTerm).gene).join(', ')
+		if (term2sample2value.size == 0) throw 'no data available for the input ' + param.terms?.map(g => g.gene).join(', ')
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }

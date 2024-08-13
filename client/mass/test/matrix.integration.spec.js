@@ -25,12 +25,10 @@ const runpp = helpers.getRunPp('mass', {
 })
 
 function getGenes() {
-	const groupsetting = geneVariantTermGroupsetting
-	const q = { type: 'values' } // {type: 'custom-groupset', customset: structuredClone(groupsetting.lst[0])}
 	return [
-		{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true, groupsetting }, q },
-		{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true, groupsetting }, q },
-		{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true, groupsetting }, q }
+		{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } },
+		{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
+		{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
 	]
 }
 
@@ -359,7 +357,7 @@ tape('geneVariant term', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			400,
+			240,
 			`should render the expected number of cell rects`
 		)
 		if (test._ok) matrix.Inner.app.destroy()
@@ -429,7 +427,7 @@ tape('geneVariant terms and dictionary terms', function (test) {
 })
 
 tape('geneVariant terms with divide by dictionary term', function (test) {
-	test.timeoutAfter(5000) //; console.log(370, getGenes())
+	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
 		state: {
@@ -551,7 +549,7 @@ tape('geneVariant terms and dictionary terms divide by dictionary term', functio
 	}
 })
 
-tape.skip('sort samples by sample name', function (test) {
+tape('sort samples by sample name', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
 	runpp({
@@ -598,7 +596,7 @@ tape.skip('sort samples by sample name', function (test) {
 	}
 })
 
-tape.skip('sort samples by Mutation categories, not sorted by CNV', function (test) {
+tape('sort samples by Mutation categories, not sorted by CNV', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
 	runpp({
@@ -652,7 +650,7 @@ tape.skip('sort samples by Mutation categories, not sorted by CNV', function (te
 	}
 })
 
-tape.skip('sort samples by CNV+SSM > SSM-only', function (test) {
+tape('sort samples by CNV+SSM > SSM-only', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(5)
 	const sortOptions = getSortOptions(
@@ -1221,7 +1219,7 @@ tape('Sort Genes By Input Data Order', function (test) {
 	}
 })
 
-tape.skip('avoid race condition', function (test) {
+tape('avoid race condition', function (test) {
 	test.timeoutAfter(1500)
 	test.plan(4)
 	runpp({
@@ -1299,8 +1297,28 @@ tape.skip('avoid race condition', function (test) {
 								lst: [
 									// $id is added manually since fillTermWrapper() is not called here and
 									// cannot be assumed to be called within store.plot_edit()
-									{ $id: 0, term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
-									{ $id: 1, term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
+									{
+										$id: 0,
+										term: {
+											gene: 'KRAS',
+											name: 'KRAS',
+											type: 'geneVariant',
+											isleaf: true,
+											groupsetting: geneVariantTermGroupsetting
+										},
+										q: { type: 'values' }
+									},
+									{
+										$id: 1,
+										term: {
+											gene: 'AKT1',
+											name: 'AKT1',
+											type: 'geneVariant',
+											isleaf: true,
+											groupsetting: geneVariantTermGroupsetting
+										},
+										q: { type: 'values' }
+									}
 								]
 							}
 						]
@@ -1317,7 +1335,19 @@ tape.skip('avoid race condition', function (test) {
 									name: '',
 									// $id is added manually since fillTermWrapper() is not called here and
 									// cannot be assumed to be called within store.plot_edit()
-									lst: [{ $id: 3, term: { gene: 'BCR', name: 'BCR', type: 'geneVariant', isleaf: true } }]
+									lst: [
+										{
+											$id: 3,
+											term: {
+												gene: 'BCR',
+												name: 'BCR',
+												type: 'geneVariant',
+												isleaf: true,
+												groupsetting: geneVariantTermGroupsetting
+											},
+											q: { type: 'values' }
+										}
+									]
 								}
 							]
 						}
@@ -1703,7 +1733,7 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 	}
 })
 
-tape.skip(
+tape(
 	'apply "Hide samples with" and "Do not show" legend filters to a geneVariant term in geneVariant term only matrix',
 	function (test) {
 		test.timeoutAfter(5000)
@@ -1909,7 +1939,7 @@ tape.skip(
 	}
 )
 
-tape.skip('apply legend group filters to a geneVariant term in geneVariant term only matrix', function (test) {
+tape('apply legend group filters to a geneVariant term in geneVariant term only matrix', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(15)
 

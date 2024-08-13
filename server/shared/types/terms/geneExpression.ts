@@ -19,6 +19,8 @@ export type GeneExpressionTW = TermWrapper & {
 
 export type GeneExpressionTerm = NumericTerm & {
 	gene: string
+	// temporarily allowing chr/start/stop to support
+	// legacy fpkm files
 	chr?: string
 	start?: number
 	stop?: number

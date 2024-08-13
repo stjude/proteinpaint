@@ -104,7 +104,7 @@ tape('tvs (common): buttons', async test => {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
+						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical', groupsetting: { disabled: true } },
 						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 					}
 				}
@@ -251,7 +251,7 @@ tape('tvs: Categorical', async test => {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
+						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical', groupsetting: { disabled: true } },
 						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 					}
 				}

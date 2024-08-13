@@ -97,7 +97,6 @@ export async function getHandler(self: CategoricalTermSettingInstance) {
 		async postMain() {
 			//for rendering groupsetting menu
 			const body = self.opts.getBodyParams?.() || {}
-			if (self.q) body.term1_q = self.q
 			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
 			/** Original code created a separate array (self.category2samplecount) and pushed only the key and label.
 			 * The new self.category2samplecount was used to create the groupsetting menu items. That logic was removed

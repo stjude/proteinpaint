@@ -2340,13 +2340,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		for (const dt of dts) {
 			const mlst =
 				dt == dtsnvindel
-					? await getSnvindelByTerm(ds, tw.term, genome, tw.q)
+					? await getSnvindelByTerm(ds, tw.term, genome, q)
 					: dt == dtfusionrna || dt == dtsv
-					? await getSvfusionByTerm(ds, tw.term, genome, tw.q)
+					? await getSvfusionByTerm(ds, tw.term, genome, q)
 					: dt == dtcnv
-					? await getCnvByTw(ds, tw, genome, tw.q)
+					? await getCnvByTw(ds, tw, genome, q)
 					: dt == 'geneCnv'
-					? await getGenecnvByTerm(ds, tw.term, genome, tw.q)
+					? await getGenecnvByTerm(ds, tw.term, genome, q)
 					: []
 
 			for (const m of mlst) {
@@ -2421,7 +2421,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				}
 			}
 
-			await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, tw.q.filter)
+			await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, q.filter)
 		}
 
 		const groupset = get_active_groupset(tw.term, tw.q)

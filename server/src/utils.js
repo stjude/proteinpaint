@@ -447,7 +447,7 @@ export async function get_header_vcf(file, dir) {
 	function to process the line
 	ps as the second arg so callback may choose to kill the process e.g. too many lines returned
 */
-export function get_lines_bigfile({ args, dir, callback, isbcf, isbam }) {
+export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, isbam = false }) {
 	if (!args) throw 'args is missing'
 	if (!Array.isArray(args)) throw 'args[] is not array'
 	if (args.length == 0) throw 'args[] empty array'
