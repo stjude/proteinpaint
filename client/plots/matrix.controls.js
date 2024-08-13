@@ -1253,7 +1253,7 @@ export class MatrixControls {
 
 		const createBtn = createNewGrpDiv
 			.append('button')
-			.html('Create Group')
+			.html('Create New Group')
 			.property('disabled', true)
 			.on('click', () => {
 				tip.clear()
@@ -1371,7 +1371,7 @@ export class MatrixControls {
 		for (const [i, group] of groups.entries()) {
 			if (group.label) continue
 			if (group.name) group.label = group.name
-			else group.label = `Unlabeled group #${i}` // cannot assume "gene" group
+			else group.label = `Unlabeled group #${i + 1}` // cannot assume "gene" group
 		}
 
 		groupSelect
