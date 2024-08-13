@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.72.0
 
 Features:
 - support up to 1000 genes in GDC Gene Expression Clustering tool
