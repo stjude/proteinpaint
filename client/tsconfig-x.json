@@ -1,5 +1,6 @@
 {
   "extends": "./tsconfig.json",
+  "include": ["./tw/RootTW.ts"],
   "exclude": [
     "./shared/checkers*/**/*",
     "./dist/**/*"
