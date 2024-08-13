@@ -68,6 +68,8 @@ function nativeValidateQuery(ds: any) {
 	if (!gE) throw 'topVariablyExpressedGenes query given but geneExpression missing'
 	if (gE.src != 'native') throw 'topVariablyExpressedGenes is native but geneExpression.src is not native'
 
+	if (ds.queries.topVariablyExpressedGenes.src == 'native') validateTopVEQueryArgs(ds.queries.topVariablyExpressedGenes)
+
 	ds.queries.topVariablyExpressedGenes.getGenes = async (q: TermdbTopVariablyExpressedGenesRequest) => {
 		// get list of samples that are used in current analysis; gE.samples[] contains all sample integer ids with exp data
 		const samples = [] as string[]
@@ -99,51 +101,56 @@ function nativeValidateQuery(ds: any) {
 	}
 }
 
+function validateTopVEQueryArgs(topVEObj) {
+	/** These are standard arguments to show in the UI for "all" native top expressed
+	 * gene queries. To override in the dataset, add .arguments:[] to the dataset and
+	 * change the appropriate values in the obj.
+	 */
+	if (!topVEObj.arguments) topVEObj.arguments = []
+	if (!topVEObj.arguments.some(i => i.id == 'maxGenes')) {
+		topVEObj.arguments.push({ id: 'maxGenes', label: 'Gene Count', type: 'number', value: 100 })
+	}
+	if (!topVEObj.arguments.some(i => i.id == 'filter_extreme_values')) {
+		topVEObj.arguments.push({
+			id: 'filter_extreme_values',
+			label: 'Filter Extreme Values',
+			type: 'boolean',
+			value: true
+		})
+	}
+	if (!topVEObj.arguments.some(i => i.id == 'filter_type')) {
+		/** The param option in input JSON is very important.
+		 * It instructs what method will be used to calculate variation in the counts for a particular gene.
+		 * It supports variance as well as interquartile region.
+		 * This is based on the recommendation of this article:
+		 * https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full.
+		 * This article recommends using interquartile region over variance.*/
+		topVEObj.arguments.push({
+			id: 'filter_type',
+			label: 'Filter type',
+			type: 'boolean',
+			radiobuttons: [
+				{
+					type: 'boolean',
+					label: 'Variance',
+					value: 'var'
+				},
+				{
+					type: 'boolean',
+					label: 'Interquartile Region',
+					value: 'iqr'
+				}
+			]
+		})
+	}
+}
+
 async function computeGenes4nativeDs(
 	q: TermdbTopVariablyExpressedGenesRequest,
 	ds: any,
 	matrixFile: string,
 	samples: string[]
 ) {
-	/** The param option in input JSON is very important.
-	 * It instructs what method will be used to calculate variation in the counts for a particular gene.
-	 * It supports variance as well as interquartile region.
-	 * This is based on the recommendation of this article:
-	 * https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full.
-	 * This article recommends using interquartile region over variance.*/
-
-	//console.log("ds:", ds.queries.topVariablyExpressedGenes.arguments)
-	const ds_options = ds.queries.topVariablyExpressedGenes.arguments
-
-	if (ds_options.find(i => i.id == 'maxGenes')) {
-		q.maxGenes = ds_options.find(i => i.id == 'maxGenes').value
-	} else if (!q.maxGenes) q.maxGenes = 100
-
-	if (ds_options.find(i => i.id == 'filter_extreme_values')) {
-		q.filter_extreme_values = ds_options.find(i => i.id == 'filter_extreme_values').value
-	} else if (q.filter_extreme_values == 1) {
-		// q.filter_extreme_values is an optional variable. If this is not defined, set filter_extreme_values = true
-		q.filter_extreme_values = true
-	} else if (q.filter_extreme_values == 0) {
-		q.filter_extreme_values = false
-	} else {
-		q.filter_extreme_values = true
-	}
-
-	if (ds_options.find(i => i.id == 'filter_type')) {
-		q.filter_type = ds_options.find(i => i.id == 'filter_type').value
-	} else {
-		q.filter_type = { type: 'iqr' } // q.filter_type is an optional variable and may not be defined. In that case, set filter_type = "iqr"
-	}
-
-	if (ds_options.find(i => i.id == 'min_count')) {
-		q.min_count = ds_options.find(i => i.id == 'min_count').value
-	} else if (!q.min_count) q.min_count = 10
-
-	if (ds_options.find(i => i.id == 'min_total_count')) {
-		q.min_total_count = ds_options.find(i => i.id == 'min_total_count').value
-	} else if (!q.min_total_count) q.min_total_count = 15
-
 	const input_json = {
 		input_file: matrixFile,
 		samples: samples.join(','),
@@ -153,7 +160,6 @@ async function computeGenes4nativeDs(
 		min_count: q.min_count, // This needs to be passed from UI, this should (preferably only shown in UI when filter_extreme_values = true)
 		min_total_count: q.min_total_count // This needs to be passed from UI (preferably only shown in UI when filter_extreme_values = true)
 	}
-	console.log('input_json:', input_json)
 
 	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
 	const rust_output_list = rust_output.split('\n')
@@ -173,7 +179,7 @@ async function computeGenes4nativeDs(
 function gdcValidateQuery(ds: any, genome: any) {
 	ds.queries.topVariablyExpressedGenes.getGenes = async (q: TermdbTopVariablyExpressedGenesRequest) => {
 		if (serverconfig.features.gdcGenes) {
-			console.log(
+			console.error(
 				'!!GDC!! using serverconfig.features.gdcGenes[] but not live api query. only use this on DEV and never on PROD!'
 			)
 			return serverconfig.features.gdcGenes as string[]
@@ -211,7 +217,7 @@ function gdcValidateQuery(ds: any, genome: any) {
 			}
 			return genes
 		} catch (e: any) {
-			console.log(e.stack || e)
+			console.error(e.stack || e)
 			throw e
 		}
 	}
