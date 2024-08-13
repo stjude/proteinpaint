@@ -67,7 +67,7 @@ function nativeValidateQuery(ds: any) {
 	if (!gE) throw 'topVariablyExpressedGenes query given but geneExpression missing'
 	if (gE.src != 'native') throw 'topVariablyExpressedGenes is native but geneExpression.src is not native'
 
-	validateTopVEObj(ds.queries.topVariablyExpressedGenes)
+	addTopVEarg(ds.queries.topVariablyExpressedGenes)
 
 	ds.queries.topVariablyExpressedGenes.getGenes = async (q: TermdbTopVariablyExpressedGenesRequest) => {
 		// get list of samples that are used in current analysis; gE.samples[] contains all sample integer ids with exp data
@@ -100,53 +100,43 @@ function nativeValidateQuery(ds: any) {
 	}
 }
 
-function validateTopVEObj(topVEObj) {
-	/** These are standard arguments to show in the UI for "all" native top expressed
-	 * gene queries. To override in the dataset, add .arguments:[] to the dataset and
-	 * change the appropriate values in the obj.
+function addTopVEarg(q: any) {
+	/** These are hardcoded, universal arguments for top variably expressed genes query using any native datasets
+	more importantly, this query for all native ds are carried out by the same rust code
+	thus they are not repeated in individual ds js files, but are dynamically assigned here on server launch
+	ds can optionally provide overrides, e.g. to account for different exp value metrics
 	 */
-	if (!topVEObj.arguments) topVEObj.arguments = []
-	if (!topVEObj.arguments.some(i => i.id == 'maxGenes')) {
-		topVEObj.arguments.push({ id: 'maxGenes', label: 'Gene Count', type: 'number', value: 100 })
-	}
-	if (!topVEObj.arguments.some(i => i.id == 'filter_extreme_values')) {
-		topVEObj.arguments.push({
+	const arglst = [
+		{ id: 'maxGenes', label: 'Gene Count', type: 'number', value: 100 },
+		{
 			id: 'filter_extreme_values',
 			label: 'Filter Extreme Values',
 			type: 'boolean',
 			value: true
-		})
-	}
-	if (topVEObj.arguments.some(i => i.id == 'filter_extreme_values' && i.value == true)) {
-		if (!topVEObj.arguments.some(i => i.id == 'min_count')) {
-			topVEObj.arguments.push({
-				id: 'min_count',
-				label: 'Min count',
-				type: 'number',
-				value: 10
-			})
-		}
-		if (!topVEObj.arguments.some(i => i.id == 'min_total_count')) {
-			topVEObj.arguments.push({
-				id: 'min_total_count',
-				label: 'Min total count',
-				type: 'number',
-				value: 15
-			})
-		}
-	}
-	if (!topVEObj.arguments.some(i => i.id == 'filter_type')) {
-		/** The param option in input JSON is very important.
-		 * It instructs what method will be used to calculate variation in the counts for a particular gene.
-		 * It supports variance as well as interquartile region.
-		 * This is based on the recommendation of this article:
-		 * https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full.
-		 * This article recommends using interquartile region over variance.*/
-		topVEObj.arguments.push({
+		},
+		{
+			id: 'min_count',
+			label: 'Min count',
+			type: 'number',
+			value: 10
+		},
+		{
+			id: 'min_total_count',
+			label: 'Min total count',
+			type: 'number',
+			value: 15
+		},
+		{
 			id: 'filter_type',
 			label: 'Filter type',
 			type: 'boolean',
 			radiobuttons: [
+				/** The param option in input JSON is very important.
+				 * It instructs what method will be used to calculate variation in the counts for a particular gene.
+				 * It supports variance as well as interquartile region.
+				 * This is based on the recommendation of this article:
+				 * https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full.
+				 * This article recommends using interquartile region over variance.*/
 				{
 					type: 'boolean',
 					label: 'Variance',
@@ -158,8 +148,19 @@ function validateTopVEObj(topVEObj) {
 					value: 'iqr'
 				}
 			]
-		})
+		}
+	]
+
+	if (q.arguments) {
+		// dataset provides overrides. apply to arguments[]
+		for (const a of q.arguments) {
+			if (!a.id) throw 'missing id of topVE.arguments[]'
+			const item = arglst.find(i => i.id == a.id)
+			if (!item) throw 'unknown id of topVE.arguments[]'
+			Object.assign(item, a) // apply override from a to item
+		}
 	}
+	q.arguments = arglst
 }
 
 async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, matrixFile: string, samples: string[]) {
