@@ -1,7 +1,8 @@
-import { ErrorResponse } from './errorResponse.js'
-import { Filter } from '../filter.js'
-import { Term } from '../terms/term.js'
-import { GeneVariantTerm } from '../terms/geneVariant.js'
+import { ErrorResponse } from './errorResponse.ts'
+import { Filter } from '../filter.ts'
+import { Term } from '../terms/term.ts'
+import { GeneVariantTerm } from '../terms/geneVariant.ts'
+import { GeneExpressionTerm } from '../terms/geneExpression.ts'
 
 export type Gene = {
 	/** gene symbol, required */
@@ -24,7 +25,7 @@ export type TermdbClusterRequest = {
 	/** Data type */
 	dataType: string
 	/** List of genes TODO can be non-genes when dataType is generalized */
-	terms: /*Term[] |*/ GeneVariantTerm[]
+	terms: /*Term[] |*/ (GeneVariantTerm | GeneExpressionTerm)[]
 	/** pp filter */
 	filter?: Filter
 	/** todo gdc filter */

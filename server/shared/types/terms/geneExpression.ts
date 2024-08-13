@@ -19,6 +19,9 @@ export type GeneExpressionTW = TermWrapper & {
 
 export type GeneExpressionTerm = NumericTerm & {
 	gene: string
+	chr?: string
+	start?: number
+	stop?: number
 }
 
 export type GeneExpressionTermSettingInstance = TermSettingInstance & {

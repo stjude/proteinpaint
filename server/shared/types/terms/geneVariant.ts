@@ -29,7 +29,7 @@ export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
 	stop?: number
 }
 
-type GeneVariantCoordTerm = GeneVariantBaseTerm & {
+export type GeneVariantCoordTerm = GeneVariantBaseTerm & {
 	kind: 'coord'
 	chr: string
 	start: number

@@ -5,11 +5,11 @@ import initBinConfig from '#shared/termdb.initbinconfig'
 
 export async function trigger_getDefaultBins(q, ds, res) {
 	/* only works for non-dict terms declared in ds.queries{}
-NOTE using following pattern:
-	1. tw.term.type identical key is used both for ds.queries{} as well as bin cache named `[type]2bins`
-	2. bin cache is indexed by term.name
-CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it breaks!
-*/
+	NOTE using following pattern:
+		1. tw.term.type identical key is used both for ds.queries{} as well as bin cache named `[type]2bins`
+		2. bin cache is indexed by term.name
+	CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it breaks!
+	*/
 	const tw = q.tw
 	const lst = []
 	let min = Infinity

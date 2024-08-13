@@ -15,7 +15,7 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes } from '#shared/terms.js'
-import { GeneVariantGeneTerm } from '#types'
+import { GeneVariantTerm, GeneVariantGeneTerm, GeneVariantCoordTerm } from '#types'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -223,18 +223,21 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		const term2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
 		for (const geneTerm of param.terms) {
-			if (geneTerm.type != 'geneVariant' || geneTerm.kind == 'coord') continue
-			if (!geneTerm.chr) {
-				// quick fix: newly added gene from client will lack chr/start/stop
-				const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 })
-				if (!re.gmlst || re.gmlst.length == 0) {
-					console.warn('unknown gene:' + geneTerm.gene) // TODO unknown genes should be notified to client
-					continue
+			if (geneTerm.type != 'geneExpression' && geneTerm.type != 'geneVariant') {
+				if (!geneTerm.chr) {
+					// quick fix: newly added gene from client will lack chr/start/stop
+					const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 })
+					if (!re.gmlst || re.gmlst.length == 0) {
+						console.warn('unknown gene:' + geneTerm.gene) // TODO unknown genes should be notified to client
+						continue
+					}
+					const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0]
+					geneTerm.start = i.start
+					geneTerm.stop = i.stop
+					geneTerm.chr = i.chr
 				}
-				const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0]
-				geneTerm.start = i.start
-				geneTerm.stop = i.stop
-				geneTerm.chr = i.chr
+			} else if ((geneTerm as GeneVariantTerm).kind != 'coord') {
+				continue
 			}
 
 			const s2v = {}
