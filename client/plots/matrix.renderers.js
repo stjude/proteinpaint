@@ -236,9 +236,13 @@ export function setRenderers(self) {
 							: 0
 					)
 				} else {
+					// this is required because labelText in the if-condition is not wrapped in tspan,
+					// so the text.selectAll('tspan') below will not remove previous label
+					text.text('')
+
 					const tspan = text.selectAll('tspan').data(labelText)
-					tspan.exit().remove()
-					tspan.attr('dx', getTspanDx).attr('font-size', getTspanFontSize).text(getTspanText)
+					//tspan.exit().remove()
+					//tspan.attr('dx', getTspanDx).attr('font-size', getTspanFontSize).text(getTspanText)
 					tspan
 						.enter()
 						.append('tspan')
