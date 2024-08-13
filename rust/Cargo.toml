@@ -90,3 +90,6 @@ path="src/genesetORA.rs"
 [[bin]]
 name="computeTopTerms"
 path="src/computeTopTerms.rs"
+[[bin]]
+name="DManalysis"
+path="src/DManalysis.rs"

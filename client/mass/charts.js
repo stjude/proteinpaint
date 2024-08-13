@@ -185,6 +185,12 @@ function getChartTypeList(self, state) {
 		},
 
 		{
+			label: 'Differential Metabolites',
+			chartType: 'DManalysis',
+			clickTo: self.loadChartSpecificMenu
+		},
+
+		{
 			label: 'Data Download',
 			clickTo: self.prepPlot,
 			chartType: 'dataDownload',

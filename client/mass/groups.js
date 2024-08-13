@@ -187,8 +187,13 @@ class MassGroups {
 		let row = menuDiv.append('div')
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
+		console.log(samplelstTW)
+		console.log(this.state.supportedChartTypes)
 		if (this.state.supportedChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
 			addDEPlotMenuItem(menuDiv, this, this.state, samplelstTW)
+
+		if (this.state.supportedChartTypes.includes('DManalysis') && samplelstTW.q.groups.length == 2)
+			addDMPlotMenuItem(menuDiv, this, this.state, samplelstTW)
 
 		if (this.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
@@ -279,6 +284,34 @@ function addDEPlotMenuItem(div, self, state, samplelstTW, tip) {
 				type: 'plot_create',
 				config
 			})
+		})
+}
+
+function addDMPlotMenuItem(div, self, state, samplelstTW, tip) {
+	div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text('Differential metabolites')
+		.on('click', e => {
+			const groups = []
+			for (const group of samplelstTW.q.groups) {
+				if (group.values && group.values.length > 0) {
+					groups.push(group)
+				} else {
+					throw 'group does not contain samples for DM analysis'
+				}
+			}
+			const config = {
+				chartType: 'DManalysis',
+				state,
+				samplelst: { groups }
+			}
+			self.tip.hide()
+			self.app.dispatch({
+				type: 'plot_create',
+				config
+			})
+			console.log(groups)
 		})
 }
 
