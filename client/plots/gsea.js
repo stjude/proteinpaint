@@ -146,8 +146,17 @@ add:
 		self.config.gsea_params.geneSetGroup = self.settings.pathway
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
 		//console.log('self.config.gsea_params:', self.config.gsea_params)
-		const output = await rungsea(self.config.gsea_params)
-		wait.remove()
+		let output
+		try {
+			output = await rungsea(self.config.gsea_params)
+			wait.remove()
+			if (output.error) {
+				throw output.error
+			}
+		} catch (e) {
+			alert('Error: ' + e)
+			return
+		}
 		const table_stats = table2col({ holder: self.dom.detailsDiv })
 		const [t1, t2] = table_stats.addRow()
 		t2.style('text-align', 'center').style('font-size', '0.8em').style('opacity', '0.8').text('COUNT')
