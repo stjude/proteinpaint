@@ -4,7 +4,6 @@ import {
 } from '#shared/types/routes/termdb.topVariablyExpressedGenes.ts'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import got from 'got'
 import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'
 import { makeFilter } from '#src/mds3.gdc.js'
@@ -96,7 +95,7 @@ function nativeValidateQuery(ds: any) {
 		}
 
 		// call rust to compute top genes on these samples
-		const genes = await computeGenes4nativeDs(q, ds, gE.file, samples)
+		const genes = await computeGenes4nativeDs(q, gE.file, samples)
 		return genes
 	}
 }
@@ -117,6 +116,24 @@ function validateTopVEObj(topVEObj) {
 			type: 'boolean',
 			value: true
 		})
+	}
+	if (topVEObj.arguments.some(i => i.id == 'filter_extreme_values' && i.value == true)) {
+		if (!topVEObj.arguments.some(i => i.id == 'min_count')) {
+			topVEObj.arguments.push({
+				id: 'min_count',
+				label: 'Min count',
+				type: 'number',
+				value: 10
+			})
+		}
+		if (!topVEObj.arguments.some(i => i.id == 'min_total_count')) {
+			topVEObj.arguments.push({
+				id: 'min_total_count',
+				label: 'Min total count',
+				type: 'number',
+				value: 15
+			})
+		}
 	}
 	if (!topVEObj.arguments.some(i => i.id == 'filter_type')) {
 		/** The param option in input JSON is very important.
@@ -145,12 +162,7 @@ function validateTopVEObj(topVEObj) {
 	}
 }
 
-async function computeGenes4nativeDs(
-	q: TermdbTopVariablyExpressedGenesRequest,
-	ds: any,
-	matrixFile: string,
-	samples: string[]
-) {
+async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, matrixFile: string, samples: string[]) {
 	const input_json = {
 		input_file: matrixFile,
 		samples: samples.join(','),
