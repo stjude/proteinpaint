@@ -15,7 +15,7 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes } from '#shared/terms.js'
-import { GeneVariantTerm, GeneVariantGeneTerm, GeneVariantCoordTerm } from '#types'
+import { GeneVariantTerm, GeneVariantGeneTerm, GeneVariantCoordTerm, GeneExpressionTerm } from '#types'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -249,7 +249,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				callback: line => {
 					const l = line.split('\t')
 					// case-insensitive match! FIXME if g.gene is alias won't work
-					if (l[3].toLowerCase() != geneTerm.gene.toLowerCase()) return
+					if (l[3].toLowerCase() != (geneTerm as GeneExpressionTerm).gene.toLowerCase()) return
 					for (let i = 4; i < l.length; i++) {
 						const sampleId = samples[i - 4]
 						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
@@ -261,7 +261,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				}
 			} as any)
 			// Above!! add "as any" to suppress a npx tsc alert
-			if (Object.keys(s2v).length) term2sample2value.set(geneTerm.gene, s2v) // only add gene if has data
+			if (Object.keys(s2v).length) term2sample2value.set((geneTerm as GeneExpressionTerm).gene, s2v) // only add gene if has data
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
