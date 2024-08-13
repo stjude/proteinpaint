@@ -680,7 +680,7 @@ async function setTermInput(opts) {
 			if (opts.processInput) opts.processInput(tw)
 			await pill.main(tw ? tw : { term: null, q: null })
 
-			const config = !(tw && opts.parent.chartType == 'hierCluster' && configKey == 'divideBy')
+			const config = !(tw && opts.parent.chartType == 'hierCluster' && opts.configKey == 'divideBy')
 				? { [opts.configKey]: tw }
 				: Object.assign(
 						{ [opts.configKey]: tw },
