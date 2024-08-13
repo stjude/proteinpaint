@@ -4,6 +4,7 @@
 import './style-normalize-scoped.css'
 import 'highlight.js/styles/github.css'
 import './style.css'
+import './style-zoomify-scoped.css'
 import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import * as client from './client'
 import { dofetch3, setAuth } from '#common/dofetch'

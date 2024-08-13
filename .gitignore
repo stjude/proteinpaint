@@ -79,6 +79,7 @@ client/test/internals*.js
 client/test/wpCompileTime.js
 client/test/*.bundle.js*
 client/test/init-esm.js
+client/test/bundle/*
 
 cairo-*/*
 canvas/*

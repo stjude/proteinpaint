@@ -2333,7 +2333,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 
 		if (re.data.hits.length < re.data.pagination.total) {
 			// total exceeds view limit, let client know
-			result.dt2total.push({ dt: 1, total: re.data.pagination.total }) // 1=snvindel
+			result.dt2total.push({ dt: common.dtsnvindel, total: re.data.pagination.total })
 		}
 
 		for (const hit of re.data.hits) {

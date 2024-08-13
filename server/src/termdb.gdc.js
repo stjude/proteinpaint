@@ -760,7 +760,14 @@ do not await when calling this function, as following steps execute logic that a
 should await each step so they work in sequence
 */
 async function runRemainingWithoutAwait(ds) {
-	await testGDCapi(ds)
+	try {
+		await testGDCapi(ds)
+	} catch (e) {
+		// on some pp env e.g. ppirt, this api test sometimes fails. in order not to abort pp launch, only logs err out
+		// no need to record this test failure and report via healthcheck: since this test runs just once on launch. during the container lifetime it never runs again and thus is not informative of actual api status
+		console.log(e.message || e)
+	}
+
 	try {
 		// obtain case id mapping for the first time and store at ds.__gdc
 		await mayCacheSampleIdMappingWithRegularCheck(ds)
