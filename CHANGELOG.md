@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- fix the error that when hiercluster is using divideBy, the tw will not show in Cases menu for gdc"
+
 
 ## 2.72.0
 
