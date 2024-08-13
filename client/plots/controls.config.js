@@ -669,11 +669,17 @@ async function setTermInput(opts) {
 		usecase: opts.usecase,
 		getBodyParams: opts.getBodyParams,
 		callback: async tw => {
-			// showing processing data ... before pill is set
-			opts.parent.dom.loadingDiv.selectAll('*').remove()
-			opts.parent.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
-			opts.parent.dom.svg.style('opacity', 0.1).style('pointer-events', 'none')
-			opts.parent.dom.loadingDiv.html('Processing data ...')
+			// hide the cases/samples control panel upon updating divideBy term
+			const tableDiv = select(opts.holder.node().closest('div'))
+			tableDiv.style('display', 'none')
+
+			// showing "processing data ..."" before pill is set
+			if (opts.parent.dom.loadingDiv && opts.parent.dom.svg) {
+				opts.parent.dom.loadingDiv.selectAll('*').remove()
+				opts.parent.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
+				opts.parent.dom.loadingDiv.html('Processing data ...')
+				opts.parent.dom.svg.style('opacity', 0.1).style('pointer-events', 'none')
+			}
 
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
