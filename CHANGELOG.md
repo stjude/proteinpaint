@@ -12,6 +12,7 @@ Fixes:
 - from matrix term group edit menu, term group name submit button will close the term group edit menu.
 - fix the error: from matrix term group edit menu, delete group name and submit still show the old name.
 - Assign alive/dead labels to GDC survival exit codes
+- add missing return in switch statement that breaks dual-term select ui
 
 
 ## 2.72.0
