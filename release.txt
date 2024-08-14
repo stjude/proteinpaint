@@ -1,2 +1,1 @@
-Fixes:
-- when a term has no computable values, do not calculate descriptive stats that breaks
+

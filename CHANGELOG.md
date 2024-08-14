@@ -13,6 +13,7 @@ Fixes:
 - fix the error: from matrix term group edit menu, delete group name and submit still show the old name.
 - Assign alive/dead labels to GDC survival exit codes
 - add missing return in switch statement that breaks dual-term select ui
+- when a term has no computable values, do not calculate descriptive stats that breaks
 
 
 ## 2.72.0
