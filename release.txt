@@ -1,1 +1,2 @@
-
+Fixes:
+- add missing return in switch statement that breaks dual-term select ui
