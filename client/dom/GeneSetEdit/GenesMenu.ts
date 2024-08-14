@@ -6,25 +6,33 @@ import { make_one_checkbox } from '../checkbox.js'
 import { makeRadiosWithContentDivs } from './radioWithContent.ts'
 
 type GenesMenuArgs = {
+	/** tip holder for displaying the Menu */
 	tip: Menu
-	params: { param: GeneArgumentEntry; input?: Elem; rendered?: boolean }[]
-	api: any
+	/** object sent from the view model
+	 * .param is the defined arg from the dataset
+	 * .input is the element created in addParameter and returned
+	 * to the view model
+	 */
+	params: { param: GeneArgumentEntry; input?: Elem }[]
+	/** Called when 'Calculate genes' is clicked */
 	callback: (f?: number) => void
+	/** Adds nested options for parameters back to opts
+	 * after rendering to avoid duplicate elements
+	 */
 	addOptionalParams: ({ param, input }) => void
 }
 
 export class GenesMenu {
 	tip: Menu
 	params: { param: GeneArgumentEntry; input?: Elem }[]
-	api: any
 	callback: (f?: number) => void
 	addOptionalParams: ({ param, input }) => void
+	/** Collects nested param options. */
 	readonly params2Add: { param: GeneArgumentEntry; input: Elem }[] = []
 
 	constructor(opts: GenesMenuArgs) {
 		this.tip = opts.tip
 		this.params = opts.params
-		this.api = opts.api
 		this.callback = opts.callback
 		this.addOptionalParams = opts.addOptionalParams
 

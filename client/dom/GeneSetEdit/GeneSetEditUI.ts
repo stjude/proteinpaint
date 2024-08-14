@@ -291,34 +291,38 @@ export class GeneSetEditUI {
 		}
 	}
 
+	baseGeneMenuArgs(arr) {
+		return {
+			tip: this.tip2,
+			params: arr,
+			addOptionalParams: ({ param, input }) => {
+				arr.push({ param, input })
+			}
+		}
+	}
+
 	createMenuList() {
 		if (this.api?.topMutatedGenesParams.length > 0) {
 			this.menuList.push({
 				label: 'Top mutated genes',
 				callback: async (event: Event) => {
 					this.tip2.clear().showunder(event.target)
-					new GenesMenu({
-						tip: this.tip2,
-						params: this.api.topMutatedGenesParams,
-						api: this.api,
-						callback: async () => {
-							const args = {
-								filter0: this.vocabApi.state.termfilter.filter0
-							}
-							for (const { param, input } of this.api.topMutatedGenesParams) {
-								const id = input.attr('id')
-								args[id] = this.getInputValue({ param, input })
-							}
-							const result = await this.vocabApi.getTopMutatedGenes(args)
-
-							this.geneList = []
-							this.geneList.push(...result.genes)
-							this.renderGenes()
-						},
-						addOptionalParams: ({ param, input }) => {
-							this.api.topMutatedGenesParams.push({ param, input })
+					const callback = async () => {
+						const args = {
+							filter0: this.vocabApi.state.termfilter.filter0
 						}
-					})
+						for (const { param, input } of this.api.topMutatedGenesParams) {
+							const id = input.attr('id')
+							args[id] = this.getInputValue({ param, input })
+						}
+						const result = await this.vocabApi.getTopMutatedGenes(args)
+
+						this.geneList = []
+						this.geneList.push(...result.genes)
+						this.renderGenes()
+					}
+					const menuArgs = Object.assign({ callback }, this.baseGeneMenuArgs(this.api.topMutatedGenesParams))
+					new GenesMenu(menuArgs)
 				}
 			})
 		}
@@ -336,36 +340,30 @@ export class GeneSetEditUI {
 							}
 						})
 					this.tip2.clear().showunder(event.target)
-					new GenesMenu({
-						tip: this.tip2,
-						params: this.api.topVariablyExpressedGenesParams,
-						api: this.api,
-						callback: async () => {
-							const args: any = {
-								genome: this.vocabApi.state.vocab.genome,
-								dslabel: this.vocabApi.state.vocab.dslabel
-							}
-							// supply filters from app state
-							if (this.vocabApi.state.termfilter) {
-								if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
-								if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
-							}
-							for (const { param, input } of this.api.topVariablyExpressedGenesParams) {
-								const id = input.attr('id')
-								args[id] = this.getInputValue({ param, input })
-							}
-							const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
-
-							this.geneList = []
-							if (result.genes) {
-								for (const gene of result.genes) this.geneList.push({ gene })
-							}
-							this.renderGenes()
-						},
-						addOptionalParams: ({ param, input }) => {
-							this.api.topVariablyExpressedGenesParams.push({ param, input })
+					const callback = async () => {
+						const args: any = {
+							genome: this.vocabApi.state.vocab.genome,
+							dslabel: this.vocabApi.state.vocab.dslabel
 						}
-					})
+						// supply filters from app state
+						if (this.vocabApi.state.termfilter) {
+							if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
+							if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
+						}
+						for (const { param, input } of this.api.topVariablyExpressedGenesParams) {
+							const id = input.attr('id')
+							args[id] = this.getInputValue({ param, input })
+						}
+						const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
+
+						this.geneList = []
+						if (result.genes) {
+							for (const gene of result.genes) this.geneList.push({ gene })
+						}
+						this.renderGenes()
+					}
+					const menuArgs = Object.assign({ callback }, this.baseGeneMenuArgs(this.api.topVariablyExpressedGenesParams))
+					new GenesMenu(menuArgs)
 				}
 			})
 		}
