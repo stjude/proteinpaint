@@ -130,7 +130,7 @@ function addTopVEarg(q: any) {
 		},
 		{
 			id: 'filter_type',
-			label: 'Filter type',
+			label: 'Rank by:',
 			type: 'radio',
 			options: [
 				/** The param option in input JSON is very important.
@@ -171,9 +171,12 @@ async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, 
 		samples: samples.join(','),
 		filter_extreme_values: q.filter_extreme_values,
 		num_genes: q.maxGenes,
-		param: q.filter_type?.type,
-		min_count: q.min_count, // This needs to be passed from UI, this should (preferably only shown in UI when filter_extreme_values = true)
-		min_total_count: q.min_total_count // This needs to be passed from UI (preferably only shown in UI when filter_extreme_values = true)
+		param: q.filter_type?.type
+	}
+
+	if (q.filter_extreme_values) {
+		input_json['min_count'] = q.min_count
+		input_json['min_total_count'] = q.min_total_count
 	}
 
 	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
