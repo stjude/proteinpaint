@@ -174,7 +174,7 @@ async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, 
 		rank_type: q.rank_type?.type
 	}
 
-	if (q.filter_extreme_values) {
+	if (q.filter_extreme_values == 1) {
 		input_json['min_count'] = q.min_count
 		input_json['min_total_count'] = q.min_total_count
 	}

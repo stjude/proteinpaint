@@ -292,13 +292,7 @@ export class GeneSetEditUI {
 	}
 
 	baseGeneMenuArgs(arr) {
-		arr = arr.filter(param => {
-			if (!param.param?.options) return true
-			//Remove any options previously added to prevent duplicate rendering
-			return !param.param.options.some(opt => {
-				return arr.some(i => i.param.id == opt.id)
-			})
-		})
+		arr = this.removeDuplicates(arr)
 		return {
 			tip: this.tip2,
 			params: arr,
@@ -306,6 +300,19 @@ export class GeneSetEditUI {
 				arr.push({ param, input })
 			}
 		}
+	}
+
+	removeDuplicates(arr) {
+		for (const param of arr) {
+			if (param.param?.options) {
+				param.param.options.forEach(opt => {
+					if (!opt.id) return
+					const i = arr.findIndex(i => i.param.id == opt.id)
+					if (i != -1) arr.splice(i, 1)
+				})
+			}
+		}
+		return arr
 	}
 
 	createMenuList() {
@@ -328,7 +335,7 @@ export class GeneSetEditUI {
 						this.geneList.push(...result.genes)
 						this.renderGenes()
 					}
-					const menuArgs = Object.assign({ callback }, this.baseGeneMenuArgs(this.api.topMutatedGenesParams))
+					const menuArgs = Object.assign(this.baseGeneMenuArgs(this.api.topMutatedGenesParams), { callback })
 					new GenesMenu(menuArgs)
 				}
 			})
@@ -369,7 +376,8 @@ export class GeneSetEditUI {
 						}
 						this.renderGenes()
 					}
-					const menuArgs = Object.assign({ callback }, this.baseGeneMenuArgs(this.api.topVariablyExpressedGenesParams))
+
+					const menuArgs = Object.assign(this.baseGeneMenuArgs(this.api.topVariablyExpressedGenesParams), { callback })
 					new GenesMenu(menuArgs)
 				}
 			})
