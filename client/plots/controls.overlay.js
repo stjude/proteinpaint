@@ -33,7 +33,7 @@ class Overlay {
 	}
 	initPill() {
 		if (!this.opts.defaultQ4fillTW) this.opts.defaultQ4fillTW = {}
-		this.opts.defaultQ4fillTW[TermTypes.GENE_VARIANT] = { groupsetting: { inuse: true } }
+		this.opts.defaultQ4fillTW[TermTypes.GENE_VARIANT] = { type: 'predefined-groupset' }
 		this.opts.defaultQ4fillTW[TermTypes.GENE_EXPRESSION] = { mode: 'discrete' }
 		this.opts.defaultQ4fillTW[TermTypes.METABOLITE_INTENSITY] = { mode: 'discrete' }
 

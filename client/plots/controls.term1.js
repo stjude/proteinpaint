@@ -103,7 +103,10 @@ function setRenderers(self) {
 		if (!plot.term) throw 'state.plot.term{} is missing'
 		if (!plot.term.q) throw 'state.plot.term.q{} is missing'
 
-		if (plot.term.q.groupsetting && plot.term.q.groupsetting.disabled) {
+		if (
+			(plot.term.q.type == 'predefined-groupset' || plot.term.q.type == 'custom-groupset') &&
+			plot.term.term.groupsetting.disabled
+		) {
 			///////////////////////////////////
 			//
 			// the term is not configurable. as plot term1 cannot be replaced, just quit

@@ -524,7 +524,7 @@ function setInteractivity(self) {
 		self.opts.callback!({
 			id: self.term.id,
 			term: self.term,
-			q: { mode: 'discrete', type: 'values', isAtomic: true, groupsetting: { inuse: false } }
+			q: { mode: 'discrete', type: 'values', isAtomic: true }
 		})
 	}
 
@@ -619,13 +619,17 @@ function setInteractivity(self) {
 		type opt = { label: string; callback: (f?: any) => void }
 		const options: opt[] = []
 
-		if (self.q.groupsetting?.inuse && self.q.mode != 'binary' && self.term.type != 'geneVariant') {
-			// this instance is using a categorical term doing groupsetting; add option to cancel it
-			// as categorical edit menu cannot do the canceling
-			options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
+		if (self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset') {
+			// term is using groupsetting
+			// should provide option to cancel it
+			if (self.q.mode != 'binary' && self.term.type != 'geneVariant') {
+				// mode=binary will never use groupsetting
+				// geneVariant term can cancel groupsetting within edit menu
+				options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
+			}
 		}
 
-		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
+		if (self.q && !self.term.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
 			// hide edit option for survival term because its showEditMenu() is disabled
 			options.push({
 				label: 'Edit',
@@ -939,12 +943,34 @@ export async function fillTermWrapper(
 	delete tw.id
 	if (!tw.q) tw.q = {}
 	tw.q.isAtomic = true
+	// check for legacy tw structure
+	checkLegacyTw(tw)
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQByTsHandler)
 	mayValidateQmode(tw)
 	// compute $id after tw is filled
 	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	return tw
+}
+
+// check for legacy tw structure that could be
+// present in old saved sessions
+function checkLegacyTw(tw) {
+	// check for legacy q.groupsetting{}
+	if (Object.keys(tw.q).includes('groupsetting')) {
+		if (tw.q['groupsetting']['inuse']) {
+			if (tw.q.type == 'predefined-groupset') {
+				tw.q['predefined_groupset_idx'] = tw.q['groupsetting']['predefined_groupset_idx']
+			} else if (tw.q.type == 'custom-groupset') {
+				tw.q['customset'] = tw.q['groupsetting']['customset']
+			} else {
+				throw 'invalid q.type'
+			}
+		} else {
+			tw.q.type = 'values'
+		}
+		delete tw.q['groupsetting']
+	}
 }
 
 async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {

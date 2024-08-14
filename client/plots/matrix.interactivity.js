@@ -71,8 +71,83 @@ export function setInteractivity(self) {
 		self.dom.matrixCellHoverOver.clear()
 		const table = table2col({ holder: self.dom.matrixCellHoverOver.d.append('div') })
 
-		if (d.term.type != 'geneVariant' || d.tw.q?.groupsetting?.inuse) {
-			// when groupsetting is used for geneVariant term, should treat as categorical term
+		if (d.term.type == 'geneVariant' && d.tw.q?.type == 'values') {
+			{
+				const [c1, c2] = table.addRow()
+				c1.html(l.Sample)
+				c2.html(d.row._ref_.label || d.value?.sample)
+			}
+			{
+				const [c1, c2] = table.addRow()
+				c1.html('Gene')
+				c2.html(d.term.name)
+			}
+
+			const siblingCellLabels = {}
+			if (d.siblingCells)
+				for (const c of d.siblingCells) {
+					if (c.$id != d.$id) continue
+					const v = c.value
+					const p = v.pairlst
+					const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
+					// TODO: when the same label can apply to multiple values/hits in the same matrix cell,
+					// list that label only once but with a hit count, instead of listing that same label
+					// as multiple table rows in the mouseover
+					const label =
+						c.t.grp.type == 'hierCluster'
+							? v.value
+							: p
+							? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
+							: v.mname
+							? `${v.mname} ${mclass[v.class].label}`
+							: mclass[v.class].label
+
+					/* display as two column tabel, do not display these info and do not show gradient CNV anymore
+				const info = []
+				if (v.label && v.label !== c.label) info.push(v.label)
+				if ('value' in v) info.push(`${s.cnvUnit}=${v.value}`)
+				if (v.chr) {
+					const pos = v.pos ? `:${v.pos}` : v.start ? `:${v.start}-${v.stop}` : ''
+					info.push(`${v.chr}${pos}`)
+				}
+				if (v.alt) info.push(`${v.ref}>${v.alt}`)
+
+				const tds = !info.length
+					? `<td colspan='2' style='text-align: center'>${label}</td>`
+					: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
+				*/
+					const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
+
+					if (!siblingCellLabels[dtLabel]) {
+						siblingCellLabels[dtLabel] = [{ label, color }]
+					} else {
+						siblingCellLabels[dtLabel].push({ label, color })
+					}
+					/*
+				do not use gradient CNV anymore
+				if (v.dt == 4 && 'value' in v) {
+					const textColor = Math.abs(v.value) < 0.5 ? '#000' : '#fff'
+					rows.push(
+						`<tr style='background-color: ${color}; color: ${textColor}; padding-left: 2px; padding-right: 2px'>${tds}</tr>`
+					)
+				} else {
+					rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
+				}
+				*/
+				}
+			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
+				const [c1, c2] = table.addRow()
+				c1.html(dtLabel)
+				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
+					${classArray[0].label}`)
+				for (const classType of classArray.slice(1)) {
+					const [c1, c2] = table.addRow()
+					c1.html('')
+					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
+						${classType.label}`)
+				}
+			}
+		} else {
 			{
 				const [c1, c2] = table.addRow()
 				c1.html(l.Sample)
@@ -167,82 +242,6 @@ export function setInteractivity(self) {
 							d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
 						}`
 					)
-				}
-			}
-		} else {
-			{
-				const [c1, c2] = table.addRow()
-				c1.html(l.Sample)
-				c2.html(d.row._ref_.label || d.value?.sample)
-			}
-			{
-				const [c1, c2] = table.addRow()
-				c1.html('Gene')
-				c2.html(d.term.name)
-			}
-
-			const siblingCellLabels = {}
-			if (d.siblingCells)
-				for (const c of d.siblingCells) {
-					if (c.$id != d.$id) continue
-					const v = c.value
-					const p = v.pairlst
-					const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
-					// TODO: when the same label can apply to multiple values/hits in the same matrix cell,
-					// list that label only once but with a hit count, instead of listing that same label
-					// as multiple table rows in the mouseover
-					const label =
-						c.t.grp.type == 'hierCluster'
-							? v.value
-							: p
-							? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
-							: v.mname
-							? `${v.mname} ${mclass[v.class].label}`
-							: mclass[v.class].label
-
-					/* display as two column tabel, do not display these info and do not show gradient CNV anymore
-				const info = []
-				if (v.label && v.label !== c.label) info.push(v.label)
-				if ('value' in v) info.push(`${s.cnvUnit}=${v.value}`)
-				if (v.chr) {
-					const pos = v.pos ? `:${v.pos}` : v.start ? `:${v.start}-${v.stop}` : ''
-					info.push(`${v.chr}${pos}`)
-				}
-				if (v.alt) info.push(`${v.ref}>${v.alt}`)
-
-				const tds = !info.length
-					? `<td colspan='2' style='text-align: center'>${label}</td>`
-					: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
-				*/
-					const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
-
-					if (!siblingCellLabels[dtLabel]) {
-						siblingCellLabels[dtLabel] = [{ label, color }]
-					} else {
-						siblingCellLabels[dtLabel].push({ label, color })
-					}
-					/*
-				do not use gradient CNV anymore
-				if (v.dt == 4 && 'value' in v) {
-					const textColor = Math.abs(v.value) < 0.5 ? '#000' : '#fff'
-					rows.push(
-						`<tr style='background-color: ${color}; color: ${textColor}; padding-left: 2px; padding-right: 2px'>${tds}</tr>`
-					)
-				} else {
-					rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
-				}
-				*/
-				}
-			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
-				const [c1, c2] = table.addRow()
-				c1.html(dtLabel)
-				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
-					${classArray[0].label}`)
-				for (const classType of classArray.slice(1)) {
-					const [c1, c2] = table.addRow()
-					c1.html('')
-					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
-						${classType.label}`)
 				}
 			}
 		}
@@ -440,8 +439,57 @@ export function setInteractivity(self) {
 			c1.html(l.Sample)
 			c2.html(sampleData.row._ref_.label || sampleData.value.sample)
 		}
-		if ((sampleData.term && sampleData.term.type != 'geneVariant') || sampleData.tw.q?.groupsetting?.inuse) {
-			// when groupsetting is used for geneVariant term, should treat as categorical term
+		if (sampleData.term?.type == 'geneVariant' && sampleData.tw.q?.type == 'values') {
+			if (sampleData.value) {
+				if (templates?.gene) {
+					const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
+					const [c1, c2] = table.addRow()
+					c1.html('Gene')
+					c2.html(
+						`<a href="${templates.gene.base}${name}" target="_blank">${sampleData.tw.term.name} ${svgIcons.externalLink}</a>`
+					)
+				} else {
+					const [c1, c2] = table.addRow()
+					c1.html('Gene')
+					c2.html(sampleData.term.name)
+				}
+
+				const siblingCellLabels = {}
+				for (const c of sampleData.siblingCells) {
+					if (c.$id != sampleData.$id) continue
+					const v = c.value
+					const p = v.pairlst
+					const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
+					const label =
+						c.t.grp.type == 'hierCluster'
+							? v.value
+							: p
+							? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
+							: v.mname
+							? `${v.mname} ${mclass[v.class].label}`
+							: mclass[v.class].label
+					const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
+
+					if (!siblingCellLabels[dtLabel]) {
+						siblingCellLabels[dtLabel] = [{ label, color }]
+					} else {
+						siblingCellLabels[dtLabel].push({ label, color })
+					}
+				}
+				for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
+					const [c1, c2] = table.addRow()
+					c1.html(dtLabel)
+					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
+						${classArray[0].label}`)
+					for (const classType of classArray.slice(1)) {
+						const [c1, c2] = table.addRow()
+						c1.html('')
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
+							${classType.label}`)
+					}
+				}
+			}
+		} else if (sampleData.term) {
 			let survivalInfo
 			if (sampleData.term.type == TermTypes.SURVIVAL && sampleData.exitCodeKey) {
 				survivalInfo = sampleData.term.values?.[sampleData.exitCodeKey]?.label || sampleData.exitCodeKey
@@ -539,54 +587,6 @@ export function setInteractivity(self) {
 								: ''
 						}`
 					)
-				}
-			}
-		} else if (sampleData.term && sampleData.term.type == 'geneVariant' && sampleData.value) {
-			if (templates?.gene) {
-				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
-				const [c1, c2] = table.addRow()
-				c1.html('Gene')
-				c2.html(
-					`<a href="${templates.gene.base}${name}" target="_blank">${sampleData.tw.term.name} ${svgIcons.externalLink}</a>`
-				)
-			} else {
-				const [c1, c2] = table.addRow()
-				c1.html('Gene')
-				c2.html(sampleData.term.name)
-			}
-
-			const siblingCellLabels = {}
-			for (const c of sampleData.siblingCells) {
-				if (c.$id != sampleData.$id) continue
-				const v = c.value
-				const p = v.pairlst
-				const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
-				const label =
-					c.t.grp.type == 'hierCluster'
-						? v.value
-						: p
-						? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
-						: v.mname
-						? `${v.mname} ${mclass[v.class].label}`
-						: mclass[v.class].label
-				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
-
-				if (!siblingCellLabels[dtLabel]) {
-					siblingCellLabels[dtLabel] = [{ label, color }]
-				} else {
-					siblingCellLabels[dtLabel].push({ label, color })
-				}
-			}
-			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
-				const [c1, c2] = table.addRow()
-				c1.html(dtLabel)
-				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
-					${classArray[0].label}`)
-				for (const classType of classArray.slice(1)) {
-					const [c1, c2] = table.addRow()
-					c1.html('')
-					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
-						${classType.label}`)
 				}
 			}
 		}
@@ -2062,8 +2062,8 @@ function setLabelDragEvents(self, prefix) {
 
 			const data = event.target.__data__
 
-			if (data.tw.term.type == 'geneVariant' && !data.tw.q?.groupsetting?.inuse) {
-				// for geneVariant term, when groupsetting is used, use subGroupCounts to
+			if (data.tw.term.type == 'geneVariant' && data.tw.q?.type == 'values') {
+				// for geneVariant term, when groupsetting is <not?> used, use subGroupCounts to
 				// show number of counted samples (WT and Blank are not counted)
 				// and number of each class in the subGroup
 
@@ -2704,7 +2704,7 @@ function setLengendActions(self) {
 			return
 		}
 		const term = self.termOrder.find(t => t.tw.$id == targetData.$id)
-		if (term?.tw?.q?.groupsetting?.inuse) {
+		if (term?.tw?.q?.type == 'predefined-groupset' || term?.tw?.q?.type == 'custom-groupset') {
 			// when the term has customized groupsetting
 			return
 		}
@@ -2812,7 +2812,7 @@ function setLengendActions(self) {
 		}
 
 		const term = self.terms.find(t => t.tw.$id == targetData.$id)
-		if (term?.tw?.q?.groupsetting?.inuse) {
+		if (term?.tw?.q?.type == 'predefined-groupset' || term?.tw?.q?.type == 'custom-groupset') {
 			// when the term has customized groupsetting
 			return
 		}

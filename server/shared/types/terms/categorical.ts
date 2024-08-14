@@ -1,14 +1,5 @@
-import { BaseTerm, BaseValue, BaseQ, BaseTW, QGroupSetting, TermGroupSetting, ValuesGroup } from './term.ts'
-
-/*
---------EXPORTED--------
-CategoricalValuesObject
-CategoricalTerm
-CategoricalQ
-CategoricalTW
-CategoricaTermSettingInstance
-GroupSetInputValues
-*/
+import { BaseTerm, TermValues, MinBaseQ, GroupSettingQ, TermGroupSetting, BaseTW } from './term.ts'
+import { TermSettingInstance } from '../termsetting.ts'
 
 /**
  * A categorical term q object
@@ -18,28 +9,15 @@ GroupSetInputValues
  * @category TW
  */
 
-export type CategoricalValuesObject = {
-	mode: 'binary' | 'discrete'
-	type?: 'values'
-	values: {
-		[key: string]: BaseValue
-	}
-}
+type CategoricalBaseQ = MinBaseQ & { mode: 'discrete' | 'binary' }
 
-export type GroupSet = {
-	mode: 'binary' | 'discrete'
-	type?: 'predefined-groupset' | 'custom-groupset'
-	name: string
-	groups: ValuesGroup[]
-}
+export type CategoricalQ = CategoricalBaseQ & GroupSettingQ
 
 export type CategoricalTerm = BaseTerm & {
 	type: 'categorical'
-	values: CategoricalValuesObject
-	groupsetting: TermGroupSetting & { useIndex: number }
+	values: TermValues
+	groupsetting: TermGroupSetting
 }
-
-export type CategoricalQ = BaseQ & QGroupSetting & (CategoricalValuesObject | GroupSet)
 
 /**
  * A categorical term wrapper object
@@ -47,17 +25,17 @@ export type CategoricalQ = BaseQ & QGroupSetting & (CategoricalValuesObject | Gr
  * @group Termdb
  * @category TW
  */
+
 export type CategoricalTW = BaseTW & {
 	id: string
-	term: CategoricalTerm
 	q: CategoricalQ
+	term: CategoricalTerm
 }
 
-export type GroupSetInputValues = {
-	[index: string]: {
-		/** value's label on client */
-		label?: string | number
-		/** value's current group index */
-		group?: number
-	}
+export type CategoricalTermSettingInstance = TermSettingInstance & {
+	q: CategoricalQ
+	term: CategoricalTerm
+	category2samplecount: any
+	validateGroupsetting: () => { text: string; bgcolor?: string }
+	error?: string
 }

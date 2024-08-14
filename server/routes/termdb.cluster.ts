@@ -1,6 +1,7 @@
 import path from 'path'
 import run_R from '#src/run_R.js'
 import {
+	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequest,
 	TermdbClusterResponse,
 	Clustering,
@@ -15,7 +16,6 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes } from '#shared/terms.js'
-import { GeneVariantGeneTerm } from '#types'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -197,7 +197,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		}
 	}
 
-	q.get = async (param: TermdbClusterRequest) => {
+	q.get = async (param: TermdbClusterRequestGeneExpression) => {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, must still return expected structure with no data
@@ -222,12 +222,12 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		// only valid genes with data are added. invalid genes or genes missing from data file is not added. backend returned genes is allowed to be fewer than supplied by client
 		const term2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
-		for (const g of param.terms!) {
-			const geneTerm = g as GeneVariantGeneTerm // FIXME wrong
+		for (const geneTerm of param.terms) {
 			if (!geneTerm.gene) continue
-
-			if (!geneTerm.chr) {
-				// quick fix: newly added gene from client will lack chr/start/stop
+			if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop)) {
+				// need to supply chr/start/stop to query
+				// legacy fpkm files
+				// will not be necessary once these files are retired
 				const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 })
 				if (!re.gmlst || re.gmlst.length == 0) {
 					console.warn('unknown gene:' + geneTerm.gene) // TODO unknown genes should be notified to client
@@ -240,11 +240,13 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 			}
 
 			const s2v = {}
+			if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop))
+				throw 'missing chr/start/stop'
 			await utils.get_lines_bigfile({
 				args: [
 					q.file,
-					(q.nochr ? geneTerm.chr?.replace('chr', '') : geneTerm.chr) + ':' + geneTerm.start + '-' + geneTerm.stop
-				], // must do g.chr?.replace to avoid tsc error
+					(q.nochr ? geneTerm.chr.replace('chr', '') : geneTerm.chr) + ':' + geneTerm.start + '-' + geneTerm.stop
+				],
 				callback: line => {
 					const l = line.split('\t')
 					// case-insensitive match! FIXME if g.gene is alias won't work
@@ -258,8 +260,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 						s2v[sampleId] = v
 					}
 				}
-			} as any)
-			// Above!! add "as any" to suppress a npx tsc alert
+			})
 			if (Object.keys(s2v).length) term2sample2value.set(geneTerm.gene, s2v) // only add gene if has data
 		}
 		// pass blank byTermId to match with expected output structure

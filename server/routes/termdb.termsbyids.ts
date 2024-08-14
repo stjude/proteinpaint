@@ -64,7 +64,7 @@ async function trigger_gettermsbyid(
 	for (const id of q.ids) {
 		const term = tdb.q.termjsonByOneid(id)
 		if (term) {
-			if (term.type == 'categorical' && !term.values && !term.groupsetting?.inuse) {
+			if (term.type == 'categorical' && !term.values) {
 				term.values = {}
 				term.samplecount = {}
 			}

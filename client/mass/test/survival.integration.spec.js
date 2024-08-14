@@ -230,10 +230,8 @@ tape('survival term as term1, term2 = genetic_race, categorical groupsetting', f
 					term2: {
 						id: 'genetic_race',
 						q: {
-							groupsetting: {
-								customset: {
-									groups
-								}
+							customset: {
+								groups
 							}
 						}
 					}
@@ -254,7 +252,7 @@ tape('survival term as term1, term2 = genetic_race, categorical groupsetting', f
 		const config = inner.state.config
 
 		test.equal(
-			JSON.stringify(config.term2.q.groupsetting.customset.groups),
+			JSON.stringify(config.term2.q.customset.groups),
 			JSON.stringify(groups),
 			`Should correctly pass customset groups for term2`
 		)
@@ -309,10 +307,8 @@ tape('survival term as term1, term0 = genetic_race, categorical groupsetting', f
 					term0: {
 						id: 'genetic_race',
 						q: {
-							groupsetting: {
-								customset: {
-									groups
-								}
+							customset: {
+								groups
 							}
 						}
 					}
@@ -334,7 +330,7 @@ tape('survival term as term1, term0 = genetic_race, categorical groupsetting', f
 		const term0Values = config.term0.term.values
 
 		test.equal(
-			JSON.stringify(config.term0.q.groupsetting.customset.groups),
+			JSON.stringify(config.term0.q.customset.groups),
 			JSON.stringify(groups),
 			`Should correctly pass customset groups for term0`
 		)

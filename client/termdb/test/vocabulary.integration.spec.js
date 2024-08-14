@@ -554,25 +554,6 @@ tape('syncTermData()', async test => {
 	termdbVocabApi.syncTermData(config, data, previousConfig)
 	test.ok(!config.term.q && Object.keys(data).length == 0, `Should return without altering config or data inputs`)
 
-	//Add term.q and term.q.groupsetting
-	config = {
-		term: { id: 'diaggrp', q: { isAtomic: true }, term: { id: 'diaggrp' } },
-		term0: { id: 'agedx', term: { id: 'agedx' } },
-		term2: { id: 'survival', term: { id: 'survival' } }
-	}
-	data = { charts: [{ chartId: '' }], refs: {} }
-	previousConfig = {
-		term: { id: 'diaggrp', term: { id: 'diaggrp' } }
-	}
-	termdbVocabApi.syncTermData(config, data, previousConfig)
-	test.ok(
-		previousConfig.term != config.term &&
-			config.term.q.groupsetting &&
-			config.term2.q.groupsetting &&
-			config.term0.q.groupsetting,
-		`Should update all term objs to include term.q{} and term.q.groupsetting`
-	)
-
 	test.end()
 })
 
@@ -608,7 +589,7 @@ tape('getRegressionData()', async test => {
 				isAtomic: true,
 				refGrp: '2',
 				term: {
-					groupsetting: { inuse: false },
+					groupsetting: { disabled: true },
 					id: 'sex',
 					name: 'Sex',
 					type: 'categorical',

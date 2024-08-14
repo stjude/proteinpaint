@@ -1133,26 +1133,31 @@ for example: in the 'Protein-changing vs. rest' groupsetting, the
 that have both missense and silent mutations are classified in the
 'Protein-changing' group
 */
+
 export const geneVariantTermGroupsetting = {
-	disabled: false,
+	disabled: false, // as const, // TODO: may need to add is when converting common.js to .ts
+	type: 'custom',
 	lst: [
 		{
 			// SNV/indel groupsetting
 			name: 'Mutated vs. wildtype',
 			groups: [
 				{
+					type: 'values', // as const, // TODO: may need to add is when converting common.js to .ts
 					name: 'Mutated',
 					values: mutationClasses
 						.filter(key => key != 'WT' && key != 'Blank')
 						.map(key => {
-							return { key, dt: mclass[key].dt, label: mclass[key].label }
+							return { key, label: mclass[key].label }
 						})
 				},
 				{
+					type: 'values',
 					name: 'Wildtype',
 					values: [{ key: 'WT', label: 'Wildtype' }]
 				},
 				{
+					type: 'values',
 					name: 'Not tested',
 					values: [{ key: 'Blank', label: 'Not tested' }],
 					uncomputable: true
@@ -1164,20 +1169,23 @@ export const geneVariantTermGroupsetting = {
 			name: 'Protein-changing vs. rest',
 			groups: [
 				{
+					type: 'values',
 					name: 'Protein-changing',
 					values: proteinChangingMutations.map(key => {
-						return { key, dt: mclass[key].dt, label: mclass[key].label }
+						return { key, label: mclass[key].label }
 					})
 				},
 				{
+					type: 'values',
 					name: 'Rest',
 					values: Object.keys(mclass)
 						.filter(key => !proteinChangingMutations.includes(key) && key != 'Blank')
 						.map(key => {
-							return { key, dt: mclass[key].dt, label: mclass[key].label }
+							return { key, label: mclass[key].label }
 						})
 				},
 				{
+					type: 'values',
 					name: 'Not tested',
 					values: [{ key: 'Blank', label: 'Not tested' }],
 					uncomputable: true
@@ -1189,20 +1197,23 @@ export const geneVariantTermGroupsetting = {
 			name: 'Truncating vs. rest',
 			groups: [
 				{
+					type: 'values',
 					name: 'Truncating',
 					values: truncatingMutations.map(key => {
-						return { key, dt: mclass[key].dt, label: mclass[key].label }
+						return { key, label: mclass[key].label }
 					})
 				},
 				{
+					type: 'values',
 					name: 'Rest',
 					values: Object.keys(mclass)
 						.filter(key => !truncatingMutations.includes(key) && key != 'Blank')
 						.map(key => {
-							return { key, dt: mclass[key].dt, label: mclass[key].label }
+							return { key, label: mclass[key].label }
 						})
 				},
 				{
+					type: 'values',
 					name: 'Not tested',
 					values: [{ key: 'Blank', label: 'Not tested' }],
 					uncomputable: true
@@ -1214,22 +1225,27 @@ export const geneVariantTermGroupsetting = {
 			name: 'Gain vs. Loss vs. LOH vs. Wildtype',
 			groups: [
 				{
+					type: 'values',
 					name: 'Copy number gain',
-					values: [{ key: 'CNV_amp', dt: mclass['CNV_amp'].dt, label: mclass['CNV_amp'].label }]
+					values: [{ key: 'CNV_amp', label: mclass['CNV_amp'].label }]
 				},
 				{
+					type: 'values',
 					name: 'Copy number loss',
-					values: [{ key: 'CNV_loss', dt: mclass['CNV_loss'].dt, label: mclass['CNV_loss'].label }]
+					values: [{ key: 'CNV_loss', label: mclass['CNV_loss'].label }]
 				},
 				{
+					type: 'values',
 					name: 'LOH',
-					values: [{ key: 'CNV_loh', dt: mclass['CNV_loh'].dt, label: mclass['CNV_loh'].label }]
+					values: [{ key: 'CNV_loh', label: mclass['CNV_loh'].label }]
 				},
 				{
+					type: 'values',
 					name: 'Wildtype',
 					values: [{ key: 'WT', label: 'Wildtype' }]
 				},
 				{
+					type: 'values',
 					name: 'Not tested',
 					values: [{ key: 'Blank', label: 'Not tested' }],
 					uncomputable: true
@@ -1241,14 +1257,17 @@ export const geneVariantTermGroupsetting = {
 			name: 'Fusion vs. Wildtype',
 			groups: [
 				{
+					type: 'values',
 					name: 'Fusion transcript',
-					values: [{ key: 'Fuserna', dt: mclass['Fuserna'].dt, label: mclass['Fuserna'].label }]
+					values: [{ key: 'Fuserna', label: mclass['Fuserna'].label }]
 				},
 				{
+					type: 'values',
 					name: 'Wildtype',
 					values: [{ key: 'WT', label: 'Wildtype' }]
 				},
 				{
+					type: 'values',
 					name: 'Not tested',
 					values: [{ key: 'Blank', label: 'Not tested' }],
 					uncomputable: true

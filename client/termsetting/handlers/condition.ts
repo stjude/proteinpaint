@@ -3,7 +3,6 @@ import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
 import { sayerror } from '../../dom/sayerror.ts'
 import { PillData, ConditionTW, ConditionQ, VocabApi } from '#shared/types/index'
-//import { GroupSettingMethods } from './groupsetting'
 import { throwMsgWithFilePathAndFnName } from '../../dom/sayerror'
 import { TermValues } from '#shared/types'
 
@@ -56,9 +55,6 @@ export function getHandler(self) {
 function getPillStatus(self) {
 	const text: string | undefined = self.q?.name || self.q?.reuseId
 	if (text) return { text }
-	// if (self.q.groupsetting?.inuse) {
-	// 	validateGroupsetting(self)
-	// }
 	if (self.q.mode == 'discrete') {
 		if (self.q.breaks?.length) {
 			return { text: self.q.breaks.length + 1 + ' groups' }
@@ -84,28 +80,6 @@ function getPillStatus(self) {
 	}
 	return {}
 }
-
-// function validateGroupsetting(self) {
-// 	if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
-// 	const text = self.q.name || self.q.reuseId
-// if (text) return { text }
-// if (self.q.groupsetting.predefined_groupset_idx && Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-// 	if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
-// 	if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
-// 	const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-// 	if (!i)
-// 		return {
-// 			text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
-// 			bgcolor: 'red'
-// 		}
-// 	return { text: i.name }
-// }
-// if (self.q.groupsetting.customset) {
-// 	const n = self.q.groupsetting.customset.groups.length
-// 	return { text: 'Divided into ' + n + ' groups' }
-// }
-// return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
-// }
 
 async function showMenu_discrete(self, div: any) {
 	// div for selecting type of grade
@@ -448,7 +422,7 @@ export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ
 	}
 
 	// assign default if missing
-	if (!tw.q.mode) tw.q.mode = 'discrete'
+	if (!Object.keys(tw.q).includes('mode')) tw.q.mode = 'discrete'
 
 	// must set up bar/value flags before quiting for inuse:false
 	if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {

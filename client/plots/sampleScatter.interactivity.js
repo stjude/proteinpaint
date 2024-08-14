@@ -200,7 +200,7 @@ export function setInteractivity(self) {
 					let fontColor = 'black'
 					const whiteColor = rgb('white').toString()
 
-					if (tw?.term.type == 'geneVariant' && !tw.q.groupsetting.inuse) {
+					if (tw?.term.type == 'geneVariant' && tw.q.type == 'values') {
 						for (const id in mclass) {
 							const class_info = mclass[id]
 							if (node.value.includes(class_info.label)) {
@@ -293,7 +293,7 @@ export function setInteractivity(self) {
 		function getCategoryValue(category, d, tw) {
 			if (category == '') return ''
 			let value = d[category]
-			if (tw?.term.type == 'geneVariant' && !tw.q.groupsetting.inuse) {
+			if (tw?.term.type == 'geneVariant' && tw.q.type == 'values') {
 				const mutation = value.split(', ')[0]
 				for (const id in mclass) {
 					const class_info = mclass[id]
@@ -414,7 +414,7 @@ export function setInteractivity(self) {
 						legendG,
 						tw,
 						mapKey,
-						tw.term.type == 'geneVariant' && !tw.q.groupsetting.inuse ? !mapKey.startsWith(key) : mapKey != key
+						tw.term.type == 'geneVariant' && tw.q.type == 'values' ? !mapKey.startsWith(key) : mapKey != key
 					)
 
 				menu.hide()
@@ -473,7 +473,7 @@ export function setInteractivity(self) {
 		}
 		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
 		const value =
-			!(tw.term.type == 'geneVariant' && !tw.q.groupsetting.inuse) && tw.term.values[key]
+			!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key]
 				? tw.term.values[key]
 				: { key: key, label: key }
 		const items = legendG.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
@@ -485,7 +485,7 @@ export function setInteractivity(self) {
 
 	self.changeColor = async function (key, color) {
 		const tw = self.config.colorTW
-		if (!(tw.term.type == 'geneVariant' && !tw.q.groupsetting.inuse) && tw.term.values[key])
+		if (!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key])
 			tw.term.values[key].color = color
 		else {
 			if (!tw.term.values) tw.term.values = {}

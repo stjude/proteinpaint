@@ -117,8 +117,8 @@ export async function barchart_data(q, ds, tdb) {
 		const t1 = map.get(1)
 		const t2 = map.get(2)
 		if (
-			(t1?.term?.type == 'geneVariant' && !t1.q.groupsetting.inuse) ||
-			(t2?.term?.type == 'geneVariant' && !t2.q.groupsetting.inuse)
+			(t1?.term?.type == 'geneVariant' && t1.q.type == 'values') ||
+			(t2?.term?.type == 'geneVariant' && t2.q.type == 'values')
 		) {
 			// term1 or term2 is a geneVariant term that is not using groupsetting
 			// data will need to be handled using specialized logic

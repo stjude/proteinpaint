@@ -1,12 +1,12 @@
 import { TermWrapper } from './tw.ts'
-import { BaseQ, BaseTerm } from './term.ts'
+import { BaseQ, BaseTerm, GroupSettingQ, TermGroupSetting } from './term.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /*
 For term type 'snp'
 */
 
-export type SnpQ = BaseQ
+export type SnpQ = BaseQ & GroupSettingQ
 
 export type SnpTW = TermWrapper & {
 	q: SnpQ
@@ -19,6 +19,7 @@ export type SnpTerm = BaseTerm & {
 	stop: number
 	ref: string
 	alt: string[]
+	groupsetting: TermGroupSetting
 }
 
 export type SnpTermSettingInstance = TermSettingInstance & {

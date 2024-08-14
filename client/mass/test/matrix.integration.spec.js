@@ -8,7 +8,8 @@ import {
 	truncatingMutations,
 	synonymousMutations,
 	mutationClasses,
-	CNVClasses
+	CNVClasses,
+	geneVariantTermGroupsetting
 } from '#shared/common'
 
 /*************************
@@ -1296,8 +1297,28 @@ tape('avoid race condition', function (test) {
 								lst: [
 									// $id is added manually since fillTermWrapper() is not called here and
 									// cannot be assumed to be called within store.plot_edit()
-									{ $id: 0, term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
-									{ $id: 1, term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
+									{
+										$id: 0,
+										term: {
+											gene: 'KRAS',
+											name: 'KRAS',
+											type: 'geneVariant',
+											isleaf: true,
+											groupsetting: geneVariantTermGroupsetting
+										},
+										q: { type: 'values' }
+									},
+									{
+										$id: 1,
+										term: {
+											gene: 'AKT1',
+											name: 'AKT1',
+											type: 'geneVariant',
+											isleaf: true,
+											groupsetting: geneVariantTermGroupsetting
+										},
+										q: { type: 'values' }
+									}
 								]
 							}
 						]
@@ -1314,7 +1335,19 @@ tape('avoid race condition', function (test) {
 									name: '',
 									// $id is added manually since fillTermWrapper() is not called here and
 									// cannot be assumed to be called within store.plot_edit()
-									lst: [{ $id: 3, term: { gene: 'BCR', name: 'BCR', type: 'geneVariant', isleaf: true } }]
+									lst: [
+										{
+											$id: 3,
+											term: {
+												gene: 'BCR',
+												name: 'BCR',
+												type: 'geneVariant',
+												isleaf: true,
+												groupsetting: geneVariantTermGroupsetting
+											},
+											q: { type: 'values' }
+										}
+									]
 								}
 							]
 						}
@@ -1724,7 +1757,7 @@ tape(
 						termgroups: [
 							{
 								name: '',
-								lst: [{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } }]
+								lst: [getGenes()[0]]
 							}
 						]
 					}

@@ -13,5 +13,5 @@
   },
   "types": ["node"],
   "include": ["./**/*.ts"],
-  "exclude": ["./**/*.type.spec.ts", "./package/*"]
+  "exclude": ["./**/*.type.spec.ts", "./package/*", "shared/checkers*/**/*"]
 }

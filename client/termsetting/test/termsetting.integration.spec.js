@@ -918,7 +918,7 @@ tape('Conditional term', async test => {
 					'Sinus tachycardia': { label: 'Sinus tachycardia' }
 				},
 				groupsetting: {
-					useIndex: -1,
+					disabled: false,
 					lst: [
 						{
 							name: 'Any condition vs normal',
@@ -946,8 +946,7 @@ tape('Conditional term', async test => {
 			q: {
 				mode: 'discrete',
 				breaks: [],
-				value_by_max_grade: true,
-				groupsetting: { inuse: false }
+				value_by_max_grade: true
 			}
 		}
 	})
@@ -1091,7 +1090,7 @@ tape('Custom vocabulary', async test => {
 	pilldiv.click()
 	const tipd = opts.pill.Inner.dom.tip.d
 	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
-	test.equal(tipd.selectAll('.sja_menuoption').size(), 3, 'the menu should show 3 buttons for edit/replace/remove')
+	test.equal(tipd.selectAll('.sja_menuoption').size(), 2, 'the menu should show 2 buttons for replace/remove')
 
 	const replaceBtn = tipd
 		.selectAll('.sja_menuoption')

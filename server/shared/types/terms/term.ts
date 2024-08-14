@@ -1,116 +1,24 @@
-import { Filter } from '../filter.ts'
-import { CategoricalQ, CategoricalTerm } from './categorical.ts'
-import { ConditionQ, ConditionTerm } from './condition.ts'
-import { NumericQ, NumericTerm } from './numeric.ts'
-import { GeneVariantQ, GeneVariantTerm } from './geneVariant.ts'
-import { SampleLstQ, SampleLstTerm } from './samplelst.ts'
-import { SnpsQ, SnpsTerm } from './snps.ts'
-import { Q } from './tw.ts'
+import { Filter } from '../filter.js'
+import { CategoricalTerm } from './categorical.js'
+import { ConditionTerm } from './condition.js'
+import { NumericTerm } from './numeric.js'
+import { GeneVariantTerm } from './geneVariant.js'
+import { SampleLstTerm } from './samplelst.js'
+import { SnpsTerm } from './snps.js'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
  * @params $id    client-computed deterministic unique identifier, to distinguish tw with the same term but different q, that are in the same payload
  */
-export type BaseTW = {
-	id?: string
-	$id?: string
-	isAtomic?: true
-}
 
-export type BaseValue = {
-	key?: string
-	uncomputable?: boolean
-	label?: string | number
-	order?: string
-	color?: string
-	group?: number
-	filter?: Filter
-}
-
-export type TermValues = {
-	[key: string | number]: BaseValue
-}
-
-// THIS IS WRONG!!!!
-export type ValuesGroup = {
-	type: 'values'
-	values: { key: number | string; label: string }[]
-	// color?: string
-}
-
-export type FilterGroup = {
-	type: 'filter'
-	filter: Filter
-}
-
-export type GroupEntry = (ValuesGroup | FilterGroup) & {
-	name: string
-}
-
-export type BaseGroupSet = {
-	groups: GroupEntry[]
-}
-
-export type GroupSetEntry = BaseGroupSet & {
-	name?: string
-	is_grade?: boolean
-	is_subcondition?: boolean
-}
-
-export type CustomQGroupSetting = {
-	/** When “predefined_groupset_idx” is undefined, will use this set of groups.
-	This is a custom set of groups either copied from predefined set, or created with UI.
-	Custom set definition is the same as a predefined set. */
-	customset: BaseGroupSet
-	/** if false, not applied */
-	inuse?: boolean
-}
-
-export type PredefinedQGroupSetting = {
-	/** If .inuse true, apply and will require predefined_groupset_idx */
-	/** Value is array index of term.groupsetting.lst[] */
-	predefined_groupset_idx: number
-	inuse: true
-}
-
-export type QGroupSetting = PredefinedQGroupSetting | CustomQGroupSetting
-
-export type TermGroupSetting = {
-	/** if there are only two values, means groupsetting definition is not applicable for the term */
-	disabled?: boolean
-	lst: GroupSetEntry[]
-}
-
-export type BaseTerm = {
-	id: string
-	name: string
-	type: string
-	child_types?: string[]
-	hashtmldetail?: boolean
-	included_types?: string[]
-	isleaf?: boolean
-	values?: TermValues
-}
-export type Term = BaseTerm &
-	(NumericTerm | CategoricalTerm | ConditionTerm | GeneVariantTerm | SampleLstTerm | SnpsTerm)
+/*** types supporting termwrapper q ***/
 
 type HiddenValues = {
 	[index: string]: number
 }
 
-export type RangeEntry = {
-	//Used binconfig.lst[] and in tvs.ranges[]
-	start?: number
-	startunbounded?: boolean
-	startinclusive?: boolean
-	stop?: number
-	stopunbounded?: boolean
-	stopinclusive?: boolean
-	label?: string //for binconfig.lst[]
-	value?: string //for tvs.ranges[]
-	range?: any //No idea what this is
-}
-
+// TODO: replace BaseQ with MinBaseQ (see below)
+// keeping BaseQ for now to not break old code
 export type BaseQ = {
 	/**Automatically set by fillTermWrapper()
 	Applies to barchart, survival plot, and cuminc plot.
@@ -148,7 +56,116 @@ export type BaseQ = {
 		| 'custom-groupset'
 		/** Applies to samplelst terms */
 		| 'custom-samplelst'
-	groupsetting?: QGroupSetting
+}
+
+// MinBaseQ is BaseQ without .mode and .type
+// MinBaseQ should eventually replace BaseQ because .mode and .type
+// should be specified in a term-type-specific manner
+export type MinBaseQ = {
+	/**Automatically set by fillTermWrapper()
+	Applies to barchart, survival plot, and cuminc plot.
+	Contains categories of a term to be hidden in its chart. This should only apply to client-side rendering, and should not be part of “dataName” when requesting data from server. Server will always provide a summary for all categories. It’s up to the client to show/hide categories.
+	This allows the key visibility to be stored in state, while toggling visibility will not trigger data re-request.
+	Currently termsetting menu does not manage this attribute. It’s managed by barchart legend.
+	*/
+	hiddenValues?: HiddenValues
+	/**indicates this object should not be extended by a copy-merge tool */
+	isAtomic?: boolean
+	name?: string
+	reuseId?: string
+}
+
+export type ValuesQ = {
+	type: 'values'
+}
+
+export type PredefinedGroupSettingQ = {
+	type: 'predefined-groupset'
+	predefined_groupset_idx: number
+}
+
+export type CustomGroupSettingQ = {
+	type: 'custom-groupset'
+	customset: BaseGroupSet
+}
+
+export type GroupSettingQ = ValuesQ | PredefinedGroupSettingQ | CustomGroupSettingQ
+
+/*** types supporting termwrapper term ***/
+
+export type BaseValue = {
+	key?: string
+	uncomputable?: boolean
+	label?: string | number
+	order?: string
+	color?: string
+	group?: number
+	filter?: Filter
+}
+
+export type TermValues = {
+	[key: string | number]: BaseValue
+}
+
+export type BaseTerm = {
+	id: string
+	name: string
+	type: string
+	child_types?: string[]
+	hashtmldetail?: boolean
+	included_types?: string[]
+	isleaf?: boolean
+	values?: TermValues
+}
+
+export type Term = BaseTerm &
+	(NumericTerm | CategoricalTerm | ConditionTerm | GeneVariantTerm | SampleLstTerm | SnpsTerm)
+
+export type ValuesGroup = {
+	name: string
+	type: 'values' | string // can remove boolean fallback once problematic js files are converted to .ts and can declare `type: 'values' as const`
+	values: { key: number | string; label: string }[]
+	uncomputable?: boolean // if true, do not include this group in computations
+}
+
+// TODO: determine if this is used
+export type FilterGroup = {
+	name: string
+	type: 'filter'
+	filter: Filter
+}
+
+export type GroupEntry = ValuesGroup | FilterGroup
+
+export type BaseGroupSet = {
+	groups: GroupEntry[]
+}
+
+type Groupset = {
+	name: string
+	is_grade?: boolean
+	is_subcondition?: boolean
+} & BaseGroupSet
+
+export type EnabledTermGroupSetting = {
+	disabled?: false | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: false as const`
+	lst: Groupset[]
+}
+
+export type TermGroupSetting =
+	| EnabledTermGroupSetting
+	| {
+			/** disabled=false when groupsetting is not applicable for term (e.g., when term has only two categories) */
+			disabled: true | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: true as const`
+			lst?: []
+	  }
+
+/*** types supporting termwrapper ***/
+
+export type BaseTW = {
+	id?: string
+	$id?: string
+	isAtomic?: true
 }
 
 /*** types supporting Term types ***/
@@ -159,26 +176,17 @@ export type Subconditions = {
 	}
 }
 
-// TODO: remove, not needed?
-//type ValueConversion = {
-/** name of unit for the original value */
-//fromUnit: string
-/** name of converted unit.
-	when converting day to year, resulting value will be `X year Y day`, that the fromUnit is used to indicate residue days from the last year; it's also printed in termsetting ui
-	this logic does not hold if converting from year to day, should detect if scaleFactor is >1 or <1 */
-//toUnit: string
-//}
+/*** other types ***/
 
-export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
-	? NumericQ
-	: T extends 'categorical'
-	? CategoricalQ
-	: T extends 'condition'
-	? ConditionQ
-	: T extends 'geneVariant'
-	? GeneVariantQ
-	: T extends 'samplelst'
-	? SampleLstQ
-	: T extends 'snplst' | 'snplocus'
-	? SnpsQ
-	: Q
+export type RangeEntry = {
+	//Used binconfig.lst[] and in tvs.ranges[]
+	start?: number
+	startunbounded?: boolean
+	startinclusive?: boolean
+	stop?: number
+	stopunbounded?: boolean
+	stopinclusive?: boolean
+	label?: string //for binconfig.lst[]
+	value?: string //for tvs.ranges[]
+	range?: any //No idea what this is
+}

@@ -135,7 +135,8 @@ function diaggrp(overrides = {}) {
 				term: {
 					type: 'categorical',
 					id: 'diaggrp',
-					name: 'Diagnosis Group'
+					name: 'Diagnosis Group',
+					groupsetting: { disabled: true }
 				},
 				values: [
 					{

@@ -556,26 +556,23 @@ tape('Render color groups', function (test) {
 					colorTW: {
 						id: 'genetic_race',
 						q: {
-							groupsetting: {
-								inuse: true,
-								customset: {
-									groups: [
-										{
-											name: 'non-Asian Ancestry',
-											type: 'values',
-											values: [
-												{ key: 'European Ancestry', label: 'European Ancestry' },
-												{ key: 'African Ancestry', label: 'African Ancestry' },
-												{ key: 'Multi-Ancestry-Admixed', label: 'Multi-Ancestry-Admixed' }
-											]
-										},
-										{
-											name: 'Asian Ancestry',
-											type: 'values',
-											values: [{ key: 'Asian Ancestry', label: 'Asian Ancestry' }]
-										}
-									]
-								}
+							customset: {
+								groups: [
+									{
+										name: 'non-Asian Ancestry',
+										type: 'values',
+										values: [
+											{ key: 'European Ancestry', label: 'European Ancestry' },
+											{ key: 'African Ancestry', label: 'African Ancestry' },
+											{ key: 'Multi-Ancestry-Admixed', label: 'Multi-Ancestry-Admixed' }
+										]
+									},
+									{
+										name: 'Asian Ancestry',
+										type: 'values',
+										values: [{ key: 'Asian Ancestry', label: 'Asian Ancestry' }]
+									}
+								]
 							}
 						}
 					},
@@ -637,7 +634,7 @@ tape('Render color groups', function (test) {
 	}
 
 	async function changeColorGroups(scatter) {
-		scatter.Inner.config.colorTW.q.groupsetting.customset = {
+		scatter.Inner.config.colorTW.q.customset = {
 			groups: [
 				{
 					name: 'European Ancestryy',

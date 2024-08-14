@@ -675,7 +675,7 @@ function setRenderers(self) {
 				...self.noData.map(chartId => {
 					let chartTitle = chartId
 					const t0 = self.config.term0
-					if (t0.q && t0.q.groupsetting && t0.q.groupsetting.inuse) return { chartId, chartTitle }
+					if (t0.q?.type == 'predefined-groupset' || t0.q?.type == 'custom-groupset') return { chartId, chartTitle }
 					if (t0.term.values) {
 						const value = t0.term.values[chartId]
 						if (value && value.label) chartTitle = value.label
@@ -1344,9 +1344,7 @@ function getPj(self) {
 				}
 				const t0 = self.config.term0
 				if (!t0 || !t0.term.values) return row.chartId
-				if (t0.q && t0.q.groupsetting && t0.q.groupsetting.inuse) {
-					return row.chartId
-				}
+				if (t0.q?.type == 'predefined-groupset' || t0.q?.type == 'custom-groupset') return row.chartId
 				const value = self.config.term0.term.values[row.chartId]
 				return value && value.label ? value.label : row.chartId
 			},
@@ -1354,7 +1352,7 @@ function getPj(self) {
 				const t2 = self.config?.term2
 				if (!t2) return context.self.seriesId
 				const seriesId = context.self.seriesId
-				if (t2 && t2.q && t2.q.groupsetting && t2.q.groupsetting.inuse) return seriesId
+				if (t2?.q?.type == 'predefined-groupset' || t2?.q?.type == 'custom-groupset') return seriesId
 				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label
 				return seriesId
 			},

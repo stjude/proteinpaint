@@ -5,18 +5,15 @@ const raceGroupsetting = {
 	id: 'genetic_race',
 	q: {
 		type: 'custom-groupset',
-		groupsetting: {
-			inuse: true,
-			customset: {
-				groups: [
-					{
-						name: 'group 123',
-						type: 'values',
-						values: [{ key: 'European Ancestry' }, { key: 'Multi-Ancestry-Admixed' }]
-					},
-					{ name: 'group 456', type: 'values', values: [{ key: 'African Ancestry' }, { key: 'Asian Ancestry' }] }
-				]
-			}
+		customset: {
+			groups: [
+				{
+					name: 'group 123',
+					type: 'values',
+					values: [{ key: 'European Ancestry' }, { key: 'Multi-Ancestry-Admixed' }]
+				},
+				{ name: 'group 456', type: 'values', values: [{ key: 'African Ancestry' }, { key: 'Asian Ancestry' }] }
+			]
 		}
 	}
 }
@@ -24,32 +21,29 @@ const diaggrpGroupsetting = {
 	id: 'diaggrp',
 	q: {
 		type: 'custom-groupset',
-		groupsetting: {
-			inuse: true,
-			customset: {
-				groups: [
-					{
-						name: 'Leukemia',
-						type: 'values',
-						values: [
-							{ key: 'Acute lymphoblastic leukemia' },
-							{ key: 'Chronic myeloid leukemia' },
-							{ key: 'Other leukemia' },
-							{ key: 'Acute myeloid leukemia' }
-						]
-					},
-					{
-						name: 'Lymphoma',
-						type: 'values',
-						values: [{ key: 'Hodgkin lymphoma' }, { key: 'Non-Hodgkin lymphoma' }]
-					},
-					{
-						name: 'Solid',
-						type: 'values',
-						values: [{ key: 'Central nervous system (CNS)' }, { key: 'Neuroblastoma' }]
-					}
-				]
-			}
+		customset: {
+			groups: [
+				{
+					name: 'Leukemia',
+					type: 'values',
+					values: [
+						{ key: 'Acute lymphoblastic leukemia' },
+						{ key: 'Chronic myeloid leukemia' },
+						{ key: 'Other leukemia' },
+						{ key: 'Acute myeloid leukemia' }
+					]
+				},
+				{
+					name: 'Lymphoma',
+					type: 'values',
+					values: [{ key: 'Hodgkin lymphoma' }, { key: 'Non-Hodgkin lymphoma' }]
+				},
+				{
+					name: 'Solid',
+					type: 'values',
+					values: [{ key: 'Central nervous system (CNS)' }, { key: 'Neuroblastoma' }]
+				}
+			]
 		}
 	}
 }
@@ -578,7 +572,7 @@ const testList = [
 
 ////////////////////////// tests start
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- mass/regression -***-')
 	test.end()
 })

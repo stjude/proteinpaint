@@ -99,7 +99,7 @@ async function trigger_getcategories(
 	if (data.error) throw data.error
 
 	const lst: any[] = []
-	if (q.tw.term.type == 'geneVariant' && !q.tw.q.groupsetting?.inuse) {
+	if (q.tw.term.type == 'geneVariant' && q.tw.q.type != 'predefined-groupset' && q.tw.q.type != 'custom-groupset') {
 		// specialized data processing for geneVariant term when
 		// groupsetting is not in use
 		const samples = data.samples as { [sampleId: string]: any }

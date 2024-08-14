@@ -37,7 +37,8 @@ exports.termjson = {
 			Rhabdomyosarcoma: { label: 'Rhabdomyosarcoma' },
 			'Soft tissue sarcoma': { label: 'Soft tissue sarcoma' },
 			'Wilms tumor': { label: 'Wilms tumor' }
-		}
+		},
+		groupsetting: { disabled: false }
 	},
 	agedx: {
 		id: 'agedx',
@@ -155,7 +156,8 @@ exports.termjson = {
 	sex: {
 		id: 'sex',
 		name: 'Sex',
-		type: 'categorical'
+		type: 'categorical',
+		groupsetting: { disabled: true }
 	},
 	idarubicin_5: {
 		id: 'idarubicin_5',

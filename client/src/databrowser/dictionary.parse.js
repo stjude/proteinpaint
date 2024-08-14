@@ -95,7 +95,6 @@ export function parseDictionary(input) {
 
 				if (type == 'categorical') {
 					terms[termId].values = {}
-					terms[termId].groupsetting = { inuse: false }
 				}
 				const values = cols[valuesIndex].trim().replace(/"/g, '').split(';')
 
@@ -109,6 +108,9 @@ export function parseDictionary(input) {
 					if (!terms[termId].values) terms[termId].values = {}
 					terms[termId].values[key] = { label: label }
 				}
+
+				const numValues = Object.keys(terms[termId].values).length
+				terms[termId].groupsetting = { disabled: numValues < 3 }
 
 				validateNumericTermCategories(terms[termId])
 			} catch (e) {
@@ -254,7 +256,8 @@ function parseCategories(type, catJSON, addAttrJSON, lineNum, varName) {
 	validateNumericTermCategories(term)
 
 	if (term.type == 'categorical') {
-		term.groupsetting = { inuse: false }
+		const numValues = Object.keys(term.values).length
+		term.groupsetting = { disabled: numValues < 3 }
 	}
 
 	return term

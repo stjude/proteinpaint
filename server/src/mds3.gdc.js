@@ -1210,22 +1210,20 @@ function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 }
 
 function mayApplyGroupsetting(v, tw) {
-	if (tw.q?.type == 'custom-groupset' && Array.isArray(tw.q?.groupsetting?.customset?.groups)) {
-		for (const group of tw.q.groupsetting.customset.groups) {
-			if (!Array.isArray(group.values)) throw 'group.values[] not array from tw.q.groupsetting.customset.groups'
+	if (tw.q?.type == 'custom-groupset') {
+		if (!Array.isArray(tw.q?.customset?.groups)) throw 'q.customset.groups is not array'
+		for (const group of tw.q.customset.groups) {
+			if (!Array.isArray(group.values)) throw 'group.values[] not array from tw.q.customset.groups'
 			if (group.values.findIndex(i => i.key == v) != -1) {
 				// value "v" is in this group
 				return group.name
 			}
 		}
-		// not matching with a group
 	}
-	if (
-		tw.q?.type == 'predefined-groupset' &&
-		Number.isInteger(tw.q.groupsetting?.predefined_groupset_idx) &&
-		tw.term.groupsetting?.lst[tw.q.groupsetting.predefined_groupset_idx]
-	) {
-		for (const group of tw.term.groupsetting.lst[tw.q.groupsetting.predefined_groupset_idx]) {
+	if (tw.q?.type == 'predefined-groupset') {
+		if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'q.predefined_groupset_idx is not an integer'
+		if (!tw.term.groupsetting?.lst?.length) throw 'term.groupsetting.lst is empty'
+		for (const group of tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]) {
 			if (!Array.isArray(group.values)) throw 'group.values[] not array from tw.term.groupsetting.lst[]'
 			if (group.values.findIndex(i => i.key == v) != -1) {
 				// value "v" is in this group
