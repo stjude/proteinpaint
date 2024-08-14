@@ -16,7 +16,7 @@ type GenesMenuArgs = {
 	params: { param: GeneArgumentEntry; input?: Elem }[]
 	/** Called when 'Calculate genes' is clicked */
 	callback: (f?: number) => void
-	/** Adds nested options for parameters back to opts
+	/** Adds nested .options: [] for parameters back to opts
 	 * after rendering to avoid duplicate elements
 	 */
 	addOptionalParams: ({ param, input }) => void
@@ -27,7 +27,7 @@ export class GenesMenu {
 	params: { param: GeneArgumentEntry; input?: Elem }[]
 	callback: (f?: number) => void
 	addOptionalParams: ({ param, input }) => void
-	/** Collects nested param options. */
+	/** Collects nested param .options:[]. */
 	readonly params2Add: { param: GeneArgumentEntry; input: Elem }[] = []
 
 	constructor(opts: GenesMenuArgs) {
@@ -65,15 +65,18 @@ export class GenesMenu {
 		if (param.type == 'boolean') {
 			if (param?.options?.length) {
 				/* Use for checkboxes that expand to show additional options when checked. */
-				const holder = div.append('div').style('margin', '10px 0px')
-				const contentDiv = div.append('div').style('padding-left', '20px')
+				const holder = div
+					.append('div')
+					.style('margin', '10px 0px')
+					.on('mousedown', (event: Event) => {
+						event.stopPropagation()
+					})
 				input = holder.append('input').attr('type', 'checkbox').attr('id', param.id)
 				this.addLabels(holder, 'label', param)
+
+				const contentDiv = div.append('div').style('padding-left', '20px')
 				for (const option of param.options) {
 					const optionInput = this.addParameter(option, contentDiv.append('div'))
-					/** To avoid rendering twice, add to a separate array
-					 * then add back to parent params array.
-					 */
 					this.params2Add.push({ param: option, input: optionInput })
 				}
 				if (param.value) {
@@ -82,7 +85,6 @@ export class GenesMenu {
 				} else contentDiv.style('display', 'none')
 
 				input.on('change', (event: MouseEvent) => {
-					event.stopPropagation()
 					contentDiv.style('display', input.property('checked') ? 'block' : 'none')
 				})
 			} else {
