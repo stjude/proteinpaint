@@ -102,10 +102,10 @@ function nativeValidateQuery(ds: any) {
 
 function addTopVEarg(q: any) {
 	/** These are hardcoded, universal arguments for top variably expressed genes query using any native datasets
-	more importantly, this query for all native ds are carried out by the same rust code
-	thus they are not repeated in individual ds js files, but are dynamically assigned here on server launch
-	ds can optionally provide overrides, e.g. to account for different exp value metrics
-	 */
+    more importantly, this query for all native ds are carried out by the same rust code
+    thus they are not repeated in individual ds js files, but are dynamically assigned here on server launch
+    ds can optionally provide overrides, e.g. to account for different exp value metrics
+     */
 	const arglst = [
 		{ id: 'maxGenes', label: 'Gene Count', type: 'number', value: 100 },
 		{
@@ -129,7 +129,7 @@ function addTopVEarg(q: any) {
 			]
 		},
 		{
-			id: 'filter_type',
+			id: 'rank_type',
 			label: 'Rank by:',
 			type: 'radio',
 			options: [
@@ -171,7 +171,7 @@ async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, 
 		samples: samples.join(','),
 		filter_extreme_values: q.filter_extreme_values,
 		num_genes: q.maxGenes,
-		param: q.filter_type?.type
+		rank_type: q.rank_type?.type
 	}
 
 	if (q.filter_extreme_values) {

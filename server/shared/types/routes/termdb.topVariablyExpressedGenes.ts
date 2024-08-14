@@ -29,7 +29,7 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	/** min_total_count of fpkm when filter_extreme_values (in native implementation) = true */
 	min_total_count?: number
 	/** Filter type: variance/inter-quartile region (in native implementation) */
-	filter_type?: {
+	rank_type?: {
 		type: 'var' | 'iqr'
 	}
 	filter?: Filter
