@@ -6,9 +6,9 @@ Various JSON parameters:
    input_file: Path to input file
    filter_extreme_values: boolean (true/false). When true, this filter according to logic filterbyExpr in edgeR. This basically removes genes that have very low gene counts.
    num_genes: The top num_genes (for e.g 10) that need to be reported in the output.
-   param: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
+   rank_type: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
 
- Example syntax: cd .. && cargo build --release && json='{"samples":"sample1,sample2,sample3","min_count":30,"min_total_count":20,"input_file":"/path/to/input/file","filter_extreme_values":true,"num_genes":100, "param":"var"}' && time echo $json | target/release/gene_variance
+ Example syntax: cd .. && cargo build --release && json='{"samples":"sample1,sample2,sample3","min_count":30,"min_total_count":20,"input_file":"/path/to/input/file","filter_extreme_values":true,"num_genes":100, "rank_type":"var"}' && time echo $json | target/release/gene_variance
 */
 #![allow(non_snake_case)]
 use bgzip::BGZFReader;
@@ -103,7 +103,7 @@ fn input_data(
 #[derive(Debug, Serialize, Deserialize)]
 struct GeneInfo {
     gene_symbol: String,
-    param: f64,
+    rank_type: f64,
 }
 
 fn calculate_variance(
@@ -111,7 +111,7 @@ fn calculate_variance(
     gene_symbols: Vec<String>,
     mut min_sample_size: f64,
     filter_extreme_values: bool,
-    param: String,
+    rank_type: String,
     min_count_option: Option<f64>,
     min_total_count_option: Option<f64>,
 ) -> Vec<GeneInfo> {
@@ -179,7 +179,7 @@ fn calculate_variance(
         for col in 0..input_matrix.ncols() {
             gene_counts.push(input_matrix[(row, col)]);
         }
-        if param == "var" {
+        if rank_type == "var" {
             // Calculating variance
             if gene_counts.clone().variance().is_nan() == true {
             } else if filter_extreme_values == true
@@ -187,12 +187,12 @@ fn calculate_variance(
                 && keep_total_bool == true
             {
                 gene_infos.push(GeneInfo {
-                    param: gene_counts.variance(),
+                    rank_type: gene_counts.variance(),
                     gene_symbol: gene_symbols[row].clone(),
                 });
             } else if filter_extreme_values == false {
                 gene_infos.push(GeneInfo {
-                    param: gene_counts.variance(),
+                    rank_type: gene_counts.variance(),
                     gene_symbol: gene_symbols[row].clone(),
                 });
             }
@@ -205,20 +205,22 @@ fn calculate_variance(
                 && keep_total_bool == true
             {
                 gene_infos.push(GeneInfo {
-                    param: gene_counts_data.interquartile_range(),
+                    rank_type: gene_counts_data.interquartile_range(),
                     gene_symbol: gene_symbols[row].clone(),
                 });
             } else if filter_extreme_values == false {
                 gene_infos.push(GeneInfo {
-                    param: gene_counts_data.interquartile_range(),
+                    rank_type: gene_counts_data.interquartile_range(),
                     gene_symbol: gene_symbols[row].clone(),
                 });
             }
         }
     }
-    gene_infos
-        .as_mut_slice()
-        .sort_by(|a, b| (a.param).partial_cmp(&b.param).unwrap_or(Ordering::Equal));
+    gene_infos.as_mut_slice().sort_by(|a, b| {
+        (a.rank_type)
+            .partial_cmp(&b.rank_type)
+            .unwrap_or(Ordering::Equal)
+    });
     gene_infos
 }
 
@@ -276,14 +278,14 @@ fn main() {
                         }
                     }
 
-                    let param = &json_string["param"] // Value provide must be either "var" or "iqr"
+                    let rank_type = &json_string["rank_type"] // Value provide must be either "var" or "iqr"
                         .to_owned()
                         .as_str()
                         .unwrap()
                         .to_string();
-                    if param != "var" && param != "iqr" {
+                    if rank_type != "var" && rank_type != "iqr" {
                         // Check if any unknown method has been provided
-                        panic!("Unknown method:{}", param);
+                        panic!("Unknown method:{}", rank_type);
                     }
                     let filter_extreme_values_result = &json_string["filter_extreme_values"];
 
@@ -329,7 +331,7 @@ fn main() {
                         gene_symbols,
                         samples_list.len() as f64,
                         filter_extreme_values,
-                        param.to_string(),
+                        rank_type.to_string(),
                         min_count,
                         min_total_count,
                     );
