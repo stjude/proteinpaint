@@ -11,6 +11,7 @@ Fixes:
 - fix the error that when hiercluster is using divideBy, the tw will not show in Cases menu for gdc"
 - from matrix term group edit menu, term group name submit button will close the term group edit menu.
 - fix the error: from matrix term group edit menu, delete group name and submit still show the old name.
+- Assign alive/dead labels to GDC survival exit codes
 
 
 ## 2.72.0
