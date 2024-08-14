@@ -4,8 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- From custom variable -> gene expression, submit one gene will launch violin plot overlayed by the custom variable, submit two genes will launch scatter plot colored by the custom variable.
+
 Fixes:
 - fix the error that when hiercluster is using divideBy, the tw will not show in Cases menu for gdc"
+- from matrix term group edit menu, term group name submit button will close the term group edit menu.
+- fix the error: from matrix term group edit menu, delete group name and submit still show the old name.
 
 
 ## 2.72.0
