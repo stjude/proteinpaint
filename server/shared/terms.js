@@ -1,6 +1,10 @@
 import { dtgeneexpression, dtmetaboliteintensity, TermTypeGroups } from './common.js'
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
 export { TermTypeGroups } from './common.js'
+
+export const ROOT_SAMPLE_TYPE = 1
+export const DEFAULT_SAMPLE_TYPE = 2
+
 export const NumericModes = {
 	continuous: 'continuous',
 	discrete: 'discrete'

@@ -17,7 +17,6 @@ One CTE is made for each item of filter.lst[], with name "CTEname_<i>"
 A superCTE is made to cap this level, with name "CTEname"
 
 */
-
 export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 	if (!filter) return
 	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
@@ -63,18 +62,18 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		) {
 			throw 'invalid term id in tvs'
 		} else if (item.tvs.term.type == 'categorical') {
-			f = get_categorical(item.tvs, CTEname_i)
+			f = get_categorical(item.tvs, CTEname_i, ds)
 			// .CTEs: []
 			// .values:[]
 			// .CTEname
 		} else if (item.tvs.term.type == 'survival') {
-			f = get_survival(item.tvs, CTEname_i)
+			f = get_survival(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'samplelst') {
-			f = get_samplelst(item.tvs, CTEname_i)
+			f = get_samplelst(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float') {
 			f = get_numerical(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'condition') {
-			f = get_condition(item.tvs, CTEname_i)
+			f = get_condition(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'geneVariant') {
 			f = await get_geneVariant(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'snp') {
@@ -87,7 +86,6 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		CTEs.push(...f.CTEs)
 		values.push(...f.values)
 	}
-
 	const JOINOPER = filter.join == 'and' ? 'INTERSECT' : 'UNION'
 	const superCTE = thislevelCTEnames.map(name => 'SELECT * FROM ' + name).join('\n' + JOINOPER + '\n')
 	if (filter.in) {
@@ -368,7 +366,7 @@ so here need to allow both string and number as range.value
 				FROM anno_${term.type}
 				WHERE term_id = ?
 				${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
-				${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')})` : ''}
+				${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')}) ` : ''}
 			)`
 		],
 		values,
@@ -376,7 +374,7 @@ so here need to allow both string and number as range.value
 	}
 }
 
-function get_condition(tvs, CTEname) {
+function get_condition(tvs, CTEname, ds) {
 	let value_for
 	if (tvs.bar_by_children) value_for = 'child'
 	else if (tvs.bar_by_grade) value_for = 'grade'

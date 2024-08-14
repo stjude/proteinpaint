@@ -3,7 +3,7 @@ import * as utils from './utils.js'
 import Partjson from 'partjson'
 import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { getData } from './termdb.matrix.js'
+import { getData, mixedSampleTypes } from './termdb.matrix.js'
 import { mclass, dt2label } from '#shared/common.js'
 
 const binLabelFormatter = format('.3r')
@@ -108,7 +108,8 @@ export async function barchart_data(q, ds, tdb) {
 		if (term) map.set(i, term)
 	}
 	const terms = [...map.values()]
-	const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, q.ds, q.genome, false)
+	const onlyChildren = mixedSampleTypes(terms, q.ds)
+	const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, q.ds, q.genome, onlyChildren)
 	if (data.error) throw data.error
 
 	const samplesMap = new Map()

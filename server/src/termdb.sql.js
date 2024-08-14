@@ -4,9 +4,8 @@ import * as numericSql from './termdb.sql.numeric.js'
 import * as categoricalSql from './termdb.sql.categorical.js'
 import * as conditionSql from './termdb.sql.condition.js'
 import { sampleLstSql } from './termdb.sql.samplelst.js'
-import * as serverconfig from './serverconfig.js'
 import { boxplot_getvalue } from './utils.js'
-import { listTableColumns } from './termdb.server.init.js'
+import { DEFAULT_SAMPLE_TYPE, isNumericTerm } from '#shared/terms.js'
 /*
 
 ********************** EXPORTED
@@ -109,7 +108,9 @@ return a sample count of sample names passing through the filter
 	const rows = ds.cohort.db.connection.prepare(statement).all(filter.values)
 	const counts = {}
 	for (const row of rows) {
-		const type = ds.sampleId2Type[row.sample] || 'sample'
+		const typeId = ds.sampleId2Type.get(row.sample) || DEFAULT_SAMPLE_TYPE
+		const type = ds.types.get(typeId)
+		console.log(row.sample, typeId, type)
 		if (!(type in counts)) counts[type] = 0
 		counts[type] = counts[type] + 1
 	}
@@ -431,7 +432,7 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	if (term.type == 'categorical') {
 		const groupset = get_active_groupset(term, termq)
 		CTE = await categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, groupset)
-	} else if (term.type == 'integer' || term.type == 'float') {
+	} else if (isNumericTerm(term)) {
 		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
 		// the error is coming from this
 		CTE = await numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)

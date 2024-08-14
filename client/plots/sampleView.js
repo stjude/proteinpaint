@@ -4,7 +4,7 @@ import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import { dofetch3 } from '#common/dofetch'
 import wsiViewer from './wsiviewer/plot.wsi'
-import { isNumericTerm } from '../shared/terms.js'
+import { isNumericTerm, ROOT_SAMPLE_TYPE } from '../shared/terms.js'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -820,7 +820,7 @@ export function searchSampleInput(holder, samplesData, callback, keyUpCallback) 
 	const allSamples = []
 	for (const sample in samplesData) {
 		const sample_type = samplesData[sample].sample_type
-		if (sample_type == 1 || sample_type == null)
+		if (sample_type == ROOT_SAMPLE_TYPE || sample_type == null)
 			//If the dataset has no ancestors, all the samples should be root'
 			allSamples.push(sample)
 	}
