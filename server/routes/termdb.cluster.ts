@@ -16,7 +16,6 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes } from '#shared/terms.js'
-import { GeneVariantTerm, GeneVariantGeneTerm, GeneVariantCoordTerm, GeneExpressionTerm } from '#types'
 
 export const api = {
 	endpoint: 'termdb/cluster',
