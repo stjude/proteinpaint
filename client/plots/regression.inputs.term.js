@@ -112,7 +112,7 @@ export class InputTerm {
 			// do not allow condition term
 			arg.numericEditMenuVersion = ['continuous', 'discrete', 'spline']
 			// for geneVariant term, only allow groupsetting
-			arg.defaultQ4fillTW['geneVariant'] = { groupsetting: { inuse: true } }
+			arg.defaultQ4fillTW['geneVariant'] = { type: 'predefined-groupset' }
 			arg.geneVariantEditMenuOnlyGrp = true
 			return
 		}
@@ -546,50 +546,35 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	if (q.mode == 'binary') {
 		if (q.type == 'values' && Object.keys(term.values).length == 2) return
 		if (q.type == 'predefined-groupset') {
-			const idx = q.groupsetting.predefined_groupset_idx
+			const idx = q.predefined_groupset_idx
 			const t_gs = term.groupsetting
 			if (t_gs[idx] && Object.keys(t_gs[idx]).length == 2) return
 		}
 		if (q.type == 'custom-groupset') {
-			const gs = q.groupsetting.customset
+			const gs = q.customset
 			if (gs.groups.length == 2) return
 		}
 	}
 
 	// step 1: check if term has only two computable categories/grades with >0 samples
 	// if so, use the two categories as outcome and do not apply groupsetting
-
 	// check the number of samples for computable categories, only use categories with >0 samples
-
-	// q should not have groupsetting enabled, as we only want to get number of cases for categories/grades
-	// TODO detect if groupsetting is enabled, then turn it off??
-	const body = { term1_q: q }
-	const data = await vocabApi.getCategories(term, filter, body)
+	const data = await vocabApi.getCategories(term, filter)
 	if (data.error) throw 'cannot get categories: ' + data.error
 	const category2samplecount = new Map() // k: category/grade, v: number of samples
 	const computableCategories = [] // list of computable keys
-	let has_filter_gs = false // if groupset group.type = filter, ignore step 1
-	// if condition term with predefined 'no condition vs has condition', ignore step 1
-	const graded_with_predefind_gs = term.type == 'condition' && term.groupsetting.lst.length
-	if (term.groupsetting && term.groupsetting.inuse) {
-		for (const group of term.groupsetting.lst[0].groups) {
-			if (group.type == 'filter' && group.filter4activeCohort) {
-				has_filter_gs = true
-			}
-		}
-	}
 	for (const i of data.lst) {
 		category2samplecount.set(i.key, i.samplecount)
 		if (term.values && term.values[i.key] && term.values[i.key].uncomputable) continue
 		computableCategories.push(i.key)
 	}
-	if (computableCategories.length < 2 && !has_filter_gs && !graded_with_predefind_gs) {
+	if (computableCategories.length < 2) {
 		// TODO UI should reject this term and prompt user to select a different one
 		q.type = 'values'
 		tw.error = 'less than 2 categories/grades - cannot create separate groups'
 		return
 	}
-	if (computableCategories.length == 2 && !has_filter_gs && !graded_with_predefind_gs) {
+	if (computableCategories.length == 2) {
 		q.type = 'values'
 		// will use the categories from term.values{} and do not apply groupsetting
 		// if the two grades happen to be "normal" and "disease" then it will make sense
@@ -598,35 +583,31 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 		return
 	}
 
-	const t_gs = term.groupsetting
-	const q_gs = q.groupsetting
 	// step 2: term has 3 or more categories/grades. must apply groupsetting
-	// force to turn on groupsetting
-	q_gs.inuse = true
-	q_gs.activeCohort = vocabApi.state.activeCohort
+	const t_gs = term.groupsetting
 
-	// step 3: find if term already has a usable groupsetting
+	// find if term already has a usable groupsetting
 	if (
-		q_gs.customset &&
-		q_gs.customset.groups &&
-		q_gs.customset.groups.length == 2 &&
-		groupsetNoEmptyGroup(q_gs.customset, category2samplecount)
+		q.customset &&
+		q.customset.groups &&
+		q.customset.groups.length == 2 &&
+		groupsetNoEmptyGroup(q.customset, category2samplecount)
 	) {
 		q.type = 'custom-groupset'
 		// has a usable custom set
 		return
 	}
 
-	// step 4: check if the term has predefined groupsetting
+	// step 3: check if the term has predefined groupsetting
 	if (t_gs && t_gs.lst) {
 		// has predefined groupsetting
 		// note!!!! check on input.term.term but not input.term.q
 
 		if (
-			q_gs.predefined_groupset_idx >= 0 &&
-			t_gs.lst[q_gs.predefined_groupset_idx] &&
-			t_gs.lst[q_gs.predefined_groupset_idx].groups.length == 2 &&
-			groupsetNoEmptyGroup(t_gs.lst[q_gs.predefined_groupset_idx], category2samplecount)
+			q.predefined_groupset_idx >= 0 &&
+			t_gs.lst[q.predefined_groupset_idx] &&
+			t_gs.lst[q.predefined_groupset_idx].groups.length == 2 &&
+			groupsetNoEmptyGroup(t_gs.lst[q.predefined_groupset_idx], category2samplecount)
 		) {
 			// has a usable predefined groupset
 			q.type = 'predefined-groupset'
@@ -636,11 +617,11 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 			return
 		}
 
-		// step 5: see if any predefined groupset has 2 groups. if so, use that
+		// step 4: see if any predefined groupset has 2 groups. if so, use that
 		const i = t_gs.lst.findIndex(g => g.groups.length == 2)
 		if (i != -1 && groupsetNoEmptyGroup(t_gs.lst[i], category2samplecount)) {
 			// found a usable groupset
-			q_gs.predefined_groupset_idx = i
+			q.predefined_groupset_idx = i
 			q.type = 'predefined-groupset'
 			// used for groupsetting if one of the group is filter (group.type) rahter than values,
 			// Not in use rightnow, if used in future, uncomment following line
@@ -649,7 +630,7 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 		}
 	}
 
-	// step 6: last resort. divide values[] array into two groups
+	// step 5: last resort. divide values[] array into two groups
 	const customset = {
 		activeCohort: state.activeCohort,
 		groups: [
@@ -671,7 +652,7 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 		if (i < group_i_cutoff) customset.groups[0].values.push({ key: v })
 		else customset.groups[1].values.push({ key: v })
 	}
-	q_gs.customset = customset
+	q.customset = customset
 	q.type = 'custom-groupset'
 }
 
