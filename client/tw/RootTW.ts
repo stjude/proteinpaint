@@ -1,5 +1,14 @@
 import { TermWrapper } from '#types'
 
+export type UseCase = {
+	target: string
+	detail: string
+}
+
+export type TwInitOpts = {
+	useCase?: UseCase
+}
+
 export type PartialTW = {
 	term: {
 		type: 'categorical'
@@ -23,7 +32,6 @@ export class RootTW {
 		switch (tw.term.type) {
 			case 'categorical': {
 				const { CategoricalBase } = await import('./CategoricalTW.ts')
-				//const twObj = new
 				if (!tw.term.id) throw 'missing tw.term.id'
 				return await CategoricalBase.fill(tw)
 			}

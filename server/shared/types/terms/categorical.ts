@@ -26,7 +26,7 @@ export type CategoricalTerm = BaseTerm & {
  * @category TW
  */
 
-export type CategoricalTW = BaseTW & {
+export type CategoricalTW = {
 	id: string
 	q: CategoricalQ
 	term: CategoricalTerm
