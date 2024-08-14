@@ -292,6 +292,13 @@ export class GeneSetEditUI {
 	}
 
 	baseGeneMenuArgs(arr) {
+		arr = arr.filter(param => {
+			if (!param.param?.options) return true
+			//Remove any options previously added to prevent duplicate rendering
+			return !param.param.options.some(opt => {
+				return arr.some(i => i.param.id == opt.id)
+			})
+		})
 		return {
 			tip: this.tip2,
 			params: arr,
