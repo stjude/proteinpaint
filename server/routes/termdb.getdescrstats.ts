@@ -87,7 +87,12 @@ function init({ genomes }) {
 				values.push(Number(value))
 			}
 
-			result = Summarystats(values) as getdescrstatsResponse
+			if (values.length) {
+				result = Summarystats(values) as getdescrstatsResponse
+			} else {
+				// no computable values. do not get stats as it breaks code. set result to blank obj to avoid "missing response.header['content-type']" err on client
+				result = {}
+			}
 		} catch (e: any) {
 			if (e instanceof Error && e.stack) console.log(e)
 			result = { error: e?.message || e } as getdescrstatsResponse
