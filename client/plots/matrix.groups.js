@@ -274,6 +274,7 @@ export function classifyValues(anno, tw, grp, s, sample) {
 					// priority in groupset
 					const groupset =
 						tw.q.type == 'predefined-groupset' ? tw.term.groupsetting.lst[tw.q.predefined_groupset_idx] : tw.q.customset
+					if (!groupset) throw 'groupset not found'
 					const group = groupset.groups[0]
 					if (v != group.name) return false
 				} else {
