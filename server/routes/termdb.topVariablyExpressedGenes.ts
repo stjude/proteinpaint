@@ -102,10 +102,10 @@ function nativeValidateQuery(ds: any) {
 
 function addTopVEarg(q: any) {
 	/** These are hardcoded, universal arguments for top variably expressed genes query using any native datasets
-    more importantly, this query for all native ds are carried out by the same rust code
-    thus they are not repeated in individual ds js files, but are dynamically assigned here on server launch
-    ds can optionally provide overrides, e.g. to account for different exp value metrics
-     */
+more importantly, this query for all native ds are carried out by the same rust code
+thus they are not repeated in individual ds js files, but are dynamically assigned here on server launch
+ds can optionally provide overrides, e.g. to account for different exp value metrics
+ */
 	const arglst = [
 		{ id: 'maxGenes', label: 'Gene Count', type: 'number', value: 100 },
 		{
