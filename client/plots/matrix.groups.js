@@ -267,13 +267,7 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		filteredValues,
 		countedValues: filteredValues.filter(v => {
 			if (tw.term.type == 'geneVariant') {
-				if (tw.q?.type == 'values') {
-					// groupsetting not in use
-					// values are mutation classes
-					// do not count WT, blank, or skipped classes
-					if (v.class == 'WT' || v.class == 'Blank' || s.geneVariantCountSamplesSkipMclass.includes(v.class))
-						return false
-				} else {
+				if (tw.q?.type == 'predefined-groupset' || tw.q?.type == 'custom-groupset') {
 					// groupsetting in use
 					// values are group assignments
 					// only count assignments to group with highest
@@ -282,6 +276,12 @@ export function classifyValues(anno, tw, grp, s, sample) {
 						tw.q.type == 'predefined-groupset' ? tw.term.groupsetting.lst[tw.q.predefined_groupset_idx] : tw.q.customset
 					const group = groupset.groups[0]
 					if (v != group.name) return false
+				} else {
+					// groupsetting not in use
+					// values are mutation classes
+					// do not count WT, blank, or skipped classes
+					if (v.class == 'WT' || v.class == 'Blank' || s.geneVariantCountSamplesSkipMclass.includes(v.class))
+						return false
 				}
 			}
 			return true
