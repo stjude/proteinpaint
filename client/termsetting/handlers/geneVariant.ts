@@ -497,7 +497,7 @@ function getGroupsetIdxs(dt) {
 }
 
 function clearGroupset(self) {
-	delete self.q.type
+	self.q.type = 'values'
 	delete self.q.predefined_groupset_idx
 	delete self.q.customset
 	delete self.groupSettingInstance
