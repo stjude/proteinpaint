@@ -78,10 +78,9 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	}
 
 	if (tw.term.kind == 'gene') {
-		if (!tw.term.gene) {
-			if (!tw.term.name) throw 'no gene specified'
-			tw.term.gene = tw.term.name // support saved states that have the older geneVariant term data shape
-		}
+		if (!tw.term.gene) tw.term.gene = tw.term.name
+		if (!tw.term.name) tw.term.name = tw.term.gene
+		if (!tw.term.gene || !tw.term.name) throw 'missing gene/name'
 	} else if (tw.term.kind == 'coord') {
 		if (!tw.term.chr || !Number.isInteger(tw.term.start) || !Number.isInteger(tw.term.stop))
 			throw 'no position specified'
