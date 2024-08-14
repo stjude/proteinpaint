@@ -169,7 +169,9 @@ export async function initGDCdictionary(ds) {
 			name: id,
 			type: 'survival',
 			isleaf: true,
-			unit: 'year', // api returns time-to-event in number of days, and mds3.gdc.js converts it to decimal years
+			// see querySamplesSurvival(): api returns time-to-event in number of days, and we convert it to decimal years; also about exit code assignment
+			unit: 'year',
+			values: { 0: { label: 'Alive' }, 1: { label: 'Dead' } },
 			included_types_set: new Set(), // apply to leaf terms, should have its own term.type
 			child_types_set: new Set() // empty for leaf terms
 		}

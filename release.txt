@@ -1,1 +1,2 @@
-
+Fixes:
+- Assign alive/dead labels to GDC survival exit codes
