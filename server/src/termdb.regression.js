@@ -10,6 +10,7 @@ import * as utils from './utils.js'
 import * as termdbsql from './termdb.sql.js'
 import { runCumincR } from './termdb.cuminc.js'
 import { isDictionaryType } from '#shared/terms'
+import { getAnnotationRows } from './termdb.matrix.js'
 
 /*
 
@@ -1202,18 +1203,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	)
 	values.push(...terms.map(d => d.term.id || d.term.name))
 
-	const sql = `WITH
-		${filter ? filter.filters + ',' : ''}
-		${CTEs.map(t => t.sql).join(',\n')}
-		${CTEs.map(
-			t => `
-			SELECT sample, key, value, ? as term_id
-			FROM ${t.tablename}
-			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
-			`
-		).join(`UNION ALL`)}`
-
-	const _rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+	const _rows = await getAnnotationRows(q, terms, filter, CTEs, values)
 
 	// process rows
 	const rows =
@@ -1222,9 +1212,11 @@ async function getSampleData_dictionaryTerms(q, terms) {
 			: _rows
 	// parse the processed rows
 	const types = new Set()
-	for (const row of rows) {
-		const type = q.ds.sampleId2Type.get(row.sample)
-		types.add(type)
+	for (const tw of terms) {
+		if (tw.term.id) {
+			const type = q.ds.term2SampleType.get(tw.term.id)
+			types.add(type)
+		}
 	}
 	for (const { sample, term_id, key, value } of rows) {
 		const term = terms.find(term => (term.term.id || term.term.name) == term_id)
@@ -1241,7 +1233,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 		}
 		if (samples.get(sample).id2value.has(term_id)) {
 			// can duplication happen?
-			throw `duplicate '${term_id}' entry for sample='${sample}'`
+			//throw `duplicate '${term_id}' entry for sample='${sample}'`
 		}
 
 		// if applicable, scale the data

@@ -2,7 +2,7 @@ import serverconfig from './serverconfig'
 import { connect_db } from './utils'
 import { isUsableTerm } from '../shared/termdb.usecase'
 import { authApi } from './auth'
-import { numericTypes } from '#shared/terms.js'
+import { DEFAULT_SAMPLE_TYPE, numericTypes } from '#shared/terms.js'
 
 /*
 server_init_db_queries()
@@ -78,10 +78,10 @@ export function server_init_db_queries(ds) {
 			ds.sample2Children.get(row.ancestor_id).push(row.sample_id)
 		}
 	}
-	ds.types = {}
+	ds.types = new Map()
 	if (tables.has('sample_types')) {
 		const rows = cn.prepare('SELECT * FROM sample_types').all()
-		for (const row of rows) ds.types[row.id] = row.name
+		for (const row of rows) ds.types.set(row.id, row.name)
 	}
 
 	for (const table of schema_tables) if (!tables.has(table)) console.log(`${table} table missing!!!!!!!!!!!!!!!!!!!!`)
@@ -118,7 +118,11 @@ export function server_init_db_queries(ds) {
 			return undefined
 		}
 	}
-
+	ds.term2SampleType = new Map()
+	if (ds.cohort.db.tableColumns['terms'].includes('sample_type')) {
+		let rows = cn.prepare('SELECT id, sample_type FROM terms').all()
+		for (const { id, sample_type } of rows) ds.term2SampleType.set(id, sample_type || DEFAULT_SAMPLE_TYPE)
+	}
 	if (tables.has('sampleidmap')) {
 		const i2s = new Map(),
 			s2i = new Map()
@@ -135,13 +139,12 @@ export function server_init_db_queries(ds) {
 			// if sampleidmap table is present, add this method to return sample count for datasets with and without subcohort
 			if (tables.has('cohort_sample_types')) rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			else rows = cn.prepare('SELECT cohort,sample_count from cohorts').all()
-			const types = Object.keys(ds.types)
 			q.getCohortSampleCount = cohortKey => {
 				let counts = rows
 					.filter(row => row.cohort == cohortKey)
 					.map(
 						row =>
-							`${row.sample_count} ${row.sample_type ? ds.types[row.sample_type] : 'sample'}${
+							`${row.sample_count} ${row.sample_type ? ds.types.get(row.sample_type) : 'sample'}${
 								row.sample_count > 1 ? 's' : ''
 							}`
 					)

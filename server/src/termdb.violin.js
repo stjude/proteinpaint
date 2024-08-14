@@ -6,6 +6,7 @@ import { getBinsDensity } from '../../server/shared/violin.bins'
 import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
 import { isNumericTerm } from '#shared/terms.js'
+import { mixedSampleTypes } from './termdb.matrix.js'
 
 /*
 q: getViolinRequest
@@ -20,11 +21,12 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const terms = [q.tw]
 	if (q.divideTw) terms.push(q.divideTw)
 
+	const onlyChildren = mixedSampleTypes(terms, ds)
 	const data = await getData(
 		{ terms, filter: q.filter, filter0: q.filter0, currentGeneNames: q.currentGeneNames },
 		ds,
 		genome,
-		false
+		onlyChildren
 	)
 	if (data.error) throw data.error
 	//get ordered labels to sort keys in key2values
