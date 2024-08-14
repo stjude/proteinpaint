@@ -84,7 +84,7 @@ export class GenesMenu {
 					contentDiv.style('display', 'block')
 				} else contentDiv.style('display', 'none')
 
-				input.on('change', (event: MouseEvent) => {
+				input.on('change', () => {
 					contentDiv.style('display', input.property('checked') ? 'block' : 'none')
 				})
 			} else {
