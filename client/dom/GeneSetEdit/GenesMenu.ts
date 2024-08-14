@@ -1,5 +1,5 @@
 import { Menu } from '../menu'
-import { Div } from '../../types/d3'
+import { Div, Elem } from '../../types/d3'
 import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 import { make_one_checkbox } from '../checkbox.js'
@@ -7,26 +7,31 @@ import { makeRadiosWithContentDivs } from './radioWithContent.ts'
 
 type GenesMenuArgs = {
 	tip: Menu
-	params: { param: GeneArgumentEntry; input?: any }[]
+	params: { param: GeneArgumentEntry; input?: Elem; rendered?: boolean }[]
 	api: any
 	callback: (f?: number) => void
+	addOptionalParams: ({ param, input }) => void
 }
 
 export class GenesMenu {
 	tip: Menu
-	params: { param: GeneArgumentEntry; input?: any }[]
+	params: { param: GeneArgumentEntry; input?: Elem }[]
 	api: any
 	callback: (f?: number) => void
+	addOptionalParams: ({ param, input }) => void
+	readonly params2Add: { param: GeneArgumentEntry; input: Elem }[] = []
 
 	constructor(opts: GenesMenuArgs) {
 		this.tip = opts.tip
 		this.params = opts.params
 		this.api = opts.api
 		this.callback = opts.callback
+		this.addOptionalParams = opts.addOptionalParams
 
 		this.tip.d.style('padding', '15px')
-
 		this.render()
+
+		for (const param of this.params2Add) this.addOptionalParams(param)
 	}
 
 	render() {
@@ -52,17 +57,22 @@ export class GenesMenu {
 		if (param.type == 'boolean') {
 			if (param?.options?.length) {
 				/* Use for checkboxes that expand to show additional options when checked. */
-				const holder = div.append('div')
+				const holder = div.append('div').style('margin', '10px 0px')
 				const contentDiv = div.append('div').style('padding-left', '20px')
-				input = holder.append('input').style('padding', '2px').attr('type', 'checkbox').attr('id', param.id)
+				input = holder.append('input').attr('type', 'checkbox').attr('id', param.id)
 				this.addLabels(holder, 'label', param)
 				for (const option of param.options) {
-					this.addParameter(option, contentDiv.append('div').style('display', 'block'))
+					const optionInput = this.addParameter(option, contentDiv.append('div'))
+					/** To avoid rendering twice, add to a separate array
+					 * then add back to parent params array.
+					 */
+					this.params2Add.push({ param: option, input: optionInput })
 				}
 				if (param.value) {
 					input.property('checked', param.value)
 					contentDiv.style('display', 'block')
 				} else contentDiv.style('display', 'none')
+
 				input.on('change', (event: MouseEvent) => {
 					event.stopPropagation()
 					contentDiv.style('display', input.property('checked') ? 'block' : 'none')
@@ -94,7 +104,6 @@ export class GenesMenu {
 			if (param.value) input.attr('value', param.value)
 			this.addLabels(div, 'span', param)
 		} else if (param.type == 'radio') {
-			if (!param?.options.length) throw new Error('Radio buttons must have options')
 			const hasChecked = param.options.find((d: any) => d.checked)
 			if (!hasChecked) param.options[0].checked = true
 			input = div.append('div').attr('id', param.id)

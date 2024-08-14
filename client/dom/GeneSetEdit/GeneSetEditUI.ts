@@ -215,7 +215,8 @@ export class GeneSetEditUI {
 		if (this.mode == TermTypes.GENE_EXPRESSION && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
-					if (param.options) {
+					if (param.type == 'radio') {
+						if (!param.options || param.options.length == 0) throw 'Radio button must have options'
 						for (const opt of param.options) {
 							if (opt.type == 'tree') {
 								opt.callback = async (holder: Elem) => {
@@ -274,7 +275,7 @@ export class GeneSetEditUI {
 										)
 								}
 							}
-							if (opt.type == 'radio') {
+							if (opt.type == 'boolean') {
 								opt.callback = () => {
 									param.value = {
 										type: opt.value,
@@ -313,6 +314,9 @@ export class GeneSetEditUI {
 							this.geneList = []
 							this.geneList.push(...result.genes)
 							this.renderGenes()
+						},
+						addOptionalParams: ({ param, input }) => {
+							this.api.topMutatedGenesParams.push({ param, input })
 						}
 					})
 				}
@@ -357,6 +361,9 @@ export class GeneSetEditUI {
 								for (const gene of result.genes) this.geneList.push({ gene })
 							}
 							this.renderGenes()
+						},
+						addOptionalParams: ({ param, input }) => {
+							this.api.topVariablyExpressedGenesParams.push({ param, input })
 						}
 					})
 				}
