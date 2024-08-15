@@ -1,47 +1,28 @@
-import { CategoricalTW, TermGroupSetting, QGroupSetting } from '#types'
+import { RawCatTW, CategoricalTW } from '#types'
 import { RootTW, TwInitOpts } from './RootTW.ts'
-
-export type PartialCatTW = {
-	id?: string
-	term?: {
-		type: 'categorical'
-		id: string
-		name?: string
-		values?:
-			| {
-					[key: string | number]: { label?: string; key?: string }
-			  }
-			| Record<string, never>
-		groupsetting?: TermGroupSetting
-	}
-	q?: {
-		type?: string
-		isAtomic: true
-		groupsetting?: QGroupSetting // deprecated nested object, must support and reapply to root q object
-	}
-}
 
 export class CategoricalBase extends RootTW {
 	tw: CategoricalTW
-	opts: TwInitOpts
+	vocabApi?: any
 
-	constructor(tw: CategoricalTW, opts: TwInitOpts) {
+	constructor(tw: CategoricalTW, vocabApi?: any) {
 		super()
 		this.tw = tw
-		this.opts = opts
+		if (vocabApi) this.vocabApi = vocabApi
 	}
 
-	static async init(partialTw: PartialCatTW, opts?: TwInitOpts) {
-		const tw = await CategoricalBase.fill(partialTw)
-		return new CategoricalBase(tw, opts || {})
+	static async init(rawTW: RawCatTW, vocabApi?: any): Promise<CategoricalBase> {
+		const tw = await CategoricalBase.fill(rawTW, vocabApi)
+		return new CategoricalBase(tw, vocabApi)
 	}
 
-	static async fill(tw: PartialCatTW): Promise<CategoricalTW> {
-		if (tw.term?.type != 'categorical') throw `incorrect term.type='${tw.term?.type}', expecting 'categorical'`
-		if (!tw.id && !tw.term?.id) throw 'missing tw.id and tw.term.id'
+	/** tw.term must already be filled-in at this point */
+	static async fill(tw: RawCatTW, vocabApi?: any): Promise<CategoricalTW> {
+		if (tw.term.type != 'categorical') throw `incorrect term.type='${tw.term?.type}', expecting 'categorical'`
+		if (!tw.id && !tw.term.id) throw 'missing tw.id and tw.term.id'
 		//if (!tw.q.type) tw.q = {...tw.q, ...defaultQ}
 		return {
-			id: tw.term?.id || 'aaa',
+			id: tw.id || tw.term?.id || 'aaa',
 			term: {
 				type: 'categorical',
 				id: tw.term?.id || 'test',

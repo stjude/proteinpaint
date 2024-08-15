@@ -9,6 +9,34 @@ import { TermSettingInstance } from '../termsetting.ts'
  * @category TW
  */
 
+export type RawCatTW = {
+	id: string
+	term: {
+		type: 'categorical'
+		id: string
+		name?: string
+		values?:
+			| Record<string, never> // empty object
+			| {
+					[key: string | number]: { label?: string; key?: string }
+			  }
+		groupsetting?: TermGroupSetting
+	}
+	q?: {
+		type?: string
+		mode?: string
+		isAtomic: true
+		groupsetting?: GroupSettingQ // deprecated nested object, must support and reapply to root q object
+	}
+	//isAtomic?: true
+	//$id?: string
+}
+
+export type CategoricalValuesObject = {
+	//mode: 'binary' | 'discrete'
+	type?: 'values'
+}
+
 type CategoricalBaseQ = MinBaseQ & { mode: 'discrete' | 'binary' }
 
 export type CategoricalQ = CategoricalBaseQ & GroupSettingQ

@@ -1,6 +1,10 @@
 import tape from 'tape'
 import { CategoricalTW } from '#types'
-import { CategoricalBase, PartialCatTW } from '../CategoricalTW.ts'
+import { CategoricalBase, RawCatTW } from '../CategoricalTW.ts'
+import { vocabInit } from '#termdb/vocabulary'
+import { getExample } from '#termdb/test/vocabData'
+
+const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 
 /*************************
  reusable helper functions
@@ -20,7 +24,8 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('fill() errors', async test => {
+tape('fill(invalid tw)', async test => {
+	// not typing with RawCatTW since these are not valid fill() argument
 	const tw = {
 		term: { id: 'abc', type: 'integer' }
 	}
@@ -37,8 +42,39 @@ tape('fill() errors', async test => {
 	test.end()
 })
 
+tape('fill({id}) basic default', async test => {
+	const tw: RawCatTW = {
+		term: { id: 'aaa', type: 'categorical' }
+	}
+
+	try {
+		const fullTw = await CategoricalBase.fill(tw as any, vocabApi)
+		test.deepEqual(
+			fullTw,
+			{
+				id: 'aaa',
+				term: {
+					type: 'categorical',
+					id: 'aaa',
+					name: 'aaa',
+					values: {},
+					groupsetting: { useIndex: 0, lst: [] }
+				},
+				q: {
+					type: 'values'
+				}
+			},
+			'should fill-in a minimal tw with only {id}'
+		)
+	} catch (e: any) {
+		test.fail(e)
+	}
+
+	test.end()
+})
+
 tape('fill() basic default', async test => {
-	const tw: PartialCatTW = {
+	const tw: RawCatTW = {
 		term: { id: 'abc', type: 'categorical' }
 	}
 
@@ -73,7 +109,7 @@ tape('fill() basic default', async test => {
 //tape.skip('fill() custom-groupset', test => {})
 
 tape('init', async test => {
-	const tw: PartialCatTW = {
+	const tw: RawCatTW = {
 		term: { id: 'abc', type: 'categorical' }
 	}
 
