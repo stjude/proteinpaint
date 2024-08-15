@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.73.0
 
 Features:
 - From custom variable -> gene expression, submit one gene will launch violin plot overlayed by the custom variable, submit two genes will launch scatter plot colored by the custom variable.
