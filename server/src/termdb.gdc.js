@@ -940,8 +940,7 @@ async function testGraphqlApi(url, headers) {
 async function mayCacheSampleIdMappingWithRegularCheck(ds) {
 	// may do it because it could be disabled by feature toggle
 	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
-	const fv = serverconfig.features.stopGdcCacheAliquot
-	if (fv === true) {
+	if (serverconfig.features.stopGdcCacheAliquot) {
 		// do not cache at all. this flag is auto-set for container validation. running stale cache check will cause the server process not to quit, and break validation, thus must skip this when flag is true
 		console.log('GDC: sample IDs are not cached! No periodic check will take place!')
 		initGdcHolder(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder
@@ -950,22 +949,11 @@ async function mayCacheSampleIdMappingWithRegularCheck(ds) {
 		// this should be fine for container validation, but may not do so on a dev environment
 		return
 	}
-	if (Number.isInteger(fv) && fv > 0) {
-		// flag value is integer. allow to run a short test on dev machine
-		console.log('GDC: running limited sample ID caching')
-	} else {
-		// for any other flag value (or not set), will cache everything. this should be on prod server
-		console.log('GDC: caching complete sample ID mapping')
-	}
 
 	await cacheSampleIdMapping(ds)
 
-	// regular check will only happen if mapping is actually cached
-	if (!serverconfig.features.noPeriodicCheckGdcCaseCache) {
-		// cache check is allowed. this is required for gdc prod environment and can be disabled on dev env.
-		// kick off stale cache check
-		setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
-	}
+	// since mapping has been cached, kick off stale cache check
+	setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
 }
 
 function initGdcHolder(ds) {
@@ -1033,10 +1021,6 @@ async function cacheSampleIdMapping(ds) {
 
 	for (let i = 0; i < Math.ceil(totalCases / size); i++) {
 		await fetchIdsFromGdcApi(ds, size, i * 1000)
-		if (Number.isInteger(serverconfig.features.stopGdcCacheAliquot) && i >= serverconfig.features.stopGdcCacheAliquot) {
-			// stop caching after this number of loops, to speed up testing
-			break
-		}
 	}
 
 	await getCasesWithGeneExpression(ds)
