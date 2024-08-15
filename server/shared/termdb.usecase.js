@@ -179,6 +179,18 @@ export function isUsableTerm(term, _usecase, ds) {
 				return uses
 			}
 
+		case 'filter':
+			if (graphableTypes.has(term.type)) {
+				if (usecase.detail == 'GDC') {
+					// is gdc ds. api doesn't support filtering by survival, do not show survival
+					if (term.type != 'survival') uses.add('plot')
+				} else {
+					uses.add('plot')
+				}
+			}
+			if (!term.isleaf) uses.add('branch')
+			return uses
+
 		default:
 			if (graphableTypes.has(term.type)) uses.add('plot')
 			if (!term.isleaf) uses.add('branch')
