@@ -913,7 +913,7 @@ export async function fillTwLst(
 // fill in tw.term{} from a dehydrated state
 // a dictionary tw can be simply expressed as {id:str} and this function will fill in the term object.
 // a non-dict term will always have a term object, so this function will not be applied to non-dict term
-async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
+export async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 	const ids: string[] = []
 	for (const tw of twlst) {
 		if (tw.term) continue
