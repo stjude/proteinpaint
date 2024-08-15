@@ -281,17 +281,7 @@ export function setInteractivity(self) {
 		const q = self.state.termdbConfig.queries
 		if (!q) return // no genomic queries
 
-		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
-		const showDZImages = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showDZImages
-		if (
-			!(
-				q.singleSampleGenomeQuantification ||
-				q.singleSampleMutation ||
-				(q.NIdata && showBrainImaging) ||
-				(q.DZImages && showDZImages)
-			)
-		)
-			return // only works for these queries
+		if (!(q.singleSampleGenomeQuantification || q.singleSampleMutation || q.NIdata || q.DZImages)) return // only works for these queries
 
 		self.dom.mainG.on('mouseout', null)
 		delete self.imgBox
@@ -364,7 +354,8 @@ export function setInteractivity(self) {
 				})
 		}
 
-		if (q.DZImages && showDZImages) {
+		if (q.DZImages) {
+			// no longer used. replaced by wsimages
 			const menuDiv = self.dom.clickMenu.d
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -400,7 +391,7 @@ export function setInteractivity(self) {
 			}
 		}
 
-		if (q.NIdata && showBrainImaging) {
+		if (q.NIdata) {
 			for (const k in q.NIdata) {
 				const menuDiv = self.dom.clickMenu.d
 					.append('div')
