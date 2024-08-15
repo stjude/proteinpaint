@@ -14,6 +14,7 @@ Fixes:
 - Assign alive/dead labels to GDC survival exit codes
 - add missing return in switch statement that breaks dual-term select ui
 - when a term has no computable values, do not calculate descriptive stats that breaks
+- Fix wsi request type issue
 
 
 ## 2.72.0
