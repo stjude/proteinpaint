@@ -228,7 +228,13 @@ export function setInteractivity(self) {
 			state: {
 				activeCohort: self.activeCohort,
 				termfilter: { filter: rootFilterCopy },
-				tree: { usecase: { target: 'filter' } }
+				tree: {
+					usecase: {
+						target: 'filter',
+						// pass ds label to perform ds-specific control. for gdc, need to exclude survival term from filter. using "detail" property for termdb.usecase.js to carry out this logic without introducing any new property
+						detail: self.vocabApi.vocab.dslabel
+					}
+				}
 			},
 			tree: {
 				disable_terms:
