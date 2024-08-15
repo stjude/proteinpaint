@@ -206,7 +206,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		}
 	}
 
-	if (q.NIdata) {
+	if (q.NIdata && serverconfig.features.showBrainImaging) {
 		q2.NIdata = {}
 		for (const k in q.NIdata) {
 			q2.NIdata[k] = JSON.parse(JSON.stringify(q.NIdata[k]))

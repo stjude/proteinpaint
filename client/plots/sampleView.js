@@ -201,7 +201,6 @@ class SampleView {
 
 	async setControls(state) {
 		const q = state.termdbConfig.queries
-		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
 		const hasPlots =
 			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.DZImages
 		if (hasPlots) {
@@ -306,7 +305,7 @@ class SampleView {
 			this.dom.showPlotsDiv.append('label').text('Show Images').attr('for', 'showImages')
 		}
 
-		if (q?.NIdata && showBrainImaging) {
+		if (q?.NIdata) {
 			this.dom.showPlotsDiv
 				.append('input')
 				.attr('type', 'checkbox')
@@ -613,8 +612,7 @@ class SampleView {
 				}
 			}
 		}
-		const showBrainImaging = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.showBrainImaging
-		if (state.termdbConfig.queries?.NIdata && showBrainImaging) {
+		if (state.termdbConfig.queries?.NIdata) {
 			let div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block')
 
