@@ -1,32 +1,45 @@
 import { Menu } from '../menu'
-import { Div } from '../../types/d3'
+import { Div, Elem } from '../../types/d3'
 import { addButton } from './addButton.ts'
 import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
 import { make_one_checkbox } from '../checkbox.js'
 import { makeRadiosWithContentDivs } from './radioWithContent.ts'
 
 type GenesMenuArgs = {
+	/** tip holder for displaying the Menu */
 	tip: Menu
-	params: { param: GeneArgumentEntry; input?: any }[]
-	api: any
+	/** object sent from the view model
+	 * .param is the defined arg from the dataset
+	 * .input is the element created in addParameter and returned
+	 * to the view model
+	 */
+	params: { param: GeneArgumentEntry; input?: Elem }[]
+	/** Called when 'Calculate genes' is clicked */
 	callback: (f?: number) => void
+	/** Adds nested .options: [] for parameters back to opts
+	 * after rendering to avoid duplicate elements
+	 */
+	addOptionalParams: ({ param, input }) => void
 }
 
 export class GenesMenu {
 	tip: Menu
-	params: { param: GeneArgumentEntry; input?: any }[]
-	api: any
+	params: { param: GeneArgumentEntry; input?: Elem }[]
 	callback: (f?: number) => void
+	addOptionalParams: ({ param, input }) => void
+	/** Collects nested param .options:[]. */
+	readonly params2Add: { param: GeneArgumentEntry; input: Elem }[] = []
 
 	constructor(opts: GenesMenuArgs) {
 		this.tip = opts.tip
 		this.params = opts.params
-		this.api = opts.api
 		this.callback = opts.callback
+		this.addOptionalParams = opts.addOptionalParams
 
 		this.tip.d.style('padding', '15px')
-
 		this.render()
+
+		for (const param of this.params2Add) this.addOptionalParams(param)
 	}
 
 	render() {
@@ -50,14 +63,32 @@ export class GenesMenu {
 	addParameter(param, div: Div) {
 		let input
 		if (param.type == 'boolean') {
-			if (param.radiobuttons && param?.radiobuttons.length) {
-				const hasChecked = param.radiobuttons.find((d: any) => d.checked)
-				if (!hasChecked) param.radiobuttons[0].checked = true
-				input = div.append('div').attr('id', param.id)
-				input.append('p').style('font-size', '0.8em').style('opacity', 0.75).text(param.label)
-				makeRadiosWithContentDivs(param.radiobuttons, input as any)
+			if (param?.options?.length) {
+				/* Use for checkboxes that expand to show additional options when checked. */
+				const holder = div
+					.append('div')
+					.style('margin', '10px 0px')
+					.on('mousedown', (event: Event) => {
+						event.stopPropagation()
+					})
+				input = holder.append('input').attr('type', 'checkbox').attr('id', param.id)
+				this.addLabels(holder, 'label', param)
+
+				const contentDiv = div.append('div').style('padding-left', '20px')
+				for (const option of param.options) {
+					const optionInput = this.addParameter(option, contentDiv.append('div'))
+					this.params2Add.push({ param: option, input: optionInput })
+				}
+				if (param.value) {
+					input.property('checked', param.value)
+					contentDiv.style('display', 'block')
+				} else contentDiv.style('display', 'none')
+
+				input.on('change', () => {
+					contentDiv.style('display', input.property('checked') ? 'block' : 'none')
+				})
 			} else {
-				input = div.append('input').attr('type', 'checkbox').attr('id', param.id)
+				input = div.append('input').style('padding', '2px').attr('type', 'checkbox').attr('id', param.id)
 				if (param.value) input.property('checked', param.value)
 				this.addLabels(div, 'label', param)
 			}
@@ -82,6 +113,12 @@ export class GenesMenu {
 				.attr('id', param.id)
 			if (param.value) input.attr('value', param.value)
 			this.addLabels(div, 'span', param)
+		} else if (param.type == 'radio') {
+			const hasChecked = param.options.find((d: any) => d.checked)
+			if (!hasChecked) param.options[0].checked = true
+			input = div.append('div').attr('id', param.id)
+			input.append('p').style('font-size', '0.8em').style('opacity', 0.75).text(param.label)
+			makeRadiosWithContentDivs(param.options, input as any)
 		}
 		return input
 	}

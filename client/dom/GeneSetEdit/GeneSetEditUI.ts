@@ -215,8 +215,9 @@ export class GeneSetEditUI {
 		if (this.mode == TermTypes.GENE_EXPRESSION && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
-					if (param.radiobuttons) {
-						for (const opt of param.radiobuttons) {
+					if (param.type == 'radio') {
+						if (!param.options || param.options.length == 0) throw 'Radio button must have options'
+						for (const opt of param.options) {
 							if (opt.type == 'tree') {
 								opt.callback = async (holder: Elem) => {
 									const termdb = await import('../../termdb/app.js')
@@ -290,31 +291,52 @@ export class GeneSetEditUI {
 		}
 	}
 
+	baseGeneMenuArgs(arr) {
+		arr = this.removeDuplicates(arr)
+		return {
+			tip: this.tip2,
+			params: arr,
+			addOptionalParams: ({ param, input }) => {
+				arr.push({ param, input })
+			}
+		}
+	}
+
+	removeDuplicates(arr) {
+		for (const param of arr) {
+			if (param.param?.options) {
+				param.param.options.forEach(opt => {
+					if (!opt.id) return
+					const i = arr.findIndex(i => i.param.id == opt.id)
+					if (i != -1) arr.splice(i, 1)
+				})
+			}
+		}
+		return arr
+	}
+
 	createMenuList() {
 		if (this.api?.topMutatedGenesParams.length > 0) {
 			this.menuList.push({
 				label: 'Top mutated genes',
 				callback: async (event: Event) => {
 					this.tip2.clear().showunder(event.target)
-					new GenesMenu({
-						tip: this.tip2,
-						params: this.api.topMutatedGenesParams,
-						api: this.api,
-						callback: async () => {
-							const args = {
-								filter0: this.vocabApi.state.termfilter.filter0
-							}
-							for (const { param, input } of this.api.topMutatedGenesParams) {
-								const id = input.attr('id')
-								args[id] = this.getInputValue({ param, input })
-							}
-							const result = await this.vocabApi.getTopMutatedGenes(args)
-
-							this.geneList = []
-							this.geneList.push(...result.genes)
-							this.renderGenes()
+					const callback = async () => {
+						const args = {
+							filter0: this.vocabApi.state.termfilter.filter0
 						}
-					})
+						for (const { param, input } of this.api.topMutatedGenesParams) {
+							const id = input.attr('id')
+							args[id] = this.getInputValue({ param, input })
+						}
+						const result = await this.vocabApi.getTopMutatedGenes(args)
+
+						this.geneList = []
+						this.geneList.push(...result.genes)
+						this.renderGenes()
+					}
+					const menuArgs = Object.assign(this.baseGeneMenuArgs(this.api.topMutatedGenesParams), { callback })
+					new GenesMenu(menuArgs)
 				}
 			})
 		}
@@ -323,52 +345,43 @@ export class GeneSetEditUI {
 				label: 'Top variably expressed genes',
 				callback: (event: Event) => {
 					this.api.topVariablyExpressedGenesParams
-						.filter(p => p.param.type == 'boolean' && p.param?.radiobuttons)
+						.filter(p => p.param.type == 'radio' && p.param?.options)
 						.forEach(p => {
-							if (typeof p.param.radiobuttons![0].value === 'string') {
-								p.param.value = { type: p.param.radiobuttons![0].value, value: null }
+							if (typeof p.param.options![0].value === 'string') {
+								p.param.value = { type: p.param.options![0].value, value: null }
 							} else {
-								console.error(`Unexpected radio button value type: ${typeof p.param.radiobuttons![0].value}`)
+								console.error(`Unexpected radio button value type: ${typeof p.param.options![0].value}`)
 							}
 						})
 					this.tip2.clear().showunder(event.target)
-					new GenesMenu({
-						tip: this.tip2,
-						params: this.api.topVariablyExpressedGenesParams,
-						api: this.api,
-						callback: async () => {
-							const args: any = {
-								genome: this.vocabApi.state.vocab.genome,
-								dslabel: this.vocabApi.state.vocab.dslabel
-							}
-							// supply filters from app state
-							if (this.vocabApi.state.termfilter) {
-								if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
-								if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
-							}
-							for (const { param, input } of this.api.topVariablyExpressedGenesParams) {
-								const id = input.attr('id')
-								args[id] = this.getInputValue({ param, input })
-							}
-							const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
-
-							this.geneList = []
-							if (result.genes) {
-								for (const gene of result.genes) this.geneList.push({ gene })
-							}
-							this.renderGenes()
+					const callback = async () => {
+						const args: any = {
+							genome: this.vocabApi.state.vocab.genome,
+							dslabel: this.vocabApi.state.vocab.dslabel
 						}
-					})
+						// supply filters from app state
+						if (this.vocabApi.state.termfilter) {
+							if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
+							if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
+						}
+						for (const { param, input } of this.api.topVariablyExpressedGenesParams) {
+							const id = input.attr('id')
+							args[id] = this.getInputValue({ param, input })
+						}
+						const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
+
+						this.geneList = []
+						if (result.genes) {
+							for (const gene of result.genes) this.geneList.push({ gene })
+						}
+						this.renderGenes()
+					}
+
+					const menuArgs = Object.assign(this.baseGeneMenuArgs(this.api.topVariablyExpressedGenesParams), { callback })
+					new GenesMenu(menuArgs)
 				}
 			})
 		}
-		//Placeholder code for future PR
-		// if (your.genesets) {
-		// 	this.menuList.push({
-		// 		label: `Your gene sets`,
-		// 		callback: async () => {}
-		// 	})
-		// }
 		if (this.genome?.termdbs?.msigdb) {
 			for (const key in this.genome.termdbs) {
 				const tdb = this.genome.termdbs[key]
@@ -443,9 +456,7 @@ export class GeneSetEditUI {
 	}
 
 	getInputValue({ param, input }) {
-		if (param.type == 'boolean' && param?.radiobuttons) {
-			return param.value
-		}
+		if (param.type == 'radio') return param.value
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
 		if (input.attr('type') == 'checkbox') {

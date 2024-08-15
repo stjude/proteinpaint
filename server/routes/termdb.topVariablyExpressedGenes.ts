@@ -102,35 +102,37 @@ function nativeValidateQuery(ds: any) {
 
 function addTopVEarg(q: any) {
 	/** These are hardcoded, universal arguments for top variably expressed genes query using any native datasets
-	more importantly, this query for all native ds are carried out by the same rust code
-	thus they are not repeated in individual ds js files, but are dynamically assigned here on server launch
-	ds can optionally provide overrides, e.g. to account for different exp value metrics
-	 */
+more importantly, this query for all native ds are carried out by the same rust code
+thus they are not repeated in individual ds js files, but are dynamically assigned here on server launch
+ds can optionally provide overrides, e.g. to account for different exp value metrics
+ */
 	const arglst = [
 		{ id: 'maxGenes', label: 'Gene Count', type: 'number', value: 100 },
 		{
 			id: 'filter_extreme_values',
 			label: 'Filter Extreme Values',
 			type: 'boolean',
-			value: true
+			value: true,
+			options: [
+				{
+					id: 'min_count',
+					label: 'Min count',
+					type: 'number',
+					value: 10
+				},
+				{
+					id: 'min_total_count',
+					label: 'Min total count',
+					type: 'number',
+					value: 15
+				}
+			]
 		},
 		{
-			id: 'min_count',
-			label: 'Min count',
-			type: 'number',
-			value: 10
-		},
-		{
-			id: 'min_total_count',
-			label: 'Min total count',
-			type: 'number',
-			value: 15
-		},
-		{
-			id: 'filter_type',
-			label: 'Filter type',
-			type: 'boolean',
-			radiobuttons: [
+			id: 'rank_type',
+			label: 'Rank by:',
+			type: 'radio',
+			options: [
 				/** The param option in input JSON is very important.
 				 * It instructs what method will be used to calculate variation in the counts for a particular gene.
 				 * It supports variance as well as interquartile region.
@@ -169,9 +171,12 @@ async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, 
 		samples: samples.join(','),
 		filter_extreme_values: q.filter_extreme_values,
 		num_genes: q.maxGenes,
-		param: q.filter_type?.type,
-		min_count: q.min_count, // This needs to be passed from UI, this should (preferably only shown in UI when filter_extreme_values = true)
-		min_total_count: q.min_total_count // This needs to be passed from UI (preferably only shown in UI when filter_extreme_values = true)
+		rank_type: q.rank_type?.type
+	}
+
+	if (q.filter_extreme_values == 1) {
+		input_json['min_count'] = q.min_count
+		input_json['min_total_count'] = q.min_total_count
 	}
 
 	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
