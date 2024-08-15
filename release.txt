@@ -1,2 +1,1 @@
-Features
-- In the gene set edit UI: If available in the dataset, more controls are available to edit gene lists for top variably expressed genes. 
+

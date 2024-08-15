@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - From custom variable -> gene expression, submit one gene will launch violin plot overlayed by the custom variable, submit two genes will launch scatter plot colored by the custom variable.
+- In the gene set edit UI: If available in the dataset, more controls are available to edit gene lists for top variably expressed genes.
 
 Fixes:
 - fix the error that when hiercluster is using divideBy, the tw will not show in Cases menu for gdc"
