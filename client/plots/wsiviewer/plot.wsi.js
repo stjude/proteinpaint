@@ -11,11 +11,8 @@ genomeObj={}
 
 sample_id
 
-wsimages = list<string>
-	list of WSI filenames to display
-
 */
-export default async function (dslabel, holder, genomeObj, sample_id, wsimages) {
+export default async function (dslabel, holder, genomeObj, sample_id) {
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
@@ -26,7 +23,6 @@ export default async function (dslabel, holder, genomeObj, sample_id, wsimages) 
 				genome: genomeObj.name,
 				dslabel: dslabel,
 				sample_id: sample_id,
-				wsimages: wsimages,
 
 				plots: [
 					{

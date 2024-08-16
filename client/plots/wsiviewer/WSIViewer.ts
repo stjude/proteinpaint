@@ -13,6 +13,7 @@ import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerIn
 import Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import { GetWSImagesRequest, GetWSImagesResponse } from '../../shared/types/routes/wsimages.ts'
+import wsiViewerImageFiles from '#plots/wsiviewer/images.ts'
 
 export default class WSIViewer {
 	// following attributes are required by rx
@@ -34,16 +35,18 @@ export default class WSIViewer {
 	async main(): Promise<void> {
 		const state = this.app.getState()
 
-		const settings = state.plots.find(p => p.id === this.id).settings as Settings
+		const plotConfig = state.plots.find(p => p.id === this.id)
+
+		const settings = plotConfig.settings as Settings
 
 		const holder = this.opts.holder
 
-		if (state.wsimages.length === 0) {
+		if (plotConfig.wsimages.length === 0) {
 			holder.append('div').style('margin-left', '10px').text('No WSI images.')
 			return
 		}
 
-		const layers = await this.getLayers(state)
+		const layers = await this.getLayers(state, plotConfig.wsimages)
 
 		if (layers.length === 0) {
 			holder
@@ -149,15 +152,15 @@ export default class WSIViewer {
 		map.addControl(overviewMapControl)
 	}
 
-	private async getLayers(state: any): Promise<Array<TileLayer<Zoomify>>> {
+	private async getLayers(state: any, wsimages: string[]): Promise<Array<TileLayer<Zoomify>>> {
 		const layers: Array<TileLayer<Zoomify>> = []
 
-		for (let i = 0; i < state.wsimages.length; i++) {
+		for (let i = 0; i < wsimages.length; i++) {
 			const body: GetWSImagesRequest = {
 				genome: state.genome,
 				dslabel: state.dslabel,
 				sampleId: state.sample_id,
-				wsimage: state.wsimages[i]
+				wsimage: wsimages[i]
 			}
 
 			const data: GetWSImagesResponse = await dofetch3('wsimages', { body })
@@ -197,11 +200,12 @@ export const wsiViewer = getCompInit(WSIViewer)
 
 export const componentInit = wsiViewer
 
-export async function getPlotConfig(opts: any) {
+export async function getPlotConfig(opts: any, app: any) {
 	return {
 		chartType: 'WSIViewer',
 		subfolder: 'wsiviewer',
 		extension: 'ts',
-		settings: wsiViewerDefaults(opts.overrides)
+		settings: wsiViewerDefaults(opts.overrides),
+		wsimages: await wsiViewerImageFiles({ app })
 	}
 }
