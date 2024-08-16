@@ -273,6 +273,7 @@ class Facet {
 
 	async getSampleTableData(config) {
 		const result = await this.app.vocabApi.getAnnotatedSampleData({
+			filter: this.state.termfilter.filter,
 			terms: [config.columnTw, config.rowTw]
 		})
 		const categories = this.getCategories(config.columnTw, result.lst)
