@@ -26,7 +26,7 @@ tape('\n', function (test) {
 })
 
 tape('fill({id}) no tw.term', async test => {
-	const tw: RawTW = {
+	const tw /*: RawTW*/ = {
 		id: 'sex'
 	}
 
@@ -45,12 +45,10 @@ tape('fill({id}) no tw.term', async test => {
 						2: { label: 'Female' }
 					},
 					groupsetting: {
-						useIndex: 0,
-						lst: [],
 						disabled: true
 					}
 				},
-				q: { isAtomic: true }
+				q: { type: 'values', isAtomic: true }
 			},
 			'should fill-in a minimal dictionary tw with only {id}'
 		)

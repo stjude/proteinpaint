@@ -133,7 +133,7 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ: CategoricalQ | null = null) {
 	if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values' // must fill default q.type if missing
 
-	if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
+	if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: true }
 
 	if (tw.q.type == 'predefined-groupset') {
 		if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'predefined_groupset_idx is not an integer'

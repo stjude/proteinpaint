@@ -22,6 +22,7 @@ export class RootTW {
 
 		if (!tw.q) tw.q = {}
 		tw.q.isAtomic = true
+		reshapeLegacyTw(tw)
 
 		switch (tw.term.type) {
 			case 'categorical': {
@@ -48,5 +49,23 @@ export class RootTW {
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`
 		}
+	}
+}
+
+// check for legacy tw structure that could be
+// present in old saved sessions
+function reshapeLegacyTw(tw) {
+	// check for legacy q.groupsetting{}
+	if (Object.keys(tw.q).includes('groupsetting')) {
+		if (!tw.q.groupsetting.inuse) {
+			tw.q.type = 'values'
+		} else if (tw.q.type == 'predefined-groupset') {
+			tw.q.predefined_groupset_idx = tw.q.groupsetting.predefined_groupset_idx
+		} else if (tw.q.type == 'custom-groupset') {
+			tw.q.customset = tw.q.groupsetting.customset
+		} else {
+			throw 'invalid q.type'
+		}
+		delete tw.q['groupsetting']
 	}
 }

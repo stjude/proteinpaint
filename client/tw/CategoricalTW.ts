@@ -1,4 +1,4 @@
-import { RawCatTW, CategoricalTW } from '#types'
+import { RawCatTW, CategoricalTW, CategoricalQ, PredefinedGroupSettingQ } from '#types'
 import { RootTW, TwInitOpts } from './RootTW.ts'
 
 export class CategoricalBase extends RootTW {
@@ -18,9 +18,9 @@ export class CategoricalBase extends RootTW {
 
 	/** tw.term must already be filled-in at this point */
 	static async fill(tw: RawCatTW, vocabApi?: any): Promise<CategoricalTW> {
+		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (tw.term.type != 'categorical') throw `incorrect term.type='${tw.term?.type}', expecting 'categorical'`
 		if (!tw.id && !tw.term.id) throw 'missing tw.id and tw.term.id'
-		//if (!tw.q.type) tw.q = {...tw.q, ...defaultQ}
 		return {
 			id: tw.id || tw.term?.id || 'aaa',
 			term: {
@@ -28,12 +28,25 @@ export class CategoricalBase extends RootTW {
 				id: tw.term?.id || 'test',
 				name: tw.term?.name || tw.term?.id || 'test',
 				values: tw.term?.values || {},
-				groupsetting: {
-					...{ useIndex: 0, lst: [] },
-					...(tw.term?.groupsetting || {})
-				}
+				groupsetting: tw.term.groupsetting || { disabled: true }
 			},
-			q: !tw.q ? { type: 'values' } : tw.q
-		}
+			q: getQ(tw)
+		} //satisfies CategoricalTW
 	}
+}
+
+function getQ(tw: RawCatTW): CategoricalQ {
+	if (!tw.q) return { type: 'values', isAtomic: true }
+	if (tw.q!.type == 'predefined-groupset') {
+		const i = tw.q.predefined_groupset_idx
+		if (i !== undefined && !Number.isInteger(i)) throw `missing or invalid tw.q.predefined_groupset_idx='${i}'`
+		return { ...tw.q, predefined_groupset_idx: i || 0 }
+	}
+	if (tw.q.type == 'custom-groupset') {
+		return tw.q
+	}
+	if (!tw.q.type) {
+		return { ...tw.q, type: 'values' }
+	}
+	throw `invalid tw.q`
 }
