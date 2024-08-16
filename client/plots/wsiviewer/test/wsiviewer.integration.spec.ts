@@ -26,11 +26,13 @@ tape.skip('\n', function (test) {
 
 //Data not available to run in Termdb test (i.e. CI)
 //Run locally
-tape('Render wsiviewer as chartType', function (test) {
+tape.skip('Render wsiviewer as chartType', function (test) {
 	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
+			dslabel: 'nintendoPublic',
+			genome: 'mm10',
 			nav: { header_mode: 'hidden' },
 			sample_id: 'B-T87L964D',
 			plots: [
