@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- At GDC lollipop subtrack, disable survival term when building the filter
+
 
 ## 2.73.0
 
