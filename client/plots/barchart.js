@@ -89,26 +89,32 @@ class Barchart {
 				.style('margin-left', '50px')
 
 			const inputs = [
-				'term1',
 				{
-					type: 'overlay',
+					type: 'term',
+					configKey: 'term',
+					chartType: 'barchart',
+					usecase: { target: 'barchart', detail: 'term' },
+					vocabApi: this.app.vocabApi
+				},
+				{
+					type: 'term',
 					configKey: 'term2',
 					chartType: 'barchart',
-					usecase: { target: 'barchart', detail: 'term2', term1type: state.config.term.term.type },
+					usecase: { target: 'barchart', detail: 'term2' },
 					title: 'Overlay data',
 					label: 'Overlay',
 					vocabApi: this.app.vocabApi,
-					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete']
+					numericEditMenuVersion: this.opts.numericEditMenuVersion
 				},
 				{
-					type: 'divideBy',
+					type: 'term',
 					configKey: 'term0',
 					chartType: 'barchart',
-					usecase: { target: 'barchart', detail: 'term0', term1type: state.config.term0?.term?.type },
+					usecase: { target: 'barchart', detail: 'term0' },
 					title: 'Divide by data',
 					label: 'Divide by',
 					vocabApi: this.app.vocabApi,
-					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete']
+					numericEditMenuVersion: this.opts.numericEditMenuVersion
 				},
 				{
 					label: 'Orientation',

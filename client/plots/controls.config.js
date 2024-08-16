@@ -6,6 +6,7 @@ import { initRadioInputs } from '../dom/radio2'
 import { termsettingInit } from '#termsetting'
 import { rgb } from 'd3-color'
 import { select } from 'd3-selection'
+import { TermTypes } from '#shared/terms'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -132,6 +133,11 @@ class TdbConfigUiInit {
 			.selectAll('td')
 			.style('border-top', '2px solid #FFECDD')
 			.style('padding', '5px 10px')
+
+		if (this.inputs.term) {
+			// label of term1 will depend on term type
+			renderTerm1Label(this.inputs.term, this.state.config)
+		}
 	}
 }
 
@@ -658,9 +664,24 @@ async function setTermInput(opts) {
 		}
 	}
 
+	if (opts.configKey == 'term') {
+		// term1 can only be edited (i.e., not replaced/removed)
+		opts.menuOptions = 'edit'
+	}
+
+	if (opts.configKey == 'term0' || opts.configKey == 'term2') {
+		// set defaultQ for term0/term2
+		if (!opts.defaultQ4fillTW) opts.defaultQ4fillTW = {}
+		Object.assign(opts.defaultQ4fillTW, {
+			[TermTypes.GENE_VARIANT]: { type: 'predefined-groupset' },
+			[TermTypes.GENE_EXPRESSION]: { mode: 'discrete' },
+			[TermTypes.METABOLITE_INTENSITY]: { mode: 'discrete' }
+		})
+	}
+
 	const pill = await termsettingInit({
 		menuOptions: opts.menuOptions || '*',
-		numericEditMenuVersion: opts.numericEditMenuVersion,
+		numericEditMenuVersion: opts.numericEditMenuVersion || ['continuous', 'discrete'],
 		vocabApi: opts.vocabApi,
 		vocab: opts.state?.vocab,
 		activeCohort: opts.state?.activeCohort,
@@ -668,11 +689,8 @@ async function setTermInput(opts) {
 		debug: opts.debug,
 		usecase: opts.usecase,
 		getBodyParams: opts.getBodyParams,
+		defaultQ4fillTW: opts.defaultQ4fillTW,
 		callback: async tw => {
-			// hide the cases/samples control panel upon updating divideBy term
-			const tableDiv = select(opts.holder.node().closest('div'))
-			tableDiv.style('display', 'none')
-
 			// showing "processing data ..."" before pill is set
 			if (opts.parent.dom.loadingDiv && opts.parent.dom.svg) {
 				opts.parent.dom.loadingDiv.selectAll('*').remove()
@@ -720,6 +738,28 @@ async function setTermInput(opts) {
 
 	if (opts.debug) api.Inner = self
 	return Object.freeze(api)
+}
+
+function renderTerm1Label(inputTerm, config) {
+	const labelTd = inputTerm.Inner.dom.labelTd // FIXME: will error here when loading saved session
+	const tw = config.term
+	switch (tw.term.type) {
+		case TermTypes.CATEGORICAL:
+			labelTd.text('Group categories')
+			break
+		case TermTypes.INTEGER:
+		case TermTypes.FLOAT:
+			labelTd.text('Customize bins')
+			break
+		case TermTypes.GENE_VARIANT:
+			labelTd.text('Group variants')
+			break
+		case tw.term.type == TermTypes.SNP:
+			labelTd.text('Group genotypes')
+			break
+		default:
+			labelTd.text('Customize')
+	}
 }
 
 export const initByInput = {
