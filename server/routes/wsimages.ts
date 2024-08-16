@@ -4,6 +4,7 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { CookieJar } from 'tough-cookie'
 import { promisify } from 'util'
+import { GetWSImagesRequest, GetWSImagesResponse } from '#shared/types/routes/wsimages.js'
 
 /*
 return session_id and slide_dimensions of the requested WSImage
@@ -17,10 +18,10 @@ export const api: any = {
 		get: {
 			init,
 			request: {
-				typeId: 'any'
+				typeId: 'GetWSImagesRequest'
 			},
 			response: {
-				typeId: 'any'
+				typeId: 'GetWSImagesResponse'
 			}
 		},
 		post: {
@@ -33,13 +34,14 @@ export const api: any = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			const g = genomes[req.query.genome]
+			const query = req.query as GetWSImagesRequest
+			const g = genomes[query.genome]
 			if (!g) throw 'invalid genome name'
-			const ds = g.datasets[req.query.dslabel]
+			const ds = g.datasets[query.dslabel]
 			if (!ds) throw 'invalid dataset name'
-			const sampleId = req.query.sampleId
+			const sampleId = query.sampleId
 			if (!sampleId) throw 'invalid sampleId'
-			const wsimage = req.query.wsimage
+			const wsimage = query.wsimage
 			if (!wsimage) throw 'invalid wsimage'
 
 			const cookieJar = new CookieJar()
@@ -116,7 +118,9 @@ function init({ genomes }) {
 				})
 				.json()
 
-			res.status(200).json({ sessionId: sessionId, slide_dimensions: getWsiImageResponse.slide_dimensions })
+			res
+				.status(200)
+				.json({ sessionId: sessionId, slide_dimensions: getWsiImageResponse.slide_dimensions } as GetWSImagesResponse)
 		} catch (e: any) {
 			console.log(e)
 			res.send({
