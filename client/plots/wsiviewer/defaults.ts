@@ -1,5 +1,5 @@
 import Settings from './Settings'
-import { copyMerge } from '../../rx'
+import { copyMerge } from '#rx'
 
 export default function wsiViewerDefaults(overrides = {}): Settings {
 	const defaults = {
