@@ -141,17 +141,23 @@ let _ID_ = 1
 
 export async function getPlotConfig(opts, app) {
 	// TODO need to supply term filter of app to fillTermWrapper
-	if (!opts.outcome) {
-		opts.outcome = {}
-	}
+	if (!opts.outcome) opts.outcome = {}
 
 	{
 		/* for condition term as outcome, it will have q.mode='binary', rather than default "discrete"
 		as required by logistic/cox regression
 		*/
-		const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
-		if (!plot) throw 'regression plot missing in state'
-		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType, 'outcome'))
+		// const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
+		// if (!plot) throw 'regression plot missing in state'
+		// await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType, 'outcome'))
+
+		// !!!
+		// the code above assumes that a regression plot exists, and that the first one
+		// relates to this particular opts.outcome, which may not be true when recovering a saved session
+		// with multiple regression plots
+		// !!!
+		// should check that the conditions are actually matched before using fillTermWrapper
+		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(opts.regressionType, 'outcome'))
 	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
@@ -166,7 +172,7 @@ export async function getPlotConfig(opts, app) {
 			await fillTermWrapper(t, app.vocabApi, defaultQ)
 		}
 		config.independent = opts.independent
-		delete opts.independent
+		//delete opts.independent // not sure why this has to be deleted? it causes an issue with file-based session recovery
 	} else {
 		config.independent = []
 	}
