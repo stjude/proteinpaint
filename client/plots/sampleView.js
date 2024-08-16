@@ -554,19 +554,8 @@ class SampleView {
 			let div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
-				const data = await dofetch3('samplewsimages', {
-					body: {
-						genome: this.app.opts.genome.name,
-						dslabel: state.vocab.dslabel,
-						sample_id: sample.sampleName
-					}
-				})
-
-				if (data.sampleWSImages?.length > 0) {
-					const cellDiv = div.append('div').style('display', 'inline-block')
-					this.wsiPlots.push({ sample, cellDiv })
-					wsiViewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleWSImages)
-				}
+				const cellDiv = div.append('div').style('display', 'inline-block')
+				wsiViewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName)
 			}
 		}
 
