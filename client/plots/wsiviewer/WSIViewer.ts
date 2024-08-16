@@ -13,8 +13,7 @@ import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerIn
 import Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import { GetWSImagesRequest, GetWSImagesResponse } from '../../shared/types/routes/wsimages.ts'
-import wsiViewerImageFiles from '#plots/wsiviewer/images.ts'
-import { copyMerge } from '#rx'
+import wsiViewerImageFiles from './wsimagesloaded.ts'
 
 export default class WSIViewer {
 	// following attributes are required by rx
