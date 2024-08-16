@@ -268,7 +268,7 @@ function setRenderers(self) {
 		self.included_terms = []
 		if (self.state.usecase) {
 			for (const t of term.terms) {
-				if (isUsableTerm(t, self.state.usecase).size) {
+				if (isUsableTerm(t, self.state.usecase, self.app.vocabApi.termdbConfig).size) {
 					self.included_terms.push(t)
 				}
 			}
@@ -328,7 +328,7 @@ function setRenderers(self) {
 		}
 
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
-		const uses = isUsableTerm(term, self.state.usecase)
+		const uses = isUsableTerm(term, self.state.usecase, self.app.vocabApi.termdbConfig)
 
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
@@ -350,7 +350,7 @@ function setRenderers(self) {
 
 	self.addTerm = async function (term) {
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
-		const uses = isUsableTerm(term, self.state.usecase)
+		const uses = isUsableTerm(term, self.state.usecase, self.app.vocabApi.termdbConfig)
 
 		const div = select(this)
 			.attr('class', cls_termdiv)

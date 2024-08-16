@@ -162,6 +162,7 @@ function setRenderers(self) {
 
 	self.getPrompt = state => {
 		/* term search prompt is decided by two factors:
+		TODO geneVariant is no longer supported here
 		1. if the term type exists in allowedTermTypes from the dataset
 		   e.g. if geneVariant type does not exist in the dataset, do not show prompt (and no need to check usecase)
 		2. termdb client app usecase, defines the context for using terms selected from the termdb app
@@ -222,7 +223,7 @@ function setRenderers(self) {
 	self.showTerm = function (term) {
 		const tr = select(this)
 		const button = tr.append('td').text(term.name)
-		const uses = isUsableTerm(term, self.state.usecase)
+		const uses = isUsableTerm(term, self.state.usecase, self.app.vocabApi.termdbConfig)
 		/*
 		below, both callbacks are made in app.js validateOpts()
 		1. self.opts.click_term() is for selecting to tvs

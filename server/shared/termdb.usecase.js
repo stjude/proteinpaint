@@ -17,13 +17,15 @@ export const graphableTypes = new Set([
 	TermTypes.SNP
 ])
 /*
-	isUsableTerm() will
+isUsableTerm() will
+
 	- centralize the "allowed term" logic
 	which can be intricate or dataset-specific 
 	for certain terms or contexts
 	- make it easy to handle new term types
 
-	Arguments:
+Arguments:
+
 	term {}
 		.type: 'categorical', etc.
 		.child_types: []
@@ -35,24 +37,31 @@ export const graphableTypes = new Set([
 		.detail 
 		  - a more specific detailed use case
 	
-	ds 
-	- a bootstrapped dataset object that can supply overrides to the use case logic,
-	for example, to apply role-based allowed term uses or performance-related restrictions
-	to ancestor terms when a use case aggregates too many data points for a given chart type
 
-	Returns
+	termdbConfig
+		optional. provides ds overrides on default rules via excludedTermtypeByTarget. for use on client
+
+	ds
+		optional. provides ds overrides when the function runs on backend
+		server-side dataset object that can supply overrides (in the form of functions) to the use case logic,
+		for example, to apply role-based allowed term uses or performance-related restrictions
+		to ancestor terms when a use case aggregates too many data points for a given chart type
+
+Returns
+
 	a Set{} with zero or more of the following strings:
 	- 'plot' if the term can be used in a plot chartType
 	- 'branch' if the term can be used only as an expandable tree branch, but not in a plot
 	- an empty Set means that the term has no valid uses, i.e, it cannot be used either for plotting or as a tree branch
 */
-export function isUsableTerm(term, _usecase, ds) {
+export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 	const usecase = _usecase || {}
 
 	// may apply dataset specific override filter for a use case
-	if (ds && ds.usecase && use.target in ds.usecase) {
+	if (typeof ds?.usecase?.[use.target] == 'function') {
 		return ds.usecase[use.target](term, use)
 	}
+
 	// if (term.isprivate && !user.roleCanUse(term)) return false
 
 	const uses = new Set()
@@ -180,16 +189,14 @@ export function isUsableTerm(term, _usecase, ds) {
 			}
 
 		case 'filter':
-			if (graphableTypes.has(term.type)) {
-				if (usecase.detail == 'GDC') {
-					// is gdc ds. api doesn't support filtering by survival, do not show survival
-					if (term.type != 'survival') uses.add('plot')
-				} else {
-					uses.add('plot')
-				}
+			// apply "exlst" to other targets as needed
+			const exlst = termdbConfig?.excludedTermtypeByTarget?.filter
+			if (exlst) {
+				if (graphableTypes.has(term.type) && !exlst.includes(term.type)) uses.add('plot')
+				if (child_types.find(t => !exlst.includes(t))) uses.add('branch') // there's a non-excluded child type, allow branch to show
+				return uses
 			}
-			if (!term.isleaf) uses.add('branch')
-			return uses
+		// no specific rule for filter. pass and use default rules
 
 		default:
 			if (graphableTypes.has(term.type)) uses.add('plot')

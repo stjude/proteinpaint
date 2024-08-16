@@ -103,6 +103,7 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 	if (tdb.hasAncestry) c.hasAncestry = tdb.hasAncestry
 	if (tdb.logscaleBase2) c.logscaleBase2 = tdb.logscaleBase2
 	if (tdb.useCasesExcluded) c.useCasesExcluded = tdb.useCasesExcluded
+	if (tdb.excludedTermtypeByTarget) c.excludedTermtypeByTarget = tdb.excludedTermtypeByTarget
 
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
