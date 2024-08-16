@@ -208,7 +208,7 @@ TdbStore.prototype.actions = {
 				expandedTermIds.push(...term.__ancestors)
 			}
 
-			if (isUsableTerm(term).has('plot')) {
+			if (isUsableTerm(term, {}, this.state.termdbConfig).has('plot')) {
 				Object.assign(this.state.submenu, action.submenu)
 			} else {
 				expandedTermIds.push(term.id)

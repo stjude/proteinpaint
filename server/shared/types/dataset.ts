@@ -903,9 +903,18 @@ type Termdb = {
 	}
 	hierCluster?: any
 
-	/** ds customization of rules on what term type to exclude for a usecase. used by gdc in that gene exp cannot be used for filtering */
+	/** ds customization of rules in TermTypeSelect on what term type to exclude for a usecase.
+	used by gdc in that gene exp cannot be used for filtering 
+	note this applies to left-side term type tabs, but not terms in dict tree. latter is controlled by excludeTermtypeByTarget
+	*/
 	useCasesExcluded?: {
 		/** key is target name (todo restrict values), value is array of 1 or more term types (todo restrict values) */
+		[useCaseTarget: string]: string[]
+	}
+	/** ds customization to rules in isUsableTerm(). this applies to what's showing in dict tree
+	 */
+	excludedTermtypeByTarget?: {
+		/** key is usecase target (todo restrict). value is array of term type (todo restrict) */
 		[useCaseTarget: string]: string[]
 	}
 }

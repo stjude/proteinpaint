@@ -236,7 +236,7 @@ class TdbApp {
 		// filter for display terms with usecase
 		const useTerms = []
 		for (const tw of tws) {
-			const uses = isUsableTerm(tw.term, this.state.tree.usecase)
+			const uses = isUsableTerm(tw.term, this.state.tree.usecase, this.state.termdbConfig)
 			if (uses.has('plot')) useTerms.push(tw)
 		}
 		if (useTerms.length == 0) return this.dom.customTermDiv.style('display', 'none')
