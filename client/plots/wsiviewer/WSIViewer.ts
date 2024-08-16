@@ -14,6 +14,7 @@ import Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import { GetWSImagesRequest, GetWSImagesResponse } from '../../shared/types/routes/wsimages.ts'
 import wsiViewerImageFiles from '#plots/wsiviewer/images.ts'
+import { copyMerge } from '#rx'
 
 export default class WSIViewer {
 	// following attributes are required by rx
@@ -157,8 +158,8 @@ export default class WSIViewer {
 
 		for (let i = 0; i < wsimages.length; i++) {
 			const body: GetWSImagesRequest = {
-				genome: state.genome,
-				dslabel: state.dslabel,
+				genome: state.genome || state.vocab.genome,
+				dslabel: state.dslabel || state.vocab.dslabel,
 				sampleId: state.sample_id,
 				wsimage: wsimages[i]
 			}
@@ -201,11 +202,12 @@ export const wsiViewer = getCompInit(WSIViewer)
 export const componentInit = wsiViewer
 
 export async function getPlotConfig(opts: any, app: any) {
-	return {
+	const config = {
 		chartType: 'WSIViewer',
 		subfolder: 'wsiviewer',
 		extension: 'ts',
-		settings: wsiViewerDefaults(opts.overrides),
-		wsimages: await wsiViewerImageFiles({ app })
+		wsimages: await wsiViewerImageFiles({ app }),
+		settings: wsiViewerDefaults(opts.overrides)
 	}
+	return copyMerge(config, opts)
 }
