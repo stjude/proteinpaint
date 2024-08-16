@@ -58,10 +58,11 @@ tape('fill({id}) basic default', async test => {
 					id: 'aaa',
 					name: 'aaa',
 					values: {},
-					groupsetting: { useIndex: 0, lst: [] }
+					groupsetting: { disabled: true }
 				},
 				q: {
-					type: 'values'
+					type: 'values',
+					isAtomic: true
 				}
 			},
 			'should fill-in a minimal tw with only {id}'
@@ -89,10 +90,11 @@ tape('fill() basic default', async test => {
 					id: 'abc',
 					name: 'abc',
 					values: {},
-					groupsetting: { useIndex: 0, lst: [] }
+					groupsetting: { disabled: true }
 				},
 				q: {
-					type: 'values'
+					type: 'values',
+					isAtomic: true
 				}
 			},
 			'should fill-in a minimal tw with only {id}'

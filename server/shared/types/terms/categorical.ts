@@ -1,4 +1,4 @@
-import { BaseTerm, TermValues, MinBaseQ, GroupSettingQ, TermGroupSetting, BaseTW } from './term.ts'
+import { BaseTerm, TermValues, MinBaseQ, GroupSettingQ, ValuesQ, TermGroupSetting, BaseTW } from './term.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /**
@@ -22,24 +22,27 @@ export type RawCatTW = {
 			  }
 		groupsetting?: TermGroupSetting
 	}
-	q?: {
-		type?: string
-		mode?: string
-		isAtomic: true
-		groupsetting?: GroupSettingQ // deprecated nested object, must support and reapply to root q object
-	}
-	//isAtomic?: true
-	//$id?: string
+	q: MinBaseQ &
+		(
+			| {
+					type?: 'values'
+			  }
+			| {
+					type: 'predefined-groupset'
+					predefined_groupset_idx?: number
+					groupsetting?: GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in RootTW
+			  }
+			| {
+					type: 'custom-groupset'
+					customset: any
+					groupsetting?: GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in RootTW
+			  }
+		)
+	isAtomic: true
+	$id?: string
 }
 
-export type CategoricalValuesObject = {
-	//mode: 'binary' | 'discrete'
-	type?: 'values'
-}
-
-type CategoricalBaseQ = MinBaseQ & { mode: 'discrete' | 'binary' }
-
-export type CategoricalQ = CategoricalBaseQ & GroupSettingQ
+export type CategoricalQ = GroupSettingQ | ValuesQ
 
 export type CategoricalTerm = BaseTerm & {
 	type: 'categorical'
@@ -54,7 +57,7 @@ export type CategoricalTerm = BaseTerm & {
  * @category TW
  */
 
-export type CategoricalTW = {
+export type CategoricalTW = BaseTW & {
 	id: string
 	q: CategoricalQ
 	term: CategoricalTerm
