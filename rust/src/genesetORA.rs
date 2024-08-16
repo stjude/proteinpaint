@@ -74,11 +74,11 @@ fn main() -> Result<()> {
             match input_json {
                 Ok(json_string) => {
                     let run_time = Instant::now();
-                    let db_input: &JsonValue = &json_string["db"];
-                    let db;
-                    match db_input.as_str() {
-                        Some(db_string) => db = db_string.to_string(),
-                        None => panic!("db file path is missing"),
+                    let msigdb_input: &JsonValue = &json_string["msigdb"];
+                    let msigdb;
+                    match misgdb_input.as_str() {
+                        Some(db_string) => msigdb = db_string.to_string(),
+                        None => panic!("msigdb file path is missing"),
                     }
                     let genesetgroup;
                     let genesetgroup_input: &JsonValue = &json_string["gene_set_group"];
@@ -106,7 +106,7 @@ fn main() -> Result<()> {
                     }
                     let num_items_output = 100; // Number of top pathways to be specified in the output
 
-                    let conn = Connection::open(db)?;
+                    let conn = Connection::open(msigdb)?;
                     let stmt_result = conn.prepare(
                         &("select id from terms where parent_id='".to_owned()
                             + &genesetgroup
