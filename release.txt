@@ -1,1 +1,2 @@
-
+Fixes:
+- fix file-based session recovery of regression plot
