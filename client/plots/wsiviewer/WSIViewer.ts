@@ -202,12 +202,11 @@ export const wsiViewer = getCompInit(WSIViewer)
 export const componentInit = wsiViewer
 
 export async function getPlotConfig(opts: any, app: any) {
-	const config = {
+	return {
 		chartType: 'WSIViewer',
 		subfolder: 'wsiviewer',
 		extension: 'ts',
 		wsimages: await wsiViewerImageFiles({ app }),
 		settings: wsiViewerDefaults(opts.overrides)
 	}
-	return copyMerge(config, opts)
 }

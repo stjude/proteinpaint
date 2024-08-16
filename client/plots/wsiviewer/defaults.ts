@@ -1,4 +1,5 @@
 import Settings from './Settings'
+import { copyMerge } from '../../rx'
 
 export default function wsiViewerDefaults(overrides = {}): Settings {
 	const defaults = {
@@ -10,5 +11,5 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		thumbnailWidth: '60px',
 		thumbnailHeight: '80px'
 	}
-	return defaults
+	return copyMerge(defaults, overrides)
 }
