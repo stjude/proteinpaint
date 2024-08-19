@@ -191,7 +191,12 @@ export class InputTerm {
 
 		if (!tw.q.mode && isDictionaryType(tw.term.type)) {
 			// fill in q.mode for dictionary terms
-			if (tw.term.type == 'categorical' || tw.term.type == 'condition' || tw.term.type == 'survival')
+			if (
+				tw.term.type == 'categorical' ||
+				tw.term.type == 'condition' ||
+				tw.term.type == 'survival' ||
+				tw.term.type == 'samplelst'
+			)
 				tw.q.mode = 'discrete'
 			else tw.q.mode = 'continuous'
 		}
