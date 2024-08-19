@@ -47,24 +47,26 @@ async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentati
 	//console.log('genomes:', genomes[q.genome].termdbs.msigdb.cohort.db.connection.name)
 	//console.log('q:', q.genome)
 	if (!genomes[q.genome].termdbs) throw 'termdb database is not available for ' + q.genome
-	const gene_overrepresentation_input = {
+	const gene_overrepresentation_input_type = {
 		sample_genes: q.sample_genes,
 		msigdb: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
 		gene_set_group: q.geneSetGroup,
-		gene_db: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile)
+		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile)
 	} as gene_overrepresentation_input
 
+	console.log('gene_overrepresentation_input_type:', gene_overrepresentation_input_type)
+
 	if (q.background_genes) {
-		gene_overrepresentation_input.background_genes = q.background_genes
+		gene_overrepresentation_input_type.background_genes = q.background_genes
 	}
 
-	//fs.writeFile('test.txt', JSON.stringify(gene_overrepresentation_input), function (err) {
+	//fs.writeFile('test.txt', JSON.stringify(gene_overrepresentation_input_type), function (err) {
 	//	// For catching input to rust pipeline, in case of an error
 	//	if (err) return console.log(err)
 	//})
 
 	const time1 = new Date().valueOf()
-	const rust_output = await run_rust('genesetORA', JSON.stringify(gene_overrepresentation_input))
+	const rust_output = await run_rust('genesetORA', JSON.stringify(gene_overrepresentation_input_type))
 	const time2 = new Date().valueOf()
 	console.log('Time taken to run rust gene over representation pipeline:', time2 - time1, 'ms')
 	let result

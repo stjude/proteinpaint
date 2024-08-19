@@ -38,7 +38,7 @@ struct pathway_p_value {
 
 fn calculate_hypergeometric_p_value(
     sample_genes: &Vec<&str>,
-    background_genes: &Vec<&str>,
+    background_genes: &Vec<String>,
     genes_in_pathway: Vec<pathway_genes>,
 ) -> f64 {
     let matching_sample_genes_counts: f64 = sample_genes
@@ -76,7 +76,7 @@ fn main() -> Result<()> {
                     let run_time = Instant::now();
                     let msigdb_input: &JsonValue = &json_string["msigdb"];
                     let msigdb;
-                    match misgdb_input.as_str() {
+                    match msigdb_input.as_str() {
                         Some(db_string) => msigdb = db_string.to_string(),
                         None => panic!("msigdb file path is missing"),
                     }
@@ -91,11 +91,39 @@ fn main() -> Result<()> {
                         sample_genes_input.as_str().unwrap().split(",").collect();
                     let mut pathway_p_values: Vec<pathway_p_value> = Vec::with_capacity(10000);
                     let background_genes_input: &JsonValue = &json_string["background_genes"];
-                    let background_genes: Vec<&str> = background_genes_input
-                        .as_str()
-                        .unwrap()
-                        .split(",")
-                        .collect();
+                    let mut background_genes = Vec::<String>::new();
+                    match background_genes_input.as_str() {
+                        Some(x) => {
+                            let background_genes_str: Vec<&str> = x.split(",").collect(); // Background genes is defined for e.g in case of DE analysis
+                            for item in background_genes_str {
+                                background_genes.push(item.to_string());
+                            }
+                        }
+                        None => {
+                            // Background genes not present for e.g. in hierarchial clustering
+                            // Get background genes from the gene database
+                            let genedb_input: &JsonValue = &json_string["genedb"];
+                            let genedb;
+                            match genedb_input.as_str() {
+                                Some(gene_db_string) => genedb = gene_db_string.to_string(),
+                                None => panic!("genedb file path is missing"),
+                            }
+
+                            let genedbconn = Connection::open(genedb)?;
+                            let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
+                            match genedb_result {
+                                Ok(mut x) => {
+                                    let mut genes = x.query([])?;
+                                    while let Some(gene) = genes.next()? {
+                                        let gn: String = gene.get::<usize, String>(0)?;
+                                        //println!("gn:{}", gn);
+                                        background_genes.push(gn);
+                                    }
+                                }
+                                Err(_) => {}
+                            }
+                        }
+                    }
                     //println!("sample_genes:{:?}", sample_genes);
                     //println!("background_genes:{:?}", background_genes);
 
@@ -106,8 +134,8 @@ fn main() -> Result<()> {
                     }
                     let num_items_output = 100; // Number of top pathways to be specified in the output
 
-                    let conn = Connection::open(msigdb)?;
-                    let stmt_result = conn.prepare(
+                    let msigdbconn = Connection::open(msigdb)?;
+                    let stmt_result = msigdbconn.prepare(
                         &("select id from terms where parent_id='".to_owned()
                             + &genesetgroup
                             + "'"),
@@ -129,7 +157,7 @@ fn main() -> Result<()> {
                                                 + &n.GO_id
                                                 + &"'";
                                         //println!("sql_statement:{}", sql_statement);
-                                        let mut gene_stmt = conn.prepare(&(sql_statement))?;
+                                        let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
                                         //println!("gene_stmt:{:?}", gene_stmt);
 
                                         let mut rows = gene_stmt.query([])?;
