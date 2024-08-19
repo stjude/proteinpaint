@@ -4,7 +4,6 @@ import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import dziviewer from './dziviewer/plot.dzi'
 import { dofetch3 } from '#common/dofetch'
-import wsiViewer from './wsiviewer/plot.wsi'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -555,7 +554,8 @@ class SampleView {
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
-				wsiViewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName)
+				const wsiViewer = await import('./wsiviewer/plot.wsi.js')
+				wsiViewer.default(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName)
 			}
 		}
 
