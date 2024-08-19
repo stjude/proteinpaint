@@ -183,7 +183,8 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 
 			if (usecase.detail == 'independent') {
-				if (term.type == 'float' || term.type == 'integer' || term.type == 'categorical') uses.add('plot')
+				if (term.type == 'float' || term.type == 'integer' || term.type == 'categorical' || term.type == 'samplelst')
+					uses.add('plot')
 				if (hasChildTypes(child_types, ['categorical', 'float', 'integer'])) uses.add('branch')
 				return uses
 			}

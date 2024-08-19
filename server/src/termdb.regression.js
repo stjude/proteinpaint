@@ -172,11 +172,13 @@ function parse_q(q, ds) {
 		if (isDictionaryType(tw.type)) {
 			// dictionary term
 			tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
-			if (!tw.id) throw '.id missing for an independent term'
-			tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
-			if (!tw.term) throw `invalid independent term='${tw.id}'`
-			// no longer need tw.id now that tw.term is rehydrated
-			delete tw.id
+			if (tw.type != 'samplelst') {
+				if (!tw.id) throw 'tw.id missing'
+				tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
+				if (!tw.term) throw `invalid independent term='${tw.id}'`
+				// no longer need tw.id now that tw.term is rehydrated
+				delete tw.id
+			}
 		} else {
 			// non-dictionary term
 			if (tw.type == 'snplst' || tw.type == 'snplocus') {
@@ -328,7 +330,7 @@ function makeRinput(q, sampledata) {
 					}
 				}
 			} else {
-				const independent = id2value.get(tw.term.id)
+				const independent = id2value.get(tw.term.id || tw.term.name)
 				if (!independent) {
 					skipsample = true
 					break
@@ -399,7 +401,7 @@ function makeRinput(q, sampledata) {
 function makeRvariable_dictionaryTerm(tw, independent, q) {
 	// tw is a dictionary term
 	const thisTerm = {
-		id: tw.term.id,
+		id: tw.term.id || tw.term.name,
 		name: tw.term.name,
 		type: tw.q.mode == 'spline' ? 'spline' : 'other',
 		rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor'
@@ -1197,7 +1199,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	const CTEs = await Promise.all(terms.map(async (t, i) => await get_term_cte(q, values, i, filter, t))).catch(
 		console.error
 	)
-	values.push(...terms.map(d => d.term.id))
+	values.push(...terms.map(d => d.term.id || d.term.name))
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
@@ -1220,7 +1222,9 @@ async function getSampleData_dictionaryTerms(q, terms) {
 
 	// parse the processed rows
 	for (const { sample, term_id, key, value } of rows) {
-		const term = terms.find(term => term.term.id == term_id)
+		const term = terms.find(term => term.term.id || term.term.name == term_id)
+
+		if (!term) throw 'no term found'
 
 		if (!samples.has(sample)) {
 			samples.set(sample, { sample, id2value: new Map() })
@@ -1245,7 +1249,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	const deletesamples = new Set()
 	for (const o of samples.values()) {
 		for (const t of terms) {
-			if (!o.id2value.has(t.term.id)) {
+			if (!o.id2value.has(t.term.id || t.term.name)) {
 				deletesamples.add(o.sample)
 				break
 			}
