@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- WSIViewer launchable from runproteinpaint() as a mass plot.
+- Example for the WSIViewer available from the app drawer.
+
 Fixes:
 - At GDC lollipop subtrack, disable survival term when building the filter
 - fix file-based session recovery of regression plot
