@@ -1,1 +1,3 @@
-
+Features
+- WSIViewer launchable from runproteinpaint() as a mass plot.
+- Example for the WSIViewer available from the app drawer. 
