@@ -2,7 +2,6 @@ import { getCompInit, copyMerge } from '#rx'
 import { select } from 'd3-selection'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
-import dziviewer from './dziviewer/plot.dzi'
 import { dofetch3 } from '#common/dofetch'
 
 const root_ID = 'root'
@@ -544,7 +543,8 @@ class SampleView {
 				if (data.sampleDZImages?.length > 0) {
 					const cellDiv = div.append('div').style('display', 'inline-block')
 					this.dziPlots.push({ sample, cellDiv })
-					dziviewer(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleDZImages)
+					const dziviewer = await import('./dziviewer/plot.dzi.js')
+					dziviewer.default(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleDZImages)
 				}
 			}
 		}
