@@ -85,6 +85,7 @@ export default class WSIViewer {
 			this.thumbnailsContainer = holder
 				.append('div')
 				.attr('id', 'thumbnails')
+				.attr('data-testid', 'sjpp-thumbnails')
 				.style('width', '600px')
 				.style('height', '80px')
 				.style('display', 'flex')
