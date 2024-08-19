@@ -219,7 +219,13 @@ export default {
 			src: 'native',
 			file: 'files/hg38/TermdbTest/TermdbTest.fpkm.matrix.gz'
 		},
-		topVariablyExpressedGenes: { src: 'native' }
+		topVariablyExpressedGenes: {
+			src: 'native'
+		},
+		WSImages: {
+			type: 'H&E',
+			imageBySampleFolder: 'hg38-test/TermdbTest/wsimages'
+		}
 	},
 	assayAvailability: {
 		// term used below must be annotated on samples rather than patients(root). otherwise matrix will pull wrong samples for geneVariant term
