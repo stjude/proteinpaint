@@ -7,6 +7,7 @@ import { rgb as d3rgb } from 'd3-color'
 import { defaultcolor } from '../../shared/common.js'
 import { Menu } from '../../dom/menu.js'
 import { dofetch3 } from '#common/dofetch'
+import { ClientCopyGenome } from 'types/global.ts'
 
 type Citation = {
 	id: number
@@ -215,12 +216,9 @@ export class AppHeader {
 				omniSearch.updatePlaceholder(get_placeholder())
 			})
 
-		for (const n in this.app.genomes) {
-			this.app.selectgenome
-				.append('option')
-				.attr('n', n)
-				.text(this.app.genomes[n].species + ' ' + n)
-				.property('value', n)
+		const filterGenomes = Object.values(this.app.genomes).filter((g: any) => !g.hideOnClient) as ClientCopyGenome[]
+		for (const n of filterGenomes) {
+			this.app.selectgenome.append('option').attr('n', n.name).text(`${n.species} ${n.name}`).property('value', n.name)
 		}
 		this.app.genome_browser_btn = this.make_genome_browser_btn(this.app, headbox, this.jwt)
 
