@@ -1,4 +1,4 @@
-import { BaseTerm, TermValues, MinBaseQ, GroupSettingQ, ValuesQ, TermGroupSetting, BaseTW } from './term.ts'
+import { BaseTerm, TermValues, MinBaseQ, GroupSettingQ, GroupEntry, ValuesQ, TermGroupSetting, BaseTW } from './term.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /**
@@ -11,17 +11,7 @@ import { TermSettingInstance } from '../termsetting.ts'
 
 export type RawCatTW = {
 	id: string
-	term: {
-		type: 'categorical'
-		id: string
-		name?: string
-		values?:
-			| Record<string, never> // empty object
-			| {
-					[key: string | number]: { label?: string; key?: string }
-			  }
-		groupsetting?: TermGroupSetting
-	}
+	term: CategoricalTerm
 	q: MinBaseQ &
 		(
 			| {
@@ -34,7 +24,9 @@ export type RawCatTW = {
 			  }
 			| {
 					type: 'custom-groupset'
-					customset: any
+					customset: {
+						groups: GroupEntry[]
+					}
 					groupsetting?: GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in RootTW
 			  }
 		)

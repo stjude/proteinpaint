@@ -21,17 +21,14 @@ export class CategoricalBase extends RootTW {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (tw.term.type != 'categorical') throw `incorrect term.type='${tw.term?.type}', expecting 'categorical'`
 		if (!tw.id && !tw.term.id) throw 'missing tw.id and tw.term.id'
+		const id = tw.id || tw.term?.id || 'aaa-TODO'
+		if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values for id='${id}'`
 		return {
-			id: tw.id || tw.term?.id || 'aaa',
-			term: {
-				type: 'categorical',
-				id: tw.term?.id || 'test',
-				name: tw.term?.name || tw.term?.id || 'test',
-				values: tw.term?.values || {},
-				groupsetting: tw.term.groupsetting || { disabled: true }
-			},
+			...tw,
+			id,
+			term: tw.term,
 			q: getQ(tw)
-		} //satisfies CategoricalTW
+		} satisfies CategoricalTW
 	}
 }
 
@@ -48,5 +45,5 @@ function getQ(tw: RawCatTW): CategoricalQ {
 	if (!tw.q.type) {
 		return { ...tw.q, type: 'values' }
 	}
-	throw `invalid tw.q`
+	throw `invalid tw.q0`
 }

@@ -11,4 +11,4 @@ export type TwLst = TermWrapper[]
 
 export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GeneVariantQ | SampleLstQ | SnpsQ
 
-export type RawTW = RawCatTW
+export type RawTW = { id: string } | RawCatTW

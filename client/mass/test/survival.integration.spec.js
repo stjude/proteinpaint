@@ -1,5 +1,5 @@
 import tape from 'tape'
-import termjson from '../../test/testdata/termjson'
+import { termjson } from '../../test/testdata/termjson'
 import helpers from '../../test/front.helpers.js'
 import { detectOne, detectGte } from '../../test/test.helpers.js'
 
