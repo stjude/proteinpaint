@@ -181,6 +181,9 @@ export async function initGenomesDs(serverconfig) {
 				}
 			}
 		}
+		if (g?.hideOnClient) {
+			g2.hideOnClient = g.hideOnClient
+		}
 	}
 
 	if (serverconfig.defaultgenome) {
@@ -389,7 +392,6 @@ export async function initGenomesDs(serverconfig) {
 			// allow to have no ds
 			continue
 		}
-
 		/*
 	done everything except dataset
 	*/

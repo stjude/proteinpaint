@@ -93,7 +93,8 @@ function clientcopy_genome(genomename, genomes) {
 		minorchr: g.minorchr,
 		tracks: g.tracks,
 		hicenzymefragment: g.hicenzymefragment,
-		datasets: {}
+		datasets: {},
+		hideOnClient: g.hideOnClient
 	}
 
 	if (g.termdbs) {

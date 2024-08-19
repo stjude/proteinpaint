@@ -30,7 +30,7 @@ type ClientCopyDataset = {
 	isoffical?: boolean
 	legacyDsIsUninitiated?: boolean | number
 	mdsIsUninitiated?: boolean | number
-	/** Ignored by the client */
+	/** if true, will not show dataset button in lollipop plot */
 	noHandleOnClient?: boolean | number
 }
 // WIP
@@ -49,6 +49,8 @@ export type ClientCopyGenome = {
 	hasSNP: boolean
 	hicdomain?: { groups: any }
 	hicenzymefragment: { enzyme: string; file: string }[]
+	/** if true, do not show genome in the header dropdown */
+	hideOnClient?: boolean
 	geneset?: GeneSet
 	isdefault?: boolean
 	/** k: upper isoform
