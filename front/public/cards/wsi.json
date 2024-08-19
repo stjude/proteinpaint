@@ -1,0 +1,27 @@
+{
+    "ribbonMessage": "We're excited to announce our new whole slide imaging viewer!",
+    "ppcalls": [
+        {
+            "runargs": {
+                "noheader": true,
+                "mass": {
+                    "state": {
+                        "dslabel": "TermdbTest",
+                        "genome": "hg38-test",
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
+                        "sample_id": "B-T87L964D",
+                        "plots": [
+                            {
+                                "chartType": "WSIViewer",
+                                "subfolder": "wsiviewer",
+                                "extension": "ts"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}

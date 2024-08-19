@@ -362,6 +362,16 @@
             "ribbon": { "text":"new", "expireDate": "2024-09-01" },
             "sandboxJson": "geneExp",
             "searchterms": ["clustering","expression","hierarchical"]
+        },
+        {
+            "type": "card",
+            "name": "Whole Slide Imaging",
+            "section": "apps",
+            "description": "H&E images zooming and panning",
+            "image": "https://proteinpaint.stjude.org/ppdemo/images/wsi-square.png",
+            "ribbon": { "text": "new", "expireDate": "2024-10-01" },
+            "sandboxJson": "wsi",
+            "searchterms": ["H&E", "HE", "histology", "slice", "slide", "pathology"]  
         }
     ]
 }
