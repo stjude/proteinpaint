@@ -10,6 +10,7 @@ import { write_tmpfile } from './utils.js'
 import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
+const maxGene4geneExpCluster = 2000 // max #genes allowed for gene exp cluster
 
 // convenient helper to only print log on dev environments, and reduce pollution on prod
 // TODO move to utils.js, also fix use of _serverconfig
@@ -143,12 +144,14 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		// getter returns this data structure
 		const term2sample2value = new Map() // k: gene symbol, v: { <case submitter id>: value }
 
-		const t2 = new Date()
+		let t2 = new Date()
 
 		let cases4clustering
 		if (q.forClusteringAnalysis) {
 			cases4clustering = await getCases4expclustering(q, ds)
-			mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', new Date() - t2, 'ms')
+			const t = new Date()
+			mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', t - t2, 'ms')
+			t2=t
 		}
 
 		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.terms, cases4clustering, genome, ds, q)
@@ -205,11 +208,11 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 				}
 			}
 		}
-		if (ensgLst.length > 1000) break // max 1000 genes
+		if (ensgLst.length > maxGene4geneExpCluster) break // do not allow to exceed max genes
 	}
 
 	// TODO: detect when the list has already been screened per Zhenyu's instructions below
-	//return [ensgLst, ensg2symbol]
+	return [ensgLst, ensg2symbol]
 
 	if (!q.forClusteringAnalysis) {
 		// the request is not for clustering analysis. do not perform gene selection step to speed up and use given genes as-is
