@@ -1,5 +1,5 @@
 import { TermWrapper, RawTW } from '#types'
-import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
+import { mayHydrateDictTwLst, get$id } from '../termsetting/termsetting.ts'
 
 export type UseCase = {
 	target: string
@@ -12,17 +12,7 @@ export type TwInitOpts = {
 
 export class RootTW {
 	static async fill(tw /*: RawTW*/, vocabApi?: any): Promise<TermWrapper> {
-		const keys = Object.keys(tw)
-		if (!keys.length) throw `empty tw object`
-		if (tw.id && !tw.term) {
-			// for dev work, testing, and URLs, it's convenient to only specify tw.id for a dictionary tw,
-			// must support creating a hydrated tw.term from a minimal dict tw
-			await mayHydrateDictTwLst([tw], vocabApi)
-		}
-
-		if (!tw.q) tw.q = {}
-		tw.q.isAtomic = true
-		reshapeLegacyTw(tw)
+		await RootTW.preprocess(tw, vocabApi)
 
 		switch (tw.term.type) {
 			case 'categorical': {
@@ -49,6 +39,22 @@ export class RootTW {
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`
 		}
+	}
+
+	// can reuse this function to generate valid preprocessed tw
+	// for term-type specific unit tests
+	static async preprocess(tw /*: RawTW*/, vocabApi?: any) {
+		const keys = Object.keys(tw)
+		if (!keys.length) throw `empty tw object`
+		if (tw.id && !tw.term) {
+			// for dev work, testing, and URLs, it's convenient to only specify tw.id for a dictionary tw,
+			// must support creating a hydrated tw.term from a minimal dict tw
+			await mayHydrateDictTwLst([tw], vocabApi)
+		}
+
+		if (!tw.q) tw.q = {}
+		tw.q.isAtomic = true
+		reshapeLegacyTw(tw)
 	}
 }
 
