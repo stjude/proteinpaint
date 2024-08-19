@@ -28,5 +28,5 @@ export type gene_overrepresentation_input = {
 	/** Name of Gene Set Group */
 	gene_set_group: string
 	/** Path to gene db */
-	gene_db: string
+	genedb: string
 }
