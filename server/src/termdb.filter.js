@@ -1,5 +1,5 @@
 import { isDictionaryType, TermTypes, getBin } from '#shared/terms'
-import { ROOT_SAMPLE_TYPE, isNonDictionaryType } from '#shared/terms.js'
+import { DEFAULT_SAMPLE_TYPE, ROOT_SAMPLE_TYPE, isNonDictionaryType } from '#shared/terms.js'
 import { getSnpData } from './termdb.matrix.js'
 
 /*
@@ -122,9 +122,7 @@ export function getSampleType(term, ds) {
 	if (term.id) sample_type = ds.term2SampleType.get(term.id)
 	// samplelst
 	else {
-		const field = Object.keys(term.values)[0]
-		const list = term.values[field].list
-		sample_type = ds.sampleId2Type.get(list[0])
+		return DEFAULT_SAMPLE_TYPE //later own term needs to know what type annotates based on the samples
 	}
 	return sample_type
 }
@@ -139,7 +137,7 @@ function get_categorical(tvs, CTEname, ds, sample_type) {
 	let values
 	if (isCohortFilter && ds.cohort.db.tableColumns['sampleidmap'].includes('cohort')) {
 		values = []
-		query = `select id as sample from sampleidmap where cohort = '${tvs.values[0].key}' and sample_type = ${sample_type}`
+		query = `select id as sample from sampleidmap where cohort = '${tvs.values[0].key}' and sample_type != 1` //we are returning only children
 	} else {
 		query = `SELECT sample
 		FROM anno_categorical 

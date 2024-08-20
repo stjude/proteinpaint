@@ -1213,9 +1213,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	// parse the processed rows
 
 	for (const { sample, term_id, key, value } of rows) {
-		const term = terms.find(term => (term.term.id || term.term.name) == term_id)
 		addSample(sample, term_id, key, value)
-		
 	}
 
 	function addSample(sample, term_id, key, value) {
