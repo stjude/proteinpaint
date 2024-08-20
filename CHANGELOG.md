@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - WSIViewer launchable from runproteinpaint() as a mass plot.
 - Example for the WSIViewer available from the app drawer.
+- hierCluster: click left dendrogram to highlight selected cluster, and show options to list items (add link to GDC gene page for genes) and perform ORA
 
 Fixes:
 - At GDC lollipop subtrack, disable survival term when building the filter
