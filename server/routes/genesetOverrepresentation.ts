@@ -54,7 +54,7 @@ async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentati
 		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile)
 	} as gene_overrepresentation_input
 
-	console.log('gene_overrepresentation_input_type:', gene_overrepresentation_input_type)
+	//console.log('gene_overrepresentation_input_type:', gene_overrepresentation_input_type)
 
 	if (q.background_genes) {
 		gene_overrepresentation_input_type.background_genes = q.background_genes

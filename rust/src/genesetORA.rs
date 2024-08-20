@@ -38,7 +38,7 @@ struct pathway_p_value {
 
 fn calculate_hypergeometric_p_value(
     sample_genes: &Vec<&str>,
-    background_genes: &Vec<String>,
+    num_background_genes: usize,
     genes_in_pathway: Vec<pathway_genes>,
 ) -> f64 {
     let matching_sample_genes_counts: f64 = sample_genes
@@ -56,7 +56,7 @@ fn calculate_hypergeometric_p_value(
     let p_value = r_mathlib::hypergeometric_cdf(
         matching_sample_genes_counts - 1.0,
         genes_in_pathway.len() as f64,
-        background_genes.len() as f64 - genes_in_pathway.len() as f64,
+        num_background_genes as f64 - genes_in_pathway.len() as f64,
         sample_genes.len() as f64,
         false,
         false,
@@ -91,13 +91,11 @@ fn main() -> Result<()> {
                         sample_genes_input.as_str().unwrap().split(",").collect();
                     let mut pathway_p_values: Vec<pathway_p_value> = Vec::with_capacity(10000);
                     let background_genes_input: &JsonValue = &json_string["background_genes"];
-                    let mut background_genes = Vec::<String>::new();
+                    let mut num_background_genes: usize = 0;
                     match background_genes_input.as_str() {
                         Some(x) => {
                             let background_genes_str: Vec<&str> = x.split(",").collect(); // Background genes is defined for e.g in case of DE analysis
-                            for item in background_genes_str {
-                                background_genes.push(item.to_string());
-                            }
+                            num_background_genes = background_genes_str.len();
                         }
                         None => {
                             // Background genes not present for e.g. in hierarchial clustering
@@ -114,10 +112,8 @@ fn main() -> Result<()> {
                             match genedb_result {
                                 Ok(mut x) => {
                                     let mut genes = x.query([])?;
-                                    while let Some(gene) = genes.next()? {
-                                        let gn: String = gene.get::<usize, String>(0)?;
-                                        //println!("gn:{}", gn);
-                                        background_genes.push(gn);
+                                    while let Some(_gene) = genes.next()? {
+                                        num_background_genes += 1;
                                     }
                                 }
                                 Err(_) => {}
@@ -129,7 +125,7 @@ fn main() -> Result<()> {
 
                     if sample_genes.len() == 0 {
                         panic!("No sample genes provided");
-                    } else if background_genes.len() == 0 {
+                    } else if num_background_genes == 0 {
                         panic!("No background genes provided");
                     }
                     let num_items_output = 100; // Number of top pathways to be specified in the output
@@ -190,7 +186,7 @@ fn main() -> Result<()> {
                                         }
                                         let p_value = calculate_hypergeometric_p_value(
                                             &sample_genes,
-                                            &background_genes,
+                                            num_background_genes,
                                             names,
                                         );
                                         if p_value.is_nan() == false {
