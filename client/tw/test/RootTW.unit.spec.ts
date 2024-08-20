@@ -1,10 +1,10 @@
 import tape from 'tape'
-//import { CategoricalTW } from '#types'
 import { RootTW } from '../RootTW.ts'
-import { RawCatTW, RawTW } from '#types'
+import { RawCatTW, RawTW, GroupEntry } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
+import { CategoricalBase } from '../CategoricalTW'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 
@@ -12,10 +12,39 @@ const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'Te
  reusable helper functions
 **************************/
 
-// function isFullCatTw(tw) {
-// 	if (!tw.id) return false
-// 	if (!tw.term) return false
-// }
+function getCustomSet() {
+	const groups: GroupEntry[] = [
+		{
+			name: 'AAA',
+			type: 'values',
+			values: [
+				{
+					key: 'ALL',
+					label: 'Acute Lymphoblastic Leukemia'
+				},
+				{
+					key: 'AML',
+					label: 'AML'
+				}
+			]
+		},
+		{
+			name: 'BBB',
+			type: 'values',
+			values: [
+				{
+					key: `Hodgkin's Lymphoma`,
+					label: `Hodgkin's Lymphoma`
+				},
+				{
+					key: `Non-hodgkin's Lymphoma`,
+					label: `Non-hodgkin's Lymphoma`
+				}
+			]
+		}
+	]
+	return { groups }
+}
 
 /**************
  test sections
@@ -32,7 +61,7 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 	}
 
 	try {
-		const fullTw = await RootTW.fill(tw as any, vocabApi)
+		const fullTw = await RootTW.fill(tw as any, { vocabApi })
 		test.deepEqual(
 			fullTw,
 			{
@@ -75,7 +104,7 @@ tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
 	}
 
 	try {
-		const fullTw = await RootTW.fill(tw, vocabApi)
+		const fullTw = await RootTW.fill(tw, { vocabApi })
 		test.deepEqual(
 			fullTw.q,
 			{
@@ -87,6 +116,64 @@ tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
 		)
 	} catch (e: any) {
 		test.fail(e)
+	}
+
+	test.end()
+})
+
+tape('init() categorical', async test => {
+	{
+		const term = termjson.diaggrp
+		const tw: RawCatTW = {
+			id: term.id,
+			term,
+			isAtomic: true as const,
+			q: {}
+		}
+
+		const handler = await RootTW.init(tw, { vocabApi })
+		test.equal(
+			handler.base,
+			CategoricalBase,
+			`should return a matching categorical handler.base on init() with missing q or q.type`
+		)
+	}
+	{
+		const term = termjson.diaggrp
+		const tw: RawCatTW = {
+			id: term.id,
+			term,
+			isAtomic: true as const,
+			q: { type: 'predefined-groupset', isAtomic: true as const }
+		}
+
+		const handler = await RootTW.init(tw, { vocabApi })
+		test.equal(
+			handler.base,
+			CategoricalBase,
+			`should return a matching categorical handler.base on init() with q.type='predefined-groupset'`
+		)
+	}
+
+	{
+		const term = termjson.diaggrp
+		const tw: RawCatTW = {
+			id: term.id,
+			term,
+			isAtomic: true as const,
+			q: {
+				type: 'custom-groupset',
+				isAtomic: true as const,
+				customset: getCustomSet()
+			}
+		}
+
+		const handler = await RootTW.init(tw, { vocabApi })
+		test.equal(
+			handler.base,
+			CategoricalBase,
+			`should return a matching categorical handler.base on init() with q.type='custom-groupset'`
+		)
 	}
 
 	test.end()

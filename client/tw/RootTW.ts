@@ -1,5 +1,15 @@
-import { TermWrapper, RawTW } from '#types'
+import { TermWrapper, RawTW, HandlerOpts } from '#types'
 import { mayHydrateDictTwLst, get$id } from '../termsetting/termsetting.ts'
+import { CategoricalInstance, CategoricalBase } from './CategoricalTW'
+
+// type FakeInstance = {
+// 	base: any
+// 	id: string
+// 	term: any
+// 	q: any
+// }
+
+type TwInstance = CategoricalInstance //| FakeInstance
 
 export type UseCase = {
 	target: string
@@ -11,14 +21,20 @@ export type TwInitOpts = {
 }
 
 export class RootTW {
-	static async fill(tw /*: RawTW*/, vocabApi?: any): Promise<TermWrapper> {
-		await RootTW.preprocess(tw, vocabApi)
+	static async init(tw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TwInstance> {
+		const fullTW = await RootTW.fill(tw, opts)
+		if (fullTW.term.type == 'categorical') return await CategoricalBase.init(fullTW, { ...opts, root: RootTW })
+		throw `unable to init(tw)`
+	}
+
+	static async fill(tw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TermWrapper> {
+		await RootTW.preprocess(tw, opts?.vocabApi)
 
 		switch (tw.term.type) {
 			case 'categorical': {
-				const { CategoricalBase } = await import('./CategoricalTW.ts')
+				//const { CategoricalBase } = await import('./CategoricalTW.ts')
 				if (!tw.term.id) throw 'missing tw.term.id'
-				return await CategoricalBase.fill(tw, vocabApi)
+				return await CategoricalBase.fill(tw, { ...opts, root: RootTW })
 			}
 			// case 'integer':
 			// case 'float':

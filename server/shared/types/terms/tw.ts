@@ -12,3 +12,10 @@ export type TwLst = TermWrapper[]
 export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GeneVariantQ | SampleLstQ | SnpsQ
 
 export type RawTW = { id: string } | RawCatTW
+
+export type HandlerOpts = {
+	vocabApi?: any // TODO
+	usecase?: any
+	base?: any
+	root?: any
+}

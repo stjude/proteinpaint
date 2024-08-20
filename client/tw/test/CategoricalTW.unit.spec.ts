@@ -1,15 +1,52 @@
 import tape from 'tape'
-import { CategoricalTW, RawCatTW, GroupEntry } from '#types'
+import { CategoricalTW, RawCatTW, GroupEntry, CatTWPredefinedGS } from '#types'
 import { CategoricalBase } from '../CategoricalTW.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
+import { CategoricalValues } from '../CategoricalValues'
+import { CategoricalPredefinedGS } from '../CategoricalPredefinedGS'
+import { CategoricalCustomGS } from '../CategoricalCustomGS'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 
 /*************************
  reusable helper functions
 **************************/
+
+function getCustomSet() {
+	const groups: GroupEntry[] = [
+		{
+			name: 'AAA',
+			type: 'values',
+			values: [
+				{
+					key: 'ALL',
+					label: 'Acute Lymphoblastic Leukemia'
+				},
+				{
+					key: 'AML',
+					label: 'AML'
+				}
+			]
+		},
+		{
+			name: 'BBB',
+			type: 'values',
+			values: [
+				{
+					key: `Hodgkin's Lymphoma`,
+					label: `Hodgkin's Lymphoma`
+				},
+				{
+					key: `Non-hodgkin's Lymphoma`,
+					label: `Non-hodgkin's Lymphoma`
+				}
+			]
+		}
+	]
+	return { groups }
+}
 
 /**************
  test sections
@@ -28,7 +65,7 @@ tape('fill(invalid tw)', async test => {
 	{
 		const msg = 'should detect an incorrect term.type'
 		try {
-			await CategoricalBase.fill(tw as any)
+			await CategoricalBase.fill(tw as any, { vocabApi })
 			test.fail(msg)
 		} catch (e: any) {
 			test.true(e.includes('incorrect term.type'), msg)
@@ -48,7 +85,7 @@ tape(`fill() default q.type='values'`, async test => {
 	}
 
 	try {
-		const fullTw = await CategoricalBase.fill(tw as any, vocabApi)
+		const fullTw = await CategoricalBase.fill(tw as any, { vocabApi })
 		const testedKeys = new Set()
 		test.deepEqual(
 			fullTw,
@@ -80,7 +117,7 @@ tape('fill() predefined-groupset', async test => {
 	}
 
 	try {
-		const fullTw = await CategoricalBase.fill(tw as any, vocabApi)
+		const fullTw = await CategoricalBase.fill(tw, { vocabApi })
 		const testedKeys = new Set()
 		test.deepEqual(
 			fullTw,
@@ -105,36 +142,6 @@ tape('fill() predefined-groupset', async test => {
 
 tape('fill() custom-groupset', async test => {
 	const id = 'diaggrp'
-	const groups: GroupEntry[] = [
-		{
-			name: 'AAA',
-			type: 'values',
-			values: [
-				{
-					key: 'ALL',
-					label: 'Acute Lymphoblastic Leukemia'
-				},
-				{
-					key: 'AML',
-					label: 'AML'
-				}
-			]
-		},
-		{
-			name: 'BBB',
-			type: 'values',
-			values: [
-				{
-					key: `Hodgkin's Lymphoma`,
-					label: `Hodgkin's Lymphoma`
-				},
-				{
-					key: `Non-hodgkin's Lymphoma`,
-					label: `Non-hodgkin's Lymphoma`
-				}
-			]
-		}
-	]
 
 	const tw: RawCatTW = {
 		id,
@@ -143,7 +150,7 @@ tape('fill() custom-groupset', async test => {
 			isAtomic: true,
 			type: 'custom-groupset',
 			name: 'AAA vs BBB',
-			customset: { groups }
+			customset: getCustomSet()
 		},
 		isAtomic: true
 	}
@@ -151,7 +158,7 @@ tape('fill() custom-groupset', async test => {
 	const twCopy = structuredClone(tw)
 
 	try {
-		const fullTw = await CategoricalBase.fill(tw as any, vocabApi)
+		const fullTw = await CategoricalBase.fill(tw, { vocabApi })
 		const testedKeys = new Set()
 		test.deepEqual(fullTw, twCopy, `should fill-in a categorical q.type='custom-groupset'`)
 	} catch (e: any) {
@@ -161,14 +168,72 @@ tape('fill() custom-groupset', async test => {
 	test.end()
 })
 
-tape('init', async test => {
-	const tw: RawCatTW = {
-		term: termjson.diaggrp
+tape('init() categorical', async test => {
+	{
+		const term = termjson.diaggrp
+		const tw: RawCatTW = {
+			id: term.id,
+			term,
+			isAtomic: true as const,
+			q: {}
+		}
+
+		const handler = await CategoricalBase.init(tw, { vocabApi })
+		test.true(
+			handler instanceof CategoricalValues,
+			`should return a matching categorical handler instance on init() with missing q or q.type`
+		)
+		test.equal(
+			handler.base,
+			CategoricalBase,
+			`should return a matching categorical handler.base on init() with missing q or q.type`
+		)
+	}
+	{
+		const term = termjson.diaggrp
+		const tw: RawCatTW = {
+			id: term.id,
+			term,
+			isAtomic: true as const,
+			q: { type: 'predefined-groupset', isAtomic: true as const }
+		}
+
+		const handler = await CategoricalBase.init(tw, { vocabApi })
+		test.true(
+			handler instanceof CategoricalPredefinedGS,
+			`should return a matching categorical handler instance on init() with missing q or q.type`
+		)
+		test.equal(
+			handler.base,
+			CategoricalBase,
+			`should return a matching categorical handler.base on init() with q.type='predefined-groupset'`
+		)
 	}
 
-	const handler = await CategoricalBase.init(tw)
-	test.true(handler instanceof CategoricalBase, `should return a CategoricalTW instance on init()`)
-	test.deepEqual(Object.keys(handler.tw || {}).sort(), ['id', 'q', 'term'], `must have the expected handler properties`)
+	{
+		const term = termjson.diaggrp
+		const tw: RawCatTW = {
+			id: term.id,
+			term,
+			isAtomic: true as const,
+			q: {
+				type: 'custom-groupset',
+				isAtomic: true as const,
+				customset: getCustomSet()
+			}
+		}
+
+		const handler = await CategoricalBase.init(tw, { vocabApi })
+		test.true(
+			handler instanceof CategoricalCustomGS,
+			`should return a matching categorical handler instance on init() with missing q or q.type`
+		)
+		test.equal(
+			handler.base,
+			CategoricalBase,
+			`should return a matching categorical handler.base on init() with q.type='custom-groupset'`
+		)
+	}
 
 	test.end()
 })
