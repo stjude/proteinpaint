@@ -202,7 +202,7 @@ function parse_q(q, ds) {
 		if (!i.interactions) i.interactions = []
 		for (const x of i.interactions) {
 			// TODO allow tw.interactions[] array to contain snpid instead of snplst term id
-			if (!q.independent.find(y => y.term?.id == x || y.id == x))
+			if (!q.independent.find(y => y.term?.id == x || y.term?.name == x || y.id == x))
 				throw 'interacting term id missing from independent[]: ' + x
 		}
 	}
@@ -410,7 +410,7 @@ function makeRvariable_dictionaryTerm(tw, independent, q) {
 	if (tw.interactions.length > 0) {
 		thisTerm.interactions = []
 		for (const id of tw.interactions) {
-			const tw2 = q.independent.find(i => i.term?.id == id || i.id == id)
+			const tw2 = q.independent.find(i => i.term?.id == id || i.term?.name == id || i.id == id)
 			if (tw2.type == 'snplst') {
 				// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
 				for (const s of tw2.highAFsnps.keys()) thisTerm.interactions.push(s)
@@ -463,7 +463,7 @@ function makeRvariable_snps(tw, independent, q) {
 				// another term (tw2) is interacting with this snplst term
 				// in R input establish tw2's interaction with this snp
 				if (!thisSnp.interactions) thisSnp.interactions = []
-				thisSnp.interactions.push(tw2.term.id)
+				thisSnp.interactions.push(tw2.term.id || tw2.term.name)
 			}
 		}
 		independent.push(thisSnp)
