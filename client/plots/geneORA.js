@@ -4,6 +4,8 @@ import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '../dom/menu'
+import { newSandboxDiv } from '../dom/sandbox.ts'
+import { select, pointer } from 'd3-selection'
 
 const hlcolor = '#ffa200'
 const tip = new Menu()
@@ -12,7 +14,12 @@ class geneORA {
 		this.type = 'geneORA'
 	}
 	async init(opts) {
-		const config = opts.plots.find(p => p.id === this.id)
+		if (!this.opts.holder || !this.opts.header) {
+			const sandBox = newSandboxDiv(select(this.opts.holder.node().parentNode))
+			this.opts.header = sandBox.header
+			this.opts.holder = sandBox.body
+		}
+
 		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
 		const mainDiv = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
 		const holder = mainDiv.append('div').style('display', 'inline-block')
