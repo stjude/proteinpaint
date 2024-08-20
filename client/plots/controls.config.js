@@ -683,7 +683,7 @@ async function setTermInput(opts) {
 
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
-			if (opts.processInput) opts.processInput(tw)
+			if (opts.processInput) await opts.processInput(tw)
 			await pill.main(tw ? tw : { term: null, q: null })
 
 			const config = !(tw && opts.parent.chartType == 'hierCluster' && opts.configKey == 'divideBy')

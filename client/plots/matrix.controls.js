@@ -141,18 +141,13 @@ export class MatrixControls {
 					vocab: this.opts.vocab
 					//activeCohort: appState.activeCohort
 				},
-				processInput: tw => {
-					if (tw) fillTermWrapper(tw, this.opts.app.vocabApi)
+				processInput: async tw => {
 					if (tw?.term && isNumericTerm(tw.term)) {
 						// any numeric term should be discrete when used as divideBy term
 						// tw is missing when dividedBy term deleted
-						tw.q.mode = 'discrete'
+						tw.q = { ...tw.q, mode: 'discrete' }
 					}
-
-					if (tw?.term?.type == TermTypes.GENE_EXPRESSION || tw?.term?.type == TermTypes.METABOLITE_INTENSITY) {
-						// default mode for GENE_EXPRESSION and METABOLITE_INTENSITY is continous
-						tw.q.mode = 'discrete'
-					}
+					if (tw) await fillTermWrapper(tw, this.opts.app.vocabApi)
 					return tw
 				},
 				processConfig: config => {
