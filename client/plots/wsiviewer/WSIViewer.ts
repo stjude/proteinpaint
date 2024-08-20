@@ -79,7 +79,7 @@ export default class WSIViewer {
 
 		if (this.opts.header) {
 			//If sandbox is present, add sample id and data type to the header
-			this.opts.header.text(`${state.sample_id} whole slide image${plotConfig.wsimages.length > 1 ? 's' : ''}`)
+			this.opts.header.text(`${state.sample_id} ${state.termdbConfig.queries.WSImages.type}`)
 		}
 	}
 
