@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
-import { RawCatTW, RawTW, GroupEntry } from '#types'
+import { RawCatTW, RawTW, GroupEntry, TermGroupSetting } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
@@ -46,6 +46,19 @@ function getCustomSet() {
 	return { groups }
 }
 
+function getTermWithGS() {
+	const term = structuredClone(termjson.diaggrp)
+	term.groupsetting = {
+		lst: [
+			{
+				name: 'AAA vs BBB',
+				groups: getCustomSet().groups
+			}
+		]
+	} satisfies TermGroupSetting
+	return term
+}
+
 /**************
  test sections
 ***************/
@@ -65,7 +78,6 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 		test.deepEqual(
 			fullTw,
 			{
-				id: 'sex',
 				term: {
 					type: 'categorical',
 					id: 'sex',
@@ -92,13 +104,14 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 })
 
 tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
+	const term = getTermWithGS()
 	const tw: RawTW = {
-		id: 'diaggrp',
+		term,
 		q: {
 			type: 'predefined-groupset',
 			groupsetting: {
 				inuse: true,
-				predefined_groupset_idx: 1
+				predefined_groupset_idx: 0
 			}
 		}
 	}
@@ -109,7 +122,7 @@ tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
 			fullTw.q,
 			{
 				type: 'predefined-groupset',
-				predefined_groupset_idx: 1,
+				predefined_groupset_idx: 0,
 				isAtomic: true
 			},
 			`should reshape a legacy nested q.groupsetting`
@@ -123,9 +136,8 @@ tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
 
 tape('init() categorical', async test => {
 	{
-		const term = termjson.diaggrp
+		const term = getTermWithGS()
 		const tw: RawCatTW = {
-			id: term.id,
 			term,
 			isAtomic: true as const,
 			q: {}
@@ -139,9 +151,8 @@ tape('init() categorical', async test => {
 		)
 	}
 	{
-		const term = termjson.diaggrp
+		const term = getTermWithGS()
 		const tw: RawCatTW = {
-			id: term.id,
 			term,
 			isAtomic: true as const,
 			q: { type: 'predefined-groupset', isAtomic: true as const }
@@ -156,9 +167,8 @@ tape('init() categorical', async test => {
 	}
 
 	{
-		const term = termjson.diaggrp
+		const term = getTermWithGS()
 		const tw: RawCatTW = {
-			id: term.id,
 			term,
 			isAtomic: true as const,
 			q: {

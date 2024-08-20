@@ -9,6 +9,7 @@ import { CategoricalQ } from '../shared/types/terms/categorical'
 import { NumericQ } from '../shared/types/terms/numeric'
 import { SnpsQ } from '../shared/types/terms/snps'
 import { TermTypes, isDictionaryType, isNumericTerm } from '../shared/terms'
+import { TwRouter } from '../tw/TwRouter'
 
 /*
 ********************* EXPORTED
@@ -929,6 +930,9 @@ export async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 	}
 }
 
+// add migrated tw fillers here, by term.type
+const routedTermTypes = new Set(['categorical'])
+
 export async function fillTermWrapper(
 	tw: TermWrapper,
 	vocabApi: VocabApi,
@@ -940,9 +944,16 @@ export async function fillTermWrapper(
 		await mayHydrateDictTwLst([tw], vocabApi)
 	}
 
-	if (tw.term.type == 'categorical') {
-		// use new TwRouter.fill(tw)
-		// return
+	if (routedTermTypes.has(tw.term.type)) {
+		// term types that have been migrated to TwRouter
+		// will use
+		const defaultQ = defaultQByTsHandler?.categorical || null
+		const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQ })
+		Object.assign(tw, fullTw)
+		mayValidateQmode(tw)
+		// this should be moved to the term-type specific handler??
+		if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
+		return tw
 	}
 
 	// tw.id is no longer needed

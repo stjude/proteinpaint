@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { CategoricalTW, RawCatTW, GroupEntry, CatTWPredefinedGS } from '#types'
+import { CategoricalTW, RawCatTW, GroupEntry, CatTWPredefinedGS, TermGroupSetting } from '#types'
 import { CategoricalBase } from '../CategoricalTW.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
@@ -8,11 +8,11 @@ import { CategoricalValues } from '../CategoricalValues'
 import { CategoricalPredefinedGS } from '../CategoricalPredefinedGS'
 import { CategoricalCustomGS } from '../CategoricalCustomGS'
 
-const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
-
 /*************************
  reusable helper functions
 **************************/
+
+const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 
 function getCustomSet() {
 	const groups: GroupEntry[] = [
@@ -48,6 +48,19 @@ function getCustomSet() {
 	return { groups }
 }
 
+function getTermWithGS() {
+	const term = structuredClone(termjson.diaggrp)
+	term.groupsetting = {
+		lst: [
+			{
+				name: 'AAA vs BBB',
+				groups: getCustomSet().groups
+			}
+		]
+	} satisfies TermGroupSetting
+	return term
+}
+
 /**************
  test sections
 ***************/
@@ -76,9 +89,7 @@ tape('fill(invalid tw)', async test => {
 })
 
 tape(`fill() default q.type='values'`, async test => {
-	const id = 'diaggrp'
 	const tw: RawCatTW = {
-		id,
 		term: termjson.diaggrp,
 		q: { isAtomic: true },
 		isAtomic: true
@@ -90,7 +101,6 @@ tape(`fill() default q.type='values'`, async test => {
 		test.deepEqual(
 			fullTw,
 			{
-				id,
 				term: tw.term,
 				q: {
 					type: 'values',
@@ -108,10 +118,9 @@ tape(`fill() default q.type='values'`, async test => {
 })
 
 tape('fill() predefined-groupset', async test => {
-	const id = 'diaggrp'
+	const term = getTermWithGS()
 	const tw: RawCatTW = {
-		id,
-		term: termjson.diaggrp,
+		term,
 		q: { isAtomic: true, type: 'predefined-groupset' },
 		isAtomic: true
 	}
@@ -122,7 +131,6 @@ tape('fill() predefined-groupset', async test => {
 		test.deepEqual(
 			fullTw,
 			{
-				id,
 				term: tw.term,
 				q: {
 					type: 'predefined-groupset',
@@ -141,10 +149,7 @@ tape('fill() predefined-groupset', async test => {
 })
 
 tape('fill() custom-groupset', async test => {
-	const id = 'diaggrp'
-
 	const tw: RawCatTW = {
-		id,
 		term: termjson.diaggrp,
 		q: {
 			isAtomic: true,
@@ -170,9 +175,9 @@ tape('fill() custom-groupset', async test => {
 
 tape('init() categorical', async test => {
 	{
-		const term = termjson.diaggrp
+		const term = getTermWithGS()
 		const tw: RawCatTW = {
-			id: term.id,
+			//id: term.id,
 			term,
 			isAtomic: true as const,
 			q: {}
@@ -190,9 +195,9 @@ tape('init() categorical', async test => {
 		)
 	}
 	{
-		const term = termjson.diaggrp
+		const term = getTermWithGS()
 		const tw: RawCatTW = {
-			id: term.id,
+			//id: term.id,
 			term,
 			isAtomic: true as const,
 			q: { type: 'predefined-groupset', isAtomic: true as const }
@@ -211,9 +216,9 @@ tape('init() categorical', async test => {
 	}
 
 	{
-		const term = termjson.diaggrp
+		const term = getTermWithGS()
 		const tw: RawCatTW = {
-			id: term.id,
+			//id: term.id,
 			term,
 			isAtomic: true as const,
 			q: {

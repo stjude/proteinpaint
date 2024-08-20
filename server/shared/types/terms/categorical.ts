@@ -1,7 +1,6 @@
 import {
 	BaseTerm,
 	TermValues,
-	MinBaseQ,
 	GroupSettingQ,
 	GroupEntry,
 	ValuesQ,
@@ -10,6 +9,7 @@ import {
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ
 } from './term.ts'
+import { MinBaseQ, RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ } from './q'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /**
@@ -20,27 +20,33 @@ import { TermSettingInstance } from '../termsetting.ts'
  * @category TW
  */
 
+export type RawCatTWValues = {
+	term: CategoricalTerm
+	q: RawValuesQ
+	isAtomic?: true
+	$id?: string
+}
+
+export type RawCatTWPredefinedGS = {
+	//id: string
+	term: CategoricalTerm
+	q: RawPredefinedGroupsetQ
+	isAtomic?: true
+	$id?: string
+}
+
+export type RawCatTWCustomGS = {
+	//id: string
+	term: CategoricalTerm
+	q: RawCustomGroupsetQ
+	isAtomic?: true
+	$id?: string
+}
+
 export type RawCatTW = {
-	id: string
+	//id: string
 	term: CategoricalTerm // must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst()
-	q: MinBaseQ &
-		(
-			| {
-					type?: 'values'
-			  }
-			| {
-					type: 'predefined-groupset'
-					predefined_groupset_idx?: number
-					groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter
-			  }
-			| {
-					type: 'custom-groupset'
-					customset: {
-						groups: GroupEntry[]
-					}
-					groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter
-			  }
-		)
+	q: RawValuesQ | RawPredefinedGroupsetQ | RawCustomGroupsetQ
 	isAtomic?: true
 	$id?: string
 }
@@ -61,25 +67,26 @@ export type CategoricalTerm = BaseTerm & {
  */
 
 export type CategoricalTW = BaseTW & {
-	id: string
+	//id: string
 	q: CategoricalQ
 	term: CategoricalTerm
 }
 
 export type CatTWValues = BaseTW & {
-	id: string
+	//id: string
 	term: CategoricalTerm
 	q: ValuesQ
+	type: 'CatTWValues'
 }
 
 export type CatTWPredefinedGS = BaseTW & {
-	id: string
+	//id: string
 	term: CategoricalTerm
 	q: PredefinedGroupSettingQ
 }
 
 export type CatTWCustomGS = BaseTW & {
-	id: string
+	//id: string
 	term: CategoricalTerm
 	q: CustomGroupSettingQ
 }
