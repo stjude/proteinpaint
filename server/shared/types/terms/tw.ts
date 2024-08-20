@@ -1,3 +1,4 @@
+import { MinBaseQ, RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ } from './q'
 import { BaseTW, BaseQ, Term } from './term.ts'
 import { CategoricalQ, CategoricalTW, RawCatTW } from './categorical.ts'
 import { NumericQ, NumericTW } from './numeric.ts'
@@ -11,11 +12,38 @@ export type TwLst = TermWrapper[]
 
 export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GeneVariantQ | SampleLstQ | SnpsQ
 
-export type RawTW = { id: string } | RawCatTW
+export type RawTW =
+	//{ id: string } | RawCatTW
+	{
+		id?: string
+		term?: {
+			//type: 'categorical' | 'condition'
+			[key: string | number]: any
+		}
+		q?: {
+			//predefined_groupset_idx?: number
+			//customset?: any
+			[key: string]: any
+			type?: string //'custom-groupset' |
+			customset?: any
+		}
+		isAtomic?: true
+		$id?: string
+	}
+
+export interface TwHandler {
+	render?: (opts?: any) => void
+}
 
 export type HandlerOpts = {
 	vocabApi?: any // TODO
-	usecase?: any
+	//usecase?: any
+	defaultQ?: any
 	base?: any
 	root?: any
+	clsMap?: {
+		CategoricalValues?: TwHandler
+		CategoricalPredefinedGS?: TwHandler
+		CategoricalCustomGS?: TwHandler
+	}
 }

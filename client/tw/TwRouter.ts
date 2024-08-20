@@ -21,9 +21,17 @@ export type TwInitOpts = {
 }
 
 export class TwRouter {
+	opts: any
+
+	constructor(opts) {
+		this.opts = opts
+	}
+
 	static async init(tw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TwInstance> {
 		const fullTW = await TwRouter.fill(tw, opts)
-		if (fullTW.term.type == 'categorical') return await CategoricalBase.init(fullTW, { ...opts, root: TwRouter })
+		if (fullTW.term.type == 'categorical') {
+			return await CategoricalBase.init(fullTW, { ...opts, root: TwRouter })
+		}
 		throw `unable to init(tw)`
 	}
 
@@ -66,6 +74,7 @@ export class TwRouter {
 			// for dev work, testing, and URLs, it's convenient to only specify tw.id for a dictionary tw,
 			// must support creating a hydrated tw.term from a minimal dict tw
 			await mayHydrateDictTwLst([tw], vocabApi)
+			delete tw.id
 		}
 
 		if (!tw.q) tw.q = {}

@@ -7,11 +7,19 @@ import {
 	CatTWPredefinedGS,
 	CatTWCustomGS,
 	HandlerOpts,
-	ValuesQ
+	ValuesQ,
+	RawTW,
+	RawValuesQ,
+	RawPredefinedGroupsetQ,
+	RawCustomGroupsetQ,
+	RawCatTWValues,
+	RawCatTWPredefinedGS,
+	RawCatTWCustomGS
 } from '#types'
 import { CategoricalValues } from './CategoricalValues'
 import { CategoricalPredefinedGS } from './CategoricalPredefinedGS'
 import { CategoricalCustomGS } from './CategoricalCustomGS'
+import { copyMerge } from '#rx'
 
 export type CategoricalInstance = CategoricalValues | CategoricalPredefinedGS | CategoricalCustomGS
 
@@ -36,51 +44,29 @@ export class CategoricalBase {
 	static fill(tw: RawCatTW, vocabApi?: any): CategoricalTW {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (tw.term.type != 'categorical') throw `incorrect term.type='${tw.term?.type}', expecting 'categorical'`
-		if (!tw.id && !tw.term.id) throw 'missing tw.id and tw.term.id'
-		const id = tw.id || tw.term?.id || 'aaa-TODO'
-		if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values for id='${id}'`
-		return {
-			...tw,
-			id,
-			term: tw.term,
-			q: getQ(tw) as CategoricalQ
-		}
-		// const q: CategoricalQ = getQ(tw)
-		// if (q.type == 'values') {
-		// 	return {
-		// 		id,
-		// 		term: tw.term,
-		// 		q
-		// 	} satisfies CatTWValues
-		// } else if (q.type == 'predefined-groupset') {
-		// 	return {
-		// 		id,
-		// 		term: tw.term,
-		// 		q
-		// 	} satisfies CatTWPredefinedGS
-		// } else if (q.type == 'custom-groupset') {
-		// 	return {
-		// 		id,
-		// 		term: tw.term,
-		// 		q
-		// 	} satisfies CatTWCustomGS
-		// } else throw `unable to fill categorical tw`
+		if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values`
+		return { ...tw, term: tw.term, q: getQ(tw) }
 	}
 }
 
-function getQ(tw: RawCatTW): CategoricalQ {
-	if (!tw.q) return { type: 'values', isAtomic: true }
-	if (tw.q!.type == 'predefined-groupset') {
-		const i = tw.q.predefined_groupset_idx
-		if (i !== undefined && !Number.isInteger(i)) throw `missing or invalid tw.q.predefined_groupset_idx='${i}'`
-		return { ...tw.q, predefined_groupset_idx: i || 0 }
-	} else if (tw.q.type == 'custom-groupset') {
-		return tw.q
-	} else if (tw.q.type == 'values') {
-		return tw.q as ValuesQ
-	} else if (!tw.q.type) {
-		return { ...tw.q, type: 'values' }
+function getQ(tw: RawCatTW, defaultQ = null): CategoricalQ {
+	if (defaultQ != null) {
+		;(defaultQ as any).isAtomic = true
+		// merge defaultQ into tw.q
+		copyMerge(tw.q, defaultQ)
 	}
-	console.log(74, tw)
+
+	if (!tw.q) tw.q = { type: 'values', isAtomic: true }
+
+	// has to use type casting/hint for tw argument, since a type union discriminant property cannot be from a nested object,
+	// and creating a new discriminant property on the root tw object seems too much to fix the
+	// simple typecheck errors that are only emitted from this function (if type casting is not used)
+	if (tw.q.type == 'predefined-groupset') {
+		return CategoricalPredefinedGS.fillQ(tw as RawCatTWPredefinedGS)
+	} else if (tw.q.type == 'custom-groupset') {
+		return CategoricalCustomGS.fillQ(tw as RawCatTWCustomGS)
+	} else if (!tw.q.type || tw.q.type == 'values') {
+		return CategoricalValues.fillQ(tw as RawCatTWValues)
+	}
 	throw `invalid tw.q`
 }
