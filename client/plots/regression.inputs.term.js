@@ -279,7 +279,7 @@ export class InputTerm {
 							.join(', ')}`
 					)
 				}
-			} else if (tw.term.type == 'categorical' || tw.term.type == 'geneVariant') {
+			} else if (tw.term.type == 'categorical' || tw.term.type == 'geneVariant' || tw.term.type == 'samplelst') {
 				this.termStatus.allowToSelectRefGrp = true
 			} else if (tw.term.type == 'condition') {
 				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'logistic') {
@@ -443,7 +443,9 @@ export class InputTerm {
 			.append('div')
 			.selectAll('div')
 			.data(
-				self.parent.config.independent.filter(tw => tw && tw.term.id !== self.term.term.id && tw.q.mode != 'spline')
+				self.parent.config.independent.filter(
+					tw => tw && tw.term.id !== self.term.term.id && tw.term.name !== self.term.term.name && tw.q.mode != 'spline'
+				)
 			)
 			.enter()
 			.append('div')
@@ -453,7 +455,7 @@ export class InputTerm {
 				const checkbox = elem
 					.append('input')
 					.attr('type', 'checkbox')
-					.property('checked', self.term.interactions.includes(tw.term.id))
+					.property('checked', self.term.interactions.includes(tw.term.id || tw.term.name))
 
 				elem.append('span').text(' ' + tw.term.name)
 			})
@@ -466,12 +468,12 @@ export class InputTerm {
 				self.dom.tip.hide()
 				self.term.interactions = []
 				self.dom.tip.d.selectAll('input').each(function (tw) {
-					if (select(this).property('checked')) self.term.interactions.push(tw.term.id)
+					if (select(this).property('checked')) self.term.interactions.push(tw.term.id || tw.term.name)
 				})
 				for (const tw of self.parent.config.independent) {
-					const i = tw.interactions.indexOf(self.term.term.id)
-					if (self.term.interactions.includes(tw.term.id)) {
-						if (i == -1) tw.interactions.push(self.term.term.id)
+					const i = tw.interactions.indexOf(self.term.term.id || self.term.term.name)
+					if (self.term.interactions.includes(tw.term.id || tw.term.name)) {
+						if (i == -1) tw.interactions.push(self.term.term.id || self.term.term.name)
 					} else if (i != -1) {
 						tw.interactions.splice(i, 1)
 					}
