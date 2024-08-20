@@ -410,16 +410,16 @@ export function setRenderers(self) {
 					) // TODO term.gene replaces term.name
 				return { currentGeneNames }
 			},
-			callback: tw => {
+			callback: async tw => {
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
-				if (tw) fillTermWrapper(tw, self.app.vocabApi)
 				if (tw?.term && isNumericTerm(tw.term)) {
 					// any numeric term should be discrete when used as divideBy term
 					// tw is missing when dividedBy term deleted
-					tw.q.mode = 'discrete'
+					tw.q = { ...tw.q, mode: 'discrete' }
 				}
-				pill.main(tw ? tw : { term: null, q: null })
+				if (tw) await fillTermWrapper(tw, self.app.vocabApi)
+				await pill.main(tw ? tw : { term: null, q: null })
 				box.datum({ tw })
 				self.app.dispatch({
 					type: 'plot_edit',
