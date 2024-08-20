@@ -1,8 +1,19 @@
-import { BaseTerm, TermValues, MinBaseQ, GroupSettingQ, GroupEntry, ValuesQ, TermGroupSetting, BaseTW } from './term.ts'
+import {
+	BaseTerm,
+	TermValues,
+	MinBaseQ,
+	GroupSettingQ,
+	GroupEntry,
+	ValuesQ,
+	TermGroupSetting,
+	BaseTW,
+	PredefinedGroupSettingQ,
+	CustomGroupSettingQ
+} from './term.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /**
- * A categorical term q object
+ * A raw categorical term q object, before filling-in
  *
  * test:CategoricalQ:
  *
@@ -11,7 +22,7 @@ import { TermSettingInstance } from '../termsetting.ts'
 
 export type RawCatTW = {
 	id: string
-	term: CategoricalTerm
+	term: CategoricalTerm // must already exist, for dictionary terms, RootTW.fill() will use mayHydrateDictTwLst()
 	q: MinBaseQ &
 		(
 			| {
@@ -20,17 +31,17 @@ export type RawCatTW = {
 			| {
 					type: 'predefined-groupset'
 					predefined_groupset_idx?: number
-					groupsetting?: GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in RootTW
+					groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in RootTW
 			  }
 			| {
 					type: 'custom-groupset'
 					customset: {
 						groups: GroupEntry[]
 					}
-					groupsetting?: GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in RootTW
+					groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in RootTW
 			  }
 		)
-	isAtomic: true
+	isAtomic?: true
 	$id?: string
 }
 
@@ -54,6 +65,26 @@ export type CategoricalTW = BaseTW & {
 	q: CategoricalQ
 	term: CategoricalTerm
 }
+
+export type CatTWValues = BaseTW & {
+	id: string
+	term: CategoricalTerm
+	q: ValuesQ
+}
+
+export type CatTWPredefinedGS = BaseTW & {
+	id: string
+	term: CategoricalTerm
+	q: PredefinedGroupSettingQ
+}
+
+export type CatTWCustomGS = BaseTW & {
+	id: string
+	term: CategoricalTerm
+	q: CustomGroupSettingQ
+}
+
+//export type CategoricalTW = CatTWValues | CatTWPredefinedGS | CatTWCustomGS
 
 export type CategoricalTermSettingInstance = TermSettingInstance & {
 	q: CategoricalQ
