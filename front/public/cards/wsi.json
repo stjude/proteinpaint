@@ -11,7 +11,7 @@
                         "nav": {
                             "header_mode": "hidden"
                         },
-                        "sample_id": "B-T87L964D",
+                        "sample_id": "TCGA-22-1017",
                         "plots": [
                             {
                                 "chartType": "WSIViewer",
