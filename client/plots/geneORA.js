@@ -137,14 +137,17 @@ add:
 				values: self.config.geneORAparams.sample_genes.split(',').length
 			},
 			{
-				label: 'Background genes',
-				values: self.config.geneORAparams.background_genes.split(',').length
-			},
-			{
 				label: 'Gene sets analyzed',
 				values: output.num_pathways
 			}
 		]
+
+		if (self.config.geneORAparams.background_genes) {
+			addStats.push({
+				label: 'Background genes',
+				values: self.config.geneORAparams.background_genes.split(',').length
+			})
+		}
 
 		for (const dataRow of addStats) {
 			const [td1, td2] = table_stats.addRow()
