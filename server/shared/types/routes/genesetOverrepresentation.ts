@@ -1,11 +1,11 @@
 export type genesetOverrepresentationRequest = {
 	/**  Sample genes to be queried */
 	sample_genes: string
-	/** Background genes against which the sample genes will be queried */
+	/** Background genes against which the sample genes will be queried. if missing will use all protein-coding genes, available in gene db */
 	background_genes?: string
 	/** Genome build */
 	genome: string
-	/** Type of GO to be queried e.g MF, CC, BP */
+	/** msigdb branch term name. all genesets under this branch will be analyzed */
 	geneSetGroup: string
 }
 
