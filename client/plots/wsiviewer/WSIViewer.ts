@@ -79,7 +79,9 @@ export default class WSIViewer {
 
 		if (this.opts.header) {
 			//If sandbox is present, add sample id and data type to the header
-			this.opts.header.text(`${state.sample_id} ${state.termdbConfig.queries.WSImages.type}`)
+			this.opts.header.html(
+				`${state.sample_id} <span style="font-size:.8em">${state.termdbConfig.queries.WSImages.type} images</span>`
+			)
 		}
 	}
 
