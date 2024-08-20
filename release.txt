@@ -1,1 +1,2 @@
-
+Fixes:
+- matrix divideby breaks when using gene exp
