@@ -50,20 +50,17 @@ tape('Gene search results on keyup', async test => {
 	const gene = 'p53'
 
 	//Check if the search box is functional
-	await detectOne({
-		target: tip.dnode,
-		trigger() {
-			searchInput.value = gene
-			searchInput.dispatchEvent(new Event('keyup'))
-		}
-	})
 	/** Leave this
 	 * Options populate slightly slower than the menu
 	 * Need to wait for options to appear before testing
 	 */
 	const result = await detectOne({
 		selector: '.sja_menuoption',
-		target: tip.dnode
+		target: tip.dnode,
+		trigger() {
+			searchInput.value = gene
+			searchInput.dispatchEvent(new KeyboardEvent('keyup'))
+		}
 	})
 	test.true(result.textContent.includes(gene.toUpperCase()), 'Should display matching gene options')
 
