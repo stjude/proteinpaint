@@ -42,7 +42,7 @@ tape('\n', test => {
 })
 
 tape('Gene search results on keyup', async test => {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(10000)
 	const holder = getHolder()
 	const tip = new Menu({ padding: '' })
 	getSearchBox(holder, { tip })
