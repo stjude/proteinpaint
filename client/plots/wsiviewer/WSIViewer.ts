@@ -76,6 +76,11 @@ export default class WSIViewer {
 		if (activeImageExtent) {
 			map.getView().fit(activeImageExtent)
 		}
+
+		if (this.opts.header) {
+			//If sandbox is present, add sample id to the header
+			this.opts.header.text(state.sample_id)
+		}
 	}
 
 	private generateThumbnails(layers: Array<TileLayer<Zoomify>>, setting: Settings) {
