@@ -1,1 +1,2 @@
-
+Features:
+- hierCluster: click left dendrogram to highlight selected cluster, and show options to list items (add link to GDC gene page for genes) and perform ORA
