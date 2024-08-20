@@ -21,12 +21,10 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const terms = [q.tw]
 	if (q.divideTw) terms.push(q.divideTw)
 
-	const onlyChildren = mixedSampleTypes(terms, ds)
 	const data = await getData(
 		{ terms, filter: q.filter, filter0: q.filter0, currentGeneNames: q.currentGeneNames },
 		ds,
-		genome,
-		onlyChildren
+		genome
 	)
 	if (data.error) throw data.error
 	//get ordered labels to sort keys in key2values
