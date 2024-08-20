@@ -2,12 +2,14 @@ import { renderTable } from '../dom/table'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
 
 // Given a clusterId, return all its children clusterIds
-export function getAllChildrenClusterIds(clickedClusterId) {
-	const mergedClusters = this.hierClusterData.clustering.col.mergedClusters
+export function getAllChildrenClusterIds(clickedClusterId, left) {
+	const mergedClusters = left
+		? this.hierClusterData.clustering.row.mergedClusters
+		: this.hierClusterData.clustering.col.mergedClusters
 	const children = mergedClusters.get(clickedClusterId).childrenClusters || []
 	let allChildren = [...children]
 	for (const child of children) {
-		allChildren = allChildren.concat(this.getAllChildrenClusterIds(child))
+		allChildren = allChildren.concat(this.getAllChildrenClusterIds(child, left))
 	}
 	return allChildren
 }
@@ -79,6 +81,70 @@ export function addSelectedSamplesOptions(clickedSampleNames, event) {
 	this.dom.dendroClickMenu.show(event.clientX, event.clientY)
 }
 
+export function addSelectedRowsOptions(clickedRowNames, event) {
+	// TODO to support other hierCluster types
+	const rowType =
+		this.config.dataType == 'geneExpression'
+			? 'genes'
+			: this.config.dataType == 'metaboliteIntensity'
+			? 'metabolites'
+			: 'items'
+
+	const optionArr = [
+		{
+			label: `List ${clickedRowNames.length} ${rowType}`,
+			callback: () => this.showTable4selectedRows(clickedRowNames, rowType)
+		}
+	]
+
+	if (this.app.opts.genome.termdbs) {
+		// Check if genome build contains termdbs, only then enable gene ora
+		optionArr.push({
+			label: `Gene set overrepresentation analysis`,
+			disabled: clickedRowNames.length < 15 || clickedRowNames.length > 500,
+			callback: () => {
+				if (clickedRowNames.length < 15 || clickedRowNames.length > 500) return
+				this.dom.dendroClickMenu.d.selectAll('*').remove()
+				const sample_genes = clickedRowNames
+				const geneORAparams = {
+					sample_genes: sample_genes.toString(),
+					genome: this.app.vocabApi.opts.state.vocab.genome
+				}
+				const config = {
+					chartType: 'geneORA',
+					geneORAparams: geneORAparams
+				}
+				this.app.dispatch({
+					type: 'plot_create',
+					config
+				})
+			}
+		})
+	}
+
+	this.mouseout()
+	this.dom.tip.hide()
+	this.dom.dendroClickMenu.d.selectAll('*').remove()
+	this.dom.dendroClickMenu.d
+		.selectAll('div')
+		.data(optionArr)
+		.enter()
+		.append('div')
+		.attr('class', d => (d.disabled ? 'sja_menuoption_not_interactive' : 'sja_menuoption'))
+		.style('opacity', d => (d.disabled ? 0.5 : 1))
+		.style('border-radius', '0px')
+		.html(d =>
+			d.disabled
+				? `${d.label} <span style="font-size: 0.6em; display: block; margin-left: 2px; margin-top: 2px;">Only available when 15 - 500 genes selected</span>`
+				: d.label
+		)
+		.attr('data-testid', d => `hierCluster_dendro_menu_${d.label.split(' ')[0]}`)
+		.on('click', event => {
+			if (event.target.__data__?.callback) event.target.__data__.callback()
+		})
+	this.dom.dendroClickMenu.show(event.clientX, event.clientY)
+}
+
 // zoom in matrix to the selected dendrogram branch
 export function triggerZoomBranch(self, clickedSampleNames) {
 	if (self.zoomArea) {
@@ -144,6 +210,31 @@ export function showTable4selectedSamples(clickedSampleNames) {
 	})
 }
 
+// show the list of clicked samples as a table
+export function showTable4selectedRows(clickedRowNames, rowType) {
+	const templates = this.state.termdbConfig.urlTemplates
+
+	const rows =
+		templates?.gene && this.config.dataType == 'geneExpression' && this.hierClusterData.byTermId
+			? clickedRowNames.map(c =>
+					this.hierClusterData.byTermId[c]?.gencodeId
+						? [{ value: c, url: `${templates.gene.base}${this.hierClusterData.byTermId[c].gencodeId}` }]
+						: [{ value: c }]
+			  )
+			: clickedRowNames.map(c => [{ value: c }])
+
+	const columns = [{ label: rowType }]
+
+	renderTable({
+		rows,
+		columns,
+		div: this.dom.dendroClickMenu.clear().d.append('div').style('margin', '10px'),
+		showLines: true,
+		maxHeight: '35vh',
+		resize: true
+	})
+}
+
 // add the clicked samples into a group
 export async function addGroup(group) {
 	group.plotId = this.id
@@ -167,6 +258,28 @@ export function getClusterFromTopDendrogram(event) {
 			(x1 <= x && x <= x2 && clusterY - 5 < y && y < clusterY + 5) ||
 			(clusterY <= y && y <= y1 && x1 - 5 < x && x < x1 + 5) ||
 			(clusterY <= y && y <= y2 && x2 - 5 < x && x < x2 + 5)
+		) {
+			return clusterId
+		}
+	}
+}
+
+// upon clicking, find the corresponding clicked clusterId from this.hierClusterData.clustering.row.mergedClusters
+export function getClusterFromLeftDendrogram(event) {
+	// Need imgBox to find the position of event relative to dendrogram
+	if (event.target.tagName == 'image') this.imgBox = event.target.getBoundingClientRect()
+	else return
+
+	const y = event.clientY - this.imgBox.y - event.target.clientTop
+	const xMin = this.dimensions.xMin
+	const x = event.clientX - this.imgBox.x - event.target.clientLeft + xMin
+
+	for (const [clusterId, cluster] of this.hierClusterData.clustering.row.mergedClusters) {
+		const { x1, y1, x2, y2, clusterX } = cluster.clusterPosition
+		if (
+			(y1 <= y && y <= y2 && clusterX - 5 < x && x < clusterX + 5) ||
+			(clusterX <= x && x <= x1 && y1 - 5 < y && y < y1 + 5) ||
+			(clusterX <= x && x <= x2 && y2 - 5 < y && y < y2 + 5)
 		) {
 			return clusterId
 		}

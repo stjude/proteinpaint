@@ -54,13 +54,41 @@ export class HierCluster extends Matrix {
 					delete this.clickedClusterIds
 				}
 
-				// rerender the col Dendrogram
-				this.plotDendrogramHclust(true)
+				// rerender the row Dendrogram
+				if (this.clickedLeftClusterIds) {
+					// when left dendrogram has highlight, clicking top dendro should cancel it
+					delete this.clickedLeftClusterIds
+					this.plotDendrogramHclust()
+				} else this.plotDendrogramHclust('top')
 			})
+
 		this.dom.leftDendrogram = this.dom.svg
 			.insert('g', 'g')
 			.attr('class', 'sjpp-matrix-dendrogram')
 			.attr('data-testid', 'hierCluster_left_dendrogram')
+			.on('click', event => {
+				const clickedLeftClusterId = this.getClusterFromLeftDendrogram(event)
+				if (clickedLeftClusterId) {
+					this.clickedLeftClusterIds = this.getAllChildrenClusterIds(clickedLeftClusterId, true)
+					this.clickedLeftClusterIds.push(clickedLeftClusterId)
+
+					const clickedLeftCluster = this.hierClusterData.clustering.row.mergedClusters.get(clickedLeftClusterId)
+
+					const clickedLeftClusterRowsNames = clickedLeftCluster.children.map(c => c.name)
+
+					this.addSelectedRowsOptions(clickedLeftClusterRowsNames, event)
+				} else {
+					// if not clicking on a cluster, change highlighted cluster color from red back to black
+					delete this.clickedLeftClusterIds
+				}
+
+				// rerender the row Dendrogram
+				if (this.clickedClusterIds) {
+					// when top dendrogram has highlight, clicking left dendro should cancel it
+					delete this.clickedClusterIds
+					this.plotDendrogramHclust()
+				} else this.plotDendrogramHclust('left')
+			})
 		//.attr('clip-path', `url(#${this.seriesClipId})`)
 	}
 
