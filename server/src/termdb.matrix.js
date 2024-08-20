@@ -420,9 +420,11 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 
 	// for "samplelst" term, term.id is missing and must use term.name
 	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
-	let isMixed = mixedSampleTypes(termWrappers, q.ds) || q.filter?.lst?.length > 1 //filters only have child samples, except the cohort filter
+	const mixed = mixedSampleTypes(termWrappers, q.ds)
+	if (!onlyChildren) onlyChildren = true
+	//onlyChildren = mixed || q.filter?.lst?.length > 1  //there is a filter other than the cohort
 	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values)
-	const samples = await getSamples(q, rows, isMixed, onlyChildren)
+	const samples = await getSamples(q, rows, onlyChildren)
 	return [samples, byTermId]
 }
 
@@ -452,24 +454,22 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 				query = ` SELECT sample, key, value, ? as term_id
 				FROM ${t.tablename}
 				${filter ? ` WHERE sample IN ${filter.CTEname} ` : ''}`
-			console.log(tw, query)
 			return query
 		}).join(`UNION ALL`)}`
-	console.log(sql)
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	console.log(interpolateSqlValues(sql, values))
+	//console.log(interpolateSqlValues(sql, values))
 	//console.log(rows)
 	return rows
 }
 
-export async function getSamples(q, rows, isMixed, onlyChildren = false) {
+export async function getSamples(q, rows, onlyChildren) {
 	const samples = {} // to return
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 	for (const { sample, key, term_id, value } of rows) {
 		const ancestor_id = q.ds.sample2Root.get(sample)
-		if (onlyChildren || isMixed) addSample(sample, term_id, key, value)
-		else if (!isMixed) addSample(ancestor_id, term_id, key)
+		if (onlyChildren) addSample(sample, term_id, key, value)
+		else addSample(ancestor_id, term_id, key)
 	}
 	return samples
 

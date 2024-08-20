@@ -110,7 +110,6 @@ export async function barchart_data(q, ds, tdb) {
 	const terms = [...map.values()]
 	const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, q.ds, q.genome)
 	if (data.error) throw data.error
-	console.log(data.samples)
 	const samplesMap = new Map()
 	const bins = []
 	if (data.samples) {

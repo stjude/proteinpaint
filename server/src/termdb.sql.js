@@ -56,6 +56,7 @@ return an array of sample names passing through the filter
 	let re
 	if (filter) re = cmd.all(filter.values)
 	else re = cmd.all()
+
 	if (canDisplay) return re
 	for (const item of re) delete item.name
 	return re
