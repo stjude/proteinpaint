@@ -1,12 +1,12 @@
 import { CatTWCustomGS, HandlerOpts } from '#types'
 import { CategoricalBase } from './CategoricalTW.ts'
-import { RootTW } from './RootTW.ts'
+import { TwRouter } from './TwRouter.ts'
 
 export class CategoricalCustomGS {
 	tw: CatTWCustomGS
 	opts: Partial<HandlerOpts>
 	base: CategoricalBase
-	root: RootTW
+	root: TwRouter
 
 	constructor(fullTw: CatTWCustomGS, opts: HandlerOpts = {}) {
 		this.tw = fullTw

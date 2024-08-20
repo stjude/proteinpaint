@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { RootTW } from '../RootTW.ts'
+import { TwRouter } from '../TwRouter.ts'
 import { RawCatTW, RawTW, GroupEntry } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
@@ -51,7 +51,7 @@ function getCustomSet() {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- tw/RootTW -***-')
+	test.pass('-***- tw/TwRouter -***-')
 	test.end()
 })
 
@@ -61,7 +61,7 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 	}
 
 	try {
-		const fullTw = await RootTW.fill(tw as any, { vocabApi })
+		const fullTw = await TwRouter.fill(tw as any, { vocabApi })
 		test.deepEqual(
 			fullTw,
 			{
@@ -104,7 +104,7 @@ tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
 	}
 
 	try {
-		const fullTw = await RootTW.fill(tw, { vocabApi })
+		const fullTw = await TwRouter.fill(tw, { vocabApi })
 		test.deepEqual(
 			fullTw.q,
 			{
@@ -131,7 +131,7 @@ tape('init() categorical', async test => {
 			q: {}
 		}
 
-		const handler = await RootTW.init(tw, { vocabApi })
+		const handler = await TwRouter.init(tw, { vocabApi })
 		test.equal(
 			handler.base,
 			CategoricalBase,
@@ -147,7 +147,7 @@ tape('init() categorical', async test => {
 			q: { type: 'predefined-groupset', isAtomic: true as const }
 		}
 
-		const handler = await RootTW.init(tw, { vocabApi })
+		const handler = await TwRouter.init(tw, { vocabApi })
 		test.equal(
 			handler.base,
 			CategoricalBase,
@@ -168,7 +168,7 @@ tape('init() categorical', async test => {
 			}
 		}
 
-		const handler = await RootTW.init(tw, { vocabApi })
+		const handler = await TwRouter.init(tw, { vocabApi })
 		test.equal(
 			handler.base,
 			CategoricalBase,

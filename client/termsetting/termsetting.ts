@@ -939,6 +939,12 @@ export async function fillTermWrapper(
 		// hydrate tw.term using tw.id
 		await mayHydrateDictTwLst([tw], vocabApi)
 	}
+
+	if (tw.term.type == 'categorical') {
+		// use new TwRouter.fill(tw)
+		// return
+	}
+
 	// tw.id is no longer needed
 	delete tw.id
 	if (!tw.q) tw.q = {}

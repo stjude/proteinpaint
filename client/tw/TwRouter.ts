@@ -20,21 +20,21 @@ export type TwInitOpts = {
 	useCase?: UseCase
 }
 
-export class RootTW {
+export class TwRouter {
 	static async init(tw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TwInstance> {
-		const fullTW = await RootTW.fill(tw, opts)
-		if (fullTW.term.type == 'categorical') return await CategoricalBase.init(fullTW, { ...opts, root: RootTW })
+		const fullTW = await TwRouter.fill(tw, opts)
+		if (fullTW.term.type == 'categorical') return await CategoricalBase.init(fullTW, { ...opts, root: TwRouter })
 		throw `unable to init(tw)`
 	}
 
 	static async fill(tw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TermWrapper> {
-		await RootTW.preprocess(tw, opts?.vocabApi)
+		await TwRouter.preprocess(tw, opts?.vocabApi)
 
 		switch (tw.term.type) {
 			case 'categorical': {
 				//const { CategoricalBase } = await import('./CategoricalTW.ts')
 				if (!tw.term.id) throw 'missing tw.term.id'
-				return await CategoricalBase.fill(tw, { ...opts, root: RootTW })
+				return await CategoricalBase.fill(tw, { ...opts, root: TwRouter })
 			}
 			// case 'integer':
 			// case 'float':

@@ -22,7 +22,7 @@ import { TermSettingInstance } from '../termsetting.ts'
 
 export type RawCatTW = {
 	id: string
-	term: CategoricalTerm // must already exist, for dictionary terms, RootTW.fill() will use mayHydrateDictTwLst()
+	term: CategoricalTerm // must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst()
 	q: MinBaseQ &
 		(
 			| {
@@ -31,14 +31,14 @@ export type RawCatTW = {
 			| {
 					type: 'predefined-groupset'
 					predefined_groupset_idx?: number
-					groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in RootTW
+					groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter
 			  }
 			| {
 					type: 'custom-groupset'
 					customset: {
 						groups: GroupEntry[]
 					}
-					groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in RootTW
+					groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter
 			  }
 		)
 	isAtomic?: true
