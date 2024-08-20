@@ -259,7 +259,7 @@ function setRenderers(self) {
 		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
 			// key function (2nd arg) uses a function to determine how datum and element are joined by variable id
-			.data(section.inputLst, input => input.term && input.term.term.id)
+			.data(section.inputLst, input => input.term && (input.term.term.id || input.term.term.name))
 
 		inputs.exit().each(removeInput)
 
@@ -287,7 +287,9 @@ function setRenderers(self) {
 				}
 			}
 
-			const input = section.inputLst.find(input => input.term && input.term.term.id == variable.term.id)
+			const input = section.inputLst.find(
+				input => input.term?.term.id == variable.term.id || input.term?.term.name == variable.term.name
+			)
 			if (!input) {
 				section.inputLst.push(
 					new InputTerm({
