@@ -1,17 +1,15 @@
 import tape from 'tape'
 import { string2variant } from '../genesearch.ts'
-import { hg38, hg38_test } from '../../test/testdata/genomes'
+import { hg38 } from '../../test/testdata/genomes'
+import { dofetch3 } from '#common/dofetch'
 import * as d3s from 'd3-selection'
 import { addGeneSearchbox } from '../genesearch.ts'
 import { Menu } from '../menu'
 import { detectOne } from '../../test/test.helpers.js'
 
 /* Tests
-    - string2variant() - HGVS deletion and delins variants
+    - SKIPPED string2variant() - HGVS deletion and delins variants
 	- Gene search results on keyup
-
-*** Tests cannot be run on CI because the fasta file is not available ***
-Run manually as needed. 
 */
 
 /**************
@@ -26,7 +24,13 @@ function getRow(holder) {
 	return holder.append('div').style('border', '1px solid #aaa').style('padding', '5px')
 }
 
-function getSearchBox(holder, opts = {}) {
+async function getHg38test() {
+	const response = await dofetch3('genomes', { body: { genome: 'hg38-test' } })
+	return response.genomes['hg38-test']
+}
+
+async function getSearchBox(holder, opts = {}) {
+	const hg38_test = await getHg38test()
 	const _opts = {
 		genome: hg38_test,
 		tip: new Menu({ padding: '' }),
@@ -46,6 +50,8 @@ tape('\n', test => {
 	test.end()
 })
 
+/*** Tests cannot be run on CI because the fasta file is not available ***
+Run manually as needed. */
 tape.skip('string2variant() - HGVS deletion and delins variants', async test => {
 	test.timeoutAfter(300)
 
@@ -121,7 +127,7 @@ tape('Gene search results on keyup', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 	const tip = new Menu({ padding: '' })
-	getSearchBox(holder, { tip })
+	await getSearchBox(holder, { tip })
 	const searchInput = holder.select('input').node() as HTMLInputElement
 	const gene = 'p53'
 
