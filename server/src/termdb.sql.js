@@ -261,7 +261,7 @@ opts{} options to tweak the query, see const default_opts = below
 		${CTE1.sql},
 		${CTE2.sql}
 		${CTEunion}`
-	//console.log(interpolateSqlValues(sql, values))
+	console.log(interpolateSqlValues(sql, values))
 	try {
 		const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 		const smap = new Map()

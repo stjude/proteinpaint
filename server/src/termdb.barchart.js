@@ -108,10 +108,9 @@ export async function barchart_data(q, ds, tdb) {
 		if (term) map.set(i, term)
 	}
 	const terms = [...map.values()]
-	const onlyChildren = mixedSampleTypes(terms, q.ds)
-	const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, q.ds, q.genome, onlyChildren)
+	const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, q.ds, q.genome)
 	if (data.error) throw data.error
-
+	console.log(data.samples)
 	const samplesMap = new Map()
 	const bins = []
 	if (data.samples) {

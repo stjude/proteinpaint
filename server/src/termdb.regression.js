@@ -10,7 +10,7 @@ import * as utils from './utils.js'
 import * as termdbsql from './termdb.sql.js'
 import { runCumincR } from './termdb.cuminc.js'
 import { isDictionaryType } from '#shared/terms'
-import { getAnnotationRows } from './termdb.matrix.js'
+import { getAnnotationRows, mixedSampleTypes } from './termdb.matrix.js'
 
 /*
 
@@ -1211,13 +1211,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 			? processCoxConditionOutcomeRows(_rows, q.outcome, q.ds.cohort.termdb.ageEndOffset)
 			: _rows
 	// parse the processed rows
-	const types = new Set()
-	for (const tw of terms) {
-		if (tw.term.id) {
-			const type = q.ds.term2SampleType.get(tw.term.id)
-			types.add(type)
-		}
-	}
+
 	for (const { sample, term_id, key, value } of rows) {
 		const term = terms.find(term => (term.term.id || term.term.name) == term_id)
 		addSample(sample, term_id, key, value)
@@ -1233,7 +1227,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 		}
 		if (samples.get(sample).id2value.has(term_id)) {
 			// can duplication happen?
-			//throw `duplicate '${term_id}' entry for sample='${sample}'`
+			throw `duplicate '${term_id}' entry for sample='${sample}'`
 		}
 
 		// if applicable, scale the data
