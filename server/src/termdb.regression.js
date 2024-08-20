@@ -1222,7 +1222,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 
 	// parse the processed rows
 	for (const { sample, term_id, key, value } of rows) {
-		const term = terms.find(term => term.term.id || term.term.name == term_id)
+		const term = terms.find(term => (term.term.id || term.term.name) == term_id)
 
 		if (!term) throw 'no term found'
 
