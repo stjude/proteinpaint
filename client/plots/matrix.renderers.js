@@ -411,6 +411,13 @@ export function setRenderers(self) {
 				return { currentGeneNames }
 			},
 			callback: async tw => {
+				// showing "processing data ..."" before pill is set
+				if (self.dom.loadingDiv && self.dom.svg) {
+					self.dom.loadingDiv.selectAll('*').remove()
+					self.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
+					self.dom.loadingDiv.html('Processing data ...')
+					self.dom.svg.style('opacity', 0.1).style('pointer-events', 'none')
+				}
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
 				if (tw?.term && isNumericTerm(tw.term)) {
