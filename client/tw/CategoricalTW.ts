@@ -20,11 +20,12 @@ import { copyMerge } from '#rx'
 export type CategoricalInstance = CategoricalValues | CategoricalPredefinedGS | CategoricalCustomGS
 
 export class CategoricalBase {
-	static init(rawTW: RawCatTW, opts: HandlerOpts = {}): CategoricalInstance {
-		const tw: CategoricalTW = CategoricalBase.fill(rawTW, opts)
-		if (tw.q.type == 'values') {
+	static init(tw: CategoricalTW, opts: HandlerOpts = {}): CategoricalInstance {
+		opts.base = CategoricalBase
+
+		switch (tw.q.type) {
 			//
-			// - has to use type casting/hint for tw argument, since a type union discriminant property cannot be ,
+			// - has to use type casting/hint for tw argument, since a type union discriminant property cannot be
 			//   from a nested object and creating a new discriminant property on the root tw object seems too much to
 			//   fix the simple typecheck errors that are only emitted from this function (if type casting is not used)
 			//
@@ -32,14 +33,24 @@ export class CategoricalBase {
 			//   as done for getQ() below to not require type casting in that function, since the class itself benefits
 			//   from having a typed-as-a-whole `tw` property
 			//
-			return new CategoricalValues(tw as CatTWValues, { ...opts, base: CategoricalBase })
-		} else if (tw.q.type == 'predefined-groupset') {
-			return new CategoricalPredefinedGS(tw as CatTWPredefinedGS, { ...opts, base: CategoricalBase })
-		} else if (tw.q.type == 'custom-groupset') {
-			return new CategoricalCustomGS(tw as CatTWCustomGS, { ...opts, base: CategoricalBase })
-		} else {
-			throw `unknown categorical class`
+			case 'values':
+				return new CategoricalValues(tw as CatTWValues, opts)
+
+			case 'predefined-groupset':
+				return new CategoricalPredefinedGS(tw as CatTWPredefinedGS, opts)
+
+			case 'custom-groupset':
+				return new CategoricalCustomGS(tw as CatTWCustomGS, opts)
+
+			default:
+				throw `unknown categorical class`
 		}
+	}
+
+	//
+	static initRaw(rawTW: RawCatTW, opts: HandlerOpts = {}): CategoricalInstance {
+		const tw: CategoricalTW = CategoricalBase.fill(rawTW, opts)
+		return CategoricalBase.init(tw, opts)
 	}
 
 	/** tw.term must already be filled-in at this point */

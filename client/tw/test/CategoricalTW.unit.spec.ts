@@ -7,6 +7,7 @@ import { termjson } from '../../test/testdata/termjson'
 import { CategoricalValues } from '../CategoricalValues'
 import { CategoricalPredefinedGS } from '../CategoricalPredefinedGS'
 import { CategoricalCustomGS } from '../CategoricalCustomGS'
+import { TwRouter } from '../TwRouter'
 
 /*************************
  reusable helper functions
@@ -183,7 +184,7 @@ tape('init() categorical', async test => {
 			q: {}
 		}
 
-		const handler = await CategoricalBase.init(tw, { vocabApi })
+		const handler = await CategoricalBase.initRaw(tw, { vocabApi }) //; console.log(186, handler.constructor.name)
 		test.true(
 			handler instanceof CategoricalValues,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
@@ -203,7 +204,7 @@ tape('init() categorical', async test => {
 			q: { type: 'predefined-groupset', isAtomic: true as const }
 		}
 
-		const handler = await CategoricalBase.init(tw, { vocabApi })
+		const handler = await CategoricalBase.initRaw(tw, { vocabApi })
 		test.true(
 			handler instanceof CategoricalPredefinedGS,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
@@ -228,7 +229,7 @@ tape('init() categorical', async test => {
 			}
 		}
 
-		const handler = await CategoricalBase.init(tw, { vocabApi })
+		const handler = await CategoricalBase.initRaw(tw, { vocabApi })
 		test.true(
 			handler instanceof CategoricalCustomGS,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
