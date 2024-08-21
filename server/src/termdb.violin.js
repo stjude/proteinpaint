@@ -6,7 +6,6 @@ import { getBinsDensity } from '../../server/shared/violin.bins'
 import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
 import { isNumericTerm } from '#shared/terms.js'
-import { mixedSampleTypes } from './termdb.matrix.js'
 
 /*
 q: getViolinRequest

@@ -898,7 +898,7 @@ export function getSamplesRelated(samplesData, sampleName) {
 	if (!sampleData) return []
 	const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
 	while (sampleData.ancestor_name) {
-		if (samplesData[sampleData.ancestor_name]?.type != 1)
+		if (samplesData[sampleData.ancestor_name]?.sample_type != ROOT_SAMPLE_TYPE)
 			//not a root sample
 			samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
 		sampleData = samplesData[sampleData.ancestor_name]

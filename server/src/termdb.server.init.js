@@ -68,23 +68,14 @@ export function server_init_db_queries(ds) {
 		'anno_categorical',
 		'buildDate'
 	]
-	ds.sample2Root = new Map()
 
-	if (tables.has('sample_ancestry') && ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) {
-		const rows = cn
-			.prepare(
-				'SELECT sample_id, ancestor_id FROM sample_ancestry sa join sampleidmap s on sa.ancestor_id = s.id where sample_type = 1'
-			)
-			.all()
-		if (rows.length) ds.cohort.termdb.hasAncestry = true
-		for (const row of rows) {
-			ds.sample2Root.set(row.sample_id, row.ancestor_id)
-		}
-	}
 	ds.types = new Map()
 	if (tables.has('sample_types')) {
 		const rows = cn.prepare('SELECT * FROM sample_types').all()
-		for (const row of rows) ds.types.set(row.id, row.name)
+		for (const row of rows) {
+			ds.types.set(row.id, row.name)
+		}
+		ds.cohort.termdb.hasAncestry = ds.types.size > 1
 	}
 
 	for (const table of schema_tables) if (!tables.has(table)) console.log(`${table} table missing!!!!!!!!!!!!!!!!!!!!`)

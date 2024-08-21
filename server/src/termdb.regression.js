@@ -10,7 +10,8 @@ import * as utils from './utils.js'
 import * as termdbsql from './termdb.sql.js'
 import { runCumincR } from './termdb.cuminc.js'
 import { isDictionaryType } from '#shared/terms'
-import { getAnnotationRows, mixedSampleTypes } from './termdb.matrix.js'
+import { getAnnotationRows, getSampleTypes } from './termdb.matrix.js'
+import { get } from 'http'
 
 /*
 
@@ -1193,7 +1194,8 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	// outcome can only be dictionary term so terms array must have at least 1 term
 	const samples = new Map()
 	// k: sample id, v: {sample, id2value:Map( tid => {key,value}) }
-	const filter = await getFilterCTEs(q.filter, q.ds)
+	const sample_types = getSampleTypes(terms, q.ds)
+	const filter = await getFilterCTEs(q.filter, q.ds, sample_types)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
@@ -1203,7 +1205,8 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	)
 	values.push(...terms.map(d => d.term.id || d.term.name))
 
-	const _rows = await getAnnotationRows(q, terms, filter, CTEs, values)
+	const onlyChildren = sample_types.size > 1
+	const _rows = await getAnnotationRows(q, terms, filter, CTEs, values, onlyChildren)
 
 	// process rows
 	const rows =
