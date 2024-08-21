@@ -1,4 +1,4 @@
-import { CatTWValues, HandlerOpts, ValuesQ, RawCatTWValues } from '#types'
+import { CatTWValues, HandlerOpts, ValuesQ, RawValuesQ, CategoricalTerm } from '#types'
 import { CategoricalBase } from './CategoricalTW.ts'
 import { TwRouter } from './TwRouter.ts'
 
@@ -15,12 +15,12 @@ export class CategoricalValues {
 		this.root = opts.root
 	}
 
-	static fillQ(tw: RawCatTWValues): ValuesQ {
-		if (!tw.term.values) throw 'no term.values defined'
-		const numVals = Object.keys(tw.term.values).length
+	static fillQ(term: CategoricalTerm, q: RawValuesQ): ValuesQ {
+		if (!term.values) throw 'no term.values defined'
+		const numVals = Object.keys(term.values).length
 		if (!numVals) throw `empty term.values`
-		if (tw.q.mode == 'binary') {
-			if (Object.keys(tw.term.values).length != 2) throw 'term.values must have exactly two keys'
+		if (q.mode == 'binary') {
+			if (Object.keys(term.values).length != 2) throw 'term.values must have exactly two keys'
 			// TODO:
 			// - add validation that both groups have samplecount > 0 or some other minimum count
 			// - rough example
@@ -33,6 +33,6 @@ export class CategoricalValues {
 			// 	}
 			// }
 		}
-		return { ...tw.q, type: 'values' }
+		return { ...q, type: 'values' }
 	}
 }

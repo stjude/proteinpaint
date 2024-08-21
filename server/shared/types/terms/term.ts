@@ -1,4 +1,4 @@
-import { MinBaseQ, RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ } from './q'
+import { MinBaseQ } from './q'
 import { Filter } from '../filter.js'
 import { CategoricalTerm } from './categorical.js'
 import { ConditionTerm } from './condition.js'

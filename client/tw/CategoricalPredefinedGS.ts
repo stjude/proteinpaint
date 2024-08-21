@@ -1,10 +1,11 @@
 import {
 	CatTWPredefinedGS,
 	HandlerOpts,
+	CategoricalTerm,
 	RawCatTW,
 	CategoricalTW,
 	PredefinedGroupSettingQ,
-	RawCatTWPredefinedGS
+	RawPredefinedGroupsetQ
 } from '#types'
 import { CategoricalBase } from './CategoricalTW.ts'
 import { TwRouter } from './TwRouter.ts'
@@ -22,13 +23,11 @@ export class CategoricalPredefinedGS {
 		this.root = opts.root
 	}
 
-	static fillQ(tw: RawCatTWPredefinedGS): PredefinedGroupSettingQ {
-		const i = tw.q.predefined_groupset_idx
+	static fillQ(term: CategoricalTerm, _q: RawPredefinedGroupsetQ): PredefinedGroupSettingQ {
+		const i = _q.predefined_groupset_idx
 		if (i !== undefined && !Number.isInteger(i)) throw `missing or invalid tw.q.predefined_groupset_idx='${i}'`
-		const q: PredefinedGroupSettingQ = { ...tw.q, predefined_groupset_idx: i || 0 }
-		tw.q = q
-
-		const gs = tw.term.groupsetting
+		const q: PredefinedGroupSettingQ = { ..._q, predefined_groupset_idx: i || 0 }
+		const gs = term.groupsetting
 		if (!gs) throw 'no term.groupsetting'
 		if (!gs.lst?.length) throw 'term.groupsetting.lst is empty'
 		const groupset = gs.lst?.[q.predefined_groupset_idx]
