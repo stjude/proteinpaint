@@ -3,7 +3,7 @@ import * as utils from './utils.js'
 import Partjson from 'partjson'
 import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { getData, mixedSampleTypes } from './termdb.matrix.js'
+import { getData } from './termdb.matrix.js'
 import { mclass, dt2label } from '#shared/common.js'
 
 const binLabelFormatter = format('.3r')

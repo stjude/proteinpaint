@@ -18,7 +18,7 @@ One CTE is made for each item of filter.lst[], with name "CTEname_<i>"
 A superCTE is made to cap this level, with name "CTEname"
 
 */
-export async function getFilterCTEs(filter, ds, CTEname = 'f') {
+export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname = 'f') {
 	if (!filter) return
 	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
 	if (!Array.isArray(filter.lst)) throw 'filter.lst must be an array'
@@ -39,14 +39,16 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 	const CTEs = []
 	// cumulative values
 	const values = []
+	sampleTypes = getFilterSampleTypes(filter, ds, sampleTypes) //add filter types to sampleTypes
 	for (const [i, item] of filter.lst.entries()) {
 		const sample_type = getSampleType(item.tvs?.term, ds)
+		const onlyChildren = sampleTypes.size > 1 && sample_type == ROOT_SAMPLE_TYPE
 		const CTEname_i = CTEname + '_' + i
 		let f
 		if (item.type == 'tvslst') {
 			if (item.lst.length == 0) continue // do not process blank list
 
-			f = await getFilterCTEs(item, ds, CTEname_i)
+			f = await getFilterCTEs(item, ds, sampleTypes, CTEname_i)
 			// .filters: str, the CTE cascade, not used here!
 			// .CTEs: [] list of individual CTE string
 			// .values: []
@@ -54,9 +56,9 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		} else if (!item.tvs) {
 			throw `filter item should have a 'tvs' or 'lst' property`
 		} else if (item.tvs.term.type == TermTypes.GENE_EXPRESSION) {
-			f = await get_geneExpression(item.tvs, CTEname_i, ds, sample_type)
+			f = await get_geneExpression(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
-			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds, sample_type)
+			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
 		} else if (
 			item.tvs.term.id &&
 			(!item.tvs.term.type || isDictionaryType(item.tvs.term.type)) &&
@@ -64,22 +66,22 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		) {
 			throw 'invalid term id in tvs'
 		} else if (item.tvs.term.type == 'categorical') {
-			f = get_categorical(item.tvs, CTEname_i, ds, sample_type)
+			f = get_categorical(item.tvs, CTEname_i, ds, onlyChildren)
 			// .CTEs: []
 			// .values:[]
 			// .CTEname
 		} else if (item.tvs.term.type == 'survival') {
-			f = get_survival(item.tvs, CTEname_i, ds, sample_type)
+			f = get_survival(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'samplelst') {
-			f = get_samplelst(item.tvs, CTEname_i, ds, sample_type)
+			f = get_samplelst(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float') {
-			f = get_numerical(item.tvs, CTEname_i, ds, sample_type)
+			f = get_numerical(item.tvs, CTEname_i, ds, onlyChildren)
 		} else if (item.tvs.term.type == 'condition') {
-			f = get_condition(item.tvs, CTEname_i, ds, sample_type)
+			f = get_condition(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'geneVariant') {
-			f = await get_geneVariant(item.tvs, CTEname_i, ds, sample_type)
+			f = await get_geneVariant(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'snp') {
-			f = await get_snp(item.tvs, CTEname_i, ds, sample_type)
+			f = await get_snp(item.tvs, CTEname_i, ds)
 		} else {
 			throw 'unknown term type'
 		}
@@ -112,50 +114,36 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		filters: CTEs.join(',\n'),
 		CTEs,
 		values,
-		CTEname
+		CTEname,
+		sampleTypes
 	}
 }
 
 export function getSampleType(term, ds) {
 	if (!term) return null
-	let sample_type
-	if (term.id) sample_type = ds.term2SampleType.get(term.id)
-	// samplelst
-	else {
-		return DEFAULT_SAMPLE_TYPE //later own term needs to know what type annotates based on the samples
-	}
-	return sample_type
+	if (term.id) return ds.term2SampleType.get(term.id)
+	// samplelst or non dict terms
+	return DEFAULT_SAMPLE_TYPE //later own term needs to know what type annotates based on the samples
 }
 
 // makesql_by_tvsfilter helpers
 // put here instead of inside makesql_by_tvsfilter
 // to parse function once at server start instead of
 // multiple times per server request
-function get_categorical(tvs, CTEname, ds, sample_type) {
-	const isCohortFilter = tvs.term.id == 'subcohort'
-	let query
-	let values
-	if (isCohortFilter && ds.cohort.db.tableColumns['sampleidmap'].includes('cohort')) {
-		values = []
-		query = `select id as sample from sampleidmap where cohort = '${tvs.values[0].key}' and sample_type != 1` //we are returning only children
-	} else {
-		query = `SELECT sample
-		FROM anno_categorical 
-		WHERE term_id = ?
-		AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-
-		if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
-			query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
-		values = [tvs.term.id, ...tvs.values.map(i => i.key)]
-	}
+function get_categorical(tvs, CTEname, ds, onlyChildren) {
+	let query = `SELECT sample
+	FROM anno_categorical 
+	WHERE term_id = ?
+	AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
+	if (onlyChildren) query = getChildren(query)
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
-		values,
+		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
 		CTEname
 	}
 }
 
-function get_survival(tvs, CTEname, sample_type) {
+function get_survival(tvs, CTEname) {
 	let query = `SELECT sample
 	FROM survival
 	WHERE term_id = ?
@@ -177,7 +165,7 @@ function get_survival(tvs, CTEname, sample_type) {
 	}
 }
 
-function get_samplelst(tvs, CTEname, sample_type) {
+function get_samplelst(tvs, CTEname) {
 	const samples = []
 	for (const field in tvs.term.values) {
 		const list = tvs.term.values[field].list
@@ -187,8 +175,6 @@ function get_samplelst(tvs, CTEname, sample_type) {
 	let query = `	SELECT id as sample
 				FROM sampleidmap
 				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${Array(samples.length).fill('?').join(', ')})`
-	if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
-		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
 
 	return {
 		CTEs: [
@@ -202,7 +188,7 @@ function get_samplelst(tvs, CTEname, sample_type) {
 	}
 }
 
-async function get_geneVariant(tvs, CTEname, ds, sample_type) {
+async function get_geneVariant(tvs, CTEname, ds) {
 	const tw = { $id: Math.random().toString(), term: tvs.term, q: {} }
 	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
 	/*
@@ -259,11 +245,12 @@ async function get_geneVariant(tvs, CTEname, ds, sample_type) {
 			)`
 		],
 		values: [...samplenames],
-		CTEname
+		CTEname,
+		onlyChildren: types.size > 1
 	}
 }
 
-async function get_snp(tvs, CTEname, ds, sample_type) {
+async function get_snp(tvs, CTEname, ds) {
 	// get sample genotypes for snp
 	const sampleGTs = await getSnpData({ term: tvs.term }, { ds })
 	// get genotypes of snp in filter
@@ -276,8 +263,6 @@ async function get_snp(tvs, CTEname, ds, sample_type) {
 				FROM sampleidmap
 				WHERE id IN (${samples.map(i => '?').join(', ')})`
 
-	if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
-		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
 	const result = {
 		CTEs: [
 			`
@@ -291,7 +276,7 @@ async function get_snp(tvs, CTEname, ds, sample_type) {
 	return result
 }
 
-async function get_geneExpression(tvs, CTEname, ds, sample_type) {
+async function get_geneExpression(tvs, CTEname, ds) {
 	const data = await ds.queries.geneExpression.get({ terms: [{ gene: tvs.term.gene }] })
 	const samples = []
 	for (const sampleId in data.term2sample2value.get(tvs.term.gene)) {
@@ -304,8 +289,6 @@ async function get_geneExpression(tvs, CTEname, ds, sample_type) {
 	let query = `SELECT id as sample
 				FROM sampleidmap
 				WHERE id IN (${samples.map(i => '?').join(', ')})`
-	if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
-		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
 
 	const result = {
 		CTEs: [
@@ -320,7 +303,7 @@ async function get_geneExpression(tvs, CTEname, ds, sample_type) {
 	return result
 }
 
-async function get_metaboliteIntensity(tvs, CTEname, ds, sample_type) {
+async function get_metaboliteIntensity(tvs, CTEname, ds) {
 	const args = {
 		genome: ds.genome,
 		dslabel: ds.label,
@@ -339,8 +322,6 @@ async function get_metaboliteIntensity(tvs, CTEname, ds, sample_type) {
 	let query = `SELECT id as sample
 				FROM sampleidmap
 				WHERE id IN (${samples.map(i => '?').join(', ')})`
-	if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
-		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
 
 	const result = {
 		CTEs: [
@@ -355,7 +336,7 @@ async function get_metaboliteIntensity(tvs, CTEname, ds, sample_type) {
 	return result
 }
 
-function get_numerical(tvs, CTEname, ds, sample_type) {
+function get_numerical(tvs, CTEname, ds, onlyChildren) {
 	/*
 for the case e.g. '0' is for "Not exposed", range.value can be either '0' or 0, string or number
 as it cannot be decided what client will provide
@@ -416,8 +397,7 @@ so here need to allow both string and number as range.value
 					${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
 					${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')}) ` : ''}`
 
-	if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
-		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
+	if (onlyChildren) query = getChildren(query)
 
 	return {
 		CTEs: [
@@ -431,7 +411,7 @@ so here need to allow both string and number as range.value
 	}
 }
 
-function get_condition(tvs, CTEname, ds, sample_type) {
+function get_condition(tvs, CTEname) {
 	let value_for
 	if (tvs.bar_by_children) value_for = 'child'
 	else if (tvs.bar_by_grade) value_for = 'grade'
@@ -453,9 +433,6 @@ function get_condition(tvs, CTEname, ds, sample_type) {
 				WHERE term_id = ? 
 				AND ${restriction} = 1
 				AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-
-		if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
-			query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
 
 		CTEs.push(`
 			${CTEname} AS (
@@ -491,4 +468,19 @@ function get_condition(tvs, CTEname, ds, sample_type) {
 		values,
 		CTEname
 	}
+}
+
+function getFilterSampleTypes(filter, ds, sampleTypes) {
+	for (const [i, item] of filter.lst.entries()) {
+		if (!item.tvs || item.tvs.term.id == 'subcohort') continue
+
+		const term_id = item.tvs.term
+		const sample_type = getSampleType(term_id, ds)
+		sampleTypes.add(sample_type)
+	}
+	return sampleTypes
+}
+
+function getChildren(query) {
+	return ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
 }

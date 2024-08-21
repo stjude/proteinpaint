@@ -8,6 +8,7 @@ import { TermTypes, isDictionaryType, isNonDictionaryType, getBin, ROOT_SAMPLE_T
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { geneVariantTermGroupsetting } from '#shared/common.js'
+import { on } from 'events'
 
 /*
 
@@ -392,7 +393,8 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
-	const filter = await getFilterCTEs(q.filter, q.ds)
+	const sampleTypes = getSampleTypes(termWrappers, q.ds)
+	const filter = await getFilterCTEs(q.filter, q.ds, sampleTypes)
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
@@ -420,33 +422,30 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 
 	// for "samplelst" term, term.id is missing and must use term.name
 	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
-	const mixed = mixedSampleTypes(termWrappers, q.ds)
-	if (!onlyChildren) onlyChildren = true
-	//onlyChildren = mixed || q.filter?.lst?.length > 1  //there is a filter other than the cohort
-	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values)
+	if (!onlyChildren) onlyChildren = filter?.onlyChildren || sampleTypes.size > 1
+	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, onlyChildren)
 	const samples = await getSamples(q, rows, onlyChildren)
 	return [samples, byTermId]
 }
 
-export function mixedSampleTypes(termWrappers, ds) {
+export function getSampleTypes(termWrappers, ds) {
 	const types = new Set()
 	for (const tw of termWrappers) {
 		const type = getSampleType(tw.term, ds)
 		types.add(type)
 	}
-	const isMixed = types.size > 1
-	return isMixed
+	return types
 }
 
-export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
+export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, onlyChildren) {
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map((t, i) => {
 			const tw = termWrappers[i]
-			const sample_type = getSampleType(tw.term, q.ds)
+			const sampleType = getSampleType(tw.term, q.ds)
 			let query
-			if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
+			if (onlyChildren && sampleType == ROOT_SAMPLE_TYPE)
 				query = ` select sa.sample_id as sample, key, value, ? as term_id
 				 from sample_ancestry sa join ${t.tablename} on sa.ancestor_id = sample
 				${filter ? ` WHERE sample_id IN ${filter.CTEname} ` : ''}`
@@ -457,7 +456,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 			return query
 		}).join(`UNION ALL`)}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	//console.log(interpolateSqlValues(sql, values))
+	//.log(interpolateSqlValues(sql, values))
 	//console.log(rows)
 	return rows
 }
@@ -467,9 +466,7 @@ export async function getSamples(q, rows, onlyChildren) {
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 	for (const { sample, key, term_id, value } of rows) {
-		const ancestor_id = q.ds.sample2Root.get(sample)
-		if (onlyChildren) addSample(sample, term_id, key, value)
-		else addSample(ancestor_id, term_id, key)
+		addSample(sample, term_id, key, value)
 	}
 	return samples
 

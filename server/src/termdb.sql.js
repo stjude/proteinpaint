@@ -103,21 +103,19 @@ return a sample count of sample names passing through the filter
 	}
 
 	const filter = await getFilterCTEs(j, ds)
-	const statement = `WITH ${filter.filters}
-		SELECT distinct sample
-		FROM ${filter.CTEname}`
-	const rows = ds.cohort.db.connection.prepare(statement).all(filter.values)
-	const counts = {}
-	for (const row of rows) {
-		const typeId = ds.sampleId2Type.get(row.sample) || DEFAULT_SAMPLE_TYPE
-		const type = ds.types.get(typeId)
-		console.log(row.sample, typeId, type)
-		if (!(type in counts)) counts[type] = 0
-		counts[type] = counts[type] + 1
+	let statement
+	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) {
+		statement = `WITH ${filter.filters}
+		SELECT count (distinct sample) as count, sample_type
+		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id group by sample_type`
+	} else {
+		statement = `WITH ${filter.filters}
+		SELECT count (distinct sample) as count
+		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
 	}
-	const keys = Object.keys(counts)
-	const count = keys.map(key => `${counts[key]} ${key}${counts[key] > 1 ? 's' : ''}`).join(' and ')
-	return { count }
+	const row = ds.cohort.db.connection.prepare(statement).get(filter.values)
+	const sample_type = ds.types.get(row.sample_type) || 'sample'
+	return { count: `${row.count} ${sample_type}s` }
 }
 export async function get_summary_numericcategories(q) {
 	/*
