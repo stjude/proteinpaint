@@ -120,8 +120,8 @@ tape('nested filter', async function (test) {
 	//console.log(filter.values)
 	test.deepEqual(
 		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
-		['CTEname', 'CTEs', 'filters', 'values'],
-		'should return an object with the four expected keys'
+		['CTEname', 'CTEs', 'filters', 'sampleTypes', 'values'],
+		'should return an object with the five expected keys'
 	)
 	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
 	test.equal(
