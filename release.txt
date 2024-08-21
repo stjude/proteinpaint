@@ -1,2 +1,2 @@
-Fix
+Fixes
 - Removed the host from the whole slide imaging card for testing
