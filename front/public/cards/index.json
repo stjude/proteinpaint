@@ -366,6 +366,7 @@
         {
             "type": "card",
             "name": "Whole Slide Imaging",
+            "configFeature": "showWSImages",
             "section": "apps",
             "description": "H&E images zooming and panning",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/wsi-square.png",

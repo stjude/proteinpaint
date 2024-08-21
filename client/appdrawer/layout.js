@@ -75,11 +75,16 @@ class AppDrawerLayoutComp {
 		return re
 	}
 
+	validateElements() {
+		const features = JSON.parse(sessionStorage.getItem('optionalFeatures')) || {}
+		this.elements = this.index.elements.filter(e => !e.hidden && (!e.configFeature || features[e.configFeature]))
+	}
+
 	async init() {
 		this.index = await this.validateIndexJson()
 		this.elementsRendered = false
 		setRenderers(this)
-		this.elements = this.index.elements.filter(e => !e.hidden)
+		this.validateElements()
 		this.layout = this.index.columnsLayout ? this.index.columnsLayout : null
 		this.components = {
 			elements: []
@@ -87,7 +92,7 @@ class AppDrawerLayoutComp {
 	}
 
 	async main() {
-		//prevent elements from reloading each time
+		// prevent elements from reloading each time
 		if (this.elementsRendered == true) return
 		this.elementsRendered = true
 		for (const element of this.elements) {
@@ -155,10 +160,7 @@ function columnsLayout(self) {
 	for (const column of self.index.columnsLayout) gridareas.push(column.gridarea)
 	parentGrid.style('grid-template-areas', `"${gridareas.toString().replace(',', ' ')}"`)
 	for (const col of self.index.columnsLayout) {
-		const newCol = parentGrid
-			.append('div')
-			.style('grid-area', col.gridarea)
-			.classed('.sjpp-track-cols', true)
+		const newCol = parentGrid.append('div').style('grid-area', col.gridarea).classed('.sjpp-track-cols', true)
 		for (const section of col.sections) addSection(section, newCol)
 	}
 
@@ -170,10 +172,7 @@ function columnsLayout(self) {
 				.classed('sjpp-appdrawer-cols', true)
 				.style('color', rgb(defaultcolor).darker())
 				.text(section.name)
-		newSection
-			.append('div')
-			.classed('sjpp-element-list', true)
-			.style('padding', '10px')
+		newSection.append('div').classed('sjpp-element-list', true).style('padding', '10px')
 
 		return newSection
 	}
