@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - always show Processing data... when a divideby term is selected for oncoMatrix and hierCluster
+- Removed the host from the whole slide imaging card for testing
 
 
 ## 2.74.0
