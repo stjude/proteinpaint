@@ -3,7 +3,6 @@
     "ppcalls": [
         {
             "runargs": {
-                "host": "https://proteinpaint.stjude.org/",
                 "noheader": true,
                 "mass": {
                     "state": {
