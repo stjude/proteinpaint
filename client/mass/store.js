@@ -92,15 +92,24 @@ class TdbStore {
 				termfilter: JSON.parse(JSON.stringify(this.state.termfilter)),
 				termdbConfig: this.state.termdbConfig
 			})
-
+			const invalidPlots = []
 			for (const [i, savedPlot] of this.state.plots.entries()) {
 				// easier for rollup to support less complex dynamic imports with variables,
 				// webpack is already more flexible but need to support packing with rollup
 				const _ = await import(`../plots/${savedPlot.chartType}.js`)
 				const plot = await _.getPlotConfig(savedPlot, this.app)
+				if (!plot) {
+					invalidPlots.push(i)
+					continue
+				}
 				this.state.plots[i] = plot
 				if (!('id' in plot)) plot.id = `_AUTOID_${id++}_${i}`
 				if (plot.mayAdjustConfig) plot.mayAdjustConfig(plot)
+			}
+			if (invalidPlots.length) {
+				for (const i of invalidPlots) {
+					this.state.plots.splice(i, 1)
+				}
 			}
 		} catch (e) {
 			throw e
