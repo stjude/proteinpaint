@@ -42,7 +42,7 @@ upon error, throw err message as a string
 
 		//Check if track/app can be shown on this server
 		//If not show error message
-		if (re.elements[element].configFeature) {
+		if (re.elements[element]?.configFeature) {
 			const features = JSON.parse(sessionStorage.getItem('optionalFeatures'))
 			if (!features[re.elements[element].configFeature]) {
 				sayerror(arg.holder, `This track or app is not enabled on this site.`)
@@ -61,6 +61,10 @@ upon error, throw err message as a string
 					}
 				}
 			})
+			if (!element) {
+				sayerror(arg.holder, `Invalid app card.`)
+				return
+			}
 			ad.openSandbox(element.children[c], arg.app.drawer.opts)
 		} else {
 			ad.openSandbox(re.elements[element], arg.app.drawer.opts)
