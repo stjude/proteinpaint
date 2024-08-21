@@ -8,3 +8,8 @@ export type GetSampleWSImagesRequest = {
 export type GetSampleWSImagesResponse = {
 	sampleWSImages: string[]
 }
+
+export type WSImage = {
+	filename: string
+	metadata: string
+}

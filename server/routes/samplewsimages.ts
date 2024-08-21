@@ -1,7 +1,4 @@
-import fs from 'fs'
-import path from 'path'
-import serverconfig from '#src/serverconfig.js'
-import { GetSampleWSImagesRequest, GetSampleWSImagesResponse } from '#shared/types/routes/samplewsimages.js'
+import { GetSampleWSImagesRequest, GetSampleWSImagesResponse, WSImage } from '#shared/types/routes/samplewsimages.js'
 
 /*
 given a sample, return all whole slide images for specified dataset
@@ -36,13 +33,8 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			const sampleId = query.sample_id
 
-			const sampleWSImagesPath = path.join(
-				`${serverconfig.tpmasterdir}/${ds.queries.WSImages.imageBySampleFolder}`,
-				sampleId
-			)
-
-			const sampleWSImages = await getWSImages(sampleWSImagesPath)
-			res.send({ sampleWSImages: sampleWSImages } as GetSampleWSImagesResponse)
+			const images = await ds.queries.WSImages.getWSImages({ sampleId })
+			res.send({ sampleWSImages: images } as GetSampleWSImagesResponse)
 		} catch (e: any) {
 			console.log(e)
 			res.status(404).send('Sample images not found')
@@ -50,7 +42,34 @@ function init({ genomes }) {
 	}
 }
 
-async function getWSImages(sampleImagesPath: string): Promise<string[]> {
-	const files = await fs.promises.readdir(sampleImagesPath)
-	return files.filter(file => ['.svs', '.mrxs', '.scn', '.ndpi', '.tiff'].includes(path.extname(file)))
+export function validate_query_getSampleWSImages(ds: any, genome: any) {
+	const q = ds.queries.WSImages
+	if (!q) return
+	nativeValidateQuery(ds)
+}
+
+function nativeValidateQuery(ds: any) {
+	ds.queries.WSImages.getWSImages = async (q: any) => {
+		return await getWSImages(ds, q.sampleId)
+	}
+}
+
+async function getWSImages(ds: any, sampleName: string) {
+	const sql = `SELECT wsimages.filename as filename, wsimages.metadata as metadata
+                 FROM wsimages
+                          INNER JOIN sampleidmap
+                                     ON wsimages.sample = sampleidmap.id
+                 WHERE sampleidmap.name = ?`
+
+	const rows = ds.cohort.db.connection.prepare(sql).all(sampleName)
+	const images: WSImage[] = []
+
+	for (const row of rows) {
+		images.push({
+			filename: row.filename,
+			metadata: row.metadata
+		})
+	}
+
+	return images
 }

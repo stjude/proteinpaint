@@ -1,1 +1,2 @@
-
+Features:
+- wsiviewer - load files and metadata from db
