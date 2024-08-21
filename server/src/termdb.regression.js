@@ -1220,7 +1220,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	}
 
 	function addSample(sample, term_id, key, value) {
-		const term = terms.find(term => term.term.id || term.term.name == term_id)
+		const term = terms.find(term => (term.term.id || term.term.name) == term_id)
 		if (!term) throw 'no term found'
 
 		if (!samples.has(sample)) {
