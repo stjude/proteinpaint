@@ -76,12 +76,8 @@ class AppDrawerLayoutComp {
 	}
 
 	validateElements() {
-		const features = JSON.parse(sessionStorage.getItem('optionalFeatures'))
-		this.elements = this.index.elements
-			.filter(e => !e.hidden)
-			.filter(e => {
-				return e.configFeature ? features[e.configFeature] === 1 || features[e.configFeature] === true : true
-			})
+		const features = JSON.parse(sessionStorage.getItem('optionalFeatures')) || {}
+		this.elements = this.index.elements.filter(e => !e.hidden && (!e.configFeature || features[e.configFeature]))
 	}
 
 	async init() {
