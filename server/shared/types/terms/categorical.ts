@@ -2,14 +2,13 @@ import {
 	BaseTerm,
 	TermValues,
 	GroupSettingQ,
-	GroupEntry,
 	ValuesQ,
 	TermGroupSetting,
 	BaseTW,
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ
 } from './term.ts'
-import { MinBaseQ, RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ } from './q'
+import { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ } from './q'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /**
@@ -20,29 +19,6 @@ import { TermSettingInstance } from '../termsetting.ts'
  * @category TW
  */
 
-export type RawCatTWValues = {
-	term: CategoricalTerm
-	q: RawValuesQ
-	isAtomic?: true
-	$id?: string
-}
-
-export type RawCatTWPredefinedGS = {
-	//id: string
-	term: CategoricalTerm
-	q: RawPredefinedGroupsetQ
-	isAtomic?: true
-	$id?: string
-}
-
-export type RawCatTWCustomGS = {
-	//id: string
-	term: CategoricalTerm
-	q: RawCustomGroupsetQ
-	isAtomic?: true
-	$id?: string
-}
-
 export type RawCatTW = {
 	//id: string
 	term: CategoricalTerm // must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst()
@@ -50,6 +26,8 @@ export type RawCatTW = {
 	isAtomic?: true
 	$id?: string
 }
+
+//export type RawCatTW = RawCatTWValues | RawCatTWPredefinedGS | RawCatTWCustomGS
 
 export type CategoricalQ = GroupSettingQ | ValuesQ
 
@@ -76,7 +54,6 @@ export type CatTWValues = BaseTW & {
 	//id: string
 	term: CategoricalTerm
 	q: ValuesQ
-	type: 'CatTWValues'
 }
 
 export type CatTWPredefinedGS = BaseTW & {
