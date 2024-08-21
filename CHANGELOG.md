@@ -12,6 +12,7 @@ Features:
 Fixes:
 - At GDC lollipop subtrack, disable survival term when building the filter
 - fix file-based session recovery of regression plot
+- matrix divideby breaks when using gene exp
 
 
 ## 2.73.0
