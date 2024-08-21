@@ -1,1 +1,2 @@
-
+Fixes:
+- always show Processing data... when a divideby term is selected for oncoMatrix and hierCluster
