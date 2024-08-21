@@ -143,7 +143,7 @@ tape('init() categorical', async test => {
 			q: {}
 		}
 
-		const handler = await TwRouter.init(tw, { vocabApi })
+		const handler = await TwRouter.initRaw(tw, { vocabApi })
 		test.equal(
 			handler.base,
 			CategoricalBase,
@@ -158,7 +158,7 @@ tape('init() categorical', async test => {
 			q: { type: 'predefined-groupset', isAtomic: true as const }
 		}
 
-		const handler = await TwRouter.init(tw, { vocabApi })
+		const handler = await TwRouter.initRaw(tw, { vocabApi })
 		test.equal(
 			handler.base,
 			CategoricalBase,
@@ -178,7 +178,7 @@ tape('init() categorical', async test => {
 			}
 		}
 
-		const handler = await TwRouter.init(tw, { vocabApi })
+		const handler = await TwRouter.initRaw(tw, { vocabApi })
 		test.equal(
 			handler.base,
 			CategoricalBase,

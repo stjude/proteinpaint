@@ -27,12 +27,35 @@ export class TwRouter {
 		this.opts = opts
 	}
 
-	static async init(tw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TwInstance> {
-		const fullTW = await TwRouter.fill(tw, opts)
-		if (fullTW.term.type == 'categorical') {
-			return await CategoricalBase.init(fullTW, { ...opts, root: TwRouter })
+	static init(tw: TermWrapper, opts: HandlerOpts = {}): TwInstance {
+		switch (tw.term.type) {
+			case 'categorical': {
+				return CategoricalBase.init(tw, { ...opts, root: TwRouter })
+			}
+			// case 'integer':
+			// case 'float':
+			// 	return
+
+			// case 'condition':
+			// 	return
+
+			// case 'survival':
+			// 	return
+
+			// case 'geneVariant':
+			// 	return
+
+			// case 'geneExpression':
+			// 	return
+
+			default:
+				throw `unable to init(tw)`
 		}
-		throw `unable to init(tw)`
+	}
+
+	static async initRaw(rawTw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TwInstance> {
+		const tw = await TwRouter.fill(rawTw, opts)
+		return TwRouter.init(tw, opts)
 	}
 
 	static async fill(tw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TermWrapper> {
@@ -40,8 +63,6 @@ export class TwRouter {
 
 		switch (tw.term.type) {
 			case 'categorical': {
-				//const { CategoricalBase } = await import('./CategoricalTW.ts')
-				if (!tw.term.id) throw 'missing tw.term.id'
 				return await CategoricalBase.fill(tw, { ...opts, root: TwRouter })
 			}
 			// case 'integer':
@@ -79,24 +100,24 @@ export class TwRouter {
 
 		if (!tw.q) tw.q = {}
 		tw.q.isAtomic = true
-		reshapeLegacyTw(tw)
+		TwRouter.reshapeLegacyTw(tw)
 	}
-}
 
-// check for legacy tw structure that could be
-// present in old saved sessions
-function reshapeLegacyTw(tw) {
-	// check for legacy q.groupsetting{}
-	if (Object.keys(tw.q).includes('groupsetting')) {
-		if (!tw.q.groupsetting.inuse) {
-			tw.q.type = 'values'
-		} else if (tw.q.type == 'predefined-groupset') {
-			tw.q.predefined_groupset_idx = tw.q.groupsetting.predefined_groupset_idx
-		} else if (tw.q.type == 'custom-groupset') {
-			tw.q.customset = tw.q.groupsetting.customset
-		} else {
-			throw 'invalid q.type'
+	// check for legacy tw structure that could be
+	// present in old saved sessions
+	static reshapeLegacyTw(tw) {
+		// check for legacy q.groupsetting{}
+		if (Object.keys(tw.q).includes('groupsetting')) {
+			if (!tw.q.groupsetting.inuse) {
+				tw.q.type = 'values'
+			} else if (tw.q.type == 'predefined-groupset') {
+				tw.q.predefined_groupset_idx = tw.q.groupsetting.predefined_groupset_idx
+			} else if (tw.q.type == 'custom-groupset') {
+				tw.q.customset = tw.q.groupsetting.customset
+			} else {
+				throw 'invalid q.type'
+			}
+			delete tw.q['groupsetting']
 		}
-		delete tw.q['groupsetting']
 	}
 }
