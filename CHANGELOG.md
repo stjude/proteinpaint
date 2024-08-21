@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.74.1
 
 Fixes:
 - always show Processing data... when a divideby term is selected for oncoMatrix and hierCluster
