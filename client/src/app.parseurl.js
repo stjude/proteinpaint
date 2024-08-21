@@ -39,6 +39,17 @@ upon error, throw err message as a string
 			cardsPath: 'cards'
 		}
 		const element = re.elements.findIndex(t => t.sandboxJson == cardJsonFile || t.sandboxHtml == cardJsonFile)
+
+		//Check if track/app can be shown on this server
+		//If not show error message
+		if (re.elements[element].configFeature) {
+			const features = JSON.parse(sessionStorage.getItem('optionalFeatures'))
+			if (!features[re.elements[element].configFeature]) {
+				sayerror(arg.holder, `This track or app is not enabled on this site.`)
+				return
+			}
+		}
+
 		if (element <= 0) {
 			const nestedCards = [...re.elements.filter(e => e.type == 'nestedCard')]
 			let element, c
