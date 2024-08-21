@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.74.0
 
 Features:
 - WSIViewer launchable from runproteinpaint() as a mass plot.
