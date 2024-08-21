@@ -2,7 +2,6 @@ import fs from 'fs'
 import readline from 'readline'
 import path from 'path'
 import { spawn, spawnSync } from 'child_process'
-import { Readable } from 'stream'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import * as gdc from './mds3.gdc.js'
@@ -37,8 +36,8 @@ import { validate_query_geneExpression } from '#routes/termdb.cluster.ts'
 import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.getTopTermsByType.ts'
-import { TermTypes } from '#shared/terms.js'
 import { validate_query_getSampleImages } from '#routes/termdb.getSampleImages.ts'
+import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 
 /*
 init
@@ -125,6 +124,7 @@ export async function init(ds, genome, _servconfig) {
 		await validate_query_metaboliteIntensity(ds, genome)
 		await validate_query_getTopTermsByType(ds, genome) //will be used to get top terms when supported
 		await validate_query_getSampleImages(ds, genome)
+		await validate_query_getSampleWSImages(ds, genome)
 		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)

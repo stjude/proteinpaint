@@ -14,6 +14,7 @@ import Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import { GetWSImagesRequest, GetWSImagesResponse } from '../../shared/types/routes/wsimages.ts'
 import wsiViewerImageFiles from './wsimagesloaded.ts'
+import { WSImage } from '../../../server/shared/types/routes/samplewsimages.ts'
 
 export default class WSIViewer {
 	// following attributes are required by rx
@@ -115,6 +116,8 @@ export default class WSIViewer {
 						this.wsiViewerInteractions.thumbnailClickListener(i)
 					})
 
+				// TODO plot metadata
+
 				thumbnail
 					.append('img')
 					.attr('src', layers[i].get('preview'))
@@ -160,7 +163,7 @@ export default class WSIViewer {
 		map.addControl(overviewMapControl)
 	}
 
-	private async getLayers(state: any, wsimages: string[]): Promise<Array<TileLayer<Zoomify>>> {
+	private async getLayers(state: any, wsimages: WSImage[]): Promise<Array<TileLayer<Zoomify>>> {
 		const layers: Array<TileLayer<Zoomify>> = []
 
 		for (let i = 0; i < wsimages.length; i++) {
@@ -168,7 +171,7 @@ export default class WSIViewer {
 				genome: state.genome || state.vocab.genome,
 				dslabel: state.dslabel || state.vocab.dslabel,
 				sampleId: state.sample_id,
-				wsimage: wsimages[i]
+				wsimage: wsimages[i].filename
 			}
 
 			const data: GetWSImagesResponse = await dofetch3('wsimages', { body })
