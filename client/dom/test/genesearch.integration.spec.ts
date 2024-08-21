@@ -9,7 +9,7 @@ import { detectOne } from '../../test/test.helpers.js'
 
 /* Tests
     - SKIPPED string2variant() - HGVS deletion and delins variants
-	- Gene search results on keyup
+	- search by p53 should find TP53
 */
 
 /**************
@@ -123,19 +123,18 @@ tape.skip('string2variant() - HGVS deletion and delins variants', async test => 
 	test.end()
 })
 
-tape('Gene search results on keyup', async test => {
+tape('search by p53 should find TP53', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 	const tip = new Menu({ padding: '' })
 	await getSearchBox(holder, { tip })
 	const searchInput = holder.select('input').node() as HTMLInputElement
-	const gene = 'p53'
 
-	//Check if the search box is functional
 	/** Leave this
 	 * Options populate slightly slower than tgit he menu
 	 * Need to wait for options to appear before testing
 	 */
+	const gene = 'p53'
 	const result = await detectOne({
 		selector: '.sja_menuoption',
 		target: tip.dnode,
@@ -144,7 +143,7 @@ tape('Gene search results on keyup', async test => {
 			searchInput.dispatchEvent(new KeyboardEvent('keyup'))
 		}
 	})
-	test.true(result.textContent.includes(gene.toUpperCase()), 'Should display matching gene options')
+	test.equal(result.textContent, 'TP53', 'found TP53') // p53=TP53 is fact and is not subject to change with test data unlike termdb data
 
 	if (test['_ok']) {
 		if (tip.dnode) tip.dnode.remove()
