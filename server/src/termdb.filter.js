@@ -73,7 +73,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		} else if (item.tvs.term.type == 'survival') {
 			f = get_survival(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'samplelst') {
-			f = get_samplelst(item.tvs, CTEname_i, ds, onlyChildren)
+			f = get_samplelst(item.tvs, CTEname_i, ds, sample_type, onlyChildren)
 		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float') {
 			f = get_numerical(item.tvs, CTEname_i, ds, onlyChildren)
 		} else if (item.tvs.term.type == 'condition') {
@@ -171,7 +171,7 @@ function get_survival(tvs, CTEname) {
 	}
 }
 
-function get_samplelst(tvs, CTEname, onlyChildren) {
+function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 	const samples = []
 	for (const field in tvs.term.values) {
 		const list = tvs.term.values[field].list
@@ -180,7 +180,8 @@ function get_samplelst(tvs, CTEname, onlyChildren) {
 
 	let query = `	SELECT id as sample
 				FROM sampleidmap
-				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${Array(samples.length).fill('?').join(', ')})  and sample_type = ${type} `
+				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${Array(samples.length).fill('?').join(', ')}) `
+	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) query += `and sample_type = ${sample_type} `
 	if (onlyChildren) query = getChildren(query)
 
 	return {
