@@ -315,20 +315,13 @@ function setRenderers(self) {
 }
 
 export async function getPlotConfig(opts, app) {
-	if (!opts.term) {
-		const message = 'summary getPlotConfig: opts.term{} missing'
-		app.printError(message)
-		console.error(message)
-		return
-	}
+	if (!opts.term) return app.errorHandler('summary getPlotConfig: opts.term{} missing')
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
-		app.printError(e)
-		console.error(`${e} [summary getPlotConfig()]`)
-		return
+		return app.errorHandler(e)
 	}
 
 	const config = {
