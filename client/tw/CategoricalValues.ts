@@ -1,18 +1,15 @@
 import { CatTWValues, HandlerOpts, ValuesQ, RawValuesQ, CategoricalTerm } from '#types'
 import { CategoricalBase } from './CategoricalTW.ts'
-import { TwRouter } from './TwRouter.ts'
+import { Handler } from './Handler'
 
-export class CategoricalValues {
+export class CategoricalValues extends Handler {
 	tw: CatTWValues
-	opts: Partial<HandlerOpts>
 	base: CategoricalBase
-	root: TwRouter
 
 	constructor(fullTw: CatTWValues, opts: HandlerOpts = {}) {
+		super(fullTw, opts) // sets this.opts, this.root
 		this.tw = fullTw
-		this.opts = opts
 		this.base = opts.base
-		this.root = opts.root
 	}
 
 	static fillQ(term: CategoricalTerm, q: RawValuesQ): ValuesQ {

@@ -6,7 +6,6 @@
   "module": "dist/app.js",
   "browser": "dist/app.js",
   "imports": {
-    "#src/*": "./src/*.js",
     "#common/*": "./common/*.js",
     "#dom/*": "./dom/*.js",
     "#filter": "./filter/filter.js",
@@ -15,11 +14,13 @@
     "#plots/*": "./plots/*",
     "#plots/disco/*": "./plots/disco/*",
     "#rx": "./rx/index.js",
-    "#types": "./shared/types/index.ts",
     "#shared/*": "@sjcrh/proteinpaint-server/shared/*",
+    "#src/*": "./src/*.js",
     "#termdb/*": "./termdb/*.js",
     "#termsetting": "./termsetting/termsetting.ts",
-    "#termsetting/handlers/*": "./termsetting/handlers/*.ts"
+    "#termsetting/handlers/*": "./termsetting/handlers/*.ts",
+    "#tw": "./tw/*",
+    "#types": "./shared/types/index.ts"
   },
   "scripts": {
     "predev0": "node ./test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",

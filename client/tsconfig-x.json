@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["./tw/TwRouter.ts"],
+  "include": ["./tw/*.ts", "./tw/**/*.ts"],
   "exclude": [
     "./shared/checkers*/**/*",
     "./dist/**/*"
