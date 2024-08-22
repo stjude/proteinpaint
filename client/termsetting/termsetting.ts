@@ -681,6 +681,7 @@ function setInteractivity(self) {
 		//self.showFullMenu(tip.d, self.opts.menuOptions)
 	}
 
+	// TODO: deprecate the reuse option???
 	self.showReuseMenu = async function (_div: any) {
 		const saveDiv = _div.append('div')
 		saveDiv
@@ -712,7 +713,8 @@ function setInteractivity(self) {
 			})
 
 		const tableWrapper = _div.append('div').style('margin', '10px')
-		const defaultTw: TermWrapper = { term: self.term, q: {} }
+		// TODO: may use a more specific type, if the reuse menu option is not deprecated
+		const defaultTw: any = { term: self.term, q: {} }
 		await fillTermWrapper(defaultTw, self.vocabApi)
 		defaultTw.q.reuseId = 'Default'
 		qlst.push(defaultTw.q)
@@ -958,7 +960,7 @@ export async function fillTermWrapper(
 
 	// tw.id is no longer needed
 	delete tw.id
-	if (!tw.q) tw.q = {}
+	if (!tw.q) (tw.q as any) = {}
 	tw.q.isAtomic = true
 	// check for legacy tw structure
 	checkLegacyTw(tw)

@@ -1,4 +1,5 @@
-import { TermWrapper, RawTW } from '#types'
+//import { RawTW } from '#types'
+import { TermWrapper } from '#updated-types'
 import { HandlerOpts } from './Handler'
 import { mayHydrateDictTwLst, get$id } from '../termsetting/termsetting.ts'
 import { CategoricalInstance, CategoricalRouter } from './CategoricalRouter'

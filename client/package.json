@@ -20,7 +20,8 @@
     "#termsetting": "./termsetting/termsetting.ts",
     "#termsetting/handlers/*": "./termsetting/handlers/*.ts",
     "#tw": "./tw/*",
-    "#types": "./shared/types/index.ts"
+    "#types": "./shared/types/index.ts",
+    "#updated-types": "./shared/types/terms/updated-types.ts"
   },
   "scripts": {
     "predev0": "node ./test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",
