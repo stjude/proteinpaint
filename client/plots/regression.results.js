@@ -641,7 +641,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_type3 = result => {
-		if (!result.type3 || self.state.hideRegressionTables?.includes('type3')) return
+		if (!result.type3 || self.parent.app.vocabApi.termdbConfig.hideRegressionTables?.includes('type3')) return
 		const div = self.newDiv(result.type3.label)
 		const table = div.append('table').style('border-spacing', '0px')
 
@@ -694,7 +694,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_tests = result => {
-		if (!result.tests || self.state.hideRegressionTables?.includes('tests')) return
+		if (!result.tests || self.parent.app.vocabApi.termdbConfig.hideRegressionTables?.includes('tests')) return
 		const div = self.newDiv(result.tests.label)
 		const table = div.append('table').style('border-spacing', '0px')
 		const header = table.append('tr').style('opacity', 0.4)

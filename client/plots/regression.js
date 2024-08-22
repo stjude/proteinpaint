@@ -61,8 +61,7 @@ class Regression {
 			termfilter: appState.termfilter,
 			config,
 			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
-			minTimeSinceDx: appState.termdbConfig.minTimeSinceDx,
-			hideRegressionTables: appState.termdbConfig.hideRegressionTables
+			minTimeSinceDx: appState.termdbConfig.minTimeSinceDx
 		}
 	}
 
