@@ -95,6 +95,7 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 	// when missing, the attribute will not be present as "key:undefined"
 	if (tdb.chartConfigByType) c.chartConfigByType = tdb.chartConfigByType
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
+	if (tdb.hideRegressionTables) c.hideRegressionTables = tdb.hideRegressionTables
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
 	if (tdb.timeUnit) c.timeUnit = tdb.timeUnit
