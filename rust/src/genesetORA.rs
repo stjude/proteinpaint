@@ -34,13 +34,15 @@ struct pathway_p_value {
     pathway_name: String,
     p_value_original: f64,
     p_value_adjusted: Option<f64>,
+    gene_set_hits: String,
+    gene_set_size: usize,
 }
 
 fn calculate_hypergeometric_p_value(
     sample_genes: &Vec<&str>,
     num_background_genes: usize,
     genes_in_pathway: Vec<pathway_genes>,
-) -> (f64, f64) {
+) -> (f64, f64, String) {
     //let matching_sample_genes_counts: f64 = sample_genes
     //    .iter()
     //    .zip(&genes_in_pathway)
@@ -48,12 +50,18 @@ fn calculate_hypergeometric_p_value(
     //    .count() as f64;
 
     let mut matching_sample_genes_counts = 0.0;
+    let mut gene_set_hits: String = "".to_string();
     for gene in sample_genes {
         for pathway in &genes_in_pathway {
             if pathway.symbol == gene.to_string() {
                 matching_sample_genes_counts += 1.0;
+                gene_set_hits += &(gene.to_string() + &",");
             }
         }
+    }
+
+    if matching_sample_genes_counts > 0.0 {
+        gene_set_hits.pop();
     }
 
     //println!("sample_genes:{:?}", sample_genes);
@@ -74,7 +82,7 @@ fn calculate_hypergeometric_p_value(
         false,
     );
     //println!("p_value:{}", p_value);
-    (p_value, matching_sample_genes_counts)
+    (p_value, matching_sample_genes_counts, gene_set_hits)
 }
 
 fn main() -> Result<()> {
@@ -194,16 +202,20 @@ fn main() -> Result<()> {
                                                 }
                                             }
                                         }
-                                        let (p_value, matches) = calculate_hypergeometric_p_value(
-                                            &sample_genes,
-                                            num_background_genes,
-                                            names,
-                                        );
+                                        let gene_set_size = names.len();
+                                        let (p_value, matches, gene_set_hits) =
+                                            calculate_hypergeometric_p_value(
+                                                &sample_genes,
+                                                num_background_genes,
+                                                names,
+                                            );
                                         if matches >= 1.0 && p_value.is_nan() == false {
                                             pathway_p_values.push(pathway_p_value {
                                                 pathway_name: n.GO_id,
                                                 p_value_original: p_value,
                                                 p_value_adjusted: None,
+                                                gene_set_hits: gene_set_hits,
+                                                gene_set_size: gene_set_size,
                                             })
                                         }
                                     }
@@ -273,6 +285,8 @@ fn adjust_p_values(
             pathway_name: original_p_values[i].pathway_name.clone(),
             p_value_original: original_p_values[i].p_value_original,
             p_value_adjusted: Some(adjusted_p_val),
+            gene_set_hits: original_p_values[i].gene_set_hits.clone(),
+            gene_set_size: original_p_values[i].gene_set_size,
         });
     }
     adjusted_p_values.as_mut_slice().sort_by(|a, b| {
