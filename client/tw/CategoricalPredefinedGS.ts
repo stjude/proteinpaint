@@ -8,19 +8,16 @@ import {
 	RawPredefinedGroupsetQ
 } from '#types'
 import { CategoricalBase } from './CategoricalTW.ts'
-import { TwRouter } from './TwRouter.ts'
+import { Handler } from './Handler'
 
-export class CategoricalPredefinedGS {
+export class CategoricalPredefinedGS extends Handler {
 	tw: CatTWPredefinedGS
-	opts: Partial<HandlerOpts>
 	base: CategoricalBase
-	root: TwRouter
 
 	constructor(fullTw: CatTWPredefinedGS, opts: HandlerOpts = {}) {
+		super(fullTw, opts) // sets this.opts, this.root
 		this.tw = fullTw
-		this.opts = opts
 		this.base = opts.base
-		this.root = opts.root
 	}
 
 	static fillQ(term: CategoricalTerm, _q: RawPredefinedGroupsetQ): PredefinedGroupSettingQ {
