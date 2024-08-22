@@ -8,7 +8,7 @@ import {
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ
 } from './term.ts'
-import { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ } from './q'
+import { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ } from './q.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /**

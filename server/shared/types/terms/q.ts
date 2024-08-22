@@ -1,4 +1,4 @@
-import { HiddenValues, GroupSettingQ, GroupEntry } from './term'
+import { HiddenValues, GroupSettingQ, GroupEntry } from './term.ts'
 
 // MinBaseQ is BaseQ without .mode and .type
 // MinBaseQ should eventually replace BaseQ because .mode and .type
