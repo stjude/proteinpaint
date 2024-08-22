@@ -114,8 +114,12 @@ return a sample count of sample names passing through the filter
 		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
 	}
 	const row = ds.cohort.db.connection.prepare(statement).get(filter.values)
-	const sample_type = ds.types.get(row.sample_type) || 'sample'
-	return { count: `${row.count} ${sample_type}s` }
+	console.log(interpolateSqlValues(statement, filter.values))
+	const sample_type =
+		row.count > 1
+			? ds.types.get(row.sample_type)?.plural_name || 'samples'
+			: ds.types.get(row.sample_type)?.name || 'sample'
+	return { count: `${row.count} ${sample_type}` }
 }
 export async function get_summary_numericcategories(q) {
 	/*
