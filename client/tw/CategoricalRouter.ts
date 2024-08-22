@@ -62,7 +62,7 @@ export class CategoricalRouter {
 		if (!tw.q) tw.q = { type: 'values', isAtomic: true }
 
 		//
-		// The `.accepts()` function asks the following, to confirm that RawCatTW can be converted to a CategoricalTW type
+		// The `.accepts()` type guard function asks the following, to confirm that RawCatTW can be converted to a CategoricalTW type
 		// 1. Can the function process the tw? If false, the tw will be passed by the router to a different specialized filler
 		// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
 		//    of the tw by any other code
@@ -74,5 +74,21 @@ export class CategoricalRouter {
 		else if (CategoricalPredefinedGS.accepts(tw)) return tw
 		else if (CategoricalCustomGS.accepts(tw)) return tw
 		else throw `cannot process the raw categorical tw`
+
+		// !!! Previous approach, kept here for future reference: !!!
+		//
+		// Unlike the init() function above, the arguments to the fillQ() methods below
+		// can be easily separated into `(term, q)`, so that the discriminant property
+		// is not nested and is found directly in the root q object as second argument,
+		// thereby avoiding the need for type casting.
+		//
+		// if (tw.q.type == 'predefined-groupset') {
+		// 	return CategoricalPredefinedGS.fillQ(tw.term, tw.q)
+		// } else if (tw.q.type == 'custom-groupset') {
+		// 	return CategoricalCustomGS.fillQ(tw.term, tw.q)
+		// } else if (!tw.q.type || tw.q.type == 'values') {
+		// 	return CategoricalValues.fillQ(tw.term, tw.q)
+		// }
+		// throw `invalid tw.q`
 	}
 }

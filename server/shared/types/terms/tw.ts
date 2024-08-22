@@ -13,18 +13,21 @@ export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GeneVariantQ | Sa
 
 export type RawTW =
 	//{ id: string } | RawCatTW
+	//
+	// BELOW TYPE IS NOT TESTED, only being used to compare tsc type checking behavior
+	// between non-union versus type-unions, which way is easier to code against
 	{
 		id?: string
 		term?: {
-			//type: 'categorical' | 'condition'
+			type: 'categorical' | 'condition'
 			[key: string | number]: any
 		}
 		q?: {
 			//predefined_groupset_idx?: number
 			//customset?: any
 			[key: string]: any
-			type?: string //'custom-groupset' |
-			customset?: any
+			//type?: string //'custom-groupset' |
+			//customset?: any
 		}
 		isAtomic?: true
 		$id?: string
