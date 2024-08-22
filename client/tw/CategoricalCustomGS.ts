@@ -1,4 +1,4 @@
-import { CatTWCustomGS, HandlerOpts, CustomGroupSettingQ, RawCustomGroupsetQ, CategoricalTerm } from '#types'
+import { CatTWCustomGS, HandlerOpts, CustomGroupSettingQ, RawCustomGroupsetQ, CategoricalTerm, RawCatTW } from '#types'
 import { CategoricalBase } from './CategoricalTW.ts'
 import { Handler } from './Handler'
 
@@ -12,9 +12,16 @@ export class CategoricalCustomGS extends Handler {
 		this.base = opts.base
 	}
 
-	static fillQ(term: CategoricalTerm, q: RawCustomGroupsetQ): CustomGroupSettingQ {
+	//
+	// This function asks the following, to confirm that RawCatTW can be converted to CatTWCustomGS type
+	// 1. Can the function process the tw? If false, the tw will be passed by the router to a different specialized filler
+	// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
+	//    of the tw by any other code
+	//
+	static accepts(tw: RawCatTW): tw is CatTWCustomGS {
+		const { term, q } = tw
+		if (term.type != 'categorical' || q.type != 'custom-groupset') return false
 		if (!q.customset) throw `missing tw.q.customset`
-
 		if (q.mode == 'binary') {
 			if (q.customset.groups.length != 2) throw 'there must be exactly two groups'
 			// TODO:
@@ -29,6 +36,6 @@ export class CategoricalCustomGS extends Handler {
 			// }
 		}
 
-		return q
+		return true
 	}
 }
