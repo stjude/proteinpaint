@@ -148,7 +148,6 @@ fn main() -> Result<()> {
                             + &genesetgroup
                             + "'"),
                     );
-                    let mut iter = 0;
                     match stmt_result {
                         Ok(mut stmt) => {
                             #[allow(non_snake_case)]
@@ -156,7 +155,6 @@ fn main() -> Result<()> {
                                 stmt.query_map([], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
                             #[allow(non_snake_case)]
                             for GO_term in GO_iter {
-                                iter += 1;
                                 match GO_term {
                                     Ok(n) => {
                                         //println!("GO term {:?}", n);
@@ -218,7 +216,7 @@ fn main() -> Result<()> {
                         Err(_) => panic!("sqlite database file not found"),
                     }
                     let output_string = "{\"num_pathways\":".to_string()
-                        + &iter.to_string()
+                        + &pathway_p_values.len().to_string()
                         + &",\"pathways\":"
                         + &adjust_p_values(pathway_p_values, num_items_output)
                         + &"}";
