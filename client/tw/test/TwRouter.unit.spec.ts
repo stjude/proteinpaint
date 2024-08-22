@@ -1,10 +1,13 @@
 import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
-import { RawCatTW, RawTW, GroupEntry, TermGroupSetting, TermWrapper } from '#types'
+import { RawCatTW, RawTW, GroupEntry, TermGroupSetting, TermWrapper, CategoricalTW } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
-import { CategoricalRouter } from '../CategoricalRouter'
+import { CategoricalRouter, CategoricalInstance } from '../CategoricalRouter'
+import { CategoricalValues } from '../CategoricalValues'
+import { CategoricalPredefinedGS } from '../CategoricalPredefinedGS'
+import { CategoricalCustomGS } from '../CategoricalCustomGS'
 import { Handler } from '../Handler'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
@@ -190,7 +193,7 @@ tape('initRaw() categorical', async test => {
 	test.end()
 })
 
-tape('handler mixin', async test => {
+tape('handler addons', async test => {
 	// Below is an example of how to extend the handler instances that are returned
 	// by TwRouter.init(), so that a plot, app, or component (consumer code) can add
 	// handler methods or properties that it needs for all of its supported tw types.
@@ -210,7 +213,7 @@ tape('handler mixin', async test => {
 	// effectively type check the use of the handler instances within consumer code.
 	//
 	type CustomMethods = {
-		render: (arg: PlotTwRenderOpts) => void
+		render: (this: any, arg: PlotTwRenderOpts) => void
 	}
 	// Below is the extended handler type.
 	//
@@ -224,8 +227,8 @@ tape('handler mixin', async test => {
 	//
 	// Use a type guard to safely convert the Handler class to the mixed-in TwHandler interface,
 	// otherwise the compiler will complain of a type mismatch for optional properties in Handler
-	// that are required in TwHandler. The runtime checks should include for the presence of
-	// the required props/methods, and return a boolean to confirm that the argument matches the target type.
+	// that are required in TwHandler. The runtime checks should verify the presence of
+	// required props/methods, and return a boolean to confirm that the argument matches the target type.
 	//
 	function isPlotTwHandler(handler: Handler): handler is TwHandler {
 		if (handler instanceof Handler && typeof handler.render == 'function') return true
@@ -233,24 +236,41 @@ tape('handler mixin', async test => {
 	}
 
 	// For each specialized handler class, identified by its constructor name,
-	// create a mixins object that define all of the specific handler methods
+	// create a addons object that define all of the specific handler methods
 	// and properties that will be needed in the consumer code
-	const mixins: { [k: string]: CustomMethods } = {
+	const addons: { [k: string]: CustomMethods } = {
 		CategoricalValues: {
-			render: (arg: PlotTwRenderOpts) => `render a categorical term with q.type='values'`
+			// since these addons are appended to an object instance instead of the class/object prototype,
+			// the `this` context must be set
+			render: function (this: CategoricalValues, arg: PlotTwRenderOpts) {
+				//
+				// *** List of benefits (the goal of this tw routing and handler refactor) ***
+				//
+				// All code inside this function can be coded safely againt the type of `this`,
+				// no need for if-else branches, type casting, or other workarounds
+				//
+				// Consumer code can easily call these added methods easily, without the need
+				// for static or runtime checks for tw type.
+				// Common methods, for example counting samples by categorical values or groups,
+				// can also be inherited by specialized handler from a base handler class, therefore
+				// keeping related logic close together instead of being spread out or duplicated.
+				//
+			}
 		},
 		CategoricalPredefinedGS: {
-			render: (arg: PlotTwRenderOpts) => `render a categorical term with q.type='predefined-groupset'`
+			render: function (this: CategoricalPredefinedGS, arg: PlotTwRenderOpts) {
+				// console.log(`render a categorical term with q.type='predefined-groupset'`)
+			}
 		}
 	}
 
-	// Create a term.type-agnostic function for getting handler instances using TwRouter.init().
-	// Then mixin using Object.assign() and use the type guard to safely return the extended handler
+	// Create a tw-type agnostic function for getting handler instances using TwRouter.init().
+	// Then apply addons using Object.assign() and use the type guard to safely return the extended handler.
 	function getHandler(tw): TwHandler {
 		const handler = TwRouter.init(tw, { vocabApi })
-		const mixin = mixins[handler.constructor.name]
-		if (!mixin) throw `no mixin for '${handler.constructor.name}'`
-		else Object.assign(handler, mixin)
+		const adds = addons[handler.constructor.name]
+		if (!addons) throw `no addons for '${handler.constructor.name}'`
+		else Object.assign(handler, adds)
 		if (isPlotTwHandler(handler)) return handler
 		else throw `mismatch`
 	}
