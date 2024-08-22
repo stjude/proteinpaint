@@ -487,9 +487,9 @@ export const componentInit = facetInit
 
 export async function getPlotConfig(opts, app) {
 	const config = { settings: {} }
-	if (!opts.columnTw) throw '.columnTw{} missing'
+	if (!opts.columnTw) return app.errorHandler('.columnTw{} missing')
 	await fillTermWrapper(opts.columnTw, app.vocabApi)
-	if (!opts.rowTw) throw '.rowTw{} missing'
+	if (!opts.rowTw) return app.errorHandler('.rowTw{} missing')
 	await fillTermWrapper(opts.rowTw, app.vocabApi)
 	const result = copyMerge(config, opts)
 	return result

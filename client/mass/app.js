@@ -65,6 +65,7 @@ class MassApp {
 				if (event.key == 'Escape') api.tip.hide()
 			})
 			api.printError = e => this.printError(e)
+			api.errorHandler = e => this.errorHandler(e)
 			const vocab = this.opts.state.vocab
 
 			// TODO: only pass state.genome, dslabel to vocabInit
@@ -172,6 +173,11 @@ class MassApp {
 		sayerror(this.dom.errdiv || this.opts.holder, 'Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
 		this.bus.emit('error')
+	}
+
+	errorHandler(e) {
+		this.printError(e)
+		console.error(e)
 	}
 }
 
