@@ -874,6 +874,7 @@ type Termdb = {
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
 	multipleTestingCorrection?: MultipleTestingCorrection
+	hideRegressionTables?: string[]
 	urlTemplates?: {
 		/** gene link definition */
 		gene?: UrlTemplateBase
