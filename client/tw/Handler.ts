@@ -1,5 +1,18 @@
-import { HandlerOpts, TermWrapper } from '#types'
+import { TermWrapper, TwHandler } from '#types'
 import { TwRouter } from './TwRouter.ts'
+
+export type HandlerOpts = {
+	vocabApi?: any // TODO
+	//usecase?: any
+	defaultQ?: any
+	router?: any
+	root?: any
+	clsMap?: {
+		CategoricalValues?: TwHandler
+		CategoricalPredefinedGS?: TwHandler
+		CategoricalCustomGS?: TwHandler
+	}
+}
 
 export class Handler {
 	// these properties are common to all derived handlers

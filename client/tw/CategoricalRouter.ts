@@ -6,12 +6,12 @@ import {
 	CatTWValues,
 	CatTWPredefinedGS,
 	CatTWCustomGS,
-	HandlerOpts,
 	ValuesQ,
 	RawValuesQ,
 	RawPredefinedGroupsetQ,
 	RawCustomGroupsetQ
 } from '#types'
+import { HandlerOpts } from './Handler'
 import { CategoricalValues } from './CategoricalValues'
 import { CategoricalPredefinedGS } from './CategoricalPredefinedGS'
 import { CategoricalCustomGS } from './CategoricalCustomGS'
@@ -19,9 +19,9 @@ import { copyMerge } from '#rx'
 
 export type CategoricalInstance = CategoricalValues | CategoricalPredefinedGS | CategoricalCustomGS
 
-export class CategoricalBase {
+export class CategoricalRouter {
 	static init(tw: CategoricalTW, opts: HandlerOpts = {}): CategoricalInstance {
-		opts.base = CategoricalBase
+		opts.router = CategoricalRouter
 
 		switch (tw.q.type) {
 			// - has to use type casting/hint for tw argument, since a type union discriminant property cannot be
@@ -44,8 +44,8 @@ export class CategoricalBase {
 
 	//
 	static initRaw(rawTW: RawCatTW, opts: HandlerOpts = {}): CategoricalInstance {
-		const tw: CategoricalTW = CategoricalBase.fill(rawTW, opts)
-		return CategoricalBase.init(tw, opts)
+		const tw: CategoricalTW = CategoricalRouter.fill(rawTW, opts)
+		return CategoricalRouter.init(tw, opts)
 	}
 
 	/** tw.term must already be filled-in at this point */

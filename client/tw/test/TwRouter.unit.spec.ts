@@ -4,7 +4,7 @@ import { RawCatTW, RawTW, GroupEntry, TermGroupSetting, TermWrapper } from '#typ
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
-import { CategoricalBase } from '../CategoricalTW'
+import { CategoricalRouter } from '../CategoricalRouter'
 import { Handler } from '../Handler'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
@@ -146,9 +146,9 @@ tape('initRaw() categorical', async test => {
 
 		const handler = await TwRouter.initRaw(tw, { vocabApi })
 		test.equal(
-			handler.base,
-			CategoricalBase,
-			`should return a matching categorical handler.base on init() with missing q or q.type`
+			handler.router,
+			CategoricalRouter,
+			`should return a matching categorical handler.router on init() with missing q or q.type`
 		)
 	}
 	{
@@ -161,9 +161,9 @@ tape('initRaw() categorical', async test => {
 
 		const handler = await TwRouter.initRaw(tw, { vocabApi })
 		test.equal(
-			handler.base,
-			CategoricalBase,
-			`should return a matching categorical handler.base on init() with q.type='predefined-groupset'`
+			handler.router,
+			CategoricalRouter,
+			`should return a matching categorical handler.router on init() with q.type='predefined-groupset'`
 		)
 	}
 
@@ -181,9 +181,9 @@ tape('initRaw() categorical', async test => {
 
 		const handler = await TwRouter.initRaw(tw, { vocabApi })
 		test.equal(
-			handler.base,
-			CategoricalBase,
-			`should return a matching categorical handler.base on init() with q.type='custom-groupset'`
+			handler.router,
+			CategoricalRouter,
+			`should return a matching categorical handler.router on init() with q.type='custom-groupset'`
 		)
 	}
 
