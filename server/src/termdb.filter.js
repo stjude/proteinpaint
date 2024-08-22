@@ -73,13 +73,13 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		} else if (item.tvs.term.type == 'survival') {
 			f = get_survival(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'samplelst') {
-			f = get_samplelst(item.tvs, CTEname_i, ds)
+			f = get_samplelst(item.tvs, CTEname_i, ds, onlyChildren)
 		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float') {
 			f = get_numerical(item.tvs, CTEname_i, ds, onlyChildren)
 		} else if (item.tvs.term.type == 'condition') {
 			f = get_condition(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'geneVariant') {
-			f = await get_geneVariant(item.tvs, CTEname_i, ds)
+			f = await get_geneVariant(item.tvs, CTEname_i, ds, onlyChildren)
 		} else if (item.tvs.term.type == 'snp') {
 			f = await get_snp(item.tvs, CTEname_i, ds)
 		} else {
@@ -122,6 +122,12 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 export function getSampleType(term, ds) {
 	if (!term) return null
 	if (term.id) return ds.term2SampleType.get(term.id)
+	if (term.type == 'samplelst') {
+		const key = Object.keys(term.values)[0]
+		const sampleId = term.values[key].list[0]?.sampleId
+		if (sampleId) return ds.sampleId2Type.get(sampleId)
+		else return DEFAULT_SAMPLE_TYPE
+	}
 	// samplelst or non dict terms
 	return DEFAULT_SAMPLE_TYPE //later own term needs to know what type annotates based on the samples
 }
@@ -165,7 +171,7 @@ function get_survival(tvs, CTEname) {
 	}
 }
 
-function get_samplelst(tvs, CTEname) {
+function get_samplelst(tvs, CTEname, onlyChildren) {
 	const samples = []
 	for (const field in tvs.term.values) {
 		const list = tvs.term.values[field].list
@@ -174,7 +180,8 @@ function get_samplelst(tvs, CTEname) {
 
 	let query = `	SELECT id as sample
 				FROM sampleidmap
-				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${Array(samples.length).fill('?').join(', ')})`
+				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${Array(samples.length).fill('?').join(', ')})  and sample_type = ${type} `
+	if (onlyChildren) query = getChildren(query)
 
 	return {
 		CTEs: [
@@ -188,7 +195,7 @@ function get_samplelst(tvs, CTEname) {
 	}
 }
 
-async function get_geneVariant(tvs, CTEname, ds) {
+async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 	const tw = { $id: Math.random().toString(), term: tvs.term, q: {} }
 	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
 	/*
@@ -232,10 +239,9 @@ async function get_geneVariant(tvs, CTEname, ds) {
 	}
 
 	let query = `SELECT id as sample
-	FROM sampleidmap
-	WHERE id IN (${samplenames.map(i => '?').join(', ')})`
-	if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
-		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
+				FROM sampleidmap
+				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
+	if (onlyChildren) query = getChildren(query)
 
 	return {
 		CTEs: [
@@ -245,8 +251,7 @@ async function get_geneVariant(tvs, CTEname, ds) {
 			)`
 		],
 		values: [...samplenames],
-		CTEname,
-		onlyChildren: types.size > 1
+		CTEname
 	}
 }
 

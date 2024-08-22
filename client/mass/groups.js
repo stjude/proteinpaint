@@ -797,7 +797,6 @@ export function getSamplelstTW(groups, name = 'groups', notIn = true) {
 	const qgroups = []
 	let samples
 	for (const group of groups) {
-		values[group.name] = { key: group.name, label: group.name, color: group.color }
 		samples = getGroupSamples(group)
 		const qgroup = {
 			name: group.name,
@@ -805,10 +804,11 @@ export function getSamplelstTW(groups, name = 'groups', notIn = true) {
 			values: samples
 		}
 		qgroups.push(qgroup)
+		values[group.name] = { key: group.name, label: group.name, color: group.color, list: samples } //samples need to be passed for the samplelst filter to work
 	}
 	if (groups.length == 1 && notIn) {
 		const name2 = 'Not in ' + groups[0].name
-		values[name2] = { key: name2, label: name2, color: '#aaa' }
+		values[name2] = { key: name2, label: name2, color: '#aaa', list: samples }
 		qgroups.push({
 			name: name2,
 			in: false,

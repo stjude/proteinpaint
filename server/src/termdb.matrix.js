@@ -456,7 +456,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, o
 			return query
 		}).join(`UNION ALL`)}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	//.log(interpolateSqlValues(sql, values))
+	//console.log(interpolateSqlValues(sql, values))
 	//console.log(rows)
 	return rows
 }
@@ -481,9 +481,9 @@ export async function getSamples(q, rows, onlyChildren) {
 		} else {
 			// samples has multiple values for a term
 			// convert to .values[]
-
 			if (!samples[sample][term_id].values) {
 				const firstvalue = samples[sample][term_id] // first term value of the sample
+				if (firstvalue.key == key && firstvalue.value == value) return // duplicate
 				samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
 			}
 			// add next term value to .values[]
