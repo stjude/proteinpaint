@@ -40,17 +40,29 @@ fn calculate_hypergeometric_p_value(
     sample_genes: &Vec<&str>,
     num_background_genes: usize,
     genes_in_pathway: Vec<pathway_genes>,
-) -> f64 {
-    let matching_sample_genes_counts: f64 = sample_genes
-        .iter()
-        .zip(&genes_in_pathway)
-        .filter(|&(a, b)| *a.to_string() == b.symbol)
-        .count() as f64;
+) -> (f64, f64) {
+    //let matching_sample_genes_counts: f64 = sample_genes
+    //    .iter()
+    //    .zip(&genes_in_pathway)
+    //    .filter(|&(a, b)| *a.to_string() == b.symbol)
+    //    .count() as f64;
+
+    let mut matching_sample_genes_counts = 0.0;
+    for gene in sample_genes {
+        for pathway in &genes_in_pathway {
+            if pathway.symbol == gene.to_string() {
+                matching_sample_genes_counts += 1.0;
+            }
+        }
+    }
+
+    //println!("sample_genes:{:?}", sample_genes);
+    //println!("genes_in_pathway:{:?}", genes_in_pathway);
     //println!("k-1:{}", matching_sample_genes_counts - 1.0);
     //println!("M:{}", genes_in_pathway.len() as f64);
     //println!(
     //    "N-M:{}",
-    //    background_genes.len() as f64 - genes_in_pathway.len() as f64
+    //    num_background_genes as f64 - genes_in_pathway.len() as f64
     //);
     //println!("n:{}", sample_genes.len() as f64);
     let p_value = r_mathlib::hypergeometric_cdf(
@@ -62,7 +74,7 @@ fn calculate_hypergeometric_p_value(
         false,
     );
     //println!("p_value:{}", p_value);
-    p_value
+    (p_value, matching_sample_genes_counts)
 }
 
 fn main() -> Result<()> {
@@ -184,12 +196,12 @@ fn main() -> Result<()> {
                                                 }
                                             }
                                         }
-                                        let p_value = calculate_hypergeometric_p_value(
+                                        let (p_value, matches) = calculate_hypergeometric_p_value(
                                             &sample_genes,
                                             num_background_genes,
                                             names,
                                         );
-                                        if p_value.is_nan() == false {
+                                        if matches >= 1.0 && p_value.is_nan() == false {
                                             pathway_p_values.push(pathway_p_value {
                                                 pathway_name: n.GO_id,
                                                 p_value_original: p_value,
