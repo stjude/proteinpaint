@@ -24,15 +24,10 @@ export class CategoricalBase {
 		opts.base = CategoricalBase
 
 		switch (tw.q.type) {
-			//
 			// - has to use type casting/hint for tw argument, since a type union discriminant property cannot be
 			//   from a nested object and creating a new discriminant property on the root tw object seems too much to
 			//   fix the simple typecheck errors that are only emitted from this function (if type casting is not used)
-			//
-			// - (may rethink the following later) would also be hard to separate the `(tw,)` argument into `(term, q,)`,
-			//   as done for getQ() below to not require type casting in that function, since the class itself benefits
-			//   from having a typed-as-a-whole `tw` property
-			//
+			// - may use a better approach later, such as a type guard
 			case 'values':
 				return new CategoricalValues(tw as CatTWValues, opts)
 
@@ -54,32 +49,30 @@ export class CategoricalBase {
 	}
 
 	/** tw.term must already be filled-in at this point */
-	static fill(tw: RawCatTW, vocabApi?: any): CategoricalTW {
+	static fill(tw: RawCatTW, opts: HandlerOpts = {}): CategoricalTW {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (tw.term.type != 'categorical') throw `incorrect term.type='${tw.term?.type}', expecting 'categorical'`
 		if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values`
-		return { ...tw, term: tw.term, q: CategoricalBase.getQ(tw) }
-	}
 
-	static getQ(tw: RawCatTW, defaultQ: any = null): CategoricalQ {
-		if (defaultQ != null) {
-			defaultQ.isAtomic = true
+		if (opts.defaultQ != null) {
+			opts.defaultQ.isAtomic = true
 			// merge defaultQ into tw.q
-			copyMerge(tw.q, defaultQ)
+			copyMerge(tw.q, opts.defaultQ)
 		}
 		if (!tw.q) tw.q = { type: 'values', isAtomic: true }
 
-		// Unlike the init() function above, the arguments to the fillQ() methods below
-		// can be easily separated into `(term, q)`, so that the discriminant property
-		// is not nested and is found directly in the root q object as second argument,
-		// thereby avoiding the need for type casting.
-		if (tw.q.type == 'predefined-groupset') {
-			return CategoricalPredefinedGS.fillQ(tw.term, tw.q)
-		} else if (tw.q.type == 'custom-groupset') {
-			return CategoricalCustomGS.fillQ(tw.term, tw.q)
-		} else if (!tw.q.type || tw.q.type == 'values') {
-			return CategoricalValues.fillQ(tw.term, tw.q)
-		}
-		throw `invalid tw.q`
+		//
+		// The `.accepts()` function asks the following, to confirm that RawCatTW can be converted to a CategoricalTW type
+		// 1. Can the function process the tw? If false, the tw will be passed by the router to a different specialized filler
+		// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
+		//    of the tw by any other code
+		//
+		// NOTE: The validate() naming convention is not appropriate here, since it's okay for accepts() to return false
+		//       and not throw, whereas validate() is more like an assertion function.
+		//
+		if (CategoricalValues.accepts(tw)) return tw
+		else if (CategoricalPredefinedGS.accepts(tw)) return tw
+		else if (CategoricalCustomGS.accepts(tw)) return tw
+		else throw `cannot process the raw categorical tw`
 	}
 }

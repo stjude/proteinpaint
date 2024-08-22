@@ -20,11 +20,19 @@ export class CategoricalPredefinedGS extends Handler {
 		this.base = opts.base
 	}
 
-	static fillQ(term: CategoricalTerm, _q: RawPredefinedGroupsetQ): PredefinedGroupSettingQ {
-		const i = _q.predefined_groupset_idx
+	//
+	// This function asks the following, to confirm that RawCatTW can be converted to a CatTWPredefinedGS type
+	// 1. Can the function process the tw? If false, the tw will be passed by the router to a different specialized filler
+	// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
+	//    of the tw by any other code
+	//
+	static accepts(tw: RawCatTW): tw is CatTWPredefinedGS {
+		const { term, q } = tw
+		if (term.type != 'categorical' || q.type != 'predefined-groupset') return false
+		const i = q.predefined_groupset_idx
 		if (i !== undefined && !Number.isInteger(i)) throw `missing or invalid tw.q.predefined_groupset_idx='${i}'`
-		const q: PredefinedGroupSettingQ = { ..._q, predefined_groupset_idx: i || 0 }
-		const gs = term.groupsetting
+		q.predefined_groupset_idx = i || 0
+		const gs = tw.term.groupsetting
 		if (!gs) throw 'no term.groupsetting'
 		if (!gs.lst?.length) throw 'term.groupsetting.lst is empty'
 		const groupset = gs.lst?.[q.predefined_groupset_idx]
@@ -43,6 +51,6 @@ export class CategoricalPredefinedGS extends Handler {
 			// 	}
 			// }
 		}
-		return q
+		return true
 	}
 }

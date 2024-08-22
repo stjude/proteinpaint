@@ -202,7 +202,7 @@ tape('handler mixin', async test => {
 	}
 
 	//
-	// Define a custom methods type that will be used to extends Handler instance (not class),
+	// Define a custom methods type that will extend a Handler instance (not class),
 	// using Object.assign().
 	//
 	// Note that consumer code will typically require very specific definitions
