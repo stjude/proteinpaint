@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { CategoricalTW, RawCatTW, GroupEntry, CatTWPredefinedGS, TermGroupSetting } from '#types'
-import { CategoricalBase } from '../CategoricalTW.ts'
+import { CategoricalRouter } from '../CategoricalRouter.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
@@ -79,7 +79,7 @@ tape('fill(invalid tw)', async test => {
 	{
 		const msg = 'should detect an incorrect term.type'
 		try {
-			await CategoricalBase.fill(tw as any, { vocabApi })
+			await CategoricalRouter.fill(tw as any, { vocabApi })
 			test.fail(msg)
 		} catch (e: any) {
 			test.true(e.includes('incorrect term.type'), msg)
@@ -97,7 +97,7 @@ tape(`fill() default q.type='values'`, async test => {
 	}
 
 	try {
-		const fullTw = await CategoricalBase.fill(tw as any, { vocabApi })
+		const fullTw = await CategoricalRouter.fill(tw as any, { vocabApi })
 		const testedKeys = new Set()
 		test.deepEqual(
 			fullTw,
@@ -127,7 +127,7 @@ tape('fill() predefined-groupset', async test => {
 	}
 
 	try {
-		const fullTw = await CategoricalBase.fill(tw, { vocabApi })
+		const fullTw = await CategoricalRouter.fill(tw, { vocabApi })
 		const testedKeys = new Set()
 		test.deepEqual(
 			fullTw,
@@ -164,7 +164,7 @@ tape('fill() custom-groupset', async test => {
 	const twCopy = structuredClone(tw)
 
 	try {
-		const fullTw = await CategoricalBase.fill(tw, { vocabApi })
+		const fullTw = await CategoricalRouter.fill(tw, { vocabApi })
 		const testedKeys = new Set()
 		test.deepEqual(fullTw, twCopy, `should fill-in a categorical q.type='custom-groupset'`)
 	} catch (e: any) {
@@ -184,15 +184,15 @@ tape('init() categorical', async test => {
 			q: {}
 		}
 
-		const handler = await CategoricalBase.initRaw(tw, { vocabApi }) //; console.log(186, handler.constructor.name)
+		const handler = await CategoricalRouter.initRaw(tw, { vocabApi }) //; console.log(186, handler.constructor.name)
 		test.true(
 			handler instanceof CategoricalValues,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
 		)
 		test.equal(
-			handler.base,
-			CategoricalBase,
-			`should return a matching categorical handler.base on init() with missing q or q.type`
+			handler.router,
+			CategoricalRouter,
+			`should return a matching categorical handler.router on init() with missing q or q.type`
 		)
 	}
 	{
@@ -204,15 +204,15 @@ tape('init() categorical', async test => {
 			q: { type: 'predefined-groupset', isAtomic: true as const }
 		}
 
-		const handler = await CategoricalBase.initRaw(tw, { vocabApi })
+		const handler = await CategoricalRouter.initRaw(tw, { vocabApi })
 		test.true(
 			handler instanceof CategoricalPredefinedGS,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
 		)
 		test.equal(
-			handler.base,
-			CategoricalBase,
-			`should return a matching categorical handler.base on init() with q.type='predefined-groupset'`
+			handler.router,
+			CategoricalRouter,
+			`should return a matching categorical handler.router on init() with q.type='predefined-groupset'`
 		)
 	}
 
@@ -229,15 +229,15 @@ tape('init() categorical', async test => {
 			}
 		}
 
-		const handler = await CategoricalBase.initRaw(tw, { vocabApi })
+		const handler = await CategoricalRouter.initRaw(tw, { vocabApi })
 		test.true(
 			handler instanceof CategoricalCustomGS,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
 		)
 		test.equal(
-			handler.base,
-			CategoricalBase,
-			`should return a matching categorical handler.base on init() with q.type='custom-groupset'`
+			handler.router,
+			CategoricalRouter,
+			`should return a matching categorical handler.router on init() with q.type='custom-groupset'`
 		)
 	}
 

@@ -1,15 +1,9 @@
-import { TermWrapper, RawTW, HandlerOpts } from '#types'
+import { TermWrapper, RawTW } from '#types'
+import { HandlerOpts } from './Handler'
 import { mayHydrateDictTwLst, get$id } from '../termsetting/termsetting.ts'
-import { CategoricalInstance, CategoricalBase } from './CategoricalTW'
+import { CategoricalInstance, CategoricalRouter } from './CategoricalRouter'
 
-// type FakeInstance = {
-// 	base: any
-// 	id: string
-// 	term: any
-// 	q: any
-// }
-
-type TwInstance = CategoricalInstance //| FakeInstance
+type TwInstance = CategoricalInstance
 
 export type UseCase = {
 	target: string
@@ -30,7 +24,7 @@ export class TwRouter {
 	static init(tw: TermWrapper, opts: HandlerOpts = {}): TwInstance {
 		switch (tw.term.type) {
 			case 'categorical': {
-				return CategoricalBase.init(tw, { ...opts, root: TwRouter })
+				return CategoricalRouter.init(tw, { ...opts, root: TwRouter })
 			}
 			// case 'integer':
 			// case 'float':
@@ -63,7 +57,7 @@ export class TwRouter {
 
 		switch (tw.term.type) {
 			case 'categorical': {
-				return await CategoricalBase.fill(tw, { ...opts, root: TwRouter })
+				return await CategoricalRouter.fill(tw, { ...opts, root: TwRouter })
 			}
 			// case 'integer':
 			// case 'float':

@@ -1,23 +1,22 @@
 import {
 	CatTWPredefinedGS,
-	HandlerOpts,
 	CategoricalTerm,
 	RawCatTW,
 	CategoricalTW,
 	PredefinedGroupSettingQ,
 	RawPredefinedGroupsetQ
 } from '#types'
-import { CategoricalBase } from './CategoricalTW.ts'
-import { Handler } from './Handler'
+import { CategoricalRouter } from './CategoricalRouter.ts'
+import { Handler, HandlerOpts } from './Handler'
 
 export class CategoricalPredefinedGS extends Handler {
 	tw: CatTWPredefinedGS
-	base: CategoricalBase
+	router: CategoricalRouter
 
 	constructor(fullTw: CatTWPredefinedGS, opts: HandlerOpts = {}) {
 		super(fullTw, opts) // sets this.opts, this.root
 		this.tw = fullTw
-		this.base = opts.base
+		this.router = opts.router
 	}
 
 	//

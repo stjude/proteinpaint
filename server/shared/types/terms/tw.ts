@@ -33,16 +33,3 @@ export type RawTW =
 export interface TwHandler {
 	render?: (opts?: any) => void
 }
-
-export type HandlerOpts = {
-	vocabApi?: any // TODO
-	//usecase?: any
-	defaultQ?: any
-	base?: any
-	root?: any
-	clsMap?: {
-		CategoricalValues?: TwHandler
-		CategoricalPredefinedGS?: TwHandler
-		CategoricalCustomGS?: TwHandler
-	}
-}

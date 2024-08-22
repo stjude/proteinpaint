@@ -1,15 +1,15 @@
-import { CatTWCustomGS, HandlerOpts, CustomGroupSettingQ, RawCustomGroupsetQ, CategoricalTerm, RawCatTW } from '#types'
-import { CategoricalBase } from './CategoricalTW.ts'
-import { Handler } from './Handler'
+import { CatTWCustomGS, CustomGroupSettingQ, RawCustomGroupsetQ, CategoricalTerm, RawCatTW } from '#types'
+import { CategoricalRouter } from './CategoricalRouter.ts'
+import { Handler, HandlerOpts } from './Handler'
 
 export class CategoricalCustomGS extends Handler {
 	tw: CatTWCustomGS
-	base: CategoricalBase
+	router: CategoricalRouter
 
 	constructor(fullTw: CatTWCustomGS, opts: HandlerOpts = {}) {
 		super(fullTw, opts) // sets this.opts, this.root
 		this.tw = fullTw
-		this.base = opts.base
+		this.router = opts.router
 	}
 
 	//
