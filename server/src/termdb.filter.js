@@ -176,7 +176,6 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 		const list = tvs.term.values[field].list
 		samples.push(...list)
 	}
-	console.log('samples', samples)
 	let query = `	SELECT id as sample
 				FROM sampleidmap
 				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${samples.map(s => s.sampleId || s.sample).join(', ')}) `

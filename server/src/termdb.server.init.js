@@ -134,13 +134,14 @@ export function server_init_db_queries(ds) {
 			if (tables.has('cohort_sample_types')) rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			else rows = cn.prepare('SELECT cohort,sample_count from cohorts').all()
 			q.getCohortSampleCount = cohortKey => {
-				console.log(rows, cohortKey)
 				let counts = rows
 					.filter(row => row.cohort == cohortKey)
 					.map(
 						row =>
 							`${row.sample_count} ${
-								row.sample_count > 1 ? ds.types.get(row.sample_type)?.plural_name || 'samples' : ''
+								row.sample_count > 1
+									? ds.types.get(row.sample_type)?.plural_name || 'samples'
+									: ds.types.get(row.sample_type)?.name || 'sample'
 							}`
 					)
 				let total = counts.join(' and ')
