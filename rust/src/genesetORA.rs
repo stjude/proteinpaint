@@ -289,8 +289,7 @@ fn adjust_p_values(
 
     let mut output_string = "[".to_string();
     for i in 0..num_items_output {
-        let j = adjusted_p_values.len() - i - 1;
-        output_string += &serde_json::to_string(&adjusted_p_values[j]).unwrap();
+        output_string += &serde_json::to_string(&adjusted_p_values[i]).unwrap();
         if i < num_items_output - 1 {
             output_string += &",".to_string();
         }
