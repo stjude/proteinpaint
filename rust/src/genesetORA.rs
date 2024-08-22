@@ -43,12 +43,6 @@ fn calculate_hypergeometric_p_value(
     num_background_genes: usize,
     genes_in_pathway: Vec<pathway_genes>,
 ) -> (f64, f64, String) {
-    //let matching_sample_genes_counts: f64 = sample_genes
-    //    .iter()
-    //    .zip(&genes_in_pathway)
-    //    .filter(|&(a, b)| *a.to_string() == b.symbol)
-    //    .count() as f64;
-
     let mut matching_sample_genes_counts = 0.0;
     let mut gene_set_hits: String = "".to_string();
     for gene in sample_genes {

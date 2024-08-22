@@ -62,6 +62,15 @@ class geneORA {
 					{ label: 'adjusted', value: 'adjusted' },
 					{ label: 'original', value: 'original' }
 				]
+			},
+			{
+				label: 'Gene set size filter cutoff',
+				type: 'number',
+				chartType: 'geneORA',
+				settingsKey: 'gene_set_size_cutoff',
+				title: 'Gene set size cutoff',
+				min: 0,
+				max: 20000
 			}
 		]
 
@@ -172,7 +181,11 @@ add:
 		]
 		self.gene_ora_table_rows = []
 		for (const pathway of output.pathways) {
-			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.p_value_adjusted) {
+			if (
+				self.settings.adjusted_original_pvalue == 'adjusted' &&
+				self.settings.pvalue >= pathway.p_value_adjusted &&
+				self.settings.gene_set_size_cutoff > pathway.gene_set_size
+			) {
 				self.gene_ora_table_rows.push([
 					{ value: pathway.pathway_name },
 					{ value: pathway.p_value_original.toPrecision(4) },
@@ -182,7 +195,8 @@ add:
 				])
 			} else if (
 				self.settings.adjusted_original_pvalue == 'original' &&
-				self.settings.pvalue >= pathway.p_value_original
+				self.settings.pvalue >= pathway.p_value_original &&
+				self.settings.gene_set_size_cutoff > pathway.gene_set_size
 			) {
 				self.gene_ora_table_rows.push([
 					{ value: pathway.pathway_name },
@@ -216,7 +230,8 @@ export async function getPlotConfig(opts, app) {
 				geneORA: {
 					pvalue: 1.0,
 					adjusted_original_pvalue: 'adjusted',
-					pathway: undefined
+					pathway: undefined,
+					gene_set_size_cutoff: 2000
 				},
 				controls: { isOpen: true }
 			}
