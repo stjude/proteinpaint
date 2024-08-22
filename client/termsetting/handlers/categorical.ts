@@ -1,13 +1,14 @@
 import { GroupSettingMethods } from './groupsetting.ts'
-import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
-import { VocabApi } from '../../shared/types/index'
-import { BaseGroupSet, GroupEntry } from '../../shared/types/terms/term'
+import { getPillNameDefault, set_hiddenvalues } from '../termsetting.ts'
+import { VocabApi } from '../../shared/types/index.ts'
 import {
+	BaseGroupSet,
+	GroupEntry,
 	CategoricalQ,
 	CategoricalTerm,
 	CategoricalTW,
 	CategoricalTermSettingInstance
-} from '../../shared/types/terms/categorical'
+} from '#types'
 import { PillData } from '../types'
 import { copyMerge } from '../../rx'
 

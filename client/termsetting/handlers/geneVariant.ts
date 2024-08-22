@@ -6,8 +6,8 @@ import {
 	GeneVariantQ,
 	GeneVariantTW,
 	GeneVariantTermSettingInstance
-} from '../../shared/types/terms/geneVariant'
-import { PredefinedGroupSettingQ, TermGroupSetting } from '../../shared/types/terms/term'
+} from '../../shared/types/terms/geneVariant.ts'
+import { PredefinedGroupSettingQ, TermGroupSetting } from '../../shared/types/terms/term.ts'
 import { PillData } from '../types'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '../../rx'
