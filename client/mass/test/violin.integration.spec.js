@@ -856,6 +856,60 @@ tape.skip('term1=geneExp, term2=survival', function (test) {
 
 tape('test samplelst term2', function (test) {
 	test.timeoutAfter(3000)
+	const values = [
+		{
+			sampleId: 42,
+			sample: '2660'
+		},
+		{
+			sampleId: 44,
+			sample: '2688'
+		},
+		{
+			sampleId: 45,
+			sample: '2702'
+		},
+		{
+			sampleId: 46,
+			sample: '2716'
+		},
+		{
+			sampleId: 59,
+			sample: '2898'
+		},
+		{
+			sampleId: 60,
+			sample: '2912'
+		},
+		{
+			sampleId: 67,
+			sample: '3010'
+		},
+		{
+			sampleId: 68,
+			sample: '3024'
+		},
+		{
+			sampleId: 69,
+			sample: '3038'
+		},
+		{
+			sampleId: 70,
+			sample: '3052'
+		},
+		{
+			sampleId: 73,
+			sample: '3094'
+		},
+		{
+			sampleId: 79,
+			sample: '3178'
+		},
+		{
+			sampleId: 80,
+			sample: '3192'
+		}
+	]
 	runpp({
 		state: {
 			nav: {
@@ -878,11 +932,13 @@ tape('test samplelst term2', function (test) {
 							values: {
 								'Group 1': {
 									key: 'Group 1',
-									label: 'Group 1'
+									label: 'Group 1',
+									list: values
 								},
 								'Not in Group 1': {
 									key: 'Not in Group 1',
-									label: 'Not in Group 1'
+									label: 'Not in Group 1',
+									list: values
 								}
 							}
 						},
@@ -892,118 +948,12 @@ tape('test samplelst term2', function (test) {
 								{
 									name: 'Group 1',
 									in: true,
-									values: [
-										{
-											sampleId: 42,
-											sample: '2660'
-										},
-										{
-											sampleId: 44,
-											sample: '2688'
-										},
-										{
-											sampleId: 45,
-											sample: '2702'
-										},
-										{
-											sampleId: 46,
-											sample: '2716'
-										},
-										{
-											sampleId: 59,
-											sample: '2898'
-										},
-										{
-											sampleId: 60,
-											sample: '2912'
-										},
-										{
-											sampleId: 67,
-											sample: '3010'
-										},
-										{
-											sampleId: 68,
-											sample: '3024'
-										},
-										{
-											sampleId: 69,
-											sample: '3038'
-										},
-										{
-											sampleId: 70,
-											sample: '3052'
-										},
-										{
-											sampleId: 73,
-											sample: '3094'
-										},
-										{
-											sampleId: 79,
-											sample: '3178'
-										},
-										{
-											sampleId: 80,
-											sample: '3192'
-										}
-									]
+									values
 								},
 								{
 									name: 'Not in Group 1',
 									in: false,
-									values: [
-										{
-											sampleId: 42,
-											sample: '2660'
-										},
-										{
-											sampleId: 44,
-											sample: '2688'
-										},
-										{
-											sampleId: 45,
-											sample: '2702'
-										},
-										{
-											sampleId: 46,
-											sample: '2716'
-										},
-										{
-											sampleId: 59,
-											sample: '2898'
-										},
-										{
-											sampleId: 60,
-											sample: '2912'
-										},
-										{
-											sampleId: 67,
-											sample: '3010'
-										},
-										{
-											sampleId: 68,
-											sample: '3024'
-										},
-										{
-											sampleId: 69,
-											sample: '3038'
-										},
-										{
-											sampleId: 70,
-											sample: '3052'
-										},
-										{
-											sampleId: 73,
-											sample: '3094'
-										},
-										{
-											sampleId: 79,
-											sample: '3178'
-										},
-										{
-											sampleId: 80,
-											sample: '3192'
-										}
-									]
+									values
 								}
 							],
 							isAtomic: true,
