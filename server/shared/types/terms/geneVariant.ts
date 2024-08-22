@@ -1,4 +1,4 @@
-import { MinBaseQ, BaseTerm, EnabledTermGroupSetting, BaseTW, GroupSettingQ } from '#types'
+import { MinBaseQ, BaseTerm, EnabledTermGroupSetting, BaseTW, GroupSettingQ, ValuesQ } from '#types'
 import { TermSettingInstance } from '../termsetting.ts'
 
 export type GeneVariantBaseQ = MinBaseQ & {
@@ -11,7 +11,7 @@ export type GeneVariantBaseQ = MinBaseQ & {
 	origin?: string
 }
 
-export type GeneVariantQ = GeneVariantBaseQ & GroupSettingQ
+export type GeneVariantQ = GeneVariantBaseQ & (ValuesQ | GroupSettingQ)
 
 type GeneVariantBaseTerm = BaseTerm & {
 	type: 'geneVariant'

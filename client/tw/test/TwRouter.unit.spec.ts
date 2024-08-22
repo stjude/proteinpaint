@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
-import { RawCatTW, RawTW, GroupEntry, TermGroupSetting, TermWrapper, CategoricalTW } from '#types'
+import { RawCatTW, RawTW, GroupEntry, TermGroupSetting, CategoricalTW } from '#types'
+import { TermWrapper } from '#updated-types'
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'

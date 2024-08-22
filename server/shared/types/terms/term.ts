@@ -6,6 +6,7 @@ import { NumericTerm } from './numeric.js'
 import { GeneVariantTerm } from './geneVariant.js'
 import { SampleLstTerm } from './samplelst.js'
 import { SnpsTerm } from './snps.js'
+export { MinBaseQ } from './q'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -76,7 +77,7 @@ export type CustomGroupSettingQ = MinBaseQ & {
 	mode?: 'binary'
 }
 
-export type GroupSettingQ = PredefinedGroupSettingQ | CustomGroupSettingQ
+export type GroupSettingQ = ValuesQ | PredefinedGroupSettingQ | CustomGroupSettingQ
 
 /*** types supporting termwrapper term ***/
 
