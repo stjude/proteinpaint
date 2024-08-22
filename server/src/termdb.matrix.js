@@ -424,7 +424,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
 	if (!onlyChildren) onlyChildren = filter?.onlyChildren || sampleTypes.size > 1
 	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, onlyChildren)
-	const samples = await getSamples(q, rows, onlyChildren)
+	const samples = await getSamples(q, rows)
 	return [samples, byTermId]
 }
 
@@ -461,7 +461,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, o
 	return rows
 }
 
-export async function getSamples(q, rows, onlyChildren) {
+export async function getSamples(q, rows) {
 	const samples = {} // to return
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
