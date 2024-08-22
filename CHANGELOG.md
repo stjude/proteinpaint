@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Mass app removes invalid plots from the state on init.
+
+
 ## 2.74.1
 
 Fixes:

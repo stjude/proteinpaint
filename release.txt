@@ -1,2 +1,1 @@
-Fixes
-- Mass app removes invalid plots from the state on init. 
+
