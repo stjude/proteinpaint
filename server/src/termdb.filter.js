@@ -71,7 +71,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			// .values:[]
 			// .CTEname
 		} else if (item.tvs.term.type == 'survival') {
-			f = get_survival(item.tvs, CTEname_i, ds)
+			f = get_survival(item.tvs, CTEname_i, onlyChildren)
 		} else if (item.tvs.term.type == 'samplelst') {
 			f = get_samplelst(item.tvs, CTEname_i, ds, sample_type, onlyChildren)
 		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float') {
@@ -149,15 +149,14 @@ function get_categorical(tvs, CTEname, ds, onlyChildren) {
 	}
 }
 
-function get_survival(tvs, CTEname) {
+function get_survival(tvs, CTEname, onlyChildren) {
 	let query = `SELECT sample
 	FROM survival
 	WHERE term_id = ?
 	${tvs.q?.cutoff ? 'AND tte >= ' + tvs.q?.cutoff : ''}
 	AND exit_code ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
 
-	if (sample_type && sample_type == ROOT_SAMPLE_TYPE)
-		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
+	if (onlyChildren) query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
 
 	return {
 		CTEs: [
@@ -177,11 +176,11 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 		const list = tvs.term.values[field].list
 		samples.push(...list)
 	}
-
+	console.log('samples', samples)
 	let query = `	SELECT id as sample
 				FROM sampleidmap
-				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${Array(samples.length).fill('?').join(', ')}) `
-	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) query += `and sample_type = ${sample_type} `
+				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${samples.map(s => s.sampleId || s.sample).join(', ')}) `
+	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) query += `and sample_type = ${sample_type} ` //later on need to cleanup the list handling in samplelst
 	if (onlyChildren) query = getChildren(query)
 
 	return {
@@ -191,7 +190,7 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 			${query}
 			)`
 		],
-		values: [...samples.map(value => value.sampleId)],
+		values: [],
 		CTEname
 	}
 }

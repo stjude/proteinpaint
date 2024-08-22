@@ -73,7 +73,7 @@ export function server_init_db_queries(ds) {
 	if (tables.has('sample_types')) {
 		const rows = cn.prepare('SELECT * FROM sample_types').all()
 		for (const row of rows) {
-			ds.types.set(row.id, row.name)
+			ds.types.set(row.id, { name: row.name, plural_name: row.plural_name })
 		}
 		ds.cohort.termdb.hasAncestry = ds.types.size > 1
 	}
@@ -134,12 +134,13 @@ export function server_init_db_queries(ds) {
 			if (tables.has('cohort_sample_types')) rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			else rows = cn.prepare('SELECT cohort,sample_count from cohorts').all()
 			q.getCohortSampleCount = cohortKey => {
+				console.log(rows, cohortKey)
 				let counts = rows
 					.filter(row => row.cohort == cohortKey)
 					.map(
 						row =>
-							`${row.sample_count} ${row.sample_type ? ds.types.get(row.sample_type) : 'sample'}${
-								row.sample_count > 1 ? 's' : ''
+							`${row.sample_count} ${
+								row.sample_count > 1 ? ds.types.get(row.sample_type)?.plural_name || 'samples' : ''
 							}`
 					)
 				let total = counts.join(' and ')
@@ -148,7 +149,7 @@ export function server_init_db_queries(ds) {
 					total = totalCount
 				return total
 			}
-		} else q.getCohortSampleCount = () => totalCount
+		} else q.getCohortSampleCount = () => `${totalCount} samples`
 	}
 
 	if (tables.has('category2vcfsample')) {
