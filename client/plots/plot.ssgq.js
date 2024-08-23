@@ -70,6 +70,8 @@ export async function plotSingleSampleGenomeQuantification(
 			} else throw data.error
 		}
 
+		holder.attr('id', 'sjpp_ssgq_holder')
+
 		// optional query, if present, will enable clicking on genome-wide img to launch block
 		const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
 

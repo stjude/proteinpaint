@@ -628,6 +628,13 @@ class SampleView {
 					)
 				}
 			}
+			const ssgqPlots = plotsDiv.selectAll('#sjpp_ssgq_holder').nodes()
+			const ssqpIds = Object.keys(state.termdbConfig.queries.singleSampleGenomeQuantification)
+			for (const i of ssqpIds) {
+				const ssgqLabel = this.dom.showPlotsDiv.select(`label[for=${i}]`)
+				if (ssgqPlots.length == 0) ssgqLabel.style('text-decoration', 'line-through').style('opacity', 0.65)
+				else ssgqLabel.style('text-decoration', '').style('opacity', 1)
+			}
 		}
 		if (state.termdbConfig.queries?.NIdata) {
 			let div = plotsDiv.append('div')
