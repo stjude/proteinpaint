@@ -117,8 +117,8 @@ return a sample count of sample names passing through the filter
 	console.log(interpolateSqlValues(statement, filter.values))
 	const sample_type =
 		row.count > 1
-			? ds.types.get(row.sample_type)?.plural_name || 'samples'
-			: ds.types.get(row.sample_type)?.name || 'sample'
+			? ds.cohort.termdb.sample_types.get(row.sample_type)?.plural_name || 'samples'
+			: ds.cohort.termdb.sample_types.get(row.sample_type)?.name || 'sample'
 	return { count: `${row.count} ${sample_type}` }
 }
 export async function get_summary_numericcategories(q) {

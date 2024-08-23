@@ -121,7 +121,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 
 export function getSampleType(term, ds) {
 	if (!term) return null
-	if (term.id) return ds.term2SampleType.get(term.id)
+	if (term.id) return ds.cohort.termdb.term2SampleType.get(term.id)
 	if (term.type == 'samplelst') {
 		const key = Object.keys(term.values)[0]
 		const sampleId = term.values[key].list[0]?.sampleId
