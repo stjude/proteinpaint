@@ -147,8 +147,8 @@ export function server_init_db_queries(ds) {
 				let total = counts.join(' and ')
 				if (total == '')
 					//older db does not have types or sample_count
-					total = totalCount
-				return total
+					return `${totalCount} samples`
+				else return total
 			}
 		} else q.getCohortSampleCount = () => `${totalCount} samples`
 	}
