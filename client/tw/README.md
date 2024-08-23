@@ -15,7 +15,11 @@ since data processing should not change for the same tw data shape.
 
 ## Replace fillTermWrapper()
 
+![Screenshot 2024-08-22 at 9 20 35 PM](https://github.com/user-attachments/assets/02e342fc-c041-4d29-8e99-e388b9dedded)
+
 ## Plugin-style TW Handlers
+
+![Screenshot 2024-08-22 at 9 36 29 PM](https://github.com/user-attachments/assets/47754d30-436e-4386-b9c2-291b86386a10)
 
 ## Code Examples
 
