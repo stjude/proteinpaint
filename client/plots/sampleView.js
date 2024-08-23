@@ -4,7 +4,7 @@ import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import { dofetch3 } from '#common/dofetch'
 import { isNumericTerm, ROOT_SAMPLE_TYPE } from '../shared/terms.js'
-import { sayerror } from '#dom/sayerror'
+import { sayerror } from '../dom/sayerror.ts'
 
 const root_ID = 'root'
 const samplesLimit = 15
