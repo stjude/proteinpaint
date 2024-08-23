@@ -31,6 +31,9 @@ genomeObj={}
 
 geneName
 	optional, if provided,show a genome browser view around the gene under the methylationArrayPlot when its launched
+
+throwError
+	optional, instead of showing error to the user, throw
 */
 export async function plotSingleSampleGenomeQuantification(
 	termdbConfig,
@@ -39,7 +42,8 @@ export async function plotSingleSampleGenomeQuantification(
 	sample,
 	holder,
 	genomeObj,
-	geneName
+	geneName,
+	throwError
 ) {
 	const loadingDiv = holder.append('div').text('Loading...')
 	try {
@@ -59,7 +63,12 @@ export async function plotSingleSampleGenomeQuantification(
 			singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] }
 		}
 		const data = await dofetch3('mds3', { body })
-		if (data.error) throw data.error
+		if (data.error) {
+			if (throwError) {
+				loadingDiv.remove()
+				return
+			} else throw data.error
+		}
 
 		// optional query, if present, will enable clicking on genome-wide img to launch block
 		const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]

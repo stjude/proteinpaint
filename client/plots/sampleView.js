@@ -567,8 +567,15 @@ class SampleView {
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
 				const wsiViewer = await import('./wsiviewer/plot.wsi.js')
-				wsiViewer.default(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName)
+				await wsiViewer.default(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName)
 			}
+
+			const wsiErrorDiv = plotsDiv.select('#sjpp-wsi-errorDiv')
+			const wsiLabel = this.dom.showPlotsDiv.select('label[for=showWsi]')
+			if (wsiErrorDiv) {
+				wsiErrorDiv.remove()
+				wsiLabel.style('text-decoration', 'line-through').style('opacity', 0.65)
+			} else wsiLabel.style('text-decoration', '').style('opacity', 1)
 		}
 
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
@@ -581,14 +588,21 @@ class SampleView {
 				if (state.samples.length > 1)
 					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 				const discoPlotImport = await import('./plot.disco.js')
-				discoPlotImport.default(
+				await discoPlotImport.default(
 					state.termdbConfig,
 					state.vocab.dslabel,
 					{ sample_id: sample.sampleName },
 					cellDiv,
-					this.app.opts.genome
+					this.app.opts.genome,
+					{},
+					true
 				)
 			}
+
+			const discoPlots = plotsDiv.selectAll('#sjpp_disco_plot_holder_div').nodes()
+			const discoLabel = this.dom.showPlotsDiv.select('label[for=showDisco]')
+			if (discoPlots.length == 0) discoLabel.style('text-decoration', 'line-through').style('opacity', 0.65)
+			else discoLabel.style('text-decoration', '').style('opacity', 1)
 		}
 		if (state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
@@ -608,7 +622,9 @@ class SampleView {
 						k,
 						{ sample_id: sample.sampleName },
 						plotDiv.insert('div'),
-						this.app.opts.genome
+						this.app.opts.genome,
+						'',
+						true
 					)
 				}
 			}
