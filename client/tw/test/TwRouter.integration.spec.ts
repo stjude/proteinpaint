@@ -1,14 +1,11 @@
 import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
-import { RawCatTW, RawTW, GroupEntry, TermGroupSetting, CategoricalTW } from '#types'
+import { GroupEntry, TermGroupSetting } from '#types'
 import { TermWrapper } from '#updated-types'
 import { vocabInit } from '#termdb/vocabulary'
-import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
-import { CategoricalRouter, CategoricalInstance } from '../CategoricalRouter'
 import { CategoricalValues } from '../CategoricalValues'
 import { CategoricalPredefinedGS } from '../CategoricalPredefinedGS'
-import { CategoricalCustomGS } from '../CategoricalCustomGS'
 import { Handler } from '../Handler'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
@@ -115,8 +112,12 @@ tape('handler addons', async test => {
 
 	// Declare argument type(s) that are specific to a method for a particulat plot, app, or component
 	type PlotTwRenderOpts = {
-		aaa: string // these can be more complex types, such as for server response data, etc
-		x: number
+		holder: string // in real apps, would be a d3-selection HTML element
+		data: {
+			[sampleId: string]: {
+				[termId: string]: number | string
+			}
+		}
 	}
 
 	//
@@ -158,6 +159,16 @@ tape('handler addons', async test => {
 			// since these addons are appended to an object instance instead of the class/object prototype,
 			// the `this` context must be set
 			render: function (this: CategoricalValues, arg: PlotTwRenderOpts): void {
+				const t = this.tw.term
+				for (const [sampleId, d] of Object.entries(arg.data)) {
+					// the tw is guaranteed to have term.type=categorical, q.type='values'
+					if (!Object.keys(d).includes(t.id)) continue
+					// for the tw in this typed context, use a svg:circle element
+					// note that `this` context guarantees that the tw shape matches
+					// expectations without having to do additional checks
+					const shape = `<circle r=${d[t.id]}></cicle></svg>`
+					arg.holder = arg.holder.replace(`</svg>`, `<text>${sampleId}, ${t.values[d[t.id]].label}</text>${shape}`)
+				}
 				//
 				// *** List of benefits (the goal of this tw routing and handler refactor) ***
 				//
@@ -174,15 +185,22 @@ tape('handler addons', async test => {
 			}
 		},
 		CategoricalPredefinedGS: {
-			render: function (this: CategoricalPredefinedGS, arg: PlotTwRenderOpts) {
-				// console.log(`render a categorical term with q.type='predefined-groupset'`)
+			render: function (this: CategoricalPredefinedGS & Addons, arg: PlotTwRenderOpts) {
+				// the tw is guaranteed to have term.type=categorical, q.type='predefined-groupset'
+				const t = this.tw.term
+				for (const [sampleId, d] of Object.entries(arg.data)) {
+					if (!Object.keys(d).includes(t.id)) continue
+					// for the tw in this typed context, use a svg:rect element
+					const shape = `<rect width=10 height=10></rect></svg>`
+					arg.holder = arg.holder.replace(`</svg>`, `<text>${sampleId}, ${d[t.id]}</text>${shape}`)
+				}
 			}
 		}
 	}
 
 	// Create a tw-type agnostic function for getting handler instances using TwRouter.init().
 	// Then apply addons using Object.assign() and use the type guard to safely return the extended handler.
-	function getHandler(tw): TwHandler {
+	function getHandler(tw): Addons {
 		const handler = TwRouter.init(tw, { vocabApi })
 		const adds = addons[handler.constructor.name]
 		if (!addons) throw `no addons for '${handler.constructor.name}'`
@@ -214,6 +232,27 @@ tape('handler addons', async test => {
 			Object.keys(handlers[0]).sort(),
 			Object.keys(handlers[1]).sort(),
 			`should have matching handler property/method names for all extended handler instances`
+		)
+		const data = {
+			sample1: { sex: 1, diaggrp: 'ALL' },
+			sample2: { sex: 2, diaggrp: 'NBL' }
+		}
+
+		let svg = '<svg></svg>'
+		for (const h of handlers) {
+			const arg = { holder: svg, data }
+			h.render(arg)
+			svg = arg.holder
+		}
+		test.equal(
+			svg,
+			`<svg>` +
+				`<text>sample1, Male</text><circle r=1></cicle>` +
+				`<text>sample2, Female</text><circle r=2></cicle>` +
+				`<text>sample1, ALL</text><rect width=10 height=10></rect>` +
+				`<text>sample2, NBL</text><rect width=10 height=10></rect>` +
+				`</svg>`,
+			`should render an svg with fake data`
 		)
 	} catch (e) {
 		test.fail(msg + ': ' + e)
