@@ -3,7 +3,6 @@ import { select } from 'd3-selection'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import { dofetch3 } from '#common/dofetch'
-import wsiViewer from './wsiviewer/plot.wsi'
 import { isNumericTerm, ROOT_SAMPLE_TYPE } from '../shared/terms.js'
 
 const root_ID = 'root'
