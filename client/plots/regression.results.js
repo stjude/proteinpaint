@@ -470,12 +470,15 @@ function setRenderers(self) {
 
 		// padding is set on every <td>. need a better solution
 
+		// different format for cox regression for neuro-oncology datasets
+		const neuroOncCox = self.config.regressionType == 'cox' && self.app.vocabApi.termdbConfig.neuroOncRegression
+
 		// header row
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 			result.coefficients.header.forEach((v, i) => {
 				tr.append('td').text(v).style('padding', '8px')
-				if (i === 1) tr.append('td') // column 3 will be for forest plot
+				if (i === (neuroOncCox ? 2 : 1)) tr.append('td') // add column for forest plot
 			})
 		}
 
@@ -511,16 +514,24 @@ function setRenderers(self) {
 			if (termdata.fields) {
 				// create only 1 row for this term in coefficients table, as it doesn't have categories
 
+				const cols = termdata.fields
+
 				// col 2: category column
 				{
 					const td = tr.append('td').style('padding', '8px')
 					fillColumn2coefficientsTable(td, tw)
 				}
 
+				if (neuroOncCox) {
+					// add events column for cox regression for
+					// neuro-onc datasets
+					tr.append('td').style('padding', '8px').text(cols.shift())
+				}
+
 				// col 3
-				forestPlotter(tr.append('td'), termdata.fields)
+				forestPlotter(tr.append('td'), cols)
 				// rest of columns
-				for (const v of termdata.fields) {
+				for (const v of cols) {
 					tr.append('td').text(v).style('padding', '8px')
 				}
 			} else if (termdata.categories) {
@@ -551,15 +562,23 @@ function setRenderers(self) {
 						tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 					}
 
-					// col 2
+					const cols = termdata.categories[k]
+
+					// col 2: category column
 					const td = tr.append('td').style('padding', '8px')
 					fillColumn2coefficientsTable(td, tw, k)
 
+					if (neuroOncCox) {
+						// add events column for cox regression for
+						// neuro-onc datasets
+						tr.append('td').style('padding', '8px').text(cols.shift())
+					}
+
 					// col 3
-					forestPlotter(tr.append('td'), termdata.categories[k])
+					forestPlotter(tr.append('td'), cols)
 
 					// rest of columns
-					for (const v of termdata.categories[k]) {
+					for (const v of cols) {
 						tr.append('td').text(v).style('padding', '8px')
 					}
 				}
@@ -599,7 +618,8 @@ function setRenderers(self) {
 		const tr = table.append('tr')
 		tr.append('td') // col 1
 		tr.append('td') // col 2
-		forestPlotter(tr.append('td')) // col 3, axis
+		if (neuroOncCox) tr.append('td')
+		forestPlotter(tr.append('td')) // forest plot axis
 		for (const v of result.coefficients.header) tr.append('td')
 	}
 
@@ -641,7 +661,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_type3 = result => {
-		if (!result.type3 || self.parent.app.vocabApi.termdbConfig.hideRegressionTables?.includes('type3')) return
+		if (!result.type3 || self.parent.app.vocabApi.termdbConfig.neuroOncRegression) return
 		const div = self.newDiv(result.type3.label)
 		const table = div.append('table').style('border-spacing', '0px')
 
@@ -694,7 +714,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_tests = result => {
-		if (!result.tests || self.parent.app.vocabApi.termdbConfig.hideRegressionTables?.includes('tests')) return
+		if (!result.tests || self.parent.app.vocabApi.termdbConfig.neuroOncRegression) return
 		const div = self.newDiv(result.tests.label)
 		const table = div.append('table').style('border-spacing', '0px')
 		const header = table.append('tr').style('opacity', 0.4)

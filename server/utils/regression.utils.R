@@ -399,7 +399,7 @@ coxRegression <- function(formula, dat) {
 }
 
 # run regression analysis
-runRegression <- function(formula, regtype, dat, outcome) {
+runRegression <- function(formula, regtype, dat, outcome, neuroOnc) {
   id <- formula$id
   # remove samples with NA values in any variable in the formula
   # NOTE: even though regression functions (e.g. lm, glm, etc.)
@@ -439,7 +439,7 @@ runRegression <- function(formula, regtype, dat, outcome) {
     }
   }
   if (length(warns) > 0) results[["warnings"]] <- warns
-  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType)
+  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType, fdat, neuroOnc)
   results$type3 <- formatType3(results$type3)
   out <- list("id" = unbox(id), "data" = results[names(results) != "res"])
   return(out)
@@ -612,7 +612,7 @@ build_coef_table <- function(res_summ) {
 }
 
 # reformat the coefficients table
-formatCoefficients <- function(coefficients_table, res, regtype) {
+formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) {
   # round all columns to 4 significant digits
   coefficients_table <- signif(coefficients_table, 4)
   # add variable and category columns
@@ -637,8 +637,8 @@ formatCoefficients <- function(coefficients_table, res, regtype) {
       if (v2 %in% names(res$xlevels)) {
         clst2 <- res$xlevels[[v2]][-1] # extract categories (without reference category)
       }
-      for (c1 in clst1) {
-        for (c2 in clst2) {
+      for (c2 in clst2) {
+        for (c1 in clst1) {
           cCol <- c(cCol, paste(c1, c2, sep = ":"))
           vCol <- c(vCol, v)
         }
@@ -667,7 +667,29 @@ formatCoefficients <- function(coefficients_table, res, regtype) {
       }
     }
   }
-  coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, coefficients_table)
+  
+  if (regtype == "cox" && !is.null(neuroOnc)) {
+    # neuro-oncology dataset using cox regression
+    # report event counts of coefficients
+    eCol <- vector(mode = "numeric")
+    for (i in 1:length(vCol)) {
+      v <- vCol[i]
+      c <- cCol[i]
+      if (grepl(":", v, fixed = T)) {
+        # interacting variables
+        # not allowed in neuro-oncology dataset
+        stop("interacting variables not supported")
+      }
+      # if categorical variable, compute event count of the category
+      # if continuous variable, set event count to NA
+      e <- ifelse(v %in% names(res$xlevels), nrow(dat[dat[,v] == c & dat[,"outcome_event"] == 1,]), NA)
+      eCol <- c(eCol, e)
+    }
+    coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, "Events" = eCol, coefficients_table)
+  } else {
+    coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, coefficients_table)
+  }
+  
   coefficients_table <- list("header" = colnames(coefficients_table), "rows" = coefficients_table)
   return(coefficients_table)
 }

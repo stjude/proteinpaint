@@ -404,6 +404,7 @@ export class InputTerm {
 		if (!this.term) return // missing term
 		if (this.section.configKey != 'independent') return
 		if (this.term.q.mode == 'spline') return // not on a spline term
+		if (this.parent.app.vocabApi.termdbConfig.neuroOncRegression) return
 		{
 			// require minimum of 2 independent terms eligible for interaction
 			let count = 0
