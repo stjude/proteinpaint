@@ -67,8 +67,11 @@ export class CategoricalRouter {
 		// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
 		//    of the tw by any other code
 		//
-		// NOTE: The validate() naming convention is not appropriate here, since it's okay for accepts() to return false
-		//       and not throw, whereas validate() is more like an assertion function.
+		// NOTES:
+		// - The validate() naming convention is not appropriate here, since it's okay for accepts() to return false
+		//   and not throw, whereas validate() is more like an assertion function.
+		// - The isTypeName() naming convention is also not appropriate, since the function may also fill-in/mutate the
+		//   tw, instead of just inspecting it as implied by isTypeName()
 		//
 		if (CategoricalValues.accepts(tw)) return tw
 		else if (CategoricalPredefinedGS.accepts(tw)) return tw
