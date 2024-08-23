@@ -142,6 +142,7 @@ add:
 	*/
 	if (self.settings.pathway != '-') {
 		self.dom.detailsDiv.selectAll('*').remove()
+		self.dom.tableDiv.selectAll('*').remove()
 		self.config.geneORAparams.geneSetGroup = self.settings.pathway
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
 		let output
@@ -219,7 +220,6 @@ add:
 			}
 		}
 
-		self.dom.tableDiv.selectAll('*').remove()
 		const d_ora = self.dom.tableDiv.append('div')
 		renderTable({
 			columns: self.gene_ora_table_cols,
