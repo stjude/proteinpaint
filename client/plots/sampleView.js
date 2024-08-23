@@ -4,6 +4,7 @@ import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import { dofetch3 } from '#common/dofetch'
 import { isNumericTerm, ROOT_SAMPLE_TYPE } from '../shared/terms.js'
+import { sayerror } from '#dom/sayerror'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -116,9 +117,19 @@ class SampleView {
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 				} else {
 					this.dom.tableDiv.style('display', 'none')
-					for (const div of this.discoPlots) div.style('display', 'none')
-					for (const div of this.singleSamplePlots) div.style('display', 'none')
-					for (const div of this.brainPlots) div.style('display', 'none')
+					for (const div of this.discoPlots) div.cellDiv.style('display', 'none')
+					for (const div of Object.values(this.singleSamplePlots)) {
+						div.forEach(p => p.cellDiv.style('display', 'none'))
+					}
+					for (const div of this.brainPlots) div.cellDiv.style('display', 'none')
+
+					if (sampleName != '') {
+						const errorDiv = sampleDiv.append('div')
+						sayerror(errorDiv, `Invalid sample ID: ${sampleName}. Please check the sample ID.`)
+						setTimeout(() => {
+							errorDiv.remove()
+						}, 6000)
+					}
 				}
 			}
 			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, callback)
