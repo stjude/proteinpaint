@@ -14,12 +14,12 @@ q.type, and q.mode data instance.
 since data processing should not change for the same tw data shape.
 
 ## Replace fillTermWrapper()
-
-![Screenshot 2024-08-22 at 9 20 35 PM](https://github.com/user-attachments/assets/02e342fc-c041-4d29-8e99-e388b9dedded)
+![Screenshot 2024-08-23 at 9 25 23 AM](https://github.com/user-attachments/assets/ba98482e-cfed-4685-9c41-43d0063742b1)
 
 ## Plugin-style TW Handlers
 
-![Screenshot 2024-08-22 at 9 36 29 PM](https://github.com/user-attachments/assets/47754d30-436e-4386-b9c2-291b86386a10)
+![Screenshot 2024-08-23 at 9 24 47 AM](https://github.com/user-attachments/assets/af0b0ee4-b0b8-4561-a232-6899d73bf256)
+
 
 ## Code Examples
 
