@@ -155,7 +155,8 @@ class TdbNav {
 
 		if (this.state.nav.header_mode === 'with_tabs') {
 			if (!(this.activeCohortName in this.samplecounts)) {
-				this.samplecounts[this.activeCohortName] = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
+				const count = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
+				this.samplecounts[this.activeCohortName] = count
 			}
 			if (!(this.filterJSON in this.samplecounts)) {
 				if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
