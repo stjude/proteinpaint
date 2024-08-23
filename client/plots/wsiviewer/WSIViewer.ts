@@ -42,8 +42,8 @@ export default class WSIViewer {
 
 		const holder = this.opts.holder
 
-		if (plotConfig.wsimages.length === 0) {
-			holder.append('div').style('margin-left', '10px').text('No WSI images.')
+		if (!plotConfig.wsimages || plotConfig.wsimages?.length === 0) {
+			holder.append('div').style('margin-left', '10px').attr('id', 'sjpp-wsi-errorDiv').text('No WSI images.')
 			return
 		}
 
