@@ -169,9 +169,11 @@ export function runproteinpaint(arg) {
 			app.genomes = data.genomes
 			app.cardsPath = data.cardsPath
 
-			if (data.debugmode && !data.features?.disableDevBrowserNotification) {
+			if (data.debugmode) {
 				app.debugmode = true
-				import('./notify').catch(e => console.warn(`debugmode: server-sent notifications is not setup`, e))
+				if (!data.features?.disableDevBrowserNotification) {
+					import('./notify').catch(e => console.warn(`debugmode: server-sent notifications is not setup`, e))
+				}
 			}
 			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
