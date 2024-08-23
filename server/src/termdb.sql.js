@@ -56,7 +56,6 @@ return an array of sample names passing through the filter
 	let re
 	if (filter) re = cmd.all(filter.values)
 	else re = cmd.all()
-
 	if (canDisplay) return re
 	for (const item of re) delete item.name
 	return re
@@ -103,22 +102,23 @@ return a sample count of sample names passing through the filter
 	}
 
 	const filter = await getFilterCTEs(j, ds)
-	let statement
+	let statement, row
+	let sample_type
 	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) {
 		statement = `WITH ${filter.filters}
 		SELECT count (distinct sample) as count, sample_type
 		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id group by sample_type`
+		row = ds.cohort.db.connection.prepare(statement).get(filter.values)
+		sample_type = ds.cohort.termdb.sample_types.get(row.sample_type)
+		sample_type = row.count > 1 ? sample_type.plural_name : sample_type.name
 	} else {
 		statement = `WITH ${filter.filters}
 		SELECT count (distinct sample) as count
 		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
+		row = ds.cohort.db.connection.prepare(statement).get(filter.values)
+		sample_type = row.count > 1 ? 'samples' : 'sample'
 	}
-	const row = ds.cohort.db.connection.prepare(statement).get(filter.values)
-	console.log(interpolateSqlValues(statement, filter.values))
-	const sample_type =
-		row.count > 1
-			? ds.cohort.termdb.sample_types.get(row.sample_type)?.plural_name || 'samples'
-			: ds.cohort.termdb.sample_types.get(row.sample_type)?.name || 'sample'
+
 	return { count: `${row.count} ${sample_type}` }
 }
 export async function get_summary_numericcategories(q) {
@@ -264,7 +264,7 @@ opts{} options to tweak the query, see const default_opts = below
 		${CTE1.sql},
 		${CTE2.sql}
 		${CTEunion}`
-	console.log(interpolateSqlValues(sql, values))
+	//console.log(interpolateSqlValues(sql, values))
 	try {
 		const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 		const smap = new Map()

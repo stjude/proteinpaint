@@ -109,7 +109,6 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 				)
 			`)
 	}
-
 	return {
 		filters: CTEs.join(',\n'),
 		CTEs,
