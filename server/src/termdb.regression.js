@@ -397,6 +397,8 @@ function makeRinput(q, sampledata) {
 		independent
 	}
 
+	if (q.ds.cohort.termdb.neuroOncRegression) Rinput.neuroOnc = true
+
 	return Rinput
 }
 
