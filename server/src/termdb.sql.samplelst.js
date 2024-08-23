@@ -18,7 +18,6 @@ export const sampleLstSql = {
 			if (i != tw.q.groups.length - 1) sql += 'UNION ALL '
 			values.push(group.name, group.name)
 		}
-		console.log('sampleLstSql.getCTE', sql)
 		return { sql: `${tablename} AS (${sql})`, tablename }
 	}
 }
