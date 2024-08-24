@@ -66,6 +66,7 @@ async function getTws() {
 	const twlst: TermWrapper[] = [
 		Object.freeze(await TwRouter.fill({ id: 'sex' }, { vocabApi })),
 		Object.freeze({
+			type: 'CatTWPredefinedGS',
 			term: getTermWithGS(),
 			isAtomic: true as const,
 			q: {
@@ -116,7 +117,8 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 					sample_type: '1',
 					hashtmldetail: true
 				},
-				q: { type: 'values', isAtomic: true, hiddenValues: {} }
+				q: { type: 'values', isAtomic: true, hiddenValues: {} },
+				type: 'CatTWValues'
 			},
 			'should fill-in a minimal dictionary tw with only {id}'
 		)

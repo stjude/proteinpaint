@@ -43,6 +43,7 @@ export class CategoricalValues extends Handler {
 			// }
 		}
 		set_hiddenvalues(q, term)
+		tw.type = 'CatTWValues'
 		return true
 	}
 }

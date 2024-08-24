@@ -108,7 +108,8 @@ tape(`fill() default q.type='values'`, async test => {
 					isAtomic: true,
 					hiddenValues: {}
 				},
-				isAtomic: true
+				isAtomic: true,
+				type: 'CatTWValues'
 			},
 			`should fill-in categorical q with no type with default q.type='values'`
 		)
@@ -140,7 +141,8 @@ tape('fill() predefined-groupset', async test => {
 					isAtomic: true,
 					hiddenValues: {}
 				},
-				isAtomic: true
+				isAtomic: true,
+				type: 'CatTWPredefinedGS'
 			},
 			`should fill-in a categorical q.type='predefined-groupset'`
 		)
@@ -165,9 +167,10 @@ tape('fill() custom-groupset', async test => {
 
 	const twCopy = structuredClone(tw)
 	twCopy.q.hiddenValues = {}
+	twCopy.type = 'CatTWCustomGS'
 	try {
 		const fullTw = await CategoricalRouter.fill(tw, { vocabApi })
-		const testedKeys = new Set()
+		//const testedKeys = new Set()
 		test.deepEqual(fullTw, twCopy, `should fill-in a categorical q.type='custom-groupset'`)
 	} catch (e: any) {
 		test.fail(e)

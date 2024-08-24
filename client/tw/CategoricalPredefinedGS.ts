@@ -52,6 +52,7 @@ export class CategoricalPredefinedGS extends Handler {
 			// }
 		}
 		set_hiddenvalues(q, term)
+		tw.type = 'CatTWPredefinedGS'
 		return true
 	}
 }

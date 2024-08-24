@@ -37,6 +37,7 @@ export class CategoricalCustomGS extends Handler {
 			// }
 		}
 		set_hiddenvalues(q, term)
+		tw.type = 'CatTWCustomGS'
 		return true
 	}
 }

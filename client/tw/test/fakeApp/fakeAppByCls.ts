@@ -3,6 +3,7 @@ import { TwRouter } from '../../TwRouter.ts'
 import { HandlerWithAddons } from './fakeTypes'
 import { CatValuesCls } from './CatValuesAddons'
 import { CatPredefinedGSCls } from './CatPredefinedGSAddons.ts'
+import { TermWrapper } from '#updated-types'
 
 const HandlerClsMap = {
 	CategoricalValues: CatValuesCls,
@@ -32,12 +33,11 @@ export class FakeAppByCls {
 		this.#render(data)
 	}
 
-	#getHandler(tw): HandlerWithAddons {
-		const HandlerCls = TwRouter.getCls(tw, { vocabApi: this.#opts.vocabApi })
-		if (!HandlerCls) throw `no handler class for term.type='${tw.term.type}', q.type='${tw.q.type}' found`
-		const clsName = HandlerCls.prototype.constructor.name
-		if (!HandlerClsMap[clsName]) throw `no HandlerClsMap[${clsName}]`
-		return new HandlerClsMap[clsName](tw, { vocabApi: this.#opts.vocabApi })
+	#getHandler(tw: TermWrapper): HandlerWithAddons {
+		const opts = { vocabApi: this.#opts.vocabApi }
+		if (tw.type == 'CatTWValues') return new CatValuesCls(tw, opts)
+		else if (tw.type == 'CatTWPredefinedGS') return new CatPredefinedGSCls(tw, opts)
+		else throw `no fakeApp handler for tw.type=${tw.type}]`
 	}
 
 	#render(data) {

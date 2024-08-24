@@ -23,32 +23,6 @@ export class TwRouter {
 		this.opts = opts
 	}
 
-	static getCls(tw: TermWrapper, opts: HandlerOpts = {}): HandlerTypes {
-		switch (tw.term.type) {
-			case 'categorical': {
-				return CategoricalRouter.getCls(tw)
-			}
-			// case 'integer':
-			// case 'float':
-			// 	return
-
-			// case 'condition':
-			// 	return
-
-			// case 'survival':
-			// 	return
-
-			// case 'geneVariant':
-			// 	return
-
-			// case 'geneExpression':
-			// 	return
-
-			default:
-				throw `unable to getCls(tw)`
-		}
-	}
-
 	static init(tw: TermWrapper, opts: HandlerOpts = {}): TwHandlerInstance {
 		switch (tw.term.type) {
 			case 'categorical': {
