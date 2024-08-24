@@ -69,7 +69,7 @@ function getTermWithGS() {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- tw/TwRouter -***-')
+	test.pass('-***- tw/TwRouter.unit -***-')
 	test.end()
 })
 
