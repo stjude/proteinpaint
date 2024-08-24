@@ -67,7 +67,7 @@ function getTermWithGS() {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- tw/CategoricalTW -***-')
+	test.pass('-***- tw/CategoricalRouter.unit -***-')
 	test.end()
 })
 

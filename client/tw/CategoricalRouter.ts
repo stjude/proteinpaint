@@ -1,28 +1,16 @@
-import {
-	RawCatTW,
-	CategoricalTW,
-	CategoricalQ,
-	PredefinedGroupSettingQ,
-	CatTWValues,
-	CatTWPredefinedGS,
-	CatTWCustomGS,
-	ValuesQ,
-	RawValuesQ,
-	RawPredefinedGroupsetQ,
-	RawCustomGroupsetQ
-} from '#types'
+import { RawCatTW, CategoricalTW, CatTWValues, CatTWPredefinedGS, CatTWCustomGS } from '#types'
 import { HandlerOpts } from './Handler'
 import { CategoricalValues } from './CategoricalValues'
 import { CategoricalPredefinedGS } from './CategoricalPredefinedGS'
 import { CategoricalCustomGS } from './CategoricalCustomGS'
 import { copyMerge } from '#rx'
 
-export type CategoricalInstance = CategoricalValues | CategoricalPredefinedGS | CategoricalCustomGS
+export type CatHandlerInstance = CategoricalValues | CategoricalPredefinedGS | CategoricalCustomGS
+export type CategoricalTypes = typeof CategoricalValues | typeof CategoricalPredefinedGS | typeof CategoricalCustomGS
 
 export class CategoricalRouter {
-	static init(tw: CategoricalTW, opts: HandlerOpts = {}): CategoricalInstance {
+	static init(tw: CategoricalTW, opts: HandlerOpts = {}): CatHandlerInstance {
 		opts.router = CategoricalRouter
-
 		switch (tw.q.type) {
 			// - has to use type casting/hint for tw argument, since a type union discriminant property cannot be
 			//   from a nested object and creating a new discriminant property on the root tw object seems too much to
@@ -42,8 +30,28 @@ export class CategoricalRouter {
 		}
 	}
 
+	static getCls(tw: CategoricalTW): CategoricalTypes {
+		switch (tw.q.type) {
+			// - has to use type casting/hint for tw argument, since a type union discriminant property cannot be
+			//   from a nested object and creating a new discriminant property on the root tw object seems too much to
+			//   fix the simple typecheck errors that are only emitted from this function (if type casting is not used)
+			// - may use a better approach later, such as a type guard
+			case 'values':
+				return CategoricalValues // new CategoricalValues(tw as CatTWValues, opts)
+
+			case 'predefined-groupset':
+				return CategoricalPredefinedGS //(tw as CatTWPredefinedGS, opts)
+
+			case 'custom-groupset':
+				return CategoricalCustomGS //(tw as CatTWCustomGS, opts)
+
+			default:
+				throw `unknown categorical class`
+		}
+	}
+
 	//
-	static initRaw(rawTW: RawCatTW, opts: HandlerOpts = {}): CategoricalInstance {
+	static initRaw(rawTW: RawCatTW, opts: HandlerOpts = {}): CatHandlerInstance {
 		const tw: CategoricalTW = CategoricalRouter.fill(rawTW, opts)
 		return CategoricalRouter.init(tw, opts)
 	}
