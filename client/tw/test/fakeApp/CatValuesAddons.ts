@@ -11,10 +11,12 @@ export const CatValuesAddons: Addons = {
 	// since these addons are appended to an object instance instead of the class/object prototype,
 	// the `this` context must be set
 	render: function (this: ThisType, arg: PlotTwRenderOpts): void {
+		// the tw is guaranteed to have term.type=categorical, q.type='values'
 		const t = this.tw.term
 		for (const [sampleId, d] of Object.entries(arg.data)) {
-			// the tw is guaranteed to have term.type=categorical, q.type='values'
-			if (!Object.keys(d).includes(t.id)) continue
+			const keys = Object.keys(d)
+			// lots of terms indicate benchmark testing, no need for string-based svg simulated render
+			if (keys.length > 100 || !keys.includes(t.id)) continue
 			// for the tw in this typed context, use a svg:circle element
 			// note that `this` context guarantees that the tw shape matches
 			// expectations without having to do additional checks
@@ -47,8 +49,9 @@ export class CatValuesCls extends CategoricalValues implements ThisType {
 	render(arg: PlotTwRenderOpts): void {
 		const t = this.tw.term
 		for (const [sampleId, d] of Object.entries(arg.data)) {
-			// the tw is guaranteed to have term.type=categorical, q.type='values'
-			if (!Object.keys(d).includes(t.id)) continue
+			const keys = Object.keys(d)
+			// lots of terms indicate benchmark testing, no need for string-based svg simulated render
+			if (keys.length > 100 || !keys.includes(t.id)) continue
 			// for the tw in this typed context, use a svg:circle element
 			// note that `this` context guarantees that the tw shape matches
 			// expectations without having to do additional checks

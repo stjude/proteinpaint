@@ -60,6 +60,28 @@ function getTermWithGS() {
 	return term
 }
 
+const softTwsLimit = 2 //5000
+async function getTws() {
+	// create an array of full tw's, to simulate what may be seen from app/plot state after a dispatch
+	const twlst: TermWrapper[] = [
+		Object.freeze(await TwRouter.fill({ id: 'sex' }, { vocabApi })),
+		Object.freeze({
+			term: getTermWithGS(),
+			isAtomic: true as const,
+			q: {
+				type: 'predefined-groupset' as const,
+				predefined_groupset_idx: 0,
+				isAtomic: true as const
+			}
+		})
+	]
+	while (twlst.length < softTwsLimit) {
+		twlst.push(...twlst)
+	}
+	Object.freeze(twlst)
+	return twlst
+}
+
 /**************
  test sections
 ***************/
@@ -105,21 +127,10 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 	test.end()
 })
 
+let twlst // ok to share between test suites because it's frozen
+
 tape('handler with addons', async test => {
-	// to test the above examples:
-	// create an array of full tw's, to simulate what may be seen from app/plot state after a dispatch
-	const twlst: TermWrapper[] = [
-		await TwRouter.fill({ id: 'sex' }, { vocabApi }),
-		{
-			term: getTermWithGS(),
-			isAtomic: true as const,
-			q: {
-				type: 'predefined-groupset' as const,
-				predefined_groupset_idx: 0,
-				isAtomic: true as const
-			}
-		}
-	]
+	twlst = await getTws()
 
 	const msg = 'should convert handler instances to the extended interface'
 	try {
@@ -128,11 +139,18 @@ tape('handler with addons', async test => {
 			sample2: { sex: 2, diaggrp: 'NBL' }
 		}
 		//const handlers = terms.map(getHandler)
+		const start = Date.now()
 		const app = new FakeApp({ twlst, vocabApi })
 		app.main(data)
-		const Inner = app.getInner()
-
 		test.pass(msg)
+		if (twlst.length > 100) {
+			// indicates benchmark test
+			console.log(142, `addons time, twlst.length=${twlst.length}`, Date.now() - start)
+			test.end()
+			return
+		}
+
+		const Inner = app.getInner()
 		test.deepEqual(
 			Object.keys(Inner.handlers[0]).sort(),
 			Object.keys(Inner.handlers[1]).sort(),
@@ -157,21 +175,6 @@ tape('handler with addons', async test => {
 })
 
 tape('handler by class', async test => {
-	// to test the above examples:
-	// create an array of full tw's, to simulate what may be seen from app/plot state after a dispatch
-	const twlst: TermWrapper[] = [
-		await TwRouter.fill({ id: 'sex' }, { vocabApi }),
-		{
-			term: getTermWithGS(),
-			isAtomic: true as const,
-			q: {
-				type: 'predefined-groupset' as const,
-				predefined_groupset_idx: 0,
-				isAtomic: true as const
-			}
-		}
-	]
-
 	const msg = 'should convert handler instances to the extended interface'
 	try {
 		const data = {
@@ -179,11 +182,18 @@ tape('handler by class', async test => {
 			sample2: { sex: 2, diaggrp: 'NBL' }
 		}
 		//const handlers = terms.map(getHandler)
+		const start = Date.now()
 		const app = new FakeAppByCls({ twlst, vocabApi })
 		app.main(data)
-		const Inner = app.getInner()
-
 		test.pass(msg)
+		if (twlst.length > 100) {
+			// indicates benchmark test
+			console.log(203, `class time, twlst.length=${twlst.length}`, Date.now() - start)
+			test.end()
+			return
+		}
+
+		const Inner = app.getInner()
 		test.deepEqual(
 			Object.keys(Inner.handlers[0]).sort(),
 			Object.keys(Inner.handlers[1]).sort(),

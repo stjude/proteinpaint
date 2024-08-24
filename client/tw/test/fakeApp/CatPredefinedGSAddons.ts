@@ -12,7 +12,9 @@ export const CatPredefinedGSAddons: Addons = {
 		// the tw is guaranteed to have term.type=categorical, q.type='predefined-groupset'\
 		const t = this.tw.term
 		for (const [sampleId, d] of Object.entries(arg.data)) {
-			if (!Object.keys(d).includes(t.id)) continue
+			const keys = Object.keys(d)
+			// lots of terms indicate benchmark testing, no need for string-based svg simulated render
+			if (keys.length > 100 || !keys.includes(t.id)) continue
 			// for the tw in this typed context, use a svg:rect element
 			const shape = `<rect width=10 height=10></rect></svg>`
 			arg.holder = arg.holder.replace(`</svg>`, `<text>${sampleId}, ${d[t.id]}</text>${shape}`)
@@ -26,7 +28,9 @@ export class CatPredefinedGSCls extends CategoricalPredefinedGS implements ThisT
 		// the tw is guaranteed to have term.type=categorical, q.type='predefined-groupset'
 		const t = this.tw.term
 		for (const [sampleId, d] of Object.entries(arg.data)) {
-			if (!Object.keys(d).includes(t.id)) continue
+			const keys = Object.keys(d)
+			// lots of terms indicate benchmark testing, no need for string-based svg simulated render
+			if (keys.length > 100 || !keys.includes(t.id)) continue
 			// for the tw in this typed context, use a svg:rect element
 			const shape = `<rect width=10 height=10></rect></svg>`
 			arg.holder = arg.holder.replace(`</svg>`, `<text>${sampleId}, ${d[t.id]}</text>${shape}`)
