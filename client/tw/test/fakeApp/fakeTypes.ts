@@ -31,15 +31,15 @@ export type Addons = {
 // code. Also, populating optional props/methods that are already declared for a class
 // is more easily optimized for lookup by browser engines.
 //
-export type TwHandler = (CategoricalValues | CategoricalPredefinedGS) & Addons
+export type HandlerWithAddons = (CategoricalValues | CategoricalPredefinedGS) & Addons
 
 //
-// Use a type guard to safely convert the Handler class to the addon TwHandler interface,
+// Use a type guard to safely convert the Handler class to the addon HandlerWithAddons interface,
 // otherwise the compiler will complain of a type mismatch for optional properties in Handler
-// that are required in TwHandler. The runtime checks should verify the presence of
+// that are required in HandlerWithAddons. The runtime checks should verify the presence of
 // required props/methods, and return a boolean to confirm that the argument matches the target type.
 //
-export function isPlotTwHandler(handler: Handler): handler is TwHandler {
-	if (handler instanceof Handler && typeof handler.render == 'function') return true
+export function isPlotTwHandler(handler: Handler): handler is HandlerWithAddons {
+	if (handler instanceof Handler && typeof (handler as any).render == 'function') return true
 	return true
 }

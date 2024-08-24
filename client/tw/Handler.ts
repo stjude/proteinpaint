@@ -20,7 +20,7 @@ export class Handler {
 	root: TwRouter
 
 	// declare optional methods that may be added to derived handler instance
-	render?: (opts: any) => any
+	//render?: (opts: any) => any
 
 	constructor(fullTw: TermWrapper, opts: HandlerOpts = {}) {
 		//this.tw = fullTw

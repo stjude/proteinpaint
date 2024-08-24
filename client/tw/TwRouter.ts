@@ -2,9 +2,10 @@
 import { TermWrapper } from '#updated-types'
 import { HandlerOpts } from './Handler'
 import { mayHydrateDictTwLst, get$id } from '../termsetting/termsetting.ts'
-import { CategoricalInstance, CategoricalRouter } from './CategoricalRouter'
+import { CatHandlerInstance, CategoricalRouter, CategoricalTypes } from './CategoricalRouter'
 
-type TwInstance = CategoricalInstance
+export type TwHandlerInstance = CatHandlerInstance // | NumericHandlerInstance | ...
+export type HandlerTypes = CategoricalTypes // | ...
 
 export type UseCase = {
 	target: string
@@ -22,7 +23,33 @@ export class TwRouter {
 		this.opts = opts
 	}
 
-	static init(tw: TermWrapper, opts: HandlerOpts = {}): TwInstance {
+	static getCls(tw: TermWrapper, opts: HandlerOpts = {}): HandlerTypes {
+		switch (tw.term.type) {
+			case 'categorical': {
+				return CategoricalRouter.getCls(tw)
+			}
+			// case 'integer':
+			// case 'float':
+			// 	return
+
+			// case 'condition':
+			// 	return
+
+			// case 'survival':
+			// 	return
+
+			// case 'geneVariant':
+			// 	return
+
+			// case 'geneExpression':
+			// 	return
+
+			default:
+				throw `unable to getCls(tw)`
+		}
+	}
+
+	static init(tw: TermWrapper, opts: HandlerOpts = {}): TwHandlerInstance {
 		switch (tw.term.type) {
 			case 'categorical': {
 				return CategoricalRouter.init(tw, { ...opts, root: TwRouter })
@@ -48,7 +75,7 @@ export class TwRouter {
 		}
 	}
 
-	static async initRaw(rawTw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TwInstance> {
+	static async initRaw(rawTw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TwHandlerInstance> {
 		const tw = await TwRouter.fill(rawTw, opts)
 		return TwRouter.init(tw, opts)
 	}

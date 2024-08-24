@@ -1,6 +1,5 @@
-import { termjson } from '../../../test/testdata/termjson'
 import { TwRouter } from '../../TwRouter.ts'
-import { TwHandler, Addons, isPlotTwHandler } from './fakeTypes'
+import { HandlerWithAddons, Addons, isPlotTwHandler } from './fakeTypes'
 import { CatValuesAddons } from './CatValuesAddons'
 import { CatPredefinedGSAddons } from './CatPredefinedGSAddons.ts'
 
@@ -15,7 +14,7 @@ const addons: { [className: string]: Addons } = {
 
 export class FakeApp {
 	#opts: any
-	#handlers: any
+	#handlers: HandlerWithAddons[]
 	#dom: {
 		svg: string
 	}
@@ -24,7 +23,7 @@ export class FakeApp {
 	constructor(opts) {
 		this.#opts = opts
 		this.#dom = { svg: '<svg></svg>' }
-		//vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
+		this.#handlers = []
 	}
 
 	main(data) {
@@ -38,11 +37,11 @@ export class FakeApp {
 
 	// Create a tw-type agnostic function for getting handler instances using TwRouter.init().
 	// Then apply addons using Object.assign() and use the type guard to safely return the extended handler.
-	#getHandler(tw): TwHandler {
+	#getHandler(tw): HandlerWithAddons {
 		const handler = TwRouter.init(tw, { vocabApi: this.#opts.vocabApi })
 		const adds = addons[handler.constructor.name]
 		if (!addons) throw `no addons for '${handler.constructor.name}'`
-		else Object.assign(handler, adds) // instead of classical inheritance
+		else Object.assign(handler, adds)
 		if (isPlotTwHandler(handler)) return handler
 		else throw `mismatch`
 	}

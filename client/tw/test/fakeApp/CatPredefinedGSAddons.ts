@@ -19,3 +19,17 @@ export const CatPredefinedGSAddons: Addons = {
 		}
 	}
 }
+
+export class CatPredefinedGSCls extends CategoricalPredefinedGS implements ThisType {
+	x = 1
+	render(arg: PlotTwRenderOpts) {
+		// the tw is guaranteed to have term.type=categorical, q.type='predefined-groupset'
+		const t = this.tw.term
+		for (const [sampleId, d] of Object.entries(arg.data)) {
+			if (!Object.keys(d).includes(t.id)) continue
+			// for the tw in this typed context, use a svg:rect element
+			const shape = `<rect width=10 height=10></rect></svg>`
+			arg.holder = arg.holder.replace(`</svg>`, `<text>${sampleId}, ${d[t.id]}</text>${shape}`)
+		}
+	}
+}
