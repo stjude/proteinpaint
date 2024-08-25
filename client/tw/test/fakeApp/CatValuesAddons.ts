@@ -40,8 +40,6 @@ export const CatValuesAddons: Addons = {
 	}
 }
 
-type HandlerCls = CategoricalValues & Addons
-
 export class CatValuesCls extends CategoricalValues implements ThisType {
 	x = 1
 	// since these addons are appended to an object instance instead of the class/object prototype,

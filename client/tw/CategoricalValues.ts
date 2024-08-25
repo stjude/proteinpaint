@@ -1,4 +1,4 @@
-import { CatTWValues, ValuesQ, RawCatTW, CategoricalTerm } from '#types'
+import { CatTWValues, RawCatTW } from '#types'
 import { CategoricalRouter } from './CategoricalRouter.ts'
 import { Handler, HandlerOpts } from './Handler'
 import { set_hiddenvalues } from '#termsetting'

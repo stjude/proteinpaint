@@ -1,13 +1,11 @@
 import tape from 'tape'
-import { CategoricalTW, RawCatTW, GroupEntry, CatTWPredefinedGS, TermGroupSetting } from '#types'
+import { RawCatTW, GroupEntry, TermGroupSetting } from '#types'
 import { CategoricalRouter } from '../CategoricalRouter.ts'
 import { vocabInit } from '#termdb/vocabulary'
-import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
 import { CategoricalValues } from '../CategoricalValues'
 import { CategoricalPredefinedGS } from '../CategoricalPredefinedGS'
 import { CategoricalCustomGS } from '../CategoricalCustomGS'
-import { TwRouter } from '../TwRouter'
 
 /*************************
  reusable helper functions
@@ -98,7 +96,6 @@ tape(`fill() default q.type='values'`, async test => {
 
 	try {
 		const fullTw = await CategoricalRouter.fill(tw as any, { vocabApi })
-		const testedKeys = new Set()
 		test.deepEqual(
 			fullTw,
 			{
@@ -130,7 +127,6 @@ tape('fill() predefined-groupset', async test => {
 
 	try {
 		const fullTw = await CategoricalRouter.fill(tw, { vocabApi })
-		const testedKeys = new Set()
 		test.deepEqual(
 			fullTw,
 			{
@@ -170,7 +166,6 @@ tape('fill() custom-groupset', async test => {
 	twCopy.type = 'CatTWCustomGS'
 	try {
 		const fullTw = await CategoricalRouter.fill(tw, { vocabApi })
-		//const testedKeys = new Set()
 		test.deepEqual(fullTw, twCopy, `should fill-in a categorical q.type='custom-groupset'`)
 	} catch (e: any) {
 		test.fail(e)

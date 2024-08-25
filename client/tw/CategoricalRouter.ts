@@ -1,4 +1,4 @@
-import { RawCatTW, CategoricalTW, CatTWTypes, CatTWValues, CatTWPredefinedGS, CatTWCustomGS } from '#types'
+import { RawCatTW, CatTWTypes } from '#types'
 import { HandlerOpts } from './Handler'
 import { CategoricalValues } from './CategoricalValues'
 import { CategoricalPredefinedGS } from './CategoricalPredefinedGS'

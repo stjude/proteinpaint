@@ -1,14 +1,7 @@
-import { termjson } from '../../../test/testdata/termjson'
-import { TwRouter } from '../../TwRouter.ts'
-import { HandlerWithAddons, FakeCatTypes } from './fakeTypes'
+import { FakeCatTypes } from './fakeTypes'
 import { CatValuesCls } from './CatValuesAddons'
 import { CatPredefinedGSCls } from './CatPredefinedGSAddons.ts'
 import { TermWrapper } from '#updated-types'
-
-const HandlerClsMap = {
-	CategoricalValues: CatValuesCls,
-	CategoricalPredefinedGS: CatPredefinedGSCls
-}
 
 export class FakeAppByCls {
 	#opts: any

@@ -1,4 +1,4 @@
-import { CatTWCustomGS, CustomGroupSettingQ, RawCustomGroupsetQ, CategoricalTerm, RawCatTW } from '#types'
+import { CatTWCustomGS, RawCatTW } from '#types'
 import { CategoricalRouter } from './CategoricalRouter.ts'
 import { Handler, HandlerOpts } from './Handler'
 import { set_hiddenvalues } from '#termsetting'

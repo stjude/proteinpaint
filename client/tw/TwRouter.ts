@@ -1,7 +1,6 @@
-//import { RawTW } from '#types'
 import { TermWrapper } from '#updated-types'
 import { HandlerOpts } from './Handler'
-import { mayHydrateDictTwLst, get$id } from '../termsetting/termsetting.ts'
+import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
 import { CatHandlerInstance, CategoricalRouter, CategoricalTypes } from './CategoricalRouter'
 
 export type TwHandlerInstance = CatHandlerInstance // | NumericHandlerInstance | ...
