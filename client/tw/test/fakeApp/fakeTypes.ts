@@ -1,6 +1,8 @@
 import { CategoricalValues } from '../../CategoricalValues'
 import { CategoricalPredefinedGS } from '../../CategoricalPredefinedGS'
 import { Handler } from '../../Handler'
+import { CatValuesCls } from './CatValuesAddons'
+import { CatPredefinedGSCls } from './CatPredefinedGSAddons'
 
 // Declare argument type(s) that are specific to a method for a particulat plot, app, or component
 export type PlotTwRenderOpts = {
@@ -11,6 +13,8 @@ export type PlotTwRenderOpts = {
 		}
 	}
 }
+
+export type FakeCatTypes = CatValuesCls | CatPredefinedGSCls
 
 //
 // Define an Addons type that will extend a Handler instance (not class),

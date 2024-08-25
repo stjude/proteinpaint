@@ -12,7 +12,7 @@ const addons: { [className: string]: Addons } = {
 	CategoricalPredefinedGS: CatPredefinedGSAddons
 }
 
-export class FakeApp {
+export class FakeAppByAddons {
 	#opts: any
 	#handlers: HandlerWithAddons[]
 	#dom: {
@@ -39,9 +39,10 @@ export class FakeApp {
 	// Then apply addons using Object.assign() and use the type guard to safely return the extended handler.
 	#getHandler(tw): HandlerWithAddons {
 		const handler = TwRouter.init(tw, { vocabApi: this.#opts.vocabApi })
-		const adds = addons[handler.constructor.name]
-		if (!addons) throw `no addons for '${handler.constructor.name}'`
-		else Object.assign(handler, adds)
+		// not type checked, may need a type guard for each handler type
+		if (tw.type == 'CatTWValues') Object.assign(handler, CatValuesAddons)
+		else if (tw.type == 'CatTWPredefinedGS') Object.assign(handler, CatPredefinedGSAddons)
+		else throw `no addons for '${handler.constructor.name}'`
 		if (isPlotTwHandler(handler)) return handler
 		else throw `mismatch`
 	}

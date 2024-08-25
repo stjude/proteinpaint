@@ -1,4 +1,5 @@
-import { TermWrapper, TwHandler } from '#types'
+import { TwHandler } from '#types'
+import { TermWrapper } from '#updated-types'
 import { TwRouter } from './TwRouter.ts'
 
 export type HandlerOpts = {

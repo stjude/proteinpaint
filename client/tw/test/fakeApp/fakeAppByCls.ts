@@ -1,6 +1,6 @@
 import { termjson } from '../../../test/testdata/termjson'
 import { TwRouter } from '../../TwRouter.ts'
-import { HandlerWithAddons } from './fakeTypes'
+import { HandlerWithAddons, FakeCatTypes } from './fakeTypes'
 import { CatValuesCls } from './CatValuesAddons'
 import { CatPredefinedGSCls } from './CatPredefinedGSAddons.ts'
 import { TermWrapper } from '#updated-types'
@@ -12,7 +12,7 @@ const HandlerClsMap = {
 
 export class FakeAppByCls {
 	#opts: any
-	#handlers: HandlerWithAddons[]
+	#handlers: FakeCatTypes[]
 	#dom: {
 		svg: string
 	}
@@ -33,7 +33,7 @@ export class FakeAppByCls {
 		this.#render(data)
 	}
 
-	#getHandler(tw: TermWrapper): HandlerWithAddons {
+	#getHandler(tw: TermWrapper): FakeCatTypes {
 		const opts = { vocabApi: this.#opts.vocabApi }
 		if (tw.type == 'CatTWValues') return new CatValuesCls(tw, opts)
 		else if (tw.type == 'CatTWPredefinedGS') return new CatPredefinedGSCls(tw, opts)
