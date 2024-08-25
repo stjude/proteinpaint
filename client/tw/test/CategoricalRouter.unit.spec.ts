@@ -3,9 +3,9 @@ import { RawCatTW, GroupEntry, TermGroupSetting } from '#types'
 import { CategoricalRouter } from '../CategoricalRouter.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
-import { CategoricalValues } from '../CategoricalValues'
-import { CategoricalPredefinedGS } from '../CategoricalPredefinedGS'
-import { CategoricalCustomGS } from '../CategoricalCustomGS'
+import { CatValuesHandler } from '../CatValuesHandler'
+import { CatPredefinedGSHandler } from '../CatPredefinedGSHandler'
+import { CatCustomGSHandler } from '../CatCustomGSHandler'
 
 /*************************
  reusable helper functions
@@ -186,7 +186,7 @@ tape('init() categorical', async test => {
 
 		const handler = await CategoricalRouter.initRaw(tw, { vocabApi }) //; console.log(186, handler.constructor.name)
 		test.true(
-			handler instanceof CategoricalValues,
+			handler instanceof CatValuesHandler,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
 		)
 		test.equal(
@@ -206,7 +206,7 @@ tape('init() categorical', async test => {
 
 		const handler = await CategoricalRouter.initRaw(tw, { vocabApi })
 		test.true(
-			handler instanceof CategoricalPredefinedGS,
+			handler instanceof CatPredefinedGSHandler,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
 		)
 		test.equal(
@@ -231,7 +231,7 @@ tape('init() categorical', async test => {
 
 		const handler = await CategoricalRouter.initRaw(tw, { vocabApi })
 		test.true(
-			handler instanceof CategoricalCustomGS,
+			handler instanceof CatCustomGSHandler,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
 		)
 		test.equal(

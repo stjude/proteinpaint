@@ -1,11 +1,11 @@
-import { FakeCatTypes } from './fakeTypes'
-import { CatValuesCls } from './CatValuesAddons'
-import { CatPredefinedGSCls } from './CatPredefinedGSAddons.ts'
+import { CatTypes } from './types'
+import { FakeCatValuesHandler } from './handlers/CatValues'
+import { FakeCatPredefinedGSHandler } from './handlers/CatPredefinedGS.ts'
 import { TermWrapper } from '#updated-types'
 
 export class FakeAppByCls {
 	#opts: any
-	#handlers: FakeCatTypes[]
+	#handlers: CatTypes[]
 	#dom: {
 		svg: string
 	}
@@ -26,10 +26,10 @@ export class FakeAppByCls {
 		this.#render(data)
 	}
 
-	#getHandler(tw: TermWrapper): FakeCatTypes {
+	#getHandler(tw: TermWrapper): CatTypes {
 		const opts = { vocabApi: this.#opts.vocabApi }
-		if (tw.type == 'CatTWValues') return new CatValuesCls(tw, opts)
-		else if (tw.type == 'CatTWPredefinedGS') return new CatPredefinedGSCls(tw, opts)
+		if (tw.type == 'CatTWValues') return new FakeCatValuesHandler(tw, opts)
+		else if (tw.type == 'CatTWPredefinedGS') return new FakeCatPredefinedGSHandler(tw, opts)
 		else throw `no fakeApp handler for tw.type=${tw.type}]`
 	}
 

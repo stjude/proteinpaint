@@ -9,9 +9,9 @@ export type HandlerOpts = {
 	router?: any
 	root?: any
 	clsMap?: {
-		CategoricalValues?: TwHandler
-		CategoricalPredefinedGS?: TwHandler
-		CategoricalCustomGS?: TwHandler
+		CatValuesHandler?: TwHandler
+		CatPredefinedGSHandler?: TwHandler
+		CatCustomGSHandler?: TwHandler
 	}
 }
 

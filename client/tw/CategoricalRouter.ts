@@ -1,25 +1,25 @@
 import { RawCatTW, CatTWTypes } from '#types'
 import { HandlerOpts } from './Handler'
-import { CategoricalValues } from './CategoricalValues'
-import { CategoricalPredefinedGS } from './CategoricalPredefinedGS'
-import { CategoricalCustomGS } from './CategoricalCustomGS'
+import { CatValuesHandler } from './CatValuesHandler'
+import { CatPredefinedGSHandler } from './CatPredefinedGSHandler'
+import { CatCustomGSHandler } from './CatCustomGSHandler'
 import { copyMerge } from '#rx'
 
-export type CatHandlerInstance = CategoricalValues | CategoricalPredefinedGS | CategoricalCustomGS
-export type CategoricalTypes = typeof CategoricalValues | typeof CategoricalPredefinedGS | typeof CategoricalCustomGS
+export type CatHandlerInstance = CatValuesHandler | CatPredefinedGSHandler | CatCustomGSHandler
+export type CategoricalTypes = typeof CatValuesHandler | typeof CatPredefinedGSHandler | typeof CatCustomGSHandler
 
 export class CategoricalRouter {
 	static init(tw: CatTWTypes, opts: HandlerOpts = {}): CatHandlerInstance {
 		opts.router = CategoricalRouter
 		switch (tw.type) {
 			case 'CatTWValues':
-				return new CategoricalValues(tw, opts)
+				return new CatValuesHandler(tw, opts)
 
 			case 'CatTWPredefinedGS':
-				return new CategoricalPredefinedGS(tw, opts)
+				return new CatPredefinedGSHandler(tw, opts)
 
 			case 'CatTWCustomGS':
-				return new CategoricalCustomGS(tw, opts)
+				return new CatCustomGSHandler(tw, opts)
 
 			default:
 				throw `unknown categorical class`
@@ -58,9 +58,9 @@ export class CategoricalRouter {
 		// - The isTypeName() naming convention is also not appropriate, since the function may also fill-in/mutate the
 		//   tw, instead of just inspecting it as implied by isTypeName()
 		//
-		if (CategoricalValues.accepts(tw)) return tw
-		else if (CategoricalPredefinedGS.accepts(tw)) return tw
-		else if (CategoricalCustomGS.accepts(tw)) return tw
+		if (CatValuesHandler.accepts(tw)) return tw
+		else if (CatPredefinedGSHandler.accepts(tw)) return tw
+		else if (CatCustomGSHandler.accepts(tw)) return tw
 		else throw `cannot process the raw categorical tw`
 
 		// !!! Previous approach, kept here for future reference: !!!
@@ -71,11 +71,11 @@ export class CategoricalRouter {
 		// thereby avoiding the need for type casting.
 		//
 		// if (tw.q.type == 'predefined-groupset') {
-		// 	return CategoricalPredefinedGS.fillQ(tw.term, tw.q)
+		// 	return CatPredefinedGSHandler.fillQ(tw.term, tw.q)
 		// } else if (tw.q.type == 'custom-groupset') {
-		// 	return CategoricalCustomGS.fillQ(tw.term, tw.q)
+		// 	return CatCustomGSHandler.fillQ(tw.term, tw.q)
 		// } else if (!tw.q.type || tw.q.type == 'values') {
-		// 	return CategoricalValues.fillQ(tw.term, tw.q)
+		// 	return CatValuesHandler.fillQ(tw.term, tw.q)
 		// }
 		// throw `invalid tw.q`
 	}

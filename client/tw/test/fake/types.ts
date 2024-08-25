@@ -1,8 +1,8 @@
-import { CategoricalValues } from '../../CategoricalValues'
-import { CategoricalPredefinedGS } from '../../CategoricalPredefinedGS'
+import { CatValuesHandler } from '../../CatValuesHandler'
+import { CatPredefinedGSHandler } from '../../CatPredefinedGSHandler'
 import { Handler } from '../../Handler'
-import { CatValuesCls } from './CatValuesAddons'
-import { CatPredefinedGSCls } from './CatPredefinedGSAddons'
+import { FakeCatValuesHandler } from './handlers/CatValues'
+import { FakeCatPredefinedGSHandler } from './handlers/CatPredefinedGS'
 
 // Declare argument type(s) that are specific to a method for a particulat plot, app, or component
 export type PlotTwRenderOpts = {
@@ -14,7 +14,7 @@ export type PlotTwRenderOpts = {
 	}
 }
 
-export type FakeCatTypes = CatValuesCls | CatPredefinedGSCls
+export type CatTypes = FakeCatValuesHandler | FakeCatPredefinedGSHandler
 
 //
 // Define an Addons type that will extend a Handler instance (not class),
@@ -35,7 +35,7 @@ export type Addons = {
 // code. Also, populating optional props/methods that are already declared for a class
 // is more easily optimized for lookup by browser engines.
 //
-export type HandlerWithAddons = (CategoricalValues | CategoricalPredefinedGS) & Addons
+export type HandlerWithAddons = (CatValuesHandler | CatPredefinedGSHandler) & Addons
 
 //
 // Use a type guard to safely convert the Handler class to the addon HandlerWithAddons interface,

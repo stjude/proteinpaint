@@ -1,18 +1,18 @@
 import { TwRouter } from '../../TwRouter.ts'
-import { HandlerWithAddons, Addons, isPlotTwHandler } from './fakeTypes'
-import { CatValuesAddons } from './CatValuesAddons'
-import { CatPredefinedGSAddons } from './CatPredefinedGSAddons.ts'
+import { HandlerWithAddons, Addons, isPlotTwHandler } from './types'
+import { CatValuesAddons } from './handlers/CatValues'
+import { CatPredefinedGSAddons } from './handlers/CatPredefinedGS.ts'
 
 // Below is an example of how to extend the handler instances that are returned
 // by TwRouter.init(), so that a plot, app, or component (consumer code) can add
 // handler methods or properties that it needs for all of its supported tw types.
 
 const addons: { [className: string]: Addons } = {
-	CategoricalValues: CatValuesAddons,
-	CategoricalPredefinedGS: CatPredefinedGSAddons
+	CatValuesHandler: CatValuesAddons,
+	CatPredefinedGSHandler: CatPredefinedGSAddons
 }
 
-export class FakeAppByAddons {
+export class AppByAddons {
 	#opts: any
 	#handlers: HandlerWithAddons[]
 	#dom: {

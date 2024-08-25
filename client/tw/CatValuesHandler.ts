@@ -3,7 +3,7 @@ import { CategoricalRouter } from './CategoricalRouter.ts'
 import { Handler, HandlerOpts } from './Handler'
 import { set_hiddenvalues } from '#termsetting'
 
-export class CategoricalValues extends Handler {
+export class CatValuesHandler extends Handler {
 	tw: CatTWValues
 	router: CategoricalRouter
 
