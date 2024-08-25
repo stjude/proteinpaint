@@ -41,13 +41,53 @@ export class FakeApp {
 
 	#getHandler1(tw: TermWrapper): CatHandlerTypes {
 		const opts = { vocabApi: this.#opts.vocabApi }
+		// counter-examples below
+		/*
+			tsc error below, because a discriminant property cannot be on nested types/shapes.
+			Even if tsc supports a nested discriminant prop:
+			- it's still much more convenient to statically and runtime check only one property in downstream code
+			- the type check error message is also much cleaner when the discriminant prop is on the root shape
+		*/
+		// if (tw.term.type == 'categorical' && tw.q.type == 'values') return new FakeCatValuesHandler(tw, opts)
+
+		/*
+			tsc error below, because the isCatTWValues flag is not defined for all types in the union. 
+			Even if it is fixable by defining every optional isType flags on all types in the union, 
+			it's still not preferred, because that fix:
+			- is really inconvenient and bloats the type definition by adding unnecessary expected props 
+			- makes it possible to accidentally set two istype flags to true at runtime (has happened when using copyMerge())
+			- is not runtime safe and much less elegant than using a discriminant prop to indicate 
+			  mutually exclusive types in a union, which is runtime safe, no possibility of isType flag collision
+		*/
+		// if (tw.isCatTWValues) return new FakeCatValuesHandler(tw, opts)
+
+		/* 
+			Below are examples of using a discriminant property at the object root,
+			it passes compiler checks and the code is simpler to write. To understand
+			why there are compiler errors in the preceding examples, and why the code
+			below works, see the detailed examples and explanations in
+			https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions
+		*/
 		if (tw.type == 'CatTWValues') return new FakeCatValuesHandler(tw, opts)
 		else if (tw.type == 'CatTWPredefinedGS') return new FakeCatPredefinedGSHandler(tw, opts)
+		// else if (tw.type == 'CatTWCustomGS') {
+		// 	// counter-example only
+		// 	const noncat = {
+		// 		type: tw.type,
+		// 		// replace term.type with a mismatched value
+		// 		term: {...tw.term, type: 'integer' as const},
+		// 		q: tw.q
+		// 	}
+		// 	// tsc emits an error on noncat argument, expecting term.type to be 'categorical'
+		// 	return new FakeCatValuesHandler(noncat, opts)
+		// }
 		else throw `no fakeApp handler for tw.type=${tw.type}]`
 	}
 
-	// Create a tw-type agnostic function for getting handler instances using TwRouter.init().
-	// Then apply addons using Object.assign() and use the type guard to safely return the extended handler.
+	// !!! DO NOT FOLLOW THE ADDON EXAMPLE BELOW !!!
+	// - prefer the class syntax above, which neatly combines type, interface, implementation
+	//
+	// apply addons using Object.assign() and use the type guard to safely return the extended handler.
 	#getHandler2(tw: TermWrapper): HandlerWithAddons {
 		const handler = TwRouter.init(tw, { vocabApi: this.#opts.vocabApi })
 		// not type checked, may need a type guard for each handler type
