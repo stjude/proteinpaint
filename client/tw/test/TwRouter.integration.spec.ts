@@ -4,8 +4,7 @@ import { GroupEntry, TermGroupSetting } from '#types'
 import { TermWrapper } from '#updated-types'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
-import { AppByAddons } from './fake/appByAddons.ts'
-import { FakeAppByCls } from './fake/appByCls.ts'
+import { FakeApp } from './fake/app.ts'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 
@@ -141,7 +140,7 @@ tape('handler with addons', async test => {
 			sample2: { sex: 2, diaggrp: 'NBL' }
 		}
 		const start = Date.now()
-		const app = new AppByAddons({ twlst, vocabApi })
+		const app = new FakeApp({ twlst, vocabApi, mode: 'addons' })
 		app.main(data)
 		test.pass(msg)
 		if (twlst.length > 100) {
@@ -184,7 +183,7 @@ tape('handler by class', async test => {
 		}
 		//const handlers = terms.map(getHandler)
 		const start = Date.now()
-		const app = new FakeAppByCls({ twlst, vocabApi })
+		const app = new FakeApp({ twlst, vocabApi })
 		app.main(data)
 		test.pass(msg)
 		if (twlst.length > 100) {

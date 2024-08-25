@@ -4,6 +4,12 @@ import { Handler } from '../../Handler'
 import { FakeCatValuesHandler } from './handlers/CatValues'
 import { FakeCatPredefinedGSHandler } from './handlers/CatPredefinedGS'
 
+// When using the class approach, the 'interface' is simply
+// the union of all app-specific tw handler classes
+// - no need to define additional types like the `Addons` for the addons approach
+// - no need to write type guards
+export type CatHandlerTypes = FakeCatValuesHandler | FakeCatPredefinedGSHandler
+
 // Declare argument type(s) that are specific to a method for a particulat plot, app, or component
 export type PlotTwRenderOpts = {
 	holder: string // in real apps, would be a d3-selection HTML element
@@ -14,7 +20,15 @@ export type PlotTwRenderOpts = {
 	}
 }
 
-export type CatTypes = FakeCatValuesHandler | FakeCatPredefinedGSHandler
+/*
+	!!! DO NOT USE THE EXAMPLES BELOW !!!
+
+	Below are type declarations for the addons approach, which should
+	not be used - use the class approach instead.
+
+	The examples are kept here only to use to contrast the 
+	addons versus class approaches.
+*/
 
 //
 // Define an Addons type that will extend a Handler instance (not class),
