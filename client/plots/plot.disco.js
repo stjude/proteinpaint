@@ -48,12 +48,8 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 			sample: sample[termdbConfig.queries.singleSampleMutation.sample_id_key]
 		}
 		const data = await dofetch3('termdb/singleSampleMutation', { body })
-		if (data.error) {
-			if (throwError) {
-				loadingDiv.remove()
-				return
-			} else throw data.error
-		}
+		if (data.error) throw data.error
+
 		if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
 
 		if (data.dt2total?.length) {
@@ -109,7 +105,9 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 		const plotAppApi = await plot.appInit(opts)
 		loadingDiv.remove()
 	} catch (e) {
-		loadingDiv.text('Error: ' + (e.message || e))
+		if (throwError) {
+			loadingDiv.remove()
+		} else loadingDiv.text('Error: ' + (e.message || e))
 	}
 }
 

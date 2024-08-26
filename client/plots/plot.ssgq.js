@@ -63,12 +63,7 @@ export async function plotSingleSampleGenomeQuantification(
 			singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] }
 		}
 		const data = await dofetch3('mds3', { body })
-		if (data.error) {
-			if (throwError) {
-				loadingDiv.remove()
-				return
-			} else throw data.error
-		}
+		if (data.error) throw data.error
 
 		holder.attr('id', 'sjpp_ssgq_holder')
 
@@ -144,7 +139,9 @@ export async function plotSingleSampleGenomeQuantification(
 			bb = await plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop)
 		})
 	} catch (e) {
-		loadingDiv.text('Error: ' + (e.message || e))
+		if (throwError) {
+			loadingDiv.remove()
+		} else loadingDiv.text('Error: ' + (e.message || e))
 	}
 }
 
