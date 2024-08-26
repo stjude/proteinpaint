@@ -23,10 +23,11 @@ export default async function (termdbConfig, dslabel, queryKey, sample, holder, 
 			state: {
 				genome: genomeObj.name,
 				dslabel: dslabel,
-				args: brainImaging_arg,
 				plots: [
 					{
 						chartType: 'brainImaging',
+						selectedSampleFileNames: [sample.sample_id + '.nii'],
+						queryKey,
 						overrides
 					}
 				]
