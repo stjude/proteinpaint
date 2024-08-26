@@ -147,7 +147,6 @@ export function server_init_db_queries(ds) {
 			}
 		} else if (tables.has('cohorts')) {
 			rows = cn.prepare('SELECT cohort, sample_count from cohorts').all()
-			console.log(rows)
 			q.getCohortSampleCount = cohortKey => {
 				let counts = rows
 					.filter(row => row.cohort == cohortKey)

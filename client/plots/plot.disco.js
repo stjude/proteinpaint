@@ -25,7 +25,7 @@ genomeObj={}
 _overrides={}
 	optional override parameters to pass to disco
 */
-export default async function (termdbConfig, dslabel, sample, holder, genomeObj, _overrides = {}) {
+export default async function (termdbConfig, dslabel, sample, holder, genomeObj, _overrides = {}, showError = true) {
 	const overrides = computeOverrides(_overrides, termdbConfig, genomeObj, sample)
 
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
@@ -100,8 +100,11 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 		const plot = await import('#plots/plot.app.js')
 		const plotAppApi = await plot.appInit(opts)
 		loadingDiv.remove()
+		return true
 	} catch (e) {
-		loadingDiv.text('Error: ' + (e.message || e))
+		if (showError) loadingDiv.text('Error: ' + (e.message || e))
+		else loadingDiv.remove()
+		return false
 	}
 }
 
