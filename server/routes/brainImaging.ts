@@ -74,13 +74,13 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any) {
 		}
 
 		return new Promise((resolve, reject) => {
-			const filePaths = query.selectedSampleFileNames.map(file => path.join(dirPath, file))
+			const filePaths = query.selectedSampleFileNames!.map(file => path.join(dirPath, file))
 			const ps = spawn('python3', [
 				`${serverconfig.binpath}/../python/src/plotBrainImaging.py`,
 				refFile,
-				query.l,
-				query.f,
-				query.t,
+				query.l!,
+				query.f!,
+				query.t!,
 				...filePaths
 			])
 			const imgData: Buffer[] = []
