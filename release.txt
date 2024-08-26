@@ -1,1 +1,2 @@
-
+Fixes
+- Disable sample view download data button when an invalid sample id is entered.
