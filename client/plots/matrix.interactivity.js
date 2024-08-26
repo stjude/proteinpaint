@@ -392,24 +392,32 @@ export function setInteractivity(self) {
 		}
 
 		if (q.NIdata) {
-			for (const k in q.NIdata) {
+			for (const [queryKey, ref] of Object.entries(q.NIdata)) {
 				const menuDiv = self.dom.clickMenu.d
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text('Neuro Image: ' + k)
+					.text('Neuro Image: ' + queryKey)
 					.on('click', async () => {
+						self.dom.clickMenu.clear()
 						const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 						sandbox.header.text(sample.sample_id)
-						;(await import('./plot.brainImaging.js')).default(
-							self.state.termdbConfig,
-							self.state.vocab.dslabel,
-							k,
-							sample,
-							sandbox.body,
-							self.app.opts.genome
-						)
-						menuDiv.remove()
-						self.dom.clickMenu.d.selectAll('*').remove()
+
+						const config = {
+							chartType: 'brainImaging',
+							queryKey,
+							settings: {
+								brainImaging: {
+									brainImageL: ref.parameters.l,
+									brainImageF: ref.parameters.f,
+									brainImageT: ref.parameters.t
+								}
+							},
+							selectedSampleFileNames: [sample.sample_id + '.nii']
+						}
+						self.app.dispatch({
+							type: 'plot_create',
+							config
+						})
 					})
 			}
 		}
