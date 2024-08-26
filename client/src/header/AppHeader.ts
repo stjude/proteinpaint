@@ -287,6 +287,11 @@ export class AppHeader {
 	}
 
 	make_genome_browser_btn(app, headbox, jwt) {
+		if (app.selectgenome.node().options.length === 0) {
+			console.error(`No selected selectgenome options.`)
+			return
+		}
+
 		const padw = '8px'
 		const genome_btn_div = headbox.append('span')
 		const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
