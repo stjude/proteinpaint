@@ -1,1 +1,2 @@
-
+Features:
+- Add brain imaging as individual chart type, use a sample table to select samples to plot on template.
