@@ -216,7 +216,7 @@ export async function getPlotConfig(opts: any, app: any) {
 		chartType: 'WSIViewer',
 		subfolder: 'wsiviewer',
 		extension: 'ts',
-		wsimages: await wsiViewerImageFiles({ app }),
+		wsimages: opts.wsimages || (await wsiViewerImageFiles({ app })),
 		settings: wsiViewerDefaults(opts.overrides)
 	}
 }

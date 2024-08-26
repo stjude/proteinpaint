@@ -566,16 +566,15 @@ class SampleView {
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
-				const wsiViewer = await import('./wsiviewer/plot.wsi.js')
-				await wsiViewer.default(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName)
+				const wsiLabel = this.dom.showPlotsDiv.select('label[for=showWsi]')
+				try {
+					const wsiViewer = await import('./wsiviewer/plot.wsi.js')
+					await wsiViewer.default(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, true)
+					wsiLabel.style('text-decoration', '').style('opacity', 1)
+				} catch (e) {
+					wsiLabel.style('text-decoration', 'line-through').style('opacity', 0.65)
+				}
 			}
-
-			const wsiErrorDiv = plotsDiv.select('#sjpp-wsi-errorDiv')
-			const wsiLabel = this.dom.showPlotsDiv.select('label[for=showWsi]')
-			if (wsiErrorDiv) {
-				wsiErrorDiv.remove()
-				wsiLabel.style('text-decoration', 'line-through').style('opacity', 0.65)
-			} else wsiLabel.style('text-decoration', '').style('opacity', 1)
 		}
 
 		if (state.termdbConfig?.queries?.singleSampleMutation) {

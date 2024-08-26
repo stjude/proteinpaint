@@ -1,3 +1,4 @@
+import wsiViewerImageFiles from './wsimagesloaded.ts'
 /* A plot for the displaying Whole Slide Images.
 
 dslabel=str
@@ -11,8 +12,11 @@ genomeObj={}
 
 sample_id
 
+throwError
+	optional, instead of showing error to the user, throw
+
 */
-export default async function (dslabel, holder, genomeObj, sample_id) {
+export default async function (dslabel, holder, genomeObj, sample_id, throwError) {
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
@@ -28,7 +32,8 @@ export default async function (dslabel, holder, genomeObj, sample_id) {
 					{
 						chartType: 'WSIViewer',
 						subfolder: 'wsiviewer',
-						extension: 'ts'
+						extension: 'ts',
+						wsimages: await wsiViewerImageFiles({ dslabel, sample_id, genomeObj })
 					}
 				]
 			}
@@ -37,6 +42,8 @@ export default async function (dslabel, holder, genomeObj, sample_id) {
 		const plotAppApi = await plot.appInit(opts)
 		loadingDiv.remove()
 	} catch (e) {
-		loadingDiv.text('Error: ' + (e.message || e))
+		if (throwError) {
+			loadingDiv.remove()
+		} else loadingDiv.text('Error: ' + (e.message || e))
 	}
 }
