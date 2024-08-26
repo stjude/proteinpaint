@@ -39,7 +39,8 @@ export async function plotSingleSampleGenomeQuantification(
 	sample,
 	holder,
 	genomeObj,
-	geneName
+	geneName,
+	showError = true
 ) {
 	const loadingDiv = holder.append('div').text('Loading...')
 	try {
@@ -132,8 +133,11 @@ export async function plotSingleSampleGenomeQuantification(
 			// block is not present yet. load block
 			bb = await plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop)
 		})
+		return true
 	} catch (e) {
-		loadingDiv.text('Error: ' + (e.message || e))
+		if (showError) loadingDiv.text('Error: ' + (e.message || e))
+		else loadingDiv.remove()
+		return false
 	}
 }
 

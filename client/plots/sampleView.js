@@ -576,24 +576,30 @@ class SampleView {
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			let div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
-
+			let someFound = false
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
 				this.discoPlots.push({ sample, cellDiv })
 				if (state.samples.length > 1)
 					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
 				const discoPlotImport = await import('./plot.disco.js')
-				discoPlotImport.default(
+				const found = await discoPlotImport.default(
 					state.termdbConfig,
 					state.vocab.dslabel,
 					{ sample_id: sample.sampleName },
 					cellDiv,
-					this.app.opts.genome
+					this.app.opts.genome,
+					{}, //overrides
+					false //showError
 				)
+				if (found) someFound = true
 			}
+			this.dom.showPlotsDiv.select('input[id=showDisco').style('display', someFound ? 'inline-block' : 'none')
+			this.dom.showPlotsDiv.select('label[for=showDisco').style('display', someFound ? 'inline-block' : 'none')
 		}
 		if (state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
+				let someFound = false
 				this.singleSamplePlots[k] = []
 				let div = plotsDiv.append('div')
 				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
@@ -604,15 +610,20 @@ class SampleView {
 					if (state.samples.length > 1)
 						plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
 					const ssgqImport = await import('./plot.ssgq.js')
-					await ssgqImport.plotSingleSampleGenomeQuantification(
+					const found = await ssgqImport.plotSingleSampleGenomeQuantification(
 						state.termdbConfig,
 						state.vocab.dslabel,
 						k,
 						{ sample_id: sample.sampleName },
 						plotDiv.insert('div'),
-						this.app.opts.genome
+						this.app.opts.genome,
+						null, //geneName
+						false //showError
 					)
+					if (found) someFound = true
 				}
+				this.dom.showPlotsDiv.select(`input[id=${k}`).style('display', someFound ? 'inline-block' : 'none')
+				this.dom.showPlotsDiv.select(`label[for=${k}`).style('display', someFound ? 'inline-block' : 'none')
 			}
 		}
 		if (state.termdbConfig.queries?.NIdata) {
