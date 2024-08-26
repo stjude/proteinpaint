@@ -500,7 +500,11 @@ function setRenderers(self) {
 		a plot is added to 3rd column of each row
 		plotter can be a blank function if there's no valid value for plotting
 		*/
-		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
+		const forestPlotter = self.getForestPlotter(
+			result.coefficients.terms,
+			result.coefficients.interactions,
+			neuroOncCox
+		)
 		let rowcount = self.config.regressionType == 'cox' ? 1 : 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
@@ -753,7 +757,7 @@ function setRenderers(self) {
 	in that case should use array[i+1] or next to find the smallest real number as axis min
 	an arbitary cap is used to guard against extreme estimate values
 	*/
-	self.getForestPlotter = (terms, interactions) => {
+	self.getForestPlotter = (terms, interactions, neuroOncCox) => {
 		// array indices are the same for both non-interacting and interacting rows
 		let midIdx, // array index of the beta/odds ratio
 			CIlow, // array(column) index of low end of confidence interval of midIdx
@@ -905,7 +909,8 @@ function setRenderers(self) {
 				.attr('stroke', forestcolor)
 		}
 		///////// helpers
-		function numbers2array(lst) {
+		function numbers2array(_lst) {
+			const lst = neuroOncCox ? _lst.slice(1) : _lst // do not consider event count
 			const m = Number(lst[midIdx])
 			if (!Number.isNaN(m)) values.push(m)
 			const l = Number(lst[CIlow]),
