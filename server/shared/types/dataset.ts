@@ -264,6 +264,7 @@ type NIdataQueryRef = {
 	referenceFile: string
 	samples: string
 	parameters?: NIdataQueryRefParams
+	sampleColumns?: { termid: string }[]
 }
 
 type NIdataQueryRefParams = {
