@@ -1,7 +1,6 @@
 import { Addons, PlotTwRenderOpts } from '../types'
 import { CatValuesHandler } from '../../../CatValuesHandler'
 
-
 export class FakeCatValuesHandler extends CatValuesHandler {
 	x = 1
 
@@ -10,7 +9,7 @@ export class FakeCatValuesHandler extends CatValuesHandler {
 		for (const [sampleId, d] of Object.entries(arg.data)) {
 			const keys = Object.keys(d)
 			// lots of terms indicate benchmark testing, no need for string-based svg simulated render
-			if (keys.length > 100 || !keys.includes(t.id)) continue
+			if (keys.length > 10 || !keys.includes(t.id)) continue
 			// for the tw in this typed context, use a svg:circle element
 			// note that `this` context guarantees that the tw shape matches
 			// expectations without having to do additional checks
@@ -58,7 +57,7 @@ export const CatValuesAddons: Addons = {
 		for (const [sampleId, d] of Object.entries(arg.data)) {
 			const keys = Object.keys(d)
 			// lots of terms indicate benchmark testing, no need for string-based svg simulated render
-			if (keys.length > 100 || !keys.includes(t.id)) continue
+			if (keys.length > 10 || !keys.includes(t.id)) continue
 			// for the tw in this typed context, use a svg:circle element
 			// note that `this` context guarantees that the tw shape matches
 			// expectations without having to do additional checks

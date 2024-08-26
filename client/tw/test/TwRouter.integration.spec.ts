@@ -60,6 +60,7 @@ function getTermWithGS() {
 }
 
 const softTwsLimit = 2 //5000
+
 async function getTws() {
 	// create an array of full tw's, to simulate what may be seen from app/plot state after a dispatch
 	const twlst: TermWrapper[] = [
@@ -130,22 +131,23 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 
 let twlst // ok to share between test suites because it's frozen
 
-tape('handler with addons', async test => {
-	twlst = await getTws()
+tape('extended TwBase', async test => {
+	if (!twlst) twlst = await getTws()
 
-	const msg = 'should convert handler instances to the extended interface'
+	const msg = 'should convert tw objects into an extended TwBase'
 	try {
 		const data = {
 			sample1: { sex: 1, diaggrp: 'ALL' },
 			sample2: { sex: 2, diaggrp: 'NBL' }
 		}
+		//const handlers = terms.map(getHandler)
 		const start = Date.now()
-		const app = new FakeApp({ twlst, vocabApi, mode: 'addons' })
+		const app = new FakeApp({ twlst, vocabApi })
 		app.main(data)
 		test.pass(msg)
-		if (twlst.length > 100) {
+		if (twlst.length > 10) {
 			// indicates benchmark test
-			console.log(142, `addons time, twlst.length=${twlst.length}`, Date.now() - start)
+			console.log(150, `twbase time, twlst.length=${twlst.length}`, Date.now() - start)
 			test.end()
 			return
 		}
@@ -175,6 +177,8 @@ tape('handler with addons', async test => {
 })
 
 tape('handler by class', async test => {
+	if (!twlst) twlst = await getTws()
+
 	const msg = 'should convert handler instances to the extended interface'
 	try {
 		const data = {
@@ -183,12 +187,56 @@ tape('handler by class', async test => {
 		}
 		//const handlers = terms.map(getHandler)
 		const start = Date.now()
-		const app = new FakeApp({ twlst, vocabApi })
+		const app = new FakeApp({ twlst, vocabApi, mode: 'handler' })
 		app.main(data)
 		test.pass(msg)
-		if (twlst.length > 100) {
+		if (twlst.length > 10) {
 			// indicates benchmark test
-			console.log(203, `class time, twlst.length=${twlst.length}`, Date.now() - start)
+			console.log(195, `handler time, twlst.length=${twlst.length}`, Date.now() - start)
+			test.end()
+			return
+		}
+
+		const Inner = app.getInner()
+		test.deepEqual(
+			Object.keys(Inner.handlers[0]).sort(),
+			Object.keys(Inner.handlers[1]).sort(),
+			`should have matching handler property/method names for all extended handler instances`
+		)
+
+		test.equal(
+			Inner.dom.svg,
+			`<svg>` +
+				`<text>sample1, Male</text><circle r=1></cicle>` +
+				`<text>sample2, Female</text><circle r=2></cicle>` +
+				`<text>sample1, ALL</text><rect width=10 height=10></rect>` +
+				`<text>sample2, NBL</text><rect width=10 height=10></rect>` +
+				`</svg>`,
+			`should render an svg with fake data`
+		)
+	} catch (e) {
+		test.fail(msg + ': ' + e)
+	}
+
+	test.end()
+})
+
+tape('handler with addons', async test => {
+	if (!twlst) twlst = await getTws()
+
+	const msg = 'should convert handler instances to the extended interface'
+	try {
+		const data = {
+			sample1: { sex: 1, diaggrp: 'ALL' },
+			sample2: { sex: 2, diaggrp: 'NBL' }
+		}
+		const start = Date.now()
+		const app = new FakeApp({ twlst, vocabApi, mode: 'addons' })
+		app.main(data)
+		test.pass(msg)
+		if (twlst.length > 10) {
+			// indicates benchmark test
+			console.log(240, `addons time, twlst.length=${twlst.length}`, Date.now() - start)
 			test.end()
 			return
 		}

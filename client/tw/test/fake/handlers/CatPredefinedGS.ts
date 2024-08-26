@@ -9,7 +9,7 @@ export class FakeCatPredefinedGSHandler extends CatPredefinedGSHandler {
 		for (const [sampleId, d] of Object.entries(arg.data)) {
 			const keys = Object.keys(d)
 			// lots of terms indicate benchmark testing, must not by influenced by string-based svg simulated render
-			if (keys.length > 100 || !keys.includes(t.id)) continue
+			if (keys.length > 10 || !keys.includes(t.id)) continue
 			// for the tw in this typed context, use a svg:rect element
 			const shape = `<rect width=10 height=10></rect></svg>`
 			arg.holder = arg.holder.replace(`</svg>`, `<text>${sampleId}, ${d[t.id]}</text>${shape}`)
@@ -39,7 +39,7 @@ export const CatPredefinedGSAddons: Addons = {
 		for (const [sampleId, d] of Object.entries(arg.data)) {
 			const keys = Object.keys(d)
 			// lots of terms indicate benchmark testing, must not be influenced by string-based svg simulated render
-			if (keys.length > 100 || !keys.includes(t.id)) continue
+			if (keys.length > 10 || !keys.includes(t.id)) continue
 			// for the tw in this typed context, use a svg:rect element
 			const shape = `<rect width=10 height=10></rect></svg>`
 			arg.holder = arg.holder.replace(`</svg>`, `<text>${sampleId}, ${d[t.id]}</text>${shape}`)

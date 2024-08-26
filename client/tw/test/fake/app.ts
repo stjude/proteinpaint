@@ -5,15 +5,10 @@ import { CatValuesAddons } from './handlers/CatValues'
 import { CatPredefinedGSAddons } from './handlers/CatPredefinedGS.ts'
 import { FakeCatValuesHandler } from './handlers/CatValues'
 import { FakeCatPredefinedGSHandler } from './handlers/CatPredefinedGS.ts'
+import { xCatValues } from './extended/xCatValues.ts'
+import { xCatPredefinedGS } from './extended/xCatPredefinedGS.ts'
 
-// Below is an example of how to extend the handler instances that are returned
-// by TwRouter.init(), so that a plot, app, or component (consumer code) can add
-// handler methods or properties that it needs for all of its supported tw types.
-
-const addons: { [className: string]: Addons } = {
-	CatValuesHandler: CatValuesAddons,
-	CatPredefinedGSHandler: CatPredefinedGSAddons
-}
+type xTwBase = xCatValues | xCatPredefinedGS
 
 export class FakeApp {
 	#opts: any
@@ -28,7 +23,12 @@ export class FakeApp {
 		this.#opts = opts
 		this.#dom = { svg: '<svg></svg>' }
 		this.#handlers = []
-		this.#getHandler = this.#opts.mode == 'addons' ? this.#getHandler2 : this.#getHandler1
+		this.#getHandler =
+			this.#opts.mode == 'addons'
+				? this.#getHandler2
+				: this.#opts.mode == 'handler'
+				? this.#getHandler1
+				: this.#getExtTws
 	}
 
 	main(data) {
@@ -37,6 +37,21 @@ export class FakeApp {
 			this.#handlers.push(this.#getHandler(tw))
 		}
 		this.#render(data)
+		//console.log(40, this.#handlers, JSON.parse(JSON.stringify(this.#handlers)))
+	}
+
+	#getExtTws(tw: TermWrapper): xTwBase {
+		const opts = { vocabApi: this.#opts.vocabApi }
+		/* 
+			Below are examples of using a discriminant property at the object root,
+			it passes compiler checks and the code is simpler to write. To understand
+			why there are compiler errors in the preceding examples, and why the code
+			below works, see the detailed examples and explanations in
+			https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions
+		*/
+		if (tw.type == 'CatTWValues') return new xCatValues(tw, opts)
+		else if (tw.type == 'CatTWPredefinedGS') return new xCatPredefinedGS(tw, opts)
+		else throw `no fakeApp extended class for tw.type=${tw.type}`
 	}
 
 	#getHandler1(tw: TermWrapper): CatHandlerTypes {
