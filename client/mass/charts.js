@@ -202,6 +202,14 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Brain Imaging',
+			clickTo: self.loadChartSpecificMenu,
+			chartType: 'brainImaging',
+			config: {
+				chartType: 'brainImaging'
+			}
+		},
+		{
 			label: 'Single Cell Plot',
 			clickTo: self.loadChartSpecificMenu,
 			chartType: 'singleCellPlot',

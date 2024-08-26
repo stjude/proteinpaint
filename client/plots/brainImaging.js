@@ -2,6 +2,7 @@ import { getCompInit, copyMerge, multiInit } from '#rx'
 import { topBarInit } from './controls.btns'
 import { configUiInit } from './controls.config'
 import { dofetch3 } from '#common/dofetch'
+import { renderTable } from '../dom/table.ts'
 
 class BrainImaging {
 	constructor(opts) {
@@ -55,7 +56,6 @@ class BrainImaging {
 	}
 
 	getConfigInputsOptions() {
-		const configInputsOptions = []
 		const mandatoryConfigInputOptions = [
 			{
 				label: 'Sagittal',
@@ -85,17 +85,24 @@ class BrainImaging {
 				max: 192
 			}
 		]
-		configInputsOptions.push(...mandatoryConfigInputOptions)
-		return configInputsOptions
+		return mandatoryConfigInputOptions
 	}
 
 	async main() {
 		const settings = this.state.settings
 		this.isOpen = settings.brainImaging.isOpen
 
-		const holder = this.opts.holder
-		holder.select('div[id="sjpp_brainImaging_holder_div"]').remove()
-		const pngDiv = holder.append('div').attr('id', 'sjpp_brainImaging_holder_div').style('display', 'inline-block')
+		this.opts.holder.select('div[id="sjpp_brainImaging_holder_div"]').remove()
+		const pngDiv = this.opts.holder
+			.append('div')
+			.attr('id', 'sjpp_brainImaging_holder_div')
+			.style('display', 'inline-block')
+
+		if (this.opts.header)
+			this.opts.header
+				.style('padding-left', '7px')
+				.style('color', 'rgb(85, 85, 85)')
+				.text(`Brain Imaging: ${this.state.queryKey}`)
 
 		const appState = this.app.getState()
 
@@ -104,16 +111,17 @@ class BrainImaging {
 		}
 
 		const body = {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
-			NIdata: { dataType: appState.args.queryKey, sample: appState.args.sampleName + '.nii' },
+			genome: appState.vocab.genome,
+			dslabel: appState.vocab.dslabel,
+			refKey: this.state.queryKey,
 			l: settings.brainImaging.brainImageL,
 			f: settings.brainImaging.brainImageF,
-			t: settings.brainImaging.brainImageT
+			t: settings.brainImaging.brainImageT,
+			selectedSampleFileNames: this.state.selectedSampleFileNames
 		}
-		const data = await dofetch3('mds3', { body })
+		const data = await dofetch3('brainImaging', { body })
 		if (data.error) throw data.error
-		const dataUrl = await data.text()
+		const dataUrl = await data.brainImage
 
 		const img = new Image()
 		img.onload = () => {
@@ -143,6 +151,70 @@ class BrainImaging {
 	}
 }
 
+export function makeChartBtnMenu(holder, chartsInstance) {
+	chartsInstance.dom.tip.clear()
+	const menuDiv = holder.append('div')
+	if (chartsInstance.state.termdbConfig.queries.NIdata) {
+		for (const [refKey, ref] of Object.entries(chartsInstance.state.termdbConfig.queries.NIdata)) {
+			const refDiv = menuDiv.append('div')
+
+			const refOption = refDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(refKey)
+				.on('click', async () => {
+					refOption.attr('class', 'sja_menuoption_not_interactive')
+					refOption.on('click', null)
+					const body = {
+						genome: chartsInstance.opts.vocab.genome,
+						dslabel: chartsInstance.opts.vocab.dslabel,
+						refKey,
+						samplesOnly: true
+					}
+					const result = await dofetch3('brainImaging', { body })
+					const samples = result.brainImage
+
+					const [rows, columns] = await getTableData(chartsInstance, samples, chartsInstance.state, refKey)
+
+					const applybt = {
+						text: 'APPLY',
+						class: 'sjpp_apply_btn sja_filter_tag_btn',
+						callback: indexes => {
+							chartsInstance.dom.tip.hide()
+							const selectedSampleFileNames = indexes.map(i => samples[i].sample + '.nii')
+							const config = {
+								chartType: 'brainImaging',
+								queryKey: refKey,
+								settings: {
+									brainImaging: {
+										brainImageL: ref.parameters.l,
+										brainImageF: ref.parameters.f,
+										brainImageT: ref.parameters.t
+									}
+								},
+								selectedSampleFileNames
+							}
+							chartsInstance.app.dispatch({
+								type: 'plot_create',
+								config
+							})
+						}
+					}
+
+					renderTable({
+						rows,
+						columns,
+						resize: true,
+						singleMode: false,
+						div: refDiv.append('div'),
+						maxHeight: '40vh',
+						buttons: [applybt]
+					})
+				})
+		}
+	}
+}
+
 export const brainImaging = getCompInit(BrainImaging)
 export const componentInit = brainImaging
 
@@ -152,4 +224,31 @@ export async function getPlotConfig(opts) {
 	}
 	const config = { chartType: 'brainImaging', settings }
 	return copyMerge(config, opts)
+}
+
+async function getTableData(self, samples, state, refKey) {
+	const rows = []
+	for (const sample of samples) {
+		// first cell is sample name
+		const row = [{ value: sample.sample }]
+
+		// optional sample columns
+		for (const c of state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
+			row.push({ value: sample[c.termid] })
+		}
+		rows.push(row)
+	}
+
+	// first column is sample and is hardcoded
+	const columns = [{ label: 'Sample' }]
+
+	// add in optional sample columns
+	for (const c of state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
+		columns.push({
+			label: (await self.app.vocabApi.getterm(c.termid)).name,
+			width: '15vw'
+		})
+	}
+
+	return [rows, columns]
 }
