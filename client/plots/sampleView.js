@@ -115,6 +115,7 @@ class SampleView {
 					const samples = getSamplesRelated(this.samplesData, sampleName)
 
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
+					this.dom.downloadbt.property('disabled', false)
 				} else {
 					this.dom.tableDiv.style('display', 'none')
 					for (const div of this.discoPlots) div.cellDiv.style('display', 'none')
@@ -124,6 +125,7 @@ class SampleView {
 					for (const div of this.brainPlots) div.cellDiv.style('display', 'none')
 
 					if (sampleName != '') {
+						this.dom.downloadbt.property('disabled', true)
 						const errorDiv = sampleDiv.append('div')
 						sayerror(errorDiv, `Invalid sample ID: ${sampleName}. Please check the sample ID.`)
 						setTimeout(() => {
