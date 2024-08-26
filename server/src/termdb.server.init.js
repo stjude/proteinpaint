@@ -485,6 +485,7 @@ export function server_init_db_queries(ds) {
 
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
+				if (ds.cohort.allowedChartTypes?.includes('brainImaging')) supportedChartTypes[r.cohort].add('brainImaging')
 				const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, embedder)
 				if (!forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')) {
 					supportedChartTypes[r.cohort].add('dataDownload')
