@@ -1,4 +1,5 @@
 import { dtgeneexpression, dtmetaboliteintensity, TermTypeGroups } from './common.js'
+
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
 export { TermTypeGroups } from './common.js'
 
@@ -6,7 +7,7 @@ export { TermTypeGroups } from './common.js'
 For datasets with multiple types of samples the ROOT_SAMPLE_TYPE is used to represent the root sample type, for example, 
 the type patient, that has one or more samples associated to it. This should be the id used as sample_type, when generating the db to identify the root samples
 in sampleidmap or the terms annotating root samples in the terms table.
-The samples associated to a patient have annotations that are specific to a timepoint, for example, the age of the patient at the time of the sample collection
+The samples associated to a patient have annotations that are specific to a timepoint, for example, the age of the patient,
 the doses of the drugs the patient was taking at the time of the data collection, etc. These annotations are associated to a sample.
 */
 export const ROOT_SAMPLE_TYPE = 1
@@ -146,4 +147,28 @@ export function getBin(lst, value) {
 				(b.stopinclusive && value == b.stop)
 		)
 	return bin
+}
+
+export function getSampleType(term, ds) {
+	if (!term) return null
+	if (term.id) return ds.cohort.termdb.term2SampleType.get(term.id)
+	if (term.type == 'samplelst') {
+		const key = Object.keys(term.values)[0]
+		const sampleId = term.values[key].list[0]?.sampleId
+		if (sampleId) return ds.sampleId2Type.get(sampleId)
+		else return DEFAULT_SAMPLE_TYPE
+	}
+	// samplelst or non dict terms
+	return DEFAULT_SAMPLE_TYPE //later own term needs to know what type annotates based on the samples
+}
+
+export function getParentType(types, ds) {
+	const ids = Array.from(types)
+	if (!ids || ids.length == 0) return null
+	for (const id of ids) {
+		const typeObj = ds.cohort.termdb.sampleTypes.get(id)
+		if (typeObj.parent_id == null) return id //this is the root type
+		if (ids.includes(typeObj.parent_id)) continue
+		else return typeObj.parent_id //my parent is not in the list, so I am the parent
+	}
 }

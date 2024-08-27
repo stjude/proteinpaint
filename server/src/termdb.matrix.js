@@ -1,10 +1,10 @@
 import path from 'path'
 import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql'
-import { getFilterCTEs, getSampleType } from './termdb.filter'
+import { getFilterCTEs } from './termdb.filter'
 import serverconfig from './serverconfig'
 import { read_file } from './utils'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
-import { TermTypes, isDictionaryType, isNonDictionaryType, getBin, ROOT_SAMPLE_TYPE } from '#shared/terms'
+import { TermTypes, isDictionaryType, isNonDictionaryType, getBin, getParentType, getSampleType } from '#shared/terms'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { geneVariantTermGroupsetting } from '#shared/common.js'
@@ -421,8 +421,9 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 
 	// for "samplelst" term, term.id is missing and must use term.name
 	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
-	if (!onlyChildren) onlyChildren = filter?.onlyChildren || sampleTypes.size > 1
-	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, onlyChildren)
+	const types = filter ? filter.sampleTypes : sampleTypes //the filter adds the types in the filter, that need to be considered
+	if (!onlyChildren) onlyChildren = types.size > 1
+	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, types, onlyChildren)
 	const samples = await getSamples(q, rows)
 	return [samples, byTermId]
 }
@@ -436,7 +437,17 @@ export function getSampleTypes(termWrappers, ds) {
 	return types
 }
 
-export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, onlyChildren) {
+/*
+When querying sample annotations for dictionary terms, the query is split into two parts:
+1. CTEs are generated for each term, and the CTEs are combined into a single SQL query
+2. The SQL query is executed and the results are processed into a map of samples
+The query for a term needs to be generated based on the sample types present in the query and
+considering if the current term is a parent term or a child term.:
+- If `onlyChildren` is true  and the term annotates parent samples, the query will return annotations for the children of the samples that have the term
+- If `onlyChildren` is false or the term annotates child samples, the query will return annotations for the samples that have the term
+ */
+export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, types, onlyChildren) {
+	const parentType = getParentType(types, q.ds)
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}
@@ -444,7 +455,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, o
 			const tw = termWrappers[i]
 			const sampleType = getSampleType(tw.term, q.ds)
 			let query
-			if (onlyChildren && sampleType == ROOT_SAMPLE_TYPE)
+			if (onlyChildren && parentType == sampleType)
 				query = ` select sa.sample_id as sample, key, value, ? as term_id
 				 from sample_ancestry sa join ${t.tablename} on sa.ancestor_id = sample
 				${filter ? ` WHERE sample_id IN ${filter.CTEname} ` : ''}`
