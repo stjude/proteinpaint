@@ -12,6 +12,7 @@ Fixes:
 - Disable sample view download data button when an invalid sample id is entered.
 - revert opacity=0 on hidden legend items so they are always shown
 - matrix groups should be sorted based on order defined in divideby term
+- allow empty categorical term.values
 
 
 ## 2.74.2
