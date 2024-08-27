@@ -446,7 +446,8 @@ function may_update_infoFields(data, tk) {
 					.append('div')
 					.style('display', 'inline-block')
 					.style('color', tk.mds.bcf.info[infoKey].categories?.[category]?.color || unknown_infoCategory_textcolor)
-					.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories?.[category]?.label || category)
+					.style('padding-left', '5px')
+					.text(tk.mds.bcf.info[infoKey].categories?.[category]?.label || category)
 			}
 
 			// hidden ones
