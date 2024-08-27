@@ -10,6 +10,7 @@ Features:
 
 Fixes:
 - Disable sample view download data button when an invalid sample id is entered.
+- revert opacity=0 on hidden legend items so they are always shown
 
 
 ## 2.74.2
