@@ -132,34 +132,33 @@ export function server_init_db_queries(ds) {
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
-		if (ds.cohort.termdb.sample_types.size > 1) {
-			if (tables.has('cohort_sample_types')) {
-				rows = cn.prepare('SELECT * from cohort_sample_types').all()
-				q.getCohortSampleCount = cohortKey => {
-					let counts = rows
-						.filter(row => row.cohort == cohortKey || cohortKey == undefined) //one may have multiple types and a default cohort
-						.map(row => {
-							const sample_type = ds.cohort.termdb.sample_types.get(row.sample_type)
-							return `${row.sample_count} ${row.sample_count > 1 ? sample_type.plural_name : sample_type.name}`
-						})
-					let total = counts.join(' and ')
+		if (tables.has('cohort_sample_types')) {
+			rows = cn.prepare('SELECT * from cohort_sample_types').all()
+			q.getCohortSampleCount = cohortKey => {
+				let counts = rows
+					.filter(row => row.cohort == cohortKey || cohortKey == undefined) //one may have multiple types and a default cohort
+					.map(row => {
+						const sample_type = ds.cohort.termdb.sample_types.get(row.sample_type)
+						return `${row.sample_count} ${row.sample_count > 1 ? sample_type.plural_name : sample_type.name}`
+					})
+				let total = counts.join(' and ')
 
-					return total
-				}
-			} else {
-				rows = cn.prepare('SELECT cohort, sample_count from cohorts').all()
-				q.getCohortSampleCount = cohortKey => {
-					let counts = rows
-						.filter(row => row.cohort == cohortKey)
-						.map(row => {
-							return `${row.sample_count} ${row.sample_count > 1 ? 'samples' : 'sample'}`
-						})
-					let total = counts.join(' and ')
-					if (total == '')
-						//older db does not have types or sample_count
-						return `${totalCount} samples`
-					else return total
-				}
+				return total
+			}
+		} else if (tables.has('cohorts')) {
+			rows = cn.prepare('SELECT cohort, sample_count from cohorts').all()
+			console.log(rows)
+			q.getCohortSampleCount = cohortKey => {
+				let counts = rows
+					.filter(row => row.cohort == cohortKey)
+					.map(row => {
+						return `${row.sample_count} ${row.sample_count > 1 ? 'samples' : 'sample'}`
+					})
+				let total = counts.join(' and ')
+				if (total == '')
+					//older db does not have types or sample_count
+					return `${totalCount} samples`
+				else return total
 			}
 		} else q.getCohortSampleCount = () => `${totalCount} samples`
 	}
