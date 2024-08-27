@@ -664,21 +664,6 @@ async function setTermInput(opts) {
 		}
 	}
 
-	if (opts.configKey == 'term') {
-		// term1 can only be edited (i.e., not replaced/removed)
-		opts.menuOptions = 'edit'
-	}
-
-	if (opts.configKey == 'term0' || opts.configKey == 'term2') {
-		// set defaultQ for term0/term2
-		if (!opts.defaultQ4fillTW) opts.defaultQ4fillTW = {}
-		Object.assign(opts.defaultQ4fillTW, {
-			[TermTypes.GENE_VARIANT]: { type: 'predefined-groupset' },
-			[TermTypes.GENE_EXPRESSION]: { mode: 'discrete' },
-			[TermTypes.METABOLITE_INTENSITY]: { mode: 'discrete' }
-		})
-	}
-
 	const pill = await termsettingInit({
 		menuOptions: opts.menuOptions || '*',
 		numericEditMenuVersion: opts.numericEditMenuVersion || ['continuous', 'discrete'],
@@ -741,7 +726,8 @@ async function setTermInput(opts) {
 }
 
 function renderTerm1Label(inputTerm, config) {
-	const labelTd = inputTerm.Inner.dom.labelTd // FIXME: will error here when loading saved session
+	const labelTd = inputTerm.Inner.dom.labelTd
+	if (labelTd.text()) return // label already filled in
 	const tw = config.term
 	switch (tw.term.type) {
 		case TermTypes.CATEGORICAL:

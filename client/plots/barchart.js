@@ -7,7 +7,7 @@ import { select } from 'd3-selection'
 import { scaleOrdinal } from 'd3-scale'
 import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
-import { controlsInit } from './controls'
+import { controlsInit, term0_term2_defaultQ } from './controls'
 import { to_svg } from '../src/client'
 import { renderTable } from '../dom/table'
 import { fillTermWrapper } from '#termsetting'
@@ -94,7 +94,8 @@ class Barchart {
 					configKey: 'term',
 					chartType: 'barchart',
 					usecase: { target: 'barchart', detail: 'term' },
-					vocabApi: this.app.vocabApi
+					vocabApi: this.app.vocabApi,
+					menuOptions: 'edit'
 				},
 				{
 					type: 'term',
@@ -104,7 +105,8 @@ class Barchart {
 					title: 'Overlay data',
 					label: 'Overlay',
 					vocabApi: this.app.vocabApi,
-					numericEditMenuVersion: this.opts.numericEditMenuVersion
+					numericEditMenuVersion: this.opts.numericEditMenuVersion,
+					defaultQ4fillTW: term0_term2_defaultQ
 				},
 				{
 					type: 'term',
@@ -114,7 +116,8 @@ class Barchart {
 					title: 'Divide by data',
 					label: 'Divide by',
 					vocabApi: this.app.vocabApi,
-					numericEditMenuVersion: this.opts.numericEditMenuVersion
+					numericEditMenuVersion: this.opts.numericEditMenuVersion,
+					defaultQ4fillTW: term0_term2_defaultQ
 				},
 				{
 					label: 'Orientation',
