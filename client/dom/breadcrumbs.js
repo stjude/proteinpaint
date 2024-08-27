@@ -44,6 +44,7 @@ function setRenderers(self) {
 		self.crumbs = self.opts.crumbs
 		for (const crumb of self.crumbs) {
 			crumb.label = crumb.label || crumb.name
+			if (!crumb.inTrail) crumb.inTrail = false
 		}
 
 		const has_active_crumb = self.crumbs.find(crumb => crumb.inTrail)
@@ -62,12 +63,10 @@ function setRenderers(self) {
 			.html(crumb => (crumb.link ? `&nbsp> <a href="${crumb.link}">${crumb.label}</a>` : `&nbsp> ${crumb.label}`))
 			.style('display', crumb => (crumb.inTrail ? 'inline-block' : 'none'))
 			.each(async function (crumb) {
-				if (!crumb.inTrail) crumb.inTrail = false
 				crumb.div = select(this)
-				console.log(crumb)
 			})
 
-		const activeCrumbIndex = self.crumbs.findIndex(c => c.active)
+		const activeCrumbIndex = self.crumbs.findIndex(c => c.inTrail)
 		self.update(activeCrumbIndex)
 	}
 

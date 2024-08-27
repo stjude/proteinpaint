@@ -23,7 +23,6 @@ openDatasetButtonSandbox()
 
 TODOs: 
 - ***Removed the nested card back button for now
-- add icon link to copy appcard= link for each sandbox and views (i.e. examples, UIs, etc.) in sandbox headers
 - fix nestcard background not in margins when sandbox called from ?appcard=
 
 */
@@ -92,9 +91,9 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 
 				if (child.type == 'card') {
 					sandboxDiv.header.trail.main()
+					openCardSandbox(child, res, sandboxDiv, pageArgs)
 					const crumbIndex = filteredChildren.findIndex(c => c == child)
 					sandboxDiv.header.trail.update(crumbIndex)
-					openCardSandbox(child, res, sandboxDiv, pageArgs)
 				}
 				if (child.type == 'dsButton') return openDatasetButtonSandbox(pageArgs.app.opts, res, sandboxDiv) //only for .sandboxJson
 			})
@@ -273,6 +272,7 @@ async function makeLeftsideTabMenu(card, contentHolder, examplesOnly, sandboxDiv
 		return {
 			active,
 			inTrail: active,
+			link: `${sessionStorage.getItem('hostURL')}/?appcard=${card.name}&example=${ppcalls.label}`,
 			label: ppcalls.label,
 			callback: async (event, tab) => {
 				const wait = tab_wait(tab.contentHolder)
