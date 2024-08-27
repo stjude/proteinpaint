@@ -531,6 +531,10 @@ export function getSampleGroupSorter(self) {
 		if ('order' in a && 'order' in b) return a.order - b.order
 		if ('order' in a) return -1
 		if ('order' in b) return 1
+		if (a.tw?.term?.values?.[a.id]?.order && b.tw?.term?.values?.[b.id]?.order) {
+			// when the term has order defined
+			return a.tw.term.values[a.id].order - b.tw.term.values[b.id].order
+		}
 		return defaultSorter(a, b)
 	}
 }

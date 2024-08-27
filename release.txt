@@ -1,1 +1,2 @@
-
+Fixes:
+- matrix groups should be sorted based on order defined in divideby term
