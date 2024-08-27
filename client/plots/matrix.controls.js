@@ -151,6 +151,14 @@ export class MatrixControls {
 					return tw
 				},
 				processConfig: config => {
+					if (this.parent.chartType == 'hierCluster' && config['divideBy']) {
+						config.settings = {
+							hierCluster: {
+								yDendrogramHeight: 0,
+								clusterSamples: false
+							}
+						}
+					}
 					if (this.parent.config.divideBy)
 						config.legendValueFilter = this.parent.mayRemoveTvsEntry(this.parent.config.divideBy)
 				},
