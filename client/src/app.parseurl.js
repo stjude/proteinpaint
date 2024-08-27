@@ -38,7 +38,12 @@ upon error, throw err message as a string
 		arg.app.drawer.opts.app = {
 			cardsPath: 'cards'
 		}
-		const element = re.elements.findIndex(t => t.sandboxJson == cardJsonFile || t.sandboxHtml == cardJsonFile)
+		const element = re.elements.findIndex(
+			t =>
+				t.sandboxJson == cardJsonFile ||
+				t.sandboxHtml == cardJsonFile ||
+				t.name.toUpperCase() == cardJsonFile.toUpperCase()
+		)
 
 		//Check if track/app can be shown on this server
 		//If not show error message
