@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - wsiviewer - load files and metadata from db
 
+Fixes:
+- Disable sample view download data button when an invalid sample id is entered.
+
 
 ## 2.74.2
 
