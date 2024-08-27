@@ -96,7 +96,10 @@ arguments:
 		bootstrap object for this ds
 */
 
-const unannotatedKey = 'Unannotated' // this duplicates the same string in mds3/legend.js
+/* used in mds3 tk ui, when a info or format key is not found in a variant, to be able to count the variant by this key in the info/format legend
+ this duplicates the same string in mds3/legend.js
+*/
+const unannotatedKey = 'Unannotated'
 
 export async function init(ds, genome, _servconfig) {
 	// optional features/settings supplied by ds, when missing from serverconfig.features{}, are centralized here.
@@ -1200,9 +1203,11 @@ function mayDropMbyInfoFilter(m0, param) {
 	if (!param.infoFilter) return false
 	for (const infoKey in param.infoFilter) {
 		// each key corresponds to a value to skip
+
 		const variantValue = m0.info[infoKey]
 		if (!variantValue) {
-			// no value, don't skip
+			// no value. client displays such values with the hardcoded value. compare if it is to be skipped
+			if (param.infoFilter[infoKey].includes(unannotatedKey)) return true // skip unannotated value
 			continue
 		}
 		if (Array.isArray(variantValue)) {
