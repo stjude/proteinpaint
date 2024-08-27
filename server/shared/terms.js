@@ -2,7 +2,16 @@ import { dtgeneexpression, dtmetaboliteintensity, TermTypeGroups } from './commo
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
 export { TermTypeGroups } from './common.js'
 
+/*
+For datasets with multiple types of samples the ROOT_SAMPLE_TYPE is used to represent the root sample type, for example, 
+the type patient, that has one or more samples associated to it. This should be the id used as sample_type, when generating the db to identify the root samples
+in sampleidmap or the terms annotating root samples in the terms table.
+The samples associated to a patient have annotations that are specific to a timepoint, for example, the age of the patient at the time of the sample collection
+the doses of the drugs the patient was taking at the time of the data collection, etc. These annotations are associated to a sample.
+*/
 export const ROOT_SAMPLE_TYPE = 1
+
+//For datasets with one sample type the DEFAULT_SAMPLE_TYPE is used to represent the sample type
 export const DEFAULT_SAMPLE_TYPE = 2
 
 export const NumericModes = {

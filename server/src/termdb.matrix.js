@@ -8,7 +8,6 @@ import { TermTypes, isDictionaryType, isNonDictionaryType, getBin, ROOT_SAMPLE_T
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { geneVariantTermGroupsetting } from '#shared/common.js'
-import { on } from 'events'
 
 /*
 
