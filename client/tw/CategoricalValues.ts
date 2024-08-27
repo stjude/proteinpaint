@@ -22,9 +22,11 @@ export class CategoricalValues extends Handler {
 		const { term, q } = tw
 		if (!q.type) q.type = 'values'
 		if (term.type != 'categorical' || q.type != 'values') return false
-		if (!term.values) throw 'no term.values defined'
+		// GDC or other dataset may allow missing term.values
+		if (!term.values) term.values = {} //throw 'no term.values defined'
 		const numVals = Object.keys(tw.term.values).length
-		if (!numVals) throw `empty term.values`
+		// GDC or other dataset may allow empty term.values
+		//if (!numVals) throw `empty term.values`
 		if (q.mode == 'binary') {
 			if (Object.keys(tw.term.values).length != 2) throw 'term.values must have exactly two keys'
 			// TODO:
