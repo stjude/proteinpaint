@@ -1,1 +1,2 @@
-
+Fixes:
+- revert opacity=0 on hidden legend items so they are always shown

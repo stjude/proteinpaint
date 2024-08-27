@@ -457,7 +457,6 @@ function may_update_infoFields(data, tk) {
 					.style('display', 'inline-block')
 					.attr('class', 'sja_clb')
 					.style('text-decoration', 'line-through')
-					.style('opacity', 0)
 					.text(c)
 					.on('click', async () => {
 						if (loading) return
