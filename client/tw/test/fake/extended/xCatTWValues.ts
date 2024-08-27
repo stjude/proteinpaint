@@ -1,17 +1,19 @@
-import { CatTWValues, CategoricalTerm } from '#types'
+import { CatTWValues, ValuesQ, CategoricalTerm, CategoricalQ, CatTWPredefinedGS } from '#types'
 import { HandlerOpts } from '../../../Handler'
 import { PlotTwRenderOpts } from '../types'
 import { TwBase } from '../../../TwBase'
 
-export class xCatValues extends TwBase {
+export class xCatTWValues extends TwBase {
+	term: CategoricalTerm
+	q: ValuesQ
 	#tw: CatTWValues
 	#opts: HandlerOpts
-	term: CategoricalTerm
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: CatTWValues, opts: HandlerOpts = {}) {
 		super(tw, opts)
-		this.term = tw.term // to narrow to categorical term, since TwBase.term is just Term
+		this.term = tw.term
+		this.q = tw.q
 		this.#tw = tw
 		this.#opts = opts
 	}

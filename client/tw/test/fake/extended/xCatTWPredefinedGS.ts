@@ -1,18 +1,29 @@
-import { CatTWPredefinedGS, CategoricalTerm } from '#types'
+import {
+	CategoricalTerm,
+	CatTWPredefinedGS,
+	CatTWCustomGS,
+	PredefinedGroupSettingQ,
+	BaseGroupSet,
+	ValuesQ
+} from '#types'
 import { HandlerOpts } from '../../../Handler'
 import { PlotTwRenderOpts } from '../types'
 import { TwBase } from '../../../TwBase'
 
-export class xCatPredefinedGS extends TwBase {
+export class xCatTWPredefinedGS extends TwBase {
+	term: CategoricalTerm
+	q: PredefinedGroupSettingQ
+	#groupset: BaseGroupSet
 	#tw: CatTWPredefinedGS
 	#opts: HandlerOpts
-	term: CategoricalTerm
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: CatTWPredefinedGS, opts: HandlerOpts = {}) {
 		super(tw, opts)
 		this.term = tw.term // to narrow to categorical term, since TwBase.term is just Term
+		this.q = tw.q
 		this.#tw = tw
+		this.#groupset = this.term.groupsetting[this.#tw.q.predefined_groupset_idx]
 		this.#opts = opts
 	}
 
@@ -30,28 +41,36 @@ export class xCatPredefinedGS extends TwBase {
 	}
 }
 
-// test only
-// const tw = {
-// 	type: 'CatTWPredefinedGS' as const,
-// 	term: {
-// 		type: 'categorical' as const,
-// 		id: 'abc',
-// 		name: 'ABC',
-// 		values: {
-// 			x: {label: 'x'},
-// 			y: {label: 'y'}
-// 		},
-// 		groupsetting: {
-// 			lst: [{
-// 				name: 'test',
-// 				groups: []
-// 			}]
-// 		}
-// 	},
-// 	q: {
-// 		type: 'predefined-groupset' as const,
-// 		predefined_groupset_idx: 0
-// 	},
-// }
+//test only
+const tw = {
+	type: 'CatTWPredefinedGS' as const,
+	term: {
+		type: 'categorical' as const,
+		id: 'abc',
+		name: 'ABC',
+		values: {
+			x: { label: 'x' },
+			y: { label: 'y' }
+		},
+		groupsetting: {
+			lst: [
+				{
+					name: 'test',
+					groups: []
+				}
+			]
+		}
+	},
+	q: {
+		type: 'predefined-groupset' as const,
+		predefined_groupset_idx: 0
+	}
+	// q: {
+	// 	type: 'custom-groupset' as const,
+	// 	customset: {
+	// 		groups: []
+	// 	}
+	// },
+}
 
-// const a = new xCatPredefinedGS(tw)
+const a = new xCatTWPredefinedGS(tw)

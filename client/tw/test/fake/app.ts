@@ -5,10 +5,10 @@ import { CatValuesAddons } from './handlers/CatValues'
 import { CatPredefinedGSAddons } from './handlers/CatPredefinedGS.ts'
 import { FakeCatValuesHandler } from './handlers/CatValues'
 import { FakeCatPredefinedGSHandler } from './handlers/CatPredefinedGS.ts'
-import { xCatValues } from './extended/xCatValues.ts'
-import { xCatPredefinedGS } from './extended/xCatPredefinedGS.ts'
+import { xCatTWValues } from './extended/xCatTWValues.ts'
+import { xCatTWGroupSet } from './extended/xCatTWGroupSet.ts'
 
-type xTwBase = xCatValues | xCatPredefinedGS
+type xTwBase = xCatTWValues | xCatTWGroupSet
 
 export class FakeApp {
 	#opts: any
@@ -49,8 +49,8 @@ export class FakeApp {
 			below works, see the detailed examples and explanations in
 			https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions
 		*/
-		if (tw.type == 'CatTWValues') return new xCatValues(tw, opts)
-		else if (tw.type == 'CatTWPredefinedGS') return new xCatPredefinedGS(tw, opts)
+		if (tw.type == 'CatTWValues') return new xCatTWValues(tw, opts)
+		else if (tw.type == 'CatTWPredefinedGS' || tw.type == 'CatTWCustomGS') return new xCatTWGroupSet(tw, opts)
 		else throw `no fakeApp extended class for tw.type=${tw.type}`
 	}
 
