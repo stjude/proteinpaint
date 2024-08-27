@@ -686,19 +686,9 @@ async function setTermInput(opts) {
 			if (opts.processInput) await opts.processInput(tw)
 			await pill.main(tw ? tw : { term: null, q: null })
 
-			const config = !(tw && opts.parent.chartType == 'hierCluster' && opts.configKey == 'divideBy')
-				? { [opts.configKey]: tw }
-				: Object.assign(
-						{ [opts.configKey]: tw },
-						{
-							settings: {
-								hierCluster: {
-									yDendrogramHeight: 0,
-									clusterSamples: false
-								}
-							}
-						}
-				  )
+			const config = {
+				[opts.configKey]: tw
+			}
 
 			if (opts.processConfig) opts.processConfig(config) // do the custom config modification inside the processConfig function
 
