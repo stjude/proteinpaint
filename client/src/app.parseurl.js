@@ -178,6 +178,7 @@ upon error, throw err message as a string
 			})
 			const state = JSON.parse(jsonFile.text)
 			opts = {
+				debug: arg.app.debugmode,
 				holder: arg.holder,
 				state,
 				genome: arg.genomes[state.vocab.genome]
@@ -191,6 +192,7 @@ upon error, throw err message as a string
 			})
 			const state = JSON.parse(jsonURL.text)
 			opts = {
+				debug: arg.app.debugmode,
 				holder: arg.holder,
 				state,
 				genome: arg.genomes[state.vocab.genome]
@@ -232,6 +234,7 @@ upon error, throw err message as a string
 			return
 		}
 		const opts = {
+			debug: arg.app.debugmode,
 			holder: arg.holder,
 			state: res.state,
 			genome: arg.genomes[res.state.vocab.genome],
