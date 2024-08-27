@@ -121,7 +121,7 @@ tape('fill() predefined-groupset', async test => {
 	const term = getTermWithGS()
 	const tw: RawCatTW = {
 		term,
-		q: { isAtomic: true, type: 'predefined-groupset' },
+		q: { isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 0 },
 		isAtomic: true
 	}
 
@@ -201,7 +201,7 @@ tape('init() categorical', async test => {
 			//id: term.id,
 			term,
 			isAtomic: true as const,
-			q: { type: 'predefined-groupset', isAtomic: true as const, hiddenValues: {} }
+			q: { type: 'predefined-groupset', isAtomic: true as const, predefined_groupset_idx: 0 }
 		}
 
 		const handler = await CategoricalRouter.initRaw(tw, { vocabApi })

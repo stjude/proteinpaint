@@ -12,7 +12,7 @@ type xTwBase = xCatValues | xCatPredefinedGS
 
 export class FakeApp {
 	#opts: any
-	#handlers: HandlerWithAddons[] | CatHandlerTypes[]
+	#xtws: HandlerWithAddons[] | CatHandlerTypes[]
 	#dom: {
 		svg: string
 	}
@@ -22,7 +22,7 @@ export class FakeApp {
 	constructor(opts) {
 		this.#opts = opts
 		this.#dom = { svg: '<svg></svg>' }
-		this.#handlers = []
+		this.#xtws = []
 		this.#getHandler =
 			this.#opts.mode == 'addons'
 				? this.#getHandler2
@@ -32,12 +32,12 @@ export class FakeApp {
 	}
 
 	main(data) {
-		this.#handlers = []
+		this.#xtws = []
 		for (const tw of this.#opts.twlst) {
-			this.#handlers.push(this.#getHandler(tw))
+			this.#xtws.push(this.#getHandler(tw))
 		}
 		this.#render(data)
-		//console.log(40, this.#handlers, JSON.parse(JSON.stringify(this.#handlers)))
+		//console.log(40, this.#xtws, JSON.parse(JSON.stringify(this.#xtws)))
 	}
 
 	#getExtTws(tw: TermWrapper): xTwBase {
@@ -115,9 +115,9 @@ export class FakeApp {
 
 	#render(data) {
 		let svg = '<svg></svg>'
-		for (const h of this.#handlers) {
+		for (const xtw of this.#xtws) {
 			const arg = { holder: svg, data }
-			h.render(arg)
+			xtw.render(arg)
 			svg = arg.holder
 		}
 		this.#dom.svg = svg
@@ -126,7 +126,7 @@ export class FakeApp {
 	getInner() {
 		return {
 			dom: this.#dom,
-			handlers: this.#handlers
+			xtws: this.#xtws
 		}
 	}
 }

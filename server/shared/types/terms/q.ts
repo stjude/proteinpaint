@@ -21,14 +21,14 @@ export type RawValuesQ = MinBaseQ & { type?: 'values'; mode?: 'binary' }
 
 export type RawPredefinedGroupsetQ = MinBaseQ & {
 	type: 'predefined-groupset'
-	mode?: 'binary'
-	predefined_groupset_idx?: number
+	mode?: 'binary' | 'discrete'
+	predefined_groupset_idx: number
 	groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter
 }
 
 export type RawCustomGroupsetQ = MinBaseQ & {
 	type: 'custom-groupset'
-	mode?: 'binary'
+	mode?: 'binary' | 'discrete'
 	customset: {
 		groups: GroupEntry[]
 	}

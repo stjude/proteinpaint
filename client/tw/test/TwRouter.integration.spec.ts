@@ -140,7 +140,7 @@ tape('extended TwBase', async test => {
 			sample1: { sex: 1, diaggrp: 'ALL' },
 			sample2: { sex: 2, diaggrp: 'NBL' }
 		}
-		//const handlers = terms.map(getHandler)
+		//const xtws = terms.map(getHandler)
 		const start = Date.now()
 		const app = new FakeApp({ twlst, vocabApi })
 		app.main(data)
@@ -154,8 +154,8 @@ tape('extended TwBase', async test => {
 
 		const Inner = app.getInner()
 		test.deepEqual(
-			Object.keys(Inner.handlers[0]).sort(),
-			Object.keys(Inner.handlers[1]).sort(),
+			Object.keys(Inner.xtws[0]).sort(),
+			Object.keys(Inner.xtws[1]).sort(),
 			`should have matching handler property/method names for all extended handler instances`
 		)
 
@@ -185,7 +185,7 @@ tape('handler by class', async test => {
 			sample1: { sex: 1, diaggrp: 'ALL' },
 			sample2: { sex: 2, diaggrp: 'NBL' }
 		}
-		//const handlers = terms.map(getHandler)
+		//const xtws = terms.map(getHandler)
 		const start = Date.now()
 		const app = new FakeApp({ twlst, vocabApi, mode: 'handler' })
 		app.main(data)
@@ -199,8 +199,8 @@ tape('handler by class', async test => {
 
 		const Inner = app.getInner()
 		test.deepEqual(
-			Object.keys(Inner.handlers[0]).sort(),
-			Object.keys(Inner.handlers[1]).sort(),
+			Object.keys(Inner.xtws[0]).sort(),
+			Object.keys(Inner.xtws[1]).sort(),
 			`should have matching handler property/method names for all extended handler instances`
 		)
 
@@ -243,8 +243,8 @@ tape('handler with addons', async test => {
 
 		const Inner = app.getInner()
 		test.deepEqual(
-			Object.keys(Inner.handlers[0]).sort(),
-			Object.keys(Inner.handlers[1]).sort(),
+			Object.keys(Inner.xtws[0]).sort(),
+			Object.keys(Inner.xtws[1]).sort(),
 			`should have matching handler property/method names for all extended handler instances`
 		)
 

@@ -121,7 +121,7 @@ tape('initRaw() categorical', async test => {
 		const tw: RawCatTW = {
 			term,
 			isAtomic: true as const,
-			q: { type: 'predefined-groupset', isAtomic: true as const }
+			q: { type: 'predefined-groupset', isAtomic: true as const, predefined_groupset_idx: 0 }
 		}
 
 		const handler = await TwRouter.initRaw(tw, { vocabApi })
