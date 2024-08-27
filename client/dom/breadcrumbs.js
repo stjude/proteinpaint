@@ -59,15 +59,16 @@ function setRenderers(self) {
 			.enter()
 			.append('span')
 			.classed('sjpp-breadcrumb', true)
-			// .html(crumb => (crumb.link? ` > <a href="${crumb.link} target="_blank">${crumb.label}</a>` : ` > ${crumb.label}`))
-			.html(crumb => `&nbsp> ${crumb.label}`)
+			.html(crumb => (crumb.link ? `&nbsp> <a href="${crumb.link}">${crumb.label}</a>` : `&nbsp> ${crumb.label}`))
 			.style('display', crumb => (crumb.inTrail ? 'inline-block' : 'none'))
-			.each(async function(crumb) {
+			.each(async function (crumb) {
 				if (!crumb.inTrail) crumb.inTrail = false
-				crumb.crumb = select(this)
+				crumb.div = select(this)
+				console.log(crumb)
 			})
 
-		self.update()
+		const activeCrumbIndex = self.crumbs.findIndex(c => c.active)
+		self.update(activeCrumbIndex)
 	}
 
 	self.update = (crumbIndex = 0) => {
@@ -80,7 +81,7 @@ function setRenderers(self) {
 			.selectAll('span')
 			.data(self.crumbs)
 			.each(async crumb => {
-				crumb.crumb.style('display', crumb.inTrail ? 'inline-block' : 'none')
+				crumb.div.style('display', crumb.inTrail ? 'inline-block' : 'none')
 			})
 	}
 }

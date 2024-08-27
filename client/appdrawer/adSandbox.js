@@ -238,7 +238,7 @@ function makeTopTabs(ppcalls, card, sandboxDiv, pageArgs) {
 	if ((ppcalls.length > 1 && uiPresent == false) || (ppcalls.length > 2 && uiPresent == true)) {
 		tabs.push({
 			label: 'Examples',
-			active: false,
+			active: pageArgs?.example ? true : false,
 			callback: async (event, tab) => {
 				try {
 					const examplesOnly = ppcalls.filter(p => p.isUi != true) //Fix to rm UIs from Examples tab
@@ -269,8 +269,10 @@ async function makeLeftsideTabMenu(card, contentHolder, examplesOnly, sandboxDiv
 	})
 
 	function getTabData(ppcalls, i, section) {
+		const active = pageArgs?.example ? pageArgs.example.toUpperCase() == ppcalls.label.toUpperCase() : i === 0
 		return {
-			active: i === 0,
+			active,
+			inTrail: active,
 			label: ppcalls.label,
 			callback: async (event, tab) => {
 				const wait = tab_wait(tab.contentHolder)

@@ -31,6 +31,7 @@ upon error, throw err message as a string
 	if (urlp.has('appcard')) {
 		const ad = await import('../appdrawer/adSandbox')
 		const cardJsonFile = urlp.get('appcard')
+		const example = urlp.get('example')
 		const re = await client.dofetch2('/cards/index.json')
 		arg.app.drawer.opts.genomes = arg.genomes
 		arg.app.drawer.opts.fromApp = true
@@ -42,7 +43,7 @@ upon error, throw err message as a string
 			t =>
 				t.sandboxJson == cardJsonFile ||
 				t.sandboxHtml == cardJsonFile ||
-				t.name.toUpperCase() == cardJsonFile.toUpperCase()
+				t.name.toUpperCase().includes(cardJsonFile.toUpperCase())
 		)
 
 		//Check if track/app can be shown on this server
@@ -55,12 +56,20 @@ upon error, throw err message as a string
 			}
 		}
 
+		if (example) {
+			arg.app.drawer.opts.example = example
+		}
+
 		if (element <= 0) {
 			const nestedCards = [...re.elements.filter(e => e.type == 'nestedCard')]
 			let element, c
 			nestedCards.findIndex(t => {
 				for (const [i, child] of t.children.entries()) {
-					if (child.sandboxJson == cardJsonFile || child.sandboxHtml == cardJsonFile) {
+					if (
+						child.sandboxJson == cardJsonFile ||
+						child.sandboxHtml == cardJsonFile ||
+						child.name.toUpperCase().includes(cardJsonFile.toUpperCase())
+					) {
 						element = t
 						c = i
 					}
