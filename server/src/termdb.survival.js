@@ -44,8 +44,13 @@ export async function get_survival(q, ds) {
 		const st = q[`term${survTermIndex}`]
 		// ot: overlay term, the series term
 		const ot = q[`term${survTermIndex == 1 ? 2 : 1}`]
-
-		const data = await getData({ terms: twLst, filter: q.filter }, ds, q.genome, true)
+		const types = new Set()
+		const ids = [st.id]
+		if (ot) ids.push(ot.id)
+		if (q.term0) ids.push(q.term0.id)
+		for (const id of ids) types.add(ds.cohort.termdb.term2SampleType.get(id))
+		const onlyChildren = types.size > 1
+		const data = await getData({ terms: twLst, filter: q.filter }, ds, q.genome, onlyChildren)
 		if (data.error) throw data.error
 		const results = getSampleArray(data, st)
 
