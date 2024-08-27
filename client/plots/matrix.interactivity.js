@@ -399,8 +399,6 @@ export function setInteractivity(self) {
 					.text('Neuro Image: ' + queryKey)
 					.on('click', async () => {
 						self.dom.clickMenu.clear()
-						const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
-						sandbox.header.text(sample.sample_id)
 
 						const config = {
 							chartType: 'brainImaging',
