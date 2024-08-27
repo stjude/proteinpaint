@@ -60,7 +60,8 @@ export class CategoricalRouter {
 	static fill(tw: RawCatTW, opts: HandlerOpts = {}): CategoricalTW {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (tw.term.type != 'categorical') throw `incorrect term.type='${tw.term?.type}', expecting 'categorical'`
-		if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values`
+		// GDC or other dataset may allow missing or empty term.values
+		//if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values`
 
 		if (opts.defaultQ != null) {
 			opts.defaultQ.isAtomic = true
