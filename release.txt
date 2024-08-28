@@ -1,1 +1,2 @@
-
+Fixes:
+- fix sample view WSI checkbox issue

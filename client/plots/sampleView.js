@@ -214,7 +214,12 @@ class SampleView {
 	async setControls(state) {
 		const q = state.termdbConfig.queries
 		const hasPlots =
-			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.DZImages
+			q?.singleSampleMutation ||
+			q?.singleSampleGenomeQuantification ||
+			q?.NIdata ||
+			q?.images ||
+			q?.DZImages ||
+			q?.WSImages
 		if (hasPlots) {
 			this.dom.showPlotsDiv
 				.append('input')
@@ -568,6 +573,7 @@ class SampleView {
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
+				this.wsiPlots.push({ sample, cellDiv })
 				const wsiViewer = await import('./wsiviewer/plot.wsi.js')
 				wsiViewer.default(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName)
 			}
