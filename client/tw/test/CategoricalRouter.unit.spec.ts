@@ -1,11 +1,9 @@
 import tape from 'tape'
 import { RawCatTW, GroupEntry, TermGroupSetting } from '#types'
-import { CategoricalRouter } from '../CategoricalRouter.ts'
+import { CategoricalRouter } from '../CategoricalRouter'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
-import { CatValuesHandler } from '../CatValuesHandler'
-import { CatPredefinedGSHandler } from '../CatPredefinedGSHandler'
-import { CatCustomGSHandler } from '../CatCustomGSHandler'
+import { CatValues, CatPredefinedGS, CatCustomGS } from '../categorical'
 
 /*************************
  reusable helper functions
@@ -186,13 +184,8 @@ tape('init() categorical', async test => {
 
 		const handler = await CategoricalRouter.initRaw(tw, { vocabApi }) //; console.log(186, handler.constructor.name)
 		test.true(
-			handler instanceof CatValuesHandler,
+			handler instanceof CatValues,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
-		)
-		test.equal(
-			handler.router,
-			CategoricalRouter,
-			`should return a matching categorical handler.router on init() with missing q or q.type`
 		)
 	}
 	{
@@ -206,13 +199,8 @@ tape('init() categorical', async test => {
 
 		const handler = await CategoricalRouter.initRaw(tw, { vocabApi })
 		test.true(
-			handler instanceof CatPredefinedGSHandler,
+			handler instanceof CatPredefinedGS,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
-		)
-		test.equal(
-			handler.router,
-			CategoricalRouter,
-			`should return a matching categorical handler.router on init() with q.type='predefined-groupset'`
 		)
 	}
 
@@ -231,13 +219,8 @@ tape('init() categorical', async test => {
 
 		const handler = await CategoricalRouter.initRaw(tw, { vocabApi })
 		test.true(
-			handler instanceof CatCustomGSHandler,
+			handler instanceof CatCustomGS,
 			`should return a matching categorical handler instance on init() with missing q or q.type`
-		)
-		test.equal(
-			handler.router,
-			CategoricalRouter,
-			`should return a matching categorical handler.router on init() with q.type='custom-groupset'`
 		)
 	}
 

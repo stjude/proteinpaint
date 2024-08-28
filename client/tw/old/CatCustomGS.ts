@@ -4,26 +4,53 @@ import {
 	CustomGroupSettingQ,
 	BaseGroupSet,
 	ValuesQ,
+	RawCatTW
 } from '#types'
-import { HandlerOpts } from '../../../Handler'
 import { PlotTwRenderOpts } from '../types'
-import { TwBase } from '../../../TwBase'
+import { TwBase, TwOpts } from '../TwBase'
 
-export class xCatTWCustomGS extends TwBase {
+export class CatCustomGS extends TwBase {
 	term: CategoricalTerm
 	q: CustomGroupSettingQ
 	#groupset: BaseGroupSet
 	#tw: CatTWCustomGS
-	#opts: HandlerOpts
+	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
-	constructor(tw: CatTWCustomGS, opts: HandlerOpts = {}) {
+	constructor(tw: CatTWCustomGS, opts: TwOpts = {}) {
 		super(tw, opts)
 		this.term = tw.term // to narrow to categorical term, since TwBase.term is just Term
 		this.q = tw.q
 		this.#groupset = this.q.customset
 		this.#tw = tw
 		this.#opts = opts
+	}
+
+	//
+	// This function asks the following, to confirm that RawCatTW can be converted to CatTWCustomGS type
+	// 1. Can the function process the tw? If false, the tw will be passed by the router to a different specialized filler
+	// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
+	//    of the tw by any other code
+	//
+	static accepts(tw: RawCatTW): tw is CatTWCustomGS {
+		const { term, q } = tw
+		if (term.type != 'categorical' || q.type != 'custom-groupset') return false
+		if (!q.customset) throw `missing tw.q.customset`
+		if (q.mode == 'binary') {
+			if (q.customset.groups.length != 2) throw 'there must be exactly two groups'
+			// TODO:
+			// - add validation that both groups have samplecount > 0 or some other minimum count
+			// - rough example
+			// const data = vocabApi.getCategories() or maybe this.countSamples()
+			// if (data.sampleCounts) {
+			// 	for (const grp of groupset.groups) {
+			// 		if (!data.sampleCounts.find(d => d.label === grp.name))
+			// 			throw `there are no samples for the required binary value=${grp.name}`
+			// 	}
+			// }
+		}
+		tw.type = 'CatTWCustomGS'
+		return true
 	}
 
 	render(arg: PlotTwRenderOpts) {
@@ -66,4 +93,4 @@ const tw = {
 	},
 }
 
-const a = new xCatTWCustomGS(tw)
+const a = new CatCustomGS(tw)

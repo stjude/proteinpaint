@@ -7,19 +7,18 @@ import {
 	BaseGroupSet,
 	ValuesQ
 } from '#types'
-import { HandlerOpts } from '../../../Handler'
 import { PlotTwRenderOpts } from '../types'
-import { TwBase } from '../../../TwBase'
+import { TwBase, TwOpts } from '../TwBase'
 
-export class xCatTWGroupSet extends TwBase {
+export class CatGroupSet extends TwBase {
 	term: CategoricalTerm
 	q: PredefinedGroupSettingQ | CustomGroupSettingQ
 	#groupset: BaseGroupSet
 	#tw: CatTWPredefinedGS | CatTWCustomGS
-	#opts: HandlerOpts
+	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
-	constructor(tw: CatTWPredefinedGS | CatTWCustomGS, opts: HandlerOpts = {}) {
+	constructor(tw: CatTWPredefinedGS | CatTWCustomGS, opts: TwOpts = {}) {
 		super(tw, opts)
 		this.term = tw.term
 		this.q = tw.q
@@ -71,7 +70,7 @@ const tw0 = {
 	}
 }
 
-const a0 = new xCatTWGroupSet(tw0)
+const a0 = new CatGroupSet(tw0)
 
 const tw1 = {
 	type: 'CatTWCustomGS' as const,
@@ -84,4 +83,4 @@ const tw1 = {
 	}
 }
 
-const a1 = new xCatTWGroupSet(tw1)
+const a1 = new CatGroupSet(tw1)
