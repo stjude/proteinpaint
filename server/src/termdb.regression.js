@@ -1198,6 +1198,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	// k: sample id, v: {sample, id2value:Map( tid => {key,value}) }
 	const sample_types = getSampleTypes(terms, q.ds)
 	const filter = await getFilterCTEs(q.filter, q.ds, sample_types)
+	const sampleTypes = filter?.sampleTypes || sample_types // filter may add sampleTypes
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
@@ -1207,8 +1208,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	)
 	values.push(...terms.map(d => d.term.id || d.term.name))
 
-	const onlyChildren = sample_types.size > 1
-	const _rows = await getAnnotationRows(q, terms, filter, CTEs, values, onlyChildren)
+	const _rows = await getAnnotationRows(q, terms, filter, CTEs, values, sampleTypes, sample_types.size > 1)
 
 	// process rows
 	const rows =

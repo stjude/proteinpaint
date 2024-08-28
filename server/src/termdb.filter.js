@@ -1,5 +1,5 @@
 import { isDictionaryType, TermTypes, getBin } from '#shared/terms'
-import { DEFAULT_SAMPLE_TYPE, ROOT_SAMPLE_TYPE, isNonDictionaryType } from '#shared/terms.js'
+import { getParentType, getSampleType } from '#shared/terms.js'
 import { getSnpData } from './termdb.matrix.js'
 
 /*
@@ -42,7 +42,8 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 	sampleTypes = getFilterSampleTypes(filter, ds, sampleTypes) //add filter types to sampleTypes
 	for (const [i, item] of filter.lst.entries()) {
 		const sample_type = getSampleType(item.tvs?.term, ds)
-		const onlyChildren = sampleTypes.size > 1 && sample_type == ROOT_SAMPLE_TYPE
+		const parentType = getParentType(sampleTypes, ds)
+		const onlyChildren = sampleTypes.size > 1 && sample_type == parentType
 		const CTEname_i = CTEname + '_' + i
 		let f
 		if (item.type == 'tvslst') {
@@ -116,19 +117,6 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		CTEname,
 		sampleTypes
 	}
-}
-
-export function getSampleType(term, ds) {
-	if (!term) return null
-	if (term.id) return ds.cohort.termdb.term2SampleType.get(term.id)
-	if (term.type == 'samplelst') {
-		const key = Object.keys(term.values)[0]
-		const sampleId = term.values[key].list[0]?.sampleId
-		if (sampleId) return ds.sampleId2Type.get(sampleId)
-		else return DEFAULT_SAMPLE_TYPE
-	}
-	// samplelst or non dict terms
-	return DEFAULT_SAMPLE_TYPE //later own term needs to know what type annotates based on the samples
 }
 
 // makesql_by_tvsfilter helpers

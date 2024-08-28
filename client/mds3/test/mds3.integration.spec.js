@@ -296,7 +296,7 @@ export function testSubtkSampleSummaryIsSmaller(test, tk, subtk) {
 		subLTmaintotalcount.length + ' categories have reduced total sample count in subtk'
 	)
 	// log out categories with total change for eyeballing
-	console.log(subLTmaintotalcount)
+	//console.log(subLTmaintotalcount)
 }
 
 export async function testVariantLeftLabel(test, tk, bb) {
