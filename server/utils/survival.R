@@ -69,11 +69,19 @@ if (length(levels(dat$series)) == 1) {
       estimates <- rbind(estimates, estimates_series)
     }
     # test for difference between survival curves using log-rank test
-    # suppress warnings to prevent warnings when test is done between
-    # curves with no events
-    test <- suppressWarnings(survdiff(Surv(time, status) ~ series, data = dat, subset = dat$series %in% pair))
-    # compute p-value (see: https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html#Extracting_information_from_a_survdiff_object)
-    pvalue <- 1 - pchisq(test$chisq, length(test$n) - 1)
+    df <- dat[dat$series %in% pair, c("time", "status")]
+    if (all(apply(df, 2, function(x) length(unique(x)) == 1))) {
+      # survival curves are identical
+      # do not compare curves using survdiff() because it will error out
+      # set pvalue to 1
+      pvalue <- 1
+    } else {
+      # suppress warnings to prevent warnings when test is done between
+      # curves with no events
+      test <- suppressWarnings(survdiff(Surv(time, status) ~ series, data = dat, subset = dat$series %in% pair))
+      # compute p-value (see: https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html#Extracting_information_from_a_survdiff_object)
+      pvalue <- 1 - pchisq(test$chisq, length(test$n) - 1)
+    }
     tests[i,] <- c(pair, signif(pvalue, 2))
   }
 }
