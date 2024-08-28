@@ -1,6 +1,7 @@
 import { CatTWValues, ValuesQ, RawCatTW, CategoricalTerm } from '#types'
 import { CategoricalRouter } from './CategoricalRouter.ts'
 import { Handler, HandlerOpts } from './Handler'
+import { set_hiddenvalues } from '#termsetting'
 
 export class CategoricalValues extends Handler {
 	tw: CatTWValues
@@ -41,6 +42,7 @@ export class CategoricalValues extends Handler {
 			// 	}
 			// }
 		}
+		set_hiddenvalues(q, term)
 		return true
 	}
 }

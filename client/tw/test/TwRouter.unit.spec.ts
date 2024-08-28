@@ -88,7 +88,8 @@ tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
 			{
 				type: 'predefined-groupset',
 				predefined_groupset_idx: 0,
-				isAtomic: true
+				isAtomic: true,
+				hiddenValues: {}
 			},
 			`should reshape a legacy nested q.groupsetting`
 		)

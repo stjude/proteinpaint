@@ -8,6 +8,7 @@ import {
 } from '#types'
 import { CategoricalRouter } from './CategoricalRouter.ts'
 import { Handler, HandlerOpts } from './Handler'
+import { set_hiddenvalues } from '#termsetting'
 
 export class CategoricalPredefinedGS extends Handler {
 	tw: CatTWPredefinedGS
@@ -50,6 +51,7 @@ export class CategoricalPredefinedGS extends Handler {
 			// 	}
 			// }
 		}
+		set_hiddenvalues(q, term)
 		return true
 	}
 }
