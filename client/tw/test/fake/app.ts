@@ -1,11 +1,10 @@
 import { TwRouter } from '../../TwRouter.ts'
-import { HandlerWithAddons, Addons, isPlotTwHandler, CatHandlerTypes } from './types'
 import { TermWrapper } from '#updated-types'
 import { FakeTw, FakeCatValues, FakeCatPredefinedGS, FakeCatCustomGS } from './xtw/categorical.ts'
 
 export class FakeApp {
 	#opts: any
-	#xtws: HandlerWithAddons[] | CatHandlerTypes[]
+	#xtws: FakeTw[]
 	#dom: {
 		svg: string
 	}
@@ -34,6 +33,7 @@ export class FakeApp {
 			below works, see the detailed examples and explanations in
 			https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions
 		*/
+		if (!tw.type) throw `missing tw.type`
 		if (tw.type == 'CatTWValues') return new FakeCatValues(tw, opts)
 		else if (tw.type == 'CatTWPredefinedGS') return new FakeCatPredefinedGS(tw, opts)
 		else if (tw.type == 'CatTWCustomGS') return new FakeCatCustomGS(tw, opts)

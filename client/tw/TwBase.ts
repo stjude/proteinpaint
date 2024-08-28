@@ -1,6 +1,5 @@
 import { TermWrapper, Q } from '#updated-types'
 import { Term } from '#types'
-import { HandlerOpts } from './Handler'
 
 export type TwOpts = {
 	vocabApi?: any // TODO

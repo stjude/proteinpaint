@@ -1,25 +1,24 @@
 import { RawCatTW, CatTWTypes } from '#types'
-import { HandlerOpts } from './Handler'
-import { CatValuesHandler } from './CatValuesHandler'
-import { CatPredefinedGSHandler } from './CatPredefinedGSHandler'
-import { CatCustomGSHandler } from './CatCustomGSHandler'
+import { TwOpts } from '../TwBase'
+import { CatValues } from './CatValues'
+import { CatPredefinedGS } from './CatPredefinedGS'
+import { CatCustomGS } from './CatCustomGS'
 import { copyMerge } from '#rx'
 
-export type CatHandlerInstance = CatValuesHandler | CatPredefinedGSHandler | CatCustomGSHandler
-export type CategoricalTypes = typeof CatValuesHandler | typeof CatPredefinedGSHandler | typeof CatCustomGSHandler
+export type CatInstance = CatValues | CatPredefinedGS | CatCustomGS
+export type CategoricalTypes = typeof CatValues | typeof CatPredefinedGS | typeof CatCustomGS
 
 export class CategoricalRouter {
-	static init(tw: CatTWTypes, opts: HandlerOpts = {}): CatHandlerInstance {
-		opts.router = CategoricalRouter
+	static init(tw: CatTWTypes, opts: TwOpts = {}): CatInstance {
 		switch (tw.type) {
 			case 'CatTWValues':
-				return new CatValuesHandler(tw, opts)
+				return new CatValues(tw, opts)
 
 			case 'CatTWPredefinedGS':
-				return new CatPredefinedGSHandler(tw, opts)
+				return new CatPredefinedGS(tw, opts)
 
 			case 'CatTWCustomGS':
-				return new CatCustomGSHandler(tw, opts)
+				return new CatCustomGS(tw, opts)
 
 			default:
 				throw `unknown categorical class`
@@ -27,13 +26,13 @@ export class CategoricalRouter {
 	}
 
 	//
-	static initRaw(rawTW: RawCatTW, opts: HandlerOpts = {}): CatHandlerInstance {
+	static initRaw(rawTW: RawCatTW, opts: TwOpts = {}): CatInstance {
 		const tw: CatTWTypes = CategoricalRouter.fill(rawTW, opts)
 		return CategoricalRouter.init(tw, opts)
 	}
 
 	/** tw.term must already be filled-in at this point */
-	static fill(tw: RawCatTW, opts: HandlerOpts = {}): CatTWTypes {
+	static fill(tw: RawCatTW, opts: TwOpts = {}): CatTWTypes {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (tw.term.type != 'categorical') throw `incorrect term.type='${tw.term?.type}', expecting 'categorical'`
 		// GDC or other dataset may allow missing or empty term.values
@@ -58,9 +57,9 @@ export class CategoricalRouter {
 		// - The isTypeName() naming convention is also not appropriate, since the function may also fill-in/mutate the
 		//   tw, instead of just inspecting it as implied by isTypeName()
 		//
-		if (CatValuesHandler.accepts(tw)) return tw
-		else if (CatPredefinedGSHandler.accepts(tw)) return tw
-		else if (CatCustomGSHandler.accepts(tw)) return tw
+		if (CatValues.accepts(tw)) return tw
+		else if (CatPredefinedGS.accepts(tw)) return tw
+		else if (CatCustomGS.accepts(tw)) return tw
 		else throw `cannot process the raw categorical tw`
 
 		// !!! Previous approach, kept here for future reference: !!!
@@ -71,11 +70,11 @@ export class CategoricalRouter {
 		// thereby avoiding the need for type casting.
 		//
 		// if (tw.q.type == 'predefined-groupset') {
-		// 	return CatPredefinedGSHandler.fillQ(tw.term, tw.q)
+		// 	return CatPredefinedGS.fillQ(tw.term, tw.q)
 		// } else if (tw.q.type == 'custom-groupset') {
-		// 	return CatCustomGSHandler.fillQ(tw.term, tw.q)
+		// 	return CatCustomGS.fillQ(tw.term, tw.q)
 		// } else if (!tw.q.type || tw.q.type == 'values') {
-		// 	return CatValuesHandler.fillQ(tw.term, tw.q)
+		// 	return CatValues.fillQ(tw.term, tw.q)
 		// }
 		// throw `invalid tw.q`
 	}

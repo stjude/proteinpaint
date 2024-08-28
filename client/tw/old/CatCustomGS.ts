@@ -1,12 +1,5 @@
-import {  
-	CategoricalTerm,
-	CatTWCustomGS,
-	CustomGroupSettingQ,
-	BaseGroupSet,
-	ValuesQ,
-	RawCatTW
-} from '#types'
-import { PlotTwRenderOpts } from '../types'
+import { CategoricalTerm, CatTWCustomGS, CustomGroupSettingQ, BaseGroupSet, ValuesQ, RawCatTW } from '#types'
+//import { PlotTwRenderOpts } from '../types'
 import { TwBase, TwOpts } from '../TwBase'
 
 export class CatCustomGS extends TwBase {
@@ -53,18 +46,18 @@ export class CatCustomGS extends TwBase {
 		return true
 	}
 
-	render(arg: PlotTwRenderOpts) {
-		// the tw is guaranteed to have term.type=categorical, q.type='predefined-groupset'
-		const t = this.term
-		for (const [sampleId, d] of Object.entries(arg.data)) {
-			const keys = Object.keys(d)
-			// lots of terms indicate benchmark testing, must not by influenced by string-based svg simulated render
-			if (keys.length > 10 || !keys.includes(t.id)) continue
-			// for the tw in this typed context, use a svg:rect element
-			const shape = `<rect width=10 height=10></rect></svg>`
-			arg.holder = arg.holder.replace(`</svg>`, `<text>${sampleId}, ${d[t.id]}</text>${shape}`)
-		}
-	}
+	// render(arg: PlotTwRenderOpts) {
+	// 	// the tw is guaranteed to have term.type=categorical, q.type='predefined-groupset'
+	// 	const t = this.term
+	// 	for (const [sampleId, d] of Object.entries(arg.data)) {
+	// 		const keys = Object.keys(d)
+	// 		// lots of terms indicate benchmark testing, must not by influenced by string-based svg simulated render
+	// 		if (keys.length > 10 || !keys.includes(t.id)) continue
+	// 		// for the tw in this typed context, use a svg:rect element
+	// 		const shape = `<rect width=10 height=10></rect></svg>`
+	// 		arg.holder = arg.holder.replace(`</svg>`, `<text>${sampleId}, ${d[t.id]}</text>${shape}`)
+	// 	}
+	// }
 }
 
 //test only
@@ -75,14 +68,16 @@ const tw = {
 		id: 'abc',
 		name: 'ABC',
 		values: {
-			x: {label: 'x'},
-			y: {label: 'y'}
+			x: { label: 'x' },
+			y: { label: 'y' }
 		},
 		groupsetting: {
-			lst: [{
-				name: 'test',
-				groups: []
-			}]
+			lst: [
+				{
+					name: 'test',
+					groups: []
+				}
+			]
 		}
 	},
 	q: {
@@ -90,7 +85,7 @@ const tw = {
 		customset: {
 			groups: []
 		}
-	},
+	}
 }
 
 const a = new CatCustomGS(tw)

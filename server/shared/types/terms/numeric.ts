@@ -1,5 +1,33 @@
 import { BaseQ, BaseTW, TermValues, BaseTerm } from './term.ts'
 
+export type RawNumericTW = {
+	// id: string
+	type?: 'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'
+	term: NumericQ // must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst()
+	q: NumericQ
+	isAtomic?: true
+	$id?: string
+}
+
+export type NumericTerm = BaseTerm & {
+	id?: string
+	// these concrete term.type values make it clear that only these are numeric,
+	// "categorical", "condition", and other term.types are not included in this union
+	type: 'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'
+	bins: PresetNumericBins
+	values?: TermValues
+	/*densityNotAvailable?: boolean //Not used?
+	logScale?: string | number
+	max?: number
+	min?: number
+	name?: string
+	skip0forPercentile?: boolean
+	tvs?: Tvs
+	values?: TermValues
+	unit?: string
+	valueConversion?: ValueConversion*/
+}
+
 export type StartUnboundedBin = {
 	// where possible, assign a concrete value (true) when it is known in advance,
 	// in which case, do not use an abstract type (boolean) to startunbounded
@@ -72,30 +100,11 @@ export type PresetNumericBins = {
 	max?: number
 }
 
-export type NumericTerm = BaseTerm & {
-	id?: string
-	// these concrete term.type values make it clear that only these are numeric,
-	// "categorical", "condition", and other term.types are not included in this union
-	type: 'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'
-	bins: PresetNumericBins
-	values?: TermValues
-	/*densityNotAvailable?: boolean //Not used?
-	logScale?: string | number
-	max?: number
-	min?: number
-	name?: string
-	skip0forPercentile?: boolean
-	tvs?: Tvs
-	values?: TermValues
-	unit?: string
-	valueConversion?: ValueConversion*/
-}
-
 export type BinnedNumericQ = RegularNumericBinConfig | CustomNumericBinConfig
 
 export type DiscreteNumericQ = BinnedNumericQ &
 	BaseQ & {
-		mode: 'discrete'
+		mode: 'discrete' | 'binary'
 	}
 
 // TODO: test with live code that defines an actual binary q object
@@ -121,10 +130,36 @@ export type SplineNumericQ = BaseQ & {
 export type NumericQ = DiscreteNumericQ | BinaryNumericQ | ContinuousNumericQ | SplineNumericQ
 
 export type NumericTW = BaseTW & {
-	id: string
+	//id: string
 	term: NumericTerm
 	q: NumericQ
 }
+
+export type NumericTWDiscrete = BaseTW & {
+	type: 'NumTWDiscrete'
+	term: NumericTerm
+	q: DiscreteNumericQ
+}
+
+export type NumericTWBinary = BaseTW & {
+	type: 'NumTWBinary'
+	term: NumericTerm
+	q: BinaryNumericQ
+}
+
+export type NumericTWCont = BaseTW & {
+	type: 'NumTWCont'
+	term: NumericTerm
+	q: ContinuousNumericQ
+}
+
+export type NumericTWSpline = BaseTW & {
+	type: 'NumTWSpline'
+	term: NumericTerm
+	q: SplineNumericQ
+}
+
+export type NumericTWTypes = NumericTWDiscrete | NumericTWBinary | NumericTWCont | NumericTWSpline
 
 export type DefaultMedianQ = {
 	isAtomic?: true

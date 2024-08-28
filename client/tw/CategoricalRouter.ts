@@ -2,6 +2,7 @@ import { RawCatTW, CatTWTypes } from '#types'
 import { TwOpts } from './TwBase'
 import { CatValues, CatPredefinedGS, CatCustomGS, CatInstance } from './categorical'
 import { copyMerge } from '#rx'
+export { CatInstance } from './categorical'
 
 export class CategoricalRouter {
 	static init(tw: CatTWTypes, opts: TwOpts = {}): CatInstance {
