@@ -87,7 +87,7 @@ export class CatPredefinedGS extends TwBase {
 	// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
 	//    of the tw by any other code
 	//
-	static accepts(tw: RawCatTW): tw is CatTWPredefinedGS {
+	static accepts(tw: RawCatTW, opts: TwOpts = {}): tw is CatTWPredefinedGS {
 		const { term, q } = tw
 		if (term.type != 'categorical' || q.type != 'predefined-groupset') return false
 		const i = q.predefined_groupset_idx

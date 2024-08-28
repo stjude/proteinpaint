@@ -15,4 +15,15 @@ export class TwBase {
 		this.isAtomic = true
 		if (tw.$id) this.$id = tw.$id
 	}
+
+	static setHiddenValues(q: Q, term: Term) {
+		if (q.hiddenValues) return
+		q.hiddenValues = {}
+		// by default, fill-in with uncomputable values
+		if (term.values) {
+			for (const k in term.values) {
+				if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+			}
+		}
+	}
 }

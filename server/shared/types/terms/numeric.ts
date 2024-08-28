@@ -1,12 +1,38 @@
-import { BaseQ, BaseTW, TermValues, BaseTerm } from './term.ts'
+import { BaseQ, BaseTW, TermValues, BaseTerm, HiddenValues } from '../index'
 
-export type RawNumericTW = {
+export type RawNumTW = BaseTW & {
 	// id: string
-	type?: 'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'
-	term: NumericQ // must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst()
-	q: NumericQ
-	isAtomic?: true
-	$id?: string
+	type?: 'NumTWDiscrete'
+	term: NumericTerm // must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst()
+	q:
+		| {
+				type?: 'regular-bin'
+				mode?: 'discrete' | 'binary' //| 'spline'
+				bin_size?: number
+				first_bin?: {
+					stop: number
+				}
+				hiddenValues?: HiddenValues
+				preferredBins?: string
+		  }
+		| {
+				type: 'custom-bin'
+				mode?: 'discrete' | 'binary' //| 'spline'
+				lst: [NumericBin, ...NumericBin[]]
+				preferredBins?: string
+				median?: number
+		  }
+		| {
+				type?: undefined
+				mode: 'continuous'
+		  }
+		| {
+				type?: undefined
+				mode: 'spline'
+				knots: {
+					value: number
+				}[]
+		  }
 }
 
 export type NumericTerm = BaseTerm & {
@@ -65,6 +91,7 @@ export type NumericBin = StartUnboundedBin | FullyBoundedBin | StopUnboundedBin
 export type RegularNumericBinConfig = {
 	type: 'regular-bin' // another concrete value being assigned, instead of `string`
 	//regular-sized bins
+	mode?: 'discrete'
 	bin_size: number
 	// first_bin.stop is always required
 	first_bin: StartUnboundedBin | FullyBoundedBin
@@ -75,6 +102,7 @@ export type RegularNumericBinConfig = {
 
 export type CustomNumericBinConfig = {
 	type: 'custom-bin'
+	mode?: 'discrete' | 'binary'
 	// since ts will allow NumericBin[] to be empty,
 	// use this workaround to define a non-empty array
 	lst: [NumericBin, ...NumericBin[]]
@@ -135,31 +163,31 @@ export type NumericTW = BaseTW & {
 	q: NumericQ
 }
 
-export type NumericTWDiscrete = BaseTW & {
+export type NumTWDiscrete = BaseTW & {
 	type: 'NumTWDiscrete'
 	term: NumericTerm
 	q: DiscreteNumericQ
 }
 
-export type NumericTWBinary = BaseTW & {
+export type NumTWBinary = BaseTW & {
 	type: 'NumTWBinary'
 	term: NumericTerm
 	q: BinaryNumericQ
 }
 
-export type NumericTWCont = BaseTW & {
+export type NumTWCont = BaseTW & {
 	type: 'NumTWCont'
 	term: NumericTerm
 	q: ContinuousNumericQ
 }
 
-export type NumericTWSpline = BaseTW & {
+export type NumTWSpline = BaseTW & {
 	type: 'NumTWSpline'
 	term: NumericTerm
 	q: SplineNumericQ
 }
 
-export type NumericTWTypes = NumericTWDiscrete | NumericTWBinary | NumericTWCont | NumericTWSpline
+export type NumTWTypes = NumTWDiscrete | NumTWBinary | NumTWCont | NumTWSpline
 
 export type DefaultMedianQ = {
 	isAtomic?: true

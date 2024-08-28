@@ -60,6 +60,7 @@ export class TwRouter {
 
 	static async fill(tw /*: RawTW*/, opts: TwOpts = {}): Promise<TermWrapper> {
 		await TwRouter.preprocess(tw, opts?.vocabApi)
+		opts.defaultQ = opts.defaultQ?.[tw.term.type]
 
 		switch (tw.term.type) {
 			case 'categorical': {

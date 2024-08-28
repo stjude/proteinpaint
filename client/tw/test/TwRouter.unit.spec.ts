@@ -2,9 +2,7 @@ import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
 import { RawCatTW, RawTW, GroupEntry, TermGroupSetting } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
-import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
-import { CategoricalRouter } from '../CategoricalRouter'
 import { CatValues, CatPredefinedGS, CatCustomGS } from '../categorical'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
