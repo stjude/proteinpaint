@@ -15,6 +15,7 @@ Fixes:
 - allow empty categorical term.values
 - shouldn't show multiple testing correction when association test skipped due to limited sample size
 - fix sample view WSI checkbox issue
+- create a custom term with just one group the custom term has equal number of samples in each group
 
 
 ## 2.74.2
