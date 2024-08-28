@@ -728,9 +728,13 @@ class Barchart {
 			for (const chartId in this.chartsData.tests) {
 				testNum += this.chartsData.tests[chartId].reduce((a, b) => a + b.term2tests.filter(a => !a.skipped).length, 0)
 			}
+			const items =
+				testNum > 1
+					? [{ text: `* p-value < (0.05 / ${testNum} tests)`, noEditColor: true }]
+					: [{ text: `* p-value < 0.05`, noEditColor: true }]
 			legendGrps.push({
 				name: `<span style="${headingStyle}">Statistical Significance</span>`,
-				items: [{ text: `* p-value < (0.05 / ${testNum} tests)`, noEditColor: true }]
+				items
 			})
 		}
 
