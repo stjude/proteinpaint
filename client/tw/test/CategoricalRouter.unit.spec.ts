@@ -105,7 +105,8 @@ tape(`fill() default q.type='values'`, async test => {
 				term: tw.term,
 				q: {
 					type: 'values',
-					isAtomic: true
+					isAtomic: true,
+					hiddenValues: {}
 				},
 				isAtomic: true
 			},
@@ -136,7 +137,8 @@ tape('fill() predefined-groupset', async test => {
 				q: {
 					type: 'predefined-groupset',
 					predefined_groupset_idx: 0,
-					isAtomic: true
+					isAtomic: true,
+					hiddenValues: {}
 				},
 				isAtomic: true
 			},
@@ -162,7 +164,7 @@ tape('fill() custom-groupset', async test => {
 	}
 
 	const twCopy = structuredClone(tw)
-
+	twCopy.q.hiddenValues = {}
 	try {
 		const fullTw = await CategoricalRouter.fill(tw, { vocabApi })
 		const testedKeys = new Set()
@@ -201,7 +203,7 @@ tape('init() categorical', async test => {
 			//id: term.id,
 			term,
 			isAtomic: true as const,
-			q: { type: 'predefined-groupset', isAtomic: true as const }
+			q: { type: 'predefined-groupset', isAtomic: true as const, hiddenValues: {} }
 		}
 
 		const handler = await CategoricalRouter.initRaw(tw, { vocabApi })

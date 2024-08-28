@@ -94,7 +94,7 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 					sample_type: '1',
 					hashtmldetail: true
 				},
-				q: { type: 'values', isAtomic: true }
+				q: { type: 'values', isAtomic: true, hiddenValues: {} }
 			},
 			'should fill-in a minimal dictionary tw with only {id}'
 		)
