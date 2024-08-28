@@ -14,6 +14,7 @@ Fixes:
 - matrix groups should be sorted based on order defined in divideby term
 - allow empty categorical term.values
 - shouldn't show multiple testing correction when association test skipped due to limited sample size
+- fix sample view WSI checkbox issue
 
 
 ## 2.74.2
