@@ -1,1 +1,4 @@
+Fixes:
+- create a custom term with just one group the custom term has equal number of samples in each group
+
 

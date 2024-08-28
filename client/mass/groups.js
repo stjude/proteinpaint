@@ -104,7 +104,18 @@ class MassGroups {
 		}
 
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
-		const tw = getSamplelstTW(samplelstGroups, name)
+		const tw = getSamplelstTW(samplelstGroups, name, this.app.vocabApi)
+
+		//when there is only one group and need to create a others group
+		if (groups.length == 1) {
+			// find the sample count in current cohort
+			const countSampleCount = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
+			const countSampleCountInt = parseInt(countSampleCount, 10)
+
+			// get the sample count in "others" group
+			const othersGroup = Object.values(tw.term.values).find(v => v.key.startsWith('Not in'))
+			othersGroup.othersGroupSampleNum = countSampleCountInt - othersGroup.list.length
+		}
 
 		// TEMP change, to be done elsewhere e.g. in getSamplelstTW()
 		for (const g of tw.q.groups) {
@@ -198,7 +209,7 @@ class MassGroups {
 				: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
 			const [c1, c2] = table.addRow()
 			c1.html(`${colorSquare} ${grp.label}:`)
-			c2.html(`${grp.list.length} samples`)
+			c2.html(`${grp.othersGroupSampleNum || grp.list.length} samples`)
 		}
 
 		let row = menuDiv.append('div')
@@ -739,8 +750,6 @@ export function addNewGroup(app, filter, groups) {
 }
 
 export function getSamplelstTWFromIds(ids) {
-	const qgroups = []
-	let samples
 	const name = 'group'
 	const values = ids.map(id => {
 		return { sampleId: id }
