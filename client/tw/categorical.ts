@@ -17,7 +17,7 @@ import { copyMerge } from '#rx'
 export type CatInstance = CatValues | CatPredefinedGS | CatCustomGS
 export type CatTypes = typeof CatValues | typeof CatPredefinedGS | typeof CatCustomGS
 
-export class CategoricalBase extends TwBase {
+export class CategoricalBase {
 	static init(tw: CatTWTypes, opts: TwOpts = {}): CatInstance {
 		switch (tw.type) {
 			case 'CatTWValues':

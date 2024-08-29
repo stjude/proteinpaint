@@ -27,30 +27,16 @@ import { roundValueAuto } from '#shared/roundValue'
 
 const numTermTypes = new Set(['integer', 'float', 'geneExpression', 'metaboliteIntensity'])
 
-export class NumericBase extends TwBase {
-	term: NumericTerm
-	q: NumericQ
-	#tw: NumTWTypes
-	#opts: TwOpts
-
-	// declare a constructor, to narrow the tw type
-	constructor(tw: NumTWTypes, opts: TwOpts = {}) {
-		super(tw, opts)
-		this.term = tw.term
-		this.q = tw.q
-		this.#tw = tw
-		this.#opts = opts
-	}
-
+export class NumericBase {
 	static async fill(tw: RawNumTW, opts: TwOpts = {}): Promise<NumTWTypes> {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
-		// if (
-		// 	tw.term.type != 'integer' &&
-		// 	tw.term.type != 'float' &&
-		// 	tw.term.type != 'geneExpression' &&
-		// 	tw.term.type != 'metaboliteIntensity'
-		// )
-		if (!numTermTypes.has(tw.term.type)) throw `non-numeric term.type='${tw.term.type}'`
+		if (
+			tw.term.type != 'integer' &&
+			tw.term.type != 'float' &&
+			tw.term.type != 'geneExpression' &&
+			tw.term.type != 'metaboliteIntensity'
+		)
+			/*if (!numTermTypes.has(tw.term.type))*/ throw `non-numeric term.type='${tw.term.type}'`
 
 		// preprocessing the preferredBins to make sure that subsequent type guard functions
 		// have a more filled-in q object to correctly detect the raw tw type. Otherwise,
