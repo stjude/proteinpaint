@@ -933,7 +933,7 @@ export async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 }
 
 // add migrated tw fillers here, by term.type
-const routedTermTypes = new Set(['categorical'])
+const routedTermTypes = new Set(['categorical', 'integer', 'float'])
 
 export async function fillTermWrapper(
 	tw: TermWrapper,
@@ -949,8 +949,7 @@ export async function fillTermWrapper(
 	if (routedTermTypes.has(tw.term.type)) {
 		// term types that have been migrated to TwRouter
 		// will use
-		const defaultQ = defaultQByTsHandler?.categorical || null
-		const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQ })
+		const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQByTsHandler })
 		Object.assign(tw, fullTw)
 		mayValidateQmode(tw)
 		// this should be moved to the term-type specific handler??

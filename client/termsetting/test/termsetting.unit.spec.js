@@ -94,11 +94,11 @@ tape('fillTermWrapper - continuous term', async function (test) {
 		hiddenValues: {}
 	}
 	const tw3 = structuredClone(await vocabApi.getterm('d'))
-	await fillTermWrapper(tw3, vocabApi, defaultQ)
+	await fillTermWrapper(tw3, vocabApi, structuredClone(defaultQ))
 	test.deepEqual(tw3.q, expectedQ, 'should fill q with defaultQ when defaultQ.preferredBins=median')
 	const tw4 = structuredClone(await vocabApi.getterm('d'))
 	tw4.q = { mode: 'continuous' }
-	await fillTermWrapper(tw4, vocabApi, defaultQ)
+	await fillTermWrapper(tw4, vocabApi, structuredClone(defaultQ))
 	test.deepEqual(tw4.q, expectedQ, 'should overwrite tw.q with defaultQ when defaultQ.preferredBins=median')
 
 	defaultQ = {
@@ -132,7 +132,10 @@ tape('fillTermWrapper - continuous term', async function (test) {
 			bin_size: 0.4,
 			stopinclusive: true,
 			first_bin: { startunbounded: true, stop: 0.2, stopinclusive: true },
-			hiddenValues: {}
+			mode: 'discrete',
+			hiddenValues: {},
+			isAtomic: true,
+			test: 'apple'
 		},
 		'should fill tw.q with tw.term.bins.less when defaultQ.preferredBins=less'
 	)
@@ -146,14 +149,6 @@ tape('fillTermWrapper - continuous term', async function (test) {
 		{
 			isAtomic: true,
 			mode: 'continuous',
-			type: 'regular-bin',
-			bin_size: 0.2,
-			stopinclusive: true,
-			first_bin: {
-				startunbounded: true,
-				stop: 0.2,
-				stopinclusive: true
-			},
 			hiddenValues: {}
 		},
 		'should merge defaultQ into tw.q when defaultQ.preferredBins is not defined'

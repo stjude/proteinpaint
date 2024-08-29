@@ -42,11 +42,16 @@ export class NumericBase {
 		// have a more filled-in q object to correctly detect the raw tw type. Otherwise,
 		// the first type guard will have to perform these steps, which will require the
 		// type guard functions to be called in a certain order, not ideal.
+		if (opts.defaultQ) opts.defaultQ.isAtomic = true
 		const preferredBins = opts.defaultQ?.preferredBins
 		if (preferredBins) {
-			if (tw.term.bins[preferredBins]) tw.q = structuredClone(tw.term.bins[preferredBins])
-			else if (preferredBins == 'median') {
-				if (!isNumeric(opts.defaultQ.median)) {
+			const q = opts.defaultQ
+			if (tw.term.bins[preferredBins]) {
+				tw.q = structuredClone(tw.term.bins[preferredBins])
+				delete q.preferredBins
+			} else if (preferredBins == 'median') {
+				if (!q.type || q.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
+				if (!isNumeric(q.median)) {
 					const result = await opts.vocabApi.getPercentile(tw.term.id, [50])
 					if (!result.values) throw '.values[] missing from vocab.getPercentile()'
 					const median = roundValueAuto(result.values[0])
@@ -54,11 +59,11 @@ export class NumericBase {
 					opts.defaultQ.median = median
 				}
 			} else {
-				// defaultQ is an actual q{} object
-				// merge it into tw.q
-				copyMerge(tw.q, opts.defaultQ)
+				throw `unrecognized defaultQ.preferredBins='${preferredBins}'`
 			}
-		} else if (opts.defaultQ) {
+		}
+
+		if (opts.defaultQ) {
 			opts.defaultQ.isAtomic = true
 			// merge defaultQ into tw.q
 			copyMerge(tw.q, opts.defaultQ)
@@ -133,7 +138,6 @@ export class NumCustomBins extends TwBase {
 
 		if (opts.defaultQ) {
 			opts.defaultQ.isAtomic = true
-			const dbq = opts.defaultQ
 			if (opts.defaultQ.preferredBins == 'median') {
 				const median = opts.defaultQ.median
 				if (!isNumeric(median)) throw 'median value not a number'
@@ -154,6 +158,11 @@ export class NumCustomBins extends TwBase {
 						label: '≥' + median
 					} as StopUnboundedBin
 				]
+			} else {
+				opts.defaultQ.isAtomic = true
+				// defaultQ is an actual q{} object
+				// merge it into tw.q
+				copyMerge(tw.q, opts.defaultQ)
 			}
 		}
 		if (!tw.q.lst) throw `missing q.lst[] for custom-bin`
@@ -183,6 +192,7 @@ export class NumCont extends TwBase {
 	static accepts(tw: RawNumTW, opts: TwOpts = {}): tw is NumTWCont {
 		//const { term, q } = tw
 		if (tw.q.mode != 'continuous') return false
+		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
 		tw.type = 'NumTWCont'
 		return true
 	}

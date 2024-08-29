@@ -4,6 +4,7 @@ import { Term } from '#types'
 export type TwOpts = {
 	vocabApi?: any // TODO
 	defaultQ?: any // TODO
+	defaultQByTsHandler?: any // TODO
 	//usecase?: any // TODO
 }
 

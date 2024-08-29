@@ -82,6 +82,7 @@ tape(`fill() q.type=custom-bin opts.defaultQ.preferredBins='median'`, async test
 	}
 
 	const defaultQ = {
+		type: 'custom-bin',
 		preferredBins: 'median'
 	}
 

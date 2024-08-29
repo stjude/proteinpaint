@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { RawCatTW, GroupEntry, TermGroupSetting } from '#types'
+import { RawCatTW, GroupEntry, TermGroupSetting, CatTWValues, CatTWPredefinedGS, CatTWCustomGS } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS } from '../categorical'
@@ -104,7 +104,7 @@ tape(`fill() default q.type='values'`, async test => {
 				},
 				isAtomic: true,
 				type: 'CatTWValues'
-			},
+			} satisfies CatTWValues,
 			`should fill-in categorical q with no type with default q.type='values'`
 		)
 	} catch (e: any) {
@@ -136,7 +136,7 @@ tape('fill() predefined-groupset', async test => {
 				},
 				isAtomic: true,
 				type: 'CatTWPredefinedGS'
-			},
+			} satisfies CatTWPredefinedGS,
 			`should fill-in a categorical q.type='predefined-groupset'`
 		)
 	} catch (e: any) {
@@ -158,12 +158,22 @@ tape('fill() custom-groupset', async test => {
 		isAtomic: true
 	}
 
-	const twCopy = structuredClone(tw)
-	twCopy.q.hiddenValues = {}
-	twCopy.type = 'CatTWCustomGS'
+	const expected = {
+		term: tw.term, // term is not filled-in, so ok to reuse raw tw.term here
+		q: {
+			isAtomic: true,
+			type: 'custom-groupset',
+			name: 'AAA vs BBB',
+			customset: getCustomSet(),
+			hiddenValues: {}
+		},
+		type: 'CatTWCustomGS',
+		isAtomic: true
+	} satisfies CatTWCustomGS
+
 	try {
 		const fullTw = await CategoricalBase.fill(tw, { vocabApi })
-		test.deepEqual(fullTw, twCopy, `should fill-in a categorical q.type='custom-groupset'`)
+		test.deepEqual(fullTw, expected, `should fill-in a categorical q.type='custom-groupset'`)
 	} catch (e: any) {
 		test.fail(e)
 	}
