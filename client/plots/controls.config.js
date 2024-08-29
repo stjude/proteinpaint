@@ -1,7 +1,4 @@
 import { getCompInit, multiInit } from '../rx'
-import { overlayInit } from './controls.overlay'
-import { term1uiInit } from './controls.term1'
-import { divideInit } from './controls.divide'
 import { initRadioInputs } from '../dom/radio2'
 import { termsettingInit } from '#termsetting'
 import { rgb } from 'd3-color'
@@ -44,16 +41,6 @@ class TdbConfigUiInit {
 								parent: this
 							})
 						)
-					} else if (obj.type in initByComponent) {
-						componentPromises[obj.type] = await initByComponent[obj.type]({
-							app: this.app,
-							holder: this.dom.table.append('tr'),
-							id: this.id,
-							usecase: obj.usecase,
-							defaultQ4fillTW: obj.defaultQ4fillTW,
-							numericEditMenuVersion: obj.numericEditMenuVersion,
-							debug: this.opts.debug
-						})
 					}
 				} else if (key in initByInput) {
 					this.inputs[key] = await initByInput[key]({
@@ -63,13 +50,6 @@ class TdbConfigUiInit {
 						instanceNum: this.instanceNum,
 						debug: this.opts.debug,
 						parent: this
-					})
-				} else if (key in initByComponent) {
-					componentPromises[key] = await initByComponent[key]({
-						app: this.app,
-						holder: this.dom.table.append('tr'),
-						id: this.id,
-						debug: this.opts.debug
 					})
 				} else {
 					throw `unsupported opts.inputs[] entry of '${key}' for controlsInit()`
@@ -759,10 +739,4 @@ export const initByInput = {
 	multiCheckbox: setMultiCheckbox,
 	custom: setCustomInput,
 	term: setTermInput
-}
-
-const initByComponent = {
-	term1: term1uiInit,
-	overlay: overlayInit,
-	divideBy: divideInit
 }
