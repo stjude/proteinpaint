@@ -28,6 +28,20 @@ import { roundValueAuto } from '#shared/roundValue'
 const numTermTypes = new Set(['integer', 'float', 'geneExpression', 'metaboliteIntensity'])
 
 export class NumericBase extends TwBase {
+	term: NumericTerm
+	q: NumericQ
+	#tw: NumTWTypes
+	#opts: TwOpts
+
+	// declare a constructor, to narrow the tw type
+	constructor(tw: NumTWTypes, opts: TwOpts = {}) {
+		super(tw, opts)
+		this.term = tw.term
+		this.q = tw.q
+		this.#tw = tw
+		this.#opts = opts
+	}
+
 	static async fill(tw: RawNumTW, opts: TwOpts = {}): Promise<NumTWTypes> {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		// if (

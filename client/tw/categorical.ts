@@ -5,15 +5,61 @@ import {
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ,
 	BaseGroupSet,
+	CatTWTypes,
 	CatTWValues,
 	CatTWPredefinedGS,
 	CatTWCustomGS,
 	RawCatTW
 } from '#types'
 import { TwBase, TwOpts } from './TwBase'
+import { copyMerge } from '#rx'
 
 export type CatInstance = CatValues | CatPredefinedGS | CatCustomGS
 export type CatTypes = typeof CatValues | typeof CatPredefinedGS | typeof CatCustomGS
+
+export class CategoricalBase extends TwBase {
+	static init(tw: CatTWTypes, opts: TwOpts = {}): CatInstance {
+		switch (tw.type) {
+			case 'CatTWValues':
+				return new CatValues(tw, opts)
+
+			case 'CatTWPredefinedGS':
+				return new CatPredefinedGS(tw, opts)
+
+			case 'CatTWCustomGS':
+				return new CatCustomGS(tw, opts)
+
+			default:
+				throw `unknown categorical class`
+		}
+	}
+
+	//
+	static initRaw(rawTW: RawCatTW, opts: TwOpts = {}): CatInstance {
+		const tw: CatTWTypes = CategoricalBase.fill(rawTW, opts)
+		return CategoricalBase.init(tw, opts)
+	}
+
+	/** tw.term must already be filled-in at this point */
+	static fill(tw: RawCatTW, opts: TwOpts = {}): CatTWTypes {
+		if (!tw.term) throw `missing tw.term, must already be filled in`
+		if (tw.term.type != 'categorical') throw `incorrect term.type='${tw.term?.type}', expecting 'categorical'`
+		// GDC or other dataset may allow missing or empty term.values
+		//if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values`
+
+		if (opts.defaultQ != null) {
+			opts.defaultQ.isAtomic = true
+			// merge defaultQ into tw.q
+			copyMerge(tw.q, opts.defaultQ)
+		}
+		if (!tw.q) tw.q = { type: 'values', isAtomic: true }
+
+		if (CatValues.accepts(tw)) return tw
+		else if (CatPredefinedGS.accepts(tw)) return tw
+		else if (CatCustomGS.accepts(tw)) return tw
+		else throw `cannot process the raw categorical tw`
+	}
+}
 
 export class CatValues extends TwBase {
 	term: CategoricalTerm

@@ -1,8 +1,8 @@
 import { TermWrapper } from '#updated-types'
 import { TwOpts } from './TwBase'
 import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
-import { CategoricalRouter } from './CategoricalRouter'
-import { CatValues, CatPredefinedGS, CatCustomGS, CatInstance, CatTypes } from './categorical'
+import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS, CatInstance, CatTypes } from './categorical'
+import { NumericBase } from './numeric'
 
 export type TwHandlerInstance = CatInstance // | NumericHandlerInstance | ...
 export type HandlerTypes = CatTypes // | ...
@@ -64,11 +64,11 @@ export class TwRouter {
 
 		switch (tw.term.type) {
 			case 'categorical': {
-				return await CategoricalRouter.fill(tw, opts)
+				return await CategoricalBase.fill(tw, opts)
 			}
-			// case 'integer':
-			// case 'float':
-			// 	return
+			case 'integer':
+			case 'float':
+				return await NumericBase.fill(tw, opts)
 
 			// case 'condition':
 			// 	return

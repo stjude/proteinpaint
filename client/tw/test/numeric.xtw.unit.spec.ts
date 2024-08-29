@@ -108,28 +108,3 @@ tape(`fill() q.type=custom-bin opts.defaultQ.preferredBins='median'`, async test
 
 	test.end()
 })
-
-// tape('fill() custom-groupset', async test => {
-// 	const tw: RawCatTW = {
-// 		term: termjson.diaggrp,
-// 		q: {
-// 			isAtomic: true,
-// 			type: 'custom-groupset',
-// 			name: 'AAA vs BBB',
-// 			customset: getCustomSet()
-// 		},
-// 		isAtomic: true
-// 	}
-
-// 	const twCopy = structuredClone(tw)
-// 	twCopy.type = 'CatTWCustomGS'
-
-// 	try {
-// 		const fullTw = await CategoricalRouter.fill(tw, { vocabApi })
-// 		test.deepEqual(fullTw, twCopy, `should fill-in a categorical q.type='custom-groupset'`)
-// 	} catch (e: any) {
-// 		test.fail(e)
-// 	}
-
-// 	test.end()
-// })
