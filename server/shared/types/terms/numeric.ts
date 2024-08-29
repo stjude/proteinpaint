@@ -1,38 +1,47 @@
-import { BaseQ, BaseTW, TermValues, BaseTerm, HiddenValues } from '../index'
+import { MinBaseQ, BaseTW, TermValues, BaseTerm, HiddenValues } from '../index'
+
+type RawRegularBin = {
+	type?: 'regular-bin'
+	mode?: 'discrete' | 'binary'
+	bin_size?: number
+	first_bin?: {
+		stop: number
+	}
+	hiddenValues?: HiddenValues
+	preferredBins?: string
+	isAtomic?: true
+}
+
+type RawCustomBin = {
+	type: 'custom-bin'
+	mode?: 'discrete' | 'binary'
+	// lst may be missing if median
+	lst?: [NumericBin, ...NumericBin[]]
+	preferredBins?: string
+	median?: number
+	isAtomic?: true
+}
+
+type RawContinuousQ = {
+	type?: undefined // todo
+	mode: 'continuous'
+	isAtomic?: true
+}
+
+type RawSplineQ = {
+	type?: undefined // todo
+	mode: 'spline'
+	knots: {
+		value: number
+	}[]
+	isAtomic?: true
+}
 
 export type RawNumTW = BaseTW & {
 	// id: string
-	type?: 'NumTWDiscrete'
+	type?: 'NumTWRegularBin' | 'NumTWCustomBin' | 'NumTWCont' | 'NumTWSpline'
 	term: NumericTerm // must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst()
-	q:
-		| {
-				type?: 'regular-bin'
-				mode?: 'discrete' | 'binary' //| 'spline'
-				bin_size?: number
-				first_bin?: {
-					stop: number
-				}
-				hiddenValues?: HiddenValues
-				preferredBins?: string
-		  }
-		| {
-				type: 'custom-bin'
-				mode?: 'discrete' | 'binary' //| 'spline'
-				lst: [NumericBin, ...NumericBin[]]
-				preferredBins?: string
-				median?: number
-		  }
-		| {
-				type?: undefined
-				mode: 'continuous'
-		  }
-		| {
-				type?: undefined
-				mode: 'spline'
-				knots: {
-					value: number
-				}[]
-		  }
+	q: RawRegularBin | RawCustomBin | RawContinuousQ | RawSplineQ
 }
 
 export type NumericTerm = BaseTerm & {
@@ -42,6 +51,7 @@ export type NumericTerm = BaseTerm & {
 	type: 'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'
 	bins: PresetNumericBins
 	values?: TermValues
+	unit?: string
 	/*densityNotAvailable?: boolean //Not used?
 	logScale?: string | number
 	max?: number
@@ -98,6 +108,7 @@ export type RegularNumericBinConfig = {
 
 	// if last_bin?.start is set, then a fixed last bin is used; otherwise it's not fixed and computed from data
 	last_bin?: StopUnboundedBin | FullyBoundedBin
+	label_offset?: number
 }
 
 export type CustomNumericBinConfig = {
@@ -131,24 +142,24 @@ export type PresetNumericBins = {
 export type BinnedNumericQ = RegularNumericBinConfig | CustomNumericBinConfig
 
 export type DiscreteNumericQ = BinnedNumericQ &
-	BaseQ & {
+	MinBaseQ & {
 		mode: 'discrete' | 'binary'
 	}
 
 // TODO: test with live code that defines an actual binary q object
-export type BinaryNumericQ = BaseQ & {
+export type BinaryNumericQ = MinBaseQ & {
 	mode: 'binary'
 	type: 'custom-bin'
 	// tuple type with 2 members
 	lst: [StartUnboundedBin | FullyBoundedBin, StopUnboundedBin | FullyBoundedBin]
 }
 
-export type ContinuousNumericQ = BaseQ & {
+export type ContinuousNumericQ = MinBaseQ & {
 	mode: 'continuous'
 	//scale?: string
 }
 
-export type SplineNumericQ = BaseQ & {
+export type SplineNumericQ = MinBaseQ & {
 	mode: 'spline'
 	knots: {
 		value: number
@@ -169,6 +180,18 @@ export type NumTWDiscrete = BaseTW & {
 	q: DiscreteNumericQ
 }
 
+export type NumTWRegularBin = BaseTW & {
+	type: 'NumTWRegularBin'
+	term: NumericTerm
+	q: RegularNumericBinConfig
+}
+
+export type NumTWCustomBin = BaseTW & {
+	type: 'NumTWCustomBin'
+	term: NumericTerm
+	q: CustomNumericBinConfig
+}
+
 export type NumTWBinary = BaseTW & {
 	type: 'NumTWBinary'
 	term: NumericTerm
@@ -187,7 +210,7 @@ export type NumTWSpline = BaseTW & {
 	q: SplineNumericQ
 }
 
-export type NumTWTypes = NumTWDiscrete | NumTWBinary | NumTWCont | NumTWSpline
+export type NumTWTypes = NumTWDiscrete | NumTWRegularBin | NumTWCustomBin | NumTWBinary | NumTWCont | NumTWSpline
 
 export type DefaultMedianQ = {
 	isAtomic?: true

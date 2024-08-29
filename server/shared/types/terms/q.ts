@@ -12,7 +12,7 @@ export type MinBaseQ = {
 	*/
 	hiddenValues?: HiddenValues
 	/**indicates this object should not be extended by a copy-merge tool */
-	isAtomic?: boolean
+	isAtomic?: true
 	name?: string
 	reuseId?: string
 }
