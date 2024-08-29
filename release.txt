@@ -1,1 +1,2 @@
-
+Feature
+- Able to open an app card on an example with new `example` URL parameter.
