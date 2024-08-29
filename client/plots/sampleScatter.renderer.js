@@ -681,7 +681,7 @@ export function setRenderers(self) {
 		let offsetY = 25
 		if (!self.config.colorTW && !self.config.shapeTW && !self.config.colorColumn) {
 			if (self.config.scaleDotTW) {
-				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX + 30},${self.legendHeight - 150})`)
+				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX + 45},${self.legendHeight - 150})`)
 				self.drawScaleDotLegend(chart)
 			}
 			return
