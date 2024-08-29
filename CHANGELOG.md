@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - wsiviewer - load files and metadata from db
 - Add brain imaging as individual chart type, use a sample table to select samples to plot on template.
+- Able to open an app card on an example with new `example` URL parameter.
 
 Fixes:
 - Disable sample view download data button when an invalid sample id is entered.
