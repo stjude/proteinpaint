@@ -72,16 +72,8 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 	switch (usecase.target) {
 		case 'barchart':
 		case 'summary':
-			if (usecase.detail == 'term0' && term.type == 'geneVariant') {
-				// hide geneVariant terms for Divide by
-				return uses
-			}
-			if (usecase.detail == 'term2' && term.type == 'geneVariant' && usecase.term1type == 'geneVariant') {
-				// hide geneVariant terms for Overlay when term1 is a geneVariant term
-				return uses
-			}
 			if (term.type && term.type !== 'survival') uses.add('plot')
-			if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
+			if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
 			return uses
 
 		case 'matrix':
@@ -127,15 +119,9 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (child_types.includes('condition')) uses.add('branch')
 				return uses
 			}
-			if (usecase.detail === 'term2') {
-				if (term.type && term.type != 'survival') uses.add('plot')
-				// -- leave it up to user, don't restrict overlay term by ancestry
-				// if (usecase.term.ancestors.includes(term.id)) return false
-				if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
-				return uses
-			}
-			if (usecase.detail == 'term0') {
-				uses.add('plot') // any term type can be used to divide charts
+			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
+				if (term.type && term.type != 'condition' && term.type != 'survival') uses.add('plot')
+				if (hasAllowedChildTypes(child_types, ['condition', 'survival'])) uses.add('branch')
 				return uses
 			}
 
@@ -145,24 +131,11 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (child_types.includes('survival')) uses.add('branch')
 				return uses
 			}
-			if (usecase.detail === 'term2') {
-				if (term.type != 'survival') {
-					// do not allow overlaying one survival term over another
-					if (term.type) uses.add('plot')
-					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
-				}
+			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
+				if (term.type && term.type != 'survival') uses.add('plot')
+				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
 				return uses
 			}
-			if (usecase.detail == 'term0') {
-				// divide by
-				if (term.type) uses.add('plot')
-				if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
-				return uses
-			}
-
-			if (term.isleaf) uses.add('plot')
-			else uses.add('branch')
-			return uses
 
 		case 'regression':
 			if (usecase.detail == 'outcome') {
@@ -173,7 +146,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				}
 				if (usecase.regressionType == 'logistic') {
 					if (term.type && term.type != 'survival') uses.add('plot')
-					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
+					if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
 					return uses
 				} else if (usecase.regressionType == 'cox') {
 					if (term.type == 'condition' || term.type == 'survival') uses.add('plot')
@@ -206,9 +179,21 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 	}
 }
 
-function hasNonSurvivalTermChild(child_types) {
-	if (!child_types.length) return false
-	return child_types.length > 1 || child_types[0] != 'survival'
+// determine if the term has at least one child type that
+// is not excluded
+function hasAllowedChildTypes(child_types, excluded_types) {
+	if (!child_types.length) {
+		// term does not have children
+		return false
+	}
+	if (!excluded_types?.length) {
+		// no excluded types
+		return true
+	}
+	if (child_types.some(type => !excluded_types.includes(type))) {
+		// at least one child type is not excluded
+		return true
+	}
 }
 
 function hasNumericChild(child_types) {
