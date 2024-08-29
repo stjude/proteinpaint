@@ -681,7 +681,7 @@ export function setRenderers(self) {
 		let offsetY = 25
 		if (!self.config.colorTW && !self.config.shapeTW && !self.config.colorColumn) {
 			if (self.config.scaleDotTW) {
-				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 150})`)
+				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX + 30},${self.legendHeight - 150})`)
 				self.drawScaleDotLegend(chart)
 			}
 			return
@@ -891,7 +891,7 @@ export function setRenderers(self) {
 		titleG.append('text').text(self.config.scaleDotTW.term.name).style('font-weight', 'bold')
 		const start = roundValueAuto(chart.scaleMin).toString()
 		const end = roundValueAuto(chart.scaleMax).toString()
-		const x = 10
+		const x = 30
 		const y = 40
 		const defaultSize = 16 //icons default size
 
@@ -900,7 +900,7 @@ export function setRenderers(self) {
 		const minRadius = minSize / 2
 		const maxRadius = maxSize / 2
 		const minG = scaleG.append('g').attr('transform', `translate(${x},${y})`)
-		const shift = 5 + start.toString().length * 7
+		const shift = 30
 		const minPath = minG
 			.append('path')
 			.attr('d', shapes[0])
@@ -937,7 +937,7 @@ export function setRenderers(self) {
 
 		maxG
 			.append('text')
-			.attr('x', isAscending ? maxSize + shift : minSize + shift)
+			.attr('x', isAscending ? maxSize + 5 : minSize + 5)
 			.attr('y', 5)
 			.style('font-size', '.8em')
 			.text(end)
