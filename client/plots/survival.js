@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '../rx'
-import { controlsInit } from './controls'
+import { controlsInit, term0_term2_defaultQ } from './controls'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
@@ -96,16 +96,26 @@ class TdbSurvival {
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 					inputs: [
 						{
-							type: 'overlay',
+							type: 'term',
+							configKey: 'term2',
+							chartType: 'survival',
 							usecase: { target: 'survival', detail: 'term2' },
-
-							// when numeric term is used as overlay, do not allow continuous mode
-							// must set it, as it defaults to ['continuous','discrete']
-							numericEditMenuVersion: ['discrete']
+							title: 'Overlay data',
+							label: 'Overlay',
+							vocabApi: this.app.vocabApi,
+							numericEditMenuVersion: ['discrete'],
+							defaultQ4fillTW: term0_term2_defaultQ
 						},
 						{
-							type: 'divideBy',
-							usecase: { target: 'survival', detail: 'term0' }
+							type: 'term',
+							configKey: 'term0',
+							chartType: 'survival',
+							usecase: { target: 'survival', detail: 'term0' },
+							title: 'Divide by data',
+							label: 'Divide by',
+							vocabApi: this.app.vocabApi,
+							numericEditMenuVersion: ['discrete'],
+							defaultQ4fillTW: term0_term2_defaultQ
 						},
 						{
 							label: 'Chart width',

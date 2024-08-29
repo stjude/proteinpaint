@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '../rx'
-import { controlsInit } from './controls'
+import { controlsInit, term0_term2_defaultQ } from './controls'
 import setViolinRenderer from './violin.renderer'
 import htmlLegend from '../dom/html.legend'
 import { fillTermWrapper } from '#termsetting'
@@ -79,18 +79,23 @@ class ViolinPlot {
 		if (this.opts.mode == 'minimal') return
 		const inputs = [
 			{
-				type: 'term1',
-				// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
-				usecase: { target: 'violin', detail: 'term' }
+				type: 'term',
+				configKey: 'term',
+				chartType: 'violin',
+				usecase: { target: 'violin', detail: 'term' },
+				vocabApi: this.app.vocabApi,
+				menuOptions: 'edit'
 			},
 			{
-				type: 'overlay',
-				title: 'Overlay data',
-				//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
-				// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
-
+				type: 'term',
+				configKey: 'term2',
+				chartType: 'violin',
 				usecase: { target: 'violin', detail: 'term2' },
-				callback: value => (this.settings.plotThickness = undefined)
+				title: 'Overlay data',
+				label: 'Overlay',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: this.opts.numericEditMenuVersion,
+				defaultQ4fillTW: term0_term2_defaultQ
 			},
 			{
 				label: 'Orientation',
