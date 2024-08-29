@@ -13,6 +13,7 @@ import {
 } from '#types'
 import { TwBase, TwOpts } from './TwBase'
 import { copyMerge } from '#rx'
+import { set_hiddenvalues } from '#termsetting'
 
 export type CatInstance = CatValues | CatPredefinedGS | CatCustomGS
 export type CatTypes = typeof CatValues | typeof CatPredefinedGS | typeof CatCustomGS
@@ -87,7 +88,7 @@ export class CatValues extends TwBase {
 		if (!q.type) q.type = 'values'
 		if (term.type != 'categorical' || q.type != 'values') return false
 		// GDC or other dataset may allow missing term.values
-		if (!term.values) term.values = {} //throw 'no term.values defined'
+		if (!term.values) term.values = {}
 		const numVals = Object.keys(tw.term.values).length
 		// GDC or other dataset may allow empty term.values
 		//if (!numVals) throw `empty term.values`
@@ -105,6 +106,7 @@ export class CatValues extends TwBase {
 			// 	}
 			// }
 		}
+		set_hiddenvalues(q, term)
 		tw.type = 'CatTWValues'
 		return true
 	}
@@ -158,6 +160,7 @@ export class CatPredefinedGS extends TwBase {
 			// 	}
 			// }
 		}
+		set_hiddenvalues(q, term)
 		tw.type = 'CatTWPredefinedGS'
 		return true
 	}
@@ -203,6 +206,7 @@ export class CatCustomGS extends TwBase {
 			// 	}
 			// }
 		}
+		set_hiddenvalues(q, term)
 		tw.type = 'CatTWCustomGS'
 		return true
 	}
