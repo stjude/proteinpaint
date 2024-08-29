@@ -805,7 +805,6 @@ export function setRenderers(self) {
 			self.drawScaleDotLegend(chart)
 		}
 		if (self.config.shapeTW) {
-
 			offsetX = !self.config.colorTW ? 0 : 300
 			offsetY = 60
 			title = `${getTitle(self.config.shapeTW.term.name)}`
@@ -815,7 +814,7 @@ export function setRenderers(self) {
 				const shapeG = legendG.append('g')
 
 				shapeG.append('text').attr('x', offsetX).attr('y', offsetY).text(title).style('font-weight', 'bold')
-				offsetY += step + 10
+				offsetY += step
 				const color = 'gray'
 				for (const [key, shape] of chart.shapeLegend) {
 					if (key == 'Ref') continue
