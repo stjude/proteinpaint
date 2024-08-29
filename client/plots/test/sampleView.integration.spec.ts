@@ -1,8 +1,8 @@
 import * as helpers from '../../test/front.helpers.js'
 import tape from 'tape'
-import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
-import { runproteinpaint } from '#src/app'
-import { select } from 'd3-selection'
+// import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
+// import { runproteinpaint } from '#src/app'
+// import { select } from 'd3-selection'
 
 /**
  Tests:
@@ -129,6 +129,9 @@ tape('Multiple samples', function (test) {
 			const sample = samples.find(s => s.sampleName === o.text)
 			test.ok(sample, `Should render ${o.text} in the multi-select.`)
 		}
+
+		const discoPlots = sv.dom.plotsDiv.selectAll('#sjpp_disco_plot_holder_div').nodes()
+		test.equal(discoPlots.length, 1, 'Should render disco plot for sample id 3416 but not 2646.')
 
 		if (test['_ok']) sv.app.destroy()
 		test.end()
