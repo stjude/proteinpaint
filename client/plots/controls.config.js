@@ -720,7 +720,7 @@ function renderTerm1Label(inputTerm, config) {
 		case TermTypes.GENE_VARIANT:
 			labelTd.text('Group variants')
 			break
-		case tw.term.type == TermTypes.SNP:
+		case TermTypes.SNP:
 			labelTd.text('Group genotypes')
 			break
 		default:
