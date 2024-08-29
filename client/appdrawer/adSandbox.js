@@ -32,7 +32,11 @@ export async function openSandbox(element, pageArgs) {
 	sandboxDiv.header_row
 	sandboxDiv.header
 		.append('span')
-		.html(`<a href="${sessionStorage.getItem('hostURL')}/?appcard=${element.name}">${element.name}</a>`)
+		.html(
+			element.type != 'nestedCard'
+				? `<a href="${sessionStorage.getItem('hostURL')}/?appcard=${element.name}">${element.name}</a>`
+				: element.name
+		)
 	sandboxDiv.body.style('overflow', 'hidden').style('background-color', 'white')
 
 	if (element.type == 'nestedCard') return openNestedCardSandbox(element, sandboxDiv, pageArgs)
