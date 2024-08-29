@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '../rx'
-import { controlsInit } from './controls'
+import { controlsInit, term0_term2_defaultQ } from './controls'
 import { fillTermWrapper } from '#termsetting'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
@@ -261,6 +261,15 @@ class MassCumInc {
 				})
 			}
 
+			const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
+			Object.assign(t0_t2_defaultQ, {
+				numeric: {
+					mode: 'discrete',
+					type: 'custom-bin',
+					preferredBins: 'median'
+				}
+			})
+
 			this.components = {
 				controls: await controlsInit({
 					app: this.app,
@@ -268,42 +277,36 @@ class MassCumInc {
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 
 					inputs: [
-						'term1',
-
 						{
+							type: 'term',
+							configKey: 'term',
+							chartType: 'cuminc',
+							usecase: { target: 'cuminc', detail: 'term' },
+							vocabApi: this.app.vocabApi,
+							menuOptions: 'edit'
+						},
+						{
+							type: 'term',
+							configKey: 'term2',
+							chartType: 'cuminc',
+							usecase: { target: 'cuminc', detail: 'term2' },
+							title: 'Overlay data',
 							label: 'Overlay',
-							title: 'Overlay',
-							type: 'overlay',
-
-							// when numeric term is used as overlay, do not allow continuous mode
-							// must set it, as it defaults to ['continuous','discrete']
+							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
-
-							defaultQ4fillTW: {
-								// use of "numeric.toggle" is a bit confusing; numeric.discrete.js feels more appropriate
-								numeric: {
-									isAtomic: true, // if this is needed?
-									mode: 'discrete',
-									type: 'custom-bin',
-									preferredBins: 'median'
-								}
-							}
+							defaultQ4fillTW: t0_t2_defaultQ
 						},
-
 						{
+							type: 'term',
+							configKey: 'term0',
+							chartType: 'cuminc',
+							usecase: { target: 'cuminc', detail: 'term0' },
+							title: 'Divide by data',
 							label: 'Divide by',
-							title: 'Divide by',
-							type: 'divideBy',
-							defaultQ4fillTW: {
-								numeric: {
-									isAtomic: true, // if this is needed?
-									mode: 'discrete',
-									type: 'custom-bin',
-									preferredBins: 'median'
-								}
-							}
+							vocabApi: this.app.vocabApi,
+							numericEditMenuVersion: ['discrete'],
+							defaultQ4fillTW: t0_t2_defaultQ
 						},
-
 						{
 							label: 'Minimum sample size of series',
 							type: 'number',
