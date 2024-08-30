@@ -840,6 +840,8 @@ function setRenderers(self) {
 				.select('.pp-cuminc-chart-noData')
 				.style('display', 'block')
 				.style('width', `${s.svgw + 50}px`)
+			div.select('svg').remove()
+			div.select('.pp-cuminc-chartLegends').style('text-align', 'center').style('margin', '0px')
 		}
 
 		// div for chart-specific legends
