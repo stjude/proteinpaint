@@ -156,6 +156,8 @@ export type BinaryNumericQ = MinBaseQ & {
 
 export type ContinuousNumericQ = MinBaseQ & {
 	mode: 'continuous'
+	// TODO: do not use a boolean, convert to a `transform: 'zscore' | ...` option
+	convert2ZScore?: boolean
 	//scale?: string
 }
 

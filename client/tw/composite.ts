@@ -43,4 +43,6 @@ export class ContinuousBase extends TwBase {
 		this.q = tw.q
 		this.#tw = tw
 	}
+
+	// should move helper functions that are common to many plots/apps here
 }

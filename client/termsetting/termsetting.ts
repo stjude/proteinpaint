@@ -932,6 +932,8 @@ export async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 	}
 }
 
+const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
+if (features.usextw) console.warn('--- Using xtw ---')
 // add migrated tw fillers here, by term.type
 const routedTermTypes = new Set(['categorical', 'integer', 'float'])
 
@@ -946,7 +948,7 @@ export async function fillTermWrapper(
 		await mayHydrateDictTwLst([tw], vocabApi)
 	}
 
-	if (routedTermTypes.has(tw.term.type)) {
+	if (features.usextw && routedTermTypes.has(tw.term.type)) {
 		// term types that have been migrated to TwRouter
 		// will use
 		const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQByTsHandler })
