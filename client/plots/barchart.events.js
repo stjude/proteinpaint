@@ -254,7 +254,7 @@ function handleColorClick(d, self, color) {
 	let binColored = null
 	if (self.bins[2].length > 0) {
 		binColored = self.bins[2].find(bin => bin.label == d.dataId)
-		binColored.color = color
+		if (binColored) binColored.color = color
 	}
 	self.app.dispatch({
 		type: 'plot_edit',
