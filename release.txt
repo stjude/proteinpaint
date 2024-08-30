@@ -1,2 +1,1 @@
-Fixes:
-- At gdc bam slicing ui, replace outdated sample_type with new terms
+

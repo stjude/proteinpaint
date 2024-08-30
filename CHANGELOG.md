@@ -18,6 +18,7 @@ Fixes:
 - shouldn't show multiple testing correction when association test skipped due to limited sample size
 - fix sample view WSI checkbox issue
 - create a custom term with just one group the custom term has equal number of samples in each group
+- At gdc bam slicing ui, replace outdated sample_type with new terms
 
 
 ## 2.74.2
