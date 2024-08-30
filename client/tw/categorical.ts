@@ -11,7 +11,7 @@ import {
 	CatTWCustomGS,
 	RawCatTW
 } from '#types'
-import { TwBase, TwOpts } from './TwBase'
+import { TwBase, TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '#termsetting'
 

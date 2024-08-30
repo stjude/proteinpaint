@@ -13,7 +13,7 @@ import {
 	CustomNumericBinConfig,
 	ContinuousNumericQ
 } from '#types'
-import { TwBase } from './TwBase'
+import { TwBase } from './TwBase.ts'
 
 export type DiscreteTWTypes = CatTWTypes | NumTWDiscreteTypes
 

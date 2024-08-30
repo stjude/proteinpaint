@@ -1,4 +1,4 @@
-import { MinBaseQ, BaseTW, TermValues, BaseTerm, HiddenValues } from '../index'
+import { MinBaseQ, BaseTW, TermValues, BaseTerm, HiddenValues } from '../index.ts'
 
 type RawRegularBin = {
 	type?: 'regular-bin'
