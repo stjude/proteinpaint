@@ -262,7 +262,13 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }
 		}
 	}
-	return { samples, refs: { byTermId, bySampleId } }
+	const sids = Object.keys(samples)
+	let sampleType
+	if (sids.length > 0) {
+		const stid = q.ds.sampleId2Type.get(Number(sids[0]))
+		sampleType = q.ds.cohort.termdb.sampleTypes.get(stid)
+	}
+	return { samples, refs: { byTermId, bySampleId }, sampleType }
 }
 
 // function to get sample genotype data for a single snp

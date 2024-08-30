@@ -183,14 +183,15 @@ export default function getHandlers(self) {
 		},
 		yAxis: {
 			text: visibleTotal => {
+				const type = self.sampleType?.plural_name || 'samples'
 				const term = self.config.term
 				if (s.orientation == 'vertical') {
 					// Do not show the sum of serieses as (n=...) when serieses are 'Sub-condition', 'Most recent grade' or 'Any grade'
 					// because a patient could have multiple 'Sub-condition', 'Most recent grade' or 'Any grade', and as a result could
 					// be counted multiple times.
 					return s.unit == 'pct'
-						? '% of samples'
-						: '# of samples ' +
+						? `% of ${type}`
+						: `# of ${type} ` +
 								(term.q.bar_by_children || term.q.value_by_most_recent || term.q.value_by_computable_grade
 									? ''
 									: `(n=${visibleTotal})`)
@@ -211,6 +212,7 @@ export default function getHandlers(self) {
 		},
 		xAxis: {
 			text: visibleTotal => {
+				const type = self.sampleType?.plural_name || 'samples'
 				const term = self.config.term
 				if (s.orientation == 'vertical') {
 					return term.q.bar_by_children
@@ -229,8 +231,8 @@ export default function getHandlers(self) {
 					// because a patient could have multiple 'Sub-condition', 'Most recent grade' or 'Any grade', and as a result could
 					// be counted multiple times.
 					return s.unit == 'pct'
-						? '% of samples'
-						: '# of samples ' +
+						? `% of ${type}`
+						: `# of ${type} ` +
 								(term.q.bar_by_children || term.q.value_by_most_recent || term.q.value_by_computable_grade
 									? ''
 									: `(n=${visibleTotal})`)
