@@ -1,1 +1,2 @@
-
+Features
+- Integration tests for the sample view plot in the mass app. 

@@ -586,8 +586,7 @@ class SampleView {
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
 				this.discoPlots.push({ sample, cellDiv })
-				if (state.samples.length > 1)
-					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
+				const header = cellDiv.insert('div')
 				const discoPlotImport = await import('./plot.disco.js')
 				const found = await discoPlotImport.default(
 					state.termdbConfig,
@@ -598,7 +597,11 @@ class SampleView {
 					{}, //overrides
 					false //showError
 				)
-				if (found) someFound = true
+				if (found) {
+					if (state.samples.length > 1)
+						header.style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
+					someFound = true
+				}
 			}
 			this.dom.showPlotsDiv.select('input[id=showDisco').style('display', someFound ? 'inline-block' : 'none')
 			this.dom.showPlotsDiv.select('label[for=showDisco').style('display', someFound ? 'inline-block' : 'none')
