@@ -77,7 +77,8 @@ const variantFlankingSize = 60 // bp
 const baminfo_rows = [
 	{ title: 'Entity ID', key: 'entity_id' },
 	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
-	{ title: 'Sample Type', key: 'sample_type' },
+	{ title: 'Tissue Type', key: 'tissue_type' },
+	{ title: 'Tumor Descriptor', key: 'tumor_descriptor' },
 	{ title: 'Size', key: 'file_size', width: '10vw' }
 ]
 const noPermissionMessage =
@@ -437,7 +438,8 @@ export async function bamsliceui({
 				experimental_strategy: "WXS"
 				file_size: "10.43 GB"
 				file_uuid: "f383b776-b162-4c61-909b-3b92d1853511"
-				sample_type: "Solid Tissue Normal"
+				tissue_type: str
+				tumor_descriptor: str
 			}
 
 			record case_id for the found file
@@ -522,7 +524,7 @@ export async function bamsliceui({
 						gdc_args.bam_files = [
 							{
 								file_id: onebam.file_uuid,
-								track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
+								track_name: `${onebam.tissue_type}, ${onebam.tumor_descriptor}, ${onebam.experimental_strategy}, ${onebam.entity_id}`,
 								about: baminfo_rows.map(i => {
 									return { k: i.title, v: onebam[i.key] }
 								})
@@ -532,7 +534,7 @@ export async function bamsliceui({
 						if (node.checked) {
 							gdc_args.bam_files.push({
 								file_id: onebam.file_uuid,
-								track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
+								track_name: `${onebam.tissue_type}, ${onebam.tumor_descriptor}, ${onebam.experimental_strategy}, ${onebam.entity_id}`,
 								about: baminfo_rows.map(i => {
 									return { k: i.title, v: onebam[i.key] }
 								})
@@ -649,13 +651,17 @@ export async function bamsliceui({
 				const td2 = tr.append('td')
 				for (const f of data.case2files[caseName]) {
 					// make a div for each file
-					// f { sample_type, experimental_strategy, file_size, file_uuid }
+					// f { tissue_type, tumor_descriptor, experimental_strategy, file_size, file_uuid }
 					if (!assays.get(f.experimental_strategy).checked) continue // assay type of this bam is unchecked
 					td2
 						.append('div')
 						.attr('class', 'sja_clbtext')
 						.attr('tabindex', 0)
-						.html(`${f.sample_type}, ${f.experimental_strategy} <span style="font-size:.8em">${f.file_size}</span>`)
+						.html(
+							`${f.tissue_type}, ${f.tumor_descriptor == 'Not Applicable' ? '' : f.tumor_descriptor + ', '}${
+								f.experimental_strategy
+							} <span style="font-size:.8em">${f.file_size}</span>`
+						)
 						.on('click', () => {
 							tip.hide()
 							gdcid_input.property('value', f.file_uuid).node().dispatchEvent(new Event('search'))
