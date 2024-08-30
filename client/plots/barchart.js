@@ -241,6 +241,7 @@ class Barchart {
 			await this.getDescrStats()
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			const data = results.data
+			this.sampleType = results.sampleType
 			this.bins = results.bins
 			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)

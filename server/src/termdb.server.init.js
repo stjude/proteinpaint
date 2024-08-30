@@ -561,7 +561,6 @@ export function server_init_db_queries(ds) {
 
 	q.getSingleSampleData = function (sampleId, term_ids = []) {
 		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(t => '?').join(',')})`
-
 		const query = `select term_id, value, jsondata from ( select term_id, value 
 		from anno_categorical 
 		where sample=? ${termClause}
