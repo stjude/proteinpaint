@@ -60,7 +60,8 @@ const filesApi = {
 		'cases.submitter_id', // used when listing all cases & files
 		'associated_entities.entity_submitter_id', // semi human readable
 		'associated_entities.case_id', // case uuid
-		'cases.samples.sample_type',
+		'cases.samples.tissue_type',
+		'cases.samples.tumor_descriptor',
 		'analysis.workflow_type' // to drop out those as skip_workflow_type
 	],
 	size: 100
@@ -168,7 +169,8 @@ async function get_gdc_data(q) {
 		file.experimental_strategy = s.experimental_strategy
 		file.entity_id = s.associated_entities[0].entity_submitter_id
 		file.case_id = s.associated_entities[0].case_id
-		file.sample_type = s.cases[0].samples[0].sample_type
+		file.tissue_type = s.cases[0].samples[0].tissue_type
+		file.tumor_descriptor = s.cases[0].samples[0].tumor_descriptor
 
 		bamdata.file_metadata.push(file)
 	}
@@ -433,7 +435,8 @@ async function getCaseFiles(filter0, q, ds) {
 		if (!case2files[c]) case2files[c] = []
 		case2files[c].push({
 			file_uuid: h.id,
-			sample_type: h.cases?.[0].samples?.[0].sample_type,
+			tissue_type: h.cases?.[0].samples?.[0].tissue_type,
+			tumor_descriptor: h.cases?.[0].samples?.[0].tumor_descriptor,
 			experimental_strategy: h.experimental_strategy,
 			file_size: fileSize(Number.parseFloat(h.file_size))
 		})

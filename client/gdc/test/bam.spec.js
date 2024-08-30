@@ -90,7 +90,7 @@ tape('Hide token input', test => {
 		const handle = await detectOne({ elem: holder, selector: '.sja-gdcbam-listCaseFileHandle' })
 		test.equal(
 			handle.innerHTML,
-			'Or, Browse 1000 Available BAM Files',
+			'Or, Browse 594 Available BAM Files',
 			'List case file handle is shown with correct text'
 		)
 
@@ -142,7 +142,7 @@ for (const entity of entities) {
 				test.pass('no table is shown in multifiletable: isFile=true')
 				const table = await detectOne({ elem: onefiletable, selector: 'table' })
 				test.ok(table, 'Table is made under onefiletable for selection')
-				test.equal(table.childNodes.length, 4, 'Table has 4 rows')
+				test.equal(table.childNodes.length, 5, 'Table has 5 rows')
 			} else {
 				// search input is not a file, check multifiletable; NOTE must result in multiple bam files! otherwise breaks
 				await detectZero({ elem: onefiletable, selector: 'table' })
