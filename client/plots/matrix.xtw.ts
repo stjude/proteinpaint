@@ -5,7 +5,7 @@ import { convertUnits } from '#shared/helpers'
 export function getTermGroups(termgroups, app) {
 	const termGroups = structuredClone(termgroups)
 	for (const tG of termGroups) {
-		const xtwlst: (MatrixXtwObj | TermWrapper)[] = []
+		const xtwlst: (MatrixTWObj | TermWrapper)[] = []
 		for (const tw of tG.lst) {
 			xtwlst.push(getxtw(tw, { vocabApi: app.vocabApi }))
 		}
@@ -14,7 +14,7 @@ export function getTermGroups(termgroups, app) {
 	return termGroups
 }
 
-function getxtw(tw: TermWrapper, opts = {}): MatrixXtwObj | TermWrapper {
+function getxtw(tw: TermWrapper, opts = {}): MatrixTWObj | TermWrapper {
 	// NOTE: TwRouter.fill(), enabled by setting `serverconfig.features.usextw: true`,
 	// will set the tw.type on rehydrated tw. Only migrated tw with corresponding
 	// declared class in client/tw files will get replaced by the extended tw (xtw);
@@ -35,7 +35,7 @@ function getxtw(tw: TermWrapper, opts = {}): MatrixXtwObj | TermWrapper {
 	}
 }
 
-interface MatrixXtwObj {
+interface MatrixTWObj {
 	setCellProps: (
 		cell: any,
 		anno: any,
@@ -58,7 +58,7 @@ type MatrixXTW = MatrixDiscrete
 
 	todo: may move this class into its own file, if the class gets too big
 */
-class MatrixDiscrete extends DiscreteBase implements MatrixXtwObj {
+class MatrixDiscrete extends DiscreteBase implements MatrixTWObj {
 	#tw: ContTWTypes
 
 	constructor(tw, opts) {
@@ -101,7 +101,7 @@ class MatrixDiscrete extends DiscreteBase implements MatrixXtwObj {
 
 	todo: may move this class into its own file, if the class gets too big
 */
-class MatrixCont extends ContinuousBase implements MatrixXtwObj {
+class MatrixCont extends ContinuousBase implements MatrixTWObj {
 	#tw: ContTWTypes
 
 	constructor(tw, opts) {

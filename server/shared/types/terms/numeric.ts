@@ -159,6 +159,11 @@ export type ContinuousNumericQ = MinBaseQ & {
 	// TODO: do not use a boolean, convert to a `transform: 'zscore' | ...` option
 	convert2ZScore?: boolean
 	//scale?: string
+	// todo below: q.type is expected to be undefined for now,
+	// but may be used later like in other q.modes,
+	// making type optional here makes NumericQ operations/conditions
+	// work consistently within the TermWrapper union type
+	type?: undefined
 }
 
 export type SplineNumericQ = MinBaseQ & {
@@ -166,6 +171,11 @@ export type SplineNumericQ = MinBaseQ & {
 	knots: {
 		value: number
 	}[]
+	// todo below: q.type is expected to be undefined for now,
+	// but may be used later like in other q.modes,
+	// making type optional here makes NumericQ operations/conditions
+	// work consistently within the TermWrapper union type
+	type?: undefined
 }
 
 export type NumericQ = DiscreteNumericQ | BinaryNumericQ | ContinuousNumericQ | SplineNumericQ

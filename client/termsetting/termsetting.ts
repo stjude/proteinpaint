@@ -948,14 +948,16 @@ export async function fillTermWrapper(
 		await mayHydrateDictTwLst([tw], vocabApi)
 	}
 
-	if (features.usextw && routedTermTypes.has(tw.term.type)) {
-		// term types that have been migrated to TwRouter
-		// will use
+	if (features.usextw && routedTermTypes.has(tw.term?.type)) {
+		// NOTE: while the tw refactor is not done for all term types and q.types/modes,
+		// there will be some code duplication between TwRouter and the legacy code;
+		// the latter will be deleted once the refactor/migration is done
 		const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQByTsHandler })
 		Object.assign(tw, fullTw)
 		mayValidateQmode(tw)
 		// this should be moved to the term-type specific handler??
 		if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
+		if (tw.q) tw.q.isAtomic = true
 		return tw
 	}
 

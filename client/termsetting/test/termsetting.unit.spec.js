@@ -6,6 +6,8 @@ import { getExample } from '#termdb/test/vocabData'
 const vocab = getExample()
 const vocabApi = vocabInit({ state: { vocab } })
 
+const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
+
 /*
 Tests:
 	fillTermWrapper - continuous term
@@ -16,7 +18,7 @@ Tests:
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- termsetting -***-')
+	test.pass('-***- termsetting.unit -***-')
 	test.end()
 })
 
@@ -125,18 +127,25 @@ tape('fillTermWrapper - continuous term', async function (test) {
 		}
 	}
 	await fillTermWrapper(tw6, vocabApi, defaultQ)
+
 	test.deepEqual(
 		tw6.q,
-		{
-			type: 'regular-bin',
-			bin_size: 0.4,
-			stopinclusive: true,
-			first_bin: { startunbounded: true, stop: 0.2, stopinclusive: true },
-			mode: 'discrete',
-			hiddenValues: {},
-			isAtomic: true,
-			test: 'apple'
-		},
+		Object.assign(
+			{
+				type: 'regular-bin',
+				bin_size: 0.4,
+				stopinclusive: true,
+				first_bin: { startunbounded: true, stop: 0.2, stopinclusive: true },
+				hiddenValues: {}
+			},
+			!features.usextw
+				? {}
+				: {
+						isAtomic: true,
+						mode: 'discrete',
+						test: 'apple'
+				  }
+		),
 		'should fill tw.q with tw.term.bins.less when defaultQ.preferredBins=less'
 	)
 
@@ -146,11 +155,26 @@ tape('fillTermWrapper - continuous term', async function (test) {
 	await fillTermWrapper(tw7, vocabApi, defaultQ)
 	test.deepEqual(
 		tw7.q,
-		{
-			isAtomic: true,
-			mode: 'continuous',
-			hiddenValues: {}
-		},
+		features.usextw
+			? {
+					isAtomic: true,
+					mode: 'continuous',
+					hiddenValues: {}
+			  }
+			: {
+					// legacy fillTermWrapper() allows nonsensical combination of q{} properties
+					isAtomic: true,
+					mode: 'continuous',
+					type: 'regular-bin',
+					bin_size: 0.2,
+					stopinclusive: true,
+					first_bin: {
+						startunbounded: true,
+						stop: 0.2,
+						stopinclusive: true
+					},
+					hiddenValues: {}
+			  },
 		'should merge defaultQ into tw.q when defaultQ.preferredBins is not defined'
 	)
 })

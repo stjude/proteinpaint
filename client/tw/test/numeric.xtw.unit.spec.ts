@@ -83,7 +83,10 @@ tape(`fill() q.type=custom-bin opts.defaultQ.preferredBins='median'`, async test
 
 	const defaultQ = {
 		type: 'custom-bin',
-		preferredBins: 'median'
+		preferredBins: 'median',
+		// supply a median value to not require a vocabApi server request,
+		// since a server is not expected to be running during a unit test
+		median: 8.16
 	}
 
 	try {

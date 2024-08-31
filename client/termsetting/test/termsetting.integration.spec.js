@@ -111,7 +111,7 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
  **************/
 
 tape('\n', test => {
-	test.pass('-***- common/termsetting.unit -***-')
+	test.pass('-***- termsetting.integration -***-')
 	test.end()
 })
 
