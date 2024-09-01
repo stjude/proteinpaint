@@ -222,6 +222,12 @@ export async function validate_termdb(ds) {
 	/* points to ds.cohort.termdb{}
 	 */
 
+	/* at minimum, an empty holder is needed for all ds (later gdc should populate this to distinguish sample types)
+	k: sample type key
+	v: {name, plural_name, parent_id}
+	*/
+	tdb.sampleTypes = new Map()
+
 	if (tdb?.dictionary?.gdcapi) {
 		await initGDCdictionary(ds)
 		/*
@@ -297,6 +303,10 @@ export async function validate_termdb(ds) {
 	// since burden data is nested under ds.cohort, only validate it when ds.cohort is set
 	await validate_cumburden(ds)
 
+	// minimum empty holder required for all datasets (later gdc should populate it)
+	// k: sampleid, v: type of that sample
+	ds.sampleId2Type = new Map()
+
 	//////////////////////////////////////////////////////
 	//
 	// XXX rest are quick fixes taken from mds2.init.js
@@ -307,7 +317,6 @@ export async function validate_termdb(ds) {
 		// gdc does not use db connection
 		ds.sampleName2Id = new Map()
 		ds.sampleId2Name = new Map()
-		ds.sampleId2Type = new Map()
 
 		const sql = 'SELECT * FROM sampleidmap'
 		const rows = ds.cohort.db.connection.prepare(sql).all()
