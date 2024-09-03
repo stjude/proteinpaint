@@ -59,6 +59,7 @@ function load_termjson(ds, db) {
 	}
 
 	if (!termdb.termjson) termdb.termjson = { map: new Map() }
+	if (!termdb.sampleTypes) termdb.sampleTypes = new Map()
 	for (const row of rows) {
 		//console.log(row.jsondata); console.log(Object.keys(row)); break
 		const term = row.jsondata ? JSON.parse(row.jsondata) : {}
