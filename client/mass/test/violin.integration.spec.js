@@ -696,7 +696,7 @@ tape('term1=categorical, term2=numeric', function (test) {
 	}
 })
 
-tape.skip('term1=numeric, term2=survival', function (test) {
+tape('term1=numeric, term2=survival', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {

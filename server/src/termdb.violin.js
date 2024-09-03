@@ -19,7 +19,11 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (!isNumericTerm(term) && term.type !== TermTypes.SURVIVAL) throw 'term type is not numeric or survival'
 
 	const terms = [q.tw]
-	if (q.divideTw) terms.push(q.divideTw)
+	let isSurvival = false
+	if (q.divideTw) {
+		terms.push(q.divideTw)
+		isSurvival = q.divideTw.term.type == TermTypes.SURVIVAL
+	}
 
 	const data = await getData(
 		{ terms, filter: q.filter, filter0: q.filter0, currentGeneNames: q.currentGeneNames },
@@ -41,7 +45,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const valuesObject = divideValues(q, data, q.tw)
 	const result = resultObj(valuesObject, data, q, ds)
-	const isSurvival = q.divideTw.term.type == TermTypes.SURVIVAL
+
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result, isSurvival)
 
@@ -67,13 +71,11 @@ export async function wilcoxon(divideTw, result, isSurvival) {
 
 	for (let i = 0; i < numPlots; i++) {
 		const group1_id =
-			isSurvival && Number.isFinite(result.plots[i].label) ? result.plots[i].label.toString() : result.plots[i].seriesId
+			isSurvival && Number.isFinite(result.plots[i].label) ? result.plots[i].label.toString() : result.plots[i].label
 		const group1_values = result.plots[i].values
 		for (let j = i + 1; j < numPlots; j++) {
 			const group2_id =
-				isSurvival && Number.isFinite(result.plots[j].label)
-					? result.plots[j].label.toString()
-					: result.plots[j].seriesId
+				isSurvival && Number.isFinite(result.plots[j].label) ? result.plots[j].label.toString() : result.plots[j].label
 			const group2_values = result.plots[j].values
 			wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 		}
