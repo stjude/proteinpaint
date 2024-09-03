@@ -218,9 +218,12 @@ export async function validate_termdb(ds) {
 		return
 	}
 
-	const tdb = ds.cohort.termdb
-	/* points to ds.cohort.termdb{}
-	 */
+	const tdb = ds.cohort.termdb // points to ds.cohort.termdb{}
+
+	/***********************************************************
+	 ** new properties created on tdb{} must be duplicated at  **
+	 ** server/src/test/load.testds.js load_termjson()         **
+	 ************************************************************/
 
 	/* at minimum, an empty holder is needed for all ds (later gdc should populate this to distinguish sample types)
 	k: sample type key
