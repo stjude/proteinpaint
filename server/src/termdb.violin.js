@@ -6,6 +6,7 @@ import { getBinsDensity } from '../../server/shared/violin.bins'
 import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
 import { isNumericTerm } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms'
 
 /*
 q: getViolinRequest
@@ -15,7 +16,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw 'q.tw not of {term,q}'
 	const term = q.tw.term
 	if (!q.tw.q.mode) q.tw.q.mode = 'continuous'
-	if (!isNumericTerm(term) && term.type !== 'survival') throw 'term type is not numeric or survival'
+	if (!isNumericTerm(term) && term.type !== TermTypes.SURVIVAL) throw 'term type is not numeric or survival'
 
 	const terms = [q.tw]
 	if (q.divideTw) terms.push(q.divideTw)
@@ -40,9 +41,16 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const valuesObject = divideValues(q, data, q.tw)
 	const result = resultObj(valuesObject, data, q, ds)
-
+	const isSurvival = q.divideTw.term.type == TermTypes.SURVIVAL
 	// wilcoxon test data to return to client
-	await wilcoxon(q.divideTw, result)
+	await wilcoxon(q.divideTw, result, isSurvival)
+
+	if (isSurvival) {
+		//Wilcoxon will not run with 'exit code' included in the label
+		for (const plot of result.plots) {
+			plot.label = Number.isFinite(plot.label) ? `Exit code ${plot.label}` : plot.label
+		}
+	}
 
 	createCanvasImg(q, result, ds)
 	if (res) res.send(result)
@@ -50,7 +58,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 }
 
 // compute pvalues using wilcoxon rank sum test
-export async function wilcoxon(divideTw, result) {
+export async function wilcoxon(divideTw, result, isSurvival) {
 	if (!divideTw) return
 	const numPlots = result.plots.length
 	if (numPlots < 2) return
@@ -58,17 +66,24 @@ export async function wilcoxon(divideTw, result) {
 	const wilcoxInput = []
 
 	for (let i = 0; i < numPlots; i++) {
-		const group1_id = result.plots[i].label
+		const group1_id =
+			isSurvival && Number.isFinite(result.plots[i].label) ? result.plots[i].label.toString() : result.plots[i].seriesId
 		const group1_values = result.plots[i].values
 		for (let j = i + 1; j < numPlots; j++) {
-			const group2_id = result.plots[j].label
+			const group2_id =
+				isSurvival && Number.isFinite(result.plots[j].label)
+					? result.plots[j].label.toString()
+					: result.plots[j].seriesId
 			const group2_values = result.plots[j].values
 			wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 		}
 	}
-
 	const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
 	for (const test of wilcoxOutput) {
+		test.group1_id =
+			(isSurvival && Number(test.group1_id)) || test.group1_id == 0 ? `Exit code ${test.group1_id}` : test.group1_id
+		test.group2_id =
+			(isSurvival && Number(test.group2_id)) || test.group1_id == 1 ? `Exit code ${test.group2_id}` : test.group2_id
 		if (test.pvalue == null || test.pvalue == 'null') {
 			result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
 		} else {
