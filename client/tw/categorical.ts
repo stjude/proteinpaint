@@ -22,6 +22,12 @@ export type CatInstance = CatValues | CatPredefinedGS | CatCustomGS
 export type CatTypes = typeof CatValues | typeof CatPredefinedGS | typeof CatCustomGS
 
 export class CategoricalBase {
+	term: CategoricalTerm
+
+	constructor(tw: CatTWTypes, opts) {
+		this.term = tw.term
+	}
+
 	static init(tw: CatTWTypes, opts: TwOpts = {}): CatInstance {
 		switch (tw.type) {
 			case 'CatTWValues':
@@ -91,22 +97,6 @@ export class CategoricalBase {
 			3. The filled-in tw, when returned, must be **coerced** to the full CatTW* type, 
 			   in order to match the function signature's return type.
 		*/
-
-		/*
-			For each of fill() functions below:
-			1. The `tw` argument must already have a tw.type string value, 
-			   which corresponds to the RawNumTW* equivalent of the full NumTW* type.
-			   NOTE: This only applies for routing, it's optional when calling the 
-			   specialized fill() function directly.
-
-			2. The fill() function must fill-in any expected missing values,
-			   validate the tw.q shape at runtime, and throw on any error or mismatched expectation.
-			   Runtime validation is required because the input raw tw can come from anywhere,
-			   like term.bins.default, which is a runtime variable that is not possible to statically check.
-
-			3. The filled-in tw, when returned, must be **coerced** to the full NumTW* type, 
-			   in order to match the function signature's return type.
-		*/
 		switch (tw.type) {
 			case 'CatTWValues':
 				return CatValues.fill(tw)
@@ -123,8 +113,7 @@ export class CategoricalBase {
 	}
 }
 
-export class CatValues extends TwBase {
-	term: CategoricalTerm
+export class CatValues extends CategoricalBase {
 	q: ValuesQ
 	#tw: CatTWValues
 	#opts: TwOpts
@@ -132,7 +121,7 @@ export class CatValues extends TwBase {
 	// declare a constructor, to narrow the tw type
 	constructor(tw: CatTWValues, opts: TwOpts = {}) {
 		super(tw, opts)
-		this.term = tw.term
+		//this.term = tw.term // already set in base class
 		this.q = tw.q
 		this.#tw = tw
 		this.#opts = opts
@@ -172,8 +161,8 @@ export class CatValues extends TwBase {
 	}
 }
 
-export class CatPredefinedGS extends TwBase {
-	term: CategoricalTerm
+export class CatPredefinedGS extends CategoricalBase {
+	//term: CategoricalTerm
 	q: PredefinedGroupSettingQ
 	#groupset: BaseGroupSet
 	#tw: CatTWPredefinedGS
@@ -182,7 +171,7 @@ export class CatPredefinedGS extends TwBase {
 	// declare a constructor, to narrow the tw type
 	constructor(tw: CatTWPredefinedGS, opts: TwOpts = {}) {
 		super(tw, opts)
-		this.term = tw.term // to narrow to categorical term, since TwBase.term is just Term
+		// this.term = tw.term // already set in base class
 		this.q = tw.q
 		this.#tw = tw
 		this.#groupset = this.term.groupsetting[this.#tw.q.predefined_groupset_idx]
@@ -225,8 +214,8 @@ export class CatPredefinedGS extends TwBase {
 	}
 }
 
-export class CatCustomGS extends TwBase {
-	term: CategoricalTerm
+export class CatCustomGS extends CategoricalBase {
+	//term: CategoricalTerm
 	q: CustomGroupSettingQ
 	#groupset: BaseGroupSet
 	#tw: CatTWCustomGS
@@ -235,7 +224,7 @@ export class CatCustomGS extends TwBase {
 	// declare a constructor, to narrow the tw type
 	constructor(tw: CatTWCustomGS, opts: TwOpts = {}) {
 		super(tw, opts)
-		this.term = tw.term // to narrow to categorical term, since TwBase.term is just Term
+		// this.term = tw.term // already set in base class
 		this.q = tw.q
 		this.#groupset = this.q.customset
 		this.#tw = tw

@@ -1,4 +1,4 @@
-import { DiscreteBase, ContinuousBase, ContTWTypes } from '../tw/index.ts'
+import { DiscreteBase, ContinuousBase, ContTWTypes, DiscreteTWTypes } from '../tw/index.ts'
 import { TermWrapper } from '#updated-types'
 import { convertUnits } from '#shared/helpers'
 
@@ -59,7 +59,7 @@ type MatrixXTW = MatrixDiscrete
 	todo: may move this class into its own file, if the class gets too big
 */
 class MatrixDiscrete extends DiscreteBase implements MatrixTWObj {
-	#tw: ContTWTypes
+	#tw: DiscreteTWTypes
 
 	constructor(tw, opts) {
 		super(tw, opts)

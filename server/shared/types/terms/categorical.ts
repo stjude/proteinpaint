@@ -40,8 +40,6 @@ export type RawCatTWCustomGS = BaseTW & {
 
 export type RawCatTW = RawCatTWValues | RawCatTWPredefinedGS | RawCatTWCustomGS
 
-//export type RawCatTW = RawCatTWValues | RawCatTWPredefinedGS | RawCatTWCustomGS
-
 export type CategoricalQ = GroupSettingQ | ValuesQ
 
 export type CategoricalTerm = BaseTerm & {

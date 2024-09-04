@@ -31,7 +31,12 @@ import { roundValueAuto } from '#shared/roundValue'
 type TermTypeSet = Set<'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'>
 
 export class NumericBase {
+	term: NumericTerm
 	static termTypes: TermTypeSet = new Set(['integer', 'float', 'geneExpression', 'metaboliteIntensity'])
+
+	constructor(tw: NumTWTypes, opts: TwOpts) {
+		this.term = tw.term
+	}
 
 	static async fill(tw: RawNumTW, opts: TwOpts = {}): Promise<NumTWTypes> {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
@@ -129,22 +134,8 @@ export class NumericBase {
 	}
 }
 
-export class NumericRegBinQ {
-	type: 'regular-bin'
-	firstBin: {
-		stop: number
-	}
-
-	constructor(q) {
-		this.type = 'regular-bin'
-		this.firstBin = {
-			stop: q.stop
-		}
-	}
-}
-
-export class NumRegularBin extends TwBase {
-	term: NumericTerm
+export class NumRegularBin extends NumericBase {
+	//term: NumericTerm
 	q: RegularNumericBinConfig
 	#tw: NumTWRegularBin
 	#opts: TwOpts
@@ -152,14 +143,14 @@ export class NumRegularBin extends TwBase {
 	// declare a constructor, to narrow the tw type
 	constructor(tw: NumTWRegularBin, opts: TwOpts = {}) {
 		super(tw, opts)
-		this.term = tw.term
+		//this.term = tw.term // already set by base constructor
 		this.q = tw.q
 		this.#tw = tw
 		this.#opts = opts
 	}
 
 	// See the relevant comments in the NumericBase.fill() function above
-	static fill(tw: RawNumTWRegularBin, opts: TwOpts = {}): NumTWRegularBin {
+	static async fill(tw: RawNumTWRegularBin, opts: TwOpts = {}): Promise<NumTWRegularBin> {
 		const { term, q } = tw
 		if (!tw.type) tw.type = 'NumTWRegularBin'
 		else if (tw.type != 'NumTWRegularBin') throw `expecting tw.type='NumTWRegularBin', got '${tw.type}'`
@@ -178,8 +169,8 @@ export class NumRegularBin extends TwBase {
 	}
 }
 
-export class NumCustomBins extends TwBase {
-	term: NumericTerm
+export class NumCustomBins extends NumericBase {
+	//term: NumericTerm
 	q: CustomNumericBinConfig
 	#tw: NumTWCustomBin
 	#opts: TwOpts
@@ -187,14 +178,14 @@ export class NumCustomBins extends TwBase {
 	// declare a constructor, to narrow the tw type
 	constructor(tw: NumTWCustomBin, opts: TwOpts = {}) {
 		super(tw, opts)
-		this.term = tw.term
+		//this.term = tw.term // already set by base constructor
 		this.q = tw.q
 		this.#tw = tw
 		this.#opts = opts
 	}
 
 	// See the relevant comments in the NumericBase.fill() function above
-	static fill(tw: RawNumTWCustomBin, opts: TwOpts = {}): NumTWCustomBin {
+	static async fill(tw: RawNumTWCustomBin, opts: TwOpts = {}): Promise<NumTWCustomBin> {
 		if (!tw.type) tw.type = 'NumTWCustomBin'
 		else if (tw.type != 'NumTWCustomBin') throw `expecting tw.type='NumTWCustomBin', got '${tw.type}'`
 
@@ -241,8 +232,8 @@ export class NumCustomBins extends TwBase {
 	}
 }
 
-export class NumCont extends TwBase {
-	term: NumericTerm
+export class NumCont extends NumericBase {
+	//term: NumericTerm
 	q: ContinuousNumericQ
 	#tw: NumTWCont
 	#opts: TwOpts
@@ -250,14 +241,14 @@ export class NumCont extends TwBase {
 	// declare a constructor, to narrow the tw type
 	constructor(tw: NumTWCont, opts: TwOpts = {}) {
 		super(tw, opts)
-		this.term = tw.term
+		//this.term = tw.term // already set by base constructor
 		this.q = tw.q
 		this.#tw = tw
 		this.#opts = opts
 	}
 
 	// See the relevant comments in the NumericBase.fill() function above
-	static fill(tw: RawNumTWCont, opts: TwOpts = {}): NumTWCont {
+	static async fill(tw: RawNumTWCont, opts: TwOpts = {}): Promise<NumTWCont> {
 		if (!tw.type) tw.type = 'NumTWCont'
 		else if (tw.type != 'NumTWCont') throw `expecting tw.type='NumTWCont', got '${tw.type}'`
 
@@ -269,8 +260,8 @@ export class NumCont extends TwBase {
 	}
 }
 
-export class NumSpline extends TwBase {
-	term: NumericTerm
+export class NumSpline extends NumericBase {
+	//term: NumericTerm
 	q: SplineNumericQ
 	#tw: NumTWSpline
 	#opts: TwOpts
@@ -278,13 +269,13 @@ export class NumSpline extends TwBase {
 	// declare a constructor, to narrow the tw type
 	constructor(tw: NumTWSpline, opts: TwOpts = {}) {
 		super(tw, opts)
-		this.term = tw.term
+		//this.term = tw.term // already set by base constructor
 		this.q = tw.q
 		this.#tw = tw
 		this.#opts = opts
 	}
 
-	static fill(tw: RawNumTWSpline, opts: TwOpts = {}): NumTWSpline {
+	static async fill(tw: RawNumTWSpline, opts: TwOpts = {}): Promise<NumTWSpline> {
 		if (!tw.type) tw.type = 'NumTWSpline'
 		else if (tw.type != 'NumTWSpline') throw `expecting tw.type='NumTWSpline', got '${tw.type}'`
 
