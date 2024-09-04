@@ -2817,7 +2817,7 @@ tape('apply "hide" and "show" legend filters to a survival term', function (test
 
 		// 1. Hide
 		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
-			d?.__data__?.text?.startsWith('Exit code: 0')
+			d?.__data__?.text?.startsWith('No Event')
 		)
 		legendTexts.dispatchEvent(
 			new MouseEvent('mouseup', {
@@ -2859,7 +2859,7 @@ tape('apply "hide" and "show" legend filters to a survival term', function (test
 
 		// 2. Show
 		const legendTexts2 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
-			d?.__data__?.text?.startsWith('Exit code: 0')
+			d?.__data__?.text?.startsWith('No Event')
 		)
 		legendTexts2.dispatchEvent(
 			new MouseEvent('mouseup', {
@@ -2976,7 +2976,7 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 
 		// 1. Show only
 		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
-			d?.__data__?.text?.startsWith('Exit code: 0')
+			d?.__data__?.text?.startsWith('No Event')
 		)
 		legendTexts.dispatchEvent(
 			new MouseEvent('mouseup', {
@@ -3091,7 +3091,7 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 
 		// 4. Show all
 		const fourthLegendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
-			d?.__data__?.text?.startsWith('Exit code: 0')
+			d?.__data__?.text?.startsWith('No Event')
 		)
 		fourthLegendTexts.dispatchEvent(
 			new MouseEvent('mouseup', {
