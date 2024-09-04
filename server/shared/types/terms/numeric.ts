@@ -2,7 +2,9 @@ import { MinBaseQ, BaseTW, TermValues, BaseTerm, HiddenValues } from '../index.t
 
 export type RawRegularBin = MinBaseQ & {
 	type?: 'regular-bin'
-	mode?: 'discrete' //| 'binary'
+	// TODO: refactor code that allows/expects regular-bin q
+	// to have mode='binary' or 'continuous'
+	mode?: 'discrete' | 'binary' | 'continuous'
 	bin_size?: number
 	first_bin?: {
 		stop: number
@@ -24,8 +26,8 @@ export type RawCustomBin = MinBaseQ & {
 	// lst may be missing if median is present
 	// TODO: separate the binary type definition from discrete???
 	lst?: [NumericBin, ...NumericBin[]]
-	preferredBins?: string
 	median?: number
+	preferredBins?: string
 	isAtomic?: true
 } /*| {
 	type: 'custom-bin'

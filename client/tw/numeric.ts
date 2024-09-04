@@ -13,6 +13,7 @@ import {
 	RawNumTWCustomBin,
 	RawNumTWCont,
 	RawNumTWSpline,
+	RawCustomBin,
 	DefaultBinnedQ,
 	DefaultMedianQ,
 	BinaryNumericQ,
@@ -52,14 +53,8 @@ export class NumericBase {
 				tw.q = structuredClone(tw.term.bins[preferredBins])
 				delete q.preferredBins
 			} else if (preferredBins == 'median') {
-				if (!q.type || q.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
-				if (!isNumeric(q.median)) {
-					const result = await opts.vocabApi.getPercentile(tw.term.id, [50])
-					if (!result.values) throw '.values[] missing from vocab.getPercentile()'
-					const median = roundValueAuto(result.values[0])
-					if (!isNumeric(median)) throw 'median value not a number'
-					opts.defaultQ.median = median
-				}
+				if (q.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
+				Object.assign(tw.q, q)
 			} else {
 				throw `unrecognized defaultQ.preferredBins='${preferredBins}'`
 			}
@@ -72,10 +67,16 @@ export class NumericBase {
 			if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
 				copyMerge(tw.q, structuredClone(tw.term.bins.default))
 			}
+		} else if (tw.q.type == 'regular-bin') {
+			if (!isNumeric(tw.q.bin_size) || !tw.q.first_bin || !isNumeric(tw.q.first_bin.stop)) {
+				// assumes that the preassigned bins.default is never custom-bin
+				tw.q = structuredClone(tw.term.bins.default)
+			}
 		}
 
 		if (opts.defaultQ) {
 			opts.defaultQ.isAtomic = true
+			tw.q.isAtomic = true
 			// merge defaultQ into tw.q
 			if (tw.q.mode != opts.defaultQ.mode) copyMerge(tw.q, opts.defaultQ)
 		}
@@ -90,17 +91,17 @@ export class NumericBase {
 			function directly, outside of TwRouter.fill(). The input tw.type
 			does not have to be discriminated in that case.
 		*/
-		if (!tw.type)
-			tw.type =
-				tw.q.type == 'regular-bin'
-					? 'NumTWRegularBin'
-					: tw.q.type == 'custom-bin'
-					? 'NumTWCustomBin'
-					: tw.q.mode == 'continuous'
-					? 'NumTWCont'
-					: tw.q.mode == 'spline'
-					? 'NumTWSpline'
-					: undefined
+		//if (!tw.type)
+		tw.type =
+			tw.q.type == 'regular-bin'
+				? 'NumTWRegularBin'
+				: tw.q.type == 'custom-bin' || tw.q.mode == 'binary'
+				? 'NumTWCustomBin'
+				: tw.q.mode == 'continuous'
+				? 'NumTWCont'
+				: tw.q.mode == 'spline'
+				? 'NumTWSpline'
+				: tw.type
 
 		/*
 			For each of fill() functions below:
@@ -117,16 +118,17 @@ export class NumericBase {
 		*/
 		switch (tw.type) {
 			case 'NumTWRegularBin':
-				return NumRegularBin.fill(tw, opts)
+				return await NumRegularBin.fill(tw, opts)
 
 			case 'NumTWCustomBin':
-				return NumCustomBins.fill(tw, opts)
+				tw.q.type = 'custom-bin'
+				return await NumCustomBins.fill(tw, opts)
 
 			case 'NumTWCont':
-				return NumCont.fill(tw, opts)
+				return await NumCont.fill(tw, opts)
 
 			case 'NumTWSpline':
-				return NumSpline.fill(tw, opts)
+				return await NumSpline.fill(tw, opts)
 
 			default:
 				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by NumericBase.fill()`
@@ -156,7 +158,8 @@ export class NumRegularBin extends NumericBase {
 		else if (tw.type != 'NumTWRegularBin') throw `expecting tw.type='NumTWRegularBin', got '${tw.type}'`
 
 		if (!tw.q.mode) tw.q.mode = 'discrete'
-		else if (tw.q.mode != 'discrete') throw `expecting tw.q.mode='discrete', got '${tw.q.mode}'`
+		else if (tw.q.mode != 'discrete' && tw.q.mode != 'binary' && tw.q.mode != 'continuous')
+			throw `expecting tw.q.mode='discrete'|'binary'|'continous', got '${tw.q.mode}'`
 
 		if (tw.q.type && tw.q.type != 'regular-bin') throw `expecting tw.q.type='regular-bin', got '${tw.q.type}'`
 
@@ -193,36 +196,36 @@ export class NumCustomBins extends NumericBase {
 		else if (tw.q.mode != 'discrete' && tw.q.mode != 'binary')
 			throw `expecting tw.q.mode='discrete'|binary', got '${tw.q.mode}'`
 
-		if (tw.q.type && tw.q.type != 'custom-bin') throw `expecting tw.q.type='custom-bin', got '${tw.q.type}'`
+		if (tw.q.type != 'custom-bin') throw `expecting tw.q.type='custom-bin', got '${tw.q.type}'`
 
-		if (opts.defaultQ) {
-			opts.defaultQ.isAtomic = true
-			if (opts.defaultQ.preferredBins == 'median') {
-				const median = opts.defaultQ.median
-				if (!isNumeric(median)) throw 'median value not a number'
-				delete tw.q.preferredBins
+		if (tw.q.preferredBins == 'median') {
+			let median
+			if (tw.q.median) {
+				median = tw.q.median
 				delete tw.q.median
-				tw.q.lst = [
-					{
-						startunbounded: true,
-						stop: median,
-						stopinclusive: false,
-						label: '<' + median // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
-					} as StartUnboundedBin,
-					{
-						start: median,
-						startinclusive: true,
-						stopunbounded: true,
-						label: '≥' + median
-					} as StopUnboundedBin
-				]
 			} else {
-				opts.defaultQ.isAtomic = true
-				// defaultQ is an actual q{} object
-				// merge it into tw.q
-				copyMerge(tw.q, opts.defaultQ)
+				const result = await opts.vocabApi.getPercentile(tw.term.id, [50])
+				if (!result.values) throw '.values[] missing from vocab.getPercentile()'
+				median = roundValueAuto(result.values[0])
 			}
+			if (!isNumeric(median)) throw 'median value not a number'
+			tw.q.lst = [
+				{
+					startunbounded: true,
+					stop: median,
+					stopinclusive: false,
+					label: '<' + median // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
+				} as StartUnboundedBin,
+				{
+					start: median,
+					startinclusive: true,
+					stopunbounded: true,
+					label: '≥' + median
+				} as StopUnboundedBin
+			]
+			delete tw.q.preferredBins
 		}
+
 		if (!tw.q.lst) throw `missing q.lst[] for custom-bin`
 		if (tw.q.mode == 'binary' && tw.q.lst.length != 2) throw `numeric q.mode='binary' requires exactly 2 bins`
 

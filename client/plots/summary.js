@@ -294,7 +294,8 @@ function setRenderers(self) {
 	self.getWrappedTermCopy = async function (term, mode) {
 		if (!term) return
 		const tw = structuredClone(term)
-		tw.q.mode = mode
+		// TODO: this is not type safe, assumes any q{} can be set to any mode
+		tw.q.mode = mode // {mode, isAtomic: true}
 		// If tw.q is empty/undefined, the default q
 		// will be assigned by fillTw by term type
 		await fillTermWrapper(tw, self.app.vocabApi)
