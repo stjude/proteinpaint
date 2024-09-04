@@ -477,8 +477,9 @@ function setRenderers(self) {
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 			result.coefficients.header.forEach((v, i) => {
+				if (neuroOncCox && i == 2) return // skip sample count column
 				tr.append('td').text(v).style('padding', '8px')
-				if (i === (neuroOncCox ? 2 : 1)) tr.append('td') // add column for forest plot
+				if (i === (neuroOncCox ? 3 : 1)) tr.append('td') // add column for forest plot
 			})
 		}
 
@@ -527,9 +528,11 @@ function setRenderers(self) {
 				}
 
 				if (neuroOncCox) {
-					// add events column for cox regression for
-					// neuro-onc datasets
-					tr.append('td').style('padding', '8px').text(cols.shift())
+					// cox regression for neuro-onc datasets
+					// sample size and event count columns present
+					// both will be NA for continuous variable
+					cols.shift() // no need to show sample size NA
+					tr.append('td').style('padding', '8px').text(cols.shift()) // show event count NA in column
 				}
 
 				// col 3
@@ -559,9 +562,7 @@ function setRenderers(self) {
 
 				let isfirst = true
 				for (const k of orderedCategories) {
-					if (isfirst) {
-						isfirst = false
-					} else {
+					if (!isfirst) {
 						// create new row starting from 2nd category
 						tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 					}
@@ -573,8 +574,18 @@ function setRenderers(self) {
 					fillColumn2coefficientsTable(td, tw, k)
 
 					if (neuroOncCox) {
-						// add events column for cox regression for
-						// neuro-onc datasets
+						// cox regression for neuro-onc datasets
+						// report sample sizes and event counts of coefficients
+						const [sampleSize_ref, sampleSize_c] = cols.shift().split('/')
+						// for sample sizes, append to ref and non-ref category labels
+						if (isfirst) {
+							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
+							const label = `${refGrpDiv.html()} (n=${sampleSize_ref})`
+							refGrpDiv.html(label)
+						}
+						const label = `${td.text()} (n=${sampleSize_c})`
+						td.text(label)
+						// for event counts, report as a column
 						tr.append('td').style('padding', '8px').text(cols.shift())
 					}
 
@@ -585,6 +596,8 @@ function setRenderers(self) {
 					for (const v of cols) {
 						tr.append('td').text(v).style('padding', '8px')
 					}
+
+					isfirst = false
 				}
 			} else {
 				tr.append('td').text('ERROR: no .fields[] or .categories{}')
@@ -910,7 +923,7 @@ function setRenderers(self) {
 		}
 		///////// helpers
 		function numbers2array(_lst) {
-			const lst = neuroOncCox ? _lst.slice(1) : _lst // do not consider event count
+			const lst = neuroOncCox ? _lst.slice(2) : _lst // do not consider sample size nor event count
 			const m = Number(lst[midIdx])
 			if (!Number.isNaN(m)) values.push(m)
 			const l = Number(lst[CIlow]),
@@ -965,6 +978,7 @@ function fillCoefficientTermname(tw, td) {
 	if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
 		// do not display ref for spline variable
 		td.append('div')
+			.attr('class', 'sjpcb-regression-results-refGrp')
 			.style('font-size', '.8em')
 			.style('opacity', 0.6)
 			.html(
