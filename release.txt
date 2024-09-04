@@ -1,1 +1,2 @@
-
+Fixes
+- Reenabled overlaying the violin plot with survival terms. 

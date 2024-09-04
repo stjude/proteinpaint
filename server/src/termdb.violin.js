@@ -49,13 +49,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result, isSurvival)
 
-	if (isSurvival) {
-		//Wilcoxon will not run with 'exit code' included in the label
-		for (const plot of result.plots) {
-			plot.label = Number.isFinite(plot.label) ? `Exit code ${plot.label}` : plot.label
-		}
-	}
-
 	createCanvasImg(q, result, ds)
 	if (res) res.send(result)
 	else return result
@@ -83,13 +76,19 @@ export async function wilcoxon(divideTw, result, isSurvival) {
 	const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
 	for (const test of wilcoxOutput) {
 		test.group1_id =
-			(isSurvival && Number(test.group1_id)) || test.group1_id == 0 ? `Exit code ${test.group1_id}` : test.group1_id
+			isSurvival && (Number(test.group1_id) || test.group1_id == 0) ? `Exit code ${test.group1_id}` : test.group1_id
 		test.group2_id =
-			(isSurvival && Number(test.group2_id)) || test.group1_id == 1 ? `Exit code ${test.group2_id}` : test.group2_id
+			isSurvival && (Number(test.group2_id) || test.group1_id == 0) ? `Exit code ${test.group2_id}` : test.group2_id
 		if (test.pvalue == null || test.pvalue == 'null') {
 			result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
 		} else {
 			result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: test.pvalue.toPrecision(4) }])
+		}
+		if (isSurvival) {
+			//Wilcoxon will not run with 'exit code' included in the label
+			for (const plot of result.plots) {
+				plot.label = Number.isFinite(plot.label) ? `Exit code ${plot.label}` : plot.label
+			}
 		}
 	}
 }
