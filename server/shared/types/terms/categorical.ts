@@ -19,14 +19,26 @@ import { TermSettingInstance } from '../termsetting.ts'
  * @category TW
  */
 
-export type RawCatTW = {
-	// id: string
-	type?: 'CatTWValues' | 'CatTWPredefinedGS' | 'CatTWCustomGS'
-	term: CategoricalTerm // must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst()
-	q: RawValuesQ | RawPredefinedGroupsetQ | RawCustomGroupsetQ
-	isAtomic?: true
-	$id?: string
+export type RawCatTWValues = BaseTW & {
+	type?: 'CatTWValues'
+	/** must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst() */
+	term: CategoricalTerm
+	q: RawValuesQ
 }
+
+export type RawCatTWPredefinedGS = BaseTW & {
+	type?: 'CatTWPredefinedGS'
+	term: CategoricalTerm
+	q: RawPredefinedGroupsetQ
+}
+
+export type RawCatTWCustomGS = BaseTW & {
+	type?: 'CatTWCustomGS'
+	term: CategoricalTerm
+	q: RawCustomGroupsetQ
+}
+
+export type RawCatTW = RawCatTWValues | RawCatTWPredefinedGS | RawCatTWCustomGS
 
 //export type RawCatTW = RawCatTWValues | RawCatTWPredefinedGS | RawCatTWCustomGS
 

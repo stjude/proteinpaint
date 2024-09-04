@@ -1,8 +1,8 @@
 import { MinBaseQ, BaseTW, TermValues, BaseTerm, HiddenValues } from '../index.ts'
 
-type RawRegularBin = {
+export type RawRegularBin = MinBaseQ & {
 	type?: 'regular-bin'
-	mode?: 'discrete' | 'binary'
+	mode?: 'discrete' //| 'binary'
 	bin_size?: number
 	first_bin?: {
 		stop: number
@@ -12,37 +12,50 @@ type RawRegularBin = {
 	isAtomic?: true
 }
 
-type RawCustomBin = {
+export type RawNumTWRegularBin = BaseTW & {
+	type?: 'NumTWRegularBin'
+	term: NumericTerm
+	q: RawRegularBin
+}
+
+export type RawCustomBin = MinBaseQ & {
 	type: 'custom-bin'
 	mode?: 'discrete' | 'binary'
-	// lst may be missing if median
+	// lst may be missing if median is present
+	// TODO: separate the binary type definition from discrete???
 	lst?: [NumericBin, ...NumericBin[]]
 	preferredBins?: string
 	median?: number
 	isAtomic?: true
-}
-
-type RawContinuousQ = {
-	type?: undefined // todo
-	mode: 'continuous'
+} /*| {
+	type: 'custom-bin'
+	mode: 'binary'
+	// lst may be missing if median is present
+	lst?: [NumericBin, NumericBin]
+	preferredBins?: string
+	median?: number
 	isAtomic?: true
+}*/
+
+export type RawNumTWCustomBin = BaseTW & {
+	type?: 'NumTWCustomBin'
+	term: NumericTerm
+	q: RawCustomBin
 }
 
-type RawSplineQ = {
-	type?: undefined // todo
-	mode: 'spline'
-	knots: {
-		value: number
-	}[]
-	isAtomic?: true
+export type RawNumTWCont = BaseTW & {
+	type?: 'NumTWCont'
+	term: NumericTerm
+	q: ContinuousNumericQ
 }
 
-export type RawNumTW = BaseTW & {
-	// id: string
-	type?: 'NumTWRegularBin' | 'NumTWCustomBin' | 'NumTWCont' | 'NumTWSpline'
-	term: NumericTerm // must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst()
-	q: RawRegularBin | RawCustomBin | RawContinuousQ | RawSplineQ
+export type RawNumTWSpline = BaseTW & {
+	type?: 'NumTWSpline'
+	term: NumericTerm
+	q: SplineNumericQ
 }
+
+export type RawNumTW = RawNumTWRegularBin | RawNumTWCustomBin | RawNumTWCont | RawNumTWSpline
 
 export type NumericTerm = BaseTerm & {
 	id?: string
@@ -113,11 +126,20 @@ export type RegularNumericBinConfig = {
 
 export type CustomNumericBinConfig = {
 	type: 'custom-bin'
-	mode?: 'discrete' | 'binary'
+	mode?: 'discrete'
 	// since ts will allow NumericBin[] to be empty,
 	// use this workaround to define a non-empty array
 	lst: [NumericBin, ...NumericBin[]]
 }
+
+// |
+// {
+// 	type?: 'custom-bin'
+// 	mode?: 'discrete' | 'binary'
+// 	// since ts will allow NumericBin[] to be empty,
+// 	// use this workaround to define a non-empty array
+// 	lst?: [NumericBin, ...NumericBin[]]
+// }
 
 /*export type NumericQ = BaseQ & {
 	// termType: 'float' | 'integer' -- converts to 'numeric'
@@ -202,6 +224,12 @@ export type NumTWCustomBin = BaseTW & {
 	type: 'NumTWCustomBin'
 	term: NumericTerm
 	q: CustomNumericBinConfig
+}
+
+export type NumTWBinaryBin = BaseTW & {
+	type: 'NumTWBinaryBin'
+	term: NumericTerm
+	q: BinaryNumericQ
 }
 
 export type NumTWBinary = BaseTW & {

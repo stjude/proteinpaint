@@ -9,7 +9,10 @@ import {
 	CatTWValues,
 	CatTWPredefinedGS,
 	CatTWCustomGS,
-	RawCatTW
+	RawCatTW,
+	RawCatTWValues,
+	RawCatTWPredefinedGS,
+	RawCatTWCustomGS
 } from '#types'
 import { TwBase, TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
@@ -55,10 +58,68 @@ export class CategoricalBase {
 		}
 		if (!tw.q) tw.q = { type: 'values', isAtomic: true }
 
-		if (CatValues.accepts(tw)) return tw
-		else if (CatPredefinedGS.accepts(tw)) return tw
-		else if (CatCustomGS.accepts(tw)) return tw
-		else throw `cannot process the raw categorical tw`
+		/* 
+			Pre-fill the tw.type, since it's required for ROUTING to the
+			correct fill() function. Tsc will be able to use tw.type as a 
+			discriminant property for the RawCatTW union type, enabling 
+			static type checks on the input raw tw.
+
+			NOTE: tw.type is NOT required when calling a specialized fill() 
+			function directly, outside of TwRouter.fill(). The input tw.type
+			does not have to be discriminated in that case.
+		*/
+		if (!tw.type)
+			tw.type =
+				!tw.q.type || tw.q.type == 'values'
+					? 'CatTWValues'
+					: tw.q.type == 'predefined-groupset'
+					? 'CatTWPredefinedGS'
+					: tw.q.type == 'custom-groupset'
+					? 'CatTWCustomGS'
+					: undefined
+
+		/*
+			For each of fill() functions below:
+			1. The `tw` argument must already have a tw.type string value, 
+			   which corresponds to the RawCatTW* equivalent of the full CatTW* type 
+
+			2. The fill() function must fill-in any expected missing values,
+			   validate the tw.q shape at runtime, and throw on any error or mismatched expectation.
+			   Runtime validation is required because the input raw tw can come from anywhere,
+			   like term.bins.default, which is a runtime variable that is not possible to statically check.
+
+			3. The filled-in tw, when returned, must be **coerced** to the full CatTW* type, 
+			   in order to match the function signature's return type.
+		*/
+
+		/*
+			For each of fill() functions below:
+			1. The `tw` argument must already have a tw.type string value, 
+			   which corresponds to the RawNumTW* equivalent of the full NumTW* type.
+			   NOTE: This only applies for routing, it's optional when calling the 
+			   specialized fill() function directly.
+
+			2. The fill() function must fill-in any expected missing values,
+			   validate the tw.q shape at runtime, and throw on any error or mismatched expectation.
+			   Runtime validation is required because the input raw tw can come from anywhere,
+			   like term.bins.default, which is a runtime variable that is not possible to statically check.
+
+			3. The filled-in tw, when returned, must be **coerced** to the full NumTW* type, 
+			   in order to match the function signature's return type.
+		*/
+		switch (tw.type) {
+			case 'CatTWValues':
+				return CatValues.fill(tw)
+
+			case 'CatTWPredefinedGS':
+				return CatPredefinedGS.fill(tw, opts)
+
+			case 'CatTWCustomGS':
+				return CatCustomGS.fill(tw)
+
+			default:
+				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by CategoricalBase.fill()`
+		}
 	}
 }
 
@@ -77,16 +138,16 @@ export class CatValues extends TwBase {
 		this.#opts = opts
 	}
 
-	//
-	// This function asks the following, to confirm that RawCatTW can be converted to CatTWValues type
-	// 1. Can the function process the tw? If false, the tw will be passed by the router to a different specialized filler
-	// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
-	//    of the tw by any other code
-	//
-	static accepts(tw: RawCatTW): tw is CatTWValues {
+	// See the relevant comments in the CategoricalBase.fill() function above
+	static fill(tw: RawCatTWValues, opts: TwOpts = {}): CatTWValues {
+		if (!tw.type) tw.type = 'CatTWValues'
+		else if (tw.type != 'CatTWValues') throw `expecting tw.type='CatTWValues', got '${tw.type}'`
+
+		if (tw.term.type != 'categorical') throw `expecting tw.term.type='categorical', got '${tw.term.type}'`
 		const { term, q } = tw
 		if (!q.type) q.type = 'values'
-		if (term.type != 'categorical' || q.type != 'values') return false
+		else if (q.type != 'values') throw `expecting tw.q.type='values', got ${tw.q.type}`
+
 		// GDC or other dataset may allow missing term.values
 		if (!term.values) term.values = {}
 		const numVals = Object.keys(tw.term.values).length
@@ -107,8 +168,7 @@ export class CatValues extends TwBase {
 			// }
 		}
 		set_hiddenvalues(q, term)
-		tw.type = 'CatTWValues'
-		return true
+		return tw as CatTWValues
 	}
 }
 
@@ -129,15 +189,15 @@ export class CatPredefinedGS extends TwBase {
 		this.#opts = opts
 	}
 
-	//
-	// This function asks the following, to confirm that RawCatTW can be converted to a CatTWPredefinedGS type
-	// 1. Can the function process the tw? If false, the tw will be passed by the router to a different specialized filler
-	// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
-	//    of the tw by any other code
-	//
-	static accepts(tw: RawCatTW, opts: TwOpts = {}): tw is CatTWPredefinedGS {
+	static fill(tw: RawCatTWPredefinedGS, opts: TwOpts = {}): CatTWPredefinedGS {
+		if (!tw.type) tw.type = 'CatTWPredefinedGS'
+		else if (tw.type != 'CatTWPredefinedGS') throw `expecting tw.type='CatTWPredefinedGS', got '${tw.type}'`
+
+		if (tw.term.type != 'categorical') throw `expecting tw.term.type='categorical', got '${tw.term.type}'`
+		if (tw.q.type != 'predefined-groupset') throw `expecting tw.q.type='predefined-groupset', got '${tw.q.type}'`
+
 		const { term, q } = tw
-		if (term.type != 'categorical' || q.type != 'predefined-groupset') return false
+		//if (term.type != 'categorical' || q.type != 'predefined-groupset') return false
 		const i = q.predefined_groupset_idx
 		if (i !== undefined && !Number.isInteger(i)) throw `missing or invalid tw.q.predefined_groupset_idx='${i}'`
 		q.predefined_groupset_idx = i || 0
@@ -161,8 +221,7 @@ export class CatPredefinedGS extends TwBase {
 			// }
 		}
 		set_hiddenvalues(q, term)
-		tw.type = 'CatTWPredefinedGS'
-		return true
+		return tw as CatTWPredefinedGS
 	}
 }
 
@@ -183,15 +242,15 @@ export class CatCustomGS extends TwBase {
 		this.#opts = opts
 	}
 
-	//
-	// This function asks the following, to confirm that RawCatTW can be converted to CatTWCustomGS type
-	// 1. Can the function process the tw? If false, the tw will be passed by the router to a different specialized filler
-	// 2. If true, is the tw valid for processing, is it full or fillable? If not, must throw to stop subsequent processing
-	//    of the tw by any other code
-	//
-	static accepts(tw: RawCatTW): tw is CatTWCustomGS {
+	// See the relevant comments in the CategoricalBase.fill() function above
+	static fill(tw: RawCatTWCustomGS): CatTWCustomGS {
+		if (!tw.type) tw.type = 'CatTWCustomGS'
+		else if (tw.type != 'CatTWCustomGS') throw `expecting tw.type='CatTWCustomGS', got '${tw.type}'`
+
+		if (tw.term.type != 'categorical') throw `expecting tw.term.type='categorical', got '${tw.term.type}'`
+		if (tw.q.type != 'custom-groupset') throw `expecting tw.q.type='custom-groupset', got '${tw.q.type}'`
+
 		const { term, q } = tw
-		if (term.type != 'categorical' || q.type != 'custom-groupset') return false
 		if (!q.customset) throw `missing tw.q.customset`
 		if (q.mode == 'binary') {
 			if (q.customset.groups.length != 2) throw 'there must be exactly two groups'
@@ -207,7 +266,6 @@ export class CatCustomGS extends TwBase {
 			// }
 		}
 		set_hiddenvalues(q, term)
-		tw.type = 'CatTWCustomGS'
-		return true
+		return tw as CatTWCustomGS
 	}
 }

@@ -23,7 +23,8 @@ export type RawPredefinedGroupsetQ = MinBaseQ & {
 	type: 'predefined-groupset'
 	mode?: 'binary' | 'discrete'
 	predefined_groupset_idx: number
-	groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter
+	/** deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter */
+	groupsetting?: { inuse?: boolean } & GroupSettingQ
 }
 
 export type RawCustomGroupsetQ = MinBaseQ & {
@@ -32,5 +33,6 @@ export type RawCustomGroupsetQ = MinBaseQ & {
 	customset: {
 		groups: GroupEntry[]
 	}
-	groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter
+	/** deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter */
+	groupsetting?: { inuse?: boolean } & GroupSettingQ
 }

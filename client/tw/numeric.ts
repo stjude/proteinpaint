@@ -9,7 +9,10 @@ import {
 	NumTWCont,
 	NumTWSpline,
 	RawNumTW,
-	DefaultNumericQ,
+	RawNumTWRegularBin,
+	RawNumTWCustomBin,
+	RawNumTWCont,
+	RawNumTWSpline,
 	DefaultBinnedQ,
 	DefaultMedianQ,
 	BinaryNumericQ,
@@ -25,23 +28,17 @@ import { copyMerge } from '#rx'
 import { isNumeric } from '#shared/helpers'
 import { roundValueAuto } from '#shared/roundValue'
 
-const numTermTypes = new Set(['integer', 'float', 'geneExpression', 'metaboliteIntensity'])
+type TermTypeSet = Set<'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'>
 
 export class NumericBase {
+	static termTypes: TermTypeSet = new Set(['integer', 'float', 'geneExpression', 'metaboliteIntensity'])
+
 	static async fill(tw: RawNumTW, opts: TwOpts = {}): Promise<NumTWTypes> {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
-		if (
-			tw.term.type != 'integer' &&
-			tw.term.type != 'float' &&
-			tw.term.type != 'geneExpression' &&
-			tw.term.type != 'metaboliteIntensity'
-		)
-			/*if (!numTermTypes.has(tw.term.type))*/ throw `non-numeric term.type='${tw.term.type}'`
+		if (!NumericBase.termTypes.has(tw.term.type)) throw `non-numeric term.type='${tw.term.type}'`
 
-		// preprocessing the preferredBins to make sure that subsequent type guard functions
-		// have a more filled-in q object to correctly detect the raw tw type. Otherwise,
-		// the first type guard will have to perform these steps, which will require the
-		// type guard functions to be called in a certain order, not ideal.
+		// preprocessing the preferredBins to make sure that subsequent fill() functions
+		// have a more filled-in q object to correctly detect the raw tw type.
 		if (opts.defaultQ) opts.defaultQ.isAtomic = true
 		const preferredBins = opts.defaultQ?.preferredBins
 		if (preferredBins) {
@@ -61,24 +58,88 @@ export class NumericBase {
 			} else {
 				throw `unrecognized defaultQ.preferredBins='${preferredBins}'`
 			}
+		} else if (!tw.q.type) {
+			if (opts.defaultQ) {
+				opts.defaultQ.isAtomic = true
+				// merge defaultQ into tw.q
+				if (tw.q.mode != opts.defaultQ.mode) copyMerge(tw.q, opts.defaultQ)
+			}
+			if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
+				copyMerge(tw.q, structuredClone(tw.term.bins.default))
+			}
 		}
 
 		if (opts.defaultQ) {
 			opts.defaultQ.isAtomic = true
 			// merge defaultQ into tw.q
-			copyMerge(tw.q, opts.defaultQ)
+			if (tw.q.mode != opts.defaultQ.mode) copyMerge(tw.q, opts.defaultQ)
 		}
 
-		if (NumRegularBin.accepts(tw, opts)) return tw
-		else if (NumCustomBins.accepts(tw, opts)) return tw
-		else if (NumCont.accepts(tw, opts)) return tw
-		else if (NumSpline.accepts(tw, opts)) return tw
-		// FOR REFERENCE:
-		// typescript does not support an async type guard,
-		// may use the simply workaround below where the type guard
-		// returns a boolean and the return type is coerced
-		//else if (await NumTYPE.accepts(tw)) return tw as NumTYPE
-		else throw `cannot process the raw numeric tw`
+		/* 
+			Pre-fill the tw.type, since it's required for ROUTING to the
+			correct fill() function. Tsc will be able to use tw.type as a 
+			discriminant property for the RawNumTW union type, enabling 
+			static type checks on the input raw tw.
+
+			NOTE: tw.type is NOT required when calling a specialized fill() 
+			function directly, outside of TwRouter.fill(). The input tw.type
+			does not have to be discriminated in that case.
+		*/
+		if (!tw.type)
+			tw.type =
+				tw.q.type == 'regular-bin'
+					? 'NumTWRegularBin'
+					: tw.q.type == 'custom-bin'
+					? 'NumTWCustomBin'
+					: tw.q.mode == 'continuous'
+					? 'NumTWCont'
+					: tw.q.mode == 'spline'
+					? 'NumTWSpline'
+					: undefined
+
+		/*
+			For each of fill() functions below:
+			1. The `tw` argument must already have a tw.type string value, 
+			   which corresponds to the RawNumTW* equivalent of the full NumTW* type 
+
+			2. The fill() function must fill-in any expected missing values,
+			   validate the tw.q shape at runtime, and throw on any error or mismatched expectation.
+			   Runtime validation is required because the input raw tw can come from anywhere,
+			   like term.bins.default, which is a runtime variable that is not possible to statically check.
+
+			3. The filled-in tw, when returned, must be **coerced** to the full NumTW* type, 
+			   in order to match the function signature's return type.
+		*/
+		switch (tw.type) {
+			case 'NumTWRegularBin':
+				return NumRegularBin.fill(tw, opts)
+
+			case 'NumTWCustomBin':
+				return NumCustomBins.fill(tw, opts)
+
+			case 'NumTWCont':
+				return NumCont.fill(tw, opts)
+
+			case 'NumTWSpline':
+				return NumSpline.fill(tw, opts)
+
+			default:
+				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by NumericBase.fill()`
+		}
+	}
+}
+
+export class NumericRegBinQ {
+	type: 'regular-bin'
+	firstBin: {
+		stop: number
+	}
+
+	constructor(q) {
+		this.type = 'regular-bin'
+		this.firstBin = {
+			stop: q.stop
+		}
 	}
 }
 
@@ -97,21 +158,23 @@ export class NumRegularBin extends TwBase {
 		this.#opts = opts
 	}
 
-	static accepts(tw: RawNumTW, opts: TwOpts = {}): tw is NumTWRegularBin {
+	// See the relevant comments in the NumericBase.fill() function above
+	static fill(tw: RawNumTWRegularBin, opts: TwOpts = {}): NumTWRegularBin {
 		const { term, q } = tw
-		if (tw.q.mode == 'continuous' || tw.q.type == 'custom-bin' || tw.q.mode == 'spline') return false
-		const defaultQ = opts.defaultQ
-		// when missing, defaults mode to discrete
-		//const dq = defaultQ as DefaultNumericQ
-		if (!tw.q.mode) tw.q.mode = opts.defaultQ?.mode || 'discrete'
-		if (!Number.isFinite(tw.q?.bin_size) || !tw.q.first_bin || !Number.isFinite(tw.q.first_bin.stop)) {
-			copyMerge(tw.q, tw.term.bins.default)
-		}
-		if (tw.q.type != 'regular-bin') return false
-		if (typeof tw.q.bin_size! !== 'number') throw `q.bin_size is not a number`
+		if (!tw.type) tw.type = 'NumTWRegularBin'
+		else if (tw.type != 'NumTWRegularBin') throw `expecting tw.type='NumTWRegularBin', got '${tw.type}'`
+
+		if (!tw.q.mode) tw.q.mode = 'discrete'
+		else if (tw.q.mode != 'discrete') throw `expecting tw.q.mode='discrete', got '${tw.q.mode}'`
+
+		if (tw.q.type && tw.q.type != 'regular-bin') throw `expecting tw.q.type='regular-bin', got '${tw.q.type}'`
+
+		if (!isNumeric(tw.q.bin_size)) throw `tw.q.bin_size=${tw.q.bin_size} is not numeric`
+		if (!tw.q.first_bin) throw `missing tw.q.first_bin`
+		if (!isNumeric(tw.q.first_bin?.stop)) throw `tw.q.first_bin.stop is not numeric`
+
 		TwBase.setHiddenValues(tw.q as NumericQ, term)
-		tw.type = 'NumTWRegularBin' // should be NumTWRegularBins???
-		return true
+		return tw as NumTWRegularBin
 	}
 }
 
@@ -130,18 +193,22 @@ export class NumCustomBins extends TwBase {
 		this.#opts = opts
 	}
 
-	static accepts(tw: RawNumTW, opts: TwOpts = {}): tw is NumTWCustomBin {
-		//const { term, q } = tw
-		if (tw.q.mode == 'continuous' || tw.q.type == 'regular-bin' || tw.q.mode == 'spline') return false
-		if (!tw.q.mode) tw.q.mode = opts.defaultQ?.mode || 'discrete'
-		if (tw.q.type != 'custom-bin') return false
+	// See the relevant comments in the NumericBase.fill() function above
+	static fill(tw: RawNumTWCustomBin, opts: TwOpts = {}): NumTWCustomBin {
+		if (!tw.type) tw.type = 'NumTWCustomBin'
+		else if (tw.type != 'NumTWCustomBin') throw `expecting tw.type='NumTWCustomBin', got '${tw.type}'`
+
+		if (!tw.q.mode) tw.q.mode = 'discrete'
+		else if (tw.q.mode != 'discrete' && tw.q.mode != 'binary')
+			throw `expecting tw.q.mode='discrete'|binary', got '${tw.q.mode}'`
+
+		if (tw.q.type && tw.q.type != 'custom-bin') throw `expecting tw.q.type='custom-bin', got '${tw.q.type}'`
 
 		if (opts.defaultQ) {
 			opts.defaultQ.isAtomic = true
 			if (opts.defaultQ.preferredBins == 'median') {
 				const median = opts.defaultQ.median
 				if (!isNumeric(median)) throw 'median value not a number'
-				const q = JSON.parse(JSON.stringify(opts.defaultQ)) as BinaryNumericQ
 				delete tw.q.preferredBins
 				delete tw.q.median
 				tw.q.lst = [
@@ -170,7 +237,7 @@ export class NumCustomBins extends TwBase {
 
 		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
 		tw.type = 'NumTWCustomBin'
-		return true
+		return tw as NumTWCustomBin
 	}
 }
 
@@ -189,12 +256,16 @@ export class NumCont extends TwBase {
 		this.#opts = opts
 	}
 
-	static accepts(tw: RawNumTW, opts: TwOpts = {}): tw is NumTWCont {
-		//const { term, q } = tw
-		if (tw.q.mode != 'continuous') return false
+	// See the relevant comments in the NumericBase.fill() function above
+	static fill(tw: RawNumTWCont, opts: TwOpts = {}): NumTWCont {
+		if (!tw.type) tw.type = 'NumTWCont'
+		else if (tw.type != 'NumTWCont') throw `expecting tw.type='NumTWCont', got '${tw.type}'`
+
+		if (tw.q.mode != 'continuous') throw `tw.q.mode='${tw.q.mode}', expecting 'continuous'`
+
 		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
 		tw.type = 'NumTWCont'
-		return true
+		return tw as NumTWCont
 	}
 }
 
@@ -213,14 +284,16 @@ export class NumSpline extends TwBase {
 		this.#opts = opts
 	}
 
-	static accepts(tw: RawNumTW, opts: TwOpts = {}): tw is NumTWSpline {
-		//const { term, q } = tw
-		if (tw.q.mode != 'spline') return false
+	static fill(tw: RawNumTWSpline, opts: TwOpts = {}): NumTWSpline {
+		if (!tw.type) tw.type = 'NumTWSpline'
+		else if (tw.type != 'NumTWSpline') throw `expecting tw.type='NumTWSpline', got '${tw.type}'`
+
+		if (tw.q.mode != 'spline') throw `tw.q.mode='${tw.q.mode}', expecting 'spline'`
 		if (!tw.q.knots) throw `missing tw.q.knots`
 		if (!tw.q.knots.length) throw `empty tw.q.knots[]`
 
 		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
 		tw.type = 'NumTWSpline'
-		return true
+		return tw as NumTWSpline
 	}
 }
