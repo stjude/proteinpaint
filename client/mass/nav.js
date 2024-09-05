@@ -32,8 +32,8 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 // data elements for navigation header tabs
+const aboutTab = { top: 'ABOUT', mid: 'DATASET', btm: '', subheader: 'about' }
 const cohortTab = { top: 'COHORT', mid: 'NONE', btm: '', subheader: 'cohort' }
-const aboutTab = { top: 'ABOUT', mid: 'NONE', btm: '', subheader: 'about' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
@@ -108,10 +108,13 @@ class TdbNav {
 					massSessionDuration: this.opts.massSessionDuration,
 					sessionDaysLeft: this.app.opts.sessionDaysLeft || null
 				}),
-				about: aboutInit({
-					app: this.app,
-					holder: this.dom.subheader.about
-				})
+				about: appState.termdbConfig.about
+					? aboutInit({
+							app: this.app,
+							holder: this.dom.subheader.about,
+							obj: appState.termdbConfig.about
+					  })
+					: []
 			})
 			this.mayShowMessage_sessionDaysLeft()
 		} catch (e) {
@@ -265,12 +268,17 @@ function setRenderers(self) {
 				.append('div')
 				.style('display', 'none')
 				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
-			about: self.dom.subheaderDiv.append('div').style('display', 'none')
+			about: self.dom.subheaderDiv.append('div').style('display', 'none').attr('data-testid', 'sjpp-mass-about')
 		})
 
 		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
-		if (appState.termdbConfig.about) self.tabs.unshift(aboutTab) // show the About tab at the beginning if defined in dataset config
 		if (appState.termdbConfig.selectCohort) self.tabs.unshift(cohortTab) // dataset has "sub-cohorts", show the Cohort tab at the beginning
+		if (appState.termdbConfig.about) {
+			// show the About tab at the beginning if defined in dataset config
+			self.tabs.unshift(aboutTab)
+			// TODO: Maybe add a human-readable dataset name for the about tab
+			// aboutTab.mid = appState.termdbConfig.about.niceName
+		}
 
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
 
@@ -581,7 +589,8 @@ function setInteractivity(self) {
 		self.activeTab = d.colNum
 		self.searching = false
 		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
-		if (self.activeTab == 1 && self.activeCohort != -1 && !self.state.plots.length) {
+		const chartsIdx = self.subheaderKeys.indexOf('charts')
+		if (self.activeTab == chartsIdx && self.activeCohort != -1 && !self.state.plots.length) {
 			// show dictionary in charts tab if no other
 			// plots have been created
 			self.app.dispatch({
