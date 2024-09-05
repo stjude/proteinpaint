@@ -421,6 +421,8 @@ export type SingleCellGeneExpressionNative = {
 	src: 'native'
 	/** path to R rds files, each is a gene-by-cell matrix for a sample, with ".rdx" suffix. missing files are detected and handled */
 	folder: string
+	/** HDF5 or RDS file, will deprecate RDS file later */
+	storage_type: 'HDF5' | 'RDS'
 	/** dynamically added getter */
 	get?: (q: any) => any
 	/** cached gene exp bins */
