@@ -477,9 +477,9 @@ function setRenderers(self) {
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 			result.coefficients.header.forEach((v, i) => {
-				if (neuroOncCox && i == 2) return // skip sample count column
+				if (neuroOncCox && (i == 2 || i == 3)) return // skip sample count and event count columns
 				tr.append('td').text(v).style('padding', '8px')
-				if (i === (neuroOncCox ? 3 : 1)) tr.append('td') // add column for forest plot
+				if (i === 1) tr.append('td') // add column for forest plot
 			})
 		}
 
@@ -531,8 +531,8 @@ function setRenderers(self) {
 					// cox regression for neuro-onc datasets
 					// sample size and event count columns present
 					// both will be NA for continuous variable
-					cols.shift() // no need to show sample size NA
-					tr.append('td').style('padding', '8px').text(cols.shift()) // show event count NA in column
+					cols.shift()
+					cols.shift()
 				}
 
 				// col 3
@@ -576,17 +576,17 @@ function setRenderers(self) {
 					if (neuroOncCox) {
 						// cox regression for neuro-onc datasets
 						// report sample sizes and event counts of coefficients
-						const [sampleSize_ref, sampleSize_c] = cols.shift().split('/')
-						// for sample sizes, append to ref and non-ref category labels
+						// report for both ref and non-ref categories
+						const [samplesize_ref, samplesize_c] = cols.shift().split('/')
+						const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
 						if (isfirst) {
 							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
-							const label = `${refGrpDiv.html()} (n=${sampleSize_ref})`
-							refGrpDiv.html(label)
+							refGrpDiv.append('div').html(`n = ${samplesize_ref}<br>events = ${eventcnt_ref}`)
 						}
-						const label = `${td.text()} (n=${sampleSize_c})`
-						td.text(label)
-						// for event counts, report as a column
-						tr.append('td').style('padding', '8px').text(cols.shift())
+						td.append('div')
+							.style('font-size', '.8em')
+							.style('opacity', 0.6)
+							.html(`n = ${samplesize_c}<br>events = ${eventcnt_c}`)
 					}
 
 					// col 3
@@ -635,7 +635,6 @@ function setRenderers(self) {
 		const tr = table.append('tr')
 		tr.append('td') // col 1
 		tr.append('td') // col 2
-		if (neuroOncCox) tr.append('td')
 		forestPlotter(tr.append('td')) // forest plot axis
 		for (const v of result.coefficients.header) tr.append('td')
 	}
@@ -977,15 +976,25 @@ function fillCoefficientTermname(tw, td) {
 
 	if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
 		// do not display ref for spline variable
-		td.append('div')
+		const refGrpDiv = td.append('div').style('margin-top', '1px').style('font-size', '.8em').style('opacity', 0.6)
+
+		refGrpDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('padding', '1px 5px')
+			.style('border', '1px solid #aaa')
+			.style('border-radius', '10px')
+			.style('font-size', '.7em')
+			.text('REF')
+
+		refGrpDiv
+			.append('div')
 			.attr('class', 'sjpcb-regression-results-refGrp')
-			.style('font-size', '.8em')
-			.style('opacity', 0.6)
-			.html(
-				'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">REF</span> ' +
-					(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp) +
-					'</span>'
-			)
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('margin-left', '3px')
+			.text(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp)
 	}
 
 	if (tw.effectAllele) {
