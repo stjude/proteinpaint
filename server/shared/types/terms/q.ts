@@ -12,7 +12,7 @@ export type MinBaseQ = {
 	*/
 	hiddenValues?: HiddenValues
 	/**indicates this object should not be extended by a copy-merge tool */
-	isAtomic?: boolean
+	isAtomic?: true
 	name?: string
 	reuseId?: string
 }
@@ -21,16 +21,18 @@ export type RawValuesQ = MinBaseQ & { type?: 'values'; mode?: 'binary' }
 
 export type RawPredefinedGroupsetQ = MinBaseQ & {
 	type: 'predefined-groupset'
-	mode?: 'binary'
-	predefined_groupset_idx?: number
-	groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter
+	mode?: 'binary' | 'discrete'
+	predefined_groupset_idx: number
+	/** deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter */
+	groupsetting?: { inuse?: boolean } & GroupSettingQ
 }
 
 export type RawCustomGroupsetQ = MinBaseQ & {
 	type: 'custom-groupset'
-	mode?: 'binary'
+	mode?: 'binary' | 'discrete'
 	customset: {
 		groups: GroupEntry[]
 	}
-	groupsetting?: { inuse?: boolean } & GroupSettingQ // deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter
+	/** deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter */
+	groupsetting?: { inuse?: boolean } & GroupSettingQ
 }

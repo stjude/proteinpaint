@@ -101,7 +101,9 @@ class TdbStore {
 					const _ = await import(`../plots/${savedPlot.chartType}.js`)
 					plot = await _.getPlotConfig(savedPlot, this.app)
 				} catch (e) {
-					this.app.errorHandler(e)
+					if (typeof this.app.errorHandler == 'function') this.app.errorHandler(e)
+					else this.app.printError(e)
+					//else console.log(103, e, this.app)
 				}
 				if (!plot) {
 					invalidPlots.push(i)

@@ -12,6 +12,7 @@ import * as matrixSerieses from './matrix.serieses'
 import * as matrixLegend from './matrix.legend'
 import * as matrixGroups from './matrix.groups'
 import { setComputedConfig } from './matrix.config'
+import { getTermGroups } from './matrix.xtw'
 export { getPlotConfig } from './matrix.config'
 
 export class Matrix {
@@ -147,6 +148,7 @@ export class Matrix {
 		try {
 			this.config = structuredClone(this.state.config)
 			if (this.mayRequireToken()) return
+			this.termGroups = getTermGroups(this.config.termgroups, this.app)
 
 			const prevTranspose = this.settings.transpose
 			// controlsRenderer.getSettings() supplies settings that are not tracked in the global app and plot state

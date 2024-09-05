@@ -2,9 +2,8 @@ import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
 import { RawCatTW, RawTW, GroupEntry, TermGroupSetting } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
-import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
-import { CategoricalRouter } from '../CategoricalRouter'
+import { CatValues, CatPredefinedGS, CatCustomGS } from '../categorical'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 
@@ -110,9 +109,8 @@ tape('initRaw() categorical', async test => {
 		}
 
 		const handler = await TwRouter.initRaw(tw, { vocabApi })
-		test.equal(
-			handler.router,
-			CategoricalRouter,
+		test.true(
+			handler instanceof CatValues,
 			`should return a matching categorical handler.router on init() with missing q or q.type`
 		)
 	}
@@ -121,13 +119,12 @@ tape('initRaw() categorical', async test => {
 		const tw: RawCatTW = {
 			term,
 			isAtomic: true as const,
-			q: { type: 'predefined-groupset', isAtomic: true as const }
+			q: { type: 'predefined-groupset', isAtomic: true as const, predefined_groupset_idx: 0 }
 		}
 
 		const handler = await TwRouter.initRaw(tw, { vocabApi })
-		test.equal(
-			handler.router,
-			CategoricalRouter,
+		test.true(
+			handler instanceof CatPredefinedGS,
 			`should return a matching categorical handler.router on init() with q.type='predefined-groupset'`
 		)
 	}
@@ -145,9 +142,8 @@ tape('initRaw() categorical', async test => {
 		}
 
 		const handler = await TwRouter.initRaw(tw, { vocabApi })
-		test.equal(
-			handler.router,
-			CategoricalRouter,
+		test.true(
+			handler instanceof CatCustomGS,
 			`should return a matching categorical handler.router on init() with q.type='custom-groupset'`
 		)
 	}

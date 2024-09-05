@@ -4,8 +4,7 @@ import { GroupEntry, TermGroupSetting } from '#types'
 import { TermWrapper } from '#updated-types'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
-import { FakeApp } from './fakeApp/fakeApp.ts'
-import { FakeAppByCls } from './fakeApp/fakeAppByCls.ts'
+import { FakeApp } from './fake/app.ts'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 
@@ -60,6 +59,30 @@ function getTermWithGS() {
 	return term
 }
 
+const softTwsLimit = 2 //5000
+
+async function getTws() {
+	// create an array of full tw's, to simulate what may be seen from app/plot state after a dispatch
+	const twlst: TermWrapper[] = [
+		Object.freeze(await TwRouter.fill({ id: 'sex' }, { vocabApi })),
+		Object.freeze({
+			type: 'CatTWPredefinedGS',
+			term: getTermWithGS(),
+			isAtomic: true as const,
+			q: {
+				type: 'predefined-groupset' as const,
+				predefined_groupset_idx: 0,
+				isAtomic: true as const
+			}
+		})
+	]
+	while (twlst.length < softTwsLimit) {
+		twlst.push(...twlst)
+	}
+	Object.freeze(twlst)
+	return twlst
+}
+
 /**************
  test sections
 ***************/
@@ -94,7 +117,8 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 					sample_type: '1',
 					hashtmldetail: true
 				},
-				q: { type: 'values', isAtomic: true, hiddenValues: {} }
+				q: { type: 'values', isAtomic: true, hiddenValues: {} },
+				type: 'CatTWValues'
 			},
 			'should fill-in a minimal dictionary tw with only {id}'
 		)
@@ -105,88 +129,33 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 	test.end()
 })
 
-tape('handler with addons', async test => {
-	// to test the above examples:
-	// create an array of full tw's, to simulate what may be seen from app/plot state after a dispatch
-	const twlst: TermWrapper[] = [
-		await TwRouter.fill({ id: 'sex' }, { vocabApi }),
-		{
-			term: getTermWithGS(),
-			isAtomic: true as const,
-			q: {
-				type: 'predefined-groupset' as const,
-				predefined_groupset_idx: 0,
-				isAtomic: true as const
-			}
-		}
-	]
+let twlst // ok to share between test suites because it's frozen
 
-	const msg = 'should convert handler instances to the extended interface'
+tape('extended TwBase', async test => {
+	if (!twlst) twlst = await getTws()
+
+	const msg = 'should convert tw objects into an extended TwBase'
 	try {
 		const data = {
 			sample1: { sex: 1, diaggrp: 'ALL' },
 			sample2: { sex: 2, diaggrp: 'NBL' }
 		}
-		//const handlers = terms.map(getHandler)
+		//const xtws = terms.map(getHandler)
+		const start = Date.now()
 		const app = new FakeApp({ twlst, vocabApi })
 		app.main(data)
-		const Inner = app.getInner()
-
 		test.pass(msg)
-		test.deepEqual(
-			Object.keys(Inner.handlers[0]).sort(),
-			Object.keys(Inner.handlers[1]).sort(),
-			`should have matching handler property/method names for all extended handler instances`
-		)
-
-		test.equal(
-			Inner.dom.svg,
-			`<svg>` +
-				`<text>sample1, Male</text><circle r=1></cicle>` +
-				`<text>sample2, Female</text><circle r=2></cicle>` +
-				`<text>sample1, ALL</text><rect width=10 height=10></rect>` +
-				`<text>sample2, NBL</text><rect width=10 height=10></rect>` +
-				`</svg>`,
-			`should render an svg with fake data`
-		)
-	} catch (e) {
-		test.fail(msg + ': ' + e)
-	}
-
-	test.end()
-})
-
-tape('handler by class', async test => {
-	// to test the above examples:
-	// create an array of full tw's, to simulate what may be seen from app/plot state after a dispatch
-	const twlst: TermWrapper[] = [
-		await TwRouter.fill({ id: 'sex' }, { vocabApi }),
-		{
-			term: getTermWithGS(),
-			isAtomic: true as const,
-			q: {
-				type: 'predefined-groupset' as const,
-				predefined_groupset_idx: 0,
-				isAtomic: true as const
-			}
+		if (twlst.length > 10) {
+			// indicates benchmark test
+			console.log(150, `twbase time, twlst.length=${twlst.length}`, Date.now() - start)
+			test.end()
+			return
 		}
-	]
 
-	const msg = 'should convert handler instances to the extended interface'
-	try {
-		const data = {
-			sample1: { sex: 1, diaggrp: 'ALL' },
-			sample2: { sex: 2, diaggrp: 'NBL' }
-		}
-		//const handlers = terms.map(getHandler)
-		const app = new FakeAppByCls({ twlst, vocabApi })
-		app.main(data)
 		const Inner = app.getInner()
-
-		test.pass(msg)
 		test.deepEqual(
-			Object.keys(Inner.handlers[0]).sort(),
-			Object.keys(Inner.handlers[1]).sort(),
+			Object.keys(Inner.xtws[0]).sort(),
+			Object.keys(Inner.xtws[1]).sort(),
 			`should have matching handler property/method names for all extended handler instances`
 		)
 

@@ -5,7 +5,7 @@ import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/
 export function getTermOrder(data) {
 	const s = this.settings.matrix
 	this.termSorter = getTermSorter(this, s)
-	this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
+	//this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 	const termOrder = []
 	let totalIndex = 0,
 		visibleGrpIndex = 0,

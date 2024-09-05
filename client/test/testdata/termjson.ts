@@ -1,4 +1,4 @@
-import { CategoricalTerm } from '#types'
+import { CategoricalTerm, NumericTerm } from '#types'
 
 const diaggrp: CategoricalTerm = {
 	id: 'diaggrp',
@@ -37,42 +37,44 @@ const diaggrp: CategoricalTerm = {
 	groupsetting: { disabled: false }
 }
 
-export const termjson = {
-	diaggrp,
-	agedx: {
-		id: 'agedx',
-		name: 'Age at Cancer Diagnosis',
-		unit: 'Years',
-		type: 'float',
-		bins: {
+const agedx: NumericTerm = {
+	id: 'agedx',
+	name: 'Age at Cancer Diagnosis',
+	unit: 'Years',
+	type: 'float' as const,
+	bins: {
+		label_offset: 1,
+		default: {
+			type: 'regular-bin',
 			label_offset: 1,
-			default: {
-				type: 'regular-bin',
-				label_offset: 1,
-				bin_size: 3,
-				startinclusive: true,
-				first_bin: {
-					startunbounded: true,
-					stop: 2
-				}
-			},
-			less: {
-				type: 'regular-bin',
-				label_offset: 1,
-				bin_size: 5,
-				startinclusive: true,
-				first_bin: {
-					startunbounded: true,
-					stop: 5
-				},
-				last_bin: {
-					stopunbounded: true,
-					start: 15
-				}
+			bin_size: 3,
+			//startinclusive: true,
+			first_bin: {
+				startunbounded: true,
+				stop: 2
 			}
 		},
-		isleaf: true
+		less: {
+			type: 'regular-bin',
+			label_offset: 1,
+			bin_size: 5,
+			//startinclusive: true,
+			first_bin: {
+				startunbounded: true,
+				stop: 5
+			},
+			last_bin: {
+				stopunbounded: true,
+				start: 15
+			}
+		}
 	},
+	isleaf: true
+}
+
+export const termjson = {
+	diaggrp,
+	agedx,
 	os: {
 		id: 'os',
 		name: 'Overall survival',
@@ -83,7 +85,7 @@ export const termjson = {
 	Arrhythmias: {
 		id: 'Arrhythmias',
 		name: 'Arrhythmias',
-		type: 'condition',
+		type: 'condition' as const,
 		values: {
 			0: { label: '0: No condition' },
 			1: { label: '1: Mild' },
@@ -98,7 +100,7 @@ export const termjson = {
 		id: 'aaclassic_5',
 		name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
 		unit: 'mg/m²',
-		type: 'float',
+		type: 'float' as const,
 		bins: {
 			label_offset: 1,
 			default: {
@@ -125,7 +127,7 @@ export const termjson = {
 	sex: {
 		id: 'sex',
 		name: 'Sex',
-		type: 'categorical',
+		type: 'categorical' as const,
 		groupsetting: { disabled: true }
 	},
 	idarubicin_5: {
@@ -156,7 +158,7 @@ export const termjson = {
 		}
 	},
 	hrtavg: {
-		type: 'float',
+		type: 'float' as const,
 		bins: {
 			default: {
 				type: 'regular-bin',

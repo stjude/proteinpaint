@@ -1,11 +1,11 @@
-//import { RawTW } from '#types'
 import { TermWrapper } from '#updated-types'
-import { HandlerOpts } from './Handler'
-import { mayHydrateDictTwLst, get$id } from '../termsetting/termsetting.ts'
-import { CatHandlerInstance, CategoricalRouter, CategoricalTypes } from './CategoricalRouter'
+import { TwOpts } from './TwBase'
+import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
+import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS, CatInstance, CatTypes } from './categorical'
+import { NumericBase } from './numeric'
 
-export type TwHandlerInstance = CatHandlerInstance // | NumericHandlerInstance | ...
-export type HandlerTypes = CategoricalTypes // | ...
+export type TwHandlerInstance = CatInstance // | NumericHandlerInstance | ...
+export type HandlerTypes = CatTypes // | ...
 
 export type UseCase = {
 	target: string
@@ -23,37 +23,15 @@ export class TwRouter {
 		this.opts = opts
 	}
 
-	static getCls(tw: TermWrapper, opts: HandlerOpts = {}): HandlerTypes {
-		switch (tw.term.type) {
-			case 'categorical': {
-				return CategoricalRouter.getCls(tw)
-			}
-			// case 'integer':
-			// case 'float':
-			// 	return
+	static init(tw: TermWrapper, opts: TwOpts = {}): TwHandlerInstance {
+		switch (tw.type) {
+			case 'CatTWValues':
+				return new CatValues(tw, opts)
+			case 'CatTWPredefinedGS':
+				return new CatPredefinedGS(tw, opts)
+			case 'CatTWCustomGS':
+				return new CatCustomGS(tw, opts)
 
-			// case 'condition':
-			// 	return
-
-			// case 'survival':
-			// 	return
-
-			// case 'geneVariant':
-			// 	return
-
-			// case 'geneExpression':
-			// 	return
-
-			default:
-				throw `unable to getCls(tw)`
-		}
-	}
-
-	static init(tw: TermWrapper, opts: HandlerOpts = {}): TwHandlerInstance {
-		switch (tw.term.type) {
-			case 'categorical': {
-				return CategoricalRouter.init(tw, { ...opts, root: TwRouter })
-			}
 			// case 'integer':
 			// case 'float':
 			// 	return
@@ -75,21 +53,23 @@ export class TwRouter {
 		}
 	}
 
-	static async initRaw(rawTw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TwHandlerInstance> {
+	static async initRaw(rawTw /*: RawTW*/, opts: TwOpts = {}): Promise<TwHandlerInstance> {
 		const tw = await TwRouter.fill(rawTw, opts)
 		return TwRouter.init(tw, opts)
 	}
 
-	static async fill(tw /*: RawTW*/, opts: HandlerOpts = {}): Promise<TermWrapper> {
+	static async fill(tw /*: RawTW*/, opts: TwOpts = {}): Promise<TermWrapper> {
 		await TwRouter.preprocess(tw, opts?.vocabApi)
+		const type = tw.term.type == 'float' || tw.term.type == 'integer' ? 'numeric' : tw.term.type
+		opts.defaultQ = opts.defaultQByTsHandler?.[type] || null
 
 		switch (tw.term.type) {
 			case 'categorical': {
-				return await CategoricalRouter.fill(tw, { ...opts, root: TwRouter })
+				return await CategoricalBase.fill(tw, opts)
 			}
-			// case 'integer':
-			// case 'float':
-			// 	return
+			case 'integer':
+			case 'float':
+				return await NumericBase.fill(tw, opts)
 
 			// case 'condition':
 			// 	return

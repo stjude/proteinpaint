@@ -153,6 +153,12 @@ export type BaseTW = {
 	id?: string
 	$id?: string
 	isAtomic?: true
+	// plot-specific customizations that are applied to a tw copy
+	// todo: should rethink these
+	legend?: any
+	settings?: {
+		[key: string]: any
+	}
 }
 
 /*** types supporting Term types ***/

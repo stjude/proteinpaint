@@ -13,14 +13,14 @@ q.type, and q.mode data instance.
 - it will be easy to share common logic within the instance to support different consumer code,
 since data processing should not change for the same tw data shape.
 
-## Replace fillTermWrapper()
+## Replace fillTW()
 ![Screenshot 2024-08-23 at 9 25 23 AM](https://github.com/user-attachments/assets/ba98482e-cfed-4685-9c41-43d0063742b1)
 
 ## Plugin-style TW Handlers
 
-![Screenshot 2024-08-23 at 9 24 47 AM](https://github.com/user-attachments/assets/af0b0ee4-b0b8-4561-a232-6899d73bf256)
-
+![Screenshot 2024-08-24 at 10 42 45 PM](https://github.com/user-attachments/assets/cd6ee372-6fa2-453a-9b9d-698f476e22d1)
 
 ## Code Examples
 
-See the detailed instructions in the `test('handler addons')` in `TwRouter.integration.spec.ts`.
+See example usage in `tw/test/fake/app.ts` and its imported code, which are used in the `test('handler by class')`
+in `TwRouter.integration.spec.ts`.

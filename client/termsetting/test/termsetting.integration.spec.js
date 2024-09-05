@@ -39,6 +39,11 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
  reusable helper functions
 **************************/
 
+// required to activate usage of xtw
+const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
+features.usextw = true
+sessionStorage.setItem('optionalFeatures', JSON.stringify(features))
+
 async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest') {
 	const holder = d3s
 		.select('body')
@@ -106,7 +111,7 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
  **************/
 
 tape('\n', test => {
-	test.pass('-***- common/termsetting -***-')
+	test.pass('-***- termsetting.integration -***-')
 	test.end()
 })
 

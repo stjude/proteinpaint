@@ -135,7 +135,7 @@ export async function getHandler(self) {
 	}
 }
 
-export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: DefaultNumericQ | undefined) {
+export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ?: DefaultNumericQ) {
 	// when missing, defaults mode to discrete
 	//const dq = defaultQ as DefaultNumericQ
 	if (!tw.q.mode && !(defaultQ as DefaultNumericQ)?.mode) (tw.q as NumericQ).mode = 'discrete'
@@ -146,7 +146,7 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: Defaul
 		to be tested if can work with partially declared state
 		always copies from .bins.default
 		*/
-		copyMerge(tw.q, tw.term.bins!.default)
+		copyMerge(tw.q, tw.term.bins.default)
 	}
 
 	if (defaultQ) {
@@ -169,7 +169,7 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: Defaul
 			const medianQ = JSON.parse(JSON.stringify(defaultQ))
 			delete medianQ.preferredBins
 			tw.q = medianQ as BinaryNumericQ
-			tw.q.lst! = [
+			tw.q.lst = [
 				{
 					startunbounded: true,
 					stop: median,
