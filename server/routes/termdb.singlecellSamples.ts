@@ -217,7 +217,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 				// if gene is not found will emit such msg
 				return {}
 			}
-
+			console.log('out:', out)
 			return out
 		}
 	} else if (G.storage_type == 'HDF5') {
@@ -241,8 +241,8 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 				const time2 = new Date().valueOf()
 				console.log('Time taken to query HDF5 file:', time2 - time1, 'ms')
 				for (const line of rust_output.split('\n')) {
-					if (line.startsWith('gene_array:')) {
-						out = JSON.parse(line.replace('gene_array:', ''))
+					if (line.startsWith('output_string:')) {
+						out = JSON.parse(line.replace('output_string:', ''))
 					} else {
 						console.log(line)
 					}
