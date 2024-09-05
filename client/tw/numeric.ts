@@ -58,27 +58,42 @@ export class NumericBase {
 			} else {
 				throw `unrecognized defaultQ.preferredBins='${preferredBins}'`
 			}
-		} else if (!tw.q.type) {
+		} else {
 			if (opts.defaultQ) {
 				opts.defaultQ.isAtomic = true
+				tw.q.isAtomic = true
 				// merge defaultQ into tw.q
 				if (tw.q.mode != opts.defaultQ.mode) copyMerge(tw.q, opts.defaultQ)
 			}
-			if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
-				copyMerge(tw.q, structuredClone(tw.term.bins.default))
-			}
-		} else if (tw.q.type == 'regular-bin') {
-			if (!isNumeric(tw.q.bin_size) || !tw.q.first_bin || !isNumeric(tw.q.first_bin.stop)) {
-				// assumes that the preassigned bins.default is never custom-bin
-				tw.q = structuredClone(tw.term.bins.default)
-			}
-		}
 
-		if (opts.defaultQ) {
-			opts.defaultQ.isAtomic = true
-			tw.q.isAtomic = true
-			// merge defaultQ into tw.q
-			if (tw.q.mode != opts.defaultQ.mode) copyMerge(tw.q, opts.defaultQ)
+			if (tw.term.bins) {
+				// detect if tw.q still needs to use term.bins
+				//
+				// TODO: may move some of these logic in the applicable switch-case code block,
+				//       which may require not allowwing "mixed-modes", like some code expecting
+				//       q.type='regular-bin' to possibly have q.mode='binary' | 'continuous',
+				//       should clean or clarify such usecases
+				//
+				if (!tw.q.type) {
+					// a missing q.type indicates that tw.q needs to be filled-in
+					if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
+						// only use bins.default if the q.mode matches (assumed to be discrete)
+						copyMerge(tw.q, structuredClone(tw.term.bins.default))
+					}
+				} else if (tw.q.type === tw.term.bins.default.type) {
+					// only fill-in tw.q if it's missing properties,
+					// otherwise assume that a full tw.q should not be overriden by term.bins
+					if (tw.q.type == 'regular-bin') {
+						if (!isNumeric(tw.q.bin_size) || !tw.q.first_bin || !isNumeric(tw.q.first_bin.stop)) {
+							// tw.q is still missing required props
+							tw.q = structuredClone(tw.term.bins.default)
+						}
+					} else if (tw.q.type == 'custom-bin' && !Array.isArray(tw.q.lst)) {
+						// tw.q is still missing required props
+						tw.q = structuredClone(tw.term.bins.default)
+					}
+				}
+			}
 		}
 
 		/* 
