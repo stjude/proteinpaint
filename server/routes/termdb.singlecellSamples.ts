@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { read_file } from '#src/utils.js'
 import run_R from '#src/run_R.js'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import {
 	SingleCellQuery,
@@ -194,27 +195,64 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 
 	// per-sample rds files are not validated up front, and simply used as-is on the fly
 
-	// client actually queries /termdb/singlecellData route for gene exp data
-	G.get = async (q: TermdbSinglecellDataRequest) => {
-		// q {sample:str, gene:str}
-		const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample + '.rds')
-		try {
-			await fs.promises.stat(rdsfile)
-		} catch (e: any) {
-			return {}
-			// do not throw when file is missing/unreabable, but returns blank data. this simplifies client logic
-		}
+	if (G.storage_type == 'RDS' || !G.storage_type) {
+		// Check if the storage format is RDS file ? For now keeping this as the default format
+		// client actually queries /termdb/singlecellData route for gene exp data
+		G.get = async (q: TermdbSinglecellDataRequest) => {
+			// q {sample:str, gene:str}
+			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample + '.rds')
+			try {
+				await fs.promises.stat(rdsfile)
+			} catch (e: any) {
+				return {}
+				// do not throw when file is missing/unreabable, but returns blank data. this simplifies client logic
+			}
 
-		let out // object of barcodes as keys, and values as value
-		try {
-			out = JSON.parse(
-				await run_R(path.join(serverconfig.binpath, 'utils', 'getGeneFromMatrix.R'), null, [rdsfile, q.gene])
-			)
-		} catch (e) {
-			// if gene is not found will emit such msg
-			return {}
-		}
+			let out // object of barcodes as keys, and values as value
+			try {
+				out = JSON.parse(
+					await run_R(path.join(serverconfig.binpath, 'utils', 'getGeneFromMatrix.R'), null, [rdsfile, q.gene])
+				)
+			} catch (e) {
+				// if gene is not found will emit such msg
+				return {}
+			}
 
-		return out
+			return out
+		}
+	} else if (G.storage_type == 'HDF5') {
+		// client actually queries /termdb/singlecellData route for gene exp data
+		G.get = async (q: TermdbSinglecellDataRequest) => {
+			// q {sample:str, gene:str}
+			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample + '.h5')
+			try {
+				await fs.promises.stat(rdsfile)
+			} catch (e: any) {
+				return {}
+				// do not throw when file is missing/unreabable, but returns blank data. this simplifies client logic
+			}
+
+			const read_hdf5_input_type = { gene: q.gene, hdf5_file: rdsfile }
+
+			let out // object of barcodes as keys, and values as value
+			try {
+				const time1 = new Date().valueOf()
+				const rust_output = await run_rust('readHDF5', JSON.stringify(read_hdf5_input_type))
+				const time2 = new Date().valueOf()
+				console.log('Time taken to query HDF5 file:', time2 - time1, 'ms')
+				for (const line of rust_output.split('\n')) {
+					if (line.startsWith('gene_array:')) {
+						out = JSON.parse(line.replace('gene_array:', ''))
+					} else {
+						console.log(line)
+					}
+				}
+			} catch (e) {
+				// if gene is not found will emit such msg
+				return {}
+			}
+
+			return out
+		}
 	}
 }

@@ -15,6 +15,7 @@ bgzip = "0.3.1"
 petgraph = "0.6.3"
 rusqlite="0.31.0"
 ndarray = "0.15.6"
+hdf5 = { package = "hdf5-metno", version = "0.9.0" }
 nalgebra = {version = "0.32.2", features = ["serde-serialize"]}
 plotters = "0.3.4"
 colorgrad = "0.6.2"
@@ -90,3 +91,7 @@ path="src/genesetORA.rs"
 [[bin]]
 name="computeTopTerms"
 path="src/computeTopTerms.rs"
+
+[[bin]]
+name="readHDF5"
+path="src/readHDF5.rs"
