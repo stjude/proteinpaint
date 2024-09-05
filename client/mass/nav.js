@@ -66,7 +66,8 @@ class TdbNav {
 				search: searchInit({
 					app: this.app,
 					holder: this.dom.searchDiv,
-					usecase: { target: 'barchart', detail: 'term' }
+					usecase: { target: 'summary', detail: 'term' },
+					targetType: 'Dictionary Variables'
 				}),
 				filter: filterRxCompInit({
 					app: this.app,

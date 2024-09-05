@@ -36,6 +36,7 @@ tape('loading of all import(spec)', test => {
 	test.timeoutAfter(exp)
 	const start = Date.now()
 	test.plan(1)
+	console.log('NOTE: require() syntax in client spec files may cause this test to fail, use import syntax instead')
 	assertAllTestLoaded = () => {
 		if (Date.now() - start < exp) test.pass('should finish before this assertion is called')
 		// else the timeoutAfter will be triggered without an assertion
