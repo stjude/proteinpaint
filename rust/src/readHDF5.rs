@@ -34,12 +34,20 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     let now_genes = Instant::now();
     let ds_genes = file.dataset("gene_names")?;
     let genes = ds_genes.read_1d::<FixedAscii<104>>()?;
-
     println!("\tgenes = {:?}", genes);
     println!("\tgenes.shape() = {:?}", genes.shape());
     println!("\tgenes.strides() = {:?}", genes.strides());
     println!("\tgenes.ndim() = {:?}", genes.ndim());
     println!("Time for parsing genes:{:?}", now_genes.elapsed());
+
+    let now_samples = Instant::now();
+    let ds_samples = file.dataset("sample_names")?;
+    let samples = ds_samples.read_1d::<FixedAscii<104>>()?;
+    println!("\tsamples = {:?}", samples);
+    println!("\tsamples.shape() = {:?}", samples.shape());
+    println!("\tsamples.strides() = {:?}", samples.strides());
+    println!("\tsamples.ndim() = {:?}", samples.ndim());
+    println!("Time for parsing samples:{:?}", now_samples.elapsed());
 
     let gene_index;
     match genes.iter().position(|&x| x == gene_name) {
@@ -125,11 +133,40 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
             false => gene_array.push(0.0), // If index not found, it means the value is 0 for that sample
         }
     }
+
+    let mut output_string = "[".to_string();
+    for i in 0..gene_array.len() {
+        //let item_json = "{\"".to_string()
+        //    + &samples[i].to_string()
+        //    + &"\","
+        //    + &gene_array[i].to_string()
+        //    + &"}";
+
+        //let item_json = format!("{{\"{}\"}}", samples[i].to_string());
+
+        output_string += &format!(
+            "{{\"{}\",{}}}",
+            samples[i].to_string(),
+            gene_array[i].to_string()
+        );
+        //println!("item_json:{}", item_json);
+
+        //let item_json = format!(
+        //    r##"{{"{}",{}}}"##,
+        //    samples[i].to_string().replace("\\", ""),
+        //    gene_array[i].to_string()
+        //);
+        if i != gene_array.len() - 1 {
+            output_string += &",";
+        }
+    }
+    output_string += &"]";
+    output_string = output_string.replace("\\", "");
     println!(
         "Time generating full array:{:?}",
         time_generating_full_array.elapsed()
     );
-    println!("gene_array:{:?}", gene_array);
+    println!("output_string:{}", output_string);
 
     // Print individual element in array
 

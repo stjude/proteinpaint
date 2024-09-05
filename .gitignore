@@ -67,7 +67,6 @@ container/dataset/*
 container/**/pkg.json
 container/ci-run.sh
 
-**/rust/*.lock
 **/rust/target/*
 Cargo.lock
 
