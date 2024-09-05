@@ -923,6 +923,10 @@ type Termdb = {
 		/** key is usecase target (todo restrict). value is array of term type (todo restrict) */
 		[useCaseTarget: string]: string[]
 	}
+	/** in development!
+	 * Supports the About tab in mass UI
+	 */
+	about?: any
 }
 
 type ChartConfigByType = {

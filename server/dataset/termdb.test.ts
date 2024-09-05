@@ -109,7 +109,10 @@ export default {
 					ignoreCnvValues: true
 				}
 			},
-			termid2totalsize2: {}
+			termid2totalsize2: {},
+			about: {
+				html: 'Test'
+			}
 		},
 		scatterplots: {
 			plots: [

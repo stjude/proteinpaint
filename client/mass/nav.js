@@ -4,6 +4,7 @@ import { searchInit } from './search'
 import { chartsInit } from './charts'
 import { groupsInit } from './groups'
 import { sessionBtnInit } from './sessionBtn'
+import { aboutInit } from './about.ts'
 import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { Menu } from '#dom/menu'
@@ -32,6 +33,7 @@ headtip.d.style('z-index', 5555)
 
 // data elements for navigation header tabs
 const cohortTab = { top: 'COHORT', mid: 'NONE', btm: '', subheader: 'cohort' }
+const aboutTab = { top: 'ABOUT', mid: 'NONE', btm: '', subheader: 'about' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
@@ -105,6 +107,10 @@ class TdbNav {
 					button: this.dom.saveBtn,
 					massSessionDuration: this.opts.massSessionDuration,
 					sessionDaysLeft: this.app.opts.sessionDaysLeft || null
+				}),
+				about: aboutInit({
+					app: this.app,
+					holder: this.dom.subheader.about
 				})
 			})
 			this.mayShowMessage_sessionDaysLeft()
@@ -258,10 +264,12 @@ function setRenderers(self) {
 			cart: self.dom.subheaderDiv
 				.append('div')
 				.style('display', 'none')
-				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>')
+				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
+			about: self.dom.subheaderDiv.append('div').style('display', 'none')
 		})
 
 		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
+		if (appState.termdbConfig.about) self.tabs.unshift(aboutTab) // show the About tab at the beginning if defined in dataset config
 		if (appState.termdbConfig.selectCohort) self.tabs.unshift(cohortTab) // dataset has "sub-cohorts", show the Cohort tab at the beginning
 
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
