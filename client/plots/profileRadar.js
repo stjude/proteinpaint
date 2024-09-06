@@ -63,11 +63,11 @@ class profileRadar extends profilePlot {
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 370
-		const y = 290
+		const y = 340
 		if (!this.settings.comparison)
 			this.svg
 				.append('text')
-				.attr('transform', `translate(40, ${y + 340})`)
+				.attr('transform', `translate(40, ${40})`)
 				.attr('font-weight', 'bold')
 				.attr('font-size', '0.9rem')
 				.text(config[config.plot].title)

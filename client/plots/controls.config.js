@@ -104,7 +104,7 @@ class TdbConfigUiInit {
 	render(isOpen) {
 		this.dom.holder
 			.style('visibility', isOpen ? 'visible' : 'hidden')
-			.style('max-width', isOpen ? '660px' : '50px')
+			.style('max-width', isOpen ? '680px' : '50px')
 			.style('height', isOpen ? '' : 0)
 
 		this.dom.table

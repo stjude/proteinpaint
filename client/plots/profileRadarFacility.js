@@ -55,12 +55,12 @@ class profileRadarFacility extends profilePlot {
 
 		this.svg
 			.append('text')
-			.attr('transform', `translate(110, ${height - 30})`)
+			.attr('transform', `translate(110, ${40})`)
 			.attr('font-weight', 'bold')
 			.text(this.config[this.config.plot].title)
 		const radius = this.radius
 		const x = 370
-		const y = 300
+		const y = 340
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 

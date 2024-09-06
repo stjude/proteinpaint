@@ -244,6 +244,7 @@ class Scatter {
 			title: 'Sample size, represents the factor used to scale the sample',
 			min: 0
 		}
+		const step = (maxShapeSize - minShapeSize) / 10
 		const minShapeSizeOption = {
 			label: 'Min size',
 			type: 'number',
@@ -251,7 +252,8 @@ class Scatter {
 			settingsKey: 'minShapeSize',
 			title: 'Minimum sample size',
 			min: minShapeSize,
-			max: maxShapeSize
+			max: maxShapeSize,
+			step
 		}
 		const maxShapeSizeOption = {
 			label: 'Max size',
@@ -260,7 +262,8 @@ class Scatter {
 			settingsKey: 'maxShapeSize',
 			title: 'Maximum sample size',
 			min: minShapeSize,
-			max: maxShapeSize
+			max: maxShapeSize,
+			step
 		}
 		const orientation = {
 			label: 'Scale order',
