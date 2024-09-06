@@ -39,8 +39,8 @@ class profileRadar extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const width = this.settings.comparison ? 900 : 1400
-		const height = 900
+		const width = 1400
+		const height = 800
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -75,9 +75,7 @@ class profileRadar extends profilePlot {
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 400},${y + 180})`)
-		this.filterG = this.svg
-			.append('g')
-			.attr('transform', `translate(${this.settings.comparison ? 150 : 40},${y + 370})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 340})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
