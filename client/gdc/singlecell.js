@@ -138,6 +138,7 @@ async function getFilesAndShowTable(obj) {
 		columns,
 		resize: true,
 		div: obj.tableDiv.append('div'),
+		singleMode: true,
 		noButtonCallback: index => {
 			submitSelectedFile(rowid2gdcfileid[index], obj)
 		}
@@ -150,7 +151,7 @@ async function submitSelectedFile(fileId, obj) {
 
 	let result
 	{
-		const body = { genome: gdcGenome, dslabel: gdcDslabel, sample: fileId }
+		const body = { genome: gdcGenome, dslabel: gdcDslabel, sample: fileId, plots: ['UMAP', 'TSNE', 'PCA'] }
 		try {
 			result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
