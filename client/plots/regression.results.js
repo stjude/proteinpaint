@@ -583,10 +583,7 @@ function setRenderers(self) {
 							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
 							refGrpDiv.append('div').html(`n = ${samplesize_ref}<br>events = ${eventcnt_ref}`)
 						}
-						td.append('div')
-							.style('font-size', '.8em')
-							.style('opacity', 0.6)
-							.html(`n = ${samplesize_c}<br>events = ${eventcnt_c}`)
+						td.append('div').style('font-size', '.8em').html(`n = ${samplesize_c}<br>events = ${eventcnt_c}`)
 					}
 
 					// col 3
@@ -976,7 +973,7 @@ function fillCoefficientTermname(tw, td) {
 
 	if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
 		// do not display ref for spline variable
-		const refGrpDiv = td.append('div').style('margin-top', '1px').style('font-size', '.8em').style('opacity', 0.6)
+		const refGrpDiv = td.append('div').style('margin-top', '2px').style('font-size', '.8em')
 
 		refGrpDiv
 			.append('div')
