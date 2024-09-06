@@ -437,6 +437,9 @@ async function parseEmbedThenUrl(arg, app) {
 	if (arg.launchGdcMaf) {
 		return await launchGdcMaf(arg, app)
 	}
+	if (arg.launchGdcScRNAseq) {
+		return await launchGdcScRNAseq(arg, app)
+	}
 
 	if (arg.parseurl && location.search.length) {
 		/*
@@ -1058,6 +1061,10 @@ async function launchGdcMatrix(arg, app) {
 }
 async function launchGdcHierCluster(arg, app) {
 	const _ = await import('../gdc/geneExpClustering.js')
+	return await _.init(arg, app.holder0, app.genomes)
+}
+async function launchGdcScRNAseq(arg, app) {
+	const _ = await import('../gdc/singlecell.js')
 	return await _.init(arg, app.holder0, app.genomes)
 }
 async function launchGdcMaf(arg, app) {

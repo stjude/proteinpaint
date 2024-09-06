@@ -1,6 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '../dom/sayerror.ts'
 import { renderTable } from '../dom/table.ts'
+import { appInit } from '#plots/plot.app.js'
 
 /*
 FIXME unfinished! change into calling mass ui as other launchers, and api supplies a callback
@@ -28,6 +29,44 @@ const columns = [
 	{ label: 'Disease Type' },
 	{ label: 'Sample Type' }
 ]
+
+export async function init(arg, holder, genomes) {
+	const plotAppApi = await appInit({
+		holder,
+		state: {
+			genome: gdcGenome,
+			dslabel: gdcDslabel,
+			termfilter: { filter0: arg.filter0 },
+			plots: [{ chartType: 'singleCellPlot' }]
+		},
+		noheader: true,
+		nobox: true,
+		hide_dsHandles: true,
+		genome: genomes[gdcGenome]
+	})
+	const api = {
+		update: async ({ filter0 }) => {
+			holder.selectAll('*').remove()
+			const obj = {
+				// old habit of wrapping everything
+				errDiv: holder.append('div'),
+				controlDiv: holder.append('div'),
+				tableDiv: holder.append('div'),
+				opts: {
+					filter0,
+					experimentalStrategy: 'WXS'
+				}
+			}
+			makeControls(obj)
+			await getFilesAndShowTable(obj)
+			// if (typeof callbacks?.postRender == 'function') {
+			// 	callbacks.postRender(publicApi)
+			// }
+		}
+	}
+
+	return api
+}
 
 export async function gdcSinglecellUi({ holder, filter0, callbackOnRender, debugmode = false }) {
 	// public api obj to be returned
@@ -85,9 +124,9 @@ async function getFilesAndShowTable(obj) {
 		for (const f of sample.experiments) {
 			const row = [
 				{ value: sample.sample },
-				{ value: sample['case.project.project_id']},
-				{ value: sample['case.primary_site']},
-				{ value: sample['case.disease_type']},
+				{ value: sample['case.project.project_id'] },
+				{ value: sample['case.primary_site'] },
+				{ value: sample['case.disease_type'] },
 				{ value: f.sampleType }
 			]
 			rows.push(row)
