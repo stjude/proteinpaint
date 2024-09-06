@@ -1,7 +1,7 @@
 import { icons } from './control.icons'
-import { Selection } from 'd3-selection'
-import { Genome } from '#shared/types/index'
+import { ClientCopyGenome } from '../types/global'
 import { Elem } from '../types/d3'
+import { RenderSandboxForm, NewSandboxOpts, NewSandbox } from './types/sandbox'
 
 /*
 Creates sandbox divs, containers running proteinpaint calls, forms, etc. 
@@ -18,7 +18,7 @@ renderSandboxFormDiv
 newSandboxDiv
 */
 
-export function renderSandboxFormDiv(holder: Elem, genomes: Genome[]) {
+export function renderSandboxFormDiv(holder: Elem, genomes: ClientCopyGenome[]): RenderSandboxForm {
 	//Classes for unit testing
 	holder.classed('sjpp-sandbox-form', true)
 	const inputdiv = holder
@@ -48,19 +48,7 @@ let sandboxIdSuffix = 0
 	sandbox_holder: a d3-selection
 */
 
-type PlotOps = {
-	/**.beforePlotId: optional insertion position, a key in the plotIdToSandboxId tracker */
-	beforePlotId: string
-	/**.plotId: optional plot.id, for which a sandbox div ID will be assigned, should not be an 'empty' value (null , undefined, 0) */
-	plotId: string
-	style: {
-		width: string
-	}
-	/**.close: optional callback to trigger when the sandbox is closed */
-	close: () => void
-}
-
-export function newSandboxDiv(sandbox_holder: Elem, opts: Partial<PlotOps> = {}) {
+export function newSandboxDiv(sandbox_holder: Elem, opts: Partial<NewSandboxOpts> = {}): NewSandbox {
 	// NOTE: plotId=0 (Number) will not be tracked, assumes a non-empty plotId is used
 	const insertSelector = opts.beforePlotId ? '#' + plotIdToSandboxId[opts.beforePlotId] : ':first-child'
 	const app_div = sandbox_holder.insert('div', insertSelector).attr('class', 'sjpp-sandbox')
