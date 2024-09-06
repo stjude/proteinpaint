@@ -127,17 +127,17 @@ export class NumericBase extends TwBase {
 		*/
 		switch (tw.type) {
 			case 'NumTWRegularBin':
-				return await NumRegularBin.fill(tw, opts)
+				return await NumRegularBin.fill(tw)
 
 			case 'NumTWCustomBin':
 				tw.q.type = 'custom-bin'
 				return await NumCustomBins.fill(tw, opts)
 
 			case 'NumTWCont':
-				return await NumCont.fill(tw, opts)
+				return await NumCont.fill(tw)
 
 			case 'NumTWSpline':
-				return await NumSpline.fill(tw, opts)
+				return await NumSpline.fill(tw)
 
 			default:
 				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by NumericBase.fill()`

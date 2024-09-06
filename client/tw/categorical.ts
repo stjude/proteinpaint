@@ -35,7 +35,7 @@ export class CategoricalBase extends TwBase {
 				return new CatValues(tw, opts)
 
 			case 'CatTWPredefinedGS':
-				return new CatPredefinedGS(tw, opts)
+				return new CatPredefinedGS(tw)
 
 			case 'CatTWCustomGS':
 				return new CatCustomGS(tw, opts)
@@ -103,7 +103,7 @@ export class CategoricalBase extends TwBase {
 				return CatValues.fill(tw)
 
 			case 'CatTWPredefinedGS':
-				return CatPredefinedGS.fill(tw, opts)
+				return CatPredefinedGS.fill(tw)
 
 			case 'CatTWCustomGS':
 				return CatCustomGS.fill(tw)

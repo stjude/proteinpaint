@@ -8,7 +8,10 @@ export type TwOpts = {
 	defaultQByTsHandler?: any // TODO
 	addons?: {
 		[TwTypeName: string]: {
-			[name: string]: (a: any) => any
+			[methodName: string]: {
+				value: (a: any) => any // required nested shape for native Object.defineProperties()
+			}
+			// | ((a: any) => any) // for convenience, not supported yet
 		}
 	}
 	//usecase?: any // TODO
@@ -45,5 +48,9 @@ export class TwBase {
 				if (term.values[k].uncomputable) q.hiddenValues[k] = 1
 			}
 		}
+	}
+
+	render(a: any): any {
+		throw `should implement this method in subclass code, as needed`
 	}
 }
