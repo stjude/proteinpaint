@@ -79,9 +79,11 @@ function addButtons(headerHolder, app, dslabel, logged, site) {
 		.style('display', 'inline-flex')
 		.style('gap', '5px')
 		.style('padding-left', '10px')
+		.style('font-size', '1.1em')
 	div
 		.append('button')
 		.text('Full PrOFILE')
+		.style('font-size', '1.1em')
 		.style('background-color', dslabel == 'ProfileFull' ? 'orange' : '')
 		.on('click', e => {
 			loadDataset(headerHolder, 'ProfileFull')
@@ -91,30 +93,36 @@ function addButtons(headerHolder, app, dslabel, logged, site) {
 		.append('button')
 		.text('Abbreviated PrOFILE')
 		.style('background-color', dslabel == 'ProfileAbbrev' ? 'orange' : '')
+		.style('font-size', '1.1em')
 		.on('click', e => loadDataset(headerHolder, 'ProfileAbbrev'))
 	div
 		.append('button')
 		.text('Polar Graph')
+		.style('font-size', '1.1em')
 		.on('click', e => launchPlot(app, 'profilePolar', 'Polar Graph', logged, site))
 	div
 		.append('button')
 		.text('Bar Graph')
+		.style('font-size', '1.1em')
 		.on('click', e => launchPlot(app, 'profileBarchart', 'Bar Graph', logged, site))
 	if (logged)
 		div
 			.append('button')
 			.text('Radar 1-Score-based(Site)')
+			.style('font-size', '1.1em')
 			.on('click', e =>
 				launchRadarPlot(app, 'profileRadarFacility', 'Radar 1-Score-based(Site)', 'plot1', logged, site)
 			)
 	div
 		.append('button')
 		.text('Radar 2-Impressions')
+		.style('font-size', '1.1em')
 		.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar 2-Impressions', 'plot1', logged, site))
 	if (isFull)
 		div
 			.append('button')
 			.text('Radar 3-Score-based(SC & POC)')
+			.style('font-size', '1.1em')
 			.on('click', e => launchRadarPlot(app, 'profileRadar', 'Radar 3-Score-based(SC & POC)', 'plot2', logged, site))
 	// if (logged)
 	// 	div
@@ -124,6 +132,7 @@ function addButtons(headerHolder, app, dslabel, logged, site) {
 
 	const deleteBt = div
 		.append('button')
+		.style('font-size', '1.1em')
 		.on('click', e => deletePlots(app))
 		.text('Delete All')
 }

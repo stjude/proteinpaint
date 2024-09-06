@@ -72,11 +72,7 @@ class profilePolar extends profilePlot {
 			.style('margin', '45px 20px')
 
 		if (!this.settings.comparison)
-			this.svg
-				.append('text')
-				.attr('transform', `translate(130, ${height - 120})`)
-				.attr('font-weight', 'bold')
-				.text(config.title)
+			this.svg.append('text').attr('transform', `translate(130, ${40})`).attr('font-weight', 'bold').text(config.title)
 
 		const rows = []
 		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: 'Score', align: 'center' }]
@@ -84,7 +80,7 @@ class profilePolar extends profilePlot {
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 280
-		const y = 280
+		const y = 330
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 280}, ${y - 200})`)
