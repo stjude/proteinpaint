@@ -2,10 +2,8 @@ import {
 	NumericTerm,
 	NumericQ,
 	NumTWTypes,
-	NumTWDiscrete,
 	NumTWRegularBin,
 	NumTWCustomBin,
-	NumTWBinary,
 	NumTWCont,
 	NumTWSpline,
 	RawNumTW,
@@ -13,10 +11,6 @@ import {
 	RawNumTWCustomBin,
 	RawNumTWCont,
 	RawNumTWSpline,
-	RawCustomBin,
-	DefaultBinnedQ,
-	DefaultMedianQ,
-	BinaryNumericQ,
 	ContinuousNumericQ,
 	SplineNumericQ,
 	StartUnboundedBin,
@@ -29,13 +23,13 @@ import { copyMerge } from '#rx'
 import { isNumeric } from '#shared/helpers'
 import { roundValueAuto } from '#shared/roundValue'
 
-type TermTypeSet = Set<'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'>
-
-export class NumericBase {
+export class NumericBase extends TwBase {
+	// type is set by TwBase constructor
 	term: NumericTerm
-	static termTypes: TermTypeSet = new Set(['integer', 'float', 'geneExpression', 'metaboliteIntensity'])
+	static termTypes = new Set(['integer', 'float', 'geneExpression', 'metaboliteIntensity'])
 
 	constructor(tw: NumTWTypes, opts: TwOpts) {
+		super(tw, opts)
 		this.term = tw.term
 	}
 
@@ -152,7 +146,7 @@ export class NumericBase {
 }
 
 export class NumRegularBin extends NumericBase {
-	//term: NumericTerm
+	// type, isAtomic, $id are set in ancestor base classes
 	q: RegularNumericBinConfig
 	#tw: NumTWRegularBin
 	#opts: TwOpts
@@ -166,9 +160,12 @@ export class NumRegularBin extends NumericBase {
 		this.#opts = opts
 	}
 
+	getTw() {
+		return this.#tw
+	}
+
 	// See the relevant comments in the NumericBase.fill() function above
-	static async fill(tw: RawNumTWRegularBin, opts: TwOpts = {}): Promise<NumTWRegularBin> {
-		const { term, q } = tw
+	static async fill(tw: RawNumTWRegularBin): Promise<NumTWRegularBin> {
 		if (!tw.type) tw.type = 'NumTWRegularBin'
 		else if (tw.type != 'NumTWRegularBin') throw `expecting tw.type='NumTWRegularBin', got '${tw.type}'`
 
@@ -182,13 +179,13 @@ export class NumRegularBin extends NumericBase {
 		if (!tw.q.first_bin) throw `missing tw.q.first_bin`
 		if (!isNumeric(tw.q.first_bin?.stop)) throw `tw.q.first_bin.stop is not numeric`
 
-		TwBase.setHiddenValues(tw.q as NumericQ, term)
+		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
 		return tw as NumTWRegularBin
 	}
 }
 
 export class NumCustomBins extends NumericBase {
-	//term: NumericTerm
+	// term, type, isAtomic, $id are set in ancestor base classes
 	q: CustomNumericBinConfig
 	#tw: NumTWCustomBin
 	#opts: TwOpts
@@ -200,6 +197,10 @@ export class NumCustomBins extends NumericBase {
 		this.q = tw.q
 		this.#tw = tw
 		this.#opts = opts
+	}
+
+	getTw() {
+		return this.#tw
 	}
 
 	// See the relevant comments in the NumericBase.fill() function above
@@ -251,7 +252,7 @@ export class NumCustomBins extends NumericBase {
 }
 
 export class NumCont extends NumericBase {
-	//term: NumericTerm
+	// term, type, isAtomic, $id are set in ancestor base classes
 	q: ContinuousNumericQ
 	#tw: NumTWCont
 	#opts: TwOpts
@@ -265,8 +266,12 @@ export class NumCont extends NumericBase {
 		this.#opts = opts
 	}
 
+	getTw() {
+		return this.#tw
+	}
+
 	// See the relevant comments in the NumericBase.fill() function above
-	static async fill(tw: RawNumTWCont, opts: TwOpts = {}): Promise<NumTWCont> {
+	static async fill(tw: RawNumTWCont): Promise<NumTWCont> {
 		if (!tw.type) tw.type = 'NumTWCont'
 		else if (tw.type != 'NumTWCont') throw `expecting tw.type='NumTWCont', got '${tw.type}'`
 
@@ -279,7 +284,7 @@ export class NumCont extends NumericBase {
 }
 
 export class NumSpline extends NumericBase {
-	//term: NumericTerm
+	// term, type, isAtomic, $id are set in ancestor base classes
 	q: SplineNumericQ
 	#tw: NumTWSpline
 	#opts: TwOpts
@@ -293,7 +298,7 @@ export class NumSpline extends NumericBase {
 		this.#opts = opts
 	}
 
-	static async fill(tw: RawNumTWSpline, opts: TwOpts = {}): Promise<NumTWSpline> {
+	static async fill(tw: RawNumTWSpline): Promise<NumTWSpline> {
 		if (!tw.type) tw.type = 'NumTWSpline'
 		else if (tw.type != 'NumTWSpline') throw `expecting tw.type='NumTWSpline', got '${tw.type}'`
 

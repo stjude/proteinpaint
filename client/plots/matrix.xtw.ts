@@ -1,72 +1,59 @@
-import { DiscreteBase, ContinuousBase, ContTWTypes, DiscreteTWTypes } from '../tw/index.ts'
+import { ContinuousXTW, DiscreteXTW } from '../tw/index.ts'
+import { TwRouter } from '../tw/TwRouter'
 import { TermWrapper } from '#updated-types'
 import { convertUnits } from '#shared/helpers'
 
+let addons
+
 export function getTermGroups(termgroups, app) {
 	const termGroups = structuredClone(termgroups)
+	// should only set the addons once, it should not vary from one call to the next
+	if (!addons)
+		addons = {
+			CatTWValues: discreteAddons,
+			CatTWPredefinedGS: discreteAddons,
+			CatTWCustomGS: discreteAddons,
+			NumTWRegularBin: discreteAddons,
+			NumTWCustomBin: discreteAddons,
+			NumTWCont: continuousAddons
+		}
+
+	const opts = {
+		vocabApi: app.vocabApi,
+		addons
+	}
+
 	for (const tG of termGroups) {
 		const xtwlst: (MatrixTWObj | TermWrapper)[] = []
 		for (const tw of tG.lst) {
-			xtwlst.push(getxtw(tw, { vocabApi: app.vocabApi }))
+			xtwlst.push(tw.type in opts.addons ? TwRouter.init(tw, opts) : tw)
 		}
 		tG.lst = xtwlst
 	}
 	return termGroups
 }
 
-function getxtw(tw: TermWrapper, opts = {}): MatrixTWObj | TermWrapper {
-	// NOTE: TwRouter.fill(), enabled by setting `serverconfig.features.usextw: true`,
-	// will set the tw.type on rehydrated tw. Only migrated tw with corresponding
-	// declared class in client/tw files will get replaced by the extended tw (xtw);
-	// the same plain tw object will be returned for non-migrated term.types + q.type/mode
-	switch (tw.type) {
-		case 'CatTWValues':
-		case 'CatTWPredefinedGS':
-		case 'CatTWCustomGS':
-		case 'NumTWRegularBin':
-		case 'NumTWCustomBin':
-			return new MatrixDiscrete(tw, opts)
-
-		case 'NumTWCont':
-			return new MatrixCont(tw, opts)
-
-		default:
-			return tw
-	}
-}
+export type SetCellPropsSignature = (
+	cell: any,
+	anno: any,
+	value: string | number,
+	s: any,
+	t: any,
+	self: any,
+	width: number,
+	height: number,
+	dx: number,
+	dy: number,
+	i: number
+) => any
 
 interface MatrixTWObj {
-	setCellProps: (
-		cell: any,
-		anno: any,
-		value: string | number,
-		s: any,
-		t: any,
-		self: any,
-		width: number,
-		height: number,
-		dx: number,
-		dy: number,
-		i: number
-	) => void
+	setCellProps: SetCellPropsSignature
 }
 
-type MatrixXTW = MatrixDiscrete
-
-/**
-	Extended TW to handle discrete-valued sample annotation
-
-	todo: may move this class into its own file, if the class gets too big
-*/
-class MatrixDiscrete extends DiscreteBase implements MatrixTWObj {
-	#tw: DiscreteTWTypes
-
-	constructor(tw, opts) {
-		super(tw, opts)
-		this.#tw = tw
-	}
-
+const discreteAddons: MatrixTWObj = {
 	setCellProps(
+		this: DiscreteXTW,
 		cell: any,
 		anno: any,
 		value: string | number,
@@ -79,7 +66,8 @@ class MatrixDiscrete extends DiscreteBase implements MatrixTWObj {
 		dy: number,
 		i: number
 	) {
-		const tw = this.#tw
+		const tw = this.getTw()
+		console.log(96, tw) //tw
 		const key = anno.key
 		const values = tw.term.values || {}
 		cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
@@ -96,20 +84,9 @@ class MatrixDiscrete extends DiscreteBase implements MatrixTWObj {
 	}
 }
 
-/**
-	Extended TW to handle discrete-valued sample annotation
-
-	todo: may move this class into its own file, if the class gets too big
-*/
-class MatrixCont extends ContinuousBase implements MatrixTWObj {
-	#tw: ContTWTypes
-
-	constructor(tw, opts) {
-		super(tw, opts)
-		this.#tw = tw
-	}
-
+const continuousAddons: MatrixTWObj = {
 	setCellProps(
+		this: ContinuousXTW,
 		cell: any,
 		anno: any,
 		value: string | number,
@@ -122,7 +99,8 @@ class MatrixCont extends ContinuousBase implements MatrixTWObj {
 		dy: number,
 		i: number
 	) {
-		const tw = this.#tw
+		const tw = this.getTw()
+		console.log(128, tw) //#tw
 		const key = anno.key
 		const values = tw.term.values || {}
 		cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
@@ -143,9 +121,14 @@ class MatrixCont extends ContinuousBase implements MatrixTWObj {
 			cell.y = height * i
 			cell.height = tw.settings.barh
 			cell.fill = 'transparent'
-			//cell.label = specialValue.label
+			cell.label = specialValue.label
 			const group = tw.legend?.group || tw.$id
-			return //{ ref: t.ref, group, value: specialValue.label || specialValue.key, entry: { key, label: cell.label, fill: cell.fill } }
+			return {
+				ref: t.ref,
+				group,
+				value: specialValue.label || specialValue.key,
+				entry: { key, label: cell.label, fill: cell.fill }
+			}
 		}
 
 		// TODO: may use color scale instead of bars
@@ -158,7 +141,7 @@ class MatrixCont extends ContinuousBase implements MatrixTWObj {
 			const vc = cell.term.valueConversion
 			let renderV = vc ? cell.key * vc.scaleFactor : cell.key
 			// todo: convert from a boolean into maybe `q.units or q.transform: 'zscore' | ...`
-			if (this.#tw.q.convert2ZScore) {
+			if (this.q.convert2ZScore) {
 				renderV = (renderV - t.mean) / t.std
 
 				// show positive z-score as soft red and negative z-score as soft blue
@@ -170,8 +153,8 @@ class MatrixCont extends ContinuousBase implements MatrixTWObj {
 					? anno.label
 					: values[key]?.label
 					? values[key].label
-					: this.#tw.term.unit
-					? `${cell.key.toFixed(2)} ${this.#tw.term.unit}`
+					: this.term.unit
+					? `${cell.key.toFixed(2)} ${this.term.unit}`
 					: cell.key.toFixed(2)
 			cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace

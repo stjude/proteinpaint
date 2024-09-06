@@ -1,11 +1,8 @@
 import { TermWrapper } from '#updated-types'
-import { TwOpts } from './TwBase'
+import { TwOpts, TwBase } from './TwBase'
 import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
-import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS, CatInstance, CatTypes } from './categorical'
-import { NumericBase } from './numeric'
-
-export type TwHandlerInstance = CatInstance // | NumericHandlerInstance | ...
-export type HandlerTypes = CatTypes // | ...
+import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS } from './categorical'
+import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric'
 
 export type UseCase = {
 	target: string
@@ -23,7 +20,7 @@ export class TwRouter {
 		this.opts = opts
 	}
 
-	static init(tw: TermWrapper, opts: TwOpts = {}): TwHandlerInstance {
+	static init(tw: TermWrapper, opts: TwOpts = {}): TwBase {
 		switch (tw.type) {
 			case 'CatTWValues':
 				return new CatValues(tw, opts)
@@ -31,6 +28,13 @@ export class TwRouter {
 				return new CatPredefinedGS(tw, opts)
 			case 'CatTWCustomGS':
 				return new CatCustomGS(tw, opts)
+
+			case 'NumTWRegularBin':
+				return new NumRegularBin(tw, opts)
+			case 'NumTWCustomBin':
+				return new NumCustomBins(tw, opts)
+			case 'NumTWCont':
+				return new NumCont(tw, opts)
 
 			// case 'integer':
 			// case 'float':
@@ -49,11 +53,12 @@ export class TwRouter {
 			// 	return
 
 			default:
+				//console.log(57, tw)
 				throw `unable to init(tw)`
 		}
 	}
 
-	static async initRaw(rawTw /*: RawTW*/, opts: TwOpts = {}): Promise<TwHandlerInstance> {
+	static async initRaw(rawTw /*: RawTW*/, opts: TwOpts = {}): Promise<TwBase> {
 		const tw = await TwRouter.fill(rawTw, opts)
 		return TwRouter.init(tw, opts)
 	}

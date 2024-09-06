@@ -88,7 +88,7 @@ export type CatTWCustomGS = BaseTW & {
 	//id: string
 	term: CategoricalTerm
 	q: CustomGroupSettingQ
-	type?: 'CatTWCustomGS'
+	type: 'CatTWCustomGS'
 }
 
 export type CatTWTypes = CatTWValues | CatTWPredefinedGS | CatTWCustomGS

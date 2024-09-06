@@ -1,6 +1,5 @@
 import {
 	CategoricalTerm,
-	CategoricalQ,
 	ValuesQ,
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ,
@@ -21,10 +20,12 @@ import { set_hiddenvalues } from '#termsetting'
 export type CatInstance = CatValues | CatPredefinedGS | CatCustomGS
 export type CatTypes = typeof CatValues | typeof CatPredefinedGS | typeof CatCustomGS
 
-export class CategoricalBase {
+export class CategoricalBase extends TwBase {
+	// type, isAtomic, $id are set in ancestor base classes
 	term: CategoricalTerm
 
-	constructor(tw: CatTWTypes, opts) {
+	constructor(tw: CatTWTypes, opts: TwOpts) {
+		super(tw, opts)
 		this.term = tw.term
 	}
 
@@ -114,6 +115,7 @@ export class CategoricalBase {
 }
 
 export class CatValues extends CategoricalBase {
+	// term, type, isAtomic, $id are set in ancestor base classes
 	q: ValuesQ
 	#tw: CatTWValues
 	#opts: TwOpts
@@ -127,8 +129,12 @@ export class CatValues extends CategoricalBase {
 		this.#opts = opts
 	}
 
+	getTw() {
+		return this.#tw
+	}
+
 	// See the relevant comments in the CategoricalBase.fill() function above
-	static fill(tw: RawCatTWValues, opts: TwOpts = {}): CatTWValues {
+	static fill(tw: RawCatTWValues): CatTWValues {
 		if (!tw.type) tw.type = 'CatTWValues'
 		else if (tw.type != 'CatTWValues') throw `expecting tw.type='CatTWValues', got '${tw.type}'`
 
@@ -139,8 +145,8 @@ export class CatValues extends CategoricalBase {
 
 		// GDC or other dataset may allow missing term.values
 		if (!term.values) term.values = {}
-		const numVals = Object.keys(tw.term.values).length
-		// GDC or other dataset may allow empty term.values
+		//const numVals = Object.keys(tw.term.values).length
+		//GDC or other dataset may allow empty term.values
 		//if (!numVals) throw `empty term.values`
 		if (q.mode == 'binary') {
 			if (Object.keys(tw.term.values).length != 2) throw 'term.values must have exactly two keys'
@@ -162,7 +168,7 @@ export class CatValues extends CategoricalBase {
 }
 
 export class CatPredefinedGS extends CategoricalBase {
-	//term: CategoricalTerm
+	// term, type, isAtomic, $id are set in ancestor base classes
 	q: PredefinedGroupSettingQ
 	#groupset: BaseGroupSet
 	#tw: CatTWPredefinedGS
@@ -178,7 +184,11 @@ export class CatPredefinedGS extends CategoricalBase {
 		this.#opts = opts
 	}
 
-	static fill(tw: RawCatTWPredefinedGS, opts: TwOpts = {}): CatTWPredefinedGS {
+	getTw() {
+		return this.#tw
+	}
+
+	static fill(tw: RawCatTWPredefinedGS): CatTWPredefinedGS {
 		if (!tw.type) tw.type = 'CatTWPredefinedGS'
 		else if (tw.type != 'CatTWPredefinedGS') throw `expecting tw.type='CatTWPredefinedGS', got '${tw.type}'`
 
@@ -215,7 +225,7 @@ export class CatPredefinedGS extends CategoricalBase {
 }
 
 export class CatCustomGS extends CategoricalBase {
-	//term: CategoricalTerm
+	// term, type, isAtomic, $id are set in ancestor base classes
 	q: CustomGroupSettingQ
 	#groupset: BaseGroupSet
 	#tw: CatTWCustomGS
@@ -229,6 +239,10 @@ export class CatCustomGS extends CategoricalBase {
 		this.#groupset = this.q.customset
 		this.#tw = tw
 		this.#opts = opts
+	}
+
+	getTw() {
+		return this.#tw
 	}
 
 	// See the relevant comments in the CategoricalBase.fill() function above

@@ -3,7 +3,8 @@
 ## Goals for Refactoring
 
 1. Replace fillTermWrapper() with router-style code that fully resolves to a specific tw data shape,
-and has a lot more type annotations and unit/integration tests.
+with unit/integration tests and built-in type safety while also minimizing the need for type annotations
+in class methods and consumer code.
 2. Minimize the need for consumer code to know about tw types, hide data-shape related
 details from app, plot, or component code.
 3. Code tw handlers as 'plugins'. Within term wrapper handler code/methods, specialize to
