@@ -1,20 +1,28 @@
 import { getCompInit } from '../rx'
 import { Elem } from '../types/d3'
-import { MassApp } from './types/mass'
+import { MassAppApi } from './types/mass'
 import { newSandboxDiv } from '#dom/sandbox'
 import { NewSandbox } from '#dom/types/sandbox'
 
+/** --In development--
+ * Only .html property enabled from ds.cohort.termdb.about
+ * Later may add other properties
+ */
+type AboutObj = {
+	html: string
+}
+
 type MassAboutOpts = {
-	app: MassApp
+	app: MassAppApi
 	holder: Elem
-	obj: any
+	features: AboutObj
 }
 
 class MassAbout {
 	type: string
-	app: MassApp
+	app: MassAppApi
 	holder: Elem
-	obj: any
+	features: AboutObj
 	sandbox: NewSandbox
 	readonly id = `${Math.random() * (1 - 0) + 1}`
 
@@ -22,14 +30,14 @@ class MassAbout {
 		this.type = 'about'
 		this.app = opts.app
 		this.holder = opts.holder
-		this.obj = opts.obj
+		this.features = opts.features
 		this.sandbox = newSandboxDiv(this.holder, { plotId: this.id })
 	}
 
 	init() {
 		this.sandbox.app_div.style('display', 'none')
 		this.sandbox.header.append('div').text('About').style('color', 'rgb(85, 85, 85)')
-		this.sandbox.body.append('div').style('padding', '10px').html(this.obj.html)
+		this.sandbox.body.append('div').style('padding', '10px').html(this.features.html)
 	}
 
 	getState(appState) {

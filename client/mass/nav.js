@@ -112,7 +112,7 @@ class TdbNav {
 					? aboutInit({
 							app: this.app,
 							holder: this.dom.subheader.about,
-							obj: appState.termdbConfig.about
+							features: appState.termdbConfig.about
 					  })
 					: []
 			})
