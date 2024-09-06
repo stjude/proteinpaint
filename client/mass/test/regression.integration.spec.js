@@ -161,13 +161,13 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
 
 		testTerm = 'Sex'
-		const checkValues1 = ['Sex\nREF Female', 'Male']
+		const checkValues1 = ['Sex\nREFFemale', 'Male']
 		data.coefficients.terms.sex.categories[1].forEach(d => checkValues1.push(d))
 		results = checkTableRow(table, 2, checkValues1)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
 		testTerm = 'African Ancestry'
-		const checkValues2 = ['Genetically defined race\nREF European Ancestry', testTerm]
+		const checkValues2 = ['Genetically defined race\nREFEuropean Ancestry', testTerm]
 		data.coefficients.terms.genetic_race.categories[testTerm].forEach(d => checkValues2.push(d))
 		results = checkTableRow(table, 3, checkValues2)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
