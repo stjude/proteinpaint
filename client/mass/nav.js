@@ -32,7 +32,7 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 // data elements for navigation header tabs
-const aboutTab = { top: 'ABOUT', mid: '', btm: '', subheader: 'about' }
+const aboutTab = { top: '', mid: 'ABOUT', btm: '', subheader: 'about' }
 const cohortTab = { top: 'COHORT', mid: 'NONE', btm: '', subheader: 'cohort' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
