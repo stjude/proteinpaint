@@ -1,8 +1,8 @@
 import { getCompInit } from '../rx'
 import { Elem } from '../types/d3'
 import { MassAppApi } from './types/mass'
-import { newSandboxDiv } from '#dom/sandbox'
-import { NewSandbox } from '#dom/types/sandbox'
+import { newSandboxDiv } from '../dom/sandbox' //Do not use #dom. Will look for .js file
+import { NewSandbox } from '../dom/types/sandbox' //Do not use #dom. Will look for .js file
 
 /** --In development--
  * Only .html property enabled from ds.cohort.termdb.about
