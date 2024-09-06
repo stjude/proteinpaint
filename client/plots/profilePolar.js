@@ -57,7 +57,7 @@ class profilePolar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-		const width = this.settings.comparison ? 900 : 1000
+		const width = 1000
 		const height = 700
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -84,7 +84,7 @@ class profilePolar extends profilePlot {
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 280}, ${y - 200})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 260},${y + 180})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 260},${y + 170})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
@@ -138,18 +138,16 @@ class profilePolar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		if (!this.settings.comparison) {
-			this.legendG
-				.append('text')
-				.attr('text-anchor', 'left')
-				.style('font-weight', 'bold')
-				.text('Overall Score')
-				.attr('transform', `translate(0, -5)`)
+		this.legendG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text('Overall Score')
+			.attr('transform', `translate(0, -5)`)
 
-			this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
-			this.addLegendItem('B', '50-75% of possible scorable items', 2)
-			this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
-		}
+		this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
+		this.addLegendItem('B', '50-75% of possible scorable items', 2)
+		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 		this.addFilterLegend()
 
 		function addCircle(percent, text = null) {
