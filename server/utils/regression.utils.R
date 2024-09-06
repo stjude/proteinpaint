@@ -670,8 +670,9 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
   
   if (regtype == "cox" && !is.null(neuroOnc)) {
     # neuro-oncology dataset using cox regression
-    # report event counts of coefficients
-    eCol <- vector(mode = "numeric")
+    # report sample size and event counts of coefficients
+    sCol <- vector(mode = "character")
+    eCol <- vector(mode = "character")
     for (i in 1:length(vCol)) {
       v <- vCol[i]
       c <- cCol[i]
@@ -680,12 +681,26 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
         # not allowed in neuro-oncology dataset
         stop("interacting variables not supported")
       }
-      # if categorical variable, compute event count of the category
-      # if continuous variable, set event count to NA
-      e <- ifelse(v %in% names(res$xlevels), nrow(dat[dat[,v] == c & dat[,"outcome_event"] == 1,]), NA)
-      eCol <- c(eCol, e)
+      if (v %in% names(res$xlevels)) {
+        # categorical variable
+        # determine sample size and event count of both ref and non-ref categories
+        # values will be stored in separate columns in the format "ref/nonref"
+        ref <- res$xlevels[[v]][1]
+        m <- table(dat[,"outcome_event"], dat[,v])
+        samplesize_ref <- sum(m[,ref])
+        samplesize_c <- sum(m[,c])
+        sCol <- c(sCol, paste(samplesize_ref, samplesize_c, sep = "/"))
+        eventcnt_ref <- m["1",ref]
+        eventcnt_c <- m["1",c]
+        eCol <- c(eCol, paste(eventcnt_ref, eventcnt_c, sep = "/"))
+      } else {
+        # continuous variable
+        # set sample size and event count to NA
+        sCol <- c(sCol, NA)
+        eCol <- c(eCol, NA)
+      }
     }
-    coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, "Events" = eCol, coefficients_table)
+    coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, "Sample Size (ref/non-ref)" = sCol, "Events (ref/non-ref)" = eCol, coefficients_table)
   } else {
     coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, coefficients_table)
   }

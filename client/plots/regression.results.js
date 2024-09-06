@@ -477,8 +477,9 @@ function setRenderers(self) {
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 			result.coefficients.header.forEach((v, i) => {
+				if (neuroOncCox && (i == 2 || i == 3)) return // skip sample count and event count columns
 				tr.append('td').text(v).style('padding', '8px')
-				if (i === (neuroOncCox ? 2 : 1)) tr.append('td') // add column for forest plot
+				if (i === 1) tr.append('td') // add column for forest plot
 			})
 		}
 
@@ -527,9 +528,11 @@ function setRenderers(self) {
 				}
 
 				if (neuroOncCox) {
-					// add events column for cox regression for
-					// neuro-onc datasets
-					tr.append('td').style('padding', '8px').text(cols.shift())
+					// cox regression for neuro-onc datasets
+					// sample size and event count columns present
+					// both will be NA for continuous variable
+					cols.shift()
+					cols.shift()
 				}
 
 				// col 3
@@ -559,9 +562,7 @@ function setRenderers(self) {
 
 				let isfirst = true
 				for (const k of orderedCategories) {
-					if (isfirst) {
-						isfirst = false
-					} else {
+					if (!isfirst) {
 						// create new row starting from 2nd category
 						tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 					}
@@ -573,9 +574,16 @@ function setRenderers(self) {
 					fillColumn2coefficientsTable(td, tw, k)
 
 					if (neuroOncCox) {
-						// add events column for cox regression for
-						// neuro-onc datasets
-						tr.append('td').style('padding', '8px').text(cols.shift())
+						// cox regression for neuro-onc datasets
+						// report sample sizes and event counts of coefficients
+						// report for both ref and non-ref categories
+						const [samplesize_ref, samplesize_c] = cols.shift().split('/')
+						const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
+						if (isfirst) {
+							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
+							refGrpDiv.append('div').html(`n = ${samplesize_ref}<br>events = ${eventcnt_ref}`)
+						}
+						td.append('div').style('font-size', '.8em').html(`n = ${samplesize_c}<br>events = ${eventcnt_c}`)
 					}
 
 					// col 3
@@ -585,6 +593,8 @@ function setRenderers(self) {
 					for (const v of cols) {
 						tr.append('td').text(v).style('padding', '8px')
 					}
+
+					isfirst = false
 				}
 			} else {
 				tr.append('td').text('ERROR: no .fields[] or .categories{}')
@@ -622,7 +632,6 @@ function setRenderers(self) {
 		const tr = table.append('tr')
 		tr.append('td') // col 1
 		tr.append('td') // col 2
-		if (neuroOncCox) tr.append('td')
 		forestPlotter(tr.append('td')) // forest plot axis
 		for (const v of result.coefficients.header) tr.append('td')
 	}
@@ -910,7 +919,7 @@ function setRenderers(self) {
 		}
 		///////// helpers
 		function numbers2array(_lst) {
-			const lst = neuroOncCox ? _lst.slice(1) : _lst // do not consider event count
+			const lst = neuroOncCox ? _lst.slice(2) : _lst // do not consider sample size nor event count
 			const m = Number(lst[midIdx])
 			if (!Number.isNaN(m)) values.push(m)
 			const l = Number(lst[CIlow]),
@@ -964,14 +973,25 @@ function fillCoefficientTermname(tw, td) {
 
 	if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
 		// do not display ref for spline variable
-		td.append('div')
-			.style('font-size', '.8em')
-			.style('opacity', 0.6)
-			.html(
-				'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">REF</span> ' +
-					(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp) +
-					'</span>'
-			)
+		const refGrpDiv = td.append('div').style('margin-top', '2px').style('font-size', '.8em')
+
+		refGrpDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('padding', '1px 5px')
+			.style('border', '1px solid #aaa')
+			.style('border-radius', '10px')
+			.style('font-size', '.7em')
+			.text('REF')
+
+		refGrpDiv
+			.append('div')
+			.attr('class', 'sjpcb-regression-results-refGrp')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('margin-left', '3px')
+			.text(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp)
 	}
 
 	if (tw.effectAllele) {
