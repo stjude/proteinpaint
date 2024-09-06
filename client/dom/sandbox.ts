@@ -1,6 +1,7 @@
 import { icons } from './control.icons'
 import { Selection } from 'd3-selection'
 import { Genome } from '#shared/types/index'
+import { Elem } from '../types/d3'
 
 /*
 Creates sandbox divs, containers running proteinpaint calls, forms, etc. 
@@ -17,7 +18,7 @@ renderSandboxFormDiv
 newSandboxDiv
 */
 
-export function renderSandboxFormDiv(holder: Selection<HTMLElement, any, any, any>, genomes: Genome[]) {
+export function renderSandboxFormDiv(holder: Elem, genomes: Genome[]) {
 	//Classes for unit testing
 	holder.classed('sjpp-sandbox-form', true)
 	const inputdiv = holder
@@ -59,7 +60,7 @@ type PlotOps = {
 	close: () => void
 }
 
-export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any, any>, opts: Partial<PlotOps> = {}) {
+export function newSandboxDiv(sandbox_holder: Elem, opts: Partial<PlotOps> = {}) {
 	// NOTE: plotId=0 (Number) will not be tracked, assumes a non-empty plotId is used
 	const insertSelector = opts.beforePlotId ? '#' + plotIdToSandboxId[opts.beforePlotId] : ':first-child'
 	const app_div = sandbox_holder.insert('div', insertSelector).attr('class', 'sjpp-sandbox')

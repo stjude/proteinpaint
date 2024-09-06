@@ -1,6 +1,7 @@
 import { getCompInit } from '../rx'
-import { Elem } from '../types/d3'
+import { Div, Elem } from '../types/d3'
 import { MassApp } from './types/mass'
+import { newSandboxDiv } from '#dom/sandbox'
 
 type MassAboutOpts = {
 	app: MassApp
@@ -21,9 +22,11 @@ class MassAbout {
 		this.obj = opts.obj
 	}
 
-	main() {
-		const messageDiv = this.holder
-		messageDiv.html(this.obj.html)
+	init() {
+		const sandbox = newSandboxDiv(this.holder, {})
+		//nice name here as well?
+		sandbox.header_row.append('div').text('About')
+		sandbox.body.html(this.obj.html)
 	}
 }
 
