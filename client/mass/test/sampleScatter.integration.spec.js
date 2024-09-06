@@ -218,7 +218,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 
 		async function testOpenSurvivalPlot() {
 			const plots = scatter.Inner.app.getState().plots
-			const elem = scatter.Inner.app.Inner.dom.holder.node()
+			const elem = scatter.Inner.app.Inner.dom.plotDiv.node()
 			const preSandboxes = [...elem.querySelectorAll('.sjpp-sandbox')]
 			const sandboxes = await detectLst({
 				elem,
@@ -235,7 +235,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 
 		async function testOpenSummaryPlot() {
 			const plots = scatter.Inner.app.getState().plots
-			const elem = scatter.Inner.app.Inner.dom.holder.node()
+			const elem = scatter.Inner.app.Inner.dom.plotDiv.node()
 			const preSandboxes = [...elem.querySelectorAll('.sjpp-sandbox')]
 			const survivalTerm = await scatter.Inner.app.vocabApi.getterm('efs')
 			const sandboxes = await detectLst({

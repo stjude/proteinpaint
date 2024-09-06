@@ -20,5 +20,13 @@ export type MassApp = RxApp & {
 	printError: (e: string) => void
 	tip: Menu
 	type: 'app'
+	/** Should be a type for TermdbVocab or Frontend Vocab later */
 	vocabApi: any
+}
+
+/** TODO: Start of all possible options for the mass state */
+type MassState = {
+	nav: {
+		activeTab: number
+	}
 }

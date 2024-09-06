@@ -101,7 +101,7 @@ tape('filter subheader and tab', function (test) {
 
 	function triggerTabSwitch(nav) {
 		tds
-			.filter((d, i) => i === 3)
+			.filter((d, i) => i === 4)
 			.node()
 			.click()
 	}
@@ -126,11 +126,10 @@ tape('filter subheader and tab', function (test) {
 			1,
 			'should add blue pill'
 		)
-
-		const itemCountTd = tds._groups[0][7]
+		const itemCountTd = tds._groups[0][9]
 		test.equal(itemCountTd.innerText, '1', 'should indicate a filter item count of 1')
 
-		const sampleCountTd = tds._groups[0][11]
+		const sampleCountTd = tds._groups[0][14]
 		const n = 35
 		test.equal(sampleCountTd.innerText, `${n} patients`, 'should display the correct filtered sample count')
 	}
