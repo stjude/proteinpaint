@@ -45,23 +45,11 @@ export async function init(arg, holder, genomes) {
 		genome: genomes[gdcGenome]
 	})
 	const api = {
-		update: async ({ filter0 }) => {
-			holder.selectAll('*').remove()
-			const obj = {
-				// old habit of wrapping everything
-				errDiv: holder.append('div'),
-				controlDiv: holder.append('div'),
-				tableDiv: holder.append('div'),
-				opts: {
-					filter0,
-					experimentalStrategy: 'WXS'
-				}
-			}
-			makeControls(obj)
-			await getFilesAndShowTable(obj)
-			// if (typeof callbacks?.postRender == 'function') {
-			// 	callbacks.postRender(publicApi)
-			// }
+		update: async arg => {
+			plotAppApi.dispatch({
+				type: 'filter_replace',
+				filter0: arg.filter0
+			})
 		}
 	}
 
