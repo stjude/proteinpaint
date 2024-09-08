@@ -31,6 +31,7 @@ const columns = [
 ]
 
 export async function init(arg, holder, genomes) {
+	const { callbacks } = arg
 	const plotAppApi = await appInit({
 		holder,
 		state: {
@@ -45,11 +46,51 @@ export async function init(arg, holder, genomes) {
 		genome: genomes[gdcGenome]
 	})
 	const api = {
-		update: async arg => {
-			plotAppApi.dispatch({
-				type: 'filter_replace',
-				filter0: arg.filter0
-			})
+		update: async updateArg => {
+			if ('filter0' in updateArg) {
+				// the table and plots will need to be updated
+				//holder.selectAll('*').remove()
+
+				plotAppApi.dispatch({
+					type: 'app_refresh',
+					subactions: [
+						{
+							type: 'filter_replace',
+							filter0: updateArg.filter0
+						},
+						{
+							type: 'plot_edit',
+							id: plotAppApi.getState().plots[0].id,
+							config: { sample: undefined }
+						}
+					]
+				})
+
+				// const obj = {
+				// 	// old habit of wrapping everything
+				// 	errDiv: holder.append('div'),
+				// 	controlDiv: holder.append('div'),
+				// 	tableDiv: holder.append('div'),
+				// 	opts: {
+				// 		filter0: updateArg.filter0,
+				// 		experimentalStrategy: 'WXS'
+				// 	},
+				// 	api
+				// }
+				// makeControls(obj)
+				// await getFilesAndShowTable(obj); console.log(70, arg, updateArg)
+				// if (typeof callbacks?.postRender == 'function') {
+				// 	callbacks.postRender(publicApi)
+				// }
+			} else {
+				console.log(75, plotAppApi)
+				// the plots may change, but the table should not change
+				plotAppApi.dispatch({
+					type: 'plot_edit',
+					id: plotAppApi.getState().plots[0].id,
+					config: updateArg
+				})
+			}
 		}
 	}
 
@@ -125,10 +166,15 @@ async function getFilesAndShowTable(obj) {
 		rows,
 		columns,
 		resize: true,
+		singleMode: true,
 		div: obj.tableDiv.append('div'),
 		singleMode: true,
 		noButtonCallback: index => {
-			submitSelectedFile(rowid2gdcfileid[index], obj)
+			console.log(160)
+			obj.api.update({
+				sample: rowid2gdcfileid[index]
+			})
+			//submitSelectedFile(rowid2gdcfileid[index], obj)
 		}
 	})
 }

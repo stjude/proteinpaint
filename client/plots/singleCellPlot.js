@@ -188,9 +188,6 @@ class singleCellPlot {
 			deDiv,
 			plotsDiv
 		}
-		if (this.tableOnPlot) {
-			await renderSamplesTable(tableDiv, this, appState)
-		}
 
 		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
@@ -313,6 +310,7 @@ class singleCellPlot {
 	}
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
+		console.log(315, config)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
@@ -320,24 +318,51 @@ class singleCellPlot {
 			config,
 			dslabel: appState.vocab.dslabel,
 			genome: appState.vocab.genome,
-			termdbConfig: appState.termdbConfig
+			termdbConfig: appState.termdbConfig,
+			termfilter: appState.termfilter
 		}
 	}
 
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
+		console.log(330, 'singleCellPlot.main()')
 		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
+
 		this.dom.tableDiv.style('display', this.settings.showSamples ? 'block' : 'none')
+		if (this.tableOnPlot) {
+			console.log(332, this.tableOnPlot)
+			await renderSamplesTable(this.dom.tableDiv, this, this.state)
+		}
+
 		this.legendRendered = false
+		console.log(336, this.config)
+		// if (!this.config.sample) {
+		// 	this.dom.plotsDiv.style('display', 'none')
+		// } else {
+		const result = await this.getData()
+		this.dom.plotsDiv.style('display', '')
+		this.renderPlots(result)
+		if (this.dom.header) this.dom.header.html(`${sample} Single Cell Data`)
+		//}
+	}
+
+	async getData() {
 		const plots = []
 		for (const plot of this.config.plots) {
 			const id = plot.name.replace(/\s+/g, '')
+			console.log(343, id, plot.name)
 			const display = this.settings[`show${id}`]
 			if (display) plots.push(plot.name)
 		}
-		const body = { genome: this.state.genome, dslabel: this.state.dslabel, plots }
+
+		const body = {
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			plots,
+			filter0: this.state.termfilter.filter0
+		}
 		let sample
 		if (this.state.config.sample) {
 			// a sample has already been selected
@@ -349,26 +374,25 @@ class singleCellPlot {
 			body.sample = this.samples[0].experiments?.[0]?.experimentID || this.samples[0].sample
 		}
 		if (this.state.config.gene) body.gene = this.state.config.gene
-		this.renderPlots(body)
-		if (this.dom.header) this.dom.header.html(`${sample} Single Cell Data`)
-	}
-
-	async renderPlots(body) {
-		this.dom.plotsDiv.selectAll('*').remove()
-		this.plots = []
-
 		try {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
-			for (const plot of result.plots) {
-				plot.id = plot.name.replace(/\s+/g, '')
-				this.renderPlot(plot)
-			}
 			this.refName = result.refName
+			return result
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			sayerror(this.dom.plotsDiv, e)
 			return
+		}
+	}
+
+	renderPlots(result) {
+		console.log(375, this.dom.plotsDiv.node())
+		this.dom.plotsDiv.selectAll('*').remove()
+		this.plots = []
+		for (const plot of result.plots) {
+			plot.id = plot.name.replace(/\s+/g, '')
+			this.renderPlot(plot)
 		}
 	}
 
@@ -705,7 +729,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 }
 
 async function renderSamplesTable(div, self, state) {
-	const body = { genome: state.vocab.genome, dslabel: state.vocab.dslabel }
+	const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
 	let result
 	try {
 		result = await dofetch3('termdb/singlecellSamples', { body })
@@ -714,8 +738,10 @@ async function renderSamplesTable(div, self, state) {
 		sayerror(div, e)
 		return
 	}
+	div.selectAll('*').remove()
 	const samples = result.samples
 	self.samples = samples
+	console.log(732, samples)
 
 	samples.sort((elem1, elem2) => {
 		const result = elem1.primarySite?.localeCompare(elem2.primarySite)
