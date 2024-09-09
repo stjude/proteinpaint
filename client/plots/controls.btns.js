@@ -68,7 +68,6 @@ function setInteractivity(self) {
 
 function burgerBtnInit(opts) {
 	const div = getTooltipDiv(opts.holder, 'Settings')
-	console.log(div.node())
 	const self = {
 		dom: {
 			btn: div

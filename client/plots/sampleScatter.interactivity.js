@@ -10,12 +10,11 @@ import {
 	addMatrixMenuItems,
 	openSummaryPlot,
 	addNewGroup,
-	getSamplelstTWFromIds,
 	getSamplelstTW
 } from '../mass/groups'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
-import { searchSampleInput, getSamplesRelated } from './sampleView.js'
+import { searchSampleInput } from './sampleView.js'
 
 import { shapes } from './sampleScatter.js'
 
