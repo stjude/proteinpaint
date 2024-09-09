@@ -310,7 +310,6 @@ class singleCellPlot {
 	}
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		console.log(315, config)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
@@ -326,18 +325,15 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
-		console.log(330, 'singleCellPlot.main()')
 		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 
 		this.dom.tableDiv.style('display', this.settings.showSamples ? 'block' : 'none')
 		if (this.tableOnPlot) {
-			console.log(332, this.tableOnPlot)
 			await renderSamplesTable(this.dom.tableDiv, this, this.state)
 		}
 
 		this.legendRendered = false
-		console.log(336, this.config)
 		// if (!this.config.sample) {
 		// 	this.dom.plotsDiv.style('display', 'none')
 		// } else {
@@ -352,7 +348,6 @@ class singleCellPlot {
 		const plots = []
 		for (const plot of this.config.plots) {
 			const id = plot.name.replace(/\s+/g, '')
-			console.log(343, id, plot.name)
 			const display = this.settings[`show${id}`]
 			if (display) plots.push(plot.name)
 		}
@@ -387,7 +382,6 @@ class singleCellPlot {
 	}
 
 	renderPlots(result) {
-		console.log(375, this.dom.plotsDiv.node())
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.plots = []
 		for (const plot of result.plots) {
@@ -741,7 +735,6 @@ async function renderSamplesTable(div, self, state) {
 	div.selectAll('*').remove()
 	const samples = result.samples
 	self.samples = samples
-	console.log(732, samples)
 
 	samples.sort((elem1, elem2) => {
 		const result = elem1.primarySite?.localeCompare(elem2.primarySite)
@@ -754,7 +747,10 @@ async function renderSamplesTable(div, self, state) {
 	const selectedRows = []
 	let maxHeight = '40vh'
 	if (self.tableOnPlot) {
-		selectedRows.push(0)
+		const selectedSample = self.config.sample
+		const selectedRow = self.samples.findIndex(s => s.sample == selectedSample)
+		const selectedRowIndex = selectedRow == -1 ? 0 : selectedRow
+		selectedRows.push(selectedRowIndex)
 		maxHeight = '30vh'
 	}
 	renderTable({
