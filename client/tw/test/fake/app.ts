@@ -21,13 +21,13 @@ export class FakeApp {
 	main(data) {
 		this.#xtws = []
 		for (const tw of this.#opts.twlst) {
-			this.#xtws.push(this.#getExtTws(tw))
+			this.#xtws.push(this.#getxtw(tw))
 		}
 		this.#render(data)
 		//console.log(40, this.#xtws, JSON.parse(JSON.stringify(this.#xtws)))
 	}
 
-	#getExtTws(tw: TermWrapper): FakeTw | TwBase {
+	#getxtw(tw: TermWrapper): FakeTw | TwBase {
 		const opts = { vocabApi: this.#opts.vocabApi }
 		/* 
 			Below are examples of using a discriminant property at the object root,
@@ -38,11 +38,15 @@ export class FakeApp {
 		*/
 		if (!tw.type) throw `missing tw.type`
 		if (tw.type in addons) {
+			// example using addons
 			return TwRouter.init(tw, { vocabApi: this.#opts.vocabApi, addons })
-		} else if (tw.type == 'CatTWValues') return new FakeCatValues(tw, opts)
-		else if (tw.type == 'CatTWPredefinedGS') return new FakeCatPredefinedGS(tw, opts)
-		else if (tw.type == 'CatTWCustomGS') return new FakeCatCustomGS(tw, opts)
-		else throw `no fakeApp extended class for tw.type=${tw.type}`
+		} else {
+			// example using extended subclass
+			if (tw.type == 'CatTWValues') return new FakeCatValues(tw, opts)
+			else if (tw.type == 'CatTWPredefinedGS') return new FakeCatPredefinedGS(tw, opts)
+			else if (tw.type == 'CatTWCustomGS') return new FakeCatCustomGS(tw, opts)
+			else throw `no fakeApp extended class for tw.type=${tw.type}`
+		}
 	}
 
 	#render(data) {

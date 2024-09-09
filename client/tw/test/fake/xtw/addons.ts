@@ -11,7 +11,7 @@ const discreteAddons = {
 				// lots of terms indicate benchmark testing, no need for string-based svg simulated render
 				if (keys.length > 10 || !keys.includes(t.id)) continue
 
-				// If there a lot of these if-else branches when extending DiscreteBase,
+				// If there are a lot of these if-else branches when extending DiscreteBase,
 				// it may be simpler and clearer to extend the "atomic" tw subclass directly.
 				// Code readability and type safety should dictate which class to extend.js
 				const shape = `<line x1=0 y1=10 x2=10 y2=0 stroke='black' stroke-width=2 />`

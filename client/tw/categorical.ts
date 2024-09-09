@@ -29,28 +29,6 @@ export class CategoricalBase extends TwBase {
 		this.term = tw.term
 	}
 
-	static init(tw: CatTWTypes, opts: TwOpts = {}): CatInstance {
-		switch (tw.type) {
-			case 'CatTWValues':
-				return new CatValues(tw, opts)
-
-			case 'CatTWPredefinedGS':
-				return new CatPredefinedGS(tw)
-
-			case 'CatTWCustomGS':
-				return new CatCustomGS(tw, opts)
-
-			default:
-				throw `unknown categorical class`
-		}
-	}
-
-	//
-	static initRaw(rawTW: RawCatTW, opts: TwOpts = {}): CatInstance {
-		const tw: CatTWTypes = CategoricalBase.fill(rawTW, opts)
-		return CategoricalBase.init(tw, opts)
-	}
-
 	/** tw.term must already be filled-in at this point */
 	static fill(tw: RawCatTW, opts: TwOpts = {}): CatTWTypes {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
@@ -196,7 +174,6 @@ export class CatPredefinedGS extends CategoricalBase {
 		if (tw.q.type != 'predefined-groupset') throw `expecting tw.q.type='predefined-groupset', got '${tw.q.type}'`
 
 		const { term, q } = tw
-		//if (term.type != 'categorical' || q.type != 'predefined-groupset') return false
 		const i = q.predefined_groupset_idx
 		if (i !== undefined && !Number.isInteger(i)) throw `missing or invalid tw.q.predefined_groupset_idx='${i}'`
 		q.predefined_groupset_idx = i || 0

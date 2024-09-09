@@ -35,6 +35,7 @@ export function getTermGroups(termgroups, app) {
 
 export type SetCellPropsSignature = {
 	value: (
+		/** a plain object for matrix cell data to be rendered, including sibling cells */
 		cell: any,
 		anno: any,
 		value: string | number,

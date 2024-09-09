@@ -51,6 +51,7 @@ export class TwBase {
 	}
 
 	render(a: any): any {
+		console.log(a)
 		throw `should implement this method in subclass code, as needed`
 	}
 }
