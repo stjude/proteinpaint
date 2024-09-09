@@ -1269,7 +1269,7 @@ sandbox header
     text-align: center;
     padding: 5px;
     border-radius: 6px;
-    font-size: 0.9em;
+    font-size: 15px!important;
     /* Position the tooltip text - see examples below! */
     position: absolute;
     left:10px;
