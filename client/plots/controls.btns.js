@@ -1,5 +1,6 @@
 import { getCompInit, multiInit } from '../rx'
 import { icons as icon_functions } from '../dom/control.icons'
+import { getTooltipDiv } from '../dom/uiUtils'
 
 class TdbControlsTopBar {
 	constructor(opts) {
@@ -66,18 +67,19 @@ function setInteractivity(self) {
 }
 
 function burgerBtnInit(opts) {
+	const div = getTooltipDiv(opts.holder, 'Settings')
+	console.log(div.node())
 	const self = {
 		dom: {
-			btn: opts.holder
+			btn: div
 				.style('margin', '10px')
-				.style('margin-left', '20px')
+				.style('margin-left', '18px')
 				.style('font-family', 'verdana')
 				.style('font-size', '28px')
 				.style('cursor', 'pointer')
 				.style('transition', '0.5s')
 				.html('&#8801;')
 				.on('click', opts.callback)
-				.attr('title', 'Settings')
 		}
 	}
 

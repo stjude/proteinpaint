@@ -215,3 +215,11 @@ export function infoToolTip(div, helpText) {
 		})
 	return icon
 }
+
+export function getTooltipDiv(holder, text) {
+	if (!text) throw 'No text provided for tooltip'
+	const div = holder.append('div').attr('class', 'tooltip')
+	const innerDiv = div.append('div').style('cursor', 'pointer')
+	div.append('div').attr('class', 'tooltiptext').text(text)
+	return innerDiv
+}
