@@ -1253,3 +1253,30 @@ sandbox header
     from {transform: rotate(0deg);}
     to {transform: rotate(359deg);}
  }
+
+
+/* Tooltip container */
+.tooltip {
+    position: relative;
+    display: inline-block;
+  }
+  
+  /* Tooltip text */
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    background-color: #aaa;
+    color: #fff;
+    text-align: center;
+    padding: 5px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    left:10px;
+    z-index: 1;
+  }
+  
+  /* Show the tooltip text when you mouse over the tooltip container */
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+  }

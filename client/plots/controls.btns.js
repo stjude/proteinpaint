@@ -26,7 +26,8 @@ class TdbControlsTopBar {
 				id: opts.id,
 				holder: this.dom.holder.insert('div'),
 				callback: opts.downloadHandler,
-				debug
+				debug,
+				title: 'Download plot image'
 			}),
 			helpbtn: helpBtnInit({
 				id: opts.id,
@@ -91,9 +92,9 @@ function burgerBtnInit(opts) {
 }
 
 function helpBtnInit(opts) {
-	const infoDiv = opts.holder.style('margin', '20px').attr('title', 'Documentation')
+	const infoDiv = opts.holder.style('margin', '20px')
 
-	icon_functions['help'](infoDiv, { handler: opts.callback })
+	icon_functions['help'](infoDiv, { handler: opts.callback, title: opts.title || 'Documentation' })
 
 	const self = {
 		plotTypes: ['profilePolar', 'profileBarchart', 'profileRadar', 'profileRadarFacility'],
@@ -114,9 +115,9 @@ function helpBtnInit(opts) {
 }
 
 function downloadBtnInit(opts) {
-	const downloadDiv = opts.holder.style('margin-left', '20px').attr('title', 'Download plot image')
+	const downloadDiv = opts.holder.style('margin-left', '20px')
 
-	icon_functions['download'](downloadDiv, { handler: opts.callback })
+	icon_functions['download'](downloadDiv, { handler: opts.callback, title: opts.title })
 
 	const self = {
 		plotTypes: ['summary', 'boxplot', 'scatter'],

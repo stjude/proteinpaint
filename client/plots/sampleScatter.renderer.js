@@ -557,24 +557,28 @@ export function setRenderers(self) {
 			.style('display', display)
 			.style('margin', '20px')
 			.attr('name', 'sjpp-reset-btn') //For unit tests
-		icon_functions['restart'](homeDiv, { handler: resetToIdentity })
+		icon_functions['restart'](homeDiv, { handler: resetToIdentity, title: 'Restore plot to defaults' })
 		const zoomInDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
 			.attr('name', 'sjpp-zoom-in-btn') //For unit tests
-		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
+		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn, title: 'Zoom in' })
 		const zoomOutDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
 			.attr('name', 'sjpp-zoom-out-btn') //For unit tests
-		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
+		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut, title: 'Zoom out' })
 		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
 		const lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
 		if (!(self.is2DLarge || self.is3D)) {
-			icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
-			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
+			icon_functions['search'](searchDiv, { handler: e => self.searchSample(e), title: 'Search sample' })
+			icon_functions['lasso'](lassoDiv, {
+				handler: toggle_lasso,
+				enabled: self.lassoOn,
+				title: 'Select a group of samples'
+			})
 		}
 		self.dom.groupDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
 
