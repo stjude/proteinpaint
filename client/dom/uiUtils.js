@@ -218,8 +218,8 @@ export function infoToolTip(div, helpText) {
 
 export function getTooltipDiv(holder, text) {
 	if (!text) throw 'No text provided for tooltip'
-	const div = holder.append('div').attr('class', 'tooltip')
-	const innerDiv = div.append('div').style('cursor', 'pointer')
-	div.append('div').attr('class', 'tooltiptext').text(text)
+	const div = holder.append('div').attr('class', 'tooltip').style('cursor', 'pointer')
+	div.append('div').attr('class', 'tooltiptext').text(text).style('left', '30px').style('top', '40px')
+	const innerDiv = div.append('div')
 	return innerDiv
 }
