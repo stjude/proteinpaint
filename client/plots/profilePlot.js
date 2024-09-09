@@ -120,7 +120,7 @@ export class profilePlot {
 		})
 		if (!config.settings[this.type].comparison)
 			icon_functions['add'](iconsDiv.append('div').style('padding', '5px'), {
-				title: 'Open a new plot;',
+				title: 'Open a new plot',
 				handler: async () => {
 					const config = {
 						chartType: this.type,
