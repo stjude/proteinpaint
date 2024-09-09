@@ -556,7 +556,7 @@ function addSvg(holder, svg, opts) {
 	if (opts.title) {
 		const div = holder.append('div').attr('class', 'tooltip')
 		div.append('div').html(svg)
-		div.append('div').attr('class', 'tooltiptext').text(`${opts.title}`)
+		div.append('div').attr('class', 'tooltiptext').text(opts.title)
 	} else holder.html(svg)
 	holder.style('cursor', 'pointer')
 	if (opts.handler) holder.on('click', opts.handler)
