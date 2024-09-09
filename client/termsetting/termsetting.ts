@@ -932,8 +932,8 @@ export async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 	}
 }
 
-const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
-if (features.usextw) console.warn('--- Using xtw ---')
+// TODO: emit to verify xtw is being used
+console.warn('--- Using xtw ---')
 // add migrated tw fillers here, by term.type
 const routedTermTypes = new Set(['categorical', 'integer', 'float'])
 
@@ -948,7 +948,7 @@ export async function fillTermWrapper(
 		await mayHydrateDictTwLst([tw], vocabApi)
 	}
 
-	if (features.usextw && routedTermTypes.has(tw.term?.type)) {
+	if (routedTermTypes.has(tw.term?.type)) {
 		// NOTE: while the tw refactor is not done for all term types and q.types/modes,
 		// there will be some code duplication between TwRouter and the legacy code;
 		// the latter will be deleted once the refactor/migration is done
