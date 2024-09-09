@@ -555,7 +555,7 @@ export const icons = {
 function addSvg(holder, svg, opts) {
 	if (opts.title) {
 		const div = holder.append('div').attr('class', 'tooltip')
-		div.append('div').html(svg).style('cursor', 'pointer')
+		div.append('div').html(svg)
 		div.append('div').attr('class', 'tooltiptext').text(`${opts.title}`)
 	} else holder.html(svg)
 	holder.style('cursor', 'pointer')
