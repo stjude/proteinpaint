@@ -84,8 +84,9 @@ class profileRadar extends profilePlot {
 			data2 = [] //term2
 		for (let { module, term1, term2 } of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
-			this.addData('term1', iangle, i, data)
 			this.addData('term2', iangle, i, data2)
+			this.addData('term1', iangle, i, data)
+
 			const color = term1.score.term.color
 			rows.push([
 				{ color, disabled: true },
