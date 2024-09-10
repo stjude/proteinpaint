@@ -34,19 +34,19 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     let now_genes = Instant::now();
     let ds_genes = file.dataset("gene_names")?;
     let genes = ds_genes.read_1d::<FixedAscii<104>>()?;
-    println!("\tgenes = {:?}", genes);
-    println!("\tgenes.shape() = {:?}", genes.shape());
-    println!("\tgenes.strides() = {:?}", genes.strides());
-    println!("\tgenes.ndim() = {:?}", genes.ndim());
+    //println!("\tgenes = {:?}", genes);
+    //println!("\tgenes.shape() = {:?}", genes.shape());
+    //println!("\tgenes.strides() = {:?}", genes.strides());
+    //println!("\tgenes.ndim() = {:?}", genes.ndim());
     println!("Time for parsing genes:{:?}", now_genes.elapsed());
 
     let now_samples = Instant::now();
     let ds_samples = file.dataset("sample_names")?;
     let samples = ds_samples.read_1d::<FixedAscii<104>>()?;
-    println!("\tsamples = {:?}", samples);
-    println!("\tsamples.shape() = {:?}", samples.shape());
-    println!("\tsamples.strides() = {:?}", samples.strides());
-    println!("\tsamples.ndim() = {:?}", samples.ndim());
+    //println!("\tsamples = {:?}", samples);
+    //println!("\tsamples.shape() = {:?}", samples.shape());
+    //println!("\tsamples.strides() = {:?}", samples.strides());
+    //println!("\tsamples.ndim() = {:?}", samples.ndim());
     println!("Time for parsing samples:{:?}", now_samples.elapsed());
 
     let gene_index;
@@ -120,17 +120,18 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
 
     // Generate the complete array from the sparse array
 
-    //let mut gene_array: Array1<f64> = Array1::zeros(num_samples);
+    let mut gene_array: Array1<f64> = Array1::zeros(num_samples);
     let time_generating_full_array = Instant::now();
-    let mut gene_array: Vec<f64> = Vec::with_capacity(num_samples);
+    //let mut gene_array: Vec<f64> = Vec::with_capacity(num_samples);
     for index in 0..num_samples {
         match populated_column_ids.iter().any(|&x| x == index) {
             true => match populated_column_ids.iter().position(|&x| x == index) {
-                Some(y) => gene_array.push(populated_column_values[y]),
-                //gene_array[index] = populated_column_values[y],
+                Some(y) => {
+                    gene_array[index] = populated_column_values[y] //gene_array.push(populated_column_values[y]),
+                }
                 None => {} // should not happen because if the index is found, its position in the array should also be found
             },
-            false => gene_array.push(0.0), // If index not found, it means the value is 0 for that sample
+            false => gene_array[index] = 0.0, //gene_array.push(0.0), // If index not found, it means the value is 0 for that sample
         }
     }
 
@@ -145,7 +146,7 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
         //let item_json = format!("{{\"{}\"}}", samples[i].to_string());
 
         output_string += &format!(
-            "{{\"{}\",{}}}",
+            "{{\"{}\":{}}}",
             samples[i].to_string(),
             gene_array[i].to_string()
         );
