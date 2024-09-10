@@ -112,7 +112,7 @@ export default {
 			termid2totalsize2: {},
 			about: {
 				tab: {
-					order: 1,
+					order: 4,
 					topLabel: 'test',
 					midLabel: 'test about',
 					btmLabel: 'test'
