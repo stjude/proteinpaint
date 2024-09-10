@@ -41,6 +41,10 @@ export class CategoricalBase extends TwBase {
 			// merge defaultQ into tw.q
 			copyMerge(tw.q, opts.defaultQ)
 		}
+		// set a default q.mode for clarity, otherwise `mode?: 'binary'` may seem like the only option
+		// NOTE: many code that process categorical tw already assume discrete mode, without checking q.mode,
+		// except for applications that allow or require q.mode='binary'
+		if (!tw.q.mode) tw.q.mode = 'discrete'
 		if (!tw.q) tw.q = { type: 'values', isAtomic: true }
 
 		/* 
@@ -127,18 +131,8 @@ export class CatValues extends CategoricalBase {
 		//GDC or other dataset may allow empty term.values
 		//if (!numVals) throw `empty term.values`
 		if (q.mode == 'binary') {
+			// a tw with q.type = 'values' can only have mode='binary' if it has exactly 2 values
 			if (Object.keys(tw.term.values).length != 2) throw 'term.values must have exactly two keys'
-			// TODO:
-			// - add validation that both groups have samplecount > 0 or some other minimum count
-			// - rough example
-			// const data = vocabApi.getCategories() or maybe this.countSamples()
-			// if (data.sampleCounts) {
-			// 	for (const [k, v] of Object.keys(tw.term.values)) {
-			// 		if (!data.sampleCounts.find(d => d.key === key)) {
-			//			throw `there are no samples for the required binary value=${key}`
-			//    }
-			// 	}
-			// }
 		}
 		set_hiddenvalues(q, term)
 		return tw as CatTWValues
@@ -148,7 +142,10 @@ export class CatValues extends CategoricalBase {
 export class CatPredefinedGS extends CategoricalBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
 	q: PredefinedGroupSettingQ
-	#groupset: BaseGroupSet
+	// set by Object.defineProperty() so that the property is not
+	// enumerable, will not show up in JSON.stringify() and structuredClone(),
+	// but can still be accessed by addon methods, unlike #private props
+	groupset!: BaseGroupSet
 	#tw: CatTWPredefinedGS
 	#opts: TwOpts
 
@@ -158,7 +155,9 @@ export class CatPredefinedGS extends CategoricalBase {
 		// this.term = tw.term // already set in base class
 		this.q = tw.q
 		this.#tw = tw
-		this.#groupset = this.term.groupsetting[this.#tw.q.predefined_groupset_idx]
+		Object.defineProperty(this, 'groupset', {
+			value: this.term.groupsetting[this.#tw.q.predefined_groupset_idx]
+		})
 		this.#opts = opts
 	}
 
@@ -184,17 +183,8 @@ export class CatPredefinedGS extends CategoricalBase {
 		if (!groupset) throw `no groupset entry for groupsetting.lst?.[predefined_groupset_idx=${i}]`
 
 		if (q.mode == 'binary') {
+			//
 			if (groupset.groups.length != 2) throw 'there must be exactly two groups'
-			// TODO:
-			// - add validation that both groups have samplecount > 0 or some other minimum count
-			// - rough example
-			// const data = vocabApi.getCategories() or maybe this.countSamples()
-			// if (data.sampleCounts) {
-			// 	for (const grp of groupset.groups) {
-			// 		if (!data.sampleCounts.find(d => d.label === grp.name))
-			// 			throw `there are no samples for the required binary value=${grp.name}`
-			// 	}
-			// }
 		}
 		set_hiddenvalues(q, term)
 		return tw as CatTWPredefinedGS
@@ -204,7 +194,7 @@ export class CatPredefinedGS extends CategoricalBase {
 export class CatCustomGS extends CategoricalBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
 	q: CustomGroupSettingQ
-	#groupset: BaseGroupSet
+	groupset!: BaseGroupSet
 	#tw: CatTWCustomGS
 	#opts: TwOpts
 
@@ -213,7 +203,7 @@ export class CatCustomGS extends CategoricalBase {
 		super(tw, opts)
 		// this.term = tw.term // already set in base class
 		this.q = tw.q
-		this.#groupset = this.q.customset
+		Object.defineProperty(this, 'groupset', { value: this.q.customset })
 		this.#tw = tw
 		this.#opts = opts
 	}

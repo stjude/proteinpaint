@@ -88,7 +88,8 @@ tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
 				type: 'predefined-groupset',
 				predefined_groupset_idx: 0,
 				isAtomic: true,
-				hiddenValues: {}
+				hiddenValues: {},
+				mode: 'discrete'
 			},
 			`should reshape a legacy nested q.groupsetting`
 		)
@@ -108,11 +109,8 @@ tape('initRaw() categorical', async test => {
 			q: {}
 		}
 
-		const handler = await TwRouter.initRaw(tw, { vocabApi })
-		test.true(
-			handler instanceof CatValues,
-			`should return a matching categorical handler.router on init() with missing q or q.type`
-		)
+		const xtw = await TwRouter.initRaw(tw, { vocabApi })
+		test.true(xtw instanceof CatValues, `should return a matching categorical xtw on init() with missing q or q.type`)
 	}
 	{
 		const term = getTermWithGS()
@@ -122,10 +120,15 @@ tape('initRaw() categorical', async test => {
 			q: { type: 'predefined-groupset', isAtomic: true as const, predefined_groupset_idx: 0 }
 		}
 
-		const handler = await TwRouter.initRaw(tw, { vocabApi })
+		const xtw = await TwRouter.initRaw(tw, { vocabApi })
 		test.true(
-			handler instanceof CatPredefinedGS,
-			`should return a matching categorical handler.router on init() with q.type='predefined-groupset'`
+			xtw instanceof CatPredefinedGS,
+			`should return a matching categorical xtw on init() with q.type='predefined-groupset'`
+		)
+		test.deepEqual(
+			Object.keys(xtw).sort(),
+			['isAtomic', 'q', 'term', 'type'],
+			`should have the expected enumerable keys`
 		)
 	}
 
@@ -137,14 +140,20 @@ tape('initRaw() categorical', async test => {
 			q: {
 				type: 'custom-groupset',
 				isAtomic: true as const,
-				customset: getCustomSet()
+				customset: getCustomSet(),
+				mode: 'discrete'
 			}
 		}
 
-		const handler = await TwRouter.initRaw(tw, { vocabApi })
+		const xtw = await TwRouter.initRaw(tw, { vocabApi })
 		test.true(
-			handler instanceof CatCustomGS,
-			`should return a matching categorical handler.router on init() with q.type='custom-groupset'`
+			xtw instanceof CatCustomGS,
+			`should return a matching categorical xtw on init() with q.type='custom-groupset'`
+		)
+		test.deepEqual(
+			Object.keys(xtw).sort(),
+			['isAtomic', 'q', 'term', 'type'],
+			`should have the expected enumerable keys`
 		)
 	}
 

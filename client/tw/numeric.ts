@@ -37,57 +37,25 @@ export class NumericBase extends TwBase {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (!NumericBase.termTypes.has(tw.term.type)) throw `non-numeric term.type='${tw.term.type}'`
 
-		// preprocessing the preferredBins to make sure that subsequent fill() functions
-		// have a more filled-in q object to correctly detect the raw tw type.
-		if (opts.defaultQ) opts.defaultQ.isAtomic = true
-		const preferredBins = opts.defaultQ?.preferredBins
-		if (preferredBins) {
-			const q = opts.defaultQ
-			if (tw.term.bins[preferredBins]) {
-				tw.q = structuredClone(tw.term.bins[preferredBins])
-				delete q.preferredBins
-			} else if (preferredBins == 'median') {
-				if (q.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
-				Object.assign(tw.q, q)
-			} else {
-				throw `unrecognized defaultQ.preferredBins='${preferredBins}'`
+		if (opts.defaultQ) {
+			opts.defaultQ.isAtomic = true
+			tw.q.isAtomic = true
+			if (opts.defaultQ.preferredBins == 'median') {
+				if (!opts.defaultQ.type) opts.defaultQ.type = 'custom-bin'
+				else if (opts.defaultQ.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
 			}
-		} else {
-			if (opts.defaultQ) {
-				opts.defaultQ.isAtomic = true
-				tw.q.isAtomic = true
-				// merge defaultQ into tw.q
-				if (tw.q.mode != opts.defaultQ.mode) copyMerge(tw.q, opts.defaultQ)
-			}
+			// merge defaultQ into tw.q
+			copyMerge(tw.q, opts.defaultQ)
+		}
 
-			if (tw.term.bins) {
-				// detect if tw.q still needs to use term.bins
-				//
-				// TODO: may move some of these logic in the applicable switch-case code block,
-				//       which may require not allowwing "mixed-modes", like some code expecting
-				//       q.type='regular-bin' to possibly have q.mode='binary' | 'continuous',
-				//       should clean or clarify such usecases
-				//
-				if (!tw.q.type) {
-					// a missing q.type indicates that tw.q needs to be filled-in
-					if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
-						// only use bins.default if the q.mode matches (assumed to be discrete)
-						copyMerge(tw.q, structuredClone(tw.term.bins.default))
-					}
-				} else if (tw.q.type === tw.term.bins.default.type) {
-					// only fill-in tw.q if it's missing properties,
-					// otherwise assume that a full tw.q should not be overriden by term.bins
-					if (tw.q.type == 'regular-bin') {
-						if (!isNumeric(tw.q.bin_size) || !tw.q.first_bin || !isNumeric(tw.q.first_bin.stop)) {
-							// tw.q is still missing required props
-							tw.q = structuredClone(tw.term.bins.default)
-						}
-					} else if (tw.q.type == 'custom-bin' && !Array.isArray(tw.q.lst)) {
-						// tw.q is still missing required props
-						tw.q = structuredClone(tw.term.bins.default)
-					}
-				}
-			}
+		if (!tw.q.mode) tw.q.mode = 'discrete'
+
+		if (tw.q.mode == 'binary') {
+			if (!tw.q.type) tw.q.type = 'custom-bin'
+		} else if (tw.q.mode == 'discrete' && !tw.q.type) {
+			// try to prefill tw.q, otherwise it would not be possible to route
+			// to the correct subclass fill() function if tw.q.type is undefined
+			mayFillQWithPresetBins(tw)
 		}
 
 		/* 
@@ -130,7 +98,6 @@ export class NumericBase extends TwBase {
 				return await NumRegularBin.fill(tw)
 
 			case 'NumTWCustomBin':
-				tw.q.type = 'custom-bin'
 				return await NumCustomBins.fill(tw, opts)
 
 			case 'NumTWCont':
@@ -174,6 +141,7 @@ export class NumRegularBin extends NumericBase {
 			throw `expecting tw.q.mode='discrete'|'binary'|'continous', got '${tw.q.mode}'`
 
 		if (tw.q.type && tw.q.type != 'regular-bin') throw `expecting tw.q.type='regular-bin', got '${tw.q.type}'`
+		if (!tw.q.first_bin || !isNumeric(tw.q.bin_size)) mayFillQWithPresetBins(tw)
 
 		if (!isNumeric(tw.q.bin_size)) throw `tw.q.bin_size=${tw.q.bin_size} is not numeric`
 		if (!tw.q.first_bin) throw `missing tw.q.first_bin`
@@ -212,19 +180,15 @@ export class NumCustomBins extends NumericBase {
 		else if (tw.q.mode != 'discrete' && tw.q.mode != 'binary')
 			throw `expecting tw.q.mode='discrete'|binary', got '${tw.q.mode}'`
 
-		if (tw.q.type != 'custom-bin') throw `expecting tw.q.type='custom-bin', got '${tw.q.type}'`
+		if (tw.q.mode == 'binary' && !tw.q.preferredBins) tw.q.preferredBins = 'median'
 
 		if (tw.q.preferredBins == 'median') {
-			let median
-			if (tw.q.median) {
-				median = tw.q.median
-				delete tw.q.median
-			} else {
-				const result = await opts.vocabApi.getPercentile(tw.term.id, [50])
-				if (!result.values) throw '.values[] missing from vocab.getPercentile()'
-				median = roundValueAuto(result.values[0])
-			}
+			const result = await opts.vocabApi.getPercentile(tw.term.id, [50])
+			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
+			const median = roundValueAuto(result.values[0])
+
 			if (!isNumeric(median)) throw 'median value not a number'
+			tw.q.type = 'custom-bin'
 			tw.q.lst = [
 				{
 					startunbounded: true,
@@ -240,9 +204,11 @@ export class NumCustomBins extends NumericBase {
 				} as StopUnboundedBin
 			]
 			delete tw.q.preferredBins
-		}
+		} else if (tw.q.type != 'custom-bin') throw `expecting tw.q.type='custom-bin', got '${tw.q.type}'`
 
-		if (!tw.q.lst) throw `missing q.lst[] for custom-bin`
+		if (!Array.isArray(tw.q.lst)) mayFillQWithPresetBins(tw)
+
+		if (!tw.q.lst || !tw.q.lst.length) throw `missing or empty q.lst[] for custom-bin`
 		if (tw.q.mode == 'binary' && tw.q.lst.length != 2) throw `numeric q.mode='binary' requires exactly 2 bins`
 
 		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
@@ -309,5 +275,26 @@ export class NumSpline extends NumericBase {
 		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
 		tw.type = 'NumTWSpline'
 		return tw as NumTWSpline
+	}
+}
+
+function mayFillQWithPresetBins(tw) {
+	if (!tw.term.bins) throw `missing tw.term.bins`
+	// preprocessing the preferredBins to make sure that q.type is set
+	// and can be used to route the raw tw to the correct subclass fill() function
+	const preferredBins = tw.q.preferredBins || 'default'
+	if (preferredBins != 'median') {
+		if (!Object.keys(tw.term.bins).includes(preferredBins)) `term.bins does not have a preset '${preferredBins}' key`
+		const bins = tw.term.bins[preferredBins]
+		if (tw.q.type && tw.q.type != bins.type) throw `mismatched tw.q.type and term.bins[preferredBins].type`
+		const qkeys = Object.keys(tw.q)
+		for (const [k, v] of Object.entries(bins)) {
+			// only override tw.q values that don't already exist in tw.q;
+			// NOTES:
+			// - Object.hasOwn(tw.q, k) will work with lib: ["es2022"], but that causes other tsc errors
+			// - using tw.q.hasOwnProperty(k) causes an eslint error, no-prototype-builtins
+			if (!qkeys.includes(k)) tw.q[k] = v
+		}
+		delete tw.q.preferredBins
 	}
 }

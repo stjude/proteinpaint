@@ -8,7 +8,7 @@ import {
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ
 } from './term.ts'
-import { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ } from './q.ts'
+import { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ, MinBaseQ } from './q.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 /**
@@ -39,6 +39,10 @@ export type RawCatTWCustomGS = BaseTW & {
 }
 
 export type RawCatTW = RawCatTWValues | RawCatTWPredefinedGS | RawCatTWCustomGS
+
+export type CategoricalBaseQ = MinBaseQ & {
+	mode?: 'discrete' | 'binary'
+}
 
 export type CategoricalQ = GroupSettingQ | ValuesQ
 

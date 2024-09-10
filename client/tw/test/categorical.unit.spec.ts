@@ -62,7 +62,7 @@ function getTermWithGS() {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- tw/CategoricalRouter.unit -***-')
+	test.pass('-***- tw/categorical.unit -***-')
 	test.end()
 })
 
@@ -99,6 +99,7 @@ tape(`fill() default q.type='values'`, async test => {
 				term: tw.term,
 				q: {
 					type: 'values',
+					mode: 'discrete',
 					isAtomic: true,
 					hiddenValues: {}
 				},
@@ -130,6 +131,7 @@ tape('fill() predefined-groupset', async test => {
 				term: tw.term,
 				q: {
 					type: 'predefined-groupset',
+					mode: 'discrete',
 					predefined_groupset_idx: 0,
 					isAtomic: true,
 					hiddenValues: {}
@@ -163,6 +165,7 @@ tape('fill() custom-groupset', async test => {
 		q: {
 			isAtomic: true,
 			type: 'custom-groupset',
+			mode: 'discrete',
 			name: 'AAA vs BBB',
 			customset: getCustomSet(),
 			hiddenValues: {}

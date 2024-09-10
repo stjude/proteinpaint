@@ -1,18 +1,6 @@
-import { MinBaseQ, BaseTW, TermValues, BaseTerm, HiddenValues } from '../index.ts'
+import { MinBaseQ, BaseTW, TermValues, BaseTerm } from '../index.ts'
 
-export type RawRegularBin = MinBaseQ & {
-	type?: 'regular-bin'
-	// TODO: refactor code that allows/expects regular-bin q
-	// to have mode='binary' or 'continuous'
-	mode?: 'discrete' | 'binary' | 'continuous'
-	bin_size?: number
-	first_bin?: {
-		stop: number
-	}
-	hiddenValues?: HiddenValues
-	preferredBins?: string
-	isAtomic?: true
-}
+export type RawRegularBin = Partial<RegularNumericBinConfig> & { preferredBins?: string }
 
 export type RawNumTWRegularBin = BaseTW & {
 	type?: 'NumTWRegularBin'
@@ -20,24 +8,7 @@ export type RawNumTWRegularBin = BaseTW & {
 	q: RawRegularBin
 }
 
-export type RawCustomBin = MinBaseQ & {
-	type: 'custom-bin'
-	mode?: 'discrete' | 'binary'
-	// lst may be missing if median is present
-	// TODO: separate the binary type definition from discrete???
-	lst?: [NumericBin, ...NumericBin[]]
-	median?: number
-	preferredBins?: string
-	isAtomic?: true
-} /*| {
-	type: 'custom-bin'
-	mode: 'binary'
-	// lst may be missing if median is present
-	lst?: [NumericBin, NumericBin]
-	preferredBins?: string
-	median?: number
-	isAtomic?: true
-}*/
+export type RawCustomBin = Partial<CustomNumericBinConfig> & { preferredBins?: string }
 
 export type RawNumTWCustomBin = BaseTW & {
 	type?: 'NumTWCustomBin'
@@ -57,7 +28,7 @@ export type RawNumTWSpline = BaseTW & {
 	q: SplineNumericQ
 }
 
-export type RawNumTW = RawNumTWRegularBin | RawNumTWCustomBin | RawNumTWCont | RawNumTWSpline
+export type RawNumTW = RawNumTWCustomBin | RawNumTWRegularBin | RawNumTWCont | RawNumTWSpline
 
 export type NumericTerm = BaseTerm & {
 	id?: string
@@ -113,7 +84,7 @@ export type FullyBoundedBin = {
 
 export type NumericBin = StartUnboundedBin | FullyBoundedBin | StopUnboundedBin
 
-export type RegularNumericBinConfig = {
+export type RegularNumericBinConfig = MinBaseQ & {
 	type: 'regular-bin' // another concrete value being assigned, instead of `string`
 	//regular-sized bins
 	mode?: 'discrete'
@@ -126,12 +97,13 @@ export type RegularNumericBinConfig = {
 	label_offset?: number
 }
 
-export type CustomNumericBinConfig = {
+export type CustomNumericBinConfig = MinBaseQ & {
 	type: 'custom-bin'
-	mode?: 'discrete'
+	mode?: 'discrete' | 'binary'
 	// since ts will allow NumericBin[] to be empty,
 	// use this workaround to define a non-empty array
 	lst: [NumericBin, ...NumericBin[]]
+	preferredBins?: 'median'
 }
 
 // |
@@ -165,10 +137,10 @@ export type PresetNumericBins = {
 
 export type BinnedNumericQ = RegularNumericBinConfig | CustomNumericBinConfig
 
-export type DiscreteNumericQ = BinnedNumericQ &
-	MinBaseQ & {
-		mode: 'discrete' | 'binary'
-	}
+export type DiscreteNumericQ = BinnedNumericQ //&
+// MinBaseQ & {
+// 	mode: 'discrete' | 'binary'
+// }
 
 // TODO: test with live code that defines an actual binary q object
 export type BinaryNumericQ = MinBaseQ & {

@@ -1,6 +1,5 @@
-import { MinBaseQ } from './q.ts'
 import { Filter } from '../filter.js'
-import { CategoricalTerm } from './categorical.js'
+import { CategoricalTerm, CategoricalBaseQ } from './categorical.js'
 import { ConditionTerm } from './condition.js'
 import { NumericTerm } from './numeric.js'
 import { GeneVariantTerm } from './geneVariant.js'
@@ -59,21 +58,18 @@ export type BaseQ = {
 		| 'custom-samplelst'
 }
 
-export type ValuesQ = MinBaseQ & {
+export type ValuesQ = CategoricalBaseQ & {
 	type: 'values'
-	mode?: 'binary'
 }
 
-export type PredefinedGroupSettingQ = MinBaseQ & {
+export type PredefinedGroupSettingQ = CategoricalBaseQ & {
 	type: 'predefined-groupset'
 	predefined_groupset_idx: number
-	mode?: 'binary'
 }
 
-export type CustomGroupSettingQ = MinBaseQ & {
+export type CustomGroupSettingQ = CategoricalBaseQ & {
 	type: 'custom-groupset'
 	customset: BaseGroupSet
-	mode?: 'binary'
 }
 
 export type GroupSettingQ = ValuesQ | PredefinedGroupSettingQ | CustomGroupSettingQ
