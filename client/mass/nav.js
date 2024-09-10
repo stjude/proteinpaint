@@ -145,6 +145,10 @@ class TdbNav {
 	}
 
 	async main() {
+		if (this.state.termdbConfig.selectCohort && this.state.termdbConfig.about) {
+			console.error('Cohort(s) and an About tab are defined. Only one can be used.')
+			return
+		}
 		this.dom.tabDiv.style('display', this.state.nav.header_mode === 'with_tabs' ? 'inline-block' : 'none')
 		this.dom.tip.hide()
 		this.activeTab = this.state.nav.activeTab
