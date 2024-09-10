@@ -47,7 +47,7 @@ export class profilePlot {
 		const mainDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const holder2 = this.opts.holder.append('div')
 
-		const controlsDiv = leftDiv.append('div').style('display', 'inline-block').style('font-size', '0.8em')
+		const controlsDiv = leftDiv.append('div').style('display', 'inline-block').style('font-size', '0.9em')
 		const iconsDiv = leftDiv.append('div').style('margin-left', '16px').style('margin-top', '8px')
 
 		const holder = mainDiv.insert('div').style('display', 'inline-block')

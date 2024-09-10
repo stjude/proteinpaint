@@ -106,6 +106,7 @@ class TdbConfigUiInit {
 			.style('visibility', isOpen ? 'visible' : 'hidden')
 			.style('max-width', isOpen ? '680px' : '50px')
 			.style('height', isOpen ? '' : 0)
+			.style('resize', isOpen ? 'both' : 'none')
 
 		this.dom.table
 			.selectAll('tr')

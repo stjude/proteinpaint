@@ -1261,17 +1261,15 @@ sandbox header
   .sja_root_holder [aria-label]:after {
     content: attr(aria-label);
     position: absolute;
-    left: 50%;
+    left: 15px;
     bottom: 50%; /* put it on the top */
     background-color: #aaa;
     border-radius: 6px ;
     font-size: 15px;
     color: #fff;
     padding: 5px;
-    width: max-content;
     opacity: 0;
     -webkit-transition: opacity 0.75s ease-in-out; /* 👈 Change the time to meet your requirements. */;
-    z-index: 1;
 }
 
   .sja_root_holder [aria-label]:hover:after {
