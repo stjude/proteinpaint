@@ -69,7 +69,7 @@ class TdbConfigUiInit {
 				.style('height', 0)
 				.style('vertical-align', 'top')
 				.style('transition', '0.2s ease-in-out')
-				.style('overflow', 'hidden')
+				//.style('overflow', 'hidden')
 				.style('visibility', 'hidden')
 				.style('transition', '0.2s')
 		}
@@ -104,7 +104,7 @@ class TdbConfigUiInit {
 	render(isOpen) {
 		this.dom.holder
 			.style('visibility', isOpen ? 'visible' : 'hidden')
-			.style('max-width', isOpen ? '680px' : '50px')
+			.style('max-width', isOpen ? '700px' : '50px')
 			.style('height', isOpen ? '' : 0)
 			.style('resize', isOpen ? 'both' : 'none')
 
@@ -237,7 +237,8 @@ function setMathExprInput(opts) {
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label')
-				.attr('aria-label', opts.title),
+				.attr('aria-label', opts.title)
+				.attr('overflow', 'visible'),
 			inputTd: opts.holder.append('td')
 		}
 	}
