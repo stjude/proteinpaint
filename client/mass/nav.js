@@ -288,8 +288,8 @@ function setRenderers(self) {
 				btm: btmLabel,
 				subheader: 'about'
 			}
-
-			self.tabs.unshift(tab)
+			const tabIdx = appState.termdbConfig?.selectCohort ? 0 : aboutTab.order || 0
+			self.tabs.splice(tabIdx, 0, tab)
 		}
 
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
