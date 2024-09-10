@@ -1071,7 +1071,7 @@ export class MatrixControls {
 
 			for (const inputConfig of t.rows) {
 				const holder = table.append('tr')
-				if (inputConfig.title) holder.attr('aria-label', inputConfig.title)
+				//if (inputConfig.title) holder.attr('aria-label', inputConfig.title)
 				const input = await initByInput[inputConfig.type](
 					Object.assign(
 						{},
