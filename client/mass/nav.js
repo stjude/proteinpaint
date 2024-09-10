@@ -32,8 +32,6 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 // data elements for navigation header tabs
-const aboutTab = { top: '', mid: 'ABOUT', btm: '', subheader: 'about' }
-const cohortTab = { top: 'COHORT', mid: 'NONE', btm: '', subheader: 'cohort' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
@@ -163,6 +161,9 @@ class TdbNav {
 
 		this.cohortsData = await this.app.vocabApi.getCohortsData()
 
+		/** Custom config to show an ABOUT tab */
+		if (this.state.termdbConfig.about) this.about = this.state.termdbConfig.about
+
 		if (this.state.nav.header_mode === 'with_tabs') {
 			if (!(this.activeCohortName in this.samplecounts)) {
 				const count = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
@@ -262,22 +263,33 @@ function setRenderers(self) {
 			search: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			groups: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			charts: self.dom.subheaderDiv.append('div').style('display', 'none'),
-			cohort: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			filter: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			cart: self.dom.subheaderDiv
 				.append('div')
 				.style('display', 'none')
 				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
+			// For either the COHORT or ABOUT tab
 			about: self.dom.subheaderDiv.append('div').style('display', 'none').attr('data-testid', 'sjpp-mass-about')
 		})
 
 		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
-		if (appState.termdbConfig.selectCohort) self.tabs.unshift(cohortTab) // dataset has "sub-cohorts", show the Cohort tab at the beginning
-		if (appState.termdbConfig.about) {
-			// show the About tab at the beginning if defined in dataset config
-			self.tabs.unshift(aboutTab)
-			// TODO: Maybe add a human-readable dataset name for the about tab
-			// aboutTab.mid = appState.termdbConfig.about.niceName
+		/** Adds either the COHORT or ABOUT tab
+		 * COHORT is added over ABOUT if both are defined
+		 */
+		if (appState.termdbConfig?.selectCohort || appState.termdbConfig?.about) {
+			const aboutTab = appState.termdbConfig?.about?.tab || {}
+			const topLabel = appState.termdbConfig.selectCohort ? 'COHORT' : aboutTab.topLabel || ''
+			const midLabel = aboutTab.midLabel || (aboutTab ? 'ABOUT' : '')
+			const btmLabel = aboutTab.btmLabel || ''
+
+			const tab = {
+				top: topLabel.toUpperCase(),
+				mid: midLabel.toUpperCase(),
+				btm: btmLabel,
+				subheader: 'about'
+			}
+
+			self.tabs.unshift(tab)
 		}
 
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
@@ -298,7 +310,7 @@ function setRenderers(self) {
 			)
 			.enter()
 			.append('td')
-			// hide the cohort tab until there is termdbConfig.selectCohort
+			// hide the about (e.g. cohort tab) until there is termdbConfig.selectCohort or termdbCongif.about
 			.style('display', 'none') // d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
 			.style('width', '100px')
 			.style('padding', d => (d.rowNum === 0 ? '12px 12px 3px 12px' : '3px 12px'))
@@ -411,15 +423,23 @@ function setRenderers(self) {
 					const n = self.state.plots.length
 					if (d.key == 'mid') return !n ? 'NONE' : n
 					else return ''
-				} else if (d.subheader === 'cohort') {
+				} else if (d.subheader === 'about') {
 					if (self.activeCohortName && self.activeCohortName in self.samplecounts) {
-						return d.key == 'top'
-							? this.innerHTML
-							: d.key == 'mid'
-							? self.activeCohortLabel
-							: self.samplecounts[self.activeCohortName]
+						const aboutMap = {
+							top: this.innerHTML,
+							mid: self.activeCohortLabel,
+							btm: self.samplecounts[self.activeCohortName]
+						}
+						return aboutMap[d.key] || ''
+					} else if (self.about) {
+						const aboutMap = {
+							top: self.about?.tab?.topLabel ? self.about.tab.topLabel.toUpperCase() : this.innerHTML,
+							mid: self.about?.tab?.midLabel ? self.about.tab.midLabel.toUpperCase() : 'ABOUT',
+							btm: self.about?.tab?.btmLabel || this.innerHTML
+						}
+						return aboutMap[d.key] || ''
 					} else {
-						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
+						return d.key === 'mid' ? 'NONE' : this.innerHTML
 					}
 				} else if (d.subheader === 'filter') {
 					const filter = self.filterUiRoot ? self.filterUiRoot : { lst: [] }
@@ -495,21 +515,18 @@ function setRenderers(self) {
 		self.cohortNames = selectCohort.values.map(d => d.keys.slice().sort().join(','))
 
 		if (selectCohort.title) {
-			self.dom.cohortTitle = self.dom.subheader.cohort
-				.append('h2')
-				.style('margin-left', '10px')
-				.text(selectCohort.title)
+			self.dom.cohortTitle = self.dom.subheader.about.append('h2').style('margin-left', '10px').text(selectCohort.title)
 		}
 
 		if (selectCohort.description) {
-			self.dom.cohortDescription = self.dom.subheader.cohort
+			self.dom.cohortDescription = self.dom.subheader.about
 				.append('div')
 				.style('margin-left', '10px')
 				.html(selectCohort.description)
 		}
 
 		if (selectCohort.prompt) {
-			self.dom.cohortPrompt = self.dom.subheader.cohort
+			self.dom.cohortPrompt = self.dom.subheader.about
 				.append('div')
 				.style('margin-left', '10px')
 				.style('padding-top', '30px')
@@ -518,7 +535,7 @@ function setRenderers(self) {
 				.text(selectCohort.prompt)
 		}
 
-		self.dom.cohortOpts = self.dom.subheader.cohort
+		self.dom.cohortOpts = self.dom.subheader.about
 			.append('div')
 			.style('margin-bottom', '30px')
 			.style('margin-left', '10px')
@@ -562,10 +579,10 @@ function setRenderers(self) {
 			})
 
 		self.dom.cohortInputs = self.dom.cohortOpts.selectAll('input')
-		self.dom.cohortTable = self.dom.subheader.cohort.append('div')
+		self.dom.cohortTable = self.dom.subheader.about.append('div')
 
 		if (selectCohort.asterisk) {
-			self.dom.cohortAsterisk = self.dom.subheader.cohort
+			self.dom.cohortAsterisk = self.dom.subheader.about
 				.append('div')
 				.style('margin-left', '10px')
 				.style('padding-top', '20px')
