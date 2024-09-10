@@ -4,7 +4,7 @@ import { select as d3select } from 'd3-selection'
 import { duplicate as svduplicate } from '#shared/bulk.sv'
 import blocklazyload from './block.lazyload'
 
-export default function(cohort, ds2clst, butt, folder, hostURL) {
+export default function (cohort, ds2clst, butt, folder, hostURL) {
 	const ds2dtlst = {}
 	let dscount = 0
 	if (ds2clst) {
@@ -34,7 +34,7 @@ export default function(cohort, ds2clst, butt, folder, hostURL) {
 	const labelnum = cohort.individual_label_num ? cohort.individual_label_num : patientnum
 	butt
 		.html(labelnum + ' <span style="font-size:70%">' + patientlabel + (labelnum > 1 ? 'S' : '') + '</span>')
-		.attr('title', 'A table of an ' + patientlabel.toLowerCase() + ' by variant categories.')
+		.attr('aria-label', 'A table of an ' + patientlabel.toLowerCase() + ' by variant categories.')
 
 	const butrow = folder.append('div').style('padding', '10px 0px')
 	butrow
@@ -97,8 +97,8 @@ export default function(cohort, ds2clst, butt, folder, hostURL) {
 	tr1.append('td').attr(
 		'colspan',
 		1 + // numerator
-		1 + // patient
-		1 + // sample
+			1 + // patient
+			1 + // sample
 			(cohort.patientannotation ? cohort.patientannotation.metadata.length : 0) +
 			cohort.assaylst.length
 	)
@@ -115,16 +115,8 @@ export default function(cohort, ds2clst, butt, folder, hostURL) {
 	// tr 2
 	const tr2 = scrolltable.append('tr').style('background-color', '#d9d9d9')
 	tr2.append('td')
-	tr2
-		.append('td')
-		.style('vertical-align', 'bottom')
-		.style('font-size', '.8em')
-		.text(patientlabel)
-	tr2
-		.append('td')
-		.style('vertical-align', 'bottom')
-		.style('font-size', '.8em')
-		.text('SAMPLE')
+	tr2.append('td').style('vertical-align', 'bottom').style('font-size', '.8em').text(patientlabel)
+	tr2.append('td').style('vertical-align', 'bottom').style('font-size', '.8em').text('SAMPLE')
 	/*
 if(cohort.patientannotation) {
 	for(const m of cohort.patientannotation.metadata) {
@@ -195,13 +187,9 @@ if(cohort.patientannotation) {
 		if (stlst.length == 0) {
 			const tr = scrolltable.append('tr').classed('sja_tr', true)
 			// td1
-			tr.append('td')
-				.style('font-size', '.7em')
-				.text(++counter)
+			tr.append('td').style('font-size', '.7em').text(++counter)
 			// td2
-			tr.append('td')
-				.style('color', '#858585')
-				.text(patientname)
+			tr.append('td').style('color', '#858585').text(patientname)
 			let colcount = 1 + cohort.assaylst.length
 			for (const k in ds2dtlst) {
 				colcount += ds2dtlst[k].length
@@ -222,13 +210,8 @@ if(cohort.patientannotation) {
 			const tr = scrolltable.append('tr').classed('sja_tr', true)
 			cfg.trlst.push(tr)
 			if (i == 0) {
-				tr.append('td')
-					.attr('rowspan', stlst.length)
-					.style('font-size', '.7em')
-					.text(++counter)
-				tr.append('td')
-					.attr('rowspan', stlst.length)
-					.text(patientname)
+				tr.append('td').attr('rowspan', stlst.length).style('font-size', '.7em').text(++counter)
+				tr.append('td').attr('rowspan', stlst.length).text(patientname)
 			}
 			sample.handle = tr
 				.append('td')

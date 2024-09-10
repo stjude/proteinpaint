@@ -87,9 +87,9 @@ setTimeout(() => {
 function detectCopyable(dom) {
 	dom
 		.selectAll('.code-snippet')
-		.attr('title', function () {
+		.attr('aria-label', function () {
 			const elem = d3.select(this)
-			if (!elem.attr('title') && !this.__data__) {
+			if (!elem.attr('aria-label') && !this.__data__) {
 				elem.datum(d3.select(this).text())
 				return 'Click to copy to clipboard'
 			}

@@ -529,7 +529,7 @@ export class GeneSetEditUI {
 			.data(this.geneList || [])
 			.enter()
 			.append('div')
-			.attr('title', 'click to delete')
+			.attr('aria-label', 'click to delete')
 			.attr('class', 'sja_menuoption')
 			.attr('tabindex', 0)
 			.style('position', 'relative')

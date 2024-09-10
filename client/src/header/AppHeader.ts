@@ -207,7 +207,7 @@ export class AppHeader {
 
 		this.app.selectgenome = genome_select_div
 			.append('select')
-			.attr('title', 'Select a genome')
+			.attr('aria-label', 'Select a genome')
 			.attr('class', 'sjpp-genome-select')
 			.style('padding', padw_input)
 			.style('border', 'solid 1px ' + defaultcolor)

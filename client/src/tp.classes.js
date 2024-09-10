@@ -4,7 +4,7 @@ import * as common from '#shared/common'
 list mutation classes
 */
 
-export default function(cohort, button, folder) {
+export default function (cohort, button, folder) {
 	let nothing = true
 	for (const k in cohort.dsset) {
 		nothing = false
@@ -76,7 +76,7 @@ export default function(cohort, button, folder) {
 
 	button
 		.html(totalcount + ' <span style="font-size:.8em">VARIANTS</span>')
-		.attr('title', 'A summary of variant hits from all genes, in descending order.')
+		.attr('aria-label', 'A summary of variant hits from all genes, in descending order.')
 	const table = folder.append('table').style('margin-right', '20px')
 	const trup = table.append('tr')
 	const trdown = table.append('tr')
@@ -90,9 +90,7 @@ export default function(cohort, button, folder) {
 				.style('padding', '2px 5px')
 				.style('margin-right', '5px')
 				.html(number ? i.count : '&nbsp;&nbsp;')
-			d.append('span')
-				.style('color', i.color)
-				.text(i.label)
+			d.append('span').style('color', i.color).text(i.label)
 		}
 	}
 
@@ -133,10 +131,7 @@ export default function(cohort, button, folder) {
 
 		ds2clst[dskey] = lst
 
-		const cholder = trdown
-			.append('td')
-			.attr('valign', 'top')
-			.attr('shownumber', 0)
+		const cholder = trdown.append('td').attr('valign', 'top').attr('shownumber', 0)
 		showclst(lst, cholder, true)
 		const td = trup
 			.append('td')

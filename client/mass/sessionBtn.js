@@ -51,7 +51,7 @@ class MassSessionBtn {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('title', d => d.title)
+			.attr('aria-label', d => d.title)
 			.html(d => d.label)
 			.on('click', (event, d) => {
 				this.dom.tip.clear().d.style('padding', '10px')

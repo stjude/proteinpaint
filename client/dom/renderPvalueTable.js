@@ -126,7 +126,7 @@ export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setAct
 			.data(d => [d.series1, d.series2, d.pvalue])
 			.enter()
 			.append('td')
-			.attr('title', plot ? 'Click to hide a p-value' : '')
+			.attr('aria-label', plot ? 'Click to hide a p-value' : '')
 			.style('color', plot == 'violin' ? 'black' : d => d.color)
 			.style('padding', '1px 8px 1px 2px')
 			.style('font-size', fontSize + 'px')
@@ -164,13 +164,10 @@ export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setAct
 						.data(hiddenTests)
 						.enter()
 						.append('div')
-						.each(function(d) {
+						.each(function (d) {
 							setActiveMenu(true)
 							const div = select(this)
-							div
-								.append('input')
-								.attr('type', 'checkbox')
-								.style('margin-right', '5px')
+							div.append('input').attr('type', 'checkbox').style('margin-right', '5px')
 							div.append('span').html(`${d.series1.id} vs ${d.series2.id}`)
 						})
 
@@ -180,7 +177,7 @@ export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setAct
 						.on('click', () => {
 							const hiddenPvalues = []
 							divs
-								.filter(function() {
+								.filter(function () {
 									return !select(this.firstChild).property('checked')
 								})
 								.each(d => hiddenPvalues.push(d))

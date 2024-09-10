@@ -642,7 +642,7 @@ function table_sort(mlst, table, attrlst, tk, trclick) {
 							// FIXME ep.p.maf returns data for both snv and fusion, but !!!
 							if (v.v2 == 0) {
 								td.text('0/0')
-								td.attr('title', 'No coverage')
+								td.attr('aria-label', 'No coverage')
 							} else {
 								client.fillbar(td, v, at)
 							}
@@ -656,7 +656,7 @@ function table_sort(mlst, table, attrlst, tk, trclick) {
 				if (atr.hover) {
 					const hs = atr.hover(s)
 					if (hs != undefined) {
-						td.attr('title', hs)
+						td.attr('aria-label', hs)
 					}
 				}
 				if (atr.tablecellwidth) {
@@ -668,7 +668,7 @@ function table_sort(mlst, table, attrlst, tk, trclick) {
 					if (v) {
 						if (v.v2 == 0) {
 							td.text('0/0')
-							td.attr('title', 'No coverage')
+							td.attr('aria-label', 'No coverage')
 						} else {
 							client.fillbar(td, v, atr)
 						}

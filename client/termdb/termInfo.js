@@ -78,7 +78,7 @@ function setRenderers(self) {
 				.style('justify-content', 'center')
 				.style('border', 'none')
 				.style('border-radius', '3px')
-				.attr('title', 'Term Information')
+				.attr('aria-label', 'Term Information')
 				.html('&#9432;')
 				.on('mouseenter', () => {
 					if (self.state.isVisible == true) return
