@@ -93,8 +93,6 @@ export function makeVariantLabel(data, tk, block, laby) {
 }
 
 function menu_variants(tk, block) {
-	let shapeBox
-
 	tk.menutip.d
 		.append('div')
 		.text('List')
@@ -103,7 +101,6 @@ function menu_variants(tk, block) {
 		.style('border-radius', '0px')
 		.on('click', () => {
 			listVariantData(tk, block)
-			if (shapeBox) shapeBox.selectAll('*').remove()
 		})
 
 	if (tk.skewer) {
@@ -125,7 +122,6 @@ function menu_variants(tk, block) {
 					} else {
 						throw 'unknown mode type'
 					}
-					if (shapeBox) shapeBox.selectAll('*').remove()
 					tk.menutip.hide()
 				})
 		}
@@ -146,7 +142,6 @@ function menu_variants(tk, block) {
 					.style('border-radius', '0px')
 					.on('click', () => {
 						fold_glyph(tk.skewer.data, tk)
-						if (shapeBox) shapeBox.selectAll('*').remove()
 						tk.menutip.hide()
 					})
 			} else if (expandCount == 0) {
@@ -158,7 +153,6 @@ function menu_variants(tk, block) {
 					.style('border-radius', '0px')
 					.on('click', () => {
 						settle_glyph(tk, block)
-						if (shapeBox) shapeBox.selectAll('*').remove()
 						tk.menutip.hide()
 					})
 			}
@@ -180,35 +174,36 @@ function menu_variants(tk, block) {
 				shapes.emptyShield,
 				shapes.emptyTriangle,
 				shapes.emptyDiamond,
-				shapes.plusIcon,
+				// shapes.plusIcon,
 				shapes.emptyEgg,
 				shapes.emptyPentagon,
 				shapes.emptyDiamondSuit,
-				shapes.emptySquare,
-				shapes.crossShape
+				shapes.emptySquare
+				// shapes.crossShape
 			]
 			// change variant shape option
 			if (tk.filterObj) {
+				let called = false
 				const div = tk.menutip.d
 					.append('div')
-					.text(tk.skewer.changeVariantShape ? 'Change variant shape' : null)
+					.text('Change variant shape')
+					.style('vertical-align', 'middle')
 					.attr('class', 'sja_menuoption')
-
-				shapeBox = div.append('div').style('margin-top', '10px')
-
-				div.on('click', () => {
-					displayVectorGraphics({
-						holder: shapeBox,
-						callbacks: {
-							onShapeClick: onShapeClick
-						},
-						tk: tk
+					.on('click', () => {
+						if (called == false) {
+							called = true
+							displayVectorGraphics({
+								holder: div.append('div').style('margin-top', '10px'),
+								callbacks: {
+									onShapeClick: onShapeClick
+								},
+								tk: tk
+							})
+						}
 					})
-				})
 			} else return
 			function displayVectorGraphics(arg) {
 				const { holder, callbacks, tk } = arg
-				holder.selectAll('*').remove()
 				const vectorGraphicsDiv = holder.append('div')
 				vectorGraphicsDiv
 					.append('div')
@@ -246,7 +241,7 @@ function menu_variants(tk, block) {
 			function onShapeClick(shapePath, tk) {
 				// Logic to change the pre-existing shape to the chosen shape
 				console.log('Shape clicked:', shapePath)
-
+				tk.skewer.shape = shapePath
 				tk.load()
 				tk.menutip.hide()
 			}
@@ -260,7 +255,6 @@ function menu_variants(tk, block) {
 				.style('border-radius', '0px')
 				.on('click', () => {
 					tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
-					if (shapeBox) shapeBox.selectAll('*').remove()
 					tk.load()
 					tk.menutip.hide()
 				})
@@ -278,11 +272,10 @@ function menu_variants(tk, block) {
 			.on('click', () => {
 				downloadVariants(tk, block)
 				tk.menutip.hide()
-				if (shapeBox) shapeBox.selectAll('*').remove()
 			})
 	}
 
-	mayAddSkewerModeOption(tk, block, shapeBox)
+	mayAddSkewerModeOption(tk, block)
 }
 
 async function listVariantData(tk, block) {
@@ -359,7 +352,7 @@ async function listVariantData(tk, block) {
 	}
 }
 
-function mayAddSkewerModeOption(tk, block, shapeBox) {
+function mayAddSkewerModeOption(tk, block) {
 	if (!tk.skewer) return
 	if (tk.skewer.viewModes.length <= 1) {
 		// only one possible mode, cannot toggle mode, do not add option
@@ -382,7 +375,6 @@ function mayAddSkewerModeOption(tk, block, shapeBox) {
 			.style('margin', '10px'),
 		options,
 		callback: async idx => {
-			if (shapeBox) shapeBox.selectAll('*').remove()
 			for (const i of tk.skewer.viewModes) i.inuse = false
 			tk.skewer.viewModes[idx].inuse = true
 			may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)

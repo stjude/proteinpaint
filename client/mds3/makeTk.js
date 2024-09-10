@@ -306,8 +306,7 @@ function mayInitSkewer(tk) {
 		// default to show dot labels
 		hideDotLabels: false,
 		// true for pointing up
-		pointup: true,
-		changeVariantShape: true
+		pointup: true
 	}
 	setSkewerMode(tk) // adds skewer.viewModes[]
 }

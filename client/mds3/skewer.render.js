@@ -3,6 +3,7 @@ import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
 import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
+import { renderSkewerShapes } from './skewer.render.shapes.ts'
 
 /*
 ********************** EXPORTED
@@ -111,6 +112,7 @@ export function skewer_make(tk, block) {
 		.each(function (d) {
 			d.skewer = this
 		})
+
 	// disc containers
 	const discg = ss.selection
 		.selectAll()
@@ -125,28 +127,34 @@ export function skewer_make(tk, block) {
 		.each(function (d) {
 			d.g = this
 		})
-	// actual disc
-	const discdot = discg.append('circle')
-	// full filled
-	discdot
-		.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
-		.attr('fill', d => tk.color4disc(d.mlst[0]))
-		.attr('stroke', 'white')
-		.attr('r', d => d.radius - 0.5)
-	// masking half
-	discg
-		.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
-		.append('path')
-		.attr('fill', 'white')
-		.attr('stroke', 'none')
-		.attr('d', d =>
-			d3arc()({
-				innerRadius: 0,
-				outerRadius: d.radius - 2,
-				startAngle: d.useNterm ? 0 : Math.PI,
-				endAngle: d.useNterm ? Math.PI : Math.PI * 2
-			})
-		)
+
+	if (tk.skewer.shape) {
+		renderSkewerShapes(tk, ss, discg)
+	} else {
+		// actual disc
+		const discdot = discg.append('circle')
+		// full filled
+		discdot
+			.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
+			.attr('fill', d => tk.color4disc(d.mlst[0]))
+			.attr('stroke', 'white')
+			.attr('r', d => d.radius - 0.5)
+		// masking half
+		discg
+			.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
+			.append('path')
+			.attr('fill', 'white')
+			.attr('stroke', 'none')
+			.attr('d', d =>
+				d3arc()({
+					innerRadius: 0,
+					outerRadius: d.radius - 2,
+					startAngle: d.useNterm ? 0 : Math.PI,
+					endAngle: d.useNterm ? Math.PI : Math.PI * 2
+				})
+			)
+	}
+
 	// number in disc
 	const textslc = discg
 		.filter(d => d.occurrence > 1)
