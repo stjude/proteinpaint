@@ -926,7 +926,21 @@ type Termdb = {
 	/** in development!
 	 * Supports the About tab in mass UI
 	 */
-	about?: any
+	about?: {
+		/** Customization for the tab */
+		tab?: {
+			/** show in a specific order of tabs */
+			order?: number
+			/** label appearing in the top row in upper case */
+			topLabel?: string
+			/** biggest label appearing in the middle row in upper case */
+			midLabel?: string
+			/** label appearing in the bottom row*/
+			btmLabel?: string
+		}
+		/** html code */
+		html: string
+	}
 }
 
 type ChartConfigByType = {
