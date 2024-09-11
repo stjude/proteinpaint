@@ -15,6 +15,7 @@ import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import { GetWSImagesRequest, GetWSImagesResponse } from '../../shared/types/routes/wsimages.ts'
 import wsiViewerImageFiles from './wsimagesloaded.ts'
 import { WSImage } from '../../../server/shared/types/routes/samplewsimages.ts'
+import { table2col } from '#dom/table2col'
 
 export default class WSIViewer {
 	// following attributes are required by rx
@@ -209,22 +210,18 @@ export default class WSIViewer {
 	}
 
 	private renderMetadata(holder: any, layers: Array<TileLayer<Zoomify>>, settings: Settings) {
-		holder.select('table[id="metadata"]').remove()
+		holder.select('div[id="metadata"]').remove()
+		const holderDiv = holder.append('div').attr('id', 'metadata')
 
+		const table = table2col({ holder: holderDiv })
 		const metadata = layers[settings.displayedImageIndex].get('metadata')
 
 		if (metadata) {
-			const table = holder.append('table').attr('id', 'metadata')
-
 			// Create table rows for each key-value pair
 			Object.entries(JSON.parse(metadata)).forEach(([key, value]) => {
-				const row = table.append('tr')
-
-				// Append a cell for the key
-				row.append('td').text(key).style('padding', '8px').style('border', '1px solid black')
-
-				// Append a cell for the value
-				row.append('td').text(value).style('padding', '8px').style('border', '1px solid black')
+				const [c1, c2] = table.addRow()
+				c1.html(key)
+				c2.html(value)
 			})
 		}
 	}
