@@ -190,24 +190,26 @@ function menu_variants(tk, block) {
 					})
 			} else return
 
-			const desiredShapes = [
-				shapes.emptyVerticalRectangle,
-				shapes.emptyCircle
-				// shapes.emptyShield,
-				// shapes.emptyTriangle,
-				// shapes.emptyDiamond,
-				// shapes.plusIcon,
-				// shapes.emptyEgg,
-				// shapes.emptyPentagon,
-				// shapes.emptyDiamondSuit,
-				// shapes.emptySquare
-				// shapes.crossShape
-			]
+			// const desiredShapes = [
+			// 	shapes.emptyVerticalRectangle,
+			// 	shapes.emptyCircle
+			// 	// shapes.emptyShield,
+			// 	// shapes.emptyTriangle,
+			// 	// shapes.emptyDiamond,
+			// 	// shapes.plusIcon,
+			// 	// shapes.emptyEgg,
+			// 	// shapes.emptyPentagon,
+			// 	// shapes.emptyDiamondSuit,
+			// 	// shapes.emptySquare
+			// 	// shapes.crossShape
+			// ]
+
+			const desiredShapes = shapes
 
 			function displayVectorGraphics(arg) {
 				const { holder, callbacks, tk } = arg
-				if (tk.skewer.shape && !tk.skewer.shape?.isDefault) {
-					desiredShapes.unshift(shapes.filledCircle)
+				if (!tk.skewer.shape || tk.skewer.shape?.isDefault) {
+					delete desiredShapes['filledCircle']
 				}
 				const vectorGraphicsDiv = holder.append('div')
 				vectorGraphicsDiv
@@ -228,7 +230,7 @@ function menu_variants(tk, block) {
 					.style('width', 'max-content')
 				// .style('width', '340px')
 
-				desiredShapes.forEach((shape, index) => {
+				Object.entries(desiredShapes).forEach((val, idx) => {
 					const shapeWrapper = shapesContainer.append('div').style('padding', '0px 2px')
 					const width = 18
 					const height = 18
@@ -240,22 +242,21 @@ function menu_variants(tk, block) {
 						.style('cursor', 'pointer')
 						.on('click', () => {
 							if (callbacks && typeof callbacks.onShapeClick === 'function') {
-								callbacks.onShapeClick(shape, tk)
+								callbacks.onShapeClick(val, tk)
 							}
 						})
-					if (shape.isDefault) {
+					if (val[1].isDefault) {
 						//adds a filled circle to toggle back to default lollipop
 						shapeSvg.append('circle').attr('cx', 9).attr('cy', 8).attr('r', 8).attr('fill', 'black')
 					} else {
-						shapeSvg.append('path').attr('d', shape.path).attr('fill', 'none').attr('stroke', 'black')
+						shapeSvg.append('path').attr('d', val[1].path).attr('fill', 'none').attr('stroke', 'black')
 					}
 				})
 			}
 
-			function onShapeClick(shape, tk) {
+			function onShapeClick(val, tk) {
 				// Logic to change the pre-existing shape to the chosen shape
-				// console.log('Shape clicked:', shape)
-				tk.skewer.shape = shape
+				tk.skewer.shape = val
 				tk.load()
 				tk.menutip.hide()
 			}
