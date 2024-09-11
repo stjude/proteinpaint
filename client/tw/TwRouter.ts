@@ -36,22 +36,6 @@ export class TwRouter {
 			case 'NumTWCont':
 				return new NumCont(tw, opts)
 
-			// case 'integer':
-			// case 'float':
-			// 	return
-
-			// case 'condition':
-			// 	return
-
-			// case 'survival':
-			// 	return
-
-			// case 'geneVariant':
-			// 	return
-
-			// case 'geneExpression':
-			// 	return
-
 			default:
 				//console.log(57, tw)
 				throw `unable to init(tw)`

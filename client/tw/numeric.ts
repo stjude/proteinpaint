@@ -50,12 +50,11 @@ export class NumericBase extends TwBase {
 
 		if (!tw.q.mode) tw.q.mode = 'discrete'
 
-		if (tw.q.mode == 'binary') {
-			if (!tw.q.type) tw.q.type = 'custom-bin'
-		} else if (tw.q.mode == 'discrete' && !tw.q.type) {
-			// try to prefill tw.q, otherwise it would not be possible to route
-			// to the correct subclass fill() function if tw.q.type is undefined
-			mayFillQWithPresetBins(tw)
+		// prefill q.type to enable routing for binary or discrete mode,
+		// not required for q.mode='continuous' | 'spline'
+		if (!tw.q.type) {
+			if (tw.q.mode == 'binary') tw.q.type = 'custom-bin'
+			else if (tw.q.mode == 'discrete') mayFillQWithPresetBins(tw)
 		}
 
 		/* 
@@ -68,7 +67,6 @@ export class NumericBase extends TwBase {
 			function directly, outside of TwRouter.fill(). The input tw.type
 			does not have to be discriminated in that case.
 		*/
-		//if (!tw.type)
 		tw.type =
 			tw.q.type == 'regular-bin'
 				? 'NumTWRegularBin'
@@ -278,11 +276,14 @@ export class NumSpline extends NumericBase {
 	}
 }
 
+const validPreferredBins = new Set(['default', 'less', 'median'])
+
 function mayFillQWithPresetBins(tw) {
 	if (!tw.term.bins) throw `missing tw.term.bins`
 	// preprocessing the preferredBins to make sure that q.type is set
 	// and can be used to route the raw tw to the correct subclass fill() function
 	const preferredBins = tw.q.preferredBins || 'default'
+	if (!validPreferredBins.has(preferredBins)) throw `invalid preferredBins='${preferredBins}'`
 	if (preferredBins != 'median') {
 		if (!Object.keys(tw.term.bins).includes(preferredBins)) `term.bins does not have a preset '${preferredBins}' key`
 		const bins = tw.term.bins[preferredBins]
