@@ -523,7 +523,8 @@ export type SingleCellDataNative = {
 
 export type SingleCellQuery = {
 	/** methods to identify samples with singlecell data,
-    for client to list those samples, or determine if to invoke plot in sampleView of a sample
+	this data allows client-side to display a table with these samples for user to choose from
+    also, sampleView uses this to determine if to invoke the sc plot for a sample
 	*/
 	samples: SingleCellSamplesGdc | SingleCellSamplesNative
 	/** defines tsne/umap type of clustering maps for each sample
