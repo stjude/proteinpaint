@@ -69,7 +69,7 @@ class TdbConfigUiInit {
 				.style('height', 0)
 				.style('vertical-align', 'top')
 				.style('transition', '0.2s ease-in-out')
-				.style('overflow', 'hidden')
+				//.style('overflow', 'hidden')
 				.style('visibility', 'hidden')
 				.style('transition', '0.2s')
 		}
@@ -104,8 +104,9 @@ class TdbConfigUiInit {
 	render(isOpen) {
 		this.dom.holder
 			.style('visibility', isOpen ? 'visible' : 'hidden')
-			.style('max-width', isOpen ? '680px' : '50px')
+			.style('max-width', isOpen ? '700px' : '50px')
 			.style('height', isOpen ? '' : 0)
+			.style('resize', isOpen ? 'both' : 'none')
 
 		this.dom.table
 			.selectAll('tr')
@@ -137,7 +138,7 @@ function setNumberInput(opts) {
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label')
-				.attr('title', opts.title),
+				.attr('aria-label', opts.title),
 			inputs: {}
 		},
 		values: {}
@@ -236,7 +237,8 @@ function setMathExprInput(opts) {
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label')
-				.attr('title', opts.title),
+				.attr('aria-label', opts.title)
+				.attr('overflow', 'visible'),
 			inputTd: opts.holder.append('td')
 		}
 	}
@@ -286,7 +288,7 @@ function setTextInput(opts) {
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label')
-				.attr('title', opts.title),
+				.attr('aria-label', opts.title),
 			inputTd: opts.holder.append('td')
 		}
 	}
@@ -324,7 +326,7 @@ function setTextInput(opts) {
 function setColorInput(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
+			row: opts.holder.style('display', 'table-row').attr('aria-label', opts.title),
 			labelTd: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder
 				.append('td')
@@ -370,7 +372,7 @@ function setRadioInput(opts) {
 			labelTdb: opts.holder
 				.append('td')
 				.html(opts.label)
-				.attr('title', opts.title)
+				.attr('aria-label', opts.title)
 				.attr('class', 'sja-termdb-config-row-label')
 		},
 		inputs: {}
@@ -496,7 +498,7 @@ function setDropdownInput(opts) {
 function setCheckboxInput(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
+			row: opts.holder.style('display', 'table-row').attr('aria-label', opts.title),
 			labelTdb: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder
 				.append('td')
@@ -546,7 +548,7 @@ function setCheckboxInput(opts) {
 function setMultiCheckbox(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
+			row: opts.holder.style('display', 'table-row').attr('aria-label', opts.title),
 			labelTdb: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder
 				.append('td')
@@ -612,7 +614,7 @@ function setCustomInput(opts) {
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label')
-				.attr('title', opts.title)
+				.attr('aria-label', opts.title)
 				.style('vertical-align', 'top'),
 			inputTd: opts.holder.append('td')
 		}
@@ -639,7 +641,7 @@ async function setTermInput(opts) {
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label')
-				.attr('title', opts.title),
+				.attr('aria-label', opts.title),
 			inputTd: opts.holder.append('td')
 		}
 	}

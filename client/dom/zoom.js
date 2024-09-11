@@ -33,7 +33,7 @@ export function zoom(opts) {
 
 	const number = label
 		.append('input')
-		.attr('title', 'enter a desired zoom level')
+		.attr('title', 'Enter a desired zoom level')
 		.attr('type', 'number')
 		.attr('min', settings.min)
 		.attr('max', settings.max)
@@ -78,7 +78,7 @@ export function zoom(opts) {
 
 	const slider = sliderDiv
 		.append('input')
-		.attr('title', 'slide to desired zoom level')
+		.attr('title', 'Slide to desired zoom level')
 		.attr('type', 'range')
 		.attr('min', settings.min)
 		.attr('max', settings.max)

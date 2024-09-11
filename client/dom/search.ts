@@ -67,7 +67,7 @@ export class InputSearch {
 			.style('border', 'border' in this.style ? this.style.border : '5px')
 			.attr('size', this.size)
 			.attr('placeholder', this.placeholder)
-			.attr('title', this.title)
+			.attr('aria-label', this.title)
 			.on('keyup', async (event: KeyboardEvent) => {
 				if (keyupEnter(event)) await this.enterSearch()
 				debounce(this.addSearchItems(), 400)

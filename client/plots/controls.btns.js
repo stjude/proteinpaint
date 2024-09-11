@@ -76,7 +76,7 @@ function burgerBtnInit(opts) {
 				.style('transition', '0.5s')
 				.html('&#8801;')
 				.on('click', opts.callback)
-				.attr('title', 'Settings')
+				.attr('aria-label', 'Settings')
 		}
 	}
 
@@ -91,9 +91,9 @@ function burgerBtnInit(opts) {
 }
 
 function helpBtnInit(opts) {
-	const infoDiv = opts.holder.style('margin', '20px').attr('title', 'Documentation')
+	const infoDiv = opts.holder.style('margin', '20px')
 
-	icon_functions['help'](infoDiv, { handler: opts.callback })
+	icon_functions['help'](infoDiv, { handler: opts.callback, title: 'Documentation' })
 
 	const self = {
 		plotTypes: ['profilePolar', 'profileBarchart', 'profileRadar', 'profileRadarFacility'],
@@ -114,7 +114,7 @@ function helpBtnInit(opts) {
 }
 
 function downloadBtnInit(opts) {
-	const downloadDiv = opts.holder.style('margin-left', '20px').attr('title', 'Download plot image')
+	const downloadDiv = opts.holder.style('margin-left', '20px').attr('aria-label', 'Download plot image')
 
 	icon_functions['download'](downloadDiv, { handler: opts.callback })
 

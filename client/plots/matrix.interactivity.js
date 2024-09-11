@@ -748,7 +748,7 @@ function setTermActions(self) {
 			.append('input')
 			.attr('type', 'text')
 			.attr('size', twlabel.length + 3)
-			.attr('title', `Type to edit the ${vartype} label`)
+			.attr('aria-label', `Type to edit the ${vartype} label`)
 			.style('padding', '1px 5px')
 			.style('text-align', 'center')
 			.property('value', twlabel)
@@ -1958,7 +1958,7 @@ function setTermGroupActions(self) {
 			.html(
 				`Minimum # of mutated ${l.samples} for the ${l.term.charAt(0).toLowerCase() + l.term.slice(1)} to be visible `
 			)
-			.attr('title', `May be overridden by a row-specific minNumSamples`)
+			.attr('aria-label', `May be overridden by a row-specific minNumSamples`)
 		const minNumSampleInput = label
 			.append('input')
 			.attr('type', 'number')

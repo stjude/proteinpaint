@@ -8,7 +8,7 @@ import { Menu } from '../dom/menu'
 
 const tip = new Menu()
 
-export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
+export default function (cohort, ds2clst, butt, folder, defaulthide, host) {
 	if (!ds2clst) return null
 	const hostURL = host || ''
 
@@ -45,7 +45,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 
 	butt
 		.html(genelst.length + ' <span style="font-size:.8em">GENES</span>')
-		.attr('title', 'A summary table of gene by variant type, order by number of hits in descending order.')
+		.attr('aria-label', 'A summary table of gene by variant type, order by number of hits in descending order.')
 	const errdiv = folder.append('div')
 	const sayerror = m => {
 		client.sayerror(errdiv, m)
@@ -118,10 +118,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 						paintgene(n)
 					})
 				row.append('span').text(n)
-				row
-					.append('span')
-					.style('font-size', '.7em')
-					.text(hit[i].count)
+				row.append('span').style('font-size', '.7em').text(hit[i].count)
 			}
 		})
 	toprow
@@ -129,14 +126,8 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 		.attr('href', 'https://docs.google.com/document/d/1NrH1H-FUWJtEKLk69V-k8uaYHOr9YO2obM9ZLZslEQ0/edit?usp=sharing')
 		.attr('target', '_blank')
 		.text('Help')
-	const secondrow = folder
-		.append('div')
-		.style('border', 'solid 1px #ccc')
-		.style('margin', '10px 0px')
-	const optiondiv = secondrow
-		.append('div')
-		.style('display', 'none')
-		.style('background-color', '#f1f1f1')
+	const secondrow = folder.append('div').style('border', 'solid 1px #ccc').style('margin', '10px 0px')
+	const optiondiv = secondrow.append('div').style('display', 'none').style('background-color', '#f1f1f1')
 	const scrolltoppad = 140
 	const scrollholder = secondrow
 		.append('div')
@@ -147,24 +138,12 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 		.style('overflow-y', 'scroll')
 		.style('height', '400px')
 		.style('resize', 'vertical')
-	const table = scrolldiv
-		.append('table')
-		.style('border-spacing', '1px')
-		.style('border-collapse', 'separate')
+	const table = scrolldiv.append('table').style('border-spacing', '1px').style('border-collapse', 'separate')
 
 	// options
-	const oprow1 = optiondiv
-		.append('div')
-		.style('padding', '10px')
-		.style('border-bottom', 'dashed 1px #ccc')
-	const oprow2 = optiondiv
-		.append('div')
-		.style('padding', '10px')
-		.style('border-bottom', 'dashed 1px #ccc')
-	const oprow3 = optiondiv
-		.append('div')
-		.style('padding', '10px')
-		.style('border-bottom', 'dashed 1px #ccc')
+	const oprow1 = optiondiv.append('div').style('padding', '10px').style('border-bottom', 'dashed 1px #ccc')
+	const oprow2 = optiondiv.append('div').style('padding', '10px').style('border-bottom', 'dashed 1px #ccc')
+	const oprow3 = optiondiv.append('div').style('padding', '10px').style('border-bottom', 'dashed 1px #ccc')
 	// option row1
 	const gcsays = oprow1
 		.append('span')
@@ -187,10 +166,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 			dotable()
 		})
 	// option row2
-	oprow2
-		.append('span')
-		.text('Show subset')
-		.style('padding-right', '10px')
+	oprow2.append('span').text('Show subset').style('padding-right', '10px')
 	const genesetta = oprow2
 		.append('textarea')
 		.attr('rows', 1)
@@ -255,14 +231,8 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 		}
 		dotable()
 	})
-	oprow3select
-		.append('option')
-		.text('show')
-		.attr('value', 'y')
-	oprow3select
-		.append('option')
-		.text('hide')
-		.attr('value', 'n')
+	oprow3select.append('option').text('show').attr('value', 'y')
+	oprow3select.append('option').text('hide').attr('value', 'n')
 	oprow3
 		.append('p')
 		.style('font-size', '.8em')
@@ -278,10 +248,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 	}
 	// option row5
 	if (hassamplelst.length) {
-		const oprow5 = optiondiv
-			.append('div')
-			.style('padding', '10px')
-			.style('border-bottom', 'dashed 1px #ccc')
+		const oprow5 = optiondiv.append('div').style('padding', '10px').style('border-bottom', 'dashed 1px #ccc')
 		oprow5.append('span').html('Gene recurrence (# of samples for each gene):&nbsp;')
 		for (const ds of hassamplelst) {
 			oprow5
@@ -311,10 +278,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 				})
 		}
 		// option row6
-		const oprow6 = optiondiv
-			.append('div')
-			.style('padding', '10px')
-			.style('border-bottom', 'dashed 1px #ccc')
+		const oprow6 = optiondiv.append('div').style('padding', '10px').style('border-bottom', 'dashed 1px #ccc')
 		oprow6.append('span').html('Mutation burden (# mutations for each sample):&nbsp;')
 		for (const ds of hassamplelst) {
 			oprow6
@@ -590,10 +554,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 
 		// tr 2, header
 		const tr2 = table.append('tr')
-		tr2
-			.append('td')
-			.style('height', '0px')
-			.style('padding', '0px')
+		tr2.append('td').style('height', '0px').style('padding', '0px')
 
 		//exportheader.push('')
 
@@ -737,10 +698,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 				let td
 				for (const bt of at.atlst) {
 					if (bt.hide) continue
-					td = tr
-						.append('td')
-						.style('color', 'black')
-						.style('background-color', '#f1f1f1')
+					td = tr.append('td').style('color', 'black').style('background-color', '#f1f1f1')
 					const m = bt.get(gene)
 					if (typeof m == 'number') {
 						if (bt.color) {
@@ -751,10 +709,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 									.style('background-color', bt.color)
 									.html(m > 1 ? m : '&nbsp;')
 							} else {
-								td.append('span')
-									.attr('class', 'sja_mcdot')
-									.style('margin', '0px 4px')
-									.html('&nbsp;')
+								td.append('span').attr('class', 'sja_mcdot').style('margin', '0px 4px').html('&nbsp;')
 							}
 						} else {
 							td.text(m)
@@ -801,24 +756,17 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 					continue
 				}
 
-				tr.append('td')
-					.text(total)
-					.style('background-color', '#f1f1f1')
+				tr.append('td').text(total).style('background-color', '#f1f1f1')
 
 				exportline.push(total)
 
-				tr.append('td')
-					.text(sample)
-					.style('background-color', '#f1f1f1')
+				tr.append('td').text(sample).style('background-color', '#f1f1f1')
 
 				exportline.push(sample)
 
 				let td
 				for (const cls of importclass[dsname]) {
-					td = tr
-						.append('td')
-						.style('text-align', 'center')
-						.style('background-color', '#f1f1f1')
+					td = tr.append('td').style('text-align', 'center').style('background-color', '#f1f1f1')
 					const _count = classsum[cls.class]
 					if (_count) {
 						td.append('span')
@@ -826,10 +774,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 							.style('background-color', common.mclass[cls.class].color)
 							.html(_count > 1 ? _count : '&nbsp;')
 					} else {
-						td.append('span')
-							.attr('class', 'sja_mcdot')
-							.style('margin', '0px 4px')
-							.html('&nbsp;')
+						td.append('span').attr('class', 'sja_mcdot').style('margin', '0px 4px').html('&nbsp;')
 					}
 
 					exportline.push(_count)

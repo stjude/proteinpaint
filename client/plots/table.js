@@ -128,11 +128,11 @@ function setInteractivity(self) {
 	self.download = () => {
 		if (!self.state || !self.state.isVisible) return
 		const data = []
-		self.dom.div.selectAll('tr').each(function() {
+		self.dom.div.selectAll('tr').each(function () {
 			const series = []
 			select(this)
 				.selectAll('th, td')
-				.each(function() {
+				.each(function () {
 					series.push(select(this).text())
 				})
 			data.push(series)
@@ -143,7 +143,7 @@ function setInteractivity(self) {
 		document.body.appendChild(a)
 		a.addEventListener(
 			'click',
-			function() {
+			function () {
 				a.download = self.config.term.term.name + ' table.txt'
 				a.href = URL.createObjectURL(new Blob([matrix], { type: 'text/tab-separated-values' }))
 				document.body.removeChild(a)
@@ -156,10 +156,7 @@ function setInteractivity(self) {
 
 function setRenderers(self) {
 	self.render = function render(columns, rows) {
-		self.dom.div
-			.style('display', 'inline-block')
-			.selectAll('*')
-			.remove()
+		self.dom.div.style('display', 'inline-block').selectAll('*').remove()
 
 		// show table
 		const table = self.dom.div
@@ -171,10 +168,7 @@ function setRenderers(self) {
 			.style('border', '1px solid black')
 
 		// header
-		const tr = table
-			.append('tr')
-			.style('white-space', 'normal')
-			.style('background-color', '#ececec')
+		const tr = table.append('tr').style('white-space', 'normal').style('background-color', '#ececec')
 
 		tr.append('td') // column 1
 		// print term2 values as rest of columns
@@ -182,7 +176,7 @@ function setRenderers(self) {
 			const label = value.label
 			tr.append('th')
 				.text(label.length > 20 ? label.slice(0, 16) + '...' : label)
-				.attr('title', label)
+				.attr('aria-label', label)
 				.style('border', '1px solid black')
 				.style('padding', '3px')
 				.style('text-align', 'center')
@@ -199,7 +193,7 @@ function setRenderers(self) {
 			// column 1
 			tr.append('th')
 				.text(t1v.label.length > 20 ? t1v.label.slice(0, 20) + '...' : t1v.label)
-				.attr('title', t1v.label)
+				.attr('aria-label', t1v.label)
 				.style('border', '1px solid black')
 				.style('padding', '3px')
 				.style('word-break', t1v.label.length > 12 ? 'break-all' : 'normal')

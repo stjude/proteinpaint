@@ -964,7 +964,7 @@ function fillTdName(td, name) {
 	if (name.length < 40) {
 		td.text(name)
 	} else {
-		td.text(name.substring(0, 35) + ' ...').attr('title', name)
+		td.text(name.substring(0, 35) + ' ...').attr('aria-label', name)
 	}
 }
 function fillCoefficientTermname(tw, td) {

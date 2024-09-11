@@ -365,7 +365,7 @@ export function getSorterUi(opts) {
 		const skipped = d.tb.notUsed?.includes(d.key)
 		const opacity = d.filterByClass[d.key] == 'value' ? 0.5 : 1
 		const div = select(this)
-			.attr('title', title.length ? title.join('\n') : `Click to not use this data value to sort ${l.samples}`)
+			.attr('aria-label', title.length ? title.join('\n') : `Click to not use this data value to sort ${l.samples}`)
 			.attr('draggable', d.tb.isOrdered ? true : false)
 			.attr('droppable', d.tb.isOrdered ? true : false)
 			.style('width', 'fit-content')

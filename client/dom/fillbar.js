@@ -1,4 +1,4 @@
-import {select} from 'd3-selection'
+import { select } from 'd3-selection'
 /*
 draw a horizontal bar with bg and fg to show percentage
 
@@ -25,11 +25,8 @@ export function fillbar(td, v, at) {
 	let g
 
 	if (td) {
-		td.attr('title', (v.f * 100).toFixed(0) + '%' + (v.v1 != undefined ? ' (' + v.v1 + '/' + v.v2 + ')' : ''))
-		g = td
-			.append('svg')
-			.attr('width', w)
-			.attr('height', h)
+		td.attr('aria-label', (v.f * 100).toFixed(0) + '%' + (v.v1 != undefined ? ' (' + v.v1 + '/' + v.v2 + ')' : ''))
+		g = td.append('svg').attr('width', w).attr('height', h)
 	} else {
 		g = select(document.body).append('svg')
 	}
@@ -52,12 +49,7 @@ export function fillbar(td, v, at) {
 		// wash with gray
 		const smudge = '#545454'
 		const smudge2 = 0.3
-		g.append('rect')
-			.attr('y', y)
-			.attr('width', w)
-			.attr('height', h)
-			.attr('fill', smudge)
-			.attr('fill-opacity', smudge2)
+		g.append('rect').attr('y', y).attr('width', w).attr('height', h).attr('fill', smudge).attr('fill-opacity', smudge2)
 	}
 
 	if (td) return g

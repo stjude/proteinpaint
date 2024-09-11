@@ -1071,7 +1071,7 @@ export class MatrixControls {
 
 			for (const inputConfig of t.rows) {
 				const holder = table.append('tr')
-				if (inputConfig.title) holder.attr('title', inputConfig.title)
+				//if (inputConfig.title) holder.attr('aria-label', inputConfig.title)
 				const input = await initByInput[inputConfig.type](
 					Object.assign(
 						{},
@@ -1111,7 +1111,7 @@ export class MatrixControls {
 			for (const inputConfig of parent.opts.customInputs.genes) {
 				inputConfig.chartType = 'matrix'
 				const holder = table.append('tr')
-				if (inputConfig.title) holder.attr('title', inputConfig.title)
+				if (inputConfig.title) holder.attr('aria-label', inputConfig.title)
 				const input = await initByInput[inputConfig.type](
 					Object.assign(
 						{},
@@ -1580,7 +1580,7 @@ export class MatrixControls {
 			dom: {
 				selectBtn: opts.holder
 					.append('button')
-					.attr('title', 'Click the matrix to select data')
+					.attr('aria-label', 'Click the matrix to select data')
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')
@@ -1589,7 +1589,7 @@ export class MatrixControls {
 
 				grabBtn: opts.holder
 					.append('button')
-					.attr('title', 'Click the matrix to drag and move')
+					.attr('aria-label', 'Click the matrix to drag and move')
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')

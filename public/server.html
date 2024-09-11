@@ -336,7 +336,7 @@ async function init() {
       .style('bottom', -22)
       .style('right', 0)
       .append('button')
-      .attr('title', 'Click this button to toggle between expanding or collapsing all type signatures.' 
+      .attr('aria-label', 'Click this button to toggle between expanding or collapsing all type signatures.' 
         + ' You may also click on individual signature IDs (red text) to toggle each type separately.')
       .attr('class', 'btn-sm')
       .html('expand')

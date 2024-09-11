@@ -51,10 +51,7 @@ export default async function tpui(cohort, holder, hostURL, app = { callbacks: {
 	const tr0 = table.append('tr')
 
 	// two pillar container, only used by makefolder
-	cohort.__tdleft = tr0
-		.append('td')
-		.style('vertical-align', 'top')
-		.style('padding-right', '20px')
+	cohort.__tdleft = tr0.append('td').style('vertical-align', 'top').style('padding-right', '20px')
 	cohort.__tdright = tr0.append('td').style('vertical-align', 'top')
 
 	if (cohort.hide_navigation) {
@@ -72,10 +69,7 @@ if(cohort.render) {
 		// add new files
 		// only allow adding new files when there is just one dataset??
 		const [butt1, folder1] = makefolder(cohort)
-		folder1
-			.style('background-color', '#f4f4f4')
-			.style('margin', '0px 20px 20px 0px')
-			.style('padding', '20px')
+		folder1.style('background-color', '#f4f4f4').style('margin', '0px 20px 20px 0px').style('padding', '20px')
 		butt1.html('&#43; <span style="font-size:.8em">NEW FILE</span>')
 		const saydiv = folder1.append('p')
 		const filediv = folder1.append('div')
@@ -151,7 +145,7 @@ if(cohort.render) {
 						holder.selectAll('*').remove()
 						tpui(cohort, holder, hostURL)
 					}
-					reader.onerror = function() {
+					reader.onerror = function () {
 						saydiv.text('Error reading file ' + file.name)
 						fileui()
 						return
@@ -250,10 +244,7 @@ if(cohort.variantgene) {
 		const [hmbut, hmdiv] = makefolder(cohort, cohort.show_hardcodemap)
 		hmbut.text('HEATMAP').style('font-size', '.8em')
 		for (const hcmap of cohort.hardcodemap) {
-			const div = hmdiv
-				.append('div')
-				.style('display', 'inline-block')
-				.style('margin-bottom', '20px')
+			const div = hmdiv.append('div').style('display', 'inline-block').style('margin-bottom', '20px')
 			if (hcmap.name) {
 				div.append('h3').text(hcmap.name)
 			}
@@ -263,10 +254,7 @@ if(cohort.variantgene) {
 
 	if (cohort.survivalJSON) {
 		const [srvbut, srvdiv] = makefolder(cohort, cohort.show_hardcodemap)
-		srvbut
-			.text('SURVIVAL CURVE')
-			.style('font-size', '.8em')
-			.style('border-color', 'transparent')
+		srvbut.text('SURVIVAL CURVE').style('font-size', '.8em').style('border-color', 'transparent')
 		const sjcharts = await getsjcharts()
 		sjcharts.survival({
 			cohort,
@@ -286,7 +274,7 @@ if(cohort.variantgene) {
 		butt
 			.style('font-size', '.8em')
 			.text('GENE NETWORK')
-			.attr('title', 'A force-directed graph of gene groups, shown with proportion of hits by diagnosis.')
+			.attr('aria-label', 'A force-directed graph of gene groups, shown with proportion of hits by diagnosis.')
 		let loaded = false
 		butt.on('click', () => {
 			if (folder.style('display') == 'none') {
@@ -307,7 +295,7 @@ if(cohort.variantgene) {
 		skbtn
 			.style('font-size', '.8em')
 			.text('RIBBON GRAPH')
-			.attr('title', 'A flow or Sankey diagram showing associated quantities by proportional ribbon widths.')
+			.attr('aria-label', 'A flow or Sankey diagram showing associated quantities by proportional ribbon widths.')
 		const sjcharts = await getsjcharts()
 		sjcharts.sankey({
 			cohort,
