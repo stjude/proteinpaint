@@ -168,19 +168,6 @@ function menu_variants(tk, block) {
 					tk.menutip.hide()
 				})
 
-			const desiredShapes = [
-				shapes.emptyVerticalRectangle,
-				shapes.emptyCircle,
-				shapes.emptyShield,
-				shapes.emptyTriangle,
-				shapes.emptyDiamond,
-				// shapes.plusIcon,
-				shapes.emptyEgg,
-				shapes.emptyPentagon,
-				shapes.emptyDiamondSuit,
-				shapes.emptySquare
-				// shapes.crossShape
-			]
 			// change variant shape option
 			if (tk.filterObj) {
 				let called = false
@@ -202,8 +189,26 @@ function menu_variants(tk, block) {
 						}
 					})
 			} else return
+
+			const desiredShapes = [
+				shapes.emptyVerticalRectangle,
+				shapes.emptyCircle
+				// shapes.emptyShield,
+				// shapes.emptyTriangle,
+				// shapes.emptyDiamond,
+				// shapes.plusIcon,
+				// shapes.emptyEgg,
+				// shapes.emptyPentagon,
+				// shapes.emptyDiamondSuit,
+				// shapes.emptySquare
+				// shapes.crossShape
+			]
+
 			function displayVectorGraphics(arg) {
 				const { holder, callbacks, tk } = arg
+				if (tk.skewer.shape && !tk.skewer.shape?.isDefault) {
+					desiredShapes.unshift(shapes.filledCircle)
+				}
 				const vectorGraphicsDiv = holder.append('div')
 				vectorGraphicsDiv
 					.append('div')
@@ -220,9 +225,10 @@ function menu_variants(tk, block) {
 					.append('div')
 					.style('display', 'flex')
 					.style('flex-wrap', 'wrap')
-					.style('width', '340px')
+					.style('width', 'max-content')
+				// .style('width', '340px')
 
-				desiredShapes.forEach((shapePath, index) => {
+				desiredShapes.forEach((shape, index) => {
 					const shapeSvg = shapesContainer
 						.append('svg')
 						.attr('width', 30)
@@ -230,18 +236,22 @@ function menu_variants(tk, block) {
 						.style('cursor', 'pointer')
 						.on('click', () => {
 							if (callbacks && typeof callbacks.onShapeClick === 'function') {
-								callbacks.onShapeClick(shapePath, tk)
+								callbacks.onShapeClick(shape, tk)
 							}
 						})
-
-					shapeSvg.append('path').attr('d', shapePath).attr('fill', 'none').attr('stroke', 'black')
+					if (shape.isDefault) {
+						//adds a filled circle to toggle back to default lollipop
+						shapeSvg.append('circle').attr('cx', 8).attr('cy', 8).attr('r', 8).attr('fill', 'black')
+					} else {
+						shapeSvg.append('path').attr('d', shape.path).attr('fill', 'none').attr('stroke', 'black')
+					}
 				})
 			}
 
-			function onShapeClick(shapePath, tk) {
+			function onShapeClick(shape, tk) {
 				// Logic to change the pre-existing shape to the chosen shape
-				console.log('Shape clicked:', shapePath)
-				tk.skewer.shape = shapePath
+				// console.log('Shape clicked:', shape)
+				tk.skewer.shape = shape
 				tk.load()
 				tk.menutip.hide()
 			}
