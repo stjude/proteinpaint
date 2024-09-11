@@ -428,37 +428,36 @@ export type SingleCellGeneExpressionNative = {
 }
 
 export type SingleCellSamplesNative = {
-	src: 'native' | string
-	/*
-    a way to query anno_cat table to find those samples labeled with this term for having sc data
-    TODO change to hasScTerm:string
-    */
-	isSampleTerm: string
+	src: 'native'
 
-	/** 
-    logic to decide sample table columns:
+	/** logic to decide sample table columns (the one shown on singlecell app ui, displaying a table of samples with sc data)
     a sample table will always have a sample column, to show sample.sample value
     firstColumnName allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc
     the other two properties allow to declare additional columns to be shown in table, that are for display only
     when sample.experiments[] are used, a last column of experiment id will be auto added
-    */
+	*/
 	firstColumnName?: string
+
+	/** do not use for native ds! gdc-only property. kept as optional to avoid tsc err */
+	experimentColumns?: string
+
 	/** any other columns to be added to sample table. each is a term id */
 	sampleColumns?: { termid: string }[]
-	experimentColumns?: { label: string }[]
 
+	/** dynamically added getter */
 	get?: (q: any) => any
 }
 export type SingleCellSamplesGdc = {
-	src: 'gdcapi' | string
+	src: 'gdcapi'
 	get?: (q: any) => any
+	/** if missing refer to the samples as 'sample', this provides override e.g. 'case' */
 	firstColumnName?: string
 	sampleColumns?: { termid: string }[]
 	experimentColumns?: { label: string }[]
 }
 
 export type SingleCellDataGdc = {
-	src: 'gdcapi' | string
+	src: 'gdcapi'
 	sameLegend: boolean
 	get?: (q: any) => any
 	refName: string
@@ -478,31 +477,58 @@ type GDCSingleCellPlot = {
 	colorColumn: ColorColumn
 	coordsColumns: { x: number; y: number }
 }
+
 type ColorColumn = {
+	/** 0-based column number in the tabular file */
 	index?: number
+	/** name of the column */
 	name: string
+	/** column values (categories) to color mapping */
 	colorMap?: { [index: string]: string }
 }
+
+/** defines a tsne type of plot for cells from one sample */
 type SingleCellPlot = {
+	/** type of the plot, e.g. tsne or umap, also display as plot name on ui */
 	name: string
+	/** folder in which per-sample files are stored.
+	each file is a tabular text file with all cells (rows) from that sample.
+	all files must have same set of columns
+	file columns include cell types and x/y coords, as described by other parameters
+	*/
 	folder: string
-	fileSuffix: string
+	/** optional suffix to locate the file for a sample, via ${folder}/${sampleName}${fileSuffix}
+	assumes that file name always start with sample name.
+	if not introduce filePrefix
+	*/
+	fileSuffix?: string
+	/** specify which column to color the cells in the plot. must have categorical values
+	TODO define a set of color columns and specify a default one, and let ui to switch from
+	*/
 	colorColumn: ColorColumn
+	/** 0-based column number for x/y coordinate for this plot */
 	coordsColumns: { x: number; y: number }
 }
 export type SingleCellDataNative = {
-	src: 'native' | string
+	src: 'native'
+	/** when a sample has multiple tsne plots, this flag allows allows all plots to share one cell type legend */
 	sameLegend: boolean
+	/** available tsne type of plots for each sample */
 	plots: SingleCellPlot[]
-	refName: string
+	/** name of ref cells? */
+	refName?: string
+	/** dynamically added getter */
 	get?: (q: any) => any
 }
 
 export type SingleCellQuery = {
 	/** methods to identify samples with singlecell data,
-    for client to list those samples, or determine if to invoke plot in sampleView of a sample */
+	this data allows client-side to display a table with these samples for user to choose from
+    also, sampleView uses this to determine if to invoke the sc plot for a sample
+	*/
 	samples: SingleCellSamplesGdc | SingleCellSamplesNative
-	/** defines tsne/umap type of clustering maps for each sample */
+	/** defines tsne/umap type of clustering maps for each sample
+	 */
 	data: SingleCellDataGdc | SingleCellDataNative
 	/** defines available gene-level expression values for each cell of each sample */
 	geneExpression?: SingleCellGeneExpressionNative
@@ -586,23 +612,30 @@ type Mds3Queries = {
 		file: string
 	}
 	trackLst?: TrackLstEntry[]
-	// TODO singleSampleGbtk
 	singleCell?: SingleCellQuery
 	geneCnv?: {
 		bygene?: {
 			gdcapi: true
 		}
 	}
-	/** unknown, verify if still needed */
 	defaultCoord?: string
 	ld?: LdQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
 	DZImages?: DZImages
 	WSImages?: WSImages
-	images?: any
+	images?: Images
 }
 
+/** non-zoom small images
+iamge file to sample mapping is stored in images table
+*/
+type Images = {
+	/** folder where the per-sample image files are stored */
+	folder: string
+}
+
+/** deep zoom image shown via openseadragon, with precomputed tiles. this is replaced by WSImages and should not be used anymore */
 export type DZImages = {
 	// type of the image, e.g. H&E
 	type: string
@@ -610,11 +643,16 @@ export type DZImages = {
 	imageBySampleFolder: string
 }
 
+/** deep zoom image shown via tiatoolbox, covers any big image files including whole-slide image. 
+image file to sample mapping is stored in wsimages table
+*/
 export type WSImages = {
 	// type of the image, e.g. H&E
 	type: string
 	// path to the folder where sample images are stored
 	imageBySampleFolder: string
+	// TODO extend to support multiple sources
+	//sources?: []
 }
 
 /*** types supporting Termdb ***/
