@@ -128,7 +128,7 @@ export function skewer_make(tk, block) {
 			d.g = this
 		})
 
-	if (tk.skewer.shape) {
+	if (tk.skewer.shape && !tk.skewer.shape?.isDefault) {
 		renderSkewerShapes(tk, ss, discg)
 	} else {
 		// actual disc
