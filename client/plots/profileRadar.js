@@ -94,7 +94,6 @@ class profileRadar extends profilePlot {
 			const diffRow = { value: diff }
 			if (diff >= 20) diffRow.color = 'red'
 			rows.push([{ color, disabled: true }, { value: module }, { value: value1 }, { value: value2 }, diffRow])
-			console.log(diffRow)
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
 			let dx = radius * 1.1 * Math.cos(iangle)
