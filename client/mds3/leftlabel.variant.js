@@ -229,10 +229,14 @@ function menu_variants(tk, block) {
 				// .style('width', '340px')
 
 				desiredShapes.forEach((shape, index) => {
-					const shapeSvg = shapesContainer
+					const shapeWrapper = shapesContainer.append('div').style('padding', '0px 2px')
+					const width = 18
+					const height = 18
+					const shapeSvg = shapeWrapper
 						.append('svg')
-						.attr('width', 30)
-						.attr('height', 30)
+						.attr('width', width)
+						.attr('height', height)
+						.attr('viewBox', `0 0 ${width} ${height}`)
 						.style('cursor', 'pointer')
 						.on('click', () => {
 							if (callbacks && typeof callbacks.onShapeClick === 'function') {
@@ -241,7 +245,7 @@ function menu_variants(tk, block) {
 						})
 					if (shape.isDefault) {
 						//adds a filled circle to toggle back to default lollipop
-						shapeSvg.append('circle').attr('cx', 8).attr('cy', 8).attr('r', 8).attr('fill', 'black')
+						shapeSvg.append('circle').attr('cx', 9).attr('cy', 8).attr('r', 8).attr('fill', 'black')
 					} else {
 						shapeSvg.append('path').attr('d', shape.path).attr('fill', 'none').attr('stroke', 'black')
 					}
