@@ -127,8 +127,9 @@ export function skewer_make(tk, block) {
 		.each(function (d) {
 			d.g = this
 		})
+	const isEmptyCircle = tk.skewer?.shape?.[0] === 'emptyCircle' || false
 
-	if (tk.skewer.shape && !tk.skewer.shape?.isDefault) {
+	if (tk.skewer.shape && !tk.skewer.shape[1]?.isDefault && !isEmptyCircle) {
 		renderSkewerShapes(tk, ss, discg)
 	} else {
 		// actual disc
@@ -136,14 +137,14 @@ export function skewer_make(tk, block) {
 		// full filled
 		discdot
 			.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
-			.attr('fill', d => tk.color4disc(d.mlst[0]))
-			.attr('stroke', 'white')
+			.attr('fill', isEmptyCircle ? 'white' : d => tk.color4disc(d.mlst[0]))
+			.attr('stroke', isEmptyCircle ? d => tk.color4disc(d.mlst[0]) : 'white')
 			.attr('r', d => d.radius - 0.5)
 		// masking half
 		discg
 			.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
 			.append('path')
-			.attr('fill', 'white')
+			.attr('fill', isEmptyCircle ? 'black' : 'white')
 			.attr('stroke', 'none')
 			.attr('d', d =>
 				d3arc()({
@@ -171,13 +172,13 @@ export function skewer_make(tk, block) {
 		})
 		.attr('font-size', d => d.discnumfontsize)
 		.attr('y', d => d.discnumfontsize * middlealignshift)
-	textslc.filter(d => d.dt == dtsnvindel).attr('fill', 'white')
+	textslc.filter(d => d.dt == dtsnvindel).attr('fill', isEmptyCircle ? 'black' : 'white')
 	textslc
 		.filter(d => d.dt == dtsv || d.dt == dtfusionrna)
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.attr('stroke-width', 0.8)
 		.attr('font-weight', 'bold')
-		.attr('fill', 'white')
+		.attr('fill', isEmptyCircle ? 'black' : 'white')
 	// right-side label
 	const textlab = discg
 		.append('text')
