@@ -10,6 +10,7 @@ Features:
 - Able to open an app card on an example with new `example` URL parameter.
 - Integration tests for the sample view plot in the mass app.
 - Prototype for about tab in mass ui. Intended to build out per dataset.
+- display WSI metadata
 
 Fixes:
 - Disable sample view download data button when an invalid sample id is entered.
