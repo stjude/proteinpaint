@@ -95,7 +95,7 @@ export class profilePlot {
 			})
 		}
 		if (this.type != 'profileBarchart') {
-			const tableIconDiv = iconsDiv.append('div')
+			const tableIconDiv = iconsDiv.append('div').style('padding-bottom', '15px')
 			this.dom.tableBt = tableIconDiv
 				.append('button')
 				.style('border', 'none')
@@ -107,7 +107,7 @@ export class profilePlot {
 				this.showTable(show)
 			})
 		}
-		icon_functions['restart'](iconsDiv.append('div').style('padding', '15px 5px'), {
+		icon_functions['restart'](iconsDiv.append('div').style('padding', '0px 5px 15px 5px'), {
 			title: 'Clear filters',
 			handler: async () => {
 				this.clearFiltersExcept([])
