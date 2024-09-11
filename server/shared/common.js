@@ -108,7 +108,7 @@ export const mclass = {
 	},
 	D: {
 		label: 'PROTEINDEL',
-		color: '#7f7f7f',
+		color: 'rgb(100, 100, 100)',
 		dt: dtsnvindel,
 		desc: 'An inframe non synonymous variant that deletes bases from the coding sequence',
 		key: 'D'
