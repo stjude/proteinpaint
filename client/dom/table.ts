@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 export type Cell = {
 	url?: string // to print in <a> element
 	value?: string | number // to print with .text() d3 method
-	color?: string // color code to render as a color
+	color?: string // color code to render as a color input or text color if value provided
 	html?: string // to print with .html() d3 method, may be susceptible to attack
 	__td?: any //is attached to each cell object pointing to <td>, for external code to render interactive contents in it
 	disabled?: boolean
@@ -272,8 +272,10 @@ export function renderTable({
 					.attr('href', cell.url)
 					.attr('target', '_blank')
 			} else if (cell.html) td.html(cell.html)
-			else if ('value' in cell) td.text(cell.value)
-			else if (cell.color) {
+			else if ('value' in cell) {
+				td.text(cell.value)
+				if (cell.color) td.style('color', cell.color)
+			} else if (cell.color) {
 				if (cell.disabled) {
 					td.style('background-color', cell.color)
 				} else {

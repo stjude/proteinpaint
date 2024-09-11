@@ -39,7 +39,7 @@ class profileRadar extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const width = 1400
+		const width = 1200
 		const height = 800
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -57,7 +57,8 @@ class profileRadar extends profilePlot {
 			{ label: 'Color' },
 			{ label: 'Module' },
 			{ label: config[config.plot].term1.abbrev },
-			{ label: config[config.plot].term2.abbrev }
+			{ label: config[config.plot].term2.abbrev },
+			{ label: 'Diff' }
 		]
 
 		// Create a polar grid.
@@ -74,7 +75,7 @@ class profileRadar extends profilePlot {
 
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 400},${y + 180})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 200})`)
 		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 340})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
@@ -87,13 +88,13 @@ class profileRadar extends profilePlot {
 			this.addData('term2', iangle, i, data2)
 			this.addData('term1', iangle, i, data)
 			const color = term1.score.term.color
-			rows.push([
-				{ color, disabled: true },
-				{ value: module },
-				{ value: this.getPercentage(term1) },
-				{ value: this.getPercentage(term2) }
-			])
-
+			const value1 = this.getPercentage(term1)
+			const value2 = this.getPercentage(term2)
+			const diff = Math.abs(value1 - value2)
+			const diffRow = { value: diff }
+			if (diff >= 20) diffRow.color = 'red'
+			rows.push([{ color, disabled: true }, { value: module }, { value: value1 }, { value: value2 }, diffRow])
+			console.log(diffRow)
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
 			let dx = radius * 1.1 * Math.cos(iangle)
