@@ -16,7 +16,7 @@ export function zoom(opts) {
 
 	let showSlider = false
 	opts.holder
-		.attr('aria-label', opts.title || null)
+		.attr('title', opts.title || null)
 		.style('vertical-align', 'top')
 		.style('text-align', 'center')
 		.on('mouseenter', () => {
@@ -33,7 +33,7 @@ export function zoom(opts) {
 
 	const number = label
 		.append('input')
-		.attr('aria-label', 'Enter a desired zoom level')
+		.attr('title', 'Enter a desired zoom level')
 		.attr('type', 'number')
 		.attr('min', settings.min)
 		.attr('max', settings.max)
@@ -64,7 +64,7 @@ export function zoom(opts) {
 		? null
 		: opts.holder
 				.append('button')
-				.attr('aria-label', 'Zoom in')
+				.attr('title', 'Zoom in')
 				.style('width', '25px')
 				.html('-')
 				.on('click', () => {
@@ -78,7 +78,7 @@ export function zoom(opts) {
 
 	const slider = sliderDiv
 		.append('input')
-		.attr('aria-label', 'Slide to desired zoom level')
+		.attr('title', 'Slide to desired zoom level')
 		.attr('type', 'range')
 		.attr('min', settings.min)
 		.attr('max', settings.max)
@@ -102,7 +102,7 @@ export function zoom(opts) {
 		? null
 		: opts.holder
 				.append('button')
-				.attr('aria-label', 'Zoom out')
+				.attr('title', 'Zoom out')
 				.style('width', '25px')
 				.html('+')
 				.on('click', () => {
