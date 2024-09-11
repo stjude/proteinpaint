@@ -8,12 +8,40 @@ export const shapes = {
 	//rectangle empty
 	emptyVerticalRectangle: {
 		path: 'M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1',
+		calculatePath: opts => {
+			const _opts = { height: 16, width: 16, radius: 2 }
+			Object.assign(_opts, opts)
+			const { width, height, radius } = _opts
+			//TODO: Check this proportion
+			const calcHeight = height + 4
+
+			return `M${radius} 0a${radius} ${radius} 0 0 0-${radius} ${radius}v${
+				calcHeight - 2 * radius
+			}a${radius} ${radius} 0 0 0${radius} ${radius}h${
+				width - 2 * radius
+			}a${radius} ${radius} 0 0 0${radius}-${radius}V${radius}a${radius} ${radius} 0 0 0-${radius}-${radius}z m0 1h${
+				width - 2 * radius
+			}a1 1 0 0 1 1 1v${calcHeight - 2 * radius}a1 1 0 0 1-1 1h-${width - 2 * radius}a1 1 0 0 1-1-1V${
+				radius + 1
+			}a1 1 0 0 1 1-1`
+		},
 		isFilled: false
 	},
 	//circle empty
 	//https://icons.getbootstrap.com/icons/circle/
 	emptyCircle: {
 		path: 'M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16',
+		calculatePath: opts => {
+			const _opts = { height: 16, width: 16, radius: 8 }
+			Object.assign(_opts, opts)
+
+			const { width, height, radius } = _opts
+			const halfWidth = width / 2
+
+			return `M${halfWidth} ${height - 1}A${radius - 1} ${radius - 1} 0 1 1 ${halfWidth} 1a${radius - 1} ${
+				radius - 1
+			} 0 0 1 0 ${height - 2}m0 1A${radius} ${radius} 0 1 0 ${halfWidth} 0a${radius} ${radius} 0 0 0 0 ${height}`
+		},
 		isFilled: false
 	}
 
