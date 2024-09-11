@@ -1147,12 +1147,18 @@ async function domainlegend(tk, block) {
 	}
 }
 
+let idIncrement = 0
+function getId() {
+	return `sjpp-customdomainui-${idIncrement++}`
+}
+
 function customdomainmakeui(block, tk, proteinDomainUI) {
 	const wrapper = proteinDomainUI.style('padding', '20px')
-
+	const textAreaId = getId()
 	//header
 	wrapper
-		.append('div')
+		.append('label')
+		.attr('for', textAreaId)
 		.html(`Add domains for ${block.usegm.name} <span style="font-size:.8em">${block.usegm.isoform}</span>`)
 	const lst = client.getdomaintypes(block.usegm)
 
@@ -1191,8 +1197,8 @@ function customdomainmakeui(block, tk, proteinDomainUI) {
 	wrapper
 		.append('p')
 		.style('font-size', '.9em')
-		.html('<span style="font-size:.8em;color:#aaa">EXAMPLE</span>&nbsp;&nbsp;domain_name ; 100 200 ; red')
-	const ta = wrapper.append('textarea').attr('rows', 5).attr('cols', 30)
+		.html('<span style="font-size:.8em;color:#000">EXAMPLE</span>&nbsp;&nbsp;domain_name ; 100 200 ; red')
+	const ta = wrapper.append('textarea').attr('id', textAreaId).attr('rows', 5).attr('cols', 30)
 	const row1 = wrapper.append('div').style('margin-top', '5px')
 	const select = row1.append('select')
 	select.append('option').text('Codon position')
@@ -1264,7 +1270,7 @@ function customdomainmakeui(block, tk, proteinDomainUI) {
 	}
 	wrapper
 		.append('div')
-		.style('color', '#858585')
+		.style('color', '#000')
 		.style('margin-top', '20px')
 		.html(
 			`One protein domain per line.<br>

@@ -155,6 +155,7 @@ by normalize.css are covered here
 .sja_menu_div textarea,
 .sja_pane textarea {
     padding: 2px;
+    border: 1px solid #ccc;
 }
 
 .sja_root_holder input[type="search"].tree_search {
