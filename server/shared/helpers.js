@@ -7,7 +7,7 @@ this is a helper file with a collection of functions to be used in backend and c
 */
 
 export function isNumeric(n) {
-	return !isNaN(parseFloat(n)) && isFinite(n)
+	return Number.isFinite(n) || !isNaN(parseFloat(n))
 }
 
 export function convertUnits(v, fromUnit, toUnit, scaleFactor, compact) {

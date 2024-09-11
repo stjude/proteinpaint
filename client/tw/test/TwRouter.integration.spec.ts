@@ -59,7 +59,7 @@ function getTermWithGS() {
 	return term
 }
 
-const softTwsLimit = 2 //5000
+const softTwsLimit = 3 //5000
 
 async function getTws() {
 	// create an array of full tw's, to simulate what may be seen from app/plot state after a dispatch
@@ -74,7 +74,9 @@ async function getTws() {
 				predefined_groupset_idx: 0,
 				isAtomic: true as const
 			}
-		})
+		}),
+		Object.freeze(await TwRouter.fill({ id: 'agedx' }, { vocabApi })),
+		Object.freeze(await TwRouter.fill({ id: 'agedx', q: { mode: 'continuous' } }, { vocabApi }))
 	]
 	while (twlst.length < softTwsLimit) {
 		twlst.push(...twlst)
@@ -117,7 +119,7 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 					sample_type: '1',
 					hashtmldetail: true
 				},
-				q: { type: 'values', isAtomic: true, hiddenValues: {} },
+				q: { type: 'values', isAtomic: true, hiddenValues: {}, mode: 'discrete' },
 				type: 'CatTWValues'
 			},
 			'should fill-in a minimal dictionary tw with only {id}'
@@ -137,8 +139,8 @@ tape('extended TwBase', async test => {
 	const msg = 'should convert tw objects into an extended TwBase'
 	try {
 		const data = {
-			sample1: { sex: 1, diaggrp: 'ALL' },
-			sample2: { sex: 2, diaggrp: 'NBL' }
+			sample1: { sex: 1, diaggrp: 'ALL', agedx: '1.5' },
+			sample2: { sex: 2, diaggrp: 'NBL', agedx: '3.3' }
 		}
 		//const xtws = terms.map(getHandler)
 		const start = Date.now()
@@ -166,7 +168,12 @@ tape('extended TwBase', async test => {
 				`<text>sample2, Female</text><circle r=2></cicle>` +
 				`<text>sample1, ALL</text><rect width=10 height=10></rect>` +
 				`<text>sample2, NBL</text><rect width=10 height=10></rect>` +
+				`<text>sample1, 1.5 (discrete)</text><line x1=0 y1=10 x2=10 y2=0 stroke='black' stroke-width=2 />` +
+				`<text>sample2, 3.3 (discrete)</text><line x1=0 y1=10 x2=10 y2=0 stroke='black' stroke-width=2 />` +
+				`<text>sample1, 1.5 (continuous)</text><line x1=0 y1=0 x2=10 y2=10 stroke='black' stroke-width=2 />` +
+				`<text>sample2, 3.3 (continuous)</text><line x1=0 y1=0 x2=10 y2=10 stroke='black' stroke-width=2 />` +
 				`</svg>`,
+
 			`should render an svg with fake data`
 		)
 	} catch (e) {

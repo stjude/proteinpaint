@@ -1,6 +1,9 @@
 import { TwRouter } from '../../TwRouter.ts'
+import { TwBase } from '../../TwBase.ts'
 import { TermWrapper } from '#updated-types'
-import { FakeTw, FakeCatValues, FakeCatPredefinedGS, FakeCatCustomGS } from './xtw/categorical.ts'
+import { FakeTw } from './types'
+import { FakeCatValues, FakeCatPredefinedGS, FakeCatCustomGS } from './xtw/categorical.ts'
+import { addons } from './xtw/addons.ts'
 
 export class FakeApp {
 	#opts: any
@@ -18,13 +21,13 @@ export class FakeApp {
 	main(data) {
 		this.#xtws = []
 		for (const tw of this.#opts.twlst) {
-			this.#xtws.push(this.#getExtTws(tw))
+			this.#xtws.push(this.#getxtw(tw))
 		}
 		this.#render(data)
 		//console.log(40, this.#xtws, JSON.parse(JSON.stringify(this.#xtws)))
 	}
 
-	#getExtTws(tw: TermWrapper): FakeTw {
+	#getxtw(tw: TermWrapper): FakeTw | TwBase {
 		const opts = { vocabApi: this.#opts.vocabApi }
 		/* 
 			Below are examples of using a discriminant property at the object root,
@@ -34,20 +37,25 @@ export class FakeApp {
 			https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions
 		*/
 		if (!tw.type) throw `missing tw.type`
-		if (tw.type == 'CatTWValues') return new FakeCatValues(tw, opts)
-		else if (tw.type == 'CatTWPredefinedGS') return new FakeCatPredefinedGS(tw, opts)
-		else if (tw.type == 'CatTWCustomGS') return new FakeCatCustomGS(tw, opts)
-		else throw `no fakeApp extended class for tw.type=${tw.type}`
+		if (tw.type in addons) {
+			// example using addons
+			return TwRouter.init(tw, { vocabApi: this.#opts.vocabApi, addons })
+		} else {
+			// example using extended subclass
+			if (tw.type == 'CatTWValues') return new FakeCatValues(tw, opts)
+			else if (tw.type == 'CatTWPredefinedGS') return new FakeCatPredefinedGS(tw, opts)
+			else if (tw.type == 'CatTWCustomGS') return new FakeCatCustomGS(tw, opts)
+			else throw `no fakeApp extended class for tw.type=${tw.type}`
+		}
 	}
 
 	#render(data) {
-		let svg = '<svg></svg>'
+		const svgElems: string[] = []
 		for (const xtw of this.#xtws) {
-			const arg = { holder: svg, data }
-			xtw.render(arg)
-			svg = arg.holder
+			const arg = { data }
+			svgElems.push(xtw.render(arg))
 		}
-		this.#dom.svg = svg
+		this.#dom.svg = `<svg>${svgElems.join('')}</svg>`
 	}
 
 	getInner() {

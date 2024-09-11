@@ -77,7 +77,7 @@ export function getSerieses(data) {
 
 				let legend
 				if (typeof t.tw.setCellProps == 'function') {
-					// use MatrixXtwObj method if present
+					// use extended tw method if present
 					legend = t.tw.setCellProps(cell, anno, value, s, t, this, width, height, dx, dy, i)
 				} else {
 					// hierCluster terms have their own setCellProps

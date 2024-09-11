@@ -3,10 +3,11 @@
 ## Goals for Refactoring
 
 1. Replace fillTermWrapper() with router-style code that fully resolves to a specific tw data shape,
-and has a lot more type annotations and unit/integration tests.
+with unit/integration tests and built-in type safety while also minimizing the need for type annotations
+in class methods and consumer code.
 2. Minimize the need for consumer code to know about tw types, hide data-shape related
 details from app, plot, or component code.
-3. Code tw handlers as 'plugins'. Within term wrapper handler code/methods, specialize to
+3. Code custom tw methods either as addons (recommended) or extended subclass. Within term wrapper handler code/methods, can use union of classes, or specialize to
 one instance type/context, so that 
 - there will be less need for static and runtime checks as related to the tw term type,
 q.type, and q.mode data instance.
@@ -16,9 +17,9 @@ since data processing should not change for the same tw data shape.
 ## Replace fillTW()
 ![Screenshot 2024-08-23 at 9 25 23 AM](https://github.com/user-attachments/assets/ba98482e-cfed-4685-9c41-43d0063742b1)
 
-## Plugin-style TW Handlers
+## Addon instance methods or extend a subclass
 
-![Screenshot 2024-08-24 at 10 42 45 PM](https://github.com/user-attachments/assets/cd6ee372-6fa2-453a-9b9d-698f476e22d1)
+![TwRouter init() (1)](https://github.com/user-attachments/assets/3ea57125-a5db-4fdf-8133-8ab35e09e160)
 
 ## Code Examples
 

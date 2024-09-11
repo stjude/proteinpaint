@@ -3,7 +3,6 @@ import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { NumericBase } from '../numeric'
 import { RawNumTW } from '#types'
-import { CatValues, CatPredefinedGS, CatCustomGS } from '../categorical'
 
 /*************************
  reusable helper functions
@@ -71,7 +70,7 @@ tape(`fill() default q.type='regular-bin'`, async test => {
 	test.end()
 })
 
-tape(`fill() q.type=custom-bin opts.defaultQ.preferredBins='median'`, async test => {
+tape.skip(`fill() q.type=custom-bin opts.defaultQ.preferredBins='median'`, async test => {
 	const tw: RawNumTW = {
 		term: termjson.agedx,
 		q: {

@@ -114,10 +114,11 @@ tape('fillTermWrapper - continuous term', async function (test) {
 	defaultQ = {
 		numeric: {
 			mode: 'discrete',
+			type: 'regular-bin',
 			preferredBins: 'median'
 		}
 	}
-	testMsg = 'should throw error when defaultQ.type is not defined'
+	testMsg = 'should throw error when defaultQ.type is not custom-bin for preferredBins=median'
 	try {
 		const tw5 = {
 			term: structuredClone(await vocabApi.getterm('d'))
@@ -139,7 +140,6 @@ tape('fillTermWrapper - continuous term', async function (test) {
 		}
 	}
 	await fillTermWrapper(tw6, vocabApi, defaultQ)
-	console.log
 	test.deepEqual(
 		tw6.q,
 		Object.assign(
@@ -150,13 +150,11 @@ tape('fillTermWrapper - continuous term', async function (test) {
 				first_bin: { startunbounded: true, stop: 0.2, stopinclusive: true },
 				hiddenValues: {}
 			},
-			!features.usextw
-				? {}
-				: {
-						isAtomic: true,
-						mode: 'discrete'
-						//test: 'apple'
-				  }
+			{
+				isAtomic: true,
+				mode: 'discrete',
+				test: 'apple'
+			}
 		),
 		'should fill tw.q with tw.term.bins.less when defaultQ.preferredBins=less'
 	)
@@ -169,26 +167,11 @@ tape('fillTermWrapper - continuous term', async function (test) {
 	await fillTermWrapper(tw7, vocabApi, defaultQ)
 	test.deepEqual(
 		tw7.q,
-		features.usextw
-			? {
-					isAtomic: true,
-					mode: 'continuous',
-					hiddenValues: {}
-			  }
-			: {
-					// legacy fillTermWrapper() allows nonsensical combination of q{} properties
-					isAtomic: true,
-					mode: 'continuous',
-					type: 'regular-bin',
-					bin_size: 0.2,
-					stopinclusive: true,
-					first_bin: {
-						startunbounded: true,
-						stop: 0.2,
-						stopinclusive: true
-					},
-					hiddenValues: {}
-			  },
+		{
+			isAtomic: true,
+			mode: 'continuous',
+			hiddenValues: {}
+		},
 		'should merge defaultQ into tw.q when defaultQ.preferredBins is not defined'
 	)
 })
