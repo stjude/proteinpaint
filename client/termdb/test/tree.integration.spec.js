@@ -234,9 +234,7 @@ tape('click_term', test => {
 	}
 	function testExpand_child1(tree) {
 		//Find disabled term button specified in tree.disable_terms
-		const disabledlabels = [...childdiv_child1.querySelectorAll('.termlabel')].filter(function (elem) {
-			return elem.style.opacity == '0.4'
-		})
+		const disabledlabels = childdiv_child1.querySelectorAll('.sja_tree_click_term_disabled')
 		test.ok(disabledlabels.length > 0, 'should have one or more disabled terms')
 		//Verify other term buttons enabled
 		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term termlabel')
