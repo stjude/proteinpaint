@@ -1263,15 +1263,16 @@ sandbox header
   .sja_root_holder [aria-label]:after, .sja_menu_div [aria-label]:after, .sja_pane [aria-label]:after {
     content: attr(aria-label);
     position: absolute;
-    left: 2em;
+    left: 1em;
     top: 1.25em; /* put it on the top */
+    /*bottom: 50%;*/
     background-color: #aaa;
     border-radius: 6px ;
     font-size: 15px;
     color: #fff;
     padding: 5px;
     opacity: 0;
-    transition: opacity 1s 1s; /* 👈 Change the time to meet your requirements. */;
+    transition: opacity 0.5s 0.25s; /* 👈 Change the time to meet your requirements. */;
     z-index: 1000;
 }
 
