@@ -327,9 +327,7 @@ function setRenderers(self) {
 			.on('click', (event, d) => {
 				self.setTab(event, d)
 				if (d.colNum === self.activeTab) {
-					/** If tab is already selected, change background color
-					 * but do not update. Prevents subheader from toggling
-					 */
+					/** If tab is already selected, change background color */
 					self.dom.tds.style('background-color', 'transparent')
 				}
 			})
