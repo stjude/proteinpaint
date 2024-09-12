@@ -1,1 +1,2 @@
-
+Fixes:
+- improve text color contrast in PP SSM lollipop view
