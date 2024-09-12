@@ -156,6 +156,8 @@ export function skewer_make(tk, block) {
 			)
 	}
 
+	const isEmptyShape = isEmptyCircle || tk.skewer?.shape?.[1]?.isFilled == false
+
 	// number in disc
 	const textslc = discg
 		.filter(d => d.occurrence > 1)
@@ -172,13 +174,13 @@ export function skewer_make(tk, block) {
 		})
 		.attr('font-size', d => d.discnumfontsize)
 		.attr('y', d => d.discnumfontsize * middlealignshift)
-	textslc.filter(d => d.dt == dtsnvindel).attr('fill', isEmptyCircle ? 'black' : 'white')
+	textslc.filter(d => d.dt == dtsnvindel).attr('fill', isEmptyShape ? 'black' : 'white')
 	textslc
 		.filter(d => d.dt == dtsv || d.dt == dtfusionrna)
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.attr('stroke-width', 0.8)
 		.attr('font-weight', 'bold')
-		.attr('fill', isEmptyCircle ? 'black' : 'white')
+		.attr('fill', isEmptyShape ? 'black' : 'white')
 	// right-side label
 	const textlab = discg
 		.append('text')
