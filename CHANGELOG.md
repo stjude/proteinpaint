@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.75.0
 
 Features:
 - wsiviewer - load files and metadata from db
