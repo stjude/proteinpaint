@@ -109,7 +109,7 @@ benchmark[["prepareDataTable"]] <- unbox(paste(round(as.numeric(dtime), 4), attr
 ##################
 
 stime <- Sys.time()
-formulas <- buildFormulas(input$outcome, input$independent)
+formulas <- buildFormulas(input$outcome, input$independent, input$neuroOnc)
 etime <- Sys.time()
 dtime <- etime - stime
 benchmark[["buildFormulas"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
@@ -132,11 +132,24 @@ etime <- Sys.time()
 dtime <- etime - stime
 benchmark[["runRegression"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
+
+##################
+# PARSE RESULTS #
+##################
+
+if (isTRUE(input$neuroOnc)) {
+  # neuro-oncology dataset
+  # combine results from univariate and multivariate analyses
+  # NOTE: this function will not work with snplocus regression because it
+  # will combine results from multiple analyses into a single set of results
+  reg_results <- combineUniMultiResults(reg_results, input$regressionType)
+}
+
 out <- list(data = reg_results, benchmark = benchmark)
 
 
 ##################
-# EXPORT RESULTS #
+# OUTPUT RESULTS #
 ##################
 
 # Export results as json to stdout
