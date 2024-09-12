@@ -3,7 +3,7 @@ import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
 import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
-import { renderSkewerShapes, renderShapeKick } from './skewer.render.shapes.ts'
+import { renderSkewerShapes, renderShapeKick, setNumBaseline } from './skewer.render.shapes.ts'
 
 /*
 ********************** EXPORTED
@@ -167,6 +167,7 @@ export function skewer_make(tk, block) {
 		.attr('class', 'sja_aa_discnum')
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('stroke-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
+		.attr('dominant-baseline', tk.skewer.shape ? setNumBaseline(tk.skewer.shape[0]) : '')
 		.attr('text-anchor', 'middle')
 		.each(d => {
 			const s = d.radius * 1.5
@@ -322,15 +323,23 @@ export function skewer_make(tk, block) {
 		}
 	}
 	ss.stem3 = Math.max(2, hbaseline + dotwidth * Math.min(5, maxm))
+
+	let foldedKick
 	// invisible kicking skewer cover when folded
-	ss.selection
-		.append('circle')
+	if (tk.skewer.shape && tk.skewer.shape[0] !== 'filledCircle') {
+		//Returns the kick in the same shape if skewer is not a circle
+		foldedKick = renderShapeKick(ss, discg)
+	} else {
+		foldedKick = ss.selection
+			.append('circle')
+			.attr('r', d => d.maxradius + 1)
+			.attr('cy', d => (tk.skewer.pointup ? -1 : 1) * d.maxradius)
+	}
+	foldedKick
 		.attr('class', 'sja_aa_skkick')
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke', 'none')
-		.attr('r', d => d.maxradius + 1)
-		.attr('cy', d => (tk.skewer.pointup ? -1 : 1) * d.maxradius)
 		.attr('transform', d => `scale(${d.showmode == modefold ? '1,1' : '0.01,0.01'})`) // "scale(0)" will not make the circle disappear on safari
 		.on('mouseover', (event, d) => {
 			let cumh = 0

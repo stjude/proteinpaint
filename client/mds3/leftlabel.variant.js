@@ -198,6 +198,7 @@ function menu_variants(tk, block) {
 					emptyTriangle: shapes.emptyTriangle,
 					emptySquare: shapes.emptySquare,
 					filledSquare: shapes.filledSquare
+					// emptyShield: shapes.emptyShield
 				}
 				const { holder, callbacks, tk } = arg
 
@@ -205,9 +206,7 @@ function menu_variants(tk, block) {
 				// to switch back to default lollipop when another
 				// shape is selected
 				if (!tk.skewer.shape) tk.skewer.shape = Object.entries(desiredShapes)[0]
-				if (tk.skewer?.shape?.[0] === 'filledCircle') {
-					delete desiredShapes['filledCircle']
-				}
+				delete desiredShapes[tk.skewer?.shape?.[0]]
 
 				const vectorGraphicsDiv = holder.append('div')
 				vectorGraphicsDiv

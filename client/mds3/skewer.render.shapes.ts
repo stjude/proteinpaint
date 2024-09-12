@@ -28,12 +28,19 @@ function getPathDimensions(key: string, d: any) {
 		case 'emptyVerticalRectangle':
 			return { width: d.radius * 1.4, height: d.radius * 2 }
 		case 'emptyTriangle':
-			return { width: d.radius * 1.75, height: d.radius * 1.75 }
+			return { width: d.radius * 2, height: d.radius * 2 }
 		case 'filledSquare':
 			return { width: d.radius * 1.7, height: d.radius * 1.7 }
 		case 'emptySquare':
 			return { width: d.radius * 1.7, height: d.radius * 1.7 }
+		case 'emptyShield':
+			return { width: d.radius * 1.1, height: d.radius * 1.1 * 1.3 }
 		default:
 			'Invalid shape key'
 	}
+}
+
+export function setNumBaseline(key: string) {
+	if (key == 'emptyTriangle') return 'central'
+	else return ''
 }
