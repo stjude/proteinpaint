@@ -2,6 +2,9 @@ import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '../dom/sayerror.ts'
 import { renderTable } from '../dom/table.ts'
 import { appInit } from '#plots/plot.app.js'
+import { newSandboxDiv } from '../dom/sandbox.ts'
+import { select } from 'd3-selection'
+import { copyMerge } from '#rx'
 
 /*
 FIXME unfinished! change into calling mass ui as other launchers, and api supplies a callback
@@ -43,7 +46,32 @@ export async function init(arg, holder, genomes) {
 		nobox: true,
 		hide_dsHandles: true,
 		genome: genomes[gdcGenome],
-		app: arg.opts?.app || {},
+		app: copyMerge(
+			{
+				getPlotHolder: (plot, div) => {
+					if (plot.chartType == 'gsea') {
+						const sandbox = newSandboxDiv(select(div.select(`#${plot.insertBefore}`).node().parentNode), {
+							close: () => {
+								plotAppApi.dispatch({
+									type: 'plot_delete',
+									id: plot.id
+								})
+							},
+							plotId: plot.id,
+							beforePlotId: plot.insertBefore || null,
+							style: {
+								width: '98.5%'
+							}
+						})
+						sandbox.header.text('GENE SET ENRICHMENT ANALYSIS')
+						return sandbox.body.style('white-space', 'nowrap')
+					} else {
+						return div.append('div')
+					}
+				}
+			},
+			arg.opts?.app || {}
+		),
 		singleCellPlot: arg.opts?.singleCell || {}
 	})
 	const api = {

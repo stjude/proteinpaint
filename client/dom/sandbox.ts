@@ -50,7 +50,11 @@ let sandboxIdSuffix = 0
 
 export function newSandboxDiv(sandbox_holder: Elem, opts: Partial<NewSandboxOpts> = {}): NewSandbox {
 	// NOTE: plotId=0 (Number) will not be tracked, assumes a non-empty plotId is used
-	const insertSelector = opts.beforePlotId ? '#' + plotIdToSandboxId[opts.beforePlotId] : ':first-child'
+	const insertSelector = opts.beforePlotId
+		? opts.beforePlotId in plotIdToSandboxId
+			? '#' + plotIdToSandboxId[opts.beforePlotId]
+			: `#${opts.beforePlotId}`
+		: ':first-child'
 	const app_div = sandbox_holder.insert('div', insertSelector).attr('class', 'sjpp-sandbox')
 	let sandboxId: string
 	if (opts.plotId) {

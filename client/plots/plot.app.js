@@ -133,7 +133,10 @@ class PlotApp {
 
 		for (const [index, plot] of this.state.plots.entries()) {
 			if (!this.components.plots[plot.id]) {
-				const holder = this.dom.holder.append('div')
+				const holder = this.opts.app.getPlotHolder
+					? this.opts.app.getPlotHolder(plot, this.dom.holder)
+					: this.dom.holder.append('div')
+
 				// quick fix to only track the plotDiv for the first plot
 				// TODO: reliably handle the case where a plotApp instance may have multiple plots/holders
 				if (!this.dom.plotDiv) this.dom.plotDiv = holder
