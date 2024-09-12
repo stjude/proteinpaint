@@ -235,12 +235,11 @@ function menu_variants(tk, block) {
 								callbacks.onShapeClick(val, tk)
 							}
 						})
-					if (val[1].isDefault) {
-						//adds a filled circle to toggle back to default lollipop
-						shapeSvg.append('circle').attr('cx', 8).attr('cy', 8).attr('r', 8).attr('fill', 'black')
-					} else {
-						shapeSvg.append('path').attr('d', val[1].path).attr('fill', 'none').attr('stroke', 'black')
-					}
+					shapeSvg
+						.append('path')
+						.attr('d', val[1].path)
+						.attr('fill', val[1].isFilled ? 'black' : 'none')
+						.attr('stroke', 'black')
 				})
 			}
 
