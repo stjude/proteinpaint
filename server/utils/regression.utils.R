@@ -54,7 +54,7 @@ cubic_spline <- function(values, knots) {
 }
 
 # build formulas
-buildFormulas <- function(outcome, independent) {
+buildFormulas <- function(outcome, independent, neuroOnc) {
   # first, format variables for building formulas
   
   # declare new objects
@@ -150,11 +150,24 @@ buildFormulas <- function(outcome, independent) {
     }
   } else {
     # no snplocus snps
-    # use single formula for all variables
-    formula <- as.formula(paste(formula_outcome, paste(c(formula_independent, formula_interaction), collapse = "+"), sep = "~"))
-    formulas[[1]] <- list("id" = "", "formula" = formula)
-    if (nrow(splineVariables) > 0) {
-      formulas[[1]][["splineVariables"]] = splineVariables
+    if (isTRUE(neuroOnc)) {
+      # neuro-onc dataset
+      # build multivariate and univariate formulas
+      # interactions are not supported in neuro-onc datasets, so no need to consider
+      formula <- as.formula(paste(formula_outcome, paste(formula_independent, collapse = "+"), sep = "~"))
+      formulas[[1]] <- list("id" = "", "type" = "multivariate", "formula" = formula)
+      for (var in formula_independent) {
+        formula <- as.formula(paste(formula_outcome, var, sep = "~"))
+        formulas[[length(formulas) + 1]] <- list("id" = "", "type" = "univariate", "formula" = formula)
+      }
+    } else {
+      # not a neuro-onc dataset
+      # use single formula for all variables
+      formula <- as.formula(paste(formula_outcome, paste(c(formula_independent, formula_interaction), collapse = "+"), sep = "~"))
+      formulas[[1]] <- list("id" = "", "formula" = formula)
+      if (nrow(splineVariables) > 0) {
+        formulas[[1]][["splineVariables"]] = splineVariables
+      }
     }
   }
   return(formulas)
@@ -400,7 +413,6 @@ coxRegression <- function(formula, dat) {
 
 # run regression analysis
 runRegression <- function(formula, regtype, dat, outcome, neuroOnc) {
-  id <- formula$id
   # remove samples with NA values in any variable in the formula
   # NOTE: even though regression functions (e.g. lm, glm, etc.)
   # perform this filtration by default, this filtration
@@ -441,7 +453,8 @@ runRegression <- function(formula, regtype, dat, outcome, neuroOnc) {
   if (length(warns) > 0) results[["warnings"]] <- warns
   results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType, fdat, neuroOnc)
   results$type3 <- formatType3(results$type3)
-  out <- list("id" = unbox(id), "data" = results[names(results) != "res"])
+  out <- list("id" = unbox(formula$id), "data" = results[names(results) != "res"])
+  if (isTRUE(neuroOnc)) out$type <- unbox(formula$type)
   return(out)
 }
 
@@ -613,8 +626,10 @@ build_coef_table <- function(res_summ) {
 
 # reformat the coefficients table
 formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) {
-  # round all columns to 4 significant digits
-  coefficients_table <- signif(coefficients_table, 4)
+  # round columns to 2 decimal places
+  # round p-value column to 3 significant digits
+  coefficients_table[,-ncol(coefficients_table)] <- round(coefficients_table[,-ncol(coefficients_table)], 2)
+  coefficients_table[,ncol(coefficients_table)] <- signif(coefficients_table[,ncol(coefficients_table)], 3)
   # add variable and category columns
   if (regtype == "cox") {
     vCol <- vector(mode = "character")
@@ -668,41 +683,49 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
     }
   }
   
-  if (regtype == "cox" && !is.null(neuroOnc)) {
-    # neuro-oncology dataset using cox regression
-    # report sample size and event counts of coefficients
-    sCol <- vector(mode = "character")
-    eCol <- vector(mode = "character")
-    for (i in 1:length(vCol)) {
-      v <- vCol[i]
-      c <- cCol[i]
-      if (grepl(":", v, fixed = T)) {
-        # interacting variables
-        # not allowed in neuro-oncology dataset
-        stop("interacting variables not supported")
+  coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, coefficients_table)
+  
+  if (isTRUE(neuroOnc)) {
+    # neuro-oncology dataset
+    # combine 95% CI columns
+    # FIXME: the combined 95% CI column is supported for cox, but not for linear/logistic
+    ciCol <- paste(coefficients_table[,"95% CI (low)"], coefficients_table[,"95% CI (high)"], sep = " - ")
+    coefficients_table <- cbind(coefficients_table, "95% CI" = ciCol)
+    if (regtype == "cox") {
+      # cox regression
+      # report sample size and event counts of coefficients
+      sCol <- vector(mode = "character")
+      eCol <- vector(mode = "character")
+      for (i in 1:length(vCol)) {
+        v <- vCol[i]
+        c <- cCol[i]
+        if (grepl(":", v, fixed = T)) {
+          # interacting variables
+          # not allowed in neuro-oncology dataset
+          stop("interacting variables not supported")
+        }
+        if (v %in% names(res$xlevels)) {
+          # categorical variable
+          # determine sample size and event count of both ref and non-ref categories
+          # values will be stored in separate columns in the format "ref/nonref"
+          ref <- res$xlevels[[v]][1]
+          m <- table(dat[,"outcome_event"], dat[,v])
+          samplesize_ref <- sum(m[,ref])
+          samplesize_c <- sum(m[,c])
+          sCol <- c(sCol, paste(samplesize_ref, samplesize_c, sep = "/"))
+          eventcnt_ref <- m["1",ref]
+          eventcnt_c <- m["1",c]
+          eCol <- c(eCol, paste(eventcnt_ref, eventcnt_c, sep = "/"))
+        } else {
+          # continuous variable
+          # set sample size and event count to NA
+          sCol <- c(sCol, NA)
+          eCol <- c(eCol, NA)
+        }
       }
-      if (v %in% names(res$xlevels)) {
-        # categorical variable
-        # determine sample size and event count of both ref and non-ref categories
-        # values will be stored in separate columns in the format "ref/nonref"
-        ref <- res$xlevels[[v]][1]
-        m <- table(dat[,"outcome_event"], dat[,v])
-        samplesize_ref <- sum(m[,ref])
-        samplesize_c <- sum(m[,c])
-        sCol <- c(sCol, paste(samplesize_ref, samplesize_c, sep = "/"))
-        eventcnt_ref <- m["1",ref]
-        eventcnt_c <- m["1",c]
-        eCol <- c(eCol, paste(eventcnt_ref, eventcnt_c, sep = "/"))
-      } else {
-        # continuous variable
-        # set sample size and event count to NA
-        sCol <- c(sCol, NA)
-        eCol <- c(eCol, NA)
-      }
+      coefficients_table <- cbind(coefficients_table, "Sample Size (ref/non-ref)" = sCol, "Events (ref/non-ref)" = eCol)
+      coefficients_table <- coefficients_table[, c("Variable", "Category", "Sample Size (ref/non-ref)", "Events (ref/non-ref)", "HR", "95% CI", "Pr(>|z|)"), drop = F]
     }
-    coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, "Sample Size (ref/non-ref)" = sCol, "Events (ref/non-ref)" = eCol, coefficients_table)
-  } else {
-    coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, coefficients_table)
   }
   
   coefficients_table <- list("header" = colnames(coefficients_table), "rows" = coefficients_table)
@@ -715,4 +738,32 @@ formatType3 <- function(type3_table) {
   type3_table <- cbind("Variable" = sub("cubic_spline\\(", "", sub(", c\\(.*", "", row.names(type3_table))), type3_table)
   type3_table <- list("header" = colnames(type3_table), "rows" = type3_table)
   return(type3_table)
+}
+
+# combine results from univariate and multivariate analyses
+combineUniMultiResults <- function(reg_results, regtype) {
+  # get coefficients from the univariate and multivariate analyses
+  multiCoefficients <- NULL
+  uniCoefficients <- NULL
+  for (res in reg_results) {
+    if (res$type == "multivariate") {
+      multiCoefficients <- res$data$coefficients$rows
+    } else if (res$type == "univariate") {
+      if (is.null(uniCoefficients)) {
+        uniCoefficients <- res$data$coefficients$rows
+      } else {
+        uniCoefficients <- rbind(uniCoefficients, res$data$coefficients$rows)
+      }
+    } else {
+      stop ("results type not recognized")
+    }
+  }
+  # merge coefficients from both analyses together
+  coefficients_table <- merge(uniCoefficients, multiCoefficients[,c("HR", "95% CI", "Pr(>|z|)")], by = "row.names", suffixes = c("_uni", "_multi"))
+  coefficients_table <- as.matrix(coefficients_table[,-1])
+  coefficients_table <- list("header" = colnames(coefficients_table), "rows" = coefficients_table)
+  # return the combined results 
+  reg_results_combined <- list()
+  reg_results_combined[[1]] <- list("id" = res$id, "data" = list("sampleSize" = res$data$sampleSize, "eventCnt" = res$data$eventCnt, "coefficients" = coefficients_table))
+  return(reg_results_combined)
 }
