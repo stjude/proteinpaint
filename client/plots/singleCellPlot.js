@@ -177,11 +177,23 @@ class singleCellPlot {
 			.style('justify-content', 'flex-start')
 			.style('width', '92vw')
 
+		const loadingDiv = this.opts.holder
+			.append('div')
+			.style('position', 'absolute')
+			.style('top', 0)
+			.style('left', 0)
+			.style('width', '100%')
+			.style('height', '100%')
+			.style('background-color', 'rgba(255, 255, 255, 0.8)')
+			.style('text-align', 'center')
+
+		loadingDiv.append('div').attr('class', 'sjpp-spinner')
+
 		this.dom = {
 			header: this.opts.header,
 			mainDiv,
 			//holder,
-			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '30%'),
+			loadingDiv,
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
 			controlsHolder: controlsDiv,
@@ -339,9 +351,9 @@ class singleCellPlot {
 			}
 		}
 
-		this.dom.loadingDiv.style('display', 'none')
+		this.dom.loadingDiv.selectAll('*').remove()
+		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 		this.dom.mainDiv.style('opacity', 1).style('display', '')
-
 		this.legendRendered = false
 		// if (!this.config.sample) {
 		// 	this.dom.plotsDiv.style('display', 'none')
@@ -349,6 +361,7 @@ class singleCellPlot {
 		const result = await this.getData()
 		this.dom.plotsDiv.style('display', '')
 		this.renderPlots(result)
+		this.dom.loadingDiv.style('display', 'none')
 		if (this.dom.header) this.dom.header.html(`Single Cell Data`)
 		//}
 	}
@@ -400,7 +413,8 @@ class singleCellPlot {
 			.style('position', 'relative')
 			.style('left', '-150px')
 			.style('font-size', '1.2em')
-		div.append('div').style('margin', '5px 10px').html('No matching cohort data.')
+			.style('margin', '2em 1em')
+			.html('No matching cohort data.')
 	}
 
 	renderPlots(result) {
@@ -754,18 +768,20 @@ async function renderSamplesTable(div, self, state) {
 		sayerror(div, e)
 		return
 	}
-	div.selectAll('*').remove()
 	const samples = result.samples
 	// need to set the salf.samples based on the current filter0
 	self.samples = samples
 
 	// need to do this after the self.samples has been set
-	if (self.tableOnPlot && self.table && deepEqual(self.state.termfilter.filter0, self.prevFilter0)) return
-
-	if (self.tableOnPlot && samples.length == 0) {
-		self.dom.plotsDiv.selectAll('*').remove()
-		return
+	if (self.tableOnPlot) {
+		if (samples.length == 0) {
+			self.dom.plotsDiv.selectAll('*').remove()
+			return
+		}
+		if (self.table && deepEqual(self.state.termfilter.filter0, self.prevFilter0)) return
 	}
+
+	div.selectAll('*').remove()
 
 	samples.sort((elem1, elem2) => {
 		const result = elem1.primarySite?.localeCompare(elem2.primarySite)
