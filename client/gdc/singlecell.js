@@ -31,7 +31,6 @@ const columns = [
 ]
 
 export async function init(arg, holder, genomes) {
-	const { callbacks } = arg
 	const plotAppApi = await appInit({
 		holder,
 		state: {
@@ -45,7 +44,7 @@ export async function init(arg, holder, genomes) {
 		hide_dsHandles: true,
 		genome: genomes[gdcGenome],
 		app: arg.opts?.app || {},
-		singleCellPlot: arg.opts.singleCell || {}
+		singleCellPlot: arg.opts?.singleCell || {}
 	})
 	const api = {
 		update: async updateArg => {

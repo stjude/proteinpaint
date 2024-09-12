@@ -119,11 +119,12 @@ class gsea {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.gsea
 		await this.setControls()
-		this.dom.header
-			.style('opacity', 0.6)
-			.style('padding-left', '10px')
-			.style('font-size', '0.75em')
-			.text('GENE SET ENRICHMENT ANALYSIS')
+		if (this.dom.header)
+			this.dom.header
+				.style('opacity', 0.6)
+				.style('padding-left', '10px')
+				.style('font-size', '0.75em')
+				.text('GENE SET ENRICHMENT ANALYSIS')
 		render_gsea(this)
 	}
 }
