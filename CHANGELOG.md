@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- improve text color contrast in PP SSM lollipop view
+
+
 ## 2.75.0
 
 Features:
