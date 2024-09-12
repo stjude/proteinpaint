@@ -393,7 +393,7 @@ function setRenderers(self) {
 					.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
 					.style('padding', '5px 8px')
 					.style('margin', '1px 0px')
-					.style('opacity', 0.4)
+					.style('opacity', 0.7)
 			} else if (uses.has('plot')) {
 				labeldiv
 					// need better css class

@@ -87,7 +87,7 @@ export const mclass = {
 	E: { label: 'EXON', color: '#bcbd22', dt: dtsnvindel, desc: 'A variant in the exon of a non-coding RNA.', key: 'E' },
 	F: {
 		label: 'FRAMESHIFT',
-		color: '#db3d3d',
+		color: 'rgb(200, 61, 61)',
 		dt: dtsnvindel,
 		desc: 'A sequence variant which causes a disruption of the translational reading frame, because the number of nucleotides inserted or deleted is not a multiple of three',
 		key: 'F'
@@ -108,7 +108,7 @@ export const mclass = {
 	},
 	D: {
 		label: 'PROTEINDEL',
-		color: '#7f7f7f',
+		color: 'rgb(100, 100, 100)',
 		dt: dtsnvindel,
 		desc: 'An inframe non synonymous variant that deletes bases from the coding sequence',
 		key: 'D'
