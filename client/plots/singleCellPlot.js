@@ -47,15 +47,11 @@ class singleCellPlot {
 		const q = state.termdbConfig.queries
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 		this.opts.holder.style('position', 'relative')
-		//read files data
-		const controlsDiv = this.opts.holder
-			.insert('div')
-			.style('display', 'inline-block')
-			.attr('class', 'pp-termdb-plot-controls')
+		this.showDivId = `${this.id}-sandbox`
 		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const headerDiv = mainDiv.append('div').style('padding', '10px')
 		const tableDiv = mainDiv.append('div')
-		const showDiv = headerDiv.append('div') //.style('display', 'inline-block')
+		const showDiv = headerDiv.append('div').attr('id', this.showDivId) //.style('display', 'inline-block')
 		const searchGeneDiv = headerDiv.append('div').style('padding-top', '10px').style('display', 'inline-block')
 
 		if (this.tableOnPlot) {
@@ -170,7 +166,9 @@ class singleCellPlot {
 		}
 
 		const deDiv = headerDiv.append('div').style('padding', '10px').style('display', 'inline-block')
-		const plotsDiv = mainDiv
+		const controlsDiv = mainDiv.append('div').style('display', 'inline-block').attr('class', 'pp-termdb-plot-controls')
+		const plotsDivParent = mainDiv.append('div').style('display', 'inline-block')
+		const plotsDiv = plotsDivParent
 			.append('div')
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
@@ -199,7 +197,8 @@ class singleCellPlot {
 			controlsHolder: controlsDiv,
 			tableDiv,
 			deDiv,
-			plotsDiv
+			plotsDiv,
+			plotsDivParent
 		}
 
 		const offsetX = 80
@@ -222,7 +221,8 @@ class singleCellPlot {
 						}
 						const config = {
 							chartType: 'gsea',
-							gsea_params: gsea_params
+							gsea_params: gsea_params,
+							insertBefore: this.app.opts?.app?.getPlotHolder && this.showDivId
 						}
 						this.app.dispatch({
 							type: 'plot_create',
@@ -359,7 +359,7 @@ class singleCellPlot {
 		// 	this.dom.plotsDiv.style('display', 'none')
 		// } else {
 		const result = await this.getData()
-		this.dom.plotsDiv.style('display', '')
+		this.dom.plotsDivParent.style('display', 'inline-block')
 		this.renderPlots(result)
 		this.dom.loadingDiv.style('display', 'none')
 		if (this.dom.header) this.dom.header.html(`Single Cell Data`)
