@@ -137,10 +137,10 @@ benchmark[["runRegression"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dt
 # PARSE RESULTS #
 ##################
 
-if (isTRUE(input$neuroOnc)) {
-  # neuro-oncology dataset
+if (isTRUE(input$neuroOnc) && nrow(input$independent) > 1) {
+  # neuro-oncology dataset using multiple covariates
   # combine results from univariate and multivariate analyses
-  # NOTE: this function will not work with snplocus regression because it
+  # FIXME: this function will not work with snplocus regression because it
   # will combine results from multiple analyses into a single set of results
   reg_results <- combineUniMultiResults(reg_results, input$regressionType)
 }
