@@ -3,7 +3,7 @@ import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
 import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
-import { renderSkewerShapes } from './skewer.render.shapes.ts'
+import { renderSkewerShapes, renderShapeCover } from './skewer.render.shapes.ts'
 
 /*
 ********************** EXPORTED
@@ -130,7 +130,7 @@ export function skewer_make(tk, block) {
 	const isEmptyCircle = tk.skewer?.shape?.[0] === 'emptyCircle' || false
 
 	if (tk.skewer.shape && !tk.skewer.shape[1]?.isDefault && !isEmptyCircle) {
-		renderSkewerShapes(tk, ss, discg, modefold)
+		renderSkewerShapes(tk, ss, discg)
 	} else {
 		// actual disc
 		const discdot = discg.append('circle')
@@ -232,10 +232,15 @@ export function skewer_make(tk, block) {
 		d.width = leftw + rightw
 	}
 
+	let kick
 	// invisible kicking disc cover
-	discg
-		.append('circle')
-		.attr('r', d => d.radius - 0.5)
+	if (tk.skewer.shape && !tk.skewer.shape[1]?.isDefault && !isEmptyCircle) {
+		kick = renderShapeCover(tk, ss, discg)
+	} else {
+		kick = discg.append('circle').attr('r', d => d.radius - 0.5)
+	}
+
+	kick
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.attr('class', 'sja_aa_disckick')
 		.attr('fill', 'white')
@@ -614,7 +619,7 @@ export function unfold_glyph(newlst, tk, block) {
 				return 'translate(0,' + d.y + ')'
 			})
 		setTimeout(function () {
-			set.selectAll('.sja_aa_disckick').attr('transform', 'scale(1)').attr('data-testid', 'scale(1)')
+			set.selectAll('.sja_aa_disckick').attr('transform', 'scale(1)')
 		}, dur)
 		set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 1).attr('stroke-opacity', 1)
 		set
