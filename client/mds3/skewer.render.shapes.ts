@@ -13,7 +13,6 @@ export function renderShapeKick(skewer: any, discg: any) {
 		.append('path')
 		.attr('d', d => {
 			d.radius = d.radius * 1.01
-			console.log(d.radius)
 			return skewer.shape[1].calculatePath(getPathDimensions(skewer.shape[0], d))
 		})
 		.attr('stroke-width', 1.5)

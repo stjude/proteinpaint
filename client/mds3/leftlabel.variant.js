@@ -191,14 +191,21 @@ function menu_variants(tk, block) {
 			} else return
 
 			function displayVectorGraphics(arg) {
-				const desiredShapes = { ...shapes }
+				const desiredShapes = {
+					filledCircle: shapes.filledCircle,
+					emptyCircle: shapes.emptyCircle,
+					emptyVerticalRectangle: shapes.emptyVerticalRectangle,
+					emptyTriangle: shapes.emptyTriangle,
+					emptySquare: shapes.emptySquare,
+					filledSquare: shapes.filledSquare
+				}
 				const { holder, callbacks, tk } = arg
 
 				// Set default shape for load and create a toggle
 				// to switch back to default lollipop when another
 				// shape is selected
 				if (!tk.skewer.shape) tk.skewer.shape = Object.entries(desiredShapes)[0]
-				if (tk.skewer?.shape?.[1]?.isDefault === true) {
+				if (tk.skewer?.shape?.[0] === 'filledCircle') {
 					delete desiredShapes['filledCircle']
 				}
 
