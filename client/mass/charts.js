@@ -43,7 +43,8 @@ class MassCharts {
 		) {
 			// force to show a dictionary chart button
 			// TODO: may want the server to decide this, and as defined for a dataset
-
+			if (state.vocab.dslabel.includes('Profile'))
+				state.supportedChartTypes.push(...['profilePolar', 'profileBarchart', 'profileRadar', 'profileRadarFacility'])
 			state.supportedChartTypes.push('dictionary')
 			state.supportedChartTypes.push('facet') //any dataset should support facet
 		}
@@ -254,6 +255,10 @@ function getChartTypeList(self, state) {
 			}
 		}
 	]
+	if (state.vocab.dslabel.includes('Profile')) {
+		const profileButtons = getProfileButtons(self, state)
+		buttons.unshift(...profileButtons)
+	}
 	for (const field in state?.termdbConfig.renamedChartTypes || []) {
 		const btn = buttons.find(b => b.chartType === field)
 		if (btn) {
@@ -261,6 +266,83 @@ function getChartTypeList(self, state) {
 		}
 	}
 	return buttons
+}
+
+function getProfileButtons(self, state) {
+	const profileButtons = [
+		{
+			label: 'Profile Polar',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'profilePolar',
+						header: 'Polar Graph',
+						logged: true
+					}
+				}),
+			chartType: 'profilePolar'
+		},
+		{
+			label: 'Profile Barchart',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'profileBarchart',
+						header: 'Barchart Graph',
+						logged: true
+					}
+				}),
+			chartType: 'profileBarchart'
+		},
+		{
+			label: 'Radar 1-Score-based(Site)',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'profileRadarFacility',
+						plot: 'plot1',
+						header: 'Radar 1-Score-based(Site)',
+						logged: true
+					}
+				}),
+			chartType: 'profileRadarFacility'
+		},
+		{
+			label: 'Radar 2-Impressions',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'profileRadar',
+						plot: 'plot1',
+						header: 'Radar 2-Impressions',
+						logged: true
+					}
+				}),
+			chartType: 'profileRadar'
+		}
+	]
+	if (state.vocab.dslabel == 'ProfileFull') {
+		profileButtons.push({
+			label: 'Radar 3-Score-based(SC & POC)s',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'profileRadar',
+						plot: 'plot2',
+						header: 'Radar 3-Score-based(SC & POC)',
+						logged: true
+					}
+				}),
+			chartType: 'profileRadar'
+		})
+	}
+
+	return profileButtons
 }
 
 function setRenderers(self) {
