@@ -43,7 +43,8 @@ export async function init(arg, holder, genomes) {
 		noheader: true,
 		nobox: true,
 		hide_dsHandles: true,
-		genome: genomes[gdcGenome]
+		genome: genomes[gdcGenome],
+		opts: arg.opts
 	})
 	const api = {
 		update: async updateArg => {
