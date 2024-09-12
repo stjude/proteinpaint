@@ -129,7 +129,7 @@ export function skewer_make(tk, block) {
 		})
 	const isEmptyCircle = tk.skewer?.shape?.[0] === 'emptyCircle' || false
 
-	if (tk.skewer.shape && !tk.skewer.shape[1]?.isDefault && !isEmptyCircle) {
+	if (tk.skewer.shape && !isEmptyCircle && tk.skewer.shape[0] !== 'filledCircle') {
 		renderSkewerShapes(tk, ss, discg)
 	} else {
 		// actual disc
@@ -234,7 +234,7 @@ export function skewer_make(tk, block) {
 
 	let kick
 	// invisible kicking disc cover
-	if (tk.skewer.shape && !tk.skewer.shape[1]?.isDefault) {
+	if (tk.skewer.shape && tk.skewer.shape[0] !== 'filledCircle') {
 		//Returns the kick in the same shape if skewer is not a circle
 		kick = renderShapeKick(ss, discg)
 	} else {
