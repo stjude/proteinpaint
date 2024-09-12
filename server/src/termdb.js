@@ -370,7 +370,7 @@ async function get_AllSamplesByName(q, req, res, ds) {
 
 	if (q.filter) {
 		q.ds = ds
-		const filteredSamples = ds.cohort.termdb.hasAncestry
+		const filteredSamples = ds.cohort.termdb.hasSampleAncestry
 			? await get_samples_ancestry(q.filter, q.ds, true)
 			: await get_samples(q.filter, q.ds, true)
 		for (const sample of filteredSamples) {

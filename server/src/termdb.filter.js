@@ -128,7 +128,7 @@ function get_categorical(tvs, CTEname, ds, onlyChildren) {
 	FROM anno_categorical 
 	WHERE term_id = ?
 	AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-	if (onlyChildren && ds.cohort.termdb.hasAncenstry) query = getChildren(query)
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
 		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
@@ -143,7 +143,7 @@ function get_survival(tvs, CTEname, onlyChildren) {
 	${tvs.q?.cutoff ? 'AND tte >= ' + tvs.q?.cutoff : ''}
 	AND exit_code ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
 
-	if (onlyChildren && ds.cohort.termdb.hasAncenstry)
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry)
 		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
 
 	return {
@@ -168,7 +168,7 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 				FROM sampleidmap
 				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${samples.map(s => s.sampleId || s.sample).join(', ')}) `
 	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) query += `and sample_type = ${sample_type} ` //later on need to cleanup the list handling in samplelst
-	if (onlyChildren && ds.cohort.termdb.hasAncenstry) query = getChildren(query)
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
 	return {
 		CTEs: [
 			`
@@ -227,7 +227,7 @@ async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 	let query = `SELECT id as sample
 				FROM sampleidmap
 				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
-	if (onlyChildren && ds.cohort.termdb.hasAncenstry) query = getChildren(query)
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
 
 	return {
 		CTEs: [
@@ -388,7 +388,7 @@ so here need to allow both string and number as range.value
 					${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
 					${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')}) ` : ''}`
 
-	if (onlyChildren && ds.cohort.termdb.hasAncenstry) query = getChildren(query)
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
 
 	return {
 		CTEs: [

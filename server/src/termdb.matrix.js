@@ -461,7 +461,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, t
 			const tw = termWrappers[i]
 			const sampleType = getSampleType(tw.term, q.ds)
 			let query
-			if (onlyChildren && parentType == sampleType && q.ds.cohort.termdb.hasAncenstry)
+			if (onlyChildren && parentType == sampleType && q.ds.cohort.termdb.hasSampleAncestry)
 				query = ` select sa.sample_id as sample, key, value, ? as term_id
 				 from sample_ancestry sa join ${t.tablename} on sa.ancestor_id = sample
 				${filter ? ` WHERE sample_id IN ${filter.CTEname} ` : ''}`

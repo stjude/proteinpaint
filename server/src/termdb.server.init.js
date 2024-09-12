@@ -79,7 +79,7 @@ export function server_init_db_queries(ds) {
 				parent_id: row.parent_id
 			})
 		}
-		ds.cohort.termdb.hasAncestry = ds.cohort.termdb.sampleTypes.size > 1
+		ds.cohort.termdb.hasSampleAncestry = ds.cohort.termdb.sampleTypes.size > 1
 	}
 
 	for (const table of schema_tables) if (!tables.has(table)) console.log(`${table} table missing!!!!!!!!!!!!!!!!!!!!`)
