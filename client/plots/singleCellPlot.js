@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge } from '../rx/index.js'
+import { getCompInit, copyMerge, deepEqual } from '../rx/index.js'
 import { Menu } from '#dom/menu'
 import { axisLeft, axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
@@ -46,7 +46,7 @@ class singleCellPlot {
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
-
+		this.opts.holder.style('position', 'relative')
 		//read files data
 		const controlsDiv = this.opts.holder
 			.insert('div')
@@ -179,8 +179,9 @@ class singleCellPlot {
 
 		this.dom = {
 			header: this.opts.header,
+			mainDiv,
 			//holder,
-			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '60%'),
+			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '30%'),
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
 			controlsHolder: controlsDiv,
@@ -313,6 +314,7 @@ class singleCellPlot {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+		this.prevFilter0 = this.state?.termfilter.filter0
 		return {
 			config,
 			dslabel: appState.vocab.dslabel,
@@ -331,7 +333,14 @@ class singleCellPlot {
 		this.dom.tableDiv.style('display', this.settings.showSamples ? 'block' : 'none')
 		if (this.tableOnPlot) {
 			await renderSamplesTable(this.dom.tableDiv, this, this.state)
+			if (!this.samples?.length) {
+				this.showNoMatchingDataMessage()
+				return
+			}
 		}
+
+		this.dom.loadingDiv.style('display', 'none')
+		this.dom.mainDiv.style('opacity', 1).style('display', '')
 
 		this.legendRendered = false
 		// if (!this.config.sample) {
@@ -340,7 +349,7 @@ class singleCellPlot {
 		const result = await this.getData()
 		this.dom.plotsDiv.style('display', '')
 		this.renderPlots(result)
-		if (this.dom.header) this.dom.header.html(`${sample} Single Cell Data`)
+		if (this.dom.header) this.dom.header.html(`Single Cell Data`)
 		//}
 	}
 
@@ -379,6 +388,19 @@ class singleCellPlot {
 			sayerror(this.dom.plotsDiv, e)
 			return
 		}
+	}
+
+	showNoMatchingDataMessage() {
+		this.dom.mainDiv.style('opacity', 0.001).style('display', 'none')
+		this.dom.loadingDiv.style('display', '').html('')
+		const div = this.dom.loadingDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('text-align', 'center')
+			.style('position', 'relative')
+			.style('left', '-150px')
+			.style('font-size', '1.2em')
+		div.append('div').style('margin', '5px 10px').html('No matching cohort data.')
 	}
 
 	renderPlots(result) {
@@ -734,7 +756,16 @@ async function renderSamplesTable(div, self, state) {
 	}
 	div.selectAll('*').remove()
 	const samples = result.samples
+	// need to set the salf.samples based on the current filter0
 	self.samples = samples
+
+	// need to do this after the self.samples has been set
+	if (self.tableOnPlot && self.table && deepEqual(self.state.termfilter.filter0, self.prevFilter0)) return
+
+	if (self.tableOnPlot && samples.length == 0) {
+		self.dom.plotsDiv.selectAll('*').remove()
+		return
+	}
 
 	samples.sort((elem1, elem2) => {
 		const result = elem1.primarySite?.localeCompare(elem2.primarySite)
@@ -753,7 +784,7 @@ async function renderSamplesTable(div, self, state) {
 		selectedRows.push(selectedRowIndex)
 		maxHeight = '30vh'
 	}
-	renderTable({
+	self.table = renderTable({
 		rows,
 		columns,
 		resize: true,
