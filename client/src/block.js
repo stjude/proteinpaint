@@ -126,7 +126,7 @@ export class Block {
 				mclasses: new Map(), // two special legend that cover all dstk on display
 				morigins: new Map(),
 				legendcolor: '#7D6836',
-				headtextcolor: '#aaa',
+				headtextcolor: '#555',
 				vpad: '5px'
 			}
 		}
@@ -1973,7 +1973,7 @@ reverseorient() {
 					'&nbsp;&nbsp;<span style="font-size:.7em">' +
 					(gm.strand == '+' ? 'FORWARD' : 'REVERSE') +
 					'</span>' +
-					'&nbsp;&nbsp;<span style="color:#858585">' +
+					'&nbsp;&nbsp;<span style="color:#555">' +
 					common.bplen(gm.stop - gm.start) +
 					'</span>'
 			)
@@ -1982,7 +1982,7 @@ reverseorient() {
 			.append('div')
 			.text('Switch display')
 			.style('font-size', '1.5em')
-			.style('color', '#aaa')
+			.style('color', '#555')
 			.style('margin-bottom', '20px')
 		this.showgmmode4switch(sec2, true)
 		// sec 3
@@ -1993,7 +1993,7 @@ reverseorient() {
 				.style('padding', '20px 30px 40px 30px')
 			sec3
 				.append('div')
-				.style('color', '#aaa')
+				.style('color', '#555')
 				.style('font-size', '1.5em')
 				.style('margin-bottom', '20px')
 				.text('Switch isoform')
@@ -3578,7 +3578,7 @@ seekrange(chr,start,stop) {
 		return tk.gright
 			.append('text')
 			.text('CONFIG')
-			.attr('fill', '#aaa')
+			.attr('fill', '#555')
 			.attr('font-family', client.font)
 			.attr('font-size', this.labelfontsize)
 			.attr('y', this.labelfontsize)
@@ -3922,12 +3922,13 @@ seekrange(chr,start,stop) {
 		if (this.allgm.length > 10) {
 			mayscroll = holder
 				.append('div')
+				.attr('tabindex', 0)
 				.style('height', '200px')
 				.style('overflow-y', 'scroll')
 				.style('resize', 'vertical')
 		}
 
-		const table = mayscroll.append('table').style('color', '#aaa')
+		const table = mayscroll.append('table').style('color', '#555')
 
 		const gmlabellst = []
 
