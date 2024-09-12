@@ -209,17 +209,17 @@ function makeControls(obj) {
 	const table = obj.controlDiv.append('table')
 	{
 		const tr = table.append('tr')
-		tr.append('td').style('opacity', 0.5).text('Access')
+		tr.append('td').style('opacity', 0.7).text('Access')
 		tr.append('td').text('Open')
 	}
 	{
 		const tr = table.append('tr')
-		tr.append('td').style('opacity', 0.5).text('Workflow Type')
+		tr.append('td').style('opacity', 0.7).text('Workflow Type')
 		tr.append('td').text('Aliquot Ensemble Somatic Variant Merging and Masking')
 	}
 	{
 		const tr = table.append('tr')
-		tr.append('td').style('opacity', 0.5).text('Experimental Strategy')
+		tr.append('td').style('opacity', 0.7).text('Experimental Strategy')
 		const td = tr.append('td')
 		make_radios({
 			holder: td,
@@ -240,7 +240,7 @@ function makeControls(obj) {
 	}
 	{
 		const tr = table.append('tr')
-		tr.append('td').style('opacity', 0.5).text('Output Columns')
+		tr.append('td').style('opacity', 0.7).text('Output Columns')
 		const td = tr.append('td')
 		const clickText = td
 			.append('span')
