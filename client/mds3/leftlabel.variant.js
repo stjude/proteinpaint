@@ -190,27 +190,18 @@ function menu_variants(tk, block) {
 					})
 			} else return
 
-			// const desiredShapes = [
-			// 	shapes.emptyVerticalRectangle,
-			// 	shapes.emptyCircle
-			// 	// shapes.emptyShield,
-			// 	// shapes.emptyTriangle,
-			// 	// shapes.emptyDiamond,
-			// 	// shapes.plusIcon,
-			// 	// shapes.emptyEgg,
-			// 	// shapes.emptyPentagon,
-			// 	// shapes.emptyDiamondSuit,
-			// 	// shapes.emptySquare
-			// 	// shapes.crossShape
-			// ]
-
-			const desiredShapes = shapes
-
 			function displayVectorGraphics(arg) {
+				const desiredShapes = { ...shapes }
 				const { holder, callbacks, tk } = arg
-				if (!tk.skewer.shape || tk.skewer.shape?.isDefault) {
+
+				// Set default shape for load and create a toggle
+				// to switch back to default lollipop when another
+				// shape is selected
+				if (!tk.skewer.shape) tk.skewer.shape = Object.entries(desiredShapes)[0]
+				if (tk.skewer?.shape?.[1]?.isDefault === true) {
 					delete desiredShapes['filledCircle']
 				}
+
 				const vectorGraphicsDiv = holder.append('div')
 				vectorGraphicsDiv
 					.append('div')
@@ -228,7 +219,6 @@ function menu_variants(tk, block) {
 					.style('display', 'flex')
 					.style('flex-wrap', 'wrap')
 					.style('width', 'max-content')
-				// .style('width', '340px')
 
 				Object.entries(desiredShapes).forEach((val, idx) => {
 					const shapeWrapper = shapesContainer.append('div').style('padding', '0px 2px')
@@ -247,7 +237,7 @@ function menu_variants(tk, block) {
 						})
 					if (val[1].isDefault) {
 						//adds a filled circle to toggle back to default lollipop
-						shapeSvg.append('circle').attr('cx', 9).attr('cy', 8).attr('r', 8).attr('fill', 'black')
+						shapeSvg.append('circle').attr('cx', 8).attr('cy', 8).attr('r', 8).attr('fill', 'black')
 					} else {
 						shapeSvg.append('path').attr('d', val[1].path).attr('fill', 'none').attr('stroke', 'black')
 					}
