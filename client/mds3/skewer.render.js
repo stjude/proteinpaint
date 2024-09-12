@@ -3,7 +3,7 @@ import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
 import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
-import { renderSkewerShapes, renderShapeCover } from './skewer.render.shapes.ts'
+import { renderSkewerShapes, renderShapeKick } from './skewer.render.shapes.ts'
 
 /*
 ********************** EXPORTED
@@ -234,8 +234,9 @@ export function skewer_make(tk, block) {
 
 	let kick
 	// invisible kicking disc cover
-	if (tk.skewer.shape && !tk.skewer.shape[1]?.isDefault && !isEmptyCircle) {
-		kick = renderShapeCover(tk, ss, discg)
+	if (tk.skewer.shape && !tk.skewer.shape[1]?.isDefault) {
+		//Returns the kick in the same shape if skewer is not a circle
+		kick = renderShapeKick(ss, discg)
 	} else {
 		kick = discg.append('circle').attr('r', d => d.radius - 0.5)
 	}
