@@ -633,7 +633,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					chartType: 'sampleScatter',
 					term: { term: xterm, q: { mode: 'continuous' } },
 					term2: { term: yterm, q: { mode: 'continuous' } },
-					name: 'Dynamic Scatter'
+					name: `${xterm.name} vs ${yterm.name}`
 				}
 			})
 		}

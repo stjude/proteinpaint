@@ -68,7 +68,13 @@ class profileRadarFacility extends profilePlot {
 		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 420},${y + 10})`)
 
 		const rows = []
-		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: `Facility` }, { label: 'Global' }]
+		const columns = [
+			{ label: 'Color' },
+			{ label: 'Module' },
+			{ label: `Facility` },
+			{ label: 'Global' },
+			{ label: 'Diff' }
+		]
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -78,11 +84,15 @@ class profileRadarFacility extends profilePlot {
 		for (const item of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
 			this.addData(iangle, i, data2, true)
-			const color = item.score.term.color
-			const row = [{ color, disabled: true }, { value: item.module }, { value: this.getPercentage(item) }]
-
 			this.addData(iangle, i, data, false)
-			row.push({ value: this.getPercentage(item, true) })
+
+			const color = item.score.term.color
+			const value1 = this.getPercentage(item) //facility
+			const value2 = this.getPercentage(item, true)
+			const diff = Math.abs(value1 - value2)
+			const diffRow = { value: diff }
+			if (diff >= 20) diffRow.color = value2 > value1 ? 'red' : 'blue'
+			const row = [{ color, disabled: true }, { value: item.module }, { value: value1 }, { value: value2 }, diffRow]
 			rows.push(row)
 
 			i++

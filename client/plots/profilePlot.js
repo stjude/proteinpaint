@@ -400,7 +400,7 @@ export class profilePlot {
 						termsPerRequest: 30,
 						filter: getSampleFilter(parseInt(id))
 					})
-					this.sampleData = result.samples[Number(this.settings.site)]
+					this.sampleData = result.lst[0]
 				} //Admin
 				else {
 					result = await this.app.vocabApi.getAnnotatedSampleData({
