@@ -13,14 +13,11 @@ export const shapes = {
 	emptyCircle: {
 		path: 'M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16',
 		calculatePath: opts => {
-			const _opts = { cx: 8, cy: 8, radius: 8 }
+			const _opts = { radius: 16 }
 			Object.assign(_opts, opts)
+			const { radius } = _opts
 
-			const { cx, cy, radius } = _opts
-
-			return `M${cx} ${cy - radius}a${radius} ${radius} 0 1 0 0 ${2 * radius}a${radius} ${radius} 0 1 0 0 -${
-				2 * radius
-			}z`
+			return `M${radius},0 A${radius},${radius} 0 1,1 ${-radius},0 A${radius},${radius} 0 1,1 ${radius},0 Z`
 		},
 		isFilled: false
 	},

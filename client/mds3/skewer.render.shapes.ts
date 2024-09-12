@@ -8,17 +8,24 @@ export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 		.attr('stroke', skewer.shape[1].isFilled ? 'white' : d => tk.color4disc(d.mlst[0]))
 }
 
-export function renderShapeCover(tk: any, skewer: any, discg: Elem) {
-	const kick = discg.append('path').attr('d', d => {
-		d.radius = d.radius * 1.01
-		return skewer.shape[1].calculatePath(getPathDimensions(skewer.shape[0], d))
-	})
+export function renderShapeKick(skewer: any, discg: any) {
+	const kick = discg
+		.append('path')
+		.attr('d', d => {
+			d.radius = d.radius * 1.01
+			console.log(d.radius)
+			return skewer.shape[1].calculatePath(getPathDimensions(skewer.shape[0], d))
+		})
+		.attr('stroke-width', 1.5)
+
 	return kick
 }
 
 function getPathDimensions(key: string, d: any) {
 	//Add more shapes here using the key from #dom/shapes.js
 	switch (key) {
+		case 'emptyCircle':
+			return { radius: d.radius }
 		case 'emptyVerticalRectangle':
 			return { width: d.radius * 1.4, height: d.radius * 2 }
 		case 'emptyTriangle':
