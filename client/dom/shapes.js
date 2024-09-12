@@ -15,7 +15,10 @@ export const shapes = {
 			Object.assign(_opts, opts)
 			const { width, height } = _opts
 
-			return `M0 0h${width}v${height}h-${width}z`
+			const xOffset = width / 2
+			const yOffset = height / 2
+
+			return `M-${xOffset},-${yOffset}h${width}v${height}h-${width}z`
 		},
 		isFilled: false
 	},

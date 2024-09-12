@@ -130,7 +130,7 @@ export function skewer_make(tk, block) {
 	const isEmptyCircle = tk.skewer?.shape?.[0] === 'emptyCircle' || false
 
 	if (tk.skewer.shape && !tk.skewer.shape[1]?.isDefault && !isEmptyCircle) {
-		renderSkewerShapes(tk, ss, discg)
+		renderSkewerShapes(tk, ss, discg, modefold)
 	} else {
 		// actual disc
 		const discdot = discg.append('circle')
