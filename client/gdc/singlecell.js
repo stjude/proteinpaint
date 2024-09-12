@@ -44,7 +44,8 @@ export async function init(arg, holder, genomes) {
 		nobox: true,
 		hide_dsHandles: true,
 		genome: genomes[gdcGenome],
-		opts: arg.opts
+		app: arg.opts?.app || {},
+		singleCellPlot: arg.opts.singleCell || {}
 	})
 	const api = {
 		update: async updateArg => {
@@ -169,7 +170,6 @@ async function getFilesAndShowTable(obj) {
 		resize: true,
 		singleMode: true,
 		div: obj.tableDiv.append('div'),
-		singleMode: true,
 		noButtonCallback: index => {
 			console.log(160)
 			obj.api.update({
