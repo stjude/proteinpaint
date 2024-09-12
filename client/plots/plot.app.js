@@ -133,7 +133,7 @@ class PlotApp {
 
 		for (const [index, plot] of this.state.plots.entries()) {
 			if (!this.components.plots[plot.id]) {
-				const holder = this.opts.app.getPlotHolder
+				const holder = this.opts?.app?.getPlotHolder
 					? this.opts.app.getPlotHolder(plot, this.dom.holder)
 					: this.dom.holder.append('div')
 
