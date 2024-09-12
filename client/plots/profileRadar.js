@@ -75,7 +75,7 @@ class profileRadar extends profilePlot {
 
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 200})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 320},${y + 240})`)
 		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 340})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
@@ -89,10 +89,10 @@ class profileRadar extends profilePlot {
 			this.addData('term1', iangle, i, data)
 			const color = term1.score.term.color
 			const value1 = this.getPercentage(term1)
-			const value2 = this.getPercentage(term2)
+			const value2 = this.getPercentage(term2) //ref term
 			const diff = Math.abs(value1 - value2)
 			const diffRow = { value: diff }
-			if (diff >= 20) diffRow.color = 'red'
+			if (diff >= 20) diffRow.color = value2 > value1 ? 'red' : 'blue'
 			rows.push([{ color, disabled: true }, { value: module }, { value: value1 }, { value: value2 }, diffRow])
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI

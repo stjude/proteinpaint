@@ -87,11 +87,11 @@ class profileRadarFacility extends profilePlot {
 			this.addData(iangle, i, data, false)
 
 			const color = item.score.term.color
-			const value1 = this.getPercentage(item)
+			const value1 = this.getPercentage(item) //facility
 			const value2 = this.getPercentage(item, true)
 			const diff = Math.abs(value1 - value2)
 			const diffRow = { value: diff }
-			if (diff >= 20) diffRow.color = 'red'
+			if (diff >= 20) diffRow.color = value2 > value1 ? 'red' : 'blue'
 			const row = [{ color, disabled: true }, { value: item.module }, { value: value1 }, { value: value2 }, diffRow]
 			rows.push(row)
 
