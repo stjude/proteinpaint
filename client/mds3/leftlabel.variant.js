@@ -188,7 +188,7 @@ function menu_variants(tk, block) {
 							})
 						}
 					})
-			} else return
+			}
 
 			function displayVectorGraphics(arg) {
 				const desiredShapes = {
