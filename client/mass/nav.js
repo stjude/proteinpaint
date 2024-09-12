@@ -326,10 +326,6 @@ function setRenderers(self) {
 			.html(d => d.label)
 			.on('click', (event, d) => {
 				self.setTab(event, d)
-				if (d.colNum === self.activeTab) {
-					/** If tab is already selected, change background color */
-					self.dom.tds.style('background-color', 'transparent')
-				}
 			})
 
 		self.dom.trs = table.selectAll('tr')
@@ -420,7 +416,9 @@ function setRenderers(self) {
 		self.dom.tds
 			.style('display', '')
 			.style('color', d => (d.colNum == self.activeTab ? '#000' : '#aaa'))
-			.style('background-color', d => (d.colNum == self.activeTab ? '#ececec' : 'transparent'))
+			.style('background-color', d =>
+				d.colNum == self.activeTab && self.dom.subheaderDiv.style('display') != 'none' ? '#ececec' : 'transparent'
+			)
 			.html(function (d, i) {
 				if (d.key == 'top') return this.innerHTML
 
