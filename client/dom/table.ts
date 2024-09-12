@@ -145,7 +145,6 @@ export function renderTable({
 		if (!singleMode) {
 			const checkboxH = cell
 				.append('input')
-				.attr('aria-label', 'Check/Uncheck All')
 				.attr('id', 'checkboxHeader')
 				.attr('type', 'checkbox')
 				.on('change', () => {
@@ -201,7 +200,6 @@ export function renderTable({
 			}
 			checkbox = td
 				.append('input')
-				.attr('aria-label', 'Select row')
 				.attr('type', singleMode ? 'radio' : 'checkbox')
 				.attr('name', uniqueInputName)
 				.attr('value', i)

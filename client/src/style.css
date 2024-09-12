@@ -1274,6 +1274,9 @@ sandbox header
     opacity: 0;
     transition: opacity 0.5s 0.25s; /* 👈 Change the time to meet your requirements. */;
     z-index: 1000;
+    width: max-content;
+    max-width: 300px;
+    white-space: wrap;
 }
 
   .sja_root_holder [aria-label]:hover:after, .sja_menu_div [aria-label]:hover:after, .sja_pane [aria-label]:hover:after {
