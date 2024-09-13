@@ -43,7 +43,7 @@ class MassCharts {
 		) {
 			// force to show a dictionary chart button
 			// TODO: may want the server to decide this, and as defined for a dataset
-			if (state.vocab.dslabel.includes('Profile'))
+			if (state.vocab.dslabel == 'ProfileFull' || state.vocab.dslabel == 'ProfileAbbrev')
 				state.supportedChartTypes.push(...appState.termdbConfig.allowedChartTypes)
 			state.supportedChartTypes.push('dictionary')
 			state.supportedChartTypes.push('facet') //any dataset should support facet
@@ -255,7 +255,7 @@ function getChartTypeList(self, state) {
 			}
 		}
 	]
-	if (state.vocab.dslabel.includes('Profile')) {
+	if (state.vocab.dslabel == 'ProfileFull' || state.vocab.dslabel == 'ProfileAbbrev') {
 		const profileButtons = getProfileButtons(self, state)
 		buttons.unshift(...profileButtons)
 	}
