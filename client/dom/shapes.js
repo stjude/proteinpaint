@@ -58,16 +58,16 @@ export const shapes = {
 	filledTriangle: {
 		path: 'M7.022 1.566a1.13 1.13 0 0 1 1.96 0l6.857 11.667c.457.778-.092 1.767-.98 1.767H1.144c-.889 0-1.437-.99-.98-1.767z',
 		calculatePath: opts => {
-			const _opts = { height: 16, width: 16 }
+			const _opts = { height: 16, width: 16, isUp: true }
 			Object.assign(_opts, opts)
-			const { width, height } = _opts
+			const { width, height, isUp } = _opts
 
 			const xOffset = width / 2
 			const yOffset = height / 2
 
-			const p1 = `M0,-${yOffset}`
-			const p2 = `L${xOffset},${yOffset}`
-			const p3 = `L-${xOffset},${yOffset}`
+			const p1 = isUp ? `M0,-${yOffset}` : `M0,${yOffset}`
+			const p2 = isUp ? `L${xOffset},${yOffset}` : `L${xOffset},-${yOffset}`
+			const p3 = isUp ? `L-${xOffset},${yOffset}` : `L-${xOffset},-${yOffset}`
 
 			return `${p1} ${p2} ${p3} Z`
 		},
@@ -79,16 +79,16 @@ export const shapes = {
 	emptyTriangle: {
 		path: 'M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057m1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z',
 		calculatePath: opts => {
-			const _opts = { height: 16, width: 16 }
+			const _opts = { height: 16, width: 16, isUp: true }
 			Object.assign(_opts, opts)
-			const { width, height } = _opts
+			const { width, height, isUp } = _opts
 
 			const xOffset = width / 2
 			const yOffset = height / 2
 
-			const p1 = `M0,-${yOffset}`
-			const p2 = `L${xOffset},${yOffset}`
-			const p3 = `L-${xOffset},${yOffset}`
+			const p1 = isUp ? `M0,-${yOffset}` : `M0,${yOffset}`
+			const p2 = isUp ? `L${xOffset},${yOffset}` : `L${xOffset},-${yOffset}`
+			const p3 = isUp ? `L-${xOffset},${yOffset}` : `L-${xOffset},-${yOffset}`
 
 			return `${p1} ${p2} ${p3} Z`
 		},
