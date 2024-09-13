@@ -1277,6 +1277,7 @@ sandbox header
     width: max-content;
     max-width: 200px;
     white-space: wrap;
+    pointer-events: none;
 }
 
   .sja_root_holder [aria-label]:hover:after, .sja_menu_div [aria-label]:hover:after, .sja_pane [aria-label]:hover:after {
