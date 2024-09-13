@@ -167,7 +167,7 @@ export function skewer_make(tk, block) {
 		.attr('class', 'sja_aa_discnum')
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('stroke-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
-		.attr('dominant-baseline', tk.skewer.shape ? setNumBaseline(tk.skewer.shape[0]) : '')
+		.attr('dominant-baseline', tk.skewer.shape ? setNumBaseline(tk.skewer.shape[0], tk.skewer.pointup) : '')
 		.attr('text-anchor', 'middle')
 		.each(d => {
 			const s = d.radius * 1.5
@@ -653,7 +653,12 @@ export function unfold_glyph(newlst, tk, block) {
 			.selectAll('.sja_aa_ssk_text')
 			.attr('transform', 'scale(1)')
 			.attr('y', ((tk.skewer.pointup ? 1 : -1) * tk.skewer.stem1) / 2)
-		set.selectAll('.sja_aa_skkick').attr('transform', 'scale(0.01,0.01)') // safari fix
+		set
+			.selectAll('.sja_aa_skkick')
+			.attr(
+				'transform',
+				d => `${tk.skewer.shape ? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})` : ''}  scale(0.01,0.01)`
+			) // safari fix
 		let counter = 0
 		set
 			.selectAll('.sja_aa_stem')
@@ -858,7 +863,10 @@ export function fold_glyph(lst, tk) {
 		.selectAll('.sja_aa_skkick')
 		.transition()
 		.duration(dur) // to prevent showing pica over busy skewer
-		.attr('transform', 'scale(1)')
+		.attr(
+			'transform',
+			d => `${tk.skewer.shape ? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})` : ''} scale(1)`
+		)
 }
 
 /* works for both skewer and numeric mode
