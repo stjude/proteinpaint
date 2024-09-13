@@ -7,6 +7,7 @@ export const shapes = {
 	},
 
 	//rectangle empty
+	// https://icons.getbootstrap.com/icons/file/
 	emptyVerticalRectangle: {
 		path: 'M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1',
 		calculatePath: opts => {
@@ -14,10 +15,7 @@ export const shapes = {
 			Object.assign(_opts, opts)
 			const { width, height } = _opts
 
-			const xOffset = width / 2
-			const yOffset = height / 2
-
-			return `M-${xOffset},-${yOffset}h${width}v${height}h-${width}z`
+			return `M-${width / 2},-${height / 2}h${width}v${height}h-${width}z`
 		},
 		isFilled: false
 	},
@@ -37,6 +35,7 @@ export const shapes = {
 	},
 
 	// shield empty
+	// https://icons.getbootstrap.com/icons/shield/
 	emptyShield: {
 		path: 'M5.338 1.59a61 61 0 0 0-2.837.856.48.48 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.7 10.7 0 0 0 2.287 2.233c.346.244.652.42.893.533q.18.085.293.118a1 1 0 0 0 .101.025 1 1 0 0 0 .1-.025q.114-.034.294-.118c.24-.113.547-.29.893-.533a10.7 10.7 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.8 11.8 0 0 1-2.517 2.453 7 7 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7 7 0 0 1-1.048-.625 11.8 11.8 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 63 63 0 0 1 5.072.56',
 		calculatePath: opts => {
@@ -46,18 +45,32 @@ export const shapes = {
 
 			const halfWidth = width / 2
 			const arcRadius = halfWidth
-			const bottomPointY = height / 2
 
 			return `M-${halfWidth},-${height / 2} A${arcRadius},${arcRadius} 0 0,1 ${halfWidth},-${
 				height / 2
-			} L${halfWidth},${height * 0.1} L0,${bottomPointY} L-${halfWidth},${height * 0.1} Z`
+			} L${halfWidth},${height * 0.1} L0,${height / 2} L-${halfWidth},${height * 0.1} Z`
 		},
 		isFilled: false
 	},
 
 	// triangle filled
+	// https://icons.getbootstrap.com/icons/triangle-fill/
 	filledTriangle: {
 		path: 'M7.022 1.566a1.13 1.13 0 0 1 1.96 0l6.857 11.667c.457.778-.092 1.767-.98 1.767H1.144c-.889 0-1.437-.99-.98-1.767z',
+		calculatePath: opts => {
+			const _opts = { height: 16, width: 16 }
+			Object.assign(_opts, opts)
+			const { width, height } = _opts
+
+			const xOffset = width / 2
+			const yOffset = height / 2
+
+			const p1 = `M0,-${yOffset}`
+			const p2 = `L${xOffset},${yOffset}`
+			const p3 = `L-${xOffset},${yOffset}`
+
+			return `${p1} ${p2} ${p3} Z`
+		},
 		isFilled: true
 	},
 
@@ -149,10 +162,7 @@ export const shapes = {
 			Object.assign(_opts, opts)
 			const { width, height } = _opts
 
-			const xOffset = width / 2
-			const yOffset = height / 2
-
-			return `M-${xOffset},-${yOffset} h${width} v${height} h-${width} Z`
+			return `M-${width / 2},-${height / 2} h${width} v${height} h-${width} Z`
 		},
 		isFilled: false
 	},
@@ -177,10 +187,21 @@ export const shapes = {
 			Object.assign(_opts, opts)
 			const { width, height } = _opts
 
-			const xOffset = width / 2
-			const yOffset = height / 2
+			return `M-${width / 2},-${height / 2} h${width} v${height} h-${width} Z`
+		},
+		isFilled: true
+	},
 
-			return `M-${xOffset},-${yOffset} h${width} v${height} h-${width} Z`
+	//rectangle filled
+	// https://icons.getbootstrap.com/icons/file-fill/
+	filledVerticalRectangle: {
+		path: 'M4 0h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2',
+		calculatePath: opts => {
+			const _opts = { height: 16, width: 16 }
+			Object.assign(_opts, opts)
+			const { width, height } = _opts
+
+			return `M-${width / 2},-${height / 2}h${width}v${height}h-${width}z`
 		},
 		isFilled: true
 	}

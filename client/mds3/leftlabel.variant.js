@@ -194,11 +194,12 @@ function menu_variants(tk, block) {
 				const desiredShapes = {
 					filledCircle: shapes.filledCircle,
 					emptyCircle: shapes.emptyCircle,
+					filledVerticalRectangle: shapes.filledVerticalRectangle,
 					emptyVerticalRectangle: shapes.emptyVerticalRectangle,
+					filledTriangle: shapes.filledTriangle,
 					emptyTriangle: shapes.emptyTriangle,
-					emptySquare: shapes.emptySquare,
-					filledSquare: shapes.filledSquare
-					// emptyShield: shapes.emptyShield
+					filledSquare: shapes.filledSquare,
+					emptySquare: shapes.emptySquare
 				}
 				const { holder, callbacks, tk } = arg
 
