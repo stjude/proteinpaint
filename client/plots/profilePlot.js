@@ -428,7 +428,7 @@ export class profilePlot {
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
-		this.settings.site = '' //always clear site when a filter is changed
+		if (this.type != 'profileRadarFacility') this.settings.site = '' //always clear site when a filter is changed
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
@@ -502,7 +502,7 @@ export class profilePlot {
 		if (!value) return
 		this.filtersCount++
 
-		const itemG = this.filterG.append('g').attr('font-size', '0.8em')
+		const itemG = this.filterG.append('g').attr('font-size', '0.95em')
 		const text = itemG
 			.append('text')
 			.attr('transform', `translate(0, ${this.filtersCount * 22})`)
@@ -527,7 +527,7 @@ export class profilePlot {
 	}
 
 	addPOCNote(uiG) {
-		uiG.attr('font-size', '0.8em')
+		uiG.attr('font-size', '0.9em')
 		let textElem = uiG.append('text').attr('transform', `translate(0, 115)`)
 		textElem.append('tspan').attr('font-weight', 'bold').text('Point of Care (POC) Staff: ')
 		textElem.append('tspan').text('All members of the assessment team, ')
