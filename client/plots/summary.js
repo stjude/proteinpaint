@@ -75,6 +75,11 @@ class SummaryPlot {
 
 		const activeTabIndex = this.tabsData.findIndex(tab => tab.childType == this.config.childType)
 		this.chartToggles.update(activeTabIndex, this.config)
+
+		//Only show tabs when more than one are present
+		const numVisTabs = this.tabsData.filter(d => d.isVisible()).length
+		if (numVisTabs > 1) this.dom.chartToggles.style('display', 'inline-block')
+		else this.dom.chartToggles.style('display', 'none')
 	}
 
 	async setComponent(config) {
