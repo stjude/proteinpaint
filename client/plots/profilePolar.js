@@ -82,8 +82,8 @@ class profilePolar extends profilePlot {
 		const y = 330
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 280}, ${y - 200})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 270},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 280}, ${y})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 280},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
