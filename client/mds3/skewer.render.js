@@ -337,6 +337,7 @@ export function skewer_make(tk, block) {
 			.attr('cy', d => (tk.skewer.pointup ? -1 : 1) * d.maxradius)
 			.attr('transform', d => `scale(${d.showmode == modefold ? '1,1' : '0.01,0.01'})`) // "scale(0)" will not make the circle disappear on safari
 	}
+
 	foldedKick
 		.attr('class', 'sja_aa_skkick')
 		.attr('fill', 'white')
@@ -657,7 +658,12 @@ export function unfold_glyph(newlst, tk, block) {
 			.selectAll('.sja_aa_skkick')
 			.attr(
 				'transform',
-				d => `${tk.skewer.shape ? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})` : ''}  scale(0.01,0.01)`
+				d =>
+					`${
+						tk.skewer.shape && !tk.skewer.shape[0].includes('Circle')
+							? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})`
+							: ''
+					}  scale(0.01,0.01)`
 			) // safari fix
 		let counter = 0
 		set
@@ -865,7 +871,12 @@ export function fold_glyph(lst, tk) {
 		.duration(dur) // to prevent showing pica over busy skewer
 		.attr(
 			'transform',
-			d => `${tk.skewer.shape ? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})` : ''} scale(1)`
+			d =>
+				`${
+					tk.skewer.shape && !tk.skewer.shape[0].includes('Circle')
+						? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})`
+						: ''
+				} scale(1)`
 		)
 }
 
