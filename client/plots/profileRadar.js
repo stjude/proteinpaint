@@ -25,6 +25,7 @@ class profileRadar extends profilePlot {
 			this.twLst.push(row.term2.score)
 			if (row.term2.maxScore.term) this.twLst.push(row.term2.maxScore)
 		}
+		this.arcGenerator = d3.arc().innerRadius(0)
 	}
 
 	async main() {
@@ -68,15 +69,15 @@ class profileRadar extends profilePlot {
 		if (!this.settings.comparison)
 			this.svg
 				.append('text')
-				.attr('transform', `translate(40, ${40})`)
+				.attr('transform', `translate(60, ${40})`)
 				.attr('font-weight', 'bold')
 				.attr('font-size', '0.9rem')
 				.text(config[config.plot].title)
 
-		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
-		this.polarG = polarG
+		const radarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
+		this.radarG = radarG
 		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 320},${y + 240})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 340})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 320})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -85,20 +86,36 @@ class profileRadar extends profilePlot {
 			data2 = [] //term2
 		for (let { module, term1, term2 } of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
-			this.addData('term2', iangle, i, data2)
-			this.addData('term1', iangle, i, data)
+			const item = this.terms[i]
+			const percentage1 = this.getPercentage(term1)
+			const percentage2 = this.getPercentage(term2)
+			//arc
+			this.radarG
+				.append('path')
+				.datum({ module: item.module, percentage1, percentage2 })
+				.attr('fill', 'transparent')
+				.attr(
+					'd',
+					this.arcGenerator({
+						outerRadius: this.radius,
+						startAngle: i * this.angle,
+						endAngle: (i + 1) * this.angle
+					})
+				)
+				.on('click', event => this.onMouseOver(event))
+
+			this.addData('term2', percentage2, iangle, data2)
+			this.addData('term1', percentage1, iangle, data)
 			const color = term1.score.term.color
-			const value1 = this.getPercentage(term1)
-			const value2 = this.getPercentage(term2) //ref term
-			const diff = Math.abs(value1 - value2)
+			const diff = Math.abs(percentage1 - percentage2)
 			const diffRow = { value: diff }
-			if (diff >= 20) diffRow.color = value2 > value1 ? 'red' : 'blue'
-			rows.push([{ color, disabled: true }, { value: module }, { value: value1 }, { value: value2 }, diffRow])
+			if (diff >= 20) diffRow.color = percentage2 > percentage1 ? 'red' : 'blue'
+			rows.push([{ color, disabled: true }, { value: module }, { value: percentage1 }, { value: percentage2 }, diffRow])
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
 			let dx = radius * 1.1 * Math.cos(iangle)
 			let dy = radius * 1.1 * Math.sin(iangle) - 10
-			const textElem = polarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
+			const textElem = radarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
 			const texts = module.split(' ')
 			let span
 			texts.forEach((text, j) => {
@@ -127,7 +144,7 @@ class profileRadar extends profilePlot {
 		data2.push(data2[0])
 		const color1 = 'blue',
 			color2 = 'gray'
-		polarG
+		radarG
 			.append('g')
 			.append('path')
 			.style('stroke', color1)
@@ -135,7 +152,7 @@ class profileRadar extends profilePlot {
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data))
 
-		polarG
+		radarG
 			.append('g')
 			.append('path')
 			.style('stroke', color2)
@@ -146,7 +163,7 @@ class profileRadar extends profilePlot {
 
 		for (let i = 0; i <= 10; i++) {
 			const percent = i * 10
-			polarG
+			radarG
 				.append('text')
 				.attr('transform', `translate(-10, ${(-percent / 100) * radius + 5})`)
 				.attr('text-anchor', 'end')
@@ -170,20 +187,13 @@ class profileRadar extends profilePlot {
 		this.addFilterLegend()
 	}
 
-	addData(field, iangle, i, data) {
-		const item = this.terms[i]
-		const percentage = this.getPercentage(item[field])
+	addData(field, percentage, iangle, data) {
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
 		const color = field == 'term1' ? 'blue' : '#aaa'
-		const circle = this.polarG
-			.append('g')
-			.attr('transform', `translate(${x}, ${y})`)
-			.append('circle')
-			.attr('r', 4)
-			.attr('fill', color)
-		circle.datum({ module: item.module, percentage }).on('click', event => this.onMouseOver(event))
+		//circle
+		this.radarG.append('g').attr('transform', `translate(${x}, ${y})`).append('circle').attr('r', 4).attr('fill', color)
 
 		data.push([x, y])
 	}
@@ -199,7 +209,7 @@ class profileRadar extends profilePlot {
 		}
 
 		data.push(data[0])
-		this.polarG
+		this.radarG
 			.append('g')
 			.append('path')
 			.style('stroke', '#aaa')
@@ -240,11 +250,11 @@ class profileRadar extends profilePlot {
 	}
 
 	onMouseOver(event) {
-		if (event.target.tagName == 'circle') {
+		if (event.target.tagName == 'path') {
 			const circle = event.target
 			const d = circle.__data__
 			const menu = this.tip.clear()
-			const percentage = d.percentage
+			const percentage = d.percentage1
 			menu.d.text(`${d.module} ${percentage}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
