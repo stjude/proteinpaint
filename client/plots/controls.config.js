@@ -8,7 +8,14 @@ import { TermTypes } from '#shared/terms'
 // to be used for assigning unique
 // radio button names by object instance
 // otherwise termdp app popups
-let instanceNum = 0
+let instanceNum = 1
+let controlNum = 1
+
+function getElemId(instanceNum) {
+	return `sjpp-control-${controlNum++}-${instanceNum || Math.random().toString().slice(-4)}-${Math.random()
+		.toString()
+		.slice(-6)}`
+}
 
 class TdbConfigUiInit {
 	constructor(opts) {
@@ -126,14 +133,17 @@ function setRenderers(self) {
 }
 
 function setNumberInput(opts) {
+	const id = getElemId(opts.instanceNum)
 	const self = {
+		id,
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
 			labelTd: opts.holder
 				.append('td')
-				.html(opts.label)
+				.attr('id', id)
 				.attr('class', 'sja-termdb-config-row-label')
-				.attr('aria-label', opts.title),
+				.attr('aria-label', opts.title)
+				.html(opts.label),
 			inputs: {}
 		},
 		values: {}
@@ -186,10 +196,11 @@ function setNumberInput(opts) {
 			.style('text-align', opts.align || '')
 			.attr('colspan', opts.colspan || '')
 		if (!input.settingsKey) {
-			inputTd.style('color', '#999').style('cursor', 'default').html(input.label)
+			inputTd.style('color', '#555').style('cursor', 'default').html(input.label)
 		} else {
 			self.dom.inputs[input.settingsKey] = inputTd
 				.append('input')
+				.attr('aria-labelledby', self.id)
 				.attr('type', 'number')
 				.attr('min', 'min' in input ? input.min : null) // verify that null gives the default html input behavior
 				.attr('max', 'max' in input ? input.max : null) // same
@@ -225,15 +236,18 @@ function setNumberInput(opts) {
 }
 
 function setMathExprInput(opts) {
+	const id = getElemId(opts.instanceNum)
 	const self = {
+		id,
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
 			labelTd: opts.holder
 				.append('td')
-				.html(opts.label)
+				.attr('id', id)
 				.attr('class', 'sja-termdb-config-row-label')
 				.attr('aria-label', opts.title)
-				.attr('overflow', 'visible'),
+				.attr('overflow', 'visible')
+				.html(opts.label),
 			inputTd: opts.holder.append('td')
 		}
 	}
@@ -243,6 +257,7 @@ function setMathExprInput(opts) {
 	self.dom.input = self.dom.inputTd
 		.append('input')
 		.attr('type', 'text')
+		.attr('aria-labelledby', self.id)
 		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
 			const value = self.dom.input.property('value')
@@ -276,14 +291,17 @@ function setMathExprInput(opts) {
 }
 
 function setTextInput(opts) {
+	const id = getElemId(opts.instanceNum)
 	const self = {
+		id,
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
 			labelTd: opts.holder
 				.append('td')
-				.html(opts.label)
+				.attr('id', id)
 				.attr('class', 'sja-termdb-config-row-label')
-				.attr('aria-label', opts.title),
+				.attr('aria-label', opts.title)
+				.html(opts.label),
 			inputTd: opts.holder.append('td')
 		}
 	}
@@ -292,6 +310,7 @@ function setTextInput(opts) {
 		.append('input')
 		.attr('type', 'text')
 		.attr('placeholder', opts.placeholder)
+		.attr('aria-labelledby', self.id)
 		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
 			const value = self.dom.input.property('value')
@@ -319,14 +338,17 @@ function setTextInput(opts) {
 }
 
 function setColorInput(opts) {
+	const id = getElemId(opts.instanceNum)
 	const self = {
+		id,
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
 			labelTd: opts.holder
 				.append('td')
+				.attr('id', id)
+				.attr('class', 'sja-termdb-config-row-label')
 				.attr('aria-label', opts.title)
-				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
+				.html(opts.label),
 			inputTd: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
@@ -337,6 +359,7 @@ function setColorInput(opts) {
 	self.dom.input = self.dom.inputTd
 		.append('input')
 		.attr('type', 'color')
+		.attr('aria-labelledby', self.id)
 		.on('change', () => {
 			const value = self.dom.input.property('value')
 			opts.dispatch({
@@ -386,12 +409,10 @@ function setRadioInput(opts) {
 				}
 		  ]
 
-	if (!('instanceNum' in opts)) opts.instanceNum = `sjpp-${Math.random().toString().slice(-7)}-${Date.now()}`
-
 	const styles = opts.styles || {}
 	for (const input of inputs) {
 		self.inputs[input.settingsKey] = initRadioInputs({
-			name: `pp-control-${input.settingsKey}-${opts.instanceNum}`,
+			name: getElemId(opts.instanceNum),
 			holder: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
@@ -445,16 +466,19 @@ function setRadioInput(opts) {
 }
 
 function setDropdownInput(opts) {
+	const id = getElemId(opts.instanceNum)
 	const self = {
+		id,
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
-			labelTd: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
+			labelTd: opts.holder.append('td').attr('id', id).html(opts.label).attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder.append('td')
 		}
 	}
 
 	self.dom.select = self.dom.inputTd
 		.append('select')
+		.attr('aria-labelledby', id)
 		.property('disabled', opts.disabled)
 		.on('change', () => {
 			const value = self.dom.select.property('value')
