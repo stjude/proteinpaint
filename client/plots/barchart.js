@@ -142,7 +142,7 @@ class Barchart {
 				},
 				{
 					label: 'Multicolor bars',
-					title: 'Colors bars using the colors preassigned if available, otherwise generates a color',
+					title: 'Color bars using the colors preassigned if available, otherwise generates a color',
 					type: 'checkbox',
 					chartType: 'barchart',
 					settingsKey: 'colorBars',
