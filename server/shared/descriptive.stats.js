@@ -1,9 +1,9 @@
-import computePercentile from './compute.percentile.js'
 import { roundValue } from './roundValue.js'
 
 /* This file generates summary statistics on any given array of numbers*/
 
 export default function summaryStats(array) {
+	//console.log("array:",array)
 	let arr = array
 	if (typeof array[0] == 'string') {
 		// somehow the values can be string but not numbers
@@ -11,6 +11,7 @@ export default function summaryStats(array) {
 		arr = array.map(Number)
 	}
 	//compute total
+	const sorted_arr = arr.sort((a, b) => a - b)
 	const n = arr.length
 
 	//compute mean
@@ -20,24 +21,22 @@ export default function summaryStats(array) {
 	}
 
 	//compute median
-	const median = computePercentile(arr, 50)
-
-	const squareDiffs = arr.map(x => (x - mean(arr)) ** 2).reduce((a, b) => a + b, 0)
+	const median = computePercentile(sorted_arr, 50)
+	const mean_arr = mean(sorted_arr)
+	const squareDiffs = arr.map(x => (x - mean_arr) ** 2).reduce((a, b) => a + b, 0)
 	// compute variance
 	const variance = squareDiffs / (n - 1)
 	// compute standard deviation
 	const stdDev = Math.sqrt(variance)
 
 	//compute percentile ranges
-	const p25 = computePercentile(arr, 25)
-	const p75 = computePercentile(arr, 75)
+	const p25 = computePercentile(sorted_arr, 25)
+	const p75 = computePercentile(sorted_arr, 75)
 
 	//compute IQR
 	const IQR = p75 - p25
-
-	const min = Math.min(...arr)
-	const max = Math.max(...arr)
-
+	const min = sorted_arr[0]
+	const max = sorted_arr[sorted_arr.length - 1]
 	//TODO outliers
 
 	return {
@@ -54,4 +53,10 @@ export default function summaryStats(array) {
 			{ id: 'IQR', label: 'Inter-quartile range', value: roundValue(IQR, 2) }
 		]
 	}
+}
+
+function computePercentile(values, percentile) {
+	const index = Math.abs((percentile / 100) * values.length - 1)
+	const value = Number.isInteger(index) ? (values[index] + values[index + 1]) / 2 : values[Math.ceil(index)]
+	return value
 }
