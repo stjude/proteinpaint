@@ -129,7 +129,7 @@ export function skewer_make(tk, block) {
 		})
 	const isEmptyCircle = tk.skewer?.shape?.[0] === 'emptyCircle' || false
 
-	if (tk.skewer.shape && !isEmptyCircle && tk.skewer.shape[0] !== 'filledCircle') {
+	if (tk.skewer.shape && !tk.skewer.shape[0].includes('Circle')) {
 		renderSkewerShapes(tk, ss, discg)
 	} else {
 		// actual disc
@@ -326,21 +326,22 @@ export function skewer_make(tk, block) {
 
 	let foldedKick
 	// invisible kicking skewer cover when folded
-	if (tk.skewer.shape && tk.skewer.shape[0] !== 'filledCircle') {
+	if (tk.skewer.shape && !tk.skewer.shape[0].includes('Circle')) {
 		//Returns the kick in the same shape if skewer is not a circle
-		foldedKick = renderShapeKick(ss, discg)
+		foldedKick = renderShapeKick(ss, ss.selection)
+		foldedKick.attr('transform', d => `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})`)
 	} else {
 		foldedKick = ss.selection
 			.append('circle')
 			.attr('r', d => d.maxradius + 1)
 			.attr('cy', d => (tk.skewer.pointup ? -1 : 1) * d.maxradius)
+			.attr('transform', d => `scale(${d.showmode == modefold ? '1,1' : '0.01,0.01'})`) // "scale(0)" will not make the circle disappear on safari
 	}
 	foldedKick
 		.attr('class', 'sja_aa_skkick')
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke', 'none')
-		.attr('transform', d => `scale(${d.showmode == modefold ? '1,1' : '0.01,0.01'})`) // "scale(0)" will not make the circle disappear on safari
 		.on('mouseover', (event, d) => {
 			let cumh = 0
 			let boxw = 0
