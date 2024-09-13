@@ -326,8 +326,12 @@ function setTextInput(opts) {
 function setColorInput(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row').attr('aria-label', opts.title),
-			labelTd: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.attr('aria-label', opts.title)
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
@@ -498,8 +502,12 @@ function setDropdownInput(opts) {
 function setCheckboxInput(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row').attr('aria-label', opts.title),
-			labelTdb: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
+			row: opts.holder.style('display', 'table-row'),
+			labelTdb: opts.holder
+				.append('td')
+				.attr('aria-label', opts.title)
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
@@ -548,8 +556,12 @@ function setCheckboxInput(opts) {
 function setMultiCheckbox(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row').attr('aria-label', opts.title),
-			labelTdb: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
+			row: opts.holder.style('display', 'table-row'),
+			labelTdb: opts.holder
+				.append('td')
+				.attr('aria-label', opts.title)
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
