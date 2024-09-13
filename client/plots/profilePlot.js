@@ -75,7 +75,7 @@ export class profilePlot {
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		document.addEventListener('scroll', event => this?.tip?.hide())
 		icon_functions['pdf'](iconsDiv.append('div').style('padding', '0px 5px 15px 5px'), {
-			title: 'Download as PDF',
+			title: 'Prints page, select Save as PDF in the options to download as a pdf',
 			handler: () => {
 				window.print()
 			}
@@ -119,8 +119,8 @@ export class profilePlot {
 			}
 		})
 		if (!config.settings[this.type].comparison)
-			icon_functions['add'](iconsDiv.append('div').style('padding', '5px'), {
-				title: 'Open new plot',
+			icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
+				title: 'Open a new plot',
 				handler: async () => {
 					const config = {
 						chartType: this.type,
