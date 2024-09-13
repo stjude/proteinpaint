@@ -16,9 +16,10 @@ class profileRadar extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
+		this.plotConfig = config[config.plot]
 		this.lineGenerator = d3.line()
 		this.twLst = []
-		this.terms = config[config.plot].terms
+		this.terms = this.plotConfig.terms
 		for (const row of this.terms) {
 			this.twLst.push(row.term1.score)
 			if (row.term1.maxScore.term) this.twLst.push(row.term1.maxScore)
@@ -250,12 +251,19 @@ class profileRadar extends profilePlot {
 	}
 
 	onMouseOver(event) {
-		if (event.target.tagName == 'path') {
-			const circle = event.target
-			const d = circle.__data__
+		const d = event.target.__data__
+		if (d?.module) {
+			const label1 = this.plotConfig.term1.name
+			const label2 = this.plotConfig.term2.name
 			const menu = this.tip.clear()
-			const percentage = d.percentage1
-			menu.d.text(`${d.module} ${percentage}%`)
+			menu.d.append('div').style('font-weight', 'bold').text(d.module)
+			const table = menu.d.append('table')
+			let tr = table.append('tr')
+			tr.append('td').text(label1)
+			tr.append('td').text(d.percentage1)
+			tr = table.append('tr')
+			tr.append('td').text(label2)
+			tr.append('td').text(d.percentage2)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
