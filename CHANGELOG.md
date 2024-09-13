@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.76.0
 
 Features:
 - Support scRNAseq analysis tool in GFF
