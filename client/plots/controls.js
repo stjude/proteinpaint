@@ -153,7 +153,7 @@ export function renderTerm1Label(tw) {
 			return 'Group categories'
 		case TermTypes.INTEGER:
 		case TermTypes.FLOAT:
-			return 'Customize bins'
+			return tw.q.mode == 'discrete' ? 'Customize bins' : 'Customize'
 		case TermTypes.GENE_VARIANT:
 			return 'Group variants'
 		case TermTypes.SNP:
