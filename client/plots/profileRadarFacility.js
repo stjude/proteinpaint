@@ -40,8 +40,8 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const width = 1200
-		const height = 650
+		const width = 1160
+		const height = 800
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -52,7 +52,7 @@ class profileRadarFacility extends profilePlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.style('margin-top', '45px')
+			.style('margin-top', '140px')
 		// Create a polar grid.
 
 		this.svg
@@ -62,12 +62,12 @@ class profileRadarFacility extends profilePlot {
 			.text(this.config[this.config.plot].title)
 		const radius = this.radius
 		const x = 370
-		const y = 340
+		const y = 330
 		const radarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 420},${y - 180})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 420},${y + 10})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 330},${y + 50})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 330},${y + 150})`)
 
 		const rows = []
 		const columns = [

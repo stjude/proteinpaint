@@ -41,7 +41,7 @@ class profileRadar extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const width = 1150
+		const width = 1180
 		const height = 800
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -53,7 +53,7 @@ class profileRadar extends profilePlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.style('margin-top', '45px')
+			.style('margin-top', '140px')
 		const rows = []
 		const columns = [
 			{ label: 'Color' },
@@ -77,7 +77,7 @@ class profileRadar extends profilePlot {
 
 		const radarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 210},${y + 250})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 240},${y + 250})`)
 		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 300})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
@@ -182,7 +182,7 @@ class profileRadar extends profilePlot {
 			const item2 = `${config[config.plot].term2.name} ${abbrev}`
 			this.addLegendItem(item2, color2, 1, '5, 5')
 			if (this.state.dslabel == 'ProfileAbbrev')
-				this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
+				this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(-50, -15)`))
 			else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
 		}
 		this.addFilterLegend()
