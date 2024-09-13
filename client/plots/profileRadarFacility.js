@@ -16,6 +16,7 @@ class profileRadarFacility extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
+		this.plotConfig = config[config.plot]
 		this.twLst = []
 		this.terms = config[config.plot].terms
 		for (const row of this.terms) {
@@ -24,6 +25,7 @@ class profileRadarFacility extends profilePlot {
 			this.twLst.push(row.maxScore)
 		}
 		this.lineGenerator = d3.line()
+		this.arcGenerator = d3.arc().innerRadius(0)
 	}
 
 	async main() {
@@ -38,13 +40,13 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const widht = 1300
+		const width = 1200
 		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
-			.attr('width', widht)
+			.attr('width', width)
 			.attr('height', height)
 		this.tableDiv = this.dom.plotDiv
 			.append('div')
@@ -61,8 +63,8 @@ class profileRadarFacility extends profilePlot {
 		const radius = this.radius
 		const x = 370
 		const y = 340
-		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
-		this.polarG = polarG
+		const radarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
+		this.radarG = radarG
 
 		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 420},${y - 180})`)
 		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 420},${y + 10})`)
@@ -83,23 +85,43 @@ class profileRadarFacility extends profilePlot {
 			data2 = []
 		for (const item of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
-			this.addData(iangle, i, data2, true)
-			this.addData(iangle, i, data, false)
+			const percentage1 = this.getPercentage(item) //facility
+			const percentage2 = this.getPercentage(item, true)
+
+			this.radarG
+				.append('path')
+				.datum({ module: item.module, percentage1, percentage2 })
+				.attr('fill', 'transparent')
+				.attr(
+					'd',
+					this.arcGenerator({
+						outerRadius: this.radius,
+						startAngle: i * this.angle,
+						endAngle: (i + 1) * this.angle
+					})
+				)
+				.on('click', event => this.onMouseOver(event))
+			this.addData(iangle, i, data2, percentage2, false)
+			this.addData(iangle, i, data, percentage1, true)
 
 			const color = item.score.term.color
-			const value1 = this.getPercentage(item) //facility
-			const value2 = this.getPercentage(item, true)
-			const diff = Math.abs(value1 - value2)
+			const diff = Math.abs(percentage1 - percentage2)
 			const diffRow = { value: diff }
-			if (diff >= 20) diffRow.color = value2 > value1 ? 'red' : 'blue'
-			const row = [{ color, disabled: true }, { value: item.module }, { value: value1 }, { value: value2 }, diffRow]
+			if (diff >= 20) diffRow.color = percentage2 > percentage1 ? 'red' : 'blue'
+			const row = [
+				{ color, disabled: true },
+				{ value: item.module },
+				{ value: percentage1 },
+				{ value: percentage2 },
+				diffRow
+			]
 			rows.push(row)
 
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
 			let dx = radius * 1.1 * Math.cos(iangle)
 			let dy = radius * 1.1 * Math.sin(iangle) - 10
-			const textElem = polarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
+			const textElem = radarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
 
 			const texts = item.module.split(' ')
 			let span
@@ -126,29 +148,28 @@ class profileRadarFacility extends profilePlot {
 			})
 		data.push(data[0])
 		data2.push(data2[0])
-		const color1 = 'gray',
-			color2 = 'blue'
-		polarG
+		const color1 = 'blue',
+			color2 = 'gray'
+		radarG
 			.append('g')
 			.append('path')
 			.style('stroke', color1)
 			.attr('fill', 'none')
-			.style('stroke-dasharray', '5, 5')
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data))
 		if (this.state.logged) {
-			polarG
+			radarG
 				.append('g')
 				.append('path')
 				.style('stroke', color2)
 				.attr('fill', 'none')
-				.attr('stroke-width', '2px')
+				.style('stroke-dasharray', '5, 5')
 				.attr('d', this.lineGenerator(data2))
 		}
 
 		for (let i = 0; i <= 10; i++) {
 			const percent = i * 10
-			polarG
+			radarG
 				.append('text')
 				.attr('transform', `translate(-10, ${(-percent / 100) * radius + 5})`)
 				.attr('text-anchor', 'end')
@@ -160,18 +181,17 @@ class profileRadarFacility extends profilePlot {
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		const siteLabel = this.sites.find(s => s.value == this.settings.site).label
-		this.addLegendItem(siteLabel, color2, 0, 'none')
-		this.addLegendItem(this.config[this.config.plot].score, color1, 1, '5, 5')
+		this.addLegendItem(siteLabel, color1, 0, 'none')
+		this.addLegendItem(this.config[this.config.plot].score, color2, 1, '5, 5')
 	}
 
-	addData(iangle, i, data, isFacility) {
+	addData(iangle, i, data, percentage, isFacility) {
 		const item = this.terms[i]
-		const percentage = isFacility ? this.getPercentage(item) : this.getPercentage(item, true)
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
 		const color = isFacility ? 'blue' : '#aaa'
-		const circle = this.polarG
+		const circle = this.radarG
 			.append('g')
 			.attr('transform', `translate(${x}, ${y})`)
 			.append('circle')
@@ -194,7 +214,7 @@ class profileRadarFacility extends profilePlot {
 		}
 
 		data.push(data[0])
-		this.polarG
+		this.radarG
 			.append('g')
 			.append('path')
 			.style('stroke', '#aaa')
@@ -235,12 +255,19 @@ class profileRadarFacility extends profilePlot {
 	}
 
 	onMouseOver(event) {
-		if (event.target.tagName == 'circle') {
-			const circle = event.target
-			const d = circle.__data__
+		const d = event.target.__data__
+		if (d?.module) {
+			const label1 = 'Facility'
+			const label2 = this.plotConfig.score
 			const menu = this.tip.clear()
-			const percentage = d.percentage
-			menu.d.text(`${d.module} ${percentage}%`)
+			menu.d.append('div').style('font-weight', 'bold').text(d.module)
+			const table = menu.d.append('table')
+			let tr = table.append('tr')
+			tr.append('td').text(label1)
+			tr.append('td').text(d.percentage1)
+			tr = table.append('tr')
+			tr.append('td').text(label2)
+			tr.append('td').text(d.percentage2)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}

@@ -41,7 +41,7 @@ class profileRadar extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const width = 1200
+		const width = 1150
 		const height = 800
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -77,8 +77,8 @@ class profileRadar extends profilePlot {
 
 		const radarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 320},${y + 240})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 320})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 210},${y + 250})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 300})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -145,13 +145,6 @@ class profileRadar extends profilePlot {
 		data2.push(data2[0])
 		const color1 = 'blue',
 			color2 = 'gray'
-		radarG
-			.append('g')
-			.append('path')
-			.style('stroke', color1)
-			.attr('fill', 'none')
-			.attr('stroke-width', '2px')
-			.attr('d', this.lineGenerator(data))
 
 		radarG
 			.append('g')
@@ -161,6 +154,13 @@ class profileRadar extends profilePlot {
 			.style('stroke-dasharray', '5, 5')
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data2))
+		radarG
+			.append('g')
+			.append('path')
+			.style('stroke', color1)
+			.attr('fill', 'none')
+			.attr('stroke-width', '2px')
+			.attr('d', this.lineGenerator(data))
 
 		for (let i = 0; i <= 10; i++) {
 			const percent = i * 10
