@@ -357,6 +357,7 @@ export function getEmptyCell(cellTemplate, s, d) {
 */
 export const setCellProps = {
 	categorical: setCategoricalCellProps,
+	condition: setCategoricalCellProps,
 	integer: setNumericCellProps,
 	float: setNumericCellProps,
 	survival: setSurvivalCellProps,
@@ -371,6 +372,7 @@ export const maySetEmptyCell = {
 	integer: setNumericEmptyCell,
 	float: setNumericEmptyCell,
 	categorical: setDefaultEmptyCell,
+	condition: setDefaultEmptyCell,
 	survival: setNumericEmptyCell,
 	[TermTypes.GENE_EXPRESSION]: setNumericEmptyCell,
 	[TermTypes.METABOLITE_INTENSITY]: setNumericEmptyCell

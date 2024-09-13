@@ -84,6 +84,9 @@ tape('only dictionary terms', function (test) {
 											stopinclusive: true
 										}
 									} // or 'continuous'
+								},
+								{
+									id: 'Arrhythmias'
 								}
 							]
 						}
@@ -102,12 +105,12 @@ tape('only dictionary terms', function (test) {
 		matrix.on('postRender.test', null)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
-			3,
+			4,
 			`should render the expected number of serieses`
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			180,
+			240,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
