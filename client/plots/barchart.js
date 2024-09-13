@@ -7,7 +7,7 @@ import { select } from 'd3-selection'
 import { scaleOrdinal } from 'd3-scale'
 import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
-import { controlsInit, term0_term2_defaultQ } from './controls'
+import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
 import { to_svg } from '../src/client'
 import { renderTable } from '../dom/table'
 import { fillTermWrapper } from '#termsetting'
@@ -94,6 +94,7 @@ class Barchart {
 					configKey: 'term',
 					chartType: 'barchart',
 					usecase: { target: 'barchart', detail: 'term' },
+					label: renderTerm1Label,
 					vocabApi: this.app.vocabApi,
 					menuOptions: 'edit'
 				},

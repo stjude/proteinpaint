@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '../rx'
-import { controlsInit, term0_term2_defaultQ } from './controls'
+import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
 import { fillTermWrapper } from '#termsetting'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
@@ -282,6 +282,7 @@ class MassCumInc {
 							configKey: 'term',
 							chartType: 'cuminc',
 							usecase: { target: 'cuminc', detail: 'term' },
+							label: renderTerm1Label,
 							vocabApi: this.app.vocabApi,
 							menuOptions: 'edit'
 						},

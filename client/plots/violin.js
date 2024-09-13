@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '../rx'
-import { controlsInit, term0_term2_defaultQ } from './controls'
+import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
 import setViolinRenderer from './violin.renderer'
 import htmlLegend from '../dom/html.legend'
 import { fillTermWrapper } from '#termsetting'
@@ -83,6 +83,7 @@ class ViolinPlot {
 				configKey: 'term',
 				chartType: 'violin',
 				usecase: { target: 'violin', detail: 'term' },
+				label: renderTerm1Label,
 				vocabApi: this.app.vocabApi,
 				menuOptions: 'edit'
 			},

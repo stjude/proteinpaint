@@ -114,11 +114,6 @@ class TdbConfigUiInit {
 			.selectAll('td')
 			.style('border-top', '2px solid #FFECDD')
 			.style('padding', '5px 10px')
-
-		if (this.inputs.term) {
-			// label of term1 will depend on term type
-			renderTerm1Label(this.inputs.term, this.state.config)
-		}
 	}
 }
 
@@ -712,34 +707,12 @@ async function setTermInput(opts) {
 			}
 			if ('$id' in tw) arg.$id = tw.$id
 			pill.main(arg)
+			self.dom.labelTd.datum(tw).html(opts.label)
 		}
 	}
 
 	if (opts.debug) api.Inner = self
 	return Object.freeze(api)
-}
-
-function renderTerm1Label(inputTerm, config) {
-	const labelTd = inputTerm.Inner.dom.labelTd
-	if (labelTd.text()) return // label already filled in
-	const tw = config.term
-	switch (tw.term.type) {
-		case TermTypes.CATEGORICAL:
-			labelTd.text('Group categories')
-			break
-		case TermTypes.INTEGER:
-		case TermTypes.FLOAT:
-			labelTd.text('Customize bins')
-			break
-		case TermTypes.GENE_VARIANT:
-			labelTd.text('Group variants')
-			break
-		case TermTypes.SNP:
-			labelTd.text('Group genotypes')
-			break
-		default:
-			labelTd.text('Customize')
-	}
 }
 
 export const initByInput = {
