@@ -145,3 +145,20 @@ function setInteractivity(self) {
 		}
 	}
 }
+
+export function renderTerm1Label(tw) {
+	if (!tw || !Object.keys(tw).length) return ''
+	switch (tw.term.type) {
+		case TermTypes.CATEGORICAL:
+			return 'Group categories'
+		case TermTypes.INTEGER:
+		case TermTypes.FLOAT:
+			return tw.q.mode == 'discrete' ? 'Customize bins' : 'Customize'
+		case TermTypes.GENE_VARIANT:
+			return 'Group variants'
+		case TermTypes.SNP:
+			return 'Group genotypes'
+		default:
+			return 'Customize'
+	}
+}
