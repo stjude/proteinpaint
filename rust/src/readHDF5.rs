@@ -135,7 +135,7 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
         }
     }
 
-    let mut output_string = "[".to_string();
+    let mut output_string = "{".to_string();
     for i in 0..gene_array.len() {
         //let item_json = "{\"".to_string()
         //    + &samples[i].to_string()
@@ -146,7 +146,7 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
         //let item_json = format!("{{\"{}\"}}", samples[i].to_string());
 
         output_string += &format!(
-            "{{\"{}\":{}}}",
+            "\"{}\":{}",
             samples[i].to_string(),
             gene_array[i].to_string()
         );
@@ -161,7 +161,7 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
             output_string += &",";
         }
     }
-    output_string += &"]";
+    output_string += &"}".to_string();
     output_string = output_string.replace("\\", "");
     println!(
         "Time generating full array:{:?}",
