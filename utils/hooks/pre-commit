@@ -21,4 +21,12 @@ pre-commit run --files "$FILES"
 echo "Linting ..."
 echo "$FILES" | grep "\.ts" | xargs npx eslint
 
+# check for invalid use of .Inner reference
+PRODINNER=$(echo "$FILES" | xargs grep -lr --exclude=\*.spec\* --exclude=\*dist/\* --exclude=\*test/\* --exclude=\*.md "\.Inner\.")
+if [[ "$PRODINNER" != "" ]]; then
+	echo "\n--- !!! invalid use of .Inner found in: !!! ---"
+	echo "$PRODINNER\n"
+	exit 1
+fi 
+
 exit 0
