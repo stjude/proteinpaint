@@ -512,7 +512,7 @@ export class profilePlot {
 	}
 
 	addEndUserImpressionNote(uiG) {
-		uiG.attr('font-size', '0.8em')
+		uiG.attr('font-size', '0.9em')
 		let textElem = uiG.append('text').attr('transform', `translate(0, 115)`)
 		textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression: ')
 		textElem.append('tspan').text('It is provided by the local liaison who completed the assessment ')
