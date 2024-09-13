@@ -1,1 +1,2 @@
-
+Features
+- May change the shape of lollipop skewers when the track is filtered or a subtrack.
