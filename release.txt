@@ -1,2 +1,1 @@
-Fixes:
-- At mass summary plot header, when there's only one subtype tab, do not show the toggle
+
