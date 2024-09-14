@@ -99,8 +99,8 @@ class profileRadar extends profilePlot {
 					'd',
 					this.arcGenerator({
 						outerRadius: this.radius,
-						startAngle: i * this.angle,
-						endAngle: (i + 1) * this.angle
+						startAngle: i * this.angle - this.angle / 2,
+						endAngle: (i + 1) * this.angle - this.angle / 2
 					})
 				)
 				.on('click', event => this.onMouseOver(event))
