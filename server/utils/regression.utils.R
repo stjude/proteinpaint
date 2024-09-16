@@ -117,6 +117,8 @@ buildFormulas <- function(outcome, independent, neuroOnc) {
     }
   }
   
+  if (isTRUE(neuroOnc) && length(formula_interaction) > 0) stop ("interactions not supported in neuro-onc datasets")
+  
   # combine variables into formula(s)
   # if snplocus snps are present, then prepare a
   # separate formula for each snplocus snp
@@ -159,7 +161,6 @@ buildFormulas <- function(outcome, independent, neuroOnc) {
         formula <- as.formula(paste(formula_outcome, var, sep = "~"))
         formulas[[length(formulas) + 1]] <- list("id" = "", "type" = "univariate", "formula" = formula)
       }
-      if (length(formula_interaction) > 0) stop ("interactions not supported in neuro-onc datasets")
     } else {
       # use single formula for all variables
       formula <- as.formula(paste(formula_outcome, paste(c(formula_independent, formula_interaction), collapse = "+"), sep = "~"))
@@ -687,10 +688,17 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
   if (isTRUE(neuroOnc)) {
     # neuro-oncology dataset
     # combine 95% CI columns
-    # FIXME: the combined 95% CI column is supported for cox, but not for linear/logistic
     ciCol <- paste(coefficients_table[,"95% CI (low)"], coefficients_table[,"95% CI (high)"], sep = " - ")
     coefficients_table <- cbind(coefficients_table, "95% CI" = ciCol)
-    if (regtype == "cox") {
+    # remove intercept row because cannot merge together intercepts
+    # from multiple univariate analyses
+    coefficients_table <- coefficients_table[row.names(coefficients_table) != "(Intercept)", ,drop = F]
+    # extract columns of interest
+    if (regtype == "linear") {
+      coefficients_table <- coefficients_table[, c("Variable", "Category", "Beta", "95% CI", "Pr(>|t|)"), drop = F]
+    } else if (regtype == "logistic") {
+      coefficients_table <- coefficients_table[, c("Variable", "Category", "Odds ratio", "95% CI", "Pr(>|z|)"), drop = F]
+    } else if (regtype == "cox") {
       # cox regression
       # report sample size and event counts of coefficients
       sCol <- vector(mode = "character")
@@ -698,11 +706,6 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
       for (i in 1:length(vCol)) {
         v <- vCol[i]
         c <- cCol[i]
-        if (grepl(":", v, fixed = T)) {
-          # interacting variables
-          # not allowed in neuro-oncology dataset
-          stop("interacting variables not supported")
-        }
         if (v %in% names(res$xlevels)) {
           # categorical variable
           # determine sample size and event count of both ref and non-ref categories
@@ -724,9 +727,12 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
       }
       coefficients_table <- cbind(coefficients_table, "Sample Size (ref/non-ref)" = sCol, "Events (ref/non-ref)" = eCol)
       coefficients_table <- coefficients_table[, c("Variable", "Category", "Sample Size (ref/non-ref)", "Events (ref/non-ref)", "HR", "95% CI", "Pr(>|z|)"), drop = F]
+    } else {
+      stop("regression type is not recognized")
     }
   }
   
+  colnames(coefficients_table)[ncol(coefficients_table)] <- "P" # p-value column
   coefficients_table <- list("header" = colnames(coefficients_table), "rows" = coefficients_table)
   return(coefficients_table)
 }
@@ -757,12 +763,13 @@ combineUniMultiResults <- function(reg_results, regtype) {
       stop ("results type not recognized")
     }
   }
-  # merge coefficients from both analyses together
-  coefficients_table <- merge(uniCoefficients, multiCoefficients[,c("HR", "95% CI", "Pr(>|z|)")], by = "row.names", suffixes = c("_uni", "_multi"))
+  # merge coefficients together
+  coefficients_table <- merge(uniCoefficients, multiCoefficients[,(ncol(multiCoefficients) - 2):ncol(multiCoefficients)], by = "row.names", suffixes = c("_uni", "_multi"))
   coefficients_table <- as.matrix(coefficients_table[,-1])
   coefficients_table <- list("header" = colnames(coefficients_table), "rows" = coefficients_table)
   # return the combined results 
   reg_results_combined <- list()
-  reg_results_combined[[1]] <- list("id" = res$id, "data" = list("sampleSize" = res$data$sampleSize, "eventCnt" = res$data$eventCnt, "coefficients" = coefficients_table))
+  reg_results_combined[[1]] <- list("id" = res$id, "data" = list("sampleSize" = res$data$sampleSize, "coefficients" = coefficients_table))
+  if (regtype == "cox") reg_results_combined[[1]]$eventCnt = res$data$eventCnt
   return(reg_results_combined)
 }

@@ -495,20 +495,25 @@ function setRenderers(self) {
 							// create label for all univariate headers
 							fillHeaderLabel(tr_label, 'Univariate', uniHeaders.length)
 						}
-						tr.append('td').text(v.replace(/_uni$/, '')).style('padding', '8px')
+						// render header
+						const td = tr.append('td').text(v.replace(/_uni$/, '')).style('padding', '8px')
+						if (v == uniHeaders[uniHeaders.length - 1]) td.style('font-style', 'italic')
 					} else if (multiHeaders.includes(v)) {
 						// multivariate header
 						if (v == multiHeaders[0]) {
 							// create label for all multivariate headers
 							fillHeaderLabel(tr_label, 'Multivariate', multiHeaders.length)
 						}
-						tr.append('td')
+						const td = tr
+							.append('td')
 							.text(v.replace(/_multi$/, ''))
 							.style('padding', '8px')
+						if (v == multiHeaders[multiHeaders.length - 1]) td.style('font-style', 'italic')
 					} else {
 						// neither univariate nor multivariate header
 						tr_label.append('td').style('padding', '8px')
-						tr.append('td').text(v).style('padding', '8px')
+						const td = tr.append('td').text(v).style('padding', '8px')
+						if (v == header[header.length - 1]) td.style('font-style', 'italic')
 					}
 				})
 			} else {
@@ -516,13 +521,14 @@ function setRenderers(self) {
 				const tr = table.append('tr').style('opacity', 0.4)
 				header.forEach((v, i) => {
 					if (i == 2) tr.append('td') // add column for forest plot
-					tr.append('td').text(v).style('padding', '8px')
+					const td = tr.append('td').text(v).style('padding', '8px')
+					if (v == header[header.length - 1]) td.style('font-style', 'italic')
 				})
 			}
 		}
 
-		// intercept row (only for linear/logistic)
-		if (self.config.regressionType != 'cox') {
+		// intercept row
+		if (!neuroOnc && self.config.regressionType != 'cox') {
 			const tr = table.append('tr').style('background', '#eee')
 			result.coefficients.intercept.forEach((v, i) => {
 				if (!neuroOnc && i == 2) tr.append('td') // for forest plot
