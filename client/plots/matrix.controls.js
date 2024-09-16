@@ -1071,7 +1071,6 @@ export class MatrixControls {
 
 			for (const inputConfig of t.rows) {
 				const holder = table.append('tr')
-				//if (inputConfig.title) holder.attr('aria-label', inputConfig.title)
 				const input = await initByInput[inputConfig.type](
 					Object.assign(
 						{},
@@ -1079,7 +1078,6 @@ export class MatrixControls {
 							holder,
 							dispatch: app.dispatch,
 							id: parent.id,
-							//instanceNum: this.instanceNum,
 							debug: this.opts.debug,
 							parent
 						},
@@ -1117,9 +1115,7 @@ export class MatrixControls {
 						{},
 						{
 							holder,
-							//dispatch: app.dispatch,
 							id: parent.id,
-							//instanceNum: this.instanceNum,
 							debug: self.opts.debug,
 							parent
 						},
@@ -1127,7 +1123,6 @@ export class MatrixControls {
 					)
 				)
 				input.main(parent.config)
-				//parent.opts.customInputs.genes(table.append('tr').append('td').attr('colspan', 2).style('text-align', 'center'))
 			}
 		}
 

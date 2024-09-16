@@ -5,12 +5,21 @@ import { rgb } from 'd3-color'
 import { select } from 'd3-selection'
 import { TermTypes } from '#shared/terms'
 
-// to be used for assigning unique
+// unique element ID's are needed for  to be used for assigning unique
 // radio button names by object instance
 // otherwise termdp app popups
-let instanceNum = 1
-let controlNum = 1
 
+// instanceNum is incremented for each control menu instance,
+// may be optionally used for distinguishing menu instances, such as
+// for matrix controls where there are multiple menu buttons
+let instanceNum = 1
+
+// controlNum is incremented when calling getElemId(),
+// which creates a unique string that can be used to name related radio inputs
+// or as a unique element ID to reference with aria-labelledby,
+// when the corresponding input is not wrapped by a label element
+// or does not have an aria-label attribute (Section 508 requirement)
+let controlNum = 1
 function getElemId(instanceNum) {
 	return `sjpp-control-${controlNum++}-${instanceNum || Math.random().toString().slice(-4)}-${Math.random()
 		.toString()
