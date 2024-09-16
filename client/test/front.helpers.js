@@ -1,13 +1,9 @@
-const runproteinpaint = require('#src/app').runproteinpaint
+import { runproteinpaint } from '#src/app'
+export { runproteinpaint } from '#src/app'
+
 const serverData = Object.create(null)
 
-exports.runproteinpaint = runproteinpaint
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}, host = 'http://localhost:3000') {
+export function getRunPp(appname = '', defaultArgs = {}, host = 'http://localhost:3000') {
 	/*
 		Wrap runproteinpaint() to make repeated calls to it more
 		convenient and easier to read
@@ -82,7 +78,7 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}, host = 'htt
 	}
 }
 
-function copyMerge(base, ...args) {
+export function copyMerge(base, ...args) {
 	/*
 		BORROWED FROM rx.core - to avoid import/export keyword issue
 
@@ -107,9 +103,7 @@ function copyMerge(base, ...args) {
 	return target
 }
 
-exports.copyMerge = copyMerge
-
-exports.rideInit = function (opts = {}) {
+export function rideInit(opts = {}) {
 	/*
 		The exported rideInit() test helper function tries to 
 		reliably sequence UI tests using chained Promises, with
@@ -269,4 +263,6 @@ class Ride {
 	}
 }
 
-exports.sleep = sleep
+export function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}

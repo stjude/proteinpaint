@@ -1,5 +1,5 @@
 import tape from 'tape'
-import helpers from '../../test/front.helpers.js'
+import * as helpers from '../../test/front.helpers.js'
 import { termjson } from '../../test/testdata/termjson'
 import { select, selectAll } from 'd3-selection'
 import { detectOne, detectGte } from '../../test/test.helpers.js'
