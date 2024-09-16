@@ -1,4 +1,4 @@
-const terms = [
+export const terms = [
 	{
 		id: 'a',
 		name: 'AAA',
@@ -108,8 +108,6 @@ const terms = [
 	}
 ]
 
-exports.terms = terms
-
 const vocab = JSON.stringify({
 	route: null,
 	terms,
@@ -157,6 +155,6 @@ const vocab = JSON.stringify({
 	}
 })
 
-exports.getExample = () => {
+export function getExample() {
 	return JSON.parse(vocab)
 }

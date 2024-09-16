@@ -2,7 +2,7 @@ import tape from 'tape'
 //import { copyMerge } from '#rx/index.js'
 import { groupsInit } from '../groups'
 import { select } from 'd3-selection'
-import helpers from '../../test/front.helpers.js'
+import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
 import { getFilterItemByTag } from '#filter'
 

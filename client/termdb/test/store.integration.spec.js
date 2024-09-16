@@ -1,5 +1,5 @@
 import tape from 'tape'
-import helpers from '../../test/front.helpers.js'
+import * as helpers from '../../test/front.helpers.js'
 import * as store from '../store'
 //import ds from '@sjcrh/proteinpaint-server/dataset/termdb.test.js')
 import * as rx from '../../rx'

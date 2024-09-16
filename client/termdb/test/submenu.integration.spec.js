@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { termjson } from '../../test/testdata/termjson'
-import helpers from '../../test/front.helpers.js'
+import * as helpers from '../../test/front.helpers.js'
 
 /*
 Tests:
