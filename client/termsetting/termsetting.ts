@@ -932,8 +932,6 @@ export async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 	}
 }
 
-// TODO: emit to verify xtw is being used
-console.warn('--- Using xtw ---')
 // add migrated tw fillers here, by term.type
 const routedTermTypes = new Set(['categorical', 'integer', 'float'])
 

@@ -175,8 +175,8 @@ export class NumCustomBins extends NumericBase {
 		else if (tw.type != 'NumTWCustomBin') throw `expecting tw.type='NumTWCustomBin', got '${tw.type}'`
 
 		if (!tw.q.mode) tw.q.mode = 'discrete'
-		else if (tw.q.mode != 'discrete' && tw.q.mode != 'binary')
-			throw `expecting tw.q.mode='discrete'|binary', got '${tw.q.mode}'`
+		else if (tw.q.mode != 'discrete' && tw.q.mode != 'binary' && tw.q.mode != 'continuous')
+			throw `expecting tw.q.mode='discrete'|binary|continuous', got '${tw.q.mode}'`
 
 		if (tw.q.mode == 'binary' && !tw.q.preferredBins) tw.q.preferredBins = 'median'
 
