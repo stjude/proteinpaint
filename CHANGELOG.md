@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Address section 508 issues in OncoMatrix and Gene Expression Clustering tools
+
+
 ## 2.76.1
 
 Fixes:
