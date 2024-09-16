@@ -39,7 +39,7 @@
     "//TODO": "# replace rollup with esbuild",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w --bundleConfigAsCjs",
     "build": "rm -rf dist && rollup -c ./rollup.config.js",
-    "prepack": "rm -rf dist && rollup -c ./rollup.config.js && npm run sedver",
+    "prepack": "rm -rf dist && node esbuild.config.mjs && npm run sedver",
     "sedver": "VER=$(node -p \"require('./package.json').version\") && sed -i.bk \"s|___current-proteinpaint-client-version___|$VER|\" dist/app*.js && rm dist/*.js.bk"
   },
   "author": "",
