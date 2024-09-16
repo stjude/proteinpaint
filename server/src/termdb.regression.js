@@ -640,17 +640,15 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		}
 
 		// coefficients
-		if (Rinput.regressionType == 'cox') {
-			if (data.coefficients.rows.length < 1) throw 'fewer than 1 row in coefficients table'
-		} else {
-			if (data.coefficients.rows.length < 2) throw 'fewer than 2 rows in coefficients table'
-		}
+		const minCoefRowCnt = q.ds.cohort.termdb.neuroOncRegression || Rinput.regressionType == 'cox' ? 1 : 2
+		if (data.coefficients.rows.length < minCoefRowCnt) throw 'unexpected number of rows in coefficients table'
 		analysisResult.data.coefficients = {
 			header: data.coefficients.header,
-			intercept: Rinput.regressionType == 'cox' ? null : data.coefficients.rows.shift(),
 			terms: {}, // individual independent terms, not interaction
 			interactions: [] // interactions
 		}
+		if (!q.ds.cohort.termdb.neuroOncRegression && Rinput.regressionType != 'cox')
+			analysisResult.data.coefficients.intercept = data.coefficients.rows.shift()
 		for (const row of data.coefficients.rows) {
 			if (row[0].indexOf(':') != -1) {
 				// is an interaction
