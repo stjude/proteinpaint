@@ -5,7 +5,7 @@
         "searchBar": "none",
         "availableGenomes": ["hg38"],
         "runargs": {
-            "host": "https://survivorship.proteinpaint.stjude.org/",
+            "host": "https://survivorship.proteinpaint.stjude.org",
             "nobox":true,
             "noheader": true,
             "mass": {

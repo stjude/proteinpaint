@@ -187,7 +187,7 @@ function renderContent(ppcalls, div, card, pageArgs) {
 		for example). It's very rare for an embedder to want to show this default "portal" header 
 		because external portals usually have their own headers, but it will affect simple html 
 		pages that embed a runpp() call where the app header is not hidden. */
-		host: sessionStorage.getItem('hostURL')
+		host: ppcalls.runargs.host || sessionStorage.getItem('hostURL')
 	}
 
 	const callpp = JSON.parse(JSON.stringify(ppcalls.runargs))
@@ -654,7 +654,10 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		? pageArgs.genomes[res.button.availableGenomes[0]]
 		: pageArgs.app.opts.genomes[res.button.availableGenomes[0]]
 
-	const genomes = pageArgs?.fromApp ? pageArgs.genomes : pageArgs.app.opts.genomes
+	let genomes
+	if (res.button.runargs.host) {
+		genomes = await getGenomes(res.button.runargs.host)
+	} else genomes = pageArgs?.fromApp ? pageArgs.genomes : pageArgs.app.opts.genomes
 
 	const par = {
 		// First genome in .availableGenomes is the default
@@ -808,4 +811,18 @@ function getHostURL() {
 	if (hostURL.startsWith('http://localhost') || hostURL.startsWith('https://pp')) {
 		return hostURL
 	} else return 'https://proteinpaint.stjude.org'
+}
+
+async function getGenomes(host) {
+	//Get genomes from a specified host if it's different than the embedder.
+	const genomeURL = `${host}/genomes?embedder=${sessionStorage.getItem('hostURL').replace(/^https?:\/\//, '')}`
+	try {
+		const response = await fetch(genomeURL)
+		if (!response.ok) throw new Error(`HTTP Response error for genomes url ${response.status}`)
+		const data = await response.json()
+		return data
+	} catch (e) {
+		console.error(`Error fetching genomes: ${e} from ${genomeURL}`)
+		return null
+	}
 }
