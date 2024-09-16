@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - Address section 508 issues in OncoMatrix and Gene Expression Clustering tools
 - fetch genomes supporting specific datasets from a specified host
+- allow q.mode=continuous for q.type=custom-bin to fix numeric edit UI toggling
 
 
 ## 2.76.1
