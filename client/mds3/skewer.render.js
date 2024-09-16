@@ -127,9 +127,9 @@ export function skewer_make(tk, block) {
 		.each(function (d) {
 			d.g = this
 		})
-	const isEmptyCircle = tk.skewer?.shape?.[0] === 'emptyCircle' || false
+	const isEmptyShape = tk.skewer?.shape?.[1]?.isFilled == false
 
-	if (tk.skewer.shape && !tk.skewer.shape[0].includes('Circle')) {
+	if (tk.skewer.shape && !tk.skewer?.shape?.[0].includes('Circle')) {
 		renderSkewerShapes(tk, ss, discg)
 	} else {
 		// actual disc
@@ -137,14 +137,14 @@ export function skewer_make(tk, block) {
 		// full filled
 		discdot
 			.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
-			.attr('fill', isEmptyCircle ? 'white' : d => tk.color4disc(d.mlst[0]))
-			.attr('stroke', isEmptyCircle ? d => tk.color4disc(d.mlst[0]) : 'white')
+			.attr('fill', isEmptyShape ? 'white' : d => tk.color4disc(d.mlst[0]))
+			.attr('stroke', isEmptyShape ? d => tk.color4disc(d.mlst[0]) : 'white')
 			.attr('r', d => d.radius - 0.5)
 		// masking half
 		discg
 			.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
 			.append('path')
-			.attr('fill', isEmptyCircle ? 'black' : 'white')
+			.attr('fill', isEmptyShape ? 'black' : 'white')
 			.attr('stroke', 'none')
 			.attr('d', d =>
 				d3arc()({
@@ -155,8 +155,6 @@ export function skewer_make(tk, block) {
 				})
 			)
 	}
-
-	const isEmptyShape = isEmptyCircle || tk.skewer?.shape?.[1]?.isFilled == false
 
 	// number in disc
 	const textslc = discg
