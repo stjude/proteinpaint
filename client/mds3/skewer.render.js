@@ -130,6 +130,7 @@ export function skewer_make(tk, block) {
 	const isEmptyShape = tk.skewer?.shape?.[1]?.isFilled == false
 
 	if (tk.skewer.shape && !tk.skewer?.shape?.[0].includes('Circle')) {
+		//Use existing rendering code for circle shapes
 		renderSkewerShapes(tk, ss, discg)
 	} else {
 		// actual disc
