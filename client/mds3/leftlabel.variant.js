@@ -227,7 +227,7 @@ function menu_variants(tk, block) {
 					.style('flex-wrap', 'wrap')
 					.style('width', 'max-content')
 
-				Object.entries(desiredShapes).forEach((val, idx) => {
+				for (const val of Object.entries(desiredShapes)) {
 					const shapeWrapper = shapesContainer.append('div').style('padding', '0px 2px')
 					const width = 18
 					const height = 18
@@ -247,7 +247,7 @@ function menu_variants(tk, block) {
 						.attr('d', val[1].path)
 						.attr('fill', val[1].isFilled ? 'black' : 'none')
 						.attr('stroke', 'black')
-				})
+				}
 			}
 
 			function onShapeClick(val, tk) {
