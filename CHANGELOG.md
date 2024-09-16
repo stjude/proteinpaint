@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.76.1
 
 Fixes:
 - At mass summary plot header, when there's only one subtype tab, do not show the toggle
