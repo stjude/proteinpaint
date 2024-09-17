@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import webpack from 'webpack'
 
-// TODO: 
+// TODO:
 // use a good esbuild node polyfill plugin to avoid having to use webpack,
 // to bundle and supplies tape lib with missing node libs
 
@@ -22,22 +22,22 @@ export default {
 	output: {
 		path: path.join(__dirname, './test'),
 		publicPath: '/bin/bin/test',
+		// generated for esbuild.config.mjs nodeLibToBrowser() polyfilled
+		// replacement for tape lib in headless browser environment
 		filename: 'tape.bundle.js',
 		chunkLoading: 'import',
 		chunkFormat: 'module',
 		//chunkLoadingGlobal: 'ppJsonp',
 		library: {
-      type: "module",
-    },
+			type: 'module'
+		}
 	},
-	
-	experiments: {
-    outputModule: true,
-  },
 
-	plugins: [
-		new NodePolyfillPlugin()
-	],
+	experiments: {
+		outputModule: true
+	},
+
+	plugins: [new NodePolyfillPlugin()],
 
 	module: {
 		strictExportPresence: true,

@@ -2,6 +2,8 @@
 
 set -euxo pipefail
 
+./test/pretest.js
+
 NAMEPATTERN=$1
 
 rm -rf ../public/bin/test

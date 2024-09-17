@@ -80,7 +80,6 @@ if (!window.global) window.global = window
 const backArrows = d3.select('#testrun-back-arrows')
 const currTest = d3.select('#testrun-curr-test')
 const loadingDiv = d3.select('#testrun-loading-div')
-const activeColor = '#990033'
 const params = getParams()
 
 if (!Object.keys(params).length) {
@@ -132,10 +131,8 @@ async function showAvailableSpecs() {
             .enter()
             .append('div')
             .attr('class', 'testrun-file-div')
-            .style('font-weight', d => d.isActive ? 600 : '')
             .append('a')
             .attr('href', d => `?dir=${d.dir}&name=${d.name}`)
-            .style('color', d => d.isActive ? activeColor : '')
             .text(d => d.name)
       })
   } catch(e) {
@@ -158,7 +155,7 @@ function processData(data) {
       short,
       specs: []
     }
-    byDir[short].specs.push({name, file, isActive: data.active.includes(file), dir: path})
+    byDir[short].specs.push({name, file, dir: path})
   }
   return byDir
 }

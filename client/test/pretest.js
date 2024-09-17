@@ -4,8 +4,9 @@ import serverconfig from '../../server/src/serverconfig.js'
 process.chdir('../server')
 
 if (!serverconfig.ignoreTermdbTest) {
-	const hg38 = serverconfig.genomes && serverconfig.genomes.find(g => g.name == 'hg38')
-	if (!hg38 || !hg38.datasets || !hg38.datasets.find(d => d.name == 'TermdbTest')) {
-		throw 'Missing the TermdbTest dataset entry in the hg38 genome of serverconfig.json'
+	const getTermdbTest = d => d.name == 'TermdbTest'
+	const termdbTest = serverconfig.genomes?.find(g => g.name.includes('hg38') && g.datasets.find(getTermdbTest))
+	if (!termdbTest) {
+		throw 'Missing TermdbTest dataset entry in serverconfig.json'
 	}
 }

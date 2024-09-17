@@ -17,4 +17,4 @@ The API is [documented here](https://docs.google.com/document/d/18Qh52MOnwIRXrcq
 
 - Using a browser: http://localhost:3000/testrun.html?dir=filter
 
-- Command line: `node ./test/import-specs.js name=filter && npm run tape`
+- Command line: `./test.sh filter.*.spec.*`
