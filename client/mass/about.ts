@@ -28,6 +28,10 @@ class MassAbout {
 	init() {
 		this.holder.append('div').style('padding', '10px').html(this.features.html)
 	}
+
+	main() {
+		//TODO: May add code for interactive elements here at a later time.
+	}
 }
 
 export const aboutInit = getCompInit(MassAbout)
