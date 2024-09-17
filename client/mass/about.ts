@@ -28,12 +28,6 @@ class MassAbout {
 	init() {
 		this.holder.append('div').style('padding', '10px').html(this.features.html)
 	}
-
-	main() {
-		const aboutIdx = this.app.Inner.components.nav.Inner.tabs.findIndex(tab => tab.subheader == 'about')
-		const isActive = this.app.Inner.state.nav.activeTab == aboutIdx
-		this.holder.style('display', isActive ? '' : 'none')
-	}
 }
 
 export const aboutInit = getCompInit(MassAbout)
