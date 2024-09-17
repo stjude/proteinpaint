@@ -1,3 +1,5 @@
+import fs from 'fs'
+
 const usage = `
 	usage from the client dir: 
 	
@@ -12,8 +14,6 @@ const usage = `
 `
 const cssFile = process.argv[2]
 if (!cssFile) throw usage
-
-const fs = require('fs')
 if (!fs.existsSync(cssFile)) throw `not found, file='${cssFile}'`
 
 const cssStr = fs.readFileSync(cssFile).toString('utf-8').trim()

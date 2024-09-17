@@ -1,14 +1,14 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
-const { detectLst, detectOne, detectZero, whenHidden, whenVisible, detectGte } = require('../../test/test.helpers')
-const {
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import { detectLst, detectOne, detectZero, whenHidden, whenVisible, detectGte } from '../../test/test.helpers'
+import {
 	findSingletonMutationTestDiscoCnvPlots,
 	testMclassFiltering,
 	testSampleSummary2subtrack,
 	testVariantLeftLabel,
 	testAllow2selectSamples,
 	testSubtkSampleSummaryIsSmaller
-} = require('./mds3.integration.spec')
+} from './mds3.integration.spec'
 
 /**************
  tests both GDC and clinvar
