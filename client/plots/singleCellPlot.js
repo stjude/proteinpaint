@@ -47,15 +47,23 @@ class singleCellPlot {
 		const q = state.termdbConfig.queries
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 		this.opts.holder.style('position', 'relative')
-		this.showDivId = `${this.id}-sandbox`
-		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const headerDiv = mainDiv.append('div').style('padding', '10px')
-		const tableDiv = mainDiv.append('div')
-		const showDiv = headerDiv.append('div').attr('id', this.showDivId) //.style('display', 'inline-block')
-		const searchGeneDiv = headerDiv.append('div').style('padding-top', '10px').style('display', 'inline-block')
+		this.showDivId = `${this.id}-sandbox` //how it is used?
+		const mainDiv = this.opts.holder
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.attr('id', this.showDivId)
+		const controlsDiv = mainDiv.append('div').style('display', 'inline-block').attr('class', 'pp-termdb-plot-controls')
+		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const headerDiv = contentDiv.append('div').style('padding', '10px')
+		const tableDiv = contentDiv
+			.append('div')
+			.style('display', this.tableOnPlot ? 'block' : 'none')
+			.style('padding', this.tableOnPlot ? '10px' : '0px')
+		const searchGeneDiv = contentDiv.append('div')
 
 		if (this.tableOnPlot) {
-			showDiv
+			headerDiv
 				.append('input')
 				.attr('id', `showSamples`)
 				.attr('type', 'checkbox')
@@ -67,24 +75,25 @@ class singleCellPlot {
 						config: { settings: { singleCellPlot: { showSamples: e.target.checked } } }
 					})
 				})
-			showDiv.append('label').text('Show samples').attr('for', `showSamples`)
+			headerDiv.append('label').text('Show samples').attr('for', `showSamples`)
 		}
-		for (const plot of state.config.plots) {
-			const id = plot.name.replace(/\s+/g, '')
-			showDiv
-				.append('input')
-				.attr('id', `show${id}`)
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { singleCellPlot: { [`show${id}`]: e.target.checked } } }
+		if (state.config.plots.length > 1)
+			for (const plot of state.config.plots) {
+				const id = plot.name.replace(/\s+/g, '')
+				headerDiv
+					.append('input')
+					.attr('id', `show${id}`)
+					.attr('type', 'checkbox')
+					.property('checked', true)
+					.on('change', e => {
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: this.id,
+							config: { settings: { singleCellPlot: { [`show${id}`]: e.target.checked } } }
+						})
 					})
-				})
-			showDiv.append('label').text(plot.name).attr('for', `show${id}`)
-		}
+				headerDiv.append('label').text(plot.name).attr('for', `show${id}`)
+			}
 		if (q.singleCell?.geneExpression) {
 			searchGeneDiv.append('label').html('Gene expression:')
 			const geneSearch = addGeneSearchbox({
@@ -165,9 +174,8 @@ class singleCellPlot {
 			})
 		}
 
-		const deDiv = headerDiv.append('div').style('padding', '10px').style('display', 'inline-block')
-		const controlsDiv = mainDiv.append('div').style('display', 'inline-block').attr('class', 'pp-termdb-plot-controls')
-		const plotsDivParent = mainDiv.append('div').style('display', 'inline-block')
+		const deDiv = searchGeneDiv.append('div').style('padding', '10px')
+		const plotsDivParent = contentDiv.append('div').style('display', 'inline-block')
 		const plotsDiv = plotsDivParent
 			.append('div')
 			.style('display', 'flex')
@@ -211,7 +219,7 @@ class singleCellPlot {
 				this.dom.GSEAbt = this.dom.deDiv
 					.append('button')
 					.style('margin-left', '5px')
-					.property('disabled', true)
+					.style('display', 'none')
 					.text('Gene set enrichment analysis')
 					.on('click', e => {
 						const gsea_params = {
@@ -222,7 +230,7 @@ class singleCellPlot {
 						const config = {
 							chartType: 'gsea',
 							gsea_params: gsea_params,
-							insertBefore: this.app.opts?.app?.getPlotHolder && this.showDivId
+							insertBefore: this.app.opts?.app?.getPlotHolder && this.showDivId //this looks wrong!!!
 						}
 						this.app.dispatch({
 							type: 'plot_create',
@@ -235,7 +243,7 @@ class singleCellPlot {
 			this.dom.deselect.on('change', async e => {
 				DETableDiv.selectAll('*').remove()
 				const categoryName = this.dom.deselect.node().value.split(' ')?.[1]
-				if (this.dom.GSEAbt) this.dom.GSEAbt.property('disabled', !categoryName)
+				if (this.dom.GSEAbt) this.dom.GSEAbt.style('display', categoryName ? 'inline-block' : 'none')
 				if (!categoryName) return
 
 				const columnName = state.termdbConfig.queries.singleCell.DEgenes.columnName
@@ -897,8 +905,11 @@ export const componentInit = scatterInit
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const plots = app.vocabApi.termdbConfig?.queries?.singleCell.data.plots
-		const settings = getDefaultSingleCellSettings()
+		const data = app.vocabApi.termdbConfig?.queries?.singleCell?.data
+		const plots = data?.plots
+		let settings = getDefaultSingleCellSettings()
+		if (data.width) settings.svgw = data.width
+		if (data.height) settings.svgh = data.height
 		for (const plot of plots) {
 			const id = plot.name.replace(/\s+/g, '')
 			const key = `show${id}`
