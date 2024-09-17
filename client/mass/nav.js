@@ -277,6 +277,7 @@ function setRenderers(self) {
 		})
 
 		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
+		if (appState.termdbConfig.hideGroupsTab) self.tabs.splice(1, 1)
 		/** Adds either the COHORT or ABOUT tab
 		 * COHORT is added over ABOUT if both are defined
 		 */
