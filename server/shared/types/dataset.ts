@@ -462,6 +462,8 @@ export type SingleCellDataGdc = {
 	get?: (q: any) => any
 	refName: string
 	plots: GDCSingleCellPlot[]
+	width?: number
+	height?: number
 }
 
 export type SingleCellDEgeneGdc = {
