@@ -47,12 +47,12 @@ class singleCellPlot {
 		const q = state.termdbConfig.queries
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 		this.opts.holder.style('position', 'relative')
-		this.showDivId = `${this.id}-sandbox` //how it is used?
+		this.insertBeforeId = `${this.id}-sandbox`
 		const mainDiv = this.opts.holder
 			.insert('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.attr('id', this.showDivId)
+			.attr('id', this.insertBeforeId)
 		const controlsDiv = mainDiv.append('div').style('display', 'inline-block').attr('class', 'pp-termdb-plot-controls')
 		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const headerDiv = contentDiv.append('div').style('padding', '10px')
@@ -230,7 +230,8 @@ class singleCellPlot {
 						const config = {
 							chartType: 'gsea',
 							gsea_params: gsea_params,
-							insertBefore: this.app.opts?.app?.getPlotHolder && this.showDivId //this looks wrong!!!
+							//if getPlotHolder is defined use this.insertBeforeId, needed for GDC
+							insertBefore: this.app.opts?.app?.getPlotHolder && this.insertBeforeId
 						}
 						this.app.dispatch({
 							type: 'plot_create',
@@ -352,7 +353,7 @@ class singleCellPlot {
 
 		this.dom.tableDiv.style('display', this.settings.showSamples ? 'block' : 'none')
 		if (this.tableOnPlot) {
-			await renderSamplesTable(this.dom.tableDiv, this, this.state)
+			await renderSamplesTable(this.dom.tableDiv, this, this.state, this.state.dslabel, this.state.genome)
 			if (!this.samples?.length) {
 				this.showNoMatchingDataMessage()
 				return
@@ -763,11 +764,17 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 	*/
 
 	const menuDiv = holder.append('div').style('padding', '5px')
-	renderSamplesTable(menuDiv, chartsInstance, chartsInstance.state)
+	renderSamplesTable(
+		menuDiv,
+		chartsInstance,
+		chartsInstance.state,
+		chartsInstance.state.vocab.dslabel,
+		chartsInstance.state.vocab.genome
+	)
 }
 
-async function renderSamplesTable(div, self, state) {
-	const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
+async function renderSamplesTable(div, self, state, dslabel, genome) {
+	const body = { genome, dslabel, filter0: state.termfilter.filter0 || null }
 	let result
 	try {
 		result = await dofetch3('termdb/singlecellSamples', { body })
