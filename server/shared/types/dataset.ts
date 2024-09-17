@@ -519,6 +519,10 @@ export type SingleCellDataNative = {
 	refName?: string
 	/** dynamically added getter */
 	get?: (q: any) => any
+	/** width and height of the plots */
+
+	width?: number
+	height?: number
 }
 
 export type SingleCellQuery = {
