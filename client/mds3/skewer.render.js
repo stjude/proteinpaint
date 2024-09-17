@@ -127,6 +127,13 @@ export function skewer_make(tk, block) {
 		.each(function (d) {
 			d.g = this
 		})
+	/** tk.skewer.shape=[
+	 * [0] key from #dom/shapes.js (e.g. emptyTriangle)
+	 * [1] object with .isFilled, calculatedPath(), .path ]
+	 * This will be refactored from a track level definition
+	 * to a data level in the future
+	 */
+
 	const isEmptyShape = tk.skewer?.shape?.[1]?.isFilled == false
 
 	if (tk.skewer.shape && !tk.skewer?.shape?.[0].includes('Circle')) {
