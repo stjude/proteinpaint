@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- May change the shape of lollipop skewers when the track is filtered or a subtrack.
+
+
 ## 2.76.2
 
 Fixes:
