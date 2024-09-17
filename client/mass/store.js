@@ -94,8 +94,6 @@ class TdbStore {
 			})
 			const invalidPlots = []
 			for (const [i, savedPlot] of this.state.plots.entries()) {
-				// easier for rollup to support less complex dynamic imports with variables,
-				// webpack is already more flexible but need to support packing with rollup
 				let plot
 				try {
 					const _ = await import(`../plots/${savedPlot.chartType}.js`)

@@ -187,7 +187,7 @@ export function runproteinpaint(arg) {
 			// TODO: may import(style-normalize-unscoped.css) here for pp portals
 			//       where is it certain html, body css resets will not conflict with portal styles;
 			//       will also need to remove the import of the unscoped.css file from style.css
-			if (data.targetPortal && data.targetPortal == 'gdc') await import('./style.gdc.css') // actual string value will the bundler to find and bundle this optional stylesheet
+			if (data.targetPortal && data.targetPortal == 'gdc') await import('./style.gdc.css')
 			// genome data init
 			for (const genomename in app.genomes) {
 				const err = initgenome(app.genomes[genomename])

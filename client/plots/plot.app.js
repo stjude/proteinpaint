@@ -140,8 +140,6 @@ class PlotApp {
 				// quick fix to only track the plotDiv for the first plot
 				// TODO: reliably handle the case where a plotApp instance may have multiple plots/holders
 				if (!this.dom.plotDiv) this.dom.plotDiv = holder
-				// easier for rollup to support less complex dynamic imports with variables,
-				// webpack is already more flexible but need to support packing with rollup
 				const _ = await import(`../plots/${plot.chartType}.js`)
 				const plotApi = await _.componentInit({
 					id: plot.id,

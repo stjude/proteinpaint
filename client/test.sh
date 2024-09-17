@@ -21,7 +21,7 @@ if [[ ! -f "./test/tape.bundle.js" ]]; then
 	# from a freshly cloned repo and will always have to create the tape.bundle
 	# TODO: 
 	# use a good esbuild node polyfill plugin to avoid having to use webpack,
-	# to bundle and supplies tape lib with missing node libs  
+	# to bundle and supply tape lib with missing node libs  
 	npx webpack --config=./webpack.tape.config.mjs
 fi
 
