@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.77.0
 
 Features:
 - May change the shape of lollipop skewers when the track is filtered or a subtrack.
