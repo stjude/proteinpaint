@@ -16,9 +16,7 @@
   ],
   "scripts": {
     "reset": "rm -rf ./node_modules && rm -rf ./**/node_modules && npm install",
-    "predev0": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
-    "bundle": "cd client; webpack --env NODE_ENV=development --watch --color; cd ..",
-    "dev0": "npm run bundle -- --progress",
+    "bundle": "cd client; npm run dev",
     "dev": "cd client; ./dev.sh; ",
     "start": "tsx watch ./server/start.js",
     "dev1": "trap 'kill %1' INT; npm run bundle & npm start",
