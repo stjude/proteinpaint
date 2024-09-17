@@ -1,16 +1,7 @@
-'use strict'
-const tape = require('tape')
-const d3s = require('d3-selection')
-const helpers = require('../../test/front.helpers.js')
-const {
-	sleep,
-	detectLst,
-	detectOne,
-	detectZero,
-	whenHidden,
-	whenVisible,
-	detectGte
-} = require('../../test/test.helpers')
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import * as helpers from '../../test/front.helpers.js'
+import { sleep, detectLst, detectOne, detectZero, whenHidden, whenVisible, detectGte } from '../../test/test.helpers'
 
 // run this test at http://localhost:3000/testrun.html?name=genomeBrowser
 
@@ -140,7 +131,7 @@ Single group: filter
 Single group: info
 
 ********************************************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- mass/genomeBrowser -***-')
 	test.end()
 })

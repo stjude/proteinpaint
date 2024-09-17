@@ -1,6 +1,6 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
-const dofetch3 = require('#common/dofetch').dofetch3
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import { dofetch3 } from '#common/dofetch'
 
 /***********************************
  reusable helper vars and functions

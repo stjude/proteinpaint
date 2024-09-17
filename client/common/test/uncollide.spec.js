@@ -1,6 +1,6 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
-const uncollide = require('../uncollide').uncollide
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import { uncollide } from '../uncollide'
 
 /*************************
  reusable helper functions
@@ -10,16 +10,9 @@ const side = 350
 const fontSize = 16
 
 function render(data) {
-	const holder = d3s
-		.select('body')
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin', '10px')
+	const holder = d3s.select('body').append('div').style('display', 'inline-block').style('margin', '10px')
 
-	const svg = holder
-		.append('svg')
-		.attr('width', side)
-		.attr('height', side)
+	const svg = holder.append('svg').attr('width', side).attr('height', side)
 
 	svg
 		.append('rect')
@@ -42,13 +35,9 @@ function render(data) {
 
 	const svgBox = svg.node().getBoundingClientRect()
 
-	const labels = svg
-		.selectAll('g')
-		.data(data)
-		.enter()
-		.append('g')
+	const labels = svg.selectAll('g').data(data).enter().append('g')
 
-	labels.each(function(d) {
+	labels.each(function (d) {
 		const g = d3s.select(this).attr('transform', `translate(${d.x},${d.y})`)
 		g.append('text')
 			//.attr('x', d.x)
@@ -104,13 +93,8 @@ tape('default options', async test => {
 	const adjFontSize = '12px'
 	test.equal(
 		dom.labels
-			.filter(function() {
-				return (
-					d3s
-						.select(this)
-						.select('text')
-						.attr('font-size') === adjFontSize
-				)
+			.filter(function () {
+				return d3s.select(this).select('text').attr('font-size') === adjFontSize
 			})
 			.size(),
 		data.length,
@@ -152,13 +136,8 @@ tape('overlapping points', async test => {
 	const adjFontSize = '12px'
 	test.equal(
 		dom.labels
-			.filter(function() {
-				return (
-					d3s
-						.select(this)
-						.select('text')
-						.attr('font-size') === adjFontSize
-				)
+			.filter(function () {
+				return d3s.select(this).select('text').attr('font-size') === adjFontSize
 			})
 			.size(),
 		data.length,
@@ -200,13 +179,8 @@ tape.skip('svg overflow', async test => {
 	const adjFontSize = '12px'
 	test.equal(
 		dom.labels
-			.filter(function() {
-				return (
-					d3s
-						.select(this)
-						.select('text')
-						.attr('font-size') === adjFontSize
-				)
+			.filter(function () {
+				return d3s.select(this).select('text').attr('font-size') === adjFontSize
 			})
 			.size(),
 		data.length,

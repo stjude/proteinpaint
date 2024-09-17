@@ -1,7 +1,6 @@
-'use strict'
-const tape = require('tape')
-const helpers = require('../../test/front.helpers.js')
-const d3s = require('d3-selection')
+import tape from 'tape'
+import * as helpers from '../../test/front.helpers.js'
+import * as d3s from 'd3-selection'
 
 /* Launch from http://localhost:3000/testrun.html?name=sampleScatter */
 

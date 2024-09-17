@@ -7,9 +7,9 @@
 	See the specHelpers.writeImportCode() opts arguments
 	for description of the 'name', 'dir' options
 */
-const path = require('path')
-const fs = require('fs')
-const writeImportCode = require('./specHelpers').writeImportCode
+import path from 'path'
+import fs from 'fs'
+import { writeImportCode } from './specHelpers'
 
 // get user-supplied arguments from the command line
 const opts = process.argv

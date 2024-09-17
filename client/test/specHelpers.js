@@ -1,8 +1,7 @@
-const glob = require('glob')
-const fs = require('fs')
-const path = require('path')
-const wpCompileTime = path.join(__dirname, '/wpCompileTime')
-const minimatch = require('minimatch')
+import * as glob from 'glob'
+import fs from 'fs'
+import path from 'path'
+import minimatch from 'minimatch'
 
 /*
 	Creates a target file to import matching test spec files.
@@ -31,13 +30,16 @@ const minimatch = require('minimatch')
 	.
 */
 
+const __dirname = import.meta.dirname
+
+const wpCompileTime = path.join(__dirname, '/wpCompileTime')
 if (!fs.existsSync(wpCompileTime)) {
 	fs.writeFileSync(wpCompileTime, '', { encoding: 'utf8' })
 }
 
 const specsCache = {}
 
-exports.writeImportCode = async function writeImportCode(opts, targetFile) {
+export async function writeImportCode(opts, targetFile) {
 	// detect if the targetFile is missing and create as needed
 	if (!fs.existsSync(targetFile)) {
 		console.log(`Creating '${targetFile}'.`)
@@ -70,7 +72,7 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 	return specs
 }
 
-function findMatchingSpecs(opts) {
+export function findMatchingSpecs(opts) {
 	// may assign default patterns
 	const SPECDIR = opts.dir ? `**/${opts.dir}` : '**'
 	const SPECNAME = opts.name || '*'
@@ -106,7 +108,6 @@ function findMatchingSpecs(opts) {
 		exclude
 	}
 }
-exports.findMatchingSpecs = findMatchingSpecs
 
 function getFromCache(pattern) {
 	if (specsCache[pattern]) return specsCache[pattern]
@@ -114,7 +115,7 @@ function getFromCache(pattern) {
 	return specsCache['*']?.filter(f => minimatch(f, pattern))
 }
 
-function getImportedSpecs(targetFile, format = '') {
+export function getImportedSpecs(targetFile, format = '') {
 	if (!fs.existsSync(targetFile)) throw `missing '${targetFile}' in getImportedSpecs()`
 	const importedSpecs = fs.readFileSync(targetFile, { encoding: 'utf8' })
 	// return the string
@@ -130,14 +131,13 @@ function getImportedSpecs(targetFile, format = '') {
 		throw `unsupported format='${format}'`
 	}
 }
-exports.getImportedSpecs = getImportedSpecs
 
 async function getModTime(file) {
 	const mtime = (await fs.promises.stat(file)).mtime
 	return +new Date(mtime)
 }
 
-class WpPlugin {
+export class SpecHelpersWpPlugin {
 	apply(compiler) {
 		compiler.hooks.beforeCompile.tapAsync('SpecsHelperPlugin', (compilation, callback) => {
 			const internalsFilename = path.join(__dirname, './internals.js')
@@ -165,8 +165,6 @@ class WpPlugin {
 		})
 	}
 }
-
-exports.SpecHelpersWpPlugin = WpPlugin
 
 function touchFile(filename) {
 	const time = new Date()

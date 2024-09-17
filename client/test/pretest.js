@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+import serverconfig from '../../server/src/serverconfig.js'
+
 process.chdir('../server')
-const serverconfig = require('../../server/src/serverconfig.js')
+
 if (!serverconfig.ignoreTermdbTest) {
 	const hg38 = serverconfig.genomes && serverconfig.genomes.find(g => g.name == 'hg38')
 	if (!hg38 || !hg38.datasets || !hg38.datasets.find(d => d.name == 'TermdbTest')) {

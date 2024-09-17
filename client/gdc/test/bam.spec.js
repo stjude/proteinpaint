@@ -1,6 +1,6 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
-const { detectOne, detectZero, whenVisible } = require('../../test/test.helpers')
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import { detectOne, detectZero, whenVisible } from '../../test/test.helpers'
 
 /**************
  test sections
