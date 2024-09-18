@@ -94,7 +94,7 @@ function menu_variants(tk, block) {
 		.append('div')
 		.text('List')
 		.attr('class', 'sja_menuoption')
-		.attr('data-testid', 'sja_list_menuoption') // FIXME mds3tk_variantleftlabel_list
+		.attr('data-testid', 'sjpp_mds3tk_variantleftlabel_list')
 		.style('border-radius', '0px')
 		.on('click', () => {
 			listVariantData(tk, block)
