@@ -5,7 +5,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { sayerror } from '../dom/sayerror.ts'
 import { dofetch3 } from '#common/dofetch'
 import { getColors, plotColor } from '#shared/common'
-import { zoom as d3zoom } from 'd3-zoom'
+import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { renderTable } from '../dom/table.ts'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
@@ -14,6 +14,7 @@ import { rgb } from 'd3'
 import { addGeneSearchbox } from '../dom/genesearch.ts'
 import { roundValueAuto } from '../shared/roundValue.js'
 import { TermTypes } from '../shared/terms.js'
+import { icons as icon_functions } from '#dom/control.icons'
 
 /*
 this
@@ -53,7 +54,34 @@ class singleCellPlot {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.attr('id', this.insertBeforeId)
-		const controlsDiv = mainDiv.append('div').style('display', 'inline-block').attr('class', 'pp-termdb-plot-controls')
+
+		const leftDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const controlsDiv = leftDiv.append('div').attr('class', 'pp-termdb-plot-controls')
+		const iconsDiv = leftDiv.append('div')
+		const zoomInDiv = iconsDiv.append('div').style('margin', '20px')
+		icon_functions['zoomIn'](zoomInDiv, {
+			handler: () => {
+				for (const plot of this.plots) this.zoom.scaleBy(plot.svg.transition().duration(500), 1.1)
+			},
+			title: 'Zoom in'
+		})
+		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
+		icon_functions['zoomOut'](zoomOutDiv, {
+			handler: () => {
+				for (const plot of this.plots) this.zoom.scaleBy(plot.svg.transition().duration(500), 0.9)
+			},
+			title: 'Zoom out'
+		})
+		const identityDiv = iconsDiv.append('div').style('margin', '20px')
+		icon_functions['restart'](identityDiv, {
+			handler: () => {
+				for (const plot of this.plots) {
+					plot.svg.transition().duration(500).call(this.zoom.transform, zoomIdentity)
+				}
+			},
+			title: 'Reset plot to defaults'
+		})
+
 		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const headerDiv = contentDiv.append('div').style('padding', '10px')
 		const tableDiv = contentDiv
@@ -498,14 +526,14 @@ class singleCellPlot {
 
 		plot.svg = svg
 
-		const zoom = d3zoom()
+		this.zoom = d3zoom()
 			.scaleExtent([0.5, 5])
 			.on('zoom', e => this.handleZoom(e, plot))
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
-		svg.call(zoom)
+		svg.call(this.zoom)
 
 		const symbols = svg.selectAll('g').data(plot.cells)
 
