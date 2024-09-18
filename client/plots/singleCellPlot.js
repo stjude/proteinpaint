@@ -174,7 +174,9 @@ class singleCellPlot {
 			})
 		}
 
+		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
 		const deDiv = searchGeneDiv.append('div').style('padding', '10px')
+
 		const plotsDivParent = contentDiv.append('div').style('display', 'inline-block')
 		const plotsDiv = plotsDivParent
 			.append('div')
@@ -259,6 +261,10 @@ class singleCellPlot {
 					DETableDiv.text(result.error)
 					return
 				}
+				if (!Array.isArray(result.genes)) {
+					DETableDiv.text('.genes[] missing')
+					return
+				}
 				const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
 				const rows = []
 				this.genes = []
@@ -277,7 +283,7 @@ class singleCellPlot {
 				renderTable({
 					rows,
 					columns,
-					maxWidth: '30vw',
+					maxWidth: '40vw',
 					div: DETableDiv
 				})
 			})
