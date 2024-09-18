@@ -65,18 +65,12 @@ function setInteractivity(self) {
 }
 
 function burgerBtnInit(opts) {
+	const burguerDiv = opts.holder.style('margin', '15px 20px')
+	icon_functions['burguer'](burguerDiv, { handler: opts.callback, title: 'Settings' })
+
 	const self = {
 		dom: {
-			btn: opts.holder
-				.style('margin', '10px')
-				.style('margin-left', '20px')
-				.style('font-family', 'verdana')
-				.style('font-size', '28px')
-				.style('cursor', 'pointer')
-				.style('transition', '0.5s')
-				.html('&#8801;')
-				.on('click', opts.callback)
-				.attr('aria-label', 'Settings')
+			btn: burguerDiv
 		}
 	}
 
