@@ -93,7 +93,8 @@ export class Vocab {
 			}
 		} catch (e) {
 			this.tokenVerificationMessage = e.message || e.reason || e
-			if (typeof e == 'object') console.log(e)
+			// may uncomment below to help troubleshoot auth errors
+			// if (typeof e == 'object') console.log(e)
 		}
 	}
 
