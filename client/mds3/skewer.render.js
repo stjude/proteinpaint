@@ -250,7 +250,7 @@ export function skewer_make(tk, block) {
 
 	kick
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
-		.attr('class', 'sja_aa_disckick')
+		.classed('sja_aa_disckick', true)
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
@@ -269,6 +269,10 @@ export function skewer_make(tk, block) {
 		})
 		.on('click', async (event, d) => {
 			click_variant(d, tk, block, event.target.getBoundingClientRect(), event.target)
+		})
+		.on('transitionend', () => {
+			console.log(274)
+			kick.classed('active', kick.style.transform.includes('scale(1)'))
 		})
 
 	// disc rims
@@ -435,6 +439,10 @@ export function skewer_make(tk, block) {
 		.on('click', (event, d) => {
 			tk.pica.g.selectAll('*').remove()
 			unfold_glyph([d], tk, block)
+		})
+		.on('transitionend', () => {
+			console.log(444)
+			foldedKick.classed('active', foldedKick.style.transform.includes('scale(1'))
 		})
 	// set fold y offset
 	// get max mcount for skewers
@@ -636,9 +644,17 @@ export function unfold_glyph(newlst, tk, block) {
 				d.y = d.yoffset * (tk.skewer.pointup ? -1 : 1)
 				return 'translate(0,' + d.y + ')'
 			})
-		setTimeout(function () {
-			set.selectAll('.sja_aa_disckick').attr('transform', 'scale(1)')
-		}, dur)
+		// setTimeout(function () {
+		set
+			.selectAll('.sja_aa_disckick')
+			.transition()
+			.duration(dur)
+			.attr('transform', 'scale(1)')
+			.on('end', () => {
+				//For e2e testing
+				set.selectAll('.sja_aa_disckick').classed('active', true)
+			})
+		// }, dur)
 		set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 1).attr('stroke-opacity', 1)
 		set
 			.filter(d => d.groups.length > 1)
@@ -662,6 +678,8 @@ export function unfold_glyph(newlst, tk, block) {
 			.attr('y', ((tk.skewer.pointup ? 1 : -1) * tk.skewer.stem1) / 2)
 		set
 			.selectAll('.sja_aa_skkick')
+			.transition()
+			.duration(0)
 			.attr(
 				'transform',
 				d =>
@@ -669,8 +687,12 @@ export function unfold_glyph(newlst, tk, block) {
 						tk.skewer.shape && !tk.skewer.shape[0].includes('Circle')
 							? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})`
 							: ''
-					}  scale(0.01,0.01)`
-			) // safari fix
+					} scale(0.01, 0.01)` // safari fix
+			)
+			.on('end', () => {
+				//For e2e testing
+				set.selectAll('.sja_aa_skkick').classed('active', false)
+			})
 		let counter = 0
 		set
 			.selectAll('.sja_aa_stem')
@@ -864,7 +886,15 @@ export function fold_glyph(lst, tk) {
 		.transition()
 		.duration(dur)
 		.attr('transform', d => 'translate(0,' + (tk.skewer.pointup ? '-' : '') + d.aa.maxradius + ')')
-	set.selectAll('.sja_aa_disckick').attr('transform', 'scale(0)')
+	set
+		.selectAll('.sja_aa_disckick')
+		.transition()
+		.duration(0)
+		.attr('transform', 'scale(0)')
+		.on('end', () => {
+			//For e2e testing
+			set.selectAll('.sja_aa_disckick').classed('active', false)
+		})
 	set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 0).attr('stroke-opacity', 0)
 	set.selectAll('.sja_aa_disclabel').transition().duration(dur).attr('fill-opacity', 0).attr('transform', 'scale(0)') // hide this label so it won't be tred
 	set.selectAll('.sja_aa_discrim').transition().duration(dur).attr('fill-opacity', 0).attr('stroke-opacity', 0)
@@ -884,6 +914,10 @@ export function fold_glyph(lst, tk) {
 						: ''
 				} scale(1)`
 		)
+		.on('end', () => {
+			//For e2e testing
+			set.selectAll('.sja_aa_skkick').classed('active', true)
+		})
 }
 
 /* works for both skewer and numeric mode
