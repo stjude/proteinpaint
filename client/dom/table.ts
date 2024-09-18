@@ -7,6 +7,7 @@ export type Cell = {
 	html?: string // to print with .html() d3 method, may be susceptible to attack
 	__td?: any //is attached to each cell object pointing to <td>, for external code to render interactive contents in it
 	disabled?: boolean
+	elemId?: string
 }
 
 export type Column = {
@@ -28,9 +29,11 @@ export type Button = {
 	class?: string //to customize button style or to assist detection in testing
 }
 
+type TableRow = Cell[] & { ariaLabelledBy?: string }
+
 export type TableArgs = {
 	columns: Column[] //List of table columns
-	rows: Cell[][] //each element is an array of cells for a row, with array length must matching columns length
+	rows: TableRow[] //each element is an array of cells for a row, with array length must matching columns length
 
 	div: any //Holder to render the table
 	columnButtons?: Button[] //List of buttons to render in a column
@@ -58,6 +61,17 @@ export type TableArgs = {
 	//Optional
 	//For testing purposes
 }
+
+// incremented input ID will guarantee no collision from using getUniqueNameOrId()
+let idIncr = 0
+// random suffix will minimize the chance of collission of other code that
+// happen to use the same prefix/beginning substring for element ID
+const randomSuffix = Math.random()
+// generate unique input name or id string
+function getUniqueNameOrId() {
+	return `sjpp-input-${idIncr++}-${randomSuffix}`
+}
+
 /*
 Prints an html table, using the specified columns and rows
 See the paramters in TableArgs; function has no return
@@ -107,7 +121,7 @@ export function renderTable({
 		//if (singleMode == true && (!buttons || !noButtonCallback)) throw `Missing buttons array and noButtonCallback but singleMode = true`
 	}
 
-	const uniqueInputName = inputName || 'select' + Math.random()
+	const uniqueInputName = inputName || getUniqueNameOrId()
 
 	const parentDiv = div.append('div').style('background-color', 'white')
 
@@ -145,8 +159,10 @@ export function renderTable({
 		if (!singleMode) {
 			const checkboxH = cell
 				.append('input')
+				// TODO: should use a globally-unique element id for the checkbox
 				.attr('id', 'checkboxHeader')
 				.attr('type', 'checkbox')
+				.attr('title', 'Check or uncheck all')
 				.on('change', () => {
 					const nodes = tbody.selectAll('input').nodes()
 					tbody.selectAll('input').property('checked', checkboxH.node().checked)
@@ -203,6 +219,7 @@ export function renderTable({
 				.attr('type', singleMode ? 'radio' : 'checkbox')
 				.attr('name', uniqueInputName)
 				.attr('value', i)
+				.attr('aria-labelledby', row.ariaLabelledBy || null)
 				.property('checked', selectAll || selectedRows.includes(i))
 				.on('change', () => {
 					if (buttons) updateButtons()
@@ -235,7 +252,10 @@ export function renderTable({
 			}
 		}
 		for (const [colIdx, cell] of row.entries()) {
-			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
+			const td = rowtable
+				.append('td')
+				.attr('id', cell.elemId || null)
+				.attr('class', 'sjpp_table_item')
 
 			// attach <td> for external code to modify
 			cell.__td = td

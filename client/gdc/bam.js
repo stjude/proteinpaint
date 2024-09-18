@@ -23,7 +23,7 @@ gdc_args {}
 	bam_files: [ {} ]
 		file_id: file uuid from gdc <string>,
 		track_name: used for naming of track <string> //optional
-		about:[] // with keys corresponding to baminfo_rows[]
+		about:[] // with keys corresponding to baminfo_cols[]
 	case_id: <string>
 	ssmInput:{}
 		chr, pos, ref, alt
@@ -74,7 +74,7 @@ const tip = new Menu({ padding: '' })
 const gdc_genome = 'hg38'
 const gdcDslabel = 'GDC' // hardcoded in multiple places
 const variantFlankingSize = 60 // bp
-const baminfo_rows = [
+const baminfo_cols = [
 	{ title: 'Entity ID', key: 'entity_id' },
 	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
 	{ title: 'Tissue Type', key: 'tissue_type' },
@@ -481,29 +481,35 @@ export async function bamsliceui({
 			gdc_args.bam_files.push(file)
 
 			const table = table2col({ holder: baminfo_table })
-			for (const row of baminfo_rows) {
+			for (const col of baminfo_cols) {
 				const [td1, td2] = table.addRow()
-				td1.text(row.title)
+				td1.text(col.title)
 				td2.html(
-					row.url ? `<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>` : onebam[row.key]
+					col.url ? `<a href=${col.url}${onebam.file_uuid} target=_blank>${onebam[col.key]}</a>` : onebam[col.key]
 				)
-				file.about.push({ k: row.title, v: onebam[row.key] })
+				const id = file.about.push({ k: col.title, v: onebam[col.key] })
 			}
 			baminfo_table.select('input').node()?.focus()
 		}
 
 		function update_multifile_table(files) {
-			const columns = baminfo_rows.map(i => {
+			const columns = baminfo_cols.map(i => {
 				return { label: i.title, width: i.width }
 			})
 			const rows = []
 			for (const [i, onebam] of files.entries()) {
 				const row = []
-				for (const column of baminfo_rows) {
+				// address section 508 requirement to have explicit or implicit labels for input elements
+				const elemId = onebam.entity_id
+				row.ariaLabelledBy = elemId
+				for (const column of baminfo_cols) {
+					const value = onebam[column.key]
 					if (column.url) {
-						row.push({ html: `<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>` })
+						row.push({ html: `<a href=${row.url}${onebam.file_uuid} target=_blank>${value}</a>` })
+					} else if (column.key == 'entity_id') {
+						row.push({ value, elemId })
 					} else {
-						row.push({ value: onebam[column.key] })
+						row.push({ value })
 					}
 				}
 				rows.push(row)
@@ -525,7 +531,7 @@ export async function bamsliceui({
 							{
 								file_id: onebam.file_uuid,
 								track_name: `${onebam.tissue_type}, ${onebam.tumor_descriptor}, ${onebam.experimental_strategy}, ${onebam.entity_id}`,
-								about: baminfo_rows.map(i => {
+								about: baminfo_cols.map(i => {
 									return { k: i.title, v: onebam[i.key] }
 								})
 							}
@@ -535,7 +541,7 @@ export async function bamsliceui({
 							gdc_args.bam_files.push({
 								file_id: onebam.file_uuid,
 								track_name: `${onebam.tissue_type}, ${onebam.tumor_descriptor}, ${onebam.experimental_strategy}, ${onebam.entity_id}`,
-								about: baminfo_rows.map(i => {
+								about: baminfo_cols.map(i => {
 									return { k: i.title, v: onebam[i.key] }
 								})
 							})
@@ -640,14 +646,14 @@ export async function bamsliceui({
 				.style('position', 'sticky')
 				.style('top', '0px')
 				.style('background-color', 'white')
-				.style('color', '#888')
+				.style('color', '#555')
 			tr.append('td').text('CASE')
 			tr.append('td').text('BAM FILES, SELECT ONE TO VIEW')
 
 			// make tr for each case
 			for (const caseName in data.case2files) {
 				const tr = table.append('tr').attr('class', 'sja_clb_gray')
-				tr.append('td').style('vertical-align', 'top').style('color', '#888').text(caseName)
+				tr.append('td').style('vertical-align', 'top').style('color', '#555').text(caseName)
 				const td2 = tr.append('td')
 				for (const f of data.case2files[caseName]) {
 					// make a div for each file
@@ -780,12 +786,16 @@ export async function bamsliceui({
 		for (const [gene, mlst] of gene2mlst) {
 			for (const m of mlst) {
 				const row = []
+				// address section 508 requirement to have explicit or implicit labels for input elements
+				const elemId = `${gene}-${m.mname}`.replace(/\W+/g, '_')
+				row.ariaLabelledBy = elemId
 				row.push({ value: gene, data: m })
-				row.push({ value: m.mname })
+				row.push({ value: m.mname, elemId })
 				row.push({ value: mclass[m.class]?.label || 'Unknown' })
 				row.push({ value: m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt })
 				rows.push(row)
 			}
+			if (rows.length > 5) break
 		}
 
 		renderTable({
@@ -1053,26 +1063,32 @@ export async function bamsliceui({
 }
 
 function geneSearchInstruction(d) {
-	d.append('div').style('opacity', 0.6).html(`<ul>
+	d.append('div').style('opacity', 0.7).html(`<ul>
 		<li>Enter gene, position, SNP, or variant.
 		The BAM file will be sliced at the given position and visualized.</li>
-		<li>Position</li>
-		<ul><li>Example: chr17:7676339-7676767</li>
-		    <li>Coordinates are hg38 and 1-based.</li>
-		</ul>
+		<li>
+			<span>Position</span>
+			<ul><li>Example: chr17:7676339-7676767</li>
+			    <li>Coordinates are hg38 and 1-based.</li>
+			</ul>
+		</li>
 		<li>SNP example: rs28934574</li>
-		<li>Variant:</li>
-		<ul>
-		  <li>Example: chr2.208248388.C.T</li>
-		  <li>Fields are separated by periods. Coordinate is hg38 and 1-based. Reference and alternative alleles are on forward strand.</li>
-		</ul>
-		<li>Supported HGVS formats for variants:</li>
-		<ul>
-		  <li>SNV: chr2:g.208248388C>T</li>
-		  <li>MNV: chr2:g.119955155_119955159delinsTTTTT</li>
-		  <li>Insertion: chr5:g.171410539_171410540insTCTG</li>
-		  <li>Deletion: chr10:g.8073734delTTTAGA</li>
-		</ul>
+		<li>
+			<span>Variant:</span>
+			<ul>
+			  <li>Example: chr2.208248388.C.T</li>
+			  <li>Fields are separated by periods. Coordinate is hg38 and 1-based. Reference and alternative alleles are on forward strand.</li>
+			</ul>
+		</li>
+		<li>
+			<span>Supported HGVS formats for variants:</span>
+			<ul>
+			  <li>SNV: chr2:g.208248388C>T</li>
+			  <li>MNV: chr2:g.119955155_119955159delinsTTTTT</li>
+			  <li>Insertion: chr5:g.171410539_171410540insTCTG</li>
+			  <li>Deletion: chr10:g.8073734delTTTAGA</li>
+			</ul>
+		</li>
 		</ul>`)
 }
 
