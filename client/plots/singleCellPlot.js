@@ -434,7 +434,6 @@ class singleCellPlot {
 	}
 
 	renderPlots(result) {
-		console.log(result)
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.plots = []
 		for (const plot of result.plots) {
