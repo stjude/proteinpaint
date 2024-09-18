@@ -7,7 +7,7 @@ export type Cell = {
 	html?: string // to print with .html() d3 method, may be susceptible to attack
 	__td?: any //is attached to each cell object pointing to <td>, for external code to render interactive contents in it
 	disabled?: boolean
-	elemId?: string
+	elemId?: string // may be used as a reference ID for aria-labelledby, or other use
 }
 
 export type Column = {
@@ -29,6 +29,9 @@ export type Button = {
 	class?: string //to customize button style or to assist detection in testing
 }
 
+// ariaLabelledBy is an optional attribute on the array object,
+// if present, will be used as aria-labelledby attribute on the
+// radio or checkbox input element, to address Section 508 requirement
 type TableRow = Cell[] & { ariaLabelledBy?: string }
 
 export type TableArgs = {
