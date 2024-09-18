@@ -195,10 +195,7 @@ export class profilePlot {
 			termsPerRequest: 10
 		})
 
-		this.regions = Object.keys(this.config.regionTW.term.values).map(value => {
-			return { label: value, value }
-		})
-		this.regions.unshift({ label: '', value: '' })
+		this.regions = this.getList(this.config.regionTW)
 		this.countries = this.getList(this.config.countryTW)
 		this.incomes = this.getList(this.config.incomeTW)
 		this.teachingStates = this.getList(this.config.teachingStatusTW)
