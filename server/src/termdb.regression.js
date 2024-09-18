@@ -640,47 +640,59 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		}
 
 		// coefficients
-		const minCoefRowCnt = q.ds.cohort.termdb.neuroOncRegression || Rinput.regressionType == 'cox' ? 1 : 2
-		if (data.coefficients.rows.length < minCoefRowCnt) throw 'unexpected number of rows in coefficients table'
-		analysisResult.data.coefficients = {
-			header: data.coefficients.header,
-			terms: {}, // individual independent terms, not interaction
-			interactions: [] // interactions
+		if (data.coefficients) {
+			// coefficients from a single analysis
+			analysisResult.data.coefficients = parseCoefficients(data.coefficients)
+		} else if (data.coefficients_uni && data.coefficients_multi) {
+			// coefficients from univariate and multivariate analyses
+			analysisResult.data.coefficients_uni = parseCoefficients(data.coefficients_uni)
+			analysisResult.data.coefficients_multi = parseCoefficients(data.coefficients_multi)
+		} else {
+			throw 'coefficients table not found'
 		}
-		if (!q.ds.cohort.termdb.neuroOncRegression && Rinput.regressionType != 'cox')
-			analysisResult.data.coefficients.intercept = data.coefficients.rows.shift()
-		for (const row of data.coefficients.rows) {
-			if (row[0].indexOf(':') != -1) {
-				// is an interaction
-				const interaction = {}
-				const [id1, id2] = row.shift().split(':')
-				const [cat1, cat2] = row.shift().split(':')
-				// row is now only data fields
-				interaction.term1 = id2originalId[id1]
-				interaction.category1 = cat1
-				interaction.term2 = id2originalId[id2]
-				interaction.category2 = cat2
-				interaction.lst = row
-				analysisResult.data.coefficients.interactions.push(interaction)
-			} else {
-				// not interaction, individual variable
-				const id = row.shift()
-				const category = row.shift()
-				// row is now only data fields
-				const termid = id2originalId[id]
-				if (!analysisResult.data.coefficients.terms[termid]) analysisResult.data.coefficients.terms[termid] = {}
-				if (category) {
-					// has category
-					if (!analysisResult.data.coefficients.terms[termid].categories)
-						analysisResult.data.coefficients.terms[termid].categories = {}
-					analysisResult.data.coefficients.terms[termid].categories[category] = row
+		function parseCoefficients(in_coef) {
+			if (in_coef.rows.length < (q.ds.cohort.termdb.neuroOncRegression || Rinput.regressionType == 'cox' ? 1 : 2))
+				throw 'unexpected number of rows in coefficients table'
+			const out_coef = {
+				header: in_coef.header,
+				terms: {}, // individual independent terms, not interaction
+				interactions: [], // interactions
+				label: 'Coefficients'
+			}
+			if (!q.ds.cohort.termdb.neuroOncRegression && Rinput.regressionType != 'cox')
+				out_coef.intercept = in_coef.rows.shift()
+			for (const row of in_coef.rows) {
+				if (row[0].indexOf(':') != -1) {
+					// is an interaction
+					const interaction = {}
+					const [id1, id2] = row.shift().split(':')
+					const [cat1, cat2] = row.shift().split(':')
+					// row is now only data fields
+					interaction.term1 = id2originalId[id1]
+					interaction.category1 = cat1
+					interaction.term2 = id2originalId[id2]
+					interaction.category2 = cat2
+					interaction.lst = row
+					out_coef.interactions.push(interaction)
 				} else {
-					// no category
-					analysisResult.data.coefficients.terms[termid].fields = row
+					// not interaction, individual variable
+					const id = row.shift()
+					const category = row.shift()
+					// row is now only data fields
+					const termid = id2originalId[id]
+					if (!out_coef.terms[termid]) out_coef.terms[termid] = {}
+					if (category) {
+						// has category
+						if (!out_coef.terms[termid].categories) out_coef.terms[termid].categories = {}
+						out_coef.terms[termid].categories[category] = row
+					} else {
+						// no category
+						out_coef.terms[termid].fields = row
+					}
 				}
 			}
+			return out_coef
 		}
-		analysisResult.data.coefficients.label = 'Coefficients'
 
 		// type III statistics
 		if (data.type3) {
