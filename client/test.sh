@@ -2,9 +2,11 @@
 
 set -euxo pipefail
 
-./test/pretest.js
-
+# glob string pattern for matching filenames to test
 NAMEPATTERN=$1
+
+TESTHOST=http://localhost:3000
+./test/pretest.js $TESTHOST
 
 rm -rf ../public/bin/test
 
@@ -22,6 +24,6 @@ if [[ ! -f "./test/tape.bundle.js" ]]; then
 fi
 
 
-ENV=test node esbuild.config.mjs 
-INITJS='window.testHost="http://localhost:3000";import("/bin/test/_.._/test/internals-test.js");'
+ENV=test node esbuild.config.mjs
+INITJS="window.testHost='$TESTHOST';import('/bin/test/_.._/test/internals-test.js');"
 echo "$INITJS" | npx tape-run --static ../public
