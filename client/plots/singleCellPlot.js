@@ -59,16 +59,17 @@ class singleCellPlot {
 		const controlsDiv = leftDiv.append('div').attr('class', 'pp-termdb-plot-controls')
 		const iconsDiv = leftDiv.append('div')
 		const zoomInDiv = iconsDiv.append('div').style('margin', '20px')
+		const duration = 750
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
-				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(750), 1.1)
+				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(duration), 1.1)
 			},
 			title: 'Zoom in'
 		})
 		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
-				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(750), 0.9)
+				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(duration), 0.9)
 			},
 			title: 'Zoom out'
 		})
@@ -76,7 +77,7 @@ class singleCellPlot {
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
 				for (const plot of this.plots) {
-					plot.svg.transition().duration(750).call(plot.zoom.transform, zoomIdentity)
+					plot.svg.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
 				}
 			},
 			title: 'Reset plot to defaults'
