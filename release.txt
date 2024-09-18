@@ -1,2 +1,1 @@
-Fixes:
-- genome browser plot now saves mds3 subtracks in state and recover from session
+

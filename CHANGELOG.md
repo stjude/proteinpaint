@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- genome browser plot now saves mds3 subtracks in state and recover from session
+
 
 ## 2.77.0
 
