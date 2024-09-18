@@ -270,11 +270,6 @@ export function skewer_make(tk, block) {
 		.on('click', async (event, d) => {
 			click_variant(d, tk, block, event.target.getBoundingClientRect(), event.target)
 		})
-		.on('transitionend', () => {
-			console.log(274)
-			kick.classed('active', kick.style.transform.includes('scale(1)'))
-		})
-
 	// disc rims
 	const rimfunc = d3arc()
 		.innerRadius(d => d.radius)
@@ -439,10 +434,6 @@ export function skewer_make(tk, block) {
 		.on('click', (event, d) => {
 			tk.pica.g.selectAll('*').remove()
 			unfold_glyph([d], tk, block)
-		})
-		.on('transitionend', () => {
-			console.log(444)
-			foldedKick.classed('active', foldedKick.style.transform.includes('scale(1'))
 		})
 	// set fold y offset
 	// get max mcount for skewers
@@ -652,7 +643,7 @@ export function unfold_glyph(newlst, tk, block) {
 			.attr('transform', 'scale(1)')
 			.on('end', () => {
 				//For e2e testing
-				set.selectAll('.sja_aa_disckick').classed('active', true)
+				set.selectAll('.sja_aa_disckick').classed('sjpp-active', true)
 			})
 		// }, dur)
 		set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 1).attr('stroke-opacity', 1)
@@ -691,7 +682,7 @@ export function unfold_glyph(newlst, tk, block) {
 			)
 			.on('end', () => {
 				//For e2e testing
-				set.selectAll('.sja_aa_skkick').classed('active', false)
+				set.selectAll('.sja_aa_skkick').classed('sjpp-active', false)
 			})
 		let counter = 0
 		set
@@ -893,7 +884,7 @@ export function fold_glyph(lst, tk) {
 		.attr('transform', 'scale(0)')
 		.on('end', () => {
 			//For e2e testing
-			set.selectAll('.sja_aa_disckick').classed('active', false)
+			set.selectAll('.sja_aa_disckick').classed('sjpp-active', false)
 		})
 	set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 0).attr('stroke-opacity', 0)
 	set.selectAll('.sja_aa_disclabel').transition().duration(dur).attr('fill-opacity', 0).attr('transform', 'scale(0)') // hide this label so it won't be tred
@@ -916,7 +907,7 @@ export function fold_glyph(lst, tk) {
 		)
 		.on('end', () => {
 			//For e2e testing
-			set.selectAll('.sja_aa_skkick').classed('active', true)
+			set.selectAll('.sja_aa_skkick').classed('sjpp-active', true)
 		})
 }
 
