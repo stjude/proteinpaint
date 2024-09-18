@@ -275,11 +275,15 @@ tape('tvs: Categorical', async test => {
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='select']").size(), 10, 'Should have a checkbox for each value')
-		test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Wilms tumor')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 10, 'Should have a checkbox for each value')
+		test.equal(
+			tipd.selectAll("input[name^='sjpp-input']:checked").size(),
+			1,
+			'Should have 1 box checked for Wilms tumor'
+		)
 
 		//trigger and test addition of new value
-		tipd.node().querySelectorAll("input[name^='select']")[0].click()
+		tipd.node().querySelectorAll("input[name^='sjpp-input']")[0].click()
 
 		// defer the execution of the next step to the next process loop "tick"
 		const valueBtn = await detectChildText({
@@ -405,7 +409,7 @@ tape.skip('tvs: Numeric', async test => {
 			editOpt.click()
 			const selectInputs = await detectLst({
 				target: tipnode,
-				selector: `input[name^='select']`,
+				selector: `input[name^='sjpp-input']`,
 				count: 3
 			})
 			selectInputs[0].click()
@@ -425,7 +429,7 @@ tape.skip('tvs: Numeric', async test => {
 			})
 
 			// for subsequent tests, hide the uncomputable bin again
-			tipnode.querySelector("input[name^='select']").click()
+			tipnode.querySelector("input[name^='sjpp-input']").click()
 			tipnode.querySelector('.sjpp_apply_btn').click()
 			await whenHidden(tipnode.parentNode)
 		}
@@ -594,16 +598,16 @@ tape('tvs: Condition', async test => {
 		const termCat = await opts.filter.Inner.vocabApi.getCategories(opts.filterData.lst[0].tvs.term, '', body)
 		test.equal(applyBtn.length, 1, 'Should have 1 button to apply value change')
 		test.equal(
-			tipd.selectAll("input[name^='select']").size(),
+			tipd.selectAll("input[name^='sjpp-input']").size(),
 			termCat.lst.length,
 			'Should have checkbox for each value'
 		)
-		test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Grade 0')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked for Grade 0')
 	}
 
 	// --- trigger and test grade change ---
 	{
-		tipd.node().querySelectorAll("input[name^='select']")[1].click()
+		tipd.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
 
 		const applyBtn = await detectGte({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 		const valueBtn = await detectChildText({
@@ -648,7 +652,7 @@ tape('tvs: Condition', async test => {
 	await sleep(800)
 	tipd
 		.node()
-		.querySelectorAll("input[name^='select']")[1]
+		.querySelectorAll("input[name^='sjpp-input']")[1]
 		.click()
 
 	tipd
