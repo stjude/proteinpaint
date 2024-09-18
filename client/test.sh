@@ -5,8 +5,8 @@ set -euxo pipefail
 # glob string pattern for matching filenames to test
 NAMEPATTERN=$1
 
+TESTHOST=http://localhost:3000
 if [[ "$NAMEPATTERN" == *"integration"* ]]; then
-	TESTHOST=http://localhost:3000
 	./test/pretest.js $TESTHOST
 fi
 
