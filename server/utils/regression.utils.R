@@ -687,17 +687,14 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
   
   if (isTRUE(neuroOnc)) {
     # neuro-oncology dataset
-    # combine 95% CI columns
-    ciCol <- paste(coefficients_table[,"95% CI (low)"], coefficients_table[,"95% CI (high)"], sep = " - ")
-    coefficients_table <- cbind(coefficients_table, "95% CI" = ciCol)
     # remove intercept row because cannot merge together intercepts
     # from multiple univariate analyses
     coefficients_table <- coefficients_table[row.names(coefficients_table) != "(Intercept)", ,drop = F]
     # extract columns of interest
     if (regtype == "linear") {
-      coefficients_table <- coefficients_table[, c("Variable", "Category", "Beta", "95% CI", "Pr(>|t|)"), drop = F]
+      coefficients_table <- coefficients_table[, c("Variable", "Category", "Beta", "95% CI (low)", "95% CI (high)", "Pr(>|t|)"), drop = F]
     } else if (regtype == "logistic") {
-      coefficients_table <- coefficients_table[, c("Variable", "Category", "Odds ratio", "95% CI", "Pr(>|z|)"), drop = F]
+      coefficients_table <- coefficients_table[, c("Variable", "Category", "Odds ratio", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
     } else if (regtype == "cox") {
       # cox regression
       # report sample size and event counts of coefficients
@@ -726,7 +723,7 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
         }
       }
       coefficients_table <- cbind(coefficients_table, "Sample Size (ref/non-ref)" = sCol, "Events (ref/non-ref)" = eCol)
-      coefficients_table <- coefficients_table[, c("Variable", "Category", "Sample Size (ref/non-ref)", "Events (ref/non-ref)", "HR", "95% CI", "Pr(>|z|)"), drop = F]
+      coefficients_table <- coefficients_table[, c("Variable", "Category", "Sample Size (ref/non-ref)", "Events (ref/non-ref)", "HR", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
     } else {
       stop("regression type is not recognized")
     }
@@ -745,8 +742,8 @@ formatType3 <- function(type3_table) {
   return(type3_table)
 }
 
-# combine results from univariate and multivariate analyses
-combineUniMultiResults <- function(reg_results, regtype) {
+# parse results from univariate and multivariate analyses
+parseUniMultiResults <- function(reg_results, regtype) {
   # get coefficients from the univariate and multivariate analyses
   multiCoefficients <- NULL
   uniCoefficients <- NULL
@@ -763,13 +760,12 @@ combineUniMultiResults <- function(reg_results, regtype) {
       stop ("results type not recognized")
     }
   }
-  # merge coefficients together
-  coefficients_table <- merge(uniCoefficients, multiCoefficients[,(ncol(multiCoefficients) - 2):ncol(multiCoefficients)], by = "row.names", suffixes = c("_uni", "_multi"))
-  coefficients_table <- as.matrix(coefficients_table[,-1])
-  coefficients_table <- list("header" = colnames(coefficients_table), "rows" = coefficients_table)
-  # return the combined results 
-  reg_results_combined <- list()
-  reg_results_combined[[1]] <- list("id" = res$id, "data" = list("sampleSize" = res$data$sampleSize, "coefficients" = coefficients_table))
-  if (regtype == "cox") reg_results_combined[[1]]$eventCnt = res$data$eventCnt
-  return(reg_results_combined)
+  # prepare separate univariate and multivariate coefficients tables
+  uniCoefficients_table <- list("header" = colnames(uniCoefficients), "rows" = uniCoefficients)
+  multiCoefficients_table <- list("header" = colnames(multiCoefficients), "rows" = multiCoefficients)
+  # return parsed results containing the separate coefficients tables 
+  reg_results_parsed <- list()
+  reg_results_parsed[[1]] <- list("id" = res$id, "data" = list("sampleSize" = res$data$sampleSize, "coefficients_uni" = uniCoefficients_table, "coefficients_multi" = multiCoefficients_table))
+  if (regtype == "cox") reg_results_parsed[[1]]$data$eventCnt = res$data$eventCnt
+  return(reg_results_parsed)
 }
