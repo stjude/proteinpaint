@@ -598,7 +598,7 @@ class singleCellPlot {
 			plot.legendSVG = legendSVG
 		}
 		legendSVG.selectAll('*').remove()
-		legendSVG.append('text').attr('transform', `translate(20, 20)`).style('font-weight', 'bold').text(plot.name)
+		legendSVG.append('text').attr('transform', `translate(0, 20)`).style('font-size', '0.9em').text(plot.name)
 		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) return
 		this.legendRendered = true
 
