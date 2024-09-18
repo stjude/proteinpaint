@@ -4,6 +4,7 @@ import { Menu } from '#dom/menu'
 import { sayerror } from '../dom/sayerror.ts'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter/filter'
+import { filterJoin } from '#shared/filter'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from './genomeBrowser.controls'
 
@@ -48,6 +49,7 @@ this{}
 				populations [{key,label}] // might not be part of state
 			ld {}
 				tracks[]
+			subTkFilters[] // list of sub tk filter objects created on mds3 tk sample summary ui
 		termdbConfig{}
 	blockInstance // exists when block has been launched; one block in each plot
 
@@ -144,7 +146,23 @@ class genomeBrowser {
 					tk.filterObj = structuredClone(this.state.filter)
 					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
 				}
-				await this.launchBlockWithTracks([tk])
+				const tklst = [tk]
+
+				if (this.state.config?.subTkFilters) {
+					for (const subFilter of this.state.config.subTkFilters) {
+						// for every element, create a new subtk
+						const t2 = {
+							type: 'mds3',
+							dslabel: this.app.opts.state.vocab.dslabel,
+							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
+							newChartHolder: this.opts.plotDiv
+						}
+						t2.filterObj = tk.filterObj ? filterJoin(tk.filterObj, subFilter) : structuredClone(subFilter)
+						tklst.push(t2)
+					}
+				}
+
+				await this.launchBlockWithTracks(tklst)
 			}
 			this.updateLDtrack()
 		} catch (e) {
@@ -264,7 +282,11 @@ class genomeBrowser {
 			genome: this.app.opts.genome, // genome obj
 			nobox: true,
 			tklst: await this.getTracks2show(tklst),
-			debugmode: true
+			debugmode: this.app.opts.debug,
+			onloadalltk_always: bb => {
+				// TODO on any tk update, collect tk config and save to state so they are recoverable from session
+				this.maySaveMds3SubtkToState(bb)
+			}
 		}
 		if (this.state.termdbConfig?.queries.defaultBlock2GeneMode && this.state.config.geneSearchResult.geneSymbol) {
 			// dataset config wants to default to gene view, and gene symbol is available
@@ -351,6 +373,25 @@ class genomeBrowser {
 			// remove
 			this.blockInstance.tk_remove(tkidx)
 		}
+	}
+
+	async maySaveMds3SubtkToState(bb) {
+		/* arg is block instance
+		when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
+		*/
+		const config = structuredClone(this.state.config)
+		config.subTkFilters = []
+		for (const t of bb.tklst) {
+			if (t.filterObj) {
+				config.subTkFilters.push(t.filterObj)
+				// filter0?
+			}
+		}
+		await this.app.save({
+			type: 'plot_edit',
+			id: this.id,
+			config
+		})
 	}
 }
 

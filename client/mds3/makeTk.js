@@ -266,7 +266,11 @@ function loadTk_finish_closure(tk, block) {
 			else*/ updateLegend(data, tk, block)
 		}
 
-		tk.leftLabelMaxwidth = Math.max(tk.leftlabels.maxwidth + tk.leftlabels.xoff, tk.skewer ? tk.skewer.maxwidth : 0)
+		tk.leftLabelMaxwidth = Math.max(
+			tk.leftlabels.maxwidth + tk.leftlabels.xoff,
+			// tk.skewer.maxwidth is undefined if makeTk had exception. must yield valid value for leftLabelMaxwidth for block to show properly with err msg in tk body
+			Number.isFinite(tk.skewer?.maxwidth) ? tk.skewer.maxwidth : 0
+		)
 
 		block.tkcloakoff(tk, { error: data ? data.error : null })
 		block.block_setheight()
