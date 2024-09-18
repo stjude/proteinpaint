@@ -231,14 +231,14 @@ class singleCellPlot {
 							chartType: 'gsea',
 							gsea_params: gsea_params,
 							//if getPlotHolder is defined use this.insertBeforeId, needed for GDC
-							insertBefore: this.app.opts?.app?.getPlotHolder && this.insertBeforeId
+							insertBefore: this.app.opts?.app?.getPlotHolder ? this.insertBeforeId : this.id
 						}
 						this.app.dispatch({
 							type: 'plot_create',
 							config
 						})
 					})
-			const DETableDiv = this.dom.deDiv.append('div')
+			const DETableDiv = this.dom.deDiv.append('div').style('padding-top', '5px')
 			this.dom.DETableDiv = DETableDiv
 			this.dom.deselect.append('option').text('')
 			this.dom.deselect.on('change', async e => {
@@ -251,7 +251,14 @@ class singleCellPlot {
 				const sample =
 					this.state.config.experimentID || this.state.config.sample || this.samples[0]?.experiments[0]?.experimentID
 				const args = { genome: state.genome, dslabel: state.dslabel, categoryName, sample, columnName }
+				this.dom.loadingDiv.selectAll('*').remove()
+				this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 				const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
+				this.dom.loadingDiv.style('display', 'none')
+				if (result.error) {
+					DETableDiv.text(result.error)
+					return
+				}
 				const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
 				const rows = []
 				this.genes = []
@@ -270,7 +277,7 @@ class singleCellPlot {
 				renderTable({
 					rows,
 					columns,
-					resize: true,
+					maxWidth: '30vw',
 					div: DETableDiv
 				})
 			})
@@ -427,6 +434,7 @@ class singleCellPlot {
 	}
 
 	renderPlots(result) {
+		console.log(result)
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.plots = []
 		for (const plot of result.plots) {
@@ -826,7 +834,7 @@ async function renderSamplesTable(div, self, state, dslabel, genome) {
 			if (self.dom.DETableDiv) {
 				self.dom.deselect.node().value = ''
 				self.dom.DETableDiv.selectAll('*').remove()
-				if (self.dom.GSEAbt) self.dom.GSEAbt.property('disabled', true)
+				if (self.dom.GSEAbt) self.dom.GSEAbt.style('display', 'none')
 			}
 			const sample = rows[index][0].value
 			const config = { chartType: 'singleCellPlot', sample }
