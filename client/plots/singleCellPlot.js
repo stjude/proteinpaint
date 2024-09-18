@@ -61,14 +61,14 @@ class singleCellPlot {
 		const zoomInDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
-				for (const plot of this.plots) this.zoom.scaleBy(plot.svg.transition().duration(500), 1.1)
+				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(500), 1.1)
 			},
 			title: 'Zoom in'
 		})
 		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
-				for (const plot of this.plots) this.zoom.scaleBy(plot.svg.transition().duration(500), 0.9)
+				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(500), 0.9)
 			},
 			title: 'Zoom out'
 		})
@@ -76,7 +76,7 @@ class singleCellPlot {
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
 				for (const plot of this.plots) {
-					plot.svg.transition().duration(500).call(this.zoom.transform, zoomIdentity)
+					plot.svg.transition().duration(500).call(plot.zoom.transform, zoomIdentity)
 				}
 			},
 			title: 'Reset plot to defaults'
@@ -501,7 +501,6 @@ class singleCellPlot {
 					: cat2Color(cluster)
 
 		plot.colorMap = colorMap
-		this.plots.push(plot)
 		this.initAxes(plot)
 
 		plot.plotDiv = this.dom.plotsDiv
@@ -514,7 +513,10 @@ class singleCellPlot {
 
 		this.renderLegend(plot)
 
-		const svg = plot.plotDiv
+		plot.svg = plot.plotDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('overflow', 'hidden')
 			.append('svg')
 			.attr('width', this.settings.svgw)
 			.attr('height', this.settings.svgh + 40)
@@ -522,20 +524,18 @@ class singleCellPlot {
 				if (this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
 			})
 			.on('click', event => this.showTooltip(event, plot))
-		svg.append('text').attr('transform', `translate(20, 30)`).style('font-weight', 'bold').text(`${plot.name}`)
 
-		plot.svg = svg
-
-		this.zoom = d3zoom()
+		plot.zoom = d3zoom()
 			.scaleExtent([0.5, 5])
 			.on('zoom', e => this.handleZoom(e, plot))
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
-		svg.call(this.zoom)
+		plot.svg.call(plot.zoom)
+		this.plots.push(plot)
 
-		const symbols = svg.selectAll('g').data(plot.cells)
+		const symbols = plot.svg.selectAll('g').data(plot.cells)
 
 		symbols
 			.enter()
@@ -564,7 +564,7 @@ class singleCellPlot {
 
 	handleZoom(e, plot) {
 		plot.svg.attr('transform', e.transform)
-		plot.zoom = e.transform.scale(1).k
+		plot.zoomK = e.transform.scale(1).k
 	}
 
 	initAxes(plot) {
@@ -583,7 +583,7 @@ class singleCellPlot {
 			.domain([yMax, yMin])
 			.range([0 + r, this.settings.svgh + r])
 		plot.axisLeft = axisLeft(plot.yAxisScale)
-		plot.zoom = 1
+		plot.zoomK = 1
 	}
 
 	renderLegend(plot) {
@@ -598,6 +598,7 @@ class singleCellPlot {
 			plot.legendSVG = legendSVG
 		}
 		legendSVG.selectAll('*').remove()
+		legendSVG.append('text').attr('transform', `translate(20, 20)`).style('font-weight', 'bold').text(plot.name)
 		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) return
 		this.legendRendered = true
 
@@ -848,7 +849,7 @@ async function renderSamplesTable(div, self, state, dslabel, genome) {
 	const [rows, columns] = await getTableData(self, samples, state)
 
 	const selectedRows = []
-	let maxHeight = '40vh'
+	let maxHeight = '30vh'
 	if (self.tableOnPlot) {
 		const selectedSample = self.config.sample
 		const selectedRow = self.samples.findIndex(s => s.sample == selectedSample)
