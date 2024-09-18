@@ -61,14 +61,14 @@ class singleCellPlot {
 		const zoomInDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
-				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(500), 1.1)
+				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(750), 1.1)
 			},
 			title: 'Zoom in'
 		})
 		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
-				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(500), 0.9)
+				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(750), 0.9)
 			},
 			title: 'Zoom out'
 		})
@@ -76,7 +76,7 @@ class singleCellPlot {
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
 				for (const plot of this.plots) {
-					plot.svg.transition().duration(500).call(plot.zoom.transform, zoomIdentity)
+					plot.svg.transition().duration(750).call(plot.zoom.transform, zoomIdentity)
 				}
 			},
 			title: 'Reset plot to defaults'
@@ -849,13 +849,13 @@ async function renderSamplesTable(div, self, state, dslabel, genome) {
 	const [rows, columns] = await getTableData(self, samples, state)
 
 	const selectedRows = []
-	let maxHeight = '30vh'
+	let maxHeight = '40vh'
 	if (self.tableOnPlot) {
 		const selectedSample = self.config.sample
 		const selectedRow = self.samples.findIndex(s => s.sample == selectedSample)
 		const selectedRowIndex = selectedRow == -1 ? 0 : selectedRow
 		selectedRows.push(selectedRowIndex)
-		maxHeight = '30vh'
+		maxHeight = '20vh'
 	}
 	self.table = renderTable({
 		rows,
