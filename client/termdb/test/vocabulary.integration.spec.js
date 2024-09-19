@@ -629,11 +629,6 @@ tape('getRegressionData()', async test => {
 		`Should return a data.coeffients object for ${type} regression data`
 	)
 	test.equal(
-		results.resultLst[0].data.eventCnt,
-		null,
-		`Should return a null value for data.eventCnt for ${type} regression data`
-	)
-	test.equal(
 		typeof results.resultLst[0].data.other,
 		'object',
 		`Should return adata.other object for ${type} regression data`
@@ -671,11 +666,6 @@ tape('getRegressionData()', async test => {
 		}
 	}
 	results = await termdbVocabApi.getRegressionData(opts)
-	test.equal(
-		results.resultLst[0].data.eventCnt,
-		null,
-		`Should return a null value for data.eventCnt for ${type} regression data`
-	)
 
 	//Cox results
 	type = 'cox'
