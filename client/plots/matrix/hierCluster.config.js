@@ -1,7 +1,7 @@
-import { copyMerge } from '../rx'
+import { copyMerge } from '#rx'
 import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
 import { fillTermWrapper, get$id } from '#termsetting'
-import { NumericModes, TermTypes } from '../shared/terms.js'
+import { NumericModes, TermTypes } from '#shared/terms.js'
 
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'

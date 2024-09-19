@@ -1,5 +1,5 @@
-import { getCompInit, copyMerge, deepEqual } from '../rx'
-import { sample_match_termvaluesetting } from '../common/termutils'
+import { getCompInit, copyMerge, deepEqual } from '#rx'
+import { sample_match_termvaluesetting } from '#common/termutils'
 
 export function mayRequireToken(tokenMessage = '') {
 	const message = tokenMessage || this.state.tokenVerificationMessage

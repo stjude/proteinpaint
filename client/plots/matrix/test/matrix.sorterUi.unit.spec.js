@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 import { copyMerge } from '#rx'
 import { getSorterUi } from '../matrix.sorterUi.js'
 import { getPlotConfig, setComputedConfig } from '../matrix.config'
-import { initByInput } from '../controls.config'
+import { initByInput } from '../../controls.config'
 
 /*************************
  reusable helper functions

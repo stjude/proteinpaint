@@ -1,17 +1,18 @@
-import { initByInput } from './controls.config'
-import { to_svg } from '../src/client'
+import { initByInput } from '#plots/controls.config.js'
+import { to_svg } from '#src/client'
 import { getSorterUi } from './matrix.sorterUi'
 import { fillTermWrapper, get$id } from '#termsetting'
-import { Menu } from '#dom/menu'
-import { zoom } from '#dom/zoom'
-import { icons } from '#dom/control.icons'
-import { svgScroll } from '#dom/svg.scroll'
-import { make_radios } from '#dom/radiobutton'
-import { make_one_checkbox } from '#dom/checkbox'
-import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
+import { Menu,
+	zoom,
+	icons,
+	svgScroll,
+	make_radios,
+	make_one_checkbox,
+	GeneSetEditUI 
+} from '#dom'
 import { select } from 'd3-selection'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
-import { TermTypes, TermTypeGroups, isNumericTerm } from '../shared/terms'
+import { TermTypes, TermTypeGroups, isNumericTerm } from '#shared/terms'
 
 const tip = new Menu({ padding: '' })
 
@@ -1441,7 +1442,7 @@ export class MatrixControls {
 	async addDictMenu(app, parent, tr, holder = undefined) {
 		//app.tip.clear()
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('#termdb/app')
 		termdb.appInit({
 			holder: holder || app.tip.d,
 			vocabApi: this.parent.app.vocabApi,
