@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- compute both univariate and multivariate analyses by default in multivariate regression analysis for Neuro-Oncology datasets
+
 Fixes:
 - address section 508 issues for GDC Sequence Read and BAM slicing download apps
 - initialize optional matrix tw props in TwBase constructor
