@@ -1,1 +1,2 @@
-
+Features
+- compute both univariate and multivariate analyses by default in multivariate regression analysis for Neuro-Oncology datasets
