@@ -68,7 +68,6 @@ container/**/pkg.json
 container/ci-run.sh
 
 **/rust/target/*
-Cargo.lock
 
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 
