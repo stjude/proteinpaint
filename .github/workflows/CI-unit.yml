@@ -90,6 +90,11 @@ jobs:
         if: contains(env.WS_TO_TEST, 'server')
         run: npm run test:unit --workspace="server"
 
+      - name: Install HDF5
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libhdf5-dev  
+
       - name: ⚡ Cache
         if: contains(env.WS_TO_TEST, 'rust')
         uses: actions/cache@v3
@@ -100,10 +105,11 @@ jobs:
             ./rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1.0.6
         if: contains(env.WS_TO_TEST, 'rust')
         with:
           toolchain: stable
+          override: true
 
       - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust')
