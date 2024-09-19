@@ -17,7 +17,7 @@ import {
 import { Cell, Plot, TermdbSinglecellDataRequest } from '#shared/types/routes/termdb.singlecellData.ts'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
-import got from 'got'
+import ky from 'ky'
 
 /* route returns list of samples with sc data
 this is due to the fact that sometimes not all samples in a dataset has sc data
@@ -239,18 +239,18 @@ function gdc_validateGeneExpression(G, ds, genome) {
 			const aliasLst = genome.genedb.getAliasByName.all(q.gene)
 			const gencodeId = aliasLst.find(a => a?.alias.toUpperCase().startsWith('ENSG'))?.alias
 
-			const body = JSON.stringify({
+			const body = {
 				case_id: uuid,
 				gene_ids: [gencodeId],
 				file_id: fileid
-			})
+			}
 
-			// Make the request to GDC API
-			const out = await got.post('https://api.gdc.cancer.gov/scrna_seq/gene_expression', {
-				body
-			})
+			const { host } = ds.getHostHeaders(q)
+			const out = await ky
+				.post(path.join(host.rest, 'scrna_seq/gene_expression'), { timeout: false, json: body })
+				.json()
 
-			const result = JSON.parse(out.body).data[0].cells
+			const result = (out as { data: { cells: any[] }[] }).data[0].cells
 			const data = {}
 			for (const r of result) {
 				data[r.cell_id] = r.value

@@ -1,7 +1,6 @@
 import * as common from '#shared/common.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import ky from 'ky'
-import got from 'got'
 import nodeFetch from 'node-fetch'
 import path from 'path'
 import { combineSamplesById } from './mds3.variant2samples.js'
