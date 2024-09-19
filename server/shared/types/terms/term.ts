@@ -155,6 +155,9 @@ export type BaseTW = {
 	settings?: {
 		[key: string]: any
 	}
+	sortSamples?: any
+	minNumSamples?: number
+	valueFilter?: any
 }
 
 /*** types supporting Term types ***/

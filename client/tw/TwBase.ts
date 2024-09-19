@@ -27,10 +27,19 @@ export class TwBase {
 	// TwBase will be type checked
 	setCellProps!: SetCellPropsSignature
 
+	// TODO: may need to track these matrix specific tw props elsewhere
+	sortSamples?: any
+	minNumSamples?: number
+	valueFilter?: any
+
 	constructor(tw: TermWrapper, opts: TwOpts) {
 		this.type = tw.type
 		this.isAtomic = true
 		if (tw.$id) this.$id = tw.$id
+		if (tw.sortSamples) this.sortSamples = tw.sortSamples
+		if (tw.minNumSamples) this.minNumSamples = tw.minNumSamples
+		if (tw.valueFilter) this.valueFilter = tw.valueFilter
+
 		// By using Object.defineProperties(), addon methods are not enumerable
 		// and makes the xtw instance compatible with structuredClone(),
 		// in contrast to using Object.assign()
