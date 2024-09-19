@@ -1,1 +1,2 @@
-
+Features:
+- Support GDC scrna gene exp API (only in qa-int) for GDC scRNA-seq plot
