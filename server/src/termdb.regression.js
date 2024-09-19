@@ -642,25 +642,23 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		// coefficients
 		if (data.coefficients) {
 			// coefficients from a single analysis
-			analysisResult.data.coefficients = parseCoefficients(data.coefficients)
+			analysisResult.data.coefficients = parseCoefficients(data.coefficients, Rinput.regressionType != 'cox')
 		} else if (data.coefficients_uni && data.coefficients_multi) {
 			// coefficients from univariate and multivariate analyses
-			analysisResult.data.coefficients_uni = parseCoefficients(data.coefficients_uni)
-			analysisResult.data.coefficients_multi = parseCoefficients(data.coefficients_multi)
+			analysisResult.data.coefficients_uni = parseCoefficients(data.coefficients_uni, false)
+			analysisResult.data.coefficients_multi = parseCoefficients(data.coefficients_multi, false)
 		} else {
 			throw 'coefficients table not found'
 		}
-		function parseCoefficients(in_coef) {
-			if (in_coef.rows.length < (q.ds.cohort.termdb.neuroOncRegression || Rinput.regressionType == 'cox' ? 1 : 2))
-				throw 'unexpected number of rows in coefficients table'
+		function parseCoefficients(in_coef, hasIntercept) {
+			if (in_coef.rows.length < (hasIntercept ? 2 : 1)) throw 'too few rows in coefficients table'
 			const out_coef = {
 				header: in_coef.header,
 				terms: {}, // individual independent terms, not interaction
 				interactions: [], // interactions
 				label: 'Coefficients'
 			}
-			if (!q.ds.cohort.termdb.neuroOncRegression && Rinput.regressionType != 'cox')
-				out_coef.intercept = in_coef.rows.shift()
+			if (hasIntercept) out_coef.intercept = in_coef.rows.shift()
 			for (const row of in_coef.rows) {
 				if (row[0].indexOf(':') != -1) {
 					// is an interaction
