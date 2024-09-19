@@ -1,6 +1,6 @@
 import { TermWrapper, Q } from '#updated-types'
 import { Term } from '#types'
-import { SetCellPropsSignature } from '../plots/matrix.xtw'
+import { SetCellPropsSignature } from '../plots/matrix/matrix.xtw.ts'
 
 export type TwOpts = {
 	vocabApi?: any // TODO
