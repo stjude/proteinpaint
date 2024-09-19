@@ -124,7 +124,7 @@ class singleCellPlot {
 				headerDiv.append('label').text(plot.name).attr('for', `show${id}`)
 			}
 		if (q.singleCell?.geneExpression) {
-			searchGeneDiv.append('label').html('Gene expression:')
+			searchGeneDiv.append('label').html('Gene expression:').style('padding', '10px')
 			const geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
 				genome: this.app.opts.genome,
@@ -136,7 +136,15 @@ class singleCellPlot {
 					select?.style('display', 'inline-block')
 
 					const gene = geneSearch.geneSymbol
-					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene } })
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: {
+							gene,
+							sample: this.state.config.sample || this.samples?.[0]?.sample,
+							experimentID: this.state.config.experimentID || this.samples?.[0].experiments?.[0]?.experimentID
+						}
+					})
 				},
 				emptyInputCallback: () => {
 					violinBt.style('display', 'none')
@@ -147,8 +155,14 @@ class singleCellPlot {
 				focusOff: true
 			})
 			const select = searchGeneDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
+
+			// Only add unique colorColumn among plots as option
+			const uniqueColorColumns = new Set()
 			for (const plot of state.termdbConfig?.queries.singleCell.data.plots) {
-				select.append('option').text(plot.colorColumn)
+				if (!uniqueColorColumns.has(plot.colorColumn)) {
+					select.append('option').text(plot.colorColumn)
+					uniqueColorColumns.add(plot.colorColumn)
+				}
 			}
 			select.on('change', async () => {
 				const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
@@ -185,7 +199,10 @@ class singleCellPlot {
 								id: gene,
 								gene,
 								name: gene,
-								sample: state.config.sample
+								sample: {
+									sID: this.state.config.sample,
+									eID: this.state.config.experimentID
+								}
 							}
 						},
 						term2: {
@@ -193,7 +210,10 @@ class singleCellPlot {
 								type: TermTypes.SINGLECELL_CELLTYPE,
 								id: TermTypes.SINGLECELL_CELLTYPE,
 								name: 'Cell type',
-								sample: state.config.sample,
+								sample: {
+									sID: this.state.config.sample,
+									eID: this.state.config.experimentID
+								},
 								plot: plot.name,
 								values
 							}
@@ -280,7 +300,7 @@ class singleCellPlot {
 
 				const columnName = state.termdbConfig.queries.singleCell.DEgenes.columnName
 				const sample =
-					this.state.config.experimentID || this.state.config.sample || this.samples[0]?.experiments[0]?.experimentID
+					this.state.config.experimentID || this.state.config.sample || this.samples?.[0]?.experiments[0]?.experimentID
 				const args = { genome: state.genome, dslabel: state.dslabel, categoryName, sample, columnName }
 				this.dom.loadingDiv.selectAll('*').remove()
 				this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
@@ -431,15 +451,21 @@ class singleCellPlot {
 			plots,
 			filter0: this.state.termfilter.filter0
 		}
-		let sample
+
+		// change the sample to contains both sampleID and experimentID, so that they could
+		// both be used to query data. (GDC sc gene expression only support sample uuid now)
 		if (this.state.config.sample) {
 			// a sample has already been selected
-			sample = this.state.config.sample
-			body.sample = this.state.config.experimentID || this.state.config.sample
+			body.sample = {
+				eID: this.state.config.experimentID,
+				sID: this.state.config.sample
+			}
 		} else {
 			// no given sample in state.config{}, assume that this.samples[] are already loaded, then use 1st sample
-			sample = this.samples[0].sample
-			body.sample = this.samples[0].experiments?.[0]?.experimentID || this.samples[0].sample
+			body.sample = {
+				eID: this.samples?.[0]?.experiments?.[0]?.experimentID,
+				sID: this.samples?.[0]?.sample
+			}
 		}
 		if (this.state.config.gene) body.gene = this.state.config.gene
 		try {
@@ -600,7 +626,25 @@ class singleCellPlot {
 		}
 		legendSVG.selectAll('*').remove()
 		legendSVG.append('text').attr('transform', `translate(0, 20)`).style('font-size', '0.9em').text(plot.name)
-		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) return
+		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) {
+			if (this.state.config.gene) {
+				// for gene expression sc plot, needs to add colorGenerator to plot even
+				// when legend is not needed for the plot
+				const colorGradient = rgb(plotColor)
+				if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(1).toString()
+				if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
+				const startColor = this.config.startColor[plot.name]
+				const stopColor = this.config.stopColor[plot.name]
+				let min, max
+				const values = plot.cells[0]?.geneExp == undefined ? [] : plot.cells.map(cell => cell.geneExp)
+				if (values.length == 0) {
+					plot.colorGenerator = null
+					return
+				} else [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+				plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
+			}
+			return
+		}
 		this.legendRendered = true
 
 		const legendG = legendSVG.append('g').attr('transform', `translate(25, 50)`).style('font-size', '0.8em')
