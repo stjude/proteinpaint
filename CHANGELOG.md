@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- address section 508 issues for GDC Sequence Read and BAM slicing download apps
+
+
 ## 2.77.1
 
 Fixes:
