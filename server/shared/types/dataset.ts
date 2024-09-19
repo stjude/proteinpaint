@@ -427,6 +427,10 @@ export type SingleCellGeneExpressionNative = {
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 }
 
+export type SingleCellGeneExpressionGdc = {
+	src: 'gdcapi'
+}
+
 export type SingleCellSamplesNative = {
 	src: 'native'
 
@@ -537,7 +541,7 @@ export type SingleCellQuery = {
 	 */
 	data: SingleCellDataGdc | SingleCellDataNative
 	/** defines available gene-level expression values for each cell of each sample */
-	geneExpression?: SingleCellGeneExpressionNative
+	geneExpression?: SingleCellGeneExpressionGdc | SingleCellGeneExpressionNative
 	/** Precomputed top differentialy expressed genes for a cell cluster, against rest of cells */
 	DEgenes?: SingleCellDEgeneGdc
 }
