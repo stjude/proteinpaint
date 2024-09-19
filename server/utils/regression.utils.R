@@ -687,9 +687,6 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
   
   if (isTRUE(neuroOnc)) {
     # neuro-oncology dataset
-    # remove intercept row because cannot merge together intercepts
-    # from multiple univariate analyses
-    coefficients_table <- coefficients_table[row.names(coefficients_table) != "(Intercept)", ,drop = F]
     # extract columns of interest
     if (regtype == "linear") {
       coefficients_table <- coefficients_table[, c("Variable", "Category", "Beta", "95% CI (low)", "95% CI (high)", "Pr(>|t|)"), drop = F]
@@ -748,13 +745,17 @@ parseUniMultiResults <- function(reg_results, regtype) {
   multiCoefficients <- NULL
   uniCoefficients <- NULL
   for (res in reg_results) {
+    coefs <- res$data$coefficients$rows
+    # remove intercept row because cannot merge together intercepts
+    # from different univariate analyses
+    coefs <- coefs[row.names(coefs) != "(Intercept)", ,drop = F]
     if (res$type == "multivariate") {
-      multiCoefficients <- res$data$coefficients$rows
+      multiCoefficients <- coefs
     } else if (res$type == "univariate") {
       if (is.null(uniCoefficients)) {
-        uniCoefficients <- res$data$coefficients$rows
+        uniCoefficients <- coefs
       } else {
-        uniCoefficients <- rbind(uniCoefficients, res$data$coefficients$rows)
+        uniCoefficients <- rbind(uniCoefficients, coefs)
       }
     } else {
       stop ("results type not recognized")

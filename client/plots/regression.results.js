@@ -258,9 +258,7 @@ function setRenderers(self) {
 		self.mayshow_headerRow(result)
 		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
-		self.app.vocabApi.termdbConfig.neuroOncRegression
-			? self.mayshow_coefficients_neuroonc(result)
-			: self.mayshow_coefficients(result)
+		self.mayshow_coefficients(result)
 		self.mayshow_totalSnpEffect(result)
 		self.mayshow_type3(result)
 		self.mayshow_tests(result)
@@ -463,7 +461,14 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_coefficients = result => {
-		if (!result.coefficients) return
+		if (!result.coefficients) {
+			if (result.coefficients_uni && result.coefficients_multi) {
+				// coefficients from univariate and multivariate analyses
+				self.mayshow_coefficients_uniMulti(result)
+			}
+			return
+		}
+
 		const div = self.newDiv(result.coefficients.label)
 		const table = div
 			.append('table')
@@ -472,24 +477,45 @@ function setRenderers(self) {
 
 		// padding is set on every <td>. need a better solution
 
+		const neuroOncCox = self.app.vocabApi.termdbConfig.neuroOncRegression && self.config.regressionType == 'cox'
+
 		// header row
+		let header
 		{
-			const header = result.coefficients.header
 			const tr = table.append('tr').style('opacity', 0.4)
-			header.forEach((v, i) => {
-				if (i == 2) tr.append('td') // add column for forest plot
+			header = result.coefficients.header
+			// header for variable column
+			tr.append('td').text(header.shift()).style('padding', '8px')
+			// header for category column
+			tr.append('td').text(header.shift()).style('padding', '8px')
+			// skip headers for sample and event count columns
+			if (neuroOncCox) {
+				header.shift()
+				header.shift()
+			}
+			// header for forest plot column
+			tr.append('td')
+			// combine headers for 95% CI columns
+			header.splice(1, 2, '95% CI')
+			// display remaining headers
+			header.forEach((v, i, arr) => {
 				const td = tr.append('td').text(v).style('padding', '8px')
-				if (v == header[header.length - 1]) td.style('font-style', 'italic')
+				if (i == arr.length - 1) td.style('font-style', 'italic')
 			})
 		}
 
 		// intercept row
-		if (self.config.regressionType != 'cox') {
+		const intercept = result.coefficients.intercept
+		if (intercept) {
 			const tr = table.append('tr').style('background', '#eee')
-			result.coefficients.intercept.forEach((v, i) => {
-				if (i == 2) tr.append('td') // for forest plot
-				tr.append('td').text(v).style('padding', '8px')
-			})
+			// variable column
+			tr.append('td').text(intercept.shift()).style('padding', '8px')
+			// category column
+			tr.append('td').text(intercept.shift()).style('padding', '8px')
+			// forest plot column
+			tr.append('td')
+			// data columns
+			fillDataColumns(tr, intercept)
 		}
 
 		/* term rows:
@@ -523,13 +549,19 @@ function setRenderers(self) {
 					fillColumn2coefficientsTable(td, tw)
 				}
 
+				if (neuroOncCox) {
+					// neuro-onc dataset using cox regression
+					// sample size and event count columns are present
+					// but do not need to report for continuous variable
+					cols.shift()
+					cols.shift()
+				}
+
 				// display forest plot
 				forestPlotter(tr.append('td'), cols)
 
-				// rest of columns
-				for (const v of cols) {
-					tr.append('td').text(v).style('padding', '8px')
-				}
+				// display data columns
+				fillDataColumns(tr, cols)
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
 
@@ -562,13 +594,25 @@ function setRenderers(self) {
 					const td = tr.append('td').style('padding', '8px')
 					fillColumn2coefficientsTable(td, tw, k)
 
+					if (neuroOncCox) {
+						// neuro-oncology dataset using cox regression
+						// sample size and event count columns are present
+						// report sample sizes and event counts of coefficients
+						// for both ref and non-ref categories
+						const [samplesize_ref, samplesize_c] = cols.shift().split('/')
+						const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
+						if (isfirst) {
+							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
+							refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
+						}
+						td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
+					}
+
 					// display forest plot
 					forestPlotter(tr.append('td'), cols)
 
-					// rest of columns
-					for (const v of cols) {
-						tr.append('td').text(v).style('padding', '8px')
-					}
+					// display data columns
+					fillDataColumns(tr, cols)
 
 					isfirst = false
 				}
@@ -609,12 +653,12 @@ function setRenderers(self) {
 		tr.append('td') // col 1
 		tr.append('td') // col 2
 		forestPlotter(tr.append('td')) // forest plot axis
-		for (const v of result.coefficients.header) tr.append('td')
+		for (const v of header) tr.append('td')
 	}
 
-	self.mayshow_coefficients_neuroonc = result => {
-		// coefficients table formatted specifically for
-		// neuro-oncology datasets
+	self.mayshow_coefficients_uniMulti = result => {
+		// generate coefficients table for
+		// univariate and multivariate analyses
 		if (!result.coefficients_uni || !result.coefficients_multi) return
 
 		const div = self.newDiv(result.coefficients_uni.label)
@@ -717,13 +761,13 @@ function setRenderers(self) {
 				// display univariate forest plot
 				forestPlotter_uni(tr.append('td'), cols)
 
-				// rest of univariate columns
+				// display univariate data columns
 				fillDataColumns(tr, cols)
 
 				// display multivariate forest plot
 				forestPlotter_multi(tr.append('td'), cols_multi)
 
-				// rest of multivariate columns
+				// display multivariate data columns
 				fillDataColumns(tr, cols_multi)
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
@@ -767,9 +811,9 @@ function setRenderers(self) {
 						const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
 						if (isfirst) {
 							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
-							refGrpDiv.append('div').html(`n = ${samplesize_ref}<br>events = ${eventcnt_ref}`)
+							refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
 						}
-						td.append('div').style('font-size', '.8em').html(`n = ${samplesize_c}<br>events = ${eventcnt_c}`)
+						td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
 						cols_multi.shift()
 						cols_multi.shift()
 					}
@@ -777,13 +821,13 @@ function setRenderers(self) {
 					// display univariate forest plot
 					forestPlotter_uni(tr.append('td'), cols)
 
-					// rest of univariate columns
+					// display univariate data columns
 					fillDataColumns(tr, cols)
 
 					// display multivariate forest plot
 					forestPlotter_multi(tr.append('td'), cols_multi)
 
-					// rest of multivariate columns
+					// display multivariate data columns
 					fillDataColumns(tr, cols_multi)
 
 					isfirst = false
@@ -841,7 +885,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_type3 = result => {
-		if (!result.type3 || self.parent.app.vocabApi.termdbConfig.neuroOncRegression) return
+		if (!result.type3 || self.app.vocabApi.termdbConfig.neuroOncRegression) return
 		const div = self.newDiv(result.type3.label)
 		const table = div.append('table').style('border-spacing', '0px')
 
@@ -894,7 +938,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_tests = result => {
-		if (!result.tests || self.parent.app.vocabApi.termdbConfig.neuroOncRegression) return
+		if (!result.tests || self.app.vocabApi.termdbConfig.neuroOncRegression) return
 		const div = self.newDiv(result.tests.label)
 		const table = div.append('table').style('border-spacing', '0px')
 		const header = table.append('tr').style('opacity', 0.4)
@@ -1573,6 +1617,6 @@ function fillDataColumns(tr, cols) {
 	tr.append('td').text(cols.shift()).style('padding', '8px')
 	// 95% CI column
 	tr.append('td').html(`${cols.shift()} &ndash; ${cols.shift()}`).style('padding', '8px')
-	// p-value column
-	tr.append('td').text(cols.shift()).style('padding', '8px')
+	// rest of columns
+	for (const v of cols) tr.append('td').text(v).style('padding', '8px')
 }
