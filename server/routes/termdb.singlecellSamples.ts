@@ -228,7 +228,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		// client actually queries /termdb/singlecellData route for gene exp data
 		G.get = async (q: TermdbSinglecellDataRequest) => {
 			// q {sample:str, gene:str}
-			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample + '.h5')
+			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
 			try {
 				await fs.promises.stat(rdsfile)
 			} catch (e: any) {
