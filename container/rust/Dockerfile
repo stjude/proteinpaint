@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     libssl-dev \
     sqlite3 libsqlite3-dev \
+    libhdf5-dev  \
 	## clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/ \
