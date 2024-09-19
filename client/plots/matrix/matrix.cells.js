@@ -1,7 +1,7 @@
 import { convertUnits } from '#shared/helpers'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv, dtmetaboliteintensity } from '#shared/common'
-import { TermTypes } from '../shared/terms'
-import { colorScaleMap } from '../shared/common'
+import { TermTypes } from '#shared/terms'
+import { colorScaleMap } from '#shared/common'
 /*
 	cell: a matrix cell data
 	tw: termwrapper

@@ -461,7 +461,14 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_coefficients = result => {
-		if (!result.coefficients) return
+		if (!result.coefficients) {
+			if (result.coefficients_uni && result.coefficients_multi) {
+				// coefficients from univariate and multivariate analyses
+				self.mayshow_coefficients_uniMulti(result)
+			}
+			return
+		}
+
 		const div = self.newDiv(result.coefficients.label)
 		const table = div
 			.append('table')
@@ -470,26 +477,45 @@ function setRenderers(self) {
 
 		// padding is set on every <td>. need a better solution
 
-		// different format for cox regression for neuro-oncology datasets
-		const neuroOncCox = self.config.regressionType == 'cox' && self.app.vocabApi.termdbConfig.neuroOncRegression
+		const neuroOncCox = self.app.vocabApi.termdbConfig.neuroOncRegression && self.config.regressionType == 'cox'
 
 		// header row
+		let header
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
-			result.coefficients.header.forEach((v, i) => {
-				if (neuroOncCox && (i == 2 || i == 3)) return // skip sample count and event count columns
-				tr.append('td').text(v).style('padding', '8px')
-				if (i === 1) tr.append('td') // add column for forest plot
+			header = result.coefficients.header
+			// header for variable column
+			tr.append('td').text(header.shift()).style('padding', '8px')
+			// header for category column
+			tr.append('td').text(header.shift()).style('padding', '8px')
+			// skip headers for sample and event count columns
+			if (neuroOncCox) {
+				header.shift()
+				header.shift()
+			}
+			// header for forest plot column
+			tr.append('td')
+			// combine headers for 95% CI columns
+			header.splice(1, 2, '95% CI')
+			// display remaining headers
+			header.forEach((v, i, arr) => {
+				const td = tr.append('td').text(v).style('padding', '8px')
+				if (i == arr.length - 1) td.style('font-style', 'italic')
 			})
 		}
 
-		// intercept row (only for linear/logistic)
-		if (self.config.regressionType != 'cox') {
+		// intercept row
+		const intercept = result.coefficients.intercept
+		if (intercept) {
 			const tr = table.append('tr').style('background', '#eee')
-			result.coefficients.intercept.forEach((v, i) => {
-				tr.append('td').text(v).style('padding', '8px')
-				if (i === 1) tr.append('td') // column 3 will be for forest plot
-			})
+			// variable column
+			tr.append('td').text(intercept.shift()).style('padding', '8px')
+			// category column
+			tr.append('td').text(intercept.shift()).style('padding', '8px')
+			// forest plot column
+			tr.append('td')
+			// data columns
+			fillDataColumns(tr, intercept)
 		}
 
 		/* term rows:
@@ -501,11 +527,7 @@ function setRenderers(self) {
 		a plot is added to 3rd column of each row
 		plotter can be a blank function if there's no valid value for plotting
 		*/
-		const forestPlotter = self.getForestPlotter(
-			result.coefficients.terms,
-			result.coefficients.interactions,
-			neuroOncCox
-		)
+		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
 		let rowcount = self.config.regressionType == 'cox' ? 1 : 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
@@ -528,19 +550,18 @@ function setRenderers(self) {
 				}
 
 				if (neuroOncCox) {
-					// cox regression for neuro-onc datasets
-					// sample size and event count columns present
-					// both will be NA for continuous variable
+					// neuro-onc dataset using cox regression
+					// sample size and event count columns are present
+					// but do not need to report for continuous variable
 					cols.shift()
 					cols.shift()
 				}
 
-				// col 3
+				// display forest plot
 				forestPlotter(tr.append('td'), cols)
-				// rest of columns
-				for (const v of cols) {
-					tr.append('td').text(v).style('padding', '8px')
-				}
+
+				// display data columns
+				fillDataColumns(tr, cols)
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
 
@@ -574,25 +595,24 @@ function setRenderers(self) {
 					fillColumn2coefficientsTable(td, tw, k)
 
 					if (neuroOncCox) {
-						// cox regression for neuro-onc datasets
+						// neuro-oncology dataset using cox regression
+						// sample size and event count columns are present
 						// report sample sizes and event counts of coefficients
-						// report for both ref and non-ref categories
+						// for both ref and non-ref categories
 						const [samplesize_ref, samplesize_c] = cols.shift().split('/')
 						const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
 						if (isfirst) {
 							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
-							refGrpDiv.append('div').html(`n = ${samplesize_ref}<br>events = ${eventcnt_ref}`)
+							refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
 						}
-						td.append('div').style('font-size', '.8em').html(`n = ${samplesize_c}<br>events = ${eventcnt_c}`)
+						td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
 					}
 
-					// col 3
+					// display forest plot
 					forestPlotter(tr.append('td'), cols)
 
-					// rest of columns
-					for (const v of cols) {
-						tr.append('td').text(v).style('padding', '8px')
-					}
+					// display data columns
+					fillDataColumns(tr, cols)
 
 					isfirst = false
 				}
@@ -633,7 +653,198 @@ function setRenderers(self) {
 		tr.append('td') // col 1
 		tr.append('td') // col 2
 		forestPlotter(tr.append('td')) // forest plot axis
-		for (const v of result.coefficients.header) tr.append('td')
+		for (const v of header) tr.append('td')
+	}
+
+	self.mayshow_coefficients_uniMulti = result => {
+		// generate coefficients table for
+		// univariate and multivariate analyses
+		if (!result.coefficients_uni || !result.coefficients_multi) return
+
+		const div = self.newDiv(result.coefficients_uni.label)
+		const table = div
+			.append('table')
+			.style('border-spacing', '0px')
+			.attr('data-testid', 'sjpp_regression_resultCoefficientTable')
+
+		// padding is set on every <td>. need a better solution
+
+		// header row
+		let header_uni, header_multi
+		{
+			const tr_label = table.append('tr').style('opacity', 0.4) // labels displayed above header row
+			const tr = table.append('tr').style('opacity', 0.4) // header row
+
+			header_uni = result.coefficients_uni.header
+			header_multi = result.coefficients_multi.header
+
+			// header for variable column
+			tr.append('td').text(header_uni.shift()).style('padding', '8px')
+			tr_label.append('td').style('padding', '8px')
+			header_multi.shift() // same value as in header_uni
+
+			// header for category column
+			tr.append('td').text(header_uni.shift()).style('padding', '8px')
+			tr_label.append('td').style('padding', '8px')
+			header_multi.shift() // same value as in header_uni
+
+			// skip headers for sample and event count columns
+			if (self.config.regressionType == 'cox') {
+				header_uni.shift()
+				header_uni.shift()
+				header_multi.shift()
+				header_multi.shift()
+			}
+
+			// combine headers for 95% CI columns
+			header_uni.splice(1, 2, '95% CI')
+			header_multi.splice(1, 2, '95% CI')
+
+			// fill headers for data columns
+			fillDataHeaders(header_uni, tr, tr_label, 'Univariate')
+			fillDataHeaders(header_multi, tr, tr_label, 'Multivariate')
+		}
+
+		/* term rows:
+		for each independent terms, show 1 or multiple rows
+
+		* forest plot *
+		a plot for univariate data and a plot for multivariate data
+		are shown as separate columns in each row
+		*/
+
+		const forestPlotter_uni = self.getForestPlotter(result.coefficients_uni.terms, result.coefficients_uni.interactions)
+		const forestPlotter_multi = self.getForestPlotter(
+			result.coefficients_multi.terms,
+			result.coefficients_multi.interactions
+		)
+
+		let rowcount = 1
+		for (const tid in result.coefficients_uni.terms) {
+			// termdata is data from univariate analysis
+			// will be used to fill in variable, category, and
+			// univariate data columns
+			const termdata = result.coefficients_uni.terms[tid]
+			// termdata_multi is data from multivariate analysis
+			// will be used to fill in multivariate data columns
+			const termdata_multi = result.coefficients_multi.terms[tid]
+
+			const tw = self.getIndependentInput(tid).term
+			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+
+			// col 1: term name
+			const termNameTd = tr.append('td').style('padding', '8px')
+			fillCoefficientTermname(tw, termNameTd)
+
+			if (termdata.fields) {
+				// create only 1 row for this term in coefficients table, as it doesn't have categories
+
+				const cols = termdata.fields
+				const cols_multi = termdata_multi.fields
+
+				// col 2: category column
+				{
+					const td = tr.append('td').style('padding', '8px')
+					fillColumn2coefficientsTable(td, tw)
+				}
+
+				if (self.config.regressionType == 'cox') {
+					// cox regression
+					// sample size and event count columns are present
+					// but do not need to report for continuous variable
+					cols.shift()
+					cols.shift()
+					cols_multi.shift()
+					cols_multi.shift()
+				}
+
+				// display univariate forest plot
+				forestPlotter_uni(tr.append('td'), cols)
+
+				// display univariate data columns
+				fillDataColumns(tr, cols)
+
+				// display multivariate forest plot
+				forestPlotter_multi(tr.append('td'), cols_multi)
+
+				// display multivariate data columns
+				fillDataColumns(tr, cols_multi)
+			} else if (termdata.categories) {
+				// term has categories, create one sub-row for each category in coefficient tables
+
+				const orderedCategories = []
+				const input = self.getIndependentInput(tid)
+				if (input.orderedLabels) {
+					// reorder rows by predefined order
+					for (const k of input.orderedLabels) {
+						if (termdata.categories[k]) orderedCategories.push(k)
+					}
+				}
+				for (const k in termdata.categories) {
+					if (!orderedCategories.includes(k)) orderedCategories.push(k)
+				}
+
+				// multiple categories
+				// show first category as full row, with first cell spanning rest of categories
+				termNameTd.attr('rowspan', orderedCategories.length).style('vertical-align', 'top')
+
+				let isfirst = true
+				for (const k of orderedCategories) {
+					if (!isfirst) {
+						// create new row starting from 2nd category
+						tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+					}
+
+					const cols = termdata.categories[k]
+					const cols_multi = termdata_multi.categories[k]
+
+					// col 2: category column
+					const td = tr.append('td').style('padding', '8px')
+					fillColumn2coefficientsTable(td, tw, k)
+
+					if (self.config.regressionType == 'cox') {
+						// cox regression
+						// sample size and event count columns are present
+						// report sample sizes and event counts of coefficients
+						// for both ref and non-ref categories
+						const [samplesize_ref, samplesize_c] = cols.shift().split('/')
+						const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
+						if (isfirst) {
+							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
+							refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
+						}
+						td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
+						cols_multi.shift()
+						cols_multi.shift()
+					}
+
+					// display univariate forest plot
+					forestPlotter_uni(tr.append('td'), cols)
+
+					// display univariate data columns
+					fillDataColumns(tr, cols)
+
+					// display multivariate forest plot
+					forestPlotter_multi(tr.append('td'), cols_multi)
+
+					// display multivariate data columns
+					fillDataColumns(tr, cols_multi)
+
+					isfirst = false
+				}
+			} else {
+				tr.append('td').text('ERROR: no .fields[] or .categories{}')
+			}
+		}
+
+		// last row to show forest plot axis (call function without data)
+		const tr = table.append('tr')
+		tr.append('td') // col 1
+		tr.append('td') // col 2
+		forestPlotter_uni(tr.append('td')) // forest plot axis
+		for (const v of header_uni) tr.append('td')
+		forestPlotter_multi(tr.append('td')) // forest plot axis
+		for (const v of header_multi) tr.append('td')
 	}
 
 	self.mayshow_totalSnpEffect = result => {
@@ -674,7 +885,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_type3 = result => {
-		if (!result.type3 || self.parent.app.vocabApi.termdbConfig.neuroOncRegression) return
+		if (!result.type3 || self.app.vocabApi.termdbConfig.neuroOncRegression) return
 		const div = self.newDiv(result.type3.label)
 		const table = div.append('table').style('border-spacing', '0px')
 
@@ -727,7 +938,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_tests = result => {
-		if (!result.tests || self.parent.app.vocabApi.termdbConfig.neuroOncRegression) return
+		if (!result.tests || self.app.vocabApi.termdbConfig.neuroOncRegression) return
 		const div = self.newDiv(result.tests.label)
 		const table = div.append('table').style('border-spacing', '0px')
 		const header = table.append('tr').style('opacity', 0.4)
@@ -766,7 +977,7 @@ function setRenderers(self) {
 	in that case should use array[i+1] or next to find the smallest real number as axis min
 	an arbitary cap is used to guard against extreme estimate values
 	*/
-	self.getForestPlotter = (terms, interactions, neuroOncCox) => {
+	self.getForestPlotter = (terms, interactions) => {
 		// array indices are the same for both non-interacting and interacting rows
 		let midIdx, // array index of the beta/odds ratio
 			CIlow, // array(column) index of low end of confidence interval of midIdx
@@ -919,7 +1130,8 @@ function setRenderers(self) {
 		}
 		///////// helpers
 		function numbers2array(_lst) {
-			const lst = neuroOncCox ? _lst.slice(2) : _lst // do not consider sample size nor event count
+			const lst =
+				self.app.vocabApi.termdbConfig.neuroOncRegression && self.config.regressionType == 'cox' ? _lst.slice(2) : _lst // exclude sample and event count columns
 			const m = Number(lst[midIdx])
 			if (!Number.isNaN(m)) values.push(m)
 			const l = Number(lst[CIlow]),
@@ -1378,4 +1590,33 @@ function fillColumn2coefficientsTable(div, tw, categoryKey) {
 		div.text('(' + tw.q.mode + ')')
 		return
 	}
+}
+
+function fillDataHeaders(header, tr, tr_label, label) {
+	// header for forest plot column
+	tr.append('td')
+	// headers for data columns
+	header.forEach((h, i, arr) => {
+		const td = tr.append('td').text(h).style('padding', '8px')
+		if (i === arr.length - 1) td.style('font-style', 'italic')
+	})
+	// label for headers
+	tr_label
+		.append('td')
+		.attr('colspan', header.length + 1)
+		.style('padding', '0px 8px')
+		.style('text-align', 'center')
+		.append('div')
+		.text(label)
+		.style('border-bottom', '1px solid')
+		.style('padding', '5px')
+}
+
+function fillDataColumns(tr, cols) {
+	// estimate column
+	tr.append('td').text(cols.shift()).style('padding', '8px')
+	// 95% CI column
+	tr.append('td').html(`${cols.shift()} &ndash; ${cols.shift()}`).style('padding', '8px')
+	// rest of columns
+	for (const v of cols) tr.append('td').text(v).style('padding', '8px')
 }

@@ -607,7 +607,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		const analysisResult = {
 			data: {
 				sampleSize: analysis.data.sampleSize,
-				eventCnt: analysis.data.eventCnt ? analysis.data.eventCnt : null
+				eventCnt: analysis.data.eventCnt
 			}
 		}
 
@@ -640,76 +640,86 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		}
 
 		// coefficients
-		if (Rinput.regressionType == 'cox') {
-			if (data.coefficients.rows.length < 1) throw 'fewer than 1 row in coefficients table'
+		if (data.coefficients) {
+			// coefficients from a single analysis
+			analysisResult.data.coefficients = parseCoefficients(data.coefficients, Rinput.regressionType != 'cox')
+		} else if (data.coefficients_uni && data.coefficients_multi) {
+			// coefficients from univariate and multivariate analyses
+			analysisResult.data.coefficients_uni = parseCoefficients(data.coefficients_uni, false)
+			analysisResult.data.coefficients_multi = parseCoefficients(data.coefficients_multi, false)
 		} else {
-			if (data.coefficients.rows.length < 2) throw 'fewer than 2 rows in coefficients table'
+			throw 'coefficients table not found'
 		}
-		analysisResult.data.coefficients = {
-			header: data.coefficients.header,
-			intercept: Rinput.regressionType == 'cox' ? null : data.coefficients.rows.shift(),
-			terms: {}, // individual independent terms, not interaction
-			interactions: [] // interactions
-		}
-		for (const row of data.coefficients.rows) {
-			if (row[0].indexOf(':') != -1) {
-				// is an interaction
-				const interaction = {}
-				const [id1, id2] = row.shift().split(':')
-				const [cat1, cat2] = row.shift().split(':')
-				// row is now only data fields
-				interaction.term1 = id2originalId[id1]
-				interaction.category1 = cat1
-				interaction.term2 = id2originalId[id2]
-				interaction.category2 = cat2
-				interaction.lst = row
-				analysisResult.data.coefficients.interactions.push(interaction)
-			} else {
-				// not interaction, individual variable
-				const id = row.shift()
-				const category = row.shift()
-				// row is now only data fields
-				const termid = id2originalId[id]
-				if (!analysisResult.data.coefficients.terms[termid]) analysisResult.data.coefficients.terms[termid] = {}
-				if (category) {
-					// has category
-					if (!analysisResult.data.coefficients.terms[termid].categories)
-						analysisResult.data.coefficients.terms[termid].categories = {}
-					analysisResult.data.coefficients.terms[termid].categories[category] = row
+		function parseCoefficients(in_coef, hasIntercept) {
+			if (in_coef.rows.length < (hasIntercept ? 2 : 1)) throw 'too few rows in coefficients table'
+			const out_coef = {
+				header: in_coef.header,
+				terms: {}, // individual independent terms, not interaction
+				interactions: [], // interactions
+				label: 'Coefficients'
+			}
+			if (hasIntercept) out_coef.intercept = in_coef.rows.shift()
+			for (const row of in_coef.rows) {
+				if (row[0].indexOf(':') != -1) {
+					// is an interaction
+					const interaction = {}
+					const [id1, id2] = row.shift().split(':')
+					const [cat1, cat2] = row.shift().split(':')
+					// row is now only data fields
+					interaction.term1 = id2originalId[id1]
+					interaction.category1 = cat1
+					interaction.term2 = id2originalId[id2]
+					interaction.category2 = cat2
+					interaction.lst = row
+					out_coef.interactions.push(interaction)
 				} else {
-					// no category
-					analysisResult.data.coefficients.terms[termid].fields = row
+					// not interaction, individual variable
+					const id = row.shift()
+					const category = row.shift()
+					// row is now only data fields
+					const termid = id2originalId[id]
+					if (!out_coef.terms[termid]) out_coef.terms[termid] = {}
+					if (category) {
+						// has category
+						if (!out_coef.terms[termid].categories) out_coef.terms[termid].categories = {}
+						out_coef.terms[termid].categories[category] = row
+					} else {
+						// no category
+						out_coef.terms[termid].fields = row
+					}
 				}
 			}
+			return out_coef
 		}
-		analysisResult.data.coefficients.label = 'Coefficients'
 
 		// type III statistics
-		analysisResult.data.type3 = {
-			header: data.type3.header,
-			terms: {}, // individual independent terms, not interaction
-			interactions: [] // interactions
-		}
-		if (Rinput.regressionType != 'cox') analysisResult.data.type3.intercept = data.type3.rows.shift()
-		for (const row of data.type3.rows) {
-			if (row[0].indexOf(':') != -1) {
-				// is an interaction
-				const interaction = {}
-				const [id1, id2] = row.shift().split(':')
-				// row is now only data fields
-				interaction.term1 = id2originalId[id1]
-				interaction.term2 = id2originalId[id2]
-				interaction.lst = row
-				analysisResult.data.type3.interactions.push(interaction)
-			} else {
-				// not interaction, individual variable
-				const id = row.shift()
-				// row is now only data fields
-				const termid = id2originalId[id]
-				if (!analysisResult.data.type3.terms[termid]) analysisResult.data.type3.terms[termid] = row
+		if (data.type3) {
+			analysisResult.data.type3 = {
+				header: data.type3.header,
+				terms: {}, // individual independent terms, not interaction
+				interactions: [] // interactions
 			}
+			if (Rinput.regressionType != 'cox') analysisResult.data.type3.intercept = data.type3.rows.shift()
+			for (const row of data.type3.rows) {
+				if (row[0].indexOf(':') != -1) {
+					// is an interaction
+					const interaction = {}
+					const [id1, id2] = row.shift().split(':')
+					// row is now only data fields
+					interaction.term1 = id2originalId[id1]
+					interaction.term2 = id2originalId[id2]
+					interaction.lst = row
+					analysisResult.data.type3.interactions.push(interaction)
+				} else {
+					// not interaction, individual variable
+					const id = row.shift()
+					// row is now only data fields
+					const termid = id2originalId[id]
+					if (!analysisResult.data.type3.terms[termid]) analysisResult.data.type3.terms[termid] = row
+				}
+			}
+			analysisResult.data.type3.label = 'Type III statistics'
 		}
-		analysisResult.data.type3.label = 'Type III statistics'
 
 		// total snp effect
 		if (data.totalSnpEffect) {
@@ -740,8 +750,10 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		}
 
 		// other summary statistics
-		analysisResult.data.other = data.other
-		analysisResult.data.other.label = 'Other summary statistics'
+		if (data.other) {
+			analysisResult.data.other = data.other
+			analysisResult.data.other.label = 'Other summary statistics'
+		}
 
 		// plots
 		for (const tw of Rinput.independent) {

@@ -1,14 +1,10 @@
 import { select, pointer } from 'd3-selection'
-import { fillTermWrapper, termsettingInit } from '#termsetting'
-import { icons } from '#dom/control.icons'
-import { newSandboxDiv } from '../dom/sandbox.ts'
-import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common'
 import { format as d3format } from 'd3-format'
-import { Menu } from '#dom/menu'
-import { renderTable } from '../dom/table.ts'
+import { fillTermWrapper, termsettingInit } from '#termsetting'
+import { icons, newSandboxDiv, Menu, renderTable, table2col } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { TermTypes, isNumericTerm } from '../shared/terms'
-import { table2col } from '#dom/table2col'
+import { TermTypes, isNumericTerm } from '#shared/terms'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common'
 
 let inputIndex = 0
 const svgIcons = {
@@ -313,7 +309,7 @@ export function setInteractivity(self) {
 						const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 						sandbox.header.text(sample.sample_id)
 						await (
-							await import('./plot.ssgq.js')
+							await import('#plots/plot.ssgq.js')
 						).plotSingleSampleGenomeQuantification(
 							self.state.termdbConfig,
 							self.state.vocab.dslabel,
@@ -337,7 +333,7 @@ export function setInteractivity(self) {
 				.on('click', async event => {
 					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 					sandbox.header.text(sample.sample_id)
-					;(await import('./plot.disco.js')).default(
+					;(await import('#plots/plot.disco.js')).default(
 						self.state.termdbConfig,
 						self.state.vocab.dslabel,
 						sample,
@@ -377,7 +373,7 @@ export function setInteractivity(self) {
 				menuDiv.on('click', async _ => {
 					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 					sandbox.header.text(sample.sample_id)
-					;(await import('./dziviewer/plot.dzi.js')).default(
+					;(await import('#plots/dziviewer/plot.dzi.js')).default(
 						self.state.vocab.dslabel,
 						sandbox.body,
 						self.app.opts.genome,
@@ -1217,7 +1213,7 @@ function setTermActions(self) {
 			usecase.target = self.activeLabel.tw.term.type
 			usecase.detail = 'term'
 		}
-		const termdb = await import('../termdb/app')
+		const termdb = await import('#termdb/app')
 		self.dom.editbody.selectAll('*').remove()
 		termdb.appInit({
 			holder: self.dom.editbody.append('div'),
@@ -1689,7 +1685,7 @@ function setSampleGroupActions(self) {
 
 		self.dom.menubody.append('div').style('padding-bottom', '10px').html(`the selected survival variable below:`)
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('#termdb/app')
 		termdb.appInit({
 			holder: self.dom.menubody.append('div'),
 			vocabApi: self.app.vocabApi,

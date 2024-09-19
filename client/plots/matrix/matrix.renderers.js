@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
-import { isNumericTerm } from '../shared/terms'
+import { isNumericTerm } from '#shared/terms'
 
 export function setRenderers(self) {
 	self.render = function () {

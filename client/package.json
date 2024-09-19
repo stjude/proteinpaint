@@ -8,6 +8,7 @@
   "browser": "dist/app.js",
   "imports": {
     "#common/*": "./common/*.js",
+    "#dom": "./dom/index.ts",
     "#dom/*": "./dom/*.js",
     "#filter": "./filter/filter.js",
     "#filter/*": "./filter/*.js",
@@ -20,7 +21,9 @@
     "#termdb/*": "./termdb/*.js",
     "#termsetting": "./termsetting/termsetting.ts",
     "#termsetting/handlers/*": "./termsetting/handlers/*.ts",
-    "#tw": "./tw/*",
+    "#test/*": "./test/*",
+    "#tw": "./tw/index.ts",
+    "#tw/*": "./tw/*.ts",
     "#types": "./shared/types/index.ts",
     "#updated-types": "./shared/types/terms/updated-types.ts"
   },

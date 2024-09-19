@@ -1,5 +1,4 @@
-import { ContinuousXTW, DiscreteXTW } from '../tw/index.ts'
-import { TwRouter } from '../tw/TwRouter'
+import { ContinuousXTW, DiscreteXTW, TwRouter } from '#tw'
 import { TermWrapper } from '#updated-types'
 import { convertUnits } from '#shared/helpers'
 

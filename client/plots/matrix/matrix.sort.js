@@ -1,4 +1,4 @@
-import { isDictionaryType } from '../shared/terms'
+import { isDictionaryType } from '#shared/terms'
 import { dtsnvindel, dtfusionrna, dtcnv, mclasscnvgain, mclasscnvloss } from '#shared/common'
 
 export function getSampleSorter(self, settings, rows, opts = {}) {
