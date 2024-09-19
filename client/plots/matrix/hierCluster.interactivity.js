@@ -1,4 +1,4 @@
-import { renderTable } from '../dom/table'
+import { renderTable } from '#dom'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
 
 // Given a clusterId, return all its children clusterIds

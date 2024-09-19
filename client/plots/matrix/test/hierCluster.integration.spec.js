@@ -1,8 +1,8 @@
-import * as helpers from '../../test/front.helpers.js'
 import tape from 'tape'
-import { sleep, detectOne, detectGte, detectLst, detectAttr } from '../../test/test.helpers.js'
+import * as helpers from '#test/front.helpers.js'
+import { sleep, detectOne, detectGte, detectLst, detectAttr } from '#test/test.helpers.js'
 import { select } from 'd3-selection'
-import { appInit } from '../plot.app.js'
+import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
 import { TermTypes } from '#shared/terms.js'
 

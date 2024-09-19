@@ -1,4 +1,4 @@
-import { copyMerge } from '../rx'
+import { copyMerge } from '#rx'
 import { getSortOptions } from './matrix.sort'
 import { fillTermWrapper } from '#termsetting'
 import {

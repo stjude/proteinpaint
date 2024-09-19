@@ -1,6 +1,6 @@
-import * as helpers from '../../test/front.helpers.js'
+import * as helpers from '../../../test/front.helpers.js'
 import tape from 'tape'
-import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
+import { sleep, detectOne, detectGte, detectLst } from '../../../test/test.helpers.js'
 import { runproteinpaint } from '#src/app'
 import { select } from 'd3-selection'
 
