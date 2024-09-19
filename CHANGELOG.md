@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - address section 508 issues for GDC Sequence Read and BAM slicing download apps
+- initialize optional matrix tw props in TwBase constructor
 
 
 ## 2.77.1
