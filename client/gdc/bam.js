@@ -795,7 +795,6 @@ export async function bamsliceui({
 				row.push({ value: m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt })
 				rows.push(row)
 			}
-			if (rows.length > 5) break
 		}
 
 		renderTable({
