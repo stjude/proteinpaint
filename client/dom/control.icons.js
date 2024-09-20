@@ -512,16 +512,16 @@ export const icons = {
 }
 
 function getHolder(elem, opts) {
-	// for Section 508: a clickable element should have a recognized aria-role,
-	// which a button element has but not a div or span
-	const holder = !opts.handler ? elem : elem.append('button').attr('class', 'sja_icon_btn')
+	if (opts.handler) {
+		elem.on('click', opts.handler)
 
-	holder
-		// presentation elements/tags like div, span, etc do not aria-roles
-		// and should not have aria-label attribute
-		.attr(opts.handler ? 'aria-label' : 'title', opts.title || null)
-		.style('cursor', 'pointer')
+		// for Section 508: a clickable element should have a recognized aria-role,
+		// either implied by element tagName (button, submit, etc) or via "role" attribute
+		if (elem.node().tagName != 'BUTTON') elem.attr('role', 'button').attr('tabindex', 0).style('cursor', 'pointer')
+	}
+	if (opts.title) {
+		elem.attr('aria-label', opts.title).style('z-index', 1000) // to have aria-label based tooltip appear above other elements
+	}
 
-	if (opts.handler) elem.on('click', opts.handler)
-	return holder
+	return elem
 }
