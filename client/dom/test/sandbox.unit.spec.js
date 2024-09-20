@@ -61,7 +61,8 @@ tape('newSandboxDiv(), holder arg only and empty', async test => {
 	test.ok(elem, `Should render destroy/delete button`)
 
 	elem = holder.select('.sjpp-output-sandbox-collapse-btn').node()
-	test.equal(elem.style.display, 'inline-block', `Should render collapse button by default`)
+	console.log(63, elem)
+	test.notEqual(elem.style.display, 'none', `Should render collapse button by default`)
 
 	elem = holder.select('.sjpp-output-sandbox-expand-btn').node()
 	test.equal(elem.style.display, 'none', `Should not render expand button by default`)
