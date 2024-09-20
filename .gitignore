@@ -85,6 +85,7 @@ pixman-*/*
 **/serverconfig*.json
 !/server/test/serverconfig.json
 !/container/ci/serverconfig.json
+!/container/dev/serverconfig.json
 **/server.js*
 **/server.ts*
 !client/rx/server.js

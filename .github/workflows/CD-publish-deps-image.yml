@@ -69,6 +69,7 @@ jobs:
             cd ..
 
             HASH=$(git rev-parse --short HEAD 2>/dev/null)
+            docker push ghcr.io/stjude/ppbase:latest
             docker push ghcr.io/stjude/ppserver:$TAG
             docker push ghcr.io/stjude/ppfull:$TAG
             docker push ghcr.io/stjude/ppserver:latest
@@ -80,7 +81,7 @@ jobs:
               git switch master
               git merge $BRANCH
             fi
-            
+          
             git config --global user.email "PPTeam@STJUDE.ORG"
             git config --global user.name "PPTeam CI"
             git add deps/package.json

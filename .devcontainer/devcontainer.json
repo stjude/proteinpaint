@@ -1,0 +1,38 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/dotnet-mssql
+{
+  "name": "ProteinPaint Development Container",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/home/root/${localWorkspaceFolderBasename}",
+
+  // Features to add to the dev container. More info: https://containers.dev/features.
+  // "features": {},
+
+  // Configure tool-specific properties.
+  "customizations": {
+    "jetbrains": {
+      "backend": "Rider"
+    }
+  },
+
+  // Custom mounts
+//  "mounts": [
+//    {
+//      "source": "/path/to/tp/",
+//      "target": "/home/root/tp/",
+//      "type": "bind"
+//    }
+//  ],
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  "forwardPorts": [3000],
+  // "portsAttributes": {
+  //		"3000": {
+  //			"protocol": "https"
+  //		}
+  // }
+
+  // Connect as root. More info for non-root connection: https://aka.ms/dev-containers-non-root.
+  "remoteUser": "root"
+}

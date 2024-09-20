@@ -1,0 +1,24 @@
+{
+  "//COMMENT": "intended for dev container development, it's copied to the root folder when the container is started",
+  "debugmode": true,
+  "defaultgenome": "hg38-test",
+  "features": {
+    "skip_checkDependenciesAndVersions": 1,
+    "extApiCache": {
+      "fake.org": "fake-test"
+    }
+  },
+  "genomes": [
+    {
+      "name": "hg38-test",
+      "species": "human",
+      "file": "./genome/hg38.test.ts",
+      "datasets": [{
+        "name": "TermdbTest",
+        "jsfile": "./dataset/termdb.test.ts"
+      }]
+    }
+  ],
+  "tpmasterdir": "/home/root/proteinpaint/server/test/tp",
+  "cachedir": "/home/root"
+}
