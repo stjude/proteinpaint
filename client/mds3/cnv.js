@@ -1,7 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import { mclasscnvgain, mclasscnvloss } from '#shared/common'
 import { table_cnv } from './itemtable'
-import { table2col } from '#dom/table2col'
+import { table2col } from '#dom'
 
 /*
 to find out if server can return a cnv segment with >1 samples
@@ -20,7 +20,6 @@ also
 export function may_render_cnv(data, tk, block) {
 	tk.cnv?.g.selectAll('*').remove()
 	if (!data.cnv) {
-		delete tk.subtk2height.cnv
 		return
 	}
 
@@ -143,12 +142,31 @@ function prepData(data, tk, block) {
 	return [samples, cnvLst, Math.min(tk.cnv.absoluteValueRenderMax, maxAbsoluteValue)]
 }
 
+/*
+arg is an array. each element is a row of either:
+	- all cnv segments per sample (for each sample, all cnv are shown in one row)
+	- a stack that will be shown as a row
+
+logic:
+
+	if there are small enough number of rows:
+	- max out row height to maxRowHeight with spacing. total subtrack height shouldn't exceed limit
+
+	if number of rows exceeds maxTkHeight:
+		return fractional row height (maxTkHeight/#rows) for canvas plotting
+	
+	else:
+		scale 
 // use same sample number cutoff values in scale and capping
-const rhScale = scaleLinear([40, 120], [10, 1])
-function getRowHeight(samples) {
-	if (samples.length > 120) return [1, 0]
-	if (samples.length < 40) return [10, 1]
-	return [Math.ceil(rhScale(samples.length)), 1]
+*/
+const maxRowHeight = 10
+const maxTkHeight = 200 // cnv sub track shouldn't exceed this height
+function getRowHeight(rows) {
+	const v = maxTkHeight / rows.length
+	if (v > maxRowHeight) return [maxRowHeight, 1] // small enough number of rows. use max height
+	if (v > 3) return [Math.floor(v), 1] //
+	if (v > 1) return [Math.floor(v), 0] // no spacing
+	return [v, 0]
 }
 
 function plotOneSegment(c, y, rowheight, tk, block, sample) {
@@ -159,7 +177,7 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 		.attr('x', x1)
 		.attr('y', y)
 		.attr('width', x2 - x1)
-		.attr('height', rowheight)
+		.attr('height', Math.max(rowheight, 1))
 		.attr('fill', tk.cnv.colorScale(c.value))
 		.on('mouseover', event => {
 			event.target.setAttribute('stroke', 'black')

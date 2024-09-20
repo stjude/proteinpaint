@@ -1,4 +1,4 @@
-import { Menu } from '#dom/menu'
+import { Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
@@ -78,9 +78,15 @@ and will use cached data at rawmlst instead
 export async function makeTk(tk, block) {
 	// run just once to initiate a track by adding in essential attributes to tk object
 
-	tk.subtk2height = {}
-	// keys: "skewer", "leftlabels"
-	// value is #pixel in height for that component
+	/* some tk components will contribute to determination of total tk height
+	declare all these components, default height for each to 0 for not rendered, so the values can be easily assessed
+	when a component rendered, set actual height
+	*/
+	tk.subtk2height = {
+		skewer: 0,
+		leftlabels: 0,
+		cnv: 0
+	}
 
 	tk.leftlabels = {
 		g: tk.gleft.append('g'), // all labels are rendered here, except track label
@@ -221,7 +227,7 @@ function loadTk_finish_closure(tk, block) {
 		tk.legend?.headTd.text(tk.name + (tk.filterObj ? ' - ' + getFilterName(tk.filterObj) : ''))
 
 		if (tk.cnv) {
-			tk.cnv.g.transition().attr('transform', `translate(0,${tk.subtk2height.skewer || 0})`)
+			tk.cnv.g.transition().attr('transform', `translate(0,${tk.subtk2height.skewer})`)
 		}
 
 		if (data) {
@@ -255,8 +261,8 @@ function loadTk_finish_closure(tk, block) {
 		// derive tk height
 		tk.height_main =
 			Math.max(
-				tk.subtk2height.leftlabels || 0, // won't be added if tk crashed
-				tk.subtk2height.skewer + (tk.subtk2height.cnv || 0)
+				tk.subtk2height.leftlabels, // won't be added if tk crashed
+				tk.subtk2height.skewer + tk.subtk2height.cnv
 			) +
 			tk.toppad +
 			tk.bottompad
