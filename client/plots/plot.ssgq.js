@@ -73,11 +73,13 @@ export async function plotSingleSampleGenomeQuantification(
 		if (q2) {
 			holder
 				.append('div')
+				.attr('data-testid', 'sjpp_ssgq_intro_text')
 				.text(`Click a chromosomal position to zoom in and view ${q2.description || q.singleSampleGbtk}`)
 		}
 
 		const img = holder
 			.append('img')
+			.attr('data-testid', 'sjpp_ssgq_img')
 			.attr('width', data.canvasWidth)
 			.attr('height', data.canvasHeight)
 			.attr('src', data.src)
