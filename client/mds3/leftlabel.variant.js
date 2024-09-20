@@ -200,11 +200,11 @@ function menu_variants(tk, block) {
 				}
 				const { holder, callbacks, tk } = arg
 
-				// Set default shape for load and create a toggle
-				// to switch back to default lollipop when another
-				// shape is selected
-				if (!tk.skewer.shape) tk.skewer.shape = Object.entries(desiredShapes)[0]
-				delete desiredShapes[tk.skewer?.shape?.[0]]
+				if (!tk.shapes) {
+					//TODO init this somewhere else
+					tk.shapes = { mclass: {} }
+					Object.keys(mclass).forEach(v => (tk.shapes.mclass[v] = 'filledCircle'))
+				}
 
 				const vectorGraphicsDiv = holder.append('div')
 				vectorGraphicsDiv
@@ -249,7 +249,9 @@ function menu_variants(tk, block) {
 
 			function onShapeClick(val, tk) {
 				// Logic to change the pre-existing shape to the chosen shape
-				tk.skewer.shape = val
+				Object.keys(tk.shapes.mclass).forEach(key => {
+					tk.shapes.mclass[key] = val[0]
+				})
 				tk.load()
 				tk.menutip.hide()
 			}

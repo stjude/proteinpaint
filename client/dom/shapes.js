@@ -3,6 +3,13 @@ export const shapes = {
 	//circle filled
 	filledCircle: {
 		path: 'M 8,8 m 8,0 a 8,8 0 1,0 -16,0 a 8,8 0 1,0 16,0',
+		calculatePath: opts => {
+			const _opts = { radius: 16 }
+			Object.assign(_opts, opts)
+			const { radius } = _opts
+
+			return `M${radius},0 A${radius},${radius} 0 1,1 ${-radius},0 A${radius},${radius} 0 1,1 ${radius},0 Z`
+		},
 		isFilled: true
 	},
 

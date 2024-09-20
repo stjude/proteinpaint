@@ -4,6 +4,7 @@ import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
 import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderSkewerShapes, renderShapeKick, setNumBaseline } from './skewer.render.shapes.ts'
+import { shapes } from '#dom/shapes'
 
 /*
 ********************** EXPORTED
@@ -126,43 +127,69 @@ export function skewer_make(tk, block) {
 		.attr('class', 'sja_aa_discg')
 		.each(function (d) {
 			d.g = this
+
+			if (tk.shapes) {
+				//TODO: Add logic to determine when to apply shape or color
+				d.shape = tk.shapes.mclass[d.aa.mlst[0].class]
+			}
+			if (d.shape && !d.shape.includes('Circle')) {
+				//Use existing rendering code for circle shapes
+				renderSkewerShapes(tk, ss, d3select(this))
+			} else {
+				// actual disc
+				const discdot = d3select(this).append('circle')
+
+				// full filled
+				discdot
+					.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
+					.attr('fill', d => (tk.shapes && !shapes[d.shape].isFilled ? 'white' : tk.color4disc(d.mlst[0])))
+					.attr('stroke', d => (tk.shapes && !shapes[d.shape].isFilled ? tk.color4disc(d.mlst[0]) : 'white'))
+					.attr('r', d => d.radius - 0.5)
+				// masking half
+				d3select(this)
+					.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
+					.append('path')
+					.attr('fill', d => (tk.shapes && !shapes[d.shape].isFilled ? 'black' : 'white'))
+					.attr('stroke', 'none')
+					.attr('d', d =>
+						d3arc()({
+							innerRadius: 0,
+							outerRadius: d.radius - 2,
+							startAngle: d.useNterm ? 0 : Math.PI,
+							endAngle: d.useNterm ? Math.PI : Math.PI * 2
+						})
+					)
+			}
 		})
-	/** tk.skewer.shape=[
-	 * [0] key from #dom/shapes.js (e.g. emptyTriangle)
-	 * [1] object with .isFilled, calculatedPath(), .path ]
-	 * This will be refactored from a track level definition
-	 * to a data level in the future
-	 */
 
-	const isEmptyShape = tk.skewer?.shape?.[1]?.isFilled == false
+	// if (tk.shapes) {
+	// 	//Use existing rendering code for circle shapes
+	// 	renderSkewerShapes(tk, ss, discg)
+	// } else {
+	// 	// actual disc
+	// 	const discdot = discg.append('circle')
 
-	if (tk.skewer.shape && !tk.skewer?.shape?.[0].includes('Circle')) {
-		//Use existing rendering code for circle shapes
-		renderSkewerShapes(tk, ss, discg)
-	} else {
-		// actual disc
-		const discdot = discg.append('circle')
-		// full filled
-		discdot
-			.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
-			.attr('fill', isEmptyShape ? 'white' : d => tk.color4disc(d.mlst[0]))
-			.attr('stroke', isEmptyShape ? d => tk.color4disc(d.mlst[0]) : 'white')
-			.attr('r', d => d.radius - 0.5)
-		// masking half
-		discg
-			.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
-			.append('path')
-			.attr('fill', isEmptyShape ? 'black' : 'white')
-			.attr('stroke', 'none')
-			.attr('d', d =>
-				d3arc()({
-					innerRadius: 0,
-					outerRadius: d.radius - 2,
-					startAngle: d.useNterm ? 0 : Math.PI,
-					endAngle: d.useNterm ? Math.PI : Math.PI * 2
-				})
-			)
-	}
+	// 	// full filled
+	// 	discdot
+	// 		.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
+	// 		.attr('fill', d => tk.shapes && !shapes[d.shape].isFilled ? 'white' : tk.color4disc(d.mlst[0]) )
+	// 		.attr('stroke', d => tk.shapes && !shapes[d.shape].isFilled ? tk.color4disc(d.mlst[0]) : 'white' )
+	// 		.attr('r', d => d.radius - 0.5)
+	// 	// masking half
+	// 	discg
+	// 		.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
+	// 		.append('path')
+	// 		.attr('fill', d => tk.shapes && !shapes[d.shape].isFilled ? 'black' : 'white' )
+	// 		.attr('stroke', 'none')
+	// 		.attr('d', d =>
+	// 			d3arc()({
+	// 				innerRadius: 0,
+	// 				outerRadius: d.radius - 2,
+	// 				startAngle: d.useNterm ? 0 : Math.PI,
+	// 				endAngle: d.useNterm ? Math.PI : Math.PI * 2
+	// 			})
+	// 		)
+	// }
 
 	// number in disc
 	const textslc = discg
@@ -173,7 +200,7 @@ export function skewer_make(tk, block) {
 		.attr('class', 'sja_aa_discnum')
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('stroke-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
-		.attr('dominant-baseline', tk.skewer.shape ? setNumBaseline(tk.skewer.shape[0], tk.skewer.pointup) : '')
+		.attr('dominant-baseline', d => (tk.shapes ? setNumBaseline(d.shape, tk.skewer.pointup) : ''))
 		.attr('text-anchor', 'middle')
 		.each(d => {
 			const s = d.radius * 1.5
@@ -181,13 +208,15 @@ export function skewer_make(tk, block) {
 		})
 		.attr('font-size', d => d.discnumfontsize)
 		.attr('y', d => d.discnumfontsize * middlealignshift)
-	textslc.filter(d => d.dt == dtsnvindel).attr('fill', isEmptyShape ? 'black' : 'white')
+	textslc
+		.filter(d => d.dt == dtsnvindel)
+		.attr('fill', d => (tk.shapes && !shapes[d.shape].isFilled ? 'black' : 'white'))
 	textslc
 		.filter(d => d.dt == dtsv || d.dt == dtfusionrna)
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.attr('stroke-width', 0.8)
 		.attr('font-weight', 'bold')
-		.attr('fill', isEmptyShape ? 'black' : 'white')
+		.attr('fill', d => (tk.shapes && !shapes[d.shape].isFilled ? 'black' : 'white'))
 	// right-side label
 	const textlab = discg
 		.append('text')
@@ -241,7 +270,7 @@ export function skewer_make(tk, block) {
 
 	let kick
 	// invisible kicking disc cover
-	if (tk.skewer.shape && tk.skewer.shape[0] !== 'filledCircle') {
+	if (tk.shapes) {
 		//Returns the kick in the same shape if skewer is not a circle
 		kick = renderShapeKick(ss, discg)
 	} else {
@@ -331,7 +360,7 @@ export function skewer_make(tk, block) {
 
 	let foldedKick
 	// invisible kicking skewer cover when folded
-	if (tk.skewer.shape && !tk.skewer.shape[0].includes('Circle')) {
+	if (tk.shapes) {
 		//Returns the kick in the same shape if skewer is not a circle
 		foldedKick = renderShapeKick(ss, ss.selection)
 		foldedKick.attr('transform', d => `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})`)

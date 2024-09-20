@@ -1,19 +1,21 @@
 import { Elem } from '../types/d3'
+import { shapes } from '../dom/shapes.js'
 
 export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 	shapeG
 		.append('path')
-		.attr('d', d => skewer.shape[1].calculatePath(getPathDimensions(skewer.shape[0], d.radius, skewer)))
-		.attr('fill', skewer.shape[1].isFilled ? d => tk.color4disc(d.mlst[0]) : 'white')
-		.attr('stroke', skewer.shape[1].isFilled ? 'white' : d => tk.color4disc(d.mlst[0]))
+		.attr('d', d => shapes[d.shape].calculatePath(getPathDimensions(d.shape, d.radius, skewer)))
+		.attr('fill', d => (shapes[d.shape].isFilled ? tk.color4disc(d.mlst[0]) : 'white'))
+		.attr('stroke', d => (shapes[d.shape].isFilled ? 'white' : tk.color4disc(d.mlst[0])))
 }
 
 export function renderShapeKick(skewer: any, elem: any) {
 	const kick = elem
 		.append('path')
 		.attr('d', d => {
+			if (!d.shape) d.shape = d.groups[0].shape
 			const radius = d.radius * 1.01 || d.maxradius + 2
-			return skewer.shape[1].calculatePath(getPathDimensions(skewer.shape[0], radius, skewer))
+			return shapes[d.shape].calculatePath(getPathDimensions(d.shape, radius, skewer))
 		})
 		.attr('stroke-width', 1.75)
 
@@ -23,6 +25,8 @@ export function renderShapeKick(skewer: any, elem: any) {
 function getPathDimensions(key: string, radius: number, skewer: any) {
 	//Add more shapes here using the key from #dom/shapes.js
 	switch (key) {
+		case 'filledCircle':
+			return { radius }
 		case 'emptyCircle':
 			return { radius }
 		case 'filledVerticalRectangle':
