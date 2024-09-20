@@ -304,6 +304,7 @@ export function setInteractivity(self) {
 				const menuDiv = self.dom.clickMenu.d
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
+					.attr('data-testid', 'sjpp-ssgp-menu-btn')
 					.text(k)
 					.on('click', async event => {
 						const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
