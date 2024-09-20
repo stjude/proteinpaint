@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - compute both univariate and multivariate analyses by default in multivariate regression analysis for Neuro-Oncology datasets
+- Support GDC scrna gene exp API (only in qa-int) for GDC scRNA-seq plot
 
 Fixes:
 - address section 508 issues for GDC Sequence Read and BAM slicing download apps
