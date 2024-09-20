@@ -1,7 +1,6 @@
 import * as common from '#shared/common.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import ky from 'ky'
-import got from 'got'
 import nodeFetch from 'node-fetch'
 import path from 'path'
 import { combineSamplesById } from './mds3.variant2samples.js'
@@ -151,7 +150,7 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 			cases4clustering = await getCases4expclustering(q, ds)
 			const t = new Date()
 			mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', t - t2, 'ms')
-			t2=t
+			t2 = t
 		}
 
 		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.terms, cases4clustering, genome, ds, q)
@@ -2259,7 +2258,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 	ds.queries.singleCell.data.get = async q => {
 		const { host } = ds.getHostHeaders(q)
 		// do not use headers here that has accept: 'application/json'
-		const re = await ky(path.join(host.rest, 'data', q.sample), { timeout: false }).text()
+		const re = await ky(path.join(host.rest, 'data', q.sample.eID || q.sample.sID), { timeout: false }).text()
 		const lines = re.trim().split('\n')
 		const datasetPlots = ds.queries.singleCell.data.plots
 		/*
@@ -2278,6 +2277,11 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		*/
 		const seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} }
 		const plots = q.plots.map(p => ({ cells: [], name: p }))
+
+		let geneExpMap
+		if (ds.queries.singleCell.geneExpression && q.gene) {
+			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
+		}
 		for (let i = 1; i < lines.length; i++) {
 			const line = lines[i]
 			const l = line.split('\t')
@@ -2296,7 +2300,13 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 				if (Number.isNaN(x)) throw 'x is nan in plot ' + plot.name
 				if (Number.isNaN(y)) throw 'x is nan in plot ' + plot.name
 				const category = `Cluster ${clusterId}`
-				plot.cells.push({ cellId, x, y, category })
+				const cell = { cellId, x, y, category }
+				if (geneExpMap) {
+					if (geneExpMap[cellId] !== undefined) {
+						cell.geneExp = geneExpMap[cellId]
+					}
+				}
+				plot.cells.push(cell)
 			}
 		}
 		return { plots }

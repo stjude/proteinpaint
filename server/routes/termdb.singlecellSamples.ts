@@ -18,6 +18,7 @@ import {
 import { Cell, Plot, TermdbSinglecellDataRequest } from '#shared/types/routes/termdb.singlecellData.ts'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
+import ky from 'ky'
 
 /* route returns list of samples with sc data
 this is due to the fact that sometimes not all samples in a dataset has sc data
@@ -86,7 +87,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 		if (q.geneExpression.src == 'native') {
 			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
 		} else if (q.geneExpression.src == 'gdcapi') {
-			// TODO
+			gdc_validateGeneExpression(q.geneExpression, ds, genome)
 		} else {
 			throw 'unknown singleCell.geneExpression.src'
 		}
@@ -137,8 +138,11 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 			const file2Lines = {}
 			for (const plot of D.plots) {
 				if (!q.plots.includes(plot.name)) continue
-				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, q.sample + plot.fileSuffix)
-				//some plots share the same file, just read different columns
+				const tsvfile = path.join(
+					serverconfig.tpmasterdir,
+					plot.folder,
+					(q.sample.eID || q.sample.sID) + plot.fileSuffix
+				) //some plots share the same file, just read different columns
 				if (!file2Lines[tsvfile]) {
 					try {
 						await fs.promises.stat(tsvfile)
@@ -199,8 +203,8 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		// Check if the storage format is RDS file ? For now keeping this as the default format
 		// client actually queries /termdb/singlecellData route for gene exp data
 		G.get = async (q: TermdbSinglecellDataRequest) => {
-			// q {sample:str, gene:str}
-			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample + '.rds')
+			// q {sample: {eID: str, sID: str}, gene:str}
+			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.rds')
 			try {
 				await fs.promises.stat(rdsfile)
 			} catch (e: any) {
@@ -224,7 +228,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		// client actually queries /termdb/singlecellData route for gene exp data
 		G.get = async (q: TermdbSinglecellDataRequest) => {
 			// q {sample:str, gene:str}
-			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, q.sample + '.h5')
+			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
 			try {
 				await fs.promises.stat(rdsfile)
 			} catch (e: any) {
@@ -253,6 +257,46 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 			}
 
 			return out
+		}
+	}
+}
+
+function gdc_validateGeneExpression(G, ds, genome) {
+	G.sample2gene2expressionBins = {} // cache for binning gene expression values
+
+	// client actually queries /termdb/singlecellData route for gene exp data
+	G.get = async (q: TermdbSinglecellDataRequest) => {
+		// q {sample: {eID: str, sID: str}, gene:str}
+
+		// first version of GDC scrna gene expression API expects:
+		// {case_id: uuid, gene_ids: Ensembl gene ID}, later may support file_id
+		try {
+			const uuid = ds.__gdc.map2caseid.get(q.sample.sID)
+			const fileid = q.sample.eID
+
+			const aliasLst = genome.genedb.getAliasByName.all(q.gene)
+			const gencodeId = aliasLst.find(a => a?.alias.toUpperCase().startsWith('ENSG'))?.alias
+
+			const body = {
+				case_id: uuid,
+				gene_ids: [gencodeId],
+				file_id: fileid
+			}
+
+			const { host } = ds.getHostHeaders(q)
+			const out = await ky
+				.post(path.join(host.rest, 'scrna_seq/gene_expression'), { timeout: false, json: body })
+				.json()
+
+			const result = (out as { data: { cells: any[] }[] }).data[0].cells
+			const data = {}
+			for (const r of result) {
+				data[r.cell_id] = r.value
+			}
+			return data
+		} catch (e: any) {
+			if (e.stack) console.log(e.stack)
+			return { error: e.message || e }
 		}
 	}
 }
