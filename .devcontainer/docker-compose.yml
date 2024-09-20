@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  app:
+    image: "ghcr.io/stjude/devcontainer:latest"
+
+    volumes:
+      - ../..:/home/root/:cached
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+
+    # Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+    user: root
+
+    # Use "forwardPorts" in **devcontainer.json** to forward an app port locally.
+    # (Adding the "ports" property to this file will not forward from a Codespace.)

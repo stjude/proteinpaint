@@ -7,6 +7,13 @@ FROM ${registry}/node:20-bookworm-slim AS ppbase
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
+ARG IMGREV=""
+ARG IMGVER=""
+
+LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
+    org.opencontainers.image.revision="$IMGREV" \
+    org.opencontainers.image.version="$IMGVER"
+
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
@@ -25,6 +32,9 @@ RUN apt-get update && apt-get install -y \
     libcairo-dev \
 	libjpeg-dev \
 	libgif-dev \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libpangocairo-1.0-0 \
 	sqlite3 libsqlite3-dev \
 	g++ \
     pkg-config \
@@ -58,9 +68,12 @@ RUN curl -L https://github.com/samtools/samtools/releases/download/${htsversion}
 RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 'B8F25A8A73EACF41' && `#pragma: allowlist secret` \
-    echo "deb http://cloud.r-project.org/bin/linux/debian bookworm-cran40/" >> /etc/apt/sources.list \
-    && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key 'E19F5F87128899B192B1A2C2AD5F960A256A04AF' #pragma: allowlist secret
+# Add CRAN repository and GPG key for R
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 'B8F25A8A73EACF41' && `#pragma: allowlist secret` \
+    && add-apt-repository 'deb https://cloud.r-project.org/bin/linux/debian bookworm-cran40/' \
+    && apt-get update
 
 RUN apt-get update && apt-get install -y r-base -y r-base-dev -y libargtable2-dev \
 	## install R packages
