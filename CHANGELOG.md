@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- section 508 issues in singleCellPlot controls: aria-label should be on element with roles
+
+
 ## 2.78.0
 
 Features:
