@@ -71,8 +71,8 @@ let idIncr = 0
 // happen to use the same prefix/beginning substring for element ID
 const randomSuffix = Math.random()
 // generate unique input name or id string
-function getUniqueNameOrId() {
-	return `sjpp-input-${idIncr++}-${randomSuffix}`
+function getUniqueNameOrId(str = 'elem') {
+	return `sjpp-${str}-${idIncr++}-${randomSuffix}`
 }
 
 /*
@@ -124,7 +124,7 @@ export function renderTable({
 		//if (singleMode == true && (!buttons || !noButtonCallback)) throw `Missing buttons array and noButtonCallback but singleMode = true`
 	}
 
-	const uniqueInputName = inputName || getUniqueNameOrId()
+	const uniqueInputName = inputName || getUniqueNameOrId('input')
 
 	const parentDiv = div.append('div').style('background-color', 'white')
 
@@ -189,11 +189,19 @@ export function renderTable({
 	const tbody = table.append('tbody')
 	for (const [i, row] of rows.entries()) {
 		let checkbox
-		const rowtable = tbody.append('tr').attr('class', 'sjpp_row_wrapper')
-		if (striped && i % 2 == 1) rowtable.style('background-color', 'rgb(245,245,245)')
+		const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper')
+		if (striped && i % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
+
+		// for Section 508 compliance: always create an aria-labelledby attribute on an input
+		// NOTE: a title attribute, wrapping with a label element, or other solutions are possible,
+		// but using aria-labelled by is less likely to conflict with existing elem attributes or layout
+		const ariaLabelledBy = row.ariaLabelledBy || row[0]?.elemId || getUniqueNameOrId('td')
+		// by default, assume that the first data cell should be used to label the input to its left,
+		// and should create an element id on it as needed
+		if (!row.ariaLabelledBy && row[0] && !row[0].elemId) row[0].elemId = ariaLabelledBy
 
 		if (buttons || noButtonCallback)
-			rowtable.on('click', e => {
+			tr.on('click', e => {
 				if (e.target !== checkbox.node()) {
 					if (singleMode)
 						//not a checkbox
@@ -203,8 +211,7 @@ export function renderTable({
 				}
 			})
 		if (showLines) {
-			rowtable
-				.append('td')
+			tr.append('td')
 				.text(i + 1)
 				.style('text-align', 'center')
 				.style('width', '1vw')
@@ -212,7 +219,7 @@ export function renderTable({
 		}
 
 		if (buttons || noButtonCallback) {
-			const td = rowtable.append('td').style('width', '1.5vw').style('float', 'center')
+			const td = tr.append('td').style('width', '1.5vw').style('float', 'center')
 			if (noRadioBtn) {
 				// should be in singleMode and do not want to show radio buttons for cleaner look. <input> elements are still rendered since "checkbox" element is required for selection. thus simply hide <td>.
 				td.style('display', 'none')
@@ -222,7 +229,7 @@ export function renderTable({
 				.attr('type', singleMode ? 'radio' : 'checkbox')
 				.attr('name', uniqueInputName)
 				.attr('value', i)
-				.attr('aria-labelledby', row.ariaLabelledBy || null)
+				.attr('aria-labelledby', ariaLabelledBy)
 				.property('checked', selectAll || selectedRows.includes(i))
 				.on('change', () => {
 					if (buttons) updateButtons()
@@ -230,17 +237,17 @@ export function renderTable({
 
 					const checked = checkbox.property('checked')
 					for (const key in _selectedRowStyle) {
-						rowtable.style(key, checked ? _selectedRowStyle[key] : '')
+						tr.style(key, checked ? _selectedRowStyle[key] : '')
 					}
 				})
 
 			const checked = checkbox.property('checked')
 			for (const key in selectedRowStyle) {
-				rowtable.style(key, checked ? selectedRowStyle[key] : '')
+				tr.style(key, checked ? selectedRowStyle[key] : '')
 			}
 		}
 		if (columnButtons && columnButtons.length > 0) {
-			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
+			const td = tr.append('td').attr('class', 'sjpp_table_item')
 			// Assuming x is your variable
 			for (const button of columnButtons) {
 				button.button = td
@@ -255,7 +262,7 @@ export function renderTable({
 			}
 		}
 		for (const [colIdx, cell] of row.entries()) {
-			const td = rowtable
+			const td = tr
 				.append('td')
 				.attr('id', cell.elemId || null)
 				.attr('class', 'sjpp_table_item')
