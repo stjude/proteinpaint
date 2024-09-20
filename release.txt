@@ -1,1 +1,2 @@
-
+Fixes:
+- wip fix to limit cnv track to under 200px for lots of cnv segments

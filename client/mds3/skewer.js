@@ -81,7 +81,6 @@ export function may_render_skewer(data, tk, block) {
 	if (!tk.skewer) {
 		// not equipped with skewer track
 		// created in makeTk when skewer datatype is available
-		tk.subtk2height.skewer = 0
 		return
 	}
 

@@ -2,13 +2,10 @@ import { fold_glyph, settle_glyph } from './skewer.render'
 import { may_render_skewer } from './skewer'
 import { itemtable } from './itemtable'
 import { makelabel, positionLeftlabelg } from './leftlabel'
-import { to_textfile } from '#dom/downloadTextfile'
-import { Tabs } from '../dom/toggleButtons'
-import { make_radios } from '../dom/radiobutton'
+import { to_textfile, Tabs, make_radios, shapes } from '#dom'
 import { rangequery_rglst } from './tk'
 import { samples2columnsRows, block2source } from './sampletable'
 import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtfusionrna } from '#shared/common'
-import { shapes } from '#dom/shapes'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track
@@ -41,7 +38,7 @@ export function makeVariantLabel(data, tk, block, laby) {
 	}
 
 	if (totalcount == 0) {
-		tk.leftlabels.doms.variants.text('No variants').attr('class', '').style('opacity', 0.5).on('click', null)
+		tk.leftlabels.doms.variants.text('No variants').attr('class', '').style('opacity', 0.7).on('click', null)
 		return
 	}
 
@@ -301,6 +298,7 @@ async function listVariantData(tk, block) {
 
 	tk.menutip.clear()
 
+	// TODO make reusable and supply contents to menu_variants() List
 	// group variants by dt; for each group, render with itemtable()
 	const dt2mlst = new Map()
 

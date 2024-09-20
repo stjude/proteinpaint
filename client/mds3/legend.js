@@ -1,10 +1,9 @@
 import { legend_newrow } from '#src/block.legend'
-import { Menu } from '#dom/menu'
+import { Menu, axisstyle } from '#dom'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
 import { axisBottom, axisTop } from 'd3-axis'
-import { axisstyle } from '#dom/axisstyle'
 import { scaleLinear } from 'd3-scale'
 
 /*

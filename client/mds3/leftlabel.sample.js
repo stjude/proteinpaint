@@ -1,10 +1,7 @@
 import { makelabel } from './leftlabel'
-import { Tabs } from '../dom/toggleButtons'
+import { Tabs, fillbar, renderTable, violinRenderer } from '#dom'
 import { displaySampleTable } from './sampletable'
-import { fillbar } from '../dom/fillbar'
-import { renderTable } from '../dom/table'
 import { filterInit, getNormalRoot } from '../filter/filter'
-import { violinRenderer } from '../dom/violinRenderer'
 import { getFilterName } from './filterName'
 
 /*
