@@ -727,7 +727,7 @@ function setTermActions(self) {
 		await self.pill.main(Object.assign({ menuOptions: self.getMenuOptions(t) }, t.tw ? t.tw : { term: null, q: null }))
 		termMenuWaitDiv.remove()
 
-		self.dom.shortcutDiv = self.dom.menutop.append('div')
+		self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
 		self.showShortcuts(t, self.dom.shortcutDiv)
 
 		self.dom.twMenuDiv = self.dom.menutop.append('div')

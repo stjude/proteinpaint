@@ -264,8 +264,10 @@ class singleCellPlot {
 		this.axisOffset = { x: offsetX, y: 30 }
 
 		if (q.singleCell?.DEgenes) {
-			this.dom.deDiv.append('label').html('View differentially expresed genes of a cluster vs rest of cells:&nbsp;')
-			this.dom.deselect = this.dom.deDiv.append('select')
+			const label = this.dom.deDiv
+				.append('label')
+				.html('View differentially expresed genes of a cluster vs rest of cells:&nbsp;')
+			this.dom.deselect = label.append('select')
 			if (this.app.opts.genome.termdbs)
 				this.dom.GSEAbt = this.dom.deDiv
 					.append('button')

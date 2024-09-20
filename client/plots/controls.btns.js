@@ -108,9 +108,8 @@ function helpBtnInit(opts) {
 }
 
 function downloadBtnInit(opts) {
-	const downloadDiv = opts.holder.style('margin-left', '20px').attr('aria-label', 'Download plot image')
-
-	icon_functions['download'](downloadDiv, { handler: opts.callback })
+	const downloadDiv = opts.holder.style('margin-left', '20px')
+	icon_functions['download'](downloadDiv, { handler: opts.callback, title: opts.title || 'Download plot image' })
 
 	const self = {
 		plotTypes: ['summary', 'boxplot', 'scatter'],
