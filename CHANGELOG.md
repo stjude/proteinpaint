@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.78.0
 
 Features:
 - compute both univariate and multivariate analyses by default in multivariate regression analysis for Neuro-Oncology datasets
