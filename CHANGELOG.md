@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - section 508 issues in singleCellPlot controls: aria-label should be on element with roles
+- wip fix to limit cnv track to under 200px for lots of cnv segments
 
 
 ## 2.78.0
