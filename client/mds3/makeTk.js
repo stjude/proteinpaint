@@ -5,6 +5,7 @@ import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '#common/urlmap'
 import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common'
 import { vcfparsemeta } from '#shared/vcf'
+import { ssmIdFieldsSeparator } from '#shared/mds3tk'
 import { getFilterName } from './filterName'
 import { fillTermWrapper } from '#termsetting'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
@@ -799,7 +800,7 @@ function validateCustomVariants(tk, block) {
 		}
 		if (m.dt == dtcnv) {
 			tk.mds.has_cnv = true // enable cnv tk
-			m.ssm_id = m.chr + '.' + m.start + '.' + m.stop + '.' + m.class
+			m.ssm_id = [m.chr, m.start, m.stop, m.class].join(ssmIdFieldsSeparator)
 			continue
 		}
 		throw 'unknown dt for a custom variant'
@@ -811,8 +812,9 @@ function validateCustomSnvindel(m) {
 	if (!m.chr) throw '.chr missing for custom snvindel'
 	if (!Number.isInteger(m.pos)) throw '.pos not integer for custom snvindel'
 	if (!m.ssm_id) {
-		// TODO ssmIdFieldsSeparator
-		m.ssm_id = m.chr + '.' + m.pos + '.' + (m.ref && m.alt ? m.ref + '.' + m.alt : m.mname)
+		m.ssm_id = [m.chr, m.pos, m.ref && m.alt ? m.ref + ssmIdFieldsSeparator + m.alt : m.mname].join(
+			ssmIdFieldsSeparator
+		)
 	}
 }
 function validateCustomSvfusion(m, block) {
@@ -889,7 +891,7 @@ function validateCustomSvfusion(m, block) {
 			// [0] a/b both are not in range. do not reject?
 		}
 	}
-	m.ssm_id = fields.join('.')
+	m.ssm_id = fields.join(ssmIdFieldsSeparator)
 }
 
 /*
@@ -944,7 +946,7 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 			ungrouped.push(m)
 			continue
 		}
-		const key = m.mname + '.' + m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
+		const key = [m.mname, m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
 		const m2 = key2m.get(key)
 		if (m2) {
 			m2.occurrence++
