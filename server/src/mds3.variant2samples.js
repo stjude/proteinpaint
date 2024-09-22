@@ -5,8 +5,7 @@ import * as utils from './utils.js'
 import { dtfusionrna, dtsv } from '#shared/common.js'
 import * as geneDbSearch from './gene.js'
 import { getSampleData_dictionaryTerms_termdb } from './termdb.matrix.js'
-
-export const ssmIdFieldsSeparator = '.'
+import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 
 /*
 validate_variant2samples()

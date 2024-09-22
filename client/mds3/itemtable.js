@@ -1,6 +1,7 @@
 import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv } from '#shared/common'
 import { init_sampletable } from './sampletable'
 import { appear, renderTable, table2col, makeSsmLink } from '#dom'
+import { dofetch3 } from '#common/dofetch'
 
 /*
 itemtable
