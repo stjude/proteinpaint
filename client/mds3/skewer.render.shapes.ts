@@ -1,12 +1,14 @@
 import { Elem } from '../types/d3'
-import { shapes } from '../dom/shapes.js'
+import { shapes } from '#dom'
 
 export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 	shapeG
 		.append('path')
-		.attr('d', d => shapes[d.shape].calculatePath(getPathDimensions(d.shape, d.radius, skewer)))
-		.attr('fill', d => (shapes[d.shape].isFilled ? tk.color4disc(d.mlst[0]) : 'white'))
-		.attr('stroke', d => (shapes[d.shape].isFilled ? 'white' : tk.color4disc(d.mlst[0])))
+		.attr('d', d => shapes[d.shape].calculatePath(getPathDimensions(d.shape, d.radius, skewer.pointup)))
+		.attr('fill', d => (!shapes[d.shape].isFilled ? 'none' : d.mlst?.[0] ? tk.color4disc(d.mlst[0]) : tk.color4disc(d)))
+		.attr('stroke', d =>
+			shapes[d.shape].isFilled ? 'white' : d.mlst?.[0] ? tk.color4disc(d.mlst[0]) : tk.color4disc(d)
+		)
 }
 
 export function renderShapeKick(skewer: any, elem: any) {
@@ -15,14 +17,14 @@ export function renderShapeKick(skewer: any, elem: any) {
 		.attr('d', d => {
 			if (!d.shape) d.shape = d.groups[0].shape
 			const radius = d.radius * 1.01 || d.maxradius + 2
-			return shapes[d.shape].calculatePath(getPathDimensions(d.shape, radius, skewer))
+			return shapes[d.shape].calculatePath(getPathDimensions(d.shape, radius, skewer.pointup))
 		})
 		.attr('stroke-width', 1.75)
 
 	return kick
 }
 
-function getPathDimensions(key: string, radius: number, skewer: any) {
+function getPathDimensions(key: string, radius: number, pointup = true) {
 	//Add more shapes here using the key from #dom/shapes.js
 	switch (key) {
 		case 'filledCircle':
@@ -34,9 +36,9 @@ function getPathDimensions(key: string, radius: number, skewer: any) {
 		case 'emptyVerticalRectangle':
 			return { width: radius * 1.4, height: radius * 2 }
 		case 'filledTriangle':
-			return { width: radius * 2.1, height: radius * 2.1, isUp: skewer.pointup }
+			return { width: radius * 2.1, height: radius * 2.1, isUp: pointup }
 		case 'emptyTriangle':
-			return { width: radius * 2, height: radius * 2, isUp: skewer.pointup }
+			return { width: radius * 2, height: radius * 2, isUp: pointup }
 		case 'filledSquare':
 			return { width: radius * 1.7, height: radius * 1.7 }
 		case 'emptySquare':

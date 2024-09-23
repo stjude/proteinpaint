@@ -903,13 +903,7 @@ export function fold_glyph(lst, tk) {
 		.selectAll('.sja_aa_skkick')
 		.transition()
 		.duration(dur) // to prevent showing pica over busy skewer
-		.attr(
-			'transform',
-			d =>
-				`${
-					d.shape && !d.shape.includes('Circle') ? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})` : ''
-				} scale(1)`
-		)
+		.attr('transform', d => `${d.shape ? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})` : ''} scale(1)`)
 		.on('end', () => {
 			//For e2e testing
 			set.selectAll('.sja_aa_skkick').classed('sjpp-active', true)
