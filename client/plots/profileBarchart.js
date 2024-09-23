@@ -4,7 +4,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
 import { profilePlot } from './profilePlot.js'
 import { loadFilterTerms } from './profilePlot.js'
-import { getDefaultProfilePlotSettings } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
 
 let stepx = 500
 const barwidth = 400
@@ -297,7 +297,7 @@ class profileBarchart extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileBarchart
+		const defaults = getProfilePlotConfig(app, opts.chartType)
 		defaults.settings = { profileBarchart: getDefaultProfilePlotSettings() }
 		const config = copyMerge(structuredClone(defaults), opts)
 		config.settings.controls = { isOpen: false }

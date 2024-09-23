@@ -43,8 +43,7 @@ class MassCharts {
 		) {
 			// force to show a dictionary chart button
 			// TODO: may want the server to decide this, and as defined for a dataset
-			if (state.vocab.dslabel == 'ProfileFull' || state.vocab.dslabel == 'ProfileAbbrev')
-				state.supportedChartTypes.push(...appState.termdbConfig.allowedChartTypes)
+			if (state.vocab.dslabel == 'profile') state.supportedChartTypes.push(...appState.termdbConfig.allowedChartTypes)
 			state.supportedChartTypes.push('dictionary')
 			state.supportedChartTypes.push('facet') //any dataset should support facet
 		}
@@ -53,7 +52,20 @@ class MassCharts {
 
 	main() {
 		//this.dom.holder.style('display', 'block')
-		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
+		if (this.state.vocab.dslabel == 'profile') this.displayProfileButtons()
+		else this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
+	}
+
+	displayProfileButtons() {
+		this.dom.btns.style('display', d =>
+			d.label === 'Radar 3-Score-based(SC & POC)s'
+				? this.state.activeCohort == 0
+					? ''
+					: 'none'
+				: this.state.supportedChartTypes.includes(d.chartType)
+				? ''
+				: 'none'
+		)
 	}
 }
 
@@ -255,7 +267,7 @@ function getChartTypeList(self, state) {
 			}
 		}
 	]
-	if (state.vocab.dslabel == 'ProfileFull' || state.vocab.dslabel == 'ProfileAbbrev') {
+	if (state.vocab.dslabel == 'profile') {
 		const profileButtons = getProfileButtons(self, state)
 		buttons.unshift(...profileButtons)
 	}
@@ -325,7 +337,7 @@ function getProfileButtons(self, state) {
 			chartType: 'profileRadar'
 		}
 	]
-	if (state.vocab.dslabel == 'ProfileFull') {
+	if (state.activeCohort == 0) {
 		profileButtons.push({
 			label: 'Radar 3-Score-based(SC & POC)s',
 			clickTo: () =>
@@ -341,7 +353,6 @@ function getProfileButtons(self, state) {
 			chartType: 'profileRadar'
 		})
 	}
-
 	return profileButtons
 }
 

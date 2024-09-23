@@ -481,6 +481,7 @@ function setRenderers(self) {
 		const rows = []
 		const result = self.cohortsData
 		if ('error' in result) throw result.error
+		if (!result.cfeatures.length) return
 		for (const feature of result.features) rows.push([{ value: feature.name }])
 		for (const cohort of result.cohorts) {
 			columns.push({ label: cohort.cohort ? `${cohort.name} (${cohort.cohort})` : cohort.name })

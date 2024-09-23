@@ -4,7 +4,7 @@ import * as d3 from 'd3'
 import { profilePlot } from './profilePlot.js'
 import { renderTable } from '../dom/table'
 import { loadFilterTerms } from './profilePlot.js'
-import { getDefaultProfilePlotSettings } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
 
 class profileRadar extends profilePlot {
 	constructor() {
@@ -275,7 +275,7 @@ class profileRadar extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileRadar
+		const defaults = getProfilePlotConfig(app, opts.chartType)
 		defaults.settings = { profileRadar: getDefaultProfilePlotSettings() }
 
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'

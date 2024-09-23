@@ -6,6 +6,7 @@ import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
+import { getActiveCohortStr } from '../mass/charts'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
@@ -576,6 +577,14 @@ export class profilePlot {
 		}
 	}
 }
+
+export function getProfilePlotConfig(app, type) {
+	const appState = app.getState()
+	const key = appState.activeCohort == 0 ? 'full' : 'abbrev'
+	const defaults = app.vocabApi.termdbConfig?.chartConfigByType[key][type]
+	return defaults
+}
+
 export async function loadFilterTerms(config, app) {
 	const twlst = []
 	config.countryTW = { id: 'country' }
