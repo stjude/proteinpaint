@@ -1,7 +1,9 @@
 // Need to set HDF5_DIR and LD_LIBRARY_PATH in ~/.bash_profile
-// Syntax: HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 && echo $HDF5_DIR && cd .. && cargo build --release && json='{"gene":"TP53","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/rust_hdf5
+// Syntax: cd .. && cargo build --release && json='{"gene":"TP53","data_type":"single","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/readHDF5
+// cd .. && cargo build --release && json='{"gene":"TP53","data_type":"bulk","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
 
 use hdf5::types::FixedAscii;
+use hdf5::types::VarLenUnicode;
 use hdf5::{File, Result};
 use json;
 use ndarray::Array1;
@@ -9,7 +11,7 @@ use ndarray::Dim;
 use std::io;
 use std::time::Instant;
 
-fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
+fn read_single_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     let file = File::open(&hdf5_filename)?; // open for reading
     let ds_dim = file.dataset("data/dim")?; // open the dataset
 
@@ -182,6 +184,38 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     Ok(())
 }
 
+fn read_bulk_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
+    let file = File::open(&hdf5_filename)?; // open for reading
+    let ds_dim = file.dataset("dims")?; // open the dataset
+
+    // Check the data type and read the dataset accordingly
+    let data_dim: Array1<_> = ds_dim.read::<usize, Dim<[usize; 1]>>()?;
+    let num_samples = data_dim[0]; // Number of total columns in the dataset
+    let num_genes = data_dim[1]; // Number of total rows in the dataset
+    println!("num_samples bulk:{}", num_samples);
+    println!("num_genes bulk:{}", num_genes);
+
+    let now_genes = Instant::now();
+    let ds_genes = file.dataset("rows")?;
+    println!("ds_genes:{:?}", ds_genes);
+    let genes = ds_genes.read::<VarLenUnicode, Dim<[usize; 1]>>()?;
+    println!("\tgenes = {:?}", genes);
+    println!("\tgenes.shape() = {:?}", genes.shape());
+    println!("\tgenes.strides() = {:?}", genes.strides());
+    println!("\tgenes.ndim() = {:?}", genes.ndim());
+    println!("Time for parsing genes:{:?}", now_genes.elapsed());
+
+    let now_samples = Instant::now();
+    let ds_samples = file.dataset("columns")?;
+    let samples = ds_samples.read::<FixedAscii<104>, Dim<[usize; 1]>>()?;
+    //println!("\tsamples = {:?}", samples);
+    //println!("\tsamples.shape() = {:?}", samples.shape());
+    //println!("\tsamples.strides() = {:?}", samples.strides());
+    //println!("\tsamples.ndim() = {:?}", samples.ndim());
+    println!("Time for parsing samples:{:?}", now_samples.elapsed());
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
@@ -215,7 +249,24 @@ fn main() -> Result<()> {
                         }
                     }
 
-                    read_hdf5(hdf5_filename, gene_name)?;
+                    let data_type_result = &json_string["data_type"].to_owned();
+                    let data_type;
+                    match data_type_result.as_str() {
+                        Some(x) => {
+                            data_type = x.to_string();
+                            if data_type == "single" {
+                                read_single_hdf5(hdf5_filename, gene_name)?;
+                            } else if data_type == "bulk" {
+                                read_bulk_hdf5(hdf5_filename, gene_name)?;
+                            } else {
+                                panic!("data_type needs to be single or bulk");
+                            }
+                        }
+                        None => {
+                            panic!("Data type not provided");
+                        }
+                    }
+
                     println!("Time for parsing genes from HDF5:{:?}", now.elapsed());
                 }
                 Err(error) => println!("Incorrect json: {}", error),
