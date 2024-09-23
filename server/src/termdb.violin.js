@@ -167,7 +167,7 @@ function sortObj(object) {
 }
 
 function sortKey2values(data, key2values, overlayTerm) {
-	const orderedLabels = data.refs.byTermId[overlayTerm?.term?.id]?.orderedLabels
+	const orderedLabels = data.refs.byTermId[overlayTerm?.$id]?.keyOrder
 
 	key2values = new Map(
 		[...key2values].sort(
