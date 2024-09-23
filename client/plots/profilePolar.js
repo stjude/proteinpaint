@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
-import { profilePlot } from './profilePlot.js'
+import { getProfilePlotConfig, profilePlot } from './profilePlot.js'
 import { renderTable } from '../dom/table'
 import { loadFilterTerms } from './profilePlot.js'
 import { getDefaultProfilePlotSettings } from './profilePlot.js'
@@ -174,7 +174,7 @@ class profilePolar extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
+		const defaults = getProfilePlotConfig(app, opts.chartType)
 		defaults.settings = { profilePolar: getDefaultProfilePlotSettings() }
 
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
