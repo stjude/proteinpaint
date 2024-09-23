@@ -520,7 +520,7 @@ function getHolder(elem, opts) {
 		if (elem.node().tagName != 'BUTTON') elem.attr('role', 'button').attr('tabindex', 0).style('cursor', 'pointer')
 	}
 	if (opts.title) {
-		elem.attr('aria-label', opts.title).style('z-index', 1000) // to have aria-label based tooltip appear above other elements
+		elem.attr('aria-label', opts.title).style('z-index', 1) // to have aria-label based tooltip appear above other elements
 	}
 
 	return elem
