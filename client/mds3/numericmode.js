@@ -2,12 +2,13 @@ import { select as d3select } from 'd3-selection'
 import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { axisstyle, makeNumericAxisConfig } from '#dom'
+import { axisstyle, makeNumericAxisConfig, shapes } from '#dom'
 import { make_datagroup } from './datagroup'
 import { click_variant } from './clickVariant'
 import { positionLeftlabelg } from './leftlabel'
 import { may_render_skewer } from './skewer'
 import { mayHighlightDiskBySsmid } from './skewer.render'
+import { renderShapeKick, renderSkewerShapes } from './skewer.render.shapes'
 
 /*
 ********************** EXPORTED
@@ -243,6 +244,11 @@ function numeric_make(nm, tk, block) {
 				} else if (m.labatbottom) {
 					nm.bottomlabelheight = Math.max(nm.bottomlabelheight, m.labwidth - m._y)
 				}
+				//Backwards compatibility with .variantShapeName{} arg
+				//May allow other shapes
+				if (m.shapeCircle) m.shape = 'emptyCircle'
+				else if (m.shapeTriangle) m.shape = 'filledTriangle'
+				else m.shape = 'filledCircle'
 			}
 		}
 	}
@@ -314,37 +320,23 @@ function numeric_make(nm, tk, block) {
 		.attr('class', 'sja_aa_discg')
 		.each(function (m) {
 			m.g = this
+
+			// actual disc
+			if (!m.shape.includes('Circle')) {
+				renderSkewerShapes(tk, nm, d3select(this))
+			} else {
+				d3select(this)
+					.append('circle')
+					.attr('fill', m => (shapes[m.shape].isFilled ? tk.color4disc(m) : 'none'))
+					.attr('stroke', m => (shapes[m.shape].isFilled ? 'white' : tk.color4disc(m)))
+					.attr('r', m => m.radius - 0.5)
+					.attr('class', 'sja_aa_disk_fill')
+			}
 		})
 
 	discg.attr('transform', m => {
 		return 'translate(' + m.xoff + ',' + (m._y + nm.maxradius) * -1 + ')'
 	})
-
-	// actual disc
-	// triangle
-	discg
-		.filter(m => m.shapeTriangle)
-		.append('path')
-		.attr('d', m => trianglePath(m.radius))
-		.attr('fill', m => tk.color4disc(m))
-		.attr('stroke', 'white')
-		.attr('class', 'sja_aa_disk_fill')
-	// hollow circle
-	discg
-		.filter(m => m.shapeCircle)
-		.append('circle')
-		.attr('stroke', m => tk.color4disc(m))
-		.attr('fill', 'none')
-		.attr('r', m => m.radius - 0.5)
-		.attr('class', 'sja_aa_disk_fill')
-	// dots, or filled circles
-	discg
-		.filter(m => !m.shapeTriangle && !m.shapeCircle)
-		.append('circle')
-		.attr('fill', m => tk.color4disc(m))
-		.attr('stroke', 'white')
-		.attr('r', m => m.radius - 0.5)
-		.attr('class', 'sja_aa_disk_fill')
 
 	// no text in disc
 
@@ -352,35 +344,12 @@ function numeric_make(nm, tk, block) {
 	tk.skewer.hlBoxG = discg.append('g')
 
 	// disc kick
-	discg
-		.filter(m => m.shapeTriangle)
-		.append('path')
-		.attr('d', m => trianglePath(m.radius))
-		.attr('stroke', m => tk.color4disc(m))
-		.attr('fill', 'white')
-		.attr('class', 'sja_aa_disckick')
-		.attr('fill-opacity', 0)
-		.attr('stroke-opacity', 0)
-		.on('mousedown', event => {
-			event.preventDefault()
-		})
-		.on('mouseover', (event, m) => {
-			m_mouseover(m, nm, tk)
-		})
-		.on('mouseout', (event, m) => {
-			m_mouseout(m, tk)
-		})
-		.on('click', (event, m) => {
-			click_variant({ mlst: [m] }, tk, block, event.target.getBoundingClientRect(), event.target)
-		})
+	const kick = renderShapeKick(nm, discg)
 
-	discg
-		.filter(m => !m.shapeTriangle)
-		.append('circle')
-		.attr('r', m => m.radius - 0.5) // must set radius for the circle to be visible
+	kick
 		.attr('stroke', m => tk.color4disc(m))
-		.attr('class', 'sja_aa_disckick')
 		.attr('fill', 'white')
+		.attr('class', 'sja_aa_disckick')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
 		.on('mousedown', event => {
@@ -940,10 +909,6 @@ function render_axis(tk, nm, block) {
 		})
 
 	tk.skewer.maxwidth = nm.axisWidth + w
-}
-
-function trianglePath(p) {
-	return `M 0 -${p} L ${p} ${p * 0.7} h -${p * 2} Z`
 }
 
 function mayHighlightByLDoverlay(tk) {
