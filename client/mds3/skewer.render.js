@@ -2,7 +2,7 @@ import { select as d3select } from 'd3-selection'
 import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
-import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
+import { dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common'
 import { renderSkewerShapes, renderShapeKick, setNumBaseline } from './skewer.render.shapes.ts'
 import { shapes } from '#dom/shapes'
 
@@ -104,6 +104,14 @@ export function skewer_make(tk, block) {
 		ss.maxheight = Math.max(ss.maxheight, totalheight)
 	}
 
+	if (!tk.shapes) {
+		/** TODO: This assumes every skewer track has mutations
+		 * In future change to accept other annotations
+		 */
+		tk.shapes = { mclass: {} }
+		Object.keys(mclass).forEach(v => (tk.shapes.mclass[v] = 'filledCircle'))
+	}
+
 	ss.selection = ss.g
 		.selectAll()
 		.data(ss.data)
@@ -128,11 +136,12 @@ export function skewer_make(tk, block) {
 		.each(function (d) {
 			d.g = this
 
-			if (tk.shapes) {
+			if (!d.shape) {
 				//TODO: Add logic to determine when to apply shape or color
+				// and which annotation to use if multiple
 				d.shape = tk.shapes.mclass[d.aa.mlst[0].class]
 			}
-			if (d.shape && !d.shape.includes('Circle')) {
+			if (!d.shape.includes('Circle')) {
 				//Use existing rendering code for circle shapes
 				renderSkewerShapes(tk, ss, d3select(this))
 			} else {
@@ -161,35 +170,6 @@ export function skewer_make(tk, block) {
 					)
 			}
 		})
-
-	// if (tk.shapes) {
-	// 	//Use existing rendering code for circle shapes
-	// 	renderSkewerShapes(tk, ss, discg)
-	// } else {
-	// 	// actual disc
-	// 	const discdot = discg.append('circle')
-
-	// 	// full filled
-	// 	discdot
-	// 		.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
-	// 		.attr('fill', d => tk.shapes && !shapes[d.shape].isFilled ? 'white' : tk.color4disc(d.mlst[0]) )
-	// 		.attr('stroke', d => tk.shapes && !shapes[d.shape].isFilled ? tk.color4disc(d.mlst[0]) : 'white' )
-	// 		.attr('r', d => d.radius - 0.5)
-	// 	// masking half
-	// 	discg
-	// 		.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
-	// 		.append('path')
-	// 		.attr('fill', d => tk.shapes && !shapes[d.shape].isFilled ? 'black' : 'white' )
-	// 		.attr('stroke', 'none')
-	// 		.attr('d', d =>
-	// 			d3arc()({
-	// 				innerRadius: 0,
-	// 				outerRadius: d.radius - 2,
-	// 				startAngle: d.useNterm ? 0 : Math.PI,
-	// 				endAngle: d.useNterm ? Math.PI : Math.PI * 2
-	// 			})
-	// 		)
-	// }
 
 	// number in disc
 	const textslc = discg
@@ -704,9 +684,7 @@ export function unfold_glyph(newlst, tk, block) {
 				'transform',
 				d =>
 					`${
-						tk.skewer.shape && !tk.skewer.shape[0].includes('Circle')
-							? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})`
-							: ''
+						d.shape && !d.shape.includes('Circle') ? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})` : ''
 					} scale(0.01, 0.01)` // safari fix
 			)
 			.on('end', () => {
@@ -929,9 +907,7 @@ export function fold_glyph(lst, tk) {
 			'transform',
 			d =>
 				`${
-					tk.skewer.shape && !tk.skewer.shape[0].includes('Circle')
-						? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})`
-						: ''
+					d.shape && !d.shape.includes('Circle') ? `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})` : ''
 				} scale(1)`
 		)
 		.on('end', () => {

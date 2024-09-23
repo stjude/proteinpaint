@@ -200,12 +200,6 @@ function menu_variants(tk, block) {
 				}
 				const { holder, callbacks, tk } = arg
 
-				if (!tk.shapes) {
-					//TODO init this somewhere else
-					tk.shapes = { mclass: {} }
-					Object.keys(mclass).forEach(v => (tk.shapes.mclass[v] = 'filledCircle'))
-				}
-
 				const vectorGraphicsDiv = holder.append('div')
 				vectorGraphicsDiv
 					.append('div')

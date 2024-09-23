@@ -26,7 +26,7 @@ function getPathDimensions(key: string, radius: number, skewer: any) {
 	//Add more shapes here using the key from #dom/shapes.js
 	switch (key) {
 		case 'filledCircle':
-			return { radius }
+			return { radius: radius * 0.95 }
 		case 'emptyCircle':
 			return { radius }
 		case 'filledVerticalRectangle':
