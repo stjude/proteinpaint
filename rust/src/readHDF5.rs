@@ -3,7 +3,7 @@
 // cd .. && cargo build --release && json='{"gene":"TP53","data_type":"bulk","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
 
 use hdf5::types::FixedAscii;
-use hdf5::types::VarLenUnicode;
+use hdf5::types::VarLenAscii;
 use hdf5::{File, Result};
 use json;
 use ndarray::Array1;
@@ -198,7 +198,7 @@ fn read_bulk_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     let now_genes = Instant::now();
     let ds_genes = file.dataset("rows")?;
     println!("ds_genes:{:?}", ds_genes);
-    let genes = ds_genes.read::<VarLenUnicode, Dim<[usize; 1]>>()?;
+    let genes = ds_genes.read::<VarLenAscii, Dim<[usize; 1]>>()?;
     println!("\tgenes = {:?}", genes);
     println!("\tgenes.shape() = {:?}", genes.shape());
     println!("\tgenes.strides() = {:?}", genes.strides());
@@ -207,11 +207,11 @@ fn read_bulk_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
 
     let now_samples = Instant::now();
     let ds_samples = file.dataset("columns")?;
-    let samples = ds_samples.read::<FixedAscii<104>, Dim<[usize; 1]>>()?;
-    //println!("\tsamples = {:?}", samples);
-    //println!("\tsamples.shape() = {:?}", samples.shape());
-    //println!("\tsamples.strides() = {:?}", samples.strides());
-    //println!("\tsamples.ndim() = {:?}", samples.ndim());
+    let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>()?;
+    println!("\tsamples = {:?}", samples);
+    println!("\tsamples.shape() = {:?}", samples.shape());
+    println!("\tsamples.strides() = {:?}", samples.strides());
+    println!("\tsamples.ndim() = {:?}", samples.ndim());
     println!("Time for parsing samples:{:?}", now_samples.elapsed());
     Ok(())
 }
