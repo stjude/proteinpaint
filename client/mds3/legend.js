@@ -60,7 +60,7 @@ run only once, called by makeTk
 	tk.legend.table = table
 
 	create_mclass(tk, block)
-	may_create_variantShapeName(tk)
+	// may_create_variantShapeName(tk)
 	may_create_infoFields(tk)
 	may_create_formatFilter(tk)
 	may_create_skewerRim(tk)
@@ -91,41 +91,41 @@ function create_mclass(tk, block) {
 	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
 }
 
-function may_create_variantShapeName(tk) {
-	if (!tk.variantShapeName) return
-	const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
-	const vl = (tk.legend.variantShapeName = {})
-	{
-		const d = holder.append('div')
-		d.append('span').html(
-			`<svg style="display:inline-block" width=12 height=12>
-			<circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=`
-		)
-		vl.dotCount = d.append('span')
-		if (tk.variantShapeName.dot) d.append('span').text(', ' + tk.variantShapeName.dot)
-		vl.dotDiv = d
-	}
-	{
-		const d = holder.append('div')
-		d.append('span').html(
-			`<svg style="display:inline-block" width=12 height=12>
-			<path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=`
-		)
-		vl.triangleCount = d.append('span')
-		if (tk.variantShapeName.triangle) d.append('span').text(', ' + tk.variantShapeName.triangle)
-		vl.triangleDiv = d
-	}
-	{
-		const d = holder.append('div')
-		d.append('span').html(
-			`<svg style="display:inline-block" width=13 height=13>
-			<circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=`
-		)
-		vl.circleCount = d.append('span')
-		if (tk.variantShapeName.circle) d.append('span').text(', ' + tk.variantShapeName.circle)
-		vl.circleDiv = d
-	}
-}
+// function may_create_variantShapeName(tk) {
+// 	if (!tk.variantShapeName) return
+// 	const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
+// 	const vl = (tk.legend.variantShapeName = {})
+// 	{
+// 		const d = holder.append('div')
+// 		d.append('span').html(
+// 			`<svg style="display:inline-block" width=12 height=12>
+// 			<circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=`
+// 		)
+// 		vl.dotCount = d.append('span')
+// 		if (tk.variantShapeName.dot) d.append('span').text(', ' + tk.variantShapeName.dot)
+// 		vl.dotDiv = d
+// 	}
+// 	{
+// 		const d = holder.append('div')
+// 		d.append('span').html(
+// 			`<svg style="display:inline-block" width=12 height=12>
+// 			<path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=`
+// 		)
+// 		vl.triangleCount = d.append('span')
+// 		if (tk.variantShapeName.triangle) d.append('span').text(', ' + tk.variantShapeName.triangle)
+// 		vl.triangleDiv = d
+// 	}
+// 	{
+// 		const d = holder.append('div')
+// 		d.append('span').html(
+// 			`<svg style="display:inline-block" width=13 height=13>
+// 			<circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=`
+// 		)
+// 		vl.circleCount = d.append('span')
+// 		if (tk.variantShapeName.circle) d.append('span').text(', ' + tk.variantShapeName.circle)
+// 		vl.circleDiv = d
+// 	}
+// }
 
 function may_create_infoFields(tk) {
 	if (!tk.mds.bcf?.info) return // not using bcf with info fields
@@ -232,39 +232,36 @@ function may_update_formatFilter(data, tk) {
 				.attr('class', 'sja_clb')
 				.style('display', 'inline-block')
 				.on('click', () => {
-					tk.legend.tip
-						.clear()
-						.showunder(cell.node())
-						.d.append('div')
-						.attr('class', 'sja_menuoption')
-						.text('Hide')
-						.on('click', () => {
-							tk.legend.formatFilter[formatKey].hiddenvalues.add(category)
-							reload(tk)
-						})
-
-					tk.legend.tip.d
-						.append('div')
-						.attr('class', 'sja_menuoption')
-						.text('Show only')
-						.on('click', () => {
-							for (const c2 of show_lst) {
-								tk.legend.formatFilter[formatKey].hiddenvalues.add(c2[0])
+					const opts = [
+						{
+							label: 'Hide',
+							isVisible: () => true,
+							callback: () => {
+								tk.legend.formatFilter[formatKey].hiddenvalues.add(category)
 							}
-							tk.legend.formatFilter[formatKey].hiddenvalues.delete(category)
-							reload(tk)
-						})
-
-					if (tk.legend.formatFilter[formatKey].hiddenvalues.size) {
-						tk.legend.tip.d
-							.append('div')
-							.attr('class', 'sja_menuoption')
-							.text('Show all')
-							.on('click', () => {
+						},
+						{
+							label: 'Show only',
+							isVisible: () => true,
+							callback: () => {
+								for (const c2 of show_lst) {
+									tk.legend.formatFilter[formatKey].hiddenvalues.add(c2[0])
+								}
+								tk.legend.formatFilter[formatKey].hiddenvalues.delete(category)
+							}
+						},
+						{
+							label: 'Show all',
+							isVisible: () => {
+								if (tk.legend.formatFilter[formatKey].hiddenvalues.size) return true
+								else false
+							},
+							callback: () => {
 								tk.legend.formatFilter[formatKey].hiddenvalues.clear()
-								reload(tk)
-							})
-					}
+							}
+						}
+					]
+					createLegendTipMenu(opts, tk, cell.node())
 				})
 			cell
 				.append('div')
@@ -321,7 +318,7 @@ export function updateLegend(data, tk, block) {
 	tk.legend.mclass.currentData = data.mclass2variantcount
 	update_mclass(tk)
 
-	may_update_variantShapeName(data, tk)
+	// may_update_variantShapeName(data, tk)
 	may_update_infoFields(data, tk)
 	may_update_formatFilter(data, tk)
 	may_update_skewerRim(data, tk)
@@ -329,24 +326,24 @@ export function updateLegend(data, tk, block) {
 	may_update_cnv(tk)
 }
 
-function may_update_variantShapeName(data, tk) {
-	if (!tk.variantShapeName) return
-	let dot = 0,
-		triangle = 0,
-		circle = 0
-	for (const m of data.skewer) {
-		if (m.shapeTriangle) triangle++
-		else if (m.shapeCircle) circle++
-		else dot++
-	}
-	const vl = tk.legend.variantShapeName
-	vl.dotDiv.style('display', dot ? 'block' : 'none')
-	vl.triangleDiv.style('display', triangle ? 'block' : 'none')
-	vl.circleDiv.style('display', circle ? 'block' : 'none')
-	vl.dotCount.text(dot)
-	vl.triangleCount.text(triangle)
-	vl.circleCount.text(circle)
-}
+// function may_update_variantShapeName(data, tk) {
+// 	if (!tk.variantShapeName) return
+// 	let dot = 0,
+// 		triangle = 0,
+// 		circle = 0
+// 	for (const m of data.skewer) {
+// 		if (m.shapeTriangle) triangle++
+// 		else if (m.shapeCircle) circle++
+// 		else dot++
+// 	}
+// 	const vl = tk.legend.variantShapeName
+// 	vl.dotDiv.style('display', dot ? 'block' : 'none')
+// 	vl.triangleDiv.style('display', triangle ? 'block' : 'none')
+// 	vl.circleDiv.style('display', circle ? 'block' : 'none')
+// 	vl.dotCount.text(dot)
+// 	vl.triangleCount.text(triangle)
+// 	vl.circleCount.text(circle)
+// }
 
 /*
 update legend for all info fields of this track
@@ -389,39 +386,37 @@ function may_update_infoFields(data, tk) {
 					.attr('class', 'sja_clb')
 					.style('display', 'inline-block')
 					.on('click', () => {
-						tk.legend.tip
-							.clear()
-							.showunder(cell.node())
-							.d.append('div')
-							.attr('class', 'sja_menuoption')
-							.text('Hide')
-							.on('click', () => {
-								tk.legend.bcfInfo[infoKey].hiddenvalues.add(category)
-								reload(tk)
-							})
-
-						tk.legend.tip.d
-							.append('div')
-							.attr('class', 'sja_menuoption')
-							.text('Show only')
-							.on('click', () => {
-								for (const c2 of show_lst) {
-									tk.legend.bcfInfo[infoKey].hiddenvalues.add(c2[0])
+						const opts = [
+							{
+								label: 'Hide',
+								isVisible: () => true,
+								callback: () => {
+									tk.legend.bcfInfo[infoKey].hiddenvalues.add(category)
 								}
-								tk.legend.bcfInfo[infoKey].hiddenvalues.delete(category)
-								reload(tk)
-							})
-
-						if (tk.legend.bcfInfo[infoKey].hiddenvalues.size) {
-							tk.legend.tip.d
-								.append('div')
-								.attr('class', 'sja_menuoption')
-								.text('Show all')
-								.on('click', () => {
+							},
+							{
+								label: 'Show only',
+								isVisible: () => true,
+								callback: () => {
+									for (const c2 of show_lst) {
+										tk.legend.bcfInfo[infoKey].hiddenvalues.add(c2[0])
+									}
+									tk.legend.bcfInfo[infoKey].hiddenvalues.delete(category)
+								}
+							},
+							{
+								label: 'Show all',
+								isVisible: () => {
+									if (tk.legend.bcfInfo[infoKey].hiddenvalues.size) return true
+									else false
+								},
+								callback: () => {
 									tk.legend.bcfInfo[infoKey].hiddenvalues.clear()
-									reload(tk)
-								})
-						}
+								}
+							}
+						]
+
+						createLegendTipMenu(opts, tk, cell.node())
 
 						// optional description of this category
 						const desc = tk.mds.bcf.info[infoKey].categories?.[category]?.desc
@@ -529,39 +524,44 @@ function update_mclass(tk) {
 			.attr('class', 'sja_clb')
 			.style('display', 'inline-block')
 			.on('click', event => {
-				tk.legend.tip
-					.clear()
-					.showunder(event.target)
-					.d.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('Hide')
-					.on('click', () => {
-						tk.legend.mclass.hiddenvalues.add(c.k)
-						reload(tk)
-					})
-
-				tk.legend.tip.d
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('Show only')
-					.on('click', () => {
-						for (const c2 of showlst) {
-							tk.legend.mclass.hiddenvalues.add(c2.k)
+				const opts = [
+					{
+						label: 'Hide',
+						isVisible: () => true,
+						callback: () => {
+							tk.legend.mclass.hiddenvalues.add(c.k)
 						}
-						tk.legend.mclass.hiddenvalues.delete(c.k)
-						reload(tk)
-					})
-
-				if (hiddenlst.length) {
-					tk.legend.tip.d
-						.append('div')
-						.attr('class', 'sja_menuoption')
-						.text('Show all')
-						.on('click', () => {
+					},
+					{
+						label: 'Show only',
+						isVisible: () => true,
+						callback: () => {
+							for (const c2 of showlst) {
+								tk.legend.mclass.hiddenvalues.add(c2.k)
+							}
+							tk.legend.mclass.hiddenvalues.delete(c.k)
+						}
+					},
+					{
+						label: 'Show all',
+						isVisible: () => {
+							if (hiddenlst.length) return true
+							else return false
+						},
+						callback: () => {
 							tk.legend.mclass.hiddenvalues.clear()
-							reload(tk)
-						})
-				}
+						}
+					},
+					{
+						isColor: true,
+						value: mclass[c.k].color,
+						isVisible: () => true,
+						callback: color => {
+							mclass[c.k].color = color
+						}
+					}
+				]
+				createLegendTipMenu(opts, tk, event.target)
 
 				tk.legend.tip.d
 					.append('div')
@@ -797,4 +797,36 @@ function may_update_cnv(tk) {
 		.attr('fill', `url(#${id})`)
 
 	svg.attr('width', xpad * 2 + axiswidth).attr('height', axisheight + barheight)
+}
+
+function createLegendTipMenu(opts, tk, elem) {
+	tk.legend.tip.clear().showunder(elem)
+
+	for (const opt of opts) {
+		if (opt.isVisible()) {
+			if (opt.isColor) {
+				tk.legend.tip.d
+					.append('div')
+					.style('padding', '5px 10px')
+					.text('Color:')
+					.append('input')
+					.attr('type', 'color')
+					.property('value', opt.value)
+					.on('change', event => {
+						const color = event.target.value
+						opt.callback(color)
+						reload(tk)
+					})
+			} else {
+				tk.legend.tip.d
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text(opt.label)
+					.on('click', () => {
+						opt.callback()
+						reload(tk)
+					})
+			}
+		}
+	}
 }

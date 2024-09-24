@@ -246,9 +246,13 @@ function numeric_make(nm, tk, block) {
 				}
 				//Backwards compatibility with .variantShapeName{} arg
 				//May allow other shapes
-				if (m.shapeCircle) m.shape = 'emptyCircle'
-				else if (m.shapeTriangle) m.shape = 'filledTriangle'
-				else m.shape = 'filledCircle'
+				if (m.shapeCircle) {
+					m.shape = 'emptyCircle'
+					delete m.shapeCircle
+				} else if (m.shapeTriangle) {
+					m.shape = 'filledTriangle'
+					delete m.shapeTriangle
+				} else m.shape = 'filledCircle'
 			}
 		}
 	}
