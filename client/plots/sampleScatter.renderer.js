@@ -832,6 +832,7 @@ export function setRenderers(self) {
 					itemG
 						.append('path')
 						.attr('transform', c => `translate(${offsetX}, ${offsetY - 5}) scale(0.5)`)
+						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
 						.attr('d', symbol)
 						.style('stroke', rgb(color).darker())
