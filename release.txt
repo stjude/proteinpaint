@@ -1,1 +1,2 @@
-
+Features:
+- Survival plot: add a control "Survival Time Cut-Off" to filter out all the survival data with Time-to-Event longer than Survival Time Cut-Off
