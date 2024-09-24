@@ -3,10 +3,12 @@ import { Menu, axisstyle } from '#dom'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
-import { axisBottom, axisTop } from 'd3-axis'
+import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
+import { rgb } from 'd3-color'
+import { displayVectorGraphics } from './leftlabel.variant'
 
-/*
+/*	
 ********************** EXPORTED
 initLegend
 updateLegend
@@ -518,7 +520,6 @@ function update_mclass(tk) {
 			color = mclass[c.k].color
 			desc = mclass[c.k].desc
 		}
-
 		const cell = tk.legend.mclass.holder
 			.append('div')
 			.attr('class', 'sja_clb')
@@ -553,11 +554,20 @@ function update_mclass(tk) {
 						}
 					},
 					{
-						isColor: true,
-						value: mclass[c.k].color,
+						isChangeShape: true,
 						isVisible: () => true,
-						callback: color => {
-							mclass[c.k].color = color
+						callback: (val, tk) => {
+							tk.shapes.mclass[c.k] = val[0]
+							tk.load()
+							tk.legend.tip.hide()
+						}
+					},
+					{
+						isColor: true,
+						value: color,
+						isVisible: () => true,
+						callback: colorValue => {
+							mclass[c.k].color = colorValue
 						}
 					}
 				]
@@ -811,11 +821,28 @@ function createLegendTipMenu(opts, tk, elem) {
 					.text('Color:')
 					.append('input')
 					.attr('type', 'color')
-					.property('value', opt.value)
+					.property('value', rgb(opt.value).formatHex())
 					.on('change', event => {
 						const color = event.target.value
 						opt.callback(color)
 						reload(tk)
+					})
+			} else if (opt.isChangeShape) {
+				let called = false
+				const div = tk.legend.tip.d
+					.append('div')
+					.text('Change variant shape')
+					.style('vertical-align', 'middle')
+					.attr('class', 'sja_menuoption')
+					.on('click', () => {
+						if (called == false) {
+							called = true
+							displayVectorGraphics({
+								holder: div.append('div').style('margin-top', '10px'),
+								callback: val => opt.callback(val, tk),
+								tk: tk
+							})
+						}
 					})
 			} else {
 				tk.legend.tip.d
