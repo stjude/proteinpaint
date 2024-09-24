@@ -208,6 +208,13 @@ function parse_q(q, ds) {
 				throw 'interacting term id missing from independent[]: ' + x
 		}
 	}
+
+	// univariate/multivariate
+	if (q.includeUnivariate) {
+		// both univariate and multivariate analyses will be performed
+		if (q.independent.length < 2) throw 'multiple covariates expected'
+		if (q.independent.find(i => i.interactions.length)) throw 'interactions not allowed in univariate analysis'
+	}
 }
 
 function checkTwAncestryRestriction(tw, q, ds) {
