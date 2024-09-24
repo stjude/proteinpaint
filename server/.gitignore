@@ -1,0 +1,23 @@
+# also see root proteinpaint/.gitignore
+app.js
+genome/*.js
+dataset/*.js
+test/*.bundle.js
+**/*serverTests.js
+routes/*.js
+src/app.js
+src/health.js
+src/hicstat.js
+package*/*
+!/test/serverconfig.json
+
+# to be ignored in the shared workspace, once it's done
+shared/doc.js
+shared/checkers/transformed/*
+shared/checkers/bin/*
+shared/checkers*/*
+shared/types/docs.json
+shared/types/*.js
+shared/types/**/**.js
+shared/types/terms/*.js
+shared/types/routes/checkers/*

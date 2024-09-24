@@ -1,0 +1,4 @@
+# also see root proteinpaint/.gitignore
+test/internals*.js
+test/*.bundle.js*
+test/bundle/*

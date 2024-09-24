@@ -1,0 +1,7 @@
+# also see root proteinpaint/.gitignore
+dataset/*
+deps/public/cards/
+public/example*
+**/pkg.json
+ci-run.sh
+!/ci/serverconfig.json

@@ -10,6 +10,7 @@
     "server",
     "client",
     "front",
+    "shared",
     "container/server",
     "container/full",
     "augen"
