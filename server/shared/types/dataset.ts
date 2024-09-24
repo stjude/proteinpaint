@@ -777,6 +777,10 @@ type SortPriorityEntry = {
 	tiebreakers: TieBreakersEntry[]
 }
 
+type SurvivalSettings = {
+	maxSurTime?: number
+}
+
 type MatrixSettings = {
 	maxSample?: number
 	svgCanvasSwitch?: number
@@ -818,6 +822,11 @@ type Matrix = {
 	// TODO: improve definitions below
 	legendGrpFilter?: any
 	legendValueFilter?: any
+}
+
+type Survival = {
+	/** default settings for survival plot */
+	settings?: SurvivalSettings
 }
 
 type MatrixPlotsEntry = {
@@ -919,6 +928,7 @@ type Termdb = {
 
 	scatterplots?: Scatterplots
 	matrix?: Matrix
+	survival?: Survival
 	logscaleBase2?: boolean
 	chartConfigByType?: ChartConfigByType
 	/** Functionality */
