@@ -1,12 +1,13 @@
 // Need to set HDF5_DIR and LD_LIBRARY_PATH in ~/.bash_profile
 // Syntax: cd .. && cargo build --release && json='{"gene":"TP53","data_type":"single","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/readHDF5
-// cd .. && cargo build --release && json='{"gene":"TP53","data_type":"bulk","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
+// cd .. && cargo build --release && json='{"gene":"ENSG00000227232.4","data_type":"bulk","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
 
 use hdf5::types::FixedAscii;
 use hdf5::types::VarLenAscii;
 use hdf5::{File, Result};
 use json;
 use ndarray::Array1;
+use ndarray::Array2;
 use ndarray::Dim;
 use std::io;
 use std::time::Instant;
@@ -213,6 +214,34 @@ fn read_bulk_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     println!("\tsamples.strides() = {:?}", samples.strides());
     println!("\tsamples.ndim() = {:?}", samples.ndim());
     println!("Time for parsing samples:{:?}", now_samples.elapsed());
+
+    //Find all columns values that are populated for the given gene
+    let now_counts = Instant::now();
+    let ds_counts = file.dataset("counts")?; // open the dataset
+
+    let gene_index;
+    match genes.iter().position(|x| x.to_string() == gene_name) {
+        Some(index) => {
+            println!(
+                "The index of '{}' is {} in 0-based format (add 1 to compare with R output)",
+                gene_name, index
+            );
+            gene_index = index;
+        }
+        None => panic!(
+            "Gene '{}' not found in the HDF5 file '{}'",
+            gene_name, &hdf5_filename
+        ),
+    }
+
+    let array_start_point = gene_index * num_samples;
+    let array_stop_point = (gene_index + 1) * num_samples;
+    //let data_counts: Array1<_> = ds_counts.read::<f64, Dim<[usize; 1]>>()?;
+    //println!("Data_counts: {:?}", data_counts);
+    let gene_array: Array2<f64> =
+        ds_counts.read_slice_2d((gene_index..gene_index + 1, 0..num_samples))?;
+    println!("Length of gene array:{:?}", gene_array.len()); // Check the result
+    println!("Time for parsing gene data:{:?}", now_counts.elapsed());
     Ok(())
 }
 
