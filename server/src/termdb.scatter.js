@@ -298,7 +298,10 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		}
 		let i = 0
 		for (const [category, value] of Object.entries(result.shapeMap)) {
-			if (!('shape' in value)) value.shape = i
+			if ('shape' in value) continue
+			if (q.shapeTW.term.values?.[category]?.shape) value.shape = q.shapeTW.term.values?.[category].shape
+			else value.shape = i
+			console.log(category, value.shape)
 			i++
 		}
 

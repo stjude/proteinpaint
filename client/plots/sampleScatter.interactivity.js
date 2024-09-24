@@ -17,7 +17,7 @@ import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
 import { searchSampleInput, getSamplesRelated } from './sampleView.js'
 
-import { shapes } from './sampleScatter.js'
+import { shapes, shapesArray } from '../dom/shapes.js'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
@@ -385,6 +385,7 @@ export function setInteractivity(self) {
 
 	self.onLegendClick = function (chart, legendG, name, key, e, category) {
 		const tw = self.config[name]
+		const isColorTW = name == 'colorTW'
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		const menu = new Menu({ padding: '0px' })
 		const div = menu.d.append('div')
@@ -432,7 +433,7 @@ export function setInteractivity(self) {
 			.text('Show all')
 			.on('click', () => {
 				menu.hide()
-				const map = name == 'colorTW' ? chart.colorLegend : chart.shapeLegend
+				const map = isColorTW ? chart.colorLegend : chart.shapeLegend
 				for (const mapKey of map.keys()) self.hideCategory(legendG, tw, mapKey, false)
 				const config = {}
 				config[name] = tw
@@ -455,6 +456,47 @@ export function setInteractivity(self) {
 				.on('change', () => {
 					self.changeColor(key, input.node().value)
 					menu.hide()
+				})
+		}
+		if (!isColorTW) {
+			//is shape
+			const shapeDiv = div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Change shape')
+				.on('click', () => {
+					const size = 20
+					const cols = 8
+					const height = Math.ceil(shapesArray.length / cols) * size
+					div.style('background-color', '#f2f2f2')
+					div.selectAll('*').remove()
+					const svg = div
+						.append('div')
+						.style('padding', '5px')
+						.append('svg')
+						.attr('width', size * cols)
+						.attr('height', height)
+						.style('background-color', 'rgba(239, 239, 239, 0.3)')
+					let count = 0
+					let y = 0
+					for (const shape of shapesArray) {
+						const index = count + y * cols
+						svg
+							.append('path')
+							.style('pointer-events', 'bounding-box')
+							.style('fill', 'gray')
+							.attr('d', shape)
+							.attr('transform', `translate(${size * count}, ${y * size})`)
+							.on('click', () => {
+								self.changeShape(key, index)
+								menu.hide()
+							})
+						count++
+						if (count % cols == 0) {
+							count = 0
+							y++
+						}
+					}
 				})
 		}
 		menu.showunder(e.target)
@@ -495,6 +537,17 @@ export function setInteractivity(self) {
 			type: 'plot_edit',
 			id: self.id,
 			config: { colorTW: tw }
+		})
+	}
+
+	self.changeShape = async function (key, shape) {
+		const tw = self.config.shapeTW
+		if (!tw.term.values) tw.term.values = {}
+		tw.term.values[key] = { key: key, label: key, shape }
+		await self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: { shapeTW: tw }
 		})
 	}
 
