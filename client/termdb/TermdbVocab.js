@@ -310,6 +310,7 @@ export class TermdbVocab extends Vocab {
 
 		const filterData = getNormalRoot(opts.filter)
 		if (filterData.lst.length) body.filter = filterData
+		if (opts.includeUnivariate) body.includeUnivariate = opts.includeUnivariate
 		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data

@@ -78,6 +78,7 @@ class Regression {
 			await this.inputs.main()
 			await this.results.main()
 			this.inputs.resetSubmitButton()
+			this.inputs.mayShowUnivariateCheckbox()
 		} catch (e) {
 			if (this.inputs.hasError) {
 				// will hide the results ui

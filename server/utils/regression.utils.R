@@ -54,7 +54,7 @@ cubic_spline <- function(values, knots) {
 }
 
 # build formulas
-buildFormulas <- function(outcome, independent, neuroOnc) {
+buildFormulas <- function(outcome, independent, includeUnivariate) {
   # first, format variables for building formulas
   
   # declare new objects
@@ -117,8 +117,6 @@ buildFormulas <- function(outcome, independent, neuroOnc) {
     }
   }
   
-  if (isTRUE(neuroOnc) && length(formula_interaction) > 0) stop ("interactions not supported in neuro-onc datasets")
-  
   # combine variables into formula(s)
   # if snplocus snps are present, then prepare a
   # separate formula for each snplocus snp
@@ -152,9 +150,10 @@ buildFormulas <- function(outcome, independent, neuroOnc) {
     }
   } else {
     # no snplocus snps
-    if (isTRUE(neuroOnc) && length(formula_independent) > 1) {
-      # neuro-onc dataset using multiple covariates
-      # build multivariate and univariate formulas
+    if (isTRUE(includeUnivariate)) {
+      # include univariate formulas along with the multivariate formula
+      if (length(formula_independent) < 2) stop("must have multiple covariates to build multivariate and univariate formulas")
+      if (length(formula_interaction) > 0) stop("interactions not supported in univariate models")
       formula <- as.formula(paste(formula_outcome, paste(formula_independent, collapse = "+"), sep = "~"))
       formulas[[1]] <- list("id" = "", "type" = "multivariate", "formula" = formula)
       for (var in formula_independent) {

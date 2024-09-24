@@ -397,7 +397,8 @@ function makeRinput(q, sampledata) {
 		independent
 	}
 
-	if (q.ds.cohort.termdb.neuroOncRegression) Rinput.neuroOnc = true
+	if (q.ds.cohort.termdb.neuroOncRegression) Rinput.neuroOnc = q.ds.cohort.termdb.neuroOncRegression
+	if (q.includeUnivariate) Rinput.includeUnivariate = q.includeUnivariate
 
 	return Rinput
 }
