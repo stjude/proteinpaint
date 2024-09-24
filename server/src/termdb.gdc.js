@@ -28,6 +28,7 @@ initGDCdictionary
 				fetchIdsFromGdcApi
 			mayReCacheCaseIdMapping
 				caseCacheIsStale
+					getApiStatus
 
 
 ******************** major tasks *****************
@@ -51,7 +52,7 @@ initGDCdictionary
   	doneCaching: boolean, falg to indicate when the sample ID caching is done
 	casesWithExpData Set
 	caseid2submitter
-	apiStatus
+	data_release_version
   }
 
 - periodic check of stale cache and re-cache above
@@ -783,9 +784,20 @@ async function runRemainingWithoutAwait(ds) {
 async function getApiStatus(ds) {
 	const { host, headers } = ds.getHostHeaders()
 	const re = await ky(path.join(host.rest, 'status'), { headers }).json()
+
+	/* structured version detail, qa 9/2024. when in prod, expect to return so
+
+	"data_release_version": {
+		"major": 41,
+		"minor": 0,
+		"release_date": "2024-08-28"
+	  },
+	  */
+	if (re.data_release_version) return re.data_release_version
+
+	// old return. when new one is in GDC prod, remove this check
 	if (!re.data_release) throw '.data_release missing'
 	return re.data_release
-	// TODO awaiting api change to return structured version info
 }
 
 async function getOpenProjects(ds) {
@@ -1034,7 +1046,7 @@ async function cacheSampleIdMapping(ds) {
 
 	// record /status endpoint result. subsequent stale cache check will requery /status and compare with this
 	// if this fetch fails, means the subsequent check won't work, and must abort launch
-	ds.__gdc.apiStatus = await getApiStatus(ds)
+	ds.__gdc.data_release_version = await getApiStatus(ds)
 }
 
 /*
@@ -1181,7 +1193,7 @@ async function mayReCacheCaseIdMapping(ds) {
 	setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
 }
 
-// check multiple numbers. on any mismatch, return true and trigger recaching
+// on any mismatch, return true and trigger recaching
 async function caseCacheIsStale(ds) {
 	console.log('GDC: checking if cache is stale')
 
@@ -1195,5 +1207,16 @@ async function caseCacheIsStale(ds) {
 		return false
 	}
 
-	return ds.__gdc.apiStatus != value
+	if (typeof ds.__gdc.data_release_version == 'object') {
+		// new api return. when released to prod, remove this check
+		console.log('(new api)') // just to indicate it's using new api; delete when api is in prod
+		for (const k in ds.__gdc.data_release_version) {
+			if (ds.__gdc.data_release_version[k] != value[k]) return true // mismatch. return true and recache
+		}
+		return false // all match. no recaching
+	}
+
+	// old api return. to be deleted
+	console.log('(old api)') // just to indicate it's using old api
+	return ds.__gdc.data_release_version != value
 }
