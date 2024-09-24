@@ -298,10 +298,10 @@
         },
         {
             "type": "dsButton",
-            "name": "Survivorship Study",
+            "name": "Survivorship Portal",
             "section": "datasetButtons",
             "sandboxHtml": "survivorBtn",
-            "searchterms": ["sjlife", "ccss", "St Jude Life", "Childhood Cancer Survivor Study"]
+            "searchterms": ["sjlife", "ccss", "St Jude Lifetime", "Childhood Cancer Survivor Study"]
         },
         {
             "type": "card",
