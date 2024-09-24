@@ -1,6 +1,6 @@
-import { deepEqual } from '../rx'
 import { select } from 'd3-selection'
 import { InputTerm } from './regression.inputs.term'
+import { make_one_checkbox } from '#dom'
 
 /*
 outcome and independent are two sections sharing same structure
@@ -208,6 +208,25 @@ function setRenderers(self) {
 			.text('Run analysis')
 			.on('click', self.submit)
 
+		self.dom.univariateCheckbox = self.dom.foot.append('div').style('display', 'none')
+
+		make_one_checkbox({
+			labeltext: 'Include univariate results',
+			checked: false,
+			holder: self.dom.univariateCheckbox,
+			callback: checked => {
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.parent.id,
+					chartType: 'regression',
+					config: {
+						hasUnsubmittedEdits: true,
+						includeUnivariate: checked
+					}
+				})
+			}
+		})
+
 		self.dom.submitMsg = self.dom.foot
 			.append('div')
 			.style('display', 'none')
@@ -331,6 +350,18 @@ function setRenderers(self) {
 			.text('Run analysis')
 			.style('display', self.config.outcome && self.config.independent.length ? 'block' : 'none')
 			.property('disabled', self.hasError)
+	}
+
+	self.mayShowUnivariateCheckbox = () => {
+		// show the univariate checkbox if analysis is multivariate and
+		// is using a neuro-oncology dataset
+		self.dom.univariateCheckbox.style(
+			'display',
+			self.app.vocabApi.termdbConfig.neuroOncRegression && self.config.outcome && self.config.independent.length > 1
+				? 'block'
+				: 'none'
+		)
+		self.dom.univariateCheckbox.select('input[type=checkbox]').property('checked', self.config.includeUnivariate)
 	}
 }
 

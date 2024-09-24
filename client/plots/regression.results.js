@@ -134,7 +134,8 @@ export class RegressionResults {
 		const opts = {
 			regressionType: c.regressionType,
 			outcome: c.outcome,
-			independent: c.independent
+			independent: c.independent,
+			includeUnivariate: c.includeUnivariate
 		}
 		opts.filter = this.parent.filter
 		return opts
