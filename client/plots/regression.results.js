@@ -703,7 +703,7 @@ function setRenderers(self) {
 
 			// fill headers for data columns
 			fillDataHeaders(header_uni, tr, tr_label, 'Univariate')
-			fillDataHeaders(header_multi, tr, tr_label, 'Multivariate')
+			fillDataHeaders(header_multi, tr, tr_label, 'Multivariable-adjusted')
 		}
 
 		/* term rows:
