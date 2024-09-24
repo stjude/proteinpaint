@@ -51,7 +51,7 @@ export async function openSandbox(element, pageArgs) {
 	}
 
 	if (element.type == 'card') return openCardSandbox(element, res, sandboxDiv, pageArgs)
-	if (element.type == 'dsButton') return openDatasetButtonSandbox(pageArgs, res, sandboxDiv) //only for .sandboxJson
+	if (element.type == 'dsButton') return openDatasetButtonSandbox(element, pageArgs, res, sandboxDiv) //only for .sandboxJson
 }
 
 /********** Nested Card Functions  **********/
@@ -101,7 +101,7 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 					const crumbIndex = filteredChildren.findIndex(c => c == child)
 					sandboxDiv.header.trail.update(crumbIndex)
 				}
-				if (child.type == 'dsButton') return openDatasetButtonSandbox(pageArgs.app.opts, res, sandboxDiv) //only for .sandboxJson
+				if (child.type == 'dsButton') return openDatasetButtonSandbox(child, pageArgs.app.opts, res, sandboxDiv)
 			})
 		return JSON.stringify(uc)
 	})
@@ -649,7 +649,16 @@ async function showViewData(btns, data, pageArgs) {
 
 /********** Dataset Button Functions  **********/
 
-async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
+async function openDatasetButtonSandbox(elem, pageArgs, res, sandboxDiv) {
+	if (elem.sandboxHtml) {
+		const renderHtml = await res.text()
+		return sandboxDiv.body
+			.append('div')
+			.style('line-height', '1.5em')
+			.style('padding', '1.5em 1.5em 2em 1.5em')
+			.html(renderHtml)
+	}
+
 	const genome = pageArgs?.fromApp
 		? pageArgs.genomes[res.button.availableGenomes[0]]
 		: pageArgs.app.opts.genomes[res.button.availableGenomes[0]]
@@ -700,7 +709,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 
 		const callpp = JSON.parse(JSON.stringify(par.runargs))
 
-		runproteinpaint(Object.assign(runppArg, callpp))
+		await runproteinpaint(Object.assign(runppArg, callpp))
 		//Reset the host if changed
 		if (originalURL != sessionStorage.getItem('hostURL')) sessionStorage.setItem('hostURL', originalURL)
 

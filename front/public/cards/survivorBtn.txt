@@ -1,0 +1,5 @@
+<p>
+    The survivorship dataset contains clinical, genomic, and patient-reported data from the <a href='https://sjlife.stjude.org/' target='sjlife'>St. Jude Life study</a> (SJLife) and <a href='https://ccss.stjude.org/' target='CCSS'> Childhood Cancer Survivor Study</a> (CCSS). The interface offers data analysis tools like regression analysis (linear, logistic, and Cox) and interactive statistical plots.
+</p>
+<button style="background-color:#cfe2f3; margin: 20px 20px 0px 20px; padding: 8px; border: none; border-radius: 3px;" onclick="window.open('https://survivorship.stjude.cloud', 'cloud')"> Go to St. Jude Survivorship Portal
+</button>
