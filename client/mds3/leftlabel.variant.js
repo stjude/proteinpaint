@@ -178,76 +178,11 @@ function menu_variants(tk, block) {
 							called = true
 							displayVectorGraphics({
 								holder: div.append('div').style('margin-top', '10px'),
-								callbacks: {
-									onShapeClick: onShapeClick
-								},
+								callback: onShapeClick,
 								tk: tk
 							})
 						}
 					})
-			}
-
-			function displayVectorGraphics(arg) {
-				const desiredShapes = {
-					filledCircle: shapes.filledCircle,
-					emptyCircle: shapes.emptyCircle,
-					filledVerticalRectangle: shapes.filledVerticalRectangle,
-					emptyVerticalRectangle: shapes.emptyVerticalRectangle,
-					filledTriangle: shapes.filledTriangle,
-					emptyTriangle: shapes.emptyTriangle,
-					filledSquare: shapes.filledSquare,
-					emptySquare: shapes.emptySquare
-				}
-				const { holder, callbacks, tk } = arg
-
-				const vectorGraphicsDiv = holder.append('div')
-				vectorGraphicsDiv
-					.append('div')
-					.style('display', 'flex')
-					.style('flex-direction', 'row')
-					.style('align-items', 'center')
-					.style('justify-content', 'center')
-					.style('border', 'none')
-					.style('width', '100%')
-					.style('font-size', '20px')
-					.style('margin-top', '5px')
-
-				const shapesContainer = vectorGraphicsDiv
-					.append('div')
-					.style('display', 'flex')
-					.style('flex-wrap', 'wrap')
-					.style('width', 'max-content')
-
-				for (const val of Object.entries(desiredShapes)) {
-					const shapeWrapper = shapesContainer.append('div').style('padding', '0px 2px')
-					const width = 18
-					const height = 18
-					const shapeSvg = shapeWrapper
-						.append('svg')
-						.attr('width', width)
-						.attr('height', height)
-						.attr('viewBox', `0 0 ${width} ${height}`)
-						.style('cursor', 'pointer')
-						.on('click', () => {
-							if (callbacks && typeof callbacks.onShapeClick === 'function') {
-								callbacks.onShapeClick(val, tk)
-							}
-						})
-					shapeSvg
-						.append('path')
-						.attr('d', val[1].path)
-						.attr('fill', val[1].isFilled ? 'black' : 'none')
-						.attr('stroke', 'black')
-				}
-			}
-
-			function onShapeClick(val, tk) {
-				// Logic to change the pre-existing shape to the chosen shape
-				Object.keys(tk.shapes.mclass).forEach(key => {
-					tk.shapes.mclass[key] = val[0]
-				})
-				tk.load()
-				tk.menutip.hide()
 			}
 		} else if (vm.type == 'numeric') {
 			// only show this opt in numeric mode; delete when label hiding works for skewer mode
@@ -355,6 +290,67 @@ async function listVariantData(tk, block) {
 			doNotListSample4multim: true
 		})
 	}
+}
+
+export function displayVectorGraphics(arg) {
+	const desiredShapes = {
+		filledCircle: shapes.filledCircle,
+		emptyCircle: shapes.emptyCircle,
+		filledVerticalRectangle: shapes.filledVerticalRectangle,
+		emptyVerticalRectangle: shapes.emptyVerticalRectangle,
+		filledTriangle: shapes.filledTriangle,
+		emptyTriangle: shapes.emptyTriangle,
+		filledSquare: shapes.filledSquare,
+		emptySquare: shapes.emptySquare
+	}
+	const { holder, callback, tk } = arg
+
+	const vectorGraphicsDiv = holder.append('div')
+	vectorGraphicsDiv
+		.append('div')
+		.style('display', 'flex')
+		.style('flex-direction', 'row')
+		.style('align-items', 'center')
+		.style('justify-content', 'center')
+		.style('border', 'none')
+		.style('width', '100%')
+		.style('font-size', '20px')
+		.style('margin-top', '5px')
+
+	const shapesContainer = vectorGraphicsDiv
+		.append('div')
+		.style('display', 'flex')
+		.style('flex-wrap', 'wrap')
+		.style('width', 'max-content')
+
+	for (const val of Object.entries(desiredShapes)) {
+		const shapeWrapper = shapesContainer.append('div').style('padding', '0px 2px')
+		const width = 18
+		const height = 18
+		const shapeSvg = shapeWrapper
+			.append('svg')
+			.attr('width', width)
+			.attr('height', height)
+			.attr('viewBox', `0 0 ${width} ${height}`)
+			.style('cursor', 'pointer')
+			.on('click', () => {
+				callback(val, tk)
+			})
+		shapeSvg
+			.append('path')
+			.attr('d', val[1].path)
+			.attr('fill', val[1].isFilled ? 'black' : 'none')
+			.attr('stroke', 'black')
+	}
+}
+
+function onShapeClick(val, tk) {
+	// Logic to change the pre-existing shape to the chosen shape
+	Object.keys(tk.shapes.mclass).forEach(key => {
+		tk.shapes.mclass[key] = val[0]
+	})
+	tk.load()
+	tk.menutip.hide()
 }
 
 function mayAddSkewerModeOption(tk, block) {
