@@ -300,7 +300,7 @@
             "type": "dsButton",
             "name": "Survivorship Study",
             "section": "datasetButtons",
-            "sandboxJson": "survivorBtn",
+            "sandboxHtml": "survivorBtn",
             "searchterms": ["sjlife", "ccss", "St Jude Life", "Childhood Cancer Survivor Study"]
         },
         {
