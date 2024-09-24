@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
 	libbz2-dev \
 	libcurl4-openssl-dev \
 	libgsl0-dev \
+	libhdf5-dev \
 	liblzma-dev \
 	libncurses5-dev \
 	libperl-dev \
