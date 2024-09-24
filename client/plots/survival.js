@@ -149,6 +149,13 @@ class TdbSurvival {
 							]
 						},
 						{
+							label: 'Survival Time Cut-Off',
+							type: 'number',
+							chartType: 'survival',
+							settingsKey: 'maxSurTime',
+							title: 'The max survival time to be displayed in this plot'
+						},
+						{
 							label: 'Time Factor',
 							type: 'math',
 							chartType: 'survival',
@@ -249,7 +256,8 @@ class TdbSurvival {
 		const opts = {
 			chartType: 'survival',
 			term: c.term,
-			filter: this.state.termfilter.filter
+			filter: this.state.termfilter.filter,
+			maxSurTime: this.state.config.settings.maxSurTime
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -1223,6 +1231,10 @@ export async function getPlotConfig(opts, app) {
 			}
 		}
 	}
+
+	// default survival settings will be overwritten by the survival settings defined in dataset
+	const overrides = app.vocabApi.termdbConfig.survival || {}
+	copyMerge(config.settings.survival, overrides.settings)
 
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
