@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Survival plot: add a control "Survival Time Cut-Off" to filter out all the survival data with Time-to-Event longer than Survival Time Cut-Off
+
 Fixes:
 - section 508 issues in singleCellPlot controls: aria-label should be on element with roles
 - wip fix to limit cnv track to under 200px for lots of cnv segments
