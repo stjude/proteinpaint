@@ -1,2 +1,1 @@
-Fixes:
-- support new GDC /status api return in stale cache check
+
