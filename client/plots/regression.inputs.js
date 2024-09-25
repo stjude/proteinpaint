@@ -208,8 +208,9 @@ function setRenderers(self) {
 			.text('Run analysis')
 			.on('click', self.submit)
 
+		// checkbox for whether or not to include univariate results
+		// along with multivariate results
 		self.dom.univariateCheckbox = self.dom.foot.append('div').style('display', 'none')
-
 		make_one_checkbox({
 			labeltext: 'Include univariate results',
 			checked: false,
@@ -357,9 +358,7 @@ function setRenderers(self) {
 		// is using a neuro-oncology dataset
 		self.dom.univariateCheckbox.style(
 			'display',
-			self.app.vocabApi.termdbConfig.neuroOncRegression && self.config.outcome && self.config.independent.length > 1
-				? 'block'
-				: 'none'
+			self.config.outcome && self.config.independent.length > 1 ? 'block' : 'none'
 		)
 		self.dom.univariateCheckbox.select('input[type=checkbox]').property('checked', self.config.includeUnivariate)
 	}

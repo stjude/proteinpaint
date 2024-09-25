@@ -401,11 +401,9 @@ function makeRinput(q, sampledata) {
 		binpath: serverconfig.binpath, // for importing regression utilities
 		data,
 		outcome,
-		independent
+		independent,
+		includeUnivariate: q.includeUnivariate
 	}
-
-	if (q.ds.cohort.termdb.neuroOncRegression) Rinput.neuroOnc = q.ds.cohort.termdb.neuroOncRegression
-	if (q.includeUnivariate) Rinput.includeUnivariate = q.includeUnivariate
 
 	return Rinput
 }
