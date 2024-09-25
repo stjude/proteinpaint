@@ -11,6 +11,8 @@ Fixes:
 - section 508 issues in singleCellPlot controls: aria-label should be on element with roles
 - wip fix to limit cnv track to under 200px for lots of cnv segments
 - support new GDC /status api return in stale cache check
+- survival plot: use pre-defined order in db for overlay and divideby
+- scatter plot: use pre-defined order in db for divideby
 
 
 ## 2.78.0
