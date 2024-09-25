@@ -152,8 +152,9 @@ class TdbSurvival {
 							label: 'Survival Time Cut-Off',
 							type: 'number',
 							chartType: 'survival',
-							settingsKey: 'maxSurTime',
-							title: 'The max survival time to be displayed in this plot'
+							settingsKey: 'maxTimeToEvent',
+							title:
+								'The max time-to-event to be displayed in plot,  if left empty or 0, would default to not having a max time-to-event cutoff'
 						},
 						{
 							label: 'Time Factor',
@@ -257,7 +258,7 @@ class TdbSurvival {
 			chartType: 'survival',
 			term: c.term,
 			filter: this.state.termfilter.filter,
-			maxSurTime: this.state.config.settings.maxSurTime
+			maxTimeToEvent: this.state.config.settings.maxTimeToEvent
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
