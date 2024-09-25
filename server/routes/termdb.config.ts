@@ -91,7 +91,8 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 		lollipop: tdb.lollipop,
 		urlTemplates: tdb.urlTemplates,
 		title: 'title' in ds.cohort ? ds.cohort.title : { text: ds.label },
-		hideGroupsTab: ds.cohort.hideGroupsTab
+		hideGroupsTab: ds.cohort.hideGroupsTab,
+		tracks: tdb.tracks
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"

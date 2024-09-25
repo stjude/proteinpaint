@@ -254,10 +254,7 @@ function may_update_formatFilter(data, tk) {
 						},
 						{
 							label: 'Show all',
-							isVisible: () => {
-								if (tk.legend.formatFilter[formatKey].hiddenvalues.size) return true
-								else false
-							},
+							isVisible: () => tk.legend.formatFilter[formatKey].hiddenvalues.size,
 							callback: () => {
 								tk.legend.formatFilter[formatKey].hiddenvalues.clear()
 							}
@@ -408,10 +405,7 @@ function may_update_infoFields(data, tk) {
 							},
 							{
 								label: 'Show all',
-								isVisible: () => {
-									if (tk.legend.bcfInfo[infoKey].hiddenvalues.size) return true
-									else false
-								},
+								isVisible: () => tk.legend.bcfInfo[infoKey].hiddenvalues.size,
 								callback: () => {
 									tk.legend.bcfInfo[infoKey].hiddenvalues.clear()
 								}
@@ -545,17 +539,18 @@ function update_mclass(tk) {
 					},
 					{
 						label: 'Show all',
-						isVisible: () => {
-							if (hiddenlst.length) return true
-							else return false
-						},
+						isVisible: () => hiddenlst.length,
 						callback: () => {
 							tk.legend.mclass.hiddenvalues.clear()
 						}
 					},
 					{
 						isChangeShape: true,
-						isVisible: () => true,
+						isVisible: () => {
+							return !tk.skewer.viewModes.find(v => v.type === 'numeric').inuse
+								? tk.mds?.termdbConfig?.tracks?.allowSkewerChanges ?? true
+								: false
+						},
 						callback: (val, tk) => {
 							tk.shapes.mclass[c.k] = val[0]
 							tk.load()
@@ -563,7 +558,7 @@ function update_mclass(tk) {
 						}
 					},
 					{
-						isColor: true,
+						isChangeColor: true,
 						value: color,
 						isVisible: () => true,
 						callback: colorValue => {
@@ -814,7 +809,7 @@ function createLegendTipMenu(opts, tk, elem) {
 
 	for (const opt of opts) {
 		if (opt.isVisible()) {
-			if (opt.isColor) {
+			if (opt.isChangeColor) {
 				tk.legend.tip.d
 					.append('div')
 					.style('padding', '5px 10px')
@@ -831,7 +826,7 @@ function createLegendTipMenu(opts, tk, elem) {
 				let called = false
 				const div = tk.legend.tip.d
 					.append('div')
-					.text('Change variant shape')
+					.text('Change Shape')
 					.style('vertical-align', 'middle')
 					.attr('class', 'sja_menuoption')
 					.on('click', () => {
