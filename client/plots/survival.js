@@ -1363,7 +1363,11 @@ function getPj(self) {
 			sortCharts(result) {
 				if (!self.refs.orderedKeys) return
 				const c = self.refs.orderedKeys.chart
-				result.charts.sort((a, b) => c.indexOf(a.chartId) - c.indexOf(b.chartId))
+				result.charts.sort(
+					(a, b) =>
+						(c.indexOf(a.chartId) == -1 ? c.indexOf(a.rawChartId) : c.indexOf(a.chartId)) -
+						(c.indexOf(b.chartId) == -1 ? c.indexOf(b.rawChartId) : c.indexOf(b.chartId))
+				)
 			}
 		}
 	})
