@@ -1,1 +1,3 @@
-
+Fixes:
+- survival plot: use pre-defined order in db for overlay and divideby
+- scatter plot: use pre-defined order in db for divideby
