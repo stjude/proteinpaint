@@ -478,8 +478,6 @@ function setRenderers(self) {
 
 		// padding is set on every <td>. need a better solution
 
-		const neuroOncCox = self.app.vocabApi.termdbConfig.neuroOncRegression && self.config.regressionType == 'cox'
-
 		// header row
 		let header
 		{
@@ -490,7 +488,7 @@ function setRenderers(self) {
 			// header for category column
 			tr.append('td').text(header.shift()).style('padding', '8px')
 			// skip headers for sample and event count columns
-			if (neuroOncCox) {
+			if (self.config.regressionType == 'cox') {
 				header.shift()
 				header.shift()
 			}
@@ -550,8 +548,7 @@ function setRenderers(self) {
 					fillColumn2coefficientsTable(td, tw)
 				}
 
-				if (neuroOncCox) {
-					// neuro-onc dataset using cox regression
+				if (self.config.regressionType == 'cox') {
 					// sample size and event count columns are present
 					// but do not need to report for continuous variable
 					cols.shift()
@@ -595,9 +592,8 @@ function setRenderers(self) {
 					const td = tr.append('td').style('padding', '8px')
 					fillColumn2coefficientsTable(td, tw, k)
 
-					if (neuroOncCox) {
-						// neuro-oncology dataset using cox regression
-						// sample size and event count columns are present
+					if (self.config.regressionType == 'cox') {
+						// sample size and event count columns present
 						// report sample sizes and event counts of coefficients
 						// for both ref and non-ref categories
 						const [samplesize_ref, samplesize_c] = cols.shift().split('/')
@@ -1129,8 +1125,7 @@ function setRenderers(self) {
 		}
 		///////// helpers
 		function numbers2array(_lst) {
-			const lst =
-				self.app.vocabApi.termdbConfig.neuroOncRegression && self.config.regressionType == 'cox' ? _lst.slice(2) : _lst // exclude sample and event count columns
+			const lst = self.config.regressionType == 'cox' ? _lst.slice(2) : _lst // exclude sample and event count columns
 			const m = Number(lst[midIdx])
 			if (!Number.isNaN(m)) values.push(m)
 			const l = Number(lst[CIlow]),

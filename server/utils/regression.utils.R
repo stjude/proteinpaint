@@ -411,7 +411,7 @@ coxRegression <- function(formula, dat) {
 }
 
 # run regression analysis
-runRegression <- function(formula, regtype, dat, outcome, neuroOnc) {
+runRegression <- function(formula, regtype, dat, outcome) {
   # remove samples with NA values in any variable in the formula
   # NOTE: even though regression functions (e.g. lm, glm, etc.)
   # perform this filtration by default, this filtration
@@ -450,10 +450,10 @@ runRegression <- function(formula, regtype, dat, outcome, neuroOnc) {
     }
   }
   if (length(warns) > 0) results[["warnings"]] <- warns
-  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType, fdat, neuroOnc)
+  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType, fdat)
   results$type3 <- formatType3(results$type3)
   out <- list("id" = unbox(formula$id), "data" = results[names(results) != "res"])
-  if (isTRUE(neuroOnc)) out$type <- unbox(formula$type)
+  if (!is.null(formula$type)) out$type <- unbox(formula$type)
   return(out)
 }
 
@@ -624,11 +624,12 @@ build_coef_table <- function(res_summ) {
 }
 
 # reformat the coefficients table
-formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) {
+formatCoefficients <- function(coefficients_table, res, regtype, dat) {
   # round columns to 2 decimal places
   # round p-value column to 3 significant digits
   coefficients_table[,-ncol(coefficients_table)] <- round(coefficients_table[,-ncol(coefficients_table)], 2)
   coefficients_table[,ncol(coefficients_table)] <- signif(coefficients_table[,ncol(coefficients_table)], 3)
+  
   # add variable and category columns
   if (regtype == "cox") {
     vCol <- vector(mode = "character")
@@ -684,45 +685,42 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
   
   coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, coefficients_table)
   
-  if (isTRUE(neuroOnc)) {
-    # neuro-oncology dataset
-    # extract columns of interest
-    if (regtype == "linear") {
-      coefficients_table <- coefficients_table[, c("Variable", "Category", "Beta", "95% CI (low)", "95% CI (high)", "Pr(>|t|)"), drop = F]
-    } else if (regtype == "logistic") {
-      coefficients_table <- coefficients_table[, c("Variable", "Category", "Odds ratio", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
-    } else if (regtype == "cox") {
-      # cox regression
-      # report sample size and event counts of coefficients
-      sCol <- vector(mode = "character")
-      eCol <- vector(mode = "character")
-      for (i in 1:length(vCol)) {
-        v <- vCol[i]
-        c <- cCol[i]
-        if (v %in% names(res$xlevels)) {
-          # categorical variable
-          # determine sample size and event count of both ref and non-ref categories
-          # values will be stored in separate columns in the format "ref/nonref"
-          ref <- res$xlevels[[v]][1]
-          m <- table(dat[,"outcome_event"], dat[,v])
-          samplesize_ref <- sum(m[,ref])
-          samplesize_c <- sum(m[,c])
-          sCol <- c(sCol, paste(samplesize_ref, samplesize_c, sep = "/"))
-          eventcnt_ref <- m["1",ref]
-          eventcnt_c <- m["1",c]
-          eCol <- c(eCol, paste(eventcnt_ref, eventcnt_c, sep = "/"))
-        } else {
-          # continuous variable
-          # set sample size and event count to NA
-          sCol <- c(sCol, NA)
-          eCol <- c(eCol, NA)
-        }
+  # extract columns of interest
+  if (regtype == "linear") {
+    coefficients_table <- coefficients_table[, c("Variable", "Category", "Beta", "95% CI (low)", "95% CI (high)", "Pr(>|t|)"), drop = F]
+  } else if (regtype == "logistic") {
+    coefficients_table <- coefficients_table[, c("Variable", "Category", "Odds ratio", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
+  } else if (regtype == "cox") {
+    # cox regression
+    # report sample size and event counts of coefficients
+    sCol <- vector(mode = "character")
+    eCol <- vector(mode = "character")
+    for (i in 1:length(vCol)) {
+      v <- vCol[i]
+      c <- cCol[i]
+      if (v %in% names(res$xlevels)) {
+        # categorical variable
+        # determine sample size and event count of both ref and non-ref categories
+        # values will be stored in separate columns in the format "ref/nonref"
+        ref <- res$xlevels[[v]][1]
+        m <- table(dat[,"outcome_event"], dat[,v])
+        samplesize_ref <- sum(m[,ref])
+        samplesize_c <- sum(m[,c])
+        sCol <- c(sCol, paste(samplesize_ref, samplesize_c, sep = "/"))
+        eventcnt_ref <- m["1",ref]
+        eventcnt_c <- m["1",c]
+        eCol <- c(eCol, paste(eventcnt_ref, eventcnt_c, sep = "/"))
+      } else {
+        # continuous variable
+        # set sample size and event count to NA
+        sCol <- c(sCol, NA)
+        eCol <- c(eCol, NA)
       }
-      coefficients_table <- cbind(coefficients_table, "Sample Size (ref/non-ref)" = sCol, "Events (ref/non-ref)" = eCol)
-      coefficients_table <- coefficients_table[, c("Variable", "Category", "Sample Size (ref/non-ref)", "Events (ref/non-ref)", "HR", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
-    } else {
-      stop("regression type is not recognized")
     }
+    coefficients_table <- cbind(coefficients_table, "Sample Size (ref/non-ref)" = sCol, "Events (ref/non-ref)" = eCol)
+    coefficients_table <- coefficients_table[, c("Variable", "Category", "Sample Size (ref/non-ref)", "Events (ref/non-ref)", "HR", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
+  } else {
+    stop("regression type is not recognized")
   }
   
   colnames(coefficients_table)[ncol(coefficients_table)] <- "P" # p-value column

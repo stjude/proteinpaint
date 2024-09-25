@@ -127,7 +127,7 @@ benchmark[["buildFormulas"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dt
 stime <- Sys.time()
 cores <- detectCores()
 if (is.na(cores)) stop("unable to detect number of cores")
-reg_results <- mclapply(X = formulas, FUN = runRegression, regtype = input$regressionType, dat = dat, outcome = input$outcome, neuroOnc = input$neuroOnc, mc.cores = cores)
+reg_results <- mclapply(X = formulas, FUN = runRegression, regtype = input$regressionType, dat = dat, outcome = input$outcome, mc.cores = cores)
 etime <- Sys.time()
 dtime <- etime - stime
 benchmark[["runRegression"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
