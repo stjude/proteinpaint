@@ -1,8 +1,10 @@
 import { Elem } from '../types/d3'
 import { shapes } from '#dom'
+import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 
 export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 	shapeG
+		.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
 		.append('path')
 		.attr('d', d => shapes[d.shape].calculatePath(getPathDimensions(d.shape, d.radius, skewer.pointup)))
 		.attr('fill', d => (!shapes[d.shape].isFilled ? 'none' : d.mlst?.[0] ? tk.color4disc(d.mlst[0]) : tk.color4disc(d)))

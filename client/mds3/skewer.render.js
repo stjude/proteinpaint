@@ -108,8 +108,10 @@ export function skewer_make(tk, block) {
 		/** TODO: This assumes every skewer track has mutations
 		 * In future change to accept other annotations
 		 */
-		tk.shapes = { mclass: {} }
-		Object.keys(mclass).forEach(v => (tk.shapes.mclass[v] = 'filledCircle'))
+		if (!tk.shapeBy) {
+			tk.shapes = {}
+			Object.keys(mclass).forEach(v => (tk.shapes[v] = 'filledCircle'))
+		}
 	}
 
 	ss.selection = ss.g
@@ -135,11 +137,10 @@ export function skewer_make(tk, block) {
 		.attr('class', 'sja_aa_discg')
 		.each(function (d) {
 			d.g = this
-
 			if (!d.shape) {
 				//TODO: Add logic to determine when to apply shape or color
-				// and which annotation to use if multiple
-				d.shape = tk.shapes.mclass[d.aa.mlst[0].class]
+				// and which annotation to use if multiple (i.e. tk.shapeBy)
+				d.shape = tk.shapes[d.mlst[0].class]
 			}
 			if (!d.shape.includes('Circle')) {
 				//Use existing rendering code for circle shapes
