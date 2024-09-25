@@ -637,10 +637,6 @@ type Mds3Queries = {
 	DZImages?: DZImages
 	WSImages?: WSImages
 	images?: Images
-	tracks?: {
-		/** allow color or shape changes in the lollipop */
-		allowSkewerChanges: boolean
-	}
 }
 
 /** non-zoom small images

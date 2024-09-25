@@ -346,8 +346,8 @@ export function displayVectorGraphics(arg) {
 
 function onShapeClick(val, tk) {
 	// Logic to change the pre-existing shape to the chosen shape
-	Object.keys(tk.shapes.mclass).forEach(key => {
-		tk.shapes.mclass[key] = val[0]
+	Object.keys(tk.shapes).forEach(key => {
+		tk.shapes[key] = val[0]
 	})
 	tk.load()
 	tk.menutip.hide()

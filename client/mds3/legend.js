@@ -552,7 +552,7 @@ function update_mclass(tk) {
 								: false
 						},
 						callback: (val, tk) => {
-							tk.shapes.mclass[c.k] = val[0]
+							tk.shapes[c.k] = val[0]
 							tk.load()
 							tk.legend.tip.hide()
 						}
