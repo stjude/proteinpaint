@@ -139,8 +139,11 @@ export async function get_survival(q, ds) {
 		// sort by d.x
 		final_data.case.sort((a, b) => a[2] - b[2])
 		const orderedLabels = getOrderedLabels(q.term2, bins ? bins.map(bin => (bin.name ? bin.name : bin.label)) : [])
+		const orderedLabelsTerm0 = getOrderedLabels(q.term0)
 		final_data.refs.orderedKeys = {
-			chart: [...keys.chart].sort(),
+			chart: [...keys.chart].sort(
+				!orderedLabelsTerm0 ? undefined : (a, b) => orderedLabelsTerm0.indexOf(a) - orderedLabelsTerm0.indexOf(b)
+			),
 			series: [...keys.series].sort(
 				!orderedLabels ? undefined : (a, b) => orderedLabels.indexOf(a) - orderedLabels.indexOf(b)
 			)
@@ -205,11 +208,9 @@ function getOrderedLabels(term, bins = []) {
 				.map(i => term.values[i].label)
 		}
 		if (term.values) {
-			return Object.keys(term.values)
-				.sort((a, b) =>
-					'order' in term.values[a] && 'order' in term.values[b] ? term.values[a].order - term.values[b].order : 0
-				)
-				.map(i => term.values[i].label)
+			return Object.keys(term.values).sort((a, b) =>
+				'order' in term.values[a] && 'order' in term.values[b] ? term.values[a].order - term.values[b].order : 0
+			)
 		}
 	}
 	return bins.map(bin => (bin.name ? bin.name : bin.label))
