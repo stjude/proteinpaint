@@ -324,14 +324,14 @@ export function displayVectorGraphics(arg) {
 		.style('width', 'max-content')
 
 	for (const val of Object.entries(desiredShapes)) {
-		const shapeWrapper = shapesContainer.append('div').style('padding', '0px 2px')
 		const width = 18
 		const height = 18
-		const shapeSvg = shapeWrapper
+		const shapeSvg = shapesContainer
 			.append('svg')
 			.attr('width', width)
 			.attr('height', height)
-			.attr('viewBox', `0 0 ${width} ${height}`)
+			.attr('viewBox', `-1 -1 ${width} ${height}`)
+			.style('padding', '0px 2px')
 			.style('cursor', 'pointer')
 			.on('click', () => {
 				callback(val, tk)
