@@ -778,7 +778,7 @@ type SortPriorityEntry = {
 }
 
 type SurvivalSettings = {
-	maxSurTime?: number
+	maxTimeToEvent?: number
 }
 
 type MatrixSettings = {
