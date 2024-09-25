@@ -52,9 +52,9 @@ type InfoFieldEntry = {
 
 /*
 type GenomicPositionEntry = {
-        chr: string
-        start: number
-        stop: number
+		chr: string
+		start: number
+		stop: number
 }
 */
 
@@ -230,8 +230,8 @@ type SnvIndelQuery = {
 	variant_filter?: VariantFilter
 	populations?: Population[]
 	/** NOTE **
-    this definition can appear either in queries.snvindel{} or termdb{}
-    so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig cannot be made */
+	this definition can appear either in queries.snvindel{} or termdb{}
+	so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig cannot be made */
 	ssmUrl?: UrlTemplateSsm
 	m2csq?: {
 		gdcapi?: boolean
@@ -345,21 +345,21 @@ type TrackLstEntry = {
 type CnvSegment = {
 	byrange: CnvSegmentByRange
 	/****** rendering parameters ****
-    not used as query parameter to filter segments
-    value range for color scaling. default to 5. cnv segment value>this will use solid color
-    */
+	not used as query parameter to filter segments
+	value range for color scaling. default to 5. cnv segment value>this will use solid color
+	*/
 	absoluteValueRenderMax?: number
 	gainColor?: string
 	lossColor?: string
 
 	/*** filtering parameters ***
-    default max length setting to restrict to focal events; if missing show all */
+	default max length setting to restrict to focal events; if missing show all */
 	cnvMaxLength?: number
 
 	/** TODO define value type, if logratio, or copy number */
 
 	/** following two cutoffs only apply to log ratio, cnv gain value is positive, cnv loss value is negative
-    if cnv is gain, skip if value<this cutoff */
+	if cnv is gain, skip if value<this cutoff */
 	cnvGainCutoff?: number
 	/** if cnv is loss, skip if value>this cutoff */
 	cnvLossCutoff?: number
@@ -377,7 +377,7 @@ for a given region, the median signal from probes in the region is used to make 
 this is alternative to CnvSegment
 
 type Probe2Cnv = {
-        file: string
+		file: string
 }
 */
 
@@ -437,10 +437,10 @@ export type SingleCellSamplesNative = {
 	src: 'native'
 
 	/** logic to decide sample table columns (the one shown on singlecell app ui, displaying a table of samples with sc data)
-    a sample table will always have a sample column, to show sample.sample value
-    firstColumnName allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc
-    the other two properties allow to declare additional columns to be shown in table, that are for display only
-    when sample.experiments[] are used, a last column of experiment id will be auto added
+	a sample table will always have a sample column, to show sample.sample value
+	firstColumnName allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc
+	the other two properties allow to declare additional columns to be shown in table, that are for display only
+	when sample.experiments[] are used, a last column of experiment id will be auto added
 	*/
 	firstColumnName?: string
 
@@ -475,8 +475,8 @@ export type SingleCellDataGdc = {
 export type SingleCellDEgeneGdc = {
 	src: 'gdcapi'
 	/** Column name.
-    this must be the colorColumn from one of the plots. so that at the client app, as soon as the plot data have been loaded and maps rendered, client will find out the cell groups based on this columnName value, and show a drop down of these groups on UI. user selects a group, and pass it as request body to backend to get DE genes for this group
-    */
+	this must be the colorColumn from one of the plots. so that at the client app, as soon as the plot data have been loaded and maps rendered, client will find out the cell groups based on this columnName value, and show a drop down of these groups on UI. user selects a group, and pass it as request body to backend to get DE genes for this group
+	*/
 	columnName: string
 }
 
@@ -536,7 +536,7 @@ export type SingleCellDataNative = {
 export type SingleCellQuery = {
 	/** methods to identify samples with singlecell data,
 	this data allows client-side to display a table with these samples for user to choose from
-    also, sampleView uses this to determine if to invoke the sc plot for a sample
+	also, sampleView uses this to determine if to invoke the sc plot for a sample
 	*/
 	samples: SingleCellSamplesGdc | SingleCellSamplesNative
 	/** defines tsne/umap type of clustering maps for each sample
@@ -714,9 +714,9 @@ type ScatterPlotsEntry = {
 	colorTW?: { id: string }
 	colorColumn?: ColorColumn
 	/** provide a sampletype term to filter for specific type of samples for subjects with multiple samples and show in the plot.
-    e.g. to only show D samples from all patients
-    this is limited to only one term and doesn't allow switching between multiple terms
-    */
+	e.g. to only show D samples from all patients
+	this is limited to only one term and doesn't allow switching between multiple terms
+	*/
 	sampleCategory?: {
 		/** categorical term like "sampleType" which describes types of multiple samples from the same subject */
 		tw: { id: string }
@@ -778,6 +778,7 @@ type SortPriorityEntry = {
 }
 
 type SurvivalSettings = {
+	/** filters out all the survival data with Time-to-Event longer than this maxTimeToEvent */
 	maxTimeToEvent?: number
 }
 
@@ -892,10 +893,10 @@ type UrlTemplateBase = {
 }
 export type UrlTemplateSsm = UrlTemplateBase & {
 	/** to create separate link, but not directly on chr.pos.ref.alt string.
-    name of link is determined by either namekey or linkText. former allows to retrieve a name per m that's different from chr.pos.xx */
+	name of link is determined by either namekey or linkText. former allows to retrieve a name per m that's different from chr.pos.xx */
 	shownSeparately?: boolean
 	/** optional name of link, if set, same name will be used for all links. e.g. "ClinVar".
-    if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsid) */
+	if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsid) */
 	linkText?: string
 }
 
@@ -919,11 +920,11 @@ type Termdb = {
 	selectCohort?: SelectCohortEntry
 
 	/** quick fix to convert category values from a term to lower cases for comparison (case insensitive comparison)
-    for gdc, graphql and rest apis return case-mismatching strings for the same category e.g. "Breast/breast"
-    keep this setting here for reason of:
-    - in mds3.gdc.js, when received all-lowercase values from graphql, it's hard to convert them to Title case for comparison
-    - mds3.variant2samples consider this setting, allows to handle other datasets of same issue
-      */
+	for gdc, graphql and rest apis return case-mismatching strings for the same category e.g. "Breast/breast"
+	keep this setting here for reason of:
+	- in mds3.gdc.js, when received all-lowercase values from graphql, it's hard to convert them to Title case for comparison
+	- mds3.variant2samples consider this setting, allows to handle other datasets of same issue
+	  */
 	useLower?: boolean
 
 	scatterplots?: Scatterplots
@@ -1184,9 +1185,9 @@ type Svcnv = BaseTrack & {
 
 type KeyLabelFull = {
 	/* Used in: 
-            queries.genefpkm.boxplotbysamplegroup.attributes
-            cohort.hierarchies.lst[i].levels
-    */
+			queries.genefpkm.boxplotbysamplegroup.attributes
+			cohort.hierarchies.lst[i].levels
+	*/
 	k: string
 	label: string
 	full?: string
