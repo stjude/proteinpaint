@@ -208,3 +208,36 @@ export const shapes = {
 }
 
 export const shapesArray = Object.values(shapes).map(shape => shape.path)
+
+export function shapeSelector(key, div, callback) {
+	const size = 20
+	const cols = 8
+	const height = Math.ceil(shapesArray.length / cols) * size
+	div.style('background-color', '#f2f2f2')
+	const svg = div
+		.append('div')
+		.style('padding', '5px')
+		.append('svg')
+		.attr('width', size * cols)
+		.attr('height', height)
+		.style('background-color', 'rgba(239, 239, 239, 0.3)')
+	let count = 0
+	let y = 0
+	for (const shape of shapesArray) {
+		const index = count + y * cols
+		svg
+			.append('path')
+			.style('pointer-events', 'bounding-box')
+			.style('fill', 'gray')
+			.attr('d', shape)
+			.attr('transform', `translate(${size * count}, ${y * size})`)
+			.on('click', () => {
+				callback(key, index)
+			})
+		count++
+		if (count % cols == 0) {
+			count = 0
+			y++
+		}
+	}
+}

@@ -17,7 +17,7 @@ import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
 import { searchSampleInput, getSamplesRelated } from './sampleView.js'
 
-import { shapes, shapesArray } from '../dom/shapes.js'
+import { shapes, shapesArray, shapeSelector } from '../dom/shapes.js'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
@@ -443,7 +443,7 @@ export function setInteractivity(self) {
 					config
 				})
 			})
-		if (category.color) {
+		if (isColorTW) {
 			const color = rgb(category.color).formatHex()
 			const input = div
 				.append('div')
@@ -465,38 +465,12 @@ export function setInteractivity(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Change shape')
 				.on('click', () => {
-					const size = 20
-					const cols = 8
-					const height = Math.ceil(shapesArray.length / cols) * size
-					div.style('background-color', '#f2f2f2')
 					div.selectAll('*').remove()
-					const svg = div
-						.append('div')
-						.style('padding', '5px')
-						.append('svg')
-						.attr('width', size * cols)
-						.attr('height', height)
-						.style('background-color', 'rgba(239, 239, 239, 0.3)')
-					let count = 0
-					let y = 0
-					for (const shape of shapesArray) {
-						const index = count + y * cols
-						svg
-							.append('path')
-							.style('pointer-events', 'bounding-box')
-							.style('fill', 'gray')
-							.attr('d', shape)
-							.attr('transform', `translate(${size * count}, ${y * size})`)
-							.on('click', () => {
-								self.changeShape(key, index)
-								menu.hide()
-							})
-						count++
-						if (count % cols == 0) {
-							count = 0
-							y++
-						}
+					const callback = (key, index) => {
+						self.changeShape(key, index)
+						menu.hide()
 					}
+					shapeSelector(key, div, callback)
 				})
 		}
 		menu.showunder(e.target)
