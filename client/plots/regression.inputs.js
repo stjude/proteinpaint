@@ -208,32 +208,42 @@ function setRenderers(self) {
 			.text('Run analysis')
 			.on('click', self.submit)
 
-		// checkbox for whether or not to include univariate results
-		// along with multivariate results
+		// checkbox for including univariate results
 		self.dom.univariateCheckbox = self.dom.foot.append('div').style('display', 'none')
 		make_one_checkbox({
 			labeltext: 'Include univariate results',
 			checked: false,
 			holder: self.dom.univariateCheckbox,
 			callback: checked => {
+				const independent = structuredClone(self.config.independent)
+				if (independent.find(v => v.interactions.length)) {
+					// clear interactions for univariate analysis
+					independent.forEach(v => (v.interactions = []))
+					self.submitMsgs.clearInteractions = 'Removed interactions to support univariate analysis'
+				} else {
+					delete self.submitMsgs.clearInteractions
+				}
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.parent.id,
 					chartType: 'regression',
 					config: {
 						hasUnsubmittedEdits: true,
-						includeUnivariate: checked
+						includeUnivariate: checked,
+						independent
 					}
 				})
 			}
 		})
 
-		self.dom.submitMsg = self.dom.foot
+		self.dom.submitMsgs = self.dom.foot
 			.append('div')
-			.style('display', 'none')
 			.style('color', '#cc0000')
 			.style('font-style', 'italic')
 			.style('font-size', '0.8em')
+
+		self.submitMsgs = {}
+
 		/*
 			not using d3.data() here since each section may only
 			be added and re-rendered, but not removed
@@ -354,13 +364,20 @@ function setRenderers(self) {
 	}
 
 	self.mayShowUnivariateCheckbox = () => {
-		// show the univariate checkbox if analysis is multivariate and
-		// is using a neuro-oncology dataset
+		// show the univariate checkbox if analysis is multivariate
 		self.dom.univariateCheckbox.style(
 			'display',
 			self.config.outcome && self.config.independent.length > 1 ? 'block' : 'none'
 		)
 		self.dom.univariateCheckbox.select('input[type=checkbox]').property('checked', self.config.includeUnivariate)
+	}
+
+	self.mayShowSubmitMsgs = () => {
+		self.dom.submitMsgs
+			.selectAll('div')
+			.data(Object.values(self.submitMsgs))
+			.join('div')
+			.text(d => d)
 	}
 }
 
