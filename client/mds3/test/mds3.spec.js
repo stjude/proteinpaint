@@ -339,7 +339,7 @@ tape('GDC - sunburst', test => {
 	async function callbackOnRender(tk, bb) {
 		// Click on track variant link to open menu
 		const discFound = tk.skewer.g
-			.selectAll('circle.sja_aa_disckick')
+			.selectAll('.sja_aa_disckick')
 			.nodes()
 			.find(e => e.__data__.occurrence >= 10)
 		test.ok(discFound, 'Found a mutation with occurrence >= 10, click on it to show sunburst')
