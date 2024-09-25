@@ -281,6 +281,16 @@ export function setRenderers(self) {
 	}
 
 	self.processData = async function () {
+		const term0Values = self.config.term0?.term.values
+		if (term0Values) {
+			// sort the divideBy subCharts based on pre-defined term0 order in db
+			const orderedLabels = Object.values(term0Values).sort((a, b) =>
+				'order' in a && 'order' in b ? a.order - b.order : 0
+			)
+			self.charts.sort(
+				(a, b) => orderedLabels.findIndex(v => v.label == a.id) - orderedLabels.findIndex(v => v.label == b.id)
+			)
+		}
 		for (const chart of self.charts) {
 			self.initAxes(chart)
 			const regressionType = self.config.settings.sampleScatter.regression
