@@ -209,7 +209,7 @@ export const shapes = {
 
 export const shapesArray = Object.values(shapes).map(shape => shape.path)
 
-export function shapeSelector(key, div, callback) {
+export function shapeSelector(div, callback) {
 	const size = 20
 	const cols = 8
 	const height = Math.ceil(shapesArray.length / cols) * size
@@ -232,7 +232,7 @@ export function shapeSelector(key, div, callback) {
 			.attr('d', shape)
 			.attr('transform', `translate(${size * count}, ${y * size})`)
 			.on('click', () => {
-				callback(key, index)
+				callback(index)
 			})
 		count++
 		if (count % cols == 0) {

@@ -466,11 +466,11 @@ export function setInteractivity(self) {
 				.text('Change shape')
 				.on('click', () => {
 					div.selectAll('*').remove()
-					const callback = (key, index) => {
+					const callback = index => {
 						self.changeShape(key, index)
 						menu.hide()
 					}
-					shapeSelector(key, div, callback)
+					shapeSelector(div, callback)
 				})
 		}
 		menu.showunder(e.target)
