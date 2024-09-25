@@ -1115,8 +1115,10 @@ export function setRenderers(self) {
 						.append('path')
 						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(0.5)`)
 						.style('fill', 'gray')
+						.style('pointer-events', 'bounding-box')
 						.attr('d', shapes[index])
 						.style('stroke', rgb('gray').darker())
+					itemG.on('click', e => self.onLegendClick(chart, legendG, 'shapeTW', key, e, category))
 				} else {
 					itemG
 						.append('path')
