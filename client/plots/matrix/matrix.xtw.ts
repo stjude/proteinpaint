@@ -1,6 +1,6 @@
 import { ContinuousXTW, DiscreteXTW, TwRouter } from '#tw'
-import { TermWrapper } from '#updated-types'
-import { convertUnits } from '#shared/helpers.js'
+import { TermWrapper } from '@sjcrh/proteinpaint-types/updated'
+import { convertUnits } from '#shared/helpers'
 
 let addons
 

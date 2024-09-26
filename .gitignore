@@ -33,6 +33,9 @@ server/src/health.js
 server/src/hicstat.js
 server/package*/*
 
+shared/*
+types/checkers/*
+
 **/public/bin/*
 public/tmp/*
 /container/deps/public/cards/
