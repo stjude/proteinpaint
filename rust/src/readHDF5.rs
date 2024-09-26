@@ -234,8 +234,6 @@ fn read_bulk_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
         ),
     }
 
-    let array_start_point = gene_index * num_samples;
-    let array_stop_point = (gene_index + 1) * num_samples;
     //let data_counts: Array1<_> = ds_counts.read::<f64, Dim<[usize; 1]>>()?;
     //println!("Data_counts: {:?}", data_counts);
     let gene_array: Array2<f64> =
