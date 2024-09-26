@@ -637,10 +637,22 @@ function setRenderers(self) {
 				fillColumn2coefficientsTable(td.append('div'), term1, row.category1)
 				fillColumn2coefficientsTable(td.append('div'), term2, row.category2)
 			}
-			// col 3
-			forestPlotter(tr.append('td'), row.lst)
+
+			const cols = row.lst
+
+			if (self.config.regressionType == 'cox') {
+				// sample size and event count columns are present
+				// skip for now for interactions
+				// TODO: how to handle sample size/event counts for interactions?
+				cols.shift()
+				cols.shift()
+			}
+
+			// display forest plot
+			forestPlotter(tr.append('td'), cols)
+
 			// display data columns
-			fillDataColumns(tr, row.lst)
+			fillDataColumns(tr, cols)
 		}
 
 		// last row to show forest plot axis (call function without data)
