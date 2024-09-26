@@ -16,7 +16,7 @@
     "#plots/*": "./plots/*",
     "#plots/disco/*": "./plots/disco/*",
     "#rx": "./rx/index.js",
-    "#shared/*": "./shared/*",
+    "#shared/*": "@sjcrh/proteinpaint-shared",
     "#src/*": "./src/*.js",
     "#termdb/*": "./termdb/*.js",
     "#termsetting": "./termsetting/termsetting.ts",
@@ -27,6 +27,7 @@
     "#types": "./shared/types/index.ts",
     "#types/*": "./shared/types/*",
     "#routes/*": "./shared/types/routes/*",
+    "#types": "@sjcrh/proteinpaint-types",
     "#updated-types": "./shared/types/terms/updated-types.ts"
   },
   "scripts": {

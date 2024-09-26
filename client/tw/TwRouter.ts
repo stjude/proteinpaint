@@ -1,4 +1,4 @@
-import { TermWrapper } from '#updated-types'
+import { TermWrapper } from '@sjcrh/proteinpaint-types/updated'
 import { TwOpts, TwBase } from './TwBase'
 import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
 import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS } from './categorical'

@@ -1,0 +1,21 @@
+{
+  "name": "@sjcrh/proteinpaint-types",
+  "version": "2.78.0",
+  "type": "module",
+  "description": "Shared type definitions between ProteinPaint server and client code",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./updated": "./src/terms/updated-types.ts"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "ts-patch": "^3.2.1",
+    "typescript": "^5.6.2",
+    "typia": "^4.1.14"
+  },
+  "scripts": {
+    "prepare": "ts-patch install"
+  }
+}
