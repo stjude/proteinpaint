@@ -7,7 +7,11 @@
   "module": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./updated": "./src/terms/updated-types.ts"
+    "./updated": "./src/terms/updated-types.ts",
+    "./*": "./src/*"
+  },
+  "imports": {
+    "#shared": "@sjcrh/proteinpaint-shared"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",

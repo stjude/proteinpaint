@@ -1,4 +1,4 @@
-import { UrlTemplateSsm } from '#shared/types/dataset.ts'
+import { UrlTemplateSsm } from '#types'
 
 /*
 Make html links from one m object (m is ssm-simple somatic mutation, snvindel, or nonmutation)

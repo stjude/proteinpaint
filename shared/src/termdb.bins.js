@@ -1,5 +1,5 @@
 import { format } from 'd3-format'
-import { getColors } from '#shared/common.js'
+import { getColors } from './common.js'
 import { isNumeric, convertUnits } from './helpers.js'
 
 export default function validate_bins(binconfig) {

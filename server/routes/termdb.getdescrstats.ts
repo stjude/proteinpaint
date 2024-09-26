@@ -1,5 +1,5 @@
 import { getdescrstatsRequest, getdescrstatsResponse } from '#types'
-import Summarystats from '../shared/descriptive.stats.js'
+import Summarystats from '#shared/descriptive.stats.js'
 import { getData } from '#src/termdb.matrix.js'
 
 export const api: any = {
