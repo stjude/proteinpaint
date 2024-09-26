@@ -20,11 +20,6 @@ server/shared/doc.js
 server/shared/checkers/transformed/*
 server/shared/checkers/bin/*
 server/shared/checkers*/*
-server/shared/types/docs.json
-server/shared/types/*.js
-server/shared/types/**/**.js
-server/shared/types/terms/*.js
-server/shared/types/routes/checkers/*
 server/test/*.bundle.js
 server/**/*serverTests.js
 server/routes/*.js
@@ -33,8 +28,12 @@ server/src/health.js
 server/src/hicstat.js
 server/package*/*
 
-shared/*
 types/checkers/*
+types/docs.json
+types/*.js
+types/**/**.js
+types/terms/*.js
+types/routes/checkers/*
 
 **/public/bin/*
 public/tmp/*
@@ -127,6 +126,3 @@ log.txt
 *-debug.*
 build/sj/env.sh
 rust/Dockerfile
-
-shared/*
-types/*

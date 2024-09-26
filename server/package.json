@@ -7,9 +7,9 @@
   "module": "src/app.js",
   "bin": "start.js",
   "imports": {
-    "#types": "./shared/types/index.ts",
-    "#shared/types/*": "./shared/types/*",
-    "#shared/*": "./shared/*",
+    "#types": "@sjcrh/proteinpaint-types",
+    "#types/*": "@sjcrh/proteinpaint-types/src/*",
+    "#shared/*": "@sjcrh/proteinpaint-shared/src/*",
     "#src/*": "./src/*",
     "#routes/*": "./routes/*"
   },

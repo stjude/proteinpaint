@@ -14,7 +14,7 @@ import {
 	StartUnboundedBin,
 	StopUnboundedBin,
 	BinnedNumericQ
-} from '../../shared/types/terms/numeric.ts'
+} from '#types'
 
 /*
 ********************** EXPORTED

@@ -13,6 +13,7 @@
     "container/server",
     "container/full",
     "types",
+    "shared",
     "augen"
   ],
   "scripts": {

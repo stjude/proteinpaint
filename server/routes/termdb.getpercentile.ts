@@ -1,7 +1,6 @@
-import { getpercentileRequest, getpercentileResponse } from '#types'
-import * as termdbsql from '../src/termdb.sql.js'
-import computePercentile from '../shared/compute.percentile.js'
-import { Filter } from '#shared/types/filter.ts'
+import { getpercentileRequest, getpercentileResponse, Filter } from '#types'
+import * as termdbsql from '#src/termdb.sql.js'
+import computePercentile from '#shared/compute.percentile.js'
 
 export const api: any = {
 	endpoint: 'termdb/getpercentile',
