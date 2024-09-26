@@ -1,4 +1,4 @@
-import { genesetEnrichmentRequest, genesetEnrichmentResponse } from '../shared/types/routes/genesetEnrichment.ts'
+import { genesetEnrichmentRequest, genesetEnrichmentResponse } from '#types'
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
