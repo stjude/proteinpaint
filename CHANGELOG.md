@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.79.0
 
 Features:
 - Survival plot: add a control "Survival Time Cut-Off" to filter out all the survival data with Time-to-Event longer than Survival Time Cut-Off
