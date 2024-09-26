@@ -3,7 +3,7 @@ import {
 	genesetOverrepresentationRequest,
 	genesetOverrepresentationResponse,
 	gene_overrepresentation_input
-} from '../shared/types/routes/genesetOverrepresentation.ts'
+} from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'

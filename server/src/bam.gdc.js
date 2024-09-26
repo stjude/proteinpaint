@@ -1,6 +1,6 @@
 import got from 'got'
 import path from 'path'
-import { fileSize } from '../shared/fileSize'
+import { fileSize } from '#shared/fileSize.js'
 
 /*
 hardcoded logic to work with gdc APIs

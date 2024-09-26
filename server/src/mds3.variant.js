@@ -1,4 +1,4 @@
-import { filterJoin } from '../shared/filter'
+import { filterJoin } from '#shared/filter.js'
 import { get_rows_by_one_key } from './termdb.sql'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import path from 'path'

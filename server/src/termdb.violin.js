@@ -2,10 +2,10 @@ import { scaleLinear, scaleLog } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix'
 import { createCanvas } from 'canvas'
-import { getBinsDensity } from '../../server/shared/violin.bins'
-import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
+import summaryStats from '#shared/descriptive.stats'
 import { isNumericTerm } from '#shared/terms.js'
+import { getBinsDensity } from '#shared/violin.bins'
 
 /*
 q: getViolinRequest
