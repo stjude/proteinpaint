@@ -209,28 +209,19 @@ function setRenderers(self) {
 			.on('click', self.submit)
 
 		// checkbox for including univariate results
-		self.dom.univariateCheckbox = self.dom.foot.append('div').style('display', 'none')
-		make_one_checkbox({
+		self.dom.univariateCheckboxDiv = self.dom.foot.append('div').style('display', 'none')
+		self.dom.univariateCheckbox = make_one_checkbox({
 			labeltext: 'Include univariate results',
 			checked: false,
-			holder: self.dom.univariateCheckbox,
+			holder: self.dom.univariateCheckboxDiv,
 			callback: checked => {
-				const independent = structuredClone(self.config.independent)
-				if (independent.find(v => v.interactions.length)) {
-					// clear interactions for univariate analysis
-					independent.forEach(v => (v.interactions = []))
-					self.submitMsgs.clearInteractions = 'Removed interactions to support univariate analysis'
-				} else {
-					delete self.submitMsgs.clearInteractions
-				}
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.parent.id,
 					chartType: 'regression',
 					config: {
 						hasUnsubmittedEdits: true,
-						includeUnivariate: checked,
-						independent
+						includeUnivariate: checked
 					}
 				})
 			}
@@ -364,12 +355,18 @@ function setRenderers(self) {
 	}
 
 	self.mayShowUnivariateCheckbox = () => {
-		// show the univariate checkbox if analysis is multivariate
-		self.dom.univariateCheckbox.style(
-			'display',
-			self.config.outcome && self.config.independent.length > 1 ? 'block' : 'none'
-		)
-		self.dom.univariateCheckbox.select('input[type=checkbox]').property('checked', self.config.includeUnivariate)
+		if (!self.config.outcome || self.config.independent.length < 2) {
+			// hide univariate checkbox if analysis does not have
+			// multiple covariates
+			self.dom.univariateCheckboxDiv.style('display', 'none')
+			return
+		}
+		self.dom.univariateCheckboxDiv.style('display', 'block')
+		self.dom.univariateCheckbox
+			// disable univariate analysis when interactions are in use
+			.property('disabled', self.config.independent.find(v => v.interactions.length) ? true : false)
+			// set checked status
+			.property('checked', self.config.includeUnivariate)
 	}
 
 	self.mayShowSubmitMsgs = () => {

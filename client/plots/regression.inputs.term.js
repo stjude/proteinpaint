@@ -434,7 +434,7 @@ export class InputTerm {
 		const self = this
 		self.dom.tip.clear().showunder(self.dom.interactionDiv.node())
 		if (self.parent.config.includeUnivariate) {
-			const label = self.parent.dom.univariateCheckbox.select('label').text().trim()
+			const label = self.parent.dom.univariateCheckboxDiv.select('label').text().trim()
 			self.dom.tip.d.append('div').text(`Cannot add interactions. Please uncheck the "${label}" checkbox.`)
 			return
 		}
