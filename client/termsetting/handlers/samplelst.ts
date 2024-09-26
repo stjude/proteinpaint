@@ -1,7 +1,6 @@
-import { getPillNameDefault, get$id } from '#termsetting'
+import { getPillNameDefault } from '#termsetting'
 import { renderTable } from '../../dom/table'
 import { SampleLstTermSettingInstance, PillData, SampleLstTW } from '#types'
-import { rgb } from 'd3'
 
 export function getHandler(self: SampleLstTermSettingInstance) {
 	return {
