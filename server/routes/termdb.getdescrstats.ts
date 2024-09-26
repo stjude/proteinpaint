@@ -1,4 +1,4 @@
-import { getdescrstatsRequest, getdescrstatsResponse } from '#shared/types/routes/termdb.getdescrstats.ts'
+import { getdescrstatsRequest, getdescrstatsResponse } from '#types'
 import Summarystats from '../shared/descriptive.stats.js'
 import { getData } from '#src/termdb.matrix.js'
 

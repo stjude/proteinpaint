@@ -14,7 +14,7 @@ import { interpolateRgb } from 'd3-interpolate'
 import { match_complexvariant_rust } from './bam.kmer.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission } from './bam.gdc.js'
-import { fileSize } from '../shared/fileSize.js'
+import { fileSize } from '#shared/fileSize.js'
 
 const clustalo_read_alignment = serverconfig.clustalo
 

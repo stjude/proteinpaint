@@ -1,7 +1,7 @@
 import serverconfig from './serverconfig'
 import { connect_db } from './utils'
-import { isUsableTerm } from '../shared/termdb.usecase'
 import { authApi } from './auth'
+import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { DEFAULT_SAMPLE_TYPE, numericTypes } from '#shared/terms.js'
 
 /*
