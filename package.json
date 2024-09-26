@@ -12,6 +12,7 @@
     "front",
     "container/server",
     "container/full",
+    "types",
     "augen"
   ],
   "scripts": {

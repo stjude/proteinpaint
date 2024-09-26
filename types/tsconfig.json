@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "strictNullChecks": true,
+  "compilerOptions": {
+    "noEmit": false,
+    "allowImportingTsExtensions": false,
+    "plugins": [
+      { "transform": "typia/lib/transform" }
+    ]
+  },
+  "include": ["./src/routes/burden.ts"],
+  "exclude": [
+    "./node_modules"
+  ]
+}

@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
 import { GroupEntry, TermGroupSetting } from '#types'
-import { TermWrapper } from '#updated-types'
+import { TermWrapper } from '@sjcrh/proteinpaint-types/updated'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { FakeApp } from './fake/app.ts'
@@ -64,8 +64,8 @@ const softTwsLimit = 3 //5000
 async function getTws() {
 	// create an array of full tw's, to simulate what may be seen from app/plot state after a dispatch
 	const twlst: TermWrapper[] = [
-		Object.freeze(await TwRouter.fill({ id: 'sex' }, { vocabApi })),
-		Object.freeze({
+		await TwRouter.fill({ id: 'sex' }, { vocabApi }),
+		{
 			type: 'CatTWPredefinedGS',
 			term: getTermWithGS(),
 			isAtomic: true as const,
@@ -74,9 +74,9 @@ async function getTws() {
 				predefined_groupset_idx: 0,
 				isAtomic: true as const
 			}
-		}),
-		Object.freeze(await TwRouter.fill({ id: 'agedx' }, { vocabApi })),
-		Object.freeze(await TwRouter.fill({ id: 'agedx', q: { mode: 'continuous' } }, { vocabApi }))
+		},
+		await TwRouter.fill({ id: 'agedx' }, { vocabApi }),
+		await TwRouter.fill({ id: 'agedx', q: { mode: 'continuous' } }, { vocabApi })
 	]
 	while (twlst.length < softTwsLimit) {
 		twlst.push(...twlst)

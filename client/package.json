@@ -24,8 +24,7 @@
     "#test/*": "./test/*",
     "#tw": "./tw/index.ts",
     "#tw/*": "./tw/*.ts",
-    "#types": "./shared/types/index.ts",
-    "#updated-types": "./shared/types/terms/updated-types.ts"
+    "#types": "@sjcrh/proteinpaint-types"
   },
   "scripts": {
     "dev": "./dev.sh",
