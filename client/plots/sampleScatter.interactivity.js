@@ -454,7 +454,7 @@ export function setInteractivity(self) {
 				.attr('type', 'color')
 				.attr('value', color)
 				.on('change', () => {
-					self.changeColor(key, input.node().value)
+					self.changeColor(category.key, input.node().value)
 					menu.hide()
 				})
 		}
@@ -467,7 +467,7 @@ export function setInteractivity(self) {
 				.on('click', () => {
 					div.selectAll('*').remove()
 					const callback = index => {
-						self.changeShape(key, index)
+						self.changeShape(category.key, index)
 						menu.hide()
 					}
 					shapeSelector(div, callback)
@@ -501,12 +501,14 @@ export function setInteractivity(self) {
 
 	self.changeColor = async function (key, color) {
 		const tw = self.config.colorTW
+
 		if (!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key])
 			tw.term.values[key].color = color
 		else {
-			if (!tw.term.values) tw.term.values = {}
-			tw.term.values[key] = { key: key, label: key, color }
+			if (!tw.term.values) tw.term.values = { [key]: {} }
+			tw.term.values[key].color = color
 		}
+
 		await self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -517,7 +519,7 @@ export function setInteractivity(self) {
 	self.changeShape = async function (key, shape) {
 		const tw = self.config.shapeTW
 		if (!tw.term.values) tw.term.values = {}
-		tw.term.values[key] = { key: key, label: key, shape }
+		tw.term.values[key].shape = shape
 		await self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,

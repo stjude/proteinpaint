@@ -165,10 +165,11 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 					const color = q.colorColumn.colorMap?.[category] || k2c(category)
 					colorMap[category] = {
 						sampleCount: refSamples.filter(s => s.category == category).length,
-						color
+						color,
+						key: category
 					}
 				}
-				const shapeMap = { Ref: { shape: 0, sampleCount: refSamples.length } }
+				const shapeMap = { Ref: { shape: 0, sampleCount: refSamples.length, key: 'Ref' } }
 				res.send({
 					Default: { samples: refSamples, colorLegend: Object.entries(colorMap), shapeLegend: Object.entries(shapeMap) }
 				})
@@ -276,11 +277,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 			for (const [category, value] of colorEntries) {
 				let tvalue
-				if (q.colorTW.term.values?.[category]) {
-					tvalue = q.colorTW.term.values?.[category]
-				} else {
-					for (const field in q.colorTW.term.values)
-						if (q.colorTW.term.values?.[field].label == category) tvalue = q.colorTW.term.values?.[field]
+				if (q.colorTW.term.values?.[value.key]) {
+					tvalue = q.colorTW.term.values?.[value.key]
 				}
 
 				if (tvalue && 'color' in tvalue) {
@@ -299,24 +297,24 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		let i = 0
 		for (const [category, value] of Object.entries(result.shapeMap)) {
 			if ('shape' in value) continue
-			if (q.shapeTW.term.values?.[category]?.shape) value.shape = q.shapeTW.term.values?.[category].shape
+			if (q.shapeTW.term.values?.[value.key]?.shape) value.shape = q.shapeTW.term.values?.[value.key].shape
 			else value.shape = i
-			console.log(category, value.shape)
 			i++
 		}
 
 		result.colorLegend = q.colorTW
 			? order(result.colorMap, q.colorTW, data.refs)
-			: [['Default', { sampleCount: cohortSamples.length, color: 'blue' }]]
+			: [['Default', { sampleCount: cohortSamples.length, color: 'blue', key: 'Default' }]]
 		result.colorLegend.push([
 			'Ref',
 			{
 				sampleCount: refSamples.length,
-				color: q.colorTW?.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : refColor
+				color: q.colorTW?.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : refColor,
+				key: 'Ref'
 			}
 		])
 		result.shapeLegend = order(result.shapeMap, q.shapeTW, data?.refs)
-		result.shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
+		result.shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0, key: 'Ref' }])
 	}
 	return results
 }
@@ -340,7 +338,7 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 		} else sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.$id]?.key in tw.q.hiddenValues : false
 		if (value) {
 			sample[category] = value.toString()
-			if (categoryMap[value] == undefined) categoryMap[value] = { sampleCount: 1 }
+			if (categoryMap[value] == undefined) categoryMap[value] = { sampleCount: 1, key: dbSample?.[tw.$id]?.key }
 			else categoryMap[value].sampleCount++
 		}
 	}
@@ -358,7 +356,7 @@ function assignGeneVariantValue(dbSample, sample, tw, categoryMap, category) {
 
 			let mapValue
 			if (categoryMap[value] == undefined) {
-				mapValue = { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation }
+				mapValue = { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation, key: value }
 				categoryMap[value] = mapValue
 			} else {
 				mapValue = categoryMap[value]
@@ -399,17 +397,14 @@ function getCategory(mutation) {
 }
 
 function order(map, tw, refs) {
+	const hasOrder = tw?.term?.values
+		? Object.keys(tw.term.values).some(key => tw.term.values[key].order != undefined)
+		: false
 	let entries = []
 	if (!tw || map.size == 0) return entries
-	if (tw.term.type == 'geneVariant' && tw.q.type == 'values') {
-		entries = Object.entries(map)
-		entries.sort((a, b) => {
-			if (a[0] < b[0]) return -1
-			if (a[0] > b[0]) return 1
-			return 0
-		})
-	} else if (!refs?.byTermId[tw.term.id]?.bins) {
-		entries = Object.entries(map)
+	entries = Object.entries(map)
+
+	if (hasOrder) {
 		entries.sort((a, b) => {
 			let v1, v2
 			for (const key in tw.term.values) {
@@ -419,21 +414,23 @@ function order(map, tw, refs) {
 				if (value.label && b[0] == value.label) v2 = value
 				else if (key == b[0]) v2 = value
 			}
-
-			if (v1 && 'order' in v1) {
-				if (v1?.order < v2?.order) return -1
-				return 1
-			} else {
-				if (a[1].sampleCount > b[1].sampleCount) return -1
-				else return 1
-			}
+			if (v1?.order < v2?.order) return -1
+			else if (v1?.order > v2?.order) return 1
+			else if (v1 > v2) return 1
+			else if (v1 < v2) return -1
+			return 0
 		})
-	} else {
+	} else if (refs?.byTermId[tw.term.id]?.bins) {
 		const bins = refs.byTermId[tw.term.id].bins
 		for (const bin of bins) if (map[bin.name]) entries.push([bin.name, map[bin.name]])
 		//If some category is not defined in the bins, should be added
 		for (const [category, value] of Object.entries(map))
 			if (!entries.some(e => e[0] === category)) entries.push([category, value])
+	} else {
+		entries.sort((a, b) => {
+			if (a[1].sampleCount > b[1].sampleCount) return -1
+			else return 1
+		})
 	}
 	return entries
 }
