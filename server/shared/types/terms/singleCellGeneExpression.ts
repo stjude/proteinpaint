@@ -1,5 +1,4 @@
 import { TermWrapper } from './tw.ts'
-import { BaseQ } from './term.ts'
 import { GeneExpressionQ } from './geneExpression'
 import { TermSettingInstance } from '../termsetting.ts'
 import { NumericTerm } from './numeric.ts'
