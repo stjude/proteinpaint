@@ -152,14 +152,14 @@ export function skewer_make(tk, block) {
 				// full filled
 				discdot
 					.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
-					.attr('fill', d => (tk.shapes && !shapes[d.shape].isFilled ? 'white' : tk.color4disc(d.mlst[0])))
-					.attr('stroke', d => (tk.shapes && !shapes[d.shape].isFilled ? tk.color4disc(d.mlst[0]) : 'white'))
+					.attr('fill', d => (!shapes[d.shape].isFilled ? 'white' : tk.color4disc(d.mlst[0])))
+					.attr('stroke', d => (!shapes[d.shape].isFilled ? tk.color4disc(d.mlst[0]) : 'white'))
 					.attr('r', d => d.radius - 0.5)
 				// masking half
 				d3select(this)
 					.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
 					.append('path')
-					.attr('fill', d => (tk.shapes && !shapes[d.shape].isFilled ? 'black' : 'white'))
+					.attr('fill', d => (!shapes[d.shape].isFilled ? tk.color4disc(d.mlst[0]) : 'white'))
 					.attr('stroke', 'none')
 					.attr('d', d =>
 						d3arc()({
@@ -197,7 +197,7 @@ export function skewer_make(tk, block) {
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.attr('stroke-width', 0.8)
 		.attr('font-weight', 'bold')
-		.attr('fill', d => (tk.shapes && !shapes[d.shape].isFilled ? 'black' : 'white'))
+		.attr('fill', 'white')
 	// right-side label
 	const textlab = discg
 		.append('text')

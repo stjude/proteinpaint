@@ -1,6 +1,7 @@
 import { Elem } from '../types/d3'
 import { shapes } from '#dom'
 import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
+import { select as d3select } from 'd3-selection'
 
 export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 	shapeG
@@ -9,8 +10,42 @@ export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 		.attr('d', d => shapes[d.shape].calculatePath(getPathDimensions(d.shape, d.radius, skewer.pointup)))
 		.attr('fill', d => (!shapes[d.shape].isFilled ? 'none' : d.mlst?.[0] ? tk.color4disc(d.mlst[0]) : tk.color4disc(d)))
 		.attr('stroke', d =>
-			shapes[d.shape].isFilled ? 'white' : d.mlst?.[0] ? tk.color4disc(d.mlst[0]) : tk.color4disc(d)
+			(d.dt == dtfusionrna || d.dt == dtsv) && d?.mlst[0]
+				? tk.color4disc(d.mlst[0])
+				: shapes[d.shape].isFilled
+				? 'white'
+				: d.mlst?.[0]
+				? tk.color4disc(d.mlst[0])
+				: tk.color4disc(d)
 		)
+
+	const defs = shapeG
+		.append('defs')
+		.selectAll('clipPath')
+		.data(shapeG.data())
+		.enter()
+		.append('clipPath')
+		.attr('id', d => `clip-path-${d?.mlst ? `${d.mlst[0].mname}-${d.mlst[0].__x}` : `${d.mname}-${d.__x}`}`)
+
+	defs.each(function (d) {
+		const { width, height } = getPathDimensions(d.shape, d.radius, skewer.pointup)
+		if (!width || !height) return
+		d3select(this)
+			.append('rect')
+			.attr('x', d.useNterm != shapes[d.shape].isFilled ? -(width / 2) : 0)
+			.attr('y', -(height / 2))
+			.attr('width', d.useNterm != shapes[d.shape].isFilled ? width / 2 : width)
+			.attr('height', height)
+	})
+
+	shapeG
+		.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
+		.append('g')
+		.attr('clip-path', d => `url(#clip-path-${d?.mlst ? `${d.mlst[0].mname}-${d.mlst[0].__x}` : `${d.mname}-${d.__x}`}`)
+		.append('path')
+		.attr('d', d => shapes[d.shape].calculatePath(getPathDimensions(d.shape, d.radius, skewer.pointup)))
+		.attr('fill', d => (shapes[d.shape].isFilled ? 'white' : tk.color4disc(d.mlst[0])))
+		.attr('stroke', 'none')
 }
 
 export function renderShapeKick(skewer: any, elem: any) {
