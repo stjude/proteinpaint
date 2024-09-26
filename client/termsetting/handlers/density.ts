@@ -1,9 +1,9 @@
 import { select, pointer } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
-import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
+import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 import { BaseType } from 'd3-selection'
-import { NumericBin } from '../../shared/types/terms/numeric.ts'
-import { violinRenderer } from '../../dom/violinRenderer.js'
+import { NumericBin } from '#types'
+import { violinRenderer } from '#dom'
 /*
 ********************** EXPORTED
 	setDensityPlot(self)

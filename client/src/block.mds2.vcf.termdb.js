@@ -1,4 +1,4 @@
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as client from './client'
 import { scaleOrdinal, scaleLinear } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
@@ -179,10 +179,7 @@ function make_phewas_ui(obj, div, tk) {
 				genome: obj.genome.name,
 				dslabel: obj.mds.label
 			},
-			holder: obj.dom.row_filter
-				.append('div')
-				.style('display', 'inline-block')
-				.style('margin', '0px 10px'),
+			holder: obj.dom.row_filter.append('div').style('display', 'inline-block').style('margin', '0px 10px'),
 			termdbConfig: obj.mds.termdb,
 			callback: async f => {
 				obj.termfilter.filter = f
@@ -210,10 +207,7 @@ function make_phewas_ui(obj, div, tk) {
 					return
 				}
 				obj.svg.ymax = v
-				input
-					.property('value', '')
-					.property('disabled', true)
-					.attr('placeholder', 'Loading...')
+				input.property('value', '').property('disabled', true).attr('placeholder', 'Loading...')
 				const lst = get_args(obj)
 				lst.push('update=1')
 				lst.push('file=' + obj.tmpfile)
@@ -256,7 +250,7 @@ function phewas_svg(data, obj) {
 				.text(g.name)
 				.attr('dominant-baseline', 'central')
 				.attr('transform', 'rotate(90)')
-				.each(function() {
+				.each(function () {
 					maxgrouplabheight = Math.max(maxgrouplabheight, this.getBBox().width)
 				})
 				.attr('class', 'sja_svgtext2')
@@ -315,10 +309,7 @@ function phewas_svg(data, obj) {
 			}
 			const table = div.append('table').style('margin', '10px 0px')
 			{
-				const tr = table
-					.append('tr')
-					.style('font-size', '.7em')
-					.style('opacity', 0.5)
+				const tr = table.append('tr').style('font-size', '.7em').style('opacity', 0.5)
 				tr.append('td')
 				tr.append('td').text('REF/REF')
 				tr.append('td').text('REF/ALT')

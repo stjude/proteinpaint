@@ -1,8 +1,8 @@
-import initBinConfig from '#shared/termdb.initbinconfig'
+import initBinConfig from '#shared/termdb.initbinconfig.js'
 import { TermdbVocab } from './TermdbVocab'
 import { FrontendVocab } from './FrontendVocab'
-import { isNumeric } from '#shared/helpers'
-import { TermTypes } from '#shared/terms'
+import { isNumeric } from '#shared/helpers.js'
+import { TermTypes } from '#shared/terms.js'
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/

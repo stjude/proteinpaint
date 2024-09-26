@@ -5,7 +5,7 @@ import { makelabel, positionLeftlabelg } from './leftlabel'
 import { to_textfile, Tabs, make_radios, shapes } from '#dom'
 import { rangequery_rglst } from './tk'
 import { samples2columnsRows, block2source } from './sampletable'
-import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtfusionrna } from '#shared/common'
+import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtfusionrna } from '#shared/common.js'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track

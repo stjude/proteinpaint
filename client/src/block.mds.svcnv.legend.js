@@ -2,7 +2,7 @@ import { scaleOrdinal } from 'd3-scale'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import * as client from './client'
 import { legend_newrow } from './block.legend'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import { loadTk } from './block.mds.svcnv'
 import { rgb as d3rgb } from 'd3-color'
 
@@ -63,10 +63,7 @@ export function makeTk_legend(block, tk) {
 	if (tk.locusAttribute) create_vcfAttribute(tk.locusAttribute, tk, block)
 
 	tk.legend_more_row = table.append('tr')
-	tk.legend_more_label = tk.legend_more_row
-		.append('td')
-		.style('text-align', 'right')
-		.append('span')
+	tk.legend_more_label = tk.legend_more_row.append('td').style('text-align', 'right').append('span')
 	// blank cell for now since hidden legend items
 	// are displayed in pop-down menu, not in this row
 	tk.legend_more_row.append('td')
@@ -109,11 +106,7 @@ function create_mclass(tk) {
 
 	tk.legend_mclass.row = tk.legend_table.append('tr')
 
-	tk.legend_mclass.row
-		.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.5)
-		.text('Mutation')
+	tk.legend_mclass.row.append('td').style('text-align', 'right').style('opacity', 0.5).text('Mutation')
 	tk.legend_mclass.holder = tk.legend_mclass.row.append('td')
 	tk.legend_hideable.push(tk.legend_mclass)
 }
@@ -124,10 +117,7 @@ create static legend
 to illusrate colors about snp usage (if has valid pvalue or not)
 */
 	const tr = tk.legend_table.append('tr')
-	tr.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.5)
-		.text('DNA marker usage')
+	tr.append('td').style('text-align', 'right').style('opacity', 0.5).text('DNA marker usage')
 	const td = tr.append('td')
 	{
 		const row = td.append('div')
@@ -136,10 +126,7 @@ to illusrate colors about snp usage (if has valid pvalue or not)
 			.html('&times;&nbsp;')
 			.style('color', tk.checkrnabam.clientcolor_snpinuse)
 			.style('font-size', '1.5em')
-		row
-			.append('span')
-			.text('Heterozygous SNP with a p-value from binomial test')
-			.style('opacity', 0.5)
+		row.append('span').text('Heterozygous SNP with a p-value from binomial test').style('opacity', 0.5)
 	}
 	{
 		const row = td.append('div')
@@ -148,10 +135,7 @@ to illusrate colors about snp usage (if has valid pvalue or not)
 			.html('&times;&nbsp;')
 			.style('color', tk.checkrnabam.clientcolor_markernotinuse)
 			.style('font-size', '1.5em')
-		row
-			.append('span')
-			.text('Marker not in use and without binomial test')
-			.style('opacity', 0.5)
+		row.append('span').text('Marker not in use and without binomial test').style('opacity', 0.5)
 	}
 
 	tk.checkrnabam.legend = {
@@ -177,11 +161,7 @@ function create_cnv(tk, block) {
 	}
 
 	tk.cnvcolor.cnvlegend.row = tk.legend_table.append('tr')
-	tk.cnvcolor.cnvlegend.row
-		.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.5)
-		.text('CNV log2(ratio)')
+	tk.cnvcolor.cnvlegend.row.append('td').style('text-align', 'right').style('opacity', 0.5).text('CNV log2(ratio)')
 	tk.legend_hideable.push(tk.cnvcolor.cnvlegend)
 
 	const btn = tk.cnvcolor.cnvlegend.row
@@ -206,10 +186,7 @@ function create_cnv(tk, block) {
 				lab.append('span').html('&nbsp;Show copy number gain')
 			}
 			{
-				const lab = tk.tkconfigtip.d
-					.append('div')
-					.style('margin-top', '10px')
-					.append('label')
+				const lab = tk.tkconfigtip.d.append('div').style('margin-top', '10px').append('label')
 				lab
 					.append('input')
 					.attr('type', 'checkbox')
@@ -246,22 +223,13 @@ function create_cnv(tk, block) {
 	{
 		// loss
 		const grad = defs.append('linearGradient').attr('id', loss_id)
-		tk.cnvcolor.cnvlegend.loss_stop = grad
-			.append('stop')
-			.attr('offset', '0%')
-			.attr('stop-color', tk.cnvcolor.loss.str)
-		grad
-			.append('stop')
-			.attr('offset', '100%')
-			.attr('stop-color', 'white')
+		tk.cnvcolor.cnvlegend.loss_stop = grad.append('stop').attr('offset', '0%').attr('stop-color', tk.cnvcolor.loss.str)
+		grad.append('stop').attr('offset', '100%').attr('stop-color', 'white')
 	}
 	{
 		// gain
 		const grad = defs.append('linearGradient').attr('id', gain_id)
-		grad
-			.append('stop')
-			.attr('offset', '0%')
-			.attr('stop-color', 'white')
+		grad.append('stop').attr('offset', '0%').attr('stop-color', 'white')
 		tk.cnvcolor.cnvlegend.gain_stop = grad
 			.append('stop')
 			.attr('offset', '100%')
@@ -321,11 +289,7 @@ function create_loh(tk) {
 	}
 
 	tk.cnvcolor.lohlegend.row = tk.legend_table.append('tr')
-	tk.cnvcolor.lohlegend.row
-		.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.5)
-		.text('LOH seg.mean')
+	tk.cnvcolor.lohlegend.row.append('td').style('text-align', 'right').style('opacity', 0.5).text('LOH seg.mean')
 	tk.legend_hideable.push(tk.cnvcolor.lohlegend)
 
 	const td = tk.cnvcolor.lohlegend.row.append('td')
@@ -336,11 +300,7 @@ function create_loh(tk) {
 		.attr('height', fontsize + tk.cnvcolor.lohlegend.axistickh + barh)
 
 	tk.cnvcolor.lohlegend.svg = svg
-	tk.cnvcolor.lohlegend.nodatadiv = td
-		.append('div')
-		.text('no data')
-		.style('opacity', 0.3)
-		.style('padding-left', '10px')
+	tk.cnvcolor.lohlegend.nodatadiv = td.append('div').text('no data').style('opacity', 0.3).style('padding-left', '10px')
 
 	tk.cnvcolor.lohlegend.axisg = svg
 		.append('g')
@@ -351,14 +311,8 @@ function create_loh(tk) {
 	const defs = svg.append('defs')
 	{
 		const grad = defs.append('linearGradient').attr('id', loh_id)
-		grad
-			.append('stop')
-			.attr('offset', '0%')
-			.attr('stop-color', 'white')
-		tk.cnvcolor.lohlegend.loh_stop = grad
-			.append('stop')
-			.attr('offset', '100%')
-			.attr('stop-color', tk.cnvcolor.loh.str)
+		grad.append('stop').attr('offset', '0%').attr('stop-color', 'white')
+		tk.cnvcolor.lohlegend.loh_stop = grad.append('stop').attr('offset', '100%').attr('stop-color', tk.cnvcolor.loh.str)
 	}
 
 	svg
@@ -379,11 +333,7 @@ function create_svchrcolor(tk) {
 		colorfunc: scaleOrdinal(schemeCategory20),
 		hidden: true
 	}
-	row
-		.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.5)
-		.text('SV chromosome')
+	row.append('td').style('text-align', 'right').style('opacity', 0.5).text('SV chromosome')
 	tk.legend_svchrcolor.holder = row.append('td')
 	tk.legend_hideable.push(tk.legend_svchrcolor)
 }
@@ -419,11 +369,7 @@ function create_sampleAttribute(tk) {
 		*/
 
 		attr.legendrow = tk.legend_table.append('tr')
-		attr.legendcell = attr.legendrow
-			.append('td')
-			.style('text-align', 'right')
-			.style('opacity', 0.5)
-			.text(attr.label)
+		attr.legendcell = attr.legendrow.append('td').style('text-align', 'right').style('opacity', 0.5).text(attr.label)
 
 		attr.legendholder = attr.legendrow.append('td')
 	}
@@ -448,16 +394,10 @@ function create_mutationsignature_single(tk) {
 	for (const k in tk.mds.mutation_signature.sets) {
 		const tr = tk.legend_table.append('tr').style('display', 'none')
 
-		tr.append('td')
-			.text(tk.mds.mutation_signature.sets[k].name)
-			.style('text-align', 'right')
-			.style('opacity', 0.5)
+		tr.append('td').text(tk.mds.mutation_signature.sets[k].name).style('text-align', 'right').style('opacity', 0.5)
 
 		const td = tr.append('td')
-		const table = td
-			.append('table')
-			.style('border-spacing', '0px')
-			.style('margin', '10px')
+		const table = td.append('table').style('border-spacing', '0px').style('margin', '10px')
 
 		tk.mutation_signature_legend.sets[k] = {
 			tr: tr,
@@ -494,11 +434,7 @@ function create_mutationAttribute(tk) {
 		*/
 
 		attr.legendrow = tk.legend_table.append('tr')
-		attr.legendcell = attr.legendrow
-			.append('td')
-			.style('text-align', 'right')
-			.style('opacity', 0.5)
-			.text(attr.label)
+		attr.legendcell = attr.legendrow.append('td').style('text-align', 'right').style('opacity', 0.5).text(attr.label)
 
 		attr.legendholder = attr.legendrow.append('td')
 	}
@@ -519,11 +455,7 @@ function create_vcfAttribute(attrSet, tk, block) {
 		}
 
 		attr.legendrow = tk.legend_table.append('tr')
-		attr.legendcell = attr.legendrow
-			.append('td')
-			.style('text-align', 'right')
-			.style('opacity', 0.5)
-			.text(attr.label)
+		attr.legendcell = attr.legendrow.append('td').style('text-align', 'right').style('opacity', 0.5).text(attr.label)
 
 		attr.legendholder = attr.legendrow.append('td')
 
@@ -551,20 +483,11 @@ function create_vcfAttribute(attrSet, tk, block) {
 					loadTk(tk, block)
 				})
 
-			const lowerthan = select
-				.append('option')
-				.attr('value', '<')
-				.property('text', '≤')
+			const lowerthan = select.append('option').attr('value', '<').property('text', '≤')
 
-			const higherthan = select
-				.append('option')
-				.attr('value', '>')
-				.property('text', '≥')
+			const higherthan = select.append('option').attr('value', '>').property('text', '≥')
 
-			const disable = select
-				.append('option')
-				.attr('value', 'x')
-				.property('text', 'X')
+			const disable = select.append('option').attr('value', 'x').property('text', 'X')
 
 			if (attr.disable) {
 				disable.property('selected', 1)
@@ -599,11 +522,7 @@ function create_vcfAttribute(attrSet, tk, block) {
 			*/
 
 			attr.legendrow = tk.legend_table.append('tr')
-			attr.legendcell = attr.legendrow
-				.append('td')
-				.style('text-align', 'right')
-				.style('opacity', 0.5)
-				.text(attr.label)
+			attr.legendcell = attr.legendrow.append('td').style('text-align', 'right').style('opacity', 0.5).text(attr.label)
 
 			attr.legendholder = attr.legendrow.append('td')
 		}
@@ -763,12 +682,7 @@ function may_legend_mclass(tk, block) {
 						})
 				}
 
-				tk.tip2.d
-					.append('div')
-					.style('padding', '10px')
-					.style('font-size', '.8em')
-					.style('width', '150px')
-					.text(desc)
+				tk.tip2.d.append('div').style('padding', '10px').style('font-size', '.8em').style('width', '150px').text(desc)
 
 				tk.tip2.showunder(cell.node())
 			})
@@ -950,10 +864,7 @@ function may_legend_attribute(tk, block) {
 				attr.hidden = 1
 				tk.legend_more_row.style('display', 'table-row')
 				client.flyindi(attr.legendcell, tk.legend_more_label)
-				attr.legendrow
-					.transition()
-					.delay(500)
-					.style('display', 'none')
+				attr.legendrow.transition().delay(500).style('display', 'none')
 				setTimeout(() => {
 					may_legend_attribute(tk, block)
 				}, 500)
@@ -1115,10 +1026,7 @@ function may_process_hideable_rows(tk, block, hiddenAttributes) {
 				hideable.hidden = 1
 				tk.legend_more_row.style('display', 'table-row')
 				client.flyindi(hideable.row.select('td'), tk.legend_more_label)
-				hideable.row
-					.transition()
-					.delay(500)
-					.style('display', 'none')
+				hideable.row.transition().delay(500).style('display', 'none')
 				setTimeout(() => {
 					may_legend_attribute(tk, block)
 				}, 500)

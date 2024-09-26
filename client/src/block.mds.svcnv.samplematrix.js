@@ -1,4 +1,4 @@
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as client from './client'
 import { string2pos, invalidcoord } from './coord'
 import { getsjcharts } from './getsjcharts'

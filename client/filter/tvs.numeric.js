@@ -2,7 +2,7 @@ import { select } from 'd3-selection'
 import { scaleLinear } from 'd3'
 import { addBrushes, addNewBrush } from './tvs.density'
 import { NumericRangeInput } from '#dom/numericRangeInput'
-import { convertUnits } from '#shared/helpers'
+import { convertUnits } from '#shared/helpers.js'
 import { violinRenderer } from '../dom/violinRenderer'
 import { niceNumLabels } from '../dom/niceNumLabels.ts'
 

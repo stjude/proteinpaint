@@ -1,7 +1,5 @@
-import { NumericQ } from '../../shared/types/terms/numeric'
-import { VocabApi } from '../../shared/types/index'
-import { SingleCellGeneExpressionTW } from '../../shared/types/terms/singleCellGeneExpression.js'
-import { copyMerge } from '../../rx'
+import { NumericQ, SingleCellGeneExpressionTW, VocabApi } from '#types'
+import { copyMerge } from '#rx'
 
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 

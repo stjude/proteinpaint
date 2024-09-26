@@ -1,7 +1,7 @@
 import { select } from 'd3-selection'
 import { copyMerge } from '#rx'
 import { Menu } from '#dom/menu'
-import { mclass } from '#shared/common'
+import { mclass } from '#shared/common.js'
 
 const alphabet = `ABCDEFGHIJKLMNOPQRSTUVWXYZ`.split('')
 

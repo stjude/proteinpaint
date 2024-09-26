@@ -1,7 +1,7 @@
 import { appInit } from '#plots/plot.app.js'
 import { select } from 'd3-selection'
 import { copyMerge } from '#rx'
-import { TermTypes } from '../shared/terms'
+import { TermTypes } from '#shared/terms.js'
 import { fillTermWrapper } from '#termsetting'
 import { vocabInit } from '#termdb/vocabulary'
 

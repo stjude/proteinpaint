@@ -1,11 +1,9 @@
 import { first_genetrack_tolist } from '#common/1stGenetk'
-import { InputSearch } from '../../dom/search.ts'
+import { InputSearch, Menu, newSandboxDiv } from '#dom'
 import { searchItems } from './omniSearch.js'
-import { newSandboxDiv } from '../../dom/sandbox.ts'
 import { appDrawerInit } from '../../appdrawer/app.js'
 import { rgb as d3rgb } from 'd3-color'
-import { defaultcolor } from '../../shared/common.js'
-import { Menu } from '../../dom/menu.js'
+import { defaultcolor } from '#shared/common.js'
 import { dofetch3 } from '#common/dofetch'
 import { ClientCopyGenome } from 'types/global.ts'
 

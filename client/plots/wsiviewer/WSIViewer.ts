@@ -12,9 +12,9 @@ import TileSource from 'ol/source/Tile'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
-import { GetWSImagesRequest, GetWSImagesResponse } from '../../shared/types/routes/wsimages.ts'
+import { GetWSImagesRequest, GetWSImagesResponse } from '#routes/wsimages.ts'
 import wsiViewerImageFiles from './wsimagesloaded.ts'
-import { WSImage } from '../../../server/shared/types/routes/samplewsimages.ts'
+import { WSImage } from '#routes/samplewsimages.ts'
 import { table2col } from '#dom/table2col'
 
 export default class WSIViewer {

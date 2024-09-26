@@ -1,12 +1,12 @@
 import { termsettingInit } from '#termsetting'
 import { getNormalRoot } from '#filter'
-import { get_bin_label } from '#shared/termdb.bins'
+import { get_bin_label } from '#shared/termdb.bins.js'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '../termsetting/handlers/snplst.sampleSum.ts'
 import { get_defaultQ4fillTW } from './regression'
-import { isDictionaryType } from '#shared/terms'
+import { isDictionaryType } from '#shared/terms.js'
 
 /*
 class instance is an input

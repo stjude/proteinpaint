@@ -3,7 +3,7 @@ import { schemeCategory10 } from 'd3-scale-chromatic'
 import { select as d3select } from 'd3-selection'
 import { transition } from 'd3-transition'
 import * as client from './client'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as coord from './coord'
 import { legend_newrow } from './block.legend'
 //import {tkhandleclick} from './block.tk.menu'
@@ -713,10 +713,7 @@ function label_samplecount_fillpane(tk, block, tip) {
 	for (const tmp of samplesortlst) {
 		const sampledata = tmp[1]
 		const tr = table.append('tr')
-		const td1 = tr
-			.append('td')
-			.style('color', '#ccc')
-			.style('font-size', '.7em')
+		const td1 = tr.append('td').style('color', '#ccc').style('font-size', '.7em')
 		// whether the track of this sample has been shown
 		for (const t of block.tklst) {
 			if (t.tkid == sampledata.tkobj.tkid) {
@@ -758,10 +755,7 @@ function label_samplecount_fillpane(tk, block, tip) {
 					.style('font-size', '.8em')
 			}
 		} else {
-			td3
-				.text('no data')
-				.style('color', '#aaa')
-				.style('font-size', '.7em')
+			td3.text('no data').style('color', '#aaa').style('font-size', '.7em')
 		}
 	}
 	tip.showunder(tk.label_samplecount.node())
@@ -857,10 +851,7 @@ function configpanel(tk, block) {
 					junctionload(tk, block)
 				}
 			})
-		const note = row
-			.append('div')
-			.style('font-size', '.7em')
-			.style('color', '#858585')
+		const note = row.append('div').style('font-size', '.7em').style('color', '#858585')
 		if (tk.totalsamplecount > 1) {
 			// multi sample
 			note.text('For a junction, samples with read count lower than cutoff will not be shown.')
@@ -961,9 +952,6 @@ function setcohortlegend_usecohortlevel(tk, block) {
 			.style('background-color', color)
 			.style('margin-right', '10px')
 			.html('&nbsp;&nbsp;')
-		row
-			.append('div')
-			.style('display', 'inline-block')
-			.text(label)
+		row.append('div').style('display', 'inline-block').text(label)
 	}
 }

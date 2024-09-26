@@ -1,7 +1,5 @@
-import { NumericQ } from '../../shared/types/terms/numeric'
-import { VocabApi } from '../../shared/types/index'
-import { MetaboliteIntensityTW } from '../../shared/types/terms/metaboliteIntensity'
-import { copyMerge } from '../../rx'
+import { NumericQ, VocabApi, MetaboliteIntensityTW } from '#types'
+import { copyMerge } from '#rx'
 
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 

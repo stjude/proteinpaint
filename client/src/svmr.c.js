@@ -1,7 +1,7 @@
 import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import { genomic2gm } from './coord'
-import { bplen as bplength } from '#shared/common'
+import { bplen as bplength } from '#shared/common.js'
 import * as unload from './svmr.unload'
 import { scaleLinear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
@@ -32,23 +32,13 @@ export default class {
 
 		if (!holder) {
 			const pane = client.newpane({ x: 100, y: 100, toshrink: true })
-			pane.header
-				.append('span')
-				.style('color', '#858585')
-				.style('font-size', '.7em')
-				.html('Fusion Editor&nbsp;')
+			pane.header.append('span').style('color', '#858585').style('font-size', '.7em').html('Fusion Editor&nbsp;')
 			pane.header.append('span').text(filename)
 			holder = pane.body
 		}
 		this.holder = holder
-		this.errdiv = holder
-			.append('div')
-			.style('width', '500px')
-			.style('margin', '10px')
-		const butrow = holder
-			.append('div')
-			.style('margin', '20px')
-			.style('padding', '0px')
+		this.errdiv = holder.append('div').style('width', '500px').style('margin', '10px')
+		const butrow = holder.append('div').style('margin', '20px').style('padding', '0px')
 		this.buttgene = butrow
 			.append('button')
 			.text('Loading genes')
@@ -141,14 +131,8 @@ export default class {
 						}
 					}
 				}
-				const d0 = tip
-					.clear()
-					.showunder(event.target)
-					.d.append('div')
-				const table = d0
-					.append('table')
-					.style('border-spacing', '10px')
-					.style('border-collapse', 'separate')
+				const d0 = tip.clear().showunder(event.target).d.append('div')
+				const table = d0.append('table').style('border-spacing', '10px').style('border-collapse', 'separate')
 				let tr = table.append('tr').style('color', '#858585')
 				tr.append('td')
 				tr.append('td').text('2-gene fusion')
@@ -156,27 +140,18 @@ export default class {
 				tr.append('td').text('ITD')
 				tr.append('td').text('Truncation')
 				tr = table.append('tr')
-				tr.append('td')
-					.text('Major')
-					.style('color', '#858585')
-					.style('text-align', 'right')
+				tr.append('td').text('Major').style('color', '#858585').style('text-align', 'right')
 				tr.append('td').text(single_hq)
 				tr.append('td').text(multi_hq)
 				tr.append('td').text(itd_hq)
 				tr.append('td').text(trunc_hq)
 				tr = table.append('tr')
-				tr.append('td')
-					.text('not Major')
-					.style('color', '#858585')
-					.style('text-align', 'right')
+				tr.append('td').text('not Major').style('color', '#858585').style('text-align', 'right')
 				tr.append('td').text(single_nhq)
 				tr.append('td').text(multi_nhq)
 				tr.append('td').text(itd_nhq)
 				tr.append('td').text(trunc_nhq)
-				let dd = d0
-					.append('div')
-					.style('margin', '10px')
-					.text('Export fusions labeled as "Major"')
+				let dd = d0.append('div').style('margin', '10px').text('Export fusions labeled as "Major"')
 				dd.append('button')
 					.style('margin', '10px')
 					.text('Tabular format')
@@ -189,10 +164,7 @@ export default class {
 					.style('margin', '10px')
 					.text('View in ProteinPaint')
 					.on('click', () => unload.svmr_2pp(this, true))
-				dd = d0
-					.append('div')
-					.style('margin', '10px')
-					.text('Export all fusions')
+				dd = d0.append('div').style('margin', '10px').text('Export all fusions')
 				dd.append('button')
 					.style('margin', '10px')
 					.text('Tabular format')
@@ -237,18 +209,9 @@ export default class {
 		this.expression.presays = this.expression.prediv.append('span').style('padding-left', '20px')
 		this.expression.afterdiv = this.expression.div.append('div').style('display', 'none')
 		// gene table
-		const genediv = holder
-			.append('div')
-			.style('display', 'none')
-			.style('margin', '20px')
-		let d0 = genediv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('border', 'dashed 1px #bbb')
-		this.genefilter = d0
-			.append('div')
-			.style('background-color', '#ededed')
-			.style('padding', '10px 20px')
+		const genediv = holder.append('div').style('display', 'none').style('margin', '20px')
+		let d0 = genediv.append('div').style('display', 'inline-block').style('border', 'dashed 1px #bbb')
+		this.genefilter = d0.append('div').style('background-color', '#ededed').style('padding', '10px 20px')
 		let d01 = d0
 			.append('div')
 			.style('padding', '10px 20px')
@@ -262,18 +225,13 @@ export default class {
 			.text('Not included: read-through and intergenic events (including one or both sides).')
 		this.genetable = d01.append('table')
 		// cutoff
-		const cutoffdiv = holder
-			.append('div')
-			.style('display', 'none')
-			.style('margin', '20px')
+		const cutoffdiv = holder.append('div').style('display', 'none').style('margin', '20px')
 		d0 = cutoffdiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('padding', '20px')
 			.style('border', 'solid 1px #ededed')
-		d0.append('span')
-			.style('padding', '0px 10px')
-			.text('Alert if:')
+		d0.append('span').style('padding', '0px 10px').text('Alert if:')
 		d01 = d0.append('span').style('padding', '0px 10px')
 		d01.append('span').html('chimeric reads &le;&nbsp;')
 		d01
@@ -327,10 +285,7 @@ export default class {
 				this.cf_ratio = v
 			})
 		// legend
-		const legenddiv = holder
-			.append('div')
-			.style('display', 'none')
-			.style('margin', '20px')
+		const legenddiv = holder.append('div').style('display', 'none').style('margin', '20px')
 		var h = 16
 		legenddiv
 			.append('div')
@@ -1171,10 +1126,7 @@ for(const i of atlst) {
 	}
 	geneshow(lst) {
 		this.genetable.selectAll('*').remove()
-		const tr = this.genetable
-			.append('tr')
-			.style('background-color', '#ededed')
-			.style('font-size', '.8em')
+		const tr = this.genetable.append('tr').style('background-color', '#ededed').style('font-size', '.8em')
 		tr.append('td').text('gene A')
 		tr.append('td').text('gene B')
 		tr.append('td').text('# sample')
@@ -1201,14 +1153,8 @@ for(const i of atlst) {
 				if (a == 4) color2 = knownprod_c
 			}
 			const tr = this.genetable.append('tr').attr('class', 'sja_clb')
-			tr.append('td')
-				.text(evt.a)
-				.style('color', color1)
-				.style('font-weight', weight1)
-			tr.append('td')
-				.text(evt.b)
-				.style('color', color2)
-				.style('font-weight', weight2)
+			tr.append('td').text(evt.a).style('color', color1).style('font-weight', weight1)
+			tr.append('td').text(evt.b).style('color', color2).style('font-weight', weight2)
 			const td = tr.append('td').text(evt.samples.length)
 			tr.on('click', () => {
 				const p = tr.node().getBoundingClientRect()
@@ -1217,10 +1163,7 @@ for(const i of atlst) {
 				const table = pane2.body.append('table')
 				for (const sample of evt.samples) {
 					const tr = table.append('tr')
-					tr.append('td')
-						.style('vertical-align', 'top')
-						.style('padding-top', '5px')
-						.text(sample.name)
+					tr.append('td').style('vertical-align', 'top').style('padding-top', '5px').text(sample.name)
 					const td = tr.append('td')
 					for (const prod of sample.prodlst) {
 						const logo = this.eventlogo([prod], td)
@@ -1376,11 +1319,7 @@ for(const i of atlst) {
 		this.eggbar = []
 		this.ul.selectAll('*').remove()
 		for (const sample of this.samples) {
-			this.ul
-				.append('li')
-				.style('font-weight', 'bold')
-				.style('color', '#545454')
-				.text(sample.name)
+			this.ul.append('li').style('font-weight', 'bold').style('color', '#545454').text(sample.name)
 			sample.ul = this.ul.append('ul').style('margin-bottom', '10px')
 			this.showsample(sample)
 		}
@@ -1481,7 +1420,7 @@ for(const i of atlst) {
 					.text(labA)
 					.attr('font-size', fontsize)
 					.attr('font-family', 'Courier')
-					.each(function() {
+					.each(function () {
 						geneAw = Math.max(geneAw, this.getBBox().width)
 					})
 					.remove()
@@ -1490,7 +1429,7 @@ for(const i of atlst) {
 					.text(labB)
 					.attr('font-size', fontsize)
 					.attr('font-family', 'Courier')
-					.each(function() {
+					.each(function () {
 						geneBw = Math.max(geneBw, this.getBBox().width)
 					})
 					.remove()
@@ -1500,7 +1439,7 @@ for(const i of atlst) {
 					.text(prod.rating)
 					.attr('font-size', fontsize)
 					.attr('font-family', 'Courier')
-					.each(function() {
+					.each(function () {
 						evt.svg.ratingw = this.getBBox().width
 					})
 					.remove()
@@ -1516,7 +1455,7 @@ for(const i of atlst) {
 					.text(prod.featureA)
 					.attr('font-size', fontsizefeature)
 					.attr('font-family', client.font)
-					.each(function() {
+					.each(function () {
 						evt.svg.featurew = this.getBBox().width
 					})
 					.remove()
@@ -1525,7 +1464,7 @@ for(const i of atlst) {
 					.text(prod.featureB)
 					.attr('font-size', fontsizefeature)
 					.attr('font-family', client.font)
-					.each(function() {
+					.each(function () {
 						evt.svg.featurew = Math.max(evt.svg.featurew, this.getBBox().width)
 					})
 					.remove()
@@ -1534,7 +1473,7 @@ for(const i of atlst) {
 					.text(Math.floor(prod.score))
 					.attr('font-size', fontsize)
 					.attr('font-family', client.font)
-					.each(function() {
+					.each(function () {
 						evt.svg.scorew = this.getBBox().width
 					})
 					.remove()
@@ -1562,7 +1501,7 @@ for(const i of atlst) {
 					.text(evt.svg.recurtext)
 					.attr('font-size', fontsize - 4)
 					.attr('font-family', client.font)
-					.each(function() {
+					.each(function () {
 						evt.svg.recurw = this.getBBox().width
 					})
 					.remove()
@@ -1756,10 +1695,7 @@ for(const i of atlst) {
 									inputdom.focus()
 									const input = d3select(inputdom)
 									const butt = d3select(buttdom)
-									input
-										.attr('size', 10)
-										.style('margin', '0px 10px')
-										.property('value', idlst.join(','))
+									input.attr('size', 10).style('margin', '0px 10px').property('value', idlst.join(','))
 									butt.text('Apply').on('click', () => {
 										const lst0 = inputdom.value.trim().split(',')
 										const goodid = []
@@ -2172,10 +2108,7 @@ for(const i of atlst) {
 					.attr('height', rowh + 2)
 					.on('mouseover', () => {
 						logobg.attr('stroke-width', '2')
-						const d = tip
-							.clear()
-							.showunder(logobg.node())
-							.d.append('div')
+						const d = tip.clear().showunder(logobg.node()).d.append('div')
 						this.prodstat(prod, d)
 					})
 					.on('mouseout', () => {
@@ -2270,20 +2203,14 @@ for(const i of atlst) {
 								.style('margin', '10px')
 								.style('color', '#aaa')
 								.text('This fusion is recurrent in other samples:')
-							const table = dd
-								.append('table')
-								.style('border-spacing', '10px')
-								.style('border-collapse', 'separate')
+							const table = dd.append('table').style('border-spacing', '10px').style('border-collapse', 'separate')
 							for (const s of slst) {
 								if (s.name == sample.name) {
 									// self, no show
 									continue
 								}
 								const tr = table.append('tr')
-								tr.append('td')
-									.style('font-weight', 'bold')
-									.style('color', '#858585')
-									.text(s.name)
+								tr.append('td').style('font-weight', 'bold').style('color', '#858585').text(s.name)
 								this.eventlogo(s.events[evt.label], tr.append('td'))
 							}
 						})
@@ -2336,7 +2263,7 @@ for(const i of atlst) {
 						const pane3 = client.newpane({
 							x: p.left + p.width + s7 + rowh + s1 + chrBw + s3 + eventlogow + s6 + recurw + 5,
 							y: p.top - 100,
-							close: function() {
+							close: function () {
 								evt.inclick = false
 								pane3.pane.remove()
 							}
@@ -2406,11 +2333,7 @@ for(const i of atlst) {
 			ext.text.attr('fill', 'white')
 		}
 		tip.clear().showunder(dom)
-		tip.d
-			.append('div')
-			.style('margin', '10px')
-			.style('color', '#aaa')
-			.text('Associated fusions from this sample:')
+		tip.d.append('div').style('margin', '10px').style('color', '#aaa').text('Associated fusions from this sample:')
 		this.extevt_table(ext.lst, tip.d, sample)
 	}
 	extevt_mo(ext) {
@@ -2425,10 +2348,7 @@ for(const i of atlst) {
 		this.extevt_table(ext.lst, pane.body, sample)
 	}
 	extevt_table(lst, holder, sample) {
-		const table = holder
-			.append('table')
-			.style('border-spacing', '10px')
-			.style('border-collapse', 'separate')
+		const table = holder.append('table').style('border-spacing', '10px').style('border-collapse', 'separate')
 		for (const elab of lst) {
 			const tr = table.append('tr')
 			const prodlst = sample.events[elab]
@@ -2494,10 +2414,7 @@ for(const i of atlst) {
 		holder.append('p').text('Product id: ' + prod.prodid)
 		const alertcolor = '#FFb3b3',
 			bg = '#f1f1f1'
-		const table = holder
-			.append('table')
-			.style('border-spacing', '8px')
-			.style('border-collapse', 'separate')
+		const table = holder.append('table').style('border-spacing', '8px').style('border-collapse', 'separate')
 		let tr = table.append('tr')
 		tr.append('td')
 		tr.append('td')
@@ -2507,10 +2424,7 @@ for(const i of atlst) {
 			.style('background-color', bg)
 			.text(prod.geneB ? prod.geneB : prod.chrB)
 		tr = table.append('tr')
-		tr.append('td')
-			.style('font-size', '80%')
-			.style('background-color', bg)
-			.text('chimeric reads')
+		tr.append('td').style('font-size', '80%').style('background-color', bg).text('chimeric reads')
 		tr.append('td')
 			.style('padding', '5px')
 			.style('background-color', prod.readsA <= this.cf_reads ? alertcolor : '')
@@ -2520,10 +2434,7 @@ for(const i of atlst) {
 			.style('background-color', prod.readsB <= this.cf_reads ? alertcolor : '')
 			.text(prod.readsB)
 		tr = table.append('tr')
-		tr.append('td')
-			.style('font-size', '80%')
-			.style('background-color', bg)
-			.text('ratio')
+		tr.append('td').style('font-size', '80%').style('background-color', bg).text('ratio')
 		tr.append('td')
 			.style('padding', '5px')
 			.style('background-color', prod.ratioA <= this.cf_ratio ? alertcolor : '')
@@ -2533,10 +2444,7 @@ for(const i of atlst) {
 			.style('background-color', prod.ratioB <= this.cf_ratio ? alertcolor : '')
 			.text(Math.ceil(prod.ratioB * 100) + '%')
 		tr = table.append('tr')
-		tr.append('td')
-			.style('font-size', '80%')
-			.style('background-color', bg)
-			.text('contig length')
+		tr.append('td').style('font-size', '80%').style('background-color', bg).text('contig length')
 		tr.append('td')
 			.style('padding', '5px')
 			.style('background-color', prod.matchA <= this.cf_match ? alertcolor : '')
@@ -2546,10 +2454,7 @@ for(const i of atlst) {
 			.style('background-color', prod.matchB <= this.cf_match ? alertcolor : '')
 			.text(prod.matchB + ' bp')
 		tr = table.append('tr')
-		tr.append('td')
-			.style('font-size', '80%')
-			.style('background-color', bg)
-			.text('repeat score')
+		tr.append('td').style('font-size', '80%').style('background-color', bg).text('repeat score')
 		tr.append('td')
 			.style('padding', '5px')
 			.style('background-color', prod.repeatA >= this.cf_repeat ? alertcolor : '')
@@ -2562,10 +2467,7 @@ for(const i of atlst) {
 
 	showsvpairs(arg) {
 		// individual pairs show separately
-		const table = arg.holder
-			.append('table')
-			.style('border-spacing', '10px')
-			.style('border-collapse', 'separate')
+		const table = arg.holder.append('table').style('border-spacing', '10px').style('border-collapse', 'separate')
 		const tr = table.append('tr')
 		const _tr = table.append('tr')
 		const expressiontd = _tr.append('td').attr('colspan', arg.prodlst.length)
@@ -2865,10 +2767,7 @@ for(const i of atlst) {
 			})
 
 			if (!arg.nodetail) {
-				const td = tr2
-					.append('td')
-					.style('font-size', '.8em')
-					.style('vertical-align', 'top')
+				const td = tr2.append('td').style('font-size', '.8em').style('vertical-align', 'top')
 				// custom attributes
 				const lst = []
 				for (const at of this.atlst) {
@@ -2902,10 +2801,7 @@ for(const i of atlst) {
 						.style('border', pair.inuse ? 'solid 1px black' : '')
 						.style('border-spacing', '10px')
 						.style('border-collapse', 'separate')
-					let _tr = table
-						.append('tr')
-						.style('color', '#858585')
-						.style('font-size', '.7em')
+					let _tr = table.append('tr').style('color', '#858585').style('font-size', '.7em')
 					_tr.append('td').text('gene')
 					_tr.append('td').text('isoform')
 					_tr.append('td').text('gene position')
@@ -3002,10 +2898,7 @@ for(const i of atlst) {
 								.text('Error: no products for this event in ' + sample.name)
 							continue
 						}
-						const table = arg.holder
-							.append('table')
-							.style('margin-top', '20px')
-							.style('border', 'solid 1px #ccc')
+						const table = arg.holder.append('table').style('margin-top', '20px').style('border', 'solid 1px #ccc')
 						const tr = table.append('tr')
 						tr.append('td').text(sample.name)
 						const td = tr.append('td')
@@ -3033,11 +2926,7 @@ for(const i of atlst) {
 						.style('display', 'inline-block')
 						.style('margin-right', '20px')
 						.style('border', 'solid 1px #ccc')
-					div
-						.append('div')
-						.style('background-color', '#ededed')
-						.style('padding', '10px')
-						.text(gene)
+					div.append('div').style('background-color', '#ededed').style('padding', '10px').text(gene)
 					if (arg.sample) {
 						for (const v of expd) {
 							if (v.sample == arg.sample.name) {
@@ -3227,7 +3116,7 @@ function msjoin(prod, newholder) {
 				}
 				// if downstream of tail
 				var dst = prod.posA - prod2.posB
-				if (prod.ortA == '+' && dst > 0 && dst < genomelimit && (prod.ortA == '-' && dst < 0 && -dst < genomelimit)) {
+				if (prod.ortA == '+' && dst > 0 && dst < genomelimit && prod.ortA == '-' && dst < 0 && -dst < genomelimit) {
 					prod.mswhat = Math.abs(dst) + ' bp apart on genome'
 					tmplst.push(prod)
 					single = false
@@ -3251,14 +3140,8 @@ function msjoin(prod, newholder) {
 
 function svtable(arg) {
 	// sample level events
-	const table = arg.holder
-		.append('table')
-		.style('border-spacing', '10px')
-		.style('border-collapse', 'separate')
-	const htr = table
-		.append('tr')
-		.style('font-size', '70%')
-		.style('color', '#858585')
+	const table = arg.holder.append('table').style('border-spacing', '10px').style('border-collapse', 'separate')
+	const htr = table.append('tr').style('font-size', '70%').style('color', '#858585')
 	const fields = [
 		{ label: 'Feature', hide: true, get: a => a.feature },
 		{ label: 'Ratio', hide: true, get: a => Math.ceil(a.ratio * 100) + '%' },
@@ -3508,11 +3391,7 @@ function showgenevalues(arg) {
 	const svg = arg.holder.append('svg')
 	const axisg = svg.append('g')
 	const dotg = svg.append('g')
-	const dotset = dotg
-		.selectAll()
-		.data(arg.data)
-		.enter()
-		.append('g')
+	const dotset = dotg.selectAll().data(arg.data).enter().append('g')
 	const dotcir = dotset
 		.append('circle')
 		.attr('fill', 'white')

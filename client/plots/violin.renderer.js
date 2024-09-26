@@ -1,7 +1,7 @@
 import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
-import { getColors } from '#shared/common'
+import { getColors } from '#shared/common.js'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '../dom/table'
 import { Menu } from '../dom/menu'

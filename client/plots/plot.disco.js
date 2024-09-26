@@ -1,5 +1,5 @@
 import { dofetch3 } from '#common/dofetch'
-import { dt2label } from '#shared/common'
+import { dt2label } from '#shared/common.js'
 
 /*
 make a disco plot for the "singleSampleMutation" directive, as well as the subsequent block-launching from clicking the image

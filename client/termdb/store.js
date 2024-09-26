@@ -1,8 +1,8 @@
-import * as rx from '../rx'
+import * as rx from '#rx'
 import { root_ID } from './tree'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '#filter'
-import { isUsableTerm } from '#shared/termdb.usecase'
-import { TermTypeGroups } from '../shared/terms'
+import { isUsableTerm } from '#shared/termdb.usecase.js'
+import { TermTypeGroups } from '#shared/terms.js'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 

@@ -3,8 +3,8 @@ import { format as d3format } from 'd3-format'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons, newSandboxDiv, Menu, renderTable, table2col } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { TermTypes, isNumericTerm } from '#shared/terms'
-import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common'
+import { TermTypes, isNumericTerm } from '#shared/terms.js'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common.js'
 
 let inputIndex = 0
 const svgIcons = {

@@ -1,5 +1,5 @@
 import { dofetch, dofetch2 } from '#src/client'
-import { contigNameNoChr2 } from '../../../shared/common'
+import { contigNameNoChr2 } from '#shared/common.js'
 
 /**
 ********* EXPORTED *********

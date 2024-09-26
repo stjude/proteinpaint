@@ -1,16 +1,17 @@
-import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '../../shared/common'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
-import { VocabApi } from '../../shared/types/vocab.ts'
 import {
 	GeneVariantBaseQ,
 	GeneVariantQ,
 	GeneVariantTW,
-	GeneVariantTermSettingInstance
-} from '../../shared/types/terms/geneVariant.ts'
-import { PredefinedGroupSettingQ, TermGroupSetting } from '../../shared/types/terms/term.ts'
+	GeneVariantTermSettingInstance,
+	PredefinedGroupSettingQ,
+	TermGroupSetting,
+	VocabApi
+} from '#types'
 import { PillData } from '../types'
-import { make_radios } from '#dom/radiobutton'
-import { copyMerge } from '../../rx'
+import { make_radios } from '#dom'
+import { copyMerge } from '#rx'
 import { GroupSettingMethods } from './groupsetting.ts'
 
 /* 

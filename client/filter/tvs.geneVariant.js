@@ -1,5 +1,5 @@
 import { select } from 'd3-selection'
-import { mclass, dt2label } from '#shared/common'
+import { mclass, dt2label } from '#shared/common.js'
 /*
 ********************** EXPORTED
 handler:

@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { mclasscnvgain, mclasscnvloss } from '#shared/common'
+import { mclasscnvgain, mclasscnvloss } from '#shared/common.js'
 import { table_cnv } from './itemtable'
 import { table2col } from '#dom'
 

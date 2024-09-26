@@ -1,5 +1,5 @@
 import { getPillNameDefault } from '#termsetting'
-import { TermWrapper, VocabApi, TermSettingInstance, PillData } from '#shared/types/index'
+import { TermWrapper, VocabApi, TermSettingInstance, PillData } from '#types'
 import { getHandler as getHandlerNumericToggle } from './numeric.toggle'
 
 export function getHandler(self: TermSettingInstance) {

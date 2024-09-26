@@ -1,7 +1,7 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { renderTable } from '../dom/table'
 import { to_svg } from '#src/client'
-import { roundValueAuto } from '../shared/roundValue'
+import { roundValueAuto } from '#shared/roundValue.js'
 import { rgb } from 'd3'
 import { niceNumLabels } from '../dom/niceNumLabels'
 

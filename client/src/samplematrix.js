@@ -1,11 +1,11 @@
 import * as client from './client'
 import { string2pos, invalidcoord } from './coord'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { showMenu_isgenevalue, showMenu_iscnv, showMenu_isloh, showMenu_ismutation } from './samplematrix.featuremenu'
 import { may_add_kmplotbutton } from './samplematrix.kmplot'
-import { vcfparsemeta } from '#shared/vcf'
+import { vcfparsemeta } from '#shared/vcf.js'
 
 /*
 build a sample by feature matrix
@@ -85,10 +85,7 @@ export class Samplematrix {
 		init_controlui(this)
 
 		if (this.header) {
-			this.holder
-				.append('div')
-				.style('margin-bottom', '20px')
-				.html(this.header)
+			this.holder.append('div').style('margin-bottom', '20px').html(this.header)
 		}
 		this.wait_div = this.holder.append('div')
 		this.wait_div.style('display', 'block').text('Loading...')
@@ -171,19 +168,11 @@ export class Samplematrix {
 		}
 
 		const cnv_tr = this.legendtable.append('tr')
-		cnv_tr
-			.append('td')
-			.style('opacity', 0.5)
-			.style('text-align', 'right')
-			.text('CNV cutoff')
+		cnv_tr.append('td').style('opacity', 0.5).style('text-align', 'right').text('CNV cutoff')
 		this.legendtable.cnv_td = cnv_tr.append('td')
 
 		const loh_tr = this.legendtable.append('tr')
-		loh_tr
-			.append('td')
-			.style('opacity', 0.5)
-			.style('text-align', 'right')
-			.text('LOH cutoff')
+		loh_tr.append('td').style('opacity', 0.5).style('text-align', 'right').text('LOH cutoff')
 		this.legendtable.loh_td = loh_tr.append('td')
 
 		if (this.limitbysamplesetgroup) {
@@ -317,10 +306,7 @@ export class Samplematrix {
 
 				if (f.missingvalue == undefined) f.missingvalue = 0 // samples that don't have value for that gene
 
-				tr.append('td')
-					.text(f.label)
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
+				tr.append('td').text(f.label).style('opacity', 0.5).style('text-align', 'right')
 				f.legendholder = tr.append('td')
 
 				if (!f.width) f.width = 20
@@ -343,10 +329,7 @@ export class Samplematrix {
 				if (!f.label && f.genename) {
 					f.label = f.genename + ' CNV'
 				}
-				tr.append('td')
-					.text(f.label)
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
+				tr.append('td').text(f.label).style('opacity', 0.5).style('text-align', 'right')
 				f.legendholder = tr.append('td')
 
 				if (!f.width) f.width = 40
@@ -375,10 +358,7 @@ export class Samplematrix {
 				if (!f.label && f.genename) {
 					f.label = f.genename + ' LOH'
 				}
-				tr.append('td')
-					.text(f.label)
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
+				tr.append('td').text(f.label).style('opacity', 0.5).style('text-align', 'right')
 				f.legendholder = tr.append('td')
 
 				if (!f.width) f.width = 40
@@ -405,10 +385,7 @@ export class Samplematrix {
 				if (!f.label && f.genename) {
 					f.label = f.genename + ' SNV/indel'
 				}
-				tr.append('td')
-					.text(f.label)
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
+				tr.append('td').text(f.label).style('opacity', 0.5).style('text-align', 'right')
 				f.legendholder = tr.append('td')
 
 				if (!f.width) f.width = 20
@@ -433,18 +410,11 @@ export class Samplematrix {
 				if (!f.width) f.width = 20
 				if (!f.color) f.color = common.mclass[common.mclassitd].color
 
-				tr.append('td')
-					.text(f.label)
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
+				tr.append('td').text(f.label).style('opacity', 0.5).style('text-align', 'right')
 				f.legendholder = tr.append('td')
 
 				// itd legend is fixed, do not refresh with data loading
-				f.legendholder
-					.append('div')
-					.style('width', '20px')
-					.html('&nbsp;')
-					.style('background', f.color)
+				f.legendholder.append('div').style('width', '20px').html('&nbsp;').style('background', f.color)
 
 				return this.feature_parseposition_maygene(f).then(() => {
 					if (!f.label) f.label = f.chr + ':' + f.start + '-' + f.stop + ' ITD'
@@ -465,10 +435,7 @@ export class Samplematrix {
 				if (!f.width) f.width = 20
 				if (!f.color) f.color = default_svcolor
 
-				tr.append('td')
-					.text(f.label)
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
+				tr.append('td').text(f.label).style('opacity', 0.5).style('text-align', 'right')
 				f.legendholder = tr.append('td')
 
 				return this.feature_parseposition_maygene(f).then(() => {
@@ -489,10 +456,7 @@ export class Samplematrix {
 					f.label = f.genename + ' CNV/SV'
 				}
 
-				tr.append('td')
-					.text(f.label)
-					.style('color', '#858585')
-					.style('text-align', 'right')
+				tr.append('td').text(f.label).style('color', '#858585').style('text-align', 'right')
 				f.legendholder = tr.append('td')
 
 				initfeature_polymutation(f)
@@ -517,10 +481,7 @@ export class Samplematrix {
 					f.label = f.genename + ' mutation'
 				}
 
-				tr.append('td')
-					.text(f.label)
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
+				tr.append('td').text(f.label).style('opacity', 0.5).style('text-align', 'right')
 				f.legendholder = tr.append('td')
 
 				initfeature_polymutation(f)
@@ -554,10 +515,7 @@ export class Samplematrix {
 				if (!f.width && !this.features_on_rows) f.width = 20
 				else if (!f.height && this.features_on_rows) f.height = 50
 
-				tr.append('td')
-					.text(f.label)
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
+				tr.append('td').text(f.label).style('opacity', 0.5).style('text-align', 'right')
 				f.legendholder = tr.append('td')
 
 				return Promise.resolve()
@@ -833,19 +791,13 @@ export class Samplematrix {
 					}
 				}
 				for (const c of classes) {
-					const cell = h
-						.append('div')
-						.style('display', 'inline-block')
-						.style('margin-right', '10px')
+					const cell = h.append('div').style('display', 'inline-block').style('margin-right', '10px')
 					cell
 						.append('span')
 						.style('background', common.mclass[c].color)
 						.style('margin-right', '2px')
 						.html('&nbsp;&nbsp;&nbsp;')
-					cell
-						.append('span')
-						.text(common.mclass[c].label)
-						.style('color', common.mclass[c].color)
+					cell.append('span').text(common.mclass[c].label).style('color', common.mclass[c].color)
 				}
 				continue
 			}
@@ -885,61 +837,27 @@ export class Samplematrix {
 
 				if (vcfclass2count.size + itdcount + svcount + fusioncount > 0) {
 					// put them in same row
-					const row = h
-						.append('div')
-						.style('margin-bottom', '5px')
-						.style('white-space', 'nowrap')
+					const row = h.append('div').style('margin-bottom', '5px').style('white-space', 'nowrap')
 
 					for (const [classname, count] of vcfclass2count) {
 						const c = common.mclass[classname]
-						const cell = row
-							.append('div')
-							.style('display', 'inline-block')
-							.style('margin-right', '20px')
-						cell
-							.append('span')
-							.attr('class', 'sja_mcdot')
-							.style('background', c.color)
-							.text(count)
-						cell
-							.append('span')
-							.text(c.label)
-							.style('color', c.color)
+						const cell = row.append('div').style('display', 'inline-block').style('margin-right', '20px')
+						cell.append('span').attr('class', 'sja_mcdot').style('background', c.color).text(count)
+						cell.append('span').text(c.label).style('color', c.color)
 					}
 					if (itdcount) {
-						const cell = row
-							.append('div')
-							.style('display', 'inline-block')
-							.style('margin-right', '20px')
-						cell
-							.append('span')
-							.attr('class', 'sja_mcdot')
-							.style('background', f.itd.color)
-							.text(itdcount)
+						const cell = row.append('div').style('display', 'inline-block').style('margin-right', '20px')
+						cell.append('span').attr('class', 'sja_mcdot').style('background', f.itd.color).text(itdcount)
 						cell.append('span').text('ITD')
 					}
 					if (svcount) {
-						const cell = row
-							.append('div')
-							.style('display', 'inline-block')
-							.style('margin-right', '20px')
-						cell
-							.append('span')
-							.attr('class', 'sja_mcdot')
-							.style('background', f.sv.color)
-							.text(svcount)
+						const cell = row.append('div').style('display', 'inline-block').style('margin-right', '20px')
+						cell.append('span').attr('class', 'sja_mcdot').style('background', f.sv.color).text(svcount)
 						cell.append('span').text('SV')
 					}
 					if (fusioncount) {
-						const cell = row
-							.append('div')
-							.style('display', 'inline-block')
-							.style('margin-right', '20px')
-						cell
-							.append('span')
-							.attr('class', 'sja_mcdot')
-							.style('background', f.fusion.color)
-							.text(fusioncount)
+						const cell = row.append('div').style('display', 'inline-block').style('margin-right', '20px')
+						cell.append('span').attr('class', 'sja_mcdot').style('background', f.fusion.color).text(fusioncount)
 						cell.append('span').text('Fusion')
 					}
 				}
@@ -959,15 +877,8 @@ sort samples by f.issampleattribute
 					}
 				}
 				for (const [value, count] of value2count) {
-					const cell = h
-						.append('div')
-						.style('display', 'inline-block')
-						.style('margin-right', '20px')
-					cell
-						.append('span')
-						.attr('class', 'sja_mcdot')
-						.style('background', f.values[value].color)
-						.text(count)
+					const cell = h.append('div').style('display', 'inline-block').style('margin-right', '20px')
+					cell.append('span').attr('class', 'sja_mcdot').style('background', f.values[value].color).text(count)
 					cell.append('span').text(f.values[value].name)
 				}
 				continue
@@ -1219,7 +1130,7 @@ sort samples by f.issampleattribute
 					.attr('x', -this.rowlabspace - this.rowlabticksize)
 					.attr('y', r.height / 2)
 					.text(this.features_on_rows ? r.label + (r.count ? ' (' + r.count + ')' : '') : r.name)
-					.each(function() {
+					.each(function () {
 						samplenamemaxwidth = Math.max(samplenamemaxwidth, this.getBBox().width)
 					})
 					.attr('class', 'sja_clbtext')
@@ -1260,7 +1171,7 @@ sort samples by f.issampleattribute
 				.attr('dominant-baseline', 'central')
 				.attr('transform', 'rotate(-90)')
 				.text(this.features_on_rows ? c.name : c.label + (c.count ? ' (' + c.count + ')' : ''))
-				.each(function() {
+				.each(function () {
 					featurenamemaxwidth = Math.max(featurenamemaxwidth, this.getBBox().width)
 				})
 				//.attr('class','sja_clbtext')
@@ -1725,18 +1636,8 @@ sort samples by f.issampleattribute
 					.attr('y2', -w)
 					.attr('stroke', 'white')
 					.attr('stroke-width', 3)
-				g2.append('line')
-					.attr('x1', -w)
-					.attr('x2', w)
-					.attr('y1', -w)
-					.attr('y2', w)
-					.attr('stroke', color)
-				g2.append('line')
-					.attr('x1', -w)
-					.attr('x2', w)
-					.attr('y1', w)
-					.attr('y2', -w)
-					.attr('stroke', color)
+				g2.append('line').attr('x1', -w).attr('x2', w).attr('y1', -w).attr('y2', w).attr('stroke', color)
+				g2.append('line').attr('x1', -w).attr('x2', w).attr('y1', w).attr('y2', -w).attr('stroke', color)
 			}
 		}
 
@@ -1955,7 +1856,10 @@ sort samples by f.issampleattribute
 			.on('click', () => {
 				this.menu.hide()
 				f.legend_tr.remove()
-				this.features.splice(this.features.findIndex(i => i.id == f.id), 1)
+				this.features.splice(
+					this.features.findIndex(i => i.id == f.id),
+					1
+				)
 				this.draw_matrix()
 			})
 
@@ -1985,12 +1889,7 @@ sort samples by f.issampleattribute
 	tipContent_feature(f, holder) {
 		// say something about a feature
 
-		holder
-			.append('div')
-			.text(f.label)
-			.style('opacity', 0.5)
-			.style('font-size', '.7em')
-			.style('margin', '10px')
+		holder.append('div').text(f.label).style('opacity', 0.5).style('font-size', '.7em').style('margin', '10px')
 
 		// __newattr
 		if (f.isgenevalue || f.iscnv || f.isloh || f.isitd || f.issvfusion) {
@@ -2027,12 +1926,7 @@ sort samples by f.issampleattribute
 	}
 
 	showTip_sample(sample) {
-		this.tip
-			.clear()
-			.d.append('div')
-			.text(sample.name)
-			.style('padding', '10px')
-			.style('font-size', '.7em')
+		this.tip.clear().d.append('div').text(sample.name).style('padding', '10px').style('font-size', '.7em')
 
 		const lst = []
 		for (const f of this.features) {
@@ -2502,10 +2396,7 @@ sort samples by f.issampleattribute
 		const height = this.features_on_rows ? feature.height : sample.height
 		const width = this.features_on_rows ? sample.width : feature.width
 		if (height < 5) return
-		g.append('line')
-			.attr('x2', width)
-			.attr('y2', height)
-			.attr('stroke', '#ededed')
+		g.append('line').attr('x2', width).attr('y2', height).attr('stroke', '#ededed')
 	}
 	// end of class
 }
@@ -2813,7 +2704,7 @@ function init_controlui(o) {
 					? 1
 					: 0
 			)
-			.on('change', function() {
+			.on('change', function () {
 				if (opt.value == 'symbol' && o.ismutation_allnotsymbolic) return
 				else if (opt.value == 'proportion' && o.ismutation_allsymbolic) return
 				else if (opt.value == 'symbol') {
@@ -2828,10 +2719,7 @@ function init_controlui(o) {
 				o.draw_matrix()
 			})
 
-		opt_div
-			.append('label')
-			.attr('for', opt.value)
-			.text(opt.text)
+		opt_div.append('label').attr('for', opt.value).text(opt.text)
 	})
 
 	// row
@@ -2880,7 +2768,7 @@ function init_controlui(o) {
 				'checked',
 				opt.value == 'gene_on_row' && o.features_on_rows ? 1 : opt.value == 'sam_on_row' && !o.features_on_rows ? 1 : 0
 			)
-			.on('change', function() {
+			.on('change', function () {
 				if (opt.value == 'gene_on_row' && o.features_on_rows) return
 				else if (opt.value == 'sam_on_row' && !o.features_on_rows) return
 				else if (opt.value == 'gene_on_row') {
@@ -2893,10 +2781,7 @@ function init_controlui(o) {
 				o.draw_matrix()
 			})
 
-		opt_div
-			.append('label')
-			.attr('for', opt.value)
-			.text(opt.text)
+		opt_div.append('label').attr('for', opt.value).text(opt.text)
 	})
 
 	// data

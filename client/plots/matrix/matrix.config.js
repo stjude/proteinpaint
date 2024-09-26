@@ -9,8 +9,8 @@ import {
 	synonymousMutations,
 	mutationClasses,
 	CNVClasses
-} from '#shared/common'
-import { isDictionaryType } from '#shared/terms'
+} from '#shared/common.js'
+import { isDictionaryType } from '#shared/terms.js'
 
 export async function getPlotConfig(opts = {}, app) {
 	const controlLabels = {

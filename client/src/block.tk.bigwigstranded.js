@@ -1,7 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import * as client from './client'
-import { defaultcolor } from '#shared/common'
+import { defaultcolor } from '#shared/common.js'
 import { format as d3format } from 'd3-format'
 import { bigwigconfigpanel } from './block.tk.bigwig'
 
@@ -78,20 +78,20 @@ export function bigwigstrandedmaketk(tk, block) {
 
 	tk.tklabel
 		.attr('y', 1) // tk label y position is fixed
-		.each(function() {
+		.each(function () {
 			collectlabelw.push(this.getBBox().width)
 		})
 
 	tk.labforward = block
 		.maketklefthandle(tk)
 		.text(tk.strand1.name)
-		.each(function() {
+		.each(function () {
 			collectlabelw.push(this.getBBox().width)
 		})
 	tk.labreverse = block
 		.maketklefthandle(tk)
 		.text(tk.strand2.name)
-		.each(function() {
+		.each(function () {
 			collectlabelw.push(this.getBBox().width)
 		})
 
@@ -127,10 +127,7 @@ export function bigwigstrandedload(tk, block) {
 	block.tkcloakon(tk)
 
 	tk.strand1.img.attr('width', block.width).attr('height', tk.strand1.barheight)
-	tk.strand2.img
-		.attr('width', block.width)
-		.attr('height', tk.strand2.barheight)
-		.attr('y', tk.strand1.barheight)
+	tk.strand2.img.attr('width', block.width).attr('height', tk.strand2.barheight).attr('y', tk.strand1.barheight)
 
 	// load strand1
 
@@ -190,11 +187,7 @@ export function bigwigstrandedload(tk, block) {
 				formatstr = 'd'
 			}
 
-			const axis = d3axis
-				.axisRight()
-				.scale(scale)
-				.tickFormat(d3format(formatstr))
-				.tickValues([minvalue, 0, maxvalue])
+			const axis = d3axis.axisRight().scale(scale).tickFormat(d3format(formatstr)).tickValues([minvalue, 0, maxvalue])
 
 			client.axisstyle({
 				axis: tk.leftaxis.call(axis),
@@ -223,10 +216,7 @@ export function bigwigstrandedloadsubpanel(tk, block, panel) {
 	block.tkcloakon_subpanel(panel)
 
 	panel.strand1.img.attr('width', panel.width).attr('height', tk.strand1.barheight)
-	panel.strand2.img
-		.attr('width', panel.width)
-		.attr('height', tk.strand2.barheight)
-		.attr('y', tk.strand1.barheight)
+	panel.strand2.img.attr('width', panel.width).attr('height', tk.strand2.barheight).attr('y', tk.strand1.barheight)
 
 	const par1 = block.tkarg_q(tk.strand1)
 	par1.width = panel.width

@@ -1,4 +1,4 @@
-import { stratinput } from '#shared/tree'
+import { stratinput } from '#shared/tree.js'
 import { stratify } from 'd3-hierarchy'
 import { scaleOrdinal } from 'd3-scale'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'

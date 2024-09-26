@@ -1,7 +1,7 @@
-import { exoncolor, IN_frame, OUT_frame, spliceeventchangegmexon } from '#shared/common'
+import { exoncolor, IN_frame, OUT_frame, spliceeventchangegmexon } from '#shared/common.js'
 import * as client from './client'
 
-export default function(evt) {
+export default function (evt) {
 	const htmls = []
 	if (evt.isaltexon || evt.isskipexon) {
 		// sum which exon

@@ -5,8 +5,7 @@ import { format as d3format } from 'd3-format'
 import { select as d3select } from 'd3-selection'
 import * as coord from './coord'
 import { legend_newrow } from './block.legend'
-import { basecompliment } from '#shared/common'
-import { default_text_color } from '../shared/common'
+import { basecompliment, default_text_color } from '#shared/common.js'
 import { rgb } from 'd3-color'
 
 /*

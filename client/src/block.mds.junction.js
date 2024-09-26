@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import { scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale'
 import { select as d3select } from 'd3-selection'
 import { axisRight } from 'd3-axis'
@@ -299,18 +299,18 @@ function addLoadParameter(par, tk) {
 
 function updateLabel(tk, block) {
 	const lst = []
-	tk.tklabel.each(function() {
+	tk.tklabel.each(function () {
 		lst.push(this.getBBox().width)
 	})
 	if (tk.subhierarchylabel) {
-		tk.subhierarchylabel.each(function() {
+		tk.subhierarchylabel.each(function () {
 			lst.push(this.getBBox().width)
 		})
 	}
-	tk.junctionCountLabel.each(function() {
+	tk.junctionCountLabel.each(function () {
 		lst.push(this.getBBox().width)
 	})
-	tk.sampleCountLabel.each(function() {
+	tk.sampleCountLabel.each(function () {
 		lst.push(this.getBBox().width)
 	})
 	tk.leftLabelMaxwidth = Math.max(...lst)
@@ -503,7 +503,7 @@ decide color for junctions
 					.attr('font-family', client.font)
 					.attr('font-size', Math.max(minfontsize, j.radius))
 					.text(j.sampleCount)
-					.each(function() {
+					.each(function () {
 						const b = this.getBBox()
 						const newrad = Math.sqrt(Math.pow(b.width, 2) + Math.pow(b.height, 2)) / 2
 						j.radius = Math.max(j.radius, newrad)
@@ -583,7 +583,7 @@ decide color for junctions
 		.enter()
 		.append('g')
 		.attr('transform', d => set_jug(d))
-		.each(function(j) {
+		.each(function (j) {
 			j.jugg = this
 		})
 
@@ -611,7 +611,7 @@ decide color for junctions
 		.attr('y2', -tk.legheight)
 		.attr('stroke-opacity', lineopacity)
 		.attr('class', 'sja_jug_leg1')
-		.each(function(d) {
+		.each(function (d) {
 			d.leg1 = this
 		})
 
@@ -623,7 +623,7 @@ decide color for junctions
 		.attr('y1', -tk.legheight)
 		.attr('stroke-opacity', lineopacity)
 		.attr('class', 'sja_jug_leg2')
-		.each(function(d) {
+		.each(function (d) {
 			d.leg2 = this
 		})
 
@@ -647,14 +647,14 @@ decide color for junctions
 			return tk.neckheight + d.axisy
 		})
 		.attr('stroke-opacity', lineopacity)
-		.each(function(d) {
+		.each(function (d) {
 			d.stem = this
 		})
 
 	// disc
 	jug2
 		.append('circle')
-		.each(function(d) {
+		.each(function (d) {
 			d.disc = this
 		})
 		.attr('r', d => d.radius)
@@ -979,10 +979,7 @@ function mouseoverSpanBackground(j, tk, block, viewpxwidth) {
 			.attr('x', block.leftheadw + block.lpad + xright - boxwidth)
 			.attr('fill', 'url(#' + tk.gradient4spanBackground.right.id + ')')
 	}
-	block.cursorhlbar
-		.attr('y', 0)
-		.attr('width', boxwidth)
-		.attr('height', block.totalheight())
+	block.cursorhlbar.attr('y', 0).attr('width', boxwidth).attr('height', block.totalheight())
 }
 
 function mouseoverBoxplot(j, tk) {
@@ -1029,10 +1026,7 @@ function mouseoverBoxplot(j, tk) {
 		.attr('shape-rendering', 'crispEdges')
 	// median
 	if (p25 - p75 > 3) {
-		g.append('line')
-			.attr('x2', w)
-			.attr('stroke', color)
-			.attr('shape-rendering', 'crispEdges')
+		g.append('line').attr('x2', w).attr('stroke', color).attr('shape-rendering', 'crispEdges')
 	}
 }
 
@@ -1134,9 +1128,7 @@ function makeLegend_cohort_attribute(lst, tk, block) {
 			.style('border-spacing', '5px')
 			.style('border-collapse', 'separate')
 		// header, not clickable
-		tr.append('td')
-			.text(attr.label)
-			.style('color', '#858585')
+		tr.append('td').text(attr.label).style('color', '#858585')
 		// values holder
 		const td = tr.append('td')
 
@@ -1174,10 +1166,7 @@ function makeLegend_cohort_attribute(lst, tk, block) {
 				.attr('class', 'sja_mcdot')
 				.style('background', cohortLegendDotColor)
 				.html(item.count > 1 ? item.count : '&nbsp;')
-			div
-				.append('div')
-				.style('display', 'inline-block')
-				.text(item.name)
+			div.append('div').style('display', 'inline-block').text(item.name)
 			if (item.totalCount) {
 				// knows the total number of samples for this subgroup
 				div
@@ -1284,12 +1273,7 @@ function showMenu_cohortFilter(tk, block, attr, item, div) {
 			.style('color', '#858585')
 	}
 	if (item.label) {
-		tip.d
-			.append('div')
-			.text(item.label)
-			.style('margin', '10px')
-			.style('font-size', '.8em')
-			.style('color', '#858585')
+		tip.d.append('div').text(item.label).style('margin', '10px').style('font-size', '.8em').style('color', '#858585')
 	}
 
 	if (tk.cohortFilter.hiddenAttr[attr.key] && tk.cohortFilter.hiddenAttr[attr.key][item.name]) {
@@ -1561,10 +1545,7 @@ function showMenu_infoFilter(info, value, tk, block) {
 	if (category) {
 		// this is valid value
 		if (category.description) {
-			tip.d
-				.append('div')
-				.style('padding', '10px')
-				.html(info.categories[value].description)
+			tip.d.append('div').style('padding', '10px').html(info.categories[value].description)
 		}
 		if (!thisvalueishidden && category.valuePerSample) {
 			/*
@@ -1576,11 +1557,7 @@ function showMenu_infoFilter(info, value, tk, block) {
 
 			// show button for each cutoff
 			for (const [i, cutoff] of category.valuePerSample.cutoffValueLst.entries()) {
-				const button = row
-					.append('div')
-					.style('display', 'inline-block')
-					.style('padding', '10px')
-					.text(cutoff.label)
+				const button = row.append('div').style('display', 'inline-block').style('padding', '10px').text(cutoff.label)
 				if (i == category.valuePerSample.cutoffValueUseIdx) {
 					button.attr('class', 'sja_clb_selected')
 				} else {
@@ -1686,36 +1663,15 @@ function makeTk(tk, block) {
 		const id3 = Math.random().toString()
 		const defs = tk.gleft.append('defs')
 		const left = defs.append('linearGradient').attr('id', id1)
-		left
-			.append('stop')
-			.attr('offset', 0)
-			.attr('stop-color', dark)
-		left
-			.append('stop')
-			.attr('offset', 1)
-			.attr('stop-color', 'white')
+		left.append('stop').attr('offset', 0).attr('stop-color', dark)
+		left.append('stop').attr('offset', 1).attr('stop-color', 'white')
 		const mid = defs.append('linearGradient').attr('id', id2)
-		mid
-			.append('stop')
-			.attr('offset', 0)
-			.attr('stop-color', pale)
-		mid
-			.append('stop')
-			.attr('offset', 0.5)
-			.attr('stop-color', 'white')
-		mid
-			.append('stop')
-			.attr('offset', 1)
-			.attr('stop-color', pale)
+		mid.append('stop').attr('offset', 0).attr('stop-color', pale)
+		mid.append('stop').attr('offset', 0.5).attr('stop-color', 'white')
+		mid.append('stop').attr('offset', 1).attr('stop-color', pale)
 		const right = defs.append('linearGradient').attr('id', id3)
-		right
-			.append('stop')
-			.attr('offset', 0)
-			.attr('stop-color', 'white')
-		right
-			.append('stop')
-			.attr('offset', 1)
-			.attr('stop-color', dark)
+		right.append('stop').attr('offset', 0).attr('stop-color', 'white')
+		right.append('stop').attr('offset', 1).attr('stop-color', dark)
 
 		tk.gradient4spanBackground = {
 			left: { id: id1, gradient: left },
@@ -1957,10 +1913,7 @@ function configPanel(tk, block) {
 		if (tk.yscaleUseLog) {
 			input.property('checked', 1)
 		}
-		row
-			.append('label')
-			.text('Use log10 for Y scale read count')
-			.attr('for', id)
+		row.append('label').text('Use log10 for Y scale read count').attr('for', id)
 	}
 }
 
@@ -1975,10 +1928,7 @@ thus the query
 
 function showOneJunction(j, tk, holder, block, ifeventdetails) {
 	// head
-	const row1 = holder
-		.append('div')
-		.style('margin-bottom', '5px')
-		.style('white-space', 'nowrap')
+	const row1 = holder.append('div').style('margin-bottom', '5px').style('white-space', 'nowrap')
 	{
 		const info = infoFilter_inuse(tk)
 		const valueobj = j.info[info.key]
@@ -2000,10 +1950,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 	}
 
 	{
-		const d = row1
-			.append('div')
-			.style('display', 'inline-block')
-			.style('margin-right', '10px')
+		const d = row1.append('div').style('display', 'inline-block').style('margin-right', '10px')
 		if (!j.sv || j.chr == j.sv.mate.chr) {
 			// same chr
 			d.html(
@@ -2348,10 +2295,7 @@ function listAllEvents(lst, holder, j, tk, block) {
 		return
 	}
 	// one button for a evt
-	const div = holder
-		.append('div')
-		.style('display', 'inline-block')
-		.style('font-size', '.8em')
+	const div = holder.append('div').style('display', 'inline-block').style('font-size', '.8em')
 	for (const e of lst) {
 		div
 			.append('div')
@@ -2446,10 +2390,7 @@ async function queryOneJunction(j, tk, block, holder) {
 					.style('margin', '10px')
 					.style('display', 'inline-block')
 					.style('vertical-align', 'top')
-				div
-					.append('h3')
-					.text(group.label)
-					.style('text-align', 'center')
+				div.append('h3').text(group.label).style('text-align', 'center')
 				const p = await import('./old/plot.boxplot')
 				const err = p.default({
 					holder: div,
@@ -2477,12 +2418,8 @@ async function queryOneJunction(j, tk, block, holder) {
 				.style('align-items', 'center')
 				.style('justify-items', 'left')
 			const [c1, c2] = get_list_cells(div)
-			c1.text('Sample')
-				.style('opacity', 0.5)
-				.style('font-size', '.7em')
-			c2.text('Read count')
-				.style('opacity', 0.5)
-				.style('font-size', '.7em')
+			c1.text('Sample').style('opacity', 0.5).style('font-size', '.7em')
+			c2.text('Read count').style('opacity', 0.5).style('font-size', '.7em')
 			for (const s of data.samples) {
 				const [c1, c2] = get_list_cells(div)
 				c1.text(s.sample_name ? s.sample_name : tk.samples[s.i])

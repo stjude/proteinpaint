@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { deepFreeze } from '#rx'
-import { encode } from '#shared/urljson'
+import { encode } from '#shared/urljson.js'
 
 const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
 const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)

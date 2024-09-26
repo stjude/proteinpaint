@@ -4,13 +4,13 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { pack as d3pack, hierarchy as d3hierarchy } from 'd3-hierarchy'
 import * as d3drag from 'd3-drag'
 import * as d3force from 'd3-force'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as client from './client'
 import { Menu } from '../dom/menu'
 
 const tip = new Menu()
 
-export default function(cohort, folder) {
+export default function (cohort, folder) {
 	const dslst = []
 	for (const n in cohort.dsset) {
 		const ds = cohort.genome.datasets[n]
@@ -51,11 +51,7 @@ export default function(cohort, folder) {
 		const holder = folder.append('div').style('margin', '10px')
 		if (dslst.length > 1) {
 			holder.style('border', 'solid 1px #ccc')
-			holder
-				.append('div')
-				.style('padding', '5px')
-				.style('background-color', '#ededed')
-				.text(ds.label)
+			holder.append('div').style('padding', '5px').style('background-color', '#ededed').text(ds.label)
 		}
 		const table = holder.append('table')
 		const tr = table.append('tr')
@@ -81,11 +77,7 @@ export default function(cohort, folder) {
 			.text('Help')
 			.attr('href', 'https://docs.google.com/document/d/1PAlu-bJMBuHRVpGhB_eVaOmlhhbWneC_94_7RRItuA8/edit?usp=sharing')
 			.attr('target', '_blank')
-		const input = td1
-			.append('textarea')
-			.attr('rows', 10)
-			.attr('cols', 20)
-			.attr('placeholder', 'enter pathway schema')
+		const input = td1.append('textarea').attr('rows', 10).attr('cols', 20).attr('placeholder', 'enter pathway schema')
 	}
 }
 
@@ -158,9 +150,7 @@ function makegraph(ds, json, holder, config) {
 			lst1.push(n)
 			lst2.push(config.diseasecolor[n])
 		}
-		diseasecolor = scaleOrdinal()
-			.domain(lst1)
-			.range(lst2)
+		diseasecolor = scaleOrdinal().domain(lst1).range(lst2)
 	} else {
 		console.log('using hardcoded target color') //////////////////
 		////////////////////
@@ -335,11 +325,7 @@ function makegraph(ds, json, holder, config) {
 	const legend = svg.append('g')
 
 	// link lines
-	const linkg = svg
-		.selectAll()
-		.data(json.links)
-		.enter()
-		.append('line')
+	const linkg = svg.selectAll().data(json.links).enter().append('line')
 	linkg
 		.attr('stroke', d => (d.inhibit ? 'red' : 'black'))
 		.attr('stroke-width', '2')
@@ -351,7 +337,7 @@ function makegraph(ds, json, holder, config) {
 		.data(json.nodes)
 		.enter()
 		.append('g')
-		.each(function(d) {
+		.each(function (d) {
 			d.nodeg = this
 		})
 
@@ -359,11 +345,7 @@ function makegraph(ds, json, holder, config) {
 	for (const node of json.nodes) {
 		// all elements are relative to node1g, position defined by render(packing())
 		node.pack = {}
-		node.pack.gs = d3select(node.nodeg)
-			.selectAll()
-			.data(node.root.descendants())
-			.enter()
-			.append('g')
+		node.pack.gs = d3select(node.nodeg).selectAll().data(node.root.descendants()).enter().append('g')
 		node.pack.circle = node.pack.gs.append('circle').attr('fill', d => {
 			if (!d.parent) {
 				// root
@@ -411,21 +393,11 @@ function makegraph(ds, json, holder, config) {
 					.attr('text-anchor', 'middle')
 					//.attr('dominant-baseline','central')
 					.attr('fill', 'black')
-					.call(
-						d3drag
-							.drag()
-							.on('start', dragstarted)
-							.on('drag', dragged)
-							.on('end', dragended)
-					)
+					.call(d3drag.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended))
 					.on('mouseover', event => {
 						tip.clear().show(event.clientX + 20, event.clientY + 20)
 						const div = tip.d
-						div
-							.append('div')
-							.text(d.data.gene)
-							.style('font-weight', 'bold')
-							.style('margin', '10px')
+						div.append('div').text(d.data.gene).style('font-weight', 'bold').style('margin', '10px')
 						const p = div.append('div').style('margin', '10px')
 						if (d.datasize) {
 							p.text('In ' + d.datasize + ' sample' + (d.datasize > 1 ? 's' : ''))
@@ -509,7 +481,7 @@ function makegraph(ds, json, holder, config) {
 				.each(d => {
 					d.textlabel
 						.attr('font-size', fontsize)
-						.each(function() {
+						.each(function () {
 							let labelwidth = this.getBBox().width
 							if (labelwidth > maxtextwidth) {
 								labelwidth = maxtextwidth

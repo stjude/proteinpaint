@@ -1,5 +1,5 @@
 import { dofetch3, isInSession } from '#common/dofetch'
-import { isDictionaryType } from '#shared/terms'
+import { isDictionaryType } from '#shared/terms.js'
 
 export class Vocab {
 	constructor(opts) {

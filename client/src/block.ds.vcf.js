@@ -1,7 +1,7 @@
 import * as client from './client'
-import * as vcf from '#shared/vcf'
+import * as vcf from '#shared/vcf.js'
 import * as coord from './coord'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import { load2tk } from './block.ds'
 
 /*

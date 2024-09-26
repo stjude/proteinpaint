@@ -13,7 +13,7 @@ import {
 	symbolTriangle,
 	symbolWye
 } from 'd3-shape'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import Anchors from './2dmaf.anchors'
 import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 

@@ -8,9 +8,9 @@ import {
 	runtimeattr_snvindel
 } from './block.ds.itemtable'
 import * as client from './client'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import may_sunburst from './block.sunburst'
-import { stratinput } from '#shared/tree'
+import { stratinput } from '#shared/tree.js'
 import { stratify } from 'd3-hierarchy'
 import * as blockds from './block.ds'
 import { legend_newrow } from './block.legend'
@@ -147,37 +147,22 @@ export default function dsmaketk(tk, block) {
 					delete tk.vcfinfofilter
 					block.error(tk.name + ': ' + err)
 				}
-				const row = td
-					.append('div')
-					.style('margin', '10px')
-					.style('display', 'none')
+				const row = td.append('div').style('margin', '10px').style('display', 'none')
 				tk.genotype2color = {
 					rr: '#ccc',
 					ra: 'blue',
 					aa: 'red',
 					legend: row
 				}
-				row
-					.append('span')
-					.text('Genotype')
-					.style('color', '#858585')
+				row.append('span').text('Genotype').style('color', '#858585')
 				let s = row.append('span').style('padding-left', '10px')
-				s.append('div')
-					.style('display', 'inline-block')
-					.style('background', tk.genotype2color.rr)
-					.html('&nbsp;&nbsp;')
+				s.append('div').style('display', 'inline-block').style('background', tk.genotype2color.rr).html('&nbsp;&nbsp;')
 				s.append('span').html('&nbsp;Ref/Ref')
 				s = row.append('span').style('padding-left', '10px')
-				s.append('div')
-					.style('display', 'inline-block')
-					.style('background', tk.genotype2color.ra)
-					.html('&nbsp;&nbsp;')
+				s.append('div').style('display', 'inline-block').style('background', tk.genotype2color.ra).html('&nbsp;&nbsp;')
 				s.append('span').html('&nbsp;Ref/Alt')
 				s = row.append('span').style('padding-left', '10px')
-				s.append('div')
-					.style('display', 'inline-block')
-					.style('background', tk.genotype2color.aa)
-					.html('&nbsp;&nbsp;')
+				s.append('div').style('display', 'inline-block').style('background', tk.genotype2color.aa).html('&nbsp;&nbsp;')
 				s.append('span').html('&nbsp;Alt/Alt')
 			}
 
@@ -418,10 +403,7 @@ function mlststratifyui(tk, holder, block) {
 	const div = holder.append('div').style('margin', '20px')
 
 	const row1 = div.append('div').style('margin-bottom', '5px')
-	row1
-		.append('span')
-		.style('font-size', '.7em')
-		.html('Stratify by&nbsp;&nbsp;')
+	row1.append('span').style('font-size', '.7em').html('Stratify by&nbsp;&nbsp;')
 	const attrnames = getmlstattrnames(tk)
 	const select = row1.append('select').on('change', () => {
 		const sn = select.node()
@@ -463,11 +445,7 @@ function freestratify(key, tk, block, div) {
 
 	div.selectAll('*').remove()
 	if (map.size > 10) {
-		div
-			.style('height', '200px')
-			.style('overflow-y', 'scroll')
-			.style('resize', 'vertical')
-			.style('padding', '5px')
+		div.style('height', '200px').style('overflow-y', 'scroll').style('resize', 'vertical').style('padding', '5px')
 	}
 	const table = div
 		.append('table')
@@ -478,9 +456,7 @@ function freestratify(key, tk, block, div) {
 	for (const [v, mlst] of resultlst) {
 		const tr = table.append('tr')
 		// td 1
-		tr.append('td')
-			.text(mlst.length)
-			.style('text-align', 'right')
+		tr.append('td').text(mlst.length).style('text-align', 'right')
 		// td 2
 		const td = tr.append('td').classed('sja_menuoption', true)
 		td.text(v)
@@ -682,10 +658,7 @@ function label_strat_fillpane(tk, block, strat, tip) {
 	const root = stratify()(stratinput(mlst, levels))
 	root.sum(i => i.value)
 	const table = tip.d.append('table')
-	const tr = table
-		.append('tr')
-		.style('font-size', '.9em')
-		.style('color', '#858585')
+	const tr = table.append('tr').style('font-size', '.9em').style('color', '#858585')
 	tr.append('td').text(strat.label.toUpperCase())
 	if (strat.bycohort && tk.ds.cohort.root) {
 		tr.append('td').text('% TUMOR')
@@ -725,10 +698,7 @@ function label_strat_fillpane(tk, block, strat, tip) {
 			}
 		}
 		// td3
-		tr.append('td')
-			.style('text-align', 'right')
-			.style('font-size', '.8em')
-			.text(n.value)
+		tr.append('td').style('text-align', 'right').style('font-size', '.8em').text(n.value)
 		// td4
 		const td4 = tr.append('td')
 		summarizemclass(n.data.lst, td4)

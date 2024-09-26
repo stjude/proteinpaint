@@ -1,4 +1,4 @@
-import { gmmode, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
+import { gmmode, dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
 import * as coord from '#src/coord'
 
 /* method shared by skewer and numeric mode

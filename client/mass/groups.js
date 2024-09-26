@@ -5,10 +5,10 @@ import { appInit } from '#termdb/app'
 import { renderTable } from '../dom/table.ts'
 import { get$id } from '#termsetting'
 import { getActiveCohortStr } from './charts'
-import { getColors } from '#shared/common'
+import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
-import { TermTypes } from '#shared/terms'
+import { TermTypes } from '#shared/terms.js'
 import { table2col } from '../dom/table2col'
 
 /*

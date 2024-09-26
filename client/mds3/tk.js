@@ -3,7 +3,7 @@ import { makeTk } from './makeTk'
 import { may_render_skewer } from './skewer'
 import { may_render_cnv } from './cnv'
 import { make_leftlabels } from './leftlabel'
-import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common.js'
 
 /*
 loadTk

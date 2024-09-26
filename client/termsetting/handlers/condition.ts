@@ -1,10 +1,7 @@
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
-import { make_radios } from '#dom/radiobutton'
+import { make_radios, sayerror, throwMsgWithFilePathAndFnName } from '#dom'
 import { copyMerge } from '#rx'
-import { sayerror } from '../../dom/sayerror.ts'
-import { PillData, ConditionTW, ConditionQ, VocabApi } from '#shared/types/index'
-import { throwMsgWithFilePathAndFnName } from '../../dom/sayerror'
-import { TermValues } from '#shared/types'
+import { PillData, ConditionTW, ConditionQ, VocabApi, TermValues } from '#types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig

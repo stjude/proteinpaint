@@ -123,3 +123,6 @@ log.txt
 *-debug.*
 build/sj/env.sh
 rust/Dockerfile
+
+shared/*
+types/*

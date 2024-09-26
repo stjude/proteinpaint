@@ -4,7 +4,7 @@ import DataObjectMapper from './DataObjectMapper.ts'
 import Settings from '#plots/disco/Settings.ts'
 import { ViewModelMapper } from '#plots/disco/viewmodel/ViewModelMapper.ts'
 import { DataHolder } from '#plots/disco/data/DataHolder.ts'
-import { dtsnvindel, dtfusionrna, dtsv, dtcnv, dtloh } from '#shared/common'
+import { dtsnvindel, dtfusionrna, dtsv, dtcnv, dtloh } from '#shared/common.js'
 import { PercentileMapper } from '#plots/disco/data/PercentileMapper.ts'
 
 export default class DataMapper {

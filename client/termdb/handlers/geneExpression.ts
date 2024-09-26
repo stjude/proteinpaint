@@ -1,6 +1,5 @@
-import { Menu } from '../../dom/menu'
-import { addGeneSearchbox } from '../../dom/genesearch.ts'
-import { TermTypes } from '../../shared/terms'
+import { Menu, addGeneSearchbox } from '#dom'
+import { TermTypes } from '#shared/terms.js'
 
 export class SearchHandler {
 	callback: any

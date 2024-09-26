@@ -1,7 +1,6 @@
-import { VocabApi } from '../../shared/types/index'
+import { SnpTW, SnpQ, VocabApi } from '#types'
 import { getHandler as getCategoricalHandler } from './categorical.ts'
-import { SnpTW, SnpQ } from '../../shared/types/terms/snp'
-import { copyMerge } from '../../rx'
+import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '../termsetting.ts'
 
 export async function getHandler(self) {

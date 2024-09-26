@@ -1,7 +1,7 @@
 import { select as d3select } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as client from './client'
 import { update as update_legend } from './block.mds2.legend'
 import { makeTk } from './block.mds2.makeTk'
@@ -45,7 +45,7 @@ export async function loadTk(tk, block) {
 			delete tk.uninitialized
 		}
 
-		tk.tklabel.each(function() {
+		tk.tklabel.each(function () {
 			tk.leftLabelMaxwidth = this.getBBox().width
 		}) // do this when querying each time
 

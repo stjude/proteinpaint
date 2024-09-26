@@ -3,7 +3,7 @@ import Reference from '#plots/disco/chromosome/Reference.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
 import Settings from '#plots/disco/Settings.ts'
 import ViewModelProvider from './ViewModelProvider.ts'
-import { dtsnvindel, dtfusionrna } from '#shared/common'
+import { dtsnvindel, dtfusionrna } from '#shared/common.js'
 
 export class ViewModelMapper {
 	static snvClassLayer = {

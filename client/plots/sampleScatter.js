@@ -9,7 +9,7 @@ import { select2Terms } from '#dom/select2Terms'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rebaseGroupFilter, getFilter } from '../mass/groups'
-import { plotColor } from '../shared/common.js'
+import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { shapesArray } from '#dom/shapes'
 

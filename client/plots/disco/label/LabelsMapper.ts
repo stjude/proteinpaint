@@ -9,7 +9,7 @@ import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
 import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
 import CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
 import CnvColorProvider from '#plots/disco/cnv/CnvColorProvider.ts'
-import { dtsnvindel, dtfusionrna } from '#shared/common'
+import { dtsnvindel, dtfusionrna } from '#shared/common.js'
 
 export default class LabelsMapper {
 	private settings: Settings

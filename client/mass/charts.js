@@ -1,7 +1,7 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter/filter'
-import { NumericModes, TermTypes } from '../shared/terms'
+import { NumericModes, TermTypes } from '#shared/terms.js'
 import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
 
 class MassCharts {

@@ -3,12 +3,12 @@ import { stratify, partition } from 'd3-hierarchy'
 import { arc as d3arc } from 'd3-shape'
 import { rgb as d3rgb } from 'd3-color'
 import { itemtable } from './block.ds.itemtable'
-import { stratinput } from '#shared/tree'
+import { stratinput } from '#shared/tree.js'
 import { scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import * as client from './client'
 
-export default function(tk, block, arg) {
+export default function (tk, block, arg) {
 	/*
 arg:
 	.cx
@@ -195,11 +195,7 @@ arg:
 	root.sort((a, b) => b.value - a.value)
 	partition().size([1, Math.pow(radius, 2)])(root)
 	// blocker
-	eye
-		.append('circle')
-		.attr('r', radius)
-		.attr('fill', 'white')
-		.attr('fill-opacity', 0)
+	eye.append('circle').attr('r', radius).attr('fill', 'white').attr('fill-opacity', 0)
 
 	let emptyspace
 	const arcfunc = d3arc()
@@ -260,12 +256,7 @@ arg:
 			if (!d.parent) return
 			if (sun.busy) return
 
-			event.target.setAttribute(
-				'fill',
-				d3rgb(d._color)
-					.darker(0.5)
-					.toString()
-			)
+			event.target.setAttribute('fill', d3rgb(d._color).darker(0.5).toString())
 			slicemouseover(d, pica, arg, cx, cy, tk, block)
 		})
 		.on('mouseout', (event, d) => {
@@ -608,14 +599,8 @@ function slicemouseover(d, pica, arg, cx, cy, tk, block) {
 			bar.attr('transform', 'translate(0,' + (fontsize + ypad) * 2 + ')')
 		}
 	} else if (toangle < 0.75) {
-		text0
-			.attr('dominant-baseline', 'hanging')
-			.attr('text-anchor', 'end')
-			.attr('y', 0)
-		text
-			.attr('dominant-baseline', 'hanging')
-			.attr('text-anchor', 'end')
-			.attr('y', 0)
+		text0.attr('dominant-baseline', 'hanging').attr('text-anchor', 'end').attr('y', 0)
+		text.attr('dominant-baseline', 'hanging').attr('text-anchor', 'end').attr('y', 0)
 		text20
 			.attr('dominant-baseline', 'hanging')
 			.attr('text-anchor', 'end')
@@ -666,10 +651,7 @@ function showmanysample(samples, cohort, x, y) {
 		// header
 		const tr = table.append('tr')
 		for (const h of headers) {
-			tr.append('td')
-				.text(h)
-				.style('color', '#858585')
-				.style('font-size', '.7em')
+			tr.append('td').text(h).style('color', '#858585').style('font-size', '.7em')
 		}
 	}
 

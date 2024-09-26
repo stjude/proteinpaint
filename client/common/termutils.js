@@ -1,4 +1,4 @@
-import { TermTypes } from '#shared/terms'
+import { TermTypes } from '#shared/terms.js'
 import { dofetch3 } from '../src/client'
 
 /*

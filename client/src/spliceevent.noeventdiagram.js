@@ -1,5 +1,5 @@
 import * as client from './client'
-import { exoncolor } from '#shared/common'
+import { exoncolor } from '#shared/common.js'
 
 /*
 mapping of a junction to a gene, with no recognizable event
@@ -96,10 +96,7 @@ export function samegene(arg) {
 		else rightout = a
 	}
 
-	const svg = arg.holder
-		.append('svg')
-		.attr('width', 1)
-		.attr('height', 1)
+	const svg = arg.holder.append('svg').attr('width', 1).attr('height', 1)
 
 	if (exonleft) {
 		if (exonright) {
@@ -172,7 +169,7 @@ export function differentgenes(arg) {
 		.attr('dominant-baseline', 'central')
 		.attr('font-size', fontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			x = this.getBBox().width
 		})
 	x += 5
@@ -226,7 +223,7 @@ export function differentgenes(arg) {
 		.attr('dominant-baseline', 'central')
 		.attr('font-size', fontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			x += this.getBBox().width
 		})
 
@@ -551,7 +548,7 @@ function leftout_exonright(r, svg) {
 		.attr('dominant-baseline', 'central')
 		.attr('font-size', fontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			leftboxw = this.getBBox().width
 		})
 
@@ -578,7 +575,7 @@ function leftout_exonrightin(r, svg) {
 		.attr('dominant-baseline', 'central')
 		.attr('font-size', fontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			leftboxw = this.getBBox().width
 		})
 
@@ -605,7 +602,7 @@ function leftout_intronright(r, svg) {
 		.attr('dominant-baseline', 'central')
 		.attr('font-size', fontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			leftboxw = this.getBBox().width
 		})
 
@@ -637,7 +634,7 @@ function leftout_rightout(l, r, svg) {
 		.attr('dominant-baseline', 'central')
 		.attr('font-size', fontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			leftboxw = this.getBBox().width
 		})
 
@@ -701,7 +698,7 @@ function renderLeftExon(exonidx, g) {
 		.text(text)
 		.attr('font-size', fontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			textw = this.getBBox().width
 		})
 		.remove()
@@ -741,7 +738,7 @@ function renderRightExon(x, exonidx, g) {
 		.text(text)
 		.attr('font-size', fontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			textw = this.getBBox().width
 		})
 		.remove()

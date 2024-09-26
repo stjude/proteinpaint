@@ -1,4 +1,4 @@
-import { decimalPlacesUntilFirstNonZero } from '../shared/roundValue'
+import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
 
 /**
  * Correct an array of numbers with the appropriate number of decimal places

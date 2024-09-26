@@ -1,7 +1,7 @@
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
-import { addGeneSearchbox } from '../../dom/genesearch.ts'
-import { SnpsTW, SnpsQ, SnpsVocabApi, SnpsTerm } from '../../shared/types/terms/snps'
+import { addGeneSearchbox } from '#dom'
+import { SnpsTW, SnpsQ, SnpsVocabApi, SnpsTerm } from '#types'
 
 /* 
 ***************** EXPORT

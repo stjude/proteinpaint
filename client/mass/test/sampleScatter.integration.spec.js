@@ -13,7 +13,7 @@ import {
 } from '../../test/test.helpers'
 import { openSummaryPlot, openPlot, getSamplelstTW } from '../groups'
 import { rgb } from 'd3-color'
-import { mclass } from '#shared/common'
+import { mclass } from '#shared/common.js'
 
 /*
 Tests:

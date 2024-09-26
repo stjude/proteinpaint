@@ -3,7 +3,7 @@ import { initRadioInputs } from '../dom/radio2'
 import { termsettingInit } from '#termsetting'
 import { rgb } from 'd3-color'
 import { select } from 'd3-selection'
-import { TermTypes } from '#shared/terms'
+import { TermTypes } from '#shared/terms.js'
 
 // unique element ID's are needed for  to be used for assigning unique
 // radio button names by object instance

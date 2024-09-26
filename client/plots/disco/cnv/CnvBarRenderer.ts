@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import IRenderer from '#plots/disco/IRenderer.ts'
 import CnvArc from './CnvArc.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
-import { dtcnv } from '#shared/common'
+import { dtcnv } from '#shared/common.js'
 import { table2col } from '#dom/table2col'
 
 export default class CnvBarRenderer implements IRenderer {

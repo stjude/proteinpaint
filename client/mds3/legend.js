@@ -1,6 +1,6 @@
 import { legend_newrow } from '#src/block.legend'
 import { Menu, axisstyle } from '#dom'
-import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common'
+import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
 import { axisTop } from 'd3-axis'

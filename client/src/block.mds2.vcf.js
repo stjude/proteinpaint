@@ -1,6 +1,6 @@
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as client from './client'
-import { vcfparsemeta } from '#shared/vcf'
+import { vcfparsemeta } from '#shared/vcf.js'
 import * as numericaxis from './block.mds2.vcf.numericaxis'
 import * as plain from './block.mds2.vcf.plain'
 import * as coord from './coord'
@@ -49,10 +49,7 @@ and return row height
 		}
 
 		if (r.imgsrc) {
-			g.append('image')
-				.attr('width', r.width)
-				.attr('height', r.imgheight)
-				.attr('xlink:href', r.imgsrc)
+			g.append('image').attr('width', r.width).attr('height', r.imgheight).attr('xlink:href', r.imgsrc)
 			rowheight = Math.max(rowheight, r.imgheight)
 			continue
 		}

@@ -16,7 +16,7 @@ import Labels from '#plots/disco/label/Labels.ts'
 import NonExonicSnvArcsMapper from '#plots/disco/snv/NonExonicSnvArcsMapper.ts'
 import LohArcMapper from '#plots/disco/loh/LohArcMapper.ts'
 import Rings from '#plots/disco/ring/Rings.ts'
-import { dtsnvindel } from '#shared/common'
+import { dtsnvindel } from '#shared/common.js'
 
 export default class ViewModelProvider {
 	private settings: Settings

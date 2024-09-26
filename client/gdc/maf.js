@@ -2,7 +2,7 @@ import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '../dom/sayerror.ts'
 import { renderTable } from '../dom/table.ts'
 import { make_radios } from '#dom/radiobutton'
-import { fileSize } from '#shared/fileSize'
+import { fileSize } from '#shared/fileSize.js'
 import { Menu } from '#dom/menu'
 
 /*

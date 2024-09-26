@@ -1,6 +1,6 @@
 import { scaleOrdinal } from 'd3-scale'
 import { gmmode, domaincolorlst } from './client'
-import { nt2aa, codon_stop, bplen } from '#shared/common'
+import { nt2aa, codon_stop, bplen } from '#shared/common.js'
 import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { first_genetrack_tolist } from '#common/1stGenetk'
