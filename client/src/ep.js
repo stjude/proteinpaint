@@ -6,7 +6,7 @@ import { hierarchy, stratify } from 'd3-hierarchy'
 import * as client from './client'
 import { burst } from './ep.sun'
 import { newboxplot, boxplotremove } from './ep.boxplot'
-import { stratinput } from '#shared/tree'
+import { stratinput } from '#shared/tree.js'
 
 /*
 launch epaint

@@ -2,7 +2,7 @@ import { axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { rnabamtk_initparam, configPanel_rnabam } from './block.mds.svcnv.share'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as expressionstat from './block.mds.expressionstat'
 
 /*
@@ -168,11 +168,7 @@ function renderTk_covplot(tk, block) {
 		client.axisstyle({
 			axis: tk.rna.coverageaxisg.attr('transform', 'scale(1) translate(0,0)').call(
 				axisLeft()
-					.scale(
-						scaleLinear()
-							.domain([0, tk.rna.coveragemax])
-							.range([tk.rna.coveragebarh, 0])
-					)
+					.scale(scaleLinear().domain([0, tk.rna.coveragemax]).range([tk.rna.coveragebarh, 0]))
 					.tickValues([0, tk.rna.coveragemax])
 			),
 			showline: true
@@ -185,11 +181,7 @@ function renderTk_covplot(tk, block) {
 				.attr('transform', 'scale(1) translate(0,' + (tk.rna.coveragebarh + tk.barypad) + ')')
 				.call(
 					axisLeft()
-						.scale(
-							scaleLinear()
-								.domain([0, tk.dna.coveragemax])
-								.range([0, tk.dna.coveragebarh])
-						)
+						.scale(scaleLinear().domain([0, tk.dna.coveragemax]).range([0, tk.dna.coveragebarh]))
 						.tickValues([0, tk.dna.coveragemax])
 				),
 			showline: true
@@ -197,7 +189,7 @@ function renderTk_covplot(tk, block) {
 		tk.dna.coveragelabel
 			.attr('transform', 'scale(1)')
 			.attr('y', tk.rna.coveragebarh + tk.barypad + tk.dna.coveragebarh / 2)
-			.each(function() {
+			.each(function () {
 				tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 			})
 
@@ -258,11 +250,7 @@ function renderTk_fpkm(tk, block) {
 		client.axisstyle({
 			axis: tk.fpkm.axisg.attr('transform', 'scale(1) translate(0,' + y + ')').call(
 				axisLeft()
-					.scale(
-						scaleLinear()
-							.domain([0, maxfpkm])
-							.range([tk.fpkm.barh, 0])
-					)
+					.scale(scaleLinear().domain([0, maxfpkm]).range([tk.fpkm.barh, 0]))
 					.tickValues([0, maxfpkm])
 			),
 			showline: true
@@ -383,10 +371,7 @@ function makeTk(tk, block) {
 
 	if (!tk.dna) tk.dna = {}
 	tk.dna.coverageaxisg = tk.gleft.append('g')
-	tk.dna.coveragelabel = block
-		.maketklefthandle(tk)
-		.attr('class', null)
-		.text('DNA coverage')
+	tk.dna.coveragelabel = block.maketklefthandle(tk).attr('class', null).text('DNA coverage')
 	tk.dna.coveragemax = 0
 	if (!tk.dna.coveragebarh) tk.dna.coveragebarh = 50
 	if (!tk.dna.refcolor) tk.dna.refcolor = '#188FF5'
@@ -454,10 +439,7 @@ function configPanel(tk, block) {
 				fixed.style('display', tk.rna.coverageauto ? 'none' : 'inline')
 				loadTk(tk, block)
 			})
-		row
-			.append('label')
-			.html('&nbsp;automatic scale')
-			.attr('for', id)
+		row.append('label').html('&nbsp;automatic scale').attr('for', id)
 		const fixed = row
 			.append('div')
 			.style('display', tk.rna.coverageauto ? 'none' : 'inline')

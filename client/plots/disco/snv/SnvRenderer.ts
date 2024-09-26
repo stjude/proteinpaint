@@ -3,7 +3,7 @@ import SnvArc from './SnvArc.ts'
 import IRenderer from '#plots/disco/IRenderer.ts'
 import FullArcRenderer from '#plots/disco/arc/FullArcRenderer.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
-import { dtsnvindel, mclass } from '#shared/common'
+import { dtsnvindel, mclass } from '#shared/common.js'
 import { table2col } from '#dom/table2col'
 
 export default class SnvRenderer implements IRenderer {

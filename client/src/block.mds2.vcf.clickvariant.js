@@ -1,4 +1,4 @@
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as client from './client'
 import { make_ui as mafcovplot_makeui } from './block.mds2.vcf.mafcovplot'
 import { termdb_bygenotype, make_phewas } from './block.mds2.vcf.termdb'
@@ -134,10 +134,7 @@ function mayaddtab_fishertable(tabs, m, tk, block) {
 		}
 
 		// the table to be shown in different ways
-		const table = div
-			.append('table')
-			.style('border', '1px solid #ccc')
-			.style('border-collapse', 'collapse')
+		const table = div.append('table').style('border', '1px solid #ccc').style('border-collapse', 'collapse')
 
 		if (additionalpop2test.length) {
 			// to test against additional populations
@@ -151,42 +148,23 @@ function mayaddtab_fishertable(tabs, m, tk, block) {
 			{
 				const tr = table.append('tr')
 				tr.append('th').text(AFtest_groupname(tk, 0))
-				tr.append('td')
-					.text(m.contigencytable[0].toFixed(0))
-					.style('padding', '5px')
-				tr.append('td')
-					.text(m.contigencytable[1].toFixed(0))
-					.style('padding', '5px')
+				tr.append('td').text(m.contigencytable[0].toFixed(0)).style('padding', '5px')
+				tr.append('td').text(m.contigencytable[1].toFixed(0)).style('padding', '5px')
 				tr.append('td').text('-')
 			}
 			{
 				const tr = table.append('tr')
 				tr.append('th').text(AFtest_groupname(tk, 1))
-				tr.append('td')
-					.text(m.contigencytable[2].toFixed(0))
-					.style('padding', '5px')
-				tr.append('td')
-					.text(m.contigencytable[3].toFixed(0))
-					.style('padding', '5px')
-				tr.append('td')
-					.text(m.AFtest_pvalue)
-					.style('padding', '5px')
+				tr.append('td').text(m.contigencytable[2].toFixed(0)).style('padding', '5px')
+				tr.append('td').text(m.contigencytable[3].toFixed(0)).style('padding', '5px')
+				tr.append('td').text(m.AFtest_pvalue).style('padding', '5px')
 			}
 			for (const g of additionalpop2test) {
 				const tr = table.append('tr')
 				tr.append('th').text(g.label)
-				const td_altcount = tr
-					.append('td')
-					.text('...')
-					.style('padding', '5px')
-				const td_refcount = tr
-					.append('td')
-					.text('...')
-					.style('padding', '5px')
-				const td_pvalue = tr
-					.append('td')
-					.text('...')
-					.style('padding', '5px')
+				const td_altcount = tr.append('td').text('...').style('padding', '5px')
+				const td_refcount = tr.append('td').text('...').style('padding', '5px')
+				const td_pvalue = tr.append('td').text('...').style('padding', '5px')
 
 				// run a full-blown query with altered parameter
 				const par = addparameter_rangequery(tk, block)
@@ -223,22 +201,14 @@ function mayaddtab_fishertable(tabs, m, tk, block) {
 			{
 				const tr = table.append('tr')
 				tr.append('th').text(AFtest_groupname(tk, 0))
-				tr.append('td')
-					.text(m.contigencytable[0].toFixed(0))
-					.style('padding', '5px')
-				tr.append('td')
-					.text(m.contigencytable[1].toFixed(0))
-					.style('padding', '5px')
+				tr.append('td').text(m.contigencytable[0].toFixed(0)).style('padding', '5px')
+				tr.append('td').text(m.contigencytable[1].toFixed(0)).style('padding', '5px')
 			}
 			{
 				const tr = table.append('tr')
 				tr.append('th').text(AFtest_groupname(tk, 1))
-				tr.append('td')
-					.text(m.contigencytable[2].toFixed(0))
-					.style('padding', '5px')
-				tr.append('td')
-					.text(m.contigencytable[3].toFixed(0))
-					.style('padding', '5px')
+				tr.append('td').text(m.contigencytable[2].toFixed(0)).style('padding', '5px')
+				tr.append('td').text(m.contigencytable[3].toFixed(0)).style('padding', '5px')
 			}
 			table
 				.append('tr')
@@ -263,9 +233,7 @@ function mayaddtab_fishertable(tabs, m, tk, block) {
 				const tr = table.append('tr')
 				tr.append('td').style('padding', '5px')
 				for (const s of termdbg.popsetaverage) {
-					tr.append('th')
-						.text(s[0])
-						.style('padding', '5px')
+					tr.append('th').text(s[0]).style('padding', '5px')
 				}
 			}
 			{
@@ -274,9 +242,7 @@ function mayaddtab_fishertable(tabs, m, tk, block) {
 					.text('Group ' + (termdbgidx + 1) + ' average admix')
 					.style('padding', '5px')
 				for (const s of termdbg.popsetaverage) {
-					tr.append('td')
-						.text(s[1].toFixed(2))
-						.style('padding', '5px')
+					tr.append('td').text(s[1].toFixed(2)).style('padding', '5px')
 				}
 			}
 			{
@@ -342,10 +308,7 @@ function addtab_functionalannotation(tabs, m, tk, block) {
 
 			let loading = false,
 				loaded = false
-			const plotdiv = div
-				.append('div')
-				.style('margin', '20px')
-				.style('display', 'none')
+			const plotdiv = div.append('div').style('margin', '20px').style('display', 'none')
 
 			button.on('click', async () => {
 				if (plotdiv.style('display') == 'none') {
@@ -453,10 +416,7 @@ function addtab_functionalannotation(tabs, m, tk, block) {
 
 		if (tk.vcf.check_pecanpie) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.attr('colspan', 2)
-				.text('PeCAN-PIE')
-				.style('opacity', 0.5)
+			tr.append('td').attr('colspan', 2).text('PeCAN-PIE').style('opacity', 0.5)
 			const td = tr.append('td').text('Loading...')
 			fetch(
 				'https://pecan.stjude.cloud/variant/decision/' +
@@ -556,11 +516,7 @@ function get_csq(div, m, tk, block) {
 					thislabel = lst.join(' ')
 				}
 				// show header row
-				const row = div
-					.append('div')
-					.style('margin', '5px')
-					.attr('class', 'sja_clbtext')
-					.html(thislabel)
+				const row = div.append('div').style('margin', '5px').attr('class', 'sja_clbtext').html(thislabel)
 				const detailtable = div.append('div').style('display', 'none')
 				const lst = []
 				for (const h of tk.vcf.info.CSQ.csqheader) {

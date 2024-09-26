@@ -1,8 +1,8 @@
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
-import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common'
-import { isNumericTerm } from '#shared/terms'
+import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
+import { isNumericTerm } from '#shared/terms.js'
 
 export function getLegendData(legendGroups, refs, self) {
 	const s = this.settings.matrix

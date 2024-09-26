@@ -1,7 +1,7 @@
 import * as client from './client'
 import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as expressionstat from './block.mds.expressionstat'
 import { may_add_sampleannotation } from './block.mds.svcnv.clickitem'
 import { createbutton_addfeature } from './block.mds.svcnv.samplematrix'
@@ -464,11 +464,7 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 		client.axisstyle({
 			axis: headg.append('g').call(
 				axisTop()
-					.scale(
-						scaleLinear()
-							.domain([minvalue, maxvalue])
-							.range([0, expbarwidth])
-					)
+					.scale(scaleLinear().domain([minvalue, maxvalue]).range([0, expbarwidth]))
 					.tickValues([0, maxvalue])
 					.tickSize(ticksize)
 			),
@@ -519,30 +515,15 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 			// too big to do it
 			const h = 15
 			let y = 20
-			g.append('text')
-				.text('Zoom in')
-				.attr('y', y)
-				.attr('font-size', 12)
+			g.append('text').text('Zoom in').attr('y', y).attr('font-size', 12)
 			y += h
-			g.append('text')
-				.text('under')
-				.attr('y', y)
-				.attr('font-size', 12)
+			g.append('text').text('under').attr('y', y).attr('font-size', 12)
 			y += h
-			g.append('text')
-				.text(common.bplen(tk.expressionrangelimit))
-				.attr('y', y)
-				.attr('font-size', 12)
+			g.append('text').text(common.bplen(tk.expressionrangelimit)).attr('y', y).attr('font-size', 12)
 			y += h
-			g.append('text')
-				.text('to show')
-				.attr('y', y)
-				.attr('font-size', 12)
+			g.append('text').text('to show').attr('y', y).attr('font-size', 12)
 			y += h
-			g.append('text')
-				.text('gene exp')
-				.attr('y', y)
-				.attr('font-size', 12)
+			g.append('text').text('gene exp').attr('y', y).attr('font-size', 12)
 			/*
 			y+=h
 			g.append('text').text('automatically').attr('y',y).attr('font-size',12)
@@ -694,11 +675,7 @@ function addcolumn_fixedgene(fixedgene, tk, block, column_xoff) {
 	client.axisstyle({
 		axis: headg.append('g').call(
 			axisTop()
-				.scale(
-					scaleLinear()
-						.domain([minvalue, maxvalue])
-						.range([0, expbarwidth])
-				)
+				.scale(scaleLinear().domain([minvalue, maxvalue]).range([0, expbarwidth]))
 				.tickValues([minvalue, maxvalue])
 				.tickSize(ticksize)
 		),
@@ -811,11 +788,7 @@ function addcolumn_attr(attr, tk, block, column_xoff) {
 			.attr('transform', 'translate(0,0)')
 			.call(
 				axisTop()
-					.scale(
-						scaleLinear()
-							.domain([attr.min, attr.max])
-							.range([0, numattrbarwidth])
-					)
+					.scale(scaleLinear().domain([attr.min, attr.max]).range([0, numattrbarwidth]))
 					.ticks(3)
 			),
 		fontsize: fontsize,

@@ -2,17 +2,10 @@ import { initByInput } from '#plots/controls.config.js'
 import { to_svg } from '#src/client'
 import { getSorterUi } from './matrix.sorterUi'
 import { fillTermWrapper, get$id } from '#termsetting'
-import { Menu,
-	zoom,
-	icons,
-	svgScroll,
-	make_radios,
-	make_one_checkbox,
-	GeneSetEditUI 
-} from '#dom'
+import { Menu, zoom, icons, svgScroll, make_radios, make_one_checkbox, GeneSetEditUI } from '#dom'
 import { select } from 'd3-selection'
-import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
-import { TermTypes, TermTypeGroups, isNumericTerm } from '#shared/terms'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
+import { TermTypes, TermTypeGroups, isNumericTerm } from '#shared/terms.js'
 
 const tip = new Menu({ padding: '' })
 

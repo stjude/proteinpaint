@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import { make_ui as AFtest_make_ui } from './block.mds2.vcf.numericaxis.AFtest'
 import {
 	may_setup_numerical_axis,
@@ -28,11 +28,7 @@ run only upon initiating track
 	const row = tk.legend.table.append('tr')
 
 	// td1
-	row
-		.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.3)
-		.text('Numerical axis')
+	row.append('td').style('text-align', 'right').style('opacity', 0.3).text('Numerical axis')
 
 	// td2
 	const td = row.append('td')
@@ -40,10 +36,7 @@ run only upon initiating track
 
 	const tr = td.append('table').append('tr')
 
-	const menubutton = tr
-		.append('td')
-		.append('button')
-		.style('margin', '0px 10px')
+	const menubutton = tr.append('td').append('button').style('margin', '0px 10px')
 
 	// following menubutton, show settings folder
 

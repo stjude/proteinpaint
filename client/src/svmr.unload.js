@@ -9,7 +9,7 @@ import {
 	mclassnloss,
 	mclasscloss,
 	mclassfusionrna
-} from '#shared/common'
+} from '#shared/common.js'
 import { newpane, export_data } from './client'
 
 export function svmr_export_json(svmr, hqonly) {

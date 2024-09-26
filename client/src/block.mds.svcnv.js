@@ -2,7 +2,7 @@ import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as expressionstat from './block.mds.expressionstat'
 import {
 	tooltip_singleitem,
@@ -21,7 +21,7 @@ import { makeTk_legend, update_legend } from './block.mds.svcnv.legend'
 import { render_singlesample } from './block.mds.svcnv.single'
 import { createbutton_addfeature, may_show_samplematrix_button } from './block.mds.svcnv.samplematrix'
 import { render_multi_genebar, genebarconfig_fixed } from './block.mds.svcnv.addcolumn'
-import { vcfparsemeta } from '#shared/vcf'
+import { vcfparsemeta } from '#shared/vcf.js'
 import { rnabamtk_initparam, configPanel_rnabam } from './block.mds.svcnv.share'
 
 /*
@@ -100,9 +100,7 @@ const novalue_max_cnvloh = 0 // for max scale of log2ratio and segmean, if there
 // x space between label and box/circle
 export const labelspace = 5 // when label is shown outside of box, the space between them
 
-const stackheightscale = scaleLinear()
-	.domain([1, 3, 5, 10])
-	.range([8, 4, 2, 1])
+const stackheightscale = scaleLinear().domain([1, 3, 5, 10]).range([8, 4, 2, 1])
 
 export function loadTk(tk, block) {
 	/*
@@ -186,10 +184,7 @@ function may_showgeneexp_nomutationdata(tk, block) {
 	// must reset cnvrightg y pos since it will be shifted if there was data previously
 	tk.cnvrightg.attr('transform', 'translate(0,' + (4 + tk.height_main / 2) + ')')
 
-	const text = tk.cnvrightg
-		.append('text')
-		.attr('font-size', 12)
-		.attr('class', 'sja_clbtext2')
+	const text = tk.cnvrightg.append('text').attr('font-size', 12).attr('class', 'sja_clbtext2')
 
 	if (genenames.length == 1) {
 		/*
@@ -409,10 +404,7 @@ export function trackclear(tk) {
 	tk.svdensityg.selectAll('*').remove()
 	tk.cnvmidg.selectAll('*').remove()
 	tk.cnvrightg.selectAll('*').remove()
-	tk.config_handle
-		.transition()
-		.attr('text-anchor', 'start')
-		.attr('x', 0)
+	tk.config_handle.transition().attr('text-anchor', 'start').attr('x', 0)
 }
 
 function addLoadParameter(par, tk) {
@@ -626,15 +618,9 @@ function render_samplegroups(tk, block) {
 	// adjust config handle position by top blank height
 	if (genebaraxisheight == 0 || hpad > genebaraxisheight + 3 + block.labelfontsize) {
 		// enough space for label to be in usual place
-		tk.config_handle
-			.transition()
-			.attr('text-anchor', 'start')
-			.attr('x', 0)
+		tk.config_handle.transition().attr('text-anchor', 'start').attr('x', 0)
 	} else {
-		tk.config_handle
-			.transition()
-			.attr('text-anchor', 'end')
-			.attr('x', -block.rpad)
+		tk.config_handle.transition().attr('text-anchor', 'end').attr('x', -block.rpad)
 	}
 
 	tk.cnvleftg.transition().attr('transform', 'translate(0,' + hpad + ')')
@@ -672,7 +658,7 @@ function render_samplegroups(tk, block) {
 				.attr('font-size', Math.min(block.labelfontsize, vcfdensityheight) - 1)
 				.attr('font-family', client.font)
 				.attr('fill', color)
-				.each(function() {
+				.each(function () {
 					tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 				})
 
@@ -711,7 +697,7 @@ function render_samplegroups(tk, block) {
 				.attr('font-size', Math.min(block.labelfontsize, svdensityheight) - 1)
 				.attr('font-family', client.font)
 				.attr('fill', color)
-				.each(function() {
+				.each(function () {
 					tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 				})
 			tk.svdensitylabelg
@@ -866,11 +852,7 @@ function render_multi_vcfdense(tk, block) {
 			*/
 
 			y += grp.radius
-			g.append('circle')
-				.attr('cy', -y)
-				.attr('r', grp.radius)
-				.attr('fill', grp.color)
-				.attr('stroke', 'white')
+			g.append('circle').attr('cy', -y).attr('r', grp.radius).attr('fill', grp.color).attr('stroke', 'white')
 
 			if (grp.radius >= 8) {
 				// big enough dot, show # of items
@@ -907,9 +889,7 @@ function render_multi_vcfdense(tk, block) {
 				})
 			y += grp.radius
 		}
-		g.append('line')
-			.attr('y2', -b.offset)
-			.attr('stroke', b.groups[0].color)
+		g.append('line').attr('y2', -b.offset).attr('stroke', b.groups[0].color)
 	}
 	return maxheight
 }
@@ -1082,11 +1062,7 @@ function render_multi_svdense(svlst, tk, block) {
 			// one dot for each group
 
 			y += grp.radius
-			g.append('circle')
-				.attr('cy', -y)
-				.attr('r', grp.radius)
-				.attr('fill', grp.color)
-				.attr('stroke', 'white')
+			g.append('circle').attr('cy', -y).attr('r', grp.radius).attr('fill', grp.color).attr('stroke', 'white')
 
 			if (grp.radius >= 8) {
 				// big enough dot, show # of items
@@ -1124,9 +1100,7 @@ function render_multi_svdense(svlst, tk, block) {
 				})
 			y += grp.radius
 		}
-		g.append('line')
-			.attr('y2', -b.offset)
-			.attr('stroke', b.groups[0].color)
+		g.append('line').attr('y2', -b.offset).attr('stroke', b.groups[0].color)
 	}
 	return maxheight
 }
@@ -1302,7 +1276,7 @@ function render_multi_cnvloh(tk, block) {
 				.attr('fill', color)
 				.attr('x', block.tkleftlabel_xshift)
 				.text(glabellst.join(''))
-				.each(function() {
+				.each(function () {
 					tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 				})
 				.on('mouseover', () => {
@@ -1357,7 +1331,7 @@ function render_multi_cnvloh(tk, block) {
 					.attr('y', yoff1 + sample.height / 2)
 					.attr('font-family', client.font)
 					.attr('font-size', Math.min(15, Math.max(minlabfontsize, sample.height + 1)))
-					.each(function() {})
+					.each(function () {})
 					.on('mouseover', () => {
 						multi_sample_addhighlight(sample)
 					})
@@ -1987,7 +1961,7 @@ function render_multi_cnvloh_stackeachsample(tk, block) {
 						.text(pi.name)
 						.attr('font-size', s.crossboxw + 2)
 						.attr('font-family', client.font)
-						.each(function() {
+						.each(function () {
 							labw = this.getBBox().width
 						})
 						.remove()
@@ -2221,11 +2195,7 @@ export function draw_colorscale_loh(tk) {
 	client.axisstyle({
 		axis: tk.cnvcolor.lohlegend.axisg.call(
 			axisTop()
-				.scale(
-					scaleLinear()
-						.domain([0, tk.cnvcolor.segmeanmax])
-						.range([0, tk.cnvcolor.lohlegend.barw])
-				)
+				.scale(scaleLinear().domain([0, tk.cnvcolor.segmeanmax]).range([0, tk.cnvcolor.lohlegend.barw]))
 				.tickValues([0, tk.cnvcolor.segmeanmax])
 				.tickSize(tk.cnvcolor.lohlegend.axistickh)
 		)
@@ -2485,10 +2455,7 @@ export async function focus_singlesample(p) {
 			.text('Show/hide available assay tracks for ' + sample.samplename)
 			.style('font-size', '.7em')
 			.style('opacity', 0.5)
-		const d = assaytkbuttondiv
-			.append('div')
-			.style('border', 'solid 1px #ccc')
-			.style('border-radius', '7px')
+		const d = assaytkbuttondiv.append('div').style('border', 'solid 1px #ccc').style('border-radius', '7px')
 		for (const t of assaytklst) {
 			const label = d
 				.append('div')
@@ -3271,9 +3238,7 @@ function showinput_sampleset(tk, block) {
 				lst.push(s + ' ' + l.name)
 			}
 		}
-		ta.property('value', lst.join('\n'))
-			.style('width', '250px')
-			.style('height', '200px')
+		ta.property('value', lst.join('\n')).style('width', '250px').style('height', '200px')
 	} else {
 		ta.style('width', '200px').style('height', '100px')
 	}
@@ -3281,10 +3246,7 @@ function showinput_sampleset(tk, block) {
 		.text('Submit')
 		.style('display', 'block')
 		.on('click', () => {
-			const lst = ta
-				.property('value')
-				.trim()
-				.split('\n')
+			const lst = ta.property('value').trim().split('\n')
 			if (lst.length == 0) return
 			const g2l = new Map()
 			const samplesnogrp = []
@@ -3341,10 +3303,7 @@ the cutoff "1" may be configurable
 			render_singlesample(tk, block)
 			block.block_setheight()
 		})
-	row
-		.append('label')
-		.attr('for', id)
-		.html('&nbsp;use Waterfall plot for SNV/indels')
+	row.append('label').attr('for', id).html('&nbsp;use Waterfall plot for SNV/indels')
 }
 
 function configPanel_cnvloh(tk, block) {
@@ -3715,11 +3674,7 @@ function may_allow_showhidelabel_multi(tk, block) {
 				tk.multihidelabel_vcf = !tk.multihidelabel_vcf
 				render_samplegroups(tk, block)
 			})
-		row
-			.append('label')
-			.attr('for', id)
-			.attr('class', 'sja_clbtext')
-			.html('&nbsp;SNV/indel')
+		row.append('label').attr('for', id).attr('class', 'sja_clbtext').html('&nbsp;SNV/indel')
 	}
 
 	if (!tk.nocnvlohsv) {
@@ -3735,11 +3690,7 @@ function may_allow_showhidelabel_multi(tk, block) {
 					tk.multihidelabel_sv = !tk.multihidelabel_sv
 					render_samplegroups(tk, block)
 				})
-			row
-				.append('label')
-				.attr('for', id)
-				.attr('class', 'sja_clbtext')
-				.html('&nbsp;DNA SV')
+			row.append('label').attr('for', id).attr('class', 'sja_clbtext').html('&nbsp;DNA SV')
 		}
 		{
 			const id = Math.random().toString()
@@ -3753,11 +3704,7 @@ function may_allow_showhidelabel_multi(tk, block) {
 					tk.multihidelabel_fusion = !tk.multihidelabel_fusion
 					render_samplegroups(tk, block)
 				})
-			row
-				.append('label')
-				.attr('for', id)
-				.attr('class', 'sja_clbtext')
-				.html('&nbsp;RNA fusion')
+			row.append('label').attr('for', id).attr('class', 'sja_clbtext').html('&nbsp;RNA fusion')
 		}
 	}
 }

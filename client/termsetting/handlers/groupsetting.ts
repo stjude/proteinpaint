@@ -1,9 +1,9 @@
 import { select, Selection } from 'd3-selection'
 //import { Tabs } from '#dom/toggleButtons'
 //import { disappear } from '#src/client'
-import { throwMsgWithFilePathAndFnName } from '../../dom/sayerror'
+import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { debounce } from 'debounce'
-import { mclass } from '../../shared/common'
+import { mclass } from '#shared/common.js'
 import {
 	TermSettingInstance,
 	ValuesGroup,

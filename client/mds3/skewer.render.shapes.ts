@@ -1,6 +1,6 @@
 import { Elem } from '../types/d3'
 import { shapes } from '#dom'
-import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
+import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
 
 export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 	shapeG

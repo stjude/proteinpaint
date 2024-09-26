@@ -1,5 +1,5 @@
 import * as client from './client'
-import { exoncolor, IN_frame, OUT_frame } from '#shared/common'
+import { exoncolor, IN_frame, OUT_frame } from '#shared/common.js'
 import spliceeventphrase from './spliceevent.phrase'
 
 /* no longer doing sample-junction read count line plots
@@ -19,7 +19,7 @@ for mds junction:
 
 */
 
-export default function(arg) {
+export default function (arg) {
 	/*
 single event, arg:
 	.event

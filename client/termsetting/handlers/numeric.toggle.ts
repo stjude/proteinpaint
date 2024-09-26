@@ -1,9 +1,9 @@
-import { Tabs } from '../../dom/toggleButtons'
+import { Tabs } from '#dom'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
-import { copyMerge } from '../../rx'
+import { copyMerge } from '#rx'
 import { PillData, HandlerGenerator, Handler } from '../types'
-import { VocabApi } from '../../shared/types/vocab.ts'
-import { roundValueAuto } from '#shared/roundValue'
+import { VocabApi } from '#types'
+import { roundValueAuto } from '#shared/roundValue.js'
 import {
 	NumericQ,
 	NumericTW,

@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 
 const ypad = 20
 const xpad = 2
@@ -9,7 +9,7 @@ const rowh = 20
 const rowpad = 3
 const fontsize = 16
 
-export default function(block) {
+export default function (block) {
 	for (const tk of block.tklst) {
 		if (tk.config_handle) tk.config_handle.text('')
 		if (tk.label_close) tk.label_close.text('')
@@ -85,7 +85,7 @@ function proteindomain(block, height) {
 			.attr('font-family', client.font)
 			.attr('fill', 'black')
 			.text(item.name)
-			.each(function() {
+			.each(function () {
 				w = this.getBBox().width
 			})
 		if (item.description) {

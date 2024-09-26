@@ -7,7 +7,7 @@ import { select as d3select } from 'd3-selection'
 import { itemtable, query_vcfcohorttrack } from './block.ds.itemtable'
 import * as client from './client'
 import * as coord from './coord'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import may_sunburst from './block.sunburst'
 import {
 	mlst_pretreat,
@@ -550,9 +550,7 @@ set:
 		}
 	}
 
-	const numscale = scaleLinear()
-		.domain([vmin, vmax])
-		.range([0, nm.axisheight])
+	const numscale = scaleLinear().domain([vmin, vmax]).range([0, nm.axisheight])
 
 	// set m._y
 	for (const d of tk.data) {
@@ -590,7 +588,7 @@ set:
 				.text(mnamegetter(m.mname))
 				.attr('font-family', client.font)
 				.attr('font-size', m.radius * 2 - 2)
-				.each(function() {
+				.each(function () {
 					m.labwidth = this.getBBox().width
 				})
 				.remove()
@@ -665,12 +663,8 @@ set:
 		.remove()
 	{
 		// axis is inverse of numscale
-		const thisscale = scaleLinear()
-			.domain([vmin, vmax])
-			.range([nm.axisheight, 0])
-		const thisaxis = axisLeft()
-			.scale(thisscale)
-			.ticks(4)
+		const thisscale = scaleLinear().domain([vmin, vmax]).range([nm.axisheight, 0])
+		const thisaxis = axisLeft().scale(thisscale).ticks(4)
 		if (mcset.numberIsInteger) {
 			thisaxis.tickFormat(d3format('d'))
 			if (vmax - vmin < 3) {
@@ -702,7 +696,7 @@ set:
 		{
 			// read the max tick label width first
 			let maxw = 0
-			tk.leftaxis.selectAll('text').each(function() {
+			tk.leftaxis.selectAll('text').each(function () {
 				maxw = Math.max(maxw, this.getBBox().width)
 			})
 			const lst = mcset.name.split(' ')
@@ -718,7 +712,7 @@ set:
 					.attr('y', y + (dotwidth + 1) * i)
 					.attr('x', -(maxw + 15))
 					.text(text)
-					.each(function() {
+					.each(function () {
 						maxlabelw = Math.max(maxlabelw, this.getBBox().width + 15 + maxw)
 					})
 			})
@@ -748,7 +742,7 @@ set:
 		.enter()
 		.append('g')
 		.attr('class', 'sja_skg2')
-		.each(function(d) {
+		.each(function (d) {
 			// compute radius for each group
 			d.g = this
 		})
@@ -781,7 +775,7 @@ set:
 		.enter()
 		.append('g')
 		.attr('class', 'sja_aa_discg')
-		.each(function(m) {
+		.each(function (m) {
 			m.g = this
 		})
 
@@ -1062,7 +1056,7 @@ set:
 	const textlabels = discg
 		.filter(m => m.labattop || m.labatbottom)
 		.append('text')
-		.each(function(m) {
+		.each(function (m) {
 			m.textlabel = this
 		})
 		.text(m => mnamegetter(m.mname))
@@ -1152,7 +1146,7 @@ function m_mouseover(m, tk) {
 		.attr('font-size', fontsize)
 		.attr('font-family', client.font)
 		.text(m._v)
-		.each(function() {
+		.each(function () {
 			textw = this.getBBox().width
 		})
 		.remove()
@@ -1164,7 +1158,7 @@ function m_mouseover(m, tk) {
 			.attr('font-size', fontsize)
 			.attr('font-family', client.font)
 			.text(m.mname)
-			.each(function() {
+			.each(function () {
 				textw = Math.max(textw, this.getBBox().width)
 			})
 			.remove()

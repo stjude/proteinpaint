@@ -10,7 +10,7 @@ import {
 	mutationClasses,
 	CNVClasses,
 	geneVariantTermGroupsetting
-} from '#shared/common'
+} from '#shared/common.js'
 
 /*************************
  reusable helper functions

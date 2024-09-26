@@ -1,7 +1,7 @@
 import * as client from './client'
-import { init_bulk_flag } from '#shared/bulk'
+import { init_bulk_flag } from '#shared/bulk.js'
 import * as bulkui from './bulk.ui'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import blocklazyload from './block.lazyload'
 import blockinit from './block.init'
 

@@ -1,8 +1,8 @@
-import { Genome } from '#shared/types/index'
+import { Genome } from '#types'
 import { Selection } from 'd3-selection'
 import { appInit } from '../plot.app'
 import { showErrorsWithCounter } from '../../dom/sayerror'
-import { mclass } from '#shared/common'
+import { mclass } from '#shared/common.js'
 
 type SnvEntry = {
 	dt: 1

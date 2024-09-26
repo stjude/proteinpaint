@@ -1,8 +1,7 @@
 import { set_hiddenvalues } from '../termsetting.ts'
-import { VocabApi } from '../../shared/types/index'
+import { SingleCellCellTypeQ, SingleCellCellTypeTW, VocabApi } from '#types'
 import { getHandler as getCategoricalHandler } from './categorical.ts'
-import { SingleCellCellTypeQ, SingleCellCellTypeTW } from '../../shared/types/terms/singleCellCellType.ts'
-import { copyMerge } from '../../rx/index.js'
+import { copyMerge } from '#rx'
 
 export async function getHandler(self) {
 	return getCategoricalHandler(self)

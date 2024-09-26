@@ -2,7 +2,7 @@ import * as client from './client'
 import { json as d3json } from 'd3-request'
 import vcf2dstk from '#shared/vcf.tkconvert'
 import getdefault_exonskipalt from './spliceevent.exonskip.getdefault'
-import { bplen, exoncolor } from '#shared/common'
+import { bplen, exoncolor } from '#shared/common.js'
 import { select as d3select } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 
@@ -243,9 +243,7 @@ function newjunction2table(spobj, jlst) {
 
 		let td
 		// 0
-		tr.append('td')
-			.style('color', '#ccc')
-			.text(spobj.junctions.length)
+		tr.append('td').style('color', '#ccc').text(spobj.junctions.length)
 
 		// 1 - junction pos
 		tr.append('td')
@@ -262,9 +260,7 @@ function newjunction2table(spobj, jlst) {
 			)
 
 		// 2 - read count
-		tr.append('td')
-			.style('color', '#aaa')
-			.text(j.jd.readcount)
+		tr.append('td').style('color', '#aaa').text(j.jd.readcount)
 
 		// 3 - gene
 		tr.append('td').text(cellvalue_genename4junction(j.jd))
@@ -274,10 +270,7 @@ function newjunction2table(spobj, jlst) {
 		if (j.jd.exonskip) {
 			cellvalue_exonskip(td, j.jd.exonskip)
 		} else {
-			td.append('span')
-				.text('-')
-				.style('padding-right', '50px')
-				.style('color', '#ccc')
+			td.append('span').text('-').style('padding-right', '50px').style('color', '#ccc')
 		}
 
 		// 5 - j.start snv
@@ -286,10 +279,7 @@ function newjunction2table(spobj, jlst) {
 			const look = j.jd.leftsnv || j.jd.rightsnv
 			td.text(look.snv.ref + '/' + look.snv.mut)
 		} else {
-			td.append('span')
-				.text('-')
-				.style('padding-right', '50px')
-				.style('color', '#ccc')
+			td.append('span').text('-').style('padding-right', '50px').style('color', '#ccc')
 		}
 
 		// 6 - compete site
@@ -297,10 +287,7 @@ function newjunction2table(spobj, jlst) {
 		if (j.jd.leftcompete || j.jd.rightcompete) {
 			cellvalue_competesite(td, j.jd.leftcompete || j.jd.rightcompete, j.jd.readcount)
 		} else {
-			td.append('span')
-				.text('-')
-				.style('padding-right', '50px')
-				.style('color', '#ccc')
+			td.append('span').text('-').style('padding-right', '50px').style('color', '#ccc')
 		}
 
 		// 7 - logo
@@ -326,10 +313,7 @@ function makesampleui(spobj, jdv) {
 
 	const errdiv = column1.append('div').style('margin-bottom', '10px')
 
-	const div = column1
-		.append('div')
-		.style('padding-top', headerpad)
-		.style('position', 'relative')
+	const div = column1.append('div').style('padding-top', headerpad).style('position', 'relative')
 
 	const scrollholder = div
 		.append('div')
@@ -337,10 +321,7 @@ function makesampleui(spobj, jdv) {
 		.style('height', '600px')
 		.style('resize', 'vertical')
 
-	const listtable = scrollholder
-		.append('table')
-		.style('border-spacing', '2px')
-		.style('border-collapse', 'separate')
+	const listtable = scrollholder.append('table').style('border-spacing', '2px').style('border-collapse', 'separate')
 
 	const header = listtable.append('tr').style('font-size', '.8em')
 
@@ -349,46 +330,17 @@ function makesampleui(spobj, jdv) {
 	// 1 - junction pos
 	header.append('td')
 	// 2 - read count
-	header
-		.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '1px')
-		.html('read<br>count')
+	header.append('td').append('div').style('position', 'absolute').style('top', '1px').html('read<br>count')
 	// 3 - gene
-	header
-		.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '1px')
-		.text('gene')
+	header.append('td').append('div').style('position', 'absolute').style('top', '1px').text('gene')
 	// 4 - exon skip
-	header
-		.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '1px')
-		.html('exon<br>skipping')
+	header.append('td').append('div').style('position', 'absolute').style('top', '1px').html('exon<br>skipping')
 	// 5 - j.start snv
-	header
-		.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '1px')
-		.html('snv')
+	header.append('td').append('div').style('position', 'absolute').style('top', '1px').html('snv')
 	// 6 - compete site
-	header
-		.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '1px')
-		.html('competing<br>site')
+	header.append('td').append('div').style('position', 'absolute').style('top', '1px').html('competing<br>site')
 	// 7 - logo
-	header
-		.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '1px')
+	header.append('td').append('div').style('position', 'absolute').style('top', '1px')
 
 	// button to load more junctions
 	const loadtr = listtable.append('tr')
@@ -453,10 +405,7 @@ function cellvalue_genename4junction(j) {
 }
 
 function cellvalue_exonskip(td, events) {
-	const bardiv = td
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin-right', '5px')
+	const bardiv = td.append('div').style('display', 'inline-block').style('margin-right', '5px')
 	client.fillbar(bardiv, { f: events[0].fraction }, bar_exonskip)
 	// exon numbers
 	td.append('span').html(
@@ -557,10 +506,7 @@ function phrase_competesite(div, compete, noveljreadcount) {
 	/*
 	in the junction table, show logo for a compete site, isoform-level
 	*/
-	const bardiv = div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin-right', '5px')
+	const bardiv = div.append('div').style('display', 'inline-block').style('margin-right', '5px')
 
 	let fraction
 	if (compete.competejunction) {
@@ -656,7 +602,7 @@ function competesitediagram(div, j) {
 		.text(distlabel)
 		.attr('font-size', distfontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			distlabelw = this.getBBox().width
 		})
 		.remove()

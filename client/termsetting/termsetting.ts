@@ -1,15 +1,25 @@
-import { getInitFxn, copyMerge, deepEqual } from '../rx/index'
-import { Menu } from '../dom/menu'
+import { getInitFxn, copyMerge, deepEqual } from '#rx'
+import { Menu } from '#dom'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
-import { Q, TermWrapper, TwLst } from '../shared/types/terms/tw'
-import { VocabApi, Dom, UseCase, NoTermPromptOptsEntry, Filter, SampleCountsEntry, Term } from '../shared/types/index'
+import {
+	CategoricalQ,
+	Q,
+	TermWrapper,
+	TwLst,
+	NumericQ,
+	SnpsQ,
+	VocabApi,
+	Dom,
+	UseCase,
+	NoTermPromptOptsEntry,
+	Filter,
+	SampleCountsEntry,
+	Term
+} from '#types'
 import { TermSettingOpts, Handler, PillData } from './types'
-import { CategoricalQ } from '../shared/types/terms/categorical'
-import { NumericQ } from '../shared/types/terms/numeric'
-import { SnpsQ } from '../shared/types/terms/snps'
-import { TermTypes, isDictionaryType, isNumericTerm } from '../shared/terms'
-import { TwRouter } from '../tw/TwRouter'
+import { TermTypes, isDictionaryType, isNumericTerm } from '#shared/terms.js'
+import { TwRouter } from '#tw/TwRouter'
 
 /*
 ********************* EXPORTED

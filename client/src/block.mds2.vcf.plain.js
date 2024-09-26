@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as client from './client'
 import { divide_data_to_group } from './block.mds2.vcf'
 

@@ -3,7 +3,7 @@ import * as d3 from 'd3'
 import SnvArc from './SnvArc.ts'
 import Arc from '#plots/disco/arc/Arc.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
-import { dtsnvindel } from '@sjcrh/proteinpaint-server/shared/common'
+import { dtsnvindel } from '@sjcrh/proteinpaint-server/shared/common.js'
 import { table2col } from '#dom/table2col'
 
 export default class NonExonicSnvRenderer implements IRenderer {

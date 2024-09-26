@@ -1,13 +1,13 @@
 import { addGeneSearchbox } from '../genesearch.ts'
 import { Menu } from '../menu'
 import { select } from 'd3-selection'
-import { mclass, dt2color, dt2label } from '../../shared/common'
+import { mclass, dt2color, dt2label } from '#shared/common.js'
 import { Button, Div, Elem } from '../../types/d3'
 import { ClientCopyGenome } from '../../types/global'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
-import { GeneArgumentEntry } from '../../shared/types/dataset.ts'
-import { TermTypes } from '../../shared/terms'
+import { GeneArgumentEntry } from '#types'
+import { TermTypes } from '#shared/terms.js'
 import { debounce } from 'debounce'
 
 type API = {

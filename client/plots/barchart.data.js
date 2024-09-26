@@ -1,7 +1,7 @@
 import Partjson from 'partjson'
-import { compute_bins } from '#shared/termdb.bins'
+import { compute_bins } from '#shared/termdb.bins.js'
 import { sample_match_termvaluesetting } from '../common/termutils'
-import { isNumeric } from '#shared/helpers'
+import { isNumeric } from '#shared/helpers.js'
 
 export function getBarchartData(_q, data) {
 	/*

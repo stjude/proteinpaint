@@ -1,6 +1,6 @@
 import * as client from './client'
 import { legend_newrow } from './block.legend'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import { may_create_vcflegend_numericalaxis } from './block.mds2.vcf.numericaxis.legend'
 import { may_create_variantfilter } from './block.mds2.legend.variantfilter'
 import { may_create_ldlegend } from './block.mds2.ld'

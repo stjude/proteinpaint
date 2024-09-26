@@ -1,13 +1,11 @@
-import { keyupEnter } from '../../src/client'
+import { keyupEnter } from '#src/client'
 import { format } from 'd3-format'
 import { setDensityPlot, DensityData } from './density'
-import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
-import { Tabs } from '../../dom/toggleButtons'
-import { make_radios } from '../../dom/radiobutton'
+import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
+import { make_radios, Tabs, violinRenderer } from '#dom'
 import { getPillNameDefault } from '../termsetting'
-import { convertViolinData } from '../../filter/tvs.numeric'
-import { PillData, RangeEntry, NumericQ } from '../../shared/types/index'
-import { violinRenderer } from '../../dom/violinRenderer.js'
+import { convertViolinData } from '#filter/tvs.numeric'
+import { PillData, RangeEntry, NumericQ } from '#types'
 
 /*
 ********************** EXPORTED

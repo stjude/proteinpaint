@@ -1,6 +1,6 @@
 import * as client from './client'
 import { legend_newrow } from './block.legend'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 
 /*
 ********************** EXPORTED
@@ -27,16 +27,9 @@ variant filters by both info fields and variantcase_fields
 	tk.legend.variantfilter = {}
 
 	const tr = tk.legend.table.append('tr')
-	tr.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.3)
-		.text('Variant Filters')
+	tr.append('td').style('text-align', 'right').style('opacity', 0.3).text('Variant Filters')
 
-	const tr2 = tr
-		.append('td')
-		.style('padding-left', '5px')
-		.append('table')
-		.append('tr')
+	const tr2 = tr.append('td').style('padding-left', '5px').append('table').append('tr')
 
 	// button to list inactive filters
 	tk.legend.variantfilter.button = tr2
@@ -63,10 +56,7 @@ i is an element from tk.info_fields[]
 add it as a new element to the holder
 allow interacting with it, to update settings of i, and update track
 */
-	const row = tk.legend.variantfilter.holder
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin-top', '5px')
+	const row = tk.legend.variantfilter.holder.append('div').style('display', 'inline-block').style('margin-top', '5px')
 
 	row
 		.append('div')
@@ -138,20 +128,13 @@ list all variant filters in the menu of the plus button
 	const tip = tk.legend.tip
 	tip.clear()
 
-	const filter_table = tip.d
-		.append('table')
-		.style('border-spacing', '5px')
-		.style('border-collapse', 'separate')
+	const filter_table = tip.d.append('table').style('border-spacing', '5px').style('border-collapse', 'separate')
 
 	if (tk.info_fields) {
 		for (const i of tk.info_fields) {
 			const tr = filter_table.append('tr')
 
-			tr.append('td')
-				.style('padding', '5px')
-				.style('text-align', 'right')
-				.style('opacity', 0.5)
-				.text(i.label)
+			tr.append('td').style('padding', '5px').style('text-align', 'right').style('opacity', 0.5).text(i.label)
 
 			const td = tr.append('td').style('padding', '5px')
 
@@ -184,11 +167,7 @@ function menu_show_categorical(i, td, update) {
 	td.selectAll('*').remove()
 
 	for (const v of i.values) {
-		const cell = td
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '2px 10px')
-			.attr('class', 'sja_clb')
+		const cell = td.append('div').style('display', 'inline-block').style('padding', '2px 10px').attr('class', 'sja_clb')
 
 		cell
 			.append('div')
@@ -214,11 +193,7 @@ function menu_show_categorical(i, td, update) {
 	}
 
 	if (i._data.unannotated_count) {
-		const cell = td
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '2px 10px')
-			.attr('class', 'sja_clb')
+		const cell = td.append('div').style('display', 'inline-block').style('padding', '2px 10px').attr('class', 'sja_clb')
 
 		cell
 			.append('div')
@@ -328,10 +303,7 @@ function menu_show_numeric(i, td, tk, block) {
 			if (!i.isactivefilter) return
 			start_input.property('disabled', true)
 			await apply()
-			start_input
-				.property('disabled', false)
-				.node()
-				.focus()
+			start_input.property('disabled', false).node().focus()
 		})
 
 	// select operator from dropdown to set start value relation
@@ -351,10 +323,7 @@ function menu_show_numeric(i, td, tk, block) {
 			if (!i.isactivefilter) return
 			startselect.property('disabled', true)
 			await apply()
-			startselect
-				.property('disabled', false)
-				.node()
-				.focus()
+			startselect.property('disabled', false).node().focus()
 		})
 
 	startselect.append('option').html('&le;')
@@ -362,10 +331,7 @@ function menu_show_numeric(i, td, tk, block) {
 	startselect.append('option').html('&#8734;')
 	startselect.node().selectedIndex = i.range.startunbounded ? 2 : i.range.startinclusive ? 0 : 1
 
-	td.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '3px 10px')
-		.html(x)
+	td.append('div').style('display', 'inline-block').style('padding', '3px 10px').html(x)
 
 	// select operator from dropdown to set end value relation
 	const stopselect = td
@@ -384,10 +350,7 @@ function menu_show_numeric(i, td, tk, block) {
 			if (!i.isactivefilter) return
 			stopselect.property('disabled', true)
 			await apply()
-			stopselect
-				.property('disabled', false)
-				.node()
-				.focus()
+			stopselect.property('disabled', false).node().focus()
 		})
 
 	stopselect.append('option').html('&le;')
@@ -406,10 +369,7 @@ function menu_show_numeric(i, td, tk, block) {
 			if (!i.isactivefilter) return
 			stop_input.property('disabled', true)
 			await apply()
-			stop_input
-				.property('disabled', false)
-				.node()
-				.focus()
+			stop_input.property('disabled', false).node().focus()
 		})
 
 	const id = Math.random()
@@ -424,11 +384,7 @@ function menu_show_numeric(i, td, tk, block) {
 			await apply()
 			apply_checkbox.property('disabled', false)
 		})
-	td.append('label')
-		.attr('for', id)
-		.text('APPLY')
-		.style('font-size', '.8em')
-		.attr('class', 'sja_clbtext')
+	td.append('label').attr('for', id).text('APPLY').style('font-size', '.8em').attr('class', 'sja_clbtext')
 
 	async function apply() {
 		i.isactivefilter = apply_checkbox.node().checked
@@ -624,10 +580,7 @@ function display_numeric_filter(tk, i, active_filter_div, row) {
 		const tip = tk.legend.tip
 		tip.clear()
 
-		const equation_div = tip.d
-			.append('div')
-			.style('display', 'block')
-			.style('padding', '3px 5px')
+		const equation_div = tip.d.append('div').style('display', 'block').style('padding', '3px 5px')
 
 		const start_input = equation_div
 			.append('input')
@@ -650,11 +603,7 @@ function display_numeric_filter(tk, i, active_filter_div, row) {
 
 		startselect.node().selectedIndex = i.range.startunbounded ? 2 : i.range.startinclusive ? 0 : 1
 
-		equation_div
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '3px 10px')
-			.html(x)
+		equation_div.append('div').style('display', 'inline-block').style('padding', '3px 10px').html(x)
 
 		// to replace operator_end_div
 		const stopselect = equation_div.append('select').style('margin-right', '10px')

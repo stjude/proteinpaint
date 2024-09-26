@@ -1,7 +1,7 @@
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions } from '#dom/control.icons'
 import { d3lasso } from '#common/lasso'
-import { dt2label, morigin } from '#shared/common'
+import { dt2label, morigin } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom, axisTop } from 'd3-axis'

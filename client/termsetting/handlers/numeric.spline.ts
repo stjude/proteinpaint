@@ -1,9 +1,9 @@
 import { setDensityPlot } from './density'
-import { keyupEnter } from '../../src/client'
+import { keyupEnter } from '#src/client'
 import { getPillNameDefault } from '../termsetting'
-import { convertViolinData } from '../../filter/tvs.numeric'
-import { NumericQ } from '../../shared/types/index'
-import { violinRenderer } from '../../dom/violinRenderer'
+import { convertViolinData } from '#filter/tvs.numeric'
+import { NumericQ } from '#types'
+import { violinRenderer } from '#dom'
 /*
 ********************** EXPORTED
 getHandler(self)

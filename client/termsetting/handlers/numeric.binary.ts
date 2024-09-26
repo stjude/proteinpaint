@@ -1,11 +1,10 @@
 import { setDensityPlot } from './density'
 import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './numeric.discrete'
-import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
-import { make_one_checkbox } from '../../dom/checkbox'
+import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
+import { make_one_checkbox, violinRenderer } from '#dom'
 import { getPillNameDefault } from '../termsetting'
-import { convertViolinData } from '../../filter/tvs.numeric'
-import { PillData, RangeEntry } from '../../shared/types/index'
-import { violinRenderer } from '../../dom/violinRenderer.js'
+import { convertViolinData } from '#filter/tvs.numeric'
+import { PillData, RangeEntry } from '#types'
 
 /*
 ********************** EXPORTED

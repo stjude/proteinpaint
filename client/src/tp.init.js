@@ -4,7 +4,7 @@ import { bulkin } from './bulk.ui'
 import { string2pos, invalidcoord } from './coord'
 import { scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import { getsjcharts } from './getsjcharts'
 
 /*

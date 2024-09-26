@@ -1,7 +1,7 @@
 import { getCompInit, multiInit } from '../rx'
 import { topBarInit } from './controls.btns'
 import { configUiInit } from './controls.config'
-import { TermTypes } from '#shared/terms'
+import { TermTypes } from '#shared/terms.js'
 
 /*
 constructor options:

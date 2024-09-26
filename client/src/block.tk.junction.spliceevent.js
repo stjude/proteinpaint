@@ -2,7 +2,7 @@ import { select as d3select } from 'd3-selection'
 import { axisLeft } from 'd3-axis'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { rgb as d3rgb } from 'd3-color'
-import { exoncolor, IN_frame, OUT_frame, spliceeventchangegmexon } from '#shared/common'
+import { exoncolor, IN_frame, OUT_frame, spliceeventchangegmexon } from '#shared/common.js'
 import * as client from './client'
 import { mapjunctiontoexons } from './spliceevent.prep'
 import { findexonskipping } from './spliceevent.exonskip'
@@ -313,15 +313,15 @@ function rendereventsintrack(allevents, tk, block) {
 				.attr('y1', stackheight / 2 - 0.5)
 				.attr('y2', stackheight / 2 - 0.5)
 		}
-		eventset.toplabel.each(function() {
+		eventset.toplabel.each(function () {
 			eventset.labelwidth = this.getBBox().width
 		})
 		if (eventset.middlelabel) {
-			eventset.middlelabel.each(function() {
+			eventset.middlelabel.each(function () {
 				eventset.labelwidth = this.getBBox().width
 			})
 		}
-		eventset.bottomlabel.each(function() {
+		eventset.bottomlabel.each(function () {
 			eventset.labelwidth = Math.max(eventset.labelwidth, this.getBBox().width)
 		})
 		if (eventset.labelwidth > eventset.boxstart) {
@@ -490,11 +490,7 @@ export function displayspliceevents(events, holder) {
 
 	if (events.length > 1) {
 		// more events, show phrase only
-		holder
-			.append('div')
-			.style('margin', '3px 0px')
-			.style('color', '#858585')
-			.text('Additional interpretations:')
+		holder.append('div').style('margin', '3px 0px').style('color', '#858585').text('Additional interpretations:')
 		const name = Math.random().toString()
 		for (const [idx, evt] of events.entries()) {
 			const id = name + idx

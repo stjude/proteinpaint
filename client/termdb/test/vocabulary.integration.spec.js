@@ -1,13 +1,13 @@
 import tape from 'tape'
-import * as helpers from '../../test/front.helpers.js'
 import { vocabInit } from '../vocabulary'
 import * as vocabData from './vocabData'
 import { TermdbVocab } from '../TermdbVocab'
 import { FrontendVocab } from '../FrontendVocab'
 import * as d3s from 'd3-selection'
-import { TermTypeGroups } from '../../shared/terms.js'
+import { TermTypeGroups } from '#shared/terms.js'
 import { testAppInit } from '../../test/test.helpers'
 import { termjson } from '../../test/testdata/termjson'
+import * as helpers from '../../test/front.helpers.js'
 
 /*
 Tests:

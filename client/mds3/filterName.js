@@ -1,5 +1,5 @@
 import { niceNumLabels } from '../dom/niceNumLabels.ts'
-import { convertUnits } from '../shared/helpers'
+import { convertUnits } from '#shared/helpers.js'
 
 /*
 try to provide a meaningful name based on filter content; 

@@ -3,9 +3,9 @@ import { select, selectAll } from 'd3-selection'
 import { sayerror } from '../dom/sayerror.ts'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
-import { isUsableTerm } from '#shared/termdb.usecase'
+import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { keyupEnter } from '#src/client'
-import { TermTypeGroups, isNonDictionaryType, equals } from '#shared/terms'
+import { TermTypeGroups, isNonDictionaryType, equals } from '#shared/terms.js'
 
 /*
 steps:

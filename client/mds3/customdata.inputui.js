@@ -1,6 +1,6 @@
 import { mclasscolor2table } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as coord from '#src/coord'
 
 /*

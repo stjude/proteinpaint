@@ -1,7 +1,7 @@
 import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import { genomic2gm } from './coord'
-import { bplen as bplength } from '#shared/common'
+import { bplen as bplength } from '#shared/common.js'
 import Svmr from './svmr.c'
 
 export function svmrparseinput(arg, sayerror, genome, holder, hostURL, jwt) {

@@ -4,7 +4,7 @@ import { Menu } from '#dom/menu'
 import { sayerror } from '../dom/sayerror.ts'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter/filter'
-import { filterJoin } from '#shared/filter'
+import { filterJoin } from '#shared/filter.js'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from './genomeBrowser.controls'
 

@@ -1,6 +1,6 @@
 import { getCompInit } from '#rx'
 import { rgb } from 'd3-color'
-import { defaultcolor } from '../shared/common'
+import { defaultcolor } from '#shared/common.js'
 import { cardInit } from './card'
 import { buttonInit } from './dsButton'
 import { select } from 'd3-selection'

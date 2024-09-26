@@ -1,4 +1,4 @@
-import { TermTypes } from '#shared/terms'
+import { TermTypes } from '#shared/terms.js'
 
 export function maySetSandboxHeader() {
 	// run only once upon init, after state and dataType is given

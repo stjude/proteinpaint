@@ -7,7 +7,7 @@ import {
 	synonymousMutations,
 	mutationClasses,
 	CNVClasses
-} from '#shared/common'
+} from '#shared/common.js'
 
 /*************************
  reusable helper functions

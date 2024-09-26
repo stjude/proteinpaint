@@ -6,9 +6,9 @@ import { dofetch3 } from '#common/dofetch'
 import { extent } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
 import { filterJoin, getNormalRoot } from '#filter'
-import { clusterMethodLst, distanceMethodLst } from '#shared/clustering'
-import { TermTypes, TermTypes2Dt } from '#shared/terms'
-import { colorScaleMap } from '#shared/common'
+import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
+import { TermTypes, TermTypes2Dt } from '#shared/terms.js'
+import { colorScaleMap } from '#shared/common.js'
 
 export class HierCluster extends Matrix {
 	constructor(opts) {

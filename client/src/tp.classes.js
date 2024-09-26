@@ -1,4 +1,4 @@
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 
 /*
 list mutation classes

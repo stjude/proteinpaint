@@ -7,9 +7,9 @@
 	a Map() of URL parameter key-values 
 */
 // keys are case insensitive and will be converted to lower case in the map
-import { isNumeric } from '#shared/helpers'
+import { isNumeric } from '#shared/helpers.js'
 
-export default function(search = '', log = console.warn) {
+export default function (search = '', log = console.warn) {
 	const location = search ? { search } : window.location
 	const urlp = new Map()
 	for (const s of location.search.substr(1).split('&')) {

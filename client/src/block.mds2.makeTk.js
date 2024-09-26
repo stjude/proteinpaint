@@ -1,5 +1,5 @@
 import { select as d3select } from 'd3-selection'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import * as client from './client'
 import { init as init_legend } from './block.mds2.legend'
 import { may_setup_numerical_axis } from './block.mds2.vcf.numericaxis'
@@ -142,12 +142,7 @@ function may_initiate_vcf(tk, block) {
 			}
 		}
 		tk.tktip.showunder(tk.vcfrow_label_numbervariants.node())
-		tk.tktip
-			.clear()
-			.d.append('textarea')
-			.attr('cols', 25)
-			.attr('rows', 20)
-			.text(variantlst.join('\n'))
+		tk.tktip.clear().d.append('textarea').attr('cols', 25).attr('rows', 20).text(variantlst.join('\n'))
 	})
 
 	try {

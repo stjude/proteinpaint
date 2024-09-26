@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import LohArc from './LohArc.ts'
 import IRenderer from '#plots/disco/IRenderer.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
-import { dtloh } from '@sjcrh/proteinpaint-server/shared/common'
+import { dtloh } from '@sjcrh/proteinpaint-server/shared/common.js'
 import { table2col } from '#dom/table2col'
 
 export default class LohRenderer implements IRenderer {

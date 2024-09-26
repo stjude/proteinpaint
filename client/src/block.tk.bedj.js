@@ -1,5 +1,5 @@
 import * as client from './client'
-import { bplen } from '#shared/common'
+import { bplen } from '#shared/common.js'
 import { legend_newrow } from './block.legend'
 import { make_one_checkbox } from '../dom/checkbox'
 
@@ -105,10 +105,7 @@ export function bedjload(tk, block) {
 			}
 			if (data.error) throw { message: data.error }
 
-			tk.img
-				.attr('width', block.width)
-				.attr('height', data.height)
-				.attr('xlink:href', data.src)
+			tk.img.attr('width', block.width).attr('height', data.height).attr('xlink:href', data.src)
 
 			tk.height_main = tk.toppad + data.height + tk.bottompad
 			return data
@@ -178,10 +175,7 @@ export function bedjloadsubpanel(tk, block, panel) {
 			}
 			if (data.error) throw { message: data.error }
 
-			panel.img
-				.attr('width', panel.width)
-				.attr('height', data.height)
-				.attr('xlink:href', data.src)
+			panel.img.attr('width', panel.width).attr('height', data.height).attr('xlink:href', data.src)
 
 			panel.height = data.height + tk.toppad + tk.bottompad
 			return data

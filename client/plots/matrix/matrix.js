@@ -12,7 +12,7 @@ import * as matrixGroups from './matrix.groups'
 import { setComputedConfig } from './matrix.config'
 import { getTermGroups } from './matrix.xtw'
 import svgLegend from '#dom/svg.legend'
-import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common'
+import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
 
 export class Matrix {
 	constructor(opts) {

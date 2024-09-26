@@ -9,7 +9,7 @@ import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { sayerror } from '../dom/sayerror.ts'
 import { dofetch3 } from '#common/dofetch'
-import { isUsableTerm } from '#shared/termdb.usecase'
+import { isUsableTerm } from '#shared/termdb.usecase.js'
 
 /*
 opts{}

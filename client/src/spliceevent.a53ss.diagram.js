@@ -1,5 +1,5 @@
 import * as client from './client'
-import { exoncolor, IN_frame, OUT_frame } from '#shared/common'
+import { exoncolor, IN_frame, OUT_frame } from '#shared/common.js'
 
 /*
 a5ss or a3ss
@@ -37,7 +37,7 @@ width of site distance (distlabelw) determine box width
 const junctionBcolor = '#990000'
 const color_truncateexon = '#00A352'
 
-export default function(arg) {
+export default function (arg) {
 	const evt = arg.event
 	if (!evt) {
 		arg.holder.text('.event missing')
@@ -70,7 +70,7 @@ export default function(arg) {
 		.text(distlabel)
 		.attr('font-size', distfontsize)
 		.attr('font-family', client.font)
-		.each(function() {
+		.each(function () {
 			distlabelw = this.getBBox().width
 		})
 		.remove()

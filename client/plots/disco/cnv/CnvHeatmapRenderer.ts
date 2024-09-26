@@ -3,7 +3,7 @@ import * as d3 from 'd3'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import { table2col } from '#dom/table2col'
 import { scaleLinear } from 'd3-scale'
-import { dtcnv } from '../../../shared/common'
+import { dtcnv } from '#shared/common.js'
 
 export class CnvHeatmapRenderer {
 	private positivePercentile80: number

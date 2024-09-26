@@ -1,6 +1,6 @@
-import { IN_frame, OUT_frame } from '#shared/common'
+import { IN_frame, OUT_frame } from '#shared/common.js'
 
-export default function(events) {
+export default function (events) {
 	// from a list of exon skip/alt events (resulted from the same junction), find the best one
 	let evt2showidx = 0
 	for (let i = 1; i < events.length; i++) {

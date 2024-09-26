@@ -1,4 +1,4 @@
-import { mclass, dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '#shared/common'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '#shared/common.js'
 import { skewer_make, settle_glyph, fold_glyph, unfold_glyph, mayHighlightDiskBySsmid } from './skewer.render'
 import { make_datagroup } from './datagroup'
 import { renderNumericMode } from './numericmode'

@@ -1,8 +1,7 @@
 import { getPillNameDefault } from '../termsetting'
-import { PillData, Term } from '../../shared/types/index'
-import { convertViolinData } from '../../filter/tvs.numeric'
-import { violinRenderer } from '../../dom/violinRenderer'
-import { make_one_checkbox } from '#dom/checkbox'
+import { PillData, Term } from '#types'
+import { convertViolinData } from '#filter/tvs.numeric'
+import { make_one_checkbox, violinRenderer } from '#dom'
 
 /*
 ********************** EXPORTED

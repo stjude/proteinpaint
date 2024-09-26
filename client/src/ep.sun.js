@@ -3,7 +3,7 @@ import { scaleLinear } from 'd3-scale'
 import { stratify, partition } from 'd3-hierarchy'
 import { select as d3select } from 'd3-selection'
 import { rgb as d3rgb } from 'd3-color'
-import { stratinput } from '#shared/tree'
+import { stratinput } from '#shared/tree.js'
 import { font as fontfamily } from './client'
 
 export function burst(ep, val1, val2) {
@@ -179,12 +179,7 @@ quick fix to avoid error!
 			//.attr('font-size',thissize)
 			numsays.text(d.value)
 			datatypesays.text(d.data.full || '')
-			event.target.setAttribute(
-				'fill',
-				d3rgb(d._color)
-					.darker(0.5)
-					.toString()
-			)
+			event.target.setAttribute('fill', d3rgb(d._color).darker(0.5).toString())
 		})
 		.on('mouseout', (event, d) => {
 			setnamesays.text(grab.min + ' - ' + grab.max).attr('font-size', setnamefontsize)
@@ -228,11 +223,7 @@ quick fix to avoid error!
 			})
 		})
 
-	bgpocket
-		.append('circle')
-		.attr('r', bgpocketrad)
-		.attr('fill', 'white')
-		.attr('fill-opacity', 0.7)
+	bgpocket.append('circle').attr('r', bgpocketrad).attr('fill', 'white').attr('fill-opacity', 0.7)
 
 	/*
 parent of leaf nodes
@@ -271,7 +262,7 @@ items must be sorted in proper order to work with following label y placement me
 		.attr('stroke', 'white')
 		.attr('stroke-width', 3)
 		.attr('fill', 'none')
-		.each(function(d) {
+		.each(function (d) {
 			const texth = this.getBBox().height // cannot use fontsize as height
 			const a = (d.x0 + d.x1) / 2
 			let rr = radius + 5
@@ -409,7 +400,7 @@ items must be sorted in proper order to work with following label y placement me
 		.append('text')
 		.text(text)
 		.attr('font-size', 1)
-		.each(function() {
+		.each(function () {
 			var b = this.getBBox()
 			setnamefontsize = Math.min(sf(text.length) / b.width, (emptyspace * 0.4) / b.height)
 		})
@@ -473,19 +464,9 @@ function removesun(sun, grab, ep) {
 			// hide shade
 			grab.shade.attr('transform', 'translate(0,1000)')
 		})
-	grab.shadebox
-		.transition()
-		.duration(500)
-		.attr('stroke-opacity', 0)
-		.attr('fill-opacity', 0)
-	grab.shadehandle1
-		.transition()
-		.duration(500)
-		.attr('fill-opacity', 0)
-	grab.shadehandle2
-		.transition()
-		.duration(500)
-		.attr('fill-opacity', 0)
+	grab.shadebox.transition().duration(500).attr('stroke-opacity', 0).attr('fill-opacity', 0)
+	grab.shadehandle1.transition().duration(500).attr('fill-opacity', 0)
+	grab.shadehandle2.transition().duration(500).attr('fill-opacity', 0)
 	delete grab.x
 	if (ep.selectsample_button) {
 		ep.selectsample_button.style('display', 'none').text('')

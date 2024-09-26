@@ -11,8 +11,8 @@ import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls
 import { to_svg } from '../src/client'
 import { renderTable } from '../dom/table'
 import { fillTermWrapper } from '#termsetting'
-import { getColors, mclass, plotColor } from '../shared/common'
-import { isNumericTerm } from '../shared/terms'
+import { getColors, mclass, plotColor } from '#shared/common.js'
+import { isNumericTerm } from '#shared/terms.js'
 
 class Barchart {
 	constructor(opts) {

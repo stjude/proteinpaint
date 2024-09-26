@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisRight } from 'd3-axis'
 import { tooltip_singleitem, svcoord2html, make_svgraph, detailtable_singlesample } from './block.mds.svcnv.clickitem'
@@ -282,7 +282,7 @@ function render_singlesample_stack(items, tk, block, svheight) {
 				.text(m.mname)
 
 			let labelw
-			lab.each(function() {
+			lab.each(function () {
 				labelw = this.getBBox().width
 			})
 
@@ -525,11 +525,7 @@ plot them in cnv_g, axis shown in .waterfall.axisgg{}
 		axis: tk.waterfall.axisg.call(
 			axisRight()
 				.ticks(3, '.0f')
-				.scale(
-					scaleLog()
-						.domain([1, maxdist])
-						.range([tk.waterfall.axisheight, 0])
-				)
+				.scale(scaleLog().domain([1, maxdist]).range([tk.waterfall.axisheight, 0]))
 		),
 		color: 'black',
 		showline: 1
@@ -809,11 +805,7 @@ function render_singlesample_sv(svlst, tk, block) {
 		const otherchr = sv.chrA == sv._chr ? sv.chrB : sv.chrA
 		const color = otherchr == sv._chr ? intrasvcolor : tk.legend_svchrcolor.colorfunc(otherchr)
 
-		g.append('circle')
-			.attr('r', sv.radius)
-			.attr('cy', -sv.radius)
-			.attr('fill', color)
-			.attr('stroke', 'white')
+		g.append('circle').attr('r', sv.radius).attr('cy', -sv.radius).attr('fill', color).attr('stroke', 'white')
 
 		if (sv.lst.length > 1) {
 			const s = sv.radius * 1.5
@@ -895,10 +887,7 @@ function render_singlesample_sv(svlst, tk, block) {
 			})
 
 		if (doubleleg) {
-			g.append('line')
-				.attr('stroke', color)
-				.attr('y2', raiseheight)
-				.attr('shape-rendering', 'crispEdges')
+			g.append('line').attr('stroke', color).attr('y2', raiseheight).attr('shape-rendering', 'crispEdges')
 			g.append('line') // right leg
 				.attr('stroke', color)
 				.attr('x2', (sv.x1 - sv.x0) / 2 - (sv.x - sv._x))
@@ -1009,8 +998,6 @@ function showtable_multi_sv(lst, holder, tk) {
 			.text(i.dt == common.dtsv ? 'SV' : 'Fusion')
 
 		tr.append('td').text(itemname_svfusion(i))
-		tr.append('td')
-			.style('font-size', '.8em')
-			.html(svcoord2html(i, tk))
+		tr.append('td').style('font-size', '.8em').html(svcoord2html(i, tk))
 	}
 }

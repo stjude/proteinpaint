@@ -1,6 +1,6 @@
-import { sample_match_termvaluesetting } from '#shared/filter'
+import { sample_match_termvaluesetting } from '#shared/filter.js'
 import { getSampleSorter, getTermSorter, getSampleGroupSorter, getMclassSorter } from './matrix.sort'
-import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common'
+import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
 
 export function getTermOrder(data) {
 	const s = this.settings.matrix

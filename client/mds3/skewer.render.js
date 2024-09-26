@@ -2,7 +2,7 @@ import { select as d3select } from 'd3-selection'
 import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
-import { dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common'
+import { dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
 import { renderSkewerShapes, renderShapeKick, setNumBaseline } from './skewer.render.shapes.ts'
 import { shapes } from '#dom/shapes'
 

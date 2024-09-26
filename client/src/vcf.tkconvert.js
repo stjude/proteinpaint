@@ -1,5 +1,5 @@
 import * as client from './client'
-import { stratinput } from '#shared/tree'
+import { stratinput } from '#shared/tree.js'
 import { stratify } from 'd3-hierarchy'
 
 /*

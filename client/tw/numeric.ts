@@ -20,8 +20,8 @@ import {
 } from '#types'
 import { TwBase, TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
-import { isNumeric } from '#shared/helpers'
-import { roundValueAuto } from '#shared/roundValue'
+import { isNumeric } from '#shared/helpers.js'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor

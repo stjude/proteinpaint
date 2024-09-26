@@ -2,9 +2,9 @@ import { q_to_param } from './vocabulary'
 import { Vocab } from './Vocab'
 import { dofetch3, isInSession } from '../common/dofetch'
 import { getNormalRoot } from '#filter'
-import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
+import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { isDictionaryType } from '#shared/terms'
+import { isDictionaryType } from '#shared/terms.js'
 import { fillTermWrapper } from '#termsetting'
 
 export class TermdbVocab extends Vocab {

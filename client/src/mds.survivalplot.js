@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'

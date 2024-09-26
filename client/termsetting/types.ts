@@ -1,7 +1,4 @@
-import { VocabApi } from '../shared/types/vocab.ts'
-import { Filter } from '../shared/types/filter.ts'
-import { Q, TermWrapper } from '../shared/types/terms/tw'
-import { Term } from '../shared/types/terms/term'
+import { VocabApi, Filter, Q, TermWrapper, Term } from '#types'
 
 /*
 

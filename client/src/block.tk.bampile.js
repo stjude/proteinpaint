@@ -1,7 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import { axisLeft, axisRight } from 'd3-axis'
 import * as client from './client'
-import { basecolor } from '#shared/common'
+import { basecolor } from '#shared/common.js'
 
 export function bampilefromtemplate(tk, template) {
 	if (!tk.fineheight) {
@@ -68,22 +68,14 @@ export function bampileload(tk, block) {
 				.attr('xlink:href', data.src)
 			tk.allaxis.selectAll('*').remove()
 			if (data.allmax) {
-				const scale = scaleLinear()
-					.domain([0, data.allmax])
-					.range([tk.allheight, 0])
+				const scale = scaleLinear().domain([0, data.allmax]).range([tk.allheight, 0])
 				client.axisstyle({
-					axis: tk.allaxis.call(
-						axisRight()
-							.scale(scale)
-							.ticks(4)
-					),
+					axis: tk.allaxis.call(axisRight().scale(scale).ticks(4)),
 					color: 'black',
 					showline: true
 				})
 			}
-			const scale = scaleLinear()
-				.domain([0, tk.fineymax])
-				.range([tk.fineheight, 0])
+			const scale = scaleLinear().domain([0, tk.fineymax]).range([tk.fineheight, 0])
 			client.axisstyle({
 				axis: tk.fineaxis.call(axisLeft().scale(scale)),
 				color: 'black',
@@ -120,18 +112,12 @@ function configpanel(tk, block) {
 				})
 		}
 	} else {
-		holder
-			.append('div')
-			.style('margin', '10px')
-			.text('No grades yet.')
+		holder.append('div').style('margin', '10px').text('No grades yet.')
 	}
 	// read depth cutoff
 	{
 		const row = holder.append('div').style('margin-bottom', '10px')
-		row
-			.append('div')
-			.text('Read depth cutoff:')
-			.style('font-size', '.8em')
+		row.append('div').text('Read depth cutoff:').style('font-size', '.8em')
 		const input = row
 			.append('input')
 			.attr('size', 5)

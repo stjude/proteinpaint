@@ -1,8 +1,8 @@
 import { fillbar, renderTable, newSandboxDiv, table2col } from '#dom'
-import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
+import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
-import { convertUnits } from '#shared/helpers'
+import { convertUnits } from '#shared/helpers.js'
 
 /*
 ********************** EXPORTED

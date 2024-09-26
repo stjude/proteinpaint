@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '#shared/common'
+import * as common from '#shared/common.js'
 
 export function showMenu_isgenevalue(smat, f) {
 	smat.menu.d
@@ -235,29 +235,21 @@ export function showMenu_ismutation(smat, f) {
 	{
 		// show/hide mutation classes
 
-		const div = smat.menu.d
-			.append('div')
-			.style('margin', '10px')
-			.style('border', 'solid 1px #ededed')
+		const div = smat.menu.d.append('div').style('margin', '10px').style('border', 'solid 1px #ededed')
 
 		const update = () => {
 			smat.update_singlefeature(f)
 			smat.menu.hide()
 		}
 
-		const table = div
-			.append('table')
-			.style('margin', '10px')
-			.style('border-spacing', '1px')
+		const table = div.append('table').style('margin', '10px').style('border-spacing', '1px')
 
 		const tbody = table.append('tbody')
 
 		{
 			// cnv
 			const tr = tbody.append('tr')
-			tr.append('td')
-				.style('opacity', 0.5)
-				.text('CNV')
+			tr.append('td').style('opacity', 0.5).text('CNV')
 			tr.append('td')
 				.attr('class', 'sja_menuoption')
 				.text(f.cnv.hidden ? 'Show' : 'Hide')
@@ -287,9 +279,7 @@ export function showMenu_ismutation(smat, f) {
 		{
 			// loh
 			const tr = tbody.append('tr')
-			tr.append('td')
-				.style('opacity', 0.5)
-				.text('LOH')
+			tr.append('td').style('opacity', 0.5).text('LOH')
 			tr.append('td')
 				.attr('class', 'sja_menuoption')
 				.text(f.loh.hidden ? 'Show' : 'Hide')
@@ -319,9 +309,7 @@ export function showMenu_ismutation(smat, f) {
 		{
 			// itd
 			const tr = tbody.append('tr')
-			tr.append('td')
-				.style('opacity', 0.5)
-				.text('ITD')
+			tr.append('td').style('opacity', 0.5).text('ITD')
 			tr.append('td')
 				.attr('class', 'sja_menuoption')
 				.text(f.itd.hidden ? 'Show' : 'Hide')
@@ -345,9 +333,7 @@ export function showMenu_ismutation(smat, f) {
 		{
 			// sv
 			const tr = tbody.append('tr')
-			tr.append('td')
-				.style('opacity', 0.5)
-				.text('SV')
+			tr.append('td').style('opacity', 0.5).text('SV')
 			tr.append('td')
 				.attr('class', 'sja_menuoption')
 				.text(f.sv.hidden ? 'Show' : 'Hide')
@@ -371,9 +357,7 @@ export function showMenu_ismutation(smat, f) {
 		{
 			// fusion
 			const tr = tbody.append('tr')
-			tr.append('td')
-				.style('opacity', 0.5)
-				.text('Fusion')
+			tr.append('td').style('opacity', 0.5).text('Fusion')
 			tr.append('td')
 				.attr('class', 'sja_menuoption')
 				.text(f.fusion.hidden ? 'show' : 'hide')
@@ -423,9 +407,7 @@ export function showMenu_ismutation(smat, f) {
 				continue
 			}
 			const tr = tbody2.append('tr')
-			tr.append('td')
-				.style('opacity', 0.5)
-				.text(c.label)
+			tr.append('td').style('opacity', 0.5).text(c.label)
 			tr.append('td')
 				.attr('class', 'sja_menuoption')
 				.text(f.snvindel.excludeclasses[k] ? 'Show' : 'Hide')

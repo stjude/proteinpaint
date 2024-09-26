@@ -7,7 +7,7 @@ import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
 import { getDefaultScatterSettings } from './sampleScatter.js'
 import { Tabs } from '../dom/toggleButtons'
-import { isNumericTerm } from '../shared/terms'
+import { isNumericTerm } from '#shared/terms.js'
 
 //import {  } from ''
 
