@@ -146,11 +146,10 @@ export function setInteractivity(self) {
 					addCategory(child)
 				}
 			}
-		else
-			for (const node of nodes) {
-				if (samples.length > 1) table.append('tr').append('td').attr('colspan', 3).style('border-top', '1px solid #aaa')
-				addCategory(node)
-			}
+		for (const node of nodes) {
+			if (samples.length > 1) table.append('tr').append('td').attr('colspan', 3).style('border-top', '1px solid #aaa')
+			addCategory(node)
+		}
 
 		self.dom.tooltip.show(event.clientX, event.clientY, true, false)
 

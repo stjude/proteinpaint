@@ -386,9 +386,9 @@ export function setRenderers(self) {
 			scale = 'sampleId' in c ? self.settings.size : self.settings.refSize
 		} else {
 			const range = self.settings.maxShapeSize - self.settings.minShapeSize
-			if (self.settings.scaleDotOrder == 'Ascending')
-				scale = self.settings.minShapeSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
-			else scale = self.settings.maxShapeSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+			const proportion = (c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)
+			if (self.settings.scaleDotOrder == 'Ascending') scale = self.settings.minShapeSize + proportion * range
+			else scale = self.settings.maxShapeSize - proportion * range
 		}
 		const transform = `translate(${x},${y}) scale(${(self.zoom * scale * factor) / 3})` // original icons are scaled to 0.3
 		return transform
