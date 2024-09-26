@@ -1,6 +1,8 @@
-// cd .. && cargo build --release && json='{"min_count":10,"min_total_count":15,"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
+// cd .. && cargo build --release && json='{"min_count":10,"min_total_count":15,"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","storage_type":"text","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
 // cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/DEanalysis
 #![allow(non_snake_case)]
+use hdf5::types::VarLenAscii;
+use hdf5::File as HDF5File;
 use json;
 use nalgebra::base::dimension::Const;
 use nalgebra::base::dimension::Dyn;
@@ -8,6 +10,9 @@ use nalgebra::base::Matrix;
 use nalgebra::base::VecStorage;
 use nalgebra::DMatrix;
 use nalgebra::ViewStorage;
+use ndarray::Array1;
+use ndarray::Array2;
+use ndarray::Dim;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use statrs::statistics::Data;
@@ -55,7 +60,156 @@ fn binary_search(input: &Vec<usize>, y: usize) -> i64 {
     index
 }
 
-fn input_data(
+fn input_data_from_HDF5(
+    hdf5_filename: &String,
+    case_list: &Vec<&str>,
+    control_list: &Vec<&str>,
+) -> (
+    Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
+    Vec<usize>,
+    Vec<usize>,
+    Vec<String>,
+    Vec<String>,
+) {
+    let file = HDF5File::open(&hdf5_filename).unwrap(); // open for reading
+    let ds_dim = file.dataset("dims").unwrap(); // open the dataset
+    let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
+    let mut case_indexes: Vec<usize> = Vec::with_capacity(case_list.len());
+    let mut control_indexes: Vec<usize> = Vec::with_capacity(control_list.len());
+    // Check the data type and read the dataset accordingly
+    let data_dim: Array1<_> = ds_dim.read::<usize, Dim<[usize; 1]>>().unwrap();
+    let num_samples = data_dim[0]; // Number of total columns in the dataset
+    let num_genes = data_dim[1]; // Number of total rows in the dataset
+    println!("num_samples bulk:{}", num_samples);
+    println!("num_genes bulk:{}", num_genes);
+
+    let now_gene_names = Instant::now();
+    let ds_gene_names = file.dataset("gene_names").unwrap();
+    println!("ds_gene_names:{:?}", ds_gene_names);
+    let gene_names = ds_gene_names
+        .read::<VarLenAscii, Dim<[usize; 1]>>()
+        .unwrap();
+    println!("\tgene_names = {:?}", gene_names);
+    println!("\tgene_names.shape() = {:?}", gene_names.shape());
+    println!("\tgene_names.strides() = {:?}", gene_names.strides());
+    println!("\tgene_names.ndim() = {:?}", gene_names.ndim());
+    println!("Time for parsing gene names:{:?}", now_gene_names.elapsed());
+
+    let now_gene_symbols = Instant::now();
+    let ds_gene_symbols = file.dataset("gene_symbols").unwrap();
+    println!("ds_gene_symbols:{:?}", ds_gene_symbols);
+    let gene_symbols = ds_gene_symbols
+        .read::<VarLenAscii, Dim<[usize; 1]>>()
+        .unwrap();
+    println!("\tgene_symbols = {:?}", gene_symbols);
+    println!("\tgene_symbols.shape() = {:?}", gene_symbols.shape());
+    println!("\tgene_symbols.strides() = {:?}", gene_symbols.strides());
+    println!("\tgene_symbols.ndim() = {:?}", gene_symbols.ndim());
+    println!(
+        "Time for parsing gene symbols:{:?}",
+        now_gene_symbols.elapsed()
+    );
+
+    let mut gene_names_string: Vec<String> = Vec::with_capacity(gene_names.len());
+    let mut gene_symbols_string: Vec<String> = Vec::with_capacity(gene_symbols.len());
+    for i in 0..gene_names.len() {
+        gene_names_string.push(gene_names[i].to_string());
+        gene_symbols_string.push(gene_symbols[i].to_string());
+    }
+
+    let now_samples = Instant::now();
+    let ds_samples = file.dataset("samples").unwrap();
+    let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>().unwrap();
+    println!("\tsamples = {:?}", samples);
+    println!("\tsamples.shape() = {:?}", samples.shape());
+    println!("\tsamples.strides() = {:?}", samples.strides());
+    println!("\tsamples.ndim() = {:?}", samples.ndim());
+    println!("Time for parsing samples:{:?}", now_samples.elapsed());
+
+    //Find all columns values that are populated for the given gene
+    let now_counts = Instant::now();
+    let ds_counts = file.dataset("counts").unwrap(); // open the dataset
+
+    let mut global_sample_index = 0;
+    for sample_name in case_list {
+        let sample_index;
+        match samples
+            .iter()
+            .position(|x| x.to_string() == *sample_name.to_string())
+        {
+            Some(index) => {
+                //println!(
+                //    "The index of '{}' is {} in 0-based format (add 1 to compare with R output)",
+                //    sample_name, index
+                //);
+                sample_index = index;
+            }
+            None => panic!(
+                "Sample '{}' not found in the HDF5 file '{}'",
+                sample_name, &hdf5_filename
+            ),
+        }
+
+        let sample_array: Array2<f64> = ds_counts
+            .read_slice_2d((0..gene_names.len(), sample_index..sample_index + 1))
+            .unwrap();
+        //println!("Length of gene array:{:?}", sample_array.len()); // Please check the result
+        input_vector.append(&mut sample_array.as_slice().unwrap().to_vec());
+        case_indexes.push(global_sample_index);
+        global_sample_index += 1;
+    }
+
+    for sample_name in control_list {
+        let sample_index;
+        match samples
+            .iter()
+            .position(|x| x.to_string() == *sample_name.to_string())
+        {
+            Some(index) => {
+                //println!(
+                //    "The index of '{}' is {} in 0-based format (add 1 to compare with R output)",
+                //    sample_name, index
+                //);
+                sample_index = index;
+            }
+            None => panic!(
+                "Sample '{}' not found in the HDF5 file '{}'",
+                sample_name, &hdf5_filename
+            ),
+        }
+        //let data_counts: Array1<_> = ds_counts.read::<f64, Dim<[usize; 1]>>().unwrap();
+        //println!("Data_counts: {:?}", data_counts);
+        let sample_array: Array2<f64> = ds_counts
+            .read_slice_2d((0..gene_names.len(), sample_index..sample_index + 1))
+            .unwrap();
+        //println!("Length of gene array:{:?}", sample_array.len()); // Please check the result
+        input_vector.append(&mut sample_array.as_slice().unwrap().to_vec());
+        control_indexes.push(global_sample_index);
+        global_sample_index += 1;
+    }
+
+    println!("Time for parsing HDF5 data:{:?}", now_counts.elapsed());
+    //println!(
+    //    "case + control length:{}",
+    //    case_list.len() + control_list.len()
+    //);
+    //println!("gene_names length:{}", gene_names.len());
+    //println!("input_vector length:{}", input_vector.len());
+    let dm = DMatrix::from_row_slice(
+        case_list.len() + control_list.len(),
+        gene_names.len(),
+        &input_vector,
+    );
+    (
+        dm.transpose(), // Transposing the matrix
+        case_indexes,
+        control_indexes,
+        gene_names_string,
+        gene_symbols_string,
+    )
+}
+
+fn input_data_from_text(
     filename: &String,
     case_list: &Vec<&str>,
     control_list: &Vec<&str>,
@@ -67,7 +221,6 @@ fn input_data(
     Vec<String>,
 ) {
     let input_time = Instant::now();
-    //let mut rdr = csv::Reader::from_path(path).unwrap();
     let mut file = File::open(filename).unwrap();
     let mut num_lines: usize = 0;
     let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
@@ -370,6 +523,18 @@ fn main() {
                     let now = Instant::now();
                     let min_count_option = json_string["min_count"].as_f64().to_owned();
                     let min_total_count_option = json_string["min_total_count"].as_f64().to_owned();
+                    let storage_type_option = json_string["storage_type"].as_str().to_owned();
+                    let storage_type;
+                    match storage_type_option {
+                        Some(x) => {
+                            if x == "HDF5" {
+                                storage_type = "HDF5"
+                            } else {
+                                panic!("storage_type needs to be HDF5 or txt");
+                            }
+                        }
+                        None => storage_type = "txt",
+                    }
                     let min_count;
                     match min_count_option {
                         Some(x) => min_count = x,
@@ -399,8 +564,25 @@ fn main() {
                         .collect();
                     let case_list: Vec<&str> = case_string.split(",").collect();
                     let control_list: Vec<&str> = control_string.split(",").collect();
-                    let (input_matrix, case_indexes, control_indexes, gene_names, gene_symbols) =
-                        input_data(file_name, &case_list, &control_list);
+                    let (input_matrix, case_indexes, control_indexes, gene_names, gene_symbols);
+                    if storage_type == "text" {
+                        (
+                            input_matrix,
+                            case_indexes,
+                            control_indexes,
+                            gene_names,
+                            gene_symbols,
+                        ) = input_data_from_text(file_name, &case_list, &control_list);
+                    } else {
+                        // Parsing data from a HDF5 file
+                        (
+                            input_matrix,
+                            case_indexes,
+                            control_indexes,
+                            gene_names,
+                            gene_symbols,
+                        ) = input_data_from_HDF5(file_name, &case_list, &control_list);
+                    }
                     let filtering_time = Instant::now();
                     let (filtered_matrix, lib_sizes, filtered_genes, filtered_gene_symbols) =
                         filter_by_expr(
@@ -1052,6 +1234,7 @@ fn filter_by_expr(
             positives.push(row);
         }
     }
+    println!("positives length:{}", positives.len());
     //println!("row_sums:{:?}", row_sums);
     //println!("keep_cpm:{:?}", keep_cpm);
     //println!("positive_cpm:{}", positive_cpm);
@@ -1067,12 +1250,17 @@ fn filter_by_expr(
     let mut filtered_genes: Vec<String> = Vec::with_capacity(positives.len());
     let mut filtered_gene_symbols: Vec<String> = Vec::with_capacity(positives.len());
     let mut i = 0;
+    println!("filtered_matrix rows:{}", filtered_matrix.nrows());
+    println!("filtered_matrix cols:{}", filtered_matrix.ncols());
     for index in positives {
         let row = raw_data.row(index);
         filtered_genes.push(gene_names[index].to_owned());
         filtered_gene_symbols.push(gene_symbols[index].to_owned());
         let mut j = 0;
         for item in &row {
+            //println!("index:{}", index);
+            //println!("i:{}", i);
+            //println!("j:{}", j);
             filtered_matrix[(i, j)] = *item;
             j += 1;
         }
