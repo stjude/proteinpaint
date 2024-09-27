@@ -249,7 +249,7 @@ function setRenderers(self) {
 				.style('vertical-align', 'top')
 
 			self.dom.cohortStandaloneDiv.append('label').html('Cohort: ')
-			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', function () {
+			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', async function () {
 				self.app.dispatch({ type: 'cohort_set', activeCohort: +this.value })
 			})
 
@@ -570,7 +570,17 @@ function setRenderers(self) {
 					.property('checked', i === self.activeCohort)
 					.style('margin-right', '5px')
 					.style('margin-left', '0px')
-					.on('click', () => {
+					.on('click', async () => {
+						const state = self.app.getState()
+						//the terms used in the plots are not always the same for the profile.
+						//Therefore when switching cohorts, it is necessary to delete the plots opened
+						if (state.vocab.dslabel == 'profile')
+							for (const plot of state.plots) {
+								await self.app.dispatch({
+									type: 'plot_delete',
+									id: plot.id
+								})
+							}
 						self.app.dispatch({ type: 'cohort_set', activeCohort: i })
 					})
 
