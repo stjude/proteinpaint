@@ -5,7 +5,7 @@
     "baseUrl": "./",
     "paths": {
       "#types": ["./shared/types/index.mts"],
-      "#shared/types/*": ["./shared/types/*"],
+      "#types*": ["./shared/types/*"],
       "#shared/*": ["./shared/*"],
       "#src/*": ["./src/*"],
       "#routes/*": ["./routes/*"]

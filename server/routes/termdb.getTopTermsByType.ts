@@ -1,7 +1,4 @@
-import {
-	TermdbTopTermsByTypeRequest,
-	TermdbTopTermsByTypeResponse
-} from '#shared/types/routes/termdb.getTopTermsByType.ts'
+import { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse } from '#routeTypes/termdb.getTopTermsByType.ts'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'

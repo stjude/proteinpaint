@@ -1,4 +1,4 @@
-import { GetSampleWSImagesRequest, GetSampleWSImagesResponse, WSImage } from '#shared/types/routes/samplewsimages.js'
+import { GetSampleWSImagesRequest, GetSampleWSImagesResponse, WSImage } from '#routeTypes/samplewsimages.js'
 
 /*
 given a sample, return all whole slide images for specified dataset

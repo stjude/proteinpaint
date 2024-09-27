@@ -5,7 +5,7 @@ import serverconfig from '#src/serverconfig.js'
 import {
 	TermdbSingleSampleMutationRequest,
 	TermdbSingleSampleMutationResponse
-} from '#shared/types/routes/termdb.singleSampleMutation.ts'
+} from '#routeTypes/termdb.singleSampleMutation.ts'
 import { gdcValidate_query_singleSampleMutation } from '#src/mds3.gdc.js'
 
 export const api: any = {

@@ -1,7 +1,7 @@
 import {
 	TermdbSinglecellDEgenesRequest,
 	TermdbSinglecellDEgenesResponse
-} from '#shared/types/routes/termdb.singlecellDEgenes.ts'
+} from '#routeTypes/termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_DEgenes } from '#src/mds3.gdc.js'
 
 /* 

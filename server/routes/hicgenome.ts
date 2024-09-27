@@ -1,5 +1,5 @@
-import { HicGenomeRequest, HicGenomeResponse } from '#shared/types/routes/hicgenome.ts'
-import { Item } from '#shared/types/routes/hicdata.ts'
+import { HicGenomeRequest, HicGenomeResponse } from '#routeTypes/hicgenome.ts'
+import { Item } from '#routeTypes/hicdata.ts'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'

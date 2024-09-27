@@ -2,7 +2,7 @@ import {
 	Image,
 	TermdbGetSampleImagesRequest,
 	TermdbGetSampleImagesResponse
-} from '#shared/types/routes/termdb.getSampleImages.ts'
+} from '#routeTypes/termdb.getSampleImages.ts'
 import path from 'path'
 import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'

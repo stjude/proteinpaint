@@ -2,7 +2,7 @@ import fs from 'fs'
 import util from 'util'
 import got from 'got'
 // import { exec } from 'child_process'
-import { HicstatResponse } from '#shared/types/routes/hicstat.ts'
+import { HicstatResponse } from '#routeTypes/hicstat.ts'
 
 /**
  * 

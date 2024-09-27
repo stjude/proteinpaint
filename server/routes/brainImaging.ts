@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import { GetBrainImagingRequest, GetBrainImagingResponse } from '#shared/types/routes/brainImaging.ts'
+import { GetBrainImagingRequest, GetBrainImagingResponse } from '#routeTypes/brainImaging.ts'
 import { spawn } from 'child_process'
 
 /*
