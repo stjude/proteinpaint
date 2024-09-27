@@ -216,7 +216,7 @@ export const shapes = {
 
 export const shapesArray = Object.values(shapes).map(shape => shape.path)
 
-export function shapeSelector(div, callback) {
+export function shapeSelector(div, callback, shapesArray = shapesArray) {
 	const size = 20
 	const cols = 8
 	const height = Math.ceil(shapesArray.length / cols) * size

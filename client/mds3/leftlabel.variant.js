@@ -2,7 +2,7 @@ import { fold_glyph, settle_glyph } from './skewer.render'
 import { may_render_skewer } from './skewer'
 import { itemtable } from './itemtable'
 import { makelabel, positionLeftlabelg } from './leftlabel'
-import { to_textfile, Tabs, make_radios, shapes } from '#dom'
+import { to_textfile, Tabs, make_radios, shapes, shapeSelector } from '#dom'
 import { rangequery_rglst } from './tk'
 import { samples2columnsRows, block2source } from './sampletable'
 import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtfusionrna } from '#shared/common.js'
@@ -176,10 +176,16 @@ function menu_variants(tk, block) {
 					.on('click', () => {
 						if (called == false) {
 							called = true
-							displayVectorGraphics({
+							renderShapePicker({
 								holder: div.append('div').style('margin-top', '10px'),
-								callback: onShapeClick,
-								tk: tk
+								callback: shape => {
+									Object.keys(tk.shapes).forEach(key => {
+										tk.shapes[key] = shape
+									})
+									tk.load()
+									tk.menutip.hide()
+								},
+								tk
 							})
 						}
 					})
@@ -292,8 +298,8 @@ async function listVariantData(tk, block) {
 	}
 }
 
-export function displayVectorGraphics(arg) {
-	const desiredShapes = {
+export function renderShapePicker(arg) {
+	const lollipopShapes = {
 		filledCircle: shapes.filledCircle,
 		emptyCircle: shapes.emptyCircle,
 		filledVerticalRectangle: shapes.filledVerticalRectangle,
@@ -303,54 +309,16 @@ export function displayVectorGraphics(arg) {
 		filledSquare: shapes.filledSquare,
 		emptySquare: shapes.emptySquare
 	}
+
 	const { holder, callback, tk } = arg
+	const shapePaths = Object.values(lollipopShapes).map(shape => shape.path)
 
-	const vectorGraphicsDiv = holder.append('div')
-	vectorGraphicsDiv
-		.append('div')
-		.style('display', 'flex')
-		.style('flex-direction', 'row')
-		.style('align-items', 'center')
-		.style('justify-content', 'center')
-		.style('border', 'none')
-		.style('width', '100%')
-		.style('font-size', '20px')
-		.style('margin-top', '5px')
-
-	const shapesContainer = vectorGraphicsDiv
-		.append('div')
-		.style('display', 'flex')
-		.style('flex-wrap', 'wrap')
-		.style('width', 'max-content')
-
-	for (const val of Object.entries(desiredShapes)) {
-		const width = 18
-		const height = 18
-		const shapeSvg = shapesContainer
-			.append('svg')
-			.attr('width', width)
-			.attr('height', height)
-			.attr('viewBox', `-1 -1 ${width} ${height}`)
-			.style('padding', '0px 2px')
-			.style('cursor', 'pointer')
-			.on('click', () => {
-				callback(val, tk)
-			})
-		shapeSvg
-			.append('path')
-			.attr('d', val[1].path)
-			.attr('fill', val[1].isFilled ? 'black' : 'none')
-			.attr('stroke', 'black')
+	const selectorCallback = val => {
+		const shape = Object.keys(lollipopShapes)[val]
+		callback(shape, tk)
 	}
-}
 
-function onShapeClick(val, tk) {
-	// Logic to change the pre-existing shape to the chosen shape
-	Object.keys(tk.shapes).forEach(key => {
-		tk.shapes[key] = val[0]
-	})
-	tk.load()
-	tk.menutip.hide()
+	shapeSelector(holder, selectorCallback, shapePaths)
 }
 
 function mayAddSkewerModeOption(tk, block) {
