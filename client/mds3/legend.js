@@ -566,7 +566,9 @@ function update_mclass(tk) {
 							mclass[c.k].color = colorValue
 						},
 						reset: () => {
+							if (!mclass[c.k].origColor) return
 							mclass[c.k].color = mclass[c.k].origColor
+							reload(tk)
 						}
 					}
 				]
@@ -834,7 +836,6 @@ function createLegendTipMenu(opts, tk, elem) {
 					const resetDiv = tk.legend.tip.d.append('div').style('display', 'inline-block')
 					const handler = () => {
 						opt.reset()
-						reload(tk)
 					}
 					icons['restart'](resetDiv, { handler, title: 'Reset to original color' })
 				}
