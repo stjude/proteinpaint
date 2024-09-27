@@ -318,7 +318,9 @@ export function renderShapePicker(arg) {
 		callback(shape, tk)
 	}
 
-	shapeSelector(holder, selectorCallback, shapePaths)
+	const opts = { backgroundColor: '' }
+
+	shapeSelector(holder, selectorCallback, shapePaths, opts)
 }
 
 function mayAddSkewerModeOption(tk, block) {

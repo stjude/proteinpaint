@@ -216,11 +216,11 @@ export const shapes = {
 
 export const shapesArray = Object.values(shapes).map(shape => shape.path)
 
-export function shapeSelector(div, callback, shapesArray = shapesArray) {
+export function shapeSelector(div, callback, arr = shapesArray, opts = {}) {
 	const size = 20
 	const cols = 8
-	const height = Math.ceil(shapesArray.length / cols) * size
-	div.style('background-color', '#f2f2f2')
+	const height = Math.ceil(arr.length / cols) * size
+	div.style('background-color', 'backgroundColor' in opts ? opts.backgroundColor : '#f2f2f2')
 	const svg = div
 		.append('div')
 		.style('padding', '5px')
@@ -230,7 +230,7 @@ export function shapeSelector(div, callback, shapesArray = shapesArray) {
 		.style('background-color', 'rgba(239, 239, 239, 0.3)')
 	let count = 0
 	let y = 0
-	for (const shape of shapesArray) {
+	for (const shape of arr) {
 		const index = count + y * cols
 		svg
 			.append('path')
