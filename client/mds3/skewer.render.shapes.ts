@@ -25,7 +25,11 @@ export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 		.data(shapeG.data())
 		.enter()
 		.append('clipPath')
-		.attr('id', d => `clip-path-${d?.mlst ? `${d.mlst[0].mname}-${d.mlst[0].__x}` : `${d.mname}-${d.__x}`}`)
+		//Keep the long id. It must be unique to the data point for rendering
+		.attr(
+			'id',
+			d => `clip-path-${d?.mlst ? `${d.mlst[0].mname}-${d.mlst[0].__x}-${d.yoffset}` : `${d.mname}-${d.__x}-${d._y}`}`
+		)
 
 	defs.each(function (d) {
 		const { width, height } = getPathDimensions(d.shape, d.radius, skewer.pointup)
@@ -45,7 +49,11 @@ export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 	shapeG
 		.filter(d => d.dt == dtfusionrna || d.dt == dtsv)
 		.append('g')
-		.attr('clip-path', d => `url(#clip-path-${d?.mlst ? `${d.mlst[0].mname}-${d.mlst[0].__x}` : `${d.mname}-${d.__x}`}`)
+		.attr(
+			'clip-path',
+			d =>
+				`url(#clip-path-${d?.mlst ? `${d.mlst[0].mname}-${d.mlst[0].__x}-${d.yoffset}` : `${d.mname}-${d.__x}-${d._y}`}`
+		)
 		.append('path')
 		.attr('d', d => shapes[d.shape].calculatePath(getPathDimensions(d.shape, d.radius, skewer.pointup)))
 		.attr('fill', d => (shapes[d.shape].isFilled ? 'white' : tk.color4disc(d.mlst[0])))
