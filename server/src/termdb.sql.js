@@ -586,7 +586,7 @@ function makesql_survival(tablename, term, q, values, filter) {
 }
 
 export function get_active_groupset(term, q) {
-	if (!q || term.groupsetting.disabled) return
+	if (!q || !term.groupsetting || term.groupsetting.disabled) return
 	if (q.type == 'predefined-groupset') {
 		if (!Number.isInteger(q.predefined_groupset_idx)) throw 'q.predefined_groupset_idx is not an integer'
 		if (q.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
