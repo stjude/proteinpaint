@@ -1,7 +1,4 @@
-import {
-	TermdbSinglecellDataRequest,
-	TermdbSinglecellDataResponse
-} from '#shared/types/routes/termdb.singlecellData.ts'
+import { TermdbSinglecellDataRequest, TermdbSinglecellDataResponse } from '#routeTypes/termdb.singlecellData.ts'
 
 /*
 given a sample, return it's singlecell data from dataset

@@ -12,8 +12,7 @@
     "front",
     "container/server",
     "container/full",
-    "types",
-    "shared",
+    "shared/*",
     "augen"
   ],
   "scripts": {

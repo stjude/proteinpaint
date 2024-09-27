@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./updated": "./src/terms/updated-types.ts",
-    "./*": "./src/*"
+    "./*": "./src/*",
+    "./routes/*": "./src/routes/*"
   },
   "imports": {
     "#shared": "@sjcrh/proteinpaint-shared"

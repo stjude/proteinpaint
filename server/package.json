@@ -8,8 +8,9 @@
   "bin": "start.js",
   "imports": {
     "#types": "@sjcrh/proteinpaint-types",
-    "#types/*": "@sjcrh/proteinpaint-types/src/*",
-    "#shared/*": "@sjcrh/proteinpaint-shared/src/*",
+    "#types/*": "@sjcrh/proteinpaint-types/*",
+    "#routeTypes/*": "@sjcrh/proteinpaint-types/routes/*",
+    "#shared/*": "@sjcrh/proteinpaint-shared/*",
     "#src/*": "./src/*",
     "#routes/*": "./routes/*"
   },

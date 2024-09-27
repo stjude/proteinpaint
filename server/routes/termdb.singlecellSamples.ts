@@ -9,13 +9,13 @@ import {
 	SingleCellSamplesNative,
 	SingleCellDataNative,
 	SingleCellGeneExpressionNative
-} from '#shared/types/dataset.ts'
+} from '#types/dataset.ts'
 import {
 	Sample,
 	TermdbSinglecellsamplesRequest,
 	TermdbSinglecellsamplesResponse
-} from '#shared/types/routes/termdb.singlecellSamples.ts'
-import { Cell, Plot, TermdbSinglecellDataRequest } from '#shared/types/routes/termdb.singlecellData.ts'
+} from '#routeTypes/termdb.singlecellSamples.ts'
+import { Cell, Plot, TermdbSinglecellDataRequest } from '#routeTypes/termdb.singlecellData.ts'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'

@@ -7,10 +7,10 @@ import {
 	Clustering,
 	ValidResponse,
 	SingletermResponse
-} from '#shared/types/routes/termdb.cluster.ts'
+} from '#routeTypes/termdb.cluster.ts'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import { GeneExpressionQuery, GeneExpressionQueryNative, GeneExpressionQueryGdc } from '#shared/types/dataset.ts'
+import { GeneExpressionQuery, GeneExpressionQueryNative, GeneExpressionQueryGdc } from '#types/dataset.ts'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
