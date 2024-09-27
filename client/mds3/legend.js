@@ -572,12 +572,15 @@ function update_mclass(tk) {
 				]
 				createLegendTipMenu(opts, tk, event.target)
 
-				tk.legend.tip.d
+				const descDiv = tk.legend.tip.d
 					.append('div')
 					.style('padding', '10px')
 					.style('font-size', '.8em')
 					.style('width', '150px')
-					.html(desc)
+
+				descDiv.append('span').style('color', color).text(label.toUpperCase())
+
+				descDiv.append('div').style('color', 'black').html(desc)
 			})
 
 		cell
