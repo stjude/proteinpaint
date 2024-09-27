@@ -165,8 +165,12 @@ export function skewer_make(tk, block) {
 						d3arc()({
 							innerRadius: 0,
 							outerRadius: d.radius - 2,
-							startAngle: d.useNterm ? 0 : Math.PI,
-							endAngle: d.useNterm ? Math.PI : Math.PI * 2
+							/**** Always show the colored area on the correct side ****
+							 * Preserves showing the colored:white areas regardless if
+							 * the shape is filled or not
+							 */
+							startAngle: d.useNterm == shapes[d.shape].isFilled ? 0 : Math.PI,
+							endAngle: d.useNterm == shapes[d.shape].isFilled ? Math.PI : Math.PI * 2
 						})
 					)
 			}
