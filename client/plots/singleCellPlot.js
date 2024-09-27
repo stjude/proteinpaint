@@ -634,7 +634,7 @@ class singleCellPlot {
 					.enter()
 					.append('option')
 					.attr('value', d => d)
-					.property('selected', d => d == this.state.config.colorBy)
+					.property('selected', d => d == this.state.config.colorBy?.[plot.name])
 					.html(d => d)
 				colorBySelect.on('change', () => {
 					const colorBy = colorBySelect.node().value
