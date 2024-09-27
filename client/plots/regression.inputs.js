@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { InputTerm } from './regression.inputs.term'
-import { make_one_checkbox } from '#dom'
+import { make_one_checkbox, Menu } from '#dom'
 
 /*
 outcome and independent are two sections sharing same structure
@@ -158,7 +158,7 @@ export class RegressionInputs {
 		// need to check if the dataset allows this
 		// if so, add to this array, to be shown as mini menu
 		const lst = []
-		for (const item of allNonDictionaryTerms) {
+		for (const item of structuredClone(allNonDictionaryTerms)) {
 			// TODO do this via vocab api
 			if (!this.state.allowedTermTypes.includes(item.termtype)) {
 				// not allowed by this dataset
@@ -167,6 +167,15 @@ export class RegressionInputs {
 			if (section.inputLst.find(i => i.term && i.term.term.type == item.termtype)) {
 				// same term is already present in this section, do not add a second
 				continue
+			}
+			if (item.termtype == 'snplocus') {
+				if (this.config.includeUnivariate) {
+					// snplocus is computationally intensive so it should not
+					// be allowed when univariate results are included
+					item.invalid = true
+					const label = this.dom.univariateCheckboxDiv.select('label').text().trim()
+					item.invalidMsg = `Cannot add this variable. Please uncheck the "${label}" checkbox.`
+				}
 			}
 			lst.push(item)
 		}
@@ -215,6 +224,19 @@ function setRenderers(self) {
 			checked: false,
 			holder: self.dom.univariateCheckboxDiv,
 			callback: checked => {
+				const invalid = self.config.independent.find(v => v.interactions.length || v.term.type == 'snplocus')
+				if (invalid) {
+					// interactions or snplocus variable in use
+					// disable univariate analysis
+					self.dom.univariateCheckbox.property('checked', false)
+					const tip = new Menu()
+					tip.showunder(self.dom.univariateCheckboxDiv.node())
+					const msg = `Cannot include univariate results. Please remove ${
+						invalid.interactions.length ? 'all interactions' : `the "${invalid.term.name}" variable`
+					}.`
+					tip.d.append('div').text(msg)
+					return
+				}
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.parent.id,
@@ -362,11 +384,8 @@ function setRenderers(self) {
 			return
 		}
 		self.dom.univariateCheckboxDiv.style('display', 'block')
-		self.dom.univariateCheckbox
-			// disable univariate analysis when interactions are in use
-			.property('disabled', self.config.independent.find(v => v.interactions.length) ? true : false)
-			// set checked status
-			.property('checked', self.config.includeUnivariate)
+		// set checked status
+		self.dom.univariateCheckbox.property('checked', self.config.includeUnivariate)
 	}
 
 	self.mayShowSubmitMsgs = () => {

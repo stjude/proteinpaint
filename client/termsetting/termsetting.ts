@@ -548,12 +548,19 @@ function setInteractivity(self) {
 		}
 		self.dom.tip.clear().showunder(self.dom.nopilldiv.node())
 		// create small menu, one option for each ele in noTermPromptOptions[]
+		const optionTip = new Menu()
 		for (const option of self.noTermPromptOptions) {
 			// {isDictionary, termtype, text, html, q{}}
 			const item = self.dom.tip.d
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.on('click', async () => {
+				.on('click', async event => {
+					optionTip.clear().hide()
+					if (option.invalid) {
+						// invalid option, display message
+						optionTip.show(event.clientX, event.clientY).d.append('div').text(option.invalidMsg)
+						return
+					}
 					self.dom.tip.clear()
 					if (option.isDictionary) {
 						await self.showTree(self.dom.tip.d.node())
