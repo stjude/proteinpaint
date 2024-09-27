@@ -6,7 +6,7 @@ import { showLDlegend } from '../plots/regression.results'
 import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
-import { displayVectorGraphics } from './leftlabel.variant'
+import { renderShapePicker } from './leftlabel.variant'
 
 /*	
 ********************** EXPORTED
@@ -552,7 +552,7 @@ function update_mclass(tk) {
 								: false
 						},
 						callback: (val, tk) => {
-							tk.shapes[c.k] = val[0]
+							tk.shapes[c.k] = val
 							tk.load()
 							tk.legend.tip.hide()
 						}
@@ -832,7 +832,7 @@ function createLegendTipMenu(opts, tk, elem) {
 					.on('click', () => {
 						if (called == false) {
 							called = true
-							displayVectorGraphics({
+							renderShapePicker({
 								holder: div.append('div').style('margin-top', '10px'),
 								callback: val => opt.callback(val, tk),
 								tk: tk
