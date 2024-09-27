@@ -2292,7 +2292,11 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			seuratClusterTerm.values[clusterId] = { label: 'Cluster ' + clusterId }
 			for (const plot of plots) {
 				const datasetPlot = datasetPlots.find(p => p.name == plot.name)
-				plot.colorBy = datasetPlot.colorColumn.name
+				const colorColumn =
+					datasetPlot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || datasetPlot.colorColumns[0]
+				plot.colorBy = colorColumn.name
+				plot.colorColumns = datasetPlot.colorColumns.map(c => c.name)
+
 				const xpos = datasetPlot.coordsColumns.x
 				const ypos = datasetPlot.coordsColumns.y
 				const x = Number(l[xpos])
