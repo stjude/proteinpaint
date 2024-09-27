@@ -138,10 +138,8 @@ benchmark[["runRegression"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dt
 ##################
 
 if (isTRUE(input$includeUnivariate)) {
-  # univariate analysis included along with multivariate analysis
-  # parse the results
-  # TODO: this function will not work with snplocus regression because it
-  # will combine results from multiple analyses into a single set of results
+  # univariate analysis included along with multivariable analysis
+  # parse the univariate/multivariable results
   reg_results <- parseUniMultiResults(reg_results, input$regressionType)
 }
 

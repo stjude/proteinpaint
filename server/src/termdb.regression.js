@@ -214,6 +214,8 @@ function parse_q(q, ds) {
 		// both univariate and multivariate analyses will be performed
 		if (q.independent.length < 2) throw 'multiple covariates expected'
 		if (q.independent.find(i => i.interactions.length)) throw 'interactions not allowed in univariate analysis'
+		if (q.independent.find(i => i.term.type == 'snplocus'))
+			throw 'snplocus term not supported in univariate/multivariable analysis'
 	}
 }
 
