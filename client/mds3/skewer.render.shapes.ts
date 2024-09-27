@@ -32,6 +32,10 @@ export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
 		if (!width || !height) return
 		d3select(this)
 			.append('rect')
+			/**** Always show the colored area on the correct side ****
+			 * Preserves showing the colored:white areas regardless if
+			 * the shape is filled or not
+			 */
 			.attr('x', d.useNterm != shapes[d.shape].isFilled ? -(width / 2) : 0)
 			.attr('y', -(height / 2))
 			.attr('width', d.useNterm != shapes[d.shape].isFilled ? width / 2 : width)
