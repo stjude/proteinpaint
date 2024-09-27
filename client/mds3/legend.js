@@ -1,5 +1,5 @@
 import { legend_newrow } from '#src/block.legend'
-import { Menu, axisstyle } from '#dom'
+import { Menu, axisstyle, icons } from '#dom'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
@@ -62,7 +62,7 @@ run only once, called by makeTk
 	tk.legend.table = table
 
 	create_mclass(tk, block)
-	// may_create_variantShapeName(tk)
+	may_create_variantShapeName(tk)
 	may_create_infoFields(tk)
 	may_create_formatFilter(tk)
 	may_create_skewerRim(tk)
@@ -93,41 +93,41 @@ function create_mclass(tk, block) {
 	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
 }
 
-// function may_create_variantShapeName(tk) {
-// 	if (!tk.variantShapeName) return
-// 	const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
-// 	const vl = (tk.legend.variantShapeName = {})
-// 	{
-// 		const d = holder.append('div')
-// 		d.append('span').html(
-// 			`<svg style="display:inline-block" width=12 height=12>
-// 			<circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=`
-// 		)
-// 		vl.dotCount = d.append('span')
-// 		if (tk.variantShapeName.dot) d.append('span').text(', ' + tk.variantShapeName.dot)
-// 		vl.dotDiv = d
-// 	}
-// 	{
-// 		const d = holder.append('div')
-// 		d.append('span').html(
-// 			`<svg style="display:inline-block" width=12 height=12>
-// 			<path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=`
-// 		)
-// 		vl.triangleCount = d.append('span')
-// 		if (tk.variantShapeName.triangle) d.append('span').text(', ' + tk.variantShapeName.triangle)
-// 		vl.triangleDiv = d
-// 	}
-// 	{
-// 		const d = holder.append('div')
-// 		d.append('span').html(
-// 			`<svg style="display:inline-block" width=13 height=13>
-// 			<circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=`
-// 		)
-// 		vl.circleCount = d.append('span')
-// 		if (tk.variantShapeName.circle) d.append('span').text(', ' + tk.variantShapeName.circle)
-// 		vl.circleDiv = d
-// 	}
-// }
+function may_create_variantShapeName(tk) {
+	if (!tk.variantShapeName) return
+	const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
+	const vl = (tk.legend.variantShapeName = {})
+	{
+		const d = holder.append('div')
+		d.append('span').html(
+			`<svg style="display:inline-block" width=12 height=12>
+			<circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=`
+		)
+		vl.dotCount = d.append('span')
+		if (tk.variantShapeName.dot) d.append('span').text(', ' + tk.variantShapeName.dot)
+		vl.dotDiv = d
+	}
+	{
+		const d = holder.append('div')
+		d.append('span').html(
+			`<svg style="display:inline-block" width=12 height=12>
+			<path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=`
+		)
+		vl.triangleCount = d.append('span')
+		if (tk.variantShapeName.triangle) d.append('span').text(', ' + tk.variantShapeName.triangle)
+		vl.triangleDiv = d
+	}
+	{
+		const d = holder.append('div')
+		d.append('span').html(
+			`<svg style="display:inline-block" width=13 height=13>
+			<circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=`
+		)
+		vl.circleCount = d.append('span')
+		if (tk.variantShapeName.circle) d.append('span').text(', ' + tk.variantShapeName.circle)
+		vl.circleDiv = d
+	}
+}
 
 function may_create_infoFields(tk) {
 	if (!tk.mds.bcf?.info) return // not using bcf with info fields
@@ -317,7 +317,7 @@ export function updateLegend(data, tk, block) {
 	tk.legend.mclass.currentData = data.mclass2variantcount
 	update_mclass(tk)
 
-	// may_update_variantShapeName(data, tk)
+	may_update_variantShapeName(data, tk)
 	may_update_infoFields(data, tk)
 	may_update_formatFilter(data, tk)
 	may_update_skewerRim(data, tk)
@@ -325,24 +325,24 @@ export function updateLegend(data, tk, block) {
 	may_update_cnv(tk)
 }
 
-// function may_update_variantShapeName(data, tk) {
-// 	if (!tk.variantShapeName) return
-// 	let dot = 0,
-// 		triangle = 0,
-// 		circle = 0
-// 	for (const m of data.skewer) {
-// 		if (m.shapeTriangle) triangle++
-// 		else if (m.shapeCircle) circle++
-// 		else dot++
-// 	}
-// 	const vl = tk.legend.variantShapeName
-// 	vl.dotDiv.style('display', dot ? 'block' : 'none')
-// 	vl.triangleDiv.style('display', triangle ? 'block' : 'none')
-// 	vl.circleDiv.style('display', circle ? 'block' : 'none')
-// 	vl.dotCount.text(dot)
-// 	vl.triangleCount.text(triangle)
-// 	vl.circleCount.text(circle)
-// }
+function may_update_variantShapeName(data, tk) {
+	if (!tk.variantShapeName) return
+	let dot = 0,
+		triangle = 0,
+		circle = 0
+	for (const m of data.skewer) {
+		if (m.shapeTriangle) triangle++
+		else if (m.shapeCircle) circle++
+		else dot++
+	}
+	const vl = tk.legend.variantShapeName
+	vl.dotDiv.style('display', dot ? 'block' : 'none')
+	vl.triangleDiv.style('display', triangle ? 'block' : 'none')
+	vl.circleDiv.style('display', circle ? 'block' : 'none')
+	vl.dotCount.text(dot)
+	vl.triangleCount.text(triangle)
+	vl.circleCount.text(circle)
+}
 
 /*
 update legend for all info fields of this track
@@ -562,7 +562,11 @@ function update_mclass(tk) {
 						value: color,
 						isVisible: () => true,
 						callback: colorValue => {
+							if (!mclass[c.k].origColor) mclass[c.k].origColor = mclass[c.k].color
 							mclass[c.k].color = colorValue
+						},
+						reset: () => {
+							mclass[c.k].color = mclass[c.k].origColor
 						}
 					}
 				]
@@ -813,6 +817,7 @@ function createLegendTipMenu(opts, tk, elem) {
 				tk.legend.tip.d
 					.append('div')
 					.style('padding', '5px 10px')
+					.style('display', 'inline-block')
 					.text('Color:')
 					.append('input')
 					.attr('type', 'color')
@@ -822,6 +827,14 @@ function createLegendTipMenu(opts, tk, elem) {
 						opt.callback(color)
 						reload(tk)
 					})
+				if (opt.reset) {
+					const resetDiv = tk.legend.tip.d.append('div').style('display', 'inline-block')
+					const handler = () => {
+						opt.reset()
+						reload(tk)
+					}
+					icons['restart'](resetDiv, { handler, title: 'Reset to original color' })
+				}
 			} else if (opt.isChangeShape) {
 				let called = false
 				const div = tk.legend.tip.d
