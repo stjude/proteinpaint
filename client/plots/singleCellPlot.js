@@ -184,7 +184,8 @@ class singleCellPlot {
 				.style('display', state.config.gene ? 'inline-block' : 'none')
 			violinBt.on('click', () => {
 				const gene = geneSearch.geneSymbol || state.config.gene
-				const name = this.state.config.plots.find(p => p.colorColumn == select.node().value).name
+				const columnName = select.node().value
+				const name = this.state.config.plots.find(p => p.colorColumns.some(c => c == columnName)).name
 				const plot = this.plots.find(p => p.name == name)
 				const values = {}
 				for (const cluster of plot.clusters) {
