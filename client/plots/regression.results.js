@@ -643,10 +643,8 @@ function setRenderers(self) {
 			}
 			// col 3
 			forestPlotter(tr.append('td'), row.lst)
-			// rest of columns
-			for (const v of row.lst) {
-				tr.append('td').text(v).style('padding', '8px')
-			}
+			// display data columns
+			fillDataColumns(tr, row.lst)
 		}
 
 		// last row to show forest plot axis (call function without data)
