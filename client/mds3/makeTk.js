@@ -74,6 +74,14 @@ when requesting skewer data at gmmode (not genomic) for the first time,
 data is queried by isoform, and returned data is kept at tk.skewer.rawmlst
 at subsequent panning/zooming, it won't re-request skewer data, as it's still using the same isoform
 and will use cached data at rawmlst instead
+
+********************************
+* On skewer shapes             *
+********************************
+In both the numeric and skewer modes, one of eight shapes is defined for each data point. In 
+skewer mode, shapes are mapped to the mutation and assigned to each skewer on render init. 
+In numeric mode, the shape is defined individually via the custom_variants.shape[Triangle/Circle] arg. 
+The default is the `filledCircle` for both modes. 
 */
 
 export async function makeTk(tk, block) {
