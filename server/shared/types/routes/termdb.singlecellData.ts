@@ -22,7 +22,13 @@ export type Plot = {
 	cells: Cell[]
 	/** Column name to color by, e.g Cell type, CNV, Fusion */
 	colorBy: string
+	colorColumns: string[]
 	colorMap?: { [key: string]: string }
+}
+
+export type ColorColumn = {
+	index: number
+	name: string
 }
 
 export type TermdbSinglecellDataRequest = {
