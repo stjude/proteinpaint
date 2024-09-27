@@ -123,6 +123,7 @@ class singleCellPlot {
 					})
 				headerDiv.append('label').text(plot.name).attr('for', `show${id}`)
 			}
+
 		if (q.singleCell?.geneExpression) {
 			searchGeneDiv.append('label').html('Gene expression:').style('padding', '10px')
 			const geneSearch = addGeneSearchbox({
@@ -159,9 +160,10 @@ class singleCellPlot {
 			// Only add unique colorColumn among plots as option
 			const uniqueColorColumns = new Set()
 			for (const plot of state.termdbConfig?.queries.singleCell.data.plots) {
-				if (!uniqueColorColumns.has(plot.colorColumn)) {
-					select.append('option').text(plot.colorColumn)
-					uniqueColorColumns.add(plot.colorColumn)
+				const colorColumn = state.config.colorBy?.[plot.name] || plot.colorColumns[0]
+				if (!uniqueColorColumns.has(colorColumn)) {
+					select.append('option').text(colorColumn)
+					uniqueColorColumns.add(colorColumn)
 				}
 			}
 			select.on('change', async () => {
@@ -469,6 +471,7 @@ class singleCellPlot {
 				sID: this.samples?.[0]?.sample
 			}
 		}
+		body.colorBy = this.state.config.colorBy
 		if (this.state.config.gene) body.gene = this.state.config.gene
 		try {
 			const result = await dofetch3('termdb/singlecellData', { body })
@@ -606,11 +609,11 @@ class singleCellPlot {
 		const r = 5
 		plot.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
-			.range([0 + r, this.settings.svgh + r])
+			.range([0 + r, this.settings.svgh - r])
 		plot.axisBottom = axisBottom(plot.xAxisScale)
 		plot.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
-			.range([0 + r, this.settings.svgh + r])
+			.range([0 + r, this.settings.svgh - r])
 		plot.axisLeft = axisLeft(plot.yAxisScale)
 		plot.zoomK = 1
 	}
@@ -619,6 +622,28 @@ class singleCellPlot {
 		const colorMap = plot.colorMap
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
+			if (plot.colorColumns.length > 1) {
+				const app = this.app
+				const colorByDiv = plot.plotDiv.append('div')
+				colorByDiv.append('label').text('Color by:').style('margin-right', '5px')
+				const colorBySelect = colorByDiv.append('select')
+				colorBySelect
+					.selectAll('option')
+					.data(plot.colorColumns)
+					.enter()
+					.append('option')
+					.attr('value', d => d)
+					.property('selected', d => d == this.state.config.colorBy)
+					.html(d => d)
+				colorBySelect.on('change', () => {
+					const colorBy = colorBySelect.node().value
+					app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { colorBy: { [plot.name]: colorBy } }
+					})
+				})
+			}
 			legendSVG = plot.plotDiv
 				.append('svg')
 				.attr('width', 250)

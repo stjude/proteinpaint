@@ -156,7 +156,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					}
 					file2Lines[tsvfile] = (await read_file(tsvfile)).trim().split('\n')
 				}
-
+				const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
 				const lines = file2Lines[tsvfile]
 				// 1st line is header
 				const cells = [] as Cell[]
@@ -167,8 +167,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 						x = Number(l[plot.coordsColumns.x]), // FIXME standardize, or define idx in plot
 						y = Number(l[plot.coordsColumns.y])
 					//if(l.length <= 3) continue //not enough columns
-
-					const category = l[plot.colorColumn?.index] || ''
+					const category = l[colorColumn?.index] || ''
 					if (!cellId) throw 'cell id missing'
 					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
 					const cell: Cell = { cellId, x, y, category }
@@ -179,7 +178,13 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					}
 					cells.push(cell)
 				}
-				plots.push({ name: plot.name, cells, colorBy: plot.colorColumn?.name, colorMap: plot.colorColumn?.colorMap })
+				plots.push({
+					name: plot.name,
+					cells,
+					colorColumns: plot.colorColumns.map(c => c.name),
+					colorBy: colorColumn?.name,
+					colorMap: colorColumn?.colorMap
+				})
 			}
 			if (plots.length == 0) {
 				// no data available for this sample
