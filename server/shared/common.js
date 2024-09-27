@@ -276,7 +276,9 @@ mclass[mclasssv] = {
 	label: 'Structural variation',
 	color: '#858585',
 	dt: dtsv,
-	desc: 'Structural variation detected in genomic DNA.',
+	desc:
+		'<span style="font-size:150%">&#9680;</span> - 3\' end of the break point is fused to the 5\' end of another break point in a different gene.<br>' +
+		'<span style="font-size:150%">&#9681;</span> - 5\' end of the break point is fused to the 3\' end of another break point in a different gene.',
 	key: mclasssv
 }
 
