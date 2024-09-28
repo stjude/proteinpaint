@@ -123,7 +123,7 @@ class singleCellPlot {
 					})
 				headerDiv.append('label').text(plot.name).attr('for', `show${id}`)
 			}
-
+		let selectCategory
 		if (q.singleCell?.geneExpression) {
 			searchGeneDiv.append('label').html('Gene expression:').style('padding', '10px')
 			const geneSearch = addGeneSearchbox({
@@ -134,7 +134,7 @@ class singleCellPlot {
 				placeholder: state.config.gene || 'Gene',
 				callback: () => {
 					violinBt?.style('display', 'inline-block')
-					select?.style('display', 'inline-block')
+					selectCategory?.style('display', 'inline-block')
 
 					const gene = geneSearch.geneSymbol
 					this.app.dispatch({
@@ -149,30 +149,22 @@ class singleCellPlot {
 				},
 				emptyInputCallback: () => {
 					violinBt.style('display', 'none')
-					select.style('display', 'none')
+					selectCategory.style('display', 'none')
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene: null } })
 				},
 				hideHelp: true,
 				focusOff: true
 			})
-			const select = searchGeneDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 
-			// Only add unique colorColumn among plots as option
-			const uniqueColorColumns = new Set()
-			for (const plot of state.termdbConfig?.queries.singleCell.data.plots) {
-				const colorColumn = state.config.colorBy?.[plot.name] || plot.colorColumns[0]
-				if (!uniqueColorColumns.has(colorColumn)) {
-					select.append('option').text(colorColumn)
-					uniqueColorColumns.add(colorColumn)
-				}
-			}
-			select.on('change', async () => {
+			selectCategory = searchGeneDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
+
+			selectCategory.on('change', async () => {
 				const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
 				const columnName = plot.columnName
 				const args = {
 					sample: state.config.sample.sampleName,
 					columnName,
-					category: select.node().value
+					category: selectCategory.node().value
 				}
 				const result = await this.app.vocabApi.getTopTermsByType(args)
 			})
@@ -184,9 +176,9 @@ class singleCellPlot {
 				.style('display', state.config.gene ? 'inline-block' : 'none')
 			violinBt.on('click', () => {
 				const gene = geneSearch.geneSymbol || state.config.gene
-				const columnName = select.node().value
-				const name = this.state.config.plots.find(p => p.colorColumns.some(c => c == columnName)).name
-				const plot = this.plots.find(p => p.name == name)
+				const columnName = selectCategory.node().value
+				const plot = this.plots.find(p => p.colorColumns.some(c => c == columnName))
+
 				const values = {}
 				for (const cluster of plot.clusters) {
 					values[cluster] = { key: cluster, value: cluster }
@@ -248,8 +240,8 @@ class singleCellPlot {
 			.style('text-align', 'center')
 
 		loadingDiv.append('div').attr('class', 'sjpp-spinner')
-
 		this.dom = {
+			selectCategory,
 			header: this.opts.header,
 			mainDiv,
 			//holder,
@@ -418,6 +410,19 @@ class singleCellPlot {
 		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 
+		// Only add unique colorColumn among plots as option
+		const uniqueColorColumns = new Set()
+		if (this.dom.selectCategory) {
+			this.dom.selectCategory.selectAll('*').remove()
+			for (const plot of this.state.termdbConfig?.queries.singleCell.data.plots) {
+				const colorColumn = this.state.config.colorBy?.[plot.name] || plot.colorColumns[0]
+				const display = this.settings[`show${plot.name.replace(/\s+/g, '')}`]
+				if (!uniqueColorColumns.has(colorColumn) && display) {
+					this.dom.selectCategory.append('option').text(colorColumn)
+					uniqueColorColumns.add(colorColumn)
+				}
+			}
+		}
 		this.dom.tableDiv.style('display', this.settings.showSamples ? 'block' : 'none')
 		if (this.tableOnPlot) {
 			await renderSamplesTable(this.dom.tableDiv, this, this.state, this.state.dslabel, this.state.genome)
