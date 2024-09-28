@@ -20,7 +20,12 @@ const namePattern = process.argv[2] || '*.spec.*'
 // prevent excessive imports
 if (!namePattern.includes('.spec.')) throw `namePattern does not include '.spec'`
 
-const specs = glob.sync(`./**/test/${namePattern}`, { cwd: __dirname })
+const specs = glob.sync(`./**/test/${namePattern}`, { cwd: __dirname }).map(file => ({ file, rel: `../${file}` }))
+const sharedUtils = path.join(__dirname, '../shared/utils')
+const sharedSpecs = glob
+	.sync(`./**/test/${namePattern}`, { cwd: sharedUtils })
+	.map(file => ({ file, rel: `../../shared/utils/${file}` }))
+specs.push(...sharedSpecs)
 specs.sort()
 
 console.log(`import { matchSpecs, specsMatched } from './matchSpecs.js'`)
@@ -50,9 +55,9 @@ if (specs.length) console.log(initialTest)
 console.log(`const promises = []`)
 // do not await on the dynamic import(), tape seems to collects all tests
 // within a given time so that they can all run in sequence, otherwise
-// if awaited, only the first spec file will run (tape seems to consider 
+// if awaited, only the first spec file will run (tape seems to consider
 // all tests done at that point)
-specs.forEach(f => console.log(`if (matchSpecs('${f}')) promises.push(import('../${f}'))`))
+specs.forEach(f => console.log(`if (matchSpecs('${f.file}')) promises.push(import('${f.rel}'))`))
 
 console.log(`// this resolves after all test modules are loaded, 
 // but likely before all test code are fully evaluated and completed 
