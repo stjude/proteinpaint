@@ -5,7 +5,11 @@ window.process = process
 
 const params = getParams()
 //const CURRSPECDIR = params.dir ? `./${params.dir}` : '.'
-const NESTEDSPECDIR = params.dir ? `**/${params.dir}` : '**'
+const NESTEDSPECDIR = !params.dir
+	? '**'
+	: params.dir.startsWith('../shared/utils/')
+	? params.dir.replace('../shared/utils/', 'shared/utils/')
+	: `**/${params.dir}`
 const SPECNAME = params.name || '*'
 const exclude = 'exclude' in params ? params.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
 const patterns = [

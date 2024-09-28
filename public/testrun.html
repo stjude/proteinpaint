@@ -91,7 +91,7 @@ if (!Object.keys(params).length) {
 }
 
 function updateNavCrumbs(display, params={}) {
-  const NESTEDSPECDIR = params.dir ? `**/${params.dir}` : '**'
+  const NESTEDSPECDIR = params.dir ? `${params.dir}` : '**'
   const SPECNAME = params.name || '*'
   const pattern = `${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`
   currTest.style('display', display).text(pattern)
@@ -105,7 +105,7 @@ async function showAvailableSpecs() {
   try {
     const data = await fetch(`/specs?exclude=`).then(r=>r.json())
     const byDir = processData(data)
-    const dirs = Object.values(byDir).sort((a,b)=> a.short < b.short ? -1 : 1)
+    const dirs = Object.values(byDir).sort((a,b) => a.short < b.short ? -1 : 1)
 
     const mainDiv = d3.select('#main-div')
     
@@ -149,7 +149,7 @@ function processData(data) {
     // the last subdir is /test/, remove from the dir name
     const path = d.slice(0,-1).join('/')
     if (d[d.length - 1] == 'test') d.pop()
-    const short = d.slice(0,2).join('/') + (d.length > 2 ? '/**' : '')
+    const short = d.slice(0, d[0] == '..' ? 3 : 2).join('/') + (d.length > 2 ? '/**' : '')
     if (!byDir[short]) byDir[short] = {
       path,
       short,

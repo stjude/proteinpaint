@@ -24,7 +24,7 @@ const specs = glob.sync(`./**/test/${namePattern}`, { cwd: __dirname }).map(file
 const sharedUtils = path.join(__dirname, '../shared/utils')
 const sharedSpecs = glob
 	.sync(`./**/test/${namePattern}`, { cwd: sharedUtils })
-	.map(file => ({ file, rel: `../../shared/utils/${file}` }))
+	.map(file => ({ file: `shared/utils/${file}`, rel: `../../shared/utils/${file}` }))
 specs.push(...sharedSpecs)
 specs.sort()
 

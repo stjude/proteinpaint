@@ -67,28 +67,17 @@ export function findMatchingSpecs(opts) {
 	for (const dir of dirnames) {
 		const pattern = path.join(dir.abs, specPattern)
 		const specs =
-			//getFromCache(pattern) ||
+			getFromCache(pattern) ||
 			glob.sync(pattern, { cwd: path.join(dir.abs, `./**`) }).filter(f => !exclude || !f.includes(exclude))
 		specs.sort()
 		if (!specsCache[pattern]) specsCache[pattern] = specs
-		if (SPECDIR == '**' && SPECNAME == '*') {
-			// this is a request for all spec files, can cache the results for
-			// all other targeted spec searches, since glob.sync could be slow
-			specsCache['*'] = specs
-		}
-
-		// sorting preference for running the tests
-		// const specOrder = []
-		// specs.sort((a, b) => {
-		// 	const i = specOrder.indexOf(a)
-		// 	const j = specOrder.indexOf(b)
-		// 	if (i == -1 && j == -1) return 0
-		// 	if (i == -1) return 1
-		// 	if (j == -1) return -1
-		// 	return i - j
-		// })
-
 		allSpecs.push(...specs.map(file => file.replace(dir.abs + '/', dir.rel)))
+	}
+
+	if (SPECDIR == '**' && SPECNAME == '*') {
+		// this is a request for all spec files, can cache the results for
+		// all other targeted spec searches, since glob.sync could be slow
+		specsCache['*'] = allSpecs
 	}
 
 	return {
