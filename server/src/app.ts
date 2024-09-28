@@ -54,11 +54,7 @@ export async function launch() {
 			app,
 			genomes,
 			basepath: serverconfig.basepath || '',
-			apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
-			types: {
-				importDir: '../types/routes',
-				outputFile: path.join(__dirname, '../shared/checkers-raw/index.ts')
-			}
+			apiJson: path.join(__dirname, '../../public/docs/server-api.json')
 		})
 
 		oldApp.setRoutes(app, genomes, serverconfig)

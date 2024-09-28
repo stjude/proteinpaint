@@ -43,7 +43,18 @@ export default function setRoutes(app, basepath) {
 	.
 */
 
-const __dirname = path.join(import.meta.dirname, '../../../../client')
+const clientAbs = path.join(import.meta.dirname, '../../../../client')
+const sharedAbs = path.join(import.meta.dirname, '../../../../shared/utils')
+const dirnames = [
+	{
+		abs: clientAbs,
+		rel: ''
+	},
+	{
+		abs: sharedAbs,
+		rel: '../shared/utils/'
+	}
+]
 const specsCache = {}
 
 export function findMatchingSpecs(opts) {
@@ -51,34 +62,39 @@ export function findMatchingSpecs(opts) {
 	const SPECDIR = opts.dir ? `**/${opts.dir}` : '**'
 	const SPECNAME = opts.name || '*'
 	const exclude = 'exclude' in opts ? opts.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
-	const pattern = path.join(__dirname, `./${SPECDIR}/test/${SPECNAME}.spec.*s`)
-	const specs =
-		getFromCache(pattern) ||
-		glob.sync(pattern, { cwd: path.join(__dirname, `./**`) }).filter(f => !exclude || !f.includes(exclude))
-	specs.sort()
-	if (!specsCache[pattern]) specsCache[pattern] = specs
-	if (SPECDIR == '**' && SPECNAME == '*') {
-		// this is a request for all spec files, can cache the results for
-		// all other targeted spec searches, since glob.sync could be slow
-		specsCache['*'] = specs
+	const specPattern = `${SPECDIR}/test/${SPECNAME}.spec.*s`
+	const allSpecs = []
+	for (const dir of dirnames) {
+		const pattern = path.join(dir.abs, specPattern)
+		const specs =
+			//getFromCache(pattern) ||
+			glob.sync(pattern, { cwd: path.join(dir.abs, `./**`) }).filter(f => !exclude || !f.includes(exclude))
+		specs.sort()
+		if (!specsCache[pattern]) specsCache[pattern] = specs
+		if (SPECDIR == '**' && SPECNAME == '*') {
+			// this is a request for all spec files, can cache the results for
+			// all other targeted spec searches, since glob.sync could be slow
+			specsCache['*'] = specs
+		}
+
+		// sorting preference for running the tests
+		// const specOrder = []
+		// specs.sort((a, b) => {
+		// 	const i = specOrder.indexOf(a)
+		// 	const j = specOrder.indexOf(b)
+		// 	if (i == -1 && j == -1) return 0
+		// 	if (i == -1) return 1
+		// 	if (j == -1) return -1
+		// 	return i - j
+		// })
+
+		allSpecs.push(...specs.map(file => file.replace(dir.abs + '/', dir.rel)))
 	}
 
-	const clientDir = __dirname.replace('client/test', 'client')
-	// sorting preference for running the tests
-	const specOrder = []
-	specs.sort((a, b) => {
-		const i = specOrder.indexOf(a)
-		const j = specOrder.indexOf(b)
-		if (i == -1 && j == -1) return 0
-		if (i == -1) return 1
-		if (j == -1) return -1
-		return i - j
-	})
-
 	return {
-		matched: specs.map(file => file.replace(clientDir + '/', '')),
-		n: specs.length,
-		pattern,
+		matched: allSpecs,
+		n: allSpecs.length,
+		pattern: specPattern,
 		exclude
 	}
 }
