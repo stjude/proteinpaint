@@ -551,7 +551,7 @@ class singleCellPlot {
 			.style('display', 'inline-block')
 			.style('overflow', 'hidden')
 			.append('svg')
-			.attr('width', this.settings.svgw)
+			.attr('width', this.settings.svgw + 40)
 			.attr('height', this.settings.svgh + 40)
 			.on('mouseover', event => {
 				if (this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
@@ -573,7 +573,7 @@ class singleCellPlot {
 		symbols
 			.enter()
 			.append('g')
-			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y) + 40})`)
+			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y)})`)
 			.append('circle')
 			.attr('r', 1.5)
 			.attr('fill', d => this.getColor(d, plot))
@@ -610,7 +610,7 @@ class singleCellPlot {
 		const r = 5
 		plot.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
-			.range([0 + r, this.settings.svgh - r])
+			.range([0 + r, this.settings.svgw - r])
 		plot.axisBottom = axisBottom(plot.xAxisScale)
 		plot.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
