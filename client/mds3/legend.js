@@ -116,20 +116,46 @@ function may_create_variantShapeName(tk) {
 	const height = 12
 
 	for (const shapeObj of Object.values(tk.legend.variantShapeName)) {
-		const args = shapeObj.key.includes('Circle')
-			? { radius: width / 2 - 0.5 }
-			: { width: width - 0.5, height: height - 0.5 }
+		const getArgs = () => {
+			return shapeObj.key.includes('Circle')
+				? { radius: width / 2 - 0.5 }
+				: shapeObj.key.includes('Rectangle')
+				? { width: width / 2 + 2.5, height: height - 0.5 }
+				: { width: width - 0.5, height: height - 0.5 }
+		}
 
-		shapeObj.wrapper = tk.legend.table.append('tr').append('td').attr('colspan', 2)
-		shapeObj.wrapper
-			.append('span')
-			.append('svg')
-			.attr('width', width)
-			.attr('height', height)
+		shapeObj.wrapper = tk.legend.table
+			.append('tr')
+			.append('td')
+			.attr('colspan', 2)
+			.on('click', event => {
+				tk.legend.tip.clear().showunder(event.target)
+				renderShapePicker({
+					holder: tk.legend.tip.d.append('div'),
+					callback: val => {
+						for (const d of tk.skewer.rawmlst) {
+							if (d.shape == shapeObj.key) {
+								d.shape = val
+							}
+						}
+						shapeObj.key = val
+						shapeObj.shapeG
+							.attr('d', shapes[val].calculatePath(getArgs(shapeObj)))
+							.attr('fill', shapes[val].isFilled ? 'grey' : 'white')
+							.attr('stroke', shapes[val].isFilled ? 'none' : 'grey')
+						reload(tk)
+					},
+					tk: tk
+				})
+			})
+
+		const svg = shapeObj.wrapper.append('span').append('svg').attr('width', width).attr('height', height)
+
+		shapeObj.shapeG = svg
 			.append('g')
 			.attr('transform', `translate(${width / 2}, ${height / 2})`)
 			.append('path')
-			.attr('d', shapes[shapeObj.key].calculatePath(args))
+			.attr('d', shapes[shapeObj.key].calculatePath(getArgs(shapeObj)))
 			.attr('fill', shapes[shapeObj.key].isFilled ? 'grey' : 'white')
 			.attr('stroke', shapes[shapeObj.key].isFilled ? 'none' : 'grey')
 
@@ -338,11 +364,11 @@ export function updateLegend(data, tk, block) {
 function may_update_variantShapeName(data, tk) {
 	if (!tk.legend.customShapeLabels) return
 	Object.values(tk.legend.variantShapeName).forEach(s => (s.num = 0))
+
 	for (const d of data.skewer) {
 		const shapeObj = tk.legend.variantShapeName.find(s => s.key == d.shape)
 		shapeObj.num = ++shapeObj.num
 	}
-
 	Object.values(tk.legend.variantShapeName).forEach(s => {
 		s.wrapper.style('display', s.num ? 'block' : 'none')
 		s.numDiv.text(s.num)
