@@ -137,7 +137,7 @@ class singleCellPlot {
 					selectCategory?.style('display', 'inline-block')
 
 					const gene = geneSearch.geneSymbol
-					if (gene) for (const select of this.colorBySelects) select.remove()
+					if (gene) for (const div of this.colorByDivs) div.remove()
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
@@ -410,7 +410,7 @@ class singleCellPlot {
 	async main() {
 		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
-		this.colorBySelects = []
+		this.colorByDivs = []
 		// Only add unique colorColumn among plots as option
 		const uniqueColorColumns = new Set()
 		if (this.dom.selectCategory) {
@@ -634,7 +634,7 @@ class singleCellPlot {
 				const colorByDiv = plot.plotDiv.append('div')
 				colorByDiv.append('label').text('Color by:').style('margin-right', '5px')
 				const colorBySelect = colorByDiv.append('select')
-				this.colorBySelects.push(colorBySelect)
+				this.colorByDivs.push(colorByDiv)
 				colorBySelect
 					.selectAll('option')
 					.data(plot.colorColumns)
