@@ -1,4 +1,4 @@
-import type { getcategoriesRequest, getcategoriesResponse } from '#routeTypes/termdb.categories.ts'
+import type { getcategoriesRequest, getcategoriesResponse } from '#types'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
 

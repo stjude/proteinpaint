@@ -1,4 +1,4 @@
-import type { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, GdcGene } from '#routeTypes/gdc.topMutatedGenes.ts'
+import type { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, GdcGene } from '#types'
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 import ky from 'ky'
 

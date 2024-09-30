@@ -1,8 +1,4 @@
-import type {
-	Image,
-	TermdbGetSampleImagesRequest,
-	TermdbGetSampleImagesResponse
-} from '#routeTypes/termdb.getSampleImages.ts'
+import type { Image, TermdbGetSampleImagesRequest, TermdbGetSampleImagesResponse } from '#types'
 import path from 'path'
 import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'
