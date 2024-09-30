@@ -628,7 +628,7 @@ class singleCellPlot {
 		const colorMap = plot.colorMap
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
-			if (plot.colorColumns.length > 1) {
+			if (plot.colorColumns.length > 1 && !this.state.config.gene) {
 				const app = this.app
 				const colorByDiv = plot.plotDiv.append('div')
 				colorByDiv.append('label').text('Color by:').style('margin-right', '5px')
