@@ -1,6 +1,7 @@
 // Need to set HDF5_DIR and LD_LIBRARY_PATH in ~/.bash_profile
-// Syntax: cd .. && cargo build --release && json='{"gene":"TP53","data_type":"single","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/readHDF5
-// cd .. && cargo build --release && json='{"gene":"ENSG00000227232.4","data_type":"bulk","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
+// Syntax: cd .. && cargo build --release && json='{"gene":"TP53","data_type":"singlecell","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/readHDF5
+// cd .. && cargo build --release && json='{"gene":"ENSG00000227232.4","data_type":"expression_count","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
+// cd .. && cargo build --release && json='{"data_type":"expression_samples","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
 
 use hdf5::types::FixedAscii;
 use hdf5::types::VarLenAscii;
@@ -185,7 +186,47 @@ fn read_single_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     Ok(())
 }
 
-fn read_bulk_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
+// Used to get the sample names from HDF5 file at PP server startup
+fn get_gene_expression_samples(hdf5_filename: String) -> Result<()> {
+    let file = File::open(&hdf5_filename)?; // open for reading
+    let now_samples = Instant::now();
+    let ds_samples = file.dataset("columns")?;
+    let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>()?;
+    println!("\tsamples = {:?}", samples);
+    println!("\tsamples.shape() = {:?}", samples.shape());
+    println!("\tsamples.strides() = {:?}", samples.strides());
+    println!("\tsamples.ndim() = {:?}", samples.ndim());
+    println!("Time for parsing samples:{:?}", now_samples.elapsed());
+
+    let mut output_string = "{".to_string();
+    for i in 0..samples.len() {
+        //let item_json = "{\"".to_string()
+        //    + &samples[i].to_string()
+        //    + &"\","
+        //    + &gene_array[i].to_string()
+        //    + &"}";
+
+        //let item_json = format!("{{\"{}\"}}", samples[i].to_string());
+
+        output_string += &format!("\"{}\"", samples[i].to_string());
+        //println!("item_json:{}", item_json);
+
+        //let item_json = format!(
+        //    r##"{{"{}",{}}}"##,
+        //    samples[i].to_string().replace("\\", ""),
+        //    gene_array[i].to_string()
+        //);
+        if i != samples.len() - 1 {
+            output_string += &",";
+        }
+    }
+    output_string += &"}".to_string();
+    output_string = output_string.replace("\\", "");
+    println!("output_string:{}", output_string);
+    Ok(())
+}
+
+fn read_gene_expression_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     let file = File::open(&hdf5_filename)?; // open for reading
     let ds_dim = file.dataset("dims")?; // open the dataset
 
@@ -265,28 +306,43 @@ fn main() -> Result<()> {
                         }
                     }
 
+                    let data_type_result = &json_string["data_type"].to_owned();
+
                     let gene_result = &json_string["gene"].to_owned();
-                    let gene_name;
                     match gene_result.as_str() {
-                        Some(x) => {
-                            gene_name = x.to_string();
-                        }
+                        Some(_x) => {}
                         None => {
-                            panic!("Gene name not provided");
+                            // This panic statement has been put inside an if statement because in case of a sample request, no gene names will be provided. Later need to organize the different queries into enums so as to type check each request.
+                            if data_type_result.as_str().unwrap() != "expression_samples" {
+                                panic!("Gene name not provided");
+                            }
                         }
                     }
 
-                    let data_type_result = &json_string["data_type"].to_owned();
                     let data_type;
                     match data_type_result.as_str() {
                         Some(x) => {
                             data_type = x.to_string();
-                            if data_type == "single" {
-                                read_single_hdf5(hdf5_filename, gene_name)?;
-                            } else if data_type == "bulk" {
-                                read_bulk_hdf5(hdf5_filename, gene_name)?;
-                            } else {
-                                panic!("data_type needs to be single or bulk");
+
+                            let gene_result2 = &json_string["gene"].to_owned();
+                            match gene_result2.as_str() {
+                                Some(gene_name) => {
+                                    if data_type == "singlecell" {
+                                        read_single_hdf5(hdf5_filename, gene_name.to_string())?;
+                                    } else if data_type == "expression_count" {
+                                        read_gene_expression_hdf5(
+                                            hdf5_filename,
+                                            gene_name.to_string(),
+                                        )?;
+                                    } else {
+                                        panic!("data_type needs to be singlecell, expression_count or expression_samples");
+                                    }
+                                }
+                                None => {
+                                    if data_type == "expression_samples" {
+                                        get_gene_expression_samples(hdf5_filename)?;
+                                    }
+                                }
                             }
                         }
                         None => {
