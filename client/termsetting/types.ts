@@ -1,4 +1,4 @@
-import { VocabApi, Filter, Q, TermWrapper, Term } from '#types'
+import type { VocabApi, Filter, Q, TermWrapper, Term } from '#types'
 
 /*
 

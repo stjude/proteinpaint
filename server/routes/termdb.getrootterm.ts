@@ -1,4 +1,4 @@
-import { getroottermRequest, getroottermResponse } from '#routeTypes/termdb.getrootterm.ts'
+import type { getroottermRequest, getroottermResponse } from '#routeTypes/termdb.getrootterm.ts'
 import { get_ds_tdb } from '#src/termdb.js'
 
 export const api: any = {

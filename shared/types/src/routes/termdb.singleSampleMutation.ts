@@ -1,4 +1,4 @@
-import { ErrorResponse } from './errorResponse.ts'
+import type { ErrorResponse } from './errorResponse.ts'
 
 export type TermdbSingleSampleMutationRequest = {
 	/** Genome id */

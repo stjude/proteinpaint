@@ -1,4 +1,4 @@
-import { Genome } from '#types'
+import type { Genome } from '#types'
 
 const genome: Genome = {
 	species: 'human',

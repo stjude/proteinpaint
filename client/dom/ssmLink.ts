@@ -1,4 +1,4 @@
-import { UrlTemplateSsm } from '#types'
+import type { UrlTemplateSsm } from '#types'
 
 /*
 Make html links from one m object (m is ssm-simple somatic mutation, snvindel, or nonmutation)

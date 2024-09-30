@@ -4,18 +4,18 @@ import { read_file } from '#src/utils.js'
 import run_R from '#src/run_R.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
-import {
+import type {
 	SingleCellQuery,
 	SingleCellSamplesNative,
 	SingleCellDataNative,
 	SingleCellGeneExpressionNative
-} from '#types/dataset.ts'
-import {
+} from '#types'
+import type {
 	Sample,
 	TermdbSinglecellsamplesRequest,
 	TermdbSinglecellsamplesResponse
 } from '#routeTypes/termdb.singlecellSamples.ts'
-import { Cell, Plot, TermdbSinglecellDataRequest } from '#routeTypes/termdb.singlecellData.ts'
+import type { Cell, Plot, TermdbSinglecellDataRequest } from '#routeTypes/termdb.singlecellData.ts'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'

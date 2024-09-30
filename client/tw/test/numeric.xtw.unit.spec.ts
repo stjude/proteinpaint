@@ -2,7 +2,7 @@ import tape from 'tape'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { NumericBase } from '../numeric'
-import { RawNumTW } from '#types'
+import type { RawNumTW } from '#types'
 
 /*************************
  reusable helper functions

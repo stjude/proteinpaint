@@ -2,7 +2,7 @@ import { setDensityPlot } from './density'
 import { keyupEnter } from '#src/client'
 import { getPillNameDefault } from '../termsetting'
 import { convertViolinData } from '#filter/tvs.numeric'
-import { NumericQ } from '#types'
+import type { NumericQ } from '#types'
 import { violinRenderer } from '#dom'
 /*
 ********************** EXPORTED

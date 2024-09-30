@@ -1,4 +1,4 @@
-import { CategoricalTerm, NumericTerm } from '#types'
+import type { CategoricalTerm, NumericTerm } from '#types'
 
 const diaggrp: CategoricalTerm = {
 	id: 'diaggrp',

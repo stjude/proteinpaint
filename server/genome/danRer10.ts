@@ -1,4 +1,4 @@
-import { Genome } from '#types'
+import type { Genome } from '#types'
 
 export default <Genome>{
 	species: 'zebrafish',

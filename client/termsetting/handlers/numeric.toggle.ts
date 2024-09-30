@@ -1,10 +1,10 @@
 import { Tabs } from '#dom'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import { copyMerge } from '#rx'
-import { PillData, HandlerGenerator, Handler } from '../types'
+import type { PillData, HandlerGenerator, Handler } from '../types'
 import { VocabApi } from '#types'
 import { roundValueAuto } from '#shared/roundValue.js'
-import {
+import type {
 	NumericQ,
 	NumericTW,
 	DefaultMedianQ,

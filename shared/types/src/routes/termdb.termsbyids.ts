@@ -1,4 +1,4 @@
-import { TermWrapper } from '../terms/tw.ts'
+import type { TermWrapper } from '../terms/tw.ts'
 
 export type gettermsbyidsRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */

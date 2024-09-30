@@ -2,7 +2,7 @@ import { getInitFxn, copyMerge, deepEqual } from '#rx'
 import { Menu } from '#dom'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
-import {
+import type {
 	CategoricalQ,
 	Q,
 	TermWrapper,
@@ -17,7 +17,7 @@ import {
 	SampleCountsEntry,
 	Term
 } from '#types'
-import { TermSettingOpts, Handler, PillData } from './types'
+import type { TermSettingOpts, Handler, PillData } from './types'
 import { TermTypes, isDictionaryType, isNumericTerm } from '#shared/terms.js'
 import { TwRouter } from '#tw/TwRouter'
 

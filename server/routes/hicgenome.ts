@@ -1,4 +1,4 @@
-import { HicGenomeRequest, HicGenomeResponse } from '#routeTypes/hicgenome.ts'
+import type { HicGenomeRequest, HicGenomeResponse } from '#routeTypes/hicgenome.ts'
 import { Item } from '#routeTypes/hicdata.ts'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'

@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
-import { GroupEntry, TermGroupSetting } from '#types'
+import type { GroupEntry, TermGroupSetting } from '#types'
 import { TermWrapper } from '@sjcrh/proteinpaint-types/updated'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'

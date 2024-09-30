@@ -1,4 +1,4 @@
-import { ErrorResponse } from './errorResponse.ts'
+import type { ErrorResponse } from './errorResponse.ts'
 
 export type Cell = {
 	/** Cell id or barcode */
@@ -39,7 +39,7 @@ export type TermdbSinglecellDataRequest = {
 	gene?: string
 }
 
-export type HasdataResponse = {
+type HasdataResponse = {
 	/** List of plots from singlecell experiment of this sample */
 	plots: Plot[]
 

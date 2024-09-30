@@ -1,4 +1,4 @@
-import { NumericQ, VocabApi, MetaboliteIntensityTW } from '#types'
+import type { NumericQ, VocabApi, MetaboliteIntensityTW } from '#types'
 import { copyMerge } from '#rx'
 
 /*

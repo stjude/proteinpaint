@@ -4,7 +4,7 @@ import { select, Selection } from 'd3-selection'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { debounce } from 'debounce'
 import { mclass } from '#shared/common.js'
-import {
+import type {
 	TermSettingInstance,
 	ValuesGroup,
 	PredefinedGroupSettingQ,

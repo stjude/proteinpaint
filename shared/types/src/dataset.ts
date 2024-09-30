@@ -482,8 +482,7 @@ export type SingleCellDEgeneGdc = {
 
 type GDCSingleCellPlot = {
 	name: string
-	colorColumn?: ColorColumn
-	ColorColumns?: ColorColumn[]
+	colorColumn: ColorColumn
 	coordsColumns: { x: number; y: number }
 }
 
@@ -514,8 +513,7 @@ type SingleCellPlot = {
 	/** specify which column to color the cells in the plot. must have categorical values
 	TODO define a set of color columns and specify a default one, and let ui to switch from
 	*/
-	colorColumn?: ColorColumn
-	ColorColumns?: ColorColumn[]
+	colorColumn: ColorColumn
 	/** 0-based column number for x/y coordinate for this plot */
 	coordsColumns: { x: number; y: number }
 }

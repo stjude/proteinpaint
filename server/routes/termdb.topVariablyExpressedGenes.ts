@@ -1,4 +1,4 @@
-import {
+import type {
 	TermdbTopVariablyExpressedGenesRequest,
 	TermdbTopVariablyExpressedGenesResponse
 } from '#routeTypes/termdb.topVariablyExpressedGenes.ts'

@@ -1,4 +1,4 @@
-import { FileORURL } from '../fileOrUrl.ts'
+import type { FileORURL } from '../fileOrUrl.ts'
 
 export type BaseHicRequest = FileORURL & {
 	/** Value relates to the 1st parameter of straw tool, which accepts 'observed', 'expected', 'oe', 'norm', and 'distance' */

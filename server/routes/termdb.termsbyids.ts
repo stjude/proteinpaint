@@ -1,4 +1,4 @@
-import { gettermsbyidsRequest, gettermsbyidsResponse } from '#routeTypes/termdb.termsbyids.js'
+import type { gettermsbyidsRequest, gettermsbyidsResponse } from '#routeTypes/termdb.termsbyids.js'
 import { copy_term } from '#src/termdb.js'
 
 export const api: any = {

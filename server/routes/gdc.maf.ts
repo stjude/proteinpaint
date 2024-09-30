@@ -1,4 +1,4 @@
-import { GdcMafRequest, GdcMafResponse, File } from '#routeTypes/gdc.maf.ts'
+import type { GdcMafRequest, GdcMafResponse, File } from '#routeTypes/gdc.maf.ts'
 import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'

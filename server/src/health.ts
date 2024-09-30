@@ -1,7 +1,7 @@
 import serverconfig from './serverconfig.js'
 import fs from 'fs'
 import pkg from '../package.json'
-import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '#types'
+import type { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '#types'
 import { authApi } from './auth.js'
 
 let auth

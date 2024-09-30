@@ -1,7 +1,7 @@
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios, sayerror, throwMsgWithFilePathAndFnName } from '#dom'
 import { copyMerge } from '#rx'
-import { PillData, ConditionTW, ConditionQ, VocabApi, TermValues } from '#types'
+import type { PillData, ConditionTW, ConditionQ, VocabApi, TermValues } from '#types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig

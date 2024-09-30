@@ -1,4 +1,4 @@
-import { NumericQ, NumericTW, VocabApi } from '#types'
+import type { NumericQ, NumericTW, VocabApi } from '#types'
 
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 

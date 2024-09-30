@@ -1,6 +1,6 @@
-import { Filter } from '../filter.ts'
-import { TermWrapper } from '../terms/tw.ts'
-import { ErrorResponse } from './errorResponse.ts'
+import type { Filter } from '../filter.ts'
+import type { TermWrapper } from '../terms/tw.ts'
+import type { ErrorResponse } from './errorResponse.ts'
 
 export type getdescrstatsRequest = {
 	/** genome label in the serverconfig.json */

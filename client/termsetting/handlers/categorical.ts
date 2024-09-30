@@ -1,6 +1,6 @@
 import { GroupSettingMethods } from './groupsetting.ts'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting.ts'
-import {
+import type {
 	BaseGroupSet,
 	GroupEntry,
 	CategoricalQ,
@@ -9,8 +9,8 @@ import {
 	CategoricalTermSettingInstance,
 	VocabApi
 } from '#types'
-import { PillData } from '../types'
-import { copyMerge } from '../../rx'
+import type { PillData } from '../types'
+import { copyMerge } from '#rx'
 
 /*
 ********************** EXPORTED

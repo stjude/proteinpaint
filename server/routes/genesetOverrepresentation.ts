@@ -1,5 +1,5 @@
 //import fs from 'fs'
-import {
+import type {
 	genesetOverrepresentationRequest,
 	genesetOverrepresentationResponse,
 	gene_overrepresentation_input

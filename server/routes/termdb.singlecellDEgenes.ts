@@ -1,4 +1,4 @@
-import {
+import type {
 	TermdbSinglecellDEgenesRequest,
 	TermdbSinglecellDEgenesResponse
 } from '#routeTypes/termdb.singlecellDEgenes.ts'

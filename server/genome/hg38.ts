@@ -1,4 +1,4 @@
-import { Genome } from '#types'
+import type { Genome } from '#types'
 import { CancerGeneCensusLst } from './cgc.js'
 
 export default <Genome>{

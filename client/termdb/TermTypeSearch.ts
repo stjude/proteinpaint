@@ -1,7 +1,7 @@
 import { Tabs } from '../dom/toggleButtons'
 import { getCompInit } from '../rx'
 import { TermTypeGroups, TermTypes, typeGroup, numericTypes } from '#shared/terms.js'
-import { Term } from '#types'
+import type { Term } from '#types'
 import { select } from 'd3-selection'
 
 type Dict = {

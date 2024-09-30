@@ -2,7 +2,7 @@ import * as uiutils from '#dom/uiUtils'
 import { Tabs } from '../../dom/toggleButtons'
 import { appear } from '#dom/animation'
 import { Selection } from 'd3-selection'
-import { Genome } from '#types'
+import type { Genome } from '#types'
 import { sayerror } from '../../dom/sayerror'
 import { launch, DiscoPlotArgs } from './launch.adhoc'
 
