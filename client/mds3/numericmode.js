@@ -248,11 +248,11 @@ function numeric_make(nm, tk, block) {
 				//May allow other shapes
 				if (m.shapeCircle) {
 					m.shape = 'emptyCircle'
-					// delete m.shapeCircle
+					delete m.shapeCircle
 				} else if (m.shapeTriangle) {
 					m.shape = 'filledTriangle'
-					// delete m.shapeTriangle
-				} else m.shape = 'filledCircle'
+					delete m.shapeTriangle
+				} else if (!m.shape) m.shape = 'filledCircle'
 			}
 		}
 	}
