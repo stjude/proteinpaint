@@ -1,4 +1,4 @@
-import { Filter } from '../filter.ts'
+import type { Filter } from '../filter.ts'
 
 export type getpercentileRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */

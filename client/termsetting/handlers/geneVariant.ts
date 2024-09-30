@@ -1,6 +1,6 @@
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
-import {
+import type {
 	GeneVariantBaseQ,
 	GeneVariantQ,
 	GeneVariantTW,
@@ -9,7 +9,7 @@ import {
 	TermGroupSetting,
 	VocabApi
 } from '#types'
-import { PillData } from '../types'
+import type { PillData } from '../types'
 import { make_radios } from '#dom'
 import { copyMerge } from '#rx'
 import { GroupSettingMethods } from './groupsetting.ts'

@@ -1,4 +1,4 @@
-import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, Gene } from '#routeTypes/gdc.topMutatedGenes.ts'
+import type { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, GdcGene } from '#routeTypes/gdc.topMutatedGenes.ts'
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 import ky from 'ky'
 
@@ -259,7 +259,7 @@ async function getGenesGraphql(q: GdcTopMutatedGeneRequest, ds) {
 		})
 		.json()
 
-	const genes: Gene[] = []
+	const genes: GdcGene[] = []
 	for (const g of re.data.genesTableViewer.explore.genes.hits.edges) {
 		/* g.node is:
 		{

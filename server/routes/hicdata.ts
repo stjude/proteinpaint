@@ -1,4 +1,4 @@
-import { HicdataRequest, HicdataResponse, Item } from '#routeTypes/hicdata.ts'
+import type { HicdataRequest, HicdataResponse, Item } from '#routeTypes/hicdata.ts'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'

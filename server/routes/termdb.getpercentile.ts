@@ -1,4 +1,4 @@
-import { getpercentileRequest, getpercentileResponse, Filter } from '#types'
+import type { getpercentileRequest, getpercentileResponse, Filter } from '#types'
 import * as termdbsql from '#src/termdb.sql.js'
 import computePercentile from '#shared/compute.percentile.js'
 

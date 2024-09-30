@@ -1,4 +1,4 @@
-import { NumericQ, VocabApi, GeneExpressionTW } from '#types'
+import type { NumericQ, VocabApi, GeneExpressionTW } from '#types'
 import { copyMerge } from '#rx'
 
 /*

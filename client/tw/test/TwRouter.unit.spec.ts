@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
-import { RawCatTW, RawTW, GroupEntry, TermGroupSetting } from '#types'
+import type { RawCatTW, RawTW, GroupEntry, TermGroupSetting } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { CatValues, CatPredefinedGS, CatCustomGS } from '../categorical'

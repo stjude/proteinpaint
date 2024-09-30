@@ -1,4 +1,4 @@
-import { BaseHicRequest, Item } from './hicdata.ts'
+import type { BaseHicRequest, Item } from './hicdata.ts'
 
 export type HicGenomeRequest = BaseHicRequest & {
 	/** Entire chromosome list read from the file (see hicstate) */

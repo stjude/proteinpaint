@@ -1,4 +1,4 @@
-import { ErrorResponse } from './errorResponse.ts'
+import type { ErrorResponse } from './errorResponse.ts'
 
 export type TermdbSinglecellDEgenesRequest = {
 	/** Genome id */
@@ -15,7 +15,7 @@ export type TermdbSinglecellDEgenesRequest = {
 	categoryName: string
 }
 
-export type HasdataResponse = {
+export type HasDataResponse = {
 	/** list of significant DE genes for the given category in the sample */
 	genes: {
 		/** gene name */
@@ -27,4 +27,4 @@ export type HasdataResponse = {
 	}[]
 }
 
-export type TermdbSinglecellDEgenesResponse = ErrorResponse | HasdataResponse
+export type TermdbSinglecellDEgenesResponse = ErrorResponse | HasDataResponse

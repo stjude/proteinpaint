@@ -1,4 +1,4 @@
-import { BurdenRequest, BurdenResponse } from '#routeTypes/burden.ts'
+import type { BurdenRequest, BurdenResponse } from '#routeTypes/burden.ts'
 import run_R from '#src/run_R.js'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'

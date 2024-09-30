@@ -1,5 +1,5 @@
-import { Filter } from '../filter.ts'
-import { TermWrapper } from '../terms/tw.ts'
+import type { Filter } from '../filter.ts'
+import type { TermWrapper } from '../terms/tw.ts'
 
 export type getcategoriesRequest = {
 	genome: string

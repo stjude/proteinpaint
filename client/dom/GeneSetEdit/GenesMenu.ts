@@ -1,7 +1,7 @@
 import { Menu } from '../menu'
-import { Div, Elem } from '../../types/d3'
+import type { Div, Elem } from '../../types/d3'
+import type { GeneArgumentEntry } from '#types'
 import { addButton } from './addButton.ts'
-import { GeneArgumentEntry } from '#types'
 import { make_one_checkbox } from '../checkbox.js'
 import { makeRadiosWithContentDivs } from './radioWithContent.ts'
 

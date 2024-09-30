@@ -1,4 +1,4 @@
-import { MinGenome } from '#types'
+import type { MinGenome } from '#types'
 
 export default <MinGenome>{
 	species: 'human',

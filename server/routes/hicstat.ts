@@ -1,6 +1,6 @@
 import { fileurl, file_is_readable } from '#src/utils.js'
 import { do_hicstat } from '#src/hicstat.ts'
-import { HicstatRequestWithValidation } from '#routeTypes/hicstat.ts'
+import type { HicstatRequestWithValidation } from '#routeTypes/hicstat.ts'
 
 export const api = {
 	endpoint: 'hicstat',

@@ -1,4 +1,4 @@
-import { SnpTW, SnpQ, VocabApi } from '#types'
+import type { SnpTW, SnpQ, VocabApi } from '#types'
 import { getHandler as getCategoricalHandler } from './categorical.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '../termsetting.ts'

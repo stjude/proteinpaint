@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { RawCatTW, GroupEntry, TermGroupSetting, CatTWValues, CatTWPredefinedGS, CatTWCustomGS } from '#types'
+import type { RawCatTW, GroupEntry, TermGroupSetting, CatTWValues, CatTWPredefinedGS, CatTWCustomGS } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { CategoricalBase } from '../categorical'

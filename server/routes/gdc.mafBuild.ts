@@ -4,7 +4,7 @@ import fs from 'fs'
 import { run_rust_stream } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import Readable from 'stream'
-import { GdcMafBuildRequest } from '#routeTypes/gdc.mafBuild.ts'
+import type { GdcMafBuildRequest } from '#routeTypes/gdc.mafBuild.ts'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 
 export const api = {

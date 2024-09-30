@@ -1,4 +1,4 @@
-import { Mds3 } from '#types'
+import type { Mds3 } from '#types'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import * as path from 'path'
 import { existsSync, unlinkSync, symlinkSync, access, constants } from 'fs'

@@ -1,4 +1,4 @@
-import { InfoFieldCategories, ClinvarAF } from '#types'
+import type { InfoFieldCategories, ClinvarAF } from '#types'
 
 export const clinsig: InfoFieldCategories = {
 	Affects: {

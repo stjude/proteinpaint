@@ -5,7 +5,7 @@ import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 import { make_radios, Tabs, violinRenderer } from '#dom'
 import { getPillNameDefault } from '../termsetting'
 import { convertViolinData } from '#filter/tvs.numeric'
-import { PillData, RangeEntry, NumericQ } from '#types'
+import type { PillData, RangeEntry, NumericQ } from '#types'
 
 /*
 ********************** EXPORTED

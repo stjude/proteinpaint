@@ -1,9 +1,9 @@
-import { genesetEnrichmentRequest, genesetEnrichmentResponse } from '#types'
+import type { genesetEnrichmentRequest, genesetEnrichmentResponse } from '#types'
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
-import serverconfig from '../src/serverconfig.js'
+import serverconfig from '#src/serverconfig.js'
 
 export const api = {
 	endpoint: 'genesetEnrichment',

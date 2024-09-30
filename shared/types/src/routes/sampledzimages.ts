@@ -1,1 +1,1 @@
-export * from './dzimages.ts'
+export type * from './dzimages.ts'

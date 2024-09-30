@@ -7,7 +7,7 @@ export type GdcTopMutatedGeneRequest = {
 	filter0?: object
 }
 
-export type Gene = {
+export type GdcGene = {
 	/** gene symbol */
 	gene: string
 	/** optional attributes on number of mutated cases per dt */
@@ -21,5 +21,5 @@ export type Gene = {
 }
 
 export type GdcTopMutatedGeneResponse = {
-	genes: Gene[]
+	genes: GdcGene[]
 }

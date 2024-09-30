@@ -1,6 +1,6 @@
 import { getPillNameDefault } from '#termsetting'
-import { renderTable } from '../../dom/table'
-import { SampleLstTermSettingInstance, PillData, SampleLstTW } from '#types'
+import { renderTable } from '#dom'
+import type { SampleLstTermSettingInstance, PillData, SampleLstTW } from '#types'
 
 export function getHandler(self: SampleLstTermSettingInstance) {
 	return {

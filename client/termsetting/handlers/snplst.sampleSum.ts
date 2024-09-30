@@ -1,4 +1,4 @@
-import { SnpsTW } from '#types'
+import type { SnpsTW } from '#types'
 
 /*
 if the "effect allele" is already set for a snp (by user), return it
