@@ -540,7 +540,9 @@ export function setInteractivity(self) {
 				// 	self.addToFilter(samplelsttw)
 				// }
 			}
-			searchSampleInput(this.searchMenu.d, this.samplesData, callback, str => self.filterSamples(str))
+			searchSampleInput(this.searchMenu.d, this.samplesData, self.state.termdbConfig.hasSampleAncestry, callback, str =>
+				self.filterSamples(str)
+			)
 		}
 		this.searchMenu.show(e.clientX, e.clientY, false)
 	}
