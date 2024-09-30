@@ -1,14 +1,18 @@
 {
-  "extends": "../../tsconfig.json",
-  "strictNullChecks": true,
   "compilerOptions": {
-    "noEmit": false,
-    "allowImportingTsExtensions": false,
+    "strictNullChecks": true,
+    "rootDir": "./",
+    "baseUrl": "./",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
     "plugins": [
       { "transform": "typia/lib/transform" }
-    ]
+    ],
+    "target": "es2016",
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler" // to skip errors related to import of types from ts files
   },
-  "include": ["./src/routes/burden.ts"],
   "exclude": [
     "./node_modules"
   ]

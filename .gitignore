@@ -16,10 +16,6 @@ dist/*
 server/app.js
 server/genome/*.js
 server/dataset/*.js
-server/shared/doc.js
-server/shared/checkers/transformed/*
-server/shared/checkers/bin/*
-server/shared/checkers*/*
 server/test/*.bundle.js
 server/**/*serverTests.js
 server/routes/*.js
@@ -28,12 +24,12 @@ server/src/health.js
 server/src/hicstat.js
 server/package*/*
 
-types/checkers/*
-types/docs.json
-types/*.js
-types/**/**.js
-types/terms/*.js
-types/routes/checkers/*
+shared/types/checkers/*
+shared/types/docs.json
+shared/types/*.js
+shared/types/**/**.js
+shared/types/terms/*.js
+shared/types/routes/checkers/*
 
 **/public/bin/*
 public/tmp/*
