@@ -1,7 +1,4 @@
-import type {
-	TermdbSinglecellDEgenesRequest,
-	TermdbSinglecellDEgenesResponse
-} from '#routeTypes/termdb.singlecellDEgenes.ts'
+import type { TermdbSinglecellDEgenesRequest, TermdbSinglecellDEgenesResponse } from '#types'
 import { gdc_validate_query_singleCell_DEgenes } from '#src/mds3.gdc.js'
 
 /* 

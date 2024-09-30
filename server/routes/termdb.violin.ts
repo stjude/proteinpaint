@@ -1,4 +1,4 @@
-import type { getViolinRequest, getViolinResponse } from '#routeTypes/termdb.violin.ts'
+import type { getViolinRequest, getViolinResponse } from '#types'
 import { trigger_getViolinPlotData } from '#src/termdb.violin.js'
 
 export const api: any = {

@@ -6,11 +6,13 @@ import type {
 	TermdbClusterResponse,
 	Clustering,
 	ValidResponse,
-	SingletermResponse
-} from '#routeTypes/termdb.cluster.ts'
+	SingletermResponse,
+	GeneExpressionQuery,
+	GeneExpressionQueryNative,
+	GeneExpressionQueryGdc
+} from '#types'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import type { GeneExpressionQuery, GeneExpressionQueryNative, GeneExpressionQueryGdc } from '#types'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'

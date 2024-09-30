@@ -8,14 +8,14 @@ import type {
 	SingleCellQuery,
 	SingleCellSamplesNative,
 	SingleCellDataNative,
-	SingleCellGeneExpressionNative
-} from '#types'
-import type {
+	SingleCellGeneExpressionNative,
 	Sample,
 	TermdbSinglecellsamplesRequest,
-	TermdbSinglecellsamplesResponse
-} from '#routeTypes/termdb.singlecellSamples.ts'
-import type { Cell, Plot, TermdbSinglecellDataRequest } from '#routeTypes/termdb.singlecellData.ts'
+	TermdbSinglecellsamplesResponse,
+	Cell,
+	Plot,
+	TermdbSinglecellDataRequest
+} from '#types'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'

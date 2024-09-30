@@ -1,7 +1,4 @@
-import type {
-	getnumericcategoriesRequest,
-	getnumericcategoriesResponse
-} from '#routeTypes/termdb.getnumericcategories.ts'
+import type { getnumericcategoriesRequest, getnumericcategoriesResponse } from '#types'
 import * as termdbsql from '#src/termdb.sql.js'
 
 export const api: any = {

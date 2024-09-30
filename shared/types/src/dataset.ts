@@ -1002,7 +1002,12 @@ type Termdb = {
 		/** html code */
 		html: string
 	}
-	tracks?: BaseTrack[]
+	hasSampleAncestry?: boolean
+
+	tracks?: {
+		/** allow color or shape changes in the lollipop */
+		allowSkewerChanges: boolean
+	}
 }
 
 type ChartConfigByType = {

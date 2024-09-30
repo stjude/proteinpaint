@@ -1,7 +1,4 @@
-import type {
-	TermdbTopVariablyExpressedGenesRequest,
-	TermdbTopVariablyExpressedGenesResponse
-} from '#routeTypes/termdb.topVariablyExpressedGenes.ts'
+import type { TermdbTopVariablyExpressedGenesRequest, TermdbTopVariablyExpressedGenesResponse } from '#types'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'

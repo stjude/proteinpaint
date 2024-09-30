@@ -4,7 +4,7 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { CookieJar } from 'tough-cookie'
 import { promisify } from 'util'
-import { GetWSImagesRequest, GetWSImagesResponse } from '#routeTypes/wsimages.js'
+import { GetWSImagesRequest, GetWSImagesResponse } from '#types'
 
 /*
 return session_id and slide_dimensions of the requested WSImage

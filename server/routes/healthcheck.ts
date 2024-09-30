@@ -1,5 +1,5 @@
 import { getStat } from '#src/health.ts'
-import { HealthCheckResponse } from '#routeTypes/healthcheck.ts'
+import { HealthCheckResponse } from '#types'
 
 export const api = {
 	endpoint: 'healthcheck',
