@@ -1,5 +1,5 @@
 import { legend_newrow } from '#src/block.legend'
-import { Menu, axisstyle, icons } from '#dom'
+import { Menu, axisstyle, icons, shapes } from '#dom'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
@@ -94,39 +94,66 @@ function create_mclass(tk, block) {
 }
 
 function may_create_variantShapeName(tk) {
-	if (!tk.variantShapeName) return
-	const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
-	const vl = (tk.legend.variantShapeName = {})
-	{
-		const d = holder.append('div')
-		d.append('span').html(
-			`<svg style="display:inline-block" width=12 height=12>
-			<circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=`
-		)
-		vl.dotCount = d.append('span')
-		if (tk.variantShapeName.dot) d.append('span').text(', ' + tk.variantShapeName.dot)
-		vl.dotDiv = d
+	if (!tk.legend.customShapeLabels || !tk.custom_variants) return
+	tk.legend.variantShapeName = {}
+	for (const data of tk.custom_variants) {
+		if (!data.shape) data.shape = 'filledCircle' //Quick fix since legend renders async with skewers
+		if (!tk.legend.variantShapeName[data.shape]) tk.legend.variantShapeName[data.shape] = 0
+		tk.legend.variantShapeName[data.shape] = ++tk.legend.variantShapeName[data.shape]
 	}
-	{
-		const d = holder.append('div')
-		d.append('span').html(
-			`<svg style="display:inline-block" width=12 height=12>
-			<path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=`
-		)
-		vl.triangleCount = d.append('span')
-		if (tk.variantShapeName.triangle) d.append('span').text(', ' + tk.variantShapeName.triangle)
-		vl.triangleDiv = d
+	for (const [shape, num] of Object.entries(tk.legend.variantShapeName)) {
+		const width = 12
+		const height = 12
+		const args = shape.includes('Circle') ? { radius: 6 } : { width: width - 0.5, height: height - 0.5 }
+
+		const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
+		holder
+			.append('span')
+			.append('svg')
+			.attr('width', width)
+			.attr('height', height)
+			.append('g')
+			.attr('transform', `translate(${width / 2}, ${height / 2})`)
+			.append('path')
+			.attr('d', shapes[shape].calculatePath(args))
+			.attr('fill', shapes[shape].isFilled ? 'grey' : 'white')
+			.attr('stroke', shapes[shape].isFilled ? 'none' : 'grey')
+
+		holder.append('span').html(`&nbsp;n=${num}`)
+		holder.append('span').text(`, ${tk.legend.customShapeLabels[shape]}`)
 	}
-	{
-		const d = holder.append('div')
-		d.append('span').html(
-			`<svg style="display:inline-block" width=13 height=13>
-			<circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=`
-		)
-		vl.circleCount = d.append('span')
-		if (tk.variantShapeName.circle) d.append('span').text(', ' + tk.variantShapeName.circle)
-		vl.circleDiv = d
-	}
+	// const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
+	// const vl = (tk.legend.variantShapeName = {})
+	// {
+	// 	const d = holder.append('div')
+	// 	d.append('span').html(
+	// 		`<svg style="display:inline-block" width=12 height=12>
+	// 		<circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=`
+	// 	)
+	// 	vl.dotCount = d.append('span')
+	// 	if (tk.variantShapeName.dot) d.append('span').text(', ' + tk.variantShapeName.dot)
+	// 	vl.dotDiv = d
+	// }
+	// {
+	// 	const d = holder.append('div')
+	// 	d.append('span').html(
+	// 		`<svg style="display:inline-block" width=12 height=12>
+	// 		<path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=`
+	// 	)
+	// 	vl.triangleCount = d.append('span')
+	// 	if (tk.variantShapeName.triangle) d.append('span').text(', ' + tk.variantShapeName.triangle)
+	// 	vl.triangleDiv = d
+	// }
+	// {
+	// 	const d = holder.append('div')
+	// 	d.append('span').html(
+	// 		`<svg style="display:inline-block" width=13 height=13>
+	// 		<circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=`
+	// 	)
+	// 	vl.circleCount = d.append('span')
+	// 	if (tk.variantShapeName.circle) d.append('span').text(', ' + tk.variantShapeName.circle)
+	// 	vl.circleDiv = d
+	// }
 }
 
 function may_create_infoFields(tk) {
@@ -326,22 +353,22 @@ export function updateLegend(data, tk, block) {
 }
 
 function may_update_variantShapeName(data, tk) {
-	if (!tk.variantShapeName) return
-	let dot = 0,
-		triangle = 0,
-		circle = 0
-	for (const m of data.skewer) {
-		if (m.shapeTriangle) triangle++
-		else if (m.shapeCircle) circle++
-		else dot++
-	}
-	const vl = tk.legend.variantShapeName
-	vl.dotDiv.style('display', dot ? 'block' : 'none')
-	vl.triangleDiv.style('display', triangle ? 'block' : 'none')
-	vl.circleDiv.style('display', circle ? 'block' : 'none')
-	vl.dotCount.text(dot)
-	vl.triangleCount.text(triangle)
-	vl.circleCount.text(circle)
+	if (!tk.legend.customShapeLabels) return
+	// let dot = 0,
+	// 	triangle = 0,
+	// 	circle = 0
+	// for (const m of data.skewer) {
+	// 	if (m.shapeTriangle) triangle++
+	// 	else if (m.shapeCircle) circle++
+	// 	else dot++
+	// }
+	// const vl = tk.legend.variantShapeName
+	// vl.dotDiv.style('display', dot ? 'block' : 'none')
+	// vl.triangleDiv.style('display', triangle ? 'block' : 'none')
+	// vl.circleDiv.style('display', circle ? 'block' : 'none')
+	// vl.dotCount.text(dot)
+	// vl.triangleCount.text(triangle)
+	// vl.circleCount.text(circle)
 }
 
 /*
@@ -565,9 +592,8 @@ function update_mclass(tk) {
 							if (!mclass[c.k].origColor) mclass[c.k].origColor = mclass[c.k].color
 							mclass[c.k].color = colorValue
 						},
-						reset: {
-							isVisible: () => mclass[c.k].origColor,
-							callback: () => (mclass[c.k].color = mclass[c.k].origColor)
+						reset: () => {
+							mclass[c.k].color = mclass[c.k].origColor
 						}
 					}
 				]
@@ -832,10 +858,10 @@ function createLegendTipMenu(opts, tk, elem) {
 						opt.callback(color)
 						reload(tk)
 					})
-				if (opt.reset && opt.reset?.isVisible()) {
+				if (opt.reset) {
 					const resetDiv = tk.legend.tip.d.append('div').style('display', 'inline-block')
 					const handler = () => {
-						opt.reset.callback()
+						opt.reset()
 						reload(tk)
 					}
 					icons['restart'](resetDiv, { handler, title: 'Reset to original color' })
