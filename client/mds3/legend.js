@@ -565,10 +565,9 @@ function update_mclass(tk) {
 							if (!mclass[c.k].origColor) mclass[c.k].origColor = mclass[c.k].color
 							mclass[c.k].color = colorValue
 						},
-						reset: () => {
-							if (!mclass[c.k].origColor) return
-							mclass[c.k].color = mclass[c.k].origColor
-							reload(tk)
+						reset: {
+							isVisible: () => mclass[c.k].origColor,
+							callback: () => (mclass[c.k].color = mclass[c.k].origColor)
 						}
 					}
 				]
@@ -832,10 +831,11 @@ function createLegendTipMenu(opts, tk, elem) {
 						opt.callback(color)
 						reload(tk)
 					})
-				if (opt.reset) {
+				if (opt.reset && opt.reset?.isVisible()) {
 					const resetDiv = tk.legend.tip.d.append('div').style('display', 'inline-block')
 					const handler = () => {
-						opt.reset()
+						opt.reset.callback()
+						reload(tk)
 					}
 					icons['restart'](resetDiv, { handler, title: 'Reset to original color' })
 				}
