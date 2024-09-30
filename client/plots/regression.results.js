@@ -1274,7 +1274,7 @@ function make_mds3_variants(tw, resultLst) {
 
 		if (d.type3) {
 			/* result has type3 section, this variant has AF>cutoff and used for model-fitting
-			show this variant as a dot, do not set .shapeTriangle=true
+			show this variant as a dot, do not set .shape = 'filledTriangle'
 			find p-value in regression results
 			*/
 			const v = getSnpPvalueFromRegressionResults(d, snp.snpid)
@@ -1310,24 +1310,24 @@ function make_mds3_variants(tw, resultLst) {
 			*/
 			m.regressionPvalue = d.fisher.pvalue
 			m.mlpv = -Math.log10(d.fisher.pvalue)
-			m.shapeTriangle = true
+			m.shape = 'filledTriangle'
 		} else if (d.wilcoxon) {
 			/* { pvalue:float }
 			this variant is tested by wilcoxon, show as triangle
 			*/
 			m.regressionPvalue = d.wilcoxon.pvalue
 			m.mlpv = -Math.log10(d.wilcoxon.pvalue)
-			m.shapeTriangle = true
+			m.shape = 'filledTriangle'
 		} else if (d.cuminc) {
 			/* { pvalue:float }
 			this variant is tested by cuminc, show as triangle
 			*/
 			m.regressionPvalue = d.cuminc.pvalue
 			m.mlpv = -Math.log10(d.cuminc.pvalue)
-			m.shapeTriangle = true
+			m.shape = 'filledTriangle'
 		} else {
 			// none of above. is monomorphic, show as hollow circle
-			m.shapeCircle = true
+			m.shape = 'emptyCircle'
 		}
 	}
 	return mlst
@@ -1402,16 +1402,18 @@ async function createGenomebrowser(self, input, resultLst) {
 			}
 		],
 		custom_variants: make_mds3_variants(input.term, resultLst),
-		variantShapeName: {
-			dot: 'common variants analyzed by model-fitting',
-			triangle:
-				'rare variants analyzed by ' +
-				(self.config.regressionType == 'linear'
-					? 'Wilcoxon rank sum test'
-					: self.config.regressionType == 'logistic'
-					? "Fisher's exact test"
-					: 'Cumulative incidence test'),
-			circle: 'monomorphic variants skipped'
+		legend: {
+			customShapeLabels: {
+				filledCircle: 'common variants analyzed by model-fitting',
+				filledTriangle:
+					'rare variants analyzed by ' +
+					(self.config.regressionType == 'linear'
+						? 'Wilcoxon rank sum test'
+						: self.config.regressionType == 'logistic'
+						? "Fisher's exact test"
+						: 'Cumulative incidence test'),
+				emptyCircle: 'monomorphic variants skipped'
+			}
 		},
 		click_snvindel: async m => {
 			self.displayResult_oneset(m.regressionResult.data)
