@@ -577,8 +577,8 @@ async function makeSvgraph(m, div, block) {
 			}
 		}
 
-		await getGm(svpair.a, block)
-		await getGm(svpair.b, block)
+		await getGm(svpair.a, block, m.pairlst[0].a.name)
+		await getGm(svpair.b, block, m.pairlst[0].b.name)
 
 		wait.remove()
 
@@ -592,11 +592,12 @@ async function makeSvgraph(m, div, block) {
 		wait.text(e.message || e)
 	}
 }
-async function getGm(p, block) {
+async function getGm(p, block, name) {
 	// p={chr, position}
 	const d = await dofetch3('isoformbycoord', { body: { genome: block.genome.name, chr: p.chr, pos: p.position } })
 	if (d.error) throw d.error
-	const u = d.lst.find(i => i.isdefault) || d.lst[0]
+	//Find name if more than one gene returned
+	const u = d.lst.find(i => i.isdefault && name == i.name) || d.lst[0]
 	if (u) {
 		p.name = u.name
 		p.gm = { isoform: u.isoform }
