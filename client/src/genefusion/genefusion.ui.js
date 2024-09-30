@@ -125,7 +125,7 @@ function makeInfoSection(div) {
 		Each line has eight fields. four fields for each gene. For each gene join the following fields separated by a comma:
 		<ol><li>Gene symbol</li>
 		<li>Chromosome</li>
-		<li>Position</li>
+		<li>Position, 1-based coordinate</li>
 		<li>Strand</li>
 		</ol>
 		Separate the two genes by a double colon (::). <br><br>
@@ -221,11 +221,11 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 								{
 									gene1: gene1[0],
 									chr1: gene1[1],
-									pos1: parseInt(gene1[2]),
+									pos1: parseInt(gene1[2]) - 1,
 									strand1: gene1[3],
 									gene2: gene2[0],
 									chr2: gene2[1],
-									pos2: parseInt(gene2[2]),
+									pos2: parseInt(gene2[2]) - 1,
 									strand2: gene2[3],
 									dt: 2,
 									class: 'Fuserna'
@@ -253,11 +253,11 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 								{
 									gene1: gene1[0],
 									chr1: gene1[1],
-									pos1: parseInt(gene1[2]),
+									pos1: parseInt(gene1[2]) - 1,
 									strand1: gene1[3],
 									gene2: gene2[0],
 									chr2: gene2[1],
-									pos2: parseInt(gene2[2]),
+									pos2: parseInt(gene2[2]) - 1,
 									strand2: gene2[3],
 									dt: 2,
 									class: 'Fuserna'

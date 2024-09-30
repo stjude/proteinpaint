@@ -553,9 +553,9 @@ export function printSvPair(pair, div) {
 	div
 		.append('span')
 		.text(
-			`${pair.a.chr}:${pair.a.pos} ${pair.a.strand == '+' ? 'forward' : 'reverse'} > ${pair.b.chr}:${pair.b.pos} ${
-				pair.b.strand == '+' ? 'forward' : 'reverse'
-			}`
+			`${pair.a.chr}:${pair.a.pos + 1} ${pair.a.strand == '+' ? 'forward' : 'reverse'} > ${pair.b.chr}:${
+				pair.b.pos + 1
+			} ${pair.b.strand == '+' ? 'forward' : 'reverse'}`
 		)
 	if (pair.b.name) div.append('span').text(pair.b.name).style('font-weight', 'bold').style('margin-left', '5px')
 }
