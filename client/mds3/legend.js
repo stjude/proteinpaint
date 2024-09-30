@@ -95,19 +95,33 @@ function create_mclass(tk, block) {
 
 function may_create_variantShapeName(tk) {
 	if (!tk.legend.customShapeLabels || !tk.custom_variants) return
-	tk.legend.variantShapeName = {}
+	if (!tk.legend.variantShapeName) tk.legend.variantShapeName = []
+
 	for (const data of tk.custom_variants) {
 		if (!data.shape) data.shape = 'filledCircle' //Quick fix since legend renders async with skewers
-		if (!tk.legend.variantShapeName[data.shape]) tk.legend.variantShapeName[data.shape] = 0
-		tk.legend.variantShapeName[data.shape] = ++tk.legend.variantShapeName[data.shape]
+		const shapeObj = tk.legend.variantShapeName.find(v => v.key == data.shape)
+		if (!shapeObj) {
+			tk.legend.variantShapeName.push({
+				key: data.shape,
+				num: 1
+			})
+		} else {
+			shapeObj.num = ++shapeObj.num
+		}
 	}
-	for (const [shape, num] of Object.entries(tk.legend.variantShapeName)) {
-		const width = 12
-		const height = 12
-		const args = shape.includes('Circle') ? { radius: 6 } : { width: width - 0.5, height: height - 0.5 }
 
-		const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
-		holder
+	tk.legend.variantShapeName.sort((a, b) => b.num - a.num)
+
+	const width = 12
+	const height = 12
+
+	for (const shapeObj of Object.values(tk.legend.variantShapeName)) {
+		const args = shapeObj.key.includes('Circle')
+			? { radius: width / 2 - 0.5 }
+			: { width: width - 0.5, height: height - 0.5 }
+
+		shapeObj.wrapper = tk.legend.table.append('tr').append('td').attr('colspan', 2)
+		shapeObj.wrapper
 			.append('span')
 			.append('svg')
 			.attr('width', width)
@@ -115,45 +129,14 @@ function may_create_variantShapeName(tk) {
 			.append('g')
 			.attr('transform', `translate(${width / 2}, ${height / 2})`)
 			.append('path')
-			.attr('d', shapes[shape].calculatePath(args))
-			.attr('fill', shapes[shape].isFilled ? 'grey' : 'white')
-			.attr('stroke', shapes[shape].isFilled ? 'none' : 'grey')
+			.attr('d', shapes[shapeObj.key].calculatePath(args))
+			.attr('fill', shapes[shapeObj.key].isFilled ? 'grey' : 'white')
+			.attr('stroke', shapes[shapeObj.key].isFilled ? 'none' : 'grey')
 
-		holder.append('span').html(`&nbsp;n=${num}`)
-		holder.append('span').text(`, ${tk.legend.customShapeLabels[shape]}`)
+		shapeObj.wrapper.append('span').html(`&nbsp;n=`)
+		shapeObj.numDiv = shapeObj.wrapper.append('span').text(shapeObj.num)
+		shapeObj.wrapper.append('span').text(`, ${tk.legend.customShapeLabels[shapeObj.key]}`)
 	}
-	// const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
-	// const vl = (tk.legend.variantShapeName = {})
-	// {
-	// 	const d = holder.append('div')
-	// 	d.append('span').html(
-	// 		`<svg style="display:inline-block" width=12 height=12>
-	// 		<circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=`
-	// 	)
-	// 	vl.dotCount = d.append('span')
-	// 	if (tk.variantShapeName.dot) d.append('span').text(', ' + tk.variantShapeName.dot)
-	// 	vl.dotDiv = d
-	// }
-	// {
-	// 	const d = holder.append('div')
-	// 	d.append('span').html(
-	// 		`<svg style="display:inline-block" width=12 height=12>
-	// 		<path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=`
-	// 	)
-	// 	vl.triangleCount = d.append('span')
-	// 	if (tk.variantShapeName.triangle) d.append('span').text(', ' + tk.variantShapeName.triangle)
-	// 	vl.triangleDiv = d
-	// }
-	// {
-	// 	const d = holder.append('div')
-	// 	d.append('span').html(
-	// 		`<svg style="display:inline-block" width=13 height=13>
-	// 		<circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=`
-	// 	)
-	// 	vl.circleCount = d.append('span')
-	// 	if (tk.variantShapeName.circle) d.append('span').text(', ' + tk.variantShapeName.circle)
-	// 	vl.circleDiv = d
-	// }
 }
 
 function may_create_infoFields(tk) {
@@ -354,21 +337,16 @@ export function updateLegend(data, tk, block) {
 
 function may_update_variantShapeName(data, tk) {
 	if (!tk.legend.customShapeLabels) return
-	// let dot = 0,
-	// 	triangle = 0,
-	// 	circle = 0
-	// for (const m of data.skewer) {
-	// 	if (m.shapeTriangle) triangle++
-	// 	else if (m.shapeCircle) circle++
-	// 	else dot++
-	// }
-	// const vl = tk.legend.variantShapeName
-	// vl.dotDiv.style('display', dot ? 'block' : 'none')
-	// vl.triangleDiv.style('display', triangle ? 'block' : 'none')
-	// vl.circleDiv.style('display', circle ? 'block' : 'none')
-	// vl.dotCount.text(dot)
-	// vl.triangleCount.text(triangle)
-	// vl.circleCount.text(circle)
+	Object.values(tk.legend.variantShapeName).forEach(s => (s.num = 0))
+	for (const d of data.skewer) {
+		const shapeObj = tk.legend.variantShapeName.find(s => s.key == d.shape)
+		shapeObj.num = ++shapeObj.num
+	}
+
+	Object.values(tk.legend.variantShapeName).forEach(s => {
+		s.wrapper.style('display', s.num ? 'block' : 'none')
+		s.numDiv.text(s.num)
+	})
 }
 
 /*
