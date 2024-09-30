@@ -185,7 +185,7 @@
         },
         {
             "label": "Data Point Shapes (Differential Phosphorylation)",
-            "message": "Add additional detail to lollipops by specifying the data point shape. Available shapes are: a solid dot (default), solid triangle, and circle. With the <span style='font-family: Courier; opacity: 0.6;'>variantShapeName</span> object, the count and additional details appears in the legend for each shape. ",
+            "message": "Add additional detail to lollipops by specifying the data point shape. Available shapes are: a 'filledCircle' (default), 'filledTriangle', and 'emptyCircle'. With the <span style='font-family: Courier; opacity: 0.6;'>variantShapeName</span> object, the count and additional details appears in the legend for each shape. ",
             "runargs": {
                 "nobox": 1,
                 "noheader": 1,
