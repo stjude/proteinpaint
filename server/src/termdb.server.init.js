@@ -72,6 +72,7 @@ export function server_init_db_queries(ds) {
 	// ds.cohort.termdb.sampleTypes has been added in mds3.init.js
 	if (tables.has('sample_types')) {
 		const rows = cn.prepare('SELECT * FROM sample_types').all()
+
 		for (const row of rows) {
 			ds.cohort.termdb.sampleTypes.set(row.id, {
 				name: row.name,

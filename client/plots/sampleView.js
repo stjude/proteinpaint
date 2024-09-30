@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import { dofetch3 } from '#common/dofetch'
-import { isNumericTerm, ROOT_SAMPLE_TYPE } from '#shared/terms.js'
+import { DEFAULT_SAMPLE_TYPE, isNumericTerm, ROOT_SAMPLE_TYPE } from '#shared/terms.js'
 import { sayerror } from '../dom/sayerror.ts'
 
 const root_ID = 'root'
@@ -134,7 +134,8 @@ class SampleView {
 					}
 				}
 			}
-			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, callback)
+			const hasSampleAncestry = appState.termdbConfig.hasSampleAncestry
+			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, hasSampleAncestry, callback)
 			this.sample = config.sample || { sampleId: this.samplesData[sampleName].id, sampleName }
 
 			this.dom.downloadbt = sampleDiv
@@ -846,13 +847,16 @@ export async function getPlotConfig(opts, app) {
 	return copyMerge(config, opts)
 }
 
-export function searchSampleInput(holder, samplesData, callback, keyUpCallback) {
+export function searchSampleInput(holder, samplesData, hasSampleAncestry, callback, keyUpCallback) {
 	const limit = 100
-
 	const allSamples = []
 	for (const sample in samplesData) {
 		const sample_type = samplesData[sample].sample_type
-		if (sample_type == ROOT_SAMPLE_TYPE || sample_type == null)
+		if (
+			sample_type == ROOT_SAMPLE_TYPE ||
+			sample_type == null ||
+			(!hasSampleAncestry && sample_type == DEFAULT_SAMPLE_TYPE)
+		)
 			//If the dataset has no ancestors, all the samples should be root'
 			allSamples.push(sample)
 	}

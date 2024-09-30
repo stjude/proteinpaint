@@ -1002,6 +1002,8 @@ type Termdb = {
 		/** html code */
 		html: string
 	}
+	hasSampleAncestry?: boolean
+
 	tracks?: {
 		/** allow color or shape changes in the lollipop */
 		allowSkewerChanges: boolean

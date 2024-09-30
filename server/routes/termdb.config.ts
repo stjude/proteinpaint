@@ -92,7 +92,8 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 		urlTemplates: tdb.urlTemplates,
 		title: 'title' in ds.cohort ? ds.cohort.title : { text: ds.label },
 		hideGroupsTab: ds.cohort.hideGroupsTab,
-		tracks: tdb.tracks
+		tracks: tdb.tracks,
+		hasSampleAncestry: ds.cohort.termdb.hasSampleAncestry
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
