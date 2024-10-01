@@ -1,4 +1,4 @@
-import type { ErrorResponse } from './errorResponse.ts'
+import { ErrorResponse } from './errorResponse.ts'
 
 export type Cell = {
 	/** Cell id or barcode */
@@ -22,6 +22,7 @@ export type Plot = {
 	cells: Cell[]
 	/** Column name to color by, e.g Cell type, CNV, Fusion */
 	colorBy: string
+	colorColumns: string[]
 	colorMap?: { [key: string]: string }
 }
 
@@ -39,7 +40,7 @@ export type TermdbSinglecellDataRequest = {
 	gene?: string
 }
 
-type HasdataResponse = {
+export type HasdataResponse = {
 	/** List of plots from singlecell experiment of this sample */
 	plots: Plot[]
 
