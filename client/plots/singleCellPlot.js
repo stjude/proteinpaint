@@ -152,7 +152,7 @@ class singleCellPlot {
 				callback: () => this.onColorByChange('2'),
 				emptyInputCallback: () => this.onColorByChange('2'),
 				hideHelp: true,
-				focusOff: false
+				focusOff: true
 			})
 			searchboxDiv.style('display', state.config.gene ? 'inline-block' : 'none')
 			selectCategory = headerDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
@@ -348,7 +348,6 @@ class singleCellPlot {
 	onColorByChange(value) {
 		const gene = this.dom.searchbox.node().value
 		this.colorByGene = value == '2'
-		if (this.colorByGene) this.dom.searchbox.node().focus()
 		for (const div of this.colorByDivs) div.style('display', this.colorByGene ? 'none' : '')
 		this.dom.searchboxDiv.style('display', this.colorByGene ? 'inline-block' : 'none')
 		this.dom.plotsDiv.selectAll('*').remove()
@@ -441,7 +440,9 @@ class singleCellPlot {
 			this.dom.selectCategory.selectAll('*').remove()
 			for (const plot of this.state.termdbConfig?.queries.singleCell.data.plots) {
 				const colorColumn = this.state.config.colorBy?.[plot.name] || plot.colorColumns[0]
-				const display = this.settings[`show${plot.name.replace(/\s+/g, '')}`]
+				const id = plot.name.replace(/\s+/g, '') //plot id
+				const plotKey = `show${id}` //for each plot a show checkbox is added and its value is stored in settings
+				const display = this.settings[plotKey]
 				if (!uniqueColorColumns.has(colorColumn) && display) {
 					this.dom.selectCategory.append('option').text(colorColumn)
 					uniqueColorColumns.add(colorColumn)
@@ -461,7 +462,6 @@ class singleCellPlot {
 		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 		this.dom.mainDiv.style('opacity', 1).style('display', '')
 		this.legendRendered = false
-
 		this.data = await this.getData()
 		this.dom.plotsDivParent.style('display', 'inline-block')
 		this.renderPlots(this.data)
