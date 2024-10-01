@@ -131,6 +131,7 @@ insertion
 export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
 		row = arg.row
+	const result: Result = {}
 
 	if (arg?.searchOnly == 'snp' && !arg.genome.hasSNP) {
 		row.append('span').text('Cannot support .searchOnly = "snp". Genome lacks SNP')
@@ -164,8 +165,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		.attr('aria-label', 'Gene symbol, position, or alias')
 		.attr('class', 'sja_genesearchinput')
 		.style('width', width + 'px')
-	const result: Result = { searchbox }
-
+	result.searchbox = searchbox
 	searchbox
 		.on('focus', event => {
 			event.target.select()
