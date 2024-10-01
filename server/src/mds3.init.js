@@ -668,6 +668,7 @@ async function validate_query_snvindel(ds, genome) {
 	}
 }
 
+// this function assumes file header uses integer sample id. TODO when all files are migrated to using string sample name, delete this function
 function mayValidateSampleHeader(ds, samples, where) {
 	if (!samples) return
 	// samples[] elements: {name:str}
@@ -683,6 +684,21 @@ function mayValidateSampleHeader(ds, samples, where) {
 		useint = ', all integer IDs'
 	}
 	console.log(samples.length, 'samples from ' + where + ' of ' + ds.label + useint)
+}
+// for data files using string sample name in header line, call this function to map each sample name to integer id and return the id array; it replaces mayValidateSampleHeader()
+// samples[] elements: {name:str}
+// returns new array with same length as samples[], {name:int}
+function validateSampleHeader2(ds, samples, where) {
+	const sampleIds = []
+	// ds?.cohort?.termdb.q.sampleName2id must be present
+	for (const s of samples) {
+		const id = ds.cohort.termdb.q.sampleName2id(s.name)
+		if (!Number.isInteger(id)) throw 'unknown sample name from ' + where
+		s.name = id
+		sampleIds.push(s)
+	}
+	console.log(samples.length, 'samples from ' + where + ' of ' + ds.label)
+	return sampleIds
 }
 
 function validate_ssm2canonicalisoform(ds) {
@@ -1009,6 +1025,10 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	if (q._tk?.samples.length) {
 		// has samples
 		if (!q._tk.format) throw 'bcf file has samples but no FORMAT'
+		if (q.tempflag_sampleNameInVcfHeader) {
+			// this flag is temporary while bcf files are being migrated to be using string sample names. once all files are migrated, delete the flag from all datasets and always run this routine
+			q._tk.samples = validateSampleHeader2(ds, q._tk.samples, 'snvindel.byrange')
+		}
 	} else {
 		if (q._tk.format) throw 'bcf file has FORMAT but no samples'
 	}
