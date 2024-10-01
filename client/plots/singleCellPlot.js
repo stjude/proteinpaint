@@ -123,40 +123,37 @@ class singleCellPlot {
 					})
 				headerDiv.append('label').text(plot.name).attr('for', `show${id}`)
 			}
-		let selectCategory
+		let selectCategory, violinBt, geneSearch, colorByGene, colorByPlot
 		if (q.singleCell?.geneExpression) {
-			searchGeneDiv.append('label').html('Gene expression:').style('padding', '10px')
-			const geneSearch = addGeneSearchbox({
+			searchGeneDiv.append('label').text('Color by:').style('margin-right', '5px')
+			colorByPlot = searchGeneDiv
+				.append('input')
+				.attr('type', 'radio')
+				.attr('id', 'colorByPlot')
+				.attr('name', 'colorBy')
+				.property('checked', true)
+				.on('change', () => this.onColorByChange())
+			searchGeneDiv.append('label').text('Plot category').attr('for', 'colorByPlot')
+
+			colorByGene = searchGeneDiv
+				.append('input')
+				.attr('type', 'radio')
+				.attr('id', 'showGene')
+				.attr('name', 'colorBy')
+				.on('change', e => this.onColorByChange())
+			searchGeneDiv.append('label').html('Gene expression').attr('for', 'showGene')
+			geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
 				genome: this.app.opts.genome,
 				row: searchGeneDiv,
 				searchOnly: 'gene',
 				placeholder: state.config.gene || 'Gene',
-				callback: () => {
-					violinBt?.style('display', 'inline-block')
-					selectCategory?.style('display', 'inline-block')
-
-					const gene = geneSearch.geneSymbol
-					if (gene) for (const div of this.colorByDivs) div.remove()
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: {
-							gene,
-							sample: this.state.config.sample || this.samples?.[0]?.sample,
-							experimentID: this.state.config.experimentID || this.samples?.[0].experiments?.[0]?.experimentID
-						}
-					})
-				},
-				emptyInputCallback: () => {
-					violinBt.style('display', 'none')
-					selectCategory.style('display', 'none')
-					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { gene: null } })
-				},
+				callback: () => this.onColorByChange(),
+				emptyInputCallback: () => this.onColorByChange(),
 				hideHelp: true,
 				focusOff: true
 			})
-
+			geneSearch.searchbox.style('display', state.config.gene ? 'inline-block' : 'none')
 			selectCategory = searchGeneDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 
 			selectCategory.on('change', async () => {
@@ -170,7 +167,7 @@ class singleCellPlot {
 				const result = await this.app.vocabApi.getTopTermsByType(args)
 			})
 
-			const violinBt = searchGeneDiv
+			violinBt = searchGeneDiv
 				.append('button')
 				.text('Open violin')
 				.style('margin-left', '2px')
@@ -243,6 +240,11 @@ class singleCellPlot {
 		loadingDiv.append('div').attr('class', 'sjpp-spinner')
 		this.dom = {
 			selectCategory,
+			violinBt,
+			geneSearch,
+			searchbox: geneSearch?.searchbox,
+			colorByGene,
+			colorByPlot,
 			header: this.opts.header,
 			mainDiv,
 			//holder,
@@ -343,6 +345,27 @@ class singleCellPlot {
 		await this.setControls(state)
 	}
 
+	onColorByChange() {
+		const gene = this.dom.searchbox.node().value
+		const colorByGene = this.dom.colorByGene.node().checked
+		for (const div of this.colorByDivs) div.style('display', colorByGene ? 'none' : '')
+		this.dom.searchbox.style('display', colorByGene ? 'inline-block' : 'none')
+		this.dom.plotsDiv.selectAll('*').remove()
+		this.dom.violinBt?.style('display', colorByGene && gene ? 'inline-block' : 'none')
+		this.dom.selectCategory?.style('display', colorByGene && gene ? 'inline-block' : 'none')
+		this.dom.deDiv.style('display', colorByGene ? 'none' : '')
+
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: {
+				gene: colorByGene ? gene : null,
+				sample: this.state.config.sample || this.samples?.[0]?.sample,
+				experimentID: this.state.config.experimentID || this.samples?.[0].experiments?.[0]?.experimentID
+			}
+		})
+	}
+
 	async setControls(state) {
 		const inputs = [
 			{
@@ -432,20 +455,17 @@ class singleCellPlot {
 				return
 			}
 		}
-
+		if (this.dom.colorByGene.node().checked && !this.state.config.gene) return
 		this.dom.loadingDiv.selectAll('*').remove()
 		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 		this.dom.mainDiv.style('opacity', 1).style('display', '')
 		this.legendRendered = false
-		// if (!this.config.sample) {
-		// 	this.dom.plotsDiv.style('display', 'none')
-		// } else {
-		const result = await this.getData()
+
+		this.data = await this.getData()
 		this.dom.plotsDivParent.style('display', 'inline-block')
-		this.renderPlots(result)
+		this.renderPlots(this.data)
 		this.dom.loadingDiv.style('display', 'none')
 		if (this.dom.header) this.dom.header.html(`Single Cell Data`)
-		//}
 	}
 
 	async getData() {
@@ -479,7 +499,7 @@ class singleCellPlot {
 			}
 		}
 		body.colorBy = this.state.config.colorBy
-		if (this.state.config.gene) body.gene = this.state.config.gene
+		if (this.state.config.gene && this.dom.colorByGene.node().checked) body.gene = this.state.config.gene
 		try {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
@@ -593,12 +613,14 @@ class singleCellPlot {
 
 	getColor(d, plot) {
 		const noExpColor = '#FAFAFA'
-		if (this.state.config.gene) {
+
+		if (this.dom.colorByPlot.node().checked) return plot.colorMap[d.category]
+		else if (this.state.config.gene) {
 			if (!d.geneExp) return noExpColor
 			if (plot.colorGenerator) return plot.colorGenerator(d.geneExp)
 			return noExpColor //no gene expression data for this plot
 		}
-		return plot.colorMap[d.category]
+		return noExpColor
 	}
 
 	handleZoom(e, plot) {
@@ -629,7 +651,7 @@ class singleCellPlot {
 		const colorMap = plot.colorMap
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
-			if (plot.colorColumns.length > 1 && !this.state.config.gene) {
+			if (plot.colorColumns.length > 1 && this.dom.colorByPlot.node().checked) {
 				const app = this.app
 				const colorByDiv = plot.plotDiv.append('div')
 				colorByDiv.append('label').text('Color by:').style('margin-right', '5px')
