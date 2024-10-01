@@ -15,6 +15,7 @@ import { addGeneSearchbox } from '../dom/genesearch.ts'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { icons as icon_functions } from '#dom/control.icons'
+import { make_radios } from '#dom/radiobutton'
 
 /*
 this
@@ -41,6 +42,7 @@ class singleCellPlot {
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		this.startGradient = {}
 		this.stopGradient = {}
+		this.colorByGene = false
 	}
 
 	async init(appState) {
@@ -123,25 +125,23 @@ class singleCellPlot {
 					})
 				topDiv.append('label').text(plot.name).attr('for', `show${id}`)
 			}
-		let selectCategory, violinBt, geneSearch, colorByGene, colorByPlot, searchboxDiv
+		let selectCategory, violinBt, geneSearch, searchboxDiv
 		if (q.singleCell?.geneExpression) {
 			headerDiv.append('label').text('Color by:').style('margin-right', '5px')
-			colorByPlot = headerDiv
-				.append('input')
-				.attr('type', 'radio')
-				.attr('id', 'colorByPlot')
-				.attr('name', 'colorBy')
-				.property('checked', true)
-				.on('change', () => this.onColorByChange())
-			headerDiv.append('label').text('Plot category').attr('for', 'colorByPlot')
 
-			colorByGene = headerDiv
-				.append('input')
-				.attr('type', 'radio')
-				.attr('id', 'showGene')
-				.attr('name', 'colorBy')
-				.on('change', e => this.onColorByChange())
-			headerDiv.append('label').html('Gene expression').attr('for', 'showGene')
+			make_radios({
+				holder: headerDiv,
+				options: [
+					{ label: 'Plot category', value: '1', checked: true },
+					{
+						label: 'Gene expression',
+						value: '2',
+						checked: false
+					}
+				],
+				styles: { display: 'inline' },
+				callback: async value => this.onColorByChange(value)
+			})
 			searchboxDiv = headerDiv.append('div')
 			geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
@@ -149,10 +149,10 @@ class singleCellPlot {
 				row: searchboxDiv,
 				searchOnly: 'gene',
 				placeholder: state.config.gene || 'Gene',
-				callback: () => this.onColorByChange(),
-				emptyInputCallback: () => this.onColorByChange(),
+				callback: () => this.onColorByChange('2'),
+				emptyInputCallback: () => this.onColorByChange('2'),
 				hideHelp: true,
-				focusOff: true
+				focusOff: false
 			})
 			searchboxDiv.style('display', state.config.gene ? 'inline-block' : 'none')
 			selectCategory = headerDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
@@ -245,8 +245,6 @@ class singleCellPlot {
 			geneSearch,
 			searchbox: geneSearch?.searchbox,
 			searchboxDiv,
-			colorByGene,
-			colorByPlot,
 			header: this.opts.header,
 			mainDiv,
 			//holder,
@@ -347,21 +345,22 @@ class singleCellPlot {
 		await this.setControls(state)
 	}
 
-	onColorByChange() {
+	onColorByChange(value) {
 		const gene = this.dom.searchbox.node().value
-		const colorByGene = this.dom.colorByGene.node().checked
-		for (const div of this.colorByDivs) div.style('display', colorByGene ? 'none' : '')
-		this.dom.searchboxDiv.style('display', colorByGene ? 'inline-block' : 'none')
+		this.colorByGene = value == '2'
+		if (this.colorByGene) this.dom.searchbox.node().focus()
+		for (const div of this.colorByDivs) div.style('display', this.colorByGene ? 'none' : '')
+		this.dom.searchboxDiv.style('display', this.colorByGene ? 'inline-block' : 'none')
 		this.dom.plotsDiv.selectAll('*').remove()
-		this.dom.violinBt?.style('display', colorByGene && gene ? 'inline-block' : 'none')
-		this.dom.selectCategory?.style('display', colorByGene && gene ? 'inline-block' : 'none')
-		this.dom.deDiv.style('display', colorByGene ? 'none' : '')
+		this.dom.violinBt?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
+		this.dom.selectCategory?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
+		this.dom.deDiv.style('display', this.colorByGene ? 'none' : '')
 
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
 			config: {
-				gene: colorByGene ? gene : null,
+				gene: this.colorByGene ? gene : null,
 				sample: this.state.config.sample || this.samples?.[0]?.sample,
 				experimentID: this.state.config.experimentID || this.samples?.[0].experiments?.[0]?.experimentID
 			}
@@ -457,7 +456,7 @@ class singleCellPlot {
 				return
 			}
 		}
-		if (this.dom.colorByGene.node().checked && !this.state.config.gene) return
+		if (this.colorByGene && !this.state.config.gene) return
 		this.dom.loadingDiv.selectAll('*').remove()
 		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 		this.dom.mainDiv.style('opacity', 1).style('display', '')
@@ -501,7 +500,7 @@ class singleCellPlot {
 			}
 		}
 		body.colorBy = this.state.config.colorBy
-		if (this.state.config.gene && this.dom.colorByGene.node().checked) body.gene = this.state.config.gene
+		if (this.state.config.gene && this.colorByGene) body.gene = this.state.config.gene
 		try {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
@@ -616,7 +615,7 @@ class singleCellPlot {
 	getColor(d, plot) {
 		const noExpColor = '#FAFAFA'
 
-		if (this.dom.colorByPlot.node().checked) return plot.colorMap[d.category]
+		if (!this.colorByGene) return plot.colorMap[d.category]
 		else if (this.state.config.gene) {
 			if (!d.geneExp) return noExpColor
 			if (plot.colorGenerator) return plot.colorGenerator(d.geneExp)
@@ -653,7 +652,7 @@ class singleCellPlot {
 		const colorMap = plot.colorMap
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
-			if (plot.colorColumns.length > 1 && this.dom.colorByPlot.node().checked) {
+			if (plot.colorColumns.length > 1 && !this.colorByGene) {
 				const app = this.app
 				const colorByDiv = plot.plotDiv.append('div')
 				colorByDiv.append('label').text('Color by:').style('margin-right', '5px')
