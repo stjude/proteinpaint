@@ -26,11 +26,6 @@ export type Plot = {
 	colorMap?: { [key: string]: string }
 }
 
-export type ColorColumn = {
-	index: number
-	name: string
-}
-
 export type TermdbSinglecellDataRequest = {
 	/** Genome id */
 	genome: string
