@@ -84,15 +84,15 @@ class singleCellPlot {
 		})
 
 		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const headerDiv = contentDiv.append('div').style('padding', '10px')
+		const topDiv = contentDiv.append('div').style('padding', '10px 0px')
 		const tableDiv = contentDiv
 			.append('div')
 			.style('display', this.tableOnPlot ? 'block' : 'none')
 			.style('padding', this.tableOnPlot ? '10px' : '0px')
-		const searchGeneDiv = contentDiv.append('div')
+		const headerDiv = contentDiv.append('div')
 
 		if (this.tableOnPlot) {
-			headerDiv
+			topDiv
 				.append('input')
 				.attr('id', `showSamples`)
 				.attr('type', 'checkbox')
@@ -104,12 +104,12 @@ class singleCellPlot {
 						config: { settings: { singleCellPlot: { showSamples: e.target.checked } } }
 					})
 				})
-			headerDiv.append('label').text('Show samples').attr('for', `showSamples`)
+			topDiv.append('label').text('Show samples').attr('for', `showSamples`)
 		}
 		if (state.config.plots.length > 1)
 			for (const plot of state.config.plots) {
 				const id = plot.name.replace(/\s+/g, '')
-				headerDiv
+				topDiv
 					.append('input')
 					.attr('id', `show${id}`)
 					.attr('type', 'checkbox')
@@ -121,28 +121,28 @@ class singleCellPlot {
 							config: { settings: { singleCellPlot: { [`show${id}`]: e.target.checked } } }
 						})
 					})
-				headerDiv.append('label').text(plot.name).attr('for', `show${id}`)
+				topDiv.append('label').text(plot.name).attr('for', `show${id}`)
 			}
 		let selectCategory, violinBt, geneSearch, colorByGene, colorByPlot, searchboxDiv
 		if (q.singleCell?.geneExpression) {
-			searchGeneDiv.append('label').text('Color by:').style('margin-right', '5px')
-			colorByPlot = searchGeneDiv
+			headerDiv.append('label').text('Color by:').style('margin-right', '5px')
+			colorByPlot = headerDiv
 				.append('input')
 				.attr('type', 'radio')
 				.attr('id', 'colorByPlot')
 				.attr('name', 'colorBy')
 				.property('checked', true)
 				.on('change', () => this.onColorByChange())
-			searchGeneDiv.append('label').text('Plot category').attr('for', 'colorByPlot')
+			headerDiv.append('label').text('Plot category').attr('for', 'colorByPlot')
 
-			colorByGene = searchGeneDiv
+			colorByGene = headerDiv
 				.append('input')
 				.attr('type', 'radio')
 				.attr('id', 'showGene')
 				.attr('name', 'colorBy')
 				.on('change', e => this.onColorByChange())
-			searchGeneDiv.append('label').html('Gene expression').attr('for', 'showGene')
-			searchboxDiv = searchGeneDiv.append('div')
+			headerDiv.append('label').html('Gene expression').attr('for', 'showGene')
+			searchboxDiv = headerDiv.append('div')
 			geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
 				genome: this.app.opts.genome,
@@ -155,7 +155,7 @@ class singleCellPlot {
 				focusOff: true
 			})
 			searchboxDiv.style('display', state.config.gene ? 'inline-block' : 'none')
-			selectCategory = searchGeneDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
+			selectCategory = headerDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 
 			selectCategory.on('change', async () => {
 				const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
@@ -168,7 +168,7 @@ class singleCellPlot {
 				const result = await this.app.vocabApi.getTopTermsByType(args)
 			})
 
-			violinBt = searchGeneDiv
+			violinBt = headerDiv
 				.append('button')
 				.text('Open violin')
 				.style('margin-left', '2px')
@@ -218,7 +218,7 @@ class singleCellPlot {
 		}
 
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
-		const deDiv = searchGeneDiv.append('div').style('padding', '10px')
+		const deDiv = headerDiv.append('div').style('padding', '10px')
 
 		const plotsDivParent = contentDiv.append('div').style('display', 'inline-block')
 		const plotsDiv = plotsDivParent
