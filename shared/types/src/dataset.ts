@@ -69,8 +69,10 @@ type bcfMafFile = {
 type SnvindelByRange = {
 	/** if true, served from gdc. no other parameters TODO change to src='gdc/native' */
 	gdcapi?: boolean
-	/**local file can have following different setup
-	 * one single bcf file */
+
+	//local ds can have following different setup
+
+	/** one single bcf file */
 	bcffile?: string
 	/** one bcf file per chr */
 	chr2bcffile?: Chr2bcffile
@@ -78,6 +80,8 @@ type SnvindelByRange = {
 	bcfMafFile?: bcfMafFile
 	/** allow to apply special configurations to certain INFO fields of the bcf file */
 	infoFields?: InfoFieldEntry[]
+	/** if true, bcf or chr2bcf uses string sample name in header. to be used during this migrating so the code can deal with old files with integer sample ids and new ones; TODO once all datasets are migrated, delete the flag */
+	tempflag_sampleNameInVcfHeader?: boolean
 }
 
 type SvfusionByRange = {
@@ -482,7 +486,7 @@ export type SingleCellDEgeneGdc = {
 
 type GDCSingleCellPlot = {
 	name: string
-	colorColumn: ColorColumn
+	colorColumns: ColorColumn[]
 	coordsColumns: { x: number; y: number }
 }
 
@@ -510,10 +514,9 @@ type SingleCellPlot = {
 	if not introduce filePrefix
 	*/
 	fileSuffix?: string
-	/** specify which column to color the cells in the plot. must have categorical values
-	TODO define a set of color columns and specify a default one, and let ui to switch from
-	*/
-	colorColumn: ColorColumn
+	/** list of columns in tabular text file that define cell categories and can be used to color the cells in the plot. must have categorical values
+	 */
+	colorColumns: ColorColumn[]
 	/** 0-based column number for x/y coordinate for this plot */
 	coordsColumns: { x: number; y: number }
 }

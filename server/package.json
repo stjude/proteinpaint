@@ -63,6 +63,8 @@
   "dependencies": {
     "@sjcrh/augen": "2.46.0",
     "@sjcrh/proteinpaint-rust": "2.78.0",
+    "@sjcrh/proteinpaint-shared": "2.78.0",
+    "@sjcrh/proteinpaint-types": "2.78.0",
     "better-sqlite3": "^9.4.1",
     "body-parser": "^1.15.2",
     "canvas": "~2.11.2",

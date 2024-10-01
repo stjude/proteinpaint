@@ -33,6 +33,31 @@ cd ..
 CHANGEDWS=$(./build/bump.js prerelease)
 cd container
 
+for shareddir in "types utils"; do
+	if [[ "$shareddir" == "utils" ]]; then
+		sharedws="shared"
+	else
+		sharedws=$shareddir
+	fi
+
+	if [[ "$CHANGEDWS" == *"shared/$sharedws"* ]]; then
+		cd ../shared/$shareddir
+		echo "packing shared/$sharedws ..."
+		npm pack
+		SHAREDPKGVER=$(node -p "require('./package.json').version")
+		SHAREDTGZ=sjcrh-proteinpaint-$sharedws-$SHAREDPKGVER.tgz
+		mv $SHAREDTGZ ../container/tmppack/
+		SHAREDDEPNAME="@sjcrh/proteinpaint-$sharedws"
+		cd ../client
+		# may reset the dep new version temporarily, for package testing 
+		npm pkg set "devDependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
+		cd ../server
+		# may reset the dep new version temporarily, for package testing 
+		npm pkg set "dependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
+		cd ../container
+	fi
+done
+
 if [[ "$CHANGEDWS" == *"client"* ]]; then
 	cd ../client
 	echo "packing client ..."
@@ -60,6 +85,21 @@ if [[ "$CHANGEDWS" == *"front"* ]]; then
 	echo "update the dependency in container/full/package.json to point to the front tarball inside of tmppack dir ..."
 	npm pkg set "dependencies.$FRONTDEPNAME"=$PKGPATH/$FRONTTGZ
 	cd ..
+fi
+
+if [[ "$CHANGEDWS" == *"augen"* ]]; then
+	cd ../augen
+	echo "packing augen ..."
+	npm pack
+	AUGENPKGVER=$(node -p "require('./package.json').version")
+	AUGENTGZ=sjcrh-augen-$RUSTPKGVER.tgz
+	mv $AUGENTGZ ../container/tmppack/
+
+	cd ../server
+	AUGENDEPNAME="@sjcrh/proteinpaint-augen"
+	# may reset the dep new version temporarily, for package testing 
+	npm pkg set "dependencies.$AUGENDEPNAME"=$PKGPATH/$AUGENTGZ
+	cd ../container
 fi
 
 if [[ "$CHANGEDWS" == *"rust"* ]]; then
