@@ -96,13 +96,13 @@ function create_mclass(tk, block) {
 function may_create_variantShapeName(tk) {
 	if (!tk.legend.customShapeLabels || !tk.custom_variants) return
 	if (!tk.legend.variantShapeName) tk.legend.variantShapeName = []
-
 	for (const data of tk.custom_variants) {
-		if (!data.shape) data.shape = 'filledCircle' //Quick fix since legend renders async with skewers
+		if (!data.shape) data.shape = 'filledCircle' //Quick fix since legend renders simultaneously with skewers
 		const shapeObj = tk.legend.variantShapeName.find(v => v.key == data.shape)
 		if (!shapeObj) {
 			tk.legend.variantShapeName.push({
 				key: data.shape,
+				origShape: data.shape,
 				num: 1
 			})
 		} else {
@@ -134,7 +134,7 @@ function may_create_variantShapeName(tk) {
 					holder: tk.legend.tip.d.append('div'),
 					callback: val => {
 						for (const d of tk.skewer.rawmlst) {
-							if (d.shape == shapeObj.key) {
+							if (shapeObj.ids.some(i => i == d.id)) {
 								d.shape = val
 							}
 						}
@@ -352,7 +352,6 @@ export function updateLegend(data, tk, block) {
 
 	tk.legend.mclass.currentData = data.mclass2variantcount
 	update_mclass(tk)
-
 	may_update_variantShapeName(data, tk)
 	may_update_infoFields(data, tk)
 	may_update_formatFilter(data, tk)
@@ -363,12 +362,26 @@ export function updateLegend(data, tk, block) {
 
 function may_update_variantShapeName(data, tk) {
 	if (!tk.legend.customShapeLabels) return
-	Object.values(tk.legend.variantShapeName).forEach(s => (s.num = 0))
+	Object.values(tk.legend.variantShapeName).forEach(s => {
+		if (!s.ids) {
+			/** Create function completes before ids are assigned to each data pt.
+			 * Create list here once, to prevent incorrect counts for legend items
+			 * when the same shape is selected more than once.
+			 */
+			s.ids = data.skewer.filter(d => d.shape == s.key).map(i => i.id)
+		}
+		s.num = 0
+	})
 
 	for (const d of data.skewer) {
-		const shapeObj = tk.legend.variantShapeName.find(s => s.key == d.shape)
+		let shapeObj = tk.legend.variantShapeName.find(s => s.ids.some(i => i == d.id))
+		if (!shapeObj) {
+			shapeObj = tk.legend.variantShapeName.find(s => s.key == d.shape || s.origShape == d.shape)
+			shapeObj.ids.push(d.id)
+		}
 		shapeObj.num = ++shapeObj.num
 	}
+
 	Object.values(tk.legend.variantShapeName).forEach(s => {
 		s.wrapper.style('display', s.num ? 'block' : 'none')
 		s.numDiv.text(s.num)

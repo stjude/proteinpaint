@@ -99,7 +99,13 @@ export function may_render_skewer(data, tk, block) {
 		// register new mlst data
 		// otherwise will not overwrite skewer.mlst
 		tk.skewer.rawmlst = data.skewer
+		data.skewer.forEach(d => {
+			if (!d.id) d.id = Math.random().toString()
+		})
 	} else {
+		tk.skewer.rawmlst.forEach(d => {
+			if (!d.id) d.id = Math.random().toString()
+		})
 		// server will not return skewer data when panning/zooming in protein mode
 		// the data is already kept as tk.skewer.rawmlst
 	}
@@ -193,6 +199,7 @@ function tkdata_update_x(tk, block) {
 	*/
 
 	for (const d of tk.skewer.data) {
+		console.log(d.id)
 		if (d.isbin) {
 			let sumx = 0
 			for (const m of d.mlst) {
