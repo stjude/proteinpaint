@@ -123,7 +123,7 @@ class singleCellPlot {
 					})
 				headerDiv.append('label').text(plot.name).attr('for', `show${id}`)
 			}
-		let selectCategory, violinBt, geneSearch, colorByGene, colorByPlot
+		let selectCategory, violinBt, geneSearch, colorByGene, colorByPlot, searchboxDiv
 		if (q.singleCell?.geneExpression) {
 			searchGeneDiv.append('label').text('Color by:').style('margin-right', '5px')
 			colorByPlot = searchGeneDiv
@@ -142,10 +142,11 @@ class singleCellPlot {
 				.attr('name', 'colorBy')
 				.on('change', e => this.onColorByChange())
 			searchGeneDiv.append('label').html('Gene expression').attr('for', 'showGene')
+			searchboxDiv = searchGeneDiv.append('div')
 			geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
 				genome: this.app.opts.genome,
-				row: searchGeneDiv,
+				row: searchboxDiv,
 				searchOnly: 'gene',
 				placeholder: state.config.gene || 'Gene',
 				callback: () => this.onColorByChange(),
@@ -153,7 +154,7 @@ class singleCellPlot {
 				hideHelp: true,
 				focusOff: true
 			})
-			geneSearch.searchbox.style('display', state.config.gene ? 'inline-block' : 'none')
+			searchboxDiv.style('display', state.config.gene ? 'inline-block' : 'none')
 			selectCategory = searchGeneDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 
 			selectCategory.on('change', async () => {
@@ -243,6 +244,7 @@ class singleCellPlot {
 			violinBt,
 			geneSearch,
 			searchbox: geneSearch?.searchbox,
+			searchboxDiv,
 			colorByGene,
 			colorByPlot,
 			header: this.opts.header,
@@ -349,7 +351,7 @@ class singleCellPlot {
 		const gene = this.dom.searchbox.node().value
 		const colorByGene = this.dom.colorByGene.node().checked
 		for (const div of this.colorByDivs) div.style('display', colorByGene ? 'none' : '')
-		this.dom.searchbox.style('display', colorByGene ? 'inline-block' : 'none')
+		this.dom.searchboxDiv.style('display', colorByGene ? 'inline-block' : 'none')
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.dom.violinBt?.style('display', colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.selectCategory?.style('display', colorByGene && gene ? 'inline-block' : 'none')
