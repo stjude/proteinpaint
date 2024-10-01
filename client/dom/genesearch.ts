@@ -79,7 +79,7 @@ type ResultArg = (GeneOrSNPResult | VariantResult) & {
 }
 
 type Result = Partial<GeneOrSNPResult> &
-	Partial<VariantResult> & { geneSymbol?: string; fromWhat?: string; chr?: string }
+	Partial<VariantResult> & { geneSymbol?: string; fromWhat?: string; chr?: string; searchbox?: any }
 /***********************************
 if arg.callback() is not provided:
     any match is silently written to RESULT
@@ -132,8 +132,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
 		row = arg.row
 
-	const result: Result = {}
-
 	if (arg?.searchOnly == 'snp' && !arg.genome.hasSNP) {
 		row.append('span').text('Cannot support .searchOnly = "snp". Genome lacks SNP')
 		return result
@@ -166,6 +164,9 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		.attr('aria-label', 'Gene symbol, position, or alias')
 		.attr('class', 'sja_genesearchinput')
 		.style('width', width + 'px')
+	const result: Result = { searchbox }
+
+	searchbox
 		.on('focus', event => {
 			event.target.select()
 		})
@@ -455,7 +456,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		if (r) {
 			// got hit (coord or variant), clear result{}
 			for (const k in result) delete result[k]
-
 			if (r.isVariant) {
 				// do not update searchbox
 				result.chr = r.chr
