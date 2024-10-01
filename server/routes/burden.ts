@@ -13,14 +13,14 @@ export const api = {
 					try {
 						const genome = genomes[req.query.genome]
 						if (!genome) throw `invalid q.genome=${req.query.genome}`
-						const q = req.query as BurdenRequest
+						const q: BurdenRequest = req.query
 						const ds = genome.datasets[q.dslabel]
 						if (!ds) throw `invalid q.genome=${req.query.dslabel}`
 						if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
 
 						const estimates = await getBurdenEstimates(req, ds)
 						const { keys, rows } = formatPayload(estimates)
-						res.send({ status: 'ok', keys, rows } as BurdenResponse)
+						res.send({ status: 'ok', keys, rows } satisfies BurdenResponse)
 					} catch (e: any) {
 						res.send({ status: 'error', error: e.message || e })
 					}
