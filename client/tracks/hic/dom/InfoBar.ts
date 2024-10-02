@@ -75,8 +75,7 @@ export class InfoBar {
 			height: 35,
 			width: 120,
 			holder: this.colorScaleDiv,
-			startColor: this.startColor,
-			endColor: this.endColor,
+			colors: [this.startColor, this.endColor],
 			position: '20,0',
 			ticks: 2,
 			tickSize: 3,
@@ -107,10 +106,10 @@ export class InfoBar {
 			const max = this.parent('max')
 
 			if (min < 0) {
-				this.colorScale.startColor = 'blue'
+				this.colorScale.colors = ['blue', 'white', 'red']
 				this.colorScale.data = [min, max]
 			} else {
-				this.colorScale.startColor = 'white'
+				this.colorScale.colors = ['white', 'red']
 				this.colorScale.data = [0, max]
 			}
 			this.colorScale.markedValue = min
