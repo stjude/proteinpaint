@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- fix the workspace directory detection/loop when publishing packages
+
+
 ## 2.79.2
 
 Fixes:

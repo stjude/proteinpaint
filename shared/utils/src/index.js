@@ -15,7 +15,7 @@ export * from './termdb.initbinconfig.js'
 export * from './termdb.usecase.js'
 export * from './terms.js'
 export * from './tree.js'
-// do `npm run esm` to generate js file from ts file
+// do `npm run esm` to generate .js file from .ts file
 export * from './urljson.js'
 export * from './vcf.ann.js'
 export * from './vcf.csq.js'
