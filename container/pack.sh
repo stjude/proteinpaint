@@ -32,23 +32,25 @@ SERVERDEPNAME="@sjcrh/proteinpaint-server"
 cd ..
 CHANGEDWS=$(./build/bump.js prerelease)
 cd container
+echo "$CHANGEDWS"
 
-for shareddir in "types utils"; do
+for shareddir in types utils
+do
 	if [[ "$shareddir" == "utils" ]]; then
 		sharedws="shared"
 	else
 		sharedws=$shareddir
 	fi
-
-	if [[ "$CHANGEDWS" == *"shared/$sharedws"* ]]; then
+  
+	if [[ "$CHANGEDWS" == *"shared/$shareddir"* ]]; then
 		cd ../shared/$shareddir
 		echo "packing shared/$sharedws ..."
 		npm pack
 		SHAREDPKGVER=$(node -p "require('./package.json').version")
 		SHAREDTGZ=sjcrh-proteinpaint-$sharedws-$SHAREDPKGVER.tgz
-		mv $SHAREDTGZ ../container/tmppack/
+		mv $SHAREDTGZ ../../container/tmppack/
 		SHAREDDEPNAME="@sjcrh/proteinpaint-$sharedws"
-		cd ../client
+		cd ../../client
 		# may reset the dep new version temporarily, for package testing 
 		npm pkg set "devDependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
 		cd ../server
