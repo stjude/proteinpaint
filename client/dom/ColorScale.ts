@@ -132,8 +132,8 @@ export class ColorScale {
 			scaleSvg.on('click', () => {
 				this.tip.clear().showunder(scaleSvg.node())
 				//TODO apply to all colors or only start and end?
-				appendColor('Min Color: ', 0)
-				appendColor('Max Color: ', this.colors.length - 1)
+				appendColor('Min:', 0)
+				appendColor('Max:', this.colors.length - 1)
 			})
 		}
 		this.render()
