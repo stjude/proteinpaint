@@ -643,6 +643,7 @@ function getSkewerRimLegendHeaderName(tk) {
 }
 
 function may_update_skewerRim(data, tk) {
+	if (!data.skewer) return // when missing, do nothing. this is possible when server breaks at loading a subtk
 	const sk = tk.mds.queries?.snvindel?.skewerRim
 	if (!sk) return // not enabled
 	let rim1total = 0, // count number of cases, not unique
