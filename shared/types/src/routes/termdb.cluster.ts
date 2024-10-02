@@ -33,6 +33,8 @@ export type TermdbClusterRequestGeneExpression = TermdbClusterRequestBase & {
 	dataType: 'geneExpression'
 	/** List of terms */
 	terms: GeneExpressionTerm[]
+	/** Storage type HDF5 or bed. bed format will be deprecated later */
+	storage_type: 'HDF5' | 'bed'
 }
 
 export type TermdbClusterRequestMetabolite = TermdbClusterRequestBase & {
