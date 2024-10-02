@@ -50,18 +50,17 @@ tape('new ColorScale()', test => {
 	const holder = getHolder() as any
 	const testColorScale = new ColorScale({ holder, data: [0, 1] })
 
-	test.ok(testColorScale.barheight == 14, 'Should set default value of 14 for barheight')
-	test.ok(testColorScale.barwidth == 100, 'Should set default value of 100 for barwidth')
-	test.ok(testColorScale.startColor == 'white', 'Should set default value of white for startColor')
-	test.ok(testColorScale.midColor == 'white', 'Should set default value of white for midColor')
-	test.ok(testColorScale.endColor == 'red', 'Should set default value of red for endColor')
-	test.ok(testColorScale.position == '0,0', 'Should set default value of 0,0 for position')
-	test.ok(testColorScale.svg.width == 100, 'Should set default value of 100 for svg.width')
-	test.ok(testColorScale.svg.height == 30, 'Should set default value of 30 for svg.height')
-	test.ok(testColorScale.topTicks == false, 'Should set default value of false for topTicks')
-	test.ok(testColorScale.ticks == 5, 'Should set default value of 5 for ticks')
-	test.ok(testColorScale.tickSize == 1, 'Should set default value of 1 for tickSize')
-	test.ok(testColorScale.fontSize == 10, 'Should set default value of 10 for fontSize')
+	test.equal(testColorScale.barheight, 14, 'Should set default value of 14 for barheight')
+	test.equal(testColorScale.barwidth, 100, 'Should set default value of 100 for barwidth')
+	test.deepEquals(testColorScale.colors, ['white', 'red'], 'Should set default colors to white and red')
+	test.equal(testColorScale.position, '0,0', 'Should set default value of 0,0 for position')
+	test.equal(testColorScale.position, '0,0', 'Should set default value of 0,0 for position')
+	test.equal(testColorScale.svg.width, 100, 'Should set default value of 100 for svg.width')
+	test.equal(testColorScale.svg.height, 30, 'Should set default value of 30 for svg.height')
+	test.equal(testColorScale.topTicks, false, 'Should set default value of false for topTicks')
+	test.equal(testColorScale.ticks, 5, 'Should set default value of 5 for ticks')
+	test.equal(testColorScale.tickSize, 1, 'Should set default value of 1 for tickSize')
+	test.equal(testColorScale.fontSize, 10, 'Should set default value of 10 for fontSize')
 	test.equal(typeof testColorScale.render, 'function', 'Should have a testColorScale.render() function')
 	test.equal(typeof testColorScale.updateAxis, 'function', 'Should have a testColorScale.updateAxis() function')
 	test.equal(typeof testColorScale.updateColors, 'function', 'Should have a testColorScale.updateColors() function')
@@ -110,8 +109,8 @@ tape('ColorScale.render() - top', test => {
 	testColorScale.render()
 
 	const childNodes = holder.select('svg > g').node().childNodes
-	test.equal(childNodes[0].nodeName, 'rect', 'Should render axis before the color bar when topTicks is true')
-	test.equal(childNodes[1].nodeName, 'g', 'Should render color bar after the axis when topTicks is true')
+	test.equal(childNodes[1].nodeName, 'rect', 'Should render axis before the color bar when topTicks is true')
+	test.equal(childNodes[2].nodeName, 'g', 'Should render color bar after the axis when topTicks is true')
 
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -124,16 +123,14 @@ tape('ColorScale.updateColors()', test => {
 	const testColorScale = getColorScale({ holder })
 	testColorScale.render()
 
-	testColorScale.startColor = 'blue'
-	testColorScale.midColor = 'purple'
-	testColorScale.endColor = 'green'
-
+	const colors = ['blue', 'purple', 'green']
+	testColorScale.colors = colors
 	testColorScale.updateColors()
 
 	const gradientStops = holder.selectAll('stop').nodes()
-	test.equal(gradientStops[0].getAttribute('stop-color'), testColorScale.startColor, 'Should update startColor')
-	test.equal(gradientStops[1].getAttribute('stop-color'), testColorScale.midColor, 'Should update midColor')
-	test.equal(gradientStops[2].getAttribute('stop-color'), testColorScale.endColor, 'Should update endColor')
+	test.equal(gradientStops[0].getAttribute('stop-color'), colors[0], 'Should update starting color')
+	test.equal(gradientStops[1].getAttribute('stop-color'), colors[1], 'Should update ths only middle color')
+	test.equal(gradientStops[2].getAttribute('stop-color'), colors[2], 'Should update ending color')
 
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -194,7 +191,9 @@ tape('ColorScale.updateScale()', test => {
 	const testColorScale = getColorScale({ holder, markedValue: 1 })
 	testColorScale.render()
 
-	testColorScale.endColor = 'blue'
+	const newColor = 'blue'
+	testColorScale.colors[2] = newColor
+
 	testColorScale.data = [-5, 5]
 	testColorScale.markedValue = -1
 
@@ -203,7 +202,7 @@ tape('ColorScale.updateScale()', test => {
 	const gradientStops = holder.selectAll('stop').nodes()
 	test.equal(
 		gradientStops[2].getAttribute('stop-color'),
-		testColorScale.endColor,
+		newColor,
 		'Should call updateColors() and update the end color to blue'
 	)
 
