@@ -1071,14 +1071,14 @@ export function setRenderers(self) {
 		colorMenu.showunder(elem.node(), false)
 	}
 
-	self.changeGradientColor = function (chart, colorKey, elem, color) {
+	self.changeGradientColor = function (chart, colorKey, color) {
 		const hexColor = rgb(color).formatHex()
 		self.config[colorKey][chart.id] = hexColor
-		elem.style('fill', hexColor)
+		// elem.style('fill', hexColor)
 
-		chart.colorGenerator = d3Linear().range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
-		self.startGradient[chart.id].attr('stop-color', self.config.startColor[chart.id])
-		self.stopGradient[chart.id].attr('stop-color', self.config.stopColor[chart.id])
+		// chart.colorGenerator = d3Linear().range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
+		// self.startGradient[chart.id].attr('stop-color', self.config.startColor[chart.id])
+		// self.stopGradient[chart.id].attr('stop-color', self.config.stopColor[chart.id])
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,

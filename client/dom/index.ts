@@ -2,6 +2,7 @@
 export * from './animation'
 export * from './axisstyle'
 export * from './checkbox'
+export * from './ColorScale.ts'
 export * from './control.icons'
 export * from './downloadTextfile'
 export * from './GeneSetEdit/GeneSetEditUI'
