@@ -17,89 +17,78 @@ type ColorScaleDom = {
 	line?: Selection<SVGLineElement, any, any, any>
 }
 
-/** Work in Progress! Update as needed.
- * Intended to be a reusable color scale throughout the platform. Also intended to be
- * highly customizable.
- */
-
-export class ColorScale {
-	dom: ColorScaleDom
+type ColorScaleOpts = {
 	/** Optional but recommended. The height of the color bar in px. Default is 14. */
-	barheight: number
+	barheight?: number
 	/** Optional but recommended. The width of the color bar in px. Default is 100. */
-	barwidth: number
-	/** Options but highly recommend. Default is a white to red scale. */
-	colors: string[]
+	barwidth?: number
+	/** Optional but highly recommend. Default is a white to red scale. */
+	colors?: string[]
 	/** Required */
 	data: number[]
-	/** Optional but recommendend. Sets the position of the color scale (i.e. svg) in the holder. Default is 0,0. */
-	position: string
-	/** Optional but recommendend. Attributes for the svg. */
-	svg: {
-		/** Optional. Default is 100 */
-		width: number
-		/** Optional. Default is 30.*/
-		height: number
-	}
-	/** Optional. Placement of numbered ticks. Default is false (i.e. placement below the color bar). */
-	topTicks: boolean
-	/** Optional. Number of ticks to show. Cannot be zero. Default is 4. */
-	ticks: number
-	/** Optional. Size of the ticks in px. Default is 1. */
-	tickSize: number
 	/** Optional. Font size in px of the text labels. */
-	fontSize: number
+	fontSize?: number
+	/** Required */
+	holder: Elem
 	/** Optional. Shows a value in the color bar for the default, bottom axis
 	 * This value cannot be zero at initialization.
 	 */
-	markedValue?: number | null
+	markedValue?: number
+	position?: string
+	/** Optional but recommendend. If the holder is not an svg or g element adding the width, height, or position creates the svg. */
+	/** Optional. Width of the svg. Default is 100 */
+	width?: number
+	/** Optional. Heigh fo the svg. Default is 30.*/
+	height?: number
+	/** Optional. Number of ticks to show. Cannot be zero. Default is 4. */
+	ticks?: number
+	/** Optional. Size of the ticks in px. Default is 1. */
+	tickSize?: number
+	/** Optional. Placement of numbered ticks. Default is false (i.e. placement below the color bar). */
+	topTicks?: boolean
+	/** Optional. Specify the values to show along a number line. Otherwise the first and last numder in data are used.  */
+	tickValues?: number[]
+}
 
-	constructor(opts: {
-		/** Required */
-		holder: Elem
-		colors?: string[]
-		data: number[]
-		/** Optional */
-		barheight?: number
-		barwidth?: number
-		position?: string
-		/** svg.width */
-		width?: number
-		/** svg.height */
-		height?: number
-		topTicks?: boolean
-		ticks?: number
-		tickSize?: number
-		fontSize?: number
-		markedValue?: number
-	}) {
+export class ColorScale {
+	dom: ColorScaleDom
+	barheight: number
+	barwidth: number
+	colors: string[]
+	data: number[]
+	fontSize: number
+	markedValue?: number | null
+	topTicks: boolean
+	ticks: number
+	tickSize: number
+	tickValues: number[]
+
+	constructor(opts: ColorScaleOpts) {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
 		this.colors = opts.colors || ['white', 'red']
 		this.data = opts.data
-		//TODO change this so it detects the holder size
-		this.position = opts.position || '0,0'
-		this.svg = {
-			width: opts.width || 100,
-			height: opts.height || 30
-		}
-		this.topTicks = opts.topTicks || false
-		this.ticks = opts.ticks || 5
-		this.tickSize = opts.tickSize || 1
 		this.fontSize = opts.fontSize || 10
 		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
+		this.ticks = opts.ticks || 5
+		this.tickSize = opts.tickSize || 1
+		this.topTicks = opts.topTicks || false
+		this.tickValues = opts.tickValues || []
 
 		if (!opts.holder) throw new Error('No holder provided for color scale.')
 		if (!opts.data) throw new Error('No data provided for color scale.')
 
 		this.formatData()
 
-		const scaleSvg = opts.holder
-			.append('svg')
-			.attr('data-testid', 'sjpp-color-scale')
-			.attr('width', this.svg.width)
-			.attr('height', this.svg.height)
-		const barG = scaleSvg.append('g').attr('transform', `translate(${this.position})`)
+		let scaleSvg
+		if (opts.width || opts.height || opts.position) {
+			scaleSvg = opts.holder
+				.append('svg')
+				.attr('data-testid', 'sjpp-color-scale')
+				.attr('width', opts.width || 100)
+				.attr('height', opts.height || 30)
+		} else scaleSvg = opts.holder
+		const barG = scaleSvg.append('g').attr('transform', `translate(${opts.position || '0,0'})`)
 		const id = Math.random().toString()
 
 		const defs = barG.append('defs')
@@ -125,7 +114,7 @@ export class ColorScale {
 		const gradElem = gradient || this.dom.gradient
 		for (const c of this.colors) {
 			const idx = this.colors.indexOf(c)
-			const offset = idx == 0 ? 0 : idx == this.colors.length - 1 ? 100 : (idx / (this.colors.length - 1)) * 100
+			const offset = (idx / (this.colors.length - 1)) * 100
 			gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${c}`)
 		}
 	}
@@ -202,19 +191,20 @@ export class ColorScale {
 		this.formatData()
 		const start = this.data[0]
 		const stop = this.data[this.data.length - 1]
-		const tickValues = [start, stop]
+		if (!this.tickValues.length) this.tickValues = [start, stop]
+
 		this.dom.scaleAxis.selectAll('*').remove()
 
 		if (start < 0 && stop > 0) {
-			tickValues.splice(this.data.length / 2, 0, 0)
+			this.tickValues.splice(this.data.length / 2, 0, 0)
 			this.dom.scale = scaleLinear()
-				.domain(tickValues)
+				.domain(this.tickValues)
 				.range([0, this.barwidth / 2, this.barwidth])
 		} else {
-			this.dom.scale = scaleLinear().domain(tickValues).range([0, this.barwidth])
+			this.dom.scale = scaleLinear().domain(this.tickValues).range([0, this.barwidth])
 		}
 
-		this.dom.scaleAxis.transition().duration(500).call(this.setAxis(tickValues))
+		this.dom.scaleAxis.transition().duration(500).call(this.setAxis(this.tickValues))
 	}
 
 	updateValueInColorBar() {
