@@ -100,13 +100,14 @@ const newVersion = semver.inc(rootPkg.version, verType)
 
 const pkgs = {}
 const changedFiles = ex(`git diff --name-only ${opts.refCommit} HEAD`).split('\n')
+
 for (const w of rootPkg.workspaces) {
 	if (opts.exclude.find(s => w.includes(s))) continue
 	const paths = glob.sync(`${w}/package.json`, { cwd })
 	for (const pkgPath of paths) {
-		const hasRelevantChangedFiles = changedFiles.find(f => f.startsWith(pkgPath) && fileAffectsVersion(f)) && true
-		const pkg = require(path.join(cwd, pkgPath))
 		const pkgDir = pkgPath.replace('/package.json', '')
+		const hasRelevantChangedFiles = changedFiles.find(f => f.startsWith(pkgDir) && fileAffectsVersion(f)) && true
+		const pkg = require(path.join(cwd, pkgPath))
 		const wsHashOnRelease = ex(`git rev-parse --verify -q ${opts.refCommit}:"${pkgDir}"`, {
 			handler(e) {
 				gitRevParseErrHandler(pkgDir)

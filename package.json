@@ -5,15 +5,16 @@
   "main": "server/main.js",
   "bin": "server/start.js",
   "private": true,
+  "//IMPORTANT": "list order of workspaces entries should match dependency graph direction",
   "workspaces": [
+    "augen",
+    "shared/*",
     "rust",
     "server",
     "client",
     "front",
     "container/server",
-    "container/full",
-    "shared/*",
-    "augen"
+    "container/full"
   ],
   "scripts": {
     "reset": "rm -rf ./node_modules && rm -rf ./**/node_modules && rm -rf ./**/**/node_modules && npm install",
