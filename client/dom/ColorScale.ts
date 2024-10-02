@@ -114,8 +114,9 @@ export class ColorScale {
 			const appendColor = (text: string, idx: number) => {
 				const input = this.tip.d
 					.append('div')
+					.style('display', 'inline-block')
 					.text(text)
-					.style('margin', '10px')
+					.style('margin', '2px')
 					.append('input')
 					.attr('type', 'color')
 					.attr('value', rgb(this.colors[idx]).formatHex())

@@ -700,7 +700,7 @@ class singleCellPlot {
 		}
 		this.legendRendered = true
 
-		const legendG = legendSVG.append('g').attr('transform', `translate(25, 50)`).style('font-size', '0.8em')
+		const legendG = legendSVG.append('g').attr('transform', `translate(0, 50)`).style('font-size', '0.8em')
 		if (this.state.config.gene) {
 			this.renderColorGradient(plot, legendG)
 			return
@@ -774,8 +774,8 @@ class singleCellPlot {
 		plot.colorGenerator = d3Linear().domain([min, max]).range(colors)
 
 		const gradientWidth = 100
-		const gradientStep = (max - min) / 4
-		const tickValues = [min < 0 ? min : 0, min + gradientStep, min + 2 * gradientStep, min + 3 * gradientStep, max]
+		const gradientStep = (max - min) / 3
+		const tickValues = [min < 0 ? min : 0, min + gradientStep, min + 2 * gradientStep, max]
 
 		const colorScale = new ColorScale({
 			holder: legendG,
