@@ -1,9 +1,6 @@
-'use strict'
-Object.defineProperty(exports, '__esModule', { value: true })
-exports.doc = exports.test = void 0
-exports.test = {}
+const test = {}
 function doc(opts) {
-	if (opts.type in exports.test) throw "test['".concat(opts.type, "'] already exists")
-	exports.test[opts.type] = opts.test
+	if (opts.type in test) throw `test['${opts.type}'] already exists`
+	test[opts.type] = opts.test
 }
-exports.doc = doc
+export { doc, test }

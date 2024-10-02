@@ -67,6 +67,7 @@ if [[ "$CHANGEDWS" == *"client"* ]]; then
 	CLIENTPKGVER=$(node -p "require('./package.json').version")
 	CLIENTTGZ=sjcrh-proteinpaint-client-$CLIENTPKGVER.tgz
 	mv $CLIENTTGZ ../container/tmppack/
+	git restore package.json
 	cd ../front
 	CLIENTDEPNAME="@sjcrh/proteinpaint-client"
 	# may reset the dep new version temporarily, for package testing 
@@ -94,7 +95,7 @@ if [[ "$CHANGEDWS" == *"augen"* ]]; then
 	echo "packing augen ..."
 	npm pack
 	AUGENPKGVER=$(node -p "require('./package.json').version")
-	AUGENTGZ=sjcrh-augen-$RUSTPKGVER.tgz
+	AUGENTGZ=sjcrh-augen-$AUGENPKGVER.tgz
 	mv $AUGENTGZ ../container/tmppack/
 
 	cd ../server

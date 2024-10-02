@@ -9,7 +9,7 @@ import serverconfig from './serverconfig.js'
 import * as utils from './utils.js'
 import * as termdbsql from './termdb.sql.js'
 import { runCumincR } from './termdb.cuminc.js'
-import { isDictionaryType } from '#shared/terms'
+import { isDictionaryType } from '#shared/terms.js'
 import { getAnnotationRows, getSampleTypes } from './termdb.matrix.js'
 import { get } from 'http'
 

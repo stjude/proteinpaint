@@ -1,5 +1,5 @@
 import { TermTypes } from '#shared/terms.js'
-import initBinConfig from '#shared/termdb.initbinconfig'
+import initBinConfig from '#shared/termdb.initbinconfig.js'
 
 // TODO convert to route
 
