@@ -59,6 +59,8 @@ jobs:
           npm run tsc
           cd ../shared/types
           npx tsc
+          cd ../utils
+          npx tsc
 
       - name: Create server cache folder
         run: if [[ ! -d "server/cache" ]]; then mkdir server/cache; fi
@@ -71,6 +73,10 @@ jobs:
             # override with only the workspaces that have relevant changes
             echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
           fi
+
+      - name: 🔎 Run shared/utils test
+        if: contains(env.WS_TO_TEST, 'shared/utils')
+        run: npm test --workspace="shared/utils"
 
       # TODO: no need to run pack test once esbuild is used for package release 
       - name: 🔎 Run client pack test
