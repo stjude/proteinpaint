@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.79.2
 
 Fixes:
 - fix the order of workspace entries, which affects order of publishing
