@@ -1526,9 +1526,7 @@ export function showLDlegend(div, colorScale) {
 		barheight,
 		barwidth: axiswidth,
 		fontSize: 12,
-		startColor: colorlst[0],
-		midColor: colorlst[colorlst.length - 1],
-		endColor: colorlst[colorlst.length - 1],
+		colors: colorlst,
 		position: `${xpad},${axisheight}`,
 		tickSize: 6
 	})

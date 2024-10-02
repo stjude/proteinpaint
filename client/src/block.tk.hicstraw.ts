@@ -95,7 +95,6 @@ export function loadTk(tk: any, block: any) {
 		.then(() => {
 			if (tk.data.length == 0) {
 				tk.height_main = 100
-				// tk.colorscale.g.attr('transform', 'scale(0)')
 				tk.img.attr('width', 0)
 				throw tk.name + ': no data in view range'
 			}
@@ -103,7 +102,7 @@ export function loadTk(tk: any, block: any) {
 		})
 		.catch(err => {
 			if (err.stack) {
-				console.log(err.stack)
+				console.error(err.stack)
 			}
 			return typeof err == 'string' ? err : err.message
 		})
@@ -895,7 +894,7 @@ function makeTk(tk: any, block: any) {
 			height: 45,
 			width: 120,
 			holder,
-			endColor: tk.color,
+			colors: ['white', tk.color],
 			position: `6,${barheight + space}`,
 			ticks: 2,
 			tickSize: 2,
@@ -945,7 +944,7 @@ function configPanel(tk: any, block: any) {
 			.property('value', tk.color)
 			.on('change', (event: MouseEvent) => {
 				tk.color = (event.target as HTMLInputElement).value
-				tk.colorScale.endColor = tk.color
+				tk.colorScale.colors[tk.colorScale.colors.length - 1] = tk.color
 				tk.colorScale.updateScale()
 				drawCanvas(tk, block)
 			})
