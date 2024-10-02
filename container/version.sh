@@ -22,8 +22,10 @@ if (( $# == 2 )); then
 fi
 
 cd ..
-# container image builds will use published packages, so no need to the excluded workspaces here
-UPDATED=$(./build/bump.js $MODE -x=rust -x=augen -x=server -x=client -x=front)
+# container image builds will use published packages, so exclude the corresponding workspaces here
+# TODO: delete the following lines since it doesn't seem like the $UPDATED variable 
+#       is used/captured by this script's consumer, anywhere???
+UPDATED=$(./build/bump.js $MODE -x=shared/types -x=shared/utils -x=rust -x=augen -x=server -x=client -x=front)
 echo "UPDATED=[$UPDATED]"
 cd container/$SUBDIR
 

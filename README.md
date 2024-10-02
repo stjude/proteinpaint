@@ -40,7 +40,7 @@ cd container/dev
 ## Develop
 ### Host Machine development
 
-These scripts require npm v7.7.6+ and are tested with Node v20+.
+These scripts require npm v10.2+ and are tested with Node v20+.
 
 ```bash
 

@@ -57,11 +57,13 @@ export type BurdenRequest = {
 	chest: number
 }
 
+// tentative code for migrating api code from `server/routes` code
 export type BurdenResponse = {
 	status: string
 	keys: string[]
 	rows: number[][]
 }
 
+// tentative code to generate runtime "type" checkers
 export const validBurdenRequest = createValidate<BurdenRequest>()
 export const validBurdenResponse = createValidate<BurdenResponse>()

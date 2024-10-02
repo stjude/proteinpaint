@@ -2,7 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.79.3
+
+Fixes:
+- fix the workspace directory detection/loop when publishing packages
+
+
+## 2.79.2
+
+Fixes:
+- fix the order of workspace entries, which affects order of publishing
+
+
+## 2.79.1
 
 Fixes:
 - fix CI-related scripts to include shared workspace versioning and packing

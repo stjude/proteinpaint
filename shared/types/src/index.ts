@@ -1,4 +1,4 @@
-// please list in alphanumeric order
+// please list in alphanumeric order, include file extension
 export * from './genome.ts'
 export * from './dataset.ts'
 export * from './termsetting.ts'
