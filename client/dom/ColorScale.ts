@@ -5,6 +5,8 @@ import { axisstyle } from './axisstyle'
 import { Selection } from 'd3-selection'
 import { ScaleLinear } from 'd3-scale'
 import { font } from '../src/client'
+import { Menu } from '#dom'
+import { rgb } from 'd3-color'
 
 type GradientElem = Selection<SVGLinearGradientElement, any, any, any>
 
@@ -22,20 +24,24 @@ type ColorScaleOpts = {
 	barheight?: number
 	/** Optional but recommended. The width of the color bar in px. Default is 100. */
 	barwidth?: number
+	/** If present, creates a menu on click to change the colors */
+	callback?: (val: string, idx: number) => void
 	/** Optional but highly recommend. Default is a white to red scale. */
 	colors?: string[]
-	/** Required */
+	/** Required
+	 * Specifies the values to show along a number line.
+	 */
 	data: number[]
 	/** Optional. Font size in px of the text labels. */
 	fontSize?: number
 	/** Required */
 	holder: Elem
 	/** Optional. Shows a value in the color bar for the default, bottom axis
-	 * This value cannot be zero at initialization.
-	 */
+	 * This value cannot be zero at initialization.*/
 	markedValue?: number
+	/** Set the position within in the element. Default is 0,0 */
 	position?: string
-	/** Optional but recommendend. If the holder is not an svg or g element adding the width, height, or position creates the svg. */
+	/** If the holder is not an svg or g element, adding the width, height, or position creates the svg. */
 	/** Optional. Width of the svg. Default is 100 */
 	width?: number
 	/** Optional. Heigh fo the svg. Default is 30.*/
@@ -46,8 +52,6 @@ type ColorScaleOpts = {
 	tickSize?: number
 	/** Optional. Placement of numbered ticks. Default is false (i.e. placement below the color bar). */
 	topTicks?: boolean
-	/** Optional. Specify the values to show along a number line. Otherwise the first and last numder in data are used.  */
-	tickValues?: number[]
 }
 
 export class ColorScale {
@@ -58,10 +62,10 @@ export class ColorScale {
 	data: number[]
 	fontSize: number
 	markedValue?: number | null
-	topTicks: boolean
 	ticks: number
 	tickSize: number
-	tickValues: number[]
+	tip: Menu
+	topTicks: boolean
 
 	constructor(opts: ColorScaleOpts) {
 		this.barheight = opts.barheight || 14
@@ -72,8 +76,8 @@ export class ColorScale {
 		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
+		this.tip = new Menu({ padding: '2px' })
 		this.topTicks = opts.topTicks || false
-		this.tickValues = opts.tickValues || []
 
 		if (!opts.holder) throw new Error('No holder provided for color scale.')
 		if (!opts.data) throw new Error('No data provided for color scale.')
@@ -84,10 +88,11 @@ export class ColorScale {
 		if (opts.width || opts.height || opts.position) {
 			scaleSvg = opts.holder
 				.append('svg')
-				.attr('data-testid', 'sjpp-color-scale')
 				.attr('width', opts.width || 100)
 				.attr('height', opts.height || 30)
 		} else scaleSvg = opts.holder
+		scaleSvg.attr('data-testid', 'sjpp-color-scale')
+
 		const barG = scaleSvg.append('g').attr('transform', `translate(${opts.position || '0,0'})`)
 		const id = Math.random().toString()
 
@@ -104,6 +109,34 @@ export class ColorScale {
 			this.dom = { gradient, scale, scaleAxis }
 			if (this.markedValue !== null) this.markedValueInColorBar(barG)
 		}
+
+		if (opts.callback) {
+			const appendColor = (text: string, idx: number) => {
+				const input = this.tip.d
+					.append('div')
+					.text(text)
+					.style('margin', '10px')
+					.append('input')
+					.attr('type', 'color')
+					.attr('value', rgb(this.colors[idx]).formatHex())
+					.style('margin-left', '5px')
+					.on('change', () => {
+						const color = input.node()!.value
+						opts.callback!(color, idx)
+						this.colors[idx] = color
+						this.updateColors()
+						this.tip.hide()
+					})
+			}
+
+			scaleSvg.on('click', () => {
+				this.tip.clear().showunder(scaleSvg.node())
+				//TODO apply to all colors or only start and end?
+				appendColor('Min Color: ', 0)
+				appendColor('Max Color: ', this.colors.length - 1)
+			})
+		}
+		this.render()
 	}
 
 	formatData() {
@@ -127,9 +160,7 @@ export class ColorScale {
 			.attr('fill', 'url(#' + id + ')')
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
-
 		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight + 2})`)
-
 		const scale = scaleLinear().domain(this.data).range([0, this.barwidth])
 
 		return { scale, scaleAxis }
@@ -174,11 +205,11 @@ export class ColorScale {
 		return axis
 	}
 
-	setAxis(tickValues: number[]) {
+	setAxis() {
 		if (this.topTicks === true) {
-			return axisTop(this.dom.scale).tickValues(tickValues).tickSize(this.tickSize)
+			return axisTop(this.dom.scale).tickValues(this.data).tickSize(this.tickSize)
 		} else {
-			return axisBottom(this.dom.scale).tickValues(tickValues).tickSize(this.tickSize)
+			return axisBottom(this.dom.scale).tickValues(this.data).tickSize(this.tickSize)
 		}
 	}
 
@@ -191,23 +222,21 @@ export class ColorScale {
 		this.formatData()
 		const start = this.data[0]
 		const stop = this.data[this.data.length - 1]
-		if (!this.tickValues.length) this.tickValues = [start, stop]
 
 		this.dom.scaleAxis.selectAll('*').remove()
 
-		const getRange = () =>
-			this.tickValues.map((v, i) => {
-				return this.barwidth * (i / (this.tickValues.length - 1))
-			})
-
-		if (start < 0 && stop > 0 && this.tickValues.indexOf(0) == -1) {
-			this.tickValues.splice(this.data.length / 2, 0, 0)
-			this.dom.scale = scaleLinear().domain(this.tickValues).range(getRange())
-		} else {
-			this.dom.scale = scaleLinear().domain(this.tickValues).range(getRange())
+		if (start < 0 && stop > 0 && this.data.indexOf(0) == -1) {
+			this.data.splice(this.data.length / 2, 0, 0)
 		}
 
-		this.dom.scaleAxis.transition().duration(500).call(this.setAxis(this.tickValues))
+		this.dom.scale = scaleLinear()
+			.domain(this.data)
+			.range(
+				this.data.map((v, i) => {
+					return this.barwidth * (i / (this.data.length - 1))
+				})
+			)
+		this.dom.scaleAxis.transition().duration(500).call(this.setAxis())
 	}
 
 	updateValueInColorBar() {
