@@ -83,7 +83,8 @@ export class InfoBar {
 			markedValue: 1
 		})
 		this.colorScale.render()
-		this.update()
+		// Do not call update on render. Wait for app to refresh
+		// this.update()
 	}
 
 	update() {
