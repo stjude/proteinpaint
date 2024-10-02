@@ -230,7 +230,7 @@ export async function validate_termdb(ds) {
 	k: sample type key
 	v: {name, plural_name, parent_id}
 	*/
-	tdb.sampleTypes = new Map()
+	tdb.sampleTypes = {}
 
 	if (tdb?.dictionary?.gdcapi) {
 		await initGDCdictionary(ds)
