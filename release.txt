@@ -1,1 +1,2 @@
-
+Fixes:
+- fix the order of workspace entries, which affects order of publishing
