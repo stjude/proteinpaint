@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { getBinsDensity } from '#shared/violin.bins'
+import { getBinsDensity } from '#shared/violin.bins.js'
 
 /*
 ********************** EXPORTED

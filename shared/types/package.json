@@ -15,7 +15,8 @@
     "#shared": "@sjcrh/proteinpaint-shared"
   },
   "scripts": {
-    "prepare": "ts-patch install"
+    "prepare": "ts-patch install",
+    "test": "tsc"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",

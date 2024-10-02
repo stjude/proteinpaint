@@ -1,4 +1,4 @@
-import { isDictionaryType, TermTypes, getBin } from '#shared/terms'
+import { isDictionaryType, TermTypes, getBin } from '#shared/terms.js'
 import { getParentType, getSampleType } from '#shared/terms.js'
 import { getSnpData } from './termdb.matrix.js'
 

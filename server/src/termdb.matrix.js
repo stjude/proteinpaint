@@ -4,7 +4,14 @@ import { getFilterCTEs } from './termdb.filter'
 import serverconfig from './serverconfig'
 import { read_file } from './utils'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
-import { TermTypes, isDictionaryType, isNonDictionaryType, getBin, getParentType, getSampleType } from '#shared/terms'
+import {
+	TermTypes,
+	isDictionaryType,
+	isNonDictionaryType,
+	getBin,
+	getParentType,
+	getSampleType
+} from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { geneVariantTermGroupsetting } from '#shared/common.js'

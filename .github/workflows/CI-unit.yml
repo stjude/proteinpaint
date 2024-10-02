@@ -57,6 +57,8 @@ jobs:
           npx tsc
           cd ../client
           npm run tsc
+          cd ../shared/types
+          npx tsc
 
       - name: Create server cache folder
         run: if [[ ! -d "server/cache" ]]; then mkdir server/cache; fi

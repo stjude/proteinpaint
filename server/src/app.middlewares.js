@@ -8,7 +8,7 @@ import url from 'url'
 import serverconfig from './serverconfig.js'
 import { authApi } from './auth.js'
 import * as validator from './validator.js'
-import { decode as urlJsonDecode } from '#shared/urljson.ts'
+import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
 
 const basepath = serverconfig.basepath || ''

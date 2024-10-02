@@ -7,12 +7,17 @@
   "exports": {
     "./*": "./src/*"
   },
-  "directories": {
-    "test": "test"
-  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "esbuild src/*.ts --platform=node --outdir=src/ --format=esm",
+    "prepack": "npm run build",
+    "test": "ls src/test/*.spec* | xargs node"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "files": [
+    "src/*.js"
+  ],
+  "devDependencies": {
+    "esbuild": "^0.19.12"
+  }
 }
