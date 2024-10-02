@@ -74,13 +74,13 @@ export function server_init_db_queries(ds) {
 		const rows = cn.prepare('SELECT * FROM sample_types').all()
 
 		for (const row of rows) {
-			ds.cohort.termdb.sampleTypes.set(row.id, {
+			ds.cohort.termdb.sampleTypes[row.id] = {
 				name: row.name,
 				plural_name: row.plural_name,
 				parent_id: row.parent_id
-			})
+			}
 		}
-		ds.cohort.termdb.hasSampleAncestry = ds.cohort.termdb.sampleTypes.size > 1
+		ds.cohort.termdb.hasSampleAncestry = Object.keys(ds.cohort.termdb.sampleTypes).length > 1
 	}
 
 	for (const table of schema_tables) if (!tables.has(table)) console.log(`${table} table missing!!!!!!!!!!!!!!!!!!!!`)
@@ -143,7 +143,7 @@ export function server_init_db_queries(ds) {
 				let counts = rows
 					.filter(row => row.cohort == cohortKey || cohortKey == undefined) //one may have multiple types and a default cohort
 					.map(row => {
-						const sample_type = ds.cohort.termdb.sampleTypes.get(row.sample_type)
+						const sample_type = ds.cohort.termdb.sampleTypes[row.sample_type]
 						return `${row.sample_count} ${row.sample_count > 1 ? sample_type.plural_name : sample_type.name}`
 					})
 				let total = counts.join(' and ')

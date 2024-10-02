@@ -163,11 +163,11 @@ export function getSampleType(term, ds) {
 }
 
 export function getParentType(types, ds) {
-	if (ds.cohort.termdb.sampleTypes.size == 0) return null //dataset only has one type of sample
+	if (Object.keys(ds.cohort.termdb.sampleTypes).length == 0) return null //dataset only has one type of sample
 	const ids = Array.from(types)
 	if (!ids || ids.length == 0) return null
 	for (const id of ids) {
-		const typeObj = ds.cohort.termdb.sampleTypes.get(id)
+		const typeObj = ds.cohort.termdb.sampleTypes[id]
 		if (typeObj.parent_id == null) return id //this is the root type
 		//if my parent is in the list, then I am not the parent
 		if (ids.includes(typeObj.parent_id)) continue

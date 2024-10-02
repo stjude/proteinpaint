@@ -273,7 +273,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 	let sampleType
 	if (sids.length > 0) {
 		const stid = q.ds.sampleId2Type.get(Number(sids[0]))
-		sampleType = q.ds.cohort.termdb.sampleTypes.get(stid)
+		sampleType = q.ds.cohort.termdb.sampleTypes[stid]
 	}
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
 }
