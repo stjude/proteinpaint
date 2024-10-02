@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.79.1
 
 Fixes:
 - fix CI-related scripts to include shared workspace versioning and packing
