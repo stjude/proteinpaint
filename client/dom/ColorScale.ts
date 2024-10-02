@@ -41,7 +41,7 @@ type ColorScaleOpts = {
 	markedValue?: number
 	/** Set the position within in the element. Default is 0,0 */
 	position?: string
-	/** If the holder is not an svg or g element, adding the width, height, or position creates the svg. */
+	/** If the holder is not an svg or g element, adding the width or height creates the svg. */
 	/** Optional. Width of the svg. Default is 100 */
 	width?: number
 	/** Optional. Heigh fo the svg. Default is 30.*/
@@ -85,7 +85,7 @@ export class ColorScale {
 		this.formatData()
 
 		let scaleSvg
-		if (opts.width || opts.height || opts.position) {
+		if (opts.width || opts.height) {
 			scaleSvg = opts.holder
 				.append('svg')
 				.attr('width', opts.width || 100)
