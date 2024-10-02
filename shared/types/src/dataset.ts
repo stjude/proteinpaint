@@ -486,7 +486,10 @@ export type GeneExpressionQueryNative = {
 	get?: (param: any) => void
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
 	geneExpression2bins?: { [index: string]: any }
+	/** Type of data format HDF5 or bed */
+	storage_type?: 'HDF5' | 'bed'
 }
+
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
 export type SingleCellGeneExpressionNative = {

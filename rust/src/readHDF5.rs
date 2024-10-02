@@ -1,7 +1,7 @@
 // Need to set HDF5_DIR and LD_LIBRARY_PATH in ~/.bash_profile
 // Syntax: cd .. && cargo build --release && json='{"gene":"TP53","data_type":"singlecell","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/readHDF5
 // cd .. && cargo build --release && json='{"gene":"ENSG00000227232.4","data_type":"expression_count","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
-// cd .. && cargo build --release && json='{"data_type":"expression_samples","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
+// cd .. && cargo build --release && json='{"data_type":"expression_samples","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/rnaseq/exprs.h5"}' && time echo $json | target/release/readHDF5
 
 use hdf5::types::FixedAscii;
 use hdf5::types::VarLenAscii;
@@ -190,7 +190,7 @@ fn read_single_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
 fn get_gene_expression_samples(hdf5_filename: String) -> Result<()> {
     let file = File::open(&hdf5_filename)?; // open for reading
     let now_samples = Instant::now();
-    let ds_samples = file.dataset("columns")?;
+    let ds_samples = file.dataset("samples")?;
     let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>()?;
     println!("\tsamples = {:?}", samples);
     println!("\tsamples.shape() = {:?}", samples.shape());
@@ -198,8 +198,8 @@ fn get_gene_expression_samples(hdf5_filename: String) -> Result<()> {
     println!("\tsamples.ndim() = {:?}", samples.ndim());
     println!("Time for parsing samples:{:?}", now_samples.elapsed());
 
-    let mut output_string = "{".to_string();
-    for i in 0..samples.len() {
+    let mut output_string = "".to_string();
+    for i in 1..samples.len() {
         //let item_json = "{\"".to_string()
         //    + &samples[i].to_string()
         //    + &"\","
@@ -208,7 +208,7 @@ fn get_gene_expression_samples(hdf5_filename: String) -> Result<()> {
 
         //let item_json = format!("{{\"{}\"}}", samples[i].to_string());
 
-        output_string += &format!("\"{}\"", samples[i].to_string());
+        output_string += &format!("{}", samples[i].to_string());
         //println!("item_json:{}", item_json);
 
         //let item_json = format!(
@@ -220,8 +220,6 @@ fn get_gene_expression_samples(hdf5_filename: String) -> Result<()> {
             output_string += &",";
         }
     }
-    output_string += &"}".to_string();
-    output_string = output_string.replace("\\", "");
     println!("output_string:{}", output_string);
     Ok(())
 }
@@ -238,7 +236,7 @@ fn read_gene_expression_hdf5(hdf5_filename: String, gene_name: String) -> Result
     println!("num_genes bulk:{}", num_genes);
 
     let now_genes = Instant::now();
-    let ds_genes = file.dataset("rows")?;
+    let ds_genes = file.dataset("gene_symbols")?;
     println!("ds_genes:{:?}", ds_genes);
     let genes = ds_genes.read::<VarLenAscii, Dim<[usize; 1]>>()?;
     println!("\tgenes = {:?}", genes);
@@ -248,7 +246,7 @@ fn read_gene_expression_hdf5(hdf5_filename: String, gene_name: String) -> Result
     println!("Time for parsing genes:{:?}", now_genes.elapsed());
 
     let now_samples = Instant::now();
-    let ds_samples = file.dataset("columns")?;
+    let ds_samples = file.dataset("samples")?;
     let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>()?;
     println!("\tsamples = {:?}", samples);
     println!("\tsamples.shape() = {:?}", samples.shape());
