@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- reset highlighted top/left dendrogram to black when data changed
+
+
 ## 2.79.3
 
 Fixes:
