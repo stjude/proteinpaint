@@ -1026,7 +1026,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		// has samples
 		if (!q._tk.format) throw 'bcf file has samples but no FORMAT'
 		if (q.tempflag_sampleNameInVcfHeader) {
-			// this flag is temporary while bcf files are being migrated to be using string sample names. once all files are migrated, delete the flag from all datasets and always run this routine
+			// this flag is temporary while bcf files are being migrated to be using string sample names. TODO once all files are migrated, delete the flag from all datasets and always run this routine
 			q._tk.samples = validateSampleHeader2(ds, q._tk.samples, 'snvindel.byrange')
 		}
 	} else {
@@ -1138,7 +1138,11 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				return []
 			}
 
-			bcfArgs.push('-s', [...limitSamples].join(','))
+			const l = []
+			for (const s of limitSamples) {
+				l.push(q.tempflag_sampleNameInVcfHeader ? ds.cohort.termdb.q.id2sampleName(s) : s)
+			}
+			bcfArgs.push('-s', l.join(','))
 		}
 
 		if (param.variantFilter) {
