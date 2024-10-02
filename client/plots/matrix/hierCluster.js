@@ -98,9 +98,10 @@ export class HierCluster extends Matrix {
 		if (d.error) throw d.error
 		this.currServerData = structuredClone(d)
 		if (!deepEqual(this.prevServerData, this.currServerData)) {
-			// do not persist highlighted dendrogram branch selection
+			// do not persist highlighted top/left dendrogram branch selection
 			// when the cohort, clustering method, or other config changes the server data
 			delete this.clickedClusterIds
+			delete this.clickedLeftClusterIds
 		}
 		const s = this.settings.hierCluster
 		const twlst = this.hcTermGroup.lst
