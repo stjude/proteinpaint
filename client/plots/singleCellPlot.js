@@ -780,6 +780,7 @@ class singleCellPlot {
 		const colorScale = new ColorScale({
 			holder: legendG,
 			barwidth: gradientWidth,
+			barheight: 20,
 			colors,
 			data: tickValues,
 			tickSize: 5,
