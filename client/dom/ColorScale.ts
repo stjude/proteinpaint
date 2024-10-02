@@ -195,13 +195,16 @@ export class ColorScale {
 
 		this.dom.scaleAxis.selectAll('*').remove()
 
-		if (start < 0 && stop > 0) {
+		const getRange = () =>
+			this.tickValues.map((v, i) => {
+				return this.barwidth * (i / (this.tickValues.length - 1))
+			})
+
+		if (start < 0 && stop > 0 && this.tickValues.indexOf(0) == -1) {
 			this.tickValues.splice(this.data.length / 2, 0, 0)
-			this.dom.scale = scaleLinear()
-				.domain(this.tickValues)
-				.range([0, this.barwidth / 2, this.barwidth])
+			this.dom.scale = scaleLinear().domain(this.tickValues).range(getRange())
 		} else {
-			this.dom.scale = scaleLinear().domain(this.tickValues).range([0, this.barwidth])
+			this.dom.scale = scaleLinear().domain(this.tickValues).range(getRange())
 		}
 
 		this.dom.scaleAxis.transition().duration(500).call(this.setAxis(this.tickValues))
