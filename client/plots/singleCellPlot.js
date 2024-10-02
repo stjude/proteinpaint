@@ -700,7 +700,7 @@ class singleCellPlot {
 		}
 		this.legendRendered = true
 
-		const legendG = legendSVG.append('g').attr('transform', `translate(0, 50)`).style('font-size', '0.8em')
+		const legendG = legendSVG.append('g').attr('transform', `translate(10, 50)`).style('font-size', '0.8em')
 		if (this.state.config.gene) {
 			this.renderColorGradient(plot, legendG)
 			return
