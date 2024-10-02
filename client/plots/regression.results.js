@@ -1530,7 +1530,6 @@ export function showLDlegend(div, colorScale) {
 		position: `${xpad},${axisheight}`,
 		tickSize: 6
 	})
-	colorScaleElem.render()
 }
 
 function getMtooltipValues(m, regressionType) {

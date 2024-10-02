@@ -82,7 +82,6 @@ export class InfoBar {
 			//Do not use min value here on initialization. It's 0 and will not update later.
 			markedValue: 1
 		})
-		this.colorScale.render()
 		// Do not call update on render. Wait for app to refresh
 		// this.update()
 	}
