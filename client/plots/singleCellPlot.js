@@ -1,21 +1,22 @@
 import { getCompInit, copyMerge, deepEqual } from '../rx/index.js'
-import { Menu } from '#dom/menu'
+// import { Menu } from '#dom/menu'
 import { axisLeft, axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { sayerror } from '../dom/sayerror.ts'
+// import { sayerror } from '../dom/sayerror.ts'
 import { dofetch3 } from '#common/dofetch'
 import { getColors, plotColor } from '#shared/common.js'
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
-import { renderTable } from '../dom/table.ts'
+// import { renderTable } from '../dom/table.ts'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rgb } from 'd3'
-import { addGeneSearchbox } from '../dom/genesearch.ts'
+// import { addGeneSearchbox } from '../dom/genesearch.ts'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
-import { icons as icon_functions } from '#dom/control.icons'
-import { make_radios } from '#dom/radiobutton'
+// import { icons as icon_functions } from '#dom/control.icons'
+// import { make_radios } from '#dom/radiobutton'
+import { ColorScale, icons as icon_functions, make_radios, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
 
 /*
 this
@@ -765,18 +766,19 @@ class singleCellPlot {
 		const colorGradient = rgb(plotColor)
 		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(1).toString()
 		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
-		const startColor = this.config.startColor[plot.name]
-		const stopColor = this.config.stopColor[plot.name]
-		const gradient = legendG
-			.append('defs')
-			.append('linearGradient')
-			.attr('id', `linear-gradient-${plot.id}`)
-			.attr('x1', '0%')
-			.attr('y1', '0%')
-			.attr('x2', '100%')
-			.attr('y2', '0%')
-		this.startGradient[plot.name] = gradient.append('stop').attr('offset', '0%').attr('stop-color', startColor)
-		this.stopGradient[plot.name] = gradient.append('stop').attr('offset', '100%').attr('stop-color', stopColor)
+		// const startColor = this.config.startColor[plot.name]
+		// const stopColor = this.config.stopColor[plot.name]
+		const colors = [this.config.startColor[plot.name], this.config.stopColor[plot.name]]
+		// const gradient = legendG
+		// 	.append('defs')
+		// 	.append('linearGradient')
+		// 	.attr('id', `linear-gradient-${plot.id}`)
+		// 	.attr('x1', '0%')
+		// 	.attr('y1', '0%')
+		// 	.attr('x2', '100%')
+		// 	.attr('y2', '0%')
+		// this.startGradient[plot.name] = gradient.append('stop').attr('offset', '0%').attr('stop-color', startColor)
+		// this.stopGradient[plot.name] = gradient.append('stop').attr('offset', '100%').attr('stop-color', stopColor)
 
 		let offsetY = 25
 		const step = 20
@@ -787,38 +789,52 @@ class singleCellPlot {
 			return
 		} else [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
 
-		plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
+		plot.colorGenerator = d3Linear().domain([min, max]).range(colors)
 
 		const gradientWidth = 100
-		const gradientScale = d3Linear().domain([min, max]).range([0, gradientWidth])
+		// const gradientScale = d3Linear().domain([min, max]).range([0, gradientWidth])
 		const gradientStep = (max - min) / 4
-		const tickValues = [min, min + gradientStep, min + 2 * gradientStep, min + 3 * gradientStep, max]
-		const axis = axisTop(gradientScale).tickValues(tickValues)
-		legendG.append('g').attr('transform', `translate(0, 100)`).call(axis)
-		plot.startRect = legendG
-			.append('rect')
-			.attr('x', -25)
-			.attr('y', 100)
-			.attr('width', 20)
-			.attr('height', 20)
-			.style('fill', startColor)
-			.on('click', e => this.editColor(plot, 'startColor', plot.startRect))
-		plot.stopRect = legendG
-			.append('rect')
-			.attr('x', gradientWidth + 5)
-			.attr('y', 100)
-			.attr('width', 20)
-			.attr('height', 20)
-			.style('fill', stopColor)
-			.on('click', e => this.editColor(plot, 'stopColor', plot.stopRect))
+		const tickValues = [min < 0 ? min : 0, min + gradientStep, min + 2 * gradientStep, min + 3 * gradientStep, max]
+		// const axis = axisTop(gradientScale).tickValues(tickValues)
+		const colorScale = new ColorScale({
+			holder: legendG,
+			barwidth: gradientWidth,
+			colors,
+			data: tickValues,
+			tickSize: 5,
+			topTicks: true,
+			tickValues,
+			changeColorCallback: val => {
+				changeGradientColor(plot, 'startColor', val)
+			}
+		})
+		colorScale.render()
+		colorScale.updateScale()
+		// legendG.append('g').attr('transform', `translate(0, 100)`).call(axis)
+		// plot.startRect = legendG
+		// 	.append('rect')
+		// 	.attr('x', -25)
+		// 	.attr('y', 100)
+		// 	.attr('width', 20)
+		// 	.attr('height', 20)
+		// 	.style('fill', startColor)
+		// 	.on('click', e => this.editColor(plot, 'startColor', plot.startRect))
+		// plot.stopRect = legendG
+		// 	.append('rect')
+		// 	.attr('x', gradientWidth + 5)
+		// 	.attr('y', 100)
+		// 	.attr('width', 20)
+		// 	.attr('height', 20)
+		// 	.style('fill', stopColor)
+		// 	.on('click', e => this.editColor(plot, 'stopColor', plot.stopRect))
 
-		const rect = legendG
-			.append('rect')
-			.attr('x', 0)
-			.attr('y', 100)
-			.attr('width', gradientWidth)
-			.attr('height', 20)
-			.style('fill', `url(#linear-gradient-${plot.id})`)
+		// const rect = legendG
+		// 	.append('rect')
+		// 	.attr('x', 0)
+		// 	.attr('y', 100)
+		// 	.attr('width', gradientWidth)
+		// 	.attr('height', 20)
+		// 	.style('fill', `url(#linear-gradient-${plot.id})`)
 
 		offsetY += step
 	}
