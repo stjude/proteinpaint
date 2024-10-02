@@ -4,7 +4,8 @@
 
 This workspace was separate from the deprecated `server/shared` dir.
 The code here are meant to be consumed at runtime by either client or server
-code.
+code. Do NOT put utility/helper code here that are specific to only one
+workspace, those files should be saved in that workspace.
 
 IMPORTANT: 
 - code must work in browser and nodejs: do not import libs, deps, or globals that
@@ -12,12 +13,12 @@ are specific to `nodejs` or `browser` environments, like `fs` or `DOM` elements
 
 ## Develop
 
-For server dev, the `tsx` library will accept imports with or without file extension,
-and is able to correctly resolve imports of '.js' files that are actually '.ts'
-files, which is done to comply with tsc compiler requirements. Server (consumer)
-code MUST use the `.js` file extension even when importing `#shared/*.ts` files.
+For server dev, the `tsx` library will accept imports with or without file extension.
+Server (consumer) code MUST use the `.js` file extension even when importing 
+`#shared/*.ts` files.
 
-For client dev, the esbuild config will bundle the #shared imports correctly, using
+For client dev, the esbuild config will bundle the #shared imports correctly, even
+when `.js` extension is used to import what is actually a `.ts` file, by using
 custom plugins like dirname. 
 
 ## Build

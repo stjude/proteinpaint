@@ -1,1 +1,2 @@
-
+Fixes:
+- fix CI-related scripts to include shared workspace versioning and packing
