@@ -71,7 +71,6 @@ tape('ColorScale.render() - default bottom', test => {
 
 	const holder = getHolder() as any
 	const testColorScale = getColorScale({ holder })
-	testColorScale.render()
 
 	test.ok(holder.select('svg[data-testid="sjpp-color-scale"]').node(), 'Should append an color scale to the holder')
 	test.ok(
@@ -101,8 +100,7 @@ tape('ColorScale.render() - top', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
-	const testColorScale = getColorScale({ holder, topTicks: true, position: '10,15' })
-	testColorScale.render()
+	getColorScale({ holder, topTicks: true, position: '10,15' })
 
 	const childNodes = holder.select('svg > g').node().childNodes
 	test.equal(childNodes[1].nodeName, 'rect', 'Should render axis before the color bar when topTicks is true')
@@ -117,7 +115,6 @@ tape('ColorScale.updateColors()', test => {
 
 	const holder = getHolder() as any
 	const testColorScale = getColorScale({ holder })
-	testColorScale.render()
 
 	const colors = ['blue', 'purple', 'green']
 	testColorScale.colors = colors
@@ -137,7 +134,6 @@ tape('ColorScale.updateAxis()', test => {
 
 	const holder = getHolder() as any
 	const testColorScale = getColorScale({ holder })
-	testColorScale.render()
 
 	testColorScale.data = [0, 5]
 	testColorScale.updateAxis()
@@ -156,7 +152,6 @@ tape('markedValue - Show value in color bar and update', test => {
 
 	const holder = getHolder() as any
 	const testColorScale = getColorScale({ holder, data: [0, 40], markedValue: 15 })
-	testColorScale.render()
 
 	const valueElems = holder.selectAll('.sjpp-color-scale-marked').nodes()
 	test.equal(valueElems[0].nodeName, 'line', 'Should render tick mark for marked value')
@@ -185,7 +180,6 @@ tape('ColorScale.updateScale()', test => {
 
 	const holder = getHolder() as any
 	const testColorScale = getColorScale({ holder, markedValue: 1 })
-	testColorScale.render()
 
 	const newColor = 'blue'
 	testColorScale.colors[2] = newColor

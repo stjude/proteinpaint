@@ -900,7 +900,6 @@ function makeTk(tk: any, block: any) {
 			tickSize: 2,
 			markedValue: tk.mincutoff
 		})
-		tk.colorScale.render()
 
 		laby += barheight + 10 + block.labelfontsize
 	}
