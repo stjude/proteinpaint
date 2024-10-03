@@ -151,12 +151,6 @@
                     }
                 ]
             },
-            "buttons": [
-                {
-                    "name": "'URL Linkout' Documentation",
-                    "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
-                }
-            ],
             "testSpec": {
                 "expected": {"image": 1, "rect": 1}
             }
@@ -188,12 +182,6 @@
                     }
                 ]
             },
-            "buttons": [
-                {
-                    "name": "'Hide item names' Documentation",
-                    "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
-                }
-            ],
             "testSpec": {
                 "expected": {"image": 1 }
             }
@@ -226,12 +214,6 @@
                     }
                 ]
             },
-            "buttons": [
-                {
-                    "name": "'Show item by name' Documentation",
-                    "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
-                }
-            ],
             "arrowButtons": [
                 {
                     "name": "Run track from URL",
@@ -283,12 +265,6 @@
                     }
                 ]
             },
-            "buttons": [
-                {
-                    "name": "\"exon2color\" Documentation",
-                    "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.j87g4brufqhu"
-                }
-            ],
             "testSpec": {
                 "expected": {"image": 1 }
             }
@@ -319,7 +295,7 @@
     "buttons": [
         {
             "name": "Documentation",
-            "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
+            "link": "https://github.com/stjude/proteinpaint/wiki/Tracks#Track-JSON-BED-track-format"
         }
     ],
     "ribbonMessage": "Now use bigBed files in ProteinPaint! Click on the bigBed example for more information."

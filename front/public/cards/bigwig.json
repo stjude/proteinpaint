@@ -30,7 +30,7 @@
             "buttons": [
                 {
                     "name": "Documentation",
-                    "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Tracks#Track-bigWig-for-numerical-data"
                 }
             ],
             "testSpec": {
@@ -58,7 +58,7 @@
             "buttons": [
                 {
                     "name": "Documentation",
-                    "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Tracks#track-a-pair-of-bigWig-for-data-from-forward-and-reverse-strands"
                 }
             ],
             "testSpec": {
