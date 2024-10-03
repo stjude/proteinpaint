@@ -74,7 +74,10 @@ jobs:
             docker push ghcr.io/stjude/ppfull:$TAG
             docker push ghcr.io/stjude/ppserver:latest
             docker push ghcr.io/stjude/ppfull:latest
-          
+            
+            ./update_deps_version.sh $TAG ./full/Dockerfile
+            ./update_deps_version.sh $TAG ./server/Dockerfile
+            
             if [[ "$BRANCH" != "master" ]]; then
               echo "merging to master"
               git fetch --depth=10 origin master:master
@@ -89,5 +92,4 @@ jobs:
             git stash -a
             git pull --rebase
             git push origin master
-          
           fi
