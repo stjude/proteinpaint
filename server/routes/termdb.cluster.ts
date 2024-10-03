@@ -311,9 +311,8 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				genes: genes
 			}
 			if (limitSamples) {
-				gene_expression_input.limitSamples = limitSamples.toString()
+				gene_expression_input.limitSamples = Array.from(limitSamples).join('\t')
 			}
-			//gene_expression_input.
 
 			//const time1 = new Date().valueOf()
 			const rust_output = await run_rust('readHDF5', JSON.stringify(gene_expression_input))

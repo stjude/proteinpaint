@@ -1,6 +1,6 @@
 // Need to set HDF5_DIR and LD_LIBRARY_PATH in ~/.bash_profile
 // Syntax: cd .. && cargo build --release && json='{"gene":"TP53","data_type":"singlecell","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/readHDF5
-// cd .. && cargo build --release && json='{"gene":"ENSG00000227232.4","data_type":"expression_count","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/pharmacotyping/exprs.h5"}' && time echo $json | target/release/readHDF5
+// cd .. && cargo build --release && json='{"genes":"TP53\tSQOR\tSSPN","limitSamples":"1\t3\t5\t6","data_type":"expression_count","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/rnaseq/exprs.h5"}' && time echo $json | target/release/readHDF5
 // cd .. && cargo build --release && json='{"data_type":"expression_samples","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/rnaseq/exprs.h5"}' && time echo $json | target/release/readHDF5
 
 use hdf5::types::FixedAscii;
@@ -224,7 +224,11 @@ fn get_gene_expression_samples(hdf5_filename: String) -> Result<()> {
     Ok(())
 }
 
-fn read_gene_expression_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
+fn read_gene_expression_hdf5(
+    hdf5_filename: String,
+    gene_name: String,
+    limit_samples: Option<&str>,
+) -> Result<()> {
     let file = File::open(&hdf5_filename)?; // open for reading
     let ds_dim = file.dataset("dims")?; // open the dataset
 
@@ -311,7 +315,9 @@ fn main() -> Result<()> {
                         Some(_x) => {}
                         None => {
                             // This panic statement has been put inside an if statement because in case of a sample request, no gene names will be provided. Later need to organize the different queries into enums so as to type check each request.
-                            if data_type_result.as_str().unwrap() != "expression_samples" {
+                            if data_type_result.as_str().unwrap() != "expression_samples"
+                                && data_type_result.as_str().unwrap() != "expression_count"
+                            {
                                 panic!("Gene name not provided");
                             }
                         }
@@ -326,21 +332,34 @@ fn main() -> Result<()> {
                             match gene_result2.as_str() {
                                 Some(gene_name) => {
                                     if data_type == "singlecell" {
-                                        read_single_hdf5(hdf5_filename, gene_name.to_string())?;
-                                    } else if data_type == "expression_count" {
+                                        read_single_hdf5(
+                                            hdf5_filename.clone(),
+                                            gene_name.to_string(),
+                                        )?;
+                                    }
+                                }
+                                None => {
+                                    if data_type == "expression_samples" {
+                                        get_gene_expression_samples(hdf5_filename.clone())?;
+                                    }
+                                }
+                            }
+
+                            let genes_result = &json_string["genes"].to_owned();
+                            match genes_result.as_str() {
+                                Some(genes) => {
+                                    if data_type == "expression_count" {
+                                        let limit_samples = &json_string["limitSamples"].to_owned();
                                         read_gene_expression_hdf5(
                                             hdf5_filename,
-                                            gene_name.to_string(),
+                                            genes.to_string(),
+                                            limit_samples.as_str(),
                                         )?;
                                     } else {
                                         panic!("data_type needs to be singlecell, expression_count or expression_samples");
                                     }
                                 }
-                                None => {
-                                    if data_type == "expression_samples" {
-                                        get_gene_expression_samples(hdf5_filename)?;
-                                    }
-                                }
+                                None => {}
                             }
                         }
                         None => {
