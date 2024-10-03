@@ -116,7 +116,7 @@ export class ColorScale {
 					.append('div')
 					.style('display', 'inline-block')
 					.text(text)
-					.style('margin', '2px')
+					.style('margin', '5px')
 					.append('input')
 					.attr('type', 'color')
 					.attr('value', rgb(this.colors[idx]).formatHex())

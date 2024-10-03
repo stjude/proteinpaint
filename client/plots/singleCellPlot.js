@@ -776,9 +776,10 @@ class singleCellPlot {
 			holder: legendG,
 			barwidth: 100,
 			barheight: 20,
-			colors,
 			data: [min, max],
+			colors,
 			tickSize: 5,
+			ticks: 4,
 			topTicks: true,
 			callback: (val, idx) => {
 				this.changeGradientColor(plot, val, idx)
