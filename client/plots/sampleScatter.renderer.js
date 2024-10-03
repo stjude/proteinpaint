@@ -701,24 +701,16 @@ export function setRenderers(self) {
 				offsetY += step
 
 				if (self.config.colorTW?.q?.mode === 'continuous') {
-					const gradientWidth = 150
 					const [min, max] = chart.colorGenerator.domain()
-					const gradientStep = (max - min) / 4
-					const tickValues = [
-						min < 0 ? min : 0,
-						min + gradientStep,
-						min + 2 * gradientStep,
-						min + 3 * gradientStep,
-						max
-					]
 
 					const colorScale = new ColorScale({
 						holder: colorG,
 						barheight: 20,
-						barwidth: gradientWidth,
+						barwidth: 150,
 						colors: [self.config.startColor[chart.id], self.config.stopColor[chart.id]],
-						data: tickValues,
+						data: [min, max],
 						position: `0, 100`,
+						ticks: 4,
 						tickSize: 5,
 						topTicks: true,
 						callback: (val, idx) => {

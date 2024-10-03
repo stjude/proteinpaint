@@ -29,12 +29,15 @@ type ColorScaleOpts = {
 	/** Optional but highly recommend. Default is a white to red scale. */
 	colors?: string[]
 	/** Required
-	 * Specifies the values to show along a number line.
+	 * Specifies the values to show along a number line. Only pass the min and max.
+	 * If data spans neg and pos values with no zero, the update method will add a zero
+	 * between the min and max to ensure zero shows on the axis.
 	 */
 	data: number[]
 	/** Optional. Font size in px of the text labels. */
 	fontSize?: number
-	/** Required */
+	/** Required. Either a div or svg element.
+	 * If not a svg, include either the .width: INT or .height:INT to create the svg.*/
 	holder: Elem
 	/** Optional. Shows a value in the color bar for the default, bottom axis
 	 * This value cannot be zero at initialization.*/
@@ -44,9 +47,13 @@ type ColorScaleOpts = {
 	/** If the holder is not an svg or g element, adding the width or height creates the svg. */
 	/** Optional. Width of the svg. Default is 100 */
 	width?: number
-	/** Optional. Heigh fo the svg. Default is 30.*/
+	/** Optional. Height fo the svg. Default is 30.*/
 	height?: number
-	/** Optional. Number of ticks to show. Cannot be zero. Default is 4. */
+	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
+	 * NOTE: D3 considers this a ** suggested ** count. d3-axis will ultimateluy render the
+	 * ticks based on the available space of each label.
+	 * See d3 documentation for more info: https://d3js.org/d3-axis#axis_ticks.
+	 */
 	ticks?: number
 	/** Optional. Size of the ticks in px. Default is 1. */
 	tickSize?: number
@@ -206,14 +213,6 @@ export class ColorScale {
 		return axis
 	}
 
-	setAxis() {
-		if (this.topTicks === true) {
-			return axisTop(this.dom.scale).tickValues(this.data).tickSize(this.tickSize)
-		} else {
-			return axisBottom(this.dom.scale).tickValues(this.data).tickSize(this.tickSize)
-		}
-	}
-
 	updateColors() {
 		this.dom.gradient.selectAll('stop').remove()
 		this.makeColorBar()
@@ -237,7 +236,7 @@ export class ColorScale {
 					return this.barwidth * (i / (this.data.length - 1))
 				})
 			)
-		this.dom.scaleAxis.transition().duration(500).call(this.setAxis())
+		this.dom.scaleAxis.transition().duration(400).call(this.getAxis())
 	}
 
 	updateValueInColorBar() {
@@ -254,5 +253,10 @@ export class ColorScale {
 		this.updateColors()
 		this.updateAxis()
 		this.updateValueInColorBar()
+
+		//The stroke may inherit 'currentColor' from opts.holder
+		//This is a workaround to prevent the black line from appearing
+		const pathElem = this.dom.scaleAxis.select('path').node()
+		if (pathElem instanceof SVGPathElement) pathElem.style.stroke = 'none'
 	}
 }
