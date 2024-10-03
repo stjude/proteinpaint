@@ -28,6 +28,17 @@ type TermdbClusterRequestBase = {
 	filter0?: any
 }
 
+export type GeneExpressionInput = {
+	/** Query to get gene expression fpkm data */
+	data_type: 'expression_count'
+	/** Name of HDF5 file */
+	hdf5_file: string
+	/** List of genes to be queried */
+	genes: string
+	/** List of samples to be queried, if undefined all samples will be queried in the dataset */
+	limitSamples?: string
+}
+
 export type TermdbClusterRequestGeneExpression = TermdbClusterRequestBase & {
 	/** Data type */
 	dataType: 'geneExpression'
