@@ -745,7 +745,7 @@ export function setRenderers(self) {
 				const refColorG = legendG.append('g')
 				refColorG
 					.append('path')
-					.attr('transform', c => `translate(${offsetX - 2}, ${offsetY - 5}) scale(0.5)`)
+					.attr('transform', c => `translate(${offsetX - 2}, ${offsetY - 5}) scale(0.6)`)
 					.style('fill', colorRefCategory.color)
 					.attr('d', shapes[0])
 					.style('stroke', rgb(colorRefCategory.color).darker())
@@ -754,7 +754,7 @@ export function setRenderers(self) {
 				const refText = legendG
 					.append('g')
 					.append('text')
-					.attr('x', offsetX + 10)
+					.attr('x', offsetX + 15)
 					.attr('y', offsetY)
 					.text(`n=${colorRefCategory.sampleCount}`)
 					.style('text-decoration', !self.settings.showRef ? 'line-through' : 'none')
@@ -790,7 +790,7 @@ export function setRenderers(self) {
 
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX}, ${offsetY - 5}) scale(0.5)`)
+						.attr('transform', c => `translate(${offsetX}, ${offsetY - 5}) scale(0.6)`)
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
 						.attr('d', symbol)
@@ -798,7 +798,7 @@ export function setRenderers(self) {
 
 					itemG
 						.append('text')
-						.attr('x', offsetX + 10)
+						.attr('x', offsetX + 15)
 						.attr('y', offsetY)
 						.text(`${name}, n=${count}`)
 						.style('text-decoration', hidden ? 'line-through' : 'none')
@@ -821,7 +821,7 @@ export function setRenderers(self) {
 			circleG
 				.append('path')
 				.attr('d', shapes[0])
-				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.5)`)
+				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.6)`)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
 			if (!self.config.colorColumn)
@@ -830,7 +830,7 @@ export function setRenderers(self) {
 			itemG
 				.append('text')
 				.attr('name', 'sjpp-scatter-legend-label')
-				.attr('x', x + 10)
+				.attr('x', x + 15)
 				.attr('y', y)
 				.text(`${name}, n=${category.sampleCount}`)
 				.style('text-decoration', hidden ? 'line-through' : 'none')
@@ -1020,7 +1020,7 @@ export function setRenderers(self) {
 		const step = 125
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
 		let title = name
-		const G = legendG.append('g').style('font-size', '0.9em')
+		const G = legendG.append('g')
 
 		G.append('text')
 			.attr('id', 'legendTitle')
@@ -1053,7 +1053,7 @@ export function setRenderers(self) {
 					const index = category.shape % shapes.length
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(0.5)`)
+						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(0.6)`)
 						.style('fill', 'gray')
 						.style('pointer-events', 'bounding-box')
 						.attr('d', shapes[index])
@@ -1063,7 +1063,7 @@ export function setRenderers(self) {
 					itemG
 						.append('path')
 						.attr('d', shapes[0])
-						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(0.5)`)
+						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(0.6)`)
 
 						.style('fill', category.color)
 						.style('stroke', rgb(category.color).darker())
@@ -1073,7 +1073,7 @@ export function setRenderers(self) {
 
 				G.append('g')
 					.append('text')
-					.attr('x', offsetX - step + 10)
+					.attr('x', offsetX - step + 14)
 					.attr('y', offsetY)
 					.attr('name', 'sjpp-scatter-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
