@@ -136,13 +136,24 @@ export class ColorScale {
 						this.tip.hide()
 					})
 			}
-
-			scaleSvg.on('click', () => {
-				this.tip.clear().showunder(barG.node())
-				//TODO apply to all colors or only start and end?
-				appendColor('Min:', 0)
-				appendColor('Max:', this.colors.length - 1)
-			})
+			let showTooltip = true
+			scaleSvg
+				.on('click', () => {
+					this.tip.clear().showunder(barG.node())
+					//TODO apply to all colors or only start and end?
+					appendColor('Min:', 0)
+					appendColor('Max:', this.colors.length - 1)
+					showTooltip = false
+				})
+				.on('mouseenter', () => {
+					//Prevent showing the tooltip after user interacts with the color picker
+					if (showTooltip == false) return
+					this.tip.clear().showunder(barG.node())
+					this.tip.d.append('div').style('padding', '2px').text('Click to customize colors')
+				})
+				.on('mouseleave', () => {
+					if (showTooltip) this.tip.hide()
+				})
 		}
 		this.render()
 	}
