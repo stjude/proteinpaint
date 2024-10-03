@@ -1,7 +1,7 @@
 import { getCompInit, multiInit } from '#rx'
 import { recoverInit } from '../rx/src/recover'
 import { searchInit } from './search'
-import { chartsInit } from './charts'
+import { chartsInit, getActiveCohortStr } from './charts'
 import { groupsInit } from './groups'
 import { sessionBtnInit } from './sessionBtn'
 import { aboutInit } from './about.ts'
@@ -197,7 +197,7 @@ function setRenderers(self) {
 			.style('float', 'right')
 			.style('font-size', '1.1em')
 			.style('margin-top', '50px')
-			.text(appState.termdbConfig?.title?.text || '')
+		//.text(appState.termdbConfig?.title?.text || cohort) //this line will be executed in update UI to reflect cohort changes
 
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
 		const controlsDiv = header
@@ -391,6 +391,9 @@ function setRenderers(self) {
 	}
 
 	self.updateUI = async (toggleSubheaderdiv = false) => {
+		const state = self.state
+		const cohort = getActiveCohortStr(state)
+		self.dom.titleDiv.text(state.termdbConfig?.title?.text || cohort)
 		if (!self.dom.subheaderDiv) return
 		if (self.activeTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
 			// showing charts or filter tab; cohort selection is enabled but no cohort is selected
