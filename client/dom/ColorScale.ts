@@ -138,7 +138,7 @@ export class ColorScale {
 			}
 
 			scaleSvg.on('click', () => {
-				this.tip.clear().showunder(scaleSvg.node())
+				this.tip.clear().showunder(barG.node())
 				//TODO apply to all colors or only start and end?
 				appendColor('Min:', 0)
 				appendColor('Max:', this.colors.length - 1)
@@ -168,7 +168,7 @@ export class ColorScale {
 			.attr('fill', 'url(#' + id + ')')
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
-		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight + 2})`)
+		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight})`)
 		const scale = scaleLinear().domain(this.data).range([0, this.barwidth])
 
 		return { scale, scaleAxis }
