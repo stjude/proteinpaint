@@ -1006,11 +1006,18 @@ type Termdb = {
 		html: string
 	}
 	hasSampleAncestry?: boolean
+	sampleTypes?: SampleType[]
 
 	tracks?: {
 		/** allow color or shape changes in the lollipop */
 		allowSkewerChanges: boolean
 	}
+}
+
+type SampleType = {
+	name: string
+	plural_name: string
+	parent_id: string
 }
 
 type ChartConfigByType = {
