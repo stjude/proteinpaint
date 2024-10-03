@@ -2,6 +2,7 @@ import path from 'path'
 import run_R from '#src/run_R.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import type {
+	GeneExpressionInput,
 	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequest,
 	TermdbClusterResponse,
@@ -227,6 +228,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 
 	q.get = async (param: TermdbClusterRequestGeneExpression) => {
 		console.log('q.samples:', q.samples)
+		//console.log("ds:", ds)
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, must still return expected structure with no data
@@ -255,6 +257,8 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		console.log('limitSamples:', limitSamples)
 		console.log('q.file:', q.file)
 		const time1 = new Date().valueOf()
+		param.storage_type = ds.queries.geneExpression.storage_type
+		console.log('param.storage_type:', param.storage_type)
 		if (!param.storage_type || param.storage_type == 'bed') {
 			// Using bed file as input
 			for (const geneTerm of param.terms) {
@@ -300,7 +304,17 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				if (Object.keys(s2v).length) term2sample2value.set(geneTerm.gene, s2v) // only add gene if has data
 			}
 		} else if (param.storage_type == 'HDF5') {
-			const gene_expression_input = {}
+			const genes = param.terms.map(x => x.gene).join('\t')
+			const gene_expression_input: GeneExpressionInput = {
+				data_type: 'expression_count',
+				hdf5_file: q.file,
+				genes: genes
+			}
+			if (limitSamples) {
+				gene_expression_input.limitSamples = limitSamples.toString()
+			}
+			//gene_expression_input.
+
 			//const time1 = new Date().valueOf()
 			const rust_output = await run_rust('readHDF5', JSON.stringify(gene_expression_input))
 			//const time2 = new Date().valueOf()
