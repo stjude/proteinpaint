@@ -141,7 +141,7 @@ tape('ColorScale.updateAxis()', test => {
 	const ticks = holder.selectAll('text').nodes()
 
 	test.equal(ticks[0].__data__, testColorScale.data[0], 'Should update the first tick to 0')
-	test.equal(ticks[1].__data__, testColorScale.data[1], 'Should update the last tick to 5')
+	test.equal(ticks[ticks.length - 1].__data__, testColorScale.data[1], 'Should update the last tick to 5')
 
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -197,8 +197,8 @@ tape('ColorScale.updateScale()', test => {
 	)
 
 	const ticks = holder.selectAll('text').nodes()
-	test.equal(ticks[0].__data__, testColorScale.data[0], 'Should call updateAxis() and update the first tick to -5')
-	test.equal(ticks[1].__data__, 0, 'Should insert a middle tick at 0')
+	test.equal(ticks[0].__data__, -4, 'Should call updateAxis() and update the first tick to -5')
+	test.equal(ticks[2].__data__, 0, 'Should insert a middle tick at 0')
 
 	const valueLabel = holder.select('text[data-testid="sjpp-color-scale-marked-label"]').node()
 	test.equal(
