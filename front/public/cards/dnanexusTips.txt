@@ -133,7 +133,7 @@
 
             <h2 id="track">Create a Track</h2>
             <p style="margin-left: 2vw;">
-                Create a track from stringing together URL parameters described in this <a href='https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.737pcqp1tlnt' target='URL param'>document</a>. <br><br>
+                Create a track from stringing together URL parameters described in this <a href='https://github.com/stjude/proteinpaint/wiki/URL-parameters' target='URL param'>wiki</a>. <br><br>
 
                 Start with "https://proteinpaint.stjude.org/?" and add the URL parameters separated by ampersands. In the example below, parameters for the genome, block, track name, and file URL to launch the genome browser. The final URL <a href="https://proteinpaint.stjude.org/?genome=hg19&block=1&bigwigurl=URL,https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw">https://proteinpaint.stjude.org/?genome=hg19&block=1&bigwigurl=URL,https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw</a>, launches this bigwig track. 
                 <img style="width: 50vw; margin: 1vw 2vw;" src="https://proteinpaint.stjude.org/ppdemo/images/bigwig_url_ex.png">

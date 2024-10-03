@@ -25,12 +25,6 @@
                     }
                 ]
             },
-            "buttons": [
-                {
-                    "name": "Custom Dataset Documentation",
-                    "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.2sz0rhdexazf"
-                }
-            ],
             "testSpec": {
                 "expected": {"rect": 20 }
             }
@@ -56,7 +50,7 @@
             "buttons": [
                 {
                     "name": "Official Dataset Documentation",
-                    "link": "https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.jibbdhrfuw7f"
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Embedding#GenomePaint"
                 }
             ],
             "testSpec": {
@@ -84,7 +78,7 @@
             "buttons": [
                 {
                     "name": "Mds JSON Documentation",
-                    "link": "https://docs.google.com/document/d/1_eUrRsR9D-6AD5buNe30tmGICU-B3w67nz-XjpjnDyI/edit#heading=h.pmuzrkapwipq"
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Tracks#track-mdsjsonfile-custom-genomepaint-dataset"
                 }
             ],
             "testSpec": {
@@ -99,7 +93,7 @@
         },
         {
             "name": "Documentation",
-            "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
+            "link": "https://github.com/stjude/proteinpaint/wiki/Tracks#track-genomepaint"
         }
     ],
     "arrowButtons": [
