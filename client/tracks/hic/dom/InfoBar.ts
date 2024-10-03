@@ -78,7 +78,7 @@ export class InfoBar {
 			colors: [this.startColor, this.endColor],
 			position: '20,0',
 			ticks: 3,
-			tickSize: 3,
+			tickSize: 5,
 			//Do not use min value here on initialization. It's 0 and will not update later.
 			markedValue: 1
 		})
