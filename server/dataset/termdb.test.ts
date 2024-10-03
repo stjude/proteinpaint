@@ -28,6 +28,8 @@ copyDataFilesFromRepo2Tp()
 export default {
 	isMds3: true,
 	cohort: {
+		title: { text: '' }, //it will show cohorts instead
+
 		db: {
 			file: 'files/hg38/TermdbTest/db'
 		},
