@@ -772,17 +772,12 @@ class singleCellPlot {
 		} else [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
 
 		plot.colorGenerator = d3Linear().domain([min, max]).range(colors)
-
-		const gradientWidth = 100
-		const gradientStep = (max - min) / 3
-		const tickValues = [min < 0 ? min : 0, min + gradientStep, min + 2 * gradientStep, max]
-
 		const colorScale = new ColorScale({
 			holder: legendG,
-			barwidth: gradientWidth,
+			barwidth: 100,
 			barheight: 20,
 			colors,
-			data: tickValues,
+			data: [min, max],
 			tickSize: 5,
 			topTicks: true,
 			callback: (val, idx) => {
