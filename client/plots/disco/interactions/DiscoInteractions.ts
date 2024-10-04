@@ -43,7 +43,7 @@ export class DiscoInteractions {
 						dslabel: this.discoApp.app.opts.state.dslabel,
 						hlaachange: mnames.join(','),
 						filter0,
-						filterObj: filter
+						filterObj: structuredClone(filter) // must not pass filter as frozen. duplicate to pass unfrozen copy so mds3 code will work
 					}
 				]
 			}
