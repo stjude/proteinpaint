@@ -1,10 +1,13 @@
 # Docker dev container development
 
-Requires Docker Desktop on your host machine. 
+Requires Docker Desktop on the host machine. 
 
 ## Host Machine development
 
 ```bash
+mkdir ~/dev
+cd ~/dev
+git clone git@github.com:stjude/proteinpaint.git
 cd proteinpaint
 npm run sethooks
 cd container/dev
