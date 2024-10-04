@@ -30,8 +30,9 @@ export class profilePlot {
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
 			vocab: appState.vocab,
-			logged: config.logged,
-			site: config.site
+			logged: true, //later change to appState.logged
+			site: config.site,
+			activeCohort: appState.activeCohort
 		}
 	}
 
@@ -170,12 +171,15 @@ export class profilePlot {
 
 	async comparePlots() {
 		this.plotAdded = true
-		const appState = this.state
 		const plotMod = await import('#plots/plot.app.js')
-		const plot = { chartType: this.type, settings: { [this.type]: { comparison: true } } }
+		const plot = {
+			chartType: this.type,
+			settings: { [this.type]: { comparison: true } },
+			activeCohort: this.state.activeCohort
+		}
 
 		if (this.type == 'profileRadar' || this.type == 'profileRadarFacility') plot.plot = this.config.plot
-		const opts = { holder: this.dom.holder2, state: { plots: [plot], vocab: appState.vocab } }
+		const opts = { holder: this.dom.holder2, state: { plots: [plot], vocab: this.state.vocab } }
 		const plotAppApi = await plotMod.appInit(opts)
 	}
 
@@ -578,10 +582,11 @@ export class profilePlot {
 	}
 }
 
-export function getProfilePlotConfig(app, type) {
-	const appState = app.getState()
-	const key = appState.activeCohort == 0 ? 'full' : 'abbrev'
-	const defaults = app.vocabApi.termdbConfig?.chartConfigByType[key][type]
+export function getProfilePlotConfig(app, opts) {
+	const state = app.getState()
+	const activeCohort = state ? state.activeCohort : opts.activeCohort
+	const key = activeCohort == 0 ? 'full' : 'abbrev'
+	const defaults = app.vocabApi.termdbConfig?.chartConfigByType[key][opts.chartType]
 	return defaults
 }
 

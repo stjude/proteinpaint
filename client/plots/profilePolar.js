@@ -174,7 +174,7 @@ class profilePolar extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = getProfilePlotConfig(app, opts.chartType)
+		const defaults = getProfilePlotConfig(app, opts)
 		defaults.settings = { profilePolar: getDefaultProfilePlotSettings() }
 
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
