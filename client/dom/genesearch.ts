@@ -129,6 +129,7 @@ insertion
 */
 
 export function addGeneSearchbox(arg: GeneSearchBoxArg) {
+	const debounceDelay = 500
 	const tip = arg.tip,
 		row = arg.row
 	const result: Result = {}
@@ -201,6 +202,9 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				input.blur()
 				tip.hide()
 
+				// delay for debounceDelay time, so that debounce fucntion could be executed after keyupEnter and before getResult.
+				await new Promise(resolve => setTimeout(resolve, debounceDelay))
+
 				// try to parse as gene
 				// get first gene match from menu
 				if (arg?.searchOnly != 'snp') {
@@ -209,6 +213,9 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 						// gene match
 						const geneSymbol = hitgene.datum()
 						arg?.searchOnly == 'gene' ? getResult({ geneSymbol }, geneSymbol) : await geneCoordSearch(geneSymbol)
+
+						// clear gene hits
+						tip.showunder(searchbox.node()).clear()
 						return
 					}
 				}
@@ -383,7 +390,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			return
 		}
 	}
-	const debouncer = debounce(checkInput, 500)
+	const debouncer = debounce(checkInput, debounceDelay)
 
 	function displayVariantHits(tip, data) {
 		tip.d
