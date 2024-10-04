@@ -1087,6 +1087,7 @@ type AssayAvailability = {
 //Shared with genome.ts
 export type Cohort = {
 	hideGroupsTab?: boolean
+	defaultChartType?: string
 	allowedChartTypes?: string[]
 	hiddenChartTypes?: string[]
 	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }

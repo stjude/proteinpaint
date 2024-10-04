@@ -94,7 +94,8 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 		hideGroupsTab: ds.cohort.hideGroupsTab,
 		tracks: tdb.tracks,
 		sampleTypes: ds.cohort.termdb.sampleTypes,
-		hasSampleAncestry: ds.cohort.termdb.hasSampleAncestry
+		hasSampleAncestry: ds.cohort.termdb.hasSampleAncestry,
+		defaultChartType: ds.cohort.defaultChartType
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
