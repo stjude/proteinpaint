@@ -1,9 +1,9 @@
 import { getCompInit, multiInit } from '../rx'
-import { initRadioInputs } from '../dom/radio2'
+import { make_radios } from '#dom'
 import { termsettingInit } from '#termsetting'
 import { rgb } from 'd3-color'
 import { select } from 'd3-selection'
-import { TermTypes } from '#shared/terms.js'
+// import { TermTypes } from '#shared/terms.js'
 
 // unique element ID's are needed for  to be used for assigning unique
 // radio button names by object instance
@@ -418,10 +418,10 @@ function setRadioInput(opts) {
 				}
 		  ]
 
-	const styles = opts.styles || {}
+	const styles = opts.styles || { display: 'inline-block' }
 	for (const input of inputs) {
-		self.inputs[input.settingsKey] = initRadioInputs({
-			name: getElemId(opts.instanceNum),
+		self.inputs[input.settingsKey] = make_radios({
+			inputName: getElemId(opts.instanceNum),
 			holder: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
@@ -461,11 +461,11 @@ function setRadioInput(opts) {
 			for (const settingsKey in self.inputs) {
 				const radio = self.inputs[settingsKey]
 				radio.main(plot.settings[opts.chartType][settingsKey])
-				radio.dom.divs.style('display', d =>
+				radio.divs.style('display', d =>
 					d.getDisplayStyle ? d.getDisplayStyle(plot) : opts.labelDisplay || 'inline-block'
 				)
-				//radio.dom.labels.style('display', d => opts.labelDisplay || 'span')
-				if (opts.setRadioLabel) radio.dom.labels.html(opts.setRadioLabel)
+				//radio.labels.style('display', d => opts.labelDisplay || 'span')
+				if (opts.setRadioLabel) radio.labels.html(opts.setRadioLabel)
 			}
 		}
 	}
