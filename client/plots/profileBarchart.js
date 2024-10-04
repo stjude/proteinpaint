@@ -297,7 +297,7 @@ class profileBarchart extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = getProfilePlotConfig(app, opts.chartType)
+		const defaults = getProfilePlotConfig(app, opts)
 		defaults.settings = { profileBarchart: getDefaultProfilePlotSettings() }
 		const config = copyMerge(structuredClone(defaults), opts)
 		config.settings.controls = { isOpen: false }

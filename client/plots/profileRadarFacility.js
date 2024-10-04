@@ -279,7 +279,7 @@ class profileRadarFacility extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = getProfilePlotConfig(app, opts.chartType)
+		const defaults = getProfilePlotConfig(app, opts)
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadarFacility'
 		let config = copyMerge(structuredClone(defaults), opts)
 		const settings = getDefaultProfilePlotSettings()
