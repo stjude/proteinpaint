@@ -103,7 +103,6 @@ class singleCellPlot {
 						config: { settings: { singleCellPlot: { showSamples: !this.settings.showSamples } } }
 					})
 				})
-			//showDiv.append('label').text(`Show samples`).attr('for', `showSamples`)
 		}
 		if (state.config.plots.length > 1)
 			for (const plot of state.config.plots) {
