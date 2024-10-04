@@ -1,12 +1,10 @@
-import { Elem } from '../types/d3'
-
 /* makes radio buttons */
 
 type RadioButtonOpts = {
 	/** Fires .oninput. Intended for general use. */
 	callback?: (f?: any) => void
 	/** Required.  */
-	holder: Elem
+	holder: any
 	/** common Name of <input>, use random number if not given */
 	inputName?: string | number
 	/** Optional callback methods for non oninput events
@@ -30,7 +28,7 @@ type OptionEntry = {
 	/** Text shown in the span to the right of the radio button */
 	label: string
 	/** Text shown in tooltip */
-	title: string
+	title?: string
 	/** Should correspond to 'currValue' in callbacks */
 	value: string | number
 }
@@ -51,7 +49,7 @@ export function make_radios(opts: RadioButtonOpts) {
 	const labels = divs
 		.enter()
 		.append('div')
-		.attr('aria-label', d => d.title)
+		.attr('aria-label', d => d.title || '')
 		.style('display', opts.styles && 'display' in opts.styles ? opts.styles.display : 'block')
 		.style('padding', opts.styles && 'padding' in opts.styles ? opts.styles.padding : '5px')
 		.append('label')

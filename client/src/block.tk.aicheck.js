@@ -1,7 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import { axisLeft, axisRight } from 'd3-axis'
 import * as client from './client'
-import { make_radios } from '../dom/radiobutton'
+import { make_radios } from '#dom'
 
 /*
 follows bigwig track, main & subpanel rendered separately
@@ -129,26 +129,19 @@ export function loadTk(tk, block) {
 			const imgh = tk.vafheight * 3 + tk.rowspace * 4 + tk.coverageheight * 2
 
 			tk.height_main = tk.toppad + imgh + tk.bottompad
-			tk.img
-				.attr('width', block.width)
-				.attr('height', imgh)
-				.attr('xlink:href', data.src)
+			tk.img.attr('width', block.width).attr('height', imgh).attr('xlink:href', data.src)
 
 			if (data.coveragemax) {
 				tk.coveragemax = data.coveragemax
 			}
 
 			if (!data.nodata) {
-				const scale = scaleLinear()
-					.domain([0, 1])
-					.range([tk.vafheight, 0])
+				const scale = scaleLinear().domain([0, 1]).range([tk.vafheight, 0])
 
 				let y = 0
 				client.axisstyle({
 					axis: tk.Tvafaxis.attr('transform', 'translate(0,' + y + ')').call(
-						axisLeft()
-							.scale(scale)
-							.tickValues([0, 1])
+						axisLeft().scale(scale).tickValues([0, 1])
 					),
 					color: 'black',
 					showline: true
@@ -158,9 +151,7 @@ export function loadTk(tk, block) {
 				y = tk.vafheight + tk.rowspace + tk.coverageheight + tk.rowspace
 				client.axisstyle({
 					axis: tk.Nvafaxis.attr('transform', 'translate(0,' + y + ')').call(
-						axisLeft()
-							.scale(scale)
-							.tickValues([0, 1])
+						axisLeft().scale(scale).tickValues([0, 1])
 					),
 					color: 'black',
 					showline: true
@@ -169,26 +160,18 @@ export function loadTk(tk, block) {
 
 				y = 2 * (tk.vafheight + tk.rowspace + tk.coverageheight + tk.rowspace)
 				client.axisstyle({
-					axis: tk.aiaxis.attr('transform', 'translate(0,' + y + ')').call(
-						axisLeft()
-							.scale(scale)
-							.tickValues([0, 1])
-					),
+					axis: tk.aiaxis.attr('transform', 'translate(0,' + y + ')').call(axisLeft().scale(scale).tickValues([0, 1])),
 					color: 'black',
 					showline: true
 				})
 				tk.label_ai.attr('y', y + tk.vafheight / 2)
 
-				const scale2 = scaleLinear()
-					.domain([0, tk.coveragemax])
-					.range([tk.coverageheight, 0])
+				const scale2 = scaleLinear().domain([0, tk.coveragemax]).range([tk.coverageheight, 0])
 
 				y = tk.vafheight + tk.rowspace
 				client.axisstyle({
 					axis: tk.Tcovaxis.attr('transform', 'translate(0,' + y + ')').call(
-						axisRight()
-							.scale(scale2)
-							.tickValues([0, tk.coveragemax])
+						axisRight().scale(scale2).tickValues([0, tk.coveragemax])
 					),
 					color: 'black',
 					showline: true
@@ -198,9 +181,7 @@ export function loadTk(tk, block) {
 				y = 2 * (tk.vafheight + tk.rowspace) + tk.coverageheight + tk.rowspace
 				client.axisstyle({
 					axis: tk.Ncovaxis.attr('transform', 'translate(0,' + y + ')').call(
-						axisRight()
-							.scale(scale2)
-							.tickValues([0, tk.coveragemax])
+						axisRight().scale(scale2).tickValues([0, tk.coveragemax])
 					),
 					color: 'black',
 					showline: true
@@ -331,11 +312,7 @@ function configPanel(tk, block) {
 				tk.gtotalcutoff = v
 				loadTk(tk, block)
 			})
-		row
-			.append('div')
-			.style('font-size', '.7em')
-			.style('opacity', 0.5)
-			.text('Set to 0 to use all markers')
+		row.append('div').style('font-size', '.7em').style('opacity', 0.5).text('Set to 0 to use all markers')
 	}
 	// gmafrestrict
 	{
