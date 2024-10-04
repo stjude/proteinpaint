@@ -133,6 +133,18 @@ export function setRenderers(self) {
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
+			const id = 'clip' + self.id
+			chart.svg
+				.append('defs')
+				.append('clipPath')
+				.attr('id', id)
+				.append('rect')
+				.attr('x', self.axisOffset.x)
+				.attr('y', self.axisOffset.y - self.settings.size)
+				.attr('width', self.settings.svgw)
+				.attr('height', self.settings.svgh)
+			chart.mainG.attr('clip-path', `url(#${id})`)
+
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
 			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-scatter-lowess')
 			chart.legendG = svg.append('g').attr('class', 'sjpcb-scatter-legend')
