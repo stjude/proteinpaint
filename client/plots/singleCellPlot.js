@@ -37,11 +37,11 @@ class singleCellPlot {
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		this.startGradient = {}
 		this.stopGradient = {}
-		this.colorByGene = false
 	}
 
 	async init(appState) {
 		const state = this.getState(appState)
+		this.colorByGene = state.config.gene ? true : false
 		const q = state.termdbConfig.queries
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 		this.opts.holder.style('position', 'relative')
@@ -82,18 +82,21 @@ class singleCellPlot {
 
 		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const topDiv = contentDiv.append('div').style('padding', '10px 0px')
+
+		const headerDiv = topDiv.append('div').style('display', 'inline-block')
+		const showDiv = topDiv.append('div').style('display', 'inline-block').style('float', 'right')
+
 		const tableDiv = contentDiv
 			.append('div')
 			.style('display', this.tableOnPlot ? 'block' : 'none')
 			.style('padding', this.tableOnPlot ? '10px' : '0px')
-		const headerDiv = contentDiv.append('div')
 
 		if (this.tableOnPlot) {
-			topDiv
+			showDiv
 				.append('input')
 				.attr('id', `showSamples`)
 				.attr('type', 'checkbox')
-				.property('checked', true)
+				.property('checked', state.config.settings.showSamples)
 				.on('change', e => {
 					this.app.dispatch({
 						type: 'plot_edit',
@@ -101,12 +104,12 @@ class singleCellPlot {
 						config: { settings: { singleCellPlot: { showSamples: e.target.checked } } }
 					})
 				})
-			topDiv.append('label').text('Show samples').attr('for', `showSamples`)
+			showDiv.append('label').text(`Show samples`).attr('for', `showSamples`)
 		}
 		if (state.config.plots.length > 1)
 			for (const plot of state.config.plots) {
 				const id = plot.name.replace(/\s+/g, '')
-				topDiv
+				showDiv
 					.append('input')
 					.attr('id', `show${id}`)
 					.attr('type', 'checkbox')
@@ -118,7 +121,7 @@ class singleCellPlot {
 							config: { settings: { singleCellPlot: { [`show${id}`]: e.target.checked } } }
 						})
 					})
-				topDiv.append('label').text(plot.name).attr('for', `show${id}`)
+				showDiv.append('label').text(plot.name).attr('for', `show${id}`)
 			}
 		let selectCategory, violinBt, geneSearch, searchboxDiv
 		if (q.singleCell?.geneExpression) {
@@ -127,11 +130,11 @@ class singleCellPlot {
 			make_radios({
 				holder: headerDiv,
 				options: [
-					{ label: 'Plot category', value: '1', checked: true },
+					{ label: 'Plot category', value: '1', checked: !this.colorByGene },
 					{
 						label: 'Gene expression',
 						value: '2',
-						checked: false
+						checked: this.colorByGene
 					}
 				],
 				styles: { display: 'inline' },
@@ -213,7 +216,7 @@ class singleCellPlot {
 		}
 
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
-		const deDiv = headerDiv.append('div').style('padding', '10px')
+		const deDiv = headerDiv.append('div').style('padding-left', '40px').style('display', 'inline-block')
 
 		const plotsDivParent = contentDiv.append('div').style('display', 'inline-block')
 		const plotsDiv = plotsDivParent
@@ -348,7 +351,7 @@ class singleCellPlot {
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.dom.violinBt?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.selectCategory?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
-		this.dom.deDiv.style('display', this.colorByGene ? 'none' : '')
+		this.dom.deDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
 
 		this.app.dispatch({
 			type: 'plot_edit',
@@ -461,7 +464,7 @@ class singleCellPlot {
 		this.dom.plotsDivParent.style('display', 'inline-block')
 		this.renderPlots(this.data)
 		this.dom.loadingDiv.style('display', 'none')
-		if (this.dom.header) this.dom.header.html(`Single Cell Data`)
+		if (this.dom.header) this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} Single Cell Data`)
 	}
 
 	async getData() {
@@ -1040,6 +1043,6 @@ export function getDefaultSingleCellSettings() {
 		svgw: 420,
 		svgh: 420,
 		showBorders: false,
-		showSamples: true
+		showSamples: false
 	}
 }
