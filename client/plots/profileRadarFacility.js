@@ -40,7 +40,7 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const width = 1160
+		const width = 1200
 		const height = 800
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -57,17 +57,17 @@ class profileRadarFacility extends profilePlot {
 
 		this.svg
 			.append('text')
-			.attr('transform', `translate(110, ${40})`)
+			.attr('transform', `translate(110, ${30})`)
 			.attr('font-weight', 'bold')
 			.text(this.config[this.config.plot].title)
 		const radius = this.radius
 		const x = 370
-		const y = 330
+		const y = 350
 		const radarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 330},${y + 50})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 330},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 360},${y + 50})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 360},${y + 150})`)
 
 		const rows = []
 		const columns = [
