@@ -95,6 +95,7 @@ class singleCellPlot {
 			showDiv
 				.append('input')
 				.attr('id', `showSamples`)
+				.attr('aria-label', 'Show or hide samples table')
 				.attr('type', 'checkbox')
 				.property('checked', state.config.settings.showSamples)
 				.on('change', e => {
@@ -113,6 +114,7 @@ class singleCellPlot {
 					.append('input')
 					.attr('id', `show${id}`)
 					.attr('type', 'checkbox')
+					.attr('aria-label', `Show or hide ${plot.name} plot`)
 					.property('checked', true)
 					.on('change', e => {
 						this.app.dispatch({
