@@ -30,7 +30,7 @@ export class profilePlot {
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
 			vocab: appState.vocab,
-			logged: true, //later change to appState.logged
+			logged: true, //later change to read login info
 			site: config.site,
 			activeCohort: appState.activeCohort
 		}
@@ -38,9 +38,9 @@ export class profilePlot {
 
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-
+		const state = this.getState(appState)
 		if (this.opts.header) {
-			const suffix = config.logged ? (config.site ? config.site : 'Admin') : 'Public'
+			const suffix = state.logged ? (config.site ? config.site : 'Admin') : 'Public'
 			this.opts.header.text(config.header ? config.header : config.chartType + ` / ${suffix}`)
 		}
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
@@ -341,8 +341,10 @@ export class profilePlot {
 			downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
 		)
 		this.components.controls.on(`helpClick.${chartType}`, () => {
+			const activeCohort = this.state.activeCohort
+			console.log('activeCohort', activeCohort)
 			let link
-			if (this.state.dslabel == 'ProfileAbbrev') {
+			if (activeCohort == 1) {
 				if (chartType == 'profileBarchart')
 					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-abbr-profiledash.pdf'
 				else if (chartType == 'profilePolar')
@@ -350,7 +352,7 @@ export class profilePlot {
 						'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-abbr-profiledash.pdf'
 				else if (chartType.startsWith('profileRadar'))
 					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-abbr-profiledash.pdf'
-			} else if (this.state.dslabel == 'ProfileFull') {
+			} else if (activeCohort == 0) {
 				if (chartType == 'profileBarchart')
 					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-full-profiledash.pdf'
 				else if (chartType == 'profilePolar')
