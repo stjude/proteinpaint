@@ -398,7 +398,7 @@ export class MatrixControls {
 							{ label: 'By Input Data Order', value: 'asListed' },
 							{ label: `By ${l.sample} Count`, value: 'sampleCount' }
 						],
-						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
+						styles: { padding: 0, 'padding-right': '10px', margin: 0, display: 'inline-block' }
 					}
 				]
 			})
