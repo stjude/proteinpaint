@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- pass unfrozen filter to launch mds3 tk from Disco
+
 
 ## 2.79.4
 
