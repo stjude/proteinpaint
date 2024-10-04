@@ -81,7 +81,7 @@ class singleCellPlot {
 		})
 
 		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const topDiv = contentDiv.append('div').style('padding', '10px 0px')
+		const topDiv = contentDiv.append('div').style('padding', '20px 0px')
 
 		const headerDiv = topDiv.append('div').style('display', 'inline-block')
 		const showDiv = topDiv.append('div').style('display', 'inline-block').style('float', 'right')
@@ -220,6 +220,7 @@ class singleCellPlot {
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
 		const deDiv = headerDiv.append('div').style('padding-left', '40px').style('display', 'inline-block')
 
+		const DETableDiv = contentDiv.append('div')
 		const plotsDivParent = contentDiv.append('div').style('display', 'inline-block')
 		const plotsDiv = plotsDivParent
 			.append('div')
@@ -254,6 +255,7 @@ class singleCellPlot {
 			controlsHolder: controlsDiv,
 			tableDiv,
 			deDiv,
+			DETableDiv,
 			plotsDiv,
 			plotsDivParent
 		}
@@ -289,8 +291,6 @@ class singleCellPlot {
 							config
 						})
 					})
-			const DETableDiv = this.dom.deDiv.append('div').style('padding-top', '5px')
-			this.dom.DETableDiv = DETableDiv
 			this.dom.deselect.append('option').text('')
 			this.dom.deselect.on('change', async e => {
 				DETableDiv.selectAll('*').remove()
@@ -333,6 +333,7 @@ class singleCellPlot {
 					rows,
 					columns,
 					maxWidth: '40vw',
+					maxHeight: '20vh',
 					div: DETableDiv
 				})
 			})
@@ -354,6 +355,7 @@ class singleCellPlot {
 		this.dom.violinBt?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.selectCategory?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.deDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
+		this.dom.DETableDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
 
 		this.app.dispatch({
 			type: 'plot_edit',
