@@ -90,22 +90,20 @@ class singleCellPlot {
 			.append('div')
 			.style('display', this.tableOnPlot ? 'block' : 'none')
 			.style('padding', this.tableOnPlot ? '10px' : '0px')
-
+		let showSamplesBt
 		if (this.tableOnPlot) {
-			showDiv
-				.append('input')
-				.attr('id', `showSamples`)
-				.attr('aria-label', 'Show or hide samples table')
-				.attr('type', 'checkbox')
-				.property('checked', state.config.settings.showSamples)
-				.on('change', e => {
+			showSamplesBt = headerDiv
+				.append('button')
+				.attr('aria-label', 'Select sample from table')
+				.text('Change sample')
+				.on('click', e => {
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
-						config: { settings: { singleCellPlot: { showSamples: e.target.checked } } }
+						config: { settings: { singleCellPlot: { showSamples: !this.settings.showSamples } } }
 					})
 				})
-			showDiv.append('label').text(`Show samples`).attr('for', `showSamples`)
+			//showDiv.append('label').text(`Show samples`).attr('for', `showSamples`)
 		}
 		if (state.config.plots.length > 1)
 			for (const plot of state.config.plots) {
@@ -127,7 +125,7 @@ class singleCellPlot {
 			}
 		let selectCategory, violinBt, geneSearch, searchboxDiv
 		if (q.singleCell?.geneExpression) {
-			headerDiv.append('label').text('Color by:').style('margin-right', '5px')
+			headerDiv.append('label').text('Color by:').style('padding-left', '25px')
 
 			make_radios({
 				holder: headerDiv,
@@ -257,7 +255,8 @@ class singleCellPlot {
 			deDiv,
 			DETableDiv,
 			plotsDiv,
-			plotsDivParent
+			plotsDivParent,
+			showSamplesBt
 		}
 
 		const offsetX = 80
@@ -453,6 +452,7 @@ class singleCellPlot {
 		}
 		this.dom.tableDiv.style('display', this.settings.showSamples ? 'block' : 'none')
 		if (this.tableOnPlot) {
+			this.dom.showSamplesBt.text(this.settings.showSamples ? 'Hide samples' : 'Change sample')
 			await renderSamplesTable(this.dom.tableDiv, this, this.state, this.state.dslabel, this.state.genome)
 			if (!this.samples?.length) {
 				this.showNoMatchingDataMessage()
