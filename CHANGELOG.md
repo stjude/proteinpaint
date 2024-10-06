@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- fix geneSearchBox errors: 1. type a valid gene name and enter, see "Gene not found". 2. type a valid gene name and enter, see previous gene typed. 3. type a valid gene name and enter, gene hits still showing.
+
+
 ## 2.79.5
 
 Fixes:
