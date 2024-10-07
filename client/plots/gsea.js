@@ -7,6 +7,7 @@ import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '../dom/menu'
 import { scaleLog, scaleLinear } from 'd3-scale'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 const tip = new Menu()
 
@@ -179,36 +180,11 @@ add:
 		for (const pathway_name of Object.keys(output.data)) {
 			const pathway = output.data[pathway_name]
 			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.fdr) {
-				let es
-				if (pathway.es) {
-					es = pathway.es.toPrecision(4)
-				} else {
-					es = pathway.es
-				}
-				let nes
-				if (pathway.nes) {
-					nes = pathway.nes.toPrecision(4)
-				} else {
-					nes = pathway.nes
-				}
-				let pval
-				if (pathway.pval) {
-					pval = pathway.pval.toPrecision(4)
-				} else {
-					pval = pathway.pval
-				}
-				let sidak
-				if (pathway.sidak) {
-					sidak = pathway.sidak.toPrecision(4)
-				} else {
-					sidak = pathway.sidak
-				}
-				let fdr
-				if (pathway.fdr) {
-					fdr = pathway.fdr.toPrecision(4)
-				} else {
-					fdr = pathway.fdr
-				}
+				const es = roundValueAuto(pathway.es)
+				const nes = roundValueAuto(pathway.nes)
+				const pval = roundValueAuto(pathway.pval)
+				const sidak = roundValueAuto(pathway.sidak)
+				const fdr = roundValueAuto(pathway.fdr)
 				self.gsea_table_rows.push([
 					{ value: pathway_name },
 					{ value: es },
@@ -222,26 +198,26 @@ add:
 			} else if (self.settings.adjusted_original_pvalue == 'original' && self.settings.pvalue >= pathway.pval) {
 				let pval
 				if (pathway.pval) {
-					pval = pathway.pval.toPrecision(4)
+					pval = roundValueAuto(pathway.pval)
 				} else {
 					pval = pathway.pval
 				}
 				let sidak
 				if (pathway.sidak) {
-					sidak = pathway.sidak.toPrecision(4)
+					sidak = roundValueAuto(pathway.sidak)
 				} else {
 					sidak = pathway.sidak
 				}
 				let fdr
 				if (pathway.fdr) {
-					fdr = pathway.fdr.toPrecision(4)
+					fdr = roundValueAuto(pathway.fdr)
 				} else {
 					fdr = pathway.fdr
 				}
 				self.gsea_table_rows.push([
 					{ value: pathway_name },
-					{ value: pathway.es.toPrecision(4) },
-					{ value: pathway.nes.toPrecision(4) },
+					{ value: roundValueAuto(pathway.es) },
+					{ value: roundValueAuto(pathway.nes) },
 					{ value: pathway.geneset_size },
 					{ value: pval },
 					{ value: sidak },
