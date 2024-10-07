@@ -241,6 +241,7 @@ add:
 	const holder = self.dom.holder
 	holder.selectAll('*').remove()
 	self.dom.detailsDiv.selectAll('*').remove()
+	self.dom.tableDiv.selectAll('*').remove()
 	let minlogfc = 0,
 		maxlogfc = 0,
 		minlogpv = 0,
@@ -328,9 +329,9 @@ add:
 				self.table_rows.push([
 					{ value: d.gene_name },
 					{ value: d.gene_symbol },
-					{ value: d.fold_change },
-					{ value: Math.pow(10, -d.original_p_value) },
-					{ value: Math.pow(10, -d.adjusted_p_value) }
+					{ value: d.fold_change.toPrecision(4) },
+					{ value: Math.pow(10, -d.original_p_value).toPrecision(4) },
+					{ value: Math.pow(10, -d.adjusted_p_value).toPrecision(4) }
 				])
 			} else {
 				color = 'black'
