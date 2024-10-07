@@ -328,7 +328,7 @@ function showMenu_cutoff(self, div: any) {
 		make_radios({
 			holder: holder.append('div'),
 			options,
-			styles: { margin: '' },
+			styles: { padding: '' },
 			callback: (v: 'age' | 'time') => (timeScaleChoice = v)
 		})
 	}
