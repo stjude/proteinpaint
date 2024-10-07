@@ -39,7 +39,7 @@
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
     "build": "rm -rf dist && node esbuild.config.mjs",
     "prepack": "rm -rf dist && node esbuild.config.mjs && npm run sedver",
-    "sedver": "VER=$(node -p \"require('./package.json').version\") && sed -i.bk \"s|___current-proteinpaint-client-version___|$VER|\" dist/app*.js && rm dist/*.js.bk"
+    "sedver": "VER=$(node -p \"require('./package.json').version\") && sed -i.bk \"s|___current-proteinpaint-client-version___|$VER|\" dist/chunk-*.js && rm dist/*.js.bk"
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",
