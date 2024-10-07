@@ -282,11 +282,10 @@ fn read_gene_expression_hdf5(
 
         //let data_counts: Array1<_> = ds_counts.read::<f64, Dim<[usize; 1]>>()?;
         //println!("Data_counts: {:?}", data_counts);
-
-        let query_time = Instant::now();
+        let gene_query = Instant::now();
         let gene_array: Array2<f64> =
             ds_counts.read_slice_2d((gene_index..gene_index + 1, 0..num_samples))?;
-        println!("read_slice 2D query time:{:?}", query_time.elapsed());
+        println!("Time for querying genes:{:?}", gene_query.elapsed());
 
         match limit_samples {
             Some(lim_sam) => {
