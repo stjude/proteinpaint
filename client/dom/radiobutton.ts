@@ -1,3 +1,5 @@
+import { Elem, Input } from '../types/d3'
+
 /* makes radio buttons */
 
 type RadioButtonOpts = {
@@ -34,9 +36,22 @@ type OptionEntry = {
 	value: string | number
 }
 
+type RadioApi = {
+	/** Divs containing the labels with the padding and display styles applied. */
+	divs: Elem
+	/** Divs encapsulating the radio buttons and text. All styles provided in opts
+	 * applied here. */
+	labels: Elem
+	/** Radio buttons, corresponding to the .options[] opt. */
+	inputs: Input
+	/** Trigger changing the checked button from the cooresponding value,
+	 * independent of user and other callbacks.  */
+	main: (value: number) => void
+}
+
 let nameSuffix = 0
 
-export function make_radios(opts: RadioButtonOpts) {
+export function make_radios(opts: RadioButtonOpts): RadioApi {
 	if (!opts.callback && !opts.listeners) throw `Missing event callback for radios [#dom/radiobutton.js]`
 	if (opts.callback && opts.listeners)
 		throw `Both callback() and .listeners defined [#dom/radiobutton.js]. Only supply one.`
@@ -72,9 +87,12 @@ export function make_radios(opts: RadioButtonOpts) {
 		.property('checked', (d: OptionEntry) => d?.checked)
 	if (opts.callback) {
 		inputs.on('input', async (event: KeyboardEvent, d: OptionEntry) => {
+			//Disable the radio buttons while the callback is running
 			inputs.property('disabled', true)
 			if (!opts.callback) return //So eslint doesn't complain
 			await opts.callback(d.value)
+			radio.main(d.value)
+			//Re-enable the radio buttons after the callback finishes
 			inputs.property('disabled', false)
 		})
 	}
