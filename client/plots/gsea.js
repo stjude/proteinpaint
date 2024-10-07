@@ -196,24 +196,9 @@ add:
 					{ value: pathway.leading_edge }
 				])
 			} else if (self.settings.adjusted_original_pvalue == 'original' && self.settings.pvalue >= pathway.pval) {
-				let pval
-				if (pathway.pval) {
-					pval = roundValueAuto(pathway.pval)
-				} else {
-					pval = pathway.pval
-				}
-				let sidak
-				if (pathway.sidak) {
-					sidak = roundValueAuto(pathway.sidak)
-				} else {
-					sidak = pathway.sidak
-				}
-				let fdr
-				if (pathway.fdr) {
-					fdr = roundValueAuto(pathway.fdr)
-				} else {
-					fdr = pathway.fdr
-				}
+				const pval = roundValueAuto(pathway.pval)
+				const sidak = roundValueAuto(pathway.sidak)
+				const fdr = roundValueAuto(pathway.fdr)
 				self.gsea_table_rows.push([
 					{ value: pathway_name },
 					{ value: roundValueAuto(pathway.es) },
