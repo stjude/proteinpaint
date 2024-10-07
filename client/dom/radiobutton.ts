@@ -67,7 +67,7 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		.append('div')
 		.attr('aria-label', (d: OptionEntry) => d.title)
 		.style('display', opts.styles && 'display' in opts.styles ? opts.styles.display : 'block')
-		.style('padding', opts.styles && 'padding' in opts.styles ? opts.styles.padding : '5px')
+		.style('padding', opts.styles && 'padding' in opts.styles ? opts.styles.padding : '3px')
 		.append('label')
 
 	if (opts.styles) {
