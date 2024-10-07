@@ -32,6 +32,7 @@ jobs:
 
   build:
     needs: check-user-permissions
+    timeout-minutes: 80
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
@@ -53,6 +54,25 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@sjcrh'
 
+      - name: Run npm ci
+        run: npm ci
+
+      - name: Copy serverconfig.json to root
+        run: |
+          cp container/ci/serverconfig.json container/
+
+      - name: Create cache folder
+        run: mkdir cache
+
+      - name: Install xvfb
+        run: sudo apt-get install xvfb
+
+      - name: TSC
+        run: |
+          cd server
+          npx tsc
+          cd ..    
+
       - name: Build image
         run: |
           npm install glob
@@ -68,13 +88,19 @@ jobs:
             TAG="$(node -p "require('./package.json').version")"
             cd ..
 
+            ./run.sh ghcr.io/stjude/ppserver:$TAG
+            sleep 10
+            cd ..
+            xvfb-run --auto-servernum npm run test:integration
+          
             HASH=$(git rev-parse --short HEAD 2>/dev/null)
             docker push ghcr.io/stjude/ppbase:latest
             docker push ghcr.io/stjude/ppserver:$TAG
             docker push ghcr.io/stjude/ppfull:$TAG
             docker push ghcr.io/stjude/ppserver:latest
             docker push ghcr.io/stjude/ppfull:latest
-            
+
+            cd container
             ./update_deps_version.sh $TAG ./full/Dockerfile
             ./update_deps_version.sh $TAG ./server/Dockerfile
             
