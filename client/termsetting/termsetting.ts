@@ -1004,6 +1004,21 @@ function checkLegacyTw(tw) {
 }
 
 async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
+	// repeating this logic from fillTermWrapper(), since call_fillTW() may be called directly
+	// TODO: may deprecate call_fillTW() once all term types have been migrated to xtw
+	if (routedTermTypes.has(tw.term?.type)) {
+		// NOTE: while the tw refactor is not done for all term types and q.types/modes,
+		// there will be some code duplication between TwRouter and the legacy code;
+		// the latter will be deleted once the refactor/migration is done
+		const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQByTsHandler })
+		Object.assign(tw, fullTw)
+		mayValidateQmode(tw)
+		// this should be moved to the term-type specific handler??
+		if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
+		if (tw.q) tw.q.isAtomic = true
+		return tw
+	}
+
 	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric' : (t as string)
