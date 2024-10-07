@@ -124,30 +124,27 @@ function may_create_variantShapeName(tk) {
 				: { width: width - 0.5, height: height - 0.5 }
 		}
 
-		shapeObj.wrapper = tk.legend.table
-			.append('tr')
-			.append('td')
-			.attr('colspan', 2)
-			.on('click', event => {
-				tk.legend.tip.clear().showunder(event.target)
-				renderShapePicker({
-					holder: tk.legend.tip.d.append('div'),
-					callback: val => {
-						for (const d of tk.skewer.rawmlst) {
-							if (shapeObj.ids.some(i => i == d.id)) {
-								d.shape = val
-							}
-						}
-						shapeObj.key = val
-						shapeObj.shapeG
-							.attr('d', shapes[val].calculatePath(getArgs(shapeObj)))
-							.attr('fill', shapes[val].isFilled ? 'grey' : 'white')
-							.attr('stroke', shapes[val].isFilled ? 'none' : 'grey')
-						reload(tk)
-					},
-					tk: tk
-				})
-			})
+		shapeObj.wrapper = tk.legend.table.append('tr').append('td').attr('colspan', 2)
+		// .on('click', event => {
+		// 	tk.legend.tip.clear().showunder(event.target)
+		// 	renderShapePicker({
+		// 		holder: tk.legend.tip.d.append('div'),
+		// 		callback: val => {
+		// 			for (const d of tk.skewer.rawmlst) {
+		// 				if (shapeObj.ids.some(i => i == d.id)) {
+		// 					d.shape = val
+		// 				}
+		// 			}
+		// 			shapeObj.key = val
+		// 			shapeObj.shapeG
+		// 				.attr('d', shapes[val].calculatePath(getArgs(shapeObj)))
+		// 				.attr('fill', shapes[val].isFilled ? 'grey' : 'white')
+		// 				.attr('stroke', shapes[val].isFilled ? 'none' : 'grey')
+		// 			reload(tk)
+		// 		},
+		// 		tk: tk
+		// 	})
+		// })
 
 		const svg = shapeObj.wrapper.append('span').append('svg').attr('width', width).attr('height', height)
 
@@ -610,7 +607,7 @@ function update_mclass(tk) {
 							mclass[c.k].color = colorValue
 						},
 						reset: () => {
-							mclass[c.k].color = mclass[c.k].origColor
+							isVisible: () => mclass[c.k].origColor, (mclass[c.k].color = mclass[c.k].origColor)
 						}
 					}
 				]
@@ -875,10 +872,10 @@ function createLegendTipMenu(opts, tk, elem) {
 						opt.callback(color)
 						reload(tk)
 					})
-				if (opt.reset) {
+				if (opt.reset && opt.reset?.isVisible()) {
 					const resetDiv = tk.legend.tip.d.append('div').style('display', 'inline-block')
 					const handler = () => {
-						opt.reset()
+						opt.reset.callback()
 						reload(tk)
 					}
 					icons['restart'](resetDiv, { handler, title: 'Reset to original color' })
