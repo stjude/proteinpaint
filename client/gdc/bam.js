@@ -351,6 +351,12 @@ export async function bamsliceui({
 			saydiv.selectAll('*').remove()
 			noPermissionDiv.style('display', 'none')
 			submitButton.style('display', 'inline-block')
+
+			// disable submit button when a new case/file loaded, and delete previou ssmInput/coordInput
+			submitButton.property('disabled', true)
+			delete gdc_args.coordInput
+			delete gdc_args.ssmInput
+
 			gdcid_error_div.style('display', 'none')
 			gdc_loading.style('display', 'none')
 
@@ -719,11 +725,19 @@ export async function bamsliceui({
 				const tabs = [
 					{
 						label: 'Gene or position',
-						callback: () => (gdc_args.useSsmOrGene = 'gene')
+						callback: () => {
+							gdc_args.useSsmOrGene = 'gene'
+							// under Gene or position tab, only enable submit button when coordInput provided
+							submitButton.property('disabled', !gdc_args.coordInput?.chr)
+						}
 					},
 					{
 						label: 'Unmapped reads',
-						callback: () => (gdc_args.useSsmOrGene = 'unmapped')
+						callback: () => {
+							gdc_args.useSsmOrGene = 'unmapped'
+							// under Unmapped reads tab, should always eanble submit button
+							submitButton.property('disabled', false)
+						}
 					}
 				]
 				new Tabs({ holder: ssmGeneDiv, tabs }).main()
@@ -744,12 +758,16 @@ export async function bamsliceui({
 				label: `${ssmLst.length} variants${data.dt2total?.[0] ? ' (' + data.dt2total[0].total + ' total)' : ''}`,
 				callback: () => {
 					gdc_args.useSsmOrGene = 'ssm'
+					// Under variants tab, only enable submit button when ssmInput provided
+					submitButton.property('disabled', !gdc_args.ssmInput?.chr)
 				}
 			},
 			{
 				label: 'Gene or position',
 				callback: () => {
 					gdc_args.useSsmOrGene = 'gene'
+					// Under Gene or position tab, only enable submit button when coordInput provided
+					submitButton.property('disabled', !gdc_args.coordInput?.chr)
 				}
 			}
 		]
@@ -757,7 +775,11 @@ export async function bamsliceui({
 		if (stream2download) {
 			tabs.push({
 				label: 'Unmapped reads',
-				callback: () => (gdc_args.useSsmOrGene = 'unmapped')
+				callback: () => {
+					gdc_args.useSsmOrGene = 'unmapped'
+					// under Unmapped reads tab, should always eanble submit button
+					submitButton.property('disabled', false)
+				}
 			})
 		}
 
@@ -809,6 +831,7 @@ export async function bamsliceui({
 					ref: m.ref,
 					alt: m.alt
 				}
+				submitButton.property('disabled', false)
 			},
 			singleMode: true
 		})
@@ -825,6 +848,7 @@ export async function bamsliceui({
 							ref: m.ref,
 							alt: m.alt
 						}
+						submitButton.property('disabled', false)
 					}
 				}
 			}
@@ -847,7 +871,9 @@ export async function bamsliceui({
 			genome,
 			tip,
 			row: div.append('div'),
-			allowVariant: true
+			allowVariant: true,
+			// after getting valid result from geneSearchbox, enable submit button
+			callback: () => submitButton.property('disabled', false)
 		}
 		if (urlp.has('gdc_pos')) {
 			const t = urlp.get('gdc_pos').split(/[:\-]/)
@@ -879,6 +905,9 @@ export async function bamsliceui({
 			.style('padding', '10px 25px')
 			.style('border-radius', '35px')
 			.text('Submit')
+			//submit button should be disabled when first created, enabled after a case/file
+			//selected and variant/postion/unmapped selected
+			.attr('disabled', true)
 			.on('click', async () => {
 				try {
 					saydiv.selectAll('*').remove()
