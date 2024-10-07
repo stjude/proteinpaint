@@ -1,10 +1,11 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { make_radios } from '#dom'
-import { Elem } from '../../types/d3'
 
 /* Tests
-    make_radios()
+	 - default radio button rendering
+	 - Missing callbacks
+	 - Duplicate callbacks
 */
 
 /**************
@@ -29,7 +30,7 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('default make_radios()', test => {
+tape('default radio button rendering', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder() as any
 
@@ -59,11 +60,18 @@ tape('default make_radios()', test => {
 		styles,
 		options,
 		callback: () => {
-			//Comment so ts doesn't complain
+			//Comment so eslint doesn't complain
 		}
 	}
 
 	const { divs, labels, inputs, main } = make_radios(testArgs)
+
+	/** Divs */
+	const divData = divs
+		.enter()
+		.nodes()
+		.map((d: any) => d.__data__)
+	test.deepEqual(divData, options, 'Should create divs with the correct data')
 
 	/** Labels */
 	const renderedLabels = labels.nodes()
@@ -82,6 +90,86 @@ tape('default make_radios()', test => {
 	main(2)
 	test.equal(renderedInputs[1].checked, true, `Should check the second button when main is called with it's value`)
 
-	if (test['__ok']) holder.remove()
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Missing callbacks', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder() as any
+
+	const options = [
+		{
+			checked: true,
+			label: 'Test button',
+			title: 'test',
+			value: 1
+		},
+		{
+			checked: false,
+			label: 'Test button 2',
+			title: 'test',
+			value: 2
+		}
+	]
+
+	const testArgs = {
+		holder,
+		options
+	}
+
+	const message = 'Should throw when no callback(s) provided'
+	try {
+		make_radios(testArgs)
+		test.fail(message)
+	} catch (e: any) {
+		test.pass(`${message}: ${e.message || e}`)
+	}
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Duplicate callbacks', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder() as any
+
+	const options = [
+		{
+			checked: true,
+			label: 'Test button',
+			title: 'test',
+			value: 1
+		},
+		{
+			checked: false,
+			label: 'Test button 2',
+			title: 'test',
+			value: 2
+		}
+	]
+
+	const testArgs = {
+		holder,
+		options,
+		callback: () => {
+			//Comment so eslint doesn't complain
+		},
+		listeners: {
+			input: () => {
+				//Comment so eslint doesn't complain
+			}
+		}
+	}
+
+	const message = 'Should throw when both callback() and listeners() provided'
+	try {
+		make_radios(testArgs)
+		test.fail(message)
+	} catch (e: any) {
+		test.pass(`${message}: ${e.message || e}`)
+	}
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })

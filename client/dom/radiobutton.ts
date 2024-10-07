@@ -7,11 +7,12 @@ type RadioButtonOpts = {
 	holder: any
 	/** common Name of <input>, use random number if not given */
 	inputName?: string | number
-	/** Optional callback methods for non oninput events
-	 * Intended to address needs for assistive techology
+	/** Mass ui specific logic. Optional callback methods for
+	 * non oninput events. Intended to address needs for assistive techology
 	 */
 	listeners?: {
-		/** Fires on onmouseup and onkeyup for the button and text label */
+		/** Fires on onmouseup and onkeyup for the button and text label
+		 */
 		input: () => void
 	}
 	/** arr of objs defining the radio buttons and properties */
@@ -49,7 +50,7 @@ export function make_radios(opts: RadioButtonOpts) {
 	const labels = divs
 		.enter()
 		.append('div')
-		.attr('aria-label', d => d.title || '')
+		.attr('aria-label', (d: OptionEntry) => d.title)
 		.style('display', opts.styles && 'display' in opts.styles ? opts.styles.display : 'block')
 		.style('padding', opts.styles && 'padding' in opts.styles ? opts.styles.padding : '5px')
 		.append('label')
@@ -64,15 +65,15 @@ export function make_radios(opts: RadioButtonOpts) {
 		.append('input')
 		.attr('type', 'radio')
 		.attr('name', inputName)
-		.attr('value', d => d.value)
+		.attr('value', (d: OptionEntry) => d.value)
 		.style('vertical-align', 'top')
 		.style('margin-top', '2px')
 		.style('margin-right', 0)
-		.property('checked', d => d?.checked)
+		.property('checked', (d: OptionEntry) => d?.checked)
 	if (opts.callback) {
-		inputs.on('input', async (event, d) => {
+		inputs.on('input', async (event: KeyboardEvent, d: OptionEntry) => {
 			inputs.property('disabled', true)
-			if (!opts.callback) return //So ts doesn't complain
+			if (!opts.callback) return //So eslint doesn't complain
 			await opts.callback(d.value)
 			inputs.property('disabled', false)
 		})
@@ -81,9 +82,10 @@ export function make_radios(opts: RadioButtonOpts) {
 	const radioText = labels
 		.append('span')
 		.style('vertical-align', 'top')
-		.html(d => '&nbsp;' + d.label)
+		.html((d: OptionEntry) => '&nbsp;' + d.label)
 
 	if (opts?.listeners?.input) {
+		//Mass UI specific logic for assistive technologies
 		inputs.on('mouseup', opts.listeners.input).on('keyup', opts.listeners.input)
 		radioText.on('mouseup', opts.listeners.input).on('keyup', opts.listeners.input)
 	}
@@ -94,7 +96,7 @@ export function make_radios(opts: RadioButtonOpts) {
 		inputs,
 		main(currValue: string | number) {
 			radio['currValue'] = currValue
-			inputs.property('checked', d => d.value == radio['currValue'])
+			inputs.property('checked', (d: OptionEntry) => d.value == radio['currValue'])
 		}
 	}
 
