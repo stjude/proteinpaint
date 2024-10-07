@@ -226,7 +226,7 @@ fn get_gene_expression_samples(hdf5_filename: String) -> Result<()> {
 
 fn read_gene_expression_hdf5(
     hdf5_filename: String,
-    gene_name: String,
+    genes_string: String,
     limit_samples: Option<&str>,
 ) -> Result<()> {
     let file = File::open(&hdf5_filename)?; // open for reading
@@ -262,27 +262,53 @@ fn read_gene_expression_hdf5(
     let now_counts = Instant::now();
     let ds_counts = file.dataset("counts")?; // open the dataset
 
-    let gene_index;
-    match genes.iter().position(|x| x.to_string() == gene_name) {
-        Some(index) => {
-            println!(
-                "The index of '{}' is {} in 0-based format (add 1 to compare with R output)",
-                gene_name, index
-            );
-            gene_index = index;
-        }
-        None => panic!(
-            "Gene '{}' not found in the HDF5 file '{}'",
-            gene_name, &hdf5_filename
-        ),
-    }
+    let genes_list: Vec<&str> = genes_string.split("\t").collect();
 
-    //let data_counts: Array1<_> = ds_counts.read::<f64, Dim<[usize; 1]>>()?;
-    //println!("Data_counts: {:?}", data_counts);
-    let gene_array: Array2<f64> =
-        ds_counts.read_slice_2d((gene_index..gene_index + 1, 0..num_samples))?;
-    println!("Length of gene array:{:?}", gene_array.len()); // Check the result
-    println!("Time for parsing gene data:{:?}", now_counts.elapsed());
+    for gene_name in genes_list {
+        let gene_index;
+        match genes.iter().position(|x| x.to_string() == gene_name) {
+            Some(index) => {
+                println!(
+                    "The index of '{}' is {} in 0-based format (add 1 to compare with R output)",
+                    gene_name, index
+                );
+                gene_index = index;
+            }
+            None => panic!(
+                "Gene '{}' not found in the HDF5 file '{}'",
+                gene_name, &hdf5_filename
+            ),
+        }
+
+        //let data_counts: Array1<_> = ds_counts.read::<f64, Dim<[usize; 1]>>()?;
+        //println!("Data_counts: {:?}", data_counts);
+
+        let query_time = Instant::now();
+        let gene_array: Array2<f64> =
+            ds_counts.read_slice_2d((gene_index..gene_index + 1, 0..num_samples))?;
+        println!("read_slice 2D query time:{:?}", query_time.elapsed());
+
+        match limit_samples {
+            Some(lim_sam) => {
+                let lim_samples_list: Vec<&str> = lim_sam.split("\t").collect();
+                let mut lim_samples_usize: Vec<usize> = Vec::with_capacity(lim_samples_list.len());
+                for i in 0..lim_samples_list.len() {
+                    lim_samples_usize.push(lim_samples_list[i].parse::<usize>().unwrap())
+                }
+                println!("Dimensions of gene_array:{:?}", gene_array.dim().1);
+                for i in 0..gene_array.dim().1 {
+                    // Check if this correct dimension is being queried
+                    for j in 0..lim_samples_usize.len() {
+                        // Need to implement binary search to speed up the loop
+                        if i == lim_samples_usize[j] {} // This vector contains the indicies of the samples that needs to be queried.
+                    }
+                }
+            }
+            None => {}
+        }
+        //println!("Length of gene array:{:?}", gene_array.len()); // Check the result
+        println!("Time for parsing gene data:{:?}", now_counts.elapsed());
+    }
     Ok(())
 }
 
