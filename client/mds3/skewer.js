@@ -95,7 +95,6 @@ export function may_render_skewer(data, tk, block) {
 
 	const currentMode = tk.skewer.viewModes.find(n => n.inuse)
 	if (!currentMode) throw 'no mode!!'
-
 	if (data.skewer) {
 		// register new mlst data
 		// otherwise will not overwrite skewer.mlst
