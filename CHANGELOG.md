@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - fix geneSearchBox errors: 1. type a valid gene name and enter, see "Gene not found". 2. type a valid gene name and enter, see previous gene typed. 3. type a valid gene name and enter, gene hits still showing.
+- BAM Slicing Download and Sequence Reads: Disable Submit button when 1. case/file is loading, 2. Under Variants tab, variant not selected, 3. Under Gene or position tab, no valid result from search box.
 
 
 ## 2.79.5
