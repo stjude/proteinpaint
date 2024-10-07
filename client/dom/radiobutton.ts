@@ -60,7 +60,7 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 	const divs = opts.holder
 		.selectAll('div')
 		.style('display', 'block')
-		.data(opts.options, (d: any) => d.value)
+		.data(opts.options, (d: any) => d?.value)
 
 	const labels = divs
 		.enter()
