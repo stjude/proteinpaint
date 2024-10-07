@@ -199,7 +199,6 @@ function tkdata_update_x(tk, block) {
 	*/
 
 	for (const d of tk.skewer.data) {
-		console.log(d.id)
 		if (d.isbin) {
 			let sumx = 0
 			for (const m of d.mlst) {
