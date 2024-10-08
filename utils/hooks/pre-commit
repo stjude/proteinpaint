@@ -23,7 +23,7 @@ if [[ "$FILES" != "" ]]; then
 
 	# lint against team preferences
 	echo "Linting ..."
-	echo "$FILES" | grep "shared\/" | xargs npx eslint
+	echo "$FILES" | grep "shared\/" | xargs npx eslint --env shared-node-browser
 	echo "$FILES" | grep "client\/" | xargs npx eslint --env browser
 	echo "$FILES" | grep "front\/" | xargs npx eslint --env browser
 	echo "$FILES" | grep "rust\/" | xargs npx eslint --env node
