@@ -6,7 +6,6 @@ import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
-import { getActiveCohortStr } from '../mass/charts'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
@@ -75,7 +74,7 @@ export class profilePlot {
 		}
 
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
-		document.addEventListener('scroll', event => this?.tip?.hide())
+		document.addEventListener('scroll', () => this?.tip?.hide())
 		icon_functions['pdf'](iconsDiv.append('div').style('padding', '0px 5px 15px 5px'), {
 			title: 'Prints page, select Save as PDF in the options to download as a pdf',
 			handler: () => {
@@ -88,7 +87,7 @@ export class profilePlot {
 			const compareBt = compareIconDiv.append('button').style('border', 'none').style('background-color', 'transparent')
 			icon_functions['compare'](compareBt, { title: 'Compare with another plot' })
 
-			compareBt.on('click', async event => {
+			compareBt.on('click', async () => {
 				const comparison = (this.settings.comparison = !this.settings.comparison)
 				compareBt.style('background-color', comparison ? 'rgb(207, 226, 243)' : 'transparent')
 
@@ -103,7 +102,7 @@ export class profilePlot {
 				.style('border', 'none')
 				.style('background-color', 'rgb(207, 226, 243)')
 			icon_functions['table'](this.dom.tableBt, { title: 'Show table with data' })
-			this.dom.tableBt.on('click', event => {
+			this.dom.tableBt.on('click', () => {
 				const show = !this.settings.showTable
 				this.dom.tableBt.style('background-color', show ? 'rgb(207, 226, 243)' : 'transparent')
 				this.showTable(show)
@@ -180,7 +179,7 @@ export class profilePlot {
 
 		if (this.type == 'profileRadar' || this.type == 'profileRadarFacility') plot.plot = this.config.plot
 		const opts = { holder: this.dom.holder2, state: { plots: [plot], vocab: this.state.vocab } }
-		const plotAppApi = await plotMod.appInit(opts)
+		await plotMod.appInit(opts)
 	}
 
 	async setControls(additionalInputs = []) {

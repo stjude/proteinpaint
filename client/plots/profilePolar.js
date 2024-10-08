@@ -17,7 +17,7 @@ class profilePolar extends profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 
 		this.twLst = []
-		for (const [i, data] of config.terms.entries()) {
+		for (const data of config.terms) {
 			this.twLst.push(data.score)
 			this.twLst.push(data.maxScore)
 		}
@@ -95,7 +95,7 @@ class profilePolar extends profilePlot {
 			const color = d.score.term.color
 			const percentage = this.getPercentage(d)
 			rows.push([{ color, disabled: true }, { value: name }, { value: percentage }])
-			const path = polarG
+			polarG
 				.append('g')
 				.append('path')
 				.datum(d)
