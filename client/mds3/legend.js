@@ -888,10 +888,21 @@ function createLegendTipMenu(opts, tk, elem) {
 				let called = false
 				const div = tk.legend.tip.d
 					.append('div')
-					.text('Change Shape')
+					.text('Change shape')
 					.style('vertical-align', 'middle')
-					.attr('class', 'sja_menuoption')
+					/** Adding the class here for the hover effect
+					 * Styles are repeated to maintain the appearance
+					 * of the menu item after the class (aka hover
+					 * effect) is removed.
+					 */
+					.classed('sja_menuoption', true)
+					.style('padding', '5px 10px')
+					.style('cursor', 'default')
+					.style('background-color', '#f2f2f2')
+					.style('margin', '1px')
+					.style('border-radius', '5px')
 					.on('click', () => {
+						div.classed('sja_menuoption', false)
 						if (called == false) {
 							called = true
 							renderShapePicker({
