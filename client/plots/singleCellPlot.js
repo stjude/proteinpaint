@@ -139,7 +139,7 @@ class singleCellPlot {
 				styles: { display: 'inline' },
 				callback: async value => this.onColorByChange(value)
 			})
-			searchboxDiv = headerDiv.append('div')
+			searchboxDiv = headerDiv.append('div').style('vertical-align', 'top').style('margin', '-3px 0px 10px')
 			geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
 				genome: this.app.opts.genome,
