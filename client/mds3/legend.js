@@ -606,8 +606,9 @@ function update_mclass(tk) {
 							if (!mclass[c.k].origColor) mclass[c.k].origColor = mclass[c.k].color
 							mclass[c.k].color = colorValue
 						},
-						reset: () => {
-							isVisible: () => mclass[c.k].origColor, (mclass[c.k].color = mclass[c.k].origColor)
+						reset: {
+							isVisible: () => mclass[c.k].origColor,
+							callback: () => (mclass[c.k].color = mclass[c.k].origColor)
 						}
 					}
 				]
