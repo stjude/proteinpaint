@@ -10,6 +10,8 @@ import { dofetch3 } from '#common/dofetch'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import { d3lasso } from '../common/lasso'
 import { downloadTable } from '../dom/table'
+import { roundValueAuto } from '#shared/roundValue.js'
+
 /*
 
 opts{}
@@ -305,6 +307,9 @@ add:
 		.append('circle')
 		.attr('stroke', d => {
 			let color
+			const value3 = roundValueAuto(d.fold_change)
+			const value4 = roundValueAuto(Math.pow(10, -d.original_p_value))
+			const value5 = roundValueAuto(Math.pow(10, -d.adjusted_p_value))
 			if (
 				p_value_adjusted_original == 'adjusted' &&
 				d.adjusted_p_value > p_value_cutoff &&
@@ -312,12 +317,13 @@ add:
 			) {
 				color = 'red'
 				num_significant_genes += 1
+
 				self.table_rows.push([
 					{ value: d.gene_name },
 					{ value: d.gene_symbol },
-					{ value: d.fold_change.toPrecision(4) },
-					{ value: Math.pow(10, -d.original_p_value).toPrecision(4) },
-					{ value: Math.pow(10, -d.adjusted_p_value).toPrecision(4) }
+					{ value: value3 },
+					{ value: value4 },
+					{ value: value5 }
 				])
 			} else if (
 				p_value_adjusted_original == 'original' &&
@@ -329,9 +335,9 @@ add:
 				self.table_rows.push([
 					{ value: d.gene_name },
 					{ value: d.gene_symbol },
-					{ value: d.fold_change.toPrecision(4) },
-					{ value: Math.pow(10, -d.original_p_value).toPrecision(4) },
-					{ value: Math.pow(10, -d.adjusted_p_value).toPrecision(4) }
+					{ value: value3 },
+					{ value: value4 },
+					{ value: value5 }
 				])
 			} else {
 				color = 'black'
