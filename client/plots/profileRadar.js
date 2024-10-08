@@ -119,7 +119,7 @@ class profileRadar extends profilePlot {
 			const textElem = radarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
 			const texts = module.split(' ')
 			let span
-			texts.forEach((text, j) => {
+			texts.forEach(text => {
 				if (text != 'and') {
 					dy += 15
 					span = textElem
@@ -268,7 +268,7 @@ class profileRadar extends profilePlot {
 		} else this.onMouseOut(event)
 	}
 
-	onMouseOut(event) {
+	onMouseOut() {
 		this.tip.hide()
 	}
 }
