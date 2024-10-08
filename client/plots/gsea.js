@@ -180,11 +180,11 @@ add:
 		for (const pathway_name of Object.keys(output.data)) {
 			const pathway = output.data[pathway_name]
 			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.fdr) {
-				const es = roundValueAuto(pathway.es)
-				const nes = roundValueAuto(pathway.nes)
-				const pval = roundValueAuto(pathway.pval)
-				const sidak = roundValueAuto(pathway.sidak)
-				const fdr = roundValueAuto(pathway.fdr)
+				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
+				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
+				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
+				const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
+				const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
 				self.gsea_table_rows.push([
 					{ value: pathway_name },
 					{ value: es },
@@ -196,13 +196,15 @@ add:
 					{ value: pathway.leading_edge }
 				])
 			} else if (self.settings.adjusted_original_pvalue == 'original' && self.settings.pvalue >= pathway.pval) {
-				const pval = roundValueAuto(pathway.pval)
-				const sidak = roundValueAuto(pathway.sidak)
-				const fdr = roundValueAuto(pathway.fdr)
+				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
+				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
+				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
+				const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
+				const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
 				self.gsea_table_rows.push([
 					{ value: pathway_name },
-					{ value: roundValueAuto(pathway.es) },
-					{ value: roundValueAuto(pathway.nes) },
+					{ value: es },
+					{ value: nes },
 					{ value: pathway.geneset_size },
 					{ value: pval },
 					{ value: sidak },
