@@ -6,6 +6,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '../dom/menu'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { select, pointer } from 'd3-selection'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 const hlcolor = '#ffa200'
 const tip = new Menu()
@@ -200,8 +201,8 @@ add:
 			) {
 				self.gene_ora_table_rows.push([
 					{ value: pathway.pathway_name },
-					{ value: pathway.p_value_original.toPrecision(4) },
-					{ value: pathway.p_value_adjusted.toPrecision(4) },
+					{ value: roundValueAuto(pathway.p_value_original) },
+					{ value: roundValueAuto(pathway.p_value_adjusted) },
 					{ value: pathway.gene_set_hits },
 					{ value: pathway.gene_set_size }
 				])
@@ -212,8 +213,8 @@ add:
 			) {
 				self.gene_ora_table_rows.push([
 					{ value: pathway.pathway_name },
-					{ value: pathway.p_value_original.toPrecision(4) },
-					{ value: pathway.p_value_adjusted.toPrecision(4) },
+					{ value: roundValueAuto(pathway.p_value_original) },
+					{ value: roundValueAuto(pathway.p_value_adjusted) },
 					{ value: pathway.gene_set_hits },
 					{ value: pathway.gene_set_size }
 				])
