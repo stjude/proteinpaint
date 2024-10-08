@@ -43,15 +43,16 @@ export function setRenderers(self) {
 
 	self.initAxes = function (chart) {
 		if (chart.data.samples.length == 0) return
-
+		const offsetX = self.axisOffset.x
+		const offsetY = self.axisOffset.y
 		chart.xAxisScale = d3Linear()
 			.domain([chart.xMin, chart.xMax])
-			.range([self.axisOffset.x, self.settings.svgw + self.axisOffset.x])
+			.range([offsetX, self.settings.svgw + offsetX])
 
 		chart.axisBottom = axisBottom(chart.xAxisScale)
 		chart.yAxisScale = d3Linear()
 			.domain([chart.yMax, chart.yMin])
-			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
+			.range([offsetY, self.settings.svgh + offsetY])
 
 		chart.zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, self.settings.svgd])
 
@@ -129,7 +130,7 @@ export function setRenderers(self) {
 				.append('rect')
 				.attr('class', 'zoom')
 				.attr('x', self.axisOffset.x)
-				.attr('y', self.axisOffset.y - self.settings.size)
+				.attr('y', self.axisOffset.y)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
@@ -140,8 +141,8 @@ export function setRenderers(self) {
 				.attr('id', id)
 				.append('rect')
 				.attr('x', self.axisOffset.x)
-				.attr('y', self.axisOffset.y - self.settings.size)
-				.attr('width', self.settings.svgw + self.axisOffset.x)
+				.attr('y', self.axisOffset.y)
+				.attr('width', self.settings.svgw + 10)
 				.attr('height', self.settings.svgh)
 			chart.mainG.attr('clip-path', `url(#${id})`)
 
