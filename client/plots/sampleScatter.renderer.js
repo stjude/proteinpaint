@@ -141,7 +141,7 @@ export function setRenderers(self) {
 				.append('rect')
 				.attr('x', self.axisOffset.x)
 				.attr('y', self.axisOffset.y - self.settings.size)
-				.attr('width', self.settings.svgw)
+				.attr('width', self.settings.svgw + self.axisOffset.x)
 				.attr('height', self.settings.svgh)
 			chart.mainG.attr('clip-path', `url(#${id})`)
 
