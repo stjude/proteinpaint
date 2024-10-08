@@ -592,18 +592,21 @@ export function getProfilePlotConfig(app, opts) {
 	return defaults
 }
 
-export async function loadFilterTerms(config, app) {
+export async function loadFilterTerms(config, app, opts) {
+	const state = app.getState()
+	const activeCohort = state ? state.activeCohort : opts.activeCohort
+	const cohortPreffix = activeCohort == 0 ? 'F' : 'A'
 	const twlst = []
-	config.countryTW = { id: 'country' }
-	config.regionTW = { id: 'WHO_region' }
-	config.incomeTW = { id: 'Income_group' }
-	config.typeTW = { id: 'FC_TypeofFacility' }
-	config.teachingStatusTW = { id: 'FC_TeachingFacility' }
-	config.referralStatusTW = { id: 'FC_ReferralFacility' }
-	config.fundingSourceTW = { id: 'FC_FundingSrc' }
+	config.countryTW = { id: cohortPreffix + 'country' }
+	config.regionTW = { id: cohortPreffix + 'WHO_region' }
+	config.incomeTW = { id: cohortPreffix + 'Income_group' }
+	config.typeTW = { id: cohortPreffix + 'FC_TypeofFacility' }
+	config.teachingStatusTW = { id: cohortPreffix + 'FC_TeachingFacility' }
+	config.referralStatusTW = { id: cohortPreffix + 'FC_ReferralFacility' }
+	config.fundingSourceTW = { id: cohortPreffix + 'FC_FundingSrc' }
 	//config.annualDiagnosisNumber = {id: 'PO_TotalDxAll'}
-	config.hospitalVolumeTW = { id: 'PO_HospitalVolume' }
-	config.yearOfImplementationTW = { id: 'Year_implementation' }
+	config.hospitalVolumeTW = { id: cohortPreffix + 'PO_HospitalVolume' }
+	config.yearOfImplementationTW = { id: cohortPreffix + 'Year_implementation' }
 
 	twlst.push(
 		...[

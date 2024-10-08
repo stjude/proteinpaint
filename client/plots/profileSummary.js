@@ -66,7 +66,7 @@ export async function getPlotConfig(opts, app) {
 			controls: { isOpen: false }
 		}
 
-		await loadFilterTerms(config, app)
+		await loadFilterTerms(config, app, opts)
 
 		return config
 	} catch (e) {
