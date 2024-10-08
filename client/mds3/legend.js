@@ -115,6 +115,8 @@ function may_create_variantShapeName(tk) {
 	const width = 12
 	const height = 12
 
+	const shapesWrapper = tk.legend.table.append('tr').append('td').attr('colspan', 2)
+
 	for (const shapeObj of Object.values(tk.legend.variantShapeName)) {
 		const getArgs = () => {
 			return shapeObj.key.includes('Circle')
@@ -124,7 +126,8 @@ function may_create_variantShapeName(tk) {
 				: { width: width - 0.5, height: height - 0.5 }
 		}
 
-		shapeObj.wrapper = tk.legend.table.append('tr').append('td').attr('colspan', 2)
+		shapeObj.wrapper = shapesWrapper.append('div')
+
 		// .on('click', event => {
 		// 	tk.legend.tip.clear().showunder(event.target)
 		// 	renderShapePicker({
