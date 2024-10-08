@@ -809,7 +809,7 @@ export function setRenderers(self) {
 					itemG
 						.append('text')
 						.attr('x', offsetX + 25)
-						.attr('y', offsetY + 7)
+						.attr('y', offsetY + 4)
 						.text(`${name}, n=${count}`)
 						.style('text-decoration', hidden ? 'line-through' : 'none')
 						.attr('alignment-baseline', 'middle')
@@ -829,7 +829,7 @@ export function setRenderers(self) {
 			circleG
 				.append('path')
 				.attr('d', shapes[0])
-				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(1)`)
+				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.8)`)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
 			if (!self.config.colorColumn)
@@ -1058,7 +1058,7 @@ export function setRenderers(self) {
 					const index = category.shape % shapes.length
 					itemG
 						.append('path')
-						.attr('transform', () => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(1)`)
+						.attr('transform', () => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(0.8)`)
 						.style('fill', 'gray')
 						.style('pointer-events', 'bounding-box')
 						.attr('d', shapes[index])
