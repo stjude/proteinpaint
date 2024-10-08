@@ -757,7 +757,7 @@ export function setRenderers(self) {
 				const refColorG = legendG.append('g')
 				refColorG
 					.append('path')
-					.attr('transform', c => `translate(${offsetX - 2}, ${offsetY - 5}) scale(1.2)`)
+					.attr('transform', c => `translate(${offsetX - 2}, ${offsetY - 5}) scale(1)`)
 					.style('fill', colorRefCategory.color)
 					.attr('d', shapes[0])
 					.style('stroke', rgb(colorRefCategory.color).darker())
@@ -802,7 +802,7 @@ export function setRenderers(self) {
 
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX}, ${offsetY - 5}) scale(1.2)`)
+						.attr('transform', c => `translate(${offsetX}, ${offsetY - 5}) scale(1)`)
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
 						.attr('d', symbol)
@@ -828,12 +828,11 @@ export function setRenderers(self) {
 
 		function addLegendItem(g, category, name, x, y, hidden = false) {
 			const radius = Math.min((5 * 40) / chart.colorLegend.size, 5)
-
 			const circleG = g.append('g')
 			circleG
 				.append('path')
 				.attr('d', shapes[0])
-				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(1.2)`)
+				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(1)`)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
 			if (!self.config.colorColumn)
@@ -842,8 +841,9 @@ export function setRenderers(self) {
 			itemG
 				.append('text')
 				.attr('name', 'sjpp-scatter-legend-label')
+				.attr('font-size', '1.1em')
 				.attr('x', x + 20)
-				.attr('y', y)
+				.attr('y', y + 4)
 				.text(`${name}, n=${category.sampleCount}`)
 				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.attr('alignment-baseline', 'middle')
@@ -1043,9 +1043,9 @@ export function setRenderers(self) {
 
 		offsetX += step
 		const mutations = chart.cohortSamples[0]['cat_info'][cname]
-
+		offsetY += 10
 		for (const [i, mutation] of mutations.entries()) {
-			offsetY += 25
+			offsetY += 15
 			const dt = mutation.dt
 			const origin = morigin[mutation.origin]?.label
 			const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
@@ -1065,7 +1065,7 @@ export function setRenderers(self) {
 					const index = category.shape % shapes.length
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(1.2)`)
+						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(1)`)
 						.style('fill', 'gray')
 						.style('pointer-events', 'bounding-box')
 						.attr('d', shapes[index])
@@ -1075,7 +1075,7 @@ export function setRenderers(self) {
 					itemG
 						.append('path')
 						.attr('d', shapes[0])
-						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(1.2)`)
+						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(0.8)`)
 						.style('fill', category.color)
 						.style('stroke', rgb(category.color).darker())
 					itemG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
@@ -1085,10 +1085,10 @@ export function setRenderers(self) {
 				G.append('g')
 					.append('text')
 					.attr('x', offsetX - step + 24)
-					.attr('y', offsetY + 7)
+					.attr('y', offsetY + 4)
 					.attr('name', 'sjpp-scatter-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
-					.text(mkey + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
+					.text(mkey.toUpperCase() + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
 					.on('click', event =>
 						self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event, category)
 					)
