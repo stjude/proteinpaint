@@ -4,7 +4,7 @@ import { d3lasso } from '#common/lasso'
 import { dt2label, morigin } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { axisLeft, axisBottom, axisTop } from 'd3-axis'
+import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW, getFilter } from '../mass/groups.js'
@@ -43,15 +43,16 @@ export function setRenderers(self) {
 
 	self.initAxes = function (chart) {
 		if (chart.data.samples.length == 0) return
-
+		const offsetX = self.axisOffset.x
+		const offsetY = self.axisOffset.y
 		chart.xAxisScale = d3Linear()
 			.domain([chart.xMin, chart.xMax])
-			.range([self.axisOffset.x, self.settings.svgw + self.axisOffset.x])
+			.range([offsetX, self.settings.svgw + offsetX])
 
 		chart.axisBottom = axisBottom(chart.xAxisScale)
 		chart.yAxisScale = d3Linear()
 			.domain([chart.yMax, chart.yMin])
-			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
+			.range([offsetY, self.settings.svgh + offsetY])
 
 		chart.zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, self.settings.svgd])
 
@@ -129,7 +130,7 @@ export function setRenderers(self) {
 				.append('rect')
 				.attr('class', 'zoom')
 				.attr('x', self.axisOffset.x)
-				.attr('y', self.axisOffset.y - self.settings.size)
+				.attr('y', self.axisOffset.y)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
@@ -140,8 +141,8 @@ export function setRenderers(self) {
 				.attr('id', id)
 				.append('rect')
 				.attr('x', self.axisOffset.x)
-				.attr('y', self.axisOffset.y - self.settings.size)
-				.attr('width', self.settings.svgw)
+				.attr('y', self.axisOffset.y)
+				.attr('width', self.settings.svgw + 10)
 				.attr('height', self.settings.svgh)
 			chart.mainG.attr('clip-path', `url(#${id})`)
 
@@ -165,7 +166,6 @@ export function setRenderers(self) {
 			chart.xAxis.call(chart.axisBottom)
 			chart.yAxis.call(chart.axisLeft)
 		}
-		const particleWidth = Math.sqrt(self.settings.size)
 		if (self.settings.showAxes && !(self.is2DLarge || self.is3D)) {
 			axisG.style('opacity', 1)
 			if (self.config.term) {
@@ -346,7 +346,7 @@ export function setRenderers(self) {
 		return refOpacity
 	}
 
-	self.getShape = function (chart, c, factor = 1) {
+	self.getShape = function (chart, c) {
 		const index = chart.shapeLegend.get(c.shape).shape % shapes.length
 		return shapes[index]
 	}
@@ -379,7 +379,7 @@ export function setRenderers(self) {
 				.on('draw', lasso_draw)
 				.on('end', lasso_end)
 
-		function lasso_start(event) {
+		function lasso_start() {
 			if (self.lassoOn) {
 				chart.lasso
 					.items()
@@ -390,7 +390,7 @@ export function setRenderers(self) {
 			}
 		}
 
-		function lasso_draw(event) {
+		function lasso_draw() {
 			if (self.lassoOn) {
 				// Style the possible dots
 
@@ -439,7 +439,7 @@ export function setRenderers(self) {
 			self.dom.tip.show(event.clientX, event.clientY)
 
 			const menuDiv = self.dom.tip.d.append('div')
-			const listDiv = menuDiv
+			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(`List ${self.selectedItems.length} samples`)
@@ -488,7 +488,7 @@ export function setRenderers(self) {
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text('Show samples')
-					.on('click', async event => {
+					.on('click', async () => {
 						const groupSamples = []
 						for (const sample of samples) groupSamples.push({ sampleId: sample.sampleId, sampleName: sample.sample })
 						self.app.dispatch({
@@ -581,8 +581,6 @@ export function setRenderers(self) {
 			self.lassoReset(chart)
 		}
 		self.updateGroupsButton()
-
-		const s = self.settings
 
 		function handleZoom(event) {
 			for (const chart of self.charts) {
@@ -738,7 +736,7 @@ export function setRenderers(self) {
 						if (key == 'Ref') continue
 						const name = key
 						const hidden = self.config.colorTW?.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
-						const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
+						const [circleG, itemG] = addLegendItem(colorG, category, name, key, offsetX, offsetY, hidden)
 						if (!self.config.colorColumn) {
 							circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
 							itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event, category))
@@ -757,7 +755,7 @@ export function setRenderers(self) {
 				const refColorG = legendG.append('g')
 				refColorG
 					.append('path')
-					.attr('transform', c => `translate(${offsetX - 2}, ${offsetY - 5}) scale(0.6)`)
+					.attr('transform', () => `translate(${offsetX - 2}, ${offsetY - 5}) scale(1)`)
 					.style('fill', colorRefCategory.color)
 					.attr('d', shapes[0])
 					.style('stroke', rgb(colorRefCategory.color).darker())
@@ -766,8 +764,8 @@ export function setRenderers(self) {
 				const refText = legendG
 					.append('g')
 					.append('text')
-					.attr('x', offsetX + 15)
-					.attr('y', offsetY)
+					.attr('x', offsetX + 20)
+					.attr('y', offsetY + 4)
 					.text(`n=${colorRefCategory.sampleCount}`)
 					.style('text-decoration', !self.settings.showRef ? 'line-through' : 'none')
 					.attr('alignment-baseline', 'middle')
@@ -802,7 +800,7 @@ export function setRenderers(self) {
 
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX}, ${offsetY - 5}) scale(0.6)`)
+						.attr('transform', () => `translate(${offsetX}, ${offsetY - 5}) scale(1)`)
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
 						.attr('d', symbol)
@@ -810,8 +808,8 @@ export function setRenderers(self) {
 
 					itemG
 						.append('text')
-						.attr('x', offsetX + 15)
-						.attr('y', offsetY)
+						.attr('x', offsetX + 25)
+						.attr('y', offsetY + 7)
 						.text(`${name}, n=${count}`)
 						.style('text-decoration', hidden ? 'line-through' : 'none')
 						.attr('alignment-baseline', 'middle')
@@ -826,14 +824,12 @@ export function setRenderers(self) {
 			return name
 		}
 
-		function addLegendItem(g, category, name, x, y, hidden = false) {
-			const radius = Math.min((5 * 40) / chart.colorLegend.size, 5)
-
+		function addLegendItem(g, category, name, key, x, y, hidden = false) {
 			const circleG = g.append('g')
 			circleG
 				.append('path')
 				.attr('d', shapes[0])
-				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.6)`)
+				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(1)`)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
 			if (!self.config.colorColumn)
@@ -842,8 +838,9 @@ export function setRenderers(self) {
 			itemG
 				.append('text')
 				.attr('name', 'sjpp-scatter-legend-label')
-				.attr('x', x + 15)
-				.attr('y', y)
+				.attr('font-size', '1.1em')
+				.attr('x', x + 20)
+				.attr('y', y + 4)
 				.text(`${name}, n=${category.sampleCount}`)
 				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.attr('alignment-baseline', 'middle')
@@ -877,7 +874,7 @@ export function setRenderers(self) {
 		const maxRadius = maxSize / 2
 		const minG = scaleG.append('g').attr('transform', `translate(${x},${y})`)
 		const shift = 30
-		const minPath = minG
+		minG
 			.append('path')
 			.attr('d', shapes[0])
 			.style('fill', '#aaa')
@@ -891,7 +888,7 @@ export function setRenderers(self) {
 
 		const maxG = scaleG.append('g').attr('transform', `translate(${width + x},${y})`)
 
-		const maxPath = maxG
+		maxG
 			.append('path')
 			.attr('d', shapes[0])
 			.style('fill', '#aaa')
@@ -999,10 +996,6 @@ export function setRenderers(self) {
 					div.append('label').text(text).attr('for', text)
 					input.on('change', e => {
 						self.config.settings.sampleScatter.scaleDotOrder = e.target.value
-						const inputs = (divRadios
-							.selectAll('input')
-							.nodes()
-							.find(d => d.value != e.target.value).checked = false)
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
@@ -1043,9 +1036,9 @@ export function setRenderers(self) {
 
 		offsetX += step
 		const mutations = chart.cohortSamples[0]['cat_info'][cname]
-
-		for (const [i, mutation] of mutations.entries()) {
-			offsetY += 25
+		offsetY += 10
+		for (const mutation of mutations) {
+			offsetY += 15
 			const dt = mutation.dt
 			const origin = morigin[mutation.origin]?.label
 			const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
@@ -1065,7 +1058,7 @@ export function setRenderers(self) {
 					const index = category.shape % shapes.length
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(0.6)`)
+						.attr('transform', () => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(1)`)
 						.style('fill', 'gray')
 						.style('pointer-events', 'bounding-box')
 						.attr('d', shapes[index])
@@ -1075,8 +1068,7 @@ export function setRenderers(self) {
 					itemG
 						.append('path')
 						.attr('d', shapes[0])
-						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(0.6)`)
-
+						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(0.8)`)
 						.style('fill', category.color)
 						.style('stroke', rgb(category.color).darker())
 					itemG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
@@ -1085,11 +1077,11 @@ export function setRenderers(self) {
 
 				G.append('g')
 					.append('text')
-					.attr('x', offsetX - step + 14)
-					.attr('y', offsetY)
+					.attr('x', offsetX - step + 24)
+					.attr('y', offsetY + 4)
 					.attr('name', 'sjpp-scatter-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
-					.text(mkey + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
+					.text(mkey.toUpperCase() + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
 					.on('click', event =>
 						self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event, category)
 					)

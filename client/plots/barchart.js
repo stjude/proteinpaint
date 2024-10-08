@@ -921,7 +921,7 @@ function setRenderers(self) {
 						html: term2.skipped
 							? 'N/A'
 							: term2.pvalue > 1e-4
-							? Number(term2.pvalue.toFixed(4))
+							? roundValueAuto(Number(term2.pvalue))
 							: roundValueAuto(Number(term2.pvalue))
 					}
 				])
