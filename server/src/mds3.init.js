@@ -3,6 +3,7 @@ import readline from 'readline'
 import path from 'path'
 import { spawn, spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { createCanvas } from 'canvas'
 import * as gdc from './mds3.gdc.js'
 import { initGDCdictionary } from './termdb.gdc.js'
@@ -1595,7 +1596,34 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	also require that there's no duplicate samples in header line, so rust/r won't break
 	*/
 	{
-		const samples = (await getFirstLine(q.file)).trim().split('\t').slice(4)
+		let samples = []
+		if (!ds.queries.rnaseqGeneCount.storage_type || ds.queries.rnaseqGeneCount.storage_type == 'text') {
+			samples = (await getFirstLine(q.file)).trim().split('\t').slice(4)
+		} else if (ds.queries.rnaseqGeneCount.storage_type == 'HDF5') {
+			const get_samples_from_hdf5 = {
+				input_file: q.file,
+				data_type: 'get_samples'
+			}
+			//console.log("get_samples_from_hdf5:",get_samples_from_hdf5)
+			//fs.writeFile('test.txt', JSON.stringify(get_samples_from_hdf5), function (err) {
+			//	// For catching input to rust pipeline, in case of an error
+			//	if (err) return console.log(err)
+			//})
+			const time1 = new Date().valueOf()
+			const rust_output = await run_rust('DEanalysis', JSON.stringify(get_samples_from_hdf5))
+			const time2 = new Date().valueOf()
+			console.log('Time taken to query gene expression:', time2 - time1, 'ms')
+			let result
+			for (const line of rust_output.split('\n')) {
+				if (line.startsWith('output_string:')) {
+					result = line.replace('output_string:', '')
+				} else {
+					//console.log(line)
+				}
+			}
+			samples = result.split(',')
+		} else throw 'unknown storage type:' + ds.queries.rnaseqGeneCount.storage_type
+
 		q.allSampleSet = new Set(samples)
 		//if(q.allSampleSet.size < samples.length) throw 'rnaseqGeneCount.file header contains duplicate samples'
 		const unknownSamples = []

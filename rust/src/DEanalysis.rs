@@ -1,4 +1,5 @@
-// cd .. && cargo build --release && json='{"min_count":10,"min_total_count":15,"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","storage_type":"text","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
+// cd .. && cargo build --release && json='{"min_count":10,"min_total_count":15,"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","data_type":"do_DE","storage_type":"text","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
+// cd .. && cargo build --release && json='{"data_type":"get_samples","input_file":"/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/rnaseq/counts.h5"}' && time echo $json | target/release/DEanalysis
 // cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/DEanalysis
 #![allow(non_snake_case)]
 use hdf5::types::VarLenAscii;
@@ -508,6 +509,43 @@ struct PValueIndexes {
     p_value: f64,
 }
 
+// Used to get the sample names from HDF5 file at PP server startup
+fn get_DE_samples(hdf5_filename: &String) {
+    let file = HDF5File::open(&hdf5_filename).unwrap(); // open for reading
+    let now_samples = Instant::now();
+    let ds_samples = file.dataset("samples").unwrap();
+    let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>().unwrap();
+    println!("\tsamples = {:?}", samples);
+    println!("\tsamples.shape() = {:?}", samples.shape());
+    println!("\tsamples.strides() = {:?}", samples.strides());
+    println!("\tsamples.ndim() = {:?}", samples.ndim());
+    println!("Time for parsing samples:{:?}", now_samples.elapsed());
+
+    let mut output_string = "".to_string();
+    for i in 0..samples.len() {
+        //let item_json = "{\"".to_string()
+        //    + &samples[i].to_string()
+        //    + &"\","
+        //    + &gene_array[i].to_string()
+        //    + &"}";
+
+        //let item_json = format!("{{\"{}\"}}", samples[i].to_string());
+
+        output_string += &format!("{}", samples[i].to_string());
+        //println!("item_json:{}", item_json);
+
+        //let item_json = format!(
+        //    r##"{{"{}",{}}}"##,
+        //    samples[i].to_string().replace("\\", ""),
+        //    gene_array[i].to_string()
+        //);
+        if i != samples.len() - 1 {
+            output_string += &",";
+        }
+    }
+    println!("output_string:{}", output_string);
+}
+
 fn main() {
     //env::set_var("RUST_BACKTRACE", "full");
     let mut input = String::new();
@@ -521,40 +559,6 @@ fn main() {
             match input_json {
                 Ok(json_string) => {
                     let now = Instant::now();
-                    let min_count_option = json_string["min_count"].as_f64().to_owned();
-                    let min_total_count_option = json_string["min_total_count"].as_f64().to_owned();
-                    let storage_type_option = json_string["storage_type"].as_str().to_owned();
-                    let storage_type;
-                    match storage_type_option {
-                        Some(x) => {
-                            if x == "HDF5" {
-                                storage_type = "HDF5"
-                            } else {
-                                panic!("storage_type needs to be HDF5 or txt");
-                            }
-                        }
-                        None => storage_type = "txt",
-                    }
-                    let min_count;
-                    match min_count_option {
-                        Some(x) => min_count = x,
-                        None => {
-                            panic!("min_count is missing a value")
-                        }
-                    }
-                    let min_total_count;
-                    match min_total_count_option {
-                        Some(x) => min_total_count = x,
-                        None => {
-                            panic!("min_total_count is missing a value")
-                        }
-                    }
-                    let case_string = &json_string["case"].to_owned().as_str().unwrap().to_string();
-                    let control_string = &json_string["control"]
-                        .to_owned()
-                        .as_str()
-                        .unwrap()
-                        .to_string();
                     let file_name = &json_string["input_file"]
                         .to_owned()
                         .as_str()
@@ -562,166 +566,145 @@ fn main() {
                         .to_string()
                         .split(",")
                         .collect();
-                    let case_list: Vec<&str> = case_string.split(",").collect();
-                    let control_list: Vec<&str> = control_string.split(",").collect();
-                    let (input_matrix, case_indexes, control_indexes, gene_names, gene_symbols);
-                    if storage_type == "text" {
-                        (
-                            input_matrix,
-                            case_indexes,
-                            control_indexes,
-                            gene_names,
-                            gene_symbols,
-                        ) = input_data_from_text(file_name, &case_list, &control_list);
-                    } else {
-                        // Parsing data from a HDF5 file
-                        (
-                            input_matrix,
-                            case_indexes,
-                            control_indexes,
-                            gene_names,
-                            gene_symbols,
-                        ) = input_data_from_HDF5(file_name, &case_list, &control_list);
-                    }
-                    let filtering_time = Instant::now();
-                    let (filtered_matrix, lib_sizes, filtered_genes, filtered_gene_symbols) =
-                        filter_by_expr(
-                            min_count,
-                            min_total_count,
-                            &input_matrix,
-                            case_indexes.len(),
-                            control_indexes.len(),
-                            gene_names,
-                            gene_symbols,
-                        );
-                    println!("filtering time:{:?}", filtering_time.elapsed());
-                    //println!("filtered_matrix_rows:{:?}", filtered_matrix.nrows());
-                    //println!("filtered_matrix_cols:{:?}", filtered_matrix.ncols());
-                    let cpm_normalization_time = Instant::now();
-                    let mut normalized_matrix = cpm(&filtered_matrix);
-                    println!(
-                        "cpm normalization time:{:?}",
-                        cpm_normalization_time.elapsed()
-                    );
-                    let tmm_normalization_time = Instant::now();
-                    let norm_factors = tmm_normalization(filtered_matrix, &lib_sizes);
-                    println!(
-                        "tmm normalization time:{:?}",
-                        tmm_normalization_time.elapsed()
-                    );
-                    //println!("norm_factors:{:?}", norm_factors);
-
-                    for col in 0..normalized_matrix.ncols() {
-                        let norm_factor = norm_factors[col];
-                        for row in 0..normalized_matrix.nrows() {
-                            normalized_matrix[(row, col)] =
-                                normalized_matrix[(row, col)] / norm_factor;
-                        }
-                    }
-                    //println!("normalized_matrix:{:?}", normalized_matrix);
-                    println!("Number of cases:{}", case_list.len());
-                    println!("Number of controls:{}", control_list.len());
-                    println!("Time for pre-processing:{:?}", now.elapsed());
-                    // Using Wilcoxon test for differential gene expression
-
-                    let now2 = Instant::now();
-                    let mut p_values: Vec<PValueIndexes> =
-                        Vec::with_capacity(normalized_matrix.nrows());
-                    const THRESHOLD: usize = 50; // This determines whether the Wilcoxon exact test or the normal test will be used based on sample size.
-
-                    //println!("case_indexes:{:?}", case_indexes);
-                    //println!("control_indexes:{:?}", control_indexes);
-                    let num_normalized_rows = normalized_matrix.nrows();
-                    if normalized_matrix.nrows() * normalized_matrix.ncols() < PAR_CUTOFF {
-                        for i in 0..normalized_matrix.nrows() {
-                            let row = normalized_matrix.row(i);
-                            //println!("row:{:?}", row);
-                            let mut treated = Vec::<f64>::new();
-                            let mut control = Vec::<f64>::new();
-                            //println!("conditions:{:?}", conditions);
-                            for j in 0..(case_indexes.len() + control_indexes.len()) {
-                                //println!("row[(0, j)]:{}", row[(0, j)]);
-                                if case_indexes.contains(&j) {
-                                    treated.push(row[(0, j)]);
-                                    //println!("{},{}", input_data_vec.0[i][j], "Diseased");
-                                } else if control_indexes.contains(&j) {
-                                    // + 1 was added because in the input file the first column of thw first row is blank as the first column consists of gene names
-                                    control.push(row[(0, j)]);
-                                    //println!("{},{}", input_data_vec.0[i][j], "Control");
-                                } else {
-                                    panic!(
-                                        "Column {} could not be classified into case/control",
-                                        j
-                                    );
+                    println!("file_name:{}", file_name);
+                    let data_type_option = json_string["data_type"].as_str().to_owned();
+                    match data_type_option {
+                        Some(x) => {
+                            if x == "get_samples" {
+                                get_DE_samples(file_name)
+                            } else if x == "do_DE" {
+                                let min_count_option = json_string["min_count"].as_f64().to_owned();
+                                let min_total_count_option =
+                                    json_string["min_total_count"].as_f64().to_owned();
+                                let storage_type_option =
+                                    json_string["storage_type"].as_str().to_owned();
+                                let storage_type;
+                                match storage_type_option {
+                                    Some(x) => {
+                                        if x == "HDF5" {
+                                            storage_type = "HDF5"
+                                        } else {
+                                            panic!("storage_type needs to be HDF5 or txt");
+                                        }
+                                    }
+                                    None => storage_type = "txt",
                                 }
-                            }
-                            //println!("treated{:?}", treated);
-                            //println!("control{:?}", control);
-                            let p_value = stats_functions::wilcoxon_rank_sum_test(
-                                treated.clone(),
-                                control.clone(),
-                                THRESHOLD,
-                                't',
-                                true,
-                            ); // Setting continuity correction to true in case of normal approximation
-                            let treated_mean = Data::new(treated).mean();
-                            let control_mean = Data::new(control).mean();
-                            if (treated_mean.unwrap() / control_mean.unwrap())
-                                .log2()
-                                .is_nan()
-                                == false
-                                && (treated_mean.unwrap() / control_mean.unwrap())
-                                    .log2()
-                                    .is_infinite()
-                                    == false
-                            {
-                                p_values.push(PValueIndexes {
-                                    index: i,
-                                    gene_name: filtered_genes[i].to_owned(),
-                                    gene_symbol: filtered_gene_symbols[i].to_owned(),
-                                    fold_change: (treated_mean.unwrap() / control_mean.unwrap())
-                                        .log2(),
-                                    p_value: p_value,
-                                });
-                            }
-                        }
-                    } else {
-                        // Multithreaded implementation of calculating wilcoxon p-values
-                        let normalized_matrix_temp = Arc::new(normalized_matrix);
-                        let filtered_genes_temp = Arc::new(filtered_genes);
-                        let filtered_gene_symbols_temp = Arc::new(filtered_gene_symbols);
-                        let case_indexes_temp = Arc::new(case_indexes);
-                        let control_indexes_temp = Arc::new(control_indexes);
-                        let p_values_temp = Arc::new(Mutex::new(Vec::<PValueIndexes>::new()));
-                        let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
-                        for thread_num in 0..max_threads {
-                            let normalized_matrix_temp = Arc::clone(&normalized_matrix_temp);
-                            let case_indexes_temp = Arc::clone(&case_indexes_temp);
-                            let control_indexes_temp = Arc::clone(&control_indexes_temp);
-                            let p_values_temp = Arc::clone(&p_values_temp);
-                            let filtered_genes_temp = Arc::clone(&filtered_genes_temp);
-                            let filtered_gene_symbols_temp =
-                                Arc::clone(&filtered_gene_symbols_temp);
-                            let handle = thread::spawn(move || {
-                                let mut p_values_thread: Vec<PValueIndexes> = Vec::with_capacity(
-                                    normalized_matrix_temp.nrows() / max_threads,
+                                let min_count;
+                                match min_count_option {
+                                    Some(x) => min_count = x,
+                                    None => {
+                                        panic!("min_count is missing a value")
+                                    }
+                                }
+                                let min_total_count;
+                                match min_total_count_option {
+                                    Some(x) => min_total_count = x,
+                                    None => {
+                                        panic!("min_total_count is missing a value")
+                                    }
+                                }
+                                let case_string =
+                                    &json_string["case"].to_owned().as_str().unwrap().to_string();
+                                let control_string = &json_string["control"]
+                                    .to_owned()
+                                    .as_str()
+                                    .unwrap()
+                                    .to_string();
+                                let case_list: Vec<&str> = case_string.split(",").collect();
+                                let control_list: Vec<&str> = control_string.split(",").collect();
+                                let (
+                                    input_matrix,
+                                    case_indexes,
+                                    control_indexes,
+                                    gene_names,
+                                    gene_symbols,
                                 );
-                                for i in 0..normalized_matrix_temp.nrows() {
-                                    let remainder: usize = i % max_threads; // Calculate remainder of iteration number divided by max_threads to decide which thread parses the row
-                                    if remainder == thread_num {
-                                        let row = normalized_matrix_temp.row(i);
+                                if storage_type == "text" {
+                                    (
+                                        input_matrix,
+                                        case_indexes,
+                                        control_indexes,
+                                        gene_names,
+                                        gene_symbols,
+                                    ) = input_data_from_text(file_name, &case_list, &control_list);
+                                } else {
+                                    // Parsing data from a HDF5 file
+                                    (
+                                        input_matrix,
+                                        case_indexes,
+                                        control_indexes,
+                                        gene_names,
+                                        gene_symbols,
+                                    ) = input_data_from_HDF5(file_name, &case_list, &control_list);
+                                }
+                                let filtering_time = Instant::now();
+                                let (
+                                    filtered_matrix,
+                                    lib_sizes,
+                                    filtered_genes,
+                                    filtered_gene_symbols,
+                                ) = filter_by_expr(
+                                    min_count,
+                                    min_total_count,
+                                    &input_matrix,
+                                    case_indexes.len(),
+                                    control_indexes.len(),
+                                    gene_names,
+                                    gene_symbols,
+                                );
+                                println!("filtering time:{:?}", filtering_time.elapsed());
+                                //println!("filtered_matrix_rows:{:?}", filtered_matrix.nrows());
+                                //println!("filtered_matrix_cols:{:?}", filtered_matrix.ncols());
+                                let cpm_normalization_time = Instant::now();
+                                let mut normalized_matrix = cpm(&filtered_matrix);
+                                println!(
+                                    "cpm normalization time:{:?}",
+                                    cpm_normalization_time.elapsed()
+                                );
+                                let tmm_normalization_time = Instant::now();
+                                let norm_factors = tmm_normalization(filtered_matrix, &lib_sizes);
+                                println!(
+                                    "tmm normalization time:{:?}",
+                                    tmm_normalization_time.elapsed()
+                                );
+                                //println!("norm_factors:{:?}", norm_factors);
+
+                                for col in 0..normalized_matrix.ncols() {
+                                    let norm_factor = norm_factors[col];
+                                    for row in 0..normalized_matrix.nrows() {
+                                        normalized_matrix[(row, col)] =
+                                            normalized_matrix[(row, col)] / norm_factor;
+                                    }
+                                }
+                                //println!("normalized_matrix:{:?}", normalized_matrix);
+                                println!("Number of cases:{}", case_list.len());
+                                println!("Number of controls:{}", control_list.len());
+                                println!("Time for pre-processing:{:?}", now.elapsed());
+                                // Using Wilcoxon test for differential gene expression
+
+                                let now2 = Instant::now();
+                                let mut p_values: Vec<PValueIndexes> =
+                                    Vec::with_capacity(normalized_matrix.nrows());
+                                const THRESHOLD: usize = 50; // This determines whether the Wilcoxon exact test or the normal test will be used based on sample size.
+
+                                //println!("case_indexes:{:?}", case_indexes);
+                                //println!("control_indexes:{:?}", control_indexes);
+                                let num_normalized_rows = normalized_matrix.nrows();
+                                if normalized_matrix.nrows() * normalized_matrix.ncols()
+                                    < PAR_CUTOFF
+                                {
+                                    for i in 0..normalized_matrix.nrows() {
+                                        let row = normalized_matrix.row(i);
                                         //println!("row:{:?}", row);
                                         let mut treated = Vec::<f64>::new();
                                         let mut control = Vec::<f64>::new();
                                         //println!("conditions:{:?}", conditions);
-                                        for j in 0..(case_indexes_temp.len()
-                                            + control_indexes_temp.len())
-                                        {
+                                        for j in 0..(case_indexes.len() + control_indexes.len()) {
                                             //println!("row[(0, j)]:{}", row[(0, j)]);
-                                            if case_indexes_temp.contains(&j) {
+                                            if case_indexes.contains(&j) {
                                                 treated.push(row[(0, j)]);
                                                 //println!("{},{}", input_data_vec.0[i][j], "Diseased");
-                                            } else if control_indexes_temp.contains(&j) {
+                                            } else if control_indexes.contains(&j) {
                                                 // + 1 was added because in the input file the first column of thw first row is blank as the first column consists of gene names
                                                 control.push(row[(0, j)]);
                                                 //println!("{},{}", input_data_vec.0[i][j], "Control");
@@ -752,11 +735,10 @@ fn main() {
                                                 .is_infinite()
                                                 == false
                                         {
-                                            p_values_thread.push(PValueIndexes {
+                                            p_values.push(PValueIndexes {
                                                 index: i,
-                                                gene_name: filtered_genes_temp[i].to_owned(),
-                                                gene_symbol: filtered_gene_symbols_temp[i]
-                                                    .to_owned(),
+                                                gene_name: filtered_genes[i].to_owned(),
+                                                gene_symbol: filtered_gene_symbols[i].to_owned(),
                                                 fold_change: (treated_mean.unwrap()
                                                     / control_mean.unwrap())
                                                 .log2(),
@@ -764,27 +746,126 @@ fn main() {
                                             });
                                         }
                                     }
+                                } else {
+                                    // Multithreaded implementation of calculating wilcoxon p-values
+                                    let normalized_matrix_temp = Arc::new(normalized_matrix);
+                                    let filtered_genes_temp = Arc::new(filtered_genes);
+                                    let filtered_gene_symbols_temp =
+                                        Arc::new(filtered_gene_symbols);
+                                    let case_indexes_temp = Arc::new(case_indexes);
+                                    let control_indexes_temp = Arc::new(control_indexes);
+                                    let p_values_temp =
+                                        Arc::new(Mutex::new(Vec::<PValueIndexes>::new()));
+                                    let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
+                                    for thread_num in 0..max_threads {
+                                        let normalized_matrix_temp =
+                                            Arc::clone(&normalized_matrix_temp);
+                                        let case_indexes_temp = Arc::clone(&case_indexes_temp);
+                                        let control_indexes_temp =
+                                            Arc::clone(&control_indexes_temp);
+                                        let p_values_temp = Arc::clone(&p_values_temp);
+                                        let filtered_genes_temp = Arc::clone(&filtered_genes_temp);
+                                        let filtered_gene_symbols_temp =
+                                            Arc::clone(&filtered_gene_symbols_temp);
+                                        let handle = thread::spawn(move || {
+                                            let mut p_values_thread: Vec<PValueIndexes> =
+                                                Vec::with_capacity(
+                                                    normalized_matrix_temp.nrows() / max_threads,
+                                                );
+                                            for i in 0..normalized_matrix_temp.nrows() {
+                                                let remainder: usize = i % max_threads; // Calculate remainder of iteration number divided by max_threads to decide which thread parses the row
+                                                if remainder == thread_num {
+                                                    let row = normalized_matrix_temp.row(i);
+                                                    //println!("row:{:?}", row);
+                                                    let mut treated = Vec::<f64>::new();
+                                                    let mut control = Vec::<f64>::new();
+                                                    //println!("conditions:{:?}", conditions);
+                                                    for j in 0..(case_indexes_temp.len()
+                                                        + control_indexes_temp.len())
+                                                    {
+                                                        //println!("row[(0, j)]:{}", row[(0, j)]);
+                                                        if case_indexes_temp.contains(&j) {
+                                                            treated.push(row[(0, j)]);
+                                                            //println!("{},{}", input_data_vec.0[i][j], "Diseased");
+                                                        } else if control_indexes_temp.contains(&j)
+                                                        {
+                                                            // + 1 was added because in the input file the first column of thw first row is blank as the first column consists of gene names
+                                                            control.push(row[(0, j)]);
+                                                            //println!("{},{}", input_data_vec.0[i][j], "Control");
+                                                        } else {
+                                                            panic!(
+                                        "Column {} could not be classified into case/control",
+                                        j
+                                    );
+                                                        }
+                                                    }
+                                                    //println!("treated{:?}", treated);
+                                                    //println!("control{:?}", control);
+                                                    let p_value =
+                                                        stats_functions::wilcoxon_rank_sum_test(
+                                                            treated.clone(),
+                                                            control.clone(),
+                                                            THRESHOLD,
+                                                            't',
+                                                            true,
+                                                        ); // Setting continuity correction to true in case of normal approximation
+                                                    let treated_mean = Data::new(treated).mean();
+                                                    let control_mean = Data::new(control).mean();
+                                                    if (treated_mean.unwrap()
+                                                        / control_mean.unwrap())
+                                                    .log2()
+                                                    .is_nan()
+                                                        == false
+                                                        && (treated_mean.unwrap()
+                                                            / control_mean.unwrap())
+                                                        .log2()
+                                                        .is_infinite()
+                                                            == false
+                                                    {
+                                                        p_values_thread.push(PValueIndexes {
+                                                            index: i,
+                                                            gene_name: filtered_genes_temp[i]
+                                                                .to_owned(),
+                                                            gene_symbol: filtered_gene_symbols_temp
+                                                                [i]
+                                                                .to_owned(),
+                                                            fold_change: (treated_mean.unwrap()
+                                                                / control_mean.unwrap())
+                                                            .log2(),
+                                                            p_value: p_value,
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                            p_values_temp
+                                                .lock()
+                                                .unwrap()
+                                                .append(&mut p_values_thread);
+                                        });
+                                        handles.push(handle);
+                                    }
+                                    for handle in handles {
+                                        // Wait for all threads to finish before proceeding further
+                                        handle.join().unwrap();
+                                    }
+                                    p_values.append(&mut *p_values_temp.lock().unwrap());
                                 }
-                                p_values_temp.lock().unwrap().append(&mut p_values_thread);
-                            });
-                            handles.push(handle);
+                                //println!("p_values:{:?}", p_values);
+                                println!(
+                                    "Time for running {} wilcoxon tests:{:?}",
+                                    num_normalized_rows,
+                                    now2.elapsed()
+                                );
+                                let adjusted_p_values = adjust_p_values(p_values);
+                                println!("adjusted_p_values:{}", adjusted_p_values);
+                                //let fold_changes =
+                                //    calculate_fold_change(normalized_matrix, case_indexes, control_indexes);
+                            }
                         }
-                        for handle in handles {
-                            // Wait for all threads to finish before proceeding further
-                            handle.join().unwrap();
+                        None => {
+                            panic!("data_type is missing")
                         }
-                        p_values.append(&mut *p_values_temp.lock().unwrap());
                     }
-                    //println!("p_values:{:?}", p_values);
-                    println!(
-                        "Time for running {} wilcoxon tests:{:?}",
-                        num_normalized_rows,
-                        now2.elapsed()
-                    );
-                    let adjusted_p_values = adjust_p_values(p_values);
-                    println!("adjusted_p_values:{}", adjusted_p_values);
-                    //let fold_changes =
-                    //    calculate_fold_change(normalized_matrix, case_indexes, control_indexes);
                 }
                 Err(error) => println!("Incorrect json: {}", error),
             }
