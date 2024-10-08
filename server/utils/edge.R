@@ -27,6 +27,7 @@
 
 
 library(jsonlite)
+library(rhdf5)
 library(stringr)
 library(readr)
 suppressWarnings({
@@ -40,20 +41,45 @@ close(con)
 input <- fromJSON(json)
 #print (input)
 #print (input$output_path)
+
 cases <- unlist(strsplit(input$case, ","))
 controls <- unlist(strsplit(input$control, ","))
 combined <- c("geneID","geneSymbol",cases,controls)
 #data %>% select(all_of(combined))
 #read_file_time_start <- Sys.time()
-suppressWarnings({
-  suppressMessages({
-read_counts <- read_tsv(input$input_file, col_names = TRUE, col_select = combined)
-  })
-})
-geneIDs <- unlist(read_counts[1])
-geneSymbols <- unlist(read_counts[2])
-read_counts <- select(read_counts, -geneID)
-read_counts <- select(read_counts, -geneSymbol)
+
+if (exists(input$storage_type)) {
+    if (input$storage_type == "HDF5") {
+        geneIDs <- h5read(input$input_file, "gene_names")
+        geneSymbols <- h5read(input$input_file, "gene_symbols")
+        samples <- h5read(input$input_file, "samples")
+        print ("geneIDs")
+        print (geneIDs)
+    } else if (input$storage_type == "text") {    
+        suppressWarnings({
+          suppressMessages({
+        read_counts <- read_tsv(input$input_file, col_names = TRUE, col_select = combined)
+          })
+        })
+        geneIDs <- unlist(read_counts[1])
+        geneSymbols <- unlist(read_counts[2])
+        read_counts <- select(read_counts, -geneID)
+        read_counts <- select(read_counts, -geneSymbol)
+    } else {
+        print ("Unknown storage type")
+    }    
+} else { # If not defined, parse data from a text file
+    suppressWarnings({
+      suppressMessages({
+    read_counts <- read_tsv(input$input_file, col_names = TRUE, col_select = combined)
+      })
+    })
+    geneIDs <- unlist(read_counts[1])
+    geneSymbols <- unlist(read_counts[2])
+    read_counts <- select(read_counts, -geneID)
+    read_counts <- select(read_counts, -geneSymbol)
+}    
+
 #read_file_time_stop <- Sys.time()
 #print (read_file_time_stop - read_file_time_start)
 
