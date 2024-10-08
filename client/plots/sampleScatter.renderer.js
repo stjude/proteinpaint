@@ -166,7 +166,6 @@ export function setRenderers(self) {
 			chart.xAxis.call(chart.axisBottom)
 			chart.yAxis.call(chart.axisLeft)
 		}
-		const particleWidth = Math.sqrt(self.settings.size)
 		if (self.settings.showAxes && !(self.is2DLarge || self.is3D)) {
 			axisG.style('opacity', 1)
 			if (self.config.term) {
@@ -347,7 +346,7 @@ export function setRenderers(self) {
 		return refOpacity
 	}
 
-	self.getShape = function (chart, c, factor = 1) {
+	self.getShape = function (chart, c) {
 		const index = chart.shapeLegend.get(c.shape).shape % shapes.length
 		return shapes[index]
 	}
@@ -380,7 +379,7 @@ export function setRenderers(self) {
 				.on('draw', lasso_draw)
 				.on('end', lasso_end)
 
-		function lasso_start(event) {
+		function lasso_start() {
 			if (self.lassoOn) {
 				chart.lasso
 					.items()
@@ -391,7 +390,7 @@ export function setRenderers(self) {
 			}
 		}
 
-		function lasso_draw(event) {
+		function lasso_draw() {
 			if (self.lassoOn) {
 				// Style the possible dots
 
@@ -440,7 +439,7 @@ export function setRenderers(self) {
 			self.dom.tip.show(event.clientX, event.clientY)
 
 			const menuDiv = self.dom.tip.d.append('div')
-			const listDiv = menuDiv
+			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(`List ${self.selectedItems.length} samples`)
@@ -489,7 +488,7 @@ export function setRenderers(self) {
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text('Show samples')
-					.on('click', async event => {
+					.on('click', async () => {
 						const groupSamples = []
 						for (const sample of samples) groupSamples.push({ sampleId: sample.sampleId, sampleName: sample.sample })
 						self.app.dispatch({
@@ -582,8 +581,6 @@ export function setRenderers(self) {
 			self.lassoReset(chart)
 		}
 		self.updateGroupsButton()
-
-		const s = self.settings
 
 		function handleZoom(event) {
 			for (const chart of self.charts) {
@@ -739,7 +736,7 @@ export function setRenderers(self) {
 						if (key == 'Ref') continue
 						const name = key
 						const hidden = self.config.colorTW?.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
-						const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
+						const [circleG, itemG] = addLegendItem(colorG, category, name, key, offsetX, offsetY, hidden)
 						if (!self.config.colorColumn) {
 							circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
 							itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event, category))
@@ -758,7 +755,7 @@ export function setRenderers(self) {
 				const refColorG = legendG.append('g')
 				refColorG
 					.append('path')
-					.attr('transform', c => `translate(${offsetX - 2}, ${offsetY - 5}) scale(1)`)
+					.attr('transform', () => `translate(${offsetX - 2}, ${offsetY - 5}) scale(1)`)
 					.style('fill', colorRefCategory.color)
 					.attr('d', shapes[0])
 					.style('stroke', rgb(colorRefCategory.color).darker())
@@ -768,7 +765,7 @@ export function setRenderers(self) {
 					.append('g')
 					.append('text')
 					.attr('x', offsetX + 20)
-					.attr('y', offsetY)
+					.attr('y', offsetY + 4)
 					.text(`n=${colorRefCategory.sampleCount}`)
 					.style('text-decoration', !self.settings.showRef ? 'line-through' : 'none')
 					.attr('alignment-baseline', 'middle')
@@ -803,7 +800,7 @@ export function setRenderers(self) {
 
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX}, ${offsetY - 5}) scale(1)`)
+						.attr('transform', () => `translate(${offsetX}, ${offsetY - 5}) scale(1)`)
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
 						.attr('d', symbol)
@@ -827,8 +824,7 @@ export function setRenderers(self) {
 			return name
 		}
 
-		function addLegendItem(g, category, name, x, y, hidden = false) {
-			const radius = Math.min((5 * 40) / chart.colorLegend.size, 5)
+		function addLegendItem(g, category, name, key, x, y, hidden = false) {
 			const circleG = g.append('g')
 			circleG
 				.append('path')
@@ -878,7 +874,7 @@ export function setRenderers(self) {
 		const maxRadius = maxSize / 2
 		const minG = scaleG.append('g').attr('transform', `translate(${x},${y})`)
 		const shift = 30
-		const minPath = minG
+		minG
 			.append('path')
 			.attr('d', shapes[0])
 			.style('fill', '#aaa')
@@ -892,7 +888,7 @@ export function setRenderers(self) {
 
 		const maxG = scaleG.append('g').attr('transform', `translate(${width + x},${y})`)
 
-		const maxPath = maxG
+		maxG
 			.append('path')
 			.attr('d', shapes[0])
 			.style('fill', '#aaa')
@@ -1000,10 +996,6 @@ export function setRenderers(self) {
 					div.append('label').text(text).attr('for', text)
 					input.on('change', e => {
 						self.config.settings.sampleScatter.scaleDotOrder = e.target.value
-						const inputs = (divRadios
-							.selectAll('input')
-							.nodes()
-							.find(d => d.value != e.target.value).checked = false)
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
@@ -1045,7 +1037,7 @@ export function setRenderers(self) {
 		offsetX += step
 		const mutations = chart.cohortSamples[0]['cat_info'][cname]
 		offsetY += 10
-		for (const [i, mutation] of mutations.entries()) {
+		for (const mutation of mutations) {
 			offsetY += 15
 			const dt = mutation.dt
 			const origin = morigin[mutation.origin]?.label
@@ -1066,7 +1058,7 @@ export function setRenderers(self) {
 					const index = category.shape % shapes.length
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(1)`)
+						.attr('transform', () => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(1)`)
 						.style('fill', 'gray')
 						.style('pointer-events', 'bounding-box')
 						.attr('d', shapes[index])
