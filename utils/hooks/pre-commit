@@ -23,7 +23,11 @@ if [[ "$FILES" != "" ]]; then
 
 	# lint against team preferences
 	echo "Linting ..."
-	echo "$FILES" | xargs npx eslint
+	echo "$FILES" | grep "shared\/" | xargs npx eslint
+	echo "$FILES" | grep "client\/" | xargs npx eslint --env browser
+	echo "$FILES" | grep "front\/" | xargs npx eslint --env browser
+	echo "$FILES" | grep "rust\/" | xargs npx eslint --env node
+	echo "$FILES" | grep "server\/" | xargs npx eslint --env node
 
 	# check for invalid use of .Inner reference
 	echo "checking for forbidden .Inner. usage"
