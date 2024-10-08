@@ -362,6 +362,7 @@ export class MatrixControls {
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'samplecount4gene',
+						styles: { display: 'inline-block' },
 						options: [
 							{ label: 'Absolute', value: 'abs' },
 							{ label: `Percent`, value: 'pct' },

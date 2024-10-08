@@ -418,7 +418,7 @@ function setRadioInput(opts) {
 				}
 		  ]
 
-	const styles = opts.styles || { display: 'inline-block' }
+	const styles = opts.styles
 	for (const input of inputs) {
 		self.inputs[input.settingsKey] = make_radios({
 			inputName: getElemId(opts.instanceNum),
