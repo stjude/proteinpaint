@@ -296,7 +296,7 @@ export async function getPlotConfig(opts, app) {
 			twlst.push(row.maxScore)
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		await loadFilterTerms(config, app)
+		await loadFilterTerms(config, app, opts)
 		return config
 	} catch (e) {
 		throw `${e} [profileRadarFacility getPlotConfig()]`

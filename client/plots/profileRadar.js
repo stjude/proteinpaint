@@ -298,7 +298,7 @@ export async function getPlotConfig(opts, app) {
 			}
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		await loadFilterTerms(config, app)
+		await loadFilterTerms(config, app, opts)
 		return config
 	} catch (e) {
 		throw `${e} [profileRadar getPlotConfig()]`
