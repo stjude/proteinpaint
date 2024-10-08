@@ -1,3 +1,5 @@
+import { select as d3select } from 'd3-selection'
+
 //Icons from bootstrap: https://icons.getbootstrap.com/
 export const shapes = {
 	//circle filled
@@ -227,7 +229,6 @@ export function shapeSelector(div, callback, arr = shapesArray, opts = {}) {
 		.append('svg')
 		.attr('width', size * cols)
 		.attr('height', height)
-		.style('background-color', 'rgba(239, 239, 239, 0.3)')
 	let count = 0
 	let y = 0
 	for (const shape of arr) {
@@ -240,6 +241,12 @@ export function shapeSelector(div, callback, arr = shapesArray, opts = {}) {
 			.attr('transform', `translate(${size * count}, ${y * size})`)
 			.on('click', () => {
 				callback(index)
+			})
+			.on('mouseover', function () {
+				d3select(this).style('fill', 'black')
+			})
+			.on('mouseout', function () {
+				d3select(this).style('fill', 'gray')
 			})
 		count++
 		if (count % cols == 0) {
