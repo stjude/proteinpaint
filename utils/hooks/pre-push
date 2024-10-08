@@ -2,7 +2,7 @@
 
 set -e
 
-FILES=$(git diff-tree --no-commit-id --name-only --diff-filter=M -r origin/master..HEAD)
+FILES=$(git diff-tree --no-commit-id --name-only --diff-filter=ACM -r origin/master..HEAD)
 echo "number of files to be checked=$(echo "$FILES" | wc -w)"
 # doing this per GDC requirements
 pre-commit run --files $FILES
