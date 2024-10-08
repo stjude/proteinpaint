@@ -50,12 +50,14 @@ export class NumericBase extends TwBase {
 
 		if (!tw.q.mode) tw.q.mode = 'discrete'
 
-		// prefill q.type to enable routing for binary or discrete mode,
-		// not required for q.mode='continuous' | 'spline'
-		if (!tw.q.type) {
+		// fill q.type for binary or discrete mode to enable routing
+		if ((tw.q.mode == 'discrete' || tw.q.mode == 'binary') && !tw.q.type) {
 			if (tw.q.mode == 'binary') tw.q.type = 'custom-bin'
 			else if (tw.q.mode == 'discrete') mayFillQWithPresetBins(tw)
 		}
+
+		// remove q.type for continuous or spline mode
+		if (tw.q.mode == 'continuous' || tw.q.mode == 'spline') delete tw.q.type
 
 		/* 
 			Pre-fill the tw.type, since it's required for ROUTING to the
