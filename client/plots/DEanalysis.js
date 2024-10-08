@@ -452,7 +452,7 @@ add:
 		const addStats = [
 			{
 				label: 'Percentage of significant genes',
-				value: ((num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)).toPrecision(2)
+				value: roundValueAuto((num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes))
 			},
 			{
 				label: 'Number of significant genes',
@@ -633,9 +633,9 @@ function circlemouseover(event, d) {
 	const lst = [
 		{ k: 'gene_name', v: d.gene_name },
 		{ k: 'gene_symbol', v: d.gene_symbol },
-		{ k: 'log fold change', v: d.fold_change.toPrecision(6) },
-		{ k: 'log original p-value', v: d.original_p_value.toPrecision(6) },
-		{ k: 'log adjusted p-value', v: d.adjusted_p_value.toPrecision(6) }
+		{ k: 'log fold change', v: roundValueAuto(d.fold_change) },
+		{ k: 'log original p-value', v: roundValueAuto(d.original_p_value) },
+		{ k: 'log adjusted p-value', v: roundValueAuto(d.adjusted_p_value) }
 	]
 	const table = table2col({ holder: tip.d })
 	for (const item of lst) {

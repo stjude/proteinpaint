@@ -4,6 +4,7 @@ import { newpane, export_data } from '../src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '#filter'
 import { renderTable } from '../dom/table'
 import { rgb } from 'd3-color'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -83,11 +84,7 @@ export default function getHandlers(self) {
 						`<tr>
 							<td style='padding:3px; color:#aaa'>p-value</td>
 							<td style='padding:3px; text-align:center'>${
-								skipped
-									? 'N/A'
-									: pvalue > 1e-4
-									? Number(pvalue.toFixed(4))
-									: Number(pvalue.toPrecision(4)).toExponential()
+								skipped ? 'N/A' : pvalue > 1e-4 ? Number(pvalue.toFixed(4)) : roundValueAuto(Number(pvalue))
 							}</td>
 						</tr>
 						<table style="margin: 5px; text-align:left; font-size: 0.8em; border-spacing: 5px; border-collapse: separate;"

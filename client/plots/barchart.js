@@ -13,6 +13,7 @@ import { renderTable } from '../dom/table'
 import { fillTermWrapper } from '#termsetting'
 import { getColors, mclass, plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 class Barchart {
 	constructor(opts) {
@@ -921,7 +922,7 @@ function setRenderers(self) {
 							? 'N/A'
 							: term2.pvalue > 1e-4
 							? Number(term2.pvalue.toFixed(4))
-							: Number(term2.pvalue.toPrecision(4)).toExponential()
+							: roundValueAuto(Number(term2.pvalue))
 					}
 				])
 			}

@@ -16,8 +16,8 @@ import {
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
 import { searchSampleInput, getSamplesRelated } from './sampleView.js'
-
 import { shapes, shapesArray, shapeSelector } from '../dom/shapes.js'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
@@ -71,7 +71,7 @@ export function setInteractivity(self) {
 		if (samples.length == 0) return
 		const tree = []
 		const showCoords = self.config.term ? true : false
-		const getCoords = sample => `${sample.x.toPrecision(2)},${sample.y.toPrecision(2)}`
+		const getCoords = sample => `${roundValueAuto(sample.x)},${roundValueAuto(sample.y)}`
 		//Building tree
 		for (const sample of samples) {
 			const id = getCoords(sample)
@@ -303,7 +303,7 @@ export function setInteractivity(self) {
 					}
 				}
 			}
-			if (typeof value == 'number' && value % 1 != 0) value = value.toPrecision(2)
+			if (typeof value == 'number' && value % 1 != 0) value = roundValueAuto(value)
 			return value
 		}
 	}
