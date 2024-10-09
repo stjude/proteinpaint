@@ -222,7 +222,7 @@ export function shapeSelector(div, callback, arr = shapesArray, opts = {}) {
 	const size = 20
 	const cols = 8
 	const height = Math.ceil(arr.length / cols) * size
-	div.style('background-color', 'backgroundColor' in opts ? opts.backgroundColor : '#f2f2f2')
+	div.style('background-color', 'backgroundColor' in opts ? opts.backgroundColor : 'white')
 	const svg = div
 		.append('div')
 		.style('padding', '5px')
