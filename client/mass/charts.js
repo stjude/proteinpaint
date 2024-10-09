@@ -326,7 +326,10 @@ function getProfileButtons(self, state) {
 		},
 		{
 			label: 'Radar 2',
-			tooltip: 'Comparison of Site Coordinator and POC Staff Impressions by Module',
+			tooltip:
+				state.activeCohort == 0
+					? 'Comparison of Site Coordinator and POC Staff Impressions by Module'
+					: 'Score based results by PrOFILE module',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
