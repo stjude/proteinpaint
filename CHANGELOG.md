@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- wait for the genelookup request to return before detecting when to display genesearch errors
+
 
 ## 2.79.6
 
