@@ -519,6 +519,7 @@ export function setInteractivity(self) {
 	self.changeShape = async function (key, shape) {
 		const tw = self.config.shapeTW
 		if (!tw.term.values) tw.term.values = {}
+		if (!tw.term.values[key]) tw.term.values[key] = {}
 		tw.term.values[key].shape = shape
 		await self.app.dispatch({
 			type: 'plot_edit',
