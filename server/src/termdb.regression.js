@@ -401,6 +401,7 @@ function makeRinput(q, sampledata) {
 	const Rinput = {
 		regressionType: q.regressionType,
 		binpath: serverconfig.binpath, // for importing regression utilities
+		cachedir: serverconfig.cachedir, // for creating spline plot file
 		data,
 		outcome,
 		independent,
@@ -442,8 +443,8 @@ function makeRvariable_dictionaryTerm(tw, independent, q) {
 			knots: tw.q.knots.map(x => Number(x.value))
 		}
 		if (!q.independent.find(i => i.type == 'snplocus')) {
-			// when there isn't the snplocus variable, can make spline plot
-			thisTerm.spline.plotfile = path.join(serverconfig.cachedir, Math.random().toString() + '.png')
+			// when there isn't a snplocus variable, can make spline plot
+			thisTerm.spline.plot = true
 		}
 	}
 	independent.push(thisTerm)
@@ -764,10 +765,19 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		}
 
 		// plots
-		for (const tw of Rinput.independent) {
-			if (tw.spline && tw.spline.plotfile) {
-				if (!analysisResult.data.splinePlots) analysisResult.data.splinePlots = []
-				const file = tw.spline.plotfile
+		if (data.splinePlotFiles) {
+			if (!analysisResult.data.splinePlots) analysisResult.data.splinePlots = []
+			// univariate plots should appear before multivariate plots
+			data.splinePlotFiles.sort((a, b) => {
+				const file_a = path.basename(a, '.png')
+				const file_b = path.basename(b, '.png')
+				const type_a = file_a.split('_')[1]
+				const type_b = file_b.split('_')[1]
+				if (type_a == 'univariate' && type_b == 'multivariate') return -1
+				if (type_a == 'multivariate' && type_b == 'univariate') return 1
+				else return 0
+			})
+			for (const file of data.splinePlotFiles) {
 				const plot = await fs.promises.readFile(file)
 				analysisResult.data.splinePlots.push({
 					src: 'data:image/png;base64,' + new Buffer.from(plot).toString('base64'),
