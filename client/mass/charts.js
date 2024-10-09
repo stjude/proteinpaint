@@ -346,7 +346,7 @@ function getProfileButtons(self, state) {
 	if (state.activeCohort == 0) {
 		profileButtons.push({
 			label: 'Radar 3',
-			tooltip: 'Comparison of SC and POC Score-based Results by Module',
+			tooltip: () => 'Comparison of SC and POC Score-based Results by Module',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
