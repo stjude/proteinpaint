@@ -111,7 +111,6 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 	if (tdb.logscaleBase2) c.logscaleBase2 = tdb.logscaleBase2
 	if (tdb.useCasesExcluded) c.useCasesExcluded = tdb.useCasesExcluded
 	if (tdb.excludedTermtypeByTarget) c.excludedTermtypeByTarget = tdb.excludedTermtypeByTarget
-	if (tdb.about) c.about = tdb.about
 	if (tdb.survival) c.survival = tdb.survival
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
