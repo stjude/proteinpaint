@@ -297,7 +297,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		let i = 0
 		for (const [category, value] of Object.entries(result.shapeMap)) {
 			if ('shape' in value) continue
-			if (q.shapeTW.term.values?.[value.key]?.shape) value.shape = q.shapeTW.term.values?.[value.key].shape
+			if (q.shapeTW.term.values?.[value.key]?.shape != undefined) value.shape = q.shapeTW.term.values?.[value.key].shape
 			else value.shape = i
 			i++
 		}
