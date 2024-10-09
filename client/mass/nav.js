@@ -270,21 +270,22 @@ function setRenderers(self) {
 			about: self.dom.subheaderDiv.append('div').style('display', 'none').attr('data-testid', 'sjpp-mass-about')
 		})
 		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
-		chartTab.top = massNav?.tabs?.charts?.topLabel || 'CHARTS'
-		groupsTab.top = massNav?.tabs?.groups?.topLabel || 'GROUPS'
-		filterTab.top = massNav?.tabs?.filter?.topLabel || 'FILTER'
+		Object.assign(chartTab, massNav?.tabs?.charts)
+		Object.assign(groupsTab, massNav?.tabs?.groups)
+		Object.assign(filterTab, massNav?.tabs?.filter)
+
 		if (massNav?.tabs?.groups?.hide) self.tabs.splice(1, 1)
 		/** Adds either the COHORT or ABOUT tab */
 		if (appState.termdbConfig?.selectCohort || massNav?.tabs?.about) {
 			const aboutTab = massNav.tabs?.about || {}
-			const topLabel = !aboutTab.topLabel && appState.termdbConfig.selectCohort ? 'COHORT' : aboutTab.topLabel || ''
-			const midLabel = aboutTab.midLabel || (aboutTab ? 'ABOUT' : '')
-			const btmLabel = aboutTab.btmLabel || ''
+			const top = !aboutTab.top && appState.termdbConfig.selectCohort ? 'COHORT' : aboutTab.top || ''
+			const mid = aboutTab.mid || (aboutTab ? 'ABOUT' : '')
+			const btm = aboutTab.btm || ''
 
 			const tab = {
-				top: topLabel.toUpperCase(),
-				mid: midLabel.toUpperCase(),
-				btm: btmLabel,
+				top: top.toUpperCase(),
+				mid: mid.toUpperCase(),
+				btm: btm,
 				subheader: 'about'
 			}
 			const tabIdx = appState.termdbConfig?.selectCohort ? 0 : aboutTab.order || 0
@@ -437,9 +438,9 @@ function setRenderers(self) {
 						return aboutMap[d.key] || ''
 					} else if (customNav?.tabs?.about) {
 						const aboutMap = {
-							top: customNav.tabs.about?.topLabel ? customNav.tabs.about.topLabel.toUpperCase() : this.innerHTML,
-							mid: customNav.tabs.about?.midLabel ? customNav.tabs.about.midLabel.toUpperCase() : 'ABOUT',
-							btm: customNav.tabs.about?.btmLabel || this.innerHTML
+							top: customNav.tabs.about?.top ? customNav.tabs.about.top.toUpperCase() : this.innerHTML,
+							mid: customNav.tabs.about?.mid ? customNav.tabs.about.mid.toUpperCase() : 'ABOUT',
+							btm: customNav.tabs.about?.btm || this.innerHTML
 						}
 						return aboutMap[d.key] || ''
 					} else {

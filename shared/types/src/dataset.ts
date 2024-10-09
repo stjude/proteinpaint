@@ -1103,14 +1103,16 @@ type MassNav = {
 			/** show in a specific order of tabs */
 			order?: number
 			/** label appearing in the top row in upper case */
-			topLabel?: string
+			top?: string
 			/** biggest label appearing in the middle row in upper case */
-			midLabel?: string
+			mid?: string
 			/** label appearing in the bottom row*/
-			btmLabel?: string
+			btm?: string
 			/** if true, does not show the tab */
 			hide?: boolean
-			/** html code */
+			/** html code, specifically for the about tab
+			 * maybe used for other tabs as well.
+			 */
 			html?: string
 		}
 	}
