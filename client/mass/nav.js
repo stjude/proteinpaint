@@ -106,13 +106,14 @@ class TdbNav {
 					massSessionDuration: this.opts.massSessionDuration,
 					sessionDaysLeft: this.app.opts.sessionDaysLeft || null
 				}),
-				about: appState.termdbConfig.about
-					? aboutInit({
-							app: this.app,
-							holder: this.dom.subheader.about,
-							features: appState.termdbConfig.about
-					  })
-					: []
+				about:
+					appState.termdbConfig?.massNav?.tabs?.about && !appState.termdbConfig.massNav.tabs.about.hide
+						? aboutInit({
+								app: this.app,
+								holder: this.dom.subheader.about,
+								features: appState.termdbConfig.massNav.tabs.about
+						  })
+						: []
 			})
 			this.mayShowMessage_sessionDaysLeft()
 		} catch (e) {
@@ -145,10 +146,10 @@ class TdbNav {
 	}
 
 	async main() {
-		if (this.state.termdbConfig.selectCohort && this.state.termdbConfig.about) {
-			console.error('Cohort(s) and an About tab are defined. Only one can be used.')
-			return
-		}
+		// if (this.state.termdbConfig.selectCohort && this.state.termdbConfig?.massNav?.tabs?.about) {
+		// 	console.error('Cohort(s) and an About tab are defined. Only one can be used.')
+		// 	return
+		// }
 		this.dom.tabDiv.style('display', this.state.nav.header_mode === 'with_tabs' ? 'inline-block' : 'none')
 		this.dom.tip.hide()
 		this.activeTab = this.state.nav.activeTab
@@ -166,7 +167,7 @@ class TdbNav {
 		this.cohortsData = await this.app.vocabApi.getCohortsData()
 
 		/** Custom config to show an ABOUT tab */
-		if (this.state.termdbConfig.about) this.about = this.state.termdbConfig.about
+		if (this.state.termdbConfig?.massNav?.tabs?.about) this.about = this.state.termdbConfig.massNav.tabs.about
 
 		if (this.state.nav.header_mode === 'with_tabs') {
 			if (!(this.activeCohortName in this.samplecounts)) {
@@ -191,13 +192,14 @@ export const navInit = getCompInit(TdbNav)
 function setRenderers(self) {
 	self.initUI = appState => {
 		const header = self.opts.holder.append('div').style('white-space', 'nowrap')
+		const massNav = appState.termdbConfig?.massNav || {}
 		let titleDiv = header
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
 			.style('font-size', '1.1em')
 			.style('margin-top', '50px')
-			.text(appState.termdbConfig?.title?.text) //this line will be executed in update UI to reflect cohort changes
+			.text(massNav?.title?.text) //this line will be executed in update UI to reflect cohort changes
 
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
 		const controlsDiv = header
@@ -234,9 +236,9 @@ function setRenderers(self) {
 			self.dom.tabDiv.style('display', 'none')
 			self.dom.recoverDiv.style('display', 'none')
 			titleDiv.style('margin-top', '95px').style('font-size', '0.9em')
-			if (appState.termdbConfig.title?.link)
+			if (massNav?.title?.link)
 				titleDiv
-					.on('click', () => window.open(appState.termdbConfig.title.link, '_blank'))
+					.on('click', () => window.open(massNav.title?.link, '_blank'))
 					.on('mouseover', () => titleDiv.style('cursor', 'pointer'))
 		}
 
@@ -275,19 +277,17 @@ function setRenderers(self) {
 			// For either the COHORT or ABOUT tab
 			about: self.dom.subheaderDiv.append('div').style('display', 'none').attr('data-testid', 'sjpp-mass-about')
 		})
-		if (appState.termdbConfig?.tabs) {
-			chartTab.top = appState.termdbConfig.tabs.charts
-			filterTab.top = appState.termdbConfig.tabs.filter
-		}
 		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
-		if (appState.termdbConfig.hideGroupsTab) self.tabs.splice(1, 1)
+		chartTab.top = massNav?.tabs?.charts?.topLabel || 'CHARTS'
+		groupsTab.top = massNav?.tabs?.groups?.topLabel || 'GROUPS'
+		filterTab.top = massNav?.tabs?.filter?.topLabel || 'FILTER'
+		if (massNav?.tabs?.groups.hide) self.tabs.splice(1, 1)
 		/** Adds either the COHORT or ABOUT tab
 		 * COHORT is added over ABOUT if both are defined
 		 */
-		const cohortTabTop = appState.termdbConfig?.tabs?.cohort || 'COHORT'
-		if (appState.termdbConfig?.selectCohort || appState.termdbConfig?.about) {
-			const aboutTab = appState.termdbConfig?.about?.tab || {}
-			const topLabel = appState.termdbConfig.selectCohort ? cohortTabTop : aboutTab.topLabel || ''
+		if (appState.termdbConfig?.selectCohort || massNav?.tabs?.about) {
+			const aboutTab = massNav.tabs?.about || {}
+			const topLabel = !aboutTab.topLabel && appState.termdbConfig.selectCohort ? 'COHORT' : aboutTab.topLabel || ''
 			const midLabel = aboutTab.midLabel || (aboutTab ? 'ABOUT' : '')
 			const btmLabel = aboutTab.btmLabel || ''
 
@@ -319,7 +319,7 @@ function setRenderers(self) {
 			)
 			.enter()
 			.append('td')
-			// hide the about (e.g. cohort tab) until there is termdbConfig.selectCohort or termdbCongif.about
+			// hide the about (e.g. cohort tab) until there is termdbConfig.selectCohort or termdbCongfig.massNav.tabs.about
 			.style('display', 'none') // d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
 			.style('width', '100px')
 			.style('padding', d => (d.rowNum === 0 ? '12px 12px 3px 12px' : '3px 12px'))
@@ -446,9 +446,9 @@ function setRenderers(self) {
 						return aboutMap[d.key] || ''
 					} else if (self.about) {
 						const aboutMap = {
-							top: self.about?.tab?.topLabel ? self.about.tab.topLabel.toUpperCase() : this.innerHTML,
-							mid: self.about?.tab?.midLabel ? self.about.tab.midLabel.toUpperCase() : 'ABOUT',
-							btm: self.about?.tab?.btmLabel || this.innerHTML
+							top: self.about?.topLabel ? self.about.topLabel.toUpperCase() : this.innerHTML,
+							mid: self.about?.midLabel ? self.about.midLabel.toUpperCase() : 'ABOUT',
+							btm: self.about?.btmLabel || this.innerHTML
 						}
 						return aboutMap[d.key] || ''
 					} else {

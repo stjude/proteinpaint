@@ -990,21 +990,6 @@ type Termdb = {
 	/** in development!
 	 * Supports the About tab in mass UI
 	 */
-	about?: {
-		/** Customization for the tab */
-		tab?: {
-			/** show in a specific order of tabs */
-			order?: number
-			/** label appearing in the top row in upper case */
-			topLabel?: string
-			/** biggest label appearing in the middle row in upper case */
-			midLabel?: string
-			/** label appearing in the bottom row*/
-			btmLabel?: string
-		}
-		/** html code */
-		html: string
-	}
 	hasSampleAncestry?: boolean
 	sampleTypes?: SampleType[]
 
@@ -1086,25 +1071,47 @@ type AssayAvailability = {
 
 //Shared with genome.ts
 export type Cohort = {
-	hideGroupsTab?: boolean
-	tabs?: { [index: string]: string } //Customizes tab top label
-	/** customize the default chart to open on mass ui when there's no charts. if missing it opens dictionary ui */
-	defaultChartType?: string
 	allowedChartTypes?: string[]
-	hiddenChartTypes?: string[]
-	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }
-	mutationset?: MutationSet[]
-	db: FileObj
-	termdb: Termdb
-	scatterplots?: Scatterplots
-	matrixplots?: MatrixPlots
-	/** optional title of this ds, if missing use ds.label. shown on mass nav header. use blank string to not to show a label*/
-	title?: Title
 	cumburden?: {
 		files: {
 			fit: string
 			surv: string
 			sample: string
+		}
+	}
+	db: FileObj
+	/** customize the default chart to open on mass ui when there's no charts. if missing it opens dictionary ui */
+	defaultChartType?: string
+	hiddenChartTypes?: string[]
+	massNav?: MassNav
+	matrixplots?: MatrixPlots
+	mutationset?: MutationSet[]
+	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }
+	scatterplots?: Scatterplots
+	termdb: Termdb
+}
+
+/** Customizations specific to the mass nav component */
+type MassNav = {
+	/** optional title of this ds, if missing use ds.label. shown on mass nav header.
+	 * use blank string to not to show a label*/
+	title?: Title
+	/** Customization for the tabs*/
+	tabs?: {
+		/** about, charts, groups, and fitler */
+		[index: string]: {
+			/** show in a specific order of tabs */
+			order?: number
+			/** label appearing in the top row in upper case */
+			topLabel?: string
+			/** biggest label appearing in the middle row in upper case */
+			midLabel?: string
+			/** label appearing in the bottom row*/
+			btmLabel?: string
+			/** if true, does not show the tab */
+			hide?: boolean
+			/** html code */
+			html?: string
 		}
 	}
 }
