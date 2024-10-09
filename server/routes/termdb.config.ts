@@ -92,6 +92,7 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 		urlTemplates: tdb.urlTemplates,
 		title: 'title' in ds.cohort ? ds.cohort.title : { text: ds.label },
 		hideGroupsTab: ds.cohort.hideGroupsTab,
+		tabs: ds.cohort.tabs,
 		tracks: tdb.tracks,
 		sampleTypes: ds.cohort.termdb.sampleTypes,
 		hasSampleAncestry: ds.cohort.termdb.hasSampleAncestry,

@@ -197,7 +197,7 @@ function setRenderers(self) {
 			.style('float', 'right')
 			.style('font-size', '1.1em')
 			.style('margin-top', '50px')
-		//.text(appState.termdbConfig?.title?.text || cohort) //this line will be executed in update UI to reflect cohort changes
+			.text(appState.termdbConfig?.title?.text) //this line will be executed in update UI to reflect cohort changes
 
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
 		const controlsDiv = header
@@ -275,15 +275,19 @@ function setRenderers(self) {
 			// For either the COHORT or ABOUT tab
 			about: self.dom.subheaderDiv.append('div').style('display', 'none').attr('data-testid', 'sjpp-mass-about')
 		})
-
+		if (appState.termdbConfig?.tabs) {
+			chartTab.top = appState.termdbConfig.tabs.charts
+			filterTab.top = appState.termdbConfig.tabs.filter
+		}
 		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
 		if (appState.termdbConfig.hideGroupsTab) self.tabs.splice(1, 1)
 		/** Adds either the COHORT or ABOUT tab
 		 * COHORT is added over ABOUT if both are defined
 		 */
+		const cohortTabTop = appState.termdbConfig?.tabs?.cohort || 'COHORT'
 		if (appState.termdbConfig?.selectCohort || appState.termdbConfig?.about) {
 			const aboutTab = appState.termdbConfig?.about?.tab || {}
-			const topLabel = appState.termdbConfig.selectCohort ? 'COHORT' : aboutTab.topLabel || ''
+			const topLabel = appState.termdbConfig.selectCohort ? cohortTabTop : aboutTab.topLabel || ''
 			const midLabel = aboutTab.midLabel || (aboutTab ? 'ABOUT' : '')
 			const btmLabel = aboutTab.btmLabel || ''
 
@@ -391,9 +395,6 @@ function setRenderers(self) {
 	}
 
 	self.updateUI = async (toggleSubheaderdiv = false) => {
-		const state = self.state
-		const cohort = getActiveCohortStr(state)
-		self.dom.titleDiv.text(state.termdbConfig?.title?.text || cohort)
 		if (!self.dom.subheaderDiv) return
 		if (self.activeTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
 			// showing charts or filter tab; cohort selection is enabled but no cohort is selected

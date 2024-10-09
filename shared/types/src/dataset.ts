@@ -1087,6 +1087,7 @@ type AssayAvailability = {
 //Shared with genome.ts
 export type Cohort = {
 	hideGroupsTab?: boolean
+	tabs?: { [index: string]: string } //Customizes tab top label
 	/** customize the default chart to open on mass ui when there's no charts. if missing it opens dictionary ui */
 	defaultChartType?: string
 	allowedChartTypes?: string[]
