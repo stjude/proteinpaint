@@ -311,7 +311,7 @@ function getProfileButtons(self, state) {
 		},
 		{
 			label: 'Radar 1',
-			tooltip: 'Radar 1-Score-based(Site)',
+			tooltip: () => 'Comparison of Institutional and Aggregated Score-based Results by Module',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
@@ -326,7 +326,7 @@ function getProfileButtons(self, state) {
 		},
 		{
 			label: 'Radar 2',
-			tooltip:
+			tooltip: state =>
 				state.activeCohort == 0
 					? 'Comparison of Site Coordinator and POC Staff Impressions by Module'
 					: 'Score based results by PrOFILE module',
@@ -381,7 +381,7 @@ function setRenderers(self) {
 				chart.clickTo(chart)
 			})
 			.on('mouseover', (e, d) => {
-				if (d.tooltip) self.dom.tooltip.clear().showunder(e.target).d.text(d.tooltip)
+				if (d.tooltip) self.dom.tooltip.clear().showunder(e.target).d.text(d.tooltip(self.state))
 			})
 	}
 
