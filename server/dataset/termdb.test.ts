@@ -29,17 +29,21 @@ export default {
 	isMds3: true,
 	cohort: {
 		massNav: {
-			title: { text: '' } //it will show cohorts instead
-			// tabs: {
-			// 	about: {
-			// 		hide: true,
-			// 		order: 4,
-			// 		topLabel: 'test',
-			// 		midLabel: 'test about',
-			// 		btmLabel: 'test',
-			// 		html: 'Test'
-			// 	}
-			// }
+			title: { text: '' }, //it will show cohorts instead
+			tabs: {
+				// about: {
+				// 	hide: true,
+				// 	order: 4,
+				// 	top: 'test',
+				// 	mid: 'test about',
+				// 	btm: 'test',
+				// 	html: 'Test'
+				// },
+				// charts: {
+				// 	top: 'test charts',
+				// 	mid: 'mid test'
+				// }
+			}
 		},
 		db: {
 			file: 'files/hg38/TermdbTest/db'
