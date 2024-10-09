@@ -903,6 +903,7 @@ function createLegendTipMenu(opts, tk, elem) {
 					.style('border-radius', '5px')
 					.on('click', () => {
 						div.classed('sja_menuoption', false)
+						div.style('background-color', 'white')
 						if (called == false) {
 							called = true
 							renderShapePicker({
