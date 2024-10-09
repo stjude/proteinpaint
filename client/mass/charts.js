@@ -13,7 +13,8 @@ class MassCharts {
 	async init(appState) {
 		this.dom = {
 			holder: this.opts.holder,
-			tip: new Menu({ padding: '0px' })
+			tip: new Menu({ padding: '0px' }),
+			tooltip: new Menu({ padding: '4px' })
 		}
 		this.makeButtons(appState)
 	}
@@ -58,7 +59,7 @@ class MassCharts {
 
 	displayProfileButtons() {
 		this.dom.btns.style('display', d =>
-			d.label === 'Radar 3-Score-based(SC & POC)s'
+			d.label === 'Radar 3'
 				? this.state.activeCohort == 0
 					? ''
 					: 'none'
@@ -309,7 +310,8 @@ function getProfileButtons(self, state) {
 			chartType: 'profileBarchart'
 		},
 		{
-			label: 'Radar 1-Score-based(Site)',
+			label: 'Radar 1',
+			tooltip: 'Radar 1-Score-based(Site)',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
@@ -323,7 +325,8 @@ function getProfileButtons(self, state) {
 			chartType: 'profileRadarFacility'
 		},
 		{
-			label: 'Radar 2-Impressions',
+			label: 'Radar 2',
+			tooltip: 'Radar 2-Impressions',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
@@ -339,7 +342,8 @@ function getProfileButtons(self, state) {
 	]
 	if (state.activeCohort == 0) {
 		profileButtons.push({
-			label: 'Radar 3-Score-based(SC & POC)s',
+			label: 'Radar 3',
+			tooltip: 'Radar 3-Score-based(SC & POC)s',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
@@ -372,6 +376,9 @@ function setRenderers(self) {
 			.on('click', function (event, chart) {
 				self.dom.tip.clear().showunder(this)
 				chart.clickTo(chart)
+			})
+			.on('mouseover', (e, d) => {
+				if (d.tooltip) self.dom.tooltip.clear().showunder(e.target).d.text(d.tooltip)
 			})
 	}
 
