@@ -1,1 +1,2 @@
-
+Fixes:
+- wait for the genelookup request to return before detecting when to display genesearch errors

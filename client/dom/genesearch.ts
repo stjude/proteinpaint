@@ -167,11 +167,15 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		.attr('class', 'sja_genesearchinput')
 		.style('width', width + 'px')
 	result.searchbox = searchbox
+
+	let lookupWait, currLookupValue
+
 	searchbox
 		.on('focus', event => {
 			event.target.select()
 		})
 		.on('keyup', async event => {
+			if (lookupWait) clearInterval(lookupWait)
 			const input = event.target
 			const v = input.value.trim()
 
@@ -202,8 +206,15 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				input.blur()
 				tip.hide()
 
-				// delay for debounceDelay time, so that debounce fucntion could be executed after keyupEnter and before getResult.
-				await new Promise(resolve => setTimeout(resolve, debounceDelay))
+				// clear the currLookupValue on pressing Enter, until the /genelookup request sets that value
+				currLookupValue = ''
+				await new Promise(resolve => {
+					// set the interval for checking when the latest /genelookup request has a response
+					lookupWait = setInterval(() => {
+						// only resolve when the latest genelookup was performed for the current input string value
+						if (currLookupValue) resolve(null)
+					}, debounceDelay)
+				})
 
 				// try to parse as gene
 				// get first gene match from menu
@@ -313,6 +324,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		// see if input is gene
 		if (arg?.searchOnly != 'snp') {
 			const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: v } })
+			currLookupValue = v
 			if (gene.error) throw gene.error
 			if (gene.hits?.length) {
 				tip.d
