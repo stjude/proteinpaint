@@ -106,14 +106,13 @@ class TdbNav {
 					massSessionDuration: this.opts.massSessionDuration,
 					sessionDaysLeft: this.app.opts.sessionDaysLeft || null
 				}),
-				about:
-					appState.termdbConfig?.massNav?.tabs?.about && !appState.termdbConfig.massNav.tabs.about.hide
-						? aboutInit({
-								app: this.app,
-								holder: this.dom.subheader.about,
-								features: appState.termdbConfig.massNav.tabs.about
-						  })
-						: []
+				about: appState.termdbConfig?.massNav?.tabs?.about
+					? aboutInit({
+							app: this.app,
+							holder: this.dom.subheader.about,
+							features: appState.termdbConfig.massNav.tabs.about
+					  })
+					: []
 			})
 			this.mayShowMessage_sessionDaysLeft()
 		} catch (e) {
@@ -146,10 +145,6 @@ class TdbNav {
 	}
 
 	async main() {
-		// if (this.state.termdbConfig.selectCohort && this.state.termdbConfig?.massNav?.tabs?.about) {
-		// 	console.error('Cohort(s) and an About tab are defined. Only one can be used.')
-		// 	return
-		// }
 		this.dom.tabDiv.style('display', this.state.nav.header_mode === 'with_tabs' ? 'inline-block' : 'none')
 		this.dom.tip.hide()
 		this.activeTab = this.state.nav.activeTab
@@ -165,9 +160,6 @@ class TdbNav {
 		this.filterJSON = JSON.stringify(this.state.filter)
 
 		this.cohortsData = await this.app.vocabApi.getCohortsData()
-
-		/** Custom config to show an ABOUT tab */
-		if (this.state.termdbConfig?.massNav?.tabs?.about) this.about = this.state.termdbConfig.massNav.tabs.about
 
 		if (this.state.nav.header_mode === 'with_tabs') {
 			if (!(this.activeCohortName in this.samplecounts)) {
@@ -281,10 +273,8 @@ function setRenderers(self) {
 		chartTab.top = massNav?.tabs?.charts?.topLabel || 'CHARTS'
 		groupsTab.top = massNav?.tabs?.groups?.topLabel || 'GROUPS'
 		filterTab.top = massNav?.tabs?.filter?.topLabel || 'FILTER'
-		if (massNav?.tabs?.groups.hide) self.tabs.splice(1, 1)
-		/** Adds either the COHORT or ABOUT tab
-		 * COHORT is added over ABOUT if both are defined
-		 */
+		if (massNav?.tabs?.groups?.hide) self.tabs.splice(1, 1)
+		/** Adds either the COHORT or ABOUT tab */
 		if (appState.termdbConfig?.selectCohort || massNav?.tabs?.about) {
 			const aboutTab = massNav.tabs?.about || {}
 			const topLabel = !aboutTab.topLabel && appState.termdbConfig.selectCohort ? 'COHORT' : aboutTab.topLabel || ''
@@ -410,6 +400,7 @@ function setRenderers(self) {
 			if (self.dom.messageDiv) self.dom.messageDiv.style('display', 'none')
 		}
 		const selectCohort = self.state.termdbConfig.selectCohort
+		const customNav = self.state.termdbConfig.massNav
 		self.dom.searchDiv.style(
 			'display',
 			(selectCohort && self.activeCohort == -1) || self.state.nav.header_mode == 'only_buttons'
@@ -444,11 +435,11 @@ function setRenderers(self) {
 							btm: self.samplecounts[self.activeCohortName]
 						}
 						return aboutMap[d.key] || ''
-					} else if (self.about) {
+					} else if (customNav?.tabs?.about) {
 						const aboutMap = {
-							top: self.about?.topLabel ? self.about.topLabel.toUpperCase() : this.innerHTML,
-							mid: self.about?.midLabel ? self.about.midLabel.toUpperCase() : 'ABOUT',
-							btm: self.about?.btmLabel || this.innerHTML
+							top: customNav.tabs.about?.topLabel ? customNav.tabs.about.topLabel.toUpperCase() : this.innerHTML,
+							mid: customNav.tabs.about?.midLabel ? customNav.tabs.about.midLabel.toUpperCase() : 'ABOUT',
+							btm: customNav.tabs.about?.btmLabel || this.innerHTML
 						}
 						return aboutMap[d.key] || ''
 					} else {
