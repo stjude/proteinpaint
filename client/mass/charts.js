@@ -283,7 +283,7 @@ function getChartTypeList(self, state) {
 function getProfileButtons(self, state) {
 	const profileButtons = [
 		{
-			label: 'Profile Polar',
+			label: 'Polar',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
@@ -296,7 +296,7 @@ function getProfileButtons(self, state) {
 			chartType: 'profilePolar'
 		},
 		{
-			label: 'Profile Barchart',
+			label: 'Barchart',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
