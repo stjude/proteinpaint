@@ -326,7 +326,7 @@ function getProfileButtons(self, state) {
 		},
 		{
 			label: 'Radar 2',
-			tooltip: 'Radar 2-Impressions',
+			tooltip: 'Comparison of Site Coordinator and POC Staff Impressions by Module',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
@@ -343,7 +343,7 @@ function getProfileButtons(self, state) {
 	if (state.activeCohort == 0) {
 		profileButtons.push({
 			label: 'Radar 3',
-			tooltip: 'Radar 3-Score-based(SC & POC)s',
+			tooltip: 'Comparison of SC and POC Score-based Results by Module',
 			clickTo: () =>
 				self.app.dispatch({
 					type: 'plot_create',
