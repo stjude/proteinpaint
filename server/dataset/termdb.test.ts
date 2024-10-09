@@ -28,8 +28,19 @@ copyDataFilesFromRepo2Tp()
 export default {
 	isMds3: true,
 	cohort: {
-		title: { text: '' }, //it will show cohorts instead
-
+		massNav: {
+			title: { text: '' } //it will show cohorts instead
+			// tabs: {
+			// 	about: {
+			// 		hide: true,
+			// 		order: 4,
+			// 		topLabel: 'test',
+			// 		midLabel: 'test about',
+			// 		btmLabel: 'test',
+			// 		html: 'Test'
+			// 	}
+			// }
+		},
 		db: {
 			file: 'files/hg38/TermdbTest/db'
 		},
@@ -112,15 +123,6 @@ export default {
 				}
 			},
 			termid2totalsize2: {}
-			// about: {
-			// 	tab: {
-			// 		order: 4,
-			// 		topLabel: 'test',
-			// 		midLabel: 'test about',
-			// 		btmLabel: 'test'
-			// 	},
-			// 	html: 'Test'
-			// }
 		},
 		scatterplots: {
 			plots: [
