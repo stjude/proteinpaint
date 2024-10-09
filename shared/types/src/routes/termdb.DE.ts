@@ -20,6 +20,8 @@ export type ExpressionInput = {
 	case: string
 	/** Control samples separated by , */
 	control: string
+	/** data_type instructs rust to carry out differential gene expression analysis */
+	data_type: 'do_DE'
 	/** File containing raw gene counts for DE analysis */
 	input_file: string
 	/** Relative cpm cutoff for filtering a gene compared to all samples and genes in dataset */
