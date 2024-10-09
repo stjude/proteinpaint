@@ -154,11 +154,23 @@ buildFormulas <- function(outcome, independent, includeUnivariate) {
       # include univariate formulas along with the multivariate formula
       if (length(formula_independent) < 2) stop("must have multiple covariates to build multivariate and univariate formulas")
       if (length(formula_interaction) > 0) stop("interactions not supported in univariate models")
+      # multivariate formula
       formula <- as.formula(paste(formula_outcome, paste(formula_independent, collapse = "+"), sep = "~"))
       formulas[[1]] <- list("id" = "", "type" = "multivariate", "formula" = formula)
+      if (nrow(splineVariables) > 0) {
+        formulas[[1]][["splineVariables"]] = splineVariables
+      }
+      # univariate formulas
       for (var in formula_independent) {
         formula <- as.formula(paste(formula_outcome, var, sep = "~"))
-        formulas[[length(formulas) + 1]] <- list("id" = "", "type" = "univariate", "formula" = formula)
+        entry <- length(formulas) + 1
+        formulas[[entry]] <- list("id" = "", "type" = "univariate", "formula" = formula)
+        if (startsWith(var, "cubic_spline")) {
+          id <- gsub("cubic_spline\\(", "", gsub("\\,.*", "", var))
+          splineVariable <- splineVariables[splineVariables$id == id, ,drop = F]
+          if (nrow(splineVariable) == 0) stop("expected spline variable")
+          formulas[[entry]][["splineVariables"]] = splineVariable
+        }
       }
     } else {
       # use single formula for all variables
@@ -411,7 +423,7 @@ coxRegression <- function(formula, dat) {
 }
 
 # run regression analysis
-runRegression <- function(formula, regtype, dat, outcome) {
+runRegression <- function(formula, regtype, dat, outcome, cachedir) {
   # remove samples with NA values in any variable in the formula
   # NOTE: even though regression functions (e.g. lm, glm, etc.)
   # perform this filtration by default, this filtration
@@ -438,14 +450,14 @@ runRegression <- function(formula, regtype, dat, outcome) {
   }
   if ("splineVariables" %in% names(formula)) {
     # spline variables present
-    # plot cubic spline for each spline variable
-    # do not plot if variable is missing plot file (to hide plot
-    # when snplocus terms are present)
+    # plot cubic spline for each spline variable (if applicable)
+    results$splinePlotFiles <- vector(mode = "character")
     splineVariables <- formula$splineVariables
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
-      if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, fdat, outcome, results$res, regtype)
+      if (isTRUE(splineVariable$spline$plot)) {
+        spline_plot_file <- plot_spline(splineVariable, fdat, outcome, results$res, regtype, formula$type, cachedir)
+        results$splinePlotFiles <- c(results$splinePlotFiles, spline_plot_file)
       }
     }
   }
@@ -457,8 +469,8 @@ runRegression <- function(formula, regtype, dat, outcome) {
   return(out)
 }
 
-# generate cubic spline plot spline
-plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
+# generate cubic spline plot
+plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype, cachedir) {
   # prepare test data table for predicting model outcome values
   # columns are all independent variables
   # for the spline variable, use regularly spaced data; for continuous variables, use data median; for categorical variables, use reference category
@@ -503,9 +515,9 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
   preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod), na.rm = T)
   
   # plot data
-  plotfile <- splineVariable$spline$plotfile
+  plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".png")
   png(filename = plotfile, width = 950, height = 550, res = 200)
-  par(mar = c(3, 2.5, 1, 5), mgp = c(1, 0.5, 0), xpd = T)
+  par(mar = c(3, 2.5, 2, 5), mgp = c(1, 0.5, 0), xpd = T)
   if (regtype == "linear" | regtype == "logistic") {
     if (regtype == "linear") {
       # for linear, plot predicted values
@@ -559,7 +571,12 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
     stop("unrecognized regression type")
   }
   
-  # axis titles
+  # titles
+  if (is.null(formulatype)) title <- NULL
+  else if (formulatype == "univariate") title <- "Univariate"
+  else if (formulatype == "multivariate") title <- "Multivariable-adjusted"
+  else stop("unexpected formula type")
+  title(main = title, cex.main = 0.75)
   title(xlab = splineVariable$name,
         ylab = ylab,
         line = 1.5,
@@ -609,6 +626,15 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
          border = c(NA, NA, NA)
   )
   dev.off()
+  return(plotfile)
+}
+
+createRandString <- function() {
+  digits = 0:9
+  v = c(sample(LETTERS, 4, replace = TRUE),
+        sample(digits, 4, replace = TRUE),
+        sample(LETTERS, 1, replace = TRUE))
+  return(paste0(v, collapse = ""))
 }
 
 # build coefficients table
@@ -738,10 +764,11 @@ formatType3 <- function(type3_table) {
 
 # parse results from univariate and multivariate analyses
 parseUniMultiResults <- function(reg_results, regtype) {
-  # get coefficients from the univariate and multivariate analyses
   multiCoefficients <- NULL
   uniCoefficients <- NULL
+  splinePlotFiles <- NULL
   for (res in reg_results) {
+    # parse coefficients
     coefs <- res$data$coefficients$rows
     # remove intercept row because cannot merge together intercepts
     # from different univariate analyses
@@ -757,6 +784,8 @@ parseUniMultiResults <- function(reg_results, regtype) {
     } else {
       stop ("results type not recognized")
     }
+    # parse spline plots
+    splinePlotFiles <- c(splinePlotFiles, res$data$splinePlotFiles)
   }
   # prepare separate univariate and multivariate coefficients tables
   uniCoefficients_table <- list("header" = colnames(uniCoefficients), "rows" = uniCoefficients)
@@ -765,5 +794,6 @@ parseUniMultiResults <- function(reg_results, regtype) {
   reg_results_parsed <- list()
   reg_results_parsed[[1]] <- list("id" = res$id, "data" = list("sampleSize" = res$data$sampleSize, "coefficients_uni" = uniCoefficients_table, "coefficients_multi" = multiCoefficients_table))
   if (regtype == "cox") reg_results_parsed[[1]]$data$eventCnt = res$data$eventCnt
+  if (!is.null(splinePlotFiles)) reg_results_parsed[[1]]$data$splinePlotFiles = splinePlotFiles
   return(reg_results_parsed)
 }
