@@ -128,8 +128,9 @@ insertion
     parse to chr5.171410539.-.TCTG
 */
 
+export const debounceDelay = 500
+
 export function addGeneSearchbox(arg: GeneSearchBoxArg) {
-	const debounceDelay = 500
 	const tip = arg.tip,
 		row = arg.row
 	const result: Result = {}
@@ -168,14 +169,11 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		.style('width', width + 'px')
 	result.searchbox = searchbox
 
-	let lookupWait, currLookupValue
-
 	searchbox
 		.on('focus', event => {
 			event.target.select()
 		})
 		.on('keyup', async event => {
-			if (lookupWait) clearInterval(lookupWait)
 			const input = event.target
 			const v = input.value.trim()
 
@@ -206,15 +204,12 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				input.blur()
 				tip.hide()
 
-				// clear the currLookupValue on pressing Enter, until the /genelookup request sets that value
-				currLookupValue = ''
-				await new Promise(resolve => {
-					// set the interval for checking when the latest /genelookup request has a response
-					lookupWait = setInterval(() => {
-						// only resolve when the latest genelookup was performed for the current input string value
-						if (currLookupValue) resolve(null)
-					}, debounceDelay)
-				})
+				// this call may repeat the last debounced checkInput using debouncer(),
+				// but it's safer to call it again in case the Enter key was pressed after the debounceDelay
+				// to ensure that the applicable /genelookup has finished before detecting/displaying errors.
+				// In contrast, the previous Promise + setInterval + resolve detection is not reliable,
+				// because there might not be a pending checkInput() call to reset the emptied currLookupValue.
+				await checkInput()
 
 				// try to parse as gene
 				// get first gene match from menu
@@ -324,7 +319,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		// see if input is gene
 		if (arg?.searchOnly != 'snp') {
 			const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: v } })
-			currLookupValue = v
 			if (gene.error) throw gene.error
 			if (gene.hits?.length) {
 				tip.d
@@ -508,7 +502,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		searchStat.word.text(fromWhat || '')
 
 		// fromWhat is the original search string. pass it to caller as extra piece of info
-		// useful when user enters isoform accession and matches to genesymbol, and wants to be able to refer back to which isoform was entered
+		// useful when user enters isoform accession and matches to genesymbol,
+		// and wants to be able to refer back to which isoform was entered
 		result.fromWhat = fromWhat
 
 		if (r && arg.callback) {
@@ -517,9 +512,13 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		}
 	}
 
-	if (arg.geneSymbol) {
-		searchbox.property('value', arg.geneSymbol)
-		setTimeout(() => getResult({ geneSymbol: arg.geneSymbol }, arg.geneSymbol!), 10)
+	// need to capture arg.geneSymbol into another variable,
+	// to pass type check and to have it is a "static" value when the timeout callback is called,
+	// since using arg.geneSymbol directly is not guaranteed to have the same value after the timeout
+	const geneSymbol = arg.geneSymbol || ''
+	if (geneSymbol) {
+		searchbox.property('value', geneSymbol)
+		setTimeout(() => getResult({ geneSymbol: arg.geneSymbol }, geneSymbol), 10)
 	}
 
 	return result //searchbox
