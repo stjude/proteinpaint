@@ -94,7 +94,7 @@ tape('searchOnly=gene', async test => {
 		}
 	})
 
-	test.equal(matchingResults.length, 2, `should display 2 matching results`)
+	test.equal(matchingResults.length, 1, `should display 1 matching results`)
 
 	// simulate an immediate Enter keypress
 	await detectLst({
@@ -123,7 +123,7 @@ tape('searchOnly=gene', async test => {
 		`should have green checkmark after an immediate Enter`
 	)
 
-	searchInput.value = 'KRASP1'
+	searchInput.value = 'KRAS'
 
 	const matchingResults2 = await detectGte({
 		elem: tip.d.node(),
