@@ -72,7 +72,7 @@
             "buttons":[
                 {
                     "name": "Custom Data Documentation",
-                    "link": "https://docs.google.com/document/d/1k50EWReR3jmJ1-Y1_jACaPkHTA65k6vLe5b-UbMgK1A/edit#heading=h.wi6hqrtn3tuq"
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#tkskewermodes"
                 }
             ]
         },
@@ -179,13 +179,13 @@
             "buttons":[
                 {
                     "name": "Custom Data Documentation",
-                    "link": "https://docs.google.com/document/d/1k50EWReR3jmJ1-Y1_jACaPkHTA65k6vLe5b-UbMgK1A/edit#heading=h.wi6hqrtn3tuq"
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#tkskewermodes"
                 }
             ]
         },
         {
             "label": "Data Point Shapes (Differential Phosphorylation)",
-            "message": "Add additional detail to lollipops by specifying the data point shape. Available shapes are: a 'filledCircle' (default), 'filledTriangle', and 'emptyCircle'. With the <span style='font-family: Courier; opacity: 0.6;'>variantShapeName</span> object, the count and additional details appears in the legend for each shape. ",
+            "message": "Add additional detail to lollipops by specifying the data point shape. Available shapes are described in <a href='https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#mshape' target='__blank' >the lollipop wiki page</a>. With the <span style='font-family: Courier; opacity: 0.6;'>.legend.customShapeLabels</span> object, the count and additional details appears in the legend for each shape.",
             "runargs": {
                 "nobox": 1,
                 "noheader": 1,
@@ -289,7 +289,7 @@
             "buttons":[
                 {
                     "name":"Data Point Shape Documentation",
-                    "link": "https://docs.google.com/document/d/1k50EWReR3jmJ1-Y1_jACaPkHTA65k6vLe5b-UbMgK1A/edit#heading=h.40171yws7duw"
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#mshape"
                 }
             ],
             "testSpec": {
