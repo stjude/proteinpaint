@@ -517,7 +517,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   # plot data
   plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".png")
   png(filename = plotfile, width = 950, height = 550, res = 200)
-  par(mar = c(3, 2.5, 2, 5), mgp = c(1, 0.5, 0), xpd = T)
+  par(mar = c(3, 2.5, 1, 5) + 0.1, mgp = c(0.5, 0.5, 0), xpd = T)
   if (regtype == "linear" | regtype == "logistic") {
     if (regtype == "linear") {
       # for linear, plot predicted values
@@ -576,7 +576,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   else if (formulatype == "univariate") title <- "Univariate"
   else if (formulatype == "multivariate") title <- "Multivariable-adjusted"
   else stop("unexpected formula type")
-  title(main = title, cex.main = 0.75)
+  title(main = title, cex.main = 0.6)
   title(xlab = splineVariable$name,
         ylab = ylab,
         line = 1.5,
