@@ -568,6 +568,7 @@ function setRenderers(self) {
 					.style('margin-left', '0px')
 					.on('click', async () => {
 						const state = self.app.getState()
+						console.log(state)
 						//the terms used in the plots are not always the same for the profile.
 						//Therefore when switching cohorts, it is necessary to delete the plots opened
 						if (state.vocab.dslabel == 'profile')
@@ -578,6 +579,15 @@ function setRenderers(self) {
 								})
 							}
 						self.app.dispatch({ type: 'cohort_set', activeCohort: i })
+						self.app.dispatch({
+							type: 'filter_replace',
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: []
+							}
+						})
 					})
 
 				td0
