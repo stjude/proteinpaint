@@ -624,8 +624,8 @@ function setInteractivity(self) {
 		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
 		const chartsIdx = self.subheaderKeys.indexOf('charts')
 		if (self.activeTab == chartsIdx && self.activeCohort != -1 && !self.state.plots.length) {
-			// show dictionary or default plot in charts tab if no other
-			// plots have been created
+			//show dictionary or default plot in charts tab if no other
+			//plots have been created
 			const defaultChartType = self.state.termdbConfig.defaultChartType || 'dictionary'
 			self.app.dispatch({
 				type: 'plot_create',

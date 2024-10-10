@@ -9,13 +9,14 @@ import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePl
 class profileRadarFacility extends profilePlot {
 	constructor() {
 		super()
-		this.type = 'profileRadarFacility'
 		this.radius = 250
+		this.type = 'profileRadarFacility'
 	}
 
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
+		this.type = config.chartType
 		this.plotConfig = config[config.plot]
 		this.twLst = []
 		this.terms = config[config.plot].terms
@@ -29,6 +30,7 @@ class profileRadarFacility extends profilePlot {
 	}
 
 	async main() {
+		console.log(this.state.config)
 		await super.main()
 
 		await this.setControls()
@@ -285,7 +287,7 @@ export async function getPlotConfig(opts, app) {
 		const settings = getDefaultProfilePlotSettings()
 
 		config.settings = {
-			profileRadarFacility: settings,
+			[opts.chartType]: settings,
 			controls: { isOpen: false }
 		}
 		const terms = config[opts.plot].terms

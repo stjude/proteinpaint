@@ -90,7 +90,15 @@ function helpBtnInit(opts) {
 	icon_functions['help'](infoDiv, { handler: opts.callback, title: 'Documentation' })
 
 	const self = {
-		plotTypes: ['profilePolar', 'profileBarchart', 'profileRadar', 'profileRadarFacility'],
+		plotTypes: [
+			'profilePolar',
+			'profileBarchart',
+			'FullProfileRadarFacility1',
+			'FullProfileRadar2',
+			'FullProfileRadar3',
+			'AbbrevProfileRadarFacility1',
+			'AbbrevProfileRadar2'
+		],
 		dom: {
 			btn: infoDiv
 		}

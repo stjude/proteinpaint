@@ -528,6 +528,12 @@ export function server_init_db_queries(ds) {
 				supportedChartTypes[cohort] = supportedChartTypes[cohort].filter(c => ds.cohort.allowedChartTypes.includes(c))
 			}
 		}
+		//Profile case is the only one adding this property as of now, all the allowed chart types per cohort are the supported chart types
+		if (ds.cohort.allowedChartTypesByCohort) {
+			for (const cohort in supportedChartTypes) {
+				supportedChartTypes[cohort] = ds.cohort.allowedChartTypesByCohort[cohort]
+			}
+		}
 
 		// determine eligible chart types based on optional genomic queries
 		if (ds.queries) {
@@ -556,7 +562,7 @@ export function server_init_db_queries(ds) {
 				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('singleCellPlot')
 			}
 		}
-
+		console.log(supportedChartTypes)
 		return supportedChartTypes
 	}
 

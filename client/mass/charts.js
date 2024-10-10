@@ -44,29 +44,17 @@ class MassCharts {
 		) {
 			// force to show a dictionary chart button
 			// TODO: may want the server to decide this, and as defined for a dataset
-			if (state.vocab.dslabel == 'profile') state.supportedChartTypes.push(...appState.termdbConfig.allowedChartTypes)
 			state.supportedChartTypes.push('dictionary')
 			state.supportedChartTypes.push('facet') //any dataset should support facet
 		}
+		console.log(state.supportedChartTypes)
 		return state
 	}
 
 	main() {
 		//this.dom.holder.style('display', 'block')
-		if (this.state.vocab.dslabel == 'profile') this.displayProfileButtons()
-		else this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
-	}
-
-	displayProfileButtons() {
-		this.dom.btns.style('display', d =>
-			d.label === 'Radar 3'
-				? this.state.activeCohort == 0
-					? ''
-					: 'none'
-				: this.state.supportedChartTypes.includes(d.chartType)
-				? ''
-				: 'none'
-		)
+		console.log(this.dom.btns, this.state.supportedChartTypes)
+		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 }
 
@@ -134,6 +122,113 @@ function getChartTypeList(self, state) {
 		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
 	*/
 	const buttons = [
+		/////////////////////These plots are supported only by the PrOFILE dataset/////////////////////////
+
+		{
+			label: 'Polar',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'profilePolar',
+						header: 'Polar Graph',
+						logged: true
+					}
+				}),
+			chartType: 'profilePolar'
+		},
+		{
+			label: 'Barchart',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'profileBarchart',
+						header: 'Barchart Graph',
+						logged: true
+					}
+				}),
+			chartType: 'profileBarchart'
+		},
+		{
+			label: 'Radar 1',
+			tooltip: () => 'Comparison of Institutional and Aggregated Score-based Results by Module',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'FullRadarFacility1',
+						baseType: 'profileRadarFacility',
+						plot: 'plot1',
+						header: 'Radar 1-Score-based(Site)',
+						logged: true
+					}
+				}),
+			chartType: 'FullRadarFacility1'
+		},
+		{
+			label: 'Radar 2',
+			tooltip: () => 'Comparison of Site Coordinator and POC Staff Impressions by Module',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'FullRadar2',
+						plot: 'plot1',
+						header: 'Radar 2-Impressions',
+						logged: true
+					}
+				}),
+			chartType: 'FullRadar2'
+		},
+		{
+			label: 'Radar 3',
+			tooltip: () => 'Comparison of SC and POC Score-based Results by Module',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'FullRadar3',
+						plot: 'plot2',
+						header: 'Radar 3-Score-based(SC & POC)',
+						logged: true
+					}
+				}),
+			chartType: 'FullRadar3'
+		},
+
+		{
+			label: 'Radar 1',
+			tooltip: () => 'Comparison of Institutional and Aggregated Score-based Results by Module',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'AbbrevRadarFacility1',
+						plot: 'plot1',
+						header: 'Radar 1-Score-based(Site)',
+						logged: true
+					}
+				}),
+			chartType: 'AbbrevRadarFacility1'
+		},
+		{
+			label: 'Radar 2',
+			tooltip: () => 'Score based results by PrOFILE module',
+			clickTo: () =>
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'AbbrevRadar2',
+						plot: 'plot1',
+						header: 'Radar 2-Impressions',
+						logged: true
+					}
+				}),
+			chartType: 'AbbrevRadar2'
+		},
+
+		////////////////Finished profile plots section////////////////////
 		{
 			label: 'Data Dictionary',
 			clickTo: self.prepPlot,
@@ -268,10 +363,7 @@ function getChartTypeList(self, state) {
 			}
 		}
 	]
-	if (state.vocab.dslabel == 'profile') {
-		const profileButtons = getProfileButtons(self, state)
-		buttons.unshift(...profileButtons)
-	}
+
 	for (const field in state?.termdbConfig.renamedChartTypes || []) {
 		const btn = buttons.find(b => b.chartType === field)
 		if (btn) {
@@ -279,88 +371,6 @@ function getChartTypeList(self, state) {
 		}
 	}
 	return buttons
-}
-
-function getProfileButtons(self, state) {
-	const profileButtons = [
-		{
-			label: 'Polar',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profilePolar',
-						header: 'Polar Graph',
-						logged: true
-					}
-				}),
-			chartType: 'profilePolar'
-		},
-		{
-			label: 'Barchart',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profileBarchart',
-						header: 'Barchart Graph',
-						logged: true
-					}
-				}),
-			chartType: 'profileBarchart'
-		},
-		{
-			label: 'Radar 1',
-			tooltip: () => 'Comparison of Institutional and Aggregated Score-based Results by Module',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profileRadarFacility',
-						plot: 'plot1',
-						header: 'Radar 1-Score-based(Site)',
-						logged: true
-					}
-				}),
-			chartType: 'profileRadarFacility'
-		},
-		{
-			label: 'Radar 2',
-			tooltip: state =>
-				state.activeCohort == 0
-					? 'Comparison of Site Coordinator and POC Staff Impressions by Module'
-					: 'Score based results by PrOFILE module',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profileRadar',
-						plot: 'plot1',
-						header: 'Radar 2-Impressions',
-						logged: true
-					}
-				}),
-			chartType: 'profileRadar'
-		}
-	]
-	if (state.activeCohort == 0) {
-		profileButtons.push({
-			label: 'Radar 3',
-			tooltip: () => 'Comparison of SC and POC Score-based Results by Module',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profileRadar',
-						plot: 'plot2',
-						header: 'Radar 3-Score-based(SC & POC)',
-						logged: true
-					}
-				}),
-			chartType: 'profileRadar'
-		})
-	}
-	return profileButtons
 }
 
 function setRenderers(self) {

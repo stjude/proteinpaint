@@ -535,17 +535,6 @@ async function parseEmbedThenUrl(arg, app) {
 		_.appInit(opts)
 		return
 	}
-
-	if (arg.profileHome) {
-		/* adhoc, special purpose trigger to load PrOFILE homepage showing two buttons, each load a separate mass ds
-		- profile has 2 ds sharing jwt, but runpp() can only load 1 ds at a time
-		- this adhoc trigger has minimum change to app.js and will not affect rest of function
-		- the intermediate logic in profileHome.js provides entry to two ds while presenting custom contents tailored for ds owner
-		*/
-		const _ = await import('./profileHome.js')
-		_.init(arg)
-		return
-	}
 }
 
 async function may_launchGeneView(arg, app) {

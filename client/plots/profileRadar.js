@@ -9,13 +9,13 @@ import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePl
 class profileRadar extends profilePlot {
 	constructor() {
 		super()
-		this.type = 'profileRadar'
 		this.radius = 250
 	}
 
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
+		this.type = config.chartType
 		this.plotConfig = config[config.plot]
 		this.lineGenerator = d3.line()
 		this.twLst = []
@@ -276,7 +276,7 @@ class profileRadar extends profilePlot {
 export async function getPlotConfig(opts, app) {
 	try {
 		const defaults = getProfilePlotConfig(app, opts)
-		defaults.settings = { profileRadar: getDefaultProfilePlotSettings() }
+		defaults.settings = { [opts.chartType]: getDefaultProfilePlotSettings() }
 
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
 		const config = copyMerge(structuredClone(defaults), opts)

@@ -179,6 +179,7 @@ export async function getPlotConfig(opts, app) {
 
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
 		const config = copyMerge(structuredClone(defaults), opts)
+		console.log('config', config)
 		config.settings.controls = { isOpen: false }
 		const twlst = []
 		for (const data of config.terms) {

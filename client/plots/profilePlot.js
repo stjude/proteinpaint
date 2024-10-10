@@ -81,20 +81,7 @@ export class profilePlot {
 				window.print()
 			}
 		})
-		// if (this.type != 'profileRadarFacility' && !config.settings[this.type].comparison) {
-		// 	//Facility radar plot does not need to compare
-		// 	const compareIconDiv = iconsDiv.append('div').style('margin-bottom', '20px')
-		// 	const compareBt = compareIconDiv.append('button').style('border', 'none').style('background-color', 'transparent')
-		// 	icon_functions['compare'](compareBt, { title: 'Compare with another plot' })
 
-		// 	compareBt.on('click', async () => {
-		// 		const comparison = (this.settings.comparison = !this.settings.comparison)
-		// 		compareBt.style('background-color', comparison ? 'rgb(207, 226, 243)' : 'transparent')
-
-		// 		this.dom.holder2.selectAll('*').remove()
-		// 		if (comparison) await this.comparePlots()
-		// 	})
-		// }
 		if (this.type != 'profileBarchart') {
 			const tableIconDiv = iconsDiv.append('div').style('padding-bottom', '15px')
 			this.dom.tableBt = tableIconDiv
@@ -119,25 +106,25 @@ export class profilePlot {
 				})
 			}
 		})
-		if (!config.settings[this.type].comparison)
-			icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
-				title: 'Open a new plot',
-				handler: async () => {
-					const config = {
-						chartType: this.type,
-						insertBefore: this.id,
-						header: this.opts.header.text(),
-						logged: this.state.config.logged,
-						site: this.state.config.site
-					}
-					if (this.type == 'profileRadarFacility' || this.type == 'profileRadar') config.plot = this.state.config.plot
-
-					this.app.dispatch({
-						type: 'plot_create',
-						config
-					})
+		icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
+			title: 'Open a new plot',
+			handler: async () => {
+				const config = {
+					chartType: this.type,
+					insertBefore: this.id,
+					header: this.opts.header.text(),
+					logged: this.state.config.logged,
+					site: this.state.config.site
 				}
-			})
+				if (this.baseType == 'profileRadarFacility' || this.baseType == 'profileRadar')
+					config.plot = this.state.config.plot
+
+				this.app.dispatch({
+					type: 'plot_create',
+					config
+				})
+			}
+		})
 	}
 
 	async showTable(show) {
@@ -163,23 +150,10 @@ export class profilePlot {
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+		console.log(this.config.settings, this.type)
 		this.settings = this.config.settings[this.type]
 		if (this.dom.tableBt)
 			this.dom.tableBt.style('background-color', this.settings.showTable ? 'rgb(207, 226, 243)' : 'transparent')
-	}
-
-	async comparePlots() {
-		this.plotAdded = true
-		const plotMod = await import('#plots/plot.app.js')
-		const plot = {
-			chartType: this.type,
-			settings: { [this.type]: { comparison: true } },
-			activeCohort: this.state.activeCohort
-		}
-
-		if (this.type == 'profileRadar' || this.type == 'profileRadarFacility') plot.plot = this.config.plot
-		const opts = { holder: this.dom.holder2, state: { plots: [plot], vocab: this.state.vocab } }
-		await plotMod.appInit(opts)
 	}
 
 	async setControls(additionalInputs = []) {
@@ -228,7 +202,7 @@ export class profilePlot {
 			filter,
 			termsPerRequest: 30
 		})
-		const chartType = this.type
+		const chartType = this.baseType
 		this.dom.controlsDiv.selectAll('*').remove()
 
 		let inputs = []
@@ -431,7 +405,7 @@ export class profilePlot {
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
-		if (this.type != 'profileRadarFacility') this.settings.site = '' //always clear site when a filter is changed
+		if (this.baseType != 'profileRadarFacility') this.settings.site = '' //always clear site when a filter is changed
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
@@ -446,7 +420,7 @@ export class profilePlot {
 
 	clearFiltersExcept(ids) {
 		for (const tw of this.config.filterTWs) if (!ids.includes(tw.term.id)) this.settings[tw.term.id] = ''
-		if (this.config.chartType != 'profileRadarFacility') this.settings.site = ''
+		if (this.config.baseType != 'profileRadarFacility') this.settings.site = ''
 	}
 
 	setSite(site) {
@@ -483,7 +457,7 @@ export class profilePlot {
 	}
 
 	addFilterLegend() {
-		if (!this.settings.site || this.config.chartType == 'profileRadarFacility') {
+		if (!this.settings.site || this.config.baseType == 'profileRadarFacility') {
 			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id])
 			const title = hasFilters ? 'Filters' : 'No filter applied'
 			this.filterG
@@ -495,7 +469,7 @@ export class profilePlot {
 				.attr('transform', `translate(0, -5)`)
 			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		}
-		if (this.settings.site && this.config.chartType != 'profileRadarFacility') {
+		if (this.settings.site && this.config.baseType != 'profileRadarFacility') {
 			const label = this.sites.find(s => s.value == this.settings.site).label
 			this.addFilterLegendItem('Facility', label)
 		}
@@ -587,8 +561,8 @@ export function getProfilePlotConfig(app, opts) {
 	const state = app.getState()
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
 	const key = activeCohort == 0 ? 'full' : 'abbrev'
-	const defaults = app.vocabApi.termdbConfig?.chartConfigByType[key][opts.chartType]
-	return defaults
+	const config = app.vocabApi.termdbConfig?.chartConfigByType[key]
+	return config[opts.chartType] || config[opts.baseType]
 }
 
 export async function loadFilterTerms(config, app, opts) {

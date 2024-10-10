@@ -1071,7 +1071,6 @@ type AssayAvailability = {
 
 //Shared with genome.ts
 export type Cohort = {
-	allowedChartTypes?: string[]
 	cumburden?: {
 		files: {
 			fit: string
@@ -1086,6 +1085,8 @@ export type Cohort = {
 	massNav?: MassNav
 	matrixplots?: MatrixPlots
 	mutationset?: MutationSet[]
+	allowedChartTypes?: string[]
+	allowedChartTypesByCohort?: { [index: string]: string[] }
 	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }
 	scatterplots?: Scatterplots
 	termdb: Termdb
