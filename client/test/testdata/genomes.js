@@ -851,7 +851,7 @@ export const hg19 = {
 
 export const hg38 = {
 	species: 'human',
-	name: 'hg38',
+	name: 'hg38-test',
 	hasSNP: true,
 	hasIdeogram: false,
 	hasClinvarVCF: true,

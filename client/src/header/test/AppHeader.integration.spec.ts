@@ -72,10 +72,7 @@ tape('Validate app header rendering, makeheader()', async test => {
 	test.ok(genomeDropDown, 'Should render genome dropdown')
 	const genomes = Object.keys(header.app.genomes)
 	for (const n of genomeDropDown.options) {
-		test.ok(
-			genomes.some(g => g == n.value),
-			`Should render options for "${n.value}" in genome dropdown.`
-		)
+		test.ok(hg38.name == n.value || hg19.name == n.value, `Should render options for "${n.value}" in genome dropdown.`)
 	}
 
 	const genomeBtn = await detectOne({
@@ -119,7 +116,7 @@ tape('Change genome selection', async test => {
 	const header = getHeader({ holder })
 	header.makeheader()
 
-	const newGenome = 'hg38'
+	const newGenome = 'hg38-test'
 
 	const findDropDown = await detectOne({
 		selector: '.sjpp-genome-select',
