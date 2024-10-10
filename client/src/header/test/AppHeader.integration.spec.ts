@@ -70,7 +70,6 @@ tape('Validate app header rendering, makeheader()', async test => {
 	})
 
 	test.ok(genomeDropDown, 'Should render genome dropdown')
-	const genomes = Object.keys(header.app.genomes)
 	for (const n of genomeDropDown.options) {
 		test.ok(hg38.name == n.value || hg19.name == n.value, `Should render options for "${n.value}" in genome dropdown.`)
 	}
