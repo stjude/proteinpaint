@@ -1,0 +1,2 @@
+Features:
+- inclusion of univariate results in a multivariable regression analysis is now a user-controllable option that is enabled in all datasets

@@ -79,6 +79,7 @@ class Regression {
 			await this.results.main()
 			this.inputs.resetSubmitButton()
 			this.inputs.mayShowUnivariateCheckbox()
+			this.inputs.mayShowSubmitMsgs()
 		} catch (e) {
 			if (this.inputs.hasError) {
 				// will hide the results ui
@@ -121,11 +122,9 @@ class Regression {
 			const tw = tws_restrictAncestry[0]
 			filters.push({ type: 'tvs', tvs: tw.q.restrictAncestry.tvs })
 			// notify user that samples will be restricted by ancestry
-			this.inputs.dom.submitMsg
-				.style('display', 'block')
-				.text(`restricting analysis to samples of ${tw.q.restrictAncestry.name}`)
+			this.inputs.submitMsgs.restrictAncestry = `Restricting analysis to samples of ${tw.q.restrictAncestry.name}`
 		} else {
-			this.inputs.dom.submitMsg.style('display', 'none')
+			delete this.inputs.submitMsgs.restrictAncestry
 		}
 
 		// store filters

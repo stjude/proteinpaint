@@ -154,11 +154,23 @@ buildFormulas <- function(outcome, independent, includeUnivariate) {
       # include univariate formulas along with the multivariate formula
       if (length(formula_independent) < 2) stop("must have multiple covariates to build multivariate and univariate formulas")
       if (length(formula_interaction) > 0) stop("interactions not supported in univariate models")
+      # multivariate formula
       formula <- as.formula(paste(formula_outcome, paste(formula_independent, collapse = "+"), sep = "~"))
       formulas[[1]] <- list("id" = "", "type" = "multivariate", "formula" = formula)
+      if (nrow(splineVariables) > 0) {
+        formulas[[1]][["splineVariables"]] = splineVariables
+      }
+      # univariate formulas
       for (var in formula_independent) {
         formula <- as.formula(paste(formula_outcome, var, sep = "~"))
-        formulas[[length(formulas) + 1]] <- list("id" = "", "type" = "univariate", "formula" = formula)
+        entry <- length(formulas) + 1
+        formulas[[entry]] <- list("id" = "", "type" = "univariate", "formula" = formula)
+        if (startsWith(var, "cubic_spline")) {
+          id <- gsub("cubic_spline\\(", "", gsub("\\,.*", "", var))
+          splineVariable <- splineVariables[splineVariables$id == id, ,drop = F]
+          if (nrow(splineVariable) == 0) stop("expected spline variable")
+          formulas[[entry]][["splineVariables"]] = splineVariable
+        }
       }
     } else {
       # use single formula for all variables
@@ -411,7 +423,7 @@ coxRegression <- function(formula, dat) {
 }
 
 # run regression analysis
-runRegression <- function(formula, regtype, dat, outcome, neuroOnc) {
+runRegression <- function(formula, regtype, dat, outcome, cachedir) {
   # remove samples with NA values in any variable in the formula
   # NOTE: even though regression functions (e.g. lm, glm, etc.)
   # perform this filtration by default, this filtration
@@ -438,27 +450,27 @@ runRegression <- function(formula, regtype, dat, outcome, neuroOnc) {
   }
   if ("splineVariables" %in% names(formula)) {
     # spline variables present
-    # plot cubic spline for each spline variable
-    # do not plot if variable is missing plot file (to hide plot
-    # when snplocus terms are present)
+    # plot cubic spline for each spline variable (if applicable)
+    results$splinePlotFiles <- vector(mode = "character")
     splineVariables <- formula$splineVariables
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
-      if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, fdat, outcome, results$res, regtype)
+      if (isTRUE(splineVariable$spline$plot)) {
+        spline_plot_file <- plot_spline(splineVariable, fdat, outcome, results$res, regtype, formula$type, cachedir)
+        results$splinePlotFiles <- c(results$splinePlotFiles, spline_plot_file)
       }
     }
   }
   if (length(warns) > 0) results[["warnings"]] <- warns
-  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType, fdat, neuroOnc)
+  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType, fdat)
   results$type3 <- formatType3(results$type3)
   out <- list("id" = unbox(formula$id), "data" = results[names(results) != "res"])
-  if (isTRUE(neuroOnc)) out$type <- unbox(formula$type)
+  if (!is.null(formula$type)) out$type <- unbox(formula$type)
   return(out)
 }
 
-# generate cubic spline plot spline
-plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
+# generate cubic spline plot
+plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype, cachedir) {
   # prepare test data table for predicting model outcome values
   # columns are all independent variables
   # for the spline variable, use regularly spaced data; for continuous variables, use data median; for categorical variables, use reference category
@@ -503,9 +515,9 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
   preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod), na.rm = T)
   
   # plot data
-  plotfile <- splineVariable$spline$plotfile
+  plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".png")
   png(filename = plotfile, width = 950, height = 550, res = 200)
-  par(mar = c(3, 2.5, 1, 5), mgp = c(1, 0.5, 0), xpd = T)
+  par(mar = c(3, 2.5, 1, 5) + 0.1, mgp = c(0.5, 0.5, 0), xpd = T)
   if (regtype == "linear" | regtype == "logistic") {
     if (regtype == "linear") {
       # for linear, plot predicted values
@@ -559,7 +571,12 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
     stop("unrecognized regression type")
   }
   
-  # axis titles
+  # titles
+  if (is.null(formulatype)) title <- NULL
+  else if (formulatype == "univariate") title <- "Univariate"
+  else if (formulatype == "multivariate") title <- "Multivariable-adjusted"
+  else stop("unexpected formula type")
+  title(main = title, cex.main = 0.6)
   title(xlab = splineVariable$name,
         ylab = ylab,
         line = 1.5,
@@ -609,6 +626,15 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
          border = c(NA, NA, NA)
   )
   dev.off()
+  return(plotfile)
+}
+
+createRandString <- function() {
+  digits = 0:9
+  v = c(sample(LETTERS, 4, replace = TRUE),
+        sample(digits, 4, replace = TRUE),
+        sample(LETTERS, 1, replace = TRUE))
+  return(paste0(v, collapse = ""))
 }
 
 # build coefficients table
@@ -624,11 +650,9 @@ build_coef_table <- function(res_summ) {
 }
 
 # reformat the coefficients table
-formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) {
-  # round columns to 2 decimal places
-  # round p-value column to 3 significant digits
-  coefficients_table[,-ncol(coefficients_table)] <- round(coefficients_table[,-ncol(coefficients_table)], 2)
-  coefficients_table[,ncol(coefficients_table)] <- signif(coefficients_table[,ncol(coefficients_table)], 3)
+formatCoefficients <- function(coefficients_table, res, regtype, dat) {
+  # round all columns to 4 significant digits
+  coefficients_table <- signif(coefficients_table, 4)
   # add variable and category columns
   if (regtype == "cox") {
     vCol <- vector(mode = "character")
@@ -684,45 +708,42 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat, neuroOnc) 
   
   coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, coefficients_table)
   
-  if (isTRUE(neuroOnc)) {
-    # neuro-oncology dataset
-    # extract columns of interest
-    if (regtype == "linear") {
-      coefficients_table <- coefficients_table[, c("Variable", "Category", "Beta", "95% CI (low)", "95% CI (high)", "Pr(>|t|)"), drop = F]
-    } else if (regtype == "logistic") {
-      coefficients_table <- coefficients_table[, c("Variable", "Category", "Odds ratio", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
-    } else if (regtype == "cox") {
-      # cox regression
-      # report sample size and event counts of coefficients
-      sCol <- vector(mode = "character")
-      eCol <- vector(mode = "character")
-      for (i in 1:length(vCol)) {
-        v <- vCol[i]
-        c <- cCol[i]
-        if (v %in% names(res$xlevels)) {
-          # categorical variable
-          # determine sample size and event count of both ref and non-ref categories
-          # values will be stored in separate columns in the format "ref/nonref"
-          ref <- res$xlevels[[v]][1]
-          m <- table(dat[,"outcome_event"], dat[,v])
-          samplesize_ref <- sum(m[,ref])
-          samplesize_c <- sum(m[,c])
-          sCol <- c(sCol, paste(samplesize_ref, samplesize_c, sep = "/"))
-          eventcnt_ref <- m["1",ref]
-          eventcnt_c <- m["1",c]
-          eCol <- c(eCol, paste(eventcnt_ref, eventcnt_c, sep = "/"))
-        } else {
-          # continuous variable
-          # set sample size and event count to NA
-          sCol <- c(sCol, NA)
-          eCol <- c(eCol, NA)
-        }
+  # extract columns of interest
+  if (regtype == "linear") {
+    coefficients_table <- coefficients_table[, c("Variable", "Category", "Beta", "95% CI (low)", "95% CI (high)", "Pr(>|t|)"), drop = F]
+  } else if (regtype == "logistic") {
+    coefficients_table <- coefficients_table[, c("Variable", "Category", "Odds ratio", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
+  } else if (regtype == "cox") {
+    # cox regression
+    # report sample size and event counts of coefficients
+    sCol <- vector(mode = "character")
+    eCol <- vector(mode = "character")
+    for (i in 1:length(vCol)) {
+      v <- vCol[i]
+      c <- cCol[i]
+      if (v %in% names(res$xlevels)) {
+        # categorical variable
+        # determine sample size and event count of both ref and non-ref categories
+        # values will be stored in separate columns in the format "ref/nonref"
+        ref <- res$xlevels[[v]][1]
+        m <- table(dat[,"outcome_event"], dat[,v])
+        samplesize_ref <- sum(m[,ref])
+        samplesize_c <- sum(m[,c])
+        sCol <- c(sCol, paste(samplesize_ref, samplesize_c, sep = "/"))
+        eventcnt_ref <- m["1",ref]
+        eventcnt_c <- m["1",c]
+        eCol <- c(eCol, paste(eventcnt_ref, eventcnt_c, sep = "/"))
+      } else {
+        # continuous or spline variable
+        # set sample size and event count to NA
+        sCol <- c(sCol, NA)
+        eCol <- c(eCol, NA)
       }
-      coefficients_table <- cbind(coefficients_table, "Sample Size (ref/non-ref)" = sCol, "Events (ref/non-ref)" = eCol)
-      coefficients_table <- coefficients_table[, c("Variable", "Category", "Sample Size (ref/non-ref)", "Events (ref/non-ref)", "HR", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
-    } else {
-      stop("regression type is not recognized")
     }
+    coefficients_table <- cbind(coefficients_table, "Sample Size (ref/non-ref)" = sCol, "Events (ref/non-ref)" = eCol)
+    coefficients_table <- coefficients_table[, c("Variable", "Category", "Sample Size (ref/non-ref)", "Events (ref/non-ref)", "HR", "95% CI (low)", "95% CI (high)", "Pr(>|z|)"), drop = F]
+  } else {
+    stop("regression type is not recognized")
   }
   
   colnames(coefficients_table)[ncol(coefficients_table)] <- "P" # p-value column
@@ -740,10 +761,11 @@ formatType3 <- function(type3_table) {
 
 # parse results from univariate and multivariate analyses
 parseUniMultiResults <- function(reg_results, regtype) {
-  # get coefficients from the univariate and multivariate analyses
   multiCoefficients <- NULL
   uniCoefficients <- NULL
+  splinePlotFiles <- NULL
   for (res in reg_results) {
+    # parse coefficients
     coefs <- res$data$coefficients$rows
     # remove intercept row because cannot merge together intercepts
     # from different univariate analyses
@@ -759,6 +781,8 @@ parseUniMultiResults <- function(reg_results, regtype) {
     } else {
       stop ("results type not recognized")
     }
+    # parse spline plots
+    splinePlotFiles <- c(splinePlotFiles, res$data$splinePlotFiles)
   }
   # prepare separate univariate and multivariate coefficients tables
   uniCoefficients_table <- list("header" = colnames(uniCoefficients), "rows" = uniCoefficients)
@@ -767,5 +791,6 @@ parseUniMultiResults <- function(reg_results, regtype) {
   reg_results_parsed <- list()
   reg_results_parsed[[1]] <- list("id" = res$id, "data" = list("sampleSize" = res$data$sampleSize, "coefficients_uni" = uniCoefficients_table, "coefficients_multi" = multiCoefficients_table))
   if (regtype == "cox") reg_results_parsed[[1]]$data$eventCnt = res$data$eventCnt
+  if (!is.null(splinePlotFiles)) reg_results_parsed[[1]]$data$splinePlotFiles = splinePlotFiles
   return(reg_results_parsed)
 }

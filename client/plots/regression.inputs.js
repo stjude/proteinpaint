@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { InputTerm } from './regression.inputs.term'
-import { make_one_checkbox } from '#dom'
+import { make_one_checkbox, Menu } from '#dom'
 
 /*
 outcome and independent are two sections sharing same structure
@@ -158,7 +158,7 @@ export class RegressionInputs {
 		// need to check if the dataset allows this
 		// if so, add to this array, to be shown as mini menu
 		const lst = []
-		for (const item of allNonDictionaryTerms) {
+		for (const item of structuredClone(allNonDictionaryTerms)) {
 			// TODO do this via vocab api
 			if (!this.state.allowedTermTypes.includes(item.termtype)) {
 				// not allowed by this dataset
@@ -167,6 +167,15 @@ export class RegressionInputs {
 			if (section.inputLst.find(i => i.term && i.term.term.type == item.termtype)) {
 				// same term is already present in this section, do not add a second
 				continue
+			}
+			if (item.termtype == 'snplocus') {
+				if (this.config.includeUnivariate) {
+					// snplocus is computationally intensive so it should not
+					// be allowed when univariate results are included
+					item.invalid = true
+					const label = this.dom.univariateCheckboxDiv.select('label').text().trim()
+					item.invalidMsg = `Cannot add this variable. Please uncheck the "${label}" checkbox.`
+				}
 			}
 			lst.push(item)
 		}
@@ -208,13 +217,26 @@ function setRenderers(self) {
 			.text('Run analysis')
 			.on('click', self.submit)
 
-		self.dom.univariateCheckbox = self.dom.foot.append('div').style('display', 'none')
-
-		make_one_checkbox({
+		// checkbox for including univariate results
+		self.dom.univariateCheckboxDiv = self.dom.foot.append('div').style('display', 'none')
+		self.dom.univariateCheckbox = make_one_checkbox({
 			labeltext: 'Include univariate results',
 			checked: false,
-			holder: self.dom.univariateCheckbox,
+			holder: self.dom.univariateCheckboxDiv,
 			callback: checked => {
+				const invalid = self.config.independent.find(v => v.interactions.length || v.term.type == 'snplocus')
+				if (invalid) {
+					// interactions or snplocus variable in use
+					// disable univariate analysis
+					self.dom.univariateCheckbox.property('checked', false)
+					const tip = new Menu()
+					tip.showunder(self.dom.univariateCheckboxDiv.node())
+					const msg = `Cannot include univariate results. Please remove ${
+						invalid.interactions.length ? 'all interactions' : `the "${invalid.term.name}" variable`
+					}.`
+					tip.d.append('div').text(msg)
+					return
+				}
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.parent.id,
@@ -227,12 +249,14 @@ function setRenderers(self) {
 			}
 		})
 
-		self.dom.submitMsg = self.dom.foot
+		self.dom.submitMsgs = self.dom.foot
 			.append('div')
-			.style('display', 'none')
 			.style('color', '#cc0000')
 			.style('font-style', 'italic')
 			.style('font-size', '0.8em')
+
+		self.submitMsgs = {}
+
 		/*
 			not using d3.data() here since each section may only
 			be added and re-rendered, but not removed
@@ -353,15 +377,23 @@ function setRenderers(self) {
 	}
 
 	self.mayShowUnivariateCheckbox = () => {
-		// show the univariate checkbox if analysis is multivariate and
-		// is using a neuro-oncology dataset
-		self.dom.univariateCheckbox.style(
-			'display',
-			self.app.vocabApi.termdbConfig.neuroOncRegression && self.config.outcome && self.config.independent.length > 1
-				? 'block'
-				: 'none'
-		)
-		self.dom.univariateCheckbox.select('input[type=checkbox]').property('checked', self.config.includeUnivariate)
+		if (!self.config.outcome || self.config.independent.length < 2) {
+			// hide univariate checkbox if analysis does not have
+			// multiple covariates
+			self.dom.univariateCheckboxDiv.style('display', 'none')
+			return
+		}
+		self.dom.univariateCheckboxDiv.style('display', 'block')
+		// set checked status
+		self.dom.univariateCheckbox.property('checked', self.config.includeUnivariate)
+	}
+
+	self.mayShowSubmitMsgs = () => {
+		self.dom.submitMsgs
+			.selectAll('div')
+			.data(Object.values(self.submitMsgs))
+			.join('div')
+			.text(d => d)
 	}
 }
 

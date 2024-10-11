@@ -942,9 +942,8 @@ type Termdb = {
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
 	multipleTestingCorrection?: MultipleTestingCorrection
-	/** regression settings for neuro-oncology portals:
+	/** regression settings for neuro-oncology datasets:
 	- no interaction terms
-	- report event counts of cox coefficients
 	- hide type III stats and miscellaneous statistical tests */
 	neuroOncRegression?: boolean
 	urlTemplates?: {

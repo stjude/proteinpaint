@@ -214,6 +214,8 @@ function parse_q(q, ds) {
 		// both univariate and multivariate analyses will be performed
 		if (q.independent.length < 2) throw 'multiple covariates expected'
 		if (q.independent.find(i => i.interactions.length)) throw 'interactions not allowed in univariate analysis'
+		if (q.independent.find(i => i.term.type == 'snplocus'))
+			throw 'snplocus term not supported in univariate/multivariable analysis'
 	}
 }
 
@@ -399,13 +401,12 @@ function makeRinput(q, sampledata) {
 	const Rinput = {
 		regressionType: q.regressionType,
 		binpath: serverconfig.binpath, // for importing regression utilities
+		cachedir: serverconfig.cachedir, // for creating spline plot file
 		data,
 		outcome,
-		independent
+		independent,
+		includeUnivariate: q.includeUnivariate
 	}
-
-	if (q.ds.cohort.termdb.neuroOncRegression) Rinput.neuroOnc = q.ds.cohort.termdb.neuroOncRegression
-	if (q.includeUnivariate) Rinput.includeUnivariate = q.includeUnivariate
 
 	return Rinput
 }
@@ -442,8 +443,8 @@ function makeRvariable_dictionaryTerm(tw, independent, q) {
 			knots: tw.q.knots.map(x => Number(x.value))
 		}
 		if (!q.independent.find(i => i.type == 'snplocus')) {
-			// when there isn't the snplocus variable, can make spline plot
-			thisTerm.spline.plotfile = path.join(serverconfig.cachedir, Math.random().toString() + '.png')
+			// when there isn't a snplocus variable, can make spline plot
+			thisTerm.spline.plot = true
 		}
 	}
 	independent.push(thisTerm)
@@ -670,16 +671,16 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 			for (const row of in_coef.rows) {
 				if (row[0].indexOf(':') != -1) {
 					// is an interaction
-					const interaction = {}
 					const [id1, id2] = row.shift().split(':')
 					const [cat1, cat2] = row.shift().split(':')
+					const termid1 = id2originalId[id1]
+					const termid2 = id2originalId[id2]
 					// row is now only data fields
-					interaction.term1 = id2originalId[id1]
-					interaction.category1 = cat1
-					interaction.term2 = id2originalId[id2]
-					interaction.category2 = cat2
-					interaction.lst = row
-					out_coef.interactions.push(interaction)
+					const interactions = out_coef.interactions
+					if (!interactions.some(x => x.term1 == termid1 && x.term2 == termid2))
+						interactions.push({ term1: termid1, term2: termid2, categories: [] })
+					const interaction = interactions.find(x => x.term1 == termid1 && x.term2 == termid2)
+					interaction.categories.push({ category1: cat1, category2: cat2, lst: row })
 				} else {
 					// not interaction, individual variable
 					const id = row.shift()
@@ -764,10 +765,19 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		}
 
 		// plots
-		for (const tw of Rinput.independent) {
-			if (tw.spline && tw.spline.plotfile) {
-				if (!analysisResult.data.splinePlots) analysisResult.data.splinePlots = []
-				const file = tw.spline.plotfile
+		if (data.splinePlotFiles) {
+			if (!analysisResult.data.splinePlots) analysisResult.data.splinePlots = []
+			// univariate plots should appear before multivariate plots
+			data.splinePlotFiles.sort((a, b) => {
+				const file_a = path.basename(a, '.png')
+				const file_b = path.basename(b, '.png')
+				const type_a = file_a.split('_')[1]
+				const type_b = file_b.split('_')[1]
+				if (type_a == 'univariate' && type_b == 'multivariate') return -1
+				if (type_a == 'multivariate' && type_b == 'univariate') return 1
+				else return 0
+			})
+			for (const file of data.splinePlotFiles) {
 				const plot = await fs.promises.readFile(file)
 				analysisResult.data.splinePlots.push({
 					src: 'data:image/png;base64,' + new Buffer.from(plot).toString('base64'),
