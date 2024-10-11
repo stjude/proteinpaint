@@ -503,10 +503,11 @@ function setRenderers(self) {
 			})
 		}
 
+		let varcount = 0
 		// intercept row
 		const intercept = result.coefficients.intercept
 		if (intercept) {
-			const tr = table.append('tr').style('background', '#eee')
+			const tr = table.append('tr').style('background', ++varcount % 2 ? '#eee' : 'none')
 			// variable column
 			tr.append('td').text(intercept.shift()).style('padding', '8px')
 			// category column
@@ -527,11 +528,12 @@ function setRenderers(self) {
 		plotter can be a blank function if there's no valid value for plotting
 		*/
 		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
-		let rowcount = self.config.regressionType == 'cox' ? 1 : 0
+		let rowcolor
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
 			const tw = self.getIndependentInput(tid).term
-			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			rowcolor = ++varcount % 2 ? '#eee' : 'none' // all rows of a variable will have same color
+			let tr = table.append('tr').style('background', rowcolor)
 
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
@@ -583,7 +585,7 @@ function setRenderers(self) {
 				for (const k of orderedCategories) {
 					if (!isfirst) {
 						// create new row starting from 2nd category
-						tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+						tr = table.append('tr').style('background', rowcolor)
 					}
 
 					const cols = termdata.categories[k]
@@ -594,15 +596,21 @@ function setRenderers(self) {
 
 					if (self.config.regressionType == 'cox') {
 						// sample size and event count columns present
-						// report sample sizes and event counts of coefficients
-						// for both ref and non-ref categories
-						const [samplesize_ref, samplesize_c] = cols.shift().split('/')
-						const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
-						if (isfirst) {
-							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
-							refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
+						if (tw.q.mode == 'spline') {
+							// skip columns for cubic spline variable
+							cols.shift()
+							cols.shift()
+						} else {
+							// report sample sizes and event counts of coefficients
+							// for both ref and non-ref categories
+							const [samplesize_ref, samplesize_c] = cols.shift().split('/')
+							const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
+							if (isfirst) {
+								const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
+								refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
+							}
+							td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
 						}
-						td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
 					}
 
 					// display forest plot
@@ -619,40 +627,49 @@ function setRenderers(self) {
 		}
 
 		// interactions
-		for (const row of result.coefficients.interactions) {
-			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+		for (const i of result.coefficients.interactions) {
+			rowcolor = ++varcount % 2 ? '#eee' : 'none' // all rows of an interaction will have same color
+			let tr = table.append('tr').style('background', rowcolor)
 
-			const term1 = self.getIndependentInput(row.term1).term
-			const term2 = self.getIndependentInput(row.term2).term
+			const term1 = self.getIndependentInput(i.term1).term
+			const term2 = self.getIndependentInput(i.term2).term
 
 			// col 1: variable
 			{
 				const td = tr.append('td').style('padding', '8px')
 				fillTdName(td.append('div'), term1 ? term1.term.name + ' : ' : row.term1 + ' : ')
 				fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
+				td.attr('rowspan', i.categories.length).style('vertical-align', 'top')
 			}
-			// col 2: category
-			{
+
+			let isfirst = true
+			for (const c of i.categories) {
+				// new subrow for every category
+				if (!isfirst) tr = table.append('tr').style('background', rowcolor)
+
+				// col 2: category
 				const td = tr.append('td').style('padding', '8px')
-				fillColumn2coefficientsTable(td.append('div'), term1, row.category1)
-				fillColumn2coefficientsTable(td.append('div'), term2, row.category2)
+				fillColumn2coefficientsTable(td.append('div'), term1, c.category1)
+				fillColumn2coefficientsTable(td.append('div'), term2, c.category2)
+
+				const cols = c.lst
+
+				if (self.config.regressionType == 'cox') {
+					// sample size and event count columns are present
+					// skip for now for interactions
+					// TODO: how to handle sample size/event counts for interactions?
+					cols.shift()
+					cols.shift()
+				}
+
+				// display forest plot
+				forestPlotter(tr.append('td'), cols)
+
+				// display data columns
+				fillDataColumns(tr, cols)
+
+				isfirst = false
 			}
-
-			const cols = row.lst
-
-			if (self.config.regressionType == 'cox') {
-				// sample size and event count columns are present
-				// skip for now for interactions
-				// TODO: how to handle sample size/event counts for interactions?
-				cols.shift()
-				cols.shift()
-			}
-
-			// display forest plot
-			forestPlotter(tr.append('td'), cols)
-
-			// display data columns
-			fillDataColumns(tr, cols)
 		}
 
 		// last row to show forest plot axis (call function without data)
@@ -709,6 +726,8 @@ function setRenderers(self) {
 
 			// fill headers for data columns
 			fillDataHeaders(header_uni, tr, tr_label, 'Univariate')
+			tr.append('td').style('width', '2px') //separation between univariate/multivariate
+			tr_label.append('td').style('width', '2px')
 			fillDataHeaders(header_multi, tr, tr_label, 'Multivariable-adjusted')
 		}
 
@@ -726,7 +745,8 @@ function setRenderers(self) {
 			result.coefficients_multi.interactions
 		)
 
-		let rowcount = 1
+		let varcount = 0,
+			rowcolor
 		for (const tid in result.coefficients_uni.terms) {
 			// termdata is data from univariate analysis
 			// will be used to fill in variable, category, and
@@ -737,7 +757,8 @@ function setRenderers(self) {
 			const termdata_multi = result.coefficients_multi.terms[tid]
 
 			const tw = self.getIndependentInput(tid).term
-			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			rowcolor = ++varcount % 2 ? '#eee' : 'none' // all rows of a variable will have same color
+			let tr = table.append('tr').style('background', rowcolor)
 
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
@@ -799,7 +820,7 @@ function setRenderers(self) {
 				for (const k of orderedCategories) {
 					if (!isfirst) {
 						// create new row starting from 2nd category
-						tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+						tr = table.append('tr').style('background', rowcolor)
 					}
 
 					const cols = termdata.categories[k]
@@ -812,17 +833,25 @@ function setRenderers(self) {
 					if (self.config.regressionType == 'cox') {
 						// cox regression
 						// sample size and event count columns are present
-						// report sample sizes and event counts of coefficients
-						// for both ref and non-ref categories
-						const [samplesize_ref, samplesize_c] = cols.shift().split('/')
-						const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
-						if (isfirst) {
-							const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
-							refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
+						if (tw.q.mode == 'spline') {
+							// skip columns for cubic spline variable
+							cols.shift()
+							cols.shift()
+							cols_multi.shift()
+							cols_multi.shift()
+						} else {
+							// report sample sizes and event counts of coefficients
+							// for both ref and non-ref categories
+							const [samplesize_ref, samplesize_c] = cols.shift().split('/')
+							const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
+							if (isfirst) {
+								const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
+								refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
+							}
+							td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
+							cols_multi.shift()
+							cols_multi.shift()
 						}
-						td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
-						cols_multi.shift()
-						cols_multi.shift()
 					}
 
 					// display univariate forest plot
@@ -830,6 +859,8 @@ function setRenderers(self) {
 
 					// display univariate data columns
 					fillDataColumns(tr, cols)
+
+					tr.append('td').style('width', '2px') // separation between univariate/multivariate
 
 					// display multivariate forest plot
 					forestPlotter_multi(tr.append('td'), cols_multi)
@@ -850,6 +881,7 @@ function setRenderers(self) {
 		tr.append('td') // col 2
 		forestPlotter_uni(tr.append('td')) // forest plot axis
 		for (const v of header_uni) tr.append('td')
+		tr.append('td').style('width', '2px') // separation between univariate/multivariate
 		forestPlotter_multi(tr.append('td')) // forest plot axis
 		for (const v of header_multi) tr.append('td')
 	}
@@ -1037,7 +1069,9 @@ function setRenderers(self) {
 			}
 		}
 		for (const i of interactions) {
-			numbers2array(i.lst)
+			for (const k of i.categories) {
+				numbers2array(k.lst)
+			}
 		}
 
 		if (values.length == 0) {
@@ -1056,7 +1090,7 @@ function setRenderers(self) {
 		}
 
 		// graph dimension
-		const width = 150 // plottable dimension
+		const width = 180 // plottable dimension
 		const height = 20
 		const xleftpad = 10,
 			xrightpad = 10 // leave space for axis

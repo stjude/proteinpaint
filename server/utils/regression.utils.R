@@ -651,11 +651,8 @@ build_coef_table <- function(res_summ) {
 
 # reformat the coefficients table
 formatCoefficients <- function(coefficients_table, res, regtype, dat) {
-  # round columns to 2 decimal places
-  # round p-value column to 3 significant digits
-  coefficients_table[,-ncol(coefficients_table)] <- round(coefficients_table[,-ncol(coefficients_table)], 2)
-  coefficients_table[,ncol(coefficients_table)] <- signif(coefficients_table[,ncol(coefficients_table)], 3)
-  
+  # round all columns to 4 significant digits
+  coefficients_table <- signif(coefficients_table, 4)
   # add variable and category columns
   if (regtype == "cox") {
     vCol <- vector(mode = "character")
@@ -737,7 +734,7 @@ formatCoefficients <- function(coefficients_table, res, regtype, dat) {
         eventcnt_c <- m["1",c]
         eCol <- c(eCol, paste(eventcnt_ref, eventcnt_c, sep = "/"))
       } else {
-        # continuous variable
+        # continuous or spline variable
         # set sample size and event count to NA
         sCol <- c(sCol, NA)
         eCol <- c(eCol, NA)

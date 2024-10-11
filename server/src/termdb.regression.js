@@ -671,16 +671,16 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 			for (const row of in_coef.rows) {
 				if (row[0].indexOf(':') != -1) {
 					// is an interaction
-					const interaction = {}
 					const [id1, id2] = row.shift().split(':')
 					const [cat1, cat2] = row.shift().split(':')
+					const termid1 = id2originalId[id1]
+					const termid2 = id2originalId[id2]
 					// row is now only data fields
-					interaction.term1 = id2originalId[id1]
-					interaction.category1 = cat1
-					interaction.term2 = id2originalId[id2]
-					interaction.category2 = cat2
-					interaction.lst = row
-					out_coef.interactions.push(interaction)
+					const interactions = out_coef.interactions
+					if (!interactions.some(x => x.term1 == termid1 && x.term2 == termid2))
+						interactions.push({ term1: termid1, term2: termid2, categories: [] })
+					const interaction = interactions.find(x => x.term1 == termid1 && x.term2 == termid2)
+					interaction.categories.push({ category1: cat1, category2: cat2, lst: row })
 				} else {
 					// not interaction, individual variable
 					const id = row.shift()
