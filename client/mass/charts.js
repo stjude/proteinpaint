@@ -134,6 +134,30 @@ function getChartTypeList(self, state) {
 		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
 	*/
 	const buttons = [
+		////////////////////// PROFILE PLOTS START //////////////////////
+		{
+			label: 'Polar',
+			chartType: 'profilePolar',
+			clickTo: self.prepPlot,
+			config: { chartType: 'profilePolar' }
+		},
+		{
+			label: 'Barchart',
+			clickTo: self.prepPlot,
+			chartType: 'profileBarchart',
+			config: { chartType: 'profileBarchart' }
+		},
+		{
+			label: 'Facility Radar',
+			chartType: 'profileRadarFacility',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Radar',
+			chartType: 'profileRadar',
+			clickTo: self.loadChartSpecificMenu
+		},
+		////////////////////// PROFILE PLOTS END //////////////////////
 		{
 			label: 'Data Dictionary',
 			clickTo: self.prepPlot,
@@ -268,10 +292,7 @@ function getChartTypeList(self, state) {
 			}
 		}
 	]
-	if (state.vocab.dslabel == 'profile') {
-		const profileButtons = getProfileButtons(self, state)
-		buttons.unshift(...profileButtons)
-	}
+
 	for (const field in state?.termdbConfig.renamedChartTypes || []) {
 		const btn = buttons.find(b => b.chartType === field)
 		if (btn) {
@@ -279,88 +300,6 @@ function getChartTypeList(self, state) {
 		}
 	}
 	return buttons
-}
-
-function getProfileButtons(self, state) {
-	const profileButtons = [
-		{
-			label: 'Polar',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profilePolar',
-						header: 'Polar Graph',
-						logged: true
-					}
-				}),
-			chartType: 'profilePolar'
-		},
-		{
-			label: 'Barchart',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profileBarchart',
-						header: 'Barchart Graph',
-						logged: true
-					}
-				}),
-			chartType: 'profileBarchart'
-		},
-		{
-			label: 'Radar 1',
-			tooltip: () => 'Comparison of Institutional and Aggregated Score-based Results by Module',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profileRadarFacility',
-						plot: 'plot1',
-						header: 'Radar 1-Score-based(Site)',
-						logged: true
-					}
-				}),
-			chartType: 'profileRadarFacility'
-		},
-		{
-			label: 'Radar 2',
-			tooltip: state =>
-				state.activeCohort == 0
-					? 'Comparison of Site Coordinator and POC Staff Impressions by Module'
-					: 'Score based results by PrOFILE module',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profileRadar',
-						plot: 'plot1',
-						header: 'Radar 2-Impressions',
-						logged: true
-					}
-				}),
-			chartType: 'profileRadar'
-		}
-	]
-	if (state.activeCohort == 0) {
-		profileButtons.push({
-			label: 'Radar 3',
-			tooltip: () => 'Comparison of SC and POC Score-based Results by Module',
-			clickTo: () =>
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'profileRadar',
-						plot: 'plot2',
-						header: 'Radar 3-Score-based(SC & POC)',
-						logged: true
-					}
-				}),
-			chartType: 'profileRadar'
-		})
-	}
-	return profileButtons
 }
 
 function setRenderers(self) {
@@ -381,7 +320,7 @@ function setRenderers(self) {
 				chart.clickTo(chart)
 			})
 			.on('mouseover', (e, d) => {
-				if (d.tooltip) self.dom.tooltip.clear().showunder(e.target).d.text(d.tooltip(self.state))
+				if (d.tooltip) self.dom.tooltip.clear().showunder(e.target).d.text(d.tooltip)
 			})
 	}
 
@@ -576,7 +515,7 @@ function setRenderers(self) {
 	self.loadChartSpecificMenu = async chart => {
 		self.dom.tip.clear()
 		const _ = await import(`../plots/${chart.chartType}.js`)
-		_.makeChartBtnMenu(self.dom.tip.d, self)
+		_.makeChartBtnMenu(self.dom.tip.d, self, chart.chartType)
 	}
 
 	/*
