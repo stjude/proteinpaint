@@ -43,6 +43,10 @@ export type NoTermPromptOptsEntry = {
 	text?: string
 	html?: string
 	q?: Q
+	/** whether or not opt is invalid */
+	invalid?: boolean
+	/** message displayed when opt is invalid */
+	invalidMsg?: string
 }
 
 type NumericContEditOptsEntry = {
