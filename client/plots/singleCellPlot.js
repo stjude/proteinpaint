@@ -258,10 +258,10 @@ class singleCellPlot {
 
 		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
-
+		let DEbt
 		if (q.singleCell?.DEgenes) {
 			this.dom.deselect = deDiv.append('select')
-			const DEbt = this.dom.deDiv
+			DEbt = this.dom.deDiv
 				.append('button')
 				.style('margin-left', '5px')
 				.html('View differentially expresed genes of a cluster vs rest of cells')
@@ -293,6 +293,7 @@ class singleCellPlot {
 		}
 
 		this.settings = {}
+		this.dom.DEbt = DEbt
 
 		document.addEventListener('scroll', event => this?.tip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.tip.hide())
@@ -504,6 +505,7 @@ class singleCellPlot {
 			//first plot
 			this.dom.deselect.selectAll('*').remove()
 			this.dom.deselect.append('option').text('')
+			this.dom.DEbt.property('disabled', true)
 			for (const cluster of plot.clusters) this.dom.deselect.append('option').text(cluster)
 		}
 		const cat2Color = getColors(plot.clusters.length + 2) //Helps to use the same color scheme in different samples
