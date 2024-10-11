@@ -599,7 +599,6 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	for (const plotConfig of typeConfig.plots) {
 		let config = structuredClone(plotConfig)
 		config.chartType = chartType
-		console.log('config', config)
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
