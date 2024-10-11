@@ -690,6 +690,8 @@ type SelectCohortEntry = {
 	values: SelectCohortValuesEntry[]
 	description?: string
 	asterisk?: string
+	//The profile has clearOnChange. The terms used in the plots are not always the same for the profile.
+	//Therefore when switching cohorts, it is necessary to delete the plots opened and the global filter
 	clearOnChange?: { [index: string]: boolean }
 }
 

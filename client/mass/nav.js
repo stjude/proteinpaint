@@ -568,8 +568,6 @@ function setRenderers(self) {
 					.style('margin-left', '0px')
 					.on('click', async () => {
 						const state = self.app.getState()
-						//The profile has clearOnChange. The terms used in the plots are not always the same for the profile.
-						//Therefore when switching cohorts, it is necessary to delete the plots opened and the global filter
 						const clearOnChange = state.termdbConfig.selectCohort.clearOnChange
 						if (clearOnChange) {
 							const subactions = [{ type: 'cohort_set', activeCohort: i }]
