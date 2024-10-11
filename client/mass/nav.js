@@ -568,11 +568,13 @@ function setRenderers(self) {
 					.style('margin-left', '0px')
 					.on('click', async () => {
 						const state = self.app.getState()
-						//the terms used in the plots are not always the same for the profile.
-						//Therefore when switching cohorts, it is necessary to delete the plots opened
-						if (state.termdbConfig.selectCohort.clearOnChange) {
-							const subactions = [
-								{
+						//The profile has clearOnChange. The terms used in the plots are not always the same for the profile.
+						//Therefore when switching cohorts, it is necessary to delete the plots opened and the global filter
+						const clearOnChange = state.termdbConfig.selectCohort.clearOnChange
+						if (clearOnChange) {
+							const subactions = [{ type: 'cohort_set', activeCohort: i }]
+							if (clearOnChange.filter)
+								subactions.push({
 									type: 'filter_replace',
 									filter: {
 										type: 'tvslst',
@@ -581,15 +583,14 @@ function setRenderers(self) {
 										tag: 'filterUiRoot',
 										lst: []
 									}
-								},
-								{ type: 'cohort_set', activeCohort: i }
-							]
-							for (const plot of state.plots) {
-								subactions.push({
-									type: 'plot_delete',
-									id: plot.id
 								})
-							}
+							if (clearOnChange.plots)
+								for (const plot of state.plots) {
+									subactions.push({
+										type: 'plot_delete',
+										id: plot.id
+									})
+								}
 
 							self.app.dispatch({
 								type: 'app_refresh',
