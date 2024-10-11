@@ -202,7 +202,7 @@ class TdbStore {
 	constructor prototype
 */
 TdbStore.prototype.actions = {
-	app_refresh(action = {}) {
+	async app_refresh(action = {}) {
 		// optional action.state{} may be full or partial overrides
 		// to the current state
 		//
@@ -212,18 +212,26 @@ TdbStore.prototype.actions = {
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state || {})
 
-		// custom array-merge logic is hard to code as a declarative argument to copyMerge(),
-		// it's easier to reuse action methods for arrays in state, like plots
+		// Subactions cause existing action methods to be called in parallel,
+		// to update unrelated parts of the state.
+		//
+		// Note that an alternative approach of pre-merging actions payloads into
+		// one "write" step or action is not as reliable, since that approach may leave
+		// out custom logic that are required and already coded in existing actions.
+		//
 		const subactionPlotIds = new Set()
+		const promises = []
 		if (action.subactions) {
 			for (const a of action.subactions) {
-				this.actions[a.type].call(this, a)
+				promises.push(this.actions[a.type].call(this, a))
 				if (a.type.startsWith('plot_')) subactionPlotIds.add(a.id)
 			}
 		}
+		await Promise.all(promises)
 
 		for (const plot in this.state.plots) {
 			if (plot.mayAdjustConfig && !subactionPlotIds.has(plot.id)) {
+				// assume that mayAdjustConfig() is not async
 				plot.mayAdjustConfig(plot, action.config)
 			}
 		}
@@ -296,8 +304,10 @@ TdbStore.prototype.actions = {
 		}
 	},
 
+	// TODO: delete this action? does not seem to be used
 	async plot_splice(action) {
 		for (const a of action.subactions) {
+			// need to await in case the sequence of subactions is relevant
 			await this.actions[a.type].call(this, a)
 		}
 	},
