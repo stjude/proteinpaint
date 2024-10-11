@@ -690,7 +690,7 @@ type SelectCohortEntry = {
 	values: SelectCohortValuesEntry[]
 	description?: string
 	asterisk?: string
-	clearOnChange?: boolean
+	clearOnChange?: { [index: string]: boolean }
 }
 
 type MissingAccess = {
