@@ -29,20 +29,28 @@ class gsea {
 	}
 	async init(opts) {
 		const config = opts.plots.find(p => p.id === this.id)
+		const loadingDiv = this.opts.holder
+			.append('div')
+			.style('position', 'absolute')
+			.style('top', 0)
+			.style('left', 0)
+			.style('width', '100%')
+			.style('height', '100%')
+			.style('background-color', 'rgba(255, 255, 255, 0.8)')
+			.style('text-align', 'center')
 		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
 		const mainDiv = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
+		const DETableDiv = mainDiv.append('div').style('display', 'inline-block').style('margin', '50px')
 		const holder = mainDiv.append('div').style('display', 'inline-block')
-		const detailsDiv = mainDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-			.style('margin-top', '50px')
+		const detailsDiv = mainDiv.append('div').style('vertical-align', 'top').style('margin-top', '50px')
 
 		const tableDiv = this.opts.holder.append('div').style('margin-left', '50px')
 
 		this.dom = {
 			holder,
+			loadingDiv,
 			header: this.opts.header,
+			DETableDiv,
 			controlsDiv,
 			detailsDiv,
 			tableDiv
@@ -112,21 +120,68 @@ class gsea {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
-			config
+			config,
+			termdbConfig: appState.termdbConfig,
+			dslabel: appState.vocab.dslabel,
+			genome: appState.vocab.genome
 		}
 	}
 
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.gsea
-		await this.setControls()
+		if (this.app.opts.genome.termdbs) await this.setControls()
 		if (this.dom.header)
 			this.dom.header
-				.style('opacity', 0.6)
 				.style('padding-left', '10px')
-				.style('font-size', '0.75em')
-				.text('GENE SET ENRICHMENT ANALYSIS')
+				.text(
+					`Differentially expresed genes of a cluster vs rest of cells. Sample ${this.state.config.sample}, Cluster ${this.state.config.cluster}`
+				)
+		this.renderDEGeneset()
 		render_gsea(this)
+	}
+
+	async renderDEGeneset() {
+		const DETableDiv = this.dom.DETableDiv
+		DETableDiv.selectAll('*').remove()
+		const categoryName = this.state.config.cluster
+		const columnName = this.state.termdbConfig.queries.singleCell.DEgenes.columnName
+		const sample = this.state.config.sample
+		const args = { genome: this.state.genome, dslabel: this.state.dslabel, categoryName, sample, columnName }
+		this.dom.loadingDiv.selectAll('*').remove()
+		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
+		const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
+		this.dom.loadingDiv.style('display', 'none')
+		if (result.error) {
+			DETableDiv.text(result.error)
+			return
+		}
+		if (!Array.isArray(result.genes)) {
+			DETableDiv.text('.genes[] missing')
+			return
+		}
+		const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
+		const rows = []
+		this.genes = []
+		this.fold_changes = []
+		result.genes.sort((a, b) => b.avg_log2FC - a.avg_log2FC)
+		for (const gene of result.genes) {
+			const row = [
+				{ value: gene.name },
+				{ value: roundValueAuto(gene.avg_log2FC) },
+				{ value: roundValueAuto(gene.p_val_adj) }
+			]
+			rows.push(row)
+			this.genes.push(gene.name)
+			this.fold_changes.push(gene.avg_log2FC)
+		}
+		renderTable({
+			rows,
+			columns,
+			maxWidth: '40vw',
+			maxHeight: '20vh',
+			div: DETableDiv
+		})
 	}
 }
 
@@ -141,16 +196,20 @@ m {}
 add:
 - vo_circle
 	*/
+	const gsea_params = {
+		genes: self.genes,
+		fold_change: self.fold_changes,
+		genome: self.app.vocabApi.opts.state.vocab.genome
+	}
 	if (self.settings.pathway != '-') {
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.dom.holder.selectAll('*').remove()
 		self.dom.tableDiv.selectAll('*').remove()
-		self.config.gsea_params.geneSetGroup = self.settings.pathway
+		gsea_params.geneSetGroup = self.settings.pathway
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
-		//console.log('self.config.gsea_params:', self.config.gsea_params)
 		let output
 		try {
-			output = await rungsea(self.config.gsea_params)
+			output = await rungsea(gsea_params)
 			wait.remove()
 			if (output.error) {
 				throw output.error
@@ -216,6 +275,7 @@ add:
 
 		self.dom.tableDiv.selectAll('*').remove()
 		const d_gsea = self.dom.tableDiv.append('div')
+
 		renderTable({
 			columns: gsea_table_cols,
 			rows: self.gsea_table_rows,
@@ -227,11 +287,11 @@ add:
 			noButtonCallback: async index => {
 				//console.log("index:",self.gsea_table_rows[index][0].value)
 				const body = {
-					genome: self.config.gsea_params.genome,
+					genome: gsea_params.genome,
 					geneset_name: self.gsea_table_rows[index][0].value,
-					genes: self.config.gsea_params.genes,
-					fold_change: self.config.gsea_params.fold_change,
-					geneSetGroup: self.config.gsea_params.geneSetGroup,
+					genes: gsea_params.genes,
+					fold_change: gsea_params.fold_change,
+					geneSetGroup: gsea_params.geneSetGroup,
 					pickle_file: output.pickle_file
 				}
 				const holder = self.dom.holder

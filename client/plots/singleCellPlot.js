@@ -217,7 +217,6 @@ class singleCellPlot {
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
 		const deDiv = headerDiv.append('div').style('padding-left', '40px').style('display', 'inline-block')
 
-		const DETableDiv = contentDiv.append('div')
 		const plotsDivParent = contentDiv.append('div').style('display', 'inline-block')
 		const plotsDiv = plotsDivParent
 			.append('div')
@@ -252,7 +251,6 @@ class singleCellPlot {
 			controlsHolder: controlsDiv,
 			tableDiv,
 			deDiv,
-			DETableDiv,
 			plotsDiv,
 			plotsDivParent,
 			showSamplesBt
@@ -262,78 +260,35 @@ class singleCellPlot {
 		this.axisOffset = { x: offsetX, y: 30 }
 
 		if (q.singleCell?.DEgenes) {
-			const label = this.dom.deDiv
-				.append('label')
-				.html('View differentially expresed genes of a cluster vs rest of cells:&nbsp;')
-			this.dom.deselect = label.append('select')
-			if (this.app.opts.genome.termdbs)
-				this.dom.GSEAbt = this.dom.deDiv
-					.append('button')
-					.style('margin-left', '5px')
-					.style('display', 'none')
-					.text('Gene set enrichment analysis')
-					.on('click', e => {
-						const gsea_params = {
-							genes: this.genes,
-							fold_change: this.fold_changes,
-							genome: this.app.vocabApi.opts.state.vocab.genome
-						}
-						const config = {
-							chartType: 'gsea',
-							gsea_params: gsea_params,
-							//if getPlotHolder is defined use this.insertBeforeId, needed for GDC
-							insertBefore: this.app.opts?.app?.getPlotHolder ? this.insertBeforeId : this.id
-						}
-						this.app.dispatch({
-							type: 'plot_create',
-							config
-						})
-					})
-			this.dom.deselect.append('option').text('')
-			this.dom.deselect.on('change', async e => {
-				DETableDiv.selectAll('*').remove()
-				const categoryName = this.dom.deselect.node().value.split(' ')?.[1]
-				if (this.dom.GSEAbt) this.dom.GSEAbt.style('display', categoryName ? 'inline-block' : 'none')
-				if (!categoryName) return
+			this.dom.deselect = deDiv.append('select')
+			const DEbt = this.dom.deDiv
+				.append('button')
+				.style('margin-left', '5px')
+				.html('View differentially expresed genes of a cluster vs rest of cells')
+				.property('disabled', true)
+				.on('click', e => {
+					const categoryName = this.dom.deselect.node().value.split(' ')?.[1]
+					if (!categoryName) return
 
-				const columnName = state.termdbConfig.queries.singleCell.DEgenes.columnName
-				const sample =
-					this.state.config.experimentID || this.state.config.sample || this.samples?.[0]?.experiments[0]?.experimentID
-				const args = { genome: state.genome, dslabel: state.dslabel, categoryName, sample, columnName }
-				this.dom.loadingDiv.selectAll('*').remove()
-				this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
-				const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
-				this.dom.loadingDiv.style('display', 'none')
-				if (result.error) {
-					DETableDiv.text(result.error)
-					return
-				}
-				if (!Array.isArray(result.genes)) {
-					DETableDiv.text('.genes[] missing')
-					return
-				}
-				const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
-				const rows = []
-				this.genes = []
-				this.fold_changes = []
-				result.genes.sort((a, b) => b.avg_log2FC - a.avg_log2FC)
-				for (const gene of result.genes) {
-					const row = [
-						{ value: gene.name },
-						{ value: roundValueAuto(gene.avg_log2FC) },
-						{ value: roundValueAuto(gene.p_val_adj) }
-					]
-					rows.push(row)
-					this.genes.push(gene.name)
-					this.fold_changes.push(gene.avg_log2FC)
-				}
-				renderTable({
-					rows,
-					columns,
-					maxWidth: '40vw',
-					maxHeight: '20vh',
-					div: DETableDiv
+					const config = {
+						chartType: 'gsea',
+						cluster: categoryName,
+						//if getPlotHolder is defined use this.insertBeforeId, needed for GDC
+						insertBefore: this.app.opts?.app?.getPlotHolder ? this.insertBeforeId : this.id,
+						sample:
+							this.state.config.experimentID ||
+							this.state.config.sample ||
+							this.samples?.[0]?.experiments[0]?.experimentID
+					}
+					this.app.dispatch({
+						type: 'plot_create',
+						config
+					})
 				})
+
+			this.dom.deselect.append('option').text('')
+			this.dom.deselect.on('change', e => {
+				DEbt.property('disabled', e.target.value == '' ? true : false)
 			})
 		}
 
@@ -353,7 +308,6 @@ class singleCellPlot {
 		this.dom.violinBt?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.selectCategory?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.deDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
-		this.dom.DETableDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
 
 		this.app.dispatch({
 			type: 'plot_edit',
@@ -924,11 +878,6 @@ async function renderSamplesTable(div, self, state, dslabel, genome) {
 		div,
 		maxHeight,
 		noButtonCallback: index => {
-			if (self.dom.DETableDiv) {
-				self.dom.deselect.node().value = ''
-				self.dom.DETableDiv.selectAll('*').remove()
-				if (self.dom.GSEAbt) self.dom.GSEAbt.style('display', 'none')
-			}
 			const sample = rows[index][0].value
 			const config = { chartType: 'singleCellPlot', sample }
 			if (rows[index][0].__experimentID) {
