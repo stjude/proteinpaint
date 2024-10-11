@@ -570,13 +570,16 @@ function setRenderers(self) {
 						const state = self.app.getState()
 						//the terms used in the plots are not always the same for the profile.
 						//Therefore when switching cohorts, it is necessary to delete the plots opened
-						console.log(state.filter)
 						if (state.vocab.dslabel == 'profile') {
 							const subactions = [
 								{
 									type: 'filter_replace',
 									filter: {
-										termfilter: { type: 'tvslst', in: true, join: '', lst: [] }
+										type: 'tvslst',
+										in: true,
+										join: '',
+										tag: 'filterUiRoot',
+										lst: []
 									}
 								},
 								{ type: 'cohort_set', activeCohort: i }
