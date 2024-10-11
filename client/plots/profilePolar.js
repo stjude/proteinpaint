@@ -1,10 +1,10 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
-import { getProfilePlotConfig, profilePlot } from './profilePlot.js'
+import { profilePlot } from './profilePlot.js'
 import { renderTable } from '../dom/table'
 import { loadFilterTerms } from './profilePlot.js'
-import { getDefaultProfilePlotSettings } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
 
 class profilePolar extends profilePlot {
 	constructor() {

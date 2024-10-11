@@ -6,6 +6,7 @@ import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
+import { config } from 'process'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
@@ -580,6 +581,37 @@ export class profilePlot {
 			const percentage = (score / maxScore) * 100
 			return Math.round(percentage)
 		}
+	}
+}
+
+export function makeChartBtnMenu(holder, chartsInstance, chartType) {
+	/*
+	holder: the holder in the tooltip
+	chartsInstance: MassCharts instance
+		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+		mass option is accessible at chartsInstance.app.opts{}
+	*/
+	const state = chartsInstance.state
+	const activeCohort = state ? state.activeCohort : opts.activeCohort
+	const key = activeCohort == 0 ? 'full' : 'abbrev'
+	const typeConfig = state.termdbConfig?.chartConfigByType[key][chartType]
+	const menuDiv = holder.append('div')
+	for (const plotConfig of typeConfig.plots) {
+		let config = structuredClone(plotConfig)
+		config.chartType = chartType
+		console.log('config', config)
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(plotConfig.title)
+			.on('click', () => {
+				chartsInstance.app.dispatch({
+					type: 'plot_create',
+					chartType,
+					config
+				})
+				chartsInstance.dom.tip.hide()
+			})
 	}
 }
 

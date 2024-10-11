@@ -4,7 +4,7 @@ import * as d3 from 'd3'
 import { profilePlot } from './profilePlot.js'
 import { renderTable } from '../dom/table'
 import { loadFilterTerms } from './profilePlot.js'
-import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, getProfilePlotConfig, makeChartBtnMenu } from './profilePlot.js'
 
 class profileRadar extends profilePlot {
 	constructor() {
@@ -16,7 +16,7 @@ class profileRadar extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
-		this.plotConfig = config[config.plot]
+		this.plotConfig = config
 		this.lineGenerator = d3.line()
 		this.twLst = []
 		this.terms = this.plotConfig.terms
@@ -58,8 +58,8 @@ class profileRadar extends profilePlot {
 		const columns = [
 			{ label: 'Color' },
 			{ label: 'Module' },
-			{ label: config[config.plot].term1.abbrev },
-			{ label: config[config.plot].term2.abbrev },
+			{ label: config.term1.abbrev },
+			{ label: config.term2.abbrev },
 			{ label: 'Diff' }
 		]
 
@@ -73,7 +73,7 @@ class profileRadar extends profilePlot {
 				.attr('transform', `translate(60, ${40})`)
 				.attr('font-weight', 'bold')
 				.attr('font-size', '0.9rem')
-				.text(config[config.plot].title)
+				.text(config.title)
 
 		const radarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
@@ -174,12 +174,12 @@ class profileRadar extends profilePlot {
 		}
 		if (!this.settings.comparison) {
 			this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
-			let abbrev = config[config.plot].term1.abbrev ? `(${config[config.plot].term1.abbrev})` : ''
-			const item1 = `${config[config.plot].term1.name} ${abbrev}`
+			let abbrev = config.term1.abbrev ? `(${config.term1.abbrev})` : ''
+			const item1 = `${config.term1.name} ${abbrev}`
 			this.addLegendItem(item1, color1, 0, 'none')
-			abbrev = config[config.plot].term2.abbrev ? `(${config[config.plot].term2.abbrev})` : ''
+			abbrev = config.term2.abbrev ? `(${config.term2.abbrev})` : ''
 
-			const item2 = `${config[config.plot].term2.name} ${abbrev}`
+			const item2 = `${config.term2.name} ${abbrev}`
 			this.addLegendItem(item2, color2, 1, '5, 5')
 			if (this.state.dslabel == 'ProfileAbbrev')
 				this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(-50, -15)`))
@@ -275,13 +275,13 @@ class profileRadar extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = getProfilePlotConfig(app, opts)
+		const defaults = opts
 		defaults.settings = { profileRadar: getDefaultProfilePlotSettings() }
 
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
 		const config = copyMerge(structuredClone(defaults), opts)
 		config.settings.controls = { isOpen: false }
-		const terms = config[opts.plot].terms
+		const terms = config.terms
 		const twlst = []
 		for (const row of terms) {
 			row.term1.score.q = { mode: 'continuous' }
@@ -304,6 +304,8 @@ export async function getPlotConfig(opts, app) {
 		throw `${e} [profileRadar getPlotConfig()]`
 	}
 }
+
+export { makeChartBtnMenu }
 
 export const profileRadarInit = getCompInit(profileRadar)
 // this alias will allow abstracted dynamic imports

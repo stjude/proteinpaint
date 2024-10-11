@@ -4,7 +4,8 @@ import * as d3 from 'd3'
 import { renderTable } from '../dom/table'
 import { profilePlot } from './profilePlot.js'
 import { loadFilterTerms } from './profilePlot.js'
-import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, makeChartBtnMenu } from './profilePlot.js'
+export { makeChartBtnMenu }
 
 class profileRadarFacility extends profilePlot {
 	constructor() {
@@ -16,9 +17,9 @@ class profileRadarFacility extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
-		this.plotConfig = config[config.plot]
+		this.plotConfig = config
 		this.twLst = []
-		this.terms = config[config.plot].terms
+		this.terms = config.terms
 		for (const row of this.terms) {
 			this.rowCount++
 			this.twLst.push(row.score)
@@ -59,7 +60,7 @@ class profileRadarFacility extends profilePlot {
 			.append('text')
 			.attr('transform', `translate(110, ${30})`)
 			.attr('font-weight', 'bold')
-			.text(this.config[this.config.plot].title)
+			.text(this.config.title)
 		const radius = this.radius
 		const x = 370
 		const y = 350
@@ -182,7 +183,7 @@ class profileRadarFacility extends profilePlot {
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		const siteLabel = this.sites.find(s => s.value == this.settings.site).label
 		this.addLegendItem(siteLabel, color1, 0, 'none')
-		this.addLegendItem(this.config[this.config.plot].score, color2, 1, '5, 5')
+		this.addLegendItem(this.config.score, color2, 1, '5, 5')
 	}
 
 	addData(iangle, i, data, percentage, isFacility) {
@@ -279,7 +280,7 @@ class profileRadarFacility extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = getProfilePlotConfig(app, opts)
+		const defaults = opts
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadarFacility'
 		let config = copyMerge(structuredClone(defaults), opts)
 		const settings = getDefaultProfilePlotSettings()
@@ -288,7 +289,7 @@ export async function getPlotConfig(opts, app) {
 			profileRadarFacility: settings,
 			controls: { isOpen: false }
 		}
-		const terms = config[opts.plot].terms
+		const terms = config.terms
 		const twlst = []
 		for (const row of terms) {
 			row.score.q = row.maxScore.q = { mode: 'continuous' }
