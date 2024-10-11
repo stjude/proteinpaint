@@ -570,7 +570,7 @@ function setRenderers(self) {
 						const state = self.app.getState()
 						//the terms used in the plots are not always the same for the profile.
 						//Therefore when switching cohorts, it is necessary to delete the plots opened
-						if (state.vocab.dslabel == 'profile') {
+						if (state.termdbConfig.selectCohort.clearOnChange) {
 							const subactions = [
 								{
 									type: 'filter_replace',
