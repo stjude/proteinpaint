@@ -17,26 +17,40 @@ type KeyLabel = {
 
 /** a set of categories about a vcf INFO field */
 export type InfoFieldCategories = {
+	/** data dictionary field (e.g. CLINSIGN for clinical significance) */
 	[index: string]: {
+		/** Color used for rendering labels and backgrounds in the legend, tables, etc. */
 		color: string
+		/** Human readable label */
 		label?: string
+		/** Shown in the legend on label click */
 		desc: string
+		/** When .color is used as the background, denoted whether
+		 * to use 'white', 'black', or other color for the text */
 		textcolor?: string
-		name?: string
 	}
 }
 
 type NumericFilterEntry = {
+	/** '<' or '>' for filtering */
 	side: string
+	/** value for filtering */
 	value: number
 }
 
 type AFEntry = {
+	/** human readable label */
 	name: string
-	locusinfo: { key: string }
+	/**  */
+	locusinfo: {
+		/** usually the data dictionary value  (e.g. AF_EXAC for ExAC frequency) */
+		key: string
+	}
+	/** key/values for filtering */
 	numericfilter: NumericFilterEntry[]
 }
 
+/** Specific allele freq info for ClinVar */
 export type ClinvarAF = {
 	[index: string]: AFEntry
 }
@@ -44,9 +58,13 @@ export type ClinvarAF = {
 /*** types supporting Queries type ***/
 
 type InfoFieldEntry = {
+	/** Human readable name to display */
 	name: string
+	/** key identifier for the information field */
 	key: string
+	/** a set of categories about a vcf INFO field */
 	categories?: InfoFieldCategories
+	/** seperator (e.g. '&', '|' ) between join values */
 	separator?: string
 }
 
@@ -58,11 +76,19 @@ type GenomicPositionEntry = {
 }
 */
 
-type Chr2bcffile = { [index: string]: string }
+type Chr2bcffile = {
+	/** index is the chr (e.g. 'chr1', 'chr2', etc.)
+	 * value is the bcf file path */
+	[index: string]: string
+}
+
 type bcfMafFile = {
 	/** bcf file for only variants, no samples and FORMAT */
 	bcffile: string
-	/** maf file for sample mutations. bcf header contents with FORMAT and list of samples are copied into this maf as headers followed by the maf header starting with #chr, pos, ref, alt and sample. Each column after sample corresponds to the information in FORMAT. file is bgzipped and tabix indexed (tabix -c"#" -s 1 -b 2 -e 2 <maf.gz>) */
+	/** maf file for sample mutations. bcf header contents with FORMAT and list of samples are
+	 * copied into this maf as headers followed by the maf header starting with #chr, pos, ref,
+	 * alt and sample. Each column after sample corresponds to the information in FORMAT. file
+	 * is bgzipped and tabix indexed (tabix -c"#" -s 1 -b 2 -e 2 <maf.gz>) */
 	maffile: string
 }
 
@@ -84,11 +110,8 @@ type SnvindelByRange = {
 	tempflag_sampleNameInVcfHeader?: boolean
 }
 
-type SvfusionByRange = {
-	file?: string
-}
-
 type URLEntry = {
+	/** base URL, including the host and possibly other queries */
 	base?: string
 	key?: string
 	namekey?: string
@@ -97,29 +120,33 @@ type URLEntry = {
 }
 
 type SkewerRim = {
+	/** only enabled for 'format' */
 	type: string
+	/** 'origin' */
 	formatKey: string
+	/** 'somatic' or 'germline', generally germline */
 	rim1value: string
+	/** 'somatic' or 'germline', generally somatic */
 	noRimValue: string
 }
 
 type GdcApi = {
+	/** Represents the configuration for accessing the GDC API. */
 	gdcapi?: boolean
 }
 
-type M2Csq = GdcApi & {
-	by: string
-}
-
-type SnvIndelFormatEntry = {
-	ID: string
-	Description: string
-	Number: string | number
-	Type: string
-}
-
 type SnvIndelFormat = {
-	[index: string]: SnvIndelFormatEntry
+	[index: string]: {
+		/* has value for a non-GT field indicating the variant 
+		is annotated to this sample*/
+		ID: string
+		Description: string
+		/** 'R' or 1. do not parse values here based on Number="R"
+		as we don't need to compute on the format values on backend
+		client will parse the values for display */
+		Number: string | number
+		Type: string
+	}
 }
 
 type FilterValues = {
@@ -229,7 +256,6 @@ type SnvIndelQuery = {
 	infoUrl?: URLEntry[]
 	skewerRim?: SkewerRim
 	format4filters?: string[]
-	m2csp?: M2Csq
 	format?: SnvIndelFormat
 	variant_filter?: VariantFilter
 	populations?: Population[]
@@ -247,27 +273,37 @@ type SnvIndelQuery = {
 }
 
 type SvFusion = {
-	byrange: SvfusionByRange
+	byrange: {
+		/** file paths for sv fusion data */
+		file?: string
+	}
 }
 
 type SingleSampleMutationQuery = {
 	src: 'native' | 'gdcapi' | string
-	/** which property of client mutation object to retrieve sample identifier for querying single sample data with */
+	/** which property of client mutation object to retrieve sample identifier for
+	 * querying single sample data with */
 	sample_id_key: string
 	/** only required for src=native */
 	folder?: string
-	/** quick fix to hide chrM from disco, due to reason e.g. this dataset doesn't have data on chrM */
+	/** quick fix to hide chrM from disco, due to reason e.g. this dataset doesn't
+	 * have data on chrM */
 	discoSkipChrM?: true
 }
 
 type NIdataQuery = {
+	/** Reference obj for NI data query. */
 	Ref1: NIdataQueryRef
 }
 
 type NIdataQueryRef = {
+	/** file path for the reference file */
 	referenceFile: string
+	/** file path for the sample file */
 	samples: string
+	/** Parameters for slice indices in the mass brain imaging plot */
 	parameters?: NIdataQueryRefParams
+	/** optional terms to show as table columns and annotate samples */
 	sampleColumns?: { termid: string }[]
 }
 
@@ -297,7 +333,14 @@ export type GeneArgumentEntry = {
 	/** value of the input or checkbox
 	 * required if type is string. Otherwise, optional
 	 */
-	value?: string | boolean | number | { type: string; value: string[] | null }
+	value?:
+		| string
+		| boolean
+		| number
+		| {
+				type: string
+				value: string[] | null
+		  }
 	options?: {
 		/** Type of dom element to render underneath the radio
 		 * 'text': creates a text area input
@@ -317,32 +360,55 @@ export type GeneArgumentEntry = {
 }
 
 type TopVariablyExpressedGenesQuery = {
+	/** Denotes either gdc specific data requests or common
+	 * data request processing */
 	src: 'gdcapi' | 'native' | string
+	/** Specifies the dom element rendered in the menu */
 	arguments?: GeneArgumentEntry[]
 }
 
 type TopMutatedGenes = {
+	/** Specifies the dom element rendered in the menu */
 	arguments?: GeneArgumentEntry[]
 }
 
 type TklstEntry = {
+	/** Determines the column to add the track via the assay names
+	 * shown at the top of the facet table.*/
 	assay?: string
+	/** track type (e.g. bigwig, bedj, etc.) */
 	type: string
+	/** Human readable name */
 	name: string
-	sample?: string
+	/** Corresponding sample id in the data file */
+	sampleID?: string
+	/** data file path */
 	file: string
+	/** The key for the second tier of the facet table*/
 	level1?: string
+	/** The key for the third tier of the facet table*/
+	level2?: string
+	/** Whether the track is shown by default */
 	defaultShown?: boolean
+	/** Track height */
 	stackheight?: number
+	/** Space added to the height of the track */
 	stackspace?: number
+	/** padding-top for the track */
 	toppad?: number
+	/** padding-bottom for the track */
 	bottompad?: number
-	onerow?: number // should be boolean???
+	/** Specifically for bedj tracks. if true, will render all items in a
+	 * single row and do not stack them */
+	onerow?: number | boolean
 }
 
 type TrackLstEntry = {
+	/** creates a facet table if true. */
 	isfacet: boolean
+	/** name shown for the facet table button from Tracks button*/
 	name: string
+	/** tk objs to show on click of the facet table */
 	tklst: TklstEntry[]
 }
 
@@ -368,6 +434,7 @@ type CnvSegment = {
 	/** if cnv is loss, skip if value>this cutoff */
 	cnvLossCutoff?: number
 }
+
 type CnvSegmentByRange = {
 	src: 'native' | 'gdcapi' | string
 	/** only for src=native */
@@ -401,6 +468,7 @@ export type MetaboliteIntensityQueryNative = {
 	find?: (param: string[]) => void
 	metaboliteIntensity2bins?: { [index: string]: any }
 }
+
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
 /** the geneExpression query */
@@ -457,6 +525,7 @@ export type SingleCellSamplesNative = {
 	/** dynamically added getter */
 	get?: (q: any) => any
 }
+
 export type SingleCellSamplesGdc = {
 	src: 'gdcapi'
 	get?: (q: any) => any
@@ -479,8 +548,11 @@ export type SingleCellDataGdc = {
 export type SingleCellDEgeneGdc = {
 	src: 'gdcapi'
 	/** Column name.
-	this must be the colorColumn from one of the plots. so that at the client app, as soon as the plot data have been loaded and maps rendered, client will find out the cell groups based on this columnName value, and show a drop down of these groups on UI. user selects a group, and pass it as request body to backend to get DE genes for this group
-	*/
+	this must be the colorColumn from one of the plots. so that at the client app, 
+	as soon as the plot data have been loaded and maps rendered, client will find 
+	out the cell groups based on this columnName value, and show a drop down of 
+	these groups on UI. user selects a group, and pass it as request body to backend 
+	to get DE genes for this group */
 	columnName: string
 }
 
@@ -567,8 +639,11 @@ type LdQuery = {
 		/** max range allowed to show data */
 		viewrangelimit: number
 	}[]
+	/** Colors for the ld scale or dots  */
 	overlay: {
+		/** Color for the same variant as has been clicked for overlaying */
 		color_1: string
+		/** Color for no match */
 		color_0: string
 	}
 }
@@ -582,7 +657,6 @@ type SingleSampleGenomeQuantification = {
 		min: number
 		/** max value of Y axis */
 		max: number
-		/** */
 		sample_id_key: string
 		/** folder path of data files per sample */
 		folder: string
@@ -620,7 +694,11 @@ type Mds3Queries = {
 	NIdata?: NIdataQuery
 	geneExpression?: GeneExpressionQuery
 	rnaseqGeneCount?: RnaseqGeneCount
+	/** Used to create the top mutated genes UI in the gene
+	 * set edit ui and data requests. */
 	topMutatedGenes?: TopMutatedGenes
+	/** Used to create the top variably expressed UI in the gene
+	 * set edit ui. Also used for data requests */
 	topVariablyExpressedGenes?: TopVariablyExpressedGenesQuery
 	metaboliteIntensity?: {
 		src: 'native' | 'gdc'
@@ -637,6 +715,7 @@ type Mds3Queries = {
 	ld?: LdQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
+	/** depreciated */
 	DZImages?: DZImages
 	WSImages?: WSImages
 	images?: Images
@@ -650,7 +729,8 @@ type Images = {
 	folder: string
 }
 
-/** deep zoom image shown via openseadragon, with precomputed tiles. this is replaced by WSImages and should not be used anymore */
+/** Depreciated. deep zoom image shown via openseadragon, with precomputed tiles.
+ * this is replaced by WSImages and should not be used anymore */
 export type DZImages = {
 	// type of the image, e.g. H&E
 	type: string
@@ -689,6 +769,7 @@ type SelectCohortEntry = {
 	prompt: string
 	values: SelectCohortValuesEntry[]
 	description?: string
+	/** subtext shown at the very bottom of the cohort/about tab subheader */
 	asterisk?: string
 	//The profile has clearOnChange. The terms used in the plots are not always the same for the profile.
 	//Therefore when switching cohorts, it is necessary to delete the plots opened and the global filter
@@ -810,11 +891,14 @@ type MatrixSettings = {
 	synonymousMutations?: string[]
 	showHints?: string[]
 	displayDictRowWithNoValues?: boolean
-	/** allow to add two buttons (CNV and mutation) to control panel for selecting mclasses displayed on oncoMatrix */
+	/** allow to add two buttons (CNV and mutation) to control panel for selecting
+	 * mclasses displayed on oncoMatrix */
 	addMutationCNVButtons?: boolean
-	/** this is now computed from sortPriority[x].tiebreakers.find(tb => tb.filter?.values[0]?.dt === 1) ... */
+	/** this is now computed from sortPriority[x].tiebreakers.find(tb =>
+	 * tb.filter?.values[0]?.dt === 1) ... */
 	sortByMutation?: string
-	/** this is now computed from sortPriority[x].tiebreakers.find(tb => tb.filter?.values[0]?.dt === 4).isOrdered */
+	/** this is now computed from sortPriority[x].tiebreakers.find(tb =>
+	 * tb.filter?.values[0]?.dt === 4).isOrdered */
 	sortByCNV?: boolean
 	cnvUnit?: 'log2ratio' | 'segmedian'
 }
@@ -899,7 +983,8 @@ type UrlTemplateBase = {
 }
 export type UrlTemplateSsm = UrlTemplateBase & {
 	/** to create separate link, but not directly on chr.pos.ref.alt string.
-	name of link is determined by either namekey or linkText. former allows to retrieve a name per m that's different from chr.pos.xx */
+	name of link is determined by either namekey or linkText. former allows 
+	to retrieve a name per m that's different from chr.pos.xx */
 	shownSeparately?: boolean
 	/** optional name of link, if set, same name will be used for all links. e.g. "ClinVar".
 	if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsid) */
@@ -968,19 +1053,19 @@ type Termdb = {
 	dictionary?: GdcApi
 	allowCaseDetails?: AllowCaseDetails
 	isGeneSetTermdb?: boolean
-	// !!! TODO: improve this type definition !!!
-	getGeneAlias?: (q: any, tw: any) => any
-	convertSampleId?: {
-		gdcapi: boolean
-	}
+	/** Searches the genedb alias list to return the genecode ID */
+	getGeneAlias?: (q: any, tw: any) => { gencodeId: any }
+	convertSampleId?: GdcApi
 	hierCluster?: any
 
 	/** ds customization of rules in TermTypeSelect on what term type to exclude for a usecase.
 	used by gdc in that gene exp cannot be used for filtering 
-	note this applies to left-side term type tabs, but not terms in dict tree. latter is controlled by excludeTermtypeByTarget
+	note this applies to left-side term type tabs, but not terms in dict tree. latter 
+	is controlled by excludeTermtypeByTarget
 	*/
 	useCasesExcluded?: {
-		/** key is target name (todo restrict values), value is array of 1 or more term types (todo restrict values) */
+		/** key is target name (todo restrict values), value is array of 1 or more term
+		 * types (todo restrict values) */
 		[useCaseTarget: string]: string[]
 	}
 	/** ds customization to rules in isUsableTerm(). this applies to what's showing in dict tree
@@ -1082,7 +1167,8 @@ export type Cohort = {
 		}
 	}
 	db: FileObj
-	/** customize the default chart to open on mass ui when there's no charts. if missing it opens dictionary ui */
+	/** customize the default chart to open on mass ui when there's no charts. if
+	 * missing it opens dictionary ui */
 	defaultChartType?: string
 	hiddenChartTypes?: string[]
 	massNav?: MassNav
@@ -1261,6 +1347,7 @@ type GeneFpkm = Fpkm & {
 }
 
 type CutoffValueLstEntry = {
+	/** '<' or '>' to add to the label */
 	side: string
 	value: number
 	label: string
