@@ -86,7 +86,7 @@ class profileBarchart extends profilePlot {
 		const height = this.rowCount * 32 + 600
 		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		const title =
-			this.state.dslabel == 'ProfileAbbrev'
+			this.state.activeCohort == 1
 				? `Score-based Results for the ${this.component} Component by Module and Domain Compared with End-User Impression`
 				: `Objective ${this.component == 'Patients and Outcomes' ? '' : 'and Subjective '}Score-based Results for the ${
 						this.component
