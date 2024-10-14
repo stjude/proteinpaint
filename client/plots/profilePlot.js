@@ -110,15 +110,9 @@ export class profilePlot {
 		icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
 			title: 'Open a new plot',
 			handler: async () => {
-				const config = {
-					chartType: this.type,
-					insertBefore: this.id,
-					header: this.opts.header.text(),
-					logged: this.state.config.logged,
-					site: this.state.config.site
-				}
-				if (this.type == 'profileRadarFacility' || this.type == 'profileRadar') config.plot = this.state.config.plot
-
+				let config = structuredClone(this.config)
+				config.insertBeforeId = this.id
+				console.log('config', config)
 				this.app.dispatch({
 					type: 'plot_create',
 					config
