@@ -3,6 +3,7 @@ import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter/filter'
 import { NumericModes, TermTypes } from '#shared/terms.js'
 import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
+import { getProfileLogin } from '../plots/profilePlot.js'
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -46,27 +47,14 @@ class MassCharts {
 			// TODO: may want the server to decide this, and as defined for a dataset
 			if (state.vocab.dslabel == 'profile') state.supportedChartTypes.push(...appState.termdbConfig.allowedChartTypes)
 			state.supportedChartTypes.push('dictionary')
-			state.supportedChartTypes.push('facet') //any dataset should support facet
+			//state.supportedChartTypes.push('facet') //it takes to sampleView, some datasets may not have sampleView if not logged in
 		}
 		return state
 	}
 
 	main() {
 		//this.dom.holder.style('display', 'block')
-		if (this.state.vocab.dslabel == 'profile') this.displayProfileButtons()
-		else this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
-	}
-
-	displayProfileButtons() {
-		this.dom.btns.style('display', d =>
-			d.label === 'Radar 3'
-				? this.state.activeCohort == 0
-					? ''
-					: 'none'
-				: this.state.supportedChartTypes.includes(d.chartType)
-				? ''
-				: 'none'
-		)
+		this.dom.btns.style('display', d => (!d.hide && this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 }
 
@@ -133,6 +121,7 @@ function getChartTypeList(self, state) {
 	.updateActionBySelectedTerms:
 		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
 	*/
+	const [logged, site, user] = getProfileLogin() //later on replace with login
 	const buttons = [
 		////////////////////// PROFILE PLOTS START //////////////////////
 		{
@@ -150,7 +139,8 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Facility Radar',
 			chartType: 'profileRadarFacility',
-			clickTo: self.loadChartSpecificMenu
+			clickTo: self.loadChartSpecificMenu,
+			hide: !logged
 		},
 		{
 			label: 'Radar',

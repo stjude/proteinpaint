@@ -24,13 +24,14 @@ export class profilePlot {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
+		const [logged, site, user] = getProfileLogin() //later on replace with real login info
 		return {
 			config,
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
 			vocab: appState.vocab,
-			logged: true, //later change to read login info
-			site: config.site,
+			logged: logged, //later change to read login info
+			site,
 			activeCohort: appState.activeCohort
 		}
 	}
@@ -39,8 +40,8 @@ export class profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
 		if (this.opts.header) {
-			const suffix = state.logged ? (config.site ? config.site : 'Admin') : 'Public'
-			this.opts.header.text(config.header ? config.header : config.chartType + ` / ${suffix}`)
+			const suffix = state.logged ? (state.site ? state.site : 'Admin') : 'Public'
+			this.opts.header.text(config.header ? config.header + ` / ${suffix}` : config.chartType + ` / ${suffix}`)
 		}
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
 		const leftDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
@@ -111,7 +112,6 @@ export class profilePlot {
 			handler: async () => {
 				let config = structuredClone(this.config)
 				config.insertBeforeId = this.id
-				console.log('config', config)
 				this.app.dispatch({
 					type: 'plot_create',
 					config
@@ -144,7 +144,6 @@ export class profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
-		console.log('this.settings', this.settings)
 		if (this.dom.tableBt)
 			this.dom.tableBt.style('background-color', this.settings.showTable ? 'rgb(207, 226, 243)' : 'transparent')
 	}
@@ -629,4 +628,13 @@ export function getDefaultProfilePlotSettings() {
 		isAggregate: false,
 		showTable: true
 	}
+}
+
+export function getProfileLogin() {
+	const queryString = window.location.search
+	const urlParams = new URLSearchParams(queryString)
+	const logged = urlParams.get('logged')
+	const site = urlParams.get('site')
+	const user = logged && site ? 'site' : logged ? 'admin' : 'public'
+	return [logged, site, user]
 }

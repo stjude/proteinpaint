@@ -427,7 +427,7 @@ function setRadioInput(opts) {
 				.attr('colspan', opts.colspan || '')
 				.style('text-align', opts.align || ''),
 			options: input.options,
-			getDisplayStyle: () => 'block',
+			getDisplayStyle: () => 'inline-block',
 			styles,
 			listeners: {
 				input(event, d) {

@@ -19,7 +19,7 @@ class profileBarchart extends profilePlot {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
-		const suffix = state.logged ? (config.site ? config.site : 'Admin') : 'Public'
+		const suffix = state.logged ? (state.site ? state.site : 'Admin') : 'Public'
 		this.opts.header.text('Barchart Graph' + ` / ${suffix}`)
 		this.componentNames = config.plotByComponent.map(elem => {
 			return { value: elem.component.name, label: elem.component.name }

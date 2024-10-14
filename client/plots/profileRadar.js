@@ -54,6 +54,8 @@ class profileRadar extends profilePlot {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin-top', '140px')
+			.style('margin-right', '20px')
+
 		const rows = []
 		const columns = [
 			{ label: 'Color' },
