@@ -334,6 +334,8 @@ TdbStore.prototype.actions = {
 				parent.lst[i] = replacementFilter
 			}
 		}
+		//In the profile runproteinpaint this function is passed to clear the local filters when the global filter changes
+		if (this.app.opts.app?.onFilterChange) this.app.opts.app.onFilterChange(this.state.plots)
 	},
 
 	cache_termq({ termId, q }) {
