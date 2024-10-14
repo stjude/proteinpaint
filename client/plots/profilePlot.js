@@ -145,22 +145,9 @@ export class profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
+		console.log('this.settings', this.settings)
 		if (this.dom.tableBt)
 			this.dom.tableBt.style('background-color', this.settings.showTable ? 'rgb(207, 226, 243)' : 'transparent')
-	}
-
-	async comparePlots() {
-		this.plotAdded = true
-		const plotMod = await import('#plots/plot.app.js')
-		const plot = {
-			chartType: this.type,
-			settings: { [this.type]: { comparison: true } },
-			activeCohort: this.state.activeCohort
-		}
-
-		if (this.type == 'profileRadar' || this.type == 'profileRadarFacility') plot.plot = this.config.plot
-		const opts = { holder: this.dom.holder2, state: { plots: [plot], vocab: this.state.vocab } }
-		await plotMod.appInit(opts)
 	}
 
 	async setControls(additionalInputs = []) {
@@ -634,6 +621,10 @@ export async function loadFilterTerms(config, app, opts) {
 	)
 	await fillTwLst(twlst, app.vocabApi)
 	config.filterTWs = twlst
+}
+
+export function clearLocalFilters(plot) {
+	plot.settings = getDefaultProfilePlotSettings()
 }
 
 export function getDefaultProfilePlotSettings() {
