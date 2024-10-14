@@ -131,8 +131,12 @@ export class AppHeader {
 			row
 				.attr('id', 'sjpp-serverstat')
 				.append('span')
-				.text(
-					'Code updated: ' + (this.data.codedate || '??') + ', server launched: ' + (this.data.launchdate || '??') + '.'
+				.html(
+					`${
+						this.data.pkgver
+							? `Release version: <a href="https://github.com/stjude/proteinpaint/releases/tag/v${this.data.pkgver}" target="${this.data.pkgver}">${this.data.pkgver}</a>`
+							: 'No version information available'
+					}, server launched: ${this.data.launchdate || '??'}.`
 				)
 			if (this.data.hasblat) {
 				row

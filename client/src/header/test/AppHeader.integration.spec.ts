@@ -29,7 +29,7 @@ function getHeader(opts) {
 		},
 		data: {
 			// cardsPath: 'cards',
-			codedate: 'Fri Jul 12 2024',
+			pkgver: '1.0.0',
 			genomes
 		},
 		jwt: {}
@@ -101,8 +101,8 @@ tape('Validate app header rendering, makeheader()', async test => {
 
 	const codeMessage = holder.select('#sjpp-serverstat > span').node()
 	test.ok(
-		codeMessage && codeMessage['textContent'].includes(header.data.codedate),
-		'Should render server status message with the codedate'
+		codeMessage && codeMessage['textContent'].includes(header.data.pkgver),
+		'Should render server status message with the package version'
 	)
 
 	if (test['_ok']) holder.remove()
