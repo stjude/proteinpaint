@@ -18,6 +18,9 @@ class profileBarchart extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
+		const state = this.getState(appState)
+		const suffix = state.logged ? (config.site ? config.site : 'Admin') : 'Public'
+		this.opts.header.text('Barchart Graph' + ` / ${suffix}`)
 		this.componentNames = config.plotByComponent.map(elem => {
 			return { value: elem.component.name, label: elem.component.name }
 		})
@@ -299,7 +302,8 @@ export async function getPlotConfig(opts, app) {
 	try {
 		const defaults = getProfilePlotConfig(app, opts)
 		defaults.settings = { profileBarchart: getDefaultProfilePlotSettings() }
-		const config = copyMerge(structuredClone(defaults), opts)
+		let config = structuredClone(defaults)
+		config = copyMerge(config, opts)
 		config.settings.controls = { isOpen: false }
 		const twlst = []
 		for (const component of config.plotByComponent) {
