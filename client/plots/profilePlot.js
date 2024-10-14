@@ -82,20 +82,7 @@ export class profilePlot {
 				window.print()
 			}
 		})
-		// if (this.type != 'profileRadarFacility' && !config.settings[this.type].comparison) {
-		// 	//Facility radar plot does not need to compare
-		// 	const compareIconDiv = iconsDiv.append('div').style('margin-bottom', '20px')
-		// 	const compareBt = compareIconDiv.append('button').style('border', 'none').style('background-color', 'transparent')
-		// 	icon_functions['compare'](compareBt, { title: 'Compare with another plot' })
 
-		// 	compareBt.on('click', async () => {
-		// 		const comparison = (this.settings.comparison = !this.settings.comparison)
-		// 		compareBt.style('background-color', comparison ? 'rgb(207, 226, 243)' : 'transparent')
-
-		// 		this.dom.holder2.selectAll('*').remove()
-		// 		if (comparison) await this.comparePlots()
-		// 	})
-		// }
 		if (this.type != 'profileBarchart') {
 			const tableIconDiv = iconsDiv.append('div').style('padding-bottom', '15px')
 			this.dom.tableBt = tableIconDiv
@@ -120,25 +107,24 @@ export class profilePlot {
 				})
 			}
 		})
-		if (!config.settings[this.type].comparison)
-			icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
-				title: 'Open a new plot',
-				handler: async () => {
-					const config = {
-						chartType: this.type,
-						insertBefore: this.id,
-						header: this.opts.header.text(),
-						logged: this.state.config.logged,
-						site: this.state.config.site
-					}
-					if (this.type == 'profileRadarFacility' || this.type == 'profileRadar') config.plot = this.state.config.plot
-
-					this.app.dispatch({
-						type: 'plot_create',
-						config
-					})
+		icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
+			title: 'Open a new plot',
+			handler: async () => {
+				const config = {
+					chartType: this.type,
+					insertBefore: this.id,
+					header: this.opts.header.text(),
+					logged: this.state.config.logged,
+					site: this.state.config.site
 				}
-			})
+				if (this.type == 'profileRadarFacility' || this.type == 'profileRadar') config.plot = this.state.config.plot
+
+				this.app.dispatch({
+					type: 'plot_create',
+					config
+				})
+			}
+		})
 	}
 
 	async showTable(show) {
@@ -599,6 +585,7 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	for (const plotConfig of typeConfig.plots) {
 		let config = structuredClone(plotConfig)
 		config.chartType = chartType
+		config.header = chartType == 'profileRadarFacility' ? 'Facility Radar Graph' : 'Radar Graph'
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')

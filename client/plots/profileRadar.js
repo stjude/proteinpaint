@@ -67,13 +67,12 @@ class profileRadar extends profilePlot {
 		const radius = this.radius
 		const x = 370
 		const y = 340
-		if (!this.settings.comparison)
-			this.svg
-				.append('text')
-				.attr('transform', `translate(60, ${40})`)
-				.attr('font-weight', 'bold')
-				.attr('font-size', '0.9rem')
-				.text(config.title)
+		this.svg
+			.append('text')
+			.attr('transform', `translate(60, ${40})`)
+			.attr('font-weight', 'bold')
+			.attr('font-size', '0.9rem')
+			.text(config.title)
 
 		const radarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
@@ -172,19 +171,17 @@ class profileRadar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		if (!this.settings.comparison) {
-			this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
-			let abbrev = config.term1.abbrev ? `(${config.term1.abbrev})` : ''
-			const item1 = `${config.term1.name} ${abbrev}`
-			this.addLegendItem(item1, color1, 0, 'none')
-			abbrev = config.term2.abbrev ? `(${config.term2.abbrev})` : ''
+		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
+		let abbrev = config.term1.abbrev ? `(${config.term1.abbrev})` : ''
+		const item1 = `${config.term1.name} ${abbrev}`
+		this.addLegendItem(item1, color1, 0, 'none')
+		abbrev = config.term2.abbrev ? `(${config.term2.abbrev})` : ''
 
-			const item2 = `${config.term2.name} ${abbrev}`
-			this.addLegendItem(item2, color2, 1, '5, 5')
-			if (this.state.dslabel == 'ProfileAbbrev')
-				this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(-50, -15)`))
-			else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
-		}
+		const item2 = `${config.term2.name} ${abbrev}`
+		this.addLegendItem(item2, color2, 1, '5, 5')
+		if (this.state.dslabel == 'ProfileAbbrev')
+			this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(-50, -15)`))
+		else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
 		this.addFilterLegend()
 	}
 

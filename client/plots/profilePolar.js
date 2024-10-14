@@ -15,6 +15,9 @@ class profilePolar extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
+		const state = this.getState(appState)
+		const suffix = state.logged ? (config.site ? config.site : 'Admin') : 'Public'
+		this.opts.header.text('Polar Graph' + ` / ${suffix}`)
 
 		this.twLst = []
 		for (const data of config.terms) {
@@ -70,8 +73,7 @@ class profilePolar extends profilePlot {
 			.style('vertical-align', 'top')
 			.style('margin', '45px 20px')
 
-		if (!this.settings.comparison)
-			this.svg.append('text').attr('transform', `translate(130, ${40})`).attr('font-weight', 'bold').text(config.title)
+		this.svg.append('text').attr('transform', `translate(130, ${40})`).attr('font-weight', 'bold').text(config.title)
 
 		const rows = []
 		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: 'Score', align: 'center' }]
