@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.80.0
 
 Features:
 - inclusion of univariate results in a multivariable regression analysis is now a user-controllable option that is enabled in all datasets
