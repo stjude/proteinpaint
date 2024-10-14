@@ -17,7 +17,7 @@ type KeyLabel = {
 
 /** a set of categories about a vcf INFO field */
 export type InfoFieldCategories = {
-	/** data dictionary field (e.g. CLINSIGN for clinical significance) */
+	/** category key from an INFO field of a vcf file */
 	[index: string]: {
 		/** Color used for rendering labels and backgrounds in the legend, tables, etc. */
 		color: string
@@ -60,7 +60,7 @@ export type ClinvarAF = {
 type InfoFieldEntry = {
 	/** Human readable name to display */
 	name: string
-	/** key identifier for the information field */
+	/** vcf INFO field */
 	key: string
 	/** a set of categories about a vcf INFO field */
 	categories?: InfoFieldCategories
@@ -639,11 +639,11 @@ type LdQuery = {
 		/** max range allowed to show data */
 		viewrangelimit: number
 	}[]
-	/** Colors for the ld scale or dots  */
+	/** color scale when LD is used to overlay on variants of a locus  */
 	overlay: {
-		/** Color for the same variant as has been clicked for overlaying */
+		/** color for r2 value 1 */
 		color_1: string
-		/** Color for no match */
+		/** Color for r2 value 0 */
 		color_0: string
 	}
 }
@@ -715,7 +715,7 @@ type Mds3Queries = {
 	ld?: LdQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
-	/** depreciated */
+	/** depreciated. replaced by WSImages */
 	DZImages?: DZImages
 	WSImages?: WSImages
 	images?: Images
