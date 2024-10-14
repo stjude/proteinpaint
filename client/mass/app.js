@@ -21,6 +21,13 @@ opts{}
 	see doc for full spec
 	https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
 
+.app
+	.onFilterChange
+	If it is provided when the global filter is edited
+	this function is called (from mass/store). Used by the profile dataset so far,
+	to clear the profile local filters
+                
+
 */
 
 class MassApp {
