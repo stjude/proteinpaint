@@ -1,1 +1,2 @@
-
+Features
+- Instead of the `code updated` date, the header displays the release version a link to the appropriate github release page.
