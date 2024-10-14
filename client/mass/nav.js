@@ -10,6 +10,7 @@ import { dofetch3 } from '#common/dofetch'
 import { Menu } from '#dom/menu'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 import { renderTable } from '../dom/table'
+import { getProfileLogin } from '../plots/profilePlot.js'
 
 /*
 nav {}
@@ -524,11 +525,12 @@ function setRenderers(self) {
 			self.dom.cohortTitle = self.dom.subheader.about.append('h2').style('margin-left', '10px').text(selectCohort.title)
 		}
 
-		if (selectCohort.description) {
-			self.dom.cohortDescription = self.dom.subheader.about
-				.append('div')
-				.style('margin-left', '10px')
-				.html(selectCohort.description)
+		if (selectCohort.description || selectCohort.descriptionByUser) {
+			//temporary logic to get the description until the login is implemented
+			const [logged, site, user] = getProfileLogin()
+			const descriptionByUser = selectCohort.descriptionByUser[user]
+			const description = selectCohort.description || descriptionByUser
+			self.dom.cohortDescription = self.dom.subheader.about.append('div').style('margin-left', '10px').html(description)
 		}
 
 		if (selectCohort.prompt) {
