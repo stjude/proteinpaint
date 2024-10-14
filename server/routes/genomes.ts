@@ -64,6 +64,7 @@ function init({ genomes }) {
 			debugmode: serverconfig.debugmode,
 			headermessage: serverconfig.headermessage,
 			base_zindex: serverconfig.base_zindex,
+			pkgver: versionInfo.pkgver,
 			codedate: versionInfo.codedate,
 			launchdate: versionInfo.launchdate,
 			hasblat,
