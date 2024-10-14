@@ -607,17 +607,15 @@ export async function loadFilterTerms(config, app, opts) {
 	config.yearOfImplementationTW = { id: cohortPreffix + 'Year_implementation' }
 
 	twlst.push(
-		...[
-			config.countryTW,
-			config.regionTW,
-			config.incomeTW,
-			config.typeTW,
-			config.teachingStatusTW,
-			config.referralStatusTW,
-			config.fundingSourceTW,
-			config.hospitalVolumeTW,
-			config.yearOfImplementationTW
-		]
+		config.countryTW,
+		config.regionTW,
+		config.incomeTW,
+		config.typeTW,
+		config.teachingStatusTW,
+		config.referralStatusTW,
+		config.fundingSourceTW,
+		config.hospitalVolumeTW,
+		config.yearOfImplementationTW
 	)
 	await fillTwLst(twlst, app.vocabApi)
 	config.filterTWs = twlst
