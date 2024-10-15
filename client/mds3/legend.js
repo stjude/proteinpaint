@@ -817,23 +817,19 @@ function may_create_cnv(tk, block) {
 	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.7).text('CNV')
 	R.holder = R.row.append('td')
 	R.showHolder = R.holder.append('div').style('display', 'none')
-}
 
-function may_update_cnv(tk) {
-	if (!tk.cnv) return
-	tk.legend.cnv.holder.selectAll('*').remove()
 	const axisheight = 20
 	const barheight = 15
 	const xpad = 10
 	const axiswidth = 150
 
-	new ColorScale({
+	tk.legend.cnv.colorScale = new ColorScale({
 		barwidth: axiswidth,
 		barheight,
 		colors: [tk.cnv.lossColor, 'white', tk.cnv.gainColor],
 		data: [-tk.cnv.absoluteMax, tk.cnv.absoluteMax],
 		fontSize: 12,
-		holder: tk.legend.cnv.holder,
+		holder: R.holder,
 		height: axisheight + barheight,
 		width: xpad * 2 + axiswidth,
 		position: `${xpad},${axisheight}`,
@@ -841,6 +837,15 @@ function may_update_cnv(tk) {
 		tickSize: 6,
 		topTicks: true
 	})
+}
+
+function may_update_cnv(tk) {
+	if (!tk.cnv) return
+	tk.legend.cnv.holder.selectAll('*').remove()
+
+	tk.legend.cnv.colorScale.colors = [tk.cnv.lossColor, 'white', tk.cnv.gainColor]
+	tk.legend.cnv.colorScale.data = [-tk.cnv.absoluteMax, tk.cnv.absoluteMax]
+	tk.legend.cnv.colorScale.updateScale()
 }
 
 function createLegendTipMenu(opts, tk, elem) {
