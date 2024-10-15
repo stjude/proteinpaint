@@ -279,11 +279,11 @@ export class ColorScale {
 
 	setMin(value: number) {
 		this.data[0] = value
-		this.updateScale()
+		this.updateAxis()
 	}
 
 	setMax(value: number) {
 		this.data[this.data.length - 1] = value
-		this.updateScale()
+		this.updateAxis()
 	}
 }
