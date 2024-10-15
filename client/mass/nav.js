@@ -1,7 +1,7 @@
 import { getCompInit, multiInit } from '#rx'
 import { recoverInit } from '../rx/src/recover'
 import { searchInit } from './search'
-import { chartsInit, getActiveCohortStr } from './charts'
+import { chartsInit } from './charts'
 import { groupsInit } from './groups'
 import { sessionBtnInit } from './sessionBtn'
 import { aboutInit } from './about.ts'
@@ -54,6 +54,7 @@ class TdbNav {
 		this.massSessionDuration = opts.massSessionDuration
 		this.sessionDaysLeft = opts.app.opts.sessionDaysLeft || null
 		this.sessionId = opts.app.opts.sessionId || null
+		this.pkgver = opts.pkgver || null //Release version
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -117,6 +118,7 @@ class TdbNav {
 					: []
 			})
 			this.mayShowMessage_sessionDaysLeft()
+			this.showReleaseVersion(appState)
 		} catch (e) {
 			throw e
 		}
@@ -640,6 +642,11 @@ function setRenderers(self) {
 				.style('font-size', 'small')
 				.text(selectCohort.asterisk)
 		}
+	}
+
+	self.showReleaseVersion = appState => {
+		if (!appState?.termdbConfig?.selectCohort && !appState.termdbConfig?.massNav?.tabs?.about) return
+		console.log(631, appState, self)
 	}
 }
 

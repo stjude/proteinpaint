@@ -168,6 +168,7 @@ export function runproteinpaint(arg) {
 
 			app.genomes = data.genomes
 			app.cardsPath = data.cardsPath
+			app.pkgver = data.pkgver
 
 			if (data.debugmode) {
 				app.debugmode = true
@@ -1233,6 +1234,7 @@ async function launchmass(arg, app) {
 	}
 	opts.getDatasetAccessToken = arg.getDatasetAccessToken
 	opts.addLoginCallback = arg.addLoginCallback
+	opts.pkgver = app.pkgver
 	const hostURL = sessionStorage.getItem('hostURL')
 	if (window.opener && hostURL != window.location.origin) {
 		// if this is a child window or tab, refreshing it will need previously hydrated session state,
