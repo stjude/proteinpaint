@@ -528,8 +528,7 @@ function setRenderers(self) {
 		if (selectCohort.description || selectCohort.descriptionByUser) {
 			//temporary logic to get the description until the login is implemented
 			const [logged, site, user] = getProfileLogin()
-			const descriptionByUser = selectCohort.descriptionByUser[user]
-			const description = selectCohort.description || descriptionByUser
+			const description = selectCohort.description || selectCohort.descriptionByUser?.[user]
 			self.dom.cohortDescription = self.dom.subheader.about.append('div').style('margin-left', '10px').html(description)
 		}
 
