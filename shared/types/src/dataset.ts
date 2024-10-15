@@ -769,8 +769,9 @@ type SelectCohortEntry = {
 	prompt: string
 	values: SelectCohortValuesEntry[]
 	description?: string
-	/** subtext shown at the very bottom of the cohort/about tab subheader */
+	/* If the description is dependent on the user pass a descriptionByUser dict instead */
 	descriptionByUser?: { [index: string]: string }
+	/** subtext shown at the very bottom of the cohort/about tab subheader */
 	asterisk?: string
 	//The profile has clearOnChange. The terms used in the plots are not always the same for the profile.
 	//Therefore when switching cohorts, it is necessary to delete the plots opened and the global filter
