@@ -30,7 +30,7 @@ export class profilePlot {
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
 			vocab: appState.vocab,
-			logged: logged, //later change to read login info
+			logged, //later change to read login info
 			site,
 			activeCohort: appState.activeCohort
 		}
@@ -204,6 +204,7 @@ export class profilePlot {
 				type: 'radio',
 				chartType,
 				settingsKey: 'isAggregate',
+				styles: { display: 'inline-block' },
 				options: [
 					{ label: this.state.site, value: false },
 					{ label: 'Aggregate', value: true }
