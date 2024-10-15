@@ -1,1 +1,2 @@
-
+Fixes:
+- matrix cnv: when cnv has quantification, cell tooltip should show it in addition to gain/loss
