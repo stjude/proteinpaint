@@ -49,6 +49,10 @@ type ColorScaleOpts = {
 	width?: number
 	/** Optional. Height fo the svg. Default is 30.*/
 	height?: number
+	/** Creates inputs for the user to set the min and max colors
+	 * Use the callback to update the plot/track/app/etc.
+	 */
+	setMinMax?: (value: number) => void
 	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
 	 * NOTE: D3 considers this a ** suggested ** count. d3-axis will ultimateluy render the
 	 * ticks based on the available space of each label.
@@ -117,39 +121,73 @@ export class ColorScale {
 			if (this.markedValue !== null) this.markedValueInColorBar(barG)
 		}
 
-		if (opts.callback) {
-			const appendColor = (text: string, idx: number) => {
-				const input = this.tip.d
+		if (opts.callback || opts.setMinMax) {
+			const appendInputs = (text: string, cidx: number, didx: number) => {
+				const wrapper = this.tip.d.append('div').style('display', 'inline-block').style('text-align', 'center')
+
+				wrapper
 					.append('div')
 					.style('display', 'inline-block')
+					.style('vertical-align', 'text-bottom')
+					.style('padding-bottom', '2px')
+					.style('padding-left', text.includes('Max') ? '10px' : '3px')
 					.text(text)
-					.style('margin', '5px')
+
+				const valueInput = wrapper.append('div').style('display', 'inline-block').style('vertical-align', 'bottom')
+				const colorInput = wrapper.append('div').style('display', 'inline-block')
+
+				if (opts.setMinMax) appendValueInput(valueInput, didx)
+				if (opts.callback) appendColorInput(colorInput, cidx)
+			}
+
+			const appendColorInput = (wrapper: any, idx: number) => {
+				const colorInput = wrapper
 					.append('input')
 					.attr('type', 'color')
 					.attr('value', rgb(this.colors[idx]).formatHex())
-					.style('margin-left', '5px')
-					.on('change', () => {
-						const color = input.node()!.value
-						opts.callback!(color, idx)
+					.on('change', async () => {
+						const color = colorInput.node()!.value
 						this.colors[idx] = color
+						await opts.callback!(color, idx)
 						this.updateColors()
 						this.tip.hide()
 					})
 			}
+
+			const appendValueInput = (wrapper: any, idx: number) => {
+				const divWrapper = wrapper.append('div').style('padding-bottom', '2px')
+				const valueInput = divWrapper
+					.append('input')
+					.attr('type', 'number')
+					.style('width', '50px')
+					.attr('value', this.data[idx])
+					.style('padding', '1px')
+					.on('keyup', async (event: KeyboardEvent) => {
+						if (event.code != 'Enter') return
+						const value: number = parseFloat(valueInput.node().value)
+						this.data[idx] = value
+						await opts.setMinMax!(value)
+						this.updateAxis()
+						this.tip.hide()
+					})
+			}
+
 			let showTooltip = true
 			scaleSvg
 				.on('click', () => {
 					this.tip.clear().showunder(barG.node())
-					//TODO apply to all colors or only start and end?
-					appendColor('Min:', 0)
-					appendColor('Max:', this.colors.length - 1)
+					appendInputs('Min:', 0, 0)
+					appendInputs('Max:', this.colors.length - 1, this.data.length - 1)
 					showTooltip = false
 				})
 				.on('mouseenter', () => {
 					//Prevent showing the tooltip after user interacts with the color picker
 					if (showTooltip == false) return
 					this.tip.clear().showunder(barG.node())
-					this.tip.d.append('div').style('padding', '2px').text('Click to customize colors')
+					const text = `Click to customize ${opts.callback ? 'colors' : ''} ${
+						opts.setMinMax && opts.callback ? ' and ' : ''
+					}${opts.setMinMax ? 'values' : ''}`
+					this.tip.d.append('div').style('padding', '2px').text(text)
 				})
 				.on('mouseleave', () => {
 					if (showTooltip) this.tip.hide()
@@ -275,15 +313,5 @@ export class ColorScale {
 		//This is a workaround to prevent the black line from appearing
 		const pathElem = this.dom.scaleAxis.select('path').node()
 		if (pathElem instanceof SVGPathElement) pathElem.style.stroke = 'none'
-	}
-
-	setMin(value: number) {
-		this.data[0] = value
-		this.updateAxis()
-	}
-
-	setMax(value: number) {
-		this.data[this.data.length - 1] = value
-		this.updateAxis()
 	}
 }
