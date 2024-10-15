@@ -128,16 +128,16 @@ export class AppHeader {
 		{
 			// a row for server stats
 			const row = headinfo.append('div').style('padding-left', '15px')
+			// link to the published ppfull container version, instead of github release tarball which we do not advertise;
+			// github's pkgs/container link has a timestamp before the tag, which cannot be computed here (but may be able to query later?)
+			const link = `https://github.com/stjude/proteinpaint/pkgs/container/ppfull` // url to list of published container versions
+			const version = this.data.pkgver
+				? `Version: <a href="${link}" target="${this.data.pkgver}">${this.data.pkgver}</a>`
+				: `Code date: ${this.data.codedate}` // default to using code date as before if pkgver is not available
 			row
 				.attr('id', 'sjpp-serverstat')
 				.append('span')
-				.html(
-					`${
-						this.data.pkgver
-							? `Release version: <a href="https://github.com/stjude/proteinpaint/releases/tag/v${this.data.pkgver}" target="${this.data.pkgver}">${this.data.pkgver}</a>`
-							: 'No version information available'
-					}, server launched: ${this.data.launchdate || '??'}.`
-				)
+				.html(`${version}, server launched: ${this.data.launchdate || '??'}.`)
 			if (this.data.hasblat) {
 				row
 					.append('a')
