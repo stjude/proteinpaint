@@ -92,6 +92,8 @@ export function setInteractivity(self) {
 					const label =
 						c.t.grp.type == 'hierCluster'
 							? v.value
+							: v && v.dt == 4 && v.value
+							? `${mclass[v.class].label} (${v.value.toFixed(2)})`
 							: p
 							? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
 							: v.mname
@@ -457,6 +459,8 @@ export function setInteractivity(self) {
 					const label =
 						c.t.grp.type == 'hierCluster'
 							? v.value
+							: v && v.dt == 4 && v.value
+							? `${mclass[v.class].label} (${v.value.toFixed(2)})`
 							: p
 							? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
 							: v.mname
