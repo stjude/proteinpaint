@@ -56,7 +56,8 @@ export default {
 			'cuminc',
 			'dataDownload',
 			'sampleView',
-			'regression'
+			'regression',
+			'facet'
 		],
 		termdb: {
 			displaySampleIds: true, // allow to display sample-level data

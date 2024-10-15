@@ -47,7 +47,6 @@ class MassCharts {
 			// TODO: may want the server to decide this, and as defined for a dataset
 			if (state.vocab.dslabel == 'profile') state.supportedChartTypes.push(...appState.termdbConfig.allowedChartTypes)
 			state.supportedChartTypes.push('dictionary')
-			//state.supportedChartTypes.push('facet') //it takes to sampleView, some datasets may not have sampleView if not logged in
 		}
 		return state
 	}
@@ -122,6 +121,7 @@ function getChartTypeList(self, state) {
 		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
 	*/
 	const [logged, site, user] = getProfileLogin() //later on replace with login
+
 	const buttons = [
 		////////////////////// PROFILE PLOTS START //////////////////////
 		{
