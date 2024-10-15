@@ -2503,10 +2503,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 }
 
 async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter) {
-	if (!ds.assayAvailability?.byDt) return
-	const sampleFilter = filter ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
+	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
 	const _dt = structuredClone(ds.assayAvailability.byDt[dtKey])
-	if (!_dt) throw 'unable to retrieve dt from dataset'
+	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
+	const sampleFilter = filter ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
 	const dts = []
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
