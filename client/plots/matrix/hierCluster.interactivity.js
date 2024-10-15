@@ -225,10 +225,31 @@ export function showTable4selectedRows(clickedRowNames, rowType) {
 
 	const columns = [{ label: rowType }]
 
+	const div = this.dom.dendroClickMenu.clear().d.append('div').style('margin', '10px')
+
+	// Create a button to copy names in the table
+	const buttonDiv = div.append('div').style('padding', '5px')
+	const copyButton = buttonDiv
+		.append('button')
+		.text(`Copy ${rowType}`)
+		.attr('class', '.sja_menu_div button')
+		.style('margin-top', '2px')
+		.style('padding', '5px')
+		.on('click', () => {
+			const geneNames = rows.map(row => row[0].value).join('\n')
+			navigator.clipboard
+				.writeText(geneNames)
+				.then(() => {
+					alert(`${rowType} copied to clipboard`)
+				})
+				.catch(err => {
+					console.error('Failed to copy: ', err)
+				})
+		})
 	renderTable({
 		rows,
 		columns,
-		div: this.dom.dendroClickMenu.clear().d.append('div').style('margin', '10px'),
+		div: div.append('div'),
 		showLines: true,
 		maxHeight: '35vh',
 		resize: true
