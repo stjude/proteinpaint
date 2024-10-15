@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- matrix cnv: when cnv has quantification, cell tooltip should show it in addition to gain/loss
+
+
 ## 2.81.0
 
 Features:
