@@ -56,7 +56,8 @@ class TdbPlotControls {
 								}
 							}
 						}),
-					helpHandler: () => this.bus.emit('helpClick')
+					helpHandler: () => this.bus.emit('helpClick'),
+					title: this.opts.title
 				}),
 				config: configUiInit({
 					app: this.app,
