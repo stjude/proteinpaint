@@ -1,10 +1,8 @@
 import { legend_newrow } from '#src/block.legend'
-import { Menu, axisstyle, icons, shapes } from '#dom'
+import { Menu, ColorScale, icons, shapes } from '#dom'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
-import { axisTop } from 'd3-axis'
-import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 import { renderShapePicker } from './leftlabel.variant'
 
@@ -824,37 +822,25 @@ function may_create_cnv(tk, block) {
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
 	tk.legend.cnv.holder.selectAll('*').remove()
-	const svg = tk.legend.cnv.holder.append('svg')
 	const axisheight = 20
 	const barheight = 15
 	const xpad = 10
 	const axiswidth = 150
-	axisstyle({
-		axis: svg
-			.append('g')
-			.attr('transform', 'translate(' + xpad + ',' + axisheight + ')')
-			.call(
-				axisTop()
-					.scale(scaleLinear().domain([-tk.cnv.absoluteMax, tk.cnv.absoluteMax]).range([0, axiswidth]))
-					.ticks(4)
-			),
-		fontsize: 12
+
+	new ColorScale({
+		barwidth: axiswidth,
+		barheight,
+		colors: [tk.cnv.lossColor, 'white', tk.cnv.gainColor],
+		data: [-tk.cnv.absoluteMax, tk.cnv.absoluteMax],
+		fontSize: 12,
+		holder: tk.legend.cnv.holder,
+		height: axisheight + barheight,
+		width: xpad * 2 + axiswidth,
+		position: `${xpad},${axisheight}`,
+		ticks: 4,
+		tickSize: 6,
+		topTicks: true
 	})
-
-	const id = 'grad' + Math.random()
-	const grad = svg.append('defs').append('linearGradient').attr('id', id)
-	grad.append('stop').attr('offset', '0%').attr('stop-color', tk.cnv.lossColor)
-	grad.append('stop').attr('offset', '50%').attr('stop-color', 'white')
-	grad.append('stop').attr('offset', '100%').attr('stop-color', tk.cnv.gainColor)
-	svg
-		.append('rect')
-		.attr('x', xpad)
-		.attr('y', axisheight)
-		.attr('width', axiswidth)
-		.attr('height', barheight)
-		.attr('fill', `url(#${id})`)
-
-	svg.attr('width', xpad * 2 + axiswidth).attr('height', axisheight + barheight)
 }
 
 function createLegendTipMenu(opts, tk, elem) {
