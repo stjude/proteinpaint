@@ -1,4 +1,4 @@
-import { createValidate } from 'typia'
+import type { RoutePayload } from './routeApi'
 
 export type BurdenRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
@@ -65,5 +65,49 @@ export type BurdenResponse = {
 }
 
 // tentative code to generate runtime "type" checkers
-export const validBurdenRequest = createValidate<BurdenRequest>()
-export const validBurdenResponse = createValidate<BurdenResponse>()
+// export const validBurdenRequest = createValidate<BurdenRequest>()
+// export const validBurdenResponse = createValidate<BurdenResponse>()
+
+export const payload: RoutePayload = {
+	request: {
+		typeId: 'BurdenRequest'
+		//checker: validBurdenRequest
+	},
+	response: {
+		typeId: 'BurdenResponse'
+		//checker: validBurdenResponse
+	},
+	examples: [
+		{
+			request: {
+				body: {
+					genome: 'hg38',
+					// TODO: !!! use hg38-test and TermdbTest !!!
+					dslabel: 'SJLife',
+					diaggrp: 5,
+					sex: 1,
+					white: 1,
+					agedx: 1,
+					bleo: 0,
+					etop: 0,
+					cisp: 0,
+					carbo: 0,
+					steriod: 0,
+					vcr: 0,
+					hdmtx: 0,
+					itmt: 0,
+					ced: 0,
+					dox: 0,
+					heart: 0,
+					brain: 0,
+					abd: 0,
+					pelvis: 0,
+					chest: 0
+				}
+			},
+			response: {
+				header: { status: 200 }
+			}
+		}
+	]
+}

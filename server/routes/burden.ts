@@ -1,70 +1,38 @@
-import type { BurdenRequest, BurdenResponse } from '#types'
+import type { BurdenRequest, BurdenResponse, RouteApi } from '#types'
+import { payload } from '#types'
 import run_R from '#src/run_R.js'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import { write_file } from '#src/utils.js'
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'burden',
 	methods: {
 		get: {
-			init({ genomes }) {
-				return async (req: any, res: any): Promise<void> => {
-					try {
-						const genome = genomes[req.query.genome]
-						if (!genome) throw `invalid q.genome=${req.query.genome}`
-						const q: BurdenRequest = req.query
-						const ds = genome.datasets[q.dslabel]
-						if (!ds) throw `invalid q.genome=${req.query.dslabel}`
-						if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
+			init,
+			...payload
+		},
+		post: {
+			init,
+			...payload
+		}
+	}
+}
 
-						const estimates = await getBurdenEstimates(req, ds)
-						const { keys, rows } = formatPayload(estimates)
-						res.send({ status: 'ok', keys, rows } satisfies BurdenResponse)
-					} catch (e: any) {
-						res.send({ status: 'error', error: e.message || e })
-					}
-				}
-			},
-			request: {
-				typeId: 'BurdenRequest'
-			},
-			response: {
-				typeId: 'BurdenResponse'
-			},
-			examples: [
-				{
-					request: {
-						body: {
-							genome: 'hg38',
-							// TODO: !!! use hg38-test and TermdbTest !!!
-							dslabel: 'SJLife',
-							diaggrp: 5,
-							sex: 1,
-							white: 1,
-							agedx: 1,
-							bleo: 0,
-							etop: 0,
-							cisp: 0,
-							carbo: 0,
-							steriod: 0,
-							vcr: 0,
-							hdmtx: 0,
-							itmt: 0,
-							ced: 0,
-							dox: 0,
-							heart: 0,
-							brain: 0,
-							abd: 0,
-							pelvis: 0,
-							chest: 0
-						}
-					},
-					response: {
-						header: { status: 200 }
-					}
-				}
-			]
+function init({ genomes }) {
+	return async function handler(req: any, res: any): Promise<void> {
+		try {
+			const genome = genomes[req.query.genome]
+			if (!genome) throw `invalid q.genome=${req.query.genome}`
+			const q: BurdenRequest = req.query
+			const ds = genome.datasets[q.dslabel]
+			if (!ds) throw `invalid q.genome=${req.query.dslabel}`
+			if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
+
+			const estimates = await getBurdenEstimates(req, ds)
+			const { keys, rows } = formatPayload(estimates)
+			res.send({ status: 'ok', keys, rows } satisfies BurdenResponse)
+		} catch (e: any) {
+			res.send({ status: 'error', error: e.message || e })
 		}
 	}
 }
