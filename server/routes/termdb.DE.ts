@@ -1,6 +1,6 @@
 //import fs from 'fs'
 import path from 'path'
-import type { DERequest, DEResponse } from '#types'
+import type { DERequest, DEResponse, ExpressionInput } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { get_ds_tdb } from '../src/termdb.js'
 import run_R from '../src/run_R.js'
@@ -41,16 +41,20 @@ function init({ genomes }) {
 
 async function run_DE(param: DERequest, ds: any) {
 	/*
-	param{}
-		samplelst{}
-			groups[]
-				values[] // using integer sample id
-	*/
+param{}
+        samplelst{}
+                groups[]
+                        values[] // using integer sample id
+*/
 	if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
 	if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
 	// txt file uses string sample name, must convert integer sample id to string
 	// txt file uses string sample name, must convert integer sample id to string
+
+	if (ds.queries.rnaseqGeneCount.storage_type) {
+		param.storage_type = ds.queries.rnaseqGeneCount.storage_type
+	}
 
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
@@ -101,9 +105,14 @@ async function run_DE(param: DERequest, ds: any) {
 	const expression_input = {
 		case: cases_string,
 		control: controls_string,
+		data_type: 'do_DE',
 		input_file: q.file,
 		min_count: param.min_count,
 		min_total_count: param.min_total_count
+	} as ExpressionInput
+
+	if (param.storage_type) {
+		expression_input.storage_type = param.storage_type
 	}
 	//console.log('expression_input:', expression_input)
 	//fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
