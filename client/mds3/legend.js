@@ -823,11 +823,14 @@ function may_create_cnv(tk, block) {
 	const xpad = 10
 	const axiswidth = 150
 
-	tk.legend.cnv.colorScale = new ColorScale({
+	R.colorScale = new ColorScale({
 		barwidth: axiswidth,
 		barheight,
 		colors: [tk.cnv.lossColor, 'white', tk.cnv.gainColor],
-		data: [-tk.cnv.absoluteMax, tk.cnv.absoluteMax],
+		//[-tk.cnv.absoluteMax, tk.cnv.absoluteMax]
+		// Neither value available on init
+		// Added during update
+		data: [-1, 1],
 		fontSize: 12,
 		holder: R.holder,
 		height: axisheight + barheight,
@@ -841,8 +844,6 @@ function may_create_cnv(tk, block) {
 
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
-	tk.legend.cnv.holder.selectAll('*').remove()
-
 	tk.legend.cnv.colorScale.colors = [tk.cnv.lossColor, 'white', tk.cnv.gainColor]
 	tk.legend.cnv.colorScale.data = [-tk.cnv.absoluteMax, tk.cnv.absoluteMax]
 	tk.legend.cnv.colorScale.updateScale()
