@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Instead of the `code updated` date, the header displays the release version a link to the appropriate github release page.
+
 
 ## 2.80.0
 
