@@ -62,7 +62,10 @@ class profileRadar extends profilePlot {
 			{ label: 'Module' },
 			{ label: config.term1.abbrev },
 			{ label: config.term2.abbrev },
-			{ label: 'Diff' }
+			{
+				label: 'Diff',
+				title: `Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20, shown in blue if positive and in red if negative.`
+			}
 		]
 
 		// Create a polar grid.

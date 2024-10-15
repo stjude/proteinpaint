@@ -126,7 +126,8 @@ export class profilePlot {
 	}
 
 	getList(tw) {
-		const values = Object.values(tw.term.values)
+		let values = Object.values(tw.term.values)
+		values.sort((v1, v2) => v1.label.localeCompare(v2.label))
 		const data = this.filtersData.lst.filter(sample =>
 			this.samplesPerFilter[tw.term.id].includes(parseInt(sample.sample))
 		)
@@ -345,6 +346,11 @@ export class profilePlot {
 					this.sites = this.data.lst.map(s => {
 						return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
 					})
+					this.sites.sort((a, b) => {
+						if (a.label < b.label) return -1
+						if (a.label > b.label) return 1
+						return 0
+					})
 					this.sites.unshift({ label: '', value: '' })
 					inputs.push({
 						label: 'Site',
@@ -381,7 +387,12 @@ export class profilePlot {
 					this.sites = result.lst.map(s => {
 						return { label: result.refs.bySampleId[s.sample].label, value: s.sample }
 					})
-					if (!this.settings.site) this.settings.site = result.lst[0].sample
+					this.sites.sort((a, b) => {
+						if (a.label < b.label) return -1
+						if (a.label > b.label) return 1
+						return 0
+					})
+					if (!this.settings.site) this.settings.site = this.sites[0].value
 					this.sampleData = result.samples[Number(this.settings.site)]
 				}
 				inputs.unshift({

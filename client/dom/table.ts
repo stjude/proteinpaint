@@ -17,6 +17,7 @@ export type Column = {
 	//It is only allowed for cells with a value or a color field
 	nowrap?: boolean // set white-space=nowrap on all <td> of this column so strings do not wrap
 	align?: string // left, center, right. If missing it is aligned to the left by default
+	title?: string //tooltip describing column content
 }
 
 export type Button = {
@@ -184,6 +185,7 @@ export function renderTable({
 		for (const c of columns) {
 			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
+			if (c.title) th.attr('title', c.title)
 		}
 
 	const tbody = table.append('tbody')
