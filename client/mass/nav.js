@@ -11,6 +11,7 @@ import { Menu } from '#dom/menu'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 import { renderTable } from '../dom/table'
 import { getProfileLogin } from '../plots/profilePlot.js'
+import { icons as icon_functions } from '#dom'
 
 /*
 nav {}
@@ -202,6 +203,7 @@ function setRenderers(self) {
 			.style('margin', '10px')
 			.style('display', 'inline-block')
 		self.opts.holder.attr('class', 'sjpp-nav')
+
 		self.dom = {
 			holder: self.opts.holder,
 			header,
@@ -224,6 +226,12 @@ function setRenderers(self) {
 			titleDiv,
 			tip: new Menu({ padding: '5px' })
 		}
+		const deleteAllDiv = controlsDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding-top', '4px')
+			.style('vertical-align', 'middle')
+		icon_functions['trash'](deleteAllDiv, { handler: self.deletePlots, title: 'Delete all' })
 
 		if (appState.nav.header_mode == 'only_buttons') {
 			self.dom.tabDiv.style('display', 'none')
@@ -369,6 +377,11 @@ function setRenderers(self) {
 					}
 				})
 		}
+	}
+
+	self.deletePlots = () => {
+		const state = self.app.getState()
+		for (const plot of state.plots) self.app.dispatch({ type: 'plot_delete', id: plot.id })
 	}
 
 	self.mayShowMessage_sessionDaysLeft = () => {
