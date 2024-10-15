@@ -645,8 +645,17 @@ function setRenderers(self) {
 	}
 
 	self.showReleaseVersion = appState => {
-		if (!appState?.termdbConfig?.selectCohort && !appState.termdbConfig?.massNav?.tabs?.about) return
-		console.log(631, appState, self)
+		if ((!appState?.termdbConfig?.selectCohort && !appState.termdbConfig?.massNav?.tabs?.about) || self.pkgver == null)
+			return
+		self.dom.subheader.about
+			.append('div')
+			.style('margin-left', '10px')
+			.style('padding-bottom', '5px')
+			.append('a')
+			.style('font-size', '.8em')
+			.property('href', 'https://github.com/stjude/proteinpaint/pkgs/container/ppfull')
+			.property('target', `${self.pkgver}`)
+			.text(`Release version: ${self.pkgver}`)
 	}
 }
 
