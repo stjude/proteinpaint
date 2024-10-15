@@ -708,7 +708,7 @@ class singleCellPlot {
 
 		const legendG = legendSVG.append('g').attr('transform', `translate(10, 50)`).style('font-size', '0.8em')
 		if (this.state.config.gene) {
-			this.renderColorGradient(plot, legendG)
+			this.renderColorGradient(plot, legendG, this.state.config.gene)
 			return
 		}
 
@@ -761,7 +761,7 @@ class singleCellPlot {
 		}
 	}
 
-	renderColorGradient(plot, legendG) {
+	renderColorGradient(plot, legendG, gene) {
 		if (plot.cells.length == 0) return
 		const colorGradient = rgb(plotColor)
 		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(1).toString()
@@ -778,12 +778,22 @@ class singleCellPlot {
 		} else [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
 
 		plot.colorGenerator = d3Linear().domain([min, max]).range(colors)
+
+		const barwidth = 100
+
+		legendG
+			.append('text')
+			.style('font-weight', '550')
+			.attr('transform', `translate(${barwidth * 0.05}, -5)`)
+			.text(`${gene} expression`)
+
 		const colorScale = new ColorScale({
 			holder: legendG,
-			barwidth: 100,
+			barwidth,
 			barheight: 20,
-			data: [min, max],
 			colors,
+			data: [min, max],
+			position: '0, 20',
 			ticks: 4,
 			tickSize: 5,
 			topTicks: true,
