@@ -78,7 +78,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y r-base -y r-base-dev -y libargtable2-dev \
 	## install R packages
  	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
-	&& R -e "BiocManager::install('edgeR')" \
+	&& R -e "BiocManager::install(c('edgeR','rhdf5'))" \
     ## set locale encoding in R
     ## must match encoding configuration in docker
     && echo "LC_ALL=C.UTF-8" > /root/.Renviron \

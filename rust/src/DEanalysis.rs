@@ -587,7 +587,7 @@ fn main() {
                                             panic!("storage_type needs to be HDF5 or txt");
                                         }
                                     }
-                                    None => storage_type = "txt",
+                                    None => storage_type = "text",
                                 }
                                 let min_count;
                                 match min_count_option {
