@@ -418,7 +418,8 @@ function setRadioInput(opts) {
 				}
 		  ]
 
-	const styles = opts.styles
+	const styles = opts.styles || {}
+	styles['display'] = inputs.length > 2 ? 'block' : 'inline-block'
 	for (const input of inputs) {
 		self.inputs[input.settingsKey] = make_radios({
 			inputName: getElemId(opts.instanceNum),
@@ -427,7 +428,6 @@ function setRadioInput(opts) {
 				.attr('colspan', opts.colspan || '')
 				.style('text-align', opts.align || ''),
 			options: input.options,
-			getDisplayStyle: () => 'inline-block',
 			styles,
 			listeners: {
 				input(event, d) {
