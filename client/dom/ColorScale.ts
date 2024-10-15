@@ -247,7 +247,13 @@ export class ColorScale {
 					return this.barwidth * (i / (this.data.length - 1))
 				})
 			)
-		this.dom.scaleAxis.transition().duration(400).call(this.getAxis())
+		this.dom.scaleAxis
+			.transition()
+			.duration(400)
+			.call(this.getAxis())
+			//Transition sometimes removes the font size
+			.selectAll('text')
+			.attr('font-size', `${this.fontSize}px`)
 	}
 
 	updateValueInColorBar() {
