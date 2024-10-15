@@ -231,7 +231,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding-top', '4px')
 			.style('vertical-align', 'middle')
-		icon_functions['trash'](deleteAllDiv, { handler: self.deletePlots, title: 'Delete all' })
+		icon_functions['trash'](deleteAllDiv, { handler: self.deletePlots, title: 'Delete all plots' })
 
 		if (appState.nav.header_mode == 'only_buttons') {
 			self.dom.tabDiv.style('display', 'none')
@@ -381,7 +381,10 @@ function setRenderers(self) {
 
 	self.deletePlots = () => {
 		const state = self.app.getState()
-		for (const plot of state.plots) self.app.dispatch({ type: 'plot_delete', id: plot.id })
+		const subactions = []
+		for (const plot of state.plots) subactions.push({ type: 'plot_delete', id: plot.id })
+
+		self.app.dispatch({ type: 'app_refresh', subactions })
 	}
 
 	self.mayShowMessage_sessionDaysLeft = () => {
