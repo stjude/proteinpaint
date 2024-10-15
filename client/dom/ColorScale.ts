@@ -34,7 +34,7 @@ type ColorScaleOpts = {
 	 * between the min and max to ensure zero shows on the axis.
 	 */
 	data: number[]
-	/** Optional. Font size in px of the text labels. */
+	/** Optional. Font size in px of the text labels. Default is 10. */
 	fontSize?: number
 	/** Required. Either a div or svg element.
 	 * If not a svg, include either the .width: INT or .height:INT to create the svg.*/
@@ -45,7 +45,7 @@ type ColorScaleOpts = {
 	/** Set the position within in the element. Default is 0,0 */
 	position?: string
 	/** If the holder is not an svg or g element, adding the width or height creates the svg. */
-	/** Optional. Width of the svg. Default is 100 */
+	/** Optional. Width of the svg. Default is 100. */
 	width?: number
 	/** Optional. Height fo the svg. Default is 30.*/
 	height?: number
