@@ -142,7 +142,8 @@ upon error, throw err message as a string
 			state: {
 				genome: genomename,
 				dslabel
-			}
+			},
+			pkgver: arg.app.pkgver
 		}
 		if (!opts.genome) throw 'invalid genome'
 		const _ = await import('../mass/app')
