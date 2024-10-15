@@ -276,4 +276,14 @@ export class ColorScale {
 		const pathElem = this.dom.scaleAxis.select('path').node()
 		if (pathElem instanceof SVGPathElement) pathElem.style.stroke = 'none'
 	}
+
+	setMin(value: number) {
+		this.data[0] = value
+		this.updateScale()
+	}
+
+	setMax(value: number) {
+		this.data[this.data.length - 1] = value
+		this.updateScale()
+	}
 }
