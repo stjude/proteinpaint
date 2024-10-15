@@ -300,7 +300,8 @@ export class profilePlot {
 				app: this.app,
 				id: this.id,
 				holder: this.dom.controlsDiv,
-				inputs
+				inputs,
+				title: 'Filters'
 			})
 		}
 		this.components.controls.on(`downloadClick.${chartType}`, () =>

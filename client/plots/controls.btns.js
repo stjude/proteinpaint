@@ -8,7 +8,6 @@ class TdbControlsTopBar {
 
 	async init() {
 		const opts = this.opts
-
 		this.dom = {
 			holder: opts.holder,
 			burger_div: opts.holder.append('div'),
@@ -20,7 +19,8 @@ class TdbControlsTopBar {
 			burgerbtn: burgerBtnInit({
 				holder: this.dom.burger_div,
 				callback: opts.callback,
-				debug
+				debug,
+				title: opts.title
 			}),
 			downloadbtn: downloadBtnInit({
 				id: opts.id,
@@ -66,7 +66,7 @@ function setInteractivity(self) {
 
 function burgerBtnInit(opts) {
 	const burguerDiv = opts.holder.style('margin', '15px 20px')
-	icon_functions['burguer'](burguerDiv, { handler: opts.callback, title: 'Settings' })
+	icon_functions['burguer'](burguerDiv, { handler: opts.callback, title: opts.title || 'Settings' })
 
 	const self = {
 		dom: {
