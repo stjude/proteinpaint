@@ -65,7 +65,7 @@ function init({ genomes }) {
 			headermessage: serverconfig.headermessage,
 			base_zindex: serverconfig.base_zindex,
 			pkgver: versionInfo.pkgver,
-			codedate: versionInfo.codedate,
+			codedate: versionInfo.codedate, // still useful to know the package build/publish date in the response payload, even if it's not displayed
 			launchdate: versionInfo.launchdate,
 			hasblat,
 			features: serverconfig.features,

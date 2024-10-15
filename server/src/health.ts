@@ -1,5 +1,6 @@
 import serverconfig from './serverconfig.js'
 import fs from 'fs'
+import path from 'path'
 import pkg from '../package.json'
 import type { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '#types'
 import { authApi } from './auth.js'
@@ -51,9 +52,13 @@ function setGenomeDbInfo(genomes, health) {
 	}
 }
 
+const codedate = get_codedate()
+const revFile = path.join(process.cwd(), 'public/rev.txt')
+const hash = fs.existsSync(revFile) && fs.readFileSync(revFile, { encoding: 'utf8' }).split(' ')[1]
+
 export const versionInfo: VersionInfo = {
-	pkgver: pkg.version,
-	codedate: get_codedate(),
+	pkgver: pkg.version + '-' + (hash || codedate),
+	codedate, // still useful to know the package build/publish date in the response payload, even if it's not displayed
 	launchdate: new Date(Date.now()).toString().split(' ').slice(0, 5).join(' '),
 	deps: {}
 }
@@ -109,5 +114,10 @@ function get_codedate() {
 	const date2 =
 		(fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || new Date(0)
 	const date = date1 > date2 ? date1 : date2
-	return date.toDateString()
+	const year = date.getUTCFullYear()
+	const month = (date.getUTCMonth() + 1).toString().padStart(2, '0') // months from 1-12
+	const day = date.getUTCDate().toString().padStart(2, '0')
+	const hours = date.getHours().toString().padStart(2, '0')
+	const minutes = date.getMinutes().toString().padStart(2, '0')
+	return `${year}${month}${day}.${hours}:${minutes}`
 }
