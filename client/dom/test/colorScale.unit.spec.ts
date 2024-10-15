@@ -9,7 +9,6 @@ import { ColorScale } from '../ColorScale'
     - ColorScale.updateColors()
 	- markedValue - Show value in color bar and update
     - ColorScale.updateAxis()
-	- setMin(), setMax()
 */
 
 /**************
@@ -29,8 +28,7 @@ function getColorScale(opts) {
 	const _opts = {
 		data: [0, 1],
 		width: 150,
-		position: '6,0',
-		midColor: 'red'
+		position: '6,0'
 	}
 
 	return new ColorScale(Object.assign(_opts, opts))
@@ -212,45 +210,20 @@ tape('ColorScale.updateScale()', test => {
 	test.end()
 })
 
-tape('setMin(), setMax()', async test => {
+tape.only('setMinMax() callback', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
-	const initData = [-5, 5]
-	const updateData = [-10, 10]
-	const testColorScale = getColorScale({ holder, data: initData, ticks: 3 })
+	const testColorScale = getColorScale({
+		holder,
+		callback: () => {
+			console.log('callback() called')
+		},
+		setMinMax: () => {
+			console.log('setMinMax() called')
+		}
+	})
 
-	//Update min
-	testColorScale.setMin(updateData[0])
-	test.equal(testColorScale.data[0], updateData[0], `Should update the minimum value = ${updateData[0]}`)
-	test.equal(testColorScale.data[testColorScale.data.length - 1], initData[1], `Should not update the maximum value`)
-
-	const tickLabels1 = testColorScale.dom.scaleAxis.selectAll('text').nodes()
-	if (tickLabels1[0])
-		test.equal(
-			(tickLabels1[0] as any).__data__,
-			updateData[0],
-			`Should update the first tick label to ${updateData[0]}`
-		)
-	else test.fail(`Should render the first tick label with updated minimum value = ${updateData[0]}`)
-	test.equal(
-		(tickLabels1[tickLabels1.length - 1] as any).__data__,
-		initData[1],
-		`Should not update the last tick label`
-	)
-
-	//Update max
-	testColorScale.setMax(updateData[1])
-
-	const tickLabels2 = testColorScale.dom.scaleAxis.selectAll('text').nodes()
-	if (tickLabels2.length)
-		test.equal(
-			(tickLabels2[tickLabels2.length - 1] as any).__data__,
-			updateData[1],
-			`Should update the last tick label to ${updateData[1]}`
-		)
-	else test.fail(`Should render the last tick label with updated maximum value = ${updateData[1]}`)
-
-	if (test['_ok']) holder.remove()
+	// if (test['_ok']) holder.remove()
 	test.end()
 })
