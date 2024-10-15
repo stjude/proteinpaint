@@ -210,20 +210,29 @@ tape('ColorScale.updateScale()', test => {
 	test.end()
 })
 
-tape.only('setMinMax() callback', test => {
+tape('setMinMax() callback', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
+	const newColor = 'blue'
+	const newIdx = 0
+	const newValue = 42
 	const testColorScale = getColorScale({
 		holder,
-		callback: () => {
-			console.log('callback() called')
+		callback: (value, idx) => {
+			test.equal(value, newColor, 'Should return the correct color to the callback')
+			test.equal(idx, newIdx, 'Should return the correct index to the callback')
+			return value
 		},
-		setMinMax: () => {
-			console.log('setMinMax() called')
+		setMinMax: value => {
+			test.equal(value, newValue, 'Should return the correct value to the callback')
+			return value
 		}
 	})
 
-	// if (test['_ok']) holder.remove()
+	if (testColorScale.callback) testColorScale.callback(newColor, newIdx)
+	if (testColorScale.setMinMax) testColorScale.setMinMax(newValue)
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })

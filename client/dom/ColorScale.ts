@@ -69,10 +69,16 @@ export class ColorScale {
 	dom: ColorScaleDom
 	barheight: number
 	barwidth: number
+	/** Purely for testing. Not used in the class but can be
+	 * called independently of user click, if needed */
+	callback: ((val: string, idx: number) => void) | null
 	colors: string[]
 	data: number[]
 	fontSize: number
 	markedValue?: number | null
+	/** Purely for testing. Not used in the class but can be
+	 * called independently of user click, if needed */
+	setMinMax: ((value: number) => void) | null
 	ticks: number
 	tickSize: number
 	tip: Menu
@@ -81,10 +87,12 @@ export class ColorScale {
 	constructor(opts: ColorScaleOpts) {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
+		this.callback = opts.callback || null
 		this.colors = opts.colors || ['white', 'red']
 		this.data = opts.data
 		this.fontSize = opts.fontSize || 10
 		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
+		this.setMinMax = opts.setMinMax || null
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
 		this.tip = new Menu({ padding: '2px' })
