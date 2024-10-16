@@ -240,7 +240,7 @@ export async function getPlotConfig(opts, app) {
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
 				geneORA: {
-					pvalue: 1.0,
+					pvalue: 0.05,
 					adjusted_original_pvalue: 'adjusted',
 					pathway: undefined,
 					gene_set_size_cutoff: 2000
