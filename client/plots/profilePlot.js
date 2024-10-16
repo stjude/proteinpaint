@@ -395,14 +395,15 @@ export class profilePlot {
 				}
 			}
 		}
-		inputs.unshift({
-			label: 'Site',
-			type: 'dropdown',
-			chartType,
-			options: this.sites,
-			settingsKey: 'site',
-			callback: value => this.setSite(value)
-		})
+		if (this.sites)
+			inputs.unshift({
+				label: 'Site',
+				type: 'dropdown',
+				chartType,
+				options: this.sites,
+				settingsKey: 'site',
+				callback: value => this.setSite(value)
+			})
 	}
 
 	setFilterValue(key, value) {
