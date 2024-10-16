@@ -121,7 +121,7 @@ fn main() -> Result<()> {
                             let mut genes = x.query([])?;
                             while let Some(coding_gene) = genes.next()? {
                                 num_coding_genes += 1;
-                                //println!("coding_gene:{}", coding_gene);
+                                //println!("coding_gene:{:?}", coding_gene);
                                 for sample_gene in &sample_genes {
                                     let code_gene: String = coding_gene.get(0).unwrap();
                                     if code_gene == *sample_gene {
@@ -131,6 +131,10 @@ fn main() -> Result<()> {
                             }
                         }
                         Err(_) => {}
+                    }
+
+                    if sample_coding_genes.len() == 0 {
+                        panic!("All query genes are non-coding");
                     }
 
                     let background_genes_input: &JsonValue = &json_string["background_genes"];
