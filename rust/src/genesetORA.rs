@@ -39,7 +39,7 @@ struct pathway_p_value {
 }
 
 fn calculate_hypergeometric_p_value(
-    sample_genes: &Vec<&str>,
+    sample_genes: &Vec<String>,
     num_background_genes: usize,
     genes_in_pathway: Vec<pathway_genes>,
 ) -> (f64, f64, String) {
@@ -47,7 +47,7 @@ fn calculate_hypergeometric_p_value(
     let mut gene_set_hits: String = "".to_string();
     for gene in sample_genes {
         for pathway in &genes_in_pathway {
-            if pathway.symbol == gene.to_string() {
+            if pathway.symbol == *gene {
                 matching_sample_genes_counts += 1.0;
                 gene_set_hits += &(gene.to_string() + &",");
             }
@@ -104,8 +104,37 @@ fn main() -> Result<()> {
                     let sample_genes: Vec<&str> =
                         sample_genes_input.as_str().unwrap().split(",").collect();
                     let mut pathway_p_values: Vec<pathway_p_value> = Vec::with_capacity(10000);
+
+                    let genedb_input: &JsonValue = &json_string["genedb"];
+                    let genedb;
+                    match genedb_input.as_str() {
+                        Some(gene_db_string) => genedb = gene_db_string.to_string(),
+                        None => panic!("genedb file path is missing"),
+                    }
+
+                    let genedbconn = Connection::open(genedb)?;
+                    let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
+                    let mut num_coding_genes: usize = 0;
+                    let mut sample_coding_genes: Vec<String> = Vec::with_capacity(20000);
+                    match genedb_result {
+                        Ok(mut x) => {
+                            let mut genes = x.query([])?;
+                            while let Some(coding_gene) = genes.next()? {
+                                num_coding_genes += 1;
+                                //println!("coding_gene:{}", coding_gene);
+                                for sample_gene in &sample_genes {
+                                    let code_gene: String = coding_gene.get(0).unwrap();
+                                    if code_gene == *sample_gene {
+                                        sample_coding_genes.push(code_gene)
+                                    }
+                                }
+                            }
+                        }
+                        Err(_) => {}
+                    }
+
                     let background_genes_input: &JsonValue = &json_string["background_genes"];
-                    let mut num_background_genes: usize = 0;
+                    let num_background_genes;
                     match background_genes_input.as_str() {
                         Some(x) => {
                             let background_genes_str: Vec<&str> = x.split(",").collect(); // Background genes is defined for e.g in case of DE analysis
@@ -114,24 +143,7 @@ fn main() -> Result<()> {
                         None => {
                             // Background genes not present for e.g. in hierarchial clustering
                             // Get background genes from the gene database
-                            let genedb_input: &JsonValue = &json_string["genedb"];
-                            let genedb;
-                            match genedb_input.as_str() {
-                                Some(gene_db_string) => genedb = gene_db_string.to_string(),
-                                None => panic!("genedb file path is missing"),
-                            }
-
-                            let genedbconn = Connection::open(genedb)?;
-                            let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
-                            match genedb_result {
-                                Ok(mut x) => {
-                                    let mut genes = x.query([])?;
-                                    while let Some(_gene) = genes.next()? {
-                                        num_background_genes += 1;
-                                    }
-                                }
-                                Err(_) => {}
-                            }
+                            num_background_genes = num_coding_genes;
                         }
                     }
                     //println!("sample_genes:{:?}", sample_genes);
@@ -199,7 +211,7 @@ fn main() -> Result<()> {
                                         let gene_set_size = names.len();
                                         let (p_value, matches, gene_set_hits) =
                                             calculate_hypergeometric_p_value(
-                                                &sample_genes,
+                                                &sample_coding_genes,
                                                 num_background_genes,
                                                 names,
                                             );
