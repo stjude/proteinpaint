@@ -820,8 +820,10 @@ if (serverconfig.features?.extApiCache) {
  *                         acceptL 'application/json'
  * @param use{}	      non-fetch options to customize the client and/or response properties
  * 	.metaKey          string key to use when attaching a caching metadata object to the response
- *    .client           got-like HTTP client with get, post methods, etc
- *
+ *  .client           got-like HTTP client with get, post methods, etc
+ *  .getErrMessage()  for fetch responses that does not use standard HTTP response error codes,
+ *                    the response payload itself may carry the error message, the consumer code
+ *                    may provide this option so that the error message can be detected and extracted
  *
  * !!! NOTE !!!: to clear the cache, `rm [cachedir]/extApiResponse/*`
  */
@@ -850,11 +852,15 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 			// console.log(`Using cache file ${cacheFile}`)
 			const json = fs.readFileSync(cacheFile)?.toString('utf-8').trim()
 			body = JSON.parse(json)
+			const err = use.getErrMessage?.(body) || ''
+			if (err) throw err
 		} catch (e) {
 			console.log(e)
 			throw e
 		}
-	} else {
+	}
+
+	if (!body) {
 		try {
 			// default headers
 			// forced lowercase keys, the client is expected to normalize the HTTP request header
@@ -902,16 +908,18 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 						: opts.response
 			}
 
-			if (cacheFile) {
-				fs.writeFileSync(cacheFile, typeof jsonBody == 'string' ? jsonBody : JSON.stringify(jsonBody), {
-					encoding: 'utf8'
-				})
-			}
-
 			// the code that calls this function should expect a parsed JSON result,
 			// UNLESS the opts.headers.accept is overriden to a non-json content-type,
 			// in which case the caller should be ready to process the body as needed
 			body = typeof jsonBody == 'string' && headers['accept'].includes('json') ? JSON.parse(jsonBody) : jsonBody
+
+			const err = use.getErrMessage?.(body) || ''
+			if (err) throw err
+			else if (cacheFile && !use.noCache) {
+				fs.writeFileSync(cacheFile, typeof jsonBody == 'string' ? jsonBody : JSON.stringify(jsonBody), {
+					encoding: 'utf8'
+				})
+			}
 		} catch (e) {
 			throw e
 		}
