@@ -205,7 +205,6 @@ function setRenderers(self) {
 			.style('margin', '10px')
 			.style('display', 'inline-block')
 		self.opts.holder.attr('class', 'sjpp-nav')
-
 		self.dom = {
 			holder: self.opts.holder,
 			header,
@@ -217,6 +216,11 @@ function setRenderers(self) {
 				.style('margin', '10px'),
 			sessionDiv: controlsDiv.append('div').style('display', 'inline-block'),
 			recoverDiv: controlsDiv.append('div').style('display', 'inline-block'),
+			deleteAllDiv: controlsDiv
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding-top', '4px')
+				.style('vertical-align', 'middle'),
 			helpDiv: controlsDiv.append('div').style('display', 'none'),
 			sessionElapsedMessageDiv: controlsDiv.append('div').style('display', 'none'),
 			subheaderDiv: self.opts.holder
@@ -228,12 +232,7 @@ function setRenderers(self) {
 			titleDiv,
 			tip: new Menu({ padding: '5px' })
 		}
-		const deleteAllDiv = controlsDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding-top', '4px')
-			.style('vertical-align', 'middle')
-		icon_functions['trash'](deleteAllDiv, {
+		icon_functions['trash'](self.dom.deleteAllDiv, {
 			handler: self.deletePlots,
 			title: 'Delete all plots. To revert, click Undo button'
 		})
