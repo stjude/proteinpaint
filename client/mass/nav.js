@@ -479,8 +479,8 @@ function setRenderers(self) {
 			self.dom.subheader[key].style('display', self.tabs[self.activeTab].subheader === key ? 'block' : 'none')
 		}
 
-		if (self.opts.header_mode === 'with_cohort_select') {
-			self.dom.cohortSelect.selectAll('option').property('value', appState.activeCohort)
+		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
+			self.dom.cohortSelect.selectAll('option').property('value', self.activeCohort)
 		}
 	}
 }

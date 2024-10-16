@@ -64,12 +64,5 @@ type MassNav = {
 	activeTab: number
 	/** -1: unselected, 0,1,2...: selected */
 	activeCohort: number
-	header_mode:
-		| 'only_buttons'
-		| 'with_tabs'
-		| 'search_only'
-		| 'hidden'
-		| 'hide_search'
-		| 'with_cohortHtmlSelect'
-		| 'with_cohort_select'
+	header_mode: 'only_buttons' | 'with_tabs' | 'search_only' | 'hidden' | 'hide_search' | 'with_cohortHtmlSelect'
 }
