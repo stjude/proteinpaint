@@ -90,7 +90,7 @@ tape('Hide token input', test => {
 		const handle = await detectOne({ elem: holder, selector: '.sja-gdcbam-listCaseFileHandle' })
 		test.equal(
 			handle.innerHTML,
-			'Or, Browse 594 Available BAM Files',
+			'Or, Browse 1000 Available BAM Files',
 			'List case file handle is shown with correct text'
 		)
 
