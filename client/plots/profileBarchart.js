@@ -157,7 +157,7 @@ class profileBarchart extends profilePlot {
 		drawLine(410, 120, 50, y, 'B')
 		drawLine(410, 120, 75, y, 'A')
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 60})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 80})`)
 		this.filterG = this.svg.append('g').attr('transform', `translate(${50},${y + 180})`)
 
 		this.legendG
@@ -171,10 +171,10 @@ class profileBarchart extends profilePlot {
 		this.addLegendItem('B', '50-75% of possible scorable items', 2)
 		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 		this.addFilterLegend()
-		if (this.state.dslabel == 'ProfileAbbrev') {
-			const uiG = this.legendG.append('g').attr('transform', `translate(420, 0)`)
+		if (this.state.activeCohort == ABBREV_COHORT) {
+			const uiG = this.legendG.append('g').attr('transform', `translate(550, -90)`)
 			this.addEndUserImpressionNote(uiG)
-		} else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(550, -80)`))
+		} else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(550, -90)`))
 
 		if (!hasSubjectiveData) return
 		drawLine(910, 120, 50, y, 'B')
@@ -232,7 +232,7 @@ class profileBarchart extends profilePlot {
 		const width = value ? (value / 100) * barwidth : 0
 		if (value) {
 			const isObjective =
-				this.state.dslabel == 'ProfileFull' && this.settings.component == 'Patients and Outcomes'
+				this.state.activeCohort == FULL_COHORT && this.settings.component == 'Patients and Outcomes'
 					? true
 					: !subjectiveTerm && (pairValue || !hasSubjectiveData)
 			const rect = g
