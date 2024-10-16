@@ -426,7 +426,9 @@ function setRadioInput(opts) {
 				.attr('colspan', opts.colspan || '')
 				.style('text-align', opts.align || ''),
 			options: input.options,
-			styles: opts.styles,
+			/** In now deleted radio2.js, 'top' was the preference for mass.
+			 * Keep it as the default to maintain styling */
+			styles: Object.assign(opts.styles, { 'vertical-align': 'top' }),
 			listeners: {
 				input(event, d) {
 					if (event.key && event.key !== 'Enter') return
