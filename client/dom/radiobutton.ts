@@ -81,7 +81,7 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		.attr('type', 'radio')
 		.attr('name', inputName)
 		.attr('value', (d: OptionEntry) => d.value)
-		.style('vertical-align', 'top')
+		.style('vertical-align', opts.styles && 'vertical-align' in opts.styles ? opts.styles['vertical-align'] : '')
 		.style('margin-top', '2px')
 		.style('margin-right', 0)
 		.property('checked', (d: OptionEntry) => d?.checked)
@@ -99,7 +99,7 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 
 	const radioText = labels
 		.append('span')
-		.style('vertical-align', 'top')
+		.style('vertical-align', opts.styles && 'vertical-align' in opts.styles ? opts.styles['vertical-align'] : '')
 		.html((d: OptionEntry) => '&nbsp;' + d.label)
 
 	if (opts?.listeners?.input) {
