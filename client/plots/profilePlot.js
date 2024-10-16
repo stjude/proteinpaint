@@ -335,10 +335,15 @@ export class profilePlot {
 	}
 
 	async loadSampleData(chartType, inputs) {
+		const id = this.sampleidmap[this.state.site]?.id
+		if (this.state.site) {
+			if (!id) throw 'Invalid site'
+			const sampleData = this.data.samples[Number(id)]
+			if (!sampleData) throw 'Invalid site, you may need to change the profile version selected'
+		}
 		if (chartType != 'profileRadarFacility') {
 			if (this.state.logged) {
 				if (this.state.site && !this.settings.isAggregate) {
-					const id = this.sampleidmap[this.state.site].id
 					this.settings.site = id
 					this.sites = [{ label: this.state.site, value: id }]
 				} //Admin
@@ -352,14 +357,6 @@ export class profilePlot {
 						return 0
 					})
 					this.sites.unshift({ label: '', value: '' })
-					inputs.push({
-						label: 'Site',
-						type: 'dropdown',
-						chartType,
-						options: this.sites,
-						settingsKey: 'site',
-						callback: value => this.setSite(value)
-					})
 				}
 				if (this.settings.site) this.sampleData = this.data.samples[Number(this.settings.site)]
 				else this.sampleData = null
@@ -395,16 +392,16 @@ export class profilePlot {
 					if (!this.settings.site) this.settings.site = this.sites[0].value
 					this.sampleData = result.samples[Number(this.settings.site)]
 				}
-				inputs.unshift({
-					label: 'Site',
-					type: 'dropdown',
-					chartType,
-					options: this.sites,
-					settingsKey: 'site',
-					callback: value => this.setSite(value)
-				})
 			}
 		}
+		inputs.unshift({
+			label: 'Site',
+			type: 'dropdown',
+			chartType,
+			options: this.sites,
+			settingsKey: 'site',
+			callback: value => this.setSite(value)
+		})
 	}
 
 	setFilterValue(key, value) {
