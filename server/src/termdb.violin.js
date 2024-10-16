@@ -137,7 +137,7 @@ function divideValues(q, data, tw) {
 		if (useLog === 'log') {
 			if (min === 0) min = Math.max(min, value.value)
 		}
-
+		const sampleType = data.sampleType.plural_name
 		if (overlayTerm) {
 			if (!v[overlayTerm?.$id]) continue
 			const value2 = v[overlayTerm.$id]
@@ -150,8 +150,8 @@ function divideValues(q, data, tw) {
 			if (!key2values.has(value2.key)) key2values.set(value2.key, [])
 			key2values.get(value2.key).push(value.value)
 		} else {
-			if (!key2values.has('All samples')) key2values.set('All samples', [])
-			key2values.get('All samples').push(value.value)
+			if (!key2values.has(sampleType)) key2values.set(sampleType, [])
+			key2values.get(sampleType).push(value.value)
 		}
 	}
 	return {
@@ -212,7 +212,7 @@ function resultObj(valuesObject, data, q, ds) {
 			})
 		} else {
 			const plot = {
-				label: 'All samples',
+				label: data.sampleType.plural_name,
 				values,
 				plotValueCount: values.length
 			}
