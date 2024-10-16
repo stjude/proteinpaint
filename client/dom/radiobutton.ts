@@ -62,11 +62,16 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		.style('display', 'block')
 		.data(opts.options, (d: any) => d?.value)
 
+	/** Fix to allow the display to be customizable but show buttons
+	 * in a single line if 3 or less options. Otherwise display vertically. */
+	const displayMode =
+		opts.styles && 'display' in opts.styles ? opts.styles.display : opts.options.length <= 3 ? 'inline-block' : 'block'
+
 	const labels = divs
 		.enter()
 		.append('div')
 		.attr('aria-label', (d: OptionEntry) => d.title)
-		.style('display', opts.styles && 'display' in opts.styles ? opts.styles.display : 'block')
+		.style('display', displayMode)
 		.style('padding', opts.styles && 'padding' in opts.styles ? opts.styles.padding : '3px')
 		.append('label')
 
