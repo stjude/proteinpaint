@@ -25,7 +25,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		ds,
 		genome
 	)
-	const sampleType = data.sampleType?.plural_name || 'samples'
+	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 	if (data.error) throw data.error
 	//get ordered labels to sort keys in key2values
 	if (q.divideTw && data.refs.byTermId[q.divideTw.term.id]) {
