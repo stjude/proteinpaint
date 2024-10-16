@@ -81,6 +81,9 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		.attr('type', 'radio')
 		.attr('name', inputName)
 		.attr('value', (d: OptionEntry) => d.value)
+		/** vertical-align = top was the default in the now deleted radio2.js
+		 * used exclusively for mass. Allow for mass to implement this style
+		 * without impeding other use cases.*/
 		.style('vertical-align', opts.styles && 'vertical-align' in opts.styles ? opts.styles['vertical-align'] : '')
 		.style('margin-top', '2px')
 		.style('margin-right', 0)
