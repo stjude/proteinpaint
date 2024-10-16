@@ -25,6 +25,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		ds,
 		genome
 	)
+	const sampleType = data.sampleType?.plural_name || 'samples'
 	if (data.error) throw data.error
 	//get ordered labels to sort keys in key2values
 	if (q.divideTw && data.refs.byTermId[q.divideTw.term.id]) {
@@ -38,8 +39,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	if (q.scale) scaleData(q, data, q.tw)
 
-	const valuesObject = divideValues(q, data, q.tw)
-	const result = resultObj(valuesObject, data, q, ds)
+	const valuesObject = divideValues(q, data, q.tw, sampleType)
+	const result = resultObj(valuesObject, data, q, sampleType)
 
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result)
@@ -103,7 +104,7 @@ function scaleData(q, data, tw) {
 	}
 }
 
-function divideValues(q, data, tw) {
+function divideValues(q, data, tw, sampleType) {
 	const overlayTerm = q.divideTw
 	const useLog = q.unit == 'log'
 
@@ -137,7 +138,6 @@ function divideValues(q, data, tw) {
 		if (useLog === 'log') {
 			if (min === 0) min = Math.max(min, value.value)
 		}
-		const sampleType = data.sampleType.plural_name
 		if (overlayTerm) {
 			if (!v[overlayTerm?.$id]) continue
 			const value2 = v[overlayTerm.$id]
@@ -187,7 +187,7 @@ function sortKey2values(data, key2values, overlayTerm) {
 	return key2values
 }
 
-function resultObj(valuesObject, data, q, ds) {
+function resultObj(valuesObject, data, q, sampleType) {
 	const overlayTerm = q.divideTw
 	const result = {
 		min: valuesObject.minMaxValues.min,
@@ -212,7 +212,7 @@ function resultObj(valuesObject, data, q, ds) {
 			})
 		} else {
 			const plot = {
-				label: data.sampleType.plural_name,
+				label: sampleType,
 				values,
 				plotValueCount: values.length
 			}
