@@ -30,6 +30,7 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 // data elements for navigation header tabs
+const aboutTab = { top: '', mid: 'ABOUT', btm: '', subheader: 'about' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
@@ -59,6 +60,10 @@ class TdbNav {
 		try {
 			this.cohortFilter = getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
 			this.initUI(appState)
+			if (appState?.termdbConfig?.selectCohort) {
+				this.dom.tds.filter(d => d.colNum === 0).style('display', '')
+				this.cohortNames = appState.termdbConfig.selectCohort.values.map(d => d.keys.slice().sort().join(','))
+			}
 
 			this.components = await multiInit({
 				search: searchInit({
@@ -278,27 +283,21 @@ function setRenderers(self) {
 			about: self.dom.subheaderDiv.append('div').style('display', 'none').attr('data-testid', 'sjpp-mass-about')
 		})
 		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
+		Object.assign(aboutTab, massNav?.tabs?.about)
 		Object.assign(chartTab, massNav?.tabs?.charts)
 		Object.assign(groupsTab, massNav?.tabs?.groups)
 		Object.assign(filterTab, massNav?.tabs?.filter)
 
 		if (massNav?.tabs?.groups?.hide) self.tabs.splice(1, 1)
-		/** Adds either the COHORT or ABOUT tab */
-		if (appState.termdbConfig?.selectCohort || massNav?.tabs?.about) {
-			const aboutTab = massNav.tabs?.about || {}
-			const top = !aboutTab.top && appState.termdbConfig.selectCohort ? 'COHORT' : aboutTab.top || ''
-			const mid = aboutTab.mid || (aboutTab ? 'ABOUT' : '')
-			const btm = aboutTab.btm || ''
-
-			const tab = {
-				top: top.toUpperCase(),
-				mid: mid.toUpperCase(),
-				btm: btm,
-				subheader: 'about'
-			}
-			const tabIdx = appState.termdbConfig?.selectCohort ? 0 : aboutTab.order || 0
-			self.tabs.splice(tabIdx, 0, tab)
+		/** Updates tab for cohorts */
+		if (appState.termdbConfig?.selectCohort) {
+			aboutTab.top = 'COHORT'
+			aboutTab.mid = ''
+			aboutTab.btm = ''
 		}
+
+		const tabIdx = appState.termdbConfig?.selectCohort ? 0 : massNav?.tabs?.about?.order || 0
+		self.tabs.splice(tabIdx, 0, aboutTab)
 
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
 
@@ -417,7 +416,7 @@ function setRenderers(self) {
 			if (self.dom.messageDiv) self.dom.messageDiv.style('display', 'none')
 		}
 		const selectCohort = self.state.termdbConfig.selectCohort
-		const customNav = self.state.termdbConfig.massNav
+		const massNav = self.state.termdbConfig.massNav
 		self.dom.searchDiv.style(
 			'display',
 			(selectCohort && self.activeCohort == -1) || self.state.nav.header_mode == 'only_buttons'
@@ -452,11 +451,11 @@ function setRenderers(self) {
 							btm: self.samplecounts[self.activeCohortName]
 						}
 						return aboutMap[d.key] || ''
-					} else if (customNav?.tabs?.about) {
+					} else if (!selectCohort) {
 						const aboutMap = {
-							top: customNav.tabs.about?.top ? customNav.tabs.about.top.toUpperCase() : this.innerHTML,
-							mid: customNav.tabs.about?.mid ? customNav.tabs.about.mid.toUpperCase() : 'ABOUT',
-							btm: customNav.tabs.about?.btm || this.innerHTML
+							top: massNav?.tabs?.about?.top || this.innerHTML,
+							mid: massNav?.tabs?.about?.mid || 'ABOUT',
+							btm: massNav?.tabs?.about?.btm || this.innerHTML
 						}
 						return aboutMap[d.key] || ''
 					} else {

@@ -22,7 +22,6 @@ class MassAbout {
 	aboutOverrides: AboutObj | null
 	activeCohort: number
 	app: MassAppApi
-	cohortNames: string[]
 	dom: any
 	instanceNum: number
 	selectCohort: any
@@ -37,14 +36,13 @@ class MassAbout {
 		this.activeCohort = opts.activeCohort
 		this.aboutOverrides = opts.aboutOverrides
 		this.selectCohort = opts.selectCohort
-		this.cohortNames = opts.selectCohort.values.map((d: any) => d.keys.slice().sort().join(','))
 		this.dom = {}
 
-		if (opts.selectCohort.title) {
+		if (opts.selectCohort?.title) {
 			this.dom.cohortTitle = opts.subheader.append('h2').style('margin-left', '10px').text(opts.selectCohort.title)
 		}
 
-		if (opts.selectCohort.description || opts.selectCohort.descriptionByUser) {
+		if (opts.selectCohort?.description || opts.selectCohort?.descriptionByUser) {
 			//temporary logic to get the description until the login is implemented
 			const loginInfo = getProfileLogin()
 			if (loginInfo[2]) {
@@ -53,7 +51,7 @@ class MassAbout {
 			}
 		}
 
-		if (opts.selectCohort.prompt) {
+		if (opts.selectCohort?.prompt) {
 			this.dom.cohortPrompt = this.subheader
 				.append('div')
 				.style('margin-left', '10px')
@@ -73,7 +71,6 @@ class MassAbout {
 			this.subheader.append('div').style('padding', '10px').html(this.aboutOverrides.html)
 		}
 		this.initCohort()
-
 		//Always show the release version at the bottom
 		this.showReleaseVersion()
 	}
@@ -84,12 +81,12 @@ class MassAbout {
 
 	initCohort = () => {
 		if (this.selectCohort == null) return
-		//Move back to nav.js
-		// self.dom.tds.filter(d => d.colNum === 0).style('display', '')
+
 		const instanceNum = this.instanceNum
 		const activeCohort = this.activeCohort
 		const app = this.app
 		const state = () => this.app.getState()
+
 		this.dom.cohortOpts
 			.append('table')
 			.selectAll('tr')
