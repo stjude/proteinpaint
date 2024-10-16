@@ -134,7 +134,6 @@ export class profilePlot {
 			this.samplesPerFilter[tw.term.id].includes(parseInt(sample.sample))
 		)
 		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
-
 		for (const value of values) {
 			value.value = value.label
 			value.disabled = !sampleValues.includes(value.label)
@@ -342,6 +341,7 @@ export class profilePlot {
 			const sampleData = this.data.samples[Number(id)]
 			if (!sampleData) throw 'Invalid site, please change the profile version selected and close this message.'
 		}
+
 		if (chartType != 'profileRadarFacility') {
 			if (this.state.logged) {
 				if (this.state.site && !this.settings.isAggregate) {
@@ -358,6 +358,14 @@ export class profilePlot {
 						return 0
 					})
 					this.sites.unshift({ label: '', value: '' })
+					inputs.unshift({
+						label: 'Site',
+						type: 'dropdown',
+						chartType,
+						options: this.sites,
+						settingsKey: 'site',
+						callback: value => this.setSite(value)
+					})
 				}
 				if (this.settings.site) this.sampleData = this.data.samples[Number(this.settings.site)]
 				else this.sampleData = null
@@ -393,17 +401,16 @@ export class profilePlot {
 					if (!this.settings.site) this.settings.site = this.sites[0].value
 					this.sampleData = result.samples[Number(this.settings.site)]
 				}
+				inputs.unshift({
+					label: 'Site',
+					type: 'dropdown',
+					chartType,
+					options: this.sites,
+					settingsKey: 'site',
+					callback: value => this.setSite(value)
+				})
 			}
 		}
-		if (this.sites)
-			inputs.unshift({
-				label: 'Site',
-				type: 'dropdown',
-				chartType,
-				options: this.sites,
-				settingsKey: 'site',
-				callback: value => this.setSite(value)
-			})
 	}
 
 	setFilterValue(key, value) {
@@ -603,7 +610,7 @@ export function getProfilePlotConfig(app, opts) {
 export async function loadFilterTerms(config, app, opts) {
 	const state = app.getState()
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
-	const cohortPreffix = activeCohort == 0 ? 'F' : 'A'
+	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
 	const twlst = []
 	config.countryTW = { id: cohortPreffix + 'country' }
 	config.regionTW = { id: cohortPreffix + 'WHO_region' }

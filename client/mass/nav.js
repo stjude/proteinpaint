@@ -502,7 +502,7 @@ function setRenderers(self) {
 		if (!result.cfeatures.length) return
 		for (const feature of result.features) rows.push([{ value: feature.name }])
 		for (const cohort of result.cohorts) {
-			columns.push({ label: cohort.cohort ? `${cohort.name} (${cohort.cohort})` : cohort.name })
+			columns.push({ label: cohort.name })
 			for (const [i, feature] of result.features.entries()) {
 				const cf = result.cfeatures.find(cf => cf.idfeature === feature.idfeature && cf.cohort === cohort.cohort)
 				if (cf) rows[i].push({ value: cf.value })
@@ -518,7 +518,7 @@ function setRenderers(self) {
 		})
 
 		self.dom.cohortTable.select('table').style('border-collapse', 'collapse')
-		self.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent')
+		self.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent').style('padding', '6px')
 		const selectCohort = self.state.termdbConfig.selectCohort
 		const keys = selectCohort.values[self.activeCohort].keys
 		let selector = `tbody > tr > td:nth-child(${self.activeCohort + 2})`
@@ -634,7 +634,7 @@ function setRenderers(self) {
 			})
 
 		self.dom.cohortInputs = self.dom.cohortOpts.selectAll('input')
-		self.dom.cohortTable = self.dom.subheader.about.append('div')
+		self.dom.cohortTable = self.dom.subheader.about.append('div').style('margin-left', '12px')
 
 		if (selectCohort.asterisk) {
 			self.dom.cohortAsterisk = self.dom.subheader.about
