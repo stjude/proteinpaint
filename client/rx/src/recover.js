@@ -142,7 +142,7 @@ function setRenderers(self) {
 	self.initUi = function () {
 		self.dom.undoBtn = self.dom.btnDiv
 			.append('button')
-			.attr('aria-label', 'undo the previous action')
+			.attr('aria-label', 'Undo the previous action')
 			.property('disabled', true)
 			.style('margin', '0 0 0 4px')
 			.style('border', '1px solid #ccc')
@@ -159,7 +159,7 @@ function setRenderers(self) {
 
 		self.dom.redoBtn = self.dom.btnDiv
 			.append('button')
-			.attr('aria-label', 'redo a subsequent action')
+			.attr('aria-label', 'Redo a subsequent action')
 			.property('disabled', true)
 			.style('margin', self.opts.resetHtml ? '0' : '0 4px 0 0')
 			.style('border', '1px solid #ccc')

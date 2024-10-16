@@ -338,7 +338,7 @@ export function server_init_db_queries(ds) {
 		// may not cache result of this one as query string may be indefinite
 		// instead, will cache prepared statement by cohort
 		const sql = cn.prepare(
-			`SELECT id, name, jsondata, s.included_types
+			`SELECT id, name, parent_id, jsondata, s.included_types
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE name LIKE ?`
@@ -348,6 +348,7 @@ export function server_init_db_queries(ds) {
 			if (tmp) {
 				const r = []
 				for (const i of tmp) {
+					if (i.parent_id == '*') continue
 					if (!i.jsondata) continue
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
