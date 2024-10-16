@@ -5,13 +5,9 @@ import { chartsInit } from './charts'
 import { groupsInit } from './groups'
 import { sessionBtnInit } from './sessionBtn'
 import { aboutInit } from './about.ts'
-import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
-import { Menu } from '#dom/menu'
+import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
-import { renderTable } from '../dom/table'
-import { getProfileLogin } from '../plots/profilePlot.js'
-import { icons as icon_functions } from '#dom'
 
 /*
 nav {}
@@ -63,7 +59,6 @@ class TdbNav {
 		try {
 			this.cohortFilter = getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
 			this.initUI(appState)
-			this.initCohort(appState)
 
 			this.components = await multiInit({
 				search: searchInit({
@@ -109,16 +104,16 @@ class TdbNav {
 					massSessionDuration: this.opts.massSessionDuration,
 					sessionDaysLeft: this.app.opts.sessionDaysLeft || null
 				}),
-				about: appState.termdbConfig?.massNav?.tabs?.about
-					? aboutInit({
-							app: this.app,
-							holder: this.dom.subheader.about,
-							features: appState.termdbConfig.massNav.tabs.about
-					  })
-					: []
+				about: aboutInit({
+					app: this.app,
+					subheader: this.dom.subheader.about,
+					instanceNum: this.instanceNum,
+					activeCohort: appState.activeCohort,
+					aboutOverrides: appState?.termdbConfig?.massNav?.tabs?.about || null,
+					selectCohort: appState?.termdbConfig?.selectCohort || null
+				})
 			})
 			this.mayShowMessage_sessionDaysLeft()
-			this.showReleaseVersion(appState)
 		} catch (e) {
 			throw e
 		}
@@ -480,184 +475,14 @@ function setRenderers(self) {
 				}
 			})
 
-		const visibleSubheaders = []
+		// const visibleSubheaders = []
 		for (const key in self.dom.subheader) {
 			self.dom.subheader[key].style('display', self.tabs[self.activeTab].subheader === key ? 'block' : 'none')
 		}
-		self.renderCohortsTable()
 
 		if (self.opts.header_mode === 'with_cohort_select') {
 			self.dom.cohortSelect.selectAll('option').property('value', appState.activeCohort)
 		}
-	}
-
-	self.renderCohortsTable = () => {
-		if (!self.dom.cohortTable) return
-		self.dom.cohortTable.selectAll('*').remove()
-		const columns = [{ label: 'Feature' }]
-		const rows = []
-		const result = self.cohortsData
-		if ('error' in result) throw result.error
-		if (!result.cfeatures.length) return
-		for (const feature of result.features) rows.push([{ value: feature.name }])
-		for (const cohort of result.cohorts) {
-			columns.push({ label: cohort.name })
-			for (const [i, feature] of result.features.entries()) {
-				const cf = result.cfeatures.find(cf => cf.idfeature === feature.idfeature && cf.cohort === cohort.cohort)
-				if (cf) rows[i].push({ value: cf.value })
-			}
-		}
-
-		renderTable({
-			rows,
-			columns,
-			div: self.dom.cohortTable,
-			showLines: false,
-			maxHeight: '60vh'
-		})
-
-		self.dom.cohortTable.select('table').style('border-collapse', 'collapse')
-		self.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent').style('padding', '6px')
-		const selectCohort = self.state.termdbConfig.selectCohort
-		const keys = selectCohort.values[self.activeCohort].keys
-		let selector = `tbody > tr > td:nth-child(${self.activeCohort + 2})`
-		const combined = keys.length > 1
-		if (combined) {
-			selector = ''
-			for (const key of keys) {
-				const i = result.cohorts.map(c => c.cohort).indexOf(key)
-				if (selector !== '') selector += ','
-				selector += `tbody > tr > td:nth-child(${i + 2})`
-			}
-		}
-		const activeColumns = self.dom.cohortTable.selectAll(selector)
-		activeColumns.style('background-color', 'yellow')
-		self.dom.cohortInputs.property('checked', (d, i) => i === self.activeCohort)
-	}
-
-	self.initCohort = async appState => {
-		const selectCohort = appState.termdbConfig.selectCohort
-		if (!selectCohort) return
-		self.dom.tds.filter(d => d.colNum === 0).style('display', '')
-		self.cohortNames = selectCohort.values.map(d => d.keys.slice().sort().join(','))
-
-		if (selectCohort.title) {
-			self.dom.cohortTitle = self.dom.subheader.about.append('h2').style('margin-left', '10px').text(selectCohort.title)
-		}
-
-		if (selectCohort.description || selectCohort.descriptionByUser) {
-			//temporary logic to get the description until the login is implemented
-			const [logged, site, user] = getProfileLogin()
-			const description = selectCohort.description || selectCohort.descriptionByUser?.[user]
-			self.dom.cohortDescription = self.dom.subheader.about.append('div').style('margin-left', '10px').html(description)
-		}
-
-		if (selectCohort.prompt) {
-			self.dom.cohortPrompt = self.dom.subheader.about
-				.append('div')
-				.style('margin-left', '10px')
-				.style('padding-top', '30px')
-				.style('padding-bottom', '10px')
-				.style('font-weight', 'bold')
-				.text(selectCohort.prompt)
-		}
-
-		self.dom.cohortOpts = self.dom.subheader.about
-			.append('div')
-			.style('margin-bottom', '30px')
-			.style('margin-left', '10px')
-
-		const trs = self.dom.cohortOpts
-			.append('table')
-			.selectAll('tr')
-			.data(selectCohort.values)
-			.enter()
-			.append('tr')
-			.each(function (d, i) {
-				const tr = select(this)
-				const td0 = tr.append('td')
-				const radioName = 'sja-termdb-cohort-' + self.instanceNum
-				const radioId = radioName + '-' + i
-				td0
-					.append('input')
-					.attr('type', 'radio')
-					.attr('name', radioName)
-					.attr('id', radioId)
-					.attr('value', i)
-					.property('checked', i === self.activeCohort)
-					.style('margin-right', '5px')
-					.style('margin-left', '0px')
-					.on('click', async () => {
-						const state = self.app.getState()
-						const clearOnChange = state.termdbConfig.selectCohort.clearOnChange
-						if (clearOnChange) {
-							const subactions = [{ type: 'cohort_set', activeCohort: i }]
-							if (clearOnChange.filter)
-								subactions.push({
-									type: 'filter_replace',
-									filter: {
-										type: 'tvslst',
-										in: true,
-										join: '',
-										tag: 'filterUiRoot',
-										lst: []
-									}
-								})
-							if (clearOnChange.plots)
-								for (const plot of state.plots) {
-									subactions.push({
-										type: 'plot_delete',
-										id: plot.id
-									})
-								}
-
-							self.app.dispatch({
-								type: 'app_refresh',
-								subactions
-							})
-						} else self.app.dispatch({ type: 'cohort_set', activeCohort: i })
-					})
-
-				td0
-					.append('label')
-					.attr('for', radioId)
-					.attr('colspan', 2)
-					.style('cursor', 'pointer')
-					.html(d => d.label)
-
-				tr.selectAll('td')
-					.style('max-width', '600px')
-					.style('padding-bottom', '10px')
-					.style('padding-right', '20px')
-					.style('vertical-align', 'top')
-			})
-
-		self.dom.cohortInputs = self.dom.cohortOpts.selectAll('input')
-		self.dom.cohortTable = self.dom.subheader.about.append('div').style('margin-left', '12px')
-
-		if (selectCohort.asterisk) {
-			self.dom.cohortAsterisk = self.dom.subheader.about
-				.append('div')
-				.style('margin-left', '10px')
-				.style('padding-top', '20px')
-				.style('padding-bottom', '20px')
-				.style('font-size', 'small')
-				.text(selectCohort.asterisk)
-		}
-	}
-
-	self.showReleaseVersion = appState => {
-		if ((!appState?.termdbConfig?.selectCohort && !appState.termdbConfig?.massNav?.tabs?.about) || self.pkgver == null)
-			return
-		self.dom.subheader.about
-			.append('div')
-			.style('margin-left', '10px')
-			.style('padding-bottom', '5px')
-			.append('a')
-			.style('font-size', '.8em')
-			.property('href', 'https://github.com/stjude/proteinpaint/pkgs/container/ppfull')
-			.property('target', `${self.pkgver}`)
-			.text(`Release version: ${self.pkgver}`)
 	}
 }
 

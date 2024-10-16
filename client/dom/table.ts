@@ -33,7 +33,7 @@ export type Button = {
 // ariaLabelledBy is an optional attribute on the array object,
 // if present, will be used as aria-labelledby attribute on the
 // radio or checkbox input element, to address Section 508 requirement
-type TableRow = Cell[] & { ariaLabelledBy?: string }
+export type TableRow = Cell[] & { ariaLabelledBy?: string }
 
 export type TableArgs = {
 	columns: Column[] //List of table columns
@@ -52,7 +52,7 @@ export type TableArgs = {
 	maxHeight?: string //The max height of the table, 40vh by default
 
 	selectedRows?: number[] //Preselect rows specified
-	selectAll: boolean //Preselect all rows
+	selectAll?: boolean //Preselect all rows
 	resize?: boolean //Allow to resize the table height dragging the border
 	selectedRowStyle?: any //An object of arbitrary css key-values on how to style selected rows,
 	//for example `{text-decoration: 'line-through'}`. If a row is not

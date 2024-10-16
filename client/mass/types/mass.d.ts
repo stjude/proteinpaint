@@ -1,11 +1,27 @@
 import { RxAppApi } from '../../types/rx'
-import { Menu } from '../../dom/menu'
+import { Menu } from '#dom'
 import { Elem } from '../../types/d3'
+import { ClientCopyGenome } from 'types/global'
 
 export type MassAppApi = RxAppApi & {
 	Inner: MassApp
 	printError: (e: string) => void
 	tip: Menu
+	opts: {
+		/** TODO!! -> {} */
+		callbacks: any
+		genome: ClientCopyGenome
+		holder: Elem
+		/** Current release version. See https://github.com/stjude/proteinpaint/releases */
+		pkgver: string
+		/** TODO!! These are probably defined somehwere else */
+		state: {
+			vocab: {
+				dslabel: string
+				genome: string
+			}
+		}
+	}
 	/** Should be a type for TermdbVocab or Frontend Vocab later */
 	vocabApi: any
 }
