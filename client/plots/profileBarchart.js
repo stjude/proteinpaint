@@ -4,7 +4,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
 import { profilePlot } from './profilePlot.js'
 import { loadFilterTerms } from './profilePlot.js'
-import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, getProfilePlotConfig, FULL_COHORT, ABBREV_COHORT } from './profilePlot.js'
 
 let stepx = 500
 const barwidth = 400
@@ -86,7 +86,7 @@ class profileBarchart extends profilePlot {
 		const height = this.rowCount * 32 + 600
 		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		const title =
-			this.state.activeCohort == 1
+			this.state.activeCohort == ABBREV_COHORT
 				? `Score-based Results for the ${this.component} Component by Module and Domain Compared with End-User Impression`
 				: `Objective ${this.component == 'Patients and Outcomes' ? '' : 'and Subjective '}Score-based Results for the ${
 						this.component
