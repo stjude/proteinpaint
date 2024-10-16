@@ -208,17 +208,29 @@ function gdcValidateQuery(ds: any, genome: any) {
 		const url = path.join(host.geneExp, '/gene_expression/gene_selection')
 		try {
 			// cachedFetch will only cache a response if an external API URL is enabled in serverconfig.features.extApiCache
-			const response = await cachedFetch(url, {
-				method: 'POST',
-				headers,
-				body: getGeneSelectionArg(q)
-			})
+			const response = await cachedFetch(
+				url,
+				{
+					method: 'POST',
+					headers,
+					body: getGeneSelectionArg(q)
+				},
+				{
+					getErrMessage: r => {
+						const body = r.body || r
+						// no error message if there is a gene_selection array in the response payload
+						return Array.isArray(body.gene_selection) ? '' : body.message || body.error || JSON.stringify(body)
+					}
+				}
+			)
 
 			const re = response.body
 			// {"gene_selection":[{"gene_id":"ENSG00000141510","log2_uqfpkm_median":3.103430497010492,"log2_uqfpkm_stddev":0.8692021350485105,"symbol":"TP53"}, ... ]}
 
 			const genes = [] as string[]
-			if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] is not array'
+			if (!Array.isArray(re.gene_selection)) {
+				throw 're.gene_selection[] is not array: ' + JSON.stringify(re)
+			}
 			for (const i of re.gene_selection) {
 				if (i.gene_id && typeof i.gene_id == 'string') {
 					// is ensg, convert to symbol
