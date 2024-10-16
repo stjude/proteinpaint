@@ -4,7 +4,7 @@ import * as d3 from 'd3'
 import { profilePlot } from './profilePlot.js'
 import { renderTable } from '../dom/table'
 import { loadFilterTerms } from './profilePlot.js'
-import { getDefaultProfilePlotSettings, getProfilePlotConfig, makeChartBtnMenu } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, ABBREV_COHORT, makeChartBtnMenu } from './profilePlot.js'
 
 class profileRadar extends profilePlot {
 	constructor() {
@@ -49,13 +49,16 @@ class profileRadar extends profilePlot {
 			.append('svg')
 			.attr('width', width)
 			.attr('height', height)
-		this.tableDiv = this.dom.plotDiv
+		const rightDiv = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin-top', '140px')
 			.style('margin-right', '20px')
-
+		this.tableDiv = rightDiv.append('div')
+		const noteDiv = rightDiv.append('div').style('font-size', '0.8rem')
+		const footNote = `Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20, shown in blue if positive and in red if negative.`
+		noteDiv.text(footNote)
 		const rows = []
 		const columns = [
 			{ label: 'Color' },
@@ -64,7 +67,7 @@ class profileRadar extends profilePlot {
 			{ label: config.term2.abbrev },
 			{
 				label: 'Diff',
-				title: `Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20, shown in blue if positive and in red if negative.`
+				title: footNote
 			}
 		]
 
@@ -184,7 +187,7 @@ class profileRadar extends profilePlot {
 
 		const item2 = `${config.term2.name} ${abbrev}`
 		this.addLegendItem(item2, color2, 1, '5, 5')
-		if (this.state.activeCohort == 1)
+		if (this.state.activeCohort == ABBREV_COHORT)
 			this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(-50, -15)`))
 		else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
 		this.addFilterLegend()

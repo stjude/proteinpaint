@@ -15,6 +15,8 @@ const orderedVolumes = [
 	'Very large (>120 annual newly diagnoses)'
 ]
 
+export const ABBREV_COHORT = 0
+export const FULL_COHORT = 1
 export class profilePlot {
 	constructor() {
 		this.type = 'profilePlot'
@@ -310,9 +312,8 @@ export class profilePlot {
 		)
 		this.components.controls.on(`helpClick.${chartType}`, () => {
 			const activeCohort = this.state.activeCohort
-			console.log('activeCohort', activeCohort)
 			let link
-			if (activeCohort == 1) {
+			if (activeCohort == ABBREV_COHORT) {
 				if (chartType == 'profileBarchart')
 					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-abbr-profiledash.pdf'
 				else if (chartType == 'profilePolar')
@@ -320,7 +321,7 @@ export class profilePlot {
 						'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-abbr-profiledash.pdf'
 				else if (chartType.startsWith('profileRadar'))
 					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-abbr-profiledash.pdf'
-			} else if (activeCohort == 0) {
+			} else if (activeCohort == FULL_COHORT) {
 				if (chartType == 'profileBarchart')
 					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-full-profiledash.pdf'
 				else if (chartType == 'profilePolar')
@@ -339,7 +340,7 @@ export class profilePlot {
 		if (this.state.site) {
 			if (!id) throw 'Invalid site'
 			const sampleData = this.data.samples[Number(id)]
-			if (!sampleData) throw 'Invalid site, you may need to change the profile version selected'
+			if (!sampleData) throw 'Invalid site, please change the profile version selected'
 		}
 		if (chartType != 'profileRadarFacility') {
 			if (this.state.logged) {
@@ -568,7 +569,7 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	*/
 	const state = chartsInstance.state
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
-	const key = activeCohort == 0 ? 'full' : 'abbrev'
+	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const typeConfig = state.termdbConfig?.chartConfigByType[key][chartType]
 	const menuDiv = holder.append('div')
 	for (const plotConfig of typeConfig.plots) {
@@ -593,7 +594,7 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 export function getProfilePlotConfig(app, opts) {
 	const state = app.getState()
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
-	const key = activeCohort == 0 ? 'full' : 'abbrev'
+	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const defaults = app.vocabApi.termdbConfig?.chartConfigByType[key][opts.chartType]
 	return defaults
 }
