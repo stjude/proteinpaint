@@ -271,7 +271,6 @@ class ViolinPlot {
 
 		const args = this.validateArgs()
 		this.data = await this.app.vocabApi.getViolinPlotData(args)
-		console.log(this.data)
 
 		if (this.settings.plotThickness == undefined) {
 			const thickness = this.data.plots.length == 1 ? 200 : 150
