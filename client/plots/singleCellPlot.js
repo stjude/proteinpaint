@@ -349,6 +349,7 @@ class singleCellPlot {
 		this.colorByGene = value == '2'
 		for (const div of this.colorByDivs) div.style('display', this.colorByGene ? 'none' : '')
 		this.dom.searchboxDiv.style('display', this.colorByGene ? 'inline-block' : 'none')
+		if (this.colorByGene) this.dom.searchbox.node().focus()
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.dom.violinBt?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.selectCategory?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
