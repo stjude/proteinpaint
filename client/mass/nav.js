@@ -233,7 +233,10 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding-top', '4px')
 			.style('vertical-align', 'middle')
-		icon_functions['trash'](deleteAllDiv, { handler: self.deletePlots, title: 'Delete all plots' })
+		icon_functions['trash'](deleteAllDiv, {
+			handler: self.deletePlots,
+			title: 'Delete all plots. To revert, click Undo button'
+		})
 
 		if (appState.nav.header_mode == 'only_buttons') {
 			self.dom.tabDiv.style('display', 'none')
