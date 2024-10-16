@@ -289,13 +289,12 @@ function setRenderers(self) {
 		Object.assign(filterTab, massNav?.tabs?.filter)
 
 		if (massNav?.tabs?.groups?.hide) self.tabs.splice(1, 1)
-		/** Updates tab for cohorts */
-		if (appState.termdbConfig?.selectCohort) {
+		/** Updates about tab for cohorts */
+		if (appState.termdbConfig?.selectCohort && !massNav?.tabs?.about) {
 			aboutTab.top = 'COHORT'
 			aboutTab.mid = ''
 			aboutTab.btm = ''
 		}
-
 		const tabIdx = appState.termdbConfig?.selectCohort ? 0 : massNav?.tabs?.about?.order || 0
 		self.tabs.splice(tabIdx, 0, aboutTab)
 
