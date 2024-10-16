@@ -7,6 +7,7 @@ use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::io;
 use std::time::Instant;
 
@@ -15,15 +16,6 @@ use std::time::Instant;
 #[derive(Debug)]
 struct GO_pathway {
     GO_id: String,
-}
-
-#[allow(non_camel_case_types)]
-#[allow(non_snake_case)]
-#[derive(Debug)]
-struct pathway_genes {
-    symbol: String,
-    _ensg: String,
-    _enstCanonical: String,
 }
 
 #[allow(non_camel_case_types)]
@@ -39,28 +31,27 @@ struct pathway_p_value {
 }
 
 fn calculate_hypergeometric_p_value(
-    sample_genes: &Vec<String>,
+    sample_genes: &HashSet<String>,
     num_background_genes: usize,
-    genes_in_pathway: Vec<pathway_genes>,
+    genes_in_pathway: HashSet<String>,
 ) -> (f64, f64, String) {
-    let mut matching_sample_genes_counts = 0.0;
     let mut gene_set_hits: String = "".to_string();
-    for gene in sample_genes {
-        for pathway in &genes_in_pathway {
-            if pathway.symbol == *gene {
-                matching_sample_genes_counts += 1.0;
-                gene_set_hits += &(gene.to_string() + &",");
-            }
-        }
+
+    let gene_intersections: HashSet<String> = genes_in_pathway
+        .intersection(sample_genes)
+        .cloned()
+        .collect();
+    for gene in &gene_intersections {
+        gene_set_hits += &(gene.to_string() + &",");
     }
 
-    if matching_sample_genes_counts > 0.0 {
+    if gene_intersections.len() > 0 {
         gene_set_hits.pop();
     }
 
     //println!("sample_genes:{:?}", sample_genes);
     //println!("genes_in_pathway:{:?}", genes_in_pathway);
-    //println!("k-1:{}", matching_sample_genes_counts - 1.0);
+    //println!("k-1:{}", gene_intersection.len() - 1.0);
     //println!("M:{}", genes_in_pathway.len() as f64);
     //println!(
     //    "N-M:{}",
@@ -68,7 +59,7 @@ fn calculate_hypergeometric_p_value(
     //);
     //println!("n:{}", sample_genes.len() as f64);
     let p_value = r_mathlib::hypergeometric_cdf(
-        matching_sample_genes_counts - 1.0,
+        gene_intersections.len() as f64 - 1.0,
         genes_in_pathway.len() as f64,
         num_background_genes as f64 - genes_in_pathway.len() as f64,
         sample_genes.len() as f64,
@@ -76,7 +67,7 @@ fn calculate_hypergeometric_p_value(
         false,
     );
     //println!("p_value:{}", p_value);
-    (p_value, matching_sample_genes_counts, gene_set_hits)
+    (p_value, gene_intersections.len() as f64, gene_set_hits)
 }
 
 fn main() -> Result<()> {
@@ -115,7 +106,7 @@ fn main() -> Result<()> {
                     let genedbconn = Connection::open(genedb)?;
                     let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
                     let mut num_coding_genes: usize = 0;
-                    let mut sample_coding_genes: Vec<String> = Vec::with_capacity(20000);
+                    let mut sample_coding_genes: HashSet<String> = HashSet::with_capacity(24000);
                     match genedb_result {
                         Ok(mut x) => {
                             let mut genes = x.query([])?;
@@ -125,7 +116,7 @@ fn main() -> Result<()> {
                                 for sample_gene in &sample_genes {
                                     let code_gene: String = coding_gene.get(0).unwrap();
                                     if code_gene == *sample_gene {
-                                        sample_coding_genes.push(code_gene)
+                                        sample_coding_genes.insert(code_gene);
                                     }
                                 }
                             }
@@ -185,24 +176,27 @@ fn main() -> Result<()> {
                                         //println!("gene_stmt:{:?}", gene_stmt);
 
                                         let mut rows = gene_stmt.query([])?;
-                                        let mut names = Vec::<pathway_genes>::new();
+                                        let mut names = HashSet::<String>::new();
                                         while let Some(row) = rows.next()? {
                                             let a: String = row.get(0)?;
                                             let input_gene_json = json::parse(&a);
                                             match input_gene_json {
                                                 Ok(json_genes) => {
                                                     for json_iter in 0..json_genes.len() {
-                                                        let item = pathway_genes {
-                                                            symbol: json_genes[json_iter]["symbol"]
-                                                                .to_string(),
-                                                            _ensg: json_genes[json_iter]["ensg"]
-                                                                .to_string(),
-                                                            _enstCanonical: json_genes[json_iter]
-                                                                ["enstCanonical"]
-                                                                .to_string(),
-                                                        };
+                                                        //let item = pathway_genes {
+                                                        //    symbol: json_genes[json_iter]["symbol"]
+                                                        //        .to_string(),
+                                                        //    _ensg: json_genes[json_iter]["ensg"]
+                                                        //        .to_string(),
+                                                        //    _enstCanonical: json_genes[json_iter]
+                                                        //        ["enstCanonical"]
+                                                        //        .to_string(),
+                                                        //};
                                                         //println!("item:{:?}", item);
-                                                        names.push(item);
+                                                        names.insert(
+                                                            json_genes[json_iter]["symbol"]
+                                                                .to_string(),
+                                                        );
                                                     }
                                                 }
                                                 Err(_) => {
