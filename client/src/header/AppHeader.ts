@@ -132,7 +132,7 @@ export class AppHeader {
 			// github's pkgs/container link has a timestamp before the tag, which cannot be computed here (but may be able to query later?)
 			const link = `https://github.com/stjude/proteinpaint/pkgs/container/ppfull` // url to list of published container versions
 			const version = this.data.pkgver
-				? `Version: <a href="${link}" target="${this.data.pkgver}">${this.data.pkgver}</a>`
+				? `Release version: <a href="${link}" target="${this.data.pkgver}">${this.data.pkgver}</a>`
 				: `Code date: ${this.data.codedate}` // default to using code date as before if pkgver is not available
 			row
 				.attr('id', 'sjpp-serverstat')
