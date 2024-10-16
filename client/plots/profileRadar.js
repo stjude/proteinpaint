@@ -56,8 +56,12 @@ class profileRadar extends profilePlot {
 			.style('margin-top', '140px')
 			.style('margin-right', '20px')
 		this.tableDiv = rightDiv.append('div')
-		const noteDiv = rightDiv.append('div').style('font-size', '0.8rem')
-		const footNote = `Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20, shown in blue if positive and in red if negative.`
+		const noteDiv = rightDiv
+			.append('div')
+			.style('font-size', '0.9rem')
+			.style('padding-top', '5px')
+			.style('word-wrap', 'wrap')
+		const footNote = `* Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20, shown in red if negative and in blue if positive.`
 		noteDiv.text(footNote)
 		const rows = []
 		const columns = [
@@ -66,7 +70,7 @@ class profileRadar extends profilePlot {
 			{ label: config.term1.abbrev },
 			{ label: config.term2.abbrev },
 			{
-				label: 'Diff',
+				label: 'Difference*',
 				title: footNote
 			}
 		]

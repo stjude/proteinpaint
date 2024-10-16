@@ -49,11 +49,20 @@ class profileRadarFacility extends profilePlot {
 			.append('svg')
 			.attr('width', width)
 			.attr('height', height)
-		this.tableDiv = this.dom.plotDiv
+		const rightDiv = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin-top', '140px')
+			.style('margin-right', '20px')
+		this.tableDiv = rightDiv.append('div')
+		const noteDiv = rightDiv
+			.append('div')
+			.style('font-size', '0.9rem')
+			.style('padding-top', '5px')
+			.style('word-wrap', 'wrap')
+		const footNote = `* Difference between site and aggregated scores. If bigger than 20, shown in red if negative and in blue if positive.`
+		noteDiv.text(footNote)
 		// Create a polar grid.
 
 		this.svg
@@ -76,7 +85,7 @@ class profileRadarFacility extends profilePlot {
 			{ label: 'Module' },
 			{ label: `Facility` },
 			{ label: 'Global' },
-			{ label: 'Diff' }
+			{ label: 'Difference*' }
 		]
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
@@ -144,8 +153,7 @@ class profileRadarFacility extends profilePlot {
 				columns,
 				div: this.tableDiv,
 				showLines: true,
-				resize: true,
-				maxHeight: '60vh'
+				resize: true
 			})
 		data.push(data[0])
 		data2.push(data2[0])

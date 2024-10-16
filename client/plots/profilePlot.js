@@ -340,7 +340,7 @@ export class profilePlot {
 		if (this.state.site) {
 			if (!id) throw 'Invalid site'
 			const sampleData = this.data.samples[Number(id)]
-			if (!sampleData) throw 'Invalid site, please change the profile version selected'
+			if (!sampleData) throw 'Invalid site, please change the profile version selected and close this message.'
 		}
 		if (chartType != 'profileRadarFacility') {
 			if (this.state.logged) {
