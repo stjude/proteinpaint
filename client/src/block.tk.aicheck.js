@@ -285,7 +285,6 @@ function configPanel(tk, block) {
 				loadTk(tk, block)
 			},
 			styles: {
-				display: 'inline-block',
 				'margin-right': '5px'
 			}
 		})
