@@ -344,6 +344,9 @@ function mayAddSkewerModeOption(tk, block) {
 			.append('div')
 			.attr('class', 'sja_pp_vlb_viewmoderadiodiv') // for testing
 			.style('margin', '10px'),
+		styles: {
+			display: 'block'
+		},
 		options,
 		callback: async idx => {
 			for (const i of tk.skewer.viewModes) i.inuse = false

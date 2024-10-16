@@ -1590,7 +1590,7 @@ function configPanel(tk, block) {
 				{ label: 'Single', value: false, checked: !tk.asPaired },
 				{ label: 'Paired', value: true, checked: tk.asPaired }
 			],
-			styles: { display: 'inline-block', margin: '10px 5px' },
+			styles: { margin: '10px 5px' },
 			callback: v => {
 				tk.asPaired = v
 				loadTk(tk, block)
