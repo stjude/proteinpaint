@@ -84,7 +84,7 @@ const entityTypes = [
 
 const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 
-const maxCaseNumber = 150 // max number of cases to request based on cohort
+const maxCaseNumber = 300 // max number of cases to request based on cohort. use big number of 300 but not 150 allows number of available bams to easily max out listCaseFileSize which is desirable on client
 const listCaseFileSize = 1000 // max number of bam files to request based on case ids
 
 let queryApi
