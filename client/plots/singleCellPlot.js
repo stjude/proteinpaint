@@ -104,24 +104,28 @@ class singleCellPlot {
 					})
 				})
 		}
-		if (state.config.plots.length > 1)
+		if (state.config.plots.length > 1) {
+			showDiv.append('label').text('Show Plots:').style('padding-right', '10px').style('vertical-align', 'top')
+			const plot_select = showDiv
+				.append('select')
+				.property('multiple', true)
+				.on('change', e => {
+					const options = plot_select.node().options
+					const singleCellPlot = {}
+					for (const option of options) singleCellPlot[option.value] = option.selected
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { singleCellPlot } }
+					})
+				})
+
 			for (const plot of state.config.plots) {
 				const id = plot.name.replace(/\s+/g, '')
-				showDiv
-					.append('input')
-					.attr('id', `show${id}`)
-					.attr('type', 'checkbox')
-					.attr('aria-label', `Show or hide ${plot.name} plot`)
-					.property('checked', true)
-					.on('change', e => {
-						this.app.dispatch({
-							type: 'plot_edit',
-							id: this.id,
-							config: { settings: { singleCellPlot: { [`show${id}`]: e.target.checked } } }
-						})
-					})
-				showDiv.append('label').text(plot.name).attr('for', `show${id}`)
+				const key = `show${id}`
+				const option = plot_select.append('option').text(plot.name).attr('value', key).property('selected', true)
 			}
+		}
 		let selectCategory, violinBt, geneSearch, searchboxDiv
 		if (q.singleCell?.geneExpression) {
 			headerDiv.append('label').text('Color by:').style('padding-left', '25px')
