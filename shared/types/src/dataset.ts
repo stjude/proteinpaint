@@ -560,6 +560,7 @@ type GDCSingleCellPlot = {
 	name: string
 	colorColumns: ColorColumn[]
 	coordsColumns: { x: number; y: number }
+	selected?: boolean
 }
 
 type ColorColumn = {
@@ -591,6 +592,7 @@ type SingleCellPlot = {
 	colorColumns: ColorColumn[]
 	/** 0-based column number for x/y coordinate for this plot */
 	coordsColumns: { x: number; y: number }
+	selected?: boolean
 }
 export type SingleCellDataNative = {
 	src: 'native'

@@ -123,7 +123,11 @@ class singleCellPlot {
 			for (const plot of state.config.plots) {
 				const id = plot.name.replace(/\s+/g, '')
 				const key = `show${id}`
-				const option = plot_select.append('option').text(plot.name).attr('value', key).property('selected', true)
+				const option = plot_select
+					.append('option')
+					.text(plot.name)
+					.attr('value', key)
+					.property('selected', plot.selected)
 			}
 		}
 		let selectCategory, violinBt, geneSearch, searchboxDiv
@@ -1037,7 +1041,7 @@ export async function getPlotConfig(opts, app) {
 		for (const plot of plots) {
 			const id = plot.name.replace(/\s+/g, '')
 			const key = `show${id}`
-			settings[key] = true
+			settings[key] = plot.selected
 		}
 		const config = {
 			hiddenClusters: [],
