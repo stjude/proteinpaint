@@ -1,6 +1,9 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '#termsetting'
-// import { controlsInit } from './controls'
+// import { drawBoxplot } from '#dom'
+import { controlsInit } from './controls'
+import { RxComponent } from '../types/rx.d'
+import { Elem } from 'types/d3'
 // import * as client from '../src/client'
 // import { scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale'
 // import { schemeCategory10 } from 'd3-scale-chromatic'
@@ -8,22 +11,77 @@ import { fillTermWrapper } from '#termsetting'
 // import { format as d3format } from 'd3-format'
 // import { axisLeft } from 'd3-axis'
 
-class TdbBoxplot {
+class TdbBoxplot extends RxComponent {
 	type = 'boxplot'
-	opts: any
-	constructor(opts) {
-		this.opts = opts
+	components: { controls: any }
+	dom: any
+	constructor() {
+		super()
+		this.components = {
+			controls: {}
+		}
+		this.dom = {}
 	}
 
-	async init() {
-		console.log(17, 'init called')
+	async setControls() {
+		const inputs = [
+			{
+				type: 'term',
+				configKey: 'term',
+				chartType: 'boxplot',
+				label: 'Customize', //TODO: Verify if this is correct
+				vocabApi: this.app.vocabApi,
+				menuOptions: 'edit'
+			}
+		]
+		// if (this.opts.controls) {
+		// 	this.opts.controls.on('downloadClick.boxplot', this.download)??????
+		// } else {
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls'),
+			inputs
+		})
+
+		// 	this.components.controls.on('downloadClick.boxplot', this.download)?????
+		// }
+	}
+
+	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		return {
+			activeCohort: appState.activeCohort,
+			termfilter: appState.termfilter,
+			config: {
+				term: config.term,
+				term2: config.term2,
+				settings: {
+					common: config.settings.common,
+					boxplot: config.settings.boxplot
+				}
+			}
+		}
+	}
+
+	async init(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+
+		const holder = this.opts.holder.classed('sjpp-boxplot-main', true)
+		this.dom.controls = this.opts.controls ? holder : holder.append('div')
+		if (this.opts.header) this.dom.header = this.opts.header.html('Boxplot')
+
+		await this.setControls()
 		// const holder = this.opts.holder
 		// const div = this.opts.controls ? holder : holder.append('div')
 		// const svg = div
 		// 	.append('svg')
 		// 	.style('margin-right', '20px')
 		// 	.style('display', 'inline-block')
-
+		console.log(this.opts.header)
 		// this.dom = {
 		// 	header: this.opts.header,
 		// 	controls: this.opts.controls ? null : holder.append('div'),
@@ -39,44 +97,7 @@ class TdbBoxplot {
 		// setRenderers(this)
 	}
 
-	// async setControls() {
-	// 	if (this.opts.controls) {
-	// 		this.opts.controls.on('downloadClick.boxplot', this.download)
-	// 	} else {
-	// 		this.components = {
-	// 			controls: await controlsInit({
-	// 				app: this.app,
-	// 				id: this.id,
-	// 				holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls'),
-	// 				inputs: ['term1', 'overlay', 'divideBy']
-	// 			})
-	// 		}
-
-	// 		this.components.controls.on('downloadClick.boxplot', this.download)
-	// 	}
-	// }
-
-	// getState(appState, sub) {
-	// 	const config = appState.plots.find(p => p.id === this.id)
-	// 	if (!config) {
-	// 		throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
-	// 	}
-	// 	return {
-	// 		activeCohort: appState.activeCohort,
-	// 		termfilter: appState.termfilter,
-	// 		config: {
-	// 			term: config.term,
-	// 			term2: config.term2,
-	// 			settings: {
-	// 				common: config.settings.common,
-	// 				boxplot: config.settings.boxplot
-	// 			}
-	// 		}
-	// 	}
-	// }
-
 	async main() {
-		console.log(77, 'main called')
 		// try {
 		// 	this.config = structuredClone(this.state.config)
 		// 	const t2 = this.config.term2

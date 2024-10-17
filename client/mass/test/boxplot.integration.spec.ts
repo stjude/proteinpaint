@@ -3,7 +3,7 @@ import * as helpers from '../../test/front.helpers.js'
 // import { detectOne, detectStyle } from '../../test/test.helpers.js'
 /*
 Tests:
-
+    Default boxplot
  */
 
 /*************************
@@ -33,7 +33,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape.only('Boxplot', test => {
+tape.only('Default boxplot', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -45,9 +45,6 @@ tape.only('Boxplot', test => {
 					term: {
 						id: 'agedx',
 						q: { mode: 'continuous' }
-					},
-					term2: {
-						id: 'sex'
 					}
 				}
 			]
