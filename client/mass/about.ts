@@ -167,6 +167,7 @@ class MassAbout {
 	}
 
 	showReleaseVersion = () => {
+		if (!this.app.opts.pkgver) return
 		this.subheader
 			.append('div')
 			.style('margin-left', '10px')

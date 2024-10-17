@@ -157,7 +157,8 @@ upon error, throw err message as a string
 		const opts = {
 			debug: arg.app.debugmode,
 			holder: arg.holder,
-			state
+			state,
+			pkgver: arg.app.pkgver
 		}
 		if (state.genome) {
 			opts.genome = arg.genomes[state.genome]
@@ -182,7 +183,8 @@ upon error, throw err message as a string
 				debug: arg.app.debugmode,
 				holder: arg.holder,
 				state,
-				genome: arg.genomes[state.vocab.genome]
+				genome: arg.genomes[state.vocab.genome],
+				pkgver: arg.app.pkgver
 			}
 		}
 		if (urlp.has('mass-session-url')) {
@@ -196,7 +198,8 @@ upon error, throw err message as a string
 				debug: arg.app.debugmode,
 				holder: arg.holder,
 				state,
-				genome: arg.genomes[state.vocab.genome]
+				genome: arg.genomes[state.vocab.genome],
+				pkgver: arg.app.pkgver
 			}
 		}
 		const _ = await import('../mass/app')
@@ -240,7 +243,8 @@ upon error, throw err message as a string
 			state: res.state,
 			genome: arg.genomes[res.state.vocab.genome],
 			sessionDaysLeft: res.sessionDaysLeft,
-			sessionId: id
+			sessionId: id,
+			pkgver: arg.app.pkgver
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)
