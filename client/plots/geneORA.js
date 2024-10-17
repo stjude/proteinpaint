@@ -72,6 +72,14 @@ class geneORA {
 				title: 'Gene set size cutoff',
 				min: 0,
 				max: 20000
+			},
+			{
+				label: 'Filter non-coding genes',
+				type: 'checkbox',
+				chartType: 'geneORA',
+				settingsKey: 'filter_non_coding_genes',
+				title: 'Filter non-coding genes',
+				boxLabel: ''
 			}
 		]
 
@@ -145,6 +153,7 @@ add:
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.dom.tableDiv.selectAll('*').remove()
 		self.config.geneORAparams.geneSetGroup = self.settings.pathway
+		self.config.geneORAparams.filter_non_coding_genes = self.settings.filter_non_coding_genes
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
 		let output
 		try {
@@ -243,7 +252,8 @@ export async function getPlotConfig(opts, app) {
 					pvalue: 0.05,
 					adjusted_original_pvalue: 'adjusted',
 					pathway: undefined,
-					gene_set_size_cutoff: 2000
+					gene_set_size_cutoff: 2000,
+					filter_non_coding_genes: true
 				},
 				controls: { isOpen: true }
 			}
