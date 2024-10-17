@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.81.2
 
 Fixes:
 - use url.resolve() for GDC gene_selection route URL
