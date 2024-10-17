@@ -820,10 +820,12 @@ if (serverconfig.features?.extApiCache) {
  *                         acceptL 'application/json'
  * @param use{}	      non-fetch options to customize the client and/or response properties
  * 	.metaKey          string key to use when attaching a caching metadata object to the response
+ *
  *  .client           got-like HTTP client with get, post methods, etc
- *  .getErrMessage()  for fetch responses that does not use standard HTTP response error codes,
- *                    the response payload itself may carry the error message, the consumer code
- *                    may provide this option so that the error message can be detected and extracted
+ *
+ *  .getErrMessage(body)  for fetch responses that does not use standard HTTP response error codes,
+ *                        the response payload itself may carry the error message, the consumer code
+ *                        may provide this option so that the error message can be detected and extracted
  *
  * !!! NOTE !!!: to clear the cache, `rm [cachedir]/extApiResponse/*`
  */
@@ -884,7 +886,13 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 				// and freeing-up resources like sockets. This issue seems to be fixed in Node 22, which will be active in October 2024.
 				// - In the meantime, replacing ky with node-fetch may be a good enough fix for edge cases of very large, long-running requests.
 				jsonBody = await nodeFetch(url, opts)
-					.then(r => r.json())
+					.then(async r => {
+						const contentType = r.headers.get('content-type') //.map(k => r.headers[k].toLowerCase()); console.log(888, contentType)
+						const payload = contentType == 'application/json' ? await r.json() : await r.text()
+						if (!r.ok || (typeof r.status == 'number' && r.status > 299))
+							throw `error from ${url}: ` + (payload.message || payload.error || JSON.stringify(payload))
+						return payload
+					})
 					.catch(e => {
 						throw e
 					})
