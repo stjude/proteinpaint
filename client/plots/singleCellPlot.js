@@ -1063,8 +1063,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 420,
-		svgh: 420,
+		svgw: 700,
+		svgh: 700,
 		showBorders: false,
 		showSamples: false
 	}
