@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.81.3
 
 Fixes:
 - use string concat to preserve the apiHost.geneExp path that was being stripped by url.resolve()
