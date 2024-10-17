@@ -287,7 +287,7 @@ export async function getPlotConfig(opts, app) {
 		const defaults = opts
 		defaults.settings = { profileRadar: getDefaultProfilePlotSettings() }
 
-		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
+		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profileRadar'
 		const config = copyMerge(structuredClone(defaults), opts)
 		config.settings.controls = { isOpen: false }
 		const terms = config.terms

@@ -55,8 +55,8 @@ class profileSummary extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileSummary
-		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileSummary'
+		const defaults = app.vocabApi.termdbConfig?.plotConfigByCohort?.profileSummary
+		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profileSummary'
 		const config = copyMerge(structuredClone(defaults), opts)
 		const settings = getDefaultProfilePlotSettings()
 		config.settings = {

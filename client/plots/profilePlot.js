@@ -578,7 +578,7 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	const state = chartsInstance.state
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
 	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
-	const typeConfig = state.termdbConfig?.chartConfigByType[key][chartType]
+	const typeConfig = state.termdbConfig?.plotConfigByCohort[key][chartType]
 	const menuDiv = holder.append('div')
 	for (const plotConfig of typeConfig.plots) {
 		let config = structuredClone(plotConfig)
@@ -603,7 +603,7 @@ export function getProfilePlotConfig(app, opts) {
 	const state = app.getState()
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
 	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
-	const defaults = app.vocabApi.termdbConfig?.chartConfigByType[key][opts.chartType]
+	const defaults = app.vocabApi.termdbConfig?.plotConfigByCohort[key][opts.chartType]
 	return defaults
 }
 
