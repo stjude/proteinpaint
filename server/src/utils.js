@@ -887,7 +887,7 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 				// - In the meantime, replacing ky with node-fetch may be a good enough fix for edge cases of very large, long-running requests.
 				jsonBody = await nodeFetch(url, opts)
 					.then(async r => {
-						const contentType = r.headers.get('content-type') //.map(k => r.headers[k].toLowerCase()); console.log(888, contentType)
+						const contentType = r.headers.get('content-type')
 						const payload = contentType == 'application/json' ? await r.json() : await r.text()
 						if (!r.ok || (typeof r.status == 'number' && r.status > 299))
 							throw `error from ${url}: ` + (payload.message || payload.error || JSON.stringify(payload))
