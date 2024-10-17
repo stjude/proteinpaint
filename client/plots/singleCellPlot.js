@@ -130,23 +130,10 @@ class singleCellPlot {
 					.property('selected', plot.selected)
 			}
 		}
-		let selectCategory, violinBt, geneSearch, searchboxDiv
+		let selectCategory, violinBt, geneSearch, searchboxDiv, colorByDiv
 		if (q.singleCell?.geneExpression) {
 			headerDiv.append('label').text('Color by:').style('padding-left', '25px')
-
-			make_radios({
-				holder: headerDiv,
-				options: [
-					{ label: 'Plot category', value: '1', checked: !this.colorByGene },
-					{
-						label: 'Gene expression',
-						value: '2',
-						checked: this.colorByGene
-					}
-				],
-				styles: { display: 'inline' },
-				callback: async value => this.onColorByChange(value)
-			})
+			colorByDiv = headerDiv.append('div').style('display', 'inline-block')
 			searchboxDiv = headerDiv.append('div')
 			geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
@@ -159,7 +146,6 @@ class singleCellPlot {
 				hideHelp: true,
 				focusOff: true
 			})
-			searchboxDiv.style('display', state.config.gene ? 'inline-block' : 'none')
 			selectCategory = headerDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 
 			selectCategory.on('change', async () => {
@@ -248,6 +234,7 @@ class singleCellPlot {
 		this.dom = {
 			selectCategory,
 			violinBt,
+			colorByDiv,
 			geneSearch,
 			searchbox: geneSearch?.searchbox,
 			searchboxDiv,
@@ -272,7 +259,8 @@ class singleCellPlot {
 		if (q.singleCell?.DEgenes) {
 			const label = this.dom.deDiv
 				.append('label')
-				.html('View differentially expresed genes of a cluster vs rest of cells:&nbsp;')
+				.attr('aria-label', 'View differentially expresed genes of a cluster versus the rest of the cells')
+				.html('View differentially expresed genes:&nbsp;')
 			this.dom.deselect = label.append('select')
 			if (this.app.opts.genome.termdbs)
 				this.dom.GSEAbt = this.dom.deDiv
@@ -298,50 +286,9 @@ class singleCellPlot {
 						})
 					})
 			this.dom.deselect.append('option').text('')
-			this.dom.deselect.on('change', async e => {
-				DETableDiv.selectAll('*').remove()
-				const categoryName = this.dom.deselect.node().value.split(' ')?.[1]
-				if (this.dom.GSEAbt) this.dom.GSEAbt.style('display', categoryName ? 'inline-block' : 'none')
-				if (!categoryName) return
-
-				const columnName = state.termdbConfig.queries.singleCell.DEgenes.columnName
-				const sample =
-					this.state.config.experimentID || this.state.config.sample || this.samples?.[0]?.experiments[0]?.experimentID
-				const args = { genome: state.genome, dslabel: state.dslabel, categoryName, sample, columnName }
-				this.dom.loadingDiv.selectAll('*').remove()
-				this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
-				const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
-				this.dom.loadingDiv.style('display', 'none')
-				if (result.error) {
-					DETableDiv.text(result.error)
-					return
-				}
-				if (!Array.isArray(result.genes)) {
-					DETableDiv.text('.genes[] missing')
-					return
-				}
-				const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
-				const rows = []
-				this.genes = []
-				this.fold_changes = []
-				result.genes.sort((a, b) => b.avg_log2FC - a.avg_log2FC)
-				for (const gene of result.genes) {
-					const row = [
-						{ value: gene.name },
-						{ value: roundValueAuto(gene.avg_log2FC) },
-						{ value: roundValueAuto(gene.p_val_adj) }
-					]
-					rows.push(row)
-					this.genes.push(gene.name)
-					this.fold_changes.push(gene.avg_log2FC)
-				}
-				renderTable({
-					rows,
-					columns,
-					maxWidth: '40vw',
-					maxHeight: '20vh',
-					div: DETableDiv
-				})
+			this.dom.deselect.on('change', e => {
+				const cluster = this.dom.deselect.node().value.split(' ')[1]
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { cluster } })
 			})
 		}
 
@@ -352,10 +299,96 @@ class singleCellPlot {
 		await this.setControls(state)
 	}
 
+	async renderDETable() {
+		const DETableDiv = this.dom.DETableDiv
+		DETableDiv.selectAll('*').remove()
+		const categoryName = this.state.config.cluster
+		this.dom.deselect.node().value = `Cluster ${categoryName}` || ''
+		if (this.dom.GSEAbt) this.dom.GSEAbt.style('display', categoryName ? 'inline-block' : 'none')
+		if (!categoryName) return
+		const columnName = this.state.termdbConfig.queries.singleCell.DEgenes.columnName
+		const sample =
+			this.state.config.experimentID || this.state.config.sample || this.samples?.[0]?.experiments[0]?.experimentID
+		const args = { genome: this.state.genome, dslabel: this.state.dslabel, categoryName, sample, columnName }
+		this.dom.loadingDiv.selectAll('*').remove()
+		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
+		const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
+		this.dom.loadingDiv.style('display', 'none')
+		if (result.error) {
+			DETableDiv.text(result.error)
+			return
+		}
+		if (!Array.isArray(result.genes)) {
+			DETableDiv.text('.genes[] missing')
+			return
+		}
+		const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
+		const rows = []
+		this.genes = []
+		this.fold_changes = []
+		result.genes.sort((a, b) => b.avg_log2FC - a.avg_log2FC)
+		const selectedRows = []
+		let i = 0
+		for (const gene of result.genes) {
+			const row = [
+				{ value: gene.name },
+				{ value: roundValueAuto(gene.avg_log2FC) },
+				{ value: roundValueAuto(gene.p_val_adj) }
+			]
+			rows.push(row)
+			this.genes.push(gene.name)
+			this.fold_changes.push(gene.avg_log2FC)
+			if (gene.name == this.state.config.gene) selectedRows.push(i)
+			i++
+		}
+		renderTable({
+			rows,
+			columns,
+			maxWidth: '40vw',
+			maxHeight: '20vh',
+			div: DETableDiv,
+			singleMode: true,
+			noButtonCallback: (i, node) => {
+				const gene = result.genes[i].name
+				this.colorByGene = true
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: {
+						gene: gene,
+						sample: this.state.config.sample || this.samples?.[0]?.sample,
+						experimentID: this.state.config.experimentID || this.samples?.[0].experiments?.[0]?.experimentID
+					}
+				})
+			},
+			selectedRows
+		})
+	}
+
+	renderColorByDiv() {
+		const colorByDiv = this.dom.colorByDiv
+		colorByDiv.selectAll('*').remove()
+		make_radios({
+			holder: colorByDiv,
+			options: [
+				{ label: 'Plot category', value: '1', checked: !this.colorByGene },
+				{
+					label: 'Gene expression',
+					value: '2',
+					checked: this.colorByGene
+				}
+			],
+			styles: { display: 'inline' },
+			callback: async value => this.onColorByChange(value)
+		})
+		this.dom.searchboxDiv.style('display', this.state.config.gene ? 'inline-block' : 'none')
+		this.dom.searchbox.node().value = this.state.config.gene || ''
+	}
+
 	onColorByChange(value) {
 		const gene = this.dom.searchbox.node().value
 		this.colorByGene = value == '2'
-		for (const div of this.colorByDivs) div.style('display', this.colorByGene ? 'none' : '')
+		for (const div of this.plotColorByDivs) div.style('display', this.colorByGene ? 'none' : '')
 		this.dom.searchboxDiv.style('display', this.colorByGene ? 'inline-block' : 'none')
 		if (this.colorByGene) this.dom.searchbox.node().focus()
 		this.dom.plotsDiv.selectAll('*').remove()
@@ -442,7 +475,7 @@ class singleCellPlot {
 	async main() {
 		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
-		this.colorByDivs = []
+		this.plotColorByDivs = []
 		// Only add unique colorColumn among plots as option
 		const uniqueColorColumns = new Set()
 		if (this.dom.selectCategory) {
@@ -474,7 +507,10 @@ class singleCellPlot {
 		this.legendRendered = false
 		this.data = await this.getData()
 		this.dom.plotsDivParent.style('display', 'inline-block')
+		this.renderColorByDiv()
 		this.renderPlots(this.data)
+		this.renderDETable()
+
 		this.dom.loadingDiv.style('display', 'none')
 		if (this.dom.header) this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} Single Cell Data`)
 	}
@@ -623,7 +659,7 @@ class singleCellPlot {
 	}
 
 	getColor(d, plot) {
-		const noExpColor = '#FAFAFA'
+		const noExpColor = '#aaa'
 
 		if (!this.colorByGene) return plot.colorMap[d.category]
 		else if (this.state.config.gene) {
@@ -664,10 +700,10 @@ class singleCellPlot {
 		if (!plot.legendSVG) {
 			if (plot.colorColumns.length > 1 && !this.colorByGene) {
 				const app = this.app
-				const colorByDiv = plot.plotDiv.append('div')
-				colorByDiv.append('label').text('Color by:').style('margin-right', '5px')
-				const colorBySelect = colorByDiv.append('select')
-				this.colorByDivs.push(colorByDiv)
+				const plotColorByDiv = plot.plotDiv.append('div')
+				plotColorByDiv.append('label').text('Color by:').style('margin-right', '5px')
+				const colorBySelect = plotColorByDiv.append('select')
+				this.plotColorByDivs.push(plotColorByDiv)
 				colorBySelect
 					.selectAll('option')
 					.data(plot.colorColumns)
@@ -1063,8 +1099,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 700,
-		svgh: 700,
+		svgw: 900,
+		svgh: 900,
 		showBorders: false,
 		showSamples: false
 	}
