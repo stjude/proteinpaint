@@ -51,6 +51,7 @@ async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentati
 		sample_genes: q.sample_genes,
 		msigdb: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
 		gene_set_group: q.geneSetGroup,
+		filter_non_coding_genes: q.filter_non_coding_genes,
 		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile)
 	} as gene_overrepresentation_input
 
