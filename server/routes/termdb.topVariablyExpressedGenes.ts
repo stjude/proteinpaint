@@ -216,7 +216,6 @@ function gdcValidateQuery(ds: any, genome: any) {
 					body: getGeneSelectionArg(q)
 				},
 				{
-					noCache: true,
 					// use an already decoded response.body as argument
 					getErrMessage: ({ body }) => {
 						// no error message if there is a gene_selection array in the response payload
