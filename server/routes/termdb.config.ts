@@ -99,7 +99,7 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
-	if (tdb.chartConfigByType) c.chartConfigByType = tdb.chartConfigByType
+	if (tdb.plotConfigByCohort) c.plotConfigByCohort = tdb.plotConfigByCohort
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.neuroOncRegression) c.neuroOncRegression = tdb.neuroOncRegression
 	if (tdb.helpPages) c.helpPages = tdb.helpPages

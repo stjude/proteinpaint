@@ -179,7 +179,7 @@ export async function getPlotConfig(opts, app) {
 		const defaults = getProfilePlotConfig(app, opts)
 		defaults.settings = { profilePolar: getDefaultProfilePlotSettings() }
 
-		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
+		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profilePolar'
 		const config = copyMerge(structuredClone(defaults), opts)
 		config.settings.controls = { isOpen: false }
 		const twlst = []

@@ -1024,7 +1024,7 @@ type Termdb = {
 	matrix?: Matrix
 	survival?: Survival
 	logscaleBase2?: boolean
-	chartConfigByType?: ChartConfigByType
+	plotConfigByCohort?: PlotConfigByCohort
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
@@ -1094,11 +1094,11 @@ type SampleType = {
 	parent_id: string
 }
 
-type ChartConfigByType = {
-	[index: string]: ChartConfig
+type PlotConfigByCohort = {
+	[index: string]: PlotConfig
 }
 
-type ChartConfig = {
+type PlotConfig = {
 	[key: string]: any
 }
 
