@@ -867,7 +867,7 @@ type SortPriorityEntry = {
 }
 
 type SurvivalSettings = {
-	/** filters out all the survival data with Time-to-Event longer than this maxTimeToEvent */
+	/** The max time-to-event to be displayed in plot, hide all the samples with Time-to-Event longer than this maxTimeToEvent */
 	maxTimeToEvent?: number
 }
 

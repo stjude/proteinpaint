@@ -257,8 +257,7 @@ class TdbSurvival {
 		const opts = {
 			chartType: 'survival',
 			term: c.term,
-			filter: this.state.termfilter.filter,
-			maxTimeToEvent: this.state.config.settings.maxTimeToEvent
+			filter: this.state.termfilter.filter
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -719,6 +718,11 @@ function setRenderers(self) {
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
+		// do not show samples with time to event larger than maxTimeToEvent
+		let processedData = series.data
+		if (s.maxTimeToEvent) {
+			processedData = series.data.filter(d => d.x <= s.maxTimeToEvent)
+		}
 		// todo: allow update of exiting path instead of replacing
 		g.selectAll('path').remove()
 		g.append('path')
@@ -728,7 +732,7 @@ function setRenderers(self) {
 					.curve(curveStepAfter)
 					.x(c => c.scaledX)
 					.y0(c => c.scaledY[1])
-					.y1(c => c.scaledY[2])(series.data)
+					.y1(c => c.scaledY[2])(processedData)
 			)
 			.style('display', s.ciVisible ? '' : 'none')
 			.style('fill', self.term2toColor[series.seriesId].adjusted)
@@ -738,7 +742,7 @@ function setRenderers(self) {
 		renderSubseries(
 			s,
 			g,
-			series.data.map(d => {
+			processedData.map(d => {
 				return {
 					seriesId: d.seriesId,
 					x: d.x,
@@ -757,7 +761,7 @@ function setRenderers(self) {
 		renderSubseries(
 			s,
 			g.append('g'),
-			series.data.map(d => {
+			processedData.map(d => {
 				return {
 					seriesId: d.seriesId,
 					x: d.x,
@@ -776,7 +780,7 @@ function setRenderers(self) {
 		renderSubseries(
 			s,
 			g.append('g'),
-			series.data.map(d => {
+			processedData.map(d => {
 				return {
 					seriesId: d.seriesId,
 					x: d.x,
@@ -851,7 +855,10 @@ function setRenderers(self) {
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
 		let xTicks
 		if (s.xTickValues?.length) {
-			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= chart.xMin && v <= chart.xMax))
+			// xTicksValues should not be larger than maxTimeToEvent
+			chart.xTickValues = s.xTickValues.filter(
+				v => v === 0 || (v >= chart.xMin && v <= Math.min(s.maxTimeToEvent || chart.xMax, chart.xMax))
+			)
 			xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
 		} else {
 			chart.xTickValues = []
@@ -1327,7 +1334,7 @@ function getPj(self) {
 					scaleLinear()
 						// force x to start at 0 because first data point will always
 						// be at x=0 (see survival.R)
-						.domain([0, context.self.xMax])
+						.domain([0, Math.min(s.maxTimeToEvent || context.self.xMax, context.self.xMax)])
 						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 				)
 			},
