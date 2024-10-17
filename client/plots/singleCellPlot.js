@@ -619,7 +619,7 @@ class singleCellPlot {
 
 	getOpacity(d) {
 		if (this.config.hiddenClusters.includes(d.category)) return 0
-		return 0.7
+		return 0.8
 	}
 
 	getColor(d, plot) {
