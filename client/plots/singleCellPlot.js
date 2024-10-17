@@ -686,7 +686,8 @@ class singleCellPlot {
 		}
 		legendSVG.selectAll('*').remove()
 		legendSVG.append('text').attr('transform', `translate(0, 20)`).style('font-size', '0.9em').text(plot.name)
-		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) {
+		const sameLegend = this.state.termdbConfig.queries.singleCell.data.sameLegend || this.colorByGene
+		if (sameLegend && this.legendRendered) {
 			if (this.state.config.gene) {
 				// for gene expression sc plot, needs to add colorGenerator to plot even
 				// when legend is not needed for the plot
