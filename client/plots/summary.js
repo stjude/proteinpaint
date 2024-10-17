@@ -2,9 +2,10 @@ import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom/menu'
 import { fillTermWrapper } from '#termsetting'
 import { recoverInit } from '../rx/src/recover'
-import { select } from 'd3-selection'
+// import { select } from 'd3-selection'
 import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
+import { getDefaultBoxplotSettings } from './boxplot.js'
 import { getDefaultScatterSettings } from './sampleScatter.js'
 import { Tabs } from '../dom/toggleButtons'
 import { isNumericTerm } from '#shared/terms.js'
@@ -230,19 +231,50 @@ function setRenderers(self) {
 					callback: self.tabClickCallback
 				},
 				{
-					childType: 'table',
-					label: 'Crosstab - in development',
-					disabled: d => true,
-					isVisible: () => false,
-					active: false,
-					callback: self.tabClickCallback
-				},
-				{
 					childType: 'boxplot',
-					label: 'Boxplot - TODO',
-					disabled: d => true,
-					isVisible: () => false, // remove during development
-					// isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
+					label: 'Boxplot',
+					disabled: d => false,
+					isVisible: () => isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term),
+					getConfig: async () => {
+						//TODO: copied from violin tab for development
+						//Move to reuseable function in cleanup
+						const term = self.config?.term
+						const term2 = self.config.term2
+
+						let _term, _term2
+						// isNumericTerm(term?.term) ? (self.violinContTerm = 'term') : (self.violinContTerm = 'term2')
+
+						// //If the first term was continuous or is coming as continuous
+						// if ((self.violinContTerm && self.violinContTerm === 'term') || term.q?.mode == 'continuous') {
+						// 	// must mean coming from scatter plot
+						// 	_term = await self.getWrappedTermCopy(term, 'continuous')
+						// 	_term2 = await self.getWrappedTermCopy(term2, 'discrete')
+						// 	self.violinContTerm = 'term'
+						// }
+						// //If the second term was continuous or is coming as continuous
+						// else if ((self.violinContTerm && self.violinContTerm === 'term2') || term2?.q?.mode == 'continuous') {
+						// 	// must mean coming from barchart
+						// 	_term = await self.getWrappedTermCopy(term, 'discrete')
+						// 	_term2 = await self.getWrappedTermCopy(term2, 'continuous')
+						// 	self.violinContTerm = 'term2'
+						// }
+						//If the second term is coming as discrete from the scatter
+						if (term2?.q?.mode == 'discrete') {
+							// must mean coming from barchart
+							_term = await self.getWrappedTermCopy(term, 'discrete')
+							_term2 = await self.getWrappedTermCopy(term2, 'continuous')
+							self.violinContTerm = 'term2'
+						}
+						//by default
+						else {
+							_term = await self.getWrappedTermCopy(term, 'continuous')
+							_term2 = await self.getWrappedTermCopy(term2, 'discrete')
+							self.violinContTerm = 'term'
+						}
+						const config = { childType: 'boxplot', term: _term, term2: _term2 }
+						console.log(282, config)
+						return config
+					},
 					active: false,
 					callback: self.tabClickCallback
 				},
@@ -321,6 +353,7 @@ function setRenderers(self) {
 }
 
 export async function getPlotConfig(opts, app) {
+	console.log(opts, app)
 	if (!opts.term) throw 'summary getPlotConfig: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
@@ -352,6 +385,8 @@ export async function getPlotConfig(opts, app) {
 
 			violin: getDefaultViolinSettings(app),
 
+			boxplot: getDefaultBoxplotSettings(app),
+
 			sampleScatter: getDefaultScatterSettings(app)
 		},
 		mayAdjustConfig(config, edits = {}) {
@@ -363,7 +398,8 @@ export async function getPlotConfig(opts, app) {
 				if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
 					config.childType = 'sampleScatter'
 				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous')
-					config.childType = 'violin'
+					if (opts.childType != 'boxplot') config.childType = 'violin'
+					else config.childType = 'boxplot'
 				else config.childType = 'barchart'
 			}
 		}
