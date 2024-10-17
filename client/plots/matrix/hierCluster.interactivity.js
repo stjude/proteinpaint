@@ -231,20 +231,14 @@ export function showTable4selectedRows(clickedRowNames, rowType) {
 	const buttonDiv = div.append('div').style('padding', '5px')
 	const copyButton = buttonDiv
 		.append('button')
-		.text(`Copy ${rowType}`)
+		.html(`Copy ${rowType}`)
 		.attr('class', '.sja_menu_div button')
 		.style('margin-top', '2px')
 		.style('padding', '5px')
 		.on('click', () => {
 			const geneNames = rows.map(row => row[0].value).join('\n')
-			navigator.clipboard
-				.writeText(geneNames)
-				.then(() => {
-					alert(`${rowType} copied to clipboard`)
-				})
-				.catch(err => {
-					console.error('Failed to copy: ', err)
-				})
+			navigator.clipboard.writeText(geneNames).then(() => {}, console.warn)
+			copyButton.html(`Copy ${rowType}&nbsp;&check;`)
 		})
 	renderTable({
 		rows,
