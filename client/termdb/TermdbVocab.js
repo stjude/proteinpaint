@@ -166,7 +166,6 @@ export class TermdbVocab extends Vocab {
 		}
 		if (opts.filter0) body.filter0 = opts.filter0
 
-		if (opts.maxTimeToEvent) body.maxTimeToEvent = opts.maxTimeToEvent
 		if ('grade' in opts) body.grade = opts.grade
 		if ('minSampleSize' in opts) body.minSampleSize = opts.minSampleSize
 

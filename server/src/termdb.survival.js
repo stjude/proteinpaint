@@ -96,11 +96,7 @@ export async function get_survival(q, ds) {
 
 		// perform survival analysis for each chart
 		for (const chartId in byChartSeries) {
-			let data = byChartSeries[chartId]
-			if (q.maxTimeToEvent) {
-				// Filter out the survival data with Time to event longer than survial time cut-off (defined in dataset)
-				data = data.filter(d => d.time <= q.maxTimeToEvent)
-			}
+			const data = byChartSeries[chartId]
 			const survival_data = JSON.parse(
 				await run_R(path.join(serverconfig.binpath, 'utils', 'survival.R'), JSON.stringify(data))
 			)
