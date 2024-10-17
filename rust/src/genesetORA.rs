@@ -103,6 +103,11 @@ fn main() -> Result<()> {
                         None => panic!("genedb file path is missing"),
                     }
 
+                    let filter_non_coding_genes_input: &JsonValue =
+                        &json_string["filter_non_coding_genes"];
+                    let filter_non_coding_genes: bool =
+                        filter_non_coding_genes_input.as_bool().unwrap();
+
                     let genedbconn = Connection::open(genedb)?;
                     let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
                     let mut num_coding_genes: usize = 0;
@@ -115,7 +120,10 @@ fn main() -> Result<()> {
                                 //println!("coding_gene:{:?}", coding_gene);
                                 for sample_gene in &sample_genes {
                                     let code_gene: String = coding_gene.get(0).unwrap();
-                                    if code_gene == *sample_gene {
+                                    if filter_non_coding_genes == true && code_gene == *sample_gene
+                                    {
+                                        sample_coding_genes.insert(code_gene);
+                                    } else if filter_non_coding_genes == false {
                                         sample_coding_genes.insert(code_gene);
                                     }
                                 }
@@ -183,16 +191,6 @@ fn main() -> Result<()> {
                                             match input_gene_json {
                                                 Ok(json_genes) => {
                                                     for json_iter in 0..json_genes.len() {
-                                                        //let item = pathway_genes {
-                                                        //    symbol: json_genes[json_iter]["symbol"]
-                                                        //        .to_string(),
-                                                        //    _ensg: json_genes[json_iter]["ensg"]
-                                                        //        .to_string(),
-                                                        //    _enstCanonical: json_genes[json_iter]
-                                                        //        ["enstCanonical"]
-                                                        //        .to_string(),
-                                                        //};
-                                                        //println!("item:{:?}", item);
                                                         names.insert(
                                                             json_genes[json_iter]["symbol"]
                                                                 .to_string(),

@@ -7,6 +7,8 @@ export type genesetOverrepresentationRequest = {
 	genome: string
 	/** msigdb branch term name. all genesets under this branch will be analyzed */
 	geneSetGroup: string
+	/** Boolean variable describing if non-coding genes should be filtered */
+	filter_non_coding_genes: boolean
 }
 
 export type genesetOverrepresentationResponse = {
@@ -29,4 +31,6 @@ export type gene_overrepresentation_input = {
 	gene_set_group: string
 	/** Path to gene db */
 	genedb: string
+	/** Boolean variable describing if non-coding genes should be filtered */
+	filter_non_coding_genes: boolean
 }
