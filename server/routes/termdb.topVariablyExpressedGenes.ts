@@ -5,7 +5,6 @@ import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'
 import { makeFilter } from '#src/mds3.gdc.js'
 import { cachedFetch } from '#src/utils.js'
-import { resolve } from 'url'
 
 export const api = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -206,7 +205,11 @@ function gdcValidateQuery(ds: any, genome: any) {
 			throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
 		}
 		const { host, headers } = ds.getHostHeaders(q)
-		const url = resolve(host.geneExp, '/gene_expression/gene_selection')
+		// NOTES:
+		// - path.join() normalizes double-slash '://' to ':/' single-slash
+		// - url.resolve() replaces the path string after the domain, instead of appending to it
+		// for now, simply concatenate and assume that the dataset file removes any trailing slash from host.geneExp
+		const url = `${host.geneExp}/gene_expression/gene_selection`
 		try {
 			// cachedFetch will only cache a response if an external API URL is enabled in serverconfig.features.extApiCache
 			const response = await cachedFetch(
