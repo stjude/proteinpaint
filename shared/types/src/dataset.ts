@@ -1094,12 +1094,13 @@ type SampleType = {
 	parent_id: string
 }
 
+/** predefined configuration objects per subcohort per plot type */
 type PlotConfigByCohort = {
-	[index: string]: PlotConfig
-}
-
-type PlotConfig = {
-	[key: string]: any
+	/** key is subcohort string */
+	[index: string]: {
+		/** key is plot type as in mass/charts.js */
+		[key: string]: object
+	}
 }
 
 /** modified version of termwrapper*/
