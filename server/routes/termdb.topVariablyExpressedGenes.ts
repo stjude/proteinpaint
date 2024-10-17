@@ -5,6 +5,7 @@ import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'
 import { makeFilter } from '#src/mds3.gdc.js'
 import { cachedFetch } from '#src/utils.js'
+import { resolve } from 'url'
 
 export const api = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -200,12 +201,12 @@ function gdcValidateQuery(ds: any, genome: any) {
 			return serverconfig.features.gdcGenes as string[]
 		}
 
-		if (!ds.__gdc.doneCaching) {
+		if (!ds.__gdc?.doneCaching) {
 			// disable when caching is incomplete (particularly cases with gene exp data); to prevent showing wrong data on client
 			throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
 		}
 		const { host, headers } = ds.getHostHeaders(q)
-		const url = path.join(host.geneExp, '/gene_expression/gene_selection')
+		const url = resolve(host.geneExp, '/gene_expression/gene_selection')
 		try {
 			// cachedFetch will only cache a response if an external API URL is enabled in serverconfig.features.extApiCache
 			const response = await cachedFetch(
@@ -216,10 +217,12 @@ function gdcValidateQuery(ds: any, genome: any) {
 					body: getGeneSelectionArg(q)
 				},
 				{
-					// use an already decoded response.body as argument
-					getErrMessage: ({ body }) => {
+					// noCache: true, // !!! for testing only !!!
+					getErrMessage: response => {
+						// TODO: may detect empty response or response body beforehand in utils:cachedFetch()
+						const body = response?.body || response
 						// no error message if there is a gene_selection array in the response payload
-						return Array.isArray(body.gene_selection) ? '' : body.message || body.error || JSON.stringify(body)
+						return Array.isArray(body?.gene_selection) ? '' : body?.message || body?.error || JSON.stringify(body)
 					}
 				}
 			)
