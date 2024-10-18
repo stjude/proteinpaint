@@ -17,9 +17,9 @@ cannot do below:
 - path.join() normalizes double-slash '://' to ':/' single-slash
 - url.resolve() replaces the path string after the domain, instead of appending to it
 */
-export function joinUrl(p1: string, p2: string): string | null {
+export function joinUrl(p1: string, p2: string): string {
 	// p1 and p2 both shouldn't be blank string. if so, return null to alert
-	if (!p1 || !p2) return null
-	if (p1.indexOf('?') != -1) return null // search string not allowed in p1. if usecase arises can support it
+	if (!p1 || !p2) throw 'blank string not allowed'
+	if (p1.indexOf('?') != -1) throw 'search string not allowed' // search string not allowed in p1. if usecase arises can support it
 	return (p1.endsWith('/') ? p1 : p1 + '/') + (p2.startsWith('/') ? p2.substring(1) : p2)
 }
