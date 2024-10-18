@@ -12,4 +12,6 @@ npx esbuild src/app.ts --bundle --platform=node --packages=external --format=esm
 
 sed -i.bk 's|clinvar.ts|clinvar.js|g' dataset/clinvar.hg19.js
 sed -i.bk 's|clinvar.ts|clinvar.js|g' dataset/clinvar.hg38.js
-rm dataset/*.bk
+
+# Non-critical cleanup step, allow it to fail silently
+rm -f dataset/*.bk
