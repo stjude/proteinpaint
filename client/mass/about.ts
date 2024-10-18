@@ -87,6 +87,7 @@ class MassAbout {
 		const app = this.app
 		const state = () => this.app.getState()
 
+		//TODO: replace with make_radios
 		this.dom.cohortOpts
 			.append('table')
 			.selectAll('tr')
@@ -136,6 +137,12 @@ class MassAbout {
 								subactions
 							})
 						} else app.dispatch({ type: 'cohort_set', activeCohort: i })
+
+						nodes.forEach((n, j) => {
+							select(n)
+								.select('input')
+								.property('checked', j === i)
+						})
 					})
 
 				td0
