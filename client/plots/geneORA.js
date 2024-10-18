@@ -129,11 +129,10 @@ class geneORA {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.geneORA
 		await this.setControls()
-		this.dom.header
-			.style('opacity', 0.6)
-			.style('padding-left', '10px')
-			.style('font-size', '0.8em')
-			.text(this.config.geneORAparams.sample_genes.split(',').length + ' genes, Gene Set Overrepresentation Analysis')
+		this.dom.header.html(
+			this.config.geneORAparams.sample_genes.split(',').length +
+				' genes <span style="font-size:.8em;opacity:.7">GENE SET OVERREPRESENTATION ANALYSIS</span>'
+		)
 		render_geneORA(this)
 	}
 }
