@@ -472,6 +472,24 @@ export class TermdbVocab extends Vocab {
 		return d
 	}
 
+	async getBoxPlotData(arg, _body = {}) {
+		const headers = this.mayGetAuthHeaders('termdb')
+		arg.tw = this.getTwMinCopy(arg.tw)
+		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
+		const body = Object.assign(
+			{
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel
+			},
+			arg,
+			_body
+		)
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		const d = await dofetch3('termdb/boxplot', { headers, body })
+
+		return d
+	}
+
 	async getPercentile(term_id, percentile_lst, filter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
 		if (percentile_lst.find(p => !Number.isInteger(p))) throw 'non-integer percentiles found'
