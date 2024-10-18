@@ -137,12 +137,6 @@ class MassAbout {
 								subactions
 							})
 						} else await app.dispatch({ type: 'cohort_set', activeCohort: i })
-
-						nodes.forEach((n, j) => {
-							select(n)
-								.select('input')
-								.property('checked', j === state().activeCohort)
-						})
 					})
 
 				td0
@@ -242,7 +236,7 @@ class MassAbout {
 		}
 		const activeColumns = this.dom.cohortTable.selectAll(selector)
 		activeColumns.style('background-color', 'yellow')
-		this.dom.cohortInputs.property('checked', (d, i) => i === this.activeCohort)
+		//this.dom.cohortInputs.property('checked', (d, i) => i === this.activeCohort)
 	}
 }
 
