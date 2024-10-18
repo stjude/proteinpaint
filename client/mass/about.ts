@@ -132,16 +132,16 @@ class MassAbout {
 									})
 								}
 
-							app.dispatch({
+							await app.dispatch({
 								type: 'app_refresh',
 								subactions
 							})
-						} else app.dispatch({ type: 'cohort_set', activeCohort: i })
+						} else await app.dispatch({ type: 'cohort_set', activeCohort: i })
 
 						nodes.forEach((n, j) => {
 							select(n)
 								.select('input')
-								.property('checked', j === i)
+								.property('checked', j === state().activeCohort)
 						})
 					})
 
