@@ -4,7 +4,7 @@ import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'
 import { makeFilter } from '#src/mds3.gdc.js'
 import { cachedFetch } from '#src/utils.js'
-import { joinUrl } from '#src/helpers'
+import { joinUrl } from '#src/helpers.ts'
 
 export const api = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
