@@ -71,8 +71,8 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		if (opts.styles && 'display' in opts.styles) return opts.styles.display
 		else {
 			let len = 0
-			opts.options.forEach((d: any) => (len = len + d.label.length))
-			if (len <= 25) return 'inline-block'
+			opts.options.forEach((d: any) => (len = len + d.label.length + 4))
+			if (len <= 30) return 'inline-block'
 			else return 'block'
 		}
 	}
