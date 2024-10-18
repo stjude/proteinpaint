@@ -37,6 +37,7 @@ class singleCellPlot {
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		this.startGradient = {}
 		this.stopGradient = {}
+		this.DETip = new Menu({ padding: '4px' })
 	}
 
 	async init(appState) {
@@ -84,7 +85,11 @@ class singleCellPlot {
 		const topDiv = contentDiv.append('div').style('padding', '20px 0px')
 
 		const headerDiv = topDiv.append('div').style('display', 'inline-block')
-		const showDiv = topDiv.append('div').style('display', 'inline-block').style('float', 'right')
+		const showDiv = topDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('float', 'right')
+			.style('padding-top', '5px')
 
 		const tableDiv = contentDiv
 			.append('div')
@@ -105,7 +110,7 @@ class singleCellPlot {
 				})
 		}
 		if (state.config.plots.length > 1) {
-			showDiv.append('label').text('Show Plots:').style('padding-right', '10px').style('vertical-align', 'top')
+			showDiv.append('label').text('Plots:').style('vertical-align', 'top')
 			const plot_select = showDiv
 				.append('select')
 				.property('multiple', true)
@@ -209,9 +214,9 @@ class singleCellPlot {
 		}
 
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
-		const deDiv = headerDiv.append('div').style('padding-left', '40px').style('display', 'inline-block')
+		const deDiv = headerDiv.append('div').style('padding-left', '20px').style('display', 'inline-block')
 
-		const DETableDiv = contentDiv.append('div')
+		const DEMsgDiv = contentDiv.append('div')
 		const plotsDivParent = contentDiv.append('div').style('display', 'inline-block')
 		const plotsDiv = plotsDivParent
 			.append('div')
@@ -239,6 +244,7 @@ class singleCellPlot {
 			searchbox: geneSearch?.searchbox,
 			searchboxDiv,
 			header: this.opts.header,
+			showDiv,
 			mainDiv,
 			//holder,
 			loadingDiv,
@@ -247,7 +253,7 @@ class singleCellPlot {
 			controlsHolder: controlsDiv,
 			tableDiv,
 			deDiv,
-			DETableDiv,
+			DEMsgDiv,
 			plotsDiv,
 			plotsDivParent,
 			showSamplesBt
@@ -257,11 +263,23 @@ class singleCellPlot {
 		this.axisOffset = { x: offsetX, y: 30 }
 
 		if (q.singleCell?.DEgenes) {
-			const label = this.dom.deDiv
-				.append('label')
-				.attr('aria-label', 'View differentially expresed genes of a cluster versus the rest of the cells')
-				.html('View differentially expresed genes:&nbsp;')
-			this.dom.deselect = label.append('select')
+			const label = this.dom.deDiv.append('label').html('Cluster:&nbsp;')
+			this.dom.deselect = label.append('select').on('change', e => {
+				const display = this.dom.deselect.node().value ? 'inline-block' : 'none'
+				this.dom.deBt.style('display', display)
+				this.dom.GSEAbt.style('display', display)
+			})
+			this.dom.deselect.append('option').text('')
+
+			this.dom.deBt = deDiv
+				.append('button')
+				.style('margin', '4px')
+				.style('display', 'none')
+				.text('Show DE genes')
+				.on('click', e => {
+					const cluster = this.dom.deselect.node().value.split(' ')[1]
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { cluster } })
+				})
 			if (this.app.opts.genome.termdbs)
 				this.dom.GSEAbt = this.dom.deDiv
 					.append('button')
@@ -285,11 +303,6 @@ class singleCellPlot {
 							config
 						})
 					})
-			this.dom.deselect.append('option').text('')
-			this.dom.deselect.on('change', e => {
-				const cluster = this.dom.deselect.node().value.split(' ')[1]
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { cluster } })
-			})
 		}
 
 		this.settings = {}
@@ -300,8 +313,8 @@ class singleCellPlot {
 	}
 
 	async renderDETable() {
-		const DETableDiv = this.dom.DETableDiv
-		DETableDiv.selectAll('*').remove()
+		const DEMsgDiv = this.dom.DEMsgDiv
+		DEMsgDiv.selectAll('*').remove()
 		const categoryName = this.state.config.cluster
 		this.dom.deselect.node().value = `Cluster ${categoryName}` || ''
 		if (this.dom.GSEAbt) this.dom.GSEAbt.style('display', categoryName ? 'inline-block' : 'none')
@@ -315,11 +328,11 @@ class singleCellPlot {
 		const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
 		this.dom.loadingDiv.style('display', 'none')
 		if (result.error) {
-			DETableDiv.text(result.error)
+			DEMsgDiv.text(result.error)
 			return
 		}
 		if (!Array.isArray(result.genes)) {
-			DETableDiv.text('.genes[] missing')
+			DEMsgDiv.text('.genes[] missing')
 			return
 		}
 		const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
@@ -341,12 +354,13 @@ class singleCellPlot {
 			if (gene.name == this.state.config.gene) selectedRows.push(i)
 			i++
 		}
+		this.DETip.clear().showunder(this.dom.DEMsgDiv.node())
 		renderTable({
 			rows,
 			columns,
 			maxWidth: '40vw',
 			maxHeight: '20vh',
-			div: DETableDiv,
+			div: this.DETip.d,
 			singleMode: true,
 			noButtonCallback: (i, node) => {
 				const gene = result.genes[i].name
@@ -395,7 +409,7 @@ class singleCellPlot {
 		this.dom.violinBt?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.selectCategory?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.deDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
-		this.dom.DETableDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
+		this.dom.DEMsgDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
 
 		this.app.dispatch({
 			type: 'plot_edit',
@@ -980,9 +994,9 @@ async function renderSamplesTable(div, self, state, dslabel, genome) {
 		div,
 		maxHeight,
 		noButtonCallback: index => {
-			if (self.dom.DETableDiv) {
+			if (self.dom.DEMsgDiv) {
 				self.dom.deselect.node().value = ''
-				self.dom.DETableDiv.selectAll('*').remove()
+				self.dom.DEMsgDiv.selectAll('*').remove()
 				if (self.dom.GSEAbt) self.dom.GSEAbt.style('display', 'none')
 			}
 			const sample = rows[index][0].value
