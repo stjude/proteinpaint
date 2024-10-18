@@ -44,9 +44,6 @@ tape.only('Default boxplot', test => {
 					term: {
 						id: 'agedx',
 						q: { mode: 'continuous' }
-					},
-					term2: {
-						id: 'sex'
 					}
 				}
 			]

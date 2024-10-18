@@ -4,13 +4,14 @@ import { controlsInit } from '../controls'
 import { RxComponent } from '../../types/rx.d'
 import { Model } from './Model'
 import { View } from './View'
+import { plotColor } from '#shared/common.js'
 // import * as client from '../src/client'
 // import { schemeCategory10 } from 'd3-scale-chromatic'
 // import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 
 /** TODOs:
- * - Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
- *
+ *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
+ *	Add other controls
  */
 
 class TdbBoxplot extends RxComponent {
@@ -71,6 +72,7 @@ class TdbBoxplot extends RxComponent {
 		this.dom.div = this.opts.controls ? holder : holder.append('div')
 		this.dom.div.style('display', 'inline-block').style('margin', '10px')
 		this.dom.svg = this.dom.div.append('svg').style('margin-right', '20px').style('display', 'inline-block')
+		this.dom.plotTitle = this.dom.svg.append('text')
 		this.dom.yAxis = this.dom.svg.append('g')
 		this.dom.boxplots = this.dom.svg.append('g')
 
@@ -85,15 +87,12 @@ class TdbBoxplot extends RxComponent {
 		try {
 			const state = this['state'] //Don't like this. calling getState here is blank?
 			const config = structuredClone(state.config)
-			const t2 = config.term2
 
 			const model = new Model(config, state, this.app)
 			const data = await model.getData()
 
-			if (this.dom.header) this.dom.header.html(`${config.term.term.name} vs ${t2.term.name}`)
-
 			const settings = config.settings.boxplot
-			new View(data, settings, this.dom)
+			new View(config.term.term, data, settings, this.dom)
 		} catch (e: any) {
 			console.error(new Error(e.message || e))
 		}
@@ -105,8 +104,8 @@ export const componentInit = boxplotInit
 
 export function getDefaultBoxplotSettings(app, overrides = {}) {
 	const defaults = {
-		boxplotWidth: 500,
-		color: 'black',
+		boxplotWidth: 550,
+		color: plotColor,
 		labelSpace: 50,
 		rowHeight: 150
 	}
