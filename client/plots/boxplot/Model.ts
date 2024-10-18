@@ -16,6 +16,15 @@ export class Model {
 		const result = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 		const data = result.data
 		this.app.vocabApi.syncTermData(this.config, data)
+
+		const boxPlotDataArgs: any = {
+			tw: this.config.term,
+			filter: this.state.termfilter.filter
+		}
+		if (this.config.term2) boxPlotDataArgs.divideTw = this.config.term2
+
+		const bData = await this.app.vocabApi.getBoxPlotData(boxPlotDataArgs)
+		console.log(25, data, bData)
 		return data
 	}
 
