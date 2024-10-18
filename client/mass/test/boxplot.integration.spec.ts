@@ -13,8 +13,7 @@ Tests:
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		nav: {
-			header_mode: 'hide_search',
-			activeTab: 1
+			header_mode: 'hidden'
 		},
 		vocab: {
 			dslabel: 'TermdbTest',
@@ -45,6 +44,9 @@ tape.only('Default boxplot', test => {
 					term: {
 						id: 'agedx',
 						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'sex'
 					}
 				}
 			]
