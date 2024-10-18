@@ -19,7 +19,6 @@ type MassAboutOpts = {
 
 class MassAbout {
 	aboutOverrides: AboutObj | null
-	activeCohort: number
 	app: MassAppApi
 	dom: any
 	instanceNum: number
