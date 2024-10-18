@@ -71,8 +71,8 @@ class MassAbout {
 			this.subheader.append('div').style('padding', '10px').html(this.aboutOverrides.html)
 		}
 		this.initCohort()
-		//Always show the release version at the bottom
-		this.showReleaseVersion()
+		//Always show the release version and server launch date at the bottom
+		this.showServerInfo()
 	}
 
 	async main() {
@@ -166,18 +166,31 @@ class MassAbout {
 		}
 	}
 
-	showReleaseVersion = () => {
-		if (!this.app.opts.pkgver) return
-		this.subheader
+	showServerInfo = () => {
+		if (!this.app.opts.pkgver && !this.app.opts.launchDate) return
+		const div = this.subheader
 			.append('div')
 			.style('margin-left', '10px')
 			.style('padding-bottom', '5px')
 			.style('font-size', '.8em')
-			.text('Release version: ')
-			.append('a')
-			.property('href', 'https://github.com/stjude/proteinpaint/pkgs/container/ppfull')
-			.property('target', `${this.app.opts.pkgver}`)
-			.text(`${this.app.opts.pkgver}`)
+
+		if (this.app.opts.pkgver) {
+			div
+				.append('div')
+				.style('display', 'inline-block')
+				.text('Release version: ')
+				.append('a')
+				.property('href', 'https://github.com/stjude/proteinpaint/pkgs/container/ppfull')
+				.property('target', `${this.app.opts.pkgver}`)
+				.text(`${this.app.opts.pkgver}`)
+		}
+
+		if (this.app.opts.launchDate) {
+			div
+				.append('div')
+				.style('display', 'inline-block')
+				.text(`${this.app.opts.pkgver ? ', ' : ''}server launched: ${this.app.opts.launchDate}`)
+		}
 	}
 
 	renderCohortsTable = async () => {
