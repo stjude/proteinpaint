@@ -17,7 +17,7 @@ elif (($# == 3)); then
 	SRCDIR=$1
 	HOSTPORT=$2
 	IMAGE_NAME=$3
-	CONTAINER_ID=pp
+	CONTAINER_ID=${4:-pp} #defaults to 'pp' if not provided
 
 else 
 	SRCDIR=$1
@@ -29,7 +29,7 @@ fi
 # docker build --file Dockerfile --tag ppbase:latest .
 
 set +e
-docker stop pp && docker rm pp
+docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
 set -e
 
 EXPOSED_PORT=3000
