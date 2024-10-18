@@ -6,6 +6,7 @@ import path from 'path'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
 import { write_tmpfile } from './utils.js'
+import { joinUrl } from './helpers'
 import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
@@ -93,9 +94,8 @@ export async function validate_ssm2canonicalisoform(api, getHostHeaders) {
 		if (!q.ssm_id) throw '.ssm_id missing'
 		const { host, headers } = getHostHeaders(q)
 		const re = await ky(
-			path.join(
-				host.rest,
-				'ssms',
+			joinUrl(
+				joinUrl(host.rest, 'ssms'),
 				q.ssm_id + '?fields=consequence.transcript.is_canonical,consequence.transcript.transcript_id'
 			),
 			{ timeout: false, headers }
@@ -372,7 +372,7 @@ async function getCases4expclustering(q, ds) {
 	}
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky.post(path.join(host.rest, 'cases'), { timeout: false, headers, json }).json()
+		const re = await ky.post(joinUrl(host.rest, 'cases'), { timeout: false, headers, json }).json()
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		const lst = []
 		for (const h of re.data.hits) {
@@ -553,7 +553,7 @@ export function validate_query_geneCnv(ds) {
 	ds.queries.geneCnv.bygene.get = async opts => {
 		const { host, headers } = ds.getHostHeaders(opts)
 		const re = await ky
-			.post(path.join(host.rest, 'cnvs'), {
+			.post(joinUrl(host.rest, 'cnvs'), {
 				timeout: false,
 				headers,
 				json: {
@@ -680,7 +680,7 @@ export function validate_query_geneCnv2(ds) {
 	ds.queries.geneCnv.bygene.get = async opts => {
 		const { host, headers } = ds.getHostHeaders(opts)
 		const re = await ky
-			.post(path.join(host.rest, 'cnv_occurrences'), {
+			.post(joinUrl(host.rest, 'cnv_occurrences'), {
 				timeout: false,
 				headers,
 				json: Object.assign({ size: 100000, fields: getFields(opts) }, getFilters(opts))
@@ -800,7 +800,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 	]
 	const { host, headers } = ds.getHostHeaders(opts)
 	const re = await ky
-		.post(path.join(host.rest, 'files'), {
+		.post(joinUrl(host.rest, 'files'), {
 			timeout: false,
 			headers,
 			json: {
@@ -847,7 +847,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 
 	if (wgsFile) {
 		// do not use headers here that has accept: 'application/json'
-		const re = await ky(path.join(host.rest, 'data', wgsFile), { timeout: false }).text()
+		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), wgsFile), { timeout: false }).text()
 		const lines = re.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Copy_Number	Major_Copy_Number	Minor_Copy_Number
@@ -902,7 +902,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 	} else if (snpFile) {
 		// only load available snp file if no wgs cnv
 		// do not use headers here since accept should be 'text/plain', not 'application/json'
-		const re = await ky(path.join(host.rest, 'data', snpFile), { timeout: false }).text()
+		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), snpFile), { timeout: false }).text()
 		const lines = re.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Num_Probes	Segment_Mean
@@ -925,7 +925,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 	if (arribaFile) {
 		try {
 			// must use headers to access controlled fusion file
-			const re = await ky(path.join(host.rest, 'data', arribaFile), { headers, timeout: false }).text()
+			const re = await ky(joinUrl(joinUrl(host.rest, 'data'), arribaFile), { headers, timeout: false }).text()
 			const lines = re.split('\n')
 			// first line is header
 			// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
@@ -1001,14 +1001,14 @@ async function snvindel_byisoform(opts, ds) {
 
 	// must use POST as filter can be too long for GET
 	const p1 = ky
-		.post(path.join(host.rest, query1.endpoint), {
+		.post(joinUrl(host.rest, query1.endpoint), {
 			timeout: false,
 			headers,
 			json: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
 		})
 		.json()
 	const p2 = ky
-		.post(path.join(host.rest, query2.endpoint), {
+		.post(joinUrl(host.rest, query2.endpoint), {
 			timeout: false,
 			headers,
 			json: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
@@ -1414,7 +1414,7 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 	// the survival term itself is not used in api query, since there's just one type of survival data from gdc and no need to distinguish
 	const { host, headers } = ds.getHostHeaders(q)
 	const re = await ky
-		.post(path.join(host.rest, 'analysis/survival'), {
+		.post(joinUrl(host.rest, 'analysis/survival'), {
 			timeout: false,
 			headers,
 			json: { filters: [filter] }
@@ -1548,7 +1548,7 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
 	const re = await ky
-		.post(path.join(host.rest, isoform2ssm_query2_getcase.endpoint), { timeout: false, headers, json: param })
+		.post(joinUrl(host.rest, isoform2ssm_query2_getcase.endpoint), { timeout: false, headers, json: param })
 		.json()
 
 	delete q.isoforms
@@ -1692,7 +1692,7 @@ async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q, dictT
 
 	const t1 = Date.now()
 
-	const re = await ky.post(path.join(host.rest, 'cases'), { timeout: false, headers, json: param }).json()
+	const re = await ky.post(joinUrl(host.rest, 'cases'), { timeout: false, headers, json: param }).json()
 
 	mayLog('gdc /cases queries', Date.now() - t1)
 
@@ -1764,7 +1764,7 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	// NOTE: not using ky, until the issue with undici intermittent timeout/socket hangup is
 	// fully resolved, and which hapens only for long-running requests where possibly
 	// garbage collection is not being performed on http socket resources
-	const re = await nodeFetch(path.join(host.rest, 'cases'), {
+	const re = await nodeFetch(joinUrl(host.rest, 'cases'), {
 		method: 'POST',
 		timeout: false,
 		headers,
@@ -2020,8 +2020,9 @@ async function convert2caseId(q, ds) {
 	- sample submitter id (TCGA-B5-A1MR-01A)
 	*/
 	const { host, headers } = ds.getHostHeaders(q)
+	console.log(10)
 	const re = await ky
-		.post(path.join(host.rest, 'cases'), {
+		.post(joinUrl(host.rest, 'cases'), {
 			timeout: false,
 			headers,
 			json: {
@@ -2078,7 +2079,7 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 		if (case_filters.content.length) json.case_filters = case_filters // speed
 
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky.post(path.join(host.rest, 'files'), { timeout: false, headers, json }).json()
+		const re = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json }).json()
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
 		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
@@ -2157,7 +2158,7 @@ async function getCaseidByFileid(q, fileId, ds) {
 		fields: 'cases.case_id'
 	}
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky.post(path.join(host.rest, 'files', fileId), { timeout: false, headers, json }).json()
+	const re = await ky.post(joinUrl(joinUrl(host.rest, 'files'), fileId), { timeout: false, headers, json }).json()
 	if (!re.data?.cases?.[0].case_id) throw 'structure not re.data.cases[].case_id'
 	return re.data?.cases[0].case_id
 }
@@ -2180,7 +2181,7 @@ async function getSinglecellDEfile(caseuuid, q, ds) {
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky.post(path.join(host.rest, 'files'), { timeout: false, headers, json }).json()
+	const re = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json }).json()
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 	/* can have multiple hits. a hit looks like:
 	{
@@ -2227,7 +2228,7 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 	// with seurat.deg.tsv file id, read file content and find DE genes belonging to given cluster
 	const { host } = ds.getHostHeaders(q)
 	// do not use headers here that has accept: 'application/json'
-	const re = await ky(path.join(host.rest, 'data', degFileId), { timeout: false }).text()
+	const re = await ky(joinUrl(joinUrl(host.rest, 'data'), degFileId), { timeout: false }).text()
 	const lines = re.trim().split('\n')
 	/*
         this tsv file first line is header:
@@ -2258,7 +2259,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 	ds.queries.singleCell.data.get = async q => {
 		const { host } = ds.getHostHeaders(q)
 		// do not use headers here that has accept: 'application/json'
-		const re = await ky(path.join(host.rest, 'data', q.sample.eID || q.sample.sID), { timeout: false }).text()
+		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), q.sample.eID || q.sample.sID), { timeout: false }).text()
 		const lines = re.trim().split('\n')
 		const datasetPlots = ds.queries.singleCell.data.plots
 		/*
@@ -2329,10 +2330,9 @@ async function getSingleSampleMutations(query, ds, genome) {
 	// ssm
 	{
 		const { host, headers } = ds.getHostHeaders(query)
-		const url = path.join(host.rest, isoform2ssm_query1_getvariant.endpoint)
 
 		const re = await ky
-			.post(url, {
+			.post(joinUrl(host.rest, isoform2ssm_query1_getvariant.endpoint), {
 				timeout: false,
 				headers,
 				json: {
