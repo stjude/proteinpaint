@@ -9,14 +9,14 @@ tape('\n', function (test) {
 })
 
 tape('joinUrl', test => {
-	test.equal(h.joinUrl('', ''), null, 'returns null on blank string')
-	test.equal(h.joinUrl('abc', ''), null, 'returns null on blank string')
-	test.equal(h.joinUrl('', 'abc'), null, 'returns null on blank string')
-	test.equal(h.joinUrl('a?b=c', 'xx'), null, 'search string not supported on p1')
+	test.throws(() => h.joinUrl('', ''), /blank string not allowed/, 'throws on blank string')
+	test.throws(() => h.joinUrl('abc', ''), /blank string not allowed/, 'throws on blank string')
+	test.throws(() => h.joinUrl('', 'abc'), /blank string not allowed/, 'throws on blank string')
+	test.throws(() => h.joinUrl('a?b=c', 'xx'), /search string not allowed/, 'throws on search string')
 	test.equal(h.joinUrl('/abc/', 'def'), '/abc/def', 'url joined')
 	test.equal(h.joinUrl('/abc', '/def'), '/abc/def', 'url joined')
 	test.equal(h.joinUrl('/abc/', '/def'), '/abc/def', 'url joined')
-	test.equal(h.joinUrl('x://abc/d/e/', '/f/g/'), 'x://abc/d/e/f/g/', 'p1 // is preserved')
+	test.equal(h.joinUrl('x://abc/d/e/', '/f/g/'), 'x://abc/d/e/f/g/', 'double slash // is preserved')
 	test.equal(h.joinUrl(h.joinUrl('x://abc/d/', 'e/f'), '/g/h/'), 'x://abc/d/e/f/g/h/', '3 pieces joined')
 	test.equal(
 		h.joinUrl(
