@@ -169,6 +169,7 @@ export function runproteinpaint(arg) {
 			app.genomes = data.genomes
 			app.cardsPath = data.cardsPath
 			app.pkgver = data.pkgver
+			app.launchDate = data.launchdate
 
 			if (data.debugmode) {
 				app.debugmode = true

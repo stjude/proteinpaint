@@ -143,7 +143,8 @@ upon error, throw err message as a string
 				genome: genomename,
 				dslabel
 			},
-			pkgver: arg.app.pkgver
+			pkgver: arg.app.pkgver,
+			launchDate: arg.app.launchDate
 		}
 		if (!opts.genome) throw 'invalid genome'
 		const _ = await import('../mass/app')
@@ -158,7 +159,8 @@ upon error, throw err message as a string
 			debug: arg.app.debugmode,
 			holder: arg.holder,
 			state,
-			pkgver: arg.app.pkgver
+			pkgver: arg.app.pkgver,
+			launchDate: arg.app.launchDate
 		}
 		if (state.genome) {
 			opts.genome = arg.genomes[state.genome]
@@ -184,7 +186,8 @@ upon error, throw err message as a string
 				holder: arg.holder,
 				state,
 				genome: arg.genomes[state.vocab.genome],
-				pkgver: arg.app.pkgver
+				pkgver: arg.app.pkgver,
+				launchDate: arg.app.launchDate
 			}
 		}
 		if (urlp.has('mass-session-url')) {
@@ -199,7 +202,8 @@ upon error, throw err message as a string
 				holder: arg.holder,
 				state,
 				genome: arg.genomes[state.vocab.genome],
-				pkgver: arg.app.pkgver
+				pkgver: arg.app.pkgver,
+				launchDate: arg.app.launchDate
 			}
 		}
 		const _ = await import('../mass/app')
@@ -244,7 +248,8 @@ upon error, throw err message as a string
 			genome: arg.genomes[res.state.vocab.genome],
 			sessionDaysLeft: res.sessionDaysLeft,
 			sessionId: id,
-			pkgver: arg.app.pkgver
+			pkgver: arg.app.pkgver,
+			launchDate: arg.app.launchDate
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)

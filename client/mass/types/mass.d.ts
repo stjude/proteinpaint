@@ -14,6 +14,8 @@ export type MassAppApi = RxAppApi & {
 		holder: Elem
 		/** Current release version. See https://github.com/stjude/proteinpaint/releases */
 		pkgver: string
+		/** Server restart date and time */
+		launchDate: string
 		/** TODO!! These are probably defined somehwere else */
 		state: {
 			vocab: {
