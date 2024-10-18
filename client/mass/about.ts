@@ -11,7 +11,6 @@ type AboutObj = {
 
 type MassAboutOpts = {
 	aboutOverrides: AboutObj | null
-	activeCohort: number
 	app: MassAppApi
 	instanceNum: number
 	selectCohort: any
@@ -33,7 +32,6 @@ class MassAbout {
 		this.app = opts.app
 		this.subheader = opts.subheader
 		this.instanceNum = opts.instanceNum
-		this.activeCohort = opts.activeCohort
 		this.aboutOverrides = opts.aboutOverrides
 		this.selectCohort = opts.selectCohort
 		this.dom = {}
@@ -66,11 +64,11 @@ class MassAbout {
 		}
 	}
 
-	init() {
+	init(appState) {
 		if (this.aboutOverrides) {
 			this.subheader.append('div').style('padding', '10px').html(this.aboutOverrides.html)
 		}
-		this.initCohort()
+		this.initCohort(appState)
 		//Always show the release version and server launch date at the bottom
 		this.showServerInfo()
 	}
@@ -79,13 +77,12 @@ class MassAbout {
 		await this.renderCohortsTable()
 	}
 
-	initCohort = () => {
+	initCohort = appState => {
 		if (this.selectCohort == null) return
 
 		const instanceNum = this.instanceNum
-		const activeCohort = this.activeCohort
+		const activeCohort = appState.activeCohort
 		const app = this.app
-		const state = () => this.app.getState()
 
 		//TODO: replace with make_radios
 		this.dom.cohortOpts
@@ -109,8 +106,8 @@ class MassAbout {
 					.style('margin-right', '5px')
 					.style('margin-left', '0px')
 					.on('click', async () => {
-						const s = state()
-						const clearOnChange = s.termdbConfig.selectCohort.clearOnChange
+						const state = app.getState()
+						const clearOnChange = state.clearOnChange
 						if (clearOnChange) {
 							const subactions: { [index: string]: string | number | any }[] = [{ type: 'cohort_set', activeCohort: i }]
 							if (clearOnChange.filter)
@@ -125,18 +122,18 @@ class MassAbout {
 									}
 								})
 							if (clearOnChange.plots)
-								for (const plot of s.plots) {
+								for (const plot of state.plots) {
 									subactions.push({
 										type: 'plot_delete',
 										id: plot.id
 									})
 								}
 
-							await app.dispatch({
+							app.dispatch({
 								type: 'app_refresh',
 								subactions
 							})
-						} else await app.dispatch({ type: 'cohort_set', activeCohort: i })
+						} else app.dispatch({ type: 'cohort_set', activeCohort: i })
 					})
 
 				td0
@@ -223,8 +220,9 @@ class MassAbout {
 		this.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent').style('padding', '6px')
 		const state = this.app.getState()
 		const selectCohort = state.termdbConfig.selectCohort
-		const keys = selectCohort.values[this.activeCohort].keys
-		let selector = `tbody > tr > td:nth-child(${this.activeCohort + 2})`
+		const activeCohort = state.activeCohort
+		const keys = selectCohort.values[activeCohort].keys
+		let selector = `tbody > tr > td:nth-child(${activeCohort + 2})`
 		const combined = keys.length > 1
 		if (combined) {
 			selector = ''
@@ -236,7 +234,6 @@ class MassAbout {
 		}
 		const activeColumns = this.dom.cohortTable.selectAll(selector)
 		activeColumns.style('background-color', 'yellow')
-		//this.dom.cohortInputs.property('checked', (d, i) => i === this.activeCohort)
 	}
 }
 
