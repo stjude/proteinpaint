@@ -104,24 +104,32 @@ class singleCellPlot {
 					})
 				})
 		}
-		if (state.config.plots.length > 1)
+		if (state.config.plots.length > 1) {
+			showDiv.append('label').text('Show Plots:').style('padding-right', '10px').style('vertical-align', 'top')
+			const plot_select = showDiv
+				.append('select')
+				.property('multiple', true)
+				.on('change', e => {
+					const options = plot_select.node().options
+					const singleCellPlot = {}
+					for (const option of options) singleCellPlot[option.value] = option.selected
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { singleCellPlot } }
+					})
+				})
+
 			for (const plot of state.config.plots) {
 				const id = plot.name.replace(/\s+/g, '')
-				showDiv
-					.append('input')
-					.attr('id', `show${id}`)
-					.attr('type', 'checkbox')
-					.attr('aria-label', `Show or hide ${plot.name} plot`)
-					.property('checked', true)
-					.on('change', e => {
-						this.app.dispatch({
-							type: 'plot_edit',
-							id: this.id,
-							config: { settings: { singleCellPlot: { [`show${id}`]: e.target.checked } } }
-						})
-					})
-				showDiv.append('label').text(plot.name).attr('for', `show${id}`)
+				const key = `show${id}`
+				const option = plot_select
+					.append('option')
+					.text(plot.name)
+					.attr('value', key)
+					.property('selected', plot.selected)
 			}
+		}
 		let selectCategory, violinBt, geneSearch, searchboxDiv
 		if (q.singleCell?.geneExpression) {
 			headerDiv.append('label').text('Color by:').style('padding-left', '25px')
@@ -139,7 +147,7 @@ class singleCellPlot {
 				styles: { display: 'inline' },
 				callback: async value => this.onColorByChange(value)
 			})
-			searchboxDiv = headerDiv.append('div').style('vertical-align', 'top').style('margin', '-3px 0px 10px')
+			searchboxDiv = headerDiv.append('div')
 			geneSearch = addGeneSearchbox({
 				tip: new Menu({ padding: '0px' }),
 				genome: this.app.opts.genome,
@@ -349,6 +357,7 @@ class singleCellPlot {
 		this.colorByGene = value == '2'
 		for (const div of this.colorByDivs) div.style('display', this.colorByGene ? 'none' : '')
 		this.dom.searchboxDiv.style('display', this.colorByGene ? 'inline-block' : 'none')
+		if (this.colorByGene) this.dom.searchbox.node().focus()
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.dom.violinBt?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.selectCategory?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
@@ -610,7 +619,7 @@ class singleCellPlot {
 
 	getOpacity(d) {
 		if (this.config.hiddenClusters.includes(d.category)) return 0
-		return 0.7
+		return 0.8
 	}
 
 	getColor(d, plot) {
@@ -685,7 +694,8 @@ class singleCellPlot {
 		}
 		legendSVG.selectAll('*').remove()
 		legendSVG.append('text').attr('transform', `translate(0, 20)`).style('font-size', '0.9em').text(plot.name)
-		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) {
+		const sameLegend = this.state.termdbConfig.queries.singleCell.data.sameLegend || this.colorByGene
+		if (sameLegend && this.legendRendered) {
 			if (this.state.config.gene) {
 				// for gene expression sc plot, needs to add colorGenerator to plot even
 				// when legend is not needed for the plot
@@ -708,7 +718,7 @@ class singleCellPlot {
 
 		const legendG = legendSVG.append('g').attr('transform', `translate(10, 50)`).style('font-size', '0.8em')
 		if (this.state.config.gene) {
-			this.renderColorGradient(plot, legendG)
+			this.renderColorGradient(plot, legendG, this.state.config.gene)
 			return
 		}
 
@@ -761,7 +771,7 @@ class singleCellPlot {
 		}
 	}
 
-	renderColorGradient(plot, legendG) {
+	renderColorGradient(plot, legendG, gene) {
 		if (plot.cells.length == 0) return
 		const colorGradient = rgb(plotColor)
 		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(1).toString()
@@ -778,12 +788,22 @@ class singleCellPlot {
 		} else [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
 
 		plot.colorGenerator = d3Linear().domain([min, max]).range(colors)
+
+		const barwidth = 100
+
+		legendG
+			.append('text')
+			.style('font-weight', '550')
+			.attr('transform', `translate(${barwidth * 0.05}, -5)`)
+			.text(`${gene} expression`)
+
 		const colorScale = new ColorScale({
 			holder: legendG,
-			barwidth: 100,
+			barwidth,
 			barheight: 20,
-			data: [min, max],
 			colors,
+			data: [min, max],
+			position: '0, 20',
 			ticks: 4,
 			tickSize: 5,
 			topTicks: true,
@@ -1021,7 +1041,7 @@ export async function getPlotConfig(opts, app) {
 		for (const plot of plots) {
 			const id = plot.name.replace(/\s+/g, '')
 			const key = `show${id}`
-			settings[key] = true
+			settings[key] = plot.selected
 		}
 		const config = {
 			hiddenClusters: [],
@@ -1043,8 +1063,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 420,
-		svgh: 420,
+		svgw: 700,
+		svgh: 700,
 		showBorders: false,
 		showSamples: false
 	}
