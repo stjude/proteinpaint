@@ -272,7 +272,6 @@ function setRenderers(self) {
 							self.violinContTerm = 'term'
 						}
 						const config = { childType: 'boxplot', term: _term, term2: _term2 }
-						console.log(282, config)
 						return config
 					},
 					active: false,
@@ -353,7 +352,6 @@ function setRenderers(self) {
 }
 
 export async function getPlotConfig(opts, app) {
-	console.log(opts, app)
 	if (!opts.term) throw 'summary getPlotConfig: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)

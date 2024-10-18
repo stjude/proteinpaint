@@ -1,21 +1,15 @@
-import { getCompInit, copyMerge } from '../rx'
+import { getCompInit, copyMerge } from '../../rx'
 import { fillTermWrapper } from '#termsetting'
-import { drawBoxplot } from '#dom'
-import { controlsInit } from './controls'
-import { RxComponent } from '../types/rx.d'
-
+import { controlsInit } from '../controls'
+import { RxComponent } from '../../types/rx.d'
+import { Model } from './Model'
+import { View } from './View'
 // import * as client from '../src/client'
-import { scaleLinear } from 'd3-scale'
 // import { schemeCategory10 } from 'd3-scale-chromatic'
 // import { schemeCategory20 } from '#common/legacy-d3-polyfill'
-// import { format as d3format } from 'd3-format'
-// import { axisLeft } from 'd3-axis'
-
-type Term = { [index: string]: any }
-type DataRequestOpts = { term: Term; term0?: Term; term2?: Term; filter: any; ssid?: string | number }
 
 /** TODOs:
- * - Old `this.components.controls.on('downloadClick.boxplot', this.download)` code. Needed?
+ * - Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
  *
  */
 
@@ -69,7 +63,7 @@ class TdbBoxplot extends RxComponent {
 		}
 	}
 
-	async init(appState) {
+	async init() {
 		const holder = this.opts.holder.classed('sjpp-boxplot-main', true)
 		if (this.opts.header) this.dom.header = this.opts.header.html('Boxplot')
 
@@ -77,6 +71,7 @@ class TdbBoxplot extends RxComponent {
 		this.dom.div = this.opts.controls ? holder : holder.append('div')
 		this.dom.div.style('display', 'inline-block').style('margin', '10px')
 		this.dom.svg = this.dom.div.append('svg').style('margin-right', '20px').style('display', 'inline-block')
+		this.dom.yAxis = this.dom.svg.append('g')
 		this.dom.boxplots = this.dom.svg.append('g')
 
 		try {
@@ -91,78 +86,53 @@ class TdbBoxplot extends RxComponent {
 			const state = this['state'] //Don't like this. calling getState here is blank?
 			const config = structuredClone(state.config)
 			const t2 = config.term2
-			//TODO!! Is this true or show boxplot with one continuous term?
-			// if (!t2) {
-			//     this.dom.div.style('display', 'none')
-			//     throw `term2 is required for boxplot view`
-			// }
-			//Data
-			const reqOpts = this.getDataRequestOpts(config, state)
-			console.log('boxplot reqOpts', reqOpts)
-			const d = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-			const data = d.data
-			console.log('boxplot data', data)
-			this.app.vocabApi.syncTermData(config, data)
-			const [lst, binmax] = this.processData(data)
-			const values = lst.map(d => d.label).sort((a, b) => a - b)
 
-			//Rendering
+			const model = new Model(config, state, this.app)
+			const data = await model.getData()
+
 			if (this.dom.header) this.dom.header.html(`${config.term.term.name} vs ${t2.term.name}`)
+
 			const settings = config.settings.boxplot
-			const scale = scaleLinear().domain([data.boxplot.min, data.boxplot.max]).range([0, settings.boxplotWidth])
-
-			this.dom.svg
-				.transition()
-				.attr('width', settings.boxplotWidth)
-				.attr('height', lst.length * (settings.rowHeight + settings.labelSpace))
-
-			this.dom.boxplots
-				// .attr('transform', 'translate(0, 0)')
-				.selectAll('*')
-				.remove()
-
-			for (const item of lst) {
-				const itemidx = lst.indexOf(item)
-				item.boxplot = drawBoxplot({
-					bp: data.boxplot,
-					g: this.dom.boxplots
-						.append('g')
-						.attr('padding', '5px')
-						.attr('transform', `translate(0, ${itemidx * (settings.rowHeight + settings.labelSpace)})`),
-					color: 'purple',
-					scale,
-					rowheight: settings.rowHeight,
-					labpad: settings.labelSpace
-				})
-			}
+			new View(data, settings, this.dom)
 		} catch (e: any) {
 			console.error(new Error(e.message || e))
 		}
 	}
+}
 
-	// creates an opts object for the vocabApi.getNestedChartsData()
-	getDataRequestOpts(config, state) {
-		const opts: DataRequestOpts = { term: config.term, filter: state.termfilter.filter }
-		if (config.term2) opts.term2 = config.term2
-		if (config.term0) opts.term0 = config.term0
-		if (state.ssid) opts.ssid = state.ssid
-		return opts
+export const boxplotInit = getCompInit(TdbBoxplot)
+export const componentInit = boxplotInit
+
+export function getDefaultBoxplotSettings(app, overrides = {}) {
+	const defaults = {
+		boxplotWidth: 500,
+		color: 'black',
+		labelSpace: 50,
+		rowHeight: 150
+	}
+	return Object.assign(defaults, overrides)
+}
+
+export async function getPlotConfig(opts, app) {
+	if (!opts.term) throw 'boxplot getPlotConfig: opts.term{} missing'
+	try {
+		await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+	} catch (e) {
+		console.error(new Error(`${e} [boxplot getPlotConfig()]`))
+		throw `boxplot getPlotConfig() failed`
 	}
 
-	processData(data) {
-		let binmax = 0
-		const lst = data.refs.cols.map(t1 => {
-			const d = data.charts[0].serieses.find(d => d.seriesId == t1)
-			if (!d) return null
-			if (binmax < d.max) binmax = d.max
-			return {
-				label: t1,
-				value: d.total,
-				boxplot: d.boxplot
+	const config = {
+		id: opts.term.term.id,
+		settings: {
+			controls: {
+				term2: null
 			}
-		})
-		return [lst, binmax]
+		}
 	}
+	return copyMerge(config, opts)
 }
 
 // function setInteractivity(self) {
@@ -408,37 +378,3 @@ class TdbBoxplot extends RxComponent {
 // 		return textwidth
 // 	}
 // }
-
-export const boxplotInit = getCompInit(TdbBoxplot)
-export const componentInit = boxplotInit
-
-export function getDefaultBoxplotSettings(app, overrides = {}) {
-	const defaults = {
-		boxplotWidth: 100,
-		rowHeight: 30,
-		labelSpace: 5
-	}
-	return Object.assign(defaults, overrides)
-}
-
-export async function getPlotConfig(opts, app) {
-	if (!opts.term) throw 'boxplot getPlotConfig: opts.term{} missing'
-	try {
-		await fillTermWrapper(opts.term, app.vocabApi)
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
-		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
-	} catch (e) {
-		console.error(new Error(`${e} [boxplot getPlotConfig()]`))
-		throw `boxplot getPlotConfig() failed`
-	}
-
-	const config = {
-		id: opts.term.term.id,
-		settings: {
-			controls: {
-				term2: null
-			}
-		}
-	}
-	return copyMerge(config, opts)
-}
