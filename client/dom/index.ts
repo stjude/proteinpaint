@@ -1,6 +1,7 @@
 // please list in alphanumeric order
 export * from './animation'
 export * from './axisstyle'
+export * from './boxplot'
 export * from './checkbox'
 export * from './ColorScale.ts'
 export * from './control.icons'
