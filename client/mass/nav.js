@@ -113,7 +113,6 @@ class TdbNav {
 					app: this.app,
 					subheader: this.dom.subheader.about,
 					instanceNum: this.instanceNum,
-					activeCohort: appState.activeCohort,
 					aboutOverrides: appState?.termdbConfig?.massNav?.tabs?.about || null,
 					selectCohort: appState?.termdbConfig?.selectCohort || null
 				})
