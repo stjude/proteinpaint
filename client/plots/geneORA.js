@@ -132,8 +132,8 @@ class geneORA {
 		this.dom.header
 			.style('opacity', 0.6)
 			.style('padding-left', '10px')
-			.style('font-size', '0.75em')
-			.text('GENE SET OVERREPRESENTATION ANALYSIS')
+			.style('font-size', '0.8em')
+			.text(this.config.geneORAparams.sample_genes.split(',').length + ' genes, Gene Set Overrepresentation Analysis')
 		render_geneORA(this)
 	}
 }
@@ -170,10 +170,10 @@ add:
 		const [t1, t2] = table_stats.addRow()
 		t2.style('text-align', 'center').style('font-size', '0.8em').style('opacity', '0.8').text('COUNT')
 		const addStats = [
-			{
-				label: 'Sample genes',
-				values: self.config.geneORAparams.sample_genes.split(',').length
-			},
+			//{
+			//	label: 'Sample genes',
+			//	values: self.config.geneORAparams.sample_genes.split(',').length
+			//},
 			{
 				label: 'Gene sets analyzed',
 				values: output.num_pathways
