@@ -5,16 +5,31 @@ import { axisTop } from 'd3-axis'
 
 export class View {
 	readonly topPad = 20
-	constructor(data, settings, dom) {
-		// dom.boxplots.selectAll('*').remove()
+	incrTopPad = 30
+
+	constructor(term, data, settings, dom) {
 		dom.svg
 			.transition()
 			.attr('width', settings.boxplotWidth)
-			.attr('height', settings.rowHeight + settings.labelSpace + this.topPad * 3 + 400)
+			.attr('height', settings.rowHeight + settings.labelSpace + this.topPad * 3)
 
-		const yScale = scaleLinear().domain([data.boxplot.min, data.boxplot.max]).range([0, settings.boxplotWidth])
+		//Add 3 to the max so the upper line to boxplot isn't cutoff
+		const yScale = scaleLinear()
+			.domain([data.boxplot.min, data.boxplot.max + 3])
+			.range([0, settings.boxplotWidth])
 
-		dom.yAxis.attr('transform', `translate(${settings.labelSpace}, ${this.topPad})`).transition().call(axisTop(yScale))
+		dom.plotTitle
+			.style('font-weight', 600)
+			.attr('text-anchor', 'middle')
+			.attr('transform', `translate(${(settings.boxplotWidth + 3) / 2}, ${this.topPad + this.incrTopPad / 2})`)
+			.text(term.name)
+		this.incrTopPad += 10
+
+		dom.yAxis
+			.attr('transform', `translate(${settings.labelSpace}, ${this.topPad + this.incrTopPad})`)
+			.transition()
+			.call(axisTop(yScale))
+		this.incrTopPad += 10
 
 		axisstyle({
 			axis: dom.yAxis,
@@ -28,8 +43,7 @@ export class View {
 			g: dom.boxplots
 				.append('g')
 				.attr('padding', '5px')
-				.attr('transform', `translate(${settings.labelSpace}, ${this.topPad + 10})`),
-			// .attr('transform', `translate(0, ${settings.rowHeight + settings.labelSpace})`),
+				.attr('transform', `translate(${settings.labelSpace}, ${this.topPad + this.incrTopPad})`),
 			color: settings.color,
 			scale: yScale,
 			rowheight: settings.rowHeight,
