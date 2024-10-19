@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- if a small number of radios, show in a single line by default
+
 
 ## 2.81.3
 

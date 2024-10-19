@@ -1,2 +1,1 @@
-Fixes:
-- if a small number of radios, show in a single line by default
+
