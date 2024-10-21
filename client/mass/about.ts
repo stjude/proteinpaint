@@ -1,28 +1,50 @@
 import { getCompInit } from '../rx'
-import { Elem } from '../types/d3'
-import { MassAppApi } from './types/mass'
+import type { Elem, Div, H2 } from '../types/d3'
+import type { SelectCohortEntry } from '#types'
+import type { MassAppApi } from './types/mass'
 import { renderTable, TableRow } from '#dom'
 import { select } from 'd3-selection'
 import { getProfileLogin } from '../plots/profilePlot.js'
 
 type AboutObj = {
+	/** Optional. Defines the html shown above the server info */
 	html: string
 }
 
 type MassAboutOpts = {
+	/** Optional. Set in the dataset file under .massNav.tabs.about. Otherwise null. */
 	aboutOverrides: AboutObj | null
+	/** Required. Provided from nav component */
 	app: MassAppApi
+	/** Required. Provided from nav component */
 	instanceNum: number
-	selectCohort: any
+	/** Optional. Set in the dataset file under .termdb.selectCohort. Otherwise null. */
+	selectCohort: SelectCohortEntry | null
+	/** Required. .dom.subheader.about in nav component */
 	subheader: Elem
 }
 
+type MassAboutDom = {
+	/** Fine print dom shown between the cohort specific content and the server info */
+	cohortAsterisk?: Div
+	/** Displays either the description or descriptionBy content */
+	cohortDescription?: Div
+	/** Div for cohort radio buttons */
+	cohortOpts?: Div
+	/** Text above radio cohort options */
+	cohortPrompt?: Div
+	/**  */
+	cohortTable?: Div
+	/** Title above the cohort introduction/content */
+	cohortTitle?: H2
+}
+//TODO: Make a validate opts fn
 export class MassAbout {
 	aboutOverrides: AboutObj | null
 	app: MassAppApi
-	dom: any
+	dom: MassAboutDom
 	instanceNum: number
-	selectCohort: any
+	selectCohort: SelectCohortEntry | null
 	subheader: Elem
 	type: string
 
@@ -35,7 +57,7 @@ export class MassAbout {
 		this.selectCohort = opts.selectCohort
 		this.dom = {}
 
-		if (opts.selectCohort?.title) {
+		if (opts?.selectCohort?.title) {
 			this.dom.cohortTitle = opts.subheader.append('h2').style('margin-left', '10px').text(opts.selectCohort.title)
 		}
 
@@ -44,7 +66,13 @@ export class MassAbout {
 			const loginInfo = getProfileLogin()
 			if (loginInfo[2]) {
 				const description = opts.selectCohort.descriptionByUser?.[loginInfo[2]] || opts.selectCohort.description
-				this.dom.cohortDescription = this.subheader.append('div').style('margin-left', '10px').html(description)
+				if (description)
+					this.dom.cohortDescription = this.subheader
+						.append('div')
+						.attr('data-testid', 'sjpp-about-cohort-desc')
+						.style('margin-left', '10px')
+						.html(description)
+				else new Error('Missing cohort description')
 			}
 		}
 
@@ -77,14 +105,16 @@ export class MassAbout {
 
 	initCohort = appState => {
 		if (this.selectCohort == null) return
+		//Move to validate opts fn
+		if (!this.selectCohort.values || this.selectCohort.values.length) return
 
 		const instanceNum = this.instanceNum
 		const activeCohort = appState.activeCohort
 		const app = this.app
 
 		//TODO: replace with make_radios
-		this.dom.cohortOpts
-			.append('table')
+		this.dom
+			.cohortOpts!.append('table')
 			.selectAll('tr')
 			.data(this.selectCohort.values)
 			.enter()
@@ -148,7 +178,6 @@ export class MassAbout {
 					.style('vertical-align', 'top')
 			})
 
-		this.dom.cohortInputs = this.dom.cohortOpts.selectAll('input')
 		this.dom.cohortTable = this.subheader.append('div').style('margin-left', '12px')
 
 		if (this.selectCohort.asterisk) {
@@ -210,13 +239,18 @@ export class MassAbout {
 	initCustomHtml = () => {
 		if (this.selectCohort != null) return
 		if (!this.aboutOverrides) return
-		this.subheader.append('div').style('padding', '10px').html(this.aboutOverrides.html)
+		this.subheader
+			.append('div')
+			.attr('data-testid', 'sjpp-custom-about-content')
+			.style('padding', '10px')
+			.html(this.aboutOverrides.html)
 	}
 
 	showServerInfo = () => {
 		if (!this.app.opts.pkgver && !this.app.opts.launchDate) return
 		const div = this.subheader
 			.append('div')
+			.attr('data-testid', 'sjpp-about-server-info')
 			.style('margin-left', '10px')
 			.style('padding-bottom', '5px')
 			.style('font-size', '.8em')
@@ -224,6 +258,7 @@ export class MassAbout {
 		if (this.app.opts.pkgver) {
 			div
 				.append('div')
+				.attr('data-testid', 'sjpp-about-release')
 				.style('display', 'inline-block')
 				.text('Release version: ')
 				.append('a')
@@ -235,6 +270,7 @@ export class MassAbout {
 		if (this.app.opts.launchDate) {
 			div
 				.append('div')
+				.attr('data-testid', 'sjpp-about-server')
 				.style('display', 'inline-block')
 				.text(`${this.app.opts.pkgver ? ', ' : ''}server launched: ${this.app.opts.launchDate}`)
 		}
