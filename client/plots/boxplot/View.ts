@@ -11,13 +11,12 @@ export class View {
 		dom.svg
 			.transition()
 			.attr('width', settings.boxplotWidth)
-			.attr('height', settings.rowHeight + settings.labelSpace + this.topPad * 3)
+			.attr('height', (settings.rowHeight + settings.labelSpace + this.topPad * 3) * data.plots.length)
 
 		//Add 3 to the max so the upper line to boxplot isn't cutoff
 		const yScale = scaleLinear()
-			.domain([data.boxplot.min, data.boxplot.max + 3])
+			.domain([data.absMin, data.absMax + 3])
 			.range([0, settings.boxplotWidth])
-
 		dom.plotTitle
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
@@ -38,16 +37,20 @@ export class View {
 			color: 'black'
 		})
 
-		drawBoxplot({
-			bp: data.boxplot,
-			g: dom.boxplots
-				.append('g')
-				.attr('padding', '5px')
-				.attr('transform', `translate(${settings.labelSpace}, ${this.topPad + this.incrTopPad})`),
-			color: settings.color,
-			scale: yScale,
-			rowheight: settings.rowHeight,
-			labpad: settings.labelSpace
-		})
+		for (const plot of data.plots) {
+			drawBoxplot({
+				bp: plot.boxplot,
+				g: dom.boxplots
+					.append('g')
+					.attr('padding', '5px')
+					.attr('transform', `translate(${settings.labelSpace}, ${this.topPad + this.incrTopPad})`),
+				color: settings.color,
+				scale: yScale,
+				rowheight: settings.rowHeight,
+				labpad: settings.labelSpace
+			})
+
+			this.incrTopPad += settings.rowHeight + 10
+		}
 	}
 }

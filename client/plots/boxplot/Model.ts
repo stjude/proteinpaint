@@ -13,9 +13,9 @@ export class Model {
 
 	async getData() {
 		const reqOpts = this.getDataRequestOpts(this.config, this.state)
-		const result = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-		const data = result.data
-		this.app.vocabApi.syncTermData(this.config, data)
+		// const result = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+		// const data2 = result.data
+		// this.app.vocabApi.syncTermData(this.config, data2)
 
 		const boxPlotDataArgs: any = {
 			tw: this.config.term,
@@ -23,8 +23,9 @@ export class Model {
 		}
 		if (this.config.term2) boxPlotDataArgs.divideTw = this.config.term2
 
-		const bData = await this.app.vocabApi.getBoxPlotData(boxPlotDataArgs)
-		console.log(25, data, bData)
+		const data = await this.app.vocabApi.getBoxPlotData(boxPlotDataArgs)
+		this.app.vocabApi.syncTermData(this.config, data)
+		// console.log(25, 'getBoxPlotData', data)
 		return data
 	}
 
