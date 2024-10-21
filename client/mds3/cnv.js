@@ -4,6 +4,12 @@ import { table_cnv } from './itemtable'
 import { table2col } from '#dom'
 
 /*
+
+tk.cnv = {
+	presetMax: number // if set, use this to set colorscale domain
+	absoluteMax: number // if presetMax is not set, use this for colorscale domain
+}
+
 to find out if server can return a cnv segment with >1 samples
 
 click cnv legend to:
@@ -29,9 +35,10 @@ export function may_render_cnv(data, tk, block) {
 	// FIXME if this tk is subtk keep value from parent tk and do not overwrite
 	tk.cnv.absoluteMax = absoluteMax
 
-	tk.cnv.colorScale = scaleLinear([-absoluteMax, 0, absoluteMax], [tk.cnv.lossColor, 'white', tk.cnv.gainColor]).clamp(
-		true
-	)
+	tk.cnv.colorScale = scaleLinear(
+		tk.cnv.presetMax ? [-tk.cnv.presetMax, 0, tk.cnv.presetMax] : [-absoluteMax, 0, absoluteMax],
+		[tk.cnv.lossColor, 'white', tk.cnv.gainColor]
+	).clamp( true)
 
 	const [rowheight, rowspace] = getRowHeight(cnvBySample || cnvLst)
 

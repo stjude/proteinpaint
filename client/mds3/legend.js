@@ -827,10 +827,7 @@ function may_create_cnv(tk, block) {
 		barwidth: axiswidth,
 		barheight,
 		colors: [tk.cnv.lossColor, 'white', tk.cnv.gainColor],
-		//[-tk.cnv.absoluteMax, tk.cnv.absoluteMax]
-		// Neither value available on init
-		// Added during update
-		data: [-1, 1],
+		data: [-1,0, 1], // actual domain added during update
 		fontSize: 12,
 		holder: R.holder,
 		height: axisheight + barheight,
@@ -838,14 +835,18 @@ function may_create_cnv(tk, block) {
 		position: `${xpad},${axisheight}`,
 		ticks: 4,
 		tickSize: 6,
-		topTicks: true
+		topTicks: true,
+		setMinMax: number=>{
+			tk.cnv.presetMax=Math.abs(number)
+			tk.load()
+		}
 	})
 }
 
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
 	tk.legend.cnv.colorScale.colors = [tk.cnv.lossColor, 'white', tk.cnv.gainColor]
-	tk.legend.cnv.colorScale.data = [-tk.cnv.absoluteMax, tk.cnv.absoluteMax]
+	tk.legend.cnv.colorScale.data = tk.cnv.presetMax ? [-tk.cnv.presetMax,0,tk.cnv.presetMax] : [-tk.cnv.absoluteMax, 0,tk.cnv.absoluteMax]
 	tk.legend.cnv.colorScale.updateScale()
 }
 
