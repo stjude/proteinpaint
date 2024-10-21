@@ -106,7 +106,7 @@ export class MassAbout {
 	initCohort = appState => {
 		if (this.selectCohort == null) return
 		//Move to validate opts fn
-		if (!this.selectCohort.values || this.selectCohort.values.length) return
+		if (!this.selectCohort.values) return
 
 		const instanceNum = this.instanceNum
 		const activeCohort = appState.activeCohort
