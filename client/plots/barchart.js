@@ -257,8 +257,9 @@ class Barchart {
 			this.term1toColor = {}
 			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
 			this.updateSettings(this.config)
-			this.colorScale = getColors(this.config.term2 ? this.settings.rows.length : this.settings.cols.length)
 
+			const numColors = this.config.term2 ? this.settings.rows?.length : this.settings.cols?.length
+			this.colorScale = getColors(numColors || 0)
 			this.chartsData = this.processData(this.currServerData)
 			this.render()
 		} catch (e) {
