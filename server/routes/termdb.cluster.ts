@@ -47,6 +47,12 @@ function init({ genomes }) {
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
 			if (q.dataType == TermTypes.GENE_EXPRESSION || q.dataType == TermTypes.METABOLITE_INTENSITY) {
 				if (!ds.queries?.[q.dataType]) throw `no ${q.dataType} data on this dataset`
+				if (!q.terms) throw `missing gene list`
+				if (!Array.isArray(q.terms)) throw `gene list is not an array`
+				// TODO: there should be a fix on the client-side to handle this error more gracefully,
+				// instead of emitting the client-side instructions from the server response and forcing a reload
+				if (q.terms.length < 3)
+					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
 				result = (await getResult(q, ds)) as TermdbClusterResponse
 			} else {
 				throw 'unknown q.dataType ' + q.dataType
