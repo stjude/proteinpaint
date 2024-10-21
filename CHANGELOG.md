@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - if a small number of radios, show in a single line by default
+- do not allow <3 genes in the termdb/cluster request
+- do not allow <3 genes in the termdb/cluster request and instruct the user to do a page refresh to clear the error
 
 
 ## 2.81.3
