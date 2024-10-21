@@ -769,7 +769,7 @@ type SelectCohortValuesEntry = {
 export type SelectCohortEntry = {
 	term: { id: string; type: string }
 	/** Title above the cohort introduction/content in the about tab */
-	title: string
+	title?: string
 	/** Text above radio cohort options in the about tab. */
 	prompt: string
 	values: SelectCohortValuesEntry[]
