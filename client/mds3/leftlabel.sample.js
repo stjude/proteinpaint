@@ -238,6 +238,8 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			filterObj: getNewFilter(tk, newTvs),
 			allow2selectSamples: tk.allow2selectSamples
 		}
+		if(tk.cnv?.presetMax) tkarg.cnv={presetMax: tk.cnv.presetMax} // preset value is present, pass to subtk
+		// TODO mclass
 		const tk2 = block.block_addtk_template(tkarg)
 		block.tk_load(tk2)
 	}
