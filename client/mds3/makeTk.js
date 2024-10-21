@@ -339,15 +339,14 @@ function mayInitCnv(tk) {
 		}
 	}
 	if (!cfg) return // lack this. no cnv from this tk
-	tk.cnv = {
-		g: tk.glider.append('g'),
-		cnvMaxLength: cfg.cnvMaxLength, // if missing do not filter
-		cnvGainCutoff: cfg.cnvGainCutoff, // if missing do not filter
-		cnvLossCutoff: cfg.cnvLossCutoff,
-		absoluteValueRenderMax: cfg.absoluteValueRenderMax || 5,
-		gainColor: cfg.gainColor || '#D6683C',
-		lossColor: cfg.lossColor || '#67a9cf'
-	}
+	if(!tk.cnv) tk.cnv={} // preserve
+	tk.cnv.g= tk.glider.append('g')
+	tk.cnv.cnvMaxLength= cfg.cnvMaxLength // if missing do not filter
+	tk.cnv.cnvGainCutoff= cfg.cnvGainCutoff // if missing do not filter
+	tk.cnv.cnvLossCutoff= cfg.cnvLossCutoff
+	tk.cnv.absoluteValueRenderMax= cfg.absoluteValueRenderMax || 5
+	tk.cnv.gainColor= cfg.gainColor || '#D6683C'
+	tk.cnv.lossColor= cfg.lossColor || '#67a9cf'
 }
 
 function setSkewerMode(tk) {
