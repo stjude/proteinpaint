@@ -17,7 +17,7 @@ type MassAboutOpts = {
 	subheader: Elem
 }
 
-class MassAbout {
+export class MassAbout {
 	aboutOverrides: AboutObj | null
 	app: MassAppApi
 	dom: any
@@ -43,7 +43,7 @@ class MassAbout {
 			//temporary logic to get the description until the login is implemented
 			const loginInfo = getProfileLogin()
 			if (loginInfo[2]) {
-				const description = opts.selectCohort.descriptionByUser?.[loginInfo[2]]
+				const description = opts.selectCohort.descriptionByUser?.[loginInfo[2]] || opts.selectCohort.description
 				this.dom.cohortDescription = this.subheader.append('div').style('margin-left', '10px').html(description)
 			}
 		}
@@ -64,10 +64,9 @@ class MassAbout {
 	}
 
 	init(appState) {
-		if (this.aboutOverrides) {
-			this.subheader.append('div').style('padding', '10px').html(this.aboutOverrides.html)
-		}
+		/** If selectCohort available, options in the about html will not show */
 		this.initCohort(appState)
+		this.initCustomHtml()
 		//Always show the release version and server launch date at the bottom
 		this.showServerInfo()
 	}
@@ -163,33 +162,6 @@ class MassAbout {
 		}
 	}
 
-	showServerInfo = () => {
-		if (!this.app.opts.pkgver && !this.app.opts.launchDate) return
-		const div = this.subheader
-			.append('div')
-			.style('margin-left', '10px')
-			.style('padding-bottom', '5px')
-			.style('font-size', '.8em')
-
-		if (this.app.opts.pkgver) {
-			div
-				.append('div')
-				.style('display', 'inline-block')
-				.text('Release version: ')
-				.append('a')
-				.property('href', 'https://github.com/stjude/proteinpaint/pkgs/container/ppfull')
-				.property('target', `${this.app.opts.pkgver}`)
-				.text(`${this.app.opts.pkgver}`)
-		}
-
-		if (this.app.opts.launchDate) {
-			div
-				.append('div')
-				.style('display', 'inline-block')
-				.text(`${this.app.opts.pkgver ? ', ' : ''}server launched: ${this.app.opts.launchDate}`)
-		}
-	}
-
 	renderCohortsTable = async () => {
 		if (!this.dom.cohortTable) return
 		this.dom.cohortTable.selectAll('*').remove()
@@ -233,6 +205,39 @@ class MassAbout {
 		}
 		const activeColumns = this.dom.cohortTable.selectAll(selector)
 		activeColumns.style('background-color', 'yellow')
+	}
+
+	initCustomHtml = () => {
+		if (this.selectCohort != null) return
+		if (!this.aboutOverrides) return
+		this.subheader.append('div').style('padding', '10px').html(this.aboutOverrides.html)
+	}
+
+	showServerInfo = () => {
+		if (!this.app.opts.pkgver && !this.app.opts.launchDate) return
+		const div = this.subheader
+			.append('div')
+			.style('margin-left', '10px')
+			.style('padding-bottom', '5px')
+			.style('font-size', '.8em')
+
+		if (this.app.opts.pkgver) {
+			div
+				.append('div')
+				.style('display', 'inline-block')
+				.text('Release version: ')
+				.append('a')
+				.property('href', 'https://github.com/stjude/proteinpaint/pkgs/container/ppfull')
+				.property('target', `${this.app.opts.pkgver}`)
+				.text(`${this.app.opts.pkgver}`)
+		}
+
+		if (this.app.opts.launchDate) {
+			div
+				.append('div')
+				.style('display', 'inline-block')
+				.text(`${this.app.opts.pkgver ? ', ' : ''}server launched: ${this.app.opts.launchDate}`)
+		}
 	}
 }
 
