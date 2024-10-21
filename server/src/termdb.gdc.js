@@ -191,7 +191,13 @@ export async function initGDCdictionary(ds) {
 		re = body
 	} catch (e) {
 		console.log(e)
-		throw 'failed to get GDC API _mapping: ' + (e.message || e)
+		if (serverconfig.features.runRemainingWithoutAwait) {
+			// okay to have an error for GDC API server maintenance
+			setTimeout(initGDCdictionary, 6000)
+			return
+		} else {
+			throw 'failed to get GDC API _mapping: ' + (e.message || e)
+		}
 	}
 
 	if (!re._mapping) throw 'returned data does not have ._mapping'
