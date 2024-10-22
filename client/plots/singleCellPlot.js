@@ -11,18 +11,14 @@ import { rgb } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, make_radios, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
+import { Tabs } from '../dom/toggleButtons'
 
 /*
 this
-	.tableOnPlot=bool
 
 	.samples[]
 		datastructure returned by /termdb/singlecellSamples
-		only attached when tableOnPlot=true
 
-	.config{}
-		if a sample is already selected, config is {sample:str} or {sample:str, experimentID:str}
-		if config.sample is undefined, use 
 
 	.legendRendered=bool
 	.state{}
@@ -33,18 +29,36 @@ this
 class singleCellPlot {
 	constructor() {
 		this.type = 'singleCellPlot'
+
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		this.startGradient = {}
 		this.stopGradient = {}
-		this.DETip = new Menu({ padding: '4px' })
 	}
 
 	async init(appState) {
 		const state = this.getState(appState)
+
+		const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
+		let result
+		try {
+			result = await dofetch3('termdb/singlecellSamples', { body })
+			if (result.error) throw result.error
+		} catch (e) {
+			sayerror(div, e)
+			return
+		}
+
+		this.samples = result.samples
+		// need to set the self.samples based on the current filter0
+		this.samples.sort((elem1, elem2) => {
+			const result = elem1.primarySite?.localeCompare(elem2.primarySite)
+			if (result == 1 || result == -1) return result
+			else return elem1.sample.localeCompare(elem2.sample)
+		})
+
 		this.colorByGene = state.config.gene ? true : false
 		const q = state.termdbConfig.queries
-		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
 		this.opts.holder.style('position', 'relative')
 		this.insertBeforeId = `${this.id}-sandbox`
 		const mainDiv = this.opts.holder
@@ -91,24 +105,8 @@ class singleCellPlot {
 			.style('float', 'right')
 			.style('padding-top', '5px')
 
-		const tableDiv = contentDiv
-			.append('div')
-			.style('display', this.tableOnPlot ? 'block' : 'none')
-			.style('padding', this.tableOnPlot ? '10px' : '0px')
-		let showSamplesBt
-		if (this.tableOnPlot) {
-			showSamplesBt = headerDiv
-				.append('button')
-				.attr('aria-label', 'Select sample from table')
-				.text('Change sample')
-				.on('click', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { singleCellPlot: { showSamples: !this.settings.showSamples } } }
-					})
-				})
-		}
+		const tableDiv = contentDiv.append('div').style('padding', '10px')
+
 		if (state.config.plots.length > 1) {
 			showDiv.append('label').text('Plots:').style('vertical-align', 'top')
 			const plot_select = showDiv
@@ -216,7 +214,7 @@ class singleCellPlot {
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
 		const deDiv = headerDiv.append('div').style('padding-left', '20px').style('display', 'inline-block')
 
-		const DEMsgDiv = contentDiv.append('div')
+		const DETableDiv = contentDiv.append('div')
 		const plotsDivParent = contentDiv.append('div').style('display', 'inline-block')
 		const plotsDiv = plotsDivParent
 			.append('div')
@@ -253,10 +251,9 @@ class singleCellPlot {
 			controlsHolder: controlsDiv,
 			tableDiv,
 			deDiv,
-			DEMsgDiv,
+			DETableDiv,
 			plotsDiv,
-			plotsDivParent,
-			showSamplesBt
+			plotsDivParent
 		}
 
 		const offsetX = 80
@@ -313,8 +310,8 @@ class singleCellPlot {
 	}
 
 	async renderDETable() {
-		const DEMsgDiv = this.dom.DEMsgDiv
-		DEMsgDiv.selectAll('*').remove()
+		const DETableDiv = this.dom.DETableDiv
+		DETableDiv.selectAll('*').remove()
 		const categoryName = this.state.config.cluster
 		this.dom.deselect.node().value = `Cluster ${categoryName}` || ''
 		if (this.dom.GSEAbt) this.dom.GSEAbt.style('display', categoryName ? 'inline-block' : 'none')
@@ -328,11 +325,11 @@ class singleCellPlot {
 		const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
 		this.dom.loadingDiv.style('display', 'none')
 		if (result.error) {
-			DEMsgDiv.text(result.error)
+			DETableDiv.text(result.error)
 			return
 		}
 		if (!Array.isArray(result.genes)) {
-			DEMsgDiv.text('.genes[] missing')
+			DETableDiv.text('.genes[] missing')
 			return
 		}
 		const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
@@ -354,13 +351,12 @@ class singleCellPlot {
 			if (gene.name == this.state.config.gene) selectedRows.push(i)
 			i++
 		}
-		this.DETip.clear().showunder(this.dom.DEMsgDiv.node())
 		renderTable({
 			rows,
 			columns,
 			maxWidth: '40vw',
 			maxHeight: '20vh',
-			div: this.DETip.d,
+			div: DETableDiv,
 			singleMode: true,
 			noButtonCallback: (i, node) => {
 				const gene = result.genes[i].name
@@ -409,7 +405,7 @@ class singleCellPlot {
 		this.dom.violinBt?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.selectCategory?.style('display', this.colorByGene && gene ? 'inline-block' : 'none')
 		this.dom.deDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
-		this.dom.DEMsgDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
+		this.dom.DETableDiv.style('display', this.colorByGene ? 'none' : 'inline-block')
 
 		this.app.dispatch({
 			type: 'plot_edit',
@@ -448,14 +444,6 @@ class singleCellPlot {
 				boxLabel: ''
 			}
 		]
-		if (this.tableOnPlot)
-			inputs.push({
-				label: 'Show samples',
-				type: 'checkbox',
-				chartType: 'singleCellPlot',
-				settingsKey: 'showSamples',
-				boxLabel: ''
-			})
 
 		this.components = {
 			controls: await controlsInit({
@@ -505,14 +493,10 @@ class singleCellPlot {
 				}
 			}
 		}
-		this.dom.tableDiv.style('display', this.settings.showSamples ? 'block' : 'none')
-		if (this.tableOnPlot) {
-			this.dom.showSamplesBt.text(this.settings.showSamples ? 'Hide samples' : 'Change sample')
-			await renderSamplesTable(this.dom.tableDiv, this, this.state, this.state.dslabel, this.state.genome)
-			if (!this.samples?.length) {
-				this.showNoMatchingDataMessage()
-				return
-			}
+		await renderSamplesTable(this.dom.tableDiv, this, this.state)
+		if (!this.samples?.length) {
+			this.showNoMatchingDataMessage()
+			return
 		}
 		if (this.colorByGene && !this.state.config.gene) return
 		this.dom.loadingDiv.selectAll('*').remove()
@@ -523,7 +507,7 @@ class singleCellPlot {
 		this.dom.plotsDivParent.style('display', 'inline-block')
 		this.renderColorByDiv()
 		this.renderPlots(this.data)
-		this.renderDETable()
+		if (this.state.termdbConfig?.queries?.singleCell?.DEGenes) this.renderDETable()
 
 		this.dom.loadingDiv.style('display', 'none')
 		if (this.dom.header) this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} Single Cell Data`)
@@ -926,66 +910,23 @@ class singleCellPlot {
 	}
 }
 
-export async function makeChartBtnMenu(holder, chartsInstance) {
-	/*
-	holder: the holder in the tooltip
-	chartsInstance: MassCharts instance
-		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
-		mass option is accessible at chartsInstance.app.opts{}
-	*/
-
-	const menuDiv = holder.append('div').style('padding', '5px')
-	renderSamplesTable(
-		menuDiv,
-		chartsInstance,
-		chartsInstance.state,
-		chartsInstance.state.vocab.dslabel,
-		chartsInstance.state.vocab.genome
-	)
-}
-
-async function renderSamplesTable(div, self, state, dslabel, genome) {
-	const body = { genome, dslabel, filter0: state.termfilter.filter0 || null }
-	let result
-	try {
-		result = await dofetch3('termdb/singlecellSamples', { body })
-		if (result.error) throw result.error
-	} catch (e) {
-		sayerror(div, e)
+async function renderSamplesTable(div, self, state) {
+	// need to do this after the self.samples has been set
+	if (self.samples.length == 0) {
+		self.dom.plotsDiv.selectAll('*').remove()
 		return
 	}
-	const samples = result.samples
-	// need to set the salf.samples based on the current filter0
-	self.samples = samples
-
-	// need to do this after the self.samples has been set
-	if (self.tableOnPlot) {
-		if (samples.length == 0) {
-			self.dom.plotsDiv.selectAll('*').remove()
-			return
-		}
-		if (self.table && deepEqual(self.state.termfilter.filter0, self.prevFilter0)) return
-	}
+	if (self.table && deepEqual(self.state.termfilter.filter0, self.prevFilter0)) return
 
 	div.selectAll('*').remove()
-
-	samples.sort((elem1, elem2) => {
-		const result = elem1.primarySite?.localeCompare(elem2.primarySite)
-		if (result == 1 || result == -1) return result
-		else return elem1.sample.localeCompare(elem2.sample)
-	})
-
-	const [rows, columns] = await getTableData(self, samples, state)
-
+	const [rows, columns] = await getTableData(self, self.samples, state)
 	const selectedRows = []
 	let maxHeight = '40vh'
-	if (self.tableOnPlot) {
-		const selectedSample = self.config.sample
-		const selectedRow = self.samples.findIndex(s => s.sample == selectedSample)
-		const selectedRowIndex = selectedRow == -1 ? 0 : selectedRow
-		selectedRows.push(selectedRowIndex)
-		maxHeight = '20vh'
-	}
+	const selectedSample = self.config.sample
+	const selectedRow = self.samples.findIndex(s => s.sample == selectedSample)
+	const selectedRowIndex = selectedRow == -1 ? 0 : selectedRow
+	selectedRows.push(selectedRowIndex)
+	maxHeight = '20vh'
 	self.table = renderTable({
 		rows,
 		columns,
@@ -994,9 +935,9 @@ async function renderSamplesTable(div, self, state, dslabel, genome) {
 		div,
 		maxHeight,
 		noButtonCallback: index => {
-			if (self.dom.DEMsgDiv) {
+			if (self.state.termdbConfig?.queries?.singleCell?.DEgenes) {
 				self.dom.deselect.node().value = ''
-				self.dom.DEMsgDiv.selectAll('*').remove()
+				self.dom.DETableDiv.selectAll('*').remove()
 				if (self.dom.GSEAbt) self.dom.GSEAbt.style('display', 'none')
 			}
 			const sample = rows[index][0].value
@@ -1005,13 +946,7 @@ async function renderSamplesTable(div, self, state, dslabel, genome) {
 				config.experimentID = rows[index][0].__experimentID
 			}
 
-			if (self.tableOnPlot) {
-				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
-			} else {
-				// please explain
-				self.dom.tip.hide()
-				self.app.dispatch({ type: 'plot_create', config })
-			}
+			self.app.dispatch({ type: 'plot_edit', id: self.id, config })
 		},
 		selectedRows
 	})
