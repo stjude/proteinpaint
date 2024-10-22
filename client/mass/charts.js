@@ -239,7 +239,7 @@ function getChartTypeList(self, state) {
 		},
 		{
 			label: 'Single Cell Plot',
-			clickTo: self.loadChartSpecificMenu,
+			clickTo: self.prepPlot,
 			chartType: 'singleCellPlot',
 			config: {
 				chartType: 'singleCellPlot'
