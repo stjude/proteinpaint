@@ -1,4 +1,4 @@
-import type { BoxPlotRequest, BoxPlotResponse, BoxPlotEntry } from '#types'
+import type { BoxPlotRequest, BoxPlotResponse, BoxPlotEntry, BoxPlotData } from '#types'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 
@@ -59,7 +59,7 @@ function init({ genomes }) {
 			}
 
 			const plots: any = []
-			let absMin, absMax
+			let absMin, absMax, maxLabelLgth
 			for (const [key, values] of sortKey2values(data, key2values, overlayTerm)) {
 				const sortedValues = values.sort((a, b) => a - b)
 
@@ -72,8 +72,10 @@ function init({ genomes }) {
 				})
 
 				if (overlayTerm) {
+					const label = overlayTerm?.term?.values?.[key]?.label || key
+					if (!maxLabelLgth || label.length > maxLabelLgth.length) maxLabelLgth = label.length
 					plots.push({
-						label: overlayTerm?.term?.values?.[key]?.label || key,
+						label,
 						values,
 						seriesId: key,
 						color: overlayTerm?.term?.values?.[key]?.color || null,
@@ -82,14 +84,16 @@ function init({ genomes }) {
 						max: sortedValues[sortedValues.length - 1]
 					})
 				} else {
+					const label = overlayTerm?.term?.values?.[key]?.label || key
+					if (!maxLabelLgth || label.length > maxLabelLgth.length) maxLabelLgth = label.length
 					const plot = {
-						label: sampleType,
+						label,
 						values,
 						plotValueCount: values.length,
-						boxplot: boxplot_getvalue(vs),
+						boxplot: boxplot_getvalue(vs) as BoxPlotData,
 						min: sortedValues[0],
 						max: sortedValues[sortedValues.length - 1]
-					}
+					} satisfies BoxPlotEntry
 					plots.push(plot)
 				}
 			}
@@ -97,6 +101,7 @@ function init({ genomes }) {
 			data.plots = plots
 			data.absMin = absMin
 			data.absMax = absMax
+			data.maxLabelLgth = maxLabelLgth
 			res.send(data)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
