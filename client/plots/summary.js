@@ -233,45 +233,49 @@ function setRenderers(self) {
 				{
 					childType: 'boxplot',
 					label: 'Boxplot',
-					disabled: d => false,
-					isVisible: () => isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term),
+					disabled: d => true,
+					/** To see the boxplot, comment out the line below and
+					 * uncomment the line below it. Non-visible whilst in
+					 * development */
+					isVisible: () => false,
+					// isVisible: () => isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term),
 					getConfig: async () => {
-						//TODO: copied from violin tab for development
-						//Move to reuseable function in cleanup
 						const term = self.config?.term
 						const term2 = self.config.term2
 
-						let _term, _term2
-						// isNumericTerm(term?.term) ? (self.violinContTerm = 'term') : (self.violinContTerm = 'term2')
+						let termMode, term2Mode
+						self.boxContTerm = isNumericTerm(term?.term) ? 'term' : 'term2'
 
-						// //If the first term was continuous or is coming as continuous
-						// if ((self.violinContTerm && self.violinContTerm === 'term') || term.q?.mode == 'continuous') {
-						// 	// must mean coming from scatter plot
-						// 	_term = await self.getWrappedTermCopy(term, 'continuous')
-						// 	_term2 = await self.getWrappedTermCopy(term2, 'discrete')
-						// 	self.violinContTerm = 'term'
-						// }
-						// //If the second term was continuous or is coming as continuous
-						// else if ((self.violinContTerm && self.violinContTerm === 'term2') || term2?.q?.mode == 'continuous') {
-						// 	// must mean coming from barchart
-						// 	_term = await self.getWrappedTermCopy(term, 'discrete')
-						// 	_term2 = await self.getWrappedTermCopy(term2, 'continuous')
-						// 	self.violinContTerm = 'term2'
-						// }
-						//If the second term is coming as discrete from the scatter
-						if (term2?.q?.mode == 'discrete') {
+						//If the first term was continuous or is coming as continuous
+						if ((self.boxContTerm && self.boxContTerm === 'term') || term.q?.mode == 'continuous') {
+							// must mean coming from scatter plot
+							termMode = 'continuous'
+							term2Mode = 'discrete'
+						}
+						//If the second term was continuous or is coming as continuous
+						else if ((self.boxContTerm && self.boxContTerm === 'term2') || term2?.q?.mode == 'continuous') {
 							// must mean coming from barchart
-							_term = await self.getWrappedTermCopy(term, 'discrete')
-							_term2 = await self.getWrappedTermCopy(term2, 'continuous')
-							self.violinContTerm = 'term2'
+							termMode = 'discrete'
+							term2Mode = 'continuous'
+						}
+						//If the second term is coming as discrete from the scatter
+						else if (term2?.q?.mode == 'discrete') {
+							// must mean coming from barchart
+							termMode = 'discrete'
+							term2Mode = 'continuous'
+							self.boxContTerm = 'term2'
 						}
 						//by default
 						else {
-							_term = await self.getWrappedTermCopy(term, 'continuous')
-							_term2 = await self.getWrappedTermCopy(term2, 'discrete')
-							self.violinContTerm = 'term'
+							termMode = 'continuous'
+							term2Mode = 'discrete'
+							self.boxContTerm = 'term'
 						}
-						const config = { childType: 'boxplot', term: _term, term2: _term2 }
+						const config = {
+							childType: 'boxplot',
+							term: await self.getWrappedTermCopy(term, termMode),
+							term2: await self.getWrappedTermCopy(term2, termMode)
+						}
 						return config
 					},
 					active: false,
@@ -402,7 +406,6 @@ export async function getPlotConfig(opts, app) {
 			}
 		}
 	}
-
 	//config.mayAdjustConfig(config)
 
 	// may apply term-specific changes to the default object
