@@ -9,8 +9,10 @@ import type { Elem } from '../../types/d3'
 
 /** TODOs:
  *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
- *	Add other controls
- *	Alternating plot colors
+ *	Finish overlay controls and add other controls
+ *	Hover effect?
+ *	Descriptive states tables?
+ *	Fix issues toggling between summary plots
  */
 
 export type BoxplotSettings = {
@@ -78,18 +80,18 @@ class TdbBoxplot extends RxComponent {
 				label: 'Customize', //TODO: Verify if this is correct
 				vocabApi: this.app.vocabApi,
 				menuOptions: 'edit'
+			},
+			{
+				type: 'term',
+				configKey: 'term2',
+				chartType: 'boxplot',
+				usecase: { target: 'boxplot', detail: 'term' },
+				title: 'Overlay data',
+				label: 'Overlay',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: this.opts.numericEditMenuVersion,
+				defaultQ4fillTW: term0_term2_defaultQ
 			}
-			// {
-			// 	type: 'term',
-			// 	configKey: 'term2',
-			// 	chartType: 'boxplot',
-			// 	usecase: { target: 'boxplot', detail: 'term' },
-			// 	title: 'Overlay data',
-			// 	label: 'Overlay',
-			// 	vocabApi: this.app.vocabApi,
-			// 	numericEditMenuVersion: this.opts.numericEditMenuVersion,
-			// 	defaultQ4fillTW: term0_term2_defaultQ
-			// }
 		]
 		this.components.controls = await controlsInit({
 			app: this.app,
@@ -127,6 +129,7 @@ class TdbBoxplot extends RxComponent {
 
 	async main() {
 		try {
+			this.dom.boxplots.selectAll('*').remove()
 			const state = this.app.getState()
 			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
 			const settings = config.settings.boxplot
@@ -171,7 +174,8 @@ export async function getPlotConfig(opts, app) {
 		settings: {
 			controls: {
 				term2: null
-			}
+			},
+			boxplot: getDefaultBoxplotSettings(app)
 		}
 	}
 	return copyMerge(config, opts)
