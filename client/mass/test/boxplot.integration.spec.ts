@@ -1,9 +1,10 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-// import { detectOne, detectStyle } from '../../test/test.helpers.js'
+
 /*
 Tests:
     Default boxplot
+    Boxplot with overlay term = sex
  */
 
 /*************************
@@ -32,7 +33,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape.only('Default boxplot', test => {
+tape('Default boxplot', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -44,6 +45,40 @@ tape.only('Default boxplot', test => {
 					term: {
 						id: 'agedx',
 						q: { mode: 'continuous' }
+					}
+				}
+			]
+		},
+		summary: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(summary) {
+		summary.on('postRender.test', null)
+
+		// if (test._ok) summary.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Boxplot with overlay term = sex', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: {
+						id: 'agedx',
+						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'sex'
 					}
 				}
 			]
