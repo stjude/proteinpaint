@@ -1,6 +1,7 @@
 import type { BoxPlotRequest, BoxPlotResponse, BoxPlotEntry, BoxPlotData } from '#types'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
+import { sortKey2values } from '../src/termdb.violin.js'
 
 export const api: any = {
 	endpoint: 'termdb/boxplot',
@@ -72,7 +73,8 @@ function init({ genomes }) {
 				})
 
 				if (overlayTerm) {
-					const label = overlayTerm?.term?.values?.[key]?.label || key
+					let label = overlayTerm?.term?.values?.[key]?.label || key
+					label = `${label}, n=${values.length}`
 					if (!maxLabelLgth || label.length > maxLabelLgth.length) maxLabelLgth = label.length
 					plots.push({
 						label,
@@ -80,16 +82,17 @@ function init({ genomes }) {
 						seriesId: key,
 						color: overlayTerm?.term?.values?.[key]?.color || null,
 						boxplot: boxplot_getvalue(vs), //Need sd and mean?
+						// plotValueCount: values.length,
 						min: sortedValues[0],
 						max: sortedValues[sortedValues.length - 1]
 					})
 				} else {
-					const label = overlayTerm?.term?.values?.[key]?.label || key
+					const label = `${sampleType}, n=${values.length}`
 					if (!maxLabelLgth || label.length > maxLabelLgth.length) maxLabelLgth = label.length
 					const plot = {
 						label,
 						values,
-						plotValueCount: values.length,
+						// plotValueCount: values.length,
 						boxplot: boxplot_getvalue(vs) as BoxPlotData,
 						min: sortedValues[0],
 						max: sortedValues[sortedValues.length - 1]
@@ -108,25 +111,4 @@ function init({ genomes }) {
 			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}
-}
-
-function sortKey2values(data, key2values, overlayTerm) {
-	const orderedLabels = data.refs.byTermId[overlayTerm?.$id]?.keyOrder
-
-	key2values = new Map(
-		[...key2values].sort(
-			orderedLabels
-				? (a, b) => orderedLabels.indexOf(a[0]) - orderedLabels.indexOf(b[0])
-				: overlayTerm?.term?.type === 'categorical'
-				? (a, b) => b[1].length - a[1].length
-				: overlayTerm?.term?.type === 'condition'
-				? (a, b) => a[0] - b[0]
-				: (a, b) =>
-						a
-							.toString()
-							.replace(/[^a-zA-Z0-9<]/g, '')
-							.localeCompare(b.toString().replace(/[^a-zA-Z0-9<]/g, ''), undefined, { numeric: true })
-		)
-	)
-	return key2values
 }

@@ -166,7 +166,7 @@ function sortObj(object) {
 	return Object.fromEntries(Object.entries(object).sort(([, a], [, b]) => a - b))
 }
 
-function sortKey2values(data, key2values, overlayTerm) {
+export function sortKey2values(data, key2values, overlayTerm) {
 	const orderedLabels = data.refs.byTermId[overlayTerm?.$id]?.keyOrder
 
 	key2values = new Map(

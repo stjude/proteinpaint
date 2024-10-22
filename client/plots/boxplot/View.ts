@@ -5,12 +5,20 @@ import { axisTop } from 'd3-axis'
 import type { BoxplotDom, BoxplotSettings } from './Boxplot'
 
 export class View {
+	/** Padding for the bottom to avoid plot cutoff */
+	readonly bottomPad = 20
+	/** Top padding */
 	readonly topPad = 20
+	/** Increasing padding to space out the boxplots */
 	incrTopPad = 30
 
 	constructor(name: string, data: any, settings: BoxplotSettings, dom: BoxplotDom) {
-		const totalWidth = settings.boxplotWidth + data.maxLabelLgth + 20
-		const totalHeight = (settings.rowHeight + settings.labelSpace + this.topPad * 3) * data.plots.length
+		//TODO: 150 because the string label length isn't enough. Need to calculate the extra space for the labels.
+		const labelsWidth = data.maxLabelLgth + settings.labelPad + 150
+		//TODO: 100 for the out values. Need to calculate the width of the out values.
+		const totalWidth = settings.boxplotWidth + labelsWidth + 100
+		const totalHeight =
+			(settings.rowHeight + settings.rowSpace) * data.plots.length + this.bottomPad + this.topPad + this.incrTopPad
 
 		dom.svg.transition().attr('width', totalWidth).attr('height', totalHeight)
 
@@ -26,7 +34,7 @@ export class View {
 		this.incrTopPad += 10
 
 		dom.yAxis
-			.attr('transform', `translate(${settings.labelSpace}, ${this.topPad + this.incrTopPad})`)
+			.attr('transform', `translate(${labelsWidth}, ${this.topPad + this.incrTopPad})`)
 			.transition()
 			.call(axisTop(yScale))
 		this.incrTopPad += 10
@@ -39,20 +47,20 @@ export class View {
 		})
 
 		for (const plot of data.plots) {
-			// plot.boxplot.label = plot.label
 			drawBoxplot({
 				bp: plot.boxplot,
 				g: dom.boxplots
 					.append('g')
 					.attr('padding', '5px')
-					.attr('transform', `translate(${settings.labelSpace}, ${this.topPad + this.incrTopPad})`),
-				color: settings.color,
+					.attr('transform', `translate(${labelsWidth}, ${this.incrTopPad + this.topPad})`),
+				color: plot.color,
 				scale: yScale,
 				rowheight: settings.rowHeight,
-				labpad: settings.labelSpace
+				labpad: settings.labelPad,
+				labColor: 'black'
 			})
 
-			this.incrTopPad += settings.rowHeight + this.topPad
+			this.incrTopPad += settings.rowHeight + settings.rowSpace
 		}
 	}
 }

@@ -17,14 +17,16 @@ rowheight:
 	int
 labpad:
 	int, horizontal space between label <text> and boxplot <g>
+labColor: 
+	str, label text color. Default is color arg
 */
-export function drawBoxplot({ bp, g, color, scale, rowheight, labpad }) {
+export function drawBoxplot({ bp, g, color, scale, rowheight, labpad, labColor = color }) {
 	if (bp.label) {
 		g.append('text')
 			.attr('font-family', 'Arial')
 			.attr('text-anchor', 'end')
 			.attr('dominant-baseline', 'central')
-			.attr('fill', color)
+			.attr('fill', labColor)
 			.attr('x', -labpad)
 			.attr('y', rowheight / 2)
 			.attr('font-size', Math.min(15, rowheight))
