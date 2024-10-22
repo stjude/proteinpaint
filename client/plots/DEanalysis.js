@@ -215,11 +215,12 @@ class DEanalysis {
 		output.mid_sample_size_cutoff = 8 // mid sample size cutoff for method toggle to appear
 		output.high_sample_size_cutoff = 30 // high sample size cutoff for method toggle to not appear, so that very high sample-size groups are not analyzed by edgeR. The exact cutoff value will need to be determined with more examples.
 		await this.setControls(output)
-		this.dom.header
-			.style('opacity', 0.6)
-			.style('padding-left', '10px')
-			.style('font-size', '0.75em')
-			.text('DIFFERENTIAL GENE EXPRESSION')
+		this.dom.header.html(
+			this.config.state.groups[0].name +
+				' vs ' +
+				this.config.state.groups[1].name +
+				' <span style="font-size:.8em;opacity:.7">DIFFERENTIAL GENE EXPRESSION</span>'
+		)
 		render_volcano(this, output)
 	}
 }
@@ -463,11 +464,11 @@ add:
 				value: num_significant_genes + num_non_significant_genes
 			},
 			{
-				label: 'Group1 sample size',
+				label: self.config.state.groups[0].name + ' sample size',
 				value: sample_size1
 			},
 			{
-				label: 'Group2 sample size',
+				label: self.config.state.groups[1].name + ' sample size',
 				value: sample_size2
 			}
 		]
