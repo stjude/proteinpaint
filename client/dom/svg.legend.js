@@ -1,4 +1,5 @@
 import { select } from 'd3-selection'
+import { ColorScale } from '#dom'
 
 export default function svgLegend(opts) {
 	let currlinex = 0
@@ -189,50 +190,25 @@ export default function svgLegend(opts) {
 		}
 
 		const y = settings.fontsize - bbox.height + (bbox.height - settings.iconh) / 2
-		let colorGradientId, minLabelBBox
+		let colorGradientId
 		if (d.domain) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
-			g.append('linearGradient')
-				.attr('id', colorGradientId)
-				.attr('x1', '0%')
-				.attr('x2', '100%') //d.width)
-				.attr('y1', '0%')
-				.attr('y2', '0%')
-				.selectAll('stop')
-				.data(d.domain.length > 2 ? d.domain : d.domain[0] < d.domain[1] ? [0, 1] : [1, 0])
-				.enter()
-				.append('stop')
-				.attr('offset', (c, i) => `${c * 100}%`)
-				.attr('stop-color', c => (d.scale ? d.scale(c) : 'grey'))
-				.attr('stop-opacity', 1)
+			const colors = d.scale ? d.domain.map(c => d.scale(c)) : d.colors || ['white', 'grey']
+			new ColorScale({
+				barwidth: width,
+				barheight: settings.iconh,
+				colors,
+				data: [d.minLabel || d.domain[0], d.maxLabel || d.domain[1]],
+				// data: d.domain.length > 2 ? d.domain : d.domain[0] < d.domain[1] ? [0, 1] : [1, 0],
+				fontSize: 0.82 * settings.fontsize,
+				holder: g,
+				id: colorGradientId,
+				position: `${bbox.width + 25},${y - 2}`,
+				ticks: 2,
+				tickSize: 0
+			})
 
-			const minLabel = g
-				.append('text')
-				.text(d.minLabel || d.domain[0])
-				.attr('x', bbox.width + 25)
-				.attr('y', 0.82 * settings.fontsize)
-				.style('font-size', settings.fontsize)
-				.attr('text-anchor', 'start')
-			minLabelBBox = minLabel.node().getBBox()
-			currlinex += minLabelBBox.width + 5
-
-			g.append('rect')
-				.attr('height', settings.iconh)
-				.attr('width', width)
-				.attr('x', bbox.width + minLabelBBox.width + 30)
-				.attr('y', y)
-				.attr('fill', colorGradientId ? `url(#${colorGradientId})` : opts.rectFillFxn)
-				.attr('stroke', opts.iconStroke)
-				.attr('shape-rendering', 'crispEdges')
-
-			const maxLabel = g
-				.append('text')
-				.text(d.maxLabel || d.domain[1])
-				.attr('x', bbox.width + minLabelBBox.width + 135)
-				.attr('y', 0.8 * settings.fontsize)
-				.style('font-size', settings.fontsize)
-				.attr('text-anchor', 'start')
-			currlinex += maxLabel.node().getBBox().width + 2.5 * settings.padx + 50
+			currlinex += 10 * settings.padx
 		} else {
 			g.append('rect')
 				.attr('height', settings.iconh)
