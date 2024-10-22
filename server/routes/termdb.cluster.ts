@@ -99,6 +99,7 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 	for (const o of data.values()) {
 		// {sampleId: value}
 		for (const s in o) sampleSet.add(s)
+		if (!sampleSet.size) continue
 		break
 	}
 
