@@ -17,8 +17,8 @@ export type BoxPlotEntry = {
 	boxplot: BoxPlotData
 	/** Label to show */
 	label: string
-	/** Number of samples */
-	plotValueCount: number
+	// /** Number of samples */
+	// plotValueCount: number
 	/** TODO: Is this needed? */
 	values: number[]
 	/** Lowest min for the scale domain */

@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../../rx'
 import { fillTermWrapper } from '#termsetting'
-import { controlsInit } from '../controls'
+import { controlsInit, term0_term2_defaultQ } from '../controls'
 import { RxComponent } from '../../types/rx.d'
 import { Model } from './Model'
 import { View } from './View'
@@ -18,10 +18,12 @@ export type BoxplotSettings = {
 	boxplotWidth: number
 	/** TODO: colors? or use schema? Default is common plot color.  */
 	color: string
-	/** TODO: rename variable. space between boxplots */
-	labelSpace: number
+	/** Padding between the left hand label and boxplot */
+	labelPad: number
 	/** Height of individual boxplots */
 	rowHeight: number
+	/** Space between the boxplots */
+	rowSpace: number
 }
 
 export type BoxplotDom = {
@@ -47,13 +49,14 @@ class TdbBoxplot extends RxComponent {
 	dom: BoxplotDom
 	constructor(opts) {
 		super()
+		this.opts = opts
 		this.components = {
 			controls: {}
 		}
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = opts.controls ? holder : holder.append('div')
-		const svg = div.append('svg').style('margin-right', '20px').style('display', 'inline-block')
+		const svg = div.append('svg').style('display', 'inline-block')
 		this.dom = {
 			controls,
 			div,
@@ -83,8 +86,10 @@ class TdbBoxplot extends RxComponent {
 			// 	usecase: { target: 'boxplot', detail: 'term' },
 			// 	title: 'Overlay data',
 			// 	label: 'Overlay',
-			// 	vocabApi: this.app.vocabApi
-			// },
+			// 	vocabApi: this.app.vocabApi,
+			// 	numericEditMenuVersion: this.opts.numericEditMenuVersion,
+			// 	defaultQ4fillTW: term0_term2_defaultQ
+			// }
 		]
 		this.components.controls = await controlsInit({
 			app: this.app,
@@ -124,11 +129,11 @@ class TdbBoxplot extends RxComponent {
 		try {
 			const state = this.app.getState()
 			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
+			const settings = config.settings.boxplot
 
-			const model = new Model(config, state, this.app)
+			const model = new Model(config, state, this.app, settings)
 			const data = await model.getData()
 
-			const settings = config.settings.boxplot
 			new View(config.term.term.name, data, settings, this.dom)
 		} catch (e: any) {
 			console.error(new Error(e.message || e))
@@ -143,8 +148,9 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 	const defaults: BoxplotSettings = {
 		boxplotWidth: 550,
 		color: plotColor,
-		labelSpace: 50,
-		rowHeight: 150
+		labelPad: 10,
+		rowHeight: 150,
+		rowSpace: 20
 	}
 	return Object.assign(defaults, overrides)
 }
