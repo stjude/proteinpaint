@@ -124,10 +124,9 @@ export function parseDictionary(input) {
 		/* 
 		Parses phenotree:
 			- Parses tab delim data arranged in cols: levels(n), variable (i.e. term_id), type, and categories 
-			(i.e. previous configuration).
-			- Only the vairable and type cols are required
-			- Blank and '-' values for levels converted to null -- how to distinguish between no id vs no 
-			hierarchy??
+			(i.e. previous configuration) as well as unit.
+			- Only the variable and type cols are required
+			- Blank and '-' values for levels converted to null.
 			- Assumptions:
 				1. Headers required. `Variable', 'Type', 'Categories', and 'Unit' may appear anywhere. 
 				'Level_[XX]' for optional hierarchy/level columns. 'Unit' is optional for numeric terms.

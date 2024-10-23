@@ -658,6 +658,72 @@ tape('uncomputable category is empty string but not number', function (test) {
 	test.end()
 })
 
+tape.only('add unit to term', function (test) {
+	test.timeoutAfter(100)
+	const tsv = [
+		`Level_1\tLevel_2\tLevel_3\tLevel_4\tLevel_5\tVariable\ttype\tCategories\tUnit`,
+		`Root\tL2\tL3\t-\t-\tdiaggrp\tcategorical\t`,
+		`Root\tAge at Sample\t-\t-\t-\tsnp6_sample_age\tinteger\t{\"999\":{\"label\":\"N/A:CCSS\"}}\tyears`
+	].join('\n')
+	const message = `Should add unit to term`
+	try {
+		const holder = getHolder()
+		const results = parseDictionary(tsv)
+		const expected = [
+			{
+				id: 'diaggrp',
+				name: 'L3',
+				type: 'categorical',
+				values: {},
+				groupsetting: {
+					disabled: true
+				},
+				additionalAttributes: {},
+				child_order: 1,
+				isleaf: true,
+				parent_id: 'L2'
+			},
+			{
+				id: 'snp6_sample_age',
+				name: 'Age at Sample',
+				type: 'integer',
+				groupsetting: undefined,
+				values: {
+					999: {
+						label: 'N/A:CCSS',
+						uncomputable: true
+					}
+				},
+				additionalAttributes: {},
+				child_order: 2,
+				isleaf: true,
+				unit: 'years',
+				parent_id: 'Root'
+			},
+			{
+				id: 'Root',
+				name: 'Root',
+				isleaf: false,
+				child_order: 1,
+				parent_id: null
+			},
+			{
+				id: 'L2',
+				name: 'L2',
+				isleaf: false,
+				child_order: 1,
+				parent_id: 'Root'
+			}
+		]
+		test.deepEqual(results.terms, expected, message)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
+	} catch (e) {
+		test.fail(message + ': ' + e)
+	}
+
+	test.end()
+})
+
 /***********************************
  reusable helper vars and functions
 ************************************/
