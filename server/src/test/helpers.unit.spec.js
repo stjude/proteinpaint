@@ -9,6 +9,7 @@ tape('\n', function (test) {
 })
 
 tape('joinUrl', test => {
+	test.throws(() => h.joinUrl(1, ''), /both arguments must be string/, 'throws on non-string argument')
 	test.throws(() => h.joinUrl('', ''), /blank string not allowed/, 'throws on blank string')
 	test.throws(() => h.joinUrl('abc', ''), /blank string not allowed/, 'throws on blank string')
 	test.throws(() => h.joinUrl('', 'abc'), /blank string not allowed/, 'throws on blank string')
