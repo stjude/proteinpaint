@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - create src/helper.ts with joinUrl()
+- prototype cnv filter prompt to change cnvMaxLength
 
 
 ## 2.81.4
