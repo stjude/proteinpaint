@@ -7,9 +7,10 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - create src/helper.ts with joinUrl()
 - prototype cnv filter prompt to change cnvMaxLength
+- handle genes that has no expression data for any sample in the gene exp clustering tool
 
 
-## 2.81.4
+## 2.81.4-0
 
 Fixes:
 - if a small number of radios, show in a single line by default
