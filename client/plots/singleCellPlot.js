@@ -70,7 +70,7 @@ class singleCellPlot {
 		if (state.config.plots.length > 1)
 			this.tabs.push({ label: 'Plots', id: PLOTS_TAB, callback: () => this.setActiveTab(PLOTS_TAB) })
 		this.tabs.push(
-			{ label: 'Color by category', id: COLORBY_CATEGORY_TAB, callback: () => this.setActiveTab(COLORBY_CATEGORY_TAB) },
+			{ label: 'Color by', id: COLORBY_CATEGORY_TAB, callback: () => this.setActiveTab(COLORBY_CATEGORY_TAB) },
 			{ label: 'Gene expression', id: GENE_EXPRESSION_TAB, callback: () => this.setActiveTab(GENE_EXPRESSION_TAB) }
 		)
 		if (state.termdbConfig.queries?.singleCell?.DEgenes)
@@ -111,7 +111,7 @@ class singleCellPlot {
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
 		const geDiv = headerDiv.append('div').style('display', 'inline-block')
-		const deDiv = headerDiv.append('div').style('display', 'inline-block')
+		const deDiv = geDiv.append('div').style('display', 'inline-block')
 
 		const plotsDivParent = contentDiv.append('div')
 		const plotsDiv = plotsDivParent
@@ -314,10 +314,10 @@ class singleCellPlot {
 				this.dom.deDiv.style('display', 'none')
 
 				break
-
 			case COLORBY_CATEGORY_TAB:
 				this.dom.geDiv.style('display', 'none')
 				this.dom.deDiv.style('display', 'none')
+
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
 				this.dom.searchboxDiv.style('display', 'none')
@@ -342,7 +342,6 @@ class singleCellPlot {
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
 				this.renderDETable()
-
 				break
 		}
 	}
@@ -543,7 +542,7 @@ class singleCellPlot {
 		this.dom.loadingDiv.style('display', 'none')
 		this.renderPlots(this.data)
 
-		if (this.dom.header) this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} Single Cell Data`)
+		if (this.dom.header) this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} single cell data`)
 	}
 
 	fillColorBy() {
@@ -717,7 +716,7 @@ class singleCellPlot {
 	}
 
 	getColor(d, plot) {
-		const noExpColor = '#aaa'
+		const noExpColor = '#D4D4D4'
 
 		if (
 			this.state.config.activeTab != GENE_EXPRESSION_TAB &&
@@ -760,7 +759,10 @@ class singleCellPlot {
 		const colorMap = plot.colorMap
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
-			if (this.state.config.activeTab == COLORBY_CATEGORY_TAB) {
+			if (
+				(this.state.config.activeTab && this.state.config.activeTab == COLORBY_CATEGORY_TAB) ||
+				this.tabs[0].id == COLORBY_CATEGORY_TAB
+			) {
 				const app = this.app
 				const plotColorByDiv = plot.plotDiv.append('div')
 				plotColorByDiv.append('label').text('Color by:').style('margin-right', '5px')
