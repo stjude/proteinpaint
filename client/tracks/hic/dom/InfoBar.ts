@@ -107,7 +107,7 @@ export class InfoBar {
 
 			if (min < 0) {
 				this.colorScale.colors = ['blue', 'white', 'red']
-				this.colorScale.data = [min, max]
+				this.colorScale.data = [min, 0, max]
 			} else {
 				this.colorScale.colors = ['white', 'red']
 				this.colorScale.data = [0, max]

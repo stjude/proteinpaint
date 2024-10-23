@@ -30,8 +30,7 @@ type ColorScaleOpts = {
 	colors?: string[]
 	/** Required
 	 * Specifies the values to show along a number line. Only pass the min and max.
-	 * If data spans neg and pos values with no zero, the update method will add a zero
-	 * between the min and max to ensure zero shows on the axis.
+	 * If the data spans negative and positive values, include zero in the array.
 	 */
 	data: number[]
 	/** Optional. Font size in px of the text labels. Default is 10. */
@@ -284,9 +283,9 @@ export class ColorScale {
 
 		this.dom.scaleAxis.selectAll('*').remove()
 
-		if (start < 0 && stop > 0 && this.data.indexOf(0) == -1) {
-			this.data.splice(this.data.length / 2, 0, 0)
-		}
+		// if (start < 0 && stop > 0 && this.data.indexOf(0) == -1) {
+		// 	this.data.splice(this.data.length / 2, 0, 0)
+		// }
 
 		this.dom.scale = scaleLinear()
 			.domain(this.data)
@@ -315,6 +314,7 @@ export class ColorScale {
 	}
 
 	updateScale() {
+		if (this.data.length != this.colors.length) throw new Error('Data and color arrays must be the same length')
 		this.updateColors()
 		this.updateAxis()
 		this.updateValueInColorBar()
