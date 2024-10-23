@@ -123,11 +123,14 @@ export function parseDictionary(input) {
 	function parsePhenotree(lines, header) {
 		/* 
 		Parses phenotree:
-			- Parses tab delim data arranged in cols: levels(n), variable (i.e. term_id), type, and categories (i.e. previous configuration).
+			- Parses tab delim data arranged in cols: levels(n), variable (i.e. term_id), type, and categories 
+			(i.e. previous configuration).
 			- Only the vairable and type cols are required
-			- Blank and '-' values for levels converted to null -- how to distinguish between no id vs no hierarchy??
+			- Blank and '-' values for levels converted to null -- how to distinguish between no id vs no 
+			hierarchy??
 			- Assumptions:
-				1. Headers required. `Variable', 'Type', and 'Categories' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
+				1. Headers required. `Variable', 'Type', 'Categories', and 'Unit' may appear anywhere. 
+				'Level_[XX]' for optional hierarchy/level columns. 'Unit' is optional for numeric terms.
 				2. Levels are defined left to right, highest to lowest, and in order, no gaps.
 				3. No blanks or '-' between levels as well as no duplicate values in the same line.
 				4. No identical term ids
@@ -147,6 +150,8 @@ export function parseDictionary(input) {
 		const levelColIndexes = header.map((c, i) => (c.toLowerCase().includes('level_') ? i : -1)).filter(i => i != -1)
 		//If no level cols provided, use key/Variable col as single level. Will print the id as name
 		if (!levelColIndexes.length) levelColIndexes.push(variableIndex)
+
+		const unitIndex = header.findIndex(l => l.toLowerCase().includes('unit'))
 
 		/** Old implementation
 		 * .attributes is passed to the term obj (see below) but not used.
@@ -193,7 +198,6 @@ export function parseDictionary(input) {
 				if (firstDashIndex != -1 && firstDashIndex < cols.indexOf(name)) {
 					throw `Blank or '-' value detected between levels in line ${lineNum}`
 				}
-
 				const term = parseCategories(cols[typeIndex], cols[categoriesIndex], cols[additionalAttrIndexes], lineNum, name)
 
 				const id = cols[variableIndex] || name
@@ -216,6 +220,7 @@ export function parseDictionary(input) {
 					lineNum, // to be deleted later
 					additionalAttributes: term.attributes
 				}
+				if (cols[unitIndex] != null) terms[id].unit = cols[unitIndex]
 				termNameToId[name] = id
 				parentTermNames.add(terms[id].parent_name)
 			} catch (e) {
