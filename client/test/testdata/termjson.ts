@@ -128,7 +128,11 @@ export const termjson = {
 		id: 'sex',
 		name: 'Sex',
 		type: 'categorical' as const,
-		groupsetting: { disabled: true }
+		groupsetting: { disabled: true },
+		values: {
+			1: { label: 'Female', color: 'blue' },
+			2: { label: 'Male', color: '#e75480' }
+		}
 	},
 	idarubicin_5: {
 		id: 'idarubicin_5',

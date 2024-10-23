@@ -3,6 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ } from '../controls'
 import { RxComponent } from '../../types/rx.d'
 import { Model } from './Model'
+import { ViewModel } from './ViewModel'
 import { View } from './View'
 import { plotColor } from '#shared/common.js'
 import type { Elem } from '../../types/d3'
@@ -137,6 +138,7 @@ class TdbBoxplot extends RxComponent {
 			const model = new Model(config, state, this.app, settings)
 			const data = await model.getData()
 
+			new ViewModel(config, data, settings)
 			new View(config.term.term.name, data, settings, this.dom)
 		} catch (e: any) {
 			console.error(new Error(e.message || e))

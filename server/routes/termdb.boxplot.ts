@@ -76,27 +76,30 @@ function init({ genomes }) {
 					let label = overlayTerm?.term?.values?.[key]?.label || key
 					label = `${label}, n=${values.length}`
 					if (!maxLabelLgth || label.length > maxLabelLgth.length) maxLabelLgth = label.length
-					plots.push({
-						label,
-						values,
+					const plot = {
+						// label,
+						// values,
 						seriesId: key,
 						color: overlayTerm?.term?.values?.[key]?.color || null,
 						boxplot: boxplot_getvalue(vs), //Need sd and mean?
 						// plotValueCount: values.length,
 						min: sortedValues[0],
 						max: sortedValues[sortedValues.length - 1]
-					})
+					}
+					plot.boxplot.label = label
+					plots.push(plot)
 				} else {
 					const label = `${sampleType}, n=${values.length}`
 					if (!maxLabelLgth || label.length > maxLabelLgth.length) maxLabelLgth = label.length
 					const plot = {
-						label,
-						values,
+						// label,
+						// values,
 						// plotValueCount: values.length,
-						boxplot: boxplot_getvalue(vs) as BoxPlotData,
+						boxplot: boxplot_getvalue(vs),
 						min: sortedValues[0],
 						max: sortedValues[sortedValues.length - 1]
-					} satisfies BoxPlotEntry
+					}
+					plot.boxplot.label = label
 					plots.push(plot)
 				}
 			}
