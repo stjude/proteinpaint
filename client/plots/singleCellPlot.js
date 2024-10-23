@@ -28,8 +28,8 @@ this
 
 const SAMPLES_TAB = 0
 const PLOTS_TAB = 1
-const GENE_EXPRESSION_TAB = 2
-const COLORBY_CATEGORY_TAB = 3
+const COLORBY_CATEGORY_TAB = 2
+const GENE_EXPRESSION_TAB = 3
 
 class singleCellPlot {
 	constructor() {
@@ -42,8 +42,8 @@ class singleCellPlot {
 		this.tabs = [
 			{ label: 'Samples', callback: () => this.setActiveTab(SAMPLES_TAB) },
 			{ label: 'Plots', callback: () => this.setActiveTab(PLOTS_TAB) },
-			{ label: 'Gene expression', callback: () => this.setActiveTab(GENE_EXPRESSION_TAB) },
-			{ label: 'Color by category', callback: () => this.setActiveTab(COLORBY_CATEGORY_TAB) }
+			{ label: 'Color by category', callback: () => this.setActiveTab(COLORBY_CATEGORY_TAB) },
+			{ label: 'Gene expression', callback: () => this.setActiveTab(GENE_EXPRESSION_TAB) }
 		]
 	}
 
@@ -83,7 +83,7 @@ class singleCellPlot {
 		this.addZoomIcons(iconsDiv)
 
 		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const tabsComp = await new Tabs({
+		this.tabsComp = await new Tabs({
 			holder: contentDiv,
 			tabsPosition: 'horizontal',
 			tabs: this.tabs
@@ -219,15 +219,15 @@ class singleCellPlot {
 		})
 		this.dom.searchbox = this.dom.geneSearch?.searchbox
 
-		this.dom.selectCluster = deDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
+		this.dom.colorBySelect = deDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 
-		this.dom.selectCluster.on('change', async () => {
+		this.dom.colorBySelect.on('change', async () => {
 			const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
 			const columnName = plot.columnName
 			const args = {
 				sample: state.config.sample.sampleName,
 				columnName,
-				category: this.dom.selectCluster.node().value
+				category: this.dom.colorBySelect.node().value
 			}
 			const result = await this.app.vocabApi.getTopTermsByType(args)
 		})
@@ -239,7 +239,7 @@ class singleCellPlot {
 			.style('display', state.config.gene ? 'inline-block' : 'none')
 		this.dom.violinBt.on('click', () => {
 			const gene = this.dom.geneSearch.geneSymbol || state.config.gene
-			const columnName = this.dom.selectCluster.node().value
+			const columnName = this.dom.colorBySelect.node().value
 			const plot = this.plots.find(p => p.colorColumns.some(c => c == columnName))
 
 			const values = {}
@@ -309,7 +309,8 @@ class singleCellPlot {
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
 				this.dom.searchbox.node().focus()
-
+				if (this.state.config.gene) this.dom.searchbox.node().value = this.state.config.gene
+				this.fillColorBy()
 				break
 			case COLORBY_CATEGORY_TAB:
 				this.dom.geDiv.style('display', 'none')
@@ -353,6 +354,7 @@ class singleCellPlot {
 	async renderDETable() {
 		const DETableDiv = this.dom.DETableDiv
 		DETableDiv.selectAll('*').remove()
+
 		const categoryName = this.state.config.cluster
 		this.dom.deselect.node().value = `Cluster ${categoryName}` || ''
 		if (this.dom.GSEAbt) this.dom.GSEAbt.style('display', categoryName ? 'inline-block' : 'none')
@@ -404,7 +406,7 @@ class singleCellPlot {
 					type: 'plot_edit',
 					id: this.id,
 					config: {
-						gene: gene,
+						gene,
 						sample: this.state.config.sample || this.samples?.[0]?.sample,
 						experimentID: this.state.config.experimentID || this.samples?.[0].experiments?.[0]?.experimentID
 					}
@@ -412,6 +414,9 @@ class singleCellPlot {
 			},
 			selectedRows
 		})
+		DETableDiv.append('div')
+			.style('font-size', '0.9rem')
+			.text('Select a gene and go to the gene expression tab to view its expression.')
 		this.dom.loadingDiv.style('display', 'none')
 	}
 
@@ -420,7 +425,7 @@ class singleCellPlot {
 
 		for (const div of this.plotColorByDivs) div.style('display', 'none')
 		this.dom.violinBt?.style('display', gene ? 'inline-block' : 'none')
-		this.dom.selectCluster?.style('display', gene ? 'inline-block' : 'none')
+		this.dom.colorBySelect?.style('display', gene ? 'inline-block' : 'none')
 
 		this.app.dispatch({
 			type: 'plot_edit',
@@ -493,7 +498,6 @@ class singleCellPlot {
 		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 		this.plotColorByDivs = []
-		this.fillColorBy()
 
 		this.dom.loadingDiv.selectAll('*').remove()
 		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
@@ -511,15 +515,15 @@ class singleCellPlot {
 	fillColorBy() {
 		// Only add unique colorColumn among plots as option
 		const uniqueColorColumns = new Set()
-		if (this.dom.selectCluster) {
-			this.dom.selectCluster.selectAll('*').remove()
+		if (this.dom.colorBySelect) {
+			this.dom.colorBySelect.selectAll('*').remove()
 			for (const plot of this.state.termdbConfig?.queries.singleCell.data.plots) {
 				const colorColumn = this.state.config.colorBy?.[plot.name] || plot.colorColumns[0]
 				const id = plot.name.replace(/\s+/g, '') //plot id
 				const plotKey = `show${id}` //for each plot a show checkbox is added and its value is stored in settings
 				const display = this.settings[plotKey]
 				if (!uniqueColorColumns.has(colorColumn) && display) {
-					this.dom.selectCluster.append('option').text(colorColumn)
+					this.dom.colorBySelect.append('option').text(colorColumn)
 					uniqueColorColumns.add(colorColumn)
 				}
 			}
@@ -715,7 +719,7 @@ class singleCellPlot {
 		const colorMap = plot.colorMap
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
-			if (plot.colorColumns.length > 1 && !this.colorByGene) {
+			if (plot.colorColumns.length > 1 && this.state.config.activeTab == COLORBY_CATEGORY_TAB) {
 				const app = this.app
 				const plotColorByDiv = plot.plotDiv.append('div')
 				plotColorByDiv.append('label').text('Color by:').style('margin-right', '5px')
