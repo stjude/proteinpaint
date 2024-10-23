@@ -827,7 +827,7 @@ function may_create_cnv(tk, block) {
 		.style('font-size', '.8em')
 		.attr('class', 'sja_clbtext')
 		.on('click', () => {
-			menu.clear().showunder(R.cnvFilterPrompt.node()) // TODO show above prompt
+			menu.clear().showunder(R.cnvFilterPrompt.node()) // TODO as this prompt is usually at bottom of page, best to show menu above prompt
 			menu.d.append('div').text('Max segment length. Set 0 for not restricting by max length.')
 			menu.d
 				.append('input')
@@ -836,6 +836,7 @@ function may_create_cnv(tk, block) {
 				.on('change', event => {
 					const v = Number(event.target.value)
 					tk.cnv.cnvMaxLength = v <= 0 ? null : v
+					menu.hide()
 					tk.load()
 				})
 		})
