@@ -93,6 +93,7 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 	return { clustering, byTermId, bySampleId } as ValidResponse
 }
 
+// default numCases should be matched to maxCase4geneExpCluster in mds3.gdc.js
 async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000) {
 	// get set of unique sample names, to generate col_names dimension
 	const sampleSet = new Set()
