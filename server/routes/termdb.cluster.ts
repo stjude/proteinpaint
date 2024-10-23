@@ -13,7 +13,7 @@ import type {
 } from '#types'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import { gdc_validate_query_geneExpression, maxCase4geneExpCluster } from '#src/mds3.gdc.js'
+import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
@@ -88,12 +88,12 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 
 	// have data for multiple genes, run clustering
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
-	const clustering: Clustering = await doClustering(term2sample2value, q)
+	const clustering: Clustering = await doClustering(term2sample2value, q, Object.keys(bySampleId).length)
 	if (serverconfig.debugmode) console.log('clustering done:', Date.now() - t, 'ms')
 	return { clustering, byTermId, bySampleId } as ValidResponse
 }
 
-async function doClustering(data: any, q: TermdbClusterRequest) {
+async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000) {
 	// get set of unique sample names, to generate col_names dimension
 	const sampleSet = new Set()
 	/* make one pass of whole matrix to collect complete set of samples from all genes
@@ -103,7 +103,7 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 	for (const o of data.values()) {
 		// o: {sampleId: value}
 		for (const s in o) sampleSet.add(s)
-		if (sampleSet.size >= maxCase4geneExpCluster) break
+		if (sampleSet.size >= numCases) break
 	}
 	if (sampleSet.size == 0) throw 'termdb.cluster: no samples'
 
