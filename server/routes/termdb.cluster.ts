@@ -88,19 +88,25 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 
 	// have data for multiple genes, run clustering
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
-	const clustering: Clustering = await doClustering(term2sample2value, q)
+	const clustering: Clustering = await doClustering(term2sample2value, q, Object.keys(bySampleId).length)
 	if (serverconfig.debugmode) console.log('clustering done:', Date.now() - t, 'ms')
 	return { clustering, byTermId, bySampleId } as ValidResponse
 }
 
-async function doClustering(data: any, q: TermdbClusterRequest) {
+// default numCases should be matched to maxCase4geneExpCluster in mds3.gdc.js
+async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000) {
 	// get set of unique sample names, to generate col_names dimension
 	const sampleSet = new Set()
+	/* make one pass of whole matrix to collect complete set of samples from all genes
+	this is fast and no performance concern
+	also as a safeguard against genes that is completely blank (gdc), and possible to be missing data for some samples
+	*/
 	for (const o of data.values()) {
-		// {sampleId: value}
+		// o: {sampleId: value}
 		for (const s in o) sampleSet.add(s)
-		break
+		if (sampleSet.size >= numCases) break
 	}
+	if (sampleSet.size == 0) throw 'termdb.cluster: no samples'
 
 	// Checking if cluster and distance method for hierarchial clustering is valid
 	if (!clusterMethodLst.find(i => i.value == q.clusterMethod)) throw 'Invalid cluster method'
@@ -125,6 +131,7 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 		inputData.matrix.push(getZscore(row))
 	}
 
+	if (inputData.matrix.length == 0) throw 'Clustering matrix is empty'
 	const Routput = JSON.parse(
 		await run_R(path.join(serverconfig.binpath, 'utils', 'hclust.R'), JSON.stringify(inputData))
 	)
