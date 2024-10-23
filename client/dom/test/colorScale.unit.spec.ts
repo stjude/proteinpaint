@@ -178,7 +178,7 @@ tape('ColorScale.updateScale()', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
-	const testColorScale = getColorScale({ holder, markedValue: 1, colors: ['white', 'red', 'green'] })
+	const testColorScale = getColorScale({ holder, markedValue: 1 })
 
 	const newColor = 'blue'
 	testColorScale.colors[2] = newColor
