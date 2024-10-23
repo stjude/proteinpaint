@@ -813,18 +813,21 @@ function may_create_cnv(tk, block) {
 	if (!tk.cnv) return
 	const R = (tk.legend.cnv = {})
 	R.row = tk.legend.table.append('tr')
-	// contents are filled in dynamically
 	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.7).text('CNV')
-	R.holder = R.row.append('td')
+	R.holder = R.row.append('td').style('padding-left', '10px')
+	// make all pieces that are arranged left to right inside <td>
 	R.colorscaleHolder = R.holder.append('div') // visibility determined by if any segments are shown in view range
-	R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6).style('margin-left', '10px') // indicator there's no cnv data
+	R.colorscaleHolder.append('span').text('Loss').style('font-size', '.8em').style('opacity', 0.6) // "Loss" label on left of colorscale
+	const csHolder = R.colorscaleHolder.append('span') // actual holder of colorscale
+	R.colorscaleHolder.append('span').text('Gain').style('font-size', '.8em').style('opacity', 0.6) // "Loss" label on left of colorscale
+	R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
+	const menu = new Menu() // launched by prompt
 	// prompt to show cnv filter stats. click prompt to show menu to adjust filter parameters
-	const menu = new Menu()
 	R.cnvFilterPrompt = R.holder
 		.append('div')
 		.style('display', 'inline-block')
 		.style('margin-left', '10px')
-		.style('font-size', '.8em')
+		.style('font-size', '.9em')
 		.attr('class', 'sja_clbtext')
 		.on('click', () => {
 			menu.clear().showunder(R.cnvFilterPrompt.node()) // TODO as this prompt is usually at bottom of page, best to show menu above prompt
@@ -853,7 +856,7 @@ function may_create_cnv(tk, block) {
 		colors: [tk.cnv.lossColor, 'white', tk.cnv.gainColor],
 		data: [-1, 0, 1], // actual domain added during update
 		fontSize: 12,
-		holder: R.colorscaleHolder,
+		holder: csHolder,
 		height: axisheight + barheight,
 		width: xpad * 2 + axiswidth,
 		position: `${xpad},${axisheight}`,
