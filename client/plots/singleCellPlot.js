@@ -594,12 +594,12 @@ class singleCellPlot {
 				sID: this.samples?.[0]?.sample
 			}
 		}
-		body.colorBy = this.state.config.colorBy
 		if (
 			this.state.config.gene &&
 			(this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB)
 		)
 			body.gene = this.state.config.gene
+		else body.colorBy = this.state.config.colorBy
 		try {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
@@ -797,7 +797,7 @@ class singleCellPlot {
 			.style('font-size', '0.9em')
 			.style('font-weight', 'bold')
 			.text(plot.name)
-		const sameLegend = this.state.termdbConfig.queries.singleCell.data.sameLegend || this.colorByGene
+		const sameLegend = this.state.termdbConfig.queries.singleCell.data.sameLegend
 		if (sameLegend && this.legendRendered) {
 			if (this.state.config.gene) {
 				// for gene expression sc plot, needs to add colorGenerator to plot even
@@ -918,7 +918,6 @@ class singleCellPlot {
 			plot.colorGenerator = null
 			return
 		} else [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
-
 		plot.colorGenerator = d3Linear().domain([min, max]).range(colors)
 
 		const barwidth = 100
@@ -1147,6 +1146,6 @@ export function getDefaultSingleCellSettings() {
 		svgw: 1000,
 		svgh: 1000,
 		showGrid: true,
-		sampleSize: 1
+		sampleSize: 1.2
 	}
 }
