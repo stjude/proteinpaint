@@ -97,12 +97,15 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 async function doClustering(data: any, q: TermdbClusterRequest) {
 	// get set of unique sample names, to generate col_names dimension
 	const sampleSet = new Set()
+	/* make one pass of whole matrix to collect complete set of samples from all genes
+	this is fast and no performance concern
+	also as a safeguard against genes that is completely blank (gdc), and possible to be missing data for some samples
+	*/
 	for (const o of data.values()) {
-		// {sampleId: value}
+		// o: {sampleId: value}
 		for (const s in o) sampleSet.add(s)
-		if (!sampleSet.size) continue
-		break
 	}
+	if (sampleSet.size == 0) throw 'termdb.cluster: no samples'
 
 	// Checking if cluster and distance method for hierarchial clustering is valid
 	if (!clusterMethodLst.find(i => i.value == q.clusterMethod)) throw 'Invalid cluster method'
@@ -126,7 +129,6 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 			if (typeof val !== 'number') throw val + ' is not a number'
 			row.push(val)
 		}
-		if (row.length == 0) throw 'No fpkm data available for row name ' + gene
 		inputData.matrix.push(getZscore(row))
 	}
 
