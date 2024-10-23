@@ -990,18 +990,18 @@ class singleCellPlot {
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
 		const selectedRows = []
-		let maxHeight = '40vh'
+		let maxHeight = '20vh'
 		const selectedSample = state.config.sample
 		const selectedRow = this.samples.findIndex(s => s.sample == selectedSample)
 		const selectedRowIndex = selectedRow == -1 ? 0 : selectedRow
 		selectedRows.push(selectedRowIndex)
-		maxHeight = '20vh'
 		renderTable({
 			rows,
 			columns,
 			resize: true,
 			singleMode: true,
 			div,
+			maxWidth: columns.length > 3 ? '90vw' : '50vw',
 			maxHeight,
 			noButtonCallback: index => {
 				const sample = rows[index][0].value
@@ -1012,7 +1012,8 @@ class singleCellPlot {
 
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 			},
-			selectedRows
+			selectedRows,
+			striped: false
 		})
 	}
 
