@@ -820,7 +820,8 @@ export function setRenderers(self) {
 		}
 
 		function getTitle(name, complete = false) {
-			if (name.length > 25 && !complete) name = name.slice(0, 25) + '...'
+			const size = 30
+			if (name.length > size && !complete) name = name.slice(0, size) + '...'
 			return name
 		}
 

@@ -643,7 +643,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 export function getDefaultScatterSettings() {
 	return {
-		size: 1,
+		size: 0.8,
 		minShapeSize: 0.5,
 		maxShapeSize: 4,
 		scaleDotOrder: 'Ascending',

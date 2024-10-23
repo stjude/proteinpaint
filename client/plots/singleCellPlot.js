@@ -98,7 +98,7 @@ class singleCellPlot {
 		const headerDiv = topDiv.append('div').style('display', 'inline-block')
 		const showDiv = topDiv.append('div')
 
-		const tableDiv = contentDiv.append('div')
+		const tableDiv = contentDiv.append('div').style('margin-bottom', '20px')
 		await this.renderSamplesTable(tableDiv, state)
 
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
@@ -470,6 +470,16 @@ class singleCellPlot {
 				chartType: 'singleCellPlot',
 				settingsKey: 'showGrid',
 				boxLabel: ''
+			},
+			{
+				label: 'Sample size',
+				type: 'number',
+				chartType: 'singleCellPlot',
+				settingsKey: 'sampleSize',
+				title: 'Sample size',
+				min: 0.5,
+				max: 2,
+				step: 0.1
 			}
 		]
 
@@ -674,7 +684,7 @@ class singleCellPlot {
 			.append('g')
 			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y)})`)
 			.append('circle')
-			.attr('r', 1.5)
+			.attr('r', this.settings.sampleSize)
 			.attr('fill', d => this.getColor(d, plot))
 			.style('fill-opacity', d => this.getOpacity(d))
 	}
@@ -1106,6 +1116,7 @@ export function getDefaultSingleCellSettings() {
 	return {
 		svgw: 1000,
 		svgh: 1000,
-		showGrid: true
+		showGrid: true,
+		sampleSize: 1
 	}
 }
