@@ -21,14 +21,6 @@ export class Model {
 		if (this.config.term2) boxPlotDataArgs.divideTw = this.config.term2
 
 		const data = await this.app.vocabApi.getBoxPlotData(boxPlotDataArgs)
-		this.processPlotsData(data.plots)
 		return data
-	}
-
-	processPlotsData(plots) {
-		for (const plot of plots) {
-			plot.boxplot.label = plot.label
-			plot.color = this.config?.term2?.term?.values?.[plot.seriesId]?.color || this.settings.color
-		}
 	}
 }

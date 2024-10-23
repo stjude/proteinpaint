@@ -13,12 +13,12 @@ export class View {
 	incrTopPad = 30
 
 	constructor(name: string, data: any, settings: BoxplotSettings, dom: BoxplotDom) {
+		const dimensions = data.plotDim
 		//TODO: 150 because the string label length isn't enough. Need to calculate the extra space for the labels.
 		const labelsWidth = data.maxLabelLgth + settings.labelPad + 150
 		//TODO: 100 for the out values. Need to calculate the width of the out values.
 		const totalWidth = settings.boxplotWidth + labelsWidth + 100
-		const totalHeight =
-			(settings.rowHeight + settings.rowSpace) * data.plots.length + this.bottomPad + this.topPad + this.incrTopPad
+		const totalHeight = dimensions.totalRowHeight * data.plots.length + this.bottomPad + this.topPad + this.incrTopPad
 
 		dom.svg.transition().attr('width', totalWidth).attr('height', totalHeight)
 
@@ -60,7 +60,7 @@ export class View {
 				labColor: 'black'
 			})
 
-			this.incrTopPad += settings.rowHeight + settings.rowSpace
+			this.incrTopPad += dimensions.totalRowHeight
 		}
 	}
 }
