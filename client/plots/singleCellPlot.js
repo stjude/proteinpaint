@@ -463,10 +463,10 @@ class singleCellPlot {
 				max: 1000
 			},
 			{
-				label: 'Show borders',
+				label: 'Show grid',
 				type: 'checkbox',
 				chartType: 'singleCellPlot',
-				settingsKey: 'showBorders',
+				settingsKey: 'showGrid',
 				boxLabel: ''
 			}
 		]
@@ -572,7 +572,6 @@ class singleCellPlot {
 			this.refName = result.refName
 			return result
 		} catch (e) {
-			console.log(e)
 			if (e.stack) console.log(e.stack)
 			sayerror(this.dom.plotsDiv, e)
 			return
@@ -640,7 +639,6 @@ class singleCellPlot {
 			.style('display', 'inline-block')
 			.style('padding', '10px')
 			.style('flex-grow', 1)
-		if (this.state.config.settings.singleCellPlot.showBorders) plot.plotDiv.style('border', '1px solid #aaa')
 
 		this.renderLegend(plot)
 
@@ -655,6 +653,7 @@ class singleCellPlot {
 				if (this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
 			})
 			.on('click', event => this.showTooltip(event, plot))
+		if (this.settings.showGrid) this.renderGrid(plot)
 
 		plot.zoom = d3zoom()
 			.scaleExtent([0.5, 5])
@@ -748,13 +747,18 @@ class singleCellPlot {
 			}
 			legendSVG = plot.plotDiv
 				.append('svg')
-				.attr('width', 250)
+				.attr('width', 280)
 				.attr('height', this.settings.svgh)
 				.style('vertical-align', 'top')
 			plot.legendSVG = legendSVG
 		}
 		legendSVG.selectAll('*').remove()
-		legendSVG.append('text').attr('transform', `translate(0, 20)`).style('font-size', '0.9em').text(plot.name)
+		legendSVG
+			.append('text')
+			.attr('transform', `translate(0, 20)`)
+			.style('font-size', '0.9em')
+			.style('font-weight', 'bold')
+			.text(plot.name)
 		const sameLegend = this.state.termdbConfig.queries.singleCell.data.sameLegend || this.colorByGene
 		if (sameLegend && this.legendRendered) {
 			if (this.state.config.gene) {
@@ -829,6 +833,32 @@ class singleCellPlot {
 				id: parent.id,
 				config: { hiddenClusters }
 			})
+		}
+	}
+
+	renderGrid(plot) {
+		const bins = 6
+		const size = this.settings.svgw / bins
+		let x, y
+		for (let i = 0; i <= bins; i++) {
+			x = i * size
+			plot.svg
+				.append('line')
+				.attr('x1', x)
+				.attr('x2', x)
+				.attr('y1', 0)
+				.attr('y2', this.settings.svgh)
+				.style('stroke', '#F5F5F5')
+		}
+		for (let i = 0; i <= bins; i++) {
+			y = i * size
+			plot.svg
+				.append('line')
+				.attr('x1', 0)
+				.attr('x2', this.settings.svgw)
+				.attr('y1', y)
+				.attr('y2', y)
+				.style('stroke', '#F5F5F5')
 		}
 	}
 
@@ -1074,7 +1104,6 @@ export function getDefaultSingleCellSettings() {
 	return {
 		svgw: 900,
 		svgh: 900,
-		showBorders: false,
-		showSamples: false
+		showGrid: true
 	}
 }
