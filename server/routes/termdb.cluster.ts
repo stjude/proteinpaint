@@ -1,3 +1,4 @@
+//import fs from 'fs'
 import path from 'path'
 import run_R from '#src/run_R.js'
 import type {
@@ -121,11 +122,20 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 		inputData.row_names.push(gene)
 		const row: number[] = []
 		for (const s of inputData.col_names) {
-			row.push(o[s] || 0)
+			const val = o[s] || 0
+			if (typeof val !== 'number') throw val + ' is not a number'
+			row.push(val)
 		}
+		if (row.length == 0) throw 'No fpkm data available for row name ' + gene
 		inputData.matrix.push(getZscore(row))
 	}
 
+	if (inputData.matrix.length == 0) throw 'Clustering matrix is empty'
+	//console.log("inputData:", inputData)
+	//fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
+	//	// For catching input to R clustering pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 	const Routput = JSON.parse(
 		await run_R(path.join(serverconfig.binpath, 'utils', 'hclust.R'), JSON.stringify(inputData))
 	)
