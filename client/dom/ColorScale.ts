@@ -39,6 +39,8 @@ type ColorScaleOpts = {
 	/** Required. Either a div or svg element.
 	 * If not a svg, include either the .width: INT or .height:INT to create the svg.*/
 	holder: Elem
+	/** id for the linearGradiant elem */
+	id?: string
 	/** Optional. Shows a value in the color bar for the default, bottom axis
 	 * This value cannot be zero at initialization.*/
 	markedValue?: number
@@ -113,7 +115,7 @@ export class ColorScale {
 		scaleSvg.attr('data-testid', 'sjpp-color-scale')
 
 		const barG = scaleSvg.append('g').attr('transform', `translate(${opts.position || '0,0'})`)
-		const id = Math.random().toString()
+		const id = opts.id || Math.random().toString()
 
 		const defs = barG.append('defs')
 		const gradient = defs.append('linearGradient').attr('data-testid', 'sjpp-color-scale-bar').attr('id', id)
