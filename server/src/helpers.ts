@@ -19,6 +19,7 @@ cannot do below:
 */
 export function joinUrl(p1: string, p2: string): string {
 	// p1 and p2 both shouldn't be blank string. if so, return null to alert
+	if (typeof p1 != 'string' || typeof p2 != 'string') throw `both arguments must be string type`
 	if (!p1 || !p2) throw 'blank string not allowed'
 	if (p1.indexOf('?') != -1) throw 'search string not allowed' // search string not allowed in p1. if usecase arises can support it
 	return (p1.endsWith('/') ? p1 : p1 + '/') + (p2.startsWith('/') ? p2.substring(1) : p2)
