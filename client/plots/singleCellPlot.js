@@ -75,7 +75,7 @@ class singleCellPlot {
 		)
 		if (state.termdbConfig.queries?.singleCell?.DEgenes)
 			this.tabs.push({
-				label: 'Differential Expression',
+				label: 'Differential expression',
 				id: DIFFERENTIAL_EXPRESSION_TAB,
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
 			})
@@ -760,7 +760,7 @@ class singleCellPlot {
 		const colorMap = plot.colorMap
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
-			if (plot.colorColumns.length > 1 && this.state.config.activeTab == COLORBY_CATEGORY_TAB) {
+			if (this.state.config.activeTab == COLORBY_CATEGORY_TAB) {
 				const app = this.app
 				const plotColorByDiv = plot.plotDiv.append('div')
 				plotColorByDiv.append('label').text('Color by:').style('margin-right', '5px')
