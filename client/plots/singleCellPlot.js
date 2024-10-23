@@ -30,6 +30,7 @@ const SAMPLES_TAB = 0
 const PLOTS_TAB = 1
 const COLORBY_CATEGORY_TAB = 2
 const GENE_EXPRESSION_TAB = 3
+const DIFFERENTIAL_EXPRESSION_TAB = 4
 
 class singleCellPlot {
 	constructor() {
@@ -72,6 +73,12 @@ class singleCellPlot {
 			{ label: 'Color by category', id: COLORBY_CATEGORY_TAB, callback: () => this.setActiveTab(COLORBY_CATEGORY_TAB) },
 			{ label: 'Gene expression', id: GENE_EXPRESSION_TAB, callback: () => this.setActiveTab(GENE_EXPRESSION_TAB) }
 		)
+		if (state.termdbConfig.queries?.singleCell?.DEgenes)
+			this.tabs.push({
+				label: 'Differential Expression',
+				id: DIFFERENTIAL_EXPRESSION_TAB,
+				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
+			})
 
 		const q = state.termdbConfig.queries
 		this.opts.holder.style('position', 'relative')
@@ -307,6 +314,15 @@ class singleCellPlot {
 				this.dom.deDiv.style('display', 'none')
 
 				break
+
+			case COLORBY_CATEGORY_TAB:
+				this.dom.geDiv.style('display', 'none')
+				this.dom.deDiv.style('display', 'none')
+				this.dom.tableDiv.style('display', 'none')
+				this.dom.showDiv.style('display', 'none')
+				this.dom.searchboxDiv.style('display', 'none')
+				this.dom.searchbox.style('display', 'none')
+				break
 			case GENE_EXPRESSION_TAB:
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'inline-block')
@@ -318,14 +334,15 @@ class singleCellPlot {
 				if (this.state.config.gene) this.dom.searchbox.node().value = this.state.config.gene
 				this.fillColorBy()
 				break
-			case COLORBY_CATEGORY_TAB:
-				this.dom.geDiv.style('display', 'none')
+			case DIFFERENTIAL_EXPRESSION_TAB:
 				this.dom.deDiv.style('display', 'inline-block')
+				this.dom.geDiv.style('display', 'inline-block')
+				this.dom.searchbox.style('display', 'inline-block')
+				this.dom.searchboxDiv.style('display', 'none')
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
-				this.dom.searchboxDiv.style('display', 'none')
-				this.dom.searchbox.style('display', 'none')
-				if (this.state.termdbConfig.queries?.singleCell?.DEgenes) this.renderDETable()
+				this.renderDETable()
+
 				break
 		}
 	}
@@ -424,7 +441,8 @@ class singleCellPlot {
 		})
 		DETableDiv.append('div')
 			.style('font-size', '0.9rem')
-			.text('Select a gene and go to the gene expression tab to view its expression.')
+			.style('padding-top', '5px')
+			.text('Select a gene to view its expression.')
 		this.dom.loadingDiv.style('display', 'none')
 	}
 
@@ -577,7 +595,11 @@ class singleCellPlot {
 			}
 		}
 		body.colorBy = this.state.config.colorBy
-		if (this.state.config.gene && this.state.config.activeTab == GENE_EXPRESSION_TAB) body.gene = this.state.config.gene
+		if (
+			this.state.config.gene &&
+			(this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB)
+		)
+			body.gene = this.state.config.gene
 		try {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
@@ -623,7 +645,7 @@ class singleCellPlot {
 			return num1 - num2
 		})
 		if (
-			this.state.config.activeTab == COLORBY_CATEGORY_TAB &&
+			this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB &&
 			!this.legendRendered &&
 			this.state.termdbConfig?.queries?.singleCell?.DEgenes
 		) {
@@ -697,7 +719,11 @@ class singleCellPlot {
 	getColor(d, plot) {
 		const noExpColor = '#aaa'
 
-		if (this.state.config.activeTab != GENE_EXPRESSION_TAB) return plot.colorMap[d.category]
+		if (
+			this.state.config.activeTab != GENE_EXPRESSION_TAB &&
+			this.state.config.activeTab != DIFFERENTIAL_EXPRESSION_TAB
+		)
+			return plot.colorMap[d.category]
 		else if (this.state.config.gene) {
 			if (!d.geneExp) return noExpColor
 			if (plot.colorGenerator) return plot.colorGenerator(d.geneExp)
@@ -794,8 +820,11 @@ class singleCellPlot {
 		this.legendRendered = true
 
 		const legendG = legendSVG.append('g').attr('transform', `translate(10, 50)`).style('font-size', '0.8em')
-		if (this.state.config.gene) {
-			this.renderColorGradient(plot, legendG, this.state.config.gene)
+		if (
+			this.state.config.activeTab == GENE_EXPRESSION_TAB ||
+			this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
+		) {
+			if (this.state.config.gene) this.renderColorGradient(plot, legendG, this.state.config.gene)
 			return
 		}
 
