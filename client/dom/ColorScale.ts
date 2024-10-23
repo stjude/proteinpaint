@@ -101,6 +101,7 @@ export class ColorScale {
 
 		if (!opts.holder) throw new Error('No holder provided for color scale.')
 		if (!opts.data) throw new Error('No data provided for color scale.')
+		if (opts.data.length != this.colors.length) throw new Error('Data and color arrays must be the same length')
 
 		this.formatData()
 
