@@ -325,7 +325,7 @@ class singleCellPlot {
 				this.dom.showDiv.style('display', 'none')
 				this.dom.searchboxDiv.style('display', 'none')
 				this.dom.searchbox.style('display', 'none')
-				if (this.state.config.cluster) this.renderDETable()
+				this.renderDETable()
 				break
 		}
 	}
@@ -1102,8 +1102,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 900,
-		svgh: 900,
+		svgw: 1000,
+		svgh: 1000,
 		showGrid: true
 	}
 }
