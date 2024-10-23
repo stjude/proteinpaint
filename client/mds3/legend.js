@@ -1,6 +1,6 @@
 import { legend_newrow } from '#src/block.legend'
 import { Menu, ColorScale, icons, shapes } from '#dom'
-import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common.js'
+import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd, bplen } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
 import { rgb } from 'd3-color'
@@ -813,11 +813,38 @@ function may_create_cnv(tk, block) {
 	if (!tk.cnv) return
 	const R = (tk.legend.cnv = {})
 	R.row = tk.legend.table.append('tr')
-	// contents are filled in dynamically
 	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.7).text('CNV')
-	R.holder = R.row.append('td')
-	R.showHolder = R.holder.append('div').style('display', 'none')
+	R.holder = R.row.append('td').style('padding-left', '10px')
+	// make all pieces that are arranged left to right inside <td>
+	R.colorscaleHolder = R.holder.append('div') // visibility determined by if any segments are shown in view range
+	R.colorscaleHolder.append('span').text('Loss').style('font-size', '.8em').style('opacity', 0.6) // "Loss" label on left of colorscale
+	const csHolder = R.colorscaleHolder.append('span') // actual holder of colorscale
+	R.colorscaleHolder.append('span').text('Gain').style('font-size', '.8em').style('opacity', 0.6) // "Loss" label on left of colorscale
+	R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
+	const menu = new Menu() // launched by prompt
+	// prompt to show cnv filter stats. click prompt to show menu to adjust filter parameters
+	R.cnvFilterPrompt = R.holder
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin-left', '10px')
+		.style('font-size', '.9em')
+		.attr('class', 'sja_clbtext')
+		.on('click', () => {
+			menu.clear().showunder(R.cnvFilterPrompt.node()) // TODO as this prompt is usually at bottom of page, best to show menu above prompt
+			menu.d.append('div').text('Max segment length. Set 0 for not restricting by max length.')
+			menu.d
+				.append('input')
+				.attr('type', 'number')
+				.attr('value', Number.isFinite(tk.cnv.cnvMaxLength) ? tk.cnv.cnvMaxLength : 0)
+				.on('change', event => {
+					const v = Number(event.target.value)
+					tk.cnv.cnvMaxLength = v <= 0 ? null : v
+					menu.hide()
+					tk.load()
+				})
+		})
 
+	// initiate colorscale component
 	const axisheight = 20
 	const barheight = 15
 	const xpad = 10
@@ -827,17 +854,17 @@ function may_create_cnv(tk, block) {
 		barwidth: axiswidth,
 		barheight,
 		colors: [tk.cnv.lossColor, 'white', tk.cnv.gainColor],
-		data: [-1,0, 1], // actual domain added during update
+		data: [-1, 0, 1], // actual domain added during update
 		fontSize: 12,
-		holder: R.holder,
+		holder: csHolder,
 		height: axisheight + barheight,
 		width: xpad * 2 + axiswidth,
 		position: `${xpad},${axisheight}`,
 		ticks: 4,
 		tickSize: 6,
 		topTicks: true,
-		setMinMax: number=>{
-			tk.cnv.presetMax=Math.abs(number)
+		setMinMax: number => {
+			tk.cnv.presetMax = Math.abs(number)
 			tk.load()
 		}
 	})
@@ -845,9 +872,28 @@ function may_create_cnv(tk, block) {
 
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
-	tk.legend.cnv.colorScale.colors = [tk.cnv.lossColor, 'white', tk.cnv.gainColor]
-	tk.legend.cnv.colorScale.data = tk.cnv.presetMax ? [-tk.cnv.presetMax,0,tk.cnv.presetMax] : [-tk.cnv.absoluteMax, 0,tk.cnv.absoluteMax]
-	tk.legend.cnv.colorScale.updateScale()
+	// tk is equipped with cnv. determine if cnv data is actually shown
+	if (tk.cnv.cnvLst.length == 0) {
+		// no cnv shown in this region. hide colorscale
+		tk.legend.cnv.colorscaleHolder.style('display', 'none')
+		tk.legend.cnv.noCnv.style('display', 'inline-block')
+	} else {
+		// has cnv shown
+		tk.legend.cnv.colorscaleHolder.style('display', 'inline-block')
+		tk.legend.cnv.noCnv.style('display', 'none')
+		// update colorscale
+		tk.legend.cnv.colorScale.colors = [tk.cnv.lossColor, 'white', tk.cnv.gainColor]
+		tk.legend.cnv.colorScale.data = tk.cnv.presetMax
+			? [-tk.cnv.presetMax, 0, tk.cnv.presetMax]
+			: [-tk.cnv.absoluteMax, 0, tk.cnv.absoluteMax]
+		tk.legend.cnv.colorScale.updateScale()
+	}
+	// update filter prompt. each applicable filter criteria generates a phrase. concatenated phrases are shown in prompt
+	// must do this even if no cnv is shown, which could be caused by filter param and allow to change here
+	const lst = [
+		Number.isFinite(tk.cnv.cnvMaxLength) ? `segment length <= ${bplen(tk.cnv.cnvMaxLength)}` : 'no length limit'
+	]
+	tk.legend.cnv.cnvFilterPrompt.text(`Filter: ${lst.join(', ')}`)
 }
 
 function createLegendTipMenu(opts, tk, elem) {
