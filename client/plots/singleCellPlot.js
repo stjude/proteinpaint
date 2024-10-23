@@ -39,12 +39,6 @@ class singleCellPlot {
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		this.startGradient = {}
 		this.stopGradient = {}
-		this.tabs = [
-			{ label: 'Samples', callback: () => this.setActiveTab(SAMPLES_TAB) },
-			{ label: 'Plots', callback: () => this.setActiveTab(PLOTS_TAB) },
-			{ label: 'Color by category', callback: () => this.setActiveTab(COLORBY_CATEGORY_TAB) },
-			{ label: 'Gene expression', callback: () => this.setActiveTab(GENE_EXPRESSION_TAB) }
-		]
 	}
 
 	async init(appState) {
@@ -67,6 +61,17 @@ class singleCellPlot {
 			if (result == 1 || result == -1) return result
 			else return elem1.sample.localeCompare(elem2.sample)
 		})
+
+		this.tabs = []
+
+		if (this.samples.length > 1)
+			this.tabs.push({ label: 'Samples', id: SAMPLES_TAB, callback: () => this.setActiveTab(SAMPLES_TAB) })
+		if (state.config.plots.length > 1)
+			this.tabs.push({ label: 'Plots', id: PLOTS_TAB, callback: () => this.setActiveTab(PLOTS_TAB) })
+		this.tabs.push(
+			{ label: 'Color by category', id: COLORBY_CATEGORY_TAB, callback: () => this.setActiveTab(COLORBY_CATEGORY_TAB) },
+			{ label: 'Gene expression', id: GENE_EXPRESSION_TAB, callback: () => this.setActiveTab(GENE_EXPRESSION_TAB) }
+		)
 
 		const q = state.termdbConfig.queries
 		this.opts.holder.style('position', 'relative')
@@ -281,12 +286,13 @@ class singleCellPlot {
 		})
 	}
 
-	setActiveTab(tab) {
+	async setActiveTab(tab) {
 		if (!this.state) return
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: tab } })
+		await this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: tab } })
 	}
 
-	showActiveTab(tab) {
+	showActiveTab() {
+		const tab = this.state.config.activeTab || this.tabs[0].id
 		switch (tab) {
 			case SAMPLES_TAB:
 				this.dom.tableDiv.style('display', 'block')
@@ -502,11 +508,9 @@ class singleCellPlot {
 		this.dom.loadingDiv.selectAll('*').remove()
 		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 		this.legendRendered = false
-		this.showActiveTab(this.state.config.activeTab || SAMPLES_TAB)
+		this.showActiveTab()
 		this.data = await this.getData()
 		this.dom.loadingDiv.style('display', 'none')
-
-		this.dom.plotsDivParent.style('display', 'inline-block')
 		this.renderPlots(this.data)
 
 		if (this.dom.header) this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} Single Cell Data`)
