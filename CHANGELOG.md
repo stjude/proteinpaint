@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- do not allow <3 genes in the termdb/cluster request and instruct the user to do a page refresh to clear the error
+- handle genes that has no expression data for any sample in the gene exp clustering tool
+
+
 ## 2.81.3
 
 Fixes:
