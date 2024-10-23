@@ -325,7 +325,7 @@ class singleCellPlot {
 				this.dom.showDiv.style('display', 'none')
 				this.dom.searchboxDiv.style('display', 'none')
 				this.dom.searchbox.style('display', 'none')
-				this.renderDETable()
+				if (this.state.termdbConfig.queries?.singleCell?.DEgenes) this.renderDETable()
 				break
 		}
 	}
@@ -335,7 +335,9 @@ class singleCellPlot {
 		const duration = 750
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
-				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(duration), 1.1)
+				for (const plot of this.plots) {
+					plot.zoom.scaleBy(plot.svg.transition().duration(duration), 1.1)
+				}
 			},
 			title: 'Zoom in'
 		})
