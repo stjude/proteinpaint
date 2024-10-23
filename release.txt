@@ -1,2 +1,0 @@
-Fixes:
-- handle genes that has no expression data for any sample in the gene exp clustering tool
