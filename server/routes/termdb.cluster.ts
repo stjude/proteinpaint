@@ -13,7 +13,7 @@ import type {
 } from '#types'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
+import { gdc_validate_query_geneExpression, maxCase4geneExpCluster } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
@@ -96,11 +96,16 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 async function doClustering(data: any, q: TermdbClusterRequest) {
 	// get set of unique sample names, to generate col_names dimension
 	const sampleSet = new Set()
+	/* make one pass of whole matrix to collect complete set of samples from all genes
+	this is fast and no performance concern
+	also as a safeguard against genes that is completely blank (gdc), and possible to be missing data for some samples
+	*/
 	for (const o of data.values()) {
-		// {sampleId: value}
+		// o: {sampleId: value}
 		for (const s in o) sampleSet.add(s)
-		break
+		if (sampleSet.size >= maxCase4geneExpCluster) break
 	}
+	if (sampleSet.size == 0) throw 'termdb.cluster: no samples'
 
 	// Checking if cluster and distance method for hierarchial clustering is valid
 	if (!clusterMethodLst.find(i => i.value == q.clusterMethod)) throw 'Invalid cluster method'
@@ -125,6 +130,7 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 		inputData.matrix.push(getZscore(row))
 	}
 
+	if (inputData.matrix.length == 0) throw 'Clustering matrix is empty'
 	const Routput = JSON.parse(
 		await run_R(path.join(serverconfig.binpath, 'utils', 'hclust.R'), JSON.stringify(inputData))
 	)
