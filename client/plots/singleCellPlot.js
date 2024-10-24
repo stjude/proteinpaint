@@ -28,7 +28,7 @@ this
 
 const SAMPLES_TAB = 0
 const PLOTS_TAB = 1
-const COLORBY_CATEGORY_TAB = 2
+const COLORBY_TAB = 2
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
 
@@ -64,19 +64,40 @@ class singleCellPlot {
 		})
 
 		this.tabs = []
-
+		const activeTab = state.config.activeTab
 		if (this.samples.length > 1)
-			this.tabs.push({ label: 'Samples', id: SAMPLES_TAB, callback: () => this.setActiveTab(SAMPLES_TAB) })
+			this.tabs.push({
+				label: 'Samples',
+				id: SAMPLES_TAB,
+				active: activeTab == SAMPLES_TAB,
+				callback: () => this.setActiveTab(SAMPLES_TAB)
+			})
 		if (state.config.plots.length > 1)
-			this.tabs.push({ label: 'Plots', id: PLOTS_TAB, callback: () => this.setActiveTab(PLOTS_TAB) })
+			this.tabs.push({
+				label: 'Plots',
+				id: PLOTS_TAB,
+				active: activeTab == PLOTS_TAB,
+				callback: () => this.setActiveTab(PLOTS_TAB)
+			})
 		this.tabs.push(
-			{ label: 'Color by', id: COLORBY_CATEGORY_TAB, callback: () => this.setActiveTab(COLORBY_CATEGORY_TAB) },
-			{ label: 'Gene expression', id: GENE_EXPRESSION_TAB, callback: () => this.setActiveTab(GENE_EXPRESSION_TAB) }
+			{
+				label: 'Color by',
+				id: COLORBY_TAB,
+				active: activeTab == COLORBY_TAB,
+				callback: () => this.setActiveTab(COLORBY_TAB)
+			},
+			{
+				label: 'Gene expression',
+				id: GENE_EXPRESSION_TAB,
+				active: activeTab == GENE_EXPRESSION_TAB,
+				callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
+			}
 		)
 		if (state.termdbConfig.queries?.singleCell?.DEgenes)
 			this.tabs.push({
 				label: 'Differential expression',
 				id: DIFFERENTIAL_EXPRESSION_TAB,
+				active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
 			})
 
@@ -111,7 +132,7 @@ class singleCellPlot {
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
 		const geDiv = headerDiv.append('div').style('display', 'inline-block')
-		const deDiv = geDiv.append('div').style('display', 'inline-block')
+		const deDiv = headerDiv.append('div').style('display', 'inline-block')
 
 		const plotsDivParent = contentDiv.append('div')
 		const plotsDiv = plotsDivParent
@@ -314,7 +335,7 @@ class singleCellPlot {
 				this.dom.deDiv.style('display', 'none')
 
 				break
-			case COLORBY_CATEGORY_TAB:
+			case COLORBY_TAB:
 				this.dom.geDiv.style('display', 'none')
 				this.dom.deDiv.style('display', 'none')
 
@@ -759,10 +780,8 @@ class singleCellPlot {
 		const colorMap = plot.colorMap
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
-			if (
-				(this.state.config.activeTab && this.state.config.activeTab == COLORBY_CATEGORY_TAB) ||
-				this.tabs[0].id == COLORBY_CATEGORY_TAB
-			) {
+			const activeTab = this.tabs.find(tab => tab.active)
+			if (activeTab.id == COLORBY_TAB) {
 				const app = this.app
 				const plotColorByDiv = plot.plotDiv.append('div')
 				plotColorByDiv.append('label').text('Color by:').style('margin-right', '5px')
@@ -1145,8 +1164,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 1000,
-		svgh: 1000,
+		svgw: 900,
+		svgh: 900,
 		showGrid: true,
 		sampleSize: 1.2
 	}
