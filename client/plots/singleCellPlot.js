@@ -32,6 +32,8 @@ const COLORBY_TAB = 2
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
 
+const lightGray = '#E5E5E5'
+
 class singleCellPlot {
 	constructor() {
 		this.type = 'singleCellPlot'
@@ -218,7 +220,7 @@ class singleCellPlot {
 		showDiv.append('label').text('Plots:').style('vertical-align', 'top')
 		const plot_select = showDiv
 			.append('select')
-			.property('multiple', true)
+			//.property('multiple', true)
 			.on('change', e => {
 				const options = plot_select.node().options
 				const singleCellPlot = {}
@@ -373,7 +375,7 @@ class singleCellPlot {
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
 				for (const plot of this.plots) {
-					plot.zoom.scaleBy(plot.svg.transition().duration(duration), 1.1)
+					plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 1.1)
 				}
 			},
 			title: 'Zoom in'
@@ -381,7 +383,7 @@ class singleCellPlot {
 		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
-				for (const plot of this.plots) plot.zoom.scaleBy(plot.svg.transition().duration(duration), 0.9)
+				for (const plot of this.plots) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 0.9)
 			},
 			title: 'Zoom out'
 		})
@@ -389,7 +391,7 @@ class singleCellPlot {
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
 				for (const plot of this.plots) {
-					plot.svg.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
+					plot.mainG.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
 				}
 			},
 			title: 'Reset plot to defaults'
@@ -701,12 +703,22 @@ class singleCellPlot {
 			.style('display', 'inline-block')
 			.style('overflow', 'hidden')
 			.append('svg')
-			.attr('width', this.settings.svgw + 40)
-			.attr('height', this.settings.svgh + 40)
+			.attr('width', this.settings.svgw)
+			.attr('height', this.settings.svgh)
 			.on('mouseover', event => {
 				if (this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
 			})
 			.on('click', event => this.showTooltip(event, plot))
+
+		plot.mainG = plot.svg.append('g')
+		//this allows the mouse zoom to work
+		plot.mainG
+			.append('rect')
+			.attr('x', 0)
+			.attr('y', 0)
+			.attr('width', this.settings.svgw)
+			.attr('height', this.settings.svgh)
+			.attr('fill', 'white')
 		if (this.settings.showGrid) this.renderGrid(plot)
 
 		plot.zoom = d3zoom()
@@ -716,10 +728,10 @@ class singleCellPlot {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
-		plot.svg.call(plot.zoom)
+		plot.mainG.call(plot.zoom)
 		this.plots.push(plot)
 
-		const symbols = plot.svg.selectAll('g').data(plot.cells)
+		const symbols = plot.mainG.selectAll('g').data(plot.cells)
 
 		symbols
 			.enter()
@@ -737,7 +749,7 @@ class singleCellPlot {
 	}
 
 	getColor(d, plot) {
-		const noExpColor = '#D4D4D4'
+		const noExpColor = lightGray
 
 		if (
 			this.state.config.activeTab != GENE_EXPRESSION_TAB &&
@@ -753,7 +765,7 @@ class singleCellPlot {
 	}
 
 	handleZoom(e, plot) {
-		plot.svg.attr('transform', e.transform)
+		plot.mainG.attr('transform', e.transform)
 		plot.zoomK = e.transform.scale(1).k
 	}
 
@@ -899,28 +911,33 @@ class singleCellPlot {
 	}
 
 	renderGrid(plot) {
+		const color = '#D4D4D4'
+		const opacity = 0.6
 		const bins = 6
 		const size = this.settings.svgw / bins
 		let x, y
+		const gridG = plot.svg.append('g')
 		for (let i = 0; i <= bins; i++) {
 			x = i * size
-			plot.svg
+			gridG
 				.append('line')
 				.attr('x1', x)
 				.attr('x2', x)
 				.attr('y1', 0)
 				.attr('y2', this.settings.svgh)
-				.style('stroke', '#F5F5F5')
+				.style('stroke', color)
+				.style('stroke-opacity', opacity)
 		}
 		for (let i = 0; i <= bins; i++) {
 			y = i * size
-			plot.svg
+			gridG
 				.append('line')
 				.attr('x1', 0)
 				.attr('x2', this.settings.svgw)
 				.attr('y1', y)
 				.attr('y2', y)
-				.style('stroke', '#F5F5F5')
+				.style('stroke', color)
+				.style('stroke-opacity', opacity)
 		}
 	}
 
@@ -1062,7 +1079,7 @@ class singleCellPlot {
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 			},
 			selectedRows,
-			striped: false
+			striped: true
 		})
 	}
 
