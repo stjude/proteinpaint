@@ -217,25 +217,26 @@ class singleCellPlot {
 	}
 
 	renderShowPlots(showDiv, state) {
-		showDiv.append('label').text('Plots:').style('vertical-align', 'top')
-		const plot_select = showDiv
-			.append('select')
-			//.property('multiple', true)
-			.on('change', e => {
-				const options = plot_select.node().options
-				const singleCellPlot = {}
-				for (const option of options) singleCellPlot[option.value] = option.selected
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: { settings: { singleCellPlot } }
-				})
-			})
+		showDiv.append('label').text('Plots:').style('font-weight', 'bold')
 
 		for (const plot of state.config.plots) {
 			const id = plot.name.replace(/\s+/g, '')
 			const key = `show${id}`
-			const option = plot_select.append('option').text(plot.name).attr('value', key).property('selected', plot.selected)
+			showDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('id', key)
+				.property('checked', plot.selected)
+				.on('change', e => {
+					let plots = structuredClone(this.state.config.plots)
+					plots.find(p => p.name == plot.name).selected = e.target.checked
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { plots }
+					})
+				})
+			showDiv.append('label').attr('for', key).text(plot.name)
 		}
 	}
 
@@ -575,10 +576,7 @@ class singleCellPlot {
 			this.dom.colorBySelect.selectAll('*').remove()
 			for (const plot of this.state.termdbConfig?.queries.singleCell.data.plots) {
 				const colorColumn = this.state.config.colorBy?.[plot.name] || plot.colorColumns[0]
-				const id = plot.name.replace(/\s+/g, '') //plot id
-				const plotKey = `show${id}` //for each plot a show checkbox is added and its value is stored in settings
-				const display = this.settings[plotKey]
-				if (!uniqueColorColumns.has(colorColumn) && display) {
+				if (!uniqueColorColumns.has(colorColumn) && plot.selected) {
 					this.dom.colorBySelect.append('option').text(colorColumn)
 					uniqueColorColumns.add(colorColumn)
 				}
@@ -589,9 +587,7 @@ class singleCellPlot {
 	async getData() {
 		const plots = []
 		for (const plot of this.config.plots) {
-			const id = plot.name.replace(/\s+/g, '')
-			const display = this.settings[`show${id}`]
-			if (display) plots.push(plot.name)
+			if (plot.selected) plots.push(plot.name)
 		}
 
 		const body = {
@@ -911,8 +907,8 @@ class singleCellPlot {
 	}
 
 	renderGrid(plot) {
-		const color = '#D4D4D4'
-		const opacity = 0.6
+		const color = '#aaa'
+		const opacity = 0.5
 		const bins = 6
 		const size = this.settings.svgw / bins
 		let x, y
@@ -1156,11 +1152,7 @@ export async function getPlotConfig(opts, app) {
 		let settings = getDefaultSingleCellSettings()
 		if (data.width) settings.svgw = data.width
 		if (data.height) settings.svgh = data.height
-		for (const plot of plots) {
-			const id = plot.name.replace(/\s+/g, '')
-			const key = `show${id}`
-			settings[key] = plot.selected
-		}
+
 		const config = {
 			hiddenClusters: [],
 			settings: {
