@@ -154,7 +154,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		boxplotWidth: 550,
 		color: plotColor,
 		labelPad: 10,
-		rowHeight: 150,
+		rowHeight: 60,
 		rowSpace: 20
 	}
 	return Object.assign(defaults, overrides)
