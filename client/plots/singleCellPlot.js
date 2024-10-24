@@ -230,10 +230,16 @@ class singleCellPlot {
 				.on('change', e => {
 					let plots = structuredClone(this.state.config.plots)
 					plots.find(p => p.name == plot.name).selected = e.target.checked
+					const selectedPlots = plots.filter(p => p.selected)
+					const width = 900
+					const height = 900
+					let settings = {}
+					settings.svgh = width / selectedPlots.length
+					settings.svgw = height / selectedPlots.length
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
-						config: { plots }
+						config: { plots, settings: { singleCellPlot: settings } }
 					})
 				})
 			showDiv.append('label').attr('for', key).text(plot.name)
