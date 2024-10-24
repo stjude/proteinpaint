@@ -9,32 +9,34 @@ export class View {
 	private incrTopPad = 40
 
 	constructor(name: string, data: any, settings: BoxplotSettings, dom: BoxplotDom) {
-		const dimensions = data.plotDim
-		const labelsWidth = dimensions.totalLabelWidth
-		const totalWidth = dimensions.svgWidth
-		const totalHeight = dimensions.svgHeight + this.incrTopPad
+		const plotDim = data.plotDim
+		const labelsWidth = plotDim.totalLabelWidth
+		const totalWidth = plotDim.svgWidth
+		const totalHeight = plotDim.svgHeight + this.incrTopPad
 
 		dom.svg.transition().attr('width', totalWidth).attr('height', totalHeight)
 
-		//Add 3 to the max so the upper line to boxplot isn't cutoff
+		//Add 1 to the max so the upper line to boxplot isn't cutoff
 		const yScale = scaleLinear()
-			.domain([data.absMin, data.absMax + 3])
+			.domain([data.absMin, data.absMax + 1])
 			.range([0, settings.boxplotWidth])
 
 		//Title of the plot
 		dom.plotTitle
+			.attr('id', 'sjpp-boxplot-title')
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr(
 				'transform',
-				`translate(${labelsWidth + settings.boxplotWidth / 2}, ${dimensions.vertPad + this.incrTopPad / 2})`
+				`translate(${labelsWidth + settings.boxplotWidth / 2}, ${plotDim.vertPad + this.incrTopPad / 2})`
 			)
 			.text(name)
 		this.incrTopPad += 20
 
 		//y-axis below the title
 		dom.yAxis
-			.attr('transform', `translate(${labelsWidth}, ${dimensions.vertPad + this.incrTopPad})`)
+			.attr('id', 'sjpp-boxplot-yAxis')
+			.attr('transform', `translate(${labelsWidth}, ${plotDim.vertPad + this.incrTopPad})`)
 			.transition()
 			.call(axisTop(yScale))
 		this.incrTopPad += 10
@@ -52,8 +54,9 @@ export class View {
 				bp: plot.boxplot,
 				g: dom.boxplots
 					.append('g')
+					.attr('id', `sjpp-boxplot-${plot.boxplot.label}`)
 					.attr('padding', '5px')
-					.attr('transform', `translate(${labelsWidth}, ${this.incrTopPad + dimensions.vertPad})`),
+					.attr('transform', `translate(${labelsWidth}, ${this.incrTopPad + plotDim.vertPad})`),
 				color: plot.color,
 				scale: yScale,
 				rowheight: settings.rowHeight,
@@ -61,7 +64,7 @@ export class View {
 				labColor: 'black'
 			})
 
-			this.incrTopPad += dimensions.totalRowHeight
+			this.incrTopPad += plotDim.totalRowHeight
 		}
 	}
 }

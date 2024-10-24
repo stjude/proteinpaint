@@ -60,7 +60,7 @@ class TdbBoxplot extends RxComponent {
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = opts.controls ? holder : holder.append('div')
-		const svg = div.append('svg').style('display', 'inline-block')
+		const svg = div.append('svg').style('display', 'inline-block').attr('class', 'sjpp-boxplot-svg')
 		this.dom = {
 			controls,
 			div,

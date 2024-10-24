@@ -91,7 +91,9 @@ tape('With plot label and label color', test => {
 	drawBoxplot(boxplotData)
 
 	const label: any = holder.select('text')
-	test.true(label && label.attr('fill') == opts.labColor, `Should render ${opts.labColor} label`)
+	test.true(label, 'Should render label')
+	test.equal(label.node().textContent, opts.label, `Should render ${opts.label} label`)
+	test.equal(label.attr('fill'), opts.labColor, `Should render ${opts.labColor} label`)
 
 	if (test['_ok']) holder.remove()
 	test.end()
