@@ -5,7 +5,8 @@ import { drawBoxplot } from '#dom'
 
 /* Tests
     Default drawBoxplot()
-    With plot label and out values
+    With plot label and label color
+    With out values and radius
 */
 
 /**************
@@ -26,7 +27,7 @@ function appendGHolder(holder) {
 }
 
 function mockBoxplotData(opts) {
-	return {
+	const _opts: any = {
 		g: opts.g,
 		bp: {
 			w1: -0.0415824538,
@@ -45,6 +46,9 @@ function mockBoxplotData(opts) {
 		rowheight: 100,
 		labpad: 10
 	}
+	if (opts.labColor) _opts.labColor = opts.labColor
+	if (opts.radius) _opts.bp.radius = opts.radius
+	return _opts
 }
 
 /**************
@@ -72,17 +76,46 @@ tape('Default drawBoxplot()', test => {
 	test.end()
 })
 
-tape('With plot label and out values', test => {
+tape('With plot label and label color', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder()
 	const g = appendGHolder(holder)
-	const boxplotData = mockBoxplotData({ g, label: 'All Samples', out: [{ value: 21.142465753 }] })
+	const opts = {
+		g,
+		label: 'All Samples',
+		labColor: 'black'
+	}
+	const boxplotData = mockBoxplotData(opts)
 
 	drawBoxplot(boxplotData)
 
-	test.equal(holder.selectAll('text').size(), 1, 'Should render label')
-	test.equal(holder.selectAll('circle').size(), 1, 'Should render circle for out value')
+	const label: any = holder.select('text')
+	test.true(label && label.attr('fill') == opts.labColor, `Should render ${opts.labColor} label`)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('With out values and radius', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder()
+	const g = appendGHolder(holder)
+	const opts = {
+		g,
+		out: [{ value: 21.142465753 }],
+		radius: 5
+	}
+	const boxplotData = mockBoxplotData(opts)
+
+	drawBoxplot(boxplotData)
+
+	const circle: any = holder.select('circle')
+	test.true(
+		circle && circle.attr('r') == opts.radius,
+		`Should render circle for out value with a radius = ${opts.radius}`
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()

@@ -5,20 +5,18 @@ import { axisTop } from 'd3-axis'
 import type { BoxplotDom, BoxplotSettings } from './Boxplot'
 
 export class View {
-	/** Padding for the bottom to avoid plot cutoff */
-	readonly bottomPad = 20
-	/** Top padding */
-	readonly topPad = 20
-	/** Increasing padding to space out the boxplots */
+	/** Vertical, or top and bottom padding */
+	readonly vertPad = 20
+	/** Horizontal, or right and left padding */
+	readonly horizPad = 100
+	/** Increasing padding to space out the boxplots and determine position */
 	incrTopPad = 30
 
 	constructor(name: string, data: any, settings: BoxplotSettings, dom: BoxplotDom) {
 		const dimensions = data.plotDim
-		//TODO: 150 because the string label length isn't enough. Need to calculate the extra space for the labels.
-		const labelsWidth = data.maxLabelLgth + settings.labelPad + 150
-		//TODO: 100 for the out values. Need to calculate the width of the out values.
-		const totalWidth = settings.boxplotWidth + labelsWidth + 100
-		const totalHeight = dimensions.totalRowHeight * data.plots.length + this.bottomPad + this.topPad + this.incrTopPad
+		const labelsWidth = dimensions.totalLabelWidth + this.horizPad
+		const totalWidth = dimensions.svgWidth + this.horizPad
+		const totalHeight = dimensions.svgHeight + this.vertPad * 2 + this.incrTopPad
 
 		dom.svg.transition().attr('width', totalWidth).attr('height', totalHeight)
 
@@ -26,15 +24,18 @@ export class View {
 		const yScale = scaleLinear()
 			.domain([data.absMin, data.absMax + 3])
 			.range([0, settings.boxplotWidth])
+
+		//Title of the plot
 		dom.plotTitle
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
-			.attr('transform', `translate(${totalWidth / 2}, ${this.topPad + this.incrTopPad / 2})`)
+			.attr('transform', `translate(${labelsWidth + settings.boxplotWidth / 2}, ${this.vertPad + this.incrTopPad / 2})`)
 			.text(name)
-		this.incrTopPad += 10
+		this.incrTopPad += 20
 
+		//y-axis below the title
 		dom.yAxis
-			.attr('transform', `translate(${labelsWidth}, ${this.topPad + this.incrTopPad})`)
+			.attr('transform', `translate(${labelsWidth}, ${this.vertPad + this.incrTopPad})`)
 			.transition()
 			.call(axisTop(yScale))
 		this.incrTopPad += 10
@@ -46,13 +47,14 @@ export class View {
 			color: 'black'
 		})
 
+		/** Draw boxplots, incrementing by the total row height */
 		for (const plot of data.plots) {
 			drawBoxplot({
 				bp: plot.boxplot,
 				g: dom.boxplots
 					.append('g')
 					.attr('padding', '5px')
-					.attr('transform', `translate(${labelsWidth}, ${this.incrTopPad + this.topPad})`),
+					.attr('transform', `translate(${labelsWidth}, ${this.incrTopPad + this.vertPad})`),
 				color: plot.color,
 				scale: yScale,
 				rowheight: settings.rowHeight,
