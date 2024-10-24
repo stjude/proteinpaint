@@ -195,10 +195,11 @@ export default function svgLegend(opts) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
 			const colors = d.scale ? d.domain.map(c => d.scale(c)) : d.colors || ['white', 'grey']
 			const getData = () => {
-				if (d.domain.length > 2) {
-					if (d.domain[0] > d.minLabel) d.domain[0] = d.minLabel
-					if (d.domain[d.domain.length - 1] < d.maxLabel) d.domain[d.domain.length - 1] = d.maxLabel
-					return d.domain
+				const data = structuredClone(d.domain)
+				if (data.length > 2) {
+					if (data[0] > d.minLabel) data[0] = d.minLabel
+					if (data[data.length - 1] < d.maxLabel) data[data.length - 1] = d.maxLabel
+					return data
 				} else {
 					return [d.minLabel || d.domain[0], d.maxLabel || d.domain[1]]
 				}
