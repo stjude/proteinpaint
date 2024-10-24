@@ -6,13 +6,13 @@ export class ViewModel {
 	/** Bottom padding for the svg */
 	readonly bottomPad = 40
 	/** Horizontal, or right and left padding */
-	readonly horizPad = 100
+	readonly horizPad = 120
 	/** For outliers, set a radius rather than using the default. */
 	readonly outRadius = 5
 	constructor(config: any, data: any, settings: BoxplotSettings) {
 		for (const plot of data.plots) {
-			plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
-			if (plot.boxplot.out?.length) {
+			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
+			if (plot.boxplot.out.length) {
 				const maxOut = plot.boxplot.out.reduce((a, b) => Math.max(a.value, b.value))
 				if (maxOut && maxOut.value > data.absMax) data.absMax = maxOut.value
 				plot.boxplot.radius = this.outRadius

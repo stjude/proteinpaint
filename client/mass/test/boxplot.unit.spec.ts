@@ -5,10 +5,13 @@ import { ViewModel } from '../../plots/boxplot/ViewModel'
 /*
 Tests:
     new ViewModel()
+
+
+See unit tests for #dom/boxplot for rendering unit tests
 */
 
 const mockConfig = {
-	term: {},
+	term: { term: termjson['agedx'] },
 	term2: { term: termjson['sex'] }
 }
 
@@ -19,7 +22,8 @@ const mockData = {
 			boxplot: {
 				label: '1, n=1',
 				min: 20,
-				max: 100
+				max: 100,
+				out: []
 			}
 		},
 		{
@@ -27,7 +31,8 @@ const mockData = {
 			boxplot: {
 				label: '2, n=2',
 				min: 0,
-				max: 60
+				max: 60,
+				out: []
 			}
 		}
 	]

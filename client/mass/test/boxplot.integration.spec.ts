@@ -49,17 +49,23 @@ tape('Default boxplot', test => {
 				}
 			]
 		},
-		summary: {
+		boxplot: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	async function runTests(summary) {
-		summary.on('postRender.test', null)
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		const config = boxplot.Inner.state.config
 
-		// if (test._ok) summary.Inner.app.destroy()
+		test.equal(dom.plotTitle.text(), config.term.term.name, `Should render ${config.term.term.name} title`)
+		test.true(dom.yAxis.select('path'), 'Should render y axis')
+		test.equal(dom.boxplots.selectAll("g[id^='sjpp-boxplot-']").size(), 1, 'Should render 1 boxplot')
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -83,17 +89,25 @@ tape('Boxplot with overlay term = sex', test => {
 				}
 			]
 		},
-		summary: {
+		boxplot: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	async function runTests(summary) {
-		summary.on('postRender.test', null)
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		const config = boxplot.Inner.state.config
+		const numValues = Object.keys(config.term2.term.values).length
+		test.equal(
+			dom.boxplots.selectAll("g[id^='sjpp-boxplot-']").size(),
+			numValues,
+			`Should render ${numValues} boxplots`
+		)
 
-		// if (test._ok) summary.Inner.app.destroy()
+		if (test['_ok']) boxplot.Inner.app.destroy()
 		test.end()
 	}
 })
