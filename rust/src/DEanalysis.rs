@@ -583,11 +583,16 @@ fn main() {
                                     Some(x) => {
                                         if x == "HDF5" {
                                             storage_type = "HDF5"
+                                        } else if x == "text" {
+                                            storage_type = "text"
                                         } else {
-                                            panic!("storage_type needs to be HDF5 or txt");
+                                            panic!(
+                                                "Unknown storage_type:{}{}",
+                                                x, " Needs to be either HDF5 or text"
+                                            );
                                         }
                                     }
-                                    None => storage_type = "text",
+                                    None => panic!("storage_type needs to be HDF5 or text"),
                                 }
                                 let min_count;
                                 match min_count_option {

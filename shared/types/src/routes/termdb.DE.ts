@@ -10,7 +10,7 @@ export type DERequest = {
 	/** Minimum total read count required for each sample */
 	min_total_count: number
 	/** Storage_type for storing data. Will deprecate text files */
-	storage_type?: 'text' | 'HDF5'
+	storage_type: 'text' | 'HDF5'
 	/** Method of DE used wilcoxon/edgeR */
 	method?: string
 }
@@ -28,8 +28,8 @@ export type ExpressionInput = {
 	min_count: number
 	/** Minimum total read count required for each sample */
 	min_total_count: number
-	/** Type of storage file: HDF5 or text.Text will be deprecated in the future */
-	storage_type?: 'HDF5' | 'text'
+	/** Type of storage file: HDF5 or text. Text will be deprecated in the future */
+	storage_type: 'HDF5' | 'text'
 }
 
 export type DEResponse = {
