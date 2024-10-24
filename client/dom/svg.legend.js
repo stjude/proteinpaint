@@ -194,11 +194,20 @@ export default function svgLegend(opts) {
 		if (d.domain) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
 			const colors = d.scale ? d.domain.map(c => d.scale(c)) : d.colors || ['white', 'grey']
+			const getData = () => {
+				if (d.domain.length > 2) {
+					if (d.domain[0] > d.minLabel) d.domain[0] = d.minLabel
+					if (d.domain[d.domain.length - 1] < d.maxLabel) d.domain[d.domain.length - 1] = d.maxLabel
+					return d.domain
+				} else {
+					return [d.minLabel || d.domain[0], d.maxLabel || d.domain[1]]
+				}
+			}
 			new ColorScale({
 				barwidth: width,
 				barheight: settings.iconh,
 				colors,
-				data: [d.minLabel || d.domain[0], d.maxLabel || d.domain[1]],
+				data: getData(),
 				// data: d.domain.length > 2 ? d.domain : d.domain[0] < d.domain[1] ? [0, 1] : [1, 0],
 				fontSize: 0.82 * settings.fontsize,
 				holder: g,
