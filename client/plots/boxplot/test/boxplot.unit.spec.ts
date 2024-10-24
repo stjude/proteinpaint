@@ -1,6 +1,6 @@
 import tape from 'tape'
-import { termjson } from '../../test/testdata/termjson'
-import { ViewModel } from '../../plots/boxplot/ViewModel'
+import { termjson } from '../../../test/testdata/termjson'
+import { ViewModel } from '../ViewModel'
 
 /*
 Tests:
