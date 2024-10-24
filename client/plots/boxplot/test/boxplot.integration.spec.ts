@@ -1,5 +1,5 @@
 import tape from 'tape'
-import * as helpers from '../../test/front.helpers.js'
+import * as helpers from '../../../test/front.helpers.js'
 
 /*
 Tests:
