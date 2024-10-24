@@ -212,9 +212,10 @@ export class ColorScale {
 
 	makeColorBar(gradient?: GradientElem) {
 		const gradElem = gradient || this.dom.gradient
+		const range = this.getRange()
 		for (const c of this.colors) {
 			const idx = this.colors.indexOf(c)
-			const offset = (idx / (this.colors.length - 1)) * 100
+			const offset = range[idx]
 			gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${c}`)
 		}
 	}
@@ -228,9 +229,16 @@ export class ColorScale {
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
 		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight})`)
-		const scale = scaleLinear().domain(this.data).range([0, this.barwidth])
+		const scale = scaleLinear().domain(this.data).range(this.getRange())
 
 		return { scale, scaleAxis }
+	}
+
+	getRange() {
+		const range = this.data.map((v, i) => {
+			return this.barwidth * (i / (this.data.length - 1))
+		})
+		return range
 	}
 
 	markedValueInColorBar(div: SvgG) {
@@ -279,8 +287,8 @@ export class ColorScale {
 
 	updateAxis() {
 		this.formatData()
-		const start = this.data[0]
-		const stop = this.data[this.data.length - 1]
+		// const start = this.data[0]
+		// const stop = this.data[this.data.length - 1]
 
 		this.dom.scaleAxis.selectAll('*').remove()
 
