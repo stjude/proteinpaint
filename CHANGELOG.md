@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- Phenotree parser accepts a new 'unit' column for numeric terms.
+
 Fixes:
 - create src/helper.ts with joinUrl()
 - prototype cnv filter prompt to change cnvMaxLength
