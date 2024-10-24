@@ -852,7 +852,7 @@ tape('Click zoom in, zoom out, and reset buttons', function (test) {
 
 	async function testZoomIn(scatter) {
 		const zoomin_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-in-btn"]')
-		await detectTransform(scatter, zoomin_bt, 1.5)
+		await detectTransform(scatter, zoomin_bt, 1.2)
 		const scale = scatter.Inner.zoom
 		test.ok(scale > 1, `Plot should zoom in`)
 	}
@@ -866,7 +866,7 @@ tape('Click zoom in, zoom out, and reset buttons', function (test) {
 
 	async function testZoomOut(scatter) {
 		const zoomout_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-out-btn"]')
-		await detectTransform(scatter, zoomout_bt, 0.5)
+		await detectTransform(scatter, zoomout_bt, 0.8)
 		const scale = scatter.Inner.zoom
 		test.ok(scale < 1, `Plot should zoom out`)
 	}
