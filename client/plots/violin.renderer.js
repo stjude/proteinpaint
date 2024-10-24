@@ -89,7 +89,8 @@ export default function setViolinRenderer(self) {
 	}
 
 	self.getPlotThickness = function () {
-		return self.settings.plotThickness || 150 //may be undefined if loading a state, because main is not executed
+		//self.settings.plotThickness may be undefined if loading a state, because main is not executed
+		return (self.settings.plotThickness || 145) + self.settings.rowSpace
 	}
 
 	self.renderPvalueTable = function () {
