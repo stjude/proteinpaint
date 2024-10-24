@@ -1597,7 +1597,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	*/
 	{
 		let samples = []
-		if (!ds.queries.rnaseqGeneCount.storage_type || ds.queries.rnaseqGeneCount.storage_type == 'text') {
+		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
 			samples = (await getFirstLine(q.file)).trim().split('\t').slice(4)
 		} else if (ds.queries.rnaseqGeneCount.storage_type == 'HDF5') {
 			const get_samples_from_hdf5 = {
@@ -1612,7 +1612,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			const time1 = new Date().valueOf()
 			const rust_output = await run_rust('DEanalysis', JSON.stringify(get_samples_from_hdf5))
 			const time2 = new Date().valueOf()
-			console.log('Time taken to query gene expression:', time2 - time1, 'ms')
+			//console.log('Time taken to query gene expression:', time2 - time1, 'ms')
 			let result
 			for (const line of rust_output.split('\n')) {
 				if (line.startsWith('output_string:')) {
