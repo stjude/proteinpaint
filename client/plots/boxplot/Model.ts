@@ -6,7 +6,7 @@ export class Model {
 	state: any
 	app: MassAppApi
 	settings: BoxplotSettings
-	constructor(config, state, app, settings) {
+	constructor(config, state, app: MassAppApi, settings: BoxplotSettings) {
 		this.config = config
 		this.state = state
 		this.app = app

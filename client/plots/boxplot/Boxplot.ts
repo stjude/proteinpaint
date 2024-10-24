@@ -12,8 +12,9 @@ import type { Elem } from '../../types/d3'
  *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
  *	Finish overlay controls and add other controls
  *	Hover effect?
- *	Descriptive states tables?
+ *	Descriptive stats tables?
  *	Fix issues toggling between summary plots
+ *	Types for config and data
  */
 
 export type BoxplotSettings = {
@@ -155,7 +156,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		color: plotColor,
 		labelPad: 10,
 		rowHeight: 60,
-		rowSpace: 20
+		rowSpace: 5
 	}
 	return Object.assign(defaults, overrides)
 }
@@ -177,7 +178,7 @@ export async function getPlotConfig(opts, app) {
 			controls: {
 				term2: null
 			},
-			boxplot: getDefaultBoxplotSettings(app)
+			boxplot: getDefaultBoxplotSettings(app, opts.overrides || {})
 		}
 	}
 	return copyMerge(config, opts)
