@@ -220,7 +220,7 @@ class singleCellPlot {
 		showDiv.append('label').text('Plots:').style('vertical-align', 'top')
 		const plot_select = showDiv
 			.append('select')
-			.property('multiple', true)
+			//.property('multiple', true)
 			.on('change', e => {
 				const options = plot_select.node().options
 				const singleCellPlot = {}
