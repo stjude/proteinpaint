@@ -946,8 +946,8 @@ class singleCellPlot {
 	renderColorGradient(plot, legendG, gene) {
 		if (plot.cells.length == 0) return
 		const colorGradient = rgb(plotColor)
-		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(1).toString()
-		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
+		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = 'white'
+		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(2).toString()
 		const colors = [this.config.startColor[plot.name], this.config.stopColor[plot.name]]
 
 		let offsetY = 25
