@@ -1,6 +1,12 @@
 import type { BoxplotSettings } from './Boxplot'
 
 export class ViewModel {
+	/** Top padding for the svg */
+	readonly topPad = 20
+	/** Bottom padding for the svg */
+	readonly bottomPad = 40
+	/** Horizontal, or right and left padding */
+	readonly horizPad = 100
 	/** For outliers, set a radius rather than using the default. */
 	readonly outRadius = 5
 	constructor(config: any, data: any, settings: BoxplotSettings) {
@@ -13,18 +19,23 @@ export class ViewModel {
 			}
 		}
 
-		const totalLabelWidth = data.maxLabelLgth + settings.labelPad
-		const totalRowHeight = settings.rowHeight + settings.rowSpace
-
 		/** Add more plot dimensions here
 		 * Eventually should calculate the difference between vertical and
 		 * horizontal orientation.
+		 *
+		 * maybe return as const? not in data?
 		 */
+
+		const totalLabelWidth = data.maxLabelLgth + settings.labelPad + this.horizPad
+		const totalRowHeight = settings.rowHeight + settings.rowSpace
+
 		data.plotDim = {
-			svgWidth: settings.boxplotWidth + totalLabelWidth,
-			svgHeight: data.plots.length * totalRowHeight,
+			svgWidth: settings.boxplotWidth + totalLabelWidth + this.horizPad,
+			svgHeight: data.plots.length * totalRowHeight + this.topPad + this.bottomPad,
 			totalLabelWidth,
-			totalRowHeight
+			totalRowHeight,
+			vertPad: this.topPad,
+			horizPad: this.horizPad
 		}
 	}
 }
