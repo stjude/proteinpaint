@@ -5,16 +5,9 @@ import { axisTop } from 'd3-axis'
 import type { BoxplotDom, BoxplotSettings } from './Boxplot'
 
 export class View {
-	/** Increasing padding to space out the boxplots and determine position */
-	private incrTopPad = 40
-
-	constructor(name: string, data: any, settings: BoxplotSettings, dom: BoxplotDom) {
+	constructor(data: any, settings: BoxplotSettings, dom: BoxplotDom) {
 		const plotDim = data.plotDim
-		const labelsWidth = plotDim.totalLabelWidth
-		const totalWidth = plotDim.svgWidth
-		const totalHeight = plotDim.svgHeight + this.incrTopPad
-
-		dom.svg.transition().attr('width', totalWidth).attr('height', totalHeight)
+		dom.svg.transition().attr('width', plotDim.svgWidth).attr('height', plotDim.svgHeight)
 
 		//Add 1 to the max so the upper line to boxplot isn't cutoff
 		const yScale = scaleLinear()
@@ -26,20 +19,15 @@ export class View {
 			.attr('id', 'sjpp-boxplot-title')
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
-			.attr(
-				'transform',
-				`translate(${labelsWidth + settings.boxplotWidth / 2}, ${plotDim.vertPad + this.incrTopPad / 2})`
-			)
-			.text(name)
-		this.incrTopPad += 20
+			.attr('transform', `translate(${plotDim.title.x}, ${plotDim.title.y})`)
+			.text(data.plotTitle)
 
 		//y-axis below the title
 		dom.yAxis
 			.attr('id', 'sjpp-boxplot-yAxis')
-			.attr('transform', `translate(${labelsWidth}, ${plotDim.vertPad + this.incrTopPad})`)
+			.attr('transform', `translate(${plotDim.yAxis.x}, ${plotDim.yAxis.y})`)
 			.transition()
 			.call(axisTop(yScale))
-		this.incrTopPad += 10
 
 		axisstyle({
 			axis: dom.yAxis,
@@ -56,15 +44,13 @@ export class View {
 					.append('g')
 					.attr('id', `sjpp-boxplot-${plot.boxplot.label}`)
 					.attr('padding', '5px')
-					.attr('transform', `translate(${labelsWidth}, ${this.incrTopPad + plotDim.vertPad})`),
+					.attr('transform', `translate(${plot.x}, ${plot.y})`),
 				color: plot.color,
 				scale: yScale,
 				rowheight: settings.rowHeight,
 				labpad: settings.labelPad,
 				labColor: 'black'
 			})
-
-			this.incrTopPad += plotDim.totalRowHeight
 		}
 	}
 }

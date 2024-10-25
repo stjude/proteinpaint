@@ -4,7 +4,7 @@ import { ViewModel } from '../ViewModel'
 
 /*
 Tests:
-    new ViewModel()
+    Default new ViewModel()
 
 
 See unit tests for #dom/boxplot for rendering unit tests
@@ -16,6 +16,7 @@ const mockConfig = {
 }
 
 const mockData = {
+	maxLabelLgth: 10,
 	plots: [
 		{
 			seriesId: '1',
@@ -51,21 +52,32 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('new ViewModel()', function (test) {
+tape('Default new ViewModel()', function (test) {
 	test.timeoutAfter(100)
 
-	new ViewModel(mockConfig, mockData, mockSettings)
+	const viewModel: any = new ViewModel(mockConfig, mockData, mockSettings)
 
-	test.equal((mockData as any).plotDim.totalRowHeight, 30, 'Should set totalRowHeight to 30')
+	test.equal(typeof viewModel.plotDim, 'object', 'Should create a plotDim object')
+	test.equal(viewModel.plotDim.incrTopPad, 40, 'Should set incrTopPad to 40')
+	test.equal(viewModel.plotDim.svgWidth, 280, 'Should set svgWidth to 280')
+	test.equal(viewModel.plotDim.svgHeight, 160, 'Should set svgHeight to 160')
+	test.equal(viewModel.plotDim.title.x, 150, 'Should set title.x to 150')
+	test.equal(viewModel.plotDim.title.y, 40, 'Should set title.y to 40')
+	test.equal(viewModel.plotDim.totalLabelWidth, 140, 'Should set totalLabelWidth to 140')
+	test.equal(viewModel.plotDim.totalRowHeight, 30, 'Should set totalRowHeight to 30')
+	test.equal(viewModel.plotDim.vertPad, 20, 'Should set vertPad to 20')
+	test.equal(viewModel.plotDim.horizPad, 120, 'Should set horizPad to 120')
+	test.equal(viewModel.plotDim.yAxis.x, 140, 'Should set yAxis.x to 140')
+	test.equal(viewModel.plotDim.yAxis.y, 80, 'Should set yAxis.y to 80')
 	test.equal(
-		(mockData as any).plots[0].color,
+		viewModel.plots[0].color,
 		termjson['sex'].values[1].color,
-		'Should set plot color to the color defined for 1:"Female"'
+		`Should set first box plot color to ${termjson['sex'].values[1].color}`
 	)
 	test.equal(
-		(mockData as any).plots[1].color,
+		viewModel.plots[1].color,
 		termjson['sex'].values[2].color,
-		'Should set plot color to the color defined for 2:"Male"'
+		`Should set second box plot color to ${termjson['sex'].values[1].color}`
 	)
 
 	test.end()

@@ -139,8 +139,8 @@ class TdbBoxplot extends RxComponent {
 			const model = new Model(config, state, this.app, settings)
 			const data = await model.getData()
 
-			new ViewModel(config, data, settings)
-			new View(config.term.term.name, data, settings, this.dom)
+			const viewData = new ViewModel(config, data, settings)
+			new View(viewData, settings, this.dom)
 		} catch (e: any) {
 			console.error(new Error(e.message || e))
 		}
