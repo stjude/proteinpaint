@@ -200,8 +200,13 @@ export async function initGenomesDs(serverconfig) {
 		if (!g.majorchr) throw genomename + ': majorchr missing'
 		if (!g.defaultcoord) throw genomename + ': defaultcoord missing'
 
-		// test samtools and genomefile
-		await utils.get_fasta(g, g.defaultcoord.chr + ':' + g.defaultcoord.start + '-' + (g.defaultcoord.start + 1))
+		try {
+			// test samtools and genomefile
+			await utils.get_fasta(g, g.defaultcoord.chr + ':' + g.defaultcoord.start + '-' + (g.defaultcoord.start + 1))
+		} catch (e) {
+			// either samtools or fasta file failed
+			throw `${genomename}: cannot get genome sequence: ${e.message || e}`
+		}
 
 		if (!g.tracks) {
 			g.tracks = []
