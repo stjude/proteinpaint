@@ -28,7 +28,21 @@ class BrainImaging {
 				app: this.app,
 				id: this.id,
 				downloadHandler: () => {
-					const imgElement = this.image.node()
+					const canvas = document.createElement('canvas')
+					const image = new Image()
+					image.src = this.dataUrl
+					canvas.width = this.width
+					canvas.height = this.height
+
+					// Get the canvas's 2D rendering context
+					const ctx = canvas.getContext('2d')
+
+					// Draw the image onto the canvas, scaling it to fit
+					ctx.drawImage(image, 0, 0, this.width, this.height)
+
+					// Convert the canvas to a data URL
+					const dataUrl = canvas.toDataURL('image/png')
+
 					const downloadImgName = 'brainImaging'
 					const a = document.createElement('a')
 					document.body.appendChild(a)
@@ -38,7 +52,7 @@ class BrainImaging {
 						() => {
 							// Download the image
 							a.download = downloadImgName + '.png'
-							a.href = imgElement.src
+							a.href = dataUrl
 							document.body.removeChild(a)
 						},
 						false
@@ -130,9 +144,9 @@ class BrainImaging {
 			const image = new Image()
 			image.src = this.dataUrl
 			image.onload = () => {
-				const width = image.width * 2
-				const height = image.height * 2
-				this.image.attr('width', width).attr('height', height)
+				this.width = image.width * 2
+				this.height = image.height * 2
+				this.image.attr('width', this.width).attr('height', this.height)
 			}
 		}
 	}
