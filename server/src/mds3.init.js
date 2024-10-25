@@ -1814,7 +1814,7 @@ async function validate_query_NIdata(ds, genome) {
 				}
 
 				return new Promise((resolve, reject) => {
-					const ps = spawn('python3', [
+					const ps = spawn(serverconfig.python, [
 						`${serverconfig.binpath}/utils/plotBrainImaging.py`,
 						refFile,
 						sampleFile,

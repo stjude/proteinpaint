@@ -11,12 +11,17 @@ class BrainImaging {
 		this.isOpen = true
 	}
 
-	async init() {
+	async init(appState) {
 		const holder = this.opts.holder
 		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const topbar = controlsHolder.append('div')
 		const config_div = controlsHolder.append('div')
 		const configInputsOptions = this.getConfigInputsOptions()
+		this.image = this.opts.holder
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.append('img')
 
 		this.features = await multiInit({
 			topbar: topBarInit({
@@ -92,12 +97,6 @@ class BrainImaging {
 		const settings = this.state.settings
 		this.isOpen = settings.brainImaging.isOpen
 
-		this.opts.holder.select('div[id="sjpp_brainImaging_holder_div"]').remove()
-		const pngDiv = this.opts.holder
-			.append('div')
-			.attr('id', 'sjpp_brainImaging_holder_div')
-			.style('display', 'inline-block')
-
 		if (this.opts.header)
 			this.opts.header
 				.style('padding-left', '7px')
@@ -119,19 +118,23 @@ class BrainImaging {
 			t: settings.brainImaging.brainImageT,
 			selectedSampleFileNames: this.state.selectedSampleFileNames
 		}
+		const firstTime = this.dataUrl == undefined
+		if (this.dataUrl) this.image.attr('src', this.dataUrl) //keep the previous image while waiting for the new one
 		const data = await dofetch3('brainImaging', { body })
 		if (data.error) throw data.error
-		const dataUrl = await data.brainImage
+		this.dataUrl = await data.brainImage
+		this.image.attr('src', this.dataUrl)
 
-		const img = new Image()
-		img.onload = () => {
-			pngDiv
-				.append('img')
-				.attr('width', img.width * 2)
-				.attr('height', img.height * 2)
-				.attr('src', dataUrl)
+		if (firstTime) {
+			//get image size to resize the image
+			const image = new Image()
+			image.src = this.dataUrl
+			image.onload = () => {
+				const width = image.width * 2
+				const height = image.height * 2
+				this.image.attr('width', width).attr('height', height)
+			}
 		}
-		img.src = dataUrl
 	}
 
 	getState(appState) {
