@@ -7,7 +7,7 @@ import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { rgb } from 'd3'
+import { color, rgb } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, make_radios, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
@@ -178,7 +178,7 @@ class singleCellPlot {
 			this.dom.deselect = label.append('select').on('change', e => {
 				const display = this.dom.deselect.node().value ? 'inline-block' : 'none'
 				const cluster = this.dom.deselect.node().value.split(' ')[1]
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { cluster } })
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { cluster, gene: null } })
 				this.dom.GSEAbt.style('display', display)
 			})
 			this.dom.deselect.append('option').text('')
@@ -334,30 +334,25 @@ class singleCellPlot {
 			case SAMPLES_TAB:
 				this.dom.tableDiv.style('display', 'block')
 				this.dom.showDiv.style('display', 'none')
-				this.dom.searchboxDiv.style('display', 'none')
 				this.dom.deDiv.style('display', 'none')
+				this.dom.geDiv.style('display', 'none')
+
 				break
 			case PLOTS_TAB:
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'block')
-				this.dom.searchboxDiv.style('display', 'none')
 				this.dom.deDiv.style('display', 'none')
-
+				this.dom.geDiv.style('display', 'none')
 				break
 			case COLORBY_TAB:
 				this.dom.geDiv.style('display', 'none')
 				this.dom.deDiv.style('display', 'none')
-
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
-				this.dom.searchboxDiv.style('display', 'none')
-				this.dom.searchbox.style('display', 'none')
 				break
 			case GENE_EXPRESSION_TAB:
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'inline-block')
-				this.dom.searchbox.style('display', 'inline-block')
-				this.dom.searchboxDiv.style('display', 'inline-block')
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
 				this.dom.searchbox.node().focus()
@@ -366,9 +361,7 @@ class singleCellPlot {
 				break
 			case DIFFERENTIAL_EXPRESSION_TAB:
 				this.dom.deDiv.style('display', 'inline-block')
-				this.dom.geDiv.style('display', 'inline-block')
-				this.dom.searchbox.style('display', 'inline-block')
-				this.dom.searchboxDiv.style('display', 'none')
+				this.dom.geDiv.style('display', 'none')
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
 				this.renderDETable()
@@ -752,18 +745,14 @@ class singleCellPlot {
 
 	getColor(d, plot) {
 		const noExpColor = lightGray
-
-		if (
-			this.state.config.activeTab != GENE_EXPRESSION_TAB &&
-			this.state.config.activeTab != DIFFERENTIAL_EXPRESSION_TAB
-		)
-			return plot.colorMap[d.category]
-		else if (this.state.config.gene) {
+		const colorByGene =
+			this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
+		if (!colorByGene || !this.state.config.gene) return plot.colorMap[d.category]
+		else if (colorByGene) {
 			if (!d.geneExp) return noExpColor
 			if (plot.colorGenerator) return plot.colorGenerator(d.geneExp)
 			return noExpColor //no gene expression data for this plot
 		}
-		return noExpColor
 	}
 
 	handleZoom(e, plot) {
@@ -1069,7 +1058,7 @@ class singleCellPlot {
 			resize: true,
 			singleMode: true,
 			div,
-			maxWidth: columns.length > 3 ? '90vw' : '50vw',
+			maxWidth: columns.length > 3 ? '90vw' : '40vw',
 			maxHeight,
 			noButtonCallback: index => {
 				const sample = rows[index][0].value
