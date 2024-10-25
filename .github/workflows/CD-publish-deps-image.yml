@@ -114,8 +114,8 @@ jobs:
             git config --global user.email "PPTeam@STJUDE.ORG"
             git config --global user.name "PPTeam CI"
             git add deps/package.json
-            git add deps/full/Dockerfile
-            git add deps/server/Dockerfile
+            git add full/Dockerfile
+            git add server/Dockerfile
             git commit -m "Update deps version to $TAG"
             git stash -a
             git pull --rebase
