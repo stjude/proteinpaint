@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.81.5
 
 General:
 - Phenotree parser accepts a new 'unit' column for numeric terms.
