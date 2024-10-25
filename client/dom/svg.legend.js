@@ -195,26 +195,28 @@ export default function svgLegend(opts) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
 			const colors = d.scale ? d.domain.map(c => d.scale(c)) : d.colors || ['white', 'grey']
 			const getData = () => {
-				const data = structuredClone(d.domain)
-				if (data.length > 2) {
-					if (data[0] > d.minLabel) data[0] = d.minLabel
-					if (data[data.length - 1] < d.maxLabel) data[data.length - 1] = d.maxLabel
-					return data
-				} else {
-					return [d.minLabel || d.domain[0], d.maxLabel || d.domain[1]]
-				}
+				/** The domain in the legend item isn't always the actual data, required to show on the
+				 * axis. The ColorScale component requires the data[] and color[] arrays to be the same
+				 * length. This function creates the data[] array based on the colors[] array using the
+				 * real min and max values.
+				 */
+				return colors.map((v, i) => {
+					if (i == 0) return d.minLabel || d.domain[0]
+					else if (i == colors.length - 1) return d.maxLabel || d.domain[1]
+					else if (i == (colors.length - 1) / 2 && d.minLabel < 0 && d.maxLabel > 0) return 0
+					else return d.maxLabel * (i / (colors.length - 1))
+				})
 			}
 			new ColorScale({
 				barwidth: width,
 				barheight: settings.iconh,
 				colors,
 				data: getData(),
-				// data: d.domain.length > 2 ? d.domain : d.domain[0] < d.domain[1] ? [0, 1] : [1, 0],
 				fontSize: 0.82 * settings.fontsize,
 				holder: g,
 				id: colorGradientId,
 				position: `${bbox.width + 25},${y - 3}`,
-				ticks: 3,
+				ticks: 2,
 				tickSize: 0
 			})
 
