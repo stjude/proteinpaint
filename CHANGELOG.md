@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- report genome name on samtools-fasta error
+
+
 ## 2.81.5
 
 General:

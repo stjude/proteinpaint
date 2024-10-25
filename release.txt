@@ -1,2 +1,1 @@
-Fixes:
-- report genome name on samtools-fasta error
+
