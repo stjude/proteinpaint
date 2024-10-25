@@ -28,7 +28,7 @@ class BrainImaging {
 				app: this.app,
 				id: this.id,
 				downloadHandler: () => {
-					const imgElement = holder.select('div[id="sjpp_brainImaging_holder_div"] img').node()
+					const imgElement = this.image.node()
 					const downloadImgName = 'brainImaging'
 					const a = document.createElement('a')
 					document.body.appendChild(a)
