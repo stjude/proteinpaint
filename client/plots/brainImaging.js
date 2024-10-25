@@ -262,8 +262,7 @@ async function getTableData(self, samples, state, refKey) {
 	// add in optional sample columns
 	for (const c of state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
 		columns.push({
-			label: (await self.app.vocabApi.getterm(c.termid)).name,
-			width: '15vw'
+			label: (await self.app.vocabApi.getterm(c.termid)).name
 		})
 	}
 
