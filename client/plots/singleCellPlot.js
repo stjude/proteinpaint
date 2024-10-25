@@ -126,7 +126,7 @@ class singleCellPlot {
 		const topDiv = contentDiv.append('div')
 
 		const headerDiv = topDiv.append('div').style('display', 'inline-block')
-		const showDiv = topDiv.append('div')
+		const showDiv = topDiv.append('div').style('padding-bottom', '10px')
 
 		const tableDiv = contentDiv.append('div').style('margin-bottom', '20px')
 		await this.renderSamplesTable(tableDiv, state)
@@ -246,8 +246,8 @@ class singleCellPlot {
 		}
 	}
 
-	renderGeneExpressionControls(deDiv, state) {
-		this.dom.searchboxDiv = deDiv.append('div')
+	renderGeneExpressionControls(geDiv, state) {
+		this.dom.searchboxDiv = geDiv.append('div')
 		this.dom.geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.app.opts.genome,
@@ -261,7 +261,7 @@ class singleCellPlot {
 		})
 		this.dom.searchbox = this.dom.geneSearch?.searchbox
 
-		this.dom.colorBySelect = deDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
+		this.dom.colorBySelect = geDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 
 		this.dom.colorBySelect.on('change', async () => {
 			const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
@@ -274,7 +274,7 @@ class singleCellPlot {
 			const result = await this.app.vocabApi.getTopTermsByType(args)
 		})
 
-		this.dom.violinBt = deDiv
+		this.dom.violinBt = geDiv
 			.append('button')
 			.text('Open violin')
 			.style('margin-left', '2px')
@@ -688,7 +688,6 @@ class singleCellPlot {
 			.append('div')
 			.style('overflow', 'hidden')
 			.style('display', 'inline-block')
-			.style('padding', '10px')
 			.style('flex-grow', 1)
 
 		this.renderLegend(plot)
