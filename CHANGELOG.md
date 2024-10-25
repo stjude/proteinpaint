@@ -11,6 +11,7 @@ Fixes:
 - create src/helper.ts with joinUrl()
 - prototype cnv filter prompt to change cnvMaxLength
 - handle genes that has no expression data for any sample in the gene exp clustering tool
+- Add a footnote to the bottom of survival plot p-value table to explaine that pvalues are still computed with all survival data when Survival Time Cut-Off is set
 
 
 ## 2.81.4-0
