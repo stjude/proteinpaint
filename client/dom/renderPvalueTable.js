@@ -188,5 +188,14 @@ export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setAct
 					tip.show(event.clientX, event.clientY)
 				})
 		}
+
+		//footnote: pvalue is still computed with all survival data when Survival Time Cut-Off is set
+		if (s.maxTimeToEvent && visibleTests.length) {
+			holder
+				.append('div')
+				.style('margin-top', '10px')
+				.style('font-size', fontSize - 2 + 'px')
+				.text((visibleTests.length > 1 ? 'p-values are' : 'p-value is') + ' computed with all survival data')
+		}
 	}
 }

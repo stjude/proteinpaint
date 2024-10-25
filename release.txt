@@ -1,1 +1,2 @@
-
+Fixes:
+- Add a footnote to the bottom of survival plot p-value table to explaine that pvalues are still computed with all survival data when Survival Time Cut-Off is set
