@@ -40,6 +40,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.getTopTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.getSampleImages.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
+import { getApiStatus, testGDCApiStatus } from '#src/termdb.gdc.status.js'
 
 /*
 init
@@ -234,6 +235,11 @@ export async function validate_termdb(ds) {
 	tdb.sampleTypes = {}
 
 	if (tdb?.dictionary?.gdcapi) {
+		const isStatusOk = await testGDCApiStatus(ds)
+		if (!isStatusOk) {
+			return
+		}
+
 		await initGDCdictionary(ds)
 		/*
 		creates ds.cohort.termdb.q={}

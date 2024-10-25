@@ -3,6 +3,7 @@ import path from 'path'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { cachedFetch } from './utils'
+import { getApiStatus } from '#src/termdb.gdc.status.js'
 
 /*
 ********************   Comment   *****************
@@ -28,7 +29,6 @@ initGDCdictionary
 				fetchIdsFromGdcApi
 			mayReCacheCaseIdMapping
 				caseCacheIsStale
-					getApiStatus
 
 
 ******************** major tasks *****************
@@ -781,25 +781,6 @@ async function runRemainingWithoutAwait(ds) {
 	// add any other gdc stuff
 }
 
-async function getApiStatus(ds) {
-	const { host, headers } = ds.getHostHeaders()
-	const re = await ky(path.join(host.rest, 'status'), { headers }).json()
-
-	/* structured version detail, qa 9/2024. when in prod, expect to return so
-
-	"data_release_version": {
-		"major": 41,
-		"minor": 0,
-		"release_date": "2024-08-28"
-	  },
-	  */
-	if (re.data_release_version) return re.data_release_version
-
-	// old return. when new one is in GDC prod, remove this check
-	if (!re.data_release) throw '.data_release missing'
-	return re.data_release
-}
-
 async function getOpenProjects(ds) {
 	const data = {
 		filters: {
@@ -1046,7 +1027,7 @@ async function cacheSampleIdMapping(ds) {
 
 	// record /status endpoint result. subsequent stale cache check will requery /status and compare with this
 	// if this fetch fails, means the subsequent check won't work, and must abort launch
-	ds.__gdc.data_release_version = await getApiStatus(ds)
+	ds.__gdc.data_release_version = await getApiStatus(ds).data_release_version
 }
 
 /*
@@ -1201,7 +1182,7 @@ async function caseCacheIsStale(ds) {
 
 	let value
 	try {
-		value = await getApiStatus(ds)
+		value = await getApiStatus(ds).data_release_version
 	} catch (e) {
 		console.warn('GDC: fetch api status failed on a check. skip and wait for next check')
 		return false
