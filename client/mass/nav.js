@@ -293,7 +293,7 @@ function setRenderers(self) {
 			aboutTab.top = 'COHORT'
 			aboutTab.mid = ''
 			aboutTab.btm = ''
-		}
+		} else aboutTab.top = massNav?.tabs?.about?.top || appState.vocab.dslabel
 		const tabIdx = appState.termdbConfig?.selectCohort ? 0 : massNav?.tabs?.about?.order || 0
 		self.tabs.splice(tabIdx, 0, aboutTab)
 
