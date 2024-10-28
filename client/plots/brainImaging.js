@@ -120,7 +120,6 @@ class BrainImaging {
 			selectedSampleFileNames: this.state.config.selectedSampleFileNames
 		}
 		const firstTime = this.dataUrl == undefined
-		if (this.dataUrl) this.image.attr('src', this.dataUrl) //keep the previous image while waiting for the new one
 		const data = await dofetch3('brainImaging', { body })
 		if (data.error) throw data.error
 		this.dataUrl = await data.brainImage
