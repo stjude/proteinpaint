@@ -100,7 +100,7 @@ export function setRenderers(self) {
 			.transition()
 			.duration(s.duration)
 			.attr('width', width)
-			.attr('height', Math.max(s.svgh + 100, self.legendHeight)) //leaving some space for top/bottom padding and y axis
+			.attr('height', Math.max(s.svgh + 200, self.legendHeight)) //leaving some space for axis/ref/ scale legend/padding
 
 		/* eslint-disable */
 		fillSvgSubElems(chart)
@@ -665,6 +665,7 @@ export function setRenderers(self) {
 		legendG.selectAll('*').remove()
 		let offsetX = 0
 		let offsetY = 25
+		let legendHeight = 0
 		if (!self.config.colorTW && !self.config.shapeTW && !self.config.colorColumn) {
 			if (self.config.scaleDotTW) {
 				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX + 45},${self.legendHeight - 150})`)
@@ -772,11 +773,9 @@ export function setRenderers(self) {
 
 				refText.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', 'Ref', e, colorRefCategory))
 			}
+			legendHeight = offsetY
 		}
-		if (self.config.scaleDotTW) {
-			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 30})`)
-			self.drawScaleDotLegend(chart)
-		}
+
 		if (self.config.shapeTW) {
 			offsetX = !self.config.colorTW ? 0 : 300
 			offsetY = 60
@@ -817,6 +816,12 @@ export function setRenderers(self) {
 					itemG.on('click', event => self.onLegendClick(chart, legendG, 'shapeTW', key, event, shape))
 				}
 			}
+			if (offsetY > legendHeight) legendHeight = offsetY
+		}
+
+		if (self.config.scaleDotTW) {
+			chart.scaleG = legendG.append('g').attr('transform', `translate(${0},${legendHeight + 50})`)
+			self.drawScaleDotLegend(chart)
 		}
 
 		function getTitle(name, complete = false) {
