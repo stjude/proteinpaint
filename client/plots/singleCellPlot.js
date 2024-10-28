@@ -123,12 +123,11 @@ class singleCellPlot {
 			tabsPosition: 'horizontal',
 			tabs: this.tabs
 		}).main()
-		const topDiv = contentDiv.append('div')
 
-		const headerDiv = topDiv.append('div').style('display', 'inline-block')
-		const showDiv = topDiv.append('div').style('padding-bottom', '10px')
+		const headerDiv = contentDiv.append('div').style('display', 'inline-block')
+		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
 
-		const tableDiv = contentDiv.append('div').style('margin-bottom', '20px')
+		const tableDiv = headerDiv.append('div').style('margin-bottom', '20px')
 		await this.renderSamplesTable(tableDiv, state)
 
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
@@ -156,6 +155,7 @@ class singleCellPlot {
 
 		this.dom = {
 			header: this.opts.header,
+			headerDiv,
 			showDiv,
 			mainDiv,
 			loadingDiv,
@@ -332,6 +332,7 @@ class singleCellPlot {
 		const tab = this.state.config.activeTab || this.tabs[0].id
 		switch (tab) {
 			case SAMPLES_TAB:
+				this.dom.headerDiv.style('display', 'block')
 				this.dom.tableDiv.style('display', 'block')
 				this.dom.showDiv.style('display', 'none')
 				this.dom.deDiv.style('display', 'none')
@@ -339,18 +340,21 @@ class singleCellPlot {
 
 				break
 			case PLOTS_TAB:
+				this.dom.headerDiv.style('display', 'block')
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'none')
 				break
 			case COLORBY_TAB:
+				this.dom.headerDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'none')
 				this.dom.deDiv.style('display', 'none')
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
 				break
 			case GENE_EXPRESSION_TAB:
+				this.dom.headerDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'inline-block')
 				this.dom.tableDiv.style('display', 'none')
@@ -360,6 +364,7 @@ class singleCellPlot {
 				this.fillColorBy()
 				break
 			case DIFFERENTIAL_EXPRESSION_TAB:
+				this.dom.headerDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'inline-block')
 				this.dom.geDiv.style('display', 'none')
 				this.dom.tableDiv.style('display', 'none')
