@@ -10,7 +10,14 @@ class BrainImaging {
 	}
 
 	async init(appState) {
+		const state = this.getState(appState)
 		const holder = this.opts.holder
+		if (this.opts.header)
+			this.opts.header
+				.style('padding-left', '7px')
+				.style('color', 'rgb(85, 85, 85)')
+				.html(`Brain Imaging: ${state.config.queryKey}/${state.config.selectedSampleFileNames.join(' ')}`)
+
 		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const config_div = controlsHolder.append('div')
 		const configInputsOptions = this.getConfigInputsOptions()
@@ -19,6 +26,7 @@ class BrainImaging {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.append('img')
+			.style('border', '5px solid #aaa')
 
 		this.components = {
 			controls: await controlsInit({
@@ -99,12 +107,6 @@ class BrainImaging {
 
 	async main() {
 		const settings = this.state.config.settings.brainImaging
-
-		if (this.opts.header)
-			this.opts.header
-				.style('padding-left', '7px')
-				.style('color', 'rgb(85, 85, 85)')
-				.text(`Brain Imaging: ${this.state.config.queryKey}`)
 
 		for (const name in this.features) {
 			this.features[name].update({ state: this.state, appState })
