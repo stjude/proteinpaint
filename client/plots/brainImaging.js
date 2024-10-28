@@ -1,6 +1,5 @@
 import { getCompInit, copyMerge, multiInit } from '#rx'
-import { topBarInit } from './controls.btns'
-import { configUiInit } from './controls.config'
+import { controlsInit } from './controls'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table.ts'
 
@@ -8,13 +7,11 @@ class BrainImaging {
 	constructor(opts) {
 		this.opts = opts
 		this.type = 'brainImaging'
-		this.isOpen = true
 	}
 
 	async init(appState) {
 		const holder = this.opts.holder
 		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const topbar = controlsHolder.append('div')
 		const config_div = controlsHolder.append('div')
 		const configInputsOptions = this.getConfigInputsOptions()
 		this.image = this.opts.holder
@@ -23,55 +20,48 @@ class BrainImaging {
 			.style('vertical-align', 'top')
 			.append('img')
 
-		this.features = await multiInit({
-			topbar: topBarInit({
-				app: this.app,
-				id: this.id,
-				downloadHandler: () => {
-					const canvas = document.createElement('canvas')
-					const image = new Image()
-					image.src = this.dataUrl
-					canvas.width = this.width
-					canvas.height = this.height
-
-					// Get the canvas's 2D rendering context
-					const ctx = canvas.getContext('2d')
-
-					// Draw the image onto the canvas, scaling it to fit
-					ctx.drawImage(image, 0, 0, this.width, this.height)
-
-					// Convert the canvas to a data URL
-					const dataUrl = canvas.toDataURL('image/png')
-
-					const downloadImgName = 'brainImaging'
-					const a = document.createElement('a')
-					document.body.appendChild(a)
-
-					a.addEventListener(
-						'click',
-						() => {
-							// Download the image
-							a.download = downloadImgName + '.png'
-							a.href = dataUrl
-							document.body.removeChild(a)
-						},
-						false
-					)
-					a.click()
-				},
-				callback: () => this.toggleVisibility(this.isOpen),
-				isOpen: () => this.isOpen,
-				holder: topbar
-			}),
-
-			config: configUiInit({
+		this.components = {
+			controls: await controlsInit({
 				app: this.app,
 				id: this.id,
 				holder: config_div,
-				isOpen: () => this.isOpen,
 				inputs: configInputsOptions
 			})
-		})
+		}
+		this.components.controls.on('downloadClick.brainImaging', () => this.downloadImage())
+	}
+
+	downloadImage() {
+		const canvas = document.createElement('canvas')
+		const image = new Image()
+		image.src = this.dataUrl
+		canvas.width = this.width
+		canvas.height = this.height
+
+		// Get the canvas's 2D rendering context
+		const ctx = canvas.getContext('2d')
+
+		// Draw the image onto the canvas, scaling it to fit
+		ctx.drawImage(image, 0, 0, this.width, this.height)
+
+		// Convert the canvas to a data URL
+		const dataUrl = canvas.toDataURL('image/png')
+
+		const downloadImgName = 'brainImaging'
+		const a = document.createElement('a')
+		document.body.appendChild(a)
+
+		a.addEventListener(
+			'click',
+			() => {
+				// Download the image
+				a.download = downloadImgName + '.png'
+				a.href = dataUrl
+				document.body.removeChild(a)
+			},
+			false
+		)
+		a.click()
 	}
 
 	getConfigInputsOptions() {
@@ -108,29 +98,26 @@ class BrainImaging {
 	}
 
 	async main() {
-		const settings = this.state.settings
-		this.isOpen = settings.brainImaging.isOpen
+		const settings = this.state.config.settings.brainImaging
 
 		if (this.opts.header)
 			this.opts.header
 				.style('padding-left', '7px')
 				.style('color', 'rgb(85, 85, 85)')
-				.text(`Brain Imaging: ${this.state.queryKey}`)
-
-		const appState = this.app.getState()
+				.text(`Brain Imaging: ${this.state.config.queryKey}`)
 
 		for (const name in this.features) {
 			this.features[name].update({ state: this.state, appState })
 		}
 
 		const body = {
-			genome: appState.vocab.genome,
-			dslabel: appState.vocab.dslabel,
-			refKey: this.state.queryKey,
-			l: settings.brainImaging.brainImageL,
-			f: settings.brainImaging.brainImageF,
-			t: settings.brainImaging.brainImageT,
-			selectedSampleFileNames: this.state.selectedSampleFileNames
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			refKey: this.state.config.queryKey,
+			l: settings.brainImageL,
+			f: settings.brainImageF,
+			t: settings.brainImageT,
+			selectedSampleFileNames: this.state.config.selectedSampleFileNames
 		}
 		const firstTime = this.dataUrl == undefined
 		if (this.dataUrl) this.image.attr('src', this.dataUrl) //keep the previous image while waiting for the new one
@@ -152,19 +139,12 @@ class BrainImaging {
 	}
 
 	getState(appState) {
-		return appState.plots.find(p => p.id === this.id)
-	}
-
-	toggleVisibility(isOpen) {
-		this.app.dispatch({
-			type: 'plot_edit',
-			id: this.opts.id,
-			config: {
-				settings: {
-					brainImaging: { isOpen: !isOpen }
-				}
-			}
-		})
+		const config = appState.plots.find(p => p.id === this.id)
+		return {
+			config,
+			dslabel: appState.vocab.dslabel,
+			genome: appState.vocab.genome
+		}
 	}
 }
 
@@ -237,7 +217,8 @@ export const componentInit = brainImaging
 
 export async function getPlotConfig(opts) {
 	const settings = {
-		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 }
+		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 },
+		controls: { isOpen: true }
 	}
 	const config = { chartType: 'brainImaging', settings }
 	return copyMerge(config, opts)
