@@ -10,7 +10,7 @@ import type { Elem } from '../../types/d3'
 
 /** TODOs:
  *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
- *	Finish overlay controls and add other controls
+ *	Add other controls
  *	Hover effect?
  *	Descriptive stats tables?
  *	Fix issues toggling between summary plots
@@ -37,6 +37,8 @@ export type BoxplotDom = {
 	controls: Elem
 	/** Main div */
 	div: Elem
+	/** Placeholder to display error messages */
+	error: Elem
 	/** Sandbox header */
 	header?: Elem
 	/** Displays the term1 name as the plot title */
@@ -60,10 +62,12 @@ class TdbBoxplot extends RxComponent {
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = opts.controls ? holder : holder.append('div')
+		const error = div.append('div').attr('class', 'sjpp-boxplot-error')
 		const svg = div.append('svg').style('display', 'inline-block').attr('class', 'sjpp-boxplot-svg')
 		this.dom = {
 			controls,
 			div,
+			error,
 			svg,
 			plotTitle: svg.append('text'),
 			yAxis: svg.append('g'),
@@ -79,7 +83,7 @@ class TdbBoxplot extends RxComponent {
 				configKey: 'term',
 				chartType: 'boxplot',
 				usecase: { target: 'boxplot', detail: 'term' },
-				label: 'Customize', //TODO: Verify if this is correct
+				label: 'Customize',
 				vocabApi: this.app.vocabApi,
 				menuOptions: 'edit'
 			},
@@ -87,11 +91,11 @@ class TdbBoxplot extends RxComponent {
 				type: 'term',
 				configKey: 'term2',
 				chartType: 'boxplot',
-				usecase: { target: 'boxplot', detail: 'term' },
+				usecase: { target: 'boxplot', detail: 'term2' },
 				title: 'Overlay data',
 				label: 'Overlay',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: this.opts.numericEditMenuVersion,
+				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 				defaultQ4fillTW: term0_term2_defaultQ
 			}
 		]
@@ -131,14 +135,27 @@ class TdbBoxplot extends RxComponent {
 
 	async main() {
 		try {
+			this.dom.error.selectAll('*').remove()
+			this.dom.plotTitle.selectAll('*').remove()
+			this.dom.yAxis.selectAll('*').remove()
 			this.dom.boxplots.selectAll('*').remove()
+
 			const state = this.app.getState()
 			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
+			if (config.childType != 'boxplot') return
 			const settings = config.settings.boxplot
 
 			const model = new Model(config, state, this.app, settings)
 			const data = await model.getData()
-
+			if (!data.plots.length) {
+				this.dom.error
+					.append('div')
+					.style('padding', '20px')
+					.style('opacity', '0.7')
+					.style('font-size', '1.1em')
+					.text('No data to render Box plot')
+				return
+			}
 			const viewData = new ViewModel(config, data, settings)
 			new View(viewData, settings, this.dom)
 		} catch (e: any) {
@@ -162,7 +179,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 }
 
 export async function getPlotConfig(opts, app) {
-	if (!opts.term) throw 'boxplot getPlotConfig: opts.term{} missing'
+	if (!opts.term) throw 'opts.term{} missing [boxplot getPlotConfig()]'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
@@ -176,7 +193,8 @@ export async function getPlotConfig(opts, app) {
 		id: opts.term.term.id,
 		settings: {
 			controls: {
-				term2: null
+				term2: null,
+				term0: null
 			},
 			boxplot: getDefaultBoxplotSettings(app, opts.overrides || {})
 		}
