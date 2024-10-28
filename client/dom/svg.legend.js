@@ -108,16 +108,12 @@ export default function svgLegend(opts) {
 
 		if (d.sorter) d.items.sort(d.sorter)
 
-		if (d.d && d.d.renderAs == 'colorScale') {
-			setColorBarLegend(g, d, i)
-		} else {
-			g.selectAll('g')
-				.data(d.items)
-				.enter()
-				.append('g')
-				//.attr('transform', 'translate(0,'+i*20+')')
-				.each(addItem)
-		}
+		g.selectAll('g')
+			.data(d.items)
+			.enter()
+			.append('g')
+			//.attr('transform', 'translate(0,'+i*20+')')
+			.each(addItem)
 
 		const bbox = grplabel.node().getBBox()
 		if (Math.abs(bbox.y + bbox.height / 2) > 1) {
