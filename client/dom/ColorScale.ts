@@ -1,12 +1,10 @@
-import { scaleLinear } from 'd3-scale'
-import { Elem, SvgG } from '../types/d3'
-import { axisBottom, axisTop } from 'd3-axis'
-import { axisstyle } from './axisstyle'
-import { Selection } from 'd3-selection'
-import { ScaleLinear } from 'd3-scale'
-import { font } from '../src/client'
-import { Menu } from '#dom'
+import { ScaleLinear, scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
+import { axisBottom, axisTop } from 'd3-axis'
+import { Selection } from 'd3-selection'
+import { font } from '../src/client'
+import { Menu, axisstyle } from '#dom'
+import { Elem, SvgG } from '../types/d3'
 
 type GradientElem = Selection<SVGLinearGradientElement, any, any, any>
 
@@ -26,12 +24,11 @@ type ColorScaleOpts = {
 	barwidth?: number
 	/** If present, creates a menu on click to change the colors */
 	callback?: (val: string, idx: number) => void
-	/** Optional but highly recommend. Default is a white to red scale. */
+	/** Optional but highly recommend. Default is a white to red scale.
+	 * The length of the array must match the data array. */
 	colors?: string[]
-	/** Required
-	 * Specifies the values to show along a number line. Only pass the min and max.
-	 * If the data spans negative and positive values, include zero in the array.
-	 */
+	/** Required . Specifies the values to show along a number line. The length
+	 * of the array must match the colors array. */
 	data: number[]
 	/** Optional. Font size in px of the text labels. Default is 10. */
 	fontSize?: number
@@ -62,7 +59,8 @@ type ColorScaleOpts = {
 	ticks?: number
 	/** Optional. Size of the ticks in px. Default is 1. */
 	tickSize?: number
-	/** Optional. Placement of numbered ticks. Default is false (i.e. placement below the color bar). */
+	/** Optional. Placement of numbered ticks. Default is false (i.e. placement
+	 * below the color bar). */
 	topTicks?: boolean
 }
 
@@ -99,9 +97,10 @@ export class ColorScale {
 		this.tip = new Menu({ padding: '2px' })
 		this.topTicks = opts.topTicks || false
 
-		if (!opts.holder) throw new Error('No holder provided for color scale.')
-		if (!opts.data) throw new Error('No data provided for color scale.')
-		if (opts.data.length != this.colors.length) throw new Error('Data and color arrays must be the same length')
+		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
+		if (!opts.data) throw new Error('No data provided for #dom/ColorScale.')
+		if (opts.data.length != this.colors.length)
+			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 
 		this.formatData()
 
@@ -279,10 +278,9 @@ export class ColorScale {
 
 	updateAxis() {
 		this.formatData()
-		const start = this.data[0]
-		const stop = this.data[this.data.length - 1]
-
 		this.dom.scaleAxis.selectAll('*').remove()
+		// const start = this.data[0]
+		// const stop = this.data[this.data.length - 1]
 
 		// if (start < 0 && stop > 0 && this.data.indexOf(0) == -1) {
 		// 	this.data.splice(this.data.length / 2, 0, 0)
@@ -306,7 +304,8 @@ export class ColorScale {
 
 	updateValueInColorBar() {
 		if (!this.markedValue || this.topTicks == true) return
-		if (!this.dom.line || !this.dom.label) throw new Error('Missing dom elements to update value in color bar.')
+		if (!this.dom.line || !this.dom.label)
+			throw new Error('Missing dom elements to update value in color bar in #dom/ColorScale.')
 
 		const x = Math.min(this.barwidth, this.dom.scale(this.markedValue))
 
@@ -315,7 +314,8 @@ export class ColorScale {
 	}
 
 	updateScale() {
-		if (this.data.length != this.colors.length) throw new Error('Data and color arrays must be the same length')
+		if (this.data.length != this.colors.length)
+			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 		this.updateColors()
 		this.updateAxis()
 		this.updateValueInColorBar()
