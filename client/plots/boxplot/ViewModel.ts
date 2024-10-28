@@ -1,5 +1,13 @@
 import type { BoxplotSettings } from './Boxplot'
 
+/**
+ * Calculates the dimensions and html attributes for the svg and
+ * individual boxplots. The data is passed to the View class.
+ *
+ * TODO:
+ *  Calculate the space needed for the labels rather than hardcoding with padding
+ */
+
 export class ViewModel {
 	config: any
 	data: any
@@ -9,7 +17,7 @@ export class ViewModel {
 	/** Bottom padding for the svg */
 	readonly bottomPad = 40
 	/** Horizontal, or right and left padding */
-	readonly horizPad = 120
+	readonly horizPad = 150
 	/** For outliers, set a radius rather than using the default. */
 	readonly outRadius = 5
 	/** Increasing padding to space out the boxplots and determine position */
@@ -18,6 +26,7 @@ export class ViewModel {
 		this.settings = settings
 		this.config = config
 
+		if (!data || !data.plots.length) return
 		const viewData: any = structuredClone(data)
 
 		const totalLabelWidth = viewData.maxLabelLgth + this.settings.labelPad + this.horizPad
@@ -29,6 +38,8 @@ export class ViewModel {
 		 */
 
 		viewData.plotDim = {
+			//Add 1 to the max so the upper line to boxplot isn't cutoff
+			domain: [viewData.absMin, viewData.absMax + 1],
 			incrTopPad: this.incrTopPad,
 			svgWidth: this.settings.boxplotWidth + totalLabelWidth + this.horizPad,
 			svgHeight: viewData.plots.length * totalRowHeight + this.topPad + this.bottomPad + this.incrTopPad,
@@ -41,13 +52,15 @@ export class ViewModel {
 				y: this.topPad + this.incrTopPad + 20
 			}
 		}
-		//20 for the yAxis offset, 10 more for the first boxplot
+		//20 for the yAxis offset (above), 10 more for the first boxplot
 		this.incrTopPad += 30
 
 		for (const plot of viewData.plots) {
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
 			if (plot.boxplot.out.length) {
-				const maxOut = plot.boxplot.out.reduce((a, b) => Math.max(a.value, b.value))
+				const maxOut = plot.boxplot.out.reduce((a: { value: number }, b: { value: number }) =>
+					Math.max(a.value, b.value)
+				)
 				if (maxOut && maxOut.value > viewData.absMax) viewData.absMax = maxOut.value
 				plot.boxplot.radius = this.outRadius
 			}

@@ -108,6 +108,8 @@ function init({ genomes }) {
 			data.absMin = absMin
 			data.absMax = absMax
 			data.maxLabelLgth = maxLabelLgth
+			delete data.samples
+			delete data.refs
 			res.send(data)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })

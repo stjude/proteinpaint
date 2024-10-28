@@ -4,15 +4,14 @@ import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxplotDom, BoxplotSettings } from './Boxplot'
 
+/** Handles all the rendering logic for the boxplot. */
 export class View {
 	constructor(data: any, settings: BoxplotSettings, dom: BoxplotDom) {
+		if (!data || !data.plots.length) return
 		const plotDim = data.plotDim
 		dom.svg.transition().attr('width', plotDim.svgWidth).attr('height', plotDim.svgHeight)
 
-		//Add 1 to the max so the upper line to boxplot isn't cutoff
-		const yScale = scaleLinear()
-			.domain([data.absMin, data.absMax + 1])
-			.range([0, settings.boxplotWidth])
+		const yScale = scaleLinear().domain(plotDim.domain).range([0, settings.boxplotWidth])
 
 		//Title of the plot
 		dom.plotTitle

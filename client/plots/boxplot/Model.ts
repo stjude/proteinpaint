@@ -1,6 +1,10 @@
 import type { MassAppApi } from '../../mass/types/mass'
 import type { BoxplotSettings } from './Boxplot'
 
+/**
+ * Requests data for the boxplots.
+ * Add more methods for formating the request opts and api requests.
+ */
 export class Model {
 	config: any
 	state: any
