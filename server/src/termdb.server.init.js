@@ -485,7 +485,7 @@ export function server_init_db_queries(ds) {
 			if (!r.type) continue // skip ungraphable parent terms
 
 			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = new Set(['regression', 'summary'])
+				supportedChartTypes[r.cohort] = new Set(['regression', 'summary', 'facet'])
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 
 				numericTypeCount[r.cohort] = 0
