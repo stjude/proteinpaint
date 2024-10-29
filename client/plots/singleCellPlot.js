@@ -233,8 +233,8 @@ class singleCellPlot {
 					let plots = structuredClone(this.state.config.plots)
 					plots.find(p => p.name == plot.name).selected = e.target.checked
 					const selectedPlots = plots.filter(p => p.selected)
-					const width = 900
-					const height = 900
+					const width = 1000
+					const height = 1000
 					let settings = {}
 					settings.svgh = width / selectedPlots.length
 					settings.svgw = height / selectedPlots.length
@@ -702,8 +702,6 @@ class singleCellPlot {
 		plot.headerDiv = plot.plotDiv.append('div')
 		plot.headerDiv.append('label').text(plot.name).style('font-size', '1.2em').style('margin-right', '10px')
 
-		this.renderLegend(plot)
-
 		plot.svg = plot.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -750,6 +748,7 @@ class singleCellPlot {
 			.attr('r', this.settings.sampleSize)
 			.attr('fill', d => this.getColor(d, plot))
 			.style('fill-opacity', d => this.getOpacity(d))
+		this.renderLegend(plot)
 	}
 
 	getOpacity(d) {
@@ -826,7 +825,7 @@ class singleCellPlot {
 			}
 			legendSVG = plot.plotDiv
 				.append('svg')
-				.attr('width', 280)
+				.attr('width', 250)
 				.attr('height', this.settings.svgh)
 				.style('vertical-align', 'top')
 			plot.legendSVG = legendSVG
@@ -855,7 +854,7 @@ class singleCellPlot {
 		}
 		this.legendRendered = true
 
-		const legendG = legendSVG.append('g').attr('transform', `translate(10, 50)`).style('font-size', '0.8em')
+		const legendG = legendSVG.append('g').attr('transform', `translate(20, 0)`).style('font-size', '0.9em')
 		if (
 			this.state.config.activeTab == GENE_EXPRESSION_TAB ||
 			this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
@@ -879,7 +878,7 @@ class singleCellPlot {
 			const n = clusterCells.length
 			const color = colorMap[cluster]
 			const itemG = legendG.append('g').attr('transform', c => `translate(${x}, ${y})`)
-			itemG.append('circle').attr('r', 3).attr('fill', color)
+			itemG.append('circle').attr('r', 5).attr('fill', color)
 			itemG
 				.append('g')
 				.attr('transform', `translate(${x + 10}, ${5})`)
