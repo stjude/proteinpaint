@@ -156,15 +156,16 @@ export function getLegendData(legendGroups, refs, self) {
 					const item = legend.values[key]
 					const count = item.samples?.size
 					if (item.scale) {
+						const colors = item.domain?.map(c => item.scale(c)) || item.scale.range()
+						const domain = setColorScaleDomain(item.minLabel, item.maxLabel, item.domain, colors)
 						return {
 							termid: $id,
 							key: item.key,
 							text: this.getLegendItemText(item, count, t, s),
 							width: 100,
 							scale: item.scale,
-							domain: item.domain,
-							minLabel: item.minLabel,
-							maxLabel: item.maxLabel,
+							colors,
+							domain,
 							order: 'order' in item ? item.order : i,
 							count,
 							isLegendItem: true,
@@ -369,4 +370,21 @@ export function getLegendItemText(item, count, t, s) {
 		notes.push('not counted')
 	if (!notes.length) return text
 	return (text += ` (${notes.join(', ')})`)
+}
+
+/** The domain in the legend item isn't always the actual data, required to show on the
+ * axis. The ColorScale component in svg.legend requires the data[] and color[] arrays
+ * to be the same length. Also the values in data[] appear along the number line and must
+ * represent the actual data. This function creates the data[] array based on the colors[]
+ * array using the min and max values.
+ */
+function setColorScaleDomain(min, max, domain, colors) {
+	if (domain[0] === min && domain[domain.length - 1] === max) return domain
+
+	const step = (max - min) / (colors.length - 1)
+
+	return colors.map((_, i) => {
+		if (i === (colors.length - 1) / 2 && min < 0 && max > 0) return 0
+		return min + step * i
+	})
 }

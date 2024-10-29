@@ -189,13 +189,11 @@ export default function svgLegend(opts) {
 		let colorGradientId
 		if (d.domain) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
-			const colors = d.scale ? d.domain.map(c => d.scale(c)) : d.colors || ['white', 'grey']
 			new ColorScale({
 				barwidth: width,
 				barheight: settings.iconh,
-				colors,
-				data: [d.minLabel || d.domain[0], d.maxLabel || d.domain[1]],
-				// data: d.domain.length > 2 ? d.domain : d.domain[0] < d.domain[1] ? [0, 1] : [1, 0],
+				colors: d.colors || d.scale.range() || ['white', 'grey'],
+				data: d.domain || [d.minLabel, d.maxLabel],
 				fontSize: 0.82 * settings.fontsize,
 				holder: g,
 				id: colorGradientId,

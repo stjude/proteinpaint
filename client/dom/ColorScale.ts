@@ -209,11 +209,18 @@ export class ColorScale {
 		this.data = this.data.map(d => Number(d.toFixed(2)))
 	}
 
+	getRange() {
+		return this.data.map((v, i) => {
+			return this.barwidth * (i / (this.data.length - 1))
+		})
+	}
+
 	makeColorBar(gradient?: GradientElem) {
 		const gradElem = gradient || this.dom.gradient
+		const range = this.getRange()
 		for (const c of this.colors) {
 			const idx = this.colors.indexOf(c)
-			const offset = (idx / (this.colors.length - 1)) * 100
+			const offset = range[idx]
 			gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${c}`)
 		}
 	}
@@ -227,7 +234,7 @@ export class ColorScale {
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
 		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight})`)
-		const scale = scaleLinear().domain(this.data).range([0, this.barwidth])
+		const scale = scaleLinear().domain(this.data).range(this.getRange()).clamp(true)
 
 		return { scale, scaleAxis }
 	}
@@ -286,13 +293,8 @@ export class ColorScale {
 		// 	this.data.splice(this.data.length / 2, 0, 0)
 		// }
 
-		this.dom.scale = scaleLinear()
-			.domain(this.data)
-			.range(
-				this.data.map((v, i) => {
-					return this.barwidth * (i / (this.data.length - 1))
-				})
-			)
+		this.dom.scale = scaleLinear().domain(this.data).range(this.getRange())
+
 		this.dom.scaleAxis
 			.transition()
 			.duration(400)
