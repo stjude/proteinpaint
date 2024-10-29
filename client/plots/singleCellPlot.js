@@ -263,7 +263,10 @@ class singleCellPlot {
 		})
 		this.dom.searchbox = this.dom.geneSearch?.searchbox
 
-		this.dom.colorBySelect = geDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
+		this.dom.colorBySelect = geDiv
+			.append('select')
+			.style('display', state.config.gene ? 'inline-block' : 'none')
+			.style('margin-left', '20px')
 
 		this.dom.colorBySelect.on('change', async () => {
 			const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
