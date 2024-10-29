@@ -9,6 +9,7 @@ import { ColorScale } from '../ColorScale'
     - ColorScale.updateColors()
 	- markedValue - Show value in color bar and update
     - ColorScale.updateAxis()
+	- .setMinMax() and .callback()
 */
 
 /**************
@@ -210,28 +211,30 @@ tape('ColorScale.updateScale()', test => {
 	test.end()
 })
 
-tape('setMinMax() callback', test => {
+tape('.setMinMax() and .callback()', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
 	const newColor = 'blue'
 	const newIdx = 0
-	const newValue = 42
+	const newMax = 42
+	const newMin = -10
 	const testColorScale = getColorScale({
 		holder,
-		callback: (value, idx) => {
+		callback: (value: string, idx: number) => {
 			test.equal(value, newColor, 'Should return the correct color to the callback')
 			test.equal(idx, newIdx, 'Should return the correct index to the callback')
 			return value
 		},
-		setMinMax: value => {
-			test.equal(value, newValue, 'Should return the correct value to the callback')
-			return value
+		setMinMax: obj => {
+			test.equal(typeof obj, 'object', 'Should pass an object to the .setMinMax() callback')
+			test.equal(obj.min, newMin, 'Should return the correct min value to the .setMinMax() callback')
+			test.equal(obj.max, newMax, 'Should return the correct max value to the .setMinMax() callback')
 		}
 	})
 
 	if (testColorScale.callback) testColorScale.callback(newColor, newIdx)
-	if (testColorScale.setMinMax) testColorScale.setMinMax(newValue)
+	if (testColorScale.setMinMax) testColorScale.setMinMax({ min: newMin, max: newMax })
 
 	if (test['_ok']) holder.remove()
 	test.end()
