@@ -50,7 +50,7 @@ type ColorScaleOpts = {
 	/** Creates inputs for the user to set the min and max colors
 	 * Use the callback to update the plot/track/app/etc.
 	 */
-	setMinMax?: (value: number) => void
+	setMinMax?: (f?: { min: number; max: number }) => void
 	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
 	 * NOTE: D3 considers this a ** suggested ** count. d3-axis will ultimateluy render the
 	 * ticks based on the available space of each label.
@@ -77,7 +77,7 @@ export class ColorScale {
 	markedValue?: number | null
 	/** Purely for testing. Not used in the class but can be
 	 * called independently of user click, if needed */
-	setMinMax: ((value: number) => void) | null
+	setMinMax: ((f?: { min: number; max: number }) => void) | null
 	ticks: number
 	tickSize: number
 	tip: Menu
@@ -131,7 +131,7 @@ export class ColorScale {
 		}
 
 		if (opts.callback || opts.setMinMax) {
-			const appendInputs = (text: string, cidx: number, didx: number) => {
+			const appendInputs = (text: string, cIdx: number, dIdx: number) => {
 				const wrapper = this.tip.d.append('div').style('display', 'inline-block').style('text-align', 'center')
 
 				wrapper
@@ -145,8 +145,8 @@ export class ColorScale {
 				const valueInput = wrapper.append('div').style('display', 'inline-block').style('vertical-align', 'bottom')
 				const colorInput = wrapper.append('div').style('display', 'inline-block')
 
-				if (opts.setMinMax) appendValueInput(valueInput, didx)
-				if (opts.callback) appendColorInput(colorInput, cidx)
+				if (opts.setMinMax) appendValueInput(valueInput, dIdx)
+				if (opts.callback) appendColorInput(colorInput, cIdx)
 			}
 
 			const appendColorInput = (wrapper: any, idx: number) => {
@@ -175,7 +175,7 @@ export class ColorScale {
 						if (event.code != 'Enter') return
 						const value: number = parseFloat(valueInput.node().value)
 						this.data[idx] = value
-						await opts.setMinMax!(value)
+						if (opts.setMinMax) await opts.setMinMax({ min: this.data[0], max: this.data[this.data.length - 1] })
 						this.updateAxis()
 						this.tip.hide()
 					})

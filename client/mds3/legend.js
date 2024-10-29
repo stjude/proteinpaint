@@ -863,8 +863,8 @@ function may_create_cnv(tk, block) {
 		ticks: 4,
 		tickSize: 6,
 		topTicks: true,
-		setMinMax: number => {
-			tk.cnv.presetMax = Math.abs(number)
+		setMinMax: obj => {
+			tk.cnv.presetMax = Math.abs(obj.max)
 			tk.load()
 		}
 	})
