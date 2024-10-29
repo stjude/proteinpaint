@@ -26,8 +26,9 @@ class BrainImaging {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('padding', '10px')
+		const contentHolder = rightDiv.append('div').style('vertical-align', 'top')
+		this.dom = { headerHolder, contentHolder }
 		this.addSliders(headerHolder, debounceDelay, state.config.settings.brainImaging)
-		this.contentHolder = rightDiv.append('div').style('vertical-align', 'top')
 
 		const configInputsOptions = this.getConfigInputsOptions()
 
@@ -42,8 +43,9 @@ class BrainImaging {
 		this.components.controls.on('downloadClick.brainImaging', () => this.downloadImage())
 	}
 
-	addSliders(headerHolder, debounceDelay, settings) {
-		headerHolder.append('label').attr('for', 'saggital').text('Sagittal:').style('vertical-align', 'top')
+	addSliders(settings) {
+		const headerHolder = this.dom.headerHolder
+		headerHolder.append('label').attr('for', 'saggital').text('Sagittal:')
 		headerHolder
 			.append('input')
 			.attr('id', 'saggital')
@@ -52,12 +54,12 @@ class BrainImaging {
 			.attr('max', 192)
 			.attr('value', settings.brainImageL)
 			.style('width', '200px')
-			.on('input', e => {
+			.on('change', e => {
 				const settings = { brainImageL: e.target.value }
-				debounce(() => this.editBrainImage(settings), debounceDelay)()
+				this.editBrainImage(settings)
 			})
 
-		headerHolder.append('label').attr('for', 'coronal').text('Coronal:').style('vertical-align', 'top')
+		headerHolder.append('label').attr('for', 'coronal').text('Coronal:').style('margin-left', '30px')
 		headerHolder
 			.append('input')
 			.attr('id', 'coronal')
@@ -68,9 +70,9 @@ class BrainImaging {
 			.style('width', '200px')
 			.on('input', e => {
 				const settings = { brainImageF: e.target.value }
-				debounce(() => this.editBrainImage(settings), debounceDelay)()
+				this.editBrainImage(settings)
 			})
-		headerHolder.append('label').attr('for', 'axial').text('Axial:').style('vertical-align', 'top')
+		headerHolder.append('label').attr('for', 'axial').text('Axial:').style('margin-left', '30px')
 		headerHolder
 			.append('input')
 			.attr('id', 'axial')
@@ -79,9 +81,9 @@ class BrainImaging {
 			.attr('max', 192)
 			.attr('value', settings.brainImageT)
 			.style('width', '200px')
-			.on('input', e => {
+			.on('change', e => {
 				const settings = { brainImageT: e.target.value }
-				debounce(() => this.editBrainImage(settings), debounceDelay)()
+				this.editBrainImage(settings)
 			})
 	}
 
@@ -174,11 +176,11 @@ class BrainImaging {
 		const dataUrl = await data.brainImage
 		this.dataUrls = [dataUrl] //later on update with urls obtained after divide by is added, or for testing purposes use [dataUrl, dataUrl]
 		this.images = []
-		this.contentHolder.selectAll('*').remove()
+		this.dom.contentHolder.selectAll('*').remove()
 		const width = this.state.RefNIdata.width
 		const height = this.state.RefNIdata.height
 		for (const dataUrl of this.dataUrls) {
-			const image = this.contentHolder
+			const image = this.dom.contentHolder
 				.append('div')
 				.style('display', 'block')
 				.style('vertical-align', 'top')
