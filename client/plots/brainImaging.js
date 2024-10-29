@@ -2,6 +2,7 @@ import { getCompInit, copyMerge, multiInit } from '#rx'
 import { controlsInit } from './controls'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table.ts'
+import { debounce } from 'debounce'
 
 class BrainImaging {
 	constructor(opts) {
@@ -11,19 +12,62 @@ class BrainImaging {
 
 	async init(appState) {
 		const state = this.getState(appState)
+		const settings = state.config.settings.brainImaging
 		const holder = this.opts.holder
 		if (this.opts.header)
 			this.opts.header
 				.style('padding-left', '7px')
 				.style('color', 'rgb(85, 85, 85)')
 				.html(`Brain Imaging: ${state.config.queryKey}/${state.config.selectedSampleFileNames.join(' ')}`)
-
+		const debounceDelay = 1000
 		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const config_div = controlsHolder.append('div')
-		const configInputsOptions = this.getConfigInputsOptions()
-		this.image = this.opts.holder
+		const contentHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const headerHolder = contentHolder
 			.append('div')
 			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('padding', '10px')
+		headerHolder.append('label').text('Sagittal:').style('vertical-align', 'top')
+		headerHolder
+			.append('input')
+			.attr('type', 'range')
+			.attr('min', 0)
+			.attr('max', 192)
+			.attr('value', settings.brainImageL)
+			.style('width', '200px')
+			.on('input', e => {
+				const settings = { brainImageL: e.target.value }
+				debounce(() => this.editBrainImage(settings), debounceDelay)()
+			})
+
+		headerHolder.append('label').text('Coronal:').style('vertical-align', 'top')
+		headerHolder
+			.append('input')
+			.attr('type', 'range')
+			.attr('min', 0)
+			.attr('max', 228)
+			.attr('value', settings.brainImageF)
+			.style('width', '200px')
+			.on('input', e => {
+				const settings = { brainImageF: e.target.value }
+				debounce(() => this.editBrainImage(settings), debounceDelay)()
+			})
+		headerHolder.append('label').text('Axial:').style('vertical-align', 'top')
+		headerHolder
+			.append('input')
+			.attr('type', 'range')
+			.attr('min', 0)
+			.attr('max', 192)
+			.attr('value', settings.brainImageT)
+			.style('width', '200px')
+			.on('input', e => {
+				const settings = { brainImageT: e.target.value }
+				debounce(() => this.editBrainImage(settings), debounceDelay)()
+			})
+		const configInputsOptions = this.getConfigInputsOptions()
+		this.image = contentHolder
+			.append('div')
+			.style('display', 'block')
 			.style('vertical-align', 'top')
 			.append('img')
 			.style('border', '5px solid #aaa')
@@ -32,11 +76,15 @@ class BrainImaging {
 			controls: await controlsInit({
 				app: this.app,
 				id: this.id,
-				holder: config_div,
+				holder: controlsHolder,
 				inputs: configInputsOptions
 			})
 		}
 		this.components.controls.on('downloadClick.brainImaging', () => this.downloadImage())
+	}
+
+	editBrainImage(settings) {
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { brainImaging: settings } } })
 	}
 
 	downloadImage() {
@@ -218,8 +266,7 @@ export const componentInit = brainImaging
 
 export async function getPlotConfig(opts) {
 	const settings = {
-		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 },
-		controls: { isOpen: true }
+		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 }
 	}
 	const config = { chartType: 'brainImaging', settings }
 	return copyMerge(config, opts)
