@@ -174,7 +174,9 @@ class singleCellPlot {
 		this.axisOffset = { x: offsetX, y: 30 }
 
 		if (q.singleCell?.DEgenes) {
-			const label = this.dom.deDiv.append('label').html('View differentially expressed genes:&nbsp;')
+			const label = this.dom.deDiv
+				.append('label')
+				.html('View differentially expressed genes for cells of a cluster versus rest of the cells:&nbsp;')
 			this.dom.deselect = label.append('select').on('change', e => {
 				const display = this.dom.deselect.node().value ? 'inline-block' : 'none'
 				const cluster = this.dom.deselect.node().value.split(' ')[1]
@@ -247,7 +249,7 @@ class singleCellPlot {
 	}
 
 	renderGeneExpressionControls(geDiv, state) {
-		this.dom.searchboxDiv = geDiv.append('div')
+		this.dom.searchboxDiv = geDiv.append('div').style('display', 'inline-block')
 		this.dom.geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.app.opts.genome,
