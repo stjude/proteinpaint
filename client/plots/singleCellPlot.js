@@ -699,7 +699,8 @@ class singleCellPlot {
 			.style('overflow', 'hidden')
 			.style('display', 'inline-block')
 			.style('flex-grow', 1)
-		plot.plotDiv.append('div').text(plot.name).style('font-size', '1.2em')
+		plot.headerDiv = plot.plotDiv.append('div')
+		plot.headerDiv.append('label').text(plot.name).style('font-size', '1.2em').style('margin-right', '10px')
 
 		this.renderLegend(plot)
 
@@ -799,7 +800,10 @@ class singleCellPlot {
 			const activeTab = this.tabs.find(tab => tab.active)
 			if (activeTab.id == COLORBY_TAB) {
 				const app = this.app
-				const plotColorByDiv = plot.plotDiv.append('div').style('padding-bottom', '20px')
+				const plotColorByDiv = plot.headerDiv
+					.append('div')
+					.style('display', 'inline-block')
+					.style('padding-bottom', '20px')
 				plotColorByDiv.append('label').text('Color by:').style('margin-right', '5px')
 				const colorBySelect = plotColorByDiv.append('select')
 				this.plotColorByDivs.push(plotColorByDiv)
