@@ -219,7 +219,7 @@ class singleCellPlot {
 	}
 
 	renderShowPlots(showDiv, state) {
-		showDiv.append('label').text('Plots:').style('font-weight', 'bold')
+		showDiv.append('label').text('Plots:').style('font-size', '1.1em')
 
 		for (const plot of state.config.plots) {
 			const id = plot.name.replace(/\s+/g, '')
