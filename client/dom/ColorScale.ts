@@ -210,17 +210,16 @@ export class ColorScale {
 	}
 
 	getRange() {
-		return this.data.map((v, i) => {
+		return this.data.map((_, i) => {
 			return this.barwidth * (i / (this.data.length - 1))
 		})
 	}
 
 	makeColorBar(gradient?: GradientElem) {
 		const gradElem = gradient || this.dom.gradient
-		const range = this.getRange()
 		for (const c of this.colors) {
 			const idx = this.colors.indexOf(c)
-			const offset = range[idx]
+			const offset = (idx / (this.colors.length - 1)) * 100
 			gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${c}`)
 		}
 	}
