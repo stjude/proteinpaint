@@ -1022,22 +1022,23 @@ class singleCellPlot {
 			let tr = table.append('tr')
 			tr.append('td').style('color', '#aaa').text(plot.colorBy)
 
-			const td = tr.append('td')
-			const svg = td.append('svg').attr('width', 150).attr('height', 20)
-			const x = 10
-			const y = 12
-			const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
-			g.append('circle').attr('fill', this.getColor(d, plot)).attr('r', 4)
-			svg
-				.append('g')
-				.attr('transform', `translate(${x + 15}, ${y + 4})`)
-				.append('text')
-				.text(d.category)
+			let td = tr.append('td')
+			td.text(d.category)
 
 			if ('geneExp' in d) {
 				tr = table.append('tr')
 				tr.append('td').style('color', '#aaa').text('Gene expression')
-				tr.append('td').text(roundValueAuto(d.geneExp))
+				td = tr.append('td')
+				const svg = td.append('svg').attr('width', 150).attr('height', 20)
+				const x = 10
+				const y = 12
+				const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
+				g.append('circle').attr('fill', this.getColor(d, plot)).attr('r', 4)
+				svg
+					.append('g')
+					.attr('transform', `translate(${x + 15}, ${y + 4})`)
+					.append('text')
+					.text(roundValueAuto(d.geneExp))
 			}
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
