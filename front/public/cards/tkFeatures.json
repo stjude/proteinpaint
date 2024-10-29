@@ -87,6 +87,39 @@
             "testSpec": {
                 "expected": {"image": 2}
             }
+        },
+        {
+            "label": "Custom mutation colors, labels, and descriptions",
+            "message": "Customize the appearance of mutations with the <span style='font-family: Courier; opacity: 0.6;'>mclassOverride</span> argument. This argument allows you to define custom mutation classes with unique colors, labels, and descriptions. Click on the Documentation button to see the learn more from the ProteinPaint wiki.",
+            "runargs": {
+                "parseurl": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "gene": "TP53",
+                "dataset": "CIViC",
+                "mclassOverride": {
+                    "className": "My Mutation Classes",
+                    "classes": {
+                        "M": {
+                            "color": "red",
+                            "label": "Custom mutation label",
+                            "desc": "Custom description about this mutation"
+                        }
+                    }
+                   
+                }
+            },
+            "buttons":[
+                {
+                    "name":"All Attributes Documentation",
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Tracks#attributes-applicable-to-all-track-types"
+                }
+            ],
+            "testSpec": {
+                "expected": { "rect": 1, "circle": 10 }
+            }
         }
-    ]
+    ],
+    "ribbonMessage": "See our newest example about customizing the appearance of mutations with the <span style='font-family: Courier; opacity: 0.6;'>mclassOverride</span> argument. Click on 'Custom mutation colors, labels, and descriptions' to learn more."
 }
