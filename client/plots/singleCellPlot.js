@@ -699,6 +699,7 @@ class singleCellPlot {
 			.style('overflow', 'hidden')
 			.style('display', 'inline-block')
 			.style('flex-grow', 1)
+		plot.plotDiv.append('div').text(plot.name).style('font-size', '1.2em')
 
 		this.renderLegend(plot)
 
@@ -827,12 +828,7 @@ class singleCellPlot {
 			plot.legendSVG = legendSVG
 		}
 		legendSVG.selectAll('*').remove()
-		legendSVG
-			.append('text')
-			.attr('transform', `translate(0, 20)`)
-			.style('font-size', '0.9em')
-			.style('font-weight', 'bold')
-			.text(plot.name)
+
 		const sameLegend = this.state.termdbConfig.queries.singleCell.data.sameLegend
 		if (sameLegend && this.legendRendered) {
 			if (this.state.config.gene) {
