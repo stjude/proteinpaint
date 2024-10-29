@@ -124,10 +124,10 @@ class singleCellPlot {
 			tabs: this.tabs
 		}).main()
 
-		const headerDiv = contentDiv.append('div').style('display', 'inline-block')
+		const headerDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '20px')
 		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
 
-		const tableDiv = headerDiv.append('div').style('margin-bottom', '20px')
+		const tableDiv = headerDiv.append('div')
 		await this.renderSamplesTable(tableDiv, state)
 
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
@@ -798,7 +798,7 @@ class singleCellPlot {
 			const activeTab = this.tabs.find(tab => tab.active)
 			if (activeTab.id == COLORBY_TAB) {
 				const app = this.app
-				const plotColorByDiv = plot.plotDiv.append('div')
+				const plotColorByDiv = plot.plotDiv.append('div').style('padding-bottom', '20px')
 				plotColorByDiv.append('label').text('Color by:').style('margin-right', '5px')
 				const colorBySelect = plotColorByDiv.append('select')
 				this.plotColorByDivs.push(plotColorByDiv)
