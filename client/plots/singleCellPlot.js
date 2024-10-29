@@ -707,7 +707,10 @@ class singleCellPlot {
 			.attr('width', this.settings.svgw)
 			.attr('height', this.settings.svgh)
 			.on('mouseover', event => {
-				if (this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
+				const geneTab =
+					this.state.config.activeTab == GENE_EXPRESSION_TAB ||
+					this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
+				if (geneTab && this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
 			})
 			.on('click', event => this.showTooltip(event, plot))
 
