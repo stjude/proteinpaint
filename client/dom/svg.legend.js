@@ -197,9 +197,10 @@ export default function svgLegend(opts) {
 				fontSize: 0.82 * settings.fontsize,
 				holder: g,
 				id: colorGradientId,
-				position: `${bbox.width + 25},${y - 2}`,
-				ticks: 2,
-				tickSize: 0
+				position: `${bbox.width + 25},${y + 6}`,
+				ticks: 3,
+				tickSize: 0,
+				topTicks: true
 			})
 
 			currlinex += 10 * settings.padx

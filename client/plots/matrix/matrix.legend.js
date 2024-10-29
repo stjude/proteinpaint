@@ -372,8 +372,8 @@ export function getLegendItemText(item, count, t, s) {
 	return (text += ` (${notes.join(', ')})`)
 }
 
-/** The domain in the legend item isn't always the actual data, required to show on the
- * axis. The ColorScale component in svg.legend requires the data[] and color[] arrays
+/** The domain in the legend item isn't always the actual data, required for the number line
+ * on the axis. The ColorScale component in svg.legend requires the data[] and color[] arrays
  * to be the same length. Also the values in data[] appear along the number line and must
  * represent the actual data. This function creates the data[] array based on the colors[]
  * array using the min and max values.
