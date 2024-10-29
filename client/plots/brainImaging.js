@@ -3,7 +3,7 @@ import { controlsInit } from './controls'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table.ts'
 import { debounce } from 'debounce'
-
+const debounceDelay = 1000
 class BrainImaging {
 	constructor(opts) {
 		this.opts = opts
@@ -12,7 +12,6 @@ class BrainImaging {
 
 	async init(appState) {
 		const state = this.getState(appState)
-		const settings = state.config.settings.brainImaging
 		const holder = this.opts.holder
 		if (this.opts.header)
 			this.opts.header
@@ -21,56 +20,16 @@ class BrainImaging {
 				.html(`Brain Imaging: ${state.config.queryKey}/${state.config.selectedSampleFileNames.join(' ')}`)
 		const debounceDelay = 1000
 		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const contentHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const headerHolder = contentHolder
+		const rightDiv = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const headerHolder = rightDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('padding', '10px')
-		headerHolder.append('label').text('Sagittal:').style('vertical-align', 'top')
-		headerHolder
-			.append('input')
-			.attr('type', 'range')
-			.attr('min', 0)
-			.attr('max', 192)
-			.attr('value', settings.brainImageL)
-			.style('width', '200px')
-			.on('input', e => {
-				const settings = { brainImageL: e.target.value }
-				debounce(() => this.editBrainImage(settings), debounceDelay)()
-			})
+		this.addSliders(headerHolder, debounceDelay, state.config.settings.brainImaging)
+		this.contentHolder = rightDiv.append('div').style('vertical-align', 'top')
 
-		headerHolder.append('label').text('Coronal:').style('vertical-align', 'top')
-		headerHolder
-			.append('input')
-			.attr('type', 'range')
-			.attr('min', 0)
-			.attr('max', 228)
-			.attr('value', settings.brainImageF)
-			.style('width', '200px')
-			.on('input', e => {
-				const settings = { brainImageF: e.target.value }
-				debounce(() => this.editBrainImage(settings), debounceDelay)()
-			})
-		headerHolder.append('label').text('Axial:').style('vertical-align', 'top')
-		headerHolder
-			.append('input')
-			.attr('type', 'range')
-			.attr('min', 0)
-			.attr('max', 192)
-			.attr('value', settings.brainImageT)
-			.style('width', '200px')
-			.on('input', e => {
-				const settings = { brainImageT: e.target.value }
-				debounce(() => this.editBrainImage(settings), debounceDelay)()
-			})
 		const configInputsOptions = this.getConfigInputsOptions()
-		this.image = contentHolder
-			.append('div')
-			.style('display', 'block')
-			.style('vertical-align', 'top')
-			.append('img')
-			.style('border', '5px solid #aaa')
 
 		this.components = {
 			controls: await controlsInit({
@@ -83,41 +42,86 @@ class BrainImaging {
 		this.components.controls.on('downloadClick.brainImaging', () => this.downloadImage())
 	}
 
+	addSliders(headerHolder, debounceDelay, settings) {
+		headerHolder.append('label').attr('for', 'saggital').text('Sagittal:').style('vertical-align', 'top')
+		headerHolder
+			.append('input')
+			.attr('id', 'saggital')
+			.attr('type', 'range')
+			.attr('min', 0)
+			.attr('max', 192)
+			.attr('value', settings.brainImageL)
+			.style('width', '200px')
+			.on('input', e => {
+				const settings = { brainImageL: e.target.value }
+				debounce(() => this.editBrainImage(settings), debounceDelay)()
+			})
+
+		headerHolder.append('label').attr('for', 'coronal').text('Coronal:').style('vertical-align', 'top')
+		headerHolder
+			.append('input')
+			.attr('id', 'coronal')
+			.attr('type', 'range')
+			.attr('min', 0)
+			.attr('max', 228)
+			.attr('value', settings.brainImageF)
+			.style('width', '200px')
+			.on('input', e => {
+				const settings = { brainImageF: e.target.value }
+				debounce(() => this.editBrainImage(settings), debounceDelay)()
+			})
+		headerHolder.append('label').attr('for', 'axial').text('Axial:').style('vertical-align', 'top')
+		headerHolder
+			.append('input')
+			.attr('id', 'axial')
+			.attr('type', 'range')
+			.attr('min', 0)
+			.attr('max', 192)
+			.attr('value', settings.brainImageT)
+			.style('width', '200px')
+			.on('input', e => {
+				const settings = { brainImageT: e.target.value }
+				debounce(() => this.editBrainImage(settings), debounceDelay)()
+			})
+	}
+
 	editBrainImage(settings) {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { brainImaging: settings } } })
 	}
 
 	downloadImage() {
-		const canvas = document.createElement('canvas')
-		const image = new Image()
-		image.src = this.dataUrl
-		canvas.width = this.width
-		canvas.height = this.height
+		for (const dataUrl of this.dataUrls) {
+			const canvas = document.createElement('canvas')
+			const image = new Image()
+			image.src = dataUrl
+			canvas.width = this.width
+			canvas.height = this.height
 
-		// Get the canvas's 2D rendering context
-		const ctx = canvas.getContext('2d')
+			// Get the canvas's 2D rendering context
+			const ctx = canvas.getContext('2d')
 
-		// Draw the image onto the canvas, scaling it to fit
-		ctx.drawImage(image, 0, 0, this.width, this.height)
+			// Draw the image onto the canvas, scaling it to fit
+			ctx.drawImage(image, 0, 0, this.width, this.height)
 
-		// Convert the canvas to a data URL
-		const dataUrl = canvas.toDataURL('image/png')
+			// Convert the canvas to a data URL
+			const dataUrlResized = canvas.toDataURL('image/png')
 
-		const downloadImgName = 'brainImaging'
-		const a = document.createElement('a')
-		document.body.appendChild(a)
+			const downloadImgName = 'brainImaging'
+			const a = document.createElement('a')
+			document.body.appendChild(a)
 
-		a.addEventListener(
-			'click',
-			() => {
-				// Download the image
-				a.download = downloadImgName + '.png'
-				a.href = dataUrl
-				document.body.removeChild(a)
-			},
-			false
-		)
-		a.click()
+			a.addEventListener(
+				'click',
+				() => {
+					// Download the image
+					a.download = downloadImgName + '.png'
+					a.href = dataUrlResized
+					document.body.removeChild(a)
+				},
+				false
+			)
+			a.click()
+		}
 	}
 
 	getConfigInputsOptions() {
@@ -155,11 +159,6 @@ class BrainImaging {
 
 	async main() {
 		const settings = this.state.config.settings.brainImaging
-
-		for (const name in this.features) {
-			this.features[name].update({ state: this.state, appState })
-		}
-
 		const body = {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
@@ -169,21 +168,26 @@ class BrainImaging {
 			t: settings.brainImageT,
 			selectedSampleFileNames: this.state.config.selectedSampleFileNames
 		}
-		const firstTime = this.dataUrl == undefined
 		const data = await dofetch3('brainImaging', { body })
 		if (data.error) throw data.error
-		this.dataUrl = await data.brainImage
-		this.image.attr('src', this.dataUrl)
 
-		if (firstTime) {
-			//get image size to resize the image
-			const image = new Image()
-			image.src = this.dataUrl
-			image.onload = () => {
-				this.width = image.width * 2
-				this.height = image.height * 2
-				this.image.attr('width', this.width).attr('height', this.height)
-			}
+		const dataUrl = await data.brainImage
+		this.dataUrls = [dataUrl] //later on update with urls obtained after divide by is added, or for testing purposes use [dataUrl, dataUrl]
+		this.images = []
+		this.contentHolder.selectAll('*').remove()
+		const width = this.state.RefNIdata.width
+		const height = this.state.RefNIdata.height
+		for (const dataUrl of this.dataUrls) {
+			const image = this.contentHolder
+				.append('div')
+				.style('display', 'block')
+				.style('vertical-align', 'top')
+				.append('img')
+				.style('border', '5px solid #aaa')
+				.attr('src', dataUrl)
+				.attr('width', width)
+				.attr('height', height)
+			this.images.push(image)
 		}
 	}
 
@@ -192,7 +196,8 @@ class BrainImaging {
 		return {
 			config,
 			dslabel: appState.vocab.dslabel,
-			genome: appState.vocab.genome
+			genome: appState.vocab.genome,
+			RefNIdata: appState.termdbConfig.queries.NIdata[config.queryKey]
 		}
 	}
 }
