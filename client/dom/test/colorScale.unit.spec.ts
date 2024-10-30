@@ -46,21 +46,41 @@ tape('\n', test => {
 
 tape('new ColorScale()', test => {
 	test.timeoutAfter(100)
-
 	const holder = getHolder() as any
-	const testColorScale = new ColorScale({ holder, data: [0, 1] })
+	const opts = { holder, data: [0, 1] }
+	const testColorScale = new ColorScale(opts)
 
 	test.equal(testColorScale.barheight, 14, 'Should set default value of 14 for barheight')
 	test.equal(testColorScale.barwidth, 100, 'Should set default value of 100 for barwidth')
 	test.deepEquals(testColorScale.colors, ['white', 'red'], 'Should set default colors to white and red')
-	test.equal(testColorScale.topTicks, false, 'Should set default value of false for topTicks')
+	test.equal(testColorScale.cutoffMode, null, 'Should set default value of null for cutoffMode')
+	test.deepEquals(testColorScale.data, opts.data, 'Should set default data to [0, 1]')
+	test.equal(typeof testColorScale.dom, 'object', 'Should have a testColorScale.dom object')
+	test.equal(testColorScale.fontSize, 10, 'Should set default value of 10 for fontSize')
+	test.equal(testColorScale.markedValue, null, 'Should set default value of null for markedValue')
 	test.equal(testColorScale.ticks, 5, 'Should set default value of 5 for ticks')
 	test.equal(testColorScale.tickSize, 1, 'Should set default value of 1 for tickSize')
-	test.equal(testColorScale.fontSize, 10, 'Should set default value of 10 for fontSize')
+	test.equal(testColorScale.topTicks, false, 'Should set default value of false for topTicks')
 	test.equal(typeof testColorScale.render, 'function', 'Should have a testColorScale.render() function')
+	test.equal(typeof testColorScale.renderMenu, 'function', 'Should have a testColorScale.renderMenu() function')
+	test.equal(
+		testColorScale.setColorsCallback,
+		null,
+		'Should return null callback when setColorsCallback is not provided'
+	)
+	test.equal(
+		testColorScale.setMinMaxCallback,
+		null,
+		'Should return null callback when setMinMaxCallback is not provided'
+	)
 	test.equal(typeof testColorScale.updateAxis, 'function', 'Should have a testColorScale.updateAxis() function')
 	test.equal(typeof testColorScale.updateColors, 'function', 'Should have a testColorScale.updateColors() function')
 	test.equal(typeof testColorScale.updateScale, 'function', 'Should have a testColorScale.updateScale() function')
+	test.equal(
+		typeof testColorScale.updateValueInColorBar,
+		'function',
+		'Should have a testColorScale.updateValueInColorBar() function'
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -228,13 +248,21 @@ tape('.setMinMaxCallback() and .setColorsCallback()', test => {
 		},
 		setMinMaxCallback: obj => {
 			test.equal(typeof obj, 'object', 'Should pass an object to the .setMinMaxCallback() callback')
+			test.equal(obj.cutoffMode, 'fixed', 'Should return the correct cutoffMode to the .setMinMaxCallback() callback')
 			test.equal(obj.min, newMin, 'Should return the correct min value to the .setMinMaxCallback) callback')
 			test.equal(obj.max, newMax, 'Should return the correct max value to the .setMinMaxCallback() callback')
 		}
 	})
 
+	test.equal(
+		testColorScale.cutoffMode,
+		'auto',
+		'Should set cutoffMode = "auto" when not specified and .setMinMaxCallback() is provided.'
+	)
+
 	if (testColorScale.setColorsCallback) testColorScale.setColorsCallback(newColor, newIdx)
-	if (testColorScale.setMinMaxCallback) testColorScale.setMinMaxCallback({ min: newMin, max: newMax })
+	if (testColorScale.setMinMaxCallback)
+		testColorScale.setMinMaxCallback({ cutoffMode: 'fixed', min: newMin, max: newMax })
 
 	if (test['_ok']) holder.remove()
 	test.end()
