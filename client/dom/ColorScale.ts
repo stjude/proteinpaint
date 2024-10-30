@@ -23,12 +23,13 @@ type ColorScaleOpts = {
 	barheight?: number
 	/** Optional but recommended. The width of the color bar in px. Default is 100. */
 	barwidth?: number
-	/** If present, creates a menu on click to change the colors */
-	setColorsCallback?: (val: string, idx: number) => void
 	/** Optional but highly recommend. Default is a white to red scale.
 	 * The length of the array must match the data array. */
 	colors?: string[]
-	/** Specifies the default min and max mode if setMinMaxCallback is provided */
+	/** Specifies the default min and max mode if setMinMaxCallback is provided
+	 * If 'auto', renders the default min and max set on init
+	 * if 'fixed', renders the min and max set by the user.
+	 */
 	cutoffMode?: 'auto' | 'fixed'
 	/** Required
 	 * Specifies the values to show along a number line. Only pass the min and max.
@@ -54,8 +55,10 @@ type ColorScaleOpts = {
 	height?: number
 	/** If present, creates a menu on click to change the colors */
 	setColorsCallback?: (val: string, idx: number) => void
-	/** Creates inputs for the user to set the min and max colors
+	/** Creates inputs for the user to set the min and max values
 	 * Use the callback to update the plot/track/app/etc.
+	 * 'Auto' mode is the absolute min and max values provided to the data array
+	 * 'Fixed mode is the min and max values set by the user.
 	 */
 	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
 	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
@@ -76,16 +79,17 @@ export class ColorScale {
 	barheight: number
 	barwidth: number
 	colors: string[]
-	cutoffMode: 'auto' | 'fixed' | null
+	cutoffMode?: 'auto' | 'fixed'
+	default?: { min: number; max: number }
 	data: number[]
 	fontSize: number
 	markedValue?: number | null
 	/** Purely for testing. Not used in the class but can be
 	 * called independently of user click, if needed */
-	setColorsCallback: ((val: string, idx: number) => void) | null
+	setColorsCallback?: (val: string, idx: number) => void
 	/** Purely for testing. Not used in the class but can be
 	 * called independently of user click, if needed */
-	setMinMaxCallback: ((f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void) | null
+	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
 	ticks: number
 	tickSize: number
 	topTicks: boolean
@@ -95,16 +99,22 @@ export class ColorScale {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
 		this.colors = opts.colors || ['white', 'red']
-		this.cutoffMode = opts.cutoffMode || opts.setMinMaxCallback ? 'auto' : null
 		this.data = opts.data
 		this.fontSize = opts.fontSize || 10
 		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
-		this.setColorsCallback = opts.setColorsCallback || null
-		this.setMinMaxCallback = opts.setMinMaxCallback || null
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
 		this.topTicks = opts.topTicks || false
 
+		if (opts.setMinMaxCallback) {
+			this.setMinMaxCallback = opts.setMinMaxCallback
+			this.cutoffMode = opts.cutoffMode || 'auto'
+			this.default = {
+				min: opts.data[0],
+				max: opts.data[opts.data.length - 1]
+			}
+		}
+		if (opts.setColorsCallback) this.setColorsCallback = opts.setColorsCallback
 		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
 		if (!opts.data) throw new Error('No data provided for #dom/ColorScale.')
 		if (opts.data.length != this.colors.length)
@@ -138,7 +148,7 @@ export class ColorScale {
 			if (this.markedValue !== null) this.markedValueInColorBar(barG)
 		}
 
-		if (this.setColorsCallback || this.setMinMaxCallback) {
+		if (opts.setColorsCallback || opts.setMinMaxCallback) {
 			this.renderMenu(scaleSvg, barG)
 		}
 		this.render()
@@ -150,10 +160,12 @@ export class ColorScale {
 		scaleSvg
 			.on('click', () => {
 				this.tip.clear().showunder(barG.node())
-				// this.tip.d.style('display', 'flex').style('justify-content', 'center')
 				const radiosDiv = this.tip.d.append('div').style('padding', '2px')
 				const table = this.tip.d.append('table').style('margin', 'auto')
-				const promptRow = table.append('tr').style('text-align', 'center')
+				const promptRow = table
+					.append('tr')
+					.style('text-align', 'center')
+					.style('display', this.setColorsCallback ? 'table-row' : 'none')
 				promptRow.append('td').text('Min').style('padding-right', '10px')
 				promptRow.append('td').text('Max')
 				if (this.setMinMaxCallback) {
@@ -165,11 +177,24 @@ export class ColorScale {
 						holder: radiosDiv.style('display', 'block'),
 						options,
 						callback: async (value: string) => {
+							this.cutoffMode = value as 'auto' | 'fixed'
+							if (!this.default) throw new Error('Auto values not set for #dom/ColorScale.')
 							if (value == 'auto') {
+								promptRow.style('display', this.setColorsCallback ? 'table-row' : 'none')
 								minMaxRow.style('display', 'none')
+								this.data[0] = this.default.min
+								this.data[this.data.length - 1] = this.default.max
+								await this.setMinMaxCallback!({
+									cutoffMode: this.cutoffMode,
+									min: this.default.min,
+									max: this.default.max
+								})
+								this.updateAxis()
+								this.tip.hide()
 							}
 							if (value == 'fixed') {
 								minMaxRow.style('display', 'table-row')
+								promptRow.style('display', 'table-row')
 							}
 						}
 					})
@@ -226,9 +251,8 @@ export class ColorScale {
 					if (event.code != 'Enter') return
 					const value: number = parseFloat(valueInput.node().value)
 					this.data[idx] = value
-					if (this.cutoffMode == null) throw new Error('Cutoff mode not set.')
 					await this.setMinMaxCallback!({
-						cutoffMode: this.cutoffMode,
+						cutoffMode: this.cutoffMode!,
 						min: this.data[0],
 						max: this.data[this.data.length - 1]
 					})
@@ -334,6 +358,11 @@ export class ColorScale {
 			//Transition sometimes removes the font size
 			.selectAll('text')
 			.attr('font-size', `${this.fontSize}px`)
+
+		//The stroke may inherit 'currentColor' from opts.holder
+		//This is a workaround to prevent the black line from appearing
+		const pathElem = this.dom.scaleAxis.select('path').node()
+		if (pathElem instanceof SVGPathElement) pathElem.style.stroke = 'none'
 	}
 
 	updateValueInColorBar() {
@@ -353,10 +382,5 @@ export class ColorScale {
 		this.updateColors()
 		this.updateAxis()
 		this.updateValueInColorBar()
-
-		//The stroke may inherit 'currentColor' from opts.holder
-		//This is a workaround to prevent the black line from appearing
-		const pathElem = this.dom.scaleAxis.select('path').node()
-		if (pathElem instanceof SVGPathElement) pathElem.style.stroke = 'none'
 	}
 }
