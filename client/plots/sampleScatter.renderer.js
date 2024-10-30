@@ -724,7 +724,7 @@ export function setRenderers(self) {
 						ticks: 4,
 						tickSize: 5,
 						topTicks: true,
-						callback: (val, idx) => {
+						setColorsCallback: (val, idx) => {
 							this.changeGradientColor(chart, val, idx)
 						}
 					})
