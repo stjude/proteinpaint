@@ -89,7 +89,7 @@ tape('Render summary plot, term: "agedx"', test => {
 			.filter(d => d.__data__.isVisible() == true)
 
 		//test correct tabs exist
-		const tabLabels2Find = ['Barchart', 'Violin'] //hardcoded data in summary.js.
+		const tabLabels2Find = ['Barchart', 'Violin', 'Boxplot'] //hardcoded data in summary.js.
 		let foundLabels = 0
 		const notFoundLabels = []
 		for (const toggle of toggles) {
@@ -282,7 +282,7 @@ tape('Barchart & violin toggles, term: "agedx", term2: "diaggrp"', test => {
 	}
 
 	function testToggleButtonRendering(toggles) {
-		const tabLabels2Find = ['Barchart', 'Violin']
+		const tabLabels2Find = ['Barchart', 'Violin', 'Boxplot']
 		let foundLabels = 0
 		for (const toggle of toggles) {
 			if (tabLabels2Find.some(d => d == toggle.__data__.label)) ++foundLabels
@@ -362,7 +362,7 @@ tape('Barchart, violin, and scatter toggles, term: "agedx", term2: "hrtavg"', te
 	}
 
 	function testToggleButtonRendering(toggles) {
-		const tabLabels2Find = ['Barchart', 'Violin', 'Scatter']
+		const tabLabels2Find = ['Barchart', 'Violin', 'Boxplot', 'Scatter']
 		let foundLabels = 0
 		for (const toggle of toggles) {
 			if (tabLabels2Find.some(d => d == toggle.__data__.label)) ++foundLabels

@@ -62,7 +62,7 @@ tape('Default new ViewModel()', function (test) {
 		plotDim: {
 			domain: [0, 101],
 			incrTopPad: 40,
-			svgWidth: 340,
+			svgWidth: 310,
 			svgHeight: 160,
 			title: { x: 180, y: 40 },
 			yAxis: { x: 170, y: 80 }
