@@ -2277,7 +2277,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		!! important !! file column index must match with x/y values of each plot in dataset/gdc.hg38.ts 
 		*/
 		const seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} }
-		const plots = q.plots.map(p => ({ cells: [], name: p }))
+		const plots = q.plots.map(p => ({ expCells: [], noExpCells: [], name: p }))
 
 		let geneExpMap
 		if (ds.queries.singleCell.geneExpression && q.gene) {
@@ -2309,9 +2309,9 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 				if (geneExpMap) {
 					if (geneExpMap[cellId] !== undefined) {
 						cell.geneExp = geneExpMap[cellId]
-					}
-				}
-				plot.cells.push(cell)
+						plot.expCells.push(cell)
+					} else plot.noExpCells.push(cell)
+				} else plot.noExpCells.push(cell)
 			}
 		}
 		return { plots }

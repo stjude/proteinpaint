@@ -18,8 +18,10 @@ export type Cell = {
 export type Plot = {
 	/** name of the plot */
 	name: string
-	/** List of cells */
-	cells: Cell[]
+	/** List of cells with gene expression */
+	expCells?: Cell[]
+	/** List of cells with no gene expression, if no gene provided all cells will be here */
+	noExpCells?: Cell[]
 	/** Column name to color by, e.g Cell type, CNV, Fusion */
 	colorBy: string
 	colorColumns: string[]

@@ -159,7 +159,9 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 				const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
 				const lines = file2Lines[tsvfile]
 				// 1st line is header
-				const cells = [] as Cell[]
+				const expCells = [] as Cell[]
+				const noExpCells = [] as Cell[]
+
 				for (let i = 1; i < lines.length; i++) {
 					// each line is a cell
 					const l = lines[i].split('\t')
@@ -174,13 +176,16 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					if (geneExpMap) {
 						if (geneExpMap[cellId] !== undefined) {
 							cell.geneExp = geneExpMap[cellId]
+							expCells.push(cell)
+						} else {
+							noExpCells.push(cell)
 						}
-					}
-					cells.push(cell)
+					} else noExpCells.push(cell)
 				}
 				plots.push({
 					name: plot.name,
-					cells,
+					expCells,
+					noExpCells,
 					colorColumns: plot.colorColumns.map(c => c.name),
 					colorBy: colorColumn?.name,
 					colorMap: colorColumn?.colorMap
