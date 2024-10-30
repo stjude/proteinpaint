@@ -14,6 +14,7 @@ import { compute_mclass } from './vcf.mclass.js'
 import computePercentile from '#shared/compute.percentile.js'
 import { filterJoin } from '#shared/filter.js'
 import serverconfig from './serverconfig.js'
+import cloneDeep from 'lodash/cloneDeep'
 import {
 	dtsnvindel,
 	dtfusionrna,
@@ -40,6 +41,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.getTopTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.getSampleImages.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
+import { preInit } from '#src/mds3.preInit.ts'
 
 /*
 init
@@ -206,6 +208,7 @@ ds.cohort = {
 }
 */
 export async function validate_termdb(ds) {
+	const dsCopy = cloneDeep(ds)
 	if (ds.cohort) {
 		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
 		if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
@@ -232,6 +235,10 @@ export async function validate_termdb(ds) {
 	v: {name, plural_name, parent_id}
 	*/
 	tdb.sampleTypes = {}
+
+	if (ds.preInit) {
+		const response = await preInit(ds)
+	}
 
 	if (tdb?.dictionary?.gdcapi) {
 		await initGDCdictionary(ds)

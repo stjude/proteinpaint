@@ -1509,9 +1509,25 @@ export type Mds = BaseMds & {
 	}
 }
 
+type PreInitStatus = {
+	status: string
+	message?: string
+	[props: string]: any
+}
+
+export type PreInit = {
+	getStatus: () => Promise<PreInitStatus>
+	retryDelay?: number
+	retryMax?: number
+	errorCallback?: (response: PreInitStatus) => void
+}
+
 export type Mds3 = BaseMds & {
 	label?: Title
 	isMds3: boolean
+	loadWithoutBlocking?: boolean
+	preInit?: PreInit
+	initErrorCallback?: (a: any) => void
 	viewModes?: ViewMode[]
 	dsinfo?: KeyVal[]
 	queries?: Mds3Queries
@@ -1522,7 +1538,7 @@ export type Mds3 = BaseMds & {
 	ssm2canonicalisoform?: GdcApi
 	variant2samples?: Variant2Samples
 	// !!! TODO: improve these type definitions below !!!
-	getHostHeaders?: (q: any) => any
+	getHostHeaders?: (q?: any) => any
 	serverconfigFeatures?: any
 	customTwQByType?: {
 		[termType: string]: {

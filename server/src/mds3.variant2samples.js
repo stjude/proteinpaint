@@ -6,6 +6,7 @@ import { dtfusionrna, dtsv } from '#shared/common.js'
 import * as geneDbSearch from './gene.js'
 import { getSampleData_dictionaryTerms_termdb } from './termdb.matrix.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
+import cloneDeep from 'lodash/cloneDeep'
 
 /*
 validate_variant2samples()
@@ -23,9 +24,16 @@ variant2samples_getresult()
 		make_summary_categorical
 */
 
-export function validate_variant2samples(ds) {
+export async function validate_variant2samples(ds) {
+	const dsCopy = cloneDeep(ds)
 	const vs = ds.variant2samples
 	if (!vs) return
+
+	if (ds.preInit?.isReady) {
+		const response = await ds.preInit.isReady()
+		if (response.status != 'OK') throw response
+	}
+
 	vs.type_samples = 'samples'
 	vs.type_sunburst = 'sunburst'
 	vs.type_summary = 'summary'
@@ -212,13 +220,13 @@ output: (output is an object to be easily extendable of adding additional attr, 
 */
 async function queryMutatedSamples(q, ds) {
 	/*
-	!!! tricky !!!
+    !!! tricky !!!
 
-	make copy of twLst[] that's only used in this function
-	as new array elements can be added when using gdc api (e.g. case_id and read counts)
-	q.twLst must remained unchanged
-	in order for summary to work for given dictionary terms in q.twLst[], while the temporarily added terms can break summary code
-	*/
+    make copy of twLst[] that's only used in this function
+    as new array elements can be added when using gdc api (e.g. case_id and read counts)
+    q.twLst must remained unchanged
+    in order for summary to work for given dictionary terms in q.twLst[], while the temporarily added terms can break summary code
+    */
 	const twLst = q.twLst ? q.twLst.slice() : []
 
 	if (ds.variant2samples.gdcapi) {
@@ -226,12 +234,12 @@ async function queryMutatedSamples(q, ds) {
 	}
 
 	/*
-	from server-side files
-	action depends on details:
-	- file type (gz or db perhaps)
-	- data type (snv or sv)
-	- query by what (ssm id, region, or isoform)
-	*/
+    from server-side files
+    action depends on details:
+    - file type (gz or db perhaps)
+    - data type (snv or sv)
+    - query by what (ssm id, region, or isoform)
+    */
 
 	if (q.ssm_id_lst) return await queryServerFileBySsmid(q, twLst, ds)
 
@@ -448,39 +456,39 @@ async function make_sunburst(mutatedSamples, ds, q) {
 		delete node.lst
 	}
 	/*
-	nodes[0] should be root:
-	{ id: 'root', name: 'root' }
+    nodes[0] should be root:
+    { id: 'root', name: 'root' }
 
-	nodes[1] is a wedge:
-	{
-		id: 'root...Adenomas and Adenocarcinomas',
-		parentId: 'root',
-		value: 0,
-		name: 'Adenomas and Adenocarcinomas',
-		full: undefined,
-		id0: 'case.disease_type',
-		v0: 'Adenomas and Adenocarcinomas',
-		id1: undefined,
-		v1: undefined,
-		id2: undefined,
-		v2: undefined
-	}
+    nodes[1] is a wedge:
+    {
+        id: 'root...Adenomas and Adenocarcinomas',
+        parentId: 'root',
+        value: 0,
+        name: 'Adenomas and Adenocarcinomas',
+        full: undefined,
+        id0: 'case.disease_type',
+        v0: 'Adenomas and Adenocarcinomas',
+        id1: undefined,
+        v1: undefined,
+        id2: undefined,
+        v2: undefined
+    }
 
-	nodes[2] can be a smaller wedge on nodes[1]:
-	{
-		id: 'root...Adenomas and Adenocarcinomas...Colon',
-		parentId: 'root...Adenomas and Adenocarcinomas',
-		value: 4,
-		name: 'Colon',
-		full: undefined,
-		id0: 'case.disease_type',
-		v0: 'Adenomas and Adenocarcinomas',
-		id1: 'case.primary_site',
-		v1: 'Colon',
-		id2: undefined,
-		v2: undefined
-	}
-	*/
+    nodes[2] can be a smaller wedge on nodes[1]:
+    {
+        id: 'root...Adenomas and Adenocarcinomas...Colon',
+        parentId: 'root...Adenomas and Adenocarcinomas',
+        value: 4,
+        name: 'Colon',
+        full: undefined,
+        id0: 'case.disease_type',
+        v0: 'Adenomas and Adenocarcinomas',
+        id1: 'case.primary_site',
+        v1: 'Colon',
+        id2: undefined,
+        v2: undefined
+    }
+    */
 
 	if (ds?.cohort?.termdb?.termid2totalsize2) {
 		const combinations = await get_crosstabCombinations(q.twLst, ds, q, nodes)
@@ -499,12 +507,12 @@ async function make_summary(mutatedSamples, ds, q) {
 
 	const entries = []
 	/* one element for a term
-	{
-		termid=str
-		numbycategory=[ ]
-		density_data=[]
-	}
-	*/
+    {
+        termid=str
+        numbycategory=[ ]
+        density_data=[]
+    }
+    */
 
 	for (const tw of q.twLst) {
 		if (!tw.term) continue
@@ -561,9 +569,9 @@ function make_summary_categorical(samples, termid) {
 	const cat2count = new Map()
 
 	if ('sample_id' in samples[0]) {
-		/* 
-		sample.sample_id is set. this should be present for all non-gdc tracks
-		*/
+		/*
+        sample.sample_id is set. this should be present for all non-gdc tracks
+        */
 		for (const s of samples) {
 			const c = s[termid]
 			if (!c) continue
@@ -581,8 +589,8 @@ function make_summary_categorical(samples, termid) {
 
 	if ('case_uuid' in samples[0]) {
 		/*
-		for gdc track, instead of "sample_id" it uses "case_uuid" as hardcoded for gdc
-		*/
+        for gdc track, instead of "sample_id" it uses "case_uuid" as hardcoded for gdc
+        */
 		for (const s of samples) {
 			const c = s[termid]
 			if (!c) continue
@@ -599,9 +607,9 @@ function make_summary_categorical(samples, termid) {
 	}
 
 	/*
-	neither sample_id or case.case_id is set
-	no way to gather unique list of samples
-	*/
+    neither sample_id or case.case_id is set
+    no way to gather unique list of samples
+    */
 	for (const s of samples) {
 		const c = s[term.id]
 		if (!c) continue

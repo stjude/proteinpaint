@@ -436,11 +436,18 @@ export async function initGenomesDs(serverconfig) {
 			g.datasets[ds.label] = ds
 
 			if (ds.isMds3) {
-				try {
-					await mds3_init.init(ds, g, d)
-				} catch (e) {
-					console.trace(e)
-					throw 'Error with mds3 dataset ' + ds.label + ': ' + e
+				if (ds.loadWithoutBlocking) {
+					// do not await to support the option to not block other datasets from loading
+					mds3_init.init(ds, g, d).catch(e => {
+						throw 'Error with mds3 dataset ' + ds.label + ': ' + e
+					})
+				} else {
+					try {
+						await mds3_init.init(ds, g, d)
+					} catch (e) {
+						console.trace(e)
+						throw 'Error with mds3 dataset ' + ds.label + ': ' + e
+					}
 				}
 				continue
 			}
