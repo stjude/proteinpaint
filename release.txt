@@ -1,1 +1,2 @@
-
+Features
+- New box plot available in the mass UI summary chart. 
