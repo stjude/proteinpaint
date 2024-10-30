@@ -37,8 +37,6 @@ export type BoxplotDom = {
 	controls: Elem
 	/** Main div */
 	div: Elem
-	/** Placeholder to display error messages */
-	error: Elem
 	/** Sandbox header */
 	header?: Elem
 	/** Displays the term1 name as the plot title */
@@ -62,12 +60,10 @@ class TdbBoxplot extends RxComponent {
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = opts.controls ? holder : holder.append('div')
-		const error = div.append('div').attr('class', 'sjpp-boxplot-error')
 		const svg = div.append('svg').style('display', 'inline-block').attr('class', 'sjpp-boxplot-svg')
 		this.dom = {
 			controls,
 			div,
-			error,
 			svg,
 			plotTitle: svg.append('text'),
 			yAxis: svg.append('g'),
@@ -135,7 +131,6 @@ class TdbBoxplot extends RxComponent {
 
 	async main() {
 		try {
-			this.dom.error.selectAll('*').remove()
 			this.dom.plotTitle.selectAll('*').remove()
 			this.dom.yAxis.selectAll('*').remove()
 			this.dom.boxplots.selectAll('*').remove()
@@ -148,13 +143,7 @@ class TdbBoxplot extends RxComponent {
 			const model = new Model(config, state, this.app, settings)
 			const data = await model.getData()
 			if (!data.plots.length) {
-				this.dom.error
-					.append('div')
-					.style('padding', '20px')
-					.style('opacity', '0.7')
-					.style('font-size', '1.1em')
-					.text('No data to render Box plot')
-				return
+				this.app.printError('No data found for boxplot')
 			}
 			const viewData = new ViewModel(config, data, settings)
 			new View(viewData, settings, this.dom)
