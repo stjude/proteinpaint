@@ -6,7 +6,7 @@ import { dtfusionrna, dtsv } from '#shared/common.js'
 import * as geneDbSearch from './gene.js'
 import { getSampleData_dictionaryTerms_termdb } from './termdb.matrix.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
-import { getApiStatus, testGDCApiStatus } from '#src/termdb.gdc.status.js'
+import { retryApiStatus } from '#src/termdb.gdc.status.ts'
 import cloneDeep from 'lodash/cloneDeep'
 
 /*
@@ -31,10 +31,8 @@ export async function validate_variant2samples(ds) {
 	if (!vs) return
 
 	if (vs.gdcapi) {
-		const isStatusOk = await testGDCApiStatus(ds, {}, 0)
-		if (!isStatusOk) {
-			return
-		}
+		const response = await retryApiStatus(ds)
+		if (response.status != 'OK') throw response
 	}
 
 	vs.type_samples = 'samples'

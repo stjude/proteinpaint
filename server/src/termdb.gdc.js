@@ -3,7 +3,6 @@ import path from 'path'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { cachedFetch } from './utils'
-import { getApiStatus } from '#src/termdb.gdc.status.js'
 
 /*
 ********************   Comment   *****************
@@ -1027,7 +1026,7 @@ async function cacheSampleIdMapping(ds) {
 
 	// record /status endpoint result. subsequent stale cache check will requery /status and compare with this
 	// if this fetch fails, means the subsequent check won't work, and must abort launch
-	ds.__gdc.data_release_version = await getApiStatus(ds).data_release_version
+	ds.__gdc.data_release_version = await ds.getStatus().data_release_version
 }
 
 /*
@@ -1182,7 +1181,7 @@ async function caseCacheIsStale(ds) {
 
 	let value
 	try {
-		value = await getApiStatus(ds).data_release_version
+		value = await ds.getStatus().data_release_version
 	} catch (e) {
 		console.warn('GDC: fetch api status failed on a check. skip and wait for next check')
 		return false
