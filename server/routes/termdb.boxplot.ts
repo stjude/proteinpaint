@@ -1,4 +1,4 @@
-import type { BoxPlotRequest, BoxPlotResponse, BoxPlotEntry, BoxPlotData } from '#types'
+import type { BoxPlotRequest, BoxPlotResponse } from '#types'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortKey2values } from '../src/termdb.violin.js'
@@ -75,7 +75,7 @@ function init({ genomes }) {
 				if (overlayTerm) {
 					let label = overlayTerm?.term?.values?.[key]?.label || key
 					label = `${label}, n=${values.length}`
-					if (!maxLabelLgth || label.length > maxLabelLgth.length) maxLabelLgth = label.length
+					if (!maxLabelLgth || label.length > maxLabelLgth) maxLabelLgth = label.length
 					const plot = {
 						// label,
 						// values,
@@ -103,14 +103,13 @@ function init({ genomes }) {
 					plots.push(plot)
 				}
 			}
-
-			data.plots = plots
-			data.absMin = absMin
-			data.absMax = absMax
-			data.maxLabelLgth = maxLabelLgth
-			delete data.samples
-			delete data.refs
-			res.send(data)
+			const returnData: BoxPlotResponse = {
+				absMin,
+				absMax,
+				maxLabelLgth,
+				plots
+			}
+			res.send(returnData)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
