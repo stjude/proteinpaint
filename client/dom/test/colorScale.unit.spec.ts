@@ -9,7 +9,7 @@ import { ColorScale } from '../ColorScale'
     - ColorScale.updateColors()
 	- markedValue - Show value in color bar and update
     - ColorScale.updateAxis()
-	- .setMinMax() and .callback()
+	- .setMinMaxCallback() and .setColorsCallback()
 */
 
 /**************
@@ -211,7 +211,7 @@ tape('ColorScale.updateScale()', test => {
 	test.end()
 })
 
-tape('.setMinMax() and .callback()', test => {
+tape('.setMinMaxCallback() and .setColorsCallback()', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
@@ -221,20 +221,20 @@ tape('.setMinMax() and .callback()', test => {
 	const newMin = -10
 	const testColorScale = getColorScale({
 		holder,
-		callback: (value: string, idx: number) => {
-			test.equal(value, newColor, 'Should return the correct color to the callback')
-			test.equal(idx, newIdx, 'Should return the correct index to the callback')
+		setColorsCallback: (value: string, idx: number) => {
+			test.equal(value, newColor, 'Should return the correct color to the .setColorsCallback()')
+			test.equal(idx, newIdx, 'Should return the correct index to the .setColorsCallback()')
 			return value
 		},
-		setMinMax: obj => {
-			test.equal(typeof obj, 'object', 'Should pass an object to the .setMinMax() callback')
-			test.equal(obj.min, newMin, 'Should return the correct min value to the .setMinMax() callback')
-			test.equal(obj.max, newMax, 'Should return the correct max value to the .setMinMax() callback')
+		setMinMaxCallback: obj => {
+			test.equal(typeof obj, 'object', 'Should pass an object to the .setMinMaxCallback() callback')
+			test.equal(obj.min, newMin, 'Should return the correct min value to the .setMinMaxCallback) callback')
+			test.equal(obj.max, newMax, 'Should return the correct max value to the .setMinMaxCallback() callback')
 		}
 	})
 
-	if (testColorScale.callback) testColorScale.callback(newColor, newIdx)
-	if (testColorScale.setMinMax) testColorScale.setMinMax({ min: newMin, max: newMax })
+	if (testColorScale.setColorsCallback) testColorScale.setColorsCallback(newColor, newIdx)
+	if (testColorScale.setMinMaxCallback) testColorScale.setMinMaxCallback({ min: newMin, max: newMax })
 
 	if (test['_ok']) holder.remove()
 	test.end()
