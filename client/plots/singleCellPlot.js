@@ -1,5 +1,4 @@
 import { getCompInit, copyMerge, deepEqual } from '../rx/index.js'
-import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { dofetch3 } from '#common/dofetch'
 import { getColors, plotColor } from '#shared/common.js'
@@ -7,10 +6,10 @@ import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { color, rgb } from 'd3'
+import { rgb } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
-import { ColorScale, icons as icon_functions, make_radios, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
+import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
 import { Tabs } from '../dom/toggleButtons.js'
 
 /*
@@ -32,7 +31,7 @@ const COLORBY_TAB = 2
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
 
-const lightGray = '#E5E5E5'
+const noExpColor = '#F5F5F5' //lightGray
 
 class singleCellPlot {
 	constructor() {
@@ -83,7 +82,7 @@ class singleCellPlot {
 			})
 		this.tabs.push(
 			{
-				label: 'Color by',
+				label: 'Clusters',
 				id: COLORBY_TAB,
 				active: activeTab == COLORBY_TAB,
 				callback: () => this.setActiveTab(COLORBY_TAB)
@@ -563,6 +562,8 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
+		this.colorByGene =
+			this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
 		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 		this.plotColorByDivs = []
@@ -657,6 +658,7 @@ class singleCellPlot {
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.plots = []
 		for (const plot of result.plots) {
+			plot.cells = [...plot.noExpCells, ...plot.expCells]
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
 		}
@@ -692,6 +694,7 @@ class singleCellPlot {
 					: cat2Color(cluster)
 
 		plot.colorMap = colorMap
+		//used to plot the cells
 		this.initAxes(plot)
 
 		plot.plotDiv = this.dom.plotsDiv
@@ -737,8 +740,33 @@ class singleCellPlot {
 			})
 		plot.mainG.call(plot.zoom)
 		this.plots.push(plot)
+		if (this.colorByGene && this.state.config.gene) {
+			// for gene expression sc plot, needs to add colorGenerator to plot even
+			// when legend is not needed for the plot
+			const colorGradient = rgb(plotColor)
+			if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = 'white'
+			if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
+			const startColor = this.config.startColor[plot.name]
+			const stopColor = this.config.stopColor[plot.name]
+			let min, max
+			const expCells = plot.expCells
 
-		const symbols = plot.mainG.selectAll('g').data(plot.cells)
+			const values = expCells.map(cell => cell.geneExp)
+			if (values.length == 0) {
+				plot.colorGenerator = null
+			} else {
+				;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+				plot.colorGenerator = d3Linear().domain([0, max]).range([startColor, stopColor])
+				plot.max = max
+			}
+		}
+		this.renderCells(plot.cells, plot)
+
+		this.renderLegend(plot)
+	}
+
+	renderCells(cells, plot) {
+		const symbols = plot.mainG.selectAll('g').data(cells)
 
 		symbols
 			.enter()
@@ -748,7 +776,6 @@ class singleCellPlot {
 			.attr('r', this.settings.sampleSize)
 			.attr('fill', d => this.getColor(d, plot))
 			.style('fill-opacity', d => this.getOpacity(d))
-		this.renderLegend(plot)
 	}
 
 	getOpacity(d) {
@@ -757,20 +784,15 @@ class singleCellPlot {
 	}
 
 	getColor(d, plot) {
-		const noExpColor = lightGray
-		const colorByGene =
-			this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
-		if (!colorByGene || !this.state.config.gene) return plot.colorMap[d.category]
-		else if (colorByGene) {
+		if (!this.colorByGene || !this.state.config.gene) return plot.colorMap[d.category]
+		else if (this.colorByGene) {
 			if (!d.geneExp) return noExpColor
-			if (plot.colorGenerator) return plot.colorGenerator(d.geneExp)
-			return noExpColor //no gene expression data for this plot
+			else return plot.colorGenerator(d.geneExp)
 		}
 	}
 
 	handleZoom(e, plot) {
 		plot.mainG.attr('transform', e.transform)
-		plot.zoomK = e.transform.scale(1).k
 	}
 
 	initAxes(plot) {
@@ -784,12 +806,9 @@ class singleCellPlot {
 		plot.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
 			.range([0 + r, this.settings.svgw - r])
-		plot.axisBottom = axisBottom(plot.xAxisScale)
 		plot.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
 			.range([0 + r, this.settings.svgh - r])
-		plot.axisLeft = axisLeft(plot.yAxisScale)
-		plot.zoomK = 1
 	}
 
 	renderLegend(plot) {
@@ -832,26 +851,6 @@ class singleCellPlot {
 		}
 		legendSVG.selectAll('*').remove()
 
-		const sameLegend = this.state.termdbConfig.queries.singleCell.data.sameLegend
-		if (sameLegend && this.legendRendered) {
-			if (this.state.config.gene) {
-				// for gene expression sc plot, needs to add colorGenerator to plot even
-				// when legend is not needed for the plot
-				const colorGradient = rgb(plotColor)
-				if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = colorGradient.brighter(1).toString()
-				if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
-				const startColor = this.config.startColor[plot.name]
-				const stopColor = this.config.stopColor[plot.name]
-				let min, max
-				const values = plot.cells[0]?.geneExp == undefined ? [] : plot.cells.map(cell => cell.geneExp)
-				if (values.length == 0) {
-					plot.colorGenerator = null
-					return
-				} else [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
-				plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
-			}
-			return
-		}
 		this.legendRendered = true
 
 		const legendG = legendSVG.append('g').attr('transform', `translate(20, 0)`).style('font-size', '0.9em')
@@ -944,22 +943,11 @@ class singleCellPlot {
 	}
 
 	renderColorGradient(plot, legendG, gene) {
-		if (plot.cells.length == 0) return
-		const colorGradient = rgb(plotColor)
-		if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = 'white'
-		if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(2).toString()
+		if (plot.cells.length == 0 || !plot.colorGenerator) return
 		const colors = [this.config.startColor[plot.name], this.config.stopColor[plot.name]]
 
 		let offsetY = 25
 		const step = 20
-		let min, max
-		const values = plot.cells[0]?.geneExp == undefined ? [] : plot.cells.map(cell => cell.geneExp)
-		if (values.length == 0) {
-			plot.colorGenerator = null
-			return
-		} else [min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
-		plot.colorGenerator = d3Linear().domain([min, max]).range(colors)
-
 		const barwidth = 100
 
 		legendG
@@ -973,7 +961,7 @@ class singleCellPlot {
 			barwidth,
 			barheight: 20,
 			colors,
-			data: [min, max],
+			data: [0, plot.max],
 			position: '0, 20',
 			ticks: 4,
 			tickSize: 5,
