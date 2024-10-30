@@ -2,8 +2,6 @@ import { getCompInit, copyMerge, multiInit } from '#rx'
 import { controlsInit } from './controls'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table.ts'
-import { debounce } from 'debounce'
-const debounceDelay = 1000
 class BrainImaging {
 	constructor(opts) {
 		this.opts = opts
@@ -18,7 +16,6 @@ class BrainImaging {
 				.style('padding-left', '7px')
 				.style('color', 'rgb(85, 85, 85)')
 				.html(`Brain Imaging: ${state.config.queryKey}/${state.config.selectedSampleFileNames.join(' ')}`)
-		const debounceDelay = 1000
 		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const rightDiv = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const headerHolder = rightDiv
@@ -28,7 +25,7 @@ class BrainImaging {
 			.style('padding', '10px')
 		const contentHolder = rightDiv.append('div').style('vertical-align', 'top')
 		this.dom = { headerHolder, contentHolder }
-		this.addSliders(headerHolder, debounceDelay, state.config.settings.brainImaging)
+		this.addSliders(state.config.settings.brainImaging)
 
 		const configInputsOptions = this.getConfigInputsOptions()
 
@@ -46,7 +43,7 @@ class BrainImaging {
 	addSliders(settings) {
 		const headerHolder = this.dom.headerHolder
 		headerHolder.append('label').attr('for', 'saggital').text('Sagittal:')
-		headerHolder
+		this.dom.saggitalSlider = headerHolder
 			.append('input')
 			.attr('id', 'saggital')
 			.attr('type', 'range')
@@ -58,22 +55,43 @@ class BrainImaging {
 				const settings = { brainImageL: e.target.value }
 				this.editBrainImage(settings)
 			})
+		this.dom.saggitalInput = headerHolder
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', 0)
+			.attr('max', 192)
+			.attr('value', settings.brainImageL)
+			.on('change', e => {
+				const settings = { brainImageL: e.target.value }
+				this.editBrainImage(settings)
+			})
+			.style('vertical-align', 'top')
 
 		headerHolder.append('label').attr('for', 'coronal').text('Coronal:').style('margin-left', '30px')
-		headerHolder
+		this.dom.coronalSlider = headerHolder
 			.append('input')
-			.attr('id', 'coronal')
 			.attr('type', 'range')
 			.attr('min', 0)
 			.attr('max', 228)
 			.attr('value', settings.brainImageF)
 			.style('width', '200px')
-			.on('input', e => {
+			.on('change', e => {
 				const settings = { brainImageF: e.target.value }
 				this.editBrainImage(settings)
 			})
+		this.dom.coronalInput = headerHolder
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', 0)
+			.attr('max', 192)
+			.attr('value', settings.brainImageF)
+			.on('change', e => {
+				const settings = { brainImageF: e.target.value }
+				this.editBrainImage(settings)
+			})
+			.style('vertical-align', 'top')
 		headerHolder.append('label').attr('for', 'axial').text('Axial:').style('margin-left', '30px')
-		headerHolder
+		this.dom.axialSlider = headerHolder
 			.append('input')
 			.attr('id', 'axial')
 			.attr('type', 'range')
@@ -81,6 +99,16 @@ class BrainImaging {
 			.attr('max', 192)
 			.attr('value', settings.brainImageT)
 			.style('width', '200px')
+			.on('change', e => {
+				const settings = { brainImageT: e.target.value }
+				this.editBrainImage(settings)
+			})
+		this.dom.axialInput = headerHolder
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', 0)
+			.attr('max', 192)
+			.attr('value', settings.brainImageT)
 			.on('change', e => {
 				const settings = { brainImageT: e.target.value }
 				this.editBrainImage(settings)
@@ -128,39 +156,48 @@ class BrainImaging {
 
 	getConfigInputsOptions() {
 		const mandatoryConfigInputOptions = [
-			{
-				label: 'Sagittal',
-				type: 'number',
-				chartType: 'brainImaging',
-				settingsKey: 'brainImageL',
-				title: 'Sagittal',
-				min: 0,
-				max: 192
-			},
-			{
-				label: 'Coronal',
-				type: 'number',
-				chartType: 'brainImaging',
-				settingsKey: 'brainImageF',
-				title: 'Coronal',
-				min: 0,
-				max: 228
-			},
-			{
-				label: 'Axial',
-				type: 'number',
-				chartType: 'brainImaging',
-				settingsKey: 'brainImageT',
-				title: 'Axial',
-				min: 0,
-				max: 192
-			}
+			// {
+			// 	label: 'Sagittal',
+			// 	type: 'number',
+			// 	chartType: 'brainImaging',
+			// 	settingsKey: 'brainImageL',
+			// 	title: 'Sagittal',
+			// 	min: 0,
+			// 	max: 192
+			// },
+			// {
+			// 	label: 'Coronal',
+			// 	type: 'number',
+			// 	chartType: 'brainImaging',
+			// 	settingsKey: 'brainImageF',
+			// 	title: 'Coronal',
+			// 	min: 0,
+			// 	max: 228
+			// },
+			// {
+			// 	label: 'Axial',
+			// 	type: 'number',
+			// 	chartType: 'brainImaging',
+			// 	settingsKey: 'brainImageT',
+			// 	title: 'Axial',
+			// 	min: 0,
+			// 	max: 192
+			// }
 		]
 		return mandatoryConfigInputOptions
 	}
 
 	async main() {
 		const settings = this.state.config.settings.brainImaging
+
+		//settings may be edited by the slider or the input, so we update the sliders and inputs to reflect the current settings
+		this.dom.saggitalSlider.node().value = settings.brainImageL
+		this.dom.saggitalInput.node().value = settings.brainImageL
+		this.dom.coronalSlider.node().value = settings.brainImageF
+		this.dom.coronalInput.node().value = settings.brainImageF
+		this.dom.axialSlider.node().value = settings.brainImageT
+		this.dom.axialInput.node().value = settings.brainImageT
+
 		const body = {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
