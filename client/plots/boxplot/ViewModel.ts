@@ -17,7 +17,7 @@ export class ViewModel {
 	/** Bottom padding for the svg */
 	readonly bottomPad = 40
 	/** Horizontal, or right and left padding */
-	readonly horizPad = 150
+	readonly horizPad = 120
 	/** For outliers, set a radius rather than using the default. */
 	readonly outRadius = 5
 	/** Increasing padding to space out the boxplots and determine position */
@@ -29,7 +29,7 @@ export class ViewModel {
 		if (!data || !data.plots.length) return
 		const viewData: any = structuredClone(data)
 
-		const totalLabelWidth = viewData.maxLabelLgth + this.settings.labelPad + this.horizPad
+		const totalLabelWidth = viewData.maxLabelLgth * 4 + this.settings.labelPad + this.horizPad
 		const totalRowHeight = this.settings.rowHeight + this.settings.rowSpace
 
 		/** Add more plot dimensions here

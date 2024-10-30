@@ -234,10 +234,6 @@ function setRenderers(self) {
 					childType: 'boxplot',
 					label: 'Boxplot',
 					disabled: d => false,
-					/** To see the boxplot, comment out the line below and
-					 * uncomment the line below it. Non-visible whilst in
-					 * development */
-					// isVisible: () => false,
 					isVisible: () => isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term),
 					getConfig: async () => {
 						const _term = self.config?.term
