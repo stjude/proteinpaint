@@ -10,7 +10,6 @@ import type { Elem } from '../../types/d3'
 
 /** TODOs:
  *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
- *	Add other controls
  *	Hover effect?
  *	Descriptive stats tables?
  *	Types for config and data
@@ -92,6 +91,23 @@ class TdbBoxplot extends RxComponent {
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 				defaultQ4fillTW: term0_term2_defaultQ
+			},
+			{
+				label: 'Box plot height',
+				title: 'Height of each box plot',
+				type: 'number',
+				chartType: 'boxplot',
+				settingsKey: 'rowHeight',
+				step: 1,
+				max: 300,
+				min: 20,
+				debounceInterval: 1000
+			},
+			{
+				label: 'Default color',
+				type: 'color',
+				chartType: 'boxplot',
+				settingsKey: 'color'
 			}
 		]
 		this.components.controls = await controlsInit({
