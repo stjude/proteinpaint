@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Added example of the .mclassOverride argument in the Additional Track Features cards
+
 
 ## 2.81.6
 
