@@ -1026,7 +1026,7 @@ async function cacheSampleIdMapping(ds) {
 
 	// record /status endpoint result. subsequent stale cache check will requery /status and compare with this
 	// if this fetch fails, means the subsequent check won't work, and must abort launch
-	ds.__gdc.data_release_version = await ds.getStatus().data_release_version
+	ds.__gdc.data_release_version = await ds.preInit.getStatus().data_release_version
 }
 
 /*

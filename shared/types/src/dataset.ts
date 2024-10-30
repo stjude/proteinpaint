@@ -1509,11 +1509,24 @@ export type Mds = BaseMds & {
 	}
 }
 
+type PreInitStatus = {
+	status: string
+	message?: string
+	[props: string]: any
+}
+
+export type PreInit = {
+	getStatus: () => Promise<PreInitStatus>
+	retryDelay?: number
+	retryMax?: number
+	errorCallback?: (response: PreInitStatus) => void
+}
+
 export type Mds3 = BaseMds & {
 	label?: Title
 	isMds3: boolean
 	loadWithoutBlocking?: boolean
-	getStatus?: (a?: any) => any
+	preInit?: PreInit
 	initErrorCallback?: (a: any) => void
 	viewModes?: ViewMode[]
 	dsinfo?: KeyVal[]
