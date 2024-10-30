@@ -17,6 +17,8 @@ const mockConfig = {
 
 const mockData = {
 	maxLabelLgth: 10,
+	absMin: 0,
+	absMax: 100,
 	plots: [
 		{
 			seriesId: '1',
@@ -48,7 +50,7 @@ const mockSettings = {
 }
 
 tape('\n', function (test) {
-	test.pass('-***- plots/boxplot -***-')
+	test.pass('-***- plots/boxplot/ViewModel -***-')
 	test.end()
 })
 
@@ -56,28 +58,46 @@ tape('Default new ViewModel()', function (test) {
 	test.timeoutAfter(100)
 
 	const viewModel: any = new ViewModel(mockConfig, mockData, mockSettings)
-
-	test.equal(typeof viewModel.plotDim, 'object', 'Should create a plotDim object')
-	test.equal(viewModel.plotDim.incrTopPad, 40, 'Should set incrTopPad to 40')
-	test.equal(viewModel.plotDim.svgWidth, 280, 'Should set svgWidth to 280')
-	test.equal(viewModel.plotDim.svgHeight, 160, 'Should set svgHeight to 160')
-	test.equal(viewModel.plotDim.title.x, 150, 'Should set title.x to 150')
-	test.equal(viewModel.plotDim.title.y, 40, 'Should set title.y to 40')
-	test.equal(viewModel.plotDim.totalLabelWidth, 140, 'Should set totalLabelWidth to 140')
-	test.equal(viewModel.plotDim.totalRowHeight, 30, 'Should set totalRowHeight to 30')
-	test.equal(viewModel.plotDim.vertPad, 20, 'Should set vertPad to 20')
-	test.equal(viewModel.plotDim.horizPad, 120, 'Should set horizPad to 120')
-	test.equal(viewModel.plotDim.yAxis.x, 140, 'Should set yAxis.x to 140')
-	test.equal(viewModel.plotDim.yAxis.y, 80, 'Should set yAxis.y to 80')
+	const expected = {
+		plotDim: {
+			domain: [0, 101],
+			incrTopPad: 40,
+			svgWidth: 340,
+			svgHeight: 160,
+			title: { x: 180, y: 40 },
+			yAxis: { x: 170, y: 80 }
+		}
+	}
+	test.equal(typeof viewModel.plotDim, 'object', `Should create a plotDim object`)
+	test.deepEqual(viewModel.plotDim.domain, expected.plotDim.domain, `Should set domain = ${expected.plotDim.domain}`)
+	test.equal(
+		viewModel.plotDim.incrTopPad,
+		expected.plotDim.incrTopPad,
+		`Should set incrTopPad = ${expected.plotDim.incrTopPad}`
+	)
+	test.equal(
+		viewModel.plotDim.svgWidth,
+		expected.plotDim.svgWidth,
+		`Should set svgWidth = ${expected.plotDim.svgWidth}`
+	)
+	test.equal(
+		viewModel.plotDim.svgHeight,
+		expected.plotDim.svgHeight,
+		`Should set svgHeight = ${expected.plotDim.svgHeight}`
+	)
+	test.equal(viewModel.plotDim.title.x, expected.plotDim.title.x, `Should set title.x = ${expected.plotDim.title.x}`)
+	test.equal(viewModel.plotDim.title.y, expected.plotDim.title.y, `Should set title.y = ${expected.plotDim.title.y}`)
+	test.equal(viewModel.plotDim.yAxis.x, expected.plotDim.yAxis.x, `Should set yAxis.x = ${expected.plotDim.yAxis.x}`)
+	test.equal(viewModel.plotDim.yAxis.y, expected.plotDim.yAxis.y, `Should set yAxis.y = ${expected.plotDim.yAxis.y}`)
 	test.equal(
 		viewModel.plots[0].color,
 		termjson['sex'].values[1].color,
-		`Should set first box plot color to ${termjson['sex'].values[1].color}`
+		`Should set first box plot color = ${termjson['sex'].values[1].color}`
 	)
 	test.equal(
 		viewModel.plots[1].color,
 		termjson['sex'].values[2].color,
-		`Should set second box plot color to ${termjson['sex'].values[1].color}`
+		`Should set second box plot color = ${termjson['sex'].values[2].color}`
 	)
 
 	test.end()
