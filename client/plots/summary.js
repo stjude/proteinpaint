@@ -399,10 +399,14 @@ export async function getPlotConfig(opts, app) {
 			if (!edits.childType) {
 				if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
 					config.childType = 'sampleScatter'
-				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous')
-					if (opts.childType != 'boxplot') config.childType = 'violin'
-					else config.childType = 'boxplot'
-				else config.childType = 'barchart'
+				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
+					/** Fix for summary tabs switching to different plots when opening and closing
+					 * controls, changing settings, etc. */
+					const state = app.getState()
+					if (state && state.plots) {
+						config.childType = state.plots.find(p => p.id === config.id).childType
+					} else config.childType = opts.childType || 'violin'
+				} else config.childType = 'barchart'
 			}
 		}
 	}

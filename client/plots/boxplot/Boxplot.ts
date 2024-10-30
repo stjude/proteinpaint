@@ -13,7 +13,6 @@ import type { Elem } from '../../types/d3'
  *	Add other controls
  *	Hover effect?
  *	Descriptive stats tables?
- *	Fix issues toggling between summary plots
  *	Types for config and data
  */
 
