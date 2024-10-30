@@ -6,7 +6,8 @@ import { Model } from './Model'
 import { ViewModel } from './ViewModel'
 import { View } from './View'
 import { plotColor } from '#shared/common.js'
-import type { Elem } from '../../types/d3'
+import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import { MassAppApi } from '#mass/types/mass'
 
 /** TODOs:
  *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
@@ -14,6 +15,13 @@ import type { Elem } from '../../types/d3'
  *	Descriptive stats tables?
  *	Types for config and data
  */
+
+type TdbBoxplotOpts = {
+	holder: Elem
+	controls?: Elem
+	header?: Elem
+	numericEditMenuVersion?: string[]
+}
 
 export type BoxplotSettings = {
 	/** Width of the boxplots and scale, excluding labels */
@@ -30,17 +38,17 @@ export type BoxplotSettings = {
 
 export type BoxplotDom = {
 	/** Div for boxplots below the scale */
-	boxplots: Elem
+	boxplots: SvgG
 	/** Controls div for the hamburger menu */
-	controls: Elem
+	controls: any
 	/** Main div */
-	div: Elem
+	div: Div | Elem
 	/** Sandbox header */
 	header?: Elem
 	/** Displays the term1 name as the plot title */
-	plotTitle: Elem
+	plotTitle: SvgText
 	/** Main svg holder */
-	svg: Elem
+	svg: SvgSvg
 	/** Y-axis shown above the boxplots */
 	yAxis: any
 }
@@ -49,7 +57,7 @@ class TdbBoxplot extends RxComponent {
 	readonly type = 'boxplot'
 	components: { controls: any }
 	dom: BoxplotDom
-	constructor(opts) {
+	constructor(opts: TdbBoxplotOpts) {
 		super()
 		this.opts = opts
 		this.components = {
@@ -182,7 +190,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 	return Object.assign(defaults, overrides)
 }
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts, app: MassAppApi) {
 	if (!opts.term) throw 'opts.term{} missing [boxplot getPlotConfig()]'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)

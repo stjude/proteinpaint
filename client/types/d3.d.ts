@@ -24,6 +24,7 @@ export type Div = Selection<HTMLDivElement, any, any, any>
 export type Svg = Selection<SVGElement, any, any, any>
 export type SvgG = Selection<SVGGElement, any, any, any>
 export type SvgSvg = Selection<SVGSVGElement, any, any, any>
+export type SvgText = Selection<SVGTextElement, any, any, any>
 
 // this is meant to easily type all properties of the this.dom object in an rx component
 export type Dom = {
