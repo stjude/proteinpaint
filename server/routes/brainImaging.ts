@@ -3,6 +3,7 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import type { GetBrainImagingRequest, GetBrainImagingResponse } from '#types'
 import { spawn } from 'child_process'
+import { getData } from '../src/termdb.matrix.js'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
@@ -84,38 +85,82 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 			}
 			return sampleNames
 		}
-		return new Promise((resolve, reject) => {
-			const filePaths = query.selectedSampleFileNames!.map(file => path.join(dirPath, file))
-			const color = query.color || 'blue'
-			const cmd = [
-				`${serverconfig.binpath}/../python/src/plotBrainImaging.py`,
-				refFile,
-				plane,
-				index,
-				color,
-				...filePaths
-			]
-			const ps = spawn(serverconfig.python, cmd)
-			const imgData: Buffer[] = []
-			ps.stdout.on('data', data => {
-				imgData.push(data)
-			})
-			ps.stderr.on('data', data => {
-				console.error(`stderr: ${data}`)
-				reject(new Error(`Python script filed: ${data}`))
-			})
-			ps.on('close', code => {
-				if (code === 0) {
-					const imageBuffer = Buffer.concat(imgData)
-					const base64Data = imageBuffer.toString('base64')
-					const imgUrl = `data:image/png;base64,${base64Data}`
-					resolve(imgUrl)
-				} else {
-					reject(new Error(`Python script exited with code ${code}`))
-				}
-			})
-		})
+
+		const terms = []
+		const divideByTw = query.divideByTW
+		const overlayTW = query.overlayTW
+
+		if (divideByTw) terms.push(divideByTw)
+		if (overlayTW) terms.push(overlayTW)
+
+		const selectedSampleNames = query.selectedSampleFileNames.map(s => s.split('.nii')[0])
+
+		const data = await getData({ terms }, ds, q.genome)
+
+		if (divideByTw) {
+			const divideByValues = {}
+			for (const value in divideByTw.term.values) {
+				divideByValues[value] = []
+			}
+
+			for (const sampleName of selectedSampleNames) {
+				const sampleId = ds.sampleName2Id.get(sampleName)
+
+				const sampleData = data.samples[sampleId]
+				divideByValues[sampleData[divideByTw.$id].value].push(sampleName + '.nii')
+			}
+
+			const arrays = Object.values(divideByValues)
+			// Find the length of each array and determine the maximum length
+			const maxLength = Math.max(...arrays.map(arr => arr.length))
+
+			const brainImageArray = {}
+			for (const [termV, samples] of Object.entries(divideByValues)) {
+				if (samples.length < 1) continue
+
+				const url = await generateBrainImage(samples, refFile, plane, index, dirPath)
+				brainImageArray[termV] = { url, catNum: samples.length }
+			}
+			return brainImageArray
+		}
+
+		const url = await generateBrainImage(query.selectedSampleFileNames, refFile, plane, index, dirPath)
+		return { default: { url, catNum: query.selectedSampleFileNames.length } }
 	} else {
 		throw 'no reference or sample files'
 	}
+}
+
+async function generateBrainImage(selectedSampleFileNames, refFile, plane, index, dirPath) {
+	return new Promise((resolve, reject) => {
+		const filePaths = selectedSampleFileNames!.map(file => path.join(dirPath, file))
+		const color = 'none'
+		const cmd = [
+			`${serverconfig.binpath}/../python/src/plotBrainImaging.py`,
+			refFile,
+			plane,
+			index,
+			color,
+			...filePaths
+		]
+		const ps = spawn(serverconfig.python, cmd)
+		const imgData: Buffer[] = []
+		ps.stdout.on('data', data => {
+			imgData.push(data)
+		})
+		ps.stderr.on('data', data => {
+			console.error(`stderr: ${data}`)
+			reject(new Error(`Python script filed: ${data}`))
+		})
+		ps.on('close', code => {
+			if (code === 0) {
+				const imageBuffer = Buffer.concat(imgData)
+				const base64Data = imageBuffer.toString('base64')
+				const imgUrl = `data:image/png;base64,${base64Data}`
+				resolve(imgUrl)
+			} else {
+				reject(new Error(`Python script exited with code ${code}`))
+			}
+		})
+	})
 }
