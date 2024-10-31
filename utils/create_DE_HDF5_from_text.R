@@ -2,10 +2,12 @@
 #  INSTRUCTIONS   #
 ###################
 # 1) This R script is not used by PP directly. Its only used to generate HDF5 files for DE analysis
-# 2) Installation: This package needs the "rhdf5" package. This can be installed by running the following from the R command line: BiocManager::install("rhdf5")
-#    Also install "hdf5" tool using the following commands
-#    On Mac. $brew install hdf5
-#    On linux: $sudo apt-get install -y libhdf5-dev
+# 2) Installation:
+#    a) This package needs the "rhdf5" package. This can be installed by running the following from the R command line: BiocManager::install("rhdf5")
+#       Also install "hdf5" tool using the following commands
+#       On Mac. $brew install hdf5
+#       On linux: $sudo apt-get install -y libhdf5-dev
+#    b) Install "readr" package since it handles sample names such as "sample1 ;sample2" better.
 # 3) Input file requirements: The columns in text file should be ordered in the following order "geneID\tgeneSymbol\tbioType\tannotationLevel\tSample1\tSample2\tSample3\n"
 # 4) Usage: time Rscript create_DE_HDF5_from_text.R {input_text_file} {output_HDF5_file}
 # 5) Note: if the output HDF5 file already exists, delete that first before running this R script
@@ -16,13 +18,14 @@
 #    $h5dump -d gene_names {output_HDF5_file}
 
 library(rhdf5)
+library(readr)
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) != 2) {
    print ("The R script needs both an input text file and an output HDF5 filename")
    quit(status=1)
 }
-df <- read.csv(args[1],header=TRUE,sep="\t")
+df <- read_tsv(args[1],col_names=TRUE,show_col_types = FALSE)
 gene_names <- df[,1]
 gene_symbols <- df[,2]
 #print (gene_names)
@@ -71,18 +74,18 @@ h5write(dims, hdf5_file, "dims")
 
 print ("Creating gene_names dataset")
 # Add columns to HDF5 file
-h5createDataset(hdf5_file, "gene_names", dims = c(length(gene_names)), storage.mode = "character", level = 9)
+h5createDataset(hdf5_file, "gene_names", dims = c(length(gene_names$geneID)), storage.mode = "character", level = 9)
 
 print ("Adding gene_names to HDF5 file")
 # Write the matrix to the HDF5 file
-h5write(gene_names, hdf5_file, "gene_names")
+h5write(gene_names$geneID, hdf5_file, "gene_names")
 
 print ("Creating gene_symbols")
-h5createDataset(hdf5_file, "gene_symbols", dims = c(length(gene_symbols)), storage.mode = "character", level = 9)
+h5createDataset(hdf5_file, "gene_symbols", dims = c(length(gene_symbols$geneSymbol)), storage.mode = "character", level = 9)
 
 print ("Adding gene_symbols to HDF5 file")
 # Write the matrix to the HDF5 file
-h5write(gene_symbols, hdf5_file, "gene_symbols")
+h5write(gene_symbols$geneSymbol, hdf5_file, "gene_symbols")
 
 print ("Creating samples")
 # Add samples to HDF5 file
@@ -91,7 +94,7 @@ h5createDataset(hdf5_file, "samples", dims = c(length(samples)), storage.mode = 
 print ("Adding samples to HDF5 file")
 # Write the matrix to the HDF5 file
 # Removing first item in samples list
-h5write(samples, hdf5_file, "samples")
+h5write(as.vector(samples), hdf5_file, "samples")
 
 # Close the HDF5 file
 H5close()
