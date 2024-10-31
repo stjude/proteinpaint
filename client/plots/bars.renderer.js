@@ -696,11 +696,7 @@ export default function barsRenderer(barsapp, holder) {
 		const ratio =
 			hm.scale == 'byChart' || hm.clickedAge ? 1 : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts
 		const min = hm.unit == 'log' ? 1 : 0
-		const max =
-			hm.unit == 'pct'
-				? 100
-				: //: hm.unit == "log" ? chart.maxSeriesLogTotal
-				  chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
+		const max = hm.unit == 'pct' ? 100 : hm.unit == 'log' ? chart.maxSeriesLogTotal : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
 
 		yAxis
 			.style('display', 'block')
@@ -749,11 +745,7 @@ export default function barsRenderer(barsapp, holder) {
 		const ratio =
 			hm.scale == 'byChart' || hm.clickedAge ? 1 : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts
 		const min = hm.unit == 'log' ? 1 : 0
-		const max =
-			hm.unit == 'pct'
-				? 100
-				: //: hm.unit == "log" ? chart.maxSeriesLogTotal
-				  chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
+		const max = hm.unit == 'pct' ? 100 : hm.unit == 'log' ? chart.maxSeriesLogTotal : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
 
 		let y = s.colheadtop ? s.collabelh - 2 : s.colgrplabelh - 2
 		if (s.legendontop) y += s.legendh
