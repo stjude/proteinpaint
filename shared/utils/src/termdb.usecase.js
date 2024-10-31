@@ -97,6 +97,16 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (!term.isleaf) uses.add('branch')
 			}
 			return uses
+		case 'numericDictTermCluster':
+			if (!usecase.detail?.exclude?.includes(term.id)) {
+				if (isNumericTerm(term)) {
+					uses.add('plot')
+				}
+				if (hasNumericChild(child_types)) {
+					uses.add('branch')
+				}
+			}
+			return uses
 
 		case 'profile':
 			if (!term.isleaf) {

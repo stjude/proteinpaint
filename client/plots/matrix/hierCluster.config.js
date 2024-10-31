@@ -63,10 +63,10 @@ export async function getPlotConfig(opts = {}, app) {
 				} else {
 					throw `term type missing and cannot be assigned by dataType`
 				}
-			} else if (!['geneExpression', 'metaboliteIntensity', 'float'].includes(tw.term.type)) {
+			} else if (!['geneExpression', 'metaboliteIntensity', 'float', 'integer'].includes(tw.term.type)) {
 				// May add other term type in hierCluster
 				throw 'term type not supported in hierCluster'
-			} else if (config.dataType && tw.term.type !== config.dataType) {
+			} else if (config.dataType && !canTermBeInHierGrp(config.dataType, tw.term.type)) {
 				throw `cannot have term type ${tw.term.type} in ${config.dataType} term group`
 			}
 			promises.push(fillTermWrapper(tw, app.vocabApi))
@@ -79,4 +79,12 @@ export async function getPlotConfig(opts = {}, app) {
 
 	config.settings.matrix.maxSample = 100000
 	return config
+}
+
+// checking if a tw type could exist in a hierCluster group type
+function canTermBeInHierGrp(grpType, twType) {
+	if (grpType == 'numericDictTerm') {
+		if (twType == 'float' || twType == 'integer') return true
+	}
+	return twType == grpType
 }

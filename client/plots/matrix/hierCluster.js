@@ -20,7 +20,7 @@ export class HierCluster extends Matrix {
 	async init(appState) {
 		await super.init(appState)
 
-		this.maySetSandboxHeader()
+		this.maySetSandboxHeader(appState)
 
 		this.hcClipId = this.seriesClipId + '-hc'
 		this.dom.hcClipRect = this.dom.svg
@@ -129,7 +129,7 @@ export class HierCluster extends Matrix {
 		for (const [i, column] of c.col.order.entries()) {
 			samples[column.name] = { sample: column.name }
 			for (const [j, row] of c.row.order.entries()) {
-				const tw = twlst.find(tw => tw.term.name === row.name)
+				const tw = twlst.find(tw => tw.term.name === row.name || tw.term.id === row.name)
 				const value = c.matrix[j][i]
 				samples[column.name][tw.$id] = {
 					key: tw.term.name,

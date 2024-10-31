@@ -23,6 +23,7 @@ export function getTermGroups(termgroups, app) {
 	}
 
 	for (const tG of termGroups) {
+		if (tG.type == 'hierCluster') continue
 		const xtwlst: (MatrixTWObj | TermWrapper)[] = []
 		for (const tw of tG.lst) {
 			xtwlst.push(tw.type in opts.addons ? TwRouter.init(tw, opts) : tw)

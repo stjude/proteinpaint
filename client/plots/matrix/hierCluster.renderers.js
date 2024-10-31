@@ -1,6 +1,6 @@
 import { TermTypes } from '#shared/terms.js'
 
-export function maySetSandboxHeader() {
+export function maySetSandboxHeader(appState) {
 	// run only once upon init, after state and dataType is given
 	if (!this.dom.header) return // no header
 	switch (this.config.dataType) {
@@ -9,6 +9,11 @@ export function maySetSandboxHeader() {
 			break
 		case TermTypes.METABOLITE_INTENSITY:
 			this.dom.header.text('Metabolite Intensity Clustering')
+			break
+		case 'numericDictTerm':
+			this.dom.header.text(
+				appState.termdbConfig.numericDictTermCluster?.appName + ' Clustering' || 'Numercic Dictionary Term Cluster'
+			)
 			break
 		default:
 			throw `dataType '${this.config.dataType}' not recognized`

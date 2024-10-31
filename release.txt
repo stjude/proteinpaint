@@ -1,1 +1,2 @@
-
+Features:
+- allow hiercluster to work with numeric dictionary term data

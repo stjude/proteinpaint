@@ -18,6 +18,7 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes } from '#shared/terms.js'
+import { getData } from '#src/termdb.matrix.js'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -45,15 +46,19 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			if (ds.__gdc && !ds.__gdc.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if (q.dataType == TermTypes.GENE_EXPRESSION || q.dataType == TermTypes.METABOLITE_INTENSITY) {
-				if (!ds.queries?.[q.dataType]) throw `no ${q.dataType} data on this dataset`
+			if (
+				q.dataType == TermTypes.GENE_EXPRESSION ||
+				q.dataType == TermTypes.METABOLITE_INTENSITY ||
+				q.dataType == 'numericDictTerm'
+			) {
+				if (!ds.queries?.[q.dataType] && q.dataType !== 'numericDictTerm') throw `no ${q.dataType} data on this dataset`
 				if (!q.terms) throw `missing gene list`
 				if (!Array.isArray(q.terms)) throw `gene list is not an array`
 				// TODO: there should be a fix on the client-side to handle this error more gracefully,
 				// instead of emitting the client-side instructions from the server response and forcing a reload
 				if (q.terms.length < 3)
 					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
-				result = (await getResult(q, ds)) as TermdbClusterResponse
+				result = (await getResult(q, ds, g)) as TermdbClusterResponse
 			} else {
 				throw 'unknown q.dataType ' + q.dataType
 			}
@@ -68,7 +73,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getResult(q: TermdbClusterRequest, ds: any) {
+async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	let _q: any = q // may assign adhoc flag, use "any" to avoid tsc err and no need to include the flag in the type doc
 
 	if (q.dataType == TermTypes.GENE_EXPRESSION) {
@@ -77,7 +82,9 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 		_q.forClusteringAnalysis = true
 	}
 
-	const { term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q) // too strong assumption on queries[dt], may not work for single cell
+	const { term2sample2value, byTermId, bySampleId } =
+		(await ds.queries[q.dataType]?.get(_q)) || // too strong assumption on queries[dt], may not work for single cell
+		(await getNumericDictTermAnnotation(q, ds, genome))
 
 	if (term2sample2value.size == 0) throw 'no data'
 	if (term2sample2value.size == 1) {
@@ -91,6 +98,28 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 	const clustering: Clustering = await doClustering(term2sample2value, q, Object.keys(bySampleId).length)
 	if (serverconfig.debugmode) console.log('clustering done:', Date.now() - t, 'ms')
 	return { clustering, byTermId, bySampleId } as ValidResponse
+}
+
+async function getNumericDictTermAnnotation(q, ds, genome) {
+	const getDataArgs = {
+		filter: q.filter,
+		terms: q.terms.map(term => ({ term, q: { mode: 'continuous' } }))
+	}
+	const data = await getData(getDataArgs, ds, genome)
+
+	const term2sample2value = new Map()
+	for (const [key, sampleData] of Object.entries(data.samples)) {
+		for (const [term, value] of Object.entries(sampleData as { [key: string]: unknown })) {
+			if (term !== 'sample') {
+				// Skip the sample number
+				if (!term2sample2value.has(term)) {
+					term2sample2value.set(term, {})
+				}
+				term2sample2value.get(term)[key] = (value as { value: any }).value
+			}
+		}
+	}
+	return { term2sample2value, byTermId: data.refs.byTermId, bySampleId: data.refs.bySampleId }
 }
 
 // default numCases should be matched to maxCase4geneExpCluster in mds3.gdc.js

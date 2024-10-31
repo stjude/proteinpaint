@@ -915,6 +915,10 @@ type MatrixSettings = {
 	cnvUnit?: 'log2ratio' | 'segmedian'
 }
 
+type NumericDictTermClusterSettings = {
+	termGroupName?: string
+}
+
 type Matrix = {
 	/** alternative name, e.g. the plot is called "oncomatrix" in gdc; by default it's called "matrix" */
 	appName?: string
@@ -925,6 +929,13 @@ type Matrix = {
 	// TODO: improve definitions below
 	legendGrpFilter?: any
 	legendValueFilter?: any
+}
+
+type NumericDictTermCluster = {
+	/** alternative name, e.g. the plot is called "drug sensitivity" in ALL-pharmacotyping; by default it's called "Numeric Dictionary Term cluster" */
+	appName?: string
+	/** default settings for numericDictTermCluster plot */
+	settings?: NumericDictTermClusterSettings
 }
 
 type Survival = {
@@ -1031,6 +1042,7 @@ keep this setting here for reason of:
 
 	scatterplots?: Scatterplots
 	matrix?: Matrix
+	numericDictTermCluster?: NumericDictTermCluster
 	survival?: Survival
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
