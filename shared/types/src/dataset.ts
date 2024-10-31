@@ -305,10 +305,6 @@ type NIdataQueryRef = {
 	parameters?: NIdataQueryRefParams
 	/** optional terms to show as table columns and annotate samples */
 	sampleColumns?: { termid: string }[]
-	/* Ref image width */
-	width: number
-	/* Ref image height */
-	height: number
 }
 
 type NIdataQueryRefParams = {
