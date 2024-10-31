@@ -257,6 +257,6 @@ tape('.setMinMaxCallback() and .setColorsCallback()', async test => {
 	if (testColorScale.setMinMaxCallback)
 		await testColorScale.setMinMaxCallback({ cutoffMode: 'fixed', min: newMin, max: newMax })
 
-	// if (test['_ok']) holder.remove()
+	if (test['_ok']) holder.remove()
 	test.end()
 })
