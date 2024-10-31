@@ -57,6 +57,16 @@
             "pmid": "35982322",
             "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/35982322/",
             "doi": "https://doi.org/10.1007/s00401-022-02484-7"
+        },
+        {
+            "id": 1007,
+            "title": "ppHiC: Interactive exploration of Hi-C results on the ProteinPaint web portal",
+            "appHeaderTitle":"ppHiC: Zhou X <em>et al</em>",
+            "year": "2024",
+            "journal": "Computational and Structural Biotechnology Journal",
+            "pmid": "39430404",
+            "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/39430404/",
+            "doi": "https://doi.org/10.1016/j.csbj.2024.09.020"
         }
     ]
 }
