@@ -24,7 +24,7 @@ class BrainImaging {
 			.style('vertical-align', 'top')
 			.style('padding', '10px')
 		const contentHolder = rightDiv.append('div').style('vertical-align', 'top')
-		const table = contentHolder.append('table')
+		const table = contentHolder.append('table').style('border-collapse', 'collapse')
 		const headerTr = table.append('tr')
 		const contentTr = table.append('tr')
 		const tdL = contentTr.append('td')
@@ -212,6 +212,7 @@ class BrainImaging {
 
 	async main() {
 		this.settings = this.state.config.settings.brainImaging
+		console.log(this.settings)
 
 		//settings may be edited by the slider or the input, so we update the sliders and inputs to reflect the current settings
 		this.dom.saggitalSlider.node().value = this.settings.brainImageL
@@ -236,7 +237,7 @@ class BrainImaging {
 				this.dom.tdL.selectAll('*').remove()
 				this.dom.imagesL = []
 				for (const url of this.dataUrlL) {
-					const img = this.dom.tdL.append('img').style('border', '5px solid #aaa').attr('src', url)
+					const img = this.dom.tdL.append('img').attr('src', url)
 					this.dom.imagesL.push(img)
 				}
 			} else for (const url of this.dataUrlL) this.dom.imagesL.forEach((img, i) => img.attr('src', url))
@@ -258,7 +259,7 @@ class BrainImaging {
 				this.dom.tdF.selectAll('*').remove()
 				this.dom.imagesF = []
 				for (const url of this.dataUrlF) {
-					const img = this.dom.tdF.append('img').style('border', '5px solid #aaa').attr('src', url)
+					const img = this.dom.tdF.append('img').attr('src', url)
 					this.dom.imagesF.push(img)
 				}
 			} else for (const url of this.dataUrlF) this.dom.imagesF.forEach((img, i) => img.attr('src', url))
@@ -279,7 +280,7 @@ class BrainImaging {
 				this.dom.tdT.selectAll('*').remove()
 				this.dom.imagesT = []
 				for (const url of this.dataUrlT) {
-					const img = this.dom.tdT.append('img').style('border', '5px solid #aaa').attr('src', url)
+					const img = this.dom.tdT.append('img').attr('src', url)
 					this.dom.imagesT.push(img)
 				}
 			} else for (const url of this.dataUrlT) this.dom.imagesT.forEach((img, i) => img.attr('src', url))
@@ -355,6 +356,7 @@ export const brainImaging = getCompInit(BrainImaging)
 export const componentInit = brainImaging
 
 export async function getPlotConfig(opts) {
+	console.log(opts)
 	const settings = {
 		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 }
 	}
