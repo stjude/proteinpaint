@@ -6,8 +6,8 @@ import { Model } from './Model'
 import { ViewModel } from './ViewModel'
 import { View } from './View'
 import { plotColor } from '#shared/common.js'
-import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
-import { MassAppApi } from '#mass/types/mass'
+import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { MassAppApi } from '#mass/types/mass'
 
 /** TODOs:
  *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
@@ -40,9 +40,9 @@ export type BoxplotDom = {
 	/** Div for boxplots below the scale */
 	boxplots: SvgG
 	/** Controls div for the hamburger menu */
-	controls: any
+	controls: Elem
 	/** Main div */
-	div: Div | Elem
+	div: Elem
 	/** Sandbox header */
 	header?: Elem
 	/** Displays the term1 name as the plot title */
@@ -68,8 +68,8 @@ class TdbBoxplot extends RxComponent {
 		const div = opts.controls ? holder : holder.append('div')
 		const svg = div.append('svg').style('display', 'inline-block').attr('class', 'sjpp-boxplot-svg')
 		this.dom = {
-			controls,
-			div,
+			controls: controls as Elem,
+			div: div as Elem,
 			svg,
 			plotTitle: svg.append('text'),
 			yAxis: svg.append('g'),
