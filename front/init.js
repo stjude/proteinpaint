@@ -8,6 +8,8 @@ const { execSync } = require('child_process')
 
 let URLPATH = process.argv[2] || '.'
 if (URLPATH.endsWith('/')) URLPATH = URLPATH.slice(0, -1)
+let publicBinOnly = process.argv[3] === true
+
 const CWD = process.cwd()
 
 console.log('CWD', CWD)
@@ -16,20 +18,22 @@ try {
 		console.log(`making a public directory at ${CWD}`)
 		fs.mkdirSync(`${CWD}/public`)
 	}
-	if (!fs.existsSync(`${CWD}/public/index.html`)) {
-		console.log(`creating a public/index.html file`)
-		fs.copyFileSync(path.join(__dirname, './public/index.html'), `${CWD}/public/index.html`)
-	}
 	if (fs.existsSync(`${CWD}/public/bin`)) {
 		console.log(`removing the old public/bin at ${CWD}`)
 		// should update as part of v16 upgrade
 		fs.rmdirSync(`${CWD}/public/bin`, { recursive: true, force: true }, () => {})
 	}
-	if (!fs.existsSync(`${CWD}/public/cards`)) {
-		console.log(`Copying cards into public/cards folder`)
-		execSync(`cp -r ${CWD}/node_modules/@sjcrh/proteinpaint-front/public/cards ${CWD}/public/cards`, {
-			stdio: 'inherit'
-		})
+	if (!publicBinOnly) {
+		if (!fs.existsSync(`${CWD}/public/index.html`)) {
+			console.log(`creating a public/index.html file`)
+			fs.copyFileSync(path.join(__dirname, './public/index.html'), `${CWD}/public/index.html`)
+		}
+		if (!fs.existsSync(`${CWD}/public/cards`)) {
+			console.log(`Copying cards into public/cards folder`)
+			execSync(`cp -r ${CWD}/node_modules/@sjcrh/proteinpaint-front/public/cards ${CWD}/public/cards`, {
+				stdio: 'inherit'
+			})
+		}
 	}
 	const tar = ps.spawnSync('tar', [`-xzf`, `${__dirname}/bundles.tgz`, `-C`, `${CWD}`], { encoding: 'utf8' })
 	if (tar.stderr) throw tar.stderr
