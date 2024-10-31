@@ -1,3 +1,5 @@
+import { CategoricalTW } from '../terms/categorical.ts'
+
 export type GetBrainImagingRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
 	genome: string
@@ -13,6 +15,8 @@ export type GetBrainImagingRequest = {
 	t?: string
 	/** the sample names selected by the users to plot on brain template */
 	selectedSampleFileNames?: string[]
+	divideByTW?: CategoricalTW
+	overlayTW?: CategoricalTW
 }
 
 export type GetBrainImagingResponse = {
