@@ -3,7 +3,7 @@ import { Filter } from '../filter.ts'
 import { Term } from '../terms/term.ts'
 import { GeneExpressionTerm } from '../terms/geneExpression.ts'
 import { MetaboliteIntensityTerm } from '../terms/metaboliteIntensity.ts'
-import { NumericDictTerm } from '../terms/index.ts'
+import { NumericDictTerm } from '../terms/numeric.ts'
 
 export type Gene = {
 	/** gene symbol, required */

@@ -46,8 +46,13 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			if (ds.__gdc && !ds.__gdc.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if ([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY, 'numericDictTerm'].includes(q.dataType)) {
-				if (!ds.queries?.[q.dataType] && q.dataType !== 'numericDictTerm') throw `no ${q.dataType} data on this dataset`
+			if (
+				[TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY, TermTypes.NUMERIC_DICTIONARY_TERM].includes(
+					q.dataType
+				)
+			) {
+				if (!ds.queries?.[q.dataType] && q.dataType !== TermTypes.NUMERIC_DICTIONARY_TERM)
+					throw `no ${q.dataType} data on this dataset`
 				if (!q.terms) throw `missing gene list`
 				if (!Array.isArray(q.terms)) throw `gene list is not an array`
 				// TODO: there should be a fix on the client-side to handle this error more gracefully,
