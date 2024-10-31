@@ -99,7 +99,7 @@ export class ColorScale {
 	constructor(opts: ColorScaleOpts) {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
-		this.colors = opts.colors || ['white', 'red']
+		this.colors = opts?.colors?.length ? opts.colors : ['white', 'red']
 		this.data = opts.data
 		this.fontSize = opts.fontSize || 10
 		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
