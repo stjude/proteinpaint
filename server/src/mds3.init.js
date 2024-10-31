@@ -14,7 +14,6 @@ import { compute_mclass } from './vcf.mclass.js'
 import computePercentile from '#shared/compute.percentile.js'
 import { filterJoin } from '#shared/filter.js'
 import serverconfig from './serverconfig.js'
-import cloneDeep from 'lodash/cloneDeep'
 import {
 	dtsnvindel,
 	dtfusionrna,
@@ -208,7 +207,6 @@ ds.cohort = {
 }
 */
 export async function validate_termdb(ds) {
-	const dsCopy = cloneDeep(ds)
 	if (ds.cohort) {
 		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
 		if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
