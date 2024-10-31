@@ -7,7 +7,7 @@ import sys
 import io
 
 if len(sys.argv) <= 1:
-	print('python3 '+sys.argv[0]+' <path/to/template/file> indexL indexF, indexT, <path/to/sample/file>')
+	print('python3 '+sys.argv[0]+' <path/to/template/file> plane index, <path/to/sample/file>\nParameter plane options: L (left, sagittal), F (front, coronal), T (top, axial)')
 	sys.exit(1)
 
 templateFile = sys.argv[1]
@@ -16,7 +16,7 @@ templateFile = sys.argv[1]
 template = nib.load(templateFile).get_fdata()
 
 
-sampleFiles = sys.argv[5:]
+sampleFiles = sys.argv[4:]
 
 # Load all sample files
 sample_data = [nib.load(file_path).get_fdata() for file_path in sampleFiles]
@@ -30,55 +30,50 @@ for data in sample_data:
 
 labels = np.ma.masked_where(labels == 0, labels) # Mask labels where they are 0
 
-l = int(sys.argv[2]) if len(sys.argv) > 2 else 70
-f = int(sys.argv[3]) if len(sys.argv) > 3 else 110
-t = int(sys.argv[4]) if len(sys.argv) > 4 else 80
+plane = sys.argv[2]
+index = sys.argv[3]
+if(plane != 'L' and plane != 'F' and plane != 'T'):
+	print('Invalid plane')
+	sys.exit(1)
+if(len(index) ==0):
+	print('Need to provide index')
+	sys.exit(1)
+index = int(index)
+#  (left, sagittal), f (front, coronal), t (top, axial) 
+if plane == 'L':
+	slice = template[index,:,:]
+	label = labels[index,:,:]
+	# adjust the orientation of the plots by flipping and rotating
 
-# extract slices l (left, sagittal), f (front, coronal), t (top, axial) from the template and label data
-left_slice = template[l,:,:]
-front_slice = template[:,f,:]
-top_slice = template[:,:,t]
+	slice = np.rot90(slice)
+	label = np.rot90(label)
+elif plane == 'F':
+	slice = template[:,index,:]
+	label = labels[:,index,:]
+	# adjust the orientation of the plots by flipping and rotating
 
-left_label = labels[l,:,:]
-front_label = labels[:,f,:]
-top_label = labels[:,:,t]
+	slice = np.flip(np.rot90(slice),axis=1)
+	label = np.flip(np.rot90(label),axis=1)
+else:# plane == 'T'
+	slice = template[:,:,index]
+	label = labels[:,:,index]
+	# adjust the orientation of the plots by flipping and rotating
 
-
-# adjust the orientation of the plots by flipping and rotating
-left_slice = np.rot90(left_slice)
-left_label = np.rot90(left_label)
-
-front_slice = np.flip(np.rot90(front_slice),axis=1)
-front_label = np.flip(np.rot90(front_label),axis=1)
-
-top_slice = np.flip(np.rot90(top_slice),axis=1)
-top_label = np.flip(np.rot90(top_label),axis=1)
+	slice = np.flip(np.rot90(slice),axis=1)
+	label = np.flip(np.rot90(label),axis=1)
+	
 
 
 # create three subplots for sagittal, coronal and axial plane
-fig, ax = plt.subplots(1, 3)
+fig, ax = plt.subplots(1, 1)
 vmin = 0
 vmax = 100
 vmaxSamples = len(sampleFiles)
 alpha = 0.6
-ax[0].imshow(left_slice, 'gray', filternorm=False, vmin=vmin, vmax=vmax)
-ax[0].imshow(left_label, 'Reds', alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
-ax[0].axis('off')
-ax[0].text(0, 0.5, 'P', fontsize=12, color='white', ha='center', va='center', transform=ax[0].transAxes)
-ax[0].text(0.5, 1, 'S', fontsize=12, color='white', ha='center', va='center', transform=ax[0].transAxes)
+ax.imshow(slice, 'gray', filternorm=False, vmin=vmin, vmax=vmax)
+ax.imshow(label, 'Reds', alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
+ax.axis('off')
 
-ax[1].imshow(front_slice, 'gray', filternorm=False, vmin=vmin, vmax=vmax)
-ax[1].imshow(front_label, cmap='Reds', alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
-ax[1].axis('off')
-ax[1].text(0, 0.5, 'R', fontsize=12, color='white', ha='center', va='center', transform=ax[1].transAxes)
-ax[1].text(0.5, 1, 'S', fontsize=12, color='white', ha='center', va='center', transform=ax[1].transAxes)
-
-ax[2].imshow(top_slice, 'gray', filternorm=False, vmin=vmin, vmax=vmax)
-ax[2].imshow(top_label, cmap='Reds', alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
-ax[2].axis('off')
-ax[2].text(0, 0.5, 'R', fontsize=12, color='white', ha='center', va='center', transform=ax[2].transAxes)
-ax[2].text(0.5, 1, 'A', fontsize=12, color='white', ha='center', va='center', transform=ax[2].transAxes)
-fig.subplots_adjust(wspace=0, hspace=0)
 
 
 
