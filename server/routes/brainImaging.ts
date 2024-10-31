@@ -86,8 +86,15 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 		}
 		return new Promise((resolve, reject) => {
 			const filePaths = query.selectedSampleFileNames!.map(file => path.join(dirPath, file))
-
-			const cmd = [`${serverconfig.binpath}/../python/src/plotBrainImaging.py`, refFile, plane, index, ...filePaths]
+			const color = query.color || 'blue'
+			const cmd = [
+				`${serverconfig.binpath}/../python/src/plotBrainImaging.py`,
+				refFile,
+				plane,
+				index,
+				color,
+				...filePaths
+			]
 			const ps = spawn(serverconfig.python, cmd)
 			const imgData: Buffer[] = []
 			ps.stdout.on('data', data => {

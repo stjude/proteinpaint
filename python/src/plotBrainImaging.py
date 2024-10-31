@@ -10,13 +10,24 @@ if len(sys.argv) <= 1:
 	print('python3 '+sys.argv[0]+' <path/to/template/file> plane index, <path/to/sample/file>\nParameter plane options: L (left, sagittal), F (front, coronal), T (top, axial)')
 	sys.exit(1)
 
+plane = sys.argv[2]
+if(plane != 'L' and plane != 'F' and plane != 'T'):
+	print('Invalid plane')
+	sys.exit(1)
+index = sys.argv[3]
+
+if(len(index) == 0):
+	print('Need to provide index')
+	sys.exit(1)
+
 templateFile = sys.argv[1]
 
 # load data from nifti files 
 template = nib.load(templateFile).get_fdata()
 
+color = sys.argv[4]
 
-sampleFiles = sys.argv[4:]
+sampleFiles = sys.argv[5:]
 
 # Load all sample files
 sample_data = [nib.load(file_path).get_fdata() for file_path in sampleFiles]
@@ -30,14 +41,7 @@ for data in sample_data:
 
 labels = np.ma.masked_where(labels == 0, labels) # Mask labels where they are 0
 
-plane = sys.argv[2]
-index = sys.argv[3]
-if(plane != 'L' and plane != 'F' and plane != 'T'):
-	print('Invalid plane')
-	sys.exit(1)
-if(len(index) ==0):
-	print('Need to provide index')
-	sys.exit(1)
+
 index = int(index)
 #  (left, sagittal), f (front, coronal), t (top, axial) 
 if plane == 'L':
@@ -70,8 +74,15 @@ vmin = 0
 vmax = 100
 vmaxSamples = len(sampleFiles)
 alpha = 0.6
+
+if color == 'none':
+	cmap = 'Reds'
+else:
+	cmap = mcolors.LinearSegmentedColormap.from_list('my_cmap', ['white', color])
+
+
 ax.imshow(slice, 'gray', filternorm=False, vmin=vmin, vmax=vmax)
-ax.imshow(label, 'Reds', alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
+ax.imshow(label, cmap, alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
 ax.axis('off')
 
 
@@ -81,7 +92,7 @@ ax.axis('off')
 if vmaxSamples > 1:
 	# Create a color bar without changing figure size
 	norm = mcolors.Normalize(vmin=0, vmax=vmaxSamples)
-	sm = plt.cm.ScalarMappable(cmap='Reds', norm=norm)
+	sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 
 	cbar = plt.colorbar(sm, ax=ax, orientation='vertical', fraction=0.01, pad=0.05, alpha=alpha)
 	cbar.set_label('Combined Intensity', color='white', fontsize=6, labelpad=-10)
