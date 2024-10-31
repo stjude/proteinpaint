@@ -9,10 +9,10 @@ export const api: any = {
 		all: {
 			init,
 			request: {
-				typeId: 'BoxplotRequest'
+				typeId: 'BoxPlotRequest'
 			},
 			response: {
-				typeId: 'BoxplotResponse'
+				typeId: 'BoxPlotResponse'
 			},
 			examples: []
 		}
