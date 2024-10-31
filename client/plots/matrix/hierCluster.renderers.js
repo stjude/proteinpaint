@@ -10,7 +10,7 @@ export function maySetSandboxHeader(appState) {
 		case TermTypes.METABOLITE_INTENSITY:
 			this.dom.header.text('Metabolite Intensity Clustering')
 			break
-		case termTypes.NUMERIC_DICTIONARY_TERM:
+		case TermTypes.NUMERIC_DICTIONARY_TERM:
 			this.dom.header.text(
 				appState.termdbConfig.numericDictTermCluster?.appName + ' Clustering' || 'Numercic Dictionary Term Cluster'
 			)
