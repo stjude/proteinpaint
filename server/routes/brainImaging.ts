@@ -31,10 +31,20 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[query.dslabel]
 			if (!ds) throw 'invalid dataset name'
-			console.log(query)
-			const plane = query.l ? 'L' : query.f ? 'F' : query.t ? 'T' : ''
+			let plane, index
+			if (query.l) {
+				plane = 'L'
+				index = query.l
+			} else if (query.f) {
+				plane = 'F'
+				index = query.f
+			} //(query.t)
+			else {
+				plane = 'T'
+				index = query.t
+			}
 
-			const brainImage = await getBrainImage(query, genomes, plane)
+			const brainImage = await getBrainImage(query, genomes, plane, index)
 			res.send({ brainImage, plane })
 		} catch (e: any) {
 			console.log(e)
@@ -43,7 +53,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane) {
+async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane: string, index: number): any {
 	const ds = genomes[query.genome].datasets[query.dslabel]
 	const q = ds.queries.NIdata
 	const key = query.refKey
@@ -76,14 +86,8 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane)
 		}
 		return new Promise((resolve, reject) => {
 			const filePaths = query.selectedSampleFileNames!.map(file => path.join(dirPath, file))
-			const cmd = [
-				`${serverconfig.binpath}/../python/src/plotBrainImaging${plane}.py`,
-				refFile,
-				query.l || '',
-				query.f || '',
-				query.t || '',
-				...filePaths
-			]
+
+			const cmd = [`${serverconfig.binpath}/../python/src/plotBrainImaging.py`, refFile, plane, index, ...filePaths]
 			const ps = spawn(serverconfig.python, cmd)
 			const imgData: Buffer[] = []
 			ps.stdout.on('data', data => {
