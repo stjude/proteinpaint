@@ -1,1 +1,2 @@
-
+Fixes:
+- Removed cloneDeep import to fix bundling issue
