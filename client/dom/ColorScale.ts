@@ -4,7 +4,7 @@ import { axisBottom, axisTop } from 'd3-axis'
 import { Selection } from 'd3-selection'
 import { font } from '../src/client'
 import { Menu, axisstyle } from '#dom'
-import { Elem, SvgG } from '../types/d3'
+import type { Elem, SvgG } from '../types/d3'
 import { make_radios } from '#dom'
 
 type GradientElem = Selection<SVGLinearGradientElement, any, any, any>
@@ -14,6 +14,7 @@ type ColorScaleDom = {
 	scale: ScaleLinear<number, number, never>
 	scaleAxis: SvgG
 	/** Present when important value is indicated in opts */
+	//TODO: Replace with d3 type when merged
 	label?: Selection<SVGTextElement, any, any, any>
 	line?: Selection<SVGLineElement, any, any, any>
 }
@@ -116,7 +117,7 @@ export class ColorScale {
 		}
 		if (opts.setColorsCallback) this.setColorsCallback = opts.setColorsCallback
 		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
-		if (!opts.data) throw new Error('No data provided for #dom/ColorScale.')
+		if (!opts.data || !opts.data.length) throw new Error('No data provided for #dom/ColorScale.')
 		if (opts.data.length != this.colors.length)
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 
