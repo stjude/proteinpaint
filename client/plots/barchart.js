@@ -12,7 +12,7 @@ import { getColors, mclass, plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 
-class Barchart {
+export class Barchart {
 	constructor(opts) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
 		this.type = 'barchart'
