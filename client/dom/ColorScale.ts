@@ -5,7 +5,7 @@ import { Selection } from 'd3-selection'
 import { font } from '../src/client'
 import { Menu, axisstyle } from '#dom'
 import type { Elem, SvgG } from '../types/d3'
-import { make_radios } from '#dom'
+import { make_radios, niceNumLabels } from '#dom'
 
 type GradientElem = Selection<SVGLinearGradientElement, any, any, any>
 
@@ -93,6 +93,7 @@ export class ColorScale {
 	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
 	ticks: number
 	tickSize: number
+	tickValues: number[]
 	topTicks: boolean
 	private tip = new Menu({ padding: '2px' })
 
@@ -107,6 +108,11 @@ export class ColorScale {
 		this.tickSize = opts.tickSize || 1
 		this.topTicks = opts.topTicks || false
 
+		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
+		if (!opts.data || !opts.data.length) throw new Error('No data provided for #dom/ColorScale.')
+		if (opts.data.length != this.colors.length)
+			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
+
 		if (opts.setMinMaxCallback) {
 			this.setMinMaxCallback = opts.setMinMaxCallback
 			this.cutoffMode = opts.cutoffMode || 'auto'
@@ -116,12 +122,8 @@ export class ColorScale {
 			}
 		}
 		if (opts.setColorsCallback) this.setColorsCallback = opts.setColorsCallback
-		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
-		if (!opts.data || !opts.data.length) throw new Error('No data provided for #dom/ColorScale.')
-		if (opts.data.length != this.colors.length)
-			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 
-		this.formatData()
+		this.tickValues = niceNumLabels(opts.data)
 
 		let scaleSvg
 		if (opts.width || opts.height) {
@@ -204,7 +206,7 @@ export class ColorScale {
 					appendValueInput(minMaxRow.append('td'), this.data.length - 1)
 				}
 				if (this.setColorsCallback) {
-					const colorRow = table.append('tr')
+					const colorRow = table.append('tr').style('text-align', 'center')
 					appendColorInput(colorRow.append('td').style('padding-right', '10px'), 0)
 					appendColorInput(colorRow.append('td'), this.colors.length - 1)
 				}
@@ -245,7 +247,7 @@ export class ColorScale {
 			const valueInput = td
 				.append('input')
 				.attr('type', 'number')
-				.style('width', '50px')
+				.style('width', '60px')
 				.attr('value', this.data[idx])
 				.style('padding', '3px')
 				.on('keyup', async (event: KeyboardEvent) => {
@@ -263,13 +265,9 @@ export class ColorScale {
 		}
 	}
 
-	formatData() {
-		this.data = this.data.map(d => Number(d.toFixed(2)))
-	}
-
 	getRange() {
-		return this.data.map((_, i) => {
-			return this.barwidth * (i / (this.data.length - 1))
+		return this.tickValues.map((_, i) => {
+			return this.barwidth * (i / (this.tickValues.length - 1))
 		})
 	}
 
@@ -291,7 +289,7 @@ export class ColorScale {
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
 		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight})`)
-		const scale = scaleLinear().domain(this.data).range(this.getRange()).clamp(true)
+		const scale = scaleLinear().domain(this.tickValues).range(this.getRange())
 
 		return { scale, scaleAxis }
 	}
@@ -341,16 +339,10 @@ export class ColorScale {
 	}
 
 	updateAxis() {
-		this.formatData()
 		this.dom.scaleAxis.selectAll('*').remove()
-		// const start = this.data[0]
-		// const stop = this.data[this.data.length - 1]
 
-		// if (start < 0 && stop > 0 && this.data.indexOf(0) == -1) {
-		// 	this.data.splice(this.data.length / 2, 0, 0)
-		// }
-
-		this.dom.scale = scaleLinear().domain(this.data).range(this.getRange())
+		this.tickValues = niceNumLabels(this.data)
+		this.dom.scale = scaleLinear().domain(this.tickValues).range(this.getRange())
 
 		this.dom.scaleAxis
 			.transition()
