@@ -163,42 +163,40 @@ class BrainImaging {
 
 	getConfigInputsOptions() {
 		const mandatoryConfigInputOptions = [
-			// {
-			// 	label: 'Sagittal',
-			// 	type: 'number',
-			// 	chartType: 'brainImaging',
-			// 	settingsKey: 'brainImageL',
-			// 	title: 'Sagittal',
-			// 	min: 0,
-			// 	max: 192
-			// },
-			// {
-			// 	label: 'Coronal',
-			// 	type: 'number',
-			// 	chartType: 'brainImaging',
-			// 	settingsKey: 'brainImageF',
-			// 	title: 'Coronal',
-			// 	min: 0,
-			// 	max: 228
-			// },
-			// {
-			// 	label: 'Axial',
-			// 	type: 'number',
-			// 	chartType: 'brainImaging',
-			// 	settingsKey: 'brainImageT',
-			// 	title: 'Axial',
-			// 	min: 0,
-			// 	max: 192
-			// }
+			{
+				label: 'Divide by',
+				type: 'term',
+				chartType: 'brainImaging',
+				configKey: 'divideByTW',
+				title: 'Categories to divide by',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: ['discrete']
+			},
+			{
+				label: 'Color by',
+				type: 'term',
+				chartType: 'brainImaging',
+				configKey: 'overlayTW',
+				title: 'Categories to color the samples',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: ['discrete']
+			}
 		]
 		return mandatoryConfigInputOptions
 	}
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		const updateL = config.settings.brainImaging.brainImageL != this.settings?.brainImageL
-		const updateF = config.settings.brainImaging.brainImageF != this.settings?.brainImageF
-		const updateT = config.settings.brainImaging.brainImageT != this.settings?.brainImageT
+		const previousConfig = this.state?.config
+
+		const overlayOrDivideByChange =
+			config.overlayTW?.term?.id !== previousConfig?.overlayTW?.term?.id ||
+			config.divideByTW?.term?.id !== previousConfig?.divideByTW?.term?.id
+
+		const updateL = config.settings.brainImaging.brainImageL != this.settings?.brainImageL || overlayOrDivideByChange
+		const updateF = config.settings.brainImaging.brainImageF != this.settings?.brainImageF || overlayOrDivideByChange
+		const updateT = config.settings.brainImaging.brainImageT != this.settings?.brainImageT || overlayOrDivideByChange
+
 		return {
 			config,
 			dslabel: appState.vocab.dslabel,
@@ -221,26 +219,48 @@ class BrainImaging {
 		this.dom.coronalInput.node().value = this.settings.brainImageF
 		this.dom.axialSlider.node().value = this.settings.brainImageT
 		this.dom.axialInput.node().value = this.settings.brainImageT
+
+		const divideByTW = this.state.config.divideByTW
+		const overlayTW = this.state.config.overlayTW
 		if (this.state.updateL) {
 			const body = {
 				genome: this.state.genome,
 				dslabel: this.state.dslabel,
 				refKey: this.state.config.queryKey,
 				l: this.settings.brainImageL,
-				selectedSampleFileNames: this.state.config.selectedSampleFileNames
+				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
+				divideByTW,
+				overlayTW
 			}
 			const data = await dofetch3('brainImaging', { body })
 			if (data.error) throw data.error
 
-			this.dataUrlL = [await data.brainImage]
+			this.dataUrlL = {}
+			for (const [termV, result] of Object.entries(data.brainImage)) {
+				this.dataUrlL[termV] = result
+			}
+
 			if (this.dom.imagesL.length != this.dataUrlL.length) {
 				this.dom.tdL.selectAll('*').remove()
 				this.dom.imagesL = []
-				for (const url of this.dataUrlL) {
-					const img = this.dom.tdL.append('img').attr('src', url)
+				for (const [termV, result] of Object.entries(this.dataUrlL)) {
+					if (divideByTW)
+						this.dom.tdL
+							.append('div')
+							.attr('class', 'pp-chart-title')
+							.style('text-align', 'center')
+							.text(`${termV} (n=${result.catNum})`)
+							.style('font-weight', '600')
+							.style('font-size', '24px')
+							.style('margin-bottom', '5px')
+							.style('margin-top', '5px')
+							.style('display', 'block')
+					const img = this.dom.tdL.append('div').append('img').attr('src', result.url)
 					this.dom.imagesL.push(img)
 				}
-			} else for (const url of this.dataUrlL) this.dom.imagesL.forEach((img, i) => img.attr('src', url))
+			} else
+				for (const [termV, result] of Object.entries(this.dataUrlL))
+					this.dom.imagesL.forEach((img, i) => img.attr('src', result.url))
 		}
 
 		if (this.state.updateF) {
@@ -249,20 +269,38 @@ class BrainImaging {
 				dslabel: this.state.dslabel,
 				refKey: this.state.config.queryKey,
 				f: this.settings.brainImageF,
-				selectedSampleFileNames: this.state.config.selectedSampleFileNames
+				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
+				divideByTW,
+				overlayTW
 			}
 			const data = await dofetch3('brainImaging', { body })
 			if (data.error) throw data.error
 
-			this.dataUrlF = [await data.brainImage]
+			this.dataUrlF = []
+			for (const [termV, result] of Object.entries(data.brainImage)) {
+				this.dataUrlF.push(result)
+			}
 			if (this.dom.imagesF.length != this.dataUrlF.length) {
 				this.dom.tdF.selectAll('*').remove()
 				this.dom.imagesF = []
-				for (const url of this.dataUrlF) {
-					const img = this.dom.tdF.append('img').attr('src', url)
+				for (const [termV, result] of Object.entries(this.dataUrlF)) {
+					if (divideByTW)
+						this.dom.tdF
+							.append('div')
+							.attr('class', 'pp-chart-title')
+							.style('text-align', 'center')
+							.html('&nbsp;')
+							.style('font-weight', '600')
+							.style('font-size', '24px')
+							.style('margin-bottom', '5px')
+							.style('margin-top', '5px')
+							.style('display', 'block')
+					const img = this.dom.tdF.append('div').append('img').attr('src', result.url)
 					this.dom.imagesF.push(img)
 				}
-			} else for (const url of this.dataUrlF) this.dom.imagesF.forEach((img, i) => img.attr('src', url))
+			} else
+				for (const [termV, result] of Object.entries(this.dataUrlF))
+					this.dom.imagesF.forEach((img, i) => img.attr('src', result.url))
 		}
 		if (this.state.updateT) {
 			const body = {
@@ -270,20 +308,39 @@ class BrainImaging {
 				dslabel: this.state.dslabel,
 				refKey: this.state.config.queryKey,
 				t: this.settings.brainImageT,
-				selectedSampleFileNames: this.state.config.selectedSampleFileNames
+				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
+				divideByTW,
+				overlayTW
 			}
 			const data = await dofetch3('brainImaging', { body })
 			if (data.error) throw data.error
 
-			this.dataUrlT = [await data.brainImage]
+			this.dataUrlT = []
+			for (const [termV, result] of Object.entries(data.brainImage)) {
+				this.dataUrlT.push(result)
+			}
+
 			if (this.dom.imagesT.length != this.dataUrlT.length) {
 				this.dom.tdT.selectAll('*').remove()
 				this.dom.imagesT = []
-				for (const url of this.dataUrlT) {
-					const img = this.dom.tdT.append('img').attr('src', url)
+				for (const [termV, result] of Object.entries(this.dataUrlT)) {
+					if (divideByTW)
+						this.dom.tdT
+							.append('div')
+							.attr('class', 'pp-chart-title')
+							.style('text-align', 'center')
+							.html('&nbsp;')
+							.style('font-weight', '600')
+							.style('font-size', '24px')
+							.style('margin-bottom', '5px')
+							.style('margin-top', '5px')
+							.style('display', 'block')
+					const img = this.dom.tdT.append('div').append('img').attr('src', result.url)
 					this.dom.imagesT.push(img)
 				}
-			} else for (const url of this.dataUrlT) this.dom.imagesT.forEach((img, i) => img.attr('src', url))
+			} else
+				for (const [termV, result] of Object.entries(this.dataUrlT))
+					this.dom.imagesT.forEach((img, i) => img.attr('src', result.url))
 		}
 	}
 }
