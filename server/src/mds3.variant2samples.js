@@ -6,7 +6,6 @@ import { dtfusionrna, dtsv } from '#shared/common.js'
 import * as geneDbSearch from './gene.js'
 import { getSampleData_dictionaryTerms_termdb } from './termdb.matrix.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
-import cloneDeep from 'lodash/cloneDeep'
 
 /*
 validate_variant2samples()
@@ -25,7 +24,6 @@ variant2samples_getresult()
 */
 
 export async function validate_variant2samples(ds) {
-	const dsCopy = cloneDeep(ds)
 	const vs = ds.variant2samples
 	if (!vs) return
 
