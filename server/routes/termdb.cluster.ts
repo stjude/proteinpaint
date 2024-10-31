@@ -46,11 +46,7 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			if (ds.__gdc && !ds.__gdc.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if (
-				q.dataType == TermTypes.GENE_EXPRESSION ||
-				q.dataType == TermTypes.METABOLITE_INTENSITY ||
-				q.dataType == 'numericDictTerm'
-			) {
+			if ([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY, 'numericDictTerm'].includes(q.dataType)) {
 				if (!ds.queries?.[q.dataType] && q.dataType !== 'numericDictTerm') throw `no ${q.dataType} data on this dataset`
 				if (!q.terms) throw `missing gene list`
 				if (!Array.isArray(q.terms)) throw `gene list is not an array`
