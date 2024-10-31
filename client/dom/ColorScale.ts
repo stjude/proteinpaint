@@ -2,6 +2,7 @@ import { ScaleLinear, scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 import { axisBottom, axisTop } from 'd3-axis'
 import { Selection } from 'd3-selection'
+import { interpolateRgb } from 'd3-interpolate'
 import { font } from '../src/client'
 import { Menu, axisstyle } from '#dom'
 import type { Elem, SvgG } from '../types/d3'
@@ -311,8 +312,12 @@ export class ColorScale {
 			.attr('data-testid', 'sjpp-color-scale-marked-label')
 			.attr('text-anchor', 'middle')
 			.attr('font-family', font)
-			.attr('font-size', this.fontSize)
+			.attr('font-size', `${this.fontSize + 2}px`)
 			.attr('y', this.barheight - 3)
+			// Text easier to see on dark backgrounds
+			.attr('fill', 'white')
+			.attr('stroke', 'black')
+			.attr('stroke-width', 0.3)
 
 		this.updateValueInColorBar()
 	}
@@ -364,9 +369,24 @@ export class ColorScale {
 			throw new Error('Missing dom elements to update value in color bar in #dom/ColorScale.')
 
 		const x = Math.min(this.barwidth, this.dom.scale(this.markedValue))
-
 		this.dom.line.attr('x1', x).attr('x2', x)
 		this.dom.label.attr('x', x).text(Math.floor(this.markedValue))
+
+		// /**Determine if the text should be white or black based on the
+		//  * background color.
+		//  *
+		//  * Code below passes npm run tsc, but fails on commit. Linters
+		//  * contradict each other on how to resolve. */
+		// //eslint-disable-next-line @typescript-eslint/no-explicit-any
+		// const colorInt = interpolateRgb.apply(null, this.colors)
+		// const color = colorInt(x)
+		// if (color) {
+		// 	const colorMap = color.match(/\d+/g)?.map(Number)
+		// 	const [r, g, b] = colorMap.map(v => v / 255)
+		// 	const contrast = 0.2126 * r + 0.7152 * g + 0.0722 * b
+		// 	if (contrast < 0.5) this.dom.label.attr('fill', 'white').attr('stroke', 'black').attr('stroke-width', 0.3)
+		// 	else this.dom.label.attr('fill', 'black').attr('stroke', 'none')
+		// }
 	}
 
 	updateScale() {
