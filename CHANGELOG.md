@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Removed cloneDeep import to fix bundling issue
+
+
 ## 2.82.0
 
 Features:
