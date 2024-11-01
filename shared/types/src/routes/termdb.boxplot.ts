@@ -1,13 +1,18 @@
 export type BoxPlotRequest = {
 	//TOOD: define request
 	tw: any
+	genome: string
+	dslabel: string
+	divideTw?: any
+	filter: any
+	filter0: any
 }
 
 export type BoxPlotResponse = {
 	/** Absolute min value for all plots */
-	absMin: number
+	absMin?: number
 	/** Absolute max value for all plots */
-	absMax: number
+	absMax?: number
 	/** Longest label length for all plots */
 	maxLabelLgth: number
 	plots: BoxPlotEntry[]

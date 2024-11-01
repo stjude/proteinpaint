@@ -37,7 +37,7 @@ function getApp({ api }, getHandlerInitArg = null) {
 ***************/
 
 // f: a filename under the server/routes dir
-export async function testApi(route, f, checkers) {
+export function testApi(route, f, checkers) {
 	const { api } = route
 
 	tape('\n', function (test) {
@@ -52,7 +52,7 @@ export async function testApi(route, f, checkers) {
 		if (!m.examples) m.examples = [{ request: {}, response: {} }]
 
 		for (const x of m.examples) {
-			tape(`${api.endpoint} ${METHOD}`, async test => {
+			tape(`${api.endpoint} ${METHOD}`, test => {
 				if (m.alternativeFor) {
 					console.log(`${METHOD} method tested previously as '${m.alternativeFor.toUpperCase()}'`)
 					test.end()
@@ -87,7 +87,7 @@ export async function testApi(route, f, checkers) {
 				}
 				const route = app.routes[api.endpoint]
 				test.equal(typeof route?.get, 'function', 'should exist as a route')
-				await route.get(req, res)
+				route.get(req, res)
 				test.end()
 			})
 		}
