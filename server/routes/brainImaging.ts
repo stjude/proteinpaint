@@ -91,7 +91,7 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 				divideByValues[category].push(sampleName + '.nii')
 			}
 
-			const matrix = Object.values(divideByValues)
+			const matrix: string[][] = Object.values(divideByValues)
 			const lengths = matrix.map(arr => arr.length)
 			// Find the length of each array and determine the maximum length
 			const maxLength = Math.max(...lengths)
