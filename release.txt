@@ -1,1 +1,2 @@
-
+Fixes:
+- detect and set the gdc version first before caching

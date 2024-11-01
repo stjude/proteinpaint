@@ -3,6 +3,7 @@ import path from 'path'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { cachedFetch } from './utils'
+import { deepEqual } from '#shared/helpers.js'
 
 /*
 ********************   Comment   *****************
@@ -998,8 +999,20 @@ async function cacheSampleIdMapping(ds) {
 	initGdcHolder(ds)
 
 	try {
+		// also indicates to ignore data_release_version even if present
+		const response = await ds.preInit.getStatus()
+		if (deepEqual(response.data_release_version, ds.__gdc.data_release_version) && ds.__gdc.doneCaching) {
+			// do not trigger another caching if it's been done for saved release version
+			return
+		}
+		// is it ok to trigger another caching loop when there may be another caching that is not finished?
+		// TODO: should be able to cancel an unfinished caching for a stale version
+		// Maybe it's highly unlikely that the data release version will be updated while caching is not done?
+		ds.__gdc.doneCaching = false
+		ds.__gdc.data_release_version = response.data_release_version
 		await getOpenProjects(ds)
 	} catch (e) {
+		ds.__gdc.doneCaching = true // to trigger
 		console.log(e)
 		throw 'getOpenProjects() failed: ' + (e.message || e)
 	}
@@ -1023,10 +1036,6 @@ async function cacheSampleIdMapping(ds) {
 	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
 	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
 	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
-
-	// record /status endpoint result. subsequent stale cache check will requery /status and compare with this
-	// if this fetch fails, means the subsequent check won't work, and must abort launch
-	ds.__gdc.data_release_version = await ds.preInit.getStatus().data_release_version
 }
 
 /*
@@ -1176,27 +1185,12 @@ async function mayReCacheCaseIdMapping(ds) {
 // on any mismatch, return true and trigger recaching
 async function caseCacheIsStale(ds) {
 	console.log('GDC: checking if cache is stale')
-
-	const { host, headers } = ds.getHostHeaders()
-
-	let value
 	try {
-		value = await ds.getStatus().data_release_version
+		const { host, headers } = ds.getHostHeaders()
+		const response = await ds.preInit.getStatus()
+		return !deepEqual(response.data_release_version, ds.__gdc.data_release_version)
 	} catch (e) {
 		console.warn('GDC: fetch api status failed on a check. skip and wait for next check')
 		return false
 	}
-
-	if (typeof ds.__gdc.data_release_version == 'object') {
-		// new api return. when released to prod, remove this check
-		console.log('(new api)') // just to indicate it's using new api; delete when api is in prod
-		for (const k in ds.__gdc.data_release_version) {
-			if (ds.__gdc.data_release_version[k] != value[k]) return true // mismatch. return true and recache
-		}
-		return false // all match. no recaching
-	}
-
-	// old api return. to be deleted
-	console.log('(old api)') // just to indicate it's using old api
-	return ds.__gdc.data_release_version != value
 }
