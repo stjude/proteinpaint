@@ -286,7 +286,10 @@ function getChartTypeList(self, state) {
 			label: state.termdbConfig.numericDictTermCluster?.appName || 'Numeric Dictionary Term cluster',
 			chartType: 'numericDictTermCluster',
 			clickTo: self.showTree_selectlst,
-			usecase: { target: 'numericDictTermCluster', detail: { exclude: ['Demographics', 'Age'] } },
+			usecase: {
+				target: 'numericDictTermCluster',
+				detail: { exclude: state.termdbConfig.numericDictTermCluster?.exclude }
+			},
 			updateActionBySelectedTerms: (action, termlst) => {
 				const twlst = termlst.map(term => ({
 					term: structuredClone(term),

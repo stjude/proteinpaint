@@ -936,6 +936,7 @@ type NumericDictTermCluster = {
 	appName?: string
 	/** default settings for numericDictTermCluster plot */
 	settings?: NumericDictTermClusterSettings
+	excludes?: string[]
 }
 
 type Survival = {
