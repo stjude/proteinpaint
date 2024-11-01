@@ -154,15 +154,15 @@ class TdbBoxplot extends RxComponent {
 
 	async main() {
 		try {
+			const state = this.app.getState()
+			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
+			if (config.childType != 'boxplot') return
+
 			this.dom.plotTitle.selectAll('*').remove()
 			this.dom.yAxis.selectAll('*').remove()
 			this.dom.boxplots.selectAll('*').remove()
 
-			const state = this.app.getState()
-			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
-			if (config.childType != 'boxplot') return
 			const settings = config.settings.boxplot
-
 			const model = new Model(config, state, this.app, settings)
 			const data = await model.getData()
 			if (!data.plots.length) {

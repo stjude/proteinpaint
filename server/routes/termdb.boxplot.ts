@@ -47,9 +47,15 @@ function init({ genomes }) {
 				const value = val[q.tw.$id]
 				if (!Number.isFinite(value?.value)) continue
 
+				//skip these
+				if (q.tw.term.values?.[value.value]?.uncomputable) continue
+
 				if (overlayTerm) {
 					if (!val[overlayTerm?.$id]) continue
 					const value2 = val[overlayTerm.$id]
+
+					//skip these
+					if (overlayTerm.term?.values?.[value2.key]?.uncomputable) continue
 
 					if (!key2values.has(value2.key)) key2values.set(value2.key, [])
 					key2values.get(value2.key).push(value.value)
@@ -64,43 +70,39 @@ function init({ genomes }) {
 			for (const [key, values] of sortKey2values(data, key2values, overlayTerm)) {
 				const sortedValues = values.sort((a, b) => a - b)
 
-				if (!absMin || sortedValues[0] < absMin) absMin = sortedValues[0]
-				if (!absMax || sortedValues[sortedValues.length - 1] > absMax) absMax = sortedValues[sortedValues.length - 1]
+				if (absMin === null || absMin === undefined || sortedValues[0] < absMin) absMin = sortedValues[0]
+				if (absMax === null || absMax === undefined || sortedValues[sortedValues.length - 1] > absMax)
+					absMax = sortedValues[sortedValues.length - 1]
 
 				const vs = sortedValues.map((v: number) => {
 					const value = { value: v }
 					return value
 				})
 
+				const _plot = {
+					// label,
+					// values,
+					// plotValueCount: values.length
+					boxplot: boxplot_getvalue(vs),
+					min: sortedValues[0],
+					max: sortedValues[sortedValues.length - 1]
+				}
+
 				if (overlayTerm) {
 					let label = overlayTerm?.term?.values?.[key]?.label || key
 					label = `${label}, n=${values.length}`
 					if (!maxLabelLgth || label.length > maxLabelLgth) maxLabelLgth = label.length
-					const plot = {
-						// label,
-						// values,
+					const plot = Object.assign(_plot, {
 						seriesId: key,
-						color: overlayTerm?.term?.values?.[key]?.color || null,
-						boxplot: boxplot_getvalue(vs), //Need sd and mean?
-						// plotValueCount: values.length,
-						min: sortedValues[0],
-						max: sortedValues[sortedValues.length - 1]
-					}
+						color: overlayTerm?.term?.values?.[key]?.color || null
+					})
 					plot.boxplot.label = label
 					plots.push(plot)
 				} else {
 					const label = `${sampleType}, n=${values.length}`
 					if (!maxLabelLgth || label.length > maxLabelLgth.length) maxLabelLgth = label.length
-					const plot = {
-						// label,
-						// values,
-						// plotValueCount: values.length,
-						boxplot: boxplot_getvalue(vs),
-						min: sortedValues[0],
-						max: sortedValues[sortedValues.length - 1]
-					}
-					plot.boxplot.label = label
-					plots.push(plot)
+					_plot.boxplot.label = label
+					plots.push(_plot)
 				}
 			}
 			const returnData: BoxPlotResponse = {
