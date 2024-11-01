@@ -34,7 +34,7 @@ class BrainImaging {
 		this.dom = { headerHolder, contentHolder, headerTr, tdL, tdF, tdT, imagesF: [], imagesL: [], imagesT: [] }
 		this.addSliders(state.config.settings.brainImaging)
 
-		const configInputsOptions = this.getConfigInputsOptions()
+		const configInputsOptions = this.getConfigInputsOptions(state)
 
 		this.components = {
 			controls: await controlsInit({
@@ -44,7 +44,14 @@ class BrainImaging {
 				inputs: configInputsOptions
 			})
 		}
-		this.components.controls.on('downloadClick.brainImaging', () => this.downloadImage())
+		this.components.controls.on('downloadClick.brainImaging', () => {
+			const urls = []
+			for (const category in this.dataUrlL) urls.push(this.dataUrlL[category].url)
+			for (const category in this.dataUrlF) urls.push(this.dataUrlF[category].url)
+			for (const category in this.dataUrlT) urls.push(this.dataUrlT[category].url)
+			console.log(urls)
+			this.downloadImage(urls)
+		})
 	}
 
 	addSliders(settings) {
@@ -126,23 +133,8 @@ class BrainImaging {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { brainImaging: settings } } })
 	}
 
-	downloadImage() {
-		for (const dataUrl of this.dataUrls) {
-			const canvas = document.createElement('canvas')
-			const image = new Image()
-			image.src = dataUrl
-			canvas.width = this.width
-			canvas.height = this.height
-
-			// Get the canvas's 2D rendering context
-			const ctx = canvas.getContext('2d')
-
-			// Draw the image onto the canvas, scaling it to fit
-			ctx.drawImage(image, 0, 0, this.width, this.height)
-
-			// Convert the canvas to a data URL
-			const dataUrlResized = canvas.toDataURL('image/png')
-
+	downloadImage(dataUrls) {
+		for (const dataUrl of dataUrls) {
 			const downloadImgName = 'brainImaging'
 			const a = document.createElement('a')
 			document.body.appendChild(a)
@@ -152,7 +144,7 @@ class BrainImaging {
 				() => {
 					// Download the image
 					a.download = downloadImgName + '.png'
-					a.href = dataUrlResized
+					a.href = dataUrl
 					document.body.removeChild(a)
 				},
 				false
@@ -161,7 +153,8 @@ class BrainImaging {
 		}
 	}
 
-	getConfigInputsOptions() {
+	getConfigInputsOptions(state) {
+		if (state.config.selectedSampleFileNames.length == 1) return []
 		const mandatoryConfigInputOptions = [
 			{
 				label: 'Divide by',
