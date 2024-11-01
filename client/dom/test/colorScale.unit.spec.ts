@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { ColorScale } from '#dom'
+import { detectGte } from '../../test/test.helpers.js'
 
 /* Tests
     - new ColorScale()
@@ -10,6 +11,7 @@ import { ColorScale } from '#dom'
 	- markedValue - Show value in color bar and update
     - ColorScale.updateAxis()
 	- .setMinMaxCallback() and .setColorsCallback()
+	- Show ticks in scientific notation
 */
 
 /**************
@@ -256,6 +258,36 @@ tape('.setMinMaxCallback() and .setColorsCallback()', async test => {
 	if (testColorScale.setColorsCallback) await testColorScale.setColorsCallback(newColor, newIdx)
 	if (testColorScale.setMinMaxCallback)
 		await testColorScale.setMinMaxCallback({ cutoffMode: 'fixed', min: newMin, max: newMax })
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Show ticks in scientific notation', async test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+	const testColorScale = getColorScale({
+		holder,
+		data: [0.001, 0.005],
+		ticks: 2
+	})
+
+	const initTicks = holder.selectAll('text').nodes()
+	test.equal(initTicks[0].innerHTML, '2.0e-3', `Should render scientific notation for first tick`)
+	test.equal(initTicks[1].innerHTML, '4.0e-3', `Should render scientific notation for second tick`)
+
+	testColorScale.data = [-0.005, -0.001]
+	testColorScale.updateAxis()
+
+	const updatedTicks = await detectGte({
+		selector: 'text',
+		target: holder.node(),
+		count: 2
+	})
+
+	test.equal(updatedTicks[0].innerHTML, '−4.0e-3', `Should render scientific notation for first tick`)
+	test.equal(updatedTicks[1].innerHTML, '−2.0e-3', `Should render scientific notation for second tick`)
 
 	if (test['_ok']) holder.remove()
 	test.end()
