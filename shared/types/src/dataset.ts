@@ -916,6 +916,7 @@ type MatrixSettings = {
 }
 
 type NumericDictTermClusterSettings = {
+	/** default hiercluster group name */
 	termGroupName?: string
 }
 
@@ -936,7 +937,8 @@ type NumericDictTermCluster = {
 	appName?: string
 	/** default settings for numericDictTermCluster plot */
 	settings?: NumericDictTermClusterSettings
-	excludes?: string[]
+	/** list of numeric term ids that will be excluded from the numeric dictionary term cluster, add to usecase.detail to exclude terms*/
+	exclude?: string[]
 }
 
 type Survival = {

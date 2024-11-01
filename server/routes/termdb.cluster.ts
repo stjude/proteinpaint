@@ -83,9 +83,13 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 		_q.forClusteringAnalysis = true
 	}
 
-	const { term2sample2value, byTermId, bySampleId } =
-		(await ds.queries[q.dataType]?.get(_q)) || // too strong assumption on queries[dt], may not work for single cell
-		(await getNumericDictTermAnnotation(q, ds, genome))
+	let term2sample2value, byTermId, bySampleId
+
+	if (q.dataType == TermTypes.NUMERIC_DICTIONARY_TERM) {
+		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds, genome))
+	} else {
+		;({ term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q))
+	}
 
 	if (term2sample2value.size == 0) throw 'no data'
 	if (term2sample2value.size == 1) {
