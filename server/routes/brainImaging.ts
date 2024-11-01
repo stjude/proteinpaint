@@ -67,19 +67,43 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 		//const filePaths = files.map(file => path.join(dirPath, file))
 
 		const terms: CategoricalTW[] = []
-		const divideByTw: CategoricalTW | undefined = query.divideByTW
+		const divideByTW: CategoricalTW | undefined = query.divideByTW
 		const overlayTW = query.overlayTW
 
-		if (divideByTw) terms.push(divideByTw)
+		if (divideByTW) terms.push(divideByTW)
 		if (overlayTW) terms.push(overlayTW)
 
 		const selectedSampleNames = query.selectedSampleFileNames.map(s => s.split('.nii')[0])
 
 		const data = await getData({ terms }, ds, q.genome)
 
-		if (divideByTw) {
+		let filesByCat = {}
+		if (overlayTW) {
+			const overlayTWValues = {}
+			for (const [key, value] of Object.entries(overlayTW.term.values)) {
+				// TODO: make sure each term has a default color. buildTermDb assigns default color when not available
+				overlayTWValues[key] = { samples: [], color: value.color || 'red' }
+			}
+			for (const sampleName of selectedSampleNames) {
+				const sampleId = ds.sampleName2Id.get(sampleName)
+				const sampleData = data.samples[sampleId]
+				const category = sampleData[overlayTW.$id!].value
+				overlayTWValues[category].samples.push(path.join(dirPath, sampleName) + '.nii')
+			}
+			filesByCat = overlayTWValues
+		} else {
+			// default filesByCat
+			filesByCat = {
+				default: {
+					samples: query.selectedSampleFileNames.map(file => path.join(dirPath, file)),
+					color: 'red'
+				}
+			}
+		}
+
+		if (divideByTW) {
 			const divideByValues = {}
-			for (const value in divideByTw.term.values) {
+			for (const value in divideByTW.term.values) {
 				divideByValues[value] = []
 			}
 
@@ -87,7 +111,7 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 				const sampleId = ds.sampleName2Id.get(sampleName)
 
 				const sampleData = data.samples[sampleId]
-				const category = sampleData[divideByTw.$id!].value
+				const category = sampleData[divideByTW.$id!].value
 				divideByValues[category].push(sampleName + '.nii')
 			}
 
@@ -100,29 +124,31 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 			for (const [termV, samples] of Object.entries(divideByValues)) {
 				if (samples.length < 1) continue
 
-				const url = await generateBrainImage(samples, refFile, plane, index, maxLength, dirPath)
+				filesByCat[termV] = {
+					samples: samples.map(file => path.join(dirPath, file)),
+					color: 'red'
+				}
+
+				const url = await generateBrainImage(refFile, plane, index, maxLength, JSON.stringify(filesByCat))
 				brainImageArray[termV] = { url, catNum: samples.length }
 			}
 			return brainImageArray
 		}
 
-		const url = await generateBrainImage(
-			query.selectedSampleFileNames,
-			refFile,
-			plane,
-			index,
-			query.selectedSampleFileNames?.length,
-			dirPath
-		)
+		const matrix = Object.values(filesByCat)
+		const lengths = matrix.map(arr => arr.samples.length)
+		// Find the length of each array and determine the maximum length
+		const maxLength = Math.max(...lengths)
+
+		const url = await generateBrainImage(refFile, plane, index, maxLength, JSON.stringify(filesByCat))
 		return { default: { url, catNum: query.selectedSampleFileNames.length } }
 	} else {
 		throw 'no reference or sample files'
 	}
 }
 
-async function generateBrainImage(selectedSampleFileNames, refFile, plane, index, catNum, dirPath) {
+async function generateBrainImage(refFile, plane, index, maxLength, filesJson) {
 	return new Promise((resolve, reject) => {
-		const filePaths = selectedSampleFileNames!.map(file => path.join(dirPath, file))
 		const color = 'none'
 		const cmd = [
 			`${serverconfig.binpath}/../python/src/plotBrainImaging.py`,
@@ -130,9 +156,10 @@ async function generateBrainImage(selectedSampleFileNames, refFile, plane, index
 			plane,
 			index,
 			color,
-			catNum,
-			...filePaths
+			maxLength,
+			filesJson
 		]
+
 		const ps = spawn(serverconfig.python, cmd)
 		const imgData: Buffer[] = []
 		ps.stdout.on('data', data => {
