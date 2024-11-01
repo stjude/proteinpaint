@@ -2,7 +2,8 @@ import { ScaleLinear, scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 import { axisBottom, axisTop } from 'd3-axis'
 import { Selection } from 'd3-selection'
-import { interpolateRgb } from 'd3-interpolate'
+import { format } from 'd3-format'
+// import { interpolateRgb } from 'd3-interpolate'
 import { font } from '../src/client'
 import { Menu, axisstyle } from '#dom'
 import type { Elem, SvgG } from '../types/d3'
@@ -335,6 +336,12 @@ export class ColorScale {
 	getAxis() {
 		const axis = this.topTicks === true ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
 		axis.ticks(this.ticks).tickSize(this.tickSize)
+
+		if (this.tickValues[0] <= 0.001 || this.tickValues[this.tickValues.length - 1] <= 0.001) {
+			//Tick values are sorted in niceNumLabels
+			//If either the min or max value is < 0.001, use scientific notation format
+			axis.tickFormat(format('.1e'))
+		}
 		return axis
 	}
 
