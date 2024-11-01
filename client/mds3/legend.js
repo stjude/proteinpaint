@@ -864,7 +864,13 @@ function may_create_cnv(tk, block) {
 		tickSize: 6,
 		topTicks: true,
 		setMinMaxCallback: obj => {
-			tk.cnv.presetMax = Math.abs(obj.max)
+			if (obj.cutoffMode == 'auto') {
+				delete tk.cnv.presetMax
+			} else if (obj.cutoffMode == 'fixed') {
+				tk.cnv.presetMax = Math.abs(obj.max)
+			} else {
+				throw 'unknown cutoffMode value'
+			}
 			tk.load()
 		}
 	})
