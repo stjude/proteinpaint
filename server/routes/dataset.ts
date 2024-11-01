@@ -1,22 +1,19 @@
 import * as mds2_init from '#src/mds2.init.js'
 import * as mds3_init from '#src/mds3.init.js'
 import * as common from '#shared/common.js'
+import type { DatasetRequest, DatasetResponse, RouteApi } from '#types'
+import { datasetPayload } from '#types'
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'getDataset', // should rename to simply 'dataset', method is based on HTTP method
 	methods: {
 		get: {
 			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
+			...datasetPayload
 		},
 		post: {
-			alternativeFor: 'get',
-			init
+			init,
+			...datasetPayload
 		}
 	}
 }
@@ -30,24 +27,21 @@ function init({ genomes }) {
 		allow case-insensitive match with dsname
 		*/
 		try {
-			const genome = genomes[req.query.genome]
+			const q: DatasetRequest = req.query
+			const genome = genomes[q.genome]
 			if (!genome) throw 'unknown genome'
 			if (!genome.datasets) throw 'genomeobj.datasets{} missing'
 			let ds
 			for (const k in genome.datasets) {
-				if (k.toLowerCase() == req.query.dsname.toLowerCase()) {
+				if (k.toLowerCase() == q.dsname.toLowerCase()) {
 					ds = genome.datasets[k]
 					break
 				}
 			}
 			if (!ds) throw 'invalid dsname'
-			if (ds.isMds3) {
-				return res.send({ ds: mds3_init.client_copy(ds) })
-			}
-			if (ds.isMds) {
-				return res.send({ ds: mds_clientcopy(ds) })
-			}
-			return res.send({ ds: copy_legacyDataset(ds) }) // to be replaced by mds3
+			const copy = ds.isMds3 ? mds3_init.client_copy(ds) : ds.isMds ? mds_clientcopy(ds) : copy_legacyDataset(ds) // to be replaced by mds3
+
+			return res.send({ ds: copy } satisfies DatasetResponse)
 		} catch (e: any) {
 			res.send({ error: e.message || e })
 		}

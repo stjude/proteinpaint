@@ -1,9 +1,24 @@
-export type GetSampleDZImagesRequest = {
+import type { RoutePayload } from './routeApi'
+
+export type DZImagesRequest = {
 	genome: string
 	dslabel: string
-	sample_id: string
+	file: string
+
+	// params: {
+	// 	[key: string]: any
+	// }
+	sampleId: string
 }
 
-export type GetSampleDZImagesResponse = {
-	sampleDZImages: string
+export type DZImagesResponse = string
+
+export const dzImagesPayload: RoutePayload = {
+	request: {
+		typeId: 'DZImagesRequest'
+	},
+	response: {
+		typeId: 'DZImagesResponse'
+	}
+	// examples: []
 }

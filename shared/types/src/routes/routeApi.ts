@@ -22,6 +22,7 @@ export type RouteMethod = {
 type RouteInitArg = {
 	app: any
 	genome: any
+	genomes: any
 }
 type RouteHandler = (req: any, res: any) => void
 type RouteInit = (a: RouteInitArg) => RouteHandler

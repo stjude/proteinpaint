@@ -1,6 +1,9 @@
 import { createValidate } from 'typia'
 import { GetBrainImagingRequest, GetBrainImagingResponse } from '../routes/brainImaging.ts'
 import { BurdenRequest, BurdenResponse } from '../routes/burden.ts'
+import { DatasetRequest, DatasetResponse } from '../routes/dataset.ts'
+import { DsDataRequest, DsDataResponse } from '../routes/dsdata.ts'
+import { DZImagesRequest, DZImagesResponse } from '../routes/dzimages.ts'
 import { GdcMafRequest, GdcMafResponse } from '../routes/gdc.maf.ts'
 import { GdcMafBuildRequest } from '../routes/gdc.mafBuild.ts'
 import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse } from '../routes/gdc.topMutatedGenes.ts'
@@ -46,6 +49,12 @@ export const validGetBrainImagingRequest = createValidate<GetBrainImagingRequest
 export const validGetBrainImagingResponse = createValidate<GetBrainImagingResponse>()
 export const validBurdenRequest = createValidate<BurdenRequest>()
 export const validBurdenResponse = createValidate<BurdenResponse>()
+export const validDatasetRequest = createValidate<DatasetRequest>()
+export const validDatasetResponse = createValidate<DatasetResponse>()
+export const validDsDataRequest = createValidate<DsDataRequest>()
+export const validDsDataResponse = createValidate<DsDataResponse>()
+export const validDZImagesRequest = createValidate<DZImagesRequest>()
+export const validDZImagesResponse = createValidate<DZImagesResponse>()
 export const validGdcMafRequest = createValidate<GdcMafRequest>()
 export const validGdcMafResponse = createValidate<GdcMafResponse>()
 export const validGdcMafBuildRequest = createValidate<GdcMafBuildRequest>()

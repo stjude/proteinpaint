@@ -1,6 +1,7 @@
 import { CategoricalTW } from '../terms/categorical.ts'
+import type { RoutePayload } from './routeApi.ts'
 
-export type GetBrainImagingRequest = {
+export type BrainImagingRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
 	genome: string
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
@@ -19,7 +20,7 @@ export type GetBrainImagingRequest = {
 	overlayTW?: CategoricalTW
 }
 
-export type GetBrainImagingSamplesRequest = {
+export type BrainImagingSamplesRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
 	genome: string
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
@@ -28,15 +29,25 @@ export type GetBrainImagingSamplesRequest = {
 	refKey: string
 }
 
-export type GetBrainImagingSamplesResponse = {
+export type BrainImagingSamplesResponse = {
 	samples: BrainSample[]
 }
 
 export type BrainSample = { [key: string]: string }
 
-export type GetBrainImagingResponse = {
+export type BrainImagingResponse = {
 	/** the brain imaging plot */
 	brainImage: string
+	plane?: any
 }
 
 export type FilesByCategory = { [category: string]: { samples: string[]; color: string } }
+
+export const brainImagingPayload: RoutePayload = {
+	request: {
+		typeId: 'BrainImagingRequest'
+	},
+	response: {
+		typeId: 'BrainImagingResponse'
+	}
+}

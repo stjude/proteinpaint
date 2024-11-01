@@ -9,14 +9,16 @@
     ".": "./src/index.ts",
     "./updated": "./src/terms/updated-types.ts",
     "./*": "./src/*",
-    "./routes/*": "./src/routes/*"
+    "./routes/*": "./src/routes/*",
+    "./checkers/*": "./dist/checkers/*"
   },
   "imports": {
     "#shared": "@sjcrh/proteinpaint-shared"
   },
   "scripts": {
     "prepare": "ts-patch install",
-    "test": "tsc"
+    "test": "tsc",
+    "build": "typia generate --input src/checkers --output dist"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",

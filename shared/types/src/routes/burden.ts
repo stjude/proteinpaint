@@ -64,11 +64,11 @@ export type BurdenResponse = {
 	rows: number[][]
 }
 
-// tentative code to generate runtime "type" checkers
+// tentative code to generate runtime "type" checkers, requires tsx/bundler to have transform for typia createValidate to work
 // export const validBurdenRequest = createValidate<BurdenRequest>()
 // export const validBurdenResponse = createValidate<BurdenResponse>()
 
-export const payload: RoutePayload = {
+export const burdenPayload: RoutePayload = {
 	request: {
 		typeId: 'BurdenRequest'
 		//checker: validBurdenRequest
