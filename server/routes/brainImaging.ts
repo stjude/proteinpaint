@@ -107,31 +107,40 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 				const sampleId = ds.sampleName2Id.get(sampleName)
 
 				const sampleData = data.samples[sampleId]
-				divideByValues[sampleData[divideByTw.$id].value].push(sampleName + '.nii')
+				const category = sampleData[divideByTw.$id].value
+				divideByValues[category].push(sampleName + '.nii')
 			}
 
-			const arrays = Object.values(divideByValues)
+			const matrix = Object.values(divideByValues)
+			const lengths = matrix.map(arr => arr.length)
 			// Find the length of each array and determine the maximum length
-			const maxLength = Math.max(...arrays.map(arr => arr.length))
+			const maxLength = Math.max(...lengths)
 
 			const brainImageArray = {}
 			for (const [termV, samples] of Object.entries(divideByValues)) {
 				if (samples.length < 1) continue
 
-				const url = await generateBrainImage(samples, refFile, plane, index, dirPath)
+				const url = await generateBrainImage(samples, refFile, plane, index, maxLength, dirPath)
 				brainImageArray[termV] = { url, catNum: samples.length }
 			}
 			return brainImageArray
 		}
 
-		const url = await generateBrainImage(query.selectedSampleFileNames, refFile, plane, index, dirPath)
+		const url = await generateBrainImage(
+			query.selectedSampleFileNames,
+			refFile,
+			plane,
+			index,
+			query.selectedSampleFileNames?.length,
+			dirPath
+		)
 		return { default: { url, catNum: query.selectedSampleFileNames.length } }
 	} else {
 		throw 'no reference or sample files'
 	}
 }
 
-async function generateBrainImage(selectedSampleFileNames, refFile, plane, index, dirPath) {
+async function generateBrainImage(selectedSampleFileNames, refFile, plane, index, catNum, dirPath) {
 	return new Promise((resolve, reject) => {
 		const filePaths = selectedSampleFileNames!.map(file => path.join(dirPath, file))
 		const color = 'none'
@@ -141,6 +150,7 @@ async function generateBrainImage(selectedSampleFileNames, refFile, plane, index
 			plane,
 			index,
 			color,
+			catNum,
 			...filePaths
 		]
 		const ps = spawn(serverconfig.python, cmd)

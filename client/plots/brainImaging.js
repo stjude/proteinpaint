@@ -210,7 +210,6 @@ class BrainImaging {
 
 	async main() {
 		this.settings = this.state.config.settings.brainImaging
-		console.log(this.settings)
 
 		//settings may be edited by the slider or the input, so we update the sliders and inputs to reflect the current settings
 		this.dom.saggitalSlider.node().value = this.settings.brainImageL
@@ -414,7 +413,6 @@ export const brainImaging = getCompInit(BrainImaging)
 export const componentInit = brainImaging
 
 export async function getPlotConfig(opts) {
-	console.log(opts)
 	const settings = {
 		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 }
 	}
