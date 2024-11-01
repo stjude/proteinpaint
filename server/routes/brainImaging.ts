@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type { GetBrainImagingRequest, GetBrainImagingResponse } from '#types'
+import type { CategoricalTW, GetBrainImagingRequest, GetBrainImagingResponse, TermWrapper } from '#types'
 import { spawn } from 'child_process'
 import { getData } from '../src/termdb.matrix.js'
 
@@ -66,28 +66,8 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 			.filter(file => file.endsWith('.nii') && fs.statSync(path.join(dirPath, file)).isFile())
 		//const filePaths = files.map(file => path.join(dirPath, file))
 
-		if (query.samplesOnly) {
-			const sampleNames = files.map(name => name.split('.nii')[0])
-			if (q[key].sampleColumns) {
-				const samples = {}
-				for (const s of sampleNames) {
-					const annoForOneS = { sample: s }
-					const sid = ds.cohort.termdb.q.sampleName2id(s)
-					for (const term of q[key].sampleColumns) {
-						const v = ds.cohort.termdb.q.getSample2value(term.termid, sid)
-						if (v[0]) {
-							annoForOneS[term.termid] = v[0].value
-						}
-					}
-					samples[s] = annoForOneS
-				}
-				return Object.values(samples)
-			}
-			return sampleNames
-		}
-
-		const terms = []
-		const divideByTw = query.divideByTW
+		const terms: CategoricalTW[] = []
+		const divideByTw: CategoricalTW | undefined = query.divideByTW
 		const overlayTW = query.overlayTW
 
 		if (divideByTw) terms.push(divideByTw)
@@ -107,7 +87,7 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 				const sampleId = ds.sampleName2Id.get(sampleName)
 
 				const sampleData = data.samples[sampleId]
-				const category = sampleData[divideByTw.$id].value
+				const category = sampleData[divideByTw.$id!].value
 				divideByValues[category].push(sampleName + '.nii')
 			}
 

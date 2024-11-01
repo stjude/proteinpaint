@@ -358,8 +358,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 						refKey,
 						samplesOnly: true
 					}
-					const result = await dofetch3('brainImaging', { body })
-					const samples = result.brainImage
+					const result = await dofetch3('brainImagingSamples', { body })
+					const samples = result.samples
 
 					const [rows, columns] = await getTableData(chartsInstance, samples, chartsInstance.state, refKey)
 
