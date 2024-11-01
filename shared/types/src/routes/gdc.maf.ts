@@ -1,3 +1,4 @@
+import type { RoutePayload } from './routeApi'
 //import GdcFilter0 from './filter.gdc'
 
 // an object representing gdc maf file, to be shown on client table
@@ -12,7 +13,7 @@ export type File = {
 	/** An integer as the byte size of this file, compressed */
 	file_size: number
 	/** Array of strings, each is a sample type, for all samples involved in generating the maf file */
-	sample_types: string[]
+	sample_types?: string[]
 	/** A string representing the type of workflow used to generate or process this file */
 	//workflow_type: string
 	/** A string as the project id of the case */
@@ -38,4 +39,14 @@ export type GdcMafResponse = {
 	filesTotal: number
 	/** Maximum total size of maf files allowed, for indicating on ui while selecting files */
 	maxTotalSizeCompressed: number
+}
+
+export const gdcMafPayload: RoutePayload = {
+	request: {
+		typeId: 'GdcMafRequest'
+	},
+	response: {
+		typeId: 'GdcMafResponse'
+	}
+	//examples: []
 }

@@ -1,38 +1,36 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
+import type { DZImagesRequest, DZImagesResponse, RouteApi } from '#types'
+import { dzImagesPayload } from '#types'
 
 /*
 given a sample, return all deep zoom images for specified dataset
 */
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'sampledzimages',
 	methods: {
 		get: {
 			init,
-			request: {
-				typeId: 'GetSampleDZImagesRequest'
-			},
-			response: {
-				typeId: 'GetSampleDZImagesResponse'
-			}
+			...dzImagesPayload
 		},
 		post: {
-			alternativeFor: 'get',
-			init
+			init,
+			...dzImagesPayload
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
+	return async (req, res): Promise<void> => {
+		const q: DZImagesRequest = req.query
 		try {
-			const g = genomes[req.query.genome]
+			const g = genomes[q.genome]
 			if (!g) throw 'invalid genome name'
-			const ds = g.datasets[req.query.dslabel]
+			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
-			const sampleId = req.query.sample_id
+			const sampleId = q.sample_id || ''
 
 			const sampleDZImagesPath = path.join(
 				`${serverconfig.tpmasterdir}/${ds.queries.DZImages.imageBySampleFolder}`,

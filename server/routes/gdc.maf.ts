@@ -1,4 +1,5 @@
 import type { GdcMafRequest, GdcMafResponse, File } from '#types'
+import { gdcMafPayload } from '#types'
 import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
@@ -22,29 +23,9 @@ export const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize ||
 export const api = {
 	endpoint: 'gdc/maf',
 	methods: {
-		all: {
-			init,
-			request: {
-				typeId: 'GdcMafRequest'
-			},
-			response: {
-				typeId: 'GdcMafResponse'
-				// will combine this with type checker
-				//valid: (t) => {}
-			},
-			examples: [
-				{
-					request: {
-						body: {
-							experimentalStrategy: 'WXS',
-							embedder: 'localhost'
-						}
-					},
-					response: {
-						header: { status: 200 }
-					}
-				}
-			]
+		get: {
+			...gdcMafPayload,
+			init
 		}
 	}
 }
@@ -123,7 +104,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
-	const files = [] as File[]
+	const files: File[] = []
 
 	for (const h of re.data.hits) {
 		/*
@@ -170,13 +151,13 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 		}
 		*/
 
-		const file = {
+		const file: File = {
 			id: h.id,
 			project_id: c.project.project_id,
 			file_size: h.file_size,
 			case_submitter_id: c.submitter_id,
 			case_uuid: c.case_id
-		} as File
+		}
 
 		if (c.samples) {
 			file.sample_types = c.samples.map((i: { sample_type: any }) => i.sample_type).sort()

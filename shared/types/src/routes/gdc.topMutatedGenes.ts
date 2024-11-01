@@ -1,3 +1,5 @@
+import type { RoutePayload } from './routeApi'
+
 export type GdcTopMutatedGeneRequest = {
 	/** to restrict to CGC genes */
 	geneFilter?: 'CGC'
@@ -22,4 +24,14 @@ export type GdcGene = {
 
 export type GdcTopMutatedGeneResponse = {
 	genes: GdcGene[]
+}
+
+export const gdcTopMutatedGenePayload: RoutePayload = {
+	request: {
+		typeId: 'GdcTopMutatedGeneRequest'
+	},
+	response: {
+		typeId: 'GdcTopMutatedGeneResponse'
+	}
+	//examples: []
 }

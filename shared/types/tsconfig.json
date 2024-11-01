@@ -14,6 +14,7 @@
     "moduleResolution": "bundler" // to skip errors related to import of types from ts files
   },
   "exclude": [
-    "./node_modules"
+    "./node_modules",
+    "./dist"
   ]
 }

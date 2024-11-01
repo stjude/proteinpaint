@@ -1,4 +1,6 @@
-export type genesetOverrepresentationRequest = {
+import type { RoutePayload } from './routeApi'
+
+export type GenesetOverrepresentationRequest = {
 	/**  Sample genes to be queried */
 	sample_genes: string
 	/** Background genes against which the sample genes will be queried. if missing will use all protein-coding genes, available in gene db */
@@ -11,7 +13,7 @@ export type genesetOverrepresentationRequest = {
 	filter_non_coding_genes: boolean
 }
 
-export type genesetOverrepresentationResponse = {
+export type GenesetOverrepresentationResponse = {
 	/** Name of pathway */
 	pathway_name: string
 	/** Original p-value */

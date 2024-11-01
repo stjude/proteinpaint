@@ -61,7 +61,7 @@ export async function launch() {
 			  should only uncomment when a file has been added or deleted in 
 			  shared/types/src/routes and not when modified.
 			*/
-			// types: {
+			//, types: {
 			// 	importDir: '../routes',
 			// 	outputFile: path.join(__dirname, '../../shared/types/src/checkers/routes.ts')
 			// }
