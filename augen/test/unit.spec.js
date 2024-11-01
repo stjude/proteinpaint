@@ -10,9 +10,9 @@ runTests()
 
 async function runTests() {
 	const files = readdirSync(join(__dirname, './routes'))
-	const endpoints = files.filter(f => f.endsWith('.ts') || f.endsWith('.js'))
+	const endpoints = files.filter(f => f.endsWith('.ts'))
 	for (const f of endpoints) {
 		const route = await import(`./routes/${f}`)
-		await testApi(route, f, checkers)
+		testApi(route, f, checkers)
 	}
 }

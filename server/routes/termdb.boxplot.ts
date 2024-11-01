@@ -21,7 +21,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any) => {
-		const q = req.query satisfies BoxPlotRequest
+		const q: BoxPlotRequest = req.query
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome name'
@@ -105,6 +105,7 @@ function init({ genomes }) {
 					plots.push(_plot)
 				}
 			}
+
 			const returnData: BoxPlotResponse = {
 				absMin,
 				absMax,
