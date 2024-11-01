@@ -49,14 +49,16 @@ export function typeCheckers(fileRoutes, fromPath) {
 	}
 	const importLines = [`import { createValidate } from 'typia'`]
 	const createLines = []
+	const dedupedTypeIds = new Set()
 	for (const file in typeIdsByFile) {
 		if (file.endsWith('.js')) continue
-		const typeIds = Array.from(typeIdsByFile[file]).filter(t => t !== 'any')
+		const typeIds = Array.from(typeIdsByFile[file]).filter(t => t !== 'any' && !dedupedTypeIds.has(t))
 		if (!typeIds.length) continue
 		importLines.push(`import { ${typeIds.join(', ')} } from '${fromPath}/${file}'`)
 		for (const typeId of typeIds) {
 			createLines.push(`export const valid${typeId} = createValidate<${typeId}>()`)
 		}
+		for (const t of typeIds) dedupedTypeIds.add(t)
 	}
 	const content = importLines.join('\n') + '\n\n' + createLines.join('\n')
 	return content

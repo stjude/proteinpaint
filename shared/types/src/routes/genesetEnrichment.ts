@@ -1,4 +1,6 @@
-export type genesetEnrichmentRequest = {
+import type { RoutePayload } from './routeApi'
+
+export type GenesetEnrichmentRequest = {
 	/** Sample genes to be queried */
 	genes: string[]
 	/** Background genes against which the sample genes will be queried */
@@ -40,7 +42,17 @@ type gsea_result = {
 /** Pass gsea image to client side */
 type gsea_image = any
 
-export type genesetEnrichmentResponse = {
+export type GenesetEnrichmentResponse = {
 	/** gsea result or an image (for plotting) is sent to client side */
 	pathway: gsea_result | gsea_image
+}
+
+export const genesetEnrichmentPayload: RoutePayload = {
+	request: {
+		typeId: 'GenesetEnrichmentRequest'
+	},
+	response: {
+		typeId: 'GenesetEnrichmentResponse'
+	}
+	//examples: []
 }

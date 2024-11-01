@@ -8,7 +8,8 @@ export type DZImagesRequest = {
 	// params: {
 	// 	[key: string]: any
 	// }
-	sampleId: string
+	sampleId?: string
+	sample_id?: string
 }
 
 export type DZImagesResponse = string

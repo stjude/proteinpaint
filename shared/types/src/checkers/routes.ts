@@ -17,7 +17,6 @@ import { HealthCheckResponse } from '../routes/healthcheck.ts'
 import { HicdataRequest, HicdataResponse } from '../routes/hicdata.ts'
 import { HicGenomeRequest, HicGenomeResponse } from '../routes/hicgenome.ts'
 import { HicstatRequest, HicstatResponse } from '../routes/hicstat.ts'
-import { GetSampleDZImagesRequest, GetSampleDZImagesResponse } from '../routes/sampledzimages.ts'
 import { GetSampleWSImagesRequest, GetSampleWSImagesResponse } from '../routes/samplewsimages.ts'
 import { DERequest, DEResponse } from '../routes/termdb.DE.ts'
 import { BoxPlotRequest, BoxPlotResponse } from '../routes/termdb.boxplot.ts'
@@ -73,8 +72,6 @@ export const validHicGenomeRequest = createValidate<HicGenomeRequest>()
 export const validHicGenomeResponse = createValidate<HicGenomeResponse>()
 export const validHicstatRequest = createValidate<HicstatRequest>()
 export const validHicstatResponse = createValidate<HicstatResponse>()
-export const validGetSampleDZImagesRequest = createValidate<GetSampleDZImagesRequest>()
-export const validGetSampleDZImagesResponse = createValidate<GetSampleDZImagesResponse>()
 export const validGetSampleWSImagesRequest = createValidate<GetSampleWSImagesRequest>()
 export const validGetSampleWSImagesResponse = createValidate<GetSampleWSImagesResponse>()
 export const validDERequest = createValidate<DERequest>()
