@@ -149,12 +149,12 @@ class TdbSurvival {
 							]
 						},
 						{
-							label: 'Survival Time Cut-Off',
+							label: 'Survival Time Visualized',
 							type: 'number',
 							chartType: 'survival',
 							settingsKey: 'maxTimeToEvent',
 							title:
-								'The max time-to-event to be displayed in plot,  if left empty or 0, would default to not having a max time-to-event cutoff'
+								'The maximum time-to-event to be displayed in the survival plot, affects only the visual representation and does not impact other analyses. All available data is still used to compute p-values. If this value is left empty or set to 0, no cutoff will be applied.'
 						},
 						{
 							label: 'Time Factor',

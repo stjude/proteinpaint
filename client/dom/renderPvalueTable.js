@@ -189,7 +189,7 @@ export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setAct
 				})
 		}
 
-		//footnote: pvalue is still computed with all survival data when Survival Time Cut-Off is set
+		//footnote: pvalue is still computed with all survival data when Survival Time Visualized is set
 		if (s.maxTimeToEvent && visibleTests.length) {
 			holder
 				.append('div')
