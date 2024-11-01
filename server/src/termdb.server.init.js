@@ -483,9 +483,18 @@ export function server_init_db_queries(ds) {
 		// value: array of chart types allowed by term types
 		for (const r of ds.cohort.termdb.termtypeByCohort) {
 			if (!r.type) continue // skip ungraphable parent terms
+			//add profile chart types to profile subcohorts
 
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = new Set(['regression', 'summary', 'facet'])
+				if (ds.label == 'profile')
+					supportedChartTypes[r.cohort] = new Set([
+						'profileRadar',
+						'profileRadarFacility',
+						'profilePolar',
+						'profileBarchart'
+					])
+				console.log('supportedChartTypes', supportedChartTypes)
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 
 				numericTypeCount[r.cohort] = 0
