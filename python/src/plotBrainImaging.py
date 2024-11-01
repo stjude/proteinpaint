@@ -27,7 +27,14 @@ template = nib.load(templateFile).get_fdata()
 
 color = sys.argv[4]
 
-sampleFiles = sys.argv[5:]
+vmaxSamples = sys.argv[5]
+
+if(len(vmaxSamples) == 0):
+	print('Need to provide max samples for normalization')
+	sys.exit(1)
+vmaxSamples = int(vmaxSamples)
+
+sampleFiles = sys.argv[6:]
 
 # Load all sample files
 sample_data = [nib.load(file_path).get_fdata() for file_path in sampleFiles]
@@ -72,7 +79,6 @@ else:# plane == 'T'
 fig, ax = plt.subplots(1, 1)
 vmin = 0
 vmax = 100
-vmaxSamples = len(sampleFiles)
 alpha = 0.6
 
 if color == 'none':
