@@ -63,7 +63,7 @@ export async function getPlotConfig(opts = {}, app) {
 				} else {
 					throw `term type missing and cannot be assigned by dataType`
 				}
-			} else if (!numericTypes.includes(tw.term.type)) {
+			} else if (!numericTypes.has(tw.term.type)) {
 				// May add other term type in hierCluster
 				throw 'term type is not numeric'
 			} else if (config.dataType && !canTermBeInHierGrp(config.dataType, tw.term.type)) {
