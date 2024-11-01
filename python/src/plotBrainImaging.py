@@ -5,6 +5,7 @@ import matplotlib.cm as cm
 import numpy as np
 import sys
 import io
+import json
 
 if len(sys.argv) <= 1:
 	print('python3 '+sys.argv[0]+' <path/to/template/file> plane index, <path/to/sample/file>\nParameter plane options: L (left, sagittal), F (front, coronal), T (top, axial)')
@@ -34,68 +35,67 @@ if(len(vmaxSamples) == 0):
 	sys.exit(1)
 vmaxSamples = int(vmaxSamples)
 
-sampleFiles = sys.argv[6:]
-
-# Load all sample files
-sample_data = [nib.load(file_path).get_fdata() for file_path in sampleFiles]
-
-# Initialize the result array with zeros
-labels = np.zeros_like(sample_data[0])
-
-# Sum all sample data
-for data in sample_data:
-    labels += data
-
-labels = np.ma.masked_where(labels == 0, labels) # Mask labels where they are 0
+sampleFiles = json.loads(sys.argv[6])
 
 
 index = int(index)
 #  (left, sagittal), f (front, coronal), t (top, axial) 
 if plane == 'L':
 	slice = template[index,:,:]
-	label = labels[index,:,:]
-	# adjust the orientation of the plots by flipping and rotating
-
 	slice = np.rot90(slice)
-	label = np.rot90(label)
 elif plane == 'F':
 	slice = template[:,index,:]
-	label = labels[:,index,:]
-	# adjust the orientation of the plots by flipping and rotating
-
 	slice = np.flip(np.rot90(slice),axis=1)
-	label = np.flip(np.rot90(label),axis=1)
+
 else:# plane == 'T'
 	slice = template[:,:,index]
-	label = labels[:,:,index]
-	# adjust the orientation of the plots by flipping and rotating
-
 	slice = np.flip(np.rot90(slice),axis=1)
-	label = np.flip(np.rot90(label),axis=1)
-	
 
-
-# create three subplots for sagittal, coronal and axial plane
 fig, ax = plt.subplots(1, 1)
-vmin = 0
-vmax = 100
-alpha = 0.6
+ax.imshow(slice, 'gray', filternorm=False, vmin=0, vmax=100)
 
-if color == 'none':
-	cmap = 'Reds'
-else:
+for key, value in sampleFiles.items():
+	if(len(value["samples"]) == 0) :
+		continue
+	# Load all sample files
+	sample_data = [nib.load(file_path).get_fdata() for file_path in value["samples"]]
+
+	# Initialize the result array with zeros
+	labels = np.zeros_like(sample_data[0])
+
+	# Sum all sample data
+	for data in sample_data:
+		labels += data
+
+	labels = np.ma.masked_where(labels == 0, labels) # Mask labels where they are 0
+
+
+	index = int(index)
+	#  (left, sagittal), f (front, coronal), t (top, axial) 
+	if plane == 'L':
+		label = labels[index,:,:]
+		label = np.rot90(label)
+	elif plane == 'F':
+		label = labels[:,index,:]
+		label = np.flip(np.rot90(label),axis=1)
+	else:# plane == 'T'
+		label = labels[:,:,index]
+		label = np.flip(np.rot90(label),axis=1)
+		
+
+
+	# create three subplots for sagittal, coronal and axial plane
+	vmin = 0
+	vmax = 100
+	alpha = 0.6
+
+	color = value['color']
 	cmap = mcolors.LinearSegmentedColormap.from_list('my_cmap', ['white', color])
-
-
-ax.imshow(slice, 'gray', filternorm=False, vmin=vmin, vmax=vmax)
-ax.imshow(label, cmap, alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
-ax.axis('off')
-
-
-
+	ax.imshow(label, cmap, alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
+	ax.axis('off')
 
 # Create the color bar
-if vmaxSamples > 1:
+if vmaxSamples > 1 and len(sampleFiles.keys()) == 1:
 	# Create a color bar without changing figure size
 	norm = mcolors.Normalize(vmin=0, vmax=vmaxSamples)
 	sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
