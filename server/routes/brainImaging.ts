@@ -1,41 +1,28 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type { CategoricalTW, GetBrainImagingRequest, FilesByCategory, TermWrapper } from '#types'
+import type { CategoricalTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory, TermWrapper, RouteApi } from '#types'
+import { brainImagingPayload } from '#types'
 import { spawn } from 'child_process'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
 */
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'brainImaging',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'GetBrainImagingRequest'
-			},
-			response: {
-				typeId: 'GetBrainImagingResponse'
-			}
-		},
-		post: {
-			init,
-			request: {
-				typeId: 'GetBrainImagingRequest'
-			},
-			response: {
-				typeId: 'GetBrainImagingResponse'
-			}
+			...brainImagingPayload,
+			init
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
+	return async (req, res): Promise<void> => {
 		try {
-			const query = req.query as GetBrainImagingRequest
+			const query: BrainImagingRequest = req.query
 
 			const g = genomes[query.genome]
 			if (!g) throw 'invalid genome name'
@@ -55,7 +42,7 @@ function init({ genomes }) {
 			}
 
 			const brainImage = await getBrainImage(query, genomes, plane, index)
-			res.send({ brainImage, plane })
+			res.send({ brainImage, plane } satisfies BrainImagingResponse)
 		} catch (e: any) {
 			console.log(e)
 			res.status(404).send('Sample brain image not found')
@@ -63,7 +50,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane: string, index: number): Promise<any> {
+async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: string, index: number): Promise<any> {
 	const ds = genomes[query.genome].datasets[query.dslabel]
 	const q = ds.queries.NIdata
 	const key = query.refKey

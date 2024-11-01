@@ -1,5 +1,7 @@
 import type { BurdenRequest, BurdenResponse, RouteApi } from '#types'
-import { payload } from '#types'
+import { burdenPayload } from '#types'
+// may decide to use these checkers later
+//import { validBurdenRequest, validBurdenResponse } from '#types/checkers/routes.js'
 import run_R from '#src/run_R.js'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
@@ -9,17 +11,17 @@ export const api: RouteApi = {
 	methods: {
 		get: {
 			init,
-			...payload
+			...burdenPayload
 		},
 		post: {
 			init,
-			...payload
+			...burdenPayload
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async function handler(req: any, res: any): Promise<void> {
+	return async function handler(req, res): Promise<void> {
 		try {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw `invalid q.genome=${req.query.genome}`

@@ -2,8 +2,10 @@ import path from 'path'
 import { spawn } from 'child_process'
 import serverconfig from '#src/serverconfig.js'
 import * as common from '#shared/common.js'
+import type { DsDataRequest, DsDataResponse, RouteApi } from '#types'
+import { dsDataPayload } from '#types'
 
-export const api: any = {
+export const api: RouteApi = {
 	// route endpoint
 	// - no need for trailing slash
 	// - should be a noun (method is based on HTTP GET, POST, etc)
@@ -11,16 +13,11 @@ export const api: any = {
 	endpoint: 'dsdata',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
+			...dsDataPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...dsDataPayload,
 			init
 		}
 	}
@@ -33,22 +30,23 @@ function init({ genomes }) {
 	    to be totally replaced by mds, which can identify queries in a mds by querykeys
 	    */
 		try {
-			if (!genomes[req.query.genome]) throw 'invalid genome'
-			if (!req.query.dsname) throw '.dsname missing'
-			const ds = genomes[req.query.genome].datasets[req.query.dsname]
+			const q: DsDataRequest = req.query
+			if (!genomes[q.genome]) throw 'invalid genome'
+			if (!q.dsname) throw '.dsname missing'
+			const ds = genomes[q.genome].datasets[q.dsname]
 			if (!ds) throw 'invalid dsname'
 
 			const data: any = []
 
 			for (const query of ds.queries) {
-				if (req.query.expressiononly && !query.isgeneexpression) {
+				if (q.expressiononly && !query.isgeneexpression) {
 					/*
           expression data only
           TODO mds should know exactly which data type to query, or which vending button to use
           */
 					continue
 				}
-				if (req.query.noexpression && query.isgeneexpression) {
+				if (q.noexpression && query.isgeneexpression) {
 					// skip expression data
 					continue
 				}
@@ -76,7 +74,7 @@ function init({ genomes }) {
 				throw 'unknow type from one of ds.queries[]'
 			}
 
-			res.send({ data })
+			res.send({ data } satisfies DsDataResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })

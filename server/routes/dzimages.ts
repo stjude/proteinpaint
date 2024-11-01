@@ -1,45 +1,40 @@
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { illegalpath } from '#src/utils.js'
+import type { DZImagesRequest, DZImagesResponse, RouteApi } from '#types'
+import { dzImagesPayload } from '#types'
 
 /*
 return .dzi file and deep zoom image tiles for specified sample and dataset
 */
 
-const routePath = 'dzimages'
-
-export const api: any = {
-	endpoint: `${routePath}/:sampleId`,
+export const api: RouteApi = {
+	endpoint: `dzimages/:sampleId`,
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
+			...dzImagesPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...dzImagesPayload,
 			init
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
-		let imagePath
+	return async (req, res): Promise<void> => {
 		try {
-			const g = genomes[req.query.genome]
+			const q: DZImagesRequest = req.query
+			const g = genomes[q.genome]
 			if (!g) throw 'invalid genome name'
-			const ds = g.datasets[req.query.dslabel]
+			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
-			const sampleId = req.params.sampleId
+			const sampleId = q.sampleId
 			if (!sampleId) throw 'invalid sampleId'
 			if (illegalpath(req.query.file)) throw `illegalpath filepath`
 
-			const filename = path.basename(req.query.file)
+			const filename = path.basename(q.file)
 			const allowedExtensions = ['.dzi', '.jpeg', '.png']
 			const extension = path.extname(filename)
 
@@ -47,7 +42,7 @@ function init({ genomes }) {
 				throw `Invalid file extension. Allowed extensions are ${allowedExtensions.join(', ')}`
 			}
 
-			imagePath = path.join(
+			const imagePath: DZImagesResponse = path.join(
 				`${serverconfig.tpmasterdir}/${ds.queries.DZImages.imageBySampleFolder}`,
 				`${sampleId}/${req.query.file}`
 			)
