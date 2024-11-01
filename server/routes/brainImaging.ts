@@ -54,7 +54,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane: string, index: number): any {
+async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane: string, index: number): Promise<any> {
 	const ds = genomes[query.genome].datasets[query.dslabel]
 	const q = ds.queries.NIdata
 	const key = query.refKey
