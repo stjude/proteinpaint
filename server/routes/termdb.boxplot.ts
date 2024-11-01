@@ -43,7 +43,7 @@ function init({ genomes }) {
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const key2values = new Map()
 			const overlayTerm = q.divideTw
-			for (const [key, val] of Object.entries(data.samples as Record<string, { key: number; value: number }>)) {
+			for (const val of Object.values(data.samples as Record<string, { key: number; value: number }>)) {
 				const value = val[q.tw.$id]
 				if (!Number.isFinite(value?.value)) continue
 
@@ -112,7 +112,7 @@ function init({ genomes }) {
 			res.send(returnData)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
-			if (e instanceof Error && e.stack) console.log(e)
+			if (e instanceof Error && e.stack) console.error(e)
 		}
 	}
 }

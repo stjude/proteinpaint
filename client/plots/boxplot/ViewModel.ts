@@ -68,8 +68,8 @@ export class ViewModel {
 			plot.y = this.topPad + this.incrTopPad
 			this.incrTopPad += totalRowHeight
 		}
-
-		viewData.plotTitle = this.config.term.term.name
+		viewData.plotTitle =
+			this.config.term.q.mode == 'continuous' ? this.config.term.term.name : this.config.term2.term.name
 
 		return viewData
 	}

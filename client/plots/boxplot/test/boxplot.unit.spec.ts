@@ -11,7 +11,7 @@ See unit tests for #dom/boxplot for rendering unit tests
 */
 
 const mockConfig = {
-	term: { term: termjson['agedx'] },
+	term: { term: termjson['agedx'], q: { mode: 'continuous' } },
 	term2: { term: termjson['sex'] }
 }
 
