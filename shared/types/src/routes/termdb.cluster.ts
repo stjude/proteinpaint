@@ -3,6 +3,7 @@ import { Filter } from '../filter.ts'
 import { Term } from '../terms/term.ts'
 import { GeneExpressionTerm } from '../terms/geneExpression.ts'
 import { MetaboliteIntensityTerm } from '../terms/metaboliteIntensity.ts'
+import { NumericDictTerm } from '../terms/numeric.ts'
 
 export type Gene = {
 	/** gene symbol, required */
@@ -42,7 +43,17 @@ export type TermdbClusterRequestMetabolite = TermdbClusterRequestBase & {
 	terms: MetaboliteIntensityTerm[]
 }
 
-export type TermdbClusterRequest = TermdbClusterRequestGeneExpression | TermdbClusterRequestMetabolite
+export type TermdbClusterRequestNumericDictTerm = TermdbClusterRequestBase & {
+	/** Data type */
+	dataType: 'numericDictTerm'
+	/** List of terms */
+	terms: NumericDictTerm[]
+}
+
+export type TermdbClusterRequest =
+	| TermdbClusterRequestGeneExpression
+	| TermdbClusterRequestMetabolite
+	| TermdbClusterRequestNumericDictTerm
 
 export type Hclust = {
 	merge: { n1: number; n2: number }[]

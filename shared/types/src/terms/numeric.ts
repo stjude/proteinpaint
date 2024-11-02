@@ -50,6 +50,14 @@ export type NumericTerm = BaseTerm & {
 	valueConversion?: ValueConversion*/
 }
 
+export type NumericDictTerm = BaseTerm & {
+	id?: string
+	type: 'integer' | 'float'
+	bins: PresetNumericBins
+	values?: TermValues
+	unit?: string
+}
+
 export type StartUnboundedBin = {
 	// where possible, assign a concrete value (true) when it is known in advance,
 	// in which case, do not use an abstract type (boolean) to startunbounded

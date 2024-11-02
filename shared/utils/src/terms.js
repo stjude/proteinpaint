@@ -39,6 +39,8 @@ export const TermTypes = {
 	SINGLECELL_CELLTYPE: 'singleCellCellType'
 }
 
+export const NUMERIC_DICTIONARY_TERM = 'numericDictTerm'
+
 export const TermTypes2Dt = {
 	[TermTypes.GENE_EXPRESSION]: dtgeneexpression,
 	[TermTypes.METABOLITE_INTENSITY]: dtmetaboliteintensity

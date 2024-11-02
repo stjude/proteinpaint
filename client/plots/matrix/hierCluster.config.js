@@ -1,7 +1,7 @@
 import { copyMerge } from '#rx'
 import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
 import { fillTermWrapper, get$id } from '#termsetting'
-import { NumericModes, TermTypes } from '#shared/terms.js'
+import { NumericModes, TermTypes, numericTypes } from '#shared/terms.js'
 
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
@@ -63,10 +63,10 @@ export async function getPlotConfig(opts = {}, app) {
 				} else {
 					throw `term type missing and cannot be assigned by dataType`
 				}
-			} else if (!['geneExpression', 'metaboliteIntensity', 'float'].includes(tw.term.type)) {
+			} else if (!numericTypes.has(tw.term.type)) {
 				// May add other term type in hierCluster
-				throw 'term type not supported in hierCluster'
-			} else if (config.dataType && tw.term.type !== config.dataType) {
+				throw 'term type is not numeric'
+			} else if (config.dataType && !canTermBeInHierGrp(config.dataType, tw.term.type)) {
 				throw `cannot have term type ${tw.term.type} in ${config.dataType} term group`
 			}
 			promises.push(fillTermWrapper(tw, app.vocabApi))
@@ -79,4 +79,12 @@ export async function getPlotConfig(opts = {}, app) {
 
 	config.settings.matrix.maxSample = 100000
 	return config
+}
+
+// checking if a tw type could exist in a hierCluster group type
+function canTermBeInHierGrp(grpType, twType) {
+	if (grpType == 'numericDictTerm') {
+		if (twType == 'float' || twType == 'integer') return true
+	}
+	return twType == grpType
 }

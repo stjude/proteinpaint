@@ -55,6 +55,13 @@ const useCasesExcluded = {
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.METABOLITE_INTENSITY
+	],
+	numericDictTermCluster: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
 	]
 }
 
