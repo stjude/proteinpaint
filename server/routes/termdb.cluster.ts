@@ -17,7 +17,7 @@ import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 import { getData } from '#src/termdb.matrix.js'
 
 export const api = {
@@ -46,12 +46,8 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			if (ds.__gdc && !ds.__gdc.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if (
-				[TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY, TermTypes.NUMERIC_DICTIONARY_TERM].includes(
-					q.dataType
-				)
-			) {
-				if (!ds.queries?.[q.dataType] && q.dataType !== TermTypes.NUMERIC_DICTIONARY_TERM)
+			if ([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY, NUMERIC_DICTIONARY_TERM].includes(q.dataType)) {
+				if (!ds.queries?.[q.dataType] && q.dataType !== NUMERIC_DICTIONARY_TERM)
 					throw `no ${q.dataType} data on this dataset`
 				if (!q.terms) throw `missing gene list`
 				if (!Array.isArray(q.terms)) throw `gene list is not an array`
@@ -85,7 +81,7 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 
 	let term2sample2value, byTermId, bySampleId
 
-	if (q.dataType == TermTypes.NUMERIC_DICTIONARY_TERM) {
+	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
 		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds, genome))
 	} else {
 		;({ term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q))

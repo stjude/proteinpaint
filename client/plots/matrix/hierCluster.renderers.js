@@ -1,4 +1,4 @@
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 
 export function maySetSandboxHeader(appState) {
 	// run only once upon init, after state and dataType is given
@@ -10,7 +10,7 @@ export function maySetSandboxHeader(appState) {
 		case TermTypes.METABOLITE_INTENSITY:
 			this.dom.header.text('Metabolite Intensity Clustering')
 			break
-		case TermTypes.NUMERIC_DICTIONARY_TERM:
+		case NUMERIC_DICTIONARY_TERM:
 			this.dom.header.text(
 				appState.termdbConfig.numericDictTermCluster?.appName + ' Clustering' || 'Numercic Dictionary Term Cluster'
 			)
