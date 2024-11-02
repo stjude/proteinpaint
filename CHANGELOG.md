@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- allow hiercluster to work with numeric dictionary term data
+
+Fixes:
+- Removed cloneDeep import to fix bundling issue
+
+
 ## 2.82.1
 
 Fixes:

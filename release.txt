@@ -1,5 +1,1 @@
-Features:
-- allow hiercluster to work with numeric dictionary term data
 
-Fixes:
-- Removed cloneDeep import to fix bundling issue
