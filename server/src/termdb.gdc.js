@@ -952,11 +952,11 @@ async function testGraphqlApi(url, headers) {
 function getCacheRef(ds) {
 	// gather these arbitrary gdc stuff under __gdc{} to be safe
 	// do not freeze the object; they will be rewritten if cache is stale
-	return {
+	const ref = {
 		aliquot2submitter: {
 			cache: new Map(),
 			get: async aliquot_id => {
-				if (ds.__gdc.aliquot2submitter.cache.has(aliquot_id)) return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
+				if (ref.aliquot2submitter.cache.has(aliquot_id)) return ref.aliquot2submitter.cache.get(aliquot_id)
 
 				/* 
 				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
@@ -965,8 +965,8 @@ function getCacheRef(ds) {
 				return aliquot_id
 
 				// converts one id on the fly while the cache is still loading
-				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
-				//return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
+				//await fetchIdsFromGdcApi(ds, null, null, ref, aliquot_id)
+				//return ref.aliquot2submitter.cache.get(aliquot_id)
 			}
 		},
 		// create new attr to map to case uuid, from 3 kinds of ids: aliquot, sample submitter, and case submitter
@@ -974,7 +974,7 @@ function getCacheRef(ds) {
 		map2caseid: {
 			cache: new Map(),
 			get: input => {
-				return ds.__gdc.map2caseid.cache.get(input)
+				return ref.map2caseid.cache.get(input)
 				// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
 			}
 		},
@@ -984,6 +984,8 @@ function getCacheRef(ds) {
 		gdcOpenProjects: new Set(), // names of open-access projects
 		doneCaching: false
 	}
+
+	return ref
 }
 
 /*
@@ -1029,17 +1031,17 @@ async function cacheMappingOnNewRelease(ds) {
 
 	console.log('GDC: cache is stale. Re-caching...')
 	const size = 1000 // fetch 1000 ids at a time
-	const totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
+	const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
 	if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
 
 	const begin = new Date()
 	console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
 
 	for (let i = 0; i < Math.ceil(totalCases / size); i++) {
-		await fetchIdsFromGdcApi(ds, size, i * 1000)
+		await fetchIdsFromGdcApi(ds, size, i * 1000, ref)
 	}
 
-	await getCasesWithGeneExpression(ds)
+	await getCasesWithGeneExpression(ds, ref)
 	// if the _pendingCacheVersion does not match the current version,
 	// do not swap ds.__gdc to the current ref, it may already be stale
 	if (!deepEqual(version, ds.__pendingCacheVersion)) return
@@ -1069,7 +1071,7 @@ output:
 
 aliquot-to-submitter mapping are automatically cached
 */
-async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
+async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 	const param = ['fields=submitter_id,samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id']
 	if (aliquot_id) {
 		param.push(
@@ -1121,30 +1123,30 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 	for (const h of re.data.hits) {
 		const case_id = h.id
 		if (!case_id) throw 'h.id (case uuid) missing'
-		ds.__gdc.caseIds.add(case_id)
+		ref.caseIds.add(case_id)
 
 		const case_submitter_id = h.submitter_id
 		if (!case_submitter_id) throw 'h.submitter_id missing'
 
-		ds.__gdc.caseid2submitter.set(case_id, case_submitter_id)
+		ref.caseid2submitter.set(case_id, case_submitter_id)
 
 		/*
 		below shows different uuids mapping to same submitter id
 		this is the reason case submitter id must not be used to align data in oncomatrix, as it's not unique across Projects
 
-		if(ds.__gdc.map2caseid.cache.has(case_submitter_id)) {
-			console.log(case_submitter_id, case_id, ds.__gdc.map2caseid.cache.get(case_submitter_id))
+		if(ref.map2caseid.cache.has(case_submitter_id)) {
+			console.log(case_submitter_id, case_id, ref.map2caseid.cache.get(case_submitter_id))
 		}
 		*/
 
-		ds.__gdc.map2caseid.cache.set(case_submitter_id, case_id)
+		ref.map2caseid.cache.set(case_submitter_id, case_id)
 
 		if (!Array.isArray(h.samples)) continue //throw 'hit.samples[] not array'
 		for (const sample of h.samples) {
 			const sample_submitter_id = sample.submitter_id
 			if (!sample_submitter_id) throw 'sample.submitter_id missing'
 
-			ds.__gdc.map2caseid.cache.set(sample_submitter_id, case_id)
+			ref.map2caseid.cache.set(sample_submitter_id, case_id)
 
 			if (!Array.isArray(sample.portions)) continue // throw 'sample.portions[] not array'
 			for (const portion of sample.portions) {
@@ -1154,8 +1156,8 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 					for (const aliquot of analyte.aliquots) {
 						const aliquot_id = aliquot.aliquot_id
 						if (!aliquot_id) throw 'aliquot.aliquot_id missing'
-						ds.__gdc.aliquot2submitter.cache.set(aliquot_id, sample_submitter_id)
-						ds.__gdc.map2caseid.cache.set(aliquot_id, case_id)
+						ref.aliquot2submitter.cache.set(aliquot_id, sample_submitter_id)
+						ref.map2caseid.cache.set(aliquot_id, case_id)
 					}
 				}
 			}
@@ -1164,12 +1166,12 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 	return re.data?.pagination?.total
 }
 
-async function getCasesWithGeneExpression(ds) {
+async function getCasesWithGeneExpression(ds, ref) {
 	const { host, headers } = ds.getHostHeaders()
 	const url = path.join(host.geneExp, 'gene_expression/availability')
 
 	try {
-		const idLst = [...ds.__gdc.caseIds]
+		const idLst = [...ref.caseIds]
 		const { body: re } = await cachedFetch(url, {
 			method: 'post',
 			headers,
@@ -1178,10 +1180,10 @@ async function getCasesWithGeneExpression(ds) {
 		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
 		if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
 		for (const c of re.cases.details) {
-			if (c.has_gene_expression_values) ds.__gdc.casesWithExpData.add(c.case_id)
+			if (c.has_gene_expression_values) ref.casesWithExpData.add(c.case_id)
 		}
 
-		delete ds.__gdc.caseIds
+		delete ref.caseIds
 	} catch (e) {
 		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
 		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
