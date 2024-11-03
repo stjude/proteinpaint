@@ -348,7 +348,10 @@ export async function initGDCdictionary(ds) {
 	if (survivalCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'survival' })
 
 	if (serverconfig.features.await4completeGdcCaseCache) {
-		// only use on dev environment. here as soon as server is launched, it will signal client to refresh (sse). if still caching asyncly, a gdc view may break due to incomplete cache, thus await a bit for cache to complete. also should use extApiCache
+		// only use on dev environment. here as soon as server is launched,
+		// it will signal client to refresh (sse). if still caching asyncly,
+		// a gdc view may break due to incomplete cache, thus await a bit for cache to complete.
+		// also should use extApiCache
 		await runRemainingWithoutAwait(ds)
 	} else {
 		// use on prod, not to hold up container launch by caching
@@ -771,9 +774,25 @@ async function runRemainingWithoutAwait(ds) {
 		console.log(e.message || e)
 	}
 
+	// may do it because it could be disabled by feature toggle
+	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
+	if (serverconfig.features.stopGdcCacheAliquot) {
+		// do not cache at all. this flag is auto-set for container validation. running stale cache check will cause the server process not to quit, and break validation, thus must skip this when flag is true
+		console.log('GDC: sample IDs are not cached! No periodic check will take place!')
+		getCacheRef(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder
+		///////////////////// NOTE ///////////////////////
+		// with missing cache for case id mapping and cases with exp data, any query using gdc gene exp data will not work!!
+		// this should be fine for container validation, but may not do so on a dev environment
+		return
+	}
+
 	try {
 		// obtain case id mapping for the first time and store at ds.__gdc
-		await mayCacheSampleIdMappingWithRegularCheck(ds)
+		await cacheMappingOnNewRelease(ds)
+		// use setInterval instead of setTimeout within cacheMappingOnNewRelease(),
+		// which will require separate setTimeout() calls at the end of the function
+		// plus within each error catch block
+		setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
@@ -781,7 +800,7 @@ async function runRemainingWithoutAwait(ds) {
 	// add any other gdc stuff
 }
 
-async function getOpenProjects(ds) {
+async function getOpenProjects(ds, ref) {
 	const data = {
 		filters: {
 			op: 'and',
@@ -815,9 +834,9 @@ async function getOpenProjects(ds) {
 	}
 	for (const b of re.data.aggregations['cases.project.project_id'].buckets) {
 		// key is project_id value
-		if (b.key) ds.__gdc.gdcOpenProjects.add(b.key)
+		if (b.key) ref.gdcOpenProjects.add(b.key)
 	}
-	console.log('GDC open-access projects:', ds.__gdc.gdcOpenProjects.size)
+	console.log('GDC open-access projects:', ref.gdcOpenProjects.size)
 }
 
 /* this function is called when the gdc mds3 dataset is initiated on a pp instance
@@ -930,29 +949,10 @@ async function testGraphqlApi(url, headers) {
 	console.log('GDC GraphQL API okay: ' + url, new Date() - t, 'ms')
 }
 
-async function mayCacheSampleIdMappingWithRegularCheck(ds) {
-	// may do it because it could be disabled by feature toggle
-	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
-	if (serverconfig.features.stopGdcCacheAliquot) {
-		// do not cache at all. this flag is auto-set for container validation. running stale cache check will cause the server process not to quit, and break validation, thus must skip this when flag is true
-		console.log('GDC: sample IDs are not cached! No periodic check will take place!')
-		initGdcHolder(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder
-		///////////////////// NOTE ///////////////////////
-		// with missing cache for case id mapping and cases with exp data, any query using gdc gene exp data will not work!!
-		// this should be fine for container validation, but may not do so on a dev environment
-		return
-	}
-
-	await cacheSampleIdMapping(ds)
-
-	// since mapping has been cached, kick off stale cache check
-	setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
-}
-
-function initGdcHolder(ds) {
+function getCacheRef(ds) {
 	// gather these arbitrary gdc stuff under __gdc{} to be safe
 	// do not freeze the object; they will be rewritten if cache is stale
-	ds.__gdc = {
+	return {
 		aliquot2submitter: {
 			cache: new Map(),
 			get: async aliquot_id => {
@@ -995,28 +995,39 @@ cache gdc sample id mappings
 
 function will rerun when it detects stale case id cache
 */
-async function cacheSampleIdMapping(ds) {
-	initGdcHolder(ds)
+async function cacheMappingOnNewRelease(ds) {
+	console.log('GDC: checking if cache is stale')
+	// to avoid issues from race condition:
+	// - do not set ds.__gdc until the caching is complete
+	// - create a new ref object to map pending cacheable data
+	// - if a new cacheMapping call is triggered before the previous one is finished,
+	//   then make sure the previous cacheRef object is not used as ds.__gdc
+	const ref = getCacheRef(ds) // a new empty nested cache object
+	if (!ds.__gdc) ds.__gdc = ref
 
+	let version
 	try {
 		// also indicates to ignore data_release_version even if present
 		const response = await ds.preInit.getStatus()
-		if (deepEqual(response.data_release_version, ds.__gdc.data_release_version) && ds.__gdc.doneCaching) {
-			// do not trigger another caching if it's been done for saved release version
+		version = response.data_release_version
+		if (deepEqual(version, ds.__pendingCacheVersion) || deepEqual(version, ds.__gdc.data_release_version)) {
+			// do not trigger duplicate caching for the same release version, whether pending or completed
+			// console.log('GDC: not recaching gdc for same data release version')
 			return
 		}
-		// is it ok to trigger another caching loop when there may be another caching that is not finished?
-		// TODO: should be able to cancel an unfinished caching for a stale version
-		// Maybe it's highly unlikely that the data release version will be updated while caching is not done?
-		ds.__gdc.doneCaching = false
-		ds.__gdc.data_release_version = response.data_release_version
-		await getOpenProjects(ds)
+		// reset doneCaching to false, which may overwrite it for a previous data version that completed caching;
+		// important to keep the existing ds.__gdc cacheRef to prevent race condition causing a stale cacheRef
+		// to be used as ds.__gdc later
+		ds.__gdc.doneCaching = false // equivalent to having a ds.__pendingCacheVersion object present
+		ds.__pendingCacheVersion = version
+		ref.data_release_version = version
+		await getOpenProjects(ds, ref)
 	} catch (e) {
-		ds.__gdc.doneCaching = true // to trigger
-		console.log(e)
-		throw 'getOpenProjects() failed: ' + (e.message || e)
+		console.log('getOpenProjects() failed: ' + (e.message || e))
+		return
 	}
 
+	console.log('GDC: cache is stale. Re-caching...')
 	const size = 1000 // fetch 1000 ids at a time
 	const totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
 	if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
@@ -1029,7 +1040,12 @@ async function cacheSampleIdMapping(ds) {
 	}
 
 	await getCasesWithGeneExpression(ds)
-
+	// if the _pendingCacheVersion does not match the current version,
+	// do not swap ds.__gdc to the current ref, it may already be stale
+	if (!deepEqual(version, ds.__pendingCacheVersion)) return
+	delete ds.__pendingCacheVersion
+	// swap to the newly completed cache reference
+	ds.__gdc = ref
 	ds.__gdc.doneCaching = true
 	console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
 	console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
@@ -1170,27 +1186,5 @@ async function getCasesWithGeneExpression(ds) {
 		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
 		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
 		// when api is releated to public prod, must throw here and abort
-	}
-}
-
-async function mayReCacheCaseIdMapping(ds) {
-	if (await caseCacheIsStale(ds)) {
-		console.log('GDC: cache is stale. Re-caching...')
-		await cacheSampleIdMapping(ds)
-	}
-	// continue checking at the next time interval
-	setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
-}
-
-// on any mismatch, return true and trigger recaching
-async function caseCacheIsStale(ds) {
-	console.log('GDC: checking if cache is stale')
-	try {
-		const { host, headers } = ds.getHostHeaders()
-		const response = await ds.preInit.getStatus()
-		return !deepEqual(response.data_release_version, ds.__gdc.data_release_version)
-	} catch (e) {
-		console.warn('GDC: fetch api status failed on a check. skip and wait for next check')
-		return false
 	}
 }
