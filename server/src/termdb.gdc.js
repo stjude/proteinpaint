@@ -789,7 +789,7 @@ async function runRemainingWithoutAwait(ds) {
 	try {
 		// obtain case id mapping for the first time and store at ds.__gdc
 		await cacheMappingOnNewRelease(ds)
-		// use setInterval instead of setTimeout within cacheMappingOnNewRelease(),
+		// use setInterval instead of using setTimeout within cacheMappingOnNewRelease(),
 		// which will require separate setTimeout() calls at the end of the function
 		// plus within each error catch block
 		setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
@@ -1005,18 +1005,28 @@ async function cacheMappingOnNewRelease(ds) {
 	// - if a new cacheMapping call is triggered before the previous one is finished,
 	//   then make sure the previous cacheRef object is not used as ds.__gdc
 	const ref = getCacheRef(ds) // a new empty nested cache object
-	if (!ds.__gdc) ds.__gdc = ref
+	if (!ds.__gdc) ds.__gdc = ref // would reference the same object only on initial call
 
 	let version
 	try {
-		// also indicates to ignore data_release_version even if present
 		const response = await ds.preInit.getStatus()
 		version = response.data_release_version
 		if (deepEqual(version, ds.__pendingCacheVersion) || deepEqual(version, ds.__gdc.data_release_version)) {
+			if (ds.preInit.test)
+				console.log(
+					'GDC: skip recache of ',
+					version.minor,
+					ds.__pendingCacheVersion?.minor,
+					ds.__gdc.data_release_version.minor
+				)
 			// do not trigger duplicate caching for the same release version, whether pending or completed
-			// console.log('GDC: not recaching gdc for same data release version')
 			return
 		}
+		// need to check before resetting ds.__pendingCacheVersion in subsequent lines
+		if (mayCancelStalePendingCache(ds, { data_release_version: version })) return
+		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
+		if (ds.__gdc !== ref) console.log('GDC: cache is stale. Re-caching...', version.minor)
+
 		// reset doneCaching to false, which may overwrite it for a previous data version that completed caching;
 		// important to keep the existing ds.__gdc cacheRef to prevent race condition causing a stale cacheRef
 		// to be used as ds.__gdc later
@@ -1025,26 +1035,30 @@ async function cacheMappingOnNewRelease(ds) {
 		ref.data_release_version = version
 		await getOpenProjects(ds, ref)
 	} catch (e) {
+		delete ds.__pendingCacheVersion
 		console.log('getOpenProjects() failed: ' + (e.message || e))
 		return
 	}
 
-	console.log('GDC: cache is stale. Re-caching...')
-	const size = 1000 // fetch 1000 ids at a time
-	const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
-	if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
-
 	const begin = new Date()
-	console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
+	try {
+		const size = 1000 // fetch 1000 ids at a time
+		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
+		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
 
-	for (let i = 0; i < Math.ceil(totalCases / size); i++) {
-		await fetchIdsFromGdcApi(ds, size, i * 1000, ref)
+		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
+		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
+			await fetchIdsFromGdcApi(ds, size, i * 1000, ref)
+		}
+
+		await getCasesWithGeneExpression(ds, ref)
+	} catch (e) {
+		console.log(e)
+		delete ds.__pendingCacheVersion
+		return
 	}
 
-	await getCasesWithGeneExpression(ds, ref)
-	// if the _pendingCacheVersion does not match the current version,
-	// do not swap ds.__gdc to the current ref, it may already be stale
-	if (!deepEqual(version, ds.__pendingCacheVersion)) return
+	if (mayCancelStalePendingCache(ds, ref)) return
 	delete ds.__pendingCacheVersion
 	// swap to the newly completed cache reference
 	ds.__gdc = ref
@@ -1054,6 +1068,20 @@ async function cacheMappingOnNewRelease(ds) {
 	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
 	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
 	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
+}
+
+// may cancel an unfinished caching for an older data_release_version,
+// if a new data_release_version is detected in cacheMappingOnNewRelease() runs
+function mayCancelStalePendingCache(ds, ref) {
+	//if (!ds.__pendingCacheVersion) return false
+	const next = ref.data_release_version
+	const current = ds.__pendingCacheVersion || ds.__gdc.data_release_version
+	if (!current) return false
+	if (next.major < current.major || next.minor < current.minor) {
+		console.log(`GDC: !!! cancel stale pending cache for `, next)
+		return true
+	}
+	return false
 }
 
 /*
@@ -1072,6 +1100,7 @@ output:
 aliquot-to-submitter mapping are automatically cached
 */
 async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
+	if (mayCancelStalePendingCache(ds, ref)) return
 	const param = ['fields=submitter_id,samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id']
 	if (aliquot_id) {
 		param.push(
@@ -1167,6 +1196,7 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 }
 
 async function getCasesWithGeneExpression(ds, ref) {
+	if (mayCancelStalePendingCache(ds, ref)) return
 	const { host, headers } = ds.getHostHeaders()
 	const url = path.join(host.geneExp, 'gene_expression/availability')
 
@@ -1185,7 +1215,9 @@ async function getCasesWithGeneExpression(ds, ref) {
 
 		delete ref.caseIds
 	} catch (e) {
+		console.log(e)
 		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
+		delete ds.__pendingCacheVersion
 		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
 		// when api is releated to public prod, must throw here and abort
 	}
