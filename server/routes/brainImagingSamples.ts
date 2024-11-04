@@ -32,7 +32,6 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 
 			const samples = await getBrainImageSamples(query, genomes)
-			console.log(samples)
 			res.send({ samples })
 		} catch (e: any) {
 			console.log(e)
