@@ -116,7 +116,6 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 		for (const dcategory in divideByCat) {
 			let catNum = 0
 			const filesByCat = divideByCat[dcategory]
-			console.log(dcategory, filesByCat)
 			for (const category in filesByCat) catNum += filesByCat[category].samples.length
 			//if (samples.length < 1) continue
 			const url = await generateBrainImage(refFile, plane, index, 1, maxLength, JSON.stringify(filesByCat))
