@@ -1,9 +1,10 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type { CategoricalTW, GetBrainImagingRequest, GetBrainImagingResponse, TermWrapper } from '#types'
+import type { CategoricalTW, GetBrainImagingRequest, FilesByCategory, TermWrapper } from '#types'
 import { spawn } from 'child_process'
 import { getData } from '../src/termdb.matrix.js'
+import { get } from 'http'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
@@ -12,6 +13,15 @@ export const api: any = {
 	endpoint: 'brainImaging',
 	methods: {
 		get: {
+			init,
+			request: {
+				typeId: 'GetBrainImagingRequest'
+			},
+			response: {
+				typeId: 'GetBrainImagingResponse'
+			}
+		},
+		post: {
 			init,
 			request: {
 				typeId: 'GetBrainImagingRequest'
@@ -76,82 +86,55 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 
 		const data = await getData({ terms }, ds, q.genome)
 
-		let filesByCat: { [category: string]: { samples: string[]; color: string } } = {}
-		if (overlayTW) {
-			const overlayTWValues = {}
-			for (const [key, value] of Object.entries(overlayTW.term.values)) {
-				// TODO: make sure each term has a default color. buildTermDb assigns default color when not available
-				overlayTWValues[key] = { samples: [], color: value.color || 'red' }
-			}
-			for (const sampleName of selectedSampleNames) {
-				const sampleId = ds.sampleName2Id.get(sampleName)
-				const sampleData = data.samples[sampleId]
-				const category = sampleData[overlayTW.$id!].value
-				overlayTWValues[category].samples.push(path.join(dirPath, sampleName) + '.nii')
-			}
-			filesByCat = overlayTWValues
-		} else {
-			// default filesByCat
-			filesByCat = {
-				default: {
-					samples: query.selectedSampleFileNames.map(file => path.join(dirPath, file)),
-					color: 'red'
+		const divideByCat: { [key: string]: FilesByCategory } = {}
+
+		for (const sampleName of selectedSampleNames) {
+			const sampleId = ds.sampleName2Id.get(sampleName)
+			const sampleData = data.samples[sampleId]
+			const samplePath = path.join(dirPath, sampleName) + '.nii'
+			const divideCategory = divideByTW ? sampleData[divideByTW.$id!].value : 'default'
+			const overlayCategory = overlayTW ? sampleData[overlayTW.$id!].value : 'default'
+			if (!divideByCat[divideCategory]) divideByCat[divideCategory] = {}
+			if (!divideByCat[divideCategory][overlayCategory])
+				divideByCat[divideCategory][overlayCategory] = {
+					samples: [],
+					color: overlayTW?.term?.values?.[overlayCategory]?.color || 'red'
 				}
-			}
+			divideByCat[divideCategory][overlayCategory].samples.push(samplePath)
 		}
 
-		if (divideByTW) {
-			const divideByValues: { [category: string]: string[] } = {}
-			for (const value in divideByTW.term.values) {
-				divideByValues[value] = []
+		const lengths: number[] = []
+		for (const dcategory in divideByCat)
+			for (const category in divideByCat[dcategory]) {
+				const samples = divideByCat[dcategory][category].samples
+				lengths.push(samples.length)
 			}
 
-			for (const sampleName of selectedSampleNames) {
-				const sampleId = ds.sampleName2Id.get(sampleName)
-
-				const sampleData = data.samples[sampleId]
-				const category = sampleData[divideByTW.$id!].value
-				divideByValues[category].push(sampleName + '.nii')
-			}
-
-			const matrix: string[][] = Object.values(divideByValues)
-			const lengths = matrix.map(arr => arr.length)
-			// Find the length of each array and determine the maximum length
-			const maxLength = Math.max(...lengths)
-
-			const brainImageDict = {}
-			for (const [termV, samples] of Object.entries(divideByValues)) {
-				if (samples.length < 1) continue
-
-				const color = 'red' //divideByTW.term.values[termV].color || 'red'
-				filesByCat = {}
-				filesByCat[termV] = {
-					samples: samples.map(file => path.join(dirPath, file)),
-					color
-				}
-				const url = await generateBrainImage(refFile, plane, index, 1, maxLength, JSON.stringify(filesByCat))
-				brainImageDict[termV] = { url, catNum: samples.length }
-			}
-
-			return brainImageDict
-		}
-
-		const matrix = Object.values(filesByCat)
-		const lengths = matrix.map(arr => arr.samples.length)
 		// Find the length of each array and determine the maximum length
 		const maxLength = Math.max(...lengths)
 
-		const url = await generateBrainImage(
-			refFile,
-			plane,
-			index,
-			overlayTW ? 0 : 1,
-			maxLength,
-			JSON.stringify(filesByCat)
-		)
-		return { default: { url, catNum: query.selectedSampleFileNames.length } }
+		const brainImageDict = {}
+		for (const dcategory in divideByCat) {
+			let catNum = 0
+			const filesByCat = divideByCat[dcategory]
+			for (const category in filesByCat) catNum += filesByCat[category].samples.length
+			//if (samples.length < 1) continue
+			const url = await generateBrainImage(refFile, plane, index, 1, maxLength, JSON.stringify(filesByCat))
+			brainImageDict[dcategory] = { url, catNum }
+		}
+
+		return brainImageDict
 	} else {
 		throw 'no reference or sample files'
+	}
+
+	function getFilesByCat(tw: TermWrapper) {
+		const filesByCat: FilesByCategory = {}
+		for (const [key, value] of Object.entries(tw.term.values)) {
+			// TODO: make sure each term has a default color. buildTermDb assigns default color when not available
+			filesByCat[key] = { samples: [], color: value.color || 'red' }
+		}
+		return filesByCat
 	}
 }
 

@@ -37,3 +37,5 @@ export type GetBrainImagingResponse = {
 	/** the brain imaging plot */
 	brainImage: string
 }
+
+export type FilesByCategory = { [category: string]: { samples: string[]; color: string } }
