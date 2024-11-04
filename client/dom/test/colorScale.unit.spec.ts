@@ -282,12 +282,12 @@ tape('Show ticks in scientific notation', async test => {
 
 	const updatedTicks = await detectGte({
 		selector: 'text',
-		target: holder.node(),
+		target: testColorScale.dom.scaleAxis.node(),
 		count: 2
 	})
-
-	test.equal(updatedTicks[0].innerHTML, '−4.0e-3', `Should render scientific notation for first tick`)
-	test.equal(updatedTicks[1].innerHTML, '−2.0e-3', `Should render scientific notation for second tick`)
+	//Note: innerHTML uses special character for neg sign. Do not test innerHTML.
+	test.equal(updatedTicks[0].__data__, -0.004, `Should render scientific notation for first tick`)
+	test.equal(updatedTicks[1].__data__, -0.002, `Should render scientific notation for second tick`)
 
 	if (test['_ok']) holder.remove()
 	test.end()
