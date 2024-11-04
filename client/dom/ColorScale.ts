@@ -337,9 +337,9 @@ export class ColorScale {
 		const axis = this.topTicks === true ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
 		axis.ticks(this.ticks).tickSize(this.tickSize)
 
-		if (this.tickValues[0] <= 0.001 || this.tickValues[this.tickValues.length - 1] <= 0.001) {
+		if (this.tickValues[this.tickValues.length - 1] <= 0.01) {
 			//Tick values are sorted in niceNumLabels
-			//If either the min or max value is < 0.001, use scientific notation format
+			//If max value is < 0.001, use scientific notation format
 			axis.tickFormat(format('.1e'))
 		}
 		return axis
