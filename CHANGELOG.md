@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - Removed cloneDeep import to fix bundling issue
+- detect and set the gdc version first before caching
 
 
 ## 2.82.1
