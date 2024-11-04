@@ -232,28 +232,24 @@ class BrainImaging {
 				this.dataUrlL[termV] = result
 			}
 
-			if (this.dom.imagesL.length != this.dataUrlL.length) {
-				this.dom.tdL.selectAll('*').remove()
-				this.dom.imagesL = []
-				for (const [termV, result] of Object.entries(this.dataUrlL)) {
-					if (divideByTW)
-						this.dom.tdL
-							.append('div')
-							.attr('class', 'pp-chart-title')
-							.style('text-align', 'center')
-							.text(`${termV} (n=${result.catNum})`)
-							.style('font-weight', '600')
-							.style('color', 'white')
-							.style('font-size', '24px')
-							.style('margin-bottom', '5px')
-							.style('margin-top', '5px')
-							.style('display', 'block')
-					const img = this.dom.tdL.append('div').append('img').attr('src', result.url)
-					this.dom.imagesL.push(img)
-				}
-			} else
-				for (const [termV, result] of Object.entries(this.dataUrlL))
-					this.dom.imagesL.forEach((img, i) => img.attr('src', result.url))
+			this.dom.tdL.selectAll('*').remove()
+			this.dom.imagesL = []
+			for (const [termV, result] of Object.entries(this.dataUrlL)) {
+				if (divideByTW)
+					this.dom.tdL
+						.append('div')
+						.attr('class', 'pp-chart-title')
+						.style('text-align', 'center')
+						.text(`${termV} (n=${result.catNum})`)
+						.style('font-weight', '600')
+						.style('color', 'white')
+						.style('font-size', '24px')
+						.style('margin-bottom', '5px')
+						.style('margin-top', '5px')
+						.style('display', 'block')
+				const img = this.dom.tdL.append('div').append('img').attr('src', result.url)
+				this.dom.imagesL.push(img)
+			}
 		}
 
 		if (this.state.updateF) {
@@ -273,27 +269,23 @@ class BrainImaging {
 			for (const [termV, result] of Object.entries(data.brainImage)) {
 				this.dataUrlF.push(result)
 			}
-			if (this.dom.imagesF.length != this.dataUrlF.length) {
-				this.dom.tdF.selectAll('*').remove()
-				this.dom.imagesF = []
-				for (const [termV, result] of Object.entries(this.dataUrlF)) {
-					if (divideByTW)
-						this.dom.tdF
-							.append('div')
-							.attr('class', 'pp-chart-title')
-							.style('text-align', 'center')
-							.html('&nbsp;')
-							.style('font-weight', '600')
-							.style('font-size', '24px')
-							.style('margin-bottom', '5px')
-							.style('margin-top', '5px')
-							.style('display', 'block')
-					const img = this.dom.tdF.append('div').append('img').attr('src', result.url)
-					this.dom.imagesF.push(img)
-				}
-			} else
-				for (const [termV, result] of Object.entries(this.dataUrlF))
-					this.dom.imagesF.forEach((img, i) => img.attr('src', result.url))
+			this.dom.tdF.selectAll('*').remove()
+			this.dom.imagesF = []
+			for (const [termV, result] of Object.entries(this.dataUrlF)) {
+				if (divideByTW)
+					this.dom.tdF
+						.append('div')
+						.attr('class', 'pp-chart-title')
+						.style('text-align', 'center')
+						.html('&nbsp;')
+						.style('font-weight', '600')
+						.style('font-size', '24px')
+						.style('margin-bottom', '5px')
+						.style('margin-top', '5px')
+						.style('display', 'block')
+				const img = this.dom.tdF.append('div').append('img').attr('src', result.url)
+				this.dom.imagesF.push(img)
+			}
 		}
 		if (this.state.updateT) {
 			const body = {
@@ -313,27 +305,23 @@ class BrainImaging {
 				this.dataUrlT.push(result)
 			}
 
-			if (this.dom.imagesT.length != this.dataUrlT.length) {
-				this.dom.tdT.selectAll('*').remove()
-				this.dom.imagesT = []
-				for (const [termV, result] of Object.entries(this.dataUrlT)) {
-					if (divideByTW)
-						this.dom.tdT
-							.append('div')
-							.attr('class', 'pp-chart-title')
-							.style('text-align', 'center')
-							.html('&nbsp;')
-							.style('font-weight', '600')
-							.style('font-size', '24px')
-							.style('margin-bottom', '5px')
-							.style('margin-top', '5px')
-							.style('display', 'block')
-					const img = this.dom.tdT.append('div').append('img').attr('src', result.url)
-					this.dom.imagesT.push(img)
-				}
-			} else
-				for (const [termV, result] of Object.entries(this.dataUrlT))
-					this.dom.imagesT.forEach((img, i) => img.attr('src', result.url))
+			this.dom.tdT.selectAll('*').remove()
+			this.dom.imagesT = []
+			for (const [termV, result] of Object.entries(this.dataUrlT)) {
+				if (divideByTW)
+					this.dom.tdT
+						.append('div')
+						.attr('class', 'pp-chart-title')
+						.style('text-align', 'center')
+						.html('&nbsp;')
+						.style('font-weight', '600')
+						.style('font-size', '24px')
+						.style('margin-bottom', '5px')
+						.style('margin-top', '5px')
+						.style('display', 'block')
+				const img = this.dom.tdT.append('div').append('img').attr('src', result.url)
+				this.dom.imagesT.push(img)
+			}
 		}
 	}
 }
