@@ -234,7 +234,16 @@ function setRenderers(self) {
 					childType: 'boxplot',
 					label: 'Boxplot',
 					disabled: d => false,
-					isVisible: () => isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term),
+					isVisible: () => {
+						//Remove after development
+						const features = JSON.parse(sessionStorage.getItem('optionalFeatures')) || {}
+						if (
+							features.draftChartTypes.indexOf('boxplot') != -1 &&
+							(isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term))
+						)
+							return true
+						// isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term)
+					},
 					getConfig: async () => {
 						const _term = self.config?.term
 						const _term2 = self.config.term2
