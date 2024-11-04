@@ -102,7 +102,6 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 				}
 			divideByCat[divideCategory][overlayCategory].samples.push(samplePath)
 		}
-
 		const lengths: number[] = []
 		for (const dcategory in divideByCat)
 			for (const category in divideByCat[dcategory]) {
@@ -117,6 +116,7 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 		for (const dcategory in divideByCat) {
 			let catNum = 0
 			const filesByCat = divideByCat[dcategory]
+			console.log(dcategory, filesByCat)
 			for (const category in filesByCat) catNum += filesByCat[category].samples.length
 			//if (samples.length < 1) continue
 			const url = await generateBrainImage(refFile, plane, index, 1, maxLength, JSON.stringify(filesByCat))
@@ -128,7 +128,7 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 		throw 'no reference or sample files'
 	}
 
-	function getFilesByCat(tw: TermWrapper) {
+	function getFilesByCat(tw: CategoricalTW) {
 		const filesByCat: FilesByCategory = {}
 		for (const [key, value] of Object.entries(tw.term.values)) {
 			// TODO: make sure each term has a default color. buildTermDb assigns default color when not available
