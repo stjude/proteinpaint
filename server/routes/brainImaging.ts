@@ -123,14 +123,16 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 			for (const [termV, samples] of Object.entries(divideByValues)) {
 				if (samples.length < 1) continue
 
+				const color = 'red' //divideByTW.term.values[termV].color || 'red'
+				filesByCat = {}
 				filesByCat[termV] = {
 					samples: samples.map(file => path.join(dirPath, file)),
-					color: 'red'
+					color
 				}
-
 				const url = await generateBrainImage(refFile, plane, index, 1, maxLength, JSON.stringify(filesByCat))
 				brainImageDict[termV] = { url, catNum: samples.length }
 			}
+
 			return brainImageDict
 		}
 
@@ -164,7 +166,7 @@ async function generateBrainImage(refFile, plane, index, showLegend, maxLength, 
 			maxLength,
 			filesJson
 		]
-		//console.log('cmd:', cmd)
+		console.log(cmd.join(' '))
 
 		const ps = spawn(serverconfig.python, cmd)
 		const imgData: Buffer[] = []
