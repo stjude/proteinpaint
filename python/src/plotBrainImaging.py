@@ -100,15 +100,15 @@ for key, value in sampleFiles.items():
 	ax.axis('off')
 
 # Create the color bar
-if showLegend == 1:
-	# Create a color bar without changing figure size
-	norm = mcolors.Normalize(vmin=0, vmax=vmaxSamples)
-	sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+# if showLegend == 1:
+# 	# Create a color bar without changing figure size
+# 	norm = mcolors.Normalize(vmin=0, vmax=vmaxSamples)
+# 	sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 
-	cbar = plt.colorbar(sm, ax=ax, orientation='vertical', fraction=0.01, pad=0.05, alpha=alpha)
-	cbar.set_label('Combined Intensity', color='white', fontsize=6, labelpad=-10)
-	cbar.ax.text(0.5, 1.0001, vmaxSamples, ha='center', va='bottom', transform=cbar.ax.transAxes, color='white', fontsize=6)
-	cbar.ax.text(0.5, -0.0001, 0, ha='center', va='top', transform=cbar.ax.transAxes, color='white', fontsize=6)
+# 	cbar = plt.colorbar(sm, ax=ax, orientation='vertical', fraction=0.01, pad=0.05, alpha=alpha)
+# 	cbar.set_label('Combined Intensity', color='white', fontsize=6, labelpad=-10)
+# 	cbar.ax.text(0.5, 1.0001, vmaxSamples, ha='center', va='bottom', transform=cbar.ax.transAxes, color='white', fontsize=6)
+# 	cbar.ax.text(0.5, -0.0001, 0, ha='center', va='top', transform=cbar.ax.transAxes, color='white', fontsize=6)
 
 # Output the image data to stdout
 buf = io.BytesIO()
