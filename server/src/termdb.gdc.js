@@ -3,6 +3,7 @@ import path from 'path'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { cachedFetch } from './utils'
+import { deepEqual } from '#shared/helpers.js'
 
 /*
 ********************   Comment   *****************
@@ -347,7 +348,10 @@ export async function initGDCdictionary(ds) {
 	if (survivalCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'survival' })
 
 	if (serverconfig.features.await4completeGdcCaseCache) {
-		// only use on dev environment. here as soon as server is launched, it will signal client to refresh (sse). if still caching asyncly, a gdc view may break due to incomplete cache, thus await a bit for cache to complete. also should use extApiCache
+		// only use on dev environment. here as soon as server is launched,
+		// it will signal client to refresh (sse). if still caching asyncly,
+		// a gdc view may break due to incomplete cache, thus await a bit for cache to complete.
+		// also should use extApiCache
 		await runRemainingWithoutAwait(ds)
 	} else {
 		// use on prod, not to hold up container launch by caching
@@ -770,9 +774,25 @@ async function runRemainingWithoutAwait(ds) {
 		console.log(e.message || e)
 	}
 
+	// may do it because it could be disabled by feature toggle
+	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
+	if (serverconfig.features.stopGdcCacheAliquot) {
+		// do not cache at all. this flag is auto-set for container validation. running stale cache check will cause the server process not to quit, and break validation, thus must skip this when flag is true
+		console.log('GDC: sample IDs are not cached! No periodic check will take place!')
+		getCacheRef(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder
+		///////////////////// NOTE ///////////////////////
+		// with missing cache for case id mapping and cases with exp data, any query using gdc gene exp data will not work!!
+		// this should be fine for container validation, but may not do so on a dev environment
+		return
+	}
+
 	try {
 		// obtain case id mapping for the first time and store at ds.__gdc
-		await mayCacheSampleIdMappingWithRegularCheck(ds)
+		await cacheMappingOnNewRelease(ds)
+		// use setInterval instead of using setTimeout within cacheMappingOnNewRelease(),
+		// which will require separate setTimeout() calls at the end of the function
+		// plus within each error catch block
+		setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
@@ -780,7 +800,7 @@ async function runRemainingWithoutAwait(ds) {
 	// add any other gdc stuff
 }
 
-async function getOpenProjects(ds) {
+async function getOpenProjects(ds, ref) {
 	const data = {
 		filters: {
 			op: 'and',
@@ -814,9 +834,9 @@ async function getOpenProjects(ds) {
 	}
 	for (const b of re.data.aggregations['cases.project.project_id'].buckets) {
 		// key is project_id value
-		if (b.key) ds.__gdc.gdcOpenProjects.add(b.key)
+		if (b.key) ref.gdcOpenProjects.add(b.key)
 	}
-	console.log('GDC open-access projects:', ds.__gdc.gdcOpenProjects.size)
+	console.log('GDC open-access projects:', ref.gdcOpenProjects.size)
 }
 
 /* this function is called when the gdc mds3 dataset is initiated on a pp instance
@@ -929,33 +949,14 @@ async function testGraphqlApi(url, headers) {
 	console.log('GDC GraphQL API okay: ' + url, new Date() - t, 'ms')
 }
 
-async function mayCacheSampleIdMappingWithRegularCheck(ds) {
-	// may do it because it could be disabled by feature toggle
-	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
-	if (serverconfig.features.stopGdcCacheAliquot) {
-		// do not cache at all. this flag is auto-set for container validation. running stale cache check will cause the server process not to quit, and break validation, thus must skip this when flag is true
-		console.log('GDC: sample IDs are not cached! No periodic check will take place!')
-		initGdcHolder(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder
-		///////////////////// NOTE ///////////////////////
-		// with missing cache for case id mapping and cases with exp data, any query using gdc gene exp data will not work!!
-		// this should be fine for container validation, but may not do so on a dev environment
-		return
-	}
-
-	await cacheSampleIdMapping(ds)
-
-	// since mapping has been cached, kick off stale cache check
-	setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
-}
-
-function initGdcHolder(ds) {
+function getCacheRef(ds) {
 	// gather these arbitrary gdc stuff under __gdc{} to be safe
 	// do not freeze the object; they will be rewritten if cache is stale
-	ds.__gdc = {
+	const ref = {
 		aliquot2submitter: {
 			cache: new Map(),
 			get: async aliquot_id => {
-				if (ds.__gdc.aliquot2submitter.cache.has(aliquot_id)) return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
+				if (ref.aliquot2submitter.cache.has(aliquot_id)) return ref.aliquot2submitter.cache.get(aliquot_id)
 
 				/* 
 				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
@@ -964,8 +965,8 @@ function initGdcHolder(ds) {
 				return aliquot_id
 
 				// converts one id on the fly while the cache is still loading
-				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
-				//return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
+				//await fetchIdsFromGdcApi(ds, null, null, ref, aliquot_id)
+				//return ref.aliquot2submitter.cache.get(aliquot_id)
 			}
 		},
 		// create new attr to map to case uuid, from 3 kinds of ids: aliquot, sample submitter, and case submitter
@@ -973,7 +974,7 @@ function initGdcHolder(ds) {
 		map2caseid: {
 			cache: new Map(),
 			get: input => {
-				return ds.__gdc.map2caseid.cache.get(input)
+				return ref.map2caseid.cache.get(input)
 				// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
 			}
 		},
@@ -983,6 +984,8 @@ function initGdcHolder(ds) {
 		gdcOpenProjects: new Set(), // names of open-access projects
 		doneCaching: false
 	}
+
+	return ref
 }
 
 /*
@@ -994,39 +997,91 @@ cache gdc sample id mappings
 
 function will rerun when it detects stale case id cache
 */
-async function cacheSampleIdMapping(ds) {
-	initGdcHolder(ds)
+async function cacheMappingOnNewRelease(ds) {
+	console.log('GDC: checking if cache is stale')
+	// to avoid issues from race condition:
+	// - do not set ds.__gdc until the caching is complete
+	// - create a new ref object to map pending cacheable data
+	// - if a new cacheMapping call is triggered before the previous one is finished,
+	//   then make sure the previous cacheRef object is not used as ds.__gdc
+	const ref = getCacheRef(ds) // a new empty nested cache object
+	if (!ds.__gdc) ds.__gdc = ref // would reference the same object only on initial call
 
+	let version
 	try {
-		await getOpenProjects(ds)
-	} catch (e) {
-		console.log(e)
-		throw 'getOpenProjects() failed: ' + (e.message || e)
-	}
+		const response = await ds.preInit.getStatus()
+		version = response.data_release_version
+		if (deepEqual(version, ds.__pendingCacheVersion) || deepEqual(version, ds.__gdc.data_release_version)) {
+			if (ds.preInit.test)
+				console.log(
+					'GDC: skip recache of ',
+					version.minor,
+					ds.__pendingCacheVersion?.minor,
+					ds.__gdc.data_release_version.minor
+				)
+			// do not trigger duplicate caching for the same release version, whether pending or completed
+			return
+		}
+		// need to check before resetting ds.__pendingCacheVersion in subsequent lines
+		if (mayCancelStalePendingCache(ds, { data_release_version: version })) return
+		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
+		if (ds.__gdc !== ref) console.log('GDC: cache is stale. Re-caching...', version.minor)
 
-	const size = 1000 // fetch 1000 ids at a time
-	const totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
-	if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
+		// reset doneCaching to false, which may overwrite it for a previous data version that completed caching;
+		// important to keep the existing ds.__gdc cacheRef to prevent race condition causing a stale cacheRef
+		// to be used as ds.__gdc later
+		ds.__gdc.doneCaching = false // equivalent to having a ds.__pendingCacheVersion object present
+		ds.__pendingCacheVersion = version
+		ref.data_release_version = version
+		await getOpenProjects(ds, ref)
+	} catch (e) {
+		delete ds.__pendingCacheVersion
+		console.log('getOpenProjects() failed: ' + (e.message || e))
+		return
+	}
 
 	const begin = new Date()
-	console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
+	try {
+		const size = 1000 // fetch 1000 ids at a time
+		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
+		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
 
-	for (let i = 0; i < Math.ceil(totalCases / size); i++) {
-		await fetchIdsFromGdcApi(ds, size, i * 1000)
+		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
+		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
+			await fetchIdsFromGdcApi(ds, size, i * 1000, ref)
+		}
+
+		await getCasesWithGeneExpression(ds, ref)
+	} catch (e) {
+		console.log(e)
+		delete ds.__pendingCacheVersion
+		return
 	}
 
-	await getCasesWithGeneExpression(ds)
-
+	if (mayCancelStalePendingCache(ds, ref)) return
+	delete ds.__pendingCacheVersion
+	// swap to the newly completed cache reference
+	ds.__gdc = ref
 	ds.__gdc.doneCaching = true
 	console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
 	console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
 	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
 	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
 	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
+}
 
-	// record /status endpoint result. subsequent stale cache check will requery /status and compare with this
-	// if this fetch fails, means the subsequent check won't work, and must abort launch
-	ds.__gdc.data_release_version = await ds.preInit.getStatus().data_release_version
+// may cancel an unfinished caching for an older data_release_version,
+// if a new data_release_version is detected in cacheMappingOnNewRelease() runs
+function mayCancelStalePendingCache(ds, ref) {
+	//if (!ds.__pendingCacheVersion) return false
+	const next = ref.data_release_version
+	const current = ds.__pendingCacheVersion || ds.__gdc.data_release_version
+	if (!current) return false
+	if (next.major < current.major || next.minor < current.minor) {
+		console.log(`GDC: !!! cancel stale pending cache for `, next)
+		return true
+	}
+	return false
 }
 
 /*
@@ -1044,7 +1099,8 @@ output:
 
 aliquot-to-submitter mapping are automatically cached
 */
-async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
+async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
+	if (mayCancelStalePendingCache(ds, ref)) return
 	const param = ['fields=submitter_id,samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id']
 	if (aliquot_id) {
 		param.push(
@@ -1096,30 +1152,30 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 	for (const h of re.data.hits) {
 		const case_id = h.id
 		if (!case_id) throw 'h.id (case uuid) missing'
-		ds.__gdc.caseIds.add(case_id)
+		ref.caseIds.add(case_id)
 
 		const case_submitter_id = h.submitter_id
 		if (!case_submitter_id) throw 'h.submitter_id missing'
 
-		ds.__gdc.caseid2submitter.set(case_id, case_submitter_id)
+		ref.caseid2submitter.set(case_id, case_submitter_id)
 
 		/*
 		below shows different uuids mapping to same submitter id
 		this is the reason case submitter id must not be used to align data in oncomatrix, as it's not unique across Projects
 
-		if(ds.__gdc.map2caseid.cache.has(case_submitter_id)) {
-			console.log(case_submitter_id, case_id, ds.__gdc.map2caseid.cache.get(case_submitter_id))
+		if(ref.map2caseid.cache.has(case_submitter_id)) {
+			console.log(case_submitter_id, case_id, ref.map2caseid.cache.get(case_submitter_id))
 		}
 		*/
 
-		ds.__gdc.map2caseid.cache.set(case_submitter_id, case_id)
+		ref.map2caseid.cache.set(case_submitter_id, case_id)
 
 		if (!Array.isArray(h.samples)) continue //throw 'hit.samples[] not array'
 		for (const sample of h.samples) {
 			const sample_submitter_id = sample.submitter_id
 			if (!sample_submitter_id) throw 'sample.submitter_id missing'
 
-			ds.__gdc.map2caseid.cache.set(sample_submitter_id, case_id)
+			ref.map2caseid.cache.set(sample_submitter_id, case_id)
 
 			if (!Array.isArray(sample.portions)) continue // throw 'sample.portions[] not array'
 			for (const portion of sample.portions) {
@@ -1129,8 +1185,8 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 					for (const aliquot of analyte.aliquots) {
 						const aliquot_id = aliquot.aliquot_id
 						if (!aliquot_id) throw 'aliquot.aliquot_id missing'
-						ds.__gdc.aliquot2submitter.cache.set(aliquot_id, sample_submitter_id)
-						ds.__gdc.map2caseid.cache.set(aliquot_id, case_id)
+						ref.aliquot2submitter.cache.set(aliquot_id, sample_submitter_id)
+						ref.map2caseid.cache.set(aliquot_id, case_id)
 					}
 				}
 			}
@@ -1139,12 +1195,13 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 	return re.data?.pagination?.total
 }
 
-async function getCasesWithGeneExpression(ds) {
+async function getCasesWithGeneExpression(ds, ref) {
+	if (mayCancelStalePendingCache(ds, ref)) return
 	const { host, headers } = ds.getHostHeaders()
 	const url = path.join(host.geneExp, 'gene_expression/availability')
 
 	try {
-		const idLst = [...ds.__gdc.caseIds]
+		const idLst = [...ref.caseIds]
 		const { body: re } = await cachedFetch(url, {
 			method: 'post',
 			headers,
@@ -1153,50 +1210,15 @@ async function getCasesWithGeneExpression(ds) {
 		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
 		if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
 		for (const c of re.cases.details) {
-			if (c.has_gene_expression_values) ds.__gdc.casesWithExpData.add(c.case_id)
+			if (c.has_gene_expression_values) ref.casesWithExpData.add(c.case_id)
 		}
 
-		delete ds.__gdc.caseIds
+		delete ref.caseIds
 	} catch (e) {
+		console.log(e)
 		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
+		delete ds.__pendingCacheVersion
 		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
 		// when api is releated to public prod, must throw here and abort
 	}
-}
-
-async function mayReCacheCaseIdMapping(ds) {
-	if (await caseCacheIsStale(ds)) {
-		console.log('GDC: cache is stale. Re-caching...')
-		await cacheSampleIdMapping(ds)
-	}
-	// continue checking at the next time interval
-	setTimeout(() => mayReCacheCaseIdMapping(ds), cacheCheckWait)
-}
-
-// on any mismatch, return true and trigger recaching
-async function caseCacheIsStale(ds) {
-	console.log('GDC: checking if cache is stale')
-
-	const { host, headers } = ds.getHostHeaders()
-
-	let value
-	try {
-		value = await ds.getStatus().data_release_version
-	} catch (e) {
-		console.warn('GDC: fetch api status failed on a check. skip and wait for next check')
-		return false
-	}
-
-	if (typeof ds.__gdc.data_release_version == 'object') {
-		// new api return. when released to prod, remove this check
-		console.log('(new api)') // just to indicate it's using new api; delete when api is in prod
-		for (const k in ds.__gdc.data_release_version) {
-			if (ds.__gdc.data_release_version[k] != value[k]) return true // mismatch. return true and recache
-		}
-		return false // all match. no recaching
-	}
-
-	// old api return. to be deleted
-	console.log('(old api)') // just to indicate it's using old api
-	return ds.__gdc.data_release_version != value
 }

@@ -1535,6 +1535,11 @@ export type PreInit = {
 	retryDelay?: number
 	retryMax?: number
 	errorCallback?: (response: PreInitStatus) => void
+	test?: {
+		numCalls: number
+		minor: number
+		mayEditResponse: (response: any) => any
+	}
 }
 
 export type Mds3 = BaseMds & {
