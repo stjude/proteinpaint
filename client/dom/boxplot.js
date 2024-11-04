@@ -35,7 +35,8 @@ export function drawBoxplot({ bp, g, color, scale, rowheight, labpad, labColor =
 			.text(bp.label)
 	}
 
-	if (bp.w1 != undefined) {
+	if (bp.w1 != undefined || bp.w2 != undefined) {
+		// Undefined when there is no distribution
 		// has valid values for boxplot, could be missing
 		const w1 = scale(bp.w1)
 		const w2 = scale(bp.w2)

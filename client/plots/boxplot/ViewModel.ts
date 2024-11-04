@@ -58,11 +58,6 @@ export class ViewModel {
 		for (const plot of viewData.plots) {
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
 
-			/** w1 and w2 can be set to 0 if no iqr
-			 * set to absMin to avoid whisker appearing out of the plot */
-			if (plot.boxplot.w1 < viewData.absMin) plot.boxplot.w1 = viewData.absMin
-			if (plot.boxplot.w2 < viewData.absMin) plot.boxplot.w2 = viewData.absMin
-
 			if (plot.boxplot.out.length) {
 				const maxOut = plot.boxplot.out.reduce((a: { value: number }, b: { value: number }) =>
 					Math.max(a.value, b.value)
