@@ -135,12 +135,12 @@ export class Barchart {
 					settingsKey: 'unit',
 					options: [
 						{ label: 'Linear', value: 'abs' },
-						/** Option commented out because:
+						/** Option not available when term2 is present:
 						 * 1. The scale for the plot renders incorrectly
 						 * 2. The bars do not appear to be rendering correctly as a result
-						 * TODOs: Investigate the cause of the rendering issue and re-enable the option
+						 * TODOs: Investigate the cause of the rendering issue
 						 */
-						// { label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
+						{ label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
 						{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
 					]
 				},
