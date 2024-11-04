@@ -545,7 +545,7 @@ export type SingleCellDataGdc = {
 	src: 'gdcapi'
 	sameLegend: boolean
 	get?: (q: any) => any
-	refName: string
+	refName?: string
 	plots: GDCSingleCellPlot[]
 	width?: number
 	height?: number
