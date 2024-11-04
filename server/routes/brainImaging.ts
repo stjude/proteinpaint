@@ -64,7 +64,6 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 		const files = fs
 			.readdirSync(dirPath)
 			.filter(file => file.endsWith('.nii') && fs.statSync(path.join(dirPath, file)).isFile())
-		//const filePaths = files.map(file => path.join(dirPath, file))
 
 		const terms: CategoricalTW[] = []
 		const divideByTW: CategoricalTW | undefined = query.divideByTW
@@ -77,7 +76,7 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 
 		const data = await getData({ terms }, ds, q.genome)
 
-		let filesByCat = {}
+		let filesByCat: { [category: string]: { samples: string[]; color: string } } = {}
 		if (overlayTW) {
 			const overlayTWValues = {}
 			for (const [key, value] of Object.entries(overlayTW.term.values)) {
@@ -102,7 +101,7 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 		}
 
 		if (divideByTW) {
-			const divideByValues = {}
+			const divideByValues: { [category: string]: string[] } = {}
 			for (const value in divideByTW.term.values) {
 				divideByValues[value] = []
 			}
@@ -120,7 +119,7 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 			// Find the length of each array and determine the maximum length
 			const maxLength = Math.max(...lengths)
 
-			const brainImageArray = {}
+			const brainImageDict = {}
 			for (const [termV, samples] of Object.entries(divideByValues)) {
 				if (samples.length < 1) continue
 
@@ -129,10 +128,10 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 					color: 'red'
 				}
 
-				const url = await generateBrainImage(refFile, plane, index, maxLength, JSON.stringify(filesByCat))
-				brainImageArray[termV] = { url, catNum: samples.length }
+				const url = await generateBrainImage(refFile, plane, index, 1, maxLength, JSON.stringify(filesByCat))
+				brainImageDict[termV] = { url, catNum: samples.length }
 			}
-			return brainImageArray
+			return brainImageDict
 		}
 
 		const matrix = Object.values(filesByCat)
@@ -140,25 +139,32 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 		// Find the length of each array and determine the maximum length
 		const maxLength = Math.max(...lengths)
 
-		const url = await generateBrainImage(refFile, plane, index, maxLength, JSON.stringify(filesByCat))
+		const url = await generateBrainImage(
+			refFile,
+			plane,
+			index,
+			overlayTW ? 0 : 1,
+			maxLength,
+			JSON.stringify(filesByCat)
+		)
 		return { default: { url, catNum: query.selectedSampleFileNames.length } }
 	} else {
 		throw 'no reference or sample files'
 	}
 }
 
-async function generateBrainImage(refFile, plane, index, maxLength, filesJson) {
+async function generateBrainImage(refFile, plane, index, showLegend, maxLength, filesJson) {
 	return new Promise((resolve, reject) => {
-		const color = 'none'
 		const cmd = [
 			`${serverconfig.binpath}/../python/src/plotBrainImaging.py`,
 			refFile,
 			plane,
 			index,
-			color,
+			showLegend,
 			maxLength,
 			filesJson
 		]
+		//console.log('cmd:', cmd)
 
 		const ps = spawn(serverconfig.python, cmd)
 		const imgData: Buffer[] = []

@@ -26,8 +26,12 @@ templateFile = sys.argv[1]
 # load data from nifti files 
 template = nib.load(templateFile).get_fdata()
 
-color = sys.argv[4]
 
+showLegend = sys.argv[4]
+if(len(showLegend) == 4):
+	print('Need to specify whether to show legend')
+	sys.exit(1)
+showLegend = int(showLegend)
 vmaxSamples = sys.argv[5]
 
 if(len(vmaxSamples) == 0):
@@ -90,12 +94,13 @@ for key, value in sampleFiles.items():
 	alpha = 0.6
 
 	color = value['color']
+	print(color)
 	cmap = mcolors.LinearSegmentedColormap.from_list('my_cmap', ['white', color])
 	ax.imshow(label, cmap, alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
 	ax.axis('off')
 
 # Create the color bar
-if vmaxSamples > 1 and len(sampleFiles.keys()) == 1:
+if showLegend == 1:
 	# Create a color bar without changing figure size
 	norm = mcolors.Normalize(vmin=0, vmax=vmaxSamples)
 	sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
