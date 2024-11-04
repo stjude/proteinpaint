@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.83.0
 
 Features:
 - allow hiercluster to work with numeric dictionary term data
