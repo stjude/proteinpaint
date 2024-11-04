@@ -58,7 +58,7 @@ chunk_size <- c(1, dims[2])
 
 # Create a dataset with sample-wise chunking
 print ("Creating counts dataset")
-h5createDataset(hdf5_file, "counts", dims = dims, chunk = chunk_size, storage.mode = "double", level = 9) # The chunk_size field option specifies that chunking occurs sample-wise so that all gene counts for a given sample lie inside the same chunk.
+h5createDataset(hdf5_file, "counts", dims = dims, chunk = chunk_size, H5type = "H5T_NATIVE_FLOAT", level = 9) # The chunk_size field option specifies that chunking occurs sample-wise so that all gene counts for a given sample lie inside the same chunk.
 
 # Write the matrix to the HDF5 file
 print ("Adding counts to HDF5 file")
