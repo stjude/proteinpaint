@@ -105,7 +105,8 @@ export class Barchart {
 					label: 'Overlay',
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion,
-					defaultQ4fillTW: term0_term2_defaultQ
+					defaultQ4fillTW: term0_term2_defaultQ,
+					getDisplayStyle: () => (this.settings.unit == 'log' ? 'none' : '')
 				},
 				{
 					type: 'term',
