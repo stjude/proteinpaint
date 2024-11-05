@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type { DZImagesRequest, DZImagesResponse, RouteApi } from '#types'
+import type { DZImagesRequest, /*DZImagesResponse,*/ RouteApi } from '#types'
 import { dzImagesPayload } from '#types'
 
 /*
@@ -37,7 +37,7 @@ function init({ genomes }) {
 				sampleId
 			)
 			const sampleDZImages = getDZImages(sampleDZImagesPath)
-			res.send({ sampleDZImages })
+			res.send({ sampleDZImages } /*satisfies DZImagesResponse*/)
 		} catch (e: any) {
 			console.log(e)
 			res.status(404).send('Sample images not found')

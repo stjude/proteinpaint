@@ -1,3 +1,5 @@
+import type { RoutePayload } from './routeApi.js'
+
 export type DERequest = {
 	/** Genome build name */
 	genome: string
@@ -41,4 +43,15 @@ export type DEResponse = {
 	sample_size2: number
 	/** Method of DE used wilcoxon/edgeR */
 	method: string
+}
+
+export const diffExpPayload: RoutePayload = {
+	request: {
+		typeId: 'DERequest'
+	},
+	response: {
+		typeId: 'DEResponse'
+		// will combine this with type checker
+		//valid: (t) => {}
+	}
 }

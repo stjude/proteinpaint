@@ -1,17 +1,14 @@
+import type { TermdbCohortSummaryRequest, TermdbCohortSummaryResponse, RouteApi } from '#types'
+import { termdbCohortSummaryPayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js' // ??? is this needed for this route ???
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'termdb/cohort/summary',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
+			...termdbCohortSummaryPayload,
+			init
 		}
 	}
 }

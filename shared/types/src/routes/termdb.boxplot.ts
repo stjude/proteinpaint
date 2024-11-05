@@ -1,3 +1,5 @@
+import type { RoutePayload } from './routeApi.js'
+
 export type BoxPlotRequest = {
 	//TOOD: define request
 	tw: any
@@ -51,4 +53,14 @@ type BoxPlotData = {
 	iqr: number
 	/** Outliers */
 	out: { value: number }[]
+}
+
+export const boxplotPayload: RoutePayload = {
+	request: {
+		typeId: 'BoxPlotRequest'
+	},
+	response: {
+		typeId: 'BoxPlotResponse'
+	}
+	//examples: []
 }

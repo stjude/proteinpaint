@@ -1,24 +1,22 @@
 //import fs from 'fs'
 import path from 'path'
-import type { DERequest, DEResponse, ExpressionInput } from '#types'
+import type { DERequest, DEResponse, ExpressionInput, RouteApi } from '#types'
+import { diffExpPayload } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { get_ds_tdb } from '../src/termdb.js'
 import run_R from '../src/run_R.js'
 import serverconfig from '../src/serverconfig.js'
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'DEanalysis',
 	methods: {
-		all: {
-			init,
-			request: {
-				typeId: 'DERequest'
-			},
-			response: {
-				typeId: 'DEResponse'
-				// will combine this with type checker
-				//valid: (t) => {}
-			}
+		get: {
+			...diffExpPayload,
+			init
+		},
+		post: {
+			...diffExpPayload,
+			init
 		}
 	}
 }

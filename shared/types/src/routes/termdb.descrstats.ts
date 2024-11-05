@@ -1,37 +1,42 @@
 import type { RoutePayload } from './routeApi.js'
 import type { Filter } from '../filter.ts'
 import type { TermWrapper } from '../terms/tw.ts'
+import type { ErrorResponse } from './errorResponse.ts'
 
-export type CategoriesRequest = {
+export type DescrStatsRequest = {
+	/** genome label in the serverconfig.json */
 	genome: string
+	/** dataset label for the given genome */
 	dslabel: string
 	embedder: string
-	/** termwrapper object */
+	/** wrapper of a numeric term, q.mode can be any as getData() will always pull sample-level values for summarizing */
 	tw: TermWrapper
+	/** if true, the (violin) plot is in log scale and must exclude 0-values from the stat */
+	logScale?: boolean
+	/** optional pp filter */
 	filter?: Filter
-	/** quick fix only for gdc */
-	currentGeneNames?: string[]
-	/** optional property added by mds3 tk, to limit to cases mutated in this region */
-	rglst?: any
+	/** optional gdc filter */
+	filter0?: any
 }
 
-interface Entries {
-	samplecount: number
-	key: string
+interface entries {
+	id: string
 	label: string
+	value: number
 }
 
-export type CategoriesResponse = {
-	lst: Entries[]
-	orderedLabels?: []
+type ValidResponse = {
+	values: entries[]
 }
 
-export const termdbCategoriesPayload: RoutePayload = {
+export type DescrStatsResponse = ValidResponse | ErrorResponse
+
+export const descrStatsPayload: RoutePayload = {
 	request: {
-		typeId: 'CategoriesRequest'
+		typeId: 'DescrStatsRequest'
 	},
 	response: {
-		typeId: 'CategoriesResponse'
+		typeId: 'DescrStatsResponse'
 	},
 	examples: [
 		{
@@ -40,7 +45,7 @@ export const termdbCategoriesPayload: RoutePayload = {
 					genome: 'hg38-test',
 					dslabel: 'TermdbTest',
 					embedder: 'localhost',
-					term: { id: 'diaggrp' },
+					tw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
 					filter: {
 						type: 'tvslst',
 						in: true,
