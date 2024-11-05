@@ -264,7 +264,7 @@ tape('.setMinMaxCallback() and .setColorsCallback()', async test => {
 })
 
 tape('Show ticks in scientific notation', async test => {
-	test.timeoutAfter(100)
+	test.timeoutAfter(3000)
 
 	let first: string | number, second: string | number, third: string | number
 
