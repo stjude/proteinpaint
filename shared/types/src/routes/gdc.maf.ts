@@ -1,4 +1,4 @@
-import type { RoutePayload } from './routeApi'
+import type { RoutePayload } from './routeApi.js'
 //import GdcFilter0 from './filter.gdc'
 
 // an object representing gdc maf file, to be shown on client table

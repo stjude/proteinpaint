@@ -1,11 +1,13 @@
-type HicstatRequestWithFile = {
+import { RoutePayload } from './routeApi.ts'
+
+export type HicstatRequestWithFile = {
 	/** HiC file path from tp/ */
 	file: string
 	/** If file is provided, url should not be provided. Checked in validation type */
 	url?: never
 }
 
-type HicstatRequestWithUrl = {
+export type HicstatRequestWithUrl = {
 	/** If url is provided, file should not be provided. Checked in validation type */
 	file?: never
 	/** Remote HiC file URL */
@@ -42,4 +44,14 @@ export type HicstatResponse = {
 	/** bins for fragment resolutions */
 	'Fragment-delimited resolutions': number[]
 	normalization: string[]
+}
+
+export const hicstatPayload: RoutePayload = {
+	request: {
+		typeId: 'HicstatRequest'
+	},
+	response: {
+		typeId: 'HicstatResponse'
+	}
+	// examples: []
 }

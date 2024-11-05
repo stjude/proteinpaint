@@ -1,20 +1,20 @@
-import type { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, GdcGene } from '#types'
+import type { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, GdcGene, RouteApi } from '#types'
+import { gdcTopMutatedGenePayload } from '#types'
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 import ky from 'ky'
 
 // TODO change to /termdb/topMutatedGenes
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'gdc/topMutatedGenes',
 	methods: {
-		all: {
+		get: {
 			init,
-			request: {
-				typeId: 'GdcTopMutatedGeneRequest'
-			},
-			response: {
-				typeId: 'GdcTopMutatedGeneResponse'
-			}
+			...gdcTopMutatedGenePayload
+		},
+		post: {
+			init,
+			...gdcTopMutatedGenePayload
 		}
 	}
 }

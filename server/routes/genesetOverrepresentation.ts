@@ -1,41 +1,37 @@
 //import fs from 'fs'
 import type {
-	genesetOverrepresentationRequest,
-	genesetOverrepresentationResponse,
-	gene_overrepresentation_input
+	GenesetOverrepresentationRequest,
+	GenesetOverrepresentationResponse,
+	gene_overrepresentation_input,
+	RouteApi
 } from '#types'
+import { genesetOverrepresentationPayload } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'genesetOverrepresentation',
 	methods: {
-		all: {
-			init,
-			request: {
-				typeId: 'genesetOverrepresentationRequest'
-			},
-			response: {
-				typeId: 'genesetOverrepresentationResponse'
-				// will combine this with type checker
-				//valid: (t) => {}
-			}
+		get: {
+			...genesetOverrepresentationPayload,
+			init
+		},
+		post: {
+			...genesetOverrepresentationPayload,
+			init
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
+	return async (req, res): Promise<void> => {
 		//console.log("gene_db:",path.join(serverconfig.tpmasterdir,genomes[req.query.genome].genedb.dbfile))
 		//console.log("req.query.genome:",req.query.genome)
 		//console.log("msigdb:",genomes[req.query.genome].termdbs.msigdb.cohort.db.connection.name)
 		try {
 			//console.log("req.query:",req.query)
-			const results = await run_genesetOverrepresentation_analysis(
-				req.query as genesetOverrepresentationRequest,
-				genomes
-			)
+			const results = await run_genesetOverrepresentation_analysis(req.query, genomes)
 			res.send(results)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -43,7 +39,7 @@ function init({ genomes }) {
 	}
 }
 
-async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentationRequest, genomes: any) {
+async function run_genesetOverrepresentation_analysis(q: GenesetOverrepresentationRequest, genomes: any) {
 	//console.log('genomes:', genomes[q.genome].termdbs.msigdb.cohort.db.connection.name)
 	//console.log('q:', q.genome)
 	if (!genomes[q.genome].termdbs) throw 'termdb database is not available for ' + q.genome
@@ -79,5 +75,5 @@ async function run_genesetOverrepresentation_analysis(q: genesetOverrepresentati
 		}
 	}
 	//console.log('result:', result)
-	return result as genesetOverrepresentationResponse
+	return result satisfies GenesetOverrepresentationResponse
 }

@@ -1,4 +1,4 @@
-import type { RoutePayload } from './routeApi'
+import type { RoutePayload } from './routeApi.js'
 
 export type GenesetOverrepresentationRequest = {
 	/**  Sample genes to be queried */
@@ -35,4 +35,14 @@ export type gene_overrepresentation_input = {
 	genedb: string
 	/** Boolean variable describing if non-coding genes should be filtered */
 	filter_non_coding_genes: boolean
+}
+
+export const genesetOverrepresentationPayload: RoutePayload = {
+	request: {
+		typeId: 'GenesetOverrepresentationRequest'
+	},
+	response: {
+		typeId: 'GenesetOverrepresentationResponse'
+	}
+	// examples: []
 }

@@ -1,4 +1,4 @@
-import type { RoutePayload } from './routeApi'
+import type { RoutePayload } from './routeApi.js'
 
 export type DatasetRequest = any
 export type DatasetResponse = any

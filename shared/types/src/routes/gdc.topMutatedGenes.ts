@@ -1,4 +1,4 @@
-import type { RoutePayload } from './routeApi'
+import type { RoutePayload } from './routeApi.js'
 
 export type GdcTopMutatedGeneRequest = {
 	/** to restrict to CGC genes */

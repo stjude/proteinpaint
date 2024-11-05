@@ -1,23 +1,21 @@
 import got from 'got'
 import path from 'path'
-import fs from 'fs'
 import { run_rust_stream } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
-import Readable from 'stream'
-import type { GdcMafBuildRequest } from '#types'
+import type { GdcMafBuildRequest, RouteApi } from '#types'
+import { gdcMafPayload } from '#types'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'gdc/mafBuild',
 	methods: {
-		all: {
+		get: {
 			init,
-			request: {
-				typeId: 'GdcMafBuildRequest'
-			},
-			response: {
-				typeId: null // 'GdcMafBuildResponse'
-			}
+			...gdcMafPayload
+		},
+		post: {
+			init,
+			...gdcMafPayload
 		}
 	}
 }
@@ -25,11 +23,12 @@ export const api = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
+			const q: GdcMafBuildRequest = req.query
 			const g = genomes.hg38
 			if (!g) throw 'hg38 missing'
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
-			await buildMaf(req.query as GdcMafBuildRequest, res, ds)
+			await buildMaf(q, res, ds)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ status: 'error', error: e.message || e })
@@ -41,7 +40,7 @@ function init({ genomes }) {
 q{}
 res{}
 */
-async function buildMaf(q: GdcMafBuildRequest, res: any, ds) {
+async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	const t0 = Date.now()
 	const { host, headers } = ds.getHostHeaders(q)
 	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst, host, headers)) as string[]

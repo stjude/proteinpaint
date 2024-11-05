@@ -54,17 +54,17 @@ export async function launch() {
 			app,
 			genomes,
 			basepath: serverconfig.basepath || '',
-			apiJson: path.join(__dirname, '../../public/docs/server-api.json')
+			apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
 			/*
 			 	As an alternative to manually adding/removing imports in shared/types/src/routes, 
 			 	you may temporarily uncomment below to generate runtime route checker code, 
 			  should only uncomment when a file has been added or deleted in 
 			  shared/types/src/routes and not when modified.
 			*/
-			//, types: {
-			// 	importDir: '../routes',
-			// 	outputFile: path.join(__dirname, '../../shared/types/src/checkers/routes.ts')
-			// }
+			types: {
+				importDir: '../routes',
+				outputFile: path.join(__dirname, '../../shared/types/src/checkers/routes.ts')
+			}
 		})
 
 		oldApp.setRoutes(app, genomes, serverconfig)

@@ -1,4 +1,4 @@
-import type { GdcMafRequest, GdcMafResponse, File } from '#types'
+import type { GdcMafRequest, GdcMafResponse, File, RouteApi } from '#types'
 import { gdcMafPayload } from '#types'
 import path from 'path'
 import got from 'got'
@@ -20,7 +20,7 @@ const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Maskin
 // change to 400 so it won't limit number of files; should keep this setting as a safeguard; also it's fast to check file size (.5s in gdc.mafBuild.ts)
 export const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 400000000 // 400Mb
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'gdc/maf',
 	methods: {
 		get: {

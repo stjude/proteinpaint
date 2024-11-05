@@ -1,52 +1,31 @@
-import type { HicGenomeRequest, HicGenomeResponse, Item } from '#types'
+import type { HicGenomeRequest, HicGenomeResponse, XYZCoord, RouteApi } from '#types'
+import { hicGenomePayload } from '#types'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'
 import serverconfig from '#src/serverconfig.js'
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'hicgenome',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'HicGenomeRequest'
-			},
-			response: {
-				typeId: 'HicGenomeResponse'
-			},
-			examples: [
-				{
-					request: {
-						body: {
-							chrlst: ['chr1', 'chr2'],
-							embedder: 'localhost',
-							url: 'https://proteinpaint.stjude.org/ppdemo/hg19/hic/hic_demo.hic',
-							matrixType: 'observed',
-							nmeth: 'NONE',
-							nochr: true,
-							resolution: 2500000
-						}
-					},
-					response: {
-						header: { status: 200 }
-					}
-				}
-			]
+			...hicGenomePayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...hicGenomePayload,
 			init
 		}
 	}
 }
 
 function init() {
-	return async (req: { query: HicGenomeRequest }, res: any): Promise<void> => {
-		const data: { items: number[][]; lead: string; follow: string }[] = []
+	return async (req, res): Promise<void> => {
+		const query: HicGenomeRequest = req.query
+		const data: { items: XYZCoord[]; lead: string; follow: string }[] = []
 		const erroutput: string[] = []
 
-		const [e, file, isurl] = fileurl({ query: req.query })
+		const [e, file] = fileurl({ query })
 		if (e) res.send({ error: 'illegal file name' })
 
 		/*Value passed from client is not the proper straw parameter.
@@ -68,7 +47,7 @@ function init() {
 							const ps = spawn(serverconfig.hicstraw, par)
 							const rl = readline.createInterface({ input: ps.stdout })
 
-							const items = [] as Item[]
+							const items: XYZCoord[] = []
 							let linenot3fields = 0
 							let fieldnotnumerical = 0
 
@@ -87,7 +66,7 @@ function init() {
 									fieldnotnumerical++
 									return
 								}
-								items.push([n1, n2, v] as Item)
+								items.push([n1, n2, v] satisfies XYZCoord)
 							})
 							data.push({ items, lead, follow })
 							ps.stderr.on('data', i => erroutput.push(`${lead} - ${follow}: `, i))
@@ -106,7 +85,7 @@ function init() {
 			.flat()
 
 		Promise.allSettled(promises)
-			.then(() => res.send({ data: data, error: erroutput.join('') } as HicGenomeResponse))
+			.then(() => res.send({ data, error: erroutput.join('') } satisfies HicGenomeResponse))
 			.catch(e => {
 				res.send({ error: e?.message || e })
 				if (e instanceof Error && e.stack) console.log(e)

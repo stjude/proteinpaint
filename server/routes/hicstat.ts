@@ -1,49 +1,31 @@
 import { fileurl, file_is_readable } from '#src/utils.js'
 import { do_hicstat } from '#src/hicstat.ts'
-import type { HicstatRequestWithValidation } from '#types'
+import type { HicstatRequest, HicstatResponse, RouteApi } from '#types'
+import { hicstatPayload } from '#types'
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'hicstat',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'HicstatRequest'
-			},
-			response: {
-				typeId: 'HicstatResponse'
-			},
-			examples: [
-				{
-					request: {
-						body: {
-							genome: 'hg19',
-							file: 'proteinpaint_demo/hg19/hic/hic_demo.hic',
-							embedder: 'localhost'
-						}
-					},
-					response: {
-						header: { status: 200 }
-					}
-				}
-			]
+			...hicstatPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...hicstatPayload,
 			init
 		}
 	}
 }
 
 function init() {
-	return async (req: HicstatRequestWithValidation, res: any): Promise<void> => {
+	return async (req: { query: HicstatRequest }, res): Promise<void> => {
 		try {
 			const [e, file, isurl] = fileurl(req)
 			if (e) throw 'illegal file name'
 			if (!isurl) {
 				await file_is_readable(file)
 			}
-			const out = await do_hicstat(file, isurl)
+			const out: HicstatResponse = await do_hicstat(file, isurl)
 			res.send({ out })
 		} catch (e) {
 			res.send({ error: e instanceof Error ? e.message : e })
