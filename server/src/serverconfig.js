@@ -67,6 +67,15 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 	serverconfig.allow_env_overrides = true
 }
 
+//if jwt is enabled, check for JWT_SECRET environment variable
+if (serverconfig.jwt) {
+	const jwtSecret = process.env.JWT_SECRET
+	if (!jwtSecret) {
+		throw `JWT_SECRET is not set as an environment variable.`
+	}
+	serverconfig.jwt.secret = jwtSecret
+}
+
 if (!serverconfig.binpath) {
 	const pkfile = process.argv.find(n => n.includes('/build'))
 	if (pkfile) {
