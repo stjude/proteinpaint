@@ -31,6 +31,7 @@ import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from './termdb.scatter.js'
 import { mayInitiateMatrixplots } from './termdb.matrix.js'
 import { add_bcf_variant_filter } from './termdb.snp.js'
+import { validate_query_NIdata } from '#routes/brainImagingSamples.ts'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
@@ -1792,58 +1793,6 @@ async function validate_query_singleSampleGenomeQuantification(ds, genome) {
 			}
 		} else {
 			throw 'unknown query method for singleSampleGenomeQuantification'
-		}
-	}
-}
-
-async function validate_query_NIdata(ds, genome) {
-	const q = ds.queries.NIdata
-	if (!q || !serverconfig.features?.showBrainImaging) return
-	for (const key in q) {
-		if (q[key].referenceFile && q[key].samples) {
-			q[key].get = async (sampleName, l, f, t) => {
-				const refFile = path.join(serverconfig.tpmasterdir, q[key].referenceFile)
-				const sampleFile = path.join(serverconfig.tpmasterdir, q[key].samples, sampleName)
-
-				try {
-					await fs.promises.stat(sampleFile)
-				} catch (e) {
-					if (e.code == 'EACCES') throw 'cannot read file, permission denied'
-					if (e.code == 'ENOENT') throw 'no data for this sample'
-					throw 'failed to load data'
-				}
-
-				return new Promise((resolve, reject) => {
-					const ps = spawn(serverconfig.python, [
-						`${serverconfig.binpath}/utils/plotBrainImaging.py`,
-						refFile,
-						sampleFile,
-						l,
-						f,
-						t
-					])
-					let imgData = []
-					ps.stdout.on('data', data => {
-						imgData.push(data)
-					})
-					ps.stderr.on('data', data => {
-						console.error(`stderr: ${data}`)
-						reject(new Error(`Python script filed: ${data}`))
-					})
-					ps.on('close', code => {
-						if (code === 0) {
-							const imageBuffer = Buffer.concat(imgData)
-							const base64Data = imageBuffer.toString('base64')
-							const imgUrl = `data:image/png;base64,${base64Data}`
-							resolve(imgUrl)
-						} else {
-							reject(new Error(`Python script exited with code ${code}`))
-						}
-					})
-				})
-			}
-		} else {
-			throw 'no reference or sample files'
 		}
 	}
 }
