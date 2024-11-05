@@ -25,6 +25,7 @@ export type GetBrainImagingSamplesRequest = {
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
 	dslabel: string
 	/** a user-defined brain template label in dataset file, such as Ref1, Ref2 */
+	refKey: string
 }
 
 export type GetBrainImagingSamplesResponse = {
