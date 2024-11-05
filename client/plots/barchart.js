@@ -107,9 +107,9 @@ export class Barchart {
 					numericEditMenuVersion: this.opts.numericEditMenuVersion,
 					defaultQ4fillTW: term0_term2_defaultQ,
 					getDisplayStyle: () => (this.settings.unit == 'log' ? 'none' : ''),
-					processConfig: () => {
+					processConfig: config => {
 						//Prevent log scale shown in overlay
-						if (this.settings.unit == 'log') this.settings.unit == 'abs'
+						if (config.term2 && this.settings.unit == 'log') this.settings.unit == 'abs'
 					}
 				},
 				{
