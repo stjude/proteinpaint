@@ -1,4 +1,4 @@
-import { RoutePayload } from './routeApi.ts'
+import type { RoutePayload } from './routeApi.ts'
 
 export type HicstatRequestWithFile = {
 	/** HiC file path from tp/ */

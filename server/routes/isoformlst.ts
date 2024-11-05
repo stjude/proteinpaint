@@ -1,3 +1,6 @@
+import type { IsoformLstRequest, IsoformLstResponse, RouteApi } from '#types'
+import { isoformlstPayload } from '#types'
+
 export const api: any = {
 	// route endpoint
 	// - no need for trailing slash
@@ -6,16 +9,11 @@ export const api: any = {
 	endpoint: 'isoformlst',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
+			...isoformlstPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...isoformlstPayload,
 			init
 		}
 	}
@@ -24,11 +22,12 @@ export const api: any = {
 function init({ genomes }) {
 	return function handle_isoformlst(req, res) {
 		try {
-			const g = genomes[req.query.genome]
+			const q: IsoformLstRequest = req.query
+			const g = genomes[q.genome]
 			if (!g) throw 'invalid genome'
-			if (!Array.isArray(req.query.lst)) throw '.lst missing'
+			if (!Array.isArray(q.lst)) throw '.lst missing'
 			const lst: any[] = []
-			for (const isoform of req.query.lst) {
+			for (const isoform of q.lst) {
 				if (g.genomicNameRegexp.test(isoform)) continue
 				const tmp: any[] = g.genedb.getjsonbyisoform.all(isoform)
 				lst.push(
@@ -39,7 +38,7 @@ function init({ genomes }) {
 					})
 				)
 			}
-			res.send({ lst })
+			res.send({ lst } satisfies IsoformLstResponse)
 		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
