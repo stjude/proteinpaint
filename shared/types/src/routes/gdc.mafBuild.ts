@@ -1,4 +1,4 @@
-import type { RoutePayload } from './routeApi'
+import type { RoutePayload } from './routeApi.ts'
 
 export type GdcMafBuildRequest = {
 	/** List of input file uuids in gdc */
@@ -7,7 +7,7 @@ export type GdcMafBuildRequest = {
 	columns: string[]
 }
 
-export type GdcMafResponse = any
+export type GdcMafBuildResponse = any
 
 export const GdcMafPayload: RoutePayload = {
 	request: {

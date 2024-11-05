@@ -1,4 +1,4 @@
-import type { RoutePayload } from './routeApi'
+import type { RoutePayload } from './routeApi.js'
 
 export type BurdenRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
@@ -71,11 +71,9 @@ export type BurdenResponse = {
 export const burdenPayload: RoutePayload = {
 	request: {
 		typeId: 'BurdenRequest'
-		//checker: validBurdenRequest
 	},
 	response: {
 		typeId: 'BurdenResponse'
-		//checker: validBurdenResponse
 	},
 	examples: [
 		{

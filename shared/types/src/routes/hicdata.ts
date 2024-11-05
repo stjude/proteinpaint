@@ -1,4 +1,5 @@
 import type { FileORURL } from '../fileOrUrl.ts'
+import { RoutePayload } from './routeApi.ts'
 
 export type BaseHicRequest = FileORURL & {
 	/** Value relates to the 1st parameter of straw tool, which accepts 'observed', 'expected', 'oe', 'norm', and 'distance' */
@@ -21,7 +22,7 @@ export type HicdataRequest = BaseHicRequest & {
 }
 
 /** Item typed for documentation/explanation purposes*/
-export type Item = [
+export type XYZCoord = [
 	/** position 1, x coordinate */
 	number,
 	/** position 2, y coordinate */
@@ -33,5 +34,15 @@ export type Item = [
 export type HicdataResponse = {
 	/** Error message to display on the client, if applicable */
 	error?: string
-	items: Item[]
+	items: XYZCoord[]
+}
+
+export const hicdataPayload: RoutePayload = {
+	request: {
+		typeId: 'HicdataRequest'
+	},
+	response: {
+		typeId: 'HicdataResponse'
+	}
+	// examples: []
 }

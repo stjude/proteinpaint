@@ -1,7 +1,8 @@
-/**
- * for documentation only, to signify integer: not type-checked statically
- */
-type int = number
+import type { RoutePayload } from './routeApi.js'
+
+export type HealthcheckRequest = {
+	dslabel?: string
+}
 
 /**
  * Information aboute the server build version and dates,
@@ -35,7 +36,7 @@ export type GenomeBuildInfo = {
 type DbInfo = {
 	buildDate: string // "unknown" or a Date-convertible string
 	tables?: {
-		[index: string]: int
+		[index: string]: number
 	}
 }
 
@@ -54,4 +55,14 @@ export type HealthCheckResponse = {
 	}[]
 	w?: number[]
 	rs?: number
+}
+
+export const healthcheckPayload: RoutePayload = {
+	request: {
+		typeId: 'HealthCheckRequest'
+	},
+	response: {
+		typeId: 'HealthCheckResponse'
+	}
+	// examples: []
 }

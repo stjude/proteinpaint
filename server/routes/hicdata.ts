@@ -1,51 +1,30 @@
-import type { HicdataRequest, HicdataResponse, Item } from '#types'
+import type { HicdataRequest, HicdataResponse, XYZCoord, RouteApi } from '#types'
+import { hicdataPayload } from '#types'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'
 import serverconfig from '#src/serverconfig.js'
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'hicdata',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'HicdataRequest'
-			},
-			response: {
-				typeId: 'HicdataResponse'
-			},
-			examples: [
-				{
-					request: {
-						body: {
-							embedder: 'localhost',
-							url: 'https://proteinpaint.stjude.org/ppdemo/hg19/hic/hic_demo.hic',
-							matrixType: 'observed',
-							nmeth: 'NONE',
-							pos1: '3',
-							pos2: '2',
-							resolution: 1000000
-						}
-					},
-					response: {
-						header: { status: 200 }
-					}
-				}
-			]
+			...hicdataPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...hicdataPayload,
 			init
 		}
 	}
 }
 
 function init() {
-	return async (req: { query: HicdataRequest }, res: any): Promise<void> => {
+	return async (req, res): Promise<void> => {
 		try {
-			const payload = await handle_hicdata(req.query)
-			res.send(payload as HicdataResponse)
+			const q: HicdataRequest = req.query
+			const payload = await handle_hicdata(q)
+			res.send(payload satisfies HicdataResponse)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
@@ -53,9 +32,9 @@ function init() {
 	}
 }
 
-function handle_hicdata(q: HicdataRequest) {
+function handle_hicdata(q: HicdataRequest): Promise<HicdataResponse> {
 	return new Promise((resolve, reject) => {
-		const [e, file, isurl] = fileurl({ query: q })
+		const [e, file] = fileurl({ query: q })
 		if (e) reject({ error: 'illegal file name' })
 
 		/*Value passed from client is not the proper straw parameter.
@@ -69,7 +48,7 @@ function handle_hicdata(q: HicdataRequest) {
 		const ps = spawn(serverconfig.hicstraw, par)
 		const rl = readline.createInterface({ input: ps.stdout })
 
-		const items = [] as Item[]
+		const items: XYZCoord[] = []
 		const erroutput = [] as string[]
 		let linenot3fields = 0
 		let fieldnotnumerical = 0
@@ -91,7 +70,7 @@ function handle_hicdata(q: HicdataRequest) {
 			if (q.mincutoff != undefined && v <= q.mincutoff) {
 				return
 			}
-			items.push([n1, n2, v] as Item)
+			items.push([n1, n2, v] satisfies XYZCoord)
 		})
 
 		ps.stderr.on('data', i => erroutput.push(i))
