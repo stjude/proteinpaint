@@ -8,6 +8,7 @@ import { font } from '../src/client'
 import { Menu, axisstyle } from '#dom'
 import type { Elem, SvgG } from '../types/d3'
 import { make_radios, niceNumLabels } from '#dom'
+import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
 
 type GradientElem = Selection<SVGLinearGradientElement, any, any, any>
 
@@ -337,9 +338,15 @@ export class ColorScale {
 		const axis = this.topTicks === true ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
 		axis.ticks(this.ticks).tickSize(this.tickSize)
 
-		if (this.tickValues[this.tickValues.length - 1] <= 0.01) {
-			//Tick values are sorted in niceNumLabels
-			//If max value is < 0.001, use scientific notation format
+		const min = this.tickValues[0]
+		const max = this.tickValues[this.tickValues.length - 1]
+		const minDec = decimalPlacesUntilFirstNonZero(min)
+		const maxDec = decimalPlacesUntilFirstNonZero(max)
+
+		if ((min <= 0.01 && min != 0 && minDec >= 2) || (max <= 0.01 && max != 0 && maxDec >= 2)) {
+			/**Tick values are sorted in niceNumLabels.
+			 * If min or max value are small nums, have 2 or more decimal places,
+			 * use scientific notation. Do not use if either value is 0. */
 			axis.tickFormat(format('.1e'))
 		}
 		return axis

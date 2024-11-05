@@ -266,6 +266,11 @@ tape('.setMinMaxCallback() and .setColorsCallback()', async test => {
 tape('Show ticks in scientific notation', async test => {
 	test.timeoutAfter(100)
 
+	let first: string | number, second: string | number, third: string | number
+
+	//[0.001, 0.005]
+	first = '2.0e-3'
+	second = '4.0e-3'
 	const holder = getHolder() as any
 	const testColorScale = getColorScale({
 		holder,
@@ -274,20 +279,265 @@ tape('Show ticks in scientific notation', async test => {
 	})
 
 	const initTicks = holder.selectAll('text').nodes()
-	test.equal(initTicks[0].innerHTML, '2.0e-3', `Should render scientific notation for first tick`)
-	test.equal(initTicks[1].innerHTML, '4.0e-3', `Should render scientific notation for second tick`)
+	test.equal(initTicks[0].innerHTML, first, `Should render scientific notation for first tick`)
+	test.equal(initTicks[1].innerHTML, second, `Should render scientific notation for second tick`)
 
+	//[-0.005, -0.001]
+	/** Note: The minus sign in the browser is U+2212.
+	 * The standard hypen when typing is U+002D. Use U+2212
+	 * for testing.
+	 */
 	testColorScale.data = [-0.005, -0.001]
-	testColorScale.updateAxis()
+	first = '−4.0e-3'
+	second = '−2.0e-3'
 
 	const updatedTicks = await detectGte({
 		selector: 'text',
 		target: testColorScale.dom.scaleAxis.node(),
-		count: 2
+		count: 2,
+		trigger: () => testColorScale.updateAxis(),
+		matcher(muts) {
+			for (const m of muts) {
+				if (m.type == 'childList') return m
+			}
+		}
 	})
-	//Note: innerHTML uses special character for neg sign. Do not test innerHTML.
-	test.equal(updatedTicks[0].__data__, -0.004, `Should render scientific notation for first tick`)
-	test.equal(updatedTicks[1].__data__, -0.002, `Should render scientific notation for second tick`)
+	test.equal(
+		updatedTicks[0].textContent,
+		first,
+		`Should render scientific notation for first tick = ${first} after update`
+	)
+	test.equal(
+		updatedTicks[1].textContent,
+		second,
+		`Should render scientific notation for second tick = ${second} after update`
+	)
+
+	//Switch back to integers
+	testColorScale.data = [0, 10]
+	first = '0'
+	second = '5'
+	third = '10'
+
+	const updatedTicks2 = await detectGte({
+		selector: 'text',
+		elem: testColorScale.dom.scaleAxis.node(),
+		count: 3,
+		trigger: () => testColorScale.updateAxis(),
+		matcher(muts) {
+			for (const m of muts) {
+				if (m.type == 'childList') return m
+			}
+		}
+	})
+
+	test.equal(
+		updatedTicks2[0].textContent,
+		first,
+		`Should not render scientific notation for first tick = ${first} after update`
+	)
+	test.equal(
+		updatedTicks2[1].textContent,
+		second,
+		`Should not render scientific notation for second tick = ${second} after update`
+	)
+	test.equal(
+		updatedTicks2[2].textContent,
+		third,
+		`Should not render scientific notation for third tick = ${third} after update`
+	)
+
+	//Zero to small number
+	testColorScale.data = [0, 0.00001]
+	first = '0.0e+0'
+	second = '5.0e-6'
+	third = '1.0e-5'
+
+	const updatedTicks3 = await detectGte({
+		selector: 'text',
+		elem: testColorScale.dom.scaleAxis.node(),
+		count: 3,
+		trigger: () => testColorScale.updateAxis(),
+		matcher(muts) {
+			for (const m of muts) {
+				if (m.type == 'childList') return m
+			}
+		}
+	})
+
+	test.equal(
+		updatedTicks3[0].textContent,
+		first,
+		`Should render scientific notation for first tick = ${first} after update`
+	)
+	test.equal(
+		updatedTicks3[1].textContent,
+		second,
+		`Should render scientific notation for second tick = ${second} after update`
+	)
+	test.equal(
+		updatedTicks3[2].textContent,
+		third,
+		`Should render scientific notation for third tick = ${third} after update`
+	)
+
+	//neg small number to zero
+	testColorScale.data = [-0.001, 0]
+	first = '−1.0e-3'
+	second = '−5.0e-4'
+	third = '0.0e+0'
+
+	const updatedTicks4 = await detectGte({
+		selector: 'text',
+		elem: testColorScale.dom.scaleAxis.node(),
+		count: 3,
+		trigger: () => testColorScale.updateAxis(),
+		matcher(muts) {
+			for (const m of muts) {
+				if (m.type == 'childList') return m
+			}
+		}
+	})
+
+	test.equal(
+		updatedTicks4[0].textContent,
+		first,
+		`Should render scientific notation for first tick = ${first} after update`
+	)
+	test.equal(
+		updatedTicks4[1].textContent,
+		second,
+		`Should render scientific notation for second tick = ${second} after update`
+	)
+	test.equal(
+		updatedTicks4[2].textContent,
+		third,
+		`Should render scientific notation for third tick = ${third} after update`
+	)
+
+	//zero min to integer
+	testColorScale.data = [0, 5.75]
+	first = '0'
+	second = '2'
+	third = '4'
+
+	const updatedTicks5 = await detectGte({
+		selector: 'text',
+		elem: testColorScale.dom.scaleAxis.node(),
+		count: 3,
+		trigger: () => testColorScale.updateAxis(),
+		matcher(muts) {
+			for (const m of muts) {
+				if (m.type == 'childList') return m
+			}
+		}
+	})
+
+	test.equal(
+		updatedTicks5[0].textContent,
+		first,
+		`Should not render scientific notation for first tick = ${first} after update`
+	)
+	test.equal(
+		updatedTicks5[1].textContent,
+		second,
+		`Should not render scientific notation for second tick = ${second} after update`
+	)
+	test.equal(
+		updatedTicks5[2].textContent,
+		third,
+		`Should not render scientific notation for third tick = ${third} after update`
+	)
+
+	//integer to zero max
+	testColorScale.data = [-5.75, 0]
+	first = '−4'
+	second = '−2'
+	third = '0'
+
+	const updatedTicks6 = await detectGte({
+		selector: 'text',
+		elem: testColorScale.dom.scaleAxis.node(),
+		count: 3,
+		trigger: () => testColorScale.updateAxis(),
+		matcher(muts) {
+			for (const m of muts) {
+				if (m.type == 'childList') return m
+			}
+		}
+	})
+
+	test.equal(
+		updatedTicks6[0].textContent,
+		first,
+		`Should not render scientific notation for first tick = ${first} after update`
+	)
+	test.equal(
+		updatedTicks6[1].textContent,
+		second,
+		`Should not render scientific notation for second tick = ${second} after update`
+	)
+	test.equal(
+		updatedTicks6[2].textContent,
+		third,
+		`Should not render scientific notation for third tick = ${third} after update`
+	)
+
+	//Large range postive integers
+	testColorScale.data = [10, 1000]
+	first = '500'
+	second = '1,000'
+
+	const updatedTicks7 = await detectGte({
+		selector: 'text',
+		elem: testColorScale.dom.scaleAxis.node(),
+		count: 3,
+		trigger: () => testColorScale.updateAxis(),
+		matcher(muts) {
+			for (const m of muts) {
+				if (m.type == 'childList') return m
+			}
+		}
+	})
+
+	test.equal(
+		updatedTicks7[0].textContent,
+		first,
+		`Should not render scientific notation for first tick = ${first} after update`
+	)
+	test.equal(
+		updatedTicks7[1].textContent,
+		second,
+		`Should not render scientific notation for second tick = ${second} after update`
+	)
+
+	//Large range negative integers
+	testColorScale.data = [-1200, -10]
+	first = '−1,000'
+	second = '−500'
+
+	const updatedTicks8 = await detectGte({
+		selector: 'text',
+		elem: testColorScale.dom.scaleAxis.node(),
+		count: 3,
+		trigger: () => testColorScale.updateAxis(),
+		matcher(muts) {
+			for (const m of muts) {
+				if (m.type == 'childList') return m
+			}
+		}
+	})
+
+	test.equal(
+		updatedTicks8[0].textContent,
+		first,
+		`Should not render scientific notation for first tick = ${first} after update`
+	)
+	test.equal(
+		updatedTicks8[1].textContent,
+		second,
+		`Should not render scientific notation for second tick = ${second} after update`
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()
