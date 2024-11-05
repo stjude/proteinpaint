@@ -1,32 +1,28 @@
-import type { GetSampleWSImagesRequest, GetSampleWSImagesResponse, WSImage } from '#types'
+import type { SampleWSImagesRequest, SampleWSImagesResponse, WSImage, RouteApi, Mds3 } from '#types'
+import { sampleWSImagesPayload } from '#types'
 
 /*
 given a sample, return all whole slide images for specified dataset
 */
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'samplewsimages',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'GetSampleWSImagesRequest'
-			},
-			response: {
-				typeId: 'GetSampleWSImagesResponse'
-			}
+			...sampleWSImagesPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...sampleWSImagesPayload,
 			init
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
+	return async (req, res): Promise<void> => {
 		try {
-			const query = req.query as GetSampleWSImagesRequest
+			const query: SampleWSImagesRequest = req.query
 			const g = genomes[query.genome]
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[query.dslabel]
@@ -34,7 +30,7 @@ function init({ genomes }) {
 			const sampleId = query.sample_id
 
 			const images = await ds.queries.WSImages.getWSImages({ sampleId })
-			res.send({ sampleWSImages: images } as GetSampleWSImagesResponse)
+			res.send({ sampleWSImages: images } satisfies SampleWSImagesResponse)
 		} catch (e: any) {
 			console.log(e)
 			res.status(404).send('Sample images not found')
@@ -42,8 +38,8 @@ function init({ genomes }) {
 	}
 }
 
-export function validate_query_getSampleWSImages(ds: any, genome: any) {
-	const q = ds.queries.WSImages
+export function validate_query_getSampleWSImages(ds: Mds3, genome: any) {
+	const q = ds.queries?.WSImages
 	if (!q) return
 	nativeValidateQuery(ds)
 }

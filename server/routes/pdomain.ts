@@ -1,3 +1,6 @@
+import type { PdomainRequest, PdomainResponse, RouteApi } from '#types'
+import { pdomainPayload } from '#types'
+
 export const api: any = {
 	// route endpoint
 	// - no need for trailing slash
@@ -6,16 +9,11 @@ export const api: any = {
 	endpoint: 'pdomain',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
+			...pdomainPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...pdomainPayload,
 			init
 		}
 	}
@@ -24,7 +22,8 @@ export const api: any = {
 function init({ genomes }) {
 	return function handle_pdomain(req, res) {
 		try {
-			const gn = req.query.genome
+			const q: PdomainRequest = req.query
+			const gn = q.genome
 			if (!gn) throw 'no genome'
 			const g = genomes[gn]
 			if (!g) throw 'invalid genome ' + gn
@@ -32,9 +31,9 @@ function init({ genomes }) {
 				// no error
 				return res.send({ lst: [] })
 			}
-			if (!Array.isArray(req.query.isoforms)) throw 'isoforms[] missing'
+			if (!Array.isArray(q.isoforms)) throw 'isoforms[] missing'
 			const lst: any[] = []
-			for (const isoform of req.query.isoforms) {
+			for (const isoform of q.isoforms) {
 				if (g.genomicNameRegexp.test(isoform)) continue
 				const tmp = g.proteindomain.getbyisoform.all(isoform)
 				// FIXME returned {data} is text not json
@@ -47,7 +46,7 @@ function init({ genomes }) {
 					})
 				})
 			}
-			res.send({ lst })
+			res.send({ lst } satisfies PdomainResponse)
 		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
