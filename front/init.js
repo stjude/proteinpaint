@@ -8,7 +8,7 @@ const { execSync } = require('child_process')
 
 let URLPATH = process.argv[2] || '.'
 if (URLPATH.endsWith('/')) URLPATH = URLPATH.slice(0, -1)
-let publicBinOnly = process.argv[3] === true
+const publicBinOnly = process.argv.includes('--publicBinOnly')
 
 const CWD = process.cwd()
 
