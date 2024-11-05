@@ -106,7 +106,11 @@ export class Barchart {
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion,
 					defaultQ4fillTW: term0_term2_defaultQ,
-					getDisplayStyle: () => (this.settings.unit == 'log' ? 'none' : '')
+					getDisplayStyle: () => (this.settings.unit == 'log' ? 'none' : ''),
+					processConfig: () => {
+						//Prevent log scale shown in overlay
+						if (this.settings.unit == 'log') this.settings.unit == 'abs'
+					}
 				},
 				{
 					type: 'term',
