@@ -13,7 +13,9 @@ export type GetBrainImagingRequest = {
 	t?: string
 	/** the sample names selected by the users to plot on brain template */
 	selectedSampleFileNames: string[]
+	/* the term to divide the samples into groups */
 	divideByTW?: CategoricalTW
+	/* the term to color the samples based on their category */
 	overlayTW?: CategoricalTW
 }
 
@@ -23,8 +25,6 @@ export type GetBrainImagingSamplesRequest = {
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
 	dslabel: string
 	/** a user-defined brain template label in dataset file, such as Ref1, Ref2 */
-	refKey: string
-	/** when true will only return all the samples that have NIdata */
 }
 
 export type GetBrainImagingSamplesResponse = {

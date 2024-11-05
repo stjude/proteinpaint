@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, multiInit } from '#rx'
+import { getCompInit, copyMerge } from '#rx'
 import { controlsInit } from './controls'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table.ts'

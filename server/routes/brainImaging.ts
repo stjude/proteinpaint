@@ -4,7 +4,6 @@ import serverconfig from '#src/serverconfig.js'
 import type { CategoricalTW, GetBrainImagingRequest, FilesByCategory, TermWrapper } from '#types'
 import { spawn } from 'child_process'
 import { getData } from '../src/termdb.matrix.js'
-import { get } from 'http'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
@@ -148,7 +147,8 @@ async function generateBrainImage(refFile, plane, index, showLegend, maxLength, 
 			maxLength,
 			filesJson
 		]
-		console.log(cmd.join(' '))
+		//Use this log if you need to debug the python script, to run the python script manually
+		//console.log(cmd.join(' '))
 
 		const ps = spawn(serverconfig.python, cmd)
 		const imgData: Buffer[] = []

@@ -45,7 +45,6 @@ async function getBrainImageSamples(query: GetBrainImagingSamplesRequest, genome
 	const q = ds.queries.NIdata
 	const key = query.refKey
 	if (q[key].referenceFile && q[key].samples) {
-		const refFile = path.join(serverconfig.tpmasterdir, q[key].referenceFile)
 		const dirPath = path.join(serverconfig.tpmasterdir, q[key].samples)
 		const files = fs
 			.readdirSync(dirPath)
