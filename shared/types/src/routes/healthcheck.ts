@@ -1,6 +1,6 @@
 import type { RoutePayload } from './routeApi.js'
 
-export type HealthcheckRequest = {
+export type HealthCheckRequest = {
 	dslabel?: string
 }
 

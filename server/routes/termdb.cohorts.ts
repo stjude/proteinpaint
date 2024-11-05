@@ -1,32 +1,29 @@
+import type { TermdbCohortsRequest, TermdbCohortsResponse, RouteApi } from '#types'
+import { termdbCohortsPayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js' // ??? is this needed for this route ???
 import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.js'
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'termdb/cohorts',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
+			...termdbCohortsPayload,
+			init
 		}
 	}
 }
 
 function init({ genomes }) {
 	return async (req, res) => {
-		const q = req.query
+		const q: TermdbCohortsRequest = req.query
 		mayCopyFromCookie(q, req.cookies) // ??? is this needed for this route ???
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 
 			const [ds] = get_ds_tdb(genome, q)
-			const result = getCohortsData(ds)
+			const result: TermdbCohortsResponse = getCohortsData(ds)
 			res.send(result)
 		} catch (e: any) {
 			res.send({ error: e.message || e })

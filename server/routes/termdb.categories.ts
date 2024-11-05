@@ -1,58 +1,17 @@
-import type { getcategoriesRequest, getcategoriesResponse } from '#types'
+import type { CategoriesRequest, CategoriesResponse, RouteApi } from '#types'
+import { termdbCategoriesPayload } from '#types'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'termdb/categories',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'getcategoriesRequest'
-			},
-			response: {
-				typeId: 'getcategoriesResponse'
-			},
-			examples: [
-				{
-					request: {
-						body: {
-							genome: 'hg38-test',
-							dslabel: 'TermdbTest',
-							embedder: 'localhost',
-							term: { id: 'diaggrp' },
-							filter: {
-								type: 'tvslst',
-								in: true,
-								join: '',
-								lst: [
-									{
-										tag: 'cohortFilter',
-										type: 'tvs',
-										tvs: {
-											term: {
-												name: 'Cohort',
-												type: 'categorical',
-												values: { ABC: { label: 'ABC' }, XYZ: { label: 'XYZ' } },
-												id: 'subcohort',
-												isleaf: false,
-												groupsetting: { disabled: true }
-											},
-											values: [{ key: 'ABC', label: 'ABC' }]
-										}
-									}
-								]
-							}
-						}
-					},
-					response: {
-						header: { status: 200 }
-					}
-				}
-			]
+			...termdbCategoriesPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...termdbCategoriesPayload,
 			init
 		}
 	}
@@ -60,7 +19,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as getcategoriesRequest
+		const q: CategoriesRequest = req.query
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -78,7 +37,7 @@ function init({ genomes }) {
 }
 
 async function trigger_getcategories(
-	q: getcategoriesRequest,
+	q: CategoriesRequest,
 	res: any,
 	tdb: any,
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
@@ -190,5 +149,5 @@ async function trigger_getcategories(
 	res.send({
 		lst,
 		orderedLabels
-	} as getcategoriesResponse)
+	} satisfies CategoriesResponse)
 }

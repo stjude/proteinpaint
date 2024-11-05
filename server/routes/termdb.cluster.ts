@@ -9,8 +9,10 @@ import type {
 	SingletermResponse,
 	GeneExpressionQuery,
 	GeneExpressionQueryNative,
-	GeneExpressionQueryGdc
+	GeneExpressionQueryGdc,
+	RouteApi
 } from '#types'
+import { termdbClusterPayload } from '#types'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
@@ -20,24 +22,19 @@ import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 import { getData } from '#src/termdb.matrix.js'
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'termdb/cluster',
 	methods: {
-		all: {
-			init,
-			request: {
-				typeId: 'TermdbClusterRequest'
-			},
-			response: {
-				typeId: 'TermdbClusterResponse'
-			}
+		get: {
+			...termdbClusterPayload,
+			init
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as TermdbClusterRequest
+	return async (req, res): Promise<void> => {
+		const q: TermdbClusterRequest = req.query
 		let result
 		try {
 			const g = genomes[q.genome]
@@ -66,7 +63,7 @@ function init({ genomes }) {
 				error: e.message || e
 			} as TermdbClusterResponse
 		}
-		res.send(result)
+		res.send(result satisfies TermdbClusterRequest)
 	}
 }
 

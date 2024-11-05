@@ -1,7 +1,7 @@
 import type { IsoformLstRequest, IsoformLstResponse, RouteApi } from '#types'
 import { isoformlstPayload } from '#types'
 
-export const api: any = {
+export const api: RouteApi = {
 	// route endpoint
 	// - no need for trailing slash
 	// - should be a noun (method is based on HTTP GET, POST, etc)

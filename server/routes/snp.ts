@@ -1,6 +1,8 @@
+import type { SnpRequest, SnpResponse, RouteApi } from '#types'
+import { snpPayload } from '#types'
 import * as utils from '#src/utils.js'
 
-export const api: any = {
+export const api: RouteApi = {
 	// route endpoint
 	// - no need for trailing slash
 	// - should be a noun (method is based on HTTP GET, POST, etc)
@@ -8,16 +10,11 @@ export const api: any = {
 	endpoint: 'snp',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
+			...snpPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...snpPayload,
 			init
 		}
 	}
@@ -27,9 +24,11 @@ function init({ genomes }) {
 	return async function handle_snp(req, res) {
 		// TODO move to routes
 		try {
-			const n = req.query.genome
+			const q: SnpRequest = req.query
+			const n = q.genome
 			if (!n) throw 'no genome'
-			res.send({ results: await searchSNP(req.query, genomes[n]) })
+			const results = await searchSNP(q, genomes[n])
+			res.send({ results } satisfies SnpResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			return res.send({ error: e.message || e })
