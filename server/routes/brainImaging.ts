@@ -117,7 +117,7 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 			const filesByCat = divideByCat[dcategory]
 			for (const category in filesByCat) catNum += filesByCat[category].samples.length
 			//if (samples.length < 1) continue
-			const url = await generateBrainImage(refFile, plane, index, 1, maxLength, JSON.stringify(filesByCat))
+			const url = await generateBrainImage(refFile, plane, index, maxLength, JSON.stringify(filesByCat))
 			brainImageDict[dcategory] = { url, catNum }
 		}
 
@@ -136,18 +136,18 @@ async function getBrainImage(query: GetBrainImagingRequest, genomes: any, plane:
 	}
 }
 
-async function generateBrainImage(refFile, plane, index, showLegend, maxLength, filesJson) {
+async function generateBrainImage(refFile, plane, index, maxLength, filesJson) {
 	return new Promise((resolve, reject) => {
 		const cmd = [
 			`${serverconfig.binpath}/../python/src/plotBrainImaging.py`,
 			refFile,
 			plane,
 			index,
-			showLegend,
 			maxLength,
 			filesJson
 		]
 		//Use this log if you need to debug the python script, to run the python script manually
+		//You will need to add simple quotes to filesJson
 		//console.log(cmd.join(' '))
 
 		const ps = spawn(serverconfig.python, cmd)

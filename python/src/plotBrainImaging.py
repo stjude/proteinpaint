@@ -8,7 +8,7 @@ import io
 import json
 
 if len(sys.argv) <= 1:
-	print('python3 '+sys.argv[0]+' <path/to/template/file> plane index, <path/to/sample/file>\nParameter plane options: L (left, sagittal), F (front, coronal), T (top, axial)')
+	print('python3 '+sys.argv[0]+' <path/to/template/file> plane index filesJson.\n filesJson: dictionary containg sample files and color per category).\nplane: L (left, sagittal), F (front, coronal), T (top, axial)')
 	sys.exit(1)
 
 plane = sys.argv[2]
@@ -26,20 +26,14 @@ templateFile = sys.argv[1]
 # load data from nifti files 
 template = nib.load(templateFile).get_fdata()
 
-
-showLegend = sys.argv[4]
-if(len(showLegend) == 4):
-	print('Need to specify whether to show legend')
-	sys.exit(1)
-showLegend = int(showLegend)
-vmaxSamples = sys.argv[5]
+vmaxSamples = sys.argv[4]
 
 if(len(vmaxSamples) == 0):
 	print('Need to provide max samples for normalization')
 	sys.exit(1)
 vmaxSamples = int(vmaxSamples)
 
-sampleFiles = json.loads(sys.argv[6])
+sampleFiles = json.loads(sys.argv[5])
 
 
 index = int(index)
