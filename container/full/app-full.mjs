@@ -53,9 +53,13 @@ if (serverconfig.releaseTag) {
 	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}"`], { encoding: 'utf-8' })
 }
 
-if (!serverconfig.URL) serverconfig.URL = serverconfig.url || '.'
+if (!serverconfig.URL) serverconfig.URL = process.env.URL || serverconfig.url || '.'
+
 console.log(`generating public/bin for ${serverconfig.URL}`)
-spawnSync('npx', ['proteinpaint-front', serverconfig.URL], { encoding: 'utf-8' })
+const publicBinOnly = process.argv.includes('--publicBinOnly')
+spawnSync('npx', ['proteinpaint-front', serverconfig.URL, publicBinOnly ? '--publicBinOnly' : 'allPublic'], {
+	encoding: 'utf-8'
+})
 // since the npx command generated non-root owned js files inside the public/bin folder , we need to change the owner of the folder and files to root
 spawnSync('chown', ['-R', 'root:root', './public/bin'], { encoding: 'utf8' })
 
