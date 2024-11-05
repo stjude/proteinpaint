@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import type { BrainSample, CategoricalTW, GetBrainImagingSamplesRequest, GetBrainImagingSamplesResponse } from '#types'
+import { spawn } from 'child_process'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
@@ -85,7 +86,7 @@ export async function validate_query_NIdata(ds, genome) {
 
 				try {
 					await fs.promises.stat(sampleFile)
-				} catch (e) {
+				} catch (e: any) {
 					if (e.code == 'EACCES') throw 'cannot read file, permission denied'
 					if (e.code == 'ENOENT') throw 'no data for this sample'
 					throw 'failed to load data'
