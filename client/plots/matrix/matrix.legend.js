@@ -157,6 +157,13 @@ export function getLegendData(legendGroups, refs, self) {
 					const count = item.samples?.size
 					if (item.scale) {
 						const colors = item.domain?.map(c => item.scale(c)) || item.scale.range()
+						if (item.key.includes('CNV_loss')) {
+							/** Hardcoded for cnv loss to avoid rendering errors within
+							 * the matrix.
+							 * TODO: Appropriate to change to item.minLabel == 0 && item.maxLabel <0
+							 * to avoid hardcoding? */
+							colors.reverse()
+						}
 						const domain = setColorScaleDomain(item.minLabel, item.maxLabel, item.domain, colors)
 						return {
 							termid: $id,
