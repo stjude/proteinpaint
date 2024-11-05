@@ -127,9 +127,9 @@ export default class LegendJSONMapper {
 					key: CnvType.Gain,
 					text: 'Copy number gain',
 					width: 100,
-					domain: [0, 1],
-					minLabel: 0,
-					maxLabel: gain.value,
+					domain: [0, gain.value],
+					// minLabel: 0,
+					// maxLabel: gain.value,
 					order: cnvOrder++,
 					isLegendItem: true,
 					dt: 4,
@@ -143,13 +143,13 @@ export default class LegendJSONMapper {
 					key: CnvType.Loss,
 					text: 'Copy number loss',
 					width: 100,
-					domain: [0, 1],
-					minLabel: 0,
-					maxLabel: loss.value,
+					domain: [loss.value, 0],
+					// minLabel: 0,
+					// maxLabel: loss.value,
 					order: cnvOrder++,
 					isLegendItem: true,
 					dt: 4,
-					scale: scaleLinear([0, 1], ['white', loss.color])
+					scale: scaleLinear([0, 1], [loss.color, 'white'])
 				})
 			}
 
