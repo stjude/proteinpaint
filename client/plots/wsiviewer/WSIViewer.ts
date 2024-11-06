@@ -12,7 +12,7 @@ import TileSource from 'ol/source/Tile'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
-import { GetWSImagesRequest, GetWSImagesResponse } from '#routes/wsimages.ts'
+import { WSImagesRequest, WSImagesResponse } from '#routes/wsimages.ts'
 import wsiViewerImageFiles from './wsimagesloaded.ts'
 import { WSImage } from '#routes/samplewsimages.ts'
 import { table2col } from '#dom/table2col'
@@ -169,14 +169,14 @@ export default class WSIViewer {
 		const layers: Array<TileLayer<Zoomify>> = []
 
 		for (let i = 0; i < wsimages.length; i++) {
-			const body: GetWSImagesRequest = {
+			const body: WSImagesRequest = {
 				genome: state.genome || state.vocab.genome,
 				dslabel: state.dslabel || state.vocab.dslabel,
 				sampleId: state.sample_id,
 				wsimage: wsimages[i].filename
 			}
 
-			const data: GetWSImagesResponse = await dofetch3('wsimages', { body })
+			const data: WSImagesResponse = await dofetch3('wsimages', { body })
 
 			if (data.status === 'error') {
 				return []
