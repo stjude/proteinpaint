@@ -31,6 +31,10 @@ const runpp = helpers.getRunPp('mass', {
 	debug: 1
 })
 
+const features = JSON.parse(sessionStorage.getItem('optionalFeatures')) || {}
+const tabLabels2Find = ['Barchart', 'Violin'] //hardcoded data in summary.js.
+if (features?.draftChartTypes?.includes('boxplot')) tabLabels2Find.push('Boxplot')
+
 /**************
  test sections
 ***************/
@@ -89,7 +93,6 @@ tape('Render summary plot, term: "agedx"', test => {
 			.filter(d => d.__data__.isVisible() == true)
 
 		//test correct tabs exist
-		const tabLabels2Find = ['Barchart', 'Violin', 'Boxplot'] //hardcoded data in summary.js.
 		let foundLabels = 0
 		const notFoundLabels = []
 		for (const toggle of toggles) {
@@ -282,7 +285,6 @@ tape('Barchart & violin toggles, term: "agedx", term2: "diaggrp"', test => {
 	}
 
 	function testToggleButtonRendering(toggles) {
-		const tabLabels2Find = ['Barchart', 'Violin', 'Boxplot']
 		let foundLabels = 0
 		for (const toggle of toggles) {
 			if (tabLabels2Find.some(d => d == toggle.__data__.label)) ++foundLabels
@@ -362,15 +364,16 @@ tape('Barchart, violin, and scatter toggles, term: "agedx", term2: "hrtavg"', te
 	}
 
 	function testToggleButtonRendering(toggles) {
-		const tabLabels2Find = ['Barchart', 'Violin', 'Boxplot', 'Scatter']
+		const tabLabels2Find2 = [...tabLabels2Find]
+		tabLabels2Find2.push('Scatter')
 		let foundLabels = 0
 		for (const toggle of toggles) {
-			if (tabLabels2Find.some(d => d == toggle.__data__.label)) ++foundLabels
+			if (tabLabels2Find2.some(d => d == toggle.__data__.label)) ++foundLabels
 		}
 		test.equal(
-			tabLabels2Find.length,
+			tabLabels2Find2.length,
 			toggles.length,
-			`Should render ${tabLabels2Find.length} tabs: ${tabLabels2Find} for 2 numeric terms`
+			`Should render ${tabLabels2Find2.length} tabs: ${tabLabels2Find2} for 2 numeric terms`
 		)
 	}
 

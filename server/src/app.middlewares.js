@@ -9,6 +9,7 @@ import serverconfig from './serverconfig.js'
 import { authApi } from './auth.js'
 import * as validator from './validator.js'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
+
 import jsonwebtoken from 'jsonwebtoken'
 
 const basepath = serverconfig.basepath || ''
@@ -160,8 +161,4 @@ function setHeaders(req, res, next) {
 	res.header('Access-Control-Allow-Credentials', true)
 
 	next()
-}
-
-function isNumeric(d) {
-	return !isNaN(parseFloat(d)) && isFinite(d) && d !== ''
 }
