@@ -58,7 +58,8 @@
     "ts-patch": "^3.0.2",
     "tsx": "^4.7.1",
     "typedoc": "^0.24.8",
-    "typescript": "^5.0.3",
+    "typedoc-plugin-missing-exports": "^2.0.1",
+    "typescript": "^5.6.3",
     "typia": "^4.1.14"
   },
   "dependencies": {
@@ -85,8 +86,7 @@
     "node-fetch": "^2.6.1",
     "partjson": "^0.58.2",
     "tiny-async-pool": "^1.2.0",
-    "tough-cookie": "^4.1.4",
-    "typedoc-plugin-missing-exports": "^2.0.1"
+    "tough-cookie": "^4.1.4"
   },
   "repository": {
     "type": "git",

@@ -21,8 +21,10 @@
   "devDependencies": {
     "ts-node": "^10.9.2",
     "ts-patch": "^3.2.1",
-    "typescript": "^5.6.2",
     "typia": "^4.1.14"
+  },
+  "peerDependencies": {
+    "typescript": "^5.6.3"
   },
   "files": [
     "src"
