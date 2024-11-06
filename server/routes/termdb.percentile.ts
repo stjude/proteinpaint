@@ -1,67 +1,25 @@
-import type { getpercentileRequest, getpercentileResponse, Filter } from '#types'
+import type { PercentileRequest, PercentileResponse, Filter, RouteApi } from '#types'
+import { percentilePayload } from '#types'
 import * as termdbsql from '#src/termdb.sql.js'
 import computePercentile from '#shared/compute.percentile.js'
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'termdb/getpercentile',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'getpercentileRequest'
-			},
-			response: {
-				typeId: 'getpercentileResponse'
-			},
-			examples: [
-				{
-					request: {
-						body: {
-							genome: 'hg38-test',
-							dslabel: 'TermdbTest',
-							embedder: 'localhost',
-							getpercentile: [50],
-							tid: 'agedx',
-							filter: {
-								type: 'tvslst',
-								in: true,
-								join: '',
-								lst: [
-									{
-										tag: 'cohortFilter',
-										type: 'tvs',
-										tvs: {
-											term: {
-												name: 'Cohort',
-												type: 'categorical',
-												values: { ABC: { label: 'ABC' }, XYZ: { label: 'XYZ' } },
-												id: 'subcohort',
-												isleaf: false,
-												groupsetting: { disabled: true }
-											},
-											values: [{ key: 'ABC', label: 'ABC' }]
-										}
-									}
-								]
-							}
-						}
-					},
-					response: {
-						header: { status: 200 }
-					}
-				}
-			]
+			...percentilePayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...percentilePayload,
 			init
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as getpercentileRequest
+	return async (req, res): Promise<void> => {
+		const q: PercentileRequest = req.query
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -111,5 +69,5 @@ async function trigger_getpercentile(
 		const perc_value = computePercentile(values, percentile)
 		perc_values.push(perc_value)
 	}
-	res.send({ values: perc_values } as getpercentileResponse)
+	res.send({ values: perc_values } satisfies PercentileResponse)
 }

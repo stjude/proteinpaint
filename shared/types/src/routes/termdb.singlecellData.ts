@@ -1,3 +1,4 @@
+import type { RoutePayload } from './routeApi.js'
 import { ErrorResponse } from './errorResponse.ts'
 
 export type Cell = {
@@ -28,7 +29,7 @@ export type Plot = {
 	colorMap?: { [key: string]: string }
 }
 
-export type TermdbSinglecellDataRequest = {
+export type TermdbSingleCellDataRequest = {
 	/** Genome id */
 	genome: string
 	/** Dataset label */
@@ -55,4 +56,14 @@ export type NodataResponse = {
 	nodata: boolean
 }
 
-export type TermdbSinglecellDataResponse = NodataResponse | ErrorResponse | HasdataResponse
+export type TermdbSingleCellDataResponse = NodataResponse | ErrorResponse | HasdataResponse
+
+export const termdbSingleCellDataPayload: RoutePayload = {
+	request: {
+		typeId: 'TermdbSingleCellDataRequest'
+	},
+	response: {
+		typeId: 'TermdbSingleCellDataResponse'
+	}
+	// examples: []
+}

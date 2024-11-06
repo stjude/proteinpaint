@@ -1,6 +1,7 @@
+import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 
-export type TermdbSinglecellDEgenesRequest = {
+export type TermdbSingleCellDEgenesRequest = {
 	/** Genome id */
 	genome: string
 	/** Dataset label */
@@ -27,4 +28,14 @@ export type HasDataResponse = {
 	}[]
 }
 
-export type TermdbSinglecellDEgenesResponse = ErrorResponse | HasDataResponse
+export type TermdbSingleCellDEgenesResponse = ErrorResponse | HasDataResponse
+
+export const termdbSingleCellDEgenesPayload: RoutePayload = {
+	request: {
+		typeId: 'TermdbSingleCellDEgenesRequest'
+	},
+	response: {
+		typeId: 'TermdbSingleCellDEgenesResponse'
+	}
+	// examples: []
+}

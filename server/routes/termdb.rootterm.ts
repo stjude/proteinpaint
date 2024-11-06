@@ -1,36 +1,16 @@
-import type { getroottermRequest, getroottermResponse } from '#types'
+import type { RootTermRequest, RootTermResponse } from '#types'
+import { rootTermPayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 
 export const api: any = {
 	endpoint: 'termdb/rootterm',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'getroottermRequest'
-			},
-			response: {
-				typeId: 'getroottermResponse'
-			},
-			examples: [
-				{
-					request: {
-						body: {
-							genome: 'hg38-test',
-							dslabel: 'TermdbTest',
-							embedder: 'localhost',
-							default_rootterm: 1,
-							cohortValues: 'ABC'
-						}
-					},
-					response: {
-						header: { status: 200 }
-					}
-				}
-			]
+			...rootTermPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...rootTermPayload,
 			init
 		}
 	}
@@ -38,7 +18,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as getroottermRequest
+		const q: RootTermRequest = req.query
 		//const cohortValues = q.cohortValues ? q.cohortValues : ''
 		//const treeFilter = q.treeFilter ? q.treeFilter : ''
 		//res.send({ lst: await tdb.q.getRootTerms(cohortValues, treeFilter) })
@@ -66,5 +46,5 @@ async function trigger_rootterm(
 ) {
 	const cohortValues = q.cohortValues ? q.cohortValues : ''
 	const treeFilter = q.treeFilter ? q.treeFilter : ''
-	res.send({ lst: await tdb.q.getRootTerms(cohortValues, treeFilter) } as getroottermResponse)
+	res.send({ lst: await tdb.q.getRootTerms(cohortValues, treeFilter) } satisfies RootTermResponse)
 }

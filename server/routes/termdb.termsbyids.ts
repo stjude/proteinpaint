@@ -1,20 +1,16 @@
-import type { gettermsbyidsRequest, gettermsbyidsResponse } from '#types'
+import type { TermsByIdsRequest, TermsByIdsResponse, RouteApi } from '#types'
+import { termsByIdsPayload } from '#types'
 import { copy_term } from '#src/termdb.js'
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'termdb/termsbyids',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'gettermsbyidsRequest'
-			},
-			response: {
-				typeId: 'gettermsbyidsResponse'
-			}
+			...termsByIdsPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...termsByIdsPayload,
 			init
 		}
 	}
@@ -28,7 +24,7 @@ export const api: any = {
  */
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q: gettermsbyidsRequest = req.query
+		const q: TermsByIdsRequest = req.query
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -36,8 +32,8 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'invalid termdb object'
-
-			await trigger_gettermsbyid(q, res, tdb)
+			const results: TermsByIdsResponse = await trigger_gettermsbyid(q, tdb)
+			res.send(results)
 		} catch (e) {
 			res.send({ error: e instanceof Error ? e.message : e })
 			if (e instanceof Error && e.stack) console.log(e)
@@ -52,15 +48,8 @@ function init({ genomes }) {
  * @param {Object} res - An object with a 'send' function to send the response.
  * @param {Object} tdb - An object with a 'termjsonByOneid' function to retrieve term by ID.
  */
-async function trigger_gettermsbyid(
-	q: { ids: any },
-	res: { send: (arg0: { terms: any }) => void },
-	tdb: { q: { termjsonByOneid: (arg0: any) => any } }
-) {
-	const terms: gettermsbyidsResponse = {
-		terms: {}
-	}
-
+async function trigger_gettermsbyid(q: { ids: any }, tdb: { q: { termjsonByOneid: (arg0: any) => any } }) {
+	const terms = {}
 	for (const id of q.ids) {
 		const term = tdb.q.termjsonByOneid(id)
 		if (term) {
@@ -71,7 +60,5 @@ async function trigger_gettermsbyid(
 		}
 		terms[id] = term ? copy_term(term) : undefined
 	}
-	res.send({
-		terms
-	})
+	return { terms }
 }

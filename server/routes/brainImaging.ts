@@ -50,7 +50,11 @@ function init({ genomes }) {
 	}
 }
 
+<<<<<<< HEAD
 async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: string, index: number): Promise<any> {
+=======
+async function getBrainImage(query: BrainImagingRequest, genomes: any) {
+>>>>>>> 4c9282991 (6th round of moving more route payload declarations from server/routes to types/src/routes code)
 	const ds = genomes[query.genome].datasets[query.dslabel]
 	const q = ds.queries.NIdata
 	const key = query.refKey

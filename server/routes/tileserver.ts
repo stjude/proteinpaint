@@ -1,31 +1,26 @@
+import type { TileRequest /*, TileResponse*/, RouteApi } from '#types'
+import { tilePayload } from '#types'
 import ky from 'ky'
 import serverconfig from '#src/serverconfig.js'
 
-const routePath = 'tileserver'
-
 export const api: any = {
-	endpoint: `${routePath}/layer/slide/:sampleId/zoomify/:TileGroup/:z-:x-:y@1x.jpg`,
+	endpoint: `tileserver/layer/slide/:sampleId/zoomify/:TileGroup/:z-:x-:y@1x.jpg`,
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
+			...tilePayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...tilePayload,
 			init
 		}
 	}
 }
 
 function init() {
-	return async (req: any, res: any): Promise<void> => {
+	return async (req, res): Promise<void> => {
 		try {
-			const { sampleId, TileGroup, z, x, y } = req.params
+			const { sampleId, TileGroup, z, x, y } = req.params satisfies TileRequest
 
 			const url = `${serverconfig.tileServerURL}/tileserver/layer/slide/${sampleId}/zoomify/${TileGroup}/${z}-${x}-${y}@1x.jpg`
 

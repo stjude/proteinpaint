@@ -1,34 +1,34 @@
-import type { Image, TermdbGetSampleImagesRequest, TermdbGetSampleImagesResponse } from '#types'
+import type { Image, TermdbSampleImagesRequest, TermdbSampleImagesResponse, RouteApi } from '#types'
+import { termdbSampleImagesPayload } from '#types'
 import path from 'path'
 import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'termdb/getSampleImages',
 	methods: {
-		all: {
-			init,
-			request: {
-				typeId: 'TermdbGetSampleImagesRequest'
-			},
-			response: {
-				typeId: 'TermdbGetSampleImagesResponse'
-			}
+		get: {
+			...termdbSampleImagesPayload,
+			init
+		},
+		post: {
+			...termdbSampleImagesPayload,
+			init
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
+	return async (req, res): Promise<void> => {
 		try {
-			const q = req.query as TermdbGetSampleImagesRequest
+			const q: TermdbSampleImagesRequest = req.query
 			const sampleId = q.sampleId
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
 			const images = await ds.queries.images.getSampleImages({ sampleId })
-			res.send({ images } as TermdbGetSampleImagesResponse)
+			res.send({ images } satisfies TermdbSampleImagesResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
@@ -44,7 +44,7 @@ export function validate_query_getSampleImages(ds: any, genome: any) {
 }
 
 function nativeValidateQuery(ds: any) {
-	ds.queries.images.getSampleImages = async (q: TermdbGetSampleImagesRequest) => {
+	ds.queries.images.getSampleImages = async (q: TermdbSampleImagesRequest) => {
 		const folder = ds.queries.images.folder //query to search top terms by type
 		const images = await getSampleImages(ds, folder, q.sampleId)
 		return images

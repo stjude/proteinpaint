@@ -1,3 +1,4 @@
+import type { RoutePayload } from './routeApi.js'
 //import GdcFilter0 from './filter.gdc'
 import type { Term } from '../terms/term.ts'
 import type { Filter } from '../filter.ts'
@@ -18,4 +19,14 @@ export type TermdbTopTermsByTypeRequest = {
 export type TermdbTopTermsByTypeResponse = {
 	/** Array of gene names TODO may change element to objs */
 	terms: Term[]
+}
+
+export const termdbTopTermsByTypePayload: RoutePayload = {
+	request: {
+		typeId: 'TermdbTopTermsByTypeRequest'
+	},
+	response: {
+		typeId: 'TermdbTopTermsByTypeResponse'
+	},
+	// examples: []
 }

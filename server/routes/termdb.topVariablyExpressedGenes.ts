@@ -1,4 +1,5 @@
-import type { TermdbTopVariablyExpressedGenesRequest, TermdbTopVariablyExpressedGenesResponse } from '#types'
+import type { TermdbTopVariablyExpressedGenesRequest, TermdbTopVariablyExpressedGenesResponse, RouteApi } from '#types'
+import { termdbTopVariablyExpressedGenesPayload } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'
@@ -6,17 +7,16 @@ import { makeFilter } from '#src/mds3.gdc.js'
 import { cachedFetch } from '#src/utils.js'
 import { joinUrl } from '#src/helpers.ts'
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
 	methods: {
-		all: {
-			init,
-			request: {
-				typeId: 'TermdbTopVariablyExpressedGenesRequest'
-			},
-			response: {
-				typeId: 'TermdbTopVariablyExpressedGenesResponse'
-			}
+		get: {
+			...termdbTopVariablyExpressedGenesPayload,
+			init
+		},
+		post: {
+			...termdbTopVariablyExpressedGenesPayload,
+			init
 		}
 	}
 }
@@ -25,7 +25,7 @@ function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		let result
 		try {
-			const q = req.query as TermdbTopVariablyExpressedGenesRequest
+			const q: TermdbTopVariablyExpressedGenesRequest = req.query
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets?.[q.dslabel]
@@ -35,14 +35,14 @@ function init({ genomes }) {
 			const t = Date.now()
 			result = {
 				genes: await ds.queries.topVariablyExpressedGenes.getGenes(q)
-			} as TermdbTopVariablyExpressedGenesResponse
+			}
 
 			if (serverconfig.debugmode) console.log('topVariablyExpressedGenes', Date.now() - t, 'ms')
 		} catch (e: any) {
-			result = { status: e.status || 400, error: e.message || e } as TermdbTopVariablyExpressedGenesResponse
+			result = { status: e.status || 400, error: e.message || e }
 		}
 
-		res.send(result)
+		res.send(result satisfies TermdbTopVariablyExpressedGenesResponse)
 	}
 }
 

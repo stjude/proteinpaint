@@ -1,23 +1,19 @@
-import type { TermdbSinglecellDataRequest, TermdbSinglecellDataResponse } from '#types'
+import type { TermdbSingleCellDataRequest, TermdbSingleCellDataResponse, RouteApi } from '#types'
+import { termdbSingleCellDataPayload } from '#types'
 
 /*
 given a sample, return it's singlecell data from dataset
 */
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'termdb/singlecellData',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'TermdbSinglecellDataRequest'
-			},
-			response: {
-				typeId: 'TermdbSinglecellDataResponse'
-			}
+			...termdbSingleCellDataPayload,
+			init
 		},
 		post: {
-			alternativeFor: 'get',
+			...termdbSingleCellDataPayload,
 			init
 		}
 	}
@@ -25,7 +21,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as TermdbSinglecellDataRequest
+		const q: TermdbSingleCellDataRequest = req.query
 		let result
 		try {
 			const g = genomes[q.genome]
@@ -33,14 +29,14 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
-			result = (await ds.queries.singleCell.data.get(q)) as TermdbSinglecellDataResponse
+			result = await ds.queries.singleCell.data.get(q)
 		} catch (e: any) {
 			if (e.stack) console.log(e)
 			result = {
 				status: e.status || 400,
 				error: e.message || e
-			} as TermdbSinglecellDataResponse
+			}
 		}
-		res.send(result)
+		res.send(result satisfies TermdbSingleCellDataResponse)
 	}
 }
