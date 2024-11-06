@@ -1,3 +1,5 @@
+import { isNumeric } from './helpers.js'
+
 /*
 	A custom encoder-decoder for URL query parameter values
 
@@ -78,8 +80,4 @@ export function decode(query: UrlJsonEncoded) {
 		// else the value is already a string
 	}
 	return query
-}
-
-function isNumeric(d) {
-	return !isNaN(parseFloat(d)) && isFinite(d) && d !== ''
 }

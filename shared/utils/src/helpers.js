@@ -1,13 +1,20 @@
 /*
 this is a helper file with a collection of functions to be used in backend and client side code. Here is a list.
 
-1. isNumeric(n) - checks whether given argument n is Numeric
+1. isNumeric(n) - checks whether given argument n is Numeric, with option to cast from string
+2. strictNumeric(n) - like isNumeric but does not cast from string
 2. convertUnits - converts a value from a unit to another unit
 3. TODO - move computepercentile, roundValue, etc here?
 */
 
 export function isNumeric(n) {
-	return Number.isFinite(n) || !isNaN(parseFloat(n))
+	const v = typeof n != 'string' || n === '' ? n : Number(n)
+	const f = parseFloat(n)
+	return !isNaN(f) && Number.isFinite(v) && v === f
+}
+
+export function strictNumeric(n) {
+	return !isNaN(parseFloat(n)) && Number.isFinite(n)
 }
 
 export function convertUnits(v, fromUnit, toUnit, scaleFactor, compact) {

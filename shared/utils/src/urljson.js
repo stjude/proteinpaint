@@ -1,3 +1,5 @@
+import { isNumeric } from './helpers'
+
 const reserved = ['false', 'true', 'null', 'undefined']
 const delimiters = ['"', '{', '[']
 function encode(rawObject) {
@@ -28,7 +30,5 @@ function decode(query) {
 	}
 	return query
 }
-function isNumeric(d) {
-	return !isNaN(parseFloat(d)) && isFinite(d) && d !== ''
-}
+
 export { decode, encode }
