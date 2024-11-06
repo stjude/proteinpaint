@@ -31,6 +31,7 @@ import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from './termdb.scatter.js'
 import { mayInitiateMatrixplots } from './termdb.matrix.js'
 import { add_bcf_variant_filter } from './termdb.snp.js'
+import { validate_query_NIdata } from '#routes/brainImagingSamples.ts'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
@@ -40,6 +41,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.getTopTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.getSampleImages.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
+import { preInit } from '#src/mds3.preInit.ts'
 
 /*
 init
@@ -232,6 +234,10 @@ export async function validate_termdb(ds) {
 	v: {name, plural_name, parent_id}
 	*/
 	tdb.sampleTypes = {}
+
+	if (ds.preInit) {
+		const response = await preInit(ds)
+	}
 
 	if (tdb?.dictionary?.gdcapi) {
 		await initGDCdictionary(ds)
@@ -1597,7 +1603,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	*/
 	{
 		let samples = []
-		if (!ds.queries.rnaseqGeneCount.storage_type || ds.queries.rnaseqGeneCount.storage_type == 'text') {
+		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
 			samples = (await getFirstLine(q.file)).trim().split('\t').slice(4)
 		} else if (ds.queries.rnaseqGeneCount.storage_type == 'HDF5') {
 			const get_samples_from_hdf5 = {
@@ -1612,7 +1618,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			const time1 = new Date().valueOf()
 			const rust_output = await run_rust('DEanalysis', JSON.stringify(get_samples_from_hdf5))
 			const time2 = new Date().valueOf()
-			console.log('Time taken to query gene expression:', time2 - time1, 'ms')
+			//console.log('Time taken to query gene expression:', time2 - time1, 'ms')
 			let result
 			for (const line of rust_output.split('\n')) {
 				if (line.startsWith('output_string:')) {
@@ -1787,58 +1793,6 @@ async function validate_query_singleSampleGenomeQuantification(ds, genome) {
 			}
 		} else {
 			throw 'unknown query method for singleSampleGenomeQuantification'
-		}
-	}
-}
-
-async function validate_query_NIdata(ds, genome) {
-	const q = ds.queries.NIdata
-	if (!q || !serverconfig.features?.showBrainImaging) return
-	for (const key in q) {
-		if (q[key].referenceFile && q[key].samples) {
-			q[key].get = async (sampleName, l, f, t) => {
-				const refFile = path.join(serverconfig.tpmasterdir, q[key].referenceFile)
-				const sampleFile = path.join(serverconfig.tpmasterdir, q[key].samples, sampleName)
-
-				try {
-					await fs.promises.stat(sampleFile)
-				} catch (e) {
-					if (e.code == 'EACCES') throw 'cannot read file, permission denied'
-					if (e.code == 'ENOENT') throw 'no data for this sample'
-					throw 'failed to load data'
-				}
-
-				return new Promise((resolve, reject) => {
-					const ps = spawn('python3', [
-						`${serverconfig.binpath}/utils/plotBrainImaging.py`,
-						refFile,
-						sampleFile,
-						l,
-						f,
-						t
-					])
-					let imgData = []
-					ps.stdout.on('data', data => {
-						imgData.push(data)
-					})
-					ps.stderr.on('data', data => {
-						console.error(`stderr: ${data}`)
-						reject(new Error(`Python script filed: ${data}`))
-					})
-					ps.on('close', code => {
-						if (code === 0) {
-							const imageBuffer = Buffer.concat(imgData)
-							const base64Data = imageBuffer.toString('base64')
-							const imgUrl = `data:image/png;base64,${base64Data}`
-							resolve(imgUrl)
-						} else {
-							reject(new Error(`Python script exited with code ${code}`))
-						}
-					})
-				})
-			}
-		} else {
-			throw 'no reference or sample files'
 		}
 	}
 }
@@ -2531,10 +2485,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 }
 
 async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter) {
-	if (!ds.assayAvailability?.byDt) return
-	const sampleFilter = filter ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
+	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
 	const _dt = structuredClone(ds.assayAvailability.byDt[dtKey])
-	if (!_dt) throw 'unable to retrieve dt from dataset'
+	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
+	const sampleFilter = filter ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
 	const dts = []
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {

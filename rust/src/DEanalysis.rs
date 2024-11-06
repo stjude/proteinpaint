@@ -235,7 +235,8 @@ fn input_data_from_text(
     // Check headers for samples
     let lines: Vec<&str> = buffer.split('\n').collect::<Vec<&str>>();
     let total_lines = lines.len();
-    let headers: Vec<&str> = lines[0].split('\t').collect::<Vec<&str>>();
+    let header_binding = lines[0].replace("\r", "");
+    let headers: Vec<&str> = header_binding.split('\t').collect::<Vec<&str>>();
     //println!("headers:{:?}", headers);
     let mut case_indexes_original: Vec<usize> = Vec::with_capacity(case_list.len());
     let mut control_indexes_original: Vec<usize> = Vec::with_capacity(control_list.len());
@@ -282,7 +283,7 @@ fn input_data_from_text(
         let lines_slice = &lines[..];
         for line_iter in 1..lines_slice.len() - 1 {
             // Subtracting 1 from total length of lines_slice because the last one will be empty
-            let line = lines_slice[line_iter];
+            let line = lines_slice[line_iter].replace("\r", "");
             let mut index = 0;
             for field in line.split('\t').collect::<Vec<&str>>() {
                 if index == gene_name_index.unwrap() {
@@ -377,7 +378,7 @@ fn input_data_from_text(
                     if remainder == thread_num {
                         //println!("buffer:{}", buffer);
                         // Thread analyzing a particular line must have the same remainder as the thread_num, this avoids multiple threads from parsing the same line
-                        let line = lines[line_iter];
+                        let line = lines[line_iter].replace("\r", "");
                         let mut index = 0;
                         for field in line.split('\t').collect::<Vec<&str>>() {
                             if index == gene_name_index.unwrap() {
@@ -583,11 +584,16 @@ fn main() {
                                     Some(x) => {
                                         if x == "HDF5" {
                                             storage_type = "HDF5"
+                                        } else if x == "text" {
+                                            storage_type = "text"
                                         } else {
-                                            panic!("storage_type needs to be HDF5 or txt");
+                                            panic!(
+                                                "Unknown storage_type:{}{}",
+                                                x, " Needs to be either HDF5 or text"
+                                            );
                                         }
                                     }
-                                    None => storage_type = "txt",
+                                    None => panic!("storage_type needs to be HDF5 or text"),
                                 }
                                 let min_count;
                                 match min_count_option {
