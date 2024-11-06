@@ -1,5 +1,6 @@
 import { renderTable } from '#dom'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
+import { select } from 'd3-selection'
 
 // Given a clusterId, return all its children clusterIds
 export function getAllChildrenClusterIds(clickedClusterId, left) {
@@ -334,6 +335,28 @@ export function setClusteringBtn(holder, callback) {
 					}
 				},
 				{
+					label: 'ZScore Transformation',
+					title: `Option to do zScore transformation`,
+					type: 'checkbox',
+					chartType: 'hierCluster',
+					settingsKey: 'zScoreTransformation',
+					boxLabel: `Perform zScore Transformation`,
+					callback: checked => {
+						if (!checked) {
+							this.config.settings.hierCluster.zScoreTransformation = false
+							this.config.settings.hierCluster.colorScale = 'whiteRed'
+						} else {
+							this.config.settings.hierCluster.zScoreTransformation = true
+							this.config.settings.hierCluster.colorScale = 'blueWhiteRed'
+						}
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: this.id,
+							config: this.config
+						})
+					}
+				},
+				{
 					label: `Clustering Method`,
 					title: `Sets which clustering method to use`,
 					type: 'radio',
@@ -407,9 +430,35 @@ export function setClusteringBtn(holder, callback) {
 						}
 					]
 				}
-			]
+			],
+			customInputs: updateClusteringControls
 		})
 		.html(d => d.label)
 		.style('margin', '2px 0')
 		.on('click', callback)
+}
+
+function updateClusteringControls(self, app, parent, table) {
+	if (parent.chartType == 'hierCluster' && !parent.config.settings.hierCluster.zScoreTransformation) {
+		const zScoreCapControl = select(
+			table
+				.selectAll('td')
+				.filter(function () {
+					return select(this).text() == 'z-score Cap'
+				})
+				.node()
+				.closest('tr')
+		)
+		zScoreCapControl.style('display', 'none')
+		const colorSchemeControl = select(
+			table
+				.selectAll('td')
+				.filter(function () {
+					return select(this).text() == 'Color Scheme'
+				})
+				.node()
+				.closest('tr')
+		)
+		colorSchemeControl.style('display', 'none')
+	}
 }

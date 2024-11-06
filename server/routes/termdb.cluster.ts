@@ -158,7 +158,7 @@ async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000)
 		for (const s of inputData.col_names) {
 			row.push(o[s] || 0)
 		}
-		inputData.matrix.push(getZscore(row))
+		inputData.matrix.push(q.zScoreTransformation ? getZscore(row) : row)
 	}
 
 	if (inputData.matrix.length == 0) throw 'Clustering matrix is empty'

@@ -1428,7 +1428,15 @@ export class MatrixControls {
 	updateSamplesControls(self, app, parent, table) {
 		if (parent.chartType == 'hierCluster' && parent.config.settings.hierCluster.clusterSamples) {
 			const l = parent.config.settings.matrix.controlLabels
-			const sortingControl = table.select(`tr[title='Set how to sort ${l.samples}']`)
+			const sortingControl = select(
+				table
+					.selectAll('td')
+					.filter(function () {
+						return select(this).text() == `Sort ${l.Sample} Priority`
+					})
+					.node()
+					.closest('tr')
+			)
 			sortingControl.style('display', 'none')
 		}
 	}

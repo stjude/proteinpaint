@@ -1293,5 +1293,7 @@ export const colorScaleMap = {
 	blueBlackYellow: {
 		domain: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
 		range: ['#0000FF', '#0000CC', '#000099', '#202020', '#999900', '#CCCC00', '#FFFF00']
-	}
+	},
+	// when hierCluster z-score transformation is not performed, should use two-color scale
+	whiteRed: { domain: [0, 1], range: ['white', 'red'] }
 }
