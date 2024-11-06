@@ -1,61 +1,59 @@
 import { createValidate } from 'typia'
-import type { GetBrainImagingRequest, GetBrainImagingResponse } from '../routes/brainImaging.ts'
-import type { BurdenRequest, BurdenResponse } from '../routes/burden.ts'
-import type { DatasetRequest, DatasetResponse } from '../routes/dataset.ts'
-import type { DsDataRequest, DsDataResponse } from '../routes/dsdata.ts'
-import type { DZImagesRequest, DZImagesResponse } from '../routes/dzimages.ts'
-import type { GdcMafRequest, GdcMafResponse } from '../routes/gdc.maf.ts'
-import type { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse } from '../routes/gdc.topMutatedGenes.ts'
-import type { GeneLookupRequest, GeneLookupResponse } from '../routes/genelookup.ts'
-import type { GenesetEnrichmentRequest, GenesetEnrichmentResponse } from '../routes/genesetEnrichment.ts'
+import type { GetBrainImagingRequest, GetBrainImagingResponse } from '../routes/brainImaging.js'
+import type { BurdenRequest, BurdenResponse } from '../routes/burden.js'
+import type { DatasetRequest, DatasetResponse } from '../routes/dataset.js'
+import type { DsDataRequest, DsDataResponse } from '../routes/dsdata.js'
+import type { DZImagesRequest, DZImagesResponse } from '../routes/dzimages.js'
+import type { GdcMafRequest, GdcMafResponse } from '../routes/gdc.maf.js'
+import type { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse } from '../routes/gdc.topMutatedGenes.js'
+import type { GeneLookupRequest, GeneLookupResponse } from '../routes/genelookup.js'
+import type { GenesetEnrichmentRequest, GenesetEnrichmentResponse } from '../routes/genesetEnrichment.js'
 import type {
 	GenesetOverrepresentationRequest,
 	GenesetOverrepresentationResponse
-} from '../routes/genesetOverrepresentation.ts'
-import type { HealthCheckRequest, HealthCheckResponse } from '../routes/healthcheck.ts'
-import type { HicdataRequest, HicdataResponse } from '../routes/hicdata.ts'
-import type { HicGenomeRequest, HicGenomeResponse } from '../routes/hicgenome.ts'
-import type { HicstatRequest, HicstatResponse } from '../routes/hicstat.ts'
-import type { IsoformLstRequest, IsoformLstResponse } from '../routes/isoformlst.ts'
-import type { NtseqRequest, NtseqResponse } from '../routes/ntseq.ts'
-import type { PdomainRequest, PdomainResponse } from '../routes/pdomain.ts'
-import type { SampleWSImagesRequest, SampleWSImagesResponse } from '../routes/samplewsimages.ts'
-import type { DERequest, DEResponse } from '../routes/termdb.DE.ts'
-import type { BoxPlotRequest, BoxPlotResponse } from '../routes/termdb.boxplot.ts'
-import type { CategoriesRequest, CategoriesResponse } from '../routes/termdb.categories.ts'
-import type { TermdbClusterRequest, TermdbClusterResponse } from '../routes/termdb.cluster.ts'
-import type { TermdbCohortSummaryRequest, TermdbCohortSummaryResponse } from '../routes/termdb.cohort.summary.ts'
-import type { TermdbCohortsRequest, TermdbCohortsResponse } from '../routes/termdb.cohorts.ts'
-import type { DescrStatsRequest, DescrStatsResponse } from '../routes/termdb.descrstats.ts'
-import type { TermdbGetSampleImagesRequest, TermdbGetSampleImagesResponse } from '../routes/termdb.getSampleImages.ts'
-import type { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse } from '../routes/termdb.getTopTermsByType.ts'
-import type {
-	getnumericcategoriesRequest,
-	getnumericcategoriesResponse
-} from '../routes/termdb.getnumericcategories.ts'
-import type { getpercentileRequest, getpercentileResponse } from '../routes/termdb.getpercentile.ts'
-import type { getroottermRequest, getroottermResponse } from '../routes/termdb.getrootterm.ts'
-import type { gettermchildrenRequest, gettermchildrenResponse } from '../routes/termdb.gettermchildren.ts'
+} from '../routes/genesetOverrepresentation.js'
+import type { HealthCheckRequest, HealthCheckResponse } from '../routes/healthcheck.js'
+import type { HicdataRequest, HicdataResponse } from '../routes/hicdata.js'
+import type { HicGenomeRequest, HicGenomeResponse } from '../routes/hicgenome.js'
+import type { HicstatRequest, HicstatResponse } from '../routes/hicstat.js'
+import type { IsoformLstRequest, IsoformLstResponse } from '../routes/isoformlst.js'
+import type { NtseqRequest, NtseqResponse } from '../routes/ntseq.js'
+import type { PdomainRequest, PdomainResponse } from '../routes/pdomain.js'
+import type { SampleWSImagesRequest, SampleWSImagesResponse } from '../routes/samplewsimages.js'
+import type { DERequest, DEResponse } from '../routes/termdb.DE.js'
+import type { BoxPlotRequest, BoxPlotResponse } from '../routes/termdb.boxplot.js'
+import type { CategoriesRequest, CategoriesResponse } from '../routes/termdb.categories.js'
+import type { TermdbClusterRequest, TermdbClusterResponse } from '../routes/termdb.cluster.js'
+import type { TermdbCohortSummaryRequest, TermdbCohortSummaryResponse } from '../routes/termdb.cohort.summary.js'
+import type { TermdbCohortsRequest, TermdbCohortsResponse } from '../routes/termdb.cohorts.js'
+import type { DescrStatsRequest, DescrStatsResponse } from '../routes/termdb.descrstats.js'
+import type { NumericCategoriesRequest, NumericCategoriesResponse } from '../routes/termdb.numericcategories.js'
+import type { PercentileRequest, PercentileResponse } from '../routes/termdb.percentile.js'
+import type { RootTermRequest, RootTermResponse } from '../routes/termdb.rootterm.js'
+import type { TermdbSampleImagesRequest, TermdbSampleImagesResponse } from '../routes/termdb.sampleImages.js'
 import type {
 	TermdbSingleSampleMutationRequest,
 	TermdbSingleSampleMutationResponse
-} from '../routes/termdb.singleSampleMutation.ts'
+} from '../routes/termdb.singleSampleMutation.js'
 import type {
-	TermdbSinglecellDEgenesRequest,
-	TermdbSinglecellDEgenesResponse
-} from '../routes/termdb.singlecellDEgenes.ts'
-import type { TermdbSinglecellDataRequest, TermdbSinglecellDataResponse } from '../routes/termdb.singlecellData.ts'
+	TermdbSingleCellDEgenesRequest,
+	TermdbSingleCellDEgenesResponse
+} from '../routes/termdb.singlecellDEgenes.js'
+import type { TermdbSingleCellDataRequest, TermdbSingleCellDataResponse } from '../routes/termdb.singlecellData.js'
 import type {
-	TermdbSinglecellsamplesRequest,
-	TermdbSinglecellsamplesResponse
-} from '../routes/termdb.singlecellSamples.ts'
-import type { gettermsbyidsRequest, gettermsbyidsResponse } from '../routes/termdb.termsbyids.ts'
+	TermdbSingleCellSamplesRequest,
+	TermdbSingleCellSamplesResponse
+} from '../routes/termdb.singlecellSamples.js'
+import type { TermChildrenRequest, TermChildrenResponse } from '../routes/termdb.termchildren.js'
+import type { TermsByIdsRequest, TermsByIdsResponse } from '../routes/termdb.termsbyids.js'
+import type { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse } from '../routes/termdb.topTermsByType.js'
 import type {
 	TermdbTopVariablyExpressedGenesRequest,
 	TermdbTopVariablyExpressedGenesResponse
-} from '../routes/termdb.topVariablyExpressedGenes.ts'
-import type { getViolinRequest, getViolinResponse } from '../routes/termdb.violin.ts'
-import type { GetWSImagesRequest, GetWSImagesResponse } from '../routes/wsimages.ts'
+} from '../routes/termdb.topVariablyExpressedGenes.js'
+import type { ViolinRequest, ViolinResponse } from '../routes/termdb.violin.js'
+import type { TileRequest, TileResponse } from '../routes/tileserver.js'
+import type { WSImagesRequest, WSImagesResponse } from '../routes/wsimages.js'
 
 export const validGetBrainImagingRequest = createValidate<GetBrainImagingRequest>()
 export const validGetBrainImagingResponse = createValidate<GetBrainImagingResponse>()
@@ -107,31 +105,33 @@ export const validTermdbCohortsRequest = createValidate<TermdbCohortsRequest>()
 export const validTermdbCohortsResponse = createValidate<TermdbCohortsResponse>()
 export const validDescrStatsRequest = createValidate<DescrStatsRequest>()
 export const validDescrStatsResponse = createValidate<DescrStatsResponse>()
-export const validTermdbGetSampleImagesRequest = createValidate<TermdbGetSampleImagesRequest>()
-export const validTermdbGetSampleImagesResponse = createValidate<TermdbGetSampleImagesResponse>()
-export const validTermdbTopTermsByTypeRequest = createValidate<TermdbTopTermsByTypeRequest>()
-export const validTermdbTopTermsByTypeResponse = createValidate<TermdbTopTermsByTypeResponse>()
-export const validgetnumericcategoriesRequest = createValidate<getnumericcategoriesRequest>()
-export const validgetnumericcategoriesResponse = createValidate<getnumericcategoriesResponse>()
-export const validgetpercentileRequest = createValidate<getpercentileRequest>()
-export const validgetpercentileResponse = createValidate<getpercentileResponse>()
-export const validgetroottermRequest = createValidate<getroottermRequest>()
-export const validgetroottermResponse = createValidate<getroottermResponse>()
-export const validgettermchildrenRequest = createValidate<gettermchildrenRequest>()
-export const validgettermchildrenResponse = createValidate<gettermchildrenResponse>()
+export const validNumericCategoriesRequest = createValidate<NumericCategoriesRequest>()
+export const validNumericCategoriesResponse = createValidate<NumericCategoriesResponse>()
+export const validPercentileRequest = createValidate<PercentileRequest>()
+export const validPercentileResponse = createValidate<PercentileResponse>()
+export const validRootTermRequest = createValidate<RootTermRequest>()
+export const validRootTermResponse = createValidate<RootTermResponse>()
+export const validTermdbSampleImagesRequest = createValidate<TermdbSampleImagesRequest>()
+export const validTermdbSampleImagesResponse = createValidate<TermdbSampleImagesResponse>()
 export const validTermdbSingleSampleMutationRequest = createValidate<TermdbSingleSampleMutationRequest>()
 export const validTermdbSingleSampleMutationResponse = createValidate<TermdbSingleSampleMutationResponse>()
-export const validTermdbSinglecellDEgenesRequest = createValidate<TermdbSinglecellDEgenesRequest>()
-export const validTermdbSinglecellDEgenesResponse = createValidate<TermdbSinglecellDEgenesResponse>()
-export const validTermdbSinglecellDataRequest = createValidate<TermdbSinglecellDataRequest>()
-export const validTermdbSinglecellDataResponse = createValidate<TermdbSinglecellDataResponse>()
-export const validTermdbSinglecellsamplesRequest = createValidate<TermdbSinglecellsamplesRequest>()
-export const validTermdbSinglecellsamplesResponse = createValidate<TermdbSinglecellsamplesResponse>()
-export const validgettermsbyidsRequest = createValidate<gettermsbyidsRequest>()
-export const validgettermsbyidsResponse = createValidate<gettermsbyidsResponse>()
+export const validTermdbSingleCellDEgenesRequest = createValidate<TermdbSingleCellDEgenesRequest>()
+export const validTermdbSingleCellDEgenesResponse = createValidate<TermdbSingleCellDEgenesResponse>()
+export const validTermdbSingleCellDataRequest = createValidate<TermdbSingleCellDataRequest>()
+export const validTermdbSingleCellDataResponse = createValidate<TermdbSingleCellDataResponse>()
+export const validTermdbSingleCellSamplesRequest = createValidate<TermdbSingleCellSamplesRequest>()
+export const validTermdbSingleCellSamplesResponse = createValidate<TermdbSingleCellSamplesResponse>()
+export const validTermChildrenRequest = createValidate<TermChildrenRequest>()
+export const validTermChildrenResponse = createValidate<TermChildrenResponse>()
+export const validTermsByIdsRequest = createValidate<TermsByIdsRequest>()
+export const validTermsByIdsResponse = createValidate<TermsByIdsResponse>()
+export const validTermdbTopTermsByTypeRequest = createValidate<TermdbTopTermsByTypeRequest>()
+export const validTermdbTopTermsByTypeResponse = createValidate<TermdbTopTermsByTypeResponse>()
 export const validTermdbTopVariablyExpressedGenesRequest = createValidate<TermdbTopVariablyExpressedGenesRequest>()
 export const validTermdbTopVariablyExpressedGenesResponse = createValidate<TermdbTopVariablyExpressedGenesResponse>()
-export const validgetViolinRequest = createValidate<getViolinRequest>()
-export const validgetViolinResponse = createValidate<getViolinResponse>()
-export const validGetWSImagesRequest = createValidate<GetWSImagesRequest>()
-export const validGetWSImagesResponse = createValidate<GetWSImagesResponse>()
+export const validViolinRequest = createValidate<ViolinRequest>()
+export const validViolinResponse = createValidate<ViolinResponse>()
+export const validTileRequest = createValidate<TileRequest>()
+export const validTileResponse = createValidate<TileResponse>()
+export const validWSImagesRequest = createValidate<WSImagesRequest>()
+export const validWSImagesResponse = createValidate<WSImagesResponse>()

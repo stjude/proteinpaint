@@ -1,4 +1,5 @@
-import type { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse } from '#types'
+import type { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse, RouteApi } from '#types'
+import { termdbTopTermsByTypePayload } from '#types'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
@@ -8,22 +9,21 @@ import { TermTypes } from '#shared/terms.js'
 export const api = {
 	endpoint: 'termdb/getTopTermsByType',
 	methods: {
-		all: {
-			init,
-			request: {
-				typeId: 'TermdbTopTermsByTypeRequest'
-			},
-			response: {
-				typeId: 'TermdbTopTermsByTypeResponse'
-			}
+		get: {
+			...termdbTopTermsByTypePayload,
+			init
+		},
+		post: {
+			...termdbTopTermsByTypePayload,
+			init
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
+	return async (req, res): Promise<void> => {
 		try {
-			const q = req.query as TermdbTopTermsByTypeRequest
+			const q: TermdbTopTermsByTypeRequest = req.query
 			const type = q.type
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
@@ -33,7 +33,7 @@ function init({ genomes }) {
 
 			const t = Date.now()
 			const terms = await ds.queries[type].getTopTerms(q)
-			res.send({ terms } as TermdbTopTermsByTypeResponse)
+			res.send({ terms } satisfies TermdbTopTermsByTypeResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}

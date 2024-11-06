@@ -2,10 +2,10 @@ import fs from 'fs'
 import path from 'path'
 import { read_file } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import type { TermdbSingleSampleMutationRequest, TermdbSingleSampleMutationResponse } from '#types'
+import type { TermdbSingleSampleMutationRequest, TermdbSingleSampleMutationResponse, RouteApi } from '#types'
 import { gdcValidate_query_singleSampleMutation } from '#src/mds3.gdc.js'
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'termdb/singleSampleMutation',
 	methods: {
 		get: {
@@ -30,15 +30,15 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleSampleMutation) throw 'not supported on this dataset'
-			result = (await ds.queries.singleSampleMutation.get(q)) as TermdbSingleSampleMutationResponse
+			result = await ds.queries.singleSampleMutation.get(q)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {
 				status: e.status || 400,
 				error: e.message || e
-			} as TermdbSingleSampleMutationResponse
+			}
 		}
-		res.send(result)
+		res.send(result satisfies TermdbSingleSampleMutationResponse)
 	}
 }
 

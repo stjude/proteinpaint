@@ -1,3 +1,4 @@
+import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 
 export type Sample = {
@@ -17,7 +18,7 @@ export type Sample = {
 	// a sample may have additional fields that will be displayed in table, see singleCell.samples.sampleColumns[]
 }
 
-export type TermdbSinglecellsamplesRequest = {
+export type TermdbSingleCellSamplesRequest = {
 	/** Genome id */
 	genome: string
 	/** Dataset label */
@@ -32,4 +33,14 @@ type ValidResponse = {
 	sameLegend?: boolean
 }
 
-export type TermdbSinglecellsamplesResponse = ErrorResponse | ValidResponse
+export type TermdbSingleCellSamplesResponse = ErrorResponse | ValidResponse
+
+export const termdbSingleCellSamplesPayload: RoutePayload = {
+	request: {
+		typeId: 'TermdbSingleCellSamplesRequest'
+	},
+	response: {
+		typeId: 'TermdbSingleCellSamplesResponse'
+	}
+	// examples: []
+}

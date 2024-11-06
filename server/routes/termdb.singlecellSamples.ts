@@ -10,12 +10,14 @@ import type {
 	SingleCellDataNative,
 	SingleCellGeneExpressionNative,
 	Sample,
-	TermdbSinglecellsamplesRequest,
-	TermdbSinglecellsamplesResponse,
+	TermdbSingleCellSamplesRequest,
+	TermdbSingleCellSamplesResponse,
 	Cell,
 	Plot,
-	TermdbSinglecellDataRequest
+	TermdbSingleCellDataRequest,
+	RouteApi
 } from '#types'
+import { termdbSingleCellSamplesPayload } from '#types'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
@@ -24,24 +26,23 @@ import ky from 'ky'
 this is due to the fact that sometimes not all samples in a dataset has sc data
 */
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'termdb/singlecellSamples',
 	methods: {
-		all: {
-			init,
-			request: {
-				typeId: 'TermdbSinglecellsamplesRequest'
-			},
-			response: {
-				typeId: 'TermdbSinglecellsamplesResponse'
-			}
+		get: {
+			...termdbSingleCellSamplesPayload,
+			init
+		},
+		post: {
+			...termdbSingleCellSamplesPayload,
+			init
 		}
 	}
 }
 
 function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as TermdbSinglecellsamplesRequest
+	return async (req, res): Promise<void> => {
+		const q: TermdbSingleCellSamplesRequest = req.query
 		let result
 		try {
 			const g = genomes[q.genome]
@@ -49,15 +50,15 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
-			result = (await ds.queries.singleCell.samples.get(q)) as TermdbSinglecellsamplesResponse
+			result = await ds.queries.singleCell.samples.get(q)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {
 				status: e.status || 400,
 				error: e.message || e
-			} as TermdbSinglecellsamplesResponse
+			}
 		}
-		res.send(result)
+		res.send(result satisfies TermdbSingleCellSamplesResponse)
 	}
 }
 
@@ -212,7 +213,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 	if (G.storage_type == 'RDS' || !G.storage_type) {
 		// Check if the storage format is RDS file ? For now keeping this as the default format
 		// client actually queries /termdb/singlecellData route for gene exp data
-		G.get = async (q: TermdbSinglecellDataRequest) => {
+		G.get = async (q: TermdbSingleCellDataRequest) => {
 			// q {sample: {eID: str, sID: str}, gene:str}
 			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.rds')
 			try {
@@ -236,7 +237,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		}
 	} else if (G.storage_type == 'HDF5') {
 		// client actually queries /termdb/singlecellData route for gene exp data
-		G.get = async (q: TermdbSinglecellDataRequest) => {
+		G.get = async (q: TermdbSingleCellDataRequest) => {
 			// q {sample:str, gene:str}
 			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
 			try {
@@ -275,7 +276,7 @@ function gdc_validateGeneExpression(G, ds, genome) {
 	G.sample2gene2expressionBins = {} // cache for binning gene expression values
 
 	// client actually queries /termdb/singlecellData route for gene exp data
-	G.get = async (q: TermdbSinglecellDataRequest) => {
+	G.get = async (q: TermdbSingleCellDataRequest) => {
 		// q {sample: {eID: str, sID: str}, gene:str}
 
 		// first version of GDC scrna gene expression API expects:
