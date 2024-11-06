@@ -1,1 +1,2 @@
-
+Features:
+- hiercluster: make zscore transformation a checkbox option in Clustering menu
