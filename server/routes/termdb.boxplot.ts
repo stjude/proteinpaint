@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import type { BoxPlotRequest, BoxPlotResponse } from '#types'
-=======
 import type { BoxPlotRequest, BoxPlotResponse, RouteApi } from '#types'
 import { boxplotPayload } from '#types'
->>>>>>> 9147c20d9 (5th round of moving more route payload declarations from server/routes to types/src/routes code)
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortKey2values } from '../src/termdb.violin.js'

@@ -1,22 +1,28 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type { BrainSample, CategoricalTW, GetBrainImagingSamplesRequest, GetBrainImagingSamplesResponse } from '#types'
+import type {
+	BrainSample,
+	CategoricalTW,
+	BrainImagingSamplesRequest,
+	BrainImagingSamplesResponse,
+	RouteApi
+} from '#types'
 import { spawn } from 'child_process'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
 */
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: 'brainImagingSamples',
 	methods: {
 		get: {
 			init,
 			request: {
-				typeId: 'GetBrainImagingSamplesRequest'
+				typeId: 'BrainImagingSamplesRequest'
 			},
 			response: {
-				typeId: 'GetBrainImagingSamplesResponse'
+				typeId: 'BrainImagingSamplesResponse'
 			}
 		}
 	}
@@ -25,7 +31,7 @@ export const api: any = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			const query = req.query as GetBrainImagingSamplesRequest
+			const query: BrainImagingSamplesRequest = req.query
 
 			const g = genomes[query.genome]
 			if (!g) throw 'invalid genome name'
@@ -33,7 +39,7 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 
 			const samples = await getBrainImageSamples(query, genomes)
-			res.send({ samples })
+			res.send({ samples } satisfies BrainImagingSamplesResponse)
 		} catch (e: any) {
 			console.log(e)
 			res.status(404).send('Sample brain image not found')
@@ -41,7 +47,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getBrainImageSamples(query: GetBrainImagingSamplesRequest, genomes: any): Promise<BrainSample[]> {
+async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: any): Promise<BrainSample[]> {
 	const ds = genomes[query.genome].datasets[query.dslabel]
 	const q = ds.queries.NIdata
 	const key = query.refKey
