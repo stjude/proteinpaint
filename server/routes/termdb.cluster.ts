@@ -1,6 +1,8 @@
 import path from 'path'
 import run_R from '#src/run_R.js'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import type {
+	GeneExpressionInput,
 	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequest,
 	TermdbClusterResponse,
@@ -19,8 +21,7 @@ import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
-import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
-import { getData } from '#src/termdb.matrix.js'
+import { TermTypes } from '#shared/terms.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/cluster',
@@ -47,16 +48,9 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			if (ds.__gdc && !ds.__gdc.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if ([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY, NUMERIC_DICTIONARY_TERM].includes(q.dataType)) {
-				if (!ds.queries?.[q.dataType] && q.dataType !== NUMERIC_DICTIONARY_TERM)
-					throw `no ${q.dataType} data on this dataset`
-				if (!q.terms) throw `missing gene list`
-				if (!Array.isArray(q.terms)) throw `gene list is not an array`
-				// TODO: there should be a fix on the client-side to handle this error more gracefully,
-				// instead of emitting the client-side instructions from the server response and forcing a reload
-				if (q.terms.length < 3)
-					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
-				result = (await getResult(q, ds, g)) as TermdbClusterResponse
+			if (q.dataType == TermTypes.GENE_EXPRESSION || q.dataType == TermTypes.METABOLITE_INTENSITY) {
+				if (!ds.queries?.[q.dataType]) throw `no ${q.dataType} data on this dataset`
+				result = (await getResult(q, ds)) as TermdbClusterResponse
 			} else {
 				throw 'unknown q.dataType ' + q.dataType
 			}
@@ -71,7 +65,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getResult(q: TermdbClusterRequest, ds: any, genome) {
+async function getResult(q: TermdbClusterRequest, ds: any) {
 	let _q: any = q // may assign adhoc flag, use "any" to avoid tsc err and no need to include the flag in the type doc
 
 	if (q.dataType == TermTypes.GENE_EXPRESSION) {
@@ -80,13 +74,7 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 		_q.forClusteringAnalysis = true
 	}
 
-	let term2sample2value, byTermId, bySampleId
-
-	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
-		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds, genome))
-	} else {
-		;({ term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q))
-	}
+	const { term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q) // too strong assumption on queries[dt], may not work for single cell
 
 	if (term2sample2value.size == 0) throw 'no data'
 	if (term2sample2value.size == 1) {
@@ -97,47 +85,19 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 
 	// have data for multiple genes, run clustering
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
-	const clustering: Clustering = await doClustering(term2sample2value, q, Object.keys(bySampleId).length)
+	const clustering: Clustering = await doClustering(term2sample2value, q)
 	if (serverconfig.debugmode) console.log('clustering done:', Date.now() - t, 'ms')
 	return { clustering, byTermId, bySampleId } as ValidResponse
 }
 
-async function getNumericDictTermAnnotation(q, ds, genome) {
-	const getDataArgs = {
-		filter: q.filter,
-		terms: q.terms.map(term => ({ term, q: { mode: 'continuous' } }))
-	}
-	const data = await getData(getDataArgs, ds, genome)
-
-	const term2sample2value = new Map()
-	for (const [key, sampleData] of Object.entries(data.samples)) {
-		for (const [term, value] of Object.entries(sampleData as { [key: string]: unknown })) {
-			if (term !== 'sample') {
-				// Skip the sample number
-				if (!term2sample2value.has(term)) {
-					term2sample2value.set(term, {})
-				}
-				term2sample2value.get(term)[key] = (value as { value: any }).value
-			}
-		}
-	}
-	return { term2sample2value, byTermId: data.refs.byTermId, bySampleId: data.refs.bySampleId }
-}
-
-// default numCases should be matched to maxCase4geneExpCluster in mds3.gdc.js
-async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000) {
+async function doClustering(data: any, q: TermdbClusterRequest) {
 	// get set of unique sample names, to generate col_names dimension
 	const sampleSet = new Set()
-	/* make one pass of whole matrix to collect complete set of samples from all genes
-	this is fast and no performance concern
-	also as a safeguard against genes that is completely blank (gdc), and possible to be missing data for some samples
-	*/
 	for (const o of data.values()) {
-		// o: {sampleId: value}
+		// {sampleId: value}
 		for (const s in o) sampleSet.add(s)
-		if (sampleSet.size >= numCases) break
+		break
 	}
-	if (sampleSet.size == 0) throw 'termdb.cluster: no samples'
 
 	// Checking if cluster and distance method for hierarchial clustering is valid
 	if (!clusterMethodLst.find(i => i.value == q.clusterMethod)) throw 'Invalid cluster method'
@@ -162,7 +122,6 @@ async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000)
 		inputData.matrix.push(q.zScoreTransformation ? getZscore(row) : row)
 	}
 
-	if (inputData.matrix.length == 0) throw 'Clustering matrix is empty'
 	const Routput = JSON.parse(
 		await run_R(path.join(serverconfig.binpath, 'utils', 'hclust.R'), JSON.stringify(inputData))
 	)
@@ -226,12 +185,12 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
 async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any) {
 	if (!q.file.startsWith(serverconfig.tpmasterdir)) q.file = path.join(serverconfig.tpmasterdir, q.file)
 	if (!q.samples) q.samples = []
-	await utils.validate_tabixfile(q.file)
-	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 	q.samples = [] as number[]
 
-	{
+	if (!q.storage_type || q.storage_type == 'bed') {
 		// is a gene-by-sample matrix file
+		await utils.validate_tabixfile(q.file)
+		q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 		const lines = await utils.get_header_tabix(q.file)
 		if (!lines[0]) throw 'header line missing from ' + q.file
 		const l = lines[0].split('\t')
@@ -241,9 +200,36 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 			if (id == undefined) throw 'queries.geneExpression: unknown sample from header: ' + l[i]
 			q.samples.push(id)
 		}
+	} else if (q.storage_type == 'HDF5') {
+		const get_samples_from_hdf5 = {
+			hdf5_file: q.file,
+			data_type: 'expression_samples'
+		}
+		const time1 = new Date().valueOf()
+		const rust_output = await run_rust('readHDF5', JSON.stringify(get_samples_from_hdf5))
+		const time2 = new Date().valueOf()
+		console.log('Time taken to query gene expression:', time2 - time1, 'ms')
+		let result
+		for (const line of rust_output.split('\n')) {
+			if (line.startsWith('output_string:')) {
+				result = line.replace('output_string:', '')
+			} else {
+				//console.log(line)
+			}
+		}
+		const samples = result.split(',')
+		for (const sample of samples) {
+			const id = ds.cohort.termdb.q.sampleName2id(sample)
+			if (id == undefined) throw 'queries.geneExpression: unknown sample from header: ' + sample
+			q.samples.push(id)
+		}
+	} else {
+		throw 'Unknown storage type:' + q.storage_type
 	}
 
 	q.get = async (param: TermdbClusterRequestGeneExpression) => {
+		console.log('q.samples:', q.samples)
+		//console.log("ds:", ds)
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, must still return expected structure with no data
@@ -268,50 +254,80 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		// only valid genes with data are added. invalid genes or genes missing from data file is not added. backend returned genes is allowed to be fewer than supplied by client
 		const term2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
-		for (const geneTerm of param.terms) {
-			if (!geneTerm.gene) continue
-			if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop)) {
-				// need to supply chr/start/stop to query
-				// legacy fpkm files
-				// will not be necessary once these files are retired
-				const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 })
-				if (!re.gmlst || re.gmlst.length == 0) {
-					console.warn('unknown gene:' + geneTerm.gene) // TODO unknown genes should be notified to client
-					continue
+		//console.log("param.terms:",param.terms)
+		console.log('limitSamples:', limitSamples)
+		console.log('q.file:', q.file)
+		const time1 = new Date().valueOf()
+		param.storage_type = ds.queries.geneExpression.storage_type
+		console.log('param.storage_type:', param.storage_type)
+		if (!param.storage_type || param.storage_type == 'bed') {
+			// Using bed file as input
+			for (const geneTerm of param.terms) {
+				if (!geneTerm.gene) continue
+				if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop)) {
+					// need to supply chr/start/stop to query
+					// legacy fpkm files
+					// will not be necessary once these files are retired
+					const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 })
+					if (!re.gmlst || re.gmlst.length == 0) {
+						console.warn('unknown gene:' + geneTerm.gene) // TODO unknown genes should be notified to client
+						continue
+					}
+					const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0]
+					geneTerm.start = i.start
+					geneTerm.stop = i.stop
+					geneTerm.chr = i.chr
 				}
-				const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0]
-				geneTerm.start = i.start
-				geneTerm.stop = i.stop
-				geneTerm.chr = i.chr
+
+				const s2v = {}
+				if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop))
+					throw 'missing chr/start/stop'
+				await utils.get_lines_bigfile({
+					args: [
+						q.file,
+						(q.nochr ? geneTerm.chr.replace('chr', '') : geneTerm.chr) + ':' + geneTerm.start + '-' + geneTerm.stop
+					],
+					callback: line => {
+						const l = line.split('\t')
+						// case-insensitive match! FIXME if g.gene is alias won't work
+						if (l[3].toLowerCase() != geneTerm.gene.toLowerCase()) return
+						for (let i = 4; i < l.length; i++) {
+							const sampleId = samples[i - 4]
+							//console.log("sampleId:",sampleId)
+							if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
+							if (!l[i]) continue // blank string
+							const v = Number(l[i])
+							if (Number.isNaN(v)) throw 'exp value not number'
+							s2v[sampleId] = v
+						}
+					}
+				})
+				if (Object.keys(s2v).length) term2sample2value.set(geneTerm.gene, s2v) // only add gene if has data
+			}
+		} else if (param.storage_type == 'HDF5') {
+			const genes = param.terms.map(x => x.gene).join('\t')
+			const gene_expression_input: GeneExpressionInput = {
+				data_type: 'expression_count',
+				hdf5_file: q.file,
+				genes: genes
+			}
+			if (limitSamples) {
+				gene_expression_input.limitSamples = Array.from(limitSamples).join('\t')
 			}
 
-			const s2v = {}
-			if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop))
-				throw 'missing chr/start/stop'
-			await utils.get_lines_bigfile({
-				args: [
-					q.file,
-					(q.nochr ? geneTerm.chr.replace('chr', '') : geneTerm.chr) + ':' + geneTerm.start + '-' + geneTerm.stop
-				],
-				callback: line => {
-					const l = line.split('\t')
-					// case-insensitive match! FIXME if g.gene is alias won't work
-					if (l[3].toLowerCase() != geneTerm.gene.toLowerCase()) return
-					for (let i = 4; i < l.length; i++) {
-						const sampleId = samples[i - 4]
-						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
-						if (!l[i]) continue // blank string
-						const v = Number(l[i])
-						if (Number.isNaN(v)) throw 'exp value not number'
-						s2v[sampleId] = v
-					}
-				}
-			})
-			if (Object.keys(s2v).length) term2sample2value.set(geneTerm.gene, s2v) // only add gene if has data
+			//const time1 = new Date().valueOf()
+			const rust_output = await run_rust('readHDF5', JSON.stringify(gene_expression_input))
+			//const time2 = new Date().valueOf()
+			console.log('rust_output:', rust_output)
+		} else {
+			throw 'Unknown storage type:' + param.storage_type
 		}
+		const time2 = new Date().valueOf()
+		console.log('Time taken to query gene expression data:', time2 - time1, 'ms')
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
 		if (term2sample2value.size == 0) throw 'no data available for the input ' + param.terms?.map(g => g.gene).join(', ')
+		//console.log("term2sample2value:",term2sample2value)
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }

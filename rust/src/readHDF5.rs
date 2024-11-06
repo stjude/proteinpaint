@@ -1,15 +1,19 @@
 // Need to set HDF5_DIR and LD_LIBRARY_PATH in ~/.bash_profile
-// Syntax: HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 && echo $HDF5_DIR && cd .. && cargo build --release && json='{"gene":"TP53","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/rust_hdf5
+// Syntax: cd .. && cargo build --release && json='{"gene":"TP53","data_type":"singlecell","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/readHDF5
+// cd .. && cargo build --release && json='{"genes":"TP53\tSQOR\tSSPN","limitSamples":"1\t3\t5\t6","data_type":"expression_count","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/rnaseq/exprs.h5"}' && time echo $json | target/release/readHDF5
+// cd .. && cargo build --release && json='{"data_type":"expression_samples","hdf5_file":"/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/rnaseq/exprs.h5"}' && time echo $json | target/release/readHDF5
 
 use hdf5::types::FixedAscii;
+use hdf5::types::VarLenAscii;
 use hdf5::{File, Result};
 use json;
 use ndarray::Array1;
+use ndarray::Array2;
 use ndarray::Dim;
 use std::io;
 use std::time::Instant;
 
-fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
+fn read_single_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     let file = File::open(&hdf5_filename)?; // open for reading
     let ds_dim = file.dataset("data/dim")?; // open the dataset
 
@@ -182,6 +186,131 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     Ok(())
 }
 
+// Used to get the sample names from HDF5 file at PP server startup
+fn get_gene_expression_samples(hdf5_filename: String) -> Result<()> {
+    let file = File::open(&hdf5_filename)?; // open for reading
+    let now_samples = Instant::now();
+    let ds_samples = file.dataset("samples")?;
+    let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>()?;
+    println!("\tsamples = {:?}", samples);
+    println!("\tsamples.shape() = {:?}", samples.shape());
+    println!("\tsamples.strides() = {:?}", samples.strides());
+    println!("\tsamples.ndim() = {:?}", samples.ndim());
+    println!("Time for parsing samples:{:?}", now_samples.elapsed());
+
+    let mut output_string = "".to_string();
+    for i in 1..samples.len() {
+        //let item_json = "{\"".to_string()
+        //    + &samples[i].to_string()
+        //    + &"\","
+        //    + &gene_array[i].to_string()
+        //    + &"}";
+
+        //let item_json = format!("{{\"{}\"}}", samples[i].to_string());
+
+        output_string += &format!("{}", samples[i].to_string());
+        //println!("item_json:{}", item_json);
+
+        //let item_json = format!(
+        //    r##"{{"{}",{}}}"##,
+        //    samples[i].to_string().replace("\\", ""),
+        //    gene_array[i].to_string()
+        //);
+        if i != samples.len() - 1 {
+            output_string += &",";
+        }
+    }
+    println!("output_string:{}", output_string);
+    Ok(())
+}
+
+fn read_gene_expression_hdf5(
+    hdf5_filename: String,
+    genes_string: String,
+    limit_samples: Option<&str>,
+) -> Result<()> {
+    let file = File::open(&hdf5_filename)?; // open for reading
+    let ds_dim = file.dataset("dims")?; // open the dataset
+
+    // Check the data type and read the dataset accordingly
+    let data_dim: Array1<_> = ds_dim.read::<usize, Dim<[usize; 1]>>()?;
+    let num_samples = data_dim[0]; // Number of total columns in the dataset
+    let num_genes = data_dim[1]; // Number of total rows in the dataset
+    println!("num_samples bulk:{}", num_samples);
+    println!("num_genes bulk:{}", num_genes);
+
+    let now_genes = Instant::now();
+    let ds_genes = file.dataset("gene_symbols")?;
+    println!("ds_genes:{:?}", ds_genes);
+    let genes = ds_genes.read::<VarLenAscii, Dim<[usize; 1]>>()?;
+    println!("\tgenes = {:?}", genes);
+    println!("\tgenes.shape() = {:?}", genes.shape());
+    println!("\tgenes.strides() = {:?}", genes.strides());
+    println!("\tgenes.ndim() = {:?}", genes.ndim());
+    println!("Time for parsing genes:{:?}", now_genes.elapsed());
+
+    let now_samples = Instant::now();
+    let ds_samples = file.dataset("samples")?;
+    let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>()?;
+    println!("\tsamples = {:?}", samples);
+    println!("\tsamples.shape() = {:?}", samples.shape());
+    println!("\tsamples.strides() = {:?}", samples.strides());
+    println!("\tsamples.ndim() = {:?}", samples.ndim());
+    println!("Time for parsing samples:{:?}", now_samples.elapsed());
+
+    //Find all columns values that are populated for the given gene
+    let now_counts = Instant::now();
+    let ds_counts = file.dataset("counts")?; // open the dataset
+
+    let genes_list: Vec<&str> = genes_string.split("\t").collect();
+
+    for gene_name in genes_list {
+        let gene_index;
+        match genes.iter().position(|x| x.to_string() == gene_name) {
+            Some(index) => {
+                println!(
+                    "The index of '{}' is {} in 0-based format (add 1 to compare with R output)",
+                    gene_name, index
+                );
+                gene_index = index;
+            }
+            None => panic!(
+                "Gene '{}' not found in the HDF5 file '{}'",
+                gene_name, &hdf5_filename
+            ),
+        }
+
+        //let data_counts: Array1<_> = ds_counts.read::<f64, Dim<[usize; 1]>>()?;
+        //println!("Data_counts: {:?}", data_counts);
+        let gene_query = Instant::now();
+        let gene_array: Array2<f64> =
+            ds_counts.read_slice_2d((gene_index..gene_index + 1, 0..num_samples))?;
+        println!("Time for querying genes:{:?}", gene_query.elapsed());
+
+        match limit_samples {
+            Some(lim_sam) => {
+                let lim_samples_list: Vec<&str> = lim_sam.split("\t").collect();
+                let mut lim_samples_usize: Vec<usize> = Vec::with_capacity(lim_samples_list.len());
+                for i in 0..lim_samples_list.len() {
+                    lim_samples_usize.push(lim_samples_list[i].parse::<usize>().unwrap())
+                }
+                println!("Dimensions of gene_array:{:?}", gene_array.dim().1);
+                for i in 0..gene_array.dim().1 {
+                    // Check if this correct dimension is being queried
+                    for j in 0..lim_samples_usize.len() {
+                        // Need to implement binary search to speed up the loop
+                        if i == lim_samples_usize[j] {} // This vector contains the indicies of the samples that needs to be queried.
+                    }
+                }
+            }
+            None => {}
+        }
+        //println!("Length of gene array:{:?}", gene_array.len()); // Check the result
+        println!("Time for parsing gene data:{:?}", now_counts.elapsed());
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
@@ -204,18 +333,65 @@ fn main() -> Result<()> {
                         }
                     }
 
+                    let data_type_result = &json_string["data_type"].to_owned();
+
                     let gene_result = &json_string["gene"].to_owned();
-                    let gene_name;
                     match gene_result.as_str() {
-                        Some(x) => {
-                            gene_name = x.to_string();
-                        }
+                        Some(_x) => {}
                         None => {
-                            panic!("Gene name not provided");
+                            // This panic statement has been put inside an if statement because in case of a sample request, no gene names will be provided. Later need to organize the different queries into enums so as to type check each request.
+                            if data_type_result.as_str().unwrap() != "expression_samples"
+                                && data_type_result.as_str().unwrap() != "expression_count"
+                            {
+                                panic!("Gene name not provided");
+                            }
                         }
                     }
 
-                    read_hdf5(hdf5_filename, gene_name)?;
+                    let data_type;
+                    match data_type_result.as_str() {
+                        Some(x) => {
+                            data_type = x.to_string();
+
+                            let gene_result2 = &json_string["gene"].to_owned();
+                            match gene_result2.as_str() {
+                                Some(gene_name) => {
+                                    if data_type == "singlecell" {
+                                        read_single_hdf5(
+                                            hdf5_filename.clone(),
+                                            gene_name.to_string(),
+                                        )?;
+                                    }
+                                }
+                                None => {
+                                    if data_type == "expression_samples" {
+                                        get_gene_expression_samples(hdf5_filename.clone())?;
+                                    }
+                                }
+                            }
+
+                            let genes_result = &json_string["genes"].to_owned();
+                            match genes_result.as_str() {
+                                Some(genes) => {
+                                    if data_type == "expression_count" {
+                                        let limit_samples = &json_string["limitSamples"].to_owned();
+                                        read_gene_expression_hdf5(
+                                            hdf5_filename,
+                                            genes.to_string(),
+                                            limit_samples.as_str(),
+                                        )?;
+                                    } else {
+                                        panic!("data_type needs to be singlecell, expression_count or expression_samples");
+                                    }
+                                }
+                                None => {}
+                            }
+                        }
+                        None => {
+                            panic!("Data type not provided");
+                        }
+                    }
+
                     println!("Time for parsing genes from HDF5:{:?}", now.elapsed());
                 }
                 Err(error) => println!("Incorrect json: {}", error),
