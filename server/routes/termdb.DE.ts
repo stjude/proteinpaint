@@ -51,12 +51,7 @@ param{}
 	if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
 	// txt file uses string sample name, must convert integer sample id to string
 	// txt file uses string sample name, must convert integer sample id to string
-
-	console.log('ds:', ds)
-	if (ds.queries.rnaseqGeneCount.storage_type) {
-		param.storage_type = ds.queries.rnaseqGeneCount.storage_type
-	}
-	console.log('param:', param)
+	param.storage_type = ds.queries.rnaseqGeneCount.storage_type
 
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
@@ -110,13 +105,11 @@ param{}
 		data_type: 'do_DE',
 		input_file: q.file,
 		min_count: param.min_count,
-		min_total_count: param.min_total_count
+		min_total_count: param.min_total_count,
+		storage_type: param.storage_type
 	} as ExpressionInput
 
-	if (param.storage_type) {
-		expression_input.storage_type = param.storage_type
-	}
-	console.log('expression_input:', expression_input)
+	//console.log('expression_input:', expression_input)
 	//fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
 	//	// For catching input to rust pipeline, in case of an error
 	//	if (err) return console.log(err)
