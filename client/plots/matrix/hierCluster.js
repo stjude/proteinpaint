@@ -119,8 +119,6 @@ export class HierCluster extends Matrix {
 		const c = this.hierClusterData.clustering
 		this.setHierColorScale(c)
 
-		const zScoreCap = this.settings.hierCluster.zScoreCap // used in loops below
-
 		const samples = {}
 
 		/* see comments inside plotDendrogramHclust() on structure of d.clustering.row{} and col{}
@@ -219,6 +217,7 @@ export class HierCluster extends Matrix {
 			dataType: state.config.dataType,
 			clusterMethod: s.clusterMethod,
 			distanceMethod: s.distanceMethod,
+			zScoreTransformation: s.zScoreTransformation,
 			terms,
 			filter: getNormalRoot(filterJoin([state.filter, dictionaryLegendFilter])),
 			filter0: state.filter0
@@ -259,14 +258,22 @@ export class HierCluster extends Matrix {
 			globalMinMaxes.push(...extent(row))
 		}
 		const absMax = Math.min(hc.zScoreCap, Math.max(...extent(globalMinMaxes).map(Math.abs)))
-		const [min, max] = [-absMax, absMax]
+		// if zScore transformation is not performed, should use min/max value from data
+		const [min, max] = hc.zScoreTransformation
+			? [-absMax, absMax]
+			: [Math.min(...globalMinMaxes), Math.max(...globalMinMaxes)]
 		// what's purpose of assigning this.hierClusterValues{}, to signal something to matrix code?
 		this.hierClusterValues = { scale, min, max }
 	}
 
 	getValueColor(value) {
-		const zScoreCap = this.settings.hierCluster.zScoreCap
-		return this.hierClusterValues.scale((value - -zScoreCap) / (zScoreCap * 2))
+		const hc = this.settings.hierCluster
+		if (hc.zScoreTransformation) {
+			const zScoreCap = this.settings.hierCluster.zScoreCap
+			return this.hierClusterValues.scale((value - -zScoreCap) / (zScoreCap * 2))
+		} else {
+			return this.hierClusterValues.scale(value / this.hierClusterValues.max)
+		}
 	}
 
 	/* returns list of gene terms as request parameter, e.g. {gene,chr,start,stop}

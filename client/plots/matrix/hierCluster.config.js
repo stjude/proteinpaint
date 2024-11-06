@@ -25,12 +25,25 @@ export async function getPlotConfig(opts = {}, app) {
 		clusterMethod: 'average', // complete
 		distanceMethod: 'euclidean',
 		zScoreCap: 5,
+		zScoreTransformation: true,
 		xDendrogramHeight: 100,
 		yDendrogramHeight: 200,
 		colorScale: 'blueWhiteRed'
 	}
 	const overrides = app.vocabApi.termdbConfig.hierCluster || {}
-	copyMerge(config.settings.hierCluster, overrides.settings, opts.settings?.hierCluster || {})
+
+	// hierClusterSubTypeOverrides has settings from specific hierCluster type, such as geneExpression, metaboliteIntensity, numericDictTermCluster.
+	// should override config so that each hierCluster type could have its own customized settings that are different from the other hierCluster
+	// types in the same dataset. e.g. redomics could do z-score transformation for gene expression cluster and do not do z-score tranformation for
+	// metabolite intensity cluster
+	const hierClusterSubTypeOverrides = app.vocabApi.termdbConfig[`${config.dataType}Cluster`] || {}
+
+	copyMerge(
+		config.settings.hierCluster,
+		overrides.settings,
+		opts.settings?.hierCluster || {},
+		hierClusterSubTypeOverrides.settings
+	)
 
 	// okay to validate state here?
 	{

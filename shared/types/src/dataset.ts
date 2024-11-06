@@ -918,6 +918,8 @@ type MatrixSettings = {
 type NumericDictTermClusterSettings = {
 	/** default hiercluster group name */
 	termGroupName?: string
+	zScoreTransformation?: boolean
+	colorScale?: string
 }
 
 type Matrix = {
@@ -932,6 +934,7 @@ type Matrix = {
 	legendValueFilter?: any
 }
 
+// specific hierCluster type settings, should be named as "dataTYpe + Cluster"
 type NumericDictTermCluster = {
 	/** alternative name, e.g. the plot is called "drug sensitivity" in ALL-pharmacotyping; by default it's called "Numeric Dictionary Term cluster" */
 	appName?: string
