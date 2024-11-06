@@ -525,7 +525,7 @@ class Barchart {
 
 	sortStacking(series, chart, chartsData) {
 		this.term1toColor[series.seriesId] = this.settings.colorBars
-			? this.getColor(this.config.term.term, series.seriesId, this.bins?.[1])
+			? this.getColor(this.config.term, series.seriesId, this.bins?.[1])
 			: this.settings.defaultColor
 
 		series.visibleData.sort(this.overlaySorter)
