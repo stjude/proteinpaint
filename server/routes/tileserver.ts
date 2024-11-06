@@ -3,7 +3,7 @@ import { tilePayload } from '#types'
 import ky from 'ky'
 import serverconfig from '#src/serverconfig.js'
 
-export const api: any = {
+export const api: RouteApi = {
 	endpoint: `tileserver/layer/slide/:sampleId/zoomify/:TileGroup/:z-:x-:y@1x.jpg`,
 	methods: {
 		get: {

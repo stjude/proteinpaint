@@ -2,7 +2,6 @@ import type { TermdbCohortsRequest, TermdbCohortsResponse, RouteApi } from '#typ
 import { termdbCohortsPayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js' // ??? is this needed for this route ???
-import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/cohorts',
