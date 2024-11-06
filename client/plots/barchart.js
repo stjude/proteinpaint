@@ -108,8 +108,16 @@ export class Barchart {
 					defaultQ4fillTW: term0_term2_defaultQ,
 					getDisplayStyle: () => (this.settings.unit == 'log' ? 'none' : ''),
 					processConfig: config => {
-						//Prevent log scale shown in overlay
-						if (config.term2 && this.settings.unit == 'log') this.settings.unit == 'abs'
+						//config.settings not usually passed for logic check below
+						//Get settings from the state and pass config change back
+						const state = this.app.getState()
+						const settings = state.plots.find(p => p.id === this.id).settings
+						if (!config.settings) config.settings = { barchart: {} }
+						//Prevent showing Log option when overlay is selected
+						if (config.term2 && settings.barchart.unit == 'log') config.settings.barchart.unit = 'abs'
+						//Revert back to Linear radio when Proportion is selected
+						//but the overlay term is removed
+						if (!config.term2 && settings.barchart.unit == 'pct') config.settings.barchart.unit = 'abs'
 					}
 				},
 				{
