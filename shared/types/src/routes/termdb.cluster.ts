@@ -34,6 +34,7 @@ export type TermdbClusterRequestGeneExpression = TermdbClusterRequestBase & {
 	dataType: 'geneExpression'
 	/** List of terms */
 	terms: GeneExpressionTerm[]
+	zScoreTransformation?: string
 }
 
 export type TermdbClusterRequestMetabolite = TermdbClusterRequestBase & {
@@ -41,6 +42,7 @@ export type TermdbClusterRequestMetabolite = TermdbClusterRequestBase & {
 	dataType: 'metaboliteIntensity'
 	/** List of terms */
 	terms: MetaboliteIntensityTerm[]
+	zScoreTransformation?: string
 }
 
 export type TermdbClusterRequestNumericDictTerm = TermdbClusterRequestBase & {
@@ -48,6 +50,7 @@ export type TermdbClusterRequestNumericDictTerm = TermdbClusterRequestBase & {
 	dataType: 'numericDictTerm'
 	/** List of terms */
 	terms: NumericDictTerm[]
+	zScoreTransformation?: string
 }
 
 export type TermdbClusterRequest =
