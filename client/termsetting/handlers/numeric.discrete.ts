@@ -482,7 +482,11 @@ function renderLastBinInputs(self, tr: any) {
 	// tell if last bin is automatic (not fixed)
 	const isAuto = !self.q.last_bin || !Number.isFinite(self.q.last_bin.start)
 
-	tr.append('td').style('margin', '5px').style('opacity', 0.5).text('Last Bin Start')
+	tr.append('td')
+		.style('padding-top', '4px')
+		.style('opacity', 0.5)
+		.style('vertical-align', 'top')
+		.text('Last Bin Start')
 
 	const dd = self.num_obj.density_data as DensityData
 
