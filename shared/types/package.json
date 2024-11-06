@@ -18,7 +18,8 @@
   "scripts": {
     "prepare": "ts-patch install",
     "test": "tsc",
-    "build": "typia generate --input src/checkers --output dist"
+    "build": "typia generate --input src/checkers --output dist",
+    "doc": "./doc.sh"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",

@@ -4,7 +4,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js" integrity="sha512-FHsFVKQ/T1KWJDGSbrUhTJyS1ph3eRrxI228ND0EGaEp6v4a/vGwPWd3Dtd/+9cI7ccofZvl/wulICEurHN1pg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- pragma: allowlist secret -->
   <link rel="stylesheet" href="/docs/server/assets/style.css"/>
   <link rel="stylesheet" href="/docs/server/assets/highlight.css"/>
-  <script src='/docs/server/checkers.js' type='module'></script>
+ <!--  <script src='/docs/server/checkers.js' type='module'></script> -->
   <style>
     .sjpp-endpoint-div {
       margin: 20px 10px 44px 10px;
@@ -69,10 +69,10 @@
     </div>
   </div>
 </div>
-<script>
+<script type='module'>
+import * as ppcheckers from './docs/server/checkers.js'
 
 init()
-
 
 
 async function init() {
@@ -280,7 +280,7 @@ async function init() {
       .on('click', function(selectData) {
         const d = selectData.selected
         if (d?.url == 'spec') return
-        fetchData(api, d, method, m, section, window.ppcheckers[`valid${m.response.typeId}`])
+        fetchData(api, d, method, m, section, ppcheckers[`valid${m.response.typeId}`])
       })
   }
 
