@@ -10,6 +10,7 @@ let auth
 export async function getStat(genomes) {
 	if (!versionInfo.deps) setVersionInfoDeps() // set only once
 	if (!auth) auth = await authApi.getHealth() // set only once
+	if (Array.isArray(auth?.errors) && !auth.errors.length) delete auth.errors
 
 	const health = {
 		status: auth?.errors?.length ? 'error' : 'ok',

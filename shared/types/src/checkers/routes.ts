@@ -1,5 +1,5 @@
 import { createValidate } from 'typia'
-import type { GetBrainImagingRequest, GetBrainImagingResponse } from '../routes/brainImaging.js'
+import type { BrainImagingRequest, BrainImagingResponse } from '../routes/brainImaging.js'
 import type { BurdenRequest, BurdenResponse } from '../routes/burden.js'
 import type { DatasetRequest, DatasetResponse } from '../routes/dataset.js'
 import type { DsDataRequest, DsDataResponse } from '../routes/dsdata.js'
@@ -55,8 +55,8 @@ import type { ViolinRequest, ViolinResponse } from '../routes/termdb.violin.js'
 import type { TileRequest, TileResponse } from '../routes/tileserver.js'
 import type { WSImagesRequest, WSImagesResponse } from '../routes/wsimages.js'
 
-export const validGetBrainImagingRequest = createValidate<GetBrainImagingRequest>()
-export const validGetBrainImagingResponse = createValidate<GetBrainImagingResponse>()
+export const validBrainImagingRequest = createValidate<BrainImagingRequest>()
+export const validBrainImagingResponse = createValidate<BrainImagingResponse>()
 export const validBurdenRequest = createValidate<BurdenRequest>()
 export const validBurdenResponse = createValidate<BurdenResponse>()
 export const validDatasetRequest = createValidate<DatasetRequest>()
