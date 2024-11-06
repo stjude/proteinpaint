@@ -1,12 +1,10 @@
 import type { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse, RouteApi } from '#types'
 import { termdbTopTermsByTypePayload } from '#types'
-import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'
 import { TermTypes } from '#shared/terms.js'
 
-export const api = {
+export const api: RouteApi = {
 	endpoint: 'termdb/getTopTermsByType',
 	methods: {
 		get: {
@@ -31,7 +29,7 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.queries[type]) throw 'not supported on dataset'
 
-			const t = Date.now()
+			//const t = Date.now()
 			const terms = await ds.queries[type].getTopTerms(q)
 			res.send({ terms } satisfies TermdbTopTermsByTypeResponse)
 		} catch (e: any) {
@@ -109,7 +107,7 @@ async function computeTopTerms(file, samples, type) {
 }
 
 function gdcValidateQuery(ds: any, genome: any, type: string) {
-	ds.queries[type].getTopTerms = async (q: TermdbTopTermsByTypeRequest) => {
+	ds.queries[type].getTopTerms = async () => {
 		return []
 	}
 }
