@@ -1,6 +1,6 @@
 import { format } from 'd3-format'
 import { getColors } from './common.js'
-import { strictNumeric, convertUnits } from './helpers.js'
+import { isStrictNumeric, convertUnits } from './helpers.js'
 
 export default function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
@@ -35,14 +35,14 @@ export default function validate_bins(binconfig) {
 				if (!('stop' in bin)) {
 					throw `a custom first bin must define a bin.stop value`
 				}
-				if (!strictNumeric(bin.stop)) {
+				if (!isStrictNumeric(bin.stop)) {
 					throw `a custom first bin.stop value should be numeric`
 				}
 			} else if (bin == last_bin) {
 				if (!('start' in bin)) {
 					throw `a custom last bin must define a bin.start value`
 				}
-				if (!strictNumeric(bin.start)) {
+				if (!isStrictNumeric(bin.start)) {
 					throw `a custom last bin.start must be numeric`
 				}
 				if ('stopunbounded' in bin && !bin.stopunbounded) {
@@ -53,8 +53,8 @@ export default function validate_bins(binconfig) {
 					throw 'a custom last bin must not set a bin.stop value'
 				}
 			} else {
-				if (!strictNumeric(bin.start)) throw 'bin.start must be numeric for a non-first bin'
-				if (!strictNumeric(bin.stop)) throw 'bin.stop must be numeric for a non-last bin'
+				if (!isStrictNumeric(bin.start)) throw 'bin.start must be numeric for a non-first bin'
+				if (!isStrictNumeric(bin.stop)) throw 'bin.stop must be numeric for a non-last bin'
 			}
 		}
 	} else if (bc.type == 'regular-bin') {
@@ -156,19 +156,19 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			? maxCeil // in order to include the max value in the last bin
 			: bc.last_bin.stop_percentile
 			? summary['p' + bc.last_bin.stop_percentile]
-			: strictNumeric(bc.last_bin.stop) && bc.last_bin.stop <= summary.max
+			: isNumeric(bc.last_bin.stop) && bc.last_bin.stop <= summary.max // '0.0088' < 0.0088
 			? bc.last_bin.stop
 			: maxCeil // in order to include the max value in the last bin
-		last_start = strictNumeric(bc.last_bin.start_percentile)
+		last_start = isStrictNumeric(bc.last_bin.start_percentile)
 			? summary['p' + bc.last_bin.start_percentile]
-			: strictNumeric(bc.last_bin.start)
+			: isStrictNumeric(bc.last_bin.start)
 			? bc.last_bin.start
 			: undefined
 		last_stop = bc.last_bin.stopunbounded
 			? null
 			: bc.last_bin.stop_percentile
 			? summary['p' + bc.last_bin.stop_percentile]
-			: strictNumeric(bc.last_bin.stop)
+			: isStrictNumeric(bc.last_bin.stop)
 			? bc.last_bin.stop
 			: null
 	} else if (bc.lst) {
@@ -181,9 +181,9 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 		last_stop = maxCeil
 	}
 
-	const numericMax = strictNumeric(max)
-	const numericLastStart = strictNumeric(last_start)
-	const numericLastStop = strictNumeric(last_stop)
+	const numericMax = isStrictNumeric(max)
+	const numericLastStart = isStrictNumeric(last_start)
+	const numericLastStop = isStrictNumeric(last_stop)
 
 	if (!numericMax && !numericLastStart) return [] //throw 'unable to compute the last bin start or stop'
 
@@ -191,16 +191,16 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	let currBin = {
 		startunbounded: bc.first_bin.startunbounded,
 		start: bc.first_bin.startunbounded ? undefined : min,
-		stop: strictNumeric(bc.first_bin.stop_percentile)
+		stop: isStrictNumeric(bc.first_bin.stop_percentile)
 			? +summary['p' + bc.first_bin.stop_percentile]
-			: strictNumeric(bc.first_bin.stop)
+			: isStrictNumeric(bc.first_bin.stop)
 			? +bc.first_bin.stop
 			: min + bc.bin_size,
 		startinclusive: bc.startinclusive,
 		stopinclusive: bc.stopinclusive
 	}
 
-	if (!strictNumeric(currBin.stop)) throw 'the computed first_bin.stop is non-numeric' + currBin.stop
+	if (!isStrictNumeric(currBin.stop)) throw 'the computed first_bin.stop is non-numeric' + currBin.stop
 	const maxNumBins = 100 // harcoded limit for now to not stress sqlite
 
 	while ((numericMax && currBin.stop <= max) || (currBin.startunbounded && !bins.length) || currBin.stopunbounded) {
@@ -372,10 +372,10 @@ export function get_bin_range_equation(bin, binconfig) {
 export function target_percentiles(binconfig) {
 	const percentiles = []
 	const f = binconfig.first_bin
-	if (f && strictNumeric(f.start_percentile)) percentiles.push(f.start_percentile)
-	if (f && strictNumeric(f.stop_percentile)) percentiles.push(f.stop_percentile)
+	if (f && isStrictNumeric(f.start_percentile)) percentiles.push(f.start_percentile)
+	if (f && isStrictNumeric(f.stop_percentile)) percentiles.push(f.stop_percentile)
 	const l = binconfig.last_bin
-	if (l && strictNumeric(l.start_percentile)) percentiles.push(l.start_percentile)
-	if (l && strictNumeric(l.stop_percentile)) percentiles.push(l.stop_percentile)
+	if (l && isStrictNumeric(l.start_percentile)) percentiles.push(l.start_percentile)
+	if (l && isStrictNumeric(l.stop_percentile)) percentiles.push(l.stop_percentile)
 	return percentiles
 }

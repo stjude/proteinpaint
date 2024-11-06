@@ -1,22 +1,25 @@
 /*
 this is a helper file with a collection of functions to be used in backend and client side code. Here is a list.
 
-1. isNumeric(n) - checks whether given argument n is Numeric, with option to cast from string
-2. strictNumeric(n) - like isNumeric but does not cast from string
-2. convertUnits - converts a value from a unit to another unit
+1. isNumeric(n)
+2. strictNumeric(n) 
+2. convertUnits
 3. TODO - move computepercentile, roundValue, etc here?
 */
 
+// checks whether given argument n is Numeric, with option to cast from string
 export function isNumeric(n) {
 	const v = typeof n != 'string' || n === '' ? n : Number(n)
 	const f = parseFloat(n)
 	return !isNaN(f) && Number.isFinite(v) && v === f
 }
 
-export function strictNumeric(n) {
-	return !isNaN(parseFloat(n)) && Number.isFinite(n)
+// like isNumeric but does not cast from string
+export function isStrictNumeric(n) {
+	return typeof n === 'number' && Number.isFinite(n)
 }
 
+// converts a value from a unit to another unit
 export function convertUnits(v, fromUnit, toUnit, scaleFactor, compact) {
 	// do floor() on toUnit
 	// do ceil() on fromUnit, in case v is decimal (from violin range selection) and to keep showing integer fromUnit
