@@ -4,16 +4,16 @@ export type BoxPlotRequest = {
 }
 
 export type BoxPlotResponse = {
-	plots: BoxPlotEntry[]
 	/** Absolute min value for all plots */
 	absMin: number
 	/** Absolute max value for all plots */
 	absMax: number
 	/** Longest label length for all plots */
 	maxLabelLgth: number
+	plots: BoxPlotEntry[]
 }
 
-export type BoxPlotEntry = {
+type BoxPlotEntry = {
 	boxplot: BoxPlotData
 	/** Label to show */
 	label: string
@@ -27,14 +27,23 @@ export type BoxPlotEntry = {
 	max: number
 }
 
-export type BoxPlotData = {
+type BoxPlotData = {
+	/** Min/1st whisker value */
 	w1: number
+	/** Max/2nd whisker value */
 	w2: number
+	/** 5% */
 	p05: number
+	/** 25% */
 	p25: number
+	/** 50% */
 	p50: number
+	/** 75% */
 	p75: number
+	/** 95% */
 	p95: number
+	/** Interquartile region */
 	iqr: number
+	/** Outliers */
 	out: { value: number }[]
 }

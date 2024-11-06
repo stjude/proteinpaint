@@ -233,48 +233,53 @@ function setRenderers(self) {
 				{
 					childType: 'boxplot',
 					label: 'Boxplot',
-					disabled: d => true,
-					/** To see the boxplot, comment out the line below and
-					 * uncomment the line below it. Non-visible whilst in
-					 * development */
-					isVisible: () => false,
-					// isVisible: () => isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term),
+					disabled: d => false,
+					isVisible: () => {
+						//Remove after development
+						const features = JSON.parse(sessionStorage.getItem('optionalFeatures')) || {}
+						if (
+							features?.draftChartTypes.indexOf('boxplot') != -1 &&
+							(isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term))
+						)
+							return true
+						// isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term)
+					},
 					getConfig: async () => {
-						const term = self.config?.term
-						const term2 = self.config.term2
+						const _term = self.config?.term
+						const _term2 = self.config.term2
 
-						let termMode, term2Mode
-						self.boxContTerm = isNumericTerm(term?.term) ? 'term' : 'term2'
+						let termMode = 'continuous',
+							term2Mode = 'discrete'
+						self.boxContTerm = isNumericTerm(_term?.term) ? 'term' : 'term2'
 
 						//If the first term was continuous or is coming as continuous
-						if ((self.boxContTerm && self.boxContTerm === 'term') || term.q?.mode == 'continuous') {
+						if ((self.boxContTerm && self.boxContTerm === 'term') || _term.q?.mode == 'continuous') {
 							// must mean coming from scatter plot
 							termMode = 'continuous'
 							term2Mode = 'discrete'
+							self.boxContTerm = 'term'
 						}
 						//If the second term was continuous or is coming as continuous
-						else if ((self.boxContTerm && self.boxContTerm === 'term2') || term2?.q?.mode == 'continuous') {
-							// must mean coming from barchart
-							termMode = 'discrete'
-							term2Mode = 'continuous'
-						}
-						//If the second term is coming as discrete from the scatter
-						else if (term2?.q?.mode == 'discrete') {
+						else if ((self.boxContTerm && self.boxContTerm === 'term2') || _term2?.q?.mode == 'continuous') {
 							// must mean coming from barchart
 							termMode = 'discrete'
 							term2Mode = 'continuous'
 							self.boxContTerm = 'term2'
 						}
-						//by default
-						else {
-							termMode = 'continuous'
-							term2Mode = 'discrete'
-							self.boxContTerm = 'term'
+						//If the second term is coming as discrete from the scatter
+						else if (_term2?.q?.mode == 'discrete') {
+							// must mean coming from barchart
+							termMode = 'discrete'
+							term2Mode = 'continuous'
+							self.boxContTerm = 'term2'
 						}
+
+						const term = await self.getWrappedTermCopy(_term, termMode)
+						const term2 = await self.getWrappedTermCopy(_term2, term2Mode)
 						const config = {
 							childType: 'boxplot',
-							term: await self.getWrappedTermCopy(term, termMode),
-							term2: await self.getWrappedTermCopy(term2, termMode)
+							term,
+							term2
 						}
 						return config
 					},
@@ -399,10 +404,14 @@ export async function getPlotConfig(opts, app) {
 			if (!edits.childType) {
 				if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
 					config.childType = 'sampleScatter'
-				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous')
-					if (opts.childType != 'boxplot') config.childType = 'violin'
-					else config.childType = 'boxplot'
-				else config.childType = 'barchart'
+				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
+					/** Fix for summary tabs switching to different plots when opening and closing
+					 * controls, changing settings, etc. */
+					const state = app.getState()
+					if (state && state.plots) {
+						config.childType = state.plots.find(p => p.id === config.id).childType
+					} else config.childType = opts.childType || 'violin'
+				} else config.childType = 'barchart'
 			}
 		}
 	}

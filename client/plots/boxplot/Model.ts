@@ -1,6 +1,11 @@
 import type { MassAppApi } from '../../mass/types/mass'
 import type { BoxplotSettings } from './Boxplot'
+import { isNumericTerm } from '#shared/terms.js'
 
+/**
+ * Requests data for the boxplots.
+ * Add more methods for formating the request opts and api requests.
+ */
 export class Model {
 	config: any
 	state: any
@@ -14,13 +19,27 @@ export class Model {
 	}
 
 	async getData() {
-		const boxPlotDataArgs: any = {
-			tw: this.config.term,
-			filter: this.state.termfilter.filter
-		}
-		if (this.config.term2) boxPlotDataArgs.divideTw = this.config.term2
+		const boxPlotDataArgs = this.setRequestOpts()
 
 		const data = await this.app.vocabApi.getBoxPlotData(boxPlotDataArgs)
 		return data
+	}
+
+	setRequestOpts() {
+		const opts: { [index: string]: any } = {
+			tw: this.getContinousTerm(),
+			filter: this.state.termfilter.filter
+		}
+		if (this.config.term2)
+			opts.divideTw = this.getContinousTerm() == this.config.term ? this.config.term2 : this.config.term
+
+		return opts
+	}
+
+	getContinousTerm() {
+		if (!this.config?.term2) return this.config.term
+		return isNumericTerm(this.config.term.term) && this.config.term.q.mode == 'continuous'
+			? this.config.term
+			: this.config.term2
 	}
 }

@@ -777,13 +777,15 @@ export function boxplot_getvalue(lst) {
 	const p75 = lst[Math.floor((l * 3) / 4)].value
 	const p05 = lst[Math.floor(l * 0.05)].value
 	const p95 = lst[Math.floor(l * 0.95)].value
-	const p01 = lst[Math.floor(l * 0.01)].value
+	// const p01 = lst[Math.floor(l * 0.01)].value
 	const iqr = p75 - p25
 
 	let w1, w2
 	if (iqr == 0) {
-		w1 = 0
-		w2 = 0
+		//No distribution
+		//Do not set value for whiskers
+		w1 = undefined
+		w2 = undefined
 	} else {
 		const i = lst.findIndex(i => i.value > p25 - iqr * 1.5)
 		w1 = lst[i == -1 ? 0 : i].value

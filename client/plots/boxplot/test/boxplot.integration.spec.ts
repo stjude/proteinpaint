@@ -3,8 +3,9 @@ import * as helpers from '../../../test/front.helpers.js'
 
 /*
 Tests:
-    Default boxplot
-    Boxplot with overlay term = sex
+    - Default boxplot
+    - Boxplot with overlay term = sex
+	- Boxplot with continuous overlay term = agedx
  */
 
 /*************************
@@ -101,6 +102,48 @@ tape('Boxplot with overlay term = sex', test => {
 		const dom = boxplot.Inner.dom
 		const config = boxplot.Inner.state.config
 		const numValues = Object.keys(config.term2.term.values).length
+		test.equal(
+			dom.boxplots.selectAll("g[id^='sjpp-boxplot-']").size(),
+			numValues,
+			`Should render ${numValues} boxplots`
+		)
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Boxplot with continuous overlay term = agedx', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: {
+						id: 'sex'
+					},
+					term2: {
+						id: 'agedx',
+						q: { mode: 'continuous' }
+					}
+				}
+			]
+		},
+		boxplot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		const config = boxplot.Inner.state.config
+		const numValues = Object.keys(config.term.term.values).length
 		test.equal(
 			dom.boxplots.selectAll("g[id^='sjpp-boxplot-']").size(),
 			numValues,

@@ -4,18 +4,21 @@ import { ViewModel } from '../ViewModel'
 
 /*
 Tests:
-    new ViewModel()
+    Default new ViewModel()
 
 
 See unit tests for #dom/boxplot for rendering unit tests
 */
 
 const mockConfig = {
-	term: { term: termjson['agedx'] },
+	term: { term: termjson['agedx'], q: { mode: 'continuous' } },
 	term2: { term: termjson['sex'] }
 }
 
 const mockData = {
+	maxLabelLgth: 10,
+	absMin: 0,
+	absMax: 100,
 	plots: [
 		{
 			seriesId: '1',
@@ -47,25 +50,54 @@ const mockSettings = {
 }
 
 tape('\n', function (test) {
-	test.pass('-***- plots/boxplot -***-')
+	test.pass('-***- plots/boxplot/ViewModel -***-')
 	test.end()
 })
 
-tape('new ViewModel()', function (test) {
+tape('Default new ViewModel()', function (test) {
 	test.timeoutAfter(100)
 
-	new ViewModel(mockConfig, mockData, mockSettings)
-
-	test.equal((mockData as any).plotDim.totalRowHeight, 30, 'Should set totalRowHeight to 30')
+	const viewModel: any = new ViewModel(mockConfig, mockData, mockSettings)
+	const expected = {
+		plotDim: {
+			domain: [0, 101],
+			incrTopPad: 40,
+			svgWidth: 310,
+			svgHeight: 160,
+			title: { x: 180, y: 40 },
+			yAxis: { x: 170, y: 80 }
+		}
+	}
+	test.equal(typeof viewModel.plotDim, 'object', `Should create a plotDim object`)
+	test.deepEqual(viewModel.plotDim.domain, expected.plotDim.domain, `Should set domain = ${expected.plotDim.domain}`)
 	test.equal(
-		(mockData as any).plots[0].color,
-		termjson['sex'].values[1].color,
-		'Should set plot color to the color defined for 1:"Female"'
+		viewModel.plotDim.incrTopPad,
+		expected.plotDim.incrTopPad,
+		`Should set incrTopPad = ${expected.plotDim.incrTopPad}`
 	)
 	test.equal(
-		(mockData as any).plots[1].color,
+		viewModel.plotDim.svgWidth,
+		expected.plotDim.svgWidth,
+		`Should set svgWidth = ${expected.plotDim.svgWidth}`
+	)
+	test.equal(
+		viewModel.plotDim.svgHeight,
+		expected.plotDim.svgHeight,
+		`Should set svgHeight = ${expected.plotDim.svgHeight}`
+	)
+	test.equal(viewModel.plotDim.title.x, expected.plotDim.title.x, `Should set title.x = ${expected.plotDim.title.x}`)
+	test.equal(viewModel.plotDim.title.y, expected.plotDim.title.y, `Should set title.y = ${expected.plotDim.title.y}`)
+	test.equal(viewModel.plotDim.yAxis.x, expected.plotDim.yAxis.x, `Should set yAxis.x = ${expected.plotDim.yAxis.x}`)
+	test.equal(viewModel.plotDim.yAxis.y, expected.plotDim.yAxis.y, `Should set yAxis.y = ${expected.plotDim.yAxis.y}`)
+	test.equal(
+		viewModel.plots[0].color,
+		termjson['sex'].values[1].color,
+		`Should set first box plot color = ${termjson['sex'].values[1].color}`
+	)
+	test.equal(
+		viewModel.plots[1].color,
 		termjson['sex'].values[2].color,
-		'Should set plot color to the color defined for 2:"Male"'
+		`Should set second box plot color = ${termjson['sex'].values[2].color}`
 	)
 
 	test.end()
