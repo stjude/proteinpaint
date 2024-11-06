@@ -153,7 +153,7 @@ export class Barchart {
 						 * 2. The bars do not appear to be rendering correctly as a result
 						 * TODOs: Investigate the cause of the rendering issue
 						 */
-						{ label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
+						// { label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
 						{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
 					]
 				},
