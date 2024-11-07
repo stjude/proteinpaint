@@ -11,9 +11,11 @@ import { View } from './View'
 import { BoxPlotInteractions } from './BoxPlotInteractions'
 
 /** TODOs:
- *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
  *	Hover effect?
  *	Types for config and data
+ *	Add functionality to change orientation
+ *	Add controls for: 
+	- multicolor boxplots when !term2
  */
 
 type TdbBoxPlotOpts = {
@@ -121,7 +123,7 @@ class TdbBoxplot extends RxComponent {
 				type: 'color',
 				chartType: 'boxplot',
 				settingsKey: 'color',
-				getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block')
+				getDisplayStyle: plot => (plot.term2 ? 'none' : '')
 			}
 		]
 		this.components.controls = await controlsInit({
@@ -133,6 +135,9 @@ class TdbBoxplot extends RxComponent {
 
 		this.components.controls.on('downloadClick.boxplot', () => {
 			this.interactions.download()
+		})
+		this.components.controls.on('helpClick.boxplot', () => {
+			this.interactions.help()
 		})
 	}
 
