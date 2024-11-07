@@ -108,15 +108,34 @@ class TdbBoxplot extends RxComponent {
 				defaultQ4fillTW: term0_term2_defaultQ
 			},
 			{
-				label: 'Box plot height',
+				label: 'Width',
+				title: 'Width of the box plot',
+				type: 'number',
+				chartType: 'boxplot',
+				settingsKey: 'boxplotWidth',
+				debounceInterval: 500
+			},
+			{
+				label: 'Plot height',
 				title: 'Height of each box plot',
 				type: 'number',
 				chartType: 'boxplot',
 				settingsKey: 'rowHeight',
 				step: 1,
-				max: 300,
+				max: 50,
 				min: 20,
-				debounceInterval: 1000
+				debounceInterval: 500
+			},
+			{
+				label: 'Plot padding',
+				title: 'Space between each box plot',
+				type: 'number',
+				chartType: 'boxplot',
+				settingsKey: 'rowSpace',
+				step: 1,
+				max: 20,
+				min: 10,
+				debounceInterval: 500
 			},
 			{
 				label: 'Default color',
@@ -176,6 +195,7 @@ class TdbBoxplot extends RxComponent {
 			this.dom.plotTitle.selectAll('*').remove()
 			this.dom.yAxis.selectAll('*').remove()
 			this.dom.boxplots.selectAll('*').remove()
+			this.dom.legend.selectAll('*').remove()
 
 			const settings = config.settings.boxplot
 			const model = new Model(config, state, this.app, settings)
@@ -199,8 +219,8 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		boxplotWidth: 550,
 		color: plotColor,
 		labelPad: 10,
-		rowHeight: 60,
-		rowSpace: 5
+		rowHeight: 50,
+		rowSpace: 10
 	}
 	return Object.assign(defaults, overrides)
 }
