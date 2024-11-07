@@ -101,8 +101,8 @@ async function init() {
       .html(`<span style='color:#aaa; font-weight: 200; margin-right: 3px'>/</span>${api.endpoint}`)
       .on('click', ()=>{window.location.hash = `#${api.id}`})
 
-    section.append('div').html(`CLI test: from the <span class='code-snippet'>proteinpaint/server</span> dir, `
-      + `<span class='code-snippet'>exportsFilename=src/test/routes.unit.spec.ts npm run test:unit</span>`)
+    // section.append('div').html(`CLI test: from the <span class='code-snippet'>proteinpaint/server</span> dir, `
+    //   + `<span class='code-snippet'>exportsFilename=src/test/routes.unit.spec.ts npm run test:unit</span>`)
     
     for(const method in api.methods) {
       const m = api.methods[method]
@@ -116,7 +116,7 @@ async function init() {
         section.append('div').html(`Alternative method for ${m.alternativeFor.toUpperCase()}, for larger request payloads.`)
         continue
       }
-      if (!m.examples) m.examples = [{ request: {}, response: {} }]
+      if (!m.examples) m.examples = [] //{ request: {}, response: {} }]
       for(const s of service) {
         const serv = m[s]
         if (!serv) continue
@@ -220,7 +220,8 @@ async function init() {
     const hostSelects = hostDivs
       .append('select')
       .attr('class', 'sjpp-host-select')
-      .on('change', async function(selectData) { //console.log(211, d) //console.log(d, signatureWrapper.node(), payloadWrapper.node())
+      .property('disabled', !api.methods.get?.examples?.length)
+      .on('change', async function(selectData) { //console.log(d, signatureWrapper.node(), payloadWrapper.node())
         const d = selectData.hostOptions[this.selectedIndex]
         selectData.selected = d
         if (d.url == 'spec') {
@@ -251,7 +252,11 @@ async function init() {
       .attr('value', d => d.url)
       .html(d => d.label)
 
-    m.exampleSelect = hostDivs.append('select').style('display', 'none')
+    m.exampleSelect = hostDivs.append('select')
+      .style('display', 'none')
+      .on('select', d => {
+        console.log(d)
+      })
     m.exampleSelect.selectAll('option')
       .data(m.examples)
       .enter()

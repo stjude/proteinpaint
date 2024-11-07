@@ -21,7 +21,7 @@ for (const t of ['types', 'interfaces']) {
 		if (fname.startsWith('_internal_.')) {
 			const linkName = join(dir, `${name}.html`)
 			if (!fs.existsSync(linkName)) {
-				fs.symlink(htmlFilePath, linkName, err => {
+				fs.symlink(join('.', fname), linkName, err => {
 					if (err) throw err
 				})
 			}
