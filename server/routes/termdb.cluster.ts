@@ -28,6 +28,10 @@ export const api: RouteApi = {
 		get: {
 			...termdbClusterPayload,
 			init
+		},
+		post: {
+			...termdbClusterPayload,
+			init
 		}
 	}
 }

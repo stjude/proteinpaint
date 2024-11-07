@@ -3,19 +3,15 @@ import path from 'path'
 import { read_file } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import type { TermdbSingleSampleMutationRequest, TermdbSingleSampleMutationResponse, RouteApi } from '#types'
+import { termdbSingleSampleMutationPayload } from '#types'
 import { gdcValidate_query_singleSampleMutation } from '#src/mds3.gdc.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/singleSampleMutation',
 	methods: {
 		get: {
-			init,
-			request: {
-				typeId: 'TermdbSingleSampleMutationRequest'
-			},
-			response: {
-				typeId: 'TermdbSingleSampleMutationResponse'
-			}
+			...termdbSingleSampleMutationPayload,
+			init
 		}
 	}
 }
