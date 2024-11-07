@@ -18,7 +18,9 @@
   "scripts": {
     "prepare": "ts-patch install",
     "test": "tsc",
-    "build": "typia generate --input src/checkers --output dist",
+    "build": "./build.sh",
+    "prepack": "./build.sh && mv src src-raw && mv srcjs src",
+    "postpack": "rm -rf src && mv src-raw src",
     "doc": "./doc.sh"
   },
   "devDependencies": {
