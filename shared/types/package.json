@@ -24,9 +24,7 @@
   "devDependencies": {
     "ts-node": "^10.9.2",
     "ts-patch": "^3.2.1",
-    "typia": "^4.1.14"
-  },
-  "peerDependencies": {
+    "typia": "^4.1.14",
     "typescript": "^5.6.3"
   },
   "files": [

@@ -28,7 +28,6 @@
     "dedup": "./dedupjs.sh",
     "//todo": "refactor or deprecate the scripts below",
     "pretest": "tsc && ./test/pretest.js",
-    "prepare": "ts-patch install",
     "pretest:type": "npm run checkers",
     "pretest:integration": "tsc",
     "test:integration": "echo 'TODO: server integration tests'",
