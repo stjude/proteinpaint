@@ -17,9 +17,9 @@
   "dependencies": {
     "ts-node": "^10.9.1",
     "ts-patch": "^3.0.2",
-    "typedoc": "^0.24.8",
-    "typedoc-plugin-missing-exports": "^2.0.1",
-    "typedoc-plugin-replace-text": "^3.1.0",
+    "typedoc": "^0.26.11",
+    "typedoc-plugin-missing-exports": "^3.0.0",
+    "typedoc-plugin-replace-text": "^4.0.0",
     "typia": "^4.1.14"
   },
   "devDependencies": {
