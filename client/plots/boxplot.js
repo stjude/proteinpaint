@@ -1,1 +1,1 @@
-export * from './boxplot/Boxplot'
+export * from './boxplot/BoxPlot'

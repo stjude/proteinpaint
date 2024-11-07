@@ -1,4 +1,4 @@
-import type { BoxplotSettings } from './Boxplot'
+import type { BoxPlotSettings } from './BoxPlot'
 
 /**
  * Calculates the dimensions and html attributes for the svg and
@@ -19,7 +19,7 @@ export class ViewModel {
 	readonly outRadius = 5
 	/** Increasing padding to space out the boxplots and determine position */
 	incrTopPad = 40
-	constructor(config: any, data: any, settings: BoxplotSettings) {
+	constructor(config: any, data: any, settings: BoxPlotSettings) {
 		if (!data || !data.plots.length) return
 		const viewData: any = structuredClone(data)
 

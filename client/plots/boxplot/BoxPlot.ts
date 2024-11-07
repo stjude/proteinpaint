@@ -16,14 +16,14 @@ import type { MassAppApi } from '#mass/types/mass'
  *	Types for config and data
  */
 
-type TdbBoxplotOpts = {
+type TdbBoxPlotOpts = {
 	holder: Elem
 	controls?: Elem
 	header?: Elem
 	numericEditMenuVersion?: string[]
 }
 
-export type BoxplotSettings = {
+export type BoxPlotSettings = {
 	/** Width of the boxplots and scale, excluding labels */
 	boxplotWidth: number
 	/** TODO: colors? or use schema? Default is common plot color.  */
@@ -36,7 +36,7 @@ export type BoxplotSettings = {
 	rowSpace: number
 }
 
-export type BoxplotDom = {
+export type BoxPlotDom = {
 	/** Div for boxplots below the scale */
 	boxplots: SvgG
 	/** Controls div for the hamburger menu */
@@ -56,8 +56,8 @@ export type BoxplotDom = {
 class TdbBoxplot extends RxComponent {
 	readonly type = 'boxplot'
 	components: { controls: any }
-	dom: BoxplotDom
-	constructor(opts: TdbBoxplotOpts) {
+	dom: BoxPlotDom
+	constructor(opts: TdbBoxPlotOpts) {
 		super()
 		this.opts = opts
 		this.components = {
@@ -180,7 +180,7 @@ export const boxplotInit = getCompInit(TdbBoxplot)
 export const componentInit = boxplotInit
 
 export function getDefaultBoxplotSettings(app, overrides = {}) {
-	const defaults: BoxplotSettings = {
+	const defaults: BoxPlotSettings = {
 		boxplotWidth: 550,
 		color: plotColor,
 		labelPad: 10,

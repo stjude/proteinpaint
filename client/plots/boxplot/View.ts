@@ -2,11 +2,11 @@ import { drawBoxplot } from '#dom'
 import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
-import type { BoxplotDom, BoxplotSettings } from './Boxplot'
+import type { BoxPlotDom, BoxPlotSettings } from './BoxPlot'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
-	constructor(data: any, settings: BoxplotSettings, dom: BoxplotDom) {
+	constructor(data: any, settings: BoxPlotSettings, dom: BoxPlotDom) {
 		if (!data || !data.plots.length) return
 		const plotDim = data.plotDim
 		dom.svg.transition().attr('width', plotDim.svgWidth).attr('height', plotDim.svgHeight)

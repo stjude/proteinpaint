@@ -1,5 +1,5 @@
 import type { MassAppApi } from '../../mass/types/mass'
-import type { BoxplotSettings } from './Boxplot'
+import type { BoxPlotSettings } from './BoxPlot'
 import { isNumericTerm } from '#shared/terms.js'
 
 /**
@@ -10,8 +10,8 @@ export class Model {
 	config: any
 	state: any
 	app: MassAppApi
-	settings: BoxplotSettings
-	constructor(config: any, state: any, app: MassAppApi, settings: BoxplotSettings) {
+	settings: BoxPlotSettings
+	constructor(config: any, state: any, app: MassAppApi, settings: BoxPlotSettings) {
 		this.config = config
 		this.state = state
 		this.app = app
