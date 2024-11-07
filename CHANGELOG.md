@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- hiercluster: make zscore transformation a checkbox option in Clustering menu
+
 Fixes:
 - improve isNumeric() helper to not allow truncated alphanumeric parseFloat(), and create strictNumeric() helper
 - improve isNumeric() helper to not allow truncated alphanumeric parseFloat(), and create strictNumeric() helper;
