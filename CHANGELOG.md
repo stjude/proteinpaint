@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.84.0
 
 Features:
 - New box plot available in the mass UI summary chart.
