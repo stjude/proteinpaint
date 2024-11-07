@@ -57,15 +57,14 @@ export class CategoricalBase extends TwBase {
 			function directly, outside of TwRouter.fill(). The input tw.type
 			does not have to be discriminated in that case.
 		*/
-		if (!tw.type)
-			tw.type =
-				!tw.q.type || tw.q.type == 'values'
-					? 'CatTWValues'
-					: tw.q.type == 'predefined-groupset'
-					? 'CatTWPredefinedGS'
-					: tw.q.type == 'custom-groupset'
-					? 'CatTWCustomGS'
-					: undefined
+		tw.type =
+			!tw.q.type || tw.q.type == 'values'
+				? 'CatTWValues'
+				: tw.q.type == 'predefined-groupset'
+				? 'CatTWPredefinedGS'
+				: tw.q.type == 'custom-groupset'
+				? 'CatTWCustomGS'
+				: tw.type
 
 		/*
 			For each of fill() functions below:

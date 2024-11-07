@@ -284,7 +284,7 @@ function makeRinput(q, sampledata) {
 		// for logistic regression, if spline terms are present, the spline plot needs to have label for nonref category of outcome
 		outcome.categories = {
 			ref: q.outcome.refGrp,
-			nonref: getLogisticOutcomeNonref(q.outcome)
+			nonref: q.outcome.nonRefGrp
 		}
 	}
 	if (q.regressionType == 'cox') {
@@ -492,53 +492,6 @@ function makeRvariable_snps(tw, independent, q) {
 			})
 		}
 	}
-}
-
-function getLogisticOutcomeNonref(outcome) {
-	// outcome is q.outcome{}, the term-wrapper {q{}, refGrp, term{}}
-	if (outcome.term.type == 'condition') {
-		// condition term does not use q.type
-		// from q.groups[], return the str name that's not refgrp
-		for (const i of outcome.q.groups) {
-			if (i.name != outcome.refGrp) return i
-		}
-		throw 'nonref group not found for logistic outcome'
-	}
-	// not condition term;
-	// depending on q.type, find the non-ref group and return its name, to be used in Y axis of spline plot
-	if (outcome.q.type == 'predefined-groupset') {
-		if (!Number.isInteger(outcome.q.predefined_groupset_idx))
-			throw 'outcome.q.predefined_groupset_idx not integer when q.type is "predefined-groupset"'
-		if (!outcome.term.groupsetting) throw 'outcome.term.groupsetting missing'
-		const grpset = outcome.term.groupsetting.lst[outcome.q.predefined_groupset_idx]
-		if (!grpset) throw 'groupset not found by outcome.q.predefined_groupset_idx'
-		const nonrefgrp = grpset.groups.find(i => i.name != outcome.refGrp)
-		if (!nonrefgrp) throw 'non-ref group not found for predefined-groupset'
-		return nonrefgrp.name
-	}
-	if (outcome.q.type == 'custom-groupset') {
-		if (!outcome.q.customset) throw 'outcome.q.customset missing'
-		const nonrefgrp = outcome.q.customset.groups.find(i => i.name != outcome.refGrp)
-		if (!nonrefgrp) throw 'non-ref group not found for custom-groupset'
-		return nonrefgrp.name
-	}
-	if (outcome.q.type == 'values') {
-		if (!outcome.term.values) throw 'outcome.term.values{} missing'
-		for (const k in outcome.term.values) {
-			const v = outcome.term.values[k]
-			if (v.label != outcome.refGrp) return v.label
-		}
-		throw 'unknown nonref group from outcome.term.values'
-	}
-	if (outcome.q.type == 'custom-bin') {
-		const nonrefbin = outcome.q.lst.find(i => i.label != outcome.refGrp)
-		if (!nonrefbin) throw 'non-ref bin is not found for custom-bin'
-		return nonrefbin.label
-	}
-	if (outcome.q.type == 'regular-bin') {
-		throw 'do not know a way to find computed bin list for type=regular-bin'
-	}
-	throw 'unknown outcome.q.type'
 }
 
 function validateRinput(Rinput) {

@@ -267,6 +267,7 @@ export class TermdbVocab extends Vocab {
 		if (!outcome.q.mode && opts.regressionType == 'linear') outcome.q.mode = 'continuous'
 		const contQkeys = ['mode', 'scale']
 		outcome.refGrp = outcome.q.mode == 'continuous' ? 'NA' : opts.outcome.refGrp
+		if (opts.outcome.nonRefGrp) outcome.nonRefGrp = opts.outcome.nonRefGrp
 
 		if (outcome.q.mode == 'continuous') {
 			// remove unneeded parameters from q

@@ -314,6 +314,18 @@ export class InputTerm {
 				}
 			}
 			this.maySet_refGrp(tw)
+			if (this.section.configKey == 'outcome') {
+				if (this.parent.config.regressionType == 'logistic') {
+					// get non-ref group of logistic outcome variable
+					// will be used in tooltip messages of coefficients table
+					// and in Y axis of cubic spline plot
+					tw.nonRefGrp = getLogisticOutcomeNonref(tw)
+				} else if (this.parent.config.regressionType == 'cox') {
+					// get event label of cox outcome variable
+					// will be used in tooltip messages of coefficients table
+					tw.eventLabel = getCoxOutcomeEventLabel(tw)
+				}
+			}
 		}
 	}
 
@@ -687,4 +699,78 @@ function groupsetNoEmptyGroup(gs, c2s) {
 		}
 	}
 	return true
+}
+
+function getLogisticOutcomeNonref(outcome) {
+	// outcome is the outcome term-wrapper {q{}, refGrp, term{}}
+	if (outcome.term.type == 'condition') {
+		// condition term does not use q.type
+		// from q.groups[], return the str name that's not refgrp
+		for (const i of outcome.q.groups) {
+			if (i.name != outcome.refGrp) return i
+		}
+		throw 'nonref group not found for logistic outcome'
+	}
+	// not condition term;
+	// depending on q.type, find the non-ref group and return its name
+	if (outcome.q.type == 'predefined-groupset') {
+		if (!Number.isInteger(outcome.q.predefined_groupset_idx))
+			throw 'outcome.q.predefined_groupset_idx not integer when q.type is "predefined-groupset"'
+		if (!outcome.term.groupsetting) throw 'outcome.term.groupsetting missing'
+		const grpset = outcome.term.groupsetting.lst[outcome.q.predefined_groupset_idx]
+		if (!grpset) throw 'groupset not found by outcome.q.predefined_groupset_idx'
+		const nonrefgrp = grpset.groups.find(i => i.name != outcome.refGrp)
+		if (!nonrefgrp) throw 'non-ref group not found for predefined-groupset'
+		return nonrefgrp.name
+	}
+	if (outcome.q.type == 'custom-groupset') {
+		if (!outcome.q.customset) throw 'outcome.q.customset missing'
+		const nonrefgrp = outcome.q.customset.groups.find(i => i.name != outcome.refGrp)
+		if (!nonrefgrp) throw 'non-ref group not found for custom-groupset'
+		return nonrefgrp.name
+	}
+	if (outcome.q.type == 'values') {
+		if (!outcome.term.values) throw 'outcome.term.values{} missing'
+		for (const k in outcome.term.values) {
+			const v = outcome.term.values[k]
+			if (v.label != outcome.refGrp) return v.label
+		}
+		throw 'unknown nonref group from outcome.term.values'
+	}
+	if (outcome.q.type == 'custom-bin') {
+		const nonrefbin = outcome.q.lst.find(i => i.label != outcome.refGrp)
+		if (!nonrefbin) throw 'non-ref bin is not found for custom-bin'
+		return nonrefbin.label
+	}
+	if (outcome.q.type == 'regular-bin') {
+		throw 'do not know a way to find computed bin list for type=regular-bin'
+	}
+	throw 'unknown outcome.q.type'
+}
+
+function getCoxOutcomeEventLabel(tw) {
+	let eventLabel
+	if (!tw.term.values) throw 'tw.term.values missing'
+	if (tw.term.type == 'condition') {
+		const grades = Object.keys(tw.term.values).map(k => {
+			const grade = Number(k)
+			if (!Number.isFinite(grade)) throw 'grade is not a number'
+			return grade
+		})
+		const startGrade = tw.q.breaks[0]
+		const endGrade = Math.max(...grades)
+		eventLabel = `Grades ${startGrade}-${endGrade}`
+	} else if (tw.term.type == 'survival') {
+		const exitCodes = Object.keys(tw.term.values).map(k => {
+			const code = Number(k)
+			if (!Number.isFinite(code)) throw 'exit code is not a number'
+			return code
+		})
+		// exit codes can be 0=alive,1=dead; 1=alive,2=dead; etc. (see Surv() in R)
+		// so using max exit code value as the exit code of the event
+		eventLabel = tw.term.values[Math.max(...exitCodes)].label
+	} else {
+		throw 'unexpected tw.term.type'
+	}
+	return eventLabel
 }
