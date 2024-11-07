@@ -66,11 +66,13 @@ export const healthcheckPayload: RoutePayload = {
 	},
 	examples: [
 		{
-			request: {}
+			request: { body: {} }
 			//response: {}
 		},
 		{
-			request: { dsLabel: 'TermdbTest' }
+			request: {
+				body: { dsLabel: 'TermdbTest' }
+			}
 			//response: {}
 		}
 	]
