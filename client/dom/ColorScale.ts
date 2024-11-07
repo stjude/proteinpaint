@@ -338,17 +338,17 @@ export class ColorScale {
 		const axis = this.topTicks === true ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
 		axis.ticks(this.ticks).tickSize(this.tickSize)
 
-		const min = this.tickValues[0]
-		const max = this.tickValues[this.tickValues.length - 1]
-		const minDec = decimalPlacesUntilFirstNonZero(min)
-		const maxDec = decimalPlacesUntilFirstNonZero(max)
+		// const min = this.tickValues[0]
+		// const max = this.tickValues[this.tickValues.length - 1]
+		// const minDec = decimalPlacesUntilFirstNonZero(min)
+		// const maxDec = decimalPlacesUntilFirstNonZero(max)
 
-		if ((min <= 0.01 && min != 0 && minDec >= 2) || (max <= 0.01 && max != 0 && maxDec >= 2)) {
-			/**Tick values are sorted in niceNumLabels.
-			 * If min or max value are small nums, have 2 or more decimal places,
-			 * use scientific notation. Do not use if either value is 0. */
-			axis.tickFormat(format('.1e'))
-		}
+		// if ((min <= 0.01 && min != 0 && minDec >= 2) || (max <= 0.01 && max != 0 && maxDec >= 2)) {
+		// 	/**Tick values are sorted in niceNumLabels.
+		// 	 * If min or max value are small nums, have 2 or more decimal places,
+		// 	 * use scientific notation. Do not use if either value is 0. */
+		// 	axis.tickFormat(format('.1e'))
+		// }
 		return axis
 	}
 
