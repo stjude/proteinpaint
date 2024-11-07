@@ -2,7 +2,6 @@ import { select } from 'd3-selection'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisLeft, axisTop } from 'd3-axis'
 import { format } from 'd3-format'
-import { newpane } from '../src/client.js'
 
 /*
 arguments: 
@@ -103,21 +102,18 @@ export default function barsRenderer(barsapp, holder) {
 	let axisG, yAxis, yTitle, yLine, xAxis, xTitle, xLine
 	// eslint-disable-next-line
 	let currCell, currRects, currRowTexts, currColTexts
-	let clusterRenderer
 	// eslint-disable-next-line
 	let defaults //will have key values in init
 	let currserieses = []
-	let unstackedBarsPanes
 	let prevBox
 
-	function main(_chart, _unstackedBarsPanes) {
+	function main(_chart) {
 		let prevOrientation = hm.orientation
 		chart = _chart
 		Object.assign(hm, chart.settings)
 		hm.handlers = chart.handlers
 		hm.cols = hm.cols.filter(colId => hm.colLabels.find(d => d.id == colId))
 		hm.rows = hm.rows?.filter(d => !hm.exclude.rows.includes(d)) || []
-		if (_unstackedBarsPanes) unstackedBarsPanes = _unstackedBarsPanes
 		const nosvg = !svg
 		if (nosvg) init()
 
@@ -345,7 +341,10 @@ export default function barsRenderer(barsapp, holder) {
 		const ratio = hm.scale == 'byChart' ? 1 : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts
 		for (const series of currserieses) {
 			if (series.visibleData[0]) {
-				const min = hm.unit == 'log' ? 1 : 0
+				// min should be 0 even if unit == 'log', since the bars are rendered in linear scale
+				// according to the log of sample count. Previously, perhaps when log scale was used before,
+				// min of 1 would have been required to avoid errors
+				const min = 0 // hm.unit == 'log' ? 1 : 0
 				const max =
 					hm.unit == 'pct'
 						? series.visibleTotal
@@ -398,10 +397,6 @@ export default function barsRenderer(barsapp, holder) {
 
 	function cellKey(d) {
 		return d.rowId + ' ' + d.colId //+' '+d.cellmateNum
-	}
-
-	function returnD(d) {
-		return d
 	}
 
 	function seriesExit() {
@@ -525,7 +520,6 @@ export default function barsRenderer(barsapp, holder) {
 		const total = hm.unit == 'log' ? d.logTotal : d.total
 		const width = hm.orientation == 'vertical' ? hm.colw : hm.h.xScale[d.seriesId](total)
 		const colspace = 0 //Math.round(width) > 1 ? hm.colspace : 0;
-		const prev = hm.h.xPrevBySeries[d.seriesId]
 		hm.h.xPrevBySeries[d.seriesId] += Math.max(1, width + colspace)
 		return Math.max(1, width - colspace)
 	}
@@ -668,8 +662,8 @@ export default function barsRenderer(barsapp, holder) {
 		xAxis.style('display', 'none')
 		yLine.style('display', 'none')
 		const colLabelBox = collabels.node().getBBox()
-		const lineY = s.svgh - s.collabelh + 24
 		/*
+		const lineY = s.svgh - s.collabelh + 24
     xLine
     .style('display','block')
     .attr("x1", 1)
@@ -742,7 +736,7 @@ export default function barsRenderer(barsapp, holder) {
 			.style('font-weight', 600)
 			.text(yLabel)
 
-		const rowLabelBox = rowlabels.node().getBBox()
+		//const rowLabelBox = rowlabels.node().getBBox()
 		setTimeout(() => {
 			yTitle.style('text-anchor', 'end').attr(
 				'transform',
@@ -805,10 +799,8 @@ export default function barsRenderer(barsapp, holder) {
 			currCell = d
 			//if (!hm.showgrid) currRects.style('stroke', rectStroke)
 			//else {
-			const x = d.x
-			const y = getRectY(d.cellmates ? d.cellmates[0] : d)
-			if (clusterRenderer) clusterRenderer.rowcolline(d, x, y)
-			//}
+			//const x = d.x
+			//const y = getRectY(d.cellmates ? d.cellmates[0] : d)
 
 			currColTexts.attr('font-weight', colTextWeight).attr('font-size', colTextSize).style('fill', colTextColor)
 
@@ -817,7 +809,6 @@ export default function barsRenderer(barsapp, holder) {
 		} else {
 			currCell = emptyObj
 			//resizeCaller.show()
-			if (clusterRenderer) clusterRenderer.rowcolline()
 			currRowTexts.attr('font-weight', rowTextWeight).attr('font-size', rowTextSize).style('fill', rowTextColor)
 			currColTexts.attr('font-weight', colTextWeight).attr('font-size', colTextSize).style('fill', colTextColor)
 		}
@@ -849,7 +840,6 @@ export default function barsRenderer(barsapp, holder) {
 	function colLabelMouseout(event) {
 		currCell = emptyObj
 		//resizeCaller.show()
-		if (clusterRenderer) clusterRenderer.rowcolline()
 		if (hm.handlers.colLabel.mouseout) hm.handlers.colLabel.mouseout(event)
 	}
 
@@ -864,12 +854,6 @@ export default function barsRenderer(barsapp, holder) {
 		const styles = {}
 		for (const key in defaults) {
 			styles[key] = hm[key]
-		}
-		if (clusterRenderer) {
-			for (const key in clusterRenderer.defaults) styles[key] = hm[key]
-		}
-		if (legendRenderer) {
-			for (const key in legendRenderer.defaults) styles[key] = hm[key]
 		}
 		return styles
 	}
