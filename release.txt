@@ -1,2 +1,1 @@
-Fixes:
-- barchart scale min should be zero even when unit='log', since a linear bar scale is still used
+

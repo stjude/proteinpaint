@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- barchart scale min should be zero even when unit='log', since a linear bar scale is still used
+
+
 ## 2.85.1
 
 Fixes:
