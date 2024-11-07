@@ -1,12 +1,9 @@
-import { sayerror } from '../dom/sayerror.ts'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
-import { axisstyle } from '../dom/axisstyle'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
-import { drawBoxplot } from '../dom/boxplot'
-import { makeSsmLink } from '../dom/ssmLink.ts'
-import { ColorScale } from '../dom/ColorScale'
+import { sayerror, axisstyle, drawBoxplot, makeSsmLink, ColorScale, Menu } from '#dom'
+import { roundValue } from '#shared/roundValue.js'
 
 /*************
 can dynamically add following attributes
@@ -515,7 +512,7 @@ function setRenderers(self) {
 			// forest plot column
 			tr.append('td')
 			// data columns
-			fillDataColumns(tr, intercept)
+			self.fillCoefDataCols(tr, intercept, null, true)
 		}
 
 		/* term rows:
@@ -561,7 +558,7 @@ function setRenderers(self) {
 				forestPlotter(tr.append('td'), cols)
 
 				// display data columns
-				fillDataColumns(tr, cols)
+				self.fillCoefDataCols(tr, cols, tw)
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
 
@@ -617,7 +614,7 @@ function setRenderers(self) {
 					forestPlotter(tr.append('td'), cols)
 
 					// display data columns
-					fillDataColumns(tr, cols)
+					self.fillCoefDataCols(tr, cols, tw, false, k)
 
 					isfirst = false
 				}
@@ -666,7 +663,7 @@ function setRenderers(self) {
 				forestPlotter(tr.append('td'), cols)
 
 				// display data columns
-				fillDataColumns(tr, cols)
+				self.fillCoefDataCols(tr, cols)
 
 				isfirst = false
 			}
@@ -790,13 +787,13 @@ function setRenderers(self) {
 				forestPlotter_uni(tr.append('td'), cols)
 
 				// display univariate data columns
-				fillDataColumns(tr, cols)
+				self.fillCoefDataCols(tr, cols, tw)
 
 				// display multivariate forest plot
 				forestPlotter_multi(tr.append('td'), cols_multi)
 
 				// display multivariate data columns
-				fillDataColumns(tr, cols_multi)
+				self.fillCoefDataCols(tr, cols_multi, tw)
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
 
@@ -858,7 +855,7 @@ function setRenderers(self) {
 					forestPlotter_uni(tr.append('td'), cols)
 
 					// display univariate data columns
-					fillDataColumns(tr, cols)
+					self.fillCoefDataCols(tr, cols, tw)
 
 					tr.append('td').style('width', '2px') // separation between univariate/multivariate
 
@@ -866,7 +863,7 @@ function setRenderers(self) {
 					forestPlotter_multi(tr.append('td'), cols_multi)
 
 					// display multivariate data columns
-					fillDataColumns(tr, cols_multi)
+					self.fillCoefDataCols(tr, cols_multi, tw)
 
 					isfirst = false
 				}
@@ -884,6 +881,98 @@ function setRenderers(self) {
 		tr.append('td').style('width', '2px') // separation between univariate/multivariate
 		forestPlotter_multi(tr.append('td')) // forest plot axis
 		for (const v of header_multi) tr.append('td')
+	}
+
+	self.fillCoefDataCols = (tr, cols, tw, isIntercept, categoryKey) => {
+		// estimate (Beta/OR/HR) column
+		const est = Number(cols.shift())
+		const estTd = tr.append('td').text(est).style('padding', '8px')
+		const tip = new Menu()
+		// get message explaining the meaning of estimate value
+		const estimateMsg = self.getEstimateMsg(est, tw, isIntercept, categoryKey)
+		// display message as a tooltip
+		tip.d.append('div').text(estimateMsg)
+		estTd.on('mouseover', event => {
+			/*const p = event.currentTarget.getBoundingClientRect()
+			const x = p.left + window.scrollX + 10
+			const y = p.top + window.scrollY + 20
+			return tip.show(x, y, false, false, false)*/
+			return tip.showunder(event.currentTarget)
+		})
+		estTd.on('mouseout', () => tip.hide())
+		// 95% CI column
+		tr.append('td').html(`${cols.shift()} &ndash; ${cols.shift()}`).style('padding', '8px')
+		// rest of columns
+		for (const v of cols) tr.append('td').text(v).style('padding', '8px')
+	}
+
+	/* get tooltip message for estimate column
+
+		TODO: currently assuming that if a term does not have a
+		category/refGrp, then it must be a continuous term.
+		This is not a correct assumption because it ignores
+		cubic spline/snplst/snplocus etc. terms. Need to consider these
+		other scenarios in this code.
+
+		TODO: for querying independent variables, see the code in
+		getIndependentInput() because this function can handle both
+		dictionary and non-dictionary variables.
+
+		TODO: for ancestry PC variables can refer to them in
+		the message as "EUR PCs 1-10".
+	*/
+	self.getEstimateMsg = (est, tw, isIntercept, categoryKey) => {
+		const independentTws = self.parent.inputs.independent.inputLst.map(i => i.term).filter(Boolean)
+		const outcomeTw = self.config.outcome
+		const regtype = self.config.regressionType
+		const category = tw?.term?.values && tw.term.values[categoryKey] ? tw.term.values[categoryKey].label : categoryKey
+		const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
+		let msg
+		if (regtype == 'linear') {
+			msg = `Mean "${outcomeTw.term.name}" is ${Math.abs(est)} units`
+			if (isIntercept) {
+				// intercept term
+				msg += ', when ' + getInterceptMsg()
+				return msg
+			}
+			msg += ` ${est < 0 ? 'lower' : 'higher'} `
+		} else if (regtype == 'logistic') {
+			msg = `Odds of "${outcomeTw.term.name}=${outcomeTw.nonRefGrp}" is `
+			if (isIntercept) {
+				msg += `${est}, when ${getInterceptMsg()}`
+				return msg
+			}
+			msg += est > 1 ? `${est} times higher ` : `${roundValue(1 / est, 3)} times lower `
+		} else if (regtype == 'cox') {
+			msg = `Hazard (instantaneous rate) of "${outcomeTw.term.name}=${outcomeTw.eventLabel}" is `
+			msg += est > 1 ? `${est} times higher ` : `${roundValue(1 / est, 3)} times lower `
+		}
+		msg += category
+			? `in "${tw.term.name}=${category}" compared to "${tw.term.name}=${refGrp}"`
+			: `for every one unit increase of "${tw.term.name}"`
+		// adjusting for covariates
+		const covariates = independentTws.filter(t => t.term.id != tw.term.id).map(t => `"${t.term.name}"`)
+		if (regtype == 'cox')
+			covariates.push(outcomeTw.q.timeScale == 'time' ? '"Years of follow-up"' : '"Attained age during follow-up"')
+		if (!covariates.length) return msg + '.'
+		else if (covariates.length === 1) return msg + `, adjusting for ${covariates[0]}.`
+		else return msg + `, adjusting for ${covariates.slice(0, -1).join(', ')} and ${covariates.slice(-1)}.`
+
+		function getInterceptMsg() {
+			const msg = independentTws
+				.map(tw => {
+					if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
+						// term has refGrp
+						const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
+						return `"${tw.term.name}=${refGrp}"`
+					} else {
+						// term does not have refGrp
+						return `"${tw.term.name}=0"`
+					}
+				})
+				.join(', ')
+			return msg + '.'
+		}
 	}
 
 	self.mayshow_totalSnpEffect = result => {
@@ -1653,13 +1742,4 @@ function fillDataHeaders(header, tr, tr_label, label) {
 		.text(label)
 		.style('border-bottom', '1px solid')
 		.style('padding', '5px')
-}
-
-function fillDataColumns(tr, cols) {
-	// estimate column
-	tr.append('td').text(cols.shift()).style('padding', '8px')
-	// 95% CI column
-	tr.append('td').html(`${cols.shift()} &ndash; ${cols.shift()}`).style('padding', '8px')
-	// rest of columns
-	for (const v of cols) tr.append('td').text(v).style('padding', '8px')
 }
