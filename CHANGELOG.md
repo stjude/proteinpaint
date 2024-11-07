@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Track proteinpaint-types as a prod dependency in server package.json so that it's installed in container.
+
+
 ## 2.85.0
 
 Features:
@@ -9,7 +15,6 @@ Features:
 
 Fixes:
 - improve isNumeric() helper to not allow truncated alphanumeric parseFloat(), and create strictNumeric() helper
-- improve isNumeric() helper to not allow truncated alphanumeric parseFloat(), and create strictNumeric() helper;
 
 
 ## 2.84.0
