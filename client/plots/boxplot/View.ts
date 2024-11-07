@@ -3,7 +3,7 @@ import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from './BoxPlot'
-import { ViewToolTips } from './ViewToolTips'
+import { PlotToolTips } from './PlotToolTips'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
@@ -59,7 +59,7 @@ export class View {
 				labColor: 'black'
 			})
 
-			new ViewToolTips(plot, g)
+			new PlotToolTips(plot, g)
 		}
 	}
 

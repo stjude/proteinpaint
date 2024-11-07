@@ -1,7 +1,7 @@
 import { Menu } from '#dom'
 import type { SvgG } from 'types/d3'
 
-export class ViewToolTips {
+export class PlotToolTips {
 	boxplot: any
 	g: SvgG
 	plot: any
