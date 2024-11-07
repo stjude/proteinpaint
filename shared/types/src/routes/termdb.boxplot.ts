@@ -22,27 +22,18 @@ export type BoxPlotResponse = {
 
 type BoxPlotEntry = {
 	boxplot: BoxPlotData
+	descrStats: BoxPlotDescrStatsEntry[]
 	/** Label to show */
 	label: string
-	// /** Number of samples */
-	// plotValueCount: number
 	/** TODO: Is this needed? */
-	values: number[]
-	/** Lowest min for the scale domain */
-	min: number
-	/** Highest max for the scale domain */
-	max: number
-	/** Mean value */
-	mean: number
-	/** Standard deviation */
-	sd: number
+	// 	values: number[]
 }
 
-type BoxPlotData = {
+export type BoxPlotData = {
 	/** Min/1st whisker value */
-	w1: number
+	w1: number | undefined
 	/** Max/2nd whisker value */
-	w2: number
+	w2: number | undefined
 	/** 5% */
 	p05: number
 	/** 25% */
@@ -57,6 +48,13 @@ type BoxPlotData = {
 	iqr: number
 	/** Outliers */
 	out: { value: number }[]
+}
+
+export type BoxPlotDescrStatsEntry = {
+	/** Use lower case for sanity check */
+	id: 'total' | 'min' | 'p25' | 'median' | 'mean' | 'p75' | 'max' | 'sd' | 'variance' | 'iqr'
+	label: string
+	value: number
 }
 
 export const boxplotPayload: RoutePayload = {

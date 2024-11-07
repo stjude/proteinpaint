@@ -24,7 +24,8 @@ labColor:
 */
 export function drawBoxplot({ bp, g, color, scale, rowheight, labpad, labColor = color }) {
 	if (bp.label) {
-		g.append('text')
+		bp.labelG = g
+			.append('text')
 			.attr('font-family', 'Arial')
 			.attr('text-anchor', 'end')
 			.attr('dominant-baseline', 'central')

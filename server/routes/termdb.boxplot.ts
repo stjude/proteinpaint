@@ -1,8 +1,9 @@
-import type { BoxPlotRequest, BoxPlotResponse, RouteApi } from '#types'
+import type { BoxPlotRequest, BoxPlotResponse, BoxPlotData, RouteApi } from '#types'
 import { boxplotPayload } from '#types'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortKey2values } from '../src/termdb.violin.js'
+import { roundValue } from '../../shared/utils/src/roundValue.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -78,23 +79,13 @@ function init({ genomes }) {
 					return value
 				})
 
-				//Calculate the stats for the plot
-				const mean = sortedValues.reduce((s, i) => s + i, 0) / sortedValues.length
-				let s = 0
-				for (const v of values) {
-					s += Math.pow(v - mean, 2)
-				}
-				const sd = Math.sqrt(s / (values.length - 1))
-
+				const boxplot = boxplot_getvalue(vs)
+				if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
+				const descrStats = setDescrStats(boxplot as BoxPlotData, sortedValues)
 				const _plot = {
-					// label,
 					// values,
-					// plotValueCount: values.length
-					boxplot: boxplot_getvalue(vs),
-					min: sortedValues[0],
-					max: sortedValues[sortedValues.length - 1],
-					mean,
-					sd: isNaN(sd) ? null : sd
+					boxplot,
+					descrStats
 				}
 
 				//Set rendering properties for the plot
@@ -128,4 +119,29 @@ function init({ genomes }) {
 			if (e instanceof Error && e.stack) console.error(e)
 		}
 	}
+}
+
+function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
+	//boxplot_getvalue() already returns calculated stats
+	//Format data rather than calculate again
+	const mean = sortedValues.reduce((s, i) => s + i, 0) / sortedValues.length
+	let s = 0
+	for (const v of sortedValues) {
+		s += Math.pow(v - mean, 2)
+	}
+	const sd = Math.sqrt(s / (sortedValues.length - 1))
+	const squareDiffs = sortedValues.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0)
+	const variance = squareDiffs / (sortedValues.length - 1)
+	return [
+		{ id: 'total', label: 'Total', value: sortedValues.length },
+		{ id: 'min', label: 'Minimum', value: roundValue(sortedValues[0], 2) },
+		{ id: 'p25', label: '1st quartile', value: roundValue(boxplot.p25, 2) },
+		{ id: 'median', label: 'Median', value: roundValue(boxplot.p50, 2) },
+		{ id: 'mean', label: 'Mean', value: roundValue(mean, 2) },
+		{ id: 'p75', label: '3rd quartile', value: roundValue(boxplot.p75, 2) },
+		{ id: 'max', label: 'Maximum', value: roundValue(sortedValues[sortedValues.length - 1], 2) },
+		{ id: 'sd', label: 'Standard deviation', value: isNaN(sd) ? null : roundValue(sd, 2) },
+		{ id: 'variance', label: 'Variance', value: roundValue(variance, 2) },
+		{ id: 'iqr', label: 'Inter-quartile range', value: roundValue(boxplot.iqr, 2) }
+	]
 }

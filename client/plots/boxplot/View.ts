@@ -43,13 +43,15 @@ export class View {
 	renderBoxPlots(dom, data, yScale, settings) {
 		/** Draw boxplots, incrementing by the total row height */
 		for (const plot of data.plots) {
+			const g = dom.boxplots
+				.append('g')
+				.attr('id', `sjpp-boxplot-${plot.boxplot.label}`)
+				.attr('padding', '5px')
+				.attr('transform', `translate(${plot.x}, ${plot.y})`)
+
 			drawBoxplot({
 				bp: plot.boxplot,
-				g: dom.boxplots
-					.append('g')
-					.attr('id', `sjpp-boxplot-${plot.boxplot.label}`)
-					.attr('padding', '5px')
-					.attr('transform', `translate(${plot.x}, ${plot.y})`),
+				g,
 				color: plot.color,
 				scale: yScale,
 				rowheight: settings.rowHeight,
@@ -57,7 +59,7 @@ export class View {
 				labColor: 'black'
 			})
 
-			new ViewToolTips(plot)
+			new ViewToolTips(plot, g)
 		}
 	}
 

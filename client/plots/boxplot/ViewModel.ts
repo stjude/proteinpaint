@@ -48,8 +48,15 @@ export class ViewModel {
 		}
 		//20 for the yAxis offset (above), 10 more for the first boxplot
 		this.incrTopPad += 30
+		this.setPlotData(viewData, config, settings, totalLabelWidth, totalRowHeight)
+		viewData.legend = this.setLegendData(config)
 
+		return viewData
+	}
+
+	setPlotData(viewData: any, config: any, settings: BoxPlotSettings, totalLabelWidth: number, totalRowHeight: number) {
 		for (const plot of viewData.plots) {
+			//Set rendering properties for the plot
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
 
 			if (plot.boxplot.out.length) {
@@ -63,10 +70,6 @@ export class ViewModel {
 			plot.y = this.topPad + this.incrTopPad
 			this.incrTopPad += totalRowHeight
 		}
-
-		viewData.legend = this.setLegendData(config)
-
-		return viewData
 	}
 
 	setLegendData(config) {
