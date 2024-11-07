@@ -242,7 +242,7 @@ class MassCumInc {
 	async setControls(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (this.opts.controls) {
-			this.opts.controls.on('downloadClick.boxplot', this.download)
+			this.opts.controls.on('downloadClick.cuminc', this.download)
 		} else {
 			this.dom.holder
 				.attr('class', 'pp-termdb-plot-viz')
@@ -375,7 +375,7 @@ class MassCumInc {
 				})
 			}
 
-			this.components.controls.on('downloadClick.boxplot', this.download)
+			this.components.controls.on('downloadClick.cuminc', this.download)
 		}
 	}
 

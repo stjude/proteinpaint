@@ -27,7 +27,7 @@ class TdbScatter {
 
 	async setControls() {
 		if (this.opts.controls) {
-			this.opts.controls.on('downloadClick.boxplot', this.download)
+			this.opts.controls.on('downloadClick.scatter', this.download)
 		} else {
 			this.components = {
 				controls: await controlsInit({
@@ -37,7 +37,7 @@ class TdbScatter {
 					inputs: ['term1', 'overlay', 'divideBy']
 				})
 			}
-			this.components.controls.on('downloadClick.boxplot', this.download)
+			this.components.controls.on('downloadClick.scatter', this.download)
 		}
 	}
 
@@ -92,7 +92,7 @@ class TdbScatter {
 export const scatterInit = getCompInit(TdbScatter)
 
 export function setRenderers(self) {
-	self.render = function() {
+	self.render = function () {
 		const chartDivs = self.dom.div.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
 
 		chartDivs.exit().remove()
@@ -104,7 +104,7 @@ export function setRenderers(self) {
 		self.dom.div.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 
-	self.addCharts = function(d) {
+	self.addCharts = function (d) {
 		const s = self.settings
 		const div = select(this)
 			.append('div')
@@ -136,13 +136,10 @@ export function setRenderers(self) {
 		const svg = div.append('svg').attr('class', 'pp-scatter-svg')
 		renderSVG(svg, d, s, 0)
 
-		div
-			.transition()
-			.duration(s.duration)
-			.style('opacity', 1)
+		div.transition().duration(s.duration).style('opacity', 1)
 	}
 
-	self.updateCharts = function(d) {
+	self.updateCharts = function (d) {
 		const s = self.settings
 		const div = select(this)
 
@@ -188,14 +185,14 @@ export function setRenderers(self) {
 			.data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
-		serieses.each(function(series, i) {
+		serieses.each(function (series, i) {
 			renderSeries(select(this), chart, series, i, s, s.duration)
 		})
 		serieses
 			.enter()
 			.append('g')
 			.attr('class', 'sjpcb-scatter-series')
-			.each(function(series, i) {
+			.each(function (series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
 
@@ -312,7 +309,7 @@ export function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.mouseover = function(event) {
+	self.mouseover = function (event) {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
 			const rows = [
@@ -327,7 +324,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.mouseout = function() {
+	self.mouseout = function () {
 		self.app.tip.hide()
 	}
 
@@ -343,7 +340,7 @@ function setInteractivity(self) {
 		let prevY = 0,
 			numChartsPerRow = 0
 
-		self.dom.div.selectAll('.sjpcb-scatter-mainG').each(function() {
+		self.dom.div.selectAll('.sjpcb-scatter-mainG').each(function () {
 			mainGs.push(this)
 			const bbox = this.getBBox()
 			if (bbox.width > maxw) maxw = bbox.width

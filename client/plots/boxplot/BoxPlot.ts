@@ -2,12 +2,13 @@ import { getCompInit, copyMerge } from '../../rx'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ } from '../controls'
 import { RxComponent } from '../../types/rx.d'
-import { Model } from './Model'
-import { ViewModel } from './ViewModel'
-import { View } from './View'
 import { plotColor } from '#shared/common.js'
 import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { MassAppApi } from '#mass/types/mass'
+import { Model } from './Model'
+import { ViewModel } from './ViewModel'
+import { View } from './View'
+import { BoxPlotInteractions } from './BoxPlotInteractions'
 
 /** TODOs:
  *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
@@ -57,6 +58,7 @@ class TdbBoxplot extends RxComponent {
 	readonly type = 'boxplot'
 	components: { controls: any }
 	dom: BoxPlotDom
+	interactions: BoxPlotInteractions
 	constructor(opts: TdbBoxPlotOpts) {
 		super()
 		this.opts = opts
@@ -66,7 +68,7 @@ class TdbBoxplot extends RxComponent {
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = opts.controls ? holder : holder.append('div')
-		const svg = div.append('svg').style('display', 'inline-block').attr('class', 'sjpp-boxplot-svg')
+		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-boxplot-svg')
 		this.dom = {
 			controls: controls as Elem,
 			div: div as Elem,
@@ -75,6 +77,7 @@ class TdbBoxplot extends RxComponent {
 			yAxis: svg.append('g'),
 			boxplots: svg.append('g')
 		}
+		this.interactions = new BoxPlotInteractions(this.dom)
 		if (opts.header) this.dom.header = opts.header.html('Boxplot')
 	}
 
@@ -123,6 +126,10 @@ class TdbBoxplot extends RxComponent {
 			id: this.id,
 			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 			inputs
+		})
+
+		this.components.controls.on('downloadClick.boxplot', () => {
+			this.interactions.download()
 		})
 	}
 
