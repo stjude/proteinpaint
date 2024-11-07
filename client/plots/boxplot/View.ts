@@ -3,6 +3,7 @@ import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from './BoxPlot'
+import { ViewToolTips } from './ViewToolTips'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
@@ -35,6 +36,11 @@ export class View {
 			color: 'black'
 		})
 
+		this.renderBoxPlots(dom, data, yScale, settings)
+		if (data.legend) this.renderLegend(dom.legend, data.legend)
+	}
+
+	renderBoxPlots(dom, data, yScale, settings) {
 		/** Draw boxplots, incrementing by the total row height */
 		for (const plot of data.plots) {
 			drawBoxplot({
@@ -50,9 +56,9 @@ export class View {
 				labpad: settings.labelPad,
 				labColor: 'black'
 			})
-		}
 
-		if (data.legend) this.renderLegend(dom.legend, data.legend)
+			new ViewToolTips(plot)
+		}
 	}
 
 	renderLegend(legendDiv, legendData: { label: string; items: { label: string; value: number }[] }[]) {
