@@ -19,8 +19,8 @@
     "prepare": "ts-patch install",
     "test": "tsc",
     "build": "./build.sh",
-    "prepack": "./build.sh && mv src src-raw && mv srcjs src",
-    "postpack": "rm -rf src && mv src-raw src",
+    "prepack": "./build.sh && mv src src-raw && mv srcjs src && mv package.json package.json-0 && mv src/package.json .",
+    "postpack": "rm -rf src && mv src-raw src && mv package.json-0 package.json",
     "doc": "./doc.sh"
   },
   "devDependencies": {
