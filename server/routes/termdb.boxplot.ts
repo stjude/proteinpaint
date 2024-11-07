@@ -78,15 +78,26 @@ function init({ genomes }) {
 					return value
 				})
 
+				//Calculate the stats for the plot
+				const mean = sortedValues.reduce((s, i) => s + i, 0) / sortedValues.length
+				let s = 0
+				for (const v of values) {
+					s += Math.pow(v - mean, 2)
+				}
+				const sd = Math.sqrt(s / (values.length - 1))
+
 				const _plot = {
 					// label,
 					// values,
 					// plotValueCount: values.length
 					boxplot: boxplot_getvalue(vs),
 					min: sortedValues[0],
-					max: sortedValues[sortedValues.length - 1]
+					max: sortedValues[sortedValues.length - 1],
+					mean,
+					sd: isNaN(sd) ? null : sd
 				}
 
+				//Set rendering properties for the plot
 				if (overlayTerm) {
 					let label = overlayTerm?.term?.values?.[key]?.label || key
 					label = `${label}, n=${values.length}`

@@ -32,6 +32,10 @@ type BoxPlotEntry = {
 	min: number
 	/** Highest max for the scale domain */
 	max: number
+	/** Mean value */
+	mean: number
+	/** Standard deviation */
+	sd: number
 }
 
 type BoxPlotData = {
@@ -43,7 +47,7 @@ type BoxPlotData = {
 	p05: number
 	/** 25% */
 	p25: number
-	/** 50% */
+	/** 50%, median */
 	p50: number
 	/** 75% */
 	p75: number
