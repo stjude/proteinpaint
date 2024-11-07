@@ -26,6 +26,10 @@ export const api: RouteApi = {
 		get: {
 			...gdcMafPayload,
 			init
+		},
+		post: {
+			...gdcMafPayload,
+			init
 		}
 	}
 }
