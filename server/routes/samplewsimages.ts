@@ -38,7 +38,7 @@ function init({ genomes }) {
 	}
 }
 
-export function validate_query_getSampleWSImages(ds: Mds3, genome: any) {
+export function validate_query_getSampleWSImages(ds: Mds3) {
 	const q = ds.queries?.WSImages
 	if (!q) return
 	nativeValidateQuery(ds)

@@ -146,7 +146,7 @@ function handle_dsdata_vcf(query, req) {
 			out2: any[] = []
 		ps.stdout.on('data', i => out.push(i))
 		ps.stderr.on('data', i => out2.push(i))
-		ps.on('close', code => {
+		ps.on('close', (/*code*/) => {
 			const e = out2.join('').trim()
 			if (e != '') reject('error querying vcf file')
 			const tmp = out.join('').trim()
