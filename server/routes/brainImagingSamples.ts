@@ -1,13 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type {
-	BrainSample,
-	CategoricalTW,
-	BrainImagingSamplesRequest,
-	BrainImagingSamplesResponse,
-	RouteApi
-} from '#types'
+import type { BrainSample, BrainImagingSamplesRequest, BrainImagingSamplesResponse, RouteApi } from '#types'
 import { spawn } from 'child_process'
 
 /*
@@ -81,7 +75,7 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 }
 
 //function called on mds3 init when validate the query, it defines the get method used by the route
-export async function validate_query_NIdata(ds, genome) {
+export async function validate_query_NIdata(ds) {
 	const q = ds.queries.NIdata
 	if (!q || !serverconfig.features?.showBrainImaging) return
 	for (const key in q) {

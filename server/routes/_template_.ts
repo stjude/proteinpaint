@@ -31,7 +31,7 @@ function init({ genomes }) {
 	return async function (req, res) {
 		// use the colon syntax for clarity, the type is seen upfront instead of at the end
 		const q: SnpRequest = req.query
-
+		console.log(genomes[q.genome])
 		// can also use 'satisfies' keyword instead of colon syntax;
 		// do not use 'as' keyword, which is less strict than 'satisfies'
 		res.send({} satisfies SnpResponse)

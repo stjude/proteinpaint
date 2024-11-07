@@ -1,14 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type {
-	CategoricalTW,
-	BrainImagingRequest,
-	BrainImagingResponse,
-	FilesByCategory,
-	TermWrapper,
-	RouteApi
-} from '#types'
+import type { CategoricalTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory, RouteApi } from '#types'
 import { brainImagingPayload } from '#types'
 import { spawn } from 'child_process'
 import { getData } from '../src/termdb.matrix.js'
