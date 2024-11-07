@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.85.0
 
 Features:
 - hiercluster: make zscore transformation a checkbox option in Clustering menu
