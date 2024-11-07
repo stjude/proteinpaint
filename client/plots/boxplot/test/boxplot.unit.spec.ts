@@ -64,17 +64,12 @@ tape('Default new ViewModel()', function (test) {
 			incrTopPad: 40,
 			svgWidth: 310,
 			svgHeight: 160,
-			title: { x: 180, y: 40 },
+			title: { x: 180, y: 40, text: 'Age at Cancer Diagnosis' },
 			yAxis: { x: 170, y: 80 }
 		}
 	}
 	test.equal(typeof viewModel.plotDim, 'object', `Should create a plotDim object`)
 	test.deepEqual(viewModel.plotDim.domain, expected.plotDim.domain, `Should set domain = ${expected.plotDim.domain}`)
-	test.equal(
-		viewModel.plotDim.incrTopPad,
-		expected.plotDim.incrTopPad,
-		`Should set incrTopPad = ${expected.plotDim.incrTopPad}`
-	)
 	test.equal(
 		viewModel.plotDim.svgWidth,
 		expected.plotDim.svgWidth,
@@ -87,6 +82,11 @@ tape('Default new ViewModel()', function (test) {
 	)
 	test.equal(viewModel.plotDim.title.x, expected.plotDim.title.x, `Should set title.x = ${expected.plotDim.title.x}`)
 	test.equal(viewModel.plotDim.title.y, expected.plotDim.title.y, `Should set title.y = ${expected.plotDim.title.y}`)
+	test.equal(
+		viewModel.plotDim.title.text,
+		expected.plotDim.title.text,
+		`Should set title text = ${expected.plotDim.title.text}`
+	)
 	test.equal(viewModel.plotDim.yAxis.x, expected.plotDim.yAxis.x, `Should set yAxis.x = ${expected.plotDim.yAxis.x}`)
 	test.equal(viewModel.plotDim.yAxis.y, expected.plotDim.yAxis.y, `Should set yAxis.y = ${expected.plotDim.yAxis.y}`)
 	test.equal(
