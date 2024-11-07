@@ -3,7 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ } from '../controls'
 import { RxComponent } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
-import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { MassAppApi } from '#mass/types/mass'
 import { Model } from './Model'
 import { ViewModel } from './ViewModel'
@@ -13,7 +13,6 @@ import { BoxPlotInteractions } from './BoxPlotInteractions'
 /** TODOs:
  *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
  *	Hover effect?
- *	Descriptive stats tables?
  *	Types for config and data
  */
 
@@ -43,9 +42,11 @@ export type BoxPlotDom = {
 	/** Controls div for the hamburger menu */
 	controls: Elem
 	/** Main div */
-	div: Elem
+	div: Div
 	/** Sandbox header */
 	header?: Elem
+	/** Legend */
+	legend: Div
 	/** Displays the term1 name as the plot title */
 	plotTitle: SvgText
 	/** Main svg holder */
@@ -67,18 +68,19 @@ class TdbBoxplot extends RxComponent {
 		}
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
-		const div = opts.controls ? holder : holder.append('div')
+		const div = holder.append('div')
 		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-boxplot-svg')
 		this.dom = {
 			controls: controls as Elem,
-			div: div as Elem,
+			div,
 			svg,
 			plotTitle: svg.append('text'),
 			yAxis: svg.append('g'),
-			boxplots: svg.append('g')
+			boxplots: svg.append('g'),
+			legend: div.append('div').attr('id', 'sjpp-boxplot-legend')
 		}
 		this.interactions = new BoxPlotInteractions(this.dom)
-		if (opts.header) this.dom.header = opts.header.html('Boxplot')
+		if (opts.header) this.dom.header = opts.header.html('Box plot')
 	}
 
 	async setControls() {
@@ -118,7 +120,8 @@ class TdbBoxplot extends RxComponent {
 				label: 'Default color',
 				type: 'color',
 				chartType: 'boxplot',
-				settingsKey: 'color'
+				settingsKey: 'color',
+				getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block')
 			}
 		]
 		this.components.controls = await controlsInit({

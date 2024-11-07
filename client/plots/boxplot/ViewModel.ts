@@ -64,6 +64,26 @@ export class ViewModel {
 			this.incrTopPad += totalRowHeight
 		}
 
+		viewData.legend = this.setLegendData(config)
+
 		return viewData
+	}
+
+	setLegendData(config) {
+		const data: { label: string; items: { label: string; value: number } }[] = []
+		const isTerm2 = config?.term2 && config.term2.q?.descrStats
+		if (config.term.q?.descrStats) {
+			data.push({
+				label: `Descriptive Statistics${isTerm2 ? `: ${config.term.term.name}` : ''}`,
+				items: config.term.q.descrStats
+			})
+		}
+		if (isTerm2) {
+			data.push({
+				label: `Descriptive Statistics: ${config.term2.term.name}`,
+				items: config.term2.q.descrStats
+			})
+		}
+		return data
 	}
 }

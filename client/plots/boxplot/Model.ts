@@ -19,8 +19,8 @@ export class Model {
 	}
 
 	async getData() {
+		await this.getDescrStats()
 		const boxPlotDataArgs = this.setRequestOpts()
-
 		const data = await this.app.vocabApi.getBoxPlotData(boxPlotDataArgs)
 		return data
 	}
@@ -41,5 +41,24 @@ export class Model {
 		return isNumericTerm(this.config.term.term) && this.config.term.q.mode == 'continuous'
 			? this.config.term
 			: this.config.term2
+	}
+
+	//Consider consolidating this fn with identical fn in
+	//barchart and violin
+	async getDescrStats() {
+		//Requests desc stats for all values for each term
+		const terms = [this.config.term]
+		if (this.config.term2) terms.push(this.config.term2)
+		if (this.config.term0) terms.push(this.config.term0)
+		for (const t of terms) {
+			if (isNumericTerm(t.term)) {
+				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter)
+				if (data.error) {
+					if (data.error instanceof Error) console.error(data.error)
+					throw data.error
+				}
+				t.q.descrStats = data.values
+			}
+		}
 	}
 }

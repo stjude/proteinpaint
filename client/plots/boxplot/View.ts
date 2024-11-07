@@ -19,7 +19,7 @@ export class View {
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr('transform', `translate(${plotDim.title.x}, ${plotDim.title.y})`)
-			.text(data.plotTitle)
+			.text(plotDim.title.text)
 
 		//y-axis below the title
 		dom.yAxis
@@ -50,6 +50,30 @@ export class View {
 				labpad: settings.labelPad,
 				labColor: 'black'
 			})
+		}
+
+		if (data.legend) this.renderLegend(dom.legend, data.legend)
+	}
+
+	renderLegend(legendDiv, legendData: { label: string; items: { label: string; value: number }[] }[]) {
+		legendDiv.attr('id', 'sjpp-boxplot-legend')
+		//Set styles and preferences in the following fns
+		const addSectionTitle = (label: string) => {
+			legendDiv.append('div').style('opacity', '0.5').text(label)
+		}
+		const addSectionDiv = () => {
+			const div = legendDiv.append('div').style('padding-left', '10px')
+			return div
+		}
+		const addData = (item: { label: string; value: number }, sectionDiv) => {
+			sectionDiv.append('div').text(`${item.label}: ${item.value}`)
+		}
+		for (const section of legendData) {
+			addSectionTitle(section.label)
+			const sectionDiv = addSectionDiv()
+			for (const item of section.items) {
+				addData(item, sectionDiv)
+			}
 		}
 	}
 }
