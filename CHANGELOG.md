@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.85.1
 
 Fixes:
 - Track proteinpaint-types as a prod dependency in server package.json so that it's installed in container.
