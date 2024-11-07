@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- improve isNumeric() helper to not allow truncated alphanumeric parseFloat(), and create strictNumeric() helper
+- improve isNumeric() helper to not allow truncated alphanumeric parseFloat(), and create strictNumeric() helper;
+
+
 ## 2.84.0
 
 Features:

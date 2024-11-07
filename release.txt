@@ -1,3 +1,1 @@
-Fixes:
-- improve isNumeric() helper to not allow truncated alphanumeric parseFloat(), and create strictNumeric() helper
-- improve isNumeric() helper to not allow truncated alphanumeric parseFloat(), and create strictNumeric() helper;
+
