@@ -12,7 +12,7 @@ export async function fillTW(tw: SnpTW, vocabApi: VocabApi, defaultQ: SnpQ | nul
 	if (!tw.term.id || !tw.term.name) throw 'missing snp id/name'
 	if (!tw.term.chr || !Number.isInteger(tw.term.start) || !Number.isInteger(tw.term.stop))
 		throw 'incomplete position information'
-	if (!tw.term.ref || !tw.term.alt) 'missing allele information'
+	if (!tw.term.ref || !tw.term.alt) throw 'missing allele information'
 
 	if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values'
 	if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }

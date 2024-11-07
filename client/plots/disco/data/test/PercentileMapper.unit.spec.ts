@@ -1,6 +1,6 @@
 import test from 'tape'
 import { PercentileMapper } from '#plots/disco/data/PercentileMapper.ts'
-import Data from '#plots/disco/data/Data.ts'
+//import Data from '#plots/disco/data/Data.ts'
 
 test('PercentileMapper.map() should return correct percentiles for positive and negative values', t => {
 	const mapper = new PercentileMapper()

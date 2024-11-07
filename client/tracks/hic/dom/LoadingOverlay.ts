@@ -7,7 +7,9 @@ class LoadingOverlay {
 	hasStatePreMain = true
 
 	constructor(opts) {
-		;(this.type = 'loadingOverlay'), (this.app = opts.app), (this.loadingDiv = opts.loadingDiv)
+		this.type = 'loadingOverlay'
+		this.app = opts.app
+		this.loadingDiv = opts.loadingDiv
 	}
 
 	reactsTo(action: any) {

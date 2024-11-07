@@ -218,7 +218,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					if (hitgene.size()) {
 						// gene match
 						const geneSymbol = hitgene.datum()
-						arg?.searchOnly == 'gene' ? getResult({ geneSymbol }, geneSymbol) : await geneCoordSearch(geneSymbol)
+						if (arg.searchOnly == 'gene') getResult({ geneSymbol }, geneSymbol)
+						else await geneCoordSearch(geneSymbol)
 
 						// clear gene hits
 						tip.showunder(searchbox.node()).clear()

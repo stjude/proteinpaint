@@ -287,7 +287,8 @@ function mayFillQWithPresetBins(tw) {
 	const preferredBins = tw.q.preferredBins || 'default'
 	if (!validPreferredBins.has(preferredBins)) throw `invalid preferredBins='${preferredBins}'`
 	if (preferredBins != 'median') {
-		if (!Object.keys(tw.term.bins).includes(preferredBins)) `term.bins does not have a preset '${preferredBins}' key`
+		if (!Object.keys(tw.term.bins).includes(preferredBins))
+			throw `term.bins does not have a preset '${preferredBins}' key`
 		const bins = tw.term.bins[preferredBins]
 		if (tw.q.type && tw.q.type != bins.type) throw `mismatched tw.q.type and term.bins[preferredBins].type`
 		const qkeys = Object.keys(tw.q)

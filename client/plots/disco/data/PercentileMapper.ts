@@ -1,4 +1,4 @@
-import Data from '#plots/disco/data/Data.ts'
+// import Data from '#plots/disco/data/Data.ts'
 
 export class PercentileMapper {
 	map(data: Array<number>, percentile: number) {

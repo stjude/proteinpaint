@@ -220,7 +220,7 @@ export class TermSetting {
 		if (!o.holder && o.renderAs != 'none') throw '.holder missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		if (!o.vocabApi) throw '.vocabApi missing'
-		if (typeof o.vocabApi != 'object') '.vocabApi{} is not object'
+		if (typeof o.vocabApi != 'object') throw '.vocabApi{} is not object'
 		if ('placeholder' in o && !o.placeholder && 'placeholderIcon' in o && !o.placeholderIcon)
 			throw 'must specify a non-empty opts.placeholder and/or .placeholderIcon'
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'

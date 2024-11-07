@@ -118,7 +118,7 @@ tape('parseMutation()', function (test) {
 
 tape('parseFusion()', async function (test) {
 	test.timeoutAfter(100)
-	let input: string[], expected: any, message: string
+	let input: string[], message: string
 	const mlst = []
 	const selecti = 2
 
