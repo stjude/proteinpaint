@@ -23,6 +23,8 @@ type RadioButtonOpts = {
 	 * e.g. { "padding":"5px", "display":"inline-block" }
 	 */
 	styles?: { [index: string]: string | number }
+	/** Legacy support for deprecated radio2 input option, will be mapped to wrapper div display */
+	labelDisplay?: string
 }
 
 type OptionEntry = {
@@ -57,34 +59,37 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		throw `Both callback() and .listeners defined [#dom/radiobutton.js]. Only supply one.`
 	const inputName = opts.inputName || 'pp-dom-radio-' + nameSuffix++
 
+	if (!opts.styles) opts.styles = {}
+	if (!opts.styles.display) {
+		if (opts.labelDisplay) opts.styles.display = opts.labelDisplay
+		else {
+			// no style specified. compute automatic style. if total length of all options is small,
+			// show all options in one row; otherwise one row per option. this allows to limit width in 2-col edit menu setting
+			// count by total number of characters. radio button counts as 4 characters
+			const len = opts.options.reduce((total, d) => total + d.label.length + 4, 0)
+			opts.styles.display = len < 30 ? 'inline-block' : 'block'
+		}
+	}
+	const styleKeys = Object.keys(opts.styles)
+	if (!styleKeys.includes('padding')) opts.styles.padding = '3px'
+
 	const divs = opts.holder
 		.selectAll('div')
-		.style('display', 'block')
 		.data(opts.options, (d: any) => d?.value)
-
-	const displayMode = () => {
-		if (opts.styles?.display) return opts.styles.display // use defined style
-		// no style specified. compute automatic style. if total length of all options is small, show all options in one row; otherwise one row per option. this allows to limit width in 2-col edit menu setting
-		let len = 0 // count by total number of characters. radio button counts as 4 characters
-		opts.options.forEach((d: any) => (len = len + d.label.length + 4))
-		if (len <= 30) return 'inline-block'
-		return 'block'
-	}
-
-	const labels = divs
 		.enter()
 		.append('div')
 		.attr('aria-label', (d: OptionEntry) => d.title)
-		.style('display', displayMode)
-		.style('padding', opts.styles && 'padding' in opts.styles ? opts.styles.padding : '3px')
-		.append('label')
+		//.style('display', opts.styles.display)
+		.style('padding', opts.styles.padding)
 
 	if (opts.styles) {
 		for (const k in opts.styles) {
-			labels.style(k, opts.styles[k])
+			// apply opts.styles to div, instead of labels
+			divs.style(k, opts.styles[k])
 		}
 	}
 
+	const labels = divs.append('label')
 	const inputs = labels
 		.append('input')
 		.attr('type', 'radio')

@@ -461,8 +461,13 @@ function setRadioInput(opts) {
 			for (const settingsKey in self.inputs) {
 				const radio = self.inputs[settingsKey]
 				radio.main(plot.settings[opts.chartType][settingsKey])
-				radio.labels.style('display', d =>
-					d.getDisplayStyle ? d.getDisplayStyle(plot) : opts.labelDisplay || 'inline-block'
+				radio.divs.style(
+					'display',
+					d =>
+						d.getDisplayStyle?.(plot, opts.styles?.display) ||
+						opts.labelDisplay ||
+						opts.styles?.display ||
+						'inline-block'
 				)
 				//radio.labels.style('display', d => opts.labelDisplay || 'span')
 				if (opts.setRadioLabel) radio.labels.html(opts.setRadioLabel)
