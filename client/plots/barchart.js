@@ -106,18 +106,18 @@ export class Barchart {
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion,
 					defaultQ4fillTW: term0_term2_defaultQ,
-					getDisplayStyle: () => (this.settings.unit == 'log' ? 'none' : ''),
+					// overlay option should always be visible, but must convert unit from log to abs
+					// when an overlay is added
+					//getDisplayStyle: () => (this.settings.unit == 'log' ? 'none' : ''),
 					processConfig: config => {
 						//config.settings not usually passed for logic check below
-						//Get settings from the state and pass config change back
-						const state = this.app.getState()
-						const settings = state.plots.find(p => p.id === this.id).settings
+						const s = this.state.config.settings.barchart
 						if (!config.settings) config.settings = { barchart: {} }
 						//Prevent showing Log option when overlay is selected
-						if (config.term2 && settings.barchart.unit == 'log') config.settings.barchart.unit = 'abs'
+						if (config.term2 && s.unit == 'log') config.settings.barchart.unit = 'abs'
 						//Revert back to Linear radio when Proportion is selected
 						//but the overlay term is removed
-						if (!config.term2 && settings.barchart.unit == 'pct') config.settings.barchart.unit = 'abs'
+						if (!config.term2 && s.unit == 'pct') config.settings.barchart.unit = 'abs'
 					}
 				},
 				{
@@ -153,7 +153,7 @@ export class Barchart {
 						 * 2. The bars do not appear to be rendering correctly as a result
 						 * TODOs: Investigate the cause of the rendering issue
 						 */
-						// { label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
+						{ label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
 						{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
 					]
 				},
