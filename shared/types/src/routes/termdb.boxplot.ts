@@ -27,9 +27,7 @@ type BoxPlotEntry = {
 	/** color matching the value/category color */
 	color?: string
 	descrStats: BoxPlotDescrStatsEntry[]
-	/** Label to show */
-	label: string
-	seriesId?: number
+	seriesId?: string
 	/** TODO: Is this needed? */
 	// 	values: number[]
 }
@@ -56,8 +54,10 @@ export type BoxPlotData = {
 }
 
 export type BoxPlotDescrStatsEntry = {
-	/** Use lower case for sanity check */
-	id: 'total' | 'min' | 'p25' | 'median' | 'mean' | 'p75' | 'max' | 'sd' | 'variance' | 'iqr'
+	/** Use lower case for sanity check
+	 * 'total' | 'min' | 'p25' | 'median' | 'mean' | 'p75' | 'max' | 'sd' | 'variance' | 'iqr'
+	 */
+	id: string
 	label: string
 	value: number
 }

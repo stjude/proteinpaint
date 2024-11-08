@@ -46,7 +46,7 @@ export class ViewModel {
 	/** For outliers, set a radius rather than using the default. */
 	readonly outRadius = 5
 	/** Increasing padding to space out the boxplots and determine position */
-	private incrTopPad = 40
+	incrTopPad = 40
 	viewData!: ViewData
 	constructor(config: any, data: BoxPlotResponse, settings: BoxPlotSettings) {
 		if (!data || !data.plots?.length) return
@@ -61,7 +61,7 @@ export class ViewModel {
 		const plotDim = {
 			//Add 1 to the max is big enough so the upper line to boxplot isn't cutoff
 			//Note: ts is complaining absMax could be null. Ignore. Throws error in request.
-			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
+			domain: [data.absMin! - 0.1, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
 			svgWidth: settings.boxplotWidth + totalLabelWidth + this.horizPad,
 			svgHeight: data.plots.length * totalRowHeight + this.topPad + this.bottomPad + this.incrTopPad,
 			title: {

@@ -11,8 +11,7 @@ import { View } from './View'
 import { BoxPlotInteractions } from './BoxPlotInteractions'
 
 /** TODOs:
- *	Hover effect?
- *	Types for config and data
+ *	Type for config
  *	Add functionality to change orientation
  *	Add controls for: 
 	- multicolor boxplots when !term2
@@ -28,7 +27,7 @@ type TdbBoxPlotOpts = {
 export type BoxPlotSettings = {
 	/** Width of the boxplots and scale, excluding labels */
 	boxplotWidth: number
-	/** TODO: colors? or use schema? Default is common plot color.  */
+	/** Default is common plot color.  */
 	color: string
 	/** Padding between the left hand label and boxplot */
 	labelPad: number

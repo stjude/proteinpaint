@@ -9,7 +9,6 @@ import { PlotToolTips } from './PlotToolTips'
 /** Handles all the rendering logic for the boxplot. */
 export class View {
 	constructor(data: ViewData, settings: BoxPlotSettings, dom: BoxPlotDom) {
-		console.log(data)
 		if (!data || !data.plots.length) return
 		const plotDim = data.plotDim
 		dom.svg.transition().attr('width', plotDim.svgWidth).attr('height', plotDim.svgHeight)
