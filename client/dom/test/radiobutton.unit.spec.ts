@@ -67,19 +67,16 @@ tape('default radio button rendering', test => {
 	const { divs, labels, inputs, main } = make_radios(testArgs)
 
 	/** Divs */
-	const divData = divs
-		.enter()
-		.nodes()
-		.map((d: any) => d.__data__)
+	const divData = divs.nodes().map((d: any) => d.__data__)
 	test.deepEqual(divData, options, 'Should create divs with the correct data')
 
 	/** Labels */
 	const renderedLabels = labels.nodes()
 	test.equal(renderedLabels.length, options.length, `Should create ${options.length} radio buttons`)
-	const labelStyles = renderedLabels[0].style
+	const divStyles = divs.nodes()[0].style
 	test.true(
-		labelStyles.display == styles.display && labelStyles.color == styles.color && labelStyles.padding == styles.padding,
-		'Should render labels with opts.styles'
+		divStyles.display == styles.display && divStyles.color == styles.color && divStyles.padding == styles.padding,
+		'Should render divs with opts.styles'
 	)
 
 	/** Inputs */

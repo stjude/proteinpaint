@@ -67,7 +67,7 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 			// show all options in one row; otherwise one row per option. this allows to limit width in 2-col edit menu setting
 			// count by total number of characters. radio button counts as 4 characters
 			const len = opts.options.reduce((total, d) => total + d.label.length + 4, 0)
-			opts.styles.display = len < 30 ? 'inline-block' : 'block'
+			opts.styles.display = len < 36 ? 'inline-block' : 'block'
 		}
 	}
 	const styleKeys = Object.keys(opts.styles)
