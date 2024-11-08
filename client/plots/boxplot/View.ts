@@ -4,7 +4,7 @@ import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from './BoxPlot'
 import type { ViewData } from './ViewModel'
-import { PlotToolTips } from './PlotToolTips'
+import { BoxPlotToolTips } from './BoxPlotToolTips'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
@@ -71,7 +71,7 @@ export class View {
 				labColor: 'black'
 			})
 
-			new PlotToolTips(plot, g)
+			new BoxPlotToolTips(plot, g)
 		}
 	}
 
