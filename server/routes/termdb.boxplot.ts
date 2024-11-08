@@ -3,7 +3,7 @@ import { boxplotPayload } from '#types'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortKey2values } from '../src/termdb.violin.js'
-import { roundValue } from '../../shared/utils/src/roundValue.js'
+import { roundValue } from '#shared/roundValue.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
