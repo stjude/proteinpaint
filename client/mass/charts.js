@@ -147,6 +147,13 @@ function getChartTypeList(self, state) {
 			chartType: 'profileRadar',
 			clickTo: self.loadChartSpecificMenu
 		},
+		{
+			label: 'Forms',
+			chartType: 'profileForms',
+			clickTo: self.showTree_select1term,
+			usecase: { target: 'profileForms', detail: 'tw' },
+			config: { chartType: 'profileForms' }
+		},
 		////////////////////// PROFILE PLOTS END //////////////////////
 		{
 			label: 'Data Dictionary',
