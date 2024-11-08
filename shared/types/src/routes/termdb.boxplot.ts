@@ -23,10 +23,13 @@ export type BoxPlotResponse = {
 }
 
 type BoxPlotEntry = {
-	boxplot: BoxPlotData
+	boxplot: BoxPlotData & { label: string }
+	/** color matching the value/category color */
+	color?: string
 	descrStats: BoxPlotDescrStatsEntry[]
 	/** Label to show */
 	label: string
+	seriesId?: number
 	/** TODO: Is this needed? */
 	// 	values: number[]
 }

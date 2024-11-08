@@ -1,13 +1,15 @@
 import { drawBoxplot } from '#dom'
-import { scaleLinear } from 'd3-scale'
+import { ScaleLinear, scaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from './BoxPlot'
+import type { ViewData } from './ViewModel'
 import { PlotToolTips } from './PlotToolTips'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
-	constructor(data: any, settings: BoxPlotSettings, dom: BoxPlotDom) {
+	constructor(data: ViewData, settings: BoxPlotSettings, dom: BoxPlotDom) {
+		console.log(data)
 		if (!data || !data.plots.length) return
 		const plotDim = data.plotDim
 		dom.svg.transition().attr('width', plotDim.svgWidth).attr('height', plotDim.svgHeight)
@@ -40,7 +42,12 @@ export class View {
 		if (data.legend) this.renderLegend(dom.legend, data.legend)
 	}
 
-	renderBoxPlots(dom, data, yScale, settings) {
+	renderBoxPlots(
+		dom: BoxPlotDom,
+		data: ViewData,
+		yScale: ScaleLinear<number, number, never>,
+		settings: BoxPlotSettings
+	) {
 		/** Draw boxplots, incrementing by the total row height */
 		for (const plot of data.plots) {
 			const g = dom.boxplots

@@ -203,8 +203,8 @@ class TdbBoxplot extends RxComponent {
 			if (!data?.plots?.length) {
 				this.app.printError('No data found for boxplot')
 			}
-			const viewData = new ViewModel(config, data, settings)
-			new View(viewData, settings, this.dom)
+			const viewModel = new ViewModel(config, data, settings)
+			new View(viewModel.viewData, settings, this.dom)
 		} catch (e: any) {
 			console.error(new Error(e.message || e))
 			throw e
@@ -221,7 +221,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		color: plotColor,
 		labelPad: 10,
 		rowHeight: 50,
-		rowSpace: 10
+		rowSpace: 15
 	}
 	return Object.assign(defaults, overrides)
 }

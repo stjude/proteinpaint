@@ -1,5 +1,5 @@
 import type { BoxPlotSettings } from './BoxPlot'
-import type { BoxPlotResponse } from '#types'
+import type { BoxPlotResponse, BoxPlotData, BoxPlotDescrStatsEntry } from '#types'
 
 /**
  * Calculates the dimensions and html attributes for the svg and
@@ -8,6 +8,33 @@ import type { BoxPlotResponse } from '#types'
  * TODO:
  *  Calculate the space needed for the labels rather than hardcoding with padding
  */
+
+export type ViewData = {
+	plotDim: PlotDimensions
+	plots: Plots[]
+	legend: { label: string; items: { label: string; value: number }[] }[]
+}
+
+type Plots = {
+	boxplot: BoxPlotData & { label: string }
+	descrStats: BoxPlotDescrStatsEntry
+	color: string
+	x: number
+	y: number
+}
+
+type PlotDimensions = {
+	/** Domain for the y-axis */
+	domain: number[]
+	/** Width of the svg */
+	svgWidth: number
+	/** Height of the svg */
+	svgHeight: number
+	/** Title of the plot and coordinates */
+	title: { x: number; y: number; text: string }
+	/** y-axis coordinates */
+	yAxis: { x: number; y: number }
+}
 
 export class ViewModel {
 	/** Top padding for the svg */
@@ -19,24 +46,24 @@ export class ViewModel {
 	/** For outliers, set a radius rather than using the default. */
 	readonly outRadius = 5
 	/** Increasing padding to space out the boxplots and determine position */
-	incrTopPad = 40
+	private incrTopPad = 40
+	viewData!: ViewData
 	constructor(config: any, data: BoxPlotResponse, settings: BoxPlotSettings) {
-		if (!data || !data.plots.length) return
-		const viewData: any = structuredClone(data)
+		if (!data || !data.plots?.length) return
 
-		const totalLabelWidth = viewData.maxLabelLgth * 4 + settings.labelPad + this.horizPad
+		const totalLabelWidth = data.maxLabelLgth * 4 + settings.labelPad + this.horizPad
 		const totalRowHeight = settings.rowHeight + settings.rowSpace
 
 		/** Add more plot dimensions here
 		 * Eventually should calculate the difference between vertical and
 		 * horizontal orientation.
 		 */
-
-		viewData.plotDim = {
+		const plotDim = {
 			//Add 1 to the max is big enough so the upper line to boxplot isn't cutoff
-			domain: [viewData.absMin, viewData.absMax <= 1 ? viewData.absMax : viewData.absMax + 1],
+			//Note: ts is complaining absMax could be null. Ignore. Throws error in request.
+			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
 			svgWidth: settings.boxplotWidth + totalLabelWidth + this.horizPad,
-			svgHeight: viewData.plots.length * totalRowHeight + this.topPad + this.bottomPad + this.incrTopPad,
+			svgHeight: data.plots.length * totalRowHeight + this.topPad + this.bottomPad + this.incrTopPad,
 			title: {
 				x: totalLabelWidth + settings.boxplotWidth / 2,
 				y: this.topPad + this.incrTopPad / 2,
@@ -49,14 +76,19 @@ export class ViewModel {
 		}
 		//20 for the yAxis offset (above), 10 more for the first boxplot
 		this.incrTopPad += 30
-		this.setPlotData(viewData, config, settings, totalLabelWidth, totalRowHeight)
-		viewData.legend = this.setLegendData(config, data)
+		const plots = this.setPlotData(data, config, settings, totalLabelWidth, totalRowHeight)
+		const legend = this.setLegendData(config, data)
 
-		return viewData
+		this.viewData = {
+			plotDim: plotDim as PlotDimensions,
+			plots,
+			legend
+		}
 	}
 
-	setPlotData(viewData: any, config: any, settings: BoxPlotSettings, totalLabelWidth: number, totalRowHeight: number) {
-		for (const plot of viewData.plots) {
+	setPlotData(data: any, config: any, settings: BoxPlotSettings, totalLabelWidth: number, totalRowHeight: number) {
+		const plots = structuredClone(data.plots)
+		for (const plot of plots) {
 			//Set rendering properties for the plot
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
 
@@ -64,17 +96,18 @@ export class ViewModel {
 				const maxOut = plot.boxplot.out.reduce((a: { value: number }, b: { value: number }) =>
 					Math.max(a.value, b.value)
 				)
-				if (maxOut && maxOut.value > viewData.absMax) viewData.absMax = maxOut.value
+				if (maxOut && maxOut.value > data.absMax) data.absMax = maxOut.value
 				plot.boxplot.radius = this.outRadius
 			}
 			plot.x = totalLabelWidth
 			plot.y = this.topPad + this.incrTopPad
 			this.incrTopPad += totalRowHeight
 		}
+		return plots
 	}
 
-	setLegendData(config, data) {
-		const legendData: { label: string; items: { label: string; value: number } }[] = []
+	setLegendData(config: any, data: BoxPlotResponse) {
+		const legendData: { label: string; items: { label: string; value: number }[] }[] = []
 		const isTerm2 = config?.term2 && config.term2.q?.descrStats
 		if (config.term.q?.descrStats) {
 			legendData.push({
