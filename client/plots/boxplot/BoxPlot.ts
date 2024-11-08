@@ -109,7 +109,7 @@ class TdbBoxplot extends RxComponent {
 			},
 			{
 				label: 'Width',
-				title: 'Width of the box plot',
+				title: 'Width of the entire plot',
 				type: 'number',
 				chartType: 'boxplot',
 				settingsKey: 'boxplotWidth',
@@ -200,13 +200,14 @@ class TdbBoxplot extends RxComponent {
 			const settings = config.settings.boxplot
 			const model = new Model(config, state, this.app, settings)
 			const data = await model.getData()
-			if (!data.plots.length) {
+			if (!data?.plots?.length) {
 				this.app.printError('No data found for boxplot')
 			}
 			const viewData = new ViewModel(config, data, settings)
 			new View(viewData, settings, this.dom)
 		} catch (e: any) {
 			console.error(new Error(e.message || e))
+			throw e
 		}
 	}
 }

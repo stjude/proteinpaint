@@ -1,5 +1,6 @@
 import type { MassAppApi } from '../../mass/types/mass'
 import type { BoxPlotSettings } from './BoxPlot'
+import type { BoxPlotResponse } from '#types'
 import { isNumericTerm } from '#shared/terms.js'
 
 /**
@@ -21,7 +22,7 @@ export class Model {
 	async getData() {
 		await this.getDescrStats()
 		const boxPlotDataArgs = this.setRequestOpts()
-		const data = await this.app.vocabApi.getBoxPlotData(boxPlotDataArgs)
+		const data: BoxPlotResponse = await this.app.vocabApi.getBoxPlotData(boxPlotDataArgs)
 		return data
 	}
 
@@ -31,7 +32,7 @@ export class Model {
 			filter: this.state.termfilter.filter
 		}
 		if (this.config.term2)
-			opts.divideTw = this.getContinousTerm() == this.config.term ? this.config.term2 : this.config.term
+			opts.overlayTw = this.getContinousTerm() == this.config.term ? this.config.term2 : this.config.term
 
 		return opts
 	}

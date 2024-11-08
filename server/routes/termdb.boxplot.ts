@@ -28,7 +28,7 @@ function init({ genomes }) {
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid ds'
 			const terms = [q.tw]
-			if (q.divideTw) terms.push(q.divideTw)
+			if (q.overlayTw) terms.push(q.overlayTw)
 			const data = await getData(
 				{
 					filter: q.filter,
@@ -42,20 +42,26 @@ function init({ genomes }) {
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const key2values = new Map()
-			const overlayTerm = q.divideTw
+			const overlayTerm = q.overlayTw
+			const uncomputableValues = {}
 			for (const val of Object.values(data.samples as Record<string, { key: number; value: number }>)) {
 				const value = val[q.tw.$id]
 				if (!Number.isFinite(value?.value)) continue
 
-				//skip these
-				if (q.tw.term.values?.[value.value]?.uncomputable) continue
+				if (q.tw.term.values?.[value.value]?.uncomputable) {
+					const label = q.tw.term.values[value.value].label
+					uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
+					continue
+				}
 
 				if (overlayTerm) {
 					if (!val[overlayTerm?.$id]) continue
 					const value2 = val[overlayTerm.$id]
 
-					//skip these
-					if (overlayTerm.term?.values?.[value2.key]?.uncomputable) continue
+					if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
+						const label = overlayTerm.term.values[value2?.key]?.label
+						uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
+					}
 
 					if (!key2values.has(value2.key)) key2values.set(value2.key, [])
 					key2values.get(value2.key).push(value.value)
@@ -66,12 +72,14 @@ function init({ genomes }) {
 			}
 
 			const plots: any = []
-			let absMin, absMax, maxLabelLgth
+			let absMin: number | null = null,
+				absMax: number | null = null,
+				maxLabelLgth: number | null = null
 			for (const [key, values] of sortKey2values(data, key2values, overlayTerm)) {
 				const sortedValues = values.sort((a, b) => a - b)
 
-				if (absMin === null || absMin === undefined || sortedValues[0] < absMin) absMin = sortedValues[0]
-				if (absMax === null || absMax === undefined || sortedValues[sortedValues.length - 1] > absMax)
+				if (absMin === null || sortedValues[0] < absMin) absMin = sortedValues[0]
+				if (absMax === null || sortedValues[sortedValues.length - 1] > absMax)
 					absMax = sortedValues[sortedValues.length - 1]
 
 				const vs = sortedValues.map((v: number) => {
@@ -92,7 +100,7 @@ function init({ genomes }) {
 				if (overlayTerm) {
 					let label = overlayTerm?.term?.values?.[key]?.label || key
 					label = `${label}, n=${values.length}`
-					if (!maxLabelLgth || label.length > maxLabelLgth) maxLabelLgth = label.length
+					if (maxLabelLgth === null || label.length > maxLabelLgth) maxLabelLgth = label.length
 					const plot = Object.assign(_plot, {
 						seriesId: key,
 						color: overlayTerm?.term?.values?.[key]?.color || null
@@ -101,18 +109,23 @@ function init({ genomes }) {
 					plots.push(plot)
 				} else {
 					const label = `${sampleType}, n=${values.length}`
-					if (!maxLabelLgth || label.length > maxLabelLgth.length) maxLabelLgth = label.length
+					if (maxLabelLgth === null || label.length > maxLabelLgth) maxLabelLgth = label.length
 					_plot.boxplot.label = label
 					plots.push(_plot)
 				}
 			}
 
+			if (absMin == null || absMax == null || maxLabelLgth == null)
+				throw 'absMin, absMax, or maxLabelLgth is null [termdb.boxplot init()]'
+
 			const returnData: BoxPlotResponse = {
 				absMin,
 				absMax,
 				maxLabelLgth,
-				plots
+				plots,
+				uncomputableValues: setUncomputableValues(uncomputableValues)
 			}
+
 			res.send(returnData)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
@@ -123,7 +136,7 @@ function init({ genomes }) {
 
 function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
 	//boxplot_getvalue() already returns calculated stats
-	//Format data rather than calculate again
+	//Format data rather than recalculate
 	const mean = sortedValues.reduce((s, i) => s + i, 0) / sortedValues.length
 	let s = 0
 	for (const v of sortedValues) {
@@ -144,4 +157,10 @@ function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
 		{ id: 'variance', label: 'Variance', value: roundValue(variance, 2) },
 		{ id: 'iqr', label: 'Inter-quartile range', value: roundValue(boxplot.iqr, 2) }
 	]
+}
+
+function setUncomputableValues(values: Record<string, number>) {
+	if (Object.entries(values)?.length) {
+		return Object.entries(values).map(([label, v]) => ({ label, value: v as number }))
+	} else return null
 }

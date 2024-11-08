@@ -1,4 +1,5 @@
 import type { BoxPlotSettings } from './BoxPlot'
+import type { BoxPlotResponse } from '#types'
 
 /**
  * Calculates the dimensions and html attributes for the svg and
@@ -19,7 +20,7 @@ export class ViewModel {
 	readonly outRadius = 5
 	/** Increasing padding to space out the boxplots and determine position */
 	incrTopPad = 40
-	constructor(config: any, data: any, settings: BoxPlotSettings) {
+	constructor(config: any, data: BoxPlotResponse, settings: BoxPlotSettings) {
 		if (!data || !data.plots.length) return
 		const viewData: any = structuredClone(data)
 
@@ -49,7 +50,7 @@ export class ViewModel {
 		//20 for the yAxis offset (above), 10 more for the first boxplot
 		this.incrTopPad += 30
 		this.setPlotData(viewData, config, settings, totalLabelWidth, totalRowHeight)
-		viewData.legend = this.setLegendData(config)
+		viewData.legend = this.setLegendData(config, data)
 
 		return viewData
 	}
@@ -72,21 +73,27 @@ export class ViewModel {
 		}
 	}
 
-	setLegendData(config) {
-		const data: { label: string; items: { label: string; value: number } }[] = []
+	setLegendData(config, data) {
+		const legendData: { label: string; items: { label: string; value: number } }[] = []
 		const isTerm2 = config?.term2 && config.term2.q?.descrStats
 		if (config.term.q?.descrStats) {
-			data.push({
+			legendData.push({
 				label: `Descriptive Statistics${isTerm2 ? `: ${config.term.term.name}` : ''}`,
 				items: config.term.q.descrStats
 			})
 		}
 		if (isTerm2) {
-			data.push({
+			legendData.push({
 				label: `Descriptive Statistics: ${config.term2.term.name}`,
 				items: config.term2.q.descrStats
 			})
 		}
-		return data
+		if (data.uncomputableValues != null) {
+			legendData.push({
+				label: 'Other categories',
+				items: data.uncomputableValues
+			})
+		}
+		return legendData
 	}
 }

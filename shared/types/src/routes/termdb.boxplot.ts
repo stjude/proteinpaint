@@ -5,7 +5,7 @@ export type BoxPlotRequest = {
 	tw: any
 	genome: string
 	dslabel: string
-	divideTw?: any
+	overlayTw?: any
 	filter: any
 	filter0: any
 }
@@ -18,6 +18,8 @@ export type BoxPlotResponse = {
 	/** Longest label length for all plots */
 	maxLabelLgth: number
 	plots: BoxPlotEntry[]
+	/** Categories not shown in the final plot */
+	uncomputableValues: { label: string; value: number }[] | null
 }
 
 type BoxPlotEntry = {
