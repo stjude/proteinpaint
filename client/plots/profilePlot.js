@@ -603,8 +603,8 @@ export function getProfilePlotConfig(app, opts) {
 	const state = app.getState()
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
 	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
-	const defaults = app.vocabApi.termdbConfig?.plotConfigByCohort[key][opts.chartType]
-	return defaults
+	const config = app.vocabApi.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]
+	return config
 }
 
 export async function loadFilterTerms(config, app, opts) {

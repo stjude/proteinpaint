@@ -108,11 +108,11 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
-		case 'profile':
+		case 'profileForms':
 			if (!term.isleaf) {
 				uses.add('branch')
 				const ancestors = term.id.split('__').length //depends on using the __ naming convension!
-				if (ancestors > 2) {
+				if (ancestors > 1) {
 					uses.add('plot')
 				}
 			}
