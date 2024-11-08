@@ -91,6 +91,8 @@ returns:
   }
 */
 
+const formatter = format('d')
+
 export default function barsRenderer(barsapp, holder) {
 	const hm = {},
 		computed = {}
@@ -693,20 +695,8 @@ export default function barsRenderer(barsapp, holder) {
 			)
 		}, 0)
 
-		const ratio =
-			hm.scale == 'byChart' || hm.clickedAge ? 1 : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts
-		const min = hm.unit == 'log' ? 1 : 0
-		const max = hm.unit == 'pct' ? 100 : hm.unit == 'log' ? chart.maxSeriesLogTotal : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
-
-		yAxis
-			.style('display', 'block')
-			.call(
-				axisLeft(
-					(hm.unit == 'log' ? scaleLog() : scaleLinear())
-						.domain([max / ratio, min])
-						.range([s.colgrplabelh, s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth + 1])
-				).ticks(4, format('d'))
-			)
+		const range = [s.colgrplabelh, s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth + 1]
+		yAxis.style('display', 'block').call(getAxisScale(axisLeft, range, true))
 
 		yTitle.selectAll('*').remove()
 		const h = s.svgh - s.collabelh
@@ -742,25 +732,14 @@ export default function barsRenderer(barsapp, holder) {
 			)
 		}, 0)
 
-		const ratio =
-			hm.scale == 'byChart' || hm.clickedAge ? 1 : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts
-		const min = hm.unit == 'log' ? 1 : 0
-		const max = hm.unit == 'pct' ? 100 : hm.unit == 'log' ? chart.maxSeriesLogTotal : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
-
+		const range = [0, s.svgw - s.rowlabelw] // + s.rowgrplabelw - s.borderwidth]
 		let y = s.colheadtop ? s.collabelh - 2 : s.colgrplabelh - 2
 		if (s.legendontop) y += s.legendh
 
 		xAxis
 			.style('display', 'block')
 			.attr('transform', 'translate(2.5,' + y + ')')
-			.call(
-				axisTop(
-					(hm.unit == 'log' ? scaleLog() : scaleLinear()).domain([min, max / ratio]).range([
-						0,
-						s.svgw - s.rowlabelw // + s.rowgrplabelw - s.borderwidth
-					])
-				).ticks(4, format('d'))
-			)
+			.call(getAxisScale(axisTop, range))
 		/*
     yLine
     .style('display','block')
@@ -779,6 +758,30 @@ export default function barsRenderer(barsapp, holder) {
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.style('font-weight', 600)
 			.text(hm.handlers.xAxis.text(visibleTotal))
+	}
+
+	function getAxisScale(axisGenerator, range, reverseDomain = false) {
+		const ratio =
+			hm.scale == 'byChart' || hm.clickedAge ? 1 : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts
+		// NOTE: domain min value default assumes that the barchart is used for sample counts/integer values
+		// TODO: may need to support float values in barchart?
+		const min = hm.unit == 'log' ? 1 : 0
+		const max = hm.unit == 'pct' ? 100 : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
+		const domain = [min, max / ratio]
+		if (reverseDomain) domain.reverse()
+
+		const scale = hm.unit == 'log' ? scaleLog() : scaleLinear()
+		scale.domain(domain).range(range)
+		const tickFormatter = hm.unit == 'log' ? v => formatter(Math.pow(10, v)) : formatter
+		if (hm.unit == 'log') {
+			const values = [1]
+			for (let i = 1; i < Math.log10(max); i++) {
+				values.push(Math.pow(10, i))
+			}
+			return axisGenerator(scale).tickValues(values).tickFormat(formatter)
+		} else {
+			return axisGenerator(scale).ticks(5).tickFormat(formatter)
+		}
 	}
 
 	function seriesMouseOver(event) {
