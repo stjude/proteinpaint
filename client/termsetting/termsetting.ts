@@ -45,7 +45,9 @@ let $id = 0
 export async function get$id(minTwCopy) {
 	if (!minTwCopy) return <string>`${$id++}${idSuffix}`
 	delete minTwCopy.$id
-	return await digestMessage(JSON.stringify(minTwCopy))
+	// TODO: may need to distinguish between unique tw $id and id for caching server response
+	// for now, just append unique $id++ to ensure unique $id
+	return await digestMessage(JSON.stringify(minTwCopy) + $id++)
 }
 
 const encoder = new TextEncoder()
