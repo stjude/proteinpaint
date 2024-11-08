@@ -63,11 +63,18 @@ export class PlotToolTips {
 					this.tip.hide()
 				})
 		}
-		const median = this.plot.descrStats.find((d: any) => d.id == 'median')
-		addToolTips(this.boxplot.linep50, `Median: ${median.value}`)
-		const min = this.plot.descrStats.find((d: any) => d.id == 'min')
-		addToolTips(this.boxplot.linew1, `Min: ${min.value}`)
-		const max = this.plot.descrStats.find((d: any) => d.id == 'max')
-		addToolTips(this.boxplot.linew2, `Max: ${max.value}`)
+
+		if (this.boxplot.linep50) {
+			const median = this.plot.descrStats.find((d: any) => d.id == 'median')
+			addToolTips(this.boxplot.linep50, `Median: ${median.value}`)
+		}
+		if (this.boxplot.linew1) {
+			const min = this.plot.descrStats.find((d: any) => d.id == 'min')
+			addToolTips(this.boxplot.linew1, `Min: ${min.value}`)
+		}
+		if (this.boxplot.linew2) {
+			const max = this.plot.descrStats.find((d: any) => d.id == 'max')
+			addToolTips(this.boxplot.linew2, `Max: ${max.value}`)
+		}
 	}
 }
