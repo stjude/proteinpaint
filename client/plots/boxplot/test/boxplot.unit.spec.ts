@@ -5,7 +5,7 @@ import { ViewModel } from '../ViewModel'
 /*
 Tests:
 	Default new ViewModel() viewData
-	Plot dimentions
+	.setPlotDimensions()
 	.setPlotData()
 	.setLegendData()
 
@@ -81,7 +81,8 @@ const mockSettings = {
 	color: 'blue',
 	labelPad: 10,
 	rowHeight: 20,
-	rowSpace: 10
+	rowSpace: 10,
+	useDefaultSettings: true
 }
 
 tape('\n', function (test) {
@@ -101,38 +102,27 @@ tape('Default new ViewModel()', function (test) {
 	test.end()
 })
 
-tape('Plot dimentions', function (test) {
+tape('.setPlotDimensions()', function (test) {
 	test.timeoutAfter(100)
-
 	const viewModel = new ViewModel(mockConfig, mockData, mockSettings)
-	const viewData = viewModel.viewData
+	const dims = viewModel.setPlotDimensions(mockData, mockConfig, mockSettings, 170, 30)
 	const expected = {
-		plotDim: {
-			domain: [0, 101],
-			incrTopPad: 40,
-			svgWidth: 310,
-			svgHeight: 160,
-			title: { x: 180, y: 40, text: 'Age at Cancer Diagnosis' },
-			yAxis: { x: 170, y: 80 }
-		}
+		domain: [0, 101],
+		incrTopPad: 40,
+		svgWidth: 310,
+		svgHeight: 250,
+		title: { x: 180, y: 85, text: 'Age at Cancer Diagnosis' },
+		yAxis: { x: 170, y: 170 }
 	}
-	test.equal(typeof viewData.plotDim, 'object', `Should create a plotDim object`)
-	test.deepEqual(viewData.plotDim.domain, expected.plotDim.domain, `Should set domain = ${expected.plotDim.domain}`)
-	test.equal(viewData.plotDim.svgWidth, expected.plotDim.svgWidth, `Should set svgWidth = ${expected.plotDim.svgWidth}`)
-	test.equal(
-		viewData.plotDim.svgHeight,
-		expected.plotDim.svgHeight,
-		`Should set svgHeight = ${expected.plotDim.svgHeight}`
-	)
-	test.equal(viewData.plotDim.title.x, expected.plotDim.title.x, `Should set title.x = ${expected.plotDim.title.x}`)
-	test.equal(viewData.plotDim.title.y, expected.plotDim.title.y, `Should set title.y = ${expected.plotDim.title.y}`)
-	test.equal(
-		viewData.plotDim.title.text,
-		expected.plotDim.title.text,
-		`Should set title text = ${expected.plotDim.title.text}`
-	)
-	test.equal(viewData.plotDim.yAxis.x, expected.plotDim.yAxis.x, `Should set yAxis.x = ${expected.plotDim.yAxis.x}`)
-	test.equal(viewData.plotDim.yAxis.y, expected.plotDim.yAxis.y, `Should set yAxis.y = ${expected.plotDim.yAxis.y}`)
+	test.equal(typeof dims, 'object', `Should create a plotDim object`)
+	test.deepEqual(dims.domain, expected.domain, `Should set domain = ${expected.domain}`)
+	test.equal(dims.svgWidth, expected.svgWidth, `Should set svgWidth = ${expected.svgWidth}`)
+	test.equal(dims.svgHeight, expected.svgHeight, `Should set svgHeight = ${expected.svgHeight}`)
+	test.equal(dims.title.x, expected.title.x, `Should set title.x = ${expected.title.x}`)
+	test.equal(dims.title.y, expected.title.y, `Should set title.y = ${expected.title.y}`)
+	test.equal(dims.title.text, expected.title.text, `Should set title text = ${expected.title.text}`)
+	test.equal(dims.yAxis.x, expected.yAxis.x, `Should set yAxis.x = ${expected.yAxis.x}`)
+	test.equal(dims.yAxis.y, expected.yAxis.y, `Should set yAxis.y = ${expected.yAxis.y}`)
 
 	test.end()
 })

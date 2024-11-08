@@ -47,21 +47,53 @@ export class ViewModel {
 	readonly outRadius = 5
 	/** Increasing padding to space out the boxplots and determine position */
 	incrTopPad = 40
+	/** Range is 20 - 50 */
+	rowHeight: number
+	/** Range is 10 -20 */
+	rowSpace: number
 	viewData!: ViewData
 	constructor(config: any, data: BoxPlotResponse, settings: BoxPlotSettings) {
+		/** As requested, adjust the size of each plot based on the number of boxplots
+		 * Manages rendering very large svgs. */
+		if (config.settings.boxplot.useDefaultSettings == true && data.plots.length > 10) {
+			this.rowHeight = data.plots.length > 20 ? 20 : 35
+			this.rowSpace = data.plots.length > 20 ? 10 : 12
+		} else {
+			this.rowHeight = settings.rowHeight
+			this.rowSpace = settings.rowSpace
+		}
+
 		if (!data || !data.plots?.length) return
 
 		const totalLabelWidth = data.maxLabelLgth * 4 + settings.labelPad + this.horizPad
-		const totalRowHeight = settings.rowHeight + settings.rowSpace
+		const totalRowHeight = this.rowHeight + this.rowSpace
 
+		const plotDim = this.setPlotDimensions(data, config, settings, totalLabelWidth, totalRowHeight)
+		//20 for the yAxis offset (above), 10 more for the first boxplot
+		this.incrTopPad += 30
+
+		this.viewData = {
+			plotDim: plotDim as PlotDimensions,
+			plots: this.setPlotData(data, config, settings, totalLabelWidth, totalRowHeight),
+			legend: this.setLegendData(config, data)
+		}
+	}
+
+	setPlotDimensions(
+		data: BoxPlotResponse,
+		config: any,
+		settings: BoxPlotSettings,
+		totalLabelWidth: number,
+		totalRowHeight: number
+	) {
 		/** Add more plot dimensions here
 		 * Eventually should calculate the difference between vertical and
 		 * horizontal orientation.
 		 */
 		const plotDim = {
 			//Add 1 to the max is big enough so the upper line to boxplot isn't cutoff
-			//Note: ts is complaining absMax could be null. Ignore. Throws error in request.
-			domain: [data.absMin! - 0.1, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
+			//Note: ts is complaining absMax could be null. Ignore. Error in server request.
+			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
 			svgWidth: settings.boxplotWidth + totalLabelWidth + this.horizPad,
 			svgHeight: data.plots.length * totalRowHeight + this.topPad + this.bottomPad + this.incrTopPad,
 			title: {
@@ -74,16 +106,7 @@ export class ViewModel {
 				y: this.topPad + this.incrTopPad + 20
 			}
 		}
-		//20 for the yAxis offset (above), 10 more for the first boxplot
-		this.incrTopPad += 30
-		const plots = this.setPlotData(data, config, settings, totalLabelWidth, totalRowHeight)
-		const legend = this.setLegendData(config, data)
-
-		this.viewData = {
-			plotDim: plotDim as PlotDimensions,
-			plots,
-			legend
-		}
+		return plotDim
 	}
 
 	setPlotData(data: any, config: any, settings: BoxPlotSettings, totalLabelWidth: number, totalRowHeight: number) {

@@ -35,6 +35,7 @@ export type BoxPlotSettings = {
 	rowHeight: number
 	/** Space between the boxplots */
 	rowSpace: number
+	useDefaultSettings: boolean
 }
 
 export type BoxPlotDom = {
@@ -61,6 +62,7 @@ class TdbBoxplot extends RxComponent {
 	components: { controls: any }
 	dom: BoxPlotDom
 	interactions: BoxPlotInteractions
+	useDefaultSettings = true
 	constructor(opts: TdbBoxPlotOpts) {
 		super()
 		this.opts = opts
@@ -191,22 +193,40 @@ class TdbBoxplot extends RxComponent {
 			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
 			if (config.childType != 'boxplot') return
 
-			this.dom.plotTitle.selectAll('*').remove()
-			this.dom.yAxis.selectAll('*').remove()
-			this.dom.boxplots.selectAll('*').remove()
-			this.dom.legend.selectAll('*').remove()
-
 			const settings = config.settings.boxplot
 			const model = new Model(config, state, this.app, settings)
 			const data = await model.getData()
 			if (!data?.plots?.length) {
-				this.app.printError('No data found for boxplot')
+				this.app.printError('No data found for box plot')
 			}
 			const viewModel = new ViewModel(config, data, settings)
+
+			if (viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) {
+				/** If the row height or space changed during data processing,
+				 * save the new settings without calling app.dispatch.
+				 * Will show updated value in the controls. */
+				settings.rowSpace = viewModel.rowSpace
+				settings.rowHeight = viewModel.rowHeight
+
+				this.app.save({
+					type: 'plot_edit',
+					id: this.id,
+					config: {
+						settings: {
+							boxplot: {
+								rowSpace: viewModel.rowSpace,
+								rowHeight: viewModel.rowHeight,
+								useDefaultSettings: false
+							}
+						}
+					}
+				})
+			}
 			new View(viewModel.viewData, settings, this.dom)
 		} catch (e: any) {
-			console.error(new Error(e.message || e))
-			throw e
+			if (e instanceof Error) console.error(e.message || e)
+			else if (e.stack) console.log(e.stack)
+			else throw e
 		}
 	}
 }
@@ -220,7 +240,8 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		color: plotColor,
 		labelPad: 10,
 		rowHeight: 50,
-		rowSpace: 15
+		rowSpace: 15,
+		useDefaultSettings: true
 	}
 	return Object.assign(defaults, overrides)
 }

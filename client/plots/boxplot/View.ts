@@ -10,6 +10,12 @@ import { PlotToolTips } from './PlotToolTips'
 export class View {
 	constructor(data: ViewData, settings: BoxPlotSettings, dom: BoxPlotDom) {
 		if (!data || !data.plots.length) return
+
+		dom.plotTitle.selectAll('*').remove()
+		dom.yAxis.selectAll('*').remove()
+		dom.boxplots.selectAll('*').remove()
+		dom.legend.selectAll('*').remove()
+
 		const plotDim = data.plotDim
 		dom.svg.transition().attr('width', plotDim.svgWidth).attr('height', plotDim.svgHeight)
 
