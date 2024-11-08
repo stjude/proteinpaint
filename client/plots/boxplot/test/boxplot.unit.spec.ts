@@ -26,7 +26,8 @@ const mockDescrStats2 = [
 
 const mockConfig = {
 	term: { term: termjson['agedx'], q: { mode: 'continuous', descrStats: mockDescrStats1 } },
-	term2: { term: termjson['sex'], q: { descrStats: mockDescrStats2 } }
+	term2: { term: termjson['sex'], q: { descrStats: mockDescrStats2 } },
+	settings: { boxplot: { useDefaultSettings: true } }
 }
 
 const mockData = {
