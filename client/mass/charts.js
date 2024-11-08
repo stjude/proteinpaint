@@ -39,15 +39,6 @@ class MassCharts {
 		if (appState?.termfilter?.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
 		}
-		if (
-			!state.supportedChartTypes.includes('dictionary') &&
-			!state.termdbConfig.hiddenChartTypes?.includes('dictionary')
-		) {
-			// force to show a dictionary chart button
-			// TODO: may want the server to decide this, and as defined for a dataset
-			if (state.vocab.dslabel == 'profile') state.supportedChartTypes.push(...appState.termdbConfig.allowedChartTypes)
-			state.supportedChartTypes.push('dictionary')
-		}
 		return state
 	}
 

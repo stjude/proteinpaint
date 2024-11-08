@@ -48,17 +48,7 @@ export default {
 		db: {
 			file: 'files/hg38/TermdbTest/db'
 		},
-		allowedChartTypes: [
-			'summary',
-			'survival',
-			'matrix',
-			'sampleScatter',
-			'cuminc',
-			'dataDownload',
-			'sampleView',
-			'regression',
-			'facet'
-		],
+
 		termdb: {
 			displaySampleIds: true, // allow to display sample-level data
 
