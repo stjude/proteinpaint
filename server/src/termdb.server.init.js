@@ -473,91 +473,100 @@ export function server_init_db_queries(ds) {
 	returns list of chart types based on term types from each subcohort combination
 	*/
 	q.getSupportedChartTypes = embedder => {
-		mayComputeTermtypeByCohort(ds)
-		// ds.cohort.termdb.termtypeByCohort[] is set
+		const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, embedder)
 
-		const cred = serverconfig.dsCredentials?.[ds.label]
-		const supportedChartTypes = {}
-		const numericTypeCount = {}
-		// key: subcohort combinations, comma-joined, alphabetically sorted, as in the subcohort_terms table
-		// value: array of chart types allowed by term types
-		for (const r of ds.cohort.termdb.termtypeByCohort) {
-			if (!r.type) continue // skip ungraphable parent terms
+		const isSupportedChart = {
+			// --- show these charts unless hidden ---
+			dictionary: ({ hiddenCharts }) => !hiddenCharts.includes('dictionary'),
 
-			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = new Set(['regression', 'summary', 'facet'])
-				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
+			summary: ({ hiddenCharts }) => !hiddenCharts.includes('summary'),
 
-				numericTypeCount[r.cohort] = 0
-				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
-				if (ds.cohort.allowedChartTypes?.includes('brainImaging')) supportedChartTypes[r.cohort].add('brainImaging')
-				if (ds.cohort.allowedChartTypes?.includes('numericDictTermCluster'))
-					supportedChartTypes[r.cohort].add('numericDictTermCluster')
-				const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, embedder)
-				if (!forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')) {
-					supportedChartTypes[r.cohort].add('dataDownload')
-					supportedChartTypes[r.cohort].add('sampleView')
-					if (ds.queries?.singleCell) supportedChartTypes[r.cohort].add('singleCellPlot')
-				}
-			}
-			if (serverconfig.features?.draftChartTypes) {
-				// TODO: move draft charts out of flag once stable
-				supportedChartTypes[r.cohort].add(...serverconfig.features.draftChartTypes)
-			}
-			if (r.type == 'survival' && !supportedChartTypes[r.cohort].has('survival'))
-				supportedChartTypes[r.cohort].add('survival')
-			if (r.type == 'condition' && !supportedChartTypes[r.cohort].has('cuminc'))
-				supportedChartTypes[r.cohort].add('cuminc')
-			if (numericTypes.has(r.type)) numericTypeCount[r.cohort] += r.samplecount
+			matrix: ({ hiddenCharts }) => !hiddenCharts.includes('matrix'),
+
+			regression: ({ hiddenCharts }) => !hiddenCharts.includes('regression'),
+
+			facet: ({ hiddenCharts }) => !hiddenCharts.includes('facet'),
+
+			// show these charts if there are matching terms and not hidden
+			survival: ({ hiddenCharts, termType }) => !hiddenCharts.includes('survival') && termType == 'survival',
+
+			cuminc: ({ hiddenCharts, termType }) => {
+				return !hiddenCharts.includes('cuminc') && termType == 'condition'
+			},
+
+			// --- show these charts if there are matching terms or ds.cohort property, and also not hidden ---
+			sampleScatter: ({ hiddenCharts, termType, termCount }) =>
+				!hiddenCharts.includes('sampleScatter') &&
+				numericTypes.has(termType) &&
+				(termCount > 2 || ds.cohort.scatterplots || ds.queries?.geneExpression || ds.queries?.metaboliteIntensity),
+
+			// ---  sample-level charts  ---
+			// not shown by default if forbidden; a logged-in user should not be forbidden by authApi
+			dataDownload: ({ hiddenCharts }) =>
+				!hiddenCharts.includes('dataDownload') && !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*'),
+
+			sampleView: ({ hiddenCharts }) =>
+				!hiddenCharts.includes('sampleView') && !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*'),
+
+			singleCellPlot: ({ hiddenCharts }) =>
+				ds.queries?.singleCell &&
+				!hiddenCharts.includes('singleCellPlot') &&
+				!forbiddenRoutes.includes('termdb') &&
+				!forbiddenRoutes.includes('*'),
+
+			// --- show these charts if there is matching ds.queries ---
+			genomeBrowser: ({ hiddenCharts }) =>
+				(ds.queries?.snvindel || ds.queries?.trackLst) && !hiddenCharts.includes('genomeBrowser'),
+
+			geneExpression: ({ hiddenCharts }) => ds.queries?.geneExpression && !hiddenCharts.includes('geneExpression'),
+
+			metaboliteIntensity: ({ hiddenCharts }) =>
+				ds.queries?.metaboliteIntensity && !hiddenCharts.includes('metaboliteIntensity'),
+
+			DEanalysis: ({ hiddenCharts }) => ds.queries?.rnaseqGeneCount && !hiddenCharts.includes('DEanalysis'),
+
+			// --- show these special charts, if specified and not hidden ---
+			brainImaging: ({ specialCharts, hiddenCharts }) =>
+				specialCharts.includes('brainImaging') && !hiddenCharts.includes('brainImaging'),
+
+			profileRadar: ({ specialCharts, hiddenCharts }) =>
+				specialCharts.includes('profileRadar') && !hiddenCharts.includes('profileRadar'),
+
+			profileRadarFacility: ({ specialCharts, hiddenCharts }) =>
+				specialCharts.includes('profileRadarFacility') && !hiddenCharts.includes('profileRadarFacility'),
+
+			profilePolar: ({ specialCharts, hiddenCharts }) =>
+				specialCharts.includes('profilePolar') && !hiddenCharts.includes('profilePolar'),
+
+			profileBarchart: ({ specialCharts, hiddenCharts }) =>
+				specialCharts.includes('profileBarchart') && !hiddenCharts.includes('profileBarchart'),
+
+			numericDictCluster: ({ specialCharts, hiddenCharts, termType }) =>
+				specialCharts.includes('numericDictCluster') &&
+				!hiddenCharts.includes('numericDictCluster') &&
+				(termType == 'float' || termType == 'integer')
 		}
 
-		/*
-		this logic allows to add chart types generally applicable to all numeric terms
-		but boxplot and scatter are now child types under "summary" plot.
-		*/
-		for (const cohort in numericTypeCount) {
-			//if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].add('boxplot')
-			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].add('sampleScatter')
+		mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set
+		const specialCharts = ds.cohort.specialCharts || []
+		const hiddenCharts = ds.cohort.hiddenCharts || []
+		const supportedChartTypes = {}
+
+		for (const { cohort, termType, termCount } of ds.cohort.termdb.termtypeByCohort) {
+			if (!Object.keys(supportedChartTypes).includes(cohort)) {
+				supportedChartTypes[cohort] = new Set()
+			}
+
+			for (const [chartType, isSupported] of Object.entries(isSupportedChart)) {
+				if (isSupported({ specialCharts, hiddenCharts, termType, termCount })) {
+					supportedChartTypes[cohort].add(chartType)
+				}
+			}
 		}
 
 		// convert to array
 		for (const cohort in supportedChartTypes) {
 			supportedChartTypes[cohort] = [...supportedChartTypes[cohort]]
-		}
-
-		// may restrict the visible chart options
-		if (ds.cohort.allowedChartTypes) {
-			for (const cohort in supportedChartTypes) {
-				supportedChartTypes[cohort] = supportedChartTypes[cohort].filter(c => ds.cohort.allowedChartTypes.includes(c))
-			}
-		}
-
-		// determine eligible chart types based on optional genomic queries
-		if (ds.queries) {
-			if (ds.queries.snvindel || ds.queries.trackLst) {
-				// suitable datatypes are present, enable genomeBrowser chart
-				for (const cohort in supportedChartTypes) {
-					supportedChartTypes[cohort].push('genomeBrowser')
-				}
-			}
-			if (ds.queries.geneExpression) {
-				for (const cohort in supportedChartTypes) {
-					supportedChartTypes[cohort].push('geneExpression')
-					supportedChartTypes[cohort].push('sampleScatter')
-				}
-				// TODO support clustering on dict terms
-			}
-			if (ds.queries.metaboliteIntensity)
-				for (const cohort in supportedChartTypes) {
-					supportedChartTypes[cohort].push('sampleScatter')
-					supportedChartTypes[cohort].push('metaboliteIntensity')
-				}
-			if (ds.queries.rnaseqGeneCount) {
-				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('DEanalysis')
-			}
-			if (ds.queries.singleCell) {
-				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('singleCellPlot')
-			}
 		}
 
 		return supportedChartTypes
@@ -664,10 +673,10 @@ export function mayComputeTermtypeByCohort(ds) {
 			FROM subcohort_terms s
 			GROUP BY cohort, term_id
 		) 
-		SELECT cohort, type, count(*) as samplecount
+		SELECT cohort, type as termType, count(*) as termCount 
 		FROM terms t
 		JOIN c ON c.term_id = t.id
-		GROUP BY cohort, type`
+		GROUP BY cohort, termType`
 		)
 		.all()
 }
