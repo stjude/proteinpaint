@@ -486,10 +486,16 @@ export function server_init_db_queries(ds) {
 			? isSupportedRestrictedChart // only loop through restricted charts if ds.supportedOpenAccessCharts has been computed and there is an embedder argument
 			: { ...isSupportedOpenAccessChart, ...isSupportedRestrictedChart } // by default, loop through open and restricted charts
 
+		const computedChartTypes = Object.keys(chartsToCheck)
+		// special charts that are not in chartsToCheck will be supported by default
+		const nonComputedCharts = specialCharts.filter(c => computedChartTypes.includes(c))
+
 		for (const { cohort, termType, termCount } of ds.cohort.termdb.termtypeByCohort) {
 			if (!Object.keys(supportedChartTypes).includes(cohort)) {
 				// if only looping through restricted charts, initialize the set with precomputed ds.supportedOpenAccessCharts
 				const precomputed = chartsToCheck == isSupportedRestrictedChart ? ds.supportedOpenAccessCharts[cohort] : []
+				// add special charts that are not computed
+				precomputed.push(...nonComputedCharts)
 				supportedChartTypes[cohort] = new Set(precomputed || [])
 			}
 
@@ -618,28 +624,29 @@ const isSupportedOpenAccessChart = {
 	metaboliteIntensity: ({ ds, hiddenCharts }) =>
 		ds.queries?.metaboliteIntensity && !hiddenCharts.includes('metaboliteIntensity'),
 
-	DEanalysis: ({ ds, hiddenCharts }) => ds.queries?.rnaseqGeneCount && !hiddenCharts.includes('DEanalysis'),
+	DEanalysis: ({ ds, hiddenCharts }) => ds.queries?.rnaseqGeneCount && !hiddenCharts.includes('DEanalysis')
 
-	// --- show these special charts, if specified and not hidden ---
-	brainImaging: ({ specialCharts, hiddenCharts }) =>
-		specialCharts.includes('brainImaging') && !hiddenCharts.includes('brainImaging'),
+	// --- show these special charts, if specified, not need to compute if not in a key in this object ---
+	// brainImaging: ({ specialCharts, hiddenCharts }) =>
+	// 	specialCharts.includes('brainImaging') && !hiddenCharts.includes('brainImaging'),
 
-	profileRadar: ({ specialCharts, hiddenCharts }) =>
-		specialCharts.includes('profileRadar') && !hiddenCharts.includes('profileRadar'),
+	// by not having profile
+	// profileRadar: ({ specialCharts, hiddenCharts }) =>
+	// 	specialCharts.includes('profileRadar') && !hiddenCharts.includes('profileRadar'),
 
-	profileRadarFacility: ({ specialCharts, hiddenCharts }) =>
-		specialCharts.includes('profileRadarFacility') && !hiddenCharts.includes('profileRadarFacility'),
+	// profileRadarFacility: ({ specialCharts, hiddenCharts }) =>
+	// 	specialCharts.includes('profileRadarFacility') && !hiddenCharts.includes('profileRadarFacility'),
 
-	profilePolar: ({ specialCharts, hiddenCharts }) =>
-		specialCharts.includes('profilePolar') && !hiddenCharts.includes('profilePolar'),
+	// profilePolar: ({ specialCharts, hiddenCharts }) =>
+	// 	specialCharts.includes('profilePolar') && !hiddenCharts.includes('profilePolar'),
 
-	profileBarchart: ({ specialCharts, hiddenCharts }) =>
-		specialCharts.includes('profileBarchart') && !hiddenCharts.includes('profileBarchart'),
+	// profileBarchart: ({ specialCharts, hiddenCharts }) =>
+	// 	specialCharts.includes('profileBarchart') && !hiddenCharts.includes('profileBarchart'),
 
-	numericDictCluster: ({ specialCharts, hiddenCharts, termType }) =>
-		specialCharts.includes('numericDictCluster') &&
-		!hiddenCharts.includes('numericDictCluster') &&
-		(termType == 'float' || termType == 'integer')
+	// numericDictCluster: ({ specialCharts, hiddenCharts, termType }) =>
+	// 	specialCharts.includes('numericDictCluster') &&
+	// 	!hiddenCharts.includes('numericDictCluster') &&
+	// 	(termType == 'float' || termType == 'integer')
 }
 
 /*
