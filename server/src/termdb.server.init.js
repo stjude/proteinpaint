@@ -478,96 +478,24 @@ export function server_init_db_queries(ds) {
 		const draftCharts = serverconfig.features?.draftChartTypes || []
 		const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, embedder)
 
-		const isSupportedChart = {
-			// --- show these charts unless hidden ---
-			dictionary: ({ hiddenCharts }) => !hiddenCharts.includes('dictionary'),
-
-			summary: ({ hiddenCharts }) => !hiddenCharts.includes('summary'),
-
-			matrix: ({ hiddenCharts }) => !hiddenCharts.includes('matrix'),
-
-			regression: ({ hiddenCharts }) => !hiddenCharts.includes('regression'),
-
-			facet: ({ hiddenCharts }) => !hiddenCharts.includes('facet'),
-
-			// show these charts if there are matching terms and not hidden
-			survival: ({ hiddenCharts, termType }) => !hiddenCharts.includes('survival') && termType == 'survival',
-
-			cuminc: ({ hiddenCharts, termType }) => {
-				return !hiddenCharts.includes('cuminc') && termType == 'condition'
-			},
-
-			boxplot: ({ hiddenCharts, termType, termCount }) =>
-				draftCharts?.includes('boxplot') &&
-				!hiddenCharts.includes('boxplot') &&
-				numericTypes.has(termType) &&
-				termCount > 2,
-
-			// --- show these charts if there are matching terms or ds.cohort property, and also not hidden ---
-			sampleScatter: ({ hiddenCharts, termType, termCount }) =>
-				!hiddenCharts.includes('sampleScatter') &&
-				((numericTypes.has(termType) && termCount > 2) ||
-					ds.cohort.scatterplots ||
-					ds.queries?.geneExpression ||
-					ds.queries?.metaboliteIntensity),
-
-			// ---  sample-level charts  ---
-			// not shown by default if forbidden; a logged-in user should not be forbidden by authApi
-			dataDownload: ({ hiddenCharts }) =>
-				!hiddenCharts.includes('dataDownload') && !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*'),
-
-			sampleView: ({ hiddenCharts }) =>
-				!hiddenCharts.includes('sampleView') && !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*'),
-
-			singleCellPlot: ({ hiddenCharts }) =>
-				ds.queries?.singleCell &&
-				!hiddenCharts.includes('singleCellPlot') &&
-				!forbiddenRoutes.includes('termdb') &&
-				!forbiddenRoutes.includes('*'),
-
-			// --- show these charts if there is matching ds.queries ---
-			genomeBrowser: ({ hiddenCharts }) =>
-				(ds.queries?.snvindel || ds.queries?.trackLst) && !hiddenCharts.includes('genomeBrowser'),
-
-			geneExpression: ({ hiddenCharts }) => ds.queries?.geneExpression && !hiddenCharts.includes('geneExpression'),
-
-			metaboliteIntensity: ({ hiddenCharts }) =>
-				ds.queries?.metaboliteIntensity && !hiddenCharts.includes('metaboliteIntensity'),
-
-			DEanalysis: ({ hiddenCharts }) => ds.queries?.rnaseqGeneCount && !hiddenCharts.includes('DEanalysis'),
-
-			// --- show these special charts, if specified and not hidden ---
-			brainImaging: ({ specialCharts, hiddenCharts }) =>
-				specialCharts.includes('brainImaging') && !hiddenCharts.includes('brainImaging'),
-
-			profileRadar: ({ specialCharts, hiddenCharts }) =>
-				specialCharts.includes('profileRadar') && !hiddenCharts.includes('profileRadar'),
-
-			profileRadarFacility: ({ specialCharts, hiddenCharts }) =>
-				specialCharts.includes('profileRadarFacility') && !hiddenCharts.includes('profileRadarFacility'),
-
-			profilePolar: ({ specialCharts, hiddenCharts }) =>
-				specialCharts.includes('profilePolar') && !hiddenCharts.includes('profilePolar'),
-
-			profileBarchart: ({ specialCharts, hiddenCharts }) =>
-				specialCharts.includes('profileBarchart') && !hiddenCharts.includes('profileBarchart'),
-
-			numericDictCluster: ({ specialCharts, hiddenCharts, termType }) =>
-				specialCharts.includes('numericDictCluster') &&
-				!hiddenCharts.includes('numericDictCluster') &&
-				(termType == 'float' || termType == 'integer')
-		}
-
 		mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set
 		const supportedChartTypes = {}
+		const chartsToCheck = !embedder
+			? isSupportedOpenAccessChart // only loop through open access charts if there is no embedder argument
+			: ds.supportedOpenAccessCharts
+			? isSupportedRestrictedChart // only loop through restricted charts if ds.supportedOpenAccessCharts has been computed and there is an embedder argument
+			: { ...isSupportedOpenAccessChart, ...isSupportedRestrictedChart } // by default, loop through open and restricted charts
 
 		for (const { cohort, termType, termCount } of ds.cohort.termdb.termtypeByCohort) {
 			if (!Object.keys(supportedChartTypes).includes(cohort)) {
-				supportedChartTypes[cohort] = new Set()
+				// if only looping through restricted charts, initialize the set with precomputed ds.supportedOpenAccessCharts
+				const precomputed = chartsToCheck == isSupportedRestrictedChart ? ds.supportedOpenAccessCharts[cohort] : []
+				supportedChartTypes[cohort] = new Set(precomputed || [])
 			}
 
-			for (const [chartType, isSupported] of Object.entries(isSupportedChart)) {
-				if (isSupported({ specialCharts, hiddenCharts, termType, termCount })) {
+			for (const [chartType, isSupported] of Object.entries(chartsToCheck)) {
+				if (supportedChartTypes[cohort].has(chartType)) continue
+				if (isSupported({ ds, forbiddenRoutes, specialCharts, hiddenCharts, draftCharts, termType, termCount })) {
 					supportedChartTypes[cohort].add(chartType)
 				}
 			}
@@ -580,6 +508,9 @@ export function server_init_db_queries(ds) {
 
 		return supportedChartTypes
 	}
+
+	// precompute the supported open access charts once and remember for subsequent requests, since it doesn't change
+	ds.supportedOpenAccessCharts = q.getSupportedChartTypes() // no embedder argument
 
 	q.getSingleSampleData = function (sampleId, term_ids = []) {
 		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(t => '?').join(',')})`
@@ -636,6 +567,106 @@ export function listDbTables(cn) {
 export function listTableColumns(cn, table) {
 	const rows = cn.prepare(`SELECT name FROM PRAGMA_TABLE_INFO('${table}')`).all()
 	return rows.map(i => i.name)
+}
+
+/*
+	key: chartType
+	value: function to evaluate whether the chart is supported for a dataset
+
+	keep outside of server_init_db_queries() so that 
+	the same logic, functions can be reused for different ds
+*/
+const isSupportedOpenAccessChart = {
+	// --- show these charts unless hidden ---
+	dictionary: ({ hiddenCharts }) => !hiddenCharts.includes('dictionary'),
+
+	summary: ({ hiddenCharts }) => !hiddenCharts.includes('summary'),
+
+	matrix: ({ hiddenCharts }) => !hiddenCharts.includes('matrix'),
+
+	regression: ({ hiddenCharts }) => !hiddenCharts.includes('regression'),
+
+	facet: ({ hiddenCharts }) => !hiddenCharts.includes('facet'),
+
+	// show these charts if there are matching terms and not hidden
+	survival: ({ hiddenCharts, termType }) => !hiddenCharts.includes('survival') && termType == 'survival',
+
+	cuminc: ({ hiddenCharts, termType }) => {
+		return !hiddenCharts.includes('cuminc') && termType == 'condition'
+	},
+
+	boxplot: ({ draftCharts, hiddenCharts, termType, termCount }) =>
+		draftCharts?.includes('boxplot') &&
+		!hiddenCharts.includes('boxplot') &&
+		numericTypes.has(termType) &&
+		termCount > 2,
+
+	// --- show these charts if there are matching terms or ds.cohort property, and also not hidden ---
+	sampleScatter: ({ ds, hiddenCharts, termType, termCount }) =>
+		!hiddenCharts.includes('sampleScatter') &&
+		((numericTypes.has(termType) && termCount > 2) ||
+			ds.cohort.scatterplots ||
+			ds.queries?.geneExpression ||
+			ds.queries?.metaboliteIntensity),
+
+	// --- show these charts if there is matching ds.queries ---
+	genomeBrowser: ({ ds, hiddenCharts }) =>
+		(ds.queries?.snvindel || ds.queries?.trackLst) && !hiddenCharts.includes('genomeBrowser'),
+
+	geneExpression: ({ ds, hiddenCharts }) => ds.queries?.geneExpression && !hiddenCharts.includes('geneExpression'),
+
+	metaboliteIntensity: ({ ds, hiddenCharts }) =>
+		ds.queries?.metaboliteIntensity && !hiddenCharts.includes('metaboliteIntensity'),
+
+	DEanalysis: ({ ds, hiddenCharts }) => ds.queries?.rnaseqGeneCount && !hiddenCharts.includes('DEanalysis'),
+
+	// --- show these special charts, if specified and not hidden ---
+	brainImaging: ({ specialCharts, hiddenCharts }) =>
+		specialCharts.includes('brainImaging') && !hiddenCharts.includes('brainImaging'),
+
+	profileRadar: ({ specialCharts, hiddenCharts }) =>
+		specialCharts.includes('profileRadar') && !hiddenCharts.includes('profileRadar'),
+
+	profileRadarFacility: ({ specialCharts, hiddenCharts }) =>
+		specialCharts.includes('profileRadarFacility') && !hiddenCharts.includes('profileRadarFacility'),
+
+	profilePolar: ({ specialCharts, hiddenCharts }) =>
+		specialCharts.includes('profilePolar') && !hiddenCharts.includes('profilePolar'),
+
+	profileBarchart: ({ specialCharts, hiddenCharts }) =>
+		specialCharts.includes('profileBarchart') && !hiddenCharts.includes('profileBarchart'),
+
+	numericDictCluster: ({ specialCharts, hiddenCharts, termType }) =>
+		specialCharts.includes('numericDictCluster') &&
+		!hiddenCharts.includes('numericDictCluster') &&
+		(termType == 'float' || termType == 'integer')
+}
+
+/*
+	key: chartType
+	value: function to evaluate whether the chart is supported for a dataset and embedder
+
+	keep outside of server_init_db_queries() so that 
+	the same logic, functions can be reused for different ds
+*/
+const isSupportedRestrictedChart = {
+	// ---  sample-level charts  ---
+	// not shown if a portal/embedder (request origin) is forbidden to access certain server routes;
+	// may need to be recomputed for every `/termdb/config` request because the embedder may change
+	dataDownload: ({ hiddenCharts, forbiddenRoutes }) => {
+		return (
+			!hiddenCharts.includes('dataDownload') && !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')
+		)
+	},
+
+	sampleView: ({ hiddenCharts, forbiddenRoutes }) =>
+		!hiddenCharts.includes('sampleView') && !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*'),
+
+	singleCellPlot: ({ ds, hiddenCharts, forbiddenRoutes }) =>
+		ds.queries?.singleCell &&
+		!hiddenCharts.includes('singleCellPlot') &&
+		!forbiddenRoutes.includes('termdb') &&
+		!forbiddenRoutes.includes('*')
 }
 
 export function mayComputeTermtypeByCohort(ds) {

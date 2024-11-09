@@ -505,6 +505,9 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		return dsAuth
 	}
 
+	// This is used by the server to indicate forbidden routes, with no option for user login,
+	// to screen unauthorized server requests from embedders/portal that match a glob pattern.
+	// Note that a route that is not forbidden may still require 'jwt' or 'password' access.
 	authApi.getForbiddenRoutesForDsEmbedder = function (dslabel, embedder) {
 		const forbiddenRoutes = []
 		const ds = creds[dslabel] || creds['*']
