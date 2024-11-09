@@ -33,6 +33,7 @@ function init({ genomes }) {
 }
 
 export function getCohortsData(ds) {
+	if (!ds.cohort.db) return { cohorts: [], features: [], cfeatures: [] }
 	const features = ds.cohort.db.connection.prepare('select * from features').all()
 	const cohorts = ds.cohort.db.connection
 		.prepare(

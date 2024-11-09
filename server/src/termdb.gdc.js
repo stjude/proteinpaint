@@ -708,6 +708,8 @@ function makeTermdbQueries(ds, id2term) {
 		for (const r of id2term.values()) {
 			if (!r.type) continue
 			// !!! r.cohort is undefined here as gdc data dictionary has no subcohort
+			// replace with empty string to match the default cohort value from a db
+			if (r.cohort === undefined) r.cohort = ''
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
 				numericTypeCount[r.cohort] = 0
