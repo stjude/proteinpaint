@@ -473,6 +473,9 @@ export function server_init_db_queries(ds) {
 	returns list of chart types based on term types from each subcohort combination
 	*/
 	q.getSupportedChartTypes = embedder => {
+		const specialCharts = ds.cohort.specialCharts || []
+		const hiddenCharts = ds.cohort.hiddenCharts || []
+		const draftCharts = serverconfig.features?.draftChartTypes || []
 		const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, embedder)
 
 		const isSupportedChart = {
@@ -494,11 +497,19 @@ export function server_init_db_queries(ds) {
 				return !hiddenCharts.includes('cuminc') && termType == 'condition'
 			},
 
+			boxplot: ({ hiddenCharts, termType, termCount }) =>
+				draftCharts?.includes('boxplot') &&
+				!hiddenCharts.includes('boxplot') &&
+				numericTypes.has(termType) &&
+				termCount > 2,
+
 			// --- show these charts if there are matching terms or ds.cohort property, and also not hidden ---
 			sampleScatter: ({ hiddenCharts, termType, termCount }) =>
 				!hiddenCharts.includes('sampleScatter') &&
-				numericTypes.has(termType) &&
-				(termCount > 2 || ds.cohort.scatterplots || ds.queries?.geneExpression || ds.queries?.metaboliteIntensity),
+				((numericTypes.has(termType) && termCount > 2) ||
+					ds.cohort.scatterplots ||
+					ds.queries?.geneExpression ||
+					ds.queries?.metaboliteIntensity),
 
 			// ---  sample-level charts  ---
 			// not shown by default if forbidden; a logged-in user should not be forbidden by authApi
@@ -548,8 +559,6 @@ export function server_init_db_queries(ds) {
 		}
 
 		mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set
-		const specialCharts = ds.cohort.specialCharts || []
-		const hiddenCharts = ds.cohort.hiddenCharts || []
 		const supportedChartTypes = {}
 
 		for (const { cohort, termType, termCount } of ds.cohort.termdb.termtypeByCohort) {
