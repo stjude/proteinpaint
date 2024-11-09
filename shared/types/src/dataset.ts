@@ -1188,7 +1188,9 @@ type AssayAvailability = {
 
 //Shared with genome.ts
 export type Cohort = {
-	allowedChartTypes?: string[]
+	allowedChartTypes?: string[] // deprecated, should use the following two options instead
+	specialCharts?: string[]
+	hiddenCharts?: string[]
 	cumburden?: {
 		files: {
 			fit: string
