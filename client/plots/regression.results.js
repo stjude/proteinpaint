@@ -500,6 +500,10 @@ function setRenderers(self) {
 			})
 		}
 
+		// get tws of all independent variables
+		// will be used for tooltip message of estimate value
+		self.independentTws = Object.keys(result.coefficients.terms).map(tid => self.getIndependentInput(tid).term)
+
 		let varcount = 0
 		// intercept row
 		const intercept = result.coefficients.intercept
@@ -742,6 +746,10 @@ function setRenderers(self) {
 			result.coefficients_multi.interactions
 		)
 
+		// get tws of all independent variables
+		// will be used for tooltip message of estimate value
+		self.independentTws = Object.keys(result.coefficients_uni.terms).map(tid => self.getIndependentInput(tid).term)
+
 		let varcount = 0,
 			rowcolor
 		for (const tid in result.coefficients_uni.terms) {
@@ -926,7 +934,7 @@ function setRenderers(self) {
 	*/
 	self.getEstimateMsg = arg => {
 		const { est, tw, tw2, categoryKey, categoryKey2, isIntercept } = arg
-		const independentTws = self.parent.inputs.independent.inputLst.map(i => i.term).filter(Boolean) // see the TODO above
+		const independentTws = self.independentTws
 		const outcomeTw = self.config.outcome
 		const regtype = self.config.regressionType
 		const category = tw?.term?.values && tw.term.values[categoryKey] ? tw.term.values[categoryKey].label : categoryKey
@@ -964,7 +972,7 @@ function setRenderers(self) {
 		if (tw.interactions.length && !tw2) {
 			// variable is part of an interaction, but the current row
 			// is not an interaction row
-			const interactingTws = independentTws.filter(t => tw.interactions.includes(t.term.id))
+			const interactingTws = independentTws.filter(t => tw.interactions.includes(t.term.id || t.term.name))
 			const interactionsBaselineMsg = getBaselinesMsg(interactingTws)
 			msg += category
 				? `in "${tw.term.name}: ${category}", ${interactionsBaselineMsg} compared to "${tw.term.name}: ${refGrp}", ${interactionsBaselineMsg}`
@@ -975,11 +983,17 @@ function setRenderers(self) {
 				: `for every one unit increase of "${tw.term.name}"`
 		}
 		// adjusting for covariates
-		const covariates = independentTws
-			.filter(t => ![tw.term.id, ...tw.interactions].includes(t.term.id))
-			.map(t => `"${t.term.name}"`)
+		// get term ids of current variable and any interacting variables
+		const tids = [tw.term.id || tw.term.name]
+		if (tw.interactions) {
+			if (tw2) tids.push(tw2.term.id || tw2.term.name)
+			else tids.push(...tw.interactions)
+		}
+		// get covariates (i.e., all other variables)
+		const covariates = independentTws.filter(t => !tids.includes(t.term.id || t.term.name)).map(t => `"${t.term.name}"`)
 		if (regtype == 'cox')
 			covariates.push(outcomeTw.q.timeScale == 'time' ? '"Years of follow-up"' : '"Attained age during follow-up"')
+		// build message for covariates
 		if (!covariates.length) return msg + '.'
 		else if (covariates.length === 1) return msg + `, adjusting for ${covariates[0]}.`
 		else return msg + `, adjusting for ${covariates.slice(0, -1).join(', ')} and ${covariates.slice(-1)}.`
