@@ -497,10 +497,16 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 	const rows = []
 	for (const sample of data.lst) {
-		const value = data.refs.bySampleId[Number(sample.sample)].label
-		rows.push([{ value }])
+		const sampleName = data.refs.bySampleId[Number(sample.sample)].label
+		const row = [{ value: sampleName }]
+		if (self.config.term2) {
+			const value = sample[self.config.term2.$id]?.value
+			row.push({ value })
+		}
+		rows.push(row)
 	}
 	const columns = [{ label: 'Sample' }]
+	if (self.config.term2) columns.push({ label: self.config.term2.term.name })
 	const menu = new Menu({ padding: '5px' })
 	const div = menu.d.append('div')
 	renderTable({
@@ -508,7 +514,6 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		columns,
 		div,
 		showLines: true,
-		maxWidth: '27vw',
 		maxHeight: '40vh',
 		resize: true
 	})
