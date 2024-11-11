@@ -512,7 +512,7 @@ function setRenderers(self) {
 			// forest plot column
 			tr.append('td')
 			// data columns
-			self.fillCoefDataCols(tr, intercept, null, true)
+			self.fillCoefDataCols({ tr, cols: intercept, isIntercept: true })
 		}
 
 		/* term rows:
@@ -558,7 +558,7 @@ function setRenderers(self) {
 				forestPlotter(tr.append('td'), cols)
 
 				// display data columns
-				self.fillCoefDataCols(tr, cols, tw)
+				self.fillCoefDataCols({ tr, cols, tw })
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
 
@@ -614,7 +614,7 @@ function setRenderers(self) {
 					forestPlotter(tr.append('td'), cols)
 
 					// display data columns
-					self.fillCoefDataCols(tr, cols, tw, false, k)
+					self.fillCoefDataCols({ tr, cols, tw, categoryKey: k })
 
 					isfirst = false
 				}
@@ -663,7 +663,7 @@ function setRenderers(self) {
 				forestPlotter(tr.append('td'), cols)
 
 				// display data columns
-				self.fillCoefDataCols(tr, cols)
+				self.fillCoefDataCols({ tr, cols, tw: term1, tw2: term2, categoryKey: c.category1, categoryKey2: c.category2 })
 
 				isfirst = false
 			}
@@ -787,13 +787,13 @@ function setRenderers(self) {
 				forestPlotter_uni(tr.append('td'), cols)
 
 				// display univariate data columns
-				self.fillCoefDataCols(tr, cols, tw)
+				self.fillCoefDataCols({ tr, cols, tw })
 
 				// display multivariate forest plot
 				forestPlotter_multi(tr.append('td'), cols_multi)
 
 				// display multivariate data columns
-				self.fillCoefDataCols(tr, cols_multi, tw)
+				self.fillCoefDataCols({ tr, cols: cols_multi, tw })
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
 
@@ -855,7 +855,7 @@ function setRenderers(self) {
 					forestPlotter_uni(tr.append('td'), cols)
 
 					// display univariate data columns
-					self.fillCoefDataCols(tr, cols, tw)
+					self.fillCoefDataCols({ tr, cols, tw, categoryKey: k })
 
 					tr.append('td').style('width', '2px') // separation between univariate/multivariate
 
@@ -863,7 +863,7 @@ function setRenderers(self) {
 					forestPlotter_multi(tr.append('td'), cols_multi)
 
 					// display multivariate data columns
-					self.fillCoefDataCols(tr, cols_multi, tw)
+					self.fillCoefDataCols({ tr, cols: cols_multi, tw, categoryKey: k })
 
 					isfirst = false
 				}
@@ -883,13 +883,14 @@ function setRenderers(self) {
 		for (const v of header_multi) tr.append('td')
 	}
 
-	self.fillCoefDataCols = (tr, cols, tw, isIntercept, categoryKey) => {
+	self.fillCoefDataCols = arg => {
+		const { tr, cols } = arg
 		// estimate (Beta/OR/HR) column
 		const est = Number(cols.shift())
 		const estTd = tr.append('td').text(est).style('padding', '8px')
 		const tip = new Menu()
 		// get message explaining the meaning of estimate value
-		const estimateMsg = self.getEstimateMsg(est, tw, isIntercept, categoryKey)
+		const estimateMsg = self.getEstimateMsg(Object.assign({ est }, arg))
 		// display message as a tooltip
 		tip.d.append('div').text(estimateMsg)
 		estTd.on('mouseover', event => {
@@ -920,59 +921,68 @@ function setRenderers(self) {
 
 		TODO: for ancestry PC variables can refer to them in
 		the message as "EUR PCs 1-10".
+
+		TODO: make sure to support custom variables
 	*/
-	self.getEstimateMsg = (est, tw, isIntercept, categoryKey) => {
-		const independentTws = self.parent.inputs.independent.inputLst.map(i => i.term).filter(Boolean)
+	self.getEstimateMsg = arg => {
+		const { est, tw, tw2, categoryKey, categoryKey2, isIntercept } = arg
+		const independentTws = self.parent.inputs.independent.inputLst.map(i => i.term).filter(Boolean) // see the TODO above
 		const outcomeTw = self.config.outcome
 		const regtype = self.config.regressionType
 		const category = tw?.term?.values && tw.term.values[categoryKey] ? tw.term.values[categoryKey].label : categoryKey
+		const category2 =
+			tw2?.term?.values && tw2.term.values[categoryKey2] ? tw2.term.values[categoryKey2].label : categoryKey2
 		const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
+		const refGrp2 = tw2?.term?.values && tw2.term.values[tw2.refGrp] ? tw2.term.values[tw2.refGrp].label : tw2?.refGrp
 		let msg
 		if (regtype == 'linear') {
-			msg = `Mean "${outcomeTw.term.name}" is ${Math.abs(est)} units`
+			if (tw2) {
+				msg = `The difference in mean "${outcomeTw.term.name}"`
+				msg += category2
+					? ` between "${tw2.term.name}: ${category2}" and "${tw2.term.name}: ${refGrp2}"`
+					: ` for every one unit increase of "${tw2.term.name}"`
+			} else {
+				msg = `Mean "${outcomeTw.term.name}"`
+			}
+			msg += ` is ${Math.abs(est)} units`
 			if (isIntercept) {
-				// intercept term
-				msg += ', when ' + getInterceptMsg()
-				return msg
+				msg += ', when ' + getBaselinesMsg(independentTws)
+				return msg + '.'
 			}
 			msg += ` ${est < 0 ? 'lower' : 'higher'} `
 		} else if (regtype == 'logistic') {
-			msg = `Odds of "${outcomeTw.term.name}=${outcomeTw.nonRefGrp}" is `
+			msg = `Odds of "${outcomeTw.term.name}: ${outcomeTw.nonRefGrp}" is `
 			if (isIntercept) {
-				msg += `${est}, when ${getInterceptMsg()}`
-				return msg
+				msg += `${est}, when ${getBaselinesMsg(independentTws)}`
+				return msg + '.'
 			}
 			msg += est > 1 ? `${est} times higher ` : `${roundValue(1 / est, 3)} times lower `
 		} else if (regtype == 'cox') {
-			msg = `Hazard (instantaneous rate) of "${outcomeTw.term.name}=${outcomeTw.eventLabel}" is `
+			msg = `Hazard (instantaneous rate) of "${outcomeTw.term.name}: ${outcomeTw.eventLabel}" is `
 			msg += est > 1 ? `${est} times higher ` : `${roundValue(1 / est, 3)} times lower `
 		}
-		msg += category
-			? `in "${tw.term.name}=${category}" compared to "${tw.term.name}=${refGrp}"`
-			: `for every one unit increase of "${tw.term.name}"`
+		if (tw.interactions.length && !tw2) {
+			// variable is part of an interaction, but the current row
+			// is not an interaction row
+			const interactingTws = independentTws.filter(t => tw.interactions.includes(t.term.id))
+			const interactionsBaselineMsg = getBaselinesMsg(interactingTws)
+			msg += category
+				? `in "${tw.term.name}: ${category}", ${interactionsBaselineMsg} compared to "${tw.term.name}: ${refGrp}", ${interactionsBaselineMsg}`
+				: `for every one unit increase of "${tw.term.name}" and ${interactionsBaselineMsg}`
+		} else {
+			msg += category
+				? `in "${tw.term.name}: ${category}" compared to "${tw.term.name}: ${refGrp}"`
+				: `for every one unit increase of "${tw.term.name}"`
+		}
 		// adjusting for covariates
-		const covariates = independentTws.filter(t => t.term.id != tw.term.id).map(t => `"${t.term.name}"`)
+		const covariates = independentTws
+			.filter(t => ![tw.term.id, ...tw.interactions].includes(t.term.id))
+			.map(t => `"${t.term.name}"`)
 		if (regtype == 'cox')
 			covariates.push(outcomeTw.q.timeScale == 'time' ? '"Years of follow-up"' : '"Attained age during follow-up"')
 		if (!covariates.length) return msg + '.'
 		else if (covariates.length === 1) return msg + `, adjusting for ${covariates[0]}.`
 		else return msg + `, adjusting for ${covariates.slice(0, -1).join(', ')} and ${covariates.slice(-1)}.`
-
-		function getInterceptMsg() {
-			const msg = independentTws
-				.map(tw => {
-					if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
-						// term has refGrp
-						const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
-						return `"${tw.term.name}=${refGrp}"`
-					} else {
-						// term does not have refGrp
-						return `"${tw.term.name}=0"`
-					}
-				})
-				.join(', ')
-			return msg + '.'
-		}
 	}
 
 	self.mayshow_totalSnpEffect = result => {
@@ -1742,4 +1752,23 @@ function fillDataHeaders(header, tr, tr_label, label) {
 		.text(label)
 		.style('border-bottom', '1px solid')
 		.style('padding', '5px')
+}
+
+// get message for baseline levels of each variable
+// <categorical variable>: <refGrp>
+// <continuous variable>: 0
+function getBaselinesMsg(tws) {
+	const msg = tws
+		.map(tw => {
+			if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
+				// term has refGrp
+				const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
+				return `"${tw.term.name}: ${refGrp}"`
+			} else {
+				// term does not have refGrp
+				return `"${tw.term.name}: 0"`
+			}
+		})
+		.join(', ')
+	return msg
 }
