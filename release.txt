@@ -1,1 +1,2 @@
-
+Features:
+- BrainImaging: add color scale legend outside of image and add legend filters.
