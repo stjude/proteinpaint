@@ -118,10 +118,10 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
-		case 'boxplot':
-			if (term.type == 'float' || term.type == 'integer') uses.add('plot')
-			if (usecase.detail === 'term2' && hasNumericChild(child_types)) uses.add('branch')
-			return uses
+		// case 'boxplot':
+		// 	if (term.type == 'float' || term.type == 'integer') uses.add('plot')
+		// 	if (usecase.detail === 'term2' && hasNumericChild(child_types)) uses.add('branch')
+		// 	return uses
 
 		case 'cuminc':
 			if (usecase.detail == 'term') {
