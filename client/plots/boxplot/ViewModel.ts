@@ -130,7 +130,7 @@ export class ViewModel {
 	}
 
 	setLegendData(config: any, data: BoxPlotResponse) {
-		const legendData: { label: string; items: { label: string; value: number }[] }[] = []
+		const legendData: { label: string; items: { label: string; value: number; isHidden?: boolean }[] }[] = []
 		const isTerm2 = config?.term2 && config.term2.q?.descrStats
 		if (config.term.q?.descrStats) {
 			legendData.push({
@@ -145,9 +145,13 @@ export class ViewModel {
 			})
 		}
 		if (data.uncomputableValues != null) {
+			const addHiddenArr = data.uncomputableValues.map((v: { label: string; value: number; isHidden?: boolean }) => {
+				v.isHidden = true
+				return v
+			})
 			legendData.push({
 				label: 'Other categories',
-				items: data.uncomputableValues
+				items: addHiddenArr
 			})
 		}
 		return legendData
