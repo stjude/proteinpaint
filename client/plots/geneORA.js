@@ -69,7 +69,7 @@ class geneORA {
 				type: 'number',
 				chartType: 'geneORA',
 				settingsKey: 'gene_set_size_cutoff',
-				title: 'Gene set size cutoff',
+				title: 'Gene set size cutoff. Helps in filtering out large gene sets',
 				min: 0,
 				max: 20000
 			},
