@@ -69,12 +69,10 @@ export class BoxPlotToolTips {
 			addToolTips(this.boxplot.linep50, `Median: ${median.value}`)
 		}
 		if (this.boxplot.linew1) {
-			const min = this.plot.descrStats.find((d: any) => d.id == 'min')
-			addToolTips(this.boxplot.linew1, `Min: ${min.value}`)
+			addToolTips(this.boxplot.linew1, `${this.boxplot.w1}`)
 		}
 		if (this.boxplot.linew2) {
-			const max = this.plot.descrStats.find((d: any) => d.id == 'max')
-			addToolTips(this.boxplot.linew2, `Max: ${max.value}`)
+			addToolTips(this.boxplot.linew2, `${this.boxplot.w2}`)
 		}
 	}
 }

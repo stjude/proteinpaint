@@ -71,7 +71,7 @@ export class View {
 				labColor: 'black'
 			})
 
-			new BoxPlotToolTips(plot, g)
+			// new BoxPlotToolTips(plot, g)
 		}
 	}
 
