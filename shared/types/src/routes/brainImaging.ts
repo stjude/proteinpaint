@@ -18,6 +18,8 @@ export type BrainImagingRequest = {
 	divideByTW?: CategoricalTW
 	/* the term to color the samples based on their category */
 	overlayTW?: CategoricalTW
+	/* the term categories that were filtered out */
+	legendFilter?: string[]
 }
 
 export type BrainImagingResponse = {
