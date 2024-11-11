@@ -495,7 +495,6 @@ async function getTableData(self, samples, state, refKey) {
 	return [rows, columns]
 }
 
-// TODO: when there is only one legend left, do not show the option to hide it
 function setInteractivity(self) {
 	self.legendLabelMouseup = event => {
 		const targetData = event.target.__data__
