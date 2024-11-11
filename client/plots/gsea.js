@@ -71,6 +71,15 @@ class gsea {
 					{ label: 'adjusted', value: 'adjusted' },
 					{ label: 'original', value: 'original' }
 				]
+			},
+			{
+				label: 'Gene set size filter cutoff',
+				type: 'number',
+				chartType: 'gsea',
+				settingsKey: 'gene_set_size_cutoff',
+				title: 'Gene set size cutoff. Helps in filtering out large gene sets',
+				min: 0,
+				max: 20000
 			}
 		]
 
@@ -121,11 +130,6 @@ class gsea {
 		this.settings = this.config.settings.gsea
 		await this.setControls()
 		if (this.dom.header)
-			//this.dom.header
-			//	.style('opacity', 0.6)
-			//	.style('padding-left', '10px')
-			//	.style('font-size', '0.75em')
-			//	.text('GENE SET ENRICHMENT ANALYSIS')
 			this.dom.header.html(
 				this.config.gsea_params.genes.length +
 					' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
@@ -183,7 +187,11 @@ add:
 		self.gsea_table_rows = []
 		for (const pathway_name of Object.keys(output.data)) {
 			const pathway = output.data[pathway_name]
-			if (self.settings.adjusted_original_pvalue == 'adjusted' && self.settings.pvalue >= pathway.fdr) {
+			if (
+				self.settings.adjusted_original_pvalue == 'adjusted' &&
+				self.settings.pvalue >= pathway.fdr &&
+				self.settings.gene_set_size_cutoff > pathway.geneset_size
+			) {
 				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
 				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
 				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
@@ -199,7 +207,11 @@ add:
 					{ value: fdr },
 					{ value: pathway.leading_edge }
 				])
-			} else if (self.settings.adjusted_original_pvalue == 'original' && self.settings.pvalue >= pathway.pval) {
+			} else if (
+				self.settings.adjusted_original_pvalue == 'original' &&
+				self.settings.pvalue >= pathway.pval &&
+				self.settings.gene_set_size_cutoff > pathway.geneset_size
+			) {
 				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
 				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
 				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
@@ -326,7 +338,8 @@ export async function getPlotConfig(opts, app) {
 				gsea: {
 					pvalue: 0.05,
 					adjusted_original_pvalue: 'adjusted',
-					pathway: undefined
+					pathway: undefined,
+					gene_set_size_cutoff: 2000
 				},
 				controls: { isOpen: true }
 			}
