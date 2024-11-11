@@ -1,11 +1,12 @@
 import { getCompInit, copyMerge } from '../rx/index.js'
 import { controlsInit } from './controls'
-import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
+import { getProfilePlotConfig, profilePlot, getDefaultProfilePlotSettings } from './profilePlot.js'
 import { fillTwLst } from '#termsetting'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
+import { loadFilterTerms } from './profilePlot.js'
 
-export class profileForms {
+export class profileForms extends profilePlot {
 	id: string
 	type: string
 	opts: { [key: string]: any }
@@ -18,83 +19,37 @@ export class profileForms {
 	settings: any
 	xAxisScale: any
 	shift: any
+	twLst: any
 
 	constructor(opts) {
+		super()
 		this.opts = opts
 		this.type = 'profileForms'
 	}
 
-	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
-		return { config }
-	}
-
 	async init(appState) {
+		super.init(appState)
+		const rightDiv = this.dom.rightDiv
 		const config = appState.plots.find(p => p.id === this.id)
 		const settings = config.settings.profileForms
-		this.opts.header.text(config.tw.term.name)
-
-		const controlsHolder = this.opts.holder
-			.append('div')
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-		const rightHolder = this.opts.holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const headerHolder = rightHolder.append('div').style('padding', '10px')
-		const contentHolder = rightHolder.append('div')
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: controlsHolder,
-				inputs: [
-					{
-						label: 'Chart width',
-						type: 'number',
-						chartType: this.type,
-						settingsKey: 'svgw'
-					},
-					{
-						label: 'Chart height',
-						type: 'number',
-						chartType: this.type,
-						settingsKey: 'svgh'
-					}
-				]
-			})
-		}
-		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: config.terms
-		})
-		const sampleHolder = headerHolder.append('div').style('padding', '10px')
+		const sampleHolder = rightDiv.append('div').style('padding', '10px')
 		sampleHolder.append('span').text('Sample: ')
 		const selectSample = sampleHolder.append('select')
-		selectSample
-			.selectAll('option')
-			.data(this.data.lst)
-			.enter()
-			.append('option')
-			.text(d => this.data.refs.bySampleId[d.sample].label)
-			.attr('value', d => d.sample)
+
 		selectSample.on('change', () => {
 			const id = selectSample.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: id } })
 		})
-		const questionHolder = headerHolder.append('div')
+		const questionHolder = rightDiv.append('div')
 		questionHolder.append('span').text('Question: ').style('vertical-align', 'top')
 		const selectQuestion = questionHolder.append('select').property('multiple', true)
-		selectQuestion
-			.selectAll('option')
-			.data(config.terms)
-			.enter()
-			.append('option')
-			.text(d => d.term.id + ' - ' + d.term.name)
-			.attr('value', d => d.term.id)
+
 		selectQuestion.on('change', () => {
 			const id = selectQuestion.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { question: id } })
 		})
 		const shift = 50
-		const svg = contentHolder
+		const svg = rightDiv
 			.append('svg')
 			.attr('width', settings.svgw + shift + 10)
 			.attr('height', settings.svgh + shift * 2 + 10)
@@ -110,17 +65,37 @@ export class profileForms {
 		xAxisG.call(xAxisBottom)
 		yAxisG.call(yAxisLeft)
 
-		this.dom = {
+		this.dom = copyMerge(this.dom, {
 			selectSample,
-			mainG
-		}
+			mainG,
+			selectQuestion
+		})
+		this.twLst = config.terms
 	}
 
 	async main() {
-		const config = this.state.config
-		this.settings = this.state.config.settings.profileForms
-
+		super.main()
+		await this.setControls()
+		this.renderHeaderOptions()
 		this.renderPlot()
+	}
+
+	renderHeaderOptions() {
+		this.dom.selectSample.selectAll('option').remove()
+		this.dom.selectSample
+			.selectAll('option')
+			.data(this.data.lst)
+			.enter()
+			.append('option')
+			.text(d => this.data.refs.bySampleId[d.sample].label)
+			.attr('value', d => d.sample)
+		this.dom.selectQuestion
+			.selectAll('option')
+			.data(this.config.terms)
+			.enter()
+			.append('option')
+			.text((d, i) => i + 1 + '. ' + d.term.name)
+			.attr('value', d => d.term.id)
 	}
 
 	renderPlot() {
@@ -170,7 +145,7 @@ export async function getPlotConfig(opts, app) {
 	config.settings = getDefaultProfileFormsSettings()
 	config = copyMerge(structuredClone(config), opts)
 	await fillTwLst(config.terms, app.vocabApi)
-
+	await loadFilterTerms(config, app, opts)
 	return config
 }
 
@@ -179,10 +154,7 @@ export function getDefaultProfileFormsSettings() {
 		controls: {
 			isOpen: false
 		},
-		profileForms: {
-			svgw: 800,
-			svgh: 300
-		}
+		profileForms: copyMerge({ svgw: 800, svgh: 300 }, getDefaultProfilePlotSettings())
 	}
 }
 

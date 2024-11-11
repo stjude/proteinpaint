@@ -48,21 +48,19 @@ export class profilePlot {
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
 		const leftDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 
-		const mainDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const holder2 = this.opts.holder.append('div')
+		const rightDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		const controlsDiv = leftDiv.append('div').style('display', 'inline-block').style('font-size', '0.9em')
 		const iconsDiv = leftDiv.append('div').style('margin-left', '16px').style('margin-top', '8px')
 
-		const holder = mainDiv.insert('div').style('display', 'inline-block')
+		const holder = rightDiv.insert('div').style('display', 'inline-block')
 
 		const plotDiv = holder.append('div')
 		this.dom = {
 			controlsDiv,
 			iconsDiv,
-			holder,
-			plotDiv,
-			holder2
+			rightDiv,
+			plotDiv
 		}
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
@@ -129,6 +127,7 @@ export class profilePlot {
 
 	getList(tw) {
 		let values = Object.values(tw.term.values)
+
 		values.sort((v1, v2) => v1.label.localeCompare(v2.label))
 		const data = this.filtersData.lst.filter(sample =>
 			this.samplesPerFilter[tw.term.id].includes(parseInt(sample.sample))
