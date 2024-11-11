@@ -2,10 +2,14 @@ import { getCompInit, copyMerge } from '#rx'
 import { controlsInit } from './controls'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table.ts'
+import svgLegend from '#dom/svg.legend'
+import { scaleLinear } from 'd3-scale'
+import { Menu } from '#dom/menu'
 class BrainImaging {
 	constructor(opts) {
 		this.opts = opts
 		this.type = 'brainImaging'
+		setInteractivity(this)
 	}
 
 	async init(appState) {
@@ -30,8 +34,22 @@ class BrainImaging {
 		const tdL = contentTr.append('td')
 		const tdF = contentTr.append('td')
 		const tdT = contentTr.append('td')
+		const legendHolder = contentHolder.append('svg').style('width', '100%').on('mouseup', this.legendLabelMouseup)
+		const legendMenu = new Menu({ padding: '0px' })
 
-		this.dom = { headerHolder, contentHolder, headerTr, tdL, tdF, tdT, imagesF: [], imagesL: [], imagesT: [] }
+		this.dom = {
+			headerHolder,
+			contentHolder,
+			headerTr,
+			tdL,
+			tdF,
+			tdT,
+			imagesF: [],
+			imagesL: [],
+			imagesT: [],
+			legendHolder,
+			legendMenu
+		}
 		this.addSliders(state.config.settings.brainImaging)
 
 		const configInputsOptions = this.getConfigInputsOptions(state)
@@ -52,6 +70,7 @@ class BrainImaging {
 			console.log(urls)
 			this.downloadImage(urls)
 		})
+		this.legendRenderer = svgLegend({ holder: this.dom.legendHolder })
 	}
 
 	addSliders(settings) {
@@ -186,9 +205,19 @@ class BrainImaging {
 			config.overlayTW?.term?.id !== previousConfig?.overlayTW?.term?.id ||
 			config.divideByTW?.term?.id !== previousConfig?.divideByTW?.term?.id
 
-		const updateL = config.settings.brainImaging.brainImageL != this.settings?.brainImageL || overlayOrDivideByChange
-		const updateF = config.settings.brainImaging.brainImageF != this.settings?.brainImageF || overlayOrDivideByChange
-		const updateT = config.settings.brainImaging.brainImageT != this.settings?.brainImageT || overlayOrDivideByChange
+		const legendFilterChange = JSON.stringify(previousConfig?.legendFilter) !== JSON.stringify(config.legendFilter)
+		const updateL =
+			config.settings.brainImaging.brainImageL != this.settings?.brainImageL ||
+			overlayOrDivideByChange ||
+			legendFilterChange
+		const updateF =
+			config.settings.brainImaging.brainImageF != this.settings?.brainImageF ||
+			overlayOrDivideByChange ||
+			legendFilterChange
+		const updateT =
+			config.settings.brainImaging.brainImageT != this.settings?.brainImageT ||
+			overlayOrDivideByChange ||
+			legendFilterChange
 
 		return {
 			config,
@@ -197,7 +226,9 @@ class BrainImaging {
 			RefNIdata: appState.termdbConfig.queries.NIdata[config.queryKey],
 			updateL,
 			updateF,
-			updateT
+			updateT,
+			overlayOrDivideByChange,
+			legendFilterChange
 		}
 	}
 
@@ -222,9 +253,11 @@ class BrainImaging {
 				l: this.settings.brainImageL,
 				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
 				divideByTW,
-				overlayTW
+				overlayTW,
+				legendFilter: this.state.config.legendFilter
 			}
 			const data = await dofetch3('brainImaging', { body })
+			this.legendValues = data.legend
 			if (data.error) throw data.error
 
 			this.dataUrlL = {}
@@ -260,7 +293,8 @@ class BrainImaging {
 				f: this.settings.brainImageF,
 				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
 				divideByTW,
-				overlayTW
+				overlayTW,
+				legendFilter: this.state.config.legendFilter
 			}
 			const data = await dofetch3('brainImaging', { body })
 			if (data.error) throw data.error
@@ -295,7 +329,8 @@ class BrainImaging {
 				t: this.settings.brainImageT,
 				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
 				divideByTW,
-				overlayTW
+				overlayTW,
+				legendFilter: this.state.config.legendFilter
 			}
 			const data = await dofetch3('brainImaging', { body })
 			if (data.error) throw data.error
@@ -322,6 +357,39 @@ class BrainImaging {
 				const img = this.dom.tdT.append('div').append('img').attr('src', result.url)
 				this.dom.imagesT.push(img)
 			}
+		}
+
+		if (this.state.overlayOrDivideByChange || !this.legendData || this.state.legendFilterChange) {
+			// only render legends when it is the first time or when divideBy/Overlay terms changed.
+			const legendItems = []
+			for (const [label, v] of Object.entries(this.legendValues)) {
+				const scale = scaleLinear(['white', v.color], [0, v.maxLength]).clamp(true)
+				legendItems.push({
+					text: label == 'default' ? 'Combined Intensity' : label,
+					width: 100,
+					scale,
+					colors: ['white', v.color],
+					domain: [0, v.maxLength],
+					key: label,
+					crossedOut: v.crossedOut
+				})
+			}
+			this.legendData = [
+				{
+					items: legendItems
+				}
+			]
+
+			this.legendRenderer(this.legendData, {
+				settings: {
+					fontsize: 16,
+					iconh: 14,
+					iconw: 14,
+					dimensions: {
+						xOffset: 0
+					}
+				}
+			})
 		}
 	}
 }
@@ -425,4 +493,69 @@ async function getTableData(self, samples, state, refKey) {
 	}
 
 	return [rows, columns]
+}
+
+// TODO: when there is only one legend left, do not show the option to hide it
+function setInteractivity(self) {
+	self.legendLabelMouseup = event => {
+		const targetData = event.target.__data__
+		if (!targetData || targetData.key == 'default') return
+		const legendMenu = self.dom.legendMenu.clear()
+		const legendMenuDiv = legendMenu.d.append('div')
+		const legendFilter = self.state.config.legendFilter ? [...self.state.config.legendFilter] : []
+
+		const legendFilterIndex = legendFilter.indexOf(targetData.key)
+
+		if (legendFilterIndex !== -1 || legendFilter.length + 1 !== self.legendData[0].items.length) {
+			// only show the Hide option when the cat is not the last shown cat
+			legendMenuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(legendFilterIndex == -1 ? 'Hide' : 'Show')
+				.on('click', () => {
+					legendMenu.hide()
+					if (legendFilterIndex == -1) legendFilter.push(targetData.key)
+					else legendFilter.splice(legendFilterIndex, 1)
+
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: { legendFilter }
+					})
+				})
+		}
+
+		legendMenuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show only')
+			.on('click', () => {
+				legendMenu.hide()
+				const legendCats = self.legendData[0].items
+				const legendFilter = []
+				for (const legendCat of legendCats) {
+					if (legendCat.key !== targetData.key) legendFilter.push(legendCat.key)
+				}
+				console.log('what is legendFilter', legendFilter)
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: { legendFilter }
+				})
+			})
+
+		legendMenuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show all')
+			.on('click', () => {
+				legendMenu.hide()
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: { legendFilter: [] }
+				})
+			})
+		legendMenu.showunder(event.target)
+	}
 }

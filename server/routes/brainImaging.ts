@@ -45,8 +45,8 @@ function init({ genomes }) {
 				index = query.t
 			}
 
-			const brainImage = await getBrainImage(query, genomes, plane, index)
-			res.send({ brainImage, plane } satisfies BrainImagingResponse)
+			const [brainImage, legend] = await getBrainImage(query, genomes, plane, index)
+			res.send({ brainImage, plane, legend })
 		} catch (e: any) {
 			console.log(e)
 			res.status(404).send('Sample brain image not found')
@@ -85,12 +85,16 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 			const divideCategory = divideByTW ? sampleData[divideByTW.$id!].value : 'default'
 			const overlayCategory = overlayTW ? sampleData[overlayTW.$id!].value : 'default'
 			if (!divideByCat[divideCategory]) divideByCat[divideCategory] = {}
-			if (!divideByCat[divideCategory][overlayCategory])
-				divideByCat[divideCategory][overlayCategory] = {
-					samples: [],
-					color: overlayTW?.term?.values?.[overlayCategory]?.color || 'red'
+
+			if (!query.legendFilter?.includes(overlayCategory)) {
+				if (!divideByCat[divideCategory][overlayCategory]) {
+					divideByCat[divideCategory][overlayCategory] = {
+						samples: [],
+						color: overlayTW?.term?.values?.[overlayCategory]?.color || 'red'
+					}
 				}
-			divideByCat[divideCategory][overlayCategory].samples.push(samplePath)
+				divideByCat[divideCategory][overlayCategory].samples.push(samplePath)
+			}
 		}
 		const lengths: number[] = []
 		for (const dcategory in divideByCat)
@@ -103,16 +107,29 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 		const maxLength = Math.max(...lengths)
 
 		const brainImageDict = {}
+		const legend = {}
 		for (const dcategory in divideByCat) {
 			let catNum = 0
 			const filesByCat = divideByCat[dcategory]
-			for (const category in filesByCat) catNum += filesByCat[category].samples.length
-			//if (samples.length < 1) continue
+			for (const category in filesByCat) {
+				if (filesByCat[category].samples.length < 1) continue
+				catNum += filesByCat[category].samples.length
+				if (!legend[category]) legend[category] = { color: filesByCat[category].color, maxLength }
+			}
 			const url = await generateBrainImage(refFile, plane, index, maxLength, JSON.stringify(filesByCat))
 			brainImageDict[dcategory] = { url, catNum }
 		}
 
-		return brainImageDict
+		if (query.legendFilter) {
+			for (const cat of query.legendFilter) {
+				legend[cat] = {
+					color: 'white',
+					maxLength,
+					crossedOut: true
+				}
+			}
+		}
+		return [brainImageDict, legend]
 	} else {
 		throw 'no reference or sample files'
 	}
