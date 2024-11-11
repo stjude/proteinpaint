@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx/index.js'
 import { controlsInit } from './controls'
-import { getProfilePlotConfig } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
 import { fillTwLst } from '#termsetting'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
@@ -16,6 +16,8 @@ export class profileForms {
 	data: any
 	dom: any
 	settings: any
+	xAxisScale: any
+	shift: any
 
 	constructor(opts) {
 		this.opts = opts
@@ -44,7 +46,20 @@ export class profileForms {
 				app: this.app,
 				id: this.id,
 				holder: controlsHolder,
-				inputs: []
+				inputs: [
+					{
+						label: 'Chart width',
+						type: 'number',
+						chartType: this.type,
+						settingsKey: 'svgw'
+					},
+					{
+						label: 'Chart height',
+						type: 'number',
+						chartType: this.type,
+						settingsKey: 'svgh'
+					}
+				]
 			})
 		}
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
@@ -72,19 +87,24 @@ export class profileForms {
 			.data(config.terms)
 			.enter()
 			.append('option')
-			.text(d => d.term.name)
+			.text(d => d.term.id + ' - ' + d.term.name)
 			.attr('value', d => d.term.id)
 		selectQuestion.on('change', () => {
 			const id = selectQuestion.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { question: id } })
 		})
-		const svg = contentHolder.append('svg').attr('width', 500).attr('height', 500)
-		const mainG = svg.append('g')
-		const xAxisG = svg.append('g').attr('transform', `translate(0, ${settings.svgh})`)
-		const yAxisG = svg.append('g')
-
-		const xAxisScale = d3Linear().domain([0, settings.svgw]).range([0, settings.svgw])
-		const xAxisBottom = axisBottom(xAxisScale)
+		const shift = 50
+		const svg = contentHolder
+			.append('svg')
+			.attr('width', settings.svgw + shift + 10)
+			.attr('height', settings.svgh + shift * 2 + 10)
+		const mainG = svg.append('g').attr('transform', `translate(${shift}, 10)`)
+		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${settings.svgh + 10})`)
+		const yAxisG = svg.append('g').attr('transform', `translate(${shift}, 10)`)
+		this.xAxisScale = d3Linear()
+			.domain([0, config.terms.length + 1])
+			.range([0, settings.svgw])
+		const xAxisBottom = axisBottom(this.xAxisScale).ticks(config.terms.length)
 		const yAxisScale = d3Linear().domain([100, 0]).range([0, settings.svgh])
 		const yAxisLeft = axisLeft(yAxisScale)
 		xAxisG.call(xAxisBottom)
@@ -108,25 +128,37 @@ export class profileForms {
 		const sample = this.state.config.sample || this.data.lst[0].sample
 		const tw = this.state.config.terms.find(t => t.term.id == this.state.config.question) || this.state.config.terms[0]
 		const sampleData = this.data.samples[sample]
-		let termData = sampleData[tw.$id].value
-		termData = termData.slice(1, -1) //Removed string quoutes
-		const percents: { [key: string]: number } = JSON.parse(termData)
-		const width = this.settings.svgw / 3
-		const x = 50
-		let y = 0
-		const total = Object.values(percents).reduce((a, b) => a + b, 0)
-		for (const key in percents) {
-			const value = percents[key]
-			const height = (value / total) * this.settings.svgh
-			this.dom.mainG
-				.append('rect')
-				.attr('x', x)
-				.attr('y', y)
-				.attr('width', width)
-				.attr('height', height)
-				.attr('stroke', 'gray')
-				.attr('fill', 'white')
-			y += height
+		const step = this.settings.svgw / (this.state.config.terms.length + 1)
+		let i = 1
+		const width = 40
+
+		for (const tw of this.state.config.terms) {
+			let termData = sampleData[tw.$id].value
+			termData = termData.slice(1, -1) //Removed string quoutes
+			const percents: { [key: string]: number } = JSON.parse(termData)
+			const x = i * step - width / 2
+
+			let y = 0
+			const total = Object.values(percents).reduce((a, b) => a + b, 0)
+			for (const key in percents) {
+				const value = percents[key]
+				const height = (value / total) * this.settings.svgh
+				this.dom.mainG
+					.append('rect')
+					.attr('x', x)
+					.attr('y', y)
+					.attr('width', width)
+					.attr('height', height)
+					.attr('stroke', 'gray')
+					.attr('fill', 'white')
+				this.dom.mainG
+					.append('text')
+					.attr('x', x + width + 2)
+					.attr('y', y + height / 2)
+					.text(key)
+				y += height
+			}
+			i++
 		}
 	}
 }
@@ -135,11 +167,23 @@ export async function getPlotConfig(opts, app) {
 	let config = getProfilePlotConfig(app, opts)
 	if (config) config = config.find(t => t.module == opts.tw.term.name)
 	else config = {}
-	config.settings = { controls: { isOpen: false }, profileForms: { svgw: 500, svgh: 500 } }
+	config.settings = getDefaultProfileFormsSettings()
 	config = copyMerge(structuredClone(config), opts)
 	await fillTwLst(config.terms, app.vocabApi)
 
 	return config
+}
+
+export function getDefaultProfileFormsSettings() {
+	return {
+		controls: {
+			isOpen: false
+		},
+		profileForms: {
+			svgw: 800,
+			svgh: 300
+		}
+	}
 }
 
 export function makeChartBtnMenu(holder, chartsInstance) {
