@@ -206,11 +206,12 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 
-		{
-			label: 'Differential Expression',
-			chartType: 'DEanalysis',
-			clickTo: self.loadChartSpecificMenu
-		},
+		// Commenting out this button since DE does not work without specifying two groups
+		//{
+		//	label: 'Differential Expression',
+		//	chartType: 'DEanalysis',
+		//	clickTo: self.loadChartSpecificMenu
+		//},
 
 		{
 			label: 'Data Download',
