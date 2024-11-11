@@ -121,11 +121,15 @@ class gsea {
 		this.settings = this.config.settings.gsea
 		await this.setControls()
 		if (this.dom.header)
-			this.dom.header
-				.style('opacity', 0.6)
-				.style('padding-left', '10px')
-				.style('font-size', '0.75em')
-				.text('GENE SET ENRICHMENT ANALYSIS')
+			//this.dom.header
+			//	.style('opacity', 0.6)
+			//	.style('padding-left', '10px')
+			//	.style('font-size', '0.75em')
+			//	.text('GENE SET ENRICHMENT ANALYSIS')
+			this.dom.header.html(
+				this.config.gsea_params.genes.length +
+					' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
+			)
 		render_gsea(this)
 	}
 }
@@ -320,7 +324,7 @@ export async function getPlotConfig(opts, app) {
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
 				gsea: {
-					pvalue: 1.0,
+					pvalue: 0.05,
 					adjusted_original_pvalue: 'adjusted',
 					pathway: undefined
 				},
