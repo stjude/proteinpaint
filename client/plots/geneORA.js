@@ -197,8 +197,8 @@ add:
 			{ label: 'Gene set group' },
 			{ label: 'Original p-value (linear scale)' },
 			{ label: 'Adjusted p-value (linear scale)' },
-			{ label: 'Gene set hits' },
-			{ label: 'Gene set size' }
+			{ label: 'Gene set size' },
+			{ label: 'Gene set hits' }
 		]
 		self.gene_ora_table_rows = []
 		for (const pathway of output.pathways) {
@@ -211,8 +211,8 @@ add:
 					{ value: pathway.pathway_name },
 					{ value: roundValueAuto(pathway.p_value_original) },
 					{ value: roundValueAuto(pathway.p_value_adjusted) },
-					{ value: pathway.gene_set_hits },
-					{ value: pathway.gene_set_size }
+					{ value: pathway.gene_set_size },
+					{ value: pathway.gene_set_hits }
 				])
 			} else if (
 				self.settings.adjusted_original_pvalue == 'original' &&
@@ -223,8 +223,8 @@ add:
 					{ value: pathway.pathway_name },
 					{ value: roundValueAuto(pathway.p_value_original) },
 					{ value: roundValueAuto(pathway.p_value_adjusted) },
-					{ value: pathway.gene_set_hits },
-					{ value: pathway.gene_set_size }
+					{ value: pathway.gene_set_size },
+					{ value: pathway.gene_set_hits }
 				])
 			}
 		}
