@@ -61,9 +61,6 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 	if (q[key].referenceFile && q[key].samples) {
 		const refFile = path.join(serverconfig.tpmasterdir, q[key].referenceFile)
 		const dirPath = path.join(serverconfig.tpmasterdir, q[key].samples)
-		const files = fs
-			.readdirSync(dirPath)
-			.filter(file => file.endsWith('.nii') && fs.statSync(path.join(dirPath, file)).isFile())
 
 		const terms: CategoricalTW[] = []
 		const divideByTW: CategoricalTW | undefined = query.divideByTW
@@ -132,15 +129,6 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 		return [brainImageDict, legend]
 	} else {
 		throw 'no reference or sample files'
-	}
-
-	function getFilesByCat(tw: CategoricalTW) {
-		const filesByCat: FilesByCategory = {}
-		for (const [key, value] of Object.entries(tw.term.values)) {
-			// TODO: make sure each term has a default color. buildTermDb assigns default color when not available
-			filesByCat[key] = { samples: [], color: value.color || 'red' }
-		}
-		return filesByCat
 	}
 }
 
