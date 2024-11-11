@@ -3,7 +3,7 @@ import { ScaleLinear, scaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from './BoxPlot'
-import type { ViewData } from './ViewModel'
+import type { ViewData, LegendItemEntry } from './ViewModel'
 // import { BoxPlotToolTips } from './BoxPlotToolTips'
 
 /** Handles all the rendering logic for the boxplot. */
@@ -75,10 +75,7 @@ export class View {
 		}
 	}
 
-	renderLegend(
-		legendDiv,
-		legendData: { label: string; items: { label: string; value: number; isHidden?: boolean }[] }[]
-	) {
+	renderLegend(legendDiv, legendData: { label: string; items: LegendItemEntry[] }[]) {
 		legendDiv.attr('id', 'sjpp-boxplot-legend')
 		//Set styles and preferences in the following fns
 		const addSectionTitle = (label: string) => {
@@ -88,11 +85,11 @@ export class View {
 			const div = legendDiv.append('div').style('padding-left', '10px')
 			return div
 		}
-		const addData = (item: { label: string; value: number; isHidden?: boolean }, sectionDiv) => {
+		const addData = (item: { label: string; value?: number; count?: number; isHidden?: boolean }, sectionDiv) => {
 			sectionDiv
 				.append('div')
 				.style('text-decoration', item.isHidden ? 'line-through' : '')
-				.text(`${item.label}: ${item.value}`)
+				.text(`${item.label}${item.value ? `: ${item.value}` : item.count ? `, n=${item.count}` : ''}`)
 		}
 		for (const section of legendData) {
 			addSectionTitle(section.label)

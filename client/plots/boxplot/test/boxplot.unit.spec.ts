@@ -36,6 +36,7 @@ const mockData = {
 	absMax: 100,
 	plots: [
 		{
+			key: '1',
 			seriesId: '1',
 			boxplot: {
 				w1: 0.002739726,
@@ -55,6 +56,7 @@ const mockData = {
 			y: 155
 		},
 		{
+			key: '2',
 			seriesId: '2',
 			boxplot: {
 				w1: 0.002739726,
@@ -163,8 +165,9 @@ tape('.setLegendData()', function (test) {
 
 	const viewModel = new ViewModel(mockConfig, mockData, mockSettings)
 	const legend = viewModel.setLegendData(mockConfig, mockData)
+	if (!legend) return test.fail('Should create a legend object')
 
-	test.equal(legend.length, 3, `Should create 3 legend sections`)
+	test.equal(legend.length, 2, `Should create 3 legend sections`)
 
 	test.true(
 		legend[0].label.includes(termjson['agedx'].name),
@@ -177,9 +180,6 @@ tape('.setLegendData()', function (test) {
 		`Should create descriptive stats section for ${termjson['sex'].name}`
 	)
 	test.deepEqual(legend[1].items, mockConfig.term2.q.descrStats, `Should properly set legend items`)
-
-	test.equal(legend[2].label, 'Other categories', `Should create section for uncomputatable values`)
-	test.deepEqual(legend[2].items, mockData.uncomputableValues, `Should properly set legend items`)
 
 	test.end()
 })

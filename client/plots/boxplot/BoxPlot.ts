@@ -226,7 +226,7 @@ class TdbBoxplot extends RxComponent {
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)
-			else throw e
+			throw e
 		}
 	}
 }

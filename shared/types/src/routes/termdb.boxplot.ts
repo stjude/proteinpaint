@@ -27,9 +27,10 @@ type BoxPlotEntry = {
 	/** color matching the value/category color */
 	color?: string
 	descrStats: BoxPlotDescrStatsEntry[]
+	key: string
 	seriesId?: string
-	/** TODO: Is this needed? */
-	// 	values: number[]
+	/** Pertains to an uncomputable term value */
+	uncomputable?: boolean
 }
 
 export type BoxPlotData = {

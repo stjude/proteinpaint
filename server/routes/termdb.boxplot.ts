@@ -98,25 +98,32 @@ function init({ genomes }) {
 
 				//Set rendering properties for the plot
 				if (overlayTerm) {
-					let label = overlayTerm?.term?.values?.[key]?.label || key
-					label = `${label}, n=${values.length}`
-					if (maxLabelLgth === null || label.length > maxLabelLgth) maxLabelLgth = label.length
+					const _key = overlayTerm?.term?.values?.[key]?.label || key
+					const plotLabel = `${_key}, n=${values.length}`
+					if (maxLabelLgth === null || plotLabel.length > maxLabelLgth) maxLabelLgth = plotLabel.length
 					const plot = Object.assign(_plot, {
-						seriesId: key,
-						color: overlayTerm?.term?.values?.[key]?.color || null
+						color: overlayTerm?.term?.values?.[key]?.color || null,
+						key: _key,
+						seriesId: key
 					})
-					plot.boxplot.label = label
+					plot.boxplot.label = plotLabel
 					plots.push(plot)
 				} else {
-					const label = `${sampleType}, n=${values.length}`
-					if (maxLabelLgth === null || label.length > maxLabelLgth) maxLabelLgth = label.length
-					_plot.boxplot.label = label
-					plots.push(_plot)
+					const plotLabel = `${sampleType}, n=${values.length}`
+					if (maxLabelLgth === null || plotLabel.length > maxLabelLgth) maxLabelLgth = plotLabel.length
+					const plot = Object.assign(_plot, {
+						key: sampleType
+					})
+					plot.boxplot.label = plotLabel
+					plots.push(plot)
 				}
 			}
 
 			if (absMin == null || absMax == null || maxLabelLgth == null)
 				throw 'absMin, absMax, or maxLabelLgth is null [termdb.boxplot init()]'
+
+			if (q.tw.term?.values) setUncomputablePlots(q.tw, plots)
+			if (overlayTerm && overlayTerm.term?.values) setUncomputablePlots(overlayTerm, plots)
 
 			const returnData: BoxPlotResponse = {
 				absMin,
@@ -132,6 +139,14 @@ function init({ genomes }) {
 			if (e instanceof Error && e.stack) console.error(e)
 		}
 	}
+}
+
+function setUncomputablePlots(term, plots) {
+	for (const v of Object.values(term.term.values as { label: string; uncomputable: boolean }[])) {
+		const plot = plots.find(p => p.key === v.label)
+		if (plot) plot.uncomputable = v.uncomputable
+	}
+	return plots
 }
 
 function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {

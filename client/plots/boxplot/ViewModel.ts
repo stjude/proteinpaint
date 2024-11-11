@@ -12,7 +12,17 @@ import type { BoxPlotResponse, BoxPlotData, BoxPlotDescrStatsEntry } from '#type
 export type ViewData = {
 	plotDim: PlotDimensions
 	plots: Plots[]
-	legend: { label: string; items: { label: string; value: number }[] }[]
+	legend: { label: string; items: LegendItemEntry[] }[]
+}
+
+export type LegendItemEntry = {
+	label: string
+	/** Value for stat */
+	value?: number
+	/** Total number of samples, cells, etc. */
+	count?: number
+	/** If true, line-through text */
+	isHidden: boolean
 }
 
 type Plots = {
@@ -75,7 +85,7 @@ export class ViewModel {
 		this.viewData = {
 			plotDim: plotDim as PlotDimensions,
 			plots: this.setPlotData(data, config, settings, totalLabelWidth, totalRowHeight),
-			legend: this.setLegendData(config, data)
+			legend: this.setLegendData(config, data) || []
 		}
 	}
 
@@ -95,7 +105,11 @@ export class ViewModel {
 			//Note: ts is complaining absMax could be null. Ignore. Error in server request.
 			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
 			svgWidth: settings.boxplotWidth + totalLabelWidth + this.horizPad,
-			svgHeight: data.plots.length * totalRowHeight + this.topPad + this.bottomPad + this.incrTopPad,
+			svgHeight:
+				data.plots.filter(p => !p.uncomputable).length * totalRowHeight +
+				this.topPad +
+				this.bottomPad +
+				this.incrTopPad,
 			title: {
 				x: totalLabelWidth + settings.boxplotWidth / 2,
 				y: this.topPad + this.incrTopPad / 2,
@@ -126,34 +140,69 @@ export class ViewModel {
 			plot.y = this.topPad + this.incrTopPad
 			this.incrTopPad += totalRowHeight
 		}
-		return plots
+		return plots.filter(p => !p.uncomputable)
 	}
 
 	setLegendData(config: any, data: BoxPlotResponse) {
-		const legendData: { label: string; items: { label: string; value: number; isHidden?: boolean }[] }[] = []
+		const legendData: { label: string; items: LegendItemEntry[] }[] = []
 		const isTerm2 = config?.term2 && config.term2.q?.descrStats
 		if (config.term.q?.descrStats) {
 			legendData.push({
 				label: `Descriptive Statistics${isTerm2 ? `: ${config.term.term.name}` : ''}`,
 				items: config.term.q.descrStats
 			})
+			if (isTerm2) {
+				legendData.push({
+					label: `Descriptive Statistics: ${config.term2.term.name}`,
+					items: config.term2.q.descrStats
+				})
+			}
+			const uncomputablePlots = data.plots
+				.filter(p => p.uncomputable)
+				?.map(p => {
+					const total = p.descrStats.find(d => d.id === 'total')
+					return { label: p.key, count: total!.value, isHidden: true }
+				})
+			if (config.term.term?.values) {
+				const term1Label = config.term2 ? config.term.term.name : 'Other categories'
+				const term1Data = this.setHiddenCategoryItems(
+					config.term.term,
+					term1Label,
+					uncomputablePlots,
+					data.uncomputableValues || undefined
+				)
+				if (term1Data) legendData.push(term1Data)
+			}
+
+			if (config.term2?.term?.values && uncomputablePlots.length) {
+				//TODO: Only show items with plot data?
+				const term2Data = this.setHiddenCategoryItems(config.term2.term, config.term2.term.name, uncomputablePlots)
+				if (term2Data) legendData.push(term2Data)
+			}
+			return legendData
 		}
-		if (isTerm2) {
-			legendData.push({
-				label: `Descriptive Statistics: ${config.term2.term.name}`,
-				items: config.term2.q.descrStats
-			})
+	}
+
+	setHiddenCategoryItems(
+		term: any,
+		label: string,
+		uncomputablePlots: LegendItemEntry[],
+		uncomputableValues?: { label: string; value: number }[]
+	) {
+		const termData: { label: string; items: LegendItemEntry[] } = { label, items: [] }
+
+		for (const v of Object.values(term.values || {})) {
+			const label = (v as { label: string }).label
+			const plot = uncomputablePlots.find(p => p.label === label)
+			if (plot) termData.items.push(plot)
+			else if (uncomputableValues) {
+				const uncomputableItem = uncomputableValues.find(u => u.label === label)
+				if (uncomputableItem) {
+					termData.items.push({ label: uncomputableItem.label, count: uncomputableItem.value, isHidden: true })
+				}
+			}
 		}
-		if (data.uncomputableValues != null) {
-			const addHiddenArr = data.uncomputableValues.map((v: { label: string; value: number; isHidden?: boolean }) => {
-				v.isHidden = true
-				return v
-			})
-			legendData.push({
-				label: 'Other categories',
-				items: addHiddenArr
-			})
-		}
-		return legendData
+
+		return termData.items.length ? termData : null
 	}
 }
