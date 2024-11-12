@@ -26,7 +26,7 @@ class TdbTable {
 
 	async setControls() {
 		if (this.opts.controls) {
-			this.opts.controls.on('downloadClick.boxplot', this.download)
+			this.opts.controls.on('downloadClick.table', this.download)
 		} else {
 			this.dom.holder
 				.attr('class', 'pp-termdb-plot-viz')
@@ -42,7 +42,7 @@ class TdbTable {
 				})
 			}
 
-			this.components.controls.on('downloadClick.boxplot', this.download)
+			this.components.controls.on('downloadClick.table', this.download)
 		}
 	}
 

@@ -90,7 +90,7 @@ function helpBtnInit(opts) {
 	icon_functions['help'](infoDiv, { handler: opts.callback, title: 'Documentation' })
 
 	const self = {
-		plotTypes: ['profilePolar', 'profileBarchart', 'profileRadar', 'profileRadarFacility'],
+		plotTypes: ['profilePolar', 'profileBarchart', 'profileRadar', 'profileRadarFacility', 'boxplot'],
 		dom: {
 			btn: infoDiv
 		}
@@ -98,7 +98,8 @@ function helpBtnInit(opts) {
 
 	const api = {
 		main(isOpen, plot) {
-			if (self.plotTypes.includes(plot.chartType)) self.dom.btn.style('display', isOpen ? 'inline-block' : 'block')
+			if (self.plotTypes.includes(plot.chartType) || self.plotTypes.includes(plot.childType))
+				self.dom.btn.style('display', isOpen ? 'inline-block' : 'block')
 			else self.dom.btn.style('display', 'none')
 		}
 	}

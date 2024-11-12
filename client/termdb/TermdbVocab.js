@@ -475,7 +475,7 @@ export class TermdbVocab extends Vocab {
 	async getBoxPlotData(arg, _body = {}) {
 		const headers = this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)
-		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
+		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
 		const body = Object.assign(
 			{
 				genome: this.vocab.genome,

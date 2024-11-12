@@ -2,31 +2,32 @@ import { getCompInit, copyMerge } from '../../rx'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ } from '../controls'
 import { RxComponent } from '../../types/rx.d'
+import { plotColor } from '#shared/common.js'
+import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { MassAppApi } from '#mass/types/mass'
 import { Model } from './Model'
 import { ViewModel } from './ViewModel'
 import { View } from './View'
-import { plotColor } from '#shared/common.js'
-import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
-import type { MassAppApi } from '#mass/types/mass'
+import { BoxPlotInteractions } from './BoxPlotInteractions'
 
 /** TODOs:
- *	Old code `this.components.controls.on('downloadClick.boxplot', this.download)`. Needed?
- *	Hover effect?
- *	Descriptive stats tables?
- *	Types for config and data
+ *	Type for config
+ *	Add functionality to change orientation
+ *	Add controls for: 
+	- multicolor boxplots when !term2
  */
 
-type TdbBoxplotOpts = {
+type TdbBoxPlotOpts = {
 	holder: Elem
 	controls?: Elem
 	header?: Elem
 	numericEditMenuVersion?: string[]
 }
 
-export type BoxplotSettings = {
+export type BoxPlotSettings = {
 	/** Width of the boxplots and scale, excluding labels */
 	boxplotWidth: number
-	/** TODO: colors? or use schema? Default is common plot color.  */
+	/** Default is common plot color.  */
 	color: string
 	/** Padding between the left hand label and boxplot */
 	labelPad: number
@@ -34,17 +35,20 @@ export type BoxplotSettings = {
 	rowHeight: number
 	/** Space between the boxplots */
 	rowSpace: number
+	useDefaultSettings: boolean
 }
 
-export type BoxplotDom = {
+export type BoxPlotDom = {
 	/** Div for boxplots below the scale */
 	boxplots: SvgG
 	/** Controls div for the hamburger menu */
 	controls: Elem
 	/** Main div */
-	div: Elem
+	div: Div
 	/** Sandbox header */
 	header?: Elem
+	/** Legend */
+	legend: Div
 	/** Displays the term1 name as the plot title */
 	plotTitle: SvgText
 	/** Main svg holder */
@@ -56,8 +60,10 @@ export type BoxplotDom = {
 class TdbBoxplot extends RxComponent {
 	readonly type = 'boxplot'
 	components: { controls: any }
-	dom: BoxplotDom
-	constructor(opts: TdbBoxplotOpts) {
+	dom: BoxPlotDom
+	interactions: BoxPlotInteractions
+	useDefaultSettings = true
+	constructor(opts: TdbBoxPlotOpts) {
 		super()
 		this.opts = opts
 		this.components = {
@@ -65,17 +71,19 @@ class TdbBoxplot extends RxComponent {
 		}
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
-		const div = opts.controls ? holder : holder.append('div')
-		const svg = div.append('svg').style('display', 'inline-block').attr('class', 'sjpp-boxplot-svg')
+		const div = holder.append('div')
+		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-boxplot-svg')
 		this.dom = {
 			controls: controls as Elem,
-			div: div as Elem,
+			div,
 			svg,
 			plotTitle: svg.append('text'),
 			yAxis: svg.append('g'),
-			boxplots: svg.append('g')
+			boxplots: svg.append('g'),
+			legend: div.append('div').attr('id', 'sjpp-boxplot-legend')
 		}
-		if (opts.header) this.dom.header = opts.header.html('Boxplot')
+		this.interactions = new BoxPlotInteractions(this.dom)
+		if (opts.header) this.dom.header = opts.header.html('Box plot')
 	}
 
 	async setControls() {
@@ -101,21 +109,41 @@ class TdbBoxplot extends RxComponent {
 				defaultQ4fillTW: term0_term2_defaultQ
 			},
 			{
-				label: 'Box plot height',
+				label: 'Width',
+				title: 'Width of the entire plot',
+				type: 'number',
+				chartType: 'boxplot',
+				settingsKey: 'boxplotWidth',
+				debounceInterval: 500
+			},
+			{
+				label: 'Plot height',
 				title: 'Height of each box plot',
 				type: 'number',
 				chartType: 'boxplot',
 				settingsKey: 'rowHeight',
 				step: 1,
-				max: 300,
+				max: 50,
 				min: 20,
-				debounceInterval: 1000
+				debounceInterval: 500
+			},
+			{
+				label: 'Plot padding',
+				title: 'Space between each box plot',
+				type: 'number',
+				chartType: 'boxplot',
+				settingsKey: 'rowSpace',
+				step: 1,
+				max: 20,
+				min: 10,
+				debounceInterval: 500
 			},
 			{
 				label: 'Default color',
 				type: 'color',
 				chartType: 'boxplot',
-				settingsKey: 'color'
+				settingsKey: 'color',
+				getDisplayStyle: plot => (plot.term2 ? 'none' : '')
 			}
 		]
 		this.components.controls = await controlsInit({
@@ -123,6 +151,13 @@ class TdbBoxplot extends RxComponent {
 			id: this.id,
 			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 			inputs
+		})
+
+		this.components.controls.on('downloadClick.boxplot', () => {
+			this.interactions.download()
+		})
+		this.components.controls.on('helpClick.boxplot', () => {
+			this.interactions.help()
 		})
 	}
 
@@ -158,20 +193,40 @@ class TdbBoxplot extends RxComponent {
 			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
 			if (config.childType != 'boxplot') return
 
-			this.dom.plotTitle.selectAll('*').remove()
-			this.dom.yAxis.selectAll('*').remove()
-			this.dom.boxplots.selectAll('*').remove()
-
 			const settings = config.settings.boxplot
 			const model = new Model(config, state, this.app, settings)
 			const data = await model.getData()
-			if (!data.plots.length) {
-				this.app.printError('No data found for boxplot')
+			if (!data?.plots?.length) {
+				this.app.printError('No data found for box plot')
 			}
-			const viewData = new ViewModel(config, data, settings)
-			new View(viewData, settings, this.dom)
+			const viewModel = new ViewModel(config, data, settings)
+
+			if (viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) {
+				/** If the row height or space changed during data processing,
+				 * save the new settings without calling app.dispatch.
+				 * Will show updated value in the controls. */
+				settings.rowSpace = viewModel.rowSpace
+				settings.rowHeight = viewModel.rowHeight
+
+				this.app.save({
+					type: 'plot_edit',
+					id: this.id,
+					config: {
+						settings: {
+							boxplot: {
+								rowSpace: viewModel.rowSpace,
+								rowHeight: viewModel.rowHeight,
+								useDefaultSettings: false
+							}
+						}
+					}
+				})
+			}
+			new View(viewModel.viewData, settings, this.dom)
 		} catch (e: any) {
-			console.error(new Error(e.message || e))
+			if (e instanceof Error) console.error(e.message || e)
+			else if (e.stack) console.log(e.stack)
+			throw e
 		}
 	}
 }
@@ -180,12 +235,13 @@ export const boxplotInit = getCompInit(TdbBoxplot)
 export const componentInit = boxplotInit
 
 export function getDefaultBoxplotSettings(app, overrides = {}) {
-	const defaults: BoxplotSettings = {
+	const defaults: BoxPlotSettings = {
 		boxplotWidth: 550,
 		color: plotColor,
 		labelPad: 10,
-		rowHeight: 60,
-		rowSpace: 5
+		rowHeight: 50,
+		rowSpace: 15,
+		useDefaultSettings: true
 	}
 	return Object.assign(defaults, overrides)
 }

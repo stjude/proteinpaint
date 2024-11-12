@@ -5,7 +5,7 @@ export type BoxPlotRequest = {
 	tw: any
 	genome: string
 	dslabel: string
-	divideTw?: any
+	overlayTw?: any
 	filter: any
 	filter0: any
 }
@@ -18,32 +18,31 @@ export type BoxPlotResponse = {
 	/** Longest label length for all plots */
 	maxLabelLgth: number
 	plots: BoxPlotEntry[]
+	/** Categories not shown in the final plot */
+	uncomputableValues: { label: string; value: number }[] | null
 }
 
 type BoxPlotEntry = {
-	boxplot: BoxPlotData
-	/** Label to show */
-	label: string
-	// /** Number of samples */
-	// plotValueCount: number
-	/** TODO: Is this needed? */
-	values: number[]
-	/** Lowest min for the scale domain */
-	min: number
-	/** Highest max for the scale domain */
-	max: number
+	boxplot: BoxPlotData & { label: string }
+	/** color matching the value/category color */
+	color?: string
+	descrStats: BoxPlotDescrStatsEntry[]
+	key: string
+	seriesId?: string
+	/** Pertains to an uncomputable term value */
+	uncomputable?: boolean
 }
 
-type BoxPlotData = {
+export type BoxPlotData = {
 	/** Min/1st whisker value */
-	w1: number
+	w1: number | undefined
 	/** Max/2nd whisker value */
-	w2: number
+	w2: number | undefined
 	/** 5% */
 	p05: number
 	/** 25% */
 	p25: number
-	/** 50% */
+	/** 50%, median */
 	p50: number
 	/** 75% */
 	p75: number
@@ -53,6 +52,15 @@ type BoxPlotData = {
 	iqr: number
 	/** Outliers */
 	out: { value: number }[]
+}
+
+export type BoxPlotDescrStatsEntry = {
+	/** Use lower case for sanity check
+	 * 'total' | 'min' | 'p25' | 'median' | 'mean' | 'p75' | 'max' | 'sd' | 'variance' | 'iqr'
+	 */
+	id: string
+	label: string
+	value: number
 }
 
 export const boxplotPayload: RoutePayload = {
