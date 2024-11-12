@@ -891,23 +891,17 @@ function setRenderers(self) {
 		for (const v of header_multi) tr.append('td')
 	}
 
+	// fill data columns of row of coefficients table
 	self.fillCoefDataCols = arg => {
 		const { tr, cols } = arg
 		// estimate (Beta/OR/HR) column
 		const est = Number(cols.shift())
 		const estTd = tr.append('td').text(est).style('padding', '8px')
+		// on hover, display explanation of estimate value
 		const tip = new Menu()
-		// get message explaining the meaning of estimate value
 		const estimateMsg = self.getEstimateMsg(Object.assign({ est }, arg))
-		// display message as a tooltip
-		tip.d.append('div').text(estimateMsg)
-		estTd.on('mouseover', event => {
-			/*const p = event.currentTarget.getBoundingClientRect()
-			const x = p.left + window.scrollX + 10
-			const y = p.top + window.scrollY + 20
-			return tip.show(x, y, false, false, false)*/
-			return tip.showunder(event.currentTarget)
-		})
+		tip.d.append('div').style('width', '700px').text(estimateMsg)
+		estTd.on('mouseover', event => tip.showunder(event.currentTarget))
 		estTd.on('mouseout', () => tip.hide())
 		// 95% CI column
 		tr.append('td').html(`${cols.shift()} &ndash; ${cols.shift()}`).style('padding', '8px')
@@ -915,25 +909,18 @@ function setRenderers(self) {
 		for (const v of cols) tr.append('td').text(v).style('padding', '8px')
 	}
 
-	/* get tooltip message for estimate column
+	/*
+	get tooltip message explaining the estimate value
 
-		TODO: currently assuming that if a term does not have a
-		category/refGrp, then it must be a continuous term.
-		This is not a correct assumption because it ignores
-		cubic spline/snplst/snplocus etc. terms. Need to consider these
-		other scenarios in this code.
-
-		TODO: for querying independent variables, see the code in
-		getIndependentInput() because this function can handle both
-		dictionary and non-dictionary variables.
-
-		TODO: for ancestry PC variables can refer to them in
-		the message as "EUR PCs 1-10".
-
-		TODO: make sure to support custom variables
+	TODO: currently assuming that if a term does not have a
+	category/refGrp, then it must be a continuous term.
+	This is not a correct assumption because it ignores
+	cubic spline/snplst/snplocus etc. terms. Need to consider these
+	other scenarios in this code.
 	*/
 	self.getEstimateMsg = arg => {
 		const { est, tw, tw2, categoryKey, categoryKey2, isIntercept } = arg
+		if (tw && (!tw.term.type || tw.q.mode == 'spline')) return '' // TODO: support non-dictionary and cubic spline variables
 		const independentTws = self.independentTws
 		const outcomeTw = self.config.outcome
 		const regtype = self.config.regressionType
