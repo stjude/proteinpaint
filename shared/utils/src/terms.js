@@ -153,6 +153,7 @@ export function getBin(lst, value) {
 
 export function getSampleType(term, ds) {
 	if (!term) return null
+	if (term.type && isNonDictionaryType(term.type)) return DEFAULT_SAMPLE_TYPE
 	if (term.id) return ds.cohort.termdb.term2SampleType.get(term.id)
 	if (term.type == 'samplelst') {
 		const key = Object.keys(term.values)[0]
