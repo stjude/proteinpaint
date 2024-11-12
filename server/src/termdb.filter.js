@@ -467,7 +467,7 @@ function getFilterSampleTypes(filter, ds, sampleTypes) {
 
 		const term_id = item.tvs.term
 		const sample_type = getSampleType(term_id, ds)
-		sampleTypes.add(sample_type)
+		if (sample_type != null) sampleTypes.add(sample_type)
 	}
 	return sampleTypes
 }
