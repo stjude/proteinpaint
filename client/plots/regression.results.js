@@ -944,30 +944,21 @@ function setRenderers(self) {
 		const refGrp2 = tw2?.term?.values && tw2.term.values[tw2.refGrp] ? tw2.term.values[tw2.refGrp].label : tw2?.refGrp
 		let msg
 		if (regtype == 'linear') {
-			if (tw2) {
-				msg = `The difference in mean "${outcomeTw.term.name}"`
-				msg += category2
-					? ` between "${tw2.term.name}: ${category2}" and "${tw2.term.name}: ${refGrp2}"`
-					: ` for every one unit increase of "${tw2.term.name}"`
-			} else {
-				msg = `Mean "${outcomeTw.term.name}"`
-			}
-			msg += ` is ${Math.abs(est)} units`
-			if (isIntercept) {
-				msg += ', when ' + getBaselinesMsg(independentTws)
-				return msg + '.'
-			}
+			msg = tw2 ? getInteractionMsg() : `Mean "${outcomeTw.term.name}" is`
+			msg += ` ${Math.abs(est)} units`
+			if (isIntercept) return `${msg}, when ${getBaselinesMsg(independentTws)}.`
 			msg += ` ${est < 0 ? 'lower' : 'higher'} `
 		} else if (regtype == 'logistic') {
-			msg = `Odds of "${outcomeTw.term.name}: ${outcomeTw.nonRefGrp}" is `
-			if (isIntercept) {
-				msg += `${est}, when ${getBaselinesMsg(independentTws)}`
-				return msg + '.'
-			}
-			msg += est > 1 ? `${est} times higher ` : `${roundValue(1 / est, 3)} times lower `
+			msg = tw2 ? getInteractionMsg() : `Odds of "${outcomeTw.term.name}: ${outcomeTw.nonRefGrp}" is`
+			if (isIntercept) return `${msg} ${est}, when ${getBaselinesMsg(independentTws)}.`
+			msg += est > 1 ? ` ${est} times higher ` : ` ${roundValue(1 / est, 3)} times lower `
 		} else if (regtype == 'cox') {
-			msg = `Hazard (instantaneous rate) of "${outcomeTw.term.name}: ${outcomeTw.eventLabel}" is `
-			msg += est > 1 ? `${est} times higher ` : `${roundValue(1 / est, 3)} times lower `
+			msg = tw2
+				? getInteractionMsg()
+				: `Hazard (instantaneous rate) of "${outcomeTw.term.name}: ${outcomeTw.eventLabel}" is`
+			msg += est > 1 ? ` ${est} times higher ` : ` ${roundValue(1 / est, 3)} times lower `
+		} else {
+			throw 'regression type not recognized'
 		}
 		if (tw.interactions.length && !tw2) {
 			// variable is part of an interaction, but the current row
@@ -997,6 +988,39 @@ function setRenderers(self) {
 		if (!covariates.length) return msg + '.'
 		else if (covariates.length === 1) return msg + `, adjusting for ${covariates[0]}.`
 		else return msg + `, adjusting for ${covariates.slice(0, -1).join(', ')} and ${covariates.slice(-1)}.`
+
+		// function to get message for interaction term
+		function getInteractionMsg() {
+			let msg =
+				regtype == 'linear'
+					? `The difference in mean "${outcomeTw.term.name}"`
+					: regtype == 'logistic'
+					? `The difference in odds of "${outcomeTw.term.name}: ${outcomeTw.nonRefGrp}"`
+					: `The difference in hazard (instantaneous rate) of "${outcomeTw.term.name}: ${outcomeTw.eventLabel}"`
+			msg += category2
+				? ` between "${tw2.term.name}: ${category2}" and "${tw2.term.name}: ${refGrp2}" is`
+				: ` for every one unit increase of "${tw2.term.name}" is`
+			return msg
+		}
+
+		// function to get message for baseline levels of each variable
+		// <categorical variable>: <refGrp>
+		// <continuous variable>: 0
+		function getBaselinesMsg(tws) {
+			const msg = tws
+				.map(tw => {
+					if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
+						// term has refGrp
+						const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
+						return `"${tw.term.name}: ${refGrp}"`
+					} else {
+						// term does not have refGrp
+						return `"${tw.term.name}: 0"`
+					}
+				})
+				.join(', ')
+			return msg
+		}
 	}
 
 	self.mayshow_totalSnpEffect = result => {
@@ -1766,23 +1790,4 @@ function fillDataHeaders(header, tr, tr_label, label) {
 		.text(label)
 		.style('border-bottom', '1px solid')
 		.style('padding', '5px')
-}
-
-// get message for baseline levels of each variable
-// <categorical variable>: <refGrp>
-// <continuous variable>: 0
-function getBaselinesMsg(tws) {
-	const msg = tws
-		.map(tw => {
-			if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
-				// term has refGrp
-				const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
-				return `"${tw.term.name}: ${refGrp}"`
-			} else {
-				// term does not have refGrp
-				return `"${tw.term.name}: 0"`
-			}
-		})
-		.join(', ')
-	return msg
 }
