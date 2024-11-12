@@ -4,7 +4,7 @@ import { newpane, export_data } from '../src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '#filter'
 import { rgb } from 'd3-color'
 import { roundValueAuto } from '#shared/roundValue.js'
-
+import { isNumericTerm } from '#shared/terms.js'
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
 	self.dom.tip = tip
@@ -74,7 +74,7 @@ export default function getHandlers(self) {
 
 				//mouse-over p-value and 2x2 table
 				if (t2) {
-					const pvalue = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).pvalue
+					const pvalue = d.groupPvalues?.term2tests?.find(x => x.term2id === d.dataId).pvalue
 					const term1Label = d.groupPvalues.term1Label
 					const term2Label = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).term2Label
 					const tableValues = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).tableValues
@@ -496,16 +496,26 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	}
 	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 	const rows = []
+	const termIsNumeric = isNumericTerm(self.config.term.term)
+	const term2isNumeric = self.config.term2 ? isNumericTerm(self.config.term2.term) : false
+
 	for (const sample of data.lst) {
 		const sampleName = data.refs.bySampleId[Number(sample.sample)].label
 		const row = [{ value: sampleName }]
+		if (termIsNumeric) {
+			const value = sample[self.config.term.$id]?.value
+			row.push({ value: roundValueAuto(value) })
+		}
 		if (self.config.term2) {
-			const value = sample[self.config.term2.$id]?.value
+			let value = sample[self.config.term2.$id]
+			const label = self.config.term2.term.values?.[value.key]?.label
+			value = term2isNumeric || !label ? value.value : label
 			row.push({ value })
 		}
 		rows.push(row)
 	}
 	const columns = [{ label: 'Sample' }]
+	if (termIsNumeric) columns.push({ label: self.config.term.term.name })
 	if (self.config.term2) columns.push({ label: self.config.term2.term.name })
 	const menu = new Menu({ padding: '5px' })
 	const div = menu.d.append('div')
@@ -528,7 +538,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 				values: [{ key: value }]
 			}
 		}
-		if (term.term.type == 'integer' || term.term.type == 'float') {
+		if (isNumericTerm(term.term)) {
 			const bins = self.bins[termIndex]
 			tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
 		}
