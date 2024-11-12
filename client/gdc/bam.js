@@ -909,6 +909,11 @@ export async function bamsliceui({
 			//selected and variant/postion/unmapped selected
 			.attr('disabled', true)
 			.on('click', async () => {
+				if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gdcBamDemoMode) {
+					launchDemoMode() // in demo mode, do not valid arg and will run with non-gdc data
+					return
+				}
+
 				try {
 					saydiv.selectAll('*').remove()
 					validateInputs(gdc_args, genome, hideTokenInput)
@@ -1083,6 +1088,35 @@ export async function bamsliceui({
 			par.tklst.push(tk)
 		}
 		first_genetrack_tolist(genome, par.tklst)
+		const _ = await import('../src/block')
+		new _.Block(par)
+	}
+
+	async function launchDemoMode() {
+		formdiv.style('display', 'none')
+		backBtnDiv.style('display', 'block')
+		blockHolder.style('display', 'block')
+		// create arg for block init
+		const hg19 = genomes.hg19
+		const par = {
+			nobox: 1,
+			genome: hg19,
+			holder: blockHolder,
+			debugmode,
+			chr: 'chr17',
+			start: 7578191,
+			stop: 7578591,
+			tklst: [
+				{
+					type: 'bam',
+					name: 'Demo BAM Track',
+					// can switch to other examples
+					file: 'proteinpaint_demo/hg19/bam/TP53_del.bam',
+					variants: [{ chr: 'chr17', pos: 7578382, ref: 'AGCAGCGCTCATGGTGGGG', alt: 'A' }]
+				}
+			]
+		}
+		first_genetrack_tolist(hg19, par.tklst)
 		const _ = await import('../src/block')
 		new _.Block(par)
 	}
