@@ -65,9 +65,10 @@ export class ViewModel {
 	constructor(config: any, data: BoxPlotResponse, settings: BoxPlotSettings) {
 		/** As requested, adjust the size of each plot based on the number of boxplots
 		 * Manages rendering very large svgs. */
-		if (config.settings.boxplot.useDefaultSettings == true && data.plots.length > 10) {
-			this.rowHeight = data.plots.length > 20 ? 20 : 35
-			this.rowSpace = data.plots.length > 20 ? 10 : 12
+		const numOfPlots = data.plots.filter(p => !p.uncomputable).length
+		if (config.settings.boxplot.useDefaultSettings == true && numOfPlots > 10) {
+			this.rowHeight = numOfPlots > 20 ? 20 : 35
+			this.rowSpace = numOfPlots > 20 ? 10 : 12
 		} else {
 			this.rowHeight = settings.rowHeight
 			this.rowSpace = settings.rowSpace
@@ -124,7 +125,7 @@ export class ViewModel {
 	}
 
 	setPlotData(data: any, config: any, settings: BoxPlotSettings, totalLabelWidth: number, totalRowHeight: number) {
-		const plots = structuredClone(data.plots)
+		const plots = structuredClone(data.plots.filter(p => !p.uncomputable))
 		for (const plot of plots) {
 			//Set rendering properties for the plot
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
@@ -140,7 +141,7 @@ export class ViewModel {
 			plot.y = this.topPad + this.incrTopPad
 			this.incrTopPad += totalRowHeight
 		}
-		return plots.filter(p => !p.uncomputable)
+		return plots
 	}
 
 	setLegendData(config: any, data: BoxPlotResponse) {
