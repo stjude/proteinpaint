@@ -15,8 +15,6 @@ export type BoxPlotResponse = {
 	absMin?: number
 	/** Absolute max value for all plots */
 	absMax?: number
-	/** Longest label length for all plots */
-	maxLabelLgth: number
 	plots: BoxPlotEntry[]
 	/** Categories not shown in the final plot */
 	uncomputableValues: { label: string; value: number }[] | null

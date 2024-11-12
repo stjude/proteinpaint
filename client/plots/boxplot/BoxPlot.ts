@@ -9,6 +9,7 @@ import { Model } from './Model'
 import { ViewModel } from './ViewModel'
 import { View } from './View'
 import { BoxPlotInteractions } from './BoxPlotInteractions'
+import getMaxLabelLgth from './MaxLabelLength'
 
 /** TODOs:
  *	Type for config
@@ -199,7 +200,11 @@ class TdbBoxplot extends RxComponent {
 			if (!data?.plots?.length) {
 				this.app.printError('No data found for box plot')
 			}
-			const viewModel = new ViewModel(config, data, settings)
+			const maxLabelLgth = getMaxLabelLgth(
+				this.dom,
+				data.plots.filter(p => !p.uncomputable)
+			)
+			const viewModel = new ViewModel(config, data, settings, maxLabelLgth)
 
 			if (viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) {
 				/** If the row height or space changed during data processing,

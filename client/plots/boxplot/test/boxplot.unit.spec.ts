@@ -31,7 +31,6 @@ const mockConfig = {
 }
 
 const mockData = {
-	maxLabelLgth: 10,
 	absMin: 0,
 	absMax: 100,
 	plots: [
@@ -88,6 +87,10 @@ const mockSettings = {
 	useDefaultSettings: true
 }
 
+function getViewModel() {
+	return new ViewModel(mockConfig, mockData, mockSettings, 400)
+}
+
 tape('\n', function (test) {
 	test.pass('-***- plots/boxplot/ViewModel -***-')
 	test.end()
@@ -96,7 +99,7 @@ tape('\n', function (test) {
 tape('Default new ViewModel()', function (test) {
 	test.timeoutAfter(100)
 
-	const viewModel = new ViewModel(mockConfig, mockData, mockSettings)
+	const viewModel = getViewModel()
 	test.equal(typeof viewModel.viewData, 'object', `Should create a viewData object`)
 	test.equal(typeof viewModel.viewData.plotDim, 'object', `Should create a plotDim object`)
 	test.equal(viewModel.viewData.plots.length, 2, `Should create 2 plots`)
@@ -107,7 +110,7 @@ tape('Default new ViewModel()', function (test) {
 
 tape('.setPlotDimensions()', function (test) {
 	test.timeoutAfter(100)
-	const viewModel = new ViewModel(mockConfig, mockData, mockSettings)
+	const viewModel = getViewModel()
 	const dims = viewModel.setPlotDimensions(mockData, mockConfig, mockSettings, 170, 30)
 	const expected = {
 		domain: [0, 101],
@@ -133,7 +136,7 @@ tape('.setPlotDimensions()', function (test) {
 tape('.setPlotData()', function (test) {
 	test.timeoutAfter(100)
 
-	const viewModel = new ViewModel(mockConfig, mockData, mockSettings)
+	const viewModel = getViewModel()
 	const plots = viewModel.setPlotData(mockData, mockConfig, mockSettings, 100, 300)
 
 	test.equal(
@@ -163,7 +166,7 @@ tape('.setPlotData()', function (test) {
 tape('.setLegendData()', function (test) {
 	test.timeoutAfter(100)
 
-	const viewModel = new ViewModel(mockConfig, mockData, mockSettings)
+	const viewModel = getViewModel()
 	const legend = viewModel.setLegendData(mockConfig, mockData)
 	if (!legend) return test.fail('Should create a legend object')
 
