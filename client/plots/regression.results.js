@@ -1560,9 +1560,13 @@ export function showLDlegend(div, colorScale) {
 	const xpad = 10
 	const axiswidth = 150
 
-	const colorScaleElem = new ColorScale({
+	/** ColorScale component requires the color and data array to be the same
+	 * length. This data array is purely to fulfill that requirement.*/
+	const data = colorlst.map((d, i) => i / (colorlst.length - 1))
+
+	new ColorScale({
 		holder: colorbardiv,
-		data: [0, 1],
+		data,
 		topTicks: true,
 		width: xpad * 2 + axiswidth,
 		height: axisheight + barheight,
