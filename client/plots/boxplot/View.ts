@@ -5,6 +5,7 @@ import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from './BoxPlot'
 import type { ViewData, LegendItemEntry } from './ViewModel'
 import { BoxPlotToolTips } from './BoxPlotToolTips'
+import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
@@ -72,6 +73,9 @@ export class View {
 			})
 
 			new BoxPlotToolTips(plot, g)
+			if (data.plots.length > 1) {
+				new BoxPlotLabelMenu(plot)
+			}
 		}
 	}
 
