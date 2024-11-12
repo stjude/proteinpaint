@@ -58,11 +58,11 @@ export class ViewModel {
 	rowHeight: number
 	/** Range is 10 -20 */
 	rowSpace: number
-	viewData!: ViewData
+	viewData: ViewData
 	constructor(config: any, data: BoxPlotResponse, settings: BoxPlotSettings, maxLabelLgth: number) {
 		/** As requested, adjust the size of each plot based on the number of boxplots
 		 * Manages rendering very large svgs. */
-		const numOfPlots = data.plots.filter(p => !p.uncomputable).length
+		const numOfPlots = data.plots.filter(p => !p.isHidden).length
 		if (config.settings.boxplot.useDefaultSettings == true && numOfPlots > 10) {
 			this.rowHeight = numOfPlots > 20 ? 20 : 35
 			this.rowSpace = numOfPlots > 20 ? 10 : 12
@@ -70,8 +70,6 @@ export class ViewModel {
 			this.rowHeight = settings.rowHeight
 			this.rowSpace = settings.rowSpace
 		}
-
-		if (!data || !data.plots?.length) return
 
 		const totalLabelWidth = maxLabelLgth + settings.labelPad
 		const totalRowHeight = this.rowHeight + this.rowSpace
@@ -104,10 +102,7 @@ export class ViewModel {
 			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
 			svgWidth: settings.boxplotWidth + totalLabelWidth + this.horizPad,
 			svgHeight:
-				data.plots.filter(p => !p.uncomputable).length * totalRowHeight +
-				this.topPad +
-				this.bottomPad +
-				this.incrTopPad,
+				data.plots.filter(p => !p.isHidden).length * totalRowHeight + this.topPad + this.bottomPad + this.incrTopPad,
 			title: {
 				x: totalLabelWidth + settings.boxplotWidth / 2,
 				y: this.topPad + this.incrTopPad / 2,
@@ -122,7 +117,7 @@ export class ViewModel {
 	}
 
 	setPlotData(data: any, config: any, settings: BoxPlotSettings, totalLabelWidth: number, totalRowHeight: number) {
-		const plots = structuredClone(data.plots.filter(p => !p.uncomputable))
+		const plots = structuredClone(data.plots.filter(p => !p.isHidden))
 		for (const plot of plots) {
 			//Set rendering properties for the plot
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
@@ -143,20 +138,20 @@ export class ViewModel {
 
 	setLegendData(config: any, data: BoxPlotResponse) {
 		const legendData: { label: string; items: LegendItemEntry[] }[] = []
-		const isTerm2 = config?.term2 && config.term2.q?.descrStats
+		const isTerm2 = config?.term2
 		if (config.term.q?.descrStats) {
 			legendData.push({
 				label: `Descriptive Statistics${isTerm2 ? `: ${config.term.term.name}` : ''}`,
 				items: config.term.q.descrStats
 			})
-			if (isTerm2) {
+			if (isTerm2 && isTerm2.q?.descrStats) {
 				legendData.push({
 					label: `Descriptive Statistics: ${config.term2.term.name}`,
-					items: config.term2.q.descrStats
+					items: isTerm2.q.descrStats
 				})
 			}
-			const uncomputablePlots = data.plots
-				.filter(p => p.uncomputable)
+			const hiddenPlots = data.plots
+				.filter(p => p.isHidden)
 				?.map(p => {
 					const total = p.descrStats.find(d => d.id === 'total')
 					return { label: p.key, count: total!.value, isHidden: true }
@@ -166,15 +161,15 @@ export class ViewModel {
 				const term1Data = this.setHiddenCategoryItems(
 					config.term.term,
 					term1Label,
-					uncomputablePlots,
+					hiddenPlots,
 					data.uncomputableValues || undefined
 				)
 				if (term1Data) legendData.push(term1Data)
 			}
 
-			if (config.term2?.term?.values && uncomputablePlots.length) {
+			if (config.term2?.term?.values && hiddenPlots.length) {
 				//TODO: Only show items with plot data?
-				const term2Data = this.setHiddenCategoryItems(config.term2.term, config.term2.term.name, uncomputablePlots)
+				const term2Data = this.setHiddenCategoryItems(config.term2.term, config.term2.term.name, hiddenPlots)
 				if (term2Data) legendData.push(term2Data)
 			}
 			return legendData
@@ -184,14 +179,14 @@ export class ViewModel {
 	setHiddenCategoryItems(
 		term: any,
 		label: string,
-		uncomputablePlots: LegendItemEntry[],
+		hiddenPlots: LegendItemEntry[],
 		uncomputableValues?: { label: string; value: number }[]
 	) {
 		const termData: { label: string; items: LegendItemEntry[] } = { label, items: [] }
 
 		for (const v of Object.values(term.values || {})) {
 			const label = (v as { label: string }).label
-			const plot = uncomputablePlots.find(p => p.label === label)
+			const plot = hiddenPlots.find(p => p.label === label)
 			if (plot) termData.items.push(plot)
 			else if (uncomputableValues) {
 				const uncomputableItem = uncomputableValues.find(u => u.label === label)

@@ -90,7 +90,6 @@ function init({ genomes }) {
 				if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
 				const descrStats = setDescrStats(boxplot as BoxPlotData, sortedValues)
 				const _plot = {
-					// values,
 					boxplot,
 					descrStats
 				}
@@ -118,8 +117,8 @@ function init({ genomes }) {
 
 			if (absMin == null || absMax == null) throw 'absMin or absMax is null [termdb.boxplot init()]'
 
-			if (q.tw.term?.values) setUncomputablePlots(q.tw, plots)
-			if (overlayTerm && overlayTerm.term?.values) setUncomputablePlots(overlayTerm, plots)
+			if (q.tw.term?.values) setHiddenPlots(q.tw, plots)
+			if (overlayTerm && overlayTerm.term?.values) setHiddenPlots(overlayTerm, plots)
 
 			const returnData: BoxPlotResponse = {
 				absMin,
@@ -136,10 +135,10 @@ function init({ genomes }) {
 	}
 }
 
-function setUncomputablePlots(term, plots) {
+function setHiddenPlots(term, plots) {
 	for (const v of Object.values(term.term.values as { label: string; uncomputable: boolean }[])) {
 		const plot = plots.find(p => p.key === v.label)
-		if (plot) plot.uncomputable = v.uncomputable
+		if (plot) plot.isHidden = v?.uncomputable
 	}
 	return plots
 }
