@@ -1097,7 +1097,7 @@ export async function bamsliceui({
 		backBtnDiv.style('display', 'block')
 		blockHolder.style('display', 'block')
 		// create arg for block init
-		const hg19 = genomes.hg19
+		const hg19 = genomes.hg19 // use hg19 since demo file is hg19-based. intentionally not using hg38 file since demo only works on local where hg19 file is present, also signifies it's not using gdc hg38-based data
 		const par = {
 			nobox: 1,
 			genome: hg19,
