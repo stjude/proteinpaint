@@ -1,5 +1,6 @@
 import { Menu } from '#dom'
 import type { SvgG } from 'types/d3'
+import { select } from 'd3-selection'
 
 export class BoxPlotToolTips {
 	boxplot: any
@@ -13,7 +14,14 @@ export class BoxPlotToolTips {
 		this.boxplot = plot.boxplot
 
 		this.addLabelTooltip()
-		this.addLineToolTips()
+		// this.addLineToolTips()
+		this.addOutliersTooltip()
+	}
+
+	//Add rendering preferences here to maintain styles
+	//across all tooltip instances
+	addText(text: string) {
+		this.tip.d.append('div').text(text)
 	}
 
 	addLabelTooltip() {
@@ -26,7 +34,7 @@ export class BoxPlotToolTips {
 				.append('td')
 				.attr('colspan', 2)
 				.style('padding', this.tablePadding)
-				.text(this.boxplot.label)
+				.text(this.plot.key)
 			for (const stat of this.plot.descrStats) {
 				const row = table.append('tr')
 				row.append('td').style('padding', this.tablePadding).style('opacity', 0.5).text(stat.label)
@@ -39,10 +47,6 @@ export class BoxPlotToolTips {
 	}
 
 	addLineToolTips() {
-		//Add rendering preferences here to maintain styles
-		const addText = (text: string) => {
-			this.tip.d.append('div').text(text)
-		}
 		const addToolTips = (elem, text: string) => {
 			const elemBBox = elem.node().getBBox()
 			//Add an expanded area for the tooltip
@@ -57,7 +61,7 @@ export class BoxPlotToolTips {
 				.style('pointer-events', 'all')
 				.on('mouseover', () => {
 					this.tip.clear().showunder(elem.node())
-					addText(text)
+					this.addText(text)
 				})
 				.on('mouseout', () => {
 					this.tip.hide()
@@ -74,5 +78,21 @@ export class BoxPlotToolTips {
 		if (this.boxplot.linew2) {
 			addToolTips(this.boxplot.linew2, `${this.boxplot.w2}`)
 		}
+	}
+
+	addOutliersTooltip() {
+		this.g
+			.selectAll('circle')
+			.data(this.boxplot.out)
+			.each((d: any, i, nodes) => {
+				const circle = select(nodes[i])
+				circle.on('mouseover', () => {
+					this.tip.clear().showunder(circle.node())
+					this.addText(d.value)
+				})
+				circle.on('mouseout', () => {
+					this.tip.hide()
+				})
+			})
 	}
 }
