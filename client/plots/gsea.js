@@ -80,6 +80,14 @@ class gsea {
 				title: 'Gene set size cutoff. Helps in filtering out large gene sets',
 				min: 0,
 				max: 20000
+			},
+			{
+				label: 'Filter non-coding genes',
+				type: 'checkbox',
+				chartType: 'gsea',
+				settingsKey: 'filter_non_coding_genes',
+				title: 'Filter non-coding genes',
+				boxLabel: ''
 			}
 		]
 
@@ -154,6 +162,7 @@ add:
 		self.dom.holder.selectAll('*').remove()
 		self.dom.tableDiv.selectAll('*').remove()
 		self.config.gsea_params.geneSetGroup = self.settings.pathway
+		self.config.gsea_params.filter_non_coding_genes = self.settings.filter_non_coding_genes
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
 		//console.log('self.config.gsea_params:', self.config.gsea_params)
 		let output
@@ -248,7 +257,8 @@ add:
 					genes: self.config.gsea_params.genes,
 					fold_change: self.config.gsea_params.fold_change,
 					geneSetGroup: self.config.gsea_params.geneSetGroup,
-					pickle_file: output.pickle_file
+					pickle_file: output.pickle_file,
+					filter_non_coding_genes: self.settings.filter_non_coding_genes
 				}
 				const holder = self.dom.holder
 				holder.selectAll('*').remove()
@@ -339,7 +349,8 @@ export async function getPlotConfig(opts, app) {
 					pvalue: 0.05,
 					adjusted_original_pvalue: 'adjusted',
 					pathway: undefined,
-					gene_set_size_cutoff: 2000
+					gene_set_size_cutoff: 2000,
+					filter_non_coding_genes: true
 				},
 				controls: { isOpen: true }
 			}

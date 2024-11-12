@@ -5,6 +5,8 @@ export type GenesetEnrichmentRequest = {
 	genes: string[]
 	/** Background genes against which the sample genes will be queried */
 	fold_change: number[]
+	/** Filter non-coding genes */
+	filter_non_coding_genes: boolean
 	/** Genome build */
 	genome: string
 	/** Type of GO to be queried e.g MF, CC, BP */
