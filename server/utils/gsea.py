@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
             
 def extract_symbols(x):
-   return x['symbol'] 
+   return x['symbol']
 
 def extract_plot_data(signature, geneset, library, result, center=True):
    signature = signature.copy()
@@ -48,6 +48,7 @@ try:
             genes=json_object['genes']
             fold_change=json_object['fold_change']
             table_name=json_object['geneset_group']
+            filter_non_coding_genes=json_object['filter_non_coding_genes']
             df = {'Genes': genes, 'fold_change': fold_change}
             signature=pd.DataFrame(df)
             db=json_object['db']
@@ -59,10 +60,19 @@ try:
             
             # SQL query to select all data from the table
             query = f"select id from terms where parent_id='" + table_name  + "'"
-            
             # Execute the SQL query
             cursor.execute(query)
-            
+            if filter_non_coding_genes == True:
+                 # SQL query to code all the protein coding genes
+                 coding_genes_query = f"select * from codingGenes"
+                 genedb = json_object['genedb']
+                 gene_conn = sqlite3.connect(genedb)
+                 gene_cursor = gene_conn.cursor()
+                 gene_cursor.execute(coding_genes_query)
+                 coding_genes_list=gene_cursor.fetchall()
+                 coding_genes_list=list(map(lambda x: x[0],coding_genes_list))
+                 signature=signature[signature['Genes'].isin(coding_genes_list)]
+                 
             # Fetch all rows from the executed SQL query
             rows = cursor.fetchall()
             

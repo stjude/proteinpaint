@@ -67,12 +67,13 @@ async function run_genesetEnrichment_analysis(
 		geneset_group: q.geneSetGroup,
 		cachedir: serverconfig.cachedir,
 		geneset_name: q.geneset_name,
-		pickle_file: q.pickle_file
+		pickle_file: q.pickle_file,
+		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
+		filter_non_coding_genes: q.filter_non_coding_genes
 	}
 
+	//console.log('genesetenrichment_input:', genesetenrichment_input)
 	//console.log('__dirname:',__dirname)
-	//console.log('genesetenrichment_input:', JSON.stringify(genesetenrichment_input))
-	//
 	//fs.writeFile('test.txt', '/' + JSON.stringify(genesetenrichment_input), function (err) {
 	//	// For catching input to rust pipeline, in case of an error
 	//	if (err) return console.log(err)
