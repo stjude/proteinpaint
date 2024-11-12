@@ -73,8 +73,7 @@ function init({ genomes }) {
 
 			const plots: any = []
 			let absMin: number | null = null,
-				absMax: number | null = null,
-				maxLabelLgth: number | null = null
+				absMax: number | null = null
 			for (const [key, values] of sortKey2values(data, key2values, overlayTerm)) {
 				const sortedValues = values.sort((a, b) => a - b)
 
@@ -100,7 +99,6 @@ function init({ genomes }) {
 				if (overlayTerm) {
 					const _key = overlayTerm?.term?.values?.[key]?.label || key
 					const plotLabel = `${_key}, n=${values.length}`
-					if (maxLabelLgth === null || plotLabel.length > maxLabelLgth) maxLabelLgth = plotLabel.length
 					const plot = Object.assign(_plot, {
 						color: overlayTerm?.term?.values?.[key]?.color || null,
 						key: _key,
@@ -110,7 +108,6 @@ function init({ genomes }) {
 					plots.push(plot)
 				} else {
 					const plotLabel = `${sampleType}, n=${values.length}`
-					if (maxLabelLgth === null || plotLabel.length > maxLabelLgth) maxLabelLgth = plotLabel.length
 					const plot = Object.assign(_plot, {
 						key: sampleType
 					})
@@ -119,8 +116,7 @@ function init({ genomes }) {
 				}
 			}
 
-			if (absMin == null || absMax == null || maxLabelLgth == null)
-				throw 'absMin, absMax, or maxLabelLgth is null [termdb.boxplot init()]'
+			if (absMin == null || absMax == null) throw 'absMin or absMax is null [termdb.boxplot init()]'
 
 			if (q.tw.term?.values) setUncomputablePlots(q.tw, plots)
 			if (overlayTerm && overlayTerm.term?.values) setUncomputablePlots(overlayTerm, plots)
@@ -128,7 +124,6 @@ function init({ genomes }) {
 			const returnData: BoxPlotResponse = {
 				absMin,
 				absMax,
-				maxLabelLgth,
 				plots,
 				uncomputableValues: setUncomputableValues(uncomputableValues)
 			}

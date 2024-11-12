@@ -4,9 +4,6 @@ import type { BoxPlotResponse, BoxPlotData, BoxPlotDescrStatsEntry } from '#type
 /**
  * Calculates the dimensions and html attributes for the svg and
  * individual boxplots. The data is passed to the View class.
- *
- * TODO:
- *  Calculate the space needed for the labels rather than hardcoding with padding
  */
 
 export type ViewData = {
@@ -62,7 +59,7 @@ export class ViewModel {
 	/** Range is 10 -20 */
 	rowSpace: number
 	viewData!: ViewData
-	constructor(config: any, data: BoxPlotResponse, settings: BoxPlotSettings) {
+	constructor(config: any, data: BoxPlotResponse, settings: BoxPlotSettings, maxLabelLgth: number) {
 		/** As requested, adjust the size of each plot based on the number of boxplots
 		 * Manages rendering very large svgs. */
 		const numOfPlots = data.plots.filter(p => !p.uncomputable).length
@@ -76,7 +73,7 @@ export class ViewModel {
 
 		if (!data || !data.plots?.length) return
 
-		const totalLabelWidth = data.maxLabelLgth * 4 + settings.labelPad + this.horizPad
+		const totalLabelWidth = maxLabelLgth + settings.labelPad
 		const totalRowHeight = this.rowHeight + this.rowSpace
 
 		const plotDim = this.setPlotDimensions(data, config, settings, totalLabelWidth, totalRowHeight)
