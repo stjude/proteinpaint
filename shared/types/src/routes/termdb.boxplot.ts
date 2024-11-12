@@ -25,10 +25,11 @@ type BoxPlotEntry = {
 	/** color matching the value/category color */
 	color?: string
 	descrStats: BoxPlotDescrStatsEntry[]
+	/** Pertains to an uncomputable term value and
+	 * whether or not the plot is hidden by default */
+	isHidden?: boolean
 	key: string
 	seriesId?: string
-	/** Pertains to an uncomputable term value */
-	uncomputable?: boolean
 }
 
 export type BoxPlotData = {
