@@ -4,14 +4,18 @@ import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from './BoxPlot'
 import type { ViewData, LegendItemEntry } from './ViewModel'
+import type { MassAppApi } from '#mass/types/mass'
 import { BoxPlotToolTips } from './BoxPlotToolTips'
 import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
-	constructor(data: ViewData, settings: BoxPlotSettings, dom: BoxPlotDom) {
+	app: MassAppApi
+	id: number
+	constructor(data: ViewData, settings: BoxPlotSettings, dom: BoxPlotDom, app: MassAppApi, id: number) {
+		this.app = app
+		this.id = id
 		if (!data || !data.plots.length) return
-
 		dom.plotTitle.selectAll('*').remove()
 		dom.yAxis.selectAll('*').remove()
 		dom.boxplots.selectAll('*').remove()
@@ -74,7 +78,7 @@ export class View {
 
 			new BoxPlotToolTips(plot, g)
 			if (data.plots.length > 1) {
-				new BoxPlotLabelMenu(plot)
+				new BoxPlotLabelMenu(plot, this.app, this.id)
 			}
 		}
 	}
@@ -89,11 +93,24 @@ export class View {
 			const div = legendDiv.append('div').style('padding-left', '10px')
 			return div
 		}
-		const addData = (item: { label: string; value?: number; count?: number; isHidden?: boolean }, sectionDiv) => {
-			sectionDiv
+		const addData = (item: LegendItemEntry, sectionDiv) => {
+			const legendItem = sectionDiv
 				.append('div')
 				.style('text-decoration', item.isHidden ? 'line-through' : '')
 				.text(`${item.label}${item.value ? `: ${item.value}` : item.count ? `, n=${item.count}` : ''}`)
+			if (item.isPlot && item.isHidden) {
+				//Do not apply to uncomputable values, only items with plot data
+				legendItem.attr('aria-label', `Click to unhide plot`).on('click', () => {
+					const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
+					const config = structuredClone(plotConfig)
+					delete config.term2.q.hiddenValues[item.label]
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config
+					})
+				})
+			}
 		}
 		for (const section of legendData) {
 			addSectionTitle(section.label)
