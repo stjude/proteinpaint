@@ -1,9 +1,10 @@
 import { getCompInit, copyMerge } from '../rx/index.js'
 import { getProfilePlotConfig, profilePlot, getDefaultProfilePlotSettings } from './profilePlot.js'
 import { fillTwLst } from '#termsetting'
-import { axisLeft, axisBottom } from 'd3-axis'
+import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { loadFilterTerms } from './profilePlot.js'
+import { render } from '#src/block.mds2.vcf.plain'
 
 export class profileForms extends profilePlot {
 	id: string
@@ -40,20 +41,21 @@ export class profileForms extends profilePlot {
 			const id = selectQuestion.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { question: id } })
 		})
-		const shift = 50
+		const shift = 700
+		const shiftTop = 30
 		const svg = rightDiv
 			.append('svg')
 			.attr('width', settings.svgw + shift + 10)
-			.attr('height', settings.svgh + shift * 2 + 10)
-		const mainG = svg.append('g').attr('transform', `translate(${shift}, 10)`)
-		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${settings.svgh + 10})`)
-		const yAxisG = svg.append('g').attr('transform', `translate(${shift}, 10)`)
-		this.xAxisScale = d3Linear()
+			.attr('height', settings.svgh + shift + 10)
+		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
+		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
+		const yAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
+		this.xAxisScale = d3Linear().domain([0, 100]).range([0, settings.svgw])
+		const xAxisBottom = axisTop(this.xAxisScale)
+		const yAxisScale = d3Linear()
 			.domain([0, config.terms.length + 1])
-			.range([0, settings.svgw])
-		const xAxisBottom = axisBottom(this.xAxisScale).ticks(config.terms.length)
-		const yAxisScale = d3Linear().domain([100, 0]).range([0, settings.svgh])
-		const yAxisLeft = axisLeft(yAxisScale)
+			.range([0, settings.svgh])
+		const yAxisLeft = axisLeft(yAxisScale).ticks(config.terms.length)
 		xAxisG.call(xAxisBottom)
 		yAxisG.call(yAxisLeft)
 
@@ -116,64 +118,50 @@ export class profileForms extends profilePlot {
 		this.dom.mainG.selectAll('*').remove()
 
 		const samples = this.settings.site ? [this.data.samples[this.settings.site]] : this.data.lst
-		const step = this.settings.svgw / (this.state.config.terms.length + 1)
 		let i = 1
-		const width = 40
+		const step = this.settings.svgh / (this.state.config.terms.length + 1)
+		const height = 40
+
 		for (const tw of this.state.config.terms) {
 			const percents: { [key: string]: number } = this.getPercentsDict(tw, samples)
-			const percentsOrdered = Object.keys(percents).sort((a, b) => a.localeCompare(b))
 			const scTerm = this.state.config.scTerms.find(t => t.term.id.includes(tw.term.id))
 			const scPercents: { [key: string]: number } = this.getSCPercentsDict(scTerm, samples)
-			const scPercentsOrdered = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
-			let x = i * step - width / 2
-
-			let y = 0
-			const total = Object.values(percents).reduce((a, b) => a + b, 0)
+			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
+			const y = this.settings.svgh - i * step - height / 2
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
 
-			for (const key of percentsOrdered) {
-				const color = key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : 'white'
-				const value = percents[key]
-
-				const height = (value / total) * this.settings.svgh
-				this.dom.mainG
-					.append('rect')
-					.attr('x', x)
-					.attr('y', y)
-					.attr('width', width)
-					.attr('height', height)
-					.attr('stroke', 'gray')
-					.attr('fill', color)
-				if (scTotal == 1 && scPercentsOrdered.includes(key))
-					this.dom.mainG
-						.append('text')
-						.text('*')
-						.attr('x', x + width + 2)
-						.attr('y', y + height / 2)
-
-				y += height
-			}
-			x = i * step + width / 2
-			y = 0
-			if (scTotal > 1)
-				for (const key of scPercentsOrdered) {
-					const color = key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : 'white'
-					const value = scPercents[key]
-
-					const height = (value / scTotal) * this.settings.svgh
-					this.dom.mainG
-						.append('rect')
-						.attr('x', x)
-						.attr('y', y)
-						.attr('width', width)
-						.attr('height', height)
-						.attr('stroke', 'gray')
-						.attr('fill', color)
-
-					y += height
-				}
+			this.renderRects(percents, y - height / 2, height, scTotal == 1 ? scPercentKeys : [])
+			if (scTotal > 1) this.renderRects(scPercents, y + height / 2, height, [])
 
 			i++
+		}
+	}
+
+	renderRects(percents: { [key: string]: number }, y: number, height: number, scPercentKeys: string[]) {
+		const percentsOrdered = Object.keys(percents).sort((a, b) => -a.localeCompare(b))
+		console.log(percentsOrdered, y, height)
+		const total = Object.values(percents).reduce((a, b) => a + b, 0)
+		let x = 0
+		for (const key of percentsOrdered) {
+			const color = key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : 'white'
+			const value = percents[key]
+			const width = (value / total) * this.settings.svgw
+			this.dom.mainG
+				.append('rect')
+				.attr('x', x)
+				.attr('y', y)
+				.attr('width', width)
+				.attr('height', height)
+				.attr('stroke', 'gray')
+				.attr('fill', color)
+			if (scPercentKeys.includes(key))
+				this.dom.mainG
+					.append('text')
+					.text('*')
+					.attr('x', x + width / 2)
+					.attr('y', y)
+
+			x += width
 		}
 	}
 }
@@ -195,7 +183,7 @@ export function getDefaultProfileFormsSettings() {
 		controls: {
 			isOpen: false
 		},
-		profileForms: copyMerge({ svgw: 800, svgh: 300 }, getDefaultProfilePlotSettings())
+		profileForms: copyMerge({ svgw: 400, svgh: 280 }, getDefaultProfilePlotSettings())
 	}
 }
 
