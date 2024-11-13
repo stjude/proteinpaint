@@ -380,7 +380,7 @@ function setRenderers(self) {
 		const action = {
 			type: 'plot_create',
 			id: getId(),
-			config: { chartType: chart.chartType }
+			config: { chartType: chart.chartType, activeCohort: self.state.activeCohort }
 		}
 
 		if (chart.parentId) action.parentId = chart.parentId
