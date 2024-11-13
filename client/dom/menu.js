@@ -202,11 +202,15 @@ export class Menu {
 		return this
 	}
 
-	showunder(dom) {
+	// opts{}: can supply offsetX and offsetY
+	// necessary because .showunder() uses .show(shift=false), which
+	// ignores offsetY in the constructor option
+	showunder(dom, _opts = {}) {
 		// route to .show()
+		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
 		const p = dom.getBoundingClientRect()
-		const x = p.left + window.scrollX
-		const y = p.top + p.height + window.scrollY + 5
+		const x = p.left + window.scrollX + opts.offsetX
+		const y = p.top + p.height + window.scrollY + 5 + opts.offsetY
 		return this.show(x, y, false, true, false)
 
 		/*

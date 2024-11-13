@@ -77,7 +77,8 @@ export class RegressionResults {
 			err_div: holder.append('div'),
 			snplocusBlockDiv: holder.append('div'),
 			// is where newDiv() and displayResult_oneset() writes to
-			oneSetResultDiv: holder.append('div').style('margin', '10px')
+			oneSetResultDiv: holder.append('div').style('margin', '10px'),
+			tip: new Menu()
 		}
 	}
 
@@ -895,14 +896,16 @@ function setRenderers(self) {
 	self.fillCoefDataCols = arg => {
 		const { tr, cols } = arg
 		// estimate (Beta/OR/HR) column
-		const est = Number(cols.shift())
-		const estTd = tr.append('td').text(est).style('padding', '8px')
-		// on hover, display explanation of estimate value
-		const tip = new Menu()
-		const estimateMsg = self.getEstimateMsg(Object.assign({ est }, arg))
-		tip.d.append('div').style('width', '700px').text(estimateMsg)
-		estTd.on('mouseover', event => tip.showunder(event.currentTarget))
-		estTd.on('mouseout', () => tip.hide())
+		const est = cols.shift()
+		const estSpan = tr.append('td').style('padding', '8px').append('span').text(est)
+		// on mouseover, display explanation of estimate value
+		estSpan.on('mouseover', event => {
+			const tip = self.dom.tip.clear()
+			const estimateMsg = self.getEstimateMsg(Object.assign({ est: Number(est) }, arg))
+			tip.d.append('div').style('min-width', '450px').style('max-width', '600px').text(estimateMsg)
+			tip.showunder(event.target, { offsetY: -5 })
+		})
+		estSpan.on('mouseout', () => self.dom.tip.hide())
 		// 95% CI column
 		tr.append('td').html(`${cols.shift()} &ndash; ${cols.shift()}`).style('padding', '8px')
 		// rest of columns
