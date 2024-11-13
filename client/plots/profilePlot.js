@@ -62,7 +62,9 @@ export class profilePlot {
 			rightDiv,
 			plotDiv
 		}
-		select('.sjpp-output-sandbox-content').on('scroll', event => this.onMouseOut(event))
+		select('.sjpp-output-sandbox-content').on('scroll', event => {
+			if (this.onMouseOut) this.onMouseOut(event)
+		})
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
@@ -127,11 +129,9 @@ export class profilePlot {
 
 	getList(tw) {
 		let values = Object.values(tw.term.values)
-
 		values.sort((v1, v2) => v1.label.localeCompare(v2.label))
-		const data = this.filtersData.lst.filter(sample =>
-			this.samplesPerFilter[tw.term.id].includes(parseInt(sample.sample))
-		)
+		const twSamples = this.samplesPerFilter[tw.term.id]
+		const data = this.filtersData.lst.filter(sample => twSamples.includes(parseInt(sample.sample)))
 		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
 		for (const value of values) {
 			value.value = value.label
@@ -160,7 +160,6 @@ export class profilePlot {
 		this.samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
 			filters
 		})
-
 		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: this.config.filterTWs,
 			termsPerRequest: 10
@@ -603,12 +602,13 @@ export function getProfilePlotConfig(app, opts) {
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
 	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const config = app.vocabApi.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]
+	if (!config) throw `No plot config found for ${opts.chartType}`
 	return config
 }
 
 export async function loadFilterTerms(config, app, opts) {
 	const state = app.getState()
-	const activeCohort = state ? state.activeCohort : opts.activeCohort
+	const activeCohort = state ? state.activeCohort : opts.activeCohort //when recovering a session the state is not available, use the opts provided
 	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
 	const twlst = []
 	config.countryTW = { id: cohortPreffix + 'country' }
