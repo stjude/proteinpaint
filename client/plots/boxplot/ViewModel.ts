@@ -14,12 +14,14 @@ export type ViewData = {
 
 export type LegendItemEntry = {
 	label: string
-	/** Value for stat */
-	value?: number
 	/** Total number of samples, cells, etc. */
 	count?: number
 	/** If true, line-through text */
 	isHidden: boolean
+	/** If true, indicates plot data available and enables callback. */
+	isPlot?: boolean
+	/** Value for stat */
+	value?: number
 }
 
 type Plots = {
@@ -154,9 +156,9 @@ export class ViewModel {
 				.filter(p => p.isHidden)
 				?.map(p => {
 					const total = p.descrStats.find(d => d.id === 'total')
-					return { label: p.key, count: total!.value, isHidden: true }
+					return { label: p.key, count: total!.value, isHidden: true, isPlot: true }
 				})
-			if (config.term.term?.values) {
+			if (config.term.term?.values && hiddenPlots.length) {
 				const term1Label = config.term2 ? config.term.term.name : 'Other categories'
 				const term1Data = this.setHiddenCategoryItems(
 					config.term.term,
