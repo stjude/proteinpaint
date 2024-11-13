@@ -32,14 +32,7 @@ export class profileForms extends profilePlot {
 		const rightDiv = this.dom.rightDiv
 		const config = appState.plots.find(p => p.id === this.id)
 		const settings = config.settings.profileForms
-		const sampleHolder = rightDiv.append('div').style('padding', '10px')
-		sampleHolder.append('span').text('Sample: ')
-		const selectSample = sampleHolder.append('select')
 
-		selectSample.on('change', () => {
-			const id = selectSample.node().value
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: id } })
-		})
 		const questionHolder = rightDiv.append('div')
 		questionHolder.append('span').text('Question: ').style('vertical-align', 'top')
 		const selectQuestion = questionHolder.append('select').property('multiple', true)
@@ -66,7 +59,6 @@ export class profileForms extends profilePlot {
 		yAxisG.call(yAxisLeft)
 
 		this.dom = copyMerge(this.dom, {
-			selectSample,
 			mainG,
 			selectQuestion
 		})
@@ -81,14 +73,6 @@ export class profileForms extends profilePlot {
 	}
 
 	renderHeaderOptions() {
-		this.dom.selectSample.selectAll('option').remove()
-		this.dom.selectSample
-			.selectAll('option')
-			.data(this.data.lst)
-			.enter()
-			.append('option')
-			.text(d => this.data.refs.bySampleId[d.sample].label)
-			.attr('value', d => d.sample)
 		this.dom.selectQuestion
 			.selectAll('option')
 			.data(this.config.terms)
@@ -98,24 +82,41 @@ export class profileForms extends profilePlot {
 			.attr('value', d => d.term.id)
 	}
 
+	getPercentsDict(tw, samples): { [key: string]: number } {
+		if (!tw) throw 'tw not defined'
+		//not specified when called
+		//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
+		const percentageDict = {}
+		for (const sample of samples) {
+			let termData = sample[tw.$id].value
+			termData = termData.slice(1, -1) //Removed string quoutes
+			const percents: { [key: string]: number } = JSON.parse(termData)
+			for (const key in percents) {
+				const value = percents[key]
+				if (!percentageDict[key]) percentageDict[key] = 0
+				percentageDict[key] += value
+			}
+		}
+		return percentageDict
+	}
+
 	renderPlot() {
 		this.dom.mainG.selectAll('*').remove()
-		const sample = this.state.config.sample || this.data.lst[0].sample
-		const tw = this.state.config.terms.find(t => t.term.id == this.state.config.question) || this.state.config.terms[0]
-		const sampleData = this.data.samples[sample]
+
+		const samples = this.settings.site ? [this.data.samples[this.settings.site]] : this.data.lst
 		const step = this.settings.svgw / (this.state.config.terms.length + 1)
 		let i = 1
 		const width = 40
 
 		for (const tw of this.state.config.terms) {
-			let termData = sampleData[tw.$id].value
-			termData = termData.slice(1, -1) //Removed string quoutes
-			const percents: { [key: string]: number } = JSON.parse(termData)
+			const percents: { [key: string]: number } = this.getPercentsDict(tw, samples)
+			const percentsOrdered = Object.keys(percents).sort((a, b) => a.localeCompare(b))
 			const x = i * step - width / 2
 
 			let y = 0
 			const total = Object.values(percents).reduce((a, b) => a + b, 0)
-			for (const key in percents) {
+			for (const key of percentsOrdered) {
+				const color = key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : 'white'
 				const value = percents[key]
 				const height = (value / total) * this.settings.svgh
 				this.dom.mainG
@@ -125,7 +126,7 @@ export class profileForms extends profilePlot {
 					.attr('width', width)
 					.attr('height', height)
 					.attr('stroke', 'gray')
-					.attr('fill', 'white')
+					.attr('fill', color)
 				this.dom.mainG
 					.append('text')
 					.attr('x', x + width + 2)
