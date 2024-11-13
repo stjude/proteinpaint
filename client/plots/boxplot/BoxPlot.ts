@@ -224,7 +224,7 @@ class TdbBoxplot extends RxComponent {
 					}
 				})
 			}
-			new View(viewModel.viewData, settings, this.dom)
+			new View(viewModel.viewData, settings, this.dom, this.app, this.id)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)

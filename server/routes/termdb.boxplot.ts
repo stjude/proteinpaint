@@ -136,10 +136,17 @@ function init({ genomes }) {
 }
 
 function setHiddenPlots(term, plots) {
-	for (const v of Object.values(term.term.values as { label: string; uncomputable: boolean }[])) {
+	for (const v of Object.values(term.term?.values as { label: string; uncomputable: boolean }[])) {
 		const plot = plots.find(p => p.key === v.label)
 		if (plot) plot.isHidden = v?.uncomputable
 	}
+	if (term.q?.hiddenValues) {
+		for (const key of Object.keys(term.q.hiddenValues)) {
+			const plot = plots.find(p => p.key === key)
+			if (plot) plot.isHidden = true
+		}
+	}
+
 	return plots
 }
 
