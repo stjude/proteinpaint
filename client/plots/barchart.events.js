@@ -508,9 +508,12 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		}
 		if (self.config.term2) {
 			let value = sample[self.config.term2.$id]
-			const label = self.config.term2.term.values?.[value.key]?.label
-			value = term2isNumeric ? roundValueAuto(value.value) : label || value.value
-			row.push({ value })
+			if (!value) row.push({ value: '' })
+			else {
+				const label = self.config.term2.term.values?.[value.key]?.label
+				value = term2isNumeric ? roundValueAuto(value.value) : label || value.value
+				row.push({ value })
+			}
 		}
 		rows.push(row)
 	}
