@@ -98,9 +98,11 @@ function init({ genomes }) {
 				if (overlayTerm) {
 					const _key = overlayTerm?.term?.values?.[key]?.label || key
 					const plotLabel = `${_key}, n=${values.length}`
+					const overlayBins = numericBins(overlayTerm, data)
 					const plot = Object.assign(_plot, {
 						color: overlayTerm?.term?.values?.[key]?.color || null,
 						key: _key,
+						overlayBins: overlayBins.has(key) ? overlayBins.get(key) : null,
 						seriesId: key
 					})
 					plot.boxplot.label = plotLabel
@@ -179,4 +181,9 @@ function setUncomputableValues(values: Record<string, number>) {
 	if (Object.entries(values)?.length) {
 		return Object.entries(values).map(([label, v]) => ({ label, value: v as number }))
 	} else return null
+}
+
+function numericBins(overlayTerm, data) {
+	const overlayBins = data.refs.byTermId[overlayTerm?.term?.id]?.bins ?? []
+	return new Map(overlayBins.map(bin => [bin.label, bin]))
 }

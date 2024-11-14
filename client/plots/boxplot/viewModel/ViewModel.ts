@@ -1,5 +1,5 @@
 import type { BoxPlotSettings } from '../BoxPlot'
-import type { BoxPlotResponse, BoxPlotData, BoxPlotDescrStatsEntry } from '#types'
+import type { BoxPlotResponse, BoxPlotEntry, BoxPlotData } from '#types'
 import { LegendItemEntry, LegendDataMapper } from './LegendDataMapper'
 
 /**
@@ -9,14 +9,12 @@ import { LegendItemEntry, LegendDataMapper } from './LegendDataMapper'
 
 export type ViewData = {
 	plotDim: PlotDimensions
-	plots: Plots[]
+	plots: FormattedPlotEntry[]
 	legend: { label: string; items: LegendItemEntry[] }[]
 }
 
-type Plots = {
-	boxplot: BoxPlotData & { label: string }
-	descrStats: BoxPlotDescrStatsEntry
-	color: string
+export type FormattedPlotEntry = BoxPlotEntry & {
+	boxplot: BoxPlotData & { label: string; radius?: number }
 	x: number
 	y: number
 }
