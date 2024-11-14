@@ -1,19 +1,44 @@
 import type { MassAppApi } from '#mass/types/mass'
+import type { FormattedPlotEntry } from '../viewModel/ViewModel'
+import type { TermWrapper } from '#types'
 import { roundValueAuto } from '#shared/roundValue.js'
+
+//TODO: Move to route or types
+type AnnotatedSampleData = {
+	lst: AnnotatedSampleEntry[]
+	refs: {
+		bySampleId: {
+			[index: string]: {
+				label: string
+			}
+		}
+		byTermId: {
+			//Term
+			[index: string]: any
+		}
+	}
+	samples: AnnotatedSampleEntry[]
+}
+
+type AnnotatedSampleEntry = {
+	[index: string]: {
+		key: number
+		value: number
+	} & {
+		sample: string
+		_ref_: { label: string }
+	}
+}
 
 export class ListSamples {
 	app: MassAppApi
 	dataOpts: {
 		terms: any[]
-		filter: {
-			type: string
-			join: string
-			lst: any[]
-		}
+		filter: any
 	}
-	plot: any
+	plot: FormattedPlotEntry
 	term: any
-	constructor(app: MassAppApi, config: any, id: string, min: number, max: number, plot: any) {
+	constructor(app: MassAppApi, config: any, id: string, min: number, max: number, plot: FormattedPlotEntry) {
 		this.app = app
 		this.plot = plot
 		const plotConfig = config.plots.find((p: { id: string }) => p.id === id)
@@ -32,12 +57,10 @@ export class ListSamples {
 	}
 
 	async getData() {
-		const data: { lst: any; refs: any; samples: Record<string, Record<string, { value: number }>> } =
-			await this.app.vocabApi.getAnnotatedSampleData(this.dataOpts)
-		return data
+		return await this.app.vocabApi.getAnnotatedSampleData(this.dataOpts)
 	}
 
-	setRows(data) {
+	setRows(data: AnnotatedSampleData) {
 		const rows: [{ value: string }, { value: number }][] = []
 		for (const [c, k] of Object.entries(data.samples))
 			rows.push([
@@ -47,7 +70,7 @@ export class ListSamples {
 		return rows
 	}
 
-	createTvsTerm(tw, tvslst) {
+	createTvsTerm(tw: TermWrapper, tvslst: any) {
 		tvslst.lst.push({
 			type: 'tvs',
 			tvs: {
@@ -56,23 +79,23 @@ export class ListSamples {
 		})
 	}
 
-	createTvsLstValues(tw, tvslst, lstIdx) {
+	createTvsLstValues(tw: any, tvslst: any, lstIdx: number) {
 		this.createTvsTerm(tw, tvslst)
 		const values =
 			tw.term.type === 'samplelst'
-				? tw.term.values[this.plot.label].list
-				: [{ key: this.plot.seriesId, label: this.plot.label }]
+				? tw.term.values[this.plot.key].list
+				: [{ key: this.plot.seriesId, label: this.plot.key }]
 		tvslst.lst[lstIdx].tvs.values = values
 
 		if (tw.term.type === 'condition') {
 			Object.assign(tvslst.lst[lstIdx].tvs, {
-				bar_by_grade: tw.q.bar_by_grade,
+				bar_by_grade: tw.q?.bar_by_grade || null,
 				value_by_max_grade: tw.q.value_by_max_grade
 			})
 		}
 	}
 
-	createTvsLstRanges(tw, tvslst, rangeStart: number, rangeStop: number, lstIdx) {
+	createTvsLstRanges(tw: TermWrapper, tvslst: any, rangeStart: number, rangeStop: number, lstIdx: number) {
 		this.createTvsTerm(tw, tvslst)
 
 		tvslst.lst[lstIdx].tvs.ranges = [
@@ -89,7 +112,7 @@ export class ListSamples {
 	}
 
 	assignPlotRangeRanges() {
-		const { start, stop, startinclusive, stopinclusive, startunbounded, stopunbounded } = this.plot.divideTwBins || {}
+		const { start, stop, startinclusive, stopinclusive, startunbounded, stopunbounded } = this.plot.overlayBins || {}
 		return [
 			{
 				start: start ?? null,
@@ -102,13 +125,13 @@ export class ListSamples {
 		]
 	}
 
-	isContinuousOrBinned(tw2) {
+	isContinuousOrBinned(tw2: TermWrapper) {
 		return (
-			tw2.q?.mode === 'continuous' || (['float', 'integer'].includes(tw2.term?.type) && this.plot.divideTwBins != null)
+			tw2.q?.mode === 'continuous' || (['float', 'integer'].includes(tw2.term?.type) && this.plot.overlayBins != null)
 		)
 	}
 
-	getTvsLst(rangeStart, rangeStop, tw1, tw2) {
+	getTvsLst(rangeStart: number, rangeStop: number, tw1: TermWrapper, tw2: TermWrapper) {
 		const tvslst: {
 			type: string
 			in: boolean
