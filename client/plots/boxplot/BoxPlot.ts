@@ -8,7 +8,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
-import { BoxPlotInteractions } from './BoxPlotInteractions'
+import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import getMaxLabelLgth from './viewModel/MaxLabelLength'
 
 /** TODOs:
