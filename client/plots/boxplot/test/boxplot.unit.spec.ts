@@ -1,13 +1,14 @@
 import tape from 'tape'
 import { termjson } from '../../../test/testdata/termjson'
 import { ViewModel } from '../viewModel/ViewModel'
+import { LegendDataMapper } from '../viewModel/LegendData'
 
 /*
 Tests:
-	Default new ViewModel() viewData
+	Default ViewModel()
 	.setPlotDimensions()
 	.setPlotData()
-	.setLegendData()
+	Default LegendDataMapper() legendData
 
 See unit tests for #dom/boxplot for rendering unit tests
 */
@@ -96,7 +97,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Default new ViewModel()', function (test) {
+tape('Default ViewModel()', function (test) {
 	test.timeoutAfter(100)
 
 	const viewModel = getViewModel()
@@ -163,26 +164,26 @@ tape('.setPlotData()', function (test) {
 	test.end()
 })
 
-tape('.setLegendData()', function (test) {
+tape('Default LegendDataMapper', function (test) {
 	test.timeoutAfter(100)
 
-	const viewModel = getViewModel()
-	const legend = viewModel.setLegendData(mockConfig, mockData)
-	if (!legend) return test.fail('Should create a legend object')
+	const legendData = new LegendDataMapper(mockConfig, mockData).legendData
+	// const legend = viewModel.setLegendData(mockConfig, mockData)
+	if (!legendData) return test.fail('Should create a legend object')
 
-	test.equal(legend.length, 2, `Should create 3 legend sections`)
+	test.equal(legendData.length, 2, `Should create 2 legend sections`)
 
 	test.true(
-		legend[0].label.includes(termjson['agedx'].name),
+		legendData[0].label.includes(termjson['agedx'].name),
 		`Should create descriptive stats section for ${termjson['agedx'].name}`
 	)
-	test.deepEqual(legend[0].items, mockConfig.term.q.descrStats, `Should properly set legend items`)
+	test.deepEqual(legendData[0].items, mockConfig.term.q.descrStats, `Should properly set legend items`)
 
 	test.true(
-		legend[1].label.includes(termjson['sex'].name),
+		legendData[1].label.includes(termjson['sex'].name),
 		`Should create descriptive stats section for ${termjson['sex'].name}`
 	)
-	test.deepEqual(legend[1].items, mockConfig.term2.q.descrStats, `Should properly set legend items`)
+	test.deepEqual(legendData[1].items, mockConfig.term2.q.descrStats, `Should properly set legend items`)
 
 	test.end()
 })
