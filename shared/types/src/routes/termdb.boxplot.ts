@@ -1,10 +1,12 @@
 import type { RoutePayload } from './routeApi.js'
 
 export type BoxPlotRequest = {
-	//TOOD: define request
+	/** Args set in TermVocab */
+	/** term1 or term */
 	tw: any
 	genome: string
 	dslabel: string
+	/** term2 */
 	overlayTw?: any
 	filter: any
 	filter0: any
@@ -20,7 +22,7 @@ export type BoxPlotResponse = {
 	uncomputableValues: { label: string; value: number }[] | null
 }
 
-type BoxPlotEntry = {
+export type BoxPlotEntry = {
 	boxplot: BoxPlotData & { label: string }
 	/** color matching the value/category color */
 	color?: string
@@ -29,6 +31,9 @@ type BoxPlotEntry = {
 	 * whether or not the plot is hidden by default */
 	isHidden?: boolean
 	key: string
+	/** Formatted bins for numeric terms */
+	overlayBins?: any
+	/** Usually the same as key, but determined by the tw */
 	seriesId?: string
 }
 

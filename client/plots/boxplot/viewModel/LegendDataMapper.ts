@@ -1,3 +1,6 @@
+import type { FormattedPlotEntry } from './ViewModel'
+import type { BoxPlotResponse } from '#types'
+
 export type LegendItemEntry = {
 	label: string
 	/** Total number of samples, cells, etc. */
@@ -12,7 +15,7 @@ export type LegendItemEntry = {
 
 export class LegendDataMapper {
 	legendData: { label: string; items: LegendItemEntry[] }[] = []
-	constructor(config, data, plots) {
+	constructor(config: any, data: BoxPlotResponse, plots: FormattedPlotEntry[]) {
 		const isTerm2 = config?.term2
 		if (config.term.q?.descrStats) {
 			this.legendData.push({
