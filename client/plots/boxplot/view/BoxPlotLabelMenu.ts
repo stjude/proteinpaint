@@ -10,7 +10,6 @@ export class BoxPlotLabelMenu {
 			//TODO: Filter option? Group?
 			{
 				text: `Hide ${plot.key}`,
-				isVisible: true,
 				callback: () => {
 					const plotConfig = app.getState().plots.find(p => p.id === id)
 					const config = structuredClone(plotConfig)
@@ -26,7 +25,6 @@ export class BoxPlotLabelMenu {
 			},
 			{
 				text: `List samples`,
-				isVisible: true,
 				callback: async () => {
 					this.tip.clear().showunder(plot.boxplot.labelG.node())
 					const min = plot.descrStats.find(s => s.id === 'min').value
@@ -51,7 +49,6 @@ export class BoxPlotLabelMenu {
 		plot.boxplot.labelG.on('click', () => {
 			this.tip.clear().showunder(plot.boxplot.labelG.node())
 			for (const opt of options) {
-				if (!opt.isVisible) continue
 				this.tip.d
 					.append('div')
 					.classed('sja_menuoption', true)

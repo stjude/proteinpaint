@@ -31,9 +31,7 @@ const runpp = helpers.getRunPp('mass', {
 	debug: 1
 })
 
-const features = JSON.parse(sessionStorage.getItem('optionalFeatures')) || {}
-const tabLabels2Find = ['Barchart', 'Violin'] //hardcoded data in summary.js.
-if (features?.draftChartTypes?.includes('boxplot')) tabLabels2Find.push('Boxplot')
+const tabLabels2Find = ['Barchart', 'Violin', 'Boxplot'] //hardcoded data in summary.js.
 
 /**************
  test sections
