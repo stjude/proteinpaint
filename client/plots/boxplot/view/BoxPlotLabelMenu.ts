@@ -1,6 +1,6 @@
 import { Menu } from '#dom'
 import type { MassAppApi } from '#mass/types/mass'
-import type { BoxPlotInteractions } from '../BoxPlotInteractions'
+import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 
 export class BoxPlotLabelMenu {
 	tip = new Menu({ padding: '' })
