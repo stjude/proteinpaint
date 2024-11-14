@@ -103,7 +103,8 @@ export class View {
 				legendItem.attr('aria-label', `Click to unhide plot`).on('click', () => {
 					const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
 					const config = structuredClone(plotConfig)
-					delete config.term2.q.hiddenValues[item.label]
+					const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
+					delete config[contTerm].q.hiddenValues[item.label]
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
