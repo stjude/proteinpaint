@@ -6,6 +6,7 @@ import type { BoxPlotDom, BoxPlotSettings } from '../BoxPlot'
 import type { LegendItemEntry } from '../viewModel/LegendDataMapper'
 import type { ViewData } from '../viewModel/ViewModel'
 import type { MassAppApi } from '#mass/types/mass'
+import type { BoxPlotInteractions } from '../BoxPlotInteractions'
 import { BoxPlotToolTips } from './BoxPlotToolTips'
 import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
 import { rgb } from 'd3-color'
@@ -13,10 +14,19 @@ import { rgb } from 'd3-color'
 /** Handles all the rendering logic for the boxplot. */
 export class View {
 	app: MassAppApi
-	id: number
-	constructor(data: ViewData, settings: BoxPlotSettings, dom: BoxPlotDom, app: MassAppApi, id: number) {
+	id: string
+	interactions: BoxPlotInteractions
+	constructor(
+		data: ViewData,
+		settings: BoxPlotSettings,
+		dom: BoxPlotDom,
+		app: MassAppApi,
+		id: string,
+		interactions: BoxPlotInteractions
+	) {
 		this.app = app
 		this.id = id
+		this.interactions = interactions
 		if (!data || !data.plots.length) return
 		dom.plotTitle.selectAll('*').remove()
 		dom.yAxis.selectAll('*').remove()
@@ -80,7 +90,7 @@ export class View {
 
 			new BoxPlotToolTips(plot, g)
 			if (data.plots.length > 1) {
-				new BoxPlotLabelMenu(plot, this.app, this.id)
+				new BoxPlotLabelMenu(plot, this.app, this.id, this.interactions)
 			}
 		}
 	}

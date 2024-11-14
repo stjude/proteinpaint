@@ -1,8 +1,10 @@
 import { Menu } from '#dom'
+import type { MassAppApi } from '#mass/types/mass'
+import type { BoxPlotInteractions } from '../BoxPlotInteractions'
 
 export class BoxPlotLabelMenu {
 	tip = new Menu({ padding: '' })
-	constructor(plot, app, id) {
+	constructor(plot, app: MassAppApi, id: string, interactions: BoxPlotInteractions) {
 		const options = [
 			//TODO: Filter option? Group?
 			{
@@ -23,9 +25,12 @@ export class BoxPlotLabelMenu {
 			},
 			{
 				text: `List samples`,
-				isVisible: false,
-				callback: () => {
-					//A comment so ts doesn't complain
+				isVisible: true,
+				callback: async () => {
+					this.tip.clear().showunder(plot.boxplot.labelG.node())
+					const min = plot.descrStats.find(s => s.id === 'min').value
+					const max = plot.descrStats.find(s => s.id === 'max').value
+					await interactions.listSamples(plot, min, max, this.tip)
 				}
 			}
 		]
