@@ -85,7 +85,6 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = await get_snp(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'multivalue') {
 			f = await get_multivalue(item.tvs, CTEname_i, ds)
-			console.log('multivalue', f)
 		} else {
 			throw 'unknown term type'
 		}
@@ -464,18 +463,19 @@ function get_condition(tvs, CTEname) {
 	}
 }
 
-function get_multivalue(tvs, CTEname, ds, onlyChildren) {
-	let query = `SELECT sample
-	FROM anno_multivalue 
-	WHERE term_id = ?`
-	//AND value ${tvs.isnot ? 'NOT' : ''} IN ()`
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
-	return {
-		CTEs: [` ${CTEname} AS (${query})`],
-		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
-		CTEname
-	}
-}
+//TO BE COMPLETED AND TESTED WHEN THE TVS IS READY
+// function get_multivalue(tvs, CTEname, ds, onlyChildren) {
+// 	let query = `SELECT sample
+// 	FROM anno_multivalue
+// 	WHERE term_id = ?
+// 	${tvs.values.map(key => ` AND value->$${key} ${tvs.isnot ? '=null' : '>0'}`)}`
+// 	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+// 	return {
+// 		CTEs: [` ${CTEname} AS (${query})`],
+// 		values: [tvs.term.id],
+// 		CTEname
+// 	}
+// }
 
 function getFilterSampleTypes(filter, ds, sampleTypes) {
 	for (const [i, item] of filter.lst.entries()) {

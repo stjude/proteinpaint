@@ -1,6 +1,5 @@
 export const multivalueCTE = {
 	getCTE(tablename, tw) {
-		console.log('multivalueCTE.getCTE', tablename, tw)
 		return {
 			sql: `${tablename} AS (
 				SELECT 
