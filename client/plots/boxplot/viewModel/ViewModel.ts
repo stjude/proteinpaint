@@ -1,4 +1,4 @@
-import type { BoxPlotSettings } from './BoxPlot'
+import type { BoxPlotSettings } from '../BoxPlot'
 import type { BoxPlotResponse, BoxPlotData, BoxPlotDescrStatsEntry } from '#types'
 
 /**

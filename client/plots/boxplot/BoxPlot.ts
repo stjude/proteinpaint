@@ -1,15 +1,15 @@
-import { getCompInit, copyMerge } from '../../rx'
+import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ } from '../controls'
 import { RxComponent } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { MassAppApi } from '#mass/types/mass'
-import { Model } from './Model'
-import { ViewModel } from './ViewModel'
-import { View } from './View'
+import { Model } from './model/Model'
+import { ViewModel } from './viewModel/ViewModel'
+import { View } from './view/View'
 import { BoxPlotInteractions } from './BoxPlotInteractions'
-import getMaxLabelLgth from './MaxLabelLength'
+import getMaxLabelLgth from './viewModel/MaxLabelLength'
 
 /** TODOs:
  *	Type for config
