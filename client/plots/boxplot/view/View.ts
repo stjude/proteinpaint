@@ -8,6 +8,7 @@ import type { ViewData } from '../viewModel/ViewModel'
 import type { MassAppApi } from '#mass/types/mass'
 import { BoxPlotToolTips } from './BoxPlotToolTips'
 import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
+import { rgb } from 'd3-color'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
@@ -86,20 +87,27 @@ export class View {
 
 	renderLegend(legendDiv, legendData: { label: string; items: LegendItemEntry[] }[]) {
 		legendDiv.attr('id', 'sjpp-boxplot-legend')
-		//Set styles and preferences in the following fns
-		const addSectionTitle = (label: string) => {
-			legendDiv.append('div').style('opacity', '0.5').text(label)
-		}
-		const addSectionDiv = () => {
-			const div = legendDiv.append('div').style('padding-left', '10px')
-			return div
-		}
+
 		const addData = (item: LegendItemEntry, sectionDiv) => {
-			const legendItem = sectionDiv
+			const legendItem = sectionDiv.append('div')
+			if (item.color) {
+				legendItem
+					.append('div')
+					.style('display', 'inline-block')
+					.style('min-width', '12px')
+					.style('height', '12px')
+					.style('background-color', item.color)
+					.style('border', `1px solid ${rgb(item.color).darker(1)}`)
+					.style('margin-right', '3px')
+					.style('top', '1px')
+					.style('position', 'relative')
+			}
+			legendItem
 				.append('div')
+				.style('display', 'inline-block')
 				.style('text-decoration', item.isHidden ? 'line-through' : '')
 				.text(`${item.label}${item.value ? `: ${item.value}` : item.count ? `, n=${item.count}` : ''}`)
-			if (item.isPlot && item.isHidden) {
+			if (item.color) {
 				//Do not apply to uncomputable values, only items with plot data
 				legendItem.attr('aria-label', `Click to unhide plot`).on('click', () => {
 					const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
@@ -115,8 +123,8 @@ export class View {
 			}
 		}
 		for (const section of legendData) {
-			addSectionTitle(section.label)
-			const sectionDiv = addSectionDiv()
+			legendDiv.append('div').style('opacity', '0.5').text(section.label)
+			const sectionDiv = legendDiv.append('div').style('padding-left', '10px')
 			for (const item of section.items) {
 				addData(item, sectionDiv)
 			}
