@@ -4,15 +4,15 @@ export type LegendItemEntry = {
 	count?: number
 	/** If true, line-through text */
 	isHidden: boolean
-	/** If true, indicates plot data available and enables callback. */
-	isPlot?: boolean
+	/** If provided, indicates plot data available and enables callback. */
+	color?: string
 	/** Value for stat */
 	value?: number
 }
 
 export class LegendDataMapper {
 	legendData: { label: string; items: LegendItemEntry[] }[] = []
-	constructor(config, data) {
+	constructor(config, data, plots) {
 		const isTerm2 = config?.term2
 		if (config.term.q?.descrStats) {
 			this.legendData.push({
@@ -27,11 +27,11 @@ export class LegendDataMapper {
 			})
 		}
 		const hiddenPlots =
-			data.plots
+			plots
 				.filter(p => p.isHidden)
 				?.map(p => {
 					const total = p.descrStats.find(d => d.id === 'total')
-					return { label: p.key, count: total!.value, isHidden: true, isPlot: true }
+					return { label: p.key, count: total!.value, isHidden: true, color: p.color }
 				}) || []
 		if (config.term.term?.values) {
 			const term1Label = config.term2 ? config.term.term.name : 'Other categories'
@@ -60,7 +60,7 @@ export class LegendDataMapper {
 		const termData: { label: string; items: LegendItemEntry[] } = { label, items: [] }
 
 		if (hiddenPlots.length) {
-			for (const key of Object.keys(tw.q.hiddenValues)) {
+			for (const key of Object.keys(tw.q.hiddenValues || {})) {
 				const plot = hiddenPlots.find(p => p.label === key)
 				if (plot) termData.items.push(plot)
 			}
