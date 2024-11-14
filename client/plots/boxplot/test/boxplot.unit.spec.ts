@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { termjson } from '../../../test/testdata/termjson'
 import { ViewModel } from '../viewModel/ViewModel'
-import { LegendDataMapper } from '../viewModel/LegendData'
+import { LegendDataMapper } from '../viewModel/LegendDataMapper'
 
 /*
 Tests:
