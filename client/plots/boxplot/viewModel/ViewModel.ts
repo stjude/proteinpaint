@@ -61,13 +61,20 @@ export class ViewModel {
 	/** Range is 10 -20 */
 	rowSpace: number
 	viewData: ViewData
-	constructor(config: any, data: BoxPlotResponse, settings: BoxPlotSettings, maxLabelLgth: number) {
+	constructor(
+		config: any,
+		data: BoxPlotResponse,
+		settings: BoxPlotSettings,
+		maxLabelLgth: number,
+		useDefaultSettings: boolean
+	) {
 		/** As requested, adjust the size of each plot based on the number of boxplots
 		 * Manages rendering very large svgs. */
 		const numOfPlots = data.plots.filter(p => !p.isHidden).length
-		if (config.settings.boxplot.useDefaultSettings == true && numOfPlots > 10) {
-			this.rowHeight = numOfPlots > 20 ? 20 : 35
-			this.rowSpace = numOfPlots > 20 ? 10 : 12
+		if (useDefaultSettings) {
+			const isLargePlotCount = numOfPlots > 20
+			this.rowHeight = numOfPlots > 10 ? (isLargePlotCount ? 20 : 35) : 50
+			this.rowSpace = numOfPlots > 10 ? (isLargePlotCount ? 10 : 12) : 15
 		} else {
 			this.rowHeight = settings.rowHeight
 			this.rowSpace = settings.rowSpace
