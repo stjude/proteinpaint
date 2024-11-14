@@ -490,15 +490,10 @@ function setRenderers(self) {
 				header.shift()
 				header.shift()
 			}
-			// header for forest plot column
-			tr.append('td')
 			// combine headers for 95% CI columns
 			header.splice(1, 2, '95% CI')
 			// display remaining headers
-			header.forEach((v, i, arr) => {
-				const td = tr.append('td').text(v).style('padding', '8px')
-				if (i == arr.length - 1) td.style('font-style', 'italic')
-			})
+			self.fillDataHeaders(header, tr)
 		}
 
 		// get tws of all independent variables
@@ -727,10 +722,10 @@ function setRenderers(self) {
 			header_multi.splice(1, 2, '95% CI')
 
 			// fill headers for data columns
-			fillDataHeaders(header_uni, tr, tr_label, 'Univariate')
+			self.fillDataHeaders(header_uni, tr, tr_label, 'Univariate')
 			tr.append('td').style('width', '2px') //separation between univariate/multivariate
 			tr_label.append('td').style('width', '2px')
-			fillDataHeaders(header_multi, tr, tr_label, 'Multivariable-adjusted')
+			self.fillDataHeaders(header_multi, tr, tr_label, 'Multivariable-adjusted')
 		}
 
 		/* term rows:
@@ -796,7 +791,7 @@ function setRenderers(self) {
 				forestPlotter_uni(tr.append('td'), cols)
 
 				// display univariate data columns
-				self.fillCoefDataCols({ tr, cols, tw })
+				self.fillCoefDataCols({ tr, cols, tw, isUnivariate: true })
 
 				// display multivariate forest plot
 				forestPlotter_multi(tr.append('td'), cols_multi)
@@ -864,7 +859,7 @@ function setRenderers(self) {
 					forestPlotter_uni(tr.append('td'), cols)
 
 					// display univariate data columns
-					self.fillCoefDataCols({ tr, cols, tw, categoryKey: k })
+					self.fillCoefDataCols({ tr, cols, tw, categoryKey: k, isUnivariate: true })
 
 					tr.append('td').style('width', '2px') // separation between univariate/multivariate
 
@@ -892,18 +887,57 @@ function setRenderers(self) {
 		for (const v of header_multi) tr.append('td')
 	}
 
+	// fill headers of data columns of coefficients table
+	self.fillDataHeaders = (header, tr, tr_label, label) => {
+		const startColN = tr.selectAll('td').size()
+		// header for forest plot column
+		tr.append('td')
+		// headers for data columns
+		header.forEach((h, i, arr) => {
+			if (i === 0) {
+				// header for estimate column
+				const est = h
+				const estTd = tr.append('td').style('padding', '8px').text(est)
+				const estInfo = estTd.append('sup').style('cursor', 'default').html('&nbsp;&#9432;')
+				estInfo.on('mouseover', event => {
+					const tip = self.dom.tip.clear()
+					tip.d.append('div').text('View interpretations of results by hovering over each value')
+					tip.showunder(event.target)
+				})
+				estInfo.on('mouseout', () => self.dom.tip.hide())
+			} else {
+				// headers for all other data columns
+				const td = tr.append('td').text(h).style('padding', '8px')
+				if (i === arr.length - 1) td.style('font-style', 'italic')
+			}
+		})
+		// fill label row, if defined
+		if (tr_label) {
+			const endColN = tr.selectAll('td').size()
+			tr_label
+				.append('td')
+				.attr('colspan', endColN - startColN)
+				.style('padding', '0px 8px')
+				.style('text-align', 'center')
+				.append('div')
+				.text(label)
+				.style('border-bottom', '1px solid')
+				.style('padding', '5px')
+		}
+	}
+
 	// fill data columns of row of coefficients table
 	self.fillCoefDataCols = arg => {
 		const { tr, cols } = arg
 		// estimate (Beta/OR/HR) column
 		const est = cols.shift()
-		const estSpan = tr.append('td').style('padding', '8px').append('span').text(est)
+		const estSpan = tr.append('td').style('padding', '8px').style('cursor', 'default').append('span').text(est)
 		// on mouseover, display explanation of estimate value
 		estSpan.on('mouseover', event => {
 			const tip = self.dom.tip.clear()
 			const estimateMsg = self.getEstimateMsg(Object.assign({ est: Number(est) }, arg))
 			tip.d.append('div').style('min-width', '450px').style('max-width', '600px').text(estimateMsg)
-			tip.showunder(event.target, { offsetY: -5 })
+			tip.showunder(event.target)
 		})
 		estSpan.on('mouseout', () => self.dom.tip.hide())
 		// 95% CI column
@@ -922,7 +956,7 @@ function setRenderers(self) {
 	other scenarios in this code.
 	*/
 	self.getEstimateMsg = arg => {
-		const { est, tw, tw2, categoryKey, categoryKey2, isIntercept } = arg
+		const { est, tw, tw2, categoryKey, categoryKey2, isIntercept, isUnivariate } = arg
 		if (tw && (!tw.term.type || tw.q.mode == 'spline')) return '' // TODO: support non-dictionary and cubic spline variables
 		const independentTws = self.independentTws
 		const outcomeTw = self.config.outcome
@@ -975,7 +1009,7 @@ function setRenderers(self) {
 		if (regtype == 'cox')
 			covariates.push(outcomeTw.q.timeScale == 'time' ? '"Years of follow-up"' : '"Attained age during follow-up"')
 		// build message for covariates
-		if (!covariates.length) return msg + '.'
+		if (!covariates.length || isUnivariate) return msg + '.'
 		else if (covariates.length === 1) return msg + `, adjusting for ${covariates[0]}.`
 		else return msg + `, adjusting for ${covariates.slice(0, -1).join(', ')} and ${covariates.slice(-1)}.`
 
@@ -997,19 +1031,19 @@ function setRenderers(self) {
 		// <categorical variable>: <refGrp>
 		// <continuous variable>: 0
 		function getBaselinesMsg(tws) {
-			const msg = tws
-				.map(tw => {
-					if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
-						// term has refGrp
-						const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
-						return `"${tw.term.name}: ${refGrp}"`
-					} else {
-						// term does not have refGrp
-						return `"${tw.term.name}: 0"`
-					}
-				})
-				.join(', ')
-			return msg
+			const baselines = tws.map(tw => {
+				if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
+					// term has refGrp
+					const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
+					return `"${tw.term.name}: ${refGrp}"`
+				} else {
+					// term does not have refGrp
+					return `"${tw.term.name}: 0"`
+				}
+			})
+			if (!baselines.length) return ''
+			else if (baselines.length === 1) return `${baselines[0]}`
+			else return `${baselines.slice(0, -1).join(', ')} and ${baselines.slice(-1)}`
 		}
 	}
 
@@ -1760,24 +1794,4 @@ function fillColumn2coefficientsTable(div, tw, categoryKey) {
 		div.text('(' + tw.q.mode + ')')
 		return
 	}
-}
-
-function fillDataHeaders(header, tr, tr_label, label) {
-	// header for forest plot column
-	tr.append('td')
-	// headers for data columns
-	header.forEach((h, i, arr) => {
-		const td = tr.append('td').text(h).style('padding', '8px')
-		if (i === arr.length - 1) td.style('font-style', 'italic')
-	})
-	// label for headers
-	tr_label
-		.append('td')
-		.attr('colspan', header.length + 1)
-		.style('padding', '0px 8px')
-		.style('text-align', 'center')
-		.append('div')
-		.text(label)
-		.style('border-bottom', '1px solid')
-		.style('padding', '5px')
 }
