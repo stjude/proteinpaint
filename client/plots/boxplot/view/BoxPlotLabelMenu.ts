@@ -1,6 +1,7 @@
 import { Menu } from '#dom'
 import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
+import { renderTable } from '#dom'
 
 export class BoxPlotLabelMenu {
 	tip = new Menu({ padding: '' })
@@ -30,7 +31,20 @@ export class BoxPlotLabelMenu {
 					this.tip.clear().showunder(plot.boxplot.labelG.node())
 					const min = plot.descrStats.find(s => s.id === 'min').value
 					const max = plot.descrStats.find(s => s.id === 'max').value
-					await interactions.listSamples(plot, min, max, this.tip)
+					const rows = await interactions.listSamples(plot, min, max)
+
+					const tableDiv = this.tip.d.append('div')
+					const columns = [{ label: 'Sample' }, { label: 'Value' }]
+
+					renderTable({
+						rows,
+						columns,
+						div: tableDiv,
+						maxWidth: '30vw',
+						maxHeight: '25vh',
+						resize: true,
+						showLines: true
+					})
 				}
 			}
 		]
