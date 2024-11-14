@@ -1,5 +1,5 @@
-import type { MassAppApi } from '../../mass/types/mass'
-import type { BoxPlotSettings } from './BoxPlot'
+import type { MassAppApi } from '#mass/types/mass'
+import type { BoxPlotSettings } from '../BoxPlot'
 import type { BoxPlotResponse } from '#types'
 import { isNumericTerm } from '#shared/terms.js'
 
