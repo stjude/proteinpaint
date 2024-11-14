@@ -82,7 +82,7 @@ class TdbBoxplot extends RxComponent {
 			boxplots: svg.append('g'),
 			legend: div.append('div').attr('id', 'sjpp-boxplot-legend')
 		}
-		this.interactions = new BoxPlotInteractions(this.dom)
+		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
 		if (opts.header) this.dom.header = opts.header.html('Box plot')
 	}
 
@@ -195,6 +195,8 @@ class TdbBoxplot extends RxComponent {
 		} catch (e: any) {
 			console.error(new Error(e.message || e))
 		}
+		//Not the best approach. Come up with a better way.
+		this.interactions.setVarAfterInit(this.app, this.id)
 	}
 
 	async main() {
@@ -235,7 +237,7 @@ class TdbBoxplot extends RxComponent {
 					}
 				})
 			}
-			new View(viewModel.viewData, settings, this.dom, this.app, this.id)
+			new View(viewModel.viewData, settings, this.dom, this.app, this.id, this.interactions)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)
