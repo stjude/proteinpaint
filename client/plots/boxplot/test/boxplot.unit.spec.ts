@@ -88,7 +88,7 @@ const mockSettings = {
 }
 
 function getViewModel() {
-	return new ViewModel(mockConfig, mockData, mockSettings, 400)
+	return new ViewModel(mockConfig, mockData, mockSettings, 400, false)
 }
 
 tape('\n', function (test) {

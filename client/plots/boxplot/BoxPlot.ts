@@ -36,7 +36,6 @@ export type BoxPlotSettings = {
 	rowHeight: number
 	/** Space between the boxplots */
 	rowSpace: number
-	useDefaultSettings: boolean
 }
 
 export type BoxPlotDom = {
@@ -126,7 +125,12 @@ class TdbBoxplot extends RxComponent {
 				step: 1,
 				max: 50,
 				min: 20,
-				debounceInterval: 500
+				debounceInterval: 500,
+				processInput: (val: number) => {
+					/**TODO: This is a hack. */
+					if (this.useDefaultSettings == true) this.useDefaultSettings = false
+					return val
+				}
 			},
 			{
 				label: 'Plot padding',
@@ -137,7 +141,12 @@ class TdbBoxplot extends RxComponent {
 				step: 1,
 				max: 20,
 				min: 10,
-				debounceInterval: 500
+				debounceInterval: 500,
+				processInput: (val: number) => {
+					/**TODO: This is a hack. */
+					if (this.useDefaultSettings == true) this.useDefaultSettings = false
+					return val
+				}
 			},
 			{
 				label: 'Default color',
@@ -200,10 +209,13 @@ class TdbBoxplot extends RxComponent {
 			if (!data?.plots?.length) {
 				this.app.printError('No data found for box plot')
 			}
-			const maxLabelLgth = getMaxLabelLgth(this.dom, data.plots)
-			const viewModel = new ViewModel(config, data, settings, maxLabelLgth)
+			const maxLabelLgth = getMaxLabelLgth(this.dom.boxplots, data.plots)
+			const viewModel = new ViewModel(config, data, settings, maxLabelLgth, this.useDefaultSettings)
 
-			if (viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) {
+			if (
+				(viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) &&
+				this.useDefaultSettings == true
+			) {
 				/** If the row height or space changed during data processing,
 				 * save the new settings without calling app.dispatch.
 				 * Will show updated value in the controls. */
@@ -217,8 +229,7 @@ class TdbBoxplot extends RxComponent {
 						settings: {
 							boxplot: {
 								rowSpace: viewModel.rowSpace,
-								rowHeight: viewModel.rowHeight,
-								useDefaultSettings: false
+								rowHeight: viewModel.rowHeight
 							}
 						}
 					}
@@ -242,8 +253,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		color: plotColor,
 		labelPad: 10,
 		rowHeight: 50,
-		rowSpace: 15,
-		useDefaultSettings: true
+		rowSpace: 15
 	}
 	return Object.assign(defaults, overrides)
 }
