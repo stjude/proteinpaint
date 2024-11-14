@@ -1,6 +1,6 @@
 import type { BoxPlotSettings } from '../BoxPlot'
 import type { BoxPlotResponse, BoxPlotData, BoxPlotDescrStatsEntry } from '#types'
-import { LegendItemEntry, LegendDataMapper } from './LegendData'
+import { LegendItemEntry, LegendDataMapper } from './LegendDataMapper'
 
 /**
  * Calculates the dimensions and html attributes for the svg and
