@@ -11,7 +11,9 @@ export class BoxPlotLabelMenu {
 				callback: () => {
 					const plotConfig = app.getState().plots.find(p => p.id === id)
 					const config = structuredClone(plotConfig)
-					config.term2.q.hiddenValues[plot.key] = 1
+					const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
+					if (!config[contTerm].q.hiddenValues) config[contTerm].q.hiddenValues = {}
+					config[contTerm].q.hiddenValues[plot.key] = 1
 					app.dispatch({
 						type: 'plot_edit',
 						id,
