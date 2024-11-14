@@ -76,11 +76,12 @@ export class ViewModel {
 		//20 for the yAxis offset (above), 10 more for the first boxplot
 		this.incrTopPad += 30
 
+		const plots = this.setPlotData(data, config, settings, totalLabelWidth, totalRowHeight)
+
 		this.viewData = {
 			plotDim: plotDim as PlotDimensions,
-			plots: this.setPlotData(data, config, settings, totalLabelWidth, totalRowHeight),
-			// legend: this.setLegendData(config, data) || []
-			legend: new LegendDataMapper(config, data).legendData
+			plots: plots.filter(p => !p.isHidden),
+			legend: new LegendDataMapper(config, data, plots).legendData
 		}
 	}
 
@@ -116,11 +117,14 @@ export class ViewModel {
 	}
 
 	setPlotData(data: any, config: any, settings: BoxPlotSettings, totalLabelWidth: number, totalRowHeight: number) {
-		const plots = structuredClone(data.plots.filter(p => !p.isHidden))
+		const plots = structuredClone(data.plots)
 		for (const plot of plots) {
-			//Set rendering properties for the plot
-			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
+			/** Set rendering properties for the plot */
 
+			//Set the color for all plots for the legend and boxplot
+			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
+			//Ignore if hidden after the color is set
+			if (plot.isHidden) continue
 			if (plot.boxplot.out.length) {
 				const maxOut = plot.boxplot.out.reduce((a: { value: number }, b: { value: number }) =>
 					Math.max(a.value, b.value)

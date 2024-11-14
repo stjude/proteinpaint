@@ -167,7 +167,7 @@ tape('.setPlotData()', function (test) {
 tape('Default LegendDataMapper', function (test) {
 	test.timeoutAfter(100)
 
-	const legendData = new LegendDataMapper(mockConfig, mockData).legendData
+	const legendData = new LegendDataMapper(mockConfig, mockData, mockData.plots).legendData
 	// const legend = viewModel.setLegendData(mockConfig, mockData)
 	if (!legendData) return test.fail('Should create a legend object')
 
