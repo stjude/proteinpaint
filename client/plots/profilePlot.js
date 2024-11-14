@@ -356,7 +356,7 @@ export class profilePlot {
 						return 0
 					})
 					this.sites.unshift({ label: '', value: '' })
-					inputs.unshift({
+					inputs.push({
 						label: 'Site',
 						type: 'dropdown',
 						chartType,
