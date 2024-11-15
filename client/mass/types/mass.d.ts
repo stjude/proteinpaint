@@ -1,7 +1,8 @@
-import { RxAppApi } from '../../types/rx'
-import { Menu } from '#dom'
-import { Elem } from '../../types/d3'
-import { ClientCopyGenome } from 'types/global'
+import type { RxAppApi } from '../../types/rx'
+import type { Menu } from '#dom'
+import type { Elem } from '../../types/d3'
+import type { ClientCopyGenome } from 'types/global'
+import type { BoxPlotSettings } from '#plots/boxplot/BoxPlot'
 
 export type MassAppApi = RxAppApi & {
 	Inner: MassApp
@@ -47,24 +48,74 @@ type MassApp = {
 	/** TODO */
 	opts: any
 	plotIdToSandboxId: any
-	/** TODO */
-	state: any
+	state: MassState
 	/** TODO */
 	store: any
 	/** required app type */
 	type: 'app'
 }
 
-/** TODO: Start of all possible options for the mass state */
-type MassState = {
+/** TODO: Start of all possible options for the mass state
+ * Combine with shared types later
+ */
+export type MassState = {
 	nav: MassNav
+	activeCohort: number
+	customTerms?: any[]
+	groups: any[]
+	plots: PlotConfig[]
+	termfilter: any
+	termdbConfig: {
+		allowedChartTypes: string[]
+		allowedTermTypes: string[]
+		displaySampleIds?: boolean
+		massSessionDuration: number
+		queries?: any
+		requiredAuth?: any
+		sampleTypes?: any
+		scatterplots?: any[]
+		supportedChartTypes: { [index: string]: string[] }
+		title?: {
+			text: string
+		}
+	}
+	reuse?: {
+		customTermQ?: {
+			byId?: any
+			byName?: any
+		}
+	}
+	search: {
+		isVisible?: boolean
+	}
+	vocab: {
+		genome: string
+		dslabel: string
+	}
 }
 
 type MassNav = {
-	/** Default is 0. Shows the tabs in this order depending on
-	 * dataset -> about > cohort > charts tab */
+	/** Default is 0, the about tab */
 	activeTab: number
 	/** -1: unselected, 0,1,2...: selected */
 	activeCohort: number
 	header_mode: 'only_buttons' | 'with_tabs' | 'search_only' | 'hidden' | 'hide_search' | 'with_cohortHtmlSelect'
+}
+
+export type PlotConfig = {
+	chartType: string
+	childType: string
+	groups: any[]
+	id: string
+	settings: {
+		barchart?: any
+		boxplot?: BoxPlotSettings
+		common?: any
+		controls?: any
+		sampleScatter?: any
+		violin?: any
+	}
+	term: any
+	term0?: any
+	term2?: any
 }
