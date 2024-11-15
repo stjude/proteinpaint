@@ -5,6 +5,7 @@ import type { CategoricalTW, BrainImagingRequest, BrainImagingResponse, FilesByC
 import { brainImagingPayload } from '#types'
 import { spawn } from 'child_process'
 import { getData } from '../src/termdb.matrix.js'
+import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
@@ -64,7 +65,7 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 
 		const terms: CategoricalTW[] = []
 		const divideByTW: CategoricalTW | undefined = query.divideByTW
-		const overlayTW = query.overlayTW
+		const overlayTW: CategoricalTW | undefined = query.overlayTW
 
 		if (divideByTW) terms.push(divideByTW)
 		if (overlayTW) terms.push(overlayTW)
@@ -79,15 +80,29 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 			const sampleId = ds.sampleName2Id.get(sampleName)
 			const sampleData = data.samples[sampleId]
 			const samplePath = path.join(dirPath, sampleName) + '.nii'
-			const divideCategory = divideByTW ? sampleData[divideByTW.$id!].value : 'default'
-			const overlayCategory = overlayTW ? sampleData[overlayTW.$id!].value : 'default'
+			let divideCategory = 'default'
+			let overlayCategory = 'default'
+			if (divideByTW) {
+				const value = sampleData[divideByTW.$id!]
+				if (value) divideCategory = divideByTW.term.values?.[value.key]?.label || value.key // for numeric terms key has the bin label
+			}
+			if (overlayTW) {
+				const value = sampleData[overlayTW.$id!]
+				if (value) overlayCategory = overlayTW.term.values?.[value.key]?.label || value.key
+			}
 			if (!divideByCat[divideCategory]) divideByCat[divideCategory] = {}
 
 			if (!query.legendFilter?.includes(overlayCategory)) {
 				if (!divideByCat[divideCategory][overlayCategory]) {
+					let color = overlayTW?.term?.values?.[overlayCategory]?.color || 'red'
+
+					if (overlayTW && isNumericTerm(overlayTW.term)) {
+						const bins = data.refs.byTermId[overlayTW.$id!].bins
+						color = bins.find(b => b.label == overlayCategory).color
+					}
 					divideByCat[divideCategory][overlayCategory] = {
 						samples: [],
-						color: overlayTW?.term?.values?.[overlayCategory]?.color || 'red'
+						color
 					}
 				}
 				divideByCat[divideCategory][overlayCategory].samples.push(samplePath)
