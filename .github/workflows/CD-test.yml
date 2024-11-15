@@ -1,13 +1,19 @@
 name: Run Tests and Check Coverage
 
 on:
-  pull_request:
+  push:
     branches:
+      - master
+      - fake-master
       - testCI
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
 
 jobs:
   test:
+    if: (github.event_name == 'workflow_call') || (github.event_name == 'push' && github.event.head_commit.author.email != 'PPTeam@STJUDE.ORG') || (github.event_name == 'pull_request')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
     - uses: actions/checkout@v3
@@ -19,8 +25,9 @@ jobs:
           cache: 'npm'
           node-version: '20'
 
-    - name: Install Dependencies
-      run: npm ci
+    - run: npm ci
+      env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Run Tests with Coverage
       run: npm run test:coverage
