@@ -5,6 +5,7 @@ import { renderTable } from '../dom/table.ts'
 import svgLegend from '#dom/svg.legend'
 import { scaleLinear } from 'd3-scale'
 import { Menu } from '#dom/menu'
+import { rgb } from 'd3-color'
 class BrainImaging {
 	constructor(opts) {
 		this.opts = opts
@@ -202,8 +203,8 @@ class BrainImaging {
 		const previousConfig = this.state?.config
 
 		const overlayOrDivideByChange =
-			config.overlayTW?.term?.id !== previousConfig?.overlayTW?.term?.id ||
-			config.divideByTW?.term?.id !== previousConfig?.divideByTW?.term?.id
+			JSON.stringify(config.overlayTW) !== JSON.stringify(previousConfig?.overlayTW) ||
+			JSON.stringify(config.divideByTW) !== JSON.stringify(previousConfig?.divideByTW)
 
 		const legendFilterChange = JSON.stringify(previousConfig?.legendFilter) !== JSON.stringify(config.legendFilter)
 		const updateL =
@@ -233,6 +234,7 @@ class BrainImaging {
 	}
 
 	async main() {
+		this.config = structuredClone(this.state.config) //to modify config on plot_edit
 		this.settings = this.state.config.settings.brainImaging
 
 		//settings may be edited by the slider or the input, so we update the sliders and inputs to reflect the current settings
@@ -359,7 +361,7 @@ class BrainImaging {
 			}
 		}
 
-		if (this.state.overlayOrDivideByChange || !this.legendData || this.state.legendFilterChange) {
+		if (this.state.overlayOrDivideByChange || !this.legendItems || this.state.legendFilterChange) {
 			// only render legends when it is the first time or when divideBy/Overlay terms changed.
 			const legendItems = []
 			for (const [label, v] of Object.entries(this.legendValues)) {
@@ -374,13 +376,14 @@ class BrainImaging {
 					crossedOut: v.crossedOut
 				})
 			}
-			this.legendData = [
+			this.legendItems = legendItems
+			const legendRendererData = [
 				{
 					items: legendItems
 				}
 			]
 
-			this.legendRenderer(this.legendData, {
+			this.legendRenderer(legendRendererData, {
 				settings: {
 					fontsize: 16,
 					iconh: 14,
@@ -505,7 +508,7 @@ function setInteractivity(self) {
 
 		const legendFilterIndex = legendFilter.indexOf(targetData.key)
 
-		if (legendFilterIndex !== -1 || legendFilter.length + 1 !== self.legendData[0].items.length) {
+		if (legendFilterIndex !== -1 || legendFilter.length + 1 !== self.legendItems.length) {
 			// only show the Hide option when the cat is not the last shown cat
 			legendMenuDiv
 				.append('div')
@@ -530,12 +533,10 @@ function setInteractivity(self) {
 			.text('Show only')
 			.on('click', () => {
 				legendMenu.hide()
-				const legendCats = self.legendData[0].items
 				const legendFilter = []
-				for (const legendCat of legendCats) {
+				for (const legendCat of self.legendItems) {
 					if (legendCat.key !== targetData.key) legendFilter.push(legendCat.key)
 				}
-				console.log('what is legendFilter', legendFilter)
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
@@ -555,6 +556,36 @@ function setInteractivity(self) {
 					config: { legendFilter: [] }
 				})
 			})
+		let color = self.state.config.overlayTW.term.values[targetData.key]?.color || '#000000'
+		color = rgb(color).formatHex() //so that the color is in the correct format to be shown in the input
+		legendMenuDiv
+			.append('div')
+			.attr('class', 'sja_sharp_border')
+			.style('padding', '0px 10px')
+			.text('Color:')
+			.append('input')
+			.attr('type', 'color')
+			.attr('value', color)
+			.on('change', e => {
+				self.changeColor(targetData.key, e.target.value)
+			})
 		legendMenu.showunder(event.target)
+	}
+
+	self.changeColor = async function (key, color) {
+		const tw = self.config.overlayTW
+
+		if (!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key])
+			tw.term.values[key].color = color
+		else {
+			if (!tw.term.values) tw.term.values = { [key]: {} }
+			tw.term.values[key].color = color
+		}
+
+		await self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: { overlayTW: tw }
+		})
 	}
 }
