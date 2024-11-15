@@ -1,4 +1,4 @@
-import { drawBoxplot } from '#dom'
+import { drawBoxplot, Menu } from '#dom'
 import { ScaleLinear, scaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
@@ -8,14 +8,13 @@ import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import { BoxPlotToolTips } from './BoxPlotToolTips'
 import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
-import { Menu } from '#dom'
 import { LegendRenderer } from './LegendRender'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
 	app: MassAppApi
+	dom: BoxPlotDom
 	interactions: BoxPlotInteractions
-	tip = new Menu()
 	constructor(
 		data: ViewData,
 		settings: BoxPlotSettings,
@@ -24,6 +23,7 @@ export class View {
 		interactions: BoxPlotInteractions
 	) {
 		this.app = app
+		this.dom = dom
 		this.interactions = interactions
 		if (!data || !data.plots.length) return
 		dom.plotTitle.selectAll('*').remove()
@@ -36,6 +36,13 @@ export class View {
 
 		const yScale = scaleLinear().domain(plotDim.domain).range([0, settings.boxplotWidth])
 
+		this.renderDom(plotDim, dom, yScale)
+		this.renderBoxPlots(dom, data, yScale, settings)
+		if (data.legend) new LegendRenderer(dom.legend, data.legend, this.interactions)
+	}
+
+	renderDom(plotDim, dom, yScale) {
+		console.log(plotDim)
 		//Title of the plot
 		dom.plotTitle
 			.attr('id', 'sjpp-boxplot-title')
@@ -57,9 +64,6 @@ export class View {
 			fontsize: 12,
 			color: 'black'
 		})
-
-		this.renderBoxPlots(dom, data, yScale, settings)
-		if (data.legend) new LegendRenderer(dom.legend, data.legend, this.interactions)
 	}
 
 	renderBoxPlots(
@@ -86,9 +90,14 @@ export class View {
 				labColor: 'black'
 			})
 
-			new BoxPlotToolTips(plot, g, this.tip)
+			new BoxPlotToolTips(plot, g, this.dom.tip)
 			if (data.plots.length > 1) {
-				new BoxPlotLabelMenu(plot, this.app, this.interactions)
+				//Do not try to use the same tip for the menu as the tooltips.
+				//When the boxplots are rendered close together, the menu
+				//disappears to show the tooltip for the next boxplot.
+				//The user can't make a selection in time.
+				const labelMenuTip = new Menu({ padding: '' })
+				new BoxPlotLabelMenu(plot, this.app, this.interactions, labelMenuTip)
 			}
 		}
 	}

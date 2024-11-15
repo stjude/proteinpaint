@@ -3,6 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ } from '../controls'
 import { RxComponent } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
+import { Menu } from '#dom'
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { MassAppApi } from '#mass/types/mass'
 import { Model } from './model/Model'
@@ -55,6 +56,7 @@ export type BoxPlotDom = {
 	svg: SvgSvg
 	/** Y-axis shown above the boxplots */
 	yAxis: any
+	tip: Menu
 }
 
 class TdbBoxplot extends RxComponent {
@@ -80,7 +82,8 @@ class TdbBoxplot extends RxComponent {
 			plotTitle: svg.append('text'),
 			yAxis: svg.append('g'),
 			boxplots: svg.append('g'),
-			legend: div.append('div').attr('id', 'sjpp-boxplot-legend')
+			legend: div.append('div').attr('id', 'sjpp-boxplot-legend'),
+			tip: new Menu()
 		}
 		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
 		if (opts.header) this.dom.header = opts.header.html('Box plot')
