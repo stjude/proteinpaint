@@ -19,15 +19,18 @@ export type FormattedPlotEntry = BoxPlotEntry & {
 	boxplot: BoxPlotData & { label: string; radius?: number }
 	x: number
 	y: number
+	labColor: string
 }
 
 type PlotDimensions = {
+	backgroundColor: string
 	/** Domain for the y-axis */
 	domain: number[]
 	/** Width of the svg */
 	svgWidth: number
 	/** Height of the svg */
 	svgHeight: number
+	textColor: string
 	/** Title of the plot and coordinates */
 	title: { x: number; y: number; text: string }
 	/** y-axis coordinates */
@@ -111,7 +114,9 @@ export class ViewModel {
 			yAxis: {
 				x: totalLabelWidth,
 				y: this.topPad + this.incrTopPad + 20
-			}
+			},
+			backgroundColor: settings.darkMode ? '#353839' : 'white',
+			textColor: settings.darkMode ? 'white' : 'black'
 		}
 		return plotDim
 	}
@@ -132,6 +137,7 @@ export class ViewModel {
 				if (maxOut && maxOut.value > data.absMax) data.absMax = maxOut.value
 				plot.boxplot.radius = this.outRadius
 			}
+			plot.labColor = settings.darkMode ? 'white' : 'black'
 			plot.x = totalLabelWidth
 			plot.y = this.topPad + this.incrTopPad
 			this.incrTopPad += totalRowHeight

@@ -28,6 +28,7 @@ const mockDescrStats2 = [
 const mockSettings = {
 	boxplotWidth: 20,
 	color: 'blue',
+	darkMode: false,
 	labelPad: 10,
 	rowHeight: 20,
 	rowSpace: 10,
@@ -63,6 +64,7 @@ const mockData = {
 				out: [{ value: 1 }],
 				label: '1, n=1'
 			},
+			labColor: 'black',
 			color: 'blue',
 			descrStats: mockDescrStats1,
 			x: 278,
@@ -83,6 +85,7 @@ const mockData = {
 				out: [],
 				label: '2, n=2'
 			},
+			labColor: 'black',
 			color: '#e75480',
 			descrStats: mockDescrStats2,
 			x: 278,

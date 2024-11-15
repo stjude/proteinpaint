@@ -33,22 +33,26 @@ export class View {
 		dom.legend.selectAll('*').remove()
 
 		const plotDim = data.plotDim
+
+		dom.div.style('background-color', plotDim.backgroundColor)
+
 		dom.svg.transition().attr('width', plotDim.svgWidth).attr('height', plotDim.svgHeight)
 
 		const yScale = scaleLinear().domain(plotDim.domain).range([0, settings.boxplotWidth])
 
 		this.renderDom(plotDim, dom, yScale)
 		this.renderBoxPlots(dom, data, yScale, settings)
-		if (data.legend) new LegendRenderer(dom.legend, data.legend, this.interactions)
+		if (data.legend) new LegendRenderer(dom.legend, data.legend, this.interactions, plotDim.textColor)
 	}
 
-	renderDom(plotDim, dom, yScale) {
+	renderDom(plotDim: any, dom: BoxPlotDom, yScale: ScaleLinear<number, number, never>) {
 		//Title of the plot
 		dom.plotTitle
 			.attr('id', 'sjpp-boxplot-title')
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr('transform', `translate(${plotDim.title.x}, ${plotDim.title.y})`)
+			.attr('fill', plotDim.textColor)
 			.text(plotDim.title.text)
 
 		//y-axis below the title
@@ -62,7 +66,7 @@ export class View {
 			axis: dom.yAxis,
 			showline: true,
 			fontsize: 12,
-			color: 'black'
+			color: plotDim.textColor
 		})
 	}
 
@@ -87,7 +91,7 @@ export class View {
 				scale: yScale,
 				rowheight: settings.rowHeight,
 				labpad: settings.labelPad,
-				labColor: 'black'
+				labColor: plot.labColor
 			})
 
 			new BoxPlotToolTips(plot, g, this.dom.tip)
@@ -100,5 +104,6 @@ export class View {
 				new BoxPlotLabelMenu(plot, this.app, this.interactions, labelMenuTip)
 			}
 		}
+		dom.boxplots.selectAll('g[id^="sjpp-boxplot-"] > rect').style('fill', data.plotDim.backgroundColor)
 	}
 }

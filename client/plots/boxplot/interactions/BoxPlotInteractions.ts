@@ -24,6 +24,7 @@ export class BoxPlotInteractions {
 
 	download() {
 		//May add more options in the future
+		//Fix for dark mode
 		const svg = this.dom.div.select('svg').node() as Node
 		to_svg(svg, `boxplot`, { apply_dom_styles: true })
 	}
