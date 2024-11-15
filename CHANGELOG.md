@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.86.1
 
 Fixes:
 - updated brainImaging python script inside of server/utils
