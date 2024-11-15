@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "module": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
+    ".": "./src/index.d.ts",
     "./updated": "./src/terms/updated-types.ts",
     "./*": "./src/*",
     "./routes/*": "./src/routes/*",
@@ -34,6 +34,7 @@
   },
   "files": [
     "dist",
-    "src"
+    "src/*.d.ts",
+    "src/**/*.d.ts"
   ]
 }

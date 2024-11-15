@@ -8,10 +8,10 @@ npx tsc
 CHECKERSRAW=src/checkers
 CHECKERSDIR=dist
 
-echo "creating type checker code at $CHECKERSDIR"
-echo "npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR"
-npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR
-npx prettier src/checkers/* --no-semi --use-tabs --write
+# echo "creating type checker code at $CHECKERSDIR"
+# echo "npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR"
+# npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR
+# npx prettier src/checkers/* --no-semi --use-tabs --write
 
 DOCSDIR=../../public/docs/server
 echo "building documentation at $DOCSDIR ..."
