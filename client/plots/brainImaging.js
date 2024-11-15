@@ -556,7 +556,7 @@ function setInteractivity(self) {
 					config: { legendFilter: [] }
 				})
 			})
-		let color = self.state.config.overlayTW.term.values[targetData.key]?.color || '#000000'
+		let color = self.state.config.overlayTW.term.values[targetData.key]?.color || 'red'
 		color = rgb(color).formatHex() //so that the color is in the correct format to be shown in the input
 		legendMenuDiv
 			.append('div')

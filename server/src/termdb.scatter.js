@@ -285,7 +285,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				if (tvalue && 'color' in tvalue) {
 					value.color = tvalue.color
 				} else if (isNumericTerm(q.colorTW.term)) {
-					const bin = data.refs.byTermId[q.colorTW.$id].bins.find(bin => bin.name == category)
+					const bins = data.refs.byTermId[q.colorTW.$id].bins
+					const bin = bins.find(bin => bin.label == category)
 					if (bin) value.color = bin.color
 					else {
 						value.color = scheme[i]
