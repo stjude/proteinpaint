@@ -5,24 +5,14 @@ import { renderTable } from '#dom'
 
 export class BoxPlotLabelMenu {
 	tip = new Menu({ padding: '' })
-	constructor(plot, app: MassAppApi, id: string, interactions: BoxPlotInteractions) {
+	constructor(plot, app: MassAppApi, interactions: BoxPlotInteractions) {
 		const options = [
 			//TODO: Filter option? Group?
 			{
 				text: `Hide ${plot.key}`,
 				isVisible: () => true,
-				callback: (state: MassState) => {
-					const plotConfig = state.plots.find(p => p.id === id)
-					if (!plotConfig) throw 'Box plot not found [BoxPlotLabelMenu]'
-					const config = structuredClone(plotConfig)
-					const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
-					if (!config[contTerm].q.hiddenValues) config[contTerm].q.hiddenValues = {}
-					config[contTerm].q.hiddenValues[plot.key] = 1
-					app.dispatch({
-						type: 'plot_edit',
-						id,
-						config: config
-					})
+				callback: () => {
+					interactions.hidePlot(plot)
 				}
 			},
 			{
@@ -60,7 +50,7 @@ export class BoxPlotLabelMenu {
 					.text(opt.text)
 					.on('click', () => {
 						this.tip.hide()
-						opt.callback(state)
+						opt.callback()
 					})
 			}
 		})

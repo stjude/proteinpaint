@@ -11,7 +11,8 @@ export class BoxPlotToolTips {
 	constructor(plot: any, g: SvgG, tip: Menu) {
 		this.plot = plot
 		this.g = g
-		;(this.boxplot = plot.boxplot), (this.tip = tip)
+		this.boxplot = plot.boxplot
+		this.tip = tip
 
 		this.addLabelTooltip()
 		// this.addLineToolTips()
