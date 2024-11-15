@@ -31,6 +31,7 @@ export type BoxPlotSettings = {
 	boxplotWidth: number
 	/** Default is common plot color.  */
 	color: string
+	darkMode: boolean
 	/** Padding between the left hand label and boxplot */
 	labelPad: number
 	/** Height of individual boxplots */
@@ -73,7 +74,7 @@ class TdbBoxplot extends RxComponent {
 		}
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
-		const div = holder.append('div')
+		const div = holder.append('div').style('padding', '5px')
 		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-boxplot-svg')
 		this.dom = {
 			controls: controls as Elem,
@@ -157,6 +158,13 @@ class TdbBoxplot extends RxComponent {
 				chartType: 'boxplot',
 				settingsKey: 'color',
 				getDisplayStyle: plot => (plot.term2 ? 'none' : '')
+			},
+			{
+				label: 'Dark mode',
+				type: 'checkbox',
+				chartType: 'boxplot',
+				boxLabel: '',
+				settingsKey: 'darkMode'
 			}
 		]
 		this.components.controls = await controlsInit({
@@ -254,6 +262,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 	const defaults: BoxPlotSettings = {
 		boxplotWidth: 550,
 		color: plotColor,
+		darkMode: false,
 		labelPad: 10,
 		rowHeight: 50,
 		rowSpace: 15
