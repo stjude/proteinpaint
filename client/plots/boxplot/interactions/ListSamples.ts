@@ -38,10 +38,11 @@ export class ListSamples {
 	}
 	plot: FormattedPlotEntry
 	term: any
-	constructor(app: MassAppApi, state: MassState, min: number, max: number, plot: FormattedPlotEntry) {
+	constructor(app: MassAppApi, state: MassState, id: string, min: number, max: number, plot: FormattedPlotEntry) {
 		this.app = app
 		this.plot = plot
-		const plotConfig = state.plots[0]
+		const plotConfig = state.plots.find((p: { id: string }) => p.id === id)
+		if (!plotConfig) throw 'Box plot not found [ListSamples]'
 		const tvslst = this.getTvsLst(min, max, plotConfig.term, plotConfig.term2)
 		this.term = plotConfig.term.q?.mode === 'continuous' ? plotConfig.term : plotConfig.term2
 		const filter = {

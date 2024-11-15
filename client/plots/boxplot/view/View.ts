@@ -3,19 +3,20 @@ import { ScaleLinear, scaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from '../BoxPlot'
-import type { LegendItemEntry } from '../viewModel/LegendDataMapper'
 import type { ViewData } from '../viewModel/ViewModel'
 import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import { BoxPlotToolTips } from './BoxPlotToolTips'
 import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
-import { rgb } from 'd3-color'
+import { Menu } from '#dom'
+import { LegendRenderer } from './LegendRender'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
 	app: MassAppApi
 	id: string
 	interactions: BoxPlotInteractions
+	tip = new Menu()
 	constructor(
 		data: ViewData,
 		settings: BoxPlotSettings,
@@ -61,7 +62,7 @@ export class View {
 		})
 
 		this.renderBoxPlots(dom, data, yScale, settings)
-		if (data.legend) this.renderLegend(dom.legend, data.legend)
+		if (data.legend) new LegendRenderer(dom.legend, data.legend, this.interactions)
 	}
 
 	renderBoxPlots(
@@ -88,55 +89,9 @@ export class View {
 				labColor: 'black'
 			})
 
-			new BoxPlotToolTips(plot, g)
+			new BoxPlotToolTips(plot, g, this.tip)
 			if (data.plots.length > 1) {
 				new BoxPlotLabelMenu(plot, this.app, this.id, this.interactions)
-			}
-		}
-	}
-
-	renderLegend(legendDiv, legendData: { label: string; items: LegendItemEntry[] }[]) {
-		legendDiv.attr('id', 'sjpp-boxplot-legend')
-
-		const addData = (item: LegendItemEntry, sectionDiv) => {
-			const legendItem = sectionDiv.append('div')
-			if (item.color) {
-				legendItem
-					.append('div')
-					.style('display', 'inline-block')
-					.style('min-width', '12px')
-					.style('height', '12px')
-					.style('background-color', item.color)
-					.style('border', `1px solid ${rgb(item.color).darker(1)}`)
-					.style('margin-right', '3px')
-					.style('top', '1px')
-					.style('position', 'relative')
-			}
-			legendItem
-				.append('div')
-				.style('display', 'inline-block')
-				.style('text-decoration', item.isHidden ? 'line-through' : '')
-				.text(`${item.label}${item.value ? `: ${item.value}` : item.count ? `, n=${item.count}` : ''}`)
-			if (item.color) {
-				//Do not apply to uncomputable values, only items with plot data
-				legendItem.attr('aria-label', `Click to unhide plot`).on('click', () => {
-					const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
-					const config = structuredClone(plotConfig)
-					const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
-					delete config[contTerm].q.hiddenValues[item.label]
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config
-					})
-				})
-			}
-		}
-		for (const section of legendData) {
-			legendDiv.append('div').style('opacity', '0.5').text(section.label)
-			const sectionDiv = legendDiv.append('div').style('padding-left', '10px')
-			for (const item of section.items) {
-				addData(item, sectionDiv)
 			}
 		}
 	}
