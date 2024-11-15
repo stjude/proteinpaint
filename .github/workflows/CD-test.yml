@@ -1,0 +1,32 @@
+name: Run Tests and Check Coverage
+
+on:
+  pull_request:
+    branches:
+      - testCI
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+          fetch-depth: 10
+
+    - uses: actions/setup-node@v3
+      with:
+          cache: 'npm'
+          node-version: '20'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Run Tests with Coverage
+      run: npm run test:coverage
+
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage/

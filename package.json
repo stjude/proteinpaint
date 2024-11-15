@@ -34,7 +34,9 @@
     "sethooks": "./utils/hooks/init.sh",
     "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'",
     "clean": "git add -A; git stash --staged",
-    "doc": "npm run doc --workspace=shared/types"
+    "doc": "npm run doc --workspace=shared/types",
+     "test": "ts-node node_modules/tape/bin/tape 'tests/**/*.test.ts'",
+  "test:coverage": "nyc npm run test"
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",
@@ -58,5 +60,14 @@
   },
   "dependencies": {
     "glob": "^10.4.5"
+  },
+  "nyc": {
+    "extends": "@istanbuljs/nyc-config-typescript",
+    "all": true,
+    "check-coverage": true,
+    "statements": 20,
+    "branches": 20,
+    "functions": 20,
+    "lines": 20
   }
 }
