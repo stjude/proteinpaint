@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "strictNullChecks": true,
-    "rootDir": "./src",
+    "rootDir": "./",
     "baseUrl": "./",
     "allowImportingTsExtensions": true,
     "plugins": [
@@ -11,12 +11,11 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "declaration": true,
-    "emitDeclarationOnly": true
+    "noEmit": true
   },
   "exclude": [
     "./node_modules",
-
+    "./*.ts",
     "./dist"
   ]
 }

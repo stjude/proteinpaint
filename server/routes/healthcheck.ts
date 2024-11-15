@@ -1,6 +1,6 @@
 import { getStat } from '#src/health.ts'
 import type { HealthCheckRequest, HealthCheckResponse, RouteApi } from '#types'
-import { healthcheckPayload } from '#types'
+import { healthcheckPayload } from '#types/checkers'
 
 export const api: RouteApi = {
 	endpoint: 'healthcheck',

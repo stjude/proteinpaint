@@ -1,5 +1,5 @@
 import type { ViolinRequest, ViolinResponse, RouteApi } from '#types'
-import { violinPayload } from '#types'
+import { violinPayload } from '#types/checkers'
 import { trigger_getViolinPlotData } from '#src/termdb.violin.js'
 
 export const api: RouteApi = {

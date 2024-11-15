@@ -3,7 +3,7 @@ import { spawn } from 'child_process'
 import serverconfig from '#src/serverconfig.js'
 import * as common from '#shared/common.js'
 import type { DsDataRequest, DsDataResponse, RouteApi } from '#types'
-import { dsDataPayload } from '#types'
+import { dsDataPayload } from '#types/checkers'
 
 export const api: RouteApi = {
 	// route endpoint

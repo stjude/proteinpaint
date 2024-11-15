@@ -3,7 +3,7 @@ import path from 'path'
 import { run_rust_stream } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type { GdcMafBuildRequest, RouteApi } from '#types'
-import { gdcMafPayload } from '#types'
+import { gdcMafPayload } from '#types/checkers'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 
 export const api: RouteApi = {

@@ -1,7 +1,7 @@
 import { fileurl, file_is_readable } from '#src/utils.js'
 import { do_hicstat } from '#src/hicstat.ts'
 import type { HicstatRequest, HicstatResponse, RouteApi } from '#types'
-import { hicstatPayload } from '#types'
+import { hicstatPayload } from '#types/checkers'
 
 export const api: RouteApi = {
 	endpoint: 'hicstat',

@@ -1,5 +1,5 @@
 import type { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse, RouteApi } from '#types'
-import { termdbTopTermsByTypePayload } from '#types'
+import { termdbTopTermsByTypePayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { get_samples } from '#src/termdb.sql.js'
 import { TermTypes } from '#shared/terms.js'

@@ -1,5 +1,5 @@
 import type { PercentileRequest, PercentileResponse, Filter, RouteApi } from '#types'
-import { percentilePayload } from '#types'
+import { percentilePayload } from '#types/checkers'
 import * as termdbsql from '#src/termdb.sql.js'
 import computePercentile from '#shared/compute.percentile.js'
 

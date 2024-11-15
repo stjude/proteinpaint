@@ -17,7 +17,7 @@ import type {
 	TermdbSingleCellDataRequest,
 	RouteApi
 } from '#types'
-import { termdbSingleCellSamplesPayload } from '#types'
+import { termdbSingleCellSamplesPayload } from '#types/checkers'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'

@@ -2,7 +2,7 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { illegalpath } from '#src/utils.js'
 import type { DZImagesRequest, DZImagesResponse, RouteApi } from '#types'
-import { dzImagesPayload } from '#types'
+import { dzImagesPayload } from '#types/checkers'
 
 /*
 return .dzi file and deep zoom image tiles for specified sample and dataset

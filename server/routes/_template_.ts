@@ -1,7 +1,7 @@
 // using snp types only as an example
 import type { SnpRequest, SnpResponse, RouteApi } from '#types'
 // imported payload is typed as RoutePayload
-import { snpPayload } from '#types'
+import { snpPayload } from '#types/checkers'
 
 export const api: RouteApi = {
 	// route endpoint

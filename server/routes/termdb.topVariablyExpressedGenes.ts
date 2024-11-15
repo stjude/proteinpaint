@@ -1,5 +1,5 @@
 import type { TermdbTopVariablyExpressedGenesRequest, TermdbTopVariablyExpressedGenesResponse, RouteApi } from '#types'
-import { termdbTopVariablyExpressedGenesPayload } from '#types'
+import { termdbTopVariablyExpressedGenesPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'

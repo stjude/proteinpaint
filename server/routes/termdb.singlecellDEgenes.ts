@@ -1,5 +1,5 @@
 import type { TermdbSingleCellDEgenesRequest, TermdbSingleCellDEgenesResponse, RouteApi } from '#types'
-import { termdbSingleCellDEgenesPayload } from '#types'
+import { termdbSingleCellDEgenesPayload } from '#types/checkers'
 import { gdc_validate_query_singleCell_DEgenes } from '#src/mds3.gdc.js'
 
 /* 

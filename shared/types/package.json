@@ -6,21 +6,22 @@
   "main": "src/index.ts",
   "module": "src/index.ts",
   "exports": {
-    ".": "./src/index.d.ts",
+    ".": "./src/index.ts",
     "./updated": "./src/terms/updated-types.ts",
-    "./*": "./src/*",
     "./routes/*": "./src/routes/*",
-    "./checkers/*": "./dist/checkers/*"
+    "./checkers": "./dist/routes.js"
   },
   "imports": {
     "#shared": "@sjcrh/proteinpaint-shared"
   },
   "scripts": {
+    "predev": "tsx emitCheckers.ts",
+    "dev": "rm -rf dist && mkdir dist && ENV=dev node esbuild.config.mjs",
     "prepare": "ts-patch install",
+    "prebuild": "tsx emitCheckers.ts",
+    "build": "rm -rf dist && mkdir dist && node esbuild.config.mjs",
+    "prepack": "tsx emitCheckers.ts && rm -rf dist && mkdir dist && node esbuild.config.mjs",
     "test": "tsc",
-    "build": "./build.sh",
-    "prepack": "./build.sh && mv src src-raw && mv srcjs src && mv package.json package.json-0 && mv src/package.json .",
-    "postpack": "rm -rf src && mv src-raw src && mv package.json-0 package.json",
     "doc": "./doc.sh"
   },
   "devDependencies": {
@@ -34,7 +35,6 @@
   },
   "files": [
     "dist",
-    "src/*.d.ts",
-    "src/**/*.d.ts"
+    "src"
   ]
 }

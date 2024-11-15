@@ -1,5 +1,5 @@
 import type { IsoformLstRequest, IsoformLstResponse, RouteApi } from '#types'
-import { isoformlstPayload } from '#types'
+import { isoformlstPayload } from '#types/checkers'
 
 export const api: RouteApi = {
 	// route endpoint

@@ -1,5 +1,5 @@
 import type { RootTermRequest, RootTermResponse } from '#types'
-import { rootTermPayload } from '#types'
+import { rootTermPayload } from '#types/checkers'
 import { get_ds_tdb } from '#src/termdb.js'
 
 export const api: any = {

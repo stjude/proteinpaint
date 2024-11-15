@@ -1,5 +1,5 @@
 import type { BoxPlotRequest, BoxPlotResponse, BoxPlotData, RouteApi } from '#types'
-import { boxplotPayload } from '#types'
+import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortKey2values } from '../src/termdb.violin.js'

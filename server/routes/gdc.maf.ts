@@ -1,5 +1,5 @@
 import type { GdcMafRequest, GdcMafResponse, File, RouteApi } from '#types'
-import { gdcMafPayload } from '#types'
+import { gdcMafPayload } from '#types/checkers'
 import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'

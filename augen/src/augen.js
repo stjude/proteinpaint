@@ -37,6 +37,7 @@ export function emitFiles(routes, opts) {
 export function typeCheckers(fileRoutes, fromPath) {
 	const typeIdsByFile = {}
 	const reqres = ['request', 'response']
+	const exportLines = []
 	for (const { file, route } of fileRoutes) {
 		const api = route.api
 		for (const method in api.methods) {
@@ -45,6 +46,8 @@ export function typeCheckers(fileRoutes, fromPath) {
 			if (!typeIdsByFile[file]) typeIdsByFile[file] = new Set()
 			if (m.request.typeId) typeIdsByFile[file].add(m.request.typeId)
 			if (m.response.typeId) typeIdsByFile[file].add(m.response.typeId)
+			const filename = file.split('.').slice(0, -1).join('.')
+			exportLines.push(`export {${route.payloadName}} from '${fromPath}/${filename}.js'`)
 		}
 	}
 	const importLines = [`import { createValidate } from 'typia'`]
@@ -56,12 +59,13 @@ export function typeCheckers(fileRoutes, fromPath) {
 		if (!typeIds.length) continue
 		const filename = file.split('.').slice(0, -1).join('.')
 		importLines.push(`import type { ${typeIds.join(', ')} } from '${fromPath}/${filename}.js'`)
+		const payloadName = typeIds[0].replace('Request', '')
 		for (const typeId of typeIds) {
 			createLines.push(`export const valid${typeId} = createValidate<${typeId}>()`)
 		}
 		for (const t of typeIds) dedupedTypeIds.add(t)
 	}
-	const content = importLines.join('\n') + '\n\n' + createLines.join('\n')
+	const content = importLines.join('\n') + '\n' + exportLines.join('\n') + '\n\n' + createLines.join('\n')
 	return content
 }
 

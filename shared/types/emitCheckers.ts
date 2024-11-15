@@ -15,33 +15,40 @@
 import fs from 'fs'
 import path from 'path'
 import glob from 'glob'
+import { execSync } from 'child_process'
 
 const __dirname = import.meta.dirname
 const routesDir = './src/routes'
 const cwd = path.join(__dirname, routesDir)
-const distDir = path.join(__dirname, './dist')
 const inputFile = process.argv[2]
 const files = inputFile ? [inputFile.replace(cwd, '')] : glob.sync('*.ts', { cwd })
 const uniquesTypeIds = new Set()
+const importLines = [`import { createValidate } from 'typia'`]
+const exportPayloads: string[] = []
+const exportCheckers: string[] = []
 
 for (const f of files) {
 	const jsfile = `${routesDir}/${f}`
 	const _ = await import(jsfile)
-	const validatorExports: any[] = []
 	for (const [key, val] of Object.entries(_)) {
 		if (!key.endsWith('Payload')) continue
+		exportPayloads.push(`export { ${key} } from '../routes/${f}'`)
 		const { request, response } = val as any
-		for (const typeId of [request?.typeId, response?.typeId]) {
+		const typeIds = [request?.typeId, response?.typeId].filter(t => t != undefined)
+		if (!typeIds.length) continue
+		importLines.push(`import type { ${typeIds.join(', ')} } from '../routes/${f}'`)
+		for (const typeId of typeIds) {
 			if (!typeId || uniquesTypeIds.has(typeId)) continue
 			uniquesTypeIds.add(typeId)
-			validatorExports.push(`export const valid${typeId} = createValidate<${typeId}>()`)
+			exportCheckers.push(`export const valid${typeId} = createValidate<${typeId}>()`)
 		}
 	}
-	if (!validatorExports.length) continue
-	const tsfile = path.join(cwd, f)
-	const contents = fs.readFileSync(tsfile).toString('utf-8').trim()
-	const modifiedContents = [`import { createValidate } from 'typia'`, contents, '', ...validatorExports, ''].join('\n')
+}
 
-	if (inputFile) console.log(modifiedContents)
-	else fs.writeFileSync(path.join(routesDir, f), modifiedContents, { encoding: 'utf8' })
+if (exportPayloads.length || exportCheckers.length) {
+	const contents =
+		importLines.join('\n') + '\n\n' + exportPayloads.join('\n') + '\n\n' + exportCheckers.join('\n') + '\n'
+	const outfile = path.join(__dirname, './src/checkers/routes.ts')
+	fs.writeFileSync(outfile, contents, { encoding: 'utf8' })
+	execSync(`npx prettier ./src/checkers/routes.ts  --no-semi --use-tabs --write`)
 }

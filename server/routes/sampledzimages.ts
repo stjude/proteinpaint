@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import type { DZImagesRequest, /*DZImagesResponse,*/ RouteApi } from '#types'
-import { dzImagesPayload } from '#types'
+import { dzImagesPayload } from '#types/checkers'
 
 /*
 given a sample, return all deep zoom images for specified dataset

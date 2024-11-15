@@ -1,5 +1,5 @@
 import type { GenesetEnrichmentRequest, GenesetEnrichmentResponse, RouteApi } from '#types'
-import { genesetEnrichmentPayload } from '#types'
+import { genesetEnrichmentPayload } from '#types/checkers'
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'

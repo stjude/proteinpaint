@@ -1,5 +1,5 @@
 import type { TermsByIdsRequest, TermsByIdsResponse, RouteApi } from '#types'
-import { termsByIdsPayload } from '#types'
+import { termsByIdsPayload } from '#types/checkers'
 import { copy_term } from '#src/termdb.js'
 
 export const api: RouteApi = {

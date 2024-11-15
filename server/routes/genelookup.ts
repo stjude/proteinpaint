@@ -1,6 +1,6 @@
 import { getResult } from '#src/gene.js'
 import type { GeneLookupRequest, GeneLookupResponse, RouteApi } from '#types'
-import { geneLookupPayload } from '#types'
+import { geneLookupPayload } from '#types/checkers'
 
 export const api: RouteApi = {
 	endpoint: 'genelookup',

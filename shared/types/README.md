@@ -10,6 +10,11 @@ Put type definitions that are used in client and server code in this workspace.
 Do NOT put here type definitions that are specific to one workspace,
 those should be saved in the applicable workspace.
 
+## Develop
+
+Consumer code can use type definitions b
+
+
 ## Test
 
 ```sh

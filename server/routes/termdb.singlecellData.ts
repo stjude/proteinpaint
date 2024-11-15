@@ -1,5 +1,5 @@
 import type { TermdbSingleCellDataRequest, TermdbSingleCellDataResponse, RouteApi } from '#types'
-import { termdbSingleCellDataPayload } from '#types'
+import { termdbSingleCellDataPayload } from '#types/checkers'
 
 /*
 given a sample, return it's singlecell data from dataset

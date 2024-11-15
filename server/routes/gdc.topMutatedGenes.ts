@@ -1,5 +1,5 @@
 import type { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, GdcGene, RouteApi } from '#types'
-import { gdcTopMutatedGenePayload } from '#types'
+import { gdcTopMutatedGenePayload } from '#types/checkers'
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 import ky from 'ky'
 
