@@ -23,13 +23,14 @@ const cwd = path.join(__dirname, routesDir)
 const inputFile = process.argv[2]
 const files = inputFile ? [inputFile.replace(cwd, '')] : glob.sync('*.ts', { cwd })
 const uniquesTypeIds = new Set()
-const importLines = [`import { createValidate } from 'typia'`]
-const exportPayloads: string[] = []
-const exportCheckers: string[] = []
+const transitiveExports: string[] = []
+// const exportCheckers: string[] = []
 
 for (const f of files) {
-	const jsfile = `${routesDir}/${f}`
-	const _ = await import(jsfile)
+	const importLines = [`import { createValidate } from 'typia'`]
+	const exportPayloads: string[] = []
+	const exportCheckers: string[] = []
+	const _ = await import(`${routesDir}/${f}`)
 	for (const [key, val] of Object.entries(_)) {
 		if (!key.endsWith('Payload')) continue
 		exportPayloads.push(`export { ${key} } from '../routes/${f}'`)
@@ -43,12 +44,20 @@ for (const f of files) {
 			exportCheckers.push(`export const valid${typeId} = createValidate<${typeId}>()`)
 		}
 	}
+
+	if (exportPayloads.length || exportCheckers.length) {
+		const contents =
+			importLines.join('\n') + '\n\n' + exportPayloads.join('\n') + '\n\n' + exportCheckers.join('\n') + '\n'
+		const outfile = path.join(__dirname, `./src/checkers/${f}`)
+		fs.writeFileSync(outfile, contents, { encoding: 'utf8' })
+		transitiveExports.push(`export * from './${f}'`)
+	}
 }
 
-if (exportPayloads.length || exportCheckers.length) {
-	const contents =
-		importLines.join('\n') + '\n\n' + exportPayloads.join('\n') + '\n\n' + exportCheckers.join('\n') + '\n'
-	const outfile = path.join(__dirname, './src/checkers/routes.ts')
+if (transitiveExports.length) {
+	const contents = transitiveExports.join('\n')
+	const outfile = path.join(__dirname, `./src/checkers/index.ts`)
 	fs.writeFileSync(outfile, contents, { encoding: 'utf8' })
-	execSync(`npx prettier ./src/checkers/routes.ts  --no-semi --use-tabs --write`)
 }
+
+execSync(`npx prettier ./src/checkers/*.ts  --no-semi --use-tabs --write`)

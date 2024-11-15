@@ -9,14 +9,14 @@
     ".": "./src/index.ts",
     "./updated": "./src/terms/updated-types.ts",
     "./routes/*": "./src/routes/*",
-    "./checkers": "./dist/routes.js"
+    "./checkers": "./dist/index.js"
   },
   "imports": {
     "#shared": "@sjcrh/proteinpaint-shared"
   },
   "scripts": {
     "predev": "tsx emitCheckers.ts",
-    "dev": "rm -rf dist && mkdir dist && ENV=dev node esbuild.config.mjs",
+    "dev": "ENV=dev node esbuild.config.mjs",
     "prepare": "ts-patch install",
     "prebuild": "tsx emitCheckers.ts",
     "build": "rm -rf dist && mkdir dist && node esbuild.config.mjs",

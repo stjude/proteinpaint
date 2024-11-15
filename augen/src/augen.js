@@ -16,7 +16,12 @@ export function setRoutes(app, routes, _opts = {}) {
 
 export function emitFiles(routes, opts) {
 	if (opts.apiJson) {
-		const apis = JSON.stringify(routes.map(r => r.api))
+		const apis = JSON.stringify(
+			routes.map(r => {
+				if (!r.api.file && r.file) r.api.file = r.file.split('.').slice(0, -1) + '.js'
+				return r.api
+			})
+		)
 		const outdir = path.dirname(opts.apiJson)
 		if (!fs.existsSync(outdir)) {
 			fs.mkdirSync(outdir, { recursive: true })
