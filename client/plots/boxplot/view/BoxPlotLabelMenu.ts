@@ -12,14 +12,16 @@ export class BoxPlotLabelMenu {
 				text: `Hide ${plot.key}`,
 				isVisible: () => true,
 				callback: (state: MassState) => {
-					const plotConfig = structuredClone(state.plots[0])
-					const contTerm = plotConfig.term.q.mode == 'continuous' ? 'term2' : 'term'
-					if (!plotConfig[contTerm].q.hiddenValues) plotConfig[contTerm].q.hiddenValues = {}
-					plotConfig[contTerm].q.hiddenValues[plot.key] = 1
+					const plotConfig = state.plots.find(p => p.id === id)
+					if (!plotConfig) throw 'Box plot not found [BoxPlotLabelMenu]'
+					const config = structuredClone(plotConfig)
+					const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
+					if (!config[contTerm].q.hiddenValues) config[contTerm].q.hiddenValues = {}
+					config[contTerm].q.hiddenValues[plot.key] = 1
 					app.dispatch({
 						type: 'plot_edit',
 						id,
-						config: plotConfig
+						config: config
 					})
 				}
 			},

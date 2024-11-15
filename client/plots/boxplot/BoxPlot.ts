@@ -200,7 +200,7 @@ class TdbBoxplot extends RxComponent {
 	async main() {
 		try {
 			const state = this.app.getState()
-			const config = structuredClone(state.plots[0])
+			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
 			if (config.childType != 'boxplot') return
 
 			const settings = config.settings.boxplot

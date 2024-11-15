@@ -1,6 +1,7 @@
 import type { BoxPlotDom } from '../BoxPlot'
 import type { MassAppApi } from '#mass/types/mass'
 import type { FormattedPlotEntry } from '../viewModel/ViewModel'
+import type { LegendItemEntry } from '../viewModel/LegendDataMapper'
 import { to_svg } from '#src/client'
 import { ListSamples } from './ListSamples'
 
@@ -34,9 +35,21 @@ export class BoxPlotInteractions {
 
 	async listSamples(plot: FormattedPlotEntry, min: number, max: number) {
 		const config = this.app.getState()
-		const sampleList = new ListSamples(this.app, config, min, max, plot)
+		const sampleList = new ListSamples(this.app, config, this.id, min, max, plot)
 		const data = await sampleList.getData()
 		const rows = sampleList.setRows(data)
 		return rows
+	}
+
+	unhidePlot(item: LegendItemEntry) {
+		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
+		const config = structuredClone(plotConfig)
+		const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
+		delete config[contTerm].q.hiddenValues[item.label]
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config
+		})
 	}
 }
