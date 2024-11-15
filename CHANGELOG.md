@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.86.0
 
 Features:
 - BrainImaging: add color scale legend outside of image and add legend filters.
