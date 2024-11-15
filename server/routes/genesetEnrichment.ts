@@ -118,7 +118,7 @@ async function run_genesetEnrichment_analysis(
 async function run_gsea(path, data) {
 	try {
 		await fs.promises.stat(path)
-	} catch (e) {
+	} catch (_) {
 		throw `${path} does not exist`
 	}
 	return new Promise((resolve, reject) => {

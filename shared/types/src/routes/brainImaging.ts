@@ -1,4 +1,4 @@
-import { CategoricalTW } from '../terms/categorical.ts'
+import type { CategoricalTW } from '../terms/categorical.ts'
 import type { RoutePayload } from './routeApi.ts'
 
 export type BrainImagingRequest = {
@@ -26,6 +26,13 @@ export type BrainImagingResponse = {
 	/** the brain imaging plot */
 	brainImage: string
 	plane?: any
+	legend?: {
+		[key: string]: {
+			color: string
+			maxLength: number
+			crossedOut: boolean
+		}
+	}
 }
 
 export type FilesByCategory = { [category: string]: { samples: string[]; color: string } }

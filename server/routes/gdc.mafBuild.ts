@@ -95,7 +95,7 @@ async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
 	let re
 	try {
 		re = JSON.parse(response.body)
-	} catch (e) {
+	} catch (_) {
 		throw 'invalid json from getFileLstUnderSizeLimit'
 	}
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'

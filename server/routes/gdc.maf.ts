@@ -100,7 +100,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 	let re
 	try {
 		re = JSON.parse(response.body)
-	} catch (e) {
+	} catch (_) {
 		throw 'invalid JSON from ' + api.endpoint
 	}
 	if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'

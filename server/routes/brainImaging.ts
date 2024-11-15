@@ -1,4 +1,3 @@
-import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import type { CategoricalTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory, RouteApi } from '#types'
@@ -47,7 +46,7 @@ function init({ genomes }) {
 			}
 
 			const [brainImage, legend] = await getBrainImage(query, genomes, plane, index)
-			res.send({ brainImage, plane, legend })
+			res.send({ brainImage, plane, legend } satisfies BrainImagingResponse)
 		} catch (e: any) {
 			console.log(e)
 			res.status(404).send('Sample brain image not found')
