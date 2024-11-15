@@ -6,6 +6,7 @@ import { mclass, dt2label, morigin } from '#shared/common.js'
 import { authApi } from './auth.js'
 import run_R from './run_R.js'
 import { read_file } from './utils.js'
+import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
 
@@ -283,7 +284,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 				if (tvalue && 'color' in tvalue) {
 					value.color = tvalue.color
-				} else if (data?.refs?.byTermId[q.colorTW.term.id]?.bins) {
+				} else if (isNumericTerm(q.colorTW.term)) {
+					const bin = data.refs.byTermId[q.colorTW.$id].bins.find(bin => bin.name == category)
 					if (bin) value.color = bin.color
 					else {
 						value.color = scheme[i]
@@ -420,8 +422,8 @@ function order(map, tw, refs) {
 			else if (v1 < v2) return -1
 			return 0
 		})
-	} else if (refs?.byTermId[tw.term.id]?.bins) {
-		const bins = refs.byTermId[tw.term.id].bins
+	} else if (refs?.byTermId[tw.$id]?.bins) {
+		const bins = refs.byTermId[tw.$id].bins
 		for (const bin of bins) if (map[bin.name]) entries.push([bin.name, map[bin.name]])
 		//If some category is not defined in the bins, should be added
 		for (const [category, value] of Object.entries(map))
