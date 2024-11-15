@@ -14,7 +14,6 @@ import { LegendRenderer } from './LegendRender'
 /** Handles all the rendering logic for the boxplot. */
 export class View {
 	app: MassAppApi
-	id: string
 	interactions: BoxPlotInteractions
 	tip = new Menu()
 	constructor(
@@ -22,11 +21,9 @@ export class View {
 		settings: BoxPlotSettings,
 		dom: BoxPlotDom,
 		app: MassAppApi,
-		id: string,
 		interactions: BoxPlotInteractions
 	) {
 		this.app = app
-		this.id = id
 		this.interactions = interactions
 		if (!data || !data.plots.length) return
 		dom.plotTitle.selectAll('*').remove()
@@ -91,7 +88,7 @@ export class View {
 
 			new BoxPlotToolTips(plot, g, this.tip)
 			if (data.plots.length > 1) {
-				new BoxPlotLabelMenu(plot, this.app, this.id, this.interactions)
+				new BoxPlotLabelMenu(plot, this.app, this.interactions)
 			}
 		}
 	}
