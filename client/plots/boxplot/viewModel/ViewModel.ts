@@ -1,7 +1,8 @@
 import type { BoxPlotSettings } from '../BoxPlot'
 import type { BoxPlotResponse, BoxPlotEntry, BoxPlotData } from '#types'
 import type { PlotConfig } from '#mass/types/mass'
-import { LegendItemEntry, LegendDataMapper } from './LegendDataMapper'
+import type { LegendItemEntry } from './LegendDataMapper'
+import { LegendDataMapper } from './LegendDataMapper'
 
 /**
  * Calculates the dimensions and html attributes for the svg and

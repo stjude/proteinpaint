@@ -1,5 +1,6 @@
 import { drawBoxplot, Menu } from '#dom'
-import { ScaleLinear, scaleLinear } from 'd3-scale'
+import { scaleLinear } from 'd3-scale'
+import type { ScaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from '../BoxPlot'

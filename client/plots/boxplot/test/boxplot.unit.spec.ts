@@ -8,7 +8,7 @@ Tests:
 	Default ViewModel()
 	.setPlotDimensions()
 	.setPlotData()
-	Default LegendDataMapper() legendData
+	Default LegendDataMapper()
 
 See unit tests for #dom/boxplot for rendering unit tests
 */
@@ -25,10 +25,23 @@ const mockDescrStats2 = [
 	{ id: 'median', label: 'Median', value: 30 }
 ]
 
+const mockSettings = {
+	boxplotWidth: 20,
+	color: 'blue',
+	labelPad: 10,
+	rowHeight: 20,
+	rowSpace: 10,
+	useDefaultSettings: true
+}
+
 const mockConfig = {
+	chartType: 'summary',
+	childType: 'boxplot',
+	groups: [],
+	id: 'test_test',
 	term: { term: termjson['agedx'], q: { mode: 'continuous', descrStats: mockDescrStats1 } },
 	term2: { term: termjson['sex'], q: { descrStats: mockDescrStats2 } },
-	settings: { boxplot: { useDefaultSettings: true } }
+	settings: { boxplot: mockSettings }
 }
 
 const mockData = {
@@ -77,15 +90,6 @@ const mockData = {
 		}
 	],
 	uncomputableValues: [{ label: 'test', value: 1 }]
-}
-
-const mockSettings = {
-	boxplotWidth: 20,
-	color: 'blue',
-	labelPad: 10,
-	rowHeight: 20,
-	rowSpace: 10,
-	useDefaultSettings: true
 }
 
 function getViewModel() {
