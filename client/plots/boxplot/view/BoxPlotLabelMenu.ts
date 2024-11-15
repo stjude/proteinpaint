@@ -1,4 +1,4 @@
-import { Menu } from '#dom'
+import type { Menu } from '#dom'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import { renderTable } from '#dom'
