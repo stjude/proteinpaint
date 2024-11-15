@@ -1,5 +1,5 @@
 import { Menu } from '#dom'
-import type { MassAppApi } from '#mass/types/mass'
+import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import { renderTable } from '#dom'
 
@@ -10,21 +10,22 @@ export class BoxPlotLabelMenu {
 			//TODO: Filter option? Group?
 			{
 				text: `Hide ${plot.key}`,
-				callback: () => {
-					const plotConfig = app.getState().plots.find(p => p.id === id)
-					const config = structuredClone(plotConfig)
-					const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
-					if (!config[contTerm].q.hiddenValues) config[contTerm].q.hiddenValues = {}
-					config[contTerm].q.hiddenValues[plot.key] = 1
+				isVisible: () => true,
+				callback: (state: MassState) => {
+					const plotConfig = structuredClone(state.plots[0])
+					const contTerm = plotConfig.term.q.mode == 'continuous' ? 'term2' : 'term'
+					if (!plotConfig[contTerm].q.hiddenValues) plotConfig[contTerm].q.hiddenValues = {}
+					plotConfig[contTerm].q.hiddenValues[plot.key] = 1
 					app.dispatch({
 						type: 'plot_edit',
 						id,
-						config
+						config: plotConfig
 					})
 				}
 			},
 			{
 				text: `List samples`,
+				isVisible: (state: MassState) => state.termdbConfig.displaySampleIds && app.vocabApi.hasVerifiedToken(),
 				callback: async () => {
 					this.tip.clear().showunder(plot.boxplot.labelG.node())
 					const min = plot.descrStats.find(s => s.id === 'min').value
@@ -48,14 +49,16 @@ export class BoxPlotLabelMenu {
 		]
 		plot.boxplot.labelG.on('click', () => {
 			this.tip.clear().showunder(plot.boxplot.labelG.node())
+			const state = app.getState()
 			for (const opt of options) {
+				if (!opt.isVisible(state)) continue
 				this.tip.d
 					.append('div')
 					.classed('sja_menuoption', true)
 					.text(opt.text)
 					.on('click', () => {
 						this.tip.hide()
-						opt.callback()
+						opt.callback(state)
 					})
 			}
 		})

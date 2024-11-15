@@ -1,5 +1,6 @@
 import type { BoxPlotSettings } from '../BoxPlot'
 import type { BoxPlotResponse, BoxPlotEntry, BoxPlotData } from '#types'
+import type { PlotConfig } from '#mass/types/mass'
 import { LegendItemEntry, LegendDataMapper } from './LegendDataMapper'
 
 /**
@@ -49,7 +50,7 @@ export class ViewModel {
 	rowSpace: number
 	viewData: ViewData
 	constructor(
-		config: any,
+		config: PlotConfig,
 		data: BoxPlotResponse,
 		settings: BoxPlotSettings,
 		maxLabelLgth: number,

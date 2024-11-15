@@ -1,5 +1,6 @@
 import type { BoxPlotDom } from '../BoxPlot'
 import type { MassAppApi } from '#mass/types/mass'
+import type { FormattedPlotEntry } from '../viewModel/ViewModel'
 import { to_svg } from '#src/client'
 import { ListSamples } from './ListSamples'
 
@@ -31,9 +32,9 @@ export class BoxPlotInteractions {
 		window.open('https://github.com/stjude/proteinpaint/wiki/Box-plot')
 	}
 
-	async listSamples(plot: any, min: number, max: number) {
+	async listSamples(plot: FormattedPlotEntry, min: number, max: number) {
 		const config = this.app.getState()
-		const sampleList = new ListSamples(this.app, config, this.id, min, max, plot)
+		const sampleList = new ListSamples(this.app, config, min, max, plot)
 		const data = await sampleList.getData()
 		const rows = sampleList.setRows(data)
 		return rows

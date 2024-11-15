@@ -1,5 +1,6 @@
 import type { FormattedPlotEntry } from './ViewModel'
 import type { BoxPlotResponse } from '#types'
+import type { PlotConfig } from '#mass/types/mass'
 
 export type LegendItemEntry = {
 	label: string
@@ -15,7 +16,7 @@ export type LegendItemEntry = {
 
 export class LegendDataMapper {
 	legendData: { label: string; items: LegendItemEntry[] }[] = []
-	constructor(config: any, data: BoxPlotResponse, plots: FormattedPlotEntry[]) {
+	constructor(config: PlotConfig, data: BoxPlotResponse, plots: FormattedPlotEntry[]) {
 		const isTerm2 = config?.term2
 		if (config.term.q?.descrStats) {
 			this.legendData.push({

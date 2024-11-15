@@ -1,4 +1,4 @@
-import type { MassAppApi } from '#mass/types/mass'
+import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { FormattedPlotEntry } from '../viewModel/ViewModel'
 import type { TermWrapper } from '#types'
 import { roundValueAuto } from '#shared/roundValue.js'
@@ -38,16 +38,16 @@ export class ListSamples {
 	}
 	plot: FormattedPlotEntry
 	term: any
-	constructor(app: MassAppApi, config: any, id: string, min: number, max: number, plot: FormattedPlotEntry) {
+	constructor(app: MassAppApi, state: MassState, min: number, max: number, plot: FormattedPlotEntry) {
 		this.app = app
 		this.plot = plot
-		const plotConfig = config.plots.find((p: { id: string }) => p.id === id)
+		const plotConfig = state.plots[0]
 		const tvslst = this.getTvsLst(min, max, plotConfig.term, plotConfig.term2)
 		this.term = plotConfig.term.q?.mode === 'continuous' ? plotConfig.term : plotConfig.term2
 		const filter = {
 			type: 'tvslst',
 			join: 'and',
-			lst: [config.termfilter.filter, tvslst],
+			lst: [state.termfilter.filter, tvslst],
 			in: true
 		}
 		this.dataOpts = {

@@ -1,6 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotSettings } from '../BoxPlot'
 import type { BoxPlotResponse } from '#types'
+import type { PlotConfig, MassState } from '#mass/types/mass'
 import { isNumericTerm } from '#shared/terms.js'
 
 /**
@@ -8,11 +9,11 @@ import { isNumericTerm } from '#shared/terms.js'
  * Add more methods for formating the request opts and api requests.
  */
 export class Model {
-	config: any
-	state: any
+	config: PlotConfig
+	state: MassState
 	app: MassAppApi
 	settings: BoxPlotSettings
-	constructor(config: any, state: any, app: MassAppApi, settings: BoxPlotSettings) {
+	constructor(config: PlotConfig, state: MassState, app: MassAppApi, settings: BoxPlotSettings) {
 		this.config = config
 		this.state = state
 		this.app = app
