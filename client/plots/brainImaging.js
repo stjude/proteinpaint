@@ -200,36 +200,12 @@ class BrainImaging {
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		const previousConfig = this.state?.config
-
-		const overlayOrDivideByChange =
-			JSON.stringify(config.overlayTW) !== JSON.stringify(previousConfig?.overlayTW) ||
-			JSON.stringify(config.divideByTW) !== JSON.stringify(previousConfig?.divideByTW)
-
-		const legendFilterChange = JSON.stringify(previousConfig?.legendFilter) !== JSON.stringify(config.legendFilter)
-		const updateL =
-			config.settings.brainImaging.brainImageL != this.settings?.brainImageL ||
-			overlayOrDivideByChange ||
-			legendFilterChange
-		const updateF =
-			config.settings.brainImaging.brainImageF != this.settings?.brainImageF ||
-			overlayOrDivideByChange ||
-			legendFilterChange
-		const updateT =
-			config.settings.brainImaging.brainImageT != this.settings?.brainImageT ||
-			overlayOrDivideByChange ||
-			legendFilterChange
 
 		return {
 			config,
 			dslabel: appState.vocab.dslabel,
 			genome: appState.vocab.genome,
-			RefNIdata: appState.termdbConfig.queries.NIdata[config.queryKey],
-			updateL,
-			updateF,
-			updateT,
-			overlayOrDivideByChange,
-			legendFilterChange
+			RefNIdata: appState.termdbConfig.queries.NIdata[config.queryKey]
 		}
 	}
 
@@ -247,153 +223,152 @@ class BrainImaging {
 
 		const divideByTW = this.state.config.divideByTW
 		const overlayTW = this.state.config.overlayTW
-		if (this.state.updateL) {
-			const body = {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel,
-				refKey: this.state.config.queryKey,
-				l: this.settings.brainImageL,
-				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
-				divideByTW,
-				overlayTW,
-				legendFilter: this.state.config.legendFilter
-			}
-			const data = await dofetch3('brainImaging', { body })
-			this.legendValues = data.legend
-			if (data.error) throw data.error
 
-			this.dataUrlL = {}
-			for (const [termV, result] of Object.entries(data.brainImage)) {
-				this.dataUrlL[termV] = result
-			}
+		//update L image //////////////////
+		let body = {
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			refKey: this.state.config.queryKey,
+			l: this.settings.brainImageL,
+			selectedSampleFileNames: this.state.config.selectedSampleFileNames,
+			divideByTW,
+			overlayTW,
+			legendFilter: this.state.config.legendFilter
+		}
+		let data = await dofetch3('brainImaging', { body })
+		this.legendValues = data.legend
+		if (data.error) throw data.error
 
-			this.dom.tdL.selectAll('*').remove()
-			this.dom.imagesL = []
-			for (const [termV, result] of Object.entries(this.dataUrlL)) {
-				if (divideByTW)
-					this.dom.tdL
-						.append('div')
-						.attr('class', 'pp-chart-title')
-						.style('text-align', 'center')
-						.text(`${termV} (n=${result.catNum})`)
-						.style('font-weight', '600')
-						.style('color', 'white')
-						.style('font-size', '24px')
-						.style('margin-bottom', '5px')
-						.style('margin-top', '5px')
-						.style('display', 'block')
-				const img = this.dom.tdL.append('div').append('img').attr('src', result.url)
-				this.dom.imagesL.push(img)
-			}
+		this.dataUrlL = {}
+		for (const [termV, result] of Object.entries(data.brainImage)) {
+			this.dataUrlL[termV] = result
 		}
 
-		if (this.state.updateF) {
-			const body = {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel,
-				refKey: this.state.config.queryKey,
-				f: this.settings.brainImageF,
-				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
-				divideByTW,
-				overlayTW,
-				legendFilter: this.state.config.legendFilter
-			}
-			const data = await dofetch3('brainImaging', { body })
-			if (data.error) throw data.error
-
-			this.dataUrlF = []
-			for (const [termV, result] of Object.entries(data.brainImage)) {
-				this.dataUrlF.push(result)
-			}
-			this.dom.tdF.selectAll('*').remove()
-			this.dom.imagesF = []
-			for (const [termV, result] of Object.entries(this.dataUrlF)) {
-				if (divideByTW)
-					this.dom.tdF
-						.append('div')
-						.attr('class', 'pp-chart-title')
-						.style('text-align', 'center')
-						.html('&nbsp;')
-						.style('font-weight', '600')
-						.style('font-size', '24px')
-						.style('margin-bottom', '5px')
-						.style('margin-top', '5px')
-						.style('display', 'block')
-				const img = this.dom.tdF.append('div').append('img').attr('src', result.url)
-				this.dom.imagesF.push(img)
-			}
+		this.dom.tdL.selectAll('*').remove()
+		this.dom.imagesL = []
+		for (const [termV, result] of Object.entries(this.dataUrlL)) {
+			if (divideByTW)
+				this.dom.tdL
+					.append('div')
+					.attr('class', 'pp-chart-title')
+					.style('text-align', 'center')
+					.text(`${termV} (n=${result.catNum})`)
+					.style('font-weight', '600')
+					.style('color', 'white')
+					.style('font-size', '24px')
+					.style('margin-bottom', '5px')
+					.style('margin-top', '5px')
+					.style('display', 'block')
+			const img = this.dom.tdL.append('div').append('img').attr('src', result.url)
+			this.dom.imagesL.push(img)
 		}
-		if (this.state.updateT) {
-			const body = {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel,
-				refKey: this.state.config.queryKey,
-				t: this.settings.brainImageT,
-				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
-				divideByTW,
-				overlayTW,
-				legendFilter: this.state.config.legendFilter
-			}
-			const data = await dofetch3('brainImaging', { body })
-			if (data.error) throw data.error
+		//update F image //////////////////
+		body = {
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			refKey: this.state.config.queryKey,
+			f: this.settings.brainImageF,
+			selectedSampleFileNames: this.state.config.selectedSampleFileNames,
+			divideByTW,
+			overlayTW,
+			legendFilter: this.state.config.legendFilter
+		}
+		data = await dofetch3('brainImaging', { body })
+		if (data.error) throw data.error
 
-			this.dataUrlT = []
-			for (const [termV, result] of Object.entries(data.brainImage)) {
-				this.dataUrlT.push(result)
-			}
-
-			this.dom.tdT.selectAll('*').remove()
-			this.dom.imagesT = []
-			for (const [termV, result] of Object.entries(this.dataUrlT)) {
-				if (divideByTW)
-					this.dom.tdT
-						.append('div')
-						.attr('class', 'pp-chart-title')
-						.style('text-align', 'center')
-						.html('&nbsp;')
-						.style('font-weight', '600')
-						.style('font-size', '24px')
-						.style('margin-bottom', '5px')
-						.style('margin-top', '5px')
-						.style('display', 'block')
-				const img = this.dom.tdT.append('div').append('img').attr('src', result.url)
-				this.dom.imagesT.push(img)
-			}
+		this.dataUrlF = []
+		for (const [termV, result] of Object.entries(data.brainImage)) {
+			this.dataUrlF.push(result)
+		}
+		this.dom.tdF.selectAll('*').remove()
+		this.dom.imagesF = []
+		for (const [termV, result] of Object.entries(this.dataUrlF)) {
+			if (divideByTW)
+				this.dom.tdF
+					.append('div')
+					.attr('class', 'pp-chart-title')
+					.style('text-align', 'center')
+					.html('&nbsp;')
+					.style('font-weight', '600')
+					.style('font-size', '24px')
+					.style('margin-bottom', '5px')
+					.style('margin-top', '5px')
+					.style('display', 'block')
+			const img = this.dom.tdF.append('div').append('img').attr('src', result.url)
+			this.dom.imagesF.push(img)
 		}
 
-		if (this.state.overlayOrDivideByChange || !this.legendItems || this.state.legendFilterChange) {
-			// only render legends when it is the first time or when divideBy/Overlay terms changed.
-			const legendItems = []
-			for (const [label, v] of Object.entries(this.legendValues)) {
-				const scale = scaleLinear(['white', v.color], [0, v.maxLength]).clamp(true)
-				legendItems.push({
-					text: label == 'default' ? 'Combined Intensity' : label,
-					width: 100,
-					scale,
-					colors: ['white', v.color],
-					domain: [0, v.maxLength],
-					key: label,
-					crossedOut: v.crossedOut
-				})
-			}
-			this.legendItems = legendItems
-			const legendRendererData = [
-				{
-					items: legendItems
-				}
-			]
+		//update T image //////////////////
+		body = {
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			refKey: this.state.config.queryKey,
+			t: this.settings.brainImageT,
+			selectedSampleFileNames: this.state.config.selectedSampleFileNames,
+			divideByTW,
+			overlayTW,
+			legendFilter: this.state.config.legendFilter
+		}
+		data = await dofetch3('brainImaging', { body })
+		if (data.error) throw data.error
 
-			this.legendRenderer(legendRendererData, {
-				settings: {
-					fontsize: 16,
-					iconh: 14,
-					iconw: 14,
-					dimensions: {
-						xOffset: 0
-					}
-				}
+		this.dataUrlT = []
+		for (const [termV, result] of Object.entries(data.brainImage)) {
+			this.dataUrlT.push(result)
+		}
+
+		this.dom.tdT.selectAll('*').remove()
+		this.dom.imagesT = []
+		for (const [termV, result] of Object.entries(this.dataUrlT)) {
+			if (divideByTW)
+				this.dom.tdT
+					.append('div')
+					.attr('class', 'pp-chart-title')
+					.style('text-align', 'center')
+					.html('&nbsp;')
+					.style('font-weight', '600')
+					.style('font-size', '24px')
+					.style('margin-bottom', '5px')
+					.style('margin-top', '5px')
+					.style('display', 'block')
+			const img = this.dom.tdT.append('div').append('img').attr('src', result.url)
+			this.dom.imagesT.push(img)
+		}
+
+		this.renderLegend()
+	}
+
+	renderLegend() {
+		const legendItems = []
+		for (const [label, v] of Object.entries(this.legendValues)) {
+			const scale = scaleLinear(['white', v.color], [0, v.maxLength]).clamp(true)
+			legendItems.push({
+				text: label == 'default' ? 'Combined Intensity' : label,
+				width: 100,
+				scale,
+				colors: ['white', v.color],
+				domain: [0, v.maxLength],
+				key: label,
+				crossedOut: v.crossedOut
 			})
 		}
+		this.legendItems = legendItems
+		const legendRendererData = [
+			{
+				items: legendItems
+			}
+		]
+
+		this.legendRenderer(legendRendererData, {
+			settings: {
+				fontsize: 16,
+				iconh: 14,
+				iconw: 14,
+				dimensions: {
+					xOffset: 0
+				}
+			}
+		})
 	}
 }
 
