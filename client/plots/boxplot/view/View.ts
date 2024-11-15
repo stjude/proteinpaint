@@ -42,7 +42,6 @@ export class View {
 	}
 
 	renderDom(plotDim, dom, yScale) {
-		console.log(plotDim)
 		//Title of the plot
 		dom.plotTitle
 			.attr('id', 'sjpp-boxplot-title')
