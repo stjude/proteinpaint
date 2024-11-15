@@ -14,8 +14,10 @@ export type LegendItemEntry = {
 	value?: number
 }
 
+export type LegendData = { label: string; items: LegendItemEntry[] }[]
+
 export class LegendDataMapper {
-	legendData: { label: string; items: LegendItemEntry[] }[] = []
+	legendData: LegendData = []
 	constructor(config: PlotConfig, data: BoxPlotResponse, plots: FormattedPlotEntry[]) {
 		const isTerm2 = config?.term2
 		if (config.term.q?.descrStats) {

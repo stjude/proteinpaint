@@ -1,4 +1,4 @@
-import { Menu } from '#dom'
+import type { Menu } from '#dom'
 import type { SvgG } from 'types/d3'
 import { select } from 'd3-selection'
 
@@ -6,12 +6,12 @@ export class BoxPlotToolTips {
 	boxplot: any
 	g: SvgG
 	plot: any
-	tip = new Menu()
+	tip: Menu
 	readonly tablePadding = '3px'
-	constructor(plot: any, g: SvgG) {
+	constructor(plot: any, g: SvgG, tip: Menu) {
 		this.plot = plot
 		this.g = g
-		this.boxplot = plot.boxplot
+		;(this.boxplot = plot.boxplot), (this.tip = tip)
 
 		this.addLabelTooltip()
 		// this.addLineToolTips()
