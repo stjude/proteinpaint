@@ -1,1 +1,2 @@
-
+Fixes:
+- updated brainImaging python script inside of server/utils

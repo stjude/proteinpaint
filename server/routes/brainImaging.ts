@@ -149,14 +149,7 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 
 async function generateBrainImage(refFile, plane, index, maxLength, filesJson) {
 	return new Promise((resolve, reject) => {
-		const cmd = [
-			`${serverconfig.binpath}/../python/src/plotBrainImaging.py`,
-			refFile,
-			plane,
-			index,
-			maxLength,
-			filesJson
-		]
+		const cmd = [`${serverconfig.binpath}/utils/plotBrainImaging.py`, refFile, plane, index, maxLength, filesJson]
 		//Use this log if you need to debug the python script, to run the python script manually
 		//You will need to add simple quotes to filesJson
 		//console.log(cmd.join(' '))
