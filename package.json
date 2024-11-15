@@ -35,8 +35,8 @@
     "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'",
     "clean": "git add -A; git stash --staged",
     "doc": "npm run doc --workspace=shared/types",
-     "test": "ts-node node_modules/tape/bin/tape 'tests/**/*.test.ts'",
-  "test:coverage": "nyc npm run test"
+    "test": "ts-node node_modules/tape/bin/tape './client/mass/test/*.spec.ts'",
+    "test:coverage": "npx nyc npm run test"
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",
@@ -48,6 +48,7 @@
     "url": "https://github.com/stjude/proteinpaint"
   },
   "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@types/d3": "^7.4.0",
     "@types/estree": "^1.0.1",
     "@types/minimatch": "^5.1.2",
@@ -56,6 +57,11 @@
     "@typescript-eslint/eslint-plugin": "^8.13.0",
     "eslint": "^8.43.0",
     "eslint-config-prettier": "^8.8.0",
+    "istanbul": "^0.4.5",
+    "nyc": "^17.1.0",
+    "tap-nyc": "^1.0.3",
+    "tape": "^5.9.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
   },
   "dependencies": {
