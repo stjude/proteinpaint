@@ -5,15 +5,17 @@ import { rgb } from 'd3-color'
 
 export class LegendRenderer {
 	interactions: BoxPlotInteractions
-	constructor(legendDiv: Div, legendData: LegendData, interactions: BoxPlotInteractions) {
+	textColor: string
+	constructor(legendDiv: Div, legendData: LegendData, interactions: BoxPlotInteractions, textColor: string) {
 		this.interactions = interactions
+		this.textColor = textColor
 		this.renderLegend(legendDiv, legendData)
 	}
 
 	renderLegend(legendDiv, legendData: LegendData) {
 		legendDiv.attr('id', 'sjpp-boxplot-legend')
 		for (const section of legendData) {
-			legendDiv.append('div').style('opacity', '0.5').text(section.label)
+			legendDiv.append('div').style('opacity', '0.5').style('color', this.textColor).text(section.label)
 			const sectionDiv = legendDiv.append('div').style('padding-left', '10px')
 			for (const item of section.items) {
 				this.addItem(item, sectionDiv)
@@ -45,6 +47,7 @@ export class LegendRenderer {
 		legendItem
 			.append('div')
 			.style('display', 'inline-block')
+			.style('color', this.textColor)
 			.style('text-decoration', item.isHidden ? 'line-through' : '')
 			.text(`${item.label}${item.value ? `: ${item.value}` : item.count ? `, n=${item.count}` : ''}`)
 
