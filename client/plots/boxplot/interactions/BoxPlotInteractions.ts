@@ -41,6 +41,20 @@ export class BoxPlotInteractions {
 		return rows
 	}
 
+	hidePlot(plot) {
+		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
+		//Don't try to modify a frozen object
+		const config = structuredClone(plotConfig)
+		const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
+		if (!config[contTerm].q.hiddenValues) config[contTerm].q.hiddenValues = {}
+		config[contTerm].q.hiddenValues[plot.key] = 1
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: config
+		})
+	}
+
 	unhidePlot(item: LegendItemEntry) {
 		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
 		const config = structuredClone(plotConfig)
