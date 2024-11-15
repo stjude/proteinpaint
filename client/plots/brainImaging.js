@@ -2,10 +2,15 @@ import { getCompInit, copyMerge } from '#rx'
 import { controlsInit } from './controls'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table.ts'
+import svgLegend from '#dom/svg.legend'
+import { scaleLinear } from 'd3-scale'
+import { Menu } from '#dom/menu'
+import { rgb } from 'd3-color'
 class BrainImaging {
 	constructor(opts) {
 		this.opts = opts
 		this.type = 'brainImaging'
+		setInteractivity(this)
 	}
 
 	async init(appState) {
@@ -30,8 +35,22 @@ class BrainImaging {
 		const tdL = contentTr.append('td')
 		const tdF = contentTr.append('td')
 		const tdT = contentTr.append('td')
+		const legendHolder = contentHolder.append('svg').style('width', '100%').on('mouseup', this.legendLabelMouseup)
+		const legendMenu = new Menu({ padding: '0px' })
 
-		this.dom = { headerHolder, contentHolder, headerTr, tdL, tdF, tdT, imagesF: [], imagesL: [], imagesT: [] }
+		this.dom = {
+			headerHolder,
+			contentHolder,
+			headerTr,
+			tdL,
+			tdF,
+			tdT,
+			imagesF: [],
+			imagesL: [],
+			imagesT: [],
+			legendHolder,
+			legendMenu
+		}
 		this.addSliders(state.config.settings.brainImaging)
 
 		const configInputsOptions = this.getConfigInputsOptions(state)
@@ -52,6 +71,7 @@ class BrainImaging {
 			console.log(urls)
 			this.downloadImage(urls)
 		})
+		this.legendRenderer = svgLegend({ holder: this.dom.legendHolder })
 	}
 
 	addSliders(settings) {
@@ -183,12 +203,22 @@ class BrainImaging {
 		const previousConfig = this.state?.config
 
 		const overlayOrDivideByChange =
-			config.overlayTW?.term?.id !== previousConfig?.overlayTW?.term?.id ||
-			config.divideByTW?.term?.id !== previousConfig?.divideByTW?.term?.id
+			JSON.stringify(config.overlayTW) !== JSON.stringify(previousConfig?.overlayTW) ||
+			JSON.stringify(config.divideByTW) !== JSON.stringify(previousConfig?.divideByTW)
 
-		const updateL = config.settings.brainImaging.brainImageL != this.settings?.brainImageL || overlayOrDivideByChange
-		const updateF = config.settings.brainImaging.brainImageF != this.settings?.brainImageF || overlayOrDivideByChange
-		const updateT = config.settings.brainImaging.brainImageT != this.settings?.brainImageT || overlayOrDivideByChange
+		const legendFilterChange = JSON.stringify(previousConfig?.legendFilter) !== JSON.stringify(config.legendFilter)
+		const updateL =
+			config.settings.brainImaging.brainImageL != this.settings?.brainImageL ||
+			overlayOrDivideByChange ||
+			legendFilterChange
+		const updateF =
+			config.settings.brainImaging.brainImageF != this.settings?.brainImageF ||
+			overlayOrDivideByChange ||
+			legendFilterChange
+		const updateT =
+			config.settings.brainImaging.brainImageT != this.settings?.brainImageT ||
+			overlayOrDivideByChange ||
+			legendFilterChange
 
 		return {
 			config,
@@ -197,11 +227,14 @@ class BrainImaging {
 			RefNIdata: appState.termdbConfig.queries.NIdata[config.queryKey],
 			updateL,
 			updateF,
-			updateT
+			updateT,
+			overlayOrDivideByChange,
+			legendFilterChange
 		}
 	}
 
 	async main() {
+		this.config = structuredClone(this.state.config) //to modify config on plot_edit
 		this.settings = this.state.config.settings.brainImaging
 
 		//settings may be edited by the slider or the input, so we update the sliders and inputs to reflect the current settings
@@ -222,9 +255,11 @@ class BrainImaging {
 				l: this.settings.brainImageL,
 				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
 				divideByTW,
-				overlayTW
+				overlayTW,
+				legendFilter: this.state.config.legendFilter
 			}
 			const data = await dofetch3('brainImaging', { body })
+			this.legendValues = data.legend
 			if (data.error) throw data.error
 
 			this.dataUrlL = {}
@@ -260,7 +295,8 @@ class BrainImaging {
 				f: this.settings.brainImageF,
 				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
 				divideByTW,
-				overlayTW
+				overlayTW,
+				legendFilter: this.state.config.legendFilter
 			}
 			const data = await dofetch3('brainImaging', { body })
 			if (data.error) throw data.error
@@ -295,7 +331,8 @@ class BrainImaging {
 				t: this.settings.brainImageT,
 				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
 				divideByTW,
-				overlayTW
+				overlayTW,
+				legendFilter: this.state.config.legendFilter
 			}
 			const data = await dofetch3('brainImaging', { body })
 			if (data.error) throw data.error
@@ -322,6 +359,40 @@ class BrainImaging {
 				const img = this.dom.tdT.append('div').append('img').attr('src', result.url)
 				this.dom.imagesT.push(img)
 			}
+		}
+
+		if (this.state.overlayOrDivideByChange || !this.legendItems || this.state.legendFilterChange) {
+			// only render legends when it is the first time or when divideBy/Overlay terms changed.
+			const legendItems = []
+			for (const [label, v] of Object.entries(this.legendValues)) {
+				const scale = scaleLinear(['white', v.color], [0, v.maxLength]).clamp(true)
+				legendItems.push({
+					text: label == 'default' ? 'Combined Intensity' : label,
+					width: 100,
+					scale,
+					colors: ['white', v.color],
+					domain: [0, v.maxLength],
+					key: label,
+					crossedOut: v.crossedOut
+				})
+			}
+			this.legendItems = legendItems
+			const legendRendererData = [
+				{
+					items: legendItems
+				}
+			]
+
+			this.legendRenderer(legendRendererData, {
+				settings: {
+					fontsize: 16,
+					iconh: 14,
+					iconw: 14,
+					dimensions: {
+						xOffset: 0
+					}
+				}
+			})
 		}
 	}
 }
@@ -425,4 +496,96 @@ async function getTableData(self, samples, state, refKey) {
 	}
 
 	return [rows, columns]
+}
+
+function setInteractivity(self) {
+	self.legendLabelMouseup = event => {
+		const targetData = event.target.__data__
+		if (!targetData || targetData.key == 'default') return
+		const legendMenu = self.dom.legendMenu.clear()
+		const legendMenuDiv = legendMenu.d.append('div')
+		const legendFilter = self.state.config.legendFilter ? [...self.state.config.legendFilter] : []
+
+		const legendFilterIndex = legendFilter.indexOf(targetData.key)
+
+		if (legendFilterIndex !== -1 || legendFilter.length + 1 !== self.legendItems.length) {
+			// only show the Hide option when the cat is not the last shown cat
+			legendMenuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(legendFilterIndex == -1 ? 'Hide' : 'Show')
+				.on('click', () => {
+					legendMenu.hide()
+					if (legendFilterIndex == -1) legendFilter.push(targetData.key)
+					else legendFilter.splice(legendFilterIndex, 1)
+
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: { legendFilter }
+					})
+				})
+		}
+
+		legendMenuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show only')
+			.on('click', () => {
+				legendMenu.hide()
+				const legendFilter = []
+				for (const legendCat of self.legendItems) {
+					if (legendCat.key !== targetData.key) legendFilter.push(legendCat.key)
+				}
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: { legendFilter }
+				})
+			})
+
+		legendMenuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show all')
+			.on('click', () => {
+				legendMenu.hide()
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: { legendFilter: [] }
+				})
+			})
+		let color = self.state.config.overlayTW.term.values[targetData.key]?.color || '#000000'
+		color = rgb(color).formatHex() //so that the color is in the correct format to be shown in the input
+		legendMenuDiv
+			.append('div')
+			.attr('class', 'sja_sharp_border')
+			.style('padding', '0px 10px')
+			.text('Color:')
+			.append('input')
+			.attr('type', 'color')
+			.attr('value', color)
+			.on('change', e => {
+				self.changeColor(targetData.key, e.target.value)
+			})
+		legendMenu.showunder(event.target)
+	}
+
+	self.changeColor = async function (key, color) {
+		const tw = self.config.overlayTW
+
+		if (!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key])
+			tw.term.values[key].color = color
+		else {
+			if (!tw.term.values) tw.term.values = { [key]: {} }
+			tw.term.values[key].color = color
+		}
+
+		await self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: { overlayTW: tw }
+		})
+	}
 }

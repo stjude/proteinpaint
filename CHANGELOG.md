@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- BrainImaging: add color scale legend outside of image and add legend filters.
+
 Fixes:
 - barchart scale min should be zero even when unit='log', since a linear bar scale is still used
 
