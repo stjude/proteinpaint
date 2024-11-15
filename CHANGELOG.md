@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- updated brainImaging python script inside of server/utils
+
+
 ## 2.86.0
 
 Features:
