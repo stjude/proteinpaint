@@ -16,11 +16,11 @@
   },
   "scripts": {
     "predev": "tsx emitCheckers.ts",
-    "dev": "ENV=dev node esbuild.config.mjs",
+    "dev": "node --watch-path=src --watch-path=checkers dev.mjs",
     "prepare": "ts-patch install",
-    "prebuild": "tsx emitCheckers.ts",
-    "build": "rm -rf dist && mkdir dist && node esbuild.config.mjs",
-    "prepack": "tsx emitCheckers.ts && rm -rf dist && mkdir dist && node esbuild.config.mjs",
+    "build": "./build.sh",
+    "prepack": "./build.sh",
+    "postpack": "mv dist/index.js dist/index.js-0 && rm dist/*.js && mv dist/index.js-0 dist/index.js",
     "test": "tsc",
     "doc": "./doc.sh"
   },
@@ -34,7 +34,7 @@
     "typia": "^4.1.14"
   },
   "files": [
-    "dist",
+    "dist/*.js",
     "src"
   ]
 }

@@ -23,23 +23,11 @@ server/src/app.js
 server/src/health.js
 server/src/hicstat.js
 server/package*/*
-# TODO: delete these server/shared/* rules once
-# the shared/types workspace is used to generate server api
-# tests and docs
-server/shared/doc.js
-server/shared/checkers/transformed/*
-server/shared/checkers/bin/*
-server/shared/checkers*/*
-server/shared/types/docs.json
-server/shared/types/*.js
-server/shared/types/**/**.js
-server/shared/types/terms/*.js
-server/shared/types/routes/checkers/*
 
-shared/types/checkers/*
 shared/types/docs.json
 shared/types/*.js
-shared/types/**/**.js
+shared/types/**/*.js
+!shared/types/checkers/index.js
 shared/types/terms/*.js
 shared/types/routes/checkers/*
 

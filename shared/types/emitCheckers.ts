@@ -33,11 +33,11 @@ for (const f of files) {
 	const _ = await import(`${routesDir}/${f}`)
 	for (const [key, val] of Object.entries(_)) {
 		if (!key.endsWith('Payload')) continue
-		exportPayloads.push(`export { ${key} } from '../routes/${f}'`)
+		exportPayloads.push(`export { ${key} } from '../src/routes/${f}'`)
 		const { request, response } = val as any
 		const typeIds = [request?.typeId, response?.typeId].filter(t => t != undefined)
 		if (!typeIds.length) continue
-		importLines.push(`import type { ${typeIds.join(', ')} } from '../routes/${f}'`)
+		importLines.push(`import type { ${typeIds.join(', ')} } from '../src/routes/${f}'`)
 		for (const typeId of typeIds) {
 			if (!typeId || uniquesTypeIds.has(typeId)) continue
 			uniquesTypeIds.add(typeId)
@@ -48,7 +48,7 @@ for (const f of files) {
 	if (exportPayloads.length || exportCheckers.length) {
 		const contents =
 			importLines.join('\n') + '\n\n' + exportPayloads.join('\n') + '\n\n' + exportCheckers.join('\n') + '\n'
-		const outfile = path.join(__dirname, `./src/checkers/${f}`)
+		const outfile = path.join(__dirname, `./checkers/${f}`)
 		fs.writeFileSync(outfile, contents, { encoding: 'utf8' })
 		transitiveExports.push(`export * from './${f}'`)
 	}
@@ -56,8 +56,8 @@ for (const f of files) {
 
 if (transitiveExports.length) {
 	const contents = transitiveExports.join('\n')
-	const outfile = path.join(__dirname, `./src/checkers/index.ts`)
+	const outfile = path.join(__dirname, `./checkers/index.js`)
 	fs.writeFileSync(outfile, contents, { encoding: 'utf8' })
 }
 
-execSync(`npx prettier ./src/checkers/*.ts  --no-semi --use-tabs --write`)
+execSync(`npx prettier ./checkers/*.ts  --no-semi --use-tabs --write`)
