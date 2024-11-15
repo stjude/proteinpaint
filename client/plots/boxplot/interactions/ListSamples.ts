@@ -1,34 +1,8 @@
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { FormattedPlotEntry } from '../viewModel/ViewModel'
 import type { TermWrapper } from '#types'
+import type { AnnotatedSampleData } from '../../../types/termdb'
 import { roundValueAuto } from '#shared/roundValue.js'
-
-//TODO: Move to route or types
-type AnnotatedSampleData = {
-	lst: AnnotatedSampleEntry[]
-	refs: {
-		bySampleId: {
-			[index: string]: {
-				label: string
-			}
-		}
-		byTermId: {
-			//Term
-			[index: string]: any
-		}
-	}
-	samples: AnnotatedSampleEntry[]
-}
-
-type AnnotatedSampleEntry = {
-	[index: string]: {
-		key: number
-		value: number
-	} & {
-		sample: string
-		_ref_: { label: string }
-	}
-}
 
 export class ListSamples {
 	app: MassAppApi
