@@ -178,13 +178,11 @@ class TdbBoxplot extends RxComponent {
 		}
 		return {
 			termfilter: appState.termfilter,
-			config: {
-				term: config.term,
-				term2: config.term2,
+			config: Object.assign({}, config, {
 				settings: {
 					boxplot: config.settings.boxplot
 				}
-			}
+			})
 		}
 	}
 
@@ -202,7 +200,7 @@ class TdbBoxplot extends RxComponent {
 	async main() {
 		try {
 			const state = this.app.getState()
-			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
+			const config = structuredClone(state.plots[0])
 			if (config.childType != 'boxplot') return
 
 			const settings = config.settings.boxplot
