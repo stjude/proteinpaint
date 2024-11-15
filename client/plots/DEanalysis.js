@@ -547,35 +547,83 @@ add:
 			const geneORAparams = {
 				sample_genes: sample_genes.toString(),
 				background_genes: background_genes.toString(),
-				genome: self.app.vocabApi.opts.state.vocab.genome
+				genome: self.app.vocabApi.opts.state.vocab.genome,
+				ora_request_type: self.settings.gene_ora,
+				num_samples_genes: sample_genes.length,
+				num_background_genes: background_genes.length
 			}
-			const config = {
-				chartType: 'geneORA',
-				geneORAparams: geneORAparams
+
+			// Check if a previous requests has already been made with the same parameters
+			const previous_geneORA = self.app.getState().plots.find(x => x.chartType == 'geneORA')
+
+			if (previous_geneORA) {
+				if (
+					previous_geneORA.geneORAparams.ora_request_type == self.settings.gene_ora &&
+					previous_geneORA.geneORAparams.num_samples_genes == sample_genes.length &&
+					previous_geneORA.geneORAparams.num_background_genes == background_genes.length
+				) {
+					// The check for number of background genes and sample genes have been added so that the same gene ORA request type (upregulated/downregulated/both) is not triggerred, but if any other DE parameter is changed (min_count etc.) then a new gene ORA request of the same type can be made.
+					//alert(self.settings.gene_ora + "geneORA already open")
+				} else {
+					const config = {
+						chartType: 'geneORA',
+						geneORAparams: geneORAparams
+					}
+					self.app.dispatch({
+						type: 'plot_create',
+						config
+					})
+				}
+			} else {
+				const config = {
+					chartType: 'geneORA',
+					geneORAparams: geneORAparams
+				}
+				self.app.dispatch({
+					type: 'plot_create',
+					config
+				})
 			}
-			self.app.dispatch({
-				type: 'plot_create',
-				config
-			})
 		}
 
 		if (self.settings.gsea && self.app.opts.genome.termdbs) {
 			// Currently backend only uses msigdb, but in future may use other databases in genome.termdbs{}. In ui will need to generate a <select> to choose one key of termdbs{}.
+			//self.settings.gsea = false
+			const input_genes = output.data.map(i => i.gene_symbol)
 			const gsea_params = {
-				genes: output.data.map(i => i.gene_symbol),
+				genes: input_genes,
 				fold_change: output.data.map(i => i.fold_change),
-				genome: self.app.vocabApi.opts.state.vocab.genome
+				genome: self.app.vocabApi.opts.state.vocab.genome,
+				genes_length: input_genes.length
 			}
 			//console.log("gsea_params:",gsea_params)
-			const config = {
-				chartType: 'gsea',
-				gsea_params: gsea_params
+			// Check if a previous requests has already been made with the same parameters
+			const previous_gsea = self.app.getState().plots.find(x => x.chartType == 'gsea')
+			if (previous_gsea) {
+				if (previous_gsea.gsea_params.genes_length == input_genes.length) {
+					// GSEA window already open for these parameters
+				} else {
+					const config = {
+						chartType: 'gsea',
+						gsea_params: gsea_params
+					}
+					self.app.dispatch({
+						type: 'plot_create',
+						config
+					})
+				}
+			} else {
+				const config = {
+					chartType: 'gsea',
+					gsea_params: gsea_params
+				}
+				self.app.dispatch({
+					type: 'plot_create',
+					config
+				})
 			}
-			self.app.dispatch({
-				type: 'plot_create',
-				config
-			})
 		}
+		//console.log('this.app.getState:', self.app.getState())
 	}
 	return svg
 }
