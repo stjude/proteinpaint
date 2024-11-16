@@ -212,36 +212,47 @@ class BrainImaging {
 		this.settings = this.state.config.settings.brainImaging
 
 		//settings may be edited by the slider or the input, so we update the sliders and inputs to reflect the current settings
-		this.dom.saggitalSlider.node().value = this.settings.brainImageL
-		this.dom.saggitalInput.node().value = this.settings.brainImageL
-		this.dom.coronalSlider.node().value = this.settings.brainImageF
-		this.dom.coronalInput.node().value = this.settings.brainImageF
-		this.dom.axialSlider.node().value = this.settings.brainImageT
-		this.dom.axialInput.node().value = this.settings.brainImageT
+		this.dom.saggitalSlider.property('value', this.settings.brainImageL)
+		this.dom.saggitalInput.property('value', this.settings.brainImageL)
+		this.dom.coronalSlider.property('value', this.settings.brainImageF)
+		this.dom.coronalInput.property('value', this.settings.brainImageF)
+		this.dom.axialSlider.property('value', this.settings.brainImageT)
+		this.dom.axialInput.property('value', this.settings.brainImageT)
 
-		const divideByTW = this.state.config.divideByTW
+		const data = await Promise.all([
+			this.requestImage('l', this.settings.brainImageL),
+			this.requestImage('f', this.settings.brainImageF),
+			this.requestImage('t', this.settings.brainImageT)
+		])
 
 		this.imagesData = {
-			brainImageL: { dataUrls: {}, td: this.dom.tdL },
-			brainImageF: { dataUrls: {}, td: this.dom.tdF },
-			brainImageT: { dataUrls: {}, td: this.dom.tdT }
+			brainImageL: { dataUrls: {}, td: this.dom.tdL, data: data[0] },
+			brainImageF: { dataUrls: {}, td: this.dom.tdF, data: data[1] },
+			brainImageT: { dataUrls: {}, td: this.dom.tdT, data: data[2] }
 		}
 
-		this.datas = await this.requestImages(Object.keys(this.imagesData))
-		this.imagesData.brainImageL.data = this.datas[0]
-		this.imagesData.brainImageF.data = this.datas[1]
-		this.imagesData.brainImageT.data = this.datas[2]
-		for (const key in this.imagesData) this.renderImages(key)
+		for (const img of Object.values(this.imagesData)) this.renderImages(img)
 
 		this.renderLegend()
 	}
 
-	renderImages(key) {
-		const data = this.imagesData[key].data
-		const td = this.imagesData[key].td
+	async requestImage(key, value) {
+		const body = {
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			refKey: this.state.config.queryKey,
+			[key]: value,
+			selectedSampleFileNames: this.state.config.selectedSampleFileNames,
+			divideByTW: this.state.config.divideByTW,
+			overlayTW: this.state.config.overlayTW,
+			legendFilter: this.state.config.legendFilter
+		}
+		return await dofetch3('brainImaging', { body })
+	}
+
+	renderImages({ data, td, dataUrls }) {
 		this.legendValues = data.legend
 		if (data.error) throw data.error
-		const dataUrls = this.imagesData[key].dataUrls
 		for (const [termV, result] of Object.entries(data.brainImage)) {
 			dataUrls[termV] = result
 		}
@@ -261,24 +272,6 @@ class BrainImaging {
 					.style('display', 'block')
 			td.append('div').append('img').attr('src', result.url)
 		}
-	}
-
-	async requestImages(keys) {
-		const promises = []
-		for (const key of keys) {
-			const body = {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel,
-				refKey: this.state.config.queryKey,
-				l: this.settings[key],
-				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
-				divideByTW: this.state.config.divideByTW,
-				overlayTW: this.state.config.overlayTW,
-				legendFilter: this.state.config.legendFilter
-			}
-			promises.push(dofetch3('brainImaging', { body }))
-		}
-		return await Promise.all(promises)
 	}
 
 	renderLegend() {
