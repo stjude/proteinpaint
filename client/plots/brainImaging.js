@@ -45,9 +45,6 @@ class BrainImaging {
 			tdL,
 			tdF,
 			tdT,
-			imagesF: [],
-			imagesL: [],
-			imagesT: [],
 			legendHolder,
 			legendMenu
 		}
@@ -65,10 +62,11 @@ class BrainImaging {
 		}
 		this.components.controls.on('downloadClick.brainImaging', () => {
 			const urls = []
-			for (const category in this.dataUrlL) urls.push(this.dataUrlL[category].url)
-			for (const category in this.dataUrlF) urls.push(this.dataUrlF[category].url)
-			for (const category in this.dataUrlT) urls.push(this.dataUrlT[category].url)
-			console.log(urls)
+			for (const key in this.imagesData)
+				for (const category in this.imagesData[key].dataUrls) {
+					const dataUrl = this.imagesData[key].dataUrls[category].url
+					urls.push(dataUrl)
+				}
 			this.downloadImage(urls)
 		})
 		this.legendRenderer = svgLegend({ holder: this.dom.legendHolder })
@@ -222,120 +220,63 @@ class BrainImaging {
 		this.dom.axialInput.node().value = this.settings.brainImageT
 
 		const divideByTW = this.state.config.divideByTW
-		const overlayTW = this.state.config.overlayTW
 
-		//update L image //////////////////
-		let body = {
-			genome: this.state.genome,
-			dslabel: this.state.dslabel,
-			refKey: this.state.config.queryKey,
-			l: this.settings.brainImageL,
-			selectedSampleFileNames: this.state.config.selectedSampleFileNames,
-			divideByTW,
-			overlayTW,
-			legendFilter: this.state.config.legendFilter
-		}
-		let data = await dofetch3('brainImaging', { body })
-		this.legendValues = data.legend
-		if (data.error) throw data.error
-
-		this.dataUrlL = {}
-		for (const [termV, result] of Object.entries(data.brainImage)) {
-			this.dataUrlL[termV] = result
+		this.imagesData = {
+			brainImageL: { dataUrls: {}, td: this.dom.tdL },
+			brainImageF: { dataUrls: {}, td: this.dom.tdF },
+			brainImageT: { dataUrls: {}, td: this.dom.tdT }
 		}
 
-		this.dom.tdL.selectAll('*').remove()
-		this.dom.imagesL = []
-		for (const [termV, result] of Object.entries(this.dataUrlL)) {
-			if (divideByTW)
-				this.dom.tdL
-					.append('div')
-					.attr('class', 'pp-chart-title')
-					.style('text-align', 'center')
-					.text(`${termV} (n=${result.catNum})`)
-					.style('font-weight', '600')
-					.style('color', 'white')
-					.style('font-size', '24px')
-					.style('margin-bottom', '5px')
-					.style('margin-top', '5px')
-					.style('display', 'block')
-			const img = this.dom.tdL.append('div').append('img').attr('src', result.url)
-			this.dom.imagesL.push(img)
-		}
-		//update F image //////////////////
-		body = {
-			genome: this.state.genome,
-			dslabel: this.state.dslabel,
-			refKey: this.state.config.queryKey,
-			f: this.settings.brainImageF,
-			selectedSampleFileNames: this.state.config.selectedSampleFileNames,
-			divideByTW,
-			overlayTW,
-			legendFilter: this.state.config.legendFilter
-		}
-		data = await dofetch3('brainImaging', { body })
-		if (data.error) throw data.error
+		this.datas = await this.requestImages(Object.keys(this.imagesData))
+		this.imagesData.brainImageL.data = this.datas[0]
+		this.imagesData.brainImageF.data = this.datas[1]
+		this.imagesData.brainImageT.data = this.datas[2]
+		for (const key in this.imagesData) {
+			const data = this.imagesData[key].data
+			const td = this.imagesData[key].td
+			this.legendValues = data.legend
+			if (data.error) throw data.error
+			const dataUrls = this.imagesData[key].dataUrls
+			for (const [termV, result] of Object.entries(data.brainImage)) {
+				dataUrls[termV] = result
+			}
 
-		this.dataUrlF = []
-		for (const [termV, result] of Object.entries(data.brainImage)) {
-			this.dataUrlF.push(result)
-		}
-		this.dom.tdF.selectAll('*').remove()
-		this.dom.imagesF = []
-		for (const [termV, result] of Object.entries(this.dataUrlF)) {
-			if (divideByTW)
-				this.dom.tdF
-					.append('div')
-					.attr('class', 'pp-chart-title')
-					.style('text-align', 'center')
-					.html('&nbsp;')
-					.style('font-weight', '600')
-					.style('font-size', '24px')
-					.style('margin-bottom', '5px')
-					.style('margin-top', '5px')
-					.style('display', 'block')
-			const img = this.dom.tdF.append('div').append('img').attr('src', result.url)
-			this.dom.imagesF.push(img)
-		}
-
-		//update T image //////////////////
-		body = {
-			genome: this.state.genome,
-			dslabel: this.state.dslabel,
-			refKey: this.state.config.queryKey,
-			t: this.settings.brainImageT,
-			selectedSampleFileNames: this.state.config.selectedSampleFileNames,
-			divideByTW,
-			overlayTW,
-			legendFilter: this.state.config.legendFilter
-		}
-		data = await dofetch3('brainImaging', { body })
-		if (data.error) throw data.error
-
-		this.dataUrlT = []
-		for (const [termV, result] of Object.entries(data.brainImage)) {
-			this.dataUrlT.push(result)
-		}
-
-		this.dom.tdT.selectAll('*').remove()
-		this.dom.imagesT = []
-		for (const [termV, result] of Object.entries(this.dataUrlT)) {
-			if (divideByTW)
-				this.dom.tdT
-					.append('div')
-					.attr('class', 'pp-chart-title')
-					.style('text-align', 'center')
-					.html('&nbsp;')
-					.style('font-weight', '600')
-					.style('font-size', '24px')
-					.style('margin-bottom', '5px')
-					.style('margin-top', '5px')
-					.style('display', 'block')
-			const img = this.dom.tdT.append('div').append('img').attr('src', result.url)
-			this.dom.imagesT.push(img)
+			td.selectAll('*').remove()
+			for (const [termV, result] of Object.entries(dataUrls)) {
+				if (divideByTW)
+					td.append('div')
+						.attr('class', 'pp-chart-title')
+						.style('text-align', 'center')
+						.text(`${termV} (n=${result.catNum})`)
+						.style('font-weight', '600')
+						.style('color', 'white')
+						.style('font-size', '24px')
+						.style('margin-bottom', '5px')
+						.style('margin-top', '5px')
+						.style('display', 'block')
+				td.append('div').append('img').attr('src', result.url)
+			}
 		}
 
 		this.renderLegend()
+	}
+
+	async requestImages(keys) {
+		const promises = []
+		for (const key of keys) {
+			const body = {
+				genome: this.state.genome,
+				dslabel: this.state.dslabel,
+				refKey: this.state.config.queryKey,
+				l: this.settings[key],
+				selectedSampleFileNames: this.state.config.selectedSampleFileNames,
+				divideByTW: this.state.config.divideByTW,
+				overlayTW: this.state.config.overlayTW,
+				legendFilter: this.state.config.legendFilter
+			}
+			promises.push(await dofetch3('brainImaging', { body }))
+		}
+		return await Promise.all(promises)
 	}
 
 	renderLegend() {
