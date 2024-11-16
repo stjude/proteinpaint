@@ -276,7 +276,7 @@ class BrainImaging {
 				overlayTW: this.state.config.overlayTW,
 				legendFilter: this.state.config.legendFilter
 			}
-			promises.push(await dofetch3('brainImaging', { body }))
+			promises.push(dofetch3('brainImaging', { body }))
 		}
 		return await Promise.all(promises)
 	}
