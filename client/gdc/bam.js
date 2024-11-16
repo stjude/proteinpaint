@@ -910,7 +910,7 @@ export async function bamsliceui({
 			.attr('disabled', true)
 			.on('click', async () => {
 				if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gdcBamDemoMode) {
-					launchDemoMode() // in demo mode, do not valid arg and will run with non-gdc data
+					launchDemoMode() // in demo mode, do not validate arg and will run with non-gdc data
 					return
 				}
 
@@ -1096,6 +1096,11 @@ export async function bamsliceui({
 		formdiv.style('display', 'none')
 		backBtnDiv.style('display', 'block')
 		blockHolder.style('display', 'block')
+		blockHolder
+			.append('div')
+			.style('margin', '25px')
+			.style('font-weight', 'bold')
+			.text('Running in demo mode and showing non-GDC data.')
 		// create arg for block init
 		const hg19 = genomes.hg19 // use hg19 since demo file is hg19-based. intentionally not using hg38 file since demo only works on local where hg19 file is present, also signifies it's not using gdc hg38-based data
 		const par = {
@@ -1117,6 +1122,10 @@ export async function bamsliceui({
 			]
 		}
 		first_genetrack_tolist(hg19, par.tklst)
+		// pretend the gene track is gencode (which gdc uses, and only show two p53 isoforms)
+		par.tklst[1].name = 'GENCODE'
+		par.tklst[1].filterByName = `NM_000546
+		NM_001126115`
 		const _ = await import('../src/block')
 		new _.Block(par)
 	}
