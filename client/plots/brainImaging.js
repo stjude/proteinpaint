@@ -231,34 +231,36 @@ class BrainImaging {
 		this.imagesData.brainImageL.data = this.datas[0]
 		this.imagesData.brainImageF.data = this.datas[1]
 		this.imagesData.brainImageT.data = this.datas[2]
-		for (const key in this.imagesData) {
-			const data = this.imagesData[key].data
-			const td = this.imagesData[key].td
-			this.legendValues = data.legend
-			if (data.error) throw data.error
-			const dataUrls = this.imagesData[key].dataUrls
-			for (const [termV, result] of Object.entries(data.brainImage)) {
-				dataUrls[termV] = result
-			}
-
-			td.selectAll('*').remove()
-			for (const [termV, result] of Object.entries(dataUrls)) {
-				if (divideByTW)
-					td.append('div')
-						.attr('class', 'pp-chart-title')
-						.style('text-align', 'center')
-						.text(`${termV} (n=${result.catNum})`)
-						.style('font-weight', '600')
-						.style('color', 'white')
-						.style('font-size', '24px')
-						.style('margin-bottom', '5px')
-						.style('margin-top', '5px')
-						.style('display', 'block')
-				td.append('div').append('img').attr('src', result.url)
-			}
-		}
+		for (const key in this.imagesData) this.renderImages(key)
 
 		this.renderLegend()
+	}
+
+	renderImages(key) {
+		const data = this.imagesData[key].data
+		const td = this.imagesData[key].td
+		this.legendValues = data.legend
+		if (data.error) throw data.error
+		const dataUrls = this.imagesData[key].dataUrls
+		for (const [termV, result] of Object.entries(data.brainImage)) {
+			dataUrls[termV] = result
+		}
+
+		td.selectAll('*').remove()
+		for (const [termV, result] of Object.entries(dataUrls)) {
+			if (this.state.config.divideByTW)
+				td.append('div')
+					.attr('class', 'pp-chart-title')
+					.style('text-align', 'center')
+					.text(`${termV} (n=${result.catNum})`)
+					.style('font-weight', '600')
+					.style('color', 'white')
+					.style('font-size', '24px')
+					.style('margin-bottom', '5px')
+					.style('margin-top', '5px')
+					.style('display', 'block')
+			td.append('div').append('img').attr('src', result.url)
+		}
 	}
 
 	async requestImages(keys) {
