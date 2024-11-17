@@ -20,9 +20,10 @@
     "prepare": "ts-patch install",
     "build": "./build.sh",
     "prepack": "./build.sh",
-    "postpack": "mv dist/index.js dist/index.js-0 && rm dist/*.js && mv dist/index.js-0 dist/index.js",
+    "postpack": "cd dist && ls *.js | grep -xvF index.js | xargs rm -f",
     "test": "tsc",
-    "doc": "./doc.sh"
+    "doc": "./doc.sh",
+    "generate": "typia generate --input ./checkers --output ./dist"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
