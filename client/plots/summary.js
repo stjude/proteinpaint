@@ -407,11 +407,21 @@ export async function getPlotConfig(opts, app) {
 				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
 					/** Fix for summary tabs switching to different plots when opening and closing
 					 * controls, changing settings, etc. */
+					config.childType = 'violin' // when mode=continuous is present, use violin by default and allow override below.
 					const state = app.getState()
-					if (state && state.plots) {
-						config.childType = state.plots.find(p => p.id === config.id).childType
-					} else config.childType = opts.childType || 'violin'
-				} else config.childType = 'barchart'
+					if (state.plots) {
+						const p = state.plots.find(p => p.id === config.id)
+						if (p && p.childType) {
+							config.childType = p.childType
+						} else {
+							// p.childType maybe missing (?), in such case do not change config.childType
+						}
+					} else if (opts.childType) {
+						config.childType = opts.childType
+					}
+				} else {
+					config.childType = 'barchart'
+				}
 			}
 		}
 	}
