@@ -157,7 +157,7 @@ export function setInteractivity(self) {
 				survivalInfo = d.term.values?.[d.exitCodeKey]?.label || d.exitCodeKey
 			}
 
-			if (survivalInfo || d.convertedValueLabel || d.label) {
+			if (survivalInfo || d.convertedValueLabel || d.label || d.label === 0) {
 				// show term value row only when not undefined
 				if (d.term.type == TermTypes.GENE_EXPRESSION) {
 					{
@@ -493,7 +493,7 @@ export function setInteractivity(self) {
 				survivalInfo = sampleData.term.values?.[sampleData.exitCodeKey]?.label || sampleData.exitCodeKey
 			}
 
-			if (survivalInfo || sampleData.convertedValueLabel || sampleData.label) {
+			if (survivalInfo || sampleData.convertedValueLabel || sampleData.label || sampleData.label === 0) {
 				// show term value row only when not undefined
 				if (sampleData.term.type == TermTypes.GENE_EXPRESSION) {
 					{
