@@ -1,2 +1,1 @@
-Fixes:
-- matrix/hiercluster: show value when it equals to 0 in hover over tooltip and click menu
+

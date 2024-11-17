@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- matrix/hiercluster: show value when it equals to 0 in hover over tooltip and click menu
+
+
 ## 2.86.1
 
 Fixes:
