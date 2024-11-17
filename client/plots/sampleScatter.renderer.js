@@ -367,7 +367,7 @@ export function setRenderers(self) {
 		}
 		scale = (self.zoom * scale * factor) / 3
 		const particleSize = 16 * scale
-		const x = chart.xAxisScale(c.x)
+		const x = chart.xAxisScale(c.x) - particleSize / 2
 		const y = chart.yAxisScale(c.y) - particleSize / 2
 		const transform = `translate(${x},${y}) scale(${scale})` // original icons are scaled to 0.3
 		return transform
