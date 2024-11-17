@@ -219,7 +219,7 @@ export function setRenderers(self) {
 							? 'none'
 							: ''
 					)
-					.attr('font-size', lab.grp?.type === 'hierCluster' ? s.clusterRowh : side.attr.fontSize)
+					.attr('font-size', lab.grp?.type === 'hierCluster' ? Math.max(4, s.clusterRowh - 4) : side.attr.fontSize)
 					.attr('text-anchor', side.attr.labelAnchor)
 					.attr('transform', side.attr.labelTransform)
 					.attr('cursor', 'pointer')
@@ -232,7 +232,7 @@ export function setRenderers(self) {
 						lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous'
 							? 10
 							: lab.grp?.type === 'hierCluster'
-							? 0.3 * s.clusterRowh
+							? 0.1 * s.clusterRowh
 							: 0
 					)
 				} else {
