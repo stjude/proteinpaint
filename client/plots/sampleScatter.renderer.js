@@ -45,13 +45,16 @@ export function setRenderers(self) {
 		if (chart.data.samples.length == 0) return
 		const offsetX = self.axisOffset.x
 		const offsetY = self.axisOffset.y
+		const extraSpaceX = (chart.xMax - chart.xMin) * 0.05 //extra space added to avoid clipping the particles on the X axis
+		const extraSpaceY = (chart.yMax - chart.yMin) * 0.05 //extra space added to avoid clipping the particles on the Y axis
+
 		chart.xAxisScale = d3Linear()
-			.domain([chart.xMin, chart.xMax])
+			.domain([chart.xMin - extraSpaceX, chart.xMax + extraSpaceX])
 			.range([offsetX, self.settings.svgw + offsetX])
 
 		chart.axisBottom = axisBottom(chart.xAxisScale)
 		chart.yAxisScale = d3Linear()
-			.domain([chart.yMax, chart.yMin])
+			.domain([chart.yMax + extraSpaceY, chart.yMin - extraSpaceY])
 			.range([offsetY, self.settings.svgh + offsetY])
 
 		chart.zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, self.settings.svgd])
@@ -352,8 +355,6 @@ export function setRenderers(self) {
 	}
 
 	self.transform = function (chart, c, factor = 1) {
-		const x = chart.xAxisScale(c.x)
-		const y = chart.yAxisScale(c.y)
 		const isRef = !('sampleId' in c)
 		let scale
 		if (!self.config.scaleDotTW || isRef) {
@@ -364,7 +365,11 @@ export function setRenderers(self) {
 				scale = self.settings.minShapeSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 			else scale = self.settings.maxShapeSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 		}
-		const transform = `translate(${x},${y}) scale(${(self.zoom * scale * factor) / 3})` // original icons are scaled to 0.3
+		scale = (self.zoom * scale * factor) / 3
+		const particleSize = 16 * scale
+		const x = chart.xAxisScale(c.x)
+		const y = chart.yAxisScale(c.y) - particleSize / 2
+		const transform = `translate(${x},${y}) scale(${scale})` // original icons are scaled to 0.3
 		return transform
 	}
 
