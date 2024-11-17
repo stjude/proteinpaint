@@ -409,9 +409,9 @@ export async function getPlotConfig(opts, app) {
 					 * controls, changing settings, etc. */
 					config.childType = 'violin' // when mode=continuous is present, use violin by default and allow override below.
 					const state = app.getState()
-					if (state.plots) {
+					if (state?.plots) {
 						const p = state.plots.find(p => p.id === config.id)
-						if (p && p.childType) {
+						if (p?.childType) {
 							config.childType = p.childType
 						} else {
 							// p.childType maybe missing (?), in such case do not change config.childType
