@@ -15,15 +15,15 @@
     "#shared": "@sjcrh/proteinpaint-shared"
   },
   "scripts": {
+    "generate": "node dev.mjs",
     "predev": "tsx emitCheckers.ts",
     "dev": "node --watch-path=src --watch-path=checkers dev.mjs",
     "prepare": "ts-patch install",
     "build": "./build.sh",
     "prepack": "./build.sh",
-    "postpack": "cd dist && ls *.js | grep -xvF index.js | xargs rm -f",
+    "postpack": "rm dist/*.js && mv dist/index.ts dist/index.js",
     "test": "tsc",
-    "doc": "./doc.sh",
-    "generate": "typia generate --input ./checkers --output ./dist"
+    "doc": "./doc.sh"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
