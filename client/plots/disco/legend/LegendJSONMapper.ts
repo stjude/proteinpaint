@@ -121,37 +121,18 @@ export default class LegendJSONMapper {
 			let cnvOrder = 0
 
 			const cnvItems: Array<any> = []
-			if (gain.value > 0) {
-				cnvItems.push({
-					termid: legend.cnvTitle,
-					key: CnvType.Gain,
-					text: 'Copy number gain',
-					width: 100,
-					domain: [0, gain.value],
-					// minLabel: 0,
-					// maxLabel: gain.value,
-					order: cnvOrder++,
-					isLegendItem: true,
-					dt: 4,
-					scale: scaleLinear([0, 1], ['white', gain.color])
-				})
-			}
-
-			if (loss.value < 0) {
-				cnvItems.push({
-					termid: legend.cnvTitle,
-					key: CnvType.Loss,
-					text: 'Copy number loss',
-					width: 100,
-					domain: [loss.value, 0],
-					// minLabel: 0,
-					// maxLabel: loss.value,
-					order: cnvOrder++,
-					isLegendItem: true,
-					dt: 4,
-					scale: scaleLinear([0, 1], [loss.color, 'white'])
-				})
-			}
+			const maxValue = Math.max(Math.abs(loss.value), gain.value)
+			const domain = maxValue < 1 ? [-1, 0, 1] : [-maxValue, 0, maxValue]
+			cnvItems.push({
+				termid: legend.cnvTitle,
+				key: CnvType.LossGain,
+				width: 100,
+				domain,
+				order: cnvOrder++,
+				isLegendItem: true,
+				dt: 4,
+				scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color])
+			})
 
 			cnvItems.push({
 				termid: legend.cnvTitle,
