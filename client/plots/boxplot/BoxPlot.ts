@@ -211,7 +211,7 @@ class TdbBoxplot extends RxComponentInner {
 	async main() {
 		try {
 			const config = structuredClone(this.state.config)
-			if (config.childType != 'boxplot') return
+			if (config.childType != this.type && config.chartType != this.type) return
 
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
