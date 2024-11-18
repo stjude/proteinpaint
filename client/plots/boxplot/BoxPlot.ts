@@ -220,7 +220,10 @@ class TdbBoxplot extends RxComponent {
 			if (!data?.plots?.length) {
 				this.app.printError('No data found for box plot')
 			}
-			const maxLabelLgth = getMaxLabelLgth(this.dom.boxplots, data.plots)
+			const maxLabelLgth = getMaxLabelLgth(
+				this.dom.boxplots,
+				data.plots.filter(p => !p.isHidden)
+			)
 			const viewModel = new ViewModel(config, data, settings, maxLabelLgth, this.useDefaultSettings)
 
 			if (
