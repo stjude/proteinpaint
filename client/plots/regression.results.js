@@ -936,7 +936,7 @@ function setRenderers(self) {
 		estSpan.on('mouseover', event => {
 			const tip = self.dom.tip.clear()
 			const estimateMsg = self.getEstimateMsg(Object.assign({ est: Number(est) }, arg))
-			tip.d.append('div').style('min-width', '450px').style('max-width', '600px').text(estimateMsg)
+			tip.d.append('div').style('max-width', '500px').html(estimateMsg)
 			tip.showunder(event.target)
 		})
 		estSpan.on('mouseout', () => self.dom.tip.hide())
@@ -968,18 +968,18 @@ function setRenderers(self) {
 		const refGrp2 = tw2?.term?.values && tw2.term.values[tw2.refGrp] ? tw2.term.values[tw2.refGrp].label : tw2?.refGrp
 		let msg
 		if (regtype == 'linear') {
-			msg = tw2 ? getInteractionMsg() : `Mean "${outcomeTw.term.name}" is`
+			msg = tw2 ? getInteractionMsg() : `Mean ${styleVariable(outcomeTw)} is`
 			msg += ` ${Math.abs(est)} units`
 			if (isIntercept) return `${msg}, when ${getBaselinesMsg(independentTws)}.`
 			msg += ` ${est < 0 ? 'lower' : 'higher'} `
 		} else if (regtype == 'logistic') {
-			msg = tw2 ? getInteractionMsg() : `Odds of "${outcomeTw.term.name}: ${outcomeTw.nonRefGrp}" is`
+			msg = tw2 ? getInteractionMsg() : `Odds of ${styleVariable(outcomeTw, outcomeTw.nonRefGrp)} is`
 			if (isIntercept) return `${msg} ${est}, when ${getBaselinesMsg(independentTws)}.`
 			msg += est > 1 ? ` ${est} times higher ` : ` ${roundValue(1 / est, 3)} times lower `
 		} else if (regtype == 'cox') {
 			msg = tw2
 				? getInteractionMsg()
-				: `Hazard (instantaneous rate) of "${outcomeTw.term.name}: ${outcomeTw.eventLabel}" is`
+				: `Hazard (instantaneous rate) of ${styleVariable(outcomeTw, outcomeTw.eventLabel)} is`
 			msg += est > 1 ? ` ${est} times higher ` : ` ${roundValue(1 / est, 3)} times lower `
 		} else {
 			throw 'regression type not recognized'
@@ -990,12 +990,15 @@ function setRenderers(self) {
 			const interactingTws = independentTws.filter(t => tw.interactions.includes(t.term.id || t.term.name))
 			const interactionsBaselineMsg = getBaselinesMsg(interactingTws)
 			msg += category
-				? `in "${tw.term.name}: ${category}", ${interactionsBaselineMsg} compared to "${tw.term.name}: ${refGrp}", ${interactionsBaselineMsg}`
-				: `for every one unit increase of "${tw.term.name}" and ${interactionsBaselineMsg}`
+				? `in ${styleVariable(tw, category)}, ${interactionsBaselineMsg} compared to ${styleVariable(
+						tw,
+						refGrp
+				  )}, ${interactionsBaselineMsg}`
+				: `for every one unit increase of ${styleVariable(tw)} and ${interactionsBaselineMsg}`
 		} else {
 			msg += category
-				? `in "${tw.term.name}: ${category}" compared to "${tw.term.name}: ${refGrp}"`
-				: `for every one unit increase of "${tw.term.name}"`
+				? `in ${styleVariable(tw, category)} compared to ${styleVariable(tw, refGrp)}`
+				: `for every one unit increase of ${styleVariable(tw)}`
 		}
 		// adjusting for covariates
 		// get term ids of current variable and any interacting variables
@@ -1005,25 +1008,40 @@ function setRenderers(self) {
 			else tids.push(...tw.interactions)
 		}
 		// get covariates (i.e., all other variables)
-		const covariates = independentTws.filter(t => !tids.includes(t.term.id || t.term.name)).map(t => `"${t.term.name}"`)
+		const covariates = independentTws.filter(t => !tids.includes(t.term.id || t.term.name)).map(t => styleVariable(t))
 		if (regtype == 'cox')
-			covariates.push(outcomeTw.q.timeScale == 'time' ? '"Years of follow-up"' : '"Attained age during follow-up"')
+			covariates.push(outcomeTw.q.timeScale == 'time' ? '"Years of follow-up"' : '"Attained age during follow-up"') // TODO: how to handle styling for this?
 		// build message for covariates
 		if (!covariates.length || isUnivariate) return msg + '.'
 		else if (covariates.length === 1) return msg + `, adjusting for ${covariates[0]}.`
 		else return msg + `, adjusting for ${covariates.slice(0, -1).join(', ')} and ${covariates.slice(-1)}.`
 
+		// function to style a variable (and its category)
+		function styleVariable(tw, category) {
+			const spans = [
+				`<span class="term_name_btn sja_filter_tag_btn" style="padding: 3px 6px; margin: 2px 0px; border-radius: ${
+					category ? '6px 0px 0px 6px' : '6px'
+				};">${tw.term.name}</span>`
+			]
+			if (category) {
+				spans.push(
+					`<span class="ts_summary_btn sja_filter_tag_btn" style="padding: 3px 6px; margin: 2px 0px; border-radius: 0px 6px 6px 0px; font-style: italic;">${category}</span>`
+				)
+			}
+			return `<div style="display: inline; white-space: nowrap">${spans.join('')}</div>`
+		}
+
 		// function to get message for interaction term
 		function getInteractionMsg() {
 			let msg =
 				regtype == 'linear'
-					? `The difference in mean "${outcomeTw.term.name}"`
+					? `The difference in mean ${styleVariable(outcomeTw)}`
 					: regtype == 'logistic'
-					? `The difference in odds of "${outcomeTw.term.name}: ${outcomeTw.nonRefGrp}"`
-					: `The difference in hazard (instantaneous rate) of "${outcomeTw.term.name}: ${outcomeTw.eventLabel}"`
+					? `The difference in odds of ${styleVariable(outcomeTw, outcomeTw.nonRefGrp)}`
+					: `The difference in hazard (instantaneous rate) of ${styleVariable(outcomeTw, outcomeTw.eventLabel)}`
 			msg += category2
-				? ` between "${tw2.term.name}: ${category2}" and "${tw2.term.name}: ${refGrp2}" is`
-				: ` for every one unit increase of "${tw2.term.name}" is`
+				? ` between ${styleVariable(tw2, category2)} and ${styleVariable(tw2, refGrp2)} is`
+				: ` for every one unit increase of ${styleVariable(tw2)}" is`
 			return msg
 		}
 
@@ -1035,10 +1053,10 @@ function setRenderers(self) {
 				if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
 					// term has refGrp
 					const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
-					return `"${tw.term.name}: ${refGrp}"`
+					return styleVariable(tw, refGrp)
 				} else {
 					// term does not have refGrp
-					return `"${tw.term.name}: 0"`
+					return styleVariable(tw, '0')
 				}
 			})
 			if (!baselines.length) return ''
