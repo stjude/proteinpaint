@@ -148,7 +148,7 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Forms',
+			label: 'Templates',
 			chartType: 'profileForms',
 			clickTo: self.showTree_select1term,
 			usecase: { target: 'profileForms', detail: 'tw' },
