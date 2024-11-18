@@ -52,7 +52,7 @@ export function typeCheckers(fileRoutes, fromPath) {
 			if (m.request.typeId) typeIdsByFile[file].add(m.request.typeId)
 			if (m.response.typeId) typeIdsByFile[file].add(m.response.typeId)
 			const filename = file.split('.').slice(0, -1).join('.')
-			exportLines.push(`export {${route.payloadName}} from '${fromPath}/${filename}.js'`)
+			if (route.payloadName) exportLines.push(`export {${route.payloadName}} from '${fromPath}/${filename}.js'`)
 		}
 	}
 	const importLines = [`import { createValidate } from 'typia'`]
