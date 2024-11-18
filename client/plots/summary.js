@@ -398,30 +398,45 @@ export async function getPlotConfig(opts, app) {
 		},
 		mayAdjustConfig(config, edits = {}) {
 			/*
-				when recovering from state:
-				  - mayAdjustConfig should not even run: how to know initial
+				when recovering from state rehydration:
+				- Mass store must call mayAdjustConfig(), if available, since the recovered state
+				may be partial such as from an example url. Even a previously saved "full" state
+				may still need to be filled or reshaped with new state config/settings.
 			*/
-			if (!edits.childType) {
-				if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
-					config.childType = 'sampleScatter'
-				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
-					/** Fix for summary tabs switching to different plots when opening and closing
-					 * controls, changing settings, etc. */
-					config.childType = 'violin' // when mode=continuous is present, use violin by default and allow override below.
-					const state = app.getState()
-					if (state?.plots) {
-						const p = state.plots.find(p => p.id === config.id)
-						if (p?.childType) {
-							config.childType = p.childType
-						} else {
-							// p.childType maybe missing (?), in such case do not change config.childType
-						}
-					} else if (opts.childType) {
-						config.childType = opts.childType
+
+			if (edits.childType) {
+				// no need to set config.childType if a value is already specified
+				// in an edits object (optional second argument), as processed by mass store
+				if (config.childType != edits.childType)
+					throw `action.config.childType was not applied in mass store.plot_edit()`
+				return
+			}
+
+			// config.childType may be stale, OR edits.childType may not be available,
+			// when the summary plot_edit is triggered by replacing a term, such as replacing
+			// categorical overlay with numeric, in which case the dispatched action might not
+			// know in advance what the chiltType should be. It is much more reliable and consistent
+			// to determine the default plots here, depending on the processed config.
+			if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
+				// TODO: may need more logic later if more than one summary childType,
+				// besides scatter, can support 2 continuous terms
+				config.childType = 'sampleScatter'
+			} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
+				if (!discreteByContinuousPlots.has(config.childType)) {
+					// only change config.childType if the current value is not supported by discrete + continuous tw
+					if (opts.childType && !discreteByContinuousPlots.has(opts.childType)) {
+						console.warn(
+							`ignoring summary opts.childType='${opts.childType}' since it does not support plotting discrete by continuous tw's`
+						)
+						config.childType = 'violin'
+					} else {
+						config.childType = opts.childType || 'violin'
 					}
-				} else {
-					config.childType = 'barchart'
 				}
+			} else {
+				// TODO: may need more logic later if more than one summary childType,
+				// besides barchart, can support discrete tw only
+				config.childType = 'barchart'
 			}
 		}
 	}
@@ -430,3 +445,5 @@ export async function getPlotConfig(opts, app) {
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
 }
+
+const discreteByContinuousPlots = new Set(['violin', 'boxplot'])
