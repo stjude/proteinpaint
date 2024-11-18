@@ -1,2 +1,1 @@
-Fixes:
-- handle missing childType when launching gene exp summary plot
+

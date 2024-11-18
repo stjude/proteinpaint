@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - matrix/hiercluster: show value when it equals to 0 in hover over tooltip and click menu
+- handle missing childType when launching gene exp summary plot
 
 
 ## 2.86.1
