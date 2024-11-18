@@ -15,8 +15,8 @@ import {
 } from '../mass/groups'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
-import { searchSampleInput, getSamplesRelated } from './sampleView.js'
-import { shapes, shapesArray, shapeSelector } from '../dom/shapes.js'
+import { searchSampleInput } from './sampleView.js'
+import { shapesArray, shapeSelector } from '../dom/shapes.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 export function setInteractivity(self) {
@@ -180,6 +180,7 @@ export function setInteractivity(self) {
 				let row = table.append('tr')
 
 				const showIcon = tw != null && (tw == self.config.colorTW || tw == self.config.shapeTW)
+				console.log(showIcon)
 				let label = tw ? tw.term.name : node.category
 				if (samples.length > 1 && !displaySample) label = label + ` (${node.samples.length})`
 				row.append('td').style('color', '#aaa').text(label)
@@ -194,9 +195,9 @@ export function setInteractivity(self) {
 							: self.settings.defaultColor
 					const index =
 						tw == self.config.colorTW
-							? chart.shapeLegend.get('Ref').shape % shapes.length
-							: chart.shapeLegend.get(sample.shape).shape % shapes.length
-					const shape = shapes[index]
+							? chart.shapeLegend.get('Ref').shape % shapesArray.length
+							: chart.shapeLegend.get(sample.shape).shape % shapesArray.length
+					const shape = shapesArray[index]
 					let fontColor = 'black'
 					const whiteColor = rgb('white').toString()
 
