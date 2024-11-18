@@ -180,7 +180,6 @@ export function setInteractivity(self) {
 				let row = table.append('tr')
 
 				const showIcon = tw != null && (tw == self.config.colorTW || tw == self.config.shapeTW)
-				console.log(showIcon)
 				let label = tw ? tw.term.name : node.category
 				if (samples.length > 1 && !displaySample) label = label + ` (${node.samples.length})`
 				row.append('td').style('color', '#aaa').text(label)
