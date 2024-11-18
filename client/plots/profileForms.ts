@@ -29,6 +29,7 @@ export class profileForms extends profilePlot {
 		super.init(appState)
 		const rightDiv = this.dom.rightDiv
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
+		const activePlot = config.plots[0] //later on will be based on the tab selected
 		const settings = config.settings.profileForms
 		rightDiv.append('h3').text(config.module)
 		const shift = 750
@@ -49,7 +50,7 @@ export class profileForms extends profilePlot {
 			mainG,
 			gridG
 		})
-		this.twLst = config.terms.concat(config.scTerms)
+		this.twLst = activePlot.terms.concat(activePlot.scTerms)
 	}
 
 	async main() {
@@ -94,9 +95,10 @@ export class profileForms extends profilePlot {
 		const samples = this.settings.site ? [this.data.samples[this.settings.site]] : this.data.lst
 		const height = 30
 		let y = 0
-		for (const tw of this.state.config.terms) {
+		const activePlot = this.state.config.plots[0] //later on will be based on the tab selected
+		for (const tw of activePlot.terms) {
 			const percents: { [key: string]: number } = this.getPercentsDict(tw, samples)
-			const scTerm = this.state.config.scTerms.find(t => t.term.id.includes(tw.term.id))
+			const scTerm = activePlot.scTerms.find(t => t.term.id.includes(tw.term.id))
 			const scPercents: { [key: string]: number } = this.getSCPercentsDict(scTerm, samples)
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
@@ -170,13 +172,18 @@ export class profileForms extends profilePlot {
 }
 
 export async function getPlotConfig(opts, app) {
-	let config = getProfilePlotConfig(app, opts)
-	config = config.find(t => t.module == opts.tw.term.name)
-
+	const formsConfig = getProfilePlotConfig(app, opts)
+	const module = opts.tw.term.name
+	let config = formsConfig[module]
+	if (!config) throw 'No data available for the module ' + module
 	config.settings = getDefaultProfileFormsSettings()
+	config.header = 'Templates'
 	config = copyMerge(structuredClone(config), opts)
-	await fillTwLst(config.terms, app.vocabApi)
-	await fillTwLst(config.scTerms, app.vocabApi)
+	for (const plot of config.plots) {
+		await fillTwLst(plot.terms, app.vocabApi)
+		await fillTwLst(plot.scTerms, app.vocabApi)
+	}
+
 	await loadFilterTerms(config, app, opts)
 	return config
 }
