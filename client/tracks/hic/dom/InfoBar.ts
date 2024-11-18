@@ -1,4 +1,4 @@
-import { ColorScale } from '#dom/ColorScale'
+import { ColorScale } from '#dom'
 import { Tr } from '../../../types/d3'
 import { bplen } from '#shared/common.js'
 
