@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ } from '../controls'
-import { RxComponent } from '../../types/rx.d'
+import { RxComponentInner } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
 import { Menu } from '#dom'
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
@@ -60,7 +60,7 @@ export type BoxPlotDom = {
 	tip: Menu
 }
 
-class TdbBoxplot extends RxComponent {
+class TdbBoxplot extends RxComponentInner {
 	readonly type = 'boxplot'
 	components: { controls: any }
 	dom: BoxPlotDom
@@ -210,12 +210,11 @@ class TdbBoxplot extends RxComponent {
 
 	async main() {
 		try {
-			const state = this.app.getState()
-			const config = structuredClone(state.plots.find((p: any) => p.id === this.id))
+			const config = structuredClone(this.state.config)
 			if (config.childType != 'boxplot') return
 
 			const settings = config.settings.boxplot
-			const model = new Model(config, state, this.app, settings)
+			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
 			if (!data?.plots?.length) {
 				this.app.printError('No data found for box plot')
