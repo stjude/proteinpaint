@@ -1,5 +1,5 @@
 import type { CategoriesRequest, CategoriesResponse, RouteApi } from '#types'
-import { termdbCategoriesPayload } from '#types'
+import { termdbCategoriesPayload } from '#types/checkers'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
 

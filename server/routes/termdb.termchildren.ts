@@ -1,5 +1,5 @@
 import type { TermChildrenRequest, TermChildrenResponse, RouteApi } from '#types'
-import { termChildrenPayload } from '#types'
+import { termChildrenPayload } from '#types/checkers'
 import { copy_term, get_ds_tdb } from '#src/termdb.js'
 
 export const api: RouteApi = {

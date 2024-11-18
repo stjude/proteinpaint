@@ -1,5 +1,5 @@
 import type { SnpRequest, SnpResponse, RouteApi } from '#types'
-import { snpPayload } from '#types'
+import { snpPayload } from '#types/checkers'
 import * as utils from '#src/utils.js'
 
 export const api: RouteApi = {

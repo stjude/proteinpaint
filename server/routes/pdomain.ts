@@ -1,5 +1,5 @@
 import type { PdomainRequest, PdomainResponse, RouteApi } from '#types'
-import { pdomainPayload } from '#types'
+import { pdomainPayload } from '#types/checkers'
 
 export const api: RouteApi = {
 	// route endpoint

@@ -11,10 +11,10 @@ export type GdcMafBuildResponse = any
 
 export const GdcMafPayload: RoutePayload = {
 	request: {
-		typeId: 'GdcMafRequest'
+		typeId: 'GdcMafBuildRequest'
 	},
 	response: {
-		typeId: 'GdcMafResponse'
+		typeId: 'GdcMafBuildResponse'
 	}
 	//examples: []
 }

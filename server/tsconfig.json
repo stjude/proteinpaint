@@ -2,16 +2,9 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "rootDir": ".",
-    "baseUrl": "./",
-    "paths": {
-      "#types": ["./shared/types/index.mts"],
-      "#types*": ["./shared/types/*"],
-      "#shared/*": ["./shared/*"],
-      "#src/*": ["./src/*"],
-      "#routes/*": ["./routes/*"]
-    }
+    "baseUrl": "./"
   },
   "types": ["node"],
   "include": ["./**/*.ts"],
-  "exclude": ["./**/*.type.spec.ts", "./package/*", "shared/checkers*/**/*"]
+  "exclude": ["./**/*.type.spec.ts", "./package/*"]
 }

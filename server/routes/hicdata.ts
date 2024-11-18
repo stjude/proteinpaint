@@ -1,5 +1,5 @@
 import type { HicdataRequest, HicdataResponse, XYZCoord, RouteApi } from '#types'
-import { hicdataPayload } from '#types'
+import { hicdataPayload } from '#types/checkers'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'

@@ -1,5 +1,5 @@
 import type { TileRequest /*, TileResponse*/, RouteApi } from '#types'
-import { tilePayload } from '#types'
+import { tilePayload } from '#types/checkers'
 import ky from 'ky'
 import serverconfig from '#src/serverconfig.js'
 

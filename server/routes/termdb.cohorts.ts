@@ -1,5 +1,5 @@
 import type { TermdbCohortsRequest, TermdbCohortsResponse, RouteApi } from '#types'
-import { termdbCohortsPayload } from '#types'
+import { termdbCohortsPayload } from '#types/checkers'
 import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js' // ??? is this needed for this route ???
 

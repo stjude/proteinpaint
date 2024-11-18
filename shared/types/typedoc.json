@@ -1,5 +1,5 @@
 {
-	"entryPoints": ["./src/checkers/routes.ts"],
+	"entryPoints": ["./checkers/index.ts"],
 	"out": "../../public/docs/server",
 	"groupOrder": ["Termdb", "Termdb - TW", "TW", "*"],
 	"categoryOrder": ["Termdb", "Termdb - TW", "TW", "*"],

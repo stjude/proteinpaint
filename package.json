@@ -19,7 +19,7 @@
   "scripts": {
     "reset": "rm -rf ./node_modules && rm -rf ./**/node_modules && rm -rf ./**/**/node_modules && npm install",
     "bundle": "cd client; npm run dev",
-    "dev": "cd client; ./dev.sh; ",
+    "dev": "cd client; ./dev.sh ",
     "build": "npm run build --workspace=server",
     "start": "tsx watch ./server/start.js",
     "dev1": "trap 'kill %1' INT; npm run bundle & npm start",

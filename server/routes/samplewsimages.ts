@@ -1,5 +1,5 @@
 import type { SampleWSImagesRequest, SampleWSImagesResponse, WSImage, RouteApi, Mds3 } from '#types'
-import { sampleWSImagesPayload } from '#types'
+import { sampleWSImagesPayload } from '#types/checkers'
 
 /*
 given a sample, return all whole slide images for specified dataset

@@ -53,14 +53,15 @@ jobs:
       - name: Run tsc
         run: |
           # !!! TODO: run type check at the proteinpaint dir !!!
-          cd server 
-          npx tsc
-          cd ../client
-          npm run tsc
-          cd ../shared/types
+          cd shared/types
+          npm run build
           npx tsc
           cd ../utils
           npx tsc
+          cd ../../server 
+          npx tsc
+          cd ../client
+          npm run tsc
 
       - name: Create server cache folder
         run: if [[ ! -d "server/cache" ]]; then mkdir server/cache; fi

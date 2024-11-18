@@ -1,7 +1,7 @@
 //import fs from 'fs'
 import path from 'path'
 import type { DERequest, DEResponse, ExpressionInput, RouteApi } from '#types'
-import { diffExpPayload } from '#types'
+import { diffExpPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { get_ds_tdb } from '../src/termdb.js'
 import run_R from '../src/run_R.js'

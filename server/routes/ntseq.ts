@@ -1,5 +1,5 @@
 import type { NtseqRequest, NtseqResponse, RouteApi } from '#types'
-import { ntseqPayload } from '#types'
+import { ntseqPayload } from '#types/checkers'
 import { get_fasta } from '#src/utils.js'
 
 export const api: RouteApi = {

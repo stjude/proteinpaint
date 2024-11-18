@@ -17,7 +17,7 @@ import type {
 	TermdbSingleCellDataRequest,
 	RouteApi
 } from '#types'
-import { termdbSingleCellSamplesPayload } from '#types'
+import { termdbSingleCellSamplesPayload } from '#types/checkers'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
@@ -218,7 +218,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.rds')
 			try {
 				await fs.promises.stat(rdsfile)
-			} catch (e: any) {
+			} catch (_) {
 				return {}
 				// do not throw when file is missing/unreabable, but returns blank data. this simplifies client logic
 			}
@@ -228,7 +228,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 				out = JSON.parse(
 					await run_R(path.join(serverconfig.binpath, 'utils', 'getGeneFromMatrix.R'), null, [rdsfile, q.gene])
 				)
-			} catch (e) {
+			} catch (_) {
 				// if gene is not found will emit such msg
 				return {}
 			}
@@ -242,7 +242,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
 			try {
 				await fs.promises.stat(rdsfile)
-			} catch (e: any) {
+			} catch (_) {
 				return {}
 				// do not throw when file is missing/unreabable, but returns blank data. this simplifies client logic
 			}
@@ -262,7 +262,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 						console.log(line)
 					}
 				}
-			} catch (e) {
+			} catch (_) {
 				// if gene is not found will emit such msg
 				return {}
 			}

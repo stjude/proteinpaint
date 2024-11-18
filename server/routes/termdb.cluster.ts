@@ -12,7 +12,7 @@ import type {
 	GeneExpressionQueryGdc,
 	RouteApi
 } from '#types'
-import { termdbClusterPayload } from '#types'
+import { termdbClusterPayload } from '#types/checkers'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'

@@ -1,5 +1,5 @@
 import type { NumericCategoriesRequest, NumericCategoriesResponse, RouteApi } from '#types'
-import { numericCategoriesPayload } from '#types'
+import { numericCategoriesPayload } from '#types/checkers'
 import * as termdbsql from '#src/termdb.sql.js'
 
 export const api: RouteApi = {

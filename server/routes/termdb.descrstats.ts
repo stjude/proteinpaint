@@ -1,5 +1,5 @@
 import type { DescrStatsRequest, DescrStatsResponse, RouteApi } from '#types'
-import { descrStatsPayload } from '#types'
+import { descrStatsPayload } from '#types/checkers'
 import Summarystats from '#shared/descriptive.stats.js'
 import { getData } from '#src/termdb.matrix.js'
 

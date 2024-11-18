@@ -70,7 +70,6 @@
   </div>
 </div>
 <script type='module'>
-import * as ppcheckers from './docs/server/checkers.js'
 
 init()
 
@@ -282,10 +281,11 @@ async function init() {
       .style('position', 'relative')
       .style('top', '-2px')
       .html('validate')
-      .on('click', function(selectData) {
+      .on('click', async function(selectData) {
         const d = selectData.selected
         if (d?.url == 'spec') return
-        fetchData(api, d, method, m, section, ppcheckers[`valid${m.response.typeId}`])
+        const checkers = await import(`./docs/server/dist/${api.file}`)
+        fetchData(api, d, method, m, section, checkers[`valid${m.response.typeId}`])
       })
   }
 

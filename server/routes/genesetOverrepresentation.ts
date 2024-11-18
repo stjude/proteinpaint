@@ -5,7 +5,7 @@ import type {
 	gene_overrepresentation_input,
 	RouteApi
 } from '#types'
-import { genesetOverrepresentationPayload } from '#types'
+import { genesetOverrepresentationPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'

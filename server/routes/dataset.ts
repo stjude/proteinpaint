@@ -2,7 +2,7 @@ import * as mds2_init from '#src/mds2.init.js'
 import * as mds3_init from '#src/mds3.init.js'
 import * as common from '#shared/common.js'
 import type { DatasetRequest, DatasetResponse, RouteApi } from '#types'
-import { datasetPayload } from '#types'
+import { datasetPayload } from '#types/checkers'
 
 export const api: RouteApi = {
 	endpoint: 'getDataset', // should rename to simply 'dataset', method is based on HTTP method

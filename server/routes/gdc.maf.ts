@@ -1,5 +1,5 @@
 import type { GdcMafRequest, GdcMafResponse, File, RouteApi } from '#types'
-import { gdcMafPayload } from '#types'
+import { gdcMafPayload } from '#types/checkers'
 import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
@@ -100,7 +100,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 	let re
 	try {
 		re = JSON.parse(response.body)
-	} catch (e) {
+	} catch (_) {
 		throw 'invalid JSON from ' + api.endpoint
 	}
 	if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'

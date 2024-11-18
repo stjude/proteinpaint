@@ -6,7 +6,13 @@ module.exports = {
 	rules: {
 		'@typescript-eslint/no-explicit-any': 'off',
 		'@typescript-eslint/no-non-null-assertion': 'off',
-		'@typescript-eslint/no-unused-vars': 'warn',
+		'@typescript-eslint/no-unused-vars': [
+			'warn',
+			{
+				caughtErrors: 'all',
+				caughtErrorsIgnorePattern: '^_'
+			}
+		],
 		'@typescript-eslint/consistent-type-imports': 'warn'
 	}
 }

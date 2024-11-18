@@ -58,7 +58,9 @@ jobs:
 
       - name: TSC
         run: |
-          cd server
+          cd shared/types
+          npm run build
+          cd ../../server
           npx tsc
           cd ..
 

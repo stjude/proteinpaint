@@ -3,7 +3,6 @@
     "strictNullChecks": true,
     "rootDir": "./",
     "baseUrl": "./",
-    "noEmit": true,
     "allowImportingTsExtensions": true,
     "plugins": [
       { "transform": "typia/lib/transform" }
@@ -11,10 +10,12 @@
     "target": "es2016",
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "bundler" // to skip errors related to import of types from ts files
+    "moduleResolution": "bundler",
+    "noEmit": true
   },
   "exclude": [
     "./node_modules",
+    "./*.ts",
     "./dist"
   ]
 }

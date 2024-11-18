@@ -8,20 +8,22 @@
   "exports": {
     ".": "./src/index.ts",
     "./updated": "./src/terms/updated-types.ts",
-    "./*": "./src/*",
     "./routes/*": "./src/routes/*",
-    "./checkers/*": "./dist/checkers/*"
+    "./checkers": "./dist/index.js"
   },
   "imports": {
     "#shared": "@sjcrh/proteinpaint-shared"
   },
   "scripts": {
+    "predev": "tsx emitCheckers.ts",
+    "dev": "node --watch-path=src --watch-path=checkers dev.mjs",
     "prepare": "ts-patch install",
-    "test": "tsc",
     "build": "./build.sh",
-    "prepack": "./build.sh && mv src src-raw && mv srcjs src && mv package.json package.json-0 && mv src/package.json .",
-    "postpack": "rm -rf src && mv src-raw src && mv package.json-0 package.json",
-    "doc": "./doc.sh"
+    "prepack": "./build.sh",
+    "postpack": "cd dist && ls *.js | grep -xvF index.js | xargs rm -f",
+    "test": "tsc",
+    "doc": "./doc.sh",
+    "generate": "typia generate --input ./checkers --output ./dist"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
@@ -33,7 +35,7 @@
     "typia": "^4.1.14"
   },
   "files": [
-    "dist",
+    "dist/*.js",
     "src"
   ]
 }

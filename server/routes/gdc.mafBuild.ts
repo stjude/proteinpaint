@@ -3,7 +3,7 @@ import path from 'path'
 import { run_rust_stream } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type { GdcMafBuildRequest, RouteApi } from '#types'
-import { gdcMafPayload } from '#types'
+import { gdcMafPayload } from '#types/checkers'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 
 export const api: RouteApi = {
@@ -95,7 +95,7 @@ async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
 	let re
 	try {
 		re = JSON.parse(response.body)
-	} catch (e) {
+	} catch (_) {
 		throw 'invalid json from getFileLstUnderSizeLimit'
 	}
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'

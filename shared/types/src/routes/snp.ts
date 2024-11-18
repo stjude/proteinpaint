@@ -5,9 +5,9 @@ export type SnpResponse = any
 
 export const snpPayload: RoutePayload = {
 	request: {
-		typeId: 'any'
+		typeId: 'SnpRequest'
 	},
 	response: {
-		typeId: 'any'
+		typeId: 'SnpResponse'
 	}
 }

@@ -1,5 +1,5 @@
 import type { Image, TermdbSampleImagesRequest, TermdbSampleImagesResponse, RouteApi } from '#types'
-import { termdbSampleImagesPayload } from '#types'
+import { termdbSampleImagesPayload } from '#types/checkers'
 import path from 'path'
 import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'

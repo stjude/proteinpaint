@@ -1,5 +1,5 @@
 import type { HicGenomeRequest, HicGenomeResponse, XYZCoord, RouteApi } from '#types'
-import { hicGenomePayload } from '#types'
+import { hicGenomePayload } from '#types/checkers'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'

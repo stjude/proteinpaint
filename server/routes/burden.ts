@@ -1,5 +1,5 @@
 import type { BurdenRequest, BurdenResponse, RouteApi } from '#types'
-import { burdenPayload } from '#types'
+import { burdenPayload } from '#types/checkers'
 // may decide to use these checkers later
 //import { validBurdenRequest, validBurdenResponse } from '#types/checkers/routes.js'
 import run_R from '#src/run_R.js'

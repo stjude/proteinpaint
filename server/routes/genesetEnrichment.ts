@@ -1,5 +1,5 @@
 import type { GenesetEnrichmentRequest, GenesetEnrichmentResponse, RouteApi } from '#types'
-import { genesetEnrichmentPayload } from '#types'
+import { genesetEnrichmentPayload } from '#types/checkers'
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
@@ -118,7 +118,7 @@ async function run_genesetEnrichment_analysis(
 async function run_gsea(path, data) {
 	try {
 		await fs.promises.stat(path)
-	} catch (e) {
+	} catch (_) {
 		throw `${path} does not exist`
 	}
 	return new Promise((resolve, reject) => {

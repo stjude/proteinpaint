@@ -1,6 +1,6 @@
 import { getStat } from '#src/health.ts'
 import type { HealthCheckRequest, HealthCheckResponse, RouteApi } from '#types'
-import { healthcheckPayload } from '#types'
+import { healthcheckPayload /*, validHealthCheckRequest*/ } from '#types/checkers'
 
 export const api: RouteApi = {
 	endpoint: 'healthcheck',
@@ -16,6 +16,8 @@ function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const q: HealthCheckRequest = req.query
+			//const result = validHealthCheckRequest(q)
+			//if (!result.success) throw result.errors
 			const health: HealthCheckResponse = await getStat(genomes)
 			if (q.dslabel) {
 				for (const gn in genomes) {
