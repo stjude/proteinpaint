@@ -2,7 +2,7 @@ import { bplen } from '#shared/common.js'
 import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { hicparsestat, hicparsefragdata } from '../tracks/hic/data/parseData.ts'
-import { ColorScale } from '../dom/ColorScale.ts'
+import { ColorScale } from '#dom'
 
 /*
 single-sample hic
