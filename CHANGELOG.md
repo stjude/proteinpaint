@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.87.0
 
 Features:
 - Box plot: new features include tooltips for the label and outliers, dark mode, list samples (when available), and hide/unhide plots.
