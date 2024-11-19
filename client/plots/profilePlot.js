@@ -41,7 +41,6 @@ export class profilePlot {
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
-		console.log(config)
 		if (this.opts.header) {
 			const suffix = state.logged ? (state.site ? state.site : 'Admin') : 'Public'
 			this.opts.header.text(config.header ? config.header + ` / ${suffix}` : config.chartType + ` / ${suffix}`)
@@ -85,8 +84,8 @@ export class profilePlot {
 				window.print()
 			}
 		})
-
-		if (this.type != 'profileBarchart') {
+		//later on show table for the profileForms
+		if (this.type != 'profileBarchart' && this.type != 'profileForms') {
 			const tableIconDiv = iconsDiv.append('div').style('padding-bottom', '15px')
 			this.dom.tableBt = tableIconDiv
 				.append('button')
