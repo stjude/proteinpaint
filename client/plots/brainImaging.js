@@ -489,7 +489,8 @@ function setInteractivity(self) {
 		if (!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key])
 			tw.term.values[key].color = color
 		else {
-			if (!tw.term.values) tw.term.values = { [key]: {} }
+			if (!tw.term.values) tw.term.values = {}
+			if (!tw.term.values[key]) tw.term.values[key] = {}
 			tw.term.values[key].color = color
 		}
 
