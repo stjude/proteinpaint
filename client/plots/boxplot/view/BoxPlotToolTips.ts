@@ -1,11 +1,12 @@
-import type { Menu } from '#dom'
+import type { Menu, RenderedBoxPlot } from '#dom'
 import type { SvgG } from 'types/d3'
+import type { RenderedPlot } from './RenderedPlot'
 import { select } from 'd3-selection'
 
 export class BoxPlotToolTips {
-	boxplot: any
+	boxplot: RenderedBoxPlot
 	g: SvgG
-	plot: any
+	plot: RenderedPlot
 	tip: Menu
 	readonly tablePadding = '3px'
 	constructor(plot: any, g: SvgG, tip: Menu) {
@@ -47,39 +48,40 @@ export class BoxPlotToolTips {
 		})
 	}
 
-	addLineToolTips() {
-		const addToolTips = (elem, text: string) => {
-			const elemBBox = elem.node().getBBox()
-			//Add an expanded area for the tooltip
-			//Easier for user to hover over
-			this.g
-				.append('rect')
-				.attr('x', elemBBox.x - 10)
-				.attr('y', elemBBox.y - 10)
-				.attr('width', elemBBox.width + 20)
-				.attr('height', elemBBox.height + 20)
-				.attr('fill', 'transparent')
-				.style('pointer-events', 'all')
-				.on('mouseover', () => {
-					this.tip.clear().showunder(elem.node())
-					this.addText(text)
-				})
-				.on('mouseout', () => {
-					this.tip.hide()
-				})
-		}
+	// addLineToolTips() {
+	// 	const addToolTips = (elem, text: string) => {
+	// 		const elemBBox = elem.node().getBBox()
+	// 		//Add an expanded area for the tooltip
+	// 		//Easier for user to hover over
+	// 		this.g
+	// 			.append('rect')
+	// 			.attr('x', elemBBox.x - 10)
+	// 			.attr('y', elemBBox.y - 10)
+	// 			.attr('width', elemBBox.width + 20)
+	// 			.attr('height', elemBBox.height + 20)
+	// 			.attr('fill', 'transparent')
+	// 			.style('pointer-events', 'all')
+	// 			.on('mouseover', () => {
+	// 				this.tip.clear().showunder(elem.node())
+	// 				this.addText(text)
+	// 			})
+	// 			.on('mouseout', () => {
+	// 				this.tip.hide()
+	// 			})
+	// 	}
 
-		if (this.boxplot.linep50) {
-			const median = this.plot.descrStats.find((d: any) => d.id == 'median')
-			addToolTips(this.boxplot.linep50, `Median: ${median.value}`)
-		}
-		if (this.boxplot.linew1) {
-			addToolTips(this.boxplot.linew1, `${this.boxplot.w1}`)
-		}
-		if (this.boxplot.linew2) {
-			addToolTips(this.boxplot.linew2, `${this.boxplot.w2}`)
-		}
-	}
+	// 	if (this.boxplot.linep50) {
+	// 		const median = this.plot.descrStats.find((d: any) => d.id == 'median')
+	// 		if (!median) throw `Missing median value for ${this.plot.key}`
+	// 		addToolTips(this.boxplot.linep50, `Median: ${median.value}`)
+	// 	}
+	// 	if (this.boxplot.linew1) {
+	// 		addToolTips(this.boxplot.linew1, `${this.boxplot.w1}`)
+	// 	}
+	// 	if (this.boxplot.linew2) {
+	// 		addToolTips(this.boxplot.linew2, `${this.boxplot.w2}`)
+	// 	}
+	// }
 
 	addOutliersTooltip() {
 		this.g

@@ -1,5 +1,5 @@
 import type { MassAppApi, MassState } from '#mass/types/mass'
-import type { FormattedPlotEntry } from '../viewModel/ViewModel'
+import type { RenderedPlot } from '../view/RenderedPlot'
 import type { TermWrapper } from '#types'
 import type { AnnotatedSampleData } from '../../../types/termdb'
 import { roundValueAuto } from '#shared/roundValue.js'
@@ -10,9 +10,9 @@ export class ListSamples {
 		terms: any[]
 		filter: any
 	}
-	plot: FormattedPlotEntry
+	plot: RenderedPlot
 	term: any
-	constructor(app: MassAppApi, state: MassState, id: string, min: number, max: number, plot: FormattedPlotEntry) {
+	constructor(app: MassAppApi, state: MassState, id: string, min: number, max: number, plot: RenderedPlot) {
 		this.app = app
 		this.plot = plot
 		const plotConfig = state.plots.find((p: { id: string }) => p.id === id)
