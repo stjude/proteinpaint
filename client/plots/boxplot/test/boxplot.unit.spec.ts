@@ -173,7 +173,7 @@ tape('.setPlotData()', function (test) {
 
 tape('Default LegendDataMapper', function (test) {
 	test.timeoutAfter(100)
-
+	let expected: { key: string; text: string; isHidden: boolean; isPlot: boolean }[]
 	const legendData = new LegendDataMapper(mockConfig, mockData, mockData.plots).legendData
 	// const legend = viewModel.setLegendData(mockConfig, mockData)
 	if (!legendData) return test.fail('Should create a legend object')
@@ -184,13 +184,25 @@ tape('Default LegendDataMapper', function (test) {
 		legendData[0].label.includes(termjson['agedx'].name),
 		`Should create descriptive stats section for ${termjson['agedx'].name}`
 	)
-	test.deepEqual(legendData[0].items, mockConfig.term.q.descrStats, `Should properly set legend items`)
+
+	expected = [
+		{ key: 'min', text: 'Min: 20', isHidden: false, isPlot: false },
+		{ key: 'max', text: 'Max: 100', isHidden: false, isPlot: false },
+		{ key: 'median', text: 'Median: 60', isHidden: false, isPlot: false }
+	]
+
+	test.deepEqual(legendData[0].items, expected, `Should properly set legend items`)
 
 	test.true(
 		legendData[1].label.includes(termjson['sex'].name),
 		`Should create descriptive stats section for ${termjson['sex'].name}`
 	)
-	test.deepEqual(legendData[1].items, mockConfig.term2.q.descrStats, `Should properly set legend items`)
+	expected = [
+		{ key: 'min', text: 'Min: 0', isHidden: false, isPlot: false },
+		{ key: 'max', text: 'Max: 60', isHidden: false, isPlot: false },
+		{ key: 'median', text: 'Median: 30', isHidden: false, isPlot: false }
+	]
+	test.deepEqual(legendData[1].items, expected, `Should properly set legend items`)
 
 	test.end()
 })

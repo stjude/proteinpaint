@@ -4,7 +4,7 @@ import type { PlotConfig } from '#mass/types/mass'
 
 export type LegendItemEntry = {
 	/** Key for value look up in tw.term object */
-	key?: string
+	key: string
 	/** If true, line-through text */
 	isHidden: boolean
 	/** If true, triggers a callback to unhide a plot on click,
@@ -62,7 +62,7 @@ export class LegendDataMapper {
 	}
 
 	setDescrStatArr(statsArr: { id: string; label: string; value: number }[]) {
-		return statsArr.map(s => ({ text: `${s.label}: ${s.value}`, isHidden: false, isPlot: false }))
+		return statsArr.map(s => ({ key: s.id, text: `${s.label}: ${s.value}`, isHidden: false, isPlot: false }))
 	}
 
 	setHiddenCategoryItems(
@@ -84,6 +84,7 @@ export class LegendDataMapper {
 				const uncomputableItem = uncomputableValues.find(u => u.label === v.label)
 				if (uncomputableItem) {
 					termData.items.push({
+						key: uncomputableItem.label,
 						text: `${uncomputableItem.label}, n=${uncomputableItem.value}`,
 						isHidden: true,
 						isPlot: false
