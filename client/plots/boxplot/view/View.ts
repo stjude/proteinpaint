@@ -7,6 +7,7 @@ import type { BoxPlotDom, BoxPlotSettings } from '../BoxPlot'
 import type { ViewData } from '../viewModel/ViewModel'
 import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
+import type { RenderedPlot } from './RenderedPlot'
 import { BoxPlotToolTips } from './BoxPlotToolTips'
 import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
 import { LegendRenderer } from './LegendRender'
@@ -101,7 +102,7 @@ export class View {
 				//disappears to show the tooltip for the next boxplot.
 				//The user can't make a selection in time.
 				const labelMenuTip = new Menu({ padding: '' })
-				new BoxPlotLabelMenu(plot, this.app, this.interactions, labelMenuTip)
+				new BoxPlotLabelMenu(plot as unknown as RenderedPlot, this.app, this.interactions, labelMenuTip)
 			}
 		}
 		dom.boxplots.selectAll('g[id^="sjpp-boxplot-"] > rect').style('fill', data.plotDim.backgroundColor)

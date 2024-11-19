@@ -17,12 +17,17 @@ export type ViewData = {
 
 export type FormattedPlotEntry = BoxPlotEntry & {
 	boxplot: BoxPlotData & { label: string; radius?: number }
+	/** offset for the label div */
 	x: number
+	/** incrementing, descending offset for each new plot  */
 	y: number
+	/** Plot label color. Changes per darkMode selection */
 	labColor: string
 }
 
-type PlotDimensions = {
+export type PlotDimensions = {
+	/** Changes background color between white and soft black
+	 * based on darkMode selection */
 	backgroundColor: string
 	/** Domain for the y-axis */
 	domain: number[]
@@ -30,6 +35,8 @@ type PlotDimensions = {
 	svgWidth: number
 	/** Height of the svg */
 	svgHeight: number
+	/** Changes text color for the axis, plot labels, and legend
+	 * between black and white based on darkMode selection */
 	textColor: string
 	/** Title of the plot and coordinates */
 	title: { x: number; y: number; text: string }
