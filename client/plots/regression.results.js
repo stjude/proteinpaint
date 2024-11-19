@@ -901,13 +901,13 @@ function setRenderers(self) {
 				// header for estimate column
 				const est = h
 				const estTd = tr.append('td').style('padding', '8px').text(est)
-				const estInfo = estTd.append('sup').style('cursor', 'default').html('&nbsp;&#9432;')
+				/*const estInfo = estTd.append('sup').style('cursor', 'default').html('&nbsp;&#9432;')
 				estInfo.on('mouseover', event => {
 					const tip = self.dom.tip.clear()
 					tip.d.append('div').text('View interpretations of results by hovering over each value')
 					tip.showunder(event.target)
 				})
-				estInfo.on('mouseout', () => self.dom.tip.hide())
+				estInfo.on('mouseout', () => self.dom.tip.hide())*/
 			} else {
 				// headers for all other data columns
 				const td = tr.append('td').text(h).style('padding', '8px')
@@ -934,16 +934,20 @@ function setRenderers(self) {
 		const { tr, cols, tw } = arg
 		// estimate (Beta/OR/HR) column
 		const est = cols.shift()
-		const estSpan = tr.append('td').style('padding', '8px').style('cursor', 'default').append('span').text(est)
+		const estSpan = tr
+			.append('td')
+			.style('padding', '8px') /*.style('cursor', 'default')*/
+			.append('span')
+			.text(est)
 		// on mouseover, display explanation of estimate value
-		estSpan.on('mouseover', event => {
+		/*estSpan.on('mouseover', event => {
 			if (tw && (!tw.term.type || tw.q.mode == 'spline')) return // TODO: support non-dictionary and cubic spline variables
 			const tip = self.dom.tip.clear()
 			const estimateMsg = self.getEstimateMsg(Object.assign({ est: Number(est) }, arg))
 			tip.d.append('div').style('max-width', '500px').html(estimateMsg)
 			tip.showunder(event.target)
 		})
-		estSpan.on('mouseout', () => self.dom.tip.hide())
+		estSpan.on('mouseout', () => self.dom.tip.hide())*/
 		// 95% CI column
 		tr.append('td').html(`${cols.shift()} &ndash; ${cols.shift()}`).style('padding', '8px')
 		// rest of columns
