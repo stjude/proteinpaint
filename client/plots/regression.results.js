@@ -78,7 +78,7 @@ export class RegressionResults {
 			snplocusBlockDiv: holder.append('div'),
 			// is where newDiv() and displayResult_oneset() writes to
 			oneSetResultDiv: holder.append('div').style('margin', '10px'),
-			tip: new Menu()
+			tip: new Menu({ padding: '9px' })
 		}
 	}
 
@@ -928,12 +928,13 @@ function setRenderers(self) {
 
 	// fill data columns of row of coefficients table
 	self.fillCoefDataCols = arg => {
-		const { tr, cols } = arg
+		const { tr, cols, tw } = arg
 		// estimate (Beta/OR/HR) column
 		const est = cols.shift()
 		const estSpan = tr.append('td').style('padding', '8px').style('cursor', 'default').append('span').text(est)
 		// on mouseover, display explanation of estimate value
 		estSpan.on('mouseover', event => {
+			if (tw && (!tw.term.type || tw.q.mode == 'spline')) return // TODO: support non-dictionary and cubic spline variables
 			const tip = self.dom.tip.clear()
 			const estimateMsg = self.getEstimateMsg(Object.assign({ est: Number(est) }, arg))
 			tip.d.append('div').style('max-width', '500px').html(estimateMsg)
@@ -957,7 +958,6 @@ function setRenderers(self) {
 	*/
 	self.getEstimateMsg = arg => {
 		const { est, tw, tw2, categoryKey, categoryKey2, isIntercept, isUnivariate } = arg
-		if (tw && (!tw.term.type || tw.q.mode == 'spline')) return '' // TODO: support non-dictionary and cubic spline variables
 		const independentTws = self.independentTws
 		const outcomeTw = self.config.outcome
 		const regtype = self.config.regressionType
@@ -1019,16 +1019,16 @@ function setRenderers(self) {
 		// function to style a variable (and its category)
 		function styleVariable(tw, category) {
 			const spans = [
-				`<span class="term_name_btn sja_filter_tag_btn" style="padding: 3px 6px; margin: 2px 0px; border-radius: ${
+				`<span class="term_name_btn sja_filter_tag_btn" style="padding: 3px 6px; margin: 2.5px 0px; border-radius: ${
 					category ? '6px 0px 0px 6px' : '6px'
-				};">${tw.term.name}</span>`
+				};">${tw.term.name.length < 40 ? tw.term.name : tw.term.name.substring(0, 35) + ' ...'}</span>`
 			]
 			if (category) {
 				spans.push(
-					`<span class="ts_summary_btn sja_filter_tag_btn" style="padding: 3px 6px; margin: 2px 0px; border-radius: 0px 6px 6px 0px; font-style: italic;">${category}</span>`
+					`<span class="ts_summary_btn sja_filter_tag_btn" style="padding: 3px 6px; margin: 2.5px 0px; border-radius: 0px 6px 6px 0px; font-style: italic;">${category}</span>`
 				)
 			}
-			return `<div style="display: inline; white-space: nowrap">${spans.join('')}</div>`
+			return `<div style="display: inline; white-space: nowrap; font-size: 0.9em">${spans.join('')}</div>`
 		}
 
 		// function to get message for interaction term
