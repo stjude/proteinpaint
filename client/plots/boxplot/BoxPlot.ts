@@ -13,7 +13,6 @@ import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import getMaxLabelLgth from './viewModel/MaxLabelLength'
 
 /** TODOs:
- *	Type for config
  *	Add functionality to change orientation
  *	Add controls for: 
 	- multicolor boxplots when !term2

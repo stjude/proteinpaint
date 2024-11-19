@@ -126,7 +126,7 @@ export class ViewModel {
 		for (const plot of plots) {
 			/** Set rendering properties for the plot */
 
-			//Set the color for all plots for the legend and boxplot
+			//Set the color for all plots
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
 			//Ignore if hidden after the color is set
 			if (plot.isHidden) continue
