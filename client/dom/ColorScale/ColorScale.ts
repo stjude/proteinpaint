@@ -1,11 +1,10 @@
 import type { SvgG } from '../../types/d3'
 import type { ColorScaleDom, ColorScaleOpts, GradientElem } from '../types/colorScale'
 import { scaleLinear } from 'd3-scale'
-import { rgb } from 'd3-color'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
-import { Menu, axisstyle } from '#dom'
-import { make_radios, niceNumLabels } from '#dom'
+import { axisstyle, niceNumLabels } from '#dom'
+import { ColorScaleMenu } from './ColorScaleMenu'
 // import { format } from 'd3-format'
 // import { interpolateRgb } from 'd3-interpolate'
 // import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
@@ -30,7 +29,6 @@ export class ColorScale {
 	tickSize: number
 	tickValues: number[]
 	topTicks: boolean
-	private tip = new Menu({ padding: '2px' })
 
 	constructor(opts: ColorScaleOpts) {
 		this.barheight = opts.barheight || 14
@@ -47,16 +45,6 @@ export class ColorScale {
 		if (!opts.data || !opts.data.length) throw new Error('No data provided for #dom/ColorScale.')
 		if (opts.data.length != this.colors.length)
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
-
-		if (opts.setMinMaxCallback) {
-			this.setMinMaxCallback = opts.setMinMaxCallback
-			this.cutoffMode = opts.cutoffMode || 'auto'
-			this.default = {
-				min: opts.data[0],
-				max: opts.data[opts.data.length - 1]
-			}
-		}
-		if (opts.setColorsCallback) this.setColorsCallback = opts.setColorsCallback
 
 		this.tickValues = niceNumLabels(opts.data)
 
@@ -87,117 +75,20 @@ export class ColorScale {
 		}
 
 		if (opts.setColorsCallback || opts.setMinMaxCallback) {
-			this.renderMenu(scaleSvg, barG)
+			// Menu appearing on color bar click if callbacks are provided
+			new ColorScaleMenu({
+				scaleSvg,
+				barG,
+				data: this.data,
+				colors: this.colors,
+				cutoffMode: opts.cutoffMode || 'auto',
+				updateColors: this.updateColors,
+				updateAxis: this.updateAxis,
+				setColorsCallback: opts.setColorsCallback,
+				setMinMaxCallback: opts.setMinMaxCallback
+			})
 		}
 		this.render()
-	}
-
-	// Menu appearing on color bar click if callbacks are provided
-	renderMenu(scaleSvg, barG) {
-		let showTooltip = true
-		scaleSvg
-			.on('click', () => {
-				this.tip.clear().showunder(barG.node())
-				const radiosDiv = this.tip.d.append('div').style('padding', '2px')
-				const table = this.tip.d.append('table').style('margin', 'auto')
-				const promptRow = table
-					.append('tr')
-					.style('text-align', 'center')
-					.style('display', this.setColorsCallback ? 'table-row' : 'none')
-				promptRow.append('td').text('Min').style('padding-right', '10px')
-				promptRow.append('td').text('Max')
-				if (this.setMinMaxCallback) {
-					const options = [
-						{ label: 'Automatic', value: 'auto', checked: this.cutoffMode == 'auto' },
-						{ label: 'Fixed', value: 'fixed', checked: this.cutoffMode == 'fixed' }
-					]
-					make_radios({
-						holder: radiosDiv.style('display', 'block'),
-						options,
-						callback: async (value: string) => {
-							this.cutoffMode = value as 'auto' | 'fixed'
-							if (!this.default) throw new Error('Auto values not set for #dom/ColorScale.')
-							if (value == 'auto') {
-								promptRow.style('display', this.setColorsCallback ? 'table-row' : 'none')
-								minMaxRow.style('display', 'none')
-								this.data[0] = this.default.min
-								this.data[this.data.length - 1] = this.default.max
-								await this.setMinMaxCallback!({
-									cutoffMode: this.cutoffMode,
-									min: this.default.min,
-									max: this.default.max
-								})
-								this.updateAxis()
-								this.tip.hide()
-							}
-							if (value == 'fixed') {
-								minMaxRow.style('display', 'table-row')
-								promptRow.style('display', 'table-row')
-							}
-						}
-					})
-					const minMaxRow = table.append('tr').style('display', this.cutoffMode == 'auto' ? 'none' : 'table-row')
-					appendValueInput(minMaxRow.append('td'), 0)
-					appendValueInput(minMaxRow.append('td'), this.data.length - 1)
-				}
-				if (this.setColorsCallback) {
-					const colorRow = table.append('tr').style('text-align', 'center')
-					appendColorInput(colorRow.append('td').style('padding-right', '10px'), 0)
-					appendColorInput(colorRow.append('td'), this.colors.length - 1)
-				}
-				showTooltip = false
-			})
-			.on('mouseenter', () => {
-				//Prevent showing the tooltip after user interacts with the color picker
-				if (showTooltip == false) return
-				this.tip.clear().showunder(barG.node())
-				const text = `Click to customize ${this.setColorsCallback ? 'colors' : ''} ${
-					this.setMinMaxCallback && this.setColorsCallback ? ' and ' : ''
-				}${this.setMinMaxCallback ? 'values' : ''}`
-				this.tip.d.append('div').style('padding', '2px').text(text)
-			})
-			.on('mouseleave', () => {
-				if (showTooltip) this.tip.hide()
-			})
-
-		const appendColorInput = (wrapper: any, idx: number) => {
-			const colorInput = wrapper
-				.append('input')
-				.attr('type', 'color')
-				//Rm default color input styles
-				.style('padding', '0px')
-				.style('border', 'none')
-				.style('margin', '0px')
-				.attr('value', rgb(this.colors[idx]).formatHex())
-				.on('change', async () => {
-					const color = colorInput.node()!.value
-					this.colors[idx] = color
-					await this.setColorsCallback!(color, idx)
-					this.updateColors()
-					this.tip.hide()
-				})
-		}
-
-		const appendValueInput = (td: any, idx: number) => {
-			const valueInput = td
-				.append('input')
-				.attr('type', 'number')
-				.style('width', '60px')
-				.attr('value', this.data[idx])
-				.style('padding', '3px')
-				.on('keyup', async (event: KeyboardEvent) => {
-					if (event.code != 'Enter') return
-					const value: number = parseFloat(valueInput.node().value)
-					this.data[idx] = value
-					await this.setMinMaxCallback!({
-						cutoffMode: this.cutoffMode!,
-						min: this.data[0],
-						max: this.data[this.data.length - 1]
-					})
-					this.updateAxis()
-					this.tip.hide()
-				})
-		}
 	}
 
 	getRange() {
