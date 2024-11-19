@@ -213,6 +213,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 		if (map.get(1)?.term?.type == 'geneVariant') {
 			const processedValues = []
 			const value1 = values[id1]
+			if (!value1) continue // skip samples without data for geneVariant term
 			for (const v1 of value1.values) {
 				if (processedValues.some(p => p.value.dt == v1.dt && (v1.origin ? v1.origin == p.value.origin : true))) {
 					const sameDtOrigin = processedValues.filter(
@@ -260,6 +261,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 			const processedValues = []
 			const value2 = values[id2]
 			const value1 = values[id1]
+			if (!value2) continue // skip samples without data for geneVariant term
 			for (const v2 of value2.values) {
 				if (processedValues.some(p => p.value.dt == v2.dt && (v2.origin ? v2.origin == p.value.origin : true))) {
 					const sameDtOrigin = processedValues.filter(
