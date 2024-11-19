@@ -1,6 +1,6 @@
 import type { BoxPlotDom } from '../BoxPlot'
 import type { MassAppApi } from '#mass/types/mass'
-import type { FormattedPlotEntry } from '../viewModel/ViewModel'
+import type { RenderedPlot } from '../view/RenderedPlot'
 import type { LegendItemEntry } from '../viewModel/LegendDataMapper'
 import { to_svg } from '#src/client'
 import { ListSamples } from './ListSamples'
@@ -34,7 +34,7 @@ export class BoxPlotInteractions {
 		window.open('https://github.com/stjude/proteinpaint/wiki/Box-plot')
 	}
 
-	async listSamples(plot: FormattedPlotEntry, min: number, max: number) {
+	async listSamples(plot: RenderedPlot, min: number, max: number) {
 		const config = this.app.getState()
 		const sampleList = new ListSamples(this.app, config, this.id, min, max, plot)
 		const data = await sampleList.getData()
@@ -60,7 +60,7 @@ export class BoxPlotInteractions {
 		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
 		const config = structuredClone(plotConfig)
 		const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
-		delete config[contTerm].q.hiddenValues[item.label]
+		delete config[contTerm].q.hiddenValues[item.key]
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
