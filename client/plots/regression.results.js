@@ -94,6 +94,9 @@ export class RegressionResults {
 				(this.config.hasUnsubmittedEdits && !this.hasUnsubmittedEdits_nullify_singleuse)
 			) {
 				// no result to show
+				// remove block instance when input variables are edited
+				delete this.snplocusBlock
+				this.dom.snplocusBlockDiv.selectAll('*').remove()
 				this.dom.holder.style('display', 'none')
 				return
 			}
@@ -1438,7 +1441,7 @@ function fillCoefficientTermname(tw, td) {
 	}
 }
 
-function make_mds3_variants(tw, resultLst) {
+function make_mds3_variants(tw, resultLst, regressionType) {
 	/* return a list of variants as mds3 client-side custom data
 	tw:
 		term:
@@ -1512,13 +1515,13 @@ function make_mds3_variants(tw, resultLst) {
 			if (!r) throw 'snp missing from data.coefficients.terms{}'
 			if (Array.isArray(r.fields)) {
 				// has fields[], snp is used as additive/dominant/recessive
-				m.regressionEstimate = r.fields[0]
+				m.regressionEstimate = regressionType == 'cox' ? r.fields[2] : r.fields[0]
 			} else if (r.categories) {
 				// has categories{}: {C/T: Array(6), T/T: Array(6)}
 				// snp is used by genotype
 				const lst = []
 				for (const gt in r.categories) {
-					lst.push(gt + ':' + r.categories[gt][0])
+					lst.push(gt + ':' + regressionType == 'cox' ? r.categories[gt][2] : r.categories[gt][0])
 				}
 				m.regressionEstimate = ' ' + lst.join(' ')
 			} else {
@@ -1621,7 +1624,7 @@ async function createGenomebrowser(self, input, resultLst) {
 				tooltipPrintValue: m => getMtooltipValues(m, self.config.regressionType)
 			}
 		],
-		custom_variants: make_mds3_variants(input.term, resultLst),
+		custom_variants: make_mds3_variants(input.term, resultLst, self.config.regressionType),
 		legend: {
 			customShapeLabels: {
 				filledCircle: 'common variants analyzed by model-fitting',
@@ -1654,7 +1657,7 @@ async function updateMds3Tk(self, input, resultLst) {
 	// find the mds3 track
 	const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 	// apply new sets of variants and results to track and render
-	tk.custom_variants = make_mds3_variants(input.term, resultLst)
+	tk.custom_variants = make_mds3_variants(input.term, resultLst, self.config.regressionType)
 	// if user changes position using termsetting ui,
 	// input.term.q{} will hold different chr/start/stop than block
 	// and block will need to update coord
