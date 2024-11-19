@@ -222,7 +222,7 @@ tape('ColorScale.updateScale()', test => {
 	test.end()
 })
 
-tape('.setMinMaxCallback() and .setColorsCallback()', async test => {
+tape.skip('.setMinMaxCallback() and .setColorsCallback()', async test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any

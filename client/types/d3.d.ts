@@ -58,4 +58,5 @@ export type Button = Selection<HTMLButtonElement, any, any, any>
 export type Input = Selection<HTMLInputElement, any, any, any>
 export type Table = Selection<HTMLTableElement, any, any, any>
 export type Tr = Selection<HTMLTableRowElement, any, any, any>
+export type Td = Selection<HTMLTableDataCellElement, any, any, any>
 export type H2 = Selection<HTMLHeadingElement, any, any, any>

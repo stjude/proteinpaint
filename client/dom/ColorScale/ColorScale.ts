@@ -1,5 +1,6 @@
 import type { SvgG } from '../../types/d3'
 import type { ColorScaleDom, ColorScaleOpts, GradientElem } from '../types/colorScale'
+import type { ColorScaleMenuOpts } from './ColorScaleMenu'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
@@ -19,6 +20,7 @@ export class ColorScale {
 	data: number[]
 	fontSize: number
 	markedValue?: number | null
+	menu?: ColorScaleMenu
 	/** Purely for testing. Not used in the class but can be
 	 * called independently of user click, if needed */
 	setColorsCallback?: (val: string, idx: number) => void
@@ -73,22 +75,12 @@ export class ColorScale {
 			this.dom = { gradient, scale, scaleAxis }
 			if (this.markedValue !== null) this.markedValueInColorBar(barG)
 		}
+		this.render()
 
 		if (opts.setColorsCallback || opts.setMinMaxCallback) {
 			// Menu appearing on color bar click if callbacks are provided
-			new ColorScaleMenu({
-				scaleSvg,
-				barG,
-				data: this.data,
-				colors: this.colors,
-				cutoffMode: opts.cutoffMode || 'auto',
-				updateColors: this.updateColors,
-				updateAxis: this.updateAxis,
-				setColorsCallback: opts.setColorsCallback,
-				setMinMaxCallback: opts.setMinMaxCallback
-			})
+			this.menu = this.renderMenu(opts, scaleSvg, barG)
 		}
-		this.render()
 	}
 
 	getRange() {
@@ -155,6 +147,35 @@ export class ColorScale {
 			showline: false,
 			fontsize: this.fontSize
 		})
+	}
+
+	renderMenu(opts, scaleSvg, barG) {
+		const _opts: ColorScaleMenuOpts = {
+			scaleSvg,
+			barG,
+			data: this.data,
+			colors: this.colors,
+			cutoffMode: opts.cutoffMode || 'auto'
+		}
+		if (opts.setColorsCallback)
+			_opts.setColorsCallback = async (val, idx) => {
+				if (!val || !idx) return
+				await opts.setColorsCallback(val, idx)
+				this.updateColors()
+			}
+		if (opts.setMinMaxCallback)
+			_opts.setMinMaxCallback = async obj => {
+				console.log(obj)
+				if (!obj) return
+				await opts.setMinMaxCallback({
+					cutoffMode: obj.cutoffMode,
+					min: obj.min,
+					max: obj.max
+				})
+				this.updateAxis()
+			}
+		const menu = new ColorScaleMenu(_opts)
+		return menu
 	}
 
 	getAxis() {
@@ -226,11 +247,19 @@ export class ColorScale {
 		// }
 	}
 
+	updateMenu() {
+		if (!this.menu) return
+		this.menu.colors = this.colors
+		this.menu.data = this.data
+	}
+
 	updateScale() {
+		console.log(this.data)
 		if (this.data.length != this.colors.length)
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 		this.updateColors()
 		this.updateAxis()
 		this.updateValueInColorBar()
+		this.updateMenu()
 	}
 }

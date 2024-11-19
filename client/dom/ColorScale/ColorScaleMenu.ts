@@ -1,17 +1,16 @@
+import type { Svg, SvgG, Td } from '../../types/d3'
 import { Menu } from '#dom'
 import { make_radios } from '#dom'
 import { rgb } from 'd3-color'
 
-type ColorScaleMenuOpts = {
-	scaleSvg: any
-	barG: any
-	data: number[]
+export type ColorScaleMenuOpts = {
+	scaleSvg: Svg
+	barG: SvgG
+	colors: string[]
 	cutoffMode: 'auto' | 'fixed'
+	data: number[]
 	setColorsCallback?: (val: string, idx: number) => void
 	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
-	colors: string[]
-	updateColors: () => void
-	updateAxis: () => void
 }
 
 export class ColorScaleMenu {
@@ -21,14 +20,10 @@ export class ColorScaleMenu {
 	cutoffMode?: 'auto' | 'fixed'
 	setColorsCallback?: (val: string, idx: number) => void
 	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
-	updateColors: () => void
-	updateAxis: () => void
 	private tip = new Menu({ padding: '2px' })
 	constructor(opts: ColorScaleMenuOpts) {
 		this.data = opts.data
 		this.colors = opts.colors
-		this.updateColors = opts.updateColors
-		this.updateAxis = opts.updateAxis
 
 		if (opts.setMinMaxCallback) {
 			this.setMinMaxCallback = opts.setMinMaxCallback
@@ -43,7 +38,7 @@ export class ColorScaleMenu {
 		this.renderMenu(opts.scaleSvg, opts.barG)
 	}
 
-	renderMenu(scaleSvg, barG) {
+	renderMenu(scaleSvg: Svg, barG: SvgG) {
 		let showTooltip = true
 		scaleSvg
 			.on('click', () => {
@@ -77,7 +72,7 @@ export class ColorScaleMenu {
 									min: this.default.min,
 									max: this.default.max
 								})
-								this.updateAxis()
+								// this.updateAxis()
 								this.tip.hide()
 							}
 							if (value == 'fixed') {
@@ -111,8 +106,8 @@ export class ColorScaleMenu {
 			})
 	}
 
-	appendColorInput = (wrapper: any, idx: number) => {
-		const colorInput = wrapper
+	appendColorInput = (td: Td, idx: number) => {
+		const colorInput = td
 			.append('input')
 			.attr('type', 'color')
 			//Rm default color input styles
@@ -124,12 +119,11 @@ export class ColorScaleMenu {
 				const color = colorInput.node()!.value
 				this.colors[idx] = color
 				await this.setColorsCallback!(color, idx)
-				this.updateColors()
 				this.tip.hide()
 			})
 	}
 
-	appendValueInput = (td: any, idx: number) => {
+	appendValueInput = (td: Td, idx: number) => {
 		const valueInput = td
 			.append('input')
 			.attr('type', 'number')
@@ -138,14 +132,15 @@ export class ColorScaleMenu {
 			.style('padding', '3px')
 			.on('keyup', async (event: KeyboardEvent) => {
 				if (event.code != 'Enter') return
-				const value: number = parseFloat(valueInput.node().value)
+				const valueNode = valueInput.node()
+				if (!valueNode) return
+				const value: number = parseFloat(valueNode.value)
 				this.data[idx] = value
 				await this.setMinMaxCallback!({
 					cutoffMode: this.cutoffMode!,
 					min: this.data[0],
 					max: this.data[this.data.length - 1]
 				})
-				this.updateAxis()
 				this.tip.hide()
 			})
 	}
