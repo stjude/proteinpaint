@@ -66,7 +66,7 @@ export class profileForms extends profilePlot {
 		const percentageDict = {}
 		for (const sample of samples) {
 			const termData = sample[tw.$id].value
-			const percents: { [key: string]: number } = JSON.parse(termData)
+			const percents: { [key: string]: number } = termData
 			for (const key in percents) {
 				const value = percents[key]
 				if (!percentageDict[key]) percentageDict[key] = 0
