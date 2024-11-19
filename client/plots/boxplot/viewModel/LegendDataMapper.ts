@@ -3,15 +3,19 @@ import type { BoxPlotResponse } from '#types'
 import type { PlotConfig } from '#mass/types/mass'
 
 export type LegendItemEntry = {
-	label: string
-	/** Total number of samples, cells, etc. */
-	count?: number
+	/** Key for value look up in tw.term object */
+	key?: string
 	/** If true, line-through text */
 	isHidden: boolean
-	/** If provided, indicates plot data available and enables callback. */
-	color?: string
-	/** Value for stat */
-	value?: number
+	/** If true, triggers a callback to unhide a plot on click,
+	 * creates an icon, and tooltip for the item.
+	 */
+	isPlot: boolean
+	/** Text shown in the legend
+	 * Uncomputable values and hidden plots report total count as n
+	 * Descriptive stats report value after colon
+	 */
+	text: string
 }
 
 export type LegendData = { label: string; items: LegendItemEntry[] }[]
@@ -23,13 +27,13 @@ export class LegendDataMapper {
 		if (config.term.q?.descrStats) {
 			this.legendData.push({
 				label: `Descriptive Statistics${isTerm2 ? `: ${config.term.term.name}` : ''}`,
-				items: config.term.q.descrStats
+				items: this.setDescrStatArr(config.term.q.descrStats)
 			})
 		}
 		if (isTerm2 && isTerm2.q?.descrStats) {
 			this.legendData.push({
 				label: `Descriptive Statistics: ${config.term2.term.name}`,
-				items: isTerm2.q.descrStats
+				items: this.setDescrStatArr(isTerm2.q.descrStats)
 			})
 		}
 		const hiddenPlots =
@@ -37,7 +41,8 @@ export class LegendDataMapper {
 				.filter(p => p.isHidden)
 				?.map(p => {
 					const total = p.descrStats.find(d => d.id === 'total')
-					return { label: p.key, count: total!.value, isHidden: true, color: p.color }
+					if (!total || !total.value) throw `Missing total value for ${p.key}`
+					return { key: p.key, text: `${p.key}, n=${total.value}`, isHidden: true, isPlot: true }
 				}) || []
 		if (config.term.term?.values) {
 			const term1Label = config.term2 ? config.term.term.name : 'Other categories'
@@ -46,7 +51,6 @@ export class LegendDataMapper {
 		}
 
 		if (config.term2?.term?.values) {
-			//TODO: Only show items with plot data?
 			const term2Data = this.setHiddenCategoryItems(
 				config.term2,
 				config.term2.term.name,
@@ -55,6 +59,10 @@ export class LegendDataMapper {
 			)
 			if (term2Data) this.legendData.push(term2Data)
 		}
+	}
+
+	setDescrStatArr(statsArr: { id: string; label: string; value: number }[]) {
+		return statsArr.map(s => ({ text: `${s.label}: ${s.value}`, isHidden: false, isPlot: false }))
 	}
 
 	setHiddenCategoryItems(
@@ -67,7 +75,7 @@ export class LegendDataMapper {
 
 		if (hiddenPlots.length) {
 			for (const key of Object.keys(tw.q.hiddenValues || {})) {
-				const plot = hiddenPlots.find(p => p.label === key)
+				const plot = hiddenPlots.find(p => p.key === key)
 				if (plot) termData.items.push(plot)
 			}
 		}
@@ -75,7 +83,11 @@ export class LegendDataMapper {
 			for (const v of Object.values((tw.term.values || {}) as { label: string }[])) {
 				const uncomputableItem = uncomputableValues.find(u => u.label === v.label)
 				if (uncomputableItem) {
-					termData.items.push({ label: uncomputableItem.label, count: uncomputableItem.value, isHidden: true })
+					termData.items.push({
+						text: `${uncomputableItem.label}, n=${uncomputableItem.value}`,
+						isHidden: true,
+						isPlot: false
+					})
 				}
 			}
 		}
