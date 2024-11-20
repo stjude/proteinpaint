@@ -1,8 +1,8 @@
-import serverconfig from './serverconfig'
-import { connect_db } from './utils'
-import { authApi } from './auth'
+import { connect_db } from './utils.js'
+import { authApi } from './auth.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { DEFAULT_SAMPLE_TYPE, numericTypes } from '#shared/terms.js'
+import type { isSupportedChartCallbacks } from '#types'
 
 /*
 server_init_db_queries()
@@ -32,7 +32,7 @@ export function server_init_db_queries(ds) {
 		console.log('Connecting', dbfile)
 		cn = connect_db(dbfile)
 		console.log(`DB connected for ${ds.label}: ${dbfile}`)
-	} catch (e) {
+	} catch (e: any) {
 		throw `Cannot connect db ${dbfile}: ${e.message || e}`
 	}
 
@@ -43,7 +43,7 @@ export function server_init_db_queries(ds) {
 	ds.cohort.db.tableColumns = {}
 	for (const table of tables) {
 		const columns = listTableColumns(cn, table)
-		ds.cohort.db.tableColumns[table] = columns
+		ds.cohort.db.tableColumns[table as string] = columns
 	}
 	const schema_tables = [
 		'cohorts',
@@ -119,16 +119,16 @@ export function server_init_db_queries(ds) {
 	}
 	ds.cohort.termdb.term2SampleType = new Map()
 	if (ds.cohort.db.tableColumns['terms'].includes('sample_type')) {
-		let rows = cn.prepare('SELECT id, sample_type FROM terms').all()
+		const rows = cn.prepare('SELECT id, sample_type FROM terms').all()
 		for (const { id, sample_type } of rows) ds.cohort.termdb.term2SampleType.set(id, sample_type || DEFAULT_SAMPLE_TYPE)
 	} else {
-		let rows = cn.prepare('SELECT id FROM terms').all()
+		const rows = cn.prepare('SELECT id FROM terms').all()
 		for (const { id } of rows) ds.cohort.termdb.term2SampleType.set(id, DEFAULT_SAMPLE_TYPE)
 	}
 	if (tables.has('sampleidmap')) {
 		const i2s = new Map(),
 			s2i = new Map()
-		let rows = cn.prepare('SELECT * FROM sampleidmap').all()
+		const rows = cn.prepare('SELECT * FROM sampleidmap').all()
 		let totalCount = 0
 		for (const { id, name } of rows) {
 			i2s.set(id, name)
@@ -138,27 +138,26 @@ export function server_init_db_queries(ds) {
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
 		if (tables.has('cohort_sample_types')) {
-			rows = cn.prepare('SELECT * from cohort_sample_types').all()
+			const rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			q.getCohortSampleCount = cohortKey => {
-				let counts = rows
+				const counts = rows
 					.filter(row => row.cohort == cohortKey || cohortKey == undefined) //one may have multiple types and a default cohort
 					.map(row => {
 						const sample_type = ds.cohort.termdb.sampleTypes[row.sample_type]
 						return `${row.sample_count} ${row.sample_count > 1 ? sample_type.plural_name : sample_type.name}`
 					})
-				let total = counts.join(' and ')
-
+				const total = counts.join(' and ')
 				return total
 			}
 		} else if (tables.has('cohorts')) {
-			rows = cn.prepare('SELECT cohort, sample_count from cohorts').all()
+			const rows = cn.prepare('SELECT cohort, sample_count from cohorts').all()
 			q.getCohortSampleCount = cohortKey => {
-				let counts = rows
+				const counts = rows
 					.filter(row => row.cohort == cohortKey)
 					.map(row => {
 						return `${row.sample_count} ${row.sample_count > 1 ? 'samples' : 'sample'}`
 					})
-				let total = counts.join(' and ')
+				const total = counts.join(' and ')
 				if (total == '')
 					//older db does not have types or sample_count
 					return `${totalCount} samples`
@@ -343,10 +342,10 @@ export function server_init_db_queries(ds) {
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE name LIKE ?`
 		)
-		q.findTermByName = (n, cohortStr = '', treeFilter = null, usecase = null) => {
+		q.findTermByName = (n, cohortStr = '', _treeFilter = null, usecase = null) => {
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
-				const r = []
+				const r: string[] = []
 				for (const i of tmp) {
 					if (i.parent_id == '*') continue
 					if (!i.jsondata) continue
@@ -473,7 +472,11 @@ export function server_init_db_queries(ds) {
 		must define commonCharts{} in local scope (inside the init function)
 		to ensure that ds-specific overrides are not shared across different datasets
 	*/
-	const commonCharts = Object.assign({}, defaultCommonCharts, ds.isSupportedChartOverride || {})
+	const commonCharts = Object.assign(
+		{},
+		defaultCommonCharts,
+		(ds.isSupportedChartOverride as isSupportedChartCallbacks) || {}
+	)
 
 	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set
 
@@ -509,7 +512,7 @@ export function server_init_db_queries(ds) {
 	}
 
 	q.getSingleSampleData = function (sampleId, term_ids = []) {
-		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(t => '?').join(',')})`
+		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(_ => '?').join(',')})`
 		const query = `select term_id, value, jsondata from ( select term_id, value 
 		from anno_categorical 
 		where sample=? ${termClause}
@@ -573,15 +576,15 @@ export function server_init_db_queries(ds) {
 	- add special "uncommon" chart (profile)
 	- supply new callback of existing chart type, to execute adhoc logic (e.g. consider user's role...)
 */
-const defaultCommonCharts = {
+const defaultCommonCharts: isSupportedChartCallbacks = {
 	dictionary: () => true,
 	summary: () => true,
 	matrix: () => true,
 	regression: () => true,
 	facet: () => true,
-	survival: ({ cohortTermTypes }) => cohortTermTypes.hasOwnProperty('survival'),
-	cuminc: ({ cohortTermTypes }) => cohortTermTypes.hasOwnProperty('condition'),
-	sampleScatter: ({ ds, cohortTermTypes, termCount }) => {
+	survival: ({ cohortTermTypes }) => cohortTermTypes.survival > 0,
+	cuminc: ({ cohortTermTypes }) => cohortTermTypes.condition > 0,
+	sampleScatter: ({ ds, cohortTermTypes }) => {
 		if (ds.cohort.scatterplots) return true
 		if (ds.queries?.geneExpression) return true
 		if (ds.queries?.metaboliteIntensity) return true
