@@ -1,5 +1,5 @@
 import { connect_db } from '../utils'
-import { server_init_db_queries, listDbTables } from '../termdb.server.init'
+import { server_init_db_queries, listDbTables } from '../termdb.server.init.ts'
 
 /**
  * Initialize the connections and prepared statements for a genome's db files
