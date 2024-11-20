@@ -153,7 +153,8 @@ function setHiddenPlots(term, plots) {
 }
 
 function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
-	if (sortedValues.length < 5) return
+	/** Return the total value for legend rendering */
+	if (sortedValues.length < 5) return [{ id: 'total', label: 'Total', value: sortedValues.length }]
 	//boxplot_getvalue() already returns calculated stats
 	//Format data rather than recalculate
 	const mean = sortedValues.reduce((s, i) => s + i, 0) / sortedValues.length
