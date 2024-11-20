@@ -20,6 +20,7 @@ export class profileForms extends profilePlot {
 	shift: any
 	twLst: any
 	filterG: any
+	keys: any
 
 	constructor(opts) {
 		super()
@@ -41,10 +42,21 @@ export class profileForms extends profilePlot {
 			.append('svg')
 			.attr('width', settings.svgw + shift + 400)
 			.attr('height', settings.svgh + shiftTop * 2)
+		svg
+			.append('defs')
+			.append('pattern')
+			.attr('id', `${this.id}_diagonalHatch`)
+			.attr('patternUnits', 'userSpaceOnUse')
+			.attr('width', 4)
+			.attr('height', 4)
+			.append('path')
+			.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
+			.attr('stroke-width', 1)
+			.attr('stroke', 'gray')
 		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		const gridG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 100}, ${shiftTop})`)
-		const legendG = svg.append('g').attr('transform', `translate(${shift + 100}, ${shiftTop + settings.svgh})`)
+		const legendG = svg.append('g').attr('transform', `translate(${shift}, ${20 + settings.svgh})`)
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
 		this.xAxisScale = d3Linear().domain([0, 100]).range([0, settings.svgw])
@@ -52,11 +64,9 @@ export class profileForms extends profilePlot {
 		this.dom = copyMerge(this.dom, {
 			svg,
 			mainG,
-			gridG
+			gridG,
+			legendG
 		})
-		this.drawLegendRect(0, 0, 'Yes', config.color, legendG)
-		this.drawLegendRect(60, 0, 'No', 'gray', legendG)
-		this.drawLegendRect(120, 0, 'Do Not Know', 'white', legendG)
 
 		this.twLst = activePlot.terms.concat(activePlot.scTerms)
 	}
@@ -67,6 +77,17 @@ export class profileForms extends profilePlot {
 		this.renderPlot()
 		this.filterG.selectAll('*').remove()
 		this.addFilterLegend()
+		let x = 0
+		for (const key of this.keys) {
+			this.drawLegendRect(x, 0, key, this.getColor(key), this.dom.legendG)
+			x += 60
+		}
+		this.dom.legendG
+			.append('text')
+			.attr('x', x + 80)
+			.attr('y', 18)
+			.style('font-weight', 'bold')
+			.text('* Site coordinator')
 	}
 
 	getPercentsDict(tw, samples): { [key: string]: number } {
@@ -108,6 +129,7 @@ export class profileForms extends profilePlot {
 		const activePlot = this.state.config.plots[0] //later on will be based on the tab selected
 		for (const tw of activePlot.terms) {
 			const percents: { [key: string]: number } = this.getPercentsDict(tw, samples)
+			if (!this.keys) this.keys = Object.keys(percents)
 			const scTerm = activePlot.scTerms.find(t => t.term.id.includes(tw.term.id))
 			const scPercents: { [key: string]: number } = this.getSCPercentsDict(scTerm, samples)
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
@@ -115,8 +137,13 @@ export class profileForms extends profilePlot {
 
 			this.renderRects(percents, y, height, scTotal == 1 ? scPercentKeys : [])
 			if (scTotal > 1) {
-				y += height
+				y += height + 10
 				this.renderRects(scPercents, y, height, [])
+				this.dom.mainG
+					.append('text')
+					.text('*')
+					.attr('x', this.settings.svgw + 10)
+					.attr('y', y + height * 0.75)
 			}
 			this.dom.mainG
 				.append('text')
@@ -126,9 +153,13 @@ export class profileForms extends profilePlot {
 				.attr('text-anchor', 'end')
 				.attr('font-size', '0.9em')
 
-			y += height + 20
+			y += height + 40
 		}
 		this.renderLines(y - 20) //last padding not needed
+	}
+
+	getColor(key: string) {
+		return key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
 	renderRects(percents: { [key: string]: number }, y: number, height: number, scPercentKeys: string[]) {
@@ -136,7 +167,8 @@ export class profileForms extends profilePlot {
 		const total = Object.values(percents).reduce((a, b) => a + b, 0)
 		let x = 0
 		for (const key of percentsOrdered) {
-			const color = key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : 'white'
+			const color = this.getColor(key)
+
 			const value = percents[key]
 			const width = (value / total) * this.settings.svgw
 			this.dom.mainG
@@ -221,7 +253,7 @@ export function getDefaultProfileFormsSettings() {
 		controls: {
 			isOpen: false
 		},
-		profileForms: { svgw: 300, svgh: 380 }
+		profileForms: { svgw: 300, svgh: 480 }
 	}
 	const profilePlotSettings = getDefaultProfilePlotSettings()
 	settings.profileForms = copyMerge(settings.profileForms, profilePlotSettings)
