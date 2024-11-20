@@ -19,6 +19,8 @@ export class profileForms extends profilePlot {
 	xAxisScale: any
 	shift: any
 	twLst: any
+	filterG: any
+
 	constructor(opts) {
 		super()
 		this.opts = opts
@@ -37,10 +39,12 @@ export class profileForms extends profilePlot {
 		const svg = rightDiv
 			.style('padding', '10px')
 			.append('svg')
-			.attr('width', settings.svgw + shift + 10)
+			.attr('width', settings.svgw + shift + 400)
 			.attr('height', settings.svgh + shiftTop * 2)
 		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		const gridG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
+		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 100}, ${shiftTop})`)
+		const legendG = svg.append('g').attr('transform', `translate(${shift + 100}, ${shiftTop + settings.svgh})`)
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
 		this.xAxisScale = d3Linear().domain([0, 100]).range([0, settings.svgw])
@@ -50,6 +54,10 @@ export class profileForms extends profilePlot {
 			mainG,
 			gridG
 		})
+		this.drawLegendRect(0, 0, 'Yes', config.color, legendG)
+		this.drawLegendRect(60, 0, 'No', 'gray', legendG)
+		this.drawLegendRect(120, 0, 'Do Not Know', 'white', legendG)
+
 		this.twLst = activePlot.terms.concat(activePlot.scTerms)
 	}
 
@@ -57,6 +65,8 @@ export class profileForms extends profilePlot {
 		super.main()
 		await this.setControls()
 		this.renderPlot()
+		this.filterG.selectAll('*').remove()
+		this.addFilterLegend()
 	}
 
 	getPercentsDict(tw, samples): { [key: string]: number } {
@@ -66,7 +76,7 @@ export class profileForms extends profilePlot {
 		const percentageDict = {}
 		for (const sample of samples) {
 			const termData = sample[tw.$id].value
-			const percents: { [key: string]: number } = termData
+			const percents: { [key: string]: number } = JSON.parse(termData)
 			for (const key in percents) {
 				const value = percents[key]
 				if (!percentageDict[key]) percentageDict[key] = 0
@@ -115,6 +125,7 @@ export class profileForms extends profilePlot {
 				.text(tw.term.name)
 				.attr('text-anchor', 'end')
 				.attr('font-size', '0.9em')
+
 			y += height + 20
 		}
 		this.renderLines(y - 20) //last padding not needed
@@ -168,6 +179,23 @@ export class profileForms extends profilePlot {
 				.style('stroke-opacity', opacity)
 				.style('stroke-dasharray', '5, 5')
 		}
+	}
+
+	drawLegendRect(x, y, text, color, legendG) {
+		const size = 20
+		const itemG = legendG.append('g').attr('transform', `translate(${x}, ${y})`)
+		itemG
+			.append('rect')
+			.attr('x', 0)
+			.attr('y', 0)
+			.attr('width', size)
+			.attr('height', size)
+			.attr('fill', color)
+			.attr('stroke', 'gray')
+		itemG
+			.append('text')
+			.attr('transform', `translate(${size + 10}, ${y + size})`)
+			.text(text)
 	}
 }
 
