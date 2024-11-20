@@ -1,17 +1,8 @@
-import type { Svg, SvgG, Td } from '../../types/d3'
+import type { SvgG, SvgSvg, Td } from '../../types/d3'
+import type { ColorScaleMenuOpts } from '../types/colorScale'
 import { Menu } from '#dom'
 import { make_radios } from '#dom'
 import { rgb } from 'd3-color'
-
-export type ColorScaleMenuOpts = {
-	scaleSvg: Svg
-	barG: SvgG
-	colors: string[]
-	cutoffMode: 'auto' | 'fixed'
-	data: number[]
-	setColorsCallback?: (val: string, idx: number) => void
-	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
-}
 
 export class ColorScaleMenu {
 	data: number[]
@@ -38,7 +29,7 @@ export class ColorScaleMenu {
 		this.renderMenu(opts.scaleSvg, opts.barG)
 	}
 
-	renderMenu(scaleSvg: Svg, barG: SvgG) {
+	renderMenu(scaleSvg: SvgSvg, barG: SvgG) {
 		let showTooltip = true
 		scaleSvg
 			.on('click', () => {

@@ -1,6 +1,5 @@
-import type { SvgG } from '../../types/d3'
-import type { ColorScaleDom, ColorScaleOpts, GradientElem } from '../types/colorScale'
-import type { ColorScaleMenuOpts } from './ColorScaleMenu'
+import type { SvgSvg, SvgG } from '../../types/d3'
+import type { ColorScaleDom, ColorScaleOpts, GradientElem, ColorScaleMenuOpts } from '../types/colorScale'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
@@ -43,14 +42,11 @@ export class ColorScale {
 		this.tickSize = opts.tickSize || 1
 		this.topTicks = opts.topTicks || false
 
-		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
-		if (!opts.data || !opts.data.length) throw new Error('No data provided for #dom/ColorScale.')
-		if (opts.data.length != this.colors.length)
-			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
+		this.validateOpts(opts)
 
 		this.tickValues = niceNumLabels(opts.data)
 
-		let scaleSvg
+		let scaleSvg: SvgSvg
 		if (opts.width || opts.height) {
 			scaleSvg = opts.holder
 				.append('svg')
@@ -58,8 +54,11 @@ export class ColorScale {
 				.attr('height', opts.height || 30)
 		} else scaleSvg = opts.holder
 		scaleSvg.attr('data-testid', 'sjpp-color-scale')
-
-		const barG = scaleSvg.append('g').attr('transform', `translate(${opts.position || '0,0'})`)
+		let barG
+		const position = opts.position || '0,0'
+		if (opts.labels) {
+			barG = this.renderLabels(scaleSvg, opts.labels, position)
+		} else barG = scaleSvg.append('g').attr('transform', `translate(${position})`)
 		const id = opts.id || Math.random().toString()
 
 		const defs = barG.append('defs')
@@ -81,6 +80,43 @@ export class ColorScale {
 			// Menu appearing on color bar click if callbacks are provided
 			this.menu = this.renderMenu(opts, scaleSvg, barG)
 		}
+	}
+
+	validateOpts(opts: ColorScaleOpts) {
+		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
+		if (!opts.data || !opts.data.length) throw new Error('No data provided for #dom/ColorScale.')
+		if (opts.data.length != this.colors.length)
+			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
+		if (opts.labels && (!opts.labels.left || !opts.labels.right))
+			throw new Error('Missing a label for #dom/ColorScale.')
+	}
+
+	renderLabels(scaleSvg: SvgSvg, labels: { left: string; right: string }, position: string) {
+		const addLabel = (text: string, x: number, y: number) => {
+			return scaleSvg
+				.append('text')
+				.text(text)
+				.attr('font-size', '.8em')
+				.attr('opacity', 0.6)
+				.attr('text-anchor', 'end')
+				.attr('transform', `translate(${x}, ${y})`)
+		}
+
+		const [posX, posY] = position.split(',').map(Number)
+
+		const leftLabel = addLabel(labels.left, posX, posY + 10)
+		const leftBBox = leftLabel.node()!.getBBox()
+
+		const startXPos = posX + leftBBox.x + leftBBox.width + 20
+		const barGPos = `${startXPos}, ${posY}`
+		const rightLabelX = startXPos + this.barwidth + 40
+		const rightLabelY = posY + 10
+		const barG = scaleSvg.append('g').attr('transform', `translate(${barGPos})`)
+		addLabel(labels.right, rightLabelX, rightLabelY)
+		const totalWidth = scaleSvg.node()!.getBBox().width + leftBBox.width
+		scaleSvg.attr('width', totalWidth)
+
+		return barG
 	}
 
 	getRange() {
@@ -149,7 +185,7 @@ export class ColorScale {
 		})
 	}
 
-	renderMenu(opts, scaleSvg, barG) {
+	renderMenu(opts: ColorScaleOpts, scaleSvg: SvgSvg, barG: SvgG) {
 		const _opts: ColorScaleMenuOpts = {
 			scaleSvg,
 			barG,
@@ -160,14 +196,13 @@ export class ColorScale {
 		if (opts.setColorsCallback)
 			_opts.setColorsCallback = async (val, idx) => {
 				if (!val || !idx) return
-				await opts.setColorsCallback(val, idx)
+				await opts.setColorsCallback!(val, idx)
 				this.updateColors()
 			}
 		if (opts.setMinMaxCallback)
 			_opts.setMinMaxCallback = async obj => {
-				console.log(obj)
 				if (!obj) return
-				await opts.setMinMaxCallback({
+				await opts.setMinMaxCallback!({
 					cutoffMode: obj.cutoffMode,
 					min: obj.min,
 					max: obj.max
@@ -181,18 +216,6 @@ export class ColorScale {
 	getAxis() {
 		const axis = this.topTicks === true ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
 		axis.ticks(this.ticks).tickSize(this.tickSize)
-
-		// const min = this.tickValues[0]
-		// const max = this.tickValues[this.tickValues.length - 1]
-		// const minDec = decimalPlacesUntilFirstNonZero(min)
-		// const maxDec = decimalPlacesUntilFirstNonZero(max)
-
-		// if ((min <= 0.01 && min != 0 && minDec >= 2) || (max <= 0.01 && max != 0 && maxDec >= 2)) {
-		// 	/**Tick values are sorted in niceNumLabels.
-		// 	 * If min or max value are small nums, have 2 or more decimal places,
-		// 	 * use scientific notation. Do not use if either value is 0. */
-		// 	axis.tickFormat(format('.1e'))
-		// }
 		return axis
 	}
 
@@ -254,7 +277,6 @@ export class ColorScale {
 	}
 
 	updateScale() {
-		console.log(this.data)
 		if (this.data.length != this.colors.length)
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 		this.updateColors()

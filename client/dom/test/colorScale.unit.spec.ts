@@ -7,6 +7,7 @@ import { detectGte } from '../../test/test.helpers.js'
     - new ColorScale()
     - ColorScale.render() - default bottom
     - ColorScale.render() - top
+	- With labels
     - ColorScale.updateColors()
 	- markedValue - Show value in color bar and update
     - ColorScale.updateAxis()
@@ -116,6 +117,29 @@ tape('ColorScale.render() - top', test => {
 	const childNodes = holder.select('svg > g').node().childNodes
 	test.equal(childNodes[1].nodeName, 'rect', 'Should render axis before the color bar when topTicks is true')
 	test.equal(childNodes[2].nodeName, 'g', 'Should render color bar after the axis when topTicks is true')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('With labels', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+	const opts = { holder, topTicks: true, position: '20, 15', labels: { left: 'Left', right: 'Right' } }
+	getColorScale(opts)
+
+	const childNodes = holder.select('svg').node().childNodes
+
+	test.true(
+		childNodes[0].nodeName == 'text' && childNodes[0].innerHTML == opts.labels.left,
+		`Should render text element to the left with label text = ${opts.labels.left}`
+	)
+	test.equal(childNodes[1].nodeName, 'g', 'Should render color bar between labels')
+	test.true(
+		childNodes[2].nodeName == 'text' && childNodes[2].innerHTML == opts.labels.right,
+		`Should render text element to the left with label text = ${opts.labels.right}`
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()
