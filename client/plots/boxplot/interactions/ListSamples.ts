@@ -40,7 +40,7 @@ export class ListSamples {
 		for (const [c, k] of Object.entries(data.samples))
 			rows.push([
 				{ value: data.refs.bySampleId[c].label },
-				{ value: roundValueAuto((k as Record<string, { value: number }>)[this.term.$id].value) }
+				{ value: Number(roundValueAuto((k as Record<string, { value: number }>)[this.term.$id].value)) }
 			])
 		return rows
 	}
