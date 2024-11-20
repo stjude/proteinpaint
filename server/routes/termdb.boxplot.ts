@@ -88,7 +88,7 @@ function init({ genomes }) {
 
 				const boxplot = boxplot_getvalue(vs)
 				if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
-				const descrStats = setDescrStats(boxplot as BoxPlotData, sortedValues, vs)
+				const descrStats = setDescrStats(boxplot as BoxPlotData, sortedValues)
 				const _plot = {
 					boxplot,
 					descrStats
@@ -152,7 +152,8 @@ function setHiddenPlots(term, plots) {
 	return plots
 }
 
-function setDescrStats(boxplot: BoxPlotData, sortedValues: number[], vs) {
+function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
+	if (sortedValues.length < 5) return
 	//boxplot_getvalue() already returns calculated stats
 	//Format data rather than recalculate
 	const mean = sortedValues.reduce((s, i) => s + i, 0) / sortedValues.length
@@ -164,24 +165,17 @@ function setDescrStats(boxplot: BoxPlotData, sortedValues: number[], vs) {
 	const squareDiffs = sortedValues.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0)
 	const variance = squareDiffs / (sortedValues.length - 1)
 
-	/** boxplot_getvalue won't return these values for small # of samples
-	 * Calculate value subset for tooltips. */
-	const p25 = boxplot.p25 ?? vs[Math.floor(vs.length / 4)].value
-	const p50 = boxplot.p50 ?? vs[Math.floor(vs.length / 2)].value
-	const p75 = boxplot.p75 ?? vs[Math.floor((vs.length * 3) / 4)].value
-	const iqr = boxplot.iqr ?? p75 - p25
-
 	return [
 		{ id: 'total', label: 'Total', value: sortedValues.length },
 		{ id: 'min', label: 'Minimum', value: roundValueAuto(sortedValues[0]) },
-		{ id: 'p25', label: '1st quartile', value: roundValueAuto(p25) },
-		{ id: 'median', label: 'Median', value: roundValueAuto(p50) },
+		{ id: 'p25', label: '1st quartile', value: roundValueAuto(boxplot.p25) },
+		{ id: 'median', label: 'Median', value: roundValueAuto(boxplot.p50) },
 		{ id: 'mean', label: 'Mean', value: roundValueAuto(mean) },
-		{ id: 'p75', label: '3rd quartile', value: roundValueAuto(p75) },
+		{ id: 'p75', label: '3rd quartile', value: roundValueAuto(boxplot.p75) },
 		{ id: 'max', label: 'Maximum', value: roundValueAuto(sortedValues[sortedValues.length - 1]) },
 		{ id: 'sd', label: 'Standard deviation', value: isNaN(sd) ? null : roundValueAuto(sd) },
 		{ id: 'variance', label: 'Variance', value: roundValueAuto(variance) },
-		{ id: 'iqr', label: 'Inter-quartile range', value: roundValueAuto(iqr) }
+		{ id: 'iqr', label: 'Inter-quartile range', value: roundValueAuto(boxplot.iqr) }
 	]
 }
 

@@ -27,6 +27,7 @@ export class BoxPlotToolTips {
 	}
 
 	addLabelTooltip() {
+		if (!this.plot.descrStats) return
 		this.boxplot.labelG.on('mouseover', () => {
 			this.tip.clear().showunder(this.boxplot.labelG.node())
 			const table = this.tip.d.append('table').attr('class', 'sja_simpletable')
