@@ -23,7 +23,7 @@ tape('roundValue tests', function (test) {
 	test.equal(roundValueAuto(value), rounded, `should return ${rounded}`)
 
 	value = 10549.23556789
-	rounded = 10549.24
+	rounded = '1.1e+4'
 	test.equal(roundValueAuto(value), rounded, `should return ${rounded}`)
 
 	value = -0.006

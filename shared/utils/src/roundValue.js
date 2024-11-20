@@ -7,16 +7,21 @@ round a value to specified digits
 value: given value
 digits: number of digits to round to
 */
+
 export function roundValue(value, digits) {
 	const v = Number(value)
 	if (Number.isInteger(v)) return v
-	if (Math.abs(v) < 1) return Number(v.toPrecision(digits))
+	const abs = Math.abs(v)
+	if (abs < 1 || abs > 9999) {
+		//Number() reverts positive values less than 10^21 to a whole number
+		return abs > 9999 ? v.toPrecision(digits) : Number(v.toPrecision(digits))
+	}
 	return Number(v.toFixed(digits))
 }
 
 export function roundValueAuto(value) {
 	const dp = decimalPlacesUntilFirstNonZero(value)
-	let digits = Math.abs(value) > 1 ? 2 : dp > 0 ? dp + 1 : 2
+	const digits = Math.abs(value) > 1 ? 2 : dp > 0 ? dp + 1 : 2
 
 	return roundValue(value, digits)
 }

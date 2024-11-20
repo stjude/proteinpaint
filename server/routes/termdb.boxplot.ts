@@ -3,7 +3,7 @@ import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortKey2values } from '../src/termdb.violin.js'
-import { roundValue } from '#shared/roundValue.js'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -152,7 +152,7 @@ function setHiddenPlots(term, plots) {
 	return plots
 }
 
-function setDescrStats(boxplot: BoxPlotData, sortedValues: number[], vs: { value: number }[]) {
+function setDescrStats(boxplot: BoxPlotData, sortedValues: number[], vs) {
 	//boxplot_getvalue() already returns calculated stats
 	//Format data rather than recalculate
 	const mean = sortedValues.reduce((s, i) => s + i, 0) / sortedValues.length
@@ -173,15 +173,15 @@ function setDescrStats(boxplot: BoxPlotData, sortedValues: number[], vs: { value
 
 	return [
 		{ id: 'total', label: 'Total', value: sortedValues.length },
-		{ id: 'min', label: 'Minimum', value: roundValue(sortedValues[0], 2) },
-		{ id: 'p25', label: '1st quartile', value: roundValue(p25, 2) },
-		{ id: 'median', label: 'Median', value: roundValue(p50, 2) },
-		{ id: 'mean', label: 'Mean', value: roundValue(mean, 2) },
-		{ id: 'p75', label: '3rd quartile', value: roundValue(p75, 2) },
-		{ id: 'max', label: 'Maximum', value: roundValue(sortedValues[sortedValues.length - 1], 2) },
-		{ id: 'sd', label: 'Standard deviation', value: isNaN(sd) ? null : roundValue(sd, 2) },
-		{ id: 'variance', label: 'Variance', value: roundValue(variance, 2) },
-		{ id: 'iqr', label: 'Inter-quartile range', value: roundValue(iqr, 2) }
+		{ id: 'min', label: 'Minimum', value: roundValueAuto(sortedValues[0]) },
+		{ id: 'p25', label: '1st quartile', value: roundValueAuto(p25) },
+		{ id: 'median', label: 'Median', value: roundValueAuto(p50) },
+		{ id: 'mean', label: 'Mean', value: roundValueAuto(mean) },
+		{ id: 'p75', label: '3rd quartile', value: roundValueAuto(p75) },
+		{ id: 'max', label: 'Maximum', value: roundValueAuto(sortedValues[sortedValues.length - 1]) },
+		{ id: 'sd', label: 'Standard deviation', value: isNaN(sd) ? null : roundValueAuto(sd) },
+		{ id: 'variance', label: 'Variance', value: roundValueAuto(variance) },
+		{ id: 'iqr', label: 'Inter-quartile range', value: roundValueAuto(iqr) }
 	]
 }
 
