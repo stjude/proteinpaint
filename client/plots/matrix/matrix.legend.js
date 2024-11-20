@@ -154,12 +154,12 @@ export function getLegendData(legendGroups, refs, self) {
 
 				const gainColors = getColors(gain)
 				const lossColors = getColors(loss)
-				const colors = [...lossColors.reverse(), 'white', ...gainColors]
+				const colors = [lossColors[1], 'white', gainColors[1]]
 				const domain = setColorScaleDomain(loss.maxLabel, gain.maxLabel, [0, 0], colors)
 				if (gain && loss) {
 					legend.values.CNV_gain_loss = {
 						key: 'CNV_gain_loss',
-						label: ' ',
+						label: 'Gain and Loss',
 						dt: 4,
 						order: -1,
 						domain,

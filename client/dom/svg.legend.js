@@ -98,8 +98,8 @@ export default function svgLegend(opts) {
 		if (settings.linesep) {
 			currlinex = settings.padleft
 			currliney += settings.lineh
-			// } else if (d.hasScale) {
-			// 	currlinex = leftdist - 2 * settings.padx + 2
+		} else if (d.hasScale) {
+			currlinex = leftdist - 2 * settings.padx + 2
 		} else if (d.hasScale || settings.hangleft) {
 			currlinex = leftdist + 2 * settings.padx
 		} else {
@@ -189,6 +189,7 @@ export default function svgLegend(opts) {
 		let colorGradientId
 		if (d.domain) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
+			const yPos = y + 3
 			const opts = {
 				barwidth: width,
 				barheight: settings.iconh,
@@ -197,13 +198,14 @@ export default function svgLegend(opts) {
 				fontSize: 0.82 * settings.fontsize,
 				holder: g,
 				id: colorGradientId,
-				position: `${bbox.width + 25},${y + 4}`,
+				position: `${bbox.width + 25},${yPos}`,
 				ticks: 3,
-				tickSize: 5,
+				tickSize: 2,
 				topTicks: true
 			}
 			if (d.termid.toLowerCase().includes('cnv')) {
 				opts.labels = { left: 'Loss', right: 'Gain' }
+				if (d.text) opts.position = `${bbox.width + bbox.x + 45 + settings.padx},${yPos}`
 			}
 			new ColorScale(opts)
 
