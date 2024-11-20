@@ -1,4 +1,4 @@
-import { roundValue } from './roundValue.js'
+import { roundValueAuto } from './roundValue.js'
 
 /* This file generates summary statistics on any given array of numbers*/
 
@@ -42,15 +42,15 @@ export default function summaryStats(array) {
 	return {
 		values: [
 			{ id: 'total', label: 'Total', value: n },
-			{ id: 'min', label: 'Minimum', value: roundValue(min, 2) },
-			{ id: 'p25', label: '1st quartile', value: roundValue(p25, 2) },
-			{ id: 'median', label: 'Median', value: roundValue(median, 2) },
-			{ id: 'mean', label: 'Mean', value: roundValue(mean(arr), 2) },
-			{ id: 'p75', label: '3rd quartile', value: roundValue(p75, 2) },
-			{ id: 'max', label: 'Maximum', value: roundValue(max, 2) },
-			{ id: 'SD', label: 'Standard deviation', value: roundValue(stdDev, 2) },
-			{ id: 'variance', label: 'Variance', value: roundValue(variance, 2) },
-			{ id: 'IQR', label: 'Inter-quartile range', value: roundValue(IQR, 2) }
+			{ id: 'min', label: 'Minimum', value: roundValueAuto(min) },
+			{ id: 'p25', label: '1st quartile', value: roundValueAuto(p25) },
+			{ id: 'median', label: 'Median', value: roundValueAuto(median) },
+			{ id: 'mean', label: 'Mean', value: roundValueAuto(mean(arr)) },
+			{ id: 'p75', label: '3rd quartile', value: roundValueAuto(p75) },
+			{ id: 'max', label: 'Maximum', value: roundValueAuto(max) },
+			{ id: 'SD', label: 'Standard deviation', value: roundValueAuto(stdDev) },
+			{ id: 'variance', label: 'Variance', value: roundValueAuto(variance) },
+			{ id: 'IQR', label: 'Inter-quartile range', value: roundValueAuto(IQR) }
 		]
 	}
 }
