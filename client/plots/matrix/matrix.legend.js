@@ -143,6 +143,38 @@ export function getLegendData(legendGroups, refs, self) {
 		const keys = Object.keys(legend.values).sort()
 		const hasScale = Object.values(legend.values).find(v => v.scale)
 		if (hasScale) {
+			if (legend === legendGroups?.CNV) {
+				/** Combine gain and loss here to avoid rendering issues */
+				const legendValues = Object.values(legend.values)
+				const findLegend = type =>
+					legendValues.find(v => v.label.toLowerCase().includes(type) || v.key.toLowerCase().includes(type))
+
+				const gain = findLegend('gain')
+				const loss = findLegend('loss')
+
+				const gainColors = getColors(gain)
+				const lossColors = getColors(loss)
+				const colors = [...lossColors.reverse(), 'white', ...gainColors]
+				const domain = setColorScaleDomain(loss.maxLabel, gain.maxLabel, [0, 0], colors)
+				if (gain && loss) {
+					legend.values.CNV_gain_loss = {
+						key: 'CNV_gain_loss',
+						label: ' ',
+						dt: 4,
+						order: -1,
+						domain,
+						scale: scaleLinear().domain(domain).range(colors),
+						minLabel: loss.maxLabel,
+						maxLabel: gain.maxLabel,
+						samples: new Set([...gain.samples, ...loss.samples])
+					}
+					delete legend.values[gain.key]
+					delete legend.values[loss.key]
+					keys.splice(keys.indexOf(gain.key), 1)
+					keys.splice(keys.indexOf(loss.key), 1)
+					keys.push('CNV_gain_loss')
+				}
+			}
 			const legendGrpLabelMaxChars = s.legendGrpLabelMaxChars || 26
 			legendData.push({
 				name: $id.length < legendGrpLabelMaxChars ? $id : $id.slice(0, legendGrpLabelMaxChars) + '...',
@@ -156,14 +188,7 @@ export function getLegendData(legendGroups, refs, self) {
 					const item = legend.values[key]
 					const count = item.samples?.size
 					if (item.scale) {
-						const colors = item.domain?.map(c => item.scale(c)) || item.scale.range()
-						if (item.key && item.key?.includes('CNV_loss')) {
-							/** Hardcoded for cnv loss to avoid rendering errors within
-							 * the matrix.
-							 * TODO: Appropriate to change to item.minLabel == 0 && item.maxLabel <0
-							 * to avoid hardcoding? */
-							colors.reverse()
-						}
+						const colors = getColors(item)
 						const domain = setColorScaleDomain(item.minLabel, item.maxLabel, item.domain, colors)
 						return {
 							termid: $id,
@@ -394,4 +419,8 @@ function setColorScaleDomain(min, max, domain, colors) {
 		if (i === (colors.length - 1) / 2 && min < 0 && max > 0) return 0
 		return min + step * i
 	})
+}
+
+function getColors(item) {
+	return item.domain?.map(c => item.scale(c)) || item.scale.range()
 }
