@@ -469,8 +469,9 @@ export function server_init_db_queries(ds) {
 	}
 
 	/* 
-		must define commonCharts{} in local scope (inside the init function)
-		to ensure that ds-specific overrides are not shared across different datasets
+		generates commonCharts with optional overrides to ensure that ds-specific overrides are not shared across different datasets
+		this is used by getSupportedChartTypes()
+		scope commonCharts inside the init function; also compute it once on server startup and no need to repeat it in getSupportedChartTypes()
 	*/
 	const commonCharts = Object.assign(
 		{},
@@ -478,13 +479,12 @@ export function server_init_db_queries(ds) {
 		(ds.isSupportedChartOverride as isSupportedChartCallbacks) || {}
 	)
 
-	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set
+	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set. needed by getSupportedChartTypes()
 
 	/*
-	getSupportedChartTypes()
 	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
 	for showing as chart buttons in mass ui
-	
+
 	auth{}
 	.embedder:
 		if a ds controls certain route based on request host name (embedder),
@@ -559,7 +559,7 @@ export function server_init_db_queries(ds) {
 }
 
 /*
-	defaultCommonCharts{} defines common chart types, including:
+	here defines common chart types, including:
 	- generally applicable to any ds, e.g. summary
 	- computable chart type based on term type or ds.queries{} availability, e.g. survival, singleCell
 
@@ -570,7 +570,7 @@ export function server_init_db_queries(ds) {
 	- numericDictCluster is not defined here, it is defined in ds that wants it
 	- does not include special "uncommon" chart type
 
-	can be overridden by ds, inside the init() function, in order to achieve:
+	can be overridden by ds.isSupportedChartOverride{}, inside the init() function, in order to achieve:
 	- hide common chart type by providing a callback that returns false 
 	  (e.g. even if a ds has survival term, collaborator still doesn't want km plot to show...)
 	- add special "uncommon" chart (profile)
