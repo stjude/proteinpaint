@@ -26,6 +26,7 @@ export class profileForms extends profilePlot {
 		super()
 		this.opts = opts
 		this.type = 'profileForms'
+		this.keys = new Set()
 	}
 
 	async init(appState) {
@@ -122,14 +123,12 @@ export class profileForms extends profilePlot {
 
 	renderPlot() {
 		this.dom.mainG.selectAll('*').remove()
-
-		const samples = this.settings.site ? [this.data.samples[this.settings.site]] : this.data.lst
+		const samples = this.settings.isAggregate || !this.sampleData ? this.data.lst : [this.sampleData]
 		const height = 30
 		let y = 0
 		const activePlot = this.state.config.plots[0] //later on will be based on the tab selected
 		for (const tw of activePlot.terms) {
 			const percents: { [key: string]: number } = this.getPercentsDict(tw, samples)
-			if (!this.keys) this.keys = Object.keys(percents)
 			const scTerm = activePlot.scTerms.find(t => t.term.id.includes(tw.term.id))
 			const scPercents: { [key: string]: number } = this.getSCPercentsDict(scTerm, samples)
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
@@ -142,7 +141,7 @@ export class profileForms extends profilePlot {
 				this.dom.mainG
 					.append('text')
 					.text('*')
-					.attr('x', this.settings.svgw + 10)
+					.attr('x', this.settings.svgw + 8)
 					.attr('y', y + height * 0.75)
 			}
 			this.dom.mainG
@@ -167,6 +166,7 @@ export class profileForms extends profilePlot {
 		const total = Object.values(percents).reduce((a, b) => a + b, 0)
 		let x = 0
 		for (const key of percentsOrdered) {
+			this.keys.add(key)
 			const color = this.getColor(key)
 
 			const value = percents[key]
