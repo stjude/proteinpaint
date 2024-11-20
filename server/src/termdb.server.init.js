@@ -470,53 +470,96 @@ export function server_init_db_queries(ds) {
 	}
 
 	/*
-	returns list of chart types based on term types from each subcohort combination
+	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
+	for showing as chart buttons in mass ui
+
+	embedder:
+		if a ds controls certain route based on request host name (embedder),
+		then this param value will be used to determine visible/hidden status for chart types depending on the controlled route
+		in such case if embedder is missing, such chart types will not be shown (or disabled, based on dsCredentials)
+
+	future:
+		may have 2nd optional arg of user's role for computing chart types
 	*/
 	q.getSupportedChartTypes = embedder => {
-		const specialCharts = ds.cohort.specialCharts || []
-		const hiddenCharts = ds.cohort.hiddenCharts || []
-		const draftCharts = serverconfig.features?.draftChartTypes || []
+		/*
+		commonCharts{} defines common chart types, including:
+		- generally applicable to any ds, e.g. summary
+		- computable chart type based on term type or ds.queries{} availability, e.g. survival, singleCell
+
+		each chart type has a callback equivalent to isSupported() that executes on context parameters to yield true/false indicating if the chart type should be shown or not
+
+		must define commonCharts{} in local scope (inside the function) as it can be overridden by ds, in order to achieve:
+		- hide common chart type by providing a callback that returns false (e.g. even if a ds has survival term, collaborator still doesn't want km plot to show...)
+		- add special "uncommon" chart (profile)
+		- supply new callback of existing chart type, to execute adhoc logic (e.g. consider user's role...)
+
+		this is **not** an exhaustive list:
+		- numericDictCluster is not defined here, it is defined in ds that wants it
+		- does not include special "uncommon" chart type
+		*/
+		const commonCharts = {
+			dictionary: () => true,
+			summary: () => true,
+			matrix: () => true,
+			regression: () => true,
+			facet: () => true,
+			survival: ({ termType }) => termType == 'survival',
+			cuminc: ({ termType }) => termType == 'condition',
+			sampleScatter: ({ ds, termType, termCount }) => {
+				if (ds.cohort.scatterplots) return true
+				if (ds.queries?.geneExpression) return true
+				if (ds.queries?.metaboliteIntensity) return true
+				// minor issue: this only considers integer/float term type separately, but not adding them together. still a ds is unlikely to have just 1 integer and 1 float terms that must enable scatter...
+				if (numericTypes.has(termType) && termCount > 2) return true
+				return false
+			},
+			genomeBrowser: ({ ds }) => {
+				// will need to add more logic
+				if (ds.queries?.snvindel || ds.queries?.trackLst) return true
+				return false
+			},
+			singleCellPlot: ({ ds }) => ds.queries?.singleCell,
+			geneExpression: ({ ds }) => ds.queries?.geneExpression,
+			metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
+			DEanalysis: ({ ds }) => ds.queries?.rnaseqGeneCount,
+			brainImaging: ({ ds }) => ds.queries?.NIdata,
+			DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case
+			WSIViewer: ({ ds }) => ds.queries?.WSImages,
+			imagePlot: ({ ds }) => ds.queries?.images,
+			dataDownload: ({ forbiddenRoutes }) => {
+				// ---  sample-level charts  ---
+				// not shown if a portal/embedder (request origin) is forbidden to access certain server routes;
+				// may need to be recomputed for every `/termdb/config` request because the embedder may change
+				return !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')
+			},
+			sampleView: ({ forbiddenRoutes }) => {
+				return !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')
+			}
+		}
+		if (ds.isSupportedChartOverride) {
+			Object.assign(commonCharts, ds.isSupportedChartOverride)
+		}
+
 		const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, embedder)
 
 		mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set
-		const supportedChartTypes = {}
-		const chartsToCheck = !embedder
-			? isSupportedOpenAccessChart // only loop through open access charts if there is no embedder argument
-			: ds.supportedOpenAccessCharts
-			? isSupportedRestrictedChart // only loop through restricted charts if ds.supportedOpenAccessCharts has been computed and there is an embedder argument
-			: { ...isSupportedOpenAccessChart, ...isSupportedRestrictedChart } // by default, loop through open and restricted charts
 
-		const computedChartTypes = Object.keys(chartsToCheck)
-		// special charts that are not in chartsToCheck will be supported by default
-		const nonComputedCharts = specialCharts.filter(c => computedChartTypes.includes(c))
+		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
 
 		for (const { cohort, termType, termCount } of ds.cohort.termdb.termtypeByCohort) {
-			if (!Object.keys(supportedChartTypes).includes(cohort)) {
-				// if only looping through restricted charts, initialize the set with precomputed ds.supportedOpenAccessCharts
-				const precomputed = chartsToCheck == isSupportedRestrictedChart ? ds.supportedOpenAccessCharts[cohort] : []
-				// add special charts that are not computed
-				precomputed.push(...nonComputedCharts)
-				supportedChartTypes[cohort] = new Set(precomputed || [])
-			}
-
-			for (const [chartType, isSupported] of Object.entries(chartsToCheck)) {
-				if (supportedChartTypes[cohort].has(chartType)) continue
-				if (isSupported({ ds, forbiddenRoutes, specialCharts, hiddenCharts, draftCharts, termType, termCount })) {
-					supportedChartTypes[cohort].add(chartType)
+			if (!supportedChartTypes[cohort]) supportedChartTypes[cohort] = []
+			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
+				//if(supportedChartTypes[cohort].includes(chartType)) continue // the chart type is already visible for thi
+				// TODO later when user's role is available, supply it to isSupported()
+				if (isSupported({ ds, forbiddenRoutes, termType, termCount })) {
+					// this chart type is supported based on context
+					supportedChartTypes[cohort].push(chartType)
 				}
 			}
 		}
-
-		// convert to array
-		for (const cohort in supportedChartTypes) {
-			supportedChartTypes[cohort] = [...supportedChartTypes[cohort]]
-		}
-
 		return supportedChartTypes
 	}
-
-	// precompute the supported open access charts once and remember for subsequent requests, since it doesn't change
-	ds.supportedOpenAccessCharts = q.getSupportedChartTypes() // no embedder argument
 
 	q.getSingleSampleData = function (sampleId, term_ids = []) {
 		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(t => '?').join(',')})`
@@ -573,107 +616,6 @@ export function listDbTables(cn) {
 export function listTableColumns(cn, table) {
 	const rows = cn.prepare(`SELECT name FROM PRAGMA_TABLE_INFO('${table}')`).all()
 	return rows.map(i => i.name)
-}
-
-/*
-	key: chartType
-	value: function to evaluate whether the chart is supported for a dataset
-
-	keep outside of server_init_db_queries() so that 
-	the same logic, functions can be reused for different ds
-*/
-const isSupportedOpenAccessChart = {
-	// --- show these charts unless hidden ---
-	dictionary: ({ hiddenCharts }) => !hiddenCharts.includes('dictionary'),
-
-	summary: ({ hiddenCharts }) => !hiddenCharts.includes('summary'),
-
-	matrix: ({ hiddenCharts }) => !hiddenCharts.includes('matrix'),
-
-	regression: ({ hiddenCharts }) => !hiddenCharts.includes('regression'),
-
-	facet: ({ hiddenCharts }) => !hiddenCharts.includes('facet'),
-
-	// show these charts if there are matching terms and not hidden
-	survival: ({ hiddenCharts, termType }) => !hiddenCharts.includes('survival') && termType == 'survival',
-
-	cuminc: ({ hiddenCharts, termType }) => {
-		return !hiddenCharts.includes('cuminc') && termType == 'condition'
-	},
-
-	boxplot: ({ draftCharts, hiddenCharts, termType, termCount }) =>
-		draftCharts?.includes('boxplot') &&
-		!hiddenCharts.includes('boxplot') &&
-		numericTypes.has(termType) &&
-		termCount > 2,
-
-	// --- show these charts if there are matching terms or ds.cohort property, and also not hidden ---
-	sampleScatter: ({ ds, hiddenCharts, termType, termCount }) =>
-		!hiddenCharts.includes('sampleScatter') &&
-		((numericTypes.has(termType) && termCount > 2) ||
-			ds.cohort.scatterplots ||
-			ds.queries?.geneExpression ||
-			ds.queries?.metaboliteIntensity),
-
-	// --- show these charts if there is matching ds.queries ---
-	genomeBrowser: ({ ds, hiddenCharts }) =>
-		(ds.queries?.snvindel || ds.queries?.trackLst) && !hiddenCharts.includes('genomeBrowser'),
-
-	geneExpression: ({ ds, hiddenCharts }) => ds.queries?.geneExpression && !hiddenCharts.includes('geneExpression'),
-
-	metaboliteIntensity: ({ ds, hiddenCharts }) =>
-		ds.queries?.metaboliteIntensity && !hiddenCharts.includes('metaboliteIntensity'),
-
-	DEanalysis: ({ ds, hiddenCharts }) => ds.queries?.rnaseqGeneCount && !hiddenCharts.includes('DEanalysis')
-
-	// --- show these special charts, if specified, not need to compute if not in a key in this object ---
-	// brainImaging: ({ specialCharts, hiddenCharts }) =>
-	// 	specialCharts.includes('brainImaging') && !hiddenCharts.includes('brainImaging'),
-
-	// by not having profile
-	// profileRadar: ({ specialCharts, hiddenCharts }) =>
-	// 	specialCharts.includes('profileRadar') && !hiddenCharts.includes('profileRadar'),
-
-	// profileRadarFacility: ({ specialCharts, hiddenCharts }) =>
-	// 	specialCharts.includes('profileRadarFacility') && !hiddenCharts.includes('profileRadarFacility'),
-
-	// profilePolar: ({ specialCharts, hiddenCharts }) =>
-	// 	specialCharts.includes('profilePolar') && !hiddenCharts.includes('profilePolar'),
-
-	// profileBarchart: ({ specialCharts, hiddenCharts }) =>
-	// 	specialCharts.includes('profileBarchart') && !hiddenCharts.includes('profileBarchart'),
-
-	// numericDictCluster: ({ specialCharts, hiddenCharts, termType }) =>
-	// 	specialCharts.includes('numericDictCluster') &&
-	// 	!hiddenCharts.includes('numericDictCluster') &&
-	// 	(termType == 'float' || termType == 'integer')
-}
-
-/*
-	key: chartType
-	value: function to evaluate whether the chart is supported for a dataset and embedder
-
-	keep outside of server_init_db_queries() so that 
-	the same logic, functions can be reused for different ds
-*/
-const isSupportedRestrictedChart = {
-	// ---  sample-level charts  ---
-	// not shown if a portal/embedder (request origin) is forbidden to access certain server routes;
-	// may need to be recomputed for every `/termdb/config` request because the embedder may change
-	dataDownload: ({ hiddenCharts, forbiddenRoutes }) => {
-		return (
-			!hiddenCharts.includes('dataDownload') && !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')
-		)
-	},
-
-	sampleView: ({ hiddenCharts, forbiddenRoutes }) =>
-		!hiddenCharts.includes('sampleView') && !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*'),
-
-	singleCellPlot: ({ ds, hiddenCharts, forbiddenRoutes }) =>
-		ds.queries?.singleCell &&
-		!hiddenCharts.includes('singleCellPlot') &&
-		!forbiddenRoutes.includes('termdb') &&
-		!forbiddenRoutes.includes('*')
 }
 
 export function mayComputeTermtypeByCohort(ds) {
