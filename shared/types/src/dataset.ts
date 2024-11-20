@@ -1188,9 +1188,6 @@ type AssayAvailability = {
 
 //Shared with genome.ts
 export type Cohort = {
-	allowedChartTypes?: string[] // deprecated, should use the following two options instead
-	specialCharts?: string[]
-	hiddenCharts?: string[]
 	cumburden?: {
 		files: {
 			fit: string
@@ -1557,8 +1554,15 @@ export type Mds3 = BaseMds & {
 	dsinfo?: KeyVal[]
 	queries?: Mds3Queries
 	cohort?: Cohort
-	/** dataset specific override on callback per chart type, that defines the visibility of a chart type based on context */
-	isSupportedChartOverride?: object
+	/** supply "isSupported()" kind of callback per chart type,
+	that will overwrite default logic in getSupportedChartTypes()
+	- the callback can have arbitrary logic based on requirements from this ds
+	- can supply ()=>false to hide charts that will otherwise shown
+	- can define arbitrary chart type names for purpose-specific charts
+	*/
+	isSupportedChartOverride?: {
+		[chartType: string]: (f: any) => void
+	}
 	// TODO: termdb should be nested under cohort
 	termdb?: Termdb
 	validate_filter0?: (f: any) => void
