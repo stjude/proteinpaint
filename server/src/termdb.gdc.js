@@ -342,10 +342,23 @@ export async function initGDCdictionary(ds) {
 	makeTermdbQueries(ds, id2term)
 
 	ds.cohort.termdb.termtypeByCohort = []
-	if (categoricalCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'categorical' })
-	if (integerCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'integer' })
-	if (floatCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'float' })
-	if (survivalCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'survival' })
+	ds.cohort.termdb.termtypeByCohort.nested = { '': {} }
+	if (categoricalCount) {
+		ds.cohort.termdb.termtypeByCohort.push({ cohort: '', termType: 'categorical', termCount: categoricalCount })
+		ds.cohort.termdb.termtypeByCohort.nested[''].categorical = categoricalCount
+	}
+	if (integerCount) {
+		ds.cohort.termdb.termtypeByCohort.push({ cohort: '', termType: 'integer', termCount: integerCount })
+		ds.cohort.termdb.termtypeByCohort.nested[''].integer = integerCount
+	}
+	if (floatCount) {
+		ds.cohort.termdb.termtypeByCohort.push({ cohort: '', termType: 'float', termCount: floatCount })
+		ds.cohort.termdb.termtypeByCohort.nested[''].float = floatCount
+	}
+	if (survivalCount) {
+		ds.cohort.termdb.termtypeByCohort.push({ cohort: '', termType: 'survival', termCount: survivalCount })
+		ds.cohort.termdb.termtypeByCohort.nested[''].survival = survivalCount
+	}
 
 	if (serverconfig.features.await4completeGdcCaseCache) {
 		// only use on dev environment. here as soon as server is launched,

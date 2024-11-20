@@ -72,10 +72,13 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 	const tdb = ds.cohort.termdb
 	// add attributes to this object to reveal to client
 
+	// TODO: may fill this in later with other request-specific credentials
+	const auth = { embedder: q.embedder }
+
 	// add required attributes
 	const c: any = {
 		selectCohort: tdb.selectCohort, // optional
-		supportedChartTypes: tdb.q?.getSupportedChartTypes(q.embedder),
+		supportedChartTypes: tdb.q?.getSupportedChartTypes(auth),
 		hiddenChartTypes: ds.cohort.hiddenChartTypes,
 		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getAllowedTermTypes(ds),

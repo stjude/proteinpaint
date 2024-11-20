@@ -469,90 +469,37 @@ export function server_init_db_queries(ds) {
 		}
 	}
 
+	/* 
+		must define commonCharts{} in local scope (inside the init function)
+		to ensure that ds-specific overrides are not shared across different datasets
+	*/
+	const commonCharts = Object.assign({}, defaultCommonCharts, ds.isSupportedChartOverride || {})
+
+	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set
+
 	/*
+	getSupportedChartTypes()
 	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
 	for showing as chart buttons in mass ui
-
-	embedder:
+	
+	auth{}
+	.embedder:
 		if a ds controls certain route based on request host name (embedder),
 		then this param value will be used to determine visible/hidden status for chart types depending on the controlled route
 		in such case if embedder is missing, such chart types will not be shown (or disabled, based on dsCredentials)
 
-	future:
-		may have 2nd optional arg of user's role for computing chart types
+	.user? may add jwt payload details if available, such as user roles and other props
 	*/
-	q.getSupportedChartTypes = embedder => {
-		/*
-		commonCharts{} defines common chart types, including:
-		- generally applicable to any ds, e.g. summary
-		- computable chart type based on term type or ds.queries{} availability, e.g. survival, singleCell
-
-		each chart type has a callback equivalent to isSupported() that executes on context parameters to yield true/false indicating if the chart type should be shown or not
-
-		must define commonCharts{} in local scope (inside the function) as it can be overridden by ds, in order to achieve:
-		- hide common chart type by providing a callback that returns false (e.g. even if a ds has survival term, collaborator still doesn't want km plot to show...)
-		- add special "uncommon" chart (profile)
-		- supply new callback of existing chart type, to execute adhoc logic (e.g. consider user's role...)
-
-		this is **not** an exhaustive list:
-		- numericDictCluster is not defined here, it is defined in ds that wants it
-		- does not include special "uncommon" chart type
-		*/
-		const commonCharts = {
-			dictionary: () => true,
-			summary: () => true,
-			matrix: () => true,
-			regression: () => true,
-			facet: () => true,
-			survival: ({ termType }) => termType == 'survival',
-			cuminc: ({ termType }) => termType == 'condition',
-			sampleScatter: ({ ds, termType, termCount }) => {
-				if (ds.cohort.scatterplots) return true
-				if (ds.queries?.geneExpression) return true
-				if (ds.queries?.metaboliteIntensity) return true
-				// minor issue: this only considers integer/float term type separately, but not adding them together. still a ds is unlikely to have just 1 integer and 1 float terms that must enable scatter...
-				if (numericTypes.has(termType) && termCount > 2) return true
-				return false
-			},
-			genomeBrowser: ({ ds }) => {
-				// will need to add more logic
-				if (ds.queries?.snvindel || ds.queries?.trackLst) return true
-				return false
-			},
-			singleCellPlot: ({ ds }) => ds.queries?.singleCell,
-			geneExpression: ({ ds }) => ds.queries?.geneExpression,
-			metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
-			DEanalysis: ({ ds }) => ds.queries?.rnaseqGeneCount,
-			brainImaging: ({ ds }) => ds.queries?.NIdata,
-			DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case
-			WSIViewer: ({ ds }) => ds.queries?.WSImages,
-			imagePlot: ({ ds }) => ds.queries?.images,
-			dataDownload: ({ forbiddenRoutes }) => {
-				// ---  sample-level charts  ---
-				// not shown if a portal/embedder (request origin) is forbidden to access certain server routes;
-				// may need to be recomputed for every `/termdb/config` request because the embedder may change
-				return !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')
-			},
-			sampleView: ({ forbiddenRoutes }) => {
-				return !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')
-			}
-		}
-		if (ds.isSupportedChartOverride) {
-			Object.assign(commonCharts, ds.isSupportedChartOverride)
-		}
-
-		const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, embedder)
-
-		mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set
-
+	q.getSupportedChartTypes = (auth = { embedder: '' }) => {
+		const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, auth.embedder)
 		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
 
-		for (const { cohort, termType, termCount } of ds.cohort.termdb.termtypeByCohort) {
-			if (!supportedChartTypes[cohort]) supportedChartTypes[cohort] = []
+		for (const [cohort, cohortTermTypes] of Object.entries(ds.cohort.termdb.termtypeByCohort.nested)) {
+			supportedChartTypes[cohort] = []
+
 			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
-				//if(supportedChartTypes[cohort].includes(chartType)) continue // the chart type is already visible for thi
-				// TODO later when user's role is available, supply it to isSupported()
-				if (isSupported({ ds, forbiddenRoutes, termType, termCount })) {
+				// auth second argument may be ignored by isSupported() callback
+				if (isSupported({ ds, forbiddenRoutes, cohortTermTypes }, auth)) {
 					// this chart type is supported based on context
 					supportedChartTypes[cohort].push(chartType)
 				}
@@ -608,6 +555,63 @@ export function server_init_db_queries(ds) {
 	}
 }
 
+/*
+	defaultCommonCharts{} defines common chart types, including:
+	- generally applicable to any ds, e.g. summary
+	- computable chart type based on term type or ds.queries{} availability, e.g. survival, singleCell
+
+	each chart type has a callback equivalent to isSupported() that executes on context parameters 
+	to yield true/false indicating if the chart type should be shown or not
+
+	this is **not** an exhaustive list:
+	- numericDictCluster is not defined here, it is defined in ds that wants it
+	- does not include special "uncommon" chart type
+
+	can be overridden by ds, inside the init() function, in order to achieve:
+	- hide common chart type by providing a callback that returns false 
+	  (e.g. even if a ds has survival term, collaborator still doesn't want km plot to show...)
+	- add special "uncommon" chart (profile)
+	- supply new callback of existing chart type, to execute adhoc logic (e.g. consider user's role...)
+*/
+const defaultCommonCharts = {
+	dictionary: () => true,
+	summary: () => true,
+	matrix: () => true,
+	regression: () => true,
+	facet: () => true,
+	survival: ({ cohortTermTypes }) => cohortTermTypes.hasOwnProperty('survival'),
+	cuminc: ({ cohortTermTypes }) => cohortTermTypes.hasOwnProperty('condition'),
+	sampleScatter: ({ ds, cohortTermTypes, termCount }) => {
+		if (ds.cohort.scatterplots) return true
+		if (ds.queries?.geneExpression) return true
+		if (ds.queries?.metaboliteIntensity) return true
+		if (cohortTermTypes.numeric > 1) return true // numeric is always prefilled for convenience, does not have to check if property exists
+		return false
+	},
+	genomeBrowser: ({ ds }) => {
+		// will need to add more logic
+		if (ds.queries?.snvindel || ds.queries?.trackLst) return true
+		return false
+	},
+	singleCellPlot: ({ ds }) => ds.queries?.singleCell,
+	geneExpression: ({ ds }) => ds.queries?.geneExpression,
+	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
+	DEanalysis: ({ ds }) => ds.queries?.rnaseqGeneCount,
+	brainImaging: ({ ds }) => ds.queries?.NIdata,
+	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case
+	WSIViewer: ({ ds }) => ds.queries?.WSImages,
+	imagePlot: ({ ds }) => ds.queries?.images,
+	dataDownload: ({ forbiddenRoutes }) => {
+		// ---  sample-level charts  ---
+		// not shown if a portal/embedder (request origin) is forbidden to access certain server routes;
+		// may need to be recomputed for every `/termdb/config` request because the embedder and login status may change
+		return !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')
+	},
+	sampleView: ({ forbiddenRoutes }) => {
+		return !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')
+	}
+}
+
 export function listDbTables(cn) {
 	const rows = cn.prepare("SELECT name FROM sqlite_master WHERE type='table'").all()
 	return new Set(rows.map(i => i.name))
@@ -633,29 +637,31 @@ export function mayComputeTermtypeByCohort(ds) {
 	not available; perform db query for the first request, and cache the results
 
 	(as this query may be expensive thus do not want to run it for every request...)
+	
+	when termType: '', it indicates a branch term that is not used to annotate samples
 
 	for dataset with subcohort:
 	[
-	  { cohort: 'XYZ', type: '', samplecount: 615 },
-	  { cohort: 'XYZ', type: 'categorical', samplecount: 393 },
-	  { cohort: 'ABC', type: '', samplecount: 636 },
-	  { cohort: 'ABC', type: 'categorical', samplecount: 457 },
+	  { cohort: 'XYZ', termType: '', termCount: 615 }, // filtered out in sql, can add back as needed
+	  { cohort: 'XYZ', termType: 'categorical', termCount: 393 },
+	  { cohort: 'ABC', termType: '', termCount: 636 },
+	  { cohort: 'ABC', termType: 'categorical', termCount: 457 },
 	  ...
-	  { cohort: 'XYZ,ABC', type: '', samplecount: 614 },
-	  { cohort: 'XYZ,ABC', type: 'categorical', samplecount: 393 },
+	  { cohort: 'XYZ,ABC', termType: '', termCount: 614 },
+	  { cohort: 'XYZ,ABC', termType: 'categorical', termCount: 393 },
 	  ...
 	]
 
 	for dataset without subcohort:
 	[
-		  { cohort: '', type: '', samplecount: 11 },
-		  { cohort: '', type: 'categorical', samplecount: 65 },
-		  { cohort: '', type: 'float', samplecount: 1 },
-		  { cohort: '', type: 'survival', samplecount: 2 }
+		  { cohort: '', termType: '', termCount: 11 }, // filtered out in sql, can add back as needed
+		  { cohort: '', termType: 'categorical', termCount: 65 },
+		  { cohort: '', termType: 'float', termCount: 1 },
+		  { cohort: '', termType: 'survival', termCount: 2 }
 	]
 
 	*/
-	ds.cohort.termdb.termtypeByCohort = ds.cohort.db.connection
+	const rows = ds.cohort.db.connection
 		.prepare(
 			`WITH c AS (
 			SELECT cohort, term_id
@@ -664,8 +670,26 @@ export function mayComputeTermtypeByCohort(ds) {
 		) 
 		SELECT cohort, type as termType, count(*) as termCount 
 		FROM terms t
-		JOIN c ON c.term_id = t.id
+		JOIN c ON c.term_id = t.id AND t.type != '' AND t.type IS NOT NULL
 		GROUP BY cohort, termType`
 		)
 		.all()
+
+	// flat list/array
+	ds.cohort.termdb.termtypeByCohort = rows
+	// freeze to avoid accidental rewrites by consumer code
+	for (const r of rows) Object.freeze(r)
+
+	// nested data by cohort name, more convenient to use in some cases
+	const nested = {}
+	for (const r of rows) {
+		if (!nested[r.cohort]) nested[r.cohort] = { numeric: 0 } // guarantees that this convenience property exists
+		nested[r.cohort][r.termType] = r.termCount
+		// for convenience, precompute the number of numeric terms in cohort
+		if (numericTypes.has(r.termType)) nested[r.cohort].numeric += r.termCount
+	}
+	Object.freeze(nested)
+	// freeze to avoid accidental rewrites by consumer code
+	for (const v of Object.values(nested)) Object.freeze(v)
+	ds.cohort.termdb.termtypeByCohort.nested = nested
 }
