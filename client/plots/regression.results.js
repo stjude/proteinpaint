@@ -603,7 +603,9 @@ function setRenderers(self) {
 							const [samplesize_ref, samplesize_c] = cols.shift().split('/')
 							const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
 							if (isfirst) {
-								const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
+								const variableBottomDiv = termNameTd.select('.sjpcb-coef-variable-bottom')
+								variableBottomDiv.style('align-items', 'baseline')
+								const refGrpDiv = variableBottomDiv.selectAll('div').filter((d, i) => i === 1)
 								refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
 							}
 							td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
@@ -846,7 +848,9 @@ function setRenderers(self) {
 							const [samplesize_ref, samplesize_c] = cols.shift().split('/')
 							const [eventcnt_ref, eventcnt_c] = cols.shift().split('/')
 							if (isfirst) {
-								const refGrpDiv = termNameTd.select('.sjpcb-regression-results-refGrp')
+								const variableBottomDiv = termNameTd.select('.sjpcb-coef-variable-bottom')
+								variableBottomDiv.style('align-items', 'baseline')
+								const refGrpDiv = variableBottomDiv.selectAll('div').filter((d, i) => i === 1)
 								refGrpDiv.append('div').html(`n=${samplesize_ref}<br>events=${eventcnt_ref}`)
 							}
 							td.append('div').style('font-size', '.8em').html(`n=${samplesize_c}<br>events=${eventcnt_c}`)
@@ -1408,9 +1412,10 @@ function fillCoefficientTermname(tw, td) {
 		// display beneath term name
 		const bottomDiv = td
 			.append('div')
+			.attr('class', 'sjpcb-coef-variable-bottom')
 			.style('display', 'flex')
 			.style('align-items', 'center')
-			.style('margin-top', '1px')
+			.style('margin-top', '2px')
 			.style('font-size', '.8em')
 
 		let label
@@ -1428,11 +1433,7 @@ function fillCoefficientTermname(tw, td) {
 			.style('font-size', '.7em')
 			.text(hasRefGrp ? 'REF' : 'EFFECT ALLELE')
 
-		bottomDiv
-			.append('div')
-			.attr('class', hasRefGrp ? 'sjpcb-regression-results-refGrp' : 'sjpcb-regression-results-effAle')
-			.style('padding', '1px 3px')
-			.text(label)
+		bottomDiv.append('div').style('padding', '1px 3px').text(label)
 	}
 }
 
