@@ -2,7 +2,7 @@ import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js'
-import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.js'
+import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.ts'
 import { TermTypes } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 

@@ -7,7 +7,7 @@ $ npx tape modules/test/*.spec.js
 import tape from 'tape'
 import { getFilterCTEs } from '../termdb.filter.js'
 import { init } from './load.testds.js'
-import { server_init_db_queries } from '../termdb.server.init.js'
+import { server_init_db_queries } from '../termdb.server.init.ts'
 
 tape('\n', function (test) {
 	test.pass('-***- modules/termdb.filter specs -***-')
