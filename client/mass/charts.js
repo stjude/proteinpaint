@@ -112,7 +112,6 @@ function getChartTypeList(self, state) {
 		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
 	*/
 	const [logged, site, user] = getProfileLogin() //later on replace with login
-
 	const buttons = [
 		////////////////////// PROFILE PLOTS START //////////////////////
 		{

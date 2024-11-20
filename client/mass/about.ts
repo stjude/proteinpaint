@@ -135,9 +135,17 @@ export class MassAbout {
 					.style('margin-left', '0px')
 					.on('click', async () => {
 						const state = app.getState()
-						const clearOnChange = state.clearOnChange
+						const clearOnChange = state.termdbConfig.selectCohort.clearOnChange
 						if (clearOnChange) {
-							const subactions: { [index: string]: string | number | any }[] = [{ type: 'cohort_set', activeCohort: i }]
+							const subactions: any[] = []
+
+							if (clearOnChange.plots)
+								for (const plot of state.plots) {
+									subactions.push({
+										type: 'plot_delete',
+										id: plot.id
+									})
+								}
 							if (clearOnChange.filter)
 								subactions.push({
 									type: 'filter_replace',
@@ -149,14 +157,7 @@ export class MassAbout {
 										lst: []
 									}
 								})
-							if (clearOnChange.plots)
-								for (const plot of state.plots) {
-									subactions.push({
-										type: 'plot_delete',
-										id: plot.id
-									})
-								}
-
+							subactions.push({ type: 'cohort_set', activeCohort: i })
 							app.dispatch({
 								type: 'app_refresh',
 								subactions

@@ -6,6 +6,7 @@ import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
+import { active } from 'd3'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
@@ -131,7 +132,11 @@ export class profilePlot {
 		let values = Object.values(tw.term.values)
 		values.sort((v1, v2) => v1.label.localeCompare(v2.label))
 		const twSamples = this.samplesPerFilter[tw.term.id]
-		const data = this.filtersData.lst.filter(sample => twSamples.includes(parseInt(sample.sample)))
+		const data = []
+		for (const sample of twSamples) {
+			data.push(this.filtersData.samples[sample])
+		}
+		//select samples with data for that term
 		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
 		for (const value of values) {
 			value.value = value.label
@@ -334,10 +339,20 @@ export class profilePlot {
 
 	async loadSampleData(chartType, inputs) {
 		const id = this.sampleidmap[this.state.site]?.id
+		let sampleData
 		if (this.state.site) {
 			if (!id) throw 'Invalid site'
-			const sampleData = this.data.samples[Number(id)]
-			if (!sampleData) throw 'Invalid site, please change the profile version selected and close this message.'
+			sampleData = this.data.samples[Number(id)]
+			if (!sampleData) {
+				//may have been filtered out
+				const data = await this.app.vocabApi.getAnnotatedSampleData({
+					terms: this.twLst,
+					termsPerRequest: 30,
+					filter: getSampleFilter(parseInt(id))
+				})
+				sampleData = data.samples[id]
+				if (!sampleData) throw 'Invalid site, please change the profile version selected and close this message.'
+			}
 		}
 
 		if (chartType != 'profileRadarFacility') {
@@ -365,23 +380,18 @@ export class profilePlot {
 						callback: value => this.setSite(value)
 					})
 				}
-				if (this.settings.site) this.sampleData = this.data.samples[Number(this.settings.site)]
+				if (this.settings.site) this.sampleData = sampleData
 				else this.sampleData = null
 			}
 		} else {
 			if (this.state.logged) {
 				let result
 
-				if (this.state.site) {
-					const id = this.sampleidmap[this.state.site].id
+				if (this.state.site && !this.settings.isAggregate) {
 					this.settings.site = id
 					this.sites = [{ label: this.state.site, value: id }]
-					result = await this.app.vocabApi.getAnnotatedSampleData({
-						terms: this.twLst,
-						termsPerRequest: 30,
-						filter: getSampleFilter(parseInt(id))
-					})
-					this.sampleData = result.lst[0]
+
+					this.sampleData = sampleData
 				} //Admin
 				else {
 					result = await this.app.vocabApi.getAnnotatedSampleData({
@@ -575,6 +585,7 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	*/
 	const state = chartsInstance.state
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
+	if (!activeCohort) throw 'No active cohort found'
 	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const typeConfig = state.termdbConfig?.plotConfigByCohort[key][chartType]
 	const menuDiv = holder.append('div')
@@ -599,6 +610,7 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 
 export function getProfilePlotConfig(app, opts) {
 	const state = app.getState()
+
 	const activeCohort = state ? state.activeCohort : opts.activeCohort
 	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const config = app.vocabApi.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]

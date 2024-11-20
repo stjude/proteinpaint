@@ -504,7 +504,7 @@ function setInteractivity(self) {
 			self.app.dispatch({
 				type: 'plot_create',
 				id: getId(),
-				config: { chartType: defaultChartType }
+				config: { chartType: defaultChartType, activeCohort: self.activeCohort }
 			})
 		}
 	}
