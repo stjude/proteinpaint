@@ -1,4 +1,4 @@
-import { Mclass } from './Mclass.ts'
+import type { Mclass } from './Mclass.ts'
 
 /*** General usage types ***/
 type FileObj = {
@@ -1557,6 +1557,8 @@ export type Mds3 = BaseMds & {
 	dsinfo?: KeyVal[]
 	queries?: Mds3Queries
 	cohort?: Cohort
+	/** dataset specific override on callback per chart type, that defines the visibility of a chart type based on context */
+	isSupportedChartOverride?: object
 	// TODO: termdb should be nested under cohort
 	termdb?: Termdb
 	validate_filter0?: (f: any) => void
