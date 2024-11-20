@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
 import * as utils from './utils.js'
-import { server_init_db_queries } from './termdb.server.init.js'
+import { server_init_db_queries } from './termdb.server.init.ts'
 import { validate_single_numericrange } from '#shared/mds.termdb.termvaluesetting.js'
 import serverconfig from './serverconfig.js'
 

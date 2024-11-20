@@ -1544,6 +1544,16 @@ export type PreInit = {
 	}
 }
 
+/** supply "isSupported()" kind of callback per chart type,
+	that will overwrite default logic in getSupportedChartTypes()
+	- the callback can have arbitrary logic based on requirements from this ds
+	- can supply ()=>false to hide charts that will otherwise shown
+	- can define arbitrary chart type names for purpose-specific charts
+*/
+export type isSupportedChartCallbacks = {
+	[chartType: string]: (f: any, auth: any) => boolean | undefined
+}
+
 export type Mds3 = BaseMds & {
 	label?: Title
 	isMds3: boolean
@@ -1554,15 +1564,7 @@ export type Mds3 = BaseMds & {
 	dsinfo?: KeyVal[]
 	queries?: Mds3Queries
 	cohort?: Cohort
-	/** supply "isSupported()" kind of callback per chart type,
-	that will overwrite default logic in getSupportedChartTypes()
-	- the callback can have arbitrary logic based on requirements from this ds
-	- can supply ()=>false to hide charts that will otherwise shown
-	- can define arbitrary chart type names for purpose-specific charts
-	*/
-	isSupportedChartOverride?: {
-		[chartType: string]: (f: any) => void
-	}
+	isSupportedChartOverride?: isSupportedChartCallbacks
 	// TODO: termdb should be nested under cohort
 	termdb?: Termdb
 	validate_filter0?: (f: any) => void

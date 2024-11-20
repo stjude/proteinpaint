@@ -26,7 +26,7 @@ import {
 	geneVariantTermGroupsetting
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
-import { server_init_db_queries } from './termdb.server.init.js'
+import { server_init_db_queries } from './termdb.server.init.ts'
 import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from './termdb.scatter.js'
 import { mayInitiateMatrixplots } from './termdb.matrix.js'
