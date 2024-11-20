@@ -342,7 +342,8 @@ export function server_init_db_queries(ds) {
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE name LIKE ?`
 		)
-		q.findTermByName = (n, cohortStr = '', _treeFilter = null, usecase = null) => {
+		// it can accept an optional treeFilter parameter which is not used here, but used in gdc
+		q.findTermByName = (n, cohortStr = '', usecase = null) => {
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
 				const r: string[] = []
@@ -512,7 +513,7 @@ export function server_init_db_queries(ds) {
 	}
 
 	q.getSingleSampleData = function (sampleId, term_ids = []) {
-		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(_ => '?').join(',')})`
+		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(() => '?').join(',')})`
 		const query = `select term_id, value, jsondata from ( select term_id, value 
 		from anno_categorical 
 		where sample=? ${termClause}
