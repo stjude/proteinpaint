@@ -1,2 +1,1 @@
-Fixes
-- Do not run a regression analysis multiple times after editing a variant locus variable
+
