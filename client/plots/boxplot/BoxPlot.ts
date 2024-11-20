@@ -46,6 +46,8 @@ export type BoxPlotDom = {
 	controls: Elem
 	/** Main div */
 	div: Div
+	/** Error messages */
+	error: Div
 	/** Sandbox header */
 	header?: Elem
 	/** Legend */
@@ -74,10 +76,12 @@ class TdbBoxplot extends RxComponentInner {
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px')
+		const errorDiv = div.append('div').attr('id', 'sjpp-boxplot-error').style('opacity', 0.75)
 		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-boxplot-svg')
 		this.dom = {
 			controls: controls as Elem,
 			div,
+			error: errorDiv,
 			svg,
 			plotTitle: svg.append('text'),
 			yAxis: svg.append('g'),
@@ -215,8 +219,10 @@ class TdbBoxplot extends RxComponentInner {
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
-			if (!data?.plots?.length) {
-				this.app.printError('No data found for box plot')
+			if (!data?.plots?.length || data['error']) {
+				this.interactions.clearDom()
+				this.dom.error.style('padding', '20px 20px 20px 60px').text('No visible box plot data to render')
+				return
 			}
 			const maxLabelLgth = getMaxLabelLgth(
 				this.dom.boxplots,

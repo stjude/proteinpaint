@@ -67,4 +67,12 @@ export class BoxPlotInteractions {
 			config
 		})
 	}
+
+	clearDom() {
+		this.dom.error.style('padding', '').text('')
+		this.dom.plotTitle.text('')
+		this.dom.yAxis.selectAll('*').remove()
+		this.dom.boxplots.selectAll('*').remove()
+		this.dom.legend.selectAll('*').remove()
+	}
 }

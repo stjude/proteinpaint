@@ -28,10 +28,7 @@ export class View {
 		this.dom = dom
 		this.interactions = interactions
 		if (!data || !data.plots.length) return
-		dom.plotTitle.selectAll('*').remove()
-		dom.yAxis.selectAll('*').remove()
-		dom.boxplots.selectAll('*').remove()
-		dom.legend.selectAll('*').remove()
+		this.interactions.clearDom()
 
 		const plotDim = data.plotDim
 
