@@ -189,7 +189,7 @@ export default function svgLegend(opts) {
 		let colorGradientId
 		if (d.domain) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
-			new ColorScale({
+			const opts = {
 				barwidth: width,
 				barheight: settings.iconh,
 				colors: d.colors || d.scale.range() || ['white', 'grey'],
@@ -197,13 +197,18 @@ export default function svgLegend(opts) {
 				fontSize: 0.82 * settings.fontsize,
 				holder: g,
 				id: colorGradientId,
-				position: `${bbox.width + 25},${y + 6}`,
+				position: `${bbox.width + 25},${y + 4}`,
 				ticks: 3,
-				tickSize: 0,
+				tickSize: 5,
 				topTicks: true
-			})
+			}
+			if (d.termid.toLowerCase().includes('cnv')) {
+				opts.labels = { left: 'Loss', right: 'Gain' }
+			}
+			new ColorScale(opts)
 
-			currlinex += 10 * settings.padx
+			if (opts.labels) currlinex += bbox.width + 25 + 15 * settings.padx
+			else currlinex += 10 * settings.padx
 		} else {
 			g.append('rect')
 				.attr('height', settings.iconh)
