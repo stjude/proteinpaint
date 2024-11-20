@@ -1199,7 +1199,6 @@ export type Cohort = {
 	/** customize the default chart to open on mass ui when there's no charts. if
 	 * missing it opens dictionary ui */
 	defaultChartType?: string
-	hiddenChartTypes?: string[]
 	massNav?: MassNav
 	matrixplots?: MatrixPlots
 	mutationset?: MutationSet[]
