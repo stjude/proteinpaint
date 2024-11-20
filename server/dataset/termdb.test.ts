@@ -49,8 +49,6 @@ export default {
 			file: 'files/hg38/TermdbTest/db'
 		},
 
-		specialCharts: ['boxplot'],
-
 		termdb: {
 			displaySampleIds: true, // allow to display sample-level data
 
