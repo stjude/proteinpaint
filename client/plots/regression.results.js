@@ -152,7 +152,6 @@ export class RegressionResults {
 		*/
 		for (const i of this.parent.inputs.independent.inputLst) {
 			if (!i.term) continue
-			if (i.term.term.id == tid || i.term.term.name == tid) return i
 			if (i.term.term && i.term.term.snps) {
 				// is a snplst or snplocus term with .snps[]
 				for (const snp of i.term.term.snps) {
@@ -186,6 +185,7 @@ export class RegressionResults {
 					}
 				}
 			}
+			if (i.term.term.id == tid || i.term.term.name == tid) return i
 		}
 		// given tid does not match with an Input
 		// can be an ancestry PC which is automatically added by serverside and not recorded on client
@@ -1399,42 +1399,40 @@ function fillTdName(td, name) {
 	}
 }
 function fillCoefficientTermname(tw, td) {
-	// fill column 1 <td> using term name, may also show refGrp and reference allele
+	// fill column 1 <td> using term name
 	fillTdName(td, tw.term.name || tid)
-
-	if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
-		// do not display ref for spline variable
-		const refGrpDiv = td.append('div').style('margin-top', '2px').style('font-size', '.8em')
-
-		refGrpDiv
+	// fill refGrp or effect allele, if applicable
+	const hasRefGrp = 'refGrp' in tw && tw.refGrp != refGrp_NA && tw.q.mode != 'spline'
+	if (hasRefGrp || tw.effectAllele) {
+		// has refGrp or effect allele
+		// display beneath term name
+		const bottomDiv = td
 			.append('div')
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('margin-top', '1px')
+			.style('font-size', '.8em')
+
+		let label
+		if (hasRefGrp) {
+			label = tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp
+		} else {
+			label = tw.effectAllele
+		}
+
+		bottomDiv
+			.append('div')
 			.style('padding', '1px 5px')
 			.style('border', '1px solid #aaa')
 			.style('border-radius', '10px')
 			.style('font-size', '.7em')
-			.text('REF')
+			.text(hasRefGrp ? 'REF' : 'EFFECT ALLELE')
 
-		refGrpDiv
+		bottomDiv
 			.append('div')
-			.attr('class', 'sjpcb-regression-results-refGrp')
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-			.style('margin-left', '3px')
-			.text(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp)
-	}
-
-	if (tw.effectAllele) {
-		// only for snplst term
-		td.append('div')
-			.style('font-size', '.8em')
-			.style('opacity', 0.6)
-			.html(
-				'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">EFFECT ALLELE</span> ' +
-					tw.effectAllele +
-					'</span>'
-			)
+			.attr('class', hasRefGrp ? 'sjpcb-regression-results-refGrp' : 'sjpcb-regression-results-effAle')
+			.style('padding', '1px 3px')
+			.text(label)
 	}
 }
 
