@@ -20,6 +20,7 @@ export function roundValue(value, digits) {
 }
 
 export function roundValueAuto(value) {
+	if (!value && value != 0) return value
 	const dp = decimalPlacesUntilFirstNonZero(value)
 	const digits = Math.abs(value) > 1 ? 2 : dp > 0 ? dp + 1 : 2
 
