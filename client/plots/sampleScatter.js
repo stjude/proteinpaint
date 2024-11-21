@@ -73,11 +73,9 @@ class Scatter {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-		const cohortKey = getActiveCohortStr(appState)
 		return {
 			config,
 			termfilter: appState.termfilter,
-			supportedChartTypes: appState.termdbConfig.supportedChartTypes[cohortKey],
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig,
@@ -625,7 +623,10 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				})
 		}
 	const formDiv = menuDiv.append('div')
-	if (!chartsInstance.state.termdbConfig.hiddenChartTypes?.includes('dynamicScatter')) {
+
+	// if "dynamicScatter" child type is present in currentCohortChartTypes, render the numeric term selection ui for dynamicScatter. if not, do not render ui
+	if (chartsInstance.state.currentCohortChartTypes.includes('dynamicScatter')) {
+		// dynamicScatter is enabled for this cohort. render ui and break loop
 		const callback = (xterm, yterm) => {
 			chartsInstance.app.dispatch({
 				type: 'plot_create',

@@ -738,10 +738,10 @@ export function setInteractivity(self) {
 
 	self.addCommonMenuItems = function (menuDiv, tw) {
 		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
-		if (self.state.supportedChartTypes.includes('survival'))
+		if (self.state.currentCohortChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', self.dom.tip, tw, self.id, this)
 
-		if (self.state.supportedChartTypes.includes('cuminc'))
+		if (self.state.currentCohortChartTypes.includes('cuminc'))
 			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', self.dom.tip, tw, self.id, this)
 
 		const summarizeDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').html('Summarize')
