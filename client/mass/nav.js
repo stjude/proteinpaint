@@ -30,7 +30,7 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 // data elements for navigation header tabs
-const aboutTab = { top: 'DATASET', mid: 'ABOUT', btm: '', subheader: 'about' }
+const aboutTab = { top: 'ABOUT', mid: '', btm: '', subheader: 'about' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
@@ -293,7 +293,7 @@ function setRenderers(self) {
 			aboutTab.top = 'COHORT'
 			aboutTab.mid = ''
 			aboutTab.btm = ''
-		} else aboutTab.top = massNav?.tabs?.about?.top || appState.vocab.dslabel.toUpperCase()
+		} else aboutTab.mid = massNav?.tabs?.about?.mid || self.pickDatasetLabel(appState)
 		const tabIdx = appState.termdbConfig?.selectCohort ? 0 : massNav?.tabs?.about?.order || 0
 		self.tabs.splice(tabIdx, 0, aboutTab)
 
@@ -451,8 +451,8 @@ function setRenderers(self) {
 						return aboutMap[d.key] || ''
 					} else if (!selectCohort) {
 						const aboutMap = {
-							top: massNav?.tabs?.about?.top || this.innerHTML,
-							mid: massNav?.tabs?.about?.mid || 'ABOUT',
+							top: massNav?.tabs?.about?.top || 'ABOUT',
+							mid: massNav?.tabs?.about?.mid || this.innerHTML,
 							btm: massNav?.tabs?.about?.btm || this.innerHTML
 						}
 						return aboutMap[d.key] || ''
@@ -518,5 +518,10 @@ function setInteractivity(self) {
 		a.download = `${self.sessionId}.json`
 		a.click()
 		a.remove()
+	}
+
+	self.pickDatasetLabel = appState => {
+		const dslabel = appState.vocab.dslabel.toUpperCase()
+		return dslabel.length > 10 ? `${dslabel.slice(0, 10)}...` : dslabel
 	}
 }
