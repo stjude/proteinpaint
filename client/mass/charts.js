@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { Menu } from '#dom/menu'
+import { Menu } from '#dom'
 import { getNormalRoot } from '#filter/filter'
 import { NumericModes, TermTypes } from '#shared/terms.js'
 import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
