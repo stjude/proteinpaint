@@ -23,17 +23,11 @@ class MassCharts {
 	// TODO later add reactsTo() to react to filter change
 
 	getState(appState) {
-		// need vocab, activeCohort and filter
-
-		const activeCohortStr = getActiveCohortStr(appState)
-
-		const chartTypesByCohort = JSON.parse(JSON.stringify(appState.termdbConfig?.supportedChartTypes || {}))
-		// {}, key is cohortstr, value is list of supported chart types under this cohort
 		const state = {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			supportedChartTypes: chartTypesByCohort[activeCohortStr] || ['summary'],
+			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
 			termdbConfig: appState.termdbConfig
 		}
 		if (appState?.termfilter?.filter) {
@@ -44,7 +38,9 @@ class MassCharts {
 
 	main() {
 		//this.dom.holder.style('display', 'block')
-		this.dom.btns.style('display', d => (!d.hide && this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
+		this.dom.btns.style('display', d =>
+			!d.hide && this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'
+		)
 	}
 }
 
@@ -61,6 +57,13 @@ export function getActiveCohortStr(appState) {
 	}
 	// if not, is undefined
 	return ''
+}
+
+export function getCurrentCohortChartTypes(appState) {
+	const activeCohortStr = getActiveCohortStr(appState)
+	const chartTypesByCohort = structuredClone(appState.termdbConfig?.supportedChartTypes || {})
+	// {}, key is cohortstr, value is list of supported chart types under this cohort
+	return chartTypesByCohort[activeCohortStr] || ['summary']
 }
 
 function getChartTypeList(self, state) {

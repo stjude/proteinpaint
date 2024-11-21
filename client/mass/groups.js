@@ -4,7 +4,7 @@ import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from 
 import { appInit } from '#termdb/app'
 import { renderTable } from '../dom/table.ts'
 import { get$id } from '#termsetting'
-import { getActiveCohortStr } from './charts'
+import { getCurrentCohortChartTypes } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
@@ -43,13 +43,12 @@ class MassGroups {
 	}
 
 	getState(appState) {
-		const cohortKey = getActiveCohortStr(appState)
 		const state = {
 			termfilter: appState.termfilter,
 			groups: rebaseGroupFilter(appState),
 			termdbConfig: appState.termdbConfig,
 			customTerms: appState.customTerms,
-			supportedChartTypes: appState.termdbConfig.supportedChartTypes[cohortKey],
+			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
 			matrixplots: appState.termdbConfig.matrixplots
 		}
 		return state
@@ -215,16 +214,16 @@ class MassGroups {
 		let row = menuDiv.append('div')
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
-		if (this.state.supportedChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
+		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
 			addDEPlotMenuItem(menuDiv, this, this.state, samplelstTW)
 
-		if (this.state.supportedChartTypes.includes('survival'))
+		if (this.state.currentCohortChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
 
-		if (this.state.supportedChartTypes.includes('geneExpression'))
+		if (this.state.currentCohortChartTypes.includes('geneExpression'))
 			addHierClusterPlotMenuItem('geneExpression', menuDiv, 'Gene expression', this.tip, samplelstTW, id, this, true)
 
-		if (this.state.supportedChartTypes.includes('cuminc'))
+		if (this.state.currentCohortChartTypes.includes('cuminc'))
 			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', this.tip, samplelstTW, id, this, true)
 
 		const summarizeDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').html('Summarize')
