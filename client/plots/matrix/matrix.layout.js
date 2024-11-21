@@ -378,7 +378,9 @@ export function setLayout() {
 	this.setAutoDimensions(xOffset)
 	this.setLabelsAndScales()
 
-	const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel))
+	// When the cell is very small, colspace is 0, once zoom in, colspace will be shown, so need to consider it when zooming in
+	// At this point, computed matrix settings has been merged to settings.matrix by setAutoDimensions.
+	const colw = Math.max(s.colwMin, Math.min(s.colwMax, (s.colw + s.colspace) * s.zoomLevel))
 	const dx = colw + s.colspace
 	const nx = this[`${col}s`].length
 	const dy = s.rowh + s.rowspace
