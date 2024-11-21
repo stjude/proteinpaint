@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.87.1
 
 Fixes:
 - Do not run a regression analysis multiple times after editing a variant locus variable
