@@ -94,7 +94,7 @@ export function getLegendData(legendGroups, refs, self) {
 							key,
 							dt: v.dt,
 							origin: v.origin,
-							label: v.label || self.mclass[key].label,
+							label: v.label || self.mclass[key]?.label || 'Gain and loss',
 							fill: v.color || self.mclass[key]?.color,
 							order: key == 'CNV_loss' ? -2 : key.startsWith('CNV_') ? -1 : 0,
 							crossedOut: f.tvs.legendFilterType == 'geneVariant_hard' ? true : false,
@@ -152,20 +152,26 @@ export function getLegendData(legendGroups, refs, self) {
 				const gain = findLegend('gain')
 				const loss = findLegend('loss')
 
-				const gainColors = getColors(gain)
-				const lossColors = getColors(loss)
-				const colors = [lossColors[1], 'white', gainColors[1]]
-				const domain = setColorScaleDomain(loss.maxLabel, gain.maxLabel, [0, 0], colors)
 				if (gain && loss) {
+					const gainColors = getColors(gain)
+					const lossColors = getColors(loss)
+					const colors = [lossColors[1], 'white', gainColors[1]]
+					const domain = setColorScaleDomain(loss.maxLabel, gain.maxLabel, [0, 0], colors)
+
+					const base = {
+						isLegendItem: true
+					}
 					legend.values.CNV_gain_loss = {
-						key: 'CNV_gain_loss',
+						key: $id,
 						label: 'Gain and Loss',
 						dt: 4,
 						order: -1,
 						domain,
+						name: 'CNV gain/loss',
 						scale: scaleLinear().domain(domain).range(colors),
 						minLabel: loss.maxLabel,
 						maxLabel: gain.maxLabel,
+						parents: [Object.assign(loss, base), Object.assign(gain, base)],
 						samples: new Set([...gain.samples, ...loss.samples])
 					}
 					delete legend.values[gain.key]
@@ -204,7 +210,8 @@ export function getLegendData(legendGroups, refs, self) {
 							dt: item.dt,
 							crossedOut: item.crossedOut,
 							greyedOut: item.greyedOut,
-							origin: item.origin
+							origin: item.origin,
+							parents: item.parents
 						}
 					} else {
 						return {
