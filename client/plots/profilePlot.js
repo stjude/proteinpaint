@@ -6,7 +6,6 @@ import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
-import { active } from 'd3'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
@@ -584,9 +583,7 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 		mass option is accessible at chartsInstance.app.opts{}
 	*/
 	const state = chartsInstance.state
-	const activeCohort = state ? state.activeCohort : opts.activeCohort
-	if (!activeCohort) throw 'No active cohort found'
-	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
+	const key = state.activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const typeConfig = state.termdbConfig?.plotConfigByCohort[key][chartType]
 	const menuDiv = holder.append('div')
 	for (const plotConfig of typeConfig.plots) {
@@ -608,20 +605,15 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	}
 }
 
-export function getProfilePlotConfig(app, opts) {
-	const state = app.getState()
-
-	const activeCohort = state ? state.activeCohort : opts.activeCohort
-	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
-	const config = app.vocabApi.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]
-	if (!config) throw `No data available form the plot ${opts.chartType} in this dataset`
-	return config
+export function getProfilePlotConfig(state, opts) {
+	const key = state.activeCohort == FULL_COHORT ? 'full' : 'abbrev'
+	const config = state.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]
+	if (!config) throw `No data available for the plot ${opts.chartType} in this dataset`
+	return structuredClone(config)
 }
 
-export async function loadFilterTerms(config, app, opts) {
-	const state = app.getState()
-	const activeCohort = state ? state.activeCohort : opts.activeCohort //when recovering a session the state is not available, use the opts provided
-	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
+export async function loadFilterTerms(config, state, app) {
+	const cohortPreffix = state.activeCohort == FULL_COHORT ? 'F' : 'A'
 	const twlst = []
 	config.countryTW = { id: cohortPreffix + 'country' }
 	config.regionTW = { id: cohortPreffix + 'WHO_region' }
