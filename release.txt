@@ -1,1 +1,2 @@
-
+Fixes:
+- after crossing out a matrix sandbox, resizing browser window will yield matrix err

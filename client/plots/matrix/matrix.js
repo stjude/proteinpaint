@@ -13,6 +13,7 @@ import { setComputedConfig } from './matrix.config'
 import { getTermGroups } from './matrix.xtw'
 import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
+import { select } from 'd3-selection'
 
 export class Matrix {
 	constructor(opts) {
@@ -406,6 +407,9 @@ export class Matrix {
 
 	termGrpLabel(t) {
 		return t.grp.label || t.grp.name || [{ text: '⋮', dx: 3, cls: 'sjpp-exclude-svg-download' }]
+	}
+	destroy() {
+		select(window).on(`resize.sjpp-${self.id}`, null)
 	}
 }
 
