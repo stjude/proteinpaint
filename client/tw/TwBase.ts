@@ -31,15 +31,18 @@ export class TwBase {
 	sortSamples?: any
 	minNumSamples?: number
 	valueFilter?: any
+	// tw settings, such as barh, color, gap
 	settings?: any
 
 	constructor(tw: TermWrapper, opts: TwOpts) {
+		console.log('what is tw.settings', tw.settings)
 		this.type = tw.type
 		this.isAtomic = true
 		if (tw.$id) this.$id = tw.$id
 		if (tw.sortSamples) this.sortSamples = tw.sortSamples
 		if (tw.minNumSamples) this.minNumSamples = tw.minNumSamples
 		if (tw.valueFilter) this.valueFilter = tw.valueFilter
+		// need to copy over tw settings if exist
 		if (tw.settings) this.settings = tw.settings
 
 		// By using Object.defineProperties(), addon methods are not enumerable
