@@ -1,1 +1,2 @@
-
+Features: 
+- matrix continuous row: clicking label to edit bar height and color
