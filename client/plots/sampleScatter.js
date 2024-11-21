@@ -1,17 +1,15 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '#termsetting'
-import { Menu } from '#dom/menu'
+import { Menu, shapesArray, select2Terms } from '#dom'
 import { controlsInit } from './controls'
 import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
 import { getActiveCohortStr } from '../mass/charts'
-import { select2Terms } from '#dom/select2Terms'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rebaseGroupFilter, getFilter } from '../mass/groups'
 import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
-import { shapesArray } from '#dom/shapes'
 
 /*
 sample object returned by server:
