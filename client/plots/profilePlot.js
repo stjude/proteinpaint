@@ -414,6 +414,8 @@ export class profilePlot {
 				filter: getSampleFilter(parseInt(this.settings.site)),
 				termsPerRequest: 30
 			})
+			if (data.lst.length == 0)
+				throw 'No data available for the selected site. Please change the cohort and close this message'
 			return data.samples[this.settings.site]
 		}
 		return null
