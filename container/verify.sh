@@ -36,7 +36,7 @@ while true; do
   fi
 done
 
-ENDSTR="STANDBY AT PORT 3000" # the port is forced to 3000 inside the container by server/src/serverconfig.js
+ENDSTR="STANDBY AT PORT ${EXPOSED_PORT}" # the port is forced to 3000 inside the container by server/src/serverconfig.js
 echo "Waiting for server startup ..."
 while true; do
   if docker logs $CONTAINER_NAME 2>&1 | grep -q "$ENDSTR"; then

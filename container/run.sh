@@ -15,7 +15,7 @@ fi
 node validateConfig
 TPDIR=$(node -p "require('./serverconfig.json').tpmasterdir")
 HOSTPORT=$(node -p "require('./serverconfig.json').URL?.split(':')[2]")
-EXPOSED_PORT=$(node -p "require('./serverconfig.json').port || 3000")
+EXPOSED_PORT=3000 # forced to 3000 by server/src/serverconfig.js, previously $(node -p "require('./serverconfig.json').port || 3000")
 
 ############
 # Arguments
