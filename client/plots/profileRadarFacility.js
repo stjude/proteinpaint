@@ -286,7 +286,7 @@ class profileRadarFacility extends profilePlot {
 	}
 }
 
-export async function getPlotConfig(opts, app, state) {
+export async function getPlotConfig(opts, app, _activeCohort) {
 	try {
 		const defaults = opts
 		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profileRadarFacility'
