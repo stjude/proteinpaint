@@ -231,9 +231,9 @@ export class profileForms extends profilePlot {
 	}
 }
 
-export async function getPlotConfig(opts, app, state) {
-	if (!state) state = app.getState()
-	const formsConfig = getProfilePlotConfig(state, opts)
+export async function getPlotConfig(opts, app, _activeCohort) {
+	const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
+	const formsConfig = getProfilePlotConfig(activeCohort, app, opts)
 	const module = opts.tw.term.name
 	let config = formsConfig[module]
 	if (!config) throw 'No data available for the module ' + module
@@ -245,7 +245,7 @@ export async function getPlotConfig(opts, app, state) {
 		await fillTwLst(plot.scTerms, app.vocabApi)
 	}
 
-	await loadFilterTerms(config, state, app)
+	await loadFilterTerms(config, activeCohort, app)
 	return config
 }
 

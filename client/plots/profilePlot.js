@@ -605,15 +605,15 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	}
 }
 
-export function getProfilePlotConfig(state, opts) {
-	const key = state.activeCohort == FULL_COHORT ? 'full' : 'abbrev'
-	const config = state.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]
+export function getProfilePlotConfig(activeCohort, app, opts) {
+	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
+	const config = app.vocabApi.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]
 	if (!config) throw `No data available for the plot ${opts.chartType} in this dataset`
 	return structuredClone(config)
 }
 
-export async function loadFilterTerms(config, state, app) {
-	const cohortPreffix = state.activeCohort == FULL_COHORT ? 'F' : 'A'
+export async function loadFilterTerms(config, activeCohort, app) {
+	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
 	const twlst = []
 	config.countryTW = { id: cohortPreffix + 'country' }
 	config.regionTW = { id: cohortPreffix + 'WHO_region' }
