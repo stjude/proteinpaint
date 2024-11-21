@@ -61,6 +61,7 @@ public/docs/server-api.json
 /utils/*/*.bundle.js*
 
 container/public/example*
+container/public/cards/*
 container/dataset/*
 container/**/pkg.json
 container/ci-run.sh
