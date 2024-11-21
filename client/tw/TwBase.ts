@@ -35,7 +35,6 @@ export class TwBase {
 	settings?: any
 
 	constructor(tw: TermWrapper, opts: TwOpts) {
-		console.log('what is tw.settings', tw.settings)
 		this.type = tw.type
 		this.isAtomic = true
 		if (tw.$id) this.$id = tw.$id
