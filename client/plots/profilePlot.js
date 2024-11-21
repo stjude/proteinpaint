@@ -70,9 +70,9 @@ export class profilePlot {
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 		this.sampleidmap = await this.app.vocabApi.getSamplesByName()
 
-		if (config.site) {
+		if (state.site) {
 			if (Object.keys(this.sampleidmap).length == 0) throw 'You must login to view site info' //no sample data returned
-			const id = this.sampleidmap[config.site]?.id
+			const id = this.sampleidmap[state.site]?.id
 			if (!id) throw 'Invalid site'
 		}
 
@@ -337,28 +337,11 @@ export class profilePlot {
 	}
 
 	async loadSampleData(chartType, inputs) {
-		const id = this.sampleidmap[this.state.site]?.id
-		let sampleData
-		if (this.state.site) {
-			if (!id) throw 'Invalid site'
-			sampleData = this.data.samples[Number(id)]
-			if (!sampleData) {
-				//may have been filtered out
-				const data = await this.app.vocabApi.getAnnotatedSampleData({
-					terms: this.twLst,
-					termsPerRequest: 30,
-					filter: getSampleFilter(parseInt(id))
-				})
-				sampleData = data.samples[id]
-				if (!sampleData) throw 'Invalid site, please change the profile version selected and close this message.'
-			}
-		}
-
 		if (chartType != 'profileRadarFacility') {
 			if (this.state.logged) {
 				if (this.state.site && !this.settings.isAggregate) {
-					this.settings.site = id
-					this.sites = [{ label: this.state.site, value: id }]
+					this.settings.site = this.sampleidmap[this.state.site]?.id
+					this.sites = [{ label: this.state.site, value: this.settings.site }]
 				} //Admin
 				else if (!this.state.site) {
 					this.sites = this.data.lst.map(s => {
@@ -379,18 +362,18 @@ export class profilePlot {
 						callback: value => this.setSite(value)
 					})
 				}
-				if (this.settings.site) this.sampleData = sampleData
-				else this.sampleData = null
+
+				this.sampleData = await this.getSampleData()
 			}
 		} else {
 			if (this.state.logged) {
 				let result
 
 				if (this.state.site && !this.settings.isAggregate) {
-					this.settings.site = id
-					this.sites = [{ label: this.state.site, value: id }]
+					this.settings.site = this.sampleidmap[this.state.site].id
+					this.sites = [{ label: this.state.site, value: this.settings.site }]
 
-					this.sampleData = sampleData
+					this.sampleData = await this.getSampleData()
 				} //Admin
 				else {
 					result = await this.app.vocabApi.getAnnotatedSampleData({
@@ -418,6 +401,22 @@ export class profilePlot {
 				})
 			}
 		}
+	}
+
+	async getSampleData() {
+		if (this.settings.site) {
+			//sample selected or provided from login
+			let sampleData = this.data.samples[this.settings.site]
+			if (sampleData) return sampleData
+			//may have been filtered out
+			const data = await this.app.vocabApi.getAnnotatedSampleData({
+				terms: this.twLst,
+				filter: getSampleFilter(parseInt(this.settings.site)),
+				termsPerRequest: 30
+			})
+			return data.samples[this.settings.site]
+		}
+		return null
 	}
 
 	setFilterValue(key, value) {
