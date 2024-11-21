@@ -4,7 +4,7 @@ import { Menu, shapesArray, select2Terms } from '#dom'
 import { controlsInit } from './controls'
 import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
-import { getActiveCohortStr } from '../mass/charts'
+import { getCurrentCohortChartTypes} from '../mass/charts'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rebaseGroupFilter, getFilter } from '../mass/groups'
@@ -77,6 +77,7 @@ class Scatter {
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig,
+			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
 			groups: rebaseGroupFilter(appState)
 		}
 	}
