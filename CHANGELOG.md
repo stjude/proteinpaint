@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Do not run a regression analysis multiple times after editing a variant locus variable
+- after crossing out a matrix sandbox, resizing browser window will yield matrix err
 
 
 ## 2.87.0
