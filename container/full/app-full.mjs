@@ -57,9 +57,20 @@ if (!serverconfig.URL) serverconfig.URL = process.env.URL || serverconfig.url ||
 
 console.log(`generating public/bin for ${serverconfig.URL}`)
 const publicBinOnly = process.argv.includes('--publicBinOnly')
-spawnSync('npx', ['proteinpaint-front', serverconfig.URL, publicBinOnly ? '--publicBinOnly' : 'allPublic'], {
-	encoding: 'utf-8'
-})
+const result = spawnSync(
+	'npx',
+	['proteinpaint-front', serverconfig.URL, publicBinOnly ? '--publicBinOnly' : 'allPublic'],
+	{
+		encoding: 'utf-8'
+	}
+)
+if (result.stderr) {
+	console.warn(result.stderr)
+}
+if (result.status !== 0) {
+	console.error(`Process exited with non-zero status code: ${result.status}`)
+	process.exit(1)
+}
 // since the npx command generated non-root owned js files inside the public/bin folder , we need to change the owner of the folder and files to root
 spawnSync('chown', ['-R', 'root:root', './public/bin'], { encoding: 'utf8' })
 
