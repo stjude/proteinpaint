@@ -174,9 +174,10 @@ class profilePolar extends profilePlot {
 	}
 }
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts, app, state) {
 	try {
-		const defaults = getProfilePlotConfig(app, opts)
+		if (!state) state = app.getState()
+		const defaults = getProfilePlotConfig(state || app.getState(), opts)
 		defaults.settings = { profilePolar: getDefaultProfilePlotSettings() }
 
 		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profilePolar'
@@ -192,7 +193,7 @@ export async function getPlotConfig(opts, app) {
 			twlst.push(maxScoreTerm)
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		await loadFilterTerms(config, app, opts)
+		await loadFilterTerms(config, state, app)
 
 		return config
 	} catch (e) {

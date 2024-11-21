@@ -298,9 +298,10 @@ class profileBarchart extends profilePlot {
 	}
 }
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts, app, state) {
 	try {
-		const defaults = getProfilePlotConfig(app, opts)
+		state = state || app.getState()
+		const defaults = getProfilePlotConfig(state, opts)
 		defaults.settings = { profileBarchart: getDefaultProfilePlotSettings() }
 		let config = structuredClone(defaults)
 		config = copyMerge(config, opts)
@@ -324,7 +325,7 @@ export async function getPlotConfig(opts, app) {
 				}
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		await loadFilterTerms(config, app, opts)
+		await loadFilterTerms(config, state, app)
 
 		return config
 	} catch (e) {

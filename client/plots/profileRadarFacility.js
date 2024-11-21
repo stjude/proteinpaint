@@ -286,7 +286,7 @@ class profileRadarFacility extends profilePlot {
 	}
 }
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts, app, state) {
 	try {
 		const defaults = opts
 		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profileRadarFacility'
@@ -305,7 +305,7 @@ export async function getPlotConfig(opts, app) {
 			twlst.push(row.maxScore)
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		await loadFilterTerms(config, app, opts)
+		await loadFilterTerms(config, state || app.getState(), app)
 		return config
 	} catch (e) {
 		throw `${e} [profileRadarFacility getPlotConfig()]`
