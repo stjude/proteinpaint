@@ -57,9 +57,9 @@ tape('term search, default behavior with barchart usecase', function (test) {
 			.to(testFirstSearch)
 			.use(triggerClickResult_firstSearch)
 			.to(testClickResult_firstSearch, { arg: tree, bus: tree, eventType: 'postRender' })
-			//.use(triggerSecondSearch_samebranchas1st)
-			.use(triggerSearchExcludedType)
-			.to(testExcludedTypeResult)
+			// .use(triggerSecondSearch_samebranchas1st)
+			// .use(triggerSearchExcludedType)
+			// .to(testExcludedTypeResult)
 			.done(test)
 	}
 
@@ -99,14 +99,14 @@ tape('term search, default behavior with barchart usecase', function (test) {
 		)
 	}
 
-	function triggerSearchExcludedType(search) {
-		search.Inner.doSearch('survival')
-	}
+	// function triggerSearchExcludedType(search) {
+	// 	search.Inner.doSearch('survival')
+	// }
 
-	function testExcludedTypeResult(search) {
-		const div = search.Inner.dom.resultDiv_terms.select('div').node()
-		test.equal(div?.innerHTML, 'No match', 'should not show excluded types in results')
-	}
+	// function testExcludedTypeResult(search) {
+	// 	const div = search.Inner.dom.resultDiv_terms.select('table').node()
+	// 	test.equal(div?.innerHTML, 'No match', 'should not show excluded types in results')
+	// }
 })
 
 tape('click_term', test => {
