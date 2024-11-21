@@ -97,7 +97,7 @@ class TdbStore {
 				let plot
 				try {
 					const _ = await import(`../plots/${savedPlot.chartType}.js`)
-					plot = await _.getPlotConfig(savedPlot, this.app, this.state)
+					plot = await _.getPlotConfig(savedPlot, this.app, this.state.activeCohort)
 				} catch (e) {
 					this.app.printError(e)
 					console.error(`getPlotConfig() failed: ${e}`)

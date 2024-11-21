@@ -282,7 +282,7 @@ class profileRadar extends profilePlot {
 	}
 }
 
-export async function getPlotConfig(opts, app, state) {
+export async function getPlotConfig(opts, app, _activeCohort) {
 	try {
 		const defaults = opts
 		defaults.settings = { profileRadar: getDefaultProfilePlotSettings() }
@@ -307,7 +307,8 @@ export async function getPlotConfig(opts, app, state) {
 			}
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		await loadFilterTerms(config, state || app.getState(), app)
+		const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
+		await loadFilterTerms(config, activeCohort, app)
 		return config
 	} catch (e) {
 		throw `${e} [profileRadar getPlotConfig()]`

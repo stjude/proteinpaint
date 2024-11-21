@@ -305,7 +305,8 @@ export async function getPlotConfig(opts, app, state) {
 			twlst.push(row.maxScore)
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		await loadFilterTerms(config, state || app.getState(), app)
+		const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
+		await loadFilterTerms(config, activeCohort, app)
 		return config
 	} catch (e) {
 		throw `${e} [profileRadarFacility getPlotConfig()]`
