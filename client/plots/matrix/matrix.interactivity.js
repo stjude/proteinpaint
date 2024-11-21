@@ -800,6 +800,81 @@ function setTermActions(self) {
 				})
 		}
 
+		const rowHeightColorEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
+		if (t.grp?.type !== 'hierCluster' && t.tw?.q?.mode == 'continuous') {
+			rowHeightColorEditDiv.append('span').text('Row Height')
+			self.dom.twRowheightInput = rowHeightColorEditDiv
+				.append('input')
+				.attr('type', 'number')
+				.attr('aria-label', `edit the row height`)
+				.style('padding', '1px 5px')
+				.style('text-align', 'center')
+				.style('width', '60px')
+				.property('value', t.tw.settings.barh)
+				.on('keyup', async event => {
+					if (event.code != 'Enter') return
+					const newBarh = parseFloat(self.dom.twRowheightInput.node().value)
+
+					const groupIndex = t.grp.origIndex
+					const group = structuredClone(t.grp)
+					const twIndex = group.lst.findIndex(tw => tw.$id == t.tw.$id)
+
+					const modifiedTW = structuredClone(t.tw)
+					if (!modifiedTW.settings) modifiedTW.settings = {}
+					modifiedTW.settings.barh = newBarh
+
+					self.app.dispatch({
+						type: 'plot_nestedEdits',
+						id: self.opts.id,
+						edits: [
+							{
+								nestedKeys: ['termgroups', groupIndex, 'lst', twIndex],
+								value: modifiedTW
+							}
+						]
+					})
+					self.dom.tip.hide()
+				})
+		}
+
+		if (
+			t.grp?.type !== 'hierCluster' &&
+			t.tw?.q?.mode == 'continuous' &&
+			t.tw.term.type != 'survival' &&
+			t.tw.q.convert2ZScore != true
+		) {
+			rowHeightColorEditDiv.append('span').text('Bar Color')
+
+			self.dom.twRowColorInput = rowHeightColorEditDiv
+				.append('input')
+				.attr('type', 'color')
+				.attr('aria-label', `change the bar color`)
+				.style('padding', '1px 5px')
+				.attr('value', t.tw.settings.color)
+				.on('change', async () => {
+					const color = self.dom.twRowColorInput.node().value
+					const groupIndex = t.grp.origIndex
+					const group = structuredClone(t.grp)
+					const twIndex = group.lst.findIndex(tw => tw.$id == t.tw.$id)
+
+					const modifiedTW = structuredClone(t.tw)
+					if (!modifiedTW.settings) modifiedTW.settings = {}
+					modifiedTW.settings.color = color
+
+					self.app.dispatch({
+						type: 'plot_nestedEdits',
+						id: self.opts.id,
+						edits: [
+							{
+								nestedKeys: ['termgroups', groupIndex, 'lst', twIndex],
+								value: modifiedTW
+							}
+						]
+					})
+					self.dom.tip.hide()
+				})
+		}
+
 		if (self.config.settings.matrix.maxSample) {
 			self.dom.twMenuDiv
 				.append('div')
@@ -2659,7 +2734,9 @@ function setZoomPanActions(self) {
 		const colw = self.computedSettings.colw || self.settings.matrix.colw
 		const maxZoomLevel = s.colwMax / colw
 		const minZoomLevel = s.colwMin / colw
-		const tentativeZoomLevel = (s.zoomLevel * d.mainw) / self.zoomWidth
+
+		// 0.75 is used to add left and right padding to the zoom.
+		const tentativeZoomLevel = ((s.zoomLevel * d.mainw) / self.zoomWidth) * 0.75
 		const zoomLevel = Math.max(minZoomLevel, Math.min(tentativeZoomLevel, maxZoomLevel))
 		const zoomCenter = centerCell.totalIndex * d.dx + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
 
@@ -2670,6 +2747,8 @@ function setZoomPanActions(self) {
 				settings: {
 					matrix: {
 						zoomLevel,
+						// try to keep the center of the grey zoom rectangle in the same position before and after zoom
+						// this could aslo support mouse scroll zoom in the future.
 						zoomCenterPct: zoomLevel < 1 && d.mainw >= d.zoomedMainW ? 0.5 : zoomCenter / d.mainw,
 						zoomIndex,
 						zoomGrpIndex: centerCell.grpIndex

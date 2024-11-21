@@ -40,7 +40,7 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 
 		// TODO: may use color scale instead of bars
 		// for bars, use a hardcoded color; TODO: allow a user to customize the bar color?
-		cell.fill = '#555'
+		cell.fill = tw.settings.color || '#555'
 		if (s.transpose) {
 			cell.height = t.scale(cell.key)
 			cell.x = tw.settings.gap // - cell.width

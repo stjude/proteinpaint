@@ -22,7 +22,8 @@ export function getTermGroups(termgroups, app) {
 		addons
 	}
 
-	for (const tG of termGroups) {
+	for (const [origIndex, tG] of termGroups.entries()) {
+		tG.origIndex = origIndex
 		if (tG.type == 'hierCluster') continue
 		const xtwlst: (MatrixTWObj | TermWrapper)[] = []
 		for (const tw of tG.lst) {
@@ -137,7 +138,7 @@ const continuousAddons: MatrixTWObj = {
 
 			// TODO: may use color scale instead of bars
 			// for bars, use a hardcoded color; TODO: allow a user to customize the bar color?
-			cell.fill = '#555'
+			cell.fill = tw.settings.color || '#555'
 			if (s.transpose) {
 				cell.height = t.scale(cell.key)
 				cell.x = tw.settings.gap // - cell.width
