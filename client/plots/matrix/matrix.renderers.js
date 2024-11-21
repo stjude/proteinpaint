@@ -235,6 +235,7 @@ export function setRenderers(self) {
 							? 0.1 * s.clusterRowh
 							: 0
 					)
+					if (lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous') text.attr('x', -20)
 				} else {
 					// this is required because labelText in the if-condition is not wrapped in tspan,
 					// so the text.selectAll('tspan') below will not remove previous label
