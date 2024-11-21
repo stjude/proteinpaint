@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- matrix drag to select a small number of samples and zoom in, it still shows large number of samples
+
+
 ## 2.87.1
 
 Fixes:
