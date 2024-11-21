@@ -1,15 +1,12 @@
 import { getCompInit } from '#rx'
-import { Menu } from '#dom/menu'
+import { Menu, GeneSetEditUI, renderTable, table2col } from '#dom'
 import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from '#filter/filter'
 import { appInit } from '#termdb/app'
-import { renderTable } from '../dom/table.ts'
 import { get$id } from '#termsetting'
 import { getCurrentCohortChartTypes } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
-import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
 import { TermTypes } from '#shared/terms.js'
-import { table2col } from '../dom/table2col'
 
 /*
 this

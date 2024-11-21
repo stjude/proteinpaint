@@ -585,8 +585,18 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	facet: () => true,
 	survival: ({ cohortTermTypes }) => cohortTermTypes.survival > 0,
 	cuminc: ({ cohortTermTypes }) => cohortTermTypes.condition > 0,
+
 	sampleScatter: ({ ds, cohortTermTypes }) => {
+		// corresponds to the "Scatter Plot" chart button. it covers both premade scatter plots, as well as dynamic scatter input ui on clicking the "Scatter Plot" chart button
 		if (ds.cohort.scatterplots) return true
+		if (ds.queries?.geneExpression) return true
+		if (ds.queries?.metaboliteIntensity) return true
+		if (cohortTermTypes.numeric > 1) return true // numeric is always prefilled for convenience, does not have to check if property exists
+		return false
+	},
+	dynamicScatter: ({ ds, cohortTermTypes }) => {
+		// can be considered a "child type" of "sampleScatter".
+		// corresponds to the two-term-selection-ui on clicking "Scatter Plot" chart button.
 		if (ds.queries?.geneExpression) return true
 		if (ds.queries?.metaboliteIntensity) return true
 		if (cohortTermTypes.numeric > 1) return true // numeric is always prefilled for convenience, does not have to check if property exists
