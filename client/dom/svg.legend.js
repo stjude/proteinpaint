@@ -203,7 +203,7 @@ export default function svgLegend(opts) {
 				tickSize: 2,
 				topTicks: true
 			}
-			if (d.termid.toLowerCase().includes('cnv') && d.key.includes('Gain')) {
+			if (d.termid.toLowerCase().includes('cnv') && d.domain[0] < 0 && d.domain[d.domain.length - 1] > 0) {
 				opts.labels = { left: 'Loss', right: 'Gain' }
 				if (d.text) opts.position = `${bbox.width + bbox.x + 45 + settings.padx},${yPos}`
 			}

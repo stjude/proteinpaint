@@ -152,26 +152,36 @@ export function getLegendData(legendGroups, refs, self) {
 				const gain = findLegend('gain')
 				const loss = findLegend('loss')
 
-				if (gain && loss) {
+				if (gain?.scale && loss?.scale) {
 					const gainColors = getColors(gain)
 					const lossColors = getColors(loss)
 					const colors = [lossColors[1], 'white', gainColors[1]]
 					const domain = setColorScaleDomain(loss.maxLabel, gain.maxLabel, [0, 0], colors)
 
-					const base = {
-						isLegendItem: true
+					const setLegendAttr = item => {
+						return {
+							$id,
+							domain: item.domain,
+							key: item.key,
+							isLegendItem: true,
+							minLabel: item.maxLabel,
+							maxLabel: item.maxLabel,
+							scale: item.scale,
+							termid: 'CNV'
+						}
 					}
+
 					legend.values.CNV_gain_loss = {
 						key: $id,
 						label: 'Gain and Loss',
-						dt: 4,
+						dt: dtcnv,
 						order: -1,
 						domain,
 						name: 'CNV gain/loss',
 						scale: scaleLinear().domain(domain).range(colors),
 						minLabel: loss.maxLabel,
 						maxLabel: gain.maxLabel,
-						parents: [Object.assign(loss, base), Object.assign(gain, base)],
+						parents: [Object.assign(setLegendAttr(loss), loss), Object.assign(setLegendAttr(gain), gain)],
 						samples: new Set([...gain.samples, ...loss.samples])
 					}
 					delete legend.values[gain.key]
