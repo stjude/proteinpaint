@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { read_file } from '#src/utils.js'
 import run_R from '#src/run_R.js'
+import { joinUrl } from '#src/helpers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type {
@@ -284,6 +285,8 @@ function gdc_validateGeneExpression(G, ds, genome) {
 		try {
 			const uuid = ds.__gdc.map2caseid.get(q.sample.sID)
 			const fileid = q.sample.eID
+			const hdf5id = ds.__gdc.scrnaAnalysis2hdf5.get(fileid)
+			if(!hdf5id) throw 'cannot map eID to hdf5 id'
 
 			const aliasLst = genome.genedb.getAliasByName.all(q.gene)
 			const gencodeId = aliasLst.find(a => a?.alias.toUpperCase().startsWith('ENSG'))?.alias
@@ -291,12 +294,12 @@ function gdc_validateGeneExpression(G, ds, genome) {
 			const body = {
 				case_id: uuid,
 				gene_ids: [gencodeId],
-				file_id: fileid
+				file_id: hdf5id
 			}
 
 			const { host } = ds.getHostHeaders(q)
 			const out = await ky
-				.post(path.join(host.rest, 'scrna_seq/gene_expression'), { timeout: false, json: body })
+				.post(joinUrl(host.rest, 'scrna_seq/gene_expression'), { timeout: false, json: body })
 				.json()
 
 			const result = (out as { data: { cells: any[] }[] }).data[0].cells
