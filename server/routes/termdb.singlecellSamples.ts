@@ -290,9 +290,9 @@ function gdc_validateGeneExpression(G, ds, genome) {
 
 			const aliasLst = genome.genedb.getAliasByName.all(q.gene)
 			const gencodeId = aliasLst.find(a => a?.alias.toUpperCase().startsWith('ENSG'))?.alias
+			if(!gencodeId) throw 'cannot map gene symbol to GENCODE'
 
 			const body = {
-				case_id: uuid,
 				gene_ids: [gencodeId],
 				file_id: hdf5id
 			}
