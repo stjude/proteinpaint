@@ -1,5 +1,6 @@
 import { getCompInit, copyMerge, deepEqual } from '#rx'
 import { sample_match_termvaluesetting } from '#common/termutils'
+import { isDictionaryType } from '#shared/terms.js'
 
 export function mayRequireToken(tokenMessage = '') {
 	const message = tokenMessage || this.state.tokenVerificationMessage
@@ -71,7 +72,9 @@ function normalizeTwForRequest(tw) {
 	// for GDC, the term.values may not be known ahead of time
 	// and only filled in as data comes in, should ignore this
 	// computed value as to avoid affecting tracked state
-	delete tw.term.values
+
+	// for dictionary term, term.values is queryed from terms table
+	if (isDictionaryType(tw.term.type) && tw.term.type !== 'samplelst') delete tw.term.values
 	return tw
 }
 
