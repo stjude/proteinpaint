@@ -1,1 +1,2 @@
-
+Fixes:
+- survival plot enable 95CI by default
