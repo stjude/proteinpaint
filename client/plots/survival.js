@@ -1211,7 +1211,7 @@ export async function getPlotConfig(opts, app) {
 			},
 			survival: {
 				radius: 5,
-				ciVisible: false,
+				ciVisible: true,
 				fill: '#fff',
 				stroke: '#000',
 				symbol: 'vtick', // 'x', 'vtick'
