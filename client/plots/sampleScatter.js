@@ -4,12 +4,13 @@ import { Menu, shapesArray, select2Terms } from '#dom'
 import { controlsInit } from './controls'
 import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
-import { getCurrentCohortChartTypes} from '../mass/charts'
+import { getCurrentCohortChartTypes } from '../mass/charts'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rebaseGroupFilter, getFilter } from '../mass/groups'
 import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
+import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
 
 /*
 sample object returned by server:
@@ -349,17 +350,18 @@ class Scatter {
 		}
 
 		if (!this.is2DLarge) {
+			const isPremade = this.config.name !== undefined
 			inputs.unshift({
 				type: 'term',
 				configKey: 'term0',
 				chartType: 'sampleScatter',
 				usecase: { target: 'sampleScatter', detail: 'term0' },
 				title: 'Categories to divide by',
-				label: this.config.term0?.q?.mode == 'continuous' ? 'Z' : 'Divide by',
+				label: !isPremade && this.config.term0?.q?.mode == 'continuous' ? 'Z' : 'Divide by',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: this.app.hasWebGL?.() ? ['discrete', 'continuous'] : ['discrete'],
+				numericEditMenuVersion: !isPremade && this.app.hasWebGL?.() ? ['discrete', 'continuous'] : ['discrete'],
 				processInput: tw => {
-					if (tw?.term.type == 'integer' || tw?.term.type == 'float') tw.q = { mode: 'continuous' }
+					if (!isPremade && isNumericTerm(tw?.term) && !tw.q.mode) tw.q = { mode: 'continuous' }
 				}
 			})
 		} else {
