@@ -280,17 +280,26 @@ function gdc_validateGeneExpression(G, ds, genome) {
 	G.get = async (q: TermdbSingleCellDataRequest) => {
 		// q {sample: {eID: str, sID: str}, gene:str}
 
-		// first version of GDC scrna gene expression API expects:
-		// {case_id: uuid, gene_ids: Ensembl gene ID}, later may support file_id
+		/* GDC scrna gene expression API expects:
+			{
+				file_id: hdf5id
+				gene_ids: Ensembl gene ID
+			}
+
+			API accepts either hdf5 file_id or case uuid
+			however, when case uuid provided has multiple files, will throw error: 
+				"case *** has more than one associated gene expression file"
+			so should always use hdf5id 
+		*/
 		try {
 			const uuid = ds.__gdc.map2caseid.get(q.sample.sID)
 			const fileid = q.sample.eID
 			const hdf5id = ds.__gdc.scrnaAnalysis2hdf5.get(fileid)
-			if(!hdf5id) throw 'cannot map eID to hdf5 id'
+			if (!hdf5id) throw 'cannot map eID to hdf5 id'
 
 			const aliasLst = genome.genedb.getAliasByName.all(q.gene)
 			const gencodeId = aliasLst.find(a => a?.alias.toUpperCase().startsWith('ENSG'))?.alias
-			if(!gencodeId) throw 'cannot map gene symbol to GENCODE'
+			if (!gencodeId) throw 'cannot map gene symbol to GENCODE'
 
 			const body = {
 				gene_ids: [gencodeId],
@@ -298,9 +307,7 @@ function gdc_validateGeneExpression(G, ds, genome) {
 			}
 
 			const { host } = ds.getHostHeaders(q)
-			const out = await ky
-				.post(joinUrl(host.rest, 'scrna_seq/gene_expression'), { timeout: false, json: body })
-				.json()
+			const out = await ky.post(joinUrl(host.rest, 'scrna_seq/gene_expression'), { timeout: false, json: body }).json()
 
 			const result = (out as { data: { cells: any[] }[] }).data[0].cells
 			const data = {}
