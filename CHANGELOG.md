@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - matrix drag to select a small number of samples and zoom in, it still shows large number of samples
+- fix tar error handling.
 
 
 ## 2.87.1
