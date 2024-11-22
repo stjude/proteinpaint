@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { read_file } from '#src/utils.js'
 import run_R from '#src/run_R.js'
-import { joinUrl } from '#src/helpers'
+import { joinUrl } from '#src/helpers.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type {
