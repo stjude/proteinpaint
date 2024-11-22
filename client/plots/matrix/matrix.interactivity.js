@@ -2927,6 +2927,8 @@ function setLengendActions(self) {
 
 		const div = menuGrp.d.append('div')
 
+		/** targetItemData may either be the target or parent data (i.e. the original parent mclass key for a merged
+		 * legend item.) */
 		const addMenuOptions = targetItemData => {
 			//Add the hard filter option
 			if (!targetItemData.dt || self.type !== 'hierCluster' || legendFilterIndex !== -1) {
