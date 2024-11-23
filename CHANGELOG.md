@@ -10,6 +10,7 @@ Features:
 Fixes:
 - matrix drag to select a small number of samples and zoom in, it still shows large number of samples
 - fix tar error handling.
+- survival plot enable 95CI by default
 
 
 ## 2.87.1
