@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.14.0a2-slim-bookworm
 
 
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
