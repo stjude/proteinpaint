@@ -1554,7 +1554,6 @@ export type isSupportedChartCallbacks = {
 }
 
 export type Mds3 = BaseMds & {
-	testProperty?: string
 	label?: Title
 	isMds3: boolean
 	loadWithoutBlocking?: boolean
