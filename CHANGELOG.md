@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.88.0
 
 Features:
 - matrix continuous row: clicking label to edit bar height and color
