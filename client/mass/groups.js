@@ -1,4 +1,4 @@
-import { getCompInit } from '#rx'
+import { copyMerge, getCompInit } from '#rx'
 import { Menu, GeneSetEditUI, renderTable, table2col } from '#dom'
 import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from '#filter/filter'
 import { appInit } from '#termdb/app'
@@ -571,11 +571,12 @@ export async function showTermsTree(
 	callback,
 	app,
 	tip,
-	state = { tree: { usecase: { target: 'default', detail: 'term' } } },
+	treeState = { tree: { usecase: { target: 'default', detail: 'term' } } },
 	closeParent = true,
 	shift = true,
 	disable_terms = []
 ) {
+	const state = copyMerge(structuredClone(app.getState()), treeState)
 	if (!tip2) tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34, parent_menu: tip.d.node() })
 	tip2.clear()
 	if (shift) tip2.showunderoffset(div.node())
