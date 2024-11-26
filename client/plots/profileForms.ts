@@ -35,11 +35,10 @@ export class profileForms extends profilePlot {
 		super.init(appState)
 		const rightDiv = this.dom.rightDiv
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
-		console.log(config)
-		const activePlot = config.plots[0] //later on will be based on the tab selected
 		const settings = config.settings.profileForms
 
 		const tabs: any[] = []
+		this.twLst = []
 		for (const plot of config.plots) {
 			const tab = {
 				label: plot.name,
@@ -47,8 +46,9 @@ export class profileForms extends profilePlot {
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: plot.name } })
 				}
 			}
+			if (plot.name == config.activeTab) tab.active = true
 			tabs.push(tab)
-			console.log(tab)
+			this.twLst.push(...plot.terms, ...plot.scTerms)
 		}
 
 		const topDiv = rightDiv.append('div')
@@ -91,8 +91,6 @@ export class profileForms extends profilePlot {
 			legendG,
 			xAxisG
 		})
-
-		this.twLst = activePlot.terms.concat(activePlot.scTerms)
 	}
 
 	async main() {
@@ -158,7 +156,9 @@ export class profileForms extends profilePlot {
 		this.dom.xAxisG.call(axisTop(this.xAxisScale))
 		const height = 30
 		let y = 0
-		const activePlot = this.state.config.plots[0] //later on will be based on the tab selected
+		const activePlot = this.state.config.activeTab
+			? this.state.config.plots.find(p => p.name == this.state.config.activeTab)
+			: this.state.config.plots[0]
 		for (const tw of activePlot.terms) {
 			const percents: { [key: string]: number } = this.getPercentsDict(tw, samples)
 			const scTerm = activePlot.scTerms.find(t => t.term.id.includes(tw.term.id))
