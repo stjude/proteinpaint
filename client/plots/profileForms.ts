@@ -35,7 +35,7 @@ export class profileForms extends profilePlot {
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
 		const activePlot = config.plots[0] //later on will be based on the tab selected
 		const settings = config.settings.profileForms
-		rightDiv.append('h3').text(config.module)
+		rightDiv.append('h3').text(config.tw.term.name)
 		const shift = 750
 		const shiftTop = 40
 		const svg = rightDiv
