@@ -162,7 +162,8 @@ function getChartTypeList(self, state) {
 			chartType: 'sampleView',
 			config: {
 				chartType: 'sampleView'
-			}
+			},
+			hide: !logged
 		},
 		{
 			label: 'Summary Plots',
@@ -228,7 +229,8 @@ function getChartTypeList(self, state) {
 			chartType: 'facet',
 			config: {
 				chartType: 'facet'
-			}
+			},
+			hide: !logged
 		},
 		{
 			label: 'Brain Imaging',
