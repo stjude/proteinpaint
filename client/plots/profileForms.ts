@@ -4,7 +4,9 @@ import { fillTwLst } from '#termsetting'
 import { axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { loadFilterTerms } from './profilePlot.js'
+import { Tabs } from '../dom/toggleButtons.js'
 
+const YES_NO_TAB = 'Yes/No Barchart'
 export class profileForms extends profilePlot {
 	id: any
 	type: string
@@ -33,9 +35,30 @@ export class profileForms extends profilePlot {
 		super.init(appState)
 		const rightDiv = this.dom.rightDiv
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
+		console.log(config)
 		const activePlot = config.plots[0] //later on will be based on the tab selected
 		const settings = config.settings.profileForms
-		rightDiv.append('h3').text(config.tw.term.name)
+
+		const tabs: any[] = []
+		for (const plot of config.plots) {
+			const tab = {
+				label: plot.name,
+				callback: () => {
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: plot.name } })
+				}
+			}
+			tabs.push(tab)
+			console.log(tab)
+		}
+
+		const topDiv = rightDiv.append('div')
+		await new Tabs({
+			holder: topDiv,
+			tabsPosition: 'horizontal',
+			tabs
+		}).main()
+
+		rightDiv.append('div').style('font-weight', 'bold').text(config.tw.term.name)
 		const shift = 750
 		const shiftTop = 40
 		const svg = rightDiv
@@ -60,13 +83,13 @@ export class profileForms extends profilePlot {
 		const legendG = svg.append('g').attr('transform', `translate(${shift}, ${20 + settings.svgh})`)
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
-		this.xAxisScale = d3Linear().domain([0, 100]).range([0, settings.svgw])
-		xAxisG.call(axisTop(this.xAxisScale))
+
 		this.dom = copyMerge(this.dom, {
 			svg,
 			mainG,
 			gridG,
-			legendG
+			legendG,
+			xAxisG
 		})
 
 		this.twLst = activePlot.terms.concat(activePlot.scTerms)
@@ -123,7 +146,16 @@ export class profileForms extends profilePlot {
 
 	renderPlot() {
 		this.dom.mainG.selectAll('*').remove()
+		this.dom.gridG.selectAll('*').remove()
+		this.dom.xAxisG.selectAll('*').remove()
 		const samples = this.settings.isAggregate || !this.sampleData ? this.data.lst : [this.sampleData]
+		if (this.state.config.activeTab === undefined || this.state.config.activeTab == YES_NO_TAB)
+			this.renderPlotYesNo(samples)
+	}
+
+	renderPlotYesNo(samples) {
+		this.xAxisScale = d3Linear().domain([0, 100]).range([0, this.settings.svgw])
+		this.dom.xAxisG.call(axisTop(this.xAxisScale))
 		const height = 30
 		let y = 0
 		const activePlot = this.state.config.plots[0] //later on will be based on the tab selected
@@ -191,7 +223,6 @@ export class profileForms extends profilePlot {
 	}
 
 	renderLines(y: number) {
-		this.dom.gridG.selectAll('*').remove()
 		const width = this.settings.svgw
 		const color = 'lightgray'
 		const opacity = 0.5
