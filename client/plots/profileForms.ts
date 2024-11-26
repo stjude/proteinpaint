@@ -40,11 +40,12 @@ export class profileForms extends profilePlot {
 		const tabs: any[] = []
 		this.twLst = []
 		for (const plot of config.plots) {
-			const tab = {
+			const tab: any = {
 				label: plot.name,
 				callback: () => {
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: plot.name } })
-				}
+				},
+				active: false
 			}
 			if (plot.name == config.activeTab) tab.active = true
 			tabs.push(tab)
