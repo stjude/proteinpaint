@@ -576,7 +576,9 @@ export async function showTermsTree(
 	shift = true,
 	disable_terms = []
 ) {
-	const state = copyMerge(structuredClone(app.getState()), treeState)
+	const activeCohort = app.getState().activeCohort
+	//we need to pass the active cohort to build the tree with the correct terms
+	const state = { activeCohort, ...treeState }
 	if (!tip2) tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34, parent_menu: tip.d.node() })
 	tip2.clear()
 	if (shift) tip2.showunderoffset(div.node())
