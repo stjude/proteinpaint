@@ -58,6 +58,7 @@ export class profilePlot {
 		const plotDiv = holder.append('div')
 		this.dom = {
 			controlsDiv,
+			holder,
 			iconsDiv,
 			rightDiv,
 			plotDiv
