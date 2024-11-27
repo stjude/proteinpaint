@@ -121,6 +121,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
+			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
 			if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
 				byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 			}
@@ -168,6 +169,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (tw.term.type == TermTypes.GENE_EXPRESSION || tw.term.type == TermTypes.METABOLITE_INTENSITY) {
+			if (!q.ds.queries?.[tw.term.type]) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
 				lstOfBins = await findListOfBins(q, tw, ds)
@@ -197,7 +199,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				samples[sampleId][tw.$id] = { key, value }
 			}
 		} else if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
-			if (!q.ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
+			if (!q.ds.queries?.singleCell?.geneExpression) throw 'not supported by dataset: singleCell.geneExpression'
 			let lst // list of bins based on tw config
 			if (tw.q?.mode == 'discrete') {
 				const min = tw.term.bins.min
@@ -212,7 +214,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				}
 				byTermId[tw.$id] = { bins: lst }
 			}
-			const geneExpMap = await q.ds.queries?.singleCell?.geneExpression.get({
+			const geneExpMap = await q.ds.queries.singleCell.geneExpression.get({
 				sample: tw.term.sample,
 				gene: tw.term.gene
 			})
@@ -231,7 +233,8 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				samples[sampleId][tw.$id] = { value, key }
 			}
 		} else if (tw.term.type == TermTypes.SINGLECELL_CELLTYPE) {
-			const data = await q.ds.queries?.singleCell?.data.get({ sample: tw.term.sample, plots: [tw.term.plot] })
+			if (!q.ds.queries?.singleCell?.data) throw 'not supported by dataset: singleCell.data'
+			const data = await q.ds.queries.singleCell.data.get({ sample: tw.term.sample, plots: [tw.term.plot] })
 			const groups = tw.q?.customset?.groups
 			for (const cell of data.plots[0].noExpCells) {
 				const sampleId = cell.cellId
@@ -280,6 +283,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 
 // function to get sample genotype data for a single snp
 export async function getSnpData(tw, q) {
+	if (!q.ds.queries?.snvindel?.byrange) throw 'not supported by dataset: snvindel.byrange'
 	const arg = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
