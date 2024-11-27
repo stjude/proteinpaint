@@ -199,7 +199,8 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Sample Matrix',
 			chartType: 'matrix',
-			clickTo: self.loadChartSpecificMenu
+			clickTo: self.loadChartSpecificMenu,
+			hide: site != 'admin'
 		},
 		{
 			label: 'Genome Browser',
