@@ -515,9 +515,9 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod), na.rm = T)
   
   # plot data
-  plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".png")
-  png(filename = plotfile, width = 950, height = 550, res = 200)
-  par(mar = c(3, 2.5, 1, 5) + 0.1, mgp = c(0.5, 0.5, 0), xpd = T)
+  plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".svg")
+  svg(filename = plotfile, width = 5, height = 5, pointsize = 20)
+  par(mar = c(2, 2, 0, 0) + 0.1, mgp = c(1, 1, 0))
   if (regtype == "linear" | regtype == "logistic") {
     if (regtype == "linear") {
       # for linear, plot predicted values
@@ -539,14 +539,16 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
     # predicted data will be overlayed later
     plot(dat[,splineVariable$id],
          dat[,outcome$id],
-         cex.axis = 0.5,
          ann = F,
+         xaxt = "n",
+         yaxt = "n",
          type = "n"
     )
     points(dat[,splineVariable$id],
            dat[,outcome$id],
            pch = pointtype,
-           cex = pointsize
+           cex = pointsize,
+           col = adjustcolor("#ce768e", 0.8)
     )
   } else if (regtype == "cox") {
     # for cox, plot hazard ratios
@@ -571,23 +573,19 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
     stop("unrecognized regression type")
   }
   
+  # axes
+  axis(1, cex.axis = 0.5, mgp = c(0, 0.2, 0))
+  axis(2, cex.axis = 0.5, mgp = c(0, 0.5, 0))
+
   # titles
-  if (is.null(formulatype)) title <- NULL
-  else if (formulatype == "univariate") title <- "Univariate"
-  else if (formulatype == "multivariate") title <- "Multivariable-adjusted"
-  else stop("unexpected formula type")
-  title(main = title, cex.main = 0.6)
-  title(xlab = splineVariable$name,
-        ylab = ylab,
-        line = 1.5,
-        cex.lab = 0.5
-  )
+  title(xlab = splineVariable$name, line = 1, cex.lab = 0.5)
+  title(ylab = ylab, line = 1.5, cex.lab = 0.5)
   
   # knots
   abline(v = splineVariable$spline$knots[[1]],
          col = "grey60",
          lty = 2,
-         lwd = 0.8,
+         lwd = 1,
          xpd = F
   )
   
@@ -601,24 +599,22 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   # regression line
   lines(newdat[,splineVariable$id],
         preddat_ci_adj[,"fit"],
-        col = "red",
-        lwd = 2
+        col = "blue",
+        lwd = 1.5
   )
   
   # legend for lines
   legend("topright",
          cex = 0.5,
-         inset = c(-0.3, 0.1),
          legend = c("knots", "cubic spline fit", "95% CI"),
          text.col = "white",
          lty = c(2, 1, NA),
-         col = c("grey60", "red", NA)
+         col = c("grey60", "blue", NA)
   )
   
   # legend for ci
   legend("topright",
          cex = 0.5,
-         inset = c(-0.3, 0.1),
          legend = c("knots", "cubic spline fit", "95% CI"),
          text.col = "black",
          bty = "n",

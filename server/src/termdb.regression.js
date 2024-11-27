@@ -720,22 +720,19 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		// plots
 		if (data.splinePlotFiles) {
 			if (!analysisResult.data.splinePlots) analysisResult.data.splinePlots = []
-			// univariate plots should appear before multivariate plots
-			data.splinePlotFiles.sort((a, b) => {
-				const file_a = path.basename(a, '.png')
-				const file_b = path.basename(b, '.png')
-				const type_a = file_a.split('_')[1]
-				const type_b = file_b.split('_')[1]
-				if (type_a == 'univariate' && type_b == 'multivariate') return -1
-				if (type_a == 'multivariate' && type_b == 'univariate') return 1
-				else return 0
-			})
 			for (const file of data.splinePlotFiles) {
 				const plot = await fs.promises.readFile(file)
-				analysisResult.data.splinePlots.push({
-					src: 'data:image/png;base64,' + new Buffer.from(plot).toString('base64'),
+				const obj = {
+					src: 'data:image/svg+xml;base64,' + new Buffer.from(plot).toString('base64'),
 					size: imagesize(file)
-				})
+				}
+				const type = path.basename(file, '.svg').split('_')[1]
+				if (type == 'univariate' || type == 'multivariate') {
+					const title = type == 'univariate' ? 'Univariate' : 'Multivariable-adjusted'
+					obj.type = type
+					obj.title = title
+				}
+				analysisResult.data.splinePlots.push(obj)
 				fs.unlink(file, err => {
 					if (err) throw err
 				})
