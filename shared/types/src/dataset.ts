@@ -1541,19 +1541,56 @@ export type Mds = BaseMds & {
 }
 
 type PreInitStatus = {
+	/**
+	 * status: 'OK' indicates a valid response
+	 *
+	 * status: 'recoverableError' may cause the server code to retry until the response is healthy,
+	 * depending on the server startup code flow
+	 *
+	 * other status will be considered fatal error
+	 * */
 	status: string
+	/** response message as related to the status */
 	message?: string
+	/** arbitrary response payload properties that is specific to a dataset */
 	[props: string]: any
 }
 
 export type PreInit = {
+	/**
+	  getStatus() is used to make sure that data sources are ready before starting to query data;
+		for example, wait on GDC API server to be healthy before starting to initialize, 
+		or wait for intermittent network errors to clear on a network mount; 
+		HTTP connection timeout errors or status 5xx are considered recoverable,
+		status 4xx are not considered recoverable (client-related request errors)
+	*/
 	getStatus: () => Promise<PreInitStatus>
+	/** number of milliseconds to wait before calling th preInit.getStatus() again */
 	retryDelay?: number
+	/** maximum number of times to call preInit.getStatus() before giving up */
 	retryMax?: number
+	/**
+	 * optional callback to send notifications of pre-init errors
+	 * for St. Jude, this may reuse code that post to Slack channel;
+	 * in dev and other portals, this may use custom callbacks
+	 * */
 	errorCallback?: (response: PreInitStatus) => void
+	/**
+	 * dev only, used to test preInit handling by simulating different
+	 * responses in a known sequence of steps that may edit the preInit
+	 * response
+	 */
 	test?: {
+		/** the current number of calls to preInit.getStatus() */
 		numCalls: number
+		/**
+		 * an arbitrary response payload property that is edited in mayEditResponse()
+		 * for example, this is used to simulate a stale or current GDC version
+		 * */
 		minor: number
+		/**
+		 * a callback to potentially edit the preInit.getStatus() response
+		 */
 		mayEditResponse: (response: any) => any
 	}
 }
@@ -1563,7 +1600,7 @@ export type PreInit = {
 	- the callback can have arbitrary logic based on requirements from this ds
 	- can supply ()=>false to hide charts that will otherwise shown
 	- can define arbitrary chart type names for purpose-specific charts
-*/
+
 export type isSupportedChartCallbacks = {
 	[chartType: string]: (f: any, auth: any) => boolean | undefined
 }
@@ -1600,3 +1637,4 @@ export type Mds3 = BaseMds & {
 export type Mds3WithCohort = Mds3 & {
 	cohort: Cohort
 }
+*/
