@@ -226,6 +226,15 @@ export async function makeTk(tk, block) {
 	} catch (e) {
 		console.error(e)
 	}
+
+	// validate optional callbacks directly attached to tkobj
+	if (tk.onClose) {
+		if (typeof tk.onClose != 'function') throw '.onClose() is not function'
+		// this only takes effect if tk shows the "Close" handle, e.g. on subtk
+	}
+	if (tk.callbackOnRender) {
+		if (typeof tk.callbackOnRender != 'function') throw '.callbackOnRender() is not function'
+	}
 }
 
 function loadTk_finish_closure(tk, block) {
@@ -291,9 +300,7 @@ function loadTk_finish_closure(tk, block) {
 		block.block_setheight()
 		block.setllabel()
 
-		if (typeof tk.callbackOnRender == 'function') {
-			tk.callbackOnRender(tk, block)
-		}
+		tk.callbackOnRender?.(tk, block) // run if present
 	}
 }
 
@@ -339,14 +346,14 @@ function mayInitCnv(tk) {
 		}
 	}
 	if (!cfg) return // lack this. no cnv from this tk
-	if(!tk.cnv) tk.cnv={} // preserve
-	tk.cnv.g= tk.glider.append('g')
-	tk.cnv.cnvMaxLength= cfg.cnvMaxLength // if missing do not filter
-	tk.cnv.cnvGainCutoff= cfg.cnvGainCutoff // if missing do not filter
-	tk.cnv.cnvLossCutoff= cfg.cnvLossCutoff
-	tk.cnv.absoluteValueRenderMax= cfg.absoluteValueRenderMax || 5
-	tk.cnv.gainColor= cfg.gainColor || '#D6683C'
-	tk.cnv.lossColor= cfg.lossColor || '#67a9cf'
+	if (!tk.cnv) tk.cnv = {} // preserve
+	tk.cnv.g = tk.glider.append('g')
+	tk.cnv.cnvMaxLength = cfg.cnvMaxLength // if missing do not filter
+	tk.cnv.cnvGainCutoff = cfg.cnvGainCutoff // if missing do not filter
+	tk.cnv.cnvLossCutoff = cfg.cnvLossCutoff
+	tk.cnv.absoluteValueRenderMax = cfg.absoluteValueRenderMax || 5
+	tk.cnv.gainColor = cfg.gainColor || '#D6683C'
+	tk.cnv.lossColor = cfg.lossColor || '#67a9cf'
 }
 
 function setSkewerMode(tk) {

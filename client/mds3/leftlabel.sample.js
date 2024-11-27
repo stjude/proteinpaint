@@ -225,23 +225,11 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			}
 		}
 
-		const newTvs = {
+		const tvs = {
 			type: 'tvs',
 			tvs: { term, values: [{ key: category }] }
 		}
-
-		const tkarg = {
-			type: 'mds3',
-			dslabel: tk.dslabel,
-			filter0: tk.filter0,
-			showCloseLeftlabel: true,
-			filterObj: getNewFilter(tk, newTvs),
-			allow2selectSamples: tk.allow2selectSamples
-		}
-		if(tk.cnv?.presetMax) tkarg.cnv={presetMax: tk.cnv.presetMax} // preset value is present, pass to subtk
-		// TODO mclass
-		const tk2 = block.block_addtk_template(tkarg)
-		block.tk_load(tk2)
+		createSubTk(tk, block, tvs)
 	}
 }
 
@@ -274,20 +262,28 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 			type: 'tvs',
 			tvs: { term, ranges: [{ start: range.range_start, stop: range.range_end }] }
 		}
-		const tkarg = {
-			type: 'mds3',
-			dslabel: tk.dslabel,
-			filter0: tk.filter0,
-			showCloseLeftlabel: true,
-			filterObj: getNewFilter(tk, tvs),
-			allow2selectSamples: tk.allow2selectSamples
-		}
-		const tk2 = block.block_addtk_template(tkarg)
-		block.tk_load(tk2)
+		createSubTk(tk, block, tvs)
 	}
 	const scaleFactor = term.valueConversion ? term.valueConversion.scaleFactor : 1
 	const vr = new violinRenderer(div, data.density_data, 400, 100, 10, 20, callback, scaleFactor)
 	vr.render()
+}
+
+function createSubTk(tk, block, tvs) {
+	// pass properties from main tk to subtk
+	const tkarg = {
+		type: 'mds3',
+		dslabel: tk.dslabel,
+		filter0: tk.filter0,
+		showCloseLeftlabel: true,
+		filterObj: getNewFilter(tk, tvs),
+		allow2selectSamples: tk.allow2selectSamples,
+		onClose: tk.onClose
+	}
+	if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
+	// TODO mclass
+	const tk2 = block.block_addtk_template(tkarg)
+	block.tk_load(tk2)
 }
 
 function menu_listSamples(buttonrow, data, tk, block) {

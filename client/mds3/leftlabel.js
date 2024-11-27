@@ -60,6 +60,7 @@ export async function make_leftlabels(data, tk, block) {
 							block.tk_remove(i)
 						}
 					}
+					tk.onClose?.() // run if present
 				})
 		}
 		// Close label is present, increment laby
