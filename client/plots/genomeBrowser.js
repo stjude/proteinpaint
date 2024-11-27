@@ -29,8 +29,9 @@ this{}
 		plotDiv
 		id
 	state {}
+		filter{} // mass filter
+		termdbConfig{}
 		config {}
-			filter{} // mass filter
 			variantFilter{}
 				filter{}
 				opts{ joinWith }
@@ -49,8 +50,7 @@ this{}
 				populations [{key,label}] // might not be part of state
 			ld {}
 				tracks[]
-			subTkFilters[] // list of sub tk filter objects created on mds3 tk sample summary ui
-		termdbConfig{}
+			subMds3TkFilters[] // list of mds3 subtk filter objects created on mds3 tk sample summary ui
 	blockInstance // exists when block has been launched; one block in each plot
 
 
@@ -127,43 +127,8 @@ class genomeBrowser {
 	async main() {
 		this.dom.loadingDiv.style('display', 'inline')
 		try {
-			if (this.state.config?.snvindel?.details) {
-				// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
-				// and launch custom mds3 tk to show the variants
-				await this.launchCustomMds3tk()
-			} else if (this.state.config?.trackLst) {
-				await this.launchBlockWithTracks(this.state.config.trackLst)
-			} else {
-				// launch official mds3 tk, same way as mds3/tk.js
-				const tk = {
-					type: 'mds3',
-					dslabel: this.app.opts.state.vocab.dslabel,
-					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
-					newChartHolder: this.opts.plotDiv
-				}
-				if (this.state.filter?.lst?.length > 0) {
-					// state has a non-empty filter, register at tk obj to pass to mds3 data queries
-					tk.filterObj = structuredClone(this.state.filter)
-					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
-				}
-				const tklst = [tk]
-
-				if (this.state.config?.subTkFilters) {
-					for (const subFilter of this.state.config.subTkFilters) {
-						// for every element, create a new subtk
-						const t2 = {
-							type: 'mds3',
-							dslabel: this.app.opts.state.vocab.dslabel,
-							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
-							newChartHolder: this.opts.plotDiv
-						}
-						t2.filterObj = tk.filterObj ? filterJoin(tk.filterObj, subFilter) : structuredClone(subFilter)
-						tklst.push(t2)
-					}
-				}
-
-				await this.launchBlockWithTracks(tklst)
-			}
+			await this.computeBlockAndMds3tk()
+			// this.blockInstance is added; add additional non-mds3 tk if needed
 			this.updateLDtrack()
 		} catch (e) {
 			sayerror(this.dom.errDiv, e.message || e)
@@ -175,6 +140,58 @@ class genomeBrowser {
 	//////////////////////////////////////////////////
 	//       rest of methods are app-specific       //
 	//////////////////////////////////////////////////
+
+	async computeBlockAndMds3tk() {
+		/* 
+		handle multiple possibilities of generating mds3 tk
+		*/
+
+		if (this.state.config?.snvindel?.details) {
+			// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
+			// and launch custom mds3 tk to show the variants
+			await this.launchCustomMds3tk()
+			return
+		}
+
+		if (this.state.config?.trackLst) {
+			// not fully developed
+			await this.launchBlockWithTracks(this.state.config.trackLst)
+			return
+		}
+
+		// launch official mds3 tk, same way as mds3/tk.js
+		const tk = {
+			type: 'mds3',
+			dslabel: this.app.opts.state.vocab.dslabel,
+			onClose: () => {
+				// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3TkFilters[], by regenerating the array
+				this.maySaveMds3SubtkToState()
+			},
+			// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
+			newChartHolder: this.opts.plotDiv
+		}
+		if (this.state.filter?.lst?.length > 0) {
+			// state has a non-empty filter, register at tk obj to pass to mds3 data queries
+			tk.filterObj = structuredClone(this.state.filter)
+			// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
+		}
+		const tklst = [tk]
+
+		if (this.state.config?.subMds3TkFilters) {
+			for (const subFilter of this.state.config.subMds3TkFilters) {
+				// for every element, create a new subtk
+				const t2 = {
+					type: 'mds3',
+					dslabel: this.app.opts.state.vocab.dslabel,
+					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
+					newChartHolder: this.opts.plotDiv
+				}
+				t2.filterObj = tk.filterObj ? filterJoin([tk.filterObj, subFilter]) : structuredClone(subFilter)
+				tklst.push(t2)
+			}
+		}
+		await this.launchBlockWithTracks(tklst)
+	}
 
 	async launchCustomMds3tk() {
 		const data = await this.preComputeData()
@@ -271,10 +288,12 @@ class genomeBrowser {
 		return data
 	}
 
+	/* when state changes, delete existing block and relaunch new one
+	(inefficient method)
+	since block/tk is not state-controlled
+	attaches this.blockInstance
+	*/
 	async launchBlockWithTracks(tklst) {
-		// when state changes, delete existing block and relaunch new one
-		// since block/tk is not state-controlled
-		// attaches this.blockInstance
 		this.dom.blockHolder.selectAll('*').remove()
 
 		const arg = {
@@ -283,9 +302,9 @@ class genomeBrowser {
 			nobox: true,
 			tklst: await this.getTracks2show(tklst),
 			debugmode: this.app.opts.debug,
-			onloadalltk_always: bb => {
+			onloadalltk_always: () => {
 				// TODO on any tk update, collect tk config and save to state so they are recoverable from session
-				this.maySaveMds3SubtkToState(bb)
+				this.maySaveMds3SubtkToState()
 			}
 		}
 		if (this.state.termdbConfig?.queries.defaultBlock2GeneMode && this.state.config.geneSearchResult.geneSymbol) {
@@ -375,16 +394,24 @@ class genomeBrowser {
 		}
 	}
 
-	async maySaveMds3SubtkToState(bb) {
+	async maySaveMds3SubtkToState() {
 		/* arg is block instance
 		when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
 		*/
 		const config = structuredClone(this.state.config)
-		config.subTkFilters = []
-		for (const t of bb.tklst) {
+		config.subMds3TkFilters = []
+		for (const t of this.blockInstance.tklst) {
+			if (t.type != 'mds3') continue
 			if (t.filterObj) {
-				config.subTkFilters.push(t.filterObj)
-				// filter0?
+				if (this.state.filter) {
+					if (JSON.stringify(t.filterObj) == JSON.stringify(this.state.filter)) {
+						// this tk filter is identical as state (mass global filter). this means the tk is the "main" tk and the filter was auto-added via mass global filter.
+						// do not add such filter in subMds3TkFilters[], that will cause an issue of auto-creating unwanted subtk on global filter change
+						continue
+					}
+					config.subMds3TkFilters.push(t.filterObj)
+					// filter0?
+				}
 			}
 		}
 		await this.app.save({

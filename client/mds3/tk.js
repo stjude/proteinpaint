@@ -13,6 +13,10 @@ loadTk
 		getParameter
 			rangequery_rglst
 rangequery_add_variantfilters
+
+callbacks that are attached to tkobj:
+- callbackOnRender()
+- onClose()
 */
 
 export async function loadTk(tk, block) {

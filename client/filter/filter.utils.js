@@ -150,7 +150,8 @@ lst:[]
   rest of the array will be joined to the first one under "and"
 */
 export function filterJoin(lst) {
-	if (!lst || lst.length == 0) return
+	if (!Array.isArray(lst)) throw 'filterJoin() arg is not array'
+	if (!lst[0]) return
 	let f = JSON.parse(JSON.stringify(lst[0]))
 	if (lst.length == 1) return f
 	// more than 1 item, will join
