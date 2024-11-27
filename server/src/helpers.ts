@@ -1,3 +1,5 @@
+import serverconfig from './serverconfig.js'
+
 /*****************************************
 NOTE
 - here contains backend helpers that are not shared with client and not supposed to run on client
@@ -23,4 +25,10 @@ export function joinUrl(p1: string, p2: string): string {
 	if (!p1 || !p2) throw 'blank string not allowed'
 	if (p1.indexOf('?') != -1) throw 'search string not allowed' // search string not allowed in p1. if usecase arises can support it
 	return (p1.endsWith('/') ? p1 : p1 + '/') + (p2.startsWith('/') ? p2.substring(1) : p2)
+}
+
+// convenient helper to only print log on dev environments, and reduce pollution on prod
+// call as mayLog('this query takes',n,'seconds')
+export function mayLog(...args) {
+	if (serverconfig.debugmode) console.log(...args) // do not use args.join() to allow numbers printed in different color on terminal
 }

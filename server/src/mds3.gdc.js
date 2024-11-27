@@ -5,17 +5,11 @@ import nodeFetch from 'node-fetch'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
 import { write_tmpfile } from './utils.js'
-import { joinUrl } from './helpers'
+import { joinUrl, mayLog } from './helpers'
 import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
 const maxGene4geneExpCluster = 2000 // max #genes allowed for gene exp cluster
-
-// convenient helper to only print log on dev environments, and reduce pollution on prod
-// TODO move to utils.js, also fix use of _serverconfig
-function mayLog(...args) {
-	if (serverconfig.debugmode) console.log(...args) // do not use args.join() to allow numbers printed in different color on terminal
-}
 
 /*
 GDC API
