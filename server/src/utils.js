@@ -889,7 +889,7 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 					.then(async r => {
 						const contentType = r.headers.get('content-type')
 						const payload = contentType == 'application/json' ? await r.json() : await r.text()
-						if (!r.ok || (typeof r.status == 'number' && r.status > 299))
+						if (!r.ok || (typeof r?.status == 'number' && r?.status > 399))
 							throw `error from ${url}: ` + (payload.message || payload.error || JSON.stringify(payload))
 						return payload
 					})
