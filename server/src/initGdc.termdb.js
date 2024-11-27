@@ -144,6 +144,7 @@ export async function buildGDCdictionary(ds) {
 		const { body } = await cachedFetch(dictUrl, { headers })
 		re = body
 	} catch (e) {
+		ds.__gdc.cacheError = 'buildGDCdictionary() ssm_occurrences/_mapping'
 		console.log(e)
 		throw 'failed to get GDC API _mapping: ' + (e.message || e)
 	}
@@ -262,6 +263,7 @@ export async function buildGDCdictionary(ds) {
 	try {
 		await assignDefaultBins(id2term, ds)
 	} catch (e) {
+		ds.__gdc.cacheError = 'assignDefaultBins()'
 		console.log(e)
 		// must abort launch upon err. lack of term.bins system app will not work
 		throw 'assignDefaultBins() failed: ' + (e.message || e)
@@ -425,6 +427,9 @@ async function assignDefaultBins(id2term, ds) {
 	const { body: re } = await cachedFetch(host.graphql, {
 		method: 'POST',
 		body: { query, variables }
+	}).catch(e => {
+		ds.__gdc.cacheError = 'assignDefaultBins() host.graphql'
+		throw e
 	})
 	if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
 		throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
@@ -688,10 +693,14 @@ function makeTermdbQueries(ds, id2term) {
 		// FIXME revive this code
 		if (terms.length == 0 || !treeFilter) return
 
-		const tv2counts = await ds.termdb.termid2totalsize2.get(
-			terms.map(i => i.id),
-			JSON.parse(treeFilter)
-		)
+		const tv2counts = await ds.termdb.termid2totalsize2
+			.get(
+				terms.map(i => i.id),
+				JSON.parse(treeFilter)
+			)
+			.catch(e => {
+				throw e
+			})
 
 		// add term.disabled if samplesize if zero
 		for (const term of terms) {
