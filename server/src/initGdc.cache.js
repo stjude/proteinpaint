@@ -4,7 +4,7 @@ import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { cachedFetch } from './utils'
 import { deepEqual } from '#shared/helpers.js'
-import {buildGDCdictionary} from './initGdc.termdb.js'
+import { buildGDCdictionary } from './initGdc.termdb.js'
 
 // wait time for next check on stale case-id cache, 5min. feature flag allows testing with short internal
 const cacheCheckWait = serverconfig.features.gdcCacheCheckWait || 5 * 60 * 1000
@@ -32,7 +32,6 @@ Important!
 */
 
 export async function runRemainingWithoutAwait(ds) {
-
 	/* 
 		this one-time api test is not informative due to below reason and subject to removal:
 		on some pp env e.g. ppirt, this api test sometimes fails. in order not to abort pp launch, only logs err out
@@ -64,6 +63,7 @@ export async function runRemainingWithoutAwait(ds) {
 		// plus within each error catch block
 		setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
 	} catch (e) {
+		ds.__gdc.cacheError = 'runRemainingWithoutAwait()'
 		if (e.stack) console.log(e.stack)
 		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
 	}
@@ -96,7 +96,11 @@ async function getOpenProjects(ds, ref) {
 	}
 
 	const { host, headers } = ds.getHostHeaders()
-	const { body: re } = await cachedFetch(joinUrl(host.rest, 'files'), { method: 'POST', headers, body: data })
+	const { body: re } = await cachedFetch(joinUrl(host.rest, 'files'), { method: 'POST', headers, body: data }).catch(
+		e => {
+			throw e
+		}
+	)
 
 	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
@@ -164,7 +168,6 @@ async function testGDCapi(ds) {
 	}
 }
 */
-
 
 /* no longer used
 if url is accessible, do not return
@@ -271,7 +274,7 @@ cache gdc sample id mappings
 function will rerun when it detects stale case id cache
 */
 async function cacheMappingOnNewRelease(ds) {
-	console.log('GDC: checking if cache is stale')
+	console.log('GDC: checking if cache is stale OR has error')
 	// to avoid issues from race condition:
 	// - do not set ds.__gdc until the caching is complete
 	// - create a new ref object to map pending cacheable data
@@ -293,8 +296,13 @@ async function cacheMappingOnNewRelease(ds) {
 					ds.__gdc.data_release_version.minor
 				)
 			// do not trigger duplicate caching for the same release version, whether pending or completed
-			return
+			if (!ds.__gdc.cacheError) return
+			else {
+				console.log(`detected caching error: ${ds.__gdc.cacheError}`)
+				console.log(`cached gdc data version is up-to-date, but there was a caching error, will restart cache`)
+			}
 		}
+		delete ds.__gdc.cacheError
 		// need to check before resetting ds.__pendingCacheVersion in subsequent lines
 		if (mayCancelStalePendingCache(ds, { data_release_version: version })) return
 		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
@@ -310,6 +318,7 @@ async function cacheMappingOnNewRelease(ds) {
 	} catch (e) {
 		delete ds.__pendingCacheVersion
 		console.log('getOpenProjects() failed: ' + (e.message || e))
+		ds.__gdc.cacheError = 'cacheMappingOnNewRelease() call to getOpenProjects()'
 		return
 	}
 
@@ -325,10 +334,12 @@ async function cacheMappingOnNewRelease(ds) {
 		}
 
 		await getCasesWithGeneExpression(ds, ref)
-		await getAnalysisTsv2loom4scrna(ds,ref)
+		await getAnalysisTsv2loom4scrna(ds, ref)
 	} catch (e) {
 		console.log(e)
 		delete ds.__pendingCacheVersion
+		ds.__gdc.cacheError =
+			'cacheMappingOnNewRelease() call to fetchIdsFromGdcApi(), getCasesWithGeneExpression(), or getAnalysisTsv2loom4scrna()'
 		return
 	}
 
@@ -389,7 +400,10 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 	}
 
 	const { host, headers } = ds.getHostHeaders()
-	const { body: re } = await cachedFetch(host.rest + '/cases?' + param.join('&'), { headers })
+	const { body: re } = await cachedFetch(host.rest + '/cases?' + param.join('&'), { headers }).catch(e => {
+		ds.__gdc.cacheError = 'fetchIdsFromGdcApi() /cases'
+		throw e
+	})
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	//console.log(re.data.hits[0]) // uncomment to examine output
@@ -489,7 +503,10 @@ async function getCasesWithGeneExpression(ds, ref) {
 
 		delete ref.caseIds
 	} catch (e) {
+		ds.__gdc.cacheError = `getCasesWithGeneExpression() gene_expression/availability`
 		console.log(e)
+		// is this related to caching and is this true for all users, or just for a single request?
+		// if for all users, the message makes it seem like it's for a single user
 		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
 		delete ds.__pendingCacheVersion
 		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
@@ -497,16 +514,19 @@ async function getCasesWithGeneExpression(ds, ref) {
 	}
 }
 
-async function getAnalysisTsv2loom4scrna(ds,ref) {
+async function getAnalysisTsv2loom4scrna(ds, ref) {
 	if (mayCancelStalePendingCache(ds, ref)) return //purpose?
 	const { host, headers } = ds.getHostHeaders()
 	const filters = {
 		op: 'and',
 		content: [
-			{ op: 'or', content: [
-				{ op: '=', content: { field: 'data_format', value: 'tsv' } },
-				{ op: '=', content: { field: 'data_format', value: 'hdf5' } }
-			]},
+			{
+				op: 'or',
+				content: [
+					{ op: '=', content: { field: 'data_format', value: 'tsv' } },
+					{ op: '=', content: { field: 'data_format', value: 'hdf5' } }
+				]
+			},
 			{ op: '=', content: { field: 'data_type', value: 'Single Cell Analysis' } },
 			{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
 		]
@@ -514,7 +534,7 @@ async function getAnalysisTsv2loom4scrna(ds,ref) {
 	const json = {
 		filters,
 		size: 10000,
-		fields: 'data_format,file_name,cases.samples.portions.analytes.aliquots.submitter_id',
+		fields: 'data_format,file_name,cases.samples.portions.analytes.aliquots.submitter_id'
 	}
 	/*
 	{
@@ -561,27 +581,33 @@ async function getAnalysisTsv2loom4scrna(ds,ref) {
   warnings: {}
 }
 */
-	const re = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json }).json()
-	if(!Array.isArray(re.data.hits)) throw 'scrna: re.data.hits[] not array'
-	const submitter2tsv=new Map(),
-		submitter2hdf5=new Map()
-	for(const hit of re.data.hits) {
-		if(!hit.id) throw 'hit.id missing'
+	let re
+	try {
+		re = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json }).json()
+	} catch (e) {
+		ds.__gdc.cacheError = 'getAnalysisTsv2loom4scrna()'
+		throw e
+	}
+	if (!Array.isArray(re.data.hits)) throw 'scrna: re.data.hits[] not array'
+	const submitter2tsv = new Map(),
+		submitter2hdf5 = new Map()
+	for (const hit of re.data.hits) {
+		if (!hit.id) throw 'hit.id missing'
 		const submitter = hit.cases?.[0]?.samples?.[0]?.portions?.[0]?.analytes?.[0]?.aliquots?.[0]?.submitter_id
-		if(!submitter) throw 'aliquot submitter missing'
-		if(hit.data_format=='HDF5') {
-			if(submitter2hdf5.has(submitter)) throw 'submitter already there'
+		if (!submitter) throw 'aliquot submitter missing'
+		if (hit.data_format == 'HDF5') {
+			if (submitter2hdf5.has(submitter)) throw 'submitter already there'
 			submitter2hdf5.set(submitter, hit.id)
-		} else if(hit.data_format=='TSV') {
-			if(submitter2tsv.has(submitter)) throw 'submitter already there'
+		} else if (hit.data_format == 'TSV') {
+			if (submitter2tsv.has(submitter)) throw 'submitter already there'
 			submitter2tsv.set(submitter, hit.id)
 		} else {
 			throw 'unknown data_format'
 		}
 	}
-	for(const [submitter, tsv] of submitter2tsv) {
+	for (const [submitter, tsv] of submitter2tsv) {
 		const hdf5 = submitter2hdf5.get(submitter)
-		if(!hdf5) throw 'aliquot has tsv but missing hdf5'
+		if (!hdf5) throw 'aliquot has tsv but missing hdf5'
 		ref.scrnaAnalysis2hdf5.set(tsv, hdf5)
 	}
 }
