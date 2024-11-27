@@ -117,7 +117,9 @@ export async function init(ds, genome, _servconfig) {
 	}
 
 	// must validate termdb first
-	await validate_termdb(ds)
+	await validate_termdb(ds).catch(e => {
+		throw e
+	})
 
 	if (ds.queries) {
 		// must validate snvindel query before variant2sample
@@ -236,11 +238,16 @@ export async function validate_termdb(ds) {
 	tdb.sampleTypes = {}
 
 	if (ds.preInit) {
-		const response = await preInit(ds)
+		const response = await preInit(ds).catch(e => {
+			throw e
+		})
+		if (response?.status != 'OK') throw response?.message || `ds.preInit() failed: unknown error`
 	}
 
 	if (tdb?.dictionary?.gdcapi) {
-		await initGDCdictionary(ds)
+		await initGDCdictionary(ds).catch(e => {
+			throw e
+		})
 		/*
 		creates ds.cohort.termdb.q={}
 		*****************************
