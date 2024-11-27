@@ -339,8 +339,19 @@ function setRenderers(self) {
 	self.mayshow_splinePlots = result => {
 		if (!result.splinePlots) return
 		const div = self.newDiv('Cubic spline plots')
+		div.style('display', 'flex').style('align-items', 'center')
+		result.splinePlots.sort((a, b) => {
+			// univariate plots should appear before multivariate plots
+			if (a.type == 'univariate' && b.type == 'multivariate') return -1
+			if (a.type == 'multivariate' && b.type == 'univariate') return 1
+			return 0
+		})
 		for (const plot of result.splinePlots) {
-			div.append('img').attr('src', plot.src).style('width', plot.size.width).style('height', plot.size.height)
+			const plotDiv = div.append('div').style('margin', '20px 50px 0px 0px')
+			if (plot.title) {
+				plotDiv.append('div').style('text-align', 'center').style('margin', '0px 0px 10px 50px').text(plot.title)
+			}
+			plotDiv.append('img').attr('src', plot.src).style('width', plot.size.width).style('height', plot.size.height)
 		}
 	}
 
