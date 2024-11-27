@@ -408,6 +408,7 @@ export async function initGenomesDs(serverconfig) {
 		*/
 			if (d.skip) continue
 			if (!d.name) throw 'a nameless dataset from ' + genomename
+			if (d.name != 'GDC') continue
 			if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
 			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
 
@@ -436,9 +437,15 @@ export async function initGenomesDs(serverconfig) {
 			g.datasets[ds.label] = ds
 
 			if (ds.isMds3) {
-				if (ds.loadWithoutBlocking) {
+				// TODO: not awaiting will be the default in next round of refactor;
+				// use strict equals of boolean value to not misinterpret undefined
+				if (d.awaitOnMds3Init === false) {
 					// do not await to support the option to not block other datasets from loading
 					mds3_init.init(ds, g, d).catch(e => {
+						if (ds.__gdc?.recoverableError) {
+							console.log(`recoverableError ignored:`, ds.__gdc.recoverableError)
+							return // ignore because error is recoverable
+						}
 						throw 'Error with mds3 dataset ' + ds.label + ': ' + e
 					})
 				} else {

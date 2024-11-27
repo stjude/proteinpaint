@@ -144,7 +144,7 @@ export async function buildGDCdictionary(ds) {
 		const { body } = await cachedFetch(dictUrl, { headers })
 		re = body
 	} catch (e) {
-		ds.__gdc.cacheError = 'buildGDCdictionary() ssm_occurrences/_mapping'
+		ds.__gdc.recoverableError = 'buildGDCdictionary() ssm_occurrences/_mapping'
 		console.log(e)
 		throw 'failed to get GDC API _mapping: ' + (e.message || e)
 	}
@@ -263,7 +263,7 @@ export async function buildGDCdictionary(ds) {
 	try {
 		await assignDefaultBins(id2term, ds)
 	} catch (e) {
-		ds.__gdc.cacheError = 'assignDefaultBins()'
+		ds.__gdc.recoverableError = 'assignDefaultBins()'
 		console.log(e)
 		// must abort launch upon err. lack of term.bins system app will not work
 		throw 'assignDefaultBins() failed: ' + (e.message || e)
@@ -428,7 +428,7 @@ async function assignDefaultBins(id2term, ds) {
 		method: 'POST',
 		body: { query, variables }
 	}).catch(e => {
-		ds.__gdc.cacheError = 'assignDefaultBins() host.graphql'
+		ds.__gdc.recoverableError = 'assignDefaultBins() host.graphql'
 		throw e
 	})
 	if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')

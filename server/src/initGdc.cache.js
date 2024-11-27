@@ -62,8 +62,10 @@ export async function runRemainingWithoutAwait(ds) {
 		// which will require separate setTimeout() calls at the end of the function
 		// plus within each error catch block
 		setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
+		throw 'whatever'
 	} catch (e) {
-		ds.__gdc.cacheError = 'runRemainingWithoutAwait()'
+		console.log(65, e)
+		ds.__gdc.recoverableError = 'runRemainingWithoutAwait()'
 		if (e.stack) console.log(e.stack)
 		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
 	}
@@ -274,7 +276,7 @@ cache gdc sample id mappings
 function will rerun when it detects stale case id cache
 */
 async function cacheMappingOnNewRelease(ds) {
-	console.log('GDC: checking if cache is stale OR has error')
+	console.log('GDC: checking if cache is stale OR has encountered a recoverable error')
 	// to avoid issues from race condition:
 	// - do not set ds.__gdc until the caching is complete
 	// - create a new ref object to map pending cacheable data
@@ -286,7 +288,7 @@ async function cacheMappingOnNewRelease(ds) {
 	let version
 	try {
 		const response = await ds.preInit.getStatus()
-		version = response.data_release_version
+		version = response?.data_release_version
 		if (deepEqual(version, ds.__pendingCacheVersion) || deepEqual(version, ds.__gdc.data_release_version)) {
 			if (ds.preInit.test)
 				console.log(
@@ -296,13 +298,16 @@ async function cacheMappingOnNewRelease(ds) {
 					ds.__gdc.data_release_version.minor
 				)
 			// do not trigger duplicate caching for the same release version, whether pending or completed
-			if (!ds.__gdc.cacheError) return
+
+			// even if version has not changed, still recache if a recoverable error was encountered,
+			// should try restart caching optimistically (that the network or server issue was resolved)
+			if (!ds.__gdc.recoverableError) return
 			else {
-				console.log(`detected caching error: ${ds.__gdc.cacheError}`)
+				console.log(`detected caching error: ${ds.__gdc.recoverableError}`)
 				console.log(`cached gdc data version is up-to-date, but there was a caching error, will restart cache`)
 			}
 		}
-		delete ds.__gdc.cacheError
+		delete ds.__gdc.recoverableError
 		// need to check before resetting ds.__pendingCacheVersion in subsequent lines
 		if (mayCancelStalePendingCache(ds, { data_release_version: version })) return
 		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
@@ -318,7 +323,7 @@ async function cacheMappingOnNewRelease(ds) {
 	} catch (e) {
 		delete ds.__pendingCacheVersion
 		console.log('getOpenProjects() failed: ' + (e.message || e))
-		ds.__gdc.cacheError = 'cacheMappingOnNewRelease() call to getOpenProjects()'
+		ds.__gdc.recoverableError = 'cacheMappingOnNewRelease() call to getOpenProjects()'
 		return
 	}
 
@@ -336,9 +341,9 @@ async function cacheMappingOnNewRelease(ds) {
 		await getCasesWithGeneExpression(ds, ref)
 		await getAnalysisTsv2loom4scrna(ds, ref)
 	} catch (e) {
-		console.log(e)
+		console.log(e.code)
 		delete ds.__pendingCacheVersion
-		ds.__gdc.cacheError =
+		ds.__gdc.recoverableError =
 			'cacheMappingOnNewRelease() call to fetchIdsFromGdcApi(), getCasesWithGeneExpression(), or getAnalysisTsv2loom4scrna()'
 		return
 	}
@@ -401,7 +406,7 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 
 	const { host, headers } = ds.getHostHeaders()
 	const { body: re } = await cachedFetch(host.rest + '/cases?' + param.join('&'), { headers }).catch(e => {
-		ds.__gdc.cacheError = 'fetchIdsFromGdcApi() /cases'
+		ds.__gdc.recoverableError = 'fetchIdsFromGdcApi() /cases'
 		throw e
 	})
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
@@ -503,7 +508,7 @@ async function getCasesWithGeneExpression(ds, ref) {
 
 		delete ref.caseIds
 	} catch (e) {
-		ds.__gdc.cacheError = `getCasesWithGeneExpression() gene_expression/availability`
+		ds.__gdc.recoverableError = `getCasesWithGeneExpression() gene_expression/availability`
 		console.log(e)
 		// is this related to caching and is this true for all users, or just for a single request?
 		// if for all users, the message makes it seem like it's for a single user
@@ -585,7 +590,7 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 	try {
 		re = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json }).json()
 	} catch (e) {
-		ds.__gdc.cacheError = 'getAnalysisTsv2loom4scrna()'
+		ds.__gdc.recoverableError = 'getAnalysisTsv2loom4scrna()'
 		throw e
 	}
 	if (!Array.isArray(re.data.hits)) throw 'scrna: re.data.hits[] not array'

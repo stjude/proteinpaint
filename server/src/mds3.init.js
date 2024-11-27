@@ -41,7 +41,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
-import { preInit } from '#src/mds3.preInit.ts'
+import { mayRetryDsPreInit } from '#src/mds3.preInit.ts'
 
 /*
 init
@@ -116,10 +116,14 @@ export async function init(ds, genome, _servconfig) {
 		}
 	}
 
-	// must validate termdb first
-	await validate_termdb(ds).catch(e => {
+	try {
+		// must validate termdb first
+		await validate_termdb(ds).catch(e => {
+			throw e
+		})
+	} catch (e) {
 		throw e
-	})
+	}
 
 	if (ds.queries) {
 		// must validate snvindel query before variant2sample
@@ -238,7 +242,7 @@ export async function validate_termdb(ds) {
 	tdb.sampleTypes = {}
 
 	if (ds.preInit) {
-		const response = await preInit(ds).catch(e => {
+		const response = await mayRetryDsPreInit(ds).catch(e => {
 			throw e
 		})
 		if (response?.status != 'OK') throw response?.message || `ds.preInit() failed: unknown error`
