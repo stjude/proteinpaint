@@ -43,14 +43,18 @@ any error is considered critical and must be presented in server log for diagnos
 */
 
 export async function initGDCdictionary(ds) {
-	await buildGDCdictionary(ds) //.catch(e => {throw e})
+	await buildGDCdictionary(ds).catch(e => {
+		throw e
+	})
 
 	if (serverconfig.features.await4completeGdcCaseCache) {
 		// only use on dev environment. here as soon as server is launched,
 		// it will signal client to refresh (sse). if still caching asyncly,
 		// a gdc view may break due to incomplete cache, thus await a bit for cache to complete.
 		// also should use extApiCache
-		await runRemainingWithoutAwait(ds) //.catch(e => {throw e})
+		await runRemainingWithoutAwait(ds).catch(e => {
+			throw e
+		})
 	} else {
 		// use on prod, not to hold up container launch by caching
 		runRemainingWithoutAwait(ds)
