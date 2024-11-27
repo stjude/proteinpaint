@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - mds3 tk will not commit subtk filter to state when it equals mass filter; fix filterJoin usage
+- Fix error from launching violin plot in scRNAseq gene expression (GDC and native)
 
 
 ## 2.88.0
