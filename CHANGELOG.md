@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- mds3 tk will not commit subtk filter to state when it equals mass filter; fix filterJoin usage
+
 
 ## 2.88.0
 
