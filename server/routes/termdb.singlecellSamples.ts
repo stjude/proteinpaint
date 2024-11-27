@@ -292,7 +292,6 @@ function gdc_validateGeneExpression(G, ds, genome) {
 			so should always use hdf5id 
 		*/
 		try {
-			const uuid = ds.__gdc.map2caseid.get(q.sample.sID)
 			const fileid = q.sample.eID
 			const hdf5id = ds.__gdc.scrnaAnalysis2hdf5.get(fileid)
 			if (!hdf5id) throw 'cannot map eID to hdf5 id'
