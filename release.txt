@@ -1,1 +1,2 @@
-
+Fixes:
+- Fix error from launching violin plot in scRNAseq gene expression (GDC and native)

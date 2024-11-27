@@ -233,7 +233,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		} else if (tw.term.type == TermTypes.SINGLECELL_CELLTYPE) {
 			const data = await q.ds.queries?.singleCell?.data.get({ sample: tw.term.sample, plots: [tw.term.plot] })
 			const groups = tw.q?.customset?.groups
-			for (const cell of data.plots[0].cells) {
+			for (const cell of data.plots[0].noExpCells) {
 				const sampleId = cell.cellId
 				if (!(sampleId in samples)) {
 					samples[sampleId] = { sample: sampleId }
