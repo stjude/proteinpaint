@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { brushX } from 'd3-brush'
-import { roundValueAuto } from '#shared/roundValue.js'
+import { roundValueAuto, roundValue2 } from '#shared/roundValue.js'
 
 /*
 ********************** EXPORTED
@@ -133,8 +133,8 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
 }
 
 function convertRangeValue(xscale, sidx) {
-	let value = Number(xscale.invert(sidx))
-	return roundValueAuto(value)
+	const value = Number(xscale.invert(sidx))
+	return roundValue2(value)
 }
 
 //Add new blank range temporary, save after entering values
