@@ -14,7 +14,7 @@ export function roundValue(value, digits) {
 	const abs = Math.abs(v)
 	if (abs < 1 || abs > 9999) {
 		//Number() reverts positive values less than 10^21 to a whole number
-		return abs > 9999 ? v.toPrecision(digits) : Number(v.toPrecision(digits))
+		return abs > 9999 ? Number(v.toPrecision(digits)) : Number(v.toPrecision(digits))
 	}
 	return Number(v.toFixed(digits))
 }
@@ -51,4 +51,25 @@ export function decimalPlacesUntilFirstNonZero(number) {
 	}
 
 	return decimalPlaces
+}
+
+/* 
+simple logic to return a number close to original while rounding up decimals.
+supplements roundValueAuto which rounds 12345 to 1.2e4 which is only suitable for human quick glance but not subsequent computing
+
+TODO:
+10000 and 10001 to 1e4
+0.00001 to 1e-5
+1.00001 to 1
+*/
+export function roundValue2(value) {
+	if (!Number.isFinite(value)) return value // not a number
+	if (Number.isInteger(value)) return value // is integer, do not convert
+	const abs = Math.abs(value)
+	if (abs > 100) return Math.round(value) // 12345.1234 to 12345 (compared to 1.2e4 from roundValueAuto)
+	if (abs > 10) return Number(value.toFixed(1)) // 99.1234 to 99.1
+	if (abs > 1) return Number(value.toFixed(2)) // 9.1234 to 9.12
+	if (abs > 0.1) return Number(value.toFixed(3)) // 0.12345 to 0.123
+	if (abs > 0.01) return Number(value.toFixed(4)) // 0.012345 to 0.0123
+	return value // as is
 }

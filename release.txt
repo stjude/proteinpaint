@@ -1,1 +1,3 @@
-
+Fixes:
+- add roundValue2 to return rounded value with higher precision for computing
+- add roundValue2 to return rounded value with higher precision to resolve tvs denisity brushing error
