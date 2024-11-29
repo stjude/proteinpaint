@@ -70,8 +70,8 @@ tape('\n', test => {
 })
 
 tape('updateTempRanges', test => {
-	//test.timeoutAfter(100)
-	//test.plan(4)
+	test.timeoutAfter(100)
+	test.plan(4)
 
 	const holder = getHolder()
 	const testSelf = createTestSelf(holder)
