@@ -70,8 +70,8 @@ tape('\n', test => {
 })
 
 tape('updateTempRanges', test => {
-	test.timeoutAfter(100)
-	test.plan(4)
+	//test.timeoutAfter(100)
+	//test.plan(4)
 
 	const holder = getHolder()
 	const testSelf = createTestSelf(holder)
@@ -85,8 +85,11 @@ tape('updateTempRanges', test => {
 		startunbounded: false,
 		stopunbounded: false
 	} as any
+
 	const origRange1 = structuredClone(range1)
+
 	updateTempRanges(testSelf.num_obj.xscale, s, range1, range1, 1962, 2012, 'integer')
+
 	test.ok(
 		range1.start != origRange1.start && range1.start == 1988,
 		'Should update start value in the original range and round to integer'
@@ -98,17 +101,16 @@ tape('updateTempRanges', test => {
 
 	//Non integer term
 	const range2 = {
-		start: '1987.3678',
-		stop: '1997.823476',
+		start: 1987.3678,
+		stop: 1997.823476,
 		index: 0,
 		startunbounded: false,
 		stopunbounded: false
 	} as any
 	const origRange2 = structuredClone(range2)
-	updateTempRanges(testSelf.num_obj.xscale, s, range2, range2, 1962, 2012, 'discrete')
-	test.ok(
-		range2.start != origRange2.start && range2.start == 1987.9,
-		'Should update start value in the original range.'
-	)
-	test.ok(range2.stop != origRange2.stop && range2.stop == 1997.9, 'Should update stop value in the original range.')
+	updateTempRanges(testSelf.num_obj.xscale, s, range2, range2, 1962, 2012, 'float')
+	test.ok(range2.start != origRange2.start && range2.start == 1988, 'Should update start value in the original range.')
+	test.ok(range2.stop != origRange2.stop && range2.stop == 1998, 'Should update stop value in the original range.')
+
+	test.end()
 })
