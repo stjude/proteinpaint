@@ -190,7 +190,7 @@ export default function svgLegend(opts) {
 		if (d.domain) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
 			const data = d.domain || [d.minLabel, d.maxLabel]
-			const yPos = y + 5
+			const yPos = y + 3
 			const opts = {
 				barwidth: width,
 				barheight: settings.iconh,
