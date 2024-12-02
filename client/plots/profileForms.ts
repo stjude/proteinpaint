@@ -100,17 +100,6 @@ export class profileForms extends profilePlot {
 		this.renderPlot()
 		this.filterG.selectAll('*').remove()
 		this.addFilterLegend()
-		let x = 0
-		for (const key of this.keys) {
-			this.drawLegendRect(x, 0, key, this.getColor(key), this.dom.legendG)
-			x += 60
-		}
-		this.dom.legendG
-			.append('text')
-			.attr('x', x + 80)
-			.attr('y', 18)
-			.style('font-weight', 'bold')
-			.text('* Site coordinator')
 	}
 
 	getPercentsDict(tw, samples): { [key: string]: number } {
@@ -118,7 +107,10 @@ export class profileForms extends profilePlot {
 		//not specified when called
 		//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
 		const percentageDict = {}
+		console.log('tw', tw)
+		console.log(this.twLst)
 		for (const sample of samples) {
+			console.log('sample', sample)
 			const termData = sample[tw.$id].value
 			const percents: { [key: string]: number } = JSON.parse(termData)
 			for (const key in percents) {
@@ -147,6 +139,7 @@ export class profileForms extends profilePlot {
 		this.dom.mainG.selectAll('*').remove()
 		this.dom.gridG.selectAll('*').remove()
 		this.dom.xAxisG.selectAll('*').remove()
+		this.dom.legendG.selectAll('*').remove()
 		const samples = this.settings.isAggregate || !this.sampleData ? this.data.lst : [this.sampleData]
 		if (this.state.config.activeTab === undefined || this.state.config.activeTab == YES_NO_TAB)
 			this.renderPlotYesNo(samples)
@@ -188,6 +181,18 @@ export class profileForms extends profilePlot {
 			y += height + 40
 		}
 		this.renderLines(y - 20) //last padding not needed
+
+		let x = 0
+		for (const key of this.keys) {
+			this.drawLegendRect(x, 0, key, this.getColor(key), this.dom.legendG)
+			x += 60
+		}
+		this.dom.legendG
+			.append('text')
+			.attr('x', x + 80)
+			.attr('y', 18)
+			.style('font-weight', 'bold')
+			.text('* Site coordinator')
 	}
 
 	getColor(key: string) {
