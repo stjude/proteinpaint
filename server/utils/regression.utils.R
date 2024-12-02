@@ -529,7 +529,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
       # for logistic, plot predicted probabilities
       preddat_ci_adj <- 1/(1+exp(-preddat_ci_adj))
       pointtype <- 124
-      pointsize <- 0.9
+      pointsize <- 0.7
       pointalpha <- 0.5
       ylab <- paste0("Pr(", outcome$name, " ", outcome$categories$nonref, ")")
     }
@@ -606,7 +606,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   
   # legend for lines
   legend("topright",
-         inset = c(-0.37, 0),
+         inset = c(-0.39, 0),
          cex = 0.5,
          legend = c("knots", "cubic spline fit", "95% CI"),
          text.col = "white",
@@ -617,7 +617,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   
   # legend for ci
   legend("topright",
-         inset = c(-0.37, 0),
+         inset = c(-0.39, 0),
          cex = 0.5,
          legend = c("knots", "cubic spline fit", "95% CI"),
          text.col = "black",
