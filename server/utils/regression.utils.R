@@ -516,19 +516,21 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   
   # plot data
   plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".svg")
-  svg(filename = plotfile, width = 5, height = 5, pointsize = 20)
-  par(mar = c(2, 2, 0, 0) + 0.1, mgp = c(1, 1, 0))
+  svg(filename = plotfile, width = 6.7, height = 5, pointsize = 20)
+  par(mar = c(2, 2, 0, 5) + 0.1, mgp = c(1, 1, 0))
   if (regtype == "linear" | regtype == "logistic") {
     if (regtype == "linear") {
       # for linear, plot predicted values
       pointtype <- 16
       pointsize <- 0.3
+      pointalpha <- 0.8
       ylab <- outcome$name
     } else {
       # for logistic, plot predicted probabilities
       preddat_ci_adj <- 1/(1+exp(-preddat_ci_adj))
       pointtype <- 124
-      pointsize <- 0.7
+      pointsize <- 0.9
+      pointalpha <- 0.5
       ylab <- paste0("Pr(", outcome$name, " ", outcome$categories$nonref, ")")
     }
     # use only finite predicted data
@@ -548,7 +550,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
            dat[,outcome$id],
            pch = pointtype,
            cex = pointsize,
-           col = adjustcolor("#ce768e", 0.8)
+           col = adjustcolor("#ce768e", alpha.f = pointalpha)
     )
   } else if (regtype == "cox") {
     # for cox, plot hazard ratios
@@ -557,16 +559,15 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
     toKeep <- rowSums(!is.finite(preddat_ci_adj)) == 0
     preddat_ci_adj <- preddat_ci_adj[toKeep,]
     newdat <- newdat[toKeep,,drop = F]
-    pointtype <- 16
-    pointsize <- 0.3
     ylab <- "Hazard Ratio"
     # plot only predicted data
     # do not also plot actual data (like for linear/logistic) because cox outcome data is time-to-event and will not be comparable to the predicted hazard ratios
     plot(newdat[,splineVariable$id],
          preddat_ci_adj[,"fit"],
          ylim = c(min(preddat_ci_adj[,"lwr"]), max(preddat_ci_adj[,"upr"])),
-         cex.axis = 0.5,
          ann = F,
+         xaxt = "n",
+         yaxt = "n",
          type = "n"
     )
   } else {
@@ -600,26 +601,30 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   lines(newdat[,splineVariable$id],
         preddat_ci_adj[,"fit"],
         col = "blue",
-        lwd = 1.5
+        lwd = 1.7
   )
   
   # legend for lines
   legend("topright",
+         inset = c(-0.37, 0),
          cex = 0.5,
          legend = c("knots", "cubic spline fit", "95% CI"),
          text.col = "white",
          lty = c(2, 1, NA),
-         col = c("grey60", "blue", NA)
+         col = c("grey60", "blue", NA),
+         xpd = TRUE
   )
   
   # legend for ci
   legend("topright",
+         inset = c(-0.37, 0),
          cex = 0.5,
          legend = c("knots", "cubic spline fit", "95% CI"),
          text.col = "black",
          bty = "n",
          fill = c(NA, NA, adjustcolor("grey", alpha.f = 0.8)),
-         border = c(NA, NA, NA)
+         border = c(NA, NA, NA),
+         xpd = TRUE
   )
   dev.off()
   return(plotfile)
