@@ -121,18 +121,54 @@ export default class LegendJSONMapper {
 			let cnvOrder = 0
 
 			const cnvItems: Array<any> = []
-			const maxValue = Math.max(Math.abs(loss.value), gain.value)
-			const domain = maxValue < 1 ? [-1, 0, 1] : [-maxValue, 0, maxValue]
-			cnvItems.push({
+			const base = {
 				termid: legend.cnvTitle,
-				key: CnvType.LossGain,
 				width: 100,
-				domain,
 				order: cnvOrder++,
 				isLegendItem: true,
-				dt: 4,
-				scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color])
-			})
+				dt: 4
+			}
+			if (gain.value > 0 && loss.value < 0) {
+				const maxValue = Math.max(Math.abs(loss.value), gain.value)
+				const domain = maxValue < 1 ? [-1, 0, 1] : [-maxValue, 0, maxValue]
+				cnvItems.push(
+					Object.assign(
+						{
+							key: CnvType.LossGain,
+							domain,
+							scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color])
+						},
+						base
+					)
+				)
+			} else {
+				if (gain.value > 0) {
+					cnvItems.push(
+						Object.assign(
+							{
+								key: CnvType.Gain,
+								text: 'Copy number gain',
+								domain: [0, gain.value],
+								scale: scaleLinear([0, 1], ['white', gain.color])
+							},
+							base
+						)
+					)
+				}
+				if (loss.value < 0) {
+					cnvItems.push(
+						Object.assign(
+							{
+								key: CnvType.Loss,
+								text: 'Copy number loss',
+								domain: [loss.value, 0],
+								scale: scaleLinear([0, 1], [loss.color, 'white'])
+							},
+							base
+						)
+					)
+				}
+			}
 
 			cnvItems.push({
 				termid: legend.cnvTitle,
