@@ -189,17 +189,19 @@ export default function svgLegend(opts) {
 		let colorGradientId
 		if (d.domain) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
-			const yPos = y + 3
+			const data = d.domain || [d.minLabel, d.maxLabel]
+			const yPos = y + 5
 			const opts = {
 				barwidth: width,
 				barheight: settings.iconh,
 				colors: d.colors || d.scale.range() || ['white', 'grey'],
-				data: d.domain || [d.minLabel, d.maxLabel],
+				data,
 				fontSize: 0.82 * settings.fontsize,
 				holder: g,
 				id: colorGradientId,
 				position: `${bbox.width + 25},${yPos}`,
-				ticks: 3,
+				//For larger ranges, reduce the number of ticks
+				ticks: Math.abs(d.domain[d.domain.length - 1] - d.domain[0]) > 10 ? 2 : 3,
 				tickSize: 2,
 				topTicks: true
 			}
