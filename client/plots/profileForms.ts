@@ -107,10 +107,7 @@ export class profileForms extends profilePlot {
 		//not specified when called
 		//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
 		const percentageDict = {}
-		console.log('tw', tw)
-		console.log(this.twLst)
 		for (const sample of samples) {
-			console.log('sample', sample)
 			const termData = sample[tw.$id].value
 			const percents: { [key: string]: number } = JSON.parse(termData)
 			for (const key in percents) {
