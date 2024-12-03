@@ -1214,13 +1214,16 @@ type MassNav = {
 	title?: Title
 	/** Customization for the tabs*/
 	tabs?: {
-		/** about, charts, groups, and fitler */
+		/** supported keys: about, charts, groups, filter
+		invalid key is ignored
+		when dslabel is too long to show in about tab middl row or to define alternative label, do .tabs:{about:{mid:'alt label'}}
+		*/
 		[index: string]: {
 			/** show in a specific order of tabs */
 			order?: number
 			/** label appearing in the top row in upper case */
 			top?: string
-			/** biggest label appearing in the middle row in upper case */
+			/** biggest label appearing in the middle row */
 			mid?: string
 			/** label appearing in the bottom row*/
 			btm?: string
