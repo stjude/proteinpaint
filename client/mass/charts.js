@@ -163,7 +163,7 @@ function getChartTypeList(self, state) {
 			config: {
 				chartType: 'sampleView'
 			},
-			hide: user != 'admin' // temp change for profile, delete later
+			hide: user && user != 'admin' //temporary user handling for the profile
 		},
 		{
 			label: 'Summary Plots',
@@ -200,7 +200,7 @@ function getChartTypeList(self, state) {
 			label: 'Sample Matrix',
 			chartType: 'matrix',
 			clickTo: self.loadChartSpecificMenu,
-			hide: user != 'admin' // temp change for profile, delete later
+			hide: user && user != 'admin' //temporary user handling for the profile
 		},
 		{
 			label: 'Genome Browser',
@@ -231,7 +231,7 @@ function getChartTypeList(self, state) {
 			config: {
 				chartType: 'facet'
 			},
-			hide: user != 'admin' // temp change for profile, delete later
+			hide: user && user != 'admin' //temporary user handling for the profile
 		},
 		{
 			label: 'Brain Imaging',

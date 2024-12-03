@@ -655,6 +655,7 @@ export function getDefaultProfilePlotSettings() {
 }
 
 export function getProfileLogin() {
+	if (!window.location.pathname.includes('profile')) return [false, null, null]
 	const queryString = window.location.search
 	const urlParams = new URLSearchParams(queryString)
 	const logged = urlParams.get('logged')
