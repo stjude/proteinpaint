@@ -130,6 +130,10 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
 	range.stop = convertRangeValue(xscale, s[1])
 	const min = roundValueAuto(Number(minvalue))
 	const max = roundValueAuto(Number(maxvalue))
+	//If the user inputs a value outside the brush, limit it to the brush
+	//Otherwise the input displays a calculated position closest to the value.
+	if (range.start < min) range.start = min
+	if (range.stop > max) range.stop = max
 	//Limit by the brush, not by the user
 	range.startunbounded = min == range.start && inputRange.startunbounded
 	range.stopunbounded = max == range.stop && inputRange.stopunbounded
