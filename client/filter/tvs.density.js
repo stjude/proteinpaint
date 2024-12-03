@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { brushX } from 'd3-brush'
-import { roundValueAuto, roundValue2 } from '#shared/roundValue.js'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 /*
 ********************** EXPORTED
@@ -153,7 +153,7 @@ export function setStartStopDisplays(range, inputRange) {
 
 function convertRangeValue(xscale, sidx) {
 	const value = Number(xscale.invert(sidx))
-	return roundValue2(value)
+	return roundValueAuto(value)
 }
 
 //Add new blank range temporary, save after entering values
