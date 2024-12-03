@@ -11,19 +11,20 @@ digits: number of digits to round to
 export function roundValue(value, digits) {
 	const v = Number(value)
 	if (Number.isInteger(v)) return v
-	const abs = Math.abs(v)
-	if (abs < 1 || abs > 9999) {
-		//Number() reverts positive values less than 10^21 to a whole number
-		return abs > 9999 ? Number(v.toPrecision(digits)) : Number(v.toPrecision(digits))
-	}
+	if (Math.abs(v) < 1) return Number(v.toPrecision(digits))
 	return Number(v.toFixed(digits))
 }
 
-export function roundValueAuto(value) {
+/** Rounds numbers to the appropriate decimal point
+ * if format is true, returns either a number or string in
+ * scientific notation.
+ */
+
+export function roundValueAuto(value, format = false) {
 	if (!value && value != 0) return value
 	const dp = decimalPlacesUntilFirstNonZero(value)
 	const digits = Math.abs(value) > 1 ? 2 : dp > 0 ? dp + 1 : 2
-
+	if (format) return formatValue(value, digits)
 	return roundValue(value, digits)
 }
 
@@ -72,4 +73,18 @@ export function roundValue2(value) {
 	if (abs > 0.1) return Number(value.toFixed(3)) // 0.12345 to 0.123
 	if (abs > 0.01) return Number(value.toFixed(4)) // 0.012345 to 0.0123
 	return value // as is
+}
+
+/** Use to return displayed values in scientific notation
+ * Do not use for values intented for calculation later.
+ */
+export function formatValue(value, digits) {
+	const v = Number(value)
+	if (Number.isInteger(v)) return v
+	const abs = Math.abs(v)
+	if (abs < 1 || abs > 9999) {
+		//Number() reverts positive values less than 10^21 to a whole number
+		return abs > 9999 ? v.toPrecision(digits) : Number(v.toPrecision(digits))
+	}
+	return Number(v.toFixed(digits))
 }

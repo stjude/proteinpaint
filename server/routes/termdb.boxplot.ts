@@ -168,15 +168,15 @@ function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
 
 	return [
 		{ id: 'total', label: 'Total', value: sortedValues.length },
-		{ id: 'min', label: 'Minimum', value: roundValueAuto(sortedValues[0]) },
-		{ id: 'p25', label: '1st quartile', value: roundValueAuto(boxplot.p25) },
-		{ id: 'median', label: 'Median', value: roundValueAuto(boxplot.p50) },
-		{ id: 'mean', label: 'Mean', value: roundValueAuto(mean) },
-		{ id: 'p75', label: '3rd quartile', value: roundValueAuto(boxplot.p75) },
-		{ id: 'max', label: 'Maximum', value: roundValueAuto(sortedValues[sortedValues.length - 1]) },
-		{ id: 'sd', label: 'Standard deviation', value: isNaN(sd) ? null : roundValueAuto(sd) },
-		{ id: 'variance', label: 'Variance', value: roundValueAuto(variance) },
-		{ id: 'iqr', label: 'Inter-quartile range', value: roundValueAuto(boxplot.iqr) }
+		{ id: 'min', label: 'Minimum', value: roundValueAuto(sortedValues[0], true) },
+		{ id: 'p25', label: '1st quartile', value: roundValueAuto(boxplot.p25, true) },
+		{ id: 'median', label: 'Median', value: roundValueAuto(boxplot.p50, true) },
+		{ id: 'mean', label: 'Mean', value: roundValueAuto(mean, true) },
+		{ id: 'p75', label: '3rd quartile', value: roundValueAuto(boxplot.p75, true) },
+		{ id: 'max', label: 'Maximum', value: roundValueAuto(sortedValues[sortedValues.length - 1], true) },
+		{ id: 'sd', label: 'Standard deviation', value: isNaN(sd) ? null : roundValueAuto(sd, true) },
+		{ id: 'variance', label: 'Variance', value: roundValueAuto(variance, true) },
+		{ id: 'iqr', label: 'Inter-quartile range', value: roundValueAuto(boxplot.iqr, true) }
 	]
 }
 
