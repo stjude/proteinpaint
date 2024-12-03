@@ -42,15 +42,15 @@ export default function summaryStats(array) {
 	return {
 		values: [
 			{ id: 'total', label: 'Total', value: n },
-			{ id: 'min', label: 'Minimum', value: roundValueAuto(min) },
-			{ id: 'p25', label: '1st quartile', value: roundValueAuto(p25) },
-			{ id: 'median', label: 'Median', value: roundValueAuto(median) },
-			{ id: 'mean', label: 'Mean', value: roundValueAuto(mean(arr)) },
-			{ id: 'p75', label: '3rd quartile', value: roundValueAuto(p75) },
-			{ id: 'max', label: 'Maximum', value: roundValueAuto(max) },
-			{ id: 'SD', label: 'Standard deviation', value: roundValueAuto(stdDev) },
-			{ id: 'variance', label: 'Variance', value: roundValueAuto(variance) },
-			{ id: 'IQR', label: 'Inter-quartile range', value: roundValueAuto(IQR) }
+			{ id: 'min', label: 'Minimum', value: roundValueAuto(min, true) },
+			{ id: 'p25', label: '1st quartile', value: roundValueAuto(p25, true) },
+			{ id: 'median', label: 'Median', value: roundValueAuto(median, true) },
+			{ id: 'mean', label: 'Mean', value: roundValueAuto(mean(arr), true) },
+			{ id: 'p75', label: '3rd quartile', value: roundValueAuto(p75, true) },
+			{ id: 'max', label: 'Maximum', value: roundValueAuto(max, true) },
+			{ id: 'SD', label: 'Standard deviation', value: roundValueAuto(stdDev, true) },
+			{ id: 'variance', label: 'Variance', value: roundValueAuto(variance, true) },
+			{ id: 'IQR', label: 'Inter-quartile range', value: roundValueAuto(IQR, true) }
 		]
 	}
 }

@@ -21,9 +21,9 @@ tape('roundValue tests', function (test) {
 	test.equal(roundValue2(value), rounded, `should return ${rounded}`)
 
 	value = 10549.23556789
-	rounded = 1.1e4
+	rounded = '1.1e+4'
 	let r2 = 10549
-	test.equal(roundValueAuto(value), rounded, `should return ${rounded}`)
+	test.equal(roundValueAuto(value, true), rounded, `should return ${rounded}`)
 	test.equal(roundValue2(value), r2, `should return ${r2}`)
 
 	value = 1549.23556789
@@ -39,9 +39,9 @@ tape('roundValue tests', function (test) {
 	test.equal(roundValue2(value), r2, `should return ${r2}`)
 
 	value = -89378.345862
-	rounded = -8.9e4
+	rounded = '-8.9e+4'
 	r2 = -89378
-	test.equal(roundValueAuto(value), rounded, `should return ${rounded}`)
+	test.equal(roundValueAuto(value, true), rounded, `should return ${rounded}`)
 	test.equal(roundValue2(value), r2, `should return ${r2}`)
 
 	value = -0.006
