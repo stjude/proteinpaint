@@ -1,11 +1,12 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { NumericRangeInput } from '#dom/numericRangeInput'
-import { updateTempRanges } from '../tvs.density'
+import { updateTempRanges, setStartStopDisplays } from '../tvs.density'
 import { scaleLinear } from 'd3-scale'
 
 /* Tests
-    updateTempRanges
+	updateTempRanges
+	setStartStop
 */
 
 /**************
@@ -71,46 +72,231 @@ tape('\n', test => {
 
 tape('updateTempRanges', test => {
 	test.timeoutAfter(100)
-	test.plan(4)
+	test.plan(2)
 
 	const holder = getHolder()
 	const testSelf = createTestSelf(holder)
-	const s = [259, 359]
+
+	let s: number[], range: any, inputRange: any, expected: any
 
 	//Integer term
-	const range1 = {
+	s = [259, 359]
+	range = {
 		start: '1987.3',
 		stop: '1997.8',
 		index: 0,
 		startunbounded: false,
 		stopunbounded: false
-	} as any
-
-	const origRange1 = structuredClone(range1)
-
-	updateTempRanges(testSelf.num_obj.xscale, s, range1, range1, 1962, 2012, 'integer')
-
-	test.ok(
-		range1.start != origRange1.start && range1.start == 1988,
-		'Should update start value in the original range and round to integer'
-	)
-	test.ok(
-		range1.stop != origRange1.stop && range1.stop == 1998,
-		'Should update stop value in the original range and round to integer'
-	)
+	}
+	inputRange = {
+		start: 2000,
+		startinclusive: true,
+		startunbounded: false,
+		stop: undefined,
+		stopinclusive: true,
+		stopunbounded: false,
+		value: undefined
+	}
+	expected = {
+		index: 0,
+		start: 1988,
+		startunbounded: false,
+		stop: 1998,
+		stopunbounded: false
+	}
+	updateTempRanges(testSelf.num_obj.xscale, s, range, inputRange, 1962, 2012, 'integer')
+	test.deepEqual(range, expected, 'Should update start and stop values in the range object and round to integer')
 
 	//Non integer term
-	const range2 = {
+	s = [200, 300]
+	range = {
 		start: 1987.3678,
 		stop: 1997.823476,
 		index: 0,
 		startunbounded: false,
 		stopunbounded: false
-	} as any
-	const origRange2 = structuredClone(range2)
-	updateTempRanges(testSelf.num_obj.xscale, s, range2, range2, 1962, 2012, 'float')
-	test.ok(range2.start != origRange2.start && range2.start == 1988, 'Should update start value in the original range.')
-	test.ok(range2.stop != origRange2.stop && range2.stop == 1998, 'Should update stop value in the original range.')
+	}
+	inputRange = {
+		start: 2000.5,
+		startinclusive: true,
+		startunbounded: true,
+		stop: undefined,
+		stopinclusive: true,
+		stopunbounded: false,
+		value: undefined
+	}
+	expected = {
+		index: 0,
+		start: 1982,
+		startunbounded: false,
+		stop: 1992,
+		stopunbounded: false
+	}
+	updateTempRanges(testSelf.num_obj.xscale, s, range, inputRange, 1962, 2012, 'continuous')
+	test.deepEqual(range, expected, 'Should update start and stop values in the range object')
+
+	holder.remove()
+	test.end()
+})
+
+tape('setStartStopDisplays', test => {
+	test.timeoutAfter(100)
+	test.plan(8)
+
+	let userInput: string, range: any, inputRange: any, expected: string[]
+
+	// displays 10 < x <= [max value]
+	userInput = `x > 10`
+	range = {
+		index: 0,
+		start: 10,
+		startunbounded: false,
+		stop: 21.8,
+		stopunbounded: false
+	}
+	inputRange = {
+		start: 10,
+		startinclusive: false,
+		startunbounded: false,
+		stop: undefined,
+		stopinclusive: true,
+		stopunbounded: true,
+		value: undefined
+	}
+	expected = ['10 <', '<= 21.8']
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange),
+		expected,
+		`Should return start and stop values for user input: ${userInput}`
+	)
+
+	//displays 10 <= x <= [max value]
+	userInput = `x >= 10`
+	inputRange.startinclusive = true
+	expected = ['10 <=', '<= 21.8']
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange),
+		expected,
+		`Should return start and stop values for user input: ${userInput}`
+	)
+
+	//displays [min value] <= x < 20
+	userInput = `x < 20`
+	range.start = 0
+	range.stop = 20
+
+	inputRange = {
+		start: undefined,
+		startinclusive: false,
+		startunbounded: true,
+		stop: 20,
+		stopinclusive: false,
+		stopunbounded: false,
+		value: undefined
+	}
+	expected = ['0 <', '< 20']
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange),
+		expected,
+		`Should return start and stop values for user input: ${userInput}`
+	)
+
+	//displays [min value] <= x <= 20
+	userInput = 'x <= 20'
+	inputRange = {
+		start: undefined,
+		startinclusive: true,
+		startunbounded: true,
+		stop: 20,
+		stopinclusive: true,
+		stopunbounded: true,
+		value: undefined
+	}
+	expected = ['0 <=', '<= 20']
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange),
+		expected,
+		`Should return start and stop values for user input: ${userInput}`
+	)
+
+	// displays 10 < x < 20
+	userInput = '10 < x < 20'
+	range = {
+		index: 0,
+		start: 10,
+		startunbounded: false,
+		stop: 20,
+		stopunbounded: false
+	}
+	inputRange = {
+		start: 10,
+		startinclusive: false,
+		startunbounded: false,
+		stop: 20,
+		stopinclusive: false,
+		stopunbounded: false,
+		value: undefined
+	}
+	expected = ['10 <', '< 20']
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange),
+		expected,
+		`Should return start and stop values for user input: ${userInput}`
+	)
+
+	//displays 10 <= x < 20
+	userInput = '10 <= x < 20'
+	inputRange = {
+		start: 10,
+		startinclusive: true,
+		startunbounded: false,
+		stop: 20,
+		stopinclusive: false,
+		stopunbounded: false,
+		value: undefined
+	}
+	expected = ['10 <=', '< 20']
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange),
+		expected,
+		`Should return start and stop values for user input: ${userInput}`
+	)
+
+	//displays 10 < x <= 20
+	userInput = '10 < x <= 20'
+	inputRange = {
+		start: 10,
+		startinclusive: false,
+		startunbounded: false,
+		stop: 20,
+		stopinclusive: true,
+		stopunbounded: false,
+		value: undefined
+	}
+	expected = ['10 <', '<= 20']
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange),
+		expected,
+		`Should return start and stop values for user input: ${userInput}`
+	)
+
+	//displays 10 < x <= 20
+	userInput = '10 <= x <= 20'
+	inputRange = {
+		start: 10,
+		startinclusive: true,
+		startunbounded: false,
+		stop: 20,
+		stopinclusive: true,
+		stopunbounded: false,
+		value: undefined
+	}
+	expected = ['10 <=', '<= 20']
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange),
+		expected,
+		`Should return start and stop values for user input: ${userInput}`
+	)
 
 	test.end()
 })

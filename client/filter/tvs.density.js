@@ -85,8 +85,7 @@ function applyBrush(self, elem, brush) {
 			//update temp_ranges
 			updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalue, self.tvs.term.type)
 
-			const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
-			const stop = range.stopunbounded ? '' : inputRange.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
+			const [start, stop] = setStartStopDisplays(range, inputRange)
 			// update inputs from brush move
 			brush.rangeInput.getInput().node().value = `${start} x ${stop}`
 		})
@@ -115,7 +114,16 @@ function applyBrush(self, elem, brush) {
 }
 
 /** Updates the number range returned from the brushing into
- * rounded values or integers. Exported for testing only.
+ * rounded values or integers.  Encapsulated and exported to verify
+ * usage via testing and CI.
+ *
+ * xscale: d3 scale for x-axis
+ * s: selection from brush, [start, stop]
+ * range: range object to update
+ * inputRange: input range object
+ * minValue: min value of the density plot
+ * maxValue: max value of the density plot
+ * termType: term type
  */
 export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalue, type) {
 	range.start = convertRangeValue(xscale, s[0])
@@ -130,6 +138,17 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
 		range.start = range.startunbounded ? '' : Math.round(range.start)
 		range.stop = range.stopunbounded ? '' : Math.round(range.stop)
 	}
+}
+
+/** Set the start and stop displayed to the user
+ * Encapsulated and exported to verify usage via testing and CI.
+ */
+
+export function setStartStopDisplays(range, inputRange) {
+	const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
+	const stop = range.stopunbounded ? '' : inputRange.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
+
+	return [start, stop]
 }
 
 function convertRangeValue(xscale, sidx) {
