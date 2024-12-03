@@ -114,7 +114,7 @@ function getChartTypeList(self, state) {
 	.updateActionBySelectedTerms:
 		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
 	*/
-	const [logged, site, user] = getProfileLogin() //later on replace with login
+	const [logged, site, user] = getProfileLogin() //later on replace with jwt login
 	const buttons = [
 		////////////////////// PROFILE PLOTS START //////////////////////
 		{
@@ -133,7 +133,7 @@ function getChartTypeList(self, state) {
 			label: 'Facility Radar',
 			chartType: 'profileRadarFacility',
 			clickTo: self.loadChartSpecificMenu,
-			hide: !logged
+			hide: !logged // temp change for profile, delete later
 		},
 		{
 			label: 'Radar',
@@ -163,7 +163,7 @@ function getChartTypeList(self, state) {
 			config: {
 				chartType: 'sampleView'
 			},
-			hide: user != 'admin'
+			hide: user != 'admin' // temp change for profile, delete later
 		},
 		{
 			label: 'Summary Plots',
@@ -200,7 +200,7 @@ function getChartTypeList(self, state) {
 			label: 'Sample Matrix',
 			chartType: 'matrix',
 			clickTo: self.loadChartSpecificMenu,
-			hide: user != 'admin'
+			hide: user != 'admin' // temp change for profile, delete later
 		},
 		{
 			label: 'Genome Browser',
@@ -231,7 +231,7 @@ function getChartTypeList(self, state) {
 			config: {
 				chartType: 'facet'
 			},
-			hide: user != 'admin'
+			hide: user != 'admin' // temp change for profile, delete later
 		},
 		{
 			label: 'Brain Imaging',
