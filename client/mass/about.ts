@@ -64,7 +64,11 @@ export class MassAbout {
 		if (opts.selectCohort?.description || opts.selectCohort?.descriptionByUser) {
 			//temporary logic to get the profile description until the login is implemented
 			const [logged, site, user] = getProfileLogin()
-			const description = user ? opts.selectCohort.descriptionByUser?.[user] : opts.selectCohort.description
+			//If there is a user and a descriptionByUser, use the user description otherwise use the default description
+			const description =
+				user && opts.selectCohort.descriptionByUser
+					? opts.selectCohort.descriptionByUser[user]
+					: opts.selectCohort.description
 			if (description)
 				this.dom.cohortDescription = this.subheader
 					.append('div')
