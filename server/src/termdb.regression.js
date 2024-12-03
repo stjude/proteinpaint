@@ -727,11 +727,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 					size: imagesize(file)
 				}
 				const type = path.basename(file, '.svg').split('_')[1]
-				if (type == 'univariate' || type == 'multivariate') {
-					const title = type == 'univariate' ? 'Univariate' : 'Multivariable-adjusted'
-					obj.type = type
-					obj.title = title
-				}
+				if (type == 'univariate' || type == 'multivariate') obj.type = type
 				analysisResult.data.splinePlots.push(obj)
 				fs.unlink(file, err => {
 					if (err) throw err

@@ -347,10 +347,7 @@ function setRenderers(self) {
 			return 0
 		})
 		for (const plot of result.splinePlots) {
-			const plotDiv = div.append('div').style('margin', '20px 50px 0px 0px')
-			if (plot.title) {
-				plotDiv.append('div').style('text-align', 'center').style('margin', '0px 0px 10px 50px').text(plot.title)
-			}
+			const plotDiv = div.append('div').style('margin', '0px 50px 5px 0px')
 			plotDiv.append('img').attr('src', plot.src).style('width', plot.size.width).style('height', plot.size.height)
 		}
 	}
