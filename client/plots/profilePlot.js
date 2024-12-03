@@ -1,6 +1,6 @@
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { filterJoin } from '#filter'
-import { controlsInit } from './controls'
+import { controlsInit } from './controls.js'
 import { fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
@@ -655,7 +655,7 @@ export function getDefaultProfilePlotSettings() {
 }
 
 export function getProfileLogin() {
-	if (!window.location.pathname.includes('profile')) return [false, null, null]
+	if (!window.location.pathname.includes('profile')) return [0, null, null]
 	const queryString = window.location.search
 	const urlParams = new URLSearchParams(queryString)
 	const logged = urlParams.get('logged')
