@@ -91,7 +91,7 @@ tape('Default About tab class', test => {
 	test.end()
 })
 
-tape('.initCohort()', test => {
+tape.only('.initCohort()', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any

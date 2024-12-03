@@ -62,18 +62,16 @@ export class MassAbout {
 		}
 
 		if (opts.selectCohort?.description || opts.selectCohort?.descriptionByUser) {
-			//temporary logic to get the description until the login is implemented
+			//temporary logic to get the profile description until the login is implemented
 			const [logged, site, user] = getProfileLogin()
-			if (user) {
-				const description = opts.selectCohort.descriptionByUser?.[user] || opts.selectCohort.description
-				if (description)
-					this.dom.cohortDescription = this.subheader
-						.append('div')
-						.attr('data-testid', 'sjpp-about-cohort-desc')
-						.style('margin-left', '10px')
-						.html(description)
-				else new Error('Missing cohort description')
-			}
+			const description = user ? opts.selectCohort.descriptionByUser?.[user] : opts.selectCohort.description
+			if (description)
+				this.dom.cohortDescription = this.subheader
+					.append('div')
+					.attr('data-testid', 'sjpp-about-cohort-desc')
+					.style('margin-left', '10px')
+					.html(description)
+			else new Error('Missing cohort description')
 		}
 
 		if (opts.selectCohort?.prompt) {
