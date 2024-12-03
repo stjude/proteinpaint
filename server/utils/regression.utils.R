@@ -516,8 +516,8 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   
   # plot data
   plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".svg")
-  svg(filename = plotfile, width = 6.7, height = 5, pointsize = 20)
-  par(mar = c(2, 2, 0, 5) + 0.1, mgp = c(1, 1, 0))
+  svg(filename = plotfile, width = 6.7, height = ifelse(is.null(formulatype),5.25,5.35), pointsize = 20)
+  par(mar = c(2, 2, ifelse(is.null(formulatype),0.7,1), 5) + 0.1, mgp = c(1, 1, 0))
   if (regtype == "linear" | regtype == "logistic") {
     if (regtype == "linear") {
       # for linear, plot predicted values
@@ -581,6 +581,12 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   # titles
   title(xlab = splineVariable$name, line = 1, cex.lab = 0.5)
   title(ylab = ylab, line = 1.5, cex.lab = 0.5)
+  if (!is.null(formulatype)) {
+    if (formulatype == "univariate") plotTitle <- "Univariate"
+    else if (formulatype == "multivariate") plotTitle <- "Multivariable-adjusted"
+    else stop("unexpected formula type")
+    title(main = plotTitle, cex.main = 0.5, line = 0.45)
+  }
   
   # knots
   abline(v = splineVariable$spline$knots[[1]],
