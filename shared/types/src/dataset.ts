@@ -1229,12 +1229,24 @@ type MassNav = {
 			btm?: string
 			/** if true, does not show the tab */
 			hide?: boolean
-			/** html code, specifically for the about tab
+			/** static html contents to show specifically in "about" tab subheader
 			 * maybe used for other tabs as well.
 			 */
 			html?: string
+			/** "active" items, shown as clickable buttons in about tab. click an item to launch a plot */
+			activeItems?: {
+				items: ActiveItem[]
+				// can add holderStyle to customize
+			}
 		}
 	}
+}
+
+type ActiveItem = {
+	/** string or html to show inside the button for the item, potentially allow to include <image> as logo */
+	title: string
+	/** plot object describing the plot to be launched */
+	plot: object
 }
 
 type Title = {
