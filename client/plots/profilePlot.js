@@ -21,6 +21,7 @@ export class profilePlot {
 	constructor() {
 		this.type = 'profilePlot'
 		this.downloadCount = 0
+		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
 	getState(appState) {
@@ -66,9 +67,9 @@ export class profilePlot {
 		select('.sjpp-output-sandbox-content').on('scroll', event => {
 			if (this.onMouseOut) this.onMouseOut(event)
 		})
-		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
-		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
-		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
+		this.dom.rightDiv.on('mousemove', event => this.onMouseOver(event))
+		this.dom.rightDiv.on('mouseleave', event => this.onMouseOut(event))
+		this.dom.rightDiv.on('mouseout', event => this.onMouseOut(event))
 		this.sampleidmap = await this.app.vocabApi.getSamplesByName()
 
 		if (state.site) {
@@ -77,7 +78,6 @@ export class profilePlot {
 			if (!id) throw 'Invalid site'
 		}
 
-		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		document.addEventListener('scroll', () => this?.tip?.hide())
 		icon_functions['pdf'](iconsDiv.append('div').style('padding', '0px 5px 15px 5px'), {
 			title: 'Prints page, select Save as PDF in the options to download as a pdf',
@@ -121,6 +121,10 @@ export class profilePlot {
 				})
 			}
 		})
+	}
+
+	onMouseOut(event) {
+		this.tip.hide()
 	}
 
 	async showTable(show) {

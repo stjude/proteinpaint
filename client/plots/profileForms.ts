@@ -192,6 +192,16 @@ export class profileForms extends profilePlot {
 			.text('* Site coordinator')
 	}
 
+	onMouseOver(event) {
+		if (event.target.tagName == 'rect') {
+			const path = event.target
+			const d = path.__data__
+			const menu = this.tip.clear()
+			menu.d.text(`${d.key}: ${d.value}`)
+			menu.show(event.clientX, event.clientY, true, true)
+		} else this.onMouseOut(event)
+	}
+
 	getColor(key: string) {
 		return key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
@@ -214,6 +224,8 @@ export class profileForms extends profilePlot {
 				.attr('height', height)
 				.attr('stroke', 'gray')
 				.attr('fill', color)
+				.datum({ key, value })
+
 			if (scPercentKeys.includes(key))
 				this.dom.mainG
 					.append('text')
