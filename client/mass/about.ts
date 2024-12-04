@@ -1,3 +1,4 @@
+import { getId } from './nav'
 import { getCompInit } from '../rx'
 import type { Elem, Div, H2 } from '../types/d3'
 import type { SelectCohortEntry } from '#types'
@@ -6,9 +7,21 @@ import { renderTable, TableRow } from '#dom'
 import { select } from 'd3-selection'
 import { getProfileLogin } from '../plots/profilePlot.js'
 
+/* 
+"about" tab will display following contents inside the area referred as this.subheader:
+- if ds uses subcohorts:
+	- <h2> for selectCohort.title
+	- description
+	- radio button options
+- custom html via massNav.about.html (todo images and cartoon)
+- functional components
+- server info
+*/
+
+// this type is fully defined in MassNav def in dataset.ts but not in a form that can extract "about" config to share. thus need to repeat here to avoid tsc err
 type AboutObj = {
-	/** Optional. Defines the html shown above the server info */
 	html: string
+	activeItems?: { items: any }
 }
 
 type MassAboutOpts = {
@@ -20,7 +33,7 @@ type MassAboutOpts = {
 	instanceNum: number
 	/** Optional. Set in the dataset file under .termdb.selectCohort. Otherwise null. */
 	selectCohort: SelectCohortEntry | null
-	/** Required. .dom.subheader.about in nav component */
+	/** Required. .dom.subheader.about in nav component, assigned to this.subheader */
 	subheader: Elem
 }
 
@@ -45,7 +58,7 @@ export class MassAbout {
 	dom: MassAboutDom
 	instanceNum: number
 	selectCohort: SelectCohortEntry | null
-	subheader: Elem
+	subheader: Elem // where all contents are rendered
 	type: string
 
 	constructor(opts: MassAboutOpts) {
@@ -54,6 +67,7 @@ export class MassAbout {
 		this.subheader = opts.subheader
 		this.instanceNum = opts.instanceNum
 		this.aboutOverrides = opts.aboutOverrides
+		console.log(opts.aboutOverrides)
 		this.selectCohort = opts.selectCohort
 		this.dom = {}
 
@@ -93,10 +107,16 @@ export class MassAbout {
 		}
 	}
 
+	/* render all contents into this.subheader
+	do it through init() means that contents are rendered just once on launching mass ui and won't be rerendered or updated
+	since there's no reason to update about tab contents while user is interacting with mass ui
+	*/
 	init(appState) {
 		/** If selectCohort available, options in the about html will not show */
+		console.log(11)
 		this.initCohort(appState)
 		this.initCustomHtml()
+		this.initActiveItems()
 		//Always show the release version and server launch date at the bottom
 		this.showServerInfo()
 	}
@@ -241,12 +261,39 @@ export class MassAbout {
 
 	initCustomHtml = () => {
 		if (this.selectCohort != null) return
-		if (!this.aboutOverrides) return
+		if (!this.aboutOverrides?.html) return
 		this.subheader
 			.append('div')
 			.attr('data-testid', 'sjpp-custom-about-content')
 			.style('padding', '10px')
 			.html(this.aboutOverrides.html)
+	}
+
+	initActiveItems = () => {
+		if (!this.aboutOverrides?.activeItems) return
+
+		// todo: customize general holder by activeItems.holderStyle{}
+		const div = this.subheader
+			.append('div')
+			.attr('data-testid', 'sjpp-custom-about-activeItems')
+			.style('padding', '0px 0px 20px 20px')
+
+		for (const item of this.aboutOverrides.activeItems.items) {
+			// todo: by item.type, item.divStyle{}
+			div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('margin', '5px')
+				.attr('class', 'sja_menuoption')
+				.html(item.title)
+				.on('click', () => {
+					this.app.dispatch({
+						type: 'plot_create',
+						id: getId(),
+						config: structuredClone(item.plot)
+					})
+				})
+		}
 	}
 
 	showServerInfo = () => {
