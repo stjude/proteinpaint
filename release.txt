@@ -1,1 +1,2 @@
-
+Features:
+- support MassNav.tabs.about.activeItems
