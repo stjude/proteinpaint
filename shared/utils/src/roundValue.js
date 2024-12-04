@@ -18,6 +18,8 @@ export function roundValue(value, digits) {
 /** Rounds numbers to the appropriate decimal point
  * if format is true, returns either a number or string in
  * scientific notation.
+ *
+ * TODO: Review digit logic.
  */
 
 export function roundValueAuto(value, format = false) {
