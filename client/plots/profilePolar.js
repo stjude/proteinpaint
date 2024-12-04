@@ -61,7 +61,7 @@ class profilePolar extends profilePlot {
 		this.dom.plotDiv.selectAll('*').remove()
 		const width = 1100
 		const height = 700
-		this.svg = this.dom.plotDiv
+		this.dom.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
@@ -73,7 +73,11 @@ class profilePolar extends profilePlot {
 			.style('vertical-align', 'top')
 			.style('margin', '45px 20px')
 
-		this.svg.append('text').attr('transform', `translate(130, ${40})`).attr('font-weight', 'bold').text(config.title)
+		this.dom.svg
+			.append('text')
+			.attr('transform', `translate(130, ${40})`)
+			.attr('font-weight', 'bold')
+			.text(config.title)
 
 		const rows = []
 		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: 'Score', align: 'center' }]
@@ -82,10 +86,10 @@ class profilePolar extends profilePlot {
 		const radius = this.radius
 		const x = 280
 		const y = 330
-		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
+		const polarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 280}, ${y})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 280},${y + 150})`)
+		this.legendG = this.dom.svg.append('g').attr('transform', `translate(${x + 280}, ${y})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 280},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 

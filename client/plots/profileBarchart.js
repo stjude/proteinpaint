@@ -84,17 +84,17 @@ class profileBarchart extends profilePlot {
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const width = 1400
 		const height = this.rowCount * 32 + 600
-		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
+		this.dom.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		const title =
 			this.state.activeCohort == ABBREV_COHORT
 				? `Score-based Results for the ${this.component} Component by Module and Domain Compared with End-User Impression`
 				: `Objective ${this.component == 'Patients and Outcomes' ? '' : 'and Subjective '}Score-based Results for the ${
 						this.component
 				  } Component by Module and Domain`
-		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(title)
-		const svg = this.svg
+		this.dom.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(title)
+		const svg = this.dom.svg
 		const color = this.configComponent.component.color
-		this.svg
+		this.dom.svg
 			.append('defs')
 			.append('pattern')
 			.attr('id', `${this.id}_diagonalHatch`)
@@ -157,8 +157,8 @@ class profileBarchart extends profilePlot {
 		drawLine(410, 120, 50, y, 'B')
 		drawLine(410, 120, 75, y, 'A')
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 80})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${50},${y + 180})`)
+		this.legendG = this.dom.svg.append('g').attr('transform', `translate(${50},${y + 80})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${50},${y + 180})`)
 
 		this.legendG
 			.append('text')
@@ -288,7 +288,7 @@ class profileBarchart extends profilePlot {
 		if (operator == 'and') rect.attr('fill', 'gray')
 		else rect.attr('fill', `url(#${this.id}_diagonalHatch)`)
 
-		const text = this.svg
+		const text = this.dom.svg
 			.append('text')
 			.attr('transform', `translate(${x + 25}, ${y + 15})`)
 			.attr('text-anchor', 'start')
