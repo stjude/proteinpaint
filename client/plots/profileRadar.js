@@ -43,7 +43,7 @@ class profileRadar extends profilePlot {
 		if (this.data.lst.length == 0) return
 		const width = 1180
 		const height = 800
-		this.svg = this.dom.plotDiv
+		this.dom.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
@@ -79,17 +79,17 @@ class profileRadar extends profilePlot {
 		const radius = this.radius
 		const x = 370
 		const y = 340
-		this.svg
+		this.dom.svg
 			.append('text')
 			.attr('transform', `translate(60, ${40})`)
 			.attr('font-weight', 'bold')
 			.attr('font-size', '0.9rem')
 			.text(config.title)
 
-		const radarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
+		const radarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 240},${y + 250})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${40},${y + 300})`)
+		this.legendG = this.dom.svg.append('g').attr('transform', `translate(${x + 240},${y + 250})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${40},${y + 300})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
