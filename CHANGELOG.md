@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.88.2
 
 Fixes:
 - add roundValue2 to return rounded value with higher precision for computing
