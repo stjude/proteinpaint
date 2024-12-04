@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- add roundValue2 to return rounded value with higher precision for computing
+- add roundValue2 to return rounded value with higher precision to resolve tvs denisity brushing error
+
 
 ## 2.88.1
 
