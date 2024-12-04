@@ -340,19 +340,22 @@ export function setLabelsAndScales() {
 							`CNV loss and gain do not have the same color for value=0` +
 								`'${loss0color}' vs '${gain0color}', color difference=${colorDiff}`
 						)
+					// force this middleColor to white, knowing that interpolateBlues and interpolateReds,
+					// as hardcoded above and below, share similar white colors for their minimum abs values
+					const middleColor = 'white'
 
 					// These precomputed CNV domains and ranges are to be passed to
 					// ColorScale legend renderer in matrix.legend.js. By computing
 					// these values here, the legend will match the scale
 					// min/max values and rendered-value colors in matrix cells.
+					const absMax = Math.max(Math.abs(minLoss), maxGain)
 					cnvLegendDomainRange =
 						maxLoss && maxGain
 							? {
-									// if it's possible to have two 0 entries in the middle of the domain,
-									// then the range can have loss0color, gain0color also in the middle,
-									// not making that assumption right now
-									domain: [minLoss, 0, maxGain],
-									range: [interpolateBlues(1), loss0color, interpolateReds(1)]
+									// expect the color scale to compute the color gradient offsets
+									// based on domain values
+									domain: [-absMax, -0.00001, 0, 0.0001, absMax],
+									range: [interpolateBlues(1), loss0color, middleColor, gain0color, interpolateReds(1)]
 							  }
 							: minLoss // at least minLoss or maxGain is checked above, cannot be both undefined
 							? {

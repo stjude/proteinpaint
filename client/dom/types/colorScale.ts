@@ -7,6 +7,13 @@ export type ColorScaleOpts = {
 	barheight?: number
 	/** Optional but recommended. The width of the color bar in px. Default is 100. */
 	barwidth?: number
+	/**
+	 * Optional; the domain array has the desired values to use for computing gradient offset
+	 * for each entry in colors array. May be used in cases where the left and right values
+	 * on either ends of the scale are equal in magnitude (absolute max values) and the
+	 * middle value is zero.
+	 * */
+	domain?: string[]
 	/** Optional but highly recommend. Default is a white to red scale.
 	 * The length of the array must match the data array. */
 	colors?: string[]

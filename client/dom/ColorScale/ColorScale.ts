@@ -14,6 +14,7 @@ export class ColorScale {
 	dom: ColorScaleDom
 	barheight: number
 	barwidth: number
+	domain: number[]
 	colors: string[]
 	cutoffMode?: 'auto' | 'fixed'
 	default?: { min: number; max: number }
@@ -42,12 +43,13 @@ export class ColorScale {
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
 		this.topTicks = opts.topTicks || false
+		this.domain = opts.domain
 
 		this.validateOpts(opts)
 
 		this.tickValues = niceNumLabels(opts.data)
 
-		let scaleSvg: SvgSvg
+		let scaleSvg: SvgSvg //
 		if (opts.width || opts.height) {
 			scaleSvg = opts.holder
 				.append('svg')
@@ -128,10 +130,21 @@ export class ColorScale {
 
 	makeColorBar(gradient?: GradientElem) {
 		const gradElem = gradient || this.dom.gradient
-		for (const c of this.colors) {
-			const idx = this.colors.indexOf(c)
-			const offset = (idx / (this.colors.length - 1)) * 100
-			gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${c}`)
+		const maxValue = this.domain.slice(-1)[0]
+		if (this.domain && this.domain[0] === -maxValue && this.domain[Math.floor(this.domain.length / 2)] == 0) {
+			// the domain is centered around zero, with negative and positive values having the same magnitude,
+			// this means to use the actual domain entries to determine the offset positions
+			const width = 2 * maxValue
+			for (const [i, v] of this.domain.entries()) {
+				const offset = (100 * (maxValue + v)) / width
+				gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${this.colors[i]}`)
+			}
+		} else {
+			for (const c of this.colors) {
+				const idx = this.colors.indexOf(c)
+				const offset = (idx / (this.colors.length - 1)) * 100
+				gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${c}`)
+			}
 		}
 	}
 

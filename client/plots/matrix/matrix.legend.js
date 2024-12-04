@@ -159,8 +159,8 @@ export function getLegendData(legendGroups, refs, self) {
 							domain: item.scales.legend.domain,
 							key: item.key,
 							isLegendItem: true,
-							minLabel: item.minLoss, // item.maxLabel,
-							maxLabel: item.maxGain, // item.maxLabel,
+							minLabel: domain[0], //item.minLoss, // item.maxLabel,
+							maxLabel: domain.slice(-1)[0], //item.maxGain, // item.maxLabel,
 							scale: item.scale,
 							termid: 'CNV'
 						}
@@ -174,8 +174,8 @@ export function getLegendData(legendGroups, refs, self) {
 						domain,
 						name: 'CNV gain/loss',
 						scale: scaleLinear().domain(domain).range(colors),
-						minLabel: loss.maxLabel,
-						maxLabel: gain.maxLabel,
+						minLabel: domain[0], //loss.maxLabel,
+						maxLabel: domain.slice(-1)[0],
 						parents: [Object.assign(setLegendAttr(loss), loss), Object.assign(setLegendAttr(gain), gain)],
 						samples: new Set([...gain.samples, ...loss.samples])
 					}
