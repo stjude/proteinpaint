@@ -2,6 +2,7 @@ import type { SvgSvg, SvgG } from '../../types/d3'
 import type { ColorScaleDom, ColorScaleOpts, GradientElem, ColorScaleMenuOpts } from '../types/colorScale'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
+import { lab } from 'd3-color'
 import { font } from '../../src/client'
 import { axisstyle, niceNumLabels } from '#dom'
 import { ColorScaleMenu } from './ColorScaleMenu'
@@ -284,4 +285,22 @@ export class ColorScale {
 		this.updateValueInColorBar()
 		this.updateMenu()
 	}
+}
+
+export function colorDelta(rgb1, rgb2) {
+	// TODO: use ciede2000 when the installed d3-color version has it
+	// lab =  CIELAB, approximate human-perceived color simiilarity
+	// const color1 = lab(rgb1);
+	// const color2 = lab(rgb2);
+	// return ciede2000(color1, color2)
+
+	// for now, simply compute the max diff across rgb components between the 2 colors
+	const a = rgb1.split('(')[1].slice(0, -1).split(',').slice(0, 3)
+	const b = rgb2.split('(')[1].slice(0, -1).split(',').slice(0, 3)
+	let maxDiff = 0
+	for (const [i, v] of a.entries()) {
+		const d = v - b[i]
+		if (maxDiff < d) maxDiff = d
+	}
+	return maxDiff
 }

@@ -3,6 +3,7 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
+import { colorDelta } from '#dom'
 
 export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
@@ -326,13 +327,47 @@ export function setLabelsAndScales() {
 	for (const t of this.termOrder) {
 		if (t.tw.term.type == 'geneVariant') {
 			if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
+				const { minLoss, maxLoss, minGain, maxGain } = this.cnvValues
+				const loss0color = interpolateBlues(0)
+				const gain0color = interpolateReds(0)
+				const colorDiff = colorDelta(loss0color, gain0color)
+				if (minLoss && maxGain && colorDiff > 25)
+					console.warn(
+						`CNV loss and gain do not have the same color for value=0` +
+							`'${loss0color}' vs '${gain0color}', color difference=${colorDiff}`
+					)
+
 				t.scales = {
 					loss: interpolateBlues,
 					gain: interpolateReds,
-					maxLoss: this.cnvValues.maxLoss,
-					maxGain: this.cnvValues.maxGain,
-					minLoss: this.cnvValues.minLoss,
-					minGain: this.cnvValues.minGain
+					maxLoss,
+					maxGain,
+					minLoss,
+					minGain,
+					// These precomputed domains and ranges are to be passed to
+					// ColorScale legend renderer in matrix.legend.js. By computing
+					// these values here, the legend will match the scale
+					// min/max values and rendered-value colors in matrix cells.
+					legend:
+						maxLoss && maxGain
+							? {
+									// if it's possible to have two 0 entries in the middle of the domain,
+									// then the range can have loss0color, gain0color also in the middle,
+									// not making that assumption right now
+									domain: [minLoss, 0, maxGain],
+									range: [interpolateBlues(1), loss0color, interpolateReds(1)]
+							  }
+							: minLoss
+							? {
+									domain: [minLoss, 0],
+									range: [loss0color, interpolateBlues(1)]
+							  }
+							: maxGain
+							? {
+									domain: [0, maxGain],
+									range: [gain0color, interpolateReds(1)]
+							  }
+							: undefined
 				}
 			}
 		}

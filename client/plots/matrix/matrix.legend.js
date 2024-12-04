@@ -145,27 +145,22 @@ export function getLegendData(legendGroups, refs, self) {
 		if (hasScale) {
 			if (legend === legendGroups?.CNV) {
 				/** Combine gain and loss here to avoid rendering issues */
-				const legendValues = Object.values(legend.values)
-				const findLegend = type =>
-					legendValues.find(v => v.label.toLowerCase().includes(type) || v.key.toLowerCase().includes(type))
-
-				const gain = findLegend('gain')
-				const loss = findLegend('loss')
+				const gain = legend.values['CNV_amp']
+				const loss = legend.values['CNV_loss']
 
 				if (gain?.scale && loss?.scale) {
-					const gainColors = getColors(gain)
-					const lossColors = getColors(loss)
-					const colors = [lossColors[1], 'white', gainColors[1]]
-					const domain = setColorScaleDomain(loss.maxLabel, gain.maxLabel, [0, 0], colors)
+					// could use either gain or loss since matrix.cells use the same logic for both t objects
+					const colors = loss.scales.legend.range //[lossColors[1], 'white', gainColors[1]]
+					const domain = loss.scales.legend.domain
 
 					const setLegendAttr = item => {
 						return {
 							$id,
-							domain: item.domain,
+							domain: item.scales.legend.domain,
 							key: item.key,
 							isLegendItem: true,
-							minLabel: item.maxLabel,
-							maxLabel: item.maxLabel,
+							minLabel: item.minLoss, // item.maxLabel,
+							maxLabel: item.maxGain, // item.maxLabel,
 							scale: item.scale,
 							termid: 'CNV'
 						}
@@ -205,6 +200,7 @@ export function getLegendData(legendGroups, refs, self) {
 					const count = item.samples?.size
 					if (item.scale) {
 						const colors = getColors(item)
+						// this is for non-CNV continuous terms that uses a chromatic scale
 						const domain = setColorScaleDomain(item.minLabel, item.maxLabel, item.domain, colors)
 						return {
 							termid: $id,
