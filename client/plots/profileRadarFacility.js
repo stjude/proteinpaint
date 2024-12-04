@@ -55,14 +55,8 @@ class profileRadarFacility extends profilePlot {
 			.style('vertical-align', 'top')
 			.style('margin-top', '140px')
 			.style('margin-right', '20px')
-		this.tableDiv = rightDiv.append('div')
-		const noteDiv = rightDiv
-			.append('div')
-			.style('font-size', '0.9rem')
-			.style('padding-top', '5px')
-			.style('word-wrap', 'wrap')
-		const footNote = `* Difference between site and aggregated scores. If bigger than 20, shown in red if negative and in blue if positive.`
-		noteDiv.text(footNote)
+		this.dom.tableDiv = rightDiv.append('div')
+
 		// Create a polar grid.
 
 		this.dom.svg
@@ -147,14 +141,23 @@ class profileRadarFacility extends profilePlot {
 			})
 			if (leftSide) textElem.attr('text-anchor', 'end')
 		}
-		if (this.settings.showTable)
+		if (this.settings.showTable) {
 			renderTable({
 				rows,
 				columns,
-				div: this.tableDiv,
+				div: this.dom.tableDiv,
 				showLines: true,
 				resize: true
 			})
+			const noteDiv = this.dom.tableDiv
+				.append('div')
+				.style('font-size', '0.9rem')
+				.style('padding-top', '5px')
+				.style('word-wrap', 'wrap')
+			const footNote = `* Difference between site and aggregated scores. If bigger than 20, shown in red if negative and in blue if positive.`
+			noteDiv.text(footNote)
+		}
+
 		data.push(data[0])
 		data2.push(data2[0])
 		const color1 = 'blue',
