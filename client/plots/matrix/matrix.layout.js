@@ -323,32 +323,29 @@ export function setLabelsAndScales() {
 		t.grpTotals = grpTotals[t.visibleGrpIndex]
 	}
 
+	let cnvLegendDomainRange // if cnv data is present, compute once and reuse across geneVariant tw's
+
 	// need to assign scales to terms after the loop above so each term has the global maxLoss, maxGain, minLoss, minGain
 	for (const t of this.termOrder) {
 		if (t.tw.term.type == 'geneVariant') {
 			if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
 				const { minLoss, maxLoss, minGain, maxGain } = this.cnvValues
-				const loss0color = interpolateBlues(0)
-				const gain0color = interpolateReds(0)
-				const colorDiff = colorDelta(loss0color, gain0color)
-				if (minLoss && maxGain && colorDiff > 25)
-					console.warn(
-						`CNV loss and gain do not have the same color for value=0` +
-							`'${loss0color}' vs '${gain0color}', color difference=${colorDiff}`
-					)
 
-				t.scales = {
-					loss: interpolateBlues,
-					gain: interpolateReds,
-					maxLoss,
-					maxGain,
-					minLoss,
-					minGain,
-					// These precomputed domains and ranges are to be passed to
+				if (!cnvLegendDomainRange) {
+					const loss0color = interpolateBlues(0)
+					const gain0color = interpolateReds(0)
+					const colorDiff = colorDelta(loss0color, gain0color)
+					if (minLoss && maxGain && colorDiff > 25)
+						console.warn(
+							`CNV loss and gain do not have the same color for value=0` +
+								`'${loss0color}' vs '${gain0color}', color difference=${colorDiff}`
+						)
+
+					// These precomputed CNV domains and ranges are to be passed to
 					// ColorScale legend renderer in matrix.legend.js. By computing
 					// these values here, the legend will match the scale
 					// min/max values and rendered-value colors in matrix cells.
-					legend:
+					cnvLegendDomainRange =
 						maxLoss && maxGain
 							? {
 									// if it's possible to have two 0 entries in the middle of the domain,
@@ -357,17 +354,25 @@ export function setLabelsAndScales() {
 									domain: [minLoss, 0, maxGain],
 									range: [interpolateBlues(1), loss0color, interpolateReds(1)]
 							  }
-							: minLoss
+							: minLoss // at least minLoss or maxGain is checked above, cannot be both undefined
 							? {
 									domain: [minLoss, 0],
 									range: [loss0color, interpolateBlues(1)]
 							  }
-							: maxGain
-							? {
+							: {
 									domain: [0, maxGain],
 									range: [gain0color, interpolateReds(1)]
 							  }
-							: undefined
+				}
+
+				t.scales = {
+					loss: interpolateBlues,
+					gain: interpolateReds,
+					maxLoss,
+					maxGain,
+					minLoss,
+					minGain,
+					legend: cnvLegendDomainRange
 				}
 			}
 		}
