@@ -61,7 +61,7 @@ export class profileForms extends profilePlot {
 
 		rightDiv.append('div').style('font-weight', 'bold').text(config.tw.term.name)
 		const shift = 750
-		const shiftTop = 40
+		const shiftTop = 60
 		const svg = rightDiv
 			.style('padding', '10px')
 			.append('svg')
