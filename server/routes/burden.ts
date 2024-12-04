@@ -30,9 +30,9 @@ function init({ genomes }) {
 			if (!ds) throw `invalid q.genome=${req.query.dslabel}`
 			if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
 
-			const estimates = await getBurdenEstimates(req, ds)
-			const { keys, rows } = formatPayload(estimates)
-			res.send({ status: 'ok', keys, rows } satisfies BurdenResponse)
+			const { /*estimates,*/ ci95 } = await getBurdenEstimates(req, ds)
+			//const { keys, rows } = formatPayload(estimates)
+			res.send({ status: 'ok', /*keys, rows,*/ ci95 } satisfies BurdenResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
@@ -47,6 +47,7 @@ async function getBurdenEstimates(
 		q.query[k] = Number(q.query[k])
 	}
 	const data = Object.assign({}, defaults, q.query)
+	console.log(data)
 	//console.log(40, data, JSON.stringify(data))
 	// TODO: use the dataset location
 	const { fit, surv, sample } = ds.cohort.cumburden.files
@@ -56,10 +57,20 @@ async function getBurdenEstimates(
 		`${serverconfig.tpmasterdir}/${surv}`,
 		`${serverconfig.tpmasterdir}/${sample}`
 	]
-	const estimates = JSON.parse(
-		await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), JSON.stringify(data), args)
-	)
-	return estimates
+
+	const promises: any[] = []
+	// promises.push(
+	// 	run_R(await path.join(serverconfig.binpath, 'utils', 'burden.R'), JSON.stringify(data), args)
+	// )
+
+	for (let i = 1; i < 2; i++) {
+		const input = { ...data }
+		input.bootnum = i
+		promises.push(run_R(path.join(serverconfig.binpath, 'utils', 'ci95.R'), JSON.stringify(input), args))
+	}
+	const /*[estimates, ...ci95]*/ ci95 = (await Promise.all(promises)).map(d => JSON.parse(d))
+	//console.log(ci95)
+	return { /*estimates,*/ ci95 }
 }
 
 function formatPayload(estimates: object[]) {
