@@ -226,6 +226,7 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 						label: cell.label,
 						scale: value.class == 'CNV_loss' ? t.scales.loss : t.scales.gain,
 						domain: value.class == 'CNV_loss' ? [0, -minLoss] : [0, maxGain],
+						scales: value.dt == 4 && t.scales,
 						minLabel: 0,
 						maxLabel: value.class == 'CNV_loss' ? minLoss : maxGain,
 						order,
