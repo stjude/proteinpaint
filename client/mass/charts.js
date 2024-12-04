@@ -17,9 +17,7 @@ class MassCharts {
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '4px' })
 		}
-		this.opts.holder.on('mouseleave', () => {
-			this.dom.tooltip.hide()
-		})
+
 		this.makeButtons(appState)
 	}
 
@@ -359,6 +357,9 @@ function setRenderers(self) {
 			})
 			.on('mouseover', (e, d) => {
 				if (d.tooltip) self.dom.tooltip.clear().showunder(e.target).d.text(d.tooltip)
+			})
+			.on('mouseleave', (e, d) => {
+				if (d.tooltip) self.dom.tooltip.hide()
 			})
 	}
 
