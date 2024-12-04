@@ -276,10 +276,6 @@ class profileRadar extends profilePlot {
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
-
-	onMouseOut() {
-		this.tip.hide()
-	}
 }
 
 export async function getPlotConfig(opts, app, _activeCohort) {
