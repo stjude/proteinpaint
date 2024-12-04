@@ -146,6 +146,9 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
 
 /** Set the start and stop displayed to the user
  * Encapsulated and exported to verify usage via testing and CI.
+ *
+ * range: range object to update. Note this is already altered by updateTempRanges
+ * inputRange: input range object
  */
 
 export function setStartStopDisplays(range, inputRange) {

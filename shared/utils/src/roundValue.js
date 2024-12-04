@@ -76,7 +76,7 @@ export function roundValue2(value) {
 }
 
 /** Use to return displayed values in scientific notation
- * Do not use for values intented for calculation later.
+ * Do not use for values intended for calculation later.
  */
 export function formatValue(value, digits) {
 	const v = Number(value)
@@ -84,6 +84,7 @@ export function formatValue(value, digits) {
 	const abs = Math.abs(v)
 	if (abs < 1 || abs > 9999) {
 		//Number() reverts positive values less than 10^21 to a whole number
+		//To return the value in scientific notation, use toPrecision without Number()
 		return abs > 9999 ? v.toPrecision(digits) : Number(v.toPrecision(digits))
 	}
 	return Number(v.toFixed(digits))
