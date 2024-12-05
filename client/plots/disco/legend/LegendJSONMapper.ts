@@ -169,15 +169,17 @@ export default class LegendJSONMapper {
 					)
 				}
 			}
-
-			cnvItems.push({
-				termid: legend.cnvTitle,
-				key: CnvType.Cap,
-				text: `Capping: ${cap.value}`,
-				color: cap.color,
-				order: cnvOrder++,
-				border: '1px solid #ccc'
-			})
+			//Only show capping if there are cnv values
+			if (gain.value > 0 || loss.value < 0) {
+				cnvItems.push({
+					termid: legend.cnvTitle,
+					key: CnvType.Cap,
+					text: `Capping: ${cap.value}`,
+					color: cap.color,
+					order: cnvOrder++,
+					border: '1px solid #ccc'
+				})
+			}
 
 			legendJSON.push({
 				name: legend.cnvTitle,
