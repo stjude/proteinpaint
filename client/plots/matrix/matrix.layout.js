@@ -347,7 +347,12 @@ export function setLabelsAndScales() {
 					// ColorScale legend renderer in matrix.legend.js. By computing
 					// these values here, the legend will match the scale
 					// min/max values and rendered-value colors in matrix cells.
-					const absMax = Math.max(Math.abs(minLoss), maxGain)
+					const absMax =
+						minLoss !== undefined && maxGain !== undefined
+							? Math.max(Math.abs(minLoss), maxGain)
+							: minLoss !== undefined
+							? Math.abs(minLoss)
+							: maxGain
 					cnvLegendDomainRange = getInterpolatedDomainRange({
 						absMax,
 						stepSize: 100,

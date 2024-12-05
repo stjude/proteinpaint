@@ -203,7 +203,8 @@ export default function svgLegend(opts) {
 				//For larger ranges, reduce the number of ticks
 				ticks: Math.abs(d.domain[d.domain.length - 1] - d.domain[0]) > 10 ? 2 : 3,
 				tickSize: 2,
-				topTicks: true
+				topTicks: true,
+				domain: d.domain
 			}
 			if (d.termid.toLowerCase().includes('cnv') && d.domain[0] < 0 && d.domain[d.domain.length - 1] > 0) {
 				opts.labels = { left: 'Loss', right: 'Gain' }
