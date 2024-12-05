@@ -344,8 +344,8 @@ export function getInterpolatedDomainRange({
 		}
 	} else if (negInterpolator) {
 		return {
-			domain: [-absMax, ...neg.values.map(Math.abs), 0],
-			range: [negInterpolator(0), ...neg.colors.reverse(), negInterpolator(1)]
+			domain: [-absMax, ...neg.values, 0],
+			range: [negInterpolator(0), ...neg.colors, negInterpolator(1)]
 		}
 	} else if (posInterpolator) {
 		return {
