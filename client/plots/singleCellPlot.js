@@ -1156,6 +1156,8 @@ class singleCellPlot {
 		const ctx = canvas.getContext('2d')
 
 		for (const c of plot.cells) {
+			const opacity = this.getOpacity(c)
+			if (opacity == 0) continue
 			let x = plot.xAxisScale(c.x)
 			let y = plot.yAxisScale(c.y)
 			const rgbColor = rgb(this.getColor(c, plot))
