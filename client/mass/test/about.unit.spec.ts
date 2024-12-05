@@ -182,3 +182,33 @@ tape('.initCustomHtml()', test => {
 	if (test['_ok']) holder.remove()
 	test.end()
 })
+
+tape('.initActiveItems()', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+	const opts = {
+		holder,
+		aboutOverrides: {
+			activeItems: {
+				items: [
+					{
+						title: 'abc'
+						// no need to supply plot because lack of app.dispatch()
+					}
+				]
+			}
+		}
+	}
+
+	const mockAbout = getAbout(opts)
+	mockAbout.initActiveItems()
+
+	test.true(
+		mockAbout.subheader.select('[data-testid="sjpp-custom-about-activeItems"]').node(),
+		'Should render activeItems'
+	)
+
+	if (test['_ok']) holder.remove() // must not use `if(test._ok)` to avoid tsc err
+	test.end()
+})

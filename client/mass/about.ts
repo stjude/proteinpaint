@@ -9,13 +9,13 @@ import { select } from 'd3-selection'
 import { getProfileLogin } from '../plots/profilePlot.js'
 
 /* 
-"about" tab will display following contents inside the area referred as this.subheader:
+"about" tab will display following contents inside this.subheader:
 - if ds uses subcohorts:
 	- <h2> for selectCohort.title
 	- description
 	- radio button options
 - custom html via massNav.about.html (todo images and cartoon)
-- functional components
+- active items to launch demo plots
 - server info
 */
 
@@ -68,7 +68,6 @@ export class MassAbout {
 		this.subheader = opts.subheader
 		this.instanceNum = opts.instanceNum
 		this.aboutOverrides = opts.aboutOverrides
-		console.log(opts.aboutOverrides)
 		this.selectCohort = opts.selectCohort
 		this.dom = {}
 
@@ -114,7 +113,6 @@ export class MassAbout {
 	*/
 	init(appState) {
 		/** If selectCohort available, options in the about html will not show */
-		console.log(11)
 		this.initCohort(appState)
 		this.initCustomHtml()
 		this.initActiveItems()
