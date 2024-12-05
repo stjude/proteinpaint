@@ -1157,8 +1157,8 @@ class singleCellPlot {
 	renderLargePlot = async function (plot) {
 		if (!plot.canvas) {
 			plot.canvas = plot.plotDiv.append('canvas').node()
-			canvas.width = this.settings.svgw
-			canvas.height = this.settings.svgh
+			plot.canvas.width = this.settings.svgw
+			plot.canvas.height = this.settings.svgh
 			plot.plotDiv.style('margin', '20px 20px')
 		}
 		const canvas = plot.canvas
