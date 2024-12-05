@@ -130,21 +130,10 @@ export class ColorScale {
 
 	makeColorBar(gradient?: GradientElem) {
 		const gradElem = gradient || this.dom.gradient
-		const maxValue = this.domain.slice(-1)[0]
-		if (this.domain && this.domain[0] === -maxValue && this.domain[Math.floor(this.domain.length / 2)] == 0) {
-			// the domain is centered around zero, with negative and positive values having the same magnitude,
-			// this means to use the actual domain entries to determine the offset positions
-			const width = 2 * maxValue
-			for (const [i, v] of this.domain.entries()) {
-				const offset = (100 * (maxValue + v)) / width
-				gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${this.colors[i]}`)
-			}
-		} else {
-			for (const c of this.colors) {
-				const idx = this.colors.indexOf(c)
-				const offset = (idx / (this.colors.length - 1)) * 100
-				gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${c}`)
-			}
+		for (const c of this.colors) {
+			const idx = this.colors.indexOf(c)
+			const offset = (idx / (this.colors.length - 1)) * 100
+			gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${c}`)
 		}
 	}
 
@@ -297,6 +286,56 @@ export class ColorScale {
 		this.updateAxis()
 		this.updateValueInColorBar()
 		this.updateMenu()
+	}
+}
+
+type InterpolatedDomainRange = {
+	values: number[]
+	colors: string[]
+}
+
+export function getInterpolatedDomainRange({
+	absMax,
+	leftInterpolator,
+	rightInterpolator,
+	middleColor = 'white',
+	numSteps = 100
+}) {
+	const stepSize = absMax / numSteps
+	const neg: InterpolatedDomainRange = { values: [], colors: [] }
+	const pos: InterpolatedDomainRange = { values: [], colors: [] }
+	let p = stepSize
+	for (let i = -absMax; i < 0; i += stepSize) {
+		if (leftInterpolator) {
+			const vn = i / absMax
+			neg.values.push(vn)
+			neg.colors.push(leftInterpolator(-vn))
+		}
+		if (rightInterpolator) {
+			p += stepSize
+			const vp = p / absMax
+			pos.values.push(vp)
+			pos.colors.push(rightInterpolator(vp))
+		}
+	}
+
+	if (leftInterpolator && rightInterpolator) {
+		return {
+			domain: [-absMax, ...neg.values, 0, ...pos.values, absMax],
+			range: [leftInterpolator(1), ...neg.colors, middleColor, ...pos.colors, rightInterpolator(1)]
+		}
+	} else if (leftInterpolator) {
+		return {
+			domain: [0, absMax],
+			range: [leftInterpolator(0), leftInterpolator(1)]
+		}
+	} else if (rightInterpolator) {
+		return {
+			domain: [0, absMax],
+			range: [rightInterpolator(0), rightInterpolator(1)]
+		}
+	} else {
+		throw `missing both left and right interpolators in getInterpolatedDomainRange()`
 	}
 }
 
