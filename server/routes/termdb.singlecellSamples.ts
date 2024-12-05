@@ -233,7 +233,6 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 				// if gene is not found will emit such msg
 				return {}
 			}
-			console.log('out:', out)
 			return out
 		}
 	} else if (G.storage_type == 'HDF5') {
