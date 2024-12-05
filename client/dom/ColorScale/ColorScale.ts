@@ -197,7 +197,7 @@ export class ColorScale {
 		}
 		if (opts.setColorsCallback)
 			_opts.setColorsCallback = async (val, idx) => {
-				if (!val || !idx) return
+				if (!val || !isFinite(idx)) return
 				await opts.setColorsCallback!(val, idx)
 				this.updateColors()
 			}
