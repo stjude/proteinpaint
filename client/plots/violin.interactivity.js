@@ -239,7 +239,7 @@ export function setInteractivity(self) {
 			.on('mouseover', event => {
 				const q = event.target.__data__
 				if (q === undefined) return
-				if (q.isHidden === true) {
+				if (q.isHidden === true && q.isClickable === true) {
 					self.dom.tip.d.html('Click to unhide plot')
 					self.dom.tip.show(event.clientX, event.clientY)
 				}

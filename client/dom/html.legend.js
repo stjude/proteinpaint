@@ -175,7 +175,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 			.classed('sjpp-htmlLegend', true)
 			.style('display', 'inline-block')
 			.style('margin-left', d.svg ? '1px' : '3px')
-			.style('cursor', d.isHidden ? 'pointer' : 'default')
+			.style('cursor', handleCursor(d))
 			.style('font-size', s.legendFontSize)
 			.style('line-height', s.legendFontSize)
 			.style('vertical-align', d.svg ? 'top' : null)
@@ -189,4 +189,16 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 	}
 
 	return render
+}
+
+/** In some instances a legend item maybe hidden but not clickable
+ * (e.g. uncomputable items in violin plot). In such cases, isHidden = true
+ * for styling and isClickable = false to prevent cursor change, thus
+ * avoiding user confusion.
+ */
+function handleCursor(d) {
+	if ('isClickable' in d) {
+		return d.isClickable ? 'pointer' : 'default'
+	}
+	return 'isHidden' in d ? 'pointer' : 'default'
 }

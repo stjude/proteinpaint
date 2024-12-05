@@ -570,7 +570,12 @@ function addUncomputableValues(term, legendGrps, headingStyle, self) {
 				items.push({
 					text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
 					noIcon: true,
+					/** Need to specify that this is a hidden value for
+					 * text styling in the legend but not a plot to avoid
+					 * rendering a tooltip or click events.
+					 */
 					isHidden: true,
+					isClickable: false,
 					hiddenOpacity: 1
 				})
 			}
@@ -591,7 +596,12 @@ function addHiddenValues(term, legendGrps, headingStyle) {
 		items.push({
 			text: `${key}`,
 			noIcon: true,
+			/** Need to specify that this is a hidden value for
+			 * text styling in the legend and  a plot for
+			 * rendering a tooltip or click events.
+			 */
 			isHidden: true,
+			isClickable: true,
 			hiddenOpacity: 1
 		})
 	}
