@@ -1155,14 +1155,17 @@ class singleCellPlot {
 	}
 
 	renderLargePlot = async function (plot) {
-		if (!plot.canvas) plot.canvas = plot.plotDiv.append('canvas').node()
+		if (!plot.canvas) {
+			plot.canvas = plot.plotDiv.append('canvas').node()
+			canvas.width = this.settings.svgw
+			canvas.height = this.settings.svgh
+			plot.plotDiv.style('margin', '20px 20px')
+		}
 		const canvas = plot.canvas
-		canvas.width = this.settings.svgw
-		canvas.height = this.settings.svgh
-		plot.plotDiv.style('margin', '20px 20px')
-
 		const size = this.settings.sampleSize
 		const ctx = canvas.getContext('2d')
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+
 		ctx.save() // Save the current transformation matrix
 		const zoomLevel = this.zoom
 		// Apply zoom transformation
