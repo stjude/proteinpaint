@@ -3,7 +3,7 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
-import { colorDelta } from '#dom'
+import { colorDelta, getInterpolatedDomainRange } from '#dom'
 
 export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
@@ -328,44 +328,35 @@ export function setLabelsAndScales() {
 	// need to assign scales to terms after the loop above so each term has the global maxLoss, maxGain, minLoss, minGain
 	for (const t of this.termOrder) {
 		if (t.tw.term.type == 'geneVariant') {
-			if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
+			if ('minLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
 				const { minLoss, maxLoss, minGain, maxGain } = this.cnvValues
 
 				if (!cnvLegendDomainRange) {
+					// compute these interpolated domain/range only once,
+					// and then share with other t objects
 					const loss0color = interpolateBlues(0)
 					const gain0color = interpolateReds(0)
 					const colorDiff = colorDelta(loss0color, gain0color)
-					if (minLoss && maxGain && colorDiff > 25)
+					if (maxLoss !== undefined && maxGain !== undefined && colorDiff > 25)
 						console.warn(
-							`CNV loss and gain do not have the same color for value=0` +
+							`CNV loss and gain do not have the same middle color for value=0` +
 								`'${loss0color}' vs '${gain0color}', color difference=${colorDiff}`
 						)
-					// force this middleColor to white, knowing that interpolateBlues and interpolateReds,
-					// as hardcoded above and below, share similar white colors for their minimum abs values
-					const middleColor = 'white'
 
 					// These precomputed CNV domains and ranges are to be passed to
 					// ColorScale legend renderer in matrix.legend.js. By computing
 					// these values here, the legend will match the scale
 					// min/max values and rendered-value colors in matrix cells.
 					const absMax = Math.max(Math.abs(minLoss), maxGain)
-					cnvLegendDomainRange =
-						maxLoss && maxGain
-							? {
-									// expect the color scale to compute the color gradient offsets
-									// based on domain values
-									domain: [-absMax, -0.00001, 0, 0.0001, absMax],
-									range: [interpolateBlues(1), loss0color, middleColor, gain0color, interpolateReds(1)]
-							  }
-							: minLoss // at least minLoss or maxGain is checked above, cannot be both undefined
-							? {
-									domain: [minLoss, 0],
-									range: [loss0color, interpolateBlues(1)]
-							  }
-							: {
-									domain: [0, maxGain],
-									range: [gain0color, interpolateReds(1)]
-							  }
+					cnvLegendDomainRange = getInterpolatedDomainRange({
+						absMax,
+						stepSize: 100,
+						leftInterpolator: maxLoss !== undefined && interpolateBlues,
+						rightInterpolator: maxGain !== undefined && interpolateReds,
+						// force this middleColor to white, knowing that interpolateBlues and interpolateReds,
+						// as hardcoded above and below, share similar white colors for their minimum abs values
+						middleColor: 'white'
+					})
 				}
 
 				t.scales = {
