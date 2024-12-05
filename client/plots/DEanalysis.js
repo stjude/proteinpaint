@@ -108,19 +108,8 @@ class DEanalysis {
 					{ label: 'adjusted', value: 'adjusted' },
 					{ label: 'original', value: 'original' }
 				]
-			}
-		]
-
-		if (
-			(output.mid_sample_size_cutoff >= output.sample_size1 &&
-				output.mid_sample_size_cutoff < output.sample_size2 &&
-				output.sample_size2 < output.high_sample_size_cutoff) ||
-			(output.mid_sample_size_cutoff >= output.sample_size2 &&
-				output.mid_sample_size_cutoff < output.sample_size1 &&
-				output.sample_size1 < output.high_sample_size_cutoff)
-		) {
-			// Invoked only when one sample size is low than the mid_sample_size_cutoff and the other one is higher but the higher sample size is lower than the high cutoff so that the DE computation does not take a lot of time on the server
-			inputs.push({
+			},
+			{
 				label: 'Method',
 				type: 'radio',
 				chartType: 'DEanalysis',
@@ -130,10 +119,32 @@ class DEanalysis {
 					{ label: 'edgeR', value: 'edgeR' },
 					{ label: 'wilcoxon', value: 'wilcoxon' }
 				]
-			})
-			this.settings.method = output.method
-			this.state.config = output.method
-		}
+			}
+		]
+
+		//if (
+		//	(output.mid_sample_size_cutoff >= output.sample_size1 &&
+		//		output.mid_sample_size_cutoff < output.sample_size2 &&
+		//		output.sample_size2 < output.high_sample_size_cutoff) ||
+		//	(output.mid_sample_size_cutoff >= output.sample_size2 &&
+		//		output.mid_sample_size_cutoff < output.sample_size1 &&
+		//		output.sample_size1 < output.high_sample_size_cutoff)
+		//) {
+		//	// Invoked only when one sample size is low than the mid_sample_size_cutoff and the other one is higher but the higher sample size is lower than the high cutoff so that the DE computation does not take a lot of time on the server
+		//	inputs.push({
+		//		label: 'Method',
+		//		type: 'radio',
+		//		chartType: 'DEanalysis',
+		//		settingsKey: 'method',
+		//		title: 'Toggle between edgeR and wilcoxon test',
+		//		options: [
+		//			{ label: 'edgeR', value: 'edgeR' },
+		//			{ label: 'wilcoxon', value: 'wilcoxon' }
+		//		]
+		//	})
+		//	this.settings.method = output.method
+		//	this.state.config = output.method
+		//}
 
 		if (this.app.opts.genome.termdbs) {
 			// Check if genome build contains termdbs, only then enable gene ora
@@ -644,7 +655,7 @@ export async function getPlotConfig(opts, app) {
 					min_total_count: 15,
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
-					method: undefined,
+					method: 'wilcoxon',
 					gene_ora: undefined,
 					gsea: undefined
 				}
