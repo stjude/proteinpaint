@@ -19,5 +19,10 @@ export function niceNumLabels(nums: number[]) {
 	 */
 	const decimals2Show = abs >= 10 ? 0 : abs >= 1 ? 1 : zeroDecimalNum + 2
 
-	return nums.map(num => Number(num.toFixed(decimals2Show)))
+	return nums.map(num => {
+		//Fix for a large spread with very small numbers.
+		//Must show at least 1 decimal for the small numbers.
+		if (num < 0 && decimals2Show == 0) return Number(num.toFixed(1))
+		return Number(num.toFixed(decimals2Show))
+	})
 }
