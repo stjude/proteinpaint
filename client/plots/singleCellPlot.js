@@ -33,6 +33,8 @@ const DIFFERENTIAL_EXPRESSION_TAB = 4
 
 const noExpColor = '#F5F5F5' //lightGray
 
+const maxSamplesD3 = 10000
+
 class singleCellPlot {
 	constructor() {
 		this.type = 'singleCellPlot'
@@ -57,7 +59,7 @@ class singleCellPlot {
 		}
 
 		this.samples = result.samples
-		// need to set the self.samples based on the current filter0
+		// need to set the this.samples based on the current filter0
 		this.samples.sort((elem1, elem2) => {
 			const result = elem1.primarySite?.localeCompare(elem2.primarySite)
 			if (result == 1 || result == -1) return result
@@ -140,7 +142,6 @@ class singleCellPlot {
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
 			.style('justify-content', 'flex-start')
-			.style('width', '92vw')
 
 		const loadingDiv = this.opts.holder
 			.append('div')
@@ -154,6 +155,7 @@ class singleCellPlot {
 
 		this.dom = {
 			header: this.opts.header,
+			iconsDiv,
 			headerDiv,
 			showDiv,
 			mainDiv,
@@ -658,6 +660,7 @@ class singleCellPlot {
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.plots = []
 		for (const plot of result.plots) {
+			this.plots.push(plot)
 			plot.cells = [...plot.noExpCells, ...plot.expCells]
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
@@ -694,6 +697,7 @@ class singleCellPlot {
 					: cat2Color(cluster)
 
 		plot.colorMap = colorMap
+
 		//used to plot the cells
 		this.initAxes(plot)
 
@@ -704,7 +708,34 @@ class singleCellPlot {
 			.style('flex-grow', 1)
 		plot.headerDiv = plot.plotDiv.append('div')
 		plot.headerDiv.append('label').text(plot.name).style('font-size', '1.2em').style('margin-right', '10px')
+		if (this.colorByGene && this.state.config.gene) {
+			// for gene expression sc plot, needs to add colorGenerator to plot even
+			// when legend is not needed for the plot
+			const colorGradient = rgb(plotColor)
+			if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = 'white'
+			if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
+			const startColor = this.config.startColor[plot.name]
+			const stopColor = this.config.stopColor[plot.name]
+			let min, max
+			const expCells = plot.expCells
 
+			const values = expCells.map(cell => cell.geneExp)
+			if (values.length == 0) {
+				plot.colorGenerator = null
+			} else {
+				;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+				plot.colorGenerator = d3Linear().domain([0, max]).range([startColor, stopColor])
+				plot.max = max
+			}
+		}
+
+		if (plot.cells.length > maxSamplesD3) {
+			this.dom.iconsDiv.style('display', 'none')
+			this.renderLargePlot(plot)
+			this.renderLegend(plot)
+
+			return
+		}
 		plot.svg = plot.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -739,29 +770,8 @@ class singleCellPlot {
 				return true
 			})
 		plot.mainG.call(plot.zoom)
-		this.plots.push(plot)
-		if (this.colorByGene && this.state.config.gene) {
-			// for gene expression sc plot, needs to add colorGenerator to plot even
-			// when legend is not needed for the plot
-			const colorGradient = rgb(plotColor)
-			if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = 'white'
-			if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
-			const startColor = this.config.startColor[plot.name]
-			const stopColor = this.config.stopColor[plot.name]
-			let min, max
-			const expCells = plot.expCells
 
-			const values = expCells.map(cell => cell.geneExp)
-			if (values.length == 0) {
-				plot.colorGenerator = null
-			} else {
-				;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
-				plot.colorGenerator = d3Linear().domain([0, max]).range([startColor, stopColor])
-				plot.max = max
-			}
-		}
 		this.renderCells(plot.cells, plot)
-
 		this.renderLegend(plot)
 	}
 
@@ -803,11 +813,12 @@ class singleCellPlot {
 			[s0.x, s0.x, s0.y, s0.y]
 		)
 		const r = 5
+
 		plot.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
 			.range([0 + r, this.settings.svgw - r])
 		plot.yAxisScale = d3Linear()
-			.domain([yMax, yMin])
+			.domain(plot.cells.length > maxSamplesD3 ? [yMin, yMax] : [yMax, yMin]) //if not d3 will use canvas, y not inverted
 			.range([0 + r, this.settings.svgh - r])
 	}
 
@@ -1036,7 +1047,7 @@ class singleCellPlot {
 	}
 
 	async renderSamplesTable(div, state) {
-		// need to do this after the self.samples has been set
+		// need to do this after the this.samples has been set
 		if (this.samples.length == 0) {
 			this.dom.plotsDiv.selectAll('*').remove()
 			this.showNoMatchingDataMessage()
@@ -1133,6 +1144,28 @@ class singleCellPlot {
 		//const index = columnNames.length == 1 ? 0 : columnNames.length - 1
 		//columns[index].width = '25vw'
 		return [rows, columns]
+	}
+
+	renderLargePlot = async function (plot) {
+		const canvas = plot.plotDiv.append('canvas').node()
+		canvas.width = this.settings.svgw
+		canvas.height = this.settings.svgh
+		plot.plotDiv.style('margin', '20px 20px')
+
+		const size = this.settings.sampleSize
+		const ctx = canvas.getContext('2d')
+
+		for (const c of plot.cells) {
+			const opacity = this.getOpacity(c)
+			if (opacity == 0) continue
+			let x = plot.xAxisScale(c.x)
+			let y = plot.yAxisScale(c.y)
+			const rgbColor = rgb(this.getColor(c, plot))
+			ctx.fillStyle = rgbColor.toString()
+			ctx.beginPath()
+			ctx.arc(x, y, size / 2, 0, 2 * Math.PI)
+			ctx.fill()
+		}
 	}
 }
 
