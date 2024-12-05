@@ -1147,7 +1147,7 @@ class singleCellPlot {
 	}
 
 	renderLargePlot = async function (plot) {
-		const canvas = (this.dom.canvas = plot.plotDiv.append('canvas').node())
+		const canvas = plot.plotDiv.append('canvas').node()
 		canvas.width = this.settings.svgw
 		canvas.height = this.settings.svgh
 		plot.plotDiv.style('margin', '20px 20px')
@@ -1204,7 +1204,6 @@ export function getDefaultSingleCellSettings() {
 		svgw: 900,
 		svgh: 900,
 		showGrid: true,
-		sampleSize: 1.2,
-		fov: 50
+		sampleSize: 1.2
 	}
 }
