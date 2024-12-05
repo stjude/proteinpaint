@@ -96,7 +96,7 @@ export default class Disco {
 			configInputsOptions.push(...filterMutationsGenesCheckbox)
 		}
 
-		const mandatoryConfigInputOptions = [
+		const cnvConfigInputOptions = [
 			{
 				label: 'CNV capping',
 				type: 'number',
@@ -128,7 +128,7 @@ export default class Disco {
 			}
 		]
 
-		configInputsOptions.push(...mandatoryConfigInputOptions)
+		if (viewModel.cnvMaxValue != 0 && viewModel.cnvMinValue != 0) configInputsOptions.push(...cnvConfigInputOptions)
 
 		return configInputsOptions
 	}
