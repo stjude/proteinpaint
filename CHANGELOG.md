@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- support MassNav.tabs.about.activeItems
+
 
 ## 2.88.2
 
