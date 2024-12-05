@@ -23,6 +23,11 @@ export default function getHandlers(self) {
 			id: self.id,
 			config: {
 				term: {
+					//Fix for list samples options not working
+					//after hiding a category
+					$id: term?.$id,
+					id: term.id,
+
 					isAtomic: true,
 					term: term.term,
 					q: getUpdatedQfromClick(d, term, true)
@@ -331,6 +336,11 @@ export function hideCategory(d, self, isHidden) {
 		id: self.id,
 		config: {
 			[termNum]: {
+				//Fix for list samples options not working
+				//after hiding a category
+				$id: term?.$id,
+				id: term.id,
+
 				isAtomic: true,
 				term: term.term,
 				q: getUpdatedQfromClick(d, term, isHidden)
