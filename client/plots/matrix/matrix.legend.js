@@ -150,8 +150,8 @@ export function getLegendData(legendGroups, refs, self) {
 
 				if (gain?.scale && loss?.scale) {
 					// could use either gain or loss since matrix.cells use the same logic for both t objects
-					const colors = loss.scales.legend.range //[lossColors[1], 'white', gainColors[1]]
-					const domain = loss.scales.legend.domain
+					const colors = loss.scales?.legend.range
+					const domain = loss.scales?.legend.domain
 
 					const setLegendAttr = item => {
 						return {
@@ -186,6 +186,7 @@ export function getLegendData(legendGroups, refs, self) {
 					keys.push('CNV_gain_loss')
 				}
 			}
+
 			const legendGrpLabelMaxChars = s.legendGrpLabelMaxChars || 26
 			legendData.push({
 				name: $id.length < legendGrpLabelMaxChars ? $id : $id.slice(0, legendGrpLabelMaxChars) + '...',
@@ -199,9 +200,10 @@ export function getLegendData(legendGroups, refs, self) {
 					const item = legend.values[key]
 					const count = item.samples?.size
 					if (item.scale) {
-						const colors = getColors(item)
-						// this is for non-CNV continuous terms that uses a chromatic scale
-						const domain = setColorScaleDomain(item.minLabel, item.maxLabel, item.domain, colors)
+						// a legend item with scale, that has not been combined as CNV_gain_loss above
+						const colors = item.scales?.legend?.range || getColors(item)
+						const domain =
+							item.scales?.legend?.domain || setColorScaleDomain(item.minLabel, item.maxLabel, item.domain, colors)
 						return {
 							termid: $id,
 							key: item.key,

@@ -14,7 +14,7 @@ export class ColorScale {
 	dom: ColorScaleDom
 	barheight: number
 	barwidth: number
-	domain: number[]
+	domain: undefined | number[]
 	colors: string[]
 	cutoffMode?: 'auto' | 'fixed'
 	default?: { min: number; max: number }
@@ -130,8 +130,7 @@ export class ColorScale {
 
 	makeColorBar(gradient?: GradientElem) {
 		const gradElem = gradient || this.dom.gradient
-		for (const c of this.colors) {
-			const idx = this.colors.indexOf(c)
+		for (const [idx, c] of this.colors.entries()) {
 			const offset = (idx / (this.colors.length - 1)) * 100
 			gradElem.append('stop').attr('offset', `${offset}%`).attr('stop-color', `${c}`)
 		}
@@ -326,13 +325,13 @@ export function getInterpolatedDomainRange({
 		}
 	} else if (leftInterpolator) {
 		return {
-			domain: [0, absMax],
-			range: [leftInterpolator(0), leftInterpolator(1)]
+			domain: [-absMax, ...neg.values.map(Math.abs), 0],
+			range: [leftInterpolator(0), ...neg.colors.reverse(), leftInterpolator(1)]
 		}
 	} else if (rightInterpolator) {
 		return {
-			domain: [0, absMax],
-			range: [rightInterpolator(0), rightInterpolator(1)]
+			domain: [0, ...pos.values, absMax],
+			range: [rightInterpolator(0), ...pos.colors, rightInterpolator(1)]
 		}
 	} else {
 		throw `missing both left and right interpolators in getInterpolatedDomainRange()`

@@ -13,7 +13,7 @@ export type ColorScaleOpts = {
 	 * on either ends of the scale are equal in magnitude (absolute max values) and the
 	 * middle value is zero.
 	 * */
-	domain?: string[]
+	domain?: undefined | number[]
 	/** Optional but highly recommend. Default is a white to red scale.
 	 * The length of the array must match the data array. */
 	colors?: string[]
