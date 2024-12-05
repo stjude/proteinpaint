@@ -43,6 +43,7 @@ class singleCellPlot {
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		this.startGradient = {}
 		this.stopGradient = {}
+		this.zoom = 1
 	}
 
 	async init(appState) {
@@ -385,8 +386,10 @@ class singleCellPlot {
 		const duration = 750
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
+				this.zoom = this.zoom * 1.1
 				for (const plot of this.plots) {
-					plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 1.1)
+					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 1.1)
+					else this.renderPlot(plot) //large plot
 				}
 			},
 			title: 'Zoom in'
@@ -394,15 +397,21 @@ class singleCellPlot {
 		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
-				for (const plot of this.plots) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 0.9)
+				this.zoom = this.zoom * 0.9
+				for (const plot of this.plots) {
+					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 0.9)
+					else this.renderPlot(plot) //large plot
+				}
 			},
 			title: 'Zoom out'
 		})
 		const identityDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
+				this.zoom = 1
 				for (const plot of this.plots) {
-					plot.mainG.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
+					if (plot.zoom) plot.mainG.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
+					else this.renderPlot(plot) //large plot
 				}
 			},
 			title: 'Reset plot to defaults'
@@ -730,7 +739,6 @@ class singleCellPlot {
 		}
 
 		if (plot.cells.length > maxSamplesD3) {
-			this.dom.iconsDiv.style('display', 'none')
 			this.renderLargePlot(plot)
 			this.renderLegend(plot)
 
@@ -1147,13 +1155,20 @@ class singleCellPlot {
 	}
 
 	renderLargePlot = async function (plot) {
-		const canvas = plot.plotDiv.append('canvas').node()
+		if (!plot.canvas) plot.canvas = plot.plotDiv.append('canvas').node()
+		const canvas = plot.canvas
 		canvas.width = this.settings.svgw
 		canvas.height = this.settings.svgh
 		plot.plotDiv.style('margin', '20px 20px')
 
 		const size = this.settings.sampleSize
 		const ctx = canvas.getContext('2d')
+		ctx.save() // Save the current transformation matrix
+		const zoomLevel = this.zoom
+		// Apply zoom transformation
+		ctx.translate(canvas.width / 2, canvas.height / 2) // Translate to center
+		ctx.scale(zoomLevel, zoomLevel) // Scale the canvas
+		ctx.translate(-canvas.width / 2, -canvas.height / 2) // Translate back
 
 		for (const c of plot.cells) {
 			const opacity = this.getOpacity(c)
@@ -1166,6 +1181,8 @@ class singleCellPlot {
 			ctx.arc(x, y, size / 2, 0, 2 * Math.PI)
 			ctx.fill()
 		}
+
+		ctx.restore()
 		if (!this.settings.showGrid) return
 		const color = '#aaa'
 		const opacity = 0.5
