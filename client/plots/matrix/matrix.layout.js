@@ -354,10 +354,11 @@ export function setLabelsAndScales() {
 							? Math.abs(minLoss)
 							: maxGain
 					cnvLegendDomainRange = getInterpolatedDomainRange({
+						absMin: 0,
 						absMax,
 						stepSize: 100,
-						leftInterpolator: maxLoss !== undefined && interpolateBlues,
-						rightInterpolator: maxGain !== undefined && interpolateReds,
+						negInterpolator: maxLoss !== undefined && interpolateBlues,
+						posInterpolator: maxGain !== undefined && interpolateReds,
 						// force this middleColor to white, knowing that interpolateBlues and interpolateReds,
 						// as hardcoded above and below, share similar white colors for their minimum abs values
 						middleColor: 'white'

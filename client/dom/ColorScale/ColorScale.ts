@@ -288,53 +288,73 @@ export class ColorScale {
 	}
 }
 
+type GeInterpolatedArg = {
+	/** the absolute magnitude of the interpolation domain minimum value */
+	absMin: number
+	/** the absolute magnitude of the interpolation domain minimum value */
+	absMax: number
+	/** function to convert number to css color */
+	negInterpolator: (a: number) => string
+	/** function to convert number to css color */
+	posInterpolator: (a: number) => string
+	/**
+	 * Optional color to insert between two interpolated color ranges,
+	 * This can be used to generate a zero-centered divergent color bar
+	 * with white in the middle.
+	 * */
+	middleColor?: string
+	/** the target number of increments within the interpolation domain and range  */
+	numSteps?: number
+}
+
 type InterpolatedDomainRange = {
 	values: number[]
 	colors: string[]
 }
 
 export function getInterpolatedDomainRange({
+	absMin,
 	absMax,
-	leftInterpolator,
-	rightInterpolator,
+	negInterpolator,
+	posInterpolator,
 	middleColor = 'white',
 	numSteps = 100
-}) {
-	const stepSize = absMax / numSteps
+}: GeInterpolatedArg) {
+	const stepSize = (absMax - absMin) / numSteps
 	const neg: InterpolatedDomainRange = { values: [], colors: [] }
 	const pos: InterpolatedDomainRange = { values: [], colors: [] }
-	let p = stepSize
-	for (let i = -absMax; i < 0; i += stepSize) {
-		if (leftInterpolator) {
-			const vn = i / absMax
+	let n = -absMax
+	for (let p = 0; p < absMax; p += stepSize) {
+		if (negInterpolator) {
+			n += stepSize
+			const vn = n / absMax
 			neg.values.push(vn)
-			neg.colors.push(leftInterpolator(-vn))
+			neg.colors.push(negInterpolator(-vn))
 		}
-		if (rightInterpolator) {
-			p += stepSize
+		if (posInterpolator) {
 			const vp = p / absMax
 			pos.values.push(vp)
-			pos.colors.push(rightInterpolator(vp))
+			pos.colors.push(posInterpolator(vp))
 		}
 	}
 
-	if (leftInterpolator && rightInterpolator) {
+	if (negInterpolator && posInterpolator) {
 		return {
 			domain: [-absMax, ...neg.values, 0, ...pos.values, absMax],
-			range: [leftInterpolator(1), ...neg.colors, middleColor, ...pos.colors, rightInterpolator(1)]
+			range: [negInterpolator(1), ...neg.colors, middleColor, ...pos.colors, posInterpolator(1)]
 		}
-	} else if (leftInterpolator) {
+	} else if (negInterpolator) {
 		return {
 			domain: [-absMax, ...neg.values.map(Math.abs), 0],
-			range: [leftInterpolator(0), ...neg.colors.reverse(), leftInterpolator(1)]
+			range: [negInterpolator(0), ...neg.colors.reverse(), negInterpolator(1)]
 		}
-	} else if (rightInterpolator) {
+	} else if (posInterpolator) {
 		return {
 			domain: [0, ...pos.values, absMax],
-			range: [rightInterpolator(0), ...pos.colors, rightInterpolator(1)]
+			range: [posInterpolator(0), ...pos.colors, posInterpolator(1)]
 		}
 	} else {
-		throw `missing both left and right interpolators in getInterpolatedDomainRange()`
+		throw `missing both negInterpolator and posInterpolator in getInterpolatedDomainRange()`
 	}
 }
 
