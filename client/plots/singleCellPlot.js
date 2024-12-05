@@ -818,7 +818,7 @@ class singleCellPlot {
 			.domain([xMin, xMax])
 			.range([0 + r, this.settings.svgw - r])
 		plot.yAxisScale = d3Linear()
-			.domain(plot.cells.length > maxSamplesD3 ? [yMin, yMax] : [yMax, yMin]) //if not d3 will use canvas, y not inverted
+			.domain([yMax, yMin])
 			.range([0 + r, this.settings.svgh - r])
 	}
 
@@ -1166,6 +1166,25 @@ class singleCellPlot {
 			ctx.arc(x, y, size / 2, 0, 2 * Math.PI)
 			ctx.fill()
 		}
+		if (!this.settings.showGrid) return
+		const color = '#aaa'
+		const opacity = 0.5
+		const bins = 6
+		const step = this.settings.svgw / bins
+		let x, y
+
+		for (let i = 0; i <= bins; i++) {
+			x = i * step
+			ctx.moveTo(x, 0)
+			ctx.lineTo(x, this.settings.svgh)
+		}
+		for (let i = 0; i <= bins; i++) {
+			y = i * step
+			ctx.moveTo(0, y)
+			ctx.lineTo(this.settings.svgw, y)
+		}
+		ctx.strokeStyle = color
+		ctx.stroke()
 	}
 }
 
