@@ -128,7 +128,7 @@ export default class Disco {
 			}
 		]
 
-		if (viewModel.cnvMaxValue != 0 && viewModel.cnvMinValue != 0) configInputsOptions.push(...cnvConfigInputOptions)
+		if (viewModel.cnvMaxValue !== 0 || viewModel.cnvMinValue !== 0) configInputsOptions.push(...cnvConfigInputOptions)
 
 		return configInputsOptions
 	}
