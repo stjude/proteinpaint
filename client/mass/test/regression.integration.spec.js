@@ -161,10 +161,10 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
 		const coefHeader = structuredClone(data.coefficients.header)
 		coefHeader.splice(3, 2, '95% CI')
-		coefHeader[2] = coefHeader[2] /* + String.fromCharCode(160) + 'ⓘ'*/
+		coefHeader[2] = coefHeader[2] + String.fromCharCode(160) + 'ⓘ'
 		results = checkTableRow(table, 0, coefHeader)
 		test.equal(results, true, `Should render all coefficient headers in ${tableLabel}`)
-		const linearHeaders = coefHeader.filter(d => d === 'Beta' /* + String.fromCharCode(160) + 'ⓘ'*/)
+		const linearHeaders = coefHeader.filter(d => d === 'Beta' + String.fromCharCode(160) + 'ⓘ')
 		test.equal(linearHeaders.length, 1, `Should render headers specific to linear regression`)
 		const coefIntercept = [data.coefficients.intercept[0], data.coefficients.intercept[1]]
 		coefIntercept.push(...getCoefData(data.coefficients.intercept.slice(2)))
@@ -470,10 +470,10 @@ tape('Logistic: binary outcome = "hrtavg", continuous independent = "agedx"', te
 		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
 		const coefHeader = structuredClone(data.coefficients.header)
 		coefHeader.splice(3, 2, '95% CI')
-		coefHeader[2] = coefHeader[2] /* + String.fromCharCode(160) + 'ⓘ'*/
+		coefHeader[2] = coefHeader[2] + String.fromCharCode(160) + 'ⓘ'
 		results = checkTableRow(table, 0, coefHeader)
 		test.equal(results, true, `Should render all coefficient headers in ${tableLabel}`)
-		const logHeaders = coefHeader.filter(d => d === 'Odds ratio' /* + String.fromCharCode(160) + 'ⓘ'*/)
+		const logHeaders = coefHeader.filter(d => d === 'Odds ratio' + String.fromCharCode(160) + 'ⓘ')
 		test.equal(logHeaders.length, 1, `Should render headers specific to logistic regression`)
 
 		const coefIntercept = [data.coefficients.intercept[0], data.coefficients.intercept[1]]
@@ -577,10 +577,10 @@ tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', te
 		const coefHeader = structuredClone(data.coefficients.header)
 		coefHeader.splice(2, 2)
 		coefHeader.splice(3, 2, '95% CI')
-		coefHeader[2] = coefHeader[2] /* + String.fromCharCode(160) + 'ⓘ'*/
+		coefHeader[2] = coefHeader[2] + String.fromCharCode(160) + 'ⓘ'
 		results = checkTableRow(table, 0, coefHeader)
 		test.equal(results, true, `Should render all coefficient headers in ${tableLabel}`)
-		const coxHeaders = coefHeader.filter(d => d === 'HR' /* + String.fromCharCode(160) + 'ⓘ'*/)
+		const coxHeaders = coefHeader.filter(d => d === 'HR' + String.fromCharCode(160) + 'ⓘ')
 		test.equal(coxHeaders.length, 1, `Should render headers specific to cox regression in ${tableLabel}`)
 
 		testTerm = 'Age (years) at Cancer Diagnosis'
@@ -687,10 +687,10 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 		const coefHeader = structuredClone(data.coefficients.header)
 		coefHeader.splice(2, 2)
 		coefHeader.splice(3, 2, '95% CI')
-		coefHeader[2] = coefHeader[2] /* + String.fromCharCode(160) + 'ⓘ'*/
+		coefHeader[2] = coefHeader[2] + String.fromCharCode(160) + 'ⓘ'
 		results = checkTableRow(table, 0, coefHeader)
 		test.equal(results, true, `Should render all coefficient headers in ${tableLabel}`)
-		const coxHeaders = coefHeader.filter(d => d === 'HR' /* + String.fromCharCode(160) + 'ⓘ'*/)
+		const coxHeaders = coefHeader.filter(d => d === 'HR' + String.fromCharCode(160) + 'ⓘ')
 		test.equal(coxHeaders.length, 1, `Should render headers specific to cox regression in ${tableLabel}`)
 
 		testTerm = 'Age (years) at Cancer Diagnosis'
