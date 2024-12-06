@@ -58,30 +58,47 @@ export async function runRemainingWithoutAwait(ds) {
 	try {
 		// obtain case id mapping for the first time and store at ds.__gdc
 		await cacheMappingOnNewRelease(ds)
-		// use setInterval instead of using setTimeout within cacheMappingOnNewRelease(),
-		// which will require separate setTimeout() calls at the end of the function
-		// plus within each error catch block
-		setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
 	} catch (e) {
 		if (isRecoverableError(e)) {
 			console.log('recoverableError: ', ds.__gdc.recoverableError, e)
-			setInterval(
-				async () => {
-					try {
-						await cacheMappingOnNewRelease(ds)
-					} catch (e) {
-						if (!ds.__gdc.recoverableError) throw e // crash immediately
-						else console.log(`allow retries of cacheMappingOnNewRelease()`, e)
-					}
-				},
-				cacheCheckWait,
-				ds
-			)
 		} else {
-			if (e.stack) console.log(e.stack)
+			// immediately crash when the initial try fails with non-recoverable error
+			console.log(e.stack || e)
 			throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
 		}
 	}
+
+	// use setInterval instead of using setTimeout within cacheMappingOnNewRelease(),
+	// which will require separate setTimeout() calls at the end of the function
+	// plus within each error catch block
+	// setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
+	const interval = setInterval(
+		async () => {
+			try {
+				await cacheMappingOnNewRelease(ds)
+			} catch (e) {
+				// uncomment to test cancellation of retries and also requires
+				// one of the `.then()` test callbacks to be uncommented
+				// delete ds.__gdc.recoverableError
+
+				if (ds.__gdc.recoverableError) {
+					console.log(`allow retries of cacheMappingOnNewRelease()`, e)
+				} else {
+					// cancel retries/auto-recovery, but do not crash server
+					// TODO: send a Slack message
+					clearInterval(interval)
+					console.log(e.stack || e)
+					console.log(
+						`non-recoverable error during gdc map recaching: ` +
+							`cancel retries of cacheMappingOnNewRelease() to not crash server`
+					)
+				}
+			}
+		},
+		cacheCheckWait,
+		ds
+	)
+
 	// add any other gdc stuff
 }
 
@@ -114,8 +131,8 @@ async function getOpenProjects(ds, ref) {
 	const url = joinUrl(host.rest, 'files')
 	const { body: re } = await cachedFetch(url, { method: 'POST', headers, body: data })
 		// uncomment this then() callback to test recoverable error handling,
-		// use `npx tsx server.ts` from sjpp instead of `npm start`,
-		// to more clearly observe server crash
+		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
 		// .then(_ => {throw {status: 404}}) // client request error detected by healthy API -- should cause an IMMEDIATE crash
 		.catch(e => {
 			if (isRecoverableError(e)) ds.__gdc.recoverableError = `getOpenProjects() ${url}`
@@ -342,7 +359,6 @@ async function cacheMappingOnNewRelease(ds) {
 	} catch (e) {
 		console.log('getOpenProjects() failed: ', e.message || e)
 		delete ds.__pendingCacheVersion
-
 		// must throw here so that the caller code execution will stop
 		throw e
 	}
@@ -365,12 +381,12 @@ async function cacheMappingOnNewRelease(ds) {
 			console.log(ds.__gdc?.recoverableError)
 			// the periodic rerun of this function will allow auto-recovery
 			delete ds.__pendingCacheVersion
-		} else {
-			throw e
 		}
+		throw e
 	}
 
 	if (mayCancelStalePendingCache(ds, ref)) return
+	if (ds.__gdc.recoverableError) return // should not allow doneCaching: true when there is an ignnored error
 	delete ds.__pendingCacheVersion
 	// swap to the newly completed cache reference
 	ds.__gdc = ref
@@ -429,9 +445,11 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 	const { host, headers } = ds.getHostHeaders()
 	const { body: re } = await cachedFetch(host.rest + '/cases?' + param.join('&'), { headers })
 		// uncomment this then() callback to test recoverable error handling,
-		// use `npx tsx server.ts` from sjpp instead of `npm start`,
-		// to more clearly observe server crash
-		//.then(_ => {throw {status: 500}}) // server-side error, should be recoverable and not cause a crash
+		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server log of errors
+		.then(_ => {
+			throw { status: 500 }
+		}) // server-side error, should be recoverable and not cause a crash
 		.catch(e => {
 			if (isRecoverableError(e)) ds.__gdc.recoverableError = 'fetchIdsFromGdcApi() /cases'
 			// still throw to stop code execution here and allow caller to catch
@@ -528,12 +546,14 @@ async function getCasesWithGeneExpression(ds, ref) {
 			headers,
 			body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
 		})
-			// uncomment this then() callback to test recoverable error handling,
-			// use `npx tsx server.ts` from sjpp instead of `npm start`,
-			// to more clearly observe server crash
-			.then(_ => {
-				throw { code: 'ENOTFOUND' }
-			}) // network connection error, should be recoverable and not cause a crash
+		// uncomment this then() callback to test recoverable error handling,
+		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
+		// .then(_ => {
+		// 	// network connection error, should be recoverable and not cause a crash
+		// 	throw { code: 'ENOTFOUND' }
+		// 	// IMPORTANT: Make sure that the `Done caching` terminal log does not show up
+		// })
 
 		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
 		if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
