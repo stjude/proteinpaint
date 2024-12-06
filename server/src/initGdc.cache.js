@@ -4,7 +4,6 @@ import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
-import { buildGDCdictionary } from './initGdc.termdb.js'
 
 // wait time for next check on stale case-id cache, 5min. feature flag allows testing with short internal
 const cacheCheckWait = serverconfig.features.gdcCacheCheckWait || 5 * 60 * 1000
@@ -84,6 +83,7 @@ export async function runRemainingWithoutAwait(ds) {
 				if (ds.__gdc.recoverableError) {
 					console.log(`allow retries of cacheMappingOnNewRelease()`, e)
 				} else {
+					ds.__gdc.hasFatalError = true
 					// cancel retries/auto-recovery, but do not crash server
 					// TODO: send a Slack message
 					clearInterval(interval)
@@ -323,8 +323,10 @@ async function cacheMappingOnNewRelease(ds) {
 
 	let version
 	try {
+		// since this runs in a loop, the API status could change between requests
 		const response = await ds.preInit.getStatus()
 		version = response?.data_release_version
+		// __pendingCacheVersion: started, but not completed
 		if (deepEqual(version, ds.__pendingCacheVersion) || deepEqual(version, ds.__gdc.data_release_version)) {
 			if (ds.preInit.test)
 				console.log(
@@ -356,15 +358,8 @@ async function cacheMappingOnNewRelease(ds) {
 		ds.__pendingCacheVersion = version
 		ref.data_release_version = version
 		await getOpenProjects(ds, ref)
-	} catch (e) {
-		console.log('getOpenProjects() failed: ', e.message || e)
-		delete ds.__pendingCacheVersion
-		// must throw here so that the caller code execution will stop
-		throw e
-	}
 
-	const begin = new Date()
-	try {
+		const begin = new Date()
 		const size = 1000 // fetch 1000 ids at a time
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
 		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'

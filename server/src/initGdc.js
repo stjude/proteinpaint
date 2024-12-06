@@ -43,6 +43,7 @@ any error is considered critical and must be presented in server log for diagnos
 */
 
 export async function initGDCdictionary(ds) {
+	// TODO: should include this in versioned cache and auto-retries on recoverable error
 	await buildGDCdictionary(ds)
 
 	if (serverconfig.features.await4completeGdcCaseCache) {
