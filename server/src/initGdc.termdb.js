@@ -140,7 +140,7 @@ export async function buildGDCdictionary(ds) {
 	const { body: re } = await cachedFetch(dictUrl, { headers }).catch(e => {
 		console.log(e)
 		if (isRecoverableError(e)) {
-			ds.__gdc.recoverableError = 'buildGDCdictionary() ${dictUrl}'
+			if (ds.__gdc) ds.__gdc.recoverableError = 'buildGDCdictionary() ${dictUrl}'
 		}
 		// should still throw to stop code execution here and allow caller to catch
 		throw 'failed to get GDC API _mapping: ' + (e.message || e)
@@ -260,7 +260,8 @@ export async function buildGDCdictionary(ds) {
 	try {
 		await assignDefaultBins(id2term, ds)
 	} catch (e) {
-		if (!ds.__gdc.recoverableError) {
+		if (!ds.__gdc?.recoverableError) {
+			console.log(e.stack || e)
 			// must abort launch upon err. lack of term.bins system app will not work
 			throw 'assignDefaultBins() failed: ' + (e.message || e)
 		}
@@ -424,13 +425,20 @@ async function assignDefaultBins(id2term, ds) {
 	const { body: re } = await cachedFetch(host.graphql, {
 		method: 'POST',
 		body: { query, variables }
-	}).catch(e => {
-		if (isRecoverableError(e)) {
-			ds.__gdc.recoverableError = 'assignDefaultBins() host.graphql'
-		}
-		// should throw to stop code execution here and allow caller to catch
-		throw e
 	})
+		// uncomment this then() callback to test recoverable error handling,
+		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server log of errors
+		// .then(_ => {
+		// 	throw { status: 500 }
+		// }) // server-side error, should be recoverable and not cause a crash
+		.catch(e => {
+			if (isRecoverableError(e)) {
+				if (ds.__gdc) ds.__gdc.recoverableError = 'assignDefaultBins() host.graphql'
+			}
+			// should throw to stop code execution here and allow caller to catch
+			throw e
+		})
 	if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
 		throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
 	for (const [facet, termid] of facet2termid) {
@@ -512,7 +520,7 @@ async function getNumericTermRange(id, ds) {
 	const url = host.rest + '/ssm_occurrences?size=5000&fields=' + id
 	const { body: re } = await cachedFetch(url, { headers }).catch(e => {
 		if (isRecoverableError(e)) {
-			ds.__gdc.recoverableError = `getNumericTermRange() ${url}`
+			if (ds.__gdc) ds.__gdc.recoverableError = `getNumericTermRange() ${url}`
 		}
 		// should throw to stop code execution here and allow caller to catch
 		throw e

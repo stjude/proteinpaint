@@ -116,6 +116,12 @@ export async function init(ds, genome, _servconfig) {
 		}
 	}
 
+	if (ds.preInit) {
+		// will not allow to move to validate_termdb until ds.preInit.getStatus() is okay
+		const response = await mayRetryDsPreInit(ds)
+		if (response?.status != 'OK') throw response?.message || `ds.preInit() failed: unknown error`
+	}
+
 	// must validate termdb first
 	await validate_termdb(ds)
 	if (ds.queries) {
@@ -233,11 +239,6 @@ export async function validate_termdb(ds) {
 	v: {name, plural_name, parent_id}
 	*/
 	tdb.sampleTypes = {}
-
-	if (ds.preInit) {
-		const response = await mayRetryDsPreInit(ds)
-		if (response?.status != 'OK') throw response?.message || `ds.preInit() failed: unknown error`
-	}
 
 	if (tdb?.dictionary?.gdcapi) {
 		await initGDCdictionary(ds)
