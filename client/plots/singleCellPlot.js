@@ -666,6 +666,7 @@ class singleCellPlot {
 	}
 
 	renderPlots(result) {
+		console.log('renderPlots', result)
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.plots = []
 		for (const plot of result.plots) {
@@ -732,7 +733,10 @@ class singleCellPlot {
 			if (values.length == 0) {
 				plot.colorGenerator = null
 			} else {
-				;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+				let min, max
+				if (!this.colorRange)
+					[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+				else [min, max] = this.colorRange
 				plot.colorGenerator = d3Linear().domain([0, max]).range([startColor, stopColor])
 				plot.max = max
 			}
@@ -987,6 +991,14 @@ class singleCellPlot {
 			topTicks: true,
 			setColorsCallback: (val, idx) => {
 				this.changeGradientColor(plot, val, idx)
+			},
+			setMinMaxCallback: obj => {
+				if (obj.cutoffMode == 'auto') {
+					this.range = null
+				} else if (obj.cutoffMode == 'fixed') {
+					this.range = { min: obj.min, max: obj.max }
+					this.renderPlots(this.data)
+				}
 			}
 		})
 		colorScale.updateScale()

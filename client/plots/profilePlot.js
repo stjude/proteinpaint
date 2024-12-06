@@ -6,6 +6,8 @@ import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
+import { copyMerge } from '#rx'
+import { json } from 'd3'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
@@ -25,9 +27,16 @@ export class profilePlot {
 	}
 
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+		let config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
+		//if the global filter changes, the local filter is cleared
+		const globalFilterChanged = JSON.stringify(this.state?.termfilter) !== JSON.stringify(appState.termfilter)
+		if (globalFilterChanged) {
+			config = structuredClone(config)
+			config.filter = null
+		}
 		const [logged, site, user] = getProfileLogin() //later on replace with real login info
+
 		return {
 			config,
 			termfilter: appState.termfilter,
