@@ -114,14 +114,20 @@ keep <- filterByExpr(y, min.count = input$min_count, min.total.count = input$min
 y <- y[keep, keep.lib.sizes = FALSE]
 y <- calcNormFactors(y, method = "TMM")
 #print (y)
-#calculate_DE_time_start <- Sys.time()
+calculate_dispersion_time_start <- Sys.time()
 suppressWarnings({
   suppressMessages({
       dge <- estimateDisp(y = y)
   })
 })
+calculate_dispersion_time_stop <- Sys.time()
+print("Dispersion Time")
+print (calculate_dispersion_time_stop - calculate_dispersion_time_start)
+calculate_exact_test_time_start <- Sys.time()
 et <- exactTest(object = dge)
-calculate_DE_time_stop <- Sys.time()
+calculate_exact_test_time_stop <- Sys.time()
+print("Exact Time")
+print(calculate_exact_test_time_stop - calculate_exact_test_time_start)
 #print ("Time to calculate DE")
 #print (calculate_DE_time_stop - calculate_DE_time_start)
 #print (et)
@@ -140,7 +146,7 @@ names(output)[3] <- "fold_change"
 names(output)[4] <- "original_p_value"
 names(output)[5] <- "adjusted_p_value"
 
-toJSON(output)
+paste0("adjusted_p_values:",toJSON(output))
 #output_json <- toJSON(output)
 #print ("output_json")
 #output_file <- paste0(input$output_path,"/r_output.txt")
