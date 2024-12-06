@@ -264,6 +264,8 @@ function handleColorClick(d, self, color) {
 		id: self.id,
 		config: {
 			[termNum]: {
+				$id: term.$id,
+				id: term.id,
 				isAtomic: true,
 				term: term.term,
 				q: getUpdatedQfromClick(d, term, d.isHidden, binColored)
@@ -399,6 +401,8 @@ function handle_click(event, self, chart) {
 					id: self.id,
 					config: {
 						term: {
+							$id: term.$id,
+							id: term.id,
 							isAtomic: true,
 							term: term.term,
 							q: getUpdatedQfromClick({ id: d.seriesId, type: 'col' }, term, true)
