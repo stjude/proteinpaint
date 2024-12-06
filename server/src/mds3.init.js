@@ -41,7 +41,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
-import { preInit } from '#src/mds3.preInit.ts'
+import { mayRetryDsPreInit } from '#src/mds3.preInit.ts'
 
 /*
 init
@@ -116,9 +116,14 @@ export async function init(ds, genome, _servconfig) {
 		}
 	}
 
+	if (ds.preInit) {
+		// will not allow to move to validate_termdb until ds.preInit.getStatus() is okay
+		const response = await mayRetryDsPreInit(ds)
+		if (response?.status != 'OK') throw response?.message || `ds.preInit() failed: unknown error`
+	}
+
 	// must validate termdb first
 	await validate_termdb(ds)
-
 	if (ds.queries) {
 		// must validate snvindel query before variant2sample
 		// as vcf header must be parsed to supply samples for variant2samples
@@ -234,10 +239,6 @@ export async function validate_termdb(ds) {
 	v: {name, plural_name, parent_id}
 	*/
 	tdb.sampleTypes = {}
-
-	if (ds.preInit) {
-		const response = await preInit(ds)
-	}
 
 	if (tdb?.dictionary?.gdcapi) {
 		await initGDCdictionary(ds)

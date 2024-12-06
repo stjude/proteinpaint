@@ -2,9 +2,8 @@ import ky from 'ky'
 import { joinUrl } from './helpers'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
-import { cachedFetch } from './utils'
+import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
-import {buildGDCdictionary} from './initGdc.termdb.js'
 
 // wait time for next check on stale case-id cache, 5min. feature flag allows testing with short internal
 const cacheCheckWait = serverconfig.features.gdcCacheCheckWait || 5 * 60 * 1000
@@ -32,7 +31,6 @@ Important!
 */
 
 export async function runRemainingWithoutAwait(ds) {
-
 	/* 
 		this one-time api test is not informative due to below reason and subject to removal:
 		on some pp env e.g. ppirt, this api test sometimes fails. in order not to abort pp launch, only logs err out
@@ -59,14 +57,48 @@ export async function runRemainingWithoutAwait(ds) {
 	try {
 		// obtain case id mapping for the first time and store at ds.__gdc
 		await cacheMappingOnNewRelease(ds)
-		// use setInterval instead of using setTimeout within cacheMappingOnNewRelease(),
-		// which will require separate setTimeout() calls at the end of the function
-		// plus within each error catch block
-		setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
 	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
+		if (isRecoverableError(e)) {
+			console.log('recoverableError: ', ds.__gdc.recoverableError, e)
+		} else {
+			// immediately crash when the initial try fails with non-recoverable error
+			console.log(e.stack || e)
+			throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
+		}
 	}
+
+	// use setInterval instead of using setTimeout within cacheMappingOnNewRelease(),
+	// which will require separate setTimeout() calls at the end of the function
+	// plus within each error catch block
+	// setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
+	const interval = setInterval(
+		async () => {
+			try {
+				await cacheMappingOnNewRelease(ds)
+			} catch (e) {
+				// uncomment to test cancellation of retries and also requires
+				// one of the `.then()` test callbacks to be uncommented
+				// delete ds.__gdc.recoverableError
+
+				if (ds.__gdc.recoverableError) {
+					console.log(`allow retries of cacheMappingOnNewRelease()`, e)
+				} else {
+					ds.__gdc.hasFatalError = true
+					// cancel retries/auto-recovery, but do not crash server
+					// TODO: send a Slack message
+					clearInterval(interval)
+					console.log(e.stack || e)
+					console.log(
+						`non-recoverable error during gdc map recaching: ` +
+							`cancel retries of cacheMappingOnNewRelease() to not crash server`
+					)
+				}
+			}
+		},
+		cacheCheckWait,
+		ds
+	)
+
 	// add any other gdc stuff
 }
 
@@ -96,7 +128,17 @@ async function getOpenProjects(ds, ref) {
 	}
 
 	const { host, headers } = ds.getHostHeaders()
-	const { body: re } = await cachedFetch(joinUrl(host.rest, 'files'), { method: 'POST', headers, body: data })
+	const url = joinUrl(host.rest, 'files')
+	const { body: re } = await cachedFetch(url, { method: 'POST', headers, body: data })
+	// uncomment this then() callback to test recoverable error handling,
+	// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+	// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
+	// .then(_ => {throw {status: 404}}) // client request error detected by healthy API -- should cause an IMMEDIATE crash
+	// .catch(e => {
+	// 	if (isRecoverableError(e)) ds.__gdc.recoverableError = `getOpenProjects() ${url}`
+	// 	// still throw to stop code execution here and allow caller to catch
+	// 	throw e
+	// })
 
 	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
@@ -164,7 +206,6 @@ async function testGDCapi(ds) {
 	}
 }
 */
-
 
 /* no longer used
 if url is accessible, do not return
@@ -271,7 +312,7 @@ cache gdc sample id mappings
 function will rerun when it detects stale case id cache
 */
 async function cacheMappingOnNewRelease(ds) {
-	console.log('GDC: checking if cache is stale')
+	console.log('GDC: checking if cache is stale OR should recover from an error')
 	// to avoid issues from race condition:
 	// - do not set ds.__gdc until the caching is complete
 	// - create a new ref object to map pending cacheable data
@@ -280,10 +321,13 @@ async function cacheMappingOnNewRelease(ds) {
 	const ref = getCacheRef(ds) // a new empty nested cache object
 	if (!ds.__gdc) ds.__gdc = ref // would reference the same object only on initial call
 
+	const begin = new Date()
 	let version
 	try {
+		// since this runs in a loop, the API status could change between requests
 		const response = await ds.preInit.getStatus()
-		version = response.data_release_version
+		version = response?.data_release_version
+		// __pendingCacheVersion: started, but not completed
 		if (deepEqual(version, ds.__pendingCacheVersion) || deepEqual(version, ds.__gdc.data_release_version)) {
 			if (ds.preInit.test)
 				console.log(
@@ -293,8 +337,16 @@ async function cacheMappingOnNewRelease(ds) {
 					ds.__gdc.data_release_version.minor
 				)
 			// do not trigger duplicate caching for the same release version, whether pending or completed
-			return
+
+			// even if version has not changed, still recache if a recoverable error was encountered,
+			// should try restart caching optimistically (that the network or server issue was resolved)
+			if (!ds.__gdc.recoverableError) return
+			else {
+				console.log(`detected caching error: ${ds.__gdc.recoverableError}`)
+				console.log(`cached gdc data version is up-to-date, but there was a caching error, will restart cache`)
+			}
 		}
+		delete ds.__gdc.recoverableError
 		// need to check before resetting ds.__pendingCacheVersion in subsequent lines
 		if (mayCancelStalePendingCache(ds, { data_release_version: version })) return
 		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
@@ -307,14 +359,6 @@ async function cacheMappingOnNewRelease(ds) {
 		ds.__pendingCacheVersion = version
 		ref.data_release_version = version
 		await getOpenProjects(ds, ref)
-	} catch (e) {
-		delete ds.__pendingCacheVersion
-		console.log('getOpenProjects() failed: ' + (e.message || e))
-		return
-	}
-
-	const begin = new Date()
-	try {
 		const size = 1000 // fetch 1000 ids at a time
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
 		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
@@ -325,14 +369,18 @@ async function cacheMappingOnNewRelease(ds) {
 		}
 
 		await getCasesWithGeneExpression(ds, ref)
-		await getAnalysisTsv2loom4scrna(ds,ref)
+		await getAnalysisTsv2loom4scrna(ds, ref)
 	} catch (e) {
-		console.log(e)
-		delete ds.__pendingCacheVersion
-		return
+		if (isRecoverableError(e)) {
+			console.log(ds.__gdc?.recoverableError)
+			// the periodic rerun of this function will allow auto-recovery
+			delete ds.__pendingCacheVersion
+		}
+		throw e
 	}
 
 	if (mayCancelStalePendingCache(ds, ref)) return
+	if (ds.__gdc.recoverableError) return // should not allow doneCaching: true when there is an ignnored error
 	delete ds.__pendingCacheVersion
 	// swap to the newly completed cache reference
 	ds.__gdc = ref
@@ -390,6 +438,17 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 
 	const { host, headers } = ds.getHostHeaders()
 	const { body: re } = await cachedFetch(host.rest + '/cases?' + param.join('&'), { headers })
+		// uncomment this then() callback to test recoverable error handling,
+		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server log of errors
+		// .then(_ => {
+		// 	throw { status: 500 } // server-side error, should be recoverable and not cause a crash
+		// })
+		.catch(e => {
+			if (isRecoverableError(e)) ds.__gdc.recoverableError = 'fetchIdsFromGdcApi() /cases'
+			// still throw to stop code execution here and allow caller to catch
+			throw e
+		})
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	//console.log(re.data.hits[0]) // uncomment to examine output
@@ -481,6 +540,15 @@ async function getCasesWithGeneExpression(ds, ref) {
 			headers,
 			body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
 		})
+		// uncomment this then() callback to test recoverable error handling,
+		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
+		// .then(_ => {
+		// 	// network connection error, should be recoverable and not cause a crash
+		// 	throw { code: 'ENOTFOUND' }
+		// 	// IMPORTANT: Make sure that the `Done caching` terminal log does not show up
+		// })
+
 		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
 		if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
 		for (const c of re.cases.details) {
@@ -490,23 +558,35 @@ async function getCasesWithGeneExpression(ds, ref) {
 		delete ref.caseIds
 	} catch (e) {
 		console.log(e)
-		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
+
+		if (isRecoverableError(e)) {
+			ds.__gdc.recoverableError = `getCasesWithGeneExpression() gene_expression/availability`
+		} else {
+			// is this related to caching and is this true for all users, or just for a single request?
+			// if for all users, the message makes it seem like it's for a single user
+			console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
+		}
+
 		delete ds.__pendingCacheVersion
-		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
-		// when api is releated to public prod, must throw here and abort
+
+		// still throw to stop code execution within getCasesWithGeneExpression() and allow its caller to catch
+		throw e
 	}
 }
 
-async function getAnalysisTsv2loom4scrna(ds,ref) {
+async function getAnalysisTsv2loom4scrna(ds, ref) {
 	if (mayCancelStalePendingCache(ds, ref)) return //purpose?
 	const { host, headers } = ds.getHostHeaders()
 	const filters = {
 		op: 'and',
 		content: [
-			{ op: 'or', content: [
-				{ op: '=', content: { field: 'data_format', value: 'tsv' } },
-				{ op: '=', content: { field: 'data_format', value: 'hdf5' } }
-			]},
+			{
+				op: 'or',
+				content: [
+					{ op: '=', content: { field: 'data_format', value: 'tsv' } },
+					{ op: '=', content: { field: 'data_format', value: 'hdf5' } }
+				]
+			},
 			{ op: '=', content: { field: 'data_type', value: 'Single Cell Analysis' } },
 			{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
 		]
@@ -514,7 +594,7 @@ async function getAnalysisTsv2loom4scrna(ds,ref) {
 	const json = {
 		filters,
 		size: 10000,
-		fields: 'data_format,file_name,cases.samples.portions.analytes.aliquots.submitter_id',
+		fields: 'data_format,file_name,cases.samples.portions.analytes.aliquots.submitter_id'
 	}
 	/*
 	{
@@ -561,27 +641,37 @@ async function getAnalysisTsv2loom4scrna(ds,ref) {
   warnings: {}
 }
 */
-	const re = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json }).json()
-	if(!Array.isArray(re.data.hits)) throw 'scrna: re.data.hits[] not array'
-	const submitter2tsv=new Map(),
-		submitter2hdf5=new Map()
-	for(const hit of re.data.hits) {
-		if(!hit.id) throw 'hit.id missing'
+	let re
+	const url = joinUrl(host.rest, 'files')
+	try {
+		re = await ky.post(url, { timeout: false, headers, json }).json()
+	} catch (e) {
+		if (isRecoverableError(e)) {
+			ds.__gdc.recoverableError = `getAnalysisTsv2loom4scrna() '${url}'`
+		}
+		// should still throw here to stop getAnalysisTsv2loom4scrna() code execution and allow its caller to catch
+		throw e
+	}
+	if (!Array.isArray(re.data.hits)) throw 'scrna: re.data.hits[] not array'
+	const submitter2tsv = new Map(),
+		submitter2hdf5 = new Map()
+	for (const hit of re.data.hits) {
+		if (!hit.id) throw 'hit.id missing'
 		const submitter = hit.cases?.[0]?.samples?.[0]?.portions?.[0]?.analytes?.[0]?.aliquots?.[0]?.submitter_id
-		if(!submitter) throw 'aliquot submitter missing'
-		if(hit.data_format=='HDF5') {
-			if(submitter2hdf5.has(submitter)) throw 'submitter already there'
+		if (!submitter) throw 'aliquot submitter missing'
+		if (hit.data_format == 'HDF5') {
+			if (submitter2hdf5.has(submitter)) throw 'submitter already there'
 			submitter2hdf5.set(submitter, hit.id)
-		} else if(hit.data_format=='TSV') {
-			if(submitter2tsv.has(submitter)) throw 'submitter already there'
+		} else if (hit.data_format == 'TSV') {
+			if (submitter2tsv.has(submitter)) throw 'submitter already there'
 			submitter2tsv.set(submitter, hit.id)
 		} else {
 			throw 'unknown data_format'
 		}
 	}
-	for(const [submitter, tsv] of submitter2tsv) {
+	for (const [submitter, tsv] of submitter2tsv) {
 		const hdf5 = submitter2hdf5.get(submitter)
-		if(!hdf5) throw 'aliquot has tsv but missing hdf5'
+		if (!hdf5) throw 'aliquot has tsv but missing hdf5'
 		ref.scrnaAnalysis2hdf5.set(tsv, hdf5)
 	}
 }

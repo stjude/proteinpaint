@@ -27,8 +27,12 @@ export async function validate_variant2samples(ds) {
 	const vs = ds.variant2samples
 	if (!vs) return
 
-	if (ds.preInit?.isReady) {
-		const response = await ds.preInit.isReady()
+	if (ds.preInit?.getStatus) {
+		// should wait for dataset or API to be "healthy" before attempting to validate,
+		// otherwise network-based datasets would fail to validate with unhealthy API
+		const response = await ds.preInit.getStatus().catch(e => {
+			throw e
+		})
 		if (response.status != 'OK') throw response
 	}
 

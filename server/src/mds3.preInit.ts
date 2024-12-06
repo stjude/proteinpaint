@@ -2,15 +2,17 @@ import serverconfig from '#src/serverconfig.js'
 import type { Mds3 } from '#types'
 
 /**
- * Tests the GDC API status and returns true if the status is OK.
- * If serverconfig.features.runRemainingWithoutAwait is false, it will throw an error if the status is not OK.
- * If serverconfig.features.runRemainingWithoutAwait is true, it will retry the request up to retryMax times.
+ * Tests the dataset readiness for initialization and data queries,
+ * for example checking if the GDC API is healthy before querying data for caching.
+ * If a raw dataset entry (in serverconfig.genomes[].datasets[]) has
+ * awaitMds3Init === true, it will throw an error if the status is not OK
+ * otherwise, it will retry the request up to retryMax times.
  * @param ds
  * @param retryDelay
  * @param retryMax
  */
 
-export async function preInit(ds: Mds3): Promise<any> {
+export async function mayRetryDsPreInit(ds: Mds3): Promise<any> {
 	if (!ds.preInit) throw `missing ds.preInit{}`
 	if (typeof ds.preInit.getStatus != 'function') throw `ds.preInit.getStatus must be a function`
 	const retryDelay = ds.preInit.retryDelay || 5000
@@ -20,17 +22,22 @@ export async function preInit(ds: Mds3): Promise<any> {
 	try {
 		// first try is not on a loop
 		const response = await ds.preInit.getStatus()
-		if (response?.status !== 'OK') {
-			console.log(`gdc api /status:`, response)
-			throw new Error('status is not OK: ' + response.message )
-		}
+		if (response?.status !== 'OK') throw response
 		return response
-	} catch (error: any) {
-		// TODO: should this 
+	} catch (response: any) {
+		// may retry depending on ds.preInit configuration
+		if (response.status != 'recoverableError') {
+			// should not retry on fatal error
+			console.log(`fatal error: ${ds.label} ds.preInit.getStatus()`, response)
+			throw new Error('status is not OK: ' + response.message)
+		}
+
 		if (retryMax < 1) {
-			throw new Error('GDC API status error: ' + (error.message || error))
+			console.log('mayRetryDsPreInit()', response)
+			throw new Error('preInit error: ' + (response.message || response))
 		} else {
-			console.warn(`First GDC status request failed. (${retryMax} attempts left)`)
+			// ok to retry on recoverable error
+			console.warn(`First ${ds.label} preInit.getStatus() request failed. (${retryMax} attempts left)`)
 			// subsequent retries uses a loop via setInterval
 			// NOTE: Using await with recursive function may have memory performance penalties,
 			// since a new promise gets created with each recursion and its not clear how
@@ -40,11 +47,11 @@ export async function preInit(ds: Mds3): Promise<any> {
 			return new Promise((resolve, reject) => {
 				const interval = setInterval(async () => {
 					currentRetry++
-					console.log(`Retrying GDC status check, attempt #${currentRetry} ...`)
+					console.log(`Retrying preInit status check, attempt #${currentRetry} ...`)
 					try {
 						const response = (await ds.preInit?.getStatus?.()) || { status: 'OK' }
 						if (response.status == 'OK') {
-							clearInterval(interval)
+							clearInterval(interval) // status is already ok, no need to retry
 							resolve(response)
 							return
 						} else {
@@ -52,12 +59,15 @@ export async function preInit(ds: Mds3): Promise<any> {
 						}
 					} catch (response) {
 						//console.log(89, response)
-						console.warn(`GDC status request failed. Retrying... (${retryMax - currentRetry} attempts left)`)
+						console.warn(`preInit.getStatus() check failed. Retrying... (${retryMax - currentRetry} attempts left)`)
 						if (currentRetry >= retryMax) {
-							clearInterval(interval)
-							console.error('Max GDC API status retry attempts reached. Failing with error:', response)
+							clearInterval(interval) // cancel retries
+							console.error('Max preInit.getStatus() retry attempts reached. Failing with error:', response)
 							if (ds.initErrorCallback) ds.initErrorCallback(response)
-							else reject(response)
+							else {
+								// allow to fail silently to not affect other loaded datasets
+								console.log(response)
+							}
 						}
 					}
 				}, retryDelay)

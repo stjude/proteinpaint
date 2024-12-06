@@ -1,6 +1,6 @@
 import serverconfig from './serverconfig.js'
-import {buildGDCdictionary} from './initGdc.termdb.js'
-import {runRemainingWithoutAwait} from './initGdc.cache.js'
+import { buildGDCdictionary } from './initGdc.termdb.js'
+import { runRemainingWithoutAwait } from './initGdc.cache.js'
 
 /*
 ********************   Comment   *****************
@@ -42,8 +42,8 @@ any error is considered critical and must be presented in server log for diagnos
 - periodic check of stale cache and re-cache above
 */
 
-
 export async function initGDCdictionary(ds) {
+	// TODO: should include this in versioned cache and auto-retries on recoverable error
 	await buildGDCdictionary(ds)
 
 	if (serverconfig.features.await4completeGdcCaseCache) {

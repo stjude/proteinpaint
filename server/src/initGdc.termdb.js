@@ -1,8 +1,7 @@
-import ky from 'ky'
 import { joinUrl } from './helpers'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
-import { cachedFetch } from './utils'
+import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
 
 /*
@@ -138,15 +137,14 @@ export async function buildGDCdictionary(ds) {
 	// TODO switch to https://api.gdc.cancer.gov/cases/_mapping
 	const { host, headers } = ds.getHostHeaders()
 	const dictUrl = joinUrl(host.rest, 'ssm_occurrences/_mapping')
-
-	let re
-	try {
-		const { body } = await cachedFetch(dictUrl, { headers })
-		re = body
-	} catch (e) {
+	const { body: re } = await cachedFetch(dictUrl, { headers }).catch(e => {
 		console.log(e)
+		if (isRecoverableError(e)) {
+			if (ds.__gdc) ds.__gdc.recoverableError = 'buildGDCdictionary() ${dictUrl}'
+		}
+		// should still throw to stop code execution here and allow caller to catch
 		throw 'failed to get GDC API _mapping: ' + (e.message || e)
-	}
+	})
 
 	if (!re._mapping) throw 'returned data does not have ._mapping'
 	if (!Array.isArray(re.fields)) throw '.fields not array'
@@ -262,9 +260,11 @@ export async function buildGDCdictionary(ds) {
 	try {
 		await assignDefaultBins(id2term, ds)
 	} catch (e) {
-		console.log(e)
-		// must abort launch upon err. lack of term.bins system app will not work
-		throw 'assignDefaultBins() failed: ' + (e.message || e)
+		if (!ds.__gdc?.recoverableError) {
+			console.log(e.stack || e)
+			// must abort launch upon err. lack of term.bins system app will not work
+			throw 'assignDefaultBins() failed: ' + (e.message || e)
+		}
 	}
 
 	for (const t of id2term.values()) {
@@ -426,6 +426,19 @@ async function assignDefaultBins(id2term, ds) {
 		method: 'POST',
 		body: { query, variables }
 	})
+		// uncomment this then() callback to test recoverable error handling,
+		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server log of errors
+		// .then(_ => {
+		// 	throw { status: 500 }
+		// }) // server-side error, should be recoverable and not cause a crash
+		.catch(e => {
+			if (isRecoverableError(e)) {
+				if (ds.__gdc) ds.__gdc.recoverableError = 'assignDefaultBins() host.graphql'
+			}
+			// should throw to stop code execution here and allow caller to catch
+			throw e
+		})
 	if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
 		throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
 	for (const [facet, termid] of facet2termid) {
@@ -504,7 +517,14 @@ for this term, the function prints out: "Min=1992  Max=2021"
 async function getNumericTermRange(id, ds) {
 	const { host, headers } = ds.getHostHeaders()
 	// getting more datapoints will slow down the response
-	const { body: re } = await cachedFetch(host.rest + '/ssm_occurrences?size=5000&fields=' + id, { headers })
+	const url = host.rest + '/ssm_occurrences?size=5000&fields=' + id
+	const { body: re } = await cachedFetch(url, { headers }).catch(e => {
+		if (isRecoverableError(e)) {
+			if (ds.__gdc) ds.__gdc.recoverableError = `getNumericTermRange() ${url}`
+		}
+		// should throw to stop code execution here and allow caller to catch
+		throw e
+	})
 	if (!Array.isArray(re.data.hits)) return
 	let min = null,
 		max = null
@@ -688,10 +708,14 @@ function makeTermdbQueries(ds, id2term) {
 		// FIXME revive this code
 		if (terms.length == 0 || !treeFilter) return
 
-		const tv2counts = await ds.termdb.termid2totalsize2.get(
-			terms.map(i => i.id),
-			JSON.parse(treeFilter)
-		)
+		const tv2counts = await ds.termdb.termid2totalsize2
+			.get(
+				terms.map(i => i.id),
+				JSON.parse(treeFilter)
+			)
+			.catch(e => {
+				throw e
+			})
 
 		// add term.disabled if samplesize if zero
 		for (const term of terms) {
