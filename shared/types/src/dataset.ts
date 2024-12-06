@@ -1602,6 +1602,7 @@ export type PreInit = {
 	- the callback can have arbitrary logic based on requirements from this ds
 	- can supply ()=>false to hide charts that will otherwise shown
 	- can define arbitrary chart type names for purpose-specific charts
+*/
 
 export type isSupportedChartCallbacks = {
 	[chartType: string]: (f: any, auth: any) => boolean | undefined
@@ -1639,4 +1640,3 @@ export type Mds3 = BaseMds & {
 export type Mds3WithCohort = Mds3 & {
 	cohort: Cohort
 }
-*/
