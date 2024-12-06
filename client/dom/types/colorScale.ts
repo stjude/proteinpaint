@@ -93,3 +93,27 @@ export type ColorScaleMenuOpts = {
 	setColorsCallback?: (val: string, idx: number) => void
 	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
 }
+
+export type GetInterpolatedArg = {
+	/** the absolute magnitude of the interpolation domain minimum value */
+	absMin: number
+	/** the absolute magnitude of the interpolation domain minimum value */
+	absMax: number
+	/** function to convert number to css color */
+	negInterpolator: (a: number) => string
+	/** function to convert number to css color */
+	posInterpolator: (a: number) => string
+	/**
+	 * Optional color to insert between two interpolated color ranges,
+	 * This can be used to generate a zero-centered divergent color bar
+	 * with white in the middle.
+	 * */
+	middleColor?: string
+	/** the target number of increments within the interpolation domain and range  */
+	numSteps?: number
+}
+
+export type InterpolatedDomainRange = {
+	values: number[]
+	colors: string[]
+}
