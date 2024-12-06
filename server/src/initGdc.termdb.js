@@ -138,9 +138,9 @@ export async function buildGDCdictionary(ds) {
 	const { host, headers } = ds.getHostHeaders()
 	const dictUrl = joinUrl(host.rest, 'ssm_occurrences/_mapping')
 	const { body: re } = await cachedFetch(dictUrl, { headers }).catch(e => {
+		console.log(e)
 		if (isRecoverableError(e)) {
 			ds.__gdc.recoverableError = 'buildGDCdictionary() ${dictUrl}'
-			console.log(e)
 		}
 		// should still throw to stop code execution here and allow caller to catch
 		throw 'failed to get GDC API _mapping: ' + (e.message || e)

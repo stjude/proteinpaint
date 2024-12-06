@@ -794,7 +794,7 @@ export function boxplot_getvalue(lst) {
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
 
-// only use this helper when catching errors that may due
+// only use this helper when catching errors that may be due to
 // external API server errors or network connection failures;
 // the `e` argument is expected to have a network-related error code, some of which
 // may be recovered from (temp maintenance or disconnect), others are fatal
@@ -809,7 +809,7 @@ export function isRecoverableError(e) {
 	// recoverable.
 	//
 	// code=ENOTFOUND below is from undici when local wifi is down,
-	// it's not an HTTP status code from an API
+	// it's not an HTTP response status code from an API
 	return code == 'ENOTFOUND'
 }
 
