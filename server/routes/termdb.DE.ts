@@ -118,11 +118,16 @@ param{}
 	if ((group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) || param.method == 'edgeR') {
 		// edgeR will be used for DE analysis
 		const time1 = new Date().valueOf()
-		result = JSON.parse(
-			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
-		)
+		const r_output = await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
 		const time2 = new Date().valueOf()
 		console.log('Time taken to run edgeR:', time2 - time1, 'ms')
+		for (const line of r_output.split('\n')) {
+			if (line.startsWith('adjusted_p_values:')) {
+				result = JSON.parse(line.replace('adjusted_p_values:', ''))
+			} else {
+				//console.log(line)
+			}
+		}
 		param.method = 'edgeR'
 		//console.log("result:",result)
 	} else if (param.method == 'wilcoxon') {
