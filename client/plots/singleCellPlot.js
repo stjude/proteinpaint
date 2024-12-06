@@ -389,7 +389,7 @@ class singleCellPlot {
 				this.zoom = this.zoom * 1.1
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 1.1)
-					else this.renderPlot(plot) //large plot
+					else this.drawCanvasCells(plot) //large plot
 				}
 			},
 			title: 'Zoom in'
@@ -400,7 +400,7 @@ class singleCellPlot {
 				this.zoom = this.zoom * 0.9
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 0.9)
-					else this.renderPlot(plot) //large plot
+					else this.drawCanvasCells(plot) //large plot
 				}
 			},
 			title: 'Zoom out'
@@ -409,9 +409,14 @@ class singleCellPlot {
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
 				this.zoom = 1
+
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.mainG.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
-					else this.renderPlot(plot) //large plot
+					else {
+						plot.panX = 0
+						plot.panY = 0
+						this.drawCanvasCells(plot) //large plot
+					}
 				}
 			},
 			title: 'Reset plot to defaults'
@@ -1155,40 +1160,44 @@ class singleCellPlot {
 	}
 
 	renderLargePlot = async function (plot) {
-		if (!plot.canvas) {
-			plot.canvas = plot.plotDiv.append('canvas').node()
-			plot.canvas.width = this.settings.svgw
-			plot.canvas.height = this.settings.svgh
-			plot.plotDiv.style('margin', '20px 20px')
-		}
+		plot.canvas = plot.plotDiv.append('canvas').node()
+		plot.canvas.width = this.settings.svgw
+		plot.canvas.height = this.settings.svgh
+		plot.plotDiv.style('margin', '20px 20px')
 		const canvas = plot.canvas
-		const size = this.settings.sampleSize
 		const ctx = canvas.getContext('2d')
-		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		plot.ctx = ctx
 
-		ctx.save() // Save the current transformation matrix
-		const zoomLevel = this.zoom
-		// Apply zoom transformation
-		ctx.translate(canvas.width / 2, canvas.height / 2) // Translate to center
-		ctx.scale(zoomLevel, zoomLevel) // Scale the canvas
-		ctx.translate(-canvas.width / 2, -canvas.height / 2) // Translate back
+		let isDragging = false
+		plot.panX = 0
+		plot.panY = 0
 
-		for (const c of plot.cells) {
-			const opacity = this.getOpacity(c)
-			if (opacity == 0) continue
-			let x = plot.xAxisScale(c.x)
-			let y = plot.yAxisScale(c.y)
-			const rgbColor = rgb(this.getColor(c, plot))
-			ctx.fillStyle = rgbColor.toString()
-			ctx.beginPath()
-			ctx.arc(x, y, size / 2, 0, 2 * Math.PI)
-			ctx.fill()
-		}
+		canvas.addEventListener('mousedown', e => {
+			isDragging = true
+			plot.startX = e.clientX
+			plot.startY = e.clientY
+		})
 
-		ctx.restore()
-		if (!this.settings.showGrid) return
+		canvas.addEventListener('mousemove', e => {
+			if (isDragging) {
+				plot.panX += e.clientX - plot.startX
+				plot.panY += e.clientY - plot.startY
+				plot.startX = e.clientX
+				plot.startY = e.clientY
+				this.drawCanvasCells(plot)
+			}
+		})
+
+		canvas.addEventListener('mouseup', () => {
+			isDragging = false
+		})
+
+		this.drawCanvasCells(plot)
+	}
+
+	drawCanvasGrid(plot) {
+		const ctx = plot.ctx
 		const color = '#aaa'
-		const opacity = 0.5
 		const bins = 6
 		const step = this.settings.svgw / bins
 		let x, y
@@ -1205,6 +1214,45 @@ class singleCellPlot {
 		}
 		ctx.strokeStyle = color
 		ctx.stroke()
+	}
+
+	drawCanvasCells(plot) {
+		const ctx = plot.ctx
+		const canvas = plot.canvas
+		const panX = plot.panX
+		const panY = plot.panY
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+		const size = this.settings.sampleSize
+		const zoomLevel = this.zoom
+
+		ctx.save() // Save the current transformation matrix
+		ctx.translate(panX, panY) //apply current pan
+
+		// Apply zoom transformation
+		//Calculate the zoom origin in canvas coordinates
+		const x = plot.startX ? plot.startX / zoomLevel - plot.panX : canvas.width / 2
+		const y = plot.startY ? plot.startY / zoomLevel - plot.panY : canvas.height / 2
+		//Translate to the zoom origin in canvas coordinates. If no origin is set, use the center of the canvas
+
+		ctx.translate(x, y)
+		ctx.scale(zoomLevel, zoomLevel) // Scale the canvas
+		ctx.translate(-x, -y)
+
+		for (const c of plot.cells) {
+			const opacity = this.getOpacity(c)
+			if (opacity == 0) continue
+			let x = plot.xAxisScale(c.x)
+			let y = plot.yAxisScale(c.y)
+			const rgbColor = rgb(this.getColor(c, plot))
+			ctx.fillStyle = rgbColor.toString()
+			ctx.beginPath()
+			ctx.arc(x, y, size / 2, 0, 2 * Math.PI)
+			ctx.fill()
+		}
+
+		ctx.restore()
+		if (this.settings.showGrid) this.drawCanvasGrid(plot)
 	}
 }
 
