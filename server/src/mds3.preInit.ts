@@ -25,6 +25,7 @@ export async function mayRetryDsPreInit(ds: Mds3): Promise<any> {
 		if (response?.status !== 'OK') throw response
 		return response
 	} catch (response: any) {
+		// may retry depending on ds.preInit configuration
 		if (response.status != 'recoverableError') {
 			// should not retry on fatal error
 			console.log(`fatal error: ${ds.label} ds.preInit.getStatus()`, response)

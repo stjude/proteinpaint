@@ -116,15 +116,8 @@ export async function init(ds, genome, _servconfig) {
 		}
 	}
 
-	try {
-		// must validate termdb first
-		await validate_termdb(ds).catch(e => {
-			throw e
-		})
-	} catch (e) {
-		throw e
-	}
-
+	// must validate termdb first
+	await validate_termdb(ds)
 	if (ds.queries) {
 		// must validate snvindel query before variant2sample
 		// as vcf header must be parsed to supply samples for variant2samples
@@ -242,16 +235,12 @@ export async function validate_termdb(ds) {
 	tdb.sampleTypes = {}
 
 	if (ds.preInit) {
-		const response = await mayRetryDsPreInit(ds).catch(e => {
-			throw e
-		})
+		const response = await mayRetryDsPreInit(ds)
 		if (response?.status != 'OK') throw response?.message || `ds.preInit() failed: unknown error`
 	}
 
 	if (tdb?.dictionary?.gdcapi) {
-		await initGDCdictionary(ds).catch(e => {
-			throw e
-		})
+		await initGDCdictionary(ds)
 		/*
 		creates ds.cohort.termdb.q={}
 		*****************************
