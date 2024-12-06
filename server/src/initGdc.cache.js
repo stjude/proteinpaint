@@ -130,15 +130,15 @@ async function getOpenProjects(ds, ref) {
 	const { host, headers } = ds.getHostHeaders()
 	const url = joinUrl(host.rest, 'files')
 	const { body: re } = await cachedFetch(url, { method: 'POST', headers, body: data })
-		// uncomment this then() callback to test recoverable error handling,
-		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
-		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
-		// .then(_ => {throw {status: 404}}) // client request error detected by healthy API -- should cause an IMMEDIATE crash
-		.catch(e => {
-			if (isRecoverableError(e)) ds.__gdc.recoverableError = `getOpenProjects() ${url}`
-			// still throw to stop code execution here and allow caller to catch
-			throw e
-		})
+	// uncomment this then() callback to test recoverable error handling,
+	// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+	// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
+	// .then(_ => {throw {status: 404}}) // client request error detected by healthy API -- should cause an IMMEDIATE crash
+	// .catch(e => {
+	// 	if (isRecoverableError(e)) ds.__gdc.recoverableError = `getOpenProjects() ${url}`
+	// 	// still throw to stop code execution here and allow caller to catch
+	// 	throw e
+	// })
 
 	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
@@ -321,6 +321,7 @@ async function cacheMappingOnNewRelease(ds) {
 	const ref = getCacheRef(ds) // a new empty nested cache object
 	if (!ds.__gdc) ds.__gdc = ref // would reference the same object only on initial call
 
+	const begin = new Date()
 	let version
 	try {
 		// since this runs in a loop, the API status could change between requests
@@ -358,8 +359,6 @@ async function cacheMappingOnNewRelease(ds) {
 		ds.__pendingCacheVersion = version
 		ref.data_release_version = version
 		await getOpenProjects(ds, ref)
-
-		const begin = new Date()
 		const size = 1000 // fetch 1000 ids at a time
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
 		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
@@ -442,9 +441,9 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 		// uncomment this then() callback to test recoverable error handling,
 		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
 		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server log of errors
-		.then(_ => {
-			throw { status: 500 }
-		}) // server-side error, should be recoverable and not cause a crash
+		// .then(_ => {
+		// 	throw { status: 500 } // server-side error, should be recoverable and not cause a crash
+		// })
 		.catch(e => {
 			if (isRecoverableError(e)) ds.__gdc.recoverableError = 'fetchIdsFromGdcApi() /cases'
 			// still throw to stop code execution here and allow caller to catch
