@@ -2,7 +2,7 @@ import ky from 'ky'
 import { joinUrl } from './helpers'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
-import { cachedFetch } from './utils'
+import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
 import { buildGDCdictionary } from './initGdc.termdb.js'
 
@@ -62,12 +62,25 @@ export async function runRemainingWithoutAwait(ds) {
 		// which will require separate setTimeout() calls at the end of the function
 		// plus within each error catch block
 		setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
-		throw 'whatever'
 	} catch (e) {
-		console.log(65, e)
-		ds.__gdc.recoverableError = 'runRemainingWithoutAwait()'
-		if (e.stack) console.log(e.stack)
-		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
+		if (isRecoverableError(e)) {
+			console.log('recoverableError: ', ds.__gdc.recoverableError, e)
+			setInterval(
+				async () => {
+					try {
+						await cacheMappingOnNewRelease(ds)
+					} catch (e) {
+						if (!ds.__gdc.recoverableError) throw e // crash immediately
+						else console.log(`allow retries of cacheMappingOnNewRelease()`, e)
+					}
+				},
+				cacheCheckWait,
+				ds
+			)
+		} else {
+			if (e.stack) console.log(e.stack)
+			throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
+		}
 	}
 	// add any other gdc stuff
 }
@@ -98,11 +111,17 @@ async function getOpenProjects(ds, ref) {
 	}
 
 	const { host, headers } = ds.getHostHeaders()
-	const { body: re } = await cachedFetch(joinUrl(host.rest, 'files'), { method: 'POST', headers, body: data }).catch(
-		e => {
+	const url = joinUrl(host.rest, 'files')
+	const { body: re } = await cachedFetch(url, { method: 'POST', headers, body: data })
+		// uncomment this then() callback to test recoverable error handling,
+		// use `npx tsx server.ts` from sjpp instead of `npm start`,
+		// to more clearly observe server crash
+		// .then(_ => {throw {status: 404}}) // client request error detected by healthy API -- should cause an IMMEDIATE crash
+		.catch(e => {
+			if (isRecoverableError(e)) ds.__gdc.recoverableError = `getOpenProjects() ${url}`
+			// still throw to stop code execution here and allow caller to catch
 			throw e
-		}
-	)
+		})
 
 	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
@@ -276,7 +295,7 @@ cache gdc sample id mappings
 function will rerun when it detects stale case id cache
 */
 async function cacheMappingOnNewRelease(ds) {
-	console.log('GDC: checking if cache is stale OR has encountered a recoverable error')
+	console.log('GDC: checking if cache is stale OR should recover from an error')
 	// to avoid issues from race condition:
 	// - do not set ds.__gdc until the caching is complete
 	// - create a new ref object to map pending cacheable data
@@ -321,10 +340,11 @@ async function cacheMappingOnNewRelease(ds) {
 		ref.data_release_version = version
 		await getOpenProjects(ds, ref)
 	} catch (e) {
+		console.log('getOpenProjects() failed: ', e.message || e)
 		delete ds.__pendingCacheVersion
-		console.log('getOpenProjects() failed: ' + (e.message || e))
-		ds.__gdc.recoverableError = 'cacheMappingOnNewRelease() call to getOpenProjects()'
-		return
+
+		// must throw here so that the caller code execution will stop
+		throw e
 	}
 
 	const begin = new Date()
@@ -341,11 +361,13 @@ async function cacheMappingOnNewRelease(ds) {
 		await getCasesWithGeneExpression(ds, ref)
 		await getAnalysisTsv2loom4scrna(ds, ref)
 	} catch (e) {
-		console.log(e.code)
-		delete ds.__pendingCacheVersion
-		ds.__gdc.recoverableError =
-			'cacheMappingOnNewRelease() call to fetchIdsFromGdcApi(), getCasesWithGeneExpression(), or getAnalysisTsv2loom4scrna()'
-		return
+		if (isRecoverableError(e)) {
+			console.log(ds.__gdc?.recoverableError)
+			// the periodic rerun of this function will allow auto-recovery
+			delete ds.__pendingCacheVersion
+		} else {
+			throw e
+		}
 	}
 
 	if (mayCancelStalePendingCache(ds, ref)) return
@@ -405,10 +427,16 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 	}
 
 	const { host, headers } = ds.getHostHeaders()
-	const { body: re } = await cachedFetch(host.rest + '/cases?' + param.join('&'), { headers }).catch(e => {
-		ds.__gdc.recoverableError = 'fetchIdsFromGdcApi() /cases'
-		throw e
-	})
+	const { body: re } = await cachedFetch(host.rest + '/cases?' + param.join('&'), { headers })
+		// uncomment this then() callback to test recoverable error handling,
+		// use `npx tsx server.ts` from sjpp instead of `npm start`,
+		// to more clearly observe server crash
+		//.then(_ => {throw {status: 500}}) // server-side error, should be recoverable and not cause a crash
+		.catch(e => {
+			if (isRecoverableError(e)) ds.__gdc.recoverableError = 'fetchIdsFromGdcApi() /cases'
+			// still throw to stop code execution here and allow caller to catch
+			throw e
+		})
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	//console.log(re.data.hits[0]) // uncomment to examine output
@@ -500,6 +528,13 @@ async function getCasesWithGeneExpression(ds, ref) {
 			headers,
 			body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
 		})
+			// uncomment this then() callback to test recoverable error handling,
+			// use `npx tsx server.ts` from sjpp instead of `npm start`,
+			// to more clearly observe server crash
+			.then(_ => {
+				throw { code: 'ENOTFOUND' }
+			}) // network connection error, should be recoverable and not cause a crash
+
 		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
 		if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
 		for (const c of re.cases.details) {
@@ -508,14 +543,20 @@ async function getCasesWithGeneExpression(ds, ref) {
 
 		delete ref.caseIds
 	} catch (e) {
-		ds.__gdc.recoverableError = `getCasesWithGeneExpression() gene_expression/availability`
 		console.log(e)
-		// is this related to caching and is this true for all users, or just for a single request?
-		// if for all users, the message makes it seem like it's for a single user
-		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
+
+		if (isRecoverableError(e)) {
+			ds.__gdc.recoverableError = `getCasesWithGeneExpression() gene_expression/availability`
+		} else {
+			// is this related to caching and is this true for all users, or just for a single request?
+			// if for all users, the message makes it seem like it's for a single user
+			console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
+		}
+
 		delete ds.__pendingCacheVersion
-		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
-		// when api is releated to public prod, must throw here and abort
+
+		// still throw to stop code execution within getCasesWithGeneExpression() and allow its caller to catch
+		throw e
 	}
 }
 
@@ -587,10 +628,14 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 }
 */
 	let re
+	const url = joinUrl(host.rest, 'files')
 	try {
-		re = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json }).json()
+		re = await ky.post(url, { timeout: false, headers, json }).json()
 	} catch (e) {
-		ds.__gdc.recoverableError = 'getAnalysisTsv2loom4scrna()'
+		if (isRecoverableError(e)) {
+			ds.__gdc.recoverableError = `getAnalysisTsv2loom4scrna() '${url}'`
+		}
+		// should still throw here to stop getAnalysisTsv2loom4scrna() code execution and allow its caller to catch
 		throw e
 	}
 	if (!Array.isArray(re.data.hits)) throw 'scrna: re.data.hits[] not array'

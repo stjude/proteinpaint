@@ -1,8 +1,7 @@
-import ky from 'ky'
 import { joinUrl } from './helpers'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
-import { cachedFetch } from './utils'
+import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
 
 /*
@@ -138,16 +137,14 @@ export async function buildGDCdictionary(ds) {
 	// TODO switch to https://api.gdc.cancer.gov/cases/_mapping
 	const { host, headers } = ds.getHostHeaders()
 	const dictUrl = joinUrl(host.rest, 'ssm_occurrences/_mapping')
-
-	let re
-	try {
-		const { body } = await cachedFetch(dictUrl, { headers })
-		re = body
-	} catch (e) {
-		ds.__gdc.recoverableError = 'buildGDCdictionary() ssm_occurrences/_mapping'
-		console.log(e)
+	const { body: re } = await cachedFetch(dictUrl, { headers }).catch(e => {
+		if (isRecoverableError(e)) {
+			ds.__gdc.recoverableError = 'buildGDCdictionary() ${dictUrl}'
+			console.log(e)
+		}
+		// should still throw to stop code execution here and allow caller to catch
 		throw 'failed to get GDC API _mapping: ' + (e.message || e)
-	}
+	})
 
 	if (!re._mapping) throw 'returned data does not have ._mapping'
 	if (!Array.isArray(re.fields)) throw '.fields not array'
@@ -263,10 +260,10 @@ export async function buildGDCdictionary(ds) {
 	try {
 		await assignDefaultBins(id2term, ds)
 	} catch (e) {
-		ds.__gdc.recoverableError = 'assignDefaultBins()'
-		console.log(e)
-		// must abort launch upon err. lack of term.bins system app will not work
-		throw 'assignDefaultBins() failed: ' + (e.message || e)
+		if (!ds.__gdc.recoverableError) {
+			// must abort launch upon err. lack of term.bins system app will not work
+			throw 'assignDefaultBins() failed: ' + (e.message || e)
+		}
 	}
 
 	for (const t of id2term.values()) {
@@ -428,7 +425,10 @@ async function assignDefaultBins(id2term, ds) {
 		method: 'POST',
 		body: { query, variables }
 	}).catch(e => {
-		ds.__gdc.recoverableError = 'assignDefaultBins() host.graphql'
+		if (isRecoverableError(e)) {
+			ds.__gdc.recoverableError = 'assignDefaultBins() host.graphql'
+		}
+		// should throw to stop code execution here and allow caller to catch
 		throw e
 	})
 	if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
@@ -509,7 +509,14 @@ for this term, the function prints out: "Min=1992  Max=2021"
 async function getNumericTermRange(id, ds) {
 	const { host, headers } = ds.getHostHeaders()
 	// getting more datapoints will slow down the response
-	const { body: re } = await cachedFetch(host.rest + '/ssm_occurrences?size=5000&fields=' + id, { headers })
+	const url = host.rest + '/ssm_occurrences?size=5000&fields=' + id
+	const { body: re } = await cachedFetch(url, { headers }).catch(e => {
+		if (isRecoverableError(e)) {
+			ds.__gdc.recoverableError = `getNumericTermRange() ${url}`
+		}
+		// should throw to stop code execution here and allow caller to catch
+		throw e
+	})
 	if (!Array.isArray(re.data.hits)) return
 	let min = null,
 		max = null
