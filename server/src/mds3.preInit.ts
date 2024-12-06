@@ -33,8 +33,8 @@ export async function mayRetryDsPreInit(ds: Mds3): Promise<any> {
 		}
 
 		if (retryMax < 1) {
-			console.log('35 mayRetryDsPreInit()', response)
-			throw new Error('GDC API status error: ' + (response.message || response))
+			console.log('mayRetryDsPreInit()', response)
+			throw new Error('preInit error: ' + (response.message || response))
 		} else {
 			// ok to retry on recoverable error
 			console.warn(`First ${ds.label} preInit.getStatus() request failed. (${retryMax} attempts left)`)
@@ -47,11 +47,11 @@ export async function mayRetryDsPreInit(ds: Mds3): Promise<any> {
 			return new Promise((resolve, reject) => {
 				const interval = setInterval(async () => {
 					currentRetry++
-					console.log(`Retrying GDC status check, attempt #${currentRetry} ...`)
+					console.log(`Retrying preInit status check, attempt #${currentRetry} ...`)
 					try {
 						const response = (await ds.preInit?.getStatus?.()) || { status: 'OK' }
 						if (response.status == 'OK') {
-							clearInterval(interval)
+							clearInterval(interval) // status is already ok, no need to retry
 							resolve(response)
 							return
 						} else {
@@ -59,12 +59,15 @@ export async function mayRetryDsPreInit(ds: Mds3): Promise<any> {
 						}
 					} catch (response) {
 						//console.log(89, response)
-						console.warn(`GDC status request failed. Retrying... (${retryMax - currentRetry} attempts left)`)
+						console.warn(`preInit.getStatus() check failed. Retrying... (${retryMax - currentRetry} attempts left)`)
 						if (currentRetry >= retryMax) {
-							clearInterval(interval)
-							console.error('Max GDC API status retry attempts reached. Failing with error:', response)
+							clearInterval(interval) // cancel retries
+							console.error('Max preInit.getStatus() retry attempts reached. Failing with error:', response)
 							if (ds.initErrorCallback) ds.initErrorCallback(response)
-							else reject(response)
+							else {
+								// allow to fail silently to not affect other loaded datasets
+								console.log(response)
+							}
 						}
 					}
 				}, retryDelay)
