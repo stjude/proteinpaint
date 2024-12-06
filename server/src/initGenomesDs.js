@@ -408,7 +408,6 @@ export async function initGenomesDs(serverconfig) {
 		*/
 			if (d.skip) continue
 			if (!d.name) throw 'a nameless dataset from ' + genomename
-			if (d.name != 'GDC') continue
 			if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
 			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
 
