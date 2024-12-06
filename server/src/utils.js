@@ -794,6 +794,25 @@ export function boxplot_getvalue(lst) {
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
 
+// only use this helper when catching errors that may due
+// external API server errors or network connection failures;
+// the `e` argument is expected to have a network-related error code, some of which
+// may be recovered from (temp maintenance or disconnect), others are fatal
+export function isRecoverableError(e) {
+	// detect if status maps to a known HTTP 5xx server error code
+	if (typeof e.status == 'number' && e.status >= 500) return true
+
+	const code = e.code || e.error?.code || e.cause?.code || ''
+	// assume that not found is not due to using the wrong hostname,
+	// typically a public API like GDC will use error status code 4xx (client-side error)
+	// where retries with the same payload/headers will always fail and is not
+	// recoverable.
+	//
+	// code=ENOTFOUND below is from undici when local wifi is down,
+	// it's not an HTTP status code from an API
+	return code == 'ENOTFOUND'
+}
+
 const extApiCache = serverconfig.features?.extApiCache || {}
 const extApiResponseDir = path.join(serverconfig.cachedir, 'extApiResponse')
 if (serverconfig.features?.extApiCache) {
@@ -814,10 +833,10 @@ if (serverconfig.features?.extApiCache) {
  *
  * @param url           string with optional
  * @param opts          {method, header, body, ...} similar to got and node-fetch or browser fetch
- * 							defaults:
- * 								method: GET
- * 								content-tyoe: 'application/json'
- *                         acceptL 'application/json'
+ * 											defaults:
+ * 												method: GET
+ * 												content-tyoe: 'application/json'
+ *                        accept: 'application/json'
  * @param use{}	      non-fetch options to customize the client and/or response properties
  * 	.metaKey          string key to use when attaching a caching metadata object to the response
  *
@@ -887,10 +906,19 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 				// - In the meantime, replacing ky with node-fetch may be a good enough fix for edge cases of very large, long-running requests.
 				jsonBody = await nodeFetch(url, opts)
 					.then(async r => {
+						console.log(889, r.status)
 						const contentType = r.headers.get('content-type')
 						const payload = contentType == 'application/json' ? await r.json() : await r.text()
-						if (!r.ok || (typeof r?.status == 'number' && r?.status > 399))
+						if (!r.ok || (typeof r?.status == 'number' && r?.status > 399 && r.status < 500)) {
+							// catch HTTP 4xx that are due to client request,
+							// not network or server errors that are considered recoverable
 							throw `error from ${url}: ` + (payload.message || payload.error || JSON.stringify(payload))
+						} else if (r?.status >= 500) {
+							// server-side error, such as during maintenance period;
+							// may use isRecoverableError() above to detect
+							throw e
+						}
+
 						return payload
 					})
 					.catch(e => {
