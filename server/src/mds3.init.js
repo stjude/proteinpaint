@@ -116,11 +116,11 @@ export async function init(ds, genome, _servconfig) {
 		}
 	}
 
-	if (ds.preInit) {
-		// will not allow to move to validate_termdb until ds.preInit.getStatus() is okay
-		const response = await mayRetryDsPreInit(ds)
-		if (response?.status != 'OK') throw response?.message || `ds.preInit() failed: unknown error`
-	}
+	// if (ds.preInit) {
+	// 	// will not allow to move to validate_termdb until ds.preInit.getStatus() is okay
+	// 	const response = await mayRetryDsPreInit(ds)
+	// 	if (response?.status != 'OK') throw response?.message || `ds.preInit() failed: unknown error`
+	// }
 
 	// must validate termdb first
 	await validate_termdb(ds)
@@ -214,7 +214,7 @@ ds.cohort = {
 */
 export async function validate_termdb(ds) {
 	if (ds.cohort) {
-		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
+		if (!ds.cohort.termdb || ds.label == 'PNET') throw 'ds.cohort is set but cohort.termdb{} missing'
 		if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
 		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 	} else if (ds.termdb) {

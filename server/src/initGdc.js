@@ -53,7 +53,18 @@ export async function initGDCdictionary(ds) {
 		// also should use extApiCache
 		await runRemainingWithoutAwait(ds)
 	} else {
-		// use on prod, not to hold up container launch by caching
+		ds.init.status = 'nonblocking'
+		// use on prod, not to hold up container launch while caching
 		runRemainingWithoutAwait(ds)
+			.then(() => {
+				ds.init.status = 'done'
+			})
+			.catch(e => {
+				if (ds.init.recoverableError) return
+				ds.init.status = 'fatalError'
+				ds.init.fatalError = e
+				console.log(`${ds.genomename}/${ds.label} fatal error`, e)
+				// TODO: notify team of ds load failure
+			})
 	}
 }
