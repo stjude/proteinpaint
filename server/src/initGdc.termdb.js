@@ -140,7 +140,7 @@ export async function buildGDCdictionary(ds) {
 	const { body: re } = await cachedFetch(dictUrl, { headers }).catch(e => {
 		console.log(e)
 		if (isRecoverableError(e)) {
-			if (ds.__gdc) ds.__gdc.recoverableError = 'buildGDCdictionary() ${dictUrl}'
+			ds.init.recoverableError = 'buildGDCdictionary() ${dictUrl}'
 		}
 		// should still throw to stop code execution here and allow caller to catch
 		throw 'failed to get GDC API _mapping: ' + (e.message || e)
@@ -434,7 +434,7 @@ async function assignDefaultBins(id2term, ds) {
 		// }) // server-side error, should be recoverable and not cause a crash
 		.catch(e => {
 			if (isRecoverableError(e)) {
-				if (ds.__gdc) ds.__gdc.recoverableError = 'assignDefaultBins() host.graphql'
+				ds.init.recoverableError = 'assignDefaultBins() host.graphql'
 			}
 			// should throw to stop code execution here and allow caller to catch
 			throw e
@@ -520,7 +520,7 @@ async function getNumericTermRange(id, ds) {
 	const url = host.rest + '/ssm_occurrences?size=5000&fields=' + id
 	const { body: re } = await cachedFetch(url, { headers }).catch(e => {
 		if (isRecoverableError(e)) {
-			if (ds.__gdc) ds.__gdc.recoverableError = `getNumericTermRange() ${url}`
+			ds.init.recoverableError = `getNumericTermRange() ${url}`
 		}
 		// should throw to stop code execution here and allow caller to catch
 		throw e

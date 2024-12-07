@@ -192,6 +192,9 @@ export async function initGenomesDs(serverconfig) {
 		}
 	}
 
+	// will be used to track dataset loading status
+	const trackedDatasets = []
+
 	for (const genomename in genomes) {
 		/*
 		validate each genome
@@ -398,17 +401,18 @@ export async function initGenomesDs(serverconfig) {
 			continue
 		}
 		/*
-	done everything except dataset
-	*/
+		done everything except dataset
+		*/
 
 		g.datasets = {}
 		for (const d of g.rawdslst) {
 			/*
-		for each raw dataset
-		*/
+			for each raw dataset
+			*/
 			if (d.skip) continue
 			if (!d.name) throw 'a nameless dataset from ' + genomename
-			if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
+			if (/*d.name != 'GDC' && d.name != 'ClinVar' &&*/ d.name != 'PNET') continue
+			if (g.datasets[d.name]) throw genomename + ' has duplicate dataset name: ' + d.name
 			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
 
 			/*
@@ -435,44 +439,107 @@ export async function initGenomesDs(serverconfig) {
 			ds.genomename = genomename
 			g.datasets[ds.label] = ds
 
-			if (ds.isMds3) {
-				// TODO: not awaiting will be the default in next round of refactor;
-				// use strict equals of boolean value to not misinterpret undefined
-				if (d.awaitOnMds3Init === false) {
-					// do not await to support the option to not block other datasets from loading
-					mds3_init.init(ds, g, d).catch(e => {
-						if (ds.__gdc?.recoverableError) {
-							console.log(`recoverableError ignored:`, ds.__gdc.recoverableError)
-							return // ignore because error is recoverable
-						}
-						throw 'Error with mds3 dataset ' + ds.label + ': ' + e
-					})
-				} else {
-					try {
-						await mds3_init.init(ds, g, d)
-					} catch (e) {
-						console.trace(e)
-						throw 'Error with mds3 dataset ' + ds.label + ': ' + e
-					}
-				}
-				continue
-			}
-			if (ds.isMds) {
-				try {
-					await mds_init(ds, g, d)
-				} catch (e) {
-					console.trace(e)
-					throw 'Error with mds dataset ' + ds.label + ': ' + e
-				}
-				continue
+			// populate possibly missing ds.init option values
+			// retryMax or retryDelay override may be specified without the other
+			ds.init = {
+				...{ retryMax: 0, retryDelay: 1000 * 60 * 5 }, // default, 0 retry, every 5 minutes
+				...(ds.init || {}), // overrides from dataset js file
+				...(d.init || {}) // overrides from raw dataset entry in serverconfig, highest priority
 			}
 
-			initLegacyDataset(ds, g, serverconfig)
+			trackedDatasets.push(ds)
+
+			// wrap ds init execution in a try-catch,
+			// to not crash when at least 1 dataset loaded successfully
+			try {
+				ds.init.status = 'started'
+				if (ds.isMds3) await mds3_init.init(ds, g, d)
+				else if (ds.isMds) await mds_init(ds, g, d)
+				else initLegacyDataset(ds, g, serverconfig)
+				// no error bubbled up to be caught, and there are no nonblocking step being performed, init is done
+				if (ds.init.status != 'nonblocking') ds.init.status = 'done'
+			} catch (e) {
+				console.log(`Init error with ${genomename} dataset ${ds.label}: ${e}`)
+				console.trace(e)
+				if (ds.init.fatalError) {
+					ds.init.status = `fatalError`
+				} else if (!ds.init.retryMax) {
+					ds.init.status = `zeroRetries`
+				} else {
+					console.log(`${gdlabel} recoverableError:`, ds.init.recoverableError)
+					ds.init.status = `recoverableError`
+					delete ds.init.recoverableError // should not be present at the beginning of retries
+
+					// This loop is NOT awaited on, so that it doesn't block subsequent datasets from loading
+					let currentRetry = 0
+					const interval = setInterval(async () => {
+						currentRetry++
+						try {
+							console.log(`Retrying ${gdlabel} init(), attempt #${currentRetry} ...`)
+							if (ds.isMds3) await mds3_init.init(ds, g, d)
+							else if (ds.isMds) await mds_init(ds, g, d)
+							else initLegacyDataset(ds, g, serverconfig)
+							// as long as no error bubbles up to here, the retry is considered successful
+							clearInterval(interval)
+							if (ds.init.status != 'nonblocking') ds.init.status = 'done'
+						} catch (e) {
+							if (!ds.init.recoverableError) {
+								console.log(`Fatal error on ${gdlabel} retry`, e)
+								clearInterval(interval) // cancel since retrying will not change the outcome
+								ds.init.status = 'fatalError'
+							} else {
+								console.warn(`${gdlabel} init() failed. Retrying... (${ds.init.retryMax - currentRetry} attempts left)`)
+								if (currentRetry >= ds.init.retryMax) {
+									clearInterval(interval) // cancel retries
+									console.error(`Max retry attempts for ${gdlabel} reached. Failing with error:`)
+									if (ds.initErrorCallback) ds.initErrorCallback(response)
+									else {
+										// allow to fail silently to not affect other loaded datasets
+										console.log(e)
+									}
+								}
+
+								ds.init.status = `recoverableError`
+								delete ds.init.recoverableError // should not be present at the beginning of retries
+							}
+						}
+					}, ds.init.retryDelay)
+				}
+			}
 		}
 
 		deleteSessionFiles()
-
 		delete g.rawdslst
+	}
+
+	const getLabel = ds => `${ds.genomename}/${ds.label}`
+	const done = trackedDatasets.filter(ds => ds.init.status === 'done')
+	const nonblocking = trackedDatasets.filter(ds => ds.init.status === 'nonblocking')
+	if (!done.length && !nonblocking.length) throw `there were no datasets that loaded successfully` // crash the server
+	else {
+		if (done.length) {
+			console.log(`\n--- these datasets finished loading ---`)
+			console.log(done.map(getLabel).join(', '))
+		}
+
+		if (nonblocking.length) {
+			console.log(`\n--- these datasets are running nonblocking initialization steps ---`)
+			console.log(nonblocking.map(getLabel).join(', '))
+		}
+
+		const activeRetries = trackedDatasets.filter(ds => ds.init.status === 'recoverableError')
+		if (activeRetries.length) {
+			console.log(`\n--- active retries after initial attempt at loading dataset ---`)
+			console.log(activeRetries.map(getLabel).join(', '))
+		}
+
+		const failed = trackedDatasets.filter(
+			ds => !done.includes(ds) && !nonblocking.includes(ds) && !activeRetries.includes(ds)
+		)
+		if (failed.length) {
+			console.log(`\n--- failed dataset init (will notify team) ---`)
+			console.log(failed.map(getLabel).join(', '))
+		}
 	}
 }
 

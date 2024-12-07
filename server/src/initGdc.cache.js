@@ -59,7 +59,7 @@ export async function runRemainingWithoutAwait(ds) {
 		await cacheMappingOnNewRelease(ds)
 	} catch (e) {
 		if (isRecoverableError(e)) {
-			console.log('recoverableError: ', ds.__gdc.recoverableError, e)
+			console.log('recoverableError: ', ds.init.recoverableError, e)
 		} else {
 			// immediately crash when the initial try fails with non-recoverable error
 			console.log(e.stack || e)
@@ -78,9 +78,9 @@ export async function runRemainingWithoutAwait(ds) {
 			} catch (e) {
 				// uncomment to test cancellation of retries and also requires
 				// one of the `.then()` test callbacks to be uncommented
-				// delete ds.__gdc.recoverableError
+				// delete ds.init.recoverableError
 
-				if (ds.__gdc.recoverableError) {
+				if (ds.init.recoverableError) {
 					console.log(`allow retries of cacheMappingOnNewRelease()`, e)
 				} else {
 					ds.__gdc.hasFatalError = true
@@ -130,15 +130,15 @@ async function getOpenProjects(ds, ref) {
 	const { host, headers } = ds.getHostHeaders()
 	const url = joinUrl(host.rest, 'files')
 	const { body: re } = await cachedFetch(url, { method: 'POST', headers, body: data })
-	// uncomment this then() callback to test recoverable error handling,
-	// use `npx tsx server.ts` from sjpp instead of `npm start`, and
-	// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
-	// .then(_ => {throw {status: 404}}) // client request error detected by healthy API -- should cause an IMMEDIATE crash
-	// .catch(e => {
-	// 	if (isRecoverableError(e)) ds.__gdc.recoverableError = `getOpenProjects() ${url}`
-	// 	// still throw to stop code execution here and allow caller to catch
-	// 	throw e
-	// })
+		// uncomment this then() callback to test recoverable error handling,
+		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
+		//.then(_ => {throw {status: 404}}) // client request error detected by healthy API -- should cause an IMMEDIATE crash
+		.catch(e => {
+			if (isRecoverableError(e)) ds.init.recoverableError = `getOpenProjects() ${url}`
+			// still throw to stop code execution here and allow caller to catch
+			throw e
+		})
 
 	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
@@ -340,13 +340,13 @@ async function cacheMappingOnNewRelease(ds) {
 
 			// even if version has not changed, still recache if a recoverable error was encountered,
 			// should try restart caching optimistically (that the network or server issue was resolved)
-			if (!ds.__gdc.recoverableError) return
+			if (!ds.init.recoverableError) return
 			else {
-				console.log(`detected caching error: ${ds.__gdc.recoverableError}`)
+				console.log(`detected caching error: ${ds.init.recoverableError}`)
 				console.log(`cached gdc data version is up-to-date, but there was a caching error, will restart cache`)
 			}
 		}
-		delete ds.__gdc.recoverableError
+		delete ds.init.recoverableError
 		// need to check before resetting ds.__pendingCacheVersion in subsequent lines
 		if (mayCancelStalePendingCache(ds, { data_release_version: version })) return
 		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
@@ -371,7 +371,9 @@ async function cacheMappingOnNewRelease(ds) {
 		await getCasesWithGeneExpression(ds, ref)
 		await getAnalysisTsv2loom4scrna(ds, ref)
 	} catch (e) {
+		console.log(373, e)
 		if (isRecoverableError(e)) {
+			console.log(374)
 			console.log(ds.__gdc?.recoverableError)
 			// the periodic rerun of this function will allow auto-recovery
 			delete ds.__pendingCacheVersion
@@ -380,7 +382,7 @@ async function cacheMappingOnNewRelease(ds) {
 	}
 
 	if (mayCancelStalePendingCache(ds, ref)) return
-	if (ds.__gdc.recoverableError) return // should not allow doneCaching: true when there is an ignnored error
+	if (ds.init.recoverableError) return // should not allow doneCaching: true when there is an ignnored error
 	delete ds.__pendingCacheVersion
 	// swap to the newly completed cache reference
 	ds.__gdc = ref
@@ -445,7 +447,7 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 		// 	throw { status: 500 } // server-side error, should be recoverable and not cause a crash
 		// })
 		.catch(e => {
-			if (isRecoverableError(e)) ds.__gdc.recoverableError = 'fetchIdsFromGdcApi() /cases'
+			if (isRecoverableError(e)) ds.init.recoverableError = 'fetchIdsFromGdcApi() /cases'
 			// still throw to stop code execution here and allow caller to catch
 			throw e
 		})
@@ -560,7 +562,7 @@ async function getCasesWithGeneExpression(ds, ref) {
 		console.log(e)
 
 		if (isRecoverableError(e)) {
-			ds.__gdc.recoverableError = `getCasesWithGeneExpression() gene_expression/availability`
+			ds.init.recoverableError = `getCasesWithGeneExpression() gene_expression/availability`
 		} else {
 			// is this related to caching and is this true for all users, or just for a single request?
 			// if for all users, the message makes it seem like it's for a single user
@@ -647,7 +649,7 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 		re = await ky.post(url, { timeout: false, headers, json }).json()
 	} catch (e) {
 		if (isRecoverableError(e)) {
-			ds.__gdc.recoverableError = `getAnalysisTsv2loom4scrna() '${url}'`
+			ds.init.recoverableError = `getAnalysisTsv2loom4scrna() '${url}'`
 		}
 		// should still throw here to stop getAnalysisTsv2loom4scrna() code execution and allow its caller to catch
 		throw e
