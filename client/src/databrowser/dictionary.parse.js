@@ -152,10 +152,7 @@ export function parseDictionary(input) {
 
 		const unitIndex = header.findIndex(l => l.toLowerCase().includes('unit'))
 
-		/** Old implementation
-		 * .attributes is passed to the term obj (see below) but not used.
-		 * Leaving parsing code as an option for the future.
-		 */
+		// see below
 		const additionalAttrIndexes = header.findIndex(l => l.toLowerCase().includes('additional attributes'))
 
 		// caching and/or tracking variables
@@ -197,7 +194,7 @@ export function parseDictionary(input) {
 				if (firstDashIndex != -1 && firstDashIndex < cols.indexOf(name)) {
 					throw `Blank or '-' value detected between levels in line ${lineNum}`
 				}
-				const term = parseCategories(cols[typeIndex], cols[categoriesIndex], cols[additionalAttrIndexes], lineNum, name)
+				const term = parseCategories(cols[typeIndex], cols[categoriesIndex], lineNum, name)
 
 				const id = cols[variableIndex] || name
 				if (id in terms) {
@@ -216,10 +213,19 @@ export function parseDictionary(input) {
 					// *** temporary attributes to be deleted later ***
 					ancestry: levelNames.slice(), // to be deleted later, used to fill in missing terms
 					parent_name: levelNames.pop() || null, // will change this later to parent_id
-					lineNum, // to be deleted later
-					additionalAttributes: term.attributes
+					lineNum // to be deleted later
 				}
+
+				// pass additional properties to term obj
 				if (cols[unitIndex] != null) terms[id].unit = cols[unitIndex]
+				if (cols[additionalAttrIndexes]) {
+					/* file has additional attribute JSON column, and this line has value for it;
+					directly assign json properties to the term object, no need to nest in "term.attributes{}"
+					e.g. default color scale for continuous mode for drug sensitivity terms
+					*/
+					Object.assign(terms[id], JSON.parse(cols[additionalAttrIndexes]))
+				}
+
 				termNameToId[name] = id
 				parentTermNames.add(terms[id].parent_name)
 			} catch (e) {
@@ -247,14 +253,12 @@ export function parseDictionary(input) {
  **** Parsing Functions for Phenotree ****
  */
 
-function parseCategories(type, catJSON, addAttrJSON, lineNum, varName) {
+function parseCategories(type, catJSON, lineNum, varName) {
 	if (!type) throw `No type provided for variable: ${varName} on line ${lineNum}`
 
 	const term = {
 		type,
-		values: catJSON == '' || catJSON == undefined ? {} : JSON.parse(catJSON),
-		/** .attributes not in use. Leaving as an option for future use. */
-		attributes: addAttrJSON == '' || addAttrJSON == undefined ? {} : JSON.parse(addAttrJSON)
+		values: catJSON == '' || catJSON == undefined ? {} : JSON.parse(catJSON)
 	}
 
 	validateNumericTermCategories(term)
