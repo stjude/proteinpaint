@@ -3,10 +3,10 @@ import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
 import { getColors } from '#shared/common.js'
 import { brushX, brushY } from 'd3-brush'
-import { renderTable } from '../dom/table'
-import { Menu } from '../dom/menu'
+import { renderTable, Menu } from '#dom'
 import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
+import { TermTypes } from '#shared/terms.js'
 
 export default function setViolinRenderer(self) {
 	self.render = function () {
@@ -62,7 +62,13 @@ export default function setViolinRenderer(self) {
 			const violinG = createViolinG(svgData, plot, plotIdx, isH)
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
 			renderViolinPlot(plot, self, isH, svgData, plotIdx, violinG, imageOffset)
-			if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
+
+			if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+				// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
+			} else {
+				// enable brushing
+				if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
+			}
 			self.labelHideLegendClicking(t2, plot)
 		}
 	}
