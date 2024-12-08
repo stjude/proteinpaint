@@ -1,9 +1,9 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { renderTable } from '../dom/table'
+import { renderTable, niceNumLabels } from '#dom'
 import { to_svg } from '#src/client'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { rgb } from 'd3'
-import { niceNumLabels } from '../dom/niceNumLabels'
+import { TermTypes } from '#shared/terms.js'
 
 export function setInteractivity(self) {
 	self.download = () => {
@@ -25,9 +25,8 @@ export function setInteractivity(self) {
 	}
 
 	self.displayLabelClickMenu = function (t1, t2, plot, event) {
-		if (!t2 || self.data.plots.length === 1) {
-			return
-		}
+		if (!t2 || self.data.plots.length === 1) return // when no term 2 and just one violin, do not show options on the sole violin label
+		if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) return // is sc gene exp data, none of the options below work, thus disable
 
 		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
 		const options = [
