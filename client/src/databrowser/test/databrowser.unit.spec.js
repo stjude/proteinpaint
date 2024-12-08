@@ -51,7 +51,6 @@ tape('levels before variable, type, and categories - no gaps', function (test) {
 			type: 'categorical',
 			values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 			groupsetting: { disabled: true },
-			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.1'
@@ -62,7 +61,6 @@ tape('levels before variable, type, and categories - no gaps', function (test) {
 			type: 'categorical',
 			values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 			groupsetting: { disabled: true },
-			additionalAttributes: {},
 			child_order: 2,
 			isleaf: true,
 			parent_id: 'A.1'
@@ -73,7 +71,6 @@ tape('levels before variable, type, and categories - no gaps', function (test) {
 			type: 'categorical',
 			values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 			groupsetting: { disabled: true },
-			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.2'
@@ -84,7 +81,6 @@ tape('levels before variable, type, and categories - no gaps', function (test) {
 			type: 'categorical',
 			values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 			groupsetting: { disabled: true },
-			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'B.1'
@@ -95,6 +91,7 @@ tape('levels before variable, type, and categories - no gaps', function (test) {
 		{ id: 'B', name: 'B', isleaf: false, child_order: 2, parent_id: null },
 		{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 	]
+	console.log(results.terms[0], expected[0])
 	test.deepEqual(results.terms, expected, 'should output the expected terms array')
 	test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	test.end()
@@ -121,7 +118,6 @@ tape('levels after variable, type, categories - with gap', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.1.a'
@@ -132,7 +128,6 @@ tape('levels after variable, type, categories - with gap', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 2,
 				isleaf: true,
 				parent_id: 'A.1'
@@ -143,7 +138,6 @@ tape('levels after variable, type, categories - with gap', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.2'
@@ -154,7 +148,6 @@ tape('levels after variable, type, categories - with gap', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'B.1'
@@ -193,7 +186,6 @@ tape('empty variable', function (test) {
 			type: 'categorical',
 			values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 			groupsetting: { disabled: true },
-			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.1'
@@ -204,7 +196,6 @@ tape('empty variable', function (test) {
 			type: 'categorical',
 			values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 			groupsetting: { disabled: true },
-			additionalAttributes: {},
 			child_order: 2,
 			isleaf: true,
 			parent_id: 'A.1'
@@ -215,7 +206,6 @@ tape('empty variable', function (test) {
 			type: 'categorical',
 			values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 			groupsetting: { disabled: true },
-			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.2'
@@ -226,7 +216,6 @@ tape('empty variable', function (test) {
 			type: 'categorical',
 			values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 			groupsetting: { disabled: true },
-			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'B.1'
@@ -263,7 +252,6 @@ tape('extra, non essential column', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.1'
@@ -274,7 +262,6 @@ tape('extra, non essential column', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 2,
 				isleaf: true,
 				parent_id: 'A.1'
@@ -285,7 +272,6 @@ tape('extra, non essential column', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.2'
@@ -296,7 +282,6 @@ tape('extra, non essential column', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'B.1'
@@ -336,7 +321,6 @@ tape('no level columns', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: null
@@ -347,7 +331,6 @@ tape('no level columns', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 2,
 				isleaf: true,
 				parent_id: null
@@ -358,7 +341,6 @@ tape('no level columns', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 3,
 				isleaf: true,
 				parent_id: null
@@ -369,7 +351,6 @@ tape('no level columns', function (test) {
 				type: 'categorical',
 				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { disabled: true },
-				additionalAttributes: {},
 				child_order: 4,
 				isleaf: true,
 				parent_id: null
@@ -678,7 +659,6 @@ tape('add unit to term', function (test) {
 				groupsetting: {
 					disabled: true
 				},
-				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'L2'
@@ -694,7 +674,6 @@ tape('add unit to term', function (test) {
 						uncomputable: true
 					}
 				},
-				additionalAttributes: {},
 				child_order: 2,
 				isleaf: true,
 				unit: 'years',
@@ -721,6 +700,23 @@ tape('add unit to term', function (test) {
 		test.fail(message + ': ' + e)
 	}
 
+	test.end()
+})
+
+tape('add additional attributes to term', function (test) {
+	test.timeoutAfter(100)
+	const tsv = [
+		`Level_1\tLevel_2\tVariable\ttype\tCategories\tadditional attributes`,
+		`Root\tTerm 2\tterm2\tinteger\t{\"999\":{\"label\":\"N/A:CCSS\"}}\t{"xx":"yy"}`
+	].join('\n')
+	try {
+		const results = parseDictionary(tsv)
+		const term = results.terms.find(i => i.id == 'term2')
+		test.ok(term, 'term is found by id=term2')
+		test.equal(term.xx, 'yy', 'new property found: term.xx=yy')
+	} catch (e) {
+		test.fail('additional attributes: ' + e)
+	}
 	test.end()
 })
 
