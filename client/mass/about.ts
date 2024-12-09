@@ -255,7 +255,8 @@ export class MassAbout {
 			}
 		}
 		const activeColumns = this.dom.cohortTable.selectAll(selector)
-		activeColumns.style('background-color', 'yellow')
+		const color = selectCohort.activeCohortColor || 'yellow'
+		activeColumns.style('background-color', color)
 	}
 
 	initCustomHtml = () => {
