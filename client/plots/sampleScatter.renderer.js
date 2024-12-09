@@ -67,13 +67,18 @@ export function setRenderers(self) {
 		chart.zScaleMax = chart.zAxisScale(chart.zMax)
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
+
 		const gradientColor = self.config.settings.sampleScatter.defaultColor
+
 		if (!self.config.startColor) self.config.startColor = self.config.stopColor = {}
+		// supply start and stop color, if term has hardcoded colors, use; otherwise use default
 		if (!self.config.startColor[chart.id]) {
-			self.config.startColor[chart.id] = rgb(gradientColor).brighter().brighter().toString()
+			self.config.startColor[chart.id] =
+				self.config.colorTW.term.continuousColorScale?.minColor || rgb(gradientColor).brighter().brighter().toString()
 		}
 		if (!self.config.stopColor[chart.id]) {
-			self.config.stopColor[chart.id] = rgb(gradientColor).darker().toString()
+			self.config.stopColor[chart.id] =
+				self.config.colorTW.term.continuousColorScale?.maxColor || rgb(gradientColor).darker().toString()
 		}
 
 		if (self.config.colorTW?.q.mode === 'continuous') {
