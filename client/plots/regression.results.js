@@ -698,6 +698,7 @@ function setRenderers(self) {
 		if (!result.coefficients_uni || !result.coefficients_multi) return
 
 		const div = self.newDiv(result.coefficients_uni.label)
+		div.style('margin-bottom', '200px') // to provide space for rendering result tooltips
 		const table = div
 			.append('table')
 			.style('border-spacing', '0px')
@@ -917,13 +918,15 @@ function setRenderers(self) {
 				// header for estimate column
 				const est = h
 				const estTd = tr.append('td').style('padding', '8px').text(est)
-				const estInfo = estTd.append('sup').style('cursor', 'default').html('&nbsp;&#9432;')
-				estInfo.on('mouseover', event => {
-					const tip = self.dom.tip.clear()
-					tip.d.append('div').text('Hover over each value to view explanation of the result')
-					tip.showunder(event.target)
-				})
-				estInfo.on('mouseout', () => self.dom.tip.hide())
+				if (JSON.parse(sessionStorage.getItem('optionalFeatures')).regressionResultMsgs) {
+					const estInfo = estTd.append('sup').style('cursor', 'default').html('&nbsp;&#9432;')
+					estInfo.on('mouseover', event => {
+						const tip = self.dom.tip.clear()
+						tip.d.append('div').text('Hover over each value to view explanation of the result')
+						tip.showunder(event.target)
+					})
+					estInfo.on('mouseout', () => self.dom.tip.hide())
+				}
 			} else {
 				// headers for all other data columns
 				const td = tr.append('td').text(h).style('padding', '8px')
@@ -950,20 +953,24 @@ function setRenderers(self) {
 		const { tr, cols, tw } = arg
 		// estimate (Beta/OR/HR) column
 		const est = cols.shift()
-		const estSpan = tr
-			.append('td')
-			.style('padding', '8px') /*.style('cursor', 'default')*/
-			.append('span')
-			.text(est)
+		const estSpan = tr.append('td').style('padding', '8px').style('cursor', 'default').append('span').text(est)
 		// on mouseover, display explanation of estimate value
-		estSpan.on('mouseover', event => {
-			if (tw && tw.q.mode == 'spline') return
-			const tip = self.dom.tip.clear()
-			const estimateMsg = self.getEstimateMsg(Object.assign({ est: Number(est) }, arg))
-			tip.d.append('div').style('max-width', '500px').html(estimateMsg)
-			tip.showunder(event.target)
-		})
-		estSpan.on('mouseout', () => self.dom.tip.hide())
+		if (JSON.parse(sessionStorage.getItem('optionalFeatures')).regressionResultMsgs) {
+			estSpan.on('mouseover', event => {
+				if (tw && tw.q.mode == 'spline') return
+				const tip = self.dom.tip.clear()
+				let estimateMsg = self.getEstimateMsg(Object.assign({ est: Number(est) }, arg))
+				if (tw) {
+					const pvalue = Number(cols[cols.length - 1])
+					estimateMsg += `<br><br><span style="font-style: italic">This association is ${
+						pvalue < 0.05 ? 'statistically significant (P < 0.05)' : 'not statistically significant (P ≥ 0.05)</span>'
+					}.`
+				}
+				tip.d.append('div').style('max-width', '500px').html(estimateMsg)
+				tip.showunder(event.target)
+			})
+			estSpan.on('mouseout', () => self.dom.tip.hide())
+		}
 		// 95% CI column
 		tr.append('td').html(`${cols.shift()} &ndash; ${cols.shift()}`).style('padding', '8px')
 		// rest of columns
