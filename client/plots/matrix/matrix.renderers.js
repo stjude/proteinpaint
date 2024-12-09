@@ -266,9 +266,11 @@ export function setRenderers(self) {
 					axisg.selectAll('*').remove()
 					const domain = [lab.counts.maxval, lab.counts.minval]
 					if (s.transpose) domain.reverse()
-					const d = self.dimensions
-					const x = !s.transpose ? 0 : lab.tw.settings.gap - 1 - lab.labelOffset
-					const y = !s.transpose ? lab.tw.settings.gap - 1 - lab.labelOffset : 0
+
+					const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
+					const twSettings = twSpecificSettings[lab.tw.$id]
+					const x = !s.transpose ? 0 : twSettings.contBarGap - 1 - lab.labelOffset
+					const y = !s.transpose ? twSettings.contBarGap - 1 - lab.labelOffset : 0
 					axisg
 						.attr('shape-rendering', 'crispEdges')
 						.attr('transform', `translate(${x},${y})`)

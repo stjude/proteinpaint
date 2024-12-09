@@ -248,6 +248,11 @@ export function setLabelsAndScales() {
 					: ((100 * t.counts.samples) / this.sampleOrder.length).toFixed(1) + '%'
 			t.label = `${t.label} (${count})`
 		}
+
+		const twSpecificSettings = this.config.settings.matrix.twSpecificSettings
+		if (!twSpecificSettings[t.tw.$id]) twSpecificSettings[t.tw.$id] = {}
+		const twSettings = twSpecificSettings[t.tw.$id]
+
 		if (t.grp.type !== 'hierCluster' && t.tw.q?.mode == 'continuous') {
 			const vc = t.tw.term.valueConversion
 			if (vc) {
@@ -276,10 +281,10 @@ export function setLabelsAndScales() {
 				t.counts.maxval = (t.counts.maxval - mean) / std
 			}
 
-			if (!t.tw.settings) t.tw.settings = {}
-			if (!t.tw.settings.barh) t.tw.settings.barh = s.barh
-			if (!('gap' in t.tw.settings)) t.tw.settings.gap = 4
-			const barh = t.tw.settings.barh
+			if (!twSettings.contBarH) twSettings.contBarH = s.barh
+			if (!('gap' in twSettings)) twSettings.contBarGap = 4
+			const barh = twSettings.contBarH
+
 			const absMin = Math.abs(t.counts.minval)
 			const rangeSpansZero = t.counts.minval < 0 && t.counts.maxval > 0
 			const ratio = t.counts.minval >= 0 ? 1 : t.counts.maxval / (absMin + t.counts.maxval)
@@ -309,7 +314,11 @@ export function setLabelsAndScales() {
 
 		t.totalHtAdjustments = totalHtAdjustments
 		t.rowHt =
-			t.grp.type == 'hierCluster' ? s.clusterRowh : t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht
+			t.grp.type == 'hierCluster'
+				? s.clusterRowh
+				: twSettings.contBarH && t.tw.q?.mode == 'continuous'
+				? twSettings.contBarH + 2 * twSettings.contBarGap
+				: ht
 		// adjustment is the difference in actual computed row height - "standard" row
 		// need to subtract s.rowspace for hierCluster row to remove gaps between heatmap rows
 		const adjustment = t.rowHt - ht - (t.grp.type == 'hierCluster' ? s.rowspace : 0)

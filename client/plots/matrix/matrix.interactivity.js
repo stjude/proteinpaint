@@ -5,6 +5,7 @@ import { icons, newSandboxDiv, Menu, renderTable, table2col } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { TermTypes, isNumericTerm } from '#shared/terms.js'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common.js'
+import { rgb2hex } from '#src/client'
 
 let inputIndex = 0
 const svgIcons = {
@@ -46,17 +47,14 @@ export function setInteractivity(self) {
 		const s = self.settings.matrix
 		const l = s.controlLabels
 
+		const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
+		const twBarh = twSpecificSettings[d.tw.$id]?.contBarH
+		const twGap = twSpecificSettings[d.tw.$id]?.contBarGap
+
 		self.dom.rowBeam
 			.attr('x', x)
 			.attr('y', y + d.seriesY)
-			.attr(
-				'height',
-				d.tw.settings?.barh
-					? d.tw.settings.barh + 2 * d.tw.settings.gap
-					: d.t.grp.type == 'hierCluster'
-					? s.clusterRowh
-					: s.rowh
-			)
+			.attr('height', twBarh ? twBarh + 2 * twGap : d.t.grp.type == 'hierCluster' ? s.clusterRowh : s.rowh)
 			.style('display', '')
 
 		self.dom.colBeam
@@ -800,6 +798,10 @@ function setTermActions(self) {
 				})
 		}
 
+		const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
+		if (!twSpecificSettings[t.tw.$id]) twSpecificSettings[t.tw.$id] = {}
+		const twSettings = twSpecificSettings[t.tw.$id]
+
 		const rowHeightColorEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
 		if (t.grp?.type !== 'hierCluster' && t.tw?.q?.mode == 'continuous') {
 			rowHeightColorEditDiv.append('span').text('Row Height')
@@ -810,28 +812,16 @@ function setTermActions(self) {
 				.style('padding', '1px 5px')
 				.style('text-align', 'center')
 				.style('width', '60px')
-				.property('value', t.tw.settings.barh)
+				.property('value', twSettings.contBarH)
 				.on('keyup', async event => {
 					if (event.code != 'Enter') return
 					const newBarh = parseFloat(self.dom.twRowheightInput.node().value)
-
-					const groupIndex = t.grp.origIndex
-					const group = structuredClone(t.grp)
-					const twIndex = group.lst.findIndex(tw => tw.$id == t.tw.$id)
-
-					const modifiedTW = structuredClone(t.tw)
-					if (!modifiedTW.settings) modifiedTW.settings = {}
-					modifiedTW.settings.barh = newBarh
+					twSettings.contBarH = newBarh
 
 					self.app.dispatch({
-						type: 'plot_nestedEdits',
+						type: 'plot_edit',
 						id: self.opts.id,
-						edits: [
-							{
-								nestedKeys: ['termgroups', groupIndex, 'lst', twIndex],
-								value: modifiedTW
-							}
-						]
+						config: { settings: { matrix: { twSpecificSettings } } }
 					})
 					self.dom.tip.hide()
 				})
@@ -850,26 +840,14 @@ function setTermActions(self) {
 				.attr('type', 'color')
 				.attr('aria-label', `change the bar color`)
 				.style('padding', '1px 5px')
-				.attr('value', t.tw.settings.color)
+				.attr('value', twSettings.contBarColor)
 				.on('change', async () => {
 					const color = self.dom.twRowColorInput.node().value
-					const groupIndex = t.grp.origIndex
-					const group = structuredClone(t.grp)
-					const twIndex = group.lst.findIndex(tw => tw.$id == t.tw.$id)
-
-					const modifiedTW = structuredClone(t.tw)
-					if (!modifiedTW.settings) modifiedTW.settings = {}
-					modifiedTW.settings.color = color
-
+					twSettings.contBarColor = color
 					self.app.dispatch({
-						type: 'plot_nestedEdits',
+						type: 'plot_edit',
 						id: self.opts.id,
-						edits: [
-							{
-								nestedKeys: ['termgroups', groupIndex, 'lst', twIndex],
-								value: modifiedTW
-							}
-						]
+						config: { settings: { matrix: { twSpecificSettings } } }
 					})
 					self.dom.tip.hide()
 				})
@@ -3232,6 +3210,49 @@ function setLengendActions(self) {
 								config: self.config
 							})
 						})
+				}
+
+				// adding the change color option
+				if (!targetData.domain) {
+					div.append('span').text('Color').style('padding', '5px 10px').style('margin', '1px')
+					self.dom.legendColorInput = div
+						.append('input')
+						.attr('type', 'color')
+						.attr('aria-label', `change the bar color`)
+						.attr('value', targetData.color?.startsWith('rgb') ? rgb2hex(targetData.color) : targetData.color)
+						.on('change', async () => {
+							menuGrp.hide()
+							const color = self.dom.legendColorInput.node().value
+							if (targetData.dt) {
+								if (!mclass[targetData.key].origColor) mclass[targetData.key].origColor = mclass[targetData.key].color
+								mclass[targetData.key].color = color
+								self.main()
+								return
+							}
+
+							const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
+							if (!twSpecificSettings[targetData.$id]) twSpecificSettings[targetData.$id] = {}
+							const twSettings = twSpecificSettings[targetData.$id]
+
+							if (!twSettings[targetData.key]) twSettings[targetData.key] = {}
+							twSettings[targetData.key].color = color
+
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.opts.id,
+								config: { settings: { matrix: { twSpecificSettings } } }
+							})
+						})
+					if (targetData.dt && mclass[targetData.key].origColor) {
+						const resetDiv = div.append('div').style('display', 'inline-block')
+						const handler = () => {
+							menuGrp.hide()
+							mclass[targetData.key].color = mclass[targetData.key].origColor
+							delete mclass[targetData.key].origColor
+							self.main()
+						}
+						icons['restart'](resetDiv, { handler, title: 'Reset to original color' })
+					}
 				}
 				menuGrp.showunder(event.target)
 			}
