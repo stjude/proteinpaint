@@ -810,6 +810,7 @@ export function isRecoverableError(e) {
 	//
 	// code=ENOTFOUND, ETIMEDOUT, etc below are from undici when network is down,
 	// it's not an HTTP response status code from an API
+	if (e.cause?.errors) console.log(e.cause.code, e.cause.errors)
 	return code == 'ENOTFOUND' || code == 'ETIMEDOUT'
 }
 
@@ -906,7 +907,6 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 				// - In the meantime, replacing ky with node-fetch may be a good enough fix for edge cases of very large, long-running requests.
 				jsonBody = await nodeFetch(url, opts)
 					.then(async r => {
-						console.log(889, r.status)
 						const contentType = r.headers.get('content-type')
 						const payload = contentType == 'application/json' ? await r.json() : await r.text()
 						if (!r.ok || (typeof r?.status == 'number' && r?.status > 399 && r.status < 500)) {
