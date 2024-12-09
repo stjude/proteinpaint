@@ -795,7 +795,7 @@ function drawCanvas(tk: any, block: any) {
 
 	tk.img.attr('width', canvaswidth).attr('height', canvasheight).attr('xlink:href', canvas.toDataURL())
 
-	tk.colorScale.data = [0, maxv]
+	tk.colorScale.domain = [0, maxv]
 	tk.colorScale.markedValue = tk.mincutoff
 	tk.colorScale.updateScale()
 
@@ -889,7 +889,7 @@ function makeTk(tk: any, block: any) {
 			barheight,
 			barwidth,
 			//data will update after loading data
-			data: [0, 1],
+			domain: [0, 1],
 			fontSize: 12,
 			height: 45,
 			width: 120,
