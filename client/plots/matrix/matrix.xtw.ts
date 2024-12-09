@@ -75,8 +75,11 @@ const discreteAddons: MatrixTWObj = {
 			const key = anno.key
 			const values = tw.term.values || {}
 			cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
-			cell.fill = anno.color || values[anno.key]?.color
-
+			cell.fill =
+				self.config.settings.matrix.twSpecificSettings?.[tw.$id]?.[key]?.color ||
+				anno.color ||
+				values[anno.key]?.color ||
+				self.data.refs.byTermId?.[tw.$id]?.bins?.find(b => anno.key == b.name)?.color
 			// only for numeric terms for now
 			// TODO: should also consider categorical term.values[*].order
 			cell.order = t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
@@ -111,9 +114,11 @@ const continuousAddons: MatrixTWObj = {
 			cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
 			cell.fill = anno.color || values[anno.key]?.color
 
-			if (!tw.settings) tw.settings = {}
-			if (!tw.settings.barh) tw.settings.barh = s.barh
-			if (!('gap' in tw.settings)) tw.settings.gap = 4
+			const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
+			if (!twSpecificSettings[tw.$id]) twSpecificSettings[tw.$id] = {}
+			const twSettings = twSpecificSettings[tw.$id]
+			if (!twSettings.contBarH) twSettings.contBarH = s.barh
+			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 
 			const specialValue = tw.term.values?.[cell.key]
 
@@ -124,7 +129,7 @@ const continuousAddons: MatrixTWObj = {
 			if (specialValue?.uncomputable) {
 				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 				cell.y = height * i
-				cell.height = tw.settings.barh
+				cell.height = twSettings.contBarH
 				cell.fill = 'transparent'
 				cell.label = specialValue.label
 				const group = tw.legend?.group || tw.$id
@@ -138,10 +143,11 @@ const continuousAddons: MatrixTWObj = {
 
 			// TODO: may use color scale instead of bars
 			// for bars, use a hardcoded color; TODO: allow a user to customize the bar color?
-			cell.fill = tw.settings.color || '#555'
+			const tw$id = tw.$id
+			cell.fill = self.config.settings.matrix.twSpecificSettings?.[tw$id]?.contBarColor || '#555'
 			if (s.transpose) {
 				cell.height = t.scale(cell.key)
-				cell.x = tw.settings.gap // - cell.width
+				cell.x = twSettings.contBarGap // - cell.width
 			} else {
 				const vc = cell.term.valueConversion
 				let renderV = vc ? cell.key * vc.scaleFactor : cell.key
@@ -164,7 +170,9 @@ const continuousAddons: MatrixTWObj = {
 				cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
 				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 				cell.y =
-					renderV >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : t.counts.posMaxHt + t.tw.settings.gap
+					renderV >= 0
+						? t.counts.posMaxHt + twSettings.contBarGap - cell.height
+						: t.counts.posMaxHt + twSettings.contBarGap
 				cell.convertedValueLabel = !vc ? '' : convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
 			}
 		}

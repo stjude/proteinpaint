@@ -18,14 +18,15 @@ export function getSerieses(data) {
 		const cellht = t.grp.type == 'hierCluster' ? s.clusterRowh : dy
 		const htAdjust = t.grp.type == 'hierCluster' ? 0 : t.totalHtAdjustments
 		const y = s.transpose ? 0 : t.totalIndex * cellht + t.visibleGrpIndex * s.rowgspace + htAdjust
-		const hoverY0 = (t.tw.settings?.gap || 0) + y
+		const twSpecificSettings = this.config.settings.matrix.twSpecificSettings
+		const hoverY0 = (twSpecificSettings[$id]?.contBarGap || 0) + y
 		const series = {
 			t,
 			tw: t.tw,
 			cells: [],
 			y,
 			hoverY0,
-			hoverY1: hoverY0 + (t.tw.settings?.barh || cellht)
+			hoverY1: hoverY0 + (twSpecificSettings[$id]?.contBarColor || cellht)
 		}
 
 		for (const so of this.unfilteredSampleOrder) {
