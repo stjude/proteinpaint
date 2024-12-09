@@ -808,9 +808,9 @@ export function isRecoverableError(e) {
 	// where retries with the same payload/headers will always fail and is not
 	// recoverable.
 	//
-	// code=ENOTFOUND below is from undici when local wifi is down,
+	// code=ENOTFOUND, ETIMEDOUT, etc below are from undici when network is down,
 	// it's not an HTTP response status code from an API
-	return code == 'ENOTFOUND'
+	return code == 'ENOTFOUND' || code == 'ETIMEDOUT'
 }
 
 const extApiCache = serverconfig.features?.extApiCache || {}
