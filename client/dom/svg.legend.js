@@ -195,16 +195,15 @@ export default function svgLegend(opts) {
 				barwidth: width,
 				barheight: settings.iconh,
 				colors: d.colors || d.scale.range() || ['white', 'grey'],
-				data,
+				domain: d.domain || data,
 				fontSize: 0.82 * settings.fontsize,
 				holder: g,
 				id: colorGradientId,
 				position: `${bbox.width + 25},${yPos}`,
 				//For larger ranges, reduce the number of ticks
-				ticks: Math.abs(d.domain[d.domain.length - 1] - d.domain[0]) > 10 ? 2 : 3,
+				ticks: Math.abs(d.domain[d.domain.length - 1] - d.domain[0]) > 1 ? 2 : 3,
 				tickSize: 2,
-				topTicks: true,
-				domain: d.domain
+				topTicks: true
 			}
 			if (d.termid.toLowerCase().includes('cnv') && d.domain[0] < 0 && d.domain[d.domain.length - 1] > 0) {
 				opts.labels = { left: 'Loss', right: 'Gain' }

@@ -70,7 +70,7 @@ export class InfoBar {
 		this.colorScale = new ColorScale({
 			barheight: 20,
 			barwidth: 100,
-			data: [this.parent('min'), this.parent('max')],
+			domain: [this.parent('min'), this.parent('max')],
 			fontSize: 12,
 			height: 40,
 			width: 150,
@@ -107,10 +107,10 @@ export class InfoBar {
 
 			if (min < 0) {
 				this.colorScale.colors = ['blue', 'white', 'red']
-				this.colorScale.data = [min, 0, max]
+				this.colorScale.domain = [min, 0, max]
 			} else {
 				this.colorScale.colors = ['white', 'red']
-				this.colorScale.data = [0, max]
+				this.colorScale.domain = [0, max]
 			}
 			this.colorScale.markedValue = min
 			this.colorScale.updateScale()
