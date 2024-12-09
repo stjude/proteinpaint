@@ -74,11 +74,11 @@ export function setRenderers(self) {
 		// supply start and stop color, if term has hardcoded colors, use; otherwise use default
 		if (!self.config.startColor[chart.id]) {
 			self.config.startColor[chart.id] =
-				self.config.colorTW.term.continuousColorScale?.minColor || rgb(gradientColor).brighter().brighter().toString()
+				self.config.colorTW?.term.continuousColorScale?.minColor || rgb(gradientColor).brighter().brighter().toString()
 		}
 		if (!self.config.stopColor[chart.id]) {
 			self.config.stopColor[chart.id] =
-				self.config.colorTW.term.continuousColorScale?.maxColor || rgb(gradientColor).darker().toString()
+				self.config.colorTW?.term.continuousColorScale?.maxColor || rgb(gradientColor).darker().toString()
 		}
 
 		if (self.config.colorTW?.q.mode === 'continuous') {
