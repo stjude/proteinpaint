@@ -7,26 +7,18 @@ export type ColorScaleOpts = {
 	barheight?: number
 	/** Optional but recommended. The width of the color bar in px. Default is 100. */
 	barwidth?: number
-	/**
-	 * Optional; the domain array has the desired values to use for computing gradient offset
-	 * for each entry in colors array. May be used in cases where the left and right values
-	 * on either ends of the scale are equal in magnitude (absolute max values) and the
-	 * middle value is zero.
-	 * */
-	domain?: undefined | number[]
 	/** Optional but highly recommend. Default is a white to red scale.
-	 * The length of the array must match the data array. */
+	 * The length of the array must match the domain array. */
 	colors?: string[]
 	/** Specifies the default min and max mode if setMinMaxCallback is provided
 	 * If 'auto', renders the default min and max set on init
 	 * if 'fixed', renders the min and max set by the user.
 	 */
 	cutoffMode?: 'auto' | 'fixed'
-	/** Required
-	 * Specifies the values to show along a number line. Only pass the min and max.
-	 * If the data spans negative and positive values, include zero in the array.
+	/** Required. Specifies the values to show along a number line.
+	 * The length must equal the colors array length.
 	 */
-	data: number[]
+	domain: number[]
 	/** Optional. Font size in px of the text labels. Default is 10. */
 	fontSize?: number
 	/** Required. Either a div or svg element.
@@ -89,7 +81,7 @@ export type ColorScaleMenuOpts = {
 	barG: SvgG
 	colors: string[]
 	cutoffMode: 'auto' | 'fixed'
-	data: number[]
+	domain: number[]
 	setColorsCallback?: (val: string, idx: number) => void
 	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
 }

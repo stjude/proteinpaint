@@ -729,7 +729,7 @@ export function setRenderers(self) {
 						barheight: 20,
 						barwidth: 150,
 						colors: [self.config.startColor[chart.id], self.config.stopColor[chart.id]],
-						data: [min, max],
+						domain: [min, max],
 						position: `0, 100`,
 						ticks: 4,
 						tickSize: 5,

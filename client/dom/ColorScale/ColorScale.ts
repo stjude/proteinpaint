@@ -13,11 +13,10 @@ export class ColorScale {
 	dom: ColorScaleDom
 	barheight: number
 	barwidth: number
-	domain: undefined | number[]
 	colors: string[]
 	cutoffMode?: 'auto' | 'fixed'
 	default?: { min: number; max: number }
-	data: number[]
+	domain: number[]
 	fontSize: number
 	markedValue?: number | null
 	menu?: ColorScaleMenu
@@ -36,17 +35,16 @@ export class ColorScale {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
 		this.colors = opts?.colors?.length ? opts.colors : ['white', 'red']
-		this.data = opts.data
+		this.domain = opts.domain
 		this.fontSize = opts.fontSize || 10
 		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
 		this.topTicks = opts.topTicks || false
-		this.domain = opts.domain
 
 		this.validateOpts(opts)
 
-		this.tickValues = niceNumLabels(opts.data)
+		this.tickValues = niceNumLabels(opts.domain)
 
 		let scaleSvg: SvgSvg //
 		if (opts.width || opts.height) {
@@ -86,8 +84,8 @@ export class ColorScale {
 
 	validateOpts(opts: ColorScaleOpts) {
 		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
-		if (!opts.data || !opts.data.length) throw new Error('No data provided for #dom/ColorScale.')
-		if (opts.data.length != this.colors.length)
+		if (!opts.domain || !opts.domain.length) throw new Error('No data provided for #dom/ColorScale.')
+		if (opts.domain.length != this.colors.length)
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 		if (opts.labels && (!opts.labels.left || !opts.labels.right))
 			throw new Error('Missing a label for #dom/ColorScale.')
@@ -190,7 +188,7 @@ export class ColorScale {
 		const _opts: ColorScaleMenuOpts = {
 			scaleSvg,
 			barG,
-			data: this.data,
+			domain: this.domain,
 			colors: this.colors,
 			cutoffMode: opts.cutoffMode || 'auto'
 		}
@@ -228,7 +226,7 @@ export class ColorScale {
 	updateAxis() {
 		this.dom.scaleAxis.selectAll('*').remove()
 
-		this.tickValues = niceNumLabels(this.data)
+		this.tickValues = niceNumLabels(this.domain)
 		this.dom.scale = scaleLinear().domain(this.tickValues).range(this.getRange())
 
 		this.dom.scaleAxis
@@ -274,11 +272,11 @@ export class ColorScale {
 	updateMenu() {
 		if (!this.menu) return
 		this.menu.colors = this.colors
-		this.menu.data = this.data
+		this.menu.domain = this.domain
 	}
 
 	updateScale() {
-		if (this.data.length != this.colors.length)
+		if (this.domain.length != this.colors.length)
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 		this.updateColors()
 		this.updateAxis()

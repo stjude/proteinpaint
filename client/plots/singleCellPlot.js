@@ -1008,7 +1008,7 @@ class singleCellPlot {
 			barwidth,
 			barheight: 20,
 			colors,
-			data: [plot.min, plot.max],
+			domain: [plot.min, plot.max],
 			position: '0, 20',
 			ticks: 4,
 			tickSize: 5,
