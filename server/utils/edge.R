@@ -145,8 +145,8 @@ names(output)[2] <- "gene_symbol"
 names(output)[3] <- "fold_change"
 names(output)[4] <- "original_p_value"
 names(output)[5] <- "adjusted_p_value"
-
-paste0("adjusted_p_values:",toJSON(output))
+#write_csv(output,"DE_output.txt")
+cat(paste0("adjusted_p_values:",toJSON(output)))
 #output_json <- toJSON(output)
 #print ("output_json")
 #output_file <- paste0(input$output_path,"/r_output.txt")

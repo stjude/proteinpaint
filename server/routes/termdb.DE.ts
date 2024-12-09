@@ -40,9 +40,9 @@ function init({ genomes }) {
 async function run_DE(param: DERequest, ds: any) {
 	/*
 param{}
-        samplelst{}
-                groups[]
-                        values[] // using integer sample id
+    samplelst{}
+            groups[]
+                    values[] // using integer sample id
 */
 	if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
@@ -108,9 +108,9 @@ param{}
 	} as ExpressionInput
 
 	//console.log('expression_input:', expression_input)
-	//fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
-	//	// For catching input to rust pipeline, in case of an error
-	//	if (err) return console.log(err)
+	//fs.writeFile('test.txt', JSON.stringify(expression_input), function(err) {
+	//    // For catching input to rust pipeline, in case of an error
+	//    if (err) return console.log(err)
 	//})
 
 	const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
@@ -123,9 +123,10 @@ param{}
 		console.log('Time taken to run edgeR:', time2 - time1, 'ms')
 		for (const line of r_output.split('\n')) {
 			if (line.startsWith('adjusted_p_values:')) {
+				//console.log("line1:", line.replace('adjusted_p_values:', ''))
 				result = JSON.parse(line.replace('adjusted_p_values:', ''))
 			} else {
-				//console.log(line)
+				//console.log("line:", line)
 			}
 		}
 		param.method = 'edgeR'
@@ -159,6 +160,6 @@ param{}
 		console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
 		param.method = 'wilcoxon'
 	}
-	//console.log("result:",result)
+	//console.log("result:", result)
 	return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
 }
