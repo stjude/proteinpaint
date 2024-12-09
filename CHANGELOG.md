@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- scrna gene exp violin disables brushing and label menu
+
 
 ## 2.89.0
 
