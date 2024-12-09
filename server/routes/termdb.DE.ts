@@ -122,10 +122,11 @@ param{}
 		const time2 = new Date().valueOf()
 		console.log('Time taken to run edgeR:', time2 - time1, 'ms')
 		for (const line of r_output.split('\n')) {
-			if (line.startsWith('adjusted_p_values:')) {
-				result = JSON.parse(line.replace('adjusted_p_values:', ''))
+			if (line.startsWith('"adjusted_p_values:')) {
+				//console.log("line1:",line)
+				result = JSON.parse(line.replace('"adjusted_p_values:', ''))
 			} else {
-				//console.log(line)
+				//console.log("line2:",line)
 			}
 		}
 		param.method = 'edgeR'
