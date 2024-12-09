@@ -504,7 +504,7 @@ function may_update_infoFields(data, tk) {
 
 function update_mclass(tk) {
 	if (!tk.legend.mclass.currentData || tk.legend.mclass.currentData.length == 0) return
-	// console.log(tk.legend.mclass.currentData)
+	// currentData[]: each ele is an entry to show in legend [ [class=str, count], [dt=integer, count] ]
 
 	tk.legend.mclass.holder.selectAll('*').remove()
 

@@ -1,6 +1,7 @@
 import { mayCopyFromCookie, fileurl } from './utils'
 import { snvindelByRangeGetter_bcf } from './mds3.init'
 import { validate_variant2samples } from './mds3.variant2samples.js'
+import { dtcnv } from '#shared/common.js'
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -277,6 +278,10 @@ async function load_driver(q, ds) {
 			filter_data(q, result)
 
 			result.mclass2variantcount = summarize_mclass(result.skewer)
+			// [ [ 'M', 2 ], [ 'F', 1 ], ..]
+			if (result.cnv) {
+				result.mclass2variantcount.push([dtcnv, result.cnv.length])
+			}
 		}
 
 		// add queries for new data types
