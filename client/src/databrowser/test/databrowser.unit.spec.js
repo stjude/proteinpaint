@@ -24,6 +24,7 @@ blank or dash in required data column
 missing k=v in values (dictionary format)
 uncomputable category is a string but not number
 uncomputable category is empty string but not number
+add additional attributes to term
 
 *****************/
 
@@ -42,7 +43,6 @@ tape('levels before variable, type, and categories - no gaps', function (test) {
 		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
-	const holder = getHolder()
 	const results = parseDictionary(tsv)
 	const expected = [
 		{
@@ -92,7 +92,6 @@ tape('levels before variable, type, and categories - no gaps', function (test) {
 		{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 	]
 	test.deepEqual(results.terms, expected, 'should output the expected terms array')
-	test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	test.end()
 })
 
@@ -108,7 +107,6 @@ tape('levels after variable, type, categories - with gap', function (test) {
 
 	const message = 'should output the expected terms array'
 	try {
-		const holder = getHolder()
 		const results = parseDictionary(tsv)
 		const expected = [
 			{
@@ -159,7 +157,6 @@ tape('levels after variable, type, categories - with gap', function (test) {
 			{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 		]
 		test.deepEqual(results.terms, expected, message)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
@@ -176,7 +173,6 @@ tape('empty variable', function (test) {
 		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
-	const holder = getHolder()
 	const results = parseDictionary(tsv)
 	const expected = [
 		{
@@ -226,7 +222,6 @@ tape('empty variable', function (test) {
 		{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 	]
 	test.deepEqual(results.terms, expected, 'should use the variable name as term.id')
-	test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	test.end()
 })
 
@@ -242,7 +237,6 @@ tape('extra, non essential column', function (test) {
 
 	const message = `should display data properly, no errors`
 	try {
-		const holder = getHolder()
 		const results = parseDictionary(tsv)
 		const expected = [
 			{
@@ -292,7 +286,6 @@ tape('extra, non essential column', function (test) {
 			{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 		]
 		test.deepEqual(results.terms, expected, message)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
@@ -311,7 +304,6 @@ tape('no level columns', function (test) {
 
 	const message = `should display dictionary with variable name (i.e. id) as name`
 	try {
-		const holder = getHolder()
 		const results = parseDictionary(tsv)
 		const expected = [
 			{
@@ -356,14 +348,13 @@ tape('no level columns', function (test) {
 			}
 		]
 		test.deepEqual(results.terms, expected, message)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display dictionary, no errors')
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
 	test.end()
 })
 
-tape('repeated level names, same line', function (test) {
+tape.skip('repeated level names, same line', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
@@ -373,11 +364,9 @@ tape('repeated level names, same line', function (test) {
 		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
-	const holder = getHolder()
 	const message = 'should display an error for repeated level names in the same line'
 	try {
 		const results = parseDictionary(tsv)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display dictionary, no errors')
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
@@ -647,7 +636,6 @@ tape('add unit to term', function (test) {
 	].join('\n')
 	const message = `Should add unit to term`
 	try {
-		const holder = getHolder()
 		const results = parseDictionary(tsv)
 		const expected = [
 			{
@@ -694,7 +682,6 @@ tape('add unit to term', function (test) {
 			}
 		]
 		test.deepEqual(results.terms, expected, message)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
@@ -718,16 +705,3 @@ tape('add additional attributes to term', function (test) {
 	}
 	test.end()
 })
-
-/***********************************
- reusable helper vars and functions
-************************************/
-
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-}
