@@ -91,7 +91,6 @@ tape('levels before variable, type, and categories - no gaps', function (test) {
 		{ id: 'B', name: 'B', isleaf: false, child_order: 2, parent_id: null },
 		{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 	]
-	console.log(results.terms[0], expected[0])
 	test.deepEqual(results.terms, expected, 'should output the expected terms array')
 	test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	test.end()
