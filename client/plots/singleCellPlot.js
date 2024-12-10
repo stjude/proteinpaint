@@ -535,20 +535,9 @@ class singleCellPlot {
 				chartType: 'singleCellPlot',
 				settingsKey: 'sampleSize',
 				title: 'Sample size',
-				min: 0.001,
-				max: 0.1,
-				step: 0.001
-			},
-
-			{
-				label: 'Field of vision',
-				type: 'number',
-				chartType: 'singleCellPlot',
-				settingsKey: 'threeFOV',
-				title: 'When larger the plot will be more zoomed out',
-				min: 30,
-				max: 70,
-				step: 5
+				min: 1,
+				max: 3,
+				step: 0.5
 			}
 		]
 
@@ -753,7 +742,6 @@ class singleCellPlot {
 				plot.max = max
 			}
 		}
-
 		if (plot.cells.length > maxSamplesD3) {
 			this.renderLargePlotThree(plot)
 			this.renderLegend(plot)
@@ -818,7 +806,7 @@ class singleCellPlot {
 			if (this.state.config.min > d.geneExp) return 0
 			if (this.state.config.max < d.geneExp) return 0
 		}
-		return 0.8
+		return this.settings.opacity
 	}
 
 	getColor(d, plot) {
@@ -843,7 +831,7 @@ class singleCellPlot {
 		const r = 5
 		if (plot.cells.length > maxSamplesD3) {
 			plot.xAxisScale = d3Linear().domain([xMin, xMax]).range([-1, 1])
-			plot.yAxisScale = d3Linear().domain([yMax, yMin]).range([1, -1])
+			plot.yAxisScale = d3Linear().domain([yMin, yMax]).range([-1, 1])
 		} else {
 			plot.xAxisScale = d3Linear()
 				.domain([xMin, xMax])
@@ -1214,10 +1202,10 @@ class singleCellPlot {
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
 		const tex = getCircle(128)
 		const material = new THREE.PointsMaterial({
-			size: this.settings.sampleSize,
+			size: this.settings.sampleSize * 0.001,
 			sizeAttenuation: true,
 			transparent: true,
-			opacity: 1,
+			opacity: this.settings.opacity,
 			map: tex,
 			vertexColors: true
 		})
@@ -1333,10 +1321,11 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 500,
-		svgh: 500,
+		svgw: 900,
+		svgh: 900,
 		showGrid: true,
-		sampleSize: 0.002,
-		threeFOV: 55
+		sampleSize: 1.5,
+		threeFOV: 55,
+		opacity: 0.8
 	}
 }
