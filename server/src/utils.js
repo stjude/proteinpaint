@@ -794,6 +794,18 @@ export function boxplot_getvalue(lst) {
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
 
+const RecoverableErrorCodes = new Set([
+	'ECONNRESET',
+	'ECONNREFUSED',
+	'ENOTFOUND',
+	'ENETDOWN',
+	'ENETUNREACH',
+	'EHOSTDOWN',
+	'EHOSTUNREACH',
+	'EPIPE',
+	'UND_ERR_SOCKET'
+])
+
 // only use this helper when catching errors that may be due to
 // external API server errors or network connection failures;
 // the `e` argument is expected to have a network-related error code, some of which
@@ -811,7 +823,7 @@ export function isRecoverableError(e) {
 	// code=ENOTFOUND, ETIMEDOUT, etc below are from undici when network is down,
 	// it's not an HTTP response status code from an API
 	if (e.cause?.errors) console.log(e.cause.code, e.cause.errors)
-	return code == 'ENOTFOUND' || code == 'ETIMEDOUT'
+	return RecoverableErrorCodes.has(code)
 }
 
 const extApiCache = serverconfig.features?.extApiCache || {}

@@ -37,7 +37,7 @@ export async function mayRetryDsPreInit(ds: Mds3): Promise<any> {
 			throw new Error('preInit error: ' + (response.message || response))
 		} else {
 			// ok to retry on recoverable error
-			console.warn(`First ${ds.label} preInit.getStatus() request failed. (${retryMax} attempts left)`)
+			console.log(`First ${ds.label} preInit.getStatus() request failed. (${retryMax} attempts left)`)
 			// subsequent retries uses a loop via setInterval
 			// NOTE: Using await with recursive function may have memory performance penalties,
 			// since a new promise gets created with each recursion and its not clear how
@@ -59,7 +59,7 @@ export async function mayRetryDsPreInit(ds: Mds3): Promise<any> {
 						}
 					} catch (response) {
 						//console.log(89, response)
-						console.warn(`preInit.getStatus() check failed. Retrying... (${retryMax - currentRetry} attempts left)`)
+						console.log(`preInit.getStatus() check failed. Retrying... (${retryMax - currentRetry} attempts left)`)
 						if (currentRetry >= retryMax) {
 							clearInterval(interval) // cancel retries
 							console.error('Max preInit.getStatus() retry attempts reached. Failing with error:', response)
