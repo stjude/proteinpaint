@@ -1016,14 +1016,14 @@ class singleCellPlot {
 			cutoffMode: this.state.config.min || this.state.config.max ? 'fixed' : 'auto',
 			setColorsCallback: (val, idx) => {
 				this.changeGradientColor(plot, val, idx)
-			},
-			setMinMaxCallback: obj => {
-				if (obj.cutoffMode == 'auto') {
-					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: null, max: null } })
-				} else if (obj.cutoffMode == 'fixed') {
-					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: obj.min, max: obj.max } })
-				}
 			}
+			// setMinMaxCallback: obj => {
+			// 	if (obj.cutoffMode == 'auto') {
+			// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: null, max: null } })
+			// 	} else if (obj.cutoffMode == 'fixed') {
+			// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: obj.min, max: obj.max } })
+			// 	}
+			// }
 		})
 		colorScale.updateScale()
 
