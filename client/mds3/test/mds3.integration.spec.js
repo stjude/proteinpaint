@@ -11,6 +11,7 @@ Official data on TP53, extensive ui test
 Official - mclass filtering
 Official - sample summaries table, create subtrack (tk.filterObj)
 Official - allow2selectSamples
+Official - hardcodeCnvOnly
 Incorrect dslabel
 Custom cnv only, no sample
 Custom ssm only, no sample
@@ -47,7 +48,7 @@ tape('Official data on TP53, extensive ui test', test => {
 		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
 	})
 	async function callbackOnRender(tk, bb) {
-		// tk is gdc mds3 track object; bb is block object
+		// tk is mds3 track object; bb is block object
 		test.equal(bb.usegm.name, gene, 'block.usegm.name=' + gene)
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
 		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
@@ -475,6 +476,29 @@ must use a gene with both single and multi occurrence mutations to test
 		test.end()
 	}
 }
+
+tape('Official - hardcodeCnvOnly', test => {
+	const holder = getHolder()
+	const gene = 'TP53'
+	runproteinpaint({
+		holder,
+		genome: 'hg38-test',
+		gene,
+		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', hardcodeCnvOnly: true, callbackOnRender }]
+	})
+	async function callbackOnRender(tk, bb) {
+		test.equal(bb.usegm.name, gene, 'block.usegm.name=' + gene)
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.ok(tk.skewer.rawmlst.length == 0, 'cnv-only: skewer.rawmlst.length ==0')
+		test.ok(tk.cnv.cnvLst.length > 0, 'cnv-only: cnv.cnvLst.length >0')
+		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
+		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
+		test.ok(tk.legend.cnv, 'tk.legend.cnv{} is set')
+		// todo: more tests
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
 
 tape('Incorrect dslabel', test => {
 	const holder = getHolder()

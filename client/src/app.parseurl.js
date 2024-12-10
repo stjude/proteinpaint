@@ -625,6 +625,7 @@ export async function get_tklst(urlp, genomeobj) {
 			}
 			if (urlp.has('token')) tk.token = urlp.get('token') // temporary
 			if (urlp.has('filterobj')) tk.filterObj = urlp.get('filterobj')
+			if (urlp.has('cnvonly')) tk.hardcodeCnvOnly = true // quick fix for testing cnv-only mode via url param; in actual use this flag should be set in runpp()
 			tklst.push(tk)
 		}
 	}

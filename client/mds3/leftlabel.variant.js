@@ -100,7 +100,8 @@ function menu_variants(tk, block) {
 			listVariantData(tk, block)
 		})
 
-	if (tk.skewer) {
+	if (tk.skewer && !tk.hardcodeCnvOnly) {
+		// these are skewer-specific options, if hardcoded cnv-only, do not show;
 		if (tk.skewer.hlssmid) {
 			tk.menutip.d
 				.append('div')

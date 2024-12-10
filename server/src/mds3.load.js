@@ -243,7 +243,8 @@ async function load_driver(q, ds) {
 			// get skewer data
 			result.skewer = [] // for skewer track
 
-			if (ds.queries.snvindel) {
+			if (ds.queries.snvindel && !q.hardcodeCnvOnly) {
+				// !!
 				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
 				const mlst = await query_snvindel(q, ds)
 				/* mlst=[], each element:
@@ -256,13 +257,13 @@ async function load_driver(q, ds) {
 				result.skewer.push(...mlst)
 			}
 
-			if (ds.queries.svfusion) {
+			if (ds.queries.svfusion && !q.hardcodeCnvOnly) {
 				// todo
 				const d = await query_svfusion(q, ds)
 				result.skewer.push(...d)
 			}
 
-			if (ds.queries.geneCnv) {
+			if (ds.queries.geneCnv && !q.hardcodeCnvOnly) {
 				// just a test; can allow gene-level cnv to be indicated as leftlabel
 				// can disable this step if not to show it in skewer tk
 				// trouble is that it's using case id as event.samples[].sample_id
@@ -271,6 +272,7 @@ async function load_driver(q, ds) {
 				// this is not appended to result.skewer[]
 				result.geneCnv = lst
 			}
+
 			if (ds.queries.cnv) {
 				if (q.hiddenmclass?.has(dtcnv)) {
 					// cnv is hidden, do not load

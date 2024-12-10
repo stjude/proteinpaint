@@ -81,6 +81,10 @@ function create_mclass(tk, block) {
 	if (!tk.legend.mclass.hiddenvalues) tk.legend.mclass.hiddenvalues = new Set()
 
 	tk.legend.mclass.row = tk.legend.table.append('tr')
+	if (tk.hardcodeCnvOnly) {
+		// in cnv-only mode, keep mutation legend invisible and still create tk.legend.mclass{} to avoid breaking logic
+		tk.legend.mclass.row.style('display', 'none')
+	}
 
 	tk.legend.mclass.row
 		.append('td')
@@ -503,9 +507,10 @@ function may_update_infoFields(data, tk) {
 }
 
 function update_mclass(tk) {
+	if (tk.hardcodeCnvOnly) return // legend is permanently hidden, no need to update
 	if (!tk.legend.mclass.currentData || tk.legend.mclass.currentData.length == 0) return
-	/* currentData[]: each element is an entry to show in legend [ [class=str, count], [dt=integer, count] ]
-	[0] of an element can be either string or integer:
+	/* currentData[]: each element is shown as an entry in legend [ [class=str, count], [dt=integer, count] ]
+	element is length=2 array. ele[0] can be either string or integer:
 	- string: mclass key for snvindel
 	- integer: a dt value e.g. dtcnv, those dt that doesn't have a corresponding mclass key
 	*/
