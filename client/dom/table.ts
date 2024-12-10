@@ -183,7 +183,11 @@ export function renderTable({
 	}
 	if (showHeader)
 		for (const c of columns) {
-			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
+			const th = theadRow
+				.append('th')
+				.style('font-size', '1.1em')
+				.text(c.label)
+				.attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
 			if (c.title) th.attr('title', c.title)
 		}

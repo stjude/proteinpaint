@@ -146,8 +146,7 @@ function getChartTypeList(self, state) {
 			chartType: 'profileForms',
 			clickTo: self.showTree_select1term,
 			usecase: { target: 'profileForms', detail: 'tw' },
-			config: { chartType: 'profileForms' },
-			tooltip: 'Visualization tools to provide insights and assist in leveraging data'
+			config: { chartType: 'profileForms' }
 		},
 		////////////////////// PROFILE PLOTS END //////////////////////
 		{
