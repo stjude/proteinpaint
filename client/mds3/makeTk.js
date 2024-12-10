@@ -688,7 +688,8 @@ function addV2Sgetter_native(tk, block) {
 		}
 
 		if (tk.legend.mclass?.hiddenvalues?.size) {
-			par.hiddenmclasslst = [...tk.legend.mclass.hiddenvalues].join(',')
+			// since hiddenvalues set contains mixture of mclass(str) and dt(int), pass json array instead of comma-joined string
+			par.hiddenmclasslst = JSON.stringify([...tk.legend.mclass.hiddenvalues])
 		}
 
 		const data = await dofetch3('mds3', { body: par, headers }, { serverData: tk.cache })
