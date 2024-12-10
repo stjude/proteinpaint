@@ -189,7 +189,7 @@ export class profileForms extends profilePlot {
 			.attr('x', x + 80)
 			.attr('y', 18)
 			.style('font-weight', 'bold')
-			.text('* Site coordinator')
+			.text('* Site coordinator vs POC staff')
 	}
 
 	onMouseOver(event) {
@@ -284,7 +284,7 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 	let config = formsConfig[module]
 	if (!config) throw 'No data available for the module ' + module
 	config.settings = getDefaultProfileFormsSettings()
-	config.header = 'Templates'
+	config.header = 'Templates: Visualization tools to provide insights and assist in leveraging data'
 	config = copyMerge(structuredClone(config), opts)
 	for (const plot of config.plots) {
 		await fillTwLst(plot.terms, app.vocabApi)
