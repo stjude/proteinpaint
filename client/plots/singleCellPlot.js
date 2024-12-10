@@ -741,8 +741,15 @@ class singleCellPlot {
 			if (values.length == 0) {
 				plot.colorGenerator = null
 			} else {
-				;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
-				plot.colorGenerator = d3Linear().domain([0, max]).range([startColor, stopColor])
+				if (this.state.config.min) {
+					min = this.state.config.min
+					max = this.state.config.max
+				} else {
+					;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+					min = 0 //force min to start in cero
+				}
+				plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
+				plot.min = min
 				plot.max = max
 			}
 		}
@@ -807,6 +814,10 @@ class singleCellPlot {
 
 	getOpacity(d) {
 		if (this.config.hiddenClusters.includes(d.category)) return 0
+		if (this.colorByGene && this.state.config.gene) {
+			if (this.state.config.min > d.geneExp) return 0
+			if (this.state.config.max < d.geneExp) return 0
+		}
 		return 0.8
 	}
 
@@ -993,13 +1004,21 @@ class singleCellPlot {
 			barwidth,
 			barheight: 20,
 			colors,
-			data: [0, plot.max],
+			data: [plot.min, plot.max],
 			position: '0, 20',
 			ticks: 4,
 			tickSize: 5,
 			topTicks: true,
+			cutoffMode: this.state.config.min || this.state.config.max ? 'fixed' : 'auto',
 			setColorsCallback: (val, idx) => {
 				this.changeGradientColor(plot, val, idx)
+			},
+			setMinMaxCallback: obj => {
+				if (obj.cutoffMode == 'auto') {
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: null, max: null } })
+				} else if (obj.cutoffMode == 'fixed') {
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: obj.min, max: obj.max } })
+				}
 			}
 		})
 		colorScale.updateScale()
