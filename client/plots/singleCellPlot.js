@@ -11,6 +11,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
 import { Tabs } from '../dom/toggleButtons.js'
+import * as THREE from 'three'
 
 /*
 this
@@ -389,7 +390,6 @@ class singleCellPlot {
 				this.zoom = this.zoom * 1.1
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 1.1)
-					else this.renderPlot(plot) //large plot
 				}
 			},
 			title: 'Zoom in'
@@ -400,7 +400,6 @@ class singleCellPlot {
 				this.zoom = this.zoom * 0.9
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 0.9)
-					else this.renderPlot(plot) //large plot
 				}
 			},
 			title: 'Zoom out'
@@ -411,7 +410,6 @@ class singleCellPlot {
 				this.zoom = 1
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.mainG.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
-					else this.renderPlot(plot) //large plot
 				}
 			},
 			title: 'Reset plot to defaults'
@@ -537,9 +535,20 @@ class singleCellPlot {
 				chartType: 'singleCellPlot',
 				settingsKey: 'sampleSize',
 				title: 'Sample size',
-				min: 0.5,
-				max: 2,
-				step: 0.1
+				min: 0.001,
+				max: 0.1,
+				step: 0.001
+			},
+
+			{
+				label: 'Field of vision',
+				type: 'number',
+				chartType: 'singleCellPlot',
+				settingsKey: 'threeFOV',
+				title: 'When larger the plot will be more zoomed out',
+				min: 30,
+				max: 70,
+				step: 5
 			}
 		]
 
@@ -739,7 +748,7 @@ class singleCellPlot {
 		}
 
 		if (plot.cells.length > maxSamplesD3) {
-			this.renderLargePlot(plot)
+			this.renderLargePlotThree(plot)
 			this.renderLegend(plot)
 
 			return
@@ -821,13 +830,17 @@ class singleCellPlot {
 			[s0.x, s0.x, s0.y, s0.y]
 		)
 		const r = 5
-
-		plot.xAxisScale = d3Linear()
-			.domain([xMin, xMax])
-			.range([0 + r, this.settings.svgw - r])
-		plot.yAxisScale = d3Linear()
-			.domain([yMax, yMin])
-			.range([0 + r, this.settings.svgh - r])
+		if (plot.cells.length > maxSamplesD3) {
+			plot.xAxisScale = d3Linear().domain([xMin, xMax]).range([-1, 1])
+			plot.yAxisScale = d3Linear().domain([yMax, yMin]).range([1, -1])
+		} else {
+			plot.xAxisScale = d3Linear()
+				.domain([xMin, xMax])
+				.range([0 + r, this.settings.svgw - r])
+			plot.yAxisScale = d3Linear()
+				.domain([yMax, yMin])
+				.range([0 + r, this.settings.svgh - r])
+		}
 	}
 
 	renderLegend(plot) {
@@ -1154,57 +1167,91 @@ class singleCellPlot {
 		return [rows, columns]
 	}
 
-	renderLargePlot = async function (plot) {
+	renderLargePlotThree = async function (plot) {
 		if (!plot.canvas) {
 			plot.canvas = plot.plotDiv.append('canvas').node()
 			plot.canvas.width = this.settings.svgw
 			plot.canvas.height = this.settings.svgh
 			plot.plotDiv.style('margin', '20px 20px')
 		}
-		const canvas = plot.canvas
-		const size = this.settings.sampleSize
-		const ctx = canvas.getContext('2d')
-		ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-		ctx.save() // Save the current transformation matrix
-		const zoomLevel = this.zoom
-		// Apply zoom transformation
-		ctx.translate(canvas.width / 2, canvas.height / 2) // Translate to center
-		ctx.scale(zoomLevel, zoomLevel) // Scale the canvas
-		ctx.translate(-canvas.width / 2, -canvas.height / 2) // Translate back
+		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 
+		const fov = this.settings.threeFOV
+		const near = 0.1
+		const far = 1000
+		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
+		const scene = new THREE.Scene()
+		camera.position.set(0, 0, 2)
+		camera.lookAt(scene.position)
+		camera.updateMatrix()
+		const whiteColor = new THREE.Color('rgb(255,255,255)')
+		scene.background = whiteColor
+
+		const geometry = new THREE.BufferGeometry()
+		const { vertices, colors } = this.getVertices(plot)
+
+		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+		const tex = getCircle(128)
+		const material = new THREE.PointsMaterial({
+			size: this.settings.sampleSize,
+			sizeAttenuation: true,
+			transparent: true,
+			opacity: 1,
+			map: tex,
+			vertexColors: true
+		})
+
+		const particles = new THREE.Points(geometry, material)
+
+		scene.add(particles)
+		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
+		renderer.setPixelRatio(window.devicePixelRatio)
+
+		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
+
+		document.addEventListener('mousewheel', event => {
+			if (event.ctrlKey) camera.position.z += event.deltaY / 500
+		})
+
+		function getCircle(size) {
+			const c = document.createElement('canvas')
+			c.width = size
+			c.height = size
+			const ctx = c.getContext('2d')
+			ctx.clearRect(0, 0, size, size)
+			ctx.fillStyle = 'white'
+			ctx.beginPath()
+			ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI)
+			ctx.fill()
+			const tex = new THREE.CanvasTexture(c)
+			return tex
+		}
+
+		const self = this
+		function animate() {
+			requestAnimationFrame(animate)
+			camera.zoom = self.zoom
+			camera.updateProjectionMatrix()
+			renderer.render(scene, camera)
+		}
+		animate()
+	}
+
+	getVertices(plot) {
+		const vertices = []
+		const colors = []
 		for (const c of plot.cells) {
 			const opacity = this.getOpacity(c)
 			if (opacity == 0) continue
 			let x = plot.xAxisScale(c.x)
 			let y = plot.yAxisScale(c.y)
 			const rgbColor = rgb(this.getColor(c, plot))
-			ctx.fillStyle = rgbColor.toString()
-			ctx.beginPath()
-			ctx.arc(x, y, size / 2, 0, 2 * Math.PI)
-			ctx.fill()
+			vertices.push(x, y, 0)
+			colors.push(rgbColor.r / 255, rgbColor.g / 255, rgbColor.b / 255)
 		}
-
-		ctx.restore()
-		if (!this.settings.showGrid) return
-		const color = '#aaa'
-		const opacity = 0.5
-		const bins = 6
-		const step = this.settings.svgw / bins
-		let x, y
-
-		for (let i = 0; i <= bins; i++) {
-			x = i * step
-			ctx.moveTo(x, 0)
-			ctx.lineTo(x, this.settings.svgh)
-		}
-		for (let i = 0; i <= bins; i++) {
-			y = i * step
-			ctx.moveTo(0, y)
-			ctx.lineTo(this.settings.svgw, y)
-		}
-		ctx.strokeStyle = color
-		ctx.stroke()
+		return { vertices, colors }
 	}
 }
 
@@ -1240,9 +1287,10 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 900,
-		svgh: 900,
+		svgw: 500,
+		svgh: 500,
 		showGrid: true,
-		sampleSize: 1.2
+		sampleSize: 0.002,
+		threeFOV: 55
 	}
 }
