@@ -504,7 +504,11 @@ function may_update_infoFields(data, tk) {
 
 function update_mclass(tk) {
 	if (!tk.legend.mclass.currentData || tk.legend.mclass.currentData.length == 0) return
-	// currentData[]: each ele is an entry to show in legend [ [class=str, count], [dt=integer, count] ]
+	/* currentData[]: each element is an entry to show in legend [ [class=str, count], [dt=integer, count] ]
+	[0] of an element can be either string or integer:
+	- string: mclass key for snvindel
+	- integer: a dt value e.g. dtcnv, those dt that doesn't have a corresponding mclass key
+	*/
 
 	tk.legend.mclass.holder.selectAll('*').remove()
 
@@ -589,6 +593,7 @@ function update_mclass(tk) {
 					{
 						isChangeShape: true,
 						isVisible: () => {
+							if (c.k == dtcnv) return false // no changing shape for cnv
 							return !tk.skewer.viewModes.find(v => v.type === 'numeric').inuse
 								? tk.mds?.termdbConfig?.tracks?.allowSkewerChanges ?? true
 								: false
@@ -602,7 +607,9 @@ function update_mclass(tk) {
 					{
 						isChangeColor: true,
 						value: color,
-						isVisible: () => true,
+						isVisible: () => {
+							return c.k != dtcnv // no changing color for cnv
+						},
 						callback: colorValue => {
 							if (!mclass[c.k].origColor) mclass[c.k].origColor = mclass[c.k].color
 							mclass[c.k].color = colorValue
@@ -942,10 +949,8 @@ function createLegendTipMenu(opts, tk, elem) {
 					 */
 					.classed('sja_menuoption', true)
 					.style('padding', '5px 10px')
-					.style('cursor', 'default')
-					.style('background-color', '#f2f2f2')
 					.style('margin', '1px')
-					.style('border-radius', '5px')
+					.style('border-radius', '0px')
 					.on('click', () => {
 						div.classed('sja_menuoption', false)
 						div.style('background-color', 'white')
@@ -962,6 +967,7 @@ function createLegendTipMenu(opts, tk, elem) {
 				tk.legend.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
+					.style('border-radius', '0px')
 					.text(opt.label)
 					.on('click', () => {
 						opt.callback()

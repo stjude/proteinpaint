@@ -142,7 +142,8 @@ function getParameter(tk, block) {
 	rangequery_rglst(tk, block, par)
 
 	if (tk.legend.mclass.hiddenvalues.size) {
-		par.hiddenmclasslst = [...tk.legend.mclass.hiddenvalues].join(',')
+		// contains mixture of mclass(str) and dt(int), pass json array instead of comma-joined string
+		par.hiddenmclasslst = JSON.stringify([...tk.legend.mclass.hiddenvalues])
 	}
 
 	if (tk.legend.bcfInfo) {
