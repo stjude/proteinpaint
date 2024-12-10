@@ -26,6 +26,8 @@ also
 export function may_render_cnv(data, tk, block) {
 	tk.cnv?.g.selectAll('*').remove()
 	if (!data.cnv) {
+		tk.subtk2height.cnv = 0 // set to 0 in case cnv was showing before and now turned off so as to remove its space
+		if (tk.cnv) tk.cnv.cnvLst = [] // a trick to hide legend colorscale
 		return
 	}
 
@@ -38,7 +40,7 @@ export function may_render_cnv(data, tk, block) {
 	tk.cnv.colorScale = scaleLinear(
 		tk.cnv.presetMax ? [-tk.cnv.presetMax, 0, tk.cnv.presetMax] : [-absoluteMax, 0, absoluteMax],
 		[tk.cnv.lossColor, 'white', tk.cnv.gainColor]
-	).clamp( true)
+	).clamp(true)
 
 	const [rowheight, rowspace] = getRowHeight(cnvBySample || cnvLst)
 

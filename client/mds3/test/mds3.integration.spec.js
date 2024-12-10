@@ -57,6 +57,10 @@ tape('Official data on TP53, extensive ui test', test => {
 		test.notOk(tk.leftlabels.doms.filterObj, 'tk.leftlabels.doms.filterObj is not set')
 		test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
 		test.ok(tk.legend.mclass, 'tk.legend.mclass{} is set')
+		test.ok(
+			tk.legend.mclass.currentData.find(i => i[0] == 4),
+			'cnv item (dt=4) is found in legend.mclass.currentData[]'
+		) // value "4" is dtcnv
 		await findSingletonMutationTestDiscoCnvPlots(test, tk)
 		await testVariantLeftLabel(test, tk, bb)
 		if (test._ok) holder.remove()

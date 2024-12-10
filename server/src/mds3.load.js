@@ -1,6 +1,7 @@
 import { mayCopyFromCookie, fileurl } from './utils'
 import { snvindelByRangeGetter_bcf } from './mds3.init'
 import { validate_variant2samples } from './mds3.variant2samples.js'
+import { dtcnv } from '#shared/common.js'
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -73,7 +74,7 @@ function init_q(req, genome) {
 
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
-		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
+		query.hiddenmclass = new Set(JSON.parse(query.hiddenmclasslst))
 		delete query.hiddenmclasslst
 		// this filter set is passed to actual data querying method, after class is set for each item, will check it to decide if to drop
 	}
@@ -271,12 +272,20 @@ async function load_driver(q, ds) {
 				result.geneCnv = lst
 			}
 			if (ds.queries.cnv) {
-				result.cnv = await query_cnv(q, ds)
+				if (q.hiddenmclass?.has(dtcnv)) {
+					// cnv is hidden, do not load
+				} else {
+					result.cnv = await query_cnv(q, ds)
+				}
 			}
 
 			filter_data(q, result)
 
 			result.mclass2variantcount = summarize_mclass(result.skewer)
+			// [ [ 'M', 2 ], [ 'F', 1 ], ..]
+			if (result.cnv) {
+				result.mclass2variantcount.push([dtcnv, result.cnv.length])
+			}
 		}
 
 		// add queries for new data types
