@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Matrix: allow user to modify colors on the legend
+
+Fixes:
+- Add twSpecificSettings to matrix config to replace tw.settings
+- After convertting continuous terms from continuous mode to discrete mode, use default colors instead of reandom colors.
+
+
 ## 2.89.1
 
 Fixes:

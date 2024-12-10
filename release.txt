@@ -1,6 +1,1 @@
-Features:
-- Matrix: allow user to modify colors on the legend
 
-Fixes:
-- Add twSpecificSettings to matrix config to replace tw.settings
-- After convertting continuous terms from continuous mode to discrete mode, use default colors instead of reandom colors.
