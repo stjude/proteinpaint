@@ -19,9 +19,12 @@ rangequery_add_variantfilters
 - callbackOnRender()
 - onClose()
 - allow2selectSamples{}
-- hardcodeCnvOnly=true: trigger cnv-only mode as a special case. used for gdc cnv tool. this is intended to be supplied
-      via pp react wrapper in GFF e.g. runpp({tklst[{hardcodeCnvOnly:true}]})
+- hardcodeCnvOnly=true:
+      special case to only show cnv. used for gdc cnv tool which won't show anything other than cnv.
+	  this is intended to be supplied via pp react wrapper in GFF e.g. runpp({tklst[{hardcodeCnvOnly:true}]})
       this flag shouldn't be set in gdc ds, that will permanently disable skewer (lollipop and cnv tool are based on same ds)
+	  this mode will not allow reenabling snvindel, and will hide skewer-specific menu options
+	  this is similar to user "show only" cnv via legend option on a regular tk, but is reversible
 */
 
 export async function loadTk(tk, block) {
