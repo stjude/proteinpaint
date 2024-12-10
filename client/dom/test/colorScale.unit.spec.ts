@@ -1,9 +1,11 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { ColorScale } from '#dom'
+import { ColorScale, removeExtremeOutliers } from '#dom'
 import { detectGte } from '../../test/test.helpers.js'
 
 /* Tests
+
+ColorScale
     - new ColorScale()
     - ColorScale.render() - default bottom
     - ColorScale.render() - top
@@ -12,7 +14,10 @@ import { detectGte } from '../../test/test.helpers.js'
 	- markedValue - Show value in color bar and update
     - ColorScale.updateAxis()
 	- .setMinMaxCallback() and .setColorsCallback()
-	- Show ticks in scientific notation
+	- (skipped) Show ticks in scientific notation
+
+Helpers
+	- removeExtremeOutliers()
 */
 
 /**************
@@ -30,7 +35,7 @@ function getHolder() {
 
 function getColorScale(opts) {
 	const _opts = {
-		data: [0, 1],
+		domain: [0, 1],
 		width: 150,
 		position: '6,0'
 	}
@@ -43,20 +48,20 @@ function getColorScale(opts) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/ColorScale -***-')
+	test.pass('-***- dom/ColorScale/ColorScale -***-')
 	test.end()
 })
 
 tape('new ColorScale()', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder() as any
-	const opts = { holder, data: [0, 1] }
+	const opts = { holder, domain: [0, 1] }
 	const testColorScale = new ColorScale(opts)
 
 	test.equal(testColorScale.barheight, 14, 'Should set default value of 14 for barheight')
 	test.equal(testColorScale.barwidth, 100, 'Should set default value of 100 for barwidth')
 	test.deepEquals(testColorScale.colors, ['white', 'red'], 'Should set default colors to white and red')
-	test.deepEquals(testColorScale.data, opts.data, 'Should set default data to [0, 1]')
+	test.deepEquals(testColorScale.domain, opts.domain, 'Should set default domain to [0, 1]')
 	test.equal(typeof testColorScale.dom, 'object', 'Should have a testColorScale.dom object')
 	test.equal(testColorScale.fontSize, 10, 'Should set default value of 10 for fontSize')
 	test.equal(testColorScale.markedValue, null, 'Should set default value of null for markedValue')
@@ -170,13 +175,13 @@ tape('ColorScale.updateAxis()', test => {
 	const holder = getHolder() as any
 	const testColorScale = getColorScale({ holder })
 
-	testColorScale.data = [0, 5]
+	testColorScale.domain = [0, 5]
 	testColorScale.updateAxis()
 
 	const ticks = holder.selectAll('text').nodes()
 
-	test.equal(ticks[0].__data__, testColorScale.data[0], 'Should update the first tick to 0')
-	test.equal(ticks[ticks.length - 1].__data__, testColorScale.data[1], 'Should update the last tick to 5')
+	test.equal(ticks[0].__data__, testColorScale.domain[0], 'Should update the first tick to 0')
+	test.equal(ticks[ticks.length - 1].__data__, testColorScale.domain[1], 'Should update the last tick to 5')
 
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -186,7 +191,7 @@ tape('markedValue - Show value in color bar and update', test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
-	const testColorScale = getColorScale({ holder, data: [0, 40], markedValue: 15 })
+	const testColorScale = getColorScale({ holder, domain: [0, 40], markedValue: 15 })
 
 	const valueElems = holder.selectAll('.sjpp-color-scale-marked').nodes()
 	test.equal(valueElems[0].nodeName, 'line', 'Should render tick mark for marked value')
@@ -219,7 +224,7 @@ tape('ColorScale.updateScale()', test => {
 	const newColor = 'blue'
 	testColorScale.colors[2] = newColor
 
-	testColorScale.data = [-5, 0, 5]
+	testColorScale.domain = [-5, 0, 5]
 	testColorScale.markedValue = -1
 
 	testColorScale.updateScale()
@@ -246,7 +251,7 @@ tape('ColorScale.updateScale()', test => {
 	test.end()
 })
 
-tape.skip('.setMinMaxCallback() and .setColorsCallback()', async test => {
+tape('.setMinMaxCallback() and .setColorsCallback()', async test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
@@ -268,14 +273,16 @@ tape.skip('.setMinMaxCallback() and .setColorsCallback()', async test => {
 			test.equal(obj.max, newMax, 'Should return the correct max value to the .setMinMaxCallback() callback')
 		}
 	})
-
+	if (!testColorScale.menu) test.fail('Should create a menu when .setMinMaxCallback() is provided.')
 	test.equal(
-		testColorScale.cutoffMode,
+		testColorScale.menu!.cutoffMode,
 		'auto',
 		'Should set cutoffMode = "auto" when not specified and .setMinMaxCallback() is provided.'
 	)
 	test.true(
-		typeof testColorScale.default == 'object' && testColorScale.default.min == 0 && testColorScale.default.max == 1,
+		typeof testColorScale.menu!.default == 'object' &&
+			testColorScale.menu!.default.min == 0 &&
+			testColorScale.menu!.default.max == 1,
 		'Should set auto to default values when not specified and .setMinMaxCallback() is provided.'
 	)
 
@@ -298,7 +305,7 @@ tape.skip('Show ticks in scientific notation', async test => {
 	const holder = getHolder() as any
 	const testColorScale = getColorScale({
 		holder,
-		data: [0.001, 0.005],
+		domain: [0.001, 0.005],
 		ticks: 2
 	})
 
@@ -311,7 +318,7 @@ tape.skip('Show ticks in scientific notation', async test => {
 	 * The standard hypen when typing is U+002D. Use U+2212
 	 * for testing.
 	 */
-	testColorScale.data = [-0.005, -0.001]
+	testColorScale.domain = [-0.005, -0.001]
 	first = '−4.0e-3'
 	second = '−2.0e-3'
 
@@ -338,7 +345,7 @@ tape.skip('Show ticks in scientific notation', async test => {
 	)
 
 	//Switch back to integers
-	testColorScale.data = [0, 10]
+	testColorScale.domain = [0, 10]
 	first = '0'
 	second = '5'
 	third = '10'
@@ -372,7 +379,7 @@ tape.skip('Show ticks in scientific notation', async test => {
 	)
 
 	//Zero to small number
-	testColorScale.data = [0, 0.00001]
+	testColorScale.domain = [0, 0.00001]
 	first = '0.0e+0'
 	second = '5.0e-6'
 	third = '1.0e-5'
@@ -406,7 +413,7 @@ tape.skip('Show ticks in scientific notation', async test => {
 	)
 
 	//neg small number to zero
-	testColorScale.data = [-0.001, 0]
+	testColorScale.domain = [-0.001, 0]
 	first = '−1.0e-3'
 	second = '−5.0e-4'
 	third = '0.0e+0'
@@ -440,7 +447,7 @@ tape.skip('Show ticks in scientific notation', async test => {
 	)
 
 	//zero min to integer
-	testColorScale.data = [0, 5.75]
+	testColorScale.domain = [0, 5.75]
 	first = '0'
 	second = '2'
 	third = '4'
@@ -474,7 +481,7 @@ tape.skip('Show ticks in scientific notation', async test => {
 	)
 
 	//integer to zero max
-	testColorScale.data = [-5.75, 0]
+	testColorScale.domain = [-5.75, 0]
 	first = '−4'
 	second = '−2'
 	third = '0'
@@ -508,7 +515,7 @@ tape.skip('Show ticks in scientific notation', async test => {
 	)
 
 	//Large range postive integers
-	testColorScale.data = [10, 1000]
+	testColorScale.domain = [10, 1000]
 	first = '500'
 	second = '1,000'
 
@@ -536,7 +543,7 @@ tape.skip('Show ticks in scientific notation', async test => {
 	)
 
 	//Large range negative integers
-	testColorScale.data = [-1200, -10]
+	testColorScale.domain = [-1200, -10]
 	first = '−1,000'
 	second = '−500'
 
@@ -564,5 +571,57 @@ tape.skip('Show ticks in scientific notation', async test => {
 	)
 
 	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+/***************************
+Color scale helper functions
+****************************/
+
+tape('\n', test => {
+	test.pass('-***- dom/ColorScale/helpers -***-')
+	test.end()
+})
+
+tape('removeExtremeOutliers()', test => {
+	test.timeoutAfter(100)
+	let minPercent: number, maxPercent: number, expected: number[], result: number[]
+	const mockDomain = [
+		-100, -0.8999999999999999, -0.7999999999999997, -0.6999999999999996, -0.5999999999999994, -0.49999999999999933,
+		-0.3999999999999992, -0.2999999999999991, -0.19999999999999896, -0.09999999999999888, 0.08, 0.18000000000000005,
+		0.2800000000000002, 0.38000000000000034, 0.4800000000000004, 0.5800000000000005, 0.6800000000000006,
+		0.7800000000000008, 0.8800000000000009, 0.9800000000000011, 100
+	]
+	result = removeExtremeOutliers(mockDomain)
+	test.deepEqual(result, mockDomain, `Should not remove outliers for such a small domain`)
+
+	minPercent = 0.05
+	maxPercent = 0.95
+	result = removeExtremeOutliers(mockDomain, minPercent, maxPercent)
+	expected = [
+		-0.8999999999999999, -0.7999999999999997, -0.6999999999999996, -0.5999999999999994, -0.49999999999999933,
+		-0.3999999999999992, -0.2999999999999991, -0.19999999999999896, -0.09999999999999888, 0.08, 0.18000000000000005,
+		0.2800000000000002, 0.38000000000000034, 0.4800000000000004, 0.5800000000000005, 0.6800000000000006,
+		0.7800000000000008, 0.8800000000000009, 0.9800000000000011
+	]
+	test.deepEqual(
+		result,
+		expected,
+		`Should remove the extreme outliers from the domain with a ${minPercent}% and ${maxPercent}% cutoff`
+	)
+
+	minPercent = 0.25
+	maxPercent = 0.75
+	result = removeExtremeOutliers(mockDomain, minPercent, maxPercent)
+	expected = [
+		-0.49999999999999933, -0.3999999999999992, -0.2999999999999991, -0.19999999999999896, -0.09999999999999888, 0.08,
+		0.18000000000000005, 0.2800000000000002, 0.38000000000000034, 0.4800000000000004, 0.5800000000000005
+	]
+	test.deepEqual(
+		result,
+		expected,
+		`Should remove the extreme outliers from the domain with a ${minPercent}% and ${maxPercent}% cutoff`
+	)
+
 	test.end()
 })

@@ -5,6 +5,7 @@ import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
 import { axisstyle, niceNumLabels } from '#dom'
 import { ColorScaleMenu } from './ColorScaleMenu'
+import { removeExtremeOutliers } from './helpers'
 // import { format } from 'd3-format'
 // import { interpolateRgb } from 'd3-interpolate'
 // import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
@@ -13,11 +14,10 @@ export class ColorScale {
 	dom: ColorScaleDom
 	barheight: number
 	barwidth: number
-	domain: undefined | number[]
 	colors: string[]
 	cutoffMode?: 'auto' | 'fixed'
 	default?: { min: number; max: number }
-	data: number[]
+	domain: number[]
 	fontSize: number
 	markedValue?: number | null
 	menu?: ColorScaleMenu
@@ -31,22 +31,23 @@ export class ColorScale {
 	tickSize: number
 	tickValues: number[]
 	topTicks: boolean
+	usePercentiles: boolean
 
 	constructor(opts: ColorScaleOpts) {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
 		this.colors = opts?.colors?.length ? opts.colors : ['white', 'red']
-		this.data = opts.data
+		this.domain = opts.domain
 		this.fontSize = opts.fontSize || 10
 		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
 		this.topTicks = opts.topTicks || false
-		this.domain = opts.domain
+		this.usePercentiles = opts.usePercentiles || false
 
 		this.validateOpts(opts)
-
-		this.tickValues = niceNumLabels(opts.data)
+		if (opts.usePercentiles) opts.domain = removeExtremeOutliers(opts.domain)
+		this.tickValues = niceNumLabels(opts.domain)
 
 		let scaleSvg: SvgSvg //
 		if (opts.width || opts.height) {
@@ -86,8 +87,8 @@ export class ColorScale {
 
 	validateOpts(opts: ColorScaleOpts) {
 		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
-		if (!opts.data || !opts.data.length) throw new Error('No data provided for #dom/ColorScale.')
-		if (opts.data.length != this.colors.length)
+		if (!opts.domain || !opts.domain.length) throw new Error('No data provided for #dom/ColorScale.')
+		if (opts.domain.length != this.colors.length)
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 		if (opts.labels && (!opts.labels.left || !opts.labels.right))
 			throw new Error('Missing a label for #dom/ColorScale.')
@@ -190,7 +191,7 @@ export class ColorScale {
 		const _opts: ColorScaleMenuOpts = {
 			scaleSvg,
 			barG,
-			data: this.data,
+			domain: this.domain,
 			colors: this.colors,
 			cutoffMode: opts.cutoffMode || 'auto'
 		}
@@ -227,8 +228,8 @@ export class ColorScale {
 
 	updateAxis() {
 		this.dom.scaleAxis.selectAll('*').remove()
-
-		this.tickValues = niceNumLabels(this.data)
+		if (this.usePercentiles) this.domain = removeExtremeOutliers(this.domain)
+		this.tickValues = niceNumLabels(this.domain)
 		this.dom.scale = scaleLinear().domain(this.tickValues).range(this.getRange())
 
 		this.dom.scaleAxis
@@ -274,103 +275,15 @@ export class ColorScale {
 	updateMenu() {
 		if (!this.menu) return
 		this.menu.colors = this.colors
-		this.menu.data = this.data
+		this.menu.domain = this.domain
 	}
 
 	updateScale() {
-		if (this.data.length != this.colors.length)
+		if (this.domain.length != this.colors.length)
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 		this.updateColors()
 		this.updateAxis()
 		this.updateValueInColorBar()
 		this.updateMenu()
 	}
-}
-
-type GeInterpolatedArg = {
-	/** the absolute magnitude of the interpolation domain minimum value */
-	absMin: number
-	/** the absolute magnitude of the interpolation domain minimum value */
-	absMax: number
-	/** function to convert number to css color */
-	negInterpolator: (a: number) => string
-	/** function to convert number to css color */
-	posInterpolator: (a: number) => string
-	/**
-	 * Optional color to insert between two interpolated color ranges,
-	 * This can be used to generate a zero-centered divergent color bar
-	 * with white in the middle.
-	 * */
-	middleColor?: string
-	/** the target number of increments within the interpolation domain and range  */
-	numSteps?: number
-}
-
-type InterpolatedDomainRange = {
-	values: number[]
-	colors: string[]
-}
-
-export function getInterpolatedDomainRange({
-	absMin,
-	absMax,
-	negInterpolator,
-	posInterpolator,
-	middleColor = 'white',
-	numSteps = 100
-}: GeInterpolatedArg) {
-	const stepSize = (absMax - absMin) / numSteps
-	const neg: InterpolatedDomainRange = { values: [], colors: [] }
-	const pos: InterpolatedDomainRange = { values: [], colors: [] }
-	let n = -absMax
-	for (let p = 0; p < absMax; p += stepSize) {
-		if (negInterpolator) {
-			n += stepSize
-			const vn = n / absMax
-			neg.values.push(vn)
-			neg.colors.push(negInterpolator(-vn))
-		}
-		if (posInterpolator) {
-			const vp = p / absMax
-			pos.values.push(vp)
-			pos.colors.push(posInterpolator(vp))
-		}
-	}
-
-	if (negInterpolator && posInterpolator) {
-		return {
-			domain: [-absMax, ...neg.values, 0, ...pos.values, absMax],
-			range: [negInterpolator(1), ...neg.colors, middleColor, ...pos.colors, posInterpolator(1)]
-		}
-	} else if (negInterpolator) {
-		return {
-			domain: [-absMax, ...neg.values, 0],
-			range: [negInterpolator(0), ...neg.colors, negInterpolator(1)]
-		}
-	} else if (posInterpolator) {
-		return {
-			domain: [0, ...pos.values, absMax],
-			range: [posInterpolator(0), ...pos.colors, posInterpolator(1)]
-		}
-	} else {
-		throw `missing both negInterpolator and posInterpolator in getInterpolatedDomainRange()`
-	}
-}
-
-export function colorDelta(rgb1, rgb2) {
-	// TODO: use ciede2000 when the installed d3-color version has it
-	// lab =  CIELAB, approximate human-perceived color simiilarity
-	// const color1 = lab(rgb1);
-	// const color2 = lab(rgb2);
-	// return ciede2000(color1, color2)
-
-	// for now, simply compute the max diff across rgb components between the 2 colors
-	const a = rgb1.split('(')[1].slice(0, -1).split(',').slice(0, 3)
-	const b = rgb2.split('(')[1].slice(0, -1).split(',').slice(0, 3)
-	let maxDiff = 0
-	for (const [i, v] of a.entries()) {
-		const d = v - b[i]
-		if (maxDiff < d) maxDiff = d
-	}
-	return maxDiff
 }
