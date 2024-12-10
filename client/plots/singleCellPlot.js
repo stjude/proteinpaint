@@ -1228,8 +1228,35 @@ class singleCellPlot {
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
 		renderer.setPixelRatio(window.devicePixelRatio)
 
-		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
+		if (this.settings.showGrid) {
+			// Line Geometry
+			const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffd3d3d3 })
 
+			const lines = 5
+			let x = -1
+			const step = 0.5
+			for (let i = 0; i < 5; i++) {
+				let points = []
+				points.push(new THREE.Vector3(x, 1, 0))
+				points.push(new THREE.Vector3(x, -1, 0))
+				let lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
+				let line = new THREE.Line(lineGeometry, lineMaterial)
+				scene.add(line)
+				points = []
+				points.push(new THREE.Vector3(-1, x, 0))
+				points.push(new THREE.Vector3(1, x, 0))
+				lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
+				line = new THREE.Line(lineGeometry, lineMaterial)
+				scene.add(line)
+				x += step
+			}
+		}
+
+		// Line Object
+
+		// Add line to scene
+
+		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
 		document.addEventListener('mousewheel', event => {
 			if (event.ctrlKey) camera.position.z += event.deltaY / 500
 		})
