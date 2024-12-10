@@ -21,11 +21,19 @@ logic:
 use same sample number cutoff values in scale and capping
 */
 const maxRowHeight = 10
-const maxTkHeight = 200 // cnv sub track shouldn't exceed this height
+const maxTkHeight = 200 // cnv tk max height when skewer is present
 function getRowHeight(rows, tk) {
-	// if tk is cnv-only, double max height for cnv tk
+	let maxh = maxTkHeight
+	if (tk.subtk2height.skewer == 0) {
+		/* assumes that skewer subtk is already rendered and height already determined. if skewer height=0, allow to double cnv max height due to:
+		- tk is hardcoded cnv-only
+		- there's no skewer data in view range
+		*/
+		maxh *= 2
+	}
+
 	// v is computed row height and used for deriving actual row height
-	const v = (maxTkHeight * (tk.hardcodeCnvOnly ? 2 : 1)) / rows.length
+	const v = maxh / rows.length
 	if (v > maxRowHeight) return [maxRowHeight, 1] // small enough number of rows. use max height
 	if (v > 3) return [Math.floor(v), 1] // big enough height, round to small integer with spacing
 	if (v > 1) return [Math.floor(v), 0] // same above, no spacing
