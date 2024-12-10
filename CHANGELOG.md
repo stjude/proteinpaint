@@ -10,6 +10,7 @@ Features:
 Fixes:
 - Add twSpecificSettings to matrix config to replace tw.settings
 - After convertting continuous terms from continuous mode to discrete mode, use default colors instead of reandom colors.
+- mds3 "mutation" legend now shows CNV entry
 
 
 ## 2.89.1
