@@ -660,7 +660,7 @@ export function getDefaultScatterSettings() {
 		defaultColor: plotColor,
 		regression: 'None',
 		fov: 50,
-		threeSize: 0.002,
+		threeSize: 0.003,
 		threeFOV: 70
 	}
 }
