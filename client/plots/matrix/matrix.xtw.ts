@@ -75,18 +75,19 @@ const discreteAddons: MatrixTWObj = {
 			const key = anno.key
 			const values = tw.term.values || {}
 			cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
+			const tw$id = tw.$id
 			cell.fill =
-				self.config.settings.matrix.twSpecificSettings?.[tw.$id]?.[key]?.color ||
+				self.config.settings.matrix.twSpecificSettings?.[tw$id!]?.[key]?.color ||
 				anno.color ||
 				values[anno.key]?.color ||
-				self.data.refs.byTermId?.[tw.$id]?.bins?.find(b => anno.key == b.name)?.color
+				self.data.refs.byTermId?.[tw$id!]?.bins?.find(b => anno.key == b.name)?.color
 			// only for numeric terms for now
 			// TODO: should also consider categorical term.values[*].order
 			cell.order = t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y = height * i
-			const group = tw.legend?.group || tw.$id
+			const group = tw.legend?.group || tw$id
 			return { ref: t.ref, group, value: key, entry: { key, label: cell.label, fill: cell.fill } }
 		}
 	}
@@ -113,10 +114,10 @@ const continuousAddons: MatrixTWObj = {
 			const values = tw.term.values || {}
 			cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
 			cell.fill = anno.color || values[anno.key]?.color
-
+			const tw$id = tw.$id
 			const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
-			if (!twSpecificSettings[tw.$id]) twSpecificSettings[tw.$id] = {}
-			const twSettings = twSpecificSettings[tw.$id]
+			if (!twSpecificSettings[tw$id!]) twSpecificSettings[tw$id!] = {}
+			const twSettings = twSpecificSettings[tw$id!]
 			if (!twSettings.contBarH) twSettings.contBarH = s.barh
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 
@@ -143,8 +144,7 @@ const continuousAddons: MatrixTWObj = {
 
 			// TODO: may use color scale instead of bars
 			// for bars, use a hardcoded color; TODO: allow a user to customize the bar color?
-			const tw$id = tw.$id
-			cell.fill = self.config.settings.matrix.twSpecificSettings?.[tw$id]?.contBarColor || '#555'
+			cell.fill = self.config.settings.matrix.twSpecificSettings?.[tw$id!]?.contBarColor || '#555'
 			if (s.transpose) {
 				cell.height = t.scale(cell.key)
 				cell.x = twSettings.contBarGap // - cell.width
