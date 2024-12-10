@@ -12,6 +12,9 @@
       }]
     }
   ],
+  "features": {
+    "regressionResultMsgs": true
+  },
   "tpmasterdir": "/home/runner/work/proteinpaint/proteinpaint/server/test/tp",
   "cachedir": "/home/runner/work/proteinpaint/proteinpaint/cache",
   "URL": "http://localhost:3000",
