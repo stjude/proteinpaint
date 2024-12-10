@@ -74,7 +74,7 @@ function init_q(req, genome) {
 
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
-		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
+		query.hiddenmclass = new Set(JSON.parse(query.hiddenmclasslst))
 		delete query.hiddenmclasslst
 		// this filter set is passed to actual data querying method, after class is set for each item, will check it to decide if to drop
 	}
@@ -272,7 +272,11 @@ async function load_driver(q, ds) {
 				result.geneCnv = lst
 			}
 			if (ds.queries.cnv) {
-				result.cnv = await query_cnv(q, ds)
+				if (q.hiddenmclass?.has(dtcnv)) {
+					// cnv is hidden, do not load
+				} else {
+					result.cnv = await query_cnv(q, ds)
+				}
 			}
 
 			filter_data(q, result)
