@@ -43,7 +43,7 @@ export function setRenderersThree(self) {
 
 		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-		const tex = self.getCircle(128)
+		const tex = getThreeCircle(128)
 		const material = new THREE.PointsMaterial({
 			size: self.settings.threeSize,
 			sizeAttenuation: true,
@@ -90,20 +90,6 @@ export function setRenderersThree(self) {
 			renderer.render(scene, camera)
 		}
 		animate()
-	}
-
-	self.getCircle = function (size) {
-		const c = document.createElement('canvas')
-		c.width = size
-		c.height = size
-		const ctx = c.getContext('2d')
-		ctx.clearRect(0, 0, size, size)
-		ctx.fillStyle = 'white'
-		ctx.beginPath()
-		ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI)
-		ctx.fill()
-		const tex = new THREE.CanvasTexture(c)
-		return tex
 	}
 
 	self.render3DSerie = async function (chart) {
@@ -166,7 +152,7 @@ export function setRenderersThree(self) {
 
 		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-		const tex = self.getCircle(128)
+		const tex = getThreeCircle(128)
 		const material = new THREE.PointsMaterial({
 			size: self.settings.threeSize * 3,
 			sizeAttenuation: true,
@@ -242,8 +228,16 @@ export function setRenderersThree(self) {
 	}
 }
 
-function onPointerMove(event) {
-	const x = (event.clientX / window.innerWidth) * 2 - 1
-	const y = -(event.clientY / window.innerHeight) * 2 + 1
-	console.log(roundValue(x, 1), roundValue(y, 1))
+export function getThreeCircle(size) {
+	const c = document.createElement('canvas')
+	c.width = size
+	c.height = size
+	const ctx = c.getContext('2d')
+	ctx.clearRect(0, 0, size, size)
+	ctx.fillStyle = 'white'
+	ctx.beginPath()
+	ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI)
+	ctx.fill()
+	const tex = new THREE.CanvasTexture(c)
+	return tex
 }

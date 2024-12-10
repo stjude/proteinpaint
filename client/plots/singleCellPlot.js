@@ -12,6 +12,7 @@ import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
 import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
+import { getThreeCircle } from './sampleScatter.rendererThree.js'
 
 /*
 this
@@ -1215,7 +1216,7 @@ class singleCellPlot {
 
 		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-		const tex = getCircle(128)
+		const tex = getThreeCircle(128)
 		const material = new THREE.PointsMaterial({
 			size: this.settings.sampleSizeThree,
 			sizeAttenuation: true,
@@ -1265,20 +1266,6 @@ class singleCellPlot {
 		document.addEventListener('mousewheel', event => {
 			if (event.ctrlKey) camera.position.z += event.deltaY / 500
 		})
-
-		function getCircle(size) {
-			const c = document.createElement('canvas')
-			c.width = size
-			c.height = size
-			const ctx = c.getContext('2d')
-			ctx.clearRect(0, 0, size, size)
-			ctx.fillStyle = 'white'
-			ctx.beginPath()
-			ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI)
-			ctx.fill()
-			const tex = new THREE.CanvasTexture(c)
-			return tex
-		}
 
 		const self = this
 		function animate() {
