@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.90.0
 
 Features:
 - Matrix: allow user to modify colors on the legend
