@@ -1,9 +1,11 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { ColorScale } from '#dom'
+import { ColorScale, removeExtremeOutliers } from '#dom'
 import { detectGte } from '../../test/test.helpers.js'
 
 /* Tests
+
+ColorScale
     - new ColorScale()
     - ColorScale.render() - default bottom
     - ColorScale.render() - top
@@ -12,7 +14,10 @@ import { detectGte } from '../../test/test.helpers.js'
 	- markedValue - Show value in color bar and update
     - ColorScale.updateAxis()
 	- .setMinMaxCallback() and .setColorsCallback()
-	- Show ticks in scientific notation
+	- (skipped) Show ticks in scientific notation
+
+Helpers
+	- removeExtremeOutliers()
 */
 
 /**************
@@ -43,7 +48,7 @@ function getColorScale(opts) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/ColorScale -***-')
+	test.pass('-***- dom/ColorScale/ColorScale -***-')
 	test.end()
 })
 
@@ -566,5 +571,57 @@ tape.skip('Show ticks in scientific notation', async test => {
 	)
 
 	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+/***************************
+Color scale helper functions
+****************************/
+
+tape('\n', test => {
+	test.pass('-***- dom/ColorScale/helpers -***-')
+	test.end()
+})
+
+tape('removeExtremeOutliers()', test => {
+	test.timeoutAfter(100)
+	let minPercent: number, maxPercent: number, expected: number[], result: number[]
+	const mockDomain = [
+		-100, -0.8999999999999999, -0.7999999999999997, -0.6999999999999996, -0.5999999999999994, -0.49999999999999933,
+		-0.3999999999999992, -0.2999999999999991, -0.19999999999999896, -0.09999999999999888, 0.08, 0.18000000000000005,
+		0.2800000000000002, 0.38000000000000034, 0.4800000000000004, 0.5800000000000005, 0.6800000000000006,
+		0.7800000000000008, 0.8800000000000009, 0.9800000000000011, 100
+	]
+	result = removeExtremeOutliers(mockDomain)
+	test.deepEqual(result, mockDomain, `Should not remove outliers for such a small domain`)
+
+	minPercent = 0.05
+	maxPercent = 0.95
+	result = removeExtremeOutliers(mockDomain, minPercent, maxPercent)
+	expected = [
+		-0.8999999999999999, -0.7999999999999997, -0.6999999999999996, -0.5999999999999994, -0.49999999999999933,
+		-0.3999999999999992, -0.2999999999999991, -0.19999999999999896, -0.09999999999999888, 0.08, 0.18000000000000005,
+		0.2800000000000002, 0.38000000000000034, 0.4800000000000004, 0.5800000000000005, 0.6800000000000006,
+		0.7800000000000008, 0.8800000000000009, 0.9800000000000011
+	]
+	test.deepEqual(
+		result,
+		expected,
+		`Should remove the extreme outliers from the domain with a ${minPercent}% and ${maxPercent}% cutoff`
+	)
+
+	minPercent = 0.25
+	maxPercent = 0.75
+	result = removeExtremeOutliers(mockDomain, minPercent, maxPercent)
+	expected = [
+		-0.49999999999999933, -0.3999999999999992, -0.2999999999999991, -0.19999999999999896, -0.09999999999999888, 0.08,
+		0.18000000000000005, 0.2800000000000002, 0.38000000000000034, 0.4800000000000004, 0.5800000000000005
+	]
+	test.deepEqual(
+		result,
+		expected,
+		`Should remove the extreme outliers from the domain with a ${minPercent}% and ${maxPercent}% cutoff`
+	)
+
 	test.end()
 })
