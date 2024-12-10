@@ -14,9 +14,14 @@ loadTk
 			rangequery_rglst
 rangequery_add_variantfilters
 
-callbacks that are attached to tkobj:
+********** properties attached to tkobj ************
+
 - callbackOnRender()
 - onClose()
+- allow2selectSamples{}
+- hardcodeCnvOnly=true: trigger cnv-only mode as a special case. used for gdc cnv tool. this is intended to be supplied
+      via pp react wrapper in GFF e.g. runpp({tklst[{hardcodeCnvOnly:true}]})
+      this flag shouldn't be set in gdc ds, that will permanently disable skewer (lollipop and cnv tool are based on same ds)
 */
 
 export async function loadTk(tk, block) {
@@ -71,7 +76,8 @@ function getParameter(tk, block) {
 		// including skewer or non-skewer
 		forTrack: 1,
 		// may not pass skewerRim if it is not in use (turn off)
-		skewerRim: tk.mds.queries?.snvindel?.skewerRim // instructions for counting rim counts per variant
+		skewerRim: tk.mds.queries?.snvindel?.skewerRim, // instructions for counting rim counts per variant
+		hardcodeCnvOnly: tk.hardcodeCnvOnly
 	}
 
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }

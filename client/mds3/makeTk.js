@@ -266,7 +266,7 @@ function loadTk_finish_closure(tk, block) {
 					if (block.usegm && block.gmmode != 'genomic') context = block.usegm.name || block.usegm.isoform
 					tk.skewer.g
 						.append('text')
-						.text('No mutation in ' + context)
+						.text('No data in ' + context)
 						.attr('y', 25)
 						.attr('x', block.width / 2)
 						.attr('text-anchor', 'middle')

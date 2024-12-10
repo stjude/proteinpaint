@@ -3,8 +3,36 @@ import { mclasscnvgain, mclasscnvloss } from '#shared/common.js'
 import { table_cnv } from './itemtable'
 import { table2col } from '#dom'
 
-/*
+/* (important param for cnv tk rendering thus is put at top)
+arg is an array. each element is a row of either:
+	- all cnv segments per sample (for each sample, all cnv are shown in one row)
+	- a stack that will be shown as a row
 
+logic:
+
+	if there are small enough number of rows:
+	- max out row height to maxRowHeight with spacing. total subtrack height shouldn't exceed limit
+
+	if number of rows exceeds maxTkHeight:
+		return fractional row height (maxTkHeight/#rows) for canvas plotting
+	
+	else:
+		scale 
+use same sample number cutoff values in scale and capping
+*/
+const maxRowHeight = 10
+const maxTkHeight = 200 // cnv sub track shouldn't exceed this height
+function getRowHeight(rows, tk) {
+	// if tk is cnv-only, double max height for cnv tk
+	// v is computed row height and used for deriving actual row height
+	const v = (maxTkHeight * (tk.hardcodeCnvOnly ? 2 : 1)) / rows.length
+	if (v > maxRowHeight) return [maxRowHeight, 1] // small enough number of rows. use max height
+	if (v > 3) return [Math.floor(v), 1] // big enough height, round to small integer with spacing
+	if (v > 1) return [Math.floor(v), 0] // same above, no spacing
+	return [v, 0] // very small height. no spacing
+}
+
+/*
 tk.cnv = {
 	presetMax: number // if set, use this to set colorscale domain
 	absoluteMax: number // if presetMax is not set, use this for colorscale domain
@@ -22,7 +50,6 @@ click cnv legend to:
 also
 - subtk maintains same absoluteMax as parent tk
 */
-
 export function may_render_cnv(data, tk, block) {
 	tk.cnv?.g.selectAll('*').remove()
 	if (!data.cnv) {
@@ -42,7 +69,7 @@ export function may_render_cnv(data, tk, block) {
 		[tk.cnv.lossColor, 'white', tk.cnv.gainColor]
 	).clamp(true)
 
-	const [rowheight, rowspace] = getRowHeight(cnvBySample || cnvLst)
+	const [rowheight, rowspace] = getRowHeight(cnvBySample || cnvLst, tk)
 
 	/* rendering
 	when using samples:
@@ -149,33 +176,6 @@ function prepData(data, tk, block) {
 	}
 
 	return [samples, cnvLst, Math.min(tk.cnv.absoluteValueRenderMax, maxAbsoluteValue)]
-}
-
-/*
-arg is an array. each element is a row of either:
-	- all cnv segments per sample (for each sample, all cnv are shown in one row)
-	- a stack that will be shown as a row
-
-logic:
-
-	if there are small enough number of rows:
-	- max out row height to maxRowHeight with spacing. total subtrack height shouldn't exceed limit
-
-	if number of rows exceeds maxTkHeight:
-		return fractional row height (maxTkHeight/#rows) for canvas plotting
-	
-	else:
-		scale 
-// use same sample number cutoff values in scale and capping
-*/
-const maxRowHeight = 10
-const maxTkHeight = 200 // cnv sub track shouldn't exceed this height
-function getRowHeight(rows) {
-	const v = maxTkHeight / rows.length
-	if (v > maxRowHeight) return [maxRowHeight, 1] // small enough number of rows. use max height
-	if (v > 3) return [Math.floor(v), 1] //
-	if (v > 1) return [Math.floor(v), 0] // no spacing
-	return [v, 0]
 }
 
 function plotOneSegment(c, y, rowheight, tk, block, sample) {

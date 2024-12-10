@@ -10,8 +10,7 @@ makeSampleLabel()
 	click label to view summaries about samples that have mutation data in the view range
 
 makeSampleFilterLabel()
-
-getFilterName
+createSubTk()
 */
 
 export function makeSampleLabel(data, tk, block, laby) {
@@ -278,10 +277,14 @@ function createSubTk(tk, block, tvs) {
 		showCloseLeftlabel: true,
 		filterObj: getNewFilter(tk, tvs),
 		allow2selectSamples: tk.allow2selectSamples,
-		onClose: tk.onClose
+		onClose: tk.onClose,
+		hardcodeCnvOnly: tk.hardcodeCnvOnly
 	}
 	if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
-	// TODO mclass
+	if (tk.legend.mclass?.hiddenvalues?.size) {
+		tkarg.legend = { mclass: { hiddenvalues: new Set() } }
+		for (const v of tk.legend.mclass.hiddenvalues) tkarg.legend.mclass.hiddenvalues.add(v)
+	}
 	const tk2 = block.block_addtk_template(tkarg)
 	block.tk_load(tk2)
 }
