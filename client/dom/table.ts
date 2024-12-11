@@ -1,78 +1,110 @@
 import { select } from 'd3-selection'
 
 export type Cell = {
-	url?: string // to print in <a> element
-	value?: string | number // to print with .text() d3 method
-	color?: string // color code to render as a color cell or, if value provided, cell font-color
-	html?: string // to print with .html() d3 method, may be susceptible to attack
-	__td?: any //is attached to each cell object pointing to <td>, for external code to render interactive contents in it
+	/** to print in <a> element */
+	url?: string
+	/** to print with .text() d3 method */
+	value?: string | number
+	/** color code to render as a color cell or, if value provided, cell font-color */
+	color?: string
+	/** to print with .html() d3 method, may be susceptible to attack */
+	html?: string
+	/** is attached to each cell object pointing to <td>, for external code to render interactive contents in it */
+	__td?: any
 	disabled?: boolean
-	elemId?: string // may be used as a reference ID for aria-labelledby, or other use
+	/** may be used as a reference ID for aria-labelledby, or other use */
+	elemId?: string
 }
 
 export type Column = {
-	label: string //the text to show as header of a column
-	width?: string // column width
-	editCallback?: (i: number, cell: Cell) => void // Makes this column editable  and allows to notify the change through the callback.
-	//It is only allowed for cells with a value or a color field
-	nowrap?: boolean // set white-space=nowrap on all <td> of this column so strings do not wrap
-	align?: string // left, center, right. If missing it is aligned to the left by default
-	title?: string //tooltip describing column content
+	/** the text to show as header of a column */
+	label: string
+	/** column width */
+	width?: string
+	/** Makes this column editable  and allows to notify the change
+	 * through the callback. It is only allowed for cells with a value or a color field */
+	editCallback?: (i: number, cell: Cell) => void
+	/** set white-space=nowrap on all <td> of this column so strings do not wrap */
+	nowrap?: boolean
+	/** left, center, right. If missing it is aligned to the left by default */
+	align?: string
+	/** tooltip describing column content */
+	title?: string
 }
 
 export type Button = {
 	dataTestId?: any
-	text: string //the text to show in the button
-	callback: (idxs: number[], button: any) => void //called when the button is clicked. Receives selected indexes and the button dom object
+	/** the text to show in the button */
+	text: string
+	/** called when the button is clicked. Receives selected indexes and the button dom object */
+	callback: (idxs: number[], button: any) => void
 	disabled?: (index: number) => boolean
 	button: any
-	onChange?: (idx: number[], button: any) => void //Called when selecting rows, it would update the button text
-	class?: string //to customize button style or to assist detection in testing
+	/** Called when selecting rows, it would update the button text */
+	onChange?: (idx: number[], button: any) => void //
+	/** to customize button style or to assist detection in testing */
+	class?: string
 }
 
-// ariaLabelledBy is an optional attribute on the array object,
-// if present, will be used as aria-labelledby attribute on the
-// radio or checkbox input element, to address Section 508 requirement
+/** ariaLabelledBy is an optional attribute on the array object,
+ * if present, will be used as aria-labelledby attribute on the
+ * radio or checkbox input element, to address Section 508 requirement */
 export type TableRow = Cell[] & { ariaLabelledBy?: string }
 
 export type TableArgs = {
-	columns: Column[] //List of table columns
-	rows: TableRow[] //each element is an array of cells for a row, with array length must matching columns length
-
-	div: any //Holder to render the table
-	columnButtons?: Button[] //List of buttons to render in a column
-	buttons?: Button[] //List of buttons to do actions after the table is edited
-	noButtonCallback?: (i: number, node: any) => void //Function that will be called when a row is selected
-	singleMode?: boolean //	true for single-selection. use radio button instead of checkboxes for multiselect
-	noRadioBtn?: boolean // true to show no radio buttons. should only use when singleMode=true
-	showLines?: boolean //Shows or hides line column.
-	striped?: boolean //When active makes the table rows to alternate bg colors
-	showHeader?: boolean //Render header row or not
-	headerThStyle?: object // object of key-value pairs to customize style of header <th> elements, e.g. {'font-size':'1.1em', ...}
-	maxWidth?: string //The max width of the table, 90vw by default.
-	maxHeight?: string //The max height of the table, 40vh by default
-
-	selectedRows?: number[] //Preselect rows specified
-	selectAll?: boolean //Preselect all rows
-	resize?: boolean //Allow to resize the table height dragging the border
-	selectedRowStyle?: any //An object of arbitrary css key-values on how to style selected rows,
-	//for example `{text-decoration: 'line-through'}`. If a row is not
-	//selected, each css property will be set to an empty string ''
-	inputName?: any //For testing purposes
-	//optional. value is predefined input name. this allows test to work.
-	//when not available, for each table made, create a unique name to use as the <input name=?>
-	//if the same name is always used, multiple tables created in one page will conflict in row selection
+	/** List of table columns */
+	columns: Column[]
+	/** each element is an array of cells for a row, with array length must matching columns length */
+	rows: TableRow[]
+	/** Holder to render the table */
+	div: any
+	/** List of buttons to render in a column */
+	columnButtons?: Button[]
+	/** List of buttons to do actions after the table is edited */
+	buttons?: Button[]
+	/** Function that will be called when a row is selected */
+	noButtonCallback?: (i: number, node: any) => void
+	/** true for single-selection. use radio button instead of checkboxes for multiselect */
+	singleMode?: boolean
+	/** true to show no radio buttons. should only use when singleMode=true */
+	noRadioBtn?: boolean
+	/** Shows or hides line column. */
+	showLines?: boolean
+	/** When active makes the table rows to alternate bg colors */
+	striped?: boolean
+	/** Render header or not */
+	showHeader: boolean
+	/**  object of key-value pairs to customize style of header <th> elements, e.g. {'font-size':'1.1em', ...} */
+	headerThStyle?: object
+	/** The max width of the table, 90vw by default. */
+	maxWidth?: string
+	/** The max height of the table, 40vh by default */
+	maxHeight?: string
+	/** Preselect rows specified */
+	selectedRows?: number[]
+	/** Preselect all rows */
+	selectAll?: boolean
+	/** Allow to resize the table height dragging the border*/
+	resize?: boolean
+	/** An object of arbitrary css key-values on how to style selected rows,
+	 * for example `{text-decoration: 'line-through'}`. If a row is not
+	 * selected, each css property will be set to an empty string ''*/
+	selectedRowStyle?: any
+	/** For testing purposes */
+	inputName?: any
+	/** optional. value is predefined input name. this allows test to work.
+	 * when not available, for each table made, create a unique name to use
+	 * as the <input name=?> if the same name is always used, multiple tables
+	 * created in one page will conflict in row selection */
 	dataTestId?: any
-	//Optional
-	//For testing purposes
 }
 
-// incremented input ID will guarantee no collision from using getUniqueNameOrId()
+/** incremented input ID will guarantee no collision from using getUniqueNameOrId()*/
 let idIncr = 0
-// random suffix will minimize the chance of collission of other code that
-// happen to use the same prefix/beginning substring for element ID
+/** random suffix will minimize the chance of collission of other code that
+happen to use the same prefix/beginning substring for element ID  */
 const randomSuffix = Math.random()
-// generate unique input name or id string
+/** generate unique input name or id string */
 function getUniqueNameOrId(str = 'elem') {
 	return `sjpp-${str}-${idIncr++}-${randomSuffix}`
 }
@@ -214,7 +246,7 @@ export function renderTable({
 		if (!row.ariaLabelledBy && row[0] && !row[0].elemId) row[0].elemId = ariaLabelledBy
 
 		if (buttons || noButtonCallback)
-			tr.on('click', e => {
+			tr.on('click', (e: Event) => {
 				if (e.target !== checkbox.node()) {
 					if (singleMode)
 						//not a checkbox
@@ -285,7 +317,7 @@ export function renderTable({
 
 			const column = columns[colIdx]
 			if (column.editCallback && cell.value) {
-				td.on('click', event => {
+				td.on('click', (event: MouseEvent) => {
 					event.stopImmediatePropagation()
 					const isEdit = td.select('input').empty()
 					if (!isEdit) return
