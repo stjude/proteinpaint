@@ -6,11 +6,13 @@ import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { rgb } from 'd3'
+import { max, rgb } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
 import { Tabs } from '../dom/toggleButtons.js'
+import * as THREE from 'three'
+import { getThreeCircle } from './sampleScatter.rendererThree.js'
 
 /*
 this
@@ -217,7 +219,6 @@ class singleCellPlot {
 
 		document.addEventListener('scroll', event => this?.tip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.tip.hide())
-		await this.setControls(state)
 	}
 
 	renderShowPlots(showDiv, state) {
@@ -389,7 +390,6 @@ class singleCellPlot {
 				this.zoom = this.zoom * 1.1
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 1.1)
-					else this.renderPlot(plot) //large plot
 				}
 			},
 			title: 'Zoom in'
@@ -400,7 +400,6 @@ class singleCellPlot {
 				this.zoom = this.zoom * 0.9
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 0.9)
-					else this.renderPlot(plot) //large plot
 				}
 			},
 			title: 'Zoom out'
@@ -411,7 +410,6 @@ class singleCellPlot {
 				this.zoom = 1
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.mainG.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
-					else this.renderPlot(plot) //large plot
 				}
 			},
 			title: 'Reset plot to defaults'
@@ -506,7 +504,8 @@ class singleCellPlot {
 		})
 	}
 
-	async setControls(state) {
+	async setControls() {
+		this.dom.controlsHolder.selectAll('*').remove()
 		const inputs = [
 			{
 				label: 'Chart width',
@@ -523,25 +522,39 @@ class singleCellPlot {
 				settingsKey: 'svgh',
 				min: 300,
 				max: 1000
-			},
-			{
-				label: 'Show grid',
-				type: 'checkbox',
+			}
+		]
+		if (this.largePlot) {
+			inputs.push({
+				label: 'Sample size',
+				type: 'number',
 				chartType: 'singleCellPlot',
-				settingsKey: 'showGrid',
-				boxLabel: ''
-			},
-			{
+				settingsKey: 'sampleSizeThree',
+				title: 'Sample size',
+				min: 0.001,
+				max: 0.1,
+				step: 0.001
+			})
+		} else {
+			inputs.push({
 				label: 'Sample size',
 				type: 'number',
 				chartType: 'singleCellPlot',
 				settingsKey: 'sampleSize',
 				title: 'Sample size',
-				min: 0.5,
-				max: 2,
-				step: 0.1
-			}
-		]
+				min: 1,
+				max: 3,
+				step: 0.5
+			}),
+				inputs.push({
+					label: 'Show grid',
+					boxLabel: '',
+					type: 'checkbox',
+					chartType: 'singleCellPlot',
+					settingsKey: 'showGrid',
+					title: 'Show grid'
+				})
+		}
 
 		this.components = {
 			controls: await controlsInit({
@@ -586,7 +599,7 @@ class singleCellPlot {
 		this.data = await this.getData()
 		this.dom.loadingDiv.style('display', 'none')
 		this.renderPlots(this.data)
-
+		await this.setControls()
 		if (this.dom.header) this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} single cell data`)
 	}
 
@@ -671,6 +684,7 @@ class singleCellPlot {
 		for (const plot of result.plots) {
 			this.plots.push(plot)
 			plot.cells = [...plot.noExpCells, ...plot.expCells]
+			if (plot.cells.length > maxSamplesD3) this.largePlot = true
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
 		}
@@ -732,14 +746,20 @@ class singleCellPlot {
 			if (values.length == 0) {
 				plot.colorGenerator = null
 			} else {
-				;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
-				plot.colorGenerator = d3Linear().domain([0, max]).range([startColor, stopColor])
+				if (this.state.config.min) {
+					min = this.state.config.min
+					max = this.state.config.max
+				} else {
+					;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
+					min = 0 //force min to start in cero
+				}
+				plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
+				plot.min = min
 				plot.max = max
 			}
 		}
-
 		if (plot.cells.length > maxSamplesD3) {
-			this.renderLargePlot(plot)
+			this.renderLargePlotThree(plot)
 			this.renderLegend(plot)
 
 			return
@@ -798,7 +818,11 @@ class singleCellPlot {
 
 	getOpacity(d) {
 		if (this.config.hiddenClusters.includes(d.category)) return 0
-		return 0.8
+		if (this.colorByGene && this.state.config.gene) {
+			if (this.state.config.min > d.geneExp) return 0
+			if (this.state.config.max < d.geneExp) return 0
+		}
+		return this.settings.opacity
 	}
 
 	getColor(d, plot) {
@@ -821,13 +845,17 @@ class singleCellPlot {
 			[s0.x, s0.x, s0.y, s0.y]
 		)
 		const r = 5
-
-		plot.xAxisScale = d3Linear()
-			.domain([xMin, xMax])
-			.range([0 + r, this.settings.svgw - r])
-		plot.yAxisScale = d3Linear()
-			.domain([yMax, yMin])
-			.range([0 + r, this.settings.svgh - r])
+		if (plot.cells.length > maxSamplesD3) {
+			plot.xAxisScale = d3Linear().domain([xMin, xMax]).range([-1, 1])
+			plot.yAxisScale = d3Linear().domain([yMin, yMax]).range([-1, 1])
+		} else {
+			plot.xAxisScale = d3Linear()
+				.domain([xMin, xMax])
+				.range([0 + r, this.settings.svgw - r])
+			plot.yAxisScale = d3Linear()
+				.domain([yMax, yMin])
+				.range([0 + r, this.settings.svgh - r])
+		}
 	}
 
 	renderLegend(plot) {
@@ -980,14 +1008,22 @@ class singleCellPlot {
 			barwidth,
 			barheight: 20,
 			colors,
-			data: [0, plot.max],
+			data: [plot.min, plot.max],
 			position: '0, 20',
 			ticks: 4,
 			tickSize: 5,
 			topTicks: true,
+			cutoffMode: this.state.config.min || this.state.config.max ? 'fixed' : 'auto',
 			setColorsCallback: (val, idx) => {
 				this.changeGradientColor(plot, val, idx)
 			}
+			// setMinMaxCallback: obj => {
+			// 	if (obj.cutoffMode == 'auto') {
+			// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: null, max: null } })
+			// 	} else if (obj.cutoffMode == 'fixed') {
+			// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: obj.min, max: obj.max } })
+			// 	}
+			// }
 		})
 		colorScale.updateScale()
 
@@ -1154,57 +1190,106 @@ class singleCellPlot {
 		return [rows, columns]
 	}
 
-	renderLargePlot = async function (plot) {
+	renderLargePlotThree = async function (plot) {
 		if (!plot.canvas) {
 			plot.canvas = plot.plotDiv.append('canvas').node()
 			plot.canvas.width = this.settings.svgw
 			plot.canvas.height = this.settings.svgh
 			plot.plotDiv.style('margin', '20px 20px')
 		}
-		const canvas = plot.canvas
-		const size = this.settings.sampleSize
-		const ctx = canvas.getContext('2d')
-		ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-		ctx.save() // Save the current transformation matrix
-		const zoomLevel = this.zoom
-		// Apply zoom transformation
-		ctx.translate(canvas.width / 2, canvas.height / 2) // Translate to center
-		ctx.scale(zoomLevel, zoomLevel) // Scale the canvas
-		ctx.translate(-canvas.width / 2, -canvas.height / 2) // Translate back
+		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 
+		const fov = this.settings.threeFOV
+		const near = 0.1
+		const far = 1000
+		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
+		const scene = new THREE.Scene()
+		camera.position.set(0, 0, 2)
+		camera.lookAt(scene.position)
+		camera.updateMatrix()
+		const whiteColor = new THREE.Color('rgb(255,255,255)')
+		scene.background = whiteColor
+
+		const geometry = new THREE.BufferGeometry()
+		const { vertices, colors } = this.getVertices(plot)
+
+		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+		const tex = getThreeCircle(128)
+		const material = new THREE.PointsMaterial({
+			size: this.settings.sampleSizeThree,
+			sizeAttenuation: true,
+			transparent: true,
+			opacity: this.settings.opacity,
+			map: tex,
+			vertexColors: true
+		})
+
+		const particles = new THREE.Points(geometry, material)
+
+		scene.add(particles)
+		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
+		renderer.setPixelRatio(window.devicePixelRatio)
+
+		// The grid should be out of the zoom, commented out until handled
+
+		// if (this.settings.showGrid) {
+		// 	// Line Geometry
+		// 	const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffd3d3d3 })
+
+		// 	const lines = 5
+		// 	let x = -1
+		// 	const step = 0.5
+		// 	for (let i = 0; i < 5; i++) {
+		// 		let points = []
+		// 		points.push(new THREE.Vector3(x, 1, 0))
+		// 		points.push(new THREE.Vector3(x, -1, 0))
+		// 		let lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
+		// 		let line = new THREE.Line(lineGeometry, lineMaterial)
+		// 		scene.add(line)
+		// 		points = []
+		// 		points.push(new THREE.Vector3(-1, x, 0))
+		// 		points.push(new THREE.Vector3(1, x, 0))
+		// 		lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
+		// 		line = new THREE.Line(lineGeometry, lineMaterial)
+		// 		scene.add(line)
+		// 		x += step
+		// 	}
+		// }
+
+		// Line Object
+
+		// Add line to scene
+
+		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
+		document.addEventListener('mousewheel', event => {
+			if (event.ctrlKey) camera.position.z += event.deltaY / 500
+		})
+
+		const self = this
+		function animate() {
+			requestAnimationFrame(animate)
+			camera.zoom = self.zoom
+			camera.updateProjectionMatrix()
+			renderer.render(scene, camera)
+		}
+		animate()
+	}
+
+	getVertices(plot) {
+		const vertices = []
+		const colors = []
 		for (const c of plot.cells) {
 			const opacity = this.getOpacity(c)
 			if (opacity == 0) continue
 			let x = plot.xAxisScale(c.x)
 			let y = plot.yAxisScale(c.y)
 			const rgbColor = rgb(this.getColor(c, plot))
-			ctx.fillStyle = rgbColor.toString()
-			ctx.beginPath()
-			ctx.arc(x, y, size / 2, 0, 2 * Math.PI)
-			ctx.fill()
+			vertices.push(x, y, 0)
+			colors.push(rgbColor.r / 255, rgbColor.g / 255, rgbColor.b / 255)
 		}
-
-		ctx.restore()
-		if (!this.settings.showGrid) return
-		const color = '#aaa'
-		const opacity = 0.5
-		const bins = 6
-		const step = this.settings.svgw / bins
-		let x, y
-
-		for (let i = 0; i <= bins; i++) {
-			x = i * step
-			ctx.moveTo(x, 0)
-			ctx.lineTo(x, this.settings.svgh)
-		}
-		for (let i = 0; i <= bins; i++) {
-			y = i * step
-			ctx.moveTo(0, y)
-			ctx.lineTo(this.settings.svgw, y)
-		}
-		ctx.strokeStyle = color
-		ctx.stroke()
+		return { vertices, colors }
 	}
 }
 
@@ -1223,7 +1308,8 @@ export async function getPlotConfig(opts, app) {
 		const config = {
 			hiddenClusters: [],
 			settings: {
-				singleCellPlot: settings
+				singleCellPlot: settings,
+				controls: { isOpen: false }
 			},
 			startColor: {},
 			stopColor: {},
@@ -1243,6 +1329,9 @@ export function getDefaultSingleCellSettings() {
 		svgw: 900,
 		svgh: 900,
 		showGrid: true,
-		sampleSize: 1.2
+		sampleSize: 1.5,
+		sampleSizeThree: 0.001,
+		threeFOV: 55,
+		opacity: 0.8
 	}
 }
