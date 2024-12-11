@@ -73,9 +73,14 @@ export type TableArgs = {
 	/** When active makes the table rows to alternate bg colors */
 	striped?: boolean
 	/** Render header or not */
-	showHeader: boolean
-	/**  object of key-value pairs to customize style of header <th> elements, e.g. {'font-size':'1.1em', ...} */
-	headerThStyle?: object
+	showHeader?: boolean
+	/** Options for rendering the header */
+	header?: {
+		/** allow sorting from column headers */
+		allowSort?: boolean
+		/**  object of key-value pairs to customize style of header <th> elements, e.g. {'font-size':'1.1em', ...} */
+		style?: object
+	}
 	/** The max width of the table, 90vw by default. */
 	maxWidth?: string
 	/** The max height of the table, 40vh by default */
@@ -125,7 +130,7 @@ export function renderTable({
 	showLines = true,
 	striped = true,
 	showHeader = true,
-	headerThStyle,
+	header = {},
 	maxWidth = '90vw',
 	maxHeight = '40vh',
 	selectedRows = [],
@@ -215,8 +220,8 @@ export function renderTable({
 
 	if (columnButtons && columnButtons.length > 0) {
 		const th = theadRow.append('th').text('Actions').attr('class', 'sjpp_table_item sjpp_table_header')
-		if (headerThStyle) {
-			for (const k in headerThStyle) th.style(k, headerThStyle[k])
+		if (header?.style) {
+			for (const k in header.style) th.style(k, header.style[k])
 		}
 	}
 
@@ -225,8 +230,8 @@ export function renderTable({
 			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
 			if (c.title) th.attr('title', c.title)
-			if (headerThStyle) {
-				for (const k in headerThStyle) th.style(k, headerThStyle[k])
+			if (header?.style) {
+				for (const k in header.style) th.style(k, header.style[k])
 			}
 		}
 	}
