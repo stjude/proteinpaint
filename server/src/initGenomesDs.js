@@ -514,39 +514,7 @@ export async function initGenomesDs(serverconfig) {
 		deleteSessionFiles()
 		delete g.rawdslst
 	}
-
-	const getLabel = ds => `${ds.genomename}/${ds.label}`
-	const done = trackedDatasets.filter(ds => ds.init.status === 'done')
-	const nonblocking = trackedDatasets.filter(ds => ds.init.status === 'nonblocking')
-	// if no dataset loaded successfully, assume that there may be something wrong
-	// with serverconfig and/or code, not with dataset js/ts files, and
-	// crash the server to trigger rollback
-	if (!done.length && !nonblocking.length) throw `there were no datasets that loaded successfully`
-	else {
-		if (done.length) {
-			console.log(`\n--- these datasets finished loading ---`)
-			console.log(done.map(getLabel).join(', '))
-		}
-
-		if (nonblocking.length) {
-			console.log(`\n--- these datasets are running nonblocking initialization steps ---`)
-			console.log(nonblocking.map(getLabel).join(', '))
-		}
-
-		const activeRetries = trackedDatasets.filter(ds => ds.init.status === 'recoverableError')
-		if (activeRetries.length) {
-			console.log(`\n--- active retries after initial attempt at loading dataset ---`)
-			console.log(activeRetries.map(getLabel).join(', '))
-		}
-
-		const failed = trackedDatasets.filter(
-			ds => !done.includes(ds) && !nonblocking.includes(ds) && !activeRetries.includes(ds)
-		)
-		if (failed.length) {
-			console.log(`\n--- failed dataset init (will notify team) ---`)
-			console.log(failed.map(getLabel).join(', '))
-		}
-	}
+	return trackedDatasets
 }
 
 async function mayCreateSubdirInCache(subdir) {

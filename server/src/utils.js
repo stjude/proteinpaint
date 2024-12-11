@@ -796,7 +796,7 @@ export function boxplot_getvalue(lst) {
 
 const RecoverableErrorCodes = new Set([
 	'ECONNRESET',
-	//'ECONNREFUSED', // retry will continue to be refused?
+	//'ECONNREFUSED', // retry will continue to be refused, so not recoverable?
 	'ENOTFOUND',
 	'ENETDOWN',
 	'ENETUNREACH',
@@ -806,6 +806,7 @@ const RecoverableErrorCodes = new Set([
 	//'UND_ERR_SOCKET'
 ])
 
+// see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses
 const RecoverableHTTPcodes = new Set([500, 502, 503, 504])
 
 // only use this helper when catching errors that may be due to
