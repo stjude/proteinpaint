@@ -796,15 +796,17 @@ export function boxplot_getvalue(lst) {
 
 const RecoverableErrorCodes = new Set([
 	'ECONNRESET',
-	'ECONNREFUSED',
+	//'ECONNREFUSED', // retry will continue to be refused?
 	'ENOTFOUND',
 	'ENETDOWN',
 	'ENETUNREACH',
 	'EHOSTDOWN',
-	'EHOSTUNREACH',
-	'EPIPE',
-	'UND_ERR_SOCKET'
+	'EHOSTUNREACH'
+	//'EPIPE',
+	//'UND_ERR_SOCKET'
 ])
+
+const RecoverableHTTPcodes = new Set([500, 502, 503, 504])
 
 // only use this helper when catching errors that may be due to
 // external API server errors or network connection failures;
@@ -812,7 +814,7 @@ const RecoverableErrorCodes = new Set([
 // may be recovered from (temp maintenance or disconnect), others are fatal
 export function isRecoverableError(e) {
 	// detect if status maps to a known HTTP 5xx server error code
-	if (typeof e.status == 'number') return e.status >= 500
+	if (typeof e.status == 'number') return RecoverableHTTPcodes.has(e.status)
 	if (e.status == 'recoverableError') return true
 
 	const code = e.code || e.error?.code || e.cause?.code || ''
