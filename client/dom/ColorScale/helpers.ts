@@ -84,9 +84,15 @@ export function colorDelta(rgb1, rgb2) {
  * @param domain - number array to remove outliers from
  * @returns the cleaned up domain array
  */
-export function removeExtremeOutliers(domain: number[], firstPercent = 0.01, lastPercent = 0.99) {
+export function removeOutliers(domain: number[], firstPercent = 0.01, lastPercent = 0.99) {
 	const sorted = domain.sort((a, b) => a - b)
 	const first = sorted[0] == 0 ? 0 : sorted[Math.floor(sorted.length * firstPercent)]
 	const last = sorted[sorted.length - 1] == 0 ? 0 : sorted[Math.floor(sorted.length * lastPercent)]
 	return sorted.filter(d => d >= first && d <= last)
+}
+
+export function removeInterpolatedOutliers(domainRange) {
+	const domain = removeOutliers(domainRange.domain)
+	const range = domain.map(d => domainRange.range[domainRange.domain.indexOf(d)])
+	return { domain, range }
 }

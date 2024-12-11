@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { ColorScale, removeExtremeOutliers } from '#dom'
+import { ColorScale, removeOutliers } from '#dom'
 import { detectGte } from '../../test/test.helpers.js'
 
 /* Tests
@@ -583,7 +583,7 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('removeExtremeOutliers()', test => {
+tape('removeOutliers()', test => {
 	test.timeoutAfter(100)
 	let minPercent: number, maxPercent: number, expected: number[], result: number[]
 	const mockDomain = [
@@ -592,12 +592,12 @@ tape('removeExtremeOutliers()', test => {
 		0.2800000000000002, 0.38000000000000034, 0.4800000000000004, 0.5800000000000005, 0.6800000000000006,
 		0.7800000000000008, 0.8800000000000009, 0.9800000000000011, 100
 	]
-	result = removeExtremeOutliers(mockDomain)
+	result = removeOutliers(mockDomain)
 	test.deepEqual(result, mockDomain, `Should not remove outliers for such a small domain`)
 
 	minPercent = 0.05
 	maxPercent = 0.95
-	result = removeExtremeOutliers(mockDomain, minPercent, maxPercent)
+	result = removeOutliers(mockDomain, minPercent, maxPercent)
 	expected = [
 		-0.8999999999999999, -0.7999999999999997, -0.6999999999999996, -0.5999999999999994, -0.49999999999999933,
 		-0.3999999999999992, -0.2999999999999991, -0.19999999999999896, -0.09999999999999888, 0.08, 0.18000000000000005,
@@ -612,7 +612,7 @@ tape('removeExtremeOutliers()', test => {
 
 	minPercent = 0.25
 	maxPercent = 0.75
-	result = removeExtremeOutliers(mockDomain, minPercent, maxPercent)
+	result = removeOutliers(mockDomain, minPercent, maxPercent)
 	expected = [
 		-0.49999999999999933, -0.3999999999999992, -0.2999999999999991, -0.19999999999999896, -0.09999999999999888, 0.08,
 		0.18000000000000005, 0.2800000000000002, 0.38000000000000034, 0.4800000000000004, 0.5800000000000005
