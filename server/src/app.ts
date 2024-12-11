@@ -21,7 +21,8 @@ Object.freeze(process.argv)
 
 export async function launch() {
 	try {
-		await initGenomesDs(serverconfig)
+		const trackedDatasets = await initGenomesDs(serverconfig)
+		processTrackedDs(trackedDatasets)
 
 		// no error from server initiation
 		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)
@@ -197,6 +198,53 @@ async function setOptionalRoutes(app) {
 		if (fname.endsWith('.js')) {
 			const _ = await import(fname)
 			_.default(app, basepath)
+		}
+	}
+}
+
+function processTrackedDs(trackedDatasets) {
+	const getLabel = ds => `${ds.genomename}/${ds.label}`
+	const done = trackedDatasets.filter(ds => ds.init.status === 'done')
+	const nonblocking = trackedDatasets.filter(ds => ds.init.status === 'nonblocking')
+	// if no dataset loaded successfully, assume that there may be something wrong
+	// with serverconfig and/or code, not with dataset js/ts files, and
+	// crash the server to trigger rollback
+	if (!done.length && !nonblocking.length) {
+		// this should trigger a rollback notification
+		throw `${serverconfig.URL}: there were no datasets that loaded successfully`
+	} else {
+		if (done.length) {
+			console.log(`\n--- these datasets finished loading ---`)
+			console.log(done.map(getLabel).join(', '))
+		}
+
+		if (nonblocking.length) {
+			console.log(`\n--- these datasets are running nonblocking initialization steps ---`)
+			console.log(nonblocking.map(getLabel).join(', '))
+		}
+
+		const activeRetries = trackedDatasets.filter(ds => ds.init.status === 'recoverableError')
+		if (activeRetries.length) {
+			console.log(`\n--- active retries after initial attempt at loading dataset ---`)
+			console.log(activeRetries.map(getLabel).join(', '))
+		}
+
+		const failed = trackedDatasets.filter(
+			ds => !done.includes(ds) && !nonblocking.includes(ds) && !activeRetries.includes(ds)
+		)
+		if (failed.length) {
+			const msg = `\n--- failed dataset init (will notify team) ---\n${failed.map(getLabel).join(', ')}\n`
+			console.log(msg)
+			// not a fatal error for the server and will not trigger a deployment rollback notification,
+			// so must trigger a notification here
+			if (serverconfig.slackWebhookUrl) {
+				const url = serverconfig.URL
+				sendMessageToSlack(
+					serverconfig.slackWebhookUrl,
+					`\n${serverconfig.URL}: ${msg}`,
+					path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+				)
+			}
 		}
 	}
 }
