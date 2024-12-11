@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- allow to customize table header row style
+
 
 ## 2.91.0
 
