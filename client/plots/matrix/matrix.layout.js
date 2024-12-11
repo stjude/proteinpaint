@@ -3,7 +3,7 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
-import { colorDelta, getInterpolatedDomainRange, removeInterpolatedOutliers } from '#dom'
+import { colorDelta, getInterpolatedDomainRange, removeInterpolatedOutliers, removeOutliers } from '#dom'
 
 export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
@@ -95,7 +95,7 @@ export function getMaxGrpLabelWidth() {
 
 export function setLabelsAndScales() {
 	const s = this.settings.matrix
-	this.cnvValues = {}
+	this.cnvValues = []
 	// ht: standard cell dimension for term row or column
 	const ht = s.transpose ? s.colw : s.rowh
 	const grpTotals = {}
@@ -164,13 +164,7 @@ export function setLabelsAndScales() {
 					for (const val of anno.values) {
 						if (val.dt == dtcnv && 'value' in val && !s.ignoreCnvValues) {
 							const v = val.value
-							if (v < 0) {
-								if (!('minLoss' in this.cnvValues) || this.cnvValues['minLoss'] > v) this.cnvValues['minLoss'] = v
-								if (!('maxLoss' in this.cnvValues) || this.cnvValues['maxLoss'] < v) this.cnvValues['maxLoss'] = v
-							} else {
-								if (!('minGain' in this.cnvValues) || this.cnvValues['minGain'] > v) this.cnvValues['minGain'] = v
-								if (!('maxGain' in this.cnvValues) || this.cnvValues['maxGain'] < v) this.cnvValues['maxGain'] = v
-							}
+							this.cnvValues.push(v)
 						}
 					}
 				}
@@ -334,19 +328,29 @@ export function setLabelsAndScales() {
 
 	let cnvLegendDomainRange // if cnv data is present, compute once and reuse across geneVariant tw's
 
-	// need to assign scales to terms after the loop above so each term has the global maxLoss, maxGain, minLoss, minGain
-	for (const t of this.termOrder) {
-		if (t.tw.term.type == 'geneVariant') {
-			if ('minLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
-				const { minLoss, maxLoss, minGain, maxGain } = this.cnvValues
-
+	if (this.cnvValues.length) {
+		this.cnvValues = removeOutliers(this.cnvValues)
+		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
+		const maxGain =
+			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
+		let maxLoss, minGain
+		for (const n of this.cnvValues) {
+			if (n < 0) maxLoss = n
+			if (!minGain && n > 0) {
+				minGain = n
+				break
+			}
+		}
+		// need to assign scales to terms after the loop above so each term has the global maxLoss, maxGain, minLoss, minGain
+		for (const t of this.termOrder) {
+			if (t.tw.term.type == 'geneVariant') {
 				if (!cnvLegendDomainRange) {
 					// compute these interpolated domain/range only once,
 					// and then share with other t objects
 					const loss0color = interpolateBlues(0)
 					const gain0color = interpolateReds(0)
 					const colorDiff = colorDelta(loss0color, gain0color)
-					if (maxLoss !== undefined && maxGain !== undefined && colorDiff > 25)
+					if (minLoss !== undefined && maxGain !== undefined && colorDiff > 25)
 						console.warn(
 							`CNV loss and gain do not have the same middle color for value=0` +
 								`'${loss0color}' vs '${gain0color}', color difference=${colorDiff}`
@@ -366,7 +370,7 @@ export function setLabelsAndScales() {
 						absMin: 0,
 						absMax,
 						stepSize: 100,
-						negInterpolator: maxLoss !== undefined && interpolateBlues,
+						negInterpolator: minLoss !== undefined && interpolateBlues,
 						posInterpolator: maxGain !== undefined && interpolateReds,
 						// force this middleColor to white, knowing that interpolateBlues and interpolateReds,
 						// as hardcoded above and below, share similar white colors for their minimum abs values
@@ -374,11 +378,11 @@ export function setLabelsAndScales() {
 					})
 				}
 
-				const min = cnvLegendDomainRange.domain[0]
-				const max = cnvLegendDomainRange.domain[cnvLegendDomainRange.domain.length - 1]
-				const domainRange = Math.abs(max - min)
-				if (((min === 0 || max === 0) && domainRange > 1) || domainRange > 5)
-					cnvLegendDomainRange = removeInterpolatedOutliers(cnvLegendDomainRange)
+				// const min = cnvLegendDomainRange.domain[0]
+				// const max = cnvLegendDomainRange.domain[cnvLegendDomainRange.domain.length - 1]
+				// const domainRange = Math.abs(max - min)
+				// if (((min === 0 || max === 0) && domainRange > 1) || domainRange > 5)
+				// 	cnvLegendDomainRange = removeInterpolatedOutliers(cnvLegendDomainRange)
 
 				t.scales = {
 					loss: interpolateBlues,
