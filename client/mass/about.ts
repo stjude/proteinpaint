@@ -235,7 +235,8 @@ export class MassAbout {
 			columns,
 			div: this.dom.cohortTable,
 			showLines: false,
-			maxHeight: '60vh'
+			maxHeight: '60vh',
+			headerThStyle: { 'font-size': '1.1em', 'font-weight': 'bold' }
 		})
 
 		this.dom.cohortTable.select('table').style('border-collapse', 'collapse')

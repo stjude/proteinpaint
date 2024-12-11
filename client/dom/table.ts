@@ -47,7 +47,8 @@ export type TableArgs = {
 	noRadioBtn?: boolean // true to show no radio buttons. should only use when singleMode=true
 	showLines?: boolean //Shows or hides line column.
 	striped?: boolean //When active makes the table rows to alternate bg colors
-	showHeader?: boolean //Render header or not
+	showHeader?: boolean //Render header row or not
+	headerThStyle?: object // object of key-value pairs to customize style of header <th> elements, e.g. {'font-size':'1.1em', ...}
 	maxWidth?: string //The max width of the table, 90vw by default.
 	maxHeight?: string //The max height of the table, 40vh by default
 
@@ -92,6 +93,7 @@ export function renderTable({
 	showLines = true,
 	striped = true,
 	showHeader = true,
+	headerThStyle,
 	maxWidth = '90vw',
 	maxHeight = '40vh',
 	selectedRows = [],
@@ -178,19 +180,24 @@ export function renderTable({
 				theadRow.append('th').text('Check/Uncheck All').attr('class', 'sjpp_table_header sjpp_table_item')
 		}
 	}
+
 	if (columnButtons && columnButtons.length > 0) {
-		theadRow.append('th').text('Actions').attr('class', 'sjpp_table_item sjpp_table_header')
+		const th = theadRow.append('th').text('Actions').attr('class', 'sjpp_table_item sjpp_table_header')
+		if (headerThStyle) {
+			for (const k in headerThStyle) th.style(k, headerThStyle[k])
+		}
 	}
-	if (showHeader)
+
+	if (showHeader) {
 		for (const c of columns) {
-			const th = theadRow
-				.append('th')
-				.style('font-size', '1.1em')
-				.text(c.label)
-				.attr('class', 'sjpp_table_item sjpp_table_header')
+			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
 			if (c.title) th.attr('title', c.title)
+			if (headerThStyle) {
+				for (const k in headerThStyle) th.style(k, headerThStyle[k])
+			}
 		}
+	}
 
 	const tbody = table.append('tbody')
 	for (const [i, row] of rows.entries()) {
