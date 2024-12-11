@@ -404,6 +404,9 @@ export async function initGenomesDs(serverconfig) {
 		done everything except dataset
 		*/
 
+		// option to limit the datasets that are loaded, useful for faster ds-specific test iteration
+		const dslabelFilter = serverconfig.features.dslabelFilter
+
 		g.datasets = {}
 		for (const d of g.rawdslst) {
 			/*
@@ -411,7 +414,7 @@ export async function initGenomesDs(serverconfig) {
 			*/
 			if (d.skip) continue
 			if (!d.name) throw 'a nameless dataset from ' + genomename
-			if (/*d.name != 'GDC' && d.name != 'ClinVar' &&*/ d.name != 'PNET') continue
+			if (dslabelFilter && !dslabelFilter?.includes(d.name)) continue
 			if (g.datasets[d.name]) throw genomename + ' has duplicate dataset name: ' + d.name
 			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
 
@@ -515,7 +518,10 @@ export async function initGenomesDs(serverconfig) {
 	const getLabel = ds => `${ds.genomename}/${ds.label}`
 	const done = trackedDatasets.filter(ds => ds.init.status === 'done')
 	const nonblocking = trackedDatasets.filter(ds => ds.init.status === 'nonblocking')
-	if (!done.length && !nonblocking.length) throw `there were no datasets that loaded successfully` // crash the server
+	// if no dataset loaded successfully, assume that there may be something wrong
+	// with serverconfig and/or code, not with dataset js/ts files, and
+	// crash the server to trigger rollback
+	if (!done.length && !nonblocking.length) throw `there were no datasets that loaded successfully`
 	else {
 		if (done.length) {
 			console.log(`\n--- these datasets finished loading ---`)

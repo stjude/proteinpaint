@@ -12,7 +12,9 @@ export default function setRoutes(app, basepath) {
 	const connections = new Set()
 	const msgDir = path.join(serverconfig.sseDir, 'messages')
 
-	fs.watch(msgDir, {}, notifyOnFileChange)
+	// when validating server ds and routes init, no need to watch file
+	// that would cause the validation to hang, should exit with no error
+	if (!process.argv.includes('validate')) fs.watch(msgDir, {}, notifyOnFileChange)
 
 	app.get(basepath + '/sse', async (req, res) => {
 		connections.add(res)

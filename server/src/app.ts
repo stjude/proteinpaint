@@ -17,6 +17,7 @@ import * as phewas from './termdb.phewas.js'
 import { sendMessageToSlack } from './postOnSlack.js'
 
 const basepath = serverconfig.basepath || ''
+Object.freeze(process.argv)
 
 export async function launch() {
 	try {
