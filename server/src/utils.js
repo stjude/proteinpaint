@@ -812,7 +812,8 @@ const RecoverableErrorCodes = new Set([
 // may be recovered from (temp maintenance or disconnect), others are fatal
 export function isRecoverableError(e) {
 	// detect if status maps to a known HTTP 5xx server error code
-	if (typeof e.status == 'number' && e.status >= 500) return true
+	if (typeof e.status == 'number') return e.status >= 500
+	if (e.status == 'recoverableError') return true
 
 	const code = e.code || e.error?.code || e.cause?.code || ''
 	// assume that not found is not due to using the wrong hostname,

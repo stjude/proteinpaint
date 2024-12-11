@@ -15,7 +15,7 @@ import type { Mds3 } from '#types'
 export async function mayRetryDsPreInit(ds: Mds3): Promise<any> {
 	if (!ds.preInit) throw `missing ds.preInit{}`
 	if (typeof ds.preInit.getStatus != 'function') throw `ds.preInit.getStatus must be a function`
-	const retryDelay = ds.preInit.retryDelay || 5000
+	const retryDelay = ds.preInit.retryDelay || 10000
 	const retryMax = ds.preInit.retryMax || 0
 
 	let currentRetry = 0
