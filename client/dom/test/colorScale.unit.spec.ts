@@ -1,23 +1,24 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { ColorScale, removeOutliers } from '#dom'
+import { ColorScale, removeOutliers, removeInterpolatedOutliers } from '#dom'
 import { detectGte } from '../../test/test.helpers.js'
 
 /* Tests
 
 ColorScale
-    - new ColorScale()
-    - ColorScale.render() - default bottom
-    - ColorScale.render() - top
+	- new ColorScale()
+	- ColorScale.render() - default bottom
+	- ColorScale.render() - top
 	- With labels
-    - ColorScale.updateColors()
+	- ColorScale.updateColors()
 	- markedValue - Show value in color bar and update
-    - ColorScale.updateAxis()
+	- ColorScale.updateAxis()
 	- .setMinMaxCallback() and .setColorsCallback()
 	- (skipped) Show ticks in scientific notation
 
 Helpers
 	- removeExtremeOutliers()
+	- removeInterpolatedOutliers()
 */
 
 /**************
@@ -621,6 +622,100 @@ tape('removeOutliers()', test => {
 		result,
 		expected,
 		`Should remove the extreme outliers from the domain with a ${minPercent}% and ${maxPercent}% cutoff`
+	)
+
+	test.end()
+})
+
+tape('removeInterpolatedOutliers()', test => {
+	test.timeoutAfter(100)
+
+	type SharedObj = { domain: number[]; range: string[] }
+	let minPercent: number, maxPercent: number, expected: SharedObj, result: SharedObj
+	const mockDomainRange = {
+		domain: [-10000000000, -100, -5, -4, -3, -2, -1, -0.75, -0.5, -0.25, 0, 0.5, 0.75, 1, 2, 3, 4, 5, 100, 10000000000],
+		range: [
+			'#33FF57',
+			'#FF33F3',
+			'#3357FF',
+			'#F3FF33',
+			'#FF33A1',
+			'#33FFF6',
+			'#A133FF',
+			'#FF7F33',
+			'#33FF7F',
+			'#7F33FF',
+			'#FF337A',
+			'#33FFA1',
+			'#A1FF33',
+			'#FF33F3',
+			'#33A1FF',
+			'#F633FF',
+			'#FFA133',
+			'#33F6FF',
+			'#7AFF33',
+			'#33F6FF'
+		]
+	}
+	result = removeInterpolatedOutliers(mockDomainRange)
+	test.deepEqual(result, mockDomainRange, `Should not remove outliers for such a small domain`)
+
+	minPercent = 0.05
+	maxPercent = 0.95
+	result = removeInterpolatedOutliers(mockDomainRange, minPercent, maxPercent)
+	expected = {
+		domain: [-100, -5, -4, -3, -2, -1, -0.75, -0.5, -0.25, 0, 0.5, 0.75, 1, 2, 3, 4, 5, 100, 10000000000],
+		range: [
+			'#FF33F3',
+			'#3357FF',
+			'#F3FF33',
+			'#FF33A1',
+			'#33FFF6',
+			'#A133FF',
+			'#FF7F33',
+			'#33FF7F',
+			'#7F33FF',
+			'#FF337A',
+			'#33FFA1',
+			'#A1FF33',
+			'#FF33F3',
+			'#33A1FF',
+			'#F633FF',
+			'#FFA133',
+			'#33F6FF',
+			'#7AFF33',
+			'#33F6FF'
+		]
+	}
+	test.deepEqual(
+		result,
+		expected,
+		`Should remove the extreme outliers from the domain and range with a ${minPercent}% and ${maxPercent}% cutoff`
+	)
+
+	minPercent = 0.25
+	maxPercent = 0.75
+	result = removeInterpolatedOutliers(mockDomainRange, minPercent, maxPercent)
+	expected = {
+		domain: [-2, -1, -0.75, -0.5, -0.25, 0, 0.5, 0.75, 1, 2, 3],
+		range: [
+			'#33FFF6',
+			'#A133FF',
+			'#FF7F33',
+			'#33FF7F',
+			'#7F33FF',
+			'#FF337A',
+			'#33FFA1',
+			'#A1FF33',
+			'#FF33F3',
+			'#33A1FF',
+			'#F633FF'
+		]
+	}
+	test.deepEqual(
+		result,
+		expected,
+		`Should remove the extreme outliers from the domain and range with a ${minPercent}% and ${maxPercent}% cutoff`
 	)
 
 	test.end()

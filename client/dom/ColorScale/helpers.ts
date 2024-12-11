@@ -91,8 +91,18 @@ export function removeOutliers(domain: number[], firstPercent = 0.01, lastPercen
 	return sorted.filter(d => d >= first && d <= last)
 }
 
-export function removeInterpolatedOutliers(domainRange) {
-	const domain = removeOutliers(domainRange.domain)
+/** Removes outlier values from the interpolated domain/range object.
+ * @param domainRange domain and range object returned from getInterpolatedDomainRange
+ * @param firstPercent Optional percentage to calculate the min percentile cutoff
+ * @param lastPercent Optional percentage to calculate the max percentile cutoff
+ * @returns
+ */
+export function removeInterpolatedOutliers(
+	domainRange: { domain: number[]; range: string[] },
+	firstPercent = 0.01,
+	lastPercent = 0.99
+) {
+	const domain = removeOutliers(domainRange.domain, firstPercent, lastPercent)
 	const range = domain.map(d => domainRange.range[domainRange.domain.indexOf(d)])
 	return { domain, range }
 }
