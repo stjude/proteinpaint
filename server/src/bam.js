@@ -3654,6 +3654,9 @@ let cacheCheckTimeout,
 if (serverconfig.features.bamCache) mayResetCacheCheckTimeout(checkWait)
 
 function mayResetCacheCheckTimeout(wait = 0) {
+	// do not trigger the cache check when only validating the server
+	if (process.argv.includes('validate')) return
+
 	const checkTime = Date.now() + wait
 	if (cacheCheckTimeout) {
 		if (nextCheckTime && nextCheckTime <= checkTime + 5) return

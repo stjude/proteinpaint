@@ -214,7 +214,9 @@ ds.cohort = {
 */
 export async function validate_termdb(ds) {
 	if (ds.cohort) {
-		if (!ds.cohort.termdb || ds.label == 'PNET') throw 'ds.cohort is set but cohort.termdb{} missing'
+		// uncomment for local testng
+		if (ds.label == 'PNET') throw `ds.cohort error test, should not crash the server`
+		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
 		if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
 		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 	} else if (ds.termdb) {
