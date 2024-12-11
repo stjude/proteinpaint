@@ -189,16 +189,17 @@ export default function svgLegend(opts) {
 		let colorGradientId
 		if (d.domain) {
 			colorGradientId = `sjpp-linear-gradient-${getId()}`
-			const data = d.domain || [d.minLabel, d.maxLabel]
+			const domain = d.domain || [d.minLabel, d.maxLabel]
 			const yPos = y + 3
 			const min = d.domain[0]
 			const max = d.domain[d.domain.length - 1]
 			const domainRange = Math.abs(max - min)
+
 			const opts = {
 				barwidth: width,
 				barheight: settings.iconh,
 				colors: d.colors || d.scale.range() || ['white', 'grey'],
-				domain: d.domain || data,
+				domain,
 				fontSize: 0.82 * settings.fontsize,
 				holder: g,
 				id: colorGradientId,
@@ -206,9 +207,7 @@ export default function svgLegend(opts) {
 				//For larger ranges, reduce the number of ticks
 				ticks: domainRange > 5 ? 2 : 3,
 				tickSize: 2,
-				topTicks: true,
-				//For larger ranges, display percentile values
-				usePercentiles: min == 0 || max == 0 ? domainRange > 1 : domainRange > 5
+				topTicks: true
 			}
 			if (d.termid.toLowerCase().includes('cnv') && min < 0 && max > 0) {
 				opts.labels = { left: 'Loss', right: 'Gain' }

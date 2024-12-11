@@ -62,13 +62,6 @@ export type ColorScaleOpts = {
 	/** Optional. Placement of numbered ticks. Default is false (i.e. placement
 	 * below the color bar). */
 	topTicks?: boolean
-	/** Optional. This is a last resort option. Ideally, use the removeExtremeOutliers()
-	 * helper function before initializing the color scale. This option maybe removed
-	 * in the future.
-	 *
-	 * When true, returns values between the 1st and 99th percentile
-	 * except if the min or max value is zero. Default is false. */
-	usePercentiles?: boolean
 }
 
 export type ColorScaleDom = {

@@ -3,7 +3,7 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
-import { colorDelta, getInterpolatedDomainRange } from '#dom'
+import { colorDelta, getInterpolatedDomainRange, removeInterpolatedOutliers } from '#dom'
 
 export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
@@ -373,6 +373,12 @@ export function setLabelsAndScales() {
 						middleColor: 'white'
 					})
 				}
+
+				const min = cnvLegendDomainRange.domain[0]
+				const max = cnvLegendDomainRange.domain[cnvLegendDomainRange.domain.length - 1]
+				const domainRange = Math.abs(max - min)
+				if (((min === 0 || max === 0) && domainRange > 1) || domainRange > 5)
+					cnvLegendDomainRange = removeInterpolatedOutliers(cnvLegendDomainRange)
 
 				t.scales = {
 					loss: interpolateBlues,

@@ -5,7 +5,6 @@ import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
 import { axisstyle, niceNumLabels } from '#dom'
 import { ColorScaleMenu } from './ColorScaleMenu'
-import { removeExtremeOutliers } from './helpers'
 // import { format } from 'd3-format'
 // import { interpolateRgb } from 'd3-interpolate'
 // import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
@@ -31,7 +30,6 @@ export class ColorScale {
 	tickSize: number
 	tickValues: number[]
 	topTicks: boolean
-	usePercentiles: boolean
 
 	constructor(opts: ColorScaleOpts) {
 		this.barheight = opts.barheight || 14
@@ -43,10 +41,9 @@ export class ColorScale {
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
 		this.topTicks = opts.topTicks || false
-		this.usePercentiles = opts.usePercentiles || false
 
 		this.validateOpts(opts)
-		if (opts.usePercentiles) opts.domain = removeExtremeOutliers(opts.domain)
+
 		this.tickValues = niceNumLabels(opts.domain)
 
 		let scaleSvg: SvgSvg //
@@ -228,7 +225,7 @@ export class ColorScale {
 
 	updateAxis() {
 		this.dom.scaleAxis.selectAll('*').remove()
-		if (this.usePercentiles) this.domain = removeExtremeOutliers(this.domain)
+
 		this.tickValues = niceNumLabels(this.domain)
 		this.dom.scale = scaleLinear().domain(this.tickValues).range(this.getRange())
 
