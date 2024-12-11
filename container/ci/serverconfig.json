@@ -13,7 +13,10 @@
     }
   ],
   "features": {
-    "regressionResultMsgs": true
+    "regressionResultMsgs": true,
+    "extApiCache": {
+        "fake.org": "fake-test"
+    }
   },
   "tpmasterdir": "/home/runner/work/proteinpaint/proteinpaint/server/test/tp",
   "cachedir": "/home/runner/work/proteinpaint/proteinpaint/cache",

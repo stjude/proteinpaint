@@ -43,13 +43,6 @@ jobs:
       - name: Run ESLint
         run: npx eslint . --ext .ts --quiet
 
-      - name: Copy serverconfig.json to root
-        run: |
-          cd server/test/
-          node -e 'const fs = require("fs"); const serverconfig = JSON.parse(fs.readFileSync("serverconfig.json")); tpmasterdir = "/home/runner/work/${{ github.event.repository.name }}/${{ github.event.repository.name }}/server/test/tp"; fs.writeFileSync("data.json", JSON.stringify(serverconfig));'
-          TPMASTERDIR=$(node -p "require('./serverconfig.json').tpmasterdir")
-          mv serverconfig.json ../../
-
       - name: Run tsc
         run: |
           # !!! TODO: run type check at the proteinpaint dir !!!
