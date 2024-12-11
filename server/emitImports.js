@@ -19,9 +19,10 @@ const __dirname = import.meta.dirname
 let relpath = __dirname.replace(cwd, '.')
 if (!relpath) relpath = '.'
 
+const hasServerConfig = fs.existsSync(`./serverconfig.json`)
+
 if (mode == 'dev') {
 	const imports = []
-	const hasServerConfig = fs.existsSync(`./serverconfig.json`)
 	if (hasServerConfig) imports.push(`import './serverconfig.json'`)
 
 	for (const dir of ['genome', 'dataset']) {
@@ -57,6 +58,14 @@ if (mode == 'dev') {
 	//console.log(vartypes.join('\n'))
 	if (hasServerConfig) console.log('launch()')
 } else if (mode == 'unit') {
+	if (!hasServerConfig) {
+		const configStr = fs.readFileSync('../container/ci/serverconfig.json', { encoding: 'utf8' })
+		const config = JSON.parse(configStr)
+		config.tpmasterdir = path.join(__dirname, 'test/tp')
+		config.cachedir = path.join(__dirname, 'test/cache')
+		fs.writeFileSync(path.join(__dirname, './serverconfig.json'), JSON.stringify(config, null, '    '))
+	}
+
 	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname })
 	const imports = specs.map(f => `import '${f}'`)
 	console.log(imports.join('\n'))

@@ -17,6 +17,7 @@ server/app.js
 server/genome/*.js
 server/dataset/*.js
 server/test/*.bundle.js
+server/test/cache/*
 server/**/*serverTests.js
 server/routes/*.js
 server/src/app.js
