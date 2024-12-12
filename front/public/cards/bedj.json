@@ -92,6 +92,33 @@
             }
         },
         {
+            "label": "Color genomic features",
+            "urlparam": "?genome=hg19&block=1&&position=chr17:7550481-7567179&bedjfile=Color_Example,proteinpaint_demo/hg19/bedj/color.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/color.gz",
+                    "tabixQueryCoord": "chr17:7550481-7567179"
+                }
+            ],
+            "runargs": {
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "position":"chr17:7550481-7567179",
+                "tracks":[{
+                    "type": "bedj",
+                    "name": "Color demo",
+                    "file": "proteinpaint_demo/hg19/bedj/color.gz",
+                    "stackheight": 16,
+                    "stackspace": 1
+                }]
+            },
+            "testSpec": {
+                "expected": {"image": 1 }
+            }
+        },
+        {
             "label": "Numeric Filter",
             "download": "https://proteinpaint.stjude.org/ppdemo/hg19/bedj/numericDenomData.tar.gz",
             "datapreview": [
@@ -298,5 +325,5 @@
             "link": "https://github.com/stjude/proteinpaint/wiki/Tracks#Track-JSON-BED-track-format"
         }
     ],
-    "ribbonMessage": "Now use bigBed files in ProteinPaint! Click on the bigBed example for more information."
+    "ribbonMessage": "New example on how to color genomic features in the JSON-BED track."
 }
