@@ -36,8 +36,6 @@ const DIFFERENTIAL_EXPRESSION_TAB = 4
 
 const noExpColor = '#F5F5F5' //lightGray
 
-const maxSamplesD3 = 10000
-
 class singleCellPlot {
 	constructor() {
 		this.type = 'singleCellPlot'
@@ -46,7 +44,6 @@ class singleCellPlot {
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		this.startGradient = {}
 		this.stopGradient = {}
-		this.zShift = 0
 	}
 
 	async init(appState) {
@@ -390,36 +387,23 @@ class singleCellPlot {
 
 	addZoomIcons(iconsDiv) {
 		const zoomInDiv = iconsDiv.append('div').style('margin', '20px')
-		const duration = 750
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
-				this.zoomHandled = false
-				this.zShift = 0.1
-				for (const plot of this.plots) {
-					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 1.1)
-				}
+				this.particles.position.z += 0.1
 			},
 			title: 'Zoom in'
 		})
 		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
-				this.zoomHandled = false
-				this.zShift = -0.1
-				for (const plot of this.plots) {
-					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 0.9)
-				}
+				this.particles.position.z -= 0.1
 			},
 			title: 'Zoom out'
 		})
 		const identityDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
-				this.zShift = 0
-				this.zoomHandled = false
-				for (const plot of this.plots) {
-					if (plot.zoom) plot.mainG.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
-				}
+				this.particles.position.z = 0
 			},
 			title: 'Reset plot to defaults'
 		})
@@ -728,11 +712,8 @@ class singleCellPlot {
 		//used to plot the cells
 		this.initAxes(plot)
 
-		plot.plotDiv = this.dom.plotsDiv
-			.append('div')
-			.style('overflow', 'hidden')
-			.style('display', 'inline-block')
-			.style('flex-grow', 1)
+		plot.plotDiv = this.dom.plotsDiv.append('div').style('overflow', 'hidden').style('display', 'inline-block')
+		//.style('flex-grow', 1)
 		plot.headerDiv = plot.plotDiv.append('div')
 		plot.headerDiv.append('label').text(plot.name).style('font-size', '1.2em').style('margin-right', '10px')
 		if (this.colorByGene && this.state.config.gene) {
@@ -762,72 +743,13 @@ class singleCellPlot {
 				plot.max = max
 			}
 		}
-		//if (plot.cells.length > maxSamplesD3) {
 		this.renderLargePlotThree(plot)
-		// }
-		// else
-		// 	this.renderD3Plot(plot)
 		this.renderLegend(plot)
-	}
-
-	renderD3Plot(plot) {
-		plot.svg = plot.plotDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('overflow', 'hidden')
-			.append('svg')
-			.attr('width', this.settings.svgw)
-			.attr('height', this.settings.svgh)
-			.on('mouseover', event => {
-				const geneTab =
-					this.state.config.activeTab == GENE_EXPRESSION_TAB ||
-					this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
-				if (geneTab && this.state.config.gene && !this.onClick) this.showTooltip(event, plot)
-			})
-			.on('click', event => this.showTooltip(event, plot))
-
-		plot.mainG = plot.svg.append('g')
-		//this allows the mouse zoom to work
-		plot.mainG
-			.append('rect')
-			.attr('x', 0)
-			.attr('y', 0)
-			.attr('width', this.settings.svgw)
-			.attr('height', this.settings.svgh)
-			.attr('fill', 'white')
-		if (this.settings.showGrid) this.renderGrid(plot)
-
-		plot.zoom = d3zoom()
-			.scaleExtent([0.5, 5])
-			.on('zoom', e => this.handleZoom(e, plot))
-			.filter(event => {
-				if (event.type === 'wheel') return event.ctrlKey
-				return true
-			})
-		plot.mainG.call(plot.zoom)
-
-		this.renderCells(plot.cells, plot)
-	}
-
-	renderCells(cells, plot) {
-		const symbols = plot.mainG.selectAll('g').data(cells)
-
-		symbols
-			.enter()
-			.append('g')
-			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y)})`)
-			.append('circle')
-			.attr('r', this.settings.sampleSize)
-			.attr('fill', d => this.getColor(d, plot))
-			.style('fill-opacity', d => this.getOpacity(d))
 	}
 
 	getOpacity(d) {
 		if (this.config.hiddenClusters.includes(d.category)) return 0
-		if (this.colorByGene && this.state.config.gene) {
-			if (this.state.config.min > d.geneExp) return 0
-			if (this.state.config.max < d.geneExp) return 0
-		}
+
 		return this.settings.opacity
 	}
 
@@ -850,18 +772,8 @@ class singleCellPlot {
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
 			[s0.x, s0.x, s0.y, s0.y]
 		)
-		const r = 5
-		//if (plot.cells.length > maxSamplesD3) {
 		plot.xAxisScale = d3Linear().domain([xMin, xMax]).range([-1, 1])
 		plot.yAxisScale = d3Linear().domain([yMin, yMax]).range([-1, 1])
-		// } else {
-		// 	plot.xAxisScale = d3Linear()
-		// 		.domain([xMin, xMax])
-		// 		.range([0 + r, this.settings.svgw - r])
-		// 	plot.yAxisScale = d3Linear()
-		// 		.domain([yMax, yMin])
-		// 		.range([0 + r, this.settings.svgh - r])
-		// }
 	}
 
 	renderLegend(plot) {
@@ -961,37 +873,6 @@ class singleCellPlot {
 				id: parent.id,
 				config: { hiddenClusters }
 			})
-		}
-	}
-
-	renderGrid(plot) {
-		const color = '#aaa'
-		const opacity = 0.5
-		const bins = 6
-		const size = this.settings.svgw / bins
-		let x, y
-		const gridG = plot.svg.append('g')
-		for (let i = 0; i <= bins; i++) {
-			x = i * size
-			gridG
-				.append('line')
-				.attr('x1', x)
-				.attr('x2', x)
-				.attr('y1', 0)
-				.attr('y2', this.settings.svgh)
-				.style('stroke', color)
-				.style('stroke-opacity', opacity)
-		}
-		for (let i = 0; i <= bins; i++) {
-			y = i * size
-			gridG
-				.append('line')
-				.attr('x1', 0)
-				.attr('x2', this.settings.svgw)
-				.attr('y1', y)
-				.attr('y2', y)
-				.style('stroke', color)
-				.style('stroke-opacity', opacity)
 		}
 	}
 
@@ -1197,11 +1078,9 @@ class singleCellPlot {
 	}
 
 	renderLargePlotThree = async function (plot) {
-		if (!plot.canvas) {
-			plot.canvas = plot.plotDiv.append('canvas').node()
-			plot.canvas.width = this.settings.svgw
-			plot.canvas.height = this.settings.svgh
-		}
+		plot.canvas = plot.plotDiv.append('canvas').node()
+		plot.canvas.width = this.settings.svgw
+		plot.canvas.height = this.settings.svgh
 
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 
@@ -1221,7 +1100,7 @@ class singleCellPlot {
 
 		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-		const tex = getThreeCircle(128)
+		const tex = getThreeCircle(256)
 		const material = new THREE.PointsMaterial({
 			size: this.settings.sampleSizeThree,
 			sizeAttenuation: true,
@@ -1232,41 +1111,12 @@ class singleCellPlot {
 		})
 
 		const particles = new THREE.Points(geometry, material)
+		this.particles = particles
 
 		scene.add(particles)
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
+		renderer.setSize(this.settings.svgw, this.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
-
-		// The grid should be out of the zoom, commented out until handled
-		const lines = []
-
-		if (this.settings.showGrid) {
-			// Line Geometry
-			const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffd3d3d3 })
-
-			let x = -1
-			const step = 0.5
-			for (let i = 0; i < 5; i++) {
-				let points = []
-				points.push(new THREE.Vector3(x, 1, 0))
-				points.push(new THREE.Vector3(x, -1, 0))
-				let lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
-				let line = new THREE.Line(lineGeometry, lineMaterial)
-				scene.add(line)
-				points = []
-				points.push(new THREE.Vector3(-1, x, 0))
-				points.push(new THREE.Vector3(1, x, 0))
-				lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
-				line = new THREE.Line(lineGeometry, lineMaterial)
-				scene.add(line)
-				x += step
-				lines.push(line)
-			}
-		}
-
-		// Line Object
-
-		// Add line to scene
 
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
 		document.addEventListener('mousewheel', event => {
@@ -1274,19 +1124,37 @@ class singleCellPlot {
 		})
 
 		const self = this
-		self.zoomHandled = false
 		function animate() {
 			requestAnimationFrame(animate)
-			if (!self.zoomHandled) {
-				if (!self.zShift) particles.position.z = 0
-				else particles.position.z += self.zShift
-				self.zoomHandled = true
-			}
-
-			camera.updateProjectionMatrix()
 			renderer.render(scene, camera)
 		}
 		animate()
+		if (this.settings.showGrid) this.renderThreeGrid(scene)
+	}
+
+	renderThreeGrid(scene) {
+		let x = -1
+		// Line Geometry
+		const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffd3d3d3 })
+
+		const lines = 8
+		const step = 3 / lines
+
+		for (let i = 0; i < lines; i++) {
+			let points = []
+			points.push(new THREE.Vector3(x, 1.5, 0))
+			points.push(new THREE.Vector3(x, -1.5, 0))
+			let lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
+			let line = new THREE.Line(lineGeometry, lineMaterial)
+			scene.add(line)
+			points = []
+			points.push(new THREE.Vector3(-1.5, x, 0))
+			points.push(new THREE.Vector3(1.5, x, 0))
+			lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
+			line = new THREE.Line(lineGeometry, lineMaterial)
+			scene.add(line)
+			x += step
+		}
 	}
 
 	getVertices(plot) {
@@ -1340,12 +1208,12 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 600,
-		svgh: 600,
+		svgw: 1000,
+		svgh: 1000,
 		showGrid: true,
 		sampleSize: 1.5,
 		sampleSizeThree: 0.008,
-		threeFOV: 55,
+		threeFOV: 60,
 		opacity: 1
 	}
 }

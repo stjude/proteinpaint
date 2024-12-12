@@ -57,6 +57,7 @@ export function setRenderersThree(self) {
 
 		scene.add(particles)
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
+		renderer.setSize(self.settings.svgw, self.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
@@ -105,8 +106,6 @@ export function setRenderersThree(self) {
 			.append('svg')
 			.attr('width', self.settings.svgw / 2)
 			.attr('height', self.settings.svgh)
-			.attr('width', self.settings.svgw)
-			.attr('height', self.settings.svgh)
 			.append('g')
 			.attr('transform', 'translate(20, 20)')
 		self.renderLegend(chart)
@@ -152,9 +151,9 @@ export function setRenderersThree(self) {
 
 		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-		const tex = getThreeCircle(128)
+		const tex = getThreeCircle(256)
 		const material = new THREE.PointsMaterial({
-			size: self.settings.threeSize * 3,
+			size: self.settings.threeSize * 4,
 			sizeAttenuation: true,
 			transparent: true,
 			opacity: self.settings.opacity,
@@ -166,6 +165,7 @@ export function setRenderersThree(self) {
 
 		scene.add(particles)
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
+		renderer.setSize(self.settings.svgw, self.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 		//document.addEventListener( 'pointermove', onPointerMove );
 		document.addEventListener('mousewheel', event => {
