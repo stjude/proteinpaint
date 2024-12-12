@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- New color genomic features example in the JSON-BED card.
+
 Fixes:
 - allow to customize table header row style
 

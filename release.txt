@@ -1,2 +1,1 @@
-Features
-- New color genomic features example in the JSON-BED card.
+
