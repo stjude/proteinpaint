@@ -1,1 +1,2 @@
-
+Fixes:
+- do not wrap scRNAseq plot div below its control div

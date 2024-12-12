@@ -109,12 +109,13 @@ class singleCellPlot {
 
 		const q = state.termdbConfig.queries
 		this.opts.holder.style('position', 'relative')
-		this.insertBeforeId = `${this.id}-sandbox`
+		this.mainDivId = `${this.id}-sandbox`
 		const mainDiv = this.opts.holder
 			.insert('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.attr('id', this.insertBeforeId)
+			.style('white-space', 'nowrap')
+			.attr('id', this.mainDivId)
 
 		const leftDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const controlsDiv = leftDiv.append('div').attr('class', 'pp-termdb-plot-controls')
@@ -204,7 +205,9 @@ class singleCellPlot {
 						const config = {
 							chartType: 'gsea',
 							gsea_params: gsea_params,
-							//if getPlotHolder is defined use this.insertBeforeId, needed for GDC
+							// if getPlotHolder is defined, use this.mainDivId as insertBeforeId,
+							// so that in GDC frontend framework, plots that are launched from scRNAseq
+							// will be inserted before it. TODO: may insert after the scRNAseq plot instead???
 							insertBefore: this.app.opts?.app?.getPlotHolder ? this.insertBeforeId : this.id
 						}
 						this.app.dispatch({
