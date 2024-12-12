@@ -41,7 +41,6 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
-import { mayRetryDsPreInit } from '#src/mds3.preInit.ts'
 
 /*
 init
@@ -105,22 +104,22 @@ arguments:
 */
 const unannotatedKey = 'Unannotated'
 
-export async function init(ds, genome, _servconfig) {
+export async function init(ds, genome) {
 	// optional features/settings supplied by ds, when missing from serverconfig.features{}, are centralized here.
 	// overwrite not allowed! to prevent hard-to-trace error that 2nd ds changes value set by 1st ds etc...
 	for (const k in ds.serverconfigFeatures || {}) {
 		if (k in serverconfig.features) {
-			console.warn(`!!! NO OVERWRITING SERVERCONFIG.FEATURES.${k} (from ${ds.label}) !!!`)
+			// on init retry, no need to see this message
+			if (!ds.init.status) console.log(`!!! NO OVERWRITING SERVERCONFIG.FEATURES.${k} (from ${ds.label}) !!!`)
 		} else {
 			serverconfig.features[k] = ds.serverconfigFeatures[k]
 		}
 	}
 
-	// if (ds.preInit) {
-	// 	// will not allow to move to validate_termdb until ds.preInit.getStatus() is okay
-	// 	const response = await mayRetryDsPreInit(ds)
-	// 	if (response?.status != 'OK') throw response?.message || `ds.preInit() failed: unknown error`
-	// }
+	if (ds.preInit) {
+		const response = await ds.preInit.getStatus(ds)
+		if (response?.status != 'OK') throw response
+	}
 
 	// must validate termdb first
 	await validate_termdb(ds)
@@ -213,17 +212,22 @@ ds.cohort = {
 }
 */
 export async function validate_termdb(ds) {
-	if (ds.cohort) {
-		// uncomment for local testng
-		if (ds.label == 'PNET') throw `ds.cohort error test, should not crash the server`
-		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
-		if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
-		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
-	} else if (ds.termdb) {
-		ds.cohort = {}
+	if (ds.termdb) {
+		// legacy support, reshape deprecated nesting order
+		if (!ds.cohort) ds.cohort = {}
 		ds.cohort.termdb = ds.termdb
 		delete ds.termdb
 		// ds.cohort.termdb is required to be compatible with termdb.js
+	}
+
+	if (ds.cohort) {
+		// uncomment for local testng
+		// if (ds.label == 'PNET') throw `ds.cohort error test, should not crash the server`
+		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
+		if (!ds.cohort.termdb.dictionary) {
+			if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
+			if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
+		}
 	} else {
 		// this dataset is not equipped with termdb
 		return

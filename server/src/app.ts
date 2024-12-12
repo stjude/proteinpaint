@@ -204,8 +204,11 @@ async function setOptionalRoutes(app) {
 
 function processTrackedDs(trackedDatasets) {
 	const getLabel = ds => `${ds.genomename}/${ds.label}`
+	// console.log(trackedDatasets.map(ds => [ds.label, ds.init.status]))
 	const done = trackedDatasets.filter(ds => ds.init.status === 'done')
-	const nonblocking = trackedDatasets.filter(ds => ds.init.status === 'nonblocking')
+	const nonblocking = trackedDatasets.filter(
+		ds => ds.init.status === 'nonblocking' || ds.init.status == 'recoverableError'
+	)
 	// if no dataset loaded successfully, assume that there may be something wrong
 	// with serverconfig and/or code, not with dataset js/ts files, and
 	// crash the server to trigger rollback
@@ -233,7 +236,7 @@ function processTrackedDs(trackedDatasets) {
 			ds => !done.includes(ds) && !nonblocking.includes(ds) && !activeRetries.includes(ds)
 		)
 		if (failed.length) {
-			const msg = `\n--- failed dataset init (will notify team) ---\n${failed.map(getLabel).join(', ')}\n`
+			const msg = `\n--- failed dataset init ---\n${failed.map(getLabel).join(', ')}\n`
 			console.log(msg)
 			// not a fatal error for the server and will not trigger a deployment rollback notification,
 			// so must trigger a notification here
