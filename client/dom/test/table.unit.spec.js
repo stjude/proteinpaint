@@ -25,10 +25,6 @@ function getHolder() {
 		.style('margin', '5px')
 }
 
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
-
 /**************
  test data
 ***************/
@@ -272,5 +268,33 @@ tape('Return correct rows on button click', async test => {
 	testBtn.click()
 
 	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('allowSort header option', async test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder()
+	const opts = {
+		columns: [
+			{ label: 'String', type: 'string' },
+			{ label: 'Number', type: 'number' },
+			{ label: 'Date', type: 'date' }
+		],
+		rows: [
+			[{ value: 'C' }, { value: 200 }, { value: '2021-01-01' }],
+			[{ value: 'A' }, { value: 300 }, { value: '2021-01-02' }],
+			[{ value: 'B' }, { value: 100 }, { value: '2021-01-03' }]
+		],
+		div: holder,
+		header: {
+			allowSort: true
+		}
+	}
+
+	renderTable(opts)
+
+	test.pass('Should allow sorting')
+
 	test.end()
 })

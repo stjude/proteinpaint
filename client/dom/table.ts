@@ -1,4 +1,6 @@
 import { select } from 'd3-selection'
+import { icons, Menu } from '#dom'
+import type { Th } from '../types/d3'
 
 export type Cell = {
 	/** to print in <a> element */
@@ -30,6 +32,9 @@ export type Column = {
 	align?: string
 	/** tooltip describing column content */
 	title?: string
+	/** Used for sorting function
+	 * Do not use this field for html columns */
+	type: 'string' | 'number'
 }
 
 export type Button = {
@@ -226,10 +231,43 @@ export function renderTable({
 	}
 
 	if (showHeader) {
-		for (const c of columns) {
+		for (const [i, c] of columns.entries()) {
 			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
 			if (c.title) th.attr('title', c.title)
+			if (header?.allowSort) {
+				//Only create sort button for columns with data
+				//(i.e. not html columns)
+				if (c.type) {
+					const callback = (opt: string) => sortTableCallBack(i, rows, opt)
+					const updateTable = (newRows: any) => {
+						div.selectAll('table').remove()
+						renderTable({
+							columns,
+							rows: newRows,
+							div,
+							columnButtons,
+							buttons,
+							noButtonCallback,
+							singleMode,
+							noRadioBtn,
+							showLines,
+							striped,
+							showHeader,
+							header,
+							maxWidth,
+							maxHeight,
+							selectedRows,
+							selectAll,
+							resize,
+							selectedRowStyle,
+							inputName,
+							dataTestId
+						})
+					}
+					createSortButton(c, th, callback, updateTable)
+				}
+			}
 			if (header?.style) {
 				for (const k in header.style) th.style(k, header.style[k])
 			}
@@ -462,4 +500,43 @@ export async function downloadTable(rows, cols) {
 	document.body.appendChild(link)
 	link.click()
 	link.remove()
+}
+
+function createSortButton(col: Column, th: Th, callback, updateTable) {
+	const sortDiv = th.append('div').style('display', 'inline-block').attr('class', 'sjpp-table-sort-button')
+	icons['updown'](sortDiv, {
+		title: `Sort table by ${col.label}`,
+		handler: () => {
+			const menu = new Menu({ padding: '' })
+			menu.showunder(sortDiv.node())
+			const options = ['ascending', 'descending']
+			for (const opt of options) {
+				menu.d
+					.append('div')
+					.classed('sja_menuoption', true)
+					.text(`Sort ${opt}`)
+					.on('click', () => {
+						const newRows = callback(opt)
+						updateTable(newRows)
+						menu.destroy()
+					})
+			}
+		}
+	})
+}
+
+function sortTableCallBack(i: number, rows: any, opt: string) {
+	const newRows = rows.sort((a, b) => {
+		if (!a[i].value || !b[i].value) return
+		//numbers
+		if (typeof a[i].value === 'number' && typeof b[i].value === 'number') {
+			if (opt == 'descending') return b[i].value - a[i].value
+			else return a[i].value - b[i].value
+			//strings
+		} else if (typeof a[i].value === 'string' && typeof b[i].value === 'string') {
+			if (opt == 'descending') return b[i].value.localeCompare(a[i].value)
+			else return a[i].value.localeCompare(b[i].value)
+		}
+	})
+	return newRows
 }
