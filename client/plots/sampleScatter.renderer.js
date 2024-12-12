@@ -612,13 +612,13 @@ export function setRenderers(self) {
 
 		function zoomIn() {
 			for (const chart of self.charts)
-				if (self.is2DLarge) self.zoom = self.zoom + 0.25
+				if (self.is2DLarge) self.zoom = self.zoom + 0.15
 				else zoom.scaleBy(chart.mainG.transition().duration(750), 1.2)
 		}
 
 		function zoomOut() {
 			for (const chart of self.charts)
-				if (self.is2DLarge) self.zoom = self.zoom - 0.25
+				if (self.is2DLarge) self.zoom = self.zoom - 0.15
 				else zoom.scaleBy(chart.mainG.transition().duration(750), 0.8)
 		}
 
