@@ -72,7 +72,8 @@
             "description": "Genomic feature annotation",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/bedj-square.png",
             "sandboxJson": "bedj",
-            "searchterms": []
+            "searchterms": [],
+            "ribbon": { "text": "updated", "expireDate": "2025-02-01" }
         },
         {
             "type": "card",
