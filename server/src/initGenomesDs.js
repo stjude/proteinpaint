@@ -506,18 +506,36 @@ function mayRetryInit(g, ds, d, e) {
 		} catch (e) {
 			console.log('init retry error:', gdlabel, e)
 			if (!ds.init.recoverableError && !utils.isRecoverableError(e)) {
-				console.log(`Fatal error on ${gdlabel} retry, stopping retry`)
+				const msg = `Fatal error on ${gdlabel} retry, stopping retry`
+				console.log(msg)
 				clearInterval(interval) // cancel since retrying will not change the outcome
 				ds.init.status = 'fatalError'
+				if (serverconfig.slackWebhookUrl) {
+					const url = serverconfig.URL
+					sendMessageToSlack(
+						serverconfig.slackWebhookUrl,
+						`\n${serverconfig.URL}: ${msg}`,
+						path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+					)
+				}
 			} else {
 				console.warn(`${gdlabel} init() failed. Retrying... (${ds.init.retryMax - currentRetry} attempts left)`)
 				if (currentRetry >= ds.init.retryMax) {
 					clearInterval(interval) // cancel retries
-					console.error(`Max retry attempts for ${gdlabel} reached. Failing with error:`)
+					const msg = `Max retry attempts for ${gdlabel} reached. Failing with error:`
+					console.error(msg)
 					if (ds.initErrorCallback) ds.initErrorCallback(response)
 					else {
 						// allow to fail silently to not affect other loaded datasets
 						console.log(e)
+					}
+					if (serverconfig.slackWebhookUrl) {
+						const url = serverconfig.URL
+						sendMessageToSlack(
+							serverconfig.slackWebhookUrl,
+							`\n${serverconfig.URL}: ${msg}`,
+							path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+						)
 					}
 				}
 
