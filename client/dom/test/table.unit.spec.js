@@ -278,9 +278,9 @@ tape('Sort button', async test => {
 	const holder = getHolder()
 	const opts = {
 		columns: [
-			{ label: 'String', type: 'string' },
-			{ label: 'Number', type: 'number' },
-			{ label: 'Date', type: 'date' }
+			{ label: 'String', sortable: true },
+			{ label: 'Number', sortable: true },
+			{ label: 'Date', sortable: true }
 		],
 		rows: [
 			[{ value: 'C' }, { value: 200 }, { value: '2021-01-01' }],

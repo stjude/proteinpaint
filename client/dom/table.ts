@@ -34,7 +34,7 @@ export type Column = {
 	title?: string
 	/** Used for sorting function
 	 * Do not use this field for html columns */
-	type: 'string' | 'number'
+	sortable?: boolean
 }
 
 export type Button = {
@@ -238,7 +238,7 @@ export function renderTable({
 			if (header?.allowSort) {
 				//Only create sort button for columns with data
 				//(i.e. not html columns)
-				if (c.type) {
+				if (c.sortable) {
 					const callback = (opt: string) => sortTableCallBack(i, rows, opt)
 					const updateTable = (newRows: any) => {
 						div.selectAll('table').remove()
