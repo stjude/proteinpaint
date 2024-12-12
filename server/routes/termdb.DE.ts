@@ -98,8 +98,8 @@ param{}
 	const cases_string = group1names.map(i => i).join(',')
 	const controls_string = group2names.map(i => i).join(',')
 	const expression_input = {
-		case: cases_string,
-		control: controls_string,
+		case: controls_string,
+		control: cases_string,
 		data_type: 'do_DE',
 		input_file: q.file,
 		min_count: param.min_count,

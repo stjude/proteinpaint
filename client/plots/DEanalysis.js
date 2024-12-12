@@ -486,11 +486,11 @@ add:
 				value: num_significant_genes + num_non_significant_genes
 			},
 			{
-				label: self.config.state.groups[0].name + ' sample size',
+				label: self.config.state.groups[0].name + ' sample size (control group)',
 				value: sample_size1
 			},
 			{
-				label: self.config.state.groups[1].name + ' sample size',
+				label: self.config.state.groups[1].name + ' sample size (treatment group)',
 				value: sample_size2
 			}
 		]
@@ -661,7 +661,7 @@ export async function getPlotConfig(opts, app) {
 			settings: {
 				DEanalysis: {
 					pvalue: 0.05,
-					foldchange: 2,
+					foldchange: 0,
 					min_count: 10,
 					min_total_count: 15,
 					pvaluetable: false,
