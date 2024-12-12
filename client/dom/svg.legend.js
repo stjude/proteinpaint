@@ -204,8 +204,7 @@ export default function svgLegend(opts) {
 				holder: g,
 				id: colorGradientId,
 				position: `${bbox.width + 25},${yPos}`,
-				//For larger ranges, reduce the number of ticks
-				ticks: domainRange > 5 ? 2 : 3,
+				ticks: domainRange > 3 ? 3 : 2,
 				tickSize: 2,
 				topTicks: true
 			}
@@ -213,6 +212,13 @@ export default function svgLegend(opts) {
 				opts.labels = { left: 'Loss', right: 'Gain' }
 				if (d.text) opts.position = `${bbox.width + bbox.x + 45 + settings.padx},${yPos}`
 			}
+			// Ticks must be spaced appropriately for loss and gain
+			// scales. Lowering the range for smaller ranges
+			// appropriates spaces the scale ticks
+			if ((min == 0 || max == 0) && domainRange > 1) {
+				opts.ticks = domainRange > 5 ? 2 : 1
+			}
+
 			new ColorScale(opts)
 
 			if (opts.labels) currlinex += bbox.width + 25 + 15 * settings.padx
