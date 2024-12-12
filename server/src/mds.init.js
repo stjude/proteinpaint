@@ -15,16 +15,11 @@ const tabix = serverconfig.tabix
 // const bigwigsummary = serverconfig.bigwigsummary
 // const hicstraw = serverconfig.hicstraw
 
-export async function mds_init(ds, genome, _servconfig) {
+export async function mds_init(ds, genome, rawds) {
 	/*
     ds: loaded from datasets/what.js
     genome: obj {}
-    _servconfig: the entry in "datasets" array from serverconfig.json
     */
-	if (ds.isMds2 || ds.isMds3 || ds.isMds) {
-		// !!! TODO: does this repeat an earlier server_updateAttr? !!!
-		server_updateAttr(ds, _servconfig)
-	} //else console.log('not mds', ds.label)
 
 	if (ds.assayAvailability) {
 		if (!ds.assayAvailability.file) throw '.assayAvailability.file missing'
@@ -478,7 +473,7 @@ export async function mds_init(ds, genome, _servconfig) {
 
 		for (const querykey in ds.queries) {
 			// server may choose to remove it
-			if (_servconfig.remove_queries && _servconfig.remove_queries.indexOf(querykey) != -1) {
+			if (rawds.remove_queries && rawds.remove_queries.indexOf(querykey) != -1) {
 				delete ds.queries[querykey]
 				continue
 			}
@@ -486,7 +481,7 @@ export async function mds_init(ds, genome, _servconfig) {
 			const query = ds.queries[querykey]
 
 			// server may choose to hide some queries
-			if (_servconfig.hide_queries && _servconfig.hide_queries.indexOf(querykey) != -1) {
+			if (rawds.hide_queries && rawds.hide_queries.indexOf(querykey) != -1) {
 				// this query will be hidden on client
 				query.hideforthemoment = 1
 			}

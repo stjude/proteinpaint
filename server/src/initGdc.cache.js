@@ -47,7 +47,7 @@ export async function runRemainingWithoutAwait(ds) {
 	if (serverconfig.features.stopGdcCacheAliquot) {
 		// do not cache at all. this flag is auto-set for container validation. running stale cache check will cause the server process not to quit, and break validation, thus must skip this when flag is true
 		console.log('GDC: sample IDs are not cached! No periodic check will take place!')
-		getCacheRef(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder
+		if (!ds.__gdc) ds.__gdc = getCacheRef(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder
 		///////////////////// NOTE ///////////////////////
 		// with missing cache for case id mapping and cases with exp data, any query using gdc gene exp data will not work!!
 		// this should be fine for container validation, but may not do so on a dev environment
@@ -60,6 +60,7 @@ export async function runRemainingWithoutAwait(ds) {
 	} catch (e) {
 		if (isRecoverableError(e)) {
 			console.log('recoverableError: ', ds.init.recoverableError, e)
+			delete ds.__pendingCacheVersion
 		} else {
 			// immediately crash when the initial try fails with non-recoverable error
 			console.log(e.stack || e)
@@ -83,7 +84,7 @@ export async function runRemainingWithoutAwait(ds) {
 				if (ds.init.recoverableError) {
 					console.log(`allow retries of cacheMappingOnNewRelease()`, e)
 				} else {
-					ds.__gdc.hasFatalError = true
+					ds.init.fatalError = `cacheMappingOnNewRelease()`
 					// cancel retries/auto-recovery, but do not crash server
 					// TODO: send a Slack message
 					clearInterval(interval)
@@ -312,6 +313,11 @@ cache gdc sample id mappings
 function will rerun when it detects stale case id cache
 */
 async function cacheMappingOnNewRelease(ds) {
+	if (ds.__pendingCacheVersion) {
+		console.log(`${ds.label}: allow pending cache to finish (${JSON.stringify(ds.__pendingCacheVersion)})`)
+		return
+	}
+
 	console.log('GDC: checking if cache is stale OR should recover from an error')
 	// to avoid issues from race condition:
 	// - do not set ds.__gdc until the caching is complete
@@ -371,16 +377,16 @@ async function cacheMappingOnNewRelease(ds) {
 		await getCasesWithGeneExpression(ds, ref)
 		await getAnalysisTsv2loom4scrna(ds, ref)
 	} catch (e) {
-		console.log(373, e)
 		if (isRecoverableError(e)) {
-			console.log(374)
 			console.log(ds.__gdc?.recoverableError)
 			// the periodic rerun of this function will allow auto-recovery
-			delete ds.__pendingCacheVersion
 		}
 		throw e
 	}
 
+	// if the version has changed while caching was being performed,
+	// do not proceed to marking caching as being done, otherwise
+	// stale cache data will be served to users
 	if (mayCancelStalePendingCache(ds, ref)) return
 	if (ds.init.recoverableError) return // should not allow doneCaching: true when there is an ignnored error
 	delete ds.__pendingCacheVersion
@@ -397,10 +403,9 @@ async function cacheMappingOnNewRelease(ds) {
 // may cancel an unfinished caching for an older data_release_version,
 // if a new data_release_version is detected in cacheMappingOnNewRelease() runs
 function mayCancelStalePendingCache(ds, ref) {
-	//if (!ds.__pendingCacheVersion) return false
-	const next = ref.data_release_version
 	const current = ds.__pendingCacheVersion || ds.__gdc.data_release_version
 	if (!current) return false
+	const next = ref.data_release_version
 	if (next.major < current.major || next.minor < current.minor) {
 		console.log(`GDC: !!! cancel stale pending cache for `, next)
 		return true
@@ -424,6 +429,7 @@ output:
 aliquot-to-submitter mapping are automatically cached
 */
 async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
+	// since this function is called in a loop, exit early as needed to avoid unnecessary requests
 	if (mayCancelStalePendingCache(ds, ref)) return
 	const param = ['fields=submitter_id,samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id']
 	if (aliquot_id) {
@@ -531,7 +537,6 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 }
 
 async function getCasesWithGeneExpression(ds, ref) {
-	if (mayCancelStalePendingCache(ds, ref)) return
 	const { host, headers } = ds.getHostHeaders()
 	const url = joinUrl(host.geneExp, 'gene_expression/availability')
 
@@ -577,7 +582,6 @@ async function getCasesWithGeneExpression(ds, ref) {
 }
 
 async function getAnalysisTsv2loom4scrna(ds, ref) {
-	if (mayCancelStalePendingCache(ds, ref)) return //purpose?
 	const { host, headers } = ds.getHostHeaders()
 	const filters = {
 		op: 'and',
@@ -651,6 +655,7 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 		if (isRecoverableError(e)) {
 			ds.init.recoverableError = `getAnalysisTsv2loom4scrna() '${url}'`
 		}
+		delete ds.__pendingCacheVersion
 		// should still throw here to stop getAnalysisTsv2loom4scrna() code execution and allow its caller to catch
 		throw e
 	}

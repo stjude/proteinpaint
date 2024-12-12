@@ -41,10 +41,12 @@ any error is considered critical and must be presented in server log for diagnos
 
 - periodic check of stale cache and re-cache above
 */
-
+let i = 0
 export async function initGDCdictionary(ds) {
-	// TODO: should include this in versioned cache and auto-retries on recoverable error
+	// TODO: should include this in versioned cache
 	await buildGDCdictionary(ds)
+	// uncomment to test, should trigger mds3_init() retry
+	// i++; if (i < 4) throw {status: 500}
 
 	if (serverconfig.features.await4completeGdcCaseCache) {
 		// only use on dev environment. here as soon as server is launched,

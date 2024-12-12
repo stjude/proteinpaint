@@ -57,6 +57,7 @@ export async function initGenomesDs(serverconfig) {
 
 	//DELETE THIS after process for deleting mass session files moved into production
 	serverconfig.cachedir_massSessionTrash = await mayCreateSubdirInCache('massSessionTrash')
+	deleteSessionFiles()
 
 	serverconfig.cache_snpgt = {
 		dir: await mayCreateSubdirInCache('snpgt'),
@@ -105,6 +106,7 @@ export async function initGenomesDs(serverconfig) {
 		const g2module = (await import(genomeFile)).default
 		const g2 = g2module.default || g2module
 		genomes[g.name] = g2
+		g2.label = g.name
 
 		if (!g2.genomefile) throw '.genomefile missing from .js file of genome ' + g.name
 		if (g2.genomefile == 'NA') {
@@ -435,7 +437,6 @@ export async function initGenomesDs(serverconfig) {
 					? await _ds.default(common, { serverconfig, clinsig })
 					: _ds.default || _ds
 
-			// !!! TODO: is this unnecessarily repeated at a later time? !!!
 			server_updateAttr(ds, d)
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name
@@ -452,69 +453,79 @@ export async function initGenomesDs(serverconfig) {
 
 			trackedDatasets.push(ds)
 
-			// wrap ds init execution in a try-catch,
-			// to not crash when at least 1 dataset loaded successfully
+			// wrap ds init execution in a try-catch, to not crash when at least 1 dataset loaded successfully
 			try {
 				ds.init.status = 'started'
-				if (ds.isMds3) await mds3_init.init(ds, g, d)
+				// initial attempt is awaited, so that the server startup logs/CI can summarize status
+				if (ds.isMds3) await mds3_init.init(ds, g)
 				else if (ds.isMds) await mds_init(ds, g, d)
 				else initLegacyDataset(ds, g, serverconfig)
 				// no error bubbled up to be caught, and there are no nonblocking step being performed, init is done
 				if (ds.init.status != 'nonblocking') ds.init.status = 'done'
 			} catch (e) {
-				console.log(`Init error with ${genomename} dataset ${ds.label}: ${e}`)
-				console.trace(e)
-				if (ds.init.fatalError) {
-					ds.init.status = `fatalError`
-				} else if (!ds.init.retryMax) {
-					ds.init.status = `zeroRetries`
-				} else {
-					console.log(`${gdlabel} recoverableError:`, ds.init.recoverableError)
-					ds.init.status = `recoverableError`
-					delete ds.init.recoverableError // should not be present at the beginning of retries
-
-					// This loop is NOT awaited on, so that it doesn't block subsequent datasets from loading
-					let currentRetry = 0
-					const interval = setInterval(async () => {
-						currentRetry++
-						try {
-							console.log(`Retrying ${gdlabel} init(), attempt #${currentRetry} ...`)
-							if (ds.isMds3) await mds3_init.init(ds, g, d)
-							else if (ds.isMds) await mds_init(ds, g, d)
-							else initLegacyDataset(ds, g, serverconfig)
-							// as long as no error bubbles up to here, the retry is considered successful
-							clearInterval(interval)
-							if (ds.init.status != 'nonblocking') ds.init.status = 'done'
-						} catch (e) {
-							if (!ds.init.recoverableError) {
-								console.log(`Fatal error on ${gdlabel} retry`, e)
-								clearInterval(interval) // cancel since retrying will not change the outcome
-								ds.init.status = 'fatalError'
-							} else {
-								console.warn(`${gdlabel} init() failed. Retrying... (${ds.init.retryMax - currentRetry} attempts left)`)
-								if (currentRetry >= ds.init.retryMax) {
-									clearInterval(interval) // cancel retries
-									console.error(`Max retry attempts for ${gdlabel} reached. Failing with error:`)
-									if (ds.initErrorCallback) ds.initErrorCallback(response)
-									else {
-										// allow to fail silently to not affect other loaded datasets
-										console.log(e)
-									}
-								}
-
-								ds.init.status = `recoverableError`
-								delete ds.init.recoverableError // should not be present at the beginning of retries
-							}
-						}
-					}, ds.init.retryDelay)
-				}
+				mayRetryInit(g, ds, d, e)
 			}
 		}
-
-		deleteSessionFiles()
 		delete g.rawdslst
 	}
 	return trackedDatasets
+}
+
+function mayRetryInit(g, ds, d, e) {
+	// if initial attempt fails, can stop or retry
+	const gdlabel = `${g.label}/${ds.label}`
+	console.log(`Init error with ${gdlabel}: ${e}`)
+	console.trace(e)
+	if (ds.init.fatalError) {
+		// will not be able to recover even with retries
+		ds.init.status = `fatalError`
+		return
+	}
+	if (!ds.init.retryMax) {
+		// default ds.init.retryMax is 0, assumes that
+		// most dataset init errors are not recoverable, unless overriden
+		ds.init.status = `zeroRetries`
+		return
+	}
+	console.log(`${gdlabel} recoverableError:`, ds.init.recoverableError)
+	ds.init.status = `recoverableError` // needed by app processTrackedDs() to summarize init status
+	delete ds.init.recoverableError // info only, should not be present at the beginning of retries
+
+	// This loop is NOT awaited on, so that it doesn't block subsequent datasets from loading
+	let currentRetry = 0
+	const interval = setInterval(async () => {
+		currentRetry++
+		try {
+			console.log(`Retrying ${gdlabel} init(), attempt #${currentRetry} ...`)
+			if (ds.isMds3) await mds3_init.init(ds, g)
+			else if (ds.isMds) await mds_init(ds, g, d)
+			else initLegacyDataset(ds, g, serverconfig)
+			// as long as no error bubbles up to here, the retry is considered successful
+			clearInterval(interval)
+			if (ds.init.status != 'nonblocking') ds.init.status = 'done'
+		} catch (e) {
+			console.log('init retry error:', gdlabel, e)
+			if (!ds.init.recoverableError && !utils.isRecoverableError(e)) {
+				console.log(`Fatal error on ${gdlabel} retry, stopping retry`)
+				clearInterval(interval) // cancel since retrying will not change the outcome
+				ds.init.status = 'fatalError'
+			} else {
+				console.warn(`${gdlabel} init() failed. Retrying... (${ds.init.retryMax - currentRetry} attempts left)`)
+				if (currentRetry >= ds.init.retryMax) {
+					clearInterval(interval) // cancel retries
+					console.error(`Max retry attempts for ${gdlabel} reached. Failing with error:`)
+					if (ds.initErrorCallback) ds.initErrorCallback(response)
+					else {
+						// allow to fail silently to not affect other loaded datasets
+						console.log(e)
+					}
+				}
+
+				ds.init.status = `recoverableError`
+				delete ds.init.recoverableError // should not be present at the beginning of retries
+			}
+		}
+	}, ds.init.retryDelay)
 }
 
 async function mayCreateSubdirInCache(subdir) {
