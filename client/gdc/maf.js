@@ -1,7 +1,6 @@
 import { dofetch3 } from '#common/dofetch'
-import { make_radios, renderTable, sayerror } from '#dom'
+import { make_radios, renderTable, sayerror, Menu } from '#dom'
 import { fileSize } from '#shared/fileSize.js'
-import { Menu } from '#dom/menu'
 
 /*
 a UI to list open-access maf files from current cohort
@@ -323,6 +322,7 @@ async function getFilesAndShowTable(obj) {
 		div: obj.tableDiv.append('div'),
 		selectAll: true,
 		dataTestId: 'sja_mafFileTable',
+		header: { allowSort: true },
 		buttons: [
 			{
 				text: 'Aggregate selected MAF files and download',
