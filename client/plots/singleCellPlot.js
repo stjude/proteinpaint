@@ -6,7 +6,7 @@ import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { max, rgb } from 'd3'
+import { line, max, rgb } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
@@ -46,7 +46,7 @@ class singleCellPlot {
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 		this.startGradient = {}
 		this.stopGradient = {}
-		this.zoom = 1
+		this.zShift = 0
 	}
 
 	async init(appState) {
@@ -393,7 +393,8 @@ class singleCellPlot {
 		const duration = 750
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
-				this.zoom = this.zoom * 1.1
+				this.zoomHandled = false
+				this.zShift = 0.1
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 1.1)
 				}
@@ -403,7 +404,8 @@ class singleCellPlot {
 		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
-				this.zoom = this.zoom * 0.9
+				this.zoomHandled = false
+				this.zShift = -0.1
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.zoom.scaleBy(plot.mainG.transition().duration(duration), 0.9)
 				}
@@ -413,7 +415,8 @@ class singleCellPlot {
 		const identityDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
-				this.zoom = 1
+				this.zShift = 0
+				this.zoomHandled = false
 				for (const plot of this.plots) {
 					if (plot.zoom) plot.mainG.transition().duration(duration).call(plot.zoom.transform, zoomIdentity)
 				}
@@ -1198,7 +1201,6 @@ class singleCellPlot {
 			plot.canvas = plot.plotDiv.append('canvas').node()
 			plot.canvas.width = this.settings.svgw
 			plot.canvas.height = this.settings.svgh
-			plot.plotDiv.style('margin', '20px 20px')
 		}
 
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
@@ -1236,12 +1238,12 @@ class singleCellPlot {
 		renderer.setPixelRatio(window.devicePixelRatio)
 
 		// The grid should be out of the zoom, commented out until handled
+		const lines = []
 
 		if (this.settings.showGrid) {
 			// Line Geometry
 			const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffd3d3d3 })
 
-			const lines = 5
 			let x = -1
 			const step = 0.5
 			for (let i = 0; i < 5; i++) {
@@ -1258,6 +1260,7 @@ class singleCellPlot {
 				line = new THREE.Line(lineGeometry, lineMaterial)
 				scene.add(line)
 				x += step
+				lines.push(line)
 			}
 		}
 
@@ -1267,13 +1270,19 @@ class singleCellPlot {
 
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
 		document.addEventListener('mousewheel', event => {
-			if (event.ctrlKey) camera.position.z += event.deltaY / 500
+			if (event.ctrlKey) particles.position.z += event.deltaY / 500
 		})
 
 		const self = this
+		self.zoomHandled = false
 		function animate() {
 			requestAnimationFrame(animate)
-			camera.zoom = self.zoom
+			if (!self.zoomHandled) {
+				if (!self.zShift) particles.position.z = 0
+				else particles.position.z += self.zShift
+				self.zoomHandled = true
+			}
+
 			camera.updateProjectionMatrix()
 			renderer.render(scene, camera)
 		}
