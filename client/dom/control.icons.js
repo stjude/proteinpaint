@@ -170,7 +170,6 @@ export const icons = {
 	},
 	updown: (elem, o) => {
 		return getHolder(elem, o)
-			.attr('aria-label', o.title)
 			.style('padding', '0 3px')
 			.style('color', 'rgb(100,100,255)')
 			.style('opacity', 0.9)
