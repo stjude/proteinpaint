@@ -10,6 +10,7 @@ import * as d3s from 'd3-selection'
 	Missing div
 	Missing and excess row data
 	Return correct rows on button click
+	Sort buttons
  */
 
 /*************************
@@ -271,7 +272,7 @@ tape('Return correct rows on button click', async test => {
 	test.end()
 })
 
-tape('allowSort header option', async test => {
+tape('Sort button', async test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder()
@@ -293,8 +294,12 @@ tape('allowSort header option', async test => {
 	}
 
 	renderTable(opts)
+	test.equal(
+		holder.selectAll('.sjpp-table-sort-button').nodes().length,
+		opts.columns.length,
+		'Should display sort buttons'
+	)
 
-	test.pass('Should allow sorting')
-
+	if (test._ok) holder.remove()
 	test.end()
 })
