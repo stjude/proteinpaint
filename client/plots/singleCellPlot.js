@@ -13,6 +13,7 @@ import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, say
 import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
+import { render } from '#src/block.mds2.vcf.plain'
 
 /*
 this
@@ -527,10 +528,8 @@ class singleCellPlot {
 				settingsKey: 'svgh',
 				min: 300,
 				max: 1000
-			}
-		]
-		if (this.largePlot) {
-			inputs.push({
+			},
+			{
 				label: 'Sample size',
 				type: 'number',
 				chartType: 'singleCellPlot',
@@ -539,27 +538,16 @@ class singleCellPlot {
 				min: 0.001,
 				max: 0.1,
 				step: 0.001
-			})
-		} else {
-			inputs.push({
-				label: 'Sample size',
-				type: 'number',
+			},
+			{
+				label: 'Show grid',
+				boxLabel: '',
+				type: 'checkbox',
 				chartType: 'singleCellPlot',
-				settingsKey: 'sampleSize',
-				title: 'Sample size',
-				min: 1,
-				max: 3,
-				step: 0.5
-			}),
-				inputs.push({
-					label: 'Show grid',
-					boxLabel: '',
-					type: 'checkbox',
-					chartType: 'singleCellPlot',
-					settingsKey: 'showGrid',
-					title: 'Show grid'
-				})
-		}
+				settingsKey: 'showGrid',
+				title: 'Show grid'
+			}
+		]
 
 		this.components = {
 			controls: await controlsInit({
@@ -698,7 +686,6 @@ class singleCellPlot {
 		for (const plot of result.plots) {
 			this.plots.push(plot)
 			plot.cells = [...plot.noExpCells, ...plot.expCells]
-			if (plot.cells.length > maxSamplesD3) this.largePlot = true
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
 		}
@@ -772,12 +759,15 @@ class singleCellPlot {
 				plot.max = max
 			}
 		}
-		if (plot.cells.length > maxSamplesD3) {
-			this.renderLargePlotThree(plot)
-			this.renderLegend(plot)
+		//if (plot.cells.length > maxSamplesD3) {
+		this.renderLargePlotThree(plot)
+		// }
+		// else
+		// 	this.renderD3Plot(plot)
+		this.renderLegend(plot)
+	}
 
-			return
-		}
+	renderD3Plot(plot) {
 		plot.svg = plot.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -814,7 +804,6 @@ class singleCellPlot {
 		plot.mainG.call(plot.zoom)
 
 		this.renderCells(plot.cells, plot)
-		this.renderLegend(plot)
 	}
 
 	renderCells(cells, plot) {
@@ -859,17 +848,17 @@ class singleCellPlot {
 			[s0.x, s0.x, s0.y, s0.y]
 		)
 		const r = 5
-		if (plot.cells.length > maxSamplesD3) {
-			plot.xAxisScale = d3Linear().domain([xMin, xMax]).range([-1, 1])
-			plot.yAxisScale = d3Linear().domain([yMin, yMax]).range([-1, 1])
-		} else {
-			plot.xAxisScale = d3Linear()
-				.domain([xMin, xMax])
-				.range([0 + r, this.settings.svgw - r])
-			plot.yAxisScale = d3Linear()
-				.domain([yMax, yMin])
-				.range([0 + r, this.settings.svgh - r])
-		}
+		//if (plot.cells.length > maxSamplesD3) {
+		plot.xAxisScale = d3Linear().domain([xMin, xMax]).range([-1, 1])
+		plot.yAxisScale = d3Linear().domain([yMin, yMax]).range([-1, 1])
+		// } else {
+		// 	plot.xAxisScale = d3Linear()
+		// 		.domain([xMin, xMax])
+		// 		.range([0 + r, this.settings.svgw - r])
+		// 	plot.yAxisScale = d3Linear()
+		// 		.domain([yMax, yMin])
+		// 		.range([0 + r, this.settings.svgh - r])
+		// }
 	}
 
 	renderLegend(plot) {
@@ -1248,29 +1237,29 @@ class singleCellPlot {
 
 		// The grid should be out of the zoom, commented out until handled
 
-		// if (this.settings.showGrid) {
-		// 	// Line Geometry
-		// 	const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffd3d3d3 })
+		if (this.settings.showGrid) {
+			// Line Geometry
+			const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffd3d3d3 })
 
-		// 	const lines = 5
-		// 	let x = -1
-		// 	const step = 0.5
-		// 	for (let i = 0; i < 5; i++) {
-		// 		let points = []
-		// 		points.push(new THREE.Vector3(x, 1, 0))
-		// 		points.push(new THREE.Vector3(x, -1, 0))
-		// 		let lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
-		// 		let line = new THREE.Line(lineGeometry, lineMaterial)
-		// 		scene.add(line)
-		// 		points = []
-		// 		points.push(new THREE.Vector3(-1, x, 0))
-		// 		points.push(new THREE.Vector3(1, x, 0))
-		// 		lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
-		// 		line = new THREE.Line(lineGeometry, lineMaterial)
-		// 		scene.add(line)
-		// 		x += step
-		// 	}
-		// }
+			const lines = 5
+			let x = -1
+			const step = 0.5
+			for (let i = 0; i < 5; i++) {
+				let points = []
+				points.push(new THREE.Vector3(x, 1, 0))
+				points.push(new THREE.Vector3(x, -1, 0))
+				let lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
+				let line = new THREE.Line(lineGeometry, lineMaterial)
+				scene.add(line)
+				points = []
+				points.push(new THREE.Vector3(-1, x, 0))
+				points.push(new THREE.Vector3(1, x, 0))
+				lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
+				line = new THREE.Line(lineGeometry, lineMaterial)
+				scene.add(line)
+				x += step
+			}
+		}
 
 		// Line Object
 
@@ -1316,8 +1305,10 @@ export async function getPlotConfig(opts, app) {
 		const data = app.vocabApi.termdbConfig?.queries?.singleCell?.data
 		const plots = data?.plots
 		let settings = getDefaultSingleCellSettings()
-		if (data.width) settings.svgw = data.width
-		if (data.height) settings.svgh = data.height
+		if (data.settings)
+			for (const key in data.settings) {
+				settings[key] = data.settings[key]
+			}
 
 		const config = {
 			hiddenClusters: [],
@@ -1340,12 +1331,12 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 900,
-		svgh: 900,
+		svgw: 600,
+		svgh: 600,
 		showGrid: true,
 		sampleSize: 1.5,
-		sampleSizeThree: 0.001,
+		sampleSizeThree: 0.008,
 		threeFOV: 55,
-		opacity: 0.8
+		opacity: 1
 	}
 }
