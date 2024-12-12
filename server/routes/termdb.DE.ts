@@ -97,6 +97,7 @@ param{}
 
 	const cases_string = group1names.map(i => i).join(',')
 	const controls_string = group2names.map(i => i).join(',')
+	//group 1 by default is selected as the control group. Later on we can allow user to select which group is control and which is treatment. Reason to do this is to first select the group against which the comparison is to be made in the DE analysis. This is important for the interpretation of the results as analyses is context dependent based on the biological question. If the user wants to compare the expression of a specific gene between 2 groups, then the user should select the group that is not of interest as the control group.
 	const expression_input = {
 		case: controls_string,
 		control: cases_string,
