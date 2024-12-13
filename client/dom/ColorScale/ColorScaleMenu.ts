@@ -6,11 +6,10 @@ import { rgb } from 'd3-color'
 export class ColorScaleMenu {
 	domain: number[]
 	colors: string[] = ['white', 'red']
-	default?: { min: number; max: number; percentile: number }
+	default?: { min: number; max: number; percentile?: number }
 	cutoffMode?: CutoffMode
 	setColorsCallback?: (val: string, idx: number) => void
-	numInputCallback?: (f?: { cutoffMode: CutoffMode; min: number; max: number }) => void
-	showPercentile?: boolean
+	numInputCallback?: (f?: { cutoffMode: CutoffMode; min?: number; max?: number; percentile?: number }) => void
 	private tip = new Menu({ padding: '2px' })
 	constructor(opts: ColorScaleMenuOpts) {
 		this.domain = opts.domain
@@ -21,10 +20,9 @@ export class ColorScaleMenu {
 			this.cutoffMode = opts.cutoffMode
 			this.default = {
 				min: opts.domain[0],
-				max: opts.domain[opts.domain.length - 1],
-				percentile: opts.percentile || 99
+				max: opts.domain[opts.domain.length - 1]
 			}
-			this.showPercentile = opts.showPercentile
+			if (opts.percentile) this.default.percentile = opts.percentile
 		}
 		if (opts.setColorsCallback) this.setColorsCallback = opts.setColorsCallback
 
@@ -49,7 +47,7 @@ export class ColorScaleMenu {
 						{ label: 'Automatic', value: 'auto', selected: this.cutoffMode == 'auto' },
 						{ label: 'Fixed', value: 'fixed', selected: this.cutoffMode == 'fixed' }
 					]
-					if (this.showPercentile) {
+					if (this.default?.percentile) {
 						options.push({
 							label: 'Percentile',
 							value: 'percentile',
@@ -90,7 +88,7 @@ export class ColorScaleMenu {
 						.style('display', this.cutoffMode == 'percentile' ? '' : 'none')
 					if (this.default?.percentile) this.appendValueInput(percentRow, this.default.percentile)
 
-					const minMaxRow = table.append('tr').style('display', this.cutoffMode == 'auto' ? 'none' : 'table-row')
+					const minMaxRow = table.append('tr').style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
 					this.appendValueInput(minMaxRow.append('td'), 0)
 					this.appendValueInput(minMaxRow.append('td'), this.domain.length - 1)
 				}

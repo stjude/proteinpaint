@@ -20,7 +20,6 @@ export class ColorScale {
 	barheight: number
 	barwidth: number
 	colors: string[]
-	default?: { min: number; max: number }
 	domain: number[]
 	fontSize: number
 	numericInputs?: NumericInputs
@@ -200,12 +199,14 @@ export class ColorScale {
 				await opts.setColorsCallback!(val, idx)
 				this.updateColors()
 			}
-		if (opts.numericInputs) _opts.cutoffMode = opts.numericInputs.cutoffMode || 'auto'
-		_opts.showPercentile = opts.numericInputs?.showPercentile || false
-		_opts.setNumbersCallback = async obj => {
-			if (!obj) return
-			await opts.numericInputs!.callback(obj)
-			this.updateAxis()
+		if (opts.numericInputs) {
+			_opts.cutoffMode = opts.numericInputs.cutoffMode || 'auto'
+			if (opts.numericInputs?.defaultPercentile) _opts.percentile = opts.numericInputs?.defaultPercentile
+			_opts.setNumbersCallback = async obj => {
+				if (!obj) return
+				await opts.numericInputs!.callback(obj)
+				this.updateAxis()
+			}
 		}
 		const menu = new ColorScaleMenu(_opts)
 		return menu
