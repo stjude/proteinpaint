@@ -2275,6 +2275,9 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		let geneExpMap
 		if (ds.queries.singleCell.geneExpression && q.gene) {
 			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
+			if (geneExpMap.error) {
+				return { error: geneExpMap.error }
+			}
 		}
 		for (let i = 1; i < lines.length; i++) {
 			const line = lines[i]
