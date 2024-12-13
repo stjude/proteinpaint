@@ -15,7 +15,12 @@ callbacks{ postRender() }
 const tip = new Menu()
 
 // list of columns to show in MAF file table
-const tableColumns = [{ label: 'Case' }, { label: 'Project' }, { label: 'Samples' }, { label: 'File Size' }]
+const tableColumns = [
+	{ label: 'Case', sortable: true },
+	{ label: 'Project', sortable: true },
+	{ label: 'Samples' },
+	{ label: 'File Size', sortable: true }
+]
 
 // list of gdc maf file columns; selected ones are used for output
 const mafColumns = [
