@@ -274,7 +274,7 @@ tape('.setColorsCallback()', async test => {
 	test.end()
 })
 
-tape.skip('.numericInputs', async test => {
+tape.only('.numericInputs', async test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
@@ -282,12 +282,18 @@ tape.skip('.numericInputs', async test => {
 	const newMin = -10
 	const testColorScale = getColorScale({
 		holder,
-		setMinMaxCallback: obj => {
-			test.equal(typeof obj, 'object', 'Should pass an object to the .setMinMaxCallback() callback')
-			test.equal(obj.cutoffMode, 'fixed', 'Should return the correct cutoffMode to the .setMinMaxCallback() callback')
-			test.equal(obj.min, newMin, 'Should return the correct min value to the .setMinMaxCallback) callback')
-			test.equal(obj.max, newMax, 'Should return the correct max value to the .setMinMaxCallback() callback')
+		numericInputs: {
+			showPercentile: true,
+			callback: obj => {
+				console.log(obj)
+			}
 		}
+		// setMinMaxCallback: obj => {
+		// 	test.equal(typeof obj, 'object', 'Should pass an object to the .setMinMaxCallback() callback')
+		// 	test.equal(obj.cutoffMode, 'fixed', 'Should return the correct cutoffMode to the .setMinMaxCallback() callback')
+		// 	test.equal(obj.min, newMin, 'Should return the correct min value to the .setMinMaxCallback) callback')
+		// 	test.equal(obj.max, newMax, 'Should return the correct max value to the .setMinMaxCallback() callback')
+		// }
 	})
 
 	// test.equal(

@@ -1,13 +1,12 @@
 import type { SvgG, SvgSvg, Td } from '../../types/d3'
 import type { ColorScaleMenuOpts, CutoffMode } from '../types/colorScale'
 import { Menu } from '#dom'
-import { make_radios } from '#dom'
 import { rgb } from 'd3-color'
 
 export class ColorScaleMenu {
 	domain: number[]
 	colors: string[] = ['white', 'red']
-	default?: { min: number; max: number }
+	default?: { min: number; max: number; percentile: number }
 	cutoffMode?: CutoffMode
 	setColorsCallback?: (val: string, idx: number) => void
 	numInputCallback?: (f?: { cutoffMode: CutoffMode; min: number; max: number }) => void
@@ -22,7 +21,8 @@ export class ColorScaleMenu {
 			this.cutoffMode = opts.cutoffMode
 			this.default = {
 				min: opts.domain[0],
-				max: opts.domain[opts.domain.length - 1]
+				max: opts.domain[opts.domain.length - 1],
+				percentile: opts.percentile || 99
 			}
 			this.showPercentile = opts.showPercentile
 		}
@@ -36,7 +36,7 @@ export class ColorScaleMenu {
 		scaleSvg
 			.on('click', () => {
 				this.tip.clear().showunder(barG.node())
-				const radiosDiv = this.tip.d.append('div').style('padding', '2px')
+				const selectDiv = this.tip.d.append('div').style('padding', '2px')
 				const table = this.tip.d.append('table').style('margin', 'auto')
 				const promptRow = table
 					.append('tr')
@@ -46,41 +46,50 @@ export class ColorScaleMenu {
 				promptRow.append('td').text('Max')
 				if (this.numInputCallback) {
 					const options = [
-						{ label: 'Automatic', value: 'auto', checked: this.cutoffMode == 'auto' },
-						{ label: 'Fixed', value: 'fixed', checked: this.cutoffMode == 'fixed' }
+						{ label: 'Automatic', value: 'auto', selected: this.cutoffMode == 'auto' },
+						{ label: 'Fixed', value: 'fixed', selected: this.cutoffMode == 'fixed' }
 					]
 					if (this.showPercentile) {
 						options.push({
 							label: 'Percentile',
 							value: 'percentile',
-							checked: this.cutoffMode == 'percentile'
+							selected: this.cutoffMode == 'percentile'
 						})
 					}
-					make_radios({
-						holder: radiosDiv.style('display', 'block'),
-						options,
-						callback: async (value: string) => {
-							this.cutoffMode = value as 'auto' | 'fixed'
-							if (!this.default) throw new Error('Auto values not set for #dom/ColorScale.')
-							if (value == 'auto') {
-								promptRow.style('display', this.setColorsCallback ? 'table-row' : 'none')
-								minMaxRow.style('display', 'none')
-								this.domain[0] = this.default.min
-								this.domain[this.domain.length - 1] = this.default.max
-								await this.numInputCallback!({
-									cutoffMode: this.cutoffMode,
-									min: this.default.min,
-									max: this.default.max
-								})
-								// this.updateAxis()
-								this.tip.hide()
-							}
-							if (value == 'fixed') {
-								minMaxRow.style('display', 'table-row')
-								promptRow.style('display', 'table-row')
-							}
+					const select = selectDiv.append('select').on('change', async () => {
+						this.cutoffMode = select.node()!.value as CutoffMode
+						if (!this.default) throw new Error('Auto values not set for #dom/ColorScale.')
+						if (this.cutoffMode == 'auto') {
+							promptRow.style('display', this.setColorsCallback ? 'table-row' : 'none')
+							this.domain[0] = this.default.min
+							this.domain[this.domain.length - 1] = this.default.max
+							await this.numInputCallback!({
+								cutoffMode: this.cutoffMode,
+								min: this.default.min,
+								max: this.default.max
+							})
+							this.tip.hide()
 						}
+						percentRow.style('display', this.cutoffMode == 'percentile' ? '' : 'none')
+						promptRow.style('display', this.setColorsCallback || this.cutoffMode == 'fixed' ? 'table-row' : 'none')
+						minMaxRow.style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
 					})
+
+					select
+						.selectAll('option')
+						.data(options)
+						.enter()
+						.append('option')
+						.text(d => d.label)
+						.property('value', d => d.value)
+						.property('selected', d => d.selected)
+
+					const percentRow = selectDiv
+						.append('div')
+						.style('padding', '5px')
+						.style('display', this.cutoffMode == 'percentile' ? '' : 'none')
+					if (this.default?.percentile) this.appendValueInput(percentRow, this.default.percentile)
+
 					const minMaxRow = table.append('tr').style('display', this.cutoffMode == 'auto' ? 'none' : 'table-row')
 					this.appendValueInput(minMaxRow.append('td'), 0)
 					this.appendValueInput(minMaxRow.append('td'), this.domain.length - 1)
@@ -123,24 +132,29 @@ export class ColorScaleMenu {
 			})
 	}
 
-	appendValueInput = (td: Td, idx: number) => {
-		const valueInput = td
+	appendValueInput = (elem: any, value: number) => {
+		const valueInput = elem
 			.append('input')
 			.attr('type', 'number')
 			.style('width', '60px')
-			.attr('value', this.domain[idx])
+			.attr('value', this.domain[value] || value)
 			.style('padding', '3px')
 			.on('keyup', async (event: KeyboardEvent) => {
 				if (event.code != 'Enter') return
 				const valueNode = valueInput.node()
 				if (!valueNode) return
 				const value: number = parseFloat(valueNode.value)
-				this.domain[idx] = value
-				await this.numInputCallback!({
-					cutoffMode: this.cutoffMode!,
-					min: this.domain[0],
-					max: this.domain[this.domain.length - 1]
-				})
+				const opts: any = {
+					cutoffMode: this.cutoffMode
+				}
+				if (this.cutoffMode == 'fixed') {
+					this.domain[value] = value
+					opts.min = this.domain[0]
+					opts.max = this.domain[this.domain.length - 1]
+				} else if (this.cutoffMode == 'percentile') {
+					opts.percentile = value
+				}
+				await this.numInputCallback!(opts)
 				this.tip.hide()
 			})
 	}
