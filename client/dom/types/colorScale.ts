@@ -1,4 +1,4 @@
-import type { SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { SvgG, SvgLine, SvgSvg, SvgText } from '../../types/d3'
 import type { Selection } from 'd3-selection'
 import type { ScaleLinear } from 'd3-scale'
 
@@ -10,11 +10,6 @@ export type ColorScaleOpts = {
 	/** Optional but highly recommend. Default is a white to red scale.
 	 * The length of the array must match the domain array. */
 	colors?: string[]
-	/** Specifies the default min and max mode if setMinMaxCallback is provided
-	 * If 'auto', renders the default min and max set on init
-	 * if 'fixed', renders the min and max set by the user.
-	 */
-	cutoffMode?: 'auto' | 'fixed'
 	/** Required. Specifies the values to show along a number line.
 	 * The length must equal the colors array length.
 	 */
@@ -29,6 +24,7 @@ export type ColorScaleOpts = {
 	/** Optional. Shows a value in the color bar for the default, bottom axis
 	 * This value cannot be zero at initialization.*/
 	markedValue?: number
+	numericInputs?: NumericInputs
 	/** Optional. Show a static text on either side of the color scale */
 	labels?: {
 		/** Label at the beginning of the scale, on the left */
@@ -45,12 +41,6 @@ export type ColorScaleOpts = {
 	height?: number
 	/** If present, creates a menu on click to change the colors */
 	setColorsCallback?: (val: string, idx: number) => void
-	/** Creates inputs for the user to set the min and max values
-	 * Use the callback to update the plot/track/app/etc.
-	 * 'Auto' mode is the absolute min and max values provided to the data array
-	 * 'Fixed mode is the min and max values set by the user.
-	 */
-	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
 	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
 	 * NOTE: D3 considers this a ** suggested ** count. d3-axis will ultimateluy render the
 	 * ticks based on the available space of each label.
@@ -68,10 +58,8 @@ export type ColorScaleDom = {
 	gradient: GradientElem
 	scale: ScaleLinear<number, number, never>
 	scaleAxis: SvgG
-	/** Present when important value is indicated in opts */
-	//TODO: Replace with d3 type when merged
 	label?: SvgText
-	line?: Selection<SVGLineElement, any, any, any>
+	line?: SvgLine
 }
 
 export type GradientElem = Selection<SVGLinearGradientElement, any, any, any>
@@ -80,10 +68,11 @@ export type ColorScaleMenuOpts = {
 	scaleSvg: SvgSvg
 	barG: SvgG
 	colors: string[]
-	cutoffMode: 'auto' | 'fixed'
+	cutoffMode?: CutoffMode
 	domain: number[]
 	setColorsCallback?: (val: string, idx: number) => void
-	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
+	setNumbersCallback?: (f?: { cutoffMode: CutoffMode; min: number; max: number }) => void
+	showPercentile?: boolean
 }
 
 export type GetInterpolatedArg = {
@@ -108,4 +97,29 @@ export type GetInterpolatedArg = {
 export type InterpolatedDomainRange = {
 	values: number[]
 	colors: string[]
+}
+
+export type CutoffMode = 'auto' | 'fixed' | 'percentile'
+
+export type NumericInputs = {
+	/** Default cutoff mode on init */
+	cutoffMode: CutoffMode
+	/** Enable percentile option */
+	showPercentile?: boolean
+	/** Creates inputs for the user to set the min and max or use the percentile
+	 *  Use the callback to update the plot/track/app/etc.
+	 * 'Auto' mode is the absolute min and max values provided to the data array
+	 * 'Fixed' mode is the min and max values set by the user.
+	 * 'Percentile' mode is the cutoff set by the user.
+	 */
+	callback: (f?: {
+		/** Which mode the user selected */
+		cutoffMode: CutoffMode
+		/** Returns the min and max for 'fixed' and 'auto' modes */
+		min: number
+		/** Returns the min and max for 'fixed' and 'auto' modes */
+		max: number
+		/** If percentile is enabled, return value */
+		percent?: number
+	}) => void
 }

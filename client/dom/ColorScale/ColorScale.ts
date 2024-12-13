@@ -1,5 +1,11 @@
 import type { SvgSvg, SvgG } from '../../types/d3'
-import type { ColorScaleDom, ColorScaleOpts, GradientElem, ColorScaleMenuOpts } from '../types/colorScale'
+import type {
+	ColorScaleDom,
+	ColorScaleOpts,
+	GradientElem,
+	ColorScaleMenuOpts,
+	NumericInputs
+} from '../types/colorScale'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
@@ -14,18 +20,15 @@ export class ColorScale {
 	barheight: number
 	barwidth: number
 	colors: string[]
-	cutoffMode?: 'auto' | 'fixed'
 	default?: { min: number; max: number }
 	domain: number[]
 	fontSize: number
+	numericInputs?: NumericInputs
 	markedValue?: number | null
 	menu?: ColorScaleMenu
 	/** Purely for testing. Not used in the class but can be
 	 * called independently of user click, if needed */
 	setColorsCallback?: (val: string, idx: number) => void
-	/** Purely for testing. Not used in the class but can be
-	 * called independently of user click, if needed */
-	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
 	ticks: number
 	tickSize: number
 	tickValues: number[]
@@ -76,7 +79,7 @@ export class ColorScale {
 		}
 		this.render()
 
-		if (opts.setColorsCallback || opts.setMinMaxCallback) {
+		if (opts.setColorsCallback || opts.numericInputs) {
 			// Menu appearing on color bar click if callbacks are provided
 			this.menu = this.renderMenu(opts, scaleSvg, barG)
 		}
@@ -189,8 +192,7 @@ export class ColorScale {
 			scaleSvg,
 			barG,
 			domain: this.domain,
-			colors: this.colors,
-			cutoffMode: opts.cutoffMode || 'auto'
+			colors: this.colors
 		}
 		if (opts.setColorsCallback)
 			_opts.setColorsCallback = async (val, idx) => {
@@ -198,16 +200,13 @@ export class ColorScale {
 				await opts.setColorsCallback!(val, idx)
 				this.updateColors()
 			}
-		if (opts.setMinMaxCallback)
-			_opts.setMinMaxCallback = async obj => {
-				if (!obj) return
-				await opts.setMinMaxCallback!({
-					cutoffMode: obj.cutoffMode,
-					min: obj.min,
-					max: obj.max
-				})
-				this.updateAxis()
-			}
+		if (opts.numericInputs) _opts.cutoffMode = opts.numericInputs.cutoffMode || 'auto'
+		_opts.showPercentile = opts.numericInputs?.showPercentile || false
+		_opts.setNumbersCallback = async obj => {
+			if (!obj) return
+			await opts.numericInputs!.callback(obj)
+			this.updateAxis()
+		}
 		const menu = new ColorScaleMenu(_opts)
 		return menu
 	}

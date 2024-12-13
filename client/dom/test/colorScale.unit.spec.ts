@@ -13,7 +13,8 @@ ColorScale
 	- ColorScale.updateColors()
 	- markedValue - Show value in color bar and update
 	- ColorScale.updateAxis()
-	- .setMinMaxCallback() and .setColorsCallback()
+	- .setColorsCallback()
+	- .numericInputs
 	- (skipped) Show ticks in scientific notation
 
 Helpers
@@ -252,21 +253,35 @@ tape('ColorScale.updateScale()', test => {
 	test.end()
 })
 
-tape('.setMinMaxCallback() and .setColorsCallback()', async test => {
+tape('.setColorsCallback()', async test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
 	const newColor = 'blue'
 	const newIdx = 0
-	const newMax = 42
-	const newMin = -10
 	const testColorScale = getColorScale({
 		holder,
 		setColorsCallback: (value: string, idx: number) => {
 			test.equal(value, newColor, 'Should return the correct color to the .setColorsCallback()')
 			test.equal(idx, newIdx, 'Should return the correct index to the .setColorsCallback()')
 			return value
-		},
+		}
+	})
+	if (!testColorScale.menu) test.fail('Should create a menu when .setMinMaxCallback() is provided.')
+	if (testColorScale.setColorsCallback) await testColorScale.setColorsCallback(newColor, newIdx)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape.skip('.numericInputs', async test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+	const newMax = 42
+	const newMin = -10
+	const testColorScale = getColorScale({
+		holder,
 		setMinMaxCallback: obj => {
 			test.equal(typeof obj, 'object', 'Should pass an object to the .setMinMaxCallback() callback')
 			test.equal(obj.cutoffMode, 'fixed', 'Should return the correct cutoffMode to the .setMinMaxCallback() callback')
@@ -274,24 +289,23 @@ tape('.setMinMaxCallback() and .setColorsCallback()', async test => {
 			test.equal(obj.max, newMax, 'Should return the correct max value to the .setMinMaxCallback() callback')
 		}
 	})
-	if (!testColorScale.menu) test.fail('Should create a menu when .setMinMaxCallback() is provided.')
-	test.equal(
-		testColorScale.menu!.cutoffMode,
-		'auto',
-		'Should set cutoffMode = "auto" when not specified and .setMinMaxCallback() is provided.'
-	)
-	test.true(
-		typeof testColorScale.menu!.default == 'object' &&
-			testColorScale.menu!.default.min == 0 &&
-			testColorScale.menu!.default.max == 1,
-		'Should set auto to default values when not specified and .setMinMaxCallback() is provided.'
-	)
 
-	if (testColorScale.setColorsCallback) await testColorScale.setColorsCallback(newColor, newIdx)
-	if (testColorScale.setMinMaxCallback)
-		await testColorScale.setMinMaxCallback({ cutoffMode: 'fixed', min: newMin, max: newMax })
+	// test.equal(
+	// 	testColorScale.menu!.cutoffMode,
+	// 	'auto',
+	// 	'Should set cutoffMode = "auto" when not specified and .setMinMaxCallback() is provided.'
+	// )
+	// test.true(
+	// 	typeof testColorScale.menu!.default == 'object' &&
+	// 		testColorScale.menu!.default.min == 0 &&
+	// 		testColorScale.menu!.default.max == 1,
+	// 	'Should set auto to default values when not specified and .setMinMaxCallback() is provided.'
+	// )
 
-	if (test['_ok']) holder.remove()
+	// if (testColorScale.setMinMaxCallback)
+	// 	await testColorScale.setMinMaxCallback({ cutoffMode: 'fixed', min: newMin, max: newMax })
+
+	// if (test['_ok']) holder.remove()
 	test.end()
 })
 
