@@ -36,7 +36,7 @@ function getOpts(_opts = {}) {
 		vocab,
 		termdbConfig: {
 			selectCohort: {
-				term: { id: 'subcohort', type: 'categorical' },
+				term: { id: 'subcohort', type: 'multivalue' },
 				prompt: 'To get started with the Clinical Browser, select the survivor population you wish to browse.',
 				values: [
 					{
@@ -687,7 +687,7 @@ tape('tvs: Cohort + Numeric', async test => {
 					term: {
 						id: 'subcohort',
 						name: 'subcohort',
-						type: 'categorical',
+						type: 'multivalue',
 						values: {
 							ABC: { key: 'ABC', label: 'ABC', shortLabel: 'ABC' },
 							XYZ: { key: 'XYZ', label: 'XYZ', shortLabel: 'XYZ' },

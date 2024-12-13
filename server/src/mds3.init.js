@@ -372,11 +372,11 @@ function mayValidateSelectCohort(tdb) {
 	if (!sc.term) throw 'term{} missing from termdb.selectCohort'
 	if (!sc.term.id) throw 'id missing from termdb.selectCohort.term'
 	if (typeof sc.term.id != 'string') throw 'termdb.selectCohort.term.id is not string'
-	if (sc.term.type != 'categorical') throw 'type is not hardcoded "categorical" from termdb.selectCohort.term'
+	if (sc.term.type != 'multivalue') throw 'type is not hardcoded "multivalue" from termdb.selectCohort.term'
 	{
 		const t = tdb.q.termjsonByOneid(sc.term.id)
 		if (!t) throw 'termdb.selectCohort.term.id is invalid'
-		if (t.type != 'categorical') throw 'termdb.selectCohort.term type is not categorical'
+		if (t.type != 'multivalue') throw 'termdb.selectCohort.term type is not multivalue'
 	}
 	if (!sc.values) throw 'values[] missing from termdb.selectCohort'
 	if (!Array.isArray(sc.values)) throw 'termdb.selectCohort.values is not array'

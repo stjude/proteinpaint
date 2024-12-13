@@ -1232,7 +1232,7 @@ tape('renderAs: htmlSelect', async test => {
 			// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
 			term: {
 				id: 'subcohort',
-				type: 'categorical'
+				type: 'multivalue'
 			},
 			values: [
 				{
