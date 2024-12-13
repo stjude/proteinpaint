@@ -241,29 +241,8 @@ export function renderTable({
 				if (c.sortable) {
 					const callback = (opt: string) => sortTableCallBack(i, rows, opt)
 					const updateTable = (newRows: any) => {
-						parentDiv.remove()
-						renderTable({
-							columns,
-							rows: newRows,
-							div,
-							columnButtons,
-							buttons,
-							noButtonCallback,
-							singleMode,
-							noRadioBtn,
-							showLines,
-							striped,
-							showHeader,
-							header,
-							maxWidth,
-							maxHeight,
-							selectedRows,
-							selectAll,
-							resize,
-							selectedRowStyle,
-							inputName,
-							dataTestId
-						})
+						rows = newRows
+						updateRows()
 					}
 					createSortButton(c, th, callback, updateTable)
 				}
@@ -275,139 +254,144 @@ export function renderTable({
 	}
 
 	const tbody = table.append('tbody')
-	for (const [i, row] of rows.entries()) {
-		let checkbox
-		const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper')
-		if (striped && i % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
+	function updateRows() {
+		tbody.selectAll('tr').remove()
+		for (const [i, row] of rows.entries()) {
+			let checkbox
+			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper')
+			if (striped && i % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
 
-		// for Section 508 compliance: always create an aria-labelledby attribute on an input
-		// NOTE: a title attribute, wrapping with a label element, or other solutions are possible,
-		// but using aria-labelled by is less likely to conflict with existing elem attributes or layout
-		const ariaLabelledBy = row.ariaLabelledBy || row[0]?.elemId || getUniqueNameOrId('td')
-		// by default, assume that the first data cell should be used to label the input to its left,
-		// and should create an element id on it as needed
-		if (!row.ariaLabelledBy && row[0] && !row[0].elemId) row[0].elemId = ariaLabelledBy
+			// for Section 508 compliance: always create an aria-labelledby attribute on an input
+			// NOTE: a title attribute, wrapping with a label element, or other solutions are possible,
+			// but using aria-labelled by is less likely to conflict with existing elem attributes or layout
+			const ariaLabelledBy = row.ariaLabelledBy || row[0]?.elemId || getUniqueNameOrId('td')
+			// by default, assume that the first data cell should be used to label the input to its left,
+			// and should create an element id on it as needed
+			if (!row.ariaLabelledBy && row[0] && !row[0].elemId) row[0].elemId = ariaLabelledBy
 
-		if (buttons || noButtonCallback)
-			tr.on('click', (e: Event) => {
-				if (e.target !== checkbox.node()) {
-					if (singleMode)
-						//not a checkbox
-						checkbox.node().checked = true
-					else checkbox.node().checked = !checkbox.node().checked
-					checkbox.dispatch('change')
-				}
-			})
-		if (showLines) {
-			tr.append('td')
-				.text(i + 1)
-				.style('text-align', 'center')
-				.style('width', '1vw')
-				.style('font-size', '0.8rem')
-		}
-
-		if (buttons || noButtonCallback) {
-			const td = tr.append('td').style('width', '1.5vw').style('float', 'center')
-			if (noRadioBtn) {
-				// should be in singleMode and do not want to show radio buttons for cleaner look. <input> elements are still rendered since "checkbox" element is required for selection. thus simply hide <td>.
-				td.style('display', 'none')
-			}
-			checkbox = td
-				.append('input')
-				.attr('type', singleMode ? 'radio' : 'checkbox')
-				.attr('name', uniqueInputName)
-				.attr('value', i)
-				.attr('aria-labelledby', ariaLabelledBy)
-				.property('checked', selectAll || selectedRows.includes(i))
-				.on('change', () => {
-					if (buttons) updateButtons()
-					else noButtonCallback!(i, checkbox.node())
-
-					const checked = checkbox.property('checked')
-					for (const key in _selectedRowStyle) {
-						tr.style(key, checked ? _selectedRowStyle[key] : '')
+			if (buttons || noButtonCallback)
+				tr.on('click', (e: Event) => {
+					if (e.target !== checkbox.node()) {
+						if (singleMode)
+							//not a checkbox
+							checkbox.node().checked = true
+						else checkbox.node().checked = !checkbox.node().checked
+						checkbox.dispatch('change')
 					}
 				})
-
-			const checked = checkbox.property('checked')
-			for (const key in selectedRowStyle) {
-				tr.style(key, checked ? selectedRowStyle[key] : '')
+			if (showLines) {
+				tr.append('td')
+					.text(i + 1)
+					.style('text-align', 'center')
+					.style('width', '1vw')
+					.style('font-size', '0.8rem')
 			}
-		}
-		if (columnButtons && columnButtons.length > 0) {
-			const td = tr.append('td').attr('class', 'sjpp_table_item')
-			// Assuming x is your variable
-			for (const button of columnButtons) {
-				button.button = td
-					.append('button')
-					.style('white-space', 'normal')
-					.text(button.text)
-					.on('click', event => button.callback(event, i))
-				if (button.dataTestId) {
-					button.button.attr('data-testid', button.dataTestId)
+
+			if (buttons || noButtonCallback) {
+				const td = tr.append('td').style('width', '1.5vw').style('float', 'center')
+				if (noRadioBtn) {
+					// should be in singleMode and do not want to show radio buttons for cleaner look. <input> elements are still rendered since "checkbox" element is required for selection. thus simply hide <td>.
+					td.style('display', 'none')
 				}
-				if ('disabled' in button) button.button.node().disabled = button.disabled!(i)
+				checkbox = td
+					.append('input')
+					.attr('type', singleMode ? 'radio' : 'checkbox')
+					.attr('name', uniqueInputName)
+					.attr('value', i)
+					.attr('aria-labelledby', ariaLabelledBy)
+					.property('checked', selectAll || selectedRows.includes(i))
+					.on('change', () => {
+						if (buttons) updateButtons()
+						else noButtonCallback!(i, checkbox.node())
+
+						const checked = checkbox.property('checked')
+						for (const key in _selectedRowStyle) {
+							tr.style(key, checked ? _selectedRowStyle[key] : '')
+						}
+					})
+
+				const checked = checkbox.property('checked')
+				for (const key in selectedRowStyle) {
+					tr.style(key, checked ? selectedRowStyle[key] : '')
+				}
 			}
-		}
-		for (const [colIdx, cell] of row.entries()) {
-			const td = tr
-				.append('td')
-				.attr('id', cell.elemId || null)
-				.attr('class', 'sjpp_table_item')
-
-			// attach <td> for external code to modify
-			cell.__td = td
-
-			const column = columns[colIdx]
-			if (column.editCallback && cell.value) {
-				td.on('click', (event: MouseEvent) => {
-					event.stopImmediatePropagation()
-					const isEdit = td.select('input').empty()
-					if (!isEdit) return
-					td.html('')
-					const input = td
-						.append('input')
-						.attr('value', cell.value)
-						.on('change', () => {
-							const value = input.node().value
-							cell.value = value
-							td.text(cell.value)
-							column.editCallback!(i, cell)
-						})
-					input.node().focus()
-					input.node().select()
-				})
+			if (columnButtons && columnButtons.length > 0) {
+				const td = tr.append('td').attr('class', 'sjpp_table_item')
+				// Assuming x is your variable
+				for (const button of columnButtons) {
+					button.button = td
+						.append('button')
+						.style('white-space', 'normal')
+						.text(button.text)
+						.on('click', event => button.callback(event, i))
+					if (button.dataTestId) {
+						button.button.attr('data-testid', button.dataTestId)
+					}
+					if ('disabled' in button) button.button.node().disabled = button.disabled!(i)
+				}
 			}
-			if (column.width) td.style('width', column.width)
-			if (column.align) td.style('text-align', column.align)
+			for (const [colIdx, cell] of row.entries()) {
+				const td = tr
+					.append('td')
+					.attr('id', cell.elemId || null)
+					.attr('class', 'sjpp_table_item')
 
-			if (column.nowrap) td.style('white-space', 'nowrap')
-			if (cell.url) {
-				td.append('a')
-					.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
-					.attr('href', cell.url)
-					.attr('target', '_blank')
-			} else if (cell.html) td.html(cell.html)
-			else if ('value' in cell) {
-				td.text(cell.value)
-				if (cell.color) td.style('color', cell.color)
-			} else if (cell.color) {
-				if (cell.disabled) {
-					td.style('background-color', cell.color)
-				} else {
-					const input = td
-						.append('input')
-						.attr('type', 'color')
-						.attr('value', cell.color)
-						.on('change', () => {
-							const color = input.node().value
-							cell.color = color
-							if (column.editCallback) column.editCallback(i, cell)
-						})
+				// attach <td> for external code to modify
+				cell.__td = td
+
+				const column = columns[colIdx]
+				if (column.editCallback && cell.value) {
+					td.on('click', (event: MouseEvent) => {
+						event.stopImmediatePropagation()
+						const isEdit = td.select('input').empty()
+						if (!isEdit) return
+						td.html('')
+						const input = td
+							.append('input')
+							.attr('value', cell.value)
+							.on('change', () => {
+								const value = input.node().value
+								cell.value = value
+								td.text(cell.value)
+								column.editCallback!(i, cell)
+							})
+						input.node().focus()
+						input.node().select()
+					})
+				}
+				if (column.width) td.style('width', column.width)
+				if (column.align) td.style('text-align', column.align)
+
+				if (column.nowrap) td.style('white-space', 'nowrap')
+				if (cell.url) {
+					td.append('a')
+						.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
+						.attr('href', cell.url)
+						.attr('target', '_blank')
+				} else if (cell.html) td.html(cell.html)
+				else if ('value' in cell) {
+					td.text(cell.value)
+					if (cell.color) td.style('color', cell.color)
+				} else if (cell.color) {
+					if (cell.disabled) {
+						td.style('background-color', cell.color)
+					} else {
+						const input = td
+							.append('input')
+							.attr('type', 'color')
+							.attr('value', cell.color)
+							.on('change', () => {
+								const color = input.node().value
+								cell.color = color
+								if (column.editCallback) column.editCallback(i, cell)
+							})
+					}
 				}
 			}
 		}
 	}
+
+	updateRows()
 
 	if (buttons) {
 		const footerDiv = div
@@ -505,7 +489,7 @@ export async function downloadTable(rows, cols) {
 function createSortButton(col: Column, th: Th, callback, updateTable) {
 	const sortDiv = th.append('div').style('display', 'inline-block').attr('class', 'sjpp-table-sort-button')
 	icons['updown'](sortDiv, {
-		title: `Sort table by ${col.label}`,
+		// title: `Sort table by ${col.label}`,
 		handler: () => {
 			const menu = new Menu({ padding: '' })
 			menu.showunder(sortDiv.node())
