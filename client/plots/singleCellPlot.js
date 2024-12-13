@@ -404,6 +404,8 @@ class singleCellPlot {
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
 				this.particles.position.z = 0
+				this.particles.position.x = 0
+				this.particles.position.y = 0
 			},
 			title: 'Reset plot to defaults'
 		})
@@ -672,7 +674,8 @@ class singleCellPlot {
 		this.plots = []
 		for (const plot of result.plots) {
 			this.plots.push(plot)
-			plot.cells = [...plot.noExpCells, ...plot.expCells]
+			const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
+			plot.cells = [...plot.noExpCells, ...expCells]
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
 		}
@@ -1119,7 +1122,8 @@ class singleCellPlot {
 		renderer.setPixelRatio(window.devicePixelRatio)
 
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
-		document.addEventListener('mousewheel', event => {
+		plot.canvas.addEventListener('mousewheel', event => {
+			event.preventDefault()
 			if (event.ctrlKey) particles.position.z += event.deltaY / 500
 		})
 
