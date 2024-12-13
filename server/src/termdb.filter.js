@@ -463,19 +463,18 @@ function get_condition(tvs, CTEname) {
 	}
 }
 
-//TO BE COMPLETED AND TESTED WHEN THE TVS IS READY
-// function get_multivalue(tvs, CTEname, ds, onlyChildren) {
-// 	let query = `SELECT sample
-// 	FROM anno_multivalue
-// 	WHERE term_id = ?
-// 	${tvs.values.map(key => ` AND value->$${key} ${tvs.isnot ? '=null' : '>0'}`)}`
-// 	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
-// 	return {
-// 		CTEs: [` ${CTEname} AS (${query})`],
-// 		values: [tvs.term.id],
-// 		CTEname
-// 	}
-// }
+function get_multivalue(tvs, CTEname, ds, onlyChildren) {
+	let query = `SELECT sample
+	FROM anno_multivalue
+	WHERE term_id = ?
+	${tvs.values.map(v => ` AND value->>'$.${v.key}' ${tvs.isnot ? 'IS NULL' : '> 0'}`)}`
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	return {
+		CTEs: [` ${CTEname} AS (${query})`],
+		values: [tvs.term.id],
+		CTEname
+	}
+}
 
 function getFilterSampleTypes(filter, ds, sampleTypes) {
 	for (const [i, item] of filter.lst.entries()) {

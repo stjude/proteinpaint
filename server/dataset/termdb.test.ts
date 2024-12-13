@@ -70,7 +70,7 @@ export default {
 				// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
 				term: {
 					id: 'subcohort',
-					type: 'categorical'
+					type: 'multivalue'
 				},
 				prompt: 'Select a cohort and test the plots.',
 				values: [

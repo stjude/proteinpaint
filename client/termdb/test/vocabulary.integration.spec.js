@@ -610,7 +610,7 @@ tape('getRegressionData()', async test => {
 							tag: 'cohortFilter',
 							type: 'tvs',
 							tvs: {
-								term: { id: 'subcohort', type: 'categorical' },
+								term: { id: 'subcohort', type: 'multivalue' },
 								values: [{ key: 'ABC', label: 'ABC' }]
 							}
 						}

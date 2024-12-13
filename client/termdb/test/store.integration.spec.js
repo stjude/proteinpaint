@@ -211,7 +211,7 @@ tape('state rehydrate: by cohortFilter', function (test) {
 	const selectCohort = {
 		term: {
 			id: 'subcohort',
-			type: 'categorical'
+			type: 'multivalue'
 		},
 		prompt: 'To get started with the Clinical Browser, select the survivor population you wish to browse.',
 		values: [

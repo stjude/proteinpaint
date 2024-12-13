@@ -197,7 +197,7 @@ tape('getTermdbConfig()', async test => {
 		vocab: {
 			terms: vocab.terms,
 			selectCohort: {
-				term: { id: 'subcohort', type: 'categorical' },
+				term: { id: 'subcohort', type: 'multivalue' },
 				values: [
 					{
 						keys: ['ABC'],
