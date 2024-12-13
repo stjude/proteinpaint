@@ -70,6 +70,7 @@ export type ColorScaleMenuOpts = {
 	colors: string[]
 	cutoffMode?: CutoffMode
 	domain: number[]
+	percentile?: number
 	setColorsCallback?: (val: string, idx: number) => void
 	setNumbersCallback?: (f?: { cutoffMode: CutoffMode; min: number; max: number }) => void
 	showPercentile?: boolean
