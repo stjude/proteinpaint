@@ -241,7 +241,7 @@ export function renderTable({
 				if (c.sortable) {
 					const callback = (opt: string) => sortTableCallBack(i, rows, opt)
 					const updateTable = (newRows: any) => {
-						div.selectAll('table').remove()
+						parentDiv.remove()
 						renderTable({
 							columns,
 							rows: newRows,
