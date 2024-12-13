@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - allow to customize table header row style
+- do not wrap scRNAseq plot div below its control div
 
 
 ## 2.91.0
