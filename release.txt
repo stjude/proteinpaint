@@ -1,1 +1,2 @@
-
+Fixes:
+- singleCellPlot should dispaly error message on ui
