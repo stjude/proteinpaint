@@ -207,10 +207,10 @@ class singleCellPlot {
 						const config = {
 							chartType: 'gsea',
 							gsea_params: gsea_params,
-							// if getPlotHolder is defined, use this.mainDivId as insertBeforeId,
+							// if getPlotHolder is defined, use this.mainDivId as insertBefore,
 							// so that in GDC frontend framework, plots that are launched from scRNAseq
 							// will be inserted before it. TODO: may insert after the scRNAseq plot instead???
-							insertBefore: this.app.opts?.app?.getPlotHolder ? this.insertBeforeId : this.id
+							insertBefore: this.app.opts?.app?.getPlotHolder ? this.mainDivId : this.id
 						}
 						this.app.dispatch({
 							type: 'plot_create',
