@@ -1,5 +1,5 @@
 import type { SvgG, SvgSvg, Td } from '../../types/d3'
-import type { ColorScaleMenuOpts } from '../types/colorScale'
+import type { ColorScaleMenuOpts, CutoffMode } from '../types/colorScale'
 import { Menu } from '#dom'
 import { make_radios } from '#dom'
 import { rgb } from 'd3-color'
@@ -8,21 +8,23 @@ export class ColorScaleMenu {
 	domain: number[]
 	colors: string[] = ['white', 'red']
 	default?: { min: number; max: number }
-	cutoffMode?: 'auto' | 'fixed'
+	cutoffMode?: CutoffMode
 	setColorsCallback?: (val: string, idx: number) => void
-	setMinMaxCallback?: (f?: { cutoffMode: 'auto' | 'fixed'; min: number; max: number }) => void
+	numInputCallback?: (f?: { cutoffMode: CutoffMode; min: number; max: number }) => void
+	showPercentile?: boolean
 	private tip = new Menu({ padding: '2px' })
 	constructor(opts: ColorScaleMenuOpts) {
 		this.domain = opts.domain
 		this.colors = opts.colors
 
-		if (opts.setMinMaxCallback) {
-			this.setMinMaxCallback = opts.setMinMaxCallback
-			this.cutoffMode = opts.cutoffMode || 'auto'
+		if (opts.setNumbersCallback) {
+			this.numInputCallback = opts.setNumbersCallback
+			this.cutoffMode = opts.cutoffMode
 			this.default = {
 				min: opts.domain[0],
 				max: opts.domain[opts.domain.length - 1]
 			}
+			this.showPercentile = opts.showPercentile
 		}
 		if (opts.setColorsCallback) this.setColorsCallback = opts.setColorsCallback
 
@@ -42,11 +44,18 @@ export class ColorScaleMenu {
 					.style('display', this.setColorsCallback ? 'table-row' : 'none')
 				promptRow.append('td').text('Min').style('padding-right', '10px')
 				promptRow.append('td').text('Max')
-				if (this.setMinMaxCallback) {
+				if (this.numInputCallback) {
 					const options = [
 						{ label: 'Automatic', value: 'auto', checked: this.cutoffMode == 'auto' },
 						{ label: 'Fixed', value: 'fixed', checked: this.cutoffMode == 'fixed' }
 					]
+					if (this.showPercentile) {
+						options.push({
+							label: 'Percentile',
+							value: 'percentile',
+							checked: this.cutoffMode == 'percentile'
+						})
+					}
 					make_radios({
 						holder: radiosDiv.style('display', 'block'),
 						options,
@@ -58,7 +67,7 @@ export class ColorScaleMenu {
 								minMaxRow.style('display', 'none')
 								this.domain[0] = this.default.min
 								this.domain[this.domain.length - 1] = this.default.max
-								await this.setMinMaxCallback!({
+								await this.numInputCallback!({
 									cutoffMode: this.cutoffMode,
 									min: this.default.min,
 									max: this.default.max
@@ -88,8 +97,8 @@ export class ColorScaleMenu {
 				if (showTooltip == false) return
 				this.tip.clear().showunder(barG.node())
 				const text = `Click to customize ${this.setColorsCallback ? 'colors' : ''} ${
-					this.setMinMaxCallback && this.setColorsCallback ? ' and ' : ''
-				}${this.setMinMaxCallback ? 'values' : ''}`
+					this.numInputCallback && this.setColorsCallback ? ' and ' : ''
+				}${this.numInputCallback ? 'values' : ''}`
 				this.tip.d.append('div').style('padding', '2px').text(text)
 			})
 			.on('mouseleave', () => {
@@ -127,7 +136,7 @@ export class ColorScaleMenu {
 				if (!valueNode) return
 				const value: number = parseFloat(valueNode.value)
 				this.domain[idx] = value
-				await this.setMinMaxCallback!({
+				await this.numInputCallback!({
 					cutoffMode: this.cutoffMode!,
 					min: this.domain[0],
 					max: this.domain[this.domain.length - 1]
