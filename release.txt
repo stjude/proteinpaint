@@ -1,1 +1,2 @@
-
+Features: 
+- Enabled additional percentile option in the dom ColorScale component. 
