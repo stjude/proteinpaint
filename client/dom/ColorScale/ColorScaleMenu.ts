@@ -8,6 +8,7 @@ export class ColorScaleMenu {
 	colors: string[] = ['white', 'red']
 	default?: { min: number; max: number; percentile?: number }
 	cutoffMode?: CutoffMode
+	percentile?: number
 	setColorsCallback?: (val: string, idx: number) => void
 	numInputCallback?: (f?: { cutoffMode: CutoffMode; min?: number; max?: number; percentile?: number }) => void
 	private tip = new Menu({ padding: '2px' })
@@ -22,7 +23,10 @@ export class ColorScaleMenu {
 				min: opts.domain[0],
 				max: opts.domain[opts.domain.length - 1]
 			}
-			if (opts.percentile) this.default.percentile = opts.percentile
+			if (opts.percentile) {
+				this.default.percentile = opts.percentile
+				this.percentile = opts.percentile
+			}
 		}
 		if (opts.setColorsCallback) this.setColorsCallback = opts.setColorsCallback
 
@@ -61,6 +65,7 @@ export class ColorScaleMenu {
 							promptRow.style('display', this.setColorsCallback ? 'table-row' : 'none')
 							this.domain[0] = this.default.min
 							this.domain[this.domain.length - 1] = this.default.max
+							this.percentile = this.default.percentile
 							await this.numInputCallback!({
 								cutoffMode: this.cutoffMode,
 								min: this.default.min,
@@ -86,7 +91,7 @@ export class ColorScaleMenu {
 						.append('div')
 						.style('padding', '5px')
 						.style('display', this.cutoffMode == 'percentile' ? '' : 'none')
-					if (this.default?.percentile) this.appendValueInput(percentRow, this.default.percentile)
+					if (this?.percentile) this.appendValueInput(percentRow, this.percentile)
 
 					const minMaxRow = table.append('tr').style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
 					this.appendValueInput(minMaxRow.append('td'), 0)
@@ -130,12 +135,12 @@ export class ColorScaleMenu {
 			})
 	}
 
-	appendValueInput = (elem: any, value: number) => {
+	appendValueInput = (elem: any, elemValue: number) => {
 		const valueInput = elem
 			.append('input')
 			.attr('type', 'number')
 			.style('width', '60px')
-			.attr('value', this.domain[value] || value)
+			.attr('value', this.domain[elemValue] || elemValue)
 			.style('padding', '3px')
 			.on('keyup', async (event: KeyboardEvent) => {
 				if (event.code != 'Enter') return
@@ -146,10 +151,11 @@ export class ColorScaleMenu {
 					cutoffMode: this.cutoffMode
 				}
 				if (this.cutoffMode == 'fixed') {
-					this.domain[value] = value
+					this.domain[elemValue] = value
 					opts.min = this.domain[0]
 					opts.max = this.domain[this.domain.length - 1]
 				} else if (this.cutoffMode == 'percentile') {
+					this.percentile = value
 					opts.percentile = value
 				}
 				await this.numInputCallback!(opts)
