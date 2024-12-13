@@ -303,7 +303,10 @@ async function getFilesAndShowTable(obj) {
 	const rows = []
 	for (const f of result.files) {
 		const row = [
-			{ html: `<a href=https://portal.gdc.cancer.gov/cases/${f.case_uuid} target=_blank>${f.case_submitter_id}</a>` },
+			{
+				html: `<a href=https://portal.gdc.cancer.gov/cases/${f.case_uuid} target=_blank>${f.case_submitter_id}</a>`,
+				value: f.case_submitter_id
+			},
 			{ value: f.project_id },
 			{
 				html: f.sample_types
