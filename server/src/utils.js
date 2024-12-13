@@ -809,6 +809,9 @@ const RecoverableErrorCodes = new Set([
 // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses
 const RecoverableHTTPcodes = new Set([500, 502, 503, 504])
 
+// for convenience, combine custom pp status strings with http status number codes
+export const nonFatalStatus = new Set(['done', 'nonblocking', 'recoverableError', ...RecoverableHTTPcodes])
+
 // only use this helper when catching errors that may be due to
 // external API server errors or network connection failures;
 // the `e` argument is expected to have a network-related error code, some of which

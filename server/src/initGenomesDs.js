@@ -476,6 +476,12 @@ function mayRetryInit(g, ds, d, e) {
 	const gdlabel = `${g.label}/${ds.label}`
 	console.log(`Init error with ${gdlabel}: ${e}`)
 	console.trace(e)
+
+	if (!ds.init.recoverableError && !utils.nonFatalStatus.has(ds.init.status) && !utils.nonFatalStatus.has(e.status)) {
+		// forget datasets that did not load or cannot be loaded with retries
+		delete g.datasets[ds.label]
+	}
+
 	if (ds.init.fatalError) {
 		// will not be able to recover even with retries
 		ds.init.status = `fatalError`
