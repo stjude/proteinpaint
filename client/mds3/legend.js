@@ -875,15 +875,17 @@ function may_create_cnv(tk, block) {
 		ticks: 4,
 		tickSize: 6,
 		topTicks: true,
-		setMinMaxCallback: obj => {
-			if (obj.cutoffMode == 'auto') {
-				delete tk.cnv.presetMax
-			} else if (obj.cutoffMode == 'fixed') {
-				tk.cnv.presetMax = Math.abs(obj.max)
-			} else {
-				throw 'unknown cutoffMode value'
+		numericInputs: {
+			callback: obj => {
+				if (obj.cutoffMode == 'auto') {
+					delete tk.cnv.presetMax
+				} else if (obj.cutoffMode == 'fixed') {
+					tk.cnv.presetMax = Math.abs(obj.max)
+				} else {
+					throw 'unknown cutoffMode value'
+				}
+				tk.load()
 			}
-			tk.load()
 		}
 	})
 }
