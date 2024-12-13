@@ -497,7 +497,8 @@ function createSortButton(col: Column, th: Th, callback, updateTable) {
 			for (const opt of options) {
 				menu.d
 					.append('div')
-					.classed('sja_menuoption', true)
+					.attr('class', 'sja_menuoption')
+					.style('border-radius', '0px')
 					.text(`Sort ${opt}`)
 					.on('click', () => {
 						const newRows = callback(opt)
