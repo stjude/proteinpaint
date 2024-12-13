@@ -274,44 +274,53 @@ tape('.setColorsCallback()', async test => {
 	test.end()
 })
 
-tape.only('.numericInputs', async test => {
+tape('.numericInputs', async test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder() as any
 	const newMax = 42
 	const newMin = -10
+	const defaultPercentile = 99
+	const newPercentile = 50
 	const testColorScale = getColorScale({
 		holder,
 		numericInputs: {
-			showPercentile: true,
+			defaultPercentile,
 			callback: obj => {
-				console.log(obj)
+				test.equal(typeof obj, 'object', 'Should pass an object to the numericInputs.callback()')
+				if (obj.cutoffMode == 'fixed') {
+					test.equal(obj.min, newMin, 'Should return the correct min value to the numericInputs.callback()')
+					test.equal(obj.max, newMax, 'Should return the correct max value to the numericInputs.callback()')
+				}
+				if (obj.cutoffMode == 'percentile') {
+					test.equal(
+						obj.percentile,
+						newPercentile,
+						'Should return the correct min value to the numericInputs.callback()'
+					)
+				}
 			}
 		}
-		// setMinMaxCallback: obj => {
-		// 	test.equal(typeof obj, 'object', 'Should pass an object to the .setMinMaxCallback() callback')
-		// 	test.equal(obj.cutoffMode, 'fixed', 'Should return the correct cutoffMode to the .setMinMaxCallback() callback')
-		// 	test.equal(obj.min, newMin, 'Should return the correct min value to the .setMinMaxCallback) callback')
-		// 	test.equal(obj.max, newMax, 'Should return the correct max value to the .setMinMaxCallback() callback')
-		// }
 	})
 
-	// test.equal(
-	// 	testColorScale.menu!.cutoffMode,
-	// 	'auto',
-	// 	'Should set cutoffMode = "auto" when not specified and .setMinMaxCallback() is provided.'
-	// )
-	// test.true(
-	// 	typeof testColorScale.menu!.default == 'object' &&
-	// 		testColorScale.menu!.default.min == 0 &&
-	// 		testColorScale.menu!.default.max == 1,
-	// 	'Should set auto to default values when not specified and .setMinMaxCallback() is provided.'
-	// )
+	test.equal(
+		testColorScale.menu!.cutoffMode,
+		'auto',
+		'Should set cutoffMode = "auto" when not specified and numericInputs.callback() is provided.'
+	)
+	test.true(
+		typeof testColorScale.menu!.default == 'object' &&
+			testColorScale.menu!.default.min == 0 &&
+			testColorScale.menu!.default.max == 1,
+		'Should set auto to default values when not specified and numericInputs.callback() is provided.'
+	)
 
-	// if (testColorScale.setMinMaxCallback)
-	// 	await testColorScale.setMinMaxCallback({ cutoffMode: 'fixed', min: newMin, max: newMax })
+	if (testColorScale?.menu?.numInputCallback) {
+		await testColorScale.menu.numInputCallback({ cutoffMode: 'fixed', min: newMin, max: newMax })
+		await testColorScale.menu.numInputCallback({ cutoffMode: 'percentile', percentile: newPercentile })
+	}
 
-	// if (test['_ok']) holder.remove()
+	if (test['_ok']) holder.remove()
 	test.end()
 })
 
