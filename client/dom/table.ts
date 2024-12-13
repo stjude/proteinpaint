@@ -9,7 +9,9 @@ export type Cell = {
 	value?: string | number
 	/** color code to render as a color cell or, if value provided, cell font-color */
 	color?: string
-	/** to print with .html() d3 method, may be susceptible to attack */
+	/** to print with .html() d3 method, may be susceptible to attack
+	 * If an a tag is used, 'onclick="event.stopPropagation()"' is
+	 * added before the end of the opening tag to prevent uncheck the box. */
 	html?: string
 	/** is attached to each cell object pointing to <td>, for external code to render interactive contents in it */
 	__td?: any
@@ -368,8 +370,10 @@ export function renderTable({
 						.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
 						.attr('href', cell.url)
 						.attr('target', '_blank')
-				} else if (cell.html) td.html(cell.html)
-				else if ('value' in cell) {
+				} else if (cell.html) {
+					const formattedHtml = addInlineClickEvent(cell.html)
+					td.html(formattedHtml)
+				} else if ('value' in cell) {
 					td.text(cell.value)
 					if (cell.color) td.style('color', cell.color)
 				} else if (cell.color) {
@@ -524,4 +528,10 @@ function sortTableCallBack(i: number, rows: any, opt: string) {
 		}
 	})
 	return newRows
+}
+
+function addInlineClickEvent(html: string) {
+	if (!html) return
+	const newHtml = html.replace(/(<a[^>]*?)>/g, '$1 onclick="event.stopPropagation()">')
+	return newHtml
 }
