@@ -110,6 +110,7 @@ class singleCellPlot {
 		const q = state.termdbConfig.queries
 		this.opts.holder.style('position', 'relative')
 		this.mainDivId = `${this.id}-sandbox`
+		const errorDiv = this.opts.holder.append('div')
 		const mainDiv = this.opts.holder
 			.insert('div')
 			.style('display', 'inline-block')
@@ -171,7 +172,8 @@ class singleCellPlot {
 			geDiv,
 			deDiv,
 			plotsDiv,
-			plotsDivParent
+			plotsDivParent,
+			errorDiv
 		}
 		if (q.singleCell?.geneExpression) this.renderGeneExpressionControls(geDiv, state)
 
@@ -589,21 +591,31 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
-		this.colorByGene =
-			this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
-		this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
-		copyMerge(this.settings, this.config.settings.singleCellPlot)
-		this.plotColorByDivs = []
+		try {
+			this.colorByGene =
+				this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
+			this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
+			copyMerge(this.settings, this.config.settings.singleCellPlot)
+			this.plotColorByDivs = []
 
-		this.dom.loadingDiv.selectAll('*').remove()
-		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
-		this.legendRendered = false
-		this.showActiveTab()
-		this.data = await this.getData()
-		this.dom.loadingDiv.style('display', 'none')
-		this.renderPlots(this.data)
-		await this.setControls()
-		if (this.dom.header) this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} single cell data`)
+			this.dom.loadingDiv.selectAll('*').remove()
+			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
+			this.legendRendered = false
+			this.showActiveTab()
+			this.data = await this.getData()
+			if (this.data.error) throw this.data.error
+			this.dom.loadingDiv.style('display', 'none')
+			this.renderPlots(this.data)
+			await this.setControls()
+			if (this.dom.header)
+				this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} single cell data`)
+		} catch (e) {
+			this.app.tip.hide()
+			this.dom.loadingDiv.style('display', 'none')
+			this.dom.plotsDiv.style('display', 'none')
+			if (e.stack) console.log(e.stack)
+			sayerror(this.dom.errorDiv, e)
+		}
 	}
 
 	fillColorBy() {
@@ -662,8 +674,7 @@ class singleCellPlot {
 			return result
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
-			sayerror(this.dom.plotsDiv, e)
-			return
+			return { error: e }
 		}
 	}
 

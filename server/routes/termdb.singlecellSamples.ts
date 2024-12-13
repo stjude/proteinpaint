@@ -321,7 +321,7 @@ function gdc_validateGeneExpression(G, ds, genome) {
 			return data
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
-			return { error: e.message || e }
+			return { error: 'GDC scRNAseq gene expression request failed with error: ' + (e.message || e) }
 		}
 	}
 }
