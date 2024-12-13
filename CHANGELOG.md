@@ -10,6 +10,7 @@ Features:
 Fixes:
 - allow to customize table header row style
 - do not wrap scRNAseq plot div below its control div
+- singleCellPlot should dispaly error message on ui
 
 
 ## 2.91.0
