@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.92.0
 
 Features:
 - New color genomic features example in the JSON-BED card.
