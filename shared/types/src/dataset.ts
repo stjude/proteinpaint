@@ -547,7 +547,7 @@ export type SingleCellDataGdc = {
 	get?: (q: any) => any
 	refName?: string
 	plots: GDCSingleCellPlot[]
-	settings: { [key: string]: string }
+	settings?: { [key: string]: string }
 }
 
 export type SingleCellDEgeneGdc = {
@@ -610,7 +610,7 @@ export type SingleCellDataNative = {
 	get?: (q: any) => any
 	/** width and height of the plots */
 
-	settings: { [key: string]: any }
+	settings?: { [key: string]: any }
 }
 
 export type SingleCellQuery = {
