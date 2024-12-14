@@ -14,6 +14,7 @@ import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
 import { render } from '#src/block.mds2.vcf.plain'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 /*
 this
@@ -1086,6 +1087,7 @@ class singleCellPlot {
 		plot.canvas.height = this.settings.svgh
 
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
+		const OrbitControls = await import('three/addons/controls/OrbitControls.js')
 
 		const fov = this.settings.threeFOV
 		const near = 0.1
@@ -1122,9 +1124,11 @@ class singleCellPlot {
 		renderer.setPixelRatio(window.devicePixelRatio)
 
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
+
 		plot.canvas.addEventListener('mousewheel', event => {
+			if (!event.ctrlKey) return
 			event.preventDefault()
-			if (event.ctrlKey) particles.position.z += event.deltaY / 500
+			if (event.ctrlKey) particles.position.z -= event.deltaY / 500
 		})
 
 		const self = this
@@ -1134,6 +1138,15 @@ class singleCellPlot {
 		}
 		animate()
 		if (this.settings.showGrid) this.renderThreeGrid(scene)
+
+		// Function to get mouse position in normalized device coordinates (-1 to +1)
+		function getMouseNDC(event) {
+			const rect = renderer.domElement.getBoundingClientRect()
+			return new THREE.Vector2(
+				((event.clientX - rect.left) / rect.width) * 2 - 1,
+				(-(event.clientY - rect.top) / rect.height) * 2 + 1
+			)
+		}
 	}
 
 	renderThreeGrid(scene) {
