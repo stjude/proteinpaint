@@ -464,10 +464,19 @@ function get_condition(tvs, CTEname) {
 }
 
 function get_multivalue(tvs, CTEname, ds, onlyChildren) {
+	let andOperator
+	if (tvs.values.length == 1) {
+		// in case of subcohort term, should select samples from a single cohort
+		andOperator = `value->>'$.${tvs.values[0].key}' ${tvs.isnot ? 'IS NULL' : '> 0'}`
+	} else {
+		// in case of subcohort term, should select samples from multiple cohorts as union
+		const lst = tvs.values.map(v => `value->>'$.${v.key}' ${tvs.isnot ? 'IS NULL' : '> 0'}`)
+		andOperator = `( ${lst.join(' OR ')} )`
+	}
+
 	let query = `SELECT sample
 	FROM anno_multivalue
-	WHERE term_id = ?
-	${tvs.values.map(v => ` AND value->>'$.${v.key}' ${tvs.isnot ? 'IS NULL' : '> 0'}`)}`
+	WHERE term_id = ? AND ${andOperator}`
 	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
