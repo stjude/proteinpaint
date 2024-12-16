@@ -98,14 +98,6 @@ export default class Disco {
 
 		const cnvConfigInputOptions = [
 			{
-				label: 'CNV capping',
-				type: 'number',
-				chartType: 'Disco',
-				settingsKey: 'cnvCapping',
-				title: 'Cnv capping',
-				min: 0
-			},
-			{
 				boxLabel: '',
 				label: 'CNV rendering type',
 				type: 'radio',
