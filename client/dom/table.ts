@@ -272,7 +272,12 @@ export function renderTable({
 			if (!row.ariaLabelledBy && row[0] && !row[0].elemId) row[0].elemId = ariaLabelledBy
 
 			if (buttons || noButtonCallback)
-				tr.on('click', (e: Event) => {
+				tr.on('click', (e: any) => {
+					// fix for clicking on <a> check/unchecking box to the left
+					if (e.target.tagName == 'A') {
+						e.stopPropagation()
+						return
+					}
 					if (e.target !== checkbox.node()) {
 						if (singleMode)
 							//not a checkbox
@@ -371,8 +376,7 @@ export function renderTable({
 						.attr('href', cell.url)
 						.attr('target', '_blank')
 				} else if (cell.html) {
-					const formattedHtml = addInlineClickEvent(cell.html)
-					td.html(formattedHtml)
+					td.html(cell.html)
 				} else if ('value' in cell) {
 					td.text(cell.value)
 					if (cell.color) td.style('color', cell.color)
@@ -528,11 +532,4 @@ function sortTableCallBack(i: number, rows: any, opt: string) {
 		}
 	})
 	return newRows
-}
-
-function addInlineClickEvent(html: string) {
-	if (!html) return
-	if (typeof html !== 'string') return html
-	const newHtml = html.replace(/(<a[^>]*?)>/g, '$1 onclick="event.stopPropagation()">')
-	return newHtml
 }
