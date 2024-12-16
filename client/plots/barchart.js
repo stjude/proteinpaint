@@ -204,6 +204,14 @@ export class Barchart {
 					settingsKey: 'asterisksVisible',
 					title: 'Display the asterisks'
 				})
+				inputs.push({
+					label: 'Multiple testing correction',
+					boxLabel: 'Visible',
+					type: 'checkbox',
+					chartType: 'barchart',
+					settingsKey: 'multiTestingCorr',
+					title: 'Perform multiple testing correction'
+				})
 			}
 			this.components = {
 				controls: await controlsInit({
@@ -325,6 +333,7 @@ export class Barchart {
 			unit: config.settings.barchart.unit,
 			orientation: config.settings.barchart.orientation,
 			asterisksVisible: config.settings.barchart.asterisksVisible,
+			multiTestingCorr: config.settings.barchart.multiTestingCorr,
 			defaultColor: config.settings.barchart.defaultColor,
 			colorBars: config.settings.barchart.colorBars,
 			dedup: config.settings.barchart.dedup,
@@ -765,11 +774,11 @@ export class Barchart {
 				testNum += this.chartsData.tests[chartId].reduce((a, b) => a + b.term2tests.filter(a => !a.skipped).length, 0)
 			}
 			const items =
-				testNum > 1
+				testNum > 1 && this.state.config.settings.barchart.multiTestingCorr
 					? [{ text: `* p-value < (0.05 / ${testNum} tests)`, noEditColor: true }]
 					: [{ text: `* p-value < 0.05`, noEditColor: true }]
 			legendGrps.push({
-				name: `<span style="${headingStyle}">Statistical Significance</span>`,
+				name: `<span style="${headingStyle}">&nbsp;</span>`,
 				items
 			})
 		}
@@ -1133,6 +1142,7 @@ export function getDefaultBarSettings(app) {
 		divideBy: 'none',
 		rowlabelw: 250,
 		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false,
+		multiTestingCorr: app?.getState()?.termdbConfig?.multipleTestingCorrection?.applyByDefault ? true : false,
 		defaultColor: plotColor,
 		colorBars: false,
 		dedup: false

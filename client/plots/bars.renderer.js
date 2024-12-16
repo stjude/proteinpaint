@@ -480,9 +480,11 @@ export default function barsRenderer(barsapp, holder) {
 		g.append('text')
 			.text(d => {
 				const test = d.groupPvalues && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId)
-				if (!test || test.skipped || !test.adjusted_p_value) return ''
-				// is conducting multiple testing correction
-				return test.adjusted_p_value < 0.05 ? '*' : ''
+				if (!test || test.skipped) return ''
+				if (barsapp.config.settings.barchart.multiTestingCorr) {
+					// is conducting multiple testing correction
+					return test.adjusted_p_value < 0.05 ? '*' : ''
+				} else return test.pvalue < 0.05 ? '*' : ''
 			})
 			.attr('x', d => d.x + d.width / 2)
 			.attr('y', d => d.y + d.height / 2)
