@@ -194,7 +194,8 @@ export class Barchart {
 				}
 			]
 
-			if (this.app.getState().termdbConfig.multipleTestingCorrection) {
+			const multipleTestingCorrection = this.app.getState().termdbConfig.multipleTestingCorrection
+			if (multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
 				inputs.push({
 					label: 'Asterisks',
@@ -204,13 +205,15 @@ export class Barchart {
 					settingsKey: 'asterisksVisible',
 					title: 'Display the asterisks'
 				})
+				const mtcMethod = multipleTestingCorrection.method
+				if (!mtcMethod) throw 'no multiple testing correction method specified'
 				inputs.push({
-					label: 'Multiple testing correction',
-					boxLabel: 'Visible',
+					label: `Multiple testing correction (${mtcMethod == 'bon' ? 'Bonferroni' : mtcMethod})`,
+					boxLabel: '',
 					type: 'checkbox',
 					chartType: 'barchart',
 					settingsKey: 'multiTestingCorr',
-					title: 'Perform multiple testing correction'
+					title: `Perform multiple testing correction (${mtcMethod == 'bon' ? 'Bonferroni' : mtcMethod})`
 				})
 			}
 			this.components = {
