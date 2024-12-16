@@ -291,6 +291,7 @@ async function makeLeftsideTabMenu(card, contentHolder, examplesOnly, sandboxDiv
 					tab.rendered = true
 					const crumbIndex = tabs.findIndex(t => t == tab)
 					sandboxDiv.header.trail.update(crumbIndex)
+					wait.remove()
 				} catch (e) {
 					wait.text('Error: ' + (e.message || e))
 				}
