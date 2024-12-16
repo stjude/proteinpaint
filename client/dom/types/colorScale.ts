@@ -24,6 +24,11 @@ export type ColorScaleOpts = {
 	/** Optional. Shows a value in the color bar for the default, bottom axis
 	 * This value cannot be zero at initialization.*/
 	markedValue?: number
+	/** Creates menu options to change the numeric values for the track/app/etc.
+	 * 'Automatic' mode is the absolute min and max values provided to the data array
+	 * 'Fixed' mode is the min and max values set by the user.
+	 * 	Optional 'Percentile' mode is the cutoff set by the user.
+	 */
 	numericInputs?: NumericInputs
 	/** Optional. Show a static text on either side of the color scale */
 	labels?: {
