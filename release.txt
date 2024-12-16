@@ -1,1 +1,2 @@
-
+Features:
+- barchart: adding a checkbox for performing multiple testing correction
