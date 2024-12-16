@@ -463,20 +463,22 @@ function get_condition(tvs, CTEname) {
 	}
 }
 
+const validTvsJoin = new Set(['and', 'or'])
+
 function get_multivalue(tvs, CTEname, ds, onlyChildren) {
-	let andOperator
-	if (tvs.values.length == 1) {
-		// in case of subcohort term, should select samples from a single cohort
-		andOperator = `value->>'$.${tvs.values[0].key}' ${tvs.isnot ? 'IS NULL' : '> 0'}`
-	} else {
-		// in case of subcohort term, should select samples from multiple cohorts as union
-		const lst = tvs.values.map(v => `value->>'$.${v.key}' ${tvs.isnot ? 'IS NULL' : '> 0'}`)
-		andOperator = `( ${lst.join(' OR ')} )`
+	if (tvs.values.length > 1 && !validTvsJoin.has(tvs.join)) {
+		// multivalue term, when used as a filter, must specify a valid "join" operator
+		throw `invalid tvs.join='${tvs.join}' when tvs.values.length > 1`
 	}
+	// note that if there is only 1 tvs.values entry,
+	// tvs.join will not be needed or used to "join" values
+	const expectedValues = tvs.values
+		.map(v => `value->>'$.${v.key}' ${tvs.isnot ? 'IS NULL' : '> 0'}`)
+		.join(` ${tvs.join} `)
 
 	let query = `SELECT sample
 	FROM anno_multivalue
-	WHERE term_id = ? AND ${andOperator}`
+	WHERE term_id = ? AND ${expectedValues}`
 	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
