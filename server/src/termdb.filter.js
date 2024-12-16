@@ -466,8 +466,11 @@ function get_condition(tvs, CTEname) {
 const validTvsJoin = new Set(['and', 'or'])
 
 function get_multivalue(tvs, CTEname, ds, onlyChildren) {
+	// default to join = 'or', more permissive/less likely to break,
+	// and also compatible with default join operator for categorical terms
+	if (!tvs.join) tvs.join = 'or'
 	if (tvs.values.length > 1 && !validTvsJoin.has(tvs.join)) {
-		// multivalue term, when used as a filter, must specify a valid "join" operator
+		// multivalue term, when used as a filter, must have a valid "join" operator
 		throw `invalid tvs.join='${tvs.join}' when tvs.values.length > 1`
 	}
 	// note that if there is only 1 tvs.values entry,
