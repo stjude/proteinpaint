@@ -5,6 +5,7 @@ import { brainImagingPayload } from '#types/checkers'
 import { spawn } from 'child_process'
 import { getData } from '../src/termdb.matrix.js'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
+import { getColors } from '#shared/common.js'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
@@ -73,8 +74,39 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 
 		const data = await getData({ terms }, ds, q.genome)
 
-		const divideByCat: { [key: string]: FilesByCategory } = {}
+		/*
+		divideByCat's structure, When no divideByTW given, one fake divideByTwCat 'default' will be used.
+		when no overlayTW given, one fake overlayTwCat 'default' will be used.
+			{
+				divideByTwCat_1: {
+					overlayTwCat_1: {
+						samples: [*.nii, *.nii, ...]
+						color: str
+					},
 
+					overlayTwCat_2: {
+						samples: [*.nii, *.nii, ...]
+						color: str
+					},
+					...
+				},
+
+				divideByTwCat_2: {
+					overlayTwCat_1: {
+						samples: [*.nii, *.nii, ...]
+						color: str
+					},
+
+					overlayTwCat_2: {
+						samples: [*.nii, *.nii, ...]
+						color: str
+					},
+					...
+				}
+			}
+		*/
+		const divideByCat: { [key: string]: FilesByCategory } = {}
+		const uniqueOverlayTwCats = new Set()
 		for (const sampleName of selectedSampleNames) {
 			const sampleId = ds.sampleName2Id.get(sampleName)
 			const sampleData = data.samples[sampleId]
@@ -83,18 +115,20 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 			let overlayCategory = 'default'
 			if (divideByTW) {
 				const value = sampleData[divideByTW.$id!]
-				if (value) divideCategory = divideByTW.term.values?.[value.key]?.label || value.key // for numeric terms key has the bin label
+				if (value) divideCategory = divideByTW.term.values?.[value.key]?.label || value.key // for numeric terms key has the bin label, for geneVariant terms, key is the group
 			}
 			if (overlayTW) {
 				const value = sampleData[overlayTW.$id!]
-				if (value) overlayCategory = overlayTW.term.values?.[value.key]?.label || value.key
+				if (value) {
+					overlayCategory = overlayTW.term.values?.[value.key]?.label || value.key
+					uniqueOverlayTwCats.add(overlayCategory)
+				}
 			}
 			if (!divideByCat[divideCategory]) divideByCat[divideCategory] = {}
 
 			if (!query.legendFilter?.includes(overlayCategory)) {
 				if (!divideByCat[divideCategory][overlayCategory]) {
-					let color = overlayTW?.term?.values?.[overlayCategory]?.color || 'red'
-
+					let color = overlayTW?.term?.values?.[overlayCategory]?.color
 					if (overlayTW && isNumericTerm(overlayTW.term)) {
 						const bins = data.refs.byTermId[overlayTW.$id!].bins
 						color = bins.find(b => b.label == overlayCategory).color
@@ -107,13 +141,17 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 				divideByCat[divideCategory][overlayCategory].samples.push(samplePath)
 			}
 		}
-		const lengths: number[] = []
-		for (const dcategory in divideByCat)
-			for (const category in divideByCat[dcategory]) {
-				const samples = divideByCat[dcategory][category].samples
-				lengths.push(samples.length)
-			}
 
+		const k2c = getColors(uniqueOverlayTwCats.size)
+		const lengths: number[] = []
+		for (const dcategory in divideByCat) {
+			for (const category in divideByCat[dcategory]) {
+				const overlayCat = divideByCat[dcategory][category]
+				const samples = overlayCat.samples
+				lengths.push(samples.length)
+				if (!overlayCat.color) overlayCat.color = category == 'default' ? 'red' : k2c(category)
+			}
+		}
 		// Find the length of each array and determine the maximum length
 		const maxLength = Math.max(...lengths)
 

@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { controlsInit } from './controls'
+import { controlsInit, term0_term2_defaultQ } from './controls'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table.ts'
 import svgLegend from '#dom/svg.legend'
@@ -180,8 +180,10 @@ class BrainImaging {
 				chartType: 'brainImaging',
 				configKey: 'divideByTW',
 				title: 'Categories to divide by',
+				usecase: { target: 'brainImaging', detail: 'term0' },
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: ['discrete']
+				numericEditMenuVersion: ['discrete'],
+				defaultQ4fillTW: term0_term2_defaultQ
 			},
 			{
 				label: 'Color by',
@@ -189,8 +191,10 @@ class BrainImaging {
 				chartType: 'brainImaging',
 				configKey: 'overlayTW',
 				title: 'Categories to color the samples',
+				usecase: { target: 'brainImaging', detail: 'term2' },
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: ['discrete']
+				numericEditMenuVersion: ['discrete'],
+				defaultQ4fillTW: term0_term2_defaultQ
 			}
 		]
 		return mandatoryConfigInputOptions
@@ -467,19 +471,23 @@ function setInteractivity(self) {
 					config: { legendFilter: [] }
 				})
 			})
-		let color = self.state.config.overlayTW.term.values[targetData.key]?.color || 'red'
-		color = rgb(color).formatHex() //so that the color is in the correct format to be shown in the input
-		legendMenuDiv
-			.append('div')
-			.attr('class', 'sja_sharp_border')
-			.style('padding', '0px 10px')
-			.text('Color:')
-			.append('input')
-			.attr('type', 'color')
-			.attr('value', color)
-			.on('change', e => {
-				self.changeColor(targetData.key, e.target.value)
-			})
+
+		//TODO: support changing color for grouped geneVariant term
+		if (self.state.config.overlayTW.term.type != 'geneVariant') {
+			let color = self.state.config.overlayTW?.term?.values?.[targetData.key]?.color || 'red'
+			color = rgb(color).formatHex() //so that the color is in the correct format to be shown in the input
+			legendMenuDiv
+				.append('div')
+				.attr('class', 'sja_sharp_border')
+				.style('padding', '0px 10px')
+				.text('Color:')
+				.append('input')
+				.attr('type', 'color')
+				.attr('value', color)
+				.on('change', e => {
+					self.changeColor(targetData.key, e.target.value)
+				})
+		}
 		legendMenu.showunder(event.target)
 	}
 
