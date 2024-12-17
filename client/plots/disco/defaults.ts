@@ -1,4 +1,4 @@
-import Settings from './Settings'
+import type Settings from './Settings'
 import { copyMerge } from '#rx'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
