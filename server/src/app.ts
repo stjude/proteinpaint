@@ -236,7 +236,13 @@ function processTrackedDs(trackedDatasets) {
 			ds => !done.includes(ds) && !nonblocking.includes(ds) && !activeRetries.includes(ds)
 		)
 		if (failed.length) {
-			const msg = `\n--- failed dataset init ---\n${failed.map(getLabel).join(', ')}\n`
+			const list = failed
+				.map(
+					ds =>
+						getLabel(ds) + `: ${ds.init.fatalError || ds.init.recoverableError || ds.init.error || '(see logs above)'}`
+				)
+				.join('\n')
+			const msg = `\n--- failed dataset init ---\n${list}\n`
 			console.log(msg)
 			// not a fatal error for the server and will not trigger a deployment rollback notification,
 			// so must trigger a notification here

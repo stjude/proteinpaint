@@ -485,12 +485,14 @@ function mayRetryInit(g, ds, d, e) {
 	if (ds.init.fatalError) {
 		// will not be able to recover even with retries
 		ds.init.status = `fatalError`
+		if (!ds.init.error) ds.init.error = JSON.stringify(e)
 		return
 	}
 	if (!ds.init.retryMax) {
 		// default ds.init.retryMax is 0, assumes that
 		// most dataset init errors are not recoverable, unless overriden
 		ds.init.status = `zeroRetries`
+		if (!ds.init.error) ds.init.error = JSON.stringify(e)
 		return
 	}
 	console.log(`${gdlabel} recoverableError:`, ds.init.recoverableError)
