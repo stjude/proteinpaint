@@ -46,7 +46,7 @@ export default class Disco {
 		const state = this.app.getState()
 		const settings = state.plots.find(p => p.id === this.id).settings
 
-		this.stateViewModelMapper = new ViewModelMapper(settings)
+		this.stateViewModelMapper = new ViewModelMapper(settings, this.discoInteractions)
 		this.viewModel = this.stateViewModelMapper.map(state)
 
 		const holder = this.opts.holder
@@ -108,15 +108,6 @@ export default class Disco {
 					{ label: 'Heatmap', value: CnvRenderingType.heatmap },
 					{ label: 'Bar', value: CnvRenderingType.bar }
 				]
-			},
-			{
-				label: 'CNV percentile',
-				type: 'number',
-				chartType: 'Disco',
-				settingsKey: 'cnvPercentile',
-				title: 'Cnv percentile',
-				min: 1,
-				max: 100
 			}
 		]
 
@@ -132,7 +123,7 @@ export default class Disco {
 		this.isOpen = settings.Disco.isOpen
 
 		if (this.recreateViewModel) {
-			this.stateViewModelMapper = new ViewModelMapper(settings)
+			this.stateViewModelMapper = new ViewModelMapper(settings, this.discoInteractions)
 			this.viewModel = this.stateViewModelMapper.map(this.app.getState())
 		}
 		this.recreateViewModel = true

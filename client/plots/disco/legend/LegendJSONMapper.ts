@@ -126,7 +126,12 @@ export default class LegendJSONMapper {
 				width: 100,
 				order: cnvOrder++,
 				isLegendItem: true,
-				dt: 4
+				dt: 4,
+				numericInputs: {
+					cutoffMode: 'auto',
+					defaultPercentile: legend.cnvPercentile,
+					callback: obj => legend.discoInteractions.numericInputsCallback(obj)
+				}
 			}
 			if (gain.value > 0 && loss.value < 0) {
 				const maxValue = Math.max(Math.abs(loss.value), gain.value)
