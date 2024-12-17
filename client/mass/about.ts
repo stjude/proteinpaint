@@ -19,6 +19,8 @@ import { getProfileLogin } from '../plots/profilePlot.js'
 - server info
 */
 
+const cohortTableActiveColor = 'yellow'
+
 // this type is fully defined in MassNav def in dataset.ts but not in a form that can extract "about" config to share. thus need to repeat here to avoid tsc err
 type AboutObj = {
 	html: string
@@ -258,7 +260,7 @@ export class MassAbout {
 			}
 		}
 		const activeColumns = this.dom.cohortTable.selectAll(selector)
-		const color = state.termdbConfig.massNav.activeColor || 'yellow'
+		const color = state.termdbConfig.massNav?.activeColor || cohortTableActiveColor
 		activeColumns.style('background-color', color)
 	}
 
