@@ -147,6 +147,7 @@ export class MassAbout {
 				const radioId = radioName + '-' + i
 				td0
 					.append('input')
+					.style('scale', '1.2')
 					.attr('type', 'radio')
 					.attr('name', radioName)
 					.attr('id', radioId)
@@ -257,7 +258,7 @@ export class MassAbout {
 			}
 		}
 		const activeColumns = this.dom.cohortTable.selectAll(selector)
-		const color = state.termdbConfig.activeColor || 'yellow'
+		const color = state.termdbConfig.massNav.activeColor || 'yellow'
 		activeColumns.style('background-color', color)
 	}
 
