@@ -78,7 +78,6 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 	// add required attributes
 	const c: any = {
 		selectCohort: tdb.selectCohort, // optional
-		activeColor: tdb.activeColor,
 		supportedChartTypes: tdb.q?.getSupportedChartTypes(auth),
 		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getAllowedTermTypes(ds),

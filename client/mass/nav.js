@@ -428,7 +428,7 @@ function setRenderers(self) {
 			.style('color', d => (d.colNum == self.activeTab ? '#000' : 'gray'))
 			.style('background-color', d =>
 				d.colNum == self.activeTab && self.dom.subheaderDiv.style('display') != 'none'
-					? self.state.termdbConfig.activeColor || '#ececec'
+					? self.state.termdbConfig.massNav.activeColor || '#ececec'
 					: 'transparent'
 			)
 			.html(function (d, i) {

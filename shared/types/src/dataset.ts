@@ -784,7 +784,6 @@ export type SelectCohortEntry = {
 	//The profile has clearOnChange. The terms used in the plots are not always the same for the profile.
 	//Therefore when switching cohorts, it is necessary to delete the plots opened and the global filter
 	clearOnChange?: { [index: string]: boolean }
-	//Allows to customize the color of the selected column on the cohort features table. Used by the PrOFILE
 }
 
 type MissingAccess = {
@@ -1036,7 +1035,6 @@ type Termdb = {
 	restrictAncestries?: RestrictAncestriesEntry[]
 	/** Cohort specific */
 	selectCohort?: SelectCohortEntry
-	activeColor?: '#CAE9F5'
 
 	/** quick fix to convert category values from a term to lower cases for comparison (case insensitive comparison)
 for gdc, graphql and rest apis return case-mismatching strings for the same category e.g. "Breast/breast"
@@ -1240,6 +1238,7 @@ type MassNav = {
 			}
 		}
 	}
+	activeColor?: string
 }
 
 type ActiveItem = {
