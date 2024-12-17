@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.93.0
 
 Features:
 - Enabled additional percentile option in the dom ColorScale component.
