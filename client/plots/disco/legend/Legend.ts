@@ -1,8 +1,8 @@
-import SnvLegendElement from '#plots/disco/snv/SnvLegendElement.ts'
-import CnvLegend from '#plots/disco/cnv/CnvLegend.ts'
-import LohLegend from '#plots/disco/loh/LohLegend.ts'
-import { CnvType } from '#plots/disco/cnv/CnvType.ts'
-import { DiscoInteractions } from '../interactions/DiscoInteractions'
+import type SnvLegendElement from '#plots/disco/snv/SnvLegendElement.ts'
+import type CnvLegend from '#plots/disco/cnv/CnvLegend.ts'
+import type LohLegend from '#plots/disco/loh/LohLegend.ts'
+import type { CnvType } from '#plots/disco/cnv/CnvType.ts'
+import type { DiscoInteractions } from '../interactions/DiscoInteractions'
 
 export default class Legend {
 	snvTitle: string
