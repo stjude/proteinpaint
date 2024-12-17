@@ -79,7 +79,10 @@ class profileRadarFacility extends profilePlot {
 			{ label: 'Module' },
 			{ label: `Facility` },
 			{ label: 'Global' },
-			{ label: 'Difference*' }
+			{
+				label: 'Difference*',
+				tooltip: `* Difference between site and aggregated scores. If bigger than 20, shown in red if negative and in blue if positive.`
+			}
 		]
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
@@ -149,13 +152,6 @@ class profileRadarFacility extends profilePlot {
 				showLines: true,
 				resize: true
 			})
-			const noteDiv = this.dom.tableDiv
-				.append('div')
-				.style('font-size', '0.9rem')
-				.style('padding-top', '5px')
-				.style('word-wrap', 'wrap')
-			const footNote = `* Difference between site and aggregated scores. If bigger than 20, shown in red if negative and in blue if positive.`
-			noteDiv.text(footNote)
 		}
 
 		data.push(data[0])

@@ -591,23 +591,31 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	const state = chartsInstance.state
 	const key = state.activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const typeConfig = state.termdbConfig?.plotConfigByCohort[key][chartType]
+	if (typeConfig.plots.length == 1) {
+		createPlot(typeConfig.plots[0], chartType, chartsInstance)
+		return
+	}
 	const menuDiv = holder.append('div')
 	for (const plotConfig of typeConfig.plots) {
-		let config = structuredClone(plotConfig)
-		config.chartType = chartType
-		config.header = chartType == 'profileRadarFacility' ? 'Facility Radar Graph' : 'Radar Graph'
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(plotConfig.title)
 			.on('click', () => {
-				chartsInstance.app.dispatch({
-					type: 'plot_create',
-					chartType,
-					config
-				})
+				createPlot(plotConfig, chartType, chartsInstance)
 				chartsInstance.dom.tip.hide()
 			})
+	}
+
+	function createPlot(plotConfig, chartType, chartsInstance) {
+		let config = structuredClone(plotConfig)
+		config.chartType = chartType
+		config.header = chartType == 'profileRadarFacility' ? 'Facility Radar Graph' : 'Radar Graph'
+		chartsInstance.app.dispatch({
+			type: 'plot_create',
+			chartType,
+			config
+		})
 	}
 }
 

@@ -64,7 +64,8 @@ class profileRadar extends profilePlot {
 			{ label: config.term1.abbrev },
 			{ label: config.term2.abbrev },
 			{
-				label: 'Difference*'
+				label: 'Difference*',
+				tooltip: `* Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20, shown in red if negative and in blue if positive.`
 			}
 		]
 
@@ -144,13 +145,6 @@ class profileRadar extends profilePlot {
 				resize: true,
 				maxHeight: '60vh'
 			})
-			const noteDiv = this.dom.tableDiv
-				.append('div')
-				.style('font-size', '0.9rem')
-				.style('padding-top', '5px')
-				.style('word-wrap', 'wrap')
-			const footNote = `* Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20, shown in red if negative and in blue if positive.`
-			noteDiv.text(footNote)
 		}
 
 		data.push(data[0])

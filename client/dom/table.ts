@@ -33,7 +33,7 @@ export type Column = {
 	/** left, center, right. If missing it is aligned to the left by default */
 	align?: string
 	/** tooltip describing column content */
-	title?: string
+	tooltip?: string
 	/** Used for sorting function
 	 * Do not use this field for html columns */
 	sortable?: boolean
@@ -236,7 +236,7 @@ export function renderTable({
 		for (const [i, c] of columns.entries()) {
 			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
-			if (c.title) th.attr('title', c.title)
+			if (c.tooltip) th.attr('title', c.tooltip)
 			if (header?.allowSort) {
 				//Only create sort button for columns with data
 				//(i.e. not html columns)

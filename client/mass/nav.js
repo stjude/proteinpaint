@@ -425,9 +425,11 @@ function setRenderers(self) {
 		self.dom.header.style('border-bottom', self.state.nav.header_mode === 'with_tabs' ? '1px solid #000' : '')
 		self.dom.tds
 			.style('display', '')
-			.style('color', d => (d.colNum == self.activeTab ? '#000' : '#aaa'))
+			.style('color', d => (d.colNum == self.activeTab ? '#000' : 'gray'))
 			.style('background-color', d =>
-				d.colNum == self.activeTab && self.dom.subheaderDiv.style('display') != 'none' ? '#ececec' : 'transparent'
+				d.colNum == self.activeTab && self.dom.subheaderDiv.style('display') != 'none'
+					? self.state.termdbConfig.activeColor || '#ececec'
+					: 'transparent'
 			)
 			.html(function (d, i) {
 				if (d.key == 'top') return this.innerHTML

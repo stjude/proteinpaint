@@ -147,6 +147,7 @@ export class profileForms extends profilePlot {
 		this.dom.xAxisG.call(axisTop(this.xAxisScale))
 		const height = 30
 		let y = 0
+		let showSCBar = false
 		const activePlot = this.state.config.activeTab
 			? this.state.config.plots.find(p => p.name == this.state.config.activeTab)
 			: this.state.config.plots[0]
@@ -156,21 +157,29 @@ export class profileForms extends profilePlot {
 			const scPercents: { [key: string]: number } = this.getSCPercentsDict(scTerm, samples)
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
-
+			showSCBar = scTotal > 1
 			this.renderRects(percents, y, height, scTotal == 1 ? scPercentKeys : [])
-			if (scTotal > 1) {
+			if (showSCBar) {
 				y += height + 10
 				this.renderRects(scPercents, y, height, [])
 				this.dom.mainG
 					.append('text')
-					.text('*')
+					.text('SC')
+					.style('font-size', '0.7em')
 					.attr('x', this.settings.svgw + 8)
-					.attr('y', y + height * 0.75)
+					.attr('y', y + height * 0.6)
 			}
+
+			this.dom.mainG
+				.append('text')
+				.text('POC')
+				.style('font-size', '0.7em')
+				.attr('x', this.settings.svgw + 8)
+				.attr('y', showSCBar ? y - height + 0.35 * height : y + height * 0.6)
 			this.dom.mainG
 				.append('text')
 				.attr('x', -15)
-				.attr('y', scTotal > 1 ? y : y + height / 2)
+				.attr('y', showSCBar ? y : y + height / 2)
 				.text(tw.term.name)
 				.attr('text-anchor', 'end')
 				.attr('font-size', '0.9em')
@@ -179,17 +188,26 @@ export class profileForms extends profilePlot {
 		}
 		this.renderLines(y - 20) //last padding not needed
 
+		if (showSCBar) this.dom.legendG.attr('transform', `translate(${750}, ${30 + this.settings.svgh})`)
+		else this.dom.legendG.attr('transform', `translate(${750}, ${this.settings.svgh * 0.8})`)
+
 		let x = 0
 		for (const key of this.keys) {
 			this.drawLegendRect(x, 0, key, this.getColor(key), this.dom.legendG)
 			x += 60
 		}
-		this.dom.legendG
+		let text = this.dom.legendG
 			.append('text')
 			.attr('x', x + 80)
 			.attr('y', 18)
-			.style('font-weight', 'bold')
-			.text('* Site coordinator vs POC staff')
+		text.append('tspan').style('font-weight', 'bold').text('SC:')
+		text.append('tspan').text('Site Coordinator')
+		text = this.dom.legendG
+			.append('text')
+			.attr('x', x + 250)
+			.attr('y', 18)
+		text.append('tspan').style('font-weight', 'bold').text('POC:')
+		text.append('tspan').text('Point of Care Staff')
 	}
 
 	onMouseOver(event) {
@@ -229,9 +247,10 @@ export class profileForms extends profilePlot {
 			if (scPercentKeys.includes(key))
 				this.dom.mainG
 					.append('text')
-					.text('*')
-					.attr('x', x + width / 2)
-					.attr('y', y)
+					.text('SC')
+					.style('font-size', '0.7em')
+					.attr('x', x + width / 2 - 5)
+					.attr('y', y - 5)
 
 			x += width
 		}
