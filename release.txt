@@ -1,1 +1,2 @@
-
+Features:
+- brainImaging: enable divideBy and overlay with geneVariant terms.
