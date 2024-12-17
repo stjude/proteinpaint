@@ -5,7 +5,7 @@ import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { rgb } from 'd3'
+import { extent, max, rgb } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
@@ -781,7 +781,7 @@ class singleCellPlot {
 		const s0 = plot.cells[0]
 		const [xMin, xMax, yMin, yMax] = plot.cells.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[s0.x, s0.x, s0.y, s0.y]
+			[s0.x, s0.x, s0.y, s0.y, s0.gene]
 		)
 		plot.xAxisScale = d3Linear().domain([xMin, xMax]).range([-1, 1])
 		plot.yAxisScale = d3Linear().domain([yMin, yMax]).range([-1, 1])
@@ -1153,7 +1153,19 @@ class singleCellPlot {
 			event.preventDefault()
 			if (event.ctrlKey) particles.position.z -= event.deltaY / 500
 		})
+		// plot.canvas.addEventListener('mousemove', event => {
+		// 	const rect = plot.canvas.getBoundingClientRect()
 
+		// 	const point = getMouseNDC(event, rect)
+		// 	console.log(point)
+		// })
+		if (plot.expCells.length > 0) {
+			const xCoords = plot.expCells.map(c => plot.xAxisScale(c.x))
+			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
+			const umapCoords = xCoords.map((x, i) => [x, yCoords[i]])
+			const geneExpression = plot.expCells.map(c => c.geneExp)
+			this.renderContourMap(scene, umapCoords, geneExpression, 30, material, plot)
+		}
 		const self = this
 		function animate() {
 			requestAnimationFrame(animate)
@@ -1161,14 +1173,33 @@ class singleCellPlot {
 		}
 		animate()
 		if (this.settings.showGrid) this.renderThreeGrid(scene)
+	}
 
-		// Function to get mouse position in normalized device coordinates (-1 to +1)
-		function getMouseNDC(event) {
-			const rect = renderer.domElement.getBoundingClientRect()
-			return new THREE.Vector2(
-				((event.clientX - rect.left) / rect.width) * 2 - 1,
-				(-(event.clientY - rect.top) / rect.height) * 2 + 1
-			)
+	renderContourMap(scene, umapCoords, geneExpression, gridSize, material, plot) {
+		const levels = [0.2, 0.4, 0.6, 0.8]
+		let [minX, minY, maxX, maxY, densityMap] = createDensityMap(umapCoords, geneExpression, gridSize, plot)
+		densityMap = normalizeDensityMap(densityMap)
+		console.log(densityMap)
+
+		const contours = calculateContours(densityMap, levels, gridSize, minX, minY, maxX, maxY)
+		console.log(contours)
+		const contourMaterial = new THREE.LineBasicMaterial({ color: 0x000000 })
+
+		for (const contour of contours) {
+			const vertices = []
+			// Convert contour points to Three.js Vector3 objects
+			for (const point of contour) {
+				vertices.push(point.x, point.y, 0) // Assuming 2D contours
+			}
+			//vertices.push(contour[0].x, contour[0].y, 0) // Close the contour
+			const contourGeometry = new THREE.BufferGeometry()
+			contourGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+
+			const contourParticles = new THREE.Points(contourGeometry, material)
+
+			const line = new THREE.Line(contourGeometry, contourMaterial)
+			scene.add(line)
+			scene.add(contourParticles)
 		}
 	}
 
@@ -1211,6 +1242,129 @@ class singleCellPlot {
 		}
 		return { vertices, colors }
 	}
+}
+
+// Assuming you have:
+// - umapCoords: Array of UMAP coordinates for each cell ([[x1, y1], [x2, y2], ...])
+// - geneExpression: Array of gene expression values for each cell ([value1, value2, ...])
+
+// Function to create a 2D density map
+function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
+	const densityMap = []
+	const minX = Math.min(...umapCoords.map(coord => coord[0]))
+	const maxX = Math.max(...umapCoords.map(coord => coord[0]))
+	const minY = Math.min(...umapCoords.map(coord => coord[1]))
+	const maxY = Math.max(...umapCoords.map(coord => coord[1]))
+	const cellWidth = (maxX - minX) / gridSize
+	const cellHeight = (maxY - minY) / gridSize
+
+	for (let i = 0; i < gridSize; i++) {
+		densityMap.push([])
+		for (let j = 0; j < gridSize; j++) {
+			densityMap[i].push(0)
+		}
+	}
+
+	for (let k = 0; k < umapCoords.length; k++) {
+		const x = umapCoords[k][0]
+		const y = umapCoords[k][1]
+		const cellX = Math.floor((x - minX) / cellWidth)
+		const cellY = Math.floor((y - minY) / cellHeight)
+
+		if (cellX >= 0 && cellX < gridSize && cellY >= 0 && cellY < gridSize) {
+			if (geneExpression[k] < plot.maxGeneExp)
+				//remove outliers
+				densityMap[cellY][cellX] += geneExpression[k]
+		}
+	}
+
+	return [minX, minY, maxX, maxY, densityMap]
+}
+
+function normalizeDensityMap(densityMap) {
+	// Find the minimum and maximum values in the density map
+	let min = Infinity
+	let max = -Infinity
+	for (let row of densityMap) {
+		for (let value of row) {
+			min = Math.min(min, value)
+			max = Math.max(max, value)
+		}
+	}
+
+	// Normalize values between 0 and 1
+	const normalizedMap = []
+	for (let i = 0; i < densityMap.length; i++) {
+		normalizedMap.push([])
+		for (let j = 0; j < densityMap[i].length; j++) {
+			normalizedMap[i].push((densityMap[i][j] - min) / (max - min))
+		}
+	}
+
+	return normalizedMap
+}
+
+// Function to calculate contour lines (simplified)
+function calculateContours(densityMap, levels, gridSize, minX, minY, maxX, maxY) {
+	const contours = []
+	const dx = maxX - minX
+	const dy = maxY - minY
+	for (let level of levels) {
+		const contour = []
+		for (let i = 0; i < densityMap.length - 1; i++) {
+			//iterates y
+			for (let j = 0; j < densityMap[i].length - 1; j++) {
+				// Simplified corner checks (replace with more robust implementation)
+				const cell = [densityMap[i][j], densityMap[i + 1][j], densityMap[i + 1][j + 1], densityMap[i][j + 1]]
+
+				if (
+					(cell[0] <= level && cell[1] > level) ||
+					(cell[1] <= level && cell[2] > level) ||
+					(cell[2] <= level && cell[3] > level) ||
+					(cell[3] <= level && cell[0] > level)
+				) {
+					const y = minY + (i * dy) / gridSize
+					const x = minX + (j * dx) / gridSize
+					const y2 = minY + ((i + 1) * dy) / gridSize
+					const x2 = minX + ((j + 1) * dx) / gridSize
+					const p1 = { x, y } // Coordinates of the first corner point
+					const p2 = { x: x2, y: y2 } // Coordinates of the second corner point
+					const v1 = densityMap[i][j]
+					const v2 = densityMap[i + 1][j]
+
+					const intersectionPoint = interpolateEdge(p1, p2, v1, v2, level)
+					if (
+						intersectionPoint.x >= minX &&
+						intersectionPoint.x <= maxX &&
+						intersectionPoint.y >= minY &&
+						intersectionPoint.y <= maxY
+					)
+						contour.push(new THREE.Vector2(intersectionPoint.x, intersectionPoint.y))
+				}
+			}
+		}
+		contours.push(contour)
+	}
+
+	return contours
+}
+
+function interpolateEdge(p1, p2, v1, v2, contourLevel) {
+	if (v1 == v2) return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }
+	const t = (contourLevel - v1) / (v2 - v1)
+	return {
+		x: p1.x + t * (p2.x - p1.x),
+		y: p1.y + t * (p2.y - p1.y)
+	}
+}
+
+// Function to get mouse position in normalized device coordinates (-1 to +1)
+export function getMouseNDC(event, rect) {
+	//const rect = renderer.domElement.getBoundingClientRect()
+	return new THREE.Vector2(
+		((event.clientX - rect.left) / rect.width) * 2 - 1,
+		(-(event.clientY - rect.top) / rect.height) * 2 + 1
+	)
 }
 
 export const scatterInit = getCompInit(singleCellPlot)
