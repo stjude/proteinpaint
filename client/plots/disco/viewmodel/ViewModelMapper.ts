@@ -1,9 +1,9 @@
-import ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
+import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import Reference from '#plots/disco/chromosome/Reference.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
-import Settings from '#plots/disco/Settings.ts'
+import type Settings from '#plots/disco/Settings.ts'
 import ViewModelProvider from './ViewModelProvider.ts'
-import { DiscoInteractions } from '../interactions/DiscoInteractions.ts'
+import type { DiscoInteractions } from '../interactions/DiscoInteractions.ts'
 
 export class ViewModelMapper {
 	static snvClassLayer = {

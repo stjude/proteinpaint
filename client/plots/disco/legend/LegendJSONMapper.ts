@@ -1,4 +1,4 @@
-import Legend from './Legend.ts'
+import type Legend from './Legend.ts'
 import { CnvType } from '#plots/disco/cnv/CnvType.ts'
 import { FusionLegend } from '#plots/disco/fusion/FusionLegend.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
