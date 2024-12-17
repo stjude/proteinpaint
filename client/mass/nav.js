@@ -16,6 +16,8 @@ nav {}
 todo: steps to add a new tab
 */
 
+const navTabActiveColor = '#ececec' // default active color of nav tab
+
 // to be used for assigning unique
 // radio button names by object instance
 // otherwise termdp app popups
@@ -428,7 +430,7 @@ function setRenderers(self) {
 			.style('color', d => (d.colNum == self.activeTab ? '#000' : 'gray'))
 			.style('background-color', d =>
 				d.colNum == self.activeTab && self.dom.subheaderDiv.style('display') != 'none'
-					? self.state.termdbConfig.massNav.activeColor || '#ececec'
+					? self.state.termdbConfig.massNav?.activeColor || navTabActiveColor
 					: 'transparent'
 			)
 			.html(function (d, i) {

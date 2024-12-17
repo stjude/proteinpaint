@@ -1238,6 +1238,7 @@ type MassNav = {
 			}
 		}
 	}
+	/** customize background color of active navigation tab */
 	activeColor?: string
 }
 
