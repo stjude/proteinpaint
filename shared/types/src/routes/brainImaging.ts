@@ -35,7 +35,7 @@ export type BrainImagingResponse = {
 	}
 }
 
-export type FilesByCategory = { [category: string]: { samples: string[]; color: string } }
+export type FilesByCategory = { [category: string]: { samples: string[]; color?: any } }
 
 export const brainImagingPayload: RoutePayload = {
 	request: {
