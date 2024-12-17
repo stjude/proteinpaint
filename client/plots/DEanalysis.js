@@ -120,42 +120,29 @@ class DEanalysis {
 				output.mid_sample_size_cutoff < output.sample_size1 &&
 				output.sample_size1 < output.high_sample_size_cutoff)
 		) {
-			inputs.push({
-				label: 'Method',
-				type: 'radio',
-				chartType: 'DEanalysis',
-				settingsKey: 'method',
-				title: 'Toggle between edgeR and wilcoxon test',
-				options: [
-					{ label: 'edgeR', value: 'edgeR' },
-					{ label: 'wilcoxon', value: 'wilcoxon' }
-				]
-			})
+			inputs.push(
+				{
+					label: 'Method',
+					type: 'radio',
+					chartType: 'DEanalysis',
+					settingsKey: 'method',
+					title: 'Toggle between edgeR and wilcoxon test',
+					options: [
+						{ label: 'edgeR', value: 'edgeR' },
+						{ label: 'wilcoxon', value: 'wilcoxon' }
+					]
+				},
+				{
+					type: 'term',
+					configKey: 'term',
+					chartType: 'DEanalysis',
+					usecase: { target: 'DEanalysis', detail: 'term' },
+					label: 'Confounding factors',
+					vocabApi: this.app.vocabApi,
+					menuOptions: 'edit'
+				}
+			)
 		}
-
-		//if (
-		//	(output.mid_sample_size_cutoff >= output.sample_size1 &&
-		//		output.mid_sample_size_cutoff < output.sample_size2 &&
-		//		output.sample_size2 < output.high_sample_size_cutoff) ||
-		//	(output.mid_sample_size_cutoff >= output.sample_size2 &&
-		//		output.mid_sample_size_cutoff < output.sample_size1 &&
-		//		output.sample_size1 < output.high_sample_size_cutoff)
-		//) {
-		//	// Invoked only when one sample size is low than the mid_sample_size_cutoff and the other one is higher but the higher sample size is lower than the high cutoff so that the DE computation does not take a lot of time on the server
-		//	inputs.push({
-		//		label: 'Method',
-		//		type: 'radio',
-		//		chartType: 'DEanalysis',
-		//		settingsKey: 'method',
-		//		title: 'Toggle between edgeR and wilcoxon test',
-		//		options: [
-		//			{ label: 'edgeR', value: 'edgeR' },
-		//			{ label: 'wilcoxon', value: 'wilcoxon' }
-		//		]
-		//	})
-		//	this.settings.method = output.method
-		//	this.state.config = output.method
-		//}
 
 		if (this.app.opts.genome.termdbs) {
 			// Check if genome build contains termdbs, only then enable gene ora
@@ -232,6 +219,7 @@ class DEanalysis {
 			this.dom.holder.selectAll('*').remove()
 		}
 		const wait = this.dom.detailsDiv.append('div').text('Loading...')
+		if (this.config.term) console.log('term:', this.config.term)
 		const output = await runDEanalysis(this) // "this.config" was changed from "this.state.config". Hope this does not create any problems.
 		wait.remove()
 		output.mid_sample_size_cutoff = 8 // mid sample size cutoff for method toggle to appear
