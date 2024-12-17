@@ -219,6 +219,7 @@ export default function svgLegend(opts) {
 			if ((min == 0 || max == 0) && domainRange > 1) {
 				opts.ticks = domainRange > 5 ? 2 : 1
 			}
+			if (d.numericInputs) opts.numericInputs = d.numericInputs
 
 			new ColorScale(opts)
 
