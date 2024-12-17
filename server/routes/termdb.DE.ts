@@ -3,6 +3,7 @@ import path from 'path'
 import type { DERequest, DEResponse, ExpressionInput, RouteApi } from '#types'
 import { diffExpPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { getData } from '../src/termdb.matrix.js'
 import { get_ds_tdb } from '../src/termdb.js'
 import run_R from '../src/run_R.js'
 import serverconfig from '../src/serverconfig.js'
@@ -28,7 +29,22 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
-			const results = await run_DE(req.query as DERequest, ds)
+			let term_results = []
+			if (q.tw) {
+				const terms = [q.tw]
+				term_results = await getData(
+					{
+						filter: q.filter,
+						filter0: q.filter0,
+						terms
+					},
+					ds,
+					genome
+				)
+				console.log('data:', term_results)
+				if (term_results.error) throw term_results.error
+			}
+			const results = await run_DE(req.query as DERequest, ds, term_results)
 			res.send(results)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -37,7 +53,7 @@ function init({ genomes }) {
 	}
 }
 
-async function run_DE(param: DERequest, ds: any) {
+async function run_DE(param: DERequest, ds: any, term_results: any) {
 	/*
 param{}
     samplelst{}

@@ -219,7 +219,6 @@ class DEanalysis {
 			this.dom.holder.selectAll('*').remove()
 		}
 		const wait = this.dom.detailsDiv.append('div').text('Loading...')
-		if (this.config.term) console.log('term:', this.config.term)
 		const output = await runDEanalysis(this) // "this.config" was changed from "this.state.config". Hope this does not create any problems.
 		wait.remove()
 		output.mid_sample_size_cutoff = 8 // mid sample size cutoff for method toggle to appear
@@ -736,15 +735,17 @@ export async function openHiercluster(term, samplelstTW, app, id, newId) {
 }
 
 async function runDEanalysis(self) {
+	const input = {
+		genome: self.app.vocabApi.vocab.genome,
+		dslabel: self.app.vocabApi.vocab.dslabel,
+		samplelst: self.config.samplelst,
+		min_count: self.settings.min_count,
+		min_total_count: self.settings.min_total_count,
+		method: self.settings.method
+	}
+	if (self.config.term) input.tw = self.config.term
 	const output = await dofetch3('DEanalysis', {
-		body: {
-			genome: self.app.vocabApi.vocab.genome,
-			dslabel: self.app.vocabApi.vocab.dslabel,
-			samplelst: self.config.samplelst,
-			min_count: self.settings.min_count,
-			min_total_count: self.settings.min_total_count,
-			method: self.settings.method
-		}
+		body: input
 	})
 	if (output.error) console.log('server side error:', output.error)
 	return output
