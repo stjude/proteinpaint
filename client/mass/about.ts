@@ -91,7 +91,6 @@ export class MassAbout {
 					.html(description)
 			else new Error('Missing cohort description')
 		}
-
 		if (opts.selectCohort?.prompt) {
 			this.dom.cohortPrompt = this.subheader
 				.append('div')
@@ -99,6 +98,7 @@ export class MassAbout {
 				.style('padding-top', '30px')
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
+				.style('font-size', '1.2em')
 				.text(opts.selectCohort.prompt)
 		}
 
@@ -188,6 +188,7 @@ export class MassAbout {
 
 				td0
 					.append('label')
+					.style('font-size', '1.4em')
 					.attr('for', radioId)
 					.attr('colspan', 2)
 					.style('cursor', 'pointer')
@@ -236,7 +237,7 @@ export class MassAbout {
 			div: this.dom.cohortTable,
 			showLines: false,
 			maxHeight: '60vh',
-			header: { style: { 'font-size': '1.1em', 'font-weight': 'bold' } }
+			header: { style: { 'font-size': '1.2em', 'font-weight': 'bold' } }
 		})
 
 		this.dom.cohortTable.select('table').style('border-collapse', 'collapse')
@@ -256,7 +257,7 @@ export class MassAbout {
 			}
 		}
 		const activeColumns = this.dom.cohortTable.selectAll(selector)
-		const color = selectCohort.activeCohortColor || 'yellow'
+		const color = state.termdbConfig.activeColor || 'yellow'
 		activeColumns.style('background-color', color)
 	}
 
