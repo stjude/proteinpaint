@@ -135,7 +135,7 @@ export default class LegendJSONMapper {
 			}
 			if (gain.value > 0 && loss.value < 0) {
 				const maxValue = Math.max(Math.abs(loss.value), gain.value)
-				const domain = maxValue < 1 ? [-1, 0, 1] : [-maxValue, 0, maxValue]
+				const domain = [-maxValue, 0, maxValue]
 				cnvItems.push(
 					Object.assign(
 						{
