@@ -94,6 +94,7 @@ async function validateDsCredentials(creds, serverconfig) {
 	}
 
 	for (const dslabel in creds) {
+		// if (dslabel[0] == '#') continue
 		const ds = creds[dslabel]
 		if (ds['*']) {
 			ds['/**'] = ds['*']
@@ -490,18 +491,43 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 					const id = getSessionId({ query, headers: req.headers, cookies: req.cookies }, cred)
 					const activeSession = sessions[dslabelPattern]?.[id]
 					const sessionStart = activeSession?.time || 0
+					// support a dataset-specific override to maxSessionAge
+					const maxAge = cred.maxSessionAge || maxSessionAge
+					console.log(494, dslabelPattern, [maxAge, cred.maxSessionAge, maxSessionAge], cred)
+					const currTime = Date.now()
+					const insession =
+						// Previously, all requests to `/genomes` is assumed to originate from a "landing page"
+						// that should trigger a sign-in. This assumption causes unnecessary duplicate logins
+						// when the landing page opens links to protected pages that also request `/genomes` data.
+						/* cred.type == 'basic' && req.path.startsWith('/genomes')
+						? false
+						: */ (cred.type != 'jwt' || id) && currTime - sessionStart < maxAge
+
+					// if session is valid, extend the session expiration by resetting the start time
+					if (insession) activeSession.time = currTime
+
 					dsAuth.push({
 						dslabel: dslabelPattern,
 						route: routePattern,
 						type: cred.type || 'basic',
-						insession:
-							cred.type == 'basic' && req.path.startsWith('/genomes')
-								? false
-								: (cred.type != 'jwt' || id) && Date.now() - sessionStart < maxSessionAge
+						insession
 					})
 				}
 			}
 		}
+
+		if (dsAuth.find(ds => ds.insession)) {
+			// the session.start would have been updated for activeSessions,
+			const unexpiredSessions = []
+			for (const dslabel in sessions) {
+				for (const id in sessions[dslabel]) {
+					const q = sessions[dslabel][id]
+					unexpiredSessions.push(`${q.dslabel}\t${q.id}\t${q.time}\t${q.email}\t${q.ip}\t${q.embedder}\t${q.route}`)
+				}
+			}
+			fs.writeFile(sessionsFile, unexpiredSessions.join('\n')).catch(console.log)
+		}
+
 		return dsAuth
 	}
 
@@ -544,8 +570,9 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	authApi.userCanAccess = function (req, ds) {
 		const cred = getRequiredCred(req.query, req.path, protectedRoutes.samples)
 		if (!cred) return true
-		// for 'basic' auth type, always require a login when runpp() is first called
-		if (cred.type == 'basic' && req.path.startsWith('/genomes')) return false
+		// !!! DEPRECATED: for 'basic' auth type, always require a login when runpp() is first called !!!
+		// this causes unnecessary additional logins when links are opened from a 'landing page'
+		// if (cred.type == 'basic' && req.path.startsWith('/genomes')) return false
 		const id = getSessionId(req, cred)
 		const altId = mayAddSessionFromJwt(sessions, ds.label, id, req, cred)
 		const activeSession = sessions[ds.label]?.[id] || sessions[ds.label]?.[altId]
