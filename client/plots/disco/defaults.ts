@@ -1,4 +1,4 @@
-import Settings from './Settings'
+import type Settings from './Settings'
 import { copyMerge } from '#rx'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
@@ -12,7 +12,8 @@ export default function discoDefaults(overrides = {}): Settings {
 			prioritizeGeneLabelsByGeneSets: false,
 			showPrioritizeGeneLabelsByGeneSets: false,
 			cnvRenderingType: CnvRenderingType.heatmap,
-			cnvPercentile: 80
+			cnvPercentile: 80,
+			cnvCutoffMode: 'auto'
 		},
 
 		rings: {
@@ -49,6 +50,7 @@ export default function discoDefaults(overrides = {}): Settings {
 
 		cnv: {
 			capping: 5,
+			percentile: 80,
 			ampColor: '#D6683C',
 			lossColor: '#67a9cf',
 			cappedAmpColor: '#8B0000',

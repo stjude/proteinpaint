@@ -1,22 +1,23 @@
-import Settings from '#plots/disco/Settings.ts'
-import Reference from '#plots/disco/chromosome/Reference.ts'
+import type Settings from '#plots/disco/Settings.ts'
+import type Reference from '#plots/disco/chromosome/Reference.ts'
 import Legend from '#plots/disco/legend/Legend.ts'
 import FusionMapper from '#plots/disco/fusion/FusionMapper.ts'
 import LohLegend from '#plots/disco/loh/LohLegend.ts'
 import ViewModel from './ViewModel.ts'
-import DataMapper from '#plots/disco/data/DataMapper.ts'
+import type DataMapper from '#plots/disco/data/DataMapper.ts'
 import Ring from '#plots/disco/ring/Ring.ts'
 import SnvArcsMapper from '#plots/disco/snv/SnvArcsMapper.ts'
-import SnvArc from '#plots/disco/snv/SnvArc.ts'
-import LohArc from '#plots/disco/loh/LohArc.ts'
+import type SnvArc from '#plots/disco/snv/SnvArc.ts'
+import type LohArc from '#plots/disco/loh/LohArc.ts'
 import CnvArcsMapper from '#plots/disco/cnv/CnvArcsMapper.ts'
-import CnvArc from '#plots/disco/cnv/CnvArc.ts'
+import type CnvArc from '#plots/disco/cnv/CnvArc.ts'
 import LabelsMapper from '#plots/disco/label/LabelsMapper.ts'
 import Labels from '#plots/disco/label/Labels.ts'
 import NonExonicSnvArcsMapper from '#plots/disco/snv/NonExonicSnvArcsMapper.ts'
 import LohArcMapper from '#plots/disco/loh/LohArcMapper.ts'
 import Rings from '#plots/disco/ring/Rings.ts'
 import { dtsnvindel } from '#shared/common.js'
+import type { DiscoInteractions } from '../interactions/DiscoInteractions.ts'
 
 export default class ViewModelProvider {
 	private settings: Settings
@@ -24,6 +25,7 @@ export default class ViewModelProvider {
 	private sampleName: string
 	private genesetName: string
 	private dataMapper: DataMapper
+	private discoInteractions: DiscoInteractions
 
 	private nonExonicArcRing?: Ring<SnvArc> = undefined
 	private snvArcsMapper?: SnvArcsMapper
@@ -37,13 +39,15 @@ export default class ViewModelProvider {
 		dataMapper: DataMapper,
 		reference: Reference,
 		sampleName: string,
-		genesetName: string
+		genesetName: string,
+		discoInteractions: DiscoInteractions
 	) {
 		this.settings = settings
 		this.dataMapper = dataMapper
 		this.reference = reference
 		this.sampleName = sampleName
 		this.genesetName = genesetName
+		this.discoInteractions = discoInteractions
 	}
 
 	map(data: Array<any>) {
@@ -139,10 +143,13 @@ export default class ViewModelProvider {
 			this.settings.legend.cnvTitle,
 			this.settings.legend.lohTitle,
 			this.settings.legend.fusionTitle,
+			this.settings.Disco.cnvPercentile,
+			this.settings.Disco.cnvCutoffMode,
 			this.snvArcsMapper ? this.snvArcsMapper.snvClassMap : new Map(),
 			this.cnvArcsMapper ? this.cnvArcsMapper.cnvClassMap : new Map(),
 			this.settings.Disco.cnvRenderingType,
 			fusions.length > 0,
+			this.discoInteractions,
 			lohLegend
 		)
 

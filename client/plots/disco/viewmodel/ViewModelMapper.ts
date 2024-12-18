@@ -1,8 +1,9 @@
-import ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
+import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import Reference from '#plots/disco/chromosome/Reference.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
-import Settings from '#plots/disco/Settings.ts'
+import type Settings from '#plots/disco/Settings.ts'
 import ViewModelProvider from './ViewModelProvider.ts'
+import type { DiscoInteractions } from '../interactions/DiscoInteractions.ts'
 
 export class ViewModelMapper {
 	static snvClassLayer = {
@@ -28,9 +29,11 @@ export class ViewModelMapper {
 	}
 
 	private settings: Settings
+	private discoInteractions: DiscoInteractions
 
-	constructor(settings: Settings) {
+	constructor(settings: Settings, discoInteractions: DiscoInteractions) {
 		this.settings = settings
+		this.discoInteractions = discoInteractions
 	}
 
 	map(opts: any): ViewModel {
@@ -52,6 +55,13 @@ export class ViewModelMapper {
 
 		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes)
 
-		return new ViewModelProvider(this.settings, dataMapper, reference, sampleName, genesetName).map(data)
+		return new ViewModelProvider(
+			this.settings,
+			dataMapper,
+			reference,
+			sampleName,
+			genesetName,
+			this.discoInteractions
+		).map(data)
 	}
 }

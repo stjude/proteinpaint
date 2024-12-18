@@ -3,6 +3,12 @@ export class DiscoInteractions {
 
 	downloadClickListener: (d: any) => void
 	geneClickListener: (gene: string, mnames: Array<string>) => void
+	colorScaleNumericInputsCallback: (obj: {
+		cutoffMode: string
+		min?: number
+		max?: number
+		percentile?: number
+	}) => void
 
 	constructor(discoApp: any) {
 		// note: discoApp will be set when discoApp.state{} is created
@@ -49,6 +55,39 @@ export class DiscoInteractions {
 			}
 			const _ = await import('#src/block.init')
 			await _.default(arg)
+		}
+
+		/** Corresponds to the numericInputs callback in dom/ColorScale.ts
+		 * Used for CNV legend items only. */
+		this.colorScaleNumericInputsCallback = async (obj: {
+			cutoffMode: string
+			min?: number
+			max?: number
+			percentile?: number
+		}) => {
+			const callAppDispatch = (settings: Record<string, any>) => {
+				this.discoApp.app.dispatch({
+					type: 'plot_edit',
+					id: this.discoApp.id,
+					config: { settings: { Disco: Object.assign({ cnvCutoffMode: obj.cutoffMode }, settings) } }
+				})
+			}
+			if (obj.cutoffMode == 'auto') {
+				if (obj.min == null || obj.max == null)
+					throw new Error('Color scale must return min and max if cutoffMode "auto"')
+				callAppDispatch({
+					cnvCapping: this.discoApp.state.settings.cnv.capping,
+					cnvPercentile: this.discoApp.state.settings.cnv.percentile
+				})
+			} else if (obj.cutoffMode == 'fixed') {
+				if (obj.min == null || obj.max == null)
+					throw new Error('Color scale must return min and max if cutoffMode "fixed"')
+				const diffValue = obj.max !== this.discoApp.state.settings.cnv.capping ? obj.max : Math.abs(obj.min)
+				callAppDispatch({
+					cnvCapping: diffValue
+				})
+			} else if (obj.cutoffMode == 'percentile') callAppDispatch({ cnvPercentile: obj.percentile })
+			else throw new Error('Unknown cutoff mode returned from dom/ColorScale')
 		}
 	}
 }

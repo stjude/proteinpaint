@@ -10,14 +10,14 @@ import NonExonicSnvRenderer from './snv/NonExonicSnvRenderer.ts'
 import SnvRenderer from './snv/SnvRenderer.ts'
 import LohRenderer from './loh/LohRenderer.ts'
 import CnvBarRenderer from './cnv/CnvBarRenderer.ts'
-import IRenderer from './IRenderer.ts'
+import type IRenderer from './IRenderer.ts'
 import { RingType } from './ring/RingType.ts'
-import Settings from './Settings.ts'
+import type Settings from './Settings.ts'
 import { multiInit } from '../../rx'
 import { topBarInit } from '../controls.btns'
 import { configUiInit } from '../controls.config'
 import { CnvHeatmapRenderer } from '#plots/disco/cnv/CnvHeatmapRenderer.ts'
-import ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
+import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
 export default class Disco {
@@ -46,7 +46,7 @@ export default class Disco {
 		const state = this.app.getState()
 		const settings = state.plots.find(p => p.id === this.id).settings
 
-		this.stateViewModelMapper = new ViewModelMapper(settings)
+		this.stateViewModelMapper = new ViewModelMapper(settings, this.discoInteractions)
 		this.viewModel = this.stateViewModelMapper.map(state)
 
 		const holder = this.opts.holder
@@ -98,14 +98,6 @@ export default class Disco {
 
 		const cnvConfigInputOptions = [
 			{
-				label: 'CNV capping',
-				type: 'number',
-				chartType: 'Disco',
-				settingsKey: 'cnvCapping',
-				title: 'Cnv capping',
-				min: 0
-			},
-			{
 				boxLabel: '',
 				label: 'CNV rendering type',
 				type: 'radio',
@@ -116,15 +108,6 @@ export default class Disco {
 					{ label: 'Heatmap', value: CnvRenderingType.heatmap },
 					{ label: 'Bar', value: CnvRenderingType.bar }
 				]
-			},
-			{
-				label: 'CNV percentile',
-				type: 'number',
-				chartType: 'Disco',
-				settingsKey: 'cnvPercentile',
-				title: 'Cnv percentile',
-				min: 1,
-				max: 100
 			}
 		]
 
@@ -140,7 +123,7 @@ export default class Disco {
 		this.isOpen = settings.Disco.isOpen
 
 		if (this.recreateViewModel) {
-			this.stateViewModelMapper = new ViewModelMapper(settings)
+			this.stateViewModelMapper = new ViewModelMapper(settings, this.discoInteractions)
 			this.viewModel = this.stateViewModelMapper.map(this.app.getState())
 		}
 		this.recreateViewModel = true

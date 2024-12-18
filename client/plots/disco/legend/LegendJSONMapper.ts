@@ -1,4 +1,4 @@
-import Legend from './Legend.ts'
+import type Legend from './Legend.ts'
 import { CnvType } from '#plots/disco/cnv/CnvType.ts'
 import { FusionLegend } from '#plots/disco/fusion/FusionLegend.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
@@ -130,13 +130,19 @@ export default class LegendJSONMapper {
 			}
 			if (gain.value > 0 && loss.value < 0) {
 				const maxValue = Math.max(Math.abs(loss.value), gain.value)
-				const domain = maxValue < 1 ? [-1, 0, 1] : [-maxValue, 0, maxValue]
+				const domain = [-maxValue, 0, maxValue]
 				cnvItems.push(
 					Object.assign(
 						{
 							key: CnvType.LossGain,
 							domain,
-							scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color])
+							scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color]),
+							labels: { left: 'Loss', right: 'Gain' },
+							numericInputs: {
+								cutoffMode: legend.cnvCutoffMode,
+								defaultPercentile: legend.cnvPercentile,
+								callback: obj => legend.discoInteractions.colorScaleNumericInputsCallback(obj)
+							}
 						},
 						base
 					)
