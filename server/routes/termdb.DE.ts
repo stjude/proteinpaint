@@ -41,7 +41,6 @@ function init({ genomes }) {
 					ds,
 					genome
 				)
-				console.log('data:', term_results)
 				if (term_results.error) throw term_results.error
 			}
 			const results = await run_DE(req.query as DERequest, ds, term_results)
@@ -73,12 +72,16 @@ param{}
 	const group1names = [] as string[]
 	//let group1names_not_found = 0
 	//const group1names_not_found_list = []
+	const conf1 = []
 	for (const s of param.samplelst.groups[0].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
 		if (q.allSampleSet.has(n)) {
 			group1names.push(n)
+			if (param.tw) {
+				conf1.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+			}
 		} else {
 			//group1names_not_found += 1
 			//group1names_not_found_list.push(n)
@@ -87,12 +90,16 @@ param{}
 	const group2names = [] as string[]
 	//let group2names_not_found = 0
 	//const group2names_not_found_list = []
+	const conf2 = []
 	for (const s of param.samplelst.groups[1].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
 		if (q.allSampleSet.has(n)) {
 			group2names.push(n)
+			if (param.tw) {
+				conf2.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+			}
 		} else {
 			//group2names_not_found += 1
 			//group2names_not_found_list.push(n)
