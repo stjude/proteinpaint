@@ -1169,7 +1169,7 @@ tape('numeric exclude range', function (test) {
 							type: 'tvs',
 							tag: 'cohortFilter',
 							tvs: {
-								term: { id: 'subcohort', type: 'categorical' },
+								term: { id: 'subcohort', type: 'multivalue' },
 								values: [
 									{ key: 'ABC', label: 'ABC' }
 									//{key:'XYZ',label:'XYZ'},

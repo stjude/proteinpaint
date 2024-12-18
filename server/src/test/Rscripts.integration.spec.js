@@ -59,7 +59,7 @@ tape.skip('fisher.R integration', test => {
 									tag: 'cohortFilter',
 									renderAs: 'htmlSelect',
 									selectOptionsFrom: 'selectCohort',
-									tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'XYZ', label: 'XYZ' }] }
+									tvs: { term: { id: 'subcohort', type: 'multivalue' }, values: [{ key: 'XYZ', label: 'XYZ' }] }
 								},
 								{
 									type: 'tvs',
@@ -126,7 +126,7 @@ tape.skip('fisher.2x3.R integration', test => {
 							tag: 'cohortFilter',
 							renderAs: 'htmlSelect',
 							selectOptionsFrom: 'selectCohort',
-							tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'XYZ', label: 'XYZ' }] }
+							tvs: { term: { id: 'subcohort', type: 'multivalue' }, values: [{ key: 'XYZ', label: 'XYZ' }] }
 						},
 						{
 							type: 'tvs',

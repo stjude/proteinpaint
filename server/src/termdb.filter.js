@@ -463,19 +463,32 @@ function get_condition(tvs, CTEname) {
 	}
 }
 
-//TO BE COMPLETED AND TESTED WHEN THE TVS IS READY
-// function get_multivalue(tvs, CTEname, ds, onlyChildren) {
-// 	let query = `SELECT sample
-// 	FROM anno_multivalue
-// 	WHERE term_id = ?
-// 	${tvs.values.map(key => ` AND value->$${key} ${tvs.isnot ? '=null' : '>0'}`)}`
-// 	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
-// 	return {
-// 		CTEs: [` ${CTEname} AS (${query})`],
-// 		values: [tvs.term.id],
-// 		CTEname
-// 	}
-// }
+const validTvsJoin = new Set(['and', 'or'])
+
+function get_multivalue(tvs, CTEname, ds, onlyChildren) {
+	// default to join = 'or', more permissive/less likely to break,
+	// and also compatible with default join operator for categorical terms
+	if (!tvs.join) tvs.join = 'or'
+	if (tvs.values.length > 1 && !validTvsJoin.has(tvs.join)) {
+		// multivalue term, when used as a filter, must have a valid "join" operator
+		throw `invalid tvs.join='${tvs.join}' when tvs.values.length > 1`
+	}
+	// note that if there is only 1 tvs.values entry,
+	// tvs.join will not be needed or used to "join" values
+	const expectedValues = tvs.values
+		.map(v => `value->>'$.${v.key}' ${tvs.isnot ? 'IS NULL' : '> 0'}`)
+		.join(` ${tvs.join} `)
+
+	let query = `SELECT sample
+	FROM anno_multivalue
+	WHERE term_id = ? AND ${expectedValues}`
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	return {
+		CTEs: [` ${CTEname} AS (${query})`],
+		values: [tvs.term.id],
+		CTEname
+	}
+}
 
 function getFilterSampleTypes(filter, ds, sampleTypes) {
 	for (const [i, item] of filter.lst.entries()) {
