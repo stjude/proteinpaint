@@ -56,6 +56,7 @@ export class DiscoInteractions {
 			const _ = await import('#src/block.init')
 			await _.default(arg)
 		}
+
 		/** Corresponds to the numericInputs callback in dom/ColorScale.ts
 		 * Used for CNV legend items only. */
 		this.colorScaleNumericInputsCallback = async (obj: {
@@ -64,49 +65,29 @@ export class DiscoInteractions {
 			max?: number
 			percentile?: number
 		}) => {
-			if (obj.cutoffMode == 'auto') {
-				if (!obj.min || !obj.max) throw new Error('min and max must be defined for cutoffMode auto')
+			const callAppDispatch = (settings: Record<string, any>) => {
 				this.discoApp.app.dispatch({
 					type: 'plot_edit',
 					id: this.discoApp.id,
-					config: {
-						settings: {
-							Disco: {
-								cnvCapping: this.discoApp.state.settings.cnv.capping,
-								cnvPercentile: this.discoApp.state.settings.cnv.percentile,
-								cnvCutoffMode: obj.cutoffMode
-							}
-						}
-					}
+					config: { settings: { Disco: Object.assign({ cnvCutoffMode: obj.cutoffMode }, settings) } }
+				})
+			}
+			if (obj.cutoffMode == 'auto') {
+				if (obj.min == null || obj.max == null)
+					throw new Error('Color scale must return min and max if cutoffMode "auto"')
+				callAppDispatch({
+					cnvCapping: this.discoApp.state.settings.cnv.capping,
+					cnvPercentile: this.discoApp.state.settings.cnv.percentile
 				})
 			} else if (obj.cutoffMode == 'fixed') {
-				if (!obj.min || !obj.max) throw new Error('min and max must be defined for cutoffMode fixed')
-				this.discoApp.app.dispatch({
-					type: 'plot_edit',
-					id: this.discoApp.id,
-					config: {
-						settings: {
-							Disco: {
-								cnvCapping: Math.max(Math.abs(obj.min), obj.max),
-								cnvCutoffMode: obj.cutoffMode
-							}
-						}
-					}
+				if (obj.min == null || obj.max == null)
+					throw new Error('Color scale must return min and max if cutoffMode "fixed"')
+				const diffValue = obj.max !== this.discoApp.state.settings.cnv.capping ? obj.max : Math.abs(obj.min)
+				callAppDispatch({
+					cnvCapping: diffValue
 				})
-			} else if (obj.cutoffMode == 'percentile') {
-				this.discoApp.app.dispatch({
-					type: 'plot_edit',
-					id: this.discoApp.id,
-					config: {
-						settings: {
-							Disco: {
-								cnvPercentile: obj.percentile,
-								cnvCutoffMode: obj.cutoffMode
-							}
-						}
-					}
-				})
-			} else throw new Error('Unknown cutoff mode')
+			} else if (obj.cutoffMode == 'percentile') callAppDispatch({ cnvPercentile: obj.percentile })
+			else throw new Error('Unknown cutoff mode returned from dom/ColorScale')
 		}
 	}
 }
