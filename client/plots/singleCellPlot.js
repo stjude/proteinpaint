@@ -119,8 +119,6 @@ class singleCellPlot {
 
 		const leftDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const controlsDiv = leftDiv.append('div').attr('class', 'pp-termdb-plot-controls')
-		const iconsDiv = leftDiv.append('div')
-		this.addZoomIcons(iconsDiv)
 
 		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		this.tabsComp = await new Tabs({
@@ -159,7 +157,6 @@ class singleCellPlot {
 
 		this.dom = {
 			header: this.opts.header,
-			iconsDiv,
 			headerDiv,
 			showDiv,
 			mainDiv,
@@ -386,27 +383,27 @@ class singleCellPlot {
 		}
 	}
 
-	addZoomIcons(iconsDiv) {
+	addZoomIcons(iconsDiv, plot) {
 		const zoomInDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
-				this.particles.position.z += 0.1
+				plot.particles.position.z += 0.1
 			},
-			title: 'Zoom in'
+			title: 'Zoom in. You can also zoom in moving the mouse wheel with the Ctrl key pressed.'
 		})
 		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
-				this.particles.position.z -= 0.1
+				plot.particles.position.z -= 0.1
 			},
-			title: 'Zoom out'
+			title: 'Zoom out. You can also zoom out moving the mouse wheel with the Ctrl key pressed.'
 		})
 		const identityDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
-				this.particles.position.z = 0
-				this.particles.position.x = 0
-				this.particles.position.y = 0
+				plot.particles.position.z = 0
+				plot.particles.position.x = 0
+				plot.particles.position.y = 0
 			},
 			title: 'Reset plot to defaults'
 		})
@@ -536,6 +533,15 @@ class singleCellPlot {
 				chartType: 'singleCellPlot',
 				settingsKey: 'showGrid',
 				title: 'Show grid'
+			},
+			{
+				label: 'Max expression percentile',
+				type: 'number',
+				chartType: 'singleCellPlot',
+				settingsKey: 'maxGeneExpPercentile',
+				title: 'Max gene expression percentile, by default 0.95, representing the 95th percentile',
+				min: 0.01,
+				max: 1
 			}
 		]
 
@@ -676,6 +682,7 @@ class singleCellPlot {
 		for (const plot of result.plots) {
 			this.plots.push(plot)
 			const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
+			plot.maxGeneExp = expCells[Math.floor(expCells.length * this.settings.maxGeneExpPercentile)]?.geneExp
 			plot.cells = [...plot.noExpCells, ...expCells]
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
@@ -716,7 +723,11 @@ class singleCellPlot {
 		//used to plot the cells
 		this.initAxes(plot)
 
+		const leftDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		plot.plotDiv = this.dom.plotsDiv.append('div').style('overflow', 'hidden').style('display', 'inline-block')
+
+		this.addZoomIcons(leftDiv, plot)
+
 		//.style('flex-grow', 1)
 		plot.headerDiv = plot.plotDiv.append('div')
 		plot.headerDiv.append('label').text(plot.name).style('font-size', '1.2em').style('margin-right', '10px')
@@ -742,7 +753,7 @@ class singleCellPlot {
 					;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
 					min = 0 //force min to start in cero
 				}
-				plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
+				plot.colorGenerator = d3Linear().domain([min, plot.maxGeneExp]).range([startColor, stopColor])
 				plot.min = min
 				plot.max = max
 			}
@@ -761,6 +772,7 @@ class singleCellPlot {
 		if (!this.colorByGene || !this.state.config.gene) return plot.colorMap[d.category]
 		else if (this.colorByGene) {
 			if (!d.geneExp) return noExpColor
+			if (d.geneExp > plot.maxGeneExp) return plot.colorGenerator(plot.maxGeneExp)
 			else return plot.colorGenerator(d.geneExp)
 		}
 	}
@@ -1116,7 +1128,7 @@ class singleCellPlot {
 		})
 
 		const particles = new THREE.Points(geometry, material)
-		this.particles = particles
+		plot.particles = particles
 
 		scene.add(particles)
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
@@ -1231,6 +1243,7 @@ export function getDefaultSingleCellSettings() {
 		sampleSize: 1.5,
 		sampleSizeThree: 0.008,
 		threeFOV: 60,
-		opacity: 1
+		opacity: 1,
+		maxGeneExpPercentile: 0.95
 	}
 }
