@@ -130,7 +130,7 @@ tape('filter subheader and tab', function (test) {
 		test.equal(itemCountTd.innerText, '1', 'should indicate a filter item count of 1')
 
 		const sampleCountTd = tds._groups[0][11]
-		const n = 35
+		const n = 36
 		test.equal(sampleCountTd.innerText, `${n} patients`, 'should display the correct filtered sample count')
 	}
 })
