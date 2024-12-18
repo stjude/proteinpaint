@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - brainImaging: enable divideBy and overlay with geneVariant terms.
+- barchart: adding a checkbox for performing multiple testing correction
 
 
 ## 2.93.0
