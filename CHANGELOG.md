@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- brainImaging: enable divideBy and overlay with geneVariant terms.
+
+
 ## 2.93.0
 
 Features:
