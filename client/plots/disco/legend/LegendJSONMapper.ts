@@ -128,9 +128,9 @@ export default class LegendJSONMapper {
 				isLegendItem: true,
 				dt: 4,
 				numericInputs: {
-					cutoffMode: 'auto',
+					cutoffMode: legend.cnvCutoffMode,
 					defaultPercentile: legend.cnvPercentile,
-					callback: obj => legend.discoInteractions.numericInputsCallback(obj)
+					callback: obj => legend.discoInteractions.colorScaleNumericInputsCallback(obj)
 				}
 			}
 			if (gain.value > 0 && loss.value < 0) {

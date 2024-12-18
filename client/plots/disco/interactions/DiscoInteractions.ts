@@ -3,7 +3,12 @@ export class DiscoInteractions {
 
 	downloadClickListener: (d: any) => void
 	geneClickListener: (gene: string, mnames: Array<string>) => void
-	numericInputsCallback: (obj: { cutoffMode: string; min?: number; max?: number; percentile?: number }) => void
+	colorScaleNumericInputsCallback: (obj: {
+		cutoffMode: string
+		min?: number
+		max?: number
+		percentile?: number
+	}) => void
 
 	constructor(discoApp: any) {
 		// note: discoApp will be set when discoApp.state{} is created
@@ -51,14 +56,14 @@ export class DiscoInteractions {
 			const _ = await import('#src/block.init')
 			await _.default(arg)
 		}
-
-		this.numericInputsCallback = async (obj: {
+		/** Corresponds to the numericInputs callback in dom/ColorScale.ts
+		 * Used for CNV legend items only. */
+		this.colorScaleNumericInputsCallback = async (obj: {
 			cutoffMode: string
 			min?: number
 			max?: number
 			percentile?: number
 		}) => {
-			//Corresponds to the numericInputs callback in dom/ColorScale.ts
 			if (obj.cutoffMode == 'auto') {
 				if (!obj.min || !obj.max) throw new Error('min and max must be defined for cutoffMode auto')
 				this.discoApp.app.dispatch({
@@ -67,7 +72,9 @@ export class DiscoInteractions {
 					config: {
 						settings: {
 							Disco: {
-								cnvCapping: Math.max(Math.abs(obj.min), obj.max)
+								cnvCapping: this.discoApp.state.settings.cnv.capping,
+								cnvPercentile: this.discoApp.state.settings.cnv.percentile,
+								cnvCutoffMode: obj.cutoffMode
 							}
 						}
 					}
@@ -80,7 +87,8 @@ export class DiscoInteractions {
 					config: {
 						settings: {
 							Disco: {
-								cnvCapping: Math.max(Math.abs(obj.min), obj.max)
+								cnvCapping: Math.max(Math.abs(obj.min), obj.max),
+								cnvCutoffMode: obj.cutoffMode
 							}
 						}
 					}
@@ -92,7 +100,8 @@ export class DiscoInteractions {
 					config: {
 						settings: {
 							Disco: {
-								cnvPercentile: obj.percentile
+								cnvPercentile: obj.percentile,
+								cnvCutoffMode: obj.cutoffMode
 							}
 						}
 					}

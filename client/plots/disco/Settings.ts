@@ -11,6 +11,9 @@ export default interface Settings {
 		prioritizeGeneLabelsByGeneSets: boolean // set to true to prioritize by default, if applicable
 		cnvRenderingType: string
 		cnvPercentile: number
+		/** auto, fixed, percentile. Used for the numeric inputs dropdown
+		 * for cnv color scales. */
+		cnvCutoffMode: string
 	}
 
 	rings: {
@@ -38,7 +41,12 @@ export default interface Settings {
 	cnv: {
 		cappedAmpColor: string
 		ampColor: string
+		/** Immutable default. User changes settings.Disco.cnvCapping.
+		 * Used when reseting plot to default cnv values. */
 		capping: number
+		/** Immutable default. User changes settings.Disco.cnvPercentile.
+		 * Used when reseting plot to default cnv values. */
+		percentile: number
 		cappedLossColor: string
 		lossColor: string
 		unit: string
