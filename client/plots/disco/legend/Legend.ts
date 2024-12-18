@@ -11,6 +11,7 @@ export default class Legend {
 	cnvTitle: string
 	cnvClassMap: Map<CnvType, CnvLegend>
 	cnvPercentile: number
+	cnvCutoffMode: string
 
 	lohTitle: string
 	lohLegend?: LohLegend
@@ -27,6 +28,7 @@ export default class Legend {
 		lohTitle: string,
 		fusionTitle: string,
 		cnvPercentile: number,
+		cnvCutoffmode: string,
 		snvClassMap: Map<string, SnvLegendElement>,
 		cnvClassMap: Map<CnvType, CnvLegend>,
 		cnvRenderingType: string,
@@ -39,6 +41,7 @@ export default class Legend {
 		this.lohTitle = lohTitle
 		this.fusionTitle = fusionTitle
 		this.cnvPercentile = cnvPercentile
+		this.cnvCutoffMode = cnvCutoffmode
 		this.snvClassMap = snvClassMap
 		this.cnvClassMap = cnvClassMap
 		this.cnvRenderingType = cnvRenderingType

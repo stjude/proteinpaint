@@ -144,6 +144,7 @@ export default class ViewModelProvider {
 			this.settings.legend.lohTitle,
 			this.settings.legend.fusionTitle,
 			this.settings.Disco.cnvPercentile,
+			this.settings.Disco.cnvCutoffMode,
 			this.snvArcsMapper ? this.snvArcsMapper.snvClassMap : new Map(),
 			this.cnvArcsMapper ? this.cnvArcsMapper.cnvClassMap : new Map(),
 			this.settings.Disco.cnvRenderingType,
