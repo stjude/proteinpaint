@@ -535,6 +535,14 @@ class singleCellPlot {
 				title: 'Show grid'
 			},
 			{
+				label: 'Show no expression',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: 'showNoExpCells',
+				title: 'Show cells without expression'
+			},
+			{
 				label: 'Max expression percentile',
 				type: 'number',
 				chartType: 'singleCellPlot',
@@ -764,13 +772,14 @@ class singleCellPlot {
 
 	getOpacity(d) {
 		if (this.config.hiddenClusters.includes(d.category)) return 0
-
+		if (this.colorByGene && this.state.config.gene && !d.geneExp)
+			return this.settings.showNoExpCells ? this.settings.opacity : 0
 		return this.settings.opacity
 	}
 
 	getColor(d, plot) {
 		if (!this.colorByGene || !this.state.config.gene) return plot.colorMap[d.category]
-		else if (this.colorByGene) {
+		else if (this.colorByGene && this.state.config.gene) {
 			if (!d.geneExp) return noExpColor
 			if (d.geneExp > plot.maxGeneExp) return plot.colorGenerator(plot.maxGeneExp)
 			else return plot.colorGenerator(d.geneExp)
@@ -1244,6 +1253,7 @@ export function getDefaultSingleCellSettings() {
 		sampleSizeThree: 0.008,
 		threeFOV: 60,
 		opacity: 1,
-		maxGeneExpPercentile: 0.95
+		maxGeneExpPercentile: 0.95,
+		showNoExpCells: false
 	}
 }
