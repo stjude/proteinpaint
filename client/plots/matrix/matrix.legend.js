@@ -176,6 +176,7 @@ export function getLegendData(legendGroups, refs, self) {
 						scale: scaleLinear().domain(domain).range(colors),
 						minLabel: domain[0], //loss.maxLabel,
 						maxLabel: domain.slice(-1)[0],
+						labels: { left: 'Loss', right: 'Gain' },
 						parents: [Object.assign(setLegendAttr(loss), loss), Object.assign(setLegendAttr(gain), gain)],
 						samples: new Set([...gain.samples, ...loss.samples])
 					}
@@ -219,7 +220,8 @@ export function getLegendData(legendGroups, refs, self) {
 							crossedOut: item.crossedOut,
 							greyedOut: item.greyedOut,
 							origin: item.origin,
-							parents: item.parents
+							parents: item.parents,
+							labels: item.labels
 						}
 					} else {
 						return {
