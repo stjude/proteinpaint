@@ -730,9 +730,9 @@ class singleCellPlot {
 
 		//used to plot the cells
 		this.initAxes(plot)
-
-		const leftDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		plot.plotDiv = this.dom.plotsDiv.append('div').style('overflow', 'hidden').style('display', 'inline-block')
+		const plotDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const leftDiv = plotDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		plot.plotDiv = plotDiv.append('div').style('overflow', 'hidden').style('display', 'inline-block')
 
 		this.addZoomIcons(leftDiv, plot)
 
