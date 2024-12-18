@@ -126,12 +126,7 @@ export default class LegendJSONMapper {
 				width: 100,
 				order: cnvOrder++,
 				isLegendItem: true,
-				dt: 4,
-				numericInputs: {
-					cutoffMode: legend.cnvCutoffMode,
-					defaultPercentile: legend.cnvPercentile,
-					callback: obj => legend.discoInteractions.colorScaleNumericInputsCallback(obj)
-				}
+				dt: 4
 			}
 			if (gain.value > 0 && loss.value < 0) {
 				const maxValue = Math.max(Math.abs(loss.value), gain.value)
@@ -141,7 +136,13 @@ export default class LegendJSONMapper {
 						{
 							key: CnvType.LossGain,
 							domain,
-							scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color])
+							scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color]),
+							labels: { left: 'Loss', right: 'Gain' },
+							numericInputs: {
+								cutoffMode: legend.cnvCutoffMode,
+								defaultPercentile: legend.cnvPercentile,
+								callback: obj => legend.discoInteractions.colorScaleNumericInputsCallback(obj)
+							}
 						},
 						base
 					)

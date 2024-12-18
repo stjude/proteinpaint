@@ -208,9 +208,8 @@ export default function svgLegend(opts) {
 				tickSize: 2,
 				topTicks: true
 			}
-			// some color scales (such as brainImaging) do not have termid
-			if (d.termid?.toLowerCase().includes('cnv') && min < 0 && max > 0) {
-				opts.labels = { left: 'Loss', right: 'Gain' }
+			if (d.labels) {
+				opts.labels = d.labels
 				if (d.text) opts.position = `${bbox.width + bbox.x + 45 + settings.padx},${yPos}`
 			}
 			// Ticks must be spaced appropriately for loss and gain
