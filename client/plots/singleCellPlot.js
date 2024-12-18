@@ -549,7 +549,7 @@ class singleCellPlot {
 				settingsKey: 'maxGeneExpPercentile',
 				title: 'Max gene expression percentile, by default 0.95, representing the 95th percentile',
 				min: 0.01,
-				max: 1
+				max: 0.99
 			}
 		]
 
