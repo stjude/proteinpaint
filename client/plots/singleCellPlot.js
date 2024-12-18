@@ -2,19 +2,16 @@ import { getCompInit, copyMerge, deepEqual } from '../rx/index.js'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { dofetch3 } from '#common/dofetch'
 import { getColors, plotColor } from '#shared/common.js'
-import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { line, max, rgb } from 'd3'
+import { rgb } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
 import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
-import { render } from '#src/block.mds2.vcf.plain'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 /*
 this
@@ -92,7 +89,7 @@ class singleCellPlot {
 				callback: () => this.setActiveTab(COLORBY_TAB)
 			},
 			{
-				label: 'Gene expression',
+				label: 'Gene Expression',
 				id: GENE_EXPRESSION_TAB,
 				active: activeTab == GENE_EXPRESSION_TAB,
 				callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
@@ -100,7 +97,7 @@ class singleCellPlot {
 		)
 		if (state.termdbConfig.queries?.singleCell?.DEgenes)
 			this.tabs.push({
-				label: 'Differential expression',
+				label: 'Differential Expression',
 				id: DIFFERENTIAL_EXPRESSION_TAB,
 				active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
