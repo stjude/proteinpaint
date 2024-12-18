@@ -1,1 +1,2 @@
-
+Features
+- Disco plot: users are able to change the cnv min and max as well as percentile from the color scale in the legend. 
