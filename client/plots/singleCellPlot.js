@@ -547,15 +547,27 @@ class singleCellPlot {
 			}
 		]
 		//if more than 50K cells do not allow contour as it may fail, excludes fetalCerebellum
-		if (this.colorByGene && this.state.config.gene && !this.maxCellsExceeded)
-			inputs.push({
-				label: 'Show contour map',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'singleCellPlot',
-				settingsKey: 'showContour',
-				title: 'Show contour map'
-			})
+		if (this.colorByGene && this.state.config.gene && !this.maxCellsExceeded) {
+			inputs.push(
+				{
+					label: 'Show contour map',
+					boxLabel: '',
+					type: 'checkbox',
+					chartType: 'singleCellPlot',
+					settingsKey: 'showContour',
+					title: 'Show contour map'
+				},
+				{
+					label: 'Contour grid size',
+					type: 'number',
+					chartType: 'singleCellPlot',
+					settingsKey: 'gridSize',
+					min: 5,
+					max: 50,
+					step: 5
+				}
+			)
+		}
 
 		this.components = {
 			controls: await controlsInit({
@@ -799,7 +811,7 @@ class singleCellPlot {
 		const s0 = plot.cells[0]
 		const [xMin, xMax, yMin, yMax] = plot.cells.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[s0.x, s0.x, s0.y, s0.y, s0.gene]
+			[s0.x, s0.x, s0.y, s0.y]
 		)
 		plot.xAxisScale = d3Linear().domain([xMin, xMax]).range([-1, 1])
 		plot.yAxisScale = d3Linear().domain([yMin, yMax]).range([-1, 1])
@@ -1178,13 +1190,12 @@ class singleCellPlot {
 		// 	const point = getMouseNDC(event, rect)
 		// 	console.log(point)
 		// })
-		if (plot.expCells.length > 0) {
+		if (plot.expCells.length > 0 && this.settings.showContour) {
 			const xCoords = plot.expCells.map(c => plot.xAxisScale(c.x))
 			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
 			const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
 			const geneExpression = plot.expCells.map(c => c.geneExp)
-			if (this.colorByGene && this.settings.showContour)
-				this.renderContourMap(scene, umapCoords, geneExpression, 30, plot)
+			this.renderContourMap(scene, umapCoords, geneExpression, plot)
 		}
 		const self = this
 		function animate() {
@@ -1195,7 +1206,8 @@ class singleCellPlot {
 		if (this.settings.showGrid) this.renderThreeGrid(scene)
 	}
 
-	async renderContourMap(scene, umapCoords, geneExpression, gridSize, plot) {
+	async renderContourMap(scene, umapCoords, geneExpression, plot) {
+		const gridSize = this.settings.gridSize
 		let densityMap = createDensityMap(umapCoords, geneExpression, gridSize, plot)
 		densityMap = normalizeDensityMap(densityMap)
 		const data = densityMap.flat()
@@ -1402,6 +1414,7 @@ export function getDefaultSingleCellSettings() {
 		threeFOV: 60,
 		opacity: 1,
 		showNoExpCells: false,
-		showContour: false
+		showContour: false,
+		gridSize: 20
 	}
 }
