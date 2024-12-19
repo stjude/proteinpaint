@@ -5,7 +5,7 @@ import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { extent, range, rgb, contours, geoIdentity, geoPath, create } from 'd3'
+import { extent, range, rgb, contours, geoIdentity, geoPath, create, scaleSequential, interpolateTurbo } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
@@ -384,6 +384,7 @@ class singleCellPlot {
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
 				plot.particles.position.z += 0.1
+				plot.plane.position.z += 0.1
 			},
 			title: 'Zoom in. You can also zoom in moving the mouse wheel with the Ctrl key pressed.'
 		})
@@ -391,6 +392,7 @@ class singleCellPlot {
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
 				plot.particles.position.z -= 0.1
+				plot.plane.position.z -= 0.1
 			},
 			title: 'Zoom out. You can also zoom out moving the mouse wheel with the Ctrl key pressed.'
 		})
@@ -400,6 +402,10 @@ class singleCellPlot {
 				plot.particles.position.z = 0
 				plot.particles.position.x = 0
 				plot.particles.position.y = 0
+
+				plot.plane.position.z = 0
+				plot.plane.position.x = 0
+				plot.plane.position.y = 0
 			},
 			title: 'Reset plot to defaults'
 		})
@@ -539,6 +545,15 @@ class singleCellPlot {
 				title: 'Show cells without expression'
 			}
 		]
+		if (this.colorByGene && this.state.config.gene)
+			inputs.push({
+				label: 'Show contour map',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: 'showContour',
+				title: 'Show contour map'
+			})
 
 		this.components = {
 			controls: await controlsInit({
@@ -1151,7 +1166,8 @@ class singleCellPlot {
 		plot.canvas.addEventListener('mousewheel', event => {
 			if (!event.ctrlKey) return
 			event.preventDefault()
-			if (event.ctrlKey) particles.position.z -= event.deltaY / 500
+			particles.position.z -= event.deltaY / 500
+			plot.plane.position.z = particles.position.z
 		})
 		// plot.canvas.addEventListener('mousemove', event => {
 		// 	const rect = plot.canvas.getBoundingClientRect()
@@ -1164,7 +1180,8 @@ class singleCellPlot {
 			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
 			const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
 			const geneExpression = plot.expCells.map(c => c.geneExp)
-			this.renderContourMap(scene, umapCoords, geneExpression, 30, plot)
+			if (this.colorByGene && this.settings.showContour)
+				this.renderContourMap(scene, umapCoords, geneExpression, 30, plot)
 		}
 		const self = this
 		function animate() {
@@ -1183,15 +1200,24 @@ class singleCellPlot {
 		const thresholds = 5
 		const width = this.settings.svgw
 		const height = this.settings.svgh
-		const [min, max] = extent(data)
+		let [min, max] = extent(data)
+
 		const contoursFunc = contours()
 			.size([gridSize, gridSize])
 			.thresholds(range(min, max, (max - min) / thresholds))
 		const contoursData = contoursFunc(data)
 		const projection = geoIdentity().fitSize([width, height], contoursData[0])
 		const path = geoPath().projection(projection)
+		const color = scaleSequential(interpolateTurbo).domain([min, max]).nice()
 		const svg = create('svg').attr('width', width).attr('height', height).style('fill', 'white')
-		svg.selectAll('path').data(contoursData).enter().append('path').attr('d', path).attr('stroke', 'black')
+		svg
+			.selectAll('path')
+			.data(contoursData)
+			.enter()
+			.append('path')
+			.attr('d', path)
+			.attr('stroke', 'black')
+			.attr('fill', d => color(d.value))
 		// Serialize the SVG element
 		const svgString = new XMLSerializer().serializeToString(svg.node())
 
@@ -1214,7 +1240,7 @@ class singleCellPlot {
 
 			// Position the plane
 			plane.position.z = 0 // Adjust z-position as needed
-
+			plot.plane = plane
 			// Add the plane to the scene
 			scene.add(plane)
 		})
@@ -1225,8 +1251,8 @@ class singleCellPlot {
 		// Line Geometry
 		const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffd3d3d3 })
 
-		const lines = 8
-		const step = 3 / lines
+		const lines = 10
+		const step = 2 / lines
 
 		for (let i = 0; i < lines; i++) {
 			let points = []
@@ -1234,6 +1260,8 @@ class singleCellPlot {
 			points.push(new THREE.Vector3(x, -1.5, 0))
 			let lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
 			let line = new THREE.Line(lineGeometry, lineMaterial)
+			line.position.z = 1
+
 			scene.add(line)
 			points = []
 			points.push(new THREE.Vector3(-1.5, x, 0))
@@ -1242,6 +1270,7 @@ class singleCellPlot {
 			line = new THREE.Line(lineGeometry, lineMaterial)
 			scene.add(line)
 			x += step
+			line.position.z = 1
 		}
 	}
 
@@ -1370,6 +1399,7 @@ export function getDefaultSingleCellSettings() {
 		sampleSizeThree: 0.008,
 		threeFOV: 60,
 		opacity: 1,
-		showNoExpCells: false
+		showNoExpCells: false,
+		showContour: false
 	}
 }
