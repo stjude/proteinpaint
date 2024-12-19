@@ -5,6 +5,7 @@ export default interface Settings {
 	downloadImgName: string // file name of downloaded svg
 
 	Disco: {
+		centerText: string
 		cnvCapping: number
 		isOpen: boolean
 		showPrioritizeGeneLabelsByGeneSets: boolean

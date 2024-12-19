@@ -44,6 +44,18 @@ export class DiscoRenderer {
 
 		this.fusionRenderer.render(mainG, viewModel.fusions)
 
+		if (viewModel.settings.Disco.centerText) {
+			const chrRingBbox = mainG.select('[data-testid="sjpp_chromosomes_arc_group"]').node().getBBox()
+			/** Truncate longer texts to stay within the center */
+			const text =
+				viewModel.settings.Disco.centerText.length > 20
+					? viewModel.settings.Disco.centerText.slice(0, 20) + '...'
+					: viewModel.settings.Disco.centerText
+			const textElem = mainG.append('text').attr('class', 'sjpp-disco-center-text').text(text)
+			const textBbox = textElem.node().getBBox()
+			textElem.attr('transform', `translate(${chrRingBbox.x + chrRingBbox.width / 2 - textBbox.width / 2},0)`)
+		}
+
 		this.legendRenderer.render(
 			mainG,
 			viewModel.legend,

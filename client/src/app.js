@@ -20,6 +20,7 @@ import urlmap from '#common/urlmap'
 import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 import { sayerror } from '../dom/sayerror'
 import { Menu } from '#dom/menu'
+import Disco from '#plots/disco/Disco.ts'
 
 /*
 exports a global function runproteinpaint()
@@ -1363,14 +1364,19 @@ async function launchDisco(arg, app) {
 		 * .dslabel: dataset label
 		 * .genome: genome name
 		 * .sample_id: sample id
+		 *
+		 * Optional in disco:{}
+		 * .centerText: string, usually sample id
 		 */
 		const vocabApi = (await import('#termdb/vocabulary')).vocabInit({
 			state: { genome: genomeObj.name, dslabel: arg.disco.dslabel }
 		})
 		const termdbConfig = await vocabApi.getTermdbConfig()
+		const overrides = { Disco: {} }
+		if (arg.disco?.centerText) overrides.Disco.centerText = arg.disco.centerText
 		await (
 			await import('#plots/plot.disco.js')
-		).default(termdbConfig, arg.disco.dslabel, { sample_id: arg.disco.sample_id }, app.holder, genomeObj)
+		).default(termdbConfig, arg.disco.dslabel, { sample_id: arg.disco.sample_id }, app.holder, genomeObj, overrides)
 		return
 	} else {
 		/** Used to parse custom data from the UI or runpp() */
