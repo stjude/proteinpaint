@@ -2,19 +2,16 @@ import { getCompInit, copyMerge, deepEqual } from '../rx/index.js'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { dofetch3 } from '#common/dofetch'
 import { getColors, plotColor } from '#shared/common.js'
-import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { line, max, rgb } from 'd3'
+import { rgb } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
 import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
-import { render } from '#src/block.mds2.vcf.plain'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 /*
 this
@@ -56,8 +53,7 @@ class singleCellPlot {
 			result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error) throw result.error
 		} catch (e) {
-			sayerror(div, e)
-			return
+			throw e
 		}
 
 		this.samples = result.samples
@@ -92,7 +88,7 @@ class singleCellPlot {
 				callback: () => this.setActiveTab(COLORBY_TAB)
 			},
 			{
-				label: 'Gene expression',
+				label: 'Gene Expression',
 				id: GENE_EXPRESSION_TAB,
 				active: activeTab == GENE_EXPRESSION_TAB,
 				callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
@@ -100,7 +96,7 @@ class singleCellPlot {
 		)
 		if (state.termdbConfig.queries?.singleCell?.DEgenes)
 			this.tabs.push({
-				label: 'Differential expression',
+				label: 'Differential Expression',
 				id: DIFFERENTIAL_EXPRESSION_TAB,
 				active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
@@ -119,8 +115,6 @@ class singleCellPlot {
 
 		const leftDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const controlsDiv = leftDiv.append('div').attr('class', 'pp-termdb-plot-controls')
-		const iconsDiv = leftDiv.append('div')
-		this.addZoomIcons(iconsDiv)
 
 		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		this.tabsComp = await new Tabs({
@@ -159,7 +153,6 @@ class singleCellPlot {
 
 		this.dom = {
 			header: this.opts.header,
-			iconsDiv,
 			headerDiv,
 			showDiv,
 			mainDiv,
@@ -386,27 +379,27 @@ class singleCellPlot {
 		}
 	}
 
-	addZoomIcons(iconsDiv) {
+	addZoomIcons(iconsDiv, plot) {
 		const zoomInDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
-				this.particles.position.z += 0.1
+				plot.particles.position.z += 0.1
 			},
-			title: 'Zoom in'
+			title: 'Zoom in. You can also zoom in moving the mouse wheel with the Ctrl key pressed.'
 		})
 		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
-				this.particles.position.z -= 0.1
+				plot.particles.position.z -= 0.1
 			},
-			title: 'Zoom out'
+			title: 'Zoom out. You can also zoom out moving the mouse wheel with the Ctrl key pressed.'
 		})
 		const identityDiv = iconsDiv.append('div').style('margin', '20px')
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
-				this.particles.position.z = 0
-				this.particles.position.x = 0
-				this.particles.position.y = 0
+				plot.particles.position.z = 0
+				plot.particles.position.x = 0
+				plot.particles.position.y = 0
 			},
 			title: 'Reset plot to defaults'
 		})
@@ -536,6 +529,14 @@ class singleCellPlot {
 				chartType: 'singleCellPlot',
 				settingsKey: 'showGrid',
 				title: 'Show grid'
+			},
+			{
+				label: 'Show no expression',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: 'showNoExpCells',
+				title: 'Show cells without expression'
 			}
 		]
 
@@ -715,8 +716,12 @@ class singleCellPlot {
 
 		//used to plot the cells
 		this.initAxes(plot)
+		const plotDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const leftDiv = plotDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		plot.plotDiv = plotDiv.append('div').style('overflow', 'hidden').style('display', 'inline-block')
 
-		plot.plotDiv = this.dom.plotsDiv.append('div').style('overflow', 'hidden').style('display', 'inline-block')
+		this.addZoomIcons(leftDiv, plot)
+
 		//.style('flex-grow', 1)
 		plot.headerDiv = plot.plotDiv.append('div')
 		plot.headerDiv.append('label').text(plot.name).style('font-size', '1.2em').style('margin-right', '10px')
@@ -735,16 +740,14 @@ class singleCellPlot {
 			if (values.length == 0) {
 				plot.colorGenerator = null
 			} else {
-				if (this.state.config.min) {
-					min = this.state.config.min
-					max = this.state.config.max
-				} else {
+				if (plot.min) min = plot.min
+				if (plot.max) max = plot.max
+				if (!min || !max) {
 					;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
-					min = 0 //force min to start in cero
+					if (!plot.min) plot.min = 0 //force min to start in 0
+					if (!plot.max) plot.max = max
 				}
-				plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
-				plot.min = min
-				plot.max = max
+				plot.colorGenerator = d3Linear().domain([plot.min, plot.max]).range([startColor, stopColor])
 			}
 		}
 		this.renderLargePlotThree(plot)
@@ -753,16 +756,19 @@ class singleCellPlot {
 
 	getOpacity(d) {
 		if (this.config.hiddenClusters.includes(d.category)) return 0
-
+		if (this.colorByGene && this.state.config.gene && !d.geneExp)
+			return this.settings.showNoExpCells ? this.settings.opacity : 0
 		return this.settings.opacity
 	}
 
 	getColor(d, plot) {
-		if (!this.colorByGene || !this.state.config.gene) return plot.colorMap[d.category]
-		else if (this.colorByGene) {
-			if (!d.geneExp) return noExpColor
-			else return plot.colorGenerator(d.geneExp)
+		let color = plot.colorMap[d.category]
+		if (this.colorByGene && this.state.config.gene) {
+			if (!d.geneExp) color = noExpColor
+			else if (d.geneExp > plot.max) color = plot.colorGenerator(plot.max)
+			else color = plot.colorGenerator(d.geneExp)
 		}
+		return color
 	}
 
 	handleZoom(e, plot) {
@@ -900,21 +906,33 @@ class singleCellPlot {
 			barheight: 20,
 			colors,
 			domain: [plot.min, plot.max],
+
 			position: '0, 20',
 			ticks: 4,
 			tickSize: 5,
 			topTicks: true,
-			cutoffMode: this.state.config.min || this.state.config.max ? 'fixed' : 'auto',
 			setColorsCallback: (val, idx) => {
 				this.changeGradientColor(plot, val, idx)
+			},
+			numericInputs: {
+				cutoffMode: plot.cutoffMode || 'auto',
+				defaultPercentile: plot.percentile || 0.95,
+				callback: obj => {
+					plot.cutoffMode = obj.cutoffMode
+					if (obj.cutoffMode == 'auto') {
+						plot.min = null
+						plot.max = null
+					} else if (obj.cutoffMode == 'fixed') {
+						plot.min = obj.min
+						plot.max = obj.max
+					} else if (obj.cutoffMode == 'percentile') {
+						plot.percentile = obj.percentile
+						//after doing this the color scale needs to be repainted as is not aware of the new max value
+						plot.max = plot.cells[Math.floor(plot.cells.length * obj.percentile)]?.geneExp
+					}
+					this.renderPlot(plot)
+				}
 			}
-			// setMinMaxCallback: obj => {
-			// 	if (obj.cutoffMode == 'auto') {
-			// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: null, max: null } })
-			// 	} else if (obj.cutoffMode == 'fixed') {
-			// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: obj.min, max: obj.max } })
-			// 	}
-			// }
 		})
 		colorScale.updateScale()
 
@@ -1082,12 +1100,16 @@ class singleCellPlot {
 	}
 
 	renderLargePlotThree = async function (plot) {
-		plot.canvas = plot.plotDiv.append('canvas').node()
-		plot.canvas.width = this.settings.svgw
-		plot.canvas.height = this.settings.svgh
+		if (!plot.canvas) {
+			plot.canvas = plot.plotDiv.append('canvas').node()
+			plot.canvas.width = this.settings.svgw
+			plot.canvas.height = this.settings.svgh
+			plot.renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
+		}
+		const renderer = plot.renderer
+		renderer.clear()
 
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
-		const OrbitControls = await import('three/addons/controls/OrbitControls.js')
 
 		const fov = this.settings.threeFOV
 		const near = 0.1
@@ -1116,10 +1138,9 @@ class singleCellPlot {
 		})
 
 		const particles = new THREE.Points(geometry, material)
-		this.particles = particles
+		plot.particles = particles
 
 		scene.add(particles)
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
 		renderer.setSize(this.settings.svgw, this.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 
@@ -1231,6 +1252,7 @@ export function getDefaultSingleCellSettings() {
 		sampleSize: 1.5,
 		sampleSizeThree: 0.008,
 		threeFOV: 60,
-		opacity: 1
+		opacity: 1,
+		showNoExpCells: false
 	}
 }
