@@ -32,6 +32,10 @@ export type ExpressionInput = {
 	min_total_count: number
 	/** Type of storage file: HDF5 or text. Text will be deprecated in the future */
 	storage_type: 'HDF5' | 'text'
+	/** Confounding variable for DE analysis. Maybe string (Gender: Male/female) or number (Age). For now supporting 1 confounding variable. Later will add support for multiple confounding variables */
+	conf1?: number | string
+	/** Type of the confounding variable (categorical/float) */
+	conf1_type?: 'categorical' | 'float'
 }
 
 export type DEResponse = {
