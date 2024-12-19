@@ -930,7 +930,6 @@ class singleCellPlot {
 						plot.percentile = obj.percentile
 						//after doing this the color scale needs to be repainted as is not aware of the new max value
 						const index = Math.floor((plot.cells.length * obj.percentile) / 100)
-						console.log(index)
 						plot.max = plot.cells[index]?.geneExp
 					}
 					this.renderPlot(plot)
