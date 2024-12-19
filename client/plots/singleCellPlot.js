@@ -5,7 +5,7 @@ import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { extent, range, rgb, contours, geoIdentity, geoPath } from 'd3'
+import { extent, range, rgb, contours, geoIdentity, geoPath, create } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
@@ -1159,7 +1159,6 @@ class singleCellPlot {
 		// 	const point = getMouseNDC(event, rect)
 		// 	console.log(point)
 		// })
-		console.log(plot)
 		if (plot.expCells.length > 0) {
 			const xCoords = plot.expCells.map(c => plot.xAxisScale(c.x))
 			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
@@ -1178,10 +1177,8 @@ class singleCellPlot {
 
 	async renderContourMap(scene, umapCoords, geneExpression, gridSize, plot) {
 		const SVGLoader = await import('three/addons/loaders/SVGLoader.js')
-		console.log('umapCoords', umapCoords, geneExpression)
 		let densityMap = createDensityMap(umapCoords, geneExpression, gridSize, plot)
 		densityMap = normalizeDensityMap(densityMap)
-		console.log('densityMap', densityMap)
 		const data = densityMap.flat()
 		const thresholds = 5
 		const width = this.settings.svgw
@@ -1193,22 +1190,34 @@ class singleCellPlot {
 		const contoursData = contoursFunc(data)
 		const projection = geoIdentity().fitSize([width, height], contoursData[0])
 		const path = geoPath().projection(projection)
-		const svg = plot.plotDiv.append('svg').attr('width', width).attr('height', height).style('fill', 'white')
+		const svg = create('svg').attr('width', width).attr('height', height).style('fill', 'white')
 		svg.selectAll('path').data(contoursData).enter().append('path').attr('d', path).attr('stroke', 'black')
-		const loader = new SVGLoader.SVGLoader()
-		const svgString = svg.node().outerHTML
-		const paths = loader.parse(svgString).paths
-		const group = new THREE.Group()
+		// Serialize the SVG element
+		const svgString = new XMLSerializer().serializeToString(svg.node())
 
-		for (let i = 0; i < paths.length; i++) {
-			for (const shape of paths[i].toShapes()) {
-				const geometry = new THREE.ShapeGeometry(shape)
-				const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }) // Green color
-				const mesh = new THREE.Mesh(geometry, material)
-				group.add(mesh)
-			}
-		}
-		scene.add(group)
+		// Encode the SVG string
+		const encodedSvg = encodeURIComponent(svgString)
+
+		// Create the data URL
+		const imageUrl = 'data:image/svg+xml;charset=utf-8,' + encodedSvg
+
+		const loader = new THREE.TextureLoader()
+		loader.load(imageUrl, texture => {
+			// Create a plane geometry
+			const geometry = new THREE.PlaneGeometry(2, 2)
+
+			// Create a material using the loaded texture
+			const material = new THREE.MeshBasicMaterial({ map: texture })
+
+			// Create a mesh with the geometry and material
+			const plane = new THREE.Mesh(geometry, material)
+
+			// Position the plane
+			plane.position.z = 0 // Adjust z-position as needed
+
+			// Add the plane to the scene
+			scene.add(plane)
+		})
 	}
 
 	renderThreeGrid(scene) {
