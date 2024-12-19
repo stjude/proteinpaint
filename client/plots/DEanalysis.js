@@ -743,7 +743,11 @@ async function runDEanalysis(self) {
 		min_total_count: self.settings.min_total_count,
 		method: self.settings.method
 	}
-	if (self.config.term) input.tw = self.config.term
+	if (self.config.term) {
+		input.tw = self.config.term
+		self.settings.method = 'edgeR' // When adjustment of confounding variables is selected, the method should always be a parmetric method such as edgeR
+		input.method = 'edgeR'
+	}
 	const output = await dofetch3('DEanalysis', {
 		body: input
 	})
