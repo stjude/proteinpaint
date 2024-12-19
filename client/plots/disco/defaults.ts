@@ -7,6 +7,7 @@ export default function discoDefaults(overrides = {}): Settings {
 		downloadImgName: 'disco.plot',
 
 		Disco: {
+			centerText: null,
 			cnvCapping: 5,
 			isOpen: false,
 			prioritizeGeneLabelsByGeneSets: false,

@@ -76,7 +76,8 @@
                 "disco": {
                     "dslabel": "GDC",
                     "genome": "hg38",
-                    "sample_id": "TCGA-85-7710-01A"
+                    "sample_id": "TCGA-85-7710-01A",
+                    "centerText": "TCGA-85-7710-01A"
                 }
             },
             "testSpec": {
