@@ -493,7 +493,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 					const sessionStart = activeSession?.time || 0
 					// support a dataset-specific override to maxSessionAge
 					const maxAge = cred.maxSessionAge || maxSessionAge
-					console.log(494, dslabelPattern, [maxAge, cred.maxSessionAge, maxSessionAge], cred)
 					const currTime = Date.now()
 					const insession =
 						// Previously, all requests to `/genomes` is assumed to originate from a "landing page"
