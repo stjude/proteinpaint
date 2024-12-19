@@ -33,6 +33,7 @@ const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
 
 const noExpColor = '#F5F5F5' //lightGray
+const maxCells = 50000
 
 class singleCellPlot {
 	constructor() {
@@ -545,7 +546,8 @@ class singleCellPlot {
 				title: 'Show cells without expression'
 			}
 		]
-		if (this.colorByGene && this.state.config.gene)
+		//if more than 50K cells do not allow contour as it may fail, excludes fetalCerebellum
+		if (this.colorByGene && this.state.config.gene && !this.maxCellsExceeded)
 			inputs.push({
 				label: 'Show contour map',
 				boxLabel: '',
@@ -599,7 +601,7 @@ class singleCellPlot {
 			this.data = await this.getData()
 			if (this.data.error) throw this.data.error
 			this.dom.loadingDiv.style('display', 'none')
-			this.renderPlots(this.data)
+			await this.renderPlots(this.data)
 			await this.setControls()
 			if (this.dom.header)
 				this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} single cell data`)
@@ -693,6 +695,7 @@ class singleCellPlot {
 			this.plots.push(plot)
 			const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
 			plot.cells = [...plot.noExpCells, ...expCells]
+			if (plot.cells.length > maxCells) this.maxCellsExceeded = true
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
 		}
@@ -1122,9 +1125,9 @@ class singleCellPlot {
 			plot.canvas.width = this.settings.svgw
 			plot.canvas.height = this.settings.svgh
 			plot.renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
-		}
+		} else plot.renderer.clear()
+
 		const renderer = plot.renderer
-		renderer.clear()
 
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 
@@ -1193,7 +1196,6 @@ class singleCellPlot {
 	}
 
 	async renderContourMap(scene, umapCoords, geneExpression, gridSize, plot) {
-		const SVGLoader = await import('three/addons/loaders/SVGLoader.js')
 		let densityMap = createDensityMap(umapCoords, geneExpression, gridSize, plot)
 		densityMap = normalizeDensityMap(densityMap)
 		const data = densityMap.flat()
