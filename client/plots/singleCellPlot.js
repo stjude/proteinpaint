@@ -684,6 +684,12 @@ class singleCellPlot {
 	}
 
 	renderPlot(plot) {
+		if (!plot.plotDiv) {
+			const plotDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+			const leftDiv = plotDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+			plot.plotDiv = plotDiv.append('div').style('overflow', 'hidden').style('display', 'inline-block')
+			this.addZoomIcons(leftDiv, plot)
+		}
 		const colorMap = {}
 		let clusters = new Set(plot.cells.map(c => c.category))
 
@@ -716,11 +722,6 @@ class singleCellPlot {
 
 		//used to plot the cells
 		this.initAxes(plot)
-		const plotDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const leftDiv = plotDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		plot.plotDiv = plotDiv.append('div').style('overflow', 'hidden').style('display', 'inline-block')
-
-		this.addZoomIcons(leftDiv, plot)
 
 		//.style('flex-grow', 1)
 		plot.headerDiv = plot.plotDiv.append('div')
@@ -916,7 +917,7 @@ class singleCellPlot {
 			},
 			numericInputs: {
 				cutoffMode: plot.cutoffMode || 'auto',
-				defaultPercentile: plot.percentile || 0.95,
+				defaultPercentile: plot.percentile || 95,
 				callback: obj => {
 					plot.cutoffMode = obj.cutoffMode
 					if (obj.cutoffMode == 'auto') {
@@ -928,7 +929,9 @@ class singleCellPlot {
 					} else if (obj.cutoffMode == 'percentile') {
 						plot.percentile = obj.percentile
 						//after doing this the color scale needs to be repainted as is not aware of the new max value
-						plot.max = plot.cells[Math.floor(plot.cells.length * obj.percentile)]?.geneExp
+						const index = Math.floor((plot.cells.length * obj.percentile) / 100)
+						console.log(index)
+						plot.max = plot.cells[index]?.geneExp
 					}
 					this.renderPlot(plot)
 				}
