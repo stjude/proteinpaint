@@ -53,8 +53,7 @@ class singleCellPlot {
 			result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error) throw result.error
 		} catch (e) {
-			sayerror(div, e)
-			return
+			throw e
 		}
 
 		this.samples = result.samples
@@ -538,15 +537,6 @@ class singleCellPlot {
 				chartType: 'singleCellPlot',
 				settingsKey: 'showNoExpCells',
 				title: 'Show cells without expression'
-			},
-			{
-				label: 'Max expression percentile',
-				type: 'number',
-				chartType: 'singleCellPlot',
-				settingsKey: 'maxGeneExpPercentile',
-				title: 'Max gene expression percentile, by default 0.95, representing the 95th percentile',
-				min: 0.01,
-				max: 0.99
 			}
 		]
 
@@ -687,7 +677,6 @@ class singleCellPlot {
 		for (const plot of result.plots) {
 			this.plots.push(plot)
 			const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
-			plot.maxGeneExp = expCells[Math.floor(expCells.length * this.settings.maxGeneExpPercentile)]?.geneExp
 			plot.cells = [...plot.noExpCells, ...expCells]
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
@@ -751,16 +740,14 @@ class singleCellPlot {
 			if (values.length == 0) {
 				plot.colorGenerator = null
 			} else {
-				if (this.state.config.min) {
-					min = this.state.config.min
-					max = this.state.config.max
-				} else {
+				if (plot.min) min = plot.min
+				if (plot.max) max = plot.max
+				if (!min || !max) {
 					;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
-					min = 0 //force min to start in cero
+					if (!plot.min) plot.min = 0 //force min to start in 0
+					if (!plot.max) plot.max = max
 				}
-				plot.colorGenerator = d3Linear().domain([min, plot.maxGeneExp]).range([startColor, stopColor])
-				plot.min = min
-				plot.max = max
+				plot.colorGenerator = d3Linear().domain([plot.min, plot.max]).range([startColor, stopColor])
 			}
 		}
 		this.renderLargePlotThree(plot)
@@ -775,12 +762,13 @@ class singleCellPlot {
 	}
 
 	getColor(d, plot) {
-		if (!this.colorByGene || !this.state.config.gene) return plot.colorMap[d.category]
-		else if (this.colorByGene && this.state.config.gene) {
-			if (!d.geneExp) return noExpColor
-			if (d.geneExp > plot.maxGeneExp) return plot.colorGenerator(plot.maxGeneExp)
-			else return plot.colorGenerator(d.geneExp)
+		let color = plot.colorMap[d.category]
+		if (this.colorByGene && this.state.config.gene) {
+			if (!d.geneExp) color = noExpColor
+			else if (d.geneExp > plot.max) color = plot.colorGenerator(plot.max)
+			else color = plot.colorGenerator(d.geneExp)
 		}
+		return color
 	}
 
 	handleZoom(e, plot) {
@@ -918,21 +906,33 @@ class singleCellPlot {
 			barheight: 20,
 			colors,
 			domain: [plot.min, plot.max],
+
 			position: '0, 20',
 			ticks: 4,
 			tickSize: 5,
 			topTicks: true,
-			cutoffMode: this.state.config.min || this.state.config.max ? 'fixed' : 'auto',
 			setColorsCallback: (val, idx) => {
 				this.changeGradientColor(plot, val, idx)
+			},
+			numericInputs: {
+				cutoffMode: plot.cutoffMode || 'auto',
+				defaultPercentile: plot.percentile || 0.95,
+				callback: obj => {
+					plot.cutoffMode = obj.cutoffMode
+					if (obj.cutoffMode == 'auto') {
+						plot.min = null
+						plot.max = null
+					} else if (obj.cutoffMode == 'fixed') {
+						plot.min = obj.min
+						plot.max = obj.max
+					} else if (obj.cutoffMode == 'percentile') {
+						plot.percentile = obj.percentile
+						//after doing this the color scale needs to be repainted as is not aware of the new max value
+						plot.max = plot.cells[Math.floor(plot.cells.length * obj.percentile)]?.geneExp
+					}
+					this.renderPlot(plot)
+				}
 			}
-			// setMinMaxCallback: obj => {
-			// 	if (obj.cutoffMode == 'auto') {
-			// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: null, max: null } })
-			// 	} else if (obj.cutoffMode == 'fixed') {
-			// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { min: obj.min, max: obj.max } })
-			// 	}
-			// }
 		})
 		colorScale.updateScale()
 
@@ -1100,12 +1100,16 @@ class singleCellPlot {
 	}
 
 	renderLargePlotThree = async function (plot) {
-		plot.canvas = plot.plotDiv.append('canvas').node()
-		plot.canvas.width = this.settings.svgw
-		plot.canvas.height = this.settings.svgh
+		if (!plot.canvas) {
+			plot.canvas = plot.plotDiv.append('canvas').node()
+			plot.canvas.width = this.settings.svgw
+			plot.canvas.height = this.settings.svgh
+			plot.renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
+		}
+		const renderer = plot.renderer
+		renderer.clear()
 
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
-		const OrbitControls = await import('three/addons/controls/OrbitControls.js')
 
 		const fov = this.settings.threeFOV
 		const near = 0.1
@@ -1137,7 +1141,6 @@ class singleCellPlot {
 		plot.particles = particles
 
 		scene.add(particles)
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
 		renderer.setSize(this.settings.svgw, this.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 
@@ -1250,7 +1253,6 @@ export function getDefaultSingleCellSettings() {
 		sampleSizeThree: 0.008,
 		threeFOV: 60,
 		opacity: 1,
-		maxGeneExpPercentile: 0.95,
 		showNoExpCells: false
 	}
 }
