@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - brainImaging: enable divideBy and overlay with geneVariant terms.
 - barchart: adding a checkbox for performing multiple testing correction
+- Disco plot: users are able to change the cnv min and max as well as percentile from the color scale in the legend.
 
 
 ## 2.93.0
