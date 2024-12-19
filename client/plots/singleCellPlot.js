@@ -1159,12 +1159,13 @@ class singleCellPlot {
 		// 	const point = getMouseNDC(event, rect)
 		// 	console.log(point)
 		// })
+		console.log(plot)
 		if (plot.expCells.length > 0) {
 			const xCoords = plot.expCells.map(c => plot.xAxisScale(c.x))
 			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
-			const umapCoords = xCoords.map((x, i) => [x, yCoords[i]])
+			const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
 			const geneExpression = plot.expCells.map(c => c.geneExp)
-			this.renderContourMap(scene, umapCoords, geneExpression, 30, material, plot)
+			this.renderContourMap(scene, umapCoords, geneExpression, 30, plot)
 		}
 		const self = this
 		function animate() {
@@ -1175,52 +1176,39 @@ class singleCellPlot {
 		if (this.settings.showGrid) this.renderThreeGrid(scene)
 	}
 
-	renderContourMap(scene, umapCoords, geneExpression, gridSize, material, plot) {
-		const levels = [0.2, 0.4, 0.6, 0.8]
-		let [minX, minY, maxX, maxY, densityMap] = createDensityMap(umapCoords, geneExpression, gridSize, plot)
+	async renderContourMap(scene, umapCoords, geneExpression, gridSize, plot) {
+		const SVGLoader = await import('three/addons/loaders/SVGLoader.js')
+		console.log('umapCoords', umapCoords, geneExpression)
+		let densityMap = createDensityMap(umapCoords, geneExpression, gridSize, plot)
 		densityMap = normalizeDensityMap(densityMap)
-		console.log(densityMap)
+		console.log('densityMap', densityMap)
 		const data = densityMap.flat()
 		const thresholds = 5
 		const width = this.settings.svgw
 		const height = this.settings.svgh
-		console.log(width, height)
 		const [min, max] = extent(data)
 		const contoursFunc = contours()
 			.size([gridSize, gridSize])
 			.thresholds(range(min, max, (max - min) / thresholds))
 		const contoursData = contoursFunc(data)
-		console.log(contoursData)
 		const projection = geoIdentity().fitSize([width, height], contoursData[0])
 		const path = geoPath().projection(projection)
-		console.log(path)
 		const svg = plot.plotDiv.append('svg').attr('width', width).attr('height', height).style('fill', 'white')
-		const paths = svg
-			.selectAll('path')
-			.data(contoursData)
-			.enter()
-			.append('path')
-			.attr('d', path)
-			.attr('stroke', 'black')
-		return
-		const contourMaterial = new THREE.LineBasicMaterial({ color: 0x000000 })
+		svg.selectAll('path').data(contoursData).enter().append('path').attr('d', path).attr('stroke', 'black')
+		const loader = new SVGLoader.SVGLoader()
+		const svgString = svg.node().outerHTML
+		const paths = loader.parse(svgString).paths
+		const group = new THREE.Group()
 
-		for (const contour of contours) {
-			const vertices = []
-			// Convert contour points to Three.js Vector3 objects
-			for (const point of contour) {
-				vertices.push(point.x, point.y, 0) // Assuming 2D contours
+		for (let i = 0; i < paths.length; i++) {
+			for (const shape of paths[i].toShapes()) {
+				const geometry = new THREE.ShapeGeometry(shape)
+				const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }) // Green color
+				const mesh = new THREE.Mesh(geometry, material)
+				group.add(mesh)
 			}
-			//vertices.push(contour[0].x, contour[0].y, 0) // Close the contour
-			const contourGeometry = new THREE.BufferGeometry()
-			contourGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-
-			const contourParticles = new THREE.Points(contourGeometry, material)
-
-			const line = new THREE.Line(contourGeometry, contourMaterial)
-			scene.add(line)
-			scene.add(contourParticles)
 		}
+		scene.add(group)
 	}
 
 	renderThreeGrid(scene) {
@@ -1292,13 +1280,11 @@ function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
 		const cellY = Math.floor((y - minY) / cellHeight)
 
 		if (cellX >= 0 && cellX < gridSize && cellY >= 0 && cellY < gridSize) {
-			if (geneExpression[k] < plot.maxGeneExp)
-				//remove outliers
-				densityMap[cellY][cellX] += geneExpression[k]
+			densityMap[cellY][cellX] += geneExpression[k]
 		}
 	}
 
-	return [minX, minY, maxX, maxY, densityMap]
+	return densityMap
 }
 
 function normalizeDensityMap(densityMap) {
