@@ -72,7 +72,7 @@ param{}
 	const group1names = [] as string[]
 	//let group1names_not_found = 0
 	//const group1names_not_found_list = []
-	const conf1 = []
+	const conf1_group1 = []
 	for (const s of param.samplelst.groups[0].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
@@ -80,7 +80,7 @@ param{}
 		if (q.allSampleSet.has(n)) {
 			group1names.push(n)
 			if (param.tw) {
-				conf1.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+				conf1_group1.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
 			}
 		} else {
 			//group1names_not_found += 1
@@ -90,7 +90,7 @@ param{}
 	const group2names = [] as string[]
 	//let group2names_not_found = 0
 	//const group2names_not_found_list = []
-	const conf2 = []
+	const conf1_group2 = []
 	for (const s of param.samplelst.groups[1].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
@@ -98,7 +98,7 @@ param{}
 		if (q.allSampleSet.has(n)) {
 			group2names.push(n)
 			if (param.tw) {
-				conf2.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+				conf1_group2.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
 			}
 		} else {
 			//group2names_not_found += 1
@@ -131,7 +131,13 @@ param{}
 		storage_type: param.storage_type
 	} as ExpressionInput
 
+	if (param.tw) {
+		expression_input.conf1 = [...conf1_group1, ...conf1_group2]
+		expression_input.conf1_type = param.tw.term.type
+	}
+
 	//console.log('expression_input:', expression_input)
+	//console.log("param.method:",param.method)
 	//fs.writeFile('test.txt', JSON.stringify(expression_input), function(err) {
 	//    // For catching input to rust pipeline, in case of an error
 	//    if (err) return console.log(err)
@@ -147,7 +153,6 @@ param{}
 		console.log('Time taken to run edgeR:', time2 - time1, 'ms')
 		for (const line of r_output.split('\n')) {
 			if (line.startsWith('adjusted_p_values:')) {
-				//console.log("line1:", line.replace('adjusted_p_values:', ''))
 				result = JSON.parse(line.replace('adjusted_p_values:', ''))
 			} else {
 				//console.log("line:", line)
