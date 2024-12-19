@@ -40,12 +40,23 @@ export class ColorScaleMenu {
 				this.tip.clear().showunder(barG.node())
 				const selectDiv = this.tip.d.append('div').style('padding', '2px')
 				const table = this.tip.d.append('table').style('margin', 'auto')
-				const promptRow = table
+
+				const submitPromptCell = table
+					.append('tr')
+					.append('td')
+					.attr('colspan', '2')
+					.style('opacity', 0.65)
+					.style('font-size', '0.7em')
+					.text('Press ENTER to submit')
+					.style('display', 'none')
+
+				const minMaxPromptRow = table
 					.append('tr')
 					.style('text-align', 'center')
 					.style('display', this.setColorsCallback ? 'table-row' : 'none')
-				promptRow.append('td').text('Min').style('padding-right', '10px')
-				promptRow.append('td').text('Max')
+				minMaxPromptRow.append('td').text('Min').style('padding-right', '10px')
+				minMaxPromptRow.append('td').text('Max')
+
 				if (this.numInputCallback) {
 					const options = [
 						{ label: 'Automatic', value: 'auto', selected: this.cutoffMode == 'auto' },
@@ -58,25 +69,7 @@ export class ColorScaleMenu {
 							selected: this.cutoffMode == 'percentile'
 						})
 					}
-					const select = selectDiv.append('select').on('change', async () => {
-						this.cutoffMode = select.node()!.value as CutoffMode
-						if (!this.default) throw new Error('Auto values not set for #dom/ColorScale.')
-						if (this.cutoffMode == 'auto') {
-							promptRow.style('display', this.setColorsCallback ? 'table-row' : 'none')
-							this.domain[0] = this.default.min
-							this.domain[this.domain.length - 1] = this.default.max
-							this.percentile = this.default.percentile
-							await this.numInputCallback!({
-								cutoffMode: this.cutoffMode,
-								min: this.default.min,
-								max: this.default.max
-							})
-							this.tip.hide()
-						}
-						percentRow.style('display', this.cutoffMode == 'percentile' ? '' : 'none')
-						promptRow.style('display', this.setColorsCallback || this.cutoffMode == 'fixed' ? 'table-row' : 'none')
-						minMaxRow.style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
-					})
+					const select = selectDiv.append('select')
 
 					select
 						.selectAll('option')
@@ -87,15 +80,48 @@ export class ColorScaleMenu {
 						.property('value', d => d.value)
 						.property('selected', d => d.selected)
 
-					const percentRow = selectDiv
-						.append('div')
+					const percentRow = table
+						.append('tr')
 						.style('padding', '5px')
+						.append('td')
+						.attr('colspan', '2')
 						.style('display', this.cutoffMode == 'percentile' ? '' : 'none')
-					if (this?.percentile) this.appendValueInput(percentRow, this.percentile)
 
-					const minMaxRow = table.append('tr').style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
-					this.appendValueInput(minMaxRow.append('td'), 0)
-					this.appendValueInput(minMaxRow.append('td'), this.domain.length - 1)
+					const percentInput = this.appendValueInput(percentRow, this.percentile || null)
+
+					const minMaxInputRow = table.append('tr').style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
+					const minInput = this.appendValueInput(minMaxInputRow.append('td'), 0)
+					this.appendValueInput(minMaxInputRow.append('td'), this.domain.length - 1)
+
+					select.on('change', async () => {
+						this.cutoffMode = select.node()!.value as CutoffMode
+						if (!this.default) throw new Error('Auto values not set for #dom/ColorScale.')
+						if (this.cutoffMode == 'auto') {
+							minMaxPromptRow.style('display', this.setColorsCallback ? 'table-row' : 'none')
+							this.domain[0] = this.default.min
+							this.domain[this.domain.length - 1] = this.default.max
+							this.percentile = this.default.percentile
+							await this.numInputCallback!({
+								cutoffMode: this.cutoffMode,
+								min: this.default.min,
+								max: this.default.max
+							})
+							this.tip.hide()
+						}
+						//Show min/max prompts for fixed mode and if user may change colors
+						minMaxPromptRow.style(
+							'display',
+							this.setColorsCallback || this.cutoffMode == 'fixed' ? 'table-row' : 'none'
+						)
+						//Show submit prompt for fixed and percentile mode
+						submitPromptCell.style('display', this.cutoffMode != 'auto' ? '' : 'none')
+						//Show min/max inputs for fixed mode and focus on the min input
+						minMaxInputRow.style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
+						if (this.cutoffMode == 'fixed') minInput.node().focus()
+						//Show and focus on the percentile input when mode is percentile
+						percentRow.style('display', this.cutoffMode == 'percentile' ? '' : 'none')
+						if (this.cutoffMode == 'percentile') percentInput.node().focus()
+					})
 				}
 				if (this.setColorsCallback) {
 					const colorRow = table.append('tr').style('text-align', 'center')
@@ -135,7 +161,8 @@ export class ColorScaleMenu {
 			})
 	}
 
-	appendValueInput = (elem: any, elemValue: number) => {
+	appendValueInput = (elem: any, elemValue: number | null) => {
+		if (elemValue == null) return
 		const valueInput = elem
 			.append('input')
 			.attr('type', 'number')
@@ -161,5 +188,6 @@ export class ColorScaleMenu {
 				await this.numInputCallback!(opts)
 				this.tip.hide()
 			})
+		return valueInput
 	}
 }
