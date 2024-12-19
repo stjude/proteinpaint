@@ -284,7 +284,7 @@ function setRenderers(self) {
 
 					if (term.type == 'geneVariant' && self.opts.handleGeneVariant) {
 						self.opts.handleGeneVariant(term)
-					} else if (isNonDictionaryType(term.type)) {
+					} else if (term.type && isNonDictionaryType(term.type)) {
 						self.app.dispatch({
 							type: 'app_refresh',
 							state: {
