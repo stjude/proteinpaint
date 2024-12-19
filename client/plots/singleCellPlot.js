@@ -5,7 +5,7 @@ import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { extent, max, rgb } from 'd3'
+import { extent, range, rgb, contours, geoIdentity, geoPath } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
@@ -1180,9 +1180,29 @@ class singleCellPlot {
 		let [minX, minY, maxX, maxY, densityMap] = createDensityMap(umapCoords, geneExpression, gridSize, plot)
 		densityMap = normalizeDensityMap(densityMap)
 		console.log(densityMap)
-
-		const contours = calculateContours(densityMap, levels, gridSize, minX, minY, maxX, maxY)
-		console.log(contours)
+		const data = densityMap.flat()
+		const thresholds = 5
+		const width = this.settings.svgw
+		const height = this.settings.svgh
+		console.log(width, height)
+		const [min, max] = extent(data)
+		const contoursFunc = contours()
+			.size([gridSize, gridSize])
+			.thresholds(range(min, max, (max - min) / thresholds))
+		const contoursData = contoursFunc(data)
+		console.log(contoursData)
+		const projection = geoIdentity().fitSize([width, height], contoursData[0])
+		const path = geoPath().projection(projection)
+		console.log(path)
+		const svg = plot.plotDiv.append('svg').attr('width', width).attr('height', height).style('fill', 'white')
+		const paths = svg
+			.selectAll('path')
+			.data(contoursData)
+			.enter()
+			.append('path')
+			.attr('d', path)
+			.attr('stroke', 'black')
+		return
 		const contourMaterial = new THREE.LineBasicMaterial({ color: 0x000000 })
 
 		for (const contour of contours) {
@@ -1302,60 +1322,6 @@ function normalizeDensityMap(densityMap) {
 	}
 
 	return normalizedMap
-}
-
-// Function to calculate contour lines (simplified)
-function calculateContours(densityMap, levels, gridSize, minX, minY, maxX, maxY) {
-	const contours = []
-	const dx = maxX - minX
-	const dy = maxY - minY
-	for (let level of levels) {
-		const contour = []
-		for (let i = 0; i < densityMap.length - 1; i++) {
-			//iterates y
-			for (let j = 0; j < densityMap[i].length - 1; j++) {
-				// Simplified corner checks (replace with more robust implementation)
-				const cell = [densityMap[i][j], densityMap[i + 1][j], densityMap[i + 1][j + 1], densityMap[i][j + 1]]
-
-				if (
-					(cell[0] <= level && cell[1] > level) ||
-					(cell[1] <= level && cell[2] > level) ||
-					(cell[2] <= level && cell[3] > level) ||
-					(cell[3] <= level && cell[0] > level)
-				) {
-					const y = minY + (i * dy) / gridSize
-					const x = minX + (j * dx) / gridSize
-					const y2 = minY + ((i + 1) * dy) / gridSize
-					const x2 = minX + ((j + 1) * dx) / gridSize
-					const p1 = { x, y } // Coordinates of the first corner point
-					const p2 = { x: x2, y: y2 } // Coordinates of the second corner point
-					const v1 = densityMap[i][j]
-					const v2 = densityMap[i + 1][j]
-
-					const intersectionPoint = interpolateEdge(p1, p2, v1, v2, level)
-					if (
-						intersectionPoint.x >= minX &&
-						intersectionPoint.x <= maxX &&
-						intersectionPoint.y >= minY &&
-						intersectionPoint.y <= maxY
-					)
-						contour.push(new THREE.Vector2(intersectionPoint.x, intersectionPoint.y))
-				}
-			}
-		}
-		contours.push(contour)
-	}
-
-	return contours
-}
-
-function interpolateEdge(p1, p2, v1, v2, contourLevel) {
-	if (v1 == v2) return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }
-	const t = (contourLevel - v1) / (v2 - v1)
-	return {
-		x: p1.x + t * (p2.x - p1.x),
-		y: p1.y + t * (p2.y - p1.y)
-	}
 }
 
 // Function to get mouse position in normalized device coordinates (-1 to +1)
