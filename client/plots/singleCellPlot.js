@@ -548,25 +548,36 @@ class singleCellPlot {
 		]
 		//if more than 50K cells do not allow contour as it may fail, excludes fetalCerebellum
 		if (this.colorByGene && this.state.config.gene && !this.maxCellsExceeded) {
-			inputs.push(
-				{
-					label: 'Show contour map',
-					boxLabel: '',
-					type: 'checkbox',
-					chartType: 'singleCellPlot',
-					settingsKey: 'showContour',
-					title: 'Show contour map'
-				},
-				{
-					label: 'Contour grid size',
-					type: 'number',
-					chartType: 'singleCellPlot',
-					settingsKey: 'gridSize',
-					min: 5,
-					max: 50,
-					step: 5
-				}
-			)
+			inputs.push({
+				label: 'Show contour map',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: 'showContour',
+				title: 'Show contour map'
+			})
+			if (this.settings.showContour) {
+				inputs.push(
+					{
+						label: 'Contour grid size',
+						type: 'number',
+						chartType: 'singleCellPlot',
+						settingsKey: 'contourGridSize',
+						min: 5,
+						max: 50,
+						step: 5
+					},
+					{
+						label: 'Contour thresholds',
+						type: 'number',
+						chartType: 'singleCellPlot',
+						settingsKey: 'contourThresholds',
+						min: 3,
+						max: 10,
+						step: 1
+					}
+				)
+			}
 		}
 
 		this.components = {
@@ -1207,11 +1218,11 @@ class singleCellPlot {
 	}
 
 	async renderContourMap(scene, umapCoords, geneExpression, plot) {
-		const gridSize = this.settings.gridSize
+		const gridSize = this.settings.contourGridSize
 		let densityMap = createDensityMap(umapCoords, geneExpression, gridSize, plot)
 		densityMap = normalizeDensityMap(densityMap)
 		const data = densityMap.flat()
-		const thresholds = 5
+		const thresholds = this.settings.contourThresholds
 		const width = this.settings.svgw
 		const height = this.settings.svgh
 		let [min, max] = extent(data)
@@ -1219,6 +1230,7 @@ class singleCellPlot {
 		const contoursFunc = contours()
 			.size([gridSize, gridSize])
 			.thresholds(range(min, max, (max - min) / thresholds))
+			.smooth(true)
 		const contoursData = contoursFunc(data)
 		const projection = geoIdentity().fitSize([width, height], contoursData[0])
 		const path = geoPath().projection(projection)
@@ -1415,6 +1427,7 @@ export function getDefaultSingleCellSettings() {
 		opacity: 1,
 		showNoExpCells: false,
 		showContour: false,
-		gridSize: 20
+		contourGridSize: 20,
+		contourThresholds: 5
 	}
 }
