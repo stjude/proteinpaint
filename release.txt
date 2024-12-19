@@ -1,1 +1,2 @@
-
+Fixes
+- clicking on a parent term in search results will no longer break and will allow user to view child terms
