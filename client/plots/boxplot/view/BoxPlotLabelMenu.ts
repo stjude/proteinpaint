@@ -3,6 +3,7 @@ import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { RenderedPlot } from './RenderedPlot'
 import { renderTable } from '#dom'
+import { rgb } from 'd3-color'
 
 export class BoxPlotLabelMenu {
 	constructor(plot: RenderedPlot, app: MassAppApi, interactions: BoxPlotInteractions, tip: Menu) {
@@ -52,6 +53,20 @@ export class BoxPlotLabelMenu {
 					.on('click', () => {
 						tip.hide()
 						opt.callback()
+					})
+			}
+			if (plot.color) {
+				tip.d
+					.append('div')
+					.style('padding', '5px 10px')
+					.style('display', 'inline-block')
+					.text('Color:')
+					.append('input')
+					.attr('type', 'color')
+					.property('value', rgb(plot.color).formatHex())
+					.on('change', event => {
+						interactions.updatePlotColor(plot, event.target.value)
+						tip.hide()
 					})
 			}
 		})
