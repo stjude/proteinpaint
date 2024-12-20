@@ -215,7 +215,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 				}
 			}
 		} else if (q.targetType == TermTypeGroups.DICTIONARY_VARIABLES) {
-			const _terms = await termdb.q.findTermByName(str, q.cohortStr, q.treeFilter, q.usecase)
+			const _terms = await termdb.q.findTermByName(str, q.cohortStr, q.usecase, q.treeFilter)
 
 			terms.push(..._terms.map(copy_term))
 		} else if (q.targetType == TermTypeGroups.METABOLITE_INTENSITY) {
