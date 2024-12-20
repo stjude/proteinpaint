@@ -68,6 +68,19 @@ export class BoxPlotInteractions {
 		})
 	}
 
+	/** Callback for color picker in plot(s) label menu */
+	updatePlotColor(plot: RenderedPlot, color: string) {
+		if (!plot.seriesId) return
+		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
+		const config = structuredClone(plotConfig)
+		config.term2.term.values[plot.seriesId].color = color
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config
+		})
+	}
+
 	clearDom() {
 		this.dom.error.style('padding', '').text('')
 		this.dom.plotTitle.text('')
