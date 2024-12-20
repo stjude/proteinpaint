@@ -335,7 +335,8 @@ for the case e.g. '0' is for "Not exposed", range.value can be either '0' or 0, 
 as it cannot be decided what client will provide
 so here need to allow both string and number as range.value
 */
-	if (!tvs.ranges) throw '.ranges{} missing'
+	if (!tvs.ranges)
+		throw `tvs.ranges{} missing, tvs.ranges = ${tvs.ranges} [server/src/termdb.filter.js get_numerical()]`
 	const values = [tvs.term.id]
 	// get term object
 	const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
