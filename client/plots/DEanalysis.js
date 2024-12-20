@@ -138,8 +138,7 @@ class DEanalysis {
 					chartType: 'DEanalysis',
 					usecase: { target: 'DEanalysis', detail: 'term' },
 					label: 'Confounding factors',
-					vocabApi: this.app.vocabApi,
-					menuOptions: 'edit'
+					vocabApi: this.app.vocabApi
 				}
 			)
 		}
