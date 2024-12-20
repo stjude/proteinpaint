@@ -115,8 +115,7 @@ y <- y[keep, keep.lib.sizes = FALSE]
 y <- calcNormFactors(y, method = "TMM")
 #print (y)
 
-paste0("conf1:",length(input$conf1))
-if (length(input$conf1) == 0) {
+if (length(input$conf1) == 0) { # No adjustment of confounding factors
       calculate_dispersion_time_start <- Sys.time()
       suppressWarnings({
         suppressMessages({
@@ -124,36 +123,45 @@ if (length(input$conf1) == 0) {
         })
       })
       calculate_dispersion_time_stop <- Sys.time()
-      print("Dispersion Time")
-      print (calculate_dispersion_time_stop - calculate_dispersion_time_start)
+      print (paste0("Dispersion Time:",calculate_dispersion_time_stop - calculate_dispersion_time_start))
       calculate_exact_test_time_start <- Sys.time()
       et <- exactTest(object = dge)
       calculate_exact_test_time_stop <- Sys.time()
-      print("Exact Time")
-      print(calculate_exact_test_time_stop - calculate_exact_test_time_start)
-      #print ("Time to calculate DE")
-      #print (calculate_DE_time_stop - calculate_DE_time_start)
-      #print (et)
-      logfc <- et$table$logFC
-      logcpm <- et$table$logCPM
-      pvalues <- et$table$PValue
-      genes_matrix <- str_split_fixed(unlist(et$genes),"\t",2)
-      geneids <- unlist(genes_matrix[,1])
-      genesymbols <- unlist(genes_matrix[,2])
-      adjust_p_values <- p.adjust(pvalues, method = "fdr")
-
-      output <- data.frame(geneids,genesymbols,logfc,-log10(pvalues),-log10(adjust_p_values))
-      names(output)[1] <- "gene_name"
-      names(output)[2] <- "gene_symbol"
-      names(output)[3] <- "fold_change"
-      names(output)[4] <- "original_p_value"
-      names(output)[5] <- "adjusted_p_value"
-      #write_csv(output,"DE_output.txt")
-      cat(paste0("adjusted_p_values:",toJSON(output)))
-} else { # Adjusting for confounding factors
+      print(paste0("Exact Time:",calculate_exact_test_time_stop - calculate_exact_test_time_start))
+} else { # Adjusting for confounding factors. This has been adapted based on the protocol described here: http://larionov.co.uk/deg_ebi_tutorial_2020/edger-analysis-1.html#calculate-degs
     design <- model.matrix(~ input$conf1 + conditions, data = y$samples)
-    print (design)
+    y <- estimateDisp(y, design)
+    # Fit the model
+    calculate_fit_time_start <- Sys.time()
+    fit <- glmQLFit(y, design)
+    calculate_fit_time_stop <- Sys.time()
+    print (paste0("Fit time:",calculate_fit_time_stop - calculate_fit_time_start))
+    # Calculate the test statistics
+    calculate_test_statistics_start <- Sys.time()
+    et <- glmQLFTest(fit, coef = ncol(design))
+    calculate_test_statistics_stop <- Sys.time()
+    print (paste0("Test statistics time:",calculate_test_statistics_stop - calculate_test_statistics_start))
 }
+#print ("Time to calculate DE")
+#print (calculate_DE_time_stop - calculate_DE_time_start)
+#print (et)
+logfc <- et$table$logFC
+logcpm <- et$table$logCPM
+pvalues <- et$table$PValue
+genes_matrix <- str_split_fixed(unlist(et$genes),"\t",2)
+geneids <- unlist(genes_matrix[,1])
+genesymbols <- unlist(genes_matrix[,2])
+adjust_p_values <- p.adjust(pvalues, method = "fdr")
+
+output <- data.frame(geneids,genesymbols,logfc,-log10(pvalues),-log10(adjust_p_values))
+names(output)[1] <- "gene_name"
+names(output)[2] <- "gene_symbol"
+names(output)[3] <- "fold_change"
+names(output)[4] <- "original_p_value"
+names(output)[5] <- "adjusted_p_value"
+#write_csv(output,"DE_output.txt")
+cat(paste0("adjusted_p_values:",toJSON(output)))
+
 #output_json <- toJSON(output)
 #print ("output_json")
 #output_file <- paste0(input$output_path,"/r_output.txt")
