@@ -637,7 +637,7 @@ function makeTermdbQueries(ds, id2term) {
 		return terms
 	}
 
-	q.findTermByName = async (searchStr, vocab, treeFilter = null, usecase = null) => {
+	q.findTermByName = async (searchStr, vocab, usecase = null, treeFilter = null) => {
 		searchStr = searchStr.toLowerCase() // convert to lowercase
 		// replace space with _ to match with id of terms
 		if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
