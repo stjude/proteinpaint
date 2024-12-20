@@ -20,7 +20,6 @@ import urlmap from '#common/urlmap'
 import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 import { sayerror } from '../dom/sayerror'
 import { Menu } from '#dom/menu'
-import Disco from '#plots/disco/Disco.ts'
 
 /*
 exports a global function runproteinpaint()
