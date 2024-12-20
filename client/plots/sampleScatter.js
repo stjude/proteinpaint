@@ -451,7 +451,37 @@ class Scatter {
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'fov'
-				})
+				}),
+					inputs.push({
+						label: 'Show contour map',
+						boxLabel: '',
+						type: 'checkbox',
+						chartType: 'sampleScatter',
+						settingsKey: 'showContour',
+						title: 'Show contour map'
+					})
+				if (this.settings.showContour) {
+					inputs.push(
+						{
+							label: 'Contour grid size',
+							type: 'number',
+							chartType: 'sampleScatter',
+							settingsKey: 'contourGridSize',
+							min: 5,
+							max: 100,
+							step: 5
+						},
+						{
+							label: 'Contour thresholds',
+							type: 'number',
+							chartType: 'sampleScatter',
+							settingsKey: 'contourThresholds',
+							min: 3,
+							max: 10,
+							step: 1
+						}
+					)
+				}
 			}
 			inputs.push(showAxes)
 
@@ -661,7 +691,11 @@ export function getDefaultScatterSettings() {
 		regression: 'None',
 		fov: 50,
 		threeSize: 0.003,
-		threeFOV: 70
+		threeFOV: 70,
+		//3D Plot settings
+		showContour: false,
+		contourGridSize: 50,
+		contourThresholds: 10
 	}
 }
 

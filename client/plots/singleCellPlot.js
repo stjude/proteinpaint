@@ -1197,9 +1197,8 @@ class singleCellPlot {
 		if (plot.expCells.length > 0 && this.settings.showContour) {
 			const xCoords = plot.expCells.map(c => plot.xAxisScale(c.x))
 			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
-			const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
 			const geneExpression = plot.expCells.map(c => c.geneExp)
-			await this.renderContourMap(scene, umapCoords, geneExpression, plot)
+			await this.renderContourMap(scene, xCoords, yCoords, geneExpression, plot)
 			let isDragging = false
 			window.addEventListener('mousedown', () => (isDragging = true))
 
@@ -1219,52 +1218,22 @@ class singleCellPlot {
 		if (this.settings.showGrid) this.renderThreeGrid(scene)
 	}
 
-	async renderContourMap(scene, umapCoords, geneExpression, plot) {
+	async renderContourMap(scene, xCoords, yCoords, zCoords, plot) {
+		const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
 		const gridSize = this.settings.contourGridSize
-		const densityMap = createDensityMap(umapCoords, geneExpression, gridSize, plot)
-		const data = densityMap.flat()
+		const densityMap = createDensityMap(umapCoords, zCoords, gridSize, plot)
 		const thresholds = this.settings.contourThresholds
 		const width = this.settings.svgw
 		const height = this.settings.svgh
-		let [min, max] = extent(data)
-
-		const contoursFunc = contours()
-			.size([gridSize, gridSize])
-			.thresholds(range(min, max, (max - min) / thresholds))
-			.smooth(true)
-		const contoursData = contoursFunc(data)
-		const projection = geoIdentity().fitSize([width, height], contoursData[0])
-		const path = geoPath().projection(projection)
-		const color = scaleSequential(interpolateTurbo).domain([min, max]).nice()
-		const svg = create('svg').attr('width', width).attr('height', height).style('fill', 'white')
-		svg
-			.selectAll('path')
-			.data(contoursData)
-			.enter()
-			.append('path')
-			.attr('d', path)
-			.attr('stroke', 'black')
-			.attr('fill', d => color(d.value))
-		// Serialize the SVG element
-		const svgString = new XMLSerializer().serializeToString(svg.node())
-
-		// Encode the SVG string
-		const encodedSvg = encodeURIComponent(svgString)
-
-		// Create the data URL
-		const imageUrl = 'data:image/svg+xml;charset=utf-8,' + encodedSvg
-
+		const imageUrl = getContourImage(densityMap, width, height, thresholds, gridSize, gridSize)
 		const loader = new THREE.TextureLoader()
 		loader.load(imageUrl, texture => {
 			// Create a plane geometry
 			const geometry = new THREE.PlaneGeometry(2, 2)
-
 			// Create a material using the loaded texture
 			const material = new THREE.MeshBasicMaterial({ map: texture })
-
 			// Create a mesh with the geometry and material
 			const plane = new THREE.Mesh(geometry, material)
-
 			// Position the plane
 			plane.position.z = 0 // Adjust z-position as needed
 			// Add the plane to the scene
@@ -1317,12 +1286,43 @@ class singleCellPlot {
 	}
 }
 
+export function getContourImage(densityMap, width, height, thresholds, gridSizeX, gridSizeY) {
+	const data = densityMap.flat()
+	let [min, max] = extent(data)
+	const contoursFunc = contours()
+		.size([gridSizeX, gridSizeY])
+		.thresholds(range(min, max, (max - min) / thresholds))
+		.smooth(true)
+	const contoursData = contoursFunc(data)
+	const projection = geoIdentity().fitSize([width, height], contoursData[0])
+	const path = geoPath().projection(projection)
+	const color = scaleSequential(interpolateTurbo).domain([min, max]).nice()
+	const svg = create('svg').attr('width', width).attr('height', height).style('fill', 'white')
+	svg
+		.selectAll('path')
+		.data(contoursData)
+		.enter()
+		.append('path')
+		.attr('d', path)
+		.attr('stroke', 'black')
+		.attr('fill', d => color(d.value))
+	// Serialize the SVG element
+	const svgString = new XMLSerializer().serializeToString(svg.node())
+
+	// Encode the SVG string
+	const encodedSvg = encodeURIComponent(svgString)
+
+	// Create the data URL
+	const imageUrl = 'data:image/svg+xml;charset=utf-8,' + encodedSvg
+	return imageUrl
+}
+
 // Assuming you have:
 // - umapCoords: Array of UMAP coordinates for each cell ([[x1, y1], [x2, y2], ...])
 // - geneExpression: Array of gene expression values for each cell ([value1, value2, ...])
 
 // Function to create a 2D density map
-function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
+export function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
 	const densityMap = []
 	const minX = Math.min(...umapCoords.map(coord => coord[0]))
 	const maxX = Math.max(...umapCoords.map(coord => coord[0]))
@@ -1345,7 +1345,9 @@ function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
 		const cellY = Math.floor((y - minY) / cellHeight)
 
 		if (cellX >= 0 && cellX < gridSize && cellY >= 0 && cellY < gridSize) {
-			densityMap[cellY][cellX] += geneExpression[k]
+			let geneExp = geneExpression[k]
+			if (geneExp > plot.max) geneExp = plot.max
+			densityMap[cellY][cellX] += geneExp
 		}
 	}
 
