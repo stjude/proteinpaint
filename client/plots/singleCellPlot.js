@@ -564,7 +564,7 @@ class singleCellPlot {
 						chartType: 'singleCellPlot',
 						settingsKey: 'contourGridSize',
 						min: 5,
-						max: 50,
+						max: 100,
 						step: 5
 					},
 					{
@@ -621,6 +621,7 @@ class singleCellPlot {
 			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 			this.legendRendered = false
 			this.showActiveTab()
+			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 			this.data = await this.getData()
 			if (this.data.error) throw this.data.error
 			this.dom.loadingDiv.style('display', 'none')
@@ -1182,12 +1183,9 @@ class singleCellPlot {
 
 		const particles = new THREE.Points(geometry, material)
 		plot.particles = particles
-
 		scene.add(particles)
 		renderer.setSize(this.settings.svgw, this.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
-
-		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
 
 		plot.canvas.addEventListener('mousewheel', event => {
 			if (!event.ctrlKey) return
@@ -1195,19 +1193,23 @@ class singleCellPlot {
 			particles.position.z -= event.deltaY / 500
 			plot.plane.position.z = particles.position.z
 		})
-		// plot.canvas.addEventListener('mousemove', event => {
-		// 	const rect = plot.canvas.getBoundingClientRect()
 
-		// 	const point = getMouseNDC(event, rect)
-		// 	console.log(point)
-		// })
 		if (plot.expCells.length > 0 && this.settings.showContour) {
 			const xCoords = plot.expCells.map(c => plot.xAxisScale(c.x))
 			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
 			const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
 			const geneExpression = plot.expCells.map(c => c.geneExp)
-			this.renderContourMap(scene, umapCoords, geneExpression, plot)
+			await this.renderContourMap(scene, umapCoords, geneExpression, plot)
+			let isDragging = false
+			window.addEventListener('mousedown', () => (isDragging = true))
+
+			plot.canvas.addEventListener('mousemove', event => {
+				if (!isDragging) return
+				plot.plane.position.set(particles.position.x, particles.position.y, particles.position.z)
+			})
 		}
+		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
+
 		const self = this
 		function animate() {
 			requestAnimationFrame(animate)
@@ -1265,9 +1267,9 @@ class singleCellPlot {
 
 			// Position the plane
 			plane.position.z = 0 // Adjust z-position as needed
-			plot.plane = plane
 			// Add the plane to the scene
 			scene.add(plane)
+			plot.plane = plane
 		})
 	}
 
@@ -1403,7 +1405,7 @@ export function getDefaultSingleCellSettings() {
 		opacity: 1,
 		showNoExpCells: false,
 		showContour: false,
-		contourGridSize: 40,
-		contourThresholds: 6
+		contourGridSize: 50,
+		contourThresholds: 10
 	}
 }
