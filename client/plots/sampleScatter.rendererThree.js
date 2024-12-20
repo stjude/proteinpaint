@@ -1,5 +1,5 @@
 import { rgb } from 'd3-color'
-import { roundValue } from '#shared/roundValue.js'
+import { createDensityMap, getContourImage } from './singleCellPlot.js'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import HelvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.json'
@@ -94,6 +94,29 @@ export function setRenderersThree(self) {
 	}
 
 	self.render3DSerie = async function (chart) {
+		const xAxisScale = chart.xAxisScale.range([0, 1])
+		const yAxisScale = chart.yAxisScale.range([0, 1])
+		const zAxisScale = chart.zAxisScale.range([0, 1])
+
+		const vertices = []
+		const colors = []
+		const xCoords = []
+		const yCoords = []
+		const zCoords = []
+		for (const sample of chart.data.samples) {
+			const opacity = self.getOpacity(sample)
+			if (opacity == 0) continue
+			let x = xAxisScale(sample.x)
+			let y = yAxisScale(sample.y)
+			let z = zAxisScale(sample.z)
+			xCoords.push(x)
+			yCoords.push(y)
+			zCoords.push(z)
+			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
+			vertices.push(x, y, z)
+			colors.push(color.r, color.g, color.b)
+		}
+
 		const OrbitControls = await import('three/addons/controls/OrbitControls.js')
 		chart.chartDiv.selectAll('*').remove()
 		self.canvas = self.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
@@ -114,67 +137,53 @@ export function setRenderersThree(self) {
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
-		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
-		controls.enableZoom = false
-		controls.update()
-		camera.position.set(1, 1, 2)
-		camera.lookAt(scene.position)
 
-		if (self.settings.showAxes) {
-			const axesHelper = new THREE.AxesHelper(1)
-			scene.add(axesHelper)
-			self.addLabels(scene, chart)
-		}
-		camera.updateMatrix()
 		const whiteColor = new THREE.Color('rgb(255,255,255)')
 		scene.background = whiteColor
+		if (self.settings.showContour) self.renderContourMap(scene, camera, xCoords, yCoords, zCoords, chart)
+		else {
+			camera.position.set(1, 1, 2)
+			camera.lookAt(scene.position)
+			camera.updateMatrix()
+			const controls = new OrbitControls.OrbitControls(camera, self.canvas)
+			controls.enableZoom = false
+			controls.update()
 
-		//const geometry = new THREE.SphereGeometry(0.003, 64)
-		const xAxisScale = chart.xAxisScale.range([0, 1])
-		const yAxisScale = chart.yAxisScale.range([0, 1])
-		const zAxisScale = chart.zAxisScale.range([0, 1])
+			if (self.settings.showAxes) {
+				const axesHelper = new THREE.AxesHelper(1)
+				scene.add(axesHelper)
+				self.addLabels(scene, chart)
+			}
 
-		const vertices = []
-		const colors = []
-		for (const sample of chart.data.samples) {
-			const opacity = self.getOpacity(sample)
-			if (opacity == 0) continue
-			let x = xAxisScale(sample.x)
-			let y = yAxisScale(sample.y)
-			let z = zAxisScale(sample.z)
-			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
-			vertices.push(x, y, z)
-			colors.push(color.r, color.g, color.b)
+			const geometry = new THREE.BufferGeometry()
+
+			geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+			geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+			const tex = getThreeCircle(256)
+			const material = new THREE.PointsMaterial({
+				size: self.settings.threeSize * 4,
+				sizeAttenuation: true,
+				transparent: true,
+				opacity: self.settings.opacity,
+				map: tex,
+				vertexColors: true
+			})
+
+			const particles = new THREE.Points(geometry, material)
+
+			scene.add(particles)
+			document.addEventListener('mousewheel', event => {
+				controls.enableZoom = event.ctrlKey
+			})
 		}
-
-		const geometry = new THREE.BufferGeometry()
-
-		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-		const tex = getThreeCircle(256)
-		const material = new THREE.PointsMaterial({
-			size: self.settings.threeSize * 4,
-			sizeAttenuation: true,
-			transparent: true,
-			opacity: self.settings.opacity,
-			map: tex,
-			vertexColors: true
-		})
-
-		const particles = new THREE.Points(geometry, material)
-
-		scene.add(particles)
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
 		renderer.setSize(self.settings.svgw, self.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 		//document.addEventListener( 'pointermove', onPointerMove );
-		document.addEventListener('mousewheel', event => {
-			controls.enableZoom = event.ctrlKey
-		})
+
 		function animate() {
 			requestAnimationFrame(animate)
 			// required if controls.enableDamping or controls.autoRotate are set to true
-			controls.update()
 
 			renderer.render(scene, camera)
 		}
@@ -224,6 +233,39 @@ export function setRenderersThree(self) {
 			})
 
 			return textGeo
+		}
+	}
+
+	self.renderContourMap = async function (scene, camera, xCoords, yCoords, zCoords, chart) {
+		camera.position.set(0, 0, 2)
+		camera.lookAt(scene.position)
+		const gridSize = this.settings.contourGridSize
+		const xyCoords = xCoords.map((x, i) => [x, yCoords[i]])
+		const densityMap = createDensityMap(xyCoords, zCoords, gridSize, chart)
+		const thresholds = this.settings.contourThresholds
+		const width = this.settings.svgw
+		const height = this.settings.svgh
+		const imageUrl = getContourImage(densityMap, width, height, thresholds, gridSize, gridSize)
+		const loader = new THREE.TextureLoader()
+		loader.load(imageUrl, texture => {
+			// Create a plane geometry
+			const geometry = new THREE.PlaneGeometry(2, 2)
+			// Create a material using the loaded texture
+			const material = new THREE.MeshBasicMaterial({ map: texture })
+			// Create a mesh with the geometry and material
+			const plane = new THREE.Mesh(geometry, material)
+			// Position the plane
+			plane.position.z = 0 // Adjust z-position as needed
+			// Add the plane to the scene
+			scene.add(plane)
+			chart.plane = plane
+		})
+
+		const vertices = []
+		for (let i = 0; i < xCoords.length; i++) {
+			const x = xCoords[i]
+			const y = yCoords[i]
+			vertices.push(x, y, 0)
 		}
 	}
 }
