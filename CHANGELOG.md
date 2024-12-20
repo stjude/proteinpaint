@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- clicking on a parent term in search results will no longer break and will allow user to view child terms
+
 
 ## 2.94.0
 
