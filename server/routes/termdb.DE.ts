@@ -1,4 +1,4 @@
-//import fs from 'fs'
+import fs from 'fs'
 import path from 'path'
 import type { DERequest, DEResponse, ExpressionInput, RouteApi } from '#types'
 import { diffExpPayload } from '#types/checkers'
@@ -29,7 +29,7 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
-			let term_results = []
+			let term_results: any = []
 			if (q.tw) {
 				const terms = [q.tw]
 				term_results = await getData(
@@ -72,7 +72,7 @@ param{}
 	const group1names = [] as string[]
 	//let group1names_not_found = 0
 	//const group1names_not_found_list = []
-	const conf1_group1 = []
+	const conf1_group1: (string | number)[] = []
 	for (const s of param.samplelst.groups[0].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
@@ -90,7 +90,7 @@ param{}
 	const group2names = [] as string[]
 	//let group2names_not_found = 0
 	//const group2names_not_found_list = []
-	const conf1_group2 = []
+	const conf1_group2: (string | number)[] = []
 	for (const s of param.samplelst.groups[1].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
@@ -138,10 +138,10 @@ param{}
 
 	//console.log('expression_input:', expression_input)
 	//console.log("param.method:",param.method)
-	//fs.writeFile('test.txt', JSON.stringify(expression_input), function(err) {
-	//    // For catching input to rust pipeline, in case of an error
-	//    if (err) return console.log(err)
-	//})
+	fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
+		// For catching input to rust pipeline, in case of an error
+		if (err) return console.log(err)
+	})
 
 	const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 	let result
