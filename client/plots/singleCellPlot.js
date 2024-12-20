@@ -1219,8 +1219,7 @@ class singleCellPlot {
 
 	async renderContourMap(scene, umapCoords, geneExpression, plot) {
 		const gridSize = this.settings.contourGridSize
-		let densityMap = createDensityMap(umapCoords, geneExpression, gridSize, plot)
-		densityMap = normalizeDensityMap(densityMap)
+		const densityMap = createDensityMap(umapCoords, geneExpression, gridSize, plot)
 		const data = densityMap.flat()
 		const thresholds = this.settings.contourThresholds
 		const width = this.settings.svgw
@@ -1351,29 +1350,6 @@ function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
 	return densityMap
 }
 
-function normalizeDensityMap(densityMap) {
-	// Find the minimum and maximum values in the density map
-	let min = Infinity
-	let max = -Infinity
-	for (let row of densityMap) {
-		for (let value of row) {
-			min = Math.min(min, value)
-			max = Math.max(max, value)
-		}
-	}
-
-	// Normalize values between 0 and 1
-	const normalizedMap = []
-	for (let i = 0; i < densityMap.length; i++) {
-		normalizedMap.push([])
-		for (let j = 0; j < densityMap[i].length; j++) {
-			normalizedMap[i].push((densityMap[i][j] - min) / (max - min))
-		}
-	}
-
-	return normalizedMap
-}
-
 // Function to get mouse position in normalized device coordinates (-1 to +1)
 export function getMouseNDC(event, rect) {
 	//const rect = renderer.domElement.getBoundingClientRect()
@@ -1427,7 +1403,7 @@ export function getDefaultSingleCellSettings() {
 		opacity: 1,
 		showNoExpCells: false,
 		showContour: false,
-		contourGridSize: 20,
-		contourThresholds: 5
+		contourGridSize: 40,
+		contourThresholds: 6
 	}
 }
