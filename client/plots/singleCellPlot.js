@@ -1234,8 +1234,6 @@ class singleCellPlot {
 			const material = new THREE.MeshBasicMaterial({ map: texture })
 			// Create a mesh with the geometry and material
 			const plane = new THREE.Mesh(geometry, material)
-			// Position the plane
-			plane.position.z = 0 // Adjust z-position as needed
 			// Add the plane to the scene
 			scene.add(plane)
 			plot.plane = plane
