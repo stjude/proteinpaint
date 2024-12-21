@@ -248,11 +248,13 @@ function processTrackedDs(trackedDatasets) {
 			// so must trigger a notification here
 			if (serverconfig.slackWebhookUrl) {
 				const url = serverconfig.URL
+				const hostname =
+					serverconfig.hostname || spawnSync('hostname', ['-s'], { encoding: 'utf-8' })?.stdout?.trim() || ''
 				sendMessageToSlack(
 					serverconfig.slackWebhookUrl,
-					`\n${serverconfig.URL}: ${msg}`,
+					`\n${serverconfig.URL} ${hostname}: ${msg}`,
 					path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
-				)
+				).catch(console.log)
 			}
 		}
 	}
