@@ -239,7 +239,8 @@ function processTrackedDs(trackedDatasets) {
 			const list = failed
 				.map(
 					ds =>
-						getLabel(ds) + `: ${ds.init.fatalError || ds.init.recoverableError || ds.init.error || '(see logs above)'}`
+						getLabel(ds) +
+						`: ${ds.init.fatalError || ds.init.recoverableError || ds.init.error || '(see startup logs)'}`
 				)
 				.join('\n')
 			const msg = `\n--- failed dataset init ---\n${list}\n`
@@ -247,7 +248,6 @@ function processTrackedDs(trackedDatasets) {
 			// not a fatal error for the server and will not trigger a deployment rollback notification,
 			// so must trigger a notification here
 			if (serverconfig.slackWebhookUrl) {
-				const url = serverconfig.URL
 				const hostname =
 					serverconfig.hostname || spawnSync('hostname', ['-s'], { encoding: 'utf-8' })?.stdout?.trim() || ''
 				sendMessageToSlack(
