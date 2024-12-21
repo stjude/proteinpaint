@@ -45,8 +45,9 @@ export function setRenderers(self) {
 		if (chart.data.samples.length == 0) return
 		const offsetX = self.axisOffset.x
 		const offsetY = self.axisOffset.y
-		const extraSpaceX = (chart.xMax - chart.xMin) * 0.05 //extra space added to avoid clipping the particles on the X axis
-		const extraSpaceY = (chart.yMax - chart.yMin) * 0.05 //extra space added to avoid clipping the particles on the Y axis
+
+		const extraSpaceX = (chart.xMax - chart.xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
+		const extraSpaceY = (chart.yMax - chart.yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
 
 		chart.xAxisScale = d3Linear()
 			.domain([chart.xMin - extraSpaceX, chart.xMax + extraSpaceX])
