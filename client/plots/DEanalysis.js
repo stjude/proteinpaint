@@ -120,42 +120,28 @@ class DEanalysis {
 				output.mid_sample_size_cutoff < output.sample_size1 &&
 				output.sample_size1 < output.high_sample_size_cutoff)
 		) {
-			inputs.push({
-				label: 'Method',
-				type: 'radio',
-				chartType: 'DEanalysis',
-				settingsKey: 'method',
-				title: 'Toggle between edgeR and wilcoxon test',
-				options: [
-					{ label: 'edgeR', value: 'edgeR' },
-					{ label: 'wilcoxon', value: 'wilcoxon' }
-				]
-			})
+			inputs.push(
+				{
+					label: 'Method',
+					type: 'radio',
+					chartType: 'DEanalysis',
+					settingsKey: 'method',
+					title: 'Toggle between edgeR and wilcoxon test',
+					options: [
+						{ label: 'edgeR', value: 'edgeR' },
+						{ label: 'wilcoxon', value: 'wilcoxon' }
+					]
+				},
+				{
+					type: 'term',
+					configKey: 'term',
+					chartType: 'DEanalysis',
+					usecase: { target: 'DEanalysis', detail: 'term' },
+					label: 'Confounding factors',
+					vocabApi: this.app.vocabApi
+				}
+			)
 		}
-
-		//if (
-		//	(output.mid_sample_size_cutoff >= output.sample_size1 &&
-		//		output.mid_sample_size_cutoff < output.sample_size2 &&
-		//		output.sample_size2 < output.high_sample_size_cutoff) ||
-		//	(output.mid_sample_size_cutoff >= output.sample_size2 &&
-		//		output.mid_sample_size_cutoff < output.sample_size1 &&
-		//		output.sample_size1 < output.high_sample_size_cutoff)
-		//) {
-		//	// Invoked only when one sample size is low than the mid_sample_size_cutoff and the other one is higher but the higher sample size is lower than the high cutoff so that the DE computation does not take a lot of time on the server
-		//	inputs.push({
-		//		label: 'Method',
-		//		type: 'radio',
-		//		chartType: 'DEanalysis',
-		//		settingsKey: 'method',
-		//		title: 'Toggle between edgeR and wilcoxon test',
-		//		options: [
-		//			{ label: 'edgeR', value: 'edgeR' },
-		//			{ label: 'wilcoxon', value: 'wilcoxon' }
-		//		]
-		//	})
-		//	this.settings.method = output.method
-		//	this.state.config = output.method
-		//}
 
 		if (this.app.opts.genome.termdbs) {
 			// Check if genome build contains termdbs, only then enable gene ora
@@ -748,15 +734,21 @@ export async function openHiercluster(term, samplelstTW, app, id, newId) {
 }
 
 async function runDEanalysis(self) {
+	const input = {
+		genome: self.app.vocabApi.vocab.genome,
+		dslabel: self.app.vocabApi.vocab.dslabel,
+		samplelst: self.config.samplelst,
+		min_count: self.settings.min_count,
+		min_total_count: self.settings.min_total_count,
+		method: self.settings.method
+	}
+	if (self.config.term) {
+		input.tw = self.config.term
+		self.settings.method = 'edgeR' // When adjustment of confounding variables is selected, the method should always be a parmetric method such as edgeR
+		input.method = 'edgeR'
+	}
 	const output = await dofetch3('DEanalysis', {
-		body: {
-			genome: self.app.vocabApi.vocab.genome,
-			dslabel: self.app.vocabApi.vocab.dslabel,
-			samplelst: self.config.samplelst,
-			min_count: self.settings.min_count,
-			min_total_count: self.settings.min_total_count,
-			method: self.settings.method
-		}
+		body: input
 	})
 	if (output.error) console.log('server side error:', output.error)
 	return output
