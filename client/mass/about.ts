@@ -227,6 +227,7 @@ export class MassAbout {
 		if (!result.cfeatures.length) return
 		for (const feature of result.features) rows.push([{ value: feature.name }])
 		for (const cohort of result.cohorts) {
+			if (cohort.subcohorts?.length) continue
 			columns.push({ label: cohort.name })
 			for (const [i, feature] of result.features.entries()) {
 				const cf = result.cfeatures.find(cf => cf.idfeature === feature.idfeature && cf.cohort === cohort.cohort)
