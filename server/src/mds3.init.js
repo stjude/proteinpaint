@@ -57,6 +57,7 @@ validate_query_snvindel
 	gdc.validate_query_snvindel_byisoform
 	gdc.validate_query_snvindel_byrange
 	snvindelByRangeGetter_bcf
+		validateSampleHeader2
 		mayLimitSamples
 			param2filter
 				tid2value2filter
@@ -705,13 +706,24 @@ function mayValidateSampleHeader(ds, samples, where) {
 function validateSampleHeader2(ds, samples, where) {
 	const sampleIds = []
 	// ds?.cohort?.termdb.q.sampleName2id must be present
+	const unknownSamples = [] // samples present in big file header but missing from db
 	for (const s of samples) {
 		const id = ds.cohort.termdb.q.sampleName2id(s.name)
-		if (!Number.isInteger(id)) throw 'unknown sample name from ' + where
+		if (!Number.isInteger(id)) {
+			unknownSamples.push(s.name)
+			// TODO if file with unknown sample should still be usable, slot a mock element in sampleIds[]. downstream query should be able to ignore it
+			continue
+		}
 		s.name = id
 		sampleIds.push(s)
 	}
 	console.log(samples.length, 'samples from ' + where + ' of ' + ds.label)
+	if (unknownSamples.length) {
+		// unknown samples can be safely reported to server log
+		console.log('unknown samples: ' + unknownSamples.join(', '))
+		// later attach a sanitized err msg to ds to report to client
+		throw 'unknown samples in big file'
+	}
 	return sampleIds
 }
 
