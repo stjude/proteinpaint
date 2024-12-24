@@ -82,7 +82,7 @@ type SNVIndelTvsValue = {
 	origin?: GeneVariantOrigin
 }
 
-type CNVClasses = 'CNV_amp' | 'CNV_losss' | 'CNV_loh' | 'Blank' | 'WT'
+type CNVClasses = 'CNV_amp' | 'CNV_loss' | 'CNV_loh' | 'Blank' | 'WT' | 'CNV_amplification' | 'CNV_homozygous_deletion'
 type CNVTvsValue = {
 	dt: 4
 	mclassLst: CNVClasses[]

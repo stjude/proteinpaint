@@ -39,8 +39,11 @@ export default function svgLegend(opts) {
 			'noncoding',
 			'Fuserna',
 			'SV',
+			'CNV_amplification',
+			'CNV_homozygous_deletion',
 			'CNV_amp',
 			'CNV_loss',
+			'CNV_loh',
 			'snv',
 			'mnv'
 		],

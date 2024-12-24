@@ -1554,8 +1554,11 @@ function setTermActions(self) {
 					by: 'class',
 					order: [
 						'Fuserna',
+						'CNV_homozygous_deletion',
+						'CNV_amplification',
 						'CNV_loss',
 						'CNV_amp',
+						'CNV_loh',
 						// truncating
 						'F',
 						'N',

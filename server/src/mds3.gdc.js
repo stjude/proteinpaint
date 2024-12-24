@@ -663,7 +663,8 @@ export function validate_query_geneCnv2(ds) {
 		'cnv.gene_level_cn',
 		'cnv.consequence.gene.symbol',
 		'case.submitter_id', // human-readable name, non-unique
-		'case.case_id' // unique uuid
+		'case.case_id', // unique uuid
+		'cnv.cnv_change_5_category'
 	]
 
 	/*
@@ -693,6 +694,18 @@ export function validate_query_geneCnv2(ds) {
 			class: common.mclasscnvloss,
 			samples: []
 		}
+		const ampEvent = {
+			ssm_id: 'geneCnvAmp',
+			dt: common.dtcnv,
+			class: common.mclasscnvAmp,
+			samples: []
+		}
+		const homozygousDelEvent = {
+			ssm_id: 'geneCnvHomozygousDel',
+			dt: common.dtcnv,
+			class: common.mclasscnvHomozygousDel,
+			samples: []
+		}
 
 		for (const hit of re.data.hits) {
 			if (typeof hit.cnv != 'object') throw 'hit.cnv{} not obj'
@@ -700,7 +713,17 @@ export function validate_query_geneCnv2(ds) {
 			if (!hit.cnv.gene_level_cn) throw 'hit.cnv.gene_level_cn is not true'
 
 			let cnv
-			if (hit.cnv.cnv_change == 'Gain') {
+			// Only qa-orange has cnv_change_5_category, need to remove once
+			if (hit.cnv.cnv_change_5_category == 'Gain') {
+				cnv = gainEvent
+			} else if (hit.cnv.cnv_change_5_category == 'Loss') {
+				cnv = lossEvent
+			} else if (hit.cnv.cnv_change_5_category == 'Amplification') {
+				cnv = ampEvent
+			} else if (hit.cnv.cnv_change_5_category == 'Homozygous Deletion') {
+				cnv = homozygousDelEvent
+			} // TODO: cnv.cnv_change will be removed after 2/16/2025, cnv.cnv_change_5_category is available only in qa-orainge now
+			else if (hit.cnv.cnv_change == 'Gain') {
 				cnv = gainEvent
 			} else if (hit.cnv.cnv_change == 'Loss') {
 				cnv = lossEvent
@@ -724,6 +747,8 @@ export function validate_query_geneCnv2(ds) {
 		const mlst = []
 		if (gainEvent.samples.length) mlst.push(gainEvent)
 		if (lossEvent.samples.length) mlst.push(lossEvent)
+		if (ampEvent.samples.length) mlst.push(ampEvent)
+		if (homozygousDelEvent.samples.length) mlst.push(homozygousDelEvent)
 		return mlst
 	}
 

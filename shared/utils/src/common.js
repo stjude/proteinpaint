@@ -282,6 +282,7 @@ mclass[mclasssv] = {
 	key: mclasssv
 }
 
+//TODO：CNV_amp should be repalced with CNV_gain to avoid confusion with CNV amplification (CNV_amplification) below
 export const mclasscnvgain = 'CNV_amp'
 mclass[mclasscnvgain] = {
 	label: 'Copy number gain',
@@ -298,6 +299,24 @@ mclass[mclasscnvloss] = {
 	dt: dtcnv,
 	desc: 'Copy number loss',
 	key: mclasscnvloss
+}
+
+export const mclasscnvAmp = 'CNV_amplification'
+mclass[mclasscnvAmp] = {
+	label: 'Copy number amplification',
+	color: '#900000',
+	dt: dtcnv,
+	desc: 'Copy number amplification',
+	key: mclasscnvAmp
+}
+
+export const mclasscnvHomozygousDel = 'CNV_homozygous_deletion'
+mclass[mclasscnvHomozygousDel] = {
+	label: 'Copy number homozygous deletion',
+	color: '#00457C',
+	dt: dtcnv,
+	desc: 'Copy number homozygous deletion',
+	key: mclasscnvHomozygousDel
 }
 
 export const mclasscnvloh = 'CNV_loh'
