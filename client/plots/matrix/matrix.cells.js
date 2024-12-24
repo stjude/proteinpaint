@@ -223,7 +223,18 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 
 		// return the corresponding legend item data
 		const byDt = self.state.termdbConfig.assayAvailability?.byDt
-		const order = value.class == 'CNV_loss' ? -2 : value.class.startsWith('CNV_') ? -1 : 0
+		const order =
+			value.class == 'CNV_homozygous_deletion'
+				? -5
+				: value.class == 'CNV_amplification'
+				? -4
+				: value.class == 'CNV_loss'
+				? -3
+				: value.class == 'CNV_amp'
+				? -2
+				: value.class == 'CNV_loh'
+				? -1
+				: 0
 		if (value.dt == dtcnv) {
 			if (t.scales && value.class.startsWith('CNV_')) {
 				const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain

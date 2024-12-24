@@ -1,5 +1,14 @@
 import { isDictionaryType } from '#shared/terms.js'
-import { dtsnvindel, dtfusionrna, dtcnv, mclasscnvgain, mclasscnvloss } from '#shared/common.js'
+import {
+	dtsnvindel,
+	dtfusionrna,
+	dtcnv,
+	mclasscnvgain,
+	mclasscnvloss,
+	mclasscnvAmp,
+	mclasscnvHomozygousDel,
+	mclasscnvloh
+} from '#shared/common.js'
 
 export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
@@ -451,7 +460,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 								by: 'class',
 								isOrdered: true,
 								disabled: true, // visible, can be enabled
-								order: [mclasscnvgain, mclasscnvloss]
+								order: [mclasscnvAmp, mclasscnvHomozygousDel, mclasscnvgain, mclasscnvloss, mclasscnvloh]
 							},
 							{
 								disabled: false,

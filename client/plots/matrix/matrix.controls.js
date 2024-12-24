@@ -943,6 +943,12 @@ export class MatrixControls {
 													? 'CNV gain'
 													: v.class == 'CNV_loss'
 													? 'CNV loss'
+													: v.class == 'CNV_homozygous_deletion'
+													? 'CNV homozygous deletion'
+													: v.class == 'CNV_amplification'
+													? 'CNV amplification'
+													: v.class == 'CNV_loh'
+													? 'CNV loss of heterozygosity'
 													: mclass[v.class]?.label
 
 												allVariant.push(

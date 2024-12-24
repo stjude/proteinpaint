@@ -28,7 +28,18 @@ export function getLegendData(legendGroups, refs, self) {
 							origin: v.origin,
 							label: v.label || self.mclass[key].label,
 							fill: v.color || self.mclass[key]?.color,
-							order: key == 'CNV_loss' ? -2 : key.startsWith('CNV_') ? -1 : 0,
+							order:
+								key == 'CNV_homozygous_deletion'
+									? -5
+									: key == 'CNV_amplification'
+									? -4
+									: key == 'CNV_loss'
+									? -3
+									: key == 'CNV_amp'
+									? -2
+									: key == 'CNV_loh'
+									? -1
+									: 0,
 							crossedOut: f.tvs.legendFilterType == 'geneVariant_hard' ? true : false,
 							greyedOut: f.tvs.legendFilterType == 'geneVariant_soft' ? true : false
 						}
@@ -96,7 +107,18 @@ export function getLegendData(legendGroups, refs, self) {
 							origin: v.origin,
 							label: v.label || self.mclass[key]?.label || 'Gain and loss',
 							fill: v.color || self.mclass[key]?.color,
-							order: key == 'CNV_loss' ? -2 : key.startsWith('CNV_') ? -1 : 0,
+							order:
+								key == 'CNV_homozygous_deletion'
+									? -5
+									: key == 'CNV_amplification'
+									? -4
+									: key == 'CNV_loss'
+									? -3
+									: key == 'CNV_amp'
+									? -2
+									: key == 'CNV_loh'
+									? -1
+									: 0,
 							crossedOut: f.tvs.legendFilterType == 'geneVariant_hard' ? true : false,
 							greyedOut: f.tvs.legendFilterType == 'geneVariant_soft' ? true : false
 						}
