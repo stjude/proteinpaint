@@ -475,31 +475,6 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		.text(d => d.label)
 		.on('click', (event, chart) => chartsInstance.showTree_selectlst(chart))
-
-	menuDiv
-		.append('div')
-		.datum({
-			label: 'Text input',
-			chartType: 'matrix',
-			clickTo: showTextAreaInput,
-			usecase: { target: 'matrix', detail: 'termgroups' },
-			placeholder: 'term\tgroup',
-			processInput: async text => {
-				const lines = text.split('\n').map(line => line.split('\t'))
-				const ids = lines.map(cols => cols[0]).filter(t => !!t)
-				const terms = await chartsInstance.app.vocabApi.getTermTypes(ids)
-				const groups = {}
-				for (const [id, name] of lines) {
-					if (!(id in terms)) continue
-					if (!(name in groups)) groups[name] = { name, lst: [] }
-					groups[name].lst.push({ term: terms[id] })
-				}
-				return Object.values(groups)
-			}
-		})
-		.attr('class', 'sja_menuoption sja_sharp_border')
-		.text(d => d.label)
-		.on('click', (event, chart) => showTextAreaInput(chart, chartsInstance))
 }
 
 function showTextAreaInput(opt, self) {
