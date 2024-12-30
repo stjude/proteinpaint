@@ -1,2 +1,2 @@
 Fixes:
-- oncoMatirx: Remove text input option
+- matrix: Remove text input option from mass chart button menu
