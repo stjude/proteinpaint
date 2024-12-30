@@ -1,2 +1,1 @@
-Fixes:
-- matrix: Remove text input option from mass chart button menu
+

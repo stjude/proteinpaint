@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- matrix: Remove text input option from mass chart button menu
+
 
 ## 2.94.1
 
