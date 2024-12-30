@@ -28,18 +28,7 @@ export function getLegendData(legendGroups, refs, self) {
 							origin: v.origin,
 							label: v.label || self.mclass[key].label,
 							fill: v.color || self.mclass[key]?.color,
-							order:
-								key == 'CNV_homozygous_deletion'
-									? -5
-									: key == 'CNV_amplification'
-									? -4
-									: key == 'CNV_loss'
-									? -3
-									: key == 'CNV_amp'
-									? -2
-									: key == 'CNV_loh'
-									? -1
-									: 0,
+							order: CNVkey2order(key),
 							crossedOut: f.tvs.legendFilterType == 'geneVariant_hard' ? true : false,
 							greyedOut: f.tvs.legendFilterType == 'geneVariant_soft' ? true : false
 						}
@@ -107,18 +96,7 @@ export function getLegendData(legendGroups, refs, self) {
 							origin: v.origin,
 							label: v.label || self.mclass[key]?.label || 'Gain and loss',
 							fill: v.color || self.mclass[key]?.color,
-							order:
-								key == 'CNV_homozygous_deletion'
-									? -5
-									: key == 'CNV_amplification'
-									? -4
-									: key == 'CNV_loss'
-									? -3
-									: key == 'CNV_amp'
-									? -2
-									: key == 'CNV_loh'
-									? -1
-									: 0,
+							order: CNVkey2order(key),
 							crossedOut: f.tvs.legendFilterType == 'geneVariant_hard' ? true : false,
 							greyedOut: f.tvs.legendFilterType == 'geneVariant_soft' ? true : false
 						}
@@ -462,4 +440,18 @@ function setColorScaleDomain(min, max, domain, colors) {
 
 function getColors(item) {
 	return item.domain?.map(c => item.scale(c)) || item.scale.range()
+}
+
+export function CNVkey2order(key) {
+	return key == 'CNV_homozygous_deletion'
+		? -5
+		: key == 'CNV_amplification'
+		? -4
+		: key == 'CNV_loss'
+		? -3
+		: key == 'CNV_amp'
+		? -2
+		: key == 'CNV_loh'
+		? -1
+		: 0
 }

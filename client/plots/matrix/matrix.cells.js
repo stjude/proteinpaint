@@ -2,6 +2,7 @@ import { convertUnits } from '#shared/helpers.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv, dtmetaboliteintensity } from '#shared/common.js'
 import { TermTypes } from '#shared/terms.js'
 import { colorScaleMap } from '#shared/common.js'
+import { CNVkey2order } from './matrix.legend'
 /*
 	cell: a matrix cell data
 	tw: termwrapper
@@ -223,18 +224,7 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 
 		// return the corresponding legend item data
 		const byDt = self.state.termdbConfig.assayAvailability?.byDt
-		const order =
-			value.class == 'CNV_homozygous_deletion'
-				? -5
-				: value.class == 'CNV_amplification'
-				? -4
-				: value.class == 'CNV_loss'
-				? -3
-				: value.class == 'CNV_amp'
-				? -2
-				: value.class == 'CNV_loh'
-				? -1
-				: 0
+		const order = CNVkey2order(value.class)
 		if (value.dt == dtcnv) {
 			if (t.scales && value.class.startsWith('CNV_')) {
 				const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
