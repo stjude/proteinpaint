@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- GDC support 5-category cnv
+
 Fixes:
 - matrix: Remove text input option from mass chart button menu
 
