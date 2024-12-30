@@ -282,7 +282,9 @@ mclass[mclasssv] = {
 	key: mclasssv
 }
 
-//TODO：CNV_amp should be repalced with CNV_gain to avoid confusion with CNV amplification (CNV_amplification) below
+// "CNV_amp" represents "CNV Gain" and is used in both 2-category and 5-category CNV data representation
+// "CNV_amplification" represents CNV amplification and is used in 5-category CNV
+// "CNV_amp" have to stay as-is since it may be hardcoded in lots of data beyond portal code.
 export const mclasscnvgain = 'CNV_amp'
 mclass[mclasscnvgain] = {
 	label: 'Copy number gain',
@@ -301,6 +303,7 @@ mclass[mclasscnvloss] = {
 	key: mclasscnvloss
 }
 
+// mclasscnvAmp is next level above mclasscnvgain and is used in 5-category CNV data
 export const mclasscnvAmp = 'CNV_amplification'
 mclass[mclasscnvAmp] = {
 	label: 'Copy number amplification',
