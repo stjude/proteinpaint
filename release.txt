@@ -1,1 +1,2 @@
-
+Fixes:
+- Matrix: matrix mass chart btn menu shows dict tree directly
