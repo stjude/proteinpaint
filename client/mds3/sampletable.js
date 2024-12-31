@@ -354,12 +354,16 @@ async function createDiscoInSandbox(tk, block, sample, thisMutation) {
 	}
 	sandbox.header.text(headerTexts.join(''))
 	try {
-		;(await import('#plots/plot.disco.js')).default(tk.mds, tk.mds.label, sample, sandbox.body, block.genome, {
-			downloadImgName: headerTexts.join('') + ' Disco', // file name of svg downloaded from disco
-			Disco: {
-				prioritizeGeneLabelsByGeneSets: true // TODO control this at dataset
+		;(await import('#plots/plot.disco.js')).default(
+			tk.mds.termdbConfig,
+			tk.mds.label,
+			sample,
+			sandbox.body,
+			block.genome,
+			{
+				downloadImgName: headerTexts.join('') + ' Disco' // file name of svg downloaded from disco
 			}
-		})
+		)
 	} catch (e) {
 		sandbox.body.append('div').text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)

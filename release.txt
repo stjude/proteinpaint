@@ -1,1 +1,2 @@
-
+Fixes:
+- disco plot CancerGeneCensus filtering is now controlled by ds setting

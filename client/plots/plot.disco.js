@@ -7,15 +7,13 @@ this function is not made as a vocab api method as it has a lot of dom and inter
 
 termdbConfig = {}
 	.queries{}
-		.singleSampleGenomeQuantification{ k: {} }
-			{ positiveColor, negativeColor, sample_id_key=str, singleSampleGbtk=str }
-		.singleSampleGbtk{ k: {} }
+		.singleSampleMutation{ sample_id_key, discoPlot }
 
 dslabel=str
 	as on vocab.dslabel
 
 sample={}
-	must have value for key of singleSampleGenomeQuantification[queryKey].sample_id_key
+	must have value for key of singleSampleMutation.sample_id_key
 
 holder
 
@@ -26,8 +24,6 @@ _overrides={}
 	optional override parameters to pass to disco
 */
 export default async function (termdbConfig, dslabel, sample, holder, genomeObj, _overrides = {}, showError = true) {
-	const overrides = computeOverrides(_overrides, termdbConfig, genomeObj, sample)
-
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
@@ -69,7 +65,7 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 			genome: genomeObj
 		}
 
-		if (termdbConfig.queries.singleSampleMutation.discoSkipChrM) {
+		if (termdbConfig.queries.singleSampleMutation.discoPlot?.skipChrM) {
 			// quick fix: exclude chrM from list of chromosomes
 			// assume the name of "chrM" but not chrMT. do case insensitive match
 			disco_arg.chromosomes = {}
@@ -92,7 +88,7 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 						chartType: 'Disco',
 						subfolder: 'disco',
 						extension: 'ts',
-						overrides
+						overrides: computeOverrides(_overrides, termdbConfig, genomeObj, sample)
 					}
 				]
 			}
@@ -112,7 +108,15 @@ function computeOverrides(o, termdbConfig, genomeObj, sample) {
 	// parameter is duplicated into a new object; this script computes new attributes and add to the new obj
 	const overrides = structuredClone(o)
 	if (!overrides.Disco) overrides.Disco = {}
-	overrides.Disco.showPrioritizeGeneLabelsByGeneSets = !!genomeObj.geneset
+
+	if (genomeObj.geneset) {
+		// genome is equipped with geneset. hardcode the logic that such genesets can be used to filter mutations on disco
+		overrides.Disco.showPrioritizeGeneLabelsByGeneSets = true
+		// only apply this property when geneset is present
+		overrides.Disco.prioritizeGeneLabelsByGeneSets =
+			termdbConfig.queries.singleSampleMutation.discoPlot?.prioritizeGeneLabelsByGeneSets
+	}
+
 	if (!overrides.downloadImgName) {
 		overrides.downloadImgName = sample[termdbConfig.queries.singleSampleMutation.sample_id_key] + ' Disco'
 	}

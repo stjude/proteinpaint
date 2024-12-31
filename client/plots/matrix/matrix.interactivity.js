@@ -339,12 +339,7 @@ export function setInteractivity(self) {
 						self.state.vocab.dslabel,
 						sample,
 						sandbox.body,
-						self.app.opts.genome,
-						{
-							Disco: {
-								prioritizeGeneLabelsByGeneSets: true // TODO control this at dataset-level
-							}
-						}
+						self.app.opts.genome
 					)
 					menuDiv.remove()
 					self.dom.clickMenu.d.selectAll('*').remove()
