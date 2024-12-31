@@ -205,7 +205,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	if (q.singleSampleMutation) {
 		q2.singleSampleMutation = {
 			sample_id_key: q.singleSampleMutation.sample_id_key,
-			discoSkipChrM: q.singleSampleMutation.discoSkipChrM
+			discoPlot: q.singleSampleMutation.discoPlot
 		}
 	}
 	if (q.singleSampleGenomeQuantification) {

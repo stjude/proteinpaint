@@ -286,9 +286,13 @@ type SingleSampleMutationQuery = {
 	sample_id_key: string
 	/** only required for src=native */
 	folder?: string
-	/** quick fix to hide chrM from disco, due to reason e.g. this dataset doesn't
-	 * have data on chrM */
-	discoSkipChrM?: true
+	/** disco plot will be launched when singleSampleMutation is enabled. supply customization options here */
+	discoPlot?: {
+		/** if true, disco plot will hide chrM, due to reason e.g. this dataset doesn't have data on chrM */
+		skipChrM?: true
+		/** if true, filter mutations by predefined geneset by default */
+		prioritizeGeneLabelsByGeneSets?: true
+	}
 }
 
 type NIdataQuery = {
