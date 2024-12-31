@@ -9,6 +9,7 @@ General:
 
 Fixes:
 - matrix: Remove text input option from mass chart button menu
+- Matrix: matrix mass chart btn menu shows dict tree directly
 
 
 ## 2.94.1
