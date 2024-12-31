@@ -454,25 +454,21 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				})
 		}
 	}
-	menuDiv
-		.append('div')
-		.datum({
-			label: 'Term tree & search',
-			clickTo: chartsInstance.showTree_selectlst,
-			chartType: 'matrix',
-			usecase: { target: 'matrix', detail: 'termgroups' },
-			processSelection: lst => {
-				return [
-					{
-						name: '',
-						lst: lst.map(term => {
-							return { term }
-						})
-					}
-				]
-			}
-		})
-		.attr('class', 'sja_menuoption sja_sharp_border')
-		.text(d => d.label)
-		.on('click', (event, chart) => chartsInstance.showTree_selectlst(chart))
+
+	const chart = {
+		clickTo: chartsInstance.showTree_selectlst,
+		chartType: 'matrix',
+		usecase: { target: 'matrix', detail: 'termgroups' },
+		processSelection: lst => {
+			return [
+				{
+					name: '',
+					lst: lst.map(term => {
+						return { term }
+					})
+				}
+			]
+		}
+	}
+	chartsInstance.showTree_selectlst(chart)
 }
