@@ -511,7 +511,6 @@ function setRenderers(self) {
 	}
 
 	self.showTree_selectlst = async chart => {
-		//self.dom.tip.clear()
 		if (chart.usecase?.label) {
 			self.dom.tip.d
 				.append('div')
