@@ -169,7 +169,7 @@ class TdbNav {
 		if (this.state.nav.header_mode === 'with_tabs') {
 			if (!(this.activeCohortName in this.samplecounts)) {
 				const count = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
-				if (!this.activeCohortName) {
+				if (this.activeCohort == -1) {
 					// dataset does not use subchort
 					this.samplecounts['TotalCountNoSubCohort'] = count
 				} else this.samplecounts[this.activeCohortName] = count
