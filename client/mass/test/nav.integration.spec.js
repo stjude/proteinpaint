@@ -76,7 +76,7 @@ tape.only('chart buttons', function (test) {
 			}
 		}
 	})
-	function runTests(nav) {
+	async function runTests(nav) {
 		for (const btn of nav.Inner.components.charts.Inner.dom.btns._groups[0]) {
 			// btn is native dom element, not d3-wrapped
 			if (btn.style.display == 'none') {
@@ -84,14 +84,19 @@ tape.only('chart buttons', function (test) {
 				continue
 			}
 			/* chart button is visible
-			evaluate what happens after clicking it, based on the type of chart
-			this test is hardcoded for termdbtest; any customizations to chart buttons must be reflected here
-			
+			evaluate what happens after clicking it, based on the innerHTML of each button;
+			if a chart name is customized in termdbtest, the test must be updated here
+
 			must not trigger click before all if(), this will cause all previous temporary menu items to disappear
 			*/
 			if (btn.innerHTML == 'Data Dictionary') {
 				btn.dispatchEvent(new Event('click'))
-				// todo: identify if a new sandbox labeled "Data Dictionary" is created
+				await detectOne({
+					elem: nav.Inner.app.Inner.dom.plotDiv.node(),
+					selector: '[data-testid=sjpp-massplot-sandbox-dictionary]'
+				})
+				test.pass('dictionary sandbox found')
+				// todo: delete sandbox
 				continue
 			}
 			if (btn.innerHTML == 'Summary Plot') {
@@ -102,6 +107,7 @@ tape.only('chart buttons', function (test) {
 			console.log('TODO: need test cover for chart button', btn.innerHTML)
 		}
 		//if (test._ok) nav.Inner.app.destroy()
+		console.log(nav)
 		test.end()
 	}
 })
