@@ -94,8 +94,12 @@ export const plotInit = getCompInit(MassPlot)
 
 function setRenderers(self) {
 	self.initUi = function (opts) {
-		const holder = opts.holder
-		// opts.holder is "sandbox" obj: {app_div, body, header, header_row, id}
+		// opts={app, chartType:str, holder, id, debug}
+
+		const holder = opts.holder // "sandbox" obj: {app_div, body, header, header_row, id}
+
+		// since chartType is already given in constructor opts, create test id with chart type as a simple way to identify the box
+		opts.holder.app_div.attr('data-testid', 'sjpp-massplot-sandbox-' + opts.chartType)
 
 		holder.header.style('padding', 0)
 
