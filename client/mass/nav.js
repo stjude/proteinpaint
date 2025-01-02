@@ -469,7 +469,7 @@ function setRenderers(self) {
 				} else if (d.subheader === 'filter') {
 					const filter = self.filterUiRoot ? self.filterUiRoot : { lst: [] }
 					if (filter.lst.length === 0) {
-						// Do not show number of samples at bottom of FILFTER tab when no filter applied
+						// Do not show number of samples at bottom of FILTER tab when no filter applied
 						return d.key === 'mid' ? 'NONE' : ''
 					} else {
 						const n = self.samplecounts[self.filterJSON] != undefined ? '' + self.samplecounts[self.filterJSON] : ''
