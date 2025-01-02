@@ -1,8 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 import { openSandbox } from '../../appdrawer/adSandbox'
-import { throwMsgWithFilePathAndFnName } from '../../dom/sayerror.ts'
+import { newSandboxDiv, throwMsgWithFilePathAndFnName } from '#dom'
 import { string2pos } from '../coord'
-import { newSandboxDiv } from '../../dom/sandbox.ts'
 import * as parseurl from '../app.parseurl'
 import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
@@ -190,8 +189,8 @@ export async function findgene2paint(str, app, genomename, jwt) {
 			genome: g,
 			nobox: true,
 			chr: pos.chr,
-			start: pos.start,
-			stop: pos.stop,
+			start: pos.start - 1, // entered positions are 1-based. block uses 0-based
+			stop: pos.stop - 1,
 			dogtag: genomename,
 			tklst,
 			debugmode: app.debugmode
