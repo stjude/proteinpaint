@@ -5,7 +5,7 @@ import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { extent, range, rgb, contours, geoIdentity, geoPath, create, scaleSequential, interpolateTurbo } from 'd3'
+import { extent, range, rgb, contours, geoIdentity, geoPath, create, scaleSequential, interpolateRgbBasis } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
@@ -1294,8 +1294,16 @@ export function getContourImage(densityMap, width, height, thresholds, gridSizeX
 	const contoursData = contoursFunc(data)
 	const projection = geoIdentity().fitSize([width, height], contoursData[0])
 	const path = geoPath().projection(projection)
-	const color = scaleSequential(interpolateTurbo).domain([min, max]).nice()
-	const svg = create('svg').attr('width', width).attr('height', height).style('fill', 'white')
+
+	const color = scaleSequential(interpolateRgbBasis(['white', '#ffde1a', '#ffce00', '#ffa700', '	#ff8d00', '#ff7400']))
+		.domain([min, max])
+		.nice()
+	const svg = create('svg')
+		.attr('width', width)
+		.attr('height', height)
+		.style('fill', 'white')
+		.style('stroke', 'transparent')
+		.style('stroke-width', 0)
 	svg
 		.selectAll('path')
 		.data(contoursData)
