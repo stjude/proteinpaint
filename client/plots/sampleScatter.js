@@ -695,7 +695,7 @@ export function getDefaultScatterSettings() {
 		//3D Plot settings
 		showContour: false,
 		contourGridSize: 50,
-		contourThresholds: 10
+		contourThresholds: 5
 	}
 }
 
