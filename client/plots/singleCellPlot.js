@@ -31,9 +31,9 @@ const PLOTS_TAB = 1
 const COLORBY_TAB = 2
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
-
 const noExpColor = '#F5F5F5' //lightGray
 const maxCells = 50000
+const contourColors = ['white', '#ffde1a', '#ffce00', '#ffa700', '	#ff8d00', '#ff7400']
 
 class singleCellPlot {
 	constructor() {
@@ -1221,7 +1221,7 @@ class singleCellPlot {
 	async renderContourMap(scene, xCoords, yCoords, zCoords, plot) {
 		const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
 		const gridSize = this.settings.contourGridSize
-		const densityMap = createDensityMap(umapCoords, zCoords, gridSize, plot, false)
+		const densityMap = createDensityMap(umapCoords, zCoords, gridSize, plot)
 		const thresholds = this.settings.contourThresholds
 		const width = this.settings.svgw
 		const height = this.settings.svgh
@@ -1295,23 +1295,22 @@ export function getContourImage(densityMap, width, height, thresholds, gridSizeX
 	const projection = geoIdentity().fitSize([width, height], contoursData[0])
 	const path = geoPath().projection(projection)
 
-	const color = scaleSequential(interpolateRgbBasis(['white', '#ffde1a', '#ffce00', '#ffa700', '	#ff8d00', '#ff7400']))
-		.domain([min, max])
-		.nice()
+	const color = scaleSequential(interpolateRgbBasis(contourColors)).domain([min, max]).nice()
 	const svg = create('svg')
 		.attr('width', width)
 		.attr('height', height)
 		.style('fill', 'white')
 		.style('stroke', 'transparent')
 		.style('stroke-width', 0)
+		.style('background-color', 'white')
 	svg
 		.selectAll('path')
 		.data(contoursData)
 		.enter()
 		.append('path')
 		.attr('d', path)
-		.attr('stroke', 'black')
 		.attr('fill', d => color(d.value))
+
 	// Serialize the SVG element
 	const svgString = new XMLSerializer().serializeToString(svg.node())
 
@@ -1328,7 +1327,7 @@ export function getContourImage(densityMap, width, height, thresholds, gridSizeX
 // - geneExpression: Array of gene expression values for each cell ([value1, value2, ...])
 
 // Function to create a 2D density map
-export function createDensityMap(umapCoords, geneExpression, gridSize, plot, sum = true) {
+export function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
 	const densityMap = []
 	const minX = Math.min(...umapCoords.map(coord => coord[0]))
 	const maxX = Math.max(...umapCoords.map(coord => coord[0]))
@@ -1353,8 +1352,7 @@ export function createDensityMap(umapCoords, geneExpression, gridSize, plot, sum
 		if (cellX >= 0 && cellX < gridSize && cellY >= 0 && cellY < gridSize) {
 			let geneExp = geneExpression[k]
 			if (geneExp > plot.max) geneExp = plot.max
-			if (sum) densityMap[cellY][cellX] += geneExp
-			else if (densityMap[cellY][cellX] < geneExp) densityMap[cellY][cellX] = geneExp
+			if (densityMap[cellY][cellX] < geneExp) densityMap[cellY][cellX] = geneExp
 		}
 	}
 
@@ -1415,6 +1413,6 @@ export function getDefaultSingleCellSettings() {
 		showNoExpCells: false,
 		showContour: false,
 		contourGridSize: 50,
-		contourThresholds: 10
+		contourThresholds: 5
 	}
 }
