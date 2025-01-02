@@ -1,1 +1,2 @@
-
+Fixes:
+- Portal ABOUT tab: show static total number of samples. FILTER tab: show number of samples only when filter applied
