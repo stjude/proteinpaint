@@ -1,3 +1,1 @@
 
-Features
-- Added support for drawing contour maps on 3d plots
