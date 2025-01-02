@@ -1,22 +1,14 @@
 import tape from 'tape'
-import { termjson } from '../../test/testdata/termjson'
 import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectOne, detectGte, whenVisible } from '../../test/test.helpers.js'
 
-/*************************
- reusable helper functions
-**************************/
-
-const runpp = helpers.getRunPp('mass', {
-	state: {
-		dslabel: 'TermdbTest',
-		genome: 'hg38-test',
-		nav: {
-			header_mode: 'search_only'
-		}
-	},
-	debug: 1
-})
+/*
+tests:
+	default hidden tabs, no filter
+	chart buttons
+	filter subheader and tab
+	with_cohortHtmlSelect
+*/
 
 async function addDemographicSexFilter(opts, btn) {
 	btn.click()
@@ -65,6 +57,51 @@ tape('default hidden tabs, no filter', function (test) {
 		// TODO: should make subheader display none?
 		//test.equal(nav.Inner.dom.subheaderDiv.style('display'), 'none', 'should hide the subheader')
 		if (test._ok) nav.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape.only('chart buttons', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			activeCohort: 0,
+			nav: {
+				header_mode: 'with_tabs'
+			}
+		},
+		nav: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(nav) {
+		for (const btn of nav.Inner.components.charts.Inner.dom.btns._groups[0]) {
+			// btn is native dom element, not d3-wrapped
+			if (btn.style.display == 'none') {
+				// hidden button means the chart is not supported in termdbtest
+				continue
+			}
+			/* chart button is visible
+			evaluate what happens after clicking it, based on the type of chart
+			this test is hardcoded for termdbtest; any customizations to chart buttons must be reflected here
+			
+			must not trigger click before all if(), this will cause all previous temporary menu items to disappear
+			*/
+			if (btn.innerHTML == 'Data Dictionary') {
+				btn.dispatchEvent(new Event('click'))
+				// todo: identify if a new sandbox labeled "Data Dictionary" is created
+				continue
+			}
+			if (btn.innerHTML == 'Summary Plot') {
+				btn.dispatchEvent(new Event('click'))
+				// todo: test that menu with dictionary ui is opened
+				continue
+			}
+			console.log('TODO: need test cover for chart button', btn.innerHTML)
+		}
+		//if (test._ok) nav.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -239,3 +276,18 @@ tape('with_cohortHtmlSelect', function (test) {
 // 		test.end()
 // 	}
 // })
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('mass', {
+	state: {
+		dslabel: 'TermdbTest',
+		genome: 'hg38-test',
+		nav: {
+			header_mode: 'search_only'
+		}
+	},
+	debug: 1
+})
