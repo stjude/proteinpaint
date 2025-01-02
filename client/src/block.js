@@ -4,17 +4,14 @@ import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
-import { Menu } from '../dom/menu'
+import { Menu, newSandboxDiv, sayerror, appear, disappear } from '#dom'
 import { dofetch3 } from '../common/dofetch'
 import * as common from '#shared/common.js'
 import * as coord from './coord'
 import vcf2dstk from './vcf.tkconvert'
 import blockinit from './block.init'
 import * as Legend from './block.legend'
-import { newSandboxDiv } from '../dom/sandbox'
 import { string2snp } from '#common/snp'
-import { sayerror } from '../dom/sayerror.ts'
-import { appear, disappear } from '#dom/animation'
 
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
@@ -46,7 +43,6 @@ import {
 import { mds2_fromtemplate, mds2_maketk, mds2_load } from './block.mds2.adaptor'
 import { mds3_fromtemplate, mds3_maketk, mds3_load } from '../mds3/adaptor'
 import { bedgraphdot_fromtemplate, bedgraphdot_maketk, bedgraphdot_load } from './block.tk.bedgraphdot.adaptor'
-import { rgb } from 'd3-color'
 
 /* non-standard handler for legacy dataset
 can delete when migrated to mds3
@@ -469,7 +465,7 @@ export class Block {
 				.append('div') // duplicated
 				.style('display', 'inline-block')
 				.text(this.genome.name)
-				.style('background', rgb('#7B95AB').darker())
+				.style('background', '#465f75')
 				.style('font-size', '.8em')
 				.style('color', 'white')
 				.style('padding', '1px 5px')
@@ -1030,7 +1026,8 @@ export class Block {
 		if (this.coord.input && this.startidx == this.stopidx) {
 			// view range is inside single region
 			const r = this.rglst[this.startidx]
-			this.coord.input.node().value = r.chr + ':' + r.start + '-' + r.stop
+			// must show 1-based coord in <input>. this will allow to show exactly what user types in e.g. chr1:10000-20000 rather than 9999-19999
+			this.coord.input.property('value', `${r.chr}:${r.start + 1}-${r.stop + 1}`)
 			this.coordwidthsays.text(common.bplen(r.stop - r.start))
 		}
 
@@ -5038,7 +5035,7 @@ function makecoordinput(bb, butrow) {
 		.attr('size', 20)
 		.style('margin-left', '10px')
 		.style('padding-right', '20px')
-		.attr('aria-label', 'Gene coordinates')
+		.attr('aria-label', 'Genome browser coordinates')
 
 	bb.coord.inputtipshow = () => {
 		bb.coord.inputtip.clear()
