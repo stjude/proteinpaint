@@ -14,6 +14,7 @@ Fixes:
 - matrix: Remove text input option from mass chart button menu
 - Matrix: matrix mass chart btn menu shows dict tree directly
 - disco plot CancerGeneCensus filtering is now controlled by ds setting
+- genome browser input box displays 1-based coordinate, resolves the issue that user inputted chr1:10000 will be shown as chr1:9999
 
 
 ## 2.94.1

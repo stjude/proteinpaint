@@ -1,2 +1,1 @@
-Fixes:
-- genome browser input box displays 1-based coordinate, resolves the issue that user inputted chr1:10000 will be shown as chr1:9999
+
