@@ -256,7 +256,7 @@ export function setRenderersThree(self) {
 		const gridSize = this.settings.contourGridSize
 		const xyCoords = chart.data.samples.map((s, i) => [xAxisScale(s.x), -yAxisScale(s.y)])
 		const zCoords = chart.data.samples.map(s => zAxisScale(s.z))
-		const densityMap = createDensityMap(xyCoords, zCoords, gridSize, chart)
+		const densityMap = createDensityMap(xyCoords, zCoords, gridSize, chart, false)
 		const thresholds = this.settings.contourThresholds
 		const width = this.settings.svgw
 		const height = this.settings.svgh
