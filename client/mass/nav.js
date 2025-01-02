@@ -169,7 +169,10 @@ class TdbNav {
 		if (this.state.nav.header_mode === 'with_tabs') {
 			if (!(this.activeCohortName in this.samplecounts)) {
 				const count = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
-				this.samplecounts[this.activeCohortName] = count
+				if (!this.activeCohortName) {
+					// dataset does not use subchort
+					this.samplecounts['TotalCountNoSubCohort'] = count
+				} else this.samplecounts[this.activeCohortName] = count
 			}
 			if (!(this.filterJSON in this.samplecounts)) {
 				if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
@@ -457,7 +460,7 @@ function setRenderers(self) {
 						const aboutMap = {
 							top: massNav?.tabs?.about?.top || 'ABOUT',
 							mid: massNav?.tabs?.about?.mid || this.innerHTML,
-							btm: massNav?.tabs?.about?.btm || this.innerHTML
+							btm: massNav?.tabs?.about?.btm || self.samplecounts['TotalCountNoSubCohort']
 						}
 						return aboutMap[d.key] || ''
 					} else {
@@ -466,7 +469,8 @@ function setRenderers(self) {
 				} else if (d.subheader === 'filter') {
 					const filter = self.filterUiRoot ? self.filterUiRoot : { lst: [] }
 					if (filter.lst.length === 0) {
-						return d.key === 'mid' ? 'NONE' : self.samplecounts['undefined'] ? `${self.samplecounts['undefined']}` : ''
+						// Do not show number of samples at bottom of FILFTER tab when no filter applied
+						return d.key === 'mid' ? 'NONE' : ''
 					} else {
 						const n = self.samplecounts[self.filterJSON] != undefined ? '' + self.samplecounts[self.filterJSON] : ''
 						return d.key === 'mid' ? filter.lst.length : n
