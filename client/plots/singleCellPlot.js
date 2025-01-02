@@ -1221,7 +1221,7 @@ class singleCellPlot {
 	async renderContourMap(scene, xCoords, yCoords, zCoords, plot) {
 		const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
 		const gridSize = this.settings.contourGridSize
-		const densityMap = createDensityMap(umapCoords, zCoords, gridSize, plot)
+		const densityMap = createDensityMap(umapCoords, zCoords, gridSize, plot, false)
 		const thresholds = this.settings.contourThresholds
 		const width = this.settings.svgw
 		const height = this.settings.svgh
@@ -1320,7 +1320,7 @@ export function getContourImage(densityMap, width, height, thresholds, gridSizeX
 // - geneExpression: Array of gene expression values for each cell ([value1, value2, ...])
 
 // Function to create a 2D density map
-export function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
+export function createDensityMap(umapCoords, geneExpression, gridSize, plot, sum = true) {
 	const densityMap = []
 	const minX = Math.min(...umapCoords.map(coord => coord[0]))
 	const maxX = Math.max(...umapCoords.map(coord => coord[0]))
@@ -1345,7 +1345,8 @@ export function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
 		if (cellX >= 0 && cellX < gridSize && cellY >= 0 && cellY < gridSize) {
 			let geneExp = geneExpression[k]
 			if (geneExp > plot.max) geneExp = plot.max
-			densityMap[cellY][cellX] += geneExp
+			if (sum) densityMap[cellY][cellX] += geneExp
+			else if (densityMap[cellY][cellX] < geneExp) densityMap[cellY][cellX] = geneExp
 		}
 	}
 
