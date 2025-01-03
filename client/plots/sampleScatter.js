@@ -282,12 +282,13 @@ class Scatter {
 			min: 0
 		}
 		const showAxes = {
-			boxLabel: 'Visible',
+			boxLabel: '',
 			label: 'Show axes',
 			type: 'checkbox',
 			chartType: 'sampleScatter',
 			settingsKey: 'showAxes',
-			title: `Option to show/hide plot axes`
+			title: `Option to show/hide plot axes`,
+			inputId: 'showAxes'
 		}
 
 		const inputs = [

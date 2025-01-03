@@ -819,7 +819,7 @@ tape('Check/uncheck Show axes from menu', function (test) {
 				opacity: `${opacity}`
 			},
 			trigger() {
-				const axesCheckbox = scatter.Inner.dom.controlsHolder.select('input[type="checkbox"]')
+				const axesCheckbox = scatter.Inner.dom.controlsHolder.select('input[id="showAxes"]')
 				axesCheckbox.property('checked', isvisible)
 				axesCheckbox.node().dispatchEvent(new Event('change'))
 			}
