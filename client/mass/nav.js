@@ -167,16 +167,13 @@ class TdbNav {
 		this.cohortsData = await this.app.vocabApi.getCohortsData()
 
 		if (this.state.nav.header_mode === 'with_tabs') {
-			if (!(this.activeCohortName in this.samplecounts)) {
+			if (!(this.activeCohort in this.samplecounts)) {
 				const count = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
-				if (this.activeCohort == -1) {
-					// dataset does not use subchort
-					this.samplecounts['TotalCountNoSubCohort'] = count
-				} else this.samplecounts[this.activeCohortName] = count
+				this.samplecounts[this.activeCohort] = count
 			}
 			if (!(this.filterJSON in this.samplecounts)) {
 				if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
-					this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
+					this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohort]
 				} else {
 					const n = await this.app.vocabApi.getFilteredSampleCount(this.filterJSON)
 					this.samplecounts[this.filterJSON] = n
@@ -449,18 +446,18 @@ function setRenderers(self) {
 					if (d.key == 'mid') return !n ? 'NONE' : n
 					else return ''
 				} else if (d.subheader === 'about') {
-					if (self.activeCohortName && self.activeCohortName in self.samplecounts) {
+					if (self.activeCohort != -1 && self.activeCohort in self.samplecounts) {
 						const aboutMap = {
 							top: this.innerHTML,
 							mid: self.activeCohortLabel,
-							btm: self.samplecounts[self.activeCohortName]
+							btm: self.samplecounts[self.activeCohort]
 						}
 						return aboutMap[d.key] || ''
 					} else if (!selectCohort) {
 						const aboutMap = {
 							top: massNav?.tabs?.about?.top || 'ABOUT',
 							mid: massNav?.tabs?.about?.mid || this.innerHTML,
-							btm: massNav?.tabs?.about?.btm || self.samplecounts['TotalCountNoSubCohort']
+							btm: massNav?.tabs?.about?.btm || self.samplecounts[self.activeCohort]
 						}
 						return aboutMap[d.key] || ''
 					} else {
