@@ -100,21 +100,20 @@ export default class LabelsRenderer implements IRenderer {
 				{
 					const [td1, td2] = table.addRow()
 
-					td1.text('Consequence')
+					td1.text('Mutation')
 					td2
+						.append('span')
+						.style('margin-left', '5px')
+						.text(mutation.mname)
 						.append('span')
 						.style('margin-left', '5px')
 						.style('color', mutation.color)
 						.text(`${mutation.dataClass}`)
 						.append('span')
+						.style('margin-left', '5px')
 						.style('color', 'black')
+						.style('font-size', '0.8em')
 						.text(` ${mutation.chr}:${mutation.position}`)
-				}
-				{
-					const [td1, td2] = table.addRow()
-
-					td1.text('Mutation')
-					td2.append('span').style('margin-left', '5px').text(mutation.mname)
 				}
 			})
 		}
@@ -142,9 +141,16 @@ export default class LabelsRenderer implements IRenderer {
 			label.cnvTooltip.forEach((cnv: CnvTooltip) => {
 				const [td1, td2] = table.addRow()
 				td1.text('CNV')
-				td2.html(
-					`<span style="background:${cnv.color}; margin-left: 5px;">&nbsp;&nbsp;</span> ${cnv.value}, ${cnv.chr}:${cnv.start}-${cnv.stop}`
-				)
+				td2.append('span').style('margin-left', '5px').style('background-color', cnv.color).html('&nbsp;&nbsp;')
+
+				td2
+					.append('span')
+					.style('margin-left', '7.5px')
+					.text(cnv.value)
+					.append('span')
+					.style('margin-left', '7.5px')
+					.style('font-size', '0.8em')
+					.text(`${cnv.chr}:${cnv.start}-${cnv.stop}`)
 			})
 		}
 	}
