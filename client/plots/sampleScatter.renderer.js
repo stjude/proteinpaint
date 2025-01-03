@@ -222,11 +222,13 @@ export function setRenderers(self) {
 
 		const g = chart.serie
 		const data = chart.data
+		chart.serie.selectAll('*').remove()
+		if (self.settings.showContour) self.renderContours(chart)
+
 		// remove all symbols as there is no data id for privacy
 		//g.selectAll('path').remove()
 
 		const symbols = g.selectAll('path[name="serie"]').data(data.samples)
-		symbols.exit().remove()
 		symbols
 			.transition()
 			.duration(duration)
@@ -251,7 +253,6 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 		self.mayRenderRegression()
-		if (self.settings.showContour) self.renderContours(chart)
 	}
 
 	self.renderContours = function (chart) {
@@ -282,12 +283,12 @@ export function setRenderers(self) {
 			.attr('fill', 'none')
 			.attr('stroke', '#aaa')
 			.attr('stroke-linejoin', 'round')
+			.style('fill-opacity', 0.5)
 			.selectAll()
 			.data(contours)
 			.join('path')
 			.attr('stroke-width', (d, i) => (i % 5 ? 0.25 : 1))
 			.attr('d', geoPath())
-			.style('fill-opacity', 0.5)
 	}
 
 	self.getStrokeWidth = function (c) {
@@ -596,13 +597,19 @@ export function setRenderers(self) {
 			.style('display', display)
 			.style('margin', '20px')
 			.attr('name', 'sjpp-zoom-in-btn') //For unit tests
-		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn, title: 'Zoom in' })
+		icon_functions['zoomIn'](zoomInDiv, {
+			handler: zoomIn,
+			title: 'Zoom in. You can also zoom in pressing the Ctrl key and using the mouse wheel'
+		})
 		const zoomOutDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
 			.attr('name', 'sjpp-zoom-out-btn') //For unit tests
-		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut, title: 'Zoom out' })
+		icon_functions['zoomOut'](zoomOutDiv, {
+			handler: zoomOut,
+			title: 'Zoom out. You can also zoom out pressing the Ctrl key and using the mouse wheel'
+		})
 		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
 		const lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
 		if (!(self.is2DLarge || self.is3D)) {
