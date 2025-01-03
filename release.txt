@@ -1,1 +1,3 @@
 
+Features
+- Supported density contours for 2d scatter

@@ -323,6 +323,14 @@ class Scatter {
 				type: 'number',
 				chartType: 'sampleScatter',
 				settingsKey: 'svgh'
+			},
+			{
+				label: 'Show contour map',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'sampleScatter',
+				settingsKey: 'showContour',
+				title: 'Show contour map'
 			}
 		]
 		if (this.config.sampleCategory) {
@@ -451,15 +459,8 @@ class Scatter {
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'fov'
-				}),
-					inputs.push({
-						label: 'Show contour map',
-						boxLabel: '',
-						type: 'checkbox',
-						chartType: 'sampleScatter',
-						settingsKey: 'showContour',
-						title: 'Show contour map'
-					})
+				})
+
 				if (this.settings.showContour) {
 					inputs.push(
 						{

@@ -9,7 +9,7 @@ import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { regressionPoly } from 'd3-regression'
-import { line } from 'd3'
+import { line, extent, contourDensity, geoPath } from 'd3'
 import { getId } from '#mass/nav'
 import { minShapeSize, maxShapeSize } from './sampleScatter.js'
 import { addNewGroup } from '../mass/groups.js'
@@ -219,6 +219,7 @@ export function setRenderers(self) {
 
 	function renderSerie(chart, duration) {
 		if (self.canvas) self.canvas.remove()
+
 		const g = chart.serie
 		const data = chart.data
 		// remove all symbols as there is no data id for privacy
@@ -250,6 +251,43 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 		self.mayRenderRegression()
+		if (self.settings.showContour) self.renderContours(chart)
+	}
+
+	self.renderContours = function (chart) {
+		const contourG = chart.serie
+		const data = chart.data.samples.map(s => {
+			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y) }
+		})
+		// Create the horizontal and vertical scales.
+		const x = d3Linear()
+			.domain(extent(data, s => s.x))
+			.nice()
+			.rangeRound([0, self.settings.width])
+
+		const y = d3Linear()
+			.domain(extent(data, s => s.y))
+			.nice()
+			.rangeRound([self.settings.svgh, 0])
+		// Compute the density contours.
+		const contours = contourDensity()
+			.x(s => s.x)
+			.y(s => s.y)
+			.size([self.settings.svgw, self.settings.svgh])
+			.bandwidth(30)
+			.thresholds(30)(data)
+
+		// Append the contours.
+		contourG
+			.attr('fill', 'none')
+			.attr('stroke', '#aaa')
+			.attr('stroke-linejoin', 'round')
+			.selectAll()
+			.data(contours)
+			.join('path')
+			.attr('stroke-width', (d, i) => (i % 5 ? 0.25 : 1))
+			.attr('d', geoPath())
+			.style('fill-opacity', 0.5)
 	}
 
 	self.getStrokeWidth = function (c) {
