@@ -236,14 +236,8 @@ class MassGroups {
 				this.tip
 			)
 		})
-		row = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Delete variable')
-			.on('click', event => {
-				deleteCallback()
-				this.tip.hide()
-			})
+		
+		//show scatterplots for custom variable options
 		if (this.state.termdbConfig.scatterplots)
 			for (const plot of this.state.termdbConfig.scatterplots) {
 				if (plot.colorTW)
@@ -275,6 +269,16 @@ class MassGroups {
 							this.tip.hide()
 						})
 			}
+
+			//show option to delete custom variable
+			row = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Delete variable')
+			.on('click', event => {
+				deleteCallback()
+				this.tip.hide()
+			})
 
 		this.tip.showunder(event.target)
 	}
