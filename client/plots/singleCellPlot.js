@@ -1351,7 +1351,6 @@ export function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
 
 		if (cellX >= 0 && cellX < gridSize && cellY >= 0 && cellY < gridSize) {
 			let geneExp = geneExpression[k]
-			if (geneExp > plot.max) geneExp = plot.max
 			if (densityMap[cellY][cellX] < geneExp) densityMap[cellY][cellX] = geneExp
 		}
 	}
