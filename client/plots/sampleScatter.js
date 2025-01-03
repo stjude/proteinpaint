@@ -282,12 +282,13 @@ class Scatter {
 			min: 0
 		}
 		const showAxes = {
-			boxLabel: 'Visible',
+			boxLabel: '',
 			label: 'Show axes',
 			type: 'checkbox',
 			chartType: 'sampleScatter',
 			settingsKey: 'showAxes',
-			title: `Option to show/hide plot axes`
+			title: `Option to show/hide plot axes`,
+			inputId: 'showAxes'
 		}
 
 		const inputs = [
@@ -323,6 +324,14 @@ class Scatter {
 				type: 'number',
 				chartType: 'sampleScatter',
 				settingsKey: 'svgh'
+			},
+			{
+				label: 'Show contour map',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'sampleScatter',
+				settingsKey: 'showContour',
+				title: 'Show contour map'
 			}
 		]
 		if (this.config.sampleCategory) {
@@ -451,15 +460,8 @@ class Scatter {
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'fov'
-				}),
-					inputs.push({
-						label: 'Show contour map',
-						boxLabel: '',
-						type: 'checkbox',
-						chartType: 'sampleScatter',
-						settingsKey: 'showContour',
-						title: 'Show contour map'
-					})
+				})
+
 				if (this.settings.showContour) {
 					inputs.push(
 						{
