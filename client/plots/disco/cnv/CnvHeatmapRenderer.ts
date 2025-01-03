@@ -49,11 +49,6 @@ export class CnvHeatmapRenderer {
 					c1.text('Position')
 					c2.text(cnv.chr + ':' + cnv.start + '-' + cnv.stop)
 				}
-				{
-					const [c1, c2] = table.addRow()
-					c1.text('Unit')
-					c2.text(cnv.value)
-				}
 
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
