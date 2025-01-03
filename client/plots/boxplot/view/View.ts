@@ -34,7 +34,12 @@ export class View {
 
 		dom.div.style('background-color', plotDim.backgroundColor)
 
-		dom.svg.transition().attr('width', plotDim.svgWidth).attr('height', plotDim.svgHeight)
+		dom.svg
+			.transition()
+			.attr('width', plotDim.svgWidth)
+			.attr('height', plotDim.svgHeight)
+			//Fix for white background when downloading darkMode image.
+			.style('fill', plotDim.backgroundColor)
 
 		const yScale = scaleLinear().domain(plotDim.domain).range([0, settings.boxplotWidth])
 

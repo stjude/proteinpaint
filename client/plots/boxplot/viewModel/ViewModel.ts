@@ -122,7 +122,7 @@ export class ViewModel {
 				x: totalLabelWidth,
 				y: this.topPad + this.incrTopPad + 20
 			},
-			backgroundColor: settings.darkMode ? '#353839' : 'white',
+			backgroundColor: settings.darkMode ? 'black' : 'white',
 			textColor: settings.darkMode ? 'white' : 'black'
 		}
 		return plotDim
