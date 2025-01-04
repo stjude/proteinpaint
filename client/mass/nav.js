@@ -10,9 +10,6 @@ import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 
 /*
-nav {}
-	.tabs[]
-
 todo: steps to add a new tab
 */
 
@@ -46,10 +43,11 @@ class TdbNav {
 	constructor(opts) {
 		this.type = 'nav'
 		this.instanceNum = instanceNum++
-		this.activeTab = 0 // 0 = cohort tab if present, otherwise charts tab
+		this.tabs = [] // array of tab objects corresponding to what's shown on header, based on ds customization. hidden tabs are not in this array. filled in initUI()
+		this.activeTab = 0 // array index for .tabs[]
 		this.activeCohort = 0 // -1 = unselected, 0,1,2... = selected
+		this.samplecounts = {} // tracks sample count by .activeCohort value and stringified filter json
 		this.searching = false
-		this.samplecounts = {}
 		this.massSessionDuration = opts.massSessionDuration
 		this.sessionDaysLeft = opts.app.opts.sessionDaysLeft || null
 		this.sessionId = opts.app.opts.sessionId || null
@@ -126,6 +124,7 @@ class TdbNav {
 	}
 
 	reactsTo(action) {
+		// never called?
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
@@ -168,8 +167,7 @@ class TdbNav {
 
 		if (this.state.nav.header_mode === 'with_tabs') {
 			if (!(this.activeCohort in this.samplecounts)) {
-				const count = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
-				this.samplecounts[this.activeCohort] = count
+				this.samplecounts[this.activeCohort] = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
 			}
 			if (!(this.filterJSON in this.samplecounts)) {
 				if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
@@ -211,10 +209,7 @@ function setRenderers(self) {
 			header,
 			tabDiv,
 			controlsDiv,
-			searchDiv: controlsDiv
-				.append('div')
-				//.style('display', 'none')
-				.style('margin', '10px'),
+			searchDiv: controlsDiv.append('div').style('margin', '10px'),
 			sessionDiv: controlsDiv.append('div').style('display', 'inline-block'),
 			recoverDiv: controlsDiv.append('div').style('display', 'inline-block'),
 			deleteAllDiv: controlsDiv
@@ -239,6 +234,7 @@ function setRenderers(self) {
 		})
 
 		if (appState.nav.header_mode == 'only_buttons') {
+			// may retire this?
 			self.dom.tabDiv.style('display', 'none')
 			self.dom.recoverDiv.style('display', 'none')
 			titleDiv.style('margin-top', '95px').style('font-size', '0.9em')
@@ -272,32 +268,46 @@ function setRenderers(self) {
 		}
 
 		self.dom.subheader = Object.freeze({
+			// For either the COHORT or ABOUT tab
+			about: self.dom.subheaderDiv.append('div').style('display', 'none').attr('data-testid', 'sjpp-mass-about'),
 			search: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			groups: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			charts: self.dom.subheaderDiv.append('div').style('display', 'none'),
-			filter: self.dom.subheaderDiv.append('div').style('display', 'none'),
-			cart: self.dom.subheaderDiv
-				.append('div')
-				.style('display', 'none')
-				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
-			// For either the COHORT or ABOUT tab
-			about: self.dom.subheaderDiv.append('div').style('display', 'none').attr('data-testid', 'sjpp-mass-about')
+			filter: self.dom.subheaderDiv.append('div').style('display', 'none')
+			// cart: self.dom.subheaderDiv.append('div').style('display', 'none').html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
 		})
-		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
-		Object.assign(aboutTab, massNav?.tabs?.about)
-		Object.assign(chartTab, massNav?.tabs?.charts)
-		Object.assign(groupsTab, massNav?.tabs?.groups)
-		Object.assign(filterTab, massNav?.tabs?.filter)
 
-		if (massNav?.tabs?.groups?.hide) self.tabs.splice(1, 1)
-		/** Updates about tab for cohorts */
-		if (appState.termdbConfig?.selectCohort && !massNav?.tabs?.about) {
-			aboutTab.top = 'COHORT'
-			aboutTab.mid = ''
-			aboutTab.btm = ''
-		} else aboutTab.mid = massNav?.tabs?.about?.mid || self.pickDatasetLabel(appState)
-		const tabIdx = appState.termdbConfig?.selectCohort ? 0 : massNav?.tabs?.about?.order || 0
-		self.tabs.splice(tabIdx, 0, aboutTab)
+		if (!massNav.tabs?.about?.hide) {
+			// about tab is not hidden
+			self.tabs.push(aboutTab)
+			// about tab contents are conditionally determined by 1) override 2) ds using or not using cohort.
+			// furbish an override object with default properties based on conditions if those properties are missing
+			const override = massNav.tabs?.about || {}
+			if (appState.termdbConfig?.selectCohort) {
+				// ds has cohort selection and no customization to about tab
+				if (!override.top) override.top = 'COHORT'
+				// do not assign "mid" here as it will be dynamically assigned with active cohort name
+			} else {
+				// ds doesn't use cohort selection. if mid is missing, use dslabel
+				if (!override.mid) override.mid = self.pickDatasetLabel(appState)
+			}
+			Object.assign(aboutTab, override) // apply ds customizations
+		}
+		if (!massNav.tabs?.charts?.hide) {
+			// charts tab is not hidden
+			self.tabs.push(chartTab)
+			Object.assign(chartTab, massNav.tabs?.charts)
+		}
+		if (!massNav.tabs?.groups?.hide) {
+			// group tab is not hidden
+			self.tabs.push(groupsTab)
+			Object.assign(groupsTab, massNav.tabs?.groups)
+		}
+		if (!massNav.tabs?.filter?.hide) {
+			// filter tab is not hidden
+			self.tabs.push(filterTab)
+			Object.assign(filterTab, massNav.tabs?.filter)
+		}
 
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
 
