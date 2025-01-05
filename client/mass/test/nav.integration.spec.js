@@ -61,7 +61,7 @@ tape('default hidden tabs, no filter', function (test) {
 	}
 })
 
-tape.only('chart buttons', function (test) {
+tape('chart buttons', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -89,25 +89,50 @@ tape.only('chart buttons', function (test) {
 
 			must not trigger click before all if(), this will cause all previous temporary menu items to disappear
 			*/
-			if (btn.innerHTML == 'Data Dictionary') {
-				btn.dispatchEvent(new Event('click'))
-				await detectOne({
-					elem: nav.Inner.app.Inner.dom.plotDiv.node(),
-					selector: '[data-testid=sjpp-massplot-sandbox-dictionary]'
-				})
-				test.pass('dictionary sandbox found')
-				// todo: delete sandbox
-				continue
+			switch (btn.innerHTML) {
+				case 'Data Dictionary':
+					btn.dispatchEvent(new Event('click'))
+					await detectOne({
+						elem: nav.Inner.app.Inner.dom.plotDiv.node(),
+						selector: '[data-testid=sjpp-massplot-sandbox-dictionary]'
+					})
+					test.pass('found sandbox after clicking chart button: ' + btn.innerHTML)
+					break
+				case 'Sample View':
+					btn.dispatchEvent(new Event('click'))
+					await detectOne({
+						elem: nav.Inner.app.Inner.dom.plotDiv.node(),
+						selector: '[data-testid=sjpp-massplot-sandbox-sampleView]'
+					})
+					test.pass('found sandbox after clicking chart button: ' + btn.innerHTML)
+					break
+				case 'Data Download':
+					btn.dispatchEvent(new Event('click'))
+					await detectOne({
+						elem: nav.Inner.app.Inner.dom.plotDiv.node(),
+						selector: '[data-testid=sjpp-massplot-sandbox-dataDownload]'
+					})
+					test.pass('found sandbox after clicking chart button: ' + btn.innerHTML)
+					break
+				case 'Summary Plots':
+				case 'Scatter Plot':
+				case 'Cumulative Incidence':
+				case 'Survival':
+				case 'Regression Analysis':
+				case 'Sample Matrix':
+				case 'Genome Browser':
+				case 'Facet Table':
+				case 'Gene Expression':
+					btn.dispatchEvent(new Event('click'))
+					await whenVisible(nav.Inner.components.charts.Inner.dom.tip.d.node())
+					test.pass('charts.dom.tip is shown after clicking chart button: ' + btn.innerHTML)
+					nav.Inner.components.charts.Inner.dom.tip.hide()
+					break
+				default:
+					test.fail('TODO: need test cover for chart button', btn.innerHTML)
 			}
-			if (btn.innerHTML == 'Summary Plot') {
-				btn.dispatchEvent(new Event('click'))
-				// todo: test that menu with dictionary ui is opened
-				continue
-			}
-			console.log('TODO: need test cover for chart button', btn.innerHTML)
 		}
-		//if (test._ok) nav.Inner.app.destroy()
-		console.log(nav)
+		if (test._ok) nav.Inner.app.destroy()
 		test.end()
 	}
 })
