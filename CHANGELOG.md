@@ -9,6 +9,7 @@ General:
 
 Features:
 - Added support for drawing contour maps on 3d plots
+- Supported density contours for 2d scatter
 
 Fixes:
 - matrix: Remove text input option from mass chart button menu
