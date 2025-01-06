@@ -129,7 +129,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
       calculate_exact_test_time_stop <- Sys.time()
       print(paste0("Exact Time:",calculate_exact_test_time_stop - calculate_exact_test_time_start))
 } else { # Adjusting for confounding factors. This has been adapted based on the protocol described here: http://larionov.co.uk/deg_ebi_tutorial_2020/edger-analysis-1.html#calculate-degs
-    design <- model.matrix(~ input$conf1 + conditions, data = y$samples)
+    design <- model.matrix(~input$conf1 + conditions, data = y$samples)
     y <- estimateDisp(y, design)
     # Fit the model
     calculate_fit_time_start <- Sys.time()
