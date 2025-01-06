@@ -95,8 +95,12 @@ export function setRenderersThree(self) {
 	}
 
 	self.render3DSerie = async function (chart) {
-		const xAxisScale = chart.xAxisScale.range([self.settings.showContour ? -1 : 0, 1])
-		const yAxisScale = chart.yAxisScale.range([self.settings.showContour ? -1 : 0, 1])
+		const xAxisScale = d3Linear()
+			.domain([chart.xMin, chart.xMax])
+			.range([self.settings.showContour ? -1 : 0, 1])
+		const yAxisScale = d3Linear()
+			.domain([chart.yMax, chart.yMin])
+			.range([self.settings.showContour ? -1 : 0, 1])
 		const zAxisScale = chart.zAxisScale.range([0, 1])
 
 		const vertices = []
@@ -254,13 +258,19 @@ export function setRenderersThree(self) {
 		camera.position.set(0, 0, 2.5)
 		camera.lookAt(scene.position)
 		const gridSize = this.settings.contourGridSize
-		const xyCoords = chart.data.samples.map((s, i) => [xAxisScale(s.x), -yAxisScale(s.y)])
+		const xyCoords = chart.data.samples.map((s, i) => [xAxisScale(s.x), yAxisScale(s.y)])
 		const zCoords = chart.data.samples.map(s => zAxisScale(s.z))
-		const densityMap = createDensityMap(xyCoords, zCoords, gridSize, chart)
+		const densityMap = createDensityMap(xyCoords, zCoords, gridSize, chart, false)
 		const thresholds = this.settings.contourThresholds
 		const width = this.settings.svgw
 		const height = this.settings.svgh
-		const imageUrl = getContourImage(densityMap, width, height, thresholds, gridSize, gridSize)
+		const imageUrl = getContourImage(
+			densityMap,
+			width,
+			height,
+			this.settings.contourInterpolation,
+			this.settings.contourBlur
+		)
 		const loader = new THREE.TextureLoader()
 		loader.load(imageUrl, texture => {
 			// Create a plane geometry

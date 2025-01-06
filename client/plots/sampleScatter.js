@@ -474,13 +474,24 @@ class Scatter {
 							step: 5
 						},
 						{
-							label: 'Contour thresholds',
-							type: 'number',
+							label: 'Contour interpolation',
+							type: 'dropdown',
 							chartType: 'sampleScatter',
-							settingsKey: 'contourThresholds',
-							min: 3,
-							max: 10,
-							step: 1
+							settingsKey: 'contourInterpolation',
+							options: [
+								{ label: 'none', value: 'none' },
+								{ label: 'barycentric', value: 'barycentric' },
+								{ label: 'random-walk', value: 'random-walk' },
+								{ label: 'nearest', value: 'nearest' }
+							]
+						},
+						{
+							label: 'Contour blur',
+							boxLabel: '',
+							type: 'checkbox',
+							chartType: 'sampleScatter',
+							settingsKey: 'contourBlur',
+							title: 'Apply blur to contour map'
 						}
 					)
 				}
@@ -697,7 +708,8 @@ export function getDefaultScatterSettings() {
 		//3D Plot settings
 		showContour: false,
 		contourGridSize: 50,
-		contourThresholds: 5
+		contourInterpolation: 'barycentric',
+		contourBlur: true
 	}
 }
 

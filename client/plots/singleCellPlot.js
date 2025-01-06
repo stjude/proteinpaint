@@ -5,7 +5,7 @@ import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { extent, range, rgb, contours, geoIdentity, geoPath, create, scaleSequential, interpolateRgbBasis } from 'd3'
+import { extent, range, rgb, scaleOrdinal } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
@@ -569,13 +569,24 @@ class singleCellPlot {
 						step: 5
 					},
 					{
-						label: 'Contour thresholds',
-						type: 'number',
+						label: 'Contour interpolation',
+						type: 'dropdown',
 						chartType: 'singleCellPlot',
-						settingsKey: 'contourThresholds',
-						min: 3,
-						max: 10,
-						step: 1
+						settingsKey: 'contourInterpolation',
+						options: [
+							{ label: 'none', value: 'none' },
+							{ label: 'barycentric', value: 'barycentric' },
+							{ label: 'random-walk', value: 'random-walk' },
+							{ label: 'nearest', value: 'nearest' }
+						]
+					},
+					{
+						label: 'Contour blur',
+						boxLabel: '',
+						type: 'checkbox',
+						chartType: 'singleCellPlot',
+						settingsKey: 'contourBlur',
+						title: 'Apply blur to contour map'
 					}
 				)
 			}
@@ -1196,9 +1207,12 @@ class singleCellPlot {
 		})
 
 		if (plot.expCells.length > 0 && this.settings.showContour) {
-			const xCoords = plot.expCells.map(c => plot.xAxisScale(c.x))
-			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
-			const geneExpression = plot.expCells.map(c => c.geneExp)
+			const xAxisScale = plot.xAxisScale.range([0, this.settings.svgw])
+			const yAxisScale = plot.yAxisScale.range([0, this.settings.svgh])
+			const zAxisScale = d3Linear().domain([plot.min, plot.max]).range([0, 1])
+			const xCoords = plot.expCells.map(c => xAxisScale(c.x))
+			const yCoords = plot.expCells.map(c => yAxisScale(c.y))
+			const geneExpression = plot.expCells.map(c => zAxisScale(c.geneExp))
 			await this.renderContourMap(scene, xCoords, yCoords, geneExpression, plot)
 			let isDragging = false
 			window.addEventListener('mousedown', () => (isDragging = true))
@@ -1221,22 +1235,17 @@ class singleCellPlot {
 
 	async renderContourMap(scene, xCoords, yCoords, zCoords, plot) {
 		const gridSize = this.settings.contourGridSize
-		const data = xCoords.map((x, i) => {
-			return { x, y: yCoords[i], value: zCoords[i] }
-		})
-		const svg = Plot.contour(data, { x: 'x', y: 'y', fill: 'value', interpolate: 'barycentric', blur: 2 }).plot({
-			color: { type: 'diverging' }
-		})
-		console.log(svg)
-
-		// Serialize the SVG element
-		const svgString = new XMLSerializer().serializeToString(svg)
-
-		// Encode the SVG string
-		const encodedSvg = encodeURIComponent(svgString)
+		const umapCoords = plot.expCells.map(c => [c.x, c.y])
+		const densityMap = createDensityMap(umapCoords, zCoords, gridSize, plot)
 
 		// Create the data URL
-		const imageUrl = 'data:image/svg+xml;charset=utf-8,' + encodedSvg
+		const imageUrl = getContourImage(
+			densityMap,
+			this.settings.svgw,
+			this.settings.svgh,
+			this.settings.contourInterpolation,
+			this.settings.contourBlur
+		)
 		const loader = new THREE.TextureLoader()
 		loader.load(imageUrl, texture => {
 			// Create a plane geometry
@@ -1295,35 +1304,29 @@ class singleCellPlot {
 	}
 }
 
-export function getContourImage(data, width, height, thresholds, gridSizeX, gridSizeY) {
-	console.log(data)
-	let [min, max] = extent(data)
-	const contoursFunc = contours()
-		.size([gridSizeX, gridSizeY])
-		.thresholds(range(min, max, (max - min) / thresholds))
-		.smooth(true)
-	const contoursData = contoursFunc(data)
-	const projection = geoIdentity().fitSize([width, height], contoursData[0])
-	const path = geoPath().projection(projection)
-
-	const color = scaleSequential(interpolateRgbBasis(contourColors)).domain([min, max]).nice()
-	const svg = create('svg')
-		.attr('width', width)
-		.attr('height', height)
-		.style('fill', 'white')
-		.style('stroke', 'transparent')
-		.style('stroke-width', 0)
-		.style('background-color', 'white')
-	svg
-		.selectAll('path')
-		.data(contoursData)
-		.enter()
-		.append('path')
-		.attr('d', path)
-		.attr('fill', d => color(d.value))
+export function getContourImage(densityMap, width, height, interpolate = 'barycentric', blur = true) {
+	const data = []
+	for (let i = 0; i < densityMap.length; i++) {
+		for (let j = 0; j < densityMap.length; j++) {
+			data.push({ x: j + 1, y: i + 1, value: densityMap[i][j] })
+		}
+	}
+	let options = { x: 'x', y: 'y', fill: 'value' }
+	if (interpolate != 'none') options = { ...options, interpolate }
+	if (blur) options = { ...options, blur: 0.5 }
+	const svg = Plot.contour(data, { ...options }).plot({
+		width,
+		height,
+		marginTop: 0,
+		marginRight: 0,
+		marginBottom: 0,
+		marginLeft: 0,
+		color: { scheme: 'oranges' }
+	})
+	//see how to use this color scale
 
 	// Serialize the SVG element
-	const svgString = new XMLSerializer().serializeToString(svg.node())
+	const svgString = new XMLSerializer().serializeToString(svg)
 
 	// Encode the SVG string
 	const encodedSvg = encodeURIComponent(svgString)
@@ -1423,6 +1426,7 @@ export function getDefaultSingleCellSettings() {
 		showNoExpCells: false,
 		showContour: false,
 		contourGridSize: 50,
-		contourThresholds: 5
+		contourInterpolation: 'barycentric',
+		contourBlur: true
 	}
 }
