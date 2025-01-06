@@ -281,7 +281,7 @@ function setRenderers(self) {
 			self.tabs.push(aboutTab)
 			// about tab contents are conditionally determined by 1) override 2) ds using or not using cohort.
 			// furbish an override object with default properties based on conditions if those properties are missing
-			const override = massNav.tabs?.about || {}
+			const override = Object.assign({}, massNav.tabs?.about)
 			if (appState.termdbConfig?.selectCohort) {
 				// ds has cohort selection and no customization to about tab
 				if (!override.top) override.top = 'COHORT'
