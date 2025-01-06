@@ -70,7 +70,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	if (q.samples.src == 'gdcapi') {
 		gdc_validate_query_singleCell_samples(ds, genome)
 	} else if (q.samples.src == 'native') {
-		validateSamplesNative(q.samples as SingleCellSamplesNative, ds)
+		validateSamplesNative(q.samples as SingleCellSamplesNative, q.data as SingleCellDataNative, ds)
 	} else {
 		throw 'unknown singleCell.samples.src'
 	}
@@ -102,23 +102,45 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	}
 }
 
-async function validateSamplesNative(S: SingleCellSamplesNative, ds: any) {
-	// for now use this quick fix method to pull sample ids annotated by this term
-	// to support situation where not all samples from a dataset has sc data
-	const samples = {}
+async function validateSamplesNative(S: SingleCellSamplesNative, D: SingleCellDataNative, ds: any) {
+	// folder of every plot contains text files, one file per sample and named by sample names. each folder may contain variable number of samples. look into all folders to get union of samples as list of samples with sc data and return in this getter
+
+	// k: sample integer id
+	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
+	const samples = new Map()
+	for (const plot of D.plots) {
+		try {
+			for (const fn of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, plot.folder))) {
+				// fn: string file name.
+				let sampleName = fn
+				if (plot.fileSuffix) {
+					if (!fn.endsWith(plot.fileSuffix)) continue // unrecognized file name, ignore
+					sampleName = fn.split(plot.fileSuffix)[0]
+				}
+				if (!sampleName) continue // blank sample name (e.g. file name equals suffix), ignore
+				const sid = ds.cohort.termdb.q.sampleName2id(sampleName)
+				if (sid == undefined) continue // unknown sample name. ignore
+				// is valid sample, add to holder
+				samples.set(sid, { sample: sampleName })
+			}
+		} catch (e) {
+			console.log('cannot readdir on singleCell.data.plot[].folder')
+			// may register as ds init err
+		}
+	}
+	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
-		// has optional terms to show as table columns and annotate samples
+		// has optional terms to show as table columns and annotate samples; pull sample values and assign
 		for (const term of S.sampleColumns) {
 			const s2v = ds.cohort.termdb.q.getAllValues4term(term.termid) // map. k: sampleid, v: term value
-			for (const [s, v] of s2v.entries()) {
-				if (!samples[s]) samples[s] = { sample: ds.cohort.termdb.q.id2sampleName(s) }
-				samples[s][term.termid] = v
+			for (const [sid, v] of s2v.entries()) {
+				if (!samples.has(sid)) continue // ignore sample without sc data
+				samples.get(sid)[term.termid] = v
 			}
 		}
 	}
-
 	S.get = () => {
-		return { samples: Object.values(samples) as Sample[] }
+		return { samples: [...samples.values()] as Sample[] }
 	}
 }
 

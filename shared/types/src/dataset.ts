@@ -517,7 +517,18 @@ export type SingleCellGeneExpressionGdc = {
 
 export type SingleCellSamplesNative = {
 	src: 'native'
+	/** kept to prevent tsc err */
+	firstColumnName?: string
+	/** any columns to be added to sample table. each is a term id */
+	sampleColumns?: { termid: string }[]
+	/** used on client but not on ds */
+	experimentColumns?: { label: string }[]
+	get?: (q: any) => any
+}
 
+export type SingleCellSamplesGdc = {
+	src: 'gdcapi'
+	/** if missing refer to the samples as 'sample', this provides override e.g. 'case' */
 	/** logic to decide sample table columns (the one shown on singlecell app ui, displaying a table of samples with sc data)
 a sample table will always have a sample column, to show sample.sample value
 firstColumnName allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc
@@ -525,24 +536,11 @@ the other two properties allow to declare additional columns to be shown in tabl
 when sample.experiments[] are used, a last column of experiment id will be auto added
 */
 	firstColumnName?: string
-
-	/** do not use for native ds! gdc-only property. kept as optional to avoid tsc err */
-	experimentColumns?: string
-
-	/** any other columns to be added to sample table. each is a term id */
+	/** same as SingleCellSamplesNative */
 	sampleColumns?: { termid: string }[]
-
-	/** dynamically added getter */
-	get?: (q: any) => any
-}
-
-export type SingleCellSamplesGdc = {
-	src: 'gdcapi'
-	get?: (q: any) => any
-	/** if missing refer to the samples as 'sample', this provides override e.g. 'case' */
-	firstColumnName?: string
-	sampleColumns?: { termid: string }[]
+	/** used on client but not on ds */
 	experimentColumns?: { label: string }[]
+	get?: (q: any) => any
 }
 
 export type SingleCellDataGdc = {
