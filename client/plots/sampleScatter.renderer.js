@@ -9,7 +9,7 @@ import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { regressionPoly } from 'd3-regression'
-import { line, extent, contourDensity, geoPath } from 'd3'
+import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateOranges, interpolateGreys } from 'd3'
 import { getId } from '#mass/nav'
 import { minShapeSize, maxShapeSize } from './sampleScatter.js'
 import { addNewGroup } from '../mass/groups.js'
@@ -260,35 +260,8 @@ export function setRenderers(self) {
 		const data = chart.data.samples.map(s => {
 			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y) }
 		})
-		// Create the horizontal and vertical scales.
-		const x = d3Linear()
-			.domain(extent(data, s => s.x))
-			.nice()
-			.rangeRound([0, self.settings.width])
 
-		const y = d3Linear()
-			.domain(extent(data, s => s.y))
-			.nice()
-			.rangeRound([self.settings.svgh, 0])
-		// Compute the density contours.
-		const contours = contourDensity()
-			.x(s => s.x)
-			.y(s => s.y)
-			.size([self.settings.svgw, self.settings.svgh])
-			.bandwidth(30)
-			.thresholds(30)(data)
-
-		// Append the contours.
-		contourG
-			.attr('fill', 'none')
-			.attr('stroke', '#aaa')
-			.attr('stroke-linejoin', 'round')
-			.style('fill-opacity', 0.5)
-			.selectAll()
-			.data(contours)
-			.join('path')
-			.attr('stroke-width', (d, i) => (i % 5 ? 0.25 : 1))
-			.attr('d', geoPath())
+		renderContours(contourG, data, self.settings.svgw, self.settings.svgh)
 	}
 
 	self.getStrokeWidth = function (c) {
@@ -1154,4 +1127,42 @@ export function setRenderers(self) {
 
 		return offsetY
 	}
+}
+
+export function renderContours(contourG, data, width, height) {
+	// Create the horizontal and vertical scales.
+	const x = d3Linear()
+		.domain(extent(data, s => s.x))
+		.nice()
+		.rangeRound([0, width])
+
+	const y = d3Linear()
+		.domain(extent(data, s => s.y))
+		.nice()
+		.rangeRound([height, 0])
+
+	const contours = contourDensity()
+		.x(s => s.x)
+		.y(s => s.y)
+		.size([width, height])
+		.bandwidth(30)
+		.thresholds(30)(data)
+
+	const colorScale = scaleSequential()
+		.domain([0, max(contours, d => d.value)])
+		.interpolator(interpolateGreys)
+
+	// Compute the density contours.
+	// Append the contours.
+	contourG
+		.attr('fill', 'none')
+		.attr('stroke', '#aaa')
+		.attr('stroke-linejoin', 'round')
+		.style('fill-opacity', 0.5)
+		.selectAll()
+		.data(contours)
+		.join('path')
+		.attr('stroke-width', (d, i) => (i % 5 ? 0.25 : 1))
+		.attr('d', geoPath())
+		.attr('fill', d => colorScale(d.value))
 }

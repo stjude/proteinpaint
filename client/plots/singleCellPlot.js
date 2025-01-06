@@ -5,14 +5,14 @@ import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { extent, range, rgb, contours, geoIdentity, geoPath, create, scaleSequential, interpolateRgbBasis } from 'd3'
+import { rgb, create } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
 import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
-
+import { renderContours } from './sampleScatter.renderer.js'
 /*
 this
 
@@ -547,7 +547,7 @@ class singleCellPlot {
 			}
 		]
 		//if more than 50K cells do not allow contour as it may fail, excludes fetalCerebellum
-		if (this.colorByGene && this.state.config.gene && !this.maxCellsExceeded) {
+		if (!this.maxCellsExceeded) {
 			inputs.push({
 				label: 'Show contour map',
 				boxLabel: '',
@@ -556,28 +556,6 @@ class singleCellPlot {
 				settingsKey: 'showContour',
 				title: 'Show contour map'
 			})
-			if (this.settings.showContour) {
-				inputs.push(
-					{
-						label: 'Contour grid size',
-						type: 'number',
-						chartType: 'singleCellPlot',
-						settingsKey: 'contourGridSize',
-						min: 5,
-						max: 100,
-						step: 5
-					},
-					{
-						label: 'Contour thresholds',
-						type: 'number',
-						chartType: 'singleCellPlot',
-						settingsKey: 'contourThresholds',
-						min: 3,
-						max: 10,
-						step: 1
-					}
-				)
-			}
 		}
 
 		this.components = {
@@ -1194,11 +1172,13 @@ class singleCellPlot {
 			plot.plane.position.z = particles.position.z
 		})
 
-		if (plot.expCells.length > 0 && this.settings.showContour) {
-			const xCoords = plot.expCells.map(c => plot.xAxisScale(c.x))
-			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
-			const geneExpression = plot.expCells.map(c => c.geneExp)
-			await this.renderContourMap(scene, xCoords, yCoords, geneExpression, plot)
+		if (this.settings.showContour) {
+			const cells = plot.expCells.length > 0 ? plot.expCells : plot.cells
+			const xAxisScale = plot.xAxisScale.range([0, this.settings.svgw])
+			const yAxisScale = plot.yAxisScale.range([this.settings.svgh, 0])
+			const xCoords = cells.map(c => xAxisScale(c.x))
+			const yCoords = cells.map(c => yAxisScale(c.y))
+			await this.renderContourMap(scene, xCoords, yCoords, plot)
 			let isDragging = false
 			window.addEventListener('mousedown', () => (isDragging = true))
 
@@ -1218,14 +1198,10 @@ class singleCellPlot {
 		if (this.settings.showGrid) this.renderThreeGrid(scene)
 	}
 
-	async renderContourMap(scene, xCoords, yCoords, zCoords, plot) {
-		const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
-		const gridSize = this.settings.contourGridSize
-		const densityMap = createDensityMap(umapCoords, zCoords, gridSize, plot)
-		const thresholds = this.settings.contourThresholds
-		const width = this.settings.svgw
-		const height = this.settings.svgh
-		const imageUrl = getContourImage(densityMap, width, height, thresholds, gridSize, gridSize)
+	async renderContourMap(scene, xCoords, yCoords, plot) {
+		const data = xCoords.map((x, i) => ({ x, y: yCoords[i] }))
+		// Create the data URL
+		const imageUrl = getContourImage(data, this.settings.svgw, this.settings.svgh)
 		const loader = new THREE.TextureLoader()
 		loader.load(imageUrl, texture => {
 			// Create a plane geometry
@@ -1284,32 +1260,11 @@ class singleCellPlot {
 	}
 }
 
-export function getContourImage(densityMap, width, height, thresholds, gridSizeX, gridSizeY) {
-	const data = densityMap.flat()
-	let [min, max] = extent(data)
-	const contoursFunc = contours()
-		.size([gridSizeX, gridSizeY])
-		.thresholds(range(min, max, (max - min) / thresholds))
-		.smooth(true)
-	const contoursData = contoursFunc(data)
-	const projection = geoIdentity().fitSize([width, height], contoursData[0])
-	const path = geoPath().projection(projection)
+export function getContourImage(data, width, height) {
+	const svg = create('svg').attr('width', width).attr('height', height)
+	svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'white')
 
-	const color = scaleSequential(interpolateRgbBasis(contourColors)).domain([min, max]).nice()
-	const svg = create('svg')
-		.attr('width', width)
-		.attr('height', height)
-		.style('fill', 'white')
-		.style('stroke', 'transparent')
-		.style('stroke-width', 0)
-		.style('background-color', 'white')
-	svg
-		.selectAll('path')
-		.data(contoursData)
-		.enter()
-		.append('path')
-		.attr('d', path)
-		.attr('fill', d => color(d.value))
+	renderContours(svg.append('g'), data, width, height)
 
 	// Serialize the SVG element
 	const svgString = new XMLSerializer().serializeToString(svg.node())
@@ -1320,42 +1275,6 @@ export function getContourImage(densityMap, width, height, thresholds, gridSizeX
 	// Create the data URL
 	const imageUrl = 'data:image/svg+xml;charset=utf-8,' + encodedSvg
 	return imageUrl
-}
-
-// Assuming you have:
-// - umapCoords: Array of UMAP coordinates for each cell ([[x1, y1], [x2, y2], ...])
-// - geneExpression: Array of gene expression values for each cell ([value1, value2, ...])
-
-// Function to create a 2D density map
-export function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
-	const densityMap = []
-	const minX = Math.min(...umapCoords.map(coord => coord[0]))
-	const maxX = Math.max(...umapCoords.map(coord => coord[0]))
-	const minY = Math.min(...umapCoords.map(coord => coord[1]))
-	const maxY = Math.max(...umapCoords.map(coord => coord[1]))
-	const cellWidth = (maxX - minX) / gridSize
-	const cellHeight = (maxY - minY) / gridSize
-
-	for (let i = 0; i < gridSize; i++) {
-		densityMap.push([])
-		for (let j = 0; j < gridSize; j++) {
-			densityMap[i].push(0)
-		}
-	}
-
-	for (let k = 0; k < umapCoords.length; k++) {
-		const x = umapCoords[k][0]
-		const y = umapCoords[k][1]
-		const cellX = Math.floor((x - minX) / cellWidth)
-		const cellY = Math.floor((y - minY) / cellHeight)
-
-		if (cellX >= 0 && cellX < gridSize && cellY >= 0 && cellY < gridSize) {
-			let geneExp = geneExpression[k]
-			if (densityMap[cellY][cellX] < geneExp) densityMap[cellY][cellX] = geneExp
-		}
-	}
-
-	return densityMap
 }
 
 // Function to get mouse position in normalized device coordinates (-1 to +1)
@@ -1406,12 +1325,10 @@ export function getDefaultSingleCellSettings() {
 		svgh: 1000,
 		showGrid: true,
 		sampleSize: 1.5,
-		sampleSizeThree: 0.008,
+		sampleSizeThree: 0.02,
 		threeFOV: 60,
 		opacity: 1,
 		showNoExpCells: false,
-		showContour: false,
-		contourGridSize: 50,
-		contourThresholds: 5
+		showContour: false
 	}
 }
