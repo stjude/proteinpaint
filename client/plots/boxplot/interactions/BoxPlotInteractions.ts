@@ -4,6 +4,7 @@ import type { RenderedPlot } from '../view/RenderedPlot'
 import type { LegendItemEntry } from '../viewModel/LegendDataMapper'
 import { to_svg } from '#src/client'
 import { ListSamples } from './ListSamples'
+import { filterJoin, getFilterItemByTag } from '#filter'
 
 export class BoxPlotInteractions {
 	app: MassAppApi
@@ -24,8 +25,7 @@ export class BoxPlotInteractions {
 
 	download() {
 		//May add more options in the future
-		//Fix for dark mode
-		const svg = this.dom.div.select('svg').node() as Node
+		const svg = this.dom.svg.node() as Node
 		to_svg(svg, `boxplot`, { apply_dom_styles: true })
 	}
 
@@ -34,14 +34,20 @@ export class BoxPlotInteractions {
 		window.open('https://github.com/stjude/proteinpaint/wiki/Box-plot')
 	}
 
-	async listSamples(plot: RenderedPlot, min: number, max: number) {
+	/** Option to add a global filter from the box plot label menu. */
+	addFilter(plot: RenderedPlot) {
 		const config = this.app.getState()
-		const sampleList = new ListSamples(this.app, config, this.id, min, max, plot)
-		const data = await sampleList.getData()
-		const rows = sampleList.setRows(data)
-		return rows
+		const sampleList = new ListSamples(this.app, config, this.id, plot, false)
+		const filterUiRoot = getFilterItemByTag(config.termfilter.filter, 'filterUiRoot')
+		const filter = filterJoin([filterUiRoot, sampleList.tvslst])
+		filter.tag = 'filterUiRoot'
+		this.app.dispatch({
+			type: 'filter_replace',
+			filter
+		})
 	}
 
+	/** Option to hide a plot from the box plot label menu. */
 	hidePlot(plot) {
 		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
 		//Don't try to modify a frozen object
@@ -56,6 +62,7 @@ export class BoxPlotInteractions {
 		})
 	}
 
+	/** Trigger when clicking on a hidden plot in the legend */
 	unhidePlot(item: LegendItemEntry) {
 		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
 		const config = structuredClone(plotConfig)
@@ -66,6 +73,15 @@ export class BoxPlotInteractions {
 			id: this.id,
 			config
 		})
+	}
+
+	/** Option from box plot label to show the samples in a table within the tooltip. */
+	async listSamples(plot: RenderedPlot) {
+		const config = this.app.getState()
+		const sampleList = new ListSamples(this.app, config, this.id, plot)
+		const data = await sampleList.getData()
+		const rows = sampleList.setRows(data)
+		return rows
 	}
 
 	/** Callback for color picker in plot(s) label menu */
