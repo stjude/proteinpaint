@@ -120,27 +120,27 @@ class DEanalysis {
 				output.mid_sample_size_cutoff < output.sample_size1 &&
 				output.sample_size1 < output.high_sample_size_cutoff)
 		) {
-			inputs.push(
-				{
-					label: 'Method',
-					type: 'radio',
-					chartType: 'DEanalysis',
-					settingsKey: 'method',
-					title: 'Toggle between edgeR and wilcoxon test',
-					options: [
-						{ label: 'edgeR', value: 'edgeR' },
-						{ label: 'wilcoxon', value: 'wilcoxon' }
-					]
-				},
-				{
+			inputs.push({
+				label: 'Method',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'method',
+				title: 'Toggle between edgeR and wilcoxon test',
+				options: [
+					{ label: 'edgeR', value: 'edgeR' },
+					{ label: 'wilcoxon', value: 'wilcoxon' }
+				]
+			})
+			if (this.settings.method == 'edgeR') {
+				inputs.push({
 					type: 'term',
 					configKey: 'term',
 					chartType: 'DEanalysis',
 					usecase: { target: 'DEanalysis', detail: 'term' },
 					label: 'Confounding factors',
 					vocabApi: this.app.vocabApi
-				}
-			)
+				})
+			}
 		}
 
 		if (this.app.opts.genome.termdbs) {
