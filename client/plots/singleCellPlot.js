@@ -12,6 +12,7 @@ import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, say
 import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
+import * as Plot from '@observablehq/plot'
 
 /*
 this
@@ -1219,13 +1220,23 @@ class singleCellPlot {
 	}
 
 	async renderContourMap(scene, xCoords, yCoords, zCoords, plot) {
-		const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
 		const gridSize = this.settings.contourGridSize
-		const densityMap = createDensityMap(umapCoords, zCoords, gridSize, plot)
-		const thresholds = this.settings.contourThresholds
-		const width = this.settings.svgw
-		const height = this.settings.svgh
-		const imageUrl = getContourImage(densityMap, width, height, thresholds, gridSize, gridSize)
+		const data = xCoords.map((x, i) => {
+			return { x, y: yCoords[i], value: zCoords[i] }
+		})
+		const svg = Plot.contour(data, { x: 'x', y: 'y', fill: 'value', interpolate: 'barycentric', blur: 2 }).plot({
+			color: { type: 'diverging' }
+		})
+		console.log(svg)
+
+		// Serialize the SVG element
+		const svgString = new XMLSerializer().serializeToString(svg)
+
+		// Encode the SVG string
+		const encodedSvg = encodeURIComponent(svgString)
+
+		// Create the data URL
+		const imageUrl = 'data:image/svg+xml;charset=utf-8,' + encodedSvg
 		const loader = new THREE.TextureLoader()
 		loader.load(imageUrl, texture => {
 			// Create a plane geometry
@@ -1284,8 +1295,8 @@ class singleCellPlot {
 	}
 }
 
-export function getContourImage(densityMap, width, height, thresholds, gridSizeX, gridSizeY) {
-	const data = densityMap.flat()
+export function getContourImage(data, width, height, thresholds, gridSizeX, gridSizeY) {
+	console.log(data)
 	let [min, max] = extent(data)
 	const contoursFunc = contours()
 		.size([gridSizeX, gridSizeY])
