@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.95.0
 
 General:
 - GDC support 5-category cnv
