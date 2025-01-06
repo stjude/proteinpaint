@@ -124,7 +124,7 @@ async function validateSamplesNative(S: SingleCellSamplesNative, D: SingleCellDa
 				samples.set(sid, { sample: sampleName })
 			}
 		} catch (e) {
-			console.log('cannot readdir on singleCell.data.plot[].folder')
+			console.log('cannot readdir on singleCell.data.plot[].folder', e)
 			// may register as ds init err
 		}
 	}
