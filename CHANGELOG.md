@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- improve mass nav header rendering to obey ds customization on tabs
+
 
 ## 2.95.0
 
