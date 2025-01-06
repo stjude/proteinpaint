@@ -47,6 +47,9 @@ controls <- unlist(strsplit(input$control, ","))
 combined <- c("geneID","geneSymbol",cases,controls)
 #data %>% select(all_of(combined))
 #read_file_time_start <- Sys.time()
+
+case_sample_list <- c()
+control_sample_list <- c()
 if (exists(input$storage_type)==FALSE) {
     if (input$storage_type == "HDF5") {
         #print(h5ls(input$input_file))
@@ -59,6 +62,7 @@ if (exists(input$storage_type)==FALSE) {
             sample_index <- which(samples == sample)
             if (length(sample_index) == 1) {
                 samples_indicies <- c(samples_indicies,sample_index)
+                case_sample_list <- c(case_sample_list,sample)
             } else {
                 print (paste(sample,"not found"))
                 quit(status = 1)
@@ -69,6 +73,7 @@ if (exists(input$storage_type)==FALSE) {
             sample_index <- which(samples == sample)
             if (length(sample_index) == 1) {
                 samples_indicies <- c(samples_indicies,sample_index)
+                control_sample_list <- c(control_sample_list,sample)
             } else {
                 print (paste(sample,"not found"))
                 quit(status = 1)
@@ -100,7 +105,10 @@ if (exists(input$storage_type)==FALSE) {
     read_counts <- select(read_counts, -geneID)
     read_counts <- select(read_counts, -geneSymbol)
 }
-
+print ("case_sample_list:")
+print (case_sample_list)
+print ("control_sample_list:")
+print (control_sample_list)
 #read_file_time_stop <- Sys.time()
 #print (read_file_time_stop - read_file_time_start)
 
