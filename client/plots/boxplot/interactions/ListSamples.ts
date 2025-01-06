@@ -3,6 +3,7 @@ import type { RenderedPlot } from '../view/RenderedPlot'
 import type { TermWrapper } from '#types'
 import type { AnnotatedSampleData } from '../../../types/termdb'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { isNumericTerm } from '#shared/terms.js'
 
 export class ListSamples {
 	app: MassAppApi
@@ -12,17 +13,25 @@ export class ListSamples {
 	}
 	plot: RenderedPlot
 	term: any
-	constructor(app: MassAppApi, state: MassState, id: string, min: number, max: number, plot: RenderedPlot) {
+	tvslst: any
+	constructor(app: MassAppApi, state: MassState, id: string, plot: RenderedPlot, getRange = true) {
 		this.app = app
 		this.plot = plot
+
 		const plotConfig = state.plots.find((p: { id: string }) => p.id === id)
 		if (!plotConfig) throw 'Box plot not found [ListSamples]'
-		const tvslst = this.getTvsLst(min, max, plotConfig.term, plotConfig.term2)
+
+		const min = plot.descrStats.find(d => d.id === 'min')!.value
+		const max = plot.descrStats.find(d => d.id === 'max')!.value
+		if (Number.isNaN(min) || Number.isNaN(max)) throw 'Min or max not found [ListSamples]'
+
+		this.tvslst = this.getTvsLst(min, max, getRange, plotConfig.term, plotConfig.term2)
 		this.term = plotConfig.term.q?.mode === 'continuous' ? plotConfig.term : plotConfig.term2
+
 		const filter = {
 			type: 'tvslst',
 			join: 'and',
-			lst: [state.termfilter.filter, tvslst],
+			lst: [state.termfilter.filter, this.tvslst],
 			in: true
 		}
 		this.dataOpts = {
@@ -106,7 +115,7 @@ export class ListSamples {
 		)
 	}
 
-	getTvsLst(rangeStart: number, rangeStop: number, tw1: TermWrapper, tw2: TermWrapper) {
+	getTvsLst(rangeStart: number, rangeStop: number, getRange = true, tw1: TermWrapper, tw2: TermWrapper) {
 		const tvslst: {
 			type: string
 			in: boolean
@@ -119,21 +128,23 @@ export class ListSamples {
 			lst: []
 		}
 		const isTw1CategoricalOrCondition = ['categorical', 'condition'].includes(tw1.term.type)
-
 		if (tw2) {
 			if (isTw1CategoricalOrCondition) {
 				this.createTvsLstValues(tw1, tvslst, 0)
-				this.createTvsLstRanges(tw2, tvslst, rangeStart, rangeStop, 1)
+				if (getRange) this.createTvsLstRanges(tw2, tvslst, rangeStart, rangeStop, 1)
 			} else if (this.isContinuousOrBinned(tw2)) {
 				this.createTvsTerm(tw2, tvslst)
 				tvslst.lst[0].tvs.ranges = this.assignPlotRangeRanges()
-				this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 1)
+				if (getRange) this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 1)
+			} else if (isNumericTerm(tw1.term) && isNumericTerm(tw2.term)) {
+				this.createTvsLstRanges(tw2, tvslst, rangeStart, rangeStop, 0)
+				if (getRange) this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 1)
 			} else {
 				this.createTvsLstValues(tw2, tvslst, 0)
-				this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 1)
+				if (getRange) this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 1)
 			}
 		} else {
-			this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 0)
+			if (getRange) this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 0)
 		}
 		return tvslst
 	}

@@ -30,6 +30,7 @@ export type BoxPlotSettings = {
 	boxplotWidth: number
 	/** Default is common plot color.  */
 	color: string
+	/** Toggle between a white and black background */
 	darkMode: boolean
 	/** Padding between the left hand label and boxplot */
 	labelPad: number
