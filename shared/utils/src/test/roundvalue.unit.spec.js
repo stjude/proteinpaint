@@ -1,10 +1,11 @@
 import tape from 'tape'
-import { roundValueAuto, roundValue2 } from '../roundValue.js'
+import { roundValueAuto, roundValue2, decimalPlacesUntilFirstNonZero } from '../roundValue.js'
 
 /**
  * Tests
  * 		roundValueAuto()
  * 		roundValue2()
+ * 		decimalPlacesUntilFirstNonZero()
  */
 
 /**************
@@ -173,6 +174,123 @@ tape('roundValue2()', function (test) {
 	value = 0.0000005
 	rounded = 5e-7
 	test.equal(roundValue2(value), value, `Should return input value=${value} unchanged`)
+
+	test.end()
+})
+
+tape('decimalPlacesUntilFirstNonZero()', function (test) {
+	let value, decimalPlaces
+	value = 0.0001234
+	decimalPlaces = 3
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return ${decimalPlaces} for input value=${value}`
+	)
+
+	value = 0.001234
+	decimalPlaces = 2
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return ${decimalPlaces} for input value=${value}`
+	)
+
+	value = 0.01234
+	decimalPlaces = 1
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return ${decimalPlaces} for input value=${value}`
+	)
+
+	value = 0.1234
+	decimalPlaces = 0
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return ${decimalPlaces} for input value=${value}`
+	)
+
+	value = 1.234
+	decimalPlaces = 0
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return ${decimalPlaces} for input value=${value}`
+	)
+
+	value = 0.0000005
+	decimalPlaces = 0
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return ${decimalPlaces} for input value=${value} because Javacscript converts small numbers to scientific notation`
+	)
+
+	value = 0
+	decimalPlaces = 0
+	test.equal(decimalPlacesUntilFirstNonZero(value), decimalPlaces, `Should return 0 for input value=${value}`)
+
+	value = -1245
+	decimalPlaces = 0
+	test.equal(decimalPlacesUntilFirstNonZero(value), decimalPlaces, `Should return 0 for input value=${value}`)
+
+	value = 123
+	decimalPlaces = 0
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return 0 for input value=${value} (number ending in decimal point)`
+	)
+
+	value = 123.0
+	decimalPlaces = 0
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return 0 for input value=${value} (trailing zeros after decimal)`
+	)
+
+	value = -0.00123
+	decimalPlaces = 2
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return ${decimalPlaces} for negative input value=${value}`
+	)
+
+	value = 999999.00123
+	decimalPlaces = 2
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return ${decimalPlaces} for large number with decimals value=${value}`
+	)
+
+	value = 1.02
+	decimalPlaces = 1
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return ${decimalPlaces} for input value=${value}`
+	)
+
+	value = Infinity
+	decimalPlaces = 0
+	test.equal(decimalPlacesUntilFirstNonZero(value), decimalPlaces, `Should return 0 for Infinity`)
+
+	value = NaN
+	decimalPlaces = 0
+	test.equal(decimalPlacesUntilFirstNonZero(value), decimalPlaces, `Should return 0 for NaN`)
+
+	value = Number.MIN_VALUE
+	decimalPlaces = 0
+	test.equal(
+		decimalPlacesUntilFirstNonZero(value),
+		decimalPlaces,
+		`Should return 0 for minimum value (will be in scientific notation)`
+	)
 
 	test.end()
 })
