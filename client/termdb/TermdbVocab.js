@@ -298,6 +298,7 @@ export class TermdbVocab extends Vocab {
 				return {
 					// TODO: refactor backend code to not have to pass
 					// term.id, term.type, and term.values separately
+					$id: tw.$id,
 					id: t.term.id,
 					q,
 					term: t.term,

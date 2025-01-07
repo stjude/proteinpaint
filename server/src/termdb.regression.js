@@ -276,7 +276,7 @@ Rinput {
 function makeRinput(q, sampledata) {
 	// outcome variable
 	const outcome = {
-		id: q.outcome.term.id,
+		id: q.outcome.$id,
 		name: q.outcome.term.name,
 		rtype: 'numeric' // always numeric because (1) linear regression: values are continuous, (2) logistic regression: values get converted to 0/1, (3) cox regression: time-to-event is continuous and event is 0/1
 	}
@@ -286,18 +286,17 @@ function makeRinput(q, sampledata) {
 			ref: q.outcome.refGrp,
 			nonref: q.outcome.nonRefGrp
 		}
-	}
-	if (q.regressionType == 'cox') {
+	} else if (q.regressionType == 'cox') {
 		// for cox regression, outcome needs to be time-to-event data
 		outcome.timeToEvent = {
-			timeId: q.outcome.term.id + '_time',
-			eventId: q.outcome.term.id + '_event',
+			timeId: q.outcome.$id + '_time',
+			eventId: q.outcome.$id + '_event',
 			timeScale: q.outcome.q.timeScale
 		}
 		if (outcome.timeToEvent.timeScale == 'age') {
 			// age time scale
-			outcome.timeToEvent.agestartId = q.outcome.term.id + '_agestart'
-			outcome.timeToEvent.ageendId = q.outcome.term.id + '_ageend'
+			outcome.timeToEvent.agestartId = q.outcome.$id + '_agestart'
+			outcome.timeToEvent.ageendId = q.outcome.$id + '_ageend'
 		}
 	}
 
@@ -317,11 +316,11 @@ function makeRinput(q, sampledata) {
 	const data = []
 	for (const tmp of sampledata) {
 		const { sample, id2value } = tmp
-		if (!id2value.has(q.outcome.term.id)) {
+		if (!id2value.has(q.outcome.$id)) {
 			tmp.noOutcome = true // to be able to skip this sample in snplocusPostprocess
 			continue
 		}
-		const out = id2value.get(q.outcome.term.id)
+		const out = id2value.get(q.outcome.$id)
 
 		let skipsample = false
 		for (const tw of q.independent) {
@@ -341,7 +340,7 @@ function makeRinput(q, sampledata) {
 					}
 				}
 			} else {
-				const independent = id2value.get(tw.term.id || tw.term.name)
+				const independent = id2value.get(tw.$id)
 				if (!independent) {
 					skipsample = true
 					break
@@ -414,13 +413,14 @@ function makeRinput(q, sampledata) {
 function makeRvariable_dictionaryTerm(tw, independent, q) {
 	// tw is a dictionary term
 	const thisTerm = {
-		id: tw.term.id || tw.term.name,
+		id: tw.$id,
 		name: tw.term.name,
 		type: tw.q.mode == 'spline' ? 'spline' : 'other',
 		rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor'
 	}
 	// map tw.interactions into thisTerm.interactions
 	if (tw.interactions.length > 0) {
+		console.log('FIXME interaction array should contain $id')
 		thisTerm.interactions = []
 		for (const id of tw.interactions) {
 			const tw2 = q.independent.find(i => i.term?.id == id || i.term?.name == id || i.id == id)
@@ -1111,15 +1111,12 @@ async function getSampleData(q, ds, genome) {
 
 		for (const tw of q2.terms) {
 			if (tw.$id in sample) {
-				// FIXME change to always using t.$id
-				obj.id2value.set(tw.term.id || tw.$id, sample[tw.$id])
-
+				obj.id2value.set(tw.$id, sample[tw.$id])
 				mayAddAncestryPCs(tw, obj, ds)
 			}
 		}
 		samples.push(obj)
 	}
-	console.log(samples[0])
 	return samples
 }
 

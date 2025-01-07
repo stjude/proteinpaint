@@ -143,7 +143,7 @@ export class RegressionResults {
 	}
 
 	getIndependentInput(tid) {
-		/* arg is independent term id
+		/* arg is independent tw $id
 		return input instance
 		for accessing input.orderedLabels and input.term{refGrp, term{}, q{}} which is term-wrapper
 
@@ -190,7 +190,7 @@ export class RegressionResults {
 					}
 				}
 			}
-			if (i.term.term.id == tid || i.term.term.name == tid) return i
+			if (i.term.$id == tid) return i
 		}
 		// given tid does not match with an Input
 		// can be an ancestry PC which is automatically added by serverside and not recorded on client
