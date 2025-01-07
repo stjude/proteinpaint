@@ -34,7 +34,7 @@ suppressWarnings({
     suppressPackageStartupMessages(library(edgeR))
     suppressPackageStartupMessages(library(dplyr))
 })
-
+read_json_start <- Sys.time()
 con <- file("stdin", "r")
 json <- readLines(con, warn=FALSE)
 close(con)
@@ -47,6 +47,8 @@ controls <- unlist(strsplit(input$control, ","))
 combined <- c("geneID","geneSymbol",cases,controls)
 #data %>% select(all_of(combined))
 #read_file_time_start <- Sys.time()
+read_json_stop <- Sys.time()
+print (paste0("Time to read json:", read_json_stop - read_json_start))
 
 case_sample_list <- c()
 control_sample_list <- c()
@@ -135,18 +137,30 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
       calculate_exact_test_time_start <- Sys.time()
       et <- exactTest(object = dge)
       calculate_exact_test_time_stop <- Sys.time()
-      print(paste0("Exact Time:",calculate_exact_test_time_stop - calculate_exact_test_time_start))
+      print (paste0("Exact Time:",calculate_exact_test_time_stop - calculate_exact_test_time_start))
 } else { # Adjusting for confounding factors. This has been adapted based on the protocol described here: http://larionov.co.uk/deg_ebi_tutorial_2020/edger-analysis-1.html#calculate-degs
-    design <- model.matrix(~input$conf1 + conditions, data = y$samples)
+    y$samples$conditions <- conditions
+    y$samples$conf1 <- input$conf1
+    print ("y$samples")
+    print (y$samples)
+    calculate_model_start <- Sys.time()
+    design <- model.matrix(~ conditions + conf1, data = y$samples)
+    calculate_model_stop <- Sys.time()
+    print (paste0("Time for making design matrix:", calculate_model_stop - calculate_model_start))
+    calculate_dispersion_time_start <- Sys.time()
     y <- estimateDisp(y, design)
+    calculate_dispersion_time_stop <- Sys.time()
+    print (paste0("Dispersion Time:",calculate_dispersion_time_stop - calculate_dispersion_time_start))    
     # Fit the model
     calculate_fit_time_start <- Sys.time()
-    fit <- glmQLFit(y, design)
+    #fit <- glmQLFit(y, design)
+    fit <- glmFit(y, design)
     calculate_fit_time_stop <- Sys.time()
     print (paste0("Fit time:",calculate_fit_time_stop - calculate_fit_time_start))
     # Calculate the test statistics
     calculate_test_statistics_start <- Sys.time()
-    et <- glmQLFTest(fit, coef = ncol(design))
+    #et <- glmQLFTest(fit, coef = ncol(design))
+    et <- glmLRT(fit, coef = 2)  # coef = 2 corresponds to the 'treatment' vs 'control' comparison
     calculate_test_statistics_stop <- Sys.time()
     print (paste0("Test statistics time:",calculate_test_statistics_stop - calculate_test_statistics_start))
 }
