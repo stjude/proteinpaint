@@ -1,1 +1,5 @@
+Fixes
+- Restored 'List samples' label menu option in both the violin and box plot. The filter label menu option restored as well.
 
+Features
+- Color picker for individual box plots and filter added. Click on the box plot label to see the new menu options. 
