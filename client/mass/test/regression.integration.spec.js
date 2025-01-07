@@ -46,7 +46,6 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 	})
 
 	async function runTests(regression) {
-		console.log(regression)
 		const data = await getData(regression)
 		const regDom = regression.Inner.dom
 
