@@ -101,7 +101,7 @@ export async function get_regression(q, ds, genome) {
 		parse_q(q, ds)
 
 		stime = new Date().getTime()
-		const sampledata = await getSampleData(q, [q.outcome, ...q.independent], ds, genome)
+		const sampledata = await getSampleData(q, ds, genome)
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
@@ -1083,9 +1083,7 @@ terms[]
 
 Returns an array with elemenents:
 		{
-	  	sample: integer,
-
-			// one or more entries by term id
+		  	sample: integer,
 			id2value: Map[
 				tw.$id,
 				{
@@ -1096,35 +1094,32 @@ Returns an array with elemenents:
 			]
 		},
 */
-async function getSampleData(q, terms, ds, genome) {
+async function getSampleData(q, ds, genome) {
 	const q2 = Object.assign({}, q)
-	q2.terms = terms
+	q2.terms = [q.outcome, ...q.independent]
 	const result = await getData(q2, ds, genome)
+
+	const filteredSamples = mayProcessSampleByCoxOutcome(q, ds, result.samples)
 	const samples = []
 
-	for (const sidString in result.samples) {
-		let sid = Number(sidString)
-		if (!Number.isInteger(sid)) {
-			// for regular ds, sidString is "100", and cast it to integer as sample id; later for gdc, sidString will be submitter id which cannot be cast into integer. need better way for ds to control if to cast or not
-			sid = sidString
+	for (const sample of filteredSamples) {
+		// reshape sample{} into obj{}
+		const obj = {
+			sample: sample.sample,
+			id2value: new Map()
 		}
 
-		const obj = {
-			sample: sid,
-			id2value: new Map()
-		} // annotation obj for this sample
-
-		for (const tw of terms) {
-			// somehow, outcome term is identified by $id, input terms lacks $id!!! may fix on client to assign $id to input terms?
-			if (tw.$id in result.samples[sidString]) {
+		for (const tw of q2.terms) {
+			if (tw.$id in sample) {
 				// FIXME change to always using t.$id
-				obj.id2value.set(tw.term.id || tw.$id, result.samples[sidString][tw.$id])
+				obj.id2value.set(tw.term.id || tw.$id, sample[tw.$id])
 
 				mayAddAncestryPCs(tw, obj, ds)
 			}
 		}
 		samples.push(obj)
 	}
+	console.log(samples[0])
 	return samples
 }
 
@@ -1138,6 +1133,42 @@ function mayAddAncestryPCs(tw, obj, ds) {
 	}
 }
 
+function mayProcessSampleByCoxOutcome(q, ds, getDataSamples) {
+	if (q.regressionType != 'cox' || q.outcome.term.type != 'condition') {
+		// will not filter
+		const lst = []
+		for (const k in getDataSamples) lst.push(getDataSamples[k])
+		return lst
+	}
+
+	if (!ds.cohort.termdb.ageEndOffset) throw 'ageEndOffset missing'
+
+	const psamples = [] // processed samples
+	for (const sid in getDataSamples) {
+		const sample = getDataSamples[sid] // object may be modified
+
+		if (!(q.outcome.$id in sample)) continue // sample missing outcome value??
+
+		// value.key is event: event status code
+		if (sample[q.outcome.$id].key == -1) continue // discard samples that had events before follow-up
+
+		// age_start: age at beginning of follow-up
+		// age_end: age at event or at censoring
+		const { age_start, age_end } = JSON.parse(sample[q.outcome.$id].value)
+
+		// for timeScale='age', add a small offset to age_end
+		// to prevent age_end = age_start (which would cause
+		// R to error out)
+		sample[q.outcome.$id].value = {
+			age_start,
+			age_end: q.outcome.q.timeScale == 'age' ? age_end + ds.cohort.termdb.ageEndOffset : age_end
+		}
+
+		psamples.push(sample)
+	}
+	return psamples
+}
+
 /*
 {
   sample: 100,
@@ -1149,6 +1180,7 @@ function mayAddAncestryPCs(tw, obj, ds) {
 */
 
 async function getSampleData2(q, terms, ds) {
+	// not used
 	// TODO: replace with getData() from termdb.matrix.js
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
@@ -1200,6 +1232,7 @@ async function getSampleData2(q, terms, ds) {
 }
 
 function mayAddAncestryPCs2(tw, samples, ds) {
+	// not used
 	if (!tw.q.restrictAncestry) return
 	// add sample pc values from tw.q.restrictAncestry.pcs to samples
 	for (const [pcid, s] of tw.q.restrictAncestry.pcs) {
@@ -1279,7 +1312,8 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	return samples
 }
 
-function processCoxConditionOutcomeRows(rows, outcome, ageEndOffset) {
+function processCoxConditionOutcomeRows2(rows, outcome, ageEndOffset) {
+	// not used
 	if (!ageEndOffset) throw 'missing age end offset'
 	const prows = []
 	for (const row of rows) {
