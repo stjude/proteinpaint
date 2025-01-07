@@ -17,83 +17,6 @@ TODO:
 	Test (maybe in unit?) beta and PR functions
 */
 
-/*************************
- reusable helper functions
-**************************/
-
-const runpp = helpers.getRunPp('mass', {
-	state: {
-		nav: {
-			header_mode: 'hide_search',
-			activeTab: 1
-		},
-		vocab: {
-			dslabel: 'TermdbTest',
-			genome: 'hg38-test'
-		}
-	},
-	debug: 1
-})
-
-async function getData(regression) {
-	const data = await regression.Inner.app.Inner.api.vocabApi.getRegressionData(getDataRequestOpts(regression))
-
-	function getDataRequestOpts(regression) {
-		const c = regression.Inner.config
-		const opts = {
-			regressionType: c.regressionType,
-			outcome: c.outcome,
-			independent: c.independent
-		}
-		opts.filter = regression.Inner.inputs.parent.filter
-
-		return opts
-	}
-
-	return data.resultLst[0].data
-}
-
-function checkTableRow(table, idx, dataArray) {
-	const checkArray = []
-	let issuesFound = 0
-	table[idx].childNodes.forEach(t => {
-		checkArray.push(t.innerText)
-	})
-	dataArray.forEach(d => {
-		if (!checkArray.some(t => t == d)) {
-			++issuesFound
-		}
-	})
-	if (issuesFound === 0) return true
-	else return false
-}
-
-function checkOnlyRowValues(valueNodes, dataArray) {
-	const checkArray = []
-	let issuesFound = 0
-	valueNodes.forEach(t => {
-		checkArray.push(t.innerText)
-	})
-	dataArray.forEach(d => {
-		if (!checkArray.some(t => t == d)) {
-			++issuesFound
-		}
-	})
-	if (issuesFound === 0) return true
-	else return false
-}
-
-function getCoefData(in_data) {
-	const out_data = structuredClone(in_data)
-	// combine 95% CI columns
-	out_data.splice(1, 2, `${out_data[1]} – ${out_data[2]}`)
-	return out_data
-}
-
-/**************
- test sections
-***************/
-
 tape('\n', test => {
 	test.pass('-***- plots/regression -***-')
 	test.end()
@@ -123,6 +46,7 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 	})
 
 	async function runTests(regression) {
+		console.log(regression)
 		const data = await getData(regression)
 		const regDom = regression.Inner.dom
 
@@ -173,19 +97,19 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 
 		testTerm = 'Sex'
 		const checkValues1 = ['Sex\nREF\nFemale', 'Male']
-		checkValues1.push(...getCoefData(data.coefficients.terms.sex.categories[1]))
+		checkValues1.push(...getCoefData(data.coefficients.terms[tid2$id('sex', regression)].categories[1]))
 		results = checkTableRow(table, 2, checkValues1)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
 		testTerm = 'African Ancestry'
 		const checkValues2 = ['Genetically defined race\nREF\nEuropean Ancestry', testTerm]
-		checkValues2.push(...getCoefData(data.coefficients.terms.genetic_race.categories[testTerm]))
+		checkValues2.push(...getCoefData(data.coefficients.terms[tid2$id('genetic_race', regression)].categories[testTerm]))
 		results = checkTableRow(table, 3, checkValues2)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
 		testTerm = 'Asian Ancestry'
 		const checkValues3 = [testTerm]
-		checkValues3.push(...getCoefData(data.coefficients.terms.genetic_race.categories[testTerm]))
+		checkValues3.push(...getCoefData(data.coefficients.terms[tid2$id('genetic_race', regression)].categories[testTerm]))
 		results = checkTableRow(table, 4, checkValues3)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
@@ -200,13 +124,13 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 
 		testTerm = 'Sex'
 		const checkValues4 = [testTerm]
-		data.type3.terms.sex.forEach(d => checkValues4.push(d))
+		data.type3.terms[tid2$id('sex', regression)].forEach(d => checkValues4.push(d))
 		results = checkTableRow(table, 2, checkValues4)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
 		testTerm = 'Genetically defined race'
 		const checkValues5 = [testTerm]
-		data.type3.terms.genetic_race.forEach(d => checkValues5.push(d))
+		data.type3.terms[tid2$id('genetic_race', regression)].forEach(d => checkValues5.push(d))
 		results = checkTableRow(table, 3, checkValues5)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
@@ -270,14 +194,17 @@ tape('Linear: continuous outcome = "agedx", continuous independent = "aaclassic_
 		)
 
 		const values2check = Array.from(table[2].childNodes).slice(3)
-		results = checkOnlyRowValues(values2check, getCoefData(data.coefficients.terms.aaclassic_5.fields))
+		results = checkOnlyRowValues(
+			values2check,
+			getCoefData(data.coefficients.terms[tid2$id('aaclassic_5', regression)].fields)
+		)
 		test.equal(results, true, `Should render all continous 'aaclassic_5' data in ${tableLabel}`)
 
 		//Type III Stats
 		tableLabel = 'type3 table'
 		table = regDom.results.selectAll('div[name^="Type III statistics"] table tr').nodes()
 		const values2check2 = Array.from(table[2].childNodes).slice(1)
-		results = checkOnlyRowValues(values2check2, data.type3.terms.aaclassic_5)
+		results = checkOnlyRowValues(values2check2, data.type3.terms[tid2$id('aaclassic_5', regression)])
 		test.equal(results, true, `Should render all continous 'aaclassic_5' data in ${tableLabel}`)
 
 		if (test._ok) regression.Inner.app.destroy()
@@ -319,16 +246,18 @@ tape('Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"
 		tableLabel = 'coefficients table'
 		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
 
+		const $id = tid2$id('aaclassic_5', regression)
+
 		for (const [i, tr] of table.entries()) {
 			//Test all bin values for independent term
 			if (i < 2 || i == table.length - 1) continue //Skip header, intercept, and bottom scale rows
 			if (i == 2) {
 				//Skip the beginning cell spanning the remaining rows
-				const checkValues = getCoefData(data.coefficients.terms.aaclassic_5.categories[tr.childNodes[1].innerText])
+				const checkValues = getCoefData(data.coefficients.terms[$id].categories[tr.childNodes[1].innerText])
 				results = checkOnlyRowValues(Array.from(tr.childNodes).slice(1), checkValues)
 				test.equal(results, true, `Should render all ${tr.childNodes[1].innerText} bin data in ${tableLabel}`)
 			} else {
-				const checkValues = getCoefData(data.coefficients.terms.aaclassic_5.categories[tr.childNodes[0].innerText])
+				const checkValues = getCoefData(data.coefficients.terms[$id].categories[tr.childNodes[0].innerText])
 				results = checkOnlyRowValues(Array.from(tr.childNodes), checkValues)
 				test.equal(results, true, `Should render all ${tr.childNodes[0].innerText} bin data in ${tableLabel}`)
 			}
@@ -372,6 +301,8 @@ tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassi
 		const regDom = regression.Inner.dom
 		const numOfKnots = regression.Inner.state.config.independent[0].q.knots.length
 
+		const $id = tid2$id('aaclassic_5', regression)
+
 		//**** Inputs ****
 		const knotLines = regDom.inputs.selectAll('.sjpp-vp-violinDiv .sjpp-vp-line').nodes()
 		test.equal(knotLines.length, numOfKnots, `Should render 3 lines over the independent variable violin plot`)
@@ -387,7 +318,7 @@ tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassi
 		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
 
 		test.equal(
-			Object.keys(data.coefficients.terms.aaclassic_5.categories).length,
+			Object.keys(data.coefficients.terms[$id].categories).length,
 			numOfKnots - 1,
 			`Should pass data for ${numOfKnots - 1} spline functions`
 		)
@@ -399,13 +330,13 @@ tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassi
 				//Skip the beginning cell spanning the remain rows
 				results = checkOnlyRowValues(
 					Array.from(tr.childNodes).slice(1),
-					getCoefData(data.coefficients.terms.aaclassic_5.categories[tr.childNodes[1].innerText])
+					getCoefData(data.coefficients.terms[$id].categories[tr.childNodes[1].innerText])
 				)
 				test.equal(results, true, `Should render all ${tr.childNodes[1].innerText} data in ${tableLabel}`)
 			} else {
 				results = checkOnlyRowValues(
 					Array.from(tr.childNodes),
-					getCoefData(data.coefficients.terms.aaclassic_5.categories[tr.childNodes[0].innerText])
+					getCoefData(data.coefficients.terms[$id].categories[tr.childNodes[0].innerText])
 				)
 				test.equal(results, true, `Should render all ${tr.childNodes[0].innerText} data in ${tableLabel}`)
 			}
@@ -483,7 +414,7 @@ tape('Logistic: binary outcome = "hrtavg", continuous independent = "agedx"', te
 
 		testTerm = 'Age (years) at Cancer Diagnosis'
 		const checkValues1 = [testTerm, '(continuous)']
-		checkValues1.push(...getCoefData(data.coefficients.terms.agedx.fields))
+		checkValues1.push(...getCoefData(data.coefficients.terms[tid2$id('agedx', regression)].fields))
 		results = checkTableRow(table, 2, checkValues1)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
@@ -497,7 +428,7 @@ tape('Logistic: binary outcome = "hrtavg", continuous independent = "agedx"', te
 		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
 
 		const checkValues2 = [testTerm]
-		data.type3.terms.agedx.forEach(d => checkValues2.push(d))
+		data.type3.terms[tid2$id('agedx', regression)].forEach(d => checkValues2.push(d))
 		results = checkTableRow(table, 2, checkValues2)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
@@ -571,6 +502,8 @@ tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', te
 			`Should not render residuals table in cox regression`
 		)
 
+		const $id = tid2$id('agedx', regression)
+
 		//Coefficients table
 		tableLabel = 'coefficients table'
 		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
@@ -585,8 +518,8 @@ tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', te
 
 		testTerm = 'Age (years) at Cancer Diagnosis'
 		const checkValues1 = [testTerm, '(continuous)']
-		data.coefficients.terms.agedx.fields.splice(0, 2)
-		checkValues1.push(...getCoefData(data.coefficients.terms.agedx.fields))
+		data.coefficients.terms[$id].fields.splice(0, 2)
+		checkValues1.push(...getCoefData(data.coefficients.terms[$id].fields))
 		results = checkTableRow(table, 1, checkValues1)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
@@ -597,7 +530,7 @@ tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', te
 		test.equal(results, true, `Should render all header data in ${tableLabel}`)
 
 		const checkValues2 = [testTerm]
-		data.type3.terms.agedx.forEach(d => checkValues2.push(d))
+		data.type3.terms[$id].forEach(d => checkValues2.push(d))
 		results = checkTableRow(table, 1, checkValues2)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
@@ -651,6 +584,8 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 		const data = await getData(regression)
 		const regDom = regression.Inner.dom
 
+		const $id = tid2$id('agedx', regression)
+
 		//#of events instead of residuals table, no intercept in coefficent, stats test table
 
 		//**** Results ****
@@ -695,8 +630,8 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 
 		testTerm = 'Age (years) at Cancer Diagnosis'
 		const checkValues1 = [testTerm, '(continuous)']
-		data.coefficients.terms.agedx.fields.splice(0, 2)
-		checkValues1.push(...getCoefData(data.coefficients.terms.agedx.fields))
+		data.coefficients.terms[$id].fields.splice(0, 2)
+		checkValues1.push(...getCoefData(data.coefficients.terms[$id].fields))
 		results = checkTableRow(table, 1, checkValues1)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
@@ -707,7 +642,7 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 		test.equal(results, true, `Should render all header data in ${tableLabel}`)
 
 		const checkValues2 = [testTerm]
-		data.type3.terms.agedx.forEach(d => checkValues2.push(d))
+		data.type3.terms[$id].forEach(d => checkValues2.push(d))
 		results = checkTableRow(table, 1, checkValues2)
 		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
@@ -733,3 +668,82 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 		test.end()
 	}
 })
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('mass', {
+	state: {
+		nav: {
+			header_mode: 'hide_search',
+			activeTab: 1
+		},
+		vocab: {
+			dslabel: 'TermdbTest',
+			genome: 'hg38-test'
+		}
+	},
+	debug: 1
+})
+
+async function getData(regression) {
+	const data = await regression.Inner.app.Inner.api.vocabApi.getRegressionData(getDataRequestOpts(regression))
+
+	function getDataRequestOpts(regression) {
+		const c = regression.Inner.config
+		const opts = {
+			regressionType: c.regressionType,
+			outcome: c.outcome,
+			independent: c.independent
+		}
+		opts.filter = regression.Inner.inputs.parent.filter
+
+		return opts
+	}
+
+	return data.resultLst[0].data
+}
+
+function checkTableRow(table, idx, dataArray) {
+	const checkArray = []
+	let issuesFound = 0
+	table[idx].childNodes.forEach(t => {
+		checkArray.push(t.innerText)
+	})
+	dataArray.forEach(d => {
+		if (!checkArray.some(t => t == d)) {
+			++issuesFound
+		}
+	})
+	if (issuesFound === 0) return true
+	else return false
+}
+
+function checkOnlyRowValues(valueNodes, dataArray) {
+	const checkArray = []
+	let issuesFound = 0
+	valueNodes.forEach(t => {
+		checkArray.push(t.innerText)
+	})
+	dataArray.forEach(d => {
+		if (!checkArray.some(t => t == d)) {
+			++issuesFound
+		}
+	})
+	if (issuesFound === 0) return true
+	else return false
+}
+
+function getCoefData(in_data) {
+	const out_data = structuredClone(in_data)
+	// combine 95% CI columns
+	out_data.splice(1, 2, `${out_data[1]} – ${out_data[2]}`)
+	return out_data
+}
+
+function tid2$id(tid, regression) {
+	const t = regression.Inner.inputs.independent.inputLst.find(i => i.term.id == tid)
+	if (t) return t.term.$id
+	throw 'unknown ' + tid
+}
