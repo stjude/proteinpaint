@@ -731,34 +731,25 @@ export function addMatrixMenuItems(menu, menuDiv, tw, app, id, state, newId) {
 }
 
 export function addNewGroup(app, filter, groups) {
-	groups = JSON.parse(JSON.stringify(groups));
-    
-    // Check if any group already has the "default control" label
-    const hasDefaultControl = groups.some(g => g.name.includes('default control'));
-    
-    let name = !hasDefaultControl && app.vocabApi.termdbConfig.allowedTermTypes.includes('geneExpression') 
-        ? 'New group (default control)' 
-        : 'New group';
-    
-    let i = 1; // Start numbering from 1
-    while (1) {
-        const name2 = name + (i === 1 ? '' : ' ' + i); 
-        if (!groups.find(g => g.name === name2)) break;
-        i++;
-    }
-    
-    name = name + (i === 1 ? '' : ' ' + i);
-    const newGroup = {
-        name,
-        filter,
-        color: rgb(colorScale(groups.length)).formatHex()
-    };
-    
-    groups.push(newGroup);
-    app.dispatch({
-        type: 'app_refresh',
-        state: { groups }
-    });
+	groups = JSON.parse(JSON.stringify(groups))
+	let name = 'New group'
+	let i = 0
+	while (1) {
+		const name2 = name + (i == 0 ? '' : ' ' + i)
+		if (!groups.find(g => g.name == name2)) break
+		i++
+	}
+	name = name + (i == 0 ? '' : ' ' + i)
+	const newGroup = {
+		name,
+		filter,
+		color: rgb(colorScale(groups.length)).formatHex()
+	}
+	groups.push(newGroup)
+	app.dispatch({
+		type: 'app_refresh',
+		state: { groups }
+	})
 }
 
 export function getSamplelstTWFromIds(ids) {
