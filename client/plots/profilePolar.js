@@ -69,6 +69,7 @@ class profilePolar extends profilePlot {
 			.attr('height', height)
 		this.dom.tableDiv = this.dom.plotDiv
 			.append('div')
+			.attr('data-testid', 'sjpp-profilePolar-data-table')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin', '45px 20px')
@@ -88,7 +89,10 @@ class profilePolar extends profilePlot {
 		const y = 330
 		const polarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.dom.svg.append('g').attr('transform', `translate(${x + 280}, ${y})`)
+		this.legendG = this.dom.svg
+			.append('g')
+			.attr('data-testid', 'sjpp-profilePolar-legend')
+			.attr('transform', `translate(${x + 280}, ${y})`)
 		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 280},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)

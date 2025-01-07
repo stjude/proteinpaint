@@ -55,7 +55,7 @@ class profileRadar extends profilePlot {
 			.style('vertical-align', 'top')
 			.style('margin-top', '140px')
 			.style('margin-right', '20px')
-		this.dom.tableDiv = rightDiv.append('div')
+		this.dom.tableDiv = rightDiv.append('div').attr('data-testid', 'sjpp-profileRadar-data-table')
 
 		const rows = []
 		const columns = [
@@ -82,7 +82,10 @@ class profileRadar extends profilePlot {
 
 		const radarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
-		this.legendG = this.dom.svg.append('g').attr('transform', `translate(${x + 240},${y + 250})`)
+		this.legendG = this.dom.svg
+			.append('g')
+			.attr('data-testid', 'sjpp-profileRadar-legend')
+			.attr('transform', `translate(${x + 240},${y + 250})`)
 		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${40},${y + 300})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
