@@ -82,7 +82,8 @@ export async function wilcoxon(divideTw, result) {
 // TODO: handle .keyOrder as an alternative to .bins ???
 function numericBins(overlayTerm, data) {
 	const divideTwBins = new Map()
-	const divideBins = data.refs.byTermId[overlayTerm?.term?.id]?.bins
+	/** Fix for broken `list samples` option no longer work for numeric terms */
+	const divideBins = data.refs.byTermId[overlayTerm?.$id]?.bins
 	if (divideBins) {
 		for (const bin of divideBins) {
 			divideTwBins.set(bin.label, bin)
