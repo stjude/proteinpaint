@@ -36,12 +36,7 @@ const useCasesExcluded = {
 	survival: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
 	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	regression: [
-		TermTypeGroups.SNP_LIST,
-		TermTypeGroups.SNP_LOCUS,
-		TermTypeGroups.GENE_EXPRESSION,
-		TermTypeGroups.METABOLITE_INTENSITY
-	],
+	regression: [TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS],
 	metaboliteIntensity: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,

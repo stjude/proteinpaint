@@ -55,7 +55,7 @@ export function handle_request_closure(genomes) {
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
 			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
-			if (q.getregression) return await trigger_getregression(q, res, ds)
+			if (q.getregression) return await trigger_getregression(q, res, ds, genome)
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return getvariantfilter(res, ds)
 			if (q.getLDdata) return await LDoverlay(q, ds, res)
@@ -282,8 +282,8 @@ async function trigger_getsurvival(q, res, ds) {
 	res.send(data)
 }
 
-async function trigger_getregression(q, res, ds) {
-	const data = await get_regression(q, ds)
+async function trigger_getregression(q, res, ds, genome) {
+	const data = await get_regression(q, ds, genome)
 	res.send(data)
 }
 
