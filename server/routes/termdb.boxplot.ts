@@ -187,6 +187,6 @@ function setUncomputableValues(values: Record<string, number>) {
 }
 
 function numericBins(overlayTerm, data) {
-	const overlayBins = data.refs.byTermId[overlayTerm?.term?.id]?.bins ?? []
+	const overlayBins = data.refs.byTermId[overlayTerm?.$id]?.bins ?? []
 	return new Map(overlayBins.map(bin => [bin.label, bin]))
 }
