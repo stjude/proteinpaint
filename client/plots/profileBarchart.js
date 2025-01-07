@@ -157,7 +157,10 @@ class profileBarchart extends profilePlot {
 		drawLine(410, 120, 50, y, 'B')
 		drawLine(410, 120, 75, y, 'A')
 
-		this.legendG = this.dom.svg.append('g').attr('transform', `translate(${50},${y + 80})`)
+		this.legendG = this.dom.svg
+			.append('g')
+			.attr('data-testid', 'sjpp-profileBarchart-legend')
+			.attr('transform', `translate(${50},${y + 80})`)
 		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${50},${y + 180})`)
 
 		this.legendG

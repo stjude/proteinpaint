@@ -90,6 +90,7 @@ export class profilePlot {
 			const tableIconDiv = iconsDiv.append('div').style('padding-bottom', '15px')
 			this.dom.tableBt = tableIconDiv
 				.append('button')
+				.attr('data-testid', 'sjpp-profile-table-button')
 				.style('border', 'none')
 				.style('background-color', 'rgb(207, 226, 243)')
 			icon_functions['table'](this.dom.tableBt, { title: 'Show table with data' })
