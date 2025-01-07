@@ -10,7 +10,7 @@ import * as utils from './utils.js'
 import * as termdbsql from './termdb.sql.js'
 import { runCumincR } from './termdb.cuminc.js'
 import { isDictionaryType } from '#shared/terms.js'
-import { getAnnotationRows, getSampleTypes } from './termdb.matrix.js'
+import { getData, getAnnotationRows, getSampleTypes } from './termdb.matrix.js'
 import { get } from 'http'
 
 /*
@@ -96,12 +96,12 @@ const minimumSample = 1
 
 let stime, etime
 const benchmark = { NodeJS: {}, 'regression.R': {} }
-export async function get_regression(q, ds) {
+export async function get_regression(q, ds, genome) {
 	try {
 		parse_q(q, ds)
 
 		stime = new Date().getTime()
-		const sampledata = await getSampleData(q, [q.outcome, ...q.independent], ds)
+		const sampledata = await getSampleData(q, [q.outcome, ...q.independent], ds, genome)
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
@@ -1073,28 +1073,21 @@ function getLine4OneSnp(snpid, tw) {
 }
 
 /*
-may move to termdb.sql.js later
-
-works for only termdb terms; non-termdb attributes will not work
-gets data for regression analysis, one row for each sample
-
 Arguments
 q{}
 	.filter
 	.ds
 
 terms[]
-	array of {id, term, q}
+	array of tw
 
-Returns two data structures
-1.
-	[
+Returns an array with elemenents:
 		{
-	  	sample: STRING,
+	  	sample: integer,
 
 			// one or more entries by term id
 			id2value: Map[
-				term.id,
+				tw.$id,
 				{
 					// depending on term type and desired 
 					key: either (a) bin or groupsetting label, or (b) precomputed or annotated value if no bin/groupset is used, 
@@ -1102,11 +1095,60 @@ Returns two data structures
 				}
 			]
 		},
-		...
-	]
-2.
 */
-async function getSampleData(q, terms, ds) {
+async function getSampleData(q, terms, ds, genome) {
+	const q2 = Object.assign({}, q)
+	q2.terms = terms
+	const result = await getData(q2, ds, genome)
+	const samples = []
+
+	for (const sidString in result.samples) {
+		let sid = Number(sidString)
+		if (!Number.isInteger(sid)) {
+			// for regular ds, sidString is "100", and cast it to integer as sample id; later for gdc, sidString will be submitter id which cannot be cast into integer. need better way for ds to control if to cast or not
+			sid = sidString
+		}
+
+		const obj = {
+			sample: sid,
+			id2value: new Map()
+		} // annotation obj for this sample
+
+		for (const tw of terms) {
+			// somehow, outcome term is identified by $id, input terms lacks $id!!! may fix on client to assign $id to input terms?
+			if (tw.$id in result.samples[sidString]) {
+				// FIXME change to always using t.$id
+				obj.id2value.set(tw.term.id || tw.$id, result.samples[sidString][tw.$id])
+
+				mayAddAncestryPCs(tw, obj, ds)
+			}
+		}
+		samples.push(obj)
+	}
+	return samples
+}
+
+function mayAddAncestryPCs(tw, obj, ds) {
+	if (!tw.q.restrictAncestry) return
+	// add sample pc values from tw.q.restrictAncestry.pcs to samples
+	for (const [pcid, s] of tw.q.restrictAncestry.pcs) {
+		if (s.has(obj.sample)) {
+			obj.id2value.set(pcid, { key: s.get(obj.sample), value: s.get(obj.sample) })
+		}
+	}
+}
+
+/*
+{
+  sample: 100,
+  id2value: Map(2) {
+    'agedx' => { key: 16.975342466, value: 16.975342466 },
+    'aaclassic_5' => { key: '10000 to <15000', value: 14641.991342 }
+  }
+}
+*/
+
+async function getSampleData2(q, terms, ds) {
 	// TODO: replace with getData() from termdb.matrix.js
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
@@ -1114,6 +1156,7 @@ async function getSampleData(q, terms, ds) {
 	// query data for dictionary terms
 	const samples = await getSampleData_dictionaryTerms(q, dictTerms)
 	// k: sampleid, v: {sample:str, id2value:Map( tid => {key,value}) }
+	console.log(samples.get(100))
 
 	// next: data from non-dictionary terms are appended to the same "samples" Map
 
@@ -1156,7 +1199,7 @@ async function getSampleData(q, terms, ds) {
 	return [...samples.values()]
 }
 
-function mayAddAncestryPCs(tw, samples, ds) {
+function mayAddAncestryPCs2(tw, samples, ds) {
 	if (!tw.q.restrictAncestry) return
 	// add sample pc values from tw.q.restrictAncestry.pcs to samples
 	for (const [pcid, s] of tw.q.restrictAncestry.pcs) {
