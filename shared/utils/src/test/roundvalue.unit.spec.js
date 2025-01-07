@@ -179,6 +179,22 @@ tape('roundValue2()', function (test) {
 })
 
 tape('decimalPlacesUntilFirstNonZero()', function (test) {
+	/**
+	 * Tests for decimalPlacesUntilFirstNonZero function
+	 *
+	 * Tests the function that counts decimal places until the first non-zero digit after the decimal point.
+	 * Edge cases tested:
+	 * - Values with 1-4 leading zeros after decimal (0.0001234 -> 0.1234)
+	 * - Integers and whole numbers (0, 123, 123.0)
+	 * - Negative numbers (-1245, -0.00123)
+	 * - Large numbers with decimals (999999.00123)
+	 * - Numbers that convert to scientific notation (0.0000005, Number.MIN_VALUE)
+	 * - Special values (Infinity, NaN)
+	 *
+	 * Returns:
+	 * - 0 for integers, numbers ≥ 1, scientific notation, special values
+	 * - Count of zeros for reaching a non-zero digit otherwise
+	 */
 	let value, decimalPlaces
 	value = 0.0001234
 	decimalPlaces = 3
