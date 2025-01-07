@@ -1,2 +1,2 @@
-Documentation:
-- Add additional documentation for decimalPlacesUntilFirstNonZero tests
+Features:
+- Add tests for decimalPlacesUntilFirstNonZero
