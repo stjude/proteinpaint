@@ -3,7 +3,6 @@ import type { RenderedPlot } from '../view/RenderedPlot'
 import type { TermWrapper } from '#types'
 import type { AnnotatedSampleData } from '../../../types/termdb'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { isNumericTerm } from '#shared/terms.js'
 
 export class ListSamples {
 	app: MassAppApi
@@ -136,9 +135,6 @@ export class ListSamples {
 				this.createTvsTerm(tw2, tvslst)
 				tvslst.lst[0].tvs.ranges = this.assignPlotRangeRanges()
 				if (getRange) this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 1)
-			} else if (isNumericTerm(tw1.term) && isNumericTerm(tw2.term)) {
-				this.createTvsLstRanges(tw2, tvslst, rangeStart, rangeStop, 0)
-				if (getRange) this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 1)
 			} else {
 				this.createTvsLstValues(tw2, tvslst, 0)
 				if (getRange) this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 1)
@@ -146,6 +142,7 @@ export class ListSamples {
 		} else {
 			if (getRange) this.createTvsLstRanges(tw1, tvslst, rangeStart, rangeStop, 0)
 		}
+
 		return tvslst
 	}
 }

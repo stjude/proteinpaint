@@ -14,8 +14,6 @@ import getMaxLabelLgth from './viewModel/MaxLabelLength'
 
 /** TODOs:
  *	Add functionality to change orientation
- *	Add controls for: 
-	- multicolor boxplots when !term2
  */
 
 type TdbBoxPlotOpts = {
