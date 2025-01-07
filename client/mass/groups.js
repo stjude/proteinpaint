@@ -291,6 +291,9 @@ function addDEPlotMenuItem(div, self, state, samplelstTW, tip) {
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		.text('Differential expression')
+		.append('div')
+		.html(self.state.groups[0].name + ' (control)' + ' vs ' + self.state.groups[1].name + ' (case)') //Add fine print "control vs case" under the text "Differential expression"
+		.style('font-size', '0.8em')
 		.on('click', e => {
 			const groups = []
 			for (const group of samplelstTW.q.groups) {
