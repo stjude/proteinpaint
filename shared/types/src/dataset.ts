@@ -879,7 +879,9 @@ type SortPriorityEntry = {
 type SurvivalSettings = {
 	/** The max time-to-event to be displayed in plot, hide all the samples with Time-to-Event longer than this maxTimeToEvent */
 	maxTimeToEvent?: number
+	/** The time unit (months, years, etc) displayed in the x-axis of survival plot */
 	timeUnit?: string
+	/** the customized x-axis tick values of survival plot */
 	xTickValues?: number[]
 }
 
