@@ -3,7 +3,6 @@ import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } 
 import { getFilterCTEs } from './termdb.filter'
 import serverconfig from './serverconfig'
 import { read_file } from './utils'
-import { getSampleData_snplstOrLocus } from './termdb.regression'
 import {
 	TermTypes,
 	isDictionaryType,
@@ -689,4 +688,242 @@ async function findListOfBins(q, tw, ds) {
 		return lst
 	}
 	throw 'unknown tw.q.type when q.mode is discrete'
+}
+
+/*
+tw{}
+	type
+	q{}
+		cacheid
+		alleleType: 0/1
+		geneticModel: 0/1/2/3
+		missingGenotype: 0/1
+		snp2effAle{}
+		snp2refGrp{}
+samples {Map}
+	contains all samples that have valid data for all dict terms
+	only get genotype data for these samples,
+	but do not introduce new samples to this map
+	as those will miss value for dict terms and ineligible for analysis
+
+useAllSamples true/false
+	if true
+		-populate "samples" with all of those from cache file
+		-do not perform imputation
+*/
+async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
+	const lines = (await read_file(path.join(serverconfig.cache_snpgt.dir, tw.q.cacheid))).split('\n')
+	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
+
+	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
+	const cachesampleheader = lines[0]
+		.split('\t')
+		.slice(serverconfig.cache_snpgt.sampleColumn) // from 7th column
+		.map(Number) // sample ids are integer
+
+	if (useAllSamples) {
+		for (const i of cachesampleheader) samples.set(i, { id2value: new Map() })
+	}
+
+	// make a list of true/false, same length of cachesampleheader
+	// to tell if a cache file column (a sample) is in use
+	// do not apply q.filter here
+	// as samples{} is already computed with q.filter in getSampleData_dictionaryTerms
+	const sampleinfilter = cachesampleheader.map(i => samples.has(i))
+
+	// load cache file data into this temporary structure for computing in this function
+	const snp2sample = new Map()
+	// k: snpid
+	// v: { effAle, refAle, altAles, samples: map { k: sample id, v: gt } }
+
+	// load cache file to snp2sample
+	for (let i = 1; i < lines.length; i++) {
+		const l = lines[i].split('\t')
+
+		const snpid = l[0] // snpid is used as "term id"
+
+		const snpObj = {
+			// get effect allele from q, but not from cache file
+			// column [5] is for user-assigned effect allele
+			refAle: l[3],
+			altAles: l[4].split(','),
+			samples: new Map()
+		}
+
+		if (tw.q.snp2effAle) {
+			snpObj.effAle = tw.q.snp2effAle[snpid]
+		} else {
+			// this is missing when generated from data download ui (called from getData)
+			// fill in effAle using first ALT so it can return data
+			snpObj.effAle = snpObj.altAles[0]
+		}
+
+		snp2sample.set(snpid, snpObj)
+
+		for (const [j, sampleid] of cachesampleheader.entries()) {
+			if (!sampleinfilter[j]) {
+				// this sample is filtered out
+				continue
+			}
+			const gt = l[j + serverconfig.cache_snpgt.sampleColumn]
+			if (gt) {
+				snp2sample.get(snpid).samples.set(sampleid, gt)
+			}
+		}
+	}
+
+	// imputation
+	if (tw.type == 'snplst' && !useAllSamples) {
+		doImputation(snp2sample, tw, cachesampleheader, sampleinfilter)
+	}
+
+	// for all snps, count samples by genotypes, keep in snpgt2count, for showing as result.headerRow
+	tw.snpgt2count = new Map()
+	// k: snpid, v:{gt:INT}
+	for (const [snpid, o] of snp2sample) {
+		const gt2count = new Map()
+		for (const [sampleid, gt] of o.samples) {
+			// count gt for this snp
+			gt2count.set(gt, 1 + (gt2count.get(gt) || 0))
+		}
+		tw.snpgt2count.set(snpid, gt2count)
+	}
+
+	categorizeSnpsByAF(tw, snp2sample)
+	// tw.lowAFsnps, tw.highAFsnps, tw.monomorphicLst, tw.snpid2AFstr are created
+
+	// for highAFsnps, write data into "samples{}" for model-fitting
+	for (const [snpid, o] of tw.highAFsnps) {
+		for (const [sampleid, gt] of o.samples) {
+			// for this sample, convert gt to value
+			const [gtA1, gtA2] = gt.split('/') // assuming diploid
+			const v = applyGeneticModel(tw, o.effAle, gtA1, gtA2)
+			// sampleid must be present in samples{map}, no need to check
+			samples.get(sampleid).id2value.set(snpid, { key: v, value: v })
+		}
+	}
+}
+
+/* categorize variants to three groups:
+lower than cutoff:
+	create tw.lowAFsnps and store these, later to be analyzed by Fisher/Wilcox
+higher than cutoff:
+	keep in snp2sample
+monomorphic:
+	delete from snp2sample, do not analyze
+	// TODO: may report this to user
+
+prev comments on this func:
+ creates following on the tw{} to divide the snps
+ tw.lowAFsnps{} tw.highAFsnps{} tw.monomorphicLst[] tw.snpid2AFstr{}
+ sample data for high-AF snps are kept in sampledata[]
+*/
+function categorizeSnpsByAF(tw, snp2sample) {
+	// same as snp2sample, to store snps with AF<cutoff, later to use for Fisher
+	tw.lowAFsnps = new Map()
+	// same as snp2sample, to store snps with AF>=cutoff, to be used for model-fitting
+	tw.highAFsnps = new Map()
+	// list of snpid for monomorphic ones
+	tw.monomorphicLst = []
+	tw.snpid2AFstr = new Map()
+	// k: snpid, v: af string, '5.1%', for display only, not for computing
+
+	for (const [snpid, o] of snp2sample) {
+		if (tw.snpgt2count.get(snpid).size == 1) {
+			// monomorphic, not to be used for any analysis
+			tw.monomorphicLst.push(snpid)
+			continue
+		}
+
+		const totalsamplecount = o.samples.size
+		// o.effAle is effect allele
+		let effAleCount = 0 // count number of effect alleles across samples
+		for (const [sampleid, gt] of o.samples) {
+			const [a1, a2] = gt.split('/') // assuming diploid
+			effAleCount += (a1 == o.effAle ? 1 : 0) + (a2 == o.effAle ? 1 : 0)
+		}
+
+		const af = effAleCount / (totalsamplecount * 2)
+		tw.snpid2AFstr.set(snpid, (af * 100).toFixed(1) + '%')
+
+		if (af < tw.q.AFcutoff / 100) {
+			// AF lower than cutoff, will not use for model-fitting
+			// move this snp from snp2sample to lowAFsnps
+			tw.lowAFsnps.set(snpid, o)
+		} else {
+			// AF above cutoff, use for model-fitting
+			tw.highAFsnps.set(snpid, o)
+		}
+	}
+}
+
+function doImputation(snp2sample, tw, cachesampleheader, sampleinfilter) {
+	if (tw.q.missingGenotype == 0) {
+		// as homozygous major/ref allele, which is not effect allele
+		for (const o of snp2sample.values()) {
+			// { effAle, refAle, altAles, samples }
+			// find an allele from this snp that is not effect allele
+			let notEffAle
+			if (o.refAle != o.effAle) {
+				notEffAle = o.refAle
+			} else {
+				for (const a of o.altAles) {
+					if (a != o.effAle) {
+						notEffAle = a
+						break
+					}
+				}
+			}
+			if (!notEffAle) throw 'not finding a non-effect allele' // not possible
+			for (const [i, sampleid] of cachesampleheader.entries()) {
+				if (!sampleinfilter[i]) continue
+				if (!o.samples.has(sampleid)) {
+					// this sample is missing gt call for this snp
+					o.samples.set(sampleid, notEffAle + '/' + notEffAle)
+				}
+			}
+		}
+		return
+	}
+	if (tw.q.missingGenotype == 1) {
+		// drop sample
+		const incompleteSamples = new Set() // any samples with missing gt
+		for (const { samples } of snp2sample.values()) {
+			for (const [i, sampleid] of cachesampleheader.entries()) {
+				if (!sampleinfilter[i]) continue
+				if (!samples.has(sampleid)) {
+					// this sample is missing gt
+					incompleteSamples.add(sampleid)
+				}
+			}
+		}
+		// delete incomplete samples from all snps
+		for (const { samples } of snp2sample.values()) {
+			for (const s of incompleteSamples) {
+				samples.delete(s)
+			}
+		}
+		return
+	}
+	throw 'invalid missingGenotype value'
+}
+
+function applyGeneticModel(tw, effAle, a1, a2) {
+	switch (tw.q.geneticModel) {
+		case 0:
+			// additive
+			return (a1 == effAle ? 1 : 0) + (a2 == effAle ? 1 : 0)
+		case 1:
+			// dominant
+			if (a1 == effAle || a2 == effAle) return 1
+			return 0
+		case 2:
+			// recessive
+			return a1 == effAle && a2 == effAle ? 1 : 0
+		case 3:
+			// by genotype
+			return a1 + '/' + a2
+		default:
+			throw 'unknown geneticModel option'
+	}
 }
