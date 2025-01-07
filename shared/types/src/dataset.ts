@@ -879,6 +879,8 @@ type SortPriorityEntry = {
 type SurvivalSettings = {
 	/** The max time-to-event to be displayed in plot, hide all the samples with Time-to-Event longer than this maxTimeToEvent */
 	maxTimeToEvent?: number
+	timeUnit?: string
+	xTickValues?: number[]
 }
 
 type MatrixSettings = {
