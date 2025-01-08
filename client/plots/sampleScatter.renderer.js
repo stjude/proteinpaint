@@ -9,7 +9,7 @@ import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { regressionPoly } from 'd3-regression'
-import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateOranges, interpolateGreys } from 'd3'
+import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateGreys } from 'd3'
 import { getId } from '#mass/nav'
 import { minShapeSize, maxShapeSize } from './sampleScatter.js'
 import { addNewGroup } from '../mass/groups.js'
@@ -1135,7 +1135,6 @@ export function renderContours(contourG, data, width, height) {
 		.domain(extent(data, s => s.x))
 		.nice()
 		.rangeRound([0, width])
-
 	const y = d3Linear()
 		.domain(extent(data, s => s.y))
 		.nice()

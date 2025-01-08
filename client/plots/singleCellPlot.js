@@ -32,8 +32,6 @@ const COLORBY_TAB = 2
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
 const noExpColor = '#F5F5F5' //lightGray
-const maxCells = 50000
-const contourColors = ['white', '#ffde1a', '#ffce00', '#ffa700', '	#ff8d00', '#ff7400']
 
 class singleCellPlot {
 	constructor() {
@@ -546,17 +544,14 @@ class singleCellPlot {
 				title: 'Show cells without expression'
 			}
 		]
-		//if more than 50K cells do not allow contour as it may fail, excludes fetalCerebellum
-		if (!this.maxCellsExceeded) {
-			inputs.push({
-				label: 'Show contour map',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'singleCellPlot',
-				settingsKey: 'showContour',
-				title: 'Show contour map'
-			})
-		}
+		inputs.push({
+			label: 'Show contour map',
+			boxLabel: '',
+			type: 'checkbox',
+			chartType: 'singleCellPlot',
+			settingsKey: 'showContour',
+			title: 'Show contour map'
+		})
 
 		this.components = {
 			controls: await controlsInit({
@@ -697,7 +692,6 @@ class singleCellPlot {
 			this.plots.push(plot)
 			const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
 			plot.cells = [...plot.noExpCells, ...expCells]
-			if (plot.cells.length > maxCells) this.maxCellsExceeded = true
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
 		}
@@ -1176,7 +1170,11 @@ class singleCellPlot {
 			const cells = plot.expCells.length > 0 ? plot.expCells : plot.cells
 			const xAxisScale = plot.xAxisScale.range([0, this.settings.svgw])
 			const yAxisScale = plot.yAxisScale.range([this.settings.svgh, 0])
-			const zAxisScale = plot.colorGenerator ? plot.colorGenerator.range([0, 1]) : null
+			let zAxisScale
+			if (plot.expCells.length > 0) {
+				const [min, max] = extent(plot.expCells, d => d.geneExp)
+				zAxisScale = d3Linear().domain([min, max]).range([0, 1])
+			}
 
 			const xCoords = cells.map(c => xAxisScale(c.x))
 			const yCoords = cells.map(c => yAxisScale(c.y))
