@@ -5,7 +5,7 @@ import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { rgb, create } from 'd3'
+import { rgb, create, extent } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
@@ -1176,9 +1176,12 @@ class singleCellPlot {
 			const cells = plot.expCells.length > 0 ? plot.expCells : plot.cells
 			const xAxisScale = plot.xAxisScale.range([0, this.settings.svgw])
 			const yAxisScale = plot.yAxisScale.range([this.settings.svgh, 0])
+			const zAxisScale = plot.colorGenerator ? plot.colorGenerator.range([0, 1]) : null
+
 			const xCoords = cells.map(c => xAxisScale(c.x))
 			const yCoords = cells.map(c => yAxisScale(c.y))
-			await this.renderContourMap(scene, xCoords, yCoords, plot)
+			const zCoords = cells.map(c => (zAxisScale ? zAxisScale(c.geneExp) : 1))
+			await this.renderContourMap(scene, xCoords, yCoords, zCoords, plot)
 			let isDragging = false
 			window.addEventListener('mousedown', () => (isDragging = true))
 
@@ -1198,8 +1201,8 @@ class singleCellPlot {
 		if (this.settings.showGrid) this.renderThreeGrid(scene)
 	}
 
-	async renderContourMap(scene, xCoords, yCoords, plot) {
-		const data = xCoords.map((x, i) => ({ x, y: yCoords[i] }))
+	async renderContourMap(scene, xCoords, yCoords, zCoords, plot) {
+		const data = xCoords.map((x, i) => ({ x, y: yCoords[i], z: zCoords[i] }))
 		// Create the data URL
 		const imageUrl = getContourImage(data, this.settings.svgw, this.settings.svgh)
 		const loader = new THREE.TextureLoader()

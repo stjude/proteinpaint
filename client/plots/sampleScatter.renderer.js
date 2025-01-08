@@ -258,7 +258,7 @@ export function setRenderers(self) {
 	self.renderContours = function (chart) {
 		const contourG = chart.serie
 		const data = chart.data.samples.map(s => {
-			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y) }
+			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: 1 }
 		})
 
 		renderContours(contourG, data, self.settings.svgw, self.settings.svgh)
@@ -1140,10 +1140,10 @@ export function renderContours(contourG, data, width, height) {
 		.domain(extent(data, s => s.y))
 		.nice()
 		.rangeRound([height, 0])
-
 	const contours = contourDensity()
 		.x(s => s.x)
 		.y(s => s.y)
+		.weight(s => s.z)
 		.size([width, height])
 		.bandwidth(30)
 		.thresholds(30)(data)
