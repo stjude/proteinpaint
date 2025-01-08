@@ -3,9 +3,10 @@ import * as helpers from '../../../test/front.helpers.js'
 
 /*
 Tests:
-	- Default boxplot
-	- Boxplot with overlay term = sex
-	- Boxplot with continuous overlay term = agedx
+	- Default box plot
+	- Box plot with overlay term = sex
+	- Box plot with continuous overlay term = agedx
+	- Box plot with user settings
  */
 
 /*************************
@@ -34,7 +35,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Default boxplot', test => {
+tape('Default box plot', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -71,7 +72,7 @@ tape('Default boxplot', test => {
 	}
 })
 
-tape('Boxplot with overlay term = sex', test => {
+tape('Box plot with overlay term = sex', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -113,7 +114,7 @@ tape('Boxplot with overlay term = sex', test => {
 	}
 })
 
-tape('Boxplot with continuous overlay term = agedx', test => {
+tape('Box plot with continuous overlay term = agedx', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -155,54 +156,59 @@ tape('Boxplot with continuous overlay term = agedx', test => {
 	}
 })
 
-// tape.skip('Boxplot with user settings', test => {
-// 	//All the settings available to the user
-// 	test.timeoutAfter(3000)
+tape('Box plot with user settings', test => {
+	//All the settings available to the user
+	test.timeoutAfter(3000)
 
-// 	const settings = {
-// 		boxplotWidth: 550,
-// 		color: 'purple',
-// 		labelPad: 40,
-// 		rowHeight: 30,
-// 		rowSpace: 20
-// 	}
+	const settings = {
+		boxplotWidth: 300,
+		color: 'yellow',
+		labelPad: 40,
+		rowHeight: 30,
+		rowSpace: 20,
+		darkMode: true
+	}
 
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'summary',
-// 					childType: 'boxplot',
-// 					term: {
-// 						id: 'agedx',
-// 						q: { mode: 'continuous' }
-// 					},
-// 					settings: {
-// 						boxplot: settings
-// 					}
-// 				}
-// 			]
-// 		},
-// 		boxplot: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: {
+						id: 'agedx',
+						q: { mode: 'continuous' }
+					},
+					settings: {
+						boxplot: settings
+					}
+				}
+			]
+		},
+		boxplot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
 
-// 	async function runTests(boxplot) {
-// 		boxplot.on('postRender.test', null)
-// 		const dom = boxplot.Inner.dom
-// 		const bp = dom.boxplots.selectAll("g[id^='sjpp-boxplot-']")
-// 		const lines = bp.selectAll('line').nodes()
-// 		test.true(
-// 			lines.some(d => {
-// 				d.attributes.stroke.value != settings.color
-// 			}),
-// 			`Should render boxplot with ${settings.color} lines.`
-// 		)
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		const bp = dom.boxplots.selectAll("g[id^='sjpp-boxplot-']")
+		const lines = bp.selectAll('line').nodes()
+		let wrongColorLine = 0
+		for (const line of lines) {
+			if (line.attributes.stroke.value !== settings.color) wrongColorLine++
+		}
+		test.equal(wrongColorLine, 0, `Should render boxplot with ${settings.color} lines.`)
 
-// 		if (test['_ok']) boxplot.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
+		test.true(
+			dom.div.style('background-color') == 'black' && dom.yAxis.select('path').attr('stroke') == 'white',
+			`Should render boxplot with dark background and white text when darkMode is ${settings.darkMode}.`
+		)
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})

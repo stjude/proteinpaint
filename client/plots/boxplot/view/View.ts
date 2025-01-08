@@ -4,7 +4,7 @@ import type { ScaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from '../BoxPlot'
-import type { ViewData } from '../viewModel/ViewModel'
+import type { ViewData, PlotDimensions } from '../viewModel/ViewModel'
 import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { RenderedPlot } from './RenderedPlot'
@@ -48,7 +48,7 @@ export class View {
 		if (data.legend) new LegendRenderer(dom.legend, data.legend, this.interactions, plotDim.textColor)
 	}
 
-	renderDom(plotDim: any, dom: BoxPlotDom, yScale: ScaleLinear<number, number, never>) {
+	renderDom(plotDim: PlotDimensions, dom: BoxPlotDom, yScale: ScaleLinear<number, number, never>) {
 		//Title of the plot
 		dom.plotTitle
 			.attr('id', 'sjpp-boxplot-title')
