@@ -3,6 +3,8 @@ export type RouteApi = {
 	methods: {
 		get?: RoutePayload
 		post?: RoutePayload
+		put?: RoutePayload
+		delete?: RoutePayload
 	}
 }
 

@@ -1,6 +1,6 @@
 import { getCompInit } from '#rx'
 import 'ol/ol.css'
-import Map from 'ol/Map.js'
+import OLMap from 'ol/Map.js'
 import TileLayer from 'ol/layer/Tile.js'
 import Tile from 'ol/layer/Tile.js'
 import View from 'ol/View.js'
@@ -15,7 +15,6 @@ import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import type { WSImagesRequest, WSImagesResponse, WSImage } from '#types'
 import wsiViewerImageFiles from './wsimagesloaded.ts'
 import { table2col } from '#dom/table2col'
-
 export default class WSIViewer {
 	// following attributes are required by rx
 	private type: string
@@ -27,10 +26,16 @@ export default class WSIViewer {
 
 	private thumbnailsContainer: any
 
+	// Field to store sample ID to wsi session ID mapping
+	private readonly wsiSessions: Map<string, string | undefined>
+
 	constructor(opts: any) {
 		this.type = 'WSIViewer'
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
+		this.wsiSessions = new Map()
+		// Add event listener for tab/window close
+		window.addEventListener('beforeunload', this.onTabClosed.bind(this))
 	}
 
 	async main(): Promise<void> {
@@ -88,6 +93,61 @@ export default class WSIViewer {
 		this.renderMetadata(holder, layers, settings)
 	}
 
+	private async getLayers(state: any, wsimages: WSImage[]): Promise<Array<TileLayer<Zoomify>>> {
+		const layers: Array<TileLayer<Zoomify>> = []
+
+		for (let i = 0; i < wsimages.length; i++) {
+			const body: WSImagesRequest = {
+				genome: state.genome || state.vocab.genome,
+				dslabel: state.dslabel || state.vocab.dslabel,
+				sampleId: state.sample_id,
+				wsimage: wsimages[i].filename
+			}
+
+			const data: WSImagesResponse = await dofetch3('wsimages', { body })
+
+			if (data.status === 'error') {
+				return []
+			}
+
+			this.wsiSessions.set(wsimages[i].filename, data.browserImageInstanceId)
+
+			const imgWidth = data.slide_dimensions[0]
+			const imgHeight = data.slide_dimensions[1]
+
+			const zoomifyUrl = `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg`
+
+			const source = new Zoomify({
+				url: zoomifyUrl,
+				size: [imgWidth, imgHeight],
+				crossOrigin: 'anonymous',
+				zDirection: -1 // Ensure we get a tile with the screen resolution or higher
+			})
+
+			const options = {
+				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg`,
+				metadata: wsimages[i].metadata,
+				source: source,
+				baseLayer: true
+			}
+
+			const layer = new TileLayer(options)
+
+			layers.push(layer)
+		}
+		return layers
+	}
+
+	private onTabClosed() {
+		const hasNonUndefinedValue = Array.from(this.wsiSessions.values()).some(value => value !== undefined)
+		if (hasNonUndefinedValue) {
+			dofetch3('clearwsisession', {
+				method: 'DELETE',
+				body: { sessions: JSON.stringify(Array.from(this.wsiSessions)) }
+			})
+		}
+	}
+
 	private generateThumbnails(layers: Array<TileLayer<Zoomify>>, setting: Settings) {
 		if (!this.thumbnailsContainer) {
 			// First-time initialization
@@ -138,8 +198,8 @@ export default class WSIViewer {
 		}
 	}
 
-	private getMap(displayedImage: TileLayer) {
-		return new Map({
+	private getMap(displayedImage: TileLayer): OLMap {
+		return new OLMap({
 			layers: [displayedImage],
 			target: 'wsi-viewer',
 			view: new View({
@@ -148,7 +208,7 @@ export default class WSIViewer {
 		})
 	}
 
-	private addControls(map: Map, firstLayer: TileLayer) {
+	private addControls(map: OLMap, firstLayer: TileLayer) {
 		const fullscreen = new FullScreen()
 		map.addControl(fullscreen)
 
@@ -162,50 +222,6 @@ export default class WSIViewer {
 		})
 
 		map.addControl(overviewMapControl)
-	}
-
-	private async getLayers(state: any, wsimages: WSImage[]): Promise<Array<TileLayer<Zoomify>>> {
-		const layers: Array<TileLayer<Zoomify>> = []
-
-		for (let i = 0; i < wsimages.length; i++) {
-			const body: WSImagesRequest = {
-				genome: state.genome || state.vocab.genome,
-				dslabel: state.dslabel || state.vocab.dslabel,
-				sampleId: state.sample_id,
-				wsimage: wsimages[i].filename
-			}
-
-			const data: WSImagesResponse = await dofetch3('wsimages', { body })
-
-			if (data.status === 'error') {
-				return []
-			}
-
-			const imgWidth = data.slide_dimensions[0]
-			const imgHeight = data.slide_dimensions[1]
-
-			const zoomifyUrl = `/tileserver/layer/slide/${data.sessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg`
-
-			const source = new Zoomify({
-				url: zoomifyUrl,
-				size: [imgWidth, imgHeight],
-				crossOrigin: 'anonymous',
-				zDirection: -1 // Ensure we get a tile with the screen resolution or higher
-			})
-
-			const options = {
-				// title: "Set Title",
-				preview: `/tileserver/layer/slide/${data.sessionId}/zoomify/TileGroup0/0-0-0@1x.jpg`,
-				metadata: wsimages[i].metadata,
-				source: source,
-				baseLayer: true
-			}
-
-			const layer = new TileLayer(options)
-
-			layers.push(layer)
-		}
-		return layers
 	}
 
 	private renderMetadata(holder: any, layers: Array<TileLayer<Zoomify>>, settings: Settings) {
