@@ -32,6 +32,9 @@ export type BoxPlotSettings = {
 	darkMode: boolean
 	/** Padding between the left hand label and boxplot */
 	labelPad: number
+	/** If true, order box plots from smallest to largest median value
+	 * Default is by alphanumeric order */
+	orderByMedian: boolean
 	/** Height of individual boxplots */
 	rowHeight: number
 	/** Space between the boxplots */
@@ -57,6 +60,7 @@ export type BoxPlotDom = {
 	svg: SvgSvg
 	/** Y-axis shown above the boxplots */
 	yAxis: any
+	/** box plot tooltip (e.g. over the outliers) */
 	tip: Menu
 }
 
@@ -115,6 +119,14 @@ class TdbBoxplot extends RxComponentInner {
 				defaultQ4fillTW: term0_term2_defaultQ
 			},
 			{
+				label: 'Order by median',
+				title: 'Order box plots by median value',
+				type: 'checkbox',
+				chartType: 'boxplot',
+				boxLabel: '',
+				settingsKey: 'orderByMedian'
+			},
+			{
 				label: 'Width',
 				title: 'Width of the entire plot',
 				type: 'number',
@@ -163,6 +175,7 @@ class TdbBoxplot extends RxComponentInner {
 			},
 			{
 				label: 'Dark mode',
+				title: 'Apply a dark theme to the plot',
 				type: 'checkbox',
 				chartType: 'boxplot',
 				boxLabel: '',
@@ -270,6 +283,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		color: plotColor,
 		darkMode: false,
 		labelPad: 10,
+		orderByMedian: false,
 		rowHeight: 50,
 		rowSpace: 15
 	}
