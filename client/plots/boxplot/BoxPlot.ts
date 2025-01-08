@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
-import { controlsInit, term0_term2_defaultQ } from '../controls'
+import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from '../controls'
 import { RxComponentInner } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
 import { Menu } from '#dom'
@@ -103,7 +103,7 @@ class TdbBoxplot extends RxComponentInner {
 				configKey: 'term',
 				chartType: 'boxplot',
 				usecase: { target: 'boxplot', detail: 'term' },
-				label: 'Customize',
+				label: renderTerm1Label,
 				vocabApi: this.app.vocabApi,
 				menuOptions: 'edit'
 			},
