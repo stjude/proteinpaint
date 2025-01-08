@@ -97,14 +97,16 @@ export default function getHandlers(self) {
 						? self.chartsData.tests[d.chartId][1].term1Label
 						: self.chartsData.tests[d.chartId][0].term1Label
 
-					// when term2 has only 2 visible categories, Col2 would be the other category instead of "not Col1"
-					const negateTerm2Label = !(
-						self.settings.rows.length - self.settings.exclude.rows.length == 2 && d.groupPvalues.term2tests.length == 2
-					)
-						? negateTermLabel(term2Label)
-						: d.groupPvalues.term2tests[0].term2Label == term2Label
-						? d.groupPvalues.term2tests[1].term2Label
-						: d.groupPvalues.term2tests[0].term2Label
+					let negateTerm2Label = negateTermLabel(term2Label)
+					if (self.settings.rows.length - self.settings.exclude.rows.length == 2) {
+						// when term2 has only 2 visible categories, Col2 would be the other category instead of "not Col1"
+						const visibleTerm2CatsKeys = self.settings.rows.filter(row => !self.settings.exclude.rows.includes(row))
+						const visibleTerm2Labels = visibleTerm2CatsKeys
+							.map(catK => self.config.term2?.term?.values?.[catK]?.label)
+							.filter(x => x != undefined)
+						if (visibleTerm2Labels?.length == 2)
+							negateTerm2Label = visibleTerm2Labels[0] == term2Label ? visibleTerm2Labels[1] : visibleTerm2Labels[0]
+					}
 
 					rows.push(
 						`<tr>
