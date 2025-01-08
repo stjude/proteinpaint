@@ -20,11 +20,15 @@ export class ListSamples {
 		const plotConfig = state.plots.find((p: { id: string }) => p.id === id)
 		if (!plotConfig) throw 'Box plot not found [ListSamples]'
 
-		const min = plot.descrStats.find(d => d.id === 'min')!.value
-		const max = plot.descrStats.find(d => d.id === 'max')!.value
-		if (Number.isNaN(min) || Number.isNaN(max)) throw 'Min or max not found [ListSamples]'
+		try {
+			//ids 'min' and 'max' are always present in the descrStats{}
+			const min = plot.descrStats.find(d => d.id === 'min')!.value
+			const max = plot.descrStats.find(d => d.id === 'max')!.value
+			this.tvslst = this.getTvsLst(min, max, getRange, plotConfig.term, plotConfig.term2)
+		} catch (e: any) {
+			console.error(e.message || e)
+		}
 
-		this.tvslst = this.getTvsLst(min, max, getRange, plotConfig.term, plotConfig.term2)
 		this.term = plotConfig.term.q?.mode === 'continuous' ? plotConfig.term : plotConfig.term2
 
 		const filter = {
