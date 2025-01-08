@@ -6,9 +6,11 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Add tests for decimalPlacesUntilFirstNonZero
+- Color picker for individual box plots and filter added. Click on the box plot label to see the new menu options.
 
 Fixes:
 - improve mass nav header rendering to obey ds customization on tabs
+- Restored 'List samples' label menu option in both the violin and box plot. The filter label menu option restored as well.
 
 
 ## 2.95.0
