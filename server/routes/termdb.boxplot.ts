@@ -122,6 +122,10 @@ function init({ genomes }) {
 			if (q.tw.term?.values) setHiddenPlots(q.tw, plots)
 			if (overlayTerm && overlayTerm.term?.values) setHiddenPlots(overlayTerm, plots)
 
+			if (q.orderByMedian == true) {
+				plots.sort((a, b) => a.boxplot.p50 - b.boxplot.p50)
+			}
+
 			const returnData: BoxPlotResponse = {
 				absMin,
 				absMax,

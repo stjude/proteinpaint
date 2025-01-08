@@ -1,1 +1,2 @@
-
+Features:
+- New control to order box plots from smallest to highest median value

@@ -1,11 +1,14 @@
 import type { RoutePayload } from './routeApi.js'
 
+/**Args set in Termdb vocab and from mass box plot */
 export type BoxPlotRequest = {
 	/** Args set in TermVocab */
 	/** term1 or term */
 	tw: any
 	genome: string
 	dslabel: string
+	/** sort plots by median value */
+	orderByMedian: boolean
 	/** term2 */
 	overlayTw?: any
 	filter: any
