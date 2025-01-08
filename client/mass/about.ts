@@ -181,6 +181,20 @@ export class MassAbout {
 										lst: []
 									}
 								})
+							if (clearOnChange.groups) {
+								for (const group of state.groups) {
+									subactions.push({
+										type: 'delete_group',
+										name: group.name
+									})
+								}
+								for (const term of state.customTerms) {
+									subactions.push({
+										type: 'delete_customTerm',
+										name: term.name
+									})
+								}
+							}
 							subactions.push({ type: 'cohort_set', activeCohort: i })
 							app.dispatch({
 								type: 'app_refresh',
