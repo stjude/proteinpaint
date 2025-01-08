@@ -124,11 +124,12 @@ class TdbBoxplot extends RxComponentInner {
 				type: 'checkbox',
 				chartType: 'boxplot',
 				boxLabel: '',
-				settingsKey: 'orderByMedian'
+				settingsKey: 'orderByMedian',
+				getDisplayStyle: plot => (plot.term2 ? '' : 'none')
 			},
 			{
 				label: 'Width',
-				title: 'Width of the entire plot',
+				title: 'Set the width of the entire plot',
 				type: 'number',
 				chartType: 'boxplot',
 				settingsKey: 'boxplotWidth',
@@ -136,7 +137,7 @@ class TdbBoxplot extends RxComponentInner {
 			},
 			{
 				label: 'Plot height',
-				title: 'Height of each box plot',
+				title: 'Set the height of each box plot between 20 and 50',
 				type: 'number',
 				chartType: 'boxplot',
 				settingsKey: 'rowHeight',
@@ -152,7 +153,7 @@ class TdbBoxplot extends RxComponentInner {
 			},
 			{
 				label: 'Plot padding',
-				title: 'Space between each box plot',
+				title: 'Set the space between each box plot. Number must be between 10 and 20',
 				type: 'number',
 				chartType: 'boxplot',
 				settingsKey: 'rowSpace',
