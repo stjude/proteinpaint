@@ -28,7 +28,6 @@ this
 
 const SAMPLES_TAB = 0
 const PLOTS_TAB = 1
-const COLORBY_TAB = 2
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
 const noExpColor = '#F5F5F5' //lightGray
@@ -79,20 +78,12 @@ class singleCellPlot {
 				active: activeTab == PLOTS_TAB,
 				callback: () => this.setActiveTab(PLOTS_TAB)
 			})
-		this.tabs.push(
-			{
-				label: 'Clusters',
-				id: COLORBY_TAB,
-				active: activeTab == COLORBY_TAB,
-				callback: () => this.setActiveTab(COLORBY_TAB)
-			},
-			{
-				label: 'Gene Expression',
-				id: GENE_EXPRESSION_TAB,
-				active: activeTab == GENE_EXPRESSION_TAB,
-				callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
-			}
-		)
+		this.tabs.push({
+			label: 'Gene Expression',
+			id: GENE_EXPRESSION_TAB,
+			active: activeTab == GENE_EXPRESSION_TAB,
+			callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
+		})
 		if (state.termdbConfig.queries?.singleCell?.DEgenes)
 			this.tabs.push({
 				label: 'Differential Expression',
@@ -350,13 +341,7 @@ class singleCellPlot {
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'none')
 				break
-			case COLORBY_TAB:
-				this.dom.headerDiv.style('display', 'none')
-				this.dom.geDiv.style('display', 'none')
-				this.dom.deDiv.style('display', 'none')
-				this.dom.tableDiv.style('display', 'none')
-				this.dom.showDiv.style('display', 'none')
-				break
+
 			case GENE_EXPRESSION_TAB:
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'none')
@@ -806,7 +791,7 @@ class singleCellPlot {
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
 			const activeTab = this.tabs.find(tab => tab.active)
-			if (activeTab.id == COLORBY_TAB) {
+			if (activeTab.id == PLOTS_TAB) {
 				const app = this.app
 				const plotColorByDiv = plot.headerDiv
 					.append('div')
