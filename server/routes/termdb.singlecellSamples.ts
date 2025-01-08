@@ -314,6 +314,10 @@ function gdc_validateGeneExpression(G, ds, genome) {
 		*/
 		try {
 			const fileid = q.sample.eID
+			if (ds.__gdc.scrnaAnalysis2hdf5.size == 0) {
+				// blank map. must be that gdc data caching is disabled; no need to detect if it's being cached because this particular query is very fast
+				throw 'GDC scRNA file mapping is not cached'
+			}
 			const hdf5id = ds.__gdc.scrnaAnalysis2hdf5.get(fileid)
 			if (!hdf5id) throw 'cannot map eID to hdf5 id'
 
