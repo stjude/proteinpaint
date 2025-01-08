@@ -236,7 +236,7 @@ class MassGroups {
 				this.tip
 			)
 		})
-		
+
 		//show scatterplots for custom variable options
 		if (this.state.termdbConfig.scatterplots)
 			for (const plot of this.state.termdbConfig.scatterplots) {
@@ -270,8 +270,8 @@ class MassGroups {
 						})
 			}
 
-			//show option to delete custom variable
-			row = menuDiv
+		//show option to delete custom variable
+		row = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Delete variable')
@@ -290,10 +290,7 @@ function addDEPlotMenuItem(div, self, state, samplelstTW, tip) {
 	div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
-		.text('Differential expression')
-		.append('div')
-		.html(self.state.groups[0].name + ' (control)' + ' vs ' + self.state.groups[1].name + ' (case)') //Add fine print "control vs case" under the text "Differential expression"
-		.style('font-size', '0.8em')
+		.text('Differential gene expression analysis')
 		.on('click', e => {
 			const groups = []
 			for (const group of samplelstTW.q.groups) {
@@ -314,6 +311,14 @@ function addDEPlotMenuItem(div, self, state, samplelstTW, tip) {
 				config
 			})
 		})
+	// small text to explain which is case/control
+	div
+		.append('div')
+		.text(`Case: ${self.state.groups[1].name}, control: ${self.state.groups[0].name}`)
+		.style('font-size', '0.8em')
+		.style('text-align', 'right')
+		.style('opacity', 0.8)
+		.style('padding', '3px')
 }
 
 function initUI(self) {
