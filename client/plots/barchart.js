@@ -940,8 +940,8 @@ function setRenderers(self) {
 				visibleTerm1Data.visibleData.some(visibleTerm2 => visibleTerm2.dataId === term2Data.term2id)
 			)
 			for (const [index2, term2] of visibleTerm2Data.entries()) {
-				if (visibleTerm2Data.length == 2 && index2 == 1) {
-					// when term2 has only 2 categories, then only a single category needs to be tested in the
+				if (chart.settings.rows.length - chart.settings.exclude.rows.length == 2 && index2 == 1) {
+					// when term2 has only 2 visible categories, then only a single category needs to be tested in the
 					// association test (because the other category will get tested in that same test).
 					break
 				}
@@ -950,8 +950,13 @@ function setRenderers(self) {
 					// when term1 has only 2 categories, Row2 would be the other category instead of "not Row1"
 					{ value: visibleTests.length == 2 ? visibleTests[1].term1Label : negateTermLabel(term1.term1Label) },
 					{ value: term2.term2Label },
-					// when term2 has only 2 categories, Col2 would be the other category instead of "not Col1"
-					{ value: visibleTerm2Data.length == 2 ? visibleTerm2Data[1].term2Label : negateTermLabel(term2.term2Label) },
+					// when term2 has only 2 visible categories, Col2 would be the other category instead of "not Col1"
+					{
+						value:
+							chart.settings.rows.length - chart.settings.exclude.rows.length == 2 && visibleTerm2Data.length == 2
+								? visibleTerm2Data[1].term2Label
+								: negateTermLabel(term2.term2Label)
+					},
 					//if both chi-square and Fisher's exact tests were used. for the tests computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
 					{
 						html: term2.skipped
@@ -992,16 +997,6 @@ function setRenderers(self) {
 			.style('font-size', '10px')
 			.style('font-weight', 'normal')
 			.html(noSkipped ? '' : 'N/A: association test skipped because of limited sample size <br>')
-	}
-
-	// a function used by generatePvalueTable to negate a term label
-	// TODO: add more conditions for better negation than "not termLable"
-	function negateTermLabel(termLabel) {
-		if (termLabel.toUpperCase().startsWith('NOT ')) {
-			return termLabel.substring(4) // Remove the "not" prefix
-		} else {
-			return 'not ' + termLabel // Otherwise, add "not" prefix
-		}
 	}
 }
 
@@ -1182,4 +1177,14 @@ export async function getPlotConfig(opts, app) {
 
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
+}
+
+// a function used by generatePvalueTable to negate a term label
+// TODO: add more conditions for better negation than "not termLable"
+export function negateTermLabel(termLabel) {
+	if (termLabel.toUpperCase().startsWith('NOT ')) {
+		return termLabel.substring(4) // Remove the "not" prefix
+	} else {
+		return 'not ' + termLabel // Otherwise, add "not" prefix
+	}
 }

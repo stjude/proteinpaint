@@ -5,6 +5,8 @@ import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normal
 import { rgb } from 'd3-color'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTerm } from '#shared/terms.js'
+import { negateTermLabel } from './barchart'
+
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
 	self.dom.tip = tip
@@ -84,6 +86,26 @@ export default function getHandlers(self) {
 					const term2Label = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).term2Label
 					const tableValues = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).tableValues
 					const skipped = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).skipped
+
+					// when term1 has only 2 categories, Row2 would be the other category instead of "not Row1"
+					const negateTerm1Label = !(
+						self.settings.cols.length - self.settings.exclude.cols.length == 2 &&
+						self.chartsData.tests[d.chartId].length == 2
+					)
+						? negateTermLabel(term1Label)
+						: self.chartsData.tests[d.chartId][0].term1Label == term1Label
+						? self.chartsData.tests[d.chartId][1].term1Label
+						: self.chartsData.tests[d.chartId][0].term1Label
+
+					// when term2 has only 2 visible categories, Col2 would be the other category instead of "not Col1"
+					const negateTerm2Label = !(
+						self.settings.rows.length - self.settings.exclude.rows.length == 2 && d.groupPvalues.term2tests.length == 2
+					)
+						? negateTermLabel(term2Label)
+						: d.groupPvalues.term2tests[0].term2Label == term2Label
+						? d.groupPvalues.term2tests[1].term2Label
+						: d.groupPvalues.term2tests[0].term2Label
+
 					rows.push(
 						`<tr>
 							<td style='padding:3px; color:#aaa'>p-value</td>
@@ -95,7 +117,7 @@ export default function getHandlers(self) {
 							<tr>
 								<td style='color:#aaa'></td>
 								<td style='color:#aaa'>${term2Label}</td>
-								<td style='color:#aaa'>not ${term2Label}</td>
+								<td style='color:#aaa'>${negateTerm2Label}</td>
 							</tr>
 							<tr>
 								<td style='color:#aaa'>${term1Label}</td>
@@ -103,7 +125,7 @@ export default function getHandlers(self) {
 								<td>${tableValues.R1C2}</td>
 							</tr>
 							<tr>
-								<td style='color:#aaa'>not ${term1Label}</td>
+								<td style='color:#aaa'>${negateTerm1Label}</td>
 								<td>${tableValues.R2C1}</td>
 								<td>${tableValues.R2C2}</td>
 							</tr>
