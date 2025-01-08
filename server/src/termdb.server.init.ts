@@ -560,28 +560,31 @@ export function server_init_db_queries(ds) {
 }
 
 /*
-	here defines common chart types, including:
-	- generally applicable to any ds, e.g. summary
-	- computable chart type based on term type or ds.queries{} availability, e.g. survival, singleCell
+	This section defines common chart types, such as 'summary charts', which are generally applicable to any dataset (ds).
+	These chart types can be computed based on term types or the availability of ds.queries{}, for example, survival or singleCell charts.
 
-	each chart type has a callback equivalent to isSupported() that executes on context parameters 
-	to yield true/false indicating if the chart type should be shown or not
+	Each chart type has a callback function equivalent to isSupported() that executes on context parameters 
+	to determine if the chart type should be displayed (returns true) or not (returns false).
 
-	this is **not** an exhaustive list:
-	- numericDictCluster is not defined here, it is defined in ds that wants it
-	- does not include special "uncommon" chart type
+	This is not an exhaustive list:
+	- numericDictCluster is not defined here; it is defined in the specific dataset that requires it.
+	- Special "uncommon" chart types are not included here.
 
-	can be overridden by ds.isSupportedChartOverride{}, inside the init() function, in order to achieve:
-	- hide common chart type by providing a callback that returns false 
-	  (e.g. even if a ds has survival term, collaborator still doesn't want km plot to show...)
-	- add special "uncommon" chart (profile)
-	- supply new callback of existing chart type, to execute adhoc logic (e.g. consider user's role...)
+	These chart types can be overridden by ds.isSupportedChartOverride{} within the init() function to:
+	- Hide a common chart type by providing a callback that returns false 
+	  (e.g., even if a dataset has a survival term, a collaborator may not want the KM plot to be shown).
+	- Add a special "uncommon" chart type (e.g., profile).
+	- Supply a new callback for an existing chart type to execute ad-hoc logic (e.g., considering the user's role).
 */
+
 const defaultCommonCharts: isSupportedChartCallbacks = {
 	dictionary: () => true,
 	summary: () => true,
 	matrix: () => true,
 	regression: () => true,
+	linear: () => true,
+	logistic: () => true,
+	cox: () => true,
 	facet: () => true,
 	survival: ({ cohortTermTypes }) => cohortTermTypes.survival > 0,
 	cuminc: ({ cohortTermTypes }) => cohortTermTypes.condition > 0,

@@ -66,7 +66,6 @@ export class RegressionInputs {
 		/* Create configuration data for each section of the input UI
 		see google doc "Regression UI"
 		*/
-
 		// configuration for the outcome variable section
 		this.outcome = {
 			/*** static configuration ***/

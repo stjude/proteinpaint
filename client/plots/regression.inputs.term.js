@@ -1,5 +1,4 @@
 import { termsettingInit } from '#termsetting'
-import { getNormalRoot } from '#filter'
 import { get_bin_label } from '#shared/termdb.bins.js'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom/menu'

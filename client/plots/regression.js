@@ -221,6 +221,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	]
 
 	for (const { label, type } of lst) {
+		if (!chartsInstance.state.currentCohortChartTypes.includes(type)) continue
 		holder
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
