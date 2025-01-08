@@ -945,18 +945,23 @@ function setRenderers(self) {
 					// association test (because the other category will get tested in that same test).
 					break
 				}
+				let negateTerm2Label = negateTermLabel(term2.term2Label)
+				if (chart.settings.rows.length - chart.settings.exclude.rows.length == 2) {
+					// when term2 has only 2 visible categories, Col2 would be the other category instead of "not Col1"
+					const visibleTerm2CatsKeys = chart.settings.rows.filter(row => !chart.settings.exclude.rows.includes(row))
+					const visibleTerm2Labels = visibleTerm2CatsKeys
+						.map(catK => self.config.term2?.term?.values?.[catK]?.label)
+						.filter(x => x != undefined)
+					if (visibleTerm2Labels?.length == 2)
+						negateTerm2Label = visibleTerm2Labels[0] == term2.term2Label ? visibleTerm2Labels[1] : visibleTerm2Labels[0]
+				}
+
 				rows.push([
 					{ value: `${term1.term1Label}` },
 					// when term1 has only 2 categories, Row2 would be the other category instead of "not Row1"
 					{ value: visibleTests.length == 2 ? visibleTests[1].term1Label : negateTermLabel(term1.term1Label) },
 					{ value: term2.term2Label },
-					// when term2 has only 2 visible categories, Col2 would be the other category instead of "not Col1"
-					{
-						value:
-							chart.settings.rows.length - chart.settings.exclude.rows.length == 2 && visibleTerm2Data.length == 2
-								? visibleTerm2Data[1].term2Label
-								: negateTermLabel(term2.term2Label)
-					},
+					{ value: negateTerm2Label },
 					//if both chi-square and Fisher's exact tests were used. for the tests computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
 					{
 						html: term2.skipped
