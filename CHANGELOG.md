@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Add tests for decimalPlacesUntilFirstNonZero
+
 Fixes:
 - improve mass nav header rendering to obey ds customization on tabs
 
