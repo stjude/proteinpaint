@@ -227,68 +227,6 @@ export function setRenderersThree(self) {
 			return textGeo
 		}
 	}
-
-	//Not in use for now
-	self.renderContourMap3D = async function (
-		scene,
-		camera,
-		material,
-		vertices,
-		chart,
-		xAxisScale,
-		yAxisScale,
-		zAxisScale,
-		maxZ
-	) {
-		const colorGenerator = d3Linear().domain([0, maxZ]).range(['#aaa', this.settings.defaultColor])
-		const colors = chart.data.samples.map(s => colorGenerator(s.z))
-		const colors3D = []
-		for (const color of colors) {
-			const color3D = new THREE.Color(color)
-			colors3D.push(color3D.r, color3D.g, color3D.b)
-		}
-		camera.position.set(0, 0, 2.5)
-		camera.lookAt(scene.position)
-		const data = chart.data.samples.map((s, i) => ({ x: xAxisScale(s.x), y: yAxisScale(s.y), z: zAxisScale(s.z) }))
-		const width = this.settings.svgw
-		const height = this.settings.svgh
-		const imageUrl = getContourImage3D(data, width, height)
-		const loader = new THREE.TextureLoader()
-		loader.load(imageUrl, texture => {
-			// Create a plane geometry
-			const geometry = new THREE.PlaneGeometry(2, 2)
-			// Create a material using the loaded texture
-			const material = new THREE.MeshBasicMaterial({ map: texture })
-			// Create a mesh with the geometry and material
-			const plane = new THREE.Mesh(geometry, material)
-			// Position the plane
-			plane.position.z = 0 // Adjust z-position as needed
-			// Add the plane to the scene
-			scene.add(plane)
-			chart.plane = plane
-		})
-
-		const geometry = new THREE.BufferGeometry()
-		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors3D, 3))
-		const particles = new THREE.Points(geometry, material)
-		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
-		const controls = new DragControls.DragControls([particles], camera, self.canvas)
-		scene.add(particles)
-		let isDragging = false
-		self.canvas.addEventListener('mousedown', () => (isDragging = true))
-
-		self.canvas.addEventListener('mousemove', event => {
-			if (!isDragging) return
-			chart.plane.position.set(particles.position.x, particles.position.y, particles.position.z)
-		})
-		self.canvas.addEventListener('mousewheel', event => {
-			if (!event.ctrlKey) return
-			event.preventDefault()
-			particles.position.z -= event.deltaY / 500
-			chart.plane.position.z = particles.position.z
-		})
-	}
 }
 
 export function getThreeCircle(size) {
