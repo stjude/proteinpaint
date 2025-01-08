@@ -8,7 +8,7 @@ export type SampleWSImagesRequest = {
 }
 
 export type SampleWSImagesResponse = {
-	sampleWSImages: string[]
+	sampleWSImages: WSImage[]
 }
 
 export type WSImage = {
