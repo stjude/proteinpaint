@@ -18,6 +18,16 @@ export default async function (dslabel, holder, genomeObj, sample_id) {
 	try {
 		const opts = {
 			holder: holder,
+			vocabApi: {
+				// api is required by plot.app.js, so create a mock one for the adhoc data
+				vocab: { terms: [] },
+				main: () => {
+					return //fix so linter doesn't yell while this is in development
+				},
+				getTermdbConfig: () => {
+					return {}
+				}
+			},
 
 			state: {
 				genome: genomeObj.name,

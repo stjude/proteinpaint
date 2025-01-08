@@ -9,6 +9,7 @@ export type WSImagesRequest = {
 
 export type WSImagesResponse = {
 	sessionId?: string
+	userSessionId: string
 	slide_dimensions: number[]
 	status: string
 }

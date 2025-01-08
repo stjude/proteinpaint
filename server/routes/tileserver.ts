@@ -24,7 +24,7 @@ function init() {
 
 			const url = `${serverconfig.tileServerURL}/tileserver/layer/slide/${sampleId}/zoomify/${TileGroup}/${z}-${x}-${y}@1x.jpg`
 
-			const response = await ky.get(url)
+			const response = await ky.get(url, { timeout: 50000 })
 
 			const buffer = await response.arrayBuffer()
 			res.status(response.status).send(Buffer.from(buffer))

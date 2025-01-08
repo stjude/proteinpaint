@@ -9,12 +9,40 @@ import serverconfig from './serverconfig.js'
 import { authApi } from './auth.js'
 import * as validator from './validator.js'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
-
 import jsonwebtoken from 'jsonwebtoken'
+import session from 'express-session'
+import connectRedis from 'connect-redis'
+import { createClient } from 'redis'
 
+const RedisStore = connectRedis(session)
 const basepath = serverconfig.basepath || ''
 
+// Create a Redis client
+const redisClient = createClient({
+	url: serverconfig.redis.url,
+	legacyMode: true // Required if using connect-redis
+})
+
+// Configure session middleware with Redis store
+const redisStore = new RedisStore({
+	client: redisClient,
+	prefix: 'wsi:' // Optional: Customize session key prefix
+})
+
 export function setAppMiddlewares(app) {
+	redisClient.connect().catch(console.error)
+	redisClient.on('connect', () => console.log('Connected to Redis'))
+
+	app.use(
+		session({
+			store: redisStore,
+			secret: serverconfig.redis.secret,
+			resave: false,
+			saveUninitialized: false,
+			cookie: { maxAge: 0 } // Prevent cookies from being set
+		})
+	)
+
 	app.use(setHeaders)
 
 	if (serverconfig.users) {
