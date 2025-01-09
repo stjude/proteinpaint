@@ -78,7 +78,7 @@ function applyBrush(self, elem, brush) {
 			const s = event.selection
 			if (!s) return // not an event triggered by brush dragging
 			const inputRange = brush.rangeInput.getRange()
-			if (inputRange.value != undefined) {
+			if (inputRange?.value != undefined) {
 				brush.range = inputRange
 				return
 			}
@@ -152,8 +152,8 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
  */
 
 export function setStartStopDisplays(range, inputRange) {
-	const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
-	const stop = range.stopunbounded ? '' : inputRange.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
+	const start = range.startunbounded ? '' : inputRange?.startinclusive ? `${range.start} <=` : `${range.start} <`
+	const stop = range.stopunbounded ? '' : inputRange?.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
 
 	return [start, stop]
 }
