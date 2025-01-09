@@ -1028,8 +1028,21 @@ type MatrixPlotsEntry = {
 	getConfig?: (f: any) => void
 }
 
+type NumericDictTermClusterPlotsEntry = {
+	name: string
+	file: string
+	settings?: {
+		[key: string]: any
+	}
+	getConfig?: (f: any) => void
+}
+
 type MatrixPlots = {
 	plots: MatrixPlotsEntry[]
+}
+
+type NumericDictTermClusterPlots = {
+	plots: NumericDictTermClusterPlotsEntry[]
 }
 
 type AllowCaseDetails = {
@@ -1271,6 +1284,7 @@ export type Cohort = {
 	defaultChartType?: string
 	massNav?: MassNav
 	matrixplots?: MatrixPlots
+	numericDictTermClusterPlots?: NumericDictTermClusterPlots
 	mutationset?: MutationSet[]
 	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }
 	scatterplots?: Scatterplots
