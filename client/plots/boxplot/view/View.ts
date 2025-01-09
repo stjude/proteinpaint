@@ -73,12 +73,12 @@ export class View {
 		settings: BoxPlotSettings
 	) {
 		if (settings.isVertical) scale.range([scale.range()[1], scale.range()[0]])
-		//axis below the title
+
 		dom.axis
 			.attr('id', 'sjpp-boxplot-axis')
 			.attr('transform', `translate(${plotDim.axis.x}, ${plotDim.axis.y})`)
 			.transition()
-			.call(this.settings.isVertical ? axisLeft(scale) : axisTop(scale))
+			.call(this.settings.isVertical ? axisLeft(scale).tickPadding(10) : axisTop(scale))
 
 		axisstyle({
 			axis: dom.axis,

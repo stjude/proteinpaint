@@ -104,15 +104,16 @@ export class ViewModel {
 	}
 
 	setPlotDimensions(data: BoxPlotResponse, config: any, settings: BoxPlotSettings) {
+		const svg = this.setSvgDimensions(settings, data)
 		const plotDim = {
 			//Add 1 to the max is big enough so the upper line to boxplot isn't cutoff
 			//Note: ts is complaining absMax could be null. Ignore. Error in server request.
 			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
 			range: [0, settings.boxplotWidth],
-			svg: this.setSvgDimensions(settings, data),
-			title: this.setTitleDimensions(config, settings),
+			svg,
+			title: this.setTitleDimensions(config, settings, svg.height),
 			axis: {
-				x: settings.isVertical ? this.topPad + this.incrPad : this.totalLabelSize,
+				x: settings.isVertical ? this.horizPad / 2 + this.incrPad : this.totalLabelSize,
 				y: this.topPad + this.incrPad + 20 + (settings.isVertical ? settings.labelPad : 0)
 			},
 			backgroundColor: settings.darkMode ? 'black' : 'white',
@@ -131,11 +132,11 @@ export class ViewModel {
 		}
 	}
 
-	setTitleDimensions(config: any, settings: BoxPlotSettings) {
+	setTitleDimensions(config: any, settings: BoxPlotSettings, height: number) {
 		const depth = this.totalLabelSize + settings.boxplotWidth / 2
 		return {
-			x: settings.isVertical ? this.topPad : depth,
-			y: settings.isVertical ? depth - this.horizPad / 2 : this.topPad + this.incrPad / 2,
+			x: settings.isVertical ? this.horizPad / 2 : depth,
+			y: settings.isVertical ? height - depth - 5 : this.topPad + this.incrPad / 2,
 			text: config.term.q.mode == 'continuous' ? config.term.term.name : config.term2.term.name
 		}
 	}
@@ -157,7 +158,7 @@ export class ViewModel {
 				plot.boxplot.radius = this.outRadius
 			}
 			plot.labColor = settings.darkMode ? 'white' : 'black'
-			plot.x = settings.isVertical ? this.topPad + this.incrPad : this.totalLabelSize
+			plot.x = settings.isVertical ? this.horizPad / 2 + this.incrPad : this.totalLabelSize
 			plot.y = settings.isVertical
 				? settings.boxplotWidth + settings.labelPad + this.bottomPad * 2
 				: this.topPad + this.incrPad
