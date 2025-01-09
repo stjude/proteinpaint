@@ -1,14 +1,18 @@
+import type { MassAppApi } from '#mass/types/mass'
 import tape from 'tape'
 import { termjson } from '../../../test/testdata/termjson'
 import { ViewModel } from '../viewModel/ViewModel'
 import { LegendDataMapper } from '../viewModel/LegendDataMapper'
+import { ListSamples } from '../interactions/ListSamples'
 
 /*
 Tests:
 	Default ViewModel()
-	.setPlotDimensions()
-	.setPlotData()
+	ViewModel.setPlotDimensions()
+	ViewModel.setPlotData()
 	Default LegendDataMapper()
+	Default ListSamples()
+	ListSamples() with invalid plot
 
 See unit tests for #dom/boxplot for rendering unit tests
 */
@@ -30,6 +34,7 @@ const mockSettings = {
 	color: 'blue',
 	darkMode: false,
 	labelPad: 10,
+	orderByMedian: false,
 	rowHeight: 20,
 	rowSpace: 10,
 	useDefaultSettings: true
@@ -45,53 +50,54 @@ const mockConfig = {
 	settings: { boxplot: mockSettings }
 }
 
+const mockPlot1 = {
+	key: '1',
+	seriesId: '1',
+	boxplot: {
+		w1: 0.002739726,
+		w2: 22.747930234,
+		p05: 0.9205479452,
+		p25: 3.4712328767,
+		p50: 7.4410958904,
+		p75: 11.78630137,
+		p95: 16.849315068,
+		iqr: 8.3150684933,
+		out: [{ value: 1 }],
+		label: '1, n=1'
+	},
+	labColor: 'black',
+	color: 'blue',
+	descrStats: mockDescrStats1,
+	x: 278,
+	y: 155
+}
+
+const mockPlot2 = {
+	key: '2',
+	seriesId: '2',
+	boxplot: {
+		w1: 0.002739726,
+		w2: 22.747930234,
+		p05: 0.9205479452,
+		p25: 3.4712328767,
+		p50: 7.4410958904,
+		p75: 11.78630137,
+		p95: 16.849315068,
+		iqr: 8.3150684933,
+		out: [],
+		label: '2, n=2'
+	},
+	labColor: 'black',
+	color: '#e75480',
+	descrStats: mockDescrStats2,
+	x: 278,
+	y: 155
+}
+
 const mockData = {
 	absMin: 0,
 	absMax: 100,
-	plots: [
-		{
-			key: '1',
-			seriesId: '1',
-			boxplot: {
-				w1: 0.002739726,
-				w2: 22.747930234,
-				p05: 0.9205479452,
-				p25: 3.4712328767,
-				p50: 7.4410958904,
-				p75: 11.78630137,
-				p95: 16.849315068,
-				iqr: 8.3150684933,
-				out: [{ value: 1 }],
-				label: '1, n=1'
-			},
-			labColor: 'black',
-			color: 'blue',
-			descrStats: mockDescrStats1,
-			x: 278,
-			y: 155
-		},
-		{
-			key: '2',
-			seriesId: '2',
-			boxplot: {
-				w1: 0.002739726,
-				w2: 22.747930234,
-				p05: 0.9205479452,
-				p25: 3.4712328767,
-				p50: 7.4410958904,
-				p75: 11.78630137,
-				p95: 16.849315068,
-				iqr: 8.3150684933,
-				out: [],
-				label: '2, n=2'
-			},
-			labColor: 'black',
-			color: '#e75480',
-			descrStats: mockDescrStats2,
-			x: 278,
-			y: 155
-		}
-	],
+	plots: [mockPlot1, mockPlot2],
 	uncomputableValues: [{ label: 'test', value: 1 }]
 }
 
@@ -116,7 +122,7 @@ tape('Default ViewModel()', function (test) {
 	test.end()
 })
 
-tape('.setPlotDimensions()', function (test) {
+tape('ViewModel.setPlotDimensions()', function (test) {
 	test.timeoutAfter(100)
 	const viewModel = getViewModel()
 	const dims = viewModel.setPlotDimensions(mockData, mockConfig, mockSettings, 170, 30)
@@ -141,7 +147,7 @@ tape('.setPlotDimensions()', function (test) {
 	test.end()
 })
 
-tape('.setPlotData()', function (test) {
+tape('ViewModel.setPlotData()', function (test) {
 	test.timeoutAfter(100)
 
 	const viewModel = getViewModel()
@@ -203,6 +209,122 @@ tape('Default LegendDataMapper', function (test) {
 		{ key: 'median', text: 'Median: 30', isHidden: false, isPlot: false }
 	]
 	test.deepEqual(legendData[1].items, expected, `Should properly set legend items`)
+
+	test.end()
+})
+
+tape('Default ListSamples()', test => {
+	test.plan(7)
+
+	const mockApp: MassAppApi = {} as MassAppApi
+	const mockState: any = {
+		plots: [mockConfig],
+		termfilter: { filter: 'test' }
+	}
+
+	const listSamples = new ListSamples(mockApp, mockState, 'test_test', mockPlot1 as any)
+
+	//Test initialization
+	test.equal(listSamples.app, mockApp, 'app should be set correctly')
+	test.equal(listSamples.plot, mockPlot1, 'plot should be set correctly')
+	test.deepEqual(listSamples.term, mockState.plots[0].term, 'term should be set correctly')
+	test.deepEqual(listSamples.dataOpts.terms, [mockState.plots[0].term], 'dataOpts.terms should be set correctly')
+	test.deepEqual(listSamples.dataOpts.filter.join, 'and', 'dataOpts.filter.join should be set to "and"')
+	test.deepEqual(
+		listSamples.dataOpts.filter.lst,
+		[mockState.termfilter.filter, listSamples.tvslst],
+		'dataOpts.filter.lst should be set correctly'
+	)
+	test.equal(listSamples.dataOpts.filter.in, true, 'dataOpts.filter.in should be set to true')
+
+	test.end()
+})
+
+tape('ListSamples() with invalid plot', test => {
+	const mockApp: MassAppApi = {} as MassAppApi
+	const mockState: any = {
+		plots: [mockConfig],
+		termfilter: { filter: 'test' }
+	}
+	const message = `Should throw error if plotConfig is not found`
+	try {
+		new ListSamples(mockApp, mockState, 'test_test', mockPlot1 as any)
+		test.pass(message)
+	} catch (e: any) {
+		test.fail(`${e}: ${message}`)
+	}
+
+	test.end()
+})
+
+tape('ListSamples.getTvsLst()', test => {
+	const mockApp: MassAppApi = {} as MassAppApi
+	const mockState: any = {
+		plots: [mockConfig],
+		termfilter: { filter: 'test' }
+	}
+	const listSamples = new ListSamples(mockApp, mockState, 'test_test', mockPlot1 as any)
+
+	const result = listSamples.getTvsLst(20, 100, true, mockState.plots[0].term, mockState.plots[0].term2)
+	const expected = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: {
+						id: 'sex',
+						name: 'Sex',
+						type: 'categorical',
+						groupsetting: { disabled: true },
+						values: { 1: { label: 'Female', color: 'blue' }, 2: { label: 'Male', color: '#e75480' } }
+					},
+					values: [{ key: '1', label: '1' }]
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: {
+						id: 'agedx',
+						name: 'Age at Cancer Diagnosis',
+						unit: 'Years',
+						type: 'float',
+						bins: {
+							label_offset: 1,
+							default: {
+								type: 'regular-bin',
+								label_offset: 1,
+								bin_size: 3,
+								first_bin: { startunbounded: true, stop: 2 }
+							},
+							less: {
+								type: 'regular-bin',
+								label_offset: 1,
+								bin_size: 5,
+								first_bin: { startunbounded: true, stop: 5 },
+								last_bin: { stopunbounded: true, start: 15 }
+							}
+						},
+						isleaf: true
+					},
+					ranges: [
+						{
+							start: 20,
+							stop: 100,
+							startinclusive: true,
+							stopinclusive: true,
+							startunbounded: false,
+							stopunbounded: false
+						}
+					]
+				}
+			}
+		]
+	}
+	test.deepEqual(result, expected, `Should return expected tvslst object`)
 
 	test.end()
 })
