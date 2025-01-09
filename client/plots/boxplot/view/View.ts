@@ -1,8 +1,8 @@
+import type { ScaleLinear } from 'd3-scale'
 import { drawBoxplot, Menu } from '#dom'
 import { scaleLinear } from 'd3-scale'
-import type { ScaleLinear } from 'd3-scale'
 import { axisstyle } from '#src/client'
-import { axisTop } from 'd3-axis'
+import { axisTop, axisLeft } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from '../BoxPlot'
 import type { ViewData, PlotDimensions } from '../viewModel/ViewModel'
 import type { MassAppApi } from '#mass/types/mass'
@@ -17,6 +17,7 @@ export class View {
 	app: MassAppApi
 	dom: BoxPlotDom
 	interactions: BoxPlotInteractions
+	settings: BoxPlotSettings
 	constructor(
 		data: ViewData,
 		settings: BoxPlotSettings,
@@ -27,6 +28,7 @@ export class View {
 		this.app = app
 		this.dom = dom
 		this.interactions = interactions
+		this.settings = settings
 		if (!data || !data.plots.length) return
 		this.interactions.clearDom()
 
@@ -36,37 +38,50 @@ export class View {
 
 		dom.svg
 			.transition()
-			.attr('width', plotDim.svgWidth)
-			.attr('height', plotDim.svgHeight)
+			.attr('width', plotDim.svg.width)
+			.attr('height', plotDim.svg.height)
 			//Fix for white background when downloading darkMode image.
 			.style('fill', plotDim.backgroundColor)
 
-		const yScale = scaleLinear().domain(plotDim.domain).range([0, settings.boxplotWidth])
+		const scale = scaleLinear().domain(plotDim.domain).range(plotDim.range)
 
-		this.renderDom(plotDim, dom, yScale)
-		this.renderBoxPlots(dom, data, yScale, settings)
+		this.renderTitle(plotDim, dom)
+		this.renderBoxPlots(dom, data, scale, settings)
+		this.renderAxis(plotDim, dom, scale, settings)
 		if (data.legend) new LegendRenderer(dom.legend, data.legend, this.interactions, plotDim.textColor)
 	}
 
-	renderDom(plotDim: PlotDimensions, dom: BoxPlotDom, yScale: ScaleLinear<number, number, never>) {
+	renderTitle(plotDim: PlotDimensions, dom: BoxPlotDom) {
 		//Title of the plot
+		const transformStr = `translate(${plotDim.title.x}, ${plotDim.title.y})${
+			this.settings.isVertical ? `,rotate(-90)` : ''
+		}`
 		dom.plotTitle
 			.attr('id', 'sjpp-boxplot-title')
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
-			.attr('transform', `translate(${plotDim.title.x}, ${plotDim.title.y})`)
+			.attr('transform', transformStr)
 			.attr('fill', plotDim.textColor)
 			.text(plotDim.title.text)
+	}
 
-		//y-axis below the title
-		dom.yAxis
-			.attr('id', 'sjpp-boxplot-yAxis')
-			.attr('transform', `translate(${plotDim.yAxis.x}, ${plotDim.yAxis.y})`)
+	//Fix for the axis rendering min -> max when the plot is vertical
+	renderAxis(
+		plotDim: PlotDimensions,
+		dom: BoxPlotDom,
+		scale: ScaleLinear<number, number, never>,
+		settings: BoxPlotSettings
+	) {
+		if (settings.isVertical) scale.range([scale.range()[1], scale.range()[0]])
+		//axis below the title
+		dom.axis
+			.attr('id', 'sjpp-boxplot-axis')
+			.attr('transform', `translate(${plotDim.axis.x}, ${plotDim.axis.y})`)
 			.transition()
-			.call(axisTop(yScale))
+			.call(this.settings.isVertical ? axisLeft(scale) : axisTop(scale))
 
 		axisstyle({
-			axis: dom.yAxis,
+			axis: dom.axis,
 			showline: true,
 			fontsize: 12,
 			color: plotDim.textColor
@@ -76,26 +91,25 @@ export class View {
 	renderBoxPlots(
 		dom: BoxPlotDom,
 		data: ViewData,
-		yScale: ScaleLinear<number, number, never>,
+		scale: ScaleLinear<number, number, never>,
 		settings: BoxPlotSettings
 	) {
 		/** Draw boxplots, incrementing by the total row height */
 		for (const plot of data.plots) {
-			const g = dom.boxplots
-				.append('g')
-				.attr('id', `sjpp-boxplot-${plot.boxplot.label}`)
-				.attr('padding', '5px')
-				.attr('transform', `translate(${plot.x}, ${plot.y})`)
+			const g = dom.boxplots.append('g').attr('id', `sjpp-boxplot-${plot.boxplot.label}`).attr('padding', '5px')
 
 			drawBoxplot({
 				bp: plot.boxplot,
 				g,
 				color: plot.color,
-				scale: yScale,
+				scale: scale,
 				rowheight: settings.rowHeight,
 				labpad: settings.labelPad,
 				labColor: plot.labColor
 			})
+
+			const transformStr = `translate(${plot.x}, ${plot.y})${settings.isVertical ? `, rotate(-90)` : ''}`
+			g.attr('transform', transformStr)
 
 			new BoxPlotToolTips(plot, g, this.dom.tip)
 			if (data.plots.length > 1) {
