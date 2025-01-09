@@ -7,6 +7,7 @@ import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { corsMessage } from '#common/embedder-helpers'
 import { sayerror } from '../dom/sayerror'
+import { copyMerge } from '#rx'
 /*
 ********************** EXPORTED
 parse()
@@ -139,17 +140,21 @@ upon error, throw err message as a string
 		const opts = {
 			holder: arg.holder,
 			genome: arg.genomes[genomename],
-			state: {
-				genome: genomename,
-				dslabel
-			},
+			state: copyMerge(
+				{
+					genome: genomename,
+					dslabel
+				},
+				arg.state || {}
+			),
 			pkgver: arg.app.pkgver,
 			launchDate: arg.app.launchDate
 		}
 		if (!opts.genome) throw 'invalid genome'
 		const _ = await import('../mass/app')
-		_.appInit(opts)
-		return
+		const subapp = await _.appInit(opts)
+		console.log(subapp)
+		return subapp
 	}
 
 	if (urlp.has('mass')) {
@@ -158,7 +163,7 @@ upon error, throw err message as a string
 		const opts = {
 			debug: arg.app.debugmode,
 			holder: arg.holder,
-			state,
+			state: copyMerge(state, arg.state || {}),
 			pkgver: arg.app.pkgver,
 			launchDate: arg.app.launchDate
 		}
@@ -168,8 +173,8 @@ upon error, throw err message as a string
 			opts.genome = arg.genomes[state.vocab.genome]
 		}
 		const _ = await import('../mass/app')
-		_.appInit(opts)
-		return
+		const subapp = await _.appInit(opts)
+		return subapp
 	}
 
 	if (urlp.has('mass-session-file') || urlp.has('mass-session-url')) {
@@ -200,15 +205,15 @@ upon error, throw err message as a string
 			opts = {
 				debug: arg.app.debugmode,
 				holder: arg.holder,
-				state,
+				state: copyMerge(state, arg.state || {}),
 				genome: arg.genomes[state.vocab.genome],
 				pkgver: arg.app.pkgver,
 				launchDate: arg.app.launchDate
 			}
 		}
 		const _ = await import('../mass/app')
-		_.appInit(opts)
-		return
+		const subapp = _.appInit(opts)
+		return subapp
 	}
 
 	if (urlp.has('mass-session-id')) {
@@ -244,7 +249,7 @@ upon error, throw err message as a string
 		const opts = {
 			debug: arg.app.debugmode,
 			holder: arg.holder,
-			state: res.state,
+			state: copyMerge(res.state, arg.state || {}),
 			genome: arg.genomes[res.state.vocab.genome],
 			sessionDaysLeft: res.sessionDaysLeft,
 			sessionId: id,
@@ -252,8 +257,8 @@ upon error, throw err message as a string
 			launchDate: arg.app.launchDate
 		}
 		const _ = await import('../mass/app')
-		_.appInit(opts)
-		return
+		const subapp = _.appInit(opts)
+		return subapp
 	}
 
 	if (urlp.has('genome') && arg.selectgenome) {

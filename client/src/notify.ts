@@ -15,7 +15,7 @@ type SseDataEntry = {
 	reload?: boolean
 	status?: string
 }
-
+console.log(18, 'notify', Date.now())
 type SseData = SseDataEntry[]
 
 const notifyDiv = select('body')
@@ -28,7 +28,8 @@ const notifyDiv = select('body')
 	.style('z-index', 10000)
 
 let sse,
-	initialLoad = 0
+	initialLoad = 0,
+	refresh = () => window.location.reload()
 
 const host = sessionStorage.getItem('hostURL') || (window as any).testHost || ''
 const sseUrl = host.endsWith('/') ? `${host}sse` : `${host}/sse`
@@ -58,7 +59,7 @@ function setSse() {
 			.style('border', d => `1px solid ${d.color || '#000'}`)
 			.html(d => `${d.key}: ${d.message}`)
 			.each(function (d) {
-				if (d.reload && event.timeStamp > lastReload) window.location.reload()
+				if (d.reload && event.timeStamp > lastReload) refresh()
 				else if (d.duration) {
 					setTimeout(
 						() =>
@@ -83,7 +84,7 @@ function setSse() {
 				//select(this).remove()
 			})
 			.each(function (d) {
-				if (d.reload && event.timeStamp > lastReload) window.location.reload()
+				if (d.reload && event.timeStamp > lastReload) refresh()
 				else if (d.duration) {
 					setTimeout(
 						() =>
@@ -103,7 +104,12 @@ function setSse() {
 	//function getHtml(d) { return `${d.key}: ${d.reload && initialLoad != lastReload ? 'stale bundle?' : d.message}` }
 }
 
+export function setRefresh(callback) {
+	refresh = callback
+}
+
 document.addEventListener('visibilitychange', () => {
-	if (document.hidden) sse.close()
-	else if (!sse || sse.readyState === 2) setSse()
+	if (document.hidden) {
+		if (sse) sse.close()
+	} else if (!sse || sse.readyState === 2) setSse()
 })

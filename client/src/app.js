@@ -170,13 +170,6 @@ export function runproteinpaint(arg) {
 			app.cardsPath = data.cardsPath
 			app.pkgver = data.pkgver
 			app.launchDate = data.launchdate
-
-			if (data.debugmode) {
-				app.debugmode = true
-				if (!data.features?.disableDevBrowserNotification) {
-					import('./notify').catch(e => console.warn(`debugmode: server-sent notifications is not setup`, e))
-				}
-			}
 			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
 			if (data.commonOverrides || arg.commonOverrides) {
@@ -220,6 +213,49 @@ export function runproteinpaint(arg) {
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
 			const subapp = await parseEmbedThenUrl(arg, app)
+			if (data.debugmode) {
+				app.debugmode = true
+				if (!data.features?.disableDevBrowserNotification) {
+					console.log(218, subapp, arg)
+					// this initial import is imported within the initial runproteinpaint instance;
+					// subsequent refresh will use a different runproteinpaint runtime
+					const { setRefresh } = await import(`./notify`).catch(e =>
+						console.warn(`debugmode: server-sent notifications setup failed`, e)
+					)
+					let wasDestroyed = false
+					setRefresh(async () => {
+						console.log(223, subapp)
+						if (subapp) {
+							if (wasDestroyed) {
+								setRefresh(() => {})
+								return
+							} else {
+								if (subapp.destroy) subapp.destroy()
+								d3select(arg.holder ? arg.holder : document.body)
+									.selectAll('*')
+									.remove()
+								wasDestroyed = true
+								if (subapp.getState) arg.state = structuredClone(subapp.getState())
+								console.log(233, arg.state)
+							}
+						}
+
+						const subapp1 = await import(
+							/* webpackIgnore: true */ `${arg.pphost || window.location.origin}/bin/dist/app.js?_=${Date.now()}`
+						)
+							.then(_ => _.runproteinpaint(arg))
+							.catch(console.log)
+
+						if (arg.origSubApp && subapp1 && !Object.isFrozen(arg.origSubApp)) {
+							console.log(228, 'arg.origSubApp')
+							arg.origSubApp.update = arg => subapp1.update(arg)
+						}
+						//else subapp.update = (arg) => subapp1.update(arg)
+					})
+				}
+			}
+			console.log(246, [subapp, arg])
+			if (!arg.origSubApp && subapp) arg.origSubApp = subapp
 			return subapp || app
 		})
 		.catch(err => {
@@ -444,12 +480,13 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.parseurl && location.search.length) {
+		console.log(471)
 		/*
 		since jwt token is only passed from arg of runpp()
 		so no way of sending it via url parameter, thus url parameter won't work when jwt is activated
 		*/
 		try {
-			await parseurl.parse({
+			return await parseurl.parse({
 				app,
 				genomes: app.genomes,
 				hostURL: app.hostURL,
@@ -458,7 +495,8 @@ async function parseEmbedThenUrl(arg, app) {
 				holder: app.holder,
 				selectgenome: app.selectgenome,
 				genome_browser_btn: app.genome_browser_btn,
-				debugmode: app.debugmode
+				debugmode: app.debugmode,
+				state: arg.state
 			})
 		} catch (e) {
 			app.error0(e)
@@ -484,7 +522,10 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.mass) {
-		return await launchmass(arg, app)
+		console.log(511)
+		const subapp = await launchmass(arg, app)
+		console.log(subapp)
+		return subapp
 	}
 
 	if (arg.tkui) {
