@@ -1,1 +1,2 @@
-
+Features:
+- numericDictTermCluster: allows adding pre-built numericDictTermCluster plots
