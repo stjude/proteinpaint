@@ -644,6 +644,26 @@ export async function mayInitiateMatrixplots(ds) {
 	}
 }
 
+/*
+works with "canned" NumericDictionaryTerm plot in a dataset, e.g. data from a text file
+called in mds3.init
+*/
+export async function mayInitiateNumericDictionaryTermplots(ds) {
+	if (!ds.cohort.numericDictTermClusterPlots) return
+	if (!Array.isArray(ds.cohort.numericDictTermClusterPlots.plots))
+		throw 'cohort.numericDictTermClusterPlots.plots is not array'
+	for (const p of ds.cohort.numericDictTermClusterPlots.plots) {
+		if (!p.name) throw '.name missing from one of numericDictTermClusterPlots.plots[]'
+		if (p.file) {
+			const numericDictTermClusterConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
+			p.numericDictTermClusterConfig = JSON.parse(numericDictTermClusterConfig)
+			if (p.getConfig) p.numericDictTermClusterConfig = p.getConfig(p.numericDictTermClusterConfig)
+		} else {
+			throw 'unknown data source of one of numericDictTermClusterConfig.plots[]'
+		}
+	}
+}
+
 async function findListOfBins(q, tw, ds) {
 	// for non-dict terms which may lack tw.term.bins
 	if (tw.q.type == 'custom-bin') {

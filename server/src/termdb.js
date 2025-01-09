@@ -67,6 +67,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'mds3queryDetails') return get_mds3queryDetails(res, ds)
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
 			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)
+			if (q.for == 'numericDictTermCluster') return await get_numericDictTermCluster(q, req, res, ds, genome)
 			if (q.for == 'getSamplesPerFilter') return await getSamplesPerFilter(q, ds, res)
 			if (q.for == 'mds3variantData') return await get_mds3variantData(q, res, ds, genome)
 			if (q.for == 'validateToken') {
@@ -326,6 +327,18 @@ async function get_matrix(q, req, res, ds, genome) {
 			}
 	}
 	res.send(data)
+}
+
+async function get_numericDictTermCluster(q, req, res, ds, genome) {
+	if (q.getPlotDataByName) {
+		// send back the config for premade numericDictTermCluster plot
+		if (!ds.cohort?.numericDictTermClusterPlots?.plots)
+			throw 'ds.cohort.get_numericDictTermClusterPlots.plots missing for the dataset'
+		const plot = ds.cohort.numericDictTermClusterPlots.plots.find(p => p.name === q.getPlotDataByName)
+		if (!plot) throw 'invalid name of premade numericDictTermCluster plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
+		res.send(plot.numericDictTermClusterConfig)
+		return
+	}
 }
 
 async function get_ProfileFacilities(q, req, res, ds, tdb) {

@@ -1157,6 +1157,18 @@ export class TermdbVocab extends Vocab {
 		})
 	}
 
+	async getNumericDictTermClusterByName(name) {
+		// find a pre-built numericDictTermCluster by name from this dataset
+		return await dofetch3('termdb', {
+			body: {
+				for: 'numericDictTermCluster',
+				getPlotDataByName: name,
+				genome: this.state.vocab.genome,
+				dslabel: this.state.vocab.dslabel
+			}
+		})
+	}
+
 	// following two methods are hardcoded at /gdc/*. TODO change to generic method to work for all datasets
 	async getTopMutatedGenes(arg) {
 		return await dofetch3('gdc/topMutatedGenes', { method: 'GET', body: arg })
