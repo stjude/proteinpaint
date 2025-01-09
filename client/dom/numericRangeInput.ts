@@ -1,5 +1,21 @@
+import { Elem, Input } from '../types/d3'
+
+type TvsRange = {
+	start: number
+	stop: number
+	value: number
+	startinclusive: boolean
+	stopinclusive: boolean
+	startunbounded?: boolean
+	stopunbounded?: boolean
+}
+
 export class NumericRangeInput {
-	constructor(holder, range, callback) {
+	callback: (f: any) => void
+	private input: Input
+	range: any
+
+	constructor(holder: Elem, range: any, callback: () => void) {
 		this.input = holder
 			.append('input')
 			.attr('name', 'rangeInput')
@@ -15,8 +31,9 @@ export class NumericRangeInput {
 					this.setRange()
 				}
 			})
-		this.setRange(range)
+		this.range = this.setRange(range)
 		this.callback = callback
+
 	}
 
 	getInput() {
@@ -24,7 +41,7 @@ export class NumericRangeInput {
 	}
 
 	parseRange() {
-		const str = this.input.node().value
+		const str = this.input.node()!.value
 		const new_range = parseRange(str)
 		if (this.range?.min != undefined) {
 			if (!new_range.startunbounded && this.range?.min > new_range.start) throw 'Invalid start value < minimum allowed'
@@ -46,18 +63,20 @@ export class NumericRangeInput {
 		return this.range
 	}
 
-	setRange(range) {
+	setRange(range?: TvsRange) {
 		if (!range) range = this.range
 		//When an error is thrown the previous range is restored
 		else this.range = range
 
+		//So ts doesn't complain
+		if (!range) return 
 		const start = range.start != undefined ? `${range.start} <=` : ''
 		const stop = range.stop != undefined ? `<= ${range.stop}` : ''
-		this.input.node().value = range.value != undefined ? ` x=${range.value} ` : `${start} x ${stop}`
+		this.input.node()!.value = range.value != undefined ? ` x=${range.value} ` : `${start} x ${stop}`
 	}
 }
 
-export function parseRange(str) {
+export function parseRange(str: string) {
 	if (!str) throw 'Empty range'
 	const tokens = str.replace(/\s/g, '').split('x')
 	let start, stop, startinclusive, stopinclusive, value
