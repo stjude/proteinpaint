@@ -12,10 +12,7 @@ import { View } from './view/View'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import getMaxLabelLgth from './viewModel/MaxLabelLength'
 
-/** TODOs:
- *	Add functionality to change orientation
- */
-
+/** Opts sent from mass */
 type TdbBoxPlotOpts = {
 	holder: Elem
 	controls?: Elem
@@ -23,6 +20,8 @@ type TdbBoxPlotOpts = {
 	numericEditMenuVersion?: string[]
 }
 
+/** User controlled settings. Some settings are calculated based on
+ * the number of boxplots */
 export type BoxPlotSettings = {
 	/** Width of the boxplots and scale, excluding labels */
 	boxplotWidth: number
@@ -35,12 +34,16 @@ export type BoxPlotSettings = {
 	/** If true, order box plots from smallest to largest median value
 	 * Default is by alphanumeric order */
 	orderByMedian: boolean
+	/** Toggle between vertical and horizontal orientation.
+	 * The default is false */
+	isVertical: boolean
 	/** Height of individual boxplots */
 	rowHeight: number
 	/** Space between the boxplots */
 	rowSpace: number
 }
 
+/** Descriptions of the dom elements for the box plot */
 export type BoxPlotDom = {
 	/** Div for boxplots below the scale */
 	boxplots: SvgG
@@ -59,7 +62,7 @@ export type BoxPlotDom = {
 	/** Main svg holder */
 	svg: SvgSvg
 	/** Y-axis shown above the boxplots */
-	yAxis: any
+	axis: any
 	/** box plot tooltip (e.g. over the outliers) */
 	tip: Menu
 }
@@ -69,7 +72,7 @@ class TdbBoxplot extends RxComponentInner {
 	components: { controls: any }
 	dom: BoxPlotDom
 	interactions: BoxPlotInteractions
-	useDefaultSettings = true
+	private useDefaultSettings = true
 	constructor(opts: TdbBoxPlotOpts) {
 		super()
 		this.opts = opts
@@ -87,7 +90,7 @@ class TdbBoxplot extends RxComponentInner {
 			error: errorDiv,
 			svg,
 			plotTitle: svg.append('text'),
-			yAxis: svg.append('g'),
+			axis: svg.append('g'),
 			boxplots: svg.append('g'),
 			legend: div.append('div').attr('id', 'sjpp-boxplot-legend'),
 			tip: new Menu()
@@ -126,6 +129,17 @@ class TdbBoxplot extends RxComponentInner {
 				boxLabel: '',
 				settingsKey: 'orderByMedian',
 				getDisplayStyle: plot => (plot.term2 ? '' : 'none')
+			},
+			{
+				label: 'Orientation',
+				title: 'Change the orientation of the box plots',
+				type: 'radio',
+				chartType: 'boxplot',
+				settingsKey: 'isVertical',
+				options: [
+					{ label: 'Horizontal', value: false },
+					{ label: 'Vertical', value: true }
+				]
 			},
 			{
 				label: 'Width',
@@ -285,6 +299,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		darkMode: false,
 		labelPad: 10,
 		orderByMedian: false,
+		isVertical: true,
 		rowHeight: 50,
 		rowSpace: 15
 	}

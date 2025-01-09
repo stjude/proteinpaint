@@ -29,19 +29,23 @@ export type PlotDimensions = {
 	/** Changes background color between white and soft black
 	 * based on darkMode selection */
 	backgroundColor: string
-	/** Domain for the y-axis */
+	/** Domain for the axis */
 	domain: number[]
-	/** Width of the svg */
-	svgWidth: number
-	/** Height of the svg */
-	svgHeight: number
+	/** Range for the axis */
+	range: number[]
+	svg: {
+		/** Width of the svg */
+		width: number
+		/** Height of the svg */
+		height: number
+	}
 	/** Changes text color for the axis, plot labels, and legend
 	 * between black and white based on darkMode selection */
 	textColor: string
 	/** Title of the plot and coordinates */
 	title: { x: number; y: number; text: string }
-	/** y-axis coordinates */
-	yAxis: { x: number; y: number }
+	/** axis coordinates */
+	axis: { x: number; y: number }
 }
 
 export class ViewModel {
@@ -54,7 +58,7 @@ export class ViewModel {
 	/** For outliers, set a radius rather than using the default. */
 	readonly outRadius = 5
 	/** Increasing padding to space out the boxplots and determine position */
-	incrTopPad = 40
+	incrPad = 40
 	/** Range is 20 - 50 */
 	rowHeight: number
 	/** Range is 10 -20 */
@@ -79,14 +83,14 @@ export class ViewModel {
 			this.rowSpace = settings.rowSpace
 		}
 
-		const totalLabelWidth = maxLabelLgth + settings.labelPad
-		const totalRowHeight = this.rowHeight + this.rowSpace
+		const totalLabelSize = maxLabelLgth + settings.labelPad
+		const totalRowSize = this.rowHeight + this.rowSpace
 
-		const plotDim = this.setPlotDimensions(data, config, settings, totalLabelWidth, totalRowHeight)
-		//20 for the yAxis offset (above), 10 more for the first boxplot
-		this.incrTopPad += 30
+		const plotDim = this.setPlotDimensions(data, config, settings, totalLabelSize, totalRowSize)
+		//20 for the axis offset (above), 10 more for the first boxplot
+		this.incrPad += 30
 
-		const plots = this.setPlotData(data, config, settings, totalLabelWidth, totalRowHeight)
+		const plots = this.setPlotData(data, config, settings, totalLabelSize, totalRowSize)
 
 		this.viewData = {
 			plotDim: plotDim as PlotDimensions,
@@ -99,28 +103,19 @@ export class ViewModel {
 		data: BoxPlotResponse,
 		config: any,
 		settings: BoxPlotSettings,
-		totalLabelWidth: number,
-		totalRowHeight: number
+		totalLabelSize: number,
+		totalRowSize: number
 	) {
-		/** Add more plot dimensions here
-		 * Eventually should calculate the difference between vertical and
-		 * horizontal orientation.
-		 */
 		const plotDim = {
 			//Add 1 to the max is big enough so the upper line to boxplot isn't cutoff
 			//Note: ts is complaining absMax could be null. Ignore. Error in server request.
 			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
-			svgWidth: settings.boxplotWidth + totalLabelWidth + this.horizPad,
-			svgHeight:
-				data.plots.filter(p => !p.isHidden).length * totalRowHeight + this.topPad + this.bottomPad + this.incrTopPad,
-			title: {
-				x: totalLabelWidth + settings.boxplotWidth / 2,
-				y: this.topPad + this.incrTopPad / 2,
-				text: config.term.q.mode == 'continuous' ? config.term.term.name : config.term2.term.name
-			},
-			yAxis: {
-				x: totalLabelWidth,
-				y: this.topPad + this.incrTopPad + 20
+			range: [0, settings.boxplotWidth],
+			svg: this.setSvgDim(totalRowSize, totalLabelSize, settings, data),
+			title: this.setTitleDim(config, totalLabelSize, settings),
+			axis: {
+				x: settings.isVertical ? this.topPad + this.incrPad : totalLabelSize,
+				y: this.topPad + this.incrPad + 20 + (settings.isVertical ? settings.labelPad : 0)
 			},
 			backgroundColor: settings.darkMode ? 'black' : 'white',
 			textColor: settings.darkMode ? 'white' : 'black'
@@ -128,7 +123,26 @@ export class ViewModel {
 		return plotDim
 	}
 
-	setPlotData(data: any, config: any, settings: BoxPlotSettings, totalLabelWidth: number, totalRowHeight: number) {
+	setSvgDim(totalRowSize, totalLabelSize, settings, data) {
+		const plotsSpace =
+			data.plots.filter(p => !p.isHidden).length * totalRowSize + this.topPad + this.bottomPad + this.incrPad
+		const depth = settings.boxplotWidth + totalLabelSize + this.horizPad
+		return {
+			width: settings.isVertical ? plotsSpace : depth,
+			height: settings.isVertical ? depth : plotsSpace
+		}
+	}
+
+	setTitleDim(config, totalLabelSize, settings) {
+		const depth = totalLabelSize + settings.boxplotWidth / 2
+		return {
+			x: settings.isVertical ? this.topPad : depth,
+			y: settings.isVertical ? depth - this.horizPad / 2 : this.topPad + this.incrPad / 2,
+			text: config.term.q.mode == 'continuous' ? config.term.term.name : config.term2.term.name
+		}
+	}
+
+	setPlotData(data: any, config: any, settings: BoxPlotSettings, totalLabelSize: number, totalRowSize: number) {
 		const plots = structuredClone(data.plots)
 		for (const plot of plots) {
 			/** Set rendering properties for the plot */
@@ -145,9 +159,11 @@ export class ViewModel {
 				plot.boxplot.radius = this.outRadius
 			}
 			plot.labColor = settings.darkMode ? 'white' : 'black'
-			plot.x = totalLabelWidth
-			plot.y = this.topPad + this.incrTopPad
-			this.incrTopPad += totalRowHeight
+			plot.x = settings.isVertical ? this.topPad + this.incrPad : totalLabelSize
+			plot.y = settings.isVertical
+				? settings.boxplotWidth + settings.labelPad + this.bottomPad * 2
+				: this.topPad + this.incrPad
+			this.incrPad += totalRowSize
 		}
 		return plots
 	}
