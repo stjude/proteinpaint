@@ -728,7 +728,7 @@ class singleCellPlot {
 		if (this.colorByGene && this.state.config.gene) {
 			// for gene expression sc plot, needs to add colorGenerator to plot even
 			// when legend is not needed for the plot
-			const colorGradient = rgb(plotColor)
+			const colorGradient = rgb('red')
 			if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = 'white'
 			if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
 			const startColor = this.config.startColor[plot.name]

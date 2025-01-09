@@ -1163,5 +1163,5 @@ export function renderContours(contourG, data, width, height) {
 		.join('path')
 		.attr('stroke-width', (d, i) => (i % 5 ? 0.25 : 1))
 		.attr('d', geoPath())
-		.attr('fill', d => colorScale(d.value))
+	//.attr('fill', d => colorScale(d.value))
 }
