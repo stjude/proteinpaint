@@ -242,6 +242,38 @@ type Population = {
 	/** if AC/AN of the population is ancestry-stratified, will be multiple elements of this array; otherwise just one */
 	sets: PopulationINFOset[]
 }
+/**
+accessible to client via termdb.js?for=mds3queryDetails
+part of state of genomeBrowser plot
+allowing for user modification
+*/
+type SnvindelComputeDetails = {
+	/**  xx
+	 */
+	groupTypes: any
+	/**  xx
+	 */
+	groups: (SnvindelComputeGroup_filter | SnvindelComputeGroup_population)[]
+	/**  xx
+	 */
+	groupTestMethods: any
+	/** array index of groupTestMethods[] */
+	groupTestMethodsIdx: number
+}
+type SnvindelComputeGroup_filter = {
+	type: 'filter'
+	/** a given filter applied to all cohorts */
+	filter?: any
+	/** filter per cohort. use either filter or filterByCohort */
+	filterByCohort?: any
+}
+type SnvindelComputeGroup_population = {
+	type: 'population'
+	key: string
+	label: string
+	allowto_adjust_race: boolean
+	adjust_race: boolean
+}
 
 /** a data type under ds.queries{} */
 type SnvIndelQuery = {
@@ -269,7 +301,7 @@ so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig canno
 	}
 	allowSNPs?: boolean
 	vcfid4skewerName?: boolean
-	details?: any
+	details?: SnvindelComputeDetails
 }
 
 type SvFusion = {
