@@ -34,6 +34,7 @@ const mockSettings = {
 	color: 'blue',
 	darkMode: false,
 	labelPad: 10,
+	isVertical: false,
 	orderByMedian: false,
 	rowHeight: 20,
 	rowSpace: 10,
@@ -125,24 +126,26 @@ tape('Default ViewModel()', function (test) {
 tape('ViewModel.setPlotDimensions()', function (test) {
 	test.timeoutAfter(100)
 	const viewModel = getViewModel()
-	const dims = viewModel.setPlotDimensions(mockData, mockConfig, mockSettings, 170, 30)
+	const dims = viewModel.setPlotDimensions(mockData, mockConfig, mockSettings)
 	const expected = {
 		domain: [0, 101],
 		incrTopPad: 40,
-		svgWidth: 310,
-		svgHeight: 250,
-		title: { x: 180, y: 85, text: 'Age at Cancer Diagnosis' },
-		yAxis: { x: 170, y: 170 }
+		svg: {
+			width: 550,
+			height: 250
+		},
+		title: { x: 420, y: 85, text: 'Age at Cancer Diagnosis' },
+		axis: { x: 410, y: 170 }
 	}
 	test.equal(typeof dims, 'object', `Should create a plotDim object`)
 	test.deepEqual(dims.domain, expected.domain, `Should set domain = ${expected.domain}`)
-	test.equal(dims.svgWidth, expected.svgWidth, `Should set svgWidth = ${expected.svgWidth}`)
-	test.equal(dims.svgHeight, expected.svgHeight, `Should set svgHeight = ${expected.svgHeight}`)
+	test.equal(dims.svg.width, expected.svg.width, `Should set svg.width = ${expected.svg.width}`)
+	test.equal(dims.svg.height, expected.svg.height, `Should set svg.height = ${expected.svg.height}`)
 	test.equal(dims.title.x, expected.title.x, `Should set title.x = ${expected.title.x}`)
 	test.equal(dims.title.y, expected.title.y, `Should set title.y = ${expected.title.y}`)
 	test.equal(dims.title.text, expected.title.text, `Should set title text = ${expected.title.text}`)
-	test.equal(dims.yAxis.x, expected.yAxis.x, `Should set yAxis.x = ${expected.yAxis.x}`)
-	test.equal(dims.yAxis.y, expected.yAxis.y, `Should set yAxis.y = ${expected.yAxis.y}`)
+	test.equal(dims.axis.x, expected.axis.x, `Should set yAxis.x = ${expected.axis.x}`)
+	test.equal(dims.axis.y, expected.axis.y, `Should set yAxis.y = ${expected.axis.y}`)
 
 	test.end()
 })
@@ -151,7 +154,7 @@ tape('ViewModel.setPlotData()', function (test) {
 	test.timeoutAfter(100)
 
 	const viewModel = getViewModel()
-	const plots = viewModel.setPlotData(mockData, mockConfig, mockSettings, 100, 300)
+	const plots = viewModel.setPlotData(mockData, mockConfig, mockSettings)
 
 	test.equal(
 		plots[0].color,
@@ -170,7 +173,7 @@ tape('ViewModel.setPlotData()', function (test) {
 	)
 
 	test.true(
-		plots[1].x == plots[0].x && plots[1].y == plots[0].y + 300,
+		plots[1].x == plots[0].x && plots[1].y == plots[0].y + 30,
 		`Should set x the same for all plots and increment y`
 	)
 
