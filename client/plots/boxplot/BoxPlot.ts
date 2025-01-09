@@ -298,8 +298,8 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		color: plotColor,
 		darkMode: false,
 		labelPad: 10,
+		isVertical: false,
 		orderByMedian: false,
-		isVertical: true,
 		rowHeight: 50,
 		rowSpace: 15
 	}

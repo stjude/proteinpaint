@@ -64,7 +64,7 @@ tape('Default box plot', test => {
 		const config = boxplot.Inner.state.config
 
 		test.equal(dom.plotTitle.text(), config.term.term.name, `Should render ${config.term.term.name} title`)
-		test.true(dom.yAxis.select('path'), 'Should render y axis')
+		test.true(dom.axis.select('path'), 'Should render y axis')
 		test.equal(dom.boxplots.selectAll("g[id^='sjpp-boxplot-']").size(), 1, 'Should render 1 boxplot')
 
 		if (test['_ok']) boxplot.Inner.app.destroy()
@@ -204,7 +204,7 @@ tape('Box plot with user settings', test => {
 		test.equal(wrongColorLine, 0, `Should render boxplot with ${settings.color} lines.`)
 
 		test.true(
-			dom.div.style('background-color') == 'black' && dom.yAxis.select('path').attr('stroke') == 'white',
+			dom.div.style('background-color') == 'black' && dom.axis.select('path').attr('stroke') == 'white',
 			`Should render boxplot with dark background and white text when darkMode is ${settings.darkMode}.`
 		)
 
