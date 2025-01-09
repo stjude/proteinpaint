@@ -240,9 +240,14 @@ export function runproteinpaint(arg) {
 							}
 						}
 
+						if (!arg.pphost)
+							arg.pphost = arg.host
+								? window.location.protocol + '//' + arg.host.split('://')[1]?.split('/')[0]
+								: window.location.origin
+						console.log(243, arg.pphost)
 						const subapp1 = await import(
 							// embedder portal bundler should ignore this PP-only hot-module-replacement
-							/* webpackIgnore: true */ `${arg.pphost || window.location.origin}/bin/dist/app.js?_=${Date.now()}`
+							/* webpackIgnore: true */ `${arg.pphost}/bin/dist/app.js?_=${Date.now()}`
 						)
 							.then(_ => _.runproteinpaint(arg))
 							.catch(console.log)
