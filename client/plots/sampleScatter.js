@@ -690,7 +690,7 @@ export function getDefaultScatterSettings() {
 		threeFOV: 70,
 		//3D Plot settings
 		showContour: false,
-		colorContours: true
+		colorContours: false
 	}
 }
 

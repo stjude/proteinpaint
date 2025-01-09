@@ -368,7 +368,6 @@ class singleCellPlot {
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
 				plot.particles.position.z += 0.1
-				plot.plane.position.z += 0.1
 			},
 			title: 'Zoom in. You can also zoom in moving the mouse wheel with the Ctrl key pressed.'
 		})
@@ -376,7 +375,6 @@ class singleCellPlot {
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
 				plot.particles.position.z -= 0.1
-				plot.plane.position.z -= 0.1
 			},
 			title: 'Zoom out. You can also zoom out moving the mouse wheel with the Ctrl key pressed.'
 		})
@@ -386,10 +384,6 @@ class singleCellPlot {
 				plot.particles.position.z = 0
 				plot.particles.position.x = 0
 				plot.particles.position.y = 0
-
-				plot.plane.position.z = 0
-				plot.plane.position.x = 0
-				plot.plane.position.y = 0
 			},
 			title: 'Reset plot to defaults'
 		})
@@ -1157,6 +1151,7 @@ class singleCellPlot {
 		const particles = new THREE.Points(geometry, material)
 		plot.particles = particles
 		scene.add(particles)
+
 		renderer.setSize(this.settings.svgw, this.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 
@@ -1164,7 +1159,6 @@ class singleCellPlot {
 			if (!event.ctrlKey) return
 			event.preventDefault()
 			particles.position.z -= event.deltaY / 500
-			plot.plane.position.z = particles.position.z
 		})
 
 		if (this.settings.showContour) {
@@ -1181,17 +1175,10 @@ class singleCellPlot {
 			const yCoords = cells.map(c => yAxisScale(c.y))
 			const zCoords = cells.map(c => (zAxisScale ? zAxisScale(c.geneExp) : 1))
 			await this.renderContourMap(scene, xCoords, yCoords, zCoords, plot)
-			let isDragging = false
-			window.addEventListener('mousedown', () => (isDragging = true))
-
-			plot.canvas.addEventListener('mousemove', event => {
-				if (!isDragging) return
-				plot.plane.position.set(particles.position.x, particles.position.y, particles.position.z)
-			})
 		}
+
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
 
-		const self = this
 		function animate() {
 			requestAnimationFrame(animate)
 			renderer.render(scene, camera)
@@ -1209,12 +1196,16 @@ class singleCellPlot {
 			// Create a plane geometry
 			const geometry = new THREE.PlaneGeometry(2, 2)
 			// Create a material using the loaded texture
-			const material = new THREE.MeshBasicMaterial({ map: texture })
+			// the transparent parameter is needed to keep the contours transparent, otherwise the background will be black
+			// the color parameter is needed to make the contours gray, otherwise they are light gray
+			const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, color: 0x808080 })
 			// Create a mesh with the geometry and material
 			const plane = new THREE.Mesh(geometry, material)
 			// Add the plane to the scene
 			scene.add(plane)
 			plot.plane = plane
+			plane.position.z = 0.00001 //makes the plane be on top of the particles
+			plot.particles.add(plane) //makes the plane move with the particles
 		})
 	}
 
@@ -1264,7 +1255,6 @@ class singleCellPlot {
 
 export function getContourImage(data, width, height, colorContours) {
 	const svg = create('svg').attr('width', width).attr('height', height)
-	svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'white')
 
 	renderContours(svg.append('g'), data, width, height, colorContours)
 
@@ -1329,9 +1319,9 @@ export function getDefaultSingleCellSettings() {
 		sampleSize: 1.5,
 		sampleSizeThree: 0.02,
 		threeFOV: 60,
-		opacity: 0.5,
+		opacity: 0.8,
 		showNoExpCells: false,
 		showContour: false,
-		colorContours: true
+		colorContours: false
 	}
 }
