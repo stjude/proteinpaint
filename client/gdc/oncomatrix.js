@@ -107,7 +107,7 @@ export async function init(arg, holder, genomes) {
 		if (typeof settings.matrix != 'object') throw 'arg.settings.matrix{} not object'
 		// set defaults
 		if (!settings.matrix.geneFilter) settings.matrix.geneFilter = 'CGC' // filter to only use CGC genes by default
-		if (!Number.isInteger(settings.matrix.maxGenes)) settings.matrix.maxGenes = 50
+		if (!Number.isInteger(settings.matrix.maxGenes)) settings.matrix.maxGenes = 5 //0
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
@@ -119,24 +119,27 @@ export async function init(arg, holder, genomes) {
 		const plotAppApi = await appInit({
 			holder: select(arg.holder).select('.sja_root_holder'),
 			genome,
-			state: {
-				genome: gdcGenome,
-				dslabel: gdcDslabel,
-				termfilter: { filter0: arg.filter0 },
-				plots: [
-					// initialize with a geneset component, in case the genes lst is empty.
-					// This will be replaced with the actual matrix/hierCluster app once
-					// a valid geneset is selected.
-					{
-						chartType: 'geneset',
-						toolName: 'OncoMatrix',
-						settings: {
-							maxGenes: settings.matrix.maxGenes,
-							geneFilter: settings.matrix.geneFilter
+			state: copyMerge(
+				{
+					genome: gdcGenome,
+					dslabel: gdcDslabel,
+					termfilter: { filter0: arg.filter0 },
+					plots: [
+						// initialize with a geneset component, in case the genes lst is empty.
+						// This will be replaced with the actual matrix/hierCluster app once
+						// a valid geneset is selected.
+						{
+							chartType: 'geneset',
+							toolName: 'OncoMatrix',
+							settings: {
+								maxGenes: settings.matrix.maxGenes,
+								geneFilter: settings.matrix.geneFilter
+							}
 						}
-					}
-				]
-			},
+					]
+				},
+				arg.state || {}
+			),
 			app: arg.opts?.app || {},
 			geneset: {
 				mode: 'geneVariant', // consistent mode value as GeneSetEdit
@@ -286,6 +289,8 @@ export async function init(arg, holder, genomes) {
 		let matrixApi, genesetCompApi
 
 		const api = {
+			getState: plotAppApi.getState,
+			destroy: plotAppApi.destroy,
 			update: async arg => {
 				if (!matrixApi) {
 					const plotConfig = plotAppApi.getState().plots.find(p => p.chartType == 'matrix')
