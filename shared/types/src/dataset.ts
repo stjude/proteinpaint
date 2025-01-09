@@ -242,37 +242,71 @@ type Population = {
 	/** if AC/AN of the population is ancestry-stratified, will be multiple elements of this array; otherwise just one */
 	sets: PopulationINFOset[]
 }
-/**
+
+/** primarily for prebuilding germline genetic association for survivorship portal
 accessible to client via termdb.js?for=mds3queryDetails
 part of state of genomeBrowser plot
 allowing for user modification
 */
 type SnvindelComputeDetails = {
-	/**  xx
+	/** in each element, type corresponds to same key in groups[]
+	used for rendering choices in group data types; but content is read-only and should not be part of state
+	*/
+	groupTypes: {
+		type: string
+		name: string
+	}[]
+	/** a type of computing decides numeric values for each variant displayed in tk
+    computing type is also determined by number of groups
+    if only 1 group:
+         type=info: use numeric info field
+         type=filter: use AF
+         type=population: use AF
+    if there're two groups:
+         both types are "filter": allow AF diff or fisher
+         "filter" and "population": allow AF diff or fisher
+         else: value difference
+	*/
+	groups: (SnvindelComputeGroup_filter | SnvindelComputeGroup_population | SnvindelComputeGroup_info)[]
+	/** define lists of group-comparison methods to compute one numerical value per variant
 	 */
-	groupTypes: any
-	/**  xx
-	 */
-	groups: (SnvindelComputeGroup_filter | SnvindelComputeGroup_population)[]
-	/**  xx
-	 */
-	groupTestMethods: any
+	groupTestMethods: {
+		/** method name. used both for display and identifier. cannot supply hardcoded values here as breaks tsc */
+		name: string
+		/** optional custom text to put on mds3 tk y axis */
+		axisLabel?: string
+	}[]
 	/** array index of groupTestMethods[] */
 	groupTestMethodsIdx: number
 }
+/** supplies a pp filter (or filter by cohort) to restrict to a subset of samples from which to compute AF for each variant.
+the filter will be user-modifiable
+*/
 type SnvindelComputeGroup_filter = {
-	type: 'filter'
+	// FIXME type value can only be 'filter' but breaks tsc
+	type: string //'filter'
 	/** a given filter applied to all cohorts */
-	filter?: any
+	//filter?: object
 	/** filter per cohort. use either filter or filterByCohort */
-	filterByCohort?: any
+	filterByCohort?: { [key: string]: object }
 }
+/** a choice from snvindel.populations[]
+ */
 type SnvindelComputeGroup_population = {
-	type: 'population'
+	type: string //'population'
+	/** used to identify corresponding population element */
 	key: string
+	/** redundant, should be copied over from snvindel.populations[] */
 	label: string
+	/** if true, can adjust race. may copy over instead of duplicating? */
 	allowto_adjust_race: boolean
+	/** if true, race adjustion is being applied */
 	adjust_race: boolean
+}
+type SnvindelComputeGroup_info = {
+	type: string //'info'
+	/** numerical INFO field name from bcf, allows to retrieve numeric values for each variant in tk */
+	infoKey: string
 }
 
 /** a data type under ds.queries{} */
