@@ -38,15 +38,7 @@ this{}
 				terms[]
 			geneSearchResult{}
 			snvindel {}
-				details {}
-					groupTypes[]
-					groups:[]
-						// each element is a group object
-						{type='info', infoKey=str}
-						{type='filter', filter={}}
-						{type='population', key, label, ..}
-					groupTestMethod{}
-					groupTestMethodsIdx
+				details {} // see type def
 				populations [{key,label}] // might not be part of state
 			ld {}
 				tracks[]
@@ -76,7 +68,7 @@ class genomeBrowser {
 		this.type = 'genomeBrowser'
 	}
 
-	async init() {
+	async init(appState) {
 		const holder = this.opts.holder.append('div')
 		this.opts.header
 			.append('div')
@@ -118,7 +110,7 @@ class genomeBrowser {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
-			config: this.mayUpdateFilterByCohort(config, appState),
+			config,
 			termdbConfig: appState.termdbConfig,
 			filter: getNormalRoot(appState.termfilter.filter)
 		}
@@ -140,19 +132,6 @@ class genomeBrowser {
 	//////////////////////////////////////////////////
 	//       rest of methods are app-specific       //
 	//////////////////////////////////////////////////
-
-	mayUpdateFilterByCohort(config, appState) {
-		const c = structuredClone(config)
-		if (!c.snvindel.details?.groups) return config // lacks "details.groups" which is the target for update
-		const fg = c.snvindel.details.groups.find(i => i.type == 'filter')
-		if (!fg) return config // lacks a type=filter group
-		if (!fg.filterByCohort) return config // filter group not using filter by cohort
-		// the group is defined as filter by cohort. assign the group filter based on current cohort to the group and delete it. this is only supposed to run in init
-		fg.filter = fg.filterByCohort[appState.termdbConfig.selectCohort.values[appState.activeCohort]?.keys?.join(',')]
-		if (!fg.filter) throw 'no filter found by cohort'
-		delete fg.filterByCohort
-		return c // return modified config obj
-	}
 
 	async computeBlockAndMds3tk() {
 		/* 
@@ -443,10 +422,11 @@ export const genomeBrowserInit = getCompInit(genomeBrowser)
 // this alias will allow abstracted dynamic imports
 export const componentInit = genomeBrowserInit
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts, app, activeCohort) {
+	// 3rd arg is initial active cohort
 	try {
 		// request default queries config from dataset, and allows opts to override
-		return await getDefaultConfig(app.vocabApi, opts)
+		return await getDefaultConfig(app.vocabApi, opts, activeCohort)
 	} catch (e) {
 		throw `${e} [genomeBrowser getPlotConfig()]`
 	}
@@ -484,7 +464,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				// must do this as 'plot_prep' does not call getPlotConfig()
 				// request default queries config from dataset, and allows opts to override
 				// this config{} will become this.state.config{}
-				const config = await getDefaultConfig(chartsInstance.app.vocabApi)
+				const config = await getDefaultConfig(chartsInstance.app.vocabApi, null, chartsInstance.state.activeCohort)
 
 				config.chartType = 'genomeBrowser'
 				config.geneSearchResult = result
@@ -507,7 +487,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 }
 
 // get default config of the app from vocabApi
-async function getDefaultConfig(vocabApi, override) {
+async function getDefaultConfig(vocabApi, override, activeCohort) {
 	const config = await vocabApi.getMds3queryDetails()
 	// request default variant filter (against vcf INFO)
 	const vf = await vocabApi.get_variantFilter()
@@ -519,6 +499,14 @@ async function getDefaultConfig(vocabApi, override) {
 		// test method may be inconsistent with group configuration (e.g. no fisher for INFO fields), update test method here
 		// 1st arg is a fake "self"
 		mayUpdateGroupTestMethodsIdx({ state: { config: c2 } }, c2.snvindel.details)
+		// a type=filter group may use filterByCohort. in such case, modify default state to assign proper filter based on current cohort
+		const gf = c2.snvindel.details.groups.find(i => i.type == 'filter')
+		if (gf && gf.filterByCohort) {
+			// modify and assign
+			gf.filter = gf.filterByCohort[vocabApi.termdbConfig.selectCohort.values[activeCohort].keys.join(',')]
+			if (!gf.filter) throw 'unknown filter by current cohort name'
+			delete gf.filterByCohort
+		}
 	}
 	return c2
 }

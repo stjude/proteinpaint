@@ -1,8 +1,6 @@
 import { getCompInit } from '#rx'
-import { Menu } from '#dom/menu'
-import { make_one_checkbox } from '#dom/checkbox'
+import { Menu, Tabs, make_one_checkbox } from '#dom'
 import { filterInit, getNormalRoot, getFilterItemByTag } from '#filter/filter'
-import { Tabs } from '../dom/toggleButtons'
 import { appInit } from '#termdb/app'
 
 /*
@@ -13,7 +11,6 @@ main
 		render1group
 			makePrompt2addNewGroup
 				launchMenu_createGroup
-					mayGetActiveCohortIdx
 			render1group_info
 			render1group_population
 			render1group_filter
@@ -51,6 +48,7 @@ class GbControls {
 		//delete this._partialData
 
 		return {
+			activeCohort: appState.activeCohort,
 			config,
 			termdbConfig: appState.termdbConfig,
 			filter: getNormalRoot(appState.termfilter.filter)
@@ -395,7 +393,6 @@ async function render1group_filter(self, groupIdx, group, div) {
 	when initiating the filter ui, must join group's filter with mass global filter and submit the joined filter to main()
 	this allows tvs edit to show correct number of samples
 	*/
-
 	let span
 	if (!self.filterUI[groupIdx]) {
 		self.filterUI[groupIdx] = await filterInit({
@@ -580,7 +577,10 @@ function launchMenu_createGroup(self, groupIdx, div) {
 			const arg = {
 				holder: tab.contentHolder,
 				vocabApi: self.app.vocabApi,
-				state: { termfilter: { filter: self.state.filter } },
+				state: {
+					activeCohort: self.state.activeCohort,
+					termfilter: { filter: self.state.filter }
+				},
 				tree: {
 					click_term2select_tvs: tvs => {
 						/////////////////////////////////
@@ -605,8 +605,6 @@ function launchMenu_createGroup(self, groupIdx, div) {
 					}
 				}
 			}
-			const activeCohortIdx = mayGetActiveCohortIdx(self)
-			if (Number.isInteger(activeCohortIdx)) arg.state.activeCohort = activeCohortIdx
 			appInit(arg)
 			continue
 		}
@@ -635,22 +633,5 @@ export function mayUpdateGroupTestMethodsIdx(self, d) {
 		d.groupTestMethodsIdx = i
 	} else {
 		// otherwise, do not change existing method idx
-	}
-}
-
-// from mass filter, find a tvs as cohortFilter, to know its array index in selectCohort.values[]
-// return undefined for anything that's not valid
-function mayGetActiveCohortIdx(self) {
-	if (!self.state.config.filter) return // no mass filter
-	const cohortFilter = getFilterItemByTag(self.config.filter, 'cohortFilter') // the tvs object
-	if (cohortFilter && self.state.termdbConfig.selectCohort) {
-		// the tvs is found
-		const cohortName = cohortFilter.tvs.values
-			.map(d => d.key)
-			.sort()
-			.join(',')
-		const idx = self.state.termdbConfig.selectCohort.values.findIndex(v => v.keys.sort().join(',') == cohortName)
-		if (idx == -1) throw 'subcohort key is not in selectCohort.values[]'
-		return idx
 	}
 }

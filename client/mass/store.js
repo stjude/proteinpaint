@@ -97,6 +97,7 @@ class TdbStore {
 				let plot
 				try {
 					const _ = await import(`../plots/${savedPlot.chartType}.js`)
+					// this.state{} is already fully set with initial state, thus okay to pass to getPlotConfig()
 					plot = await _.getPlotConfig(savedPlot, this.app, this.state.activeCohort)
 				} catch (e) {
 					this.app.printError(e)
