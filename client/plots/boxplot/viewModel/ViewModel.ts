@@ -63,6 +63,10 @@ export class ViewModel {
 	rowHeight: number
 	/** Range is 10 -20 */
 	rowSpace: number
+	/** Total size of the labels. May reflect height or width depending on orientation */
+	private totalLabelSize: number
+	/** Total size of each box plot. May reflect height or width depending on orientation */
+	private totalRowSize: number
 	viewData: ViewData
 	constructor(
 		config: PlotConfig,
@@ -83,14 +87,14 @@ export class ViewModel {
 			this.rowSpace = settings.rowSpace
 		}
 
-		const totalLabelSize = maxLabelLgth + settings.labelPad
-		const totalRowSize = this.rowHeight + this.rowSpace
+		this.totalLabelSize = maxLabelLgth + settings.labelPad
+		this.totalRowSize = this.rowHeight + this.rowSpace
 
-		const plotDim = this.setPlotDimensions(data, config, settings, totalLabelSize, totalRowSize)
+		const plotDim = this.setPlotDimensions(data, config, settings)
 		//20 for the axis offset (above), 10 more for the first boxplot
 		this.incrPad += 30
 
-		const plots = this.setPlotData(data, config, settings, totalLabelSize, totalRowSize)
+		const plots = this.setPlotData(data, config, settings)
 
 		this.viewData = {
 			plotDim: plotDim as PlotDimensions,
@@ -99,22 +103,16 @@ export class ViewModel {
 		}
 	}
 
-	setPlotDimensions(
-		data: BoxPlotResponse,
-		config: any,
-		settings: BoxPlotSettings,
-		totalLabelSize: number,
-		totalRowSize: number
-	) {
+	setPlotDimensions(data: BoxPlotResponse, config: any, settings: BoxPlotSettings) {
 		const plotDim = {
 			//Add 1 to the max is big enough so the upper line to boxplot isn't cutoff
 			//Note: ts is complaining absMax could be null. Ignore. Error in server request.
 			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
 			range: [0, settings.boxplotWidth],
-			svg: this.setSvgDim(totalRowSize, totalLabelSize, settings, data),
-			title: this.setTitleDim(config, totalLabelSize, settings),
+			svg: this.setSvgDimensions(settings, data),
+			title: this.setTitleDimensions(config, settings),
 			axis: {
-				x: settings.isVertical ? this.topPad + this.incrPad : totalLabelSize,
+				x: settings.isVertical ? this.topPad + this.incrPad : this.totalLabelSize,
 				y: this.topPad + this.incrPad + 20 + (settings.isVertical ? settings.labelPad : 0)
 			},
 			backgroundColor: settings.darkMode ? 'black' : 'white',
@@ -123,18 +121,18 @@ export class ViewModel {
 		return plotDim
 	}
 
-	setSvgDim(totalRowSize, totalLabelSize, settings, data) {
+	setSvgDimensions(settings: BoxPlotSettings, data: BoxPlotResponse) {
 		const plotsSpace =
-			data.plots.filter(p => !p.isHidden).length * totalRowSize + this.topPad + this.bottomPad + this.incrPad
-		const depth = settings.boxplotWidth + totalLabelSize + this.horizPad
+			data.plots.filter(p => !p.isHidden).length * this.totalRowSize + this.topPad + this.bottomPad + this.incrPad
+		const depth = settings.boxplotWidth + this.totalLabelSize + this.horizPad
 		return {
 			width: settings.isVertical ? plotsSpace : depth,
 			height: settings.isVertical ? depth : plotsSpace
 		}
 	}
 
-	setTitleDim(config, totalLabelSize, settings) {
-		const depth = totalLabelSize + settings.boxplotWidth / 2
+	setTitleDimensions(config: any, settings: BoxPlotSettings) {
+		const depth = this.totalLabelSize + settings.boxplotWidth / 2
 		return {
 			x: settings.isVertical ? this.topPad : depth,
 			y: settings.isVertical ? depth - this.horizPad / 2 : this.topPad + this.incrPad / 2,
@@ -142,7 +140,7 @@ export class ViewModel {
 		}
 	}
 
-	setPlotData(data: any, config: any, settings: BoxPlotSettings, totalLabelSize: number, totalRowSize: number) {
+	setPlotData(data: any, config: any, settings: BoxPlotSettings) {
 		const plots = structuredClone(data.plots)
 		for (const plot of plots) {
 			/** Set rendering properties for the plot */
@@ -159,11 +157,11 @@ export class ViewModel {
 				plot.boxplot.radius = this.outRadius
 			}
 			plot.labColor = settings.darkMode ? 'white' : 'black'
-			plot.x = settings.isVertical ? this.topPad + this.incrPad : totalLabelSize
+			plot.x = settings.isVertical ? this.topPad + this.incrPad : this.totalLabelSize
 			plot.y = settings.isVertical
 				? settings.boxplotWidth + settings.labelPad + this.bottomPad * 2
 				: this.topPad + this.incrPad
-			this.incrPad += totalRowSize
+			this.incrPad += this.totalRowSize
 		}
 		return plots
 	}
