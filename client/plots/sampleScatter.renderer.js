@@ -261,7 +261,7 @@ export function setRenderers(self) {
 			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: 1 }
 		})
 
-		renderContours(contourG, data, self.settings.svgw, self.settings.svgh)
+		renderContours(contourG, data, self.settings.svgw, self.settings.svgh, self.settings.colorContours)
 	}
 
 	self.getStrokeWidth = function (c) {
@@ -1129,7 +1129,7 @@ export function setRenderers(self) {
 	}
 }
 
-export function renderContours(contourG, data, width, height) {
+export function renderContours(contourG, data, width, height, colorContours) {
 	// Create the horizontal and vertical scales.
 	const x = d3Linear()
 		.domain(extent(data, s => s.x))
@@ -1163,5 +1163,5 @@ export function renderContours(contourG, data, width, height) {
 		.join('path')
 		.attr('stroke-width', (d, i) => (i % 5 ? 0.25 : 1))
 		.attr('d', geoPath())
-	//.attr('fill', d => colorScale(d.value))
+		.attr('fill', colorContours ? d => colorScale(d.value) : 'none')
 }

@@ -288,7 +288,7 @@ class Scatter {
 			chartType: 'sampleScatter',
 			settingsKey: 'showAxes',
 			title: `Option to show/hide plot axes`,
-			inputId: 'showAxes'
+			testid: 'showAxes'
 		}
 
 		const inputs = [
@@ -494,6 +494,14 @@ class Scatter {
 			})
 		}
 
+		if (this.settings.showContour)
+			inputs.push({
+				label: 'Color contours',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'sampleScatter',
+				settingsKey: 'colorContours'
+			})
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -674,14 +682,15 @@ export function getDefaultScatterSettings() {
 		axisTitleFontSize: 16,
 		showAxes: true,
 		showRef: true,
-		opacity: 0.8,
+		opacity: 0.6,
 		defaultColor: plotColor,
 		regression: 'None',
 		fov: 50,
 		threeSize: 0.003,
 		threeFOV: 70,
 		//3D Plot settings
-		showContour: false
+		showContour: false,
+		colorContours: true
 	}
 }
 
