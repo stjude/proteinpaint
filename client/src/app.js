@@ -241,6 +241,7 @@ export function runproteinpaint(arg) {
 						}
 
 						const subapp1 = await import(
+							// embedder portal bundler should ignore this PP-only hot-module-replacement
 							/* webpackIgnore: true */ `${arg.pphost || window.location.origin}/bin/dist/app.js?_=${Date.now()}`
 						)
 							.then(_ => _.runproteinpaint(arg))
