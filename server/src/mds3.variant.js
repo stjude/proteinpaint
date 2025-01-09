@@ -78,7 +78,15 @@ function validateParam(q, ds) {
 	if (q.details.groups.length > 2) throw 'q.details.groups[] has more than 2'
 	for (const g of q.details.groups) {
 		if (g.type == 'filter') {
-			if (typeof g.filter != 'object') throw '.filter not an object for group type=filter'
+			if (g.filter) {
+				if (typeof g.filter != 'object') throw '.filter not an object for group type=filter'
+			} else if (g.filterByCohort) {
+				if (!ds.cohort.termdb.selectCohort) throw 'filterByCohort in use but ds not using subcohort'
+				if (typeof g.filterByCohort != 'object') throw '.filterByCohort not an object for group type=filter'
+				// xx
+			} else {
+				throw 'unknown structure of group.type=filter'
+			}
 		} else if (g.type == 'population') {
 			if (!g.key) throw '.key missing from group type=population'
 			if (!ds.queries.snvindel?.populations) throw 'group type=population but this ds does not have populations'

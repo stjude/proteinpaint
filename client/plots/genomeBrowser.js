@@ -118,7 +118,7 @@ class genomeBrowser {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
-			config,
+			config: this.mayUpdateFilterByCohort(config, appState),
 			termdbConfig: appState.termdbConfig,
 			filter: getNormalRoot(appState.termfilter.filter)
 		}
@@ -140,6 +140,19 @@ class genomeBrowser {
 	//////////////////////////////////////////////////
 	//       rest of methods are app-specific       //
 	//////////////////////////////////////////////////
+
+	mayUpdateFilterByCohort(config, appState) {
+		const c = structuredClone(config)
+		if (!c.snvindel.details?.groups) return config // lacks "details.groups" which is the target for update
+		const fg = c.snvindel.details.groups.find(i => i.type == 'filter')
+		if (!fg) return config // lacks a type=filter group
+		if (!fg.filterByCohort) return config // filter group not using filter by cohort
+		// the group is defined as filter by cohort. assign the group filter based on current cohort to the group and delete it. this is only supposed to run in init
+		fg.filter = fg.filterByCohort[appState.termdbConfig.selectCohort.values[appState.activeCohort]?.keys?.join(',')]
+		if (!fg.filter) throw 'no filter found by cohort'
+		delete fg.filterByCohort
+		return c // return modified config obj
+	}
 
 	async computeBlockAndMds3tk() {
 		/* 
