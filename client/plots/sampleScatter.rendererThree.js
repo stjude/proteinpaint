@@ -1,5 +1,4 @@
 import { rgb } from 'd3-color'
-import { createDensityMap, getContourImage } from './singleCellPlot.js'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import HelvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.json'
@@ -95,8 +94,8 @@ export function setRenderersThree(self) {
 	}
 
 	self.render3DSerie = async function (chart) {
-		const xAxisScale = chart.xAxisScale.range([self.settings.showContour ? -1 : 0, 1])
-		const yAxisScale = chart.yAxisScale.range([self.settings.showContour ? -1 : 0, 1])
+		const xAxisScale = d3Linear().domain([chart.xMin, chart.xMax]).range([0, 1])
+		const yAxisScale = d3Linear().domain([chart.yMax, chart.yMin]).range([0, 1])
 		const zAxisScale = chart.zAxisScale.range([0, 1])
 
 		const vertices = []
@@ -148,31 +147,27 @@ export function setRenderersThree(self) {
 			vertexColors: true
 		})
 
-		if (self.settings.showContour)
-			self.renderContourMap(scene, camera, material, vertices, chart, xAxisScale, yAxisScale, zAxisScale, maxZ)
-		else {
-			camera.position.set(1, 1, 2)
-			camera.lookAt(scene.position)
-			camera.updateMatrix()
-			const controls = new OrbitControls.OrbitControls(camera, self.canvas)
-			controls.enableZoom = false
-			controls.update()
+		camera.position.set(1, 1, 2)
+		camera.lookAt(scene.position)
+		camera.updateMatrix()
+		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
+		controls.enableZoom = false
+		controls.update()
 
-			if (self.settings.showAxes) {
-				const axesHelper = new THREE.AxesHelper(1)
-				scene.add(axesHelper)
-				self.addLabels(scene, chart)
-			}
-
-			const geometry = new THREE.BufferGeometry()
-			geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-			geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-			const particles = new THREE.Points(geometry, material)
-			scene.add(particles)
-			document.addEventListener('mousewheel', event => {
-				controls.enableZoom = event.ctrlKey
-			})
+		if (self.settings.showAxes) {
+			const axesHelper = new THREE.AxesHelper(1)
+			scene.add(axesHelper)
+			self.addLabels(scene, chart)
 		}
+
+		const geometry = new THREE.BufferGeometry()
+		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+		const particles = new THREE.Points(geometry, material)
+		scene.add(particles)
+		document.addEventListener('mousewheel', event => {
+			controls.enableZoom = event.ctrlKey
+		})
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
 		renderer.setSize(self.settings.svgw, self.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
@@ -231,71 +226,6 @@ export function setRenderersThree(self) {
 
 			return textGeo
 		}
-	}
-
-	self.renderContourMap = async function (
-		scene,
-		camera,
-		material,
-		vertices,
-		chart,
-		xAxisScale,
-		yAxisScale,
-		zAxisScale,
-		maxZ
-	) {
-		const colorGenerator = d3Linear().domain([0, maxZ]).range(['#aaa', this.settings.defaultColor])
-		const colors = chart.data.samples.map(s => colorGenerator(s.z))
-		const colors3D = []
-		for (const color of colors) {
-			const color3D = new THREE.Color(color)
-			colors3D.push(color3D.r, color3D.g, color3D.b)
-		}
-		camera.position.set(0, 0, 2.5)
-		camera.lookAt(scene.position)
-		const gridSize = this.settings.contourGridSize
-		const xyCoords = chart.data.samples.map((s, i) => [xAxisScale(s.x), -yAxisScale(s.y)])
-		const zCoords = chart.data.samples.map(s => zAxisScale(s.z))
-		const densityMap = createDensityMap(xyCoords, zCoords, gridSize, chart)
-		const thresholds = this.settings.contourThresholds
-		const width = this.settings.svgw
-		const height = this.settings.svgh
-		const imageUrl = getContourImage(densityMap, width, height, thresholds, gridSize, gridSize)
-		const loader = new THREE.TextureLoader()
-		loader.load(imageUrl, texture => {
-			// Create a plane geometry
-			const geometry = new THREE.PlaneGeometry(2, 2)
-			// Create a material using the loaded texture
-			const material = new THREE.MeshBasicMaterial({ map: texture })
-			// Create a mesh with the geometry and material
-			const plane = new THREE.Mesh(geometry, material)
-			// Position the plane
-			plane.position.z = 0 // Adjust z-position as needed
-			// Add the plane to the scene
-			scene.add(plane)
-			chart.plane = plane
-		})
-
-		const geometry = new THREE.BufferGeometry()
-		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors3D, 3))
-		const particles = new THREE.Points(geometry, material)
-		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
-		const controls = new DragControls.DragControls([particles], camera, self.canvas)
-		scene.add(particles)
-		let isDragging = false
-		self.canvas.addEventListener('mousedown', () => (isDragging = true))
-
-		self.canvas.addEventListener('mousemove', event => {
-			if (!isDragging) return
-			chart.plane.position.set(particles.position.x, particles.position.y, particles.position.z)
-		})
-		self.canvas.addEventListener('mousewheel', event => {
-			if (!event.ctrlKey) return
-			event.preventDefault()
-			particles.position.z -= event.deltaY / 500
-			chart.plane.position.z = particles.position.z
-		})
 	}
 }
 

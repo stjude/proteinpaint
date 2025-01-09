@@ -5,14 +5,14 @@ import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { extent, range, rgb, contours, geoIdentity, geoPath, create, scaleSequential, interpolateRgbBasis } from 'd3'
+import { rgb, create, extent } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
 import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
-
+import { renderContours } from './sampleScatter.renderer.js'
 /*
 this
 
@@ -28,12 +28,9 @@ this
 
 const SAMPLES_TAB = 0
 const PLOTS_TAB = 1
-const COLORBY_TAB = 2
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
 const noExpColor = '#F5F5F5' //lightGray
-const maxCells = 50000
-const contourColors = ['white', '#ffde1a', '#ffce00', '#ffa700', '	#ff8d00', '#ff7400']
 
 class singleCellPlot {
 	constructor() {
@@ -81,20 +78,12 @@ class singleCellPlot {
 				active: activeTab == PLOTS_TAB,
 				callback: () => this.setActiveTab(PLOTS_TAB)
 			})
-		this.tabs.push(
-			{
-				label: 'Clusters',
-				id: COLORBY_TAB,
-				active: activeTab == COLORBY_TAB,
-				callback: () => this.setActiveTab(COLORBY_TAB)
-			},
-			{
-				label: 'Gene Expression',
-				id: GENE_EXPRESSION_TAB,
-				active: activeTab == GENE_EXPRESSION_TAB,
-				callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
-			}
-		)
+		this.tabs.push({
+			label: 'Gene Expression',
+			id: GENE_EXPRESSION_TAB,
+			active: activeTab == GENE_EXPRESSION_TAB,
+			callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
+		})
 		if (state.termdbConfig.queries?.singleCell?.DEgenes)
 			this.tabs.push({
 				label: 'Differential Expression',
@@ -352,13 +341,7 @@ class singleCellPlot {
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'none')
 				break
-			case COLORBY_TAB:
-				this.dom.headerDiv.style('display', 'none')
-				this.dom.geDiv.style('display', 'none')
-				this.dom.deDiv.style('display', 'none')
-				this.dom.tableDiv.style('display', 'none')
-				this.dom.showDiv.style('display', 'none')
-				break
+
 			case GENE_EXPRESSION_TAB:
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'none')
@@ -546,39 +529,14 @@ class singleCellPlot {
 				title: 'Show cells without expression'
 			}
 		]
-		//if more than 50K cells do not allow contour as it may fail, excludes fetalCerebellum
-		if (this.colorByGene && this.state.config.gene && !this.maxCellsExceeded) {
-			inputs.push({
-				label: 'Show contour map',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'singleCellPlot',
-				settingsKey: 'showContour',
-				title: 'Show contour map'
-			})
-			if (this.settings.showContour) {
-				inputs.push(
-					{
-						label: 'Contour grid size',
-						type: 'number',
-						chartType: 'singleCellPlot',
-						settingsKey: 'contourGridSize',
-						min: 5,
-						max: 100,
-						step: 5
-					},
-					{
-						label: 'Contour thresholds',
-						type: 'number',
-						chartType: 'singleCellPlot',
-						settingsKey: 'contourThresholds',
-						min: 3,
-						max: 10,
-						step: 1
-					}
-				)
-			}
-		}
+		inputs.push({
+			label: 'Show contour map',
+			boxLabel: '',
+			type: 'checkbox',
+			chartType: 'singleCellPlot',
+			settingsKey: 'showContour',
+			title: 'Show contour map'
+		})
 
 		this.components = {
 			controls: await controlsInit({
@@ -719,7 +677,6 @@ class singleCellPlot {
 			this.plots.push(plot)
 			const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
 			plot.cells = [...plot.noExpCells, ...expCells]
-			if (plot.cells.length > maxCells) this.maxCellsExceeded = true
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
 		}
@@ -771,9 +728,8 @@ class singleCellPlot {
 		if (this.colorByGene && this.state.config.gene) {
 			// for gene expression sc plot, needs to add colorGenerator to plot even
 			// when legend is not needed for the plot
-			const colorGradient = rgb(plotColor)
 			if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = 'white'
-			if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = colorGradient.darker(3).toString()
+			if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = 'red'
 			const startColor = this.config.startColor[plot.name]
 			const stopColor = this.config.stopColor[plot.name]
 			let min, max
@@ -834,7 +790,7 @@ class singleCellPlot {
 		let legendSVG = plot.legendSVG
 		if (!plot.legendSVG) {
 			const activeTab = this.tabs.find(tab => tab.active)
-			if (activeTab.id == COLORBY_TAB) {
+			if (activeTab.id == PLOTS_TAB) {
 				const app = this.app
 				const plotColorByDiv = plot.headerDiv
 					.append('div')
@@ -1194,11 +1150,20 @@ class singleCellPlot {
 			plot.plane.position.z = particles.position.z
 		})
 
-		if (plot.expCells.length > 0 && this.settings.showContour) {
-			const xCoords = plot.expCells.map(c => plot.xAxisScale(c.x))
-			const yCoords = plot.expCells.map(c => plot.yAxisScale(c.y))
-			const geneExpression = plot.expCells.map(c => c.geneExp)
-			await this.renderContourMap(scene, xCoords, yCoords, geneExpression, plot)
+		if (this.settings.showContour) {
+			const cells = plot.expCells.length > 0 ? plot.expCells : plot.cells
+			const xAxisScale = plot.xAxisScale.range([0, this.settings.svgw])
+			const yAxisScale = plot.yAxisScale.range([this.settings.svgh, 0])
+			let zAxisScale
+			if (plot.expCells.length > 0) {
+				const [min, max] = extent(plot.expCells, d => d.geneExp)
+				zAxisScale = d3Linear().domain([min, max]).range([0, 1])
+			}
+
+			const xCoords = cells.map(c => xAxisScale(c.x))
+			const yCoords = cells.map(c => yAxisScale(c.y))
+			const zCoords = cells.map(c => (zAxisScale ? zAxisScale(c.geneExp) : 1))
+			await this.renderContourMap(scene, xCoords, yCoords, zCoords, plot)
 			let isDragging = false
 			window.addEventListener('mousedown', () => (isDragging = true))
 
@@ -1219,13 +1184,9 @@ class singleCellPlot {
 	}
 
 	async renderContourMap(scene, xCoords, yCoords, zCoords, plot) {
-		const umapCoords = xCoords.map((x, i) => [x, -yCoords[i]]) //y is inverted in d3
-		const gridSize = this.settings.contourGridSize
-		const densityMap = createDensityMap(umapCoords, zCoords, gridSize, plot)
-		const thresholds = this.settings.contourThresholds
-		const width = this.settings.svgw
-		const height = this.settings.svgh
-		const imageUrl = getContourImage(densityMap, width, height, thresholds, gridSize, gridSize)
+		const data = xCoords.map((x, i) => ({ x, y: yCoords[i], z: zCoords[i] }))
+		// Create the data URL
+		const imageUrl = getContourImage(data, this.settings.svgw, this.settings.svgh)
 		const loader = new THREE.TextureLoader()
 		loader.load(imageUrl, texture => {
 			// Create a plane geometry
@@ -1284,32 +1245,11 @@ class singleCellPlot {
 	}
 }
 
-export function getContourImage(densityMap, width, height, thresholds, gridSizeX, gridSizeY) {
-	const data = densityMap.flat()
-	let [min, max] = extent(data)
-	const contoursFunc = contours()
-		.size([gridSizeX, gridSizeY])
-		.thresholds(range(min, max, (max - min) / thresholds))
-		.smooth(true)
-	const contoursData = contoursFunc(data)
-	const projection = geoIdentity().fitSize([width, height], contoursData[0])
-	const path = geoPath().projection(projection)
+export function getContourImage(data, width, height) {
+	const svg = create('svg').attr('width', width).attr('height', height)
+	svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'white')
 
-	const color = scaleSequential(interpolateRgbBasis(contourColors)).domain([min, max]).nice()
-	const svg = create('svg')
-		.attr('width', width)
-		.attr('height', height)
-		.style('fill', 'white')
-		.style('stroke', 'transparent')
-		.style('stroke-width', 0)
-		.style('background-color', 'white')
-	svg
-		.selectAll('path')
-		.data(contoursData)
-		.enter()
-		.append('path')
-		.attr('d', path)
-		.attr('fill', d => color(d.value))
+	renderContours(svg.append('g'), data, width, height)
 
 	// Serialize the SVG element
 	const svgString = new XMLSerializer().serializeToString(svg.node())
@@ -1320,42 +1260,6 @@ export function getContourImage(densityMap, width, height, thresholds, gridSizeX
 	// Create the data URL
 	const imageUrl = 'data:image/svg+xml;charset=utf-8,' + encodedSvg
 	return imageUrl
-}
-
-// Assuming you have:
-// - umapCoords: Array of UMAP coordinates for each cell ([[x1, y1], [x2, y2], ...])
-// - geneExpression: Array of gene expression values for each cell ([value1, value2, ...])
-
-// Function to create a 2D density map
-export function createDensityMap(umapCoords, geneExpression, gridSize, plot) {
-	const densityMap = []
-	const minX = Math.min(...umapCoords.map(coord => coord[0]))
-	const maxX = Math.max(...umapCoords.map(coord => coord[0]))
-	const minY = Math.min(...umapCoords.map(coord => coord[1]))
-	const maxY = Math.max(...umapCoords.map(coord => coord[1]))
-	const cellWidth = (maxX - minX) / gridSize
-	const cellHeight = (maxY - minY) / gridSize
-
-	for (let i = 0; i < gridSize; i++) {
-		densityMap.push([])
-		for (let j = 0; j < gridSize; j++) {
-			densityMap[i].push(0)
-		}
-	}
-
-	for (let k = 0; k < umapCoords.length; k++) {
-		const x = umapCoords[k][0]
-		const y = umapCoords[k][1]
-		const cellX = Math.floor((x - minX) / cellWidth)
-		const cellY = Math.floor((y - minY) / cellHeight)
-
-		if (cellX >= 0 && cellX < gridSize && cellY >= 0 && cellY < gridSize) {
-			let geneExp = geneExpression[k]
-			if (densityMap[cellY][cellX] < geneExp) densityMap[cellY][cellX] = geneExp
-		}
-	}
-
-	return densityMap
 }
 
 // Function to get mouse position in normalized device coordinates (-1 to +1)
@@ -1406,12 +1310,10 @@ export function getDefaultSingleCellSettings() {
 		svgh: 1000,
 		showGrid: true,
 		sampleSize: 1.5,
-		sampleSizeThree: 0.008,
+		sampleSizeThree: 0.02,
 		threeFOV: 60,
 		opacity: 1,
 		showNoExpCells: false,
-		showContour: false,
-		contourGridSize: 50,
-		contourThresholds: 5
+		showContour: false
 	}
 }

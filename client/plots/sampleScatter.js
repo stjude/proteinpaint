@@ -324,14 +324,6 @@ class Scatter {
 				type: 'number',
 				chartType: 'sampleScatter',
 				settingsKey: 'svgh'
-			},
-			{
-				label: 'Show contour map',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'sampleScatter',
-				settingsKey: 'showContour',
-				title: 'Show contour map'
 			}
 		]
 		if (this.config.sampleCategory) {
@@ -435,18 +427,28 @@ class Scatter {
 					if (hasRef) inputs.splice(7, 0, refSizeOption)
 				}
 
-				inputs.push({
-					label: 'Show regression',
-					type: 'dropdown',
-					chartType: 'sampleScatter',
-					settingsKey: 'regression',
-					options: [
-						{ label: 'None', value: 'None' },
-						//{ label: 'Loess', value: 'Loess' },
-						{ label: 'Lowess', value: 'Lowess' },
-						{ label: 'Polynomial', value: 'Polynomial' }
-					]
-				})
+				inputs.push(
+					{
+						label: 'Show regression',
+						type: 'dropdown',
+						chartType: 'sampleScatter',
+						settingsKey: 'regression',
+						options: [
+							{ label: 'None', value: 'None' },
+							//{ label: 'Loess', value: 'Loess' },
+							{ label: 'Lowess', value: 'Lowess' },
+							{ label: 'Polynomial', value: 'Polynomial' }
+						]
+					},
+					{
+						label: 'Show contour map',
+						boxLabel: '',
+						type: 'checkbox',
+						chartType: 'sampleScatter',
+						settingsKey: 'showContour',
+						title: 'Show contour map'
+					}
+				)
 			} else {
 				inputs.push({
 					label: 'Chart depth',
@@ -461,29 +463,6 @@ class Scatter {
 					chartType: 'sampleScatter',
 					settingsKey: 'fov'
 				})
-
-				if (this.settings.showContour) {
-					inputs.push(
-						{
-							label: 'Contour grid size',
-							type: 'number',
-							chartType: 'sampleScatter',
-							settingsKey: 'contourGridSize',
-							min: 5,
-							max: 100,
-							step: 5
-						},
-						{
-							label: 'Contour thresholds',
-							type: 'number',
-							chartType: 'sampleScatter',
-							settingsKey: 'contourThresholds',
-							min: 3,
-							max: 10,
-							step: 1
-						}
-					)
-				}
 			}
 			inputs.push(showAxes)
 
@@ -505,7 +484,14 @@ class Scatter {
 				inputs.splice(4, 0, shapeSizeOption)
 				if (hasRef) inputs.splice(5, 0, refSizeOption)
 			}
-			inputs.push(showAxes)
+			inputs.push(showAxes, {
+				label: 'Show contour map',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'sampleScatter',
+				settingsKey: 'showContour',
+				title: 'Show contour map'
+			})
 		}
 
 		this.components = {
@@ -695,9 +681,7 @@ export function getDefaultScatterSettings() {
 		threeSize: 0.003,
 		threeFOV: 70,
 		//3D Plot settings
-		showContour: false,
-		contourGridSize: 50,
-		contourThresholds: 5
+		showContour: false
 	}
 }
 
