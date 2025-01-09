@@ -29,7 +29,7 @@ import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.ts'
 import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from './termdb.scatter.js'
-import { mayInitiateMatrixplots } from './termdb.matrix.js'
+import { mayInitiateMatrixplots, mayInitiateNumericDictionaryTermplots } from './termdb.matrix.js'
 import { add_bcf_variant_filter } from './termdb.snp.js'
 import { validate_query_NIdata } from '#routes/brainImagingSamples.ts'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
@@ -300,6 +300,8 @@ export async function validate_termdb(ds) {
 	await mayInitiateScatterplots(ds)
 
 	await mayInitiateMatrixplots(ds)
+
+	await mayInitiateNumericDictionaryTermplots(ds)
 
 	if ('minTimeSinceDx' in tdb) {
 		if (!Number.isFinite(tdb.minTimeSinceDx)) throw 'termdb.minTimeSinceDx not number'
