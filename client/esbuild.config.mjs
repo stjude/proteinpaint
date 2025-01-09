@@ -1,10 +1,13 @@
 import path from 'path'
 import fs from 'fs'
-import { execSync } from 'child_process'
+import { promisify } from 'node:util'
+import child_process from 'node:child_process'
 import { context } from 'esbuild'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 import notifier from 'node-notifier'
+import { getCodeText } from './emitImports.mjs'
 
+const exec = promisify(child_process.exec)
 const __dirname = import.meta.dirname
 const ENV = process.env.ENV || 'prod'
 
@@ -56,11 +59,17 @@ function logRebuild() {
 
 			onStart(() => {
 				console.log('\n--- starting client rebuild... ---\n')
-				if (ENV == 'dev') {
-					//console.log('emitting spec imports')
-					execSync(`node ${emitImports} > ${internalsFilename}`)
-				}
 				t = Date.now()
+				if (ENV == 'dev') {
+					// console.log('emitting spec imports')
+					try {
+						const codeText = getCodeText()
+						fs.writeFileSync(internalsFilename, codeText)
+					} catch (e) {
+						throw e
+					}
+					// console.log(`updated ./test/internals-${ENV}.js in `, Date.now() - t, ` ms`)
+				}
 			})
 			onEnd(result => {
 				if (ENV == 'dev') {
