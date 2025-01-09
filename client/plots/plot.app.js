@@ -159,7 +159,7 @@ class PlotApp {
 	}
 
 	destroy() {
-		this.dom.holder.selectAll('*').remove()
+		if (this.dom?.holder) this.dom.holder.selectAll('*').remove()
 	}
 }
 
