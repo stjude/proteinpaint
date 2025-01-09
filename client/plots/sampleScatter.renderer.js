@@ -223,7 +223,6 @@ export function setRenderers(self) {
 		const g = chart.serie
 		const data = chart.data
 		chart.serie.selectAll('*').remove()
-		if (self.settings.showContour) self.renderContours(chart)
 
 		// remove all symbols as there is no data id for privacy
 		//g.selectAll('path').remove()
@@ -253,6 +252,7 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 		self.mayRenderRegression()
+		if (self.settings.showContour) self.renderContours(chart)
 	}
 
 	self.renderContours = function (chart) {
@@ -1155,13 +1155,13 @@ export function renderContours(contourG, data, width, height, colorContours) {
 	// Append the contours.
 	contourG
 		.attr('fill', 'none')
-		.attr('stroke', '#aaa')
+		.attr('stroke', 'gray') // gray to make the contours visible
 		.attr('stroke-linejoin', 'round')
-		.style('fill-opacity', 0.5)
 		.selectAll()
 		.data(contours)
 		.join('path')
 		.attr('stroke-width', (d, i) => (i % 5 ? 0.25 : 1))
 		.attr('d', geoPath())
 		.attr('fill', colorContours ? d => colorScale(d.value) : 'none')
+		.attr('fill-opacity', 0.05) //this is the opacity of the contour, reduce it to 0.05 to avoid hiding the points
 }
