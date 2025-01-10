@@ -22,17 +22,20 @@ type SseData = SseDataEntry[]
 // it can be reused across HMR replacement of app instances/runtimes
 const divId = `#sjpp-notify-div-sse-refresh`
 const notifyElem = document.querySelector(divId)
-const notifyDiv = notifyElem
-	? select(notifyElem)
-	: select('body')
-			.append('div')
-			.attr('id', divId.slice(0))
-			.style('position', 'fixed')
-			.style('top', `16px`)
-			.style('right', '10px')
-			.style('font-size', '1.2em')
-			.style('background-color', 'rgba(250, 250, 250, 0.75)')
-			.style('z-index', 10000)
+// tsc errors on const notifyDiv = notifyElem ? select(notifyElem) : ...,
+// so has to use this longer syntax for now
+let notifyDiv
+if (notifyElem) notifyDiv = select(notifyElem)
+else
+	notifyDiv = select('body')
+		.append('div')
+		.attr('id', divId.slice(0))
+		.style('position', 'fixed')
+		.style('top', `16px`)
+		.style('right', '10px')
+		.style('font-size', '1.2em')
+		.style('background-color', 'rgba(250, 250, 250, 0.75)')
+		.style('z-index', 10000)
 
 let sse,
 	initialLoad = 0,
@@ -66,7 +69,7 @@ function setSse() {
 			.style('border', d => `1px solid ${d.color || '#000'}`)
 			.style('display', '')
 			.html(d => `${d.key}: ${d.message}`)
-			.each(function (d) {
+			.each(function (this: HTMLElement, d) {
 				if (d.reload && event.timeStamp > lastReload) refresh()
 				else if (d.duration) {
 					setTimeout(
@@ -88,10 +91,10 @@ function setSse() {
 			.style('border', d => `1px solid ${d.color || '#000'}`)
 			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
 			.html(d => `${d.key}: ${d.message}`)
-			.on('click', function () {
+			.on('click', function (this: HTMLElement) {
 				select(this).style('display', 'none')
 			})
-			.each(function (d) {
+			.each(function (this: HTMLElement, d) {
 				if (d.reload && event.timeStamp > lastReload) refresh()
 				else if (d.duration) {
 					setTimeout(

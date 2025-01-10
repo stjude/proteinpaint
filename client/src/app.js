@@ -159,6 +159,7 @@ export function runproteinpaint(arg) {
 		.then(async data => {
 			if (data.error) throw { message: 'Cannot get genomes: ' + data.error }
 			if (!data.genomes) throw { message: 'no genome data!?' }
+			if (data.debugmode) app.debugmode = true
 
 			if (data.base_zindex) {
 				client.newpane({ setzindex: data.base_zindex })
@@ -215,23 +216,20 @@ export function runproteinpaint(arg) {
 
 			const subapp = await parseEmbedThenUrl(arg, app)
 			const appInstance = subapp || app
-			if (data.debugmode) {
-				app.debugmode = true
-				if (!data.features?.disableDevBrowserNotification) {
-					// this initial import runs within the initial runproteinpaint instance;
-					// subsequent refresh will use a different runproteinpaint runtime
-					import(`./notify`)
-						.catch(e => console.warn(`debugmode: server-sent notifications setup failed`, e))
-						.then(({ setRefresh }) => {
-							setRefresh(() => {
-								if (subapp?.destroy) subapp.destroy()
-								d3select(arg.holder ? arg.holder : document.body)
-									.selectAll('*')
-									.remove()
-								sseRefreshCallback(arg, appInstance)
-							})
+			if (app.debugmode && !data.features?.disableDevBrowserNotification) {
+				// this initial import runs within the initial runproteinpaint instance;
+				// subsequent refresh will use a different runproteinpaint runtime
+				import(`./notify`)
+					.catch(e => console.warn(`debugmode: server-sent notifications setup failed`, e))
+					.then(({ setRefresh }) => {
+						setRefresh(() => {
+							if (subapp?.destroy) subapp.destroy()
+							d3select(arg.holder ? arg.holder : document.body)
+								.selectAll('*')
+								.remove()
+							sseRefreshCallback(arg, appInstance)
 						})
-				}
+					})
 			}
 			if (!arg.origSubApp && subapp) arg.origSubApp = subapp
 			// this returned instance is the second argument to
