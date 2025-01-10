@@ -1,5 +1,5 @@
 import type { BoxPlotDom } from '../BoxPlot'
-import type { MassAppApi } from '#mass/types/mass'
+import type { MassAppApi, PlotConfig } from '#mass/types/mass'
 import type { RenderedPlot } from '../view/RenderedPlot'
 import type { LegendItemEntry } from '../viewModel/LegendDataMapper'
 import { to_svg } from '#src/client'
@@ -48,8 +48,8 @@ export class BoxPlotInteractions {
 	}
 
 	/** Option to hide a plot from the box plot label menu. */
-	hidePlot(plot) {
-		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
+	hidePlot(plot: RenderedPlot) {
+		const plotConfig = this.app.getState().plots.find((p: PlotConfig) => p.id === this.id)
 		//Don't try to modify a frozen object
 		const config = structuredClone(plotConfig)
 		const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
@@ -64,7 +64,7 @@ export class BoxPlotInteractions {
 
 	/** Trigger when clicking on a hidden plot in the legend */
 	unhidePlot(item: LegendItemEntry) {
-		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
+		const plotConfig = this.app.getState().plots.find((p: PlotConfig) => p.id === this.id)
 		const config = structuredClone(plotConfig)
 		const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
 		delete config[contTerm].q.hiddenValues[item.key]
@@ -87,7 +87,7 @@ export class BoxPlotInteractions {
 	/** Callback for color picker in plot(s) label menu */
 	updatePlotColor(plot: RenderedPlot, color: string) {
 		if (!plot.seriesId) return
-		const plotConfig = this.app.getState().plots.find(p => p.id === this.id)
+		const plotConfig = this.app.getState().plots.find((p: PlotConfig) => p.id === this.id)
 		const config = structuredClone(plotConfig)
 		config.term2.term.values[plot.seriesId].color = color
 		this.app.dispatch({
