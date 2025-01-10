@@ -324,8 +324,24 @@ class Scatter {
 				type: 'number',
 				chartType: 'sampleScatter',
 				settingsKey: 'svgh'
+			},
+			{
+				label: 'Show contour map',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'sampleScatter',
+				settingsKey: 'showContour',
+				title: 'Show contour map'
 			}
 		]
+		if (this.settings.showContour)
+			inputs.push({
+				label: 'Color contours',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'sampleScatter',
+				settingsKey: 'colorContours'
+			})
 		if (this.config.sampleCategory) {
 			const options = Object.values(this.config.sampleCategory.tw.term.values).map(v => ({
 				label: v.label || v.key,
@@ -427,28 +443,18 @@ class Scatter {
 					if (hasRef) inputs.splice(7, 0, refSizeOption)
 				}
 
-				inputs.push(
-					{
-						label: 'Show regression',
-						type: 'dropdown',
-						chartType: 'sampleScatter',
-						settingsKey: 'regression',
-						options: [
-							{ label: 'None', value: 'None' },
-							//{ label: 'Loess', value: 'Loess' },
-							{ label: 'Lowess', value: 'Lowess' },
-							{ label: 'Polynomial', value: 'Polynomial' }
-						]
-					},
-					{
-						label: 'Show contour map',
-						boxLabel: '',
-						type: 'checkbox',
-						chartType: 'sampleScatter',
-						settingsKey: 'showContour',
-						title: 'Show contour map'
-					}
-				)
+				inputs.push({
+					label: 'Show regression',
+					type: 'dropdown',
+					chartType: 'sampleScatter',
+					settingsKey: 'regression',
+					options: [
+						{ label: 'None', value: 'None' },
+						//{ label: 'Loess', value: 'Loess' },
+						{ label: 'Lowess', value: 'Lowess' },
+						{ label: 'Polynomial', value: 'Polynomial' }
+					]
+				})
 			} else {
 				inputs.push({
 					label: 'Chart depth',
@@ -484,24 +490,9 @@ class Scatter {
 				inputs.splice(4, 0, shapeSizeOption)
 				if (hasRef) inputs.splice(5, 0, refSizeOption)
 			}
-			inputs.push(showAxes, {
-				label: 'Show contour map',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'sampleScatter',
-				settingsKey: 'showContour',
-				title: 'Show contour map'
-			})
+			inputs.push(showAxes)
 		}
 
-		if (this.settings.showContour)
-			inputs.push({
-				label: 'Color contours',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'sampleScatter',
-				settingsKey: 'colorContours'
-			})
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
