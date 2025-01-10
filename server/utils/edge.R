@@ -82,7 +82,7 @@ if (exists(input$storage_type)==FALSE) {
             }
         }
         read_counts <- t(h5read(input$input_file,"counts",index=list(samples_indicies, 1:length(geneIDs))))
-
+        colnames(read_counts) <- c(cases,controls)
     } else if (input$storage_type == "text") {
         suppressWarnings({
           suppressMessages({
