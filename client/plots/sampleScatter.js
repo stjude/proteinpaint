@@ -331,7 +331,8 @@ class Scatter {
 				type: 'checkbox',
 				chartType: 'sampleScatter',
 				settingsKey: 'showContour',
-				title: 'Show contour map'
+				title:
+					'Shows the density of point clouds. If Z/Divide by is added with continous mode uses it to weight the points when calculating the density contours'
 			}
 		]
 		if (this.settings.showContour)
