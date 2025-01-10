@@ -641,8 +641,12 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		}
 		*/
 			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
+				.append('button')
+				.style('margin', '10px')
+				.style('padding', '10px 15px')
+				.style('border-radius', '20px')
+				.style('border-color', '#ededed')
+				.style('display', 'inline-block')
 				.text(plot.name)
 				.on('click', () => {
 					openScatterPlot(chartsInstance.app, plot)
