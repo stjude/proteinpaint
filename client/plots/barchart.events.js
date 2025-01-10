@@ -540,11 +540,22 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	for (const sample of data.lst) {
 		const sampleName = data.refs.bySampleId[Number(sample.sample)].label
 		const row = [{ value: sampleName }]
+		/** Don't show hidden values in the results
+		 * May not be caught in server request for custom variables
+		 * with user supplied keys */
+		if (self.config.term.q?.hiddenValues && `${sample[self.config.term.$id].key}` in self.config.term.q.hiddenValues)
+			continue
 		if (termIsNumeric) {
 			const value = sample[self.config.term.$id]?.value
 			row.push({ value: roundValueAuto(value) })
 		}
 		if (self.config.term2) {
+			//Don't show hidden values in the results
+			if (
+				self.config.term2.q?.hiddenValues &&
+				`${sample[self.config.term2.$id].key}` in self.config.term2.q.hiddenValues
+			)
+				continue
 			let value = sample[self.config.term2.$id]
 			if (!value) row.push({ value: '' })
 			else {
