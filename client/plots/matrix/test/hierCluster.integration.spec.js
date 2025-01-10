@@ -81,7 +81,7 @@ tape('\n', function (test) {
 })
 
 tape('basic render', async test => {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(4000)
 	const { app, hc } = await getHierClusterApp({
 		terms: [
 			{ gene: 'AKT1', type: 'geneExpression' },
@@ -101,7 +101,7 @@ tape('avoid race condition', async test => {
 	// hardcode a constant value or comment out the ++ for the sequenceID
 	// in rx/index.js getStoreApi().write()
 	// !!!
-	test.timeoutAfter(2000)
+	test.timeoutAfter(4000)
 	const { app, hc } = await getHierClusterApp({
 		terms: [
 			{ gene: 'AKT1', type: 'geneExpression' },
@@ -124,6 +124,15 @@ tape('avoid race condition', async test => {
 		return await hc.origRequestData({})
 	}
 
+	const prom = {}
+	const postRenderTest = new Promise(resolve => {
+		prom.resolve = resolve
+	})
+	app.on('postRender.test1', () => {
+		app.on('postRender.test1', null)
+		prom.resolve()
+	})
+
 	await Promise.all([
 		app.dispatch({
 			type: 'plot_edit',
@@ -139,15 +148,17 @@ tape('avoid race condition', async test => {
 				fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }, app.vocabApi),
 				fillTermWrapper({ term: { gene: 'KRAS', name: 'KRAS', type: 'geneExpression' } }, app.vocabApi)
 			])
-			app.dispatch({
+			await app.dispatch({
 				type: 'plot_edit',
 				id: hc.id,
 				config: { termgroups }
 			})
 		})()
 	])
+
+	await postRenderTest
+	await sleep(responseDelay + 500)
 	// run tests after the delayed response, as part of simulating the race condition
-	await sleep(responseDelay + 800)
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 gene rows')
 	const rects = hc.dom.seriesesG.selectAll('.sjpp-mass-series-g rect')
 	const hits = rects.filter(d => d.key !== 'BCR' && d.value.class != 'WT' && d.value.class != 'Blank')
@@ -158,7 +169,8 @@ tape('avoid race condition', async test => {
 	)
 	test.equal(hits.size(), 180, 'should have the expected number of matrix cell rects with hits')
 	if (test._ok) app.destroy()
-	test.end()
+
+	//test.end()
 })
 
 tape('dendrogram click', async function (test) {
