@@ -12,7 +12,11 @@ export function maySetSandboxHeader(appState) {
 			break
 		case NUMERIC_DICTIONARY_TERM:
 			this.dom.header.text(
-				appState.termdbConfig.numericDictTermCluster?.appName + ' Clustering' || 'Numercic Dictionary Term Cluster'
+				this.config.preBuiltPlotTitle
+					? this.config.preBuiltPlotTitle
+					: appState.termdbConfig.numericDictTermCluster?.appName
+					? appState.termdbConfig.numericDictTermCluster.appName + ' Clustering'
+					: 'Numercic Dictionary Term Cluster'
 			)
 			break
 		default:

@@ -33,7 +33,7 @@ export class Matrix {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
 		this.computed = {} // will hold settings/configuration/data that are computed or derived from other data
-		if (this.dom.header) this.dom.header.html(this.holderTitle)
+		if (this.dom.header) this.dom.header.html(this.config.preBuiltPlotTitle || this.holderTitle)
 
 		this.setControls(appState)
 		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app, parent: this })
@@ -451,6 +451,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				.on('click', async () => {
 					chartsInstance.dom.tip.hide()
 					const config = await chartsInstance.app.vocabApi.getMatrixByName(plot.name)
+					//add pre-built plot name to config to be shown in the sandbox header
+					config.preBuiltPlotTitle = plot.name
 					chartsInstance.app.dispatch({
 						type: 'plot_create',
 						config

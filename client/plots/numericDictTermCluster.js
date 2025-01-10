@@ -27,6 +27,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				.on('click', async () => {
 					chartsInstance.dom.tip.hide()
 					const config = await chartsInstance.app.vocabApi.getNumericDictTermClusterByName(plot.name)
+					//add pre-built plot name to config to be shown in the sandbox header
+					config.preBuiltPlotTitle = plot.name
 					chartsInstance.app.dispatch({
 						type: 'plot_create',
 						config
