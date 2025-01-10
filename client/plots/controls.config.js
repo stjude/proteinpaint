@@ -552,7 +552,7 @@ function setCheckboxInput(opts) {
 
 	self.dom.input = label
 		.append('input')
-		.attr('id', opts.testid)
+		.attr('data-testid', opts.testid)
 		.attr('type', 'checkbox')
 		.on('change', () => {
 			const value = self.dom.input.property('checked')
