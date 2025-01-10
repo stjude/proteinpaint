@@ -1197,8 +1197,8 @@ class singleCellPlot {
 			const geometry = new THREE.PlaneGeometry(2, 2)
 			// Create a material using the loaded texture
 			// the transparent parameter is needed to keep the contours transparent, otherwise the background will be black
-			// the color parameter is needed to make the contours gray, otherwise they are light gray
-			const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, color: 0x808080 })
+			// the color parameter is needed to make the contours darker, otherwise they are light gray
+			const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, color: 0x141414 })
 			// Create a mesh with the geometry and material
 			const plane = new THREE.Mesh(geometry, material)
 			// Add the plane to the scene
