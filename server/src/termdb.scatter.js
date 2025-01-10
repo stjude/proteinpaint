@@ -223,7 +223,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		let isLast = false
 		if ((q.colorTW && !hasValue(dbSample, q.colorTW)) || (q.shapeTW && !hasValue(dbSample, q.shapeTW))) continue
 		let divideBy = 'Default'
-		if (q.divideByTW && q.divideByTW.q.mode != 'continuous') {
+		if (q.divideByTW) {
 			sample.z = 0
 			if (q.divideByTW.term.type == 'geneVariant' && q.divideByTW.q.type == 'values') {
 				divideBy = getMutation(true, dbSample, q.divideByTW)
@@ -235,7 +235,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				const field = q.divideByTW.$id
 				const key = dbSample[field]?.key
 				if (key == null) continue
-				divideBy = q.divideByTW.term.values?.[key]?.label || key
+				if (q.divideByTW.q.mode != 'continuous') divideBy = q.divideByTW.term.values?.[key]?.label || key
+				else sample.z = key
 			}
 		}
 		if (!results[divideBy]) {
