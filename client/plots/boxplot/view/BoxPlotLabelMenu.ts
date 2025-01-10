@@ -7,7 +7,7 @@ import { rgb } from 'd3-color'
 
 /** Menu is available when more than one boxplot is rendered. */
 export class BoxPlotLabelMenu {
-	constructor(plot: RenderedPlot, app: MassAppApi, interactions: BoxPlotInteractions, tip: Menu) {
+	constructor(plot: RenderedPlot, app: MassAppApi, interactions: BoxPlotInteractions, tip: Menu, isVertical: boolean) {
 		const options = [
 			{
 				text: `Add filter: ${plot.key}`,
@@ -22,8 +22,9 @@ export class BoxPlotLabelMenu {
 			{
 				text: `List samples`,
 				isVisible: (state: MassState) => state.termdbConfig.displaySampleIds && app.vocabApi.hasVerifiedToken(),
-				callback: async () => {
-					tip.clear().showunder(plot.boxplot.labelG.node())
+				callback: async (event: MouseEvent) => {
+					if (isVertical) tip.clear().show(event.clientX, event.clientY)
+					else tip.clear().showunder(plot.boxplot.labelG.node())
 					const rows = await interactions.listSamples(plot)
 
 					const tableDiv = tip.d.append('div')
@@ -41,8 +42,10 @@ export class BoxPlotLabelMenu {
 				}
 			}
 		]
-		plot.boxplot.labelG.on('click', () => {
-			tip.clear().showunder(plot.boxplot.labelG.node())
+		plot.boxplot.labelG.on('click', (event: MouseEvent) => {
+			tip.clear()
+			if (isVertical) tip.show(event.clientX, event.clientY)
+			else tip.showunder(plot.boxplot.labelG.node())
 			const state = app.getState()
 			for (const opt of options) {
 				//Adds all the menu options before the color picker
@@ -51,9 +54,9 @@ export class BoxPlotLabelMenu {
 					.append('div')
 					.classed('sja_menuoption', true)
 					.text(opt.text)
-					.on('click', () => {
+					.on('click', (event: MouseEvent) => {
 						tip.hide()
-						opt.callback()
+						opt.callback(event)
 					})
 			}
 			if (plot.color) {
