@@ -6,7 +6,7 @@ import { plotColor } from '#shared/common.js'
 import { Menu } from '#dom'
 import { isNumericTerm } from '#shared/terms.js'
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
-import type { MassAppApi, PlotConfig } from '#mass/types/mass'
+import type { MassAppApi, MassState, PlotConfig } from '#mass/types/mass'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -129,8 +129,8 @@ class TdbBoxplot extends RxComponentInner {
 				type: 'radio',
 				chartType: 'boxplot',
 				settingsKey: 'orderByMedian',
-				options: setOrderByOptions(this.app.getState().plots.find(p => p.id === this.id)),
-				getDisplayStyle: plot => (plot.term2 ? '' : 'none')
+				options: setOrderByOptions(this.app.getState().plots.find((p: PlotConfig) => p.id === this.id)),
+				getDisplayStyle: (plot: PlotConfig) => (plot.term2 ? '' : 'none')
 			},
 			{
 				label: 'Orientation',
@@ -188,7 +188,7 @@ class TdbBoxplot extends RxComponentInner {
 				type: 'color',
 				chartType: 'boxplot',
 				settingsKey: 'color',
-				getDisplayStyle: plot => (plot.term2 ? 'none' : '')
+				getDisplayStyle: (plot: PlotConfig) => (plot.term2 ? 'none' : '')
 			},
 			{
 				label: 'Dark mode',
@@ -214,8 +214,8 @@ class TdbBoxplot extends RxComponentInner {
 		})
 	}
 
-	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+	getState(appState: MassState) {
+		const config = appState.plots.find((p: PlotConfig) => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
