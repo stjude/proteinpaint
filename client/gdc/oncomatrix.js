@@ -107,7 +107,7 @@ export async function init(arg, holder, genomes) {
 		if (typeof settings.matrix != 'object') throw 'arg.settings.matrix{} not object'
 		// set defaults
 		if (!settings.matrix.geneFilter) settings.matrix.geneFilter = 'CGC' // filter to only use CGC genes by default
-		if (!Number.isInteger(settings.matrix.maxGenes)) settings.matrix.maxGenes = 5 //0
+		if (!Number.isInteger(settings.matrix.maxGenes)) settings.matrix.maxGenes = 50
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
