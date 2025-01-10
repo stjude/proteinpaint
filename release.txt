@@ -1,2 +1,1 @@
-Fixes:
-- Change menu options to buttons for pre-built scatter/matrix/numericDictTerm plots. Show pre-built plot name in the sandbox header after clicking
+

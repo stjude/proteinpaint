@@ -16,6 +16,7 @@ Fixes:
 - Restored 'List samples' label menu option in both the violin and box plot. The filter label menu option restored as well.
 - barChart: when term1/2 has only 2 visible categories, only show one associate test result (cover both categories) in p-value table
 - conditionally enable regression methods based on term type and show customized Regression chart button if a single method is available
+- Change menu options to buttons for pre-built scatter/matrix/numericDictTerm plots. Show pre-built plot name in the sandbox header after clicking
 
 
 ## 2.95.0
