@@ -55,9 +55,9 @@ function init({ genomes }) {
 async function run_DE(param: DERequest, ds: any, term_results: any) {
 	/*
 param{}
-    samplelst{}
-            groups[]
-                    values[] // using integer sample id
+samplelst{}
+        groups[]
+                values[] // using integer sample id
 */
 	if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
@@ -130,11 +130,6 @@ param{}
 		min_total_count: param.min_total_count,
 		storage_type: param.storage_type
 	} as ExpressionInput
-
-	if (param.tw) {
-		expression_input.conf1 = [...conf1_group1, ...conf1_group2]
-		expression_input.conf1_type = param.tw.term.type
-	}
 
 	// console.log(140, 'control',[expression_input.control.split(',').length]);
 	// console.log(141, 'case',[expression_input.case.split(',').length]);

@@ -8,6 +8,7 @@
 library(jsonlite)
 library(rhdf5)
 library(stringr)
+library(ggplot2)
 library(readr)
 suppressWarnings({
     suppressPackageStartupMessages(library(edgeR))
@@ -61,7 +62,8 @@ if (exists(input$storage_type) == FALSE) {
             }
         }
         read_counts <- t(h5read(input$input_file, "counts", index = list(samples_indicies, 1:length(geneIDs))))
-
+        colnames(read_counts) <- c(cases,controls)
+        rownames(read_counts) <- geneSymbols
     } else if (input$storage_type == "text") {
         # Read data from text file
         suppressWarnings({
@@ -96,52 +98,107 @@ conditions <- c(diseased, control)
 tabs <- rep("\t", length(geneIDs))
 gene_id_symbols <- paste0(geneIDs, tabs, geneSymbols)
 
-# Create DGEList object
-y <- DGEList(counts = as.matrix(read_counts), group = conditions, genes = gene_id_symbols)
 
-# Filter lowly expressed genes
-# keep <- filterByExpr(y, min.count = input$min_count, min.total.count = input$min_total_count)
-keep <- filterByExpr(y)
-y <- y[keep, keep.lib.sizes = FALSE]
+# Define file paths from command-line arguments
+confounders_file <- "/Users/rpaul1/Documents/test/conf_adj/confounders.tsv" # Change this path to where your resapective confounders.tsv file is located
+edgeR_results_file <- "edgeR_results.txt"
+edgeR_volcano_file <- "volcano.png"
 
-# Normalize data
-y <- calcNormFactors(y, method = "TMM")
+confounders <- read.delim(file=confounders_file, header = TRUE, check.names = FALSE)
 
-# Differential expression analysis
-if (length(input$conf1) == 0) {
-    # No adjustment for confounding factors
-    suppressWarnings({
-        suppressMessages({
-            dge <- estimateDisp(y = y)
-        })
-    })
-    et <- exactTest(object = dge)
-} else {
-    # Adjust for confounding factors
-    y$samples$conditions <- conditions
-    y$samples$conf1 <- input$conf1
-    design <- model.matrix(~ conf1 + conditions, data = y$samples)
-    y <- estimateDisp(y, design)
-    fit <- glmFit(y, design)
-    et <- glmLRT(fit, coef = 2)
+# Remove the suffix '_D1' from the column names of counts
+sample_names <- colnames(read_counts)
+#colnames(counts) <- sample_names
+
+# Print the number of samples in the counts data and confounders data
+cat("Number of samples in counts data:", ncol(read_counts), "\n")
+cat("Number of samples in confounders data:", nrow(confounders), "\n")
+
+# Check for mismatches
+missing_in_counts <- setdiff(confounders$Sample_name, sample_names)
+missing_in_confounders <- setdiff(sample_names, confounders$Sample_name)
+
+if (length(missing_in_counts) > 0) {
+  cat("Samples in confounders but not in counts:\n")
+  print(missing_in_counts)
 }
 
-# Extract results
-logfc <- et$table$logFC
-logcpm <- et$table$logCPM
-pvalues <- et$table$PValue
-genes_matrix <- str_split_fixed(unlist(et$genes), "\t", 2)
-geneids <- unlist(genes_matrix[, 1])
-genesymbols <- unlist(genes_matrix[, 2])
-adjust_p_values <- p.adjust(pvalues, method = "fdr")
+if (length(missing_in_confounders) > 0) {
+  cat("Samples in counts but not in confounders:\n")
+  print(missing_in_confounders)
+}
 
-# Prepare output data frame
-output <- data.frame(geneids, genesymbols, logfc, -log10(pvalues), -log10(adjust_p_values))
-names(output)[1] <- "gene_name"
-names(output)[2] <- "gene_symbol"
-names(output)[3] <- "fold_change"
-names(output)[4] <- "original_p_value"
-names(output)[5] <- "adjusted_p_value"
+# Filter the confounders data to include only the samples that are present in the counts data
+confounders <- confounders[confounders$Sample_name %in% sample_names, ]
 
-# Output results as JSON
-cat(paste0("adjusted_p_values:", toJSON(output)))
+# Print the number of samples after filtering confounders
+cat("Number of samples in confounders data after filtering:", nrow(confounders), "\n")
+
+# Filter the counts data to include only the samples that are present in the confounders data
+read_counts <- read_counts[, sample_names %in% confounders$Sample_name]
+
+# Ensure the order of samples in counts matches the order in confounders
+confounders <- confounders[match(colnames(read_counts), confounders$Sample_name), ]
+
+# Check if the sample names are now aligned
+if (!all(colnames(read_counts) == confounders$Sample_name)) {
+  stop("Sample names in counts and confounders data do not match after alignment.")
+}
+
+print ("Dim of counts")
+print (dim(read_counts))
+# Create a DGEList object
+dge <- DGEList(counts = read_counts, group = confounders$Condition)
+
+# Filter out lowly expressed genes
+keep <- filterByExpr(dge)
+dge <- dge[keep, keep.lib.sizes = FALSE]
+dge <- calcNormFactors(dge, method = "TMM")
+print ("for estimate disp")
+print (dge$samples)
+
+# Add sample information to the DGEList object
+dge$samples <- data.frame(group = confounders$Condition, cov2 = confounders$Molecular_subtype)
+print ("dge$samples")
+print (dge$samples)
+# Create a design matrix
+#design <- model.matrix(~ group + cov2 + cov1, data = dge$samples)
+design <- model.matrix(~ cov2 + group, data = dge$samples)
+
+# Estimate dispersion
+dge <- estimateDisp(dge, design)
+
+# Fit the model
+fit <- glmFit(dge, design)
+
+# Perform likelihood ratio test
+lrt <- glmLRT(fit, coef = 2)  # coef = 2 corresponds to the 'treatment' vs 'control' comparison
+
+# Extract the top differentially expressed genes
+topTags <- topTags(lrt, n = Inf)
+
+results <- topTags$table
+
+# Adjust p-values for multiple testing using FDR
+results$FDR <- p.adjust(results$PValue, method = "fdr")
+
+# Output results based on FDR threshold
+fdrThres <- 0.05
+significantResults <- results[results$FDR < fdrThres, ]
+
+# Write the updated results to a new file
+write.table(results, file = edgeR_results_file, sep = "\t", quote = FALSE, row.names = TRUE, col.names = TRUE)
+
+# Generate volcano plot
+results$logP <- -log10(results$PValue)
+results$Significant <- results$FDR < fdrThres
+
+volcano_plot <- ggplot(results, aes(x = logFC, y = logP)) +
+  geom_point(aes(color = Significant), alpha = 0.5) +
+  scale_color_manual(values = c("lightgrey", "red")) +
+  theme_minimal() +
+  labs(title = "Volcano Plot", x = "Log2 Fold Change", y = "-Log10 P-Value") +
+  theme(legend.position = "none")
+
+# Save the plot
+ggsave(edgeR_volcano_file, plot = volcano_plot)

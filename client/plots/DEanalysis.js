@@ -243,7 +243,7 @@ class DEanalysis {
 				this.config.state.groups[1].name +
 				' <span style="font-size:.8em;opacity:.7">DIFFERENTIAL GENE EXPRESSION</span>'
 		)
-		// render_volcano(this, output)
+		//render_volcano(this, output)
 	}
 }
 
