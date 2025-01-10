@@ -200,7 +200,7 @@ export function setRenderersThree(self) {
 			const color3D = new THREE.Color(color)
 			colors3D.push(color3D.r, color3D.g, color3D.b)
 		}
-		camera.position.set(0, 0, 2.5)
+		camera.position.set(0, 0, 2.5) // Sets the position of the camera on the z axis, 2.5 units away from the scene/particles
 		camera.lookAt(scene.position)
 
 		const geometry = new THREE.BufferGeometry()
