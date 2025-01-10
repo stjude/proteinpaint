@@ -43,6 +43,43 @@ class MassCharts {
 			!d.hide && this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'
 		)
 	}
+
+	generateRegressionButtonObject(state) {
+		// the default obj for regression, this obj is suitable for a button that will launch a menu with multiple regression methods
+		const obj = {
+			label: 'Regression Analysis',
+			chartType: 'regression',
+			clickTo: this.loadChartSpecificMenu
+		}
+		/* following detects if the ds has just one method, if so will customize obj{} so that the button directly show the available method name, and click on it to directly launch the ui without showing a menu
+		alternatively, this logic could be implemented inside makeChartBtnMenu() of the chart itself and eliminate chart-specific logic in here (ideal)
+		but there lacks a way for makeChartBtnMenu to customize the button label
+		*/
+		const lst = getCurrentCohortChartTypes(state)
+		if (!lst.includes('regression')) return obj // regression is hidden. still return obj to maintain proper charts array and the button will be hidden later
+		const availableMethods = []
+		if (lst.includes('linear')) availableMethods.push('linear')
+		if (lst.includes('logistic')) availableMethods.push('logistic')
+		if (lst.includes('cox')) availableMethods.push('cox')
+		if (availableMethods.length > 1) return obj // more than 1 regression methods. do not modify original obj
+		if (availableMethods.length == 1) {
+			// has only one method. customized button label and click behavior
+			const m = availableMethods[0]
+			obj.label = (m == 'linear' ? 'Linear' : m == 'cox' ? 'Cox' : 'Logistic') + ' Regression'
+			obj.clickTo = () => {
+				this.dom.tip.hide()
+				this.prepPlot({
+					config: {
+						chartType: 'regression',
+						regressionType: m,
+						independent: []
+					}
+				})
+			}
+		}
+		// no method (exception?)
+		return obj
+	}
 }
 
 export const chartsInit = getCompInit(MassCharts)
@@ -71,6 +108,8 @@ function getChartTypeList(self, state) {
 	/* returns a list all possible chart types supported in mass
 	each char type will generate a button under the nav bar
 	a dataset can support a subset of these charts
+
+	allow some chart button objects to be dynamically generated based on state
 
 	design goal is that chart specific logic should not leak into mass UI
 
@@ -114,8 +153,12 @@ function getChartTypeList(self, state) {
 
 	.updateActionBySelectedTerms:
 		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
+
+	TODO fixed order of buttons. may allow to customize order
 	*/
-	const [logged, site, user] = getProfileLogin() //later on replace with jwt login
+
+	const [logged, site, user] = getProfileLogin() // XXX later on replace with jwt login
+
 	const buttons = [
 		////////////////////// PROFILE PLOTS START //////////////////////
 		{
@@ -178,25 +221,20 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			// should only show for official dataset, but not custom
 			label: 'Cumulative Incidence',
 			chartType: 'cuminc',
 			clickTo: self.showTree_select1term,
 			usecase: { target: 'cuminc', detail: 'term' }
 		},
 		{
-			// should only show for official dataset, but not custom
 			label: 'Survival',
 			chartType: 'survival',
 			clickTo: self.showTree_select1term,
 			usecase: { target: 'survival', detail: 'term' }
 		},
-		{
-			// should only show for official dataset, but not custom
-			label: 'Regression Analysis',
-			chartType: 'regression',
-			clickTo: self.loadChartSpecificMenu
-		},
+
+		self.generateRegressionButtonObject(state), // returns an object like other buttons but tailored by current state
+
 		{
 			label: 'Sample Matrix',
 			chartType: 'matrix',

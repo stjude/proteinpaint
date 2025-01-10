@@ -582,9 +582,15 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	summary: () => true,
 	matrix: () => true,
 	regression: () => true,
-	linear: () => true,
-	logistic: () => true,
-	cox: () => true,
+	// linear/logistic/cox can be considered "child types" for regression, their availability can be separately determined to be more user friendly
+	linear: ({ cohortTermTypes }) => {
+		return cohortTermTypes.numeric > 0 // numeric term present and could be used as linear outcome
+	},
+	logistic: () => true, // consider both numeric & categorical can be logistic outcome
+	cox: ({ cohortTermTypes }) => {
+		// requires either survival or condition term as cox outcome
+		return (cohortTermTypes.survival || 0) + (cohortTermTypes.condition || 0) > 0
+	},
 	facet: () => true,
 	survival: ({ cohortTermTypes }) => cohortTermTypes.survival > 0,
 	cuminc: ({ cohortTermTypes }) => cohortTermTypes.condition > 0,
