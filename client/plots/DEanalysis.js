@@ -54,24 +54,24 @@ class DEanalysis {
 	async setControls(output) {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
-			{
-				label: 'Minimum read count',
-				type: 'number',
-				chartType: 'DEanalysis',
-				settingsKey: 'min_count',
-				title: 'Relative cpm cutoff for filtering a gene compared to all samples and genes in dataset',
-				min: 0,
-				max: 10000
-			},
-			{
-				label: 'Minimum total read count',
-				type: 'number',
-				chartType: 'DEanalysis',
-				settingsKey: 'min_total_count',
-				title: 'Minimum total read count required for each sample',
-				min: 0,
-				max: 10000
-			},
+			// {
+			// 	label: 'Minimum read count',
+			// 	type: 'number',
+			// 	chartType: 'DEanalysis',
+			// 	settingsKey: 'min_count',
+			// 	title: 'Relative cpm cutoff for filtering a gene compared to all samples and genes in dataset',
+			// 	min: 0,
+			// 	max: 10000
+			// },
+			// {
+			// 	label: 'Minimum total read count',
+			// 	type: 'number',
+			// 	chartType: 'DEanalysis',
+			// 	settingsKey: 'min_total_count',
+			// 	title: 'Minimum total read count required for each sample',
+			// 	min: 0,
+			// 	max: 10000
+			// },
 			{
 				label: 'P-value significance (linear scale)',
 				type: 'number',
@@ -127,35 +127,35 @@ class DEanalysis {
 				settingsKey: 'method',
 				title: 'Toggle between edgeR and wilcoxon test',
 				options: [
-					{ label: 'edgeR', value: 'edgeR' },
-					{ label: 'wilcoxon', value: 'wilcoxon' }
+					{ label: 'edgeR', value: 'edgeR' }
+					// { label: 'wilcoxon', value: 'wilcoxon' }
 				]
 			})
 		}
 
-		//if (
-		//	(output.mid_sample_size_cutoff >= output.sample_size1 &&
-		//		output.mid_sample_size_cutoff < output.sample_size2 &&
-		//		output.sample_size2 < output.high_sample_size_cutoff) ||
-		//	(output.mid_sample_size_cutoff >= output.sample_size2 &&
-		//		output.mid_sample_size_cutoff < output.sample_size1 &&
-		//		output.sample_size1 < output.high_sample_size_cutoff)
-		//) {
-		//	// Invoked only when one sample size is low than the mid_sample_size_cutoff and the other one is higher but the higher sample size is lower than the high cutoff so that the DE computation does not take a lot of time on the server
-		//	inputs.push({
-		//		label: 'Method',
-		//		type: 'radio',
-		//		chartType: 'DEanalysis',
-		//		settingsKey: 'method',
-		//		title: 'Toggle between edgeR and wilcoxon test',
-		//		options: [
-		//			{ label: 'edgeR', value: 'edgeR' },
-		//			{ label: 'wilcoxon', value: 'wilcoxon' }
-		//		]
-		//	})
-		//	this.settings.method = output.method
-		//	this.state.config = output.method
-		//}
+		if (
+			(output.mid_sample_size_cutoff >= output.sample_size1 &&
+				output.mid_sample_size_cutoff < output.sample_size2 &&
+				output.sample_size2 < output.high_sample_size_cutoff) ||
+			(output.mid_sample_size_cutoff >= output.sample_size2 &&
+				output.mid_sample_size_cutoff < output.sample_size1 &&
+				output.sample_size1 < output.high_sample_size_cutoff)
+		) {
+			// Invoked only when one sample size is low than the mid_sample_size_cutoff and the other one is higher but the higher sample size is lower than the high cutoff so that the DE computation does not take a lot of time on the server
+			inputs.push({
+				label: 'Method',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'method',
+				title: 'Toggle between edgeR and wilcoxon test',
+				options: [
+					{ label: 'edgeR', value: 'edgeR' }
+					// { label: 'wilcoxon', value: 'wilcoxon' }
+				]
+			})
+			this.settings.method = output.method
+			this.state.config = output.method
+		}
 
 		if (this.app.opts.genome.termdbs) {
 			// Check if genome build contains termdbs, only then enable gene ora
@@ -243,7 +243,7 @@ class DEanalysis {
 				this.config.state.groups[1].name +
 				' <span style="font-size:.8em;opacity:.7">DIFFERENTIAL GENE EXPRESSION</span>'
 		)
-		render_volcano(this, output)
+		// render_volcano(this, output)
 	}
 }
 
@@ -666,7 +666,7 @@ export async function getPlotConfig(opts, app) {
 					min_total_count: 15,
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
-					method: 'wilcoxon',
+					method: 'edgeR',
 					gene_ora: undefined,
 					gsea: undefined
 				}

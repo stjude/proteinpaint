@@ -1,8 +1,9 @@
-//import fs from 'fs'
+import fs from 'fs'
 import path from 'path'
 import type { DERequest, DEResponse, ExpressionInput, RouteApi } from '#types'
 import { diffExpPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { getData } from '../src/termdb.matrix.js'
 import { get_ds_tdb } from '../src/termdb.js'
 import run_R from '../src/run_R.js'
 import serverconfig from '../src/serverconfig.js'
@@ -28,7 +29,21 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
-			const results = await run_DE(req.query as DERequest, ds)
+			let term_results: any = []
+			if (q.tw) {
+				const terms = [q.tw]
+				term_results = await getData(
+					{
+						filter: q.filter,
+						filter0: q.filter0,
+						terms
+					},
+					ds,
+					genome
+				)
+				if (term_results.error) throw term_results.error
+			}
+			const results = await run_DE(req.query as DERequest, ds, term_results)
 			res.send(results)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -37,7 +52,7 @@ function init({ genomes }) {
 	}
 }
 
-async function run_DE(param: DERequest, ds: any) {
+async function run_DE(param: DERequest, ds: any, term_results: any) {
 	/*
 param{}
     samplelst{}
@@ -57,12 +72,16 @@ param{}
 	const group1names = [] as string[]
 	//let group1names_not_found = 0
 	//const group1names_not_found_list = []
+	const conf1_group1: (string | number)[] = []
 	for (const s of param.samplelst.groups[0].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
 		if (q.allSampleSet.has(n)) {
 			group1names.push(n)
+			if (param.tw) {
+				conf1_group1.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+			}
 		} else {
 			//group1names_not_found += 1
 			//group1names_not_found_list.push(n)
@@ -71,12 +90,16 @@ param{}
 	const group2names = [] as string[]
 	//let group2names_not_found = 0
 	//const group2names_not_found_list = []
+	const conf1_group2: (string | number)[] = []
 	for (const s of param.samplelst.groups[1].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
 		if (q.allSampleSet.has(n)) {
 			group2names.push(n)
+			if (param.tw) {
+				conf1_group2.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+			}
 		} else {
 			//group2names_not_found += 1
 			//group2names_not_found_list.push(n)
@@ -108,11 +131,20 @@ param{}
 		storage_type: param.storage_type
 	} as ExpressionInput
 
+	if (param.tw) {
+		expression_input.conf1 = [...conf1_group1, ...conf1_group2]
+		expression_input.conf1_type = param.tw.term.type
+	}
+
+	// console.log(140, 'control',[expression_input.control.split(',').length]);
+	// console.log(141, 'case',[expression_input.case.split(',').length]);
+
 	//console.log('expression_input:', expression_input)
-	//fs.writeFile('test.txt', JSON.stringify(expression_input), function(err) {
-	//    // For catching input to rust pipeline, in case of an error
-	//    if (err) return console.log(err)
-	//})
+	//console.log("param.method:",param.method)
+	fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
+		// For catching input to rust pipeline, in case of an error
+		if (err) return console.log(err)
+	})
 
 	const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 	let result
@@ -124,43 +156,46 @@ param{}
 		console.log('Time taken to run edgeR:', time2 - time1, 'ms')
 		for (const line of r_output.split('\n')) {
 			if (line.startsWith('adjusted_p_values:')) {
-				//console.log("line1:", line.replace('adjusted_p_values:', ''))
 				result = JSON.parse(line.replace('adjusted_p_values:', ''))
 			} else {
-				//console.log("line:", line)
+				// console.log(158, "line:", line)
 			}
 		}
 		param.method = 'edgeR'
-		//console.log("result:",result)
-	} else if (param.method == 'wilcoxon') {
-		// Wilcoxon test will be used for DE analysis
-		const time1 = new Date().valueOf()
-		const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
-		const time2 = new Date().valueOf()
-		for (const line of rust_output.split('\n')) {
-			if (line.startsWith('adjusted_p_values:')) {
-				result = JSON.parse(line.replace('adjusted_p_values:', ''))
-			} else {
-				//console.log(line)
-			}
-		}
-		console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
-		param.method = 'wilcoxon'
-	} else {
-		// Wilcoxon test will be used for DE analysis
-		const time1 = new Date().valueOf()
-		const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
-		const time2 = new Date().valueOf()
-		for (const line of rust_output.split('\n')) {
-			if (line.startsWith('adjusted_p_values:')) {
-				result = JSON.parse(line.replace('adjusted_p_values:', ''))
-			} else {
-				//console.log(line)
-			}
-		}
-		console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
-		param.method = 'wilcoxon'
+		console.log(166, 'result:', result)
 	}
+
+	// else if (param.method == 'wilcoxon') {
+	// 	// Wilcoxon test will be used for DE analysis
+	// 	const time1 = new Date().valueOf()
+	// 	const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
+	// 	const time2 = new Date().valueOf()
+	// 	for (const line of rust_output.split('\n')) {
+	// 		if (line.startsWith('adjusted_p_values:')) {
+	// 			result = JSON.parse(line.replace('adjusted_p_values:', ''))
+	// 		} else {
+	// 			//console.log(line)
+	// 		}
+	// 	}
+	// 	console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
+	// 	param.method = 'wilcoxon'
+	// }
+
+	// else {
+	// 	// Wilcoxon test will be used for DE analysis
+	// 	const time1 = new Date().valueOf()
+	// 	const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
+	// 	const time2 = new Date().valueOf()
+	// 	for (const line of rust_output.split('\n')) {
+	// 		if (line.startsWith('adjusted_p_values:')) {
+	// 			result = JSON.parse(line.replace('adjusted_p_values:', ''))
+	// 		} else {
+	// 			//console.log(line)
+	// 		}
+	// 	}
+	// 	console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
+	// 	param.method = 'wilcoxon'
+	// }
 	//console.log("result:", result)
 	return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
 }
