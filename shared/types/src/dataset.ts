@@ -1036,6 +1036,7 @@ type NumericDictTermClusterPlotsEntry = {
 	settings?: {
 		[key: string]: any
 	}
+	/** helper function to get plot config from saved session file */
 	getConfig?: (f: any) => void
 }
 
