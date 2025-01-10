@@ -131,7 +131,7 @@ tape('ViewModel.setPlotDimensions()', function (test) {
 		domain: [0, 101],
 		incrTopPad: 40,
 		svg: {
-			width: 550,
+			width: 490,
 			height: 250
 		},
 		title: { x: 420, y: 85, text: 'Age at Cancer Diagnosis' },
