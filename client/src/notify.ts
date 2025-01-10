@@ -15,17 +15,24 @@ type SseDataEntry = {
 	reload?: boolean
 	status?: string
 }
-console.log(18, 'notify', Date.now())
+
 type SseData = SseDataEntry[]
 
-const notifyDiv = select('body')
-	.append('div')
-	.style('position', 'fixed')
-	.style('top', `16px`)
-	.style('right', '10px')
-	.style('font-size', '1.2em')
-	.style('background-color', 'rgba(250, 250, 250, 0.75)')
-	.style('z-index', 10000)
+// by using an id attribute for the notify div,
+// it can be reused across HMR replacement of app instances/runtimes
+const divId = `#sjpp-notify-div-sse-refresh`
+const notifyElem = document.querySelector(divId)
+const notifyDiv = notifyElem
+	? select(notifyElem)
+	: select('body')
+			.append('div')
+			.attr('id', divId.slice(0))
+			.style('position', 'fixed')
+			.style('top', `16px`)
+			.style('right', '10px')
+			.style('font-size', '1.2em')
+			.style('background-color', 'rgba(250, 250, 250, 0.75)')
+			.style('z-index', 10000)
 
 let sse,
 	initialLoad = 0,
@@ -57,6 +64,7 @@ function setSse() {
 		divs
 			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
 			.style('border', d => `1px solid ${d.color || '#000'}`)
+			.style('display', '')
 			.html(d => `${d.key}: ${d.message}`)
 			.each(function (d) {
 				if (d.reload && event.timeStamp > lastReload) refresh()
@@ -81,7 +89,7 @@ function setSse() {
 			.style('color', d => d.color || (d.status == 'ok' ? 'green' : 'red'))
 			.html(d => `${d.key}: ${d.message}`)
 			.on('click', function () {
-				//select(this).remove()
+				select(this).style('display', 'none')
 			})
 			.each(function (d) {
 				if (d.reload && event.timeStamp > lastReload) refresh()
@@ -106,6 +114,8 @@ function setSse() {
 
 export function setRefresh(callback) {
 	refresh = callback
+	if (!notifyDiv) return
+	notifyDiv.selectAll(`:scope>div`).transition().duration(5000).style('opacity', 0).remove()
 }
 
 document.addEventListener('visibilitychange', () => {

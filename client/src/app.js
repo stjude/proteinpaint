@@ -214,82 +214,70 @@ export function runproteinpaint(arg) {
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
 			const subapp = await parseEmbedThenUrl(arg, app)
+			const appInstance = subapp || app
 			if (data.debugmode) {
 				app.debugmode = true
 				if (!data.features?.disableDevBrowserNotification) {
-					// this initial import is imported within the initial runproteinpaint instance;
+					// this initial import runs within the initial runproteinpaint instance;
 					// subsequent refresh will use a different runproteinpaint runtime
-					const { setRefresh } = await import(`./notify`).catch(e =>
-						console.warn(`debugmode: server-sent notifications setup failed`, e)
-					)
-					let wasDestroyed = false
-					setRefresh(async () => {
-						if (subapp) {
-							if (wasDestroyed) {
-								setRefresh(() => {})
-								return
-							} else {
-								if (subapp.destroy) subapp.destroy()
+					import(`./notify`)
+						.catch(e => console.warn(`debugmode: server-sent notifications setup failed`, e))
+						.then(({ setRefresh }) => {
+							setRefresh(() => {
+								if (subapp?.destroy) subapp.destroy()
 								d3select(arg.holder ? arg.holder : document.body)
 									.selectAll('*')
 									.remove()
-								wasDestroyed = true
-								if (subapp.getState) arg.state = structuredClone(subapp.getState())
-							}
-							if (subapp.isStale) subapp.isStale(true)
-						}
-						if (arg.hotModuleReplace) {
-							if (!arg.pphost)
-								arg.pphost = arg.host
-									? window.location.protocol + '//' + arg.host.split('://')[1]?.split('/')[0]
-									: window.location.origin
-
-							const subapp1 = await import(
-								// embedder portal bundler should ignore this PP-only hot-module-replacement
-								/*webpackIgnore: true*/ `${arg.pphost}/bin/dist/app.js?_=${Date.now()}`
-							)
-								.then(_ => _.runproteinpaint(arg))
-								.catch(console.log)
-
-							if (arg.origSubApp && subapp1 && !Object.isFrozen(arg.origSubApp)) {
-								arg.origSubApp.update = arg => subapp1.update(arg)
-							} else subapp.update = arg => subapp1.update(arg)
-						}
-					})
+								sseRefreshCallback(arg, appInstance)
+							})
+						})
 				}
 			}
 			if (!arg.origSubApp && subapp) arg.origSubApp = subapp
-			return subapp || app
+			// this returned instance is the second argument to
+			return appInstance
 		})
 		.catch(err => {
 			app.holder.text(err.message || err)
 			if (err.stack) console.log(err.stack)
 		})
 }
-console.clear = () => {}
-const appInstanceByElem = new WeakMap()
 
-// for use by embedders that may trigger multiple calls to
-// runpp for a given DOM rootElem, ensuring that only the
-// latest data gets rendered by latest code bundle/release
-export function advancedRunPp({
-	rootElem,
-	data,
-	hasUpdatedData, // ()=>boolean
-	getInitArgs,
-	getUpdateArgs
-}) {
-	const app = appInstanceByElem.get(rootElem)
+// boundApps is a tracker for PP app instances
+// - keys are DOM elem
+// - values are app instance promise or fully-resolved instance
+//   with an update() and getState() method
+const boundApps = new WeakMap()
+
+// bindProteinPaint()
+// - uses runproteinpaint()
+// - "binds" the resulting app instance to the arg.holder DOM element
+// - ensures that a bound instance will be reused as needed, making
+//   it more suitable for use in an embedder's reactive framework
+// - checks for stale state and app instance, which is critical in
+//   a portal that may dispatch state updates in quick succession,
+//   and ensures that the latest data (in prod and dev) gets rendered
+//   by the latest code bundle (in dev HMR)
+//
+// bound app instance API must expose these functions/interface
+// {
+//   update(newState): {...} // for reactive re-render
+//   getState?: () => (/*full app state object to allow recovering views on HMR */)
+// }
+//
+export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale }) {
+	const app = boundApps.get(rootElem)
 
 	// A PP tool instance may become stale due to new data and/or code version release, and
 	// in case a user browser session remained open to an outdated tool view while a new version was published.
 	// In dev, tool instance staleness may be triggered by a bundler's hot-module-replacement (works with nextjs + webpack).
 	// In prod, this may be detected from a response header or payload property (TODO).
-	if (app && !app.isStale?.()) {
-		if (!hasUpdatedData(data)) return
+	if (app) {
+		// an existing app instance should not rerender data that has not been updated
+		if (!updateArgs) return
 		if (typeof app.then != 'function') {
-			// the app instance has finished initializing.
-			app.update(getUpdateArgs())
+			// the app instance has finished initializing (replaced an instance promise)
+			if (!isStale()) app.update(updateArgs)
 		} else {
 			// The app instance has not finished initializing, it's still an unresolved Promise.
 			// In case another state update comes in when there is already
@@ -301,10 +289,9 @@ export function advancedRunPp({
 			if (!hasUpdatedData(data)) {
 				app.initTimeout = setTimeout(() => {
 					app.then(() => {
-						// if the filter0 has not changed, the PP matrix app (the engine for gene expression app)
-						// will not update unnecessarily
 						if (!app) console.error('missing ppRef.current')
-						else if (hasUpdatedData(data)) app.update({ filter0: data.filter0 })
+						//
+						if (!isStale()) app.update(updateArgs)
 					})
 				}, 20)
 			}
@@ -314,25 +301,66 @@ export function advancedRunPp({
 		if (pp_holder) pp_holder.remove()
 
 		const arg = Object.assign(
-			{
-				holder: rootElem,
-				noheader: true,
-				nobox: true,
-				hide_dsHandles: true
-			},
-			getInitArgs()
+			initArgs,
+			updateArgs || {},
+			// may reapply previously rendered state from an unbound stale instance
+			{ state: rootElem._ppAppState || {} }
 		)
 
-		// reapply previously rendered state when a stale instance is replaced
-		if (app?.getState) arg.state = app.getState()
+		delete rootElem._ppAppState
 
 		const newAppInstance = runproteinpaint(arg).then(pp => {
-			// app is set after the tool fully renders
-			appInstanceByElem.set(rootElem, pp) // fully resolved instance
+			// tracked app is set after the tool fully renders
+			boundApps.set(rootElem, pp) // bind the fully resolved instance
 			return pp
 		})
 		// initially track the app as an unresolved promise
-		appInstanceByElem.set(rootElem, newAppInstance)
+		boundApps.set(rootElem, newAppInstance)
+	}
+}
+
+/*
+	arg: runproteinpaint argument
+	subapp: the app instance that was returned from a runpp() call
+*/
+async function sseRefreshCallback(arg, subapp) {
+	if (subapp?.destroy) subapp.destroy()
+	d3select(arg.holder ? arg.holder : document.body)
+		.selectAll('*')
+		.remove()
+
+	const app = boundApps.has(arg.holder) && boundApps.get(arg.holder)
+
+	if (app) {
+		// assume consistent usage of bindProteinPaint() for the same holder DOM,
+		// and in that case, avoid acting on a stale app instance
+		if (subapp && app != subapp) return
+
+		// unbind the stale app instance from the holder DOM element
+		arg.holder._ppAppState = app.getState?.() // may reuse state in refresh
+		boundApps.delete(arg.holder)
+		// expect an embedder portal's dev bundler to trigger hot-module-replacement,
+		// no need to refresh with a call to runproteinpaint()
+	} else {
+		// re-import rebundled PP code, expects esbuild to generate
+		// chunks with the same filename hashes, except for code files that
+		// have changed, which will force redownload of updated ESM chunks
+		if (!arg.pphost)
+			arg.pphost = arg.host
+				? window.location.protocol + '//' + arg.host.split('://')[1]?.split('/')[0]
+				: window.location.origin
+
+		if (subapp.getState) arg.state = subapp.getState()
+		const subapp1 = await import(
+			// embedder portal bundler should ignore this PP-only hot-module-replacement
+			/*webpackIgnore: true*/ `${arg.pphost}/bin/dist/app.js?_=${Date.now()}`
+		)
+			.then(_ => _.runproteinpaint(arg))
+			.catch(console.log)
+
+		if (arg.origSubApp && subapp1 && !Object.isFrozen(arg.origSubApp)) {
+			arg.origSubApp.update = arg => subapp1.update(arg)
+		} else subapp.update = arg => subapp1.update(arg)
 	}
 }
 

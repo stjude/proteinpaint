@@ -430,10 +430,6 @@ export function getAppApi(self) {
 			delete self.store
 			if (self.api) delete self.api
 			self.wasDestroyed = true
-		},
-		isStale(bool) {
-			if (arguments.length) self.isStale = bool
-			else return self.isStale
 		}
 	}
 
