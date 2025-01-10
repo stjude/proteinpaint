@@ -1,2 +1,1 @@
-Fixes:
-- conditionally enable regression methods based on term type and show customized Regression chart button if a single method is available
+
