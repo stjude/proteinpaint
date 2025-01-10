@@ -121,7 +121,7 @@ export class ViewModel {
 			title: this.setTitleDimensions(config, settings, svg.height),
 			axis: {
 				x: settings.isVertical ? this.horizPad / 2 + this.incrPad + this.topPad : this.totalLabelSize,
-				y: this.topPad + this.incrPad + 20 + (settings.isVertical ? settings.labelPad : 0)
+				y: this.topPad + (settings.isVertical ? settings.labelPad : this.incrPad + 20)
 			},
 			backgroundColor: settings.darkMode ? 'black' : 'white',
 			textColor: settings.darkMode ? 'white' : 'black'
@@ -132,9 +132,9 @@ export class ViewModel {
 	setSvgDimensions(settings: BoxPlotSettings, data: BoxPlotResponse) {
 		const plotsSpace =
 			data.plots.filter(p => !p.isHidden).length * this.totalRowSize + this.topPad + this.bottomPad + this.incrPad
-		const depth = settings.boxplotWidth + this.totalLabelSize + this.horizPad
+		const depth = settings.boxplotWidth + this.totalLabelSize + this.horizPad / 2
 		return {
-			width: settings.isVertical ? plotsSpace + this.horizPad / 2 : depth,
+			width: settings.isVertical ? plotsSpace + this.horizPad : depth,
 			height: settings.isVertical ? depth : plotsSpace
 		}
 	}
@@ -143,7 +143,7 @@ export class ViewModel {
 		const depth = this.totalLabelSize + settings.boxplotWidth / 2
 		return {
 			x: settings.isVertical ? this.horizPad / 2 : depth,
-			y: settings.isVertical ? height - depth - 10 : this.topPad + this.incrPad / 2,
+			y: settings.isVertical ? height - depth - this.horizPad / 2 : this.topPad + this.incrPad / 2,
 			text: config.term.q.mode == 'continuous' ? config.term.term.name : config.term2.term.name
 		}
 	}
@@ -166,9 +166,7 @@ export class ViewModel {
 			}
 			plot.labColor = settings.darkMode ? 'white' : 'black'
 			plot.x = settings.isVertical ? this.horizPad / 2 + this.incrPad : this.totalLabelSize
-			plot.y = settings.isVertical
-				? settings.boxplotWidth + settings.labelPad + this.bottomPad * 2
-				: this.topPad + this.incrPad
+			plot.y = this.topPad + (settings.isVertical ? settings.boxplotWidth + settings.labelPad : this.incrPad)
 			this.incrPad += this.totalRowSize
 		}
 		return plots
