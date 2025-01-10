@@ -20,6 +20,7 @@ import urlmap from '#common/urlmap'
 import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 import { sayerror } from '../dom/sayerror'
 import { Menu } from '#dom/menu'
+import { isEqual } from 'lodash'
 
 /*
 exports a global function runproteinpaint()
@@ -216,7 +217,6 @@ export function runproteinpaint(arg) {
 			if (data.debugmode) {
 				app.debugmode = true
 				if (!data.features?.disableDevBrowserNotification) {
-					console.log(218, subapp, arg)
 					// this initial import is imported within the initial runproteinpaint instance;
 					// subsequent refresh will use a different runproteinpaint runtime
 					const { setRefresh } = await import(`./notify`).catch(e =>
@@ -224,7 +224,6 @@ export function runproteinpaint(arg) {
 					)
 					let wasDestroyed = false
 					setRefresh(async () => {
-						console.log(223, subapp)
 						if (subapp) {
 							if (wasDestroyed) {
 								setRefresh(() => {})
@@ -236,31 +235,29 @@ export function runproteinpaint(arg) {
 									.remove()
 								wasDestroyed = true
 								if (subapp.getState) arg.state = structuredClone(subapp.getState())
-								console.log(233, arg.state)
 							}
+							if (subapp.isStale) subapp.isStale(true)
 						}
+						if (arg.hotModuleReplace) {
+							if (!arg.pphost)
+								arg.pphost = arg.host
+									? window.location.protocol + '//' + arg.host.split('://')[1]?.split('/')[0]
+									: window.location.origin
 
-						if (!arg.pphost)
-							arg.pphost = arg.host
-								? window.location.protocol + '//' + arg.host.split('://')[1]?.split('/')[0]
-								: window.location.origin
-						console.log(243, arg.pphost)
-						const subapp1 = await import(
-							// embedder portal bundler should ignore this PP-only hot-module-replacement
-							/* webpackIgnore: true */ `${arg.pphost}/bin/dist/app.js?_=${Date.now()}`
-						)
-							.then(_ => _.runproteinpaint(arg))
-							.catch(console.log)
+							const subapp1 = await import(
+								// embedder portal bundler should ignore this PP-only hot-module-replacement
+								/*webpackIgnore: true*/ `${arg.pphost}/bin/dist/app.js?_=${Date.now()}`
+							)
+								.then(_ => _.runproteinpaint(arg))
+								.catch(console.log)
 
-						if (arg.origSubApp && subapp1 && !Object.isFrozen(arg.origSubApp)) {
-							console.log(228, 'arg.origSubApp')
-							arg.origSubApp.update = arg => subapp1.update(arg)
+							if (arg.origSubApp && subapp1 && !Object.isFrozen(arg.origSubApp)) {
+								arg.origSubApp.update = arg => subapp1.update(arg)
+							} else subapp.update = arg => subapp1.update(arg)
 						}
-						//else subapp.update = (arg) => subapp1.update(arg)
 					})
 				}
 			}
-			console.log(246, [subapp, arg])
 			if (!arg.origSubApp && subapp) arg.origSubApp = subapp
 			return subapp || app
 		})
@@ -268,6 +265,75 @@ export function runproteinpaint(arg) {
 			app.holder.text(err.message || err)
 			if (err.stack) console.log(err.stack)
 		})
+}
+console.clear = () => {}
+const appInstanceByElem = new WeakMap()
+
+// for use by embedders that may trigger multiple calls to
+// runpp for a given DOM rootElem, ensuring that only the
+// latest data gets rendered by latest code bundle/release
+export function advancedRunPp({
+	rootElem,
+	data,
+	hasUpdatedData, // ()=>boolean
+	getInitArgs,
+	getUpdateArgs
+}) {
+	const app = appInstanceByElem.get(rootElem)
+
+	// A PP tool instance may become stale due to new data and/or code version release, and
+	// in case a user browser session remained open to an outdated tool view while a new version was published.
+	// In dev, tool instance staleness may be triggered by a bundler's hot-module-replacement (works with nextjs + webpack).
+	// In prod, this may be detected from a response header or payload property (TODO).
+	if (app && !app.isStale?.()) {
+		if (!hasUpdatedData(data)) return
+		if (typeof app.then != 'function') {
+			// the app instance has finished initializing.
+			app.update(getUpdateArgs())
+		} else {
+			// The app instance has not finished initializing, it's still an unresolved Promise.
+			// In case another state update comes in when there is already
+			// an instance that is being created, debounce to the last update
+			// Except: during startup in demo mode, the filter0 is not expected to change,
+			// so don't trigger a non-user reactive update right after the initial rendering
+			if (app.initTimeout) clearTimeout(app.initTimeout)
+
+			if (!hasUpdatedData(data)) {
+				app.initTimeout = setTimeout(() => {
+					app.then(() => {
+						// if the filter0 has not changed, the PP matrix app (the engine for gene expression app)
+						// will not update unnecessarily
+						if (!app) console.error('missing ppRef.current')
+						else if (hasUpdatedData(data)) app.update({ filter0: data.filter0 })
+					})
+				}, 20)
+			}
+		}
+	} else {
+		const pp_holder = rootElem.querySelector('.sja_root_holder')
+		if (pp_holder) pp_holder.remove()
+
+		const arg = Object.assign(
+			{
+				holder: rootElem,
+				noheader: true,
+				nobox: true,
+				hide_dsHandles: true
+			},
+			getInitArgs()
+		)
+
+		// reapply previously rendered state when a stale instance is replaced
+		if (app?.getState) arg.state = app.getState()
+
+		const newAppInstance = runproteinpaint(arg).then(pp => {
+			// app is set after the tool fully renders
+			appInstanceByElem.set(rootElem, pp) // fully resolved instance
+			return pp
+		})
+		// initially track the app as an unresolved promise
+		appInstanceByElem.set(rootElem, newAppInstance)
+	}
 }
 
 runproteinpaint.getStatus = async function getStatus(outputAs = '') {
@@ -486,7 +552,6 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.parseurl && location.search.length) {
-		console.log(471)
 		/*
 		since jwt token is only passed from arg of runpp()
 		so no way of sending it via url parameter, thus url parameter won't work when jwt is activated
@@ -528,9 +593,7 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.mass) {
-		console.log(511)
 		const subapp = await launchmass(arg, app)
-		console.log(subapp)
 		return subapp
 	}
 
