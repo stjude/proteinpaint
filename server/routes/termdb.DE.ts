@@ -55,9 +55,9 @@ function init({ genomes }) {
 async function run_DE(param: DERequest, ds: any, term_results: any) {
 	/*
 param{}
-    samplelst{}
-            groups[]
-                    values[] // using integer sample id
+samplelst{}
+        groups[]
+                values[] // using integer sample id
 */
 	if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
@@ -132,7 +132,7 @@ param{}
 	} as ExpressionInput
 
 	if (param.tw) {
-		expression_input.conf1 = [...conf1_group1, ...conf1_group2]
+		expression_input.conf1 = [...conf1_group2, ...conf1_group1] // Make sure the order of the groups is same as in expression_input case and control
 		expression_input.conf1_type = param.tw.term.type
 	}
 
