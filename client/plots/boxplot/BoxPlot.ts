@@ -4,8 +4,9 @@ import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from '../control
 import { RxComponentInner } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
 import { Menu } from '#dom'
+import { isNumericTerm } from '#shared/terms.js'
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
-import type { MassAppApi } from '#mass/types/mass'
+import type { MassAppApi, PlotConfig } from '#mass/types/mass'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -31,12 +32,13 @@ export type BoxPlotSettings = {
 	darkMode: boolean
 	/** Padding between the left hand label and boxplot */
 	labelPad: number
-	/** If true, order box plots from smallest to largest median value
-	 * Default is by alphanumeric order */
-	orderByMedian: boolean
 	/** Toggle between vertical and horizontal orientation.
 	 * The default is false */
 	isVertical: boolean
+	/** If true, order box plots from smallest to largest median value
+	 * Default is by alphanumeric order or by bin
+	 * May change this later to `orderBy` if more options arise */
+	orderByMedian: boolean
 	/** Height of individual boxplots */
 	rowHeight: number
 	/** Space between the boxplots */
@@ -122,12 +124,12 @@ class TdbBoxplot extends RxComponentInner {
 				defaultQ4fillTW: term0_term2_defaultQ
 			},
 			{
-				label: 'Order by median',
-				title: 'Order box plots by median value',
-				type: 'checkbox',
+				label: 'Order by',
+				title: 'Order box plots by parameters',
+				type: 'radio',
 				chartType: 'boxplot',
-				boxLabel: '',
 				settingsKey: 'orderByMedian',
+				options: setOrderByOptions(this.app.getState().plots.find(p => p.id === this.id)),
 				getDisplayStyle: plot => (plot.term2 ? '' : 'none')
 			},
 			{
@@ -287,6 +289,14 @@ class TdbBoxplot extends RxComponentInner {
 			throw e
 		}
 	}
+}
+
+function setOrderByOptions(config: PlotConfig) {
+	if (!config || !config.term2) return []
+	return [
+		{ label: isNumericTerm(config.term2.term) ? 'Bins' : 'Sample count', value: false },
+		{ label: 'Median values', value: true }
+	]
 }
 
 export const boxplotInit = getCompInit(TdbBoxplot)
