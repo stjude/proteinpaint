@@ -7,12 +7,14 @@ export class BoxPlotToolTips {
 	boxplot: RenderedBoxPlot
 	g: SvgG
 	plot: RenderedPlot
+	isVertical: boolean
 	tip: Menu
 	readonly tablePadding = '3px'
-	constructor(plot: any, g: SvgG, tip: Menu) {
+	constructor(plot: any, g: SvgG, tip: Menu, isVertical: boolean) {
 		this.plot = plot
 		this.g = g
 		this.boxplot = plot.boxplot
+		this.isVertical = isVertical
 		this.tip = tip
 
 		this.addLabelTooltip()
@@ -28,8 +30,10 @@ export class BoxPlotToolTips {
 
 	addLabelTooltip() {
 		if (this.plot.descrStats.length < 2) return
-		this.boxplot.labelG.on('mouseover', () => {
-			this.tip.clear().showunder(this.boxplot.labelG.node())
+		this.boxplot.labelG.on('mouseover', (event: MouseEvent) => {
+			this.tip.clear()
+			if (this.isVertical) this.tip.show(event.clientX, event.clientY)
+			else this.tip.showunder(this.boxplot.labelG.node())
 			const table = this.tip.d.append('table').attr('class', 'sja_simpletable')
 			table
 				.append('tr')

@@ -72,13 +72,16 @@ export class View {
 		scale: ScaleLinear<number, number, never>,
 		settings: BoxPlotSettings
 	) {
+		/** draw_boxplot renders the boxplot from min-max but the scale
+		 * renders the axis from max - min. Render the box plots, then change
+		 * the scale vector to match. */
 		if (settings.isVertical) scale.range([scale.range()[1], scale.range()[0]])
 
 		dom.axis
 			.attr('id', 'sjpp-boxplot-axis')
 			.attr('transform', `translate(${plotDim.axis.x}, ${plotDim.axis.y})`)
 			.transition()
-			.call(this.settings.isVertical ? axisLeft(scale).tickPadding(10) : axisTop(scale))
+			.call(this.settings.isVertical ? axisLeft(scale).tickPadding(5) : axisTop(scale))
 
 		axisstyle({
 			axis: dom.axis,
@@ -111,14 +114,20 @@ export class View {
 			const transformStr = `translate(${plot.x}, ${plot.y})${settings.isVertical ? `, rotate(-90)` : ''}`
 			g.attr('transform', transformStr)
 
-			new BoxPlotToolTips(plot, g, this.dom.tip)
+			new BoxPlotToolTips(plot, g, this.dom.tip, settings.isVertical)
 			if (data.plots.length > 1) {
 				//Do not try to use the same tip for the menu as the tooltips.
 				//When the boxplots are rendered close together, the menu
 				//disappears to show the tooltip for the next boxplot.
 				//The user can't make a selection in time.
 				const labelMenuTip = new Menu({ padding: '' })
-				new BoxPlotLabelMenu(plot as unknown as RenderedPlot, this.app, this.interactions, labelMenuTip)
+				new BoxPlotLabelMenu(
+					plot as unknown as RenderedPlot,
+					this.app,
+					this.interactions,
+					labelMenuTip,
+					settings.isVertical
+				)
 			}
 		}
 		dom.boxplots.selectAll('g[id^="sjpp-boxplot-"] > rect').style('fill', data.plotDim.backgroundColor)

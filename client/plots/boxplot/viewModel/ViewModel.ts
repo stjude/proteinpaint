@@ -15,8 +15,15 @@ export type ViewData = {
 	legend: { label: string; items: LegendItemEntry[] }[]
 }
 
+/** Processed box plot obj with dimensions needs for
+ * rendering in the view. */
 export type FormattedPlotEntry = BoxPlotEntry & {
-	boxplot: BoxPlotData & { label: string; radius?: number }
+	boxplot: BoxPlotData & {
+		label: string
+		/** if outliers are present, set the radius
+		 * instead of using the rather large default */
+		radius?: number
+	}
 	/** offset for the label div */
 	x: number
 	/** incrementing, descending offset for each new plot  */
@@ -113,7 +120,7 @@ export class ViewModel {
 			svg,
 			title: this.setTitleDimensions(config, settings, svg.height),
 			axis: {
-				x: settings.isVertical ? this.horizPad / 2 + this.incrPad : this.totalLabelSize,
+				x: settings.isVertical ? this.horizPad / 2 + this.incrPad + this.topPad : this.totalLabelSize,
 				y: this.topPad + this.incrPad + 20 + (settings.isVertical ? settings.labelPad : 0)
 			},
 			backgroundColor: settings.darkMode ? 'black' : 'white',
@@ -127,7 +134,7 @@ export class ViewModel {
 			data.plots.filter(p => !p.isHidden).length * this.totalRowSize + this.topPad + this.bottomPad + this.incrPad
 		const depth = settings.boxplotWidth + this.totalLabelSize + this.horizPad
 		return {
-			width: settings.isVertical ? plotsSpace : depth,
+			width: settings.isVertical ? plotsSpace + this.horizPad / 2 : depth,
 			height: settings.isVertical ? depth : plotsSpace
 		}
 	}
@@ -136,7 +143,7 @@ export class ViewModel {
 		const depth = this.totalLabelSize + settings.boxplotWidth / 2
 		return {
 			x: settings.isVertical ? this.horizPad / 2 : depth,
-			y: settings.isVertical ? height - depth - 5 : this.topPad + this.incrPad / 2,
+			y: settings.isVertical ? height - depth - 10 : this.topPad + this.incrPad / 2,
 			text: config.term.q.mode == 'continuous' ? config.term.term.name : config.term2.term.name
 		}
 	}
