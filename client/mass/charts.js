@@ -51,9 +51,8 @@ class MassCharts {
 			chartType: 'regression',
 			clickTo: this.loadChartSpecificMenu
 		}
-		/* following detects if the ds has just one method, if so will customize obj{} so that the button directly show the available method name, and click on it to directly launch the ui without showing a menu
-		alternatively, this logic could be implemented inside makeChartBtnMenu() of the chart itself and eliminate chart-specific logic in here (ideal)
-		but there lacks a way for makeChartBtnMenu to customize the button label
+		/* following detects if the ds has just one method, if so will customize obj{} so that the button directly show the available method name, and click on it to directly launch the ui without showing a menu, and will not trigger makeChartBtnMenu()
+		TODO move this logic to regression makeChartBtnMenu() to keep chart-specific logic out of here, but there lacks a way for makeChartBtnMenu to customize obj.label
 		*/
 		const lst = getCurrentCohortChartTypes(state)
 		if (!lst.includes('regression')) return obj // regression is hidden. still return obj to maintain proper charts array and the button will be hidden later
@@ -64,20 +63,20 @@ class MassCharts {
 		if (availableMethods.length > 1) return obj // more than 1 regression methods. do not modify original obj
 		if (availableMethods.length == 1) {
 			// has only one method. customized button label and click behavior
-			const m = availableMethods[0]
-			obj.label = (m == 'linear' ? 'Linear' : m == 'cox' ? 'Cox' : 'Logistic') + ' Regression'
+			obj.label =
+				(availableMethods[0] == 'linear' ? 'Linear' : availableMethods[0] == 'cox' ? 'Cox' : 'Logistic') + ' Regression'
 			obj.clickTo = () => {
 				this.dom.tip.hide()
 				this.prepPlot({
 					config: {
 						chartType: 'regression',
-						regressionType: m,
+						regressionType: availableMethods[0],
 						independent: []
 					}
 				})
 			}
 		}
-		// no method (exception?)
+		// no method (exception?) this is handled by regression makeChartBtnMenu
 		return obj
 	}
 }

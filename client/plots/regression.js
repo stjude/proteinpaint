@@ -210,18 +210,15 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	/*
 	holder: the holder in the tooltip
 	chartsInstance: MassCharts instance
-		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
-		mass option is accessible at chartsInstance.app.opts{}
 	*/
-
-	const lst = [
+	const allMethods = [
 		{ label: 'Linear', type: 'linear' },
 		{ label: 'Logistic', type: 'logistic' },
 		{ label: 'Cox', type: 'cox' }
 	]
-
-	for (const { label, type } of lst) {
-		if (!chartsInstance.state.currentCohortChartTypes.includes(type)) continue
+	const useMethods = allMethods.filter(i => chartsInstance.state.currentCohortChartTypes.includes(i.type))
+	if (useMethods.length == 0) return holder.append('div').text('Error: no methods available')
+	for (const { label, type } of useMethods) {
 		holder
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
