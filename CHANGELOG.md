@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Add tests for decimalPlacesUntilFirstNonZero
 - Color picker for individual box plots and filter added. Click on the box plot label to see the new menu options.
+- numericDictTermCluster: allows adding pre-built numericDictTermCluster plots
 
 Fixes:
 - improve mass nav header rendering to obey ds customization on tabs
