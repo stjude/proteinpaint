@@ -332,9 +332,9 @@ async function get_matrix(q, req, res, ds, genome) {
 async function get_numericDictTermCluster(q, req, res, ds, genome) {
 	if (q.getPlotDataByName) {
 		// send back the config for premade numericDictTermCluster plot
-		if (!ds.cohort?.numericDictTermClusterPlots?.plots)
-			throw 'ds.cohort.get_numericDictTermClusterPlots.plots missing for the dataset'
-		const plot = ds.cohort.numericDictTermClusterPlots.plots.find(p => p.name === q.getPlotDataByName)
+		if (!ds.cohort?.termdb?.numericDictTermCluster?.plots)
+			throw 'ds.cohort.termdb.numericDictTermCluster.plots missing for the dataset'
+		const plot = ds.cohort.termdb.numericDictTermCluster.plots.find(p => p.name === q.getPlotDataByName)
 		if (!plot) throw 'invalid name of premade numericDictTermCluster plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
 		res.send(plot.numericDictTermClusterConfig)
 		return

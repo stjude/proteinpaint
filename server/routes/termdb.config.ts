@@ -120,7 +120,6 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
-	addNumericDictTermClusterPlots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
 
 	res.send({ termdbConfig: c })
@@ -154,14 +153,6 @@ function addMatrixplots(c, ds) {
 	if (!ds.cohort.matrixplots) return
 	// this dataset has premade matrixplots. reveal matrix plot names to client
 	c.matrixplots = ds.cohort.matrixplots.plots.map(p => {
-		return { name: p.name }
-	})
-}
-
-function addNumericDictTermClusterPlots(c, ds) {
-	if (!ds.cohort.numericDictTermClusterPlots) return
-	// this dataset has premade numericDictTermClusterPlots. reveal numericDictTermCluster plot names to client
-	c.numericDictTermClusterPlots = ds.cohort.numericDictTermClusterPlots.plots.map(p => {
 		return { name: p.name }
 	})
 }
