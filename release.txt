@@ -1,1 +1,2 @@
-
+Fixes:
+- Change menu options to buttons for pre-built scatter/matrix/numericDictTerm plots
