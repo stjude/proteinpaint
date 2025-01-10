@@ -24,6 +24,7 @@ window.runproteinpaint = async arg => {
 		// assume that this script is loaded from a full image service,
 		// where the expected server base path is the parent path of /bin
 		if (!arg.host) arg.host = hostpath.replace('/bin', '')
+		arg.hotModuleReplace = true
 		return await runproteinpaint(arg)
 	}
 	window.runproteinpaint = runproteinpaint
