@@ -1012,6 +1012,8 @@ type NumericDictTermCluster = {
 	settings?: NumericDictTermClusterSettings
 	/** list of numeric term ids that will be excluded from the numeric dictionary term cluster, add to usecase.detail to exclude terms*/
 	exclude?: string[]
+	/** list of pre-built numericDictTermcluster plots */
+	plots?: NumericDictTermClusterPlotsEntry[]
 }
 
 type Survival = {
@@ -1039,10 +1041,6 @@ type NumericDictTermClusterPlotsEntry = {
 
 type MatrixPlots = {
 	plots: MatrixPlotsEntry[]
-}
-
-type NumericDictTermClusterPlots = {
-	plots: NumericDictTermClusterPlotsEntry[]
 }
 
 type AllowCaseDetails = {
@@ -1284,7 +1282,6 @@ export type Cohort = {
 	defaultChartType?: string
 	massNav?: MassNav
 	matrixplots?: MatrixPlots
-	numericDictTermClusterPlots?: NumericDictTermClusterPlots
 	mutationset?: MutationSet[]
 	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }
 	scatterplots?: Scatterplots

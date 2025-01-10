@@ -9,8 +9,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	*/
 	chartsInstance.dom.tip.clear()
 	const menuDiv = holder.append('div')
-	if (chartsInstance.state.termdbConfig.numericDictTermClusterPlots) {
-		for (const plot of chartsInstance.state.termdbConfig.numericDictTermClusterPlots) {
+	if (chartsInstance.state.termdbConfig.numericDictTermCluster?.plots) {
+		for (const plot of chartsInstance.state.termdbConfig.numericDictTermCluster.plots) {
 			/* plot: 
 			{
 				name=str

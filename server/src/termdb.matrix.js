@@ -649,11 +649,11 @@ works with "canned" NumericDictionaryTerm plot in a dataset, e.g. data from a te
 called in mds3.init
 */
 export async function mayInitiateNumericDictionaryTermplots(ds) {
-	if (!ds.cohort.numericDictTermClusterPlots) return
-	if (!Array.isArray(ds.cohort.numericDictTermClusterPlots.plots))
-		throw 'cohort.numericDictTermClusterPlots.plots is not array'
-	for (const p of ds.cohort.numericDictTermClusterPlots.plots) {
-		if (!p.name) throw '.name missing from one of numericDictTermClusterPlots.plots[]'
+	if (!ds.cohort.termdb?.numericDictTermCluster?.plots) return
+	if (!Array.isArray(ds.cohort.termdb.numericDictTermCluster.plots))
+		throw 'cohort.termdb.numericDictTermCluster.plots is not array'
+	for (const p of ds.cohort.termdb.numericDictTermCluster.plots) {
+		if (!p.name) throw '.name missing from one of numericDictTermCluster.plots[]'
 		if (p.file) {
 			const numericDictTermClusterConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
 			p.numericDictTermClusterConfig = JSON.parse(numericDictTermClusterConfig)
