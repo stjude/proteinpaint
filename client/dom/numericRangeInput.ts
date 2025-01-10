@@ -1,14 +1,7 @@
 import { Elem, Input } from '../types/d3'
+import { FullyBoundedBin } from '#types'
 
-type TvsRange = {
-	start: number
-	stop: number
-	value: number
-	startinclusive: boolean
-	stopinclusive: boolean
-	startunbounded?: boolean
-	stopunbounded?: boolean
-}
+type TvsRange = FullyBoundedBin & { value?: number }
 
 export class NumericRangeInput {
 	callback: (f: any) => void
@@ -33,7 +26,6 @@ export class NumericRangeInput {
 			})
 		this.range = this.setRange(range)
 		this.callback = callback
-
 	}
 
 	getInput() {
@@ -69,7 +61,7 @@ export class NumericRangeInput {
 		else this.range = range
 
 		//So ts doesn't complain
-		if (!range) return 
+		if (!range) return
 		const start = range.start != undefined ? `${range.start} <=` : ''
 		const stop = range.stop != undefined ? `<= ${range.stop}` : ''
 		this.input.node()!.value = range.value != undefined ? ` x=${range.value} ` : `${start} x ${stop}`
