@@ -8,6 +8,8 @@ Features:
 - Add tests for decimalPlacesUntilFirstNonZero
 - Color picker for individual box plots and filter added. Click on the box plot label to see the new menu options.
 - numericDictTermCluster: allows adding pre-built numericDictTermCluster plots
+- New control to order box plots from smallest to highest median value
+- Toggle between vertical and horizontal orientation of the box plot
 
 Fixes:
 - improve mass nav header rendering to obey ds customization on tabs

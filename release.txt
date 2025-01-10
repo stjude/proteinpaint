@@ -1,3 +1,1 @@
-Features:
-- New control to order box plots from smallest to highest median value
-- Toggle between vertical and horizontal orientation of the box plot
+
