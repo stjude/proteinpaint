@@ -1,1 +1,2 @@
-
+Fixes:
+- Do not show hidden values in the barchart `List sample` label menu option results.
