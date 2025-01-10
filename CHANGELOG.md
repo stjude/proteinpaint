@@ -10,6 +10,7 @@ Features:
 - numericDictTermCluster: allows adding pre-built numericDictTermCluster plots
 - New control to order box plots from smallest to highest median value
 - Toggle between vertical and horizontal orientation of the box plot
+- Added comprehensive test suite for parseRange() of numericRangeInput.ts
 
 Fixes:
 - improve mass nav header rendering to obey ds customization on tabs
