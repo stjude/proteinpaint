@@ -581,20 +581,29 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	dictionary: () => true,
 	summary: () => true,
 	matrix: () => true,
+
+	/*
+	parent type: regression
+	child types: linear/logistic/cox
+	- if parent is disabled, all child types are not accessible
+	- when parent is accessible, availability of each child type is individually calculated based on data types and allows for ds override for customization
+	*/
 	regression: () => true,
-	// linear/logistic/cox can be considered "child types" for regression, their availability can be separately determined to be more user friendly
-	linear: ({ cohortTermTypes }) => {
-		return cohortTermTypes.numeric > 0 // numeric term present and could be used as linear outcome
-	},
-	logistic: () => true, // consider both numeric & categorical can be logistic outcome
+	linear: ({ cohortTermTypes }) => cohortTermTypes.numeric > 0, // numeric term present and could be used as linear outcome
+	logistic: () => true, // always enabled by default because: numeric/categorical/condition terms could all be used as outcome. later we will support custom samplelst term of two groups as outcome. a ds can provide an override to hide it if needed
 	cox: ({ cohortTermTypes }) => {
 		// requires either survival or condition term as cox outcome
 		return (cohortTermTypes.survival || 0) + (cohortTermTypes.condition || 0) > 0
 	},
+
 	facet: () => true,
 	survival: ({ cohortTermTypes }) => cohortTermTypes.survival > 0,
 	cuminc: ({ cohortTermTypes }) => cohortTermTypes.condition > 0,
 
+	/*
+	parent type: sampleScatter
+	child type: dynamicScatter
+	*/
 	sampleScatter: ({ ds, cohortTermTypes }) => {
 		// corresponds to the "Scatter Plot" chart button. it covers both premade scatter plots, as well as dynamic scatter input ui on clicking the "Scatter Plot" chart button
 		if (ds.cohort.scatterplots) return true
@@ -611,6 +620,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		if (cohortTermTypes.numeric > 1) return true // numeric is always prefilled for convenience, does not have to check if property exists
 		return false
 	},
+
 	genomeBrowser: ({ ds }) => {
 		// will need to add more logic
 		if (ds.queries?.snvindel || ds.queries?.trackLst) return true
