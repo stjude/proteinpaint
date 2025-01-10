@@ -138,7 +138,7 @@ class Scatter {
 			else this.createChart(key, data, 0)
 		}
 		this.initRanges()
-		this.is3D = this.config.term && this.config.term0?.q.mode == 'continuous'
+		this.is3D = this.config.term0?.q.mode == 'continuous'
 		if (!this.config.colorColumn) await this.setControls()
 		await this.processData()
 		this.render()
@@ -377,7 +377,7 @@ class Scatter {
 				title: 'Categories to divide by',
 				label: !isPremade && this.config.term0?.q?.mode == 'continuous' ? 'Z' : 'Divide by',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: !isPremade && this.app.hasWebGL?.() ? ['discrete', 'continuous'] : ['discrete'],
+				numericEditMenuVersion: ['discrete', 'continuous'],
 				processInput: tw => {
 					if (!isPremade && isNumericTerm(tw?.term) && !tw.q.mode) tw.q = { mode: 'continuous' }
 				}

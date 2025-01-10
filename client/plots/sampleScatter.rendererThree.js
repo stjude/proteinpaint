@@ -19,6 +19,7 @@ export function setRenderersThree(self) {
 		chart.chartDiv.style('margin', '20px 20px')
 		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		let step = Math.min((20 * 40) / chart.colorLegend.size, 20)
+		console.log(step)
 		if (step < 12) step = 12
 		const height = (chart.colorLegend.size + 6) * step
 		chart.legendG = chart.legendDiv
@@ -133,7 +134,7 @@ export function setRenderersThree(self) {
 			.attr('height', self.settings.svgh)
 			.append('g')
 			.attr('transform', 'translate(20, 20)')
-		self.renderLegend(chart)
+		//self.renderLegend(chart)
 		const fov = self.settings.fov
 		const near = 0.1
 		const far = 1000
@@ -144,7 +145,7 @@ export function setRenderersThree(self) {
 		scene.background = whiteColor
 		const tex = getThreeCircle(256)
 		const material = new THREE.PointsMaterial({
-			size: self.settings.threeSize * 4,
+			size: self.settings.threeSize * 8,
 			sizeAttenuation: true,
 			transparent: true,
 			opacity: self.settings.opacity,
@@ -160,10 +161,9 @@ export function setRenderersThree(self) {
 			const controls = new OrbitControls.OrbitControls(camera, self.canvas)
 			controls.enableZoom = false
 			controls.update()
-
+			const axesHelper = new THREE.AxesHelper(1)
+			scene.add(axesHelper)
 			if (self.settings.showAxes) {
-				const axesHelper = new THREE.AxesHelper(1)
-				scene.add(axesHelper)
 				self.addLabels(scene, chart)
 			}
 
@@ -193,8 +193,9 @@ export function setRenderersThree(self) {
 		const yAxisScale = d3Linear().domain([chart.yMax, chart.yMin]).range([0, this.settings.svgh])
 		const zCoords = chart.data.samples.map(s => zAxisScale(s.z))
 		const colorGenerator = zAxisScale.copy().range(['#aaa', self.settings.defaultColor])
-		console.log(zCoords)
-		const colors = zCoords.map(z => colorGenerator(z))
+		const colors = self.config.colorTW
+			? chart.data.samples.map(s => self.getColor(s, chart))
+			: zCoords.map(z => colorGenerator(z))
 		const colors3D = []
 		for (const color of colors) {
 			const color3D = new THREE.Color(color)
@@ -239,7 +240,7 @@ export function setRenderersThree(self) {
 
 	self.addLabels = async function (scene) {
 		const intensity = 0.7
-		let textGeo = getTextGeo(self.config.term.term.name)
+		let textGeo = getTextGeo(self.config.term?.term?.name || 'X')
 		let textMesh = new THREE.Mesh(
 			textGeo,
 			new THREE.MeshBasicMaterial({ color: new THREE.Color(intensity, intensity / 4, intensity / 4) })
@@ -247,8 +248,8 @@ export function setRenderersThree(self) {
 		textMesh.position.x = 0.01
 		textMesh.position.y = -0.03
 		scene.add(textMesh)
-
-		textGeo = getTextGeo(self.config.term2.term.name)
+		const ytext = self.config.term2?.term?.name || 'Y'
+		textGeo = getTextGeo(ytext)
 		textGeo.rotateZ(Math.PI / 2)
 		textMesh = new THREE.Mesh(
 			textGeo,
@@ -257,8 +258,8 @@ export function setRenderersThree(self) {
 		textMesh.position.x = -0.03
 		textMesh.position.y = 0.01
 		scene.add(textMesh)
-
-		textGeo = getTextGeo(self.config.term0.term.name)
+		const ztext = self.config.term0?.term?.name
+		textGeo = getTextGeo(ztext)
 		textGeo.rotateY(Math.PI / 2)
 		textMesh = new THREE.Mesh(
 			textGeo,
