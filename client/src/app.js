@@ -358,7 +358,9 @@ async function sseRefreshCallback(arg, subapp) {
 
 		if (arg.origSubApp && subapp1 && !Object.isFrozen(arg.origSubApp)) {
 			arg.origSubApp.update = arg => subapp1.update(arg)
-		} else subapp.update = arg => subapp1.update(arg)
+		} else if (!Object.isFrozen(arg.subApp)) {
+			subapp.update = arg => subapp1.update(arg)
+		}
 	}
 }
 

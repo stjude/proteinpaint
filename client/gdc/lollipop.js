@@ -43,8 +43,12 @@ export async function init(arg, holder, genomes) {
 	const genome = genomes[gdcGenome]
 	if (!genome) throw gdcGenome + ' missing'
 
+	// assume that there will only be one main div within a given holder
+	holder.selectAll('.sja_lollipop_holder').remove()
+	const mainDiv = holder.append('div').attr('class', 'sja_lollipop_holder')
+
 	// first row, gene search
-	const geneInputDiv = holder.append('div').style('margin-left', '20px')
+	const geneInputDiv = mainDiv.append('div').style('margin-left', '20px')
 	geneInputDiv
 		.append('div')
 		.text(
@@ -52,7 +56,7 @@ export async function init(arg, holder, genomes) {
 		)
 
 	// second row, display graph
-	const graphDiv = holder.append('div').attr('class', 'sja_geneSearch4GDCmds3_blockdiv')
+	const graphDiv = mainDiv.append('div').attr('class', 'sja_geneSearch4GDCmds3_blockdiv')
 
 	const searchOpt = {
 		genome,
@@ -66,32 +70,41 @@ export async function init(arg, holder, genomes) {
 
 	// must declare this variable first then call postRender(), other wise it can crash for accessing variable before initialization...
 	let selectedIsoform
-
 	if (typeof arg.geneSearch4GDCmds3.postRender == 'function') {
 		// supports testing
 		await arg.geneSearch4GDCmds3.postRender({ tip })
 	}
 
-	async function launchView(triggeredByInput = true) {
-		if (!coordInput.geneSymbol) {
-			if (triggeredByInput) throw 'geneSymbol missing'
-			// updates of arg.filter0 should still render
-			// return
+	if (arg.state) {
+		if (arg.state.isoform) launchView(false, arg.state.isoform)
+		delete arg.state
+	}
+
+	async function launchView(triggeredByInput = true, isoform) {
+		let gmmode = 'exon only'
+		if (isoform) {
+			selectedIsoform = isoform
+		} else {
+			if (!coordInput.geneSymbol) {
+				if (triggeredByInput) throw 'geneSymbol missing'
+				// updates of arg.filter0 should still render
+				// return
+			}
+
+			// a bit inefficient but must retrieve all gene models to find out if any is coding or all are noncoding
+			const gmlst = (await dofetch3(`genelookup?deep=1&input=${coordInput.geneSymbol}&genome=${gdcGenome}`)).gmlst
+			if (!Array.isArray(gmlst) || gmlst.length == 0) throw 'gmlst is not non-empty array'
+			selectedIsoform = isoform || getSelectedIsoform(coordInput, gmlst)
+			if (gmlst.some(i => i.coding)) gmmode = 'protein'
 		}
 
 		graphDiv.selectAll('*').remove()
-
-		// a bit inefficient but must retrieve all gene models to find out if any is coding or all are noncoding
-		const gmlst = (await dofetch3(`genelookup?deep=1&input=${coordInput.geneSymbol}&genome=${gdcGenome}`)).gmlst
-		if (!Array.isArray(gmlst) || gmlst.length == 0) throw 'gmlst is not non-empty array'
-
-		selectedIsoform = getSelectedIsoform(coordInput, gmlst)
 
 		const pa = {
 			query: selectedIsoform,
 			genome,
 			holder: graphDiv,
-			gmmode: gmlst.some(i => i.coding) ? 'protein' : 'exon only',
+			gmmode,
 			hide_dsHandles: arg.hide_dsHandles,
 			tklst: arg.tracks
 				? arg.tracks
@@ -109,9 +122,9 @@ export async function init(arg, holder, genomes) {
 	const api = {
 		update: _arg => {
 			Object.assign(arg, _arg)
-			arg.isoform = selectedIsoform
 			launchView(false)
-		}
+		},
+		getState: () => ({ isoform: selectedIsoform })
 	}
 	return api
 }

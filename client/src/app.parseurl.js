@@ -120,11 +120,11 @@ upon error, throw err message as a string
 		const state = typeof value === 'string' ? JSON.parse(value) : value
 		const opts = {
 			holder: arg.holder,
-			state
+			state: copyMerge(state, arg.state || {})
 		}
 		const _ = await import('../termdb/app')
-		_.appInit(opts)
-		return
+		const subapp = _.appInit(opts)
+		return subapp
 	}
 
 	if (urlp.has('massnative')) {
@@ -153,7 +153,6 @@ upon error, throw err message as a string
 		if (!opts.genome) throw 'invalid genome'
 		const _ = await import('../mass/app')
 		const subapp = await _.appInit(opts)
-		console.log(subapp)
 		return subapp
 	}
 
