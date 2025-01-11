@@ -119,7 +119,7 @@ control <- rep("Control", length(controls))
 conditions <- c(diseased, control)
 tabs <- rep("\t",length(geneIDs))
 gene_id_symbols <- paste0(geneIDs,tabs,geneSymbols)
-y <- DGEList(counts = as.matrix(read_counts), group = conditions, genes = gene_id_symbols)
+y <- DGEList(counts = read_counts, group = conditions, genes = gene_id_symbols)
 keep <- filterByExpr(y, min.count = input$min_count, min.total.count = input$min_total_count)
 y <- y[keep, keep.lib.sizes = FALSE]
 y <- calcNormFactors(y, method = "TMM")
@@ -139,8 +139,9 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
       calculate_exact_test_time_stop <- Sys.time()
       print (paste0("Exact Time:",calculate_exact_test_time_stop - calculate_exact_test_time_start))
 } else { # Adjusting for confounding factors. This has been adapted based on the protocol described here: http://larionov.co.uk/deg_ebi_tutorial_2020/edger-analysis-1.html#calculate-degs
-    y$samples$conditions <- conditions
-    y$samples$conf1 <- input$conf1
+    #y$samples$conditions <- conditions
+    #y$samples$conf1 <- input$conf1
+    y$samples <- data.frame(conditions = conditions, conf1 = input$conf1)
     print ("y$samples")
     print (y$samples)
     calculate_model_start <- Sys.time()
