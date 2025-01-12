@@ -109,7 +109,7 @@ export function runproteinpaint(arg) {
 	}
 	// parse embedding arguments
 
-	app.holder = d3select(arg.holder ? arg.holder : document.body)
+	app.holder = d3select(arg.holder || document.body)
 		.append('div')
 		.attr('class', 'sja_root_holder')
 		//must not use the method of ".datum({ clientVersion })", as d3 propagates bound data custom property to all descendents and are accidentally passed to event listeners
@@ -314,6 +314,7 @@ export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale }) {
 		})
 		// initially track the app as an unresolved promise
 		boundApps.set(rootElem, newAppInstance)
+		return newAppInstance
 	}
 }
 
@@ -335,7 +336,7 @@ async function sseRefreshCallback(arg, subapp) {
 		if (subapp && app != subapp) return
 
 		// unbind the stale app instance from the holder DOM element
-		arg.holder._ppAppState = app.getState?.() // may reuse state in refresh
+		arg.holder._ppAppState = structuredClone(app.getState?.()) // may reuse state in refresh
 		boundApps.delete(arg.holder)
 		// expect an embedder portal's dev bundler to trigger hot-module-replacement,
 		// no need to refresh with a call to runproteinpaint()
@@ -348,7 +349,7 @@ async function sseRefreshCallback(arg, subapp) {
 				? window.location.protocol + '//' + arg.host.split('://')[1]?.split('/')[0]
 				: window.location.origin
 
-		if (subapp.getState) arg.state = subapp.getState()
+		if (subapp.getState) arg.state = structuredClone(subapp.getState())
 		const subapp1 = await import(
 			// embedder portal bundler should ignore this PP-only hot-module-replacement
 			/*webpackIgnore: true*/ `${arg.pphost}/bin/dist/app.js?_=${Date.now()}`

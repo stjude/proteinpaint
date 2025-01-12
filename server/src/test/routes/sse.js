@@ -17,7 +17,12 @@ export default function setRoutes(app, basepath) {
 	if (!process.argv.includes('validate')) fs.watch(msgDir, {}, notifyOnFileChange)
 
 	app.get(basepath + '/sse', async (req, res) => {
+		if (!serverconfig.features.multiSse) {
+			for (const r of connections) r.end()
+			connections.clear()
+		}
 		connections.add(res)
+		console.log(24, 'num sse connections', connections.size)
 		try {
 			res.writeHead(200, {
 				Connection: 'keep-alive',
@@ -29,7 +34,8 @@ export default function setRoutes(app, basepath) {
 			res.flushHeaders()
 
 			res.on('close', () => {
-				//console.log('Client closed.')
+				// console.log('Client closed.')
+				res.end()
 				connections.delete(res)
 			})
 
