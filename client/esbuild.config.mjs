@@ -64,10 +64,10 @@ function logRebuild() {
 					// console.log('emitting spec imports')
 					try {
 						// using execSync or spawnSync(`node ...`) slows down rebuilds after reloading a browser page,
-						// unclear how that could affect this esbuild plugin step
+						// due to sse using stream and possibly affecting available total buffer for esbuild
 						// child_process.execSync(`node`, [`emitImports} *.spec.* > ${internalsFilename}`])
 
-						// for now, import the code and use it directly in this runtime,
+						// more reliable: import the code and use it directly in this runtime,
 						// which does not have the rebuild slowdown issue above with exec/spawn
 						const codeText = getCodeText()
 						fs.writeFileSync(internalsFilename, codeText)
