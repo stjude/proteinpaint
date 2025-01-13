@@ -6,7 +6,7 @@
  * Use this type for that purpose.
  */
 
-export type GetDataResponse = {
+export type ValidGetDataResponse = {
 	samples: Record<
 		string,
 		{
@@ -35,7 +35,14 @@ export type GetDataResponse = {
 		byTermId: Record<string, { bins: any }>
 		/** metadata about samples (e.g. print names). avoid duplicating such in sample data elements (e.g. mutations)
 		[sample integer id]: {label: [string sample name for display], ...} */
-		bySampleId: Record<string, { label: string }>
+		bySampleId: any
+		//{
+		// 	[key: string]: {
+		// 		label: string
+		// 	}
+		// }
 	}
 	sampleType?: any
 }
+
+export type GetDataResponse = ValidGetDataResponse | { error: string }
