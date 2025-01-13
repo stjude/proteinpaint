@@ -19,7 +19,7 @@ output:
             numbers....
         ],
         [can be empty],
-    bins:[                 //take this bins object and send to client. See implementation at termdb.violin.js and mds3.densityPlot.js
+    bins:[                 //take this bins object and send to client. See implementation at termdb.violin.ts and mds3.densityPlot.js
         {
             { x0: density: 0.2 },
             { x0, density: 0.3 },

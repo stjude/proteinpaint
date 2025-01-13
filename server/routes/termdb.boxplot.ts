@@ -2,7 +2,7 @@ import type { BoxPlotRequest, BoxPlotResponse, BoxPlotData, RouteApi } from '#ty
 import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
-import { sortKey2values } from '../src/termdb.violin.js'
+import { sortKey2values } from './termdb.violin.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 export const api: RouteApi = {
