@@ -1,4 +1,4 @@
-import type { ViolinRequest, ViolinResponse, RouteApi } from '#types'
+import type { ViolinRequest, ViolinResponse, RouteApi, GetDataResponse } from '#types'
 import { violinPayload } from '#types/checkers'
 import { scaleLinear, scaleLog } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -32,7 +32,7 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid ds'
-			data = await trigger_getViolinPlotData(q, null, ds, g)
+			data = await trigger_getViolinPlotData(q, ds, g)
 		} catch (e: any) {
 			data = { error: e?.message || e }
 			if (e instanceof Error && e.stack) console.log(e)
@@ -41,7 +41,7 @@ function init({ genomes }) {
 	}
 }
 
-export async function trigger_getViolinPlotData(q, res, ds, genome) {
+export async function trigger_getViolinPlotData(q: ViolinRequest, ds, genome) {
 	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw 'q.tw not of {term,q}'
 	const term = q.tw.term
 	if (!q.tw.q.mode) q.tw.q.mode = 'continuous'
@@ -70,14 +70,14 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (q.scale) scaleData(q, data, q.tw)
 
 	const valuesObject = divideValues(q, data, q.tw, sampleType)
-	const result = resultObj(valuesObject, data, q, sampleType)
+	const result = setResponse(valuesObject, data, q, sampleType)
 
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result)
 
 	createCanvasImg(q, result, ds)
-	if (res) res.send(result)
-	else return result
+
+	return result
 }
 
 // compute pvalues using wilcoxon rank sum test
@@ -86,7 +86,7 @@ export async function wilcoxon(divideTw, result) {
 	const numPlots = result.plots.length
 	if (numPlots < 2) return
 
-	const wilcoxInput = []
+	const wilcoxInput: { [index: string]: any }[] = []
 
 	for (let i = 0; i < numPlots; i++) {
 		const group1_id = result.plots[i].label
@@ -124,18 +124,18 @@ function numericBins(overlayTerm, data) {
 
 // scale sample data
 // divide keys and values by scaling factor - this is important for regression UI when running association tests.
-function scaleData(q, data, tw) {
+function scaleData(q, data: GetDataResponse, tw) {
 	if (!q.scale) return
 	const scale = Number(q.scale)
-	for (const [k, v] of Object.entries(data.samples)) {
-		if (!v[tw.$id]) continue
-		if (tw.term.values?.[v[tw.$id]?.value]?.uncomputable) continue
-		v[tw.$id].key = v[tw.$id].key / scale
-		v[tw.$id].value = v[tw.$id].value / scale
+	for (const val of Object.values(data.samples)) {
+		if (!val[tw.$id]) continue
+		if (tw.term.values?.[val[tw.$id]?.value]?.uncomputable) continue
+		val[tw.$id].key = val[tw.$id].key / scale
+		val[tw.$id].value = val[tw.$id].value / scale
 	}
 }
 
-function divideValues(q, data, tw, sampleType) {
+function divideValues(q, data: GetDataResponse, tw, sampleType) {
 	const overlayTerm = q.divideTw
 	const useLog = q.unit == 'log'
 
@@ -146,7 +146,7 @@ function divideValues(q, data, tw, sampleType) {
 	//create object to store uncomputable values and label
 	const uncomputableValueObj = {}
 	let skipNonPositiveCount = 0 // if useLog=true, record number of <=0 values skipped
-	for (const [c, v] of Object.entries(data.samples)) {
+	for (const v of Object.values(data.samples)) {
 		//if there is no value for term then skip that.
 		const value = v[tw.$id]
 		if (!Number.isFinite(value?.value)) continue
@@ -166,7 +166,7 @@ function divideValues(q, data, tw, sampleType) {
 		if (min > value.value) min = value.value
 		if (max < value.value) max = value.value
 
-		if (useLog === 'log') {
+		if (useLog) {
 			if (min === 0) min = Math.max(min, value.value)
 		}
 		if (overlayTerm) {
@@ -187,7 +187,8 @@ function divideValues(q, data, tw, sampleType) {
 	}
 	return {
 		key2values,
-		minMaxValues: { min, max },
+		min,
+		max,
 		uncomputableValueObj: sortObj(uncomputableValueObj),
 		skipNonPositiveCount
 	}
@@ -218,20 +219,23 @@ export function sortKey2values(data, key2values, overlayTerm) {
 	return key2values
 }
 
-function resultObj(valuesObject, data, q, sampleType) {
+function setResponse(valuesObject, data, q, sampleType) {
 	const overlayTerm = q.divideTw
-	const result = {
-		min: valuesObject.minMaxValues.min,
-		max: valuesObject.minMaxValues.max,
-		plots: [], // each element is data for one plot: {label=str, values=[]}
-		pvalues: [],
-		uncomputableValueObj:
-			Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
-	}
+	//temp plot type
+	const plots: {
+		label: string
+		values: number[]
+		seriesId?: string
+		plotValueCount: number
+		color?: string
+		divideTwBins?: any
+		uncomputableValueObj?: { [index: string]: number } | null
+	}[] = []
+	const pvalues = []
 
 	for (const [key, values] of sortKey2values(data, valuesObject.key2values, overlayTerm)) {
 		if (overlayTerm) {
-			result.plots.push({
+			plots.push({
 				label: overlayTerm?.term?.values?.[key]?.label || key,
 				values,
 				seriesId: key,
@@ -248,9 +252,19 @@ function resultObj(valuesObject, data, q, sampleType) {
 				plotValueCount: values.length
 			}
 
-			result.plots.push(plot)
+			plots.push(plot)
 		}
 	}
+
+	const result = {
+		min: valuesObject.min,
+		max: valuesObject.max,
+		plots,
+		pvalues,
+		uncomputableValueObj:
+			Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
+	}
+
 	return result
 }
 
@@ -285,7 +299,7 @@ function createCanvasImg(q, result, ds) {
 
 	const scaledRadius = q.radius / q.devicePixelRatio
 	const arcEndAngle = scaledRadius * Math.PI
-	// let biggestBin = 0
+	// let biggestBin = 0 //Never updated??
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
 
@@ -302,7 +316,7 @@ function createCanvasImg(q, result, ds) {
 			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 		}
 		if (q.datasymbol === 'rug')
-			plot.values.forEach(i => {
+			plot.values.forEach((i: number) => {
 				ctx.beginPath()
 				if (q.orientation == 'horizontal') {
 					ctx.moveTo(+axisScale(i), 0)
@@ -314,7 +328,7 @@ function createCanvasImg(q, result, ds) {
 				ctx.stroke()
 			})
 		else if (q.datasymbol === 'bean')
-			plot.values.forEach(i => {
+			plot.values.forEach((i: number) => {
 				ctx.beginPath()
 				if (q.orientation === 'horizontal') ctx.arc(+axisScale(i), q.radius, scaledRadius, 0, arcEndAngle)
 				else ctx.arc(q.radius, +axisScale(i), scaledRadius, 0, arcEndAngle)
@@ -332,4 +346,5 @@ function createCanvasImg(q, result, ds) {
 		delete plot.values
 	}
 	// result.biggestBin = biggestBin
+	result.biggestBin = 0 //Never updated??
 }

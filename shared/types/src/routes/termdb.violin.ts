@@ -8,6 +8,8 @@ export type ViolinRequest = {
 	embedder: string
 	/** main tw to fetch numeric data to show in violin */
 	tw: any
+	/** ?? */
+	currentGeneNames: string[]
 	/** optional tw to divide tw data into multiple violins and show under one axis */
 	divideTw?: any
 	/** A number representing the device's pixel ratio, which may be used for rendering quality adjustments */
@@ -33,45 +35,62 @@ export type ViolinRequest = {
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit: string
 	/** ?? */
+	scale: any
+	/** ?? */
 	isKDE: boolean
 }
 
-interface binsEntries {
+interface BinsEntries {
 	x0: number
 	x1: number
 	density: number
 }
-interface valuesEntries {
+interface ValuesEntries {
 	id: string
 	label: string
 	value: number
 }
 
-interface pvalueEntries {
+interface PValueEntries {
 	value?: string
 	html?: string
 }
 
-type plot = {
-	label: string
-	plotValueCount: number
-	src: string
-	bins: binsEntries[]
+type ViolinDensity = {
+	bins: BinsEntries[]
 	densityMax: number
+	densityMin: number
+}
+
+export type ViolinPlotEntry = {
 	biggestBin: number
+	/** Color to render */
+	color: string
+	density: ViolinDensity
+	divideTwBins: any
+	/** Text for label */
+	label: string
+	/** Number of samples/cases/patients/etc. */
+	plotValueCount: number
+	seriesId: string
+	/** Plot image to display */
+	src: string
 	summaryStats: {
-		values: valuesEntries[]
+		values: ValuesEntries[]
 	}
+	uncomputableValueObj: { [index: string]: number } | null
 }
 
 export type ViolinResponse = ValidResponse | ErrorResponse
 
 type ValidResponse = {
+	/** Absolute min value for all plots */
 	min: number
+	/** Absolute max value for all plots */
 	max: number
-	plots: plot[]
-	pvalues?: pvalueEntries[][]
-	uncomputableValueObj: any
+	plots: ViolinPlotEntry[]
+	pvalues?: PValueEntries[][]
+	uncomputableValueObj: { [index: string]: number }[] | null
 }
 
 export const violinPayload: RoutePayload = {
