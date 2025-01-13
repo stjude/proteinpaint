@@ -20,7 +20,6 @@ import urlmap from '#common/urlmap'
 import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 import { sayerror } from '../dom/sayerror'
 import { Menu } from '#dom/menu'
-import { isEqual } from 'lodash'
 
 /*
 exports a global function runproteinpaint()
@@ -221,8 +220,8 @@ export function runproteinpaint(arg) {
 				// subsequent refresh will use a different runproteinpaint runtime
 				import(`./notify`)
 					.catch(e => console.warn(`debugmode: server-sent notifications setup failed`, e))
-					.then(({ setRefresh }) => {
-						setRefresh(() => {
+					.then(({ setRefreshCallback }) => {
+						setRefreshCallback(() => {
 							if (subapp?.destroy) subapp.destroy()
 							d3select(arg.holder ? arg.holder : document.body)
 								.selectAll('*')

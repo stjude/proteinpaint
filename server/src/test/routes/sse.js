@@ -9,6 +9,9 @@ const __dirname = import.meta.dirname
 
 export default function setRoutes(app, basepath) {
 	const messages = {}
+	// will track only one active sse connection per origin
+	// - key: req.header('host')
+	// - value: res (second argument to route handler)
 	const connections = new Map()
 	const msgDir = path.join(serverconfig.sseDir, 'messages')
 
@@ -20,6 +23,7 @@ export default function setRoutes(app, basepath) {
 		const host = req.header('host')
 		if (connections.has(host)) connections.get(host).end()
 		connections.set(host, res)
+		// console.log(25, 'num conn=', connections.size)
 		try {
 			res.writeHead(200, {
 				Connection: 'keep-alive',
@@ -31,7 +35,7 @@ export default function setRoutes(app, basepath) {
 			res.flushHeaders()
 
 			res.on('close', () => {
-				// console.log('Sse client connection closed.')
+				// console.log('--- Sse client connection closed. ---')
 				res.end()
 				connections.delete(res)
 			})
@@ -46,15 +50,26 @@ export default function setRoutes(app, basepath) {
 				// to adjust the time comparison between client request and message file mtime
 				const nowDiff = Math.abs((req.query.now || now) - now)
 				// the 3rd argument type should match the variable connections Set type
-				files.forEach(async f => {
-					if (f.startsWith('.')) return
-					const s = await fs.promises.stat(path.join(msgDir, f))
-					// for initial connection, filter out message files
-					// that has already been sent to the client based on time and nowDiff
-					// console.log(54, Math.abs(time - s.mtimeMs) < 100, Math.abs(time - s.mtimeMs))
-					if (!s.isFile() || Math.abs(time - s.mtimeMs) < 100) return
-					notifyOnFileChange('change', f, new Set([res]))
-				})
+				const fileInfo = await Promise.all(
+					files.map(async f => {
+						if (f.startsWith('.')) return { isRelevant: false }
+						const s = await fs.promises.stat(path.join(msgDir, f))
+						// for initial connection, filter out message files
+						// that has already been sent to the client based on time and nowDiff
+						// console.log(54, Math.abs(time - s.mtimeMs) < 100, Math.abs(time - s.mtimeMs))
+						const isRelevant = s.isFile() && Math.abs(time - s.mtimeMs) > 100
+						return {
+							file: f,
+							stat: isRelevant && s,
+							isRelevant
+						}
+					})
+				)
+
+				fileInfo
+					.filter(d => d.isRelevant)
+					.sort((a, b) => (a.stat.mtimeMs < b.stat.mtimeMs ? -1 : 1))
+					.forEach(d => notifyOnFileChange('change', d.file, new Set([res])))
 			}, 0)
 		} catch (err) {
 			res.send(err)
