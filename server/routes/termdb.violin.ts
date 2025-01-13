@@ -68,9 +68,9 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds, genome) {
 		)
 	}
 
-	if (q.scale) scaleData(q, data, q.tw)
+	if (q.scale) scaleData(q, data as ValidGetDataResponse, q.tw)
 
-	const valuesObject = divideValues(q, data, q.tw, sampleType)
+	const valuesObject = divideValues(q, data as ValidGetDataResponse, q.tw, sampleType)
 	const result = setResponse(valuesObject, data, q, sampleType)
 
 	// wilcoxon test data to return to client
@@ -109,20 +109,6 @@ export async function wilcoxon(divideTw, result) {
 	}
 }
 
-// //create numeric bins for the overlay term to provide filtering options
-// // TODO: handle .keyOrder as an alternative to .bins ???
-// function numericBins(overlayTerm, data) {
-// 	const divideTwBins = new Map()
-// 	/** Fix for broken `list samples` option no longer work for numeric terms */
-// 	const divideBins = data.refs.byTermId[overlayTerm?.$id]?.bins
-// 	if (divideBins) {
-// 		for (const bin of divideBins) {
-// 			divideTwBins.set(bin.label, bin)
-// 		}
-// 	}
-// 	return divideTwBins
-// }
-
 // scale sample data
 // divide keys and values by scaling factor - this is important for regression UI when running association tests.
 function scaleData(q, data: ValidGetDataResponse, tw: any) {
@@ -140,65 +126,20 @@ function divideValues(q, data: ValidGetDataResponse, tw, sampleType) {
 	const overlayTerm = q.divideTw
 	const useLog = q.unit == 'log'
 
-	// const key2values = new Map()
-	// let min = Infinity
-	// let max = -Infinity
-
-	//create object to store uncomputable values and label
-	// const uncomputableValueObj = {}
+	// Never used? Remove entirely?
 	// let skipNonPositiveCount = 0 // if useLog=true, record number of <=0 values skipped
-	// for (const v of Object.values(data.samples)) {
-	// 	//if there is no value for term then skip that.
-	// 	const value = v[tw.$id]
-	// 	if (!Number.isFinite(value?.value)) continue
 
-	// 	if (tw.term.values?.[value.value]?.uncomputable) {
-	// 		//skip these values from rendering in plot but show in legend as uncomputable categories
-	// 		const label = tw.term.values[value.value].label // label of this uncomputable category
-	// 		uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
-	// 		continue
-	// 	}
-
-	// 	if (useLog && value.value <= 0) {
-	// 		skipNonPositiveCount++
-	// 		continue
-	// 	}
-
-	// 	if (min > value.value) min = value.value
-	// 	if (max < value.value) max = value.value
-
-	// 	if (useLog) {
-	// 		//Is this necessary??
-	// 		if (min === 0) min = Math.max(min, value.value)
-	// 	}
-	// 	if (overlayTerm) {
-	// 		if (!v[overlayTerm?.$id]) continue
-	// 		const value2 = v[overlayTerm.$id]
-	// 		// if there is no value for q.divideTw then skip this
-	// 		if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
-	// 			const label = overlayTerm.term.values[value2?.key]?.label // label of this uncomputable category
-	// 			uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
-	// 		}
-
-	// 		if (!key2values.has(value2.key)) key2values.set(value2.key, [])
-	// 		key2values.get(value2.key).push(value.value)
-	// 	} else {
-	// 		if (!key2values.has(sampleType)) key2values.set(sampleType, [])
-	// 		key2values.get(sampleType).push(value.value)
-	// 	}
-	// }
 	const { absMax, absMin, key2values, uncomputableValues } = parseValues(q, data, sampleType, useLog, overlayTerm)
 	return {
 		key2values,
 		min: absMin,
 		max: absMax,
 		uncomputableValueObj: sortObj(uncomputableValues)
-		// skipNonPositiveCount
 	}
 }
 
 function sortObj(object) {
-	return Object.fromEntries(Object.entries(object).sort(([, a], [, b]) => a - b))
+	return Object.fromEntries(Object.entries(object).sort(([, a], [, b]) => (a as any) - (b as any)))
 }
 
 export function sortKey2values(data, key2values, overlayTerm) {
