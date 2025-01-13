@@ -34,31 +34,34 @@ suppressWarnings({
     suppressPackageStartupMessages(library(edgeR))
     suppressPackageStartupMessages(library(dplyr))
 })
-read_json_start <- Sys.time()
-con <- file("stdin", "r")
-json <- readLines(con, warn=FALSE)
-close(con)
-input <- fromJSON(json)
-#print (input)
-#print (input$output_path)
-
-cases <- unlist(strsplit(input$case, ","))
-controls <- unlist(strsplit(input$control, ","))
-combined <- c("geneID","geneSymbol",cases,controls)
-#data %>% select(all_of(combined))
-#read_file_time_start <- Sys.time()
-read_json_stop <- Sys.time()
-print (paste0("Time to read json:", read_json_stop - read_json_start))
+read_json_time <- system.time({
+   con <- file("stdin", "r")
+   json <- readLines(con, warn=FALSE)
+   close(con)
+   input <- fromJSON(json)
+   #print (input)
+   #print (input$output_path)
+   
+   cases <- unlist(strsplit(input$case, ","))
+   controls <- unlist(strsplit(input$control, ","))
+   combined <- c("geneID","geneSymbol",cases,controls)
+   #data %>% select(all_of(combined))
+   #read_file_time_start <- Sys.time()
+})
+print ("Time to read json")
+print (read_json_time)
 
 case_sample_list <- c()
 control_sample_list <- c()
 if (exists(input$storage_type)==FALSE) {
     if (input$storage_type == "HDF5") {
         #print(h5ls(input$input_file))
-        geneIDs <- h5read(input$input_file, "gene_names")
-        geneSymbols <- h5read(input$input_file, "gene_symbols")
-        samples <- h5read(input$input_file, "samples")
+        geneIDs <- h5read(input$input_file, "gene_names") # Get geneID (i.e ENSG's) from HDF5 file
+        geneSymbols <- h5read(input$input_file, "gene_symbols") # Get gene symbols from HDF5 file
+        samples <- h5read(input$input_file, "samples") # Get sample names from HDF5 file
 
+        # Get the column numbers (in the HDF5 file) corresponding to the sample ID for case cohort
+        parse_sample_indices_time <- system.time({
         samples_indicies <- c()
         for (sample in cases) {
             sample_index <- which(samples == sample)
@@ -71,6 +74,7 @@ if (exists(input$storage_type)==FALSE) {
             }
         }
 
+        # Get the column numbers (in the HDF5 file) corresponding to the sample ID for control cohort
         for (sample in controls) {
             sample_index <- which(samples == sample)
             if (length(sample_index) == 1) {
@@ -81,6 +85,10 @@ if (exists(input$storage_type)==FALSE) {
                 quit(status = 1)
             }
         }
+        })
+        print ("Time to parse sample indices")
+        print (parse_sample_indices_time)
+        # Getting read counts corresponding to the sample indices
         read_counts <- t(h5read(input$input_file,"counts",index=list(samples_indicies, 1:length(geneIDs))))
         colnames(read_counts) <- c(cases,controls)
     } else if (input$storage_type == "text") {
@@ -107,10 +115,10 @@ if (exists(input$storage_type)==FALSE) {
     read_counts <- select(read_counts, -geneID)
     read_counts <- select(read_counts, -geneSymbol)
 }
-print ("case_sample_list:")
-print (case_sample_list)
-print ("control_sample_list:")
-print (control_sample_list)
+#print ("case_sample_list:")
+#print (case_sample_list)
+#print ("control_sample_list:")
+#print (control_sample_list)
 #read_file_time_stop <- Sys.time()
 #print (read_file_time_stop - read_file_time_start)
 
@@ -119,72 +127,86 @@ control <- rep("Control", length(controls))
 conditions <- c(diseased, control)
 tabs <- rep("\t",length(geneIDs))
 gene_id_symbols <- paste0(geneIDs,tabs,geneSymbols)
-y <- DGEList(counts = read_counts, group = conditions, genes = gene_id_symbols)
-keep <- filterByExpr(y, min.count = input$min_count, min.total.count = input$min_total_count)
-y <- y[keep, keep.lib.sizes = FALSE]
-y <- calcNormFactors(y, method = "TMM")
+time_generate_dge_list <- system.time({
+    y <- DGEList(counts = read_counts, group = conditions, genes = gene_id_symbols)
+})
+print ("Time to generate dge list")
+print (time_generate_dge_list)
+filter_time <- system.time({
+keep <- filterByExpr(y, min.count = input$min_count, min.total.count = input$min_total_count) # This will be replaced by its Rust version in the future
+})
+print ("Time to filter by expression")
+print (filter_time)
+normalization_time <- system.time({
+y <- y[keep, keep.lib.sizes = FALSE] # This will be replaced by its Rust version in the future
+y <- calcNormFactors(y, method = "TMM") # This will be replaced by its Rust version in the future
+})
+print ("Normalization time")
+print (normalization_time)
 #print (y)
 
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
-      calculate_dispersion_time_start <- Sys.time()
+      calculate_dispersion_time <- system.time({
       suppressWarnings({
         suppressMessages({
             dge <- estimateDisp(y = y)
         })
       })
-      calculate_dispersion_time_stop <- Sys.time()
-      print (paste0("Dispersion Time:",calculate_dispersion_time_stop - calculate_dispersion_time_start))
-      calculate_exact_test_time_start <- Sys.time()
-      et <- exactTest(object = dge)
-      calculate_exact_test_time_stop <- Sys.time()
-      print (paste0("Exact Time:",calculate_exact_test_time_stop - calculate_exact_test_time_start))
+      })
+      print ("Dispersion Time")
+      print (calculate_dispersion_time)
+      exact_test_time <- system.time({
+          et <- exactTest(object = dge)
+      })
+      print ("Exact time")
+      print (exact_test_time)
 } else { # Adjusting for confounding factors. This has been adapted based on the protocol described here: http://larionov.co.uk/deg_ebi_tutorial_2020/edger-analysis-1.html#calculate-degs
-    #y$samples$conditions <- conditions
-    #y$samples$conf1 <- input$conf1
     y$samples <- data.frame(conditions = conditions, conf1 = input$conf1)
-    print ("y$samples")
-    print (y$samples)
-    calculate_model_start <- Sys.time()
-    design <- model.matrix(~ conf1 + conditions, data = y$samples)
-    calculate_model_stop <- Sys.time()
-    print (paste0("Time for making design matrix:", calculate_model_stop - calculate_model_start))
-    calculate_dispersion_time_start <- Sys.time()
-    y <- estimateDisp(y, design)
-    calculate_dispersion_time_stop <- Sys.time()
-    print (paste0("Dispersion Time:",calculate_dispersion_time_stop - calculate_dispersion_time_start))
+    model_gen_time <- system.time({
+        design <- model.matrix(~ conf1 + conditions, data = y$samples)
+    })    
+    print ("Time for making design matrix")
+    print (model_gen_time)
+    dispersion_time <- system.time({
+        y <- estimateDisp(y, design)
+    })    
+    print ("Dispersion Time")
+    print (dispersion_time)
     # Fit the model
-    calculate_fit_time_start <- Sys.time()
-    #fit <- glmQLFit(y, design)
-    fit <- glmFit(y, design)
-    calculate_fit_time_stop <- Sys.time()
-    print (paste0("Fit time:",calculate_fit_time_stop - calculate_fit_time_start))
+    fit_time <- system.time({
+        #fit <- glmQLFit(y, design)
+        fit <- glmFit(y, design)
+    })    
+    print ("Fit time")
+    print (fit_time)
     # Calculate the test statistics
-    calculate_test_statistics_start <- Sys.time()
-    #et <- glmQLFTest(fit, coef = ncol(design))
-    et <- glmLRT(fit, coef = 2)  # coef = 2 corresponds to the 'treatment' vs 'control' comparison
-    calculate_test_statistics_stop <- Sys.time()
-    print (paste0("Test statistics time:",calculate_test_statistics_stop - calculate_test_statistics_start))
+    test_statistics_time <- system.time({
+       #et <- glmQLFTest(fit, coef = ncol(design))
+       et <- glmLRT(fit, coef = 2)  # coef = 2 corresponds to the 'treatment' vs 'control' comparison
+    })    
+    print ("Test statistics time")
+    print (test_statistics_time)
 }
-#print ("Time to calculate DE")
-#print (calculate_DE_time_stop - calculate_DE_time_start)
-#print (et)
-logfc <- et$table$logFC
-logcpm <- et$table$logCPM
-pvalues <- et$table$PValue
-genes_matrix <- str_split_fixed(unlist(et$genes),"\t",2)
-geneids <- unlist(genes_matrix[,1])
-genesymbols <- unlist(genes_matrix[,2])
-adjust_p_values <- p.adjust(pvalues, method = "fdr")
 
-output <- data.frame(geneids,genesymbols,logfc,-log10(pvalues),-log10(adjust_p_values))
-names(output)[1] <- "gene_name"
-names(output)[2] <- "gene_symbol"
-names(output)[3] <- "fold_change"
-names(output)[4] <- "original_p_value"
-names(output)[5] <- "adjusted_p_value"
-#write_csv(output,"DE_output.txt")
+multiple_testing_correction_time <- system.time({
+   logfc <- et$table$logFC
+   logcpm <- et$table$logCPM
+   pvalues <- et$table$PValue
+   genes_matrix <- str_split_fixed(unlist(et$genes),"\t",2)
+   geneids <- unlist(genes_matrix[,1])
+   genesymbols <- unlist(genes_matrix[,2])
+   adjust_p_values <- p.adjust(pvalues, method = "fdr")
+   output <- data.frame(geneids,genesymbols,logfc,-log10(pvalues),-log10(adjust_p_values))
+   names(output)[1] <- "gene_name"
+   names(output)[2] <- "gene_symbol"
+   names(output)[3] <- "fold_change"
+   names(output)[4] <- "original_p_value"
+   names(output)[5] <- "adjusted_p_value"
+   #write_csv(output,"DE_output.txt")
+})
+print ("Time for multiple testing correction")
+print (multiple_testing_correction_time)
 cat(paste0("adjusted_p_values:",toJSON(output)))
-
 #output_json <- toJSON(output)
 #print ("output_json")
 #output_file <- paste0(input$output_path,"/r_output.txt")

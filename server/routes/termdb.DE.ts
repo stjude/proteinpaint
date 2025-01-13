@@ -1,4 +1,4 @@
-import fs from 'fs'
+//import fs from 'fs'
 import path from 'path'
 import type { DERequest, DEResponse, ExpressionInput, RouteApi } from '#types'
 import { diffExpPayload } from '#types/checkers'
@@ -56,8 +56,8 @@ async function run_DE(param: DERequest, ds: any, term_results: any) {
 	/*
 param{}
 samplelst{}
-        groups[]
-                values[] // using integer sample id
+    groups[]
+            values[] // using integer sample id
 */
 	if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
@@ -138,10 +138,10 @@ samplelst{}
 
 	//console.log('expression_input:', expression_input)
 	//console.log("param.method:",param.method)
-	fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
-		// For catching input to rust pipeline, in case of an error
-		if (err) return console.log(err)
-	})
+	//fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 
 	const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 	let result
