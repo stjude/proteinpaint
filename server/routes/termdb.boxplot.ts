@@ -1,4 +1,4 @@
-import type { BoxPlotRequest, BoxPlotResponse, BoxPlotData, RouteApi } from '#types'
+import type { BoxPlotRequest, BoxPlotResponse, BoxPlotData, RouteApi, ValidGetDataResponse } from '#types'
 import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
@@ -41,45 +41,13 @@ function init({ genomes }) {
 			if (data.error) throw data.error
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
-			const key2values = new Map()
 			const overlayTerm = q.overlayTw
-			const uncomputableValues = {}
-			for (const val of Object.values(data.samples as Record<string, { key: number; value: number }>)) {
-				const value = val[q.tw.$id]
-				if (!Number.isFinite(value?.value)) continue
-
-				if (q.tw.term.values?.[value.value]?.uncomputable) {
-					const label = q.tw.term.values[value.value].label
-					uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
-					continue
-				}
-
-				if (overlayTerm) {
-					if (!val[overlayTerm?.$id]) continue
-					const value2 = val[overlayTerm.$id]
-
-					if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
-						const label = overlayTerm.term.values[value2?.key]?.label
-						uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
-					}
-
-					if (!key2values.has(value2.key)) key2values.set(value2.key, [])
-					key2values.get(value2.key).push(value.value)
-				} else {
-					if (!key2values.has(sampleType)) key2values.set(sampleType, [])
-					key2values.get(sampleType).push(value.value)
-				}
-			}
+			const isLog = false // TODO: implement rendering plots in a log scale
+			const { absMin, absMax, key2values, uncomputableValues } = parseValues(q, data, sampleType, isLog, overlayTerm)
 
 			const plots: any = []
-			let absMin: number | null = null,
-				absMax: number | null = null
 			for (const [key, values] of sortKey2values(data, key2values, overlayTerm)) {
 				const sortedValues = values.sort((a, b) => a - b)
-
-				if (absMin === null || sortedValues[0] < absMin) absMin = sortedValues[0]
-				if (absMax === null || sortedValues[sortedValues.length - 1] > absMax)
-					absMax = sortedValues[sortedValues.length - 1]
 
 				const vs = sortedValues.map((v: number) => {
 					const value = { value: v }
@@ -141,7 +109,7 @@ function init({ genomes }) {
 	}
 }
 
-function setHiddenPlots(term, plots) {
+function setHiddenPlots(term: any, plots: any) {
 	for (const v of Object.values(term.term?.values as { label: string; uncomputable: boolean }[])) {
 		const plot = plots.find(p => p.key === v.label)
 		if (plot) plot.isHidden = v?.uncomputable
@@ -190,7 +158,58 @@ function setUncomputableValues(values: Record<string, number>) {
 	} else return null
 }
 
-function numericBins(overlayTerm, data) {
+/**********************************************************
+ * Functions used in both box plot and violin plot routes *
+ **********************************************************/
+
+export function parseValues(q: any, data: ValidGetDataResponse, sampleType: string, isLog: boolean, overlayTerm?: any) {
+	const key2values = new Map()
+	const uncomputableValues = {}
+
+	let absMin: number | null = null,
+		absMax: number | null = null
+
+	for (const val of Object.values(data.samples as Record<string, { key: number; value: number }>)) {
+		const value = val[q.tw.$id]
+		if (!Number.isFinite(value?.value)) continue
+
+		if (q.tw.term.values?.[value.value]?.uncomputable) {
+			const label = q.tw.term.values[value.value].label
+			uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
+			continue
+		}
+
+		if (isLog && value.value <= 0) continue
+
+		if (overlayTerm) {
+			if (!val[overlayTerm?.$id]) continue
+			const value2 = val[overlayTerm.$id]
+
+			if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
+				const label = overlayTerm.term.values[value2?.key]?.label
+				uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
+			}
+
+			if (!key2values.has(value2.key)) key2values.set(value2.key, [])
+			key2values.get(value2.key).push(value.value)
+		} else {
+			if (!key2values.has(sampleType)) key2values.set(sampleType, [])
+			key2values.get(sampleType).push(value.value)
+		}
+
+		if (absMin === null || value.value < absMin) absMin = value.value
+		if (absMax === null || value.value > absMax) absMax = value.value
+
+		// if (useLog) {
+		// 		//Is this necessary??
+		// 		if (min === 0) min = Math.max(min, value.value)
+		// 	}
+	}
+
+	return { absMax, absMin, key2values, uncomputableValues }
+}
+
+export function numericBins(overlayTerm: any, data: any) {
 	const overlayBins = data.refs.byTermId[overlayTerm?.$id]?.bins ?? []
 	return new Map(overlayBins.map(bin => [bin.label, bin]))
 }

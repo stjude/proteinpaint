@@ -1,4 +1,4 @@
-import type { ViolinRequest, ViolinResponse, RouteApi, GetDataResponse } from '#types'
+import type { ViolinRequest, ViolinResponse, RouteApi, ValidGetDataResponse } from '#types'
 import { violinPayload } from '#types/checkers'
 import { scaleLinear, scaleLog } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -8,6 +8,7 @@ import { getOrderedLabels } from '../src/termdb.barchart.js'
 import summaryStats from '#shared/descriptive.stats.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { getBinsDensity } from '#shared/violin.bins.js'
+import { numericBins, parseValues } from './termdb.boxplot.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/violin',
@@ -108,23 +109,23 @@ export async function wilcoxon(divideTw, result) {
 	}
 }
 
-//create numeric bins for the overlay term to provide filtering options
-// TODO: handle .keyOrder as an alternative to .bins ???
-function numericBins(overlayTerm, data) {
-	const divideTwBins = new Map()
-	/** Fix for broken `list samples` option no longer work for numeric terms */
-	const divideBins = data.refs.byTermId[overlayTerm?.$id]?.bins
-	if (divideBins) {
-		for (const bin of divideBins) {
-			divideTwBins.set(bin.label, bin)
-		}
-	}
-	return divideTwBins
-}
+// //create numeric bins for the overlay term to provide filtering options
+// // TODO: handle .keyOrder as an alternative to .bins ???
+// function numericBins(overlayTerm, data) {
+// 	const divideTwBins = new Map()
+// 	/** Fix for broken `list samples` option no longer work for numeric terms */
+// 	const divideBins = data.refs.byTermId[overlayTerm?.$id]?.bins
+// 	if (divideBins) {
+// 		for (const bin of divideBins) {
+// 			divideTwBins.set(bin.label, bin)
+// 		}
+// 	}
+// 	return divideTwBins
+// }
 
 // scale sample data
 // divide keys and values by scaling factor - this is important for regression UI when running association tests.
-function scaleData(q, data: GetDataResponse, tw) {
+function scaleData(q, data: ValidGetDataResponse, tw: any) {
 	if (!q.scale) return
 	const scale = Number(q.scale)
 	for (const val of Object.values(data.samples)) {
@@ -135,62 +136,64 @@ function scaleData(q, data: GetDataResponse, tw) {
 	}
 }
 
-function divideValues(q, data: GetDataResponse, tw, sampleType) {
+function divideValues(q, data: ValidGetDataResponse, tw, sampleType) {
 	const overlayTerm = q.divideTw
 	const useLog = q.unit == 'log'
 
-	const key2values = new Map()
-	let min = Infinity
-	let max = -Infinity
+	// const key2values = new Map()
+	// let min = Infinity
+	// let max = -Infinity
 
 	//create object to store uncomputable values and label
-	const uncomputableValueObj = {}
-	let skipNonPositiveCount = 0 // if useLog=true, record number of <=0 values skipped
-	for (const v of Object.values(data.samples)) {
-		//if there is no value for term then skip that.
-		const value = v[tw.$id]
-		if (!Number.isFinite(value?.value)) continue
+	// const uncomputableValueObj = {}
+	// let skipNonPositiveCount = 0 // if useLog=true, record number of <=0 values skipped
+	// for (const v of Object.values(data.samples)) {
+	// 	//if there is no value for term then skip that.
+	// 	const value = v[tw.$id]
+	// 	if (!Number.isFinite(value?.value)) continue
 
-		if (tw.term.values?.[value.value]?.uncomputable) {
-			//skip these values from rendering in plot but show in legend as uncomputable categories
-			const label = tw.term.values[value.value].label // label of this uncomputable category
-			uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
-			continue
-		}
+	// 	if (tw.term.values?.[value.value]?.uncomputable) {
+	// 		//skip these values from rendering in plot but show in legend as uncomputable categories
+	// 		const label = tw.term.values[value.value].label // label of this uncomputable category
+	// 		uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
+	// 		continue
+	// 	}
 
-		if (useLog && value.value <= 0) {
-			skipNonPositiveCount++
-			continue
-		}
+	// 	if (useLog && value.value <= 0) {
+	// 		skipNonPositiveCount++
+	// 		continue
+	// 	}
 
-		if (min > value.value) min = value.value
-		if (max < value.value) max = value.value
+	// 	if (min > value.value) min = value.value
+	// 	if (max < value.value) max = value.value
 
-		if (useLog) {
-			if (min === 0) min = Math.max(min, value.value)
-		}
-		if (overlayTerm) {
-			if (!v[overlayTerm?.$id]) continue
-			const value2 = v[overlayTerm.$id]
-			// if there is no value for q.divideTw then skip this
-			if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
-				const label = overlayTerm.term.values[value2?.key]?.label // label of this uncomputable category
-				uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
-			}
+	// 	if (useLog) {
+	// 		//Is this necessary??
+	// 		if (min === 0) min = Math.max(min, value.value)
+	// 	}
+	// 	if (overlayTerm) {
+	// 		if (!v[overlayTerm?.$id]) continue
+	// 		const value2 = v[overlayTerm.$id]
+	// 		// if there is no value for q.divideTw then skip this
+	// 		if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
+	// 			const label = overlayTerm.term.values[value2?.key]?.label // label of this uncomputable category
+	// 			uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
+	// 		}
 
-			if (!key2values.has(value2.key)) key2values.set(value2.key, [])
-			key2values.get(value2.key).push(value.value)
-		} else {
-			if (!key2values.has(sampleType)) key2values.set(sampleType, [])
-			key2values.get(sampleType).push(value.value)
-		}
-	}
+	// 		if (!key2values.has(value2.key)) key2values.set(value2.key, [])
+	// 		key2values.get(value2.key).push(value.value)
+	// 	} else {
+	// 		if (!key2values.has(sampleType)) key2values.set(sampleType, [])
+	// 		key2values.get(sampleType).push(value.value)
+	// 	}
+	// }
+	const { absMax, absMin, key2values, uncomputableValues } = parseValues(q, data, sampleType, useLog, overlayTerm)
 	return {
 		key2values,
-		min,
-		max,
-		uncomputableValueObj: sortObj(uncomputableValueObj),
-		skipNonPositiveCount
+		min: absMin,
+		max: absMax,
+		uncomputableValueObj: sortObj(uncomputableValues)
+		// skipNonPositiveCount
 	}
 }
 
@@ -241,7 +244,7 @@ function setResponse(valuesObject, data, q, sampleType) {
 				seriesId: key,
 				plotValueCount: values?.length,
 				color: overlayTerm?.term?.values?.[key]?.color || null,
-				divideTwBins: numericBins(overlayTerm, data).has(key) ? numericBins(overlayTerm, data).get(key) : null,
+				divideTwBins: isNumericTerm(overlayTerm.term) ? numericBins(overlayTerm, data) : null,
 				uncomputableValueObj:
 					Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
 			})
@@ -268,7 +271,7 @@ function setResponse(valuesObject, data, q, sampleType) {
 	return result
 }
 
-function createCanvasImg(q, result, ds) {
+function createCanvasImg(q, result, ds: any) {
 	// size on x-y for creating circle and ticks
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
