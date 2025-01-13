@@ -1,41 +1,17 @@
 import { select } from 'd3-selection'
 
-const featureToggle = 'sseRefreshMode'
-const toggleValues = {
-	// default: 'call runproteinpaint() again with the original argument + any HMR state',
-	reload:
-		'call window.reload() to refresh from URL params and/or runpp() arguments, ' +
-		'this may have less memory leaks than the default approach',
-	none: 'do not refresh the app view'
-}
-console.log(
-	`You may use sessionStorage.setItem('${featureToggle}', ` +
-		Object.keys(toggleValues)
-			.map(d => `'${d}'`)
-			.join(' | ') +
-		`) or sessionStorage.removeItem('${featureToggle}') for default behavior, ` +
-		`see notify.ts for details.`
-	//toggleValues
-)
-
 const sseMessageStorageKey = 'sjpp-sse-message'
 const notifyDiv = setNotifyDiv()
 const notifyElem = notifyDiv.node()
+const refresh = notifyElem.__ppRefresh
 
-// sse = the connection to /sse route
+// the sse connection that is specific to this notify code bundle
 let sse
-// the callback to call when a notification included `reload: true`,
-// may be overriden by setRefresh()
-let refresh = () => window.location.reload()
-// the Unix timestamp when refresh() was last called
-let lastRefresh = Date.now() //Math.min(notifyElem.__ppLastRefresh, Date.now())
-// the most recent sse message that was processed
-let mostRecentReloadTime = 0
 
 // notify a user of pertinent message
 function notify(_data: SseData, now) {
-	const data = _data.filter(d => d.status != 'ok' || !d.time || now - d.time < 5000 || lastRefresh < d.time)
-	if (sessionStorage.getItem(featureToggle) == 'none') {
+	const data = _data.filter(d => d.status != 'ok' || !d.time || now - d.time < 5000 || refresh.lastCall < d.time)
+	if (refresh.mode == 'none') {
 		data.unshift({
 			key: 'IGNORED SSE',
 			message: 'no auto-refresh',
@@ -47,7 +23,7 @@ function notify(_data: SseData, now) {
 		})
 	}
 
-	const divs = notifyDiv.selectAll(`:scope>div`).data(data, (d: SseDataEntry) => d.key)
+	const divs = notifyDiv.selectAll(`.sjpp-sse-message`).data(data, (d: SseDataEntry) => d.key)
 
 	divs.exit().remove()
 	divs
@@ -70,6 +46,7 @@ function notify(_data: SseData, now) {
 	divs
 		.enter()
 		.append('div')
+		.attr('class', 'sjpp-sse-message')
 		.style('margin', '5px')
 		.style('padding', '5px')
 		.style('border', getBorder)
@@ -111,6 +88,8 @@ function setNotifyDiv() {
 			.style('font-size', '1.2em')
 			.style('background-color', 'rgba(250, 250, 250, 0.75)')
 			.style('z-index', 10000)
+
+		notifyDiv.node().__ppRefresh = setRefresh(notifyDiv)
 	}
 
 	return notifyDiv
@@ -126,6 +105,128 @@ function getColor(d) {
 
 function getBorder(d) {
 	return `1px solid ${d.color || '#000'}`
+}
+
+function setRefresh(notifyDiv) {
+	const refresh = {
+		// used in both sessionStorage and serverconfig.features
+		key: 'sseRefreshMode',
+		// default starting mode, may be replaced by:
+		// - using the rendered dom.select dropdown (tab-specific behavior)
+		// - setting sessionStorage.setItem(/*refresh.key*/, ) manually (tab-specific)
+		// - setting serverconfig.features[/*refresh.key*/] (applies across tabs)
+
+		mode: 'partial',
+		// available mode options
+		modeOptions: {
+			partial: 'call runproteinpaint() on the same DOM element, with the original argument + any HMR state',
+			partial_except_on_unhide: 'same as reload, except when a hidden browser tab is made visible',
+			full:
+				'call window.reload() to refresh from URL params and/or runpp() arguments, ' +
+				'this may have less memory leaks than the default approach',
+			full_except_on_unhide: 'same as reload, except when a hidden browser tab is made visible',
+			none: 'do not refresh the app view'
+		},
+
+		// the callback to call when a notification includes `reload: true`,
+		// will be overriden by setRefreshCallback()
+		callback: () => window.location.reload(),
+		// the Unix timestamp when callback() was last called
+		lastCall: Date.now(),
+		mostRecentMsg: 0,
+
+		dom: {} as any,
+
+		// sse = the connection to /sse route
+		sse: undefined as any,
+
+		update(mode) {
+			if (!refresh.modeOptions[mode]) {
+				console.log(`invalid refresh.mode='${mode}'`)
+				return
+			}
+			refresh.mode = mode
+			refresh.dom.select.property('value', mode)
+			if (sessionStorage.getItem(refresh.key) != mode) {
+				sessionStorage.setItem(refresh.key, mode)
+			}
+		},
+
+		destroy() {
+			console.log(47, 'refresh.destroy()')
+			disconnect(refresh.sse)
+			for (const k of Object.keys(refresh.dom)) {
+				if (typeof refresh.dom[k] == 'function') refresh.dom[k].remove()
+				delete refresh.dom[k]
+			}
+			// for (const k of Object.keys(refresh)) {
+			// 	delete refresh[k]
+			// }
+		}
+	}
+
+	const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
+	refresh.mode = sessionStorage.getItem(refresh.key) || features[refresh.key] || refresh.mode
+	sessionStorage.setItem(refresh.key, refresh.mode)
+
+	// in case this notify code file was rebundled, the refresh instance will be replaced,
+	// and so must replace the dom with attached event listeners from the stale bundle
+	const handleCls = '.sja-sse-refresh-opts-div' //
+	notifyDiv.selectAll(handleCls).remove()
+	const elem = notifyDiv.insert('div', 'div').attr('class', handleCls.slice(1)).style('text-align', 'right')
+	const s = {
+		w: '32px',
+		h: '24px',
+		o: 0.5,
+		bg: '#ececec'
+	}
+	const handle = elem
+		.append('div')
+		.style('display', 'inline-block')
+		.style('width', s.w)
+		.style('height', s.h)
+		.style('overflow', 'hidden')
+		.style('background-color', s.bg)
+		.on('mouseover', function () {
+			handle.style('width', '').style('height', '').style('opacity', '').style('background-color', '')
+		})
+		.on('mouseout', function () {
+			handle.style('width', s.w).style('height', s.h).style('opacity', s.o).style('background-color', s.bg)
+		})
+
+	const dom: any = {
+		elem,
+		label: handle.append('label')
+	}
+
+	dom.label
+		.append('span')
+		.style('font-family', 'consola arial')
+		.style('font-size', '1rem')
+		.attr('title', 'Click on the select input and hover over an option for details')
+		.html(`SSE refresh mode (tab-specific) <br/>`)
+
+	dom.select = dom.label.append('select').on('change', () => {
+		refresh.mode = refresh.dom.select.property('value')
+		sessionStorage.setItem(refresh.key, refresh.mode)
+	})
+
+	dom.select
+		.selectAll('option')
+		.data(Object.keys(refresh.modeOptions))
+		.enter()
+		.append('option')
+		.attr('value', key => key)
+		.attr('title', key => refresh.modeOptions[key])
+		.property('selected', key => key == refresh.mode)
+		.html(key => key)
+
+	refresh.dom = dom
+	return refresh
+}
+
+export function setRefreshCallback(callback) {
+	refresh.callback = callback
 }
 
 // TODO: may move this to #shared/types/sse.ts so
@@ -152,80 +253,73 @@ const sseUrl = host.endsWith('/') ? `${host}sse` : `${host}/sse`
 // when a user clicks opens a link in another tab,
 // the browser might not switch the active tab to it yet,
 // in that case do not automatically listen for server-sent events
-if (!document.hidden) setSse()
+if (!document.hidden) setSse() //
 
 function setSse() {
-	// if this code file was rebundled, then clear the notifyElem.__ppSse reference
-	if (notifyElem.__ppSse) notifyElem.__ppSse.close()
+	if (sse && sse == refresh.sse && sse.readyState != 2) return
+
+	// if this code file was rebundled, then clear the current refresh.sse reference
+	if (refresh.sse) disconnect(refresh.sse)
 
 	// server-sent events
-	sse = new EventSource(`${sseUrl}?time=${lastRefresh}&now=${Date.now()}`)
-	notifyElem.__ppSse = sse
+	sse = new EventSource(`${sseUrl}?time=${refresh.lastCall}&now=${Date.now()}`)
+	refresh.sse = sse
 
 	sse.onmessage = event => {
-		if (sse != notifyElem.__ppSse) {
-			console.log(155, 'stale sse --')
-			// this sse was from a stale notify.ts bundle that was replaced via HMR
-			sse.close()
-			delete sse.onmessage
+		if (sse != refresh.sse) {
+			// only the browser tab with the active refresh.sse connection should notify
+			// and trigger a storage event that will allow other visible window tabs
+			// to refresh after a rebundle
+			disconnect(sse)
 			return
 		}
 		const data: SseData = JSON.parse(event.data)
 		if (!data.length) return
 		const now = Date.now()
 		const renderedData = notify(data, now)
-		mostRecentReloadTime = Math.max(0, ...renderedData.map(d => d.time))
+		const mostRecentMsg = Math.max(0, ...renderedData.map(d => d.time))
 
-		// track last refresh to prevent triggering infinite refresh loop
-		// if (lastRefresh === 0) lastRefresh = now //
-		// console.log(lastRefresh, mostRecentReloadTime)
-		// the first entry will be the timestamp of when the data was stored
 		localStorage.setItem(sseMessageStorageKey, JSON.stringify(data))
-		if (mostRecentReloadTime && mostRecentReloadTime - lastRefresh > 100) {
-			// only the browser tab with the active sse connection should refresh,
-			// to allow side-by-side comparison of visible window tabs before and
-			// after code change
-			lastRefresh = Math.max(now, mostRecentReloadTime)
-			const mode = sessionStorage.getItem(featureToggle)
-			if (!mode) refresh()
-			else if (mode == 'reload') window.location.reload()
-			else if (!toggleValues[mode]) {
-				console.warn(`invalue ${featureToggle}='${mode}', triggering refresh instead`)
-				refresh()
+		if (mostRecentMsg && mostRecentMsg - refresh.lastCall > 100) {
+			refresh.lastCall = refresh.mostRecentMsg ? mostRecentMsg : Math.max(mostRecentMsg, now)
+			refresh.mostRecentMsg = mostRecentMsg
+			if (refresh.mode == 'none') {
+				// console.log(`skipped refresh in sessionRefresh.mode='none'`)
+			} else if (refresh.mode == 'partial') refresh.callback()
+			else if (refresh.mode == 'full') window.location.reload()
+			else if (!refresh.modeOptions[refresh.mode]) {
+				console.warn(`invalid value ${refresh.key}='${refresh.mode}', triggering refresh instead`)
+				refresh.callback()
 			}
 		}
 	}
 
-	// sse.onerror = e => console.log(e.message, e.phase, sse.readyState, e) // err => {
-	// 	// ok to lose sse connection, since the server can only maintain
-	// 	// up to 6 sse streams per standard; another connection will be triggered
-	// 	// when this browser window/tab becomes visible again
-	// 	// if (sse) {
-	// 	// 	sse.close()
-	// 	// 	sse = undefined
-	// 	// }
-	// }
+	sse.onerror = e => {
+		// ok to lose sse connection, since the server can only maintain
+		// up to 6 sse streams per standard; another connection will be triggered
+		// when this browser window/tab becomes visible again
+		if (sse != refresh.sse) sse.close()
+	}
 }
 
-export function setRefresh(callback) {
-	refresh = callback
-	//if (!notifyDiv) return
-	//notifyDiv.selectAll(`:scope>div`).remove()
+function disconnect(sse) {
+	if (!sse) return
+	console.log(307, 'disconnect(sse)')
+	// console.log('!!! stale sse !!!')
+	// this sse was from a stale notify.ts bundle that was replaced via HMR
+	if (sse.readyState != 2) sse.close()
+	if (sse == refresh.sse) delete refresh.sse
+	delete sse.onmessage
 }
 
 document.onvisibilitychange = () => {
 	if (document.hidden) {
-		if (sse) {
-			sse.close()
-			sse = undefined
-			delete notifyElem.__ppSse
-		}
-	} else if (!sse || sse.readyState === 2) {
-		sse = undefined
-		delete notifyElem.__ppSse
-		setSse()
+		disconnect(refresh.sse)
+	} else if (!refresh.sse || refresh.sse.readyState === 2) {
+		if (!refresh.mode.endsWith('except_on_unhide')) setSse()
 	} else {
-		console.warn(sse, 'not hidden, has open sse')
+		console.warn('not hidden, has open sse - will be disconnected')
+		disconnect(refresh.sse)
 	}
 }
 
@@ -239,11 +333,20 @@ window.onstorage = event => {
 	// - sse is present: rely on sse.onmessage event directly
 	// - document is not visible: does not have to display notification
 	//   when the browser window/tab is not visible
-	if (sse || document.hidden) return
+	if (refresh.sse || document.hidden) return
 
-	// only process the event if the expected storage key was changed
-	if (event.key != sseMessageStorageKey) return
-	const data = JSON.parse(localStorage.getItem(sseMessageStorageKey) || '')
-	notify(data, Date.now)
-	refresh()
+	switch (event.key) {
+		case refresh.key:
+			refresh.update(event.newValue)
+			break
+
+		case sseMessageStorageKey:
+			{
+				const msg = localStorage.getItem(sseMessageStorageKey)
+				const data = JSON.parse(msg || '')
+				notify(data, Date.now)
+				refresh.callback()
+			}
+			break
+	}
 }
