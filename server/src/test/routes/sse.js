@@ -9,20 +9,17 @@ const __dirname = import.meta.dirname
 
 export default function setRoutes(app, basepath) {
 	const messages = {}
-	const connections = new Set()
+	const connections = new Map()
 	const msgDir = path.join(serverconfig.sseDir, 'messages')
 
 	// when validating server ds and routes init, no need to watch file
 	// that would cause the validation to hang, should exit with no error
 	if (!process.argv.includes('validate')) fs.watch(msgDir, {}, notifyOnFileChange)
 
-	app.get(basepath + '/sse', async (req, res) => {
-		if (!serverconfig.features.multiSse) {
-			for (const r of connections) r.end()
-			connections.clear()
-		}
-		connections.add(res)
-		console.log(24, 'num sse connections', connections.size)
+	app.get(basepath + '/sse?', async (req, res) => {
+		const host = req.header('host')
+		if (connections.has(host)) connections.get(host).end()
+		connections.set(host, res)
 		try {
 			res.writeHead(200, {
 				Connection: 'keep-alive',
@@ -34,7 +31,7 @@ export default function setRoutes(app, basepath) {
 			res.flushHeaders()
 
 			res.on('close', () => {
-				// console.log('Client closed.')
+				// console.log('Sse client connection closed.')
 				res.end()
 				connections.delete(res)
 			})
@@ -43,8 +40,21 @@ export default function setRoutes(app, basepath) {
 			// would not be ready for a message while the initial fetch response is still active
 			setTimeout(async () => {
 				const files = await fs.promises.readdir(msgDir)
+				const now = Date.now()
+				const time = req.query.time || 0
+				// approximate diff in client versus server unix timestamp,
+				// to adjust the time comparison between client request and message file mtime
+				const nowDiff = Math.abs((req.query.now || now) - now)
 				// the 3rd argument type should match the variable connections Set type
-				files.forEach(f => !f.startsWith('.') && notifyOnFileChange('change', f, new Set([res])))
+				files.forEach(async f => {
+					if (f.startsWith('.')) return
+					const s = await fs.promises.stat(path.join(msgDir, f))
+					// for initial connection, filter out message files
+					// that has already been sent to the client based on time and nowDiff
+					// console.log(54, Math.abs(time - s.mtimeMs) < 100, Math.abs(time - s.mtimeMs))
+					if (!s.isFile() || Math.abs(time - s.mtimeMs) < 100) return
+					notifyOnFileChange('change', f, new Set([res]))
+				})
 			}, 0)
 		} catch (err) {
 			res.send(err)
@@ -72,7 +82,7 @@ export default function setRoutes(app, basepath) {
 			}
 			const data = JSON.stringify(Object.values(messages))
 			const conn = initialConnection || connections
-			for (const res of conn) {
+			for (const res of conn.values()) {
 				res.write(`event: message\n`)
 				res.write(`data: ${data}\n\n`)
 			}
