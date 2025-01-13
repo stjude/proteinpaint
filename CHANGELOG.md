@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.96.0
 
 Features:
 - Add tests for decimalPlacesUntilFirstNonZero
