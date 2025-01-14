@@ -133,7 +133,9 @@ export function setRenderersThree(self) {
 			.attr('height', self.settings.svgh)
 			.append('g')
 			.attr('transform', 'translate(20, 20)')
-		//self.renderLegend(chart)
+		let step = Math.min((20 * 40) / chart.colorLegend.size, 20)
+
+		self.renderLegend(chart, step)
 		const fov = self.settings.fov
 		const near = 0.1
 		const far = 1000
