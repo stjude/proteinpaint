@@ -63,7 +63,6 @@ samplelst{}
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
 	if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
 	// txt file uses string sample name, must convert integer sample id to string
-	// txt file uses string sample name, must convert integer sample id to string
 	param.storage_type = ds.queries.rnaseqGeneCount.storage_type
 
 	const q = ds.queries.rnaseqGeneCount
@@ -160,20 +159,6 @@ samplelst{}
 		}
 		param.method = 'edgeR'
 		//console.log("result:",result)
-	} else if (param.method == 'wilcoxon') {
-		// Wilcoxon test will be used for DE analysis
-		const time1 = new Date().valueOf()
-		const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
-		const time2 = new Date().valueOf()
-		for (const line of rust_output.split('\n')) {
-			if (line.startsWith('adjusted_p_values:')) {
-				result = JSON.parse(line.replace('adjusted_p_values:', ''))
-			} else {
-				//console.log(line)
-			}
-		}
-		console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
-		param.method = 'wilcoxon'
 	} else {
 		// Wilcoxon test will be used for DE analysis
 		const time1 = new Date().valueOf()
