@@ -258,12 +258,14 @@ export function setRenderers(self) {
 	self.renderContours = function (chart) {
 		const contourG = chart.serie
 		let zAxisScale
-		if (self.config.colorTW?.q.mode == 'continuous')
-			zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, 1])
+		if (self.config.colorTW?.q.mode == 'continuous') {
+			const [zMin, zMax] = extent(chart.data.samples, d => d.category)
+			zAxisScale = d3Linear().domain([zMin, zMax]).range([0, 1])
+		}
+
 		const data = chart.data.samples.map(s => {
 			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: zAxisScale ? zAxisScale(s.category) : 1 }
 		})
-
 		renderContours(contourG, data, self.settings.svgw, self.settings.svgh, self.settings.colorContours)
 	}
 
