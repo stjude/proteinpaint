@@ -56,10 +56,7 @@ class MassSearch {
 
 	async main() {
 		// show/hide search input from the tree
-		this.dom.holder.style(
-			'display',
-			this.state.search.isVisible && this.state.nav.header_mode != 'only_buttons' ? 'inline-block' : 'none'
-		)
+		this.dom.holder.style('display', this.state.search.isVisible ? 'inline-block' : 'none')
 	}
 
 	async doSearch(str) {
