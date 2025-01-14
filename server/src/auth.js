@@ -227,7 +227,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		authApi.userCanAccess = () => true
 		authApi.getRequiredCredForDsEmbedder = () => undefined
 		authApi.getPayloadFromHeaderAuth = () => ({})
-		Object.freeze(authApi)
+		// custom auth for testing
+		if (serverconfig.debugmode && !app.doNotFreezeAuth) Object.freeze(authApi)
 		return
 	}
 	try {
@@ -642,6 +643,9 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		}
 		return { errors }
 	}
+
+	// custom auth for testing
+	if (serverconfig.debugmode && !app.doNotFreezeAuth) Object.freeze(authApi)
 }
 
 function getSessionId(req, cred) {

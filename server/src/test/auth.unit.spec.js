@@ -26,6 +26,7 @@ const secrets = {
 function appInit() {
 	// mock the express router api
 	const app = {
+		doNotFreezeAuthApi: true,
 		routes: {},
 		middlewares: {},
 		setRoute(method, route, handler) {
