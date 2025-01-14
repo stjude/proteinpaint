@@ -374,12 +374,12 @@ class Scatter {
 				configKey: 'term0',
 				chartType: 'sampleScatter',
 				usecase: { target: 'sampleScatter', detail: 'term0' },
-				title: 'Categories to divide by',
-				label: !isPremade && this.config.term0?.q?.mode == 'continuous' ? 'Z' : 'Divide by',
+				title: 'Term to to divide by categories or to use as Z coordinate',
+				label: 'Z / Divide by',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['discrete', 'continuous'],
 				processInput: tw => {
-					if (!isPremade && isNumericTerm(tw?.term) && !tw.q.mode) tw.q = { mode: 'continuous' }
+					if (!isPremade && isNumericTerm(tw?.term) && !tw.q.mode) tw.q = { mode: 'continuous' } //use continuous mode by default if not premade plot
 				}
 			})
 		} else {
