@@ -76,6 +76,57 @@ export const boxplotPayload: RoutePayload = {
 	},
 	response: {
 		typeId: 'BoxPlotResponse'
-	}
-	//examples: []
+	},
+	examples: [
+		{
+			request: {
+				body: {
+					tw: {
+						term: { id: 'subcohort', type: 'categorical' },
+						values: [{ key: 'ABC', label: 'ABC' }]
+					},
+					genome: 'hg38-test',
+					dslabel: 'TermdbTest',
+					orderByMedian: true
+				}
+			},
+			response: {
+				body: {
+					absMin: 0,
+					absMax: 100,
+					plots: [
+						{
+							boxplot: {
+								label: 'ABC',
+								w1: 0,
+								w2: 100,
+								p05: 0,
+								p25: 25,
+								p50: 50,
+								p75: 75,
+								p95: 100,
+								iqr: 50,
+								out: [101, 102, 106]
+							},
+							color: 'blue',
+							descrStats: [
+								{ id: 'total', label: 'Total', value: 100 },
+								{ id: 'min', label: 'Min', value: 0 },
+								{ id: 'p25', label: '25%', value: 25 },
+								{ id: 'median', label: 'Median', value: 50 },
+								{ id: 'mean', label: 'Mean', value: 50 },
+								{ id: 'p75', label: '75%', value: 75 },
+								{ id: 'max', label: 'Max', value: 100 },
+								{ id: 'sd', label: 'SD', value: 0 },
+								{ id: 'variance', label: 'Variance', value: 0 },
+								{ id: 'iqr', label: 'IQR', value: 50 }
+							],
+							key: 'ABC'
+						}
+					],
+					uncomputableValues: [{ label: 'uncomputable-test', value: 1 }]
+				}
+			}
+		}
+	]
 }
