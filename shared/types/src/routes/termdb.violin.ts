@@ -8,7 +8,7 @@ export type ViolinRequest = {
 	embedder: string
 	/** main tw to fetch numeric data to show in violin */
 	tw: any
-	/** ?? */
+	/** ?? TODO: Needs description */
 	currentGeneNames: string[]
 	/** optional tw to divide tw data into multiple violins and show under one axis */
 	divideTw?: any
@@ -34,28 +34,33 @@ export type ViolinRequest = {
 	rightMargin: number
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit: string
-	/** ?? */
+	/** ?? TODO: Needs description */
 	scale: any
-	/** ?? */
+	/** ?? TODO: Needs description */
 	isKDE: boolean
 }
 
+/** ?? TODO: Needs description */
 interface BinsEntries {
 	x0: number
 	x1: number
 	density: number
 }
+
+/** ?? TODO: Needs description */
 interface ValuesEntries {
 	id: string
 	label: string
 	value: number
 }
 
+/** Computed in wilcoxon to show in table */
 interface PValueEntries {
 	value?: string
 	html?: string
 }
 
+/** ?? TODO: Needs description */
 type ViolinDensity = {
 	bins: BinsEntries[]
 	densityMax: number
@@ -63,6 +68,8 @@ type ViolinDensity = {
 }
 
 export type ViolinPlotEntry = {
+	/** ?? TODO: Needs description
+	 * Doesn't appear to be used on the client */
 	biggestBin: number
 	/** Color to render */
 	color: string
@@ -72,10 +79,12 @@ export type ViolinPlotEntry = {
 	label: string
 	/** Number of samples/cases/patients/etc. */
 	plotValueCount: number
+	/** Cooresponds to the tw.$id */
 	seriesId: string
 	/** Plot image to display */
 	src: string
 	summaryStats: {
+		/** Descriptive stats (i.e. min, max, sd, etc.) */
 		values: ValuesEntries[]
 	}
 	uncomputableValueObj: { [index: string]: number } | null

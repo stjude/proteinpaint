@@ -42,7 +42,7 @@ function init({ genomes }) {
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const overlayTerm = q.overlayTw
-			const isLog = false // TODO: implement rendering plots in a log scale
+			const isLog = false // TODO: implement rendering plots in a log scale (q.isLog)
 			const { absMin, absMax, key2values, uncomputableValues } = parseValues(
 				q,
 				data as ValidGetDataResponse,
@@ -115,6 +115,7 @@ function init({ genomes }) {
 	}
 }
 
+/** Set hidden status for plots */
 function setHiddenPlots(term: any, plots: any) {
 	for (const v of Object.values(term.term?.values as { label: string; uncomputable: boolean }[])) {
 		const plot = plots.find(p => p.key === v.label)
@@ -126,7 +127,6 @@ function setHiddenPlots(term: any, plots: any) {
 			if (plot) plot.isHidden = true
 		}
 	}
-
 	return plots
 }
 
@@ -158,6 +158,7 @@ function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
 	]
 }
 
+/** Only return a simplified object for the legend data */
 function setUncomputableValues(values: Record<string, number>) {
 	if (Object.entries(values)?.length) {
 		return Object.entries(values).map(([label, v]) => ({ label, value: v as number }))
@@ -169,9 +170,14 @@ function setUncomputableValues(values: Record<string, number>) {
  **********************************************************/
 
 export function parseValues(q: any, data: ValidGetDataResponse, sampleType: string, isLog: boolean, overlayTerm?: any) {
+	/** Map samples to terms */
 	const key2values = new Map()
+	/** Record uncomputable values not used for plot rendering
+	 * but displayed in the legend */
 	const uncomputableValues = {}
 
+	/** Find the absolute min and max values to render
+	 * the plot scale */
 	let absMin: number | null = null,
 		absMax: number | null = null
 
@@ -180,11 +186,13 @@ export function parseValues(q: any, data: ValidGetDataResponse, sampleType: stri
 		if (!Number.isFinite(value?.value)) continue
 
 		if (q.tw.term.values?.[value.value]?.uncomputable) {
+			/** Record uncomputable values for the legend and skip */
 			const label = q.tw.term.values[value.value].label
 			uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
 			continue
 		}
 
+		/** Only use positive values for log scales */
 		if (isLog && value.value <= 0) continue
 
 		if (overlayTerm) {
@@ -192,6 +200,7 @@ export function parseValues(q: any, data: ValidGetDataResponse, sampleType: stri
 			const value2 = val[overlayTerm.$id]
 
 			if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
+				/** Sample as above but for overlay term */
 				const label = overlayTerm.term.values[value2?.key]?.label
 				uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
 			}
@@ -205,16 +214,12 @@ export function parseValues(q: any, data: ValidGetDataResponse, sampleType: stri
 
 		if (absMin === null || value.value < absMin) absMin = value.value
 		if (absMax === null || value.value > absMax) absMax = value.value
-
-		// if (useLog) {
-		// 		//Is this necessary??
-		// 		if (min === 0) min = Math.max(min, value.value)
-		// 	}
 	}
 
 	return { absMax, absMin, key2values, uncomputableValues }
 }
 
+/** Return bins for filtering and list sample label menu options */
 export function numericBins(overlayTerm: any, data: any) {
 	const overlayBins = data.refs.byTermId[overlayTerm?.$id]?.bins ?? []
 	return new Map(overlayBins.map(bin => [bin.label, bin]))

@@ -68,13 +68,13 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds, genome) {
 		)
 	}
 
-	if (q.scale) scaleData(q, data as ValidGetDataResponse, q.tw)
+	if (q.scale) setScaleData(q, data as ValidGetDataResponse, q.tw)
 
 	const valuesObject = divideValues(q, data as ValidGetDataResponse, q.tw, sampleType)
 	const result = setResponse(valuesObject, data, q, sampleType)
 
 	// wilcoxon test data to return to client
-	await wilcoxon(q.divideTw, result)
+	await getWilcoxonData(q.divideTw, result)
 
 	createCanvasImg(q, result, ds)
 
@@ -82,7 +82,7 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds, genome) {
 }
 
 // compute pvalues using wilcoxon rank sum test
-export async function wilcoxon(divideTw, result) {
+export async function getWilcoxonData(divideTw: any, result: any) {
 	if (!divideTw) return
 	const numPlots = result.plots.length
 	if (numPlots < 2) return
@@ -109,9 +109,10 @@ export async function wilcoxon(divideTw, result) {
 	}
 }
 
-// scale sample data
-// divide keys and values by scaling factor - this is important for regression UI when running association tests.
-function scaleData(q, data: ValidGetDataResponse, tw: any) {
+/** scale sample data
+ * divide keys and values by scaling factor - this is important
+ * for regression UI when running association tests. */
+function setScaleData(q, data: ValidGetDataResponse, tw: any) {
 	if (!q.scale) return
 	const scale = Number(q.scale)
 	for (const val of Object.values(data.samples)) {
@@ -125,9 +126,6 @@ function scaleData(q, data: ValidGetDataResponse, tw: any) {
 function divideValues(q, data: ValidGetDataResponse, tw, sampleType) {
 	const overlayTerm = q.divideTw
 	const useLog = q.unit == 'log'
-
-	// Never used? Remove entirely?
-	// let skipNonPositiveCount = 0 // if useLog=true, record number of <=0 values skipped
 
 	const { absMax, absMin, key2values, uncomputableValues } = parseValues(q, data, sampleType, useLog, overlayTerm)
 	return {
