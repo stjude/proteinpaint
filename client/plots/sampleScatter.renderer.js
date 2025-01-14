@@ -257,8 +257,11 @@ export function setRenderers(self) {
 
 	self.renderContours = function (chart) {
 		const contourG = chart.serie
+		let zAxisScale
+		if (self.config.colorTW?.q.mode == 'continuous')
+			zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, 1])
 		const data = chart.data.samples.map(s => {
-			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: 1 }
+			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: zAxisScale ? zAxisScale(s.category) : 1 }
 		})
 
 		renderContours(contourG, data, self.settings.svgw, self.settings.svgh, self.settings.colorContours)
@@ -545,11 +548,9 @@ export function setRenderers(self) {
 
 	self.setTools = function () {
 		if (!self.charts[0]) return
-		const inline = self.config.settings.controls.isOpen
 		const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
 		toolsDiv.selectAll('*').remove()
 		let display = 'block'
-		if (inline) display = 'inline-block'
 		// const helpDiv = toolsDiv
 		// 	.insert('div')
 		// 	.style('display', display)

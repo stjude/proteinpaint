@@ -19,7 +19,6 @@ export function setRenderersThree(self) {
 		chart.chartDiv.style('margin', '20px 20px')
 		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		let step = Math.min((20 * 40) / chart.colorLegend.size, 20)
-		console.log(step)
 		if (step < 12) step = 12
 		const height = (chart.colorLegend.size + 6) * step
 		chart.legendG = chart.legendDiv
@@ -226,7 +225,7 @@ export function setRenderersThree(self) {
 			// Create a plane geometry
 			const geometry = new THREE.PlaneGeometry(2, 2)
 			// Create a material using the loaded texture
-			const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true })
+			const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, color: 0x141414 })
 			// Create a mesh with the geometry and material
 			const plane = new THREE.Mesh(geometry, material)
 			// Position the plane

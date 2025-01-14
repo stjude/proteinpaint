@@ -332,7 +332,7 @@ class Scatter {
 				chartType: 'sampleScatter',
 				settingsKey: 'showContour',
 				title:
-					"Shows the density of point clouds. If 'Z/Divide by' is added in continous mode, it uses this to weight the points when calculating the density contours"
+					"Shows the density of point clouds. If 'Color' is used in continous mode, it uses it to weight the points when calculating the density contours. If 'Z/Divide by' is added in continous mode, it used it instead."
 			}
 		]
 		if (this.settings.showContour)
