@@ -538,7 +538,7 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 
 async function getCasesWithGeneExpression(ds, ref) {
 	const { host, headers } = ds.getHostHeaders()
-	const url = joinUrl(host.geneExp, 'gene_expression/availability')
+	const url = joinUrl(host.rest, 'gene_expression/availability')
 
 	try {
 		const idLst = [...ref.caseIds]

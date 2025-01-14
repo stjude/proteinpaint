@@ -208,7 +208,7 @@ function gdcValidateQuery(ds: any, genome: any) {
 		try {
 			// cachedFetch will only cache a response if an external API URL is enabled in serverconfig.features.extApiCache
 			const response = await cachedFetch(
-				joinUrl(host.geneExp, '/gene_expression/gene_selection'),
+				joinUrl(host.rest, '/gene_expression/gene_selection'),
 				{
 					method: 'POST',
 					headers,
