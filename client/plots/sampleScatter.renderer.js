@@ -711,7 +711,7 @@ export function setRenderers(self) {
 		if (fontSize < 0.5) fontSize = 0.5
 		const colorG = legendG.style('font-size', `${fontSize}em`)
 		let title0 = self.config.term0
-			? `${chart.id}, n=${chart.cohortSamples.length}`
+			? `${self.config.term0.term.name + ' ' + chart.id}, n=${chart.cohortSamples.length}`
 			: `${chart.cohortSamples.length} ${self.config.sampleType ? self.config.sampleType + 's' : 'samples'}`
 		if (self.filterSampleStr) title0 += `, search = ${self.filterSampleStr}`
 		colorG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
