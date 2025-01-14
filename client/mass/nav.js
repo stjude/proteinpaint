@@ -202,6 +202,7 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.style('margin', '10px')
 			.style('display', 'inline-block')
+			.style('float', 'right')
 		self.opts.holder.attr('class', 'sjpp-nav')
 		self.dom = {
 			holder: self.opts.holder,
@@ -231,17 +232,6 @@ function setRenderers(self) {
 			handler: self.deletePlots,
 			title: 'Delete all plots. To revert, click Undo button'
 		})
-
-		if (appState.nav.header_mode == 'only_buttons') {
-			// may retire this?
-			self.dom.tabDiv.style('display', 'none')
-			self.dom.recoverDiv.style('display', 'none')
-			titleDiv.style('margin-top', '95px').style('font-size', '0.9em')
-			if (massNav?.title?.link)
-				titleDiv
-					.on('click', () => window.open(massNav.title?.link, '_blank'))
-					.on('mouseover', () => titleDiv.style('cursor', 'pointer'))
-		}
 
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
 			// not part of filter div
@@ -426,12 +416,7 @@ function setRenderers(self) {
 		}
 		const selectCohort = self.state.termdbConfig.selectCohort
 		const massNav = self.state.termdbConfig.massNav
-		self.dom.searchDiv.style(
-			'display',
-			(selectCohort && self.activeCohort == -1) || self.state.nav.header_mode == 'only_buttons'
-				? 'none'
-				: 'inline-block'
-		)
+		self.dom.searchDiv.style('display', selectCohort && self.activeCohort == -1 ? 'none' : 'inline-block')
 		//self.dom.holder.style('margin-bottom', self.state.nav.header_mode === 'with_tabs' ? '20px' : '')//To be checked why it was needed
 		self.dom.header.style('border-bottom', self.state.nav.header_mode === 'with_tabs' ? '1px solid #000' : '')
 		self.dom.tds

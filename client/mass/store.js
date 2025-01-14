@@ -18,7 +18,6 @@ const navHeaderModes = new Set([
 	'hidden', // no header
 	'search_only', // ?
 	'hide_search', // ?
-	'only_buttons', // show only chart buttons and hide the tabs and search, to tailor header appearance for some ds
 	'with_cohortHtmlSelect' // only show cohort toggle as <select>
 ])
 

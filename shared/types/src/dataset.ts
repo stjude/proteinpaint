@@ -1291,9 +1291,6 @@ export type Cohort = {
 
 /** Customizations specific to the mass nav component */
 type MassNav = {
-	/** optional title of this ds, if missing use ds.label. shown on mass nav header.
-	 * use blank string to not to show a label*/
-	title?: Title
 	/** Customization for the tabs*/
 	tabs?: {
 		/** supported keys: about, charts, groups, filter
