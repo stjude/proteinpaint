@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.96.1
 
 Fixes:
 - Do not show hidden values in the barchart `List sample` label menu option results.
