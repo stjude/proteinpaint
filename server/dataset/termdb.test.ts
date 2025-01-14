@@ -29,7 +29,6 @@ export default {
 	isMds3: true,
 	cohort: {
 		massNav: {
-			title: { text: '' }, //it will show cohorts instead
 			tabs: {
 				// about: {
 				// 	hide: true,
