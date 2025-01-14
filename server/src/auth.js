@@ -210,6 +210,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	const sessionTracking = serverconfig.features?.sessionTracking || ''
 	const sessionsFile = path.join(serverconfig.cachedir, 'dsSessions')
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
+	// the required security checks for each applicable dslabel, to be processed from serverconfig.dsCredentials
 	const creds = serverconfig.dsCredentials || {}
 	// !!! do not expose the loaded dsCredentials to other code that imports serverconfig.json !!!
 	delete serverconfig.dsCredentials
@@ -226,6 +227,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		authApi.userCanAccess = () => true
 		authApi.getRequiredCredForDsEmbedder = () => undefined
 		authApi.getPayloadFromHeaderAuth = () => ({})
+		Object.freeze(authApi)
 		return
 	}
 	try {
@@ -234,9 +236,16 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		throw e
 	}
 
+	// runs on every request as part of middleware to inspect request
+	//
+	// returns
+	// - a cred object containing details
+	// - falsy if a data route is not protected
+	//
 	function getRequiredCred(q, path, _protectedRoutes) {
 		if (!q.dslabel) return
 		// faster exact matching, based on known protected routes
+		// if no creds[dslabel], match to wildcard dslabel if specified
 		const ds0 = creds[q.dslabel] || creds['*']
 		if (ds0) {
 			if (path == '/jwt-status') {
@@ -425,7 +434,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	})
 
 	app.post(basepath + '/jwt-status', async (req, res) => {
-		let code = 401
+		let code = 401 // assume unauthorized by default
 		try {
 			const q = req.query
 			const cred = getRequiredCred(q, req.path)

@@ -35,6 +35,11 @@ export async function launch() {
 		console.log('setting server routes ...')
 		await setOptionalRoutes(app)
 		console.log('may set auth routes ...')
+		/*
+		 !!! the order of middlewares is critical, must be set before data routes !!!
+		  - so that a request will be inspected by auth before allowing 
+		    to proceed to any *protected* route handler
+		*/
 		authApi.maySetAuthRoutes(app, basepath, serverconfig)
 
 		// start moving migrated route handler code here
