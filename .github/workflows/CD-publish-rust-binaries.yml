@@ -8,7 +8,7 @@ on:
         description: Build secret
 jobs:
   check-user-permissions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Check user permission
         uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
@@ -23,7 +23,7 @@ jobs:
 
   upload-rust-assets:
     needs: rust-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Upload rust assets
         uses: stjude/proteinpaint/.github/actions/upload-rust-assets@master

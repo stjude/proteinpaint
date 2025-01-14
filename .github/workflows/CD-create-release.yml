@@ -28,7 +28,7 @@ on:
 
 jobs:
   check-user-permissions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Check user permission
         uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
@@ -39,7 +39,7 @@ jobs:
 
   publish-npm:
     needs: check-user-permissions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
       packages: write
@@ -120,7 +120,7 @@ jobs:
 
   upload-rust-assets:
     needs: rust-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Upload rust assets
         uses: stjude/proteinpaint/.github/actions/upload-rust-assets@master
@@ -130,7 +130,7 @@ jobs:
   publish-docker-no-new-rust-module:
     if: needs.publish-npm.outputs.updated_rust == 'false' && github.event.inputs.include == 'npm packages + Docker image'
     needs: publish-npm
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Publish docker image
         uses: stjude/proteinpaint/.github/actions/publish-docker@master
@@ -141,7 +141,7 @@ jobs:
   publish-docker-with-new-rust-module:
     if: github.event.inputs.include == 'npm packages + Docker image'
     needs: upload-rust-assets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Publish docker image
         uses: stjude/proteinpaint/.github/actions/publish-docker@master
