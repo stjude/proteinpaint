@@ -8,21 +8,9 @@ const refresh = notifyElem.__ppRefresh
 // the sse connection that is specific to this notify code bundle
 let sse
 
-// notify a user of pertinent message
+// notify a user of pertinent message //
 function notify(_data: SseData, now) {
 	const data = _data.filter(d => d.status != 'ok' || !d.time || now - d.time < 5000 || refresh.lastCall < d.time)
-	if (refresh.mode == 'none') {
-		data.unshift({
-			key: 'IGNORED SSE',
-			message: 'no auto-refresh',
-			status: 'ok',
-			color: 'black',
-			duration: 2500,
-			reload: false,
-			time: Date.now()
-		})
-	}
-
 	const divs = notifyDiv.selectAll(`.sjpp-sse-message`).data(data, (d: SseDataEntry) => d.key)
 
 	divs.exit().remove()
@@ -153,7 +141,7 @@ function setRefresh(notifyDiv) {
 		},
 
 		destroy() {
-			console.log(47, 'refresh.destroy()')
+			//console.log(47, 'refresh.destroy()')
 			disconnect(refresh.sse)
 			for (const k of Object.keys(refresh.dom)) {
 				if (typeof refresh.dom[k] == 'function') refresh.dom[k].remove()
@@ -262,7 +250,7 @@ function setSse() {
 	if (refresh.sse) disconnect(refresh.sse)
 
 	// server-sent events
-	sse = new EventSource(`${sseUrl}?time=${refresh.lastCall}&now=${Date.now()}`)
+	sse = new EventSource(sseUrl)
 	refresh.sse = sse
 
 	sse.onmessage = event => {
@@ -275,23 +263,7 @@ function setSse() {
 		}
 		const data: SseData = JSON.parse(event.data)
 		if (!data.length) return
-		const now = Date.now()
-		const renderedData = notify(data, now)
-		const mostRecentMsg = Math.max(0, ...renderedData.map(d => d.time))
-
-		localStorage.setItem(sseMessageStorageKey, JSON.stringify(data))
-		if (mostRecentMsg && mostRecentMsg - refresh.lastCall > 100) {
-			refresh.lastCall = refresh.mostRecentMsg ? mostRecentMsg : Math.max(mostRecentMsg, now)
-			refresh.mostRecentMsg = mostRecentMsg
-			if (refresh.mode == 'none') {
-				// console.log(`skipped refresh in sessionRefresh.mode='none'`)
-			} else if (refresh.mode == 'partial') refresh.callback()
-			else if (refresh.mode == 'full') window.location.reload()
-			else if (!refresh.modeOptions[refresh.mode]) {
-				console.warn(`invalid value ${refresh.key}='${refresh.mode}', triggering refresh instead`)
-				refresh.callback()
-			}
-		}
+		handleMessageData(data, { save: true })
 	}
 
 	sse.onerror = e => {
@@ -302,9 +274,53 @@ function setSse() {
 	}
 }
 
+function handleMessageData(_data, opts = {} as any) {
+	if (!_data.length) return
+	const now = Date.now()
+	const data = [..._data] //
+	if (data.length && (refresh.mode == 'none' || opts.unhidden)) {
+		data.unshift({
+			key: 'skipped refresh',
+			message: 'no auto-refresh',
+			status: 'ok',
+			color: 'black',
+			duration: 2500,
+			reload: false,
+			time: Date.now()
+		})
+	}
+	const renderedData = notify(data, now)
+	if (data[0]?.key == 'skipped refresh') return
+
+	const mostRecentMsg = Math.max(0, ...renderedData.map(d => d.time))
+	// console.log(293, mostRecentMsg - refresh.lastCall)
+	if (opts.save) localStorage.setItem(sseMessageStorageKey, JSON.stringify(data))
+	if (mostRecentMsg && mostRecentMsg - refresh.lastCall > 100) {
+		// Math.max() would adjust for possible discrepancy between browser and server unix time
+		refresh.lastCall = refresh.mostRecentMsg ? mostRecentMsg : Math.max(mostRecentMsg, now)
+		refresh.mostRecentMsg = mostRecentMsg
+		if (refresh.mode == 'none') {
+			// console.log(`skipped refresh in sessionRefresh.mode='none'`)
+		} else if (refresh.mode == 'partial') {
+			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)
+			// debounce
+			refresh.pendingCall = setTimeout(refresh.callback, 1000)
+		} else if (refresh.mode == 'full') {
+			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)
+			// debounce
+			refresh.pendingCall = setTimeout(() => window.location.reload(), 1000)
+		} else if (!refresh.modeOptions[refresh.mode]) {
+			console.warn(`invalid value ${refresh.key}='${refresh.mode}', triggering refresh instead`)
+			//refresh.callback()
+			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)
+			// debounce
+			refresh.pendingCall = setTimeout(refresh.callback, 1000)
+		}
+	}
+}
+
 function disconnect(sse) {
 	if (!sse) return
-	console.log(307, 'disconnect(sse)')
 	// console.log('!!! stale sse !!!')
 	// this sse was from a stale notify.ts bundle that was replaced via HMR
 	if (sse.readyState != 2) sse.close()
@@ -315,11 +331,22 @@ function disconnect(sse) {
 document.onvisibilitychange = () => {
 	if (document.hidden) {
 		disconnect(refresh.sse)
-	} else if (!refresh.sse || refresh.sse.readyState === 2) {
-		if (!refresh.mode.endsWith('except_on_unhide')) setSse()
 	} else {
-		console.warn('not hidden, has open sse - will be disconnected')
-		disconnect(refresh.sse)
+		const msg = localStorage.getItem(sseMessageStorageKey)
+		const data = JSON.parse(msg || '[]')
+		const opts = { unhidden: refresh.mode.endsWith('except_on_unhide') } as any
+		if (!refresh.lastUnhide) refresh.lastUnhide = 0
+		handleMessageData(
+			data.filter(m => !m.key.includes('skipped') && m.time > refresh.lastUnhide),
+			opts
+		)
+
+		if (!refresh.sse || refresh.sse.readyState === 2) {
+			setSse()
+		} else {
+			console.warn('will reuse sse connection')
+			// disconnect(refresh.sse)
+		}
 	}
 }
 
@@ -329,6 +356,7 @@ document.onvisibilitychange = () => {
 // a localStorage.setItem() event that the other tabs listens on;
 // this is a work-around to SSE being limited to 6 max connections
 window.onstorage = event => {
+	//
 	// ignore storage event if
 	// - sse is present: rely on sse.onmessage event directly
 	// - document is not visible: does not have to display notification
@@ -343,9 +371,8 @@ window.onstorage = event => {
 		case sseMessageStorageKey:
 			{
 				const msg = localStorage.getItem(sseMessageStorageKey)
-				const data = JSON.parse(msg || '')
-				notify(data, Date.now)
-				refresh.callback()
+				const data = JSON.parse(msg || '[]')
+				handleMessageData(data)
 			}
 			break
 	}
