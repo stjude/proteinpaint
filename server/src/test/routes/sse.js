@@ -8,6 +8,7 @@ import serverconfig from '../../serverconfig.js'
 const __dirname = import.meta.dirname
 
 export default function setRoutes(app, basepath) {
+	// key: message filename, value: message text
 	const messages = {}
 	// will track only one active sse connection per origin
 	// - key: req.header('host')
@@ -45,19 +46,13 @@ export default function setRoutes(app, basepath) {
 			setTimeout(async () => {
 				const files = await fs.promises.readdir(msgDir)
 				const now = Date.now()
-				const time = req.query.time || 0
-				// approximate diff in client versus server unix timestamp,
-				// to adjust the time comparison between client request and message file mtime
-				const nowDiff = Math.abs((req.query.now || now) - now)
 				// the 3rd argument type should match the variable connections Set type
 				const fileInfo = await Promise.all(
 					files.map(async f => {
 						if (f.startsWith('.')) return { isRelevant: false }
 						const s = await fs.promises.stat(path.join(msgDir, f))
-						// for initial connection, filter out message files
-						// that has already been sent to the client based on time and nowDiff
-						// console.log(54, Math.abs(time - s.mtimeMs) < 100, Math.abs(time - s.mtimeMs))
-						const isRelevant = s.isFile() && Math.abs(time - s.mtimeMs) > 100
+						const lastMsg = messages[f]
+						const isRelevant = s.isFile() && (!lastMsg || lastMsg.mtimeMs < s.mtimeMs)
 						return {
 							file: f,
 							stat: isRelevant && s,
@@ -81,13 +76,16 @@ export default function setRoutes(app, basepath) {
 	async function notifyOnFileChange(eventType, fileName, initialConnection = undefined) {
 		try {
 			const f = path.join(msgDir, fileName)
-			if (!(await fs.promises.stat(f))) delete messages[fileName]
+			const stat = await fs.promises.stat(f)
+			if (!stat) delete messages[fileName]
 			else {
 				const message = await fs.promises.readFile(f, { encoding: 'utf8' })
 				if (!message) delete messages[fileName]
 				else {
 					try {
-						messages[fileName] = JSON.parse(message)
+						const m = JSON.parse(message)
+						m.mtimeMs = stat.mtimeMs
+						messages[fileName] = m
 					} catch (e) {
 						// TODO: handle parsing error
 						delete messages[fileName]
