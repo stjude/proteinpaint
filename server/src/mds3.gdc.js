@@ -218,7 +218,7 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 		const { host, headers } = ds.getHostHeaders(q)
 
 		// test code to use native fetch
-		// const _re = await fetch(`${host.geneExp}/gene_expression/gene_selection`, {
+		// const _re = await fetch(`${host.rest}/gene_expression/gene_selection`, {
 		// 		headers,
 		// 		method: 'POST',
 		// 		//timeout: false, // instead of 10 second default
@@ -230,7 +230,7 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 		// 		})
 		// 	}).then(r => r.json()).catch(e => {throw e})
 
-		const re = await nodeFetch(`${host.geneExp}/gene_expression/gene_selection`, {
+		const re = await nodeFetch(`${host.rest}/gene_expression/gene_selection`, {
 			method: 'POST',
 			headers,
 			timeout: false, // instead of 10 second default
@@ -302,10 +302,10 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, ter
 	//
 	// --- keeping previous request code below for reference ---
 	//
-	// const re = await ky.post(`${host.geneExp}/gene_expression/values`, { timeout: false, headers, json: arg }).text()
+	// const re = await ky.post(`${host.rest}/gene_expression/values`, { timeout: false, headers, json: arg }).text()
 	// const lines = re.trim().split('\n')
 	//
-	// const response = await got.post(`${host.geneExp}/gene_expression/values`, {
+	// const response = await got.post(`${host.rest}/gene_expression/values`, {
 	// 	headers,
 	// 	body: JSON.stringify(arg)
 	// })
@@ -313,7 +313,7 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, ter
 	// const lines = response.body.trim().split('\n')
 	//
 
-	const re = await nodeFetch(`${host.geneExp}/gene_expression/values`, {
+	const re = await nodeFetch(`${host.rest}/gene_expression/values`, {
 		method: 'POST',
 		timeout: false,
 		headers,
