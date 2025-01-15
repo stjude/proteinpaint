@@ -5,20 +5,23 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '../../serverconfig.js'
+import notifier from 'node-notifier'
+
 const __dirname = import.meta.dirname
 
+notifier.notify({ title: 'PP server', message: 'restarted' })
+// notifier.notify({ title: 'server stopped', message: msg })
+
 export default function setRoutes(app, basepath) {
-	// key: message filename, value: message text
-	const messages = {}
+	// when validating server ds and routes init, no need to watch file
+	// that would cause the validation to hang, should exit with no error
+	if (process.argv.includes('validate')) return
+	if (!serverconfig.sseDir) return
+
 	// will track only one active sse connection per origin
 	// - key: req.header('host')
 	// - value: res (second argument to route handler)
 	const connections = new Map()
-	const msgDir = path.join(serverconfig.sseDir, 'messages')
-
-	// when validating server ds and routes init, no need to watch file
-	// that would cause the validation to hang, should exit with no error
-	if (!process.argv.includes('validate')) fs.watch(msgDir, {}, notifyOnFileChange)
 
 	app.get(basepath + '/sse?', async (req, res) => {
 		const host = req.header('host')
@@ -43,65 +46,88 @@ export default function setRoutes(app, basepath) {
 
 			// emit the message on the next process tick, since the client connection
 			// would not be ready for a message while the initial fetch response is still active
-			setTimeout(async () => {
-				const files = await fs.promises.readdir(msgDir)
-				const now = Date.now()
-				// the 3rd argument type should match the variable connections Set type
-				const fileInfo = await Promise.all(
-					files.map(async f => {
-						if (f.startsWith('.')) return { isRelevant: false }
-						const s = await fs.promises.stat(path.join(msgDir, f))
-						const lastMsg = messages[f]
-						const isRelevant = s.isFile() && (!lastMsg || lastMsg.mtimeMs < s.mtimeMs)
-						return {
-							file: f,
-							stat: isRelevant && s,
-							isRelevant
-						}
-					})
-				)
-
-				fileInfo
-					.filter(d => d.isRelevant)
-					.sort((a, b) => (a.stat.mtimeMs < b.stat.mtimeMs ? -1 : 1))
-					.forEach(d => notifyOnFileChange('change', d.file, new Set([res])))
-			}, 0)
+			setTimeout(() => notify([res]), 0)
 		} catch (err) {
 			res.send(err)
 		}
 	})
 
-	// 3rd agument is to limit to an initial connection,
-	// to not trigger infinite reload loops across browser tabs/windows
-	async function notifyOnFileChange(eventType, fileName, initialConnection = undefined) {
+	// messages will store all current message to be sent as notifications
+	// - key: message filename or source, value: message text
+	// - notify() will clear this store once all connections have been notified
+	const messages = new Map()
+	const msgDir = path.join(serverconfig.sseDir, 'messages')
+
+	// initiliaze message detection
+	setTimeout(async () => {
+		messages.set('server', {
+			key: 'server',
+			message: 'restarted',
+			status: 'ok',
+			color: 'green',
+			duration: 2500,
+			reload: true,
+			time: Date.now()
+		})
+		// messages initialization will delete files, so do not watch the directory
+		// until that is done since the deletion will trigger a watched event
+		await setMessageFromFile()
+		// message events will detected via file events, which is more reliable
+		// than posting to a server route that will not be available on server
+		// code rebundling/restart
+		fs.watch(msgDir, {}, notifyOnFileChange)
+	}, 0)
+
+	// initialConnection will avoid re-notifying previous connections
+	function notify(initialConnection) {
+		const msgArr = [...messages.values()].sort((a, b) => (a.time < b.time ? -1 : 1))
+		const data = JSON.stringify(msgArr)
+		const text = `data: ${data}\n\n`
+		const conn = initialConnection || connections.values()
+		for (const res of conn) {
+			res.write(`event: message\n`)
+			res.write(text)
+		}
+		// delay clearing messages to allow re-connections to receive recent messages;
+		// cannot directly use messages.clear as callback, use a wrapper function to clear
+		setTimeout(clearMessages, 3000)
+	}
+
+	async function setMessageFromFile(fileName) {
+		const now = Date.now()
 		try {
-			const f = path.join(msgDir, fileName)
-			const stat = await fs.promises.stat(f)
-			if (!stat) delete messages[fileName]
-			else {
-				const message = await fs.promises.readFile(f, { encoding: 'utf8' })
-				if (!message) delete messages[fileName]
-				else {
-					try {
-						const m = JSON.parse(message)
-						m.mtimeMs = stat.mtimeMs
-						messages[fileName] = m
-					} catch (e) {
-						// TODO: handle parsing error
-						delete messages[fileName]
-						console.log(e)
-					}
-				}
-			}
-			const data = JSON.stringify(Object.values(messages))
-			const conn = initialConnection || connections
-			for (const res of conn.values()) {
-				res.write(`event: message\n`)
-				res.write(`data: ${data}\n\n`)
+			const files = await fs.promises.readdir(msgDir)
+			if (fileName && !files.includes(fileName)) {
+				messages.delete(fileName)
+			} else {
+				const p = await Promise.all(
+					files.map(async f => {
+						const file = path.join(msgDir, f)
+						const s = await fs.promises.stat(file)
+						if (!f.startsWith('.') && s.isFile()) {
+							const message = await fs.promises.readFile(file, { encoding: 'utf8' })
+							messages.set(f, JSON.parse(message))
+							fs.unlink(file, logErr)
+						}
+					})
+				)
 			}
 		} catch (e) {
 			console.log(e)
 		}
+	}
+
+	async function notifyOnFileChange(_, fileName) {
+		await setMessageFromFile(fileName)
+		if (messages.has(fileName)) notify()
+	}
+
+	function clearMessages() {
+		messages.clear()
+	}
+
+	function logErr(e) {
+		if (e) console.log(e)
 	}
 
 	// deprecated since messages cannot be posted when the server is rebundling/restarting

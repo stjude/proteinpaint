@@ -115,8 +115,9 @@ if (!serverconfig.binpath) {
 	}
 }
 
-if (serverconfig.debugmode) {
-	// only apply optional routeSetters in debugmode
+if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
+	// only apply optional routeSetters in debugmode and when the binpath
+	// indicates the server code is not installed as a node_module
 	const routeSetters = []
 	const defaultDir = path.join(serverconfig.binpath, 'src/test/routes')
 	// will add testing routes as needed and if found, such as in dev environment
@@ -146,8 +147,9 @@ if (serverconfig.debugmode) {
 	// since the serverconfig.binpath prefix may
 	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
-	// server-sent events dir
-	serverconfig.sseDir = path.join(serverconfig.binpath, '../.sse')
+	// server-sent events dir, can manually set sseDir to false
+	// to prevent the default SSE setup in dev
+	if (serverconfig.sseDir !== false) serverconfig.sseDir = path.join(serverconfig.binpath, '../.sse')
 }
 
 if (serverconfig.allow_env_overrides) {
