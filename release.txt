@@ -1,1 +1,2 @@
-
+Fixes:
+- Charts tab now correctly shows the number of plots created

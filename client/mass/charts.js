@@ -193,7 +193,7 @@ function getChartTypeList(self, state) {
 		////////////////////// PROFILE PLOTS END //////////////////////
 		{
 			label: 'Data Dictionary',
-			clickTo: self.prepPlot,
+			clickTo: self.createPlot,
 			chartType: 'dictionary',
 			config: {
 				chartType: 'dictionary'
@@ -201,7 +201,7 @@ function getChartTypeList(self, state) {
 		},
 		{
 			label: 'Sample View',
-			clickTo: self.prepPlot,
+			clickTo: self.createPlot,
 			chartType: 'sampleView',
 			config: {
 				chartType: 'sampleView'
@@ -255,7 +255,7 @@ function getChartTypeList(self, state) {
 
 		{
 			label: 'Data Download',
-			clickTo: self.prepPlot,
+			clickTo: self.createPlot,
 			chartType: 'dataDownload',
 			config: {
 				chartType: 'dataDownload',
@@ -564,6 +564,15 @@ function setRenderers(self) {
 	*/
 	self.prepPlot = function (chart) {
 		const action = { type: 'plot_prep', config: chart.config, id: getId() }
+		self.app.dispatch(action)
+	}
+
+	/** ALl data selection occurs within the plot (i.e. no external plot controls are needed).
+	 * Launch the plot directly.
+	 * This is a fix for the charts tab not correctly displaying the number of plots.
+	 */
+	self.createPlot = function (chart) {
+		const action = { type: 'plot_create', config: chart.config, id: getId() }
 		self.app.dispatch(action)
 	}
 }
