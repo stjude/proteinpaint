@@ -128,8 +128,12 @@ class TdbNav {
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type.startsWith('tab')) return true
+
+		// do not use startsWith('plot_') to exclude 'plot_edit' as no need for nav to react to that
+		if (action.type == 'plot_prep') return true
 		if (action.type == 'plot_create') return true
 		if (action.type == 'plot_delete') return true
+
 		if (action.type == 'app_refresh') return true
 		if (action.type.endsWith('_customTerm')) return true
 		if (action.type.endsWith('_group')) return true

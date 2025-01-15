@@ -249,6 +249,8 @@ TdbStore.prototype.actions = {
 		})
 	},
 
+	// dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
+	// example: table, scatterplot which requires user to select two terms
 	async plot_prep(action) {
 		const plot = {
 			id: 'id' in action ? action.id : getId()
