@@ -4,7 +4,6 @@ import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from '../control
 import { RxComponentInner } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
 import { Menu } from '#dom'
-import { isNumericTerm } from '#shared/terms.js'
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { MassAppApi, MassState, PlotConfig } from '#mass/types/mass'
 import { Model } from './model/Model'
@@ -129,7 +128,10 @@ class TdbBoxplot extends RxComponentInner {
 				type: 'radio',
 				chartType: 'boxplot',
 				settingsKey: 'orderByMedian',
-				options: setOrderByOptions(this.app.getState().plots.find((p: PlotConfig) => p.id === this.id)),
+				options: [
+					{ label: 'Default', value: false },
+					{ label: 'Median values', value: true }
+				],
 				getDisplayStyle: (plot: PlotConfig) => (plot.term2 ? '' : 'none')
 			},
 			{
@@ -289,14 +291,6 @@ class TdbBoxplot extends RxComponentInner {
 			throw e
 		}
 	}
-}
-
-function setOrderByOptions(config: PlotConfig) {
-	if (!config || !config.term2) return []
-	return [
-		{ label: isNumericTerm(config.term2.term) ? 'Bins' : 'Sample count', value: false },
-		{ label: 'Median values', value: true }
-	]
 }
 
 export const boxplotInit = getCompInit(TdbBoxplot)
