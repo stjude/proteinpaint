@@ -103,7 +103,6 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 	// when missing, the attribute will not be present as "key:undefined"
 	if (tdb.plotConfigByCohort) c.plotConfigByCohort = tdb.plotConfigByCohort
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
-	if (tdb.neuroOncRegression) c.neuroOncRegression = tdb.neuroOncRegression
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
 	if (tdb.timeUnit) c.timeUnit = tdb.timeUnit
@@ -114,6 +113,7 @@ function make(q, res, ds: Mds3WithCohort, genome) {
 	if (tdb.useCasesExcluded) c.useCasesExcluded = tdb.useCasesExcluded
 	if (tdb.excludedTermtypeByTarget) c.excludedTermtypeByTarget = tdb.excludedTermtypeByTarget
 	if (tdb.survival) c.survival = tdb.survival
+	if (tdb.regression) c.regression = tdb.regression
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
 	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
