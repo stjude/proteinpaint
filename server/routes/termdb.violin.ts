@@ -1,4 +1,4 @@
-import type { ViolinRequest, ViolinResponse, RouteApi, ValidGetDataResponse } from '#types'
+import type { ViolinRequest, ViolinResponse, RouteApi, ValidGetDataResponse, TermWrapper } from '#types'
 import { violinPayload } from '#types/checkers'
 import { scaleLinear, scaleLog } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -42,7 +42,11 @@ function init({ genomes }) {
 	}
 }
 
-export async function trigger_getViolinPlotData(q: ViolinRequest, ds, genome) {
+export async function trigger_getViolinPlotData(
+	q: ViolinRequest,
+	ds: { [index: string]: any },
+	genome: { [index: string]: any }
+) {
 	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw 'q.tw not of {term,q}'
 	const term = q.tw.term
 	if (!q.tw.q.mode) q.tw.q.mode = 'continuous'
@@ -70,8 +74,8 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds, genome) {
 
 	if (q.scale) setScaleData(q, data as ValidGetDataResponse, q.tw)
 
-	const valuesObject = divideValues(q, data as ValidGetDataResponse, q.tw, sampleType)
-	const result = setResponse(valuesObject, data, q, sampleType)
+	const valuesObject = divideValues(q, data as ValidGetDataResponse, sampleType)
+	const result = setResponse(valuesObject, data as ValidGetDataResponse, q, sampleType)
 
 	// wilcoxon test data to return to client
 	await getWilcoxonData(q.divideTw, result)
@@ -82,7 +86,7 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds, genome) {
 }
 
 // compute pvalues using wilcoxon rank sum test
-export async function getWilcoxonData(divideTw: any, result: any) {
+export async function getWilcoxonData(divideTw: TermWrapper, result: { [index: string]: any }) {
 	if (!divideTw) return
 	const numPlots = result.plots.length
 	if (numPlots < 2) return
@@ -112,18 +116,18 @@ export async function getWilcoxonData(divideTw: any, result: any) {
 /** scale sample data
  * divide keys and values by scaling factor - this is important
  * for regression UI when running association tests. */
-function setScaleData(q, data: ValidGetDataResponse, tw: any) {
+function setScaleData(q: ViolinRequest, data: ValidGetDataResponse, tw: TermWrapper) {
 	if (!q.scale) return
 	const scale = Number(q.scale)
 	for (const val of Object.values(data.samples)) {
-		if (!val[tw.$id]) continue
+		if (!tw.$id || !val[tw.$id]) continue
 		if (tw.term.values?.[val[tw.$id]?.value]?.uncomputable) continue
 		val[tw.$id].key = val[tw.$id].key / scale
 		val[tw.$id].value = val[tw.$id].value / scale
 	}
 }
 
-function divideValues(q, data: ValidGetDataResponse, tw, sampleType) {
+function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: string) {
 	const overlayTerm = q.divideTw
 	const useLog = q.unit == 'log'
 
@@ -136,12 +140,12 @@ function divideValues(q, data: ValidGetDataResponse, tw, sampleType) {
 	}
 }
 
-function sortObj(object) {
+function sortObj(object: { [index: string]: any }) {
 	return Object.fromEntries(Object.entries(object).sort(([, a], [, b]) => (a as any) - (b as any)))
 }
 
-export function sortKey2values(data, key2values, overlayTerm) {
-	const orderedLabels = data.refs.byTermId[overlayTerm?.$id]?.keyOrder
+export function sortKey2values(data: ValidGetDataResponse, key2values: Map<string, any[]>, overlayTerm: TermWrapper) {
+	const orderedLabels = overlayTerm?.$id ? data.refs.byTermId[overlayTerm.$id]?.keyOrder : undefined
 
 	key2values = new Map(
 		[...key2values].sort(
@@ -150,7 +154,7 @@ export function sortKey2values(data, key2values, overlayTerm) {
 				: overlayTerm?.term?.type === 'categorical'
 				? (a, b) => b[1].length - a[1].length
 				: overlayTerm?.term?.type === 'condition'
-				? (a, b) => a[0] - b[0]
+				? (a, b) => Number(a[0]) - Number(b[0])
 				: (a, b) =>
 						a
 							.toString()
@@ -161,7 +165,7 @@ export function sortKey2values(data, key2values, overlayTerm) {
 	return key2values
 }
 
-function setResponse(valuesObject, data, q, sampleType) {
+function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinRequest, sampleType: string) {
 	const overlayTerm = q.divideTw
 	//temp plot type
 	const plots: {
@@ -173,7 +177,6 @@ function setResponse(valuesObject, data, q, sampleType) {
 		divideTwBins?: any
 		uncomputableValueObj?: { [index: string]: number } | null
 	}[] = []
-	const pvalues = []
 
 	for (const [key, values] of sortKey2values(data, valuesObject.key2values, overlayTerm)) {
 		if (overlayTerm) {
@@ -202,7 +205,7 @@ function setResponse(valuesObject, data, q, sampleType) {
 		min: valuesObject.min,
 		max: valuesObject.max,
 		plots,
-		pvalues,
+		pvalues: [],
 		uncomputableValueObj:
 			Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
 	}
@@ -210,7 +213,7 @@ function setResponse(valuesObject, data, q, sampleType) {
 	return result
 }
 
-function createCanvasImg(q, result, ds: any) {
+function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds: { [index: string]: any }) {
 	// size on x-y for creating circle and ticks
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
