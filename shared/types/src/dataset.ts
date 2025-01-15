@@ -951,6 +951,15 @@ type SurvivalSettings = {
 	xTickValues?: number[]
 }
 
+type RegressionSettings = {
+	/** disable interactions */
+	disableInteractions?: boolean
+	/** hide type III statistics table in results */
+	hideType3?: boolean
+	/** hide statistical tests table in results */
+	hideTests?: boolean
+}
+
 type MatrixSettings = {
 	maxSample?: number
 	svgCanvasSwitch?: number
@@ -1019,6 +1028,11 @@ type NumericDictTermCluster = {
 type Survival = {
 	/** default settings for survival plot */
 	settings?: SurvivalSettings
+}
+
+type Regression = {
+	/** default settings for regression */
+	settings?: RegressionSettings
 }
 
 type MatrixPlotsEntry = {
@@ -1132,17 +1146,13 @@ keep this setting here for reason of:
 	matrix?: Matrix
 	numericDictTermCluster?: NumericDictTermCluster
 	survival?: Survival
+	regression?: Regression
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
 	multipleTestingCorrection?: MultipleTestingCorrection
-	/** regression settings for neuro-oncology portals:
-- no interaction terms
-- report event counts of cox coefficients
-- hide type III stats and miscellaneous statistical tests */
-	neuroOncRegression?: boolean
 	urlTemplates?: {
 		/** gene link definition */
 		gene?: UrlTemplateBase

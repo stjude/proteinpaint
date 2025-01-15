@@ -1232,7 +1232,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_type3 = result => {
-		if (!result.type3 || self.app.vocabApi.termdbConfig.neuroOncRegression) return
+		if (!result.type3 || self.app.vocabApi.termdbConfig.regression?.settings?.hideType3) return
 		const div = self.newDiv(result.type3.label)
 		const table = div.append('table').style('border-spacing', '0px')
 
@@ -1285,7 +1285,7 @@ function setRenderers(self) {
 	}
 
 	self.mayshow_tests = result => {
-		if (!result.tests || self.app.vocabApi.termdbConfig.neuroOncRegression) return
+		if (!result.tests || self.app.vocabApi.termdbConfig.regression?.settings?.hideTests) return
 		const div = self.newDiv(result.tests.label)
 		const table = div.append('table').style('border-spacing', '0px')
 		const header = table.append('tr').style('opacity', 0.4)
