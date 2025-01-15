@@ -15,12 +15,9 @@ import * as oldApp from './app.unorg.js'
 import { authApi } from './auth.js'
 import * as phewas from './termdb.phewas.js'
 import { sendMessageToSlack } from './postOnSlack.js'
-import notifier from 'node-notifier'
 
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
-
-const msgDir = path.join(serverconfig.sseDir, 'messages')
 
 export async function launch() {
 	try {
@@ -91,18 +88,6 @@ export async function launch() {
 		}
 
 		await startServer(app)
-		const message = 'restarted'
-		notifier.notify({ title: 'PP server', message })
-		const data = JSON.stringify({
-			key: 'server',
-			message,
-			status: 'ok',
-			color: 'green',
-			duration: 2500,
-			reload: true,
-			time: Date.now()
-		})
-		fs.promises.writeFile(`${msgDir}/server`, data)
 		return app
 	} catch (err: any) {
 		let exitCode = 1
@@ -129,10 +114,7 @@ export async function launch() {
       and thereby avoid unnecessary endless restarts of an invalid server
       init with bad config, data, and/or code
     */
-
 		const msg = err.stack ? err.stack : err
-		notifier.notify({ title: 'server stopped', message: msg })
-
 		if (serverconfig.slackWebhookUrl) {
 			const url = serverconfig.URL
 			const message = `Startup error on: ${url} \n` + `${msg}`
