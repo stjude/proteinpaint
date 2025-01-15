@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.98.0
 
 Features:
 - enable hot module replacement in dev
