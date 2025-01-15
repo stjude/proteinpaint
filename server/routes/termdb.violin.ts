@@ -63,7 +63,7 @@ export async function trigger_getViolinPlotData(
 	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 	if (data.error) throw data.error
 	//get ordered labels to sort keys in key2values
-	if (q.divideTw && data.refs.byTermId[q.divideTw.$id]) {
+	if (q.divideTw.$id && data.refs.byTermId[q.divideTw.$id]) {
 		data.refs.byTermId[q.divideTw.$id].orderedLabels = getOrderedLabels(
 			q.divideTw,
 			data.refs.byTermId[q.divideTw.$id]?.bins,
@@ -244,7 +244,7 @@ function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds:
 
 	const scaledRadius = q.radius / q.devicePixelRatio
 	const arcEndAngle = scaledRadius * Math.PI
-	// let biggestBin = 0 //Never updated??
+
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
 
@@ -290,6 +290,4 @@ function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds:
 		plot.summaryStats = summaryStats(plot.values)
 		delete plot.values
 	}
-	// result.biggestBin = biggestBin
-	result.biggestBin = 0 //Never updated??
 }
