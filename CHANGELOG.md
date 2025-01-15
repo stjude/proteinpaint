@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- enable hot module replacement in dev
+
+
 ## 2.97.0
 
 
