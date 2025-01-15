@@ -721,12 +721,7 @@ class singleCellPlot {
 		}
 		const cat2Color = getColors(plot.clusters.length + 2) //Helps to use the same color scheme in different samples
 		for (const cluster of plot.clusters)
-			colorMap[cluster] =
-				cluster == 'ref' || cluster == 'No'
-					? '#F2F2F2'
-					: plot.colorMap?.[cluster]
-					? plot.colorMap[cluster]
-					: cat2Color(cluster)
+			colorMap[cluster] = plot.colorMap?.[cluster] ? plot.colorMap[cluster] : cat2Color(cluster)
 
 		plot.colorMap = colorMap
 
