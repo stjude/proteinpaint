@@ -25,12 +25,11 @@ tape('Render Databrowser UI from runpp()', async test => {
 	await runproteinpaint({
 		holder,
 		noheader: true,
-		parseurl: true,
 		nobox: true,
 		tkui: 'databrowser'
 	})
 
-	const headers = ['Data Dictionary', 'Sample Annotation Matrix']
+	const headers = ['Data Dictionary']
 	const sectionFound = await detectGte({
 		elem: holder,
 		selector: '.sjpp-databrowser-section-header'
@@ -38,7 +37,7 @@ tape('Render Databrowser UI from runpp()', async test => {
 	const headersFound = sectionFound.filter(elem => headers.some(h => h == elem.innerText))
 	test.equal(headersFound.length, sectionFound.length, `Should render all sections`)
 
-	// if (test._ok) holder.remove()
+	if (test._ok) holder.remove()
 	test.end()
 })
 
