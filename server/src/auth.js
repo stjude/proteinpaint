@@ -447,13 +447,15 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				code = 400
 				throw `Incorrect authorization route, use ${cred.authRoute}'`
 			}
-			const { email, ip } = getJwtPayload(q, req.headers, cred)
+			const result = getJwtPayload(q, req.headers, cred)
+			const { email, ip, clientAuthResult } = getJwtPayload(q, req.headers, cred)
+
 			checkIPaddress(req, ip, cred)
 			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred)
 			code = 401 // in case of jwt processing error
 			const jwt = await getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email)
 			// difficult to setup CORS cookie, will simply reply with cookie and use a custom header for now
-			res.send({ status: 'ok', jwt, route: cred.route, [cred.cookieId]: id })
+			res.send({ status: 'ok', jwt, route: cred.route, [cred.cookieId]: id, clientAuthResult })
 		} catch (e) {
 			console.log(e)
 			res.status(code)
@@ -798,7 +800,8 @@ function getJwtPayload(q, headers, cred, _time, session = null) {
 	// this verification will throw if the token is invalid in any way
 	const payload = jsonwebtoken.verify(token, secret)
 	// if there is a session, handle the expiration outside of this function
-	if (session) return { iat: payload.iat, email: payload.email, ip: payload.ip }
+	if (session)
+		return { iat: payload.iat, email: payload.email, ip: payload.ip, clientAuthResult: payload.clientAuthResult }
 
 	// the embedder may use a post-processor function to
 	// optionally transform, translate, reformat the payload
@@ -819,7 +822,7 @@ function getJwtPayload(q, headers, cred, _time, session = null) {
 	if (missingAccess.length) {
 		throw { error: 'Missing access', linkKey: missingAccess.join(',') }
 	}
-	return { iat: payload.iat, email: payload.email, ip: payload.ip }
+	return { iat: payload.iat, email: payload.email, ip: payload.ip, clientAuthResult: payload.clientAuthResult }
 }
 
 function checkIPaddress(req, ip, cred) {
