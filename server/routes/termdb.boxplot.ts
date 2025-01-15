@@ -52,7 +52,7 @@ function init({ genomes }) {
 			)
 
 			const plots: any = []
-			for (const [key, values] of sortKey2values(data, key2values, overlayTerm)) {
+			for (const [key, values] of sortKey2values(data as ValidGetDataResponse, key2values, overlayTerm)) {
 				const sortedValues = values.sort((a, b) => a - b)
 
 				const vs = sortedValues.map((v: number) => {
