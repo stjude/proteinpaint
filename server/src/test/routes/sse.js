@@ -8,15 +8,18 @@ import serverconfig from '../../serverconfig.js'
 import notifier from 'node-notifier'
 
 const __dirname = import.meta.dirname
-
 notifier.notify({ title: 'PP server', message: 'restarted' })
-// notifier.notify({ title: 'server stopped', message: msg })
+
+const sse = serverconfig.sse !== false && path.join(serverconfig.binpath, '.sse')
 
 export default function setRoutes(app, basepath) {
 	// when validating server ds and routes init, no need to watch file
 	// that would cause the validation to hang, should exit with no error
-	if (process.argv.includes('validate')) return
-	if (!serverconfig.sseDir) return
+	if (process.argv.includes('validate') || !serverconfig.debugmode) return
+	// dev or test script will create .sse/messages as needed in non-prod environments,
+	// sse routes, notification is disabled if this msgDir is not present
+	const msgDir = path.join(serverconfig.binpath, '../.sse/messages')
+	if (!fs.existsSync(msgDir)) return
 
 	// will track only one active sse connection per origin
 	// - key: req.header('host')
@@ -56,7 +59,6 @@ export default function setRoutes(app, basepath) {
 	// - key: message filename or source, value: message text
 	// - notify() will clear this store once all connections have been notified
 	const messages = new Map()
-	const msgDir = path.join(serverconfig.sseDir, 'messages')
 
 	// initiliaze message detection
 	setTimeout(async () => {
@@ -88,8 +90,7 @@ export default function setRoutes(app, basepath) {
 			res.write(`event: message\n`)
 			res.write(text)
 		}
-		// delay clearing messages to allow re-connections to receive recent messages;
-		// cannot directly use messages.clear as callback, use a wrapper function to clear
+		// delay clearing messages to allow re-connections to receive recent messages
 		setTimeout(clearMessages, 3000)
 	}
 
@@ -126,10 +127,6 @@ export default function setRoutes(app, basepath) {
 		messages.clear()
 	}
 
-	function logErr(e) {
-		if (e) console.log(e)
-	}
-
 	// deprecated since messages cannot be posted when the server is rebundling/restarting
 	// app.post('/notifications', async (req, res) => {
 	// 	for (const res of connections) {
@@ -139,4 +136,8 @@ export default function setRoutes(app, basepath) {
 	// 		res.write(`data: ${data}\n\n`)
 	// 	}
 	// })
+}
+
+function logErr(e) {
+	if (e) console.log(e)
 }

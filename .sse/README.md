@@ -19,19 +19,22 @@ https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server
 
 1. If `serverconfig.debugmode == true`, then
 	a. set `serverconfig.sse` to `abs/path/proteinpaint/.sse`.
-	This is done in `server/src/serverconfig.js`.
+	This is done in `server/src/serverconfig.js`, except when manually disabled (opt-out)
+	using serverconfig.sse: false.
 
 	b. set optional routes that include `server/src/test/routes/sse.js`.
 
-2. In `server/src/test/routes/sse.js`, the `app.get('/sse')` route handler is set up.
+2. `client/dev.sh` will create `proteinpaint/.sse/messages` dir to enable sse routes and notification setup.
+
+3. In `server/src/test/routes/sse.js`, the `app.get('/sse')` route handler is set up.
 Within the handler, `fs.watch()` is used to detect file changes in `serverconfig.sse/messages`.
 
-3. On detecting `messages/${file}` changes, a notification is triggered in the route handler.
+4. On detecting `messages/${file}` changes, a notification is triggered in the route handler.
 
-4. In `client/src/nofify.js`, an event subcription/listener to the `/sse` route is created.
+5. In `client/src/nofify.js`, an event subcription/listener to the `/sse` route is created.
 This creates notification divs to render messages as they are streamed by the server.
 
-5. Some message may trigger browser refresh (must prevent accidental infinite reload loop).
+6. Some message may trigger browser refresh (must prevent accidental infinite reload loop).
 
 ### Creating a new message by filename
 
