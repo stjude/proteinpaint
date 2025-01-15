@@ -1,4 +1,4 @@
-/******* termdb.matrix.js is ~not~ a route *****
+/******* server/src/termdb.matrix.js is ~not~ a route *****
  * getData() is used frequently in other routes or typescript files.
  * Although the original file is 1) not ts and 2) not a route, a type
  * is still needed when func used in other ts files.
@@ -14,33 +14,30 @@ export type ValidGetDataResponse = {
 			key: number
 			/** value: { 
 			sample: integerId,
-			<termid>: {key, value},
+			<tw.$id>: {key, value},
 			<more terms...>
-			<geneName>:{ 
-				key, label, // these two are both gene names. useless?? FIXME
-				values:[]
-					{gene/isoform/chr/pos/ref/alt/class/mname/dt}
-			}
 		} */
 			value: number
 		}
 	>
+	/** Metadata */
 	refs: {
-		/** metadata about terms 
-         * <tw.$id>:
-			bins: CTE.bins
-			events: CTE.events
-				these info are not available in term object and is computed during run time, and 
-        */
-		byTermId: Record<string, { keyOrder?: any; bins: any }>
+		/** metadata about terms
+		 * Index is <tw.$id> */
+		byTermId: Record<
+			string,
+			{
+				keyOrder?: any
+				/** CTE.bins */
+				bins?: any
+				/** CTE.events. These info are not available in term object and is computed during run time. */
+				events?: any
+			}
+		>
 		/** metadata about samples (e.g. print names). avoid duplicating such in sample data elements (e.g. mutations)
-		[sample integer id]: {label: [string sample name for display], ...} */
-		bySampleId: any
-		//{
-		// 	[key: string]: {
-		// 		label: string
-		// 	}
-		// }
+		[sample integer id]: {label: [string sample name for display], ...} 
+		May return as an empty object. */
+		bySampleId: Record<string, { label: string }> | object
 	}
 	sampleType?: any
 }

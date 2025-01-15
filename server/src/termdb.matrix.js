@@ -37,32 +37,10 @@ genome{}
 	server-side genome object
 
 Returns:
-
-{
-	samples{}
-		key: stringified integer sample id 
-		value: { 
-			sample: integerId,
-			<termid>: {key, value},
-			<more terms...>
-			<geneName>:{ 
-				key, label, // these two are both gene names. useless?? FIXME
-				values:[]
-					{gene/isoform/chr/pos/ref/alt/class/mname/dt}
-			}
-		}
-	
-	byTermId{}
-		metadata about terms
-		<term id>:
-			bins: CTE.bins
-			events: CTE.events
-				these info are not available in term object and is computed during run time, and 
-
-	bySampleId{}
-		metadata about samples (e.g. print names). avoid duplicating such in sample data elements (e.g. mutations)
-		[sample integer id]: {label: [string sample name for display], ...}
-}
+	- see ValidGetDataResponse type in shared/types/src/termdb.matrix.ts
+	for documentation
+	- please update types in shared/types/src/termdb.matrix.ts if 
+	the return object is changed
 */
 
 export async function getData(q, ds, genome, onlyChildren = false) {
