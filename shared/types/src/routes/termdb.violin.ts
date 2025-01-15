@@ -3,43 +3,50 @@ import type { Filter } from '../filter.ts'
 import type { ErrorResponse } from './errorResponse.ts'
 
 export type ViolinRequest = {
-	genome: string
-	dslabel: string
-	embedder: string
-	/** main tw to fetch numeric data to show in violin */
-	tw: any
+	/** A number representing the dimension perpendicular to the violin spread
+	 * (the height of the axis) */
+	axisHeight: number
 	/** ?? TODO: Needs description */
 	currentGeneNames: string[]
+	/** A string representing the type of symbol used on the plot, which can be
+	 * either 'circles' or 'rugs' */
+	datasymbol: string
+	/** A number representing the device's pixel ratio, which may be used for
+	 * rendering quality adjustments */
+	devicePixelRatio: number
 	/** optional tw to divide tw data into multiple violins and show under one axis */
 	divideTw?: any
-	/** A number representing the device's pixel ratio, which may be used for rendering quality adjustments */
-	devicePixelRatio: number
+	/** Reference label (i.e. short label) for the ds */
+	dslabel: string
 	/** optional mass filter */
 	filter?: Filter
 	/** optional read-only invisible filter TODO GdcFilter0 */
 	filter0?: any
-	/** A number representing the width of the SVG (Scalable Vector Graphics) box, used for rendering the chart */
-	svgw: number
-	/** A string with two possible values: 'horizontal' or 'vertical', indicating the orientation of the chart, either horizontal or vertical */
+	/** Reference label */
+	genome: string
+	/** If true, uses KDE method to build plot. Otherwise a histogram is rendered */
+	isKDE: boolean
+	/** A string with two possible values: 'horizontal' or 'vertical',
+	 * indicating the orientation of the chart, either horizontal or vertical */
 	orientation: 'horizontal' | 'vertical'
-	/** A string representing the type of symbol used on the plot, which can be either 'circles' or 'rugs' */
-	datasymbol: string
 	/** A number representing the radius of the data symbols rendered on the plot */
 	radius: number
-	/** A number representing the width of the stroke used to generate the data symbols (data symbols are rendered on the server side) */
-	strokeWidth: number
-	/** A number representing the dimension perpendicular to the violin spread (the height of the axis) */
-	axisHeight: number
 	/** A number representing the right margin of the chart or plot */
 	rightMargin: number
+	/** Term may be scaled from regression analysis. Equivalent of term.q.scale */
+	scale?: any
+	/** A number representing the width of the stroke used to generate the data symbols
+	 * (data symbols are rendered on the server side) */
+	strokeWidth: number
+	/** A number representing the width of the SVG (Scalable Vector Graphics) box, used for
+	 * rendering the chart */
+	svgw: number
+	/** Number of bins to build the plot. Default is 20. */
+	ticks: number
+	/** main tw to fetch numeric data to show in violin */
+	tw: any
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit: string
-	/** ?? TODO: Needs description */
-	scale: any
-	/** ?? TODO: Needs description */
-	isKDE: boolean
-	/** ?? TODO: Needs description */
-	ticks: any
 }
 
 /** ?? TODO: Needs description */
@@ -70,9 +77,6 @@ type ViolinDensity = {
 }
 
 export type ViolinPlotEntry = {
-	/** ?? TODO: Needs description
-	 * Doesn't appear to be used on the client */
-	biggestBin: number
 	/** Color to render */
 	color: string
 	density: ViolinDensity
