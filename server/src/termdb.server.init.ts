@@ -491,6 +491,7 @@ export function server_init_db_queries(ds) {
 		if a ds controls certain route based on request host name (embedder),
 		then this param value will be used to determine visible/hidden status for chart types depending on the controlled route
 		in such case if embedder is missing, such chart types will not be shown (or disabled, based on dsCredentials)
+	.clientAuthResult{}
 
 	.user? may add jwt payload details if available, such as user roles and other props
 	*/

@@ -485,6 +485,16 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		}
 	})
 
+	// helper with some code duplication just to get clientAuthResult from jwt
+	authApi.getClientAuthResult = function (req) {
+		const q = req.query
+		const cred = getRequiredCred(q, req.path)
+		if (!cred) return // no result. open-access ds
+		if (cred.authRoute != '/jwt-status') throw `Incorrect authorization route, use ${cred.authRoute}'` // needed?
+		const result = getJwtPayload(q, req.headers, cred)
+		return result.clientAuthResult
+	}
+
 	/*
 		will return a list of dslabels that require credentials
 	*/
