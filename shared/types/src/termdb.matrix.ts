@@ -32,7 +32,7 @@ export type ValidGetDataResponse = {
 			events: CTE.events
 				these info are not available in term object and is computed during run time, and 
         */
-		byTermId: Record<string, { bins: any }>
+		byTermId: Record<string, { keyOrder?: any; bins: any }>
 		/** metadata about samples (e.g. print names). avoid duplicating such in sample data elements (e.g. mutations)
 		[sample integer id]: {label: [string sample name for display], ...} */
 		bySampleId: any

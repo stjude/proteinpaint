@@ -38,6 +38,8 @@ export type ViolinRequest = {
 	scale: any
 	/** ?? TODO: Needs description */
 	isKDE: boolean
+	/** ?? TODO: Needs description */
+	ticks: any
 }
 
 /** ?? TODO: Needs description */
