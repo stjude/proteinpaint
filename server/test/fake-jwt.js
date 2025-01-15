@@ -11,9 +11,11 @@ const cred = dsCred.termdb[embedder]
 const data = {
 	iat: time,
 	exp: time + 3600,
-	datasets: ['TermdbTest', 'SJLife', 'PNET', 'sjlife', 'ccss', 'ABC', 'XYZ', 'abc', 'xyz'],
 	email: 'username@test.tld',
-	ip: '127.0.0.1'
+	ip: '127.0.0.1', //client ip address
+	//parameters added by us, not standard jwt
+	datasets: ['TermdbTest', 'SJLife', 'PNET', 'sjlife', 'ccss', 'ABC', 'XYZ', 'abc', 'xyz', 'profile'],
+	clientAuthResult: { full: { role: 'admin', site: 'A' }, abbrev: { role: 'user', site: 'B' } }
 }
 
 const route = !process.argv[4] ? '' : process.argv[4][0] != '/' ? process.argv[4] : process.argv[4].slice(1)

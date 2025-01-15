@@ -156,7 +156,7 @@ function getChartTypeList(self, state) {
 	TODO fixed order of buttons. may allow to customize order
 	*/
 
-	const [logged, site, user] = getProfileLogin() // XXX later on replace with jwt login
+	const [logged, site, user] = getProfileLogin(self.app) // XXX later on replace with jwt login
 
 	const buttons = [
 		////////////////////// PROFILE PLOTS START //////////////////////

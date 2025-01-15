@@ -27,7 +27,7 @@ export class profilePlot {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
-		const [logged, site, user] = getProfileLogin() //later on replace with real login info
+		const [logged, site, user] = getProfileLogin(this.app, appState.activeCohort) //later on replace with real login info
 		return {
 			config,
 			termfilter: appState.termfilter,
@@ -667,12 +667,13 @@ export function getDefaultProfilePlotSettings() {
 	}
 }
 
-export function getProfileLogin() {
-	if (!window.location.pathname.includes('profile')) return [0, null, null]
-	const queryString = window.location.search
-	const urlParams = new URLSearchParams(queryString)
-	const logged = urlParams.get('logged')
-	const site = urlParams.get('site')
-	const user = logged && site ? 'site' : logged ? 'admin' : 'public'
+export function getProfileLogin(app, cohort = FULL_COHORT) {
+	const auth = app.vocabApi.getClientAuthResult()
+	if (!auth) return [false, null, 'public']
+	const logged = true
+	const auth_info = cohort == FULL_COHORT ? auth.full : auth.abbrev
+	if (!auth_info) return [false, null, 'public'] //no login info for the cohort, treat it as not logged in, public view for that cohort
+	const user = auth_info.role
+	const site = user == 'admin' ? null : auth_info.site //site only matters if you are not admin
 	return [logged, site, user]
 }
