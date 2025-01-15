@@ -260,7 +260,7 @@ class Scatter {
 			settingsKey: 'maxShapeSize',
 			title: 'Maximum sample size',
 			min: minShapeSize,
-			max: maxShapeSize,
+			max: maxShapeSize * 2,
 			step
 		}
 		const orientation = {
