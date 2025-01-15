@@ -180,6 +180,7 @@ class TdbNav {
 					this.samplecounts[this.filterJSON] = n
 				}
 			}
+			this.displaySubheader = this.state.nav.displaySubheader
 		}
 		this.updateUI()
 	}
@@ -403,7 +404,7 @@ function setRenderers(self) {
 			)
 	}
 
-	self.updateUI = async (toggleSubheaderdiv = false) => {
+	self.updateUI = async () => {
 		if (!self.dom.subheaderDiv) return
 		if (self.activeTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
 			// showing charts or filter tab; cohort selection is enabled but no cohort is selected
@@ -411,11 +412,7 @@ function setRenderers(self) {
 			self.dom.messageDiv.selectAll('text').remove()
 			self.dom.messageDiv.style('display', '').text('No cohort selected. Please select a cohort in the "COHORT" tab.')
 		} else {
-			let display = 'block'
-			if (toggleSubheaderdiv) {
-				display = self.dom.subheaderDiv.style('display') == 'none' ? 'block' : 'none'
-			}
-			if (self.dom.subheaderDiv) self.dom.subheaderDiv.style('display', display)
+			if (self.dom.subheaderDiv) self.dom.subheaderDiv.style('display', self.displaySubheader ? 'block' : 'none')
 			if (self.dom.messageDiv) self.dom.messageDiv.style('display', 'none')
 		}
 		const selectCohort = self.state.termdbConfig.selectCohort
@@ -490,15 +487,22 @@ function setInteractivity(self) {
 	self.setTab = async (event, d) => {
 		if (d.colNum === self.activeTab && !self.searching) {
 			self.prevCohort = self.activeCohort
-			await self.updateUI(true)
+			/** Fix to ensure the subheader is displayed/not displayed when
+			 * sharing or saving the session.
+			 */
+			self.displaySubheader = !self.displaySubheader
+			await self.updateUI()
+
+			/** Must trigger app dispatch to save the display in the state */
+
 			// since the app.dispatch() is not called directly,
 			// must trigger the event bus here
-			if (self.bus) self.bus.emit('postRender')
-			return
+			// if (self.bus) self.bus.emit('postRender')
+			// return
 		}
 		self.activeTab = d.colNum
 		self.searching = false
-		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
+		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab, displaySubheader: self.displaySubheader })
 		const chartsIdx = self.subheaderKeys.indexOf('charts')
 		if (self.activeTab == chartsIdx && self.activeCohort != -1 && !self.state.plots.length) {
 			// show dictionary or default plot in charts tab if no other
