@@ -105,19 +105,6 @@ export class MassAbout {
 	since there's no reason to update about tab contents while user is interacting with mass ui
 	*/
 	init(appState) {
-		console.log(appState)
-		if (this.opts.selectCohort?.description || this.opts.selectCohort?.descriptionByUser) {
-			//temporary logic to get the profile description until the login is implemented
-			const [logged, site, user] = getProfileLogin(this.app, appState.activeCohort)
-			console.log(this.opts.selectCohort.descriptionByUser)
-			//If there is a user and a descriptionByUser, use the user description otherwise use the default description
-			const description =
-				user && this.opts.selectCohort.descriptionByUser
-					? this.opts.selectCohort.descriptionByUser[user]
-					: this.opts.selectCohort.description
-			console.log('description', description)
-			if (description) this.dom.cohortDescription.html(description)
-		}
 		/** If selectCohort available, options in the about html will not show */
 		this.initCohort(appState)
 		this.initCustomHtml()
@@ -128,6 +115,16 @@ export class MassAbout {
 
 	async main() {
 		await this.renderCohortsTable()
+		if (this.opts.selectCohort?.description || this.opts.selectCohort?.descriptionByUser) {
+			//temporary logic to get the profile description until the login is implemented
+			const [logged, site, user] = getProfileLogin(this.app, this.state.activeCohort)
+			//If there is a user and a descriptionByUser, use the user description otherwise use the default description
+			const description =
+				user && this.opts.selectCohort.descriptionByUser
+					? this.opts.selectCohort.descriptionByUser[user]
+					: this.opts.selectCohort.description
+			if (description) this.dom.cohortDescription.html(description)
+		}
 	}
 
 	initCohort = appState => {
