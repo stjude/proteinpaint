@@ -498,7 +498,7 @@ export function server_init_db_queries(ds) {
 
 			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
 				// auth second argument may be ignored by isSupported() callback
-				if (isSupported({ ds, forbiddenRoutes, cohortTermTypes, clientAuthResult })) {
+				if (isSupported({ ds, forbiddenRoutes, cohortTermTypes, clientAuthResults })) {
 					// this chart type is supported based on context
 					supportedChartTypes[cohort].push(chartType)
 				}
