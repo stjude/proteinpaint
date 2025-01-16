@@ -197,6 +197,9 @@ tape('term1 as numeric and term2 categorical, test median rendering', function (
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hidden'
+			},
 			plots: [open_state]
 		},
 		violin: {
@@ -219,26 +222,20 @@ tape('term1 as numeric and term2 categorical, test median rendering', function (
 			count: 2
 		})
 		test.ok(median, 'Median exists')
-
 		test.equal(
 			median.length,
 			violin.Inner.data.plots.length,
 			'Number of median lines rendered should be/is equal to number of plots rendered'
 		)
-		const medianValues = median.map(
-			({
-				__data__: {
-					summaryStats: { values }
-				}
-			}) => {
-				const { value } = values.find(c => c.id === 'median')
-				return value
-			}
-		)
-		const sumStatsValues = violin.Inner.data.plots.map(({ summaryStats: { values } }) => {
-			const { value } = values.find(c => c.id === 'median')
+		const medianValues = median.map(({ __data__: { summaryStats } }) => {
+			const { value } = summaryStats.find(c => c.id === 'median')
 			return value
 		})
+		const sumStatsValues = violin.Inner.data.plots.map(({ summaryStats }) => {
+			const { value } = summaryStats.find(c => c.id === 'median')
+			return value
+		})
+
 		test.equal(
 			medianValues[0],
 			sumStatsValues[0],
