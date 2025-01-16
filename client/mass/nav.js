@@ -494,14 +494,16 @@ function setInteractivity(self) {
 			await self.updateUI()
 
 			/** Must trigger app dispatch to save the display in the state */
+			self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab, displaySubheader: self.displaySubheader })
 
 			// since the app.dispatch() is not called directly,
 			// must trigger the event bus here
 			// if (self.bus) self.bus.emit('postRender')
-			// return
+			return
 		}
 		self.activeTab = d.colNum
 		self.searching = false
+		self.displaySubheader = true
 		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab, displaySubheader: self.displaySubheader })
 		const chartsIdx = self.subheaderKeys.indexOf('charts')
 		if (self.activeTab == chartsIdx && self.activeCohort != -1 && !self.state.plots.length) {
