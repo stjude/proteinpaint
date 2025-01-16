@@ -77,7 +77,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// add required attributes
 	const c: any = {
 		selectCohort: tdb.selectCohort, // optional
-		supportedChartTypes: tdb.q?.getSupportedChartTypes(getClientAuth(q, req)),
+		supportedChartTypes: tdb.q?.getSupportedChartTypes(req),
 		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getAllowedTermTypes(ds),
 		termMatch2geneSet: tdb.termMatch2geneSet,
@@ -304,12 +304,4 @@ function getAllowedTermTypes(ds) {
 	if (ds?.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 
 	return [...typeSet]
-}
-
-function getClientAuth(q, req) {
-	// optional auth results based on the request (if this ds requires it). pass to getSupportedChartTypes to customize chart list based on user role
-	return {
-		embedder: q.embedder,
-		clientAuthResult: authApi.getClientAuthResult(req)
-	}
 }

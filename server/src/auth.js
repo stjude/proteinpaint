@@ -221,12 +221,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	// no need to setup additional middlewares and routes
 	// if there are no protected datasets
 	if (!creds || !Object.keys(creds).length) {
-		// open-access methods
-		authApi.getDsAuth = () => []
-		authApi.getForbiddenRoutesForDsEmbedder = () => []
-		authApi.userCanAccess = () => true
-		authApi.getRequiredCredForDsEmbedder = () => undefined
-		authApi.getPayloadFromHeaderAuth = () => ({})
+		// no checks for ds, is open access
 		// custom auth for testing
 		if (serverconfig.debugmode && !app.doNotFreezeAuth) Object.freeze(authApi)
 		return
@@ -485,16 +480,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		}
 	})
 
-	// helper with some code duplication just to get clientAuthResult from jwt
-	authApi.getClientAuthResult = function (req) {
-		const q = req.query
-		const cred = getRequiredCred(q, req.path)
-		if (!cred) return // no result. open-access ds
-		if (cred.authRoute != '/jwt-status') throw `Incorrect authorization route, use ${cred.authRoute}'` // needed?
-		const result = getJwtPayload(q, req.headers, cred)
-		return result.clientAuthResult
-	}
-
 	/*
 		will return a list of dslabels that require credentials
 	*/
@@ -552,20 +537,39 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		return dsAuth
 	}
 
-	// This is used by the server to indicate forbidden routes, with no option for user login,
-	// to screen unauthorized server requests from embedders/portal that match a glob pattern.
-	// Note that a route that is not forbidden may still require 'jwt' or 'password' access.
-	authApi.getForbiddenRoutesForDsEmbedder = function (dslabel, embedder) {
+	/* return non sensitive user auth info to assist backend process e.g. getSupportChartTypes
+	forbiddenRoutes: 
+		This is used by the server to indicate forbidden routes, with no option for user login,
+		to screen unauthorized server requests from embedders/portal that match a glob pattern.
+		Note that a route that is not forbidden may still require 'jwt' or 'password' access.
+	clientAuthResult:
+		ds-specific jwt payload
+	*/
+	authApi.getNonsensitiveInfo = function (req) {
+		if (!req.query.dslabel) throw 'req.query.dslabel missing'
+		if (!req.query.embedder) throw 'req.query.embedder missing'
+
 		const forbiddenRoutes = []
-		const ds = creds[dslabel] || creds['*']
-		if (!ds) return forbiddenRoutes
-		for (const k in ds) {
-			const cred = ds[k][embedder] || ds[k]['*']
-			if (cred?.type == 'forbidden') {
-				forbiddenRoutes.push(k)
+		const ds = creds[req.query.dslabel] || creds['*']
+		if (!ds) {
+			// no checks for this ds, is open access
+		} else {
+			// has checks
+			for (const k in ds) {
+				const cred = ds[k][req.query.embedder] || ds[k]['*']
+				if (cred?.type == 'forbidden') {
+					forbiddenRoutes.push(k)
+				}
 			}
 		}
-		return forbiddenRoutes
+
+		const q = req.query
+		const cred = getRequiredCred(q, req.path)
+		if (!cred) return // no result. open-access ds
+		if (cred.authRoute != '/jwt-status') throw `Incorrect authorization route, use ${cred.authRoute}'` // needed?
+		const { clientAuthResult } = getJwtPayload(q, req.headers, cred)
+
+		return { forbiddenRoutes, clientAuthResult }
 	}
 
 	authApi.getRequiredCredForDsEmbedder = function (dslabel, embedder) {
@@ -853,7 +857,7 @@ export const authApi = {
 	},
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
 	getDsAuth: (req = undefined) => [],
-	getForbiddenRoutesForDsEmbedder: (_a, _b) => [],
+	getNonsensitiveInfo: (_a, _b) => [],
 	userCanAccess: () => true,
 	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
 	getPayloadFromHeaderAuth: () => ({}),
