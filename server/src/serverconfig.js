@@ -122,7 +122,14 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	const defaultDir = path.join(serverconfig.binpath, 'src/test/routes')
 	// will add testing routes as needed and if found, such as in dev environment
 	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js']
-	if (serverconfig.sse !== false) testRouteSetters.push('sse.js')
+	if (serverconfig.features.sse === undefined) serverconfig.features.sse = true
+	if (typeof serverconfig.features.sse !== 'boolean') {
+		throw `serverconfig.features.sse must be either undefined or boolean`
+	}
+	// !!! if the sse route code file is detected as missing,
+	// features.sse will be reset to false below in testRouteSetters loop
+	// to prevent the client from attempting a connection !!!
+	if (serverconfig.features.sse) testRouteSetters.push('sse.js')
 
 	if (serverconfig.routeSetters) {
 		for (const f of serverconfig.routeSetters) {
@@ -142,6 +149,7 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 		const absf = `${defaultDir}/${f}`
 		// avoid duplicate entries; these test route setters should only exist in dev environment and not deployed to prod
 		if (!routeSetters.includes(absf) && fs.existsSync(absf)) routeSetters.push(absf)
+		else if (f === 'sse.js') serverconfig.features.sse = false
 	}
 
 	// may replace the original routeSetters value,
