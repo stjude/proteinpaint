@@ -1,4 +1,4 @@
-exports.termjson = {
+export const termjson = {
 	diaggrp: {
 		id: 'diaggrp',
 		name: 'Diagnosis Group',
@@ -69,6 +69,7 @@ exports.termjson = {
 				}
 			}
 		},
+		values: {},
 		isleaf: true
 	},
 	Arrhythmias: {
@@ -106,13 +107,13 @@ exports.termjson = {
 			}
 		},
 		values: {
-			'0': { label: '0: No condition' },
-			'1': { label: '1: Mild' },
-			'2': { label: '2: Moderate' },
-			'3': { label: '3: Severe' },
-			'4': { label: '4: Life-threatening' },
-			'5': { label: '5: Death' },
-			'9': { label: 'Unknown status', uncomputable: true }
+			0: { label: '0: No condition' },
+			1: { label: '1: Mild' },
+			2: { label: '2: Moderate' },
+			3: { label: '3: Severe' },
+			4: { label: '4: Life-threatening' },
+			5: { label: '5: Death' },
+			9: { label: 'Unknown status', uncomputable: true }
 		}
 	},
 	aaclassic_5: {
@@ -136,7 +137,7 @@ exports.termjson = {
 			}
 		},
 		values: {
-			'0': { label: 'Not exposed', uncomputable: true },
+			0: { label: 'Not exposed', uncomputable: true },
 			'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
 			'-9999': { label: 'Unknown treatment record', uncomputable: true }
 		},
@@ -169,7 +170,7 @@ exports.termjson = {
 			}
 		},
 		values: {
-			'0': { label: 'Not exposed', uncomputable: true },
+			0: { label: 'Not exposed', uncomputable: true },
 			'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
 			'-9999': { label: 'Unknown treatment record', uncomputable: true }
 		}
@@ -210,13 +211,13 @@ exports.termjson = {
 			}
 		},
 		values: {
-			'0': { label: '0: No condition' },
-			'1': { label: '1: Mild' },
-			'2': { label: '2: Moderate' },
-			'3': { label: '3: Severe' },
-			'4': { label: '4: Life-threatening' },
-			'5': { label: '5: Death' },
-			'9': { label: 'Unknown status', uncomputable: true }
+			0: { label: '0: No condition' },
+			1: { label: '1: Mild' },
+			2: { label: '2: Moderate' },
+			3: { label: '3: Severe' },
+			4: { label: '4: Life-threatening' },
+			5: { label: '5: Death' },
+			9: { label: 'Unknown status', uncomputable: true }
 		}
 	}
 }

@@ -62,11 +62,11 @@ export type BoxPlotData = {
 }
 
 export type BoxPlotDescrStatsEntry = {
-	/** Use lower case for sanity check
-	 * 'total' | 'min' | 'p25' | 'median' | 'mean' | 'p75' | 'max' | 'sd' | 'variance' | 'iqr'
-	 */
-	id: string
+	/** Short hand for summary stat. Use lower case for sanity check */
+	id: 'total' | 'min' | 'p25' | 'median' | 'mean' | 'p75' | 'max' | 'sd' | 'variance' | 'iqr' | string
+	/** Full label displayed to the user */
 	label: string
+	/** Calculated value. */
 	value: number
 }
 
