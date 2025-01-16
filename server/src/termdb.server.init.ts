@@ -485,25 +485,17 @@ export function server_init_db_queries(ds) {
 	/*
 	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
 	for showing as chart buttons in mass ui
-
-	auth{}
-	.embedder:
-		if a ds controls certain route based on request host name (embedder),
-		then this param value will be used to determine visible/hidden status for chart types depending on the controlled route
-		in such case if embedder is missing, such chart types will not be shown (or disabled, based on dsCredentials)
-
-	.user? may add jwt payload details if available, such as user roles and other props
 	*/
-	q.getSupportedChartTypes = (auth = { embedder: '' }) => {
-		const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, auth.embedder)
+	q.getSupportedChartTypes = req => {
+		// based on request, derive forbiddenRoutes and clientAuthResults that ds can use to tailor chart support
+		const authInfo = authApi.getNonsensitiveInfo(req)
 		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
 
 		for (const [cohort, cohortTermTypes] of Object.entries(ds.cohort.termdb.termtypeByCohort.nested)) {
 			supportedChartTypes[cohort] = []
 
 			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
-				// auth second argument may be ignored by isSupported() callback
-				if (isSupported({ ds, forbiddenRoutes, cohortTermTypes }, auth)) {
+				if (isSupported({ ds, cohortTermTypes, ...authInfo })) {
 					// this chart type is supported based on context
 					supportedChartTypes[cohort].push(chartType)
 				}

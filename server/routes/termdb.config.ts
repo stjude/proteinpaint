@@ -30,7 +30,7 @@ function init({ genomes }) {
 			if (!genome) throw 'invalid genome'
 
 			const [ds] = get_ds_tdb(genome, q)
-			return make(q, res, ds, genome)
+			return make(q, req, res, ds, genome)
 		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -54,7 +54,9 @@ q{}
 		for identifying official dataset when checking credentials
 	.embedder=str
 		client portal host
-		
+
+req{}
+	q is req.query
 res
 	express response
 
@@ -68,17 +70,14 @@ returns:
 	a json object
 */
 
-function make(q, res, ds: Mds3WithCohort, genome) {
+function make(q, req, res, ds: Mds3WithCohort, genome) {
 	const tdb = ds.cohort.termdb
 	// add attributes to this object to reveal to client
-
-	// TODO: may fill this in later with other request-specific credentials
-	const auth = { embedder: q.embedder }
 
 	// add required attributes
 	const c: any = {
 		selectCohort: tdb.selectCohort, // optional
-		supportedChartTypes: tdb.q?.getSupportedChartTypes(auth),
+		supportedChartTypes: tdb.q?.getSupportedChartTypes(req),
 		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getAllowedTermTypes(ds),
 		termMatch2geneSet: tdb.termMatch2geneSet,

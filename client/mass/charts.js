@@ -39,9 +39,7 @@ class MassCharts {
 
 	main() {
 		//this.dom.holder.style('display', 'block')
-		this.dom.btns.style('display', d =>
-			!d.hide && this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'
-		)
+		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 
 	generateRegressionButtonObject(state) {
@@ -153,10 +151,8 @@ function getChartTypeList(self, state) {
 	.updateActionBySelectedTerms:
 		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
 
-	TODO fixed order of buttons. may allow to customize order
+	TODO order of buttons is hardcoded, may allow to customize order
 	*/
-
-	const [logged, site, user] = getProfileLogin(self.app) // XXX later on replace with jwt login
 
 	const buttons = [
 		////////////////////// PROFILE PLOTS START //////////////////////
@@ -175,8 +171,7 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Facility Radar',
 			chartType: 'profileRadarFacility',
-			clickTo: self.loadChartSpecificMenu,
-			hide: !logged // temp change for profile, delete later
+			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Radar',
@@ -205,8 +200,7 @@ function getChartTypeList(self, state) {
 			chartType: 'sampleView',
 			config: {
 				chartType: 'sampleView'
-			},
-			hide: user && user != 'admin' //temporary user handling for the profile
+			}
 		},
 		{
 			label: 'Summary Plots',
@@ -237,8 +231,7 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Sample Matrix',
 			chartType: 'matrix',
-			clickTo: self.loadChartSpecificMenu,
-			hide: user && user != 'admin' //temporary user handling for the profile
+			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Genome Browser',
@@ -268,8 +261,7 @@ function getChartTypeList(self, state) {
 			chartType: 'facet',
 			config: {
 				chartType: 'facet'
-			},
-			hide: user && user != 'admin' //temporary user handling for the profile
+			}
 		},
 		{
 			label: 'Brain Imaging',
