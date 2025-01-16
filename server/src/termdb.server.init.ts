@@ -490,7 +490,7 @@ export function server_init_db_queries(ds) {
 		from which to derive forbiddenRoutes and clientAuthResults for ds to tailor chart support based on user role and permission
 	*/
 	q.getSupportedChartTypes = req => {
-		const { forbiddenRoutes, clientAuthResults } = authApi.getNonsensitiveInfo(req)
+		const authInfo = authApi.getNonsensitiveInfo(req)
 		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
 
 		for (const [cohort, cohortTermTypes] of Object.entries(ds.cohort.termdb.termtypeByCohort.nested)) {
@@ -498,7 +498,7 @@ export function server_init_db_queries(ds) {
 
 			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
 				// auth second argument may be ignored by isSupported() callback
-				if (isSupported({ ds, forbiddenRoutes, cohortTermTypes, clientAuthResults })) {
+				if (isSupported(Object.assign({ ds, cohortTermTypes }, authInfo))) {
 					// this chart type is supported based on context
 					supportedChartTypes[cohort].push(chartType)
 				}

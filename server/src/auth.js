@@ -564,10 +564,16 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		}
 
 		const q = req.query
-		const cred = getRequiredCred(q, req.path)
-		if (!cred) return // no result. open-access ds
-		if (cred.authRoute != '/jwt-status') throw `Incorrect authorization route, use ${cred.authRoute}'` // needed?
-		const { clientAuthResult } = getJwtPayload(q, req.headers, cred)
+		const cred = getRequiredCred(q, req.path) // still needed?
+		let clientAuthResult
+		if (!cred) {
+			// no checks, is open access
+		} else {
+			// has checks
+			if (cred.authRoute != '/jwt-status') throw `Incorrect authorization route, use ${cred.authRoute}'` // needed?
+			const _ = getJwtPayload(q, req.headers, cred)
+			clientAuthResult = _.clientAuthResult
+		}
 
 		return { forbiddenRoutes, clientAuthResult }
 	}
