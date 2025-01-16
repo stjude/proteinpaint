@@ -188,13 +188,11 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 				divideTwBins: isNumericTerm(overlayTerm.term) ? numericBins(overlayTerm, data) : null
 			})
 		} else {
-			const plot = {
+			plots.push({
 				label: sampleType,
 				values,
 				plotValueCount: values.length
-			}
-
-			plots.push(plot)
+			})
 		}
 	}
 
@@ -279,11 +277,10 @@ function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds:
 
 		plot.src = canvas.toDataURL()
 		// create bins for violins
-		const isKDE = q.isKDE
-		plot.density = getBinsDensity(axisScale, plot, isKDE, q.ticks)
+		plot.density = getBinsDensity(axisScale, plot, q.isKDE, q.ticks)
 
 		//generate summary stat values
-		plot.summaryStats = summaryStats(plot.values)
+		plot.summaryStats = summaryStats(plot.values).values
 		delete plot.values
 	}
 }

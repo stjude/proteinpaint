@@ -77,7 +77,7 @@ export default function setViolinRenderer(self) {
 		let rows = []
 
 		if (d.summaryStats) {
-			const summaryValues = d.summaryStats.values
+			const summaryValues = d.summaryStats
 
 			rows = [
 				`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`,
@@ -416,22 +416,10 @@ export default function setViolinRenderer(self) {
 				.style('stroke-width', s.medianThickness)
 				.style('stroke', 'red')
 				.style('opacity', '1')
-				.attr(
-					'y1',
-					isH ? -s.medianLength : svgData.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value)
-				)
-				.attr(
-					'y2',
-					isH ? s.medianLength : svgData.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value)
-				)
-				.attr(
-					'x1',
-					isH ? svgData.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : -s.medianLength
-				)
-				.attr(
-					'x2',
-					isH ? svgData.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : s.medianLength
-				)
+				.attr('y1', isH ? -s.medianLength : svgData.axisScale(plot.summaryStats.find(x => x.id === 'median').value))
+				.attr('y2', isH ? s.medianLength : svgData.axisScale(plot.summaryStats.find(x => x.id === 'median').value))
+				.attr('x1', isH ? svgData.axisScale(plot.summaryStats.find(x => x.id === 'median').value) : -s.medianLength)
+				.attr('x2', isH ? svgData.axisScale(plot.summaryStats.find(x => x.id === 'median').value) : s.medianLength)
 		} else return
 	}
 
