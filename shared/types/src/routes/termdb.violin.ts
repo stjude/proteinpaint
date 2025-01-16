@@ -89,10 +89,8 @@ export type ViolinPlotEntry = {
 	seriesId: string
 	/** Plot image to display */
 	src: string
-	summaryStats: {
-		/** Descriptive stats (i.e. min, max, sd, etc.) */
-		values: ValuesEntries[]
-	}
+	/** Descriptive stats (i.e. min, max, sd, etc.) */
+	summaryStats: ValuesEntries[]
 }
 
 export type ViolinResponse = ValidResponse | ErrorResponse
