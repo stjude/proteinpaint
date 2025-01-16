@@ -74,21 +74,17 @@ export default function setViolinRenderer(self) {
 	}
 
 	self.displaySummaryStats = function (d, event, tip) {
-		let rows = []
+		if (!d.summaryStats) return
 
-		if (d.summaryStats) {
-			const summaryValues = d.summaryStats
-
-			rows = [
-				`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`,
-				...summaryValues.map(
-					({ id, label, value }) => `<tr>
-					<td style='padding:3px; color:#aaa'>${label}</td>
-					<td style='padding:3px; text-align:center'>${value}</td>
-				</tr>`
-				)
-			]
-		}
+		const rows = [
+			`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`,
+			...d.summaryStats.map(
+				({ id, label, value }) => `<tr>
+				<td style='padding:3px; color:#aaa'>${label}</td>
+				<td style='padding:3px; text-align:center'>${value}</td>
+			</tr>`
+			)
+		]
 
 		const tableHtml = `<table class='sja_simpletable'>${rows.join('')}</table>`
 		tip.show(event.clientX, event.clientY).d.html(tableHtml)
