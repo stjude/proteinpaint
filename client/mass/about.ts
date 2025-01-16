@@ -63,8 +63,10 @@ export class MassAbout {
 	selectCohort: SelectCohortEntry | null
 	subheader: Elem // where all contents are rendered
 	type: string
+	opts: MassAboutOpts
 
 	constructor(opts: MassAboutOpts) {
+		this.opts = opts
 		this.type = 'about'
 		this.app = opts.app
 		this.subheader = opts.subheader
@@ -77,22 +79,11 @@ export class MassAbout {
 			this.dom.cohortTitle = opts.subheader.append('h2').style('margin-left', '10px').text(opts.selectCohort.title)
 		}
 
-		if (opts.selectCohort?.description || opts.selectCohort?.descriptionByUser) {
-			//temporary logic to get the profile description until the login is implemented
-			const [logged, site, user] = getProfileLogin(this.app)
-			//If there is a user and a descriptionByUser, use the user description otherwise use the default description
-			const description =
-				user && opts.selectCohort.descriptionByUser
-					? opts.selectCohort.descriptionByUser[user]
-					: opts.selectCohort.description
-			if (description)
-				this.dom.cohortDescription = this.subheader
-					.append('div')
-					.attr('data-testid', 'sjpp-about-cohort-desc')
-					.style('margin-left', '10px')
-					.html(description)
-			else new Error('Missing cohort description')
-		}
+		this.dom.cohortDescription = this.subheader
+			.append('div')
+			.attr('data-testid', 'sjpp-about-cohort-desc')
+			.style('margin-left', '10px')
+
 		if (opts.selectCohort?.prompt) {
 			this.dom.cohortPrompt = this.subheader
 				.append('div')
@@ -114,6 +105,19 @@ export class MassAbout {
 	since there's no reason to update about tab contents while user is interacting with mass ui
 	*/
 	init(appState) {
+		console.log(appState)
+		if (this.opts.selectCohort?.description || this.opts.selectCohort?.descriptionByUser) {
+			//temporary logic to get the profile description until the login is implemented
+			const [logged, site, user] = getProfileLogin(this.app, appState.activeCohort)
+			console.log(this.opts.selectCohort.descriptionByUser)
+			//If there is a user and a descriptionByUser, use the user description otherwise use the default description
+			const description =
+				user && this.opts.selectCohort.descriptionByUser
+					? this.opts.selectCohort.descriptionByUser[user]
+					: this.opts.selectCohort.description
+			console.log('description', description)
+			if (description) this.dom.cohortDescription.html(description)
+		}
 		/** If selectCohort available, options in the about html will not show */
 		this.initCohort(appState)
 		this.initCustomHtml()
