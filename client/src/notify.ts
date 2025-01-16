@@ -8,12 +8,15 @@ const refresh = notifyElem.__ppRefresh
 // the sse connection that is specific to this notify code bundle
 let sse
 
-// notify a user of pertinent message //
+// notify a user of pertinent message
 function notify(_data: SseData, now) {
 	const data = _data.filter(d => d.status != 'ok' || !d.time || now - d.time < 5000 || refresh.lastCall < d.time)
 	const divs = notifyDiv.selectAll(`.sjpp-sse-message`).data(data, (d: SseDataEntry) => d.key)
 
-	divs.exit().remove()
+	divs
+		.exit()
+		.filter(d => !d.duration)
+		.remove()
 	divs
 		.style('color', getColor)
 		.style('border', getBorder)
@@ -104,11 +107,11 @@ function setRefresh(notifyDiv) {
 		// - setting sessionStorage.setItem(/*refresh.key*/, ) manually (tab-specific)
 		// - setting serverconfig.features[/*refresh.key*/] (applies across tabs)
 
-		mode: 'partial',
+		mode: 'appOnly',
 		// available mode options
 		modeOptions: {
-			partial: 'call runproteinpaint() on the same DOM element, with the original argument + any HMR state',
-			partial_except_on_unhide: 'same as reload, except when a hidden browser tab is made visible',
+			appOnly: 'call runproteinpaint() on the same DOM element, with the original argument + any HMR state',
+			appOnly_except_on_unhide: 'same as reload, except when a hidden browser tab is made visible',
 			full:
 				'call window.reload() to refresh from URL params and/or runpp() arguments, ' +
 				'this may have less memory leaks than the default approach',
@@ -299,22 +302,23 @@ function handleMessageData(_data, opts = {} as any) {
 		// Math.max() would adjust for possible discrepancy between browser and server unix time
 		refresh.lastCall = refresh.mostRecentMsg ? mostRecentMsg : Math.max(mostRecentMsg, now)
 		refresh.mostRecentMsg = mostRecentMsg
+
 		if (refresh.mode == 'none') {
 			// console.log(`skipped refresh in sessionRefresh.mode='none'`)
-		} else if (refresh.mode == 'partial') {
+		} else if (refresh.mode == 'appOnly') {
 			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)
 			// debounce
-			refresh.pendingCall = setTimeout(refresh.callback, 1000)
+			refresh.pendingCall = setTimeout(refresh.callback, 500)
 		} else if (refresh.mode == 'full') {
 			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)
 			// debounce
-			refresh.pendingCall = setTimeout(() => window.location.reload(), 1000)
+			refresh.pendingCall = setTimeout(() => window.location.reload(), 500)
 		} else if (!refresh.modeOptions[refresh.mode]) {
 			console.warn(`invalid value ${refresh.key}='${refresh.mode}', triggering refresh instead`)
 			//refresh.callback()
 			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)
 			// debounce
-			refresh.pendingCall = setTimeout(refresh.callback, 1000)
+			refresh.pendingCall = setTimeout(refresh.callback, 500)
 		}
 	}
 }

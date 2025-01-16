@@ -18,16 +18,17 @@ https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server
 ### Logic
 
 1. If `serverconfig.debugmode == true`, then
-	a. set `serverconfig.sse` to `abs/path/proteinpaint/.sse`.
+	a. set `serverconfig.features.sse` to `abs/path/proteinpaint/.sse`.
 	This is done in `server/src/serverconfig.js`, except when manually disabled (opt-out)
-	using serverconfig.sse: false.
+	using serverconfig.features.sse: false.
 
-	b. set optional routes that include `server/src/test/routes/sse.js`.
+	b. set optional routes that include `server/src/test/routes/sse.js`, unless sse route
+	file is not found, then serverconfig.features.sse will be reset to false.
 
 2. `client/dev.sh` will create `proteinpaint/.sse/messages` dir to enable sse routes and notification setup.
 
 3. In `server/src/test/routes/sse.js`, the `app.get('/sse')` route handler is set up.
-Within the handler, `fs.watch()` is used to detect file changes in `serverconfig.sse/messages`.
+Within the handler, `fs.watch()` is used to detect file changes in `serverconfig.features.sse/messages`.
 
 4. On detecting `messages/${file}` changes, a notification is triggered in the route handler.
 
