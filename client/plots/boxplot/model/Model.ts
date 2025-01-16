@@ -36,6 +36,7 @@ export class Model {
 			opts.overlayTw = this.getContinousTerm() == this.config.term ? this.config.term2 : this.config.term
 
 		opts.orderByMedian = this.settings.orderByMedian
+		opts.isLogScale = this.settings.isLogScale
 
 		return opts
 	}

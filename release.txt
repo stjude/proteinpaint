@@ -1,1 +1,2 @@
-
+Features:
+- Enable toggling between a linear and log axis scale in the mass box plot

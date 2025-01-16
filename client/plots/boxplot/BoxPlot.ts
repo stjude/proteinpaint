@@ -31,6 +31,9 @@ export type BoxPlotSettings = {
 	darkMode: boolean
 	/** Padding between the left hand label and boxplot */
 	labelPad: number
+	/** Toggle between a linear and log scale
+	 * When true, renders a log scale. Default is false */
+	isLogScale: boolean
 	/** Toggle between vertical and horizontal orientation.
 	 * The default is false */
 	isVertical: boolean
@@ -135,14 +138,25 @@ class TdbBoxplot extends RxComponentInner {
 				getDisplayStyle: (plot: PlotConfig) => (plot.term2 ? '' : 'none')
 			},
 			{
+				label: 'Scale',
+				title: 'Change the axis scale',
+				type: 'radio',
+				chartType: 'boxplot',
+				settingsKey: 'isLogScale',
+				options: [
+					{ label: 'Linear', value: false },
+					{ label: 'Log', value: true }
+				]
+			},
+			{
 				label: 'Orientation',
 				title: 'Change the orientation of the box plots',
 				type: 'radio',
 				chartType: 'boxplot',
 				settingsKey: 'isVertical',
 				options: [
-					{ label: 'Horizontal', value: false },
-					{ label: 'Vertical', value: true }
+					{ label: 'Vertical', value: true },
+					{ label: 'Horizontal', value: false }
 				]
 			},
 			{
@@ -245,6 +259,7 @@ class TdbBoxplot extends RxComponentInner {
 	async main() {
 		try {
 			const config = structuredClone(this.state.config)
+			console.log(this.app.vocabApi.termdbConfig.logscaleBase2)
 			if (config.childType != this.type && config.chartType != this.type) return
 
 			const settings = config.settings.boxplot
@@ -302,6 +317,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		color: plotColor,
 		darkMode: false,
 		labelPad: 10,
+		isLogScale: false,
 		isVertical: false,
 		orderByMedian: false,
 		rowHeight: 50,

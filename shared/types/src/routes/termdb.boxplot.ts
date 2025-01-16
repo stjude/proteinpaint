@@ -9,6 +9,8 @@ export type BoxPlotRequest = {
 	tw: TermWrapper
 	genome: string
 	dslabel: string
+	/** if true, only return positive values */
+	isLogScale: boolean
 	/** sort plots by median value */
 	orderByMedian: boolean
 	/** term2 */
