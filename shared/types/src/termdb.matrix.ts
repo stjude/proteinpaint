@@ -6,20 +6,21 @@
  * Use this type for that purpose.
  */
 
+type SampleEntry = {
+	/** stringified integer sample id  */
+	sample: string | number
+} & {
+	/** key and values for terms, separated by tw.$id */
+	[index: string]: {
+		key: number
+		value: number
+	}
+}
+
 export type ValidGetDataResponse = {
-	samples: Record<
-		string,
-		{
-			/** stringified integer sample id  */
-			key: number
-			/** value: { 
-			sample: integerId,
-			<tw.$id>: {key, value},
-			<more terms...>
-		} */
-			value: number
-		}
-	>
+	samples: {
+		[index: string | number]: SampleEntry
+	}
 	/** Metadata */
 	refs: {
 		/** metadata about terms

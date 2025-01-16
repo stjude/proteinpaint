@@ -181,7 +181,7 @@ export function parseValues(q: any, data: ValidGetDataResponse, sampleType: stri
 	let absMin: number | null = null,
 		absMax: number | null = null
 
-	for (const val of Object.values(data.samples as Record<string, { key: number; value: number }>)) {
+	for (const val of Object.values(data.samples)) {
 		const value = val[q.tw.$id]
 		if (!Number.isFinite(value?.value)) continue
 
