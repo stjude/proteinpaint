@@ -136,7 +136,7 @@ function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: 
 		key2values,
 		min: absMin,
 		max: absMax,
-		uncomputableValueObj: sortObj(uncomputableValues)
+		uncomputableValues: sortObj(uncomputableValues)
 	}
 }
 
@@ -175,7 +175,6 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 		plotValueCount: number
 		color?: string
 		divideTwBins?: any
-		uncomputableValueObj?: { [index: string]: number } | null
 	}[] = []
 
 	for (const [key, values] of sortKey2values(data, valuesObject.key2values, overlayTerm)) {
@@ -186,9 +185,7 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 				seriesId: key,
 				plotValueCount: values?.length,
 				color: overlayTerm?.term?.values?.[key]?.color || null,
-				divideTwBins: isNumericTerm(overlayTerm.term) ? numericBins(overlayTerm, data) : null,
-				uncomputableValueObj:
-					Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
+				divideTwBins: isNumericTerm(overlayTerm.term) ? numericBins(overlayTerm, data) : null
 			})
 		} else {
 			const plot = {
@@ -206,8 +203,7 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 		max: valuesObject.max,
 		plots,
 		pvalues: [],
-		uncomputableValueObj:
-			Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
+		uncomputableValues: Object.keys(valuesObject.uncomputableValues).length > 0 ? valuesObject.uncomputableValues : null
 	}
 
 	return result

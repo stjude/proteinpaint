@@ -1211,7 +1211,7 @@ tape('test uncomputable categories legend', function (test) {
 	}
 
 	async function testUncomputableCategories(violin, legendDiv) {
-		const keys = Object.keys(violin.Inner.data.uncomputableValueObj)
+		const keys = Object.keys(violin.Inner.data.uncomputableValues)
 		const categories = await detectGte({ elem: legendDiv.node(), selector: '.legend-row', count: 9 })
 		test.ok(categories, 'Uncomputable categories exist')
 
@@ -1223,7 +1223,7 @@ tape('test uncomputable categories legend', function (test) {
 				.find(c => c.__data__.text.startsWith(keys[0]))
 				?.__data__.text.split(',')
 				.pop(),
-			' n = ' + violin.Inner.data.uncomputableValueObj[keys[0]],
+			' n = ' + violin.Inner.data.uncomputableValues[keys[0]],
 			`Uncomputable category '${keys[0]}' rendered with the correct count`
 		)
 		test.equal(
@@ -1231,7 +1231,7 @@ tape('test uncomputable categories legend', function (test) {
 				.find(c => c.__data__.text.startsWith(keys[1]))
 				?.__data__.text.split(',')
 				.pop(),
-			' n = ' + violin.Inner.data.uncomputableValueObj[keys[1]],
+			' n = ' + violin.Inner.data.uncomputableValues[keys[1]],
 			`Uncomputable category '${keys[1]}' rendered with the correct count`
 		)
 	}

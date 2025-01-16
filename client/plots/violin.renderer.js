@@ -572,9 +572,9 @@ function addUncomputableValues(term, legendGrps, headingStyle, self) {
 	if (term?.term.values) {
 		const items = []
 		for (const k in term.term.values) {
-			if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
+			if (self.data.uncomputableValues?.[term.term.values[k]?.label]) {
 				items.push({
-					text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
+					text: `${term.term.values[k].label}, n = ${self.data.uncomputableValues[term.term.values[k].label]}`,
 					noIcon: true,
 					/** Need to specify that this is a hidden value for
 					 * text styling in the legend but not a plot to avoid
