@@ -485,11 +485,9 @@ export function server_init_db_queries(ds) {
 	/*
 	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
 	for showing as chart buttons in mass ui
-
-	req:
-		from which to derive forbiddenRoutes and clientAuthResults for ds to tailor chart support based on user role and permission
 	*/
 	q.getSupportedChartTypes = req => {
+		// based on request, derive forbiddenRoutes and clientAuthResults that ds can use to tailor chart support
 		const authInfo = authApi.getNonsensitiveInfo(req)
 		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
 
@@ -497,8 +495,7 @@ export function server_init_db_queries(ds) {
 			supportedChartTypes[cohort] = []
 
 			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
-				// auth second argument may be ignored by isSupported() callback
-				if (isSupported(Object.assign({ ds, cohortTermTypes }, authInfo))) {
+				if (isSupported({ ds, cohortTermTypes, ...authInfo })) {
 					// this chart type is supported based on context
 					supportedChartTypes[cohort].push(chartType)
 				}
