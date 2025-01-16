@@ -93,7 +93,6 @@ export type ViolinPlotEntry = {
 		/** Descriptive stats (i.e. min, max, sd, etc.) */
 		values: ValuesEntries[]
 	}
-	uncomputableValueObj: { [index: string]: number } | null
 }
 
 export type ViolinResponse = ValidResponse | ErrorResponse
@@ -105,7 +104,7 @@ type ValidResponse = {
 	max: number
 	plots: ViolinPlotEntry[]
 	pvalues?: PValueEntries[][]
-	uncomputableValueObj: { [index: string]: number }[] | null
+	uncomputableValues: { [index: string]: number }[] | null
 }
 
 export const violinPayload: RoutePayload = {
