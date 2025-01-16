@@ -1,6 +1,6 @@
 import type { ScaleLinear } from 'd3-scale'
 import { drawBoxplot, Menu } from '#dom'
-import { scaleLinear } from 'd3-scale'
+import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop, axisLeft } from 'd3-axis'
 import type { BoxPlotDom, BoxPlotSettings } from '../BoxPlot'
@@ -43,7 +43,8 @@ export class View {
 			//Fix for white background when downloading darkMode image.
 			.style('fill', plotDim.backgroundColor)
 
-		const scale = scaleLinear().domain(plotDim.domain).range(plotDim.range)
+		const setScaleFunc = settings.isLogScale ? scaleLog().base(2) : scaleLinear()
+		const scale = setScaleFunc.domain(plotDim.domain).range(plotDim.range)
 
 		this.renderTitle(plotDim, dom)
 		this.renderBoxPlots(dom, data, scale, settings)

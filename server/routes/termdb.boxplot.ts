@@ -42,12 +42,11 @@ function init({ genomes }) {
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const overlayTerm = q.overlayTw
-			const isLog = false // TODO: implement rendering plots in a log scale (q.isLog)
 			const { absMin, absMax, key2values, uncomputableValues } = parseValues(
 				q,
 				data as ValidGetDataResponse,
 				sampleType,
-				isLog,
+				q.isLogScale,
 				overlayTerm
 			)
 
