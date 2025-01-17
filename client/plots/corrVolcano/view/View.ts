@@ -11,15 +11,28 @@ export class View {
 	viewData: ViewData
 	readonly defaultRadius = 5
 	constructor(dom: CorrVolcanoDom, viewData: ViewData) {
-		this.viewData = viewData
 		this.dom = dom
+		this.viewData = viewData
 
 		const plotDim = viewData.plotDim
 		this.renderDom(plotDim)
 	}
 
 	renderDom(plotDim) {
-		this.dom.svg.transition().attr('width', plotDim.svg.width).attr('height', plotDim.svg.height)
+		this.dom.svg.attr('width', plotDim.svg.width).attr('height', plotDim.svg.height)
+
+		this.dom.title
+			.style('font-weight', 600)
+			.attr('text-anchor', 'middle')
+			.attr('x', plotDim.title.x)
+			.attr('y', plotDim.title.y)
+			.text(plotDim.title.text)
+
+		this.dom.yAxisLabel
+			.style('font-weight', 600)
+			.attr('text-anchor', 'middle')
+			.attr('transform', `translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`)
+			.text(`-log10(pvalue)`)
 
 		//Y, left scale
 		this.renderScale(plotDim.yScale, true)
