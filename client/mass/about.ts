@@ -124,7 +124,7 @@ export class MassAbout {
 				user && this.opts.selectCohort.descriptionByUser
 					? this.opts.selectCohort.descriptionByUser[user]
 					: this.opts.selectCohort.description
-			if (description) this.dom.cohortDescription.html(description)
+			if (description) this.dom.cohortDescription!.html(description)
 		}
 	}
 
