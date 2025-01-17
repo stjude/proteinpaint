@@ -11,5 +11,6 @@ export class CorrVolcanoInteractions {
 		this.dom.plot.selectAll('*').remove()
 		this.dom.svg.selectAll('line').remove()
 		this.dom.title.text('')
+		this.dom.yAxisLabel.text('')
 	}
 }
