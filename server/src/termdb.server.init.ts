@@ -495,7 +495,7 @@ export function server_init_db_queries(ds) {
 			supportedChartTypes[cohort] = []
 
 			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
-				if (isSupported({ ds, cohortTermTypes, ...authInfo })) {
+				if (isSupported({ ds, cohortTermTypes, cohort, ...authInfo })) {
 					// this chart type is supported based on context
 					supportedChartTypes[cohort].push(chartType)
 				}
