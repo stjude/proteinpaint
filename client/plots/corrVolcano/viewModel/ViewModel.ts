@@ -58,7 +58,7 @@ export class ViewModel {
 				y: settings.height + this.topPad
 			},
 			yScale: {
-				scale: scaleLinear().domain([absYMin, absYMax]).range([0, settings.height]),
+				scale: scaleLog().domain([absYMin, absYMax]).range([0, settings.height]),
 				x: this.horizPad,
 				y: this.topPad
 			},
@@ -75,7 +75,7 @@ export class ViewModel {
 			item.color = item.correlation > 0 ? 'blue' : 'red'
 			item.label = variableTwLst.find(t => t.$id == item.tw$id).term.name
 			item.x = plotDim.xScale.scale(item.correlation) + this.horizPad
-			item.y = plotDim.yScale.scale(item.original_pvalue) + this.topPad
+			item.y = Math.abs(-plotDim.yScale.scale(item.original_pvalue) - this.topPad)
 		}
 		return data.variableItems
 	}
