@@ -3,9 +3,8 @@ import { CorrelationVolcanoPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import run_R from '../src/run_R.js'
 import serverconfig from '../src/serverconfig.js'
-//import fs from 'fs'
+import { mayLog } from '#src/helpers.ts'
 import path from 'path'
-// import { roundValueAuto } from '#shared/roundValue.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/correlationVolcano',
@@ -78,10 +77,9 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	//	if (err) return console.log(err)
 	//})
 
-	const time1 = new Date().valueOf()
+	const time1 = new Date()
 	const r_output = await run_R(path.join(serverconfig.binpath, 'utils', 'corr.R'), JSON.stringify(input))
-	const time2 = new Date().valueOf()
-	console.log('Time taken to run correlation analysis:', time2 - time1, 'ms')
+	mayLog('Time taken to run correlation analysis:', new Date() - time1)
 	let json_result
 	for (const line of r_output.split('\n')) {
 		if (line.startsWith('adjusted_p_values:')) {
@@ -106,7 +104,6 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 		}
 		result.variableItems.push(t2)
 	}
-	console.log('result:', result)
 	return result
 }
 
