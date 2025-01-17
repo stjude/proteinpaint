@@ -895,6 +895,22 @@ this is limited to only one term and doesn't allow switching between multiple te
 type Scatterplots = {
 	plots: ScatterPlotsEntry[]
 }
+/** this plot compares correlation of one feature against a bunch of variables across samples
+ */
+type CorrelationVolcano = {
+	/** fixed feature, is one numeric term */
+	feature: {
+		/** later expand to other types */
+		termType: 'geneExpression'
+	}
+	/** list of numeric variables to be compared against fixed feature*/
+	variables: {
+		/** later can expand */
+		type: 'dictionaryTerm'
+		/** when type=dictionaryTerm, is array of numeric term ids */
+		termIds: string[]
+	}
+}
 
 type MatrixSettingsControlLabels = {
 	samples?: string
@@ -1142,7 +1158,6 @@ keep this setting here for reason of:
   */
 	useLower?: boolean
 
-	scatterplots?: Scatterplots
 	matrix?: Matrix
 	numericDictTermCluster?: NumericDictTermCluster
 	survival?: Survival
@@ -1295,7 +1310,10 @@ export type Cohort = {
 	matrixplots?: MatrixPlots
 	mutationset?: MutationSet[]
 	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }
+	/** if present, supplies premade scatter plots */
 	scatterplots?: Scatterplots
+	/** if present, means correlation volcano plot analysis is enabled */
+	correlationVolcano?: CorrelationVolcano
 	termdb: Termdb
 }
 
