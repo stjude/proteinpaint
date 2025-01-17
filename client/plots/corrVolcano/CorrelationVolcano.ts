@@ -94,7 +94,7 @@ class CorrelationVolcano extends RxComponentInner {
 export const corrVolcanoInit = getCompInit(CorrelationVolcano)
 export const componentInit = corrVolcanoInit
 
-export function getDefaultCorrVolcanoSettings(app, overrides = {}) {
+export function getDefaultCorrVolcanoSettings(overrides = {}) {
 	const defaults: CorrVolcanoSettings = {
 		height: 400,
 		method: 'pearson',
@@ -119,7 +119,7 @@ export async function getPlotConfig(opts: any, app: MassAppApi) {
 				term2: null,
 				term0: null
 			},
-			correlationVolcano: getDefaultCorrVolcanoSettings(app, opts.overrides || {})
+			correlationVolcano: getDefaultCorrVolcanoSettings(opts.overrides || {})
 		}
 	}
 	return copyMerge(config, opts)
