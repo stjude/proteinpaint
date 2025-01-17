@@ -2,8 +2,10 @@ import { getCompInit, copyMerge } from '#rx'
 import { RxComponentInner } from '../../types/rx.d'
 import { fillTermWrapper } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { Elem, SvgSvg } from '../../types/d3'
 import { Model } from './model/Model'
+import { ViewModel } from './viewModel/ViewModel'
+import { View } from './view/View'
 
 /**
  * TODOs:
@@ -11,7 +13,9 @@ import { Model } from './model/Model'
  */
 
 export type CorrVolcanoSettings = {
+	height: number
 	method: 'pearson' | 'spearman'
+	width: number
 }
 
 export type CorrVolcanoPlotConfig = BasePlotConfig & {
@@ -29,14 +33,16 @@ class CorrelationVolcano extends RxComponentInner {
 		this.components = {
 			controls: {}
 		}
-		const holder = opts.holder.classed('sjpp-boxplot-main', true)
+		const holder = opts.holder.classed('sjpp-corrVolcano-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px')
-		const errorDiv = div.append('div').attr('id', 'sjpp-boxplot-error').style('opacity', 0.75)
+		const errorDiv = div.append('div').attr('id', 'sjpp-corrVolcano-error').style('opacity', 0.75)
+		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-corrVolcano-svg')
 		this.dom = {
 			controls: controls as Elem,
 			div,
-			error: errorDiv
+			error: errorDiv,
+			svg
 		}
 		this.dsCorrVolcano = {}
 	}
@@ -69,9 +75,19 @@ class CorrelationVolcano extends RxComponentInner {
 		if (config.childType != this.type && config.chartType != this.type) return
 
 		const settings = config.settings.correlationVolcano
+		const variableTwLst = this.dsCorrVolcano.variables.termIds.map((id: string) => {
+			return { id }
+		})
+		for (const t of variableTwLst) await fillTermWrapper(t, this.app.vocabApi)
 		/** Request data from the server*/
-		const model = new Model(config, this.state, this.app, settings, this.dsCorrVolcano)
+		const model = new Model(config, this.state, this.app, settings, variableTwLst)
 		const data = await model.getData()
+
+		/** Format returned data for rendering */
+		const viewModel = new ViewModel(config, data, settings, variableTwLst)
+
+		/** Render correlation volcano plot */
+		new View(this.dom, viewModel.viewData)
 	}
 }
 
@@ -80,7 +96,9 @@ export const componentInit = corrVolcanoInit
 
 export function getDefaultCorrVolcanoSettings(app, overrides = {}) {
 	const defaults: CorrVolcanoSettings = {
-		method: 'pearson'
+		height: 400,
+		method: 'pearson',
+		width: 400
 	}
 	return Object.assign(defaults, overrides)
 }
