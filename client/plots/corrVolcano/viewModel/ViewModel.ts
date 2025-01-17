@@ -18,23 +18,6 @@ export class ViewModel {
 	readonly horizPad = 70
 	readonly bottomPad = 20
 	constructor(config, data, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
-		/** Test data for development until the server code is ready
-		 * Will remove
-		 */
-		data.variableItems = [
-			{
-				tw$id: 'TDQWmvitw0gPLX7I9iWYAVcgJG4-', //pragma: allowlist secret
-				correlation: 0.5,
-				pvalue: 0.025,
-				sampleSize: 1
-			},
-			{
-				tw$id: '0idPJ69kmHlL5kcaEBOlZmKmasg-', //pragma: allowlist secret
-				correlation: -0.5,
-				pvalue: 0.002,
-				sampleSize: 2
-			}
-		]
 		const sortedValues = data.variableItems.map(v => v.pvalue).sort((a, b) => a - b)
 		const absYMax = sortedValues[sortedValues.length - 1]
 		const absYMin = sortedValues[0]

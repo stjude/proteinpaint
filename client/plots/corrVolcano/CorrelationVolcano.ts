@@ -8,6 +8,7 @@ import { Menu } from '#dom'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
+import { CorrVolcanoInteractions } from './interactions/CorrVolcanoInteractions'
 
 /**
  * TODOs:
@@ -126,6 +127,9 @@ class CorrelationVolcano extends RxComponentInner {
 	async main() {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
+
+		const interactions = new CorrVolcanoInteractions(this.app, this.dom)
+		interactions.clearDom()
 
 		const settings = config.settings.correlationVolcano
 		const variableTwLst = this.dsCorrVolcano.variables.termIds.map((id: string) => {
