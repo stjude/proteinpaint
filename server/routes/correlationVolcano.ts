@@ -34,10 +34,9 @@ function init({ genomes }) {
 	}
 }
 
-async function compute(q, ds, genome) {
+async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	const terms = [q.featureTw, ...q.variableTwLst]
-	console.log(39, terms)
-	const data = await getData(
+	const data: ValidGetDataResponse = await getData(
 		{
 			filter: q.filter,
 			filter0: q.filter0,
@@ -48,7 +47,41 @@ async function compute(q, ds, genome) {
 	)
 	if (data.error) throw data.error
 
-	return
+	const vtid2array = new Map() // k: variable tw $id, v: two arrays to calculate correlation for
+	for (const tw of q.variableTwLst) {
+		vtid2array.set(tw.$id, { id: tw.$id, v1: [], v2: [] })
+	}
+	// populate with each variable tw
+	for (const sid in data.samples) {
+		const featureValue = data.samples[sid][q.featureTw.$id]?.value
+		if (!Number.isFinite(featureValue)) continue // missing value. ignore this sample
+		for (const tw of q.variableTwLst) {
+			const variableValue = data.samples[sid][tw.$id]?.value
+			if (!Number.isFinite(variableValue)) continue // missing. ignore this from input into tw array
+			vtid2array.get(tw.$id).v1.push(featureValue)
+			vtid2array.get(tw.$id).v2.push(variableValue)
+		}
+	}
+
+	const input = {
+		method: q.method || 'pearson',
+		terms: vtid2array.values()
+	}
+
+	const output = { terms: [] }
+	//await call(q)
+
+	const result = { variableItems: [] }
+	for (const t of output.terms) {
+		const t2 = {
+			tw$id: t.id,
+			sampleSize: input.terms.get(t.id).v1.length,
+			correlation: t.correlation,
+			pvalue: t.pvalue
+		}
+		result.variableItems.push(t2)
+	}
+	return result
 }
 
 export function validate_correlationVolcano(ds: any) {
