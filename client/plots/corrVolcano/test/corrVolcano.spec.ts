@@ -2,6 +2,8 @@ import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 
 /*
+DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING ONLY
+
 Tests:
     - Default correlation volcano plot
  */
@@ -16,8 +18,8 @@ const runpp = helpers.getRunPp('mass', {
 			header_mode: 'hidden'
 		},
 		vocab: {
-			dslabel: 'TermdbTest',
-			genome: 'hg38-test'
+			dslabel: 'ALL-pharmacotyping',
+			genome: 'hg38'
 		}
 	},
 	debug: 1
@@ -39,8 +41,13 @@ tape('Default correlation volcano', test => {
 		state: {
 			plots: [
 				{
-					chartType: 'summary',
-					childType: 'correlationVolcano'
+					chartType: 'correlationVolcano',
+					featureTw: {
+						term: {
+							type: 'geneExpression',
+							gene: 'KRAS'
+						}
+					}
 				}
 			]
 		},

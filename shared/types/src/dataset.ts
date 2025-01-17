@@ -1295,6 +1295,8 @@ type AssayAvailability = {
 
 //Shared with genome.ts
 export type Cohort = {
+	/** if present, means correlation volcano plot analysis is enabled */
+	correlationVolcano?: CorrelationVolcano
 	cumburden?: {
 		files: {
 			fit: string
@@ -1312,8 +1314,6 @@ export type Cohort = {
 	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }
 	/** if present, supplies premade scatter plots */
 	scatterplots?: Scatterplots
-	/** if present, means correlation volcano plot analysis is enabled */
-	correlationVolcano?: CorrelationVolcano
 	termdb: Termdb
 }
 

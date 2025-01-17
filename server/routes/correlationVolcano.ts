@@ -1,7 +1,7 @@
 import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse, RouteApi, ValidGetDataResponse } from '#types'
 import { CorrelationVolcanoPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
-import { roundValueAuto } from '#shared/roundValue.js'
+// import { roundValueAuto } from '#shared/roundValue.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/correlationVolcano',
@@ -25,8 +25,7 @@ function init({ genomes }) {
 			if (!genome) throw 'invalid genome name'
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid ds'
-
-			const result: CorrelationVolcanoResponse = await compute(q, ds, genome)
+			const result = await compute(q, ds, genome)
 			res.send(result)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
@@ -37,6 +36,7 @@ function init({ genomes }) {
 
 async function compute(q, ds, genome) {
 	const terms = [q.featureTw, ...q.variableTwLst]
+	console.log(39, terms)
 	const data = await getData(
 		{
 			filter: q.filter,

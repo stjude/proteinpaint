@@ -63,9 +63,10 @@ export type MassState = {
 	activeCohort: number
 	customTerms?: any[]
 	groups: any[]
-	plots: PlotConfig[]
+	plots: BasePlotConfig[]
 	termfilter: any
 	termdbConfig: {
+		correlationVolcano: any
 		allowedChartTypes: string[]
 		allowedTermTypes: string[]
 		displaySampleIds?: boolean
@@ -102,19 +103,24 @@ type MassNav = {
 	header_mode: 'with_tabs' | 'search_only' | 'hidden' | 'hide_search' | 'with_cohortHtmlSelect'
 }
 
-export type PlotConfig = {
+export type BasePlotConfig = {
 	chartType: string
-	childType: string
 	groups: any[]
 	id: string
-	settings: {
-		barchart?: any
-		boxplot?: BoxPlotSettings
-		common?: any
-		controls?: any
-		sampleScatter?: any
-		violin?: any
-	}
+	settings: PlotSettings
+}
+
+type PlotSettings = {
+	barchart?: any
+	boxplot?: BoxPlotSettings
+	common?: any
+	controls?: any
+	correlationVolcano?: any
+	sampleScatter?: any
+	violin?: any
+}
+
+export type PlotConfig = BasePlotConfig & {
 	term: any
 	term0?: any
 	term2?: any
