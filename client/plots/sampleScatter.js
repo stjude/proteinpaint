@@ -624,26 +624,33 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	*/
 	const menuDiv = holder.append('div')
 	if (chartsInstance.state.termdbConfig.scatterplots)
-		for (const plot of chartsInstance.state.termdbConfig.scatterplots) {
-			/* plot: 
-		{
-			name=str,
-			dimensions=int,
-			term={ id, ... }
-		}
-		*/
-			menuDiv
-				.append('button')
-				.style('margin', '5px')
-				.style('padding', '10px 15px')
-				.style('border-radius', '20px')
-				.style('border-color', '#ededed')
-				.style('display', 'block')
-				.text(plot.name)
-				.on('click', () => {
-					openScatterPlot(chartsInstance.app, plot)
-					chartsInstance.dom.tip.hide()
-				})
+		if (
+			chartsInstance.state.termdbConfig.scatterplots.length == 1 &&
+			!chartsInstance.state.currentCohortChartTypes.includes('dynamicScatter')
+		)
+			openScatterPlot(chartsInstance.app, chartsInstance.state.termdbConfig.scatterplots[0])
+		else {
+			for (const plot of chartsInstance.state.termdbConfig.scatterplots) {
+				/* plot: 
+			{
+				name=str,
+				dimensions=int,
+				term={ id, ... }
+			}
+			*/
+				menuDiv
+					.append('button')
+					.style('margin', '5px')
+					.style('padding', '10px 15px')
+					.style('border-radius', '20px')
+					.style('border-color', '#ededed')
+					.style('display', 'block')
+					.text(plot.name)
+					.on('click', () => {
+						openScatterPlot(chartsInstance.app, plot)
+						chartsInstance.dom.tip.hide()
+					})
+			}
 		}
 	const formDiv = menuDiv.append('div')
 
