@@ -1,4 +1,4 @@
-import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse, RouteApi, ValidGetDataResponse } from '#types'
+import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse, RouteApi } from '#types'
 import { CorrelationVolcanoPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import run_R from '../src/run_R.js'
@@ -39,7 +39,7 @@ function init({ genomes }) {
 
 async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	const terms = [q.featureTw, ...q.variableTwLst]
-	const data: ValidGetDataResponse = await getData(
+	const data = await getData(
 		{
 			filter: q.filter,
 			filter0: q.filter0,
@@ -67,7 +67,7 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	}
 
 	const input = {
-		method: q.method || 'pearson',
+		method: q.correlationMethod || 'pearson',
 		terms: [...vtid2array.values()]
 	}
 
@@ -77,9 +77,9 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	//	if (err) return console.log(err)
 	//})
 
-	const time1 = new Date()
+	const time1 = Date.now()
 	const r_output = await run_R(path.join(serverconfig.binpath, 'utils', 'corr.R'), JSON.stringify(input))
-	mayLog('Time taken to run correlation analysis:', new Date() - time1)
+	mayLog('Time taken to run correlation analysis:', Date.now() - time1)
 	let json_result
 	for (const line of r_output.split('\n')) {
 		if (line.startsWith('adjusted_p_values:')) {
@@ -92,7 +92,7 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 
 	const output = { terms: json_result }
 
-	const result = { variableItems: [] }
+	const result: CorrelationVolcanoResponse = { variableItems: [] }
 	for (const t of output.terms) {
 		const t2 = {
 			tw$id: t.id,
