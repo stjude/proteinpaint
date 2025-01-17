@@ -65,7 +65,7 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 
 	const input = {
 		method: q.method || 'pearson',
-		terms: vtid2array.values()
+		terms: [...vtid2array.values()]
 	}
 
 	const output = { terms: [] }
