@@ -64,6 +64,7 @@ export class MassAbout {
 	subheader: Elem // where all contents are rendered
 	type: string
 	opts: MassAboutOpts
+	state: any
 
 	constructor(opts: MassAboutOpts) {
 		this.opts = opts

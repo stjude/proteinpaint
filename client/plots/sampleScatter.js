@@ -634,11 +634,11 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		*/
 			menuDiv
 				.append('button')
-				.style('margin', '10px')
+				.style('margin', '5px')
 				.style('padding', '10px 15px')
 				.style('border-radius', '20px')
 				.style('border-color', '#ededed')
-				.style('display', 'inline-block')
+				.style('display', 'block')
 				.text(plot.name)
 				.on('click', () => {
 					openScatterPlot(chartsInstance.app, plot)
