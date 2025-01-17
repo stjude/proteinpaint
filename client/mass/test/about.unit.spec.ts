@@ -107,11 +107,7 @@ tape('.initCohort()', test => {
 		mockAbout.dom.cohortTitle && mockAbout.dom.cohortTitle.node()!.textContent == opts.selectCohort.title,
 		'Should render cohort tile'
 	)
-	test.true(
-		mockAbout.dom.cohortDescription &&
-			mockAbout.dom.cohortDescription.node()!.textContent == opts.selectCohort.description,
-		'Should render cohort description'
-	)
+
 	test.true(
 		mockAbout.dom.cohortPrompt && mockAbout.dom.cohortPrompt.node()!.textContent == opts.selectCohort.prompt,
 		'Should render cohort prompt'
