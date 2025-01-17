@@ -3,6 +3,7 @@ import { RxComponentInner } from '../../types/rx.d'
 import { fillTermWrapper } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { Elem, SvgSvg } from '../../types/d3'
+import { controlsInit } from '../controls'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -22,10 +23,17 @@ export type CorrVolcanoPlotConfig = BasePlotConfig & {
 	featureTw: any
 }
 
+export type CorrVolcanoDom = {
+	controls: Elem
+	div: Elem
+	error: Elem
+	svg: SvgSvg
+}
+
 class CorrelationVolcano extends RxComponentInner {
 	readonly type = 'correlationVolcano'
 	components: { controls: any }
-	dom: any
+	dom: CorrVolcanoDom
 	dsCorrVolcano: any
 	constructor(opts: any) {
 		super()
@@ -63,8 +71,47 @@ class CorrelationVolcano extends RxComponentInner {
 		}
 	}
 
-	init(appState) {
-		//TODO: Will figure out controls later
+	async setControls() {
+		const inputs = [
+			{
+				label: 'Correlation method',
+				title: 'Correlation method',
+				type: 'radio',
+				chartType: 'correlationVolcano',
+				settingsKey: 'method',
+				options: [
+					{ label: 'Pearson', value: 'pearson' },
+					{ label: 'Spearman', value: 'spearman' }
+				]
+			},
+			{
+				label: 'Height',
+				title: 'Set the height of the plot',
+				type: 'number',
+				chartType: 'correlationVolcano',
+				settingsKey: 'height',
+				debounceInterval: 500
+			},
+			{
+				label: 'Width',
+				title: 'Set the width of the plot',
+				type: 'number',
+				chartType: 'correlationVolcano',
+				settingsKey: 'width',
+				debounceInterval: 500
+			}
+		]
+
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
+			inputs
+		})
+	}
+
+	async init(appState) {
+		await this.setControls()
 
 		//Hack because obj not returning in getState(). Will fix later.
 		this.dsCorrVolcano = appState.termdbConfig.correlationVolcano
@@ -82,9 +129,12 @@ class CorrelationVolcano extends RxComponentInner {
 		/** Request data from the server*/
 		const model = new Model(config, this.state, this.app, settings, variableTwLst)
 		const data = await model.getData()
+		if (!data || data['error']) {
+			this.dom.error.text(data['error'] || 'No data returned from server')
+		}
 
 		/** Format returned data for rendering */
-		const viewModel = new ViewModel(config, data, settings, variableTwLst)
+		const viewModel = new ViewModel(data, settings, variableTwLst)
 
 		/** Render correlation volcano plot */
 		new View(this.dom, viewModel.viewData)

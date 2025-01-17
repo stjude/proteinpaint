@@ -1,3 +1,4 @@
+import type { TermWrapper } from '#types'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { CorrVolcanoPlotConfig, CorrVolcanoSettings } from '../CorrelationVolcano'
 
@@ -6,13 +7,13 @@ export class Model {
 	state: MassState
 	app: MassAppApi
 	settings: CorrVolcanoSettings
-	variableTwLst: any
+	variableTwLst: TermWrapper[]
 	constructor(
 		config: CorrVolcanoPlotConfig,
 		state: MassState,
 		app: MassAppApi,
 		settings: CorrVolcanoSettings,
-		variableTwLst: any
+		variableTwLst: TermWrapper[]
 	) {
 		this.config = config
 		this.state = state
