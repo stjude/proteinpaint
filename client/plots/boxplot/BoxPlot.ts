@@ -5,7 +5,7 @@ import { RxComponentInner } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
 import { Menu } from '#dom'
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
-import type { MassAppApi, MassState, PlotConfig } from '#mass/types/mass'
+import type { BasePlotConfig, MassAppApi, MassState, PlotConfig } from '#mass/types/mass'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -217,7 +217,7 @@ class TdbBoxplot extends RxComponentInner {
 	}
 
 	getState(appState: MassState) {
-		const config = appState.plots.find((p: PlotConfig) => p.id === this.id)
+		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}

@@ -1252,6 +1252,31 @@ export class TermdbVocab extends Vocab {
 		await Promise.all(promises)
 		return bySample
 	}
+
+	async getCorrelationVolcanoData(arg, _body = {}) {
+		// Is this auth needed for this plot??
+		const headers = this.mayGetAuthHeaders('termdb')
+
+		//Add more args here (e.g. filter, etc. )
+		arg.featureTw = this.getTwMinCopy(arg.featureTw)
+		for (const tw of arg.variableTwLst) {
+			this.getTwMinCopy(tw)
+		}
+
+		const body = Object.assign(
+			{
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel
+			},
+			arg,
+			_body
+		)
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		console.log(body)
+		const d = await dofetch3('termdb/correlationVolcano', { headers, body })
+
+		return d
+	}
 }
 
 /*
