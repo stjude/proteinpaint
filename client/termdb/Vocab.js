@@ -88,7 +88,6 @@ export class Vocab {
 						localStorage.setItem('jwtByDsRoute', JSON.stringify(this.jwtByDsRoute))
 					}
 				}
-				this.clientAuthResult = data.clientAuthResult
 			} else {
 				throw `unsupported requiredAuth='${auth.type}'`
 			}
@@ -125,7 +124,7 @@ export class Vocab {
 	}
 
 	getClientAuthResult() {
-		return this.clientAuthResult
+		return this.state.termdbConfig.clientAuthResult
 	}
 
 	async trackDsAction({ action, details }) {

@@ -253,8 +253,11 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			} else if (path.startsWith('/termdb') && ds0.termdb) {
 				const route = ds0.termdb
 				// okay to return an undefined embedder[route]
+				const cred = route[q.embedder] || route['*']
+				if (!cred) return
+				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
 				const protRoutes = _protectedRoutes || protectedRoutes.termdb
-				return protRoutes.includes(q.for) && (route[q.embedder] || route['*'])
+				if (protRoutes.includes(q.for)) return cred
 			} else if (path.startsWith('/burden') && ds0.burden) {
 				// okay to return an undefined embedder[route]
 				return ds0.burden[q.embedder] || ds0.burden['*']
@@ -286,6 +289,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			next()
 			return
 		}
+
 		const q = req.query
 		const cred = getRequiredCred(q, req.path)
 		if (!cred) {
@@ -293,8 +297,13 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			return
 		}
 		let code
+
 		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
-		if (sessionTracking == 'jwt-only') sessions = {}
+		if (sessionTracking == 'jwt-only') {
+			console.log('!!! --- CLEARNING ALL SESSION DATA TO simulate stateless service --- !!!')
+			sessions = {}
+		}
+
 		try {
 			const id = getSessionId(req, cred)
 			let altId
@@ -321,7 +330,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			}
 			//if (!session.email) throw `missing session details: please login again through a supported portal`
 			checkIPaddress(req, session.ip, cred)
-
 			const time = Date.now()
 			/* !!! TODO: may rethink the following assumption !!!
 				assumes that the payload.datasets list will not change within the maxSessionAge duration
@@ -340,7 +348,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 					return
 				}
 			}
-
 			// TODO: may not to adjust session expiration based on the last active period
 			// If any activity happens within the harcoded number of milliseconds below,
 			// then update the start time of the active session (account for prolonged user inactivity)
@@ -359,15 +366,29 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	try {
 		// 1. Get an empty or rehydrated sessions tracker object
 		sessions = await getSessions(creds, sessionsFile, maxSessionAge)
+		const time = Date.now()
+		const latestSessionByDslabel = {}
 		const unexpiredSessions = []
+
 		for (const dslabel in sessions) {
 			for (const id in sessions[dslabel]) {
 				const q = sessions[dslabel][id]
-				unexpiredSessions.push(`${q.dslabel}\t${q.id}\t${q.time}\t${q.email}\t${q.ip}\t${q.embedder}\t${q.route}`)
+				const session = await maySaveSession(
+					'',
+					q.dslabel,
+					q.id,
+					q.time,
+					q.email,
+					q.ip,
+					q.embedder,
+					q.route,
+					q.clientAuthResult
+				)
+				if (!latestSessionByDslabel[q.dslabel] || latestSessionByDslabel[dslabel].time < q.time)
+					latestSessionByDslabel[dslabel] = session
 			}
 		}
-		// update the sessionsFile content so only unexpiredSessions are recorded
-		await fs.writeFile(sessionsFile, unexpiredSessions.join('\n'))
+		await fs.writeFile(sessionsFile, Object.values(latestSessionByDslabel).map(JSON.stringify).join('\n') + '\n')
 	} catch (e) {
 		throw e
 	}
@@ -418,10 +439,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			}
 			delete sessions[q.dslabel][id]
 			const ip = req.ip
-			await fs.appendFile(
-				sessionsFile,
-				`${q.dslabel}\t${id}\t0\t\t${session.ip}\t${session.embedder}\t${session.route}\n`
-			)
+			await maySaveSession(sessionsFile, q.dslabel, id, 0, '', session.ip, session.embedder, session.route, {})
 			res.send({ status: 'ok' })
 		} catch (e) {
 			res.status(code)
@@ -446,9 +464,9 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const { email, ip, clientAuthResult } = getJwtPayload(q, req.headers, cred)
 
 			checkIPaddress(req, ip, cred)
-			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred)
+			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred, clientAuthResult)
 			code = 401 // in case of jwt processing error
-			const jwt = await getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email)
+			const jwt = await getSignedJwt(req, q, id, cred, clientAuthResult, maxSessionAge, sessionsFile, email)
 			// difficult to setup CORS cookie, will simply reply with cookie and use a custom header for now
 			res.send({ status: 'ok', jwt, route: cred.route, [cred.cookieId]: id, clientAuthResult })
 		} catch (e) {
@@ -528,10 +546,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			for (const dslabel in sessions) {
 				for (const id in sessions[dslabel]) {
 					const q = sessions[dslabel][id]
-					unexpiredSessions.push(`${q.dslabel}\t${q.id}\t${q.time}\t${q.email}\t${q.ip}\t${q.embedder}\t${q.route}`)
+					// no need to await ??
+					maySaveSession(sessionsFile, q.dslabel, q.id, q.time, q.email, q.ip, q.embedder, q.route, q.clientAuthResult)
 				}
 			}
-			fs.writeFile(sessionsFile, unexpiredSessions.join('\n')).catch(console.log)
 		}
 
 		return dsAuth
@@ -551,31 +569,22 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 		const forbiddenRoutes = []
 		const ds = creds[req.query.dslabel] || creds['*']
+		let cred
 		if (!ds) {
 			// no checks for this ds, is open access
 		} else {
 			// has checks
 			for (const k in ds) {
-				const cred = ds[k][req.query.embedder] || ds[k]['*']
+				cred = ds[k][req.query.embedder] || ds[k]['*']
 				if (cred?.type == 'forbidden') {
 					forbiddenRoutes.push(k)
 				}
 			}
 		}
-
-		const q = req.query
-		const cred = getRequiredCred(q, req.path) // still needed?
-		let clientAuthResult
-		if (!cred) {
-			// no checks, is open access
-		} else {
-			// has checks
-			if (cred.authRoute != '/jwt-status') throw `Incorrect authorization route, use ${cred.authRoute}'` // needed?
-			const _ = getJwtPayload(q, req.headers, cred)
-			clientAuthResult = _.clientAuthResult
-		}
-
-		return { forbiddenRoutes, clientAuthResult }
+		const id = getSessionId(req, cred)
+		const altId = mayAddSessionFromJwt(sessions, ds.label, id, req, cred)
+		const activeSession = sessions[req.query.dslabel]?.[id] || sessions[req.query.dslabel]?.[altId]
+		return { forbiddenRoutes, clientAuthResult: activeSession?.clientAuthResult }
 	}
 
 	authApi.getRequiredCredForDsEmbedder = function (dslabel, embedder) {
@@ -676,12 +685,13 @@ function getSessionId(req, cred) {
 	return (
 		req.cookies?.[`${cred?.cookieId}`] ||
 		req.cookies?.[`${req.query.dslabel}SessionId`] ||
+		req.cookies?.[`x-ds-access-token`] ||
 		req.headers?.['x-sjppds-sessionid'] ||
 		req.query?.['x-sjppds-sessionid']
 	)
 }
 
-async function getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email = '') {
+async function getSignedJwt(req, q, id, cred, clientAuthResult, getSignedJwt, maxSessionAge, sessionsFile, email = '') {
 	if (!cred.secret) return
 	try {
 		const time = Date.now()
@@ -695,13 +705,15 @@ async function getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email
 			embedder: q.embedder,
 			route: cred.route,
 			exp: iat + Math.floor(maxSessionAge / 1000),
-			email
+			email,
+			getSignedJwt
 		}
 		if (cred.dsnames) payload.datasets = cred.dsnames.map(d => d.id)
 		const jwt = jsonwebtoken.sign(payload, cred.secret)
+		const clientAuthResultString = JSON.stringify(clientAuthResult || '{}')
 		await fs.appendFile(
 			sessionsFile,
-			`${q.dslabel}\t${id}\t${time}\t${email}\t${req.ip}\t${q.embedder}\t${cred.route}\n`
+			[q.dslabel, id, time.email, req.ip, q.embedder, cred.route, clientAuthResultString].join('\t') + '\n'
 		)
 		return jwt
 	} catch (e) {
@@ -712,7 +724,7 @@ async function getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email
 // in a server farm, where the session state is not shared by all active PP servers,
 // the login details that is created by one server can be obtained from the JWT payload
 function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
-	if (!req.headers.authorization || (id && sessions[dslabel]?.[id])) return
+	if (!req.headers?.authorization || (id && sessions[dslabel]?.[id])) return
 	if (!cred.secret)
 		throw {
 			status: 'error',
@@ -731,7 +743,6 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 		// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
 		// otherwise an expired header.auth jwt may be reused even when a user has already logged out
 		if (id && payload.id != id && req.headers?.['x-sjppds-sessionid'] != payload.id) return
-
 		// do not overwrite existing
 		if (!sessions[dslabel]) sessions[dslabel] = {}
 		//if (sessions[dslabel][payload.id]) throw `session conflict`
@@ -760,12 +771,21 @@ async function getSessions(creds, sessionsFile, maxSessionAge) {
 		const file = await fs.readFile(sessionsFile, 'utf8')
 		//rehydrate sessions from a cached file
 		const now = +new Date()
+		const latestSessionByDslabel = {}
 		for (const line of file.split('\n')) {
 			if (!line) continue
-			const [dslabel, id, _time, email, ip] = line.split('\t')
-			const time = Number(_time)
+			const session = JSON.parse(line)
+			session.time = Number(session.time)
+			const { dslabel, time } = session
 			if (!sessions[dslabel]) sessions[dslabel] = {}
-			if (now - time < maxSessionAge) sessions[dslabel][id] = { id, time, email, ip }
+			if (now - time < maxSessionAge) {
+				if (!latestSessionByDslabel[dslabel] || latestSessionByDslabel[dslabel].time < time) {
+					latestSessionByDslabel[dslabel] = session
+				}
+			}
+		}
+		for (const [dslabel, session] of Object.entries(latestSessionByDslabel)) {
+			sessions[dslabel][session.id] = session
 		}
 		return sessions
 	} catch (e) {
@@ -775,17 +795,42 @@ async function getSessions(creds, sessionsFile, maxSessionAge) {
 	}
 }
 
-async function setSession(q, res, sessions, sessionsFile, email, req, cred) {
+async function setSession(q, res, sessions, sessionsFile, email, req, cred, clientAuthResult) {
 	const time = Date.now()
 	const id = Math.random().toString() + '.' + time.toString().slice(4)
 	const ip = req.ip // may use req.ips?
 	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
-	sessions[q.dslabel][id] = { id, time, email, ip }
-	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\t${ip}\t${q.embedder}\t${cred.route}\n`)
+	const session = await maySaveSession(
+		sessionsFile,
+		q.dslabel,
+		id,
+		time,
+		email,
+		ip,
+		q.embedder,
+		cred.route,
+		clientAuthResult
+	)
+	sessions[q.dslabel][id] = session //{ id, time, email, ip, embedder: q.embedder, route: cred.route, clientAuthResult }
 	if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
 		res.header('Set-Cookie', `${cred.cookieId}=${id}; HttpOnly; SameSite=None; Secure`)
 	}
 	return id
+}
+
+async function maySaveSession(sessionsFile, dslabel, id, time, email, ip, embedder, route, clientAuthResult) {
+	const session = {
+		dslabel,
+		id,
+		time,
+		email,
+		ip,
+		embedder,
+		route,
+		clientAuthResult
+	}
+	if (sessionsFile) await fs.appendFile(sessionsFile, JSON.stringify(session) + '\n')
+	return session
 }
 
 /*
@@ -863,7 +908,7 @@ export const authApi = {
 	},
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
 	getDsAuth: (req = undefined) => [],
-	getNonsensitiveInfo: (_a, _b) => [],
+	getNonsensitiveInfo: (_a, _b) => {},
 	userCanAccess: () => true,
 	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
 	getPayloadFromHeaderAuth: () => ({}),
