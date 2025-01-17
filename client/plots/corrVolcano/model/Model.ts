@@ -7,19 +7,19 @@ export class Model {
 	state: MassState
 	app: MassAppApi
 	settings: CorrVolcanoSettings
-	dsCorrVolcanoSettings: any
+	variableTwLst: any
 	constructor(
 		config: CorrVolcanoPlotConfig,
 		state: MassState,
 		app: MassAppApi,
 		settings: CorrVolcanoSettings,
-		dsCorrVolcanoSettings: any
+		variableTwLst: any
 	) {
 		this.config = config
 		this.state = state
 		this.app = app
 		this.settings = settings
-		this.dsCorrVolcanoSettings = dsCorrVolcanoSettings
+		this.variableTwLst = variableTwLst
 	}
 
 	async getData() {
@@ -29,16 +29,12 @@ export class Model {
 	}
 
 	async setRequestOpts() {
-		const variableTwLst = this.dsCorrVolcanoSettings.variables.termIds.map((id: string) => {
-			return { id }
-		})
-		for (const t of variableTwLst) await fillTermWrapper(t, this.app.vocabApi)
 		return {
 			featureTw: this.config.featureTw,
-			variableTwLst,
+			variableTwLst: this.variableTwLst,
 			filter: this.state.termfilter.filter,
 			filter0: this.state.termfilter.filter0,
-			correlationMethod: this.dsCorrVolcanoSettings.method
+			correlationMethod: this.settings.method
 		}
 	}
 }
