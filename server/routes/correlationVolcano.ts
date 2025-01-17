@@ -101,8 +101,8 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 			sampleSize: t.sample_size,
 			//sampleSize: input.terms.get(t.id).v1.length, // This was not working so passed the length of each array from R
 			correlation: t.correlation,
-			original_pvalue: t.original_p_value, // This is in -log10 scale for volcano plot
-			adjusted_pvalue: t.adjusted_p_value // This is in -log10 scale for volcano plot
+			original_pvalue: t.original_p_value,
+			adjusted_pvalue: t.adjusted_p_value
 		}
 		result.variableItems.push(t2)
 	}
