@@ -2,6 +2,7 @@ import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
 import type { CorrVolcanoDom } from '../CorrelationVolcano'
 import type { ViewData } from '../viewModel/ViewModel'
+import { ItemToolTip } from './ItemToolTip'
 
 /** Using the data formated in ViewModel, renders the correlation
  * volcano plot. */
@@ -51,7 +52,7 @@ export class View {
 
 	renderVariables(variableItems) {
 		for (const item of variableItems) {
-			this.dom.svg
+			const g = this.dom.svg
 				.append('circle')
 				.attr('stroke', item.color)
 				.attr('fill', item.color)
@@ -59,6 +60,8 @@ export class View {
 				.attr('cx', item.x)
 				.attr('cy', item.y)
 				.attr('r', this.defaultRadius)
+
+			new ItemToolTip(item, g, this.dom.tip)
 		}
 	}
 }
