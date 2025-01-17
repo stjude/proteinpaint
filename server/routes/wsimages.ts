@@ -152,8 +152,8 @@ function init({ genomes }) {
 
 			const payload: WSImagesResponse = {
 				status: 'ok',
-				sessionId: sessionId,
-				userSessionId: req.session.user.id,
+				wsiSessionId: sessionId,
+				browserImageInstanceId: req.session.user.id,
 				slide_dimensions: getWsiImageResponse.slide_dimensions
 			}
 			res.status(200).json(payload)

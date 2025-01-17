@@ -26,14 +26,14 @@ export default class WSIViewer {
 
 	private thumbnailsContainer: any
 
-	// Field to store session IDs
-	private readonly sessions: Map<string, string>
+	// Field to store sample ID to wsi session ID mapping
+	private readonly wsiSessions: Map<string, string>
 
 	constructor(opts: any) {
 		this.type = 'WSIViewer'
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
-		this.sessions = new Map()
+		this.wsiSessions = new Map()
 
 		// Add event listener for tab/window close
 		window.addEventListener('beforeunload', this.logSessions.bind(this))
@@ -111,14 +111,12 @@ export default class WSIViewer {
 				return []
 			}
 
-			// Save session ID
-
-			this.sessions.set(wsimages[i].filename, data.userSessionId)
+			this.wsiSessions.set(wsimages[i].filename, data.browserImageInstanceId)
 
 			const imgWidth = data.slide_dimensions[0]
 			const imgHeight = data.slide_dimensions[1]
 
-			const zoomifyUrl = `/tileserver/layer/slide/${data.sessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg`
+			const zoomifyUrl = `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg`
 
 			const source = new Zoomify({
 				url: zoomifyUrl,
@@ -128,7 +126,7 @@ export default class WSIViewer {
 			})
 
 			const options = {
-				preview: `/tileserver/layer/slide/${data.sessionId}/zoomify/TileGroup0/0-0-0@1x.jpg`,
+				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg`,
 				metadata: wsimages[i].metadata,
 				source: source,
 				baseLayer: true
@@ -143,7 +141,7 @@ export default class WSIViewer {
 
 	private logSessions() {
 		// Example: Send the session IDs to the server
-		dofetch3('clearwsisession', { method: 'DELETE', body: { sessions: JSON.stringify(Array.from(this.sessions)) } })
+		dofetch3('clearwsisession', { method: 'DELETE', body: { sessions: JSON.stringify(Array.from(this.wsiSessions)) } })
 	}
 
 	private generateThumbnails(layers: Array<TileLayer<Zoomify>>, setting: Settings) {
