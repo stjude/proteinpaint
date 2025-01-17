@@ -38,7 +38,7 @@ export class Vocab {
 	async maySetVerifiedToken(dslabel) {
 		// strict true boolean value means no auth required
 		if (this.verifiedToken === true) return this.verifiedToken
-		let token = this.opts.getDatasetAccessToken?.()
+		let token = await this.opts.getDatasetAccessToken?.()
 		if (!token) token = this.jwtByRoute['termdb']
 		if (this.verifedToken && token === this.verifiedToken) return this.verifiedToken
 		try {
@@ -121,6 +121,10 @@ export class Vocab {
 			headers.authorization = `Bearer ${btoa(jwt)}`
 		}
 		return headers
+	}
+
+	getClientAuthResult() {
+		return this.state.termdbConfig.clientAuthResult
 	}
 
 	async trackDsAction({ action, details }) {
