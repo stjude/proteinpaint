@@ -1686,15 +1686,10 @@ export type PreInit = {
 	}
 }
 
-/** supply "isSupported()" kind of callback per chart type,
-	that will overwrite default logic in getSupportedChartTypes()
-	- the callback can have arbitrary logic based on requirements from this ds
-	- can supply ()=>false to hide charts that will otherwise shown
-	- can define arbitrary chart type names for purpose-specific charts
-*/
-
+/** see details in termdb.server.init.ts
+ */
 export type isSupportedChartCallbacks = {
-	[chartType: string]: (f: any, auth: any) => boolean | undefined
+	[chartType: string]: (f: any) => boolean | undefined
 }
 
 export type Mds3 = BaseMds & {
