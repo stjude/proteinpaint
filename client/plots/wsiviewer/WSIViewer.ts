@@ -34,9 +34,8 @@ export default class WSIViewer {
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
 		this.wsiSessions = new Map()
-
 		// Add event listener for tab/window close
-		window.addEventListener('beforeunload', this.logSessions.bind(this))
+		window.addEventListener('beforeunload', this.onTabClosed.bind(this))
 	}
 
 	async main(): Promise<void> {
@@ -139,8 +138,7 @@ export default class WSIViewer {
 		return layers
 	}
 
-	private logSessions() {
-		// Example: Send the session IDs to the server
+	private onTabClosed() {
 		dofetch3('clearwsisession', { method: 'DELETE', body: { sessions: JSON.stringify(Array.from(this.wsiSessions)) } })
 	}
 
