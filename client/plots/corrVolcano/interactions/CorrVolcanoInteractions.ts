@@ -8,7 +8,8 @@ export class CorrVolcanoInteractions {
 
 	clearDom() {
 		this.dom.error.style('padding', '').text('')
-		this.dom.svg.selectAll('*').remove()
+		this.dom.plot.selectAll('*').remove()
+		this.dom.svg.selectAll('line').remove()
 		this.dom.title.text('')
 	}
 }

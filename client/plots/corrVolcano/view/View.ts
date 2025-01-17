@@ -31,10 +31,11 @@ export class View {
 			.text(plotDim.title.text)
 
 		this.dom.yAxisLabel
+			.attr('class', 'sjpp-volcano-divide-line')
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr('transform', `translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`)
-			.text(`-log10(pvalue)`)
+			.text(plotDim.yAxisLabel.text)
 
 		//Y, left scale
 		this.renderScale(plotDim.yScale, true)
@@ -45,7 +46,8 @@ export class View {
 		this.dom.svg
 			.append('line')
 			.attr('stroke', 'black')
-			.attr('stroke-dasharray', '4 2')
+			.attr('stroke-dasharray', '5 4')
+			.attr('stroke-opacity', 0.5)
 			.attr('x1', plotDim.divideLine.x)
 			.attr('x2', plotDim.divideLine.x)
 			.attr('y1', plotDim.divideLine.y1)
@@ -56,7 +58,7 @@ export class View {
 	}
 
 	renderScale(scale, isLeft = false) {
-		const scaleG = this.dom.svg.append('g').attr('transform', `translate(${scale.x}, ${scale.y})`)
+		const scaleG = this.dom.plot.append('g').attr('transform', `translate(${scale.x}, ${scale.y})`)
 		axisstyle({
 			axis: scaleG.call(isLeft ? axisLeft(scale.scale) : axisBottom(scale.scale)),
 			color: 'black',
@@ -67,7 +69,7 @@ export class View {
 
 	renderVariables(variableItems) {
 		for (const item of variableItems) {
-			const g = this.dom.svg
+			const g = this.dom.plot
 				.append('circle')
 				.attr('stroke', item.color)
 				.attr('fill', item.color)

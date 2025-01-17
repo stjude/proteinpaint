@@ -36,6 +36,7 @@ export class ViewModel {
 	}
 
 	setPlotDimensions(config, settings, absYMax: number, absYMin: number, absXMax: number, absXMin: number) {
+		const xScale = scaleLinear().domain([absXMin, absXMax]).range([0, settings.width])
 		return {
 			svg: {
 				height: settings.height + this.topPad + this.bottomPad,
@@ -52,7 +53,7 @@ export class ViewModel {
 				y: this.topPad + settings.height / 2
 			},
 			xScale: {
-				scale: scaleLinear().domain([absXMin, absXMax]).range([0, settings.width]),
+				scale: xScale,
 				x: this.horizPad,
 				y: settings.height + this.topPad
 			},
@@ -62,7 +63,7 @@ export class ViewModel {
 				y: this.topPad
 			},
 			divideLine: {
-				x: this.horizPad + settings.width / 2,
+				x: xScale(0) + this.horizPad,
 				y1: settings.height + this.topPad,
 				y2: this.topPad
 			}
