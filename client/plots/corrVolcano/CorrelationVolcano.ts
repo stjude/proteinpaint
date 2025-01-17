@@ -10,6 +10,10 @@ import { Model } from './model/Model'
  * - WILL DO ALL TYPING AFTER INITIAL PROTOTYPE
  */
 
+export type CorrVolcanoSettings = {
+	method: 'pearson' | 'spearman'
+}
+
 export type CorrVolcanoPlotConfig = BasePlotConfig & {
 	featureTw: any
 }
@@ -42,8 +46,6 @@ class CorrelationVolcano extends RxComponentInner {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-
-		console.log(44, appState.termdbConfig.correlationVolcano)
 		return {
 			termfilter: appState.termfilter,
 			correlationVolcano: appState.termdbConfig.correlationVolcano,
@@ -66,10 +68,10 @@ class CorrelationVolcano extends RxComponentInner {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 
+		const settings = config.settings.correlationVolcano
 		/** Request data from the server*/
-		const model = new Model(config, this.state, this.app, this.dsCorrVolcano)
+		const model = new Model(config, this.state, this.app, settings, this.dsCorrVolcano)
 		const data = await model.getData()
-		console.log(data)
 	}
 }
 
@@ -77,8 +79,8 @@ export const corrVolcanoInit = getCompInit(CorrelationVolcano)
 export const componentInit = corrVolcanoInit
 
 export function getDefaultCorrVolcanoSettings(app, overrides = {}) {
-	const defaults = {
-		//TODO, will figure out with the controls later
+	const defaults: CorrVolcanoSettings = {
+		method: 'pearson'
 	}
 	return Object.assign(defaults, overrides)
 }
