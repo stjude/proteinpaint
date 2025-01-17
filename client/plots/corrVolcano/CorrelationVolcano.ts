@@ -2,7 +2,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { RxComponentInner } from '../../types/rx.d'
 import { fillTermWrapper } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { Elem, SvgSvg, SvgText } from '../../types/d3'
+import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import { controlsInit } from '../controls'
 import { Menu } from '#dom'
 import { Model } from './model/Model'
@@ -30,6 +30,7 @@ export type CorrVolcanoDom = {
 	div: Elem
 	error: Elem
 	svg: SvgSvg
+	plot: SvgG
 	title: SvgText
 	tip: Menu
 	yAxisLabel: SvgText
@@ -56,6 +57,7 @@ class CorrelationVolcano extends RxComponentInner {
 			div,
 			error: errorDiv,
 			svg,
+			plot: svg.append('g'),
 			title: svg.append('text'),
 			yAxisLabel: svg.append('text'),
 			tip: new Menu({ padding: '' })
