@@ -582,7 +582,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			}
 		}
 		const id = getSessionId(req, cred)
-		const altId = mayAddSessionFromJwt(sessions, ds.label, id, req, cred)
+		const altId = mayAddSessionFromJwt(sessions, ds?.label, id, req, cred)
 		const activeSession = sessions[req.query.dslabel]?.[id] || sessions[req.query.dslabel]?.[altId]
 		return { forbiddenRoutes, clientAuthResult: activeSession?.clientAuthResult }
 	}
