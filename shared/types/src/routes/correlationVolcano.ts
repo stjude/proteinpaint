@@ -23,7 +23,9 @@ export type CorrelationVolcanoResponse = {
 		/** correlation coefficient, -1 to 1 */
 		correlation: number
 		/** pvalue */
-		pvalue: number
+		original_pvalue: number
+		/** pvalue */
+		adjusted_pvalue: number
 		/** tw.$id, for client to match the item with variableTwLst */
 		tw$id: string
 		/** number of samples analyzed. samples not having complete data for all terms will be excluded, thus size may be lower than current cohort */
