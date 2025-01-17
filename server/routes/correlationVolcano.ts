@@ -1,6 +1,10 @@
 import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse, RouteApi, ValidGetDataResponse } from '#types'
 import { CorrelationVolcanoPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
+import run_R from '../src/run_R.js'
+import serverconfig from '../src/serverconfig.js'
+//import fs from 'fs'
+import path from 'path'
 // import { roundValueAuto } from '#shared/roundValue.js'
 
 export const api: RouteApi = {
@@ -68,19 +72,41 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 		terms: [...vtid2array.values()]
 	}
 
-	const output = { terms: [] }
-	//await call(q)
+	//console.log("input:",input)
+	//fs.writeFile('test.txt', JSON.stringify(input), function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
+
+	const time1 = new Date().valueOf()
+	const r_output = await run_R(path.join(serverconfig.binpath, 'utils', 'corr.R'), JSON.stringify(input))
+	const time2 = new Date().valueOf()
+	console.log('Time taken to run correlation analysis:', time2 - time1, 'ms')
+	let json_result
+	for (const line of r_output.split('\n')) {
+		if (line.startsWith('adjusted_p_values:')) {
+			json_result = JSON.parse(line.replace('adjusted_p_values:', ''))
+		} else {
+			// Useful for debugging
+			//console.log("line:", line)
+		}
+	}
+
+	const output = { terms: json_result }
 
 	const result = { variableItems: [] }
 	for (const t of output.terms) {
 		const t2 = {
 			tw$id: t.id,
-			sampleSize: input.terms.get(t.id).v1.length,
+			sampleSize: t.sample_size,
+			//sampleSize: input.terms.get(t.id).v1.length, // This was not working so passed the length of each array from R
 			correlation: t.correlation,
-			pvalue: t.pvalue
+			original_pvalue: t.original_p_value, // This is in -log10 scale for volcano plot
+			adjusted_pvalue: t.adjusted_p_value // This is in -log10 scale for volcano plot
 		}
 		result.variableItems.push(t2)
 	}
+	console.log('result:', result)
 	return result
 }
 
