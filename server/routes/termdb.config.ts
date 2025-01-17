@@ -115,6 +115,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.regression) c.regression = tdb.regression
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
+	if (ds.cohort.correlationVolcano) c.correlationVolcano = ds.cohort.correlationVolcano
+	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
