@@ -15,9 +15,9 @@ export class ViewModel {
 	viewData: ViewData
 	readonly topPad = 40
 	/** Only one side, left or right */
-	readonly horizPad = 60
+	readonly horizPad = 70
 	readonly bottomPad = 20
-	constructor(data, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
+	constructor(config, data, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
 		/** Test data for development until the server code is ready
 		 * Will remove
 		 */
@@ -38,7 +38,7 @@ export class ViewModel {
 		const sortedValues = data.variableItems.map(v => v.pvalue).sort((a, b) => a - b)
 		const absYMax = sortedValues[sortedValues.length - 1]
 		const absYMin = sortedValues[0]
-		const plotDim = this.setPlotDimensions(settings, absYMax, absYMin)
+		const plotDim = this.setPlotDimensions(config, settings, absYMax, absYMin)
 
 		this.viewData = {
 			plotDim,
@@ -46,11 +46,21 @@ export class ViewModel {
 		}
 	}
 
-	setPlotDimensions(settings, absYMax: number, absYMin: number) {
+	setPlotDimensions(config, settings, absYMax: number, absYMin: number) {
 		return {
 			svg: {
 				height: settings.height + this.topPad + this.bottomPad,
 				width: settings.width + this.horizPad * 2
+			},
+			title: {
+				text: config.featureTw.term.name,
+				x: this.horizPad + settings.width / 2,
+				y: this.topPad / 2
+			},
+			yAxisLabel: {
+				text: '-log10(pvalue)',
+				x: this.horizPad / 3,
+				y: this.topPad + settings.height / 2
 			},
 			xScale: {
 				scale: scaleLinear().domain([-1, 1]).range([0, settings.width]),
