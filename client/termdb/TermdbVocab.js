@@ -1271,8 +1271,8 @@ export class TermdbVocab extends Vocab {
 			arg,
 			_body
 		)
+
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		console.log(body)
 		const d = await dofetch3('termdb/correlationVolcano', { headers, body })
 
 		return d
