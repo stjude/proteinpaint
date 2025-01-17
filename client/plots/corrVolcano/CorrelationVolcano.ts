@@ -4,6 +4,7 @@ import { fillTermWrapper } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { Elem, SvgSvg } from '../../types/d3'
 import { controlsInit } from '../controls'
+import { Menu } from '#dom'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -28,6 +29,7 @@ export type CorrVolcanoDom = {
 	div: Elem
 	error: Elem
 	svg: SvgSvg
+	tip: Menu
 }
 
 class CorrelationVolcano extends RxComponentInner {
@@ -50,7 +52,8 @@ class CorrelationVolcano extends RxComponentInner {
 			controls: controls as Elem,
 			div,
 			error: errorDiv,
-			svg
+			svg,
+			tip: new Menu({ padding: '' })
 		}
 		this.dsCorrVolcano = {}
 	}
