@@ -18,10 +18,9 @@ export class ViewModel {
 	readonly horizPad = 70
 	readonly bottomPad = 20
 	constructor(config, data, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
-		const sortedValues = data.variableItems.map(v => v.pvalue).sort((a, b) => a - b)
-		const absYMax = sortedValues[sortedValues.length - 1]
-		const absYMin = sortedValues[0]
-		const plotDim = this.setPlotDimensions(config, settings, absYMax, absYMin)
+		const [absYMax, absYMin] = this.setMinMax(data, 'original_pvalue')
+		const [absXMax, absXMin] = this.setMinMax(data, 'correlation')
+		const plotDim = this.setPlotDimensions(config, settings, absYMax, absYMin, absXMax, absXMin)
 
 		this.viewData = {
 			plotDim,
@@ -29,7 +28,14 @@ export class ViewModel {
 		}
 	}
 
-	setPlotDimensions(config, settings, absYMax: number, absYMin: number) {
+	setMinMax(data, key) {
+		const sortedValues = data.variableItems.map(v => v[key]).sort((a, b) => a - b)
+		const max = sortedValues[sortedValues.length - 1]
+		const min = sortedValues[0]
+		return [max, min]
+	}
+
+	setPlotDimensions(config, settings, absYMax: number, absYMin: number, absXMax: number, absXMin: number) {
 		return {
 			svg: {
 				height: settings.height + this.topPad + this.bottomPad,
@@ -46,12 +52,12 @@ export class ViewModel {
 				y: this.topPad + settings.height / 2
 			},
 			xScale: {
-				scale: scaleLinear().domain([-1, 1]).range([0, settings.width]),
+				scale: scaleLinear().domain([absXMin, absXMax]).range([0, settings.width]),
 				x: this.horizPad,
 				y: settings.height + this.topPad
 			},
 			yScale: {
-				scale: scaleLog().domain([absYMin, absYMax]).range([settings.height, 0]),
+				scale: scaleLinear().domain([absYMin, absYMax]).range([0, settings.height]),
 				x: this.horizPad,
 				y: this.topPad
 			},
@@ -68,7 +74,7 @@ export class ViewModel {
 			item.color = item.correlation > 0 ? 'blue' : 'red'
 			item.label = variableTwLst.find(t => t.$id == item.tw$id).term.name
 			item.x = plotDim.xScale.scale(item.correlation) + this.horizPad
-			item.y = plotDim.yScale.scale(item.pvalue) + this.topPad
+			item.y = plotDim.yScale.scale(item.original_pvalue) + this.topPad
 		}
 		return data.variableItems
 	}

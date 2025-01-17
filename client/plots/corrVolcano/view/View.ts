@@ -10,9 +10,11 @@ export class View {
 	dom: CorrVolcanoDom
 	viewData: ViewData
 	readonly defaultRadius = 5
-	constructor(dom: CorrVolcanoDom, viewData: ViewData) {
+	constructor(dom: CorrVolcanoDom, viewData: ViewData, interactions: any) {
 		this.dom = dom
 		this.viewData = viewData
+
+		interactions.clearDom()
 
 		const plotDim = viewData.plotDim
 		this.renderDom(plotDim)
