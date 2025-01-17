@@ -27,7 +27,7 @@ for (i in 1:length(v1)) {
 
 # Adjusting for multiple testing correction
 adjust_p_values <- p.adjust(pvalues, method = "fdr")
-output <- data.frame(ids, coeffs, -log10(pvalues), -log10(adjust_p_values), sample_sizes)
+output <- data.frame(ids, coeffs, pvalues, adjust_p_values, sample_sizes)
 names(output)[1] <- "id"
 names(output)[2] <- "correlation"
 names(output)[3] <- "original_p_value"
