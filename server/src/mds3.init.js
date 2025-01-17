@@ -32,6 +32,7 @@ import { mayInitiateScatterplots } from './termdb.scatter.js'
 import { mayInitiateMatrixplots, mayInitiateNumericDictionaryTermplots } from './termdb.matrix.js'
 import { add_bcf_variant_filter } from './termdb.snp.js'
 import { validate_query_NIdata } from '#routes/brainImagingSamples.ts'
+import { validate_correlationVolcano } from '#routes/correlationVolcano.ts'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
@@ -124,6 +125,7 @@ export async function init(ds, genome) {
 
 	// must validate termdb first
 	await validate_termdb(ds)
+
 	if (ds.queries) {
 		// must validate snvindel query before variant2sample
 		// as vcf header must be parsed to supply samples for variant2samples
@@ -222,8 +224,6 @@ export async function validate_termdb(ds) {
 	}
 
 	if (ds.cohort) {
-		// uncomment for local testng, recoverable or fatal
-		// if (ds.label == 'PNET') throw {status: 500} //`ds.cohort error test, should not crash the server`
 		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
 		if (!ds.cohort.termdb.dictionary) {
 			if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
@@ -296,12 +296,10 @@ export async function validate_termdb(ds) {
 
 	// must validate selectCohort first, then restrictAncestries, as latter may depend on former
 	await mayValidateRestrictAcestries(tdb)
-
 	await mayInitiateScatterplots(ds)
-
 	await mayInitiateMatrixplots(ds)
-
 	await mayInitiateNumericDictionaryTermplots(ds)
+	await validate_correlationVolcano(ds)
 
 	if ('minTimeSinceDx' in tdb) {
 		if (!Number.isFinite(tdb.minTimeSinceDx)) throw 'termdb.minTimeSinceDx not number'

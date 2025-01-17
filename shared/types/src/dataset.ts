@@ -908,7 +908,7 @@ type CorrelationVolcano = {
 		/** later can expand */
 		type: 'dictionaryTerm'
 		/** when type=dictionaryTerm, is array of numeric term ids */
-		termIds: string[]
+		termIds?: string[]
 	}
 }
 

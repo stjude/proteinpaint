@@ -1,18 +1,20 @@
 import type { RoutePayload } from './routeApi.js'
+import type { TermWrapper } from '../terms/tw.ts'
+import type { Filter } from '../filter.ts'
 
 /**Args set in Termdb vocab and from mass box plot */
 export type BoxPlotRequest = {
 	/** Args set in TermVocab */
 	/** term1 or term */
-	tw: any
+	tw: TermWrapper
 	genome: string
 	dslabel: string
 	/** sort plots by median value */
 	orderByMedian: boolean
 	/** term2 */
-	overlayTw?: any
-	filter: any
-	filter0: any
+	overlayTw?: TermWrapper
+	filter?: Filter
+	filter0?: any
 }
 
 export type BoxPlotResponse = {
