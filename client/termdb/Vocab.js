@@ -88,7 +88,6 @@ export class Vocab {
 						localStorage.setItem('jwtByDsRoute', JSON.stringify(this.jwtByDsRoute))
 					}
 				}
-				this.clientAuthResult = data.clientAuthResult
 			} else {
 				throw `unsupported requiredAuth='${auth.type}'`
 			}
@@ -105,6 +104,7 @@ export class Vocab {
 	}
 
 	mayGetAuthHeaders(route = '') {
+		if (isInSession(this.state.vocab.dslabel, 'termdb')) return {}
 		const auth = this.state.termdbConfig?.requiredAuth
 		if (!auth) return {}
 		if (!this.verifiedToken) {
@@ -125,7 +125,7 @@ export class Vocab {
 	}
 
 	getClientAuthResult() {
-		return this.clientAuthResult
+		return this.state.termdbConfig.clientAuthResult
 	}
 
 	async trackDsAction({ action, details }) {
