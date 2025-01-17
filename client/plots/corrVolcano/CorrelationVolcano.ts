@@ -129,7 +129,6 @@ class CorrelationVolcano extends RxComponentInner {
 		if (config.childType != this.type && config.chartType != this.type) return
 
 		const interactions = new CorrVolcanoInteractions(this.app, this.dom)
-		interactions.clearDom()
 
 		const settings = config.settings.correlationVolcano
 		const variableTwLst = this.dsCorrVolcano.variables.termIds.map((id: string) => {
@@ -140,6 +139,7 @@ class CorrelationVolcano extends RxComponentInner {
 		const model = new Model(config, this.state, this.app, settings, variableTwLst)
 		const data = await model.getData()
 		if (!data || data['error']) {
+			interactions.clearDom()
 			this.dom.error.text(data['error'] || 'No data returned from server')
 		}
 
@@ -147,7 +147,7 @@ class CorrelationVolcano extends RxComponentInner {
 		const viewModel = new ViewModel(config, data, settings, variableTwLst)
 
 		/** Render correlation volcano plot */
-		new View(this.dom, viewModel.viewData)
+		new View(this.dom, viewModel.viewData, interactions)
 	}
 }
 
