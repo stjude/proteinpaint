@@ -66,10 +66,10 @@ export type MassState = {
 	plots: BasePlotConfig[]
 	termfilter: any
 	termdbConfig: {
-		correlationVolcano: any
 		allowedChartTypes: string[]
 		allowedTermTypes: string[]
 		displaySampleIds?: boolean
+		correlationVolcano?: any
 		massSessionDuration: number
 		queries?: any
 		requiredAuth?: any
