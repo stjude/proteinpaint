@@ -3,7 +3,7 @@ import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
 import { getColors } from '#shared/common.js'
 import { brushX, brushY } from 'd3-brush'
-import { renderTable, Menu } from '#dom'
+import { renderTable, Menu, table2col } from '#dom'
 import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
 import { TermTypes } from '#shared/terms.js'
@@ -75,19 +75,18 @@ export default function setViolinRenderer(self) {
 
 	self.displaySummaryStats = function (d, event, tip) {
 		if (!d.summaryStats) return
+		tip.clear().show(event.clientX, event.clientY)
 
-		const rows = [
-			`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`,
-			...d.summaryStats.map(
-				({ id, label, value }) => `<tr>
-				<td style='padding:3px; color:#aaa'>${label}</td>
-				<td style='padding:3px; text-align:center'>${value}</td>
-			</tr>`
-			)
-		]
-
-		const tableHtml = `<table class='sja_simpletable'>${rows.join('')}</table>`
-		tip.show(event.clientX, event.clientY).d.html(tableHtml)
+		const table = table2col({ holder: tip.d.append('div') })
+		//Sample label
+		const [th1, _] = table.addRow()
+		th1.attr('colspan', '2').style('color', 'black').style('text-align', 'center').text(d.label)
+		//Summary stat rows
+		for (const stat of d.summaryStats) {
+			const [td1, td2] = table.addRow()
+			td1.text(stat.label)
+			td2.style('text-align', 'center').text(stat.value ?? 0)
+		}
 	}
 
 	self.getPlotThickness = function () {
