@@ -115,13 +115,16 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.regression) c.regression = tdb.regression
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
-	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
-	const info = authApi.getNonsensitiveInfo(req)
-	c.clientAuthResult = info.clientAuthResult || {}
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
+
+	/////////////// CAUTION //////////////
+	// ensure only safe auth info is revealed to client
+	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
+	const info = authApi.getNonsensitiveInfo(req)
+	c.clientAuthResult = info.clientAuthResult || {}
 
 	res.send({ termdbConfig: c })
 }
