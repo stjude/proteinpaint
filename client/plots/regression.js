@@ -218,6 +218,19 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	]
 	const useMethods = allMethods.filter(i => chartsInstance.state.currentCohortChartTypes.includes(i.type))
 	if (useMethods.length == 0) return holder.append('div').text('Error: no methods available')
+	if (useMethods.length == 1) {
+		// only 1 method supported. directly show ui for this method but not menu
+		chartsInstance.dom.tip.hide()
+		chartsInstance.prepPlot({
+			config: {
+				chartType: 'regression',
+				regressionType: useMethods[0].type,
+				independent: []
+			}
+		})
+		return
+	}
+	// multiple methods. show menu to list them
 	for (const { label, type } of useMethods) {
 		holder
 			.append('div')

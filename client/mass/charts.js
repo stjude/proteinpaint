@@ -42,40 +42,30 @@ class MassCharts {
 		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 
-	generateRegressionButtonObject(state) {
-		// the default obj for regression, this obj is suitable for a button that will launch a menu with multiple regression methods
-		const obj = {
-			label: 'Regression Analysis',
-			chartType: 'regression',
-			clickTo: this.loadChartSpecificMenu
-		}
-		/* following detects if the ds has just one method, if so will customize obj{} so that the button directly show the available method name, and click on it to directly launch the ui without showing a menu, and will not trigger makeChartBtnMenu()
-		TODO move this logic to regression makeChartBtnMenu() to keep chart-specific logic out of here, but there lacks a way for makeChartBtnMenu to customize obj.label
+	getRegressionBtnLabel(state) {
+		/* define button label based conditions:
+		if ds allows multiple regression methods, use generic name, click btn will display menu of options
+		if ds allows just one method, directly show method name on button, click btn will show sandbox
 		*/
 		const lst = getCurrentCohortChartTypes(state)
-		if (!lst.includes('regression')) return obj // regression is hidden. still return obj to maintain proper charts array and the button will be hidden later
-		const availableMethods = []
-		if (lst.includes('linear')) availableMethods.push('linear')
-		if (lst.includes('logistic')) availableMethods.push('logistic')
-		if (lst.includes('cox')) availableMethods.push('cox')
-		if (availableMethods.length > 1) return obj // more than 1 regression methods. do not modify original obj
-		if (availableMethods.length == 1) {
-			// has only one method. customized button label and click behavior
-			obj.label =
-				(availableMethods[0] == 'linear' ? 'Linear' : availableMethods[0] == 'cox' ? 'Cox' : 'Logistic') + ' Regression'
-			obj.clickTo = () => {
-				this.dom.tip.hide()
-				this.prepPlot({
-					config: {
-						chartType: 'regression',
-						regressionType: availableMethods[0],
-						independent: []
-					}
-				})
-			}
+		if (!lst.includes('regression')) return '' // plot not supported. label doesn't matter as button will be hidden
+		const ms = []
+		if (lst.includes('linear')) ms.push('linear')
+		if (lst.includes('logistic')) ms.push('logistic')
+		if (lst.includes('cox')) ms.push('cox')
+		if (ms.length > 1) return 'Regresison Analysis' // more than 1 methods. return general name
+		// only 1 method
+		return `${ms[0] == 'linear' ? 'Linear' : ms[0] == 'cox' ? 'Cox' : 'Logistic'} Regression`
+	}
+	getSamplescatterBtnLabel(state) {
+		// define button label
+		const lst = getCurrentCohortChartTypes(state)
+		if (state.termdbConfig.scatterplots?.length == 1 && !lst.includes('dynamicScatter')) {
+			// has 1 premade plot and no dynamic scatter. just show premade plot name as button name
+			return state.termdbConfig.scatterplots[0].name
 		}
-		// no method (exception?) this is handled by regression makeChartBtnMenu
-		return obj
+		// either has >1 premade plots or dynamic scatter. show generic name
+		return 'Sample Scatter'
 	}
 }
 
@@ -209,7 +199,7 @@ function getChartTypeList(self, state) {
 			usecase: { target: 'summary', detail: 'term' }
 		},
 		{
-			label: 'Scatter Plot',
+			label: self.getSamplescatterBtnLabel(state),
 			chartType: 'sampleScatter',
 			clickTo: self.loadChartSpecificMenu
 		},
@@ -226,7 +216,11 @@ function getChartTypeList(self, state) {
 			usecase: { target: 'survival', detail: 'term' }
 		},
 
-		self.generateRegressionButtonObject(state), // returns an object like other buttons but tailored by current state
+		{
+			label: self.getRegressionBtnLabel(state),
+			chartType: 'regression',
+			clickTo: self.loadChartSpecificMenu
+		},
 
 		{
 			label: 'Sample Matrix',
