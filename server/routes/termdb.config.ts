@@ -76,7 +76,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 
 	// add required attributes
 	const c: any = {
-		selectCohort: tdb.selectCohort, // optional
+		selectCohort: getSelectCohort(ds, req),
 		supportedChartTypes: tdb.q?.getSupportedChartTypes(req),
 		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getAllowedTermTypes(ds),
@@ -311,4 +311,14 @@ function getAllowedTermTypes(ds) {
 	if (ds?.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 
 	return [...typeSet]
+}
+
+function getSelectCohort(ds, req) {
+	if (!ds.cohort.termdb.selectCohort) return // ds doesn't use cohort
+	const copy = Object.assign({}, ds.cohort.termdb.selectCohort) // make copy for return
+	if (ds.cohort.termdb.selectCohort.descriptionByUser) {
+		copy.description = ds.cohort.termdb.selectCohort.descriptionByUser(authApi.getNonsensitiveInfo(req))
+		delete copy.descriptionByUser
+	}
+	return copy
 }
