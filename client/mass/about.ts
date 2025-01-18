@@ -6,7 +6,6 @@ import type { MassAppApi } from './types/mass'
 import { renderTable } from '#dom'
 import type { TableRow } from '#dom'
 import { select } from 'd3-selection'
-import { getProfileLogin } from '../plots/profilePlot.js'
 
 /* 
 "about" tab will display following contents inside this.subheader:
@@ -43,8 +42,8 @@ type MassAboutOpts = {
 type MassAboutDom = {
 	/** Fine print dom shown between the cohort specific content and the server info */
 	cohortAsterisk?: Div
-	/** Displays either the description or descriptionBy content */
-	cohortDescription?: Div
+	/** Displays description */
+	cohortDescription: Div
 	/** Div for cohort radio buttons */
 	cohortOpts?: Div
 	/** Text above radio cohort options */
@@ -74,16 +73,16 @@ export class MassAbout {
 		this.instanceNum = opts.instanceNum
 		this.aboutOverrides = opts.aboutOverrides
 		this.selectCohort = opts.selectCohort
-		this.dom = {}
+		this.dom = {
+			cohortDescription: this.subheader
+				.append('div')
+				.attr('data-testid', 'sjpp-about-cohort-desc')
+				.style('margin-left', '10px')
+		}
 
 		if (opts?.selectCohort?.title) {
 			this.dom.cohortTitle = opts.subheader.append('h2').style('margin-left', '10px').text(opts.selectCohort.title)
 		}
-
-		this.dom.cohortDescription = this.subheader
-			.append('div')
-			.attr('data-testid', 'sjpp-about-cohort-desc')
-			.style('margin-left', '10px')
 
 		if (opts.selectCohort?.prompt) {
 			this.dom.cohortPrompt = this.subheader
@@ -116,16 +115,7 @@ export class MassAbout {
 
 	async main() {
 		await this.renderCohortsTable()
-		if (this.opts.selectCohort?.description || this.opts.selectCohort?.descriptionByUser) {
-			//temporary logic to get the profile description until the login is implemented
-			const [logged, site, user] = getProfileLogin(this.app, this.state.activeCohort)
-			//If there is a user and a descriptionByUser, use the user description otherwise use the default description
-			const description =
-				user && this.opts.selectCohort.descriptionByUser
-					? this.opts.selectCohort.descriptionByUser[user]
-					: this.opts.selectCohort.description
-			if (description) this.dom.cohortDescription!.html(description)
-		}
+		if (this.opts.selectCohort?.description) this.dom.cohortDescription.html(this.opts.selectCohort.description)
 	}
 
 	initCohort = appState => {

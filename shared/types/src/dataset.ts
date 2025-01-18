@@ -838,15 +838,18 @@ type SelectCohortValuesEntry = {
 }
 
 export type SelectCohortEntry = {
+	/** subcohort term in db. uses hardcoded type=multivalue */
 	term: { id: string; type: string }
 	/** Title above the cohort introduction/content in the about tab */
 	title?: string
 	/** Text above radio cohort options in the about tab. */
 	prompt: string
 	values: SelectCohortValuesEntry[]
+	/** cohort-related static html shown in about tab */
 	description?: string
-	/* If the description is dependent on the user pass a descriptionByUser dict instead */
-	descriptionByUser?: { [index: string]: string }
+	/** If the description is dependent on the user's role, 
+	define this callback to return description based on auth */
+	descriptionByUser?: (auth: any) => string
 	/** subtext shown at the very bottom of the cohort/about tab subheader */
 	asterisk?: string
 	//The profile has clearOnChange. The terms used in the plots are not always the same for the profile.
