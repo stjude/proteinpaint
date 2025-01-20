@@ -10,14 +10,14 @@ not specific to mds3, may move to client/filter/ or even shared/ in case backend
 */
 
 export function getFilterName(f) {
-	if (f.lst.length == 0) {
-		// this is possible when user has deleted the only tvs
-		return 'No filter'
-	}
+	if (!Array.isArray(f?.lst)) return 'Invalid filter'
+	// for a ds using subcohorts, a filter may contain cohort tvs and is not informative to display. thus derive new tvs array by skipping it
+	const lst = f.lst.filter(i => i.tag != 'cohortFilter')
+	if (lst.length == 0) return 'No filter' // this is possible when user has deleted the only tvs
 
-	if (f.lst.length == 1 && f.lst[0].type == 'tvs') {
+	if (lst.length == 1 && lst[0].type == 'tvs') {
 		// has only one tvs
-		const tvs = f.lst[0].tvs
+		const tvs = lst[0].tvs
 		if (!tvs) throw 'f.lst[0].tvs{} missing'
 		const ttype = tvs?.term?.type
 		if (ttype == 'categorical') {
@@ -52,7 +52,7 @@ export function getFilterName(f) {
 	}
 	// more than 1 tvs, not able to generate a short name
 	// TODO count total tvs from nested list
-	return 'Filter (' + f.lst.length + ')'
+	return 'Filter (' + lst.length + ')'
 }
 
 /*
