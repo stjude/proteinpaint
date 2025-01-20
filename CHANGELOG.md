@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- getFilterName ignores cohort tvs
+
 
 ## 2.98.0
 
