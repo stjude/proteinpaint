@@ -52,7 +52,7 @@ class MassCharts {
 		if (lst.includes('linear')) ms.push('linear')
 		if (lst.includes('logistic')) ms.push('logistic')
 		if (lst.includes('cox')) ms.push('cox')
-		if (ms.length > 1) return 'Regresison Analysis' // more than 1 methods. return general name
+		if (ms.length > 1) return 'Regression Analysis' // more than 1 methods. return general name
 		// only 1 method
 		return `${ms[0] == 'linear' ? 'Linear' : ms[0] == 'cox' ? 'Cox' : 'Logistic'} Regression`
 	}
