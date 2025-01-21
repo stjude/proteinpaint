@@ -10,7 +10,7 @@ export class View {
 	dom: CorrVolcanoDom
 	viewData: ViewData
 	readonly defaultRadius = 5
-	constructor(dom: CorrVolcanoDom, viewData: ViewData, interactions: any) {
+	constructor(dom: CorrVolcanoDom, viewData: ViewData, interactions: any, settings: any) {
 		this.dom = dom
 		this.viewData = viewData
 
@@ -18,6 +18,8 @@ export class View {
 
 		const plotDim = viewData.plotDim
 		this.renderDom(plotDim)
+		// Draw all circles for variables
+		this.renderVariables(this.viewData.variableItems, settings)
 	}
 
 	renderDom(plotDim) {
@@ -52,9 +54,6 @@ export class View {
 			.attr('x2', plotDim.divideLine.x)
 			.attr('y1', plotDim.divideLine.y1)
 			.attr('y2', plotDim.divideLine.y2)
-
-		// Draw all circles for variables
-		this.renderVariables(this.viewData.variableItems)
 	}
 
 	renderScale(scale, isLeft = false) {
@@ -67,7 +66,7 @@ export class View {
 		// return scaleG
 	}
 
-	renderVariables(variableItems) {
+	renderVariables(variableItems, settings) {
 		for (const item of variableItems) {
 			const g = this.dom.plot
 				.append('circle')
@@ -78,7 +77,7 @@ export class View {
 				.attr('cy', item.y)
 				.attr('r', this.defaultRadius)
 
-			new ItemToolTip(item, g, this.dom.tip)
+			new ItemToolTip(item, g, this.dom.tip, settings)
 		}
 	}
 }
