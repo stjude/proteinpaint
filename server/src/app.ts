@@ -15,6 +15,7 @@ import * as oldApp from './app.unorg.js'
 import { authApi } from './auth.js'
 import * as phewas from './termdb.phewas.js'
 import { sendMessageToSlack } from './postOnSlack.js'
+import { routeFiles } from './app.routes.js'
 
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
@@ -42,18 +43,15 @@ export async function launch() {
 		*/
 		authApi.maySetAuthRoutes(app, basepath, serverconfig)
 
-		// start moving migrated route handler code here
-		const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
-		const routeFiles = files.filter(f => !f.startsWith('_') && (f.endsWith('.ts') || f.endsWith('js'))).sort()
 		const routes = await Promise.all(
-			routeFiles
-				//.filter(file => file.includes('health'))
-				.map(async file => {
-					const _ = await import(`../routes/${file}`)
-					const route = Object.assign({}, _)
-					route.file = file
-					return route
-				})
+			routeFiles.map(async file => {
+				// do not use `import('../routes/${scanned_filename}')`, since esbuild is not able to
+				// filer out dynamically imported files such as spec files; add to imported routeFiles[] instead
+				const _ = await import(file)
+				const route = Object.assign({}, _)
+				route.file = file
+				return route
+			})
 		)
 
 		const __dirname = import.meta.dirname
