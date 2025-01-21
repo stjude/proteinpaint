@@ -52,7 +52,7 @@
  * @throws Will throw an error if the SVG selection is invalid or if label text
  *         cannot be extracted from an item when no getLabelText function is provided
  */
-export function getMaxLabelWidth<T>(
+export function getMaxLabelWidth<T extends object>(
 	svg: d3.Selection<any, any, any, any>,
 	items: T[],
 	getLabelText?: (item: T) => string
