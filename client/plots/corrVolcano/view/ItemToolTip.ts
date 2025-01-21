@@ -7,7 +7,7 @@ export class ItemToolTip {
 			const table = table2col({ holder: tip.d.append('table') })
 			//Header
 			const [th, _] = table.addRow()
-			th.attr('colspan', '2').text(item.label)
+			th.attr('colspan', '2').style('text-align', 'center').text(item.label)
 			//Show p value
 			const [td1, td2] = table.addRow()
 			td1.text(`${settings.isAdjustedPValue ? 'Adjusted p-value ' : 'Original p-value'} (-log10)`)
