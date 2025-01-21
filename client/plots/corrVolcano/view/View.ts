@@ -26,6 +26,7 @@ export class View {
 		this.dom.svg.attr('width', plotDim.svg.width).attr('height', plotDim.svg.height)
 
 		this.dom.title
+			.attr('class', 'sjpp-corr-volcano-title')
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr('x', plotDim.title.x)
@@ -33,11 +34,18 @@ export class View {
 			.text(plotDim.title.text)
 
 		this.dom.yAxisLabel
-			.attr('class', 'sjpp-volcano-divide-line')
+			.attr('class', 'sjpp-corr-volcano-y-axis')
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr('transform', `translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`)
 			.text(plotDim.yAxisLabel.text)
+
+		this.dom.xAxisLabel
+			.attr('class', 'sjpp-corr-volcano-x-axis')
+			.style('font-weight', 600)
+			.attr('text-anchor', 'middle')
+			.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
+			.text(plotDim.xAxisLabel.text)
 
 		//Y, left scale
 		this.renderScale(plotDim.yScale, true)
@@ -47,6 +55,7 @@ export class View {
 		// Draw the line dividing the plot
 		this.dom.svg
 			.append('line')
+			.attr('class', 'sjpp-corr-volcano-divide-line')
 			.attr('stroke', 'black')
 			.attr('stroke-dasharray', '5 4')
 			.attr('stroke-opacity', 0.5)
@@ -70,6 +79,7 @@ export class View {
 		for (const item of variableItems) {
 			const g = this.dom.plot
 				.append('circle')
+				.attr('data-testid', `sjpp-corr-volcano-circle-${item.label}`)
 				.attr('stroke', item.color)
 				.attr('fill', item.color)
 				.attr('fill-opacity', 0.5)
@@ -86,7 +96,12 @@ export class View {
 
 	renderLegend(dom, legendData) {
 		//Show min radius for sample size
-		const svg = dom.legend.attr('width', 100).attr('height', 100)
+		const svg = dom.legend
+			.attr('width', 100)
+			.attr('height', 100)
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('padding-top', '20px')
 		svg.append('text').text('Sample size').attr('x', 10).attr('y', 15)
 
 		for (const c of legendData) {
