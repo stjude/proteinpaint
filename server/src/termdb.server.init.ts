@@ -488,10 +488,6 @@ export function server_init_db_queries(ds) {
 	*/
 	q.getSupportedChartTypes = req => {
 		// based on request, derive forbiddenRoutes and clientAuthResults that ds can use to tailor chart support
-		const info = authApi.getNonsensitiveInfo(req)
-		// fails tsc compiler check, assumed to be due to not being able to infer
-		// the return type of getNonsensitiveInfo() from the non-typescript code
-		// in auth.js, so the extra typeof condition fixes the failing check
 		const authInfo = typeof info == 'object' ? info : { forbiddenRoutes: [] }
 		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
 
