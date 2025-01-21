@@ -85,6 +85,16 @@ class CorrelationVolcano extends RxComponentInner {
 	async setControls() {
 		const inputs = [
 			{
+				type: 'term',
+				configKey: 'featureTw',
+				chartType: 'correlationVolcano',
+				usecase: { target: 'correlationVolcano', detail: 'featureTw' },
+				label: 'Gene',
+				vocabApi: this.app.vocabApi,
+				geneVariantEditMenuOnlyGrp: true,
+				menuOptions: 'replace'
+			},
+			{
 				label: 'Correlation method',
 				title: 'Correlation method',
 				type: 'radio',
