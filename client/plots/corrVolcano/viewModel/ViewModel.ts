@@ -5,6 +5,7 @@ import type { CorrVolcanoSettings } from '../CorrelationVolcano'
 export type ViewData = {
 	plotDim: any
 	variableItems: any
+	legendData: any
 }
 
 /** TODO, clean this up */
@@ -13,31 +14,34 @@ export class ViewModel {
 	// data: any
 	// settings: CorrVolcanoSettings
 	viewData: ViewData
+	readonly defaultMinRadius = 5
+	readonly defaultMaxRadius = 20
 	readonly topPad = 40
 	/** Only one side, left or right */
 	readonly horizPad = 70
 	readonly bottomPad = 20
 	constructor(config, data, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
-		const [absYMax, absYMin] = this.setMinMax(data, settings.isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue')
-		const [absXMax, absXMin] = this.setMinMax(data, 'correlation')
-		const [absSampleMax, absSampleMin] = this.setMinMax(data, 'sampleSize')
+		const pValueKey = settings.isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue'
+		const d = this.transformPValues(data, pValueKey)
+		const [absYMax, absYMin] = this.setMinMax(d, pValueKey)
+		const [absXMax, absXMin] = this.setMinMax(d, 'correlation')
+		const [absSampleMax, absSampleMin] = this.setMinMax(d, 'sampleSize')
 
 		const plotDim = this.setPlotDimensions(config, settings, absYMax, absYMin, absXMax, absXMin)
 
 		this.viewData = {
 			plotDim,
-			variableItems: this.setVariablesData(
-				data,
-				variableTwLst,
-				plotDim,
-				settings.isAdjustedPValue,
-				absSampleMax,
-				absSampleMin
-			)
+			variableItems: this.setVariablesData(d, variableTwLst, plotDim, pValueKey, absSampleMax, absSampleMin),
+			legendData: {
+				minRad: this.defaultMinRadius,
+				maxRad: this.defaultMaxRadius,
+				minSampleSize: absSampleMin,
+				maxSampleSize: absSampleMax
+			}
 		}
 	}
 
-	setMinMax(data, key) {
+	setMinMax(data: any, key: string) {
 		const sortedValues = data.variableItems.map(v => v[key]).sort((a, b) => a - b)
 		const max = sortedValues[sortedValues.length - 1]
 		const min = sortedValues[0]
@@ -68,7 +72,9 @@ export class ViewModel {
 				y: settings.height + this.topPad
 			},
 			yScale: {
-				scale: scaleLog().domain([absYMin, absYMax]).range([0, settings.height]),
+				//Do not use scaleLog() here. scaleLog is for raw values before the log transformation
+				//Using it will distort the values.
+				scale: scaleLinear().domain([absYMin, absYMax]).range([settings.height, 0]),
 				x: this.horizPad,
 				y: this.topPad
 			},
@@ -80,18 +86,27 @@ export class ViewModel {
 		}
 	}
 
-	setVariablesData(data, variableTwLst, plotDim, isAdjustedPValue, absSampleMax, absSampleMin) {
+	setVariablesData(data, variableTwLst, plotDim, key, absSampleMax, absSampleMin) {
 		//5 and 15 are the min and max radius
-		const radiusScale = scaleLinear().domain([absSampleMin, absSampleMax]).range([5, 15])
+		const radiusScale = scaleLinear()
+			.domain([absSampleMin, absSampleMax])
+			.range([this.defaultMinRadius, this.defaultMaxRadius])
 		for (const item of data.variableItems) {
 			item.color = item.correlation > 0 ? 'blue' : 'red'
 			item.label = variableTwLst.find(t => t.$id == item.tw$id).term.name
 			item.x = plotDim.xScale.scale(item.correlation) + this.horizPad
-			const key = isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue'
-			item.y = Math.abs(-plotDim.yScale.scale(item[key]) - this.topPad)
+			item.y = plotDim.yScale.scale(item[key]) + this.topPad
 			item.radius = radiusScale(item.sampleSize)
 		}
 		return data.variableItems
+	}
+
+	transformPValues(data, key) {
+		for (const item of data.variableItems) {
+			if (item[key] > 0) item[key] = -Math.log10(item[key])
+			else item[key] = null
+		}
+		return data
 	}
 
 	//TODO: Add more types
@@ -99,6 +114,8 @@ export class ViewModel {
 		switch (type) {
 			case 'geneExpression':
 				return 'Gene Expression'
+			case 'geneVariant':
+				return 'Gene Variant'
 			default:
 				return 'Gene Expression'
 		}

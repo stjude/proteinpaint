@@ -10,7 +10,7 @@ export class ItemToolTip {
 			th.attr('colspan', '2').text(item.label)
 			//Show p value
 			const [td1, td2] = table.addRow()
-			td1.text(settings.isAdjustedPValue ? 'Adjusted p-value' : 'Original p-value')
+			td1.text(`${settings.isAdjustedPValue ? 'Adjusted p-value ' : 'Original p-value'} (-log10)`)
 			td2.text(settings.isAdjustedPValue ? item.adjusted_pvalue : item.original_pvalue)
 			const [td3, td4] = table.addRow()
 			//Show correlation
