@@ -30,8 +30,9 @@ export type CorrVolcanoDom = {
 	controls: Elem
 	div: Elem
 	error: Elem
-	svg: SvgSvg
+	legend: SvgG
 	plot: SvgG
+	svg: SvgSvg
 	title: SvgText
 	tip: Menu
 	yAxisLabel: SvgText
@@ -61,6 +62,7 @@ class CorrelationVolcano extends RxComponentInner {
 			plot: svg.append('g'),
 			title: svg.append('text'),
 			yAxisLabel: svg.append('text'),
+			legend: div.append('svg'),
 			tip: new Menu({ padding: '' })
 		}
 		this.dsCorrVolcano = {}
