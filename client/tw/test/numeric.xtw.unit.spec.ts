@@ -39,6 +39,7 @@ tape('fill(invalid tw)', async test => {
 
 tape(`fill() default q.type='regular-bin'`, async test => {
 	const tw: RawNumTW = {
+		$id: 'test.$id',
 		term: termjson.agedx,
 		q: { isAtomic: true },
 		isAtomic: true
@@ -72,6 +73,7 @@ tape(`fill() default q.type='regular-bin'`, async test => {
 
 tape.skip(`fill() q.type=custom-bin opts.defaultQ.preferredBins='median'`, async test => {
 	const tw: RawNumTW = {
+		$id: 'test.$id',
 		term: termjson.agedx,
 		q: {
 			type: 'custom-bin',

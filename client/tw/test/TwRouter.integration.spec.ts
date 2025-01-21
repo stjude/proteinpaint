@@ -66,6 +66,7 @@ async function getTws() {
 	const twlst: TermWrapper[] = [
 		await TwRouter.fill({ id: 'sex' }, { vocabApi }),
 		{
+			$id: 'test.$id',
 			type: 'CatTWPredefinedGS',
 			term: getTermWithGS(),
 			isAtomic: true as const,
