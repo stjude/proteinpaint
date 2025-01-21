@@ -9,7 +9,6 @@ import { ItemToolTip } from './ItemToolTip'
 export class View {
 	dom: CorrVolcanoDom
 	viewData: ViewData
-	readonly defaultRadius = 5
 	constructor(dom: CorrVolcanoDom, viewData: ViewData, interactions: any, settings: any) {
 		this.dom = dom
 		this.viewData = viewData
@@ -75,7 +74,7 @@ export class View {
 				.attr('fill-opacity', 0.5)
 				.attr('cx', item.x)
 				.attr('cy', item.y)
-				.attr('r', this.defaultRadius)
+				.attr('r', item.radius)
 
 			new ItemToolTip(item, g, this.dom.tip, settings)
 		}

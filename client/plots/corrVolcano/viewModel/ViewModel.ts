@@ -20,11 +20,20 @@ export class ViewModel {
 	constructor(config, data, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
 		const [absYMax, absYMin] = this.setMinMax(data, settings.isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue')
 		const [absXMax, absXMin] = this.setMinMax(data, 'correlation')
+		const [absSampleMax, absSampleMin] = this.setMinMax(data, 'sampleSize')
+
 		const plotDim = this.setPlotDimensions(config, settings, absYMax, absYMin, absXMax, absXMin)
 
 		this.viewData = {
 			plotDim,
-			variableItems: this.setVariablesData(data, variableTwLst, plotDim, settings.isAdjustedPValue)
+			variableItems: this.setVariablesData(
+				data,
+				variableTwLst,
+				plotDim,
+				settings.isAdjustedPValue,
+				absSampleMax,
+				absSampleMin
+			)
 		}
 	}
 
@@ -70,13 +79,16 @@ export class ViewModel {
 		}
 	}
 
-	setVariablesData(data, variableTwLst, plotDim, isAdjustedPValue) {
+	setVariablesData(data, variableTwLst, plotDim, isAdjustedPValue, absSampleMax, absSampleMin) {
+		//5 and 15 are the min and max radius
+		const radiusScale = scaleLinear().domain([absSampleMin, absSampleMax]).range([5, 15])
 		for (const item of data.variableItems) {
 			item.color = item.correlation > 0 ? 'blue' : 'red'
 			item.label = variableTwLst.find(t => t.$id == item.tw$id).term.name
 			item.x = plotDim.xScale.scale(item.correlation) + this.horizPad
 			const key = isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue'
 			item.y = Math.abs(-plotDim.yScale.scale(item[key]) - this.topPad)
+			item.radius = radiusScale(item.sampleSize)
 		}
 		return data.variableItems
 	}
