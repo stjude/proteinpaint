@@ -19,6 +19,7 @@ and prevent snps from being included in regression request string
 instance attributes
 
 self.term{}
+	.$id: str
 	.id: str, not really used
 	.type: "snplst"
 	.snps[ {} ]
@@ -608,9 +609,14 @@ async function makeSampleSummary(self) {
 
 	const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
 	if (f) filter.lst.push(f)
-
 	const data = await self.vocabApi.getCategories(self.term as SnpsTerm, filter, body)
-	mayRunSnplstTask({ term: self.term as SnpsTerm, q: self.q as SnpsQ }, data)
+	mayRunSnplstTask(
+		{
+			term: self.term as SnpsTerm,
+			q: self.q as SnpsQ
+		} as any, //quick fix for $id being required in BaseTw type
+		data
+	)
 }
 
 function validateQ(data: any) {
