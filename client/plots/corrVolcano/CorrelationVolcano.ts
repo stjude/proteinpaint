@@ -17,6 +17,7 @@ import { CorrVolcanoInteractions } from './interactions/CorrVolcanoInteractions'
 
 export type CorrVolcanoSettings = {
 	height: number
+	isAdjustedPValue: boolean
 	method: 'pearson' | 'spearman'
 	width: number
 }
@@ -95,6 +96,17 @@ class CorrelationVolcano extends RxComponentInner {
 				]
 			},
 			{
+				label: 'P value',
+				title: 'Change the p value',
+				type: 'radio',
+				chartType: 'correlationVolcano',
+				settingsKey: 'isAdjustedPValue',
+				options: [
+					{ label: 'Adjusted', value: true },
+					{ label: 'Original', value: false }
+				]
+			},
+			{
 				label: 'Height',
 				title: 'Set the height of the plot',
 				type: 'number',
@@ -159,6 +171,7 @@ export const componentInit = corrVolcanoInit
 export function getDefaultCorrVolcanoSettings(overrides = {}) {
 	const defaults: CorrVolcanoSettings = {
 		height: 400,
+		isAdjustedPValue: false,
 		method: 'pearson',
 		width: 400
 	}
