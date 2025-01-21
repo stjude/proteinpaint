@@ -129,7 +129,7 @@ tape('initRaw() categorical', async test => {
 		)
 		test.deepEqual(
 			Object.keys(xtw).sort(),
-			['isAtomic', 'q', 'term', 'type'],
+			['$id', 'isAtomic', 'q', 'term', 'type'],
 			`should have the expected enumerable keys`
 		)
 	}
@@ -155,7 +155,7 @@ tape('initRaw() categorical', async test => {
 		)
 		test.deepEqual(
 			Object.keys(xtw).sort(),
-			['isAtomic', 'q', 'term', 'type'],
+			['$id', 'isAtomic', 'q', 'term', 'type'],
 			`should have the expected enumerable keys`
 		)
 	}

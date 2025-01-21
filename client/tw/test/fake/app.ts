@@ -36,6 +36,7 @@ export class FakeApp {
 			below works, see the detailed examples and explanations in
 			https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions
 		*/
+		if (!tw.$id) tw.$id = 'test.$id'
 		if (!tw.type) throw `missing tw.type`
 		if (tw.type in addons) {
 			// example using addons
