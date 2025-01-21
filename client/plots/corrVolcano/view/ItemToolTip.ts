@@ -1,4 +1,5 @@
 import { table2col } from '#dom'
+import { roundValue } from '#shared/roundValue.js'
 
 export class ItemToolTip {
 	constructor(item, g, tip, settings) {
@@ -11,7 +12,8 @@ export class ItemToolTip {
 			//Show p value
 			const [td1, td2] = table.addRow()
 			td1.text(`${settings.isAdjustedPValue ? 'Adjusted p-value ' : 'Original p-value'} (-log10)`)
-			td2.text(settings.isAdjustedPValue ? item.adjusted_pvalue : item.original_pvalue)
+			const value = settings.isAdjustedPValue ? item.adjusted_pvalue : item.original_pvalue
+			td2.text(roundValue(value, 5))
 			const [td3, td4] = table.addRow()
 			//Show correlation
 			td3.text('Correlation')
